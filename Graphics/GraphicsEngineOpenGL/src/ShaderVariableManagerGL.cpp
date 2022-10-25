@@ -196,7 +196,7 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::BindResource(const BindResour
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferGLImpl> pBuffGLImpl{BindInfo.pObject, IID_BufferGL};
+    RefCntAutoPtr<BufferGLImpl> pBuffGLImpl{BindInfo.pObject, IID_IBufferGL};
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& CachedUB = ResourceCache.GetConstUB(Attr.CacheOffset + BindInfo.ArrayIndex);
@@ -236,7 +236,7 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(const BindResourceIn
         Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
     {
         // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-        RefCntAutoPtr<TextureViewGLImpl> pViewGL{BindInfo.pObject, IID_TextureViewGL};
+        RefCntAutoPtr<TextureViewGLImpl> pViewGL{BindInfo.pObject, IID_ITextureViewGL};
 
         const auto ImmutableSamplerAssigned = (m_ParentManager.m_pSignature->GetImmutableSamplerIdx(Attr) != InvalidImmutableSamplerIndex);
 #ifdef DILIGENT_DEVELOPMENT
@@ -263,7 +263,7 @@ void ShaderVariableManagerGL::TextureBindInfo::BindResource(const BindResourceIn
     else if (Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV)
     {
         // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-        RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_BufferViewGL};
+        RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_IBufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
             const auto& CachedBuffSampler = ResourceCache.GetConstTexture(Attr.CacheOffset + BindInfo.ArrayIndex);
@@ -299,7 +299,7 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(const BindResourceInfo
     if (Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV)
     {
         // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-        RefCntAutoPtr<TextureViewGLImpl> pViewGL{BindInfo.pObject, IID_TextureViewGL};
+        RefCntAutoPtr<TextureViewGLImpl> pViewGL{BindInfo.pObject, IID_ITextureViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
             const auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + BindInfo.ArrayIndex);
@@ -316,7 +316,7 @@ void ShaderVariableManagerGL::ImageBindInfo::BindResource(const BindResourceInfo
     else if (Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV)
     {
         // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-        RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_BufferViewGL};
+        RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_IBufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
         {
             const auto& CachedUAV = ResourceCache.GetConstImage(Attr.CacheOffset + BindInfo.ArrayIndex);
@@ -353,7 +353,7 @@ void ShaderVariableManagerGL::StorageBufferBindInfo::BindResource(const BindReso
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_BufferViewGL};
+    RefCntAutoPtr<BufferViewGLImpl> pViewGL{BindInfo.pObject, IID_IBufferViewGL};
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedSSBO = ResourceCache.GetConstSSBO(Attr.CacheOffset + BindInfo.ArrayIndex);

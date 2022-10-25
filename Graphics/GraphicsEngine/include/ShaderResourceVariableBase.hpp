@@ -644,7 +644,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
             return;
 
         *ppInterface = nullptr;
-        if (IID == IID_ShaderResourceVariable || IID == IID_Unknown)
+        if (IID == IID_IShaderResourceVariable || IID == IID_Unknown)
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();

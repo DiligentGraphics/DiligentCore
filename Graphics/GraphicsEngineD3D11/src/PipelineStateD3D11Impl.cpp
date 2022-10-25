@@ -380,7 +380,7 @@ void PipelineStateD3D11Impl::Destruct()
     TPipelineStateBase::Destruct();
 }
 
-IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D11Impl, IID_PipelineStateD3D11, TPipelineStateBase)
+IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D11Impl, IID_IPipelineStateD3D11, TPipelineStateBase)
 
 
 bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState* pPSO) const

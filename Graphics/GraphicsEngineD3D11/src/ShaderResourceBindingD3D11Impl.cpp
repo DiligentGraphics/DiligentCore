@@ -45,6 +45,6 @@ ShaderResourceBindingD3D11Impl::~ShaderResourceBindingD3D11Impl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(ShaderResourceBindingD3D11Impl, IID_ShaderResourceBindingD3D11, TBase)
+IMPLEMENT_QUERY_INTERFACE(ShaderResourceBindingD3D11Impl, IID_IShaderResourceBindingD3D11, TBase)
 
 } // namespace Diligent

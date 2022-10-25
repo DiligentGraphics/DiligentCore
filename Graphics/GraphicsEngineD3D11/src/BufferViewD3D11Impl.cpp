@@ -58,6 +58,6 @@ BufferViewD3D11Impl::BufferViewD3D11Impl(IReferenceCounters*    pRefCounters,
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(BufferViewD3D11Impl, IID_BufferViewD3D11, TBufferViewBase)
+IMPLEMENT_QUERY_INTERFACE(BufferViewD3D11Impl, IID_IBufferViewD3D11, TBufferViewBase)
 
 } // namespace Diligent

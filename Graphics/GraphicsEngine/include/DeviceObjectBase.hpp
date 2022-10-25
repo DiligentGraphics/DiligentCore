@@ -137,7 +137,7 @@ public:
             });
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceObject, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IDeviceObject, TBase)
 
     virtual const ObjectDescType& DILIGENT_CALL_TYPE GetDesc() const override final
     {

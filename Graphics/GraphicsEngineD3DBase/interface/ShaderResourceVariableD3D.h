@@ -37,7 +37,7 @@ namespace Diligent
 {
 
 // {99BCAFBF-E7E1-420A-929B-C862265FD146}
-static constexpr INTERFACE_ID IID_ShaderResourceVariableD3D =
+static constexpr INTERFACE_ID IID_IShaderResourceVariableD3D =
     {0x99bcafbf, 0xe7e1, 0x420a, {0x92, 0x9b, 0xc8, 0x62, 0x26, 0x5f, 0xd1, 0x46}};
 
 

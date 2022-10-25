@@ -50,7 +50,7 @@ public:
                              bool                          bIsDeviceInternal = false);
     ~ShaderBindingTableVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTableVk, TShaderBindingTableBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderBindingTableVk, TShaderBindingTableBase)
 
     virtual const BindingTableVk& DILIGENT_CALL_TYPE GetVkBindingTable() const override final { return m_VkBindingTable; }
 

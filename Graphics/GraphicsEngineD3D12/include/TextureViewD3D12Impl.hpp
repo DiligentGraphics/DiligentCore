@@ -53,7 +53,7 @@ public:
                          bool                       bIsDefaultView);
     ~TextureViewD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureViewD3D12, TTextureViewBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ITextureViewD3D12, TTextureViewBase)
 
     /// Implementation of ITextureViewD3D12::GetCPUDescriptorHandle().
     virtual D3D12_CPU_DESCRIPTOR_HANDLE DILIGENT_CALL_TYPE GetCPUDescriptorHandle() override final

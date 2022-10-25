@@ -63,7 +63,7 @@ public:
 
     using TBase = EngineFactoryBase<IEngineFactoryVk>;
     EngineFactoryVkImpl() :
-        TBase{IID_EngineFactoryVk}
+        TBase{IID_IEngineFactoryVk}
     {
     }
 
@@ -1274,7 +1274,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
             NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(
                 RawMemAllocator, this, EngineCI, AdapterInfo, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice) //
         };
-        pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
+        pRenderDeviceVk->QueryInterface(IID_IRenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         if (m_OnRenderDeviceCreated != nullptr)
             m_OnRenderDeviceCreated(pRenderDeviceVk);
@@ -1300,7 +1300,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
                     )};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
-            pImmediateCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CtxInd));
+            pImmediateCtxVk->QueryInterface(IID_IDeviceContext, reinterpret_cast<IObject**>(ppContexts + CtxInd));
             pRenderDeviceVk->SetImmediateContext(CtxInd, pImmediateCtxVk);
         }
 
@@ -1319,7 +1319,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
                     )};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
-            pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + NumImmediateContexts + DeferredCtx));
+            pDeferredCtxVk->QueryInterface(IID_IDeviceContext, reinterpret_cast<IObject**>(ppContexts + NumImmediateContexts + DeferredCtx));
             pRenderDeviceVk->SetDeferredContext(DeferredCtx, pDeferredCtxVk);
         }
     }
@@ -1363,7 +1363,7 @@ void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
         auto& RawMemAllocator  = GetRawAllocator();
 
         auto* pSwapChainVk = NEW_RC_OBJ(RawMemAllocator, "SwapChainVkImpl instance", SwapChainVkImpl)(SCDesc, pDeviceVk, pDeviceContextVk, Window);
-        pSwapChainVk->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+        pSwapChainVk->QueryInterface(IID_ISwapChain, reinterpret_cast<IObject**>(ppSwapChain));
     }
     catch (const std::runtime_error&)
     {

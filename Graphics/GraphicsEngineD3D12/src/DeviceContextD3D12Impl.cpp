@@ -2273,7 +2273,7 @@ void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 
     CommandListD3D12Impl* pCmdListD3D12(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)(m_pDevice, this, std::move(m_CurrCmdCtx)));
-    pCmdListD3D12->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
+    pCmdListD3D12->QueryInterface(IID_ICommandList, reinterpret_cast<IObject**>(ppCommandList));
 
     // We can't request new cmd context because we don't know the command queue type
     constexpr auto RequestNewCmdCtx = false;
@@ -2359,14 +2359,14 @@ static void AliasingBarrier(CommandContext& CmdCtx, IDeviceObject* pResourceBefo
     bool UseNVApi         = false;
     auto GetD3D12Resource = [&UseNVApi](IDeviceObject* pResource) -> ID3D12Resource* //
     {
-        if (RefCntAutoPtr<ITextureD3D12> pTexture{pResource, IID_TextureD3D12})
+        if (RefCntAutoPtr<ITextureD3D12> pTexture{pResource, IID_ITextureD3D12})
         {
             const auto* pTexD3D12 = pTexture.RawPtr<const TextureD3D12Impl>();
             if (pTexD3D12->IsUsingNVApi())
                 UseNVApi = true;
             return pTexD3D12->GetD3D12Texture();
         }
-        else if (RefCntAutoPtr<IBufferD3D12> pBuffer{pResource, IID_BufferD3D12})
+        else if (RefCntAutoPtr<IBufferD3D12> pBuffer{pResource, IID_IBufferD3D12})
         {
             return pBuffer.RawPtr<BufferD3D12Impl>()->GetD3D12Resource();
         }
@@ -2412,13 +2412,13 @@ void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, const
         }
         else
         {
-            if (RefCntAutoPtr<TextureD3D12Impl> pTextureD3D12Impl{Barrier.pResource, IID_TextureD3D12})
+            if (RefCntAutoPtr<TextureD3D12Impl> pTextureD3D12Impl{Barrier.pResource, IID_ITextureD3D12})
                 CmdCtx.TransitionResource(*pTextureD3D12Impl, Barrier);
-            else if (RefCntAutoPtr<BufferD3D12Impl> pBufferD3D12Impl{Barrier.pResource, IID_BufferD3D12})
+            else if (RefCntAutoPtr<BufferD3D12Impl> pBufferD3D12Impl{Barrier.pResource, IID_IBufferD3D12})
                 CmdCtx.TransitionResource(*pBufferD3D12Impl, Barrier);
-            else if (RefCntAutoPtr<BottomLevelASD3D12Impl> pBLASD3D12Impl{Barrier.pResource, IID_BottomLevelASD3D12})
+            else if (RefCntAutoPtr<BottomLevelASD3D12Impl> pBLASD3D12Impl{Barrier.pResource, IID_IBottomLevelASD3D12})
                 CmdCtx.TransitionResource(*pBLASD3D12Impl, Barrier);
-            else if (RefCntAutoPtr<TopLevelASD3D12Impl> pTLASD3D12Impl{Barrier.pResource, IID_TopLevelASD3D12})
+            else if (RefCntAutoPtr<TopLevelASD3D12Impl> pTLASD3D12Impl{Barrier.pResource, IID_ITopLevelASD3D12})
                 CmdCtx.TransitionResource(*pTLASD3D12Impl, Barrier);
             else
                 UNEXPECTED("Unknown resource type");
@@ -3060,7 +3060,7 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
         for (Uint32 r = 0; r < BuffBind.NumRanges; ++r)
         {
             const auto& BindRange = BuffBind.pRanges[r];
-            const auto  pMemD3D12 = RefCntAutoPtr<IDeviceMemoryD3D12>{BindRange.pMemory, IID_DeviceMemoryD3D12};
+            const auto  pMemD3D12 = RefCntAutoPtr<IDeviceMemoryD3D12>{BindRange.pMemory, IID_IDeviceMemoryD3D12};
             DEV_CHECK_ERR((BindRange.pMemory != nullptr) == (pMemD3D12 != nullptr),
                           "Failed to query IDeviceMemoryD3D12 interface from non-null memory object");
 
@@ -3084,7 +3084,7 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
         for (Uint32 r = 0; r < TexBind.NumRanges; ++r)
         {
             const auto& BindRange = TexBind.pRanges[r];
-            const auto  pMemD3D12 = RefCntAutoPtr<IDeviceMemoryD3D12>{BindRange.pMemory, IID_DeviceMemoryD3D12};
+            const auto  pMemD3D12 = RefCntAutoPtr<IDeviceMemoryD3D12>{BindRange.pMemory, IID_IDeviceMemoryD3D12};
             DEV_CHECK_ERR((BindRange.pMemory != nullptr) == (pMemD3D12 != nullptr),
                           "Failed to query IDeviceMemoryD3D12 interface from non-null memory object");
 

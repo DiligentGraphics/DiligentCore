@@ -43,7 +43,7 @@ public:
         TBase{pRefCounters}
     {}
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_HLSL2GLSLConverter, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IHLSL2GLSLConverter, TBase)
 
     virtual void DILIGENT_CALL_TYPE CreateStream(const Char*                      InputFileName,
                                                  IShaderSourceInputStreamFactory* pSourceStreamFactory,

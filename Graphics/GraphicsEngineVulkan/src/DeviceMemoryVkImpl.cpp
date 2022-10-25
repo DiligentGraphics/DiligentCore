@@ -59,7 +59,7 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
     {
         auto* pResource = MemCI.ppCompatibleResources[i];
 
-        if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_TextureVk})
+        if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_ITextureVk})
         {
             const auto* pTexVk = pTexture.RawPtr<const TextureVkImpl>();
             if (pTexVk->GetDesc().Usage != USAGE_SPARSE)
@@ -67,7 +67,7 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
 
             MemoryTypeBits &= LogicalDevice.GetImageMemoryRequirements(pTexVk->GetVkImage()).memoryTypeBits;
         }
-        else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_BufferVk})
+        else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_IBufferVk})
         {
             const auto* pBuffVk = pBuffer.RawPtr<const BufferVkImpl>();
             if (pBuffVk->GetDesc().Usage != USAGE_SPARSE)
@@ -111,7 +111,7 @@ DeviceMemoryVkImpl::~DeviceMemoryVkImpl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pages), m_Desc.ImmediateContextMask);
 }
 
-IMPLEMENT_QUERY_INTERFACE(DeviceMemoryVkImpl, IID_DeviceMemoryVk, TDeviceMemoryBase)
+IMPLEMENT_QUERY_INTERFACE(DeviceMemoryVkImpl, IID_IDeviceMemoryVk, TDeviceMemoryBase)
 
 Bool DeviceMemoryVkImpl::Resize(Uint64 NewSize)
 {
@@ -159,12 +159,12 @@ Bool DeviceMemoryVkImpl::IsCompatible(IDeviceObject* pResource) const
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
 
     uint32_t memoryTypeBits = 0;
-    if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_TextureVk})
+    if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_ITextureVk})
     {
         const auto* pTexVk = pTexture.RawPtr<const TextureVkImpl>();
         memoryTypeBits     = LogicalDevice.GetImageMemoryRequirements(pTexVk->GetVkImage()).memoryTypeBits;
     }
-    else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_BufferVk})
+    else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_IBufferVk})
     {
         const auto* pBuffVk = pBuffer.RawPtr<const BufferVkImpl>();
         memoryTypeBits      = LogicalDevice.GetBufferMemoryRequirements(pBuffVk->GetVkBuffer()).memoryTypeBits;

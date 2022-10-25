@@ -587,7 +587,7 @@ void SwapChainVkImpl::InitBuffersAndViews()
         RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
         RefCntAutoPtr<ITextureView> pRTV;
         pBackBufferTex->CreateView(RTVDesc, &pRTV);
-        m_pBackBufferRTV[i] = RefCntAutoPtr<ITextureViewVk>(pRTV, IID_TextureViewVk);
+        m_pBackBufferRTV[i] = RefCntAutoPtr<ITextureViewVk>(pRTV, IID_ITextureViewVk);
     }
 
     if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
@@ -608,7 +608,7 @@ void SwapChainVkImpl::InitBuffersAndViews()
         RefCntAutoPtr<ITexture> pDepthBufferTex;
         m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex));
         auto pDSV         = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
-        m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewVk>(pDSV, IID_TextureViewVk);
+        m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewVk>(pDSV, IID_ITextureViewVk);
     }
 }
 

@@ -108,7 +108,7 @@ void DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*           
 
     if (pFileStream)
     {
-        pFileStream->QueryInterface(IID_FileStream, reinterpret_cast<IObject**>(ppStream));
+        pFileStream->QueryInterface(IID_IFileStream, reinterpret_cast<IObject**>(ppStream));
     }
     else
     {

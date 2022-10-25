@@ -52,7 +52,7 @@ bool GetRenderDeviceD3D12MaxShaderVersion(IRenderDevice* pDevice, ShaderVersion&
         return false;
     }
 
-    RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12{pDevice, IID_RenderDeviceD3D12};
+    RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12{pDevice, IID_IRenderDeviceD3D12};
     if (!pDeviceD3D12)
     {
         UNEXPECTED("Failed to query the IRenderDeviceD3D12 interface");

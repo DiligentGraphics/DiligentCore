@@ -39,7 +39,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {E56F5755-FE5E-496C-BFA7-BCD535360FF7}
-static const INTERFACE_ID IID_BottomLevelAS =
+static const INTERFACE_ID IID_IBottomLevelAS =
     {0xe56f5755, 0xfe5e, 0x496c, {0xbf, 0xa7, 0xbc, 0xd5, 0x35, 0x36, 0xf, 0xf7}};
 
 // clang-format off

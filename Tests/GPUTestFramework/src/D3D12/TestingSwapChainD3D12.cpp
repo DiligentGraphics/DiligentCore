@@ -53,7 +53,7 @@ TestingSwapChainD3D12::TestingSwapChainD3D12(IReferenceCounters*  pRefCounters,
         SCDesc //
     }
 {
-    RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{pDevice, IID_RenderDeviceD3D12};
+    RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{pDevice, IID_IRenderDeviceD3D12};
 
     auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
@@ -225,7 +225,7 @@ void TestingSwapChainD3D12::TakeSnapshot(ITexture* pCopyFrom)
     }
     else
     {
-        RefCntAutoPtr<ITextureD3D12> pSrcTexD3D12{pCopyFrom, IID_TextureD3D12};
+        RefCntAutoPtr<ITextureD3D12> pSrcTexD3D12{pCopyFrom, IID_ITextureD3D12};
         VERIFY_EXPR(pSrcTexD3D12->GetD3D12ResourceState() == D3D12_RESOURCE_STATE_COPY_SOURCE);
         VERIFY_EXPR(GetDesc().Width == pSrcTexD3D12->GetDesc().Width);
         VERIFY_EXPR(GetDesc().Height == pSrcTexD3D12->GetDesc().Height);
@@ -263,7 +263,7 @@ void CreateTestingSwapChainD3D12(IRenderDevice*       pDevice,
                                  ISwapChain**         ppSwapChain)
 {
     TestingSwapChainD3D12* pTestingSC(MakeNewRCObj<TestingSwapChainD3D12>()(pDevice, pContext, SCDesc));
-    pTestingSC->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+    pTestingSC->QueryInterface(IID_ISwapChain, reinterpret_cast<IObject**>(ppSwapChain));
 }
 
 } // namespace Testing

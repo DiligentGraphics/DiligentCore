@@ -166,7 +166,7 @@ void VerifyComputePSO(IPipelineState* pPSO, bool UseSignature = false)
     }
     ASSERT_TRUE(pSRB);
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_ITestingSwapChain};
     ASSERT_NE(pTestingSwapChain, nullptr);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DUAV")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
 

@@ -88,7 +88,7 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
     RTVDesc.Format   = m_SwapChainDesc.ColorBufferFormat;
     RefCntAutoPtr<ITextureView> pRTV;
     pBackBuffer->CreateView(RTVDesc, &pRTV);
-    m_pRenderTargetView = RefCntAutoPtr<ITextureViewD3D11>(pRTV, IID_TextureViewD3D11);
+    m_pRenderTargetView = RefCntAutoPtr<ITextureViewD3D11>(pRTV, IID_ITextureViewD3D11);
 
     if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
     {
@@ -110,11 +110,11 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
         RefCntAutoPtr<ITexture> ptex2DDepthBuffer;
         m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, &ptex2DDepthBuffer);
         auto* pDSV          = ptex2DDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
-        m_pDepthStencilView = RefCntAutoPtr<ITextureViewD3D11>{pDSV, IID_TextureViewD3D11};
+        m_pDepthStencilView = RefCntAutoPtr<ITextureViewD3D11>{pDSV, IID_ITextureViewD3D11};
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(SwapChainD3D11Impl, IID_SwapChainD3D11, TSwapChainBase)
+IMPLEMENT_QUERY_INTERFACE(SwapChainD3D11Impl, IID_ISwapChainD3D11, TSwapChainBase)
 
 void SwapChainD3D11Impl::Present(Uint32 SyncInterval)
 {

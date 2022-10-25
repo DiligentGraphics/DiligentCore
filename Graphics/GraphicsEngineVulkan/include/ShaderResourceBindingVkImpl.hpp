@@ -54,7 +54,7 @@ public:
                                 PipelineResourceSignatureVkImpl* pPRS);
     ~ShaderResourceBindingVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBindingVk, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderResourceBindingVk, TBase)
 };
 
 } // namespace Diligent

@@ -67,7 +67,7 @@ public:
         ValidatePipelineStateCacheCreateInfo(CreateInfo);
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineStateCache, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IPipelineStateCache, TDeviceObjectBase)
 };
 
 } // namespace Diligent

@@ -152,8 +152,8 @@ private:
 
     void SetMemory(IDeviceMemory* pNewMemory)
     {
-        auto pNewMemD3D11 = RefCntAutoPtr<IDeviceMemoryD3D11>{pNewMemory, IID_DeviceMemoryD3D11};
-        DEV_CHECK_ERR(pNewMemory == nullptr || pNewMemD3D11, "Failed to query IID_DeviceMemoryD3D11 interface");
+        auto pNewMemD3D11 = RefCntAutoPtr<IDeviceMemoryD3D11>{pNewMemory, IID_IDeviceMemoryD3D11};
+        DEV_CHECK_ERR(pNewMemory == nullptr || pNewMemD3D11, "Failed to query IID_IDeviceMemoryD3D11 interface");
         if (pMemory != nullptr && pNewMemD3D11 != nullptr && pMemory != pNewMemD3D11)
         {
             LOG_ERROR_MESSAGE("Binding multiple memory objects to a single resource is not allowed in Direct3D11.");

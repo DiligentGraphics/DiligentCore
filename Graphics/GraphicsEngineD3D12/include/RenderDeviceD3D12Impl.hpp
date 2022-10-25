@@ -86,7 +86,7 @@ public:
                           ICommandQueueD3D12**         ppCmdQueues) noexcept(false);
     ~RenderDeviceD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderDeviceD3D12, TRenderDeviceBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IRenderDeviceD3D12, TRenderDeviceBase)
 
     /// Implementation of IRenderDevice::CreateGraphicsPipelineState() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;

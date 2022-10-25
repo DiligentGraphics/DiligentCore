@@ -154,7 +154,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
             if (infoLogLen > 0)
                 memcpy(DataPtr, infoLog.data(), infoLogLen);
             memcpy(DataPtr + infoLogLen, FullSource.data(), FullSource.length() + 1);
-            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
+            pOutputDataBlob->QueryInterface(IID_IDataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
         }
         else
         {
@@ -191,7 +191,7 @@ ShaderGLImpl::~ShaderGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(ShaderGLImpl, IID_ShaderGL, TShaderBase)
+IMPLEMENT_QUERY_INTERFACE(ShaderGLImpl, IID_IShaderGL, TShaderBase)
 
 
 GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram)

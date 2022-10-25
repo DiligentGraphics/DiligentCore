@@ -384,7 +384,7 @@ static bool VerifyAliasingBarrierDesc(const StateTransitionDesc& Barrier)
         if (pResource == nullptr)
             return RESOURCE_DIM_UNDEFINED;
 
-        if (RefCntAutoPtr<ITexture> pTexture{pResource, IID_Texture})
+        if (RefCntAutoPtr<ITexture> pTexture{pResource, IID_ITexture})
         {
             const auto& TexDesc = pTexture->GetDesc();
             DEV_CHECK_ERR(TexDesc.Usage == USAGE_SPARSE,
@@ -394,7 +394,7 @@ static bool VerifyAliasingBarrierDesc(const StateTransitionDesc& Barrier)
 
             return TexDesc.Type;
         }
-        else if (RefCntAutoPtr<IBuffer> pBuffer{pResource, IID_Buffer})
+        else if (RefCntAutoPtr<IBuffer> pBuffer{pResource, IID_IBuffer})
         {
             const auto& BuffDesc = pBuffer->GetDesc();
 
@@ -453,7 +453,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
     RESOURCE_STATE OldState             = RESOURCE_STATE_UNKNOWN;
     Uint64         ImmediateContextMask = 0;
 
-    if (RefCntAutoPtr<ITexture> pTexture{Barrier.pResource, IID_Texture})
+    if (RefCntAutoPtr<ITexture> pTexture{Barrier.pResource, IID_ITexture})
     {
         const auto& TexDesc  = pTexture->GetDesc();
         ImmediateContextMask = TexDesc.ImmediateContextMask;
@@ -490,7 +490,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
                                         "failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device.");
         }
     }
-    else if (RefCntAutoPtr<IBuffer> pBuffer{Barrier.pResource, IID_Buffer})
+    else if (RefCntAutoPtr<IBuffer> pBuffer{Barrier.pResource, IID_IBuffer})
     {
         const auto& BuffDesc = pBuffer->GetDesc();
         ImmediateContextMask = BuffDesc.ImmediateContextMask;
@@ -499,7 +499,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
         CHECK_STATE_TRANSITION_DESC(OldState != RESOURCE_STATE_UNKNOWN, "the state of buffer '", BuffDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier.");
         CHECK_STATE_TRANSITION_DESC(VerifyResourceStates(OldState, false), "invalid old state specified for buffer '", BuffDesc.Name, "'.");
     }
-    else if (RefCntAutoPtr<IBottomLevelAS> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
+    else if (RefCntAutoPtr<IBottomLevelAS> pBottomLevelAS{Barrier.pResource, IID_IBottomLevelAS})
     {
         const auto& BLASDesc = pBottomLevelAS->GetDesc();
         ImmediateContextMask = BLASDesc.ImmediateContextMask;
@@ -509,7 +509,7 @@ bool VerifyStateTransitionDesc(const IRenderDevice*       pDevice,
                                     "invalid new state specified for BLAS '", BLASDesc.Name, "'.");
         CHECK_STATE_TRANSITION_DESC(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "split barriers are not supported for BLAS.");
     }
-    else if (RefCntAutoPtr<ITopLevelAS> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
+    else if (RefCntAutoPtr<ITopLevelAS> pTopLevelAS{Barrier.pResource, IID_ITopLevelAS})
     {
         const auto& TLASDesc = pTopLevelAS->GetDesc();
         ImmediateContextMask = TLASDesc.ImmediateContextMask;

@@ -50,7 +50,7 @@ public:
                                 bool                          bIsDeviceInternal = false);
     ~ShaderBindingTableD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTableD3D12, TShaderBindingTableBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderBindingTableD3D12, TShaderBindingTableBase)
 
     virtual const D3D12_DISPATCH_RAYS_DESC& DILIGENT_CALL_TYPE GetD3D12BindingTable() const override final { return m_d3d12DispatchDesc; }
 

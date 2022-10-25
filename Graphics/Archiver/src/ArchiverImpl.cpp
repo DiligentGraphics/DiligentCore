@@ -258,17 +258,17 @@ bool AddObjectToArchive(IfaceType*                                              
 
 Bool ArchiverImpl::AddShader(IShader* pShader)
 {
-    return AddObjectToArchive<SerializedShaderImpl>(pShader, "Shader", IID_SerializedShader, m_ShadersMtx, m_Shaders);
+    return AddObjectToArchive<SerializedShaderImpl>(pShader, "Shader", IID_ISerializedShader, m_ShadersMtx, m_Shaders);
 }
 
 bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS)
 {
-    return AddObjectToArchive<SerializedResourceSignatureImpl>(pPRS, "Pipeline resource signature", IID_SerializedResourceSignature, m_SignaturesMtx, m_Signatures);
+    return AddObjectToArchive<SerializedResourceSignatureImpl>(pPRS, "Pipeline resource signature", IID_ISerializedResourceSignature, m_SignaturesMtx, m_Signatures);
 }
 
 bool ArchiverImpl::AddRenderPass(IRenderPass* pRP)
 {
-    return AddObjectToArchive<SerializedRenderPassImpl>(pRP, "Render pass", IID_SerializedRenderPass, m_RenderPassesMtx, m_RenderPasses);
+    return AddObjectToArchive<SerializedRenderPassImpl>(pRP, "Render pass", IID_ISerializedRenderPass, m_RenderPassesMtx, m_RenderPasses);
 }
 
 Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
@@ -277,7 +277,7 @@ Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
     if (pPSO == nullptr)
         return false;
 
-    RefCntAutoPtr<SerializedPipelineStateImpl> pSerializedPSO{pPSO, IID_SerializedPipelineState};
+    RefCntAutoPtr<SerializedPipelineStateImpl> pSerializedPSO{pPSO, IID_ISerializedPipelineState};
     if (!pSerializedPSO)
     {
         UNEXPECTED("Pipeline state '", pPSO->GetDesc().Name, "' was not created by a serialization device.");

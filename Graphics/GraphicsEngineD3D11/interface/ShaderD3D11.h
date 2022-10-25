@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {C513E83E-B037-405B-8B49-BF8F5C220DEE}
-static const struct INTERFACE_ID IID_ShaderD3D11 =
+static const struct INTERFACE_ID IID_IShaderD3D11 =
     {0xc513e83e, 0xb037, 0x405b, {0x8b, 0x49, 0xbf, 0x8f, 0x5c, 0x22, 0xd, 0xee}};
 
 #define DILIGENT_INTERFACE_NAME IShaderD3D11

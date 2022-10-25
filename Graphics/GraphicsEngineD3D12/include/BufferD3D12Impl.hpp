@@ -63,7 +63,7 @@ public:
                     ID3D12Resource*            pd3d12Buffer);
     ~BufferD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferD3D12, TBufferBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IBufferD3D12, TBufferBase)
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpVerifyDynamicAllocation(const DeviceContextD3D12Impl* pCtx) const;

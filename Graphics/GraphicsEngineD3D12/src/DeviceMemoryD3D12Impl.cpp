@@ -92,7 +92,7 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
         if (pResource == nullptr)
             continue;
 
-        if (RefCntAutoPtr<ITextureD3D12> pTexture{pResource, IID_TextureD3D12})
+        if (RefCntAutoPtr<ITextureD3D12> pTexture{pResource, IID_ITextureD3D12})
         {
             const auto* pTexD3D12Impl = pTexture.RawPtr<const TextureD3D12Impl>();
             const auto& TexDesc       = pTexD3D12Impl->GetDesc();
@@ -117,7 +117,7 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
             if (TexDesc.BindFlags & BIND_UNORDERED_ACCESS)
                 HeapFlags |= D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS;
         }
-        else if (RefCntAutoPtr<IBufferD3D12> pBuffer{pResource, IID_BufferD3D12})
+        else if (RefCntAutoPtr<IBufferD3D12> pBuffer{pResource, IID_IBufferD3D12})
         {
             const auto& BuffDesc = pBuffer.RawPtr<const BufferD3D12Impl>()->GetDesc();
 
@@ -200,7 +200,7 @@ DeviceMemoryD3D12Impl::~DeviceMemoryD3D12Impl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pages), m_Desc.ImmediateContextMask);
 }
 
-IMPLEMENT_QUERY_INTERFACE(DeviceMemoryD3D12Impl, IID_DeviceMemoryD3D12, TDeviceMemoryBase)
+IMPLEMENT_QUERY_INTERFACE(DeviceMemoryD3D12Impl, IID_IDeviceMemoryD3D12, TDeviceMemoryBase)
 
 
 Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)

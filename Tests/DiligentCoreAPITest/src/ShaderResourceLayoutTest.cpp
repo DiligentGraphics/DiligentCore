@@ -966,7 +966,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     ASSERT_NE(pPSO, nullptr);
     ASSERT_NE(pSRB, nullptr);
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_ITestingSwapChain};
     ASSERT_TRUE(pTestingSwapChain);
     SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_tex2DUAV", Set, pTestingSwapChain->GetCurrentBackBufferUAV());
 
@@ -1155,7 +1155,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     ASSERT_NE(pPSO, nullptr);
     ASSERT_NE(pSRB, nullptr);
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_ITestingSwapChain};
     ASSERT_TRUE(pTestingSwapChain);
     SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_tex2DUAV", Set, pTestingSwapChain->GetCurrentBackBufferUAV());
 

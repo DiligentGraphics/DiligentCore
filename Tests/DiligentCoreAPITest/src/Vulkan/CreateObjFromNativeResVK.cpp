@@ -48,8 +48,8 @@ namespace Testing
 void TestCreateObjFromNativeResVK::CreateTexture(Diligent::ITexture* pTexture)
 {
 #if VULKAN_SUPPORTED
-    RefCntAutoPtr<IRenderDeviceVk> pDeviceVk(m_pDevice, IID_RenderDeviceVk);
-    RefCntAutoPtr<ITextureVk>      pTextureVk(pTexture, IID_TextureVk);
+    RefCntAutoPtr<IRenderDeviceVk> pDeviceVk(m_pDevice, IID_IRenderDeviceVk);
+    RefCntAutoPtr<ITextureVk>      pTextureVk(pTexture, IID_ITextureVk);
     ASSERT_NE(pDeviceVk, nullptr);
     ASSERT_NE(pTextureVk, nullptr);
 
@@ -67,7 +67,7 @@ void TestCreateObjFromNativeResVK::CreateTexture(Diligent::ITexture* pTexture)
     const auto& TestTexDesc = pAttachedTexture->GetDesc();
     EXPECT_EQ(TestTexDesc, SrcTexDesc);
 
-    RefCntAutoPtr<ITextureVk> pAttachedTextureVk(pAttachedTexture, IID_TextureVk);
+    RefCntAutoPtr<ITextureVk> pAttachedTextureVk(pAttachedTexture, IID_ITextureVk);
     ASSERT_NE(pAttachedTextureVk, nullptr);
     EXPECT_EQ(pAttachedTextureVk->GetVkImage(), VkHandle);
     EXPECT_EQ(BitCast<VkImage>(pAttachedTextureVk->GetNativeHandle()), VkHandle);
@@ -77,8 +77,8 @@ void TestCreateObjFromNativeResVK::CreateTexture(Diligent::ITexture* pTexture)
 void TestCreateObjFromNativeResVK::CreateBuffer(Diligent::IBuffer* pBuffer)
 {
 #if VULKAN_SUPPORTED
-    RefCntAutoPtr<IRenderDeviceVk> pDeviceVk(m_pDevice, IID_RenderDeviceVk);
-    RefCntAutoPtr<IBufferVk>       pBufferVk(pBuffer, IID_BufferVk);
+    RefCntAutoPtr<IRenderDeviceVk> pDeviceVk(m_pDevice, IID_IRenderDeviceVk);
+    RefCntAutoPtr<IBufferVk>       pBufferVk(pBuffer, IID_IBufferVk);
     ASSERT_NE(pDeviceVk, nullptr);
     ASSERT_NE(pBufferVk, nullptr);
 
@@ -94,7 +94,7 @@ void TestCreateObjFromNativeResVK::CreateBuffer(Diligent::IBuffer* pBuffer)
     const auto& TestBufferDesc = pBufferFromNativeVkHandle->GetDesc();
     EXPECT_EQ(TestBufferDesc, SrcBuffDesc);
 
-    RefCntAutoPtr<IBufferVk> pTestBufferVk(pBufferFromNativeVkHandle, IID_BufferVk);
+    RefCntAutoPtr<IBufferVk> pTestBufferVk(pBufferFromNativeVkHandle, IID_IBufferVk);
     ASSERT_NE(pTestBufferVk, nullptr);
     EXPECT_EQ(pTestBufferVk->GetVkBuffer(), VkBufferHandle);
     EXPECT_EQ(BitCast<VkBuffer>(pTestBufferVk->GetNativeHandle()), VkBufferHandle);

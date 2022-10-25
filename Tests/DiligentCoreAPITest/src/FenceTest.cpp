@@ -132,7 +132,7 @@ TEST_F(FenceTest, GPUWaitForCPU)
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pSwapChain = pEnv->GetSwapChain();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Constants 1";
@@ -252,7 +252,7 @@ TEST_F(FenceTest, ContextWaitForAnotherContext)
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
     const float4 ConstData = float4(1.2f, 0.25f, 1.1f, 0.14f);
 

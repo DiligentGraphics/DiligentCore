@@ -71,7 +71,7 @@ public:
             return;
 
         *ppInterface = nullptr;
-        if (IID == IID_Unknown || IID == m_FactoryIID || IID == IID_EngineFactory)
+        if (IID == IID_Unknown || IID == m_FactoryIID || IID == IID_IEngineFactory)
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();
@@ -121,7 +121,7 @@ protected:
         RefCntAutoPtr<DearchiverImplType> pDearchiver{NEW_RC_OBJ(GetRawAllocator(), "Dearchiver instance", DearchiverImplType)(CreateInfo)};
 
         if (pDearchiver)
-            pDearchiver->QueryInterface(IID_Dearchiver, reinterpret_cast<IObject**>(ppDearchiver));
+            pDearchiver->QueryInterface(IID_IDearchiver, reinterpret_cast<IObject**>(ppDearchiver));
     }
 
 private:

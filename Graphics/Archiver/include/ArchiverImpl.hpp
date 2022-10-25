@@ -59,7 +59,7 @@ public:
     ArchiverImpl(IReferenceCounters* pRefCounters, SerializationDeviceImpl* pDevice);
     ~ArchiverImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Archiver, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IArchiver, TBase)
 
     /// Implementation of IArchiver::SerializeToBlob().
     virtual Bool DILIGENT_CALL_TYPE SerializeToBlob(IDataBlob** ppBlob) override final;

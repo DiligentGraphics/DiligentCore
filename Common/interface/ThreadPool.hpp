@@ -57,7 +57,7 @@ enum ASYNC_TASK_STATUS
 
 
 // {B06D1DDA-AEA0-4CFD-969A-C8E2011DC294}
-static const INTERFACE_ID IID_AsyncTask =
+static const INTERFACE_ID IID_IAsyncTask =
     {0xb06d1dda, 0xaea0, 0x4cfd, {0x96, 0x9a, 0xc8, 0xe2, 0x1, 0x1d, 0xc2, 0x94}};
 
 /// Asynchronous task interface
@@ -116,7 +116,7 @@ public:
 
 
 // {8BB92B5E-3EAB-4CC3-9DA2-5470DBBA7120}
-static const INTERFACE_ID IID_ThreadPool =
+static const INTERFACE_ID IID_IThreadPool =
     {0x8bb92b5e, 0x3eab, 0x4cc3, {0x9d, 0xa2, 0x54, 0x70, 0xdb, 0xba, 0x71, 0x20}};
 
 /// Thread pool interface
@@ -277,7 +277,7 @@ public:
     }
     virtual ~AsyncTaskBase() = 0;
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_AsyncTask, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IAsyncTask, TBase)
 
     virtual void Cancel() override
     {

@@ -112,7 +112,7 @@ public:
         ClearGeometry();
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelAS, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IBottomLevelAS, TDeviceObjectBase)
 
     // Maps geometry that was used in a build operation to the geometry description.
     // Returns the geometry index in geometry description.

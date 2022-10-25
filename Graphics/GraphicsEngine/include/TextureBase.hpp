@@ -142,7 +142,7 @@ public:
             this->m_Desc.BindFlags |= BIND_SHADER_RESOURCE;
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Texture, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ITexture, TDeviceObjectBase)
 
     /// Implementation of ITexture::CreateView(); calls CreateViewInternal() virtual function that
     /// creates texture view for the specific engine implementation.

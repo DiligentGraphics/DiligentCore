@@ -330,7 +330,7 @@ void DILIGENT_CALL_TYPE SerializedPipelineStateImpl::QueryInterface(const INTERF
 {
     if (ppInterface == nullptr)
         return;
-    if (IID == IID_SerializedPipelineState || IID == IID_PipelineState)
+    if (IID == IID_ISerializedPipelineState || IID == IID_IPipelineState)
     {
         *ppInterface = this;
         (*ppInterface)->AddRef();

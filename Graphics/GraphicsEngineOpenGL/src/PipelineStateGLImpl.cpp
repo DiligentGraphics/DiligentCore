@@ -383,7 +383,7 @@ void PipelineStateGLImpl::Destruct()
     TPipelineStateBase::Destruct();
 }
 
-IMPLEMENT_QUERY_INTERFACE(PipelineStateGLImpl, IID_PipelineStateGL, TPipelineStateBase)
+IMPLEMENT_QUERY_INTERFACE(PipelineStateGLImpl, IID_IPipelineStateGL, TPipelineStateBase)
 
 SHADER_TYPE PipelineStateGLImpl::GetShaderStageType(Uint32 Index) const
 {

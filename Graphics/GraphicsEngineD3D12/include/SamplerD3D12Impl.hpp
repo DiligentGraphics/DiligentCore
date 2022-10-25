@@ -48,7 +48,7 @@ public:
                      const SamplerDesc&     SamplerDesc);
     ~SamplerD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SamplerD3D12, TSamplerBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ISamplerD3D12, TSamplerBase)
 
     /// Implementation of ISamplerD3D12::GetCPUDescriptorHandle().
     virtual D3D12_CPU_DESCRIPTOR_HANDLE DILIGENT_CALL_TYPE GetCPUDescriptorHandle() override { return m_Descriptor.GetCpuHandle(); }

@@ -86,7 +86,7 @@ public:
 
     using TBase = EngineFactoryBase<IEngineFactoryOpenGL>;
     EngineFactoryOpenGLImpl() :
-        TBase{IID_EngineFactoryOpenGL}
+        TBase{IID_IEngineFactoryOpenGL}
     {}
 
     virtual void DILIGENT_CALL_TYPE CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
@@ -210,7 +210,7 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
                 RawMemAllocator, this, EngineCI, &SCDesc //
                 )                                        //
         };
-        pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
+        pRenderDeviceOpenGL->QueryInterface(IID_IRenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         DeviceContextGLImpl* pDeviceContextOpenGL{
             NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(
@@ -225,14 +225,14 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
         };
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
-        pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));
+        pDeviceContextOpenGL->QueryInterface(IID_IDeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));
         pRenderDeviceOpenGL->SetImmediateContext(0, pDeviceContextOpenGL);
 
         // Need to create immediate context first
         pRenderDeviceOpenGL->InitTexRegionRender();
 
         TSwapChain* pSwapChainGL = NEW_RC_OBJ(RawMemAllocator, "SwapChainGLImpl instance", TSwapChain)(EngineCI, SCDesc, pRenderDeviceOpenGL, pDeviceContextOpenGL);
-        pSwapChainGL->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+        pSwapChainGL->QueryInterface(IID_ISwapChain, reinterpret_cast<IObject**>(ppSwapChain));
 
         pDeviceContextOpenGL->SetSwapChain(pSwapChainGL);
     }
@@ -311,7 +311,7 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
                 RawMemAllocator, this, EngineCI //
                 )                               //
         };
-        pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
+        pRenderDeviceOpenGL->QueryInterface(IID_IRenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         DeviceContextGLImpl* pDeviceContextOpenGL{
             NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(
@@ -326,7 +326,7 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
         };
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceOpenGL will
         // keep a weak reference to the context
-        pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));
+        pDeviceContextOpenGL->QueryInterface(IID_IDeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));
         pRenderDeviceOpenGL->SetImmediateContext(0, pDeviceContextOpenGL);
     }
     catch (const std::runtime_error&)
@@ -375,7 +375,7 @@ void EngineFactoryOpenGLImpl::CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppC
     LOG_ERROR_MESSAGE("Unable to create HLSL2GLSL converter: HLSL support is disabled.");
 #else
     HLSL2GLSLConverterObject* pConverter(NEW_RC_OBJ(GetRawAllocator(), "HLSL2GLSLConverterObject instance", HLSL2GLSLConverterObject)());
-    pConverter->QueryInterface(IID_HLSL2GLSLConverter, reinterpret_cast<IObject**>(ppConverter));
+    pConverter->QueryInterface(IID_IHLSL2GLSLConverter, reinterpret_cast<IObject**>(ppConverter));
 #endif
 }
 

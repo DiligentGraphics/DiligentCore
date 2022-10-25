@@ -148,7 +148,7 @@ void ArchiverFactoryImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppIn
         return;
 
     *ppInterface = nullptr;
-    if (IID == IID_Unknown || IID == IID_ArchiverFactory)
+    if (IID == IID_Unknown || IID == IID_IArchiverFactory)
     {
         *ppInterface = this;
         (*ppInterface)->AddRef();
@@ -166,7 +166,7 @@ void ArchiverFactoryImpl::CreateArchiver(ISerializationDevice* pDevice, IArchive
     {
         auto& RawMemAllocator = GetRawAllocator();
         auto* pArchiverImpl(NEW_RC_OBJ(RawMemAllocator, "Archiver instance", ArchiverImpl)(ClassPtrCast<SerializationDeviceImpl>(pDevice)));
-        pArchiverImpl->QueryInterface(IID_Archiver, reinterpret_cast<IObject**>(ppArchiver));
+        pArchiverImpl->QueryInterface(IID_IArchiver, reinterpret_cast<IObject**>(ppArchiver));
     }
     catch (...)
     {
@@ -185,7 +185,7 @@ void ArchiverFactoryImpl::CreateSerializationDevice(const SerializationDeviceCre
     {
         auto& RawMemAllocator = GetRawAllocator();
         auto* pDeviceImpl(NEW_RC_OBJ(RawMemAllocator, "Serialization device instance", SerializationDeviceImpl)(CreateInfo));
-        pDeviceImpl->QueryInterface(IID_SerializationDevice, reinterpret_cast<IObject**>(ppDevice));
+        pDeviceImpl->QueryInterface(IID_ISerializationDevice, reinterpret_cast<IObject**>(ppDevice));
     }
     catch (...)
     {

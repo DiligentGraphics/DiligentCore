@@ -950,7 +950,7 @@ typedef struct TilePipelineStateCreateInfo TilePipelineStateCreateInfo;
 
 
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
-static const struct INTERFACE_ID IID_PipelineState =
+static const struct INTERFACE_ID IID_IPipelineState =
     {0x6084ae5, 0x6a71, 0x4fe8, {0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c}};
 
 #define DILIGENT_INTERFACE_NAME IPipelineState

@@ -125,7 +125,7 @@ TEST(ClearRenderTargetTest, AsRenderTarget)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
     constexpr float ClearColor[] = {0.25f, 0.5f, 0.75f, 1.0f};
 
@@ -164,7 +164,7 @@ TEST(ClearRenderTargetTest, AsAttachment)
 
     constexpr float ClearColor[] = {0.75f, 0.1875f, 0.375f, 1.0f};
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -238,7 +238,7 @@ TEST(ClearRenderTargetTest, LoadOpClear)
 
     constexpr float ClearColor[] = {0.875f, 0.3125, 0.4375, 1.0f};
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();

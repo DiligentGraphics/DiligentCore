@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {8FEACBDA-89D6-4509-88E6-D55DD06220C5}
-static const INTERFACE_ID IID_FenceGL =
+static const INTERFACE_ID IID_IFenceGL =
     {0x8feacbda, 0x89d6, 0x4509, {0x88, 0xe6, 0xd5, 0x5d, 0xd0, 0x62, 0x20, 0xc5}};
 
 #define DILIGENT_INTERFACE_NAME IFenceGL

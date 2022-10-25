@@ -76,7 +76,7 @@ public:
         this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceMemory, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IDeviceMemory, TDeviceObjectBase)
 
     void DvpVerifyResize(Uint64 NewSize) const
     {

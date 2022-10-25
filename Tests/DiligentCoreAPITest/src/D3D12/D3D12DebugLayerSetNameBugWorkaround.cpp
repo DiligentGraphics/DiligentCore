@@ -53,7 +53,7 @@ D3D12DebugLayerSetNameBugWorkaround::D3D12DebugLayerSetNameBugWorkaround(IRender
     if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
         return;
 
-    RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12(pDevice, IID_RenderDeviceD3D12);
+    RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12(pDevice, IID_IRenderDeviceD3D12);
     VERIFY_EXPR(pDeviceD3D12);
     auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
 

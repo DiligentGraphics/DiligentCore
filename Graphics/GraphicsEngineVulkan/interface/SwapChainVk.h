@@ -36,7 +36,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {22A39881-5EC5-4A9C-8395-90215F04A5CC}
-static const INTERFACE_ID IID_SwapChainVk =
+static const INTERFACE_ID IID_ISwapChainVk =
     {0x22a39881, 0x5ec5, 0x4a9c, {0x83, 0x95, 0x90, 0x21, 0x5f, 0x4, 0xa5, 0xcc}};
 
 #define DILIGENT_INTERFACE_NAME ISwapChainVk

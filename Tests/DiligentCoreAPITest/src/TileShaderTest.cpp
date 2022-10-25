@@ -66,7 +66,7 @@ TEST(TileShaderTest, DrawQuad)
     auto*       pContext   = pEnv->GetDeviceContext();
     const auto& SCDesc     = pSwapChain->GetDesc();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();

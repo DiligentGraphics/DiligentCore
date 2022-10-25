@@ -138,7 +138,7 @@ void TestingSwapChainGL::TakeSnapshot(ITexture* pCopyFrom)
     glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
     if (pCopyFrom != nullptr)
     {
-        RefCntAutoPtr<ITextureGL> pSrcTexGL{pCopyFrom, IID_TextureGL};
+        RefCntAutoPtr<ITextureGL> pSrcTexGL{pCopyFrom, IID_ITextureGL};
         VERIFY_EXPR(pSrcTexGL);
 
         glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pSrcTexGL->GetGLTextureHandle(), 0);
@@ -166,7 +166,7 @@ void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
     try
     {
         TestingSwapChainGL* pTestingSC(MakeNewRCObj<TestingSwapChainGL>()(pDevice, pContext, SCDesc));
-        pTestingSC->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+        pTestingSC->QueryInterface(IID_ISwapChain, reinterpret_cast<IObject**>(ppSwapChain));
     }
     catch (...)
     {

@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {CF5522EF-8116-4D76-ADF1-5CC8FB31FF66}
-static const INTERFACE_ID IID_TextureD3D12 =
+static const INTERFACE_ID IID_ITextureD3D12 =
     {0xcf5522ef, 0x8116, 0x4d76, {0xad, 0xf1, 0x5c, 0xc8, 0xfb, 0x31, 0xff, 0x66}};
 
 #define DILIGENT_INTERFACE_NAME ITextureD3D12

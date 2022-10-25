@@ -661,7 +661,7 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
         pSerializationDevice->CreateShader(VertexShaderCI, ShaderArchiveInfo{GetDeviceBits()}, ppSerializedVS);
         ASSERT_NE(*ppSerializedVS, nullptr);
 
-        RefCntAutoPtr<ISerializedShader> pSerializedVS{*ppSerializedVS, IID_SerializedShader};
+        RefCntAutoPtr<ISerializedShader> pSerializedVS{*ppSerializedVS, IID_ISerializedShader};
         ASSERT_NE(pSerializedVS, nullptr);
         const auto Bits = GetDeviceBits();
         for (const auto Type : {RENDER_DEVICE_TYPE_D3D11, RENDER_DEVICE_TYPE_D3D12, RENDER_DEVICE_TYPE_VULKAN})
@@ -687,7 +687,7 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
         pSerializationDevice->CreateShader(PixelShaderCI, ShaderArchiveInfo{GetDeviceBits()}, ppSerializedPS);
         ASSERT_NE(*ppSerializedPS, nullptr);
 
-        RefCntAutoPtr<ISerializedShader> pSerializedPS{*ppSerializedPS, IID_SerializedShader};
+        RefCntAutoPtr<ISerializedShader> pSerializedPS{*ppSerializedPS, IID_ISerializedShader};
         ASSERT_NE(pSerializedPS, nullptr);
         const auto Bits = GetDeviceBits();
         for (const auto Type : {RENDER_DEVICE_TYPE_D3D11, RENDER_DEVICE_TYPE_D3D12, RENDER_DEVICE_TYPE_VULKAN})
@@ -891,11 +891,11 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 for (auto Flags = ArchiveInfo.DeviceFlags; Flags != ARCHIVE_DEVICE_DATA_FLAG_NONE;)
                 {
                     const auto Flag        = ExtractLSB(Flags);
-                    const auto ShaderCount = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCount(Flag);
+                    const auto ShaderCount = pSerializedPSO.Cast<ISerializedPipelineState>(IID_ISerializedPipelineState)->GetPatchedShaderCount(Flag);
                     EXPECT_EQ(ShaderCount, 2u);
                     for (Uint32 ShaderId = 0; ShaderId < ShaderCount; ++ShaderId)
                     {
-                        auto ShaderCI = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCreateInfo(Flag, ShaderId);
+                        auto ShaderCI = pSerializedPSO.Cast<ISerializedPipelineState>(IID_ISerializedPipelineState)->GetPatchedShaderCreateInfo(Flag, ShaderId);
 
                         EXPECT_TRUE(ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX || ShaderCI.Desc.ShaderType == SHADER_TYPE_PIXEL);
                         const auto& RefCI = ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX ? VertexShaderCI : PixelShaderCI;
@@ -1115,7 +1115,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     }
 
     // Draw reference
-    if (RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain})
+    if (RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_ITestingSwapChain})
     {
         RenderGraphicsPSOTestImage(pContext, pRefPSOWithSign, pRenderPass, pSRB, pFramebuffer, pVB);
 
@@ -1296,7 +1296,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     auto*       pSwapChain = pEnv->GetSwapChain();
     const auto& SCDesc     = pSwapChain->GetDesc();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_ITestingSwapChain};
     if (!pTestingSwapChain)
     {
         GTEST_SKIP() << "Compute shader test requires testing swap chain";
@@ -1489,7 +1489,7 @@ TEST(ArchiveTest, RayTracingPipeline)
 
     auto* pSwapChain = pEnv->GetSwapChain();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_ITestingSwapChain};
     if (!pTestingSwapChain)
     {
         GTEST_SKIP() << "Ray tracing shader test requires testing swap chain";

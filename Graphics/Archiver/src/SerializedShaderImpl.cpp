@@ -211,7 +211,7 @@ void DILIGENT_CALL_TYPE SerializedShaderImpl::QueryInterface(const INTERFACE_ID&
 {
     if (ppInterface == nullptr)
         return;
-    if (IID == IID_SerializedShader || IID == IID_Shader)
+    if (IID == IID_ISerializedShader || IID == IID_IShader)
     {
         *ppInterface = this;
         (*ppInterface)->AddRef();

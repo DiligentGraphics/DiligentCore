@@ -390,7 +390,7 @@ private:
                                                 bool        UseInOutLocationQualifiers,
                                                 IDataBlob** ppGLSLSource) override final;
 
-        IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_HLSL2GLSLConversionStream, TBase)
+        IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IHLSL2GLSLConversionStream, TBase)
 
         const String& GetInputFileName() const { return m_InputFileName; }
 

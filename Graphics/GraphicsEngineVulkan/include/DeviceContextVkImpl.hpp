@@ -76,7 +76,7 @@ public:
                         const DeviceContextDesc&  Desc);
     ~DeviceContextVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextVk, TDeviceContextBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IDeviceContextVk, TDeviceContextBase)
 
     /// Implementation of IDeviceContext::Begin() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE Begin(Uint32 ImmediateContextId) override final;

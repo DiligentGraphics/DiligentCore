@@ -173,7 +173,7 @@ TEST(VariableShadingRateTest, PerDraw)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -291,7 +291,7 @@ TEST(VariableShadingRateTest, PerPrimitive)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -437,7 +437,7 @@ TEST(VariableShadingRateTest, TextureBased)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -570,7 +570,7 @@ TEST(VariableShadingRateTest, TextureBasedWithTextureArray)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -750,7 +750,7 @@ TEST(VariableShadingRateTest, TextureBasedWithRenderPass)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();

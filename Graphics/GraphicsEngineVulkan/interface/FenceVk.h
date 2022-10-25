@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {7610B4CD-EDEA-4951-82CF-52F97FAFED2D}
-static const INTERFACE_ID IID_FenceVk =
+static const INTERFACE_ID IID_IFenceVk =
     {0x7610b4cd, 0xedea, 0x4951, {0x82, 0xcf, 0x52, 0xf9, 0x7f, 0xaf, 0xed, 0x2d}};
 
 #define DILIGENT_INTERFACE_NAME IFenceVk

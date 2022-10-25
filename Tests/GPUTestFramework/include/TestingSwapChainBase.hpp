@@ -54,7 +54,7 @@ void CompareTestImages(const Uint8*                          pReferencePixels,
                        std::unordered_map<std::string, int>& FailureCounters);
 
 // {41BF4655-9B33-4E6C-9300-0CB45FBFE104}
-static constexpr INTERFACE_ID IID_TestingSwapChain =
+static constexpr INTERFACE_ID IID_ITestingSwapChain =
     {0x41bf4655, 0x9b33, 0x4e6c, {0x93, 0x0, 0xc, 0xb4, 0x5f, 0xbf, 0xe1, 0x4}};
 
 class ITestingSwapChain : public IObject
@@ -146,12 +146,12 @@ public:
         if (ppInterface == nullptr)
             return;
 
-        if (IID == IID_SwapChain || IID == IID_Unknown)
+        if (IID == IID_ISwapChain || IID == IID_Unknown)
         {
             *ppInterface = static_cast<TSwapChainInterface*>(this);
             (*ppInterface)->AddRef();
         }
-        if (IID == IID_TestingSwapChain)
+        if (IID == IID_ITestingSwapChain)
         {
             *ppInterface = static_cast<ITestingSwapChain*>(this);
             (*ppInterface)->AddRef();

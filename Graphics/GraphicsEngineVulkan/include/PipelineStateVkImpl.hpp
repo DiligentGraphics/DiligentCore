@@ -60,7 +60,7 @@ public:
     PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const RayTracingPipelineStateCreateInfo& CreateInfo);
     ~PipelineStateVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineStateVk, TPipelineStateBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IPipelineStateVk, TPipelineStateBase)
 
     /// Implementation of IPipelineStateVk::GetRenderPass().
     virtual IRenderPassVk* DILIGENT_CALL_TYPE GetRenderPass() const override final { return GetRenderPassPtr().RawPtr<IRenderPassVk>(); }

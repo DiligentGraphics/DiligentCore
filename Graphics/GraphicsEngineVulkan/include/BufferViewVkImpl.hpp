@@ -51,7 +51,7 @@ public:
                      bool                                 bIsDefaultView);
     ~BufferViewVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferViewVk, TBufferViewBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IBufferViewVk, TBufferViewBase)
 
     /// Implementation of IBufferViewVk::GetVkBufferView().
     virtual VkBufferView DILIGENT_CALL_TYPE GetVkBufferView() const override final { return m_BuffView; }

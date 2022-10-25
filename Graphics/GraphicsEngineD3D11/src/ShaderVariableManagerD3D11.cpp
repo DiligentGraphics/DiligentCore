@@ -274,7 +274,7 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(const BindResou
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{BindInfo.pObject, IID_BufferD3D11};
+    RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{BindInfo.pObject, IID_IBufferD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& CachedCB = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + BindInfo.ArrayIndex);
@@ -311,7 +311,7 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResource
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_TextureViewD3D11};
+    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_ITextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + BindInfo.ArrayIndex);
@@ -369,7 +369,7 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(const BindResourc
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{BindInfo.pObject, IID_SamplerD3D11};
+    RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{BindInfo.pObject, IID_ISamplerD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + BindInfo.ArrayIndex);
@@ -391,7 +391,7 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(const BindResourc
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_BufferViewD3D11};
+    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_IBufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + BindInfo.ArrayIndex);
@@ -416,7 +416,7 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(const BindResource
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_TextureViewD3D11};
+    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_ITextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex);
@@ -440,7 +440,7 @@ void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(const BindResourc
     auto& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_BufferViewD3D11};
+    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_IBufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex);

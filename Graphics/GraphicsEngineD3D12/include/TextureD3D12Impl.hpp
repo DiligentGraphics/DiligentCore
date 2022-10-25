@@ -62,7 +62,7 @@ public:
                      ID3D12Resource*              pTexture);
     ~TextureD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureD3D12, TTextureBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ITextureD3D12, TTextureBase)
 
     /// Implementation of ITextureD3D12::GetD3D12Texture().
     virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12Texture() const override final { return GetD3D12Resource(); }

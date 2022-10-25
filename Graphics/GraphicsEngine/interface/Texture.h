@@ -40,7 +40,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
 // {A64B0E60-1B5E-4CFD-B880-663A1ADCBE98}
-static const INTERFACE_ID IID_Texture =
+static const INTERFACE_ID IID_ITexture =
     {0xa64b0e60, 0x1b5e, 0x4cfd,{0xb8, 0x80, 0x66, 0x3a, 0x1a, 0xdc, 0xbe, 0x98}};
 
 

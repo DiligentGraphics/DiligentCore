@@ -212,7 +212,7 @@ BufferGLImpl::~BufferGLImpl()
     GetDevice()->OnDestroyBuffer(*this);
 }
 
-IMPLEMENT_QUERY_INTERFACE(BufferGLImpl, IID_BufferGL, TBufferBase)
+IMPLEMENT_QUERY_INTERFACE(BufferGLImpl, IID_IBufferGL, TBufferBase)
 
 void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint64 Offset, Uint64 Size, const void* pData)
 {

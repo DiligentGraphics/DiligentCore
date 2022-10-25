@@ -236,7 +236,7 @@ void LogCompilerError(const char* DebugOutputMessage,
         char* DataPtr         = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
         memcpy(DataPtr, ErrorLog.data(), ErrorLog.length() + 1);
         memcpy(DataPtr + ErrorLog.length() + 1, ShaderSource, SourceCodeLen + 1);
-        pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
+        pOutputDataBlob->QueryInterface(IID_IDataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
     }
 }
 

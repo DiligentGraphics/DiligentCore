@@ -36,7 +36,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {F20B91EB-BDE3-4615-81CC-F720AA32410E}
-static const INTERFACE_ID IID_ArchiverFactory =
+static const INTERFACE_ID IID_IArchiverFactory =
     {0xf20b91eb, 0xbde3, 0x4615, {0x81, 0xcc, 0xf7, 0x20, 0xaa, 0x32, 0x41, 0xe}};
 
 #define DILIGENT_INTERFACE_NAME IArchiverFactory

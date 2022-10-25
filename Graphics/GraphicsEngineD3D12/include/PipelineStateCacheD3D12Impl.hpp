@@ -46,7 +46,7 @@ public:
                                 const PipelineStateCacheCreateInfo& CreateInfo);
     ~PipelineStateCacheD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineStateCacheD3D12, TPipelineStateCacheBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IPipelineStateCacheD3D12, TPipelineStateCacheBase)
 
     /// Implementation of IPipelineStateCache::GetData().
     virtual void DILIGENT_CALL_TYPE GetData(IDataBlob** ppBlob) override final;

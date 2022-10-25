@@ -253,7 +253,7 @@ void TestingSwapChainVk::TakeSnapshot(ITexture* pCopyFrom)
     }
     else
     {
-        RefCntAutoPtr<ITextureVk> pSrcTexVk{pCopyFrom, IID_TextureVk};
+        RefCntAutoPtr<ITextureVk> pSrcTexVk{pCopyFrom, IID_ITextureVk};
         VERIFY_EXPR(pSrcTexVk);
         VERIFY_EXPR(pSrcTexVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
         VERIFY_EXPR(GetDesc().Width == pSrcTexVk->GetDesc().Width);
@@ -296,7 +296,7 @@ void CreateTestingSwapChainVk(TestingEnvironmentVk* pEnv,
                               ISwapChain**          ppSwapChain)
 {
     TestingSwapChainVk* pTestingSC(MakeNewRCObj<TestingSwapChainVk>()(pEnv, SCDesc));
-    pTestingSC->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+    pTestingSC->QueryInterface(IID_ISwapChain, reinterpret_cast<IObject**>(ppSwapChain));
 }
 
 } // namespace Testing

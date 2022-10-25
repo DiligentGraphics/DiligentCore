@@ -61,7 +61,7 @@ typedef struct RenderStateCacheCreateInfo RenderStateCacheCreateInfo;
 // clang-format on
 
 // {5B356268-256C-401F-BDE2-B9832157141A}
-static const INTERFACE_ID IID_RenderStateCache =
+static const INTERFACE_ID IID_IRenderStateCache =
     {0x5b356268, 0x256c, 0x401f, {0xbd, 0xe2, 0xb9, 0x83, 0x21, 0x57, 0x14, 0x1a}};
 
 #define DILIGENT_INTERFACE_NAME IRenderStateCache

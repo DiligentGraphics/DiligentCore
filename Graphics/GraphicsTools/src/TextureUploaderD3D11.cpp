@@ -144,7 +144,7 @@ struct TextureUploaderD3D11::InternalData
 
     InternalData(IRenderDevice* pDevice)
     {
-        RefCntAutoPtr<IRenderDeviceD3D11> pDeviceD3D11(pDevice, IID_RenderDeviceD3D11);
+        RefCntAutoPtr<IRenderDeviceD3D11> pDeviceD3D11(pDevice, IID_IRenderDeviceD3D11);
         m_pd3d11NativeDevice = pDeviceD3D11->GetD3D11Device();
     }
 
@@ -172,7 +172,7 @@ struct TextureUploaderD3D11::InternalData
 
     void ExecuteImmediately(IDeviceContext* pContext, PendingBufferOperation& OperationInfo)
     {
-        RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11(pContext, IID_DeviceContextD3D11);
+        RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11(pContext, IID_IDeviceContextD3D11);
         if (pContextD3D11)
         {
             auto* pd3d11NativeCtx = pContextD3D11->GetD3D11DeviceContext();
@@ -180,7 +180,7 @@ struct TextureUploaderD3D11::InternalData
         }
         else
         {
-            UNEXPECTED("Failed to query IID_DeviceContextD3D11 interface from the device context. "
+            UNEXPECTED("Failed to query IID_IDeviceContextD3D11 interface from the device context. "
                        "Is it really Diligent::IDeviceContextD3D11 interface?");
         }
     }
@@ -227,7 +227,7 @@ void TextureUploaderD3D11::RenderThreadUpdate(IDeviceContext* pContext)
     m_pInternalData->SwapMapQueues();
     if (!m_pInternalData->m_InWorkOperations.empty())
     {
-        RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11(pContext, IID_DeviceContextD3D11);
+        RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11(pContext, IID_IDeviceContextD3D11);
 
         auto* pd3d11NativeCtx = pContextD3D11->GetD3D11DeviceContext();
 
@@ -418,7 +418,7 @@ void TextureUploaderD3D11::ScheduleGPUCopy(IDeviceContext* pContext,
                                            IUploadBuffer*  pUploadBuffer)
 {
     auto*                        pUploadBufferD3D11 = ClassPtrCast<UploadBufferD3D11>(pUploadBuffer);
-    RefCntAutoPtr<ITextureD3D11> pDstTexD3D11(pDstTexture, IID_TextureD3D11);
+    RefCntAutoPtr<ITextureD3D11> pDstTexD3D11(pDstTexture, IID_ITextureD3D11);
     auto*                        pd3d11NativeDstTex = pDstTexD3D11->GetD3D11Texture();
     const auto&                  DstTexDesc         = pDstTexture->GetDesc();
     if (pContext != nullptr)

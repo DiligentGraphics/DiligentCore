@@ -67,7 +67,7 @@ public:
         }
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ThreadPool, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IThreadPool, TBase)
 
     virtual bool ProcessTask(Uint32 ThreadId, bool WaitForTask) override final
     {

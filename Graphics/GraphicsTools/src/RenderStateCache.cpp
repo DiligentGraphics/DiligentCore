@@ -56,7 +56,7 @@ public:
     RenderStateCacheImpl(IReferenceCounters*               pRefCounters,
                          const RenderStateCacheCreateInfo& CreateInfo);
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderStateCache, TBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IRenderStateCache, TBase);
 
     virtual bool DILIGENT_CALL_TYPE Load(const IDataBlob* pArchive,
                                          bool             MakeCopy) override final
@@ -387,7 +387,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
 
     if (pArchivedShader)
     {
-        RefCntAutoPtr<ISerializedShader> pSerializedShader{pArchivedShader, IID_SerializedShader};
+        RefCntAutoPtr<ISerializedShader> pSerializedShader{pArchivedShader, IID_ISerializedShader};
         VERIFY(pSerializedShader, "Shader object is not a serialized shader");
         if (pSerializedShader)
         {
@@ -474,7 +474,7 @@ protected:
 
         RefCntAutoPtr<IObject> pObject;
         pShader->GetReferenceCounters()->QueryObject(&pObject);
-        RefCntAutoPtr<IShader> pSerializedShader{pObject, IID_SerializedShader};
+        RefCntAutoPtr<IShader> pSerializedShader{pObject, IID_ISerializedShader};
         if (!pSerializedShader)
         {
             ShaderCreateInfo ShaderCI;
@@ -613,7 +613,7 @@ void CreateRenderStateCache(const RenderStateCacheCreateInfo& CreateInfo,
     {
         RefCntAutoPtr<IRenderStateCache> pCache{MakeNewRCObj<RenderStateCacheImpl>()(CreateInfo)};
         if (pCache)
-            pCache->QueryInterface(IID_RenderStateCache, reinterpret_cast<IObject**>(ppCache));
+            pCache->QueryInterface(IID_IRenderStateCache, reinterpret_cast<IObject**>(ppCache));
     }
     catch (...)
     {

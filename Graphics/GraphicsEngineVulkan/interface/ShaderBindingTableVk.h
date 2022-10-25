@@ -36,7 +36,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {31ED9B4B-4FF4-44D8-AE71-12B5D8AF7F93}
-static const INTERFACE_ID IID_ShaderBindingTableVk =
+static const INTERFACE_ID IID_IShaderBindingTableVk =
     {0x31ed9b4b, 0x4ff4, 0x44d8, {0xae, 0x71, 0x12, 0xb5, 0xd8, 0xaf, 0x7f, 0x93}};
 
 #define DILIGENT_INTERFACE_NAME IShaderBindingTableVk

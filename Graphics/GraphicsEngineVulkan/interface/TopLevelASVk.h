@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {356FFFFA-9E57-49F7-8FF4-7017B61BE6A8}
-static const INTERFACE_ID IID_TopLevelASVk =
+static const INTERFACE_ID IID_ITopLevelASVk =
     {0x356ffffa, 0x9e57, 0x49f7, {0x8f, 0xf4, 0x70, 0x17, 0xb6, 0x1b, 0xe6, 0xa8}};
 
 #define DILIGENT_INTERFACE_NAME ITopLevelASVk

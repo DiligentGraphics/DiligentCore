@@ -288,7 +288,7 @@ public:
 #endif
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineState, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IPipelineState, TDeviceObjectBase)
 
     Uint32 GetBufferStride(Uint32 BufferSlot) const
     {

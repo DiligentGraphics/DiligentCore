@@ -107,7 +107,7 @@ public:
                        const ImmediateContextCreateInfo&                     CreateInfo);
     ~CommandQueueVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandQueueVk, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ICommandQueueVk, TBase)
 
     /// Implementation of ICommandQueue::GetNextFenceValue().
     virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue.load(); }

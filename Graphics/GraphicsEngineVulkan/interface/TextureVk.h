@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {3BB9155F-22C5-4365-927E-8C4049F9B949}
-static const INTERFACE_ID IID_TextureVk =
+static const INTERFACE_ID IID_ITextureVk =
     {0x3bb9155f, 0x22c5, 0x4365, {0x92, 0x7e, 0x8c, 0x40, 0x49, 0xf9, 0xb9, 0x49}};
 
 #define DILIGENT_INTERFACE_NAME ITextureVk

@@ -204,7 +204,7 @@ typedef struct RenderPassUnpackInfo RenderPassUnpackInfo;
 
 
 // {ACB3F67A-CE3B-4212-9592-879122D3C191}
-static const INTERFACE_ID IID_Dearchiver =
+static const INTERFACE_ID IID_IDearchiver =
     {0xacb3f67a, 0xce3b, 0x4212, {0x95, 0x92, 0x87, 0x91, 0x22, 0xd3, 0xc1, 0x91}};
 
 #define DILIGENT_INTERFACE_NAME IDearchiver

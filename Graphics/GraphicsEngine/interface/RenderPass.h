@@ -37,7 +37,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {B818DEC7-174D-447A-A8E4-94D21C57B40A}
-static const struct INTERFACE_ID IID_RenderPass =
+static const struct INTERFACE_ID IID_IRenderPass =
     { 0xb818dec7, 0x174d, 0x447a, { 0xa8, 0xe4, 0x94, 0xd2, 0x1c, 0x57, 0xb4, 0xa } };
 
 

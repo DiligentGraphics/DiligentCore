@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {AB8CF3A6-D959-41C1-AE00-A58AE9820E6A}
-static const INTERFACE_ID IID_RenderDeviceVk =
+static const INTERFACE_ID IID_IRenderDeviceVk =
     {0xab8cf3a6, 0xd959, 0x41c1, {0xae, 0x0, 0xa5, 0x8a, 0xe9, 0x82, 0xe, 0x6a}};
 
 #define DILIGENT_INTERFACE_NAME IRenderDeviceVk

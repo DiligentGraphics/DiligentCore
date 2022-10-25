@@ -48,7 +48,7 @@ public:
                 const QueryDesc&    Desc);
     ~QueryGLImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryGL, TQueryBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IQueryGL, TQueryBase)
 
     /// Implementation of IQuery::GetData() in OpenGL backend.
     virtual bool DILIGENT_CALL_TYPE GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;

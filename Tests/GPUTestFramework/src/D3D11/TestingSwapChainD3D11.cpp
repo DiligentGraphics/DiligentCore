@@ -50,8 +50,8 @@ TestingSwapChainD3D11::TestingSwapChainD3D11(IReferenceCounters*  pRefCounters,
         SCDesc //
     }
 {
-    RefCntAutoPtr<IRenderDeviceD3D11>  pRenderDeviceD3D11{pDevice, IID_RenderDeviceD3D11};
-    RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{pContext, IID_DeviceContextD3D11};
+    RefCntAutoPtr<IRenderDeviceD3D11>  pRenderDeviceD3D11{pDevice, IID_IRenderDeviceD3D11};
+    RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{pContext, IID_IDeviceContextD3D11};
 
     auto* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
     m_pd3d11Context    = pContextD3D11->GetD3D11DeviceContext();
@@ -106,7 +106,7 @@ void TestingSwapChainD3D11::TakeSnapshot(ITexture* pCopyFrom)
     ID3D11Texture2D* pSrcRT = m_pd3d11RenderTarget;
     if (pCopyFrom != nullptr)
     {
-        RefCntAutoPtr<ITextureD3D11> pSrcTexD3D11{pCopyFrom, IID_TextureD3D11};
+        RefCntAutoPtr<ITextureD3D11> pSrcTexD3D11{pCopyFrom, IID_ITextureD3D11};
         VERIFY_EXPR(pSrcTexD3D11->GetState() == RESOURCE_STATE_COPY_SOURCE);
         VERIFY_EXPR(GetDesc().Width == pSrcTexD3D11->GetDesc().Width);
         VERIFY_EXPR(GetDesc().Height == pSrcTexD3D11->GetDesc().Height);
@@ -145,7 +145,7 @@ void CreateTestingSwapChainD3D11(IRenderDevice*       pDevice,
                                  ISwapChain**         ppSwapChain)
 {
     TestingSwapChainD3D11* pTestingSC(MakeNewRCObj<TestingSwapChainD3D11>()(pDevice, pContext, SCDesc));
-    pTestingSC->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+    pTestingSC->QueryInterface(IID_ISwapChain, reinterpret_cast<IObject**>(ppSwapChain));
 }
 
 } // namespace Testing

@@ -325,7 +325,7 @@ void BindResourceHelper::CacheCB(const BindResourceInfo& BindInfo) const
     VERIFY(BindInfo.pObject != nullptr, "Setting buffer to null is handled by BindResourceHelper::operator()");
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
-    RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12{BindInfo.pObject, IID_BufferD3D12};
+    RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12{BindInfo.pObject, IID_IBufferD3D12};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyConstantBufferBinding(m_ResDesc, BindInfo, pBuffD3D12.RawPtr(), m_DstRes.pObject.RawPtr(),
                                 m_DstRes.BufferBaseOffset, m_DstRes.BufferRangeSize, m_Signature.GetDesc().Name);
@@ -391,7 +391,7 @@ void BindResourceHelper::CacheSampler(const BindResourceInfo& BindInfo) const
 {
     VERIFY(BindInfo.pObject != nullptr, "Setting sampler to null is handled by BindResourceHelper::operator()");
 
-    RefCntAutoPtr<ISamplerD3D12> pSamplerD3D12{BindInfo.pObject, IID_SamplerD3D12};
+    RefCntAutoPtr<ISamplerD3D12> pSamplerD3D12{BindInfo.pObject, IID_ISamplerD3D12};
 #ifdef DILIGENT_DEVELOPMENT
     VerifySamplerBinding(m_ResDesc, BindInfo, pSamplerD3D12.RawPtr(), m_DstRes.pObject, m_Signature.GetDesc().Name);
 #endif
@@ -418,7 +418,7 @@ void BindResourceHelper::CacheAccelStruct(const BindResourceInfo& BindInfo) cons
 {
     VERIFY(BindInfo.pObject != nullptr, "Setting TLAS to null is handled by BindResourceHelper::operator()");
 
-    RefCntAutoPtr<ITopLevelASD3D12> pTLASD3D12{BindInfo.pObject, IID_TopLevelASD3D12};
+    RefCntAutoPtr<ITopLevelASD3D12> pTLASD3D12{BindInfo.pObject, IID_ITopLevelASD3D12};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyTLASResourceBinding(m_ResDesc, BindInfo, pTLASD3D12.RawPtr(), m_DstRes.pObject.RawPtr(), m_Signature.GetDesc().Name);
 #endif
@@ -457,7 +457,7 @@ struct ResourceViewTraits<TextureViewD3D12Impl>
         return true;
     }
 };
-const INTERFACE_ID& ResourceViewTraits<TextureViewD3D12Impl>::IID = IID_TextureViewD3D12;
+const INTERFACE_ID& ResourceViewTraits<TextureViewD3D12Impl>::IID = IID_ITextureViewD3D12;
 
 template <>
 struct ResourceViewTraits<BufferViewD3D12Impl>
@@ -484,7 +484,7 @@ struct ResourceViewTraits<BufferViewD3D12Impl>
         return true;
     }
 };
-const INTERFACE_ID& ResourceViewTraits<BufferViewD3D12Impl>::IID = IID_BufferViewD3D12;
+const INTERFACE_ID& ResourceViewTraits<BufferViewD3D12Impl>::IID = IID_IBufferViewD3D12;
 
 template <typename TResourceViewType,
           typename TViewTypeEnum>

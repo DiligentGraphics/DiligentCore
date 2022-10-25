@@ -60,7 +60,7 @@ TextureViewGLImpl::~TextureViewGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(TextureViewGLImpl, IID_TextureViewGL, TTextureViewBase)
+IMPLEMENT_QUERY_INTERFACE(TextureViewGLImpl, IID_ITextureViewGL, TTextureViewBase)
 
 const GLObjectWrappers::GLTextureObj& TextureViewGLImpl::GetHandle()
 {

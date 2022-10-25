@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {53A9A017-6A34-4AE9-AA23-C8E587023F9E}
-static const INTERFACE_ID IID_SerializedShader =
+static const INTERFACE_ID IID_ISerializedShader =
     {0x53a9a017, 0x6a34, 0x4ae9, {0xaa, 0x23, 0xc8, 0xe5, 0x87, 0x2, 0x3f, 0x9e}};
 
 #define DILIGENT_INTERFACE_NAME ISerializedShader

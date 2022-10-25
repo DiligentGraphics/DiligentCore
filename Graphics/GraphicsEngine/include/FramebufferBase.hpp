@@ -140,7 +140,7 @@ public:
         this->m_Desc.pRenderPass->Release();
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Framebuffer, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IFramebuffer, TDeviceObjectBase)
 
 private:
     RefCntAutoPtr<IRenderPass> m_pRenderPass;

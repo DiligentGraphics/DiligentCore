@@ -99,7 +99,7 @@ public:
             LOG_ERROR_AND_THROW("Tile shaders are not supported by this device.");
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShader, TDeviceObjectBase)
 
 private:
     const std::string m_CombinedSamplerSuffix;

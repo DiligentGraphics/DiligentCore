@@ -133,6 +133,6 @@ SamplerGLImpl::~SamplerGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(SamplerGLImpl, IID_SamplerGL, TSamplerBase)
+IMPLEMENT_QUERY_INTERFACE(SamplerGLImpl, IID_ISamplerGL, TSamplerBase)
 
 } // namespace Diligent

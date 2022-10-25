@@ -100,7 +100,7 @@ SwapChainGLImpl::~SwapChainGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(SwapChainGLImpl, IID_SwapChainGL, TSwapChainGLBase)
+IMPLEMENT_QUERY_INTERFACE(SwapChainGLImpl, IID_ISwapChainGL, TSwapChainGLBase)
 
 void SwapChainGLImpl::Present(Uint32 SyncInterval)
 {

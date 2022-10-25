@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {31A3BFAF-738E-4D8C-AD18-B021C5D948DD}
-static const INTERFACE_ID IID_SamplerD3D12 =
+static const INTERFACE_ID IID_ISamplerD3D12 =
     {0x31a3bfaf, 0x738e, 0x4d8c, {0xad, 0x18, 0xb0, 0x21, 0xc5, 0xd9, 0x48, 0xdd}};
 
 #define DILIGENT_INTERFACE_NAME ISamplerD3D12

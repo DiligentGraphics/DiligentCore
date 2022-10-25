@@ -47,8 +47,8 @@ namespace Testing
 
 void TestCreateObjFromNativeResD3D11::CreateTexture(ITexture* pTexture)
 {
-    RefCntAutoPtr<IRenderDeviceD3D11> pDeviceD3D11(m_pDevice, IID_RenderDeviceD3D11);
-    RefCntAutoPtr<ITextureD3D11>      pTextureD3D11(pTexture, IID_TextureD3D11);
+    RefCntAutoPtr<IRenderDeviceD3D11> pDeviceD3D11(m_pDevice, IID_IRenderDeviceD3D11);
+    RefCntAutoPtr<ITextureD3D11>      pTextureD3D11(pTexture, IID_ITextureD3D11);
     ASSERT_NE(pDeviceD3D11, nullptr);
     ASSERT_NE(pTextureD3D11, nullptr);
 
@@ -92,7 +92,7 @@ void TestCreateObjFromNativeResD3D11::CreateTexture(ITexture* pTexture)
     EXPECT_EQ(TestTexDesc, SrcTexDesc) << "Src tex desc:  " << GetObjectDescString(SrcTexDesc)
                                        << "\nTest tex desc: " << GetObjectDescString(TestTexDesc);
 
-    RefCntAutoPtr<ITextureD3D11> pTestTextureD3D11(pTextureFromNativeD3D11Handle, IID_TextureD3D11);
+    RefCntAutoPtr<ITextureD3D11> pTestTextureD3D11(pTextureFromNativeD3D11Handle, IID_ITextureD3D11);
     ASSERT_NE(pTestTextureD3D11, nullptr);
     EXPECT_EQ(pTestTextureD3D11->GetD3D11Texture(), pd3d11Texture);
     EXPECT_EQ(reinterpret_cast<ID3D11Resource*>(pTestTextureD3D11->GetNativeHandle()), pd3d11Texture);
@@ -100,8 +100,8 @@ void TestCreateObjFromNativeResD3D11::CreateTexture(ITexture* pTexture)
 
 void TestCreateObjFromNativeResD3D11::CreateBuffer(IBuffer* pBuffer)
 {
-    RefCntAutoPtr<IRenderDeviceD3D11> pDeviceD3D11(m_pDevice, IID_RenderDeviceD3D11);
-    RefCntAutoPtr<IBufferD3D11>       pBufferD3D11(pBuffer, IID_BufferD3D11);
+    RefCntAutoPtr<IRenderDeviceD3D11> pDeviceD3D11(m_pDevice, IID_IRenderDeviceD3D11);
+    RefCntAutoPtr<IBufferD3D11>       pBufferD3D11(pBuffer, IID_IBufferD3D11);
     ASSERT_NE(pDeviceD3D11, nullptr);
     ASSERT_NE(pBufferD3D11, nullptr);
 
@@ -117,7 +117,7 @@ void TestCreateObjFromNativeResD3D11::CreateBuffer(IBuffer* pBuffer)
         const auto& TestBufferDesc = pBufferFromNativeD3D11Handle->GetDesc();
         EXPECT_EQ(TestBufferDesc, SrcBuffDesc);
 
-        RefCntAutoPtr<IBufferD3D11> pTestBufferD3D11(pBufferFromNativeD3D11Handle, IID_BufferD3D11);
+        RefCntAutoPtr<IBufferD3D11> pTestBufferD3D11(pBufferFromNativeD3D11Handle, IID_IBufferD3D11);
         EXPECT_EQ(pTestBufferD3D11->GetD3D11Buffer(), pd3d11Buffer);
         EXPECT_EQ(reinterpret_cast<ID3D11Resource*>(pTestBufferD3D11->GetNativeHandle()), pd3d11Buffer);
     }
@@ -134,7 +134,7 @@ void TestCreateObjFromNativeResD3D11::CreateBuffer(IBuffer* pBuffer)
         EXPECT_EQ(TestBufferDesc, SrcBuffDesc) << "Src buff desc:  " << GetObjectDescString(SrcBuffDesc)
                                                << "\nTest buff desc: " << GetObjectDescString(TestBufferDesc);
 
-        RefCntAutoPtr<IBufferD3D11> pTestBufferD3D11(pBufferFromNativeD3D11Handle, IID_BufferD3D11);
+        RefCntAutoPtr<IBufferD3D11> pTestBufferD3D11(pBufferFromNativeD3D11Handle, IID_IBufferD3D11);
         ASSERT_NE(pTestBufferD3D11, nullptr);
         EXPECT_EQ(pTestBufferD3D11->GetD3D11Buffer(), pd3d11Buffer);
         EXPECT_EQ(reinterpret_cast<ID3D11Resource*>(pTestBufferD3D11->GetNativeHandle()), pd3d11Buffer);

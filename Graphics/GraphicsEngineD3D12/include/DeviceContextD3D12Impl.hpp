@@ -67,7 +67,7 @@ public:
                            const DeviceContextDesc&     Desc);
     ~DeviceContextD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextD3D12, TDeviceContextBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IDeviceContextD3D12, TDeviceContextBase)
 
     /// Implementation of IDeviceContext::Begin() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE Begin(Uint32 ImmediateContextId) override final;

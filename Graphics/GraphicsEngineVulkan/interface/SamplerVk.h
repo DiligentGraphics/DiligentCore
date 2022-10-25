@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {87C21E88-8A9F-4AD2-9A1E-D5EC140415EA}
-static const INTERFACE_ID IID_SamplerVk =
+static const INTERFACE_ID IID_ISamplerVk =
     {0x87c21e88, 0x8a9f, 0x4ad2, {0x9a, 0x1e, 0xd5, 0xec, 0x14, 0x4, 0x15, 0xea}};
 
 #define DILIGENT_INTERFACE_NAME ISamplerVk

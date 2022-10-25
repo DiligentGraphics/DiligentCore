@@ -59,7 +59,7 @@ public:
                 VkSemaphore         vkTimelineSemaphore);
     ~FenceVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceVk, TFenceBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IFenceVk, TFenceBase)
 
     /// Implementation of IFence::GetCompletedValue() in Vulkan backend.
     virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;

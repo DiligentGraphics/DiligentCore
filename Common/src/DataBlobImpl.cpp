@@ -83,7 +83,7 @@ const void* DataBlobImpl::GetConstDataPtr() const
     return m_DataBuff.data();
 }
 
-IMPLEMENT_QUERY_INTERFACE(DataBlobImpl, IID_DataBlob, TBase)
+IMPLEMENT_QUERY_INTERFACE(DataBlobImpl, IID_IDataBlob, TBase)
 
 
 void* DataBlobAllocatorAdapter::Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)

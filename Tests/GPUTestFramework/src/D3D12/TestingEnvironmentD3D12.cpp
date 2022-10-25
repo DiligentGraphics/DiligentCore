@@ -47,7 +47,7 @@ TestingEnvironmentD3D12::TestingEnvironmentD3D12(const CreateInfo&    CI,
     m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)},
     m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr)}
 {
-    RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{m_pDevice, IID_RenderDeviceD3D12};
+    RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{m_pDevice, IID_IRenderDeviceD3D12};
     m_pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
     auto hr =
         m_pd3d12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(m_pd3d12CmdAllocator),
@@ -103,7 +103,7 @@ void TestingEnvironmentD3D12::IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue)
 
 void TestingEnvironmentD3D12::ExecuteCommandList(ID3D12CommandList* pCmdList, bool WaitForIdle)
 {
-    RefCntAutoPtr<ICommandQueueD3D12> pQueueD3D12{GetDeviceContext()->LockCommandQueue(), IID_CommandQueueD3D12};
+    RefCntAutoPtr<ICommandQueueD3D12> pQueueD3D12{GetDeviceContext()->LockCommandQueue(), IID_ICommandQueueD3D12};
 
     auto* pd3d12Queue = pQueueD3D12->GetD3D12CommandQueue();
 

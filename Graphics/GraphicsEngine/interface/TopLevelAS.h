@@ -40,7 +40,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {16561861-294B-4804-96FA-1717333F769A}
-static const INTERFACE_ID IID_TopLevelAS =
+static const INTERFACE_ID IID_ITopLevelAS =
     {0x16561861, 0x294b, 0x4804, {0x96, 0xfa, 0x17, 0x17, 0x33, 0x3f, 0x76, 0x9a}};
 
 // clang-format off

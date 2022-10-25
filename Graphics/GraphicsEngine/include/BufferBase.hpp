@@ -103,7 +103,7 @@ public:
         this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Buffer, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IBuffer, TDeviceObjectBase)
 
     /// Implementation of IBuffer::CreateView(); calls CreateViewInternal() virtual function
     /// that creates buffer view for the specific engine implementation.

@@ -48,7 +48,7 @@ void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppConverter)
     try
     {
         RefCntAutoPtr<HLSL2GLSLConverterObject> pConverter{MakeNewRCObj<HLSL2GLSLConverterObject>()()};
-        pConverter->QueryInterface(IID_HLSL2GLSLConverter, reinterpret_cast<IObject**>(ppConverter));
+        pConverter->QueryInterface(IID_IHLSL2GLSLConverter, reinterpret_cast<IObject**>(ppConverter));
     }
     catch (...)
     {

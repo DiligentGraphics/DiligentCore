@@ -83,7 +83,7 @@ public:
         }
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Sampler, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ISampler, TDeviceObjectBase)
 };
 
 } // namespace Diligent

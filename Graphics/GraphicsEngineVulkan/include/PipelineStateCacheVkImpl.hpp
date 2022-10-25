@@ -49,7 +49,7 @@ public:
                              const PipelineStateCacheCreateInfo& CreateInfo);
     ~PipelineStateCacheVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineStateCacheVk, TPipelineStateCacheBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IPipelineStateCacheVk, TPipelineStateCacheBase)
 
     /// Implementation of IPipelineStateCache::GetData().
     virtual void DILIGENT_CALL_TYPE GetData(IDataBlob** ppBlob) override final;

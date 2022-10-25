@@ -34,7 +34,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {0FF427F7-6284-409E-8161-A023CA07EF5D}
-static const INTERFACE_ID IID_CommandQueue =
+static const INTERFACE_ID IID_ICommandQueue =
     {0xff427f7, 0x6284, 0x409e, {0x81, 0x61, 0xa0, 0x23, 0xca, 0x7, 0xef, 0x5d}};
 
 #define DILIGENT_INTERFACE_NAME ICommandQueue

@@ -42,7 +42,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {62663A30-AAF0-4A9A-9729-9EAC6BF789F2}
-static const struct INTERFACE_ID IID_EngineFactoryD3D11 =
+static const struct INTERFACE_ID IID_IEngineFactoryD3D11 =
     {0x62663a30, 0xaaf0, 0x4a9a, {0x97, 0x29, 0x9e, 0xac, 0x6b, 0xf7, 0x89, 0xf2}};
 
 #define DILIGENT_INTERFACE_NAME IEngineFactoryD3D11

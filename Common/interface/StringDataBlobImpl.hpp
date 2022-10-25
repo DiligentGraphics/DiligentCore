@@ -51,7 +51,7 @@ public:
     StringDataBlobImpl(IReferenceCounters* pRefCounters, String&& str) :
         TBase(pRefCounters), m_String(std::move(str)) {}
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DataBlob, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IDataBlob, TBase)
 
     /// Sets the size of the internal data buffer
     virtual void DILIGENT_CALL_TYPE Resize(size_t NewSize) override

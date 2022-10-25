@@ -62,7 +62,7 @@ void DILIGENT_CALL_TYPE SerializedRenderPassImpl::QueryInterface(const INTERFACE
 {
     if (ppInterface == nullptr)
         return;
-    if (IID == IID_SerializedRenderPass || IID == IID_RenderPass)
+    if (IID == IID_ISerializedRenderPass || IID == IID_IRenderPass)
     {
         *ppInterface = this;
         (*ppInterface)->AddRef();

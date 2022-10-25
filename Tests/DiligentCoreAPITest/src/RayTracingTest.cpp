@@ -630,7 +630,7 @@ TEST_P(RT1, TriangleClosestHitShader)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -813,7 +813,7 @@ TEST_P(RT2, TriangleAnyHitShader)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -1006,7 +1006,7 @@ TEST_P(RT3, ProceduralIntersection)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -1199,7 +1199,7 @@ TEST_P(RT4, MultiGeometry)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -1579,7 +1579,7 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -1736,7 +1736,7 @@ TEST_P(RT6, InlineRayTracing_GraphicsPSO)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -1889,7 +1889,7 @@ TEST_P(RT7, TraceRaysIndirect)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -2108,7 +2108,7 @@ TEST_P(RT8, InlineRayTracing_ComputePSO)
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -2275,7 +2275,7 @@ static void RayTracingPRSTest(const int Mode)
     auto*       pContext   = pEnv->GetDeviceContext();
     const auto& SCDesc     = pSwapChain->GetDesc();
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();

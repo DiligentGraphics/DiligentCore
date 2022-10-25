@@ -98,7 +98,7 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         RTVDesc.Format   = m_SwapChainDesc.ColorBufferFormat;
         RefCntAutoPtr<ITextureView> pRTV;
         pBackBufferTex->CreateView(RTVDesc, &pRTV);
-        m_pBackBufferRTV[backbuff] = RefCntAutoPtr<ITextureViewD3D12>(pRTV, IID_TextureViewD3D12);
+        m_pBackBufferRTV[backbuff] = RefCntAutoPtr<ITextureViewD3D12>(pRTV, IID_ITextureViewD3D12);
     }
 
     if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
@@ -119,7 +119,7 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         RefCntAutoPtr<ITexture> pDepthBufferTex;
         m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex));
         auto pDSV         = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
-        m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewD3D12>(pDSV, IID_TextureViewD3D12);
+        m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewD3D12>(pDSV, IID_ITextureViewD3D12);
     }
 }
 

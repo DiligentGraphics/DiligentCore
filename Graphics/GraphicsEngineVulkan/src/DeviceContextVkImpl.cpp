@@ -2571,7 +2571,7 @@ void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
     (void)err;
 
     CommandListVkImpl* pCmdListVk{NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)(m_pDevice, this, vkCmdBuff)};
-    pCmdListVk->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
+    pCmdListVk->QueryInterface(IID_ICommandList, reinterpret_cast<IObject**>(ppCommandList));
 
     m_CommandBuffer.Reset();
     m_State          = ContextState{};
@@ -3123,7 +3123,7 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, const St
         {
             VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");
 
-            if (RefCntAutoPtr<TextureVkImpl> pTexture{Barrier.pResource, IID_TextureVk})
+            if (RefCntAutoPtr<TextureVkImpl> pTexture{Barrier.pResource, IID_ITextureVk})
             {
                 VkImageSubresourceRange SubResRange;
                 SubResRange.aspectMask     = 0;
@@ -3133,15 +3133,15 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, const St
                 SubResRange.layerCount     = (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES) ? VK_REMAINING_ARRAY_LAYERS : Barrier.ArraySliceCount;
                 TransitionTextureState(*pTexture, Barrier.OldState, Barrier.NewState, Barrier.Flags, &SubResRange);
             }
-            else if (RefCntAutoPtr<BufferVkImpl> pBuffer{Barrier.pResource, IID_BufferVk})
+            else if (RefCntAutoPtr<BufferVkImpl> pBuffer{Barrier.pResource, IID_IBufferVk})
             {
                 TransitionBufferState(*pBuffer, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
             }
-            else if (RefCntAutoPtr<BottomLevelASVkImpl> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
+            else if (RefCntAutoPtr<BottomLevelASVkImpl> pBottomLevelAS{Barrier.pResource, IID_IBottomLevelAS})
             {
                 TransitionBLASState(*pBottomLevelAS, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
             }
-            else if (RefCntAutoPtr<TopLevelASVkImpl> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
+            else if (RefCntAutoPtr<TopLevelASVkImpl> pTopLevelAS{Barrier.pResource, IID_ITopLevelAS})
             {
                 TransitionTLASState(*pTopLevelAS, Barrier.OldState, Barrier.NewState, (Barrier.Flags & STATE_TRANSITION_FLAG_UPDATE_STATE) != 0);
             }
@@ -3157,11 +3157,11 @@ void DeviceContextVkImpl::AliasingBarrier(IDeviceObject* pResourceBefore, IDevic
 {
     auto GetResourceBindFlags = [](IDeviceObject* pResource) //
     {
-        if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_TextureVk})
+        if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_ITextureVk})
         {
             return pTexture.RawPtr<TextureVkImpl>()->GetDesc().BindFlags;
         }
-        else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_BufferVk})
+        else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_IBufferVk})
         {
             return pBuffer.RawPtr<BufferVkImpl>()->GetDesc().BindFlags;
         }
@@ -3833,7 +3833,7 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
         for (Uint32 r = 0; r < BuffBind.NumRanges; ++r)
         {
             const auto& SrcRange = BuffBind.pRanges[r];
-            const auto  pMemVk   = RefCntAutoPtr<IDeviceMemoryVk>{SrcRange.pMemory, IID_DeviceMemoryVk};
+            const auto  pMemVk   = RefCntAutoPtr<IDeviceMemoryVk>{SrcRange.pMemory, IID_IDeviceMemoryVk};
             DEV_CHECK_ERR((SrcRange.pMemory != nullptr) == (pMemVk != nullptr),
                           "Failed to query IDeviceMemoryVk interface from non-null memory object");
 
@@ -3872,7 +3872,7 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
         for (Uint32 r = 0; r < TexBind.NumRanges; ++r)
         {
             const auto& SrcRange = TexBind.pRanges[r];
-            const auto  pMemVk   = RefCntAutoPtr<IDeviceMemoryVk>{SrcRange.pMemory, IID_DeviceMemoryVk};
+            const auto  pMemVk   = RefCntAutoPtr<IDeviceMemoryVk>{SrcRange.pMemory, IID_IDeviceMemoryVk};
             DEV_CHECK_ERR((SrcRange.pMemory != nullptr) == (pMemVk != nullptr),
                           "Failed to query IDeviceMemoryVk interface from non-null memory object");
 

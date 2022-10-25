@@ -34,7 +34,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {CC43FEB3-688F-4D4D-B493-0E509F4A0D02}
-static const INTERFACE_ID IID_DeviceMemoryD3D12 =
+static const INTERFACE_ID IID_IDeviceMemoryD3D12 =
     {0xcc43feb3, 0x688f, 0x4d4d, {0xb4, 0x93, 0xe, 0x50, 0x9f, 0x4a, 0xd, 0x2}};
 
 #define DILIGENT_INTERFACE_NAME IDeviceMemoryD3D12

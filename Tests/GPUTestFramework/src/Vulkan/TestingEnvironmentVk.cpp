@@ -57,7 +57,7 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
     // and the Vulkan library is not present on the system, the app will instantly crash.
     volkInitialize();
 
-    RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice, IID_RenderDeviceVk};
+    RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice, IID_IRenderDeviceVk};
     m_vkDevice         = pRenderDeviceVk->GetVkDevice();
     m_vkPhysicalDevice = pRenderDeviceVk->GetVkPhysicalDevice();
 
@@ -65,8 +65,8 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
 
     volkLoadInstance(pRenderDeviceVk->GetVkInstance());
 
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{GetDeviceContext(), IID_DeviceContextVk};
-    RefCntAutoPtr<ICommandQueueVk>  pQueueVk{pContextVk->LockCommandQueue(), IID_CommandQueueVk};
+    RefCntAutoPtr<IDeviceContextVk> pContextVk{GetDeviceContext(), IID_IDeviceContextVk};
+    RefCntAutoPtr<ICommandQueueVk>  pQueueVk{pContextVk->LockCommandQueue(), IID_ICommandQueueVk};
 
     const auto QueueFamilyIndex = pQueueVk->GetQueueFamilyIndex();
     pContextVk->UnlockCommandQueue();
@@ -428,7 +428,7 @@ VkCommandBuffer TestingEnvironmentVk::AllocateCommandBuffer()
 
 void TestingEnvironmentVk::SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool WaitForIdle)
 {
-    RefCntAutoPtr<ICommandQueueVk> pQueueVk{GetDeviceContext()->LockCommandQueue(), IID_CommandQueueVk};
+    RefCntAutoPtr<ICommandQueueVk> pQueueVk{GetDeviceContext()->LockCommandQueue(), IID_ICommandQueueVk};
 
     auto vkQueue = pQueueVk->GetVkQueue();
 
@@ -753,7 +753,7 @@ void TestingEnvironmentVk::TransitionImageLayout(VkCommandBuffer                
 bool TestingEnvironmentVk::SupportsRayTracing() const
 {
     // DXC requires Vulkan 1.2 otherwise tests will fail.
-    RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice.RawPtr<IRenderDevice>(), IID_RenderDeviceVk};
+    RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice.RawPtr<IRenderDevice>(), IID_IRenderDeviceVk};
     return pRenderDeviceVk->GetDeviceInfo().Features.RayTracing &&
         (pRenderDeviceVk->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) != 0 &&
         pRenderDeviceVk->GetVkVersion() >= VK_API_VERSION_1_2 &&

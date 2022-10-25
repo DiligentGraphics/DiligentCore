@@ -402,7 +402,7 @@ public:
         VERIFY(m_IsDestructed, "This object must be explicitly destructed with Destruct()");
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineResourceSignature, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IPipelineResourceSignature, TDeviceObjectBase)
 
     /// Implementation of IPipelineResourceSignature::GetStaticVariableCount.
     virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
@@ -494,7 +494,7 @@ public:
         auto* pResBindingImpl{NEW_RC_OBJ(SRBAllocator, "ShaderResourceBinding instance", ShaderResourceBindingImplType)(pThisImpl)};
         if (InitStaticResources)
             pThisImpl->InitializeStaticSRBResources(pResBindingImpl);
-        pResBindingImpl->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
+        pResBindingImpl->QueryInterface(IID_IShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
     }
 
     /// Implementation of IPipelineResourceSignature::InitializeStaticSRBResources.

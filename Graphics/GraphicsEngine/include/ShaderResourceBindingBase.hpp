@@ -136,7 +136,7 @@ public:
         Destruct();
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBinding, TObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderResourceBinding, TObjectBase)
 
     Uint32 GetBindingIndex() const
     {

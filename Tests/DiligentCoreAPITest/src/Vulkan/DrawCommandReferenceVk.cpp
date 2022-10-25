@@ -403,9 +403,9 @@ void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, const float* pClearC
         pDevice->CreateTexture(TexDesc, nullptr, &pMSTex);
         ASSERT_NE(pMSTex, nullptr);
     }
-    RefCntAutoPtr<ITextureVk> pMSTexVK{pMSTex, IID_TextureVk};
+    RefCntAutoPtr<ITextureVk> pMSTexVK{pMSTex, IID_ITextureVk};
     ASSERT_NE(pMSTexVK, nullptr);
-    RefCntAutoPtr<ITextureViewVk> pMSTexViewVK{pMSTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), IID_TextureViewVk};
+    RefCntAutoPtr<ITextureViewVk> pMSTexViewVK{pMSTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), IID_ITextureViewVk};
     ASSERT_NE(pMSTexViewVK, nullptr);
 
     VkFramebufferCreateInfo FramebufferCI = {};
@@ -567,9 +567,9 @@ void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, const float* p
         pDevice->CreateTexture(TexDesc, nullptr, &pTex);
         ASSERT_NE(pTex, nullptr);
     }
-    RefCntAutoPtr<ITextureVk> pTexVK{pTex, IID_TextureVk};
+    RefCntAutoPtr<ITextureVk> pTexVK{pTex, IID_ITextureVk};
     ASSERT_NE(pTexVK, nullptr);
-    RefCntAutoPtr<ITextureViewVk> pTexViewVK{pTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), IID_TextureViewVk};
+    RefCntAutoPtr<ITextureViewVk> pTexViewVK{pTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), IID_ITextureViewVk};
     ASSERT_NE(pTexViewVK, nullptr);
 
     ReferenceTriangleRenderer TriRenderer2{pSwapChain, vkRenderPass, VK_SAMPLE_COUNT_1_BIT, pTexViewVK->GetVulkanImageView()};

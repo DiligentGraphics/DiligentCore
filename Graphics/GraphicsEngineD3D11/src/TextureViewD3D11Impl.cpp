@@ -57,6 +57,6 @@ TextureViewD3D11Impl::TextureViewD3D11Impl(IReferenceCounters*    pRefCounters,
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(TextureViewD3D11Impl, IID_TextureViewD3D11, TTextureViewBase)
+IMPLEMENT_QUERY_INTERFACE(TextureViewD3D11Impl, IID_ITextureViewD3D11, TTextureViewBase)
 
 } // namespace Diligent

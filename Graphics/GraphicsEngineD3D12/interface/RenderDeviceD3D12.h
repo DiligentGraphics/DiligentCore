@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {C7987C98-87FE-4309-AE88-E98F044B00F6}
-static const INTERFACE_ID IID_RenderDeviceD3D12 =
+static const INTERFACE_ID IID_IRenderDeviceD3D12 =
     {0xc7987c98, 0x87fe, 0x4309, {0xae, 0x88, 0xe9, 0x8f, 0x4, 0x4b, 0x0, 0xf6}};
 
 #define DILIGENT_INTERFACE_NAME IRenderDeviceD3D12

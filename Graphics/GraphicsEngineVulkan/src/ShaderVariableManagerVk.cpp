@@ -431,7 +431,7 @@ void BindResourceHelper::CacheUniformBuffer(const BindResourceInfo& BindInfo) co
            "Uniform buffer resource is expected");
 
     // We cannot use ClassPtrCast<> here as the resource can have wrong type
-    RefCntAutoPtr<BufferVkImpl> pBufferVk{BindInfo.pObject, IID_BufferVk};
+    RefCntAutoPtr<BufferVkImpl> pBufferVk{BindInfo.pObject, IID_IBufferVk};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyConstantBufferBinding(m_ResDesc, BindInfo, pBufferVk.RawPtr(), m_DstRes.pObject.RawPtr(),
                                 m_DstRes.BufferBaseOffset, m_DstRes.BufferRangeSize, m_Signature.GetDesc().Name);
@@ -449,7 +449,7 @@ void BindResourceHelper::CacheStorageBuffer(const BindResourceInfo& BindInfo) co
             m_DstRes.Type == DescriptorType::StorageBufferDynamic_ReadOnly),
            "Storage buffer resource is expected");
 
-    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{BindInfo.pObject, IID_BufferViewVk};
+    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{BindInfo.pObject, IID_IBufferViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storage buffers in GLSL
@@ -478,7 +478,7 @@ void BindResourceHelper::CacheTexelBuffer(const BindResourceInfo& BindInfo) cons
             m_DstRes.Type == DescriptorType::StorageTexelBuffer_ReadOnly),
            "Uniform or storage buffer resource is expected");
 
-    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{BindInfo.pObject, IID_BufferViewVk};
+    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{BindInfo.pObject, IID_IBufferViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storage buffers in GLSL
@@ -507,7 +507,7 @@ void BindResourceHelper::CacheImage(const BindResourceInfo& BindInfo) const
             m_DstRes.Type == DescriptorType::CombinedImageSampler),
            "Storage image, separate image or sampled image resource is expected");
 
-    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0{BindInfo.pObject, IID_TextureViewVk};
+    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0{BindInfo.pObject, IID_ITextureViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storage buffers in GLSL
@@ -581,7 +581,7 @@ void BindResourceHelper::CacheSeparateSampler(const BindResourceInfo& BindInfo) 
     VERIFY(m_DstRes.Type == DescriptorType::Sampler, "Separate sampler resource is expected");
     VERIFY(!m_Attribs.IsImmutableSamplerAssigned(), "This separate sampler is assigned an immutable sampler");
 
-    RefCntAutoPtr<SamplerVkImpl> pSamplerVk{BindInfo.pObject, IID_Sampler};
+    RefCntAutoPtr<SamplerVkImpl> pSamplerVk{BindInfo.pObject, IID_ISampler};
 #ifdef DILIGENT_DEVELOPMENT
     VerifySamplerBinding(m_ResDesc, BindInfo, pSamplerVk.RawPtr(), m_DstRes.pObject, m_Signature.GetDesc().Name);
 #endif
@@ -595,7 +595,7 @@ void BindResourceHelper::CacheInputAttachment(const BindResourceInfo& BindInfo) 
     VERIFY((m_DstRes.Type == DescriptorType::InputAttachment ||
             m_DstRes.Type == DescriptorType::InputAttachment_General),
            "Input attachment resource is expected");
-    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk{BindInfo.pObject, IID_TextureViewVk};
+    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk{BindInfo.pObject, IID_ITextureViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyResourceViewBinding(m_ResDesc, BindInfo, pTexViewVk.RawPtr(),
                               {TEXTURE_VIEW_SHADER_RESOURCE},
@@ -612,7 +612,7 @@ void BindResourceHelper::CacheAccelerationStructure(const BindResourceInfo& Bind
 {
     VERIFY(BindInfo.pObject != nullptr, "Setting acceleration structure to null is handled by BindResourceHelper::operator()");
     VERIFY(m_DstRes.Type == DescriptorType::AccelerationStructure, "Acceleration Structure resource is expected");
-    RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{BindInfo.pObject, IID_TopLevelASVk};
+    RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{BindInfo.pObject, IID_ITopLevelASVk};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyTLASResourceBinding(m_ResDesc, BindInfo, pTLASVk.RawPtr(), m_DstRes.pObject.RawPtr(), m_Signature.GetDesc().Name);
 #endif

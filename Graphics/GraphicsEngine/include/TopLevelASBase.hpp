@@ -96,7 +96,7 @@ public:
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelAS, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ITopLevelAS, TDeviceObjectBase)
 
     bool SetInstanceData(const TLASBuildInstanceData* pInstances,
                          const Uint32                 InstanceCount,

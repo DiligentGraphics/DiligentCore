@@ -67,7 +67,7 @@ public:
 
     ~BufferSuballocationImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferSuballocation, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IBufferSuballocation, TBase)
 
     virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
     {
@@ -119,7 +119,7 @@ class BufferSuballocatorImpl final : public ObjectBase<IBufferSuballocator>
 public:
     using TBase = ObjectBase<IBufferSuballocator>;
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferSuballocator, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IBufferSuballocator, TBase)
 
     BufferSuballocatorImpl(IReferenceCounters*                 pRefCounters,
                            IRenderDevice*                      pDevice,
@@ -231,7 +231,7 @@ public:
         };
         // clang-format on
 
-        pSuballocation->QueryInterface(IID_BufferSuballocation, reinterpret_cast<IObject**>(ppSuballocation));
+        pSuballocation->QueryInterface(IID_IBufferSuballocation, reinterpret_cast<IObject**>(ppSuballocation));
         m_AllocationCount.fetch_add(1);
     }
 
@@ -301,7 +301,7 @@ void CreateBufferSuballocator(IRenderDevice*                      pDevice,
     try
     {
         auto* pAllocator = MakeNewRCObj<BufferSuballocatorImpl>()(pDevice, CreateInfo);
-        pAllocator->QueryInterface(IID_BufferSuballocator, reinterpret_cast<IObject**>(ppBufferSuballocator));
+        pAllocator->QueryInterface(IID_IBufferSuballocator, reinterpret_cast<IObject**>(ppBufferSuballocator));
     }
     catch (...)
     {

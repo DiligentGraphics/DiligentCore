@@ -51,7 +51,7 @@ public:
                 bool                IsDeviceInternal = false);
     ~QueryVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryVk, TQueryBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IQueryVk, TQueryBase)
 
     /// Implementation of IQuery::GetData().
     virtual bool DILIGENT_CALL_TYPE GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;

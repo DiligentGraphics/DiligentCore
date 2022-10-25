@@ -63,7 +63,7 @@ public:
         DeviceObjectAttribs Desc;
         Desc.Name = Name;
         auto* pObj(NEW_RC_OBJ(GetRawAllocator(), "ManagedVulkanObject instance", ManagedVulkanObject)(pDevice, Desc, std::move(ObjectWrapper)));
-        pObj->QueryInterface(IID_DeviceObject, reinterpret_cast<IObject**>(ppManagedObject));
+        pObj->QueryInterface(IID_IDeviceObject, reinterpret_cast<IObject**>(ppManagedObject));
     }
 
     typename VulkanObjectWrapperType::VkObjectType Get() const

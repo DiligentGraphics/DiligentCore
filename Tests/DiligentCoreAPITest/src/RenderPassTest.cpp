@@ -561,7 +561,7 @@ void RenderPassTest::TestMSResolve(bool UseMemoryless)
 
     constexpr float ClearColor[] = {0.25f, 0.5f, 0.375f, 0.5f};
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -722,7 +722,7 @@ void RenderPassTest::TestInputAttachment(bool UseSignature, bool UseMemoryless)
 
     constexpr float ClearColor[] = {0.5f, 0.125f, 0.25f, 0.25f};
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();
@@ -1037,7 +1037,7 @@ void RenderPassTest::TestInputAttachmentGeneralLayout(bool UseSignature)
 
     constexpr float ClearColor[] = {0.5f, 0.125f, 0.25f, 0.25f};
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
     if (pTestingSwapChain)
     {
         pContext->Flush();

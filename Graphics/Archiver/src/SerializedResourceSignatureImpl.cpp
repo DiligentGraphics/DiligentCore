@@ -121,7 +121,7 @@ void DILIGENT_CALL_TYPE SerializedResourceSignatureImpl::QueryInterface(const IN
 {
     if (ppInterface == nullptr)
         return;
-    if (IID == IID_SerializedResourceSignature || IID == IID_PipelineResourceSignature)
+    if (IID == IID_ISerializedResourceSignature || IID == IID_IPipelineResourceSignature)
     {
         *ppInterface = this;
         (*ppInterface)->AddRef();

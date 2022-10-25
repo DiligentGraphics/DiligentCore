@@ -67,7 +67,7 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRef
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(DeviceContextD3D11Impl, IID_DeviceContextD3D11, TDeviceContextBase)
+IMPLEMENT_QUERY_INTERFACE(DeviceContextD3D11Impl, IID_IDeviceContextD3D11, TDeviceContextBase)
 
 
 void DeviceContextD3D11Impl::Begin(Uint32 ImmediateContextId)
@@ -1772,7 +1772,7 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
         &pd3d11CmdList);
 
     CommandListD3D11Impl* pCmdListD3D11(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D11Impl instance", CommandListD3D11Impl)(m_pDevice, this, pd3d11CmdList));
-    pCmdListD3D11->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
+    pCmdListD3D11->QueryInterface(IID_ICommandList, reinterpret_cast<IObject**>(ppCommandList));
 
     // Device context is now in default state
     InvalidateState();
@@ -2019,14 +2019,14 @@ static void AliasingBarrier(ID3D11DeviceContext* pd3d11Ctx, IDeviceObject* pReso
 
     auto GetD3D11Resource = [&UseNVApi](IDeviceObject* pResource) -> ID3D11Resource* //
     {
-        if (RefCntAutoPtr<ITextureD3D11> pTexture{pResource, IID_TextureD3D11})
+        if (RefCntAutoPtr<ITextureD3D11> pTexture{pResource, IID_ITextureD3D11})
         {
             const auto* pTexD3D11 = pTexture.RawPtr<const TextureBaseD3D11>();
             if (pTexD3D11->IsUsingNVApi())
                 UseNVApi = true;
             return pTexture->GetD3D11Texture();
         }
-        else if (RefCntAutoPtr<IBufferD3D11> pBuffer{pResource, IID_BufferD3D11})
+        else if (RefCntAutoPtr<IBufferD3D11> pBuffer{pResource, IID_IBufferD3D11})
         {
             return pBuffer.RawPtr<BufferD3D11Impl>()->GetD3D11Buffer();
         }
@@ -2078,11 +2078,11 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, const
         else
         {
             DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
-            if (RefCntAutoPtr<TextureBaseD3D11> pTexture{Barrier.pResource, IID_TextureD3D11})
+            if (RefCntAutoPtr<TextureBaseD3D11> pTexture{Barrier.pResource, IID_ITextureD3D11})
             {
                 TransitionResource(*pTexture, Barrier.NewState, Barrier.OldState);
             }
-            else if (RefCntAutoPtr<BufferD3D11Impl> pBuffer{Barrier.pResource, IID_BufferD3D11})
+            else if (RefCntAutoPtr<BufferD3D11Impl> pBuffer{Barrier.pResource, IID_IBufferD3D11})
             {
                 TransitionResource(*pBuffer, Barrier.NewState, Barrier.OldState);
             }

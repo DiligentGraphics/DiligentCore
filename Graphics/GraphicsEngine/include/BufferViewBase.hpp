@@ -77,7 +77,7 @@ public:
         m_spBuffer{bIsDefaultView ? nullptr : pBuffer}
     {}
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferView, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IBufferView, TDeviceObjectBase)
 
     /// Implementation of IBufferView::GetBuffer()
     virtual IBuffer* DILIGENT_CALL_TYPE GetBuffer() const override final

@@ -37,7 +37,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 struct ISwapChainGL;
 
 // {3464FDF1-C548-4935-96C3-B454C9DF6F6A}
-static const INTERFACE_ID IID_DeviceContextGL =
+static const INTERFACE_ID IID_IDeviceContextGL =
     {0x3464fdf1, 0xc548, 0x4935, {0x96, 0xc3, 0xb4, 0x54, 0xc9, 0xdf, 0x6f, 0x6a}};
 
 #define DILIGENT_INTERFACE_NAME IDeviceContextGL

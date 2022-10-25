@@ -51,7 +51,7 @@ namespace Testing
 
 void PrintShaderResources(IShader* pShader)
 {
-    RefCntAutoPtr<IShaderD3D> pShaderD3D(pShader, IID_ShaderD3D);
+    RefCntAutoPtr<IShaderD3D> pShaderD3D(pShader, IID_IShaderD3D);
 
     std::stringstream ss;
     ss << "Resources of shader '" << pShader->GetDesc().Name << "':" << std::endl;

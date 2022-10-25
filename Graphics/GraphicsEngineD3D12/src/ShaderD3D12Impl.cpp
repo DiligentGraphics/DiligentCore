@@ -132,7 +132,7 @@ void ShaderD3D12Impl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterf
 {
     if (ppInterface == nullptr)
         return;
-    if (IID == IID_ShaderD3D || IID == IID_ShaderD3D12)
+    if (IID == IID_IShaderD3D || IID == IID_IShaderD3D12)
     {
         *ppInterface = this;
         (*ppInterface)->AddRef();

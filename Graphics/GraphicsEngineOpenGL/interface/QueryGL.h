@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {D8A02AB7-0720-417D-AA9B-20A2C05A3EE0}
-static const INTERFACE_ID IID_QueryGL =
+static const INTERFACE_ID IID_IQueryGL =
     {0xd8a02ab7, 0x720, 0x417d, {0xaa, 0x9b, 0x20, 0xa2, 0xc0, 0x5a, 0x3e, 0xe0}};
 
 #define DILIGENT_INTERFACE_NAME IQueryGL

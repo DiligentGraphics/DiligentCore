@@ -105,8 +105,8 @@ namespace Testing
 void TestCreateObjFromNativeResGL::CreateTexture(Diligent::ITexture* pTexture)
 {
 #if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_ANDROID
-    RefCntAutoPtr<IRenderDeviceGL> pDeviceGL(m_pDevice, IID_RenderDeviceGL);
-    RefCntAutoPtr<ITextureGL>      pTextureGL(pTexture, IID_TextureGL);
+    RefCntAutoPtr<IRenderDeviceGL> pDeviceGL(m_pDevice, IID_IRenderDeviceGL);
+    RefCntAutoPtr<ITextureGL>      pTextureGL(pTexture, IID_ITextureGL);
     ASSERT_NE(pDeviceGL, nullptr);
     ASSERT_NE(pTextureGL, nullptr);
 
@@ -134,7 +134,7 @@ void TestCreateObjFromNativeResGL::CreateTexture(Diligent::ITexture* pTexture)
 
     EXPECT_EQ(TestTexDesc, SrcTexDesc);
 
-    RefCntAutoPtr<ITextureGL> pAttachedTextureGL(pAttachedTexture, IID_TextureGL);
+    RefCntAutoPtr<ITextureGL> pAttachedTextureGL(pAttachedTexture, IID_ITextureGL);
     ASSERT_NE(pAttachedTextureGL, nullptr);
     EXPECT_EQ(pAttachedTextureGL->GetGLTextureHandle(), GLHandle);
     EXPECT_EQ(pAttachedTextureGL->GetBindTarget(), pTextureGL->GetBindTarget());
@@ -145,8 +145,8 @@ void TestCreateObjFromNativeResGL::CreateTexture(Diligent::ITexture* pTexture)
 void TestCreateObjFromNativeResGL::CreateBuffer(Diligent::IBuffer* pBuffer)
 {
 #if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_ANDROID
-    RefCntAutoPtr<IRenderDeviceGL> pDeviceGL(m_pDevice, IID_RenderDeviceGL);
-    RefCntAutoPtr<IBufferGL>       pBufferGL(pBuffer, IID_BufferGL);
+    RefCntAutoPtr<IRenderDeviceGL> pDeviceGL(m_pDevice, IID_IRenderDeviceGL);
+    RefCntAutoPtr<IBufferGL>       pBufferGL(pBuffer, IID_IBufferGL);
     ASSERT_NE(pDeviceGL, nullptr);
     ASSERT_NE(pBufferGL, nullptr);
 
@@ -161,7 +161,7 @@ void TestCreateObjFromNativeResGL::CreateBuffer(Diligent::IBuffer* pBuffer)
     const auto& TestBufferDesc = pBufferFromNativeGLHandle->GetDesc();
     EXPECT_EQ(TestBufferDesc, SrcBuffDesc);
 
-    RefCntAutoPtr<IBufferGL> pTestBufferGL(pBufferFromNativeGLHandle, IID_BufferGL);
+    RefCntAutoPtr<IBufferGL> pTestBufferGL(pBufferFromNativeGLHandle, IID_IBufferGL);
     ASSERT_NE(pTestBufferGL, nullptr);
     EXPECT_EQ(pTestBufferGL->GetGLBufferHandle(), GLBufferHandle);
     EXPECT_EQ(static_cast<GLuint>(pTestBufferGL->GetNativeHandle()), GLBufferHandle);

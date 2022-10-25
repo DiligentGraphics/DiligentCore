@@ -64,7 +64,7 @@ TextureBaseD3D11::TextureBaseD3D11(IReferenceCounters*        pRefCounters,
     SetState(RESOURCE_STATE_UNDEFINED);
 }
 
-IMPLEMENT_QUERY_INTERFACE(TextureBaseD3D11, IID_TextureD3D11, TTextureBase)
+IMPLEMENT_QUERY_INTERFACE(TextureBaseD3D11, IID_ITextureD3D11, TTextureBase)
 
 void TextureBaseD3D11::CreateViewInternal(const TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
 {
@@ -137,7 +137,7 @@ void TextureBaseD3D11::CreateViewInternal(const TextureViewDesc& ViewDesc, IText
         if (bIsDefaultView)
             *ppView = pViewD3D11;
         else
-            pViewD3D11->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppView));
+            pViewD3D11->QueryInterface(IID_ITextureView, reinterpret_cast<IObject**>(ppView));
     }
     catch (const std::runtime_error&)
     {

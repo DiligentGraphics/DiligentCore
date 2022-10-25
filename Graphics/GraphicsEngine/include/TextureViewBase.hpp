@@ -75,7 +75,7 @@ public:
         m_spTexture(bIsDefaultView ? nullptr : pTexture)
     {}
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureView, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ITextureView, TDeviceObjectBase)
 
     /// Implementation of ITextureView::SetSampler()
     virtual void DILIGENT_CALL_TYPE SetSampler(ISampler* pSampler) override final

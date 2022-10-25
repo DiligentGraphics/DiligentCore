@@ -82,7 +82,7 @@ public:
         return m_QueueId;
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandList, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ICommandList, TDeviceObjectBase)
 
 private:
     const Uint8 m_QueueId;

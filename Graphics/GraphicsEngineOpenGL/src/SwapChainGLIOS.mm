@@ -62,7 +62,7 @@ SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters*          pRefCounters,
     CreateDummyBuffers(m_pRenderDevice.RawPtr<RenderDeviceGLImpl>());
 }
 
-IMPLEMENT_QUERY_INTERFACE( SwapChainGLIOS, IID_SwapChainGL, TSwapChainBase )
+IMPLEMENT_QUERY_INTERFACE( SwapChainGLIOS, IID_ISwapChainGL, TSwapChainBase )
 
 void SwapChainGLIOS::Present(Uint32 SyncInterval)
 {

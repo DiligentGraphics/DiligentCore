@@ -37,7 +37,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {2989B45C-143D-4886-B89C-C3271C2DCC5D}
-static const INTERFACE_ID IID_Shader =
+static const INTERFACE_ID IID_IShader =
     {0x2989b45c, 0x143d, 0x4886, {0xb8, 0x9c, 0xc3, 0x27, 0x1c, 0x2d, 0xcc, 0x5d}};
 
 // clang-format off

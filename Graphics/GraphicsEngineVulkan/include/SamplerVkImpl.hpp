@@ -48,7 +48,7 @@ public:
     SamplerVkImpl(IReferenceCounters* pRefCounters, const SamplerDesc& SamplerDesc) noexcept;
     ~SamplerVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SamplerVk, TSamplerBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ISamplerVk, TSamplerBase)
 
     /// Implementation of ISamplerVk::GetVkSampler().
     virtual VkSampler DILIGENT_CALL_TYPE GetVkSampler() const override final { return m_VkSampler; }

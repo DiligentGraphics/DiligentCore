@@ -67,7 +67,7 @@ public:
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Fence, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IFence, TDeviceObjectBase)
 
 
     // Validate IFence::Signal() and IDeviceContext::EnqueueSignal()

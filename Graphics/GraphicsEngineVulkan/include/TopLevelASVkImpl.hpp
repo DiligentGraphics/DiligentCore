@@ -53,7 +53,7 @@ public:
                      VkAccelerationStructureKHR vkTLAS);
     ~TopLevelASVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelASVk, TTopLevelASBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ITopLevelASVk, TTopLevelASBase)
 
     /// Implementation of ITopLevelAS::GetNativeHandle() in Vulkan backend.
     virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final { return BitCast<Uint64>(GetVkTLAS()); }

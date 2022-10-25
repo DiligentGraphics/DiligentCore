@@ -36,7 +36,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {4DAF2E76-9204-4DC4-A53A-B00097412D3A}
-static const struct INTERFACE_ID IID_SwapChainD3D11 =
+static const struct INTERFACE_ID IID_ISwapChainD3D11 =
     {0x4daf2e76, 0x9204, 0x4dc4, {0xa5, 0x3a, 0xb0, 0x0, 0x97, 0x41, 0x2d, 0x3a}};
 
 #define DILIGENT_INTERFACE_NAME ISwapChainD3D11

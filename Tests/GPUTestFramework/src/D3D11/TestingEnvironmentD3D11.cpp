@@ -48,8 +48,8 @@ TestingEnvironmentD3D11::TestingEnvironmentD3D11(const CreateInfo&    CI,
                                                  const SwapChainDesc& SCDesc) :
     GPUTestingEnvironment{CI, SCDesc}
 {
-    RefCntAutoPtr<IRenderDeviceD3D11>  pRenderDeviceD3D11{m_pDevice, IID_RenderDeviceD3D11};
-    RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{GetDeviceContext(), IID_DeviceContextD3D11};
+    RefCntAutoPtr<IRenderDeviceD3D11>  pRenderDeviceD3D11{m_pDevice, IID_IRenderDeviceD3D11};
+    RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{GetDeviceContext(), IID_IDeviceContextD3D11};
 
     m_pd3d11Device  = pRenderDeviceD3D11->GetD3D11Device();
     m_pd3d11Context = pContextD3D11->GetD3D11DeviceContext();

@@ -168,7 +168,7 @@ public:
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContext, TObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IDeviceContext, TObjectBase)
 
     /// Implementation of IDeviceContext::GetDesc().
     virtual const DeviceContextDesc& DILIGENT_CALL_TYPE GetDesc() const override final { return m_Desc; }
@@ -819,7 +819,7 @@ inline void DeviceContextBase<ImplementationTraits>::GetPipelineState(IPipelineS
     DEV_CHECK_ERR(*ppPSO == nullptr, "Memory address contains a pointer to a non-null blend state");
     if (m_pPipelineState)
     {
-        m_pPipelineState->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPSO));
+        m_pPipelineState->QueryInterface(IID_IPipelineState, reinterpret_cast<IObject**>(ppPSO));
     }
     else
     {
@@ -1222,7 +1222,7 @@ inline void DeviceContextBase<ImplementationTraits>::GetRenderTargets(
             DEV_CHECK_ERR(ppRTVs[rt] == nullptr, "Non-null pointer found in RTV array element #", rt);
             auto pBoundRTV = m_pBoundRenderTargets[rt];
             if (pBoundRTV)
-                pBoundRTV->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppRTVs + rt));
+                pBoundRTV->QueryInterface(IID_ITextureView, reinterpret_cast<IObject**>(ppRTVs + rt));
             else
                 ppRTVs[rt] = nullptr;
         }
@@ -1237,7 +1237,7 @@ inline void DeviceContextBase<ImplementationTraits>::GetRenderTargets(
     {
         DEV_CHECK_ERR(*ppDSV == nullptr, "Non-null DSV pointer found");
         if (m_pBoundDepthStencil)
-            m_pBoundDepthStencil->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppDSV));
+            m_pBoundDepthStencil->QueryInterface(IID_ITextureView, reinterpret_cast<IObject**>(ppDSV));
         else
             *ppDSV = nullptr;
     }

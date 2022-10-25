@@ -129,7 +129,7 @@ public:
 #endif
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderPass, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IRenderPass, TDeviceObjectBase)
 
     RESOURCE_STATE GetAttachmentState(Uint32 Subpass, Uint32 Attachment) const
     {

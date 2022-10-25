@@ -73,7 +73,7 @@ public:
 
     ~TextureAtlasSuballocationImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureAtlasSuballocation, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ITextureAtlasSuballocation, TBase)
 
     virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
     {
@@ -442,7 +442,7 @@ public:
         VERIFY_EXPR(m_AvailableSlices.size() == m_MaxSliceCount);
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DynamicTextureAtlas, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IDynamicTextureAtlas, TBase)
 
     virtual ITexture* GetTexture(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
@@ -564,7 +564,7 @@ public:
         };
         // clang-format on
 
-        pSuballocation->QueryInterface(IID_TextureAtlasSuballocation, reinterpret_cast<IObject**>(ppSuballocation));
+        pSuballocation->QueryInterface(IID_ITextureAtlasSuballocation, reinterpret_cast<IObject**>(ppSuballocation));
     }
 
     void Free(Uint32 Slice, Uint32 Alignment, DynamicAtlasManager::Region&& Subregion, Uint32 Width, Uint32 Height)
@@ -770,7 +770,7 @@ void CreateDynamicTextureAtlas(IRenderDevice*                       pDevice,
     try
     {
         auto* pAllocator = MakeNewRCObj<DynamicTextureAtlasImpl>()(pDevice, CreateInfo);
-        pAllocator->QueryInterface(IID_DynamicTextureAtlas, reinterpret_cast<IObject**>(ppAtlas));
+        pAllocator->QueryInterface(IID_IDynamicTextureAtlas, reinterpret_cast<IObject**>(ppAtlas));
     }
     catch (...)
     {

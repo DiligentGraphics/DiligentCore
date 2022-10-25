@@ -102,7 +102,7 @@ void ComputeShaderReference(ISwapChain* pSwapChain)
             LOG_ERROR_AND_THROW("Unsupported device type");
     }
 
-    if (RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain})
+    if (RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_ITestingSwapChain})
     {
         pTestingSwapChain->TakeSnapshot();
     }
@@ -132,7 +132,7 @@ TEST(ComputeShaderTest, FillTexture)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_ITestingSwapChain};
     if (!pTestingSwapChain)
     {
         GTEST_SKIP() << "Compute shader test requires testing swap chain";
@@ -197,7 +197,7 @@ TEST(ComputeShaderTest, GenerateMips_CSInterference)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_ITestingSwapChain};
     if (!pTestingSwapChain)
     {
         GTEST_SKIP() << "Compute shader test requires testing swap chain";

@@ -58,7 +58,7 @@ public:
 
     ~ResourceMappingImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ResourceMapping, TObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IResourceMapping, TObjectBase)
 
     /// Implementation of IResourceMapping::AddResource()
     virtual void DILIGENT_CALL_TYPE AddResource(const Char*    Name,

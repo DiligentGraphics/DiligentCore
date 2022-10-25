@@ -4367,7 +4367,7 @@ void HLSL2GLSLConverterImpl::CreateStream(const Char*                      Input
     try
     {
         auto* pStream = NEW_RC_OBJ(GetRawAllocator(), "HLSL2GLSLConverterImpl::ConversionStream object instance", ConversionStream)(*this, InputFileName, pSourceStreamFactory, HLSLSource, NumSymbols, true);
-        pStream->QueryInterface(IID_HLSL2GLSLConversionStream, reinterpret_cast<IObject**>(ppStream));
+        pStream->QueryInterface(IID_IHLSL2GLSLConversionStream, reinterpret_cast<IObject**>(ppStream));
     }
     catch (std::runtime_error&)
     {
@@ -4386,7 +4386,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
     {
         auto                GLSLSource = Convert(EntryPoint, ShaderType, IncludeDefintions, SamplerSuffix, UseInOutLocationQualifiers);
         StringDataBlobImpl* pDataBlob  = MakeNewRCObj<StringDataBlobImpl>()(std::move(GLSLSource));
-        pDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppGLSLSource));
+        pDataBlob->QueryInterface(IID_IDataBlob, reinterpret_cast<IObject**>(ppGLSLSource));
     }
     catch (std::runtime_error&)
     {

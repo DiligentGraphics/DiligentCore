@@ -53,7 +53,7 @@ public:
                     const NativeWindow&        Window);
     ~SwapChainVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SwapChainVk, TSwapChainBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ISwapChainVk, TSwapChainBase)
 
     /// Implementation of ISwapChain::Present() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override final;

@@ -51,7 +51,7 @@ public:
                                    PipelineResourceSignatureD3D12Impl* pPRS);
     ~ShaderResourceBindingD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBindingD3D12, TBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderResourceBindingD3D12, TBase)
 };
 
 } // namespace Diligent

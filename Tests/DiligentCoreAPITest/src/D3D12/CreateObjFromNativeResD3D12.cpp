@@ -47,8 +47,8 @@ namespace Testing
 
 void TestCreateObjFromNativeResD3D12::CreateTexture(Diligent::ITexture* pTexture)
 {
-    RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12(m_pDevice, IID_RenderDeviceD3D12);
-    RefCntAutoPtr<ITextureD3D12>      pTextureD3D12(pTexture, IID_TextureD3D12);
+    RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12(m_pDevice, IID_IRenderDeviceD3D12);
+    RefCntAutoPtr<ITextureD3D12>      pTextureD3D12(pTexture, IID_ITextureD3D12);
     ASSERT_NE(pDeviceD3D12, nullptr);
     ASSERT_NE(pTextureD3D12, nullptr);
 
@@ -75,7 +75,7 @@ void TestCreateObjFromNativeResD3D12::CreateTexture(Diligent::ITexture* pTexture
     EXPECT_EQ(TestTexDesc, SrcTexDesc) << "Src tex desc:  " << GetObjectDescString(SrcTexDesc)
                                        << "\nTest tex desc: " << GetObjectDescString(TestTexDesc);
 
-    RefCntAutoPtr<ITextureD3D12> pTestTextureD3D12(pTextureFromNativeD3D12Handle, IID_TextureD3D12);
+    RefCntAutoPtr<ITextureD3D12> pTestTextureD3D12(pTextureFromNativeD3D12Handle, IID_ITextureD3D12);
     ASSERT_NE(pTestTextureD3D12, nullptr);
     EXPECT_EQ(pTestTextureD3D12->GetD3D12Texture(), pD3D12Texture);
     EXPECT_EQ(reinterpret_cast<ID3D12Resource*>(pTestTextureD3D12->GetNativeHandle()), pD3D12Texture);
@@ -83,8 +83,8 @@ void TestCreateObjFromNativeResD3D12::CreateTexture(Diligent::ITexture* pTexture
 
 void TestCreateObjFromNativeResD3D12::CreateBuffer(Diligent::IBuffer* pBuffer)
 {
-    RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12(m_pDevice, IID_RenderDeviceD3D12);
-    RefCntAutoPtr<IBufferD3D12>       pBufferD3D12(pBuffer, IID_BufferD3D12);
+    RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12(m_pDevice, IID_IRenderDeviceD3D12);
+    RefCntAutoPtr<IBufferD3D12>       pBufferD3D12(pBuffer, IID_IBufferD3D12);
     ASSERT_NE(pDeviceD3D12, nullptr);
     ASSERT_NE(pBufferD3D12, nullptr);
 
@@ -104,7 +104,7 @@ void TestCreateObjFromNativeResD3D12::CreateBuffer(Diligent::IBuffer* pBuffer)
         EXPECT_EQ(TestBufferDesc, SrcBuffDesc) << "Src buff desc:  " << GetObjectDescString(SrcBuffDesc)
                                                << "\nTest buff desc: " << GetObjectDescString(TestBufferDesc);
 
-        RefCntAutoPtr<IBufferD3D12> pTestBufferD3D12(pBufferFromNativeD3D12Handle, IID_BufferD3D12);
+        RefCntAutoPtr<IBufferD3D12> pTestBufferD3D12(pBufferFromNativeD3D12Handle, IID_IBufferD3D12);
         ASSERT_NE(pTestBufferD3D12, nullptr);
 
         Uint64 TestBuffDataStartByteOffset;

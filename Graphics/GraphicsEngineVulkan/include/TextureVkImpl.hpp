@@ -62,7 +62,7 @@ public:
 
     ~TextureVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureVk, TTextureBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ITextureVk, TTextureBase)
 
     /// Implementation of ITextureVk::GetVkImage().
     virtual VkImage DILIGENT_CALL_TYPE GetVkImage() const override final { return m_VulkanImage; }

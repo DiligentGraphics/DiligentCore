@@ -96,7 +96,7 @@ public:
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTable, TDeviceObjectBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderBindingTable, TDeviceObjectBase)
 
 
     void DILIGENT_CALL_TYPE Reset(IPipelineState* pPSO) override final

@@ -59,7 +59,7 @@ public:
                  bool                    IsDeviceInternal = false);
     ~ShaderVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderVk, TShaderBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderVk, TShaderBase)
 
     /// Implementation of IShader::GetResourceCount() in Vulkan backend.
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final

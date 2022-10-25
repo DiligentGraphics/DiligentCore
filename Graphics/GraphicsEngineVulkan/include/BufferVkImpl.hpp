@@ -62,7 +62,7 @@ public:
                  VkBuffer                   vkBuffer);
     ~BufferVkImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferVk, TBufferBase)
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IBufferVk, TBufferBase)
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpVerifyDynamicAllocation(const DeviceContextVkImpl* pCtx) const;

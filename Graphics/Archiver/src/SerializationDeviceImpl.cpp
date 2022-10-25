@@ -138,7 +138,7 @@ void DILIGENT_CALL_TYPE SerializationDeviceImpl::QueryInterface(const INTERFACE_
 {
     if (ppInterface == nullptr)
         return;
-    if (IID == IID_SerializationDevice || IID == IID_RenderDevice)
+    if (IID == IID_ISerializationDevice || IID == IID_IRenderDevice)
     {
         *ppInterface = this;
         (*ppInterface)->AddRef();
@@ -187,7 +187,7 @@ void SerializationDeviceImpl::CreateSerializedResourceSignature(SerializedResour
 {
     auto& RawMemAllocator = GetRawAllocator();
     auto* pSignatureImpl  = NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializedResourceSignatureImpl)(Name);
-    pSignatureImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
+    pSignatureImpl->QueryInterface(IID_IPipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
 }
 
 void SerializationDeviceImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,

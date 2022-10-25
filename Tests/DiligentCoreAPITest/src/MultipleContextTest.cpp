@@ -374,7 +374,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
     // Draw reference in single queue
     {
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
         auto* pRTV        = pSwapChain->GetCurrentBackBufferRTV();
         auto  pTextureRT  = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, 0, "TextureRT", pGraphicsCtx);
@@ -612,7 +612,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 
     // Draw reference in single queue
     {
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
         auto* pRTV           = pSwapChain->GetCurrentBackBufferRTV();
         auto  pTextureRT     = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, 0, "TextureRT", pGraphicsCtx);

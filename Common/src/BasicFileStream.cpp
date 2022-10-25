@@ -39,7 +39,7 @@ BasicFileStream::BasicFileStream(IReferenceCounters* pRefCounters,
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(BasicFileStream, IID_FileStream, TBase)
+IMPLEMENT_QUERY_INTERFACE(BasicFileStream, IID_IFileStream, TBase)
 
 bool BasicFileStream::Read(void* Data, size_t Size)
 {

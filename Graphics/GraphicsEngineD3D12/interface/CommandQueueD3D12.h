@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {D89693CE-F3F4-44B5-B7EF-24115AAD085E}
-static const INTERFACE_ID IID_CommandQueueD3D12 =
+static const INTERFACE_ID IID_ICommandQueueD3D12 =
     {0xd89693ce, 0xf3f4, 0x44b5, {0xb7, 0xef, 0x24, 0x11, 0x5a, 0xad, 0x8, 0x5e}};
 
 #define DILIGENT_INTERFACE_NAME ICommandQueueD3D12

@@ -45,6 +45,6 @@ ShaderResourceBindingGLImpl::~ShaderResourceBindingGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(ShaderResourceBindingGLImpl, IID_ShaderResourceBindingGL, TBase)
+IMPLEMENT_QUERY_INTERFACE(ShaderResourceBindingGLImpl, IID_IShaderResourceBindingGL, TBase)
 
 } // namespace Diligent

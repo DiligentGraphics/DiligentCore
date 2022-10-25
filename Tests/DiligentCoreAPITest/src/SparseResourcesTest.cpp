@@ -951,7 +951,7 @@ TEST_F(SparseResourceTest, SparseBuffer)
 
     // Draw reference
     {
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
         auto pBuffer = CreateBuffer(BuffSize, BIND_NONE);
         ASSERT_NE(pBuffer, nullptr);
@@ -1079,7 +1079,7 @@ TEST_F(SparseResourceTest, SparseResidentBuffer)
 
     // Draw reference
     {
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
         auto pBuffer = CreateBuffer(BuffSize, BIND_NONE);
         ASSERT_NE(pBuffer, nullptr);
@@ -1224,7 +1224,7 @@ TEST_F(SparseResourceTest, SparseResidentAliasedBuffer)
 
     // Draw reference
     {
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
         auto pBuffer = CreateBuffer(BuffSize, BIND_NONE);
         ASSERT_NE(pBuffer, nullptr);
@@ -1350,7 +1350,7 @@ TEST_P(SparseResourceTest, SparseTexture)
 
     // Draw reference
     {
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
         auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET);
         ASSERT_NE(pRefTexture, nullptr);
@@ -1543,7 +1543,7 @@ TEST_P(SparseResourceTest, SparseResidencyTexture)
 
     // Draw reference
     {
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
         auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET);
         ASSERT_NE(pRefTexture, nullptr);
@@ -1755,7 +1755,7 @@ TEST_P(SparseResourceTest, SparseResidencyAliasedTexture)
 
     // Draw reference
     {
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
         auto pRefTexture = CreateTexture(TexSize.Recast<Uint32>(), BIND_RENDER_TARGET);
         ASSERT_NE(pRefTexture, nullptr);
@@ -1937,7 +1937,7 @@ TEST_F(SparseResourceTest, SparseTexture3D)
 
     // Draw reference
     {
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_ITestingSwapChain);
 
         auto pRefTexture = CreateTexture(TexSize, BIND_UNORDERED_ACCESS);
         ASSERT_NE(pRefTexture, nullptr);

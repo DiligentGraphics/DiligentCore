@@ -80,7 +80,7 @@ public:
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BytecodeCache, TBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IBytecodeCache, TBase);
 
     virtual bool DILIGENT_CALL_TYPE Load(IDataBlob* pDataBlob) override final
     {
@@ -207,7 +207,7 @@ void CreateBytecodeCache(const BytecodeCacheCreateInfo& CreateInfo,
     {
         RefCntAutoPtr<IBytecodeCache> pCache{MakeNewRCObj<BytecodeCacheImpl>()(CreateInfo)};
         if (pCache)
-            pCache->QueryInterface(IID_BytecodeCache, reinterpret_cast<IObject**>(ppCache));
+            pCache->QueryInterface(IID_IBytecodeCache, reinterpret_cast<IObject**>(ppCache));
     }
     catch (...)
     {

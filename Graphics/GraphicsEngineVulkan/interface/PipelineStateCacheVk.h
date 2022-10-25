@@ -34,9 +34,8 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {C866CC1D-A607-4F55-8D5F-FD6D4F0E051C}
-static const INTERFACE_ID IID_PipelineStateCacheVk =
+static const INTERFACE_ID IID_IPipelineStateCacheVk =
     {0xc866cc1d, 0xa607, 0x4f55, {0x8d, 0x5f, 0xfd, 0x6d, 0x4f, 0xe, 0x5, 0x1c}};
-
 
 #define DILIGENT_INTERFACE_NAME IPipelineStateCacheVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
