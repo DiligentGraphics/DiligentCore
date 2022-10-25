@@ -236,9 +236,9 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     /// 
     /// \warning    This method is not thread-safe and must not be called simultaneously
     ///             with other methods.
-    VIRTUAL bool METHOD(LoadArchive)(THIS_
+    VIRTUAL Bool METHOD(LoadArchive)(THIS_
                                      const IDataBlob* pArchive,
-                                     bool             MakeCopy DEFAULT_VALUE(false)) PURE;
+                                     Bool             MakeCopy DEFAULT_VALUE(false)) PURE;
 
     /// Unpacks a shader from the device object archive.
 
@@ -303,7 +303,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     ///
     /// \warning    This method is not thread-safe and must not be called simultaneously
     ///             with other methods.
-    VIRTUAL bool METHOD(Store)(THIS_
+    VIRTUAL Bool METHOD(Store)(THIS_
                                IDataBlob** ppArchive) CONST PURE;
 
     /// Resets the dearchiver state and releases all loaded objects.

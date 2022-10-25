@@ -163,7 +163,7 @@ DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
     ///< A texture can be used as shading rate texture.
     BIND_SHADING_RATE        = 1u << 11u,
 
-    BIND_FLAGS_LAST          = BIND_SHADING_RATE
+    BIND_FLAG_LAST           = BIND_SHADING_RATE
 };
 DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)
 
@@ -1475,7 +1475,7 @@ struct SwapChainDesc
 
     /// Indicates if this is a primary swap chain. When Present() is called
     /// for the primary swap chain, the engine releases stale resources.
-    bool  IsPrimary                     DEFAULT_INITIALIZER(true);
+    Bool  IsPrimary                     DEFAULT_INITIALIZER(true);
 
 #if DILIGENT_CPP_INTERFACE
     constexpr SwapChainDesc() noexcept
@@ -1494,7 +1494,7 @@ struct SwapChainDesc
                             Uint32         _BufferCount         = SwapChainDesc{}.BufferCount,
                             Float32        _DefaultDepthValue   = SwapChainDesc{}.DefaultDepthValue,
                             Uint8          _DefaultStencilValue = SwapChainDesc{}.DefaultStencilValue,
-                            bool           _IsPrimary           = SwapChainDesc{}.IsPrimary) :
+                            Bool           _IsPrimary           = SwapChainDesc{}.IsPrimary) :
         Width               {_Width              },
         Height              {_Height             },
         ColorBufferFormat   {_ColorBufferFormat  },
@@ -3323,7 +3323,7 @@ struct EngineCreateInfo
     /// debug layer, enable Vulkan validation layers, create debug OpenGL context, etc.).
     /// The validation is enabled by default in Debug/Development builds and disabled
     /// in release builds.
-    bool                EnableValidation            DEFAULT_INITIALIZER(false);
+    Bool                EnableValidation            DEFAULT_INITIALIZER(false);
 
     /// Validation options, see Diligent::VALIDATION_FLAGS.
     VALIDATION_FLAGS    ValidationFlags             DEFAULT_INITIALIZER(VALIDATION_FLAG_NONE);
@@ -3363,7 +3363,7 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Enable 0..1 normalized-device Z range, if required extension is supported; -1..+1 otherwise.
     /// Use IRenderDevice::GetDeviceInfo().NDC to get current NDC.
-    bool         ZeroToOneNDZ DEFAULT_INITIALIZER(false);
+    Bool         ZeroToOneNDZ DEFAULT_INITIALIZER(false);
 
 #if DILIGENT_CPP_INTERFACE
     EngineGLCreateInfo() noexcept : EngineGLCreateInfo{EngineCreateInfo{}}
@@ -3914,7 +3914,7 @@ struct TextureFormatAttribs
     COMPONENT_TYPE ComponentType DEFAULT_INITIALIZER(COMPONENT_TYPE_UNDEFINED);
 
     /// Bool flag indicating if the format is a typeless format
-    bool IsTypeless              DEFAULT_INITIALIZER(false);
+    Bool IsTypeless              DEFAULT_INITIALIZER(false);
 
     /// For block-compressed formats, compression block width
     Uint8 BlockWidth             DEFAULT_INITIALIZER(0);
@@ -3962,10 +3962,10 @@ typedef struct TextureFormatAttribs TextureFormatAttribs;
 struct TextureFormatInfo DILIGENT_DERIVE(TextureFormatAttribs)
 
     /// Indicates if the format is supported by the device
-    bool Supported  DEFAULT_INITIALIZER(false);
+    Bool Supported  DEFAULT_INITIALIZER(false);
 
     // Explicitly pad the structure to 8-byte boundary
-    bool Padding[7] DEFAULT_INITIALIZER({});
+    Bool Padding[7] DEFAULT_INITIALIZER({});
 };
 typedef struct TextureFormatInfo TextureFormatInfo;
 

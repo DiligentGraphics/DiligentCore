@@ -371,7 +371,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     ///                             great care only if you are sure the resources are not
     ///                             in use by the GPU (such as when the device has just been idled).
     VIRTUAL void METHOD(ReleaseStaleResources)(THIS_
-                                               bool ForceRelease DEFAULT_VALUE(false)) PURE;
+                                               Bool ForceRelease DEFAULT_VALUE(false)) PURE;
 
 
     /// Waits until all outstanding operations on the GPU are complete.

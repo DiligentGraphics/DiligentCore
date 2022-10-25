@@ -840,7 +840,7 @@ const Char* GetBindFlagString(Uint32 BindFlag)
 {
     VERIFY(BindFlag == BIND_NONE || IsPowerOfTwo(BindFlag), "More than one bind flag is specified");
 
-    static_assert(BIND_FLAGS_LAST == 0x800L, "Please handle the new bind flag in the switch below");
+    static_assert(BIND_FLAG_LAST == 0x800L, "Please handle the new bind flag in the switch below");
     switch (BindFlag)
     {
 #define BIND_FLAG_STR_CASE(Flag) \
@@ -868,7 +868,7 @@ String GetBindFlagsString(Uint32 BindFlags, const char* Delimiter)
     if (BindFlags == 0)
         return "0";
     String Str;
-    for (Uint32 Flag = 1; BindFlags && Flag <= BIND_FLAGS_LAST; Flag <<= 1)
+    for (Uint32 Flag = 1; BindFlags && Flag <= BIND_FLAG_LAST; Flag <<= 1)
     {
         if (BindFlags & Flag)
         {
