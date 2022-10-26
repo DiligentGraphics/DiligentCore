@@ -117,22 +117,6 @@ SerializedResourceSignatureImpl::~SerializedResourceSignatureImpl()
 {
 }
 
-void DILIGENT_CALL_TYPE SerializedResourceSignatureImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
-{
-    if (ppInterface == nullptr)
-        return;
-    if (IID == IID_SerializedResourceSignature || IID == IID_PipelineResourceSignature)
-    {
-        *ppInterface = this;
-        (*ppInterface)->AddRef();
-    }
-    else
-    {
-        TBase::QueryInterface(IID, ppInterface);
-    }
-}
-
-
 const PipelineResourceSignatureDesc& SerializedResourceSignatureImpl::GetDesc() const
 {
     if (m_pDesc != nullptr)

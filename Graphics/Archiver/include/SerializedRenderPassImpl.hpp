@@ -49,7 +49,7 @@ public:
 
     ~SerializedRenderPassImpl() override;
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_SerializedRenderPass, IID_RenderPass, TBase)
 
     const SerializedData& GetCommonData() const { return m_CommonData; }
 

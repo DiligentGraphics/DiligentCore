@@ -49,7 +49,7 @@ public:
     SerializationDeviceImpl(IReferenceCounters* pRefCounters, const SerializationDeviceCreateInfo& CreateInfo);
     ~SerializationDeviceImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_SerializationDevice, IID_RenderDevice, TBase)
 
     // clang-format off
     UNSUPPORTED_METHOD(void, CreateGraphicsPipelineState,   const GraphicsPipelineStateCreateInfo&   PSOCreateInfo, IPipelineState** ppPipelineState)

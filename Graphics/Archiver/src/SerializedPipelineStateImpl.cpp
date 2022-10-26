@@ -326,21 +326,6 @@ INSTANTIATE_SERIALIZED_PSO_CTOR(RayTracingPipelineStateCreateInfo);
 SerializedPipelineStateImpl::~SerializedPipelineStateImpl()
 {}
 
-void DILIGENT_CALL_TYPE SerializedPipelineStateImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
-{
-    if (ppInterface == nullptr)
-        return;
-    if (IID == IID_SerializedPipelineState || IID == IID_PipelineState)
-    {
-        *ppInterface = this;
-        (*ppInterface)->AddRef();
-    }
-    else
-    {
-        TBase::QueryInterface(IID, ppInterface);
-    }
-}
-
 void SerializedPipelineStateImpl::SerializeShaderCreateInfo(DeviceType              Type,
                                                             const ShaderCreateInfo& CI)
 {

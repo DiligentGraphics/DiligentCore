@@ -134,21 +134,6 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
     }
 }
 
-void DILIGENT_CALL_TYPE SerializationDeviceImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
-{
-    if (ppInterface == nullptr)
-        return;
-    if (IID == IID_SerializationDevice || IID == IID_RenderDevice)
-    {
-        *ppInterface = this;
-        (*ppInterface)->AddRef();
-    }
-    else
-    {
-        TBase::QueryInterface(IID, ppInterface);
-    }
-}
-
 SerializationDeviceImpl::~SerializationDeviceImpl()
 {
 #if !DILIGENT_NO_GLSLANG

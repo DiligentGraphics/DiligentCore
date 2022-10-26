@@ -63,7 +63,7 @@ public:
 
     ~SerializedResourceSignatureImpl() override;
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_SerializedResourceSignature, IID_PipelineResourceSignature, TBase)
 
     virtual const PipelineResourceSignatureDesc& DILIGENT_CALL_TYPE GetDesc() const override final;
 
