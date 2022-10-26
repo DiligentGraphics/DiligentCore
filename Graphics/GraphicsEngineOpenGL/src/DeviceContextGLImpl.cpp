@@ -94,15 +94,15 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     if (PipelineStateGLImpl::IsSameObject(m_pPipelineState, pPipelineStateGLImpl))
         return;
 
-    TDeviceContextBase::SetPipelineState(pPipelineStateGLImpl, 0 /*Dummy*/);
+    TDeviceContextBase::SetPipelineState(std::move(pPipelineStateGLImpl), 0 /*Dummy*/);
 
-    const auto& Desc = pPipelineStateGLImpl->GetDesc();
+    const auto& Desc = m_pPipelineState->GetDesc();
     if (Desc.PipelineType == PIPELINE_TYPE_COMPUTE)
     {
     }
     else if (Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
-        const auto& GraphicsPipeline = pPipelineStateGLImpl->GetGraphicsPipelineDesc();
+        const auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
         // Set rasterizer state
         {
             const auto& RasterizerDesc = GraphicsPipeline.RasterizerDesc;

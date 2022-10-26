@@ -303,10 +303,10 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
             CommitScissor = !m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable;
     }
 
-    TDeviceContextBase::SetPipelineState(pPipelineStateVk, 0 /*Dummy*/);
+    TDeviceContextBase::SetPipelineState(std::move(pPipelineStateVk), 0 /*Dummy*/);
     EnsureVkCmdBuffer();
 
-    auto vkPipeline = pPipelineStateVk->GetVkPipeline();
+    auto vkPipeline = m_pPipelineState->GetVkPipeline();
 
     static_assert(PIPELINE_TYPE_LAST == 4, "Please update the switch below to handle the new pipeline type");
     switch (PSODesc.PipelineType)
@@ -314,7 +314,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
         {
-            auto& GraphicsPipeline = pPipelineStateVk->GetGraphicsPipelineDesc();
+            auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
             m_CommandBuffer.BindGraphicsPipeline(vkPipeline);
 
             if (CommitStates)
@@ -350,8 +350,8 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
             UNEXPECTED("unknown pipeline type");
     }
 
-    const auto& Layout    = pPipelineStateVk->GetPipelineLayout();
-    const auto  SignCount = pPipelineStateVk->GetResourceSignatureCount();
+    const auto& Layout    = m_pPipelineState->GetPipelineLayout();
+    const auto  SignCount = m_pPipelineState->GetResourceSignatureCount();
     auto&       BindInfo  = GetBindInfo(PSODesc.PipelineType);
 
     Uint32 DvpCompatibleSRBCount = 0;
@@ -371,7 +371,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     {
         auto& SetInfo = BindInfo.SetInfo[i];
 
-        auto* pSignature = pPipelineStateVk->GetResourceSignature(i);
+        auto* pSignature = m_pPipelineState->GetResourceSignature(i);
         if (pSignature == nullptr || pSignature->GetNumDescriptorSets() == 0)
         {
             SetInfo = {};

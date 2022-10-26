@@ -293,11 +293,11 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
             CommitScissor = m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable != pPipelineStateD3D12->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable;
     }
 
-    TDeviceContextBase::SetPipelineState(pPipelineStateD3D12, 0 /*Dummy*/);
+    TDeviceContextBase::SetPipelineState(std::move(pPipelineStateD3D12), 0 /*Dummy*/);
 
     auto& CmdCtx        = GetCmdContext();
     auto& RootInfo      = GetRootTableInfo(PSODesc.PipelineType);
-    auto* pd3d12RootSig = pPipelineStateD3D12->GetD3D12RootSignature();
+    auto* pd3d12RootSig = m_pPipelineState->GetD3D12RootSignature();
 
     if (RootInfo.pd3d12RootSig != pd3d12RootSig)
     {
@@ -316,9 +316,9 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
         {
-            auto& GraphicsPipeline = pPipelineStateD3D12->GetGraphicsPipelineDesc();
+            auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
             auto& GraphicsCtx      = CmdCtx.AsGraphicsContext();
-            auto* pd3d12PSO        = pPipelineStateD3D12->GetD3D12PipelineState();
+            auto* pd3d12PSO        = m_pPipelineState->GetD3D12PipelineState();
             GraphicsCtx.SetPipelineState(pd3d12PSO);
             GraphicsCtx.SetGraphicsRootSignature(pd3d12RootSig);
 
@@ -347,7 +347,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         }
         case PIPELINE_TYPE_COMPUTE:
         {
-            auto* pd3d12PSO = pPipelineStateD3D12->GetD3D12PipelineState();
+            auto* pd3d12PSO = m_pPipelineState->GetD3D12PipelineState();
             auto& CompCtx   = CmdCtx.AsComputeContext();
             CompCtx.SetPipelineState(pd3d12PSO);
             CompCtx.SetComputeRootSignature(pd3d12RootSig);
@@ -355,7 +355,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         }
         case PIPELINE_TYPE_RAY_TRACING:
         {
-            auto* pd3d12SO = pPipelineStateD3D12->GetD3D12StateObject();
+            auto* pd3d12SO = m_pPipelineState->GetD3D12StateObject();
             auto& RTCtx    = CmdCtx.AsGraphicsContext4();
             RTCtx.SetRayTracingPipelineState(pd3d12SO);
             RTCtx.SetComputeRootSignature(pd3d12RootSig);
