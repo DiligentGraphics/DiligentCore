@@ -41,6 +41,8 @@
 namespace Diligent
 {
 
+constexpr INTERFACE_ID PipelineStateGLImpl::IID_InternalImpl;
+
 static void VerifyResourceMerge(const PipelineStateDesc&                    PSODesc,
                                 const ShaderResourcesGL::GLResourceAttribs& ExistingRes,
                                 const ShaderResourcesGL::GLResourceAttribs& NewResAttribs)
@@ -383,7 +385,7 @@ void PipelineStateGLImpl::Destruct()
     TPipelineStateBase::Destruct();
 }
 
-IMPLEMENT_QUERY_INTERFACE(PipelineStateGLImpl, IID_PipelineStateGL, TPipelineStateBase)
+IMPLEMENT_QUERY_INTERFACE2(PipelineStateGLImpl, IID_PipelineStateGL, IID_InternalImpl, TPipelineStateBase)
 
 SHADER_TYPE PipelineStateGLImpl::GetShaderStageType(Uint32 Index) const
 {

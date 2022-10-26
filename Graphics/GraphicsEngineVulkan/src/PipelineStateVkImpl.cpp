@@ -50,6 +50,8 @@
 namespace Diligent
 {
 
+constexpr INTERFACE_ID PipelineStateVkImpl::IID_InternalImpl;
+
 namespace
 {
 

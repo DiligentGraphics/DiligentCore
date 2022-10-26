@@ -33,7 +33,7 @@
 namespace Diligent
 {
 
-const INTERFACE_ID ShaderD3D11Impl::IID_InternalImpl;
+constexpr INTERFACE_ID ShaderD3D11Impl::IID_InternalImpl;
 
 static const ShaderVersion HLSLValidateShaderVersion(const ShaderVersion& Version, const ShaderVersion& MaxVersion)
 {

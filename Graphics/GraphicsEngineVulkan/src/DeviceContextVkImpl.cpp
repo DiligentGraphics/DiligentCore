@@ -274,7 +274,8 @@ inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(SoftwareQueueIndex CmdQ
 
 void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 {
-    auto* pPipelineStateVk = ClassPtrCast<PipelineStateVkImpl>(pPipelineState);
+    RefCntAutoPtr<PipelineStateVkImpl> pPipelineStateVk{pPipelineState, PipelineStateVkImpl::IID_InternalImpl};
+    VERIFY(pPipelineState == nullptr || pPipelineStateVk != nullptr, "Unknown pipeline state object implementation");
     if (PipelineStateVkImpl::IsSameObject(m_pPipelineState, pPipelineStateVk))
         return;
 

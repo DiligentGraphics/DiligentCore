@@ -89,7 +89,8 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
 {
     VERIFY_EXPR(pPipelineState != nullptr);
 
-    auto* pPipelineStateGLImpl = ClassPtrCast<PipelineStateGLImpl>(pPipelineState);
+    RefCntAutoPtr<PipelineStateGLImpl> pPipelineStateGLImpl{pPipelineState, PipelineStateGLImpl::IID_InternalImpl};
+    VERIFY(pPipelineState == nullptr || pPipelineStateGLImpl != nullptr, "Unknown pipeline state object implementation");
     if (PipelineStateGLImpl::IsSameObject(m_pPipelineState, pPipelineStateGLImpl))
         return;
 

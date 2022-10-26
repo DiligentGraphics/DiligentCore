@@ -39,7 +39,7 @@
 namespace Diligent
 {
 
-const INTERFACE_ID ShaderD3D12Impl::IID_InternalImpl;
+constexpr INTERFACE_ID ShaderD3D12Impl::IID_InternalImpl;
 
 static ShaderVersion GetD3D12ShaderModel(const ShaderVersion& HLSLVersion,
                                          SHADER_COMPILER      ShaderCompiler,

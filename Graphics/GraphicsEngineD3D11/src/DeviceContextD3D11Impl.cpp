@@ -78,7 +78,8 @@ void DeviceContextD3D11Impl::Begin(Uint32 ImmediateContextId)
 
 void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
 {
-    auto* pPipelineStateD3D11 = ClassPtrCast<PipelineStateD3D11Impl>(pPipelineState);
+    RefCntAutoPtr<PipelineStateD3D11Impl> pPipelineStateD3D11{pPipelineState, PipelineStateD3D11Impl::IID_InternalImpl};
+    VERIFY(pPipelineState == nullptr || pPipelineStateD3D11 != nullptr, "Unknown pipeline state object implementation");
     if (PipelineStateD3D11Impl::IsSameObject(m_pPipelineState, pPipelineStateD3D11))
         return;
 

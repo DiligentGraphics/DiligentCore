@@ -58,6 +58,8 @@
 namespace Diligent
 {
 
+constexpr INTERFACE_ID PipelineStateD3D12Impl::IID_InternalImpl;
+
 namespace
 {
 #ifdef _MSC_VER
