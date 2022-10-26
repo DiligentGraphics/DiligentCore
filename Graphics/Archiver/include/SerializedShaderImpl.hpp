@@ -26,12 +26,11 @@
 
 #pragma once
 
-#include <memory>
 #include <array>
 
 #include "SerializedShader.h"
 #include "SerializationEngineImplTraits.hpp"
-#include "ObjectBase.hpp"
+#include "ShaderBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "STDAllocator.hpp"
 #include "Serializer.hpp"
@@ -57,7 +56,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    virtual const ShaderDesc& DILIGENT_CALL_TYPE GetDesc() const override final { return m_CreateInfo.Desc; }
+    virtual const ShaderDesc& DILIGENT_CALL_TYPE GetDesc() const override final { return m_CreateInfo.Get().Desc; }
 
     UNSUPPORTED_CONST_METHOD(Uint32, GetResourceCount)
     UNSUPPORTED_CONST_METHOD(void, GetResourceDesc, Uint32 Index, ShaderResourceDesc& ResourceDesc)
@@ -99,12 +98,8 @@ public:
     }
 
 private:
-    void CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI) noexcept(false);
-
-    SerializationDeviceImpl*                       m_pDevice;
-    RefCntAutoPtr<IShaderSourceInputStreamFactory> m_pShaderSourceFactory;
-    ShaderCreateInfo                               m_CreateInfo;
-    std::unique_ptr<void, STDDeleterRawMem<void>>  m_pRawMemory;
+    SerializationDeviceImpl* m_pDevice;
+    ShaderCreateInfoWrapper  m_CreateInfo;
 
     std::array<std::unique_ptr<CompiledShader>, static_cast<size_t>(DeviceType::Count)> m_Shaders;
 

@@ -105,6 +105,7 @@ set(SOURCE
     src/RenderPassBase.cpp
     src/ShaderBindingTableBase.cpp
     src/SamplerBase.cpp
+    src/ShaderBase.cpp
     src/TextureBase.cpp
     src/TopLevelASBase.cpp
 )

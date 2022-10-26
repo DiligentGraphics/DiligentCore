@@ -29,7 +29,6 @@
 #include <cstring>
 
 #include "SerializationDeviceImpl.hpp"
-#include "FixedLinearAllocator.hpp"
 #include "EngineMemory.h"
 #include "DataBlobImpl.hpp"
 #include "PlatformMisc.hpp"
@@ -46,9 +45,7 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
                                            const ShaderCreateInfo&  ShaderCI,
                                            const ShaderArchiveInfo& ArchiveInfo) :
     TBase{pRefCounters},
-    m_pDevice{pDevice},
-    m_pShaderSourceFactory{ShaderCI.pShaderSourceStreamFactory},
-    m_CreateInfo{ShaderCI}
+    m_pDevice{pDevice}
 {
     if (ShaderCI.Desc.Name == nullptr || ShaderCI.Desc.Name[0] == '\0')
     {
@@ -66,7 +63,7 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
         LOG_ERROR_AND_THROW("Serialized shader must not contain SHADER_COMPILE_FLAG_SKIP_REFLECTION flag");
     }
 
-    CopyShaderCreateInfo(ShaderCI);
+    m_CreateInfo = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()};
 
     if ((DeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_GL) != 0 && (DeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_GLES) != 0)
     {
@@ -124,88 +121,6 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
     }
 }
 
-void SerializedShaderImpl::CopyShaderCreateInfo(const ShaderCreateInfo& ShaderCI) noexcept(false)
-{
-    m_CreateInfo.ppCompilerOutput = nullptr;
-
-    auto&                RawAllocator = GetRawAllocator();
-    FixedLinearAllocator Allocator{RawAllocator};
-
-    Allocator.AddSpaceForString(ShaderCI.EntryPoint);
-    Allocator.AddSpaceForString(ShaderCI.Desc.CombinedSamplerSuffix);
-    Allocator.AddSpaceForString(ShaderCI.Desc.Name);
-
-    if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
-    {
-        Allocator.AddSpace(ShaderCI.ByteCodeSize, alignof(Uint32));
-    }
-    else if (ShaderCI.Source != nullptr)
-    {
-        Allocator.AddSpaceForString(ShaderCI.Source, ShaderCI.SourceLength);
-    }
-    else if (ShaderCI.FilePath != nullptr && ShaderCI.pShaderSourceStreamFactory != nullptr)
-    {
-        Allocator.AddSpaceForString(ShaderCI.FilePath);
-    }
-    else
-    {
-        LOG_ERROR_AND_THROW("Shader create info must contain Source, Bytecode or FilePath with pShaderSourceStreamFactory");
-    }
-
-    size_t MacroCount = 0;
-    if (ShaderCI.Macros)
-    {
-        for (auto* Macro = ShaderCI.Macros; Macro->Name != nullptr && Macro->Definition != nullptr; ++Macro, ++MacroCount)
-        {}
-        Allocator.AddSpace<ShaderMacro>(MacroCount + 1);
-
-        for (size_t i = 0; i < MacroCount; ++i)
-        {
-            Allocator.AddSpaceForString(ShaderCI.Macros[i].Name);
-            Allocator.AddSpaceForString(ShaderCI.Macros[i].Definition);
-        }
-    }
-
-    Allocator.Reserve();
-
-    m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
-
-    m_CreateInfo.EntryPoint                 = Allocator.CopyString(ShaderCI.EntryPoint);
-    m_CreateInfo.Desc.CombinedSamplerSuffix = Allocator.CopyString(ShaderCI.Desc.CombinedSamplerSuffix);
-    m_CreateInfo.Desc.Name                  = Allocator.CopyString(ShaderCI.Desc.Name);
-
-    if (m_CreateInfo.Desc.Name == nullptr)
-        m_CreateInfo.Desc.Name = "";
-
-    if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
-    {
-        m_CreateInfo.ByteCode = Allocator.Copy(ShaderCI.ByteCode, ShaderCI.ByteCodeSize, alignof(Uint32));
-    }
-    else if (ShaderCI.Source != nullptr)
-    {
-        m_CreateInfo.Source       = Allocator.CopyString(ShaderCI.Source, ShaderCI.SourceLength);
-        m_CreateInfo.SourceLength = ShaderCI.SourceLength;
-    }
-    else
-    {
-        VERIFY_EXPR(ShaderCI.FilePath != nullptr && ShaderCI.pShaderSourceStreamFactory != nullptr);
-        m_CreateInfo.FilePath = Allocator.CopyString(ShaderCI.FilePath);
-    }
-
-    if (MacroCount > 0)
-    {
-        auto* pMacros       = Allocator.ConstructArray<ShaderMacro>(MacroCount + 1);
-        m_CreateInfo.Macros = pMacros;
-        for (auto* Macro = ShaderCI.Macros; Macro->Name != nullptr && Macro->Definition != nullptr; ++Macro, ++pMacros)
-        {
-            pMacros->Name       = Allocator.CopyString(Macro->Name);
-            pMacros->Definition = Allocator.CopyString(Macro->Definition);
-        }
-        pMacros->Name       = nullptr;
-        pMacros->Definition = nullptr;
-    }
-}
-
 SerializedShaderImpl::~SerializedShaderImpl()
 {}
 
@@ -226,7 +141,7 @@ void DILIGENT_CALL_TYPE SerializedShaderImpl::QueryInterface(const INTERFACE_ID&
 
 bool SerializedShaderImpl::operator==(const SerializedShaderImpl& Rhs) const noexcept
 {
-    return m_CreateInfo == Rhs.m_CreateInfo;
+    return m_CreateInfo.Get() == Rhs.m_CreateInfo.Get();
 }
 
 SerializedData SerializedShaderImpl::SerializeCreateInfo(const ShaderCreateInfo& CI)

@@ -31,6 +31,7 @@
 /// Implementation of the Diligent::ShaderBase template class
 
 #include <vector>
+#include <memory>
 
 #include "Shader.h"
 #include "DeviceObjectBase.hpp"
@@ -41,6 +42,51 @@
 
 namespace Diligent
 {
+
+class ShaderCreateInfoWrapper
+{
+public:
+    ShaderCreateInfoWrapper() = default;
+
+    ShaderCreateInfoWrapper(const ShaderCreateInfoWrapper&) = delete;
+    ShaderCreateInfoWrapper& operator=(const ShaderCreateInfoWrapper&) = delete;
+
+    ShaderCreateInfoWrapper(ShaderCreateInfoWrapper&& rhs) noexcept :
+        m_CreateInfo{rhs.m_CreateInfo},
+        m_SourceFactory{std::move(rhs.m_SourceFactory)},
+        m_pRawMemory{std::move(rhs.m_pRawMemory)}
+    {
+        rhs.m_CreateInfo = {};
+    }
+
+    ShaderCreateInfoWrapper& operator=(ShaderCreateInfoWrapper&& rhs) noexcept
+    {
+        m_CreateInfo    = rhs.m_CreateInfo;
+        m_SourceFactory = std::move(rhs.m_SourceFactory);
+        m_pRawMemory    = std::move(rhs.m_pRawMemory);
+
+        rhs.m_CreateInfo = {};
+
+        return *this;
+    }
+
+    ShaderCreateInfoWrapper(const ShaderCreateInfo& CI, IMemoryAllocator& RawAllocator) noexcept(false);
+
+    const ShaderCreateInfo& Get() const
+    {
+        return m_CreateInfo;
+    }
+
+    operator const ShaderCreateInfo&() const
+    {
+        return m_CreateInfo;
+    }
+
+private:
+    ShaderCreateInfo                               m_CreateInfo;
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> m_SourceFactory;
+    std::unique_ptr<void, STDDeleterRawMem<void>>  m_pRawMemory;
+};
 
 /// Template class implementing base functionality of the shader object
 
