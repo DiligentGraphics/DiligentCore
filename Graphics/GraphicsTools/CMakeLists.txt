@@ -94,6 +94,7 @@ PRIVATE
     Diligent-PlatformInterface
     Diligent-GraphicsAccessories
     Diligent-ShaderTools
+    Diligent-GraphicsEngine
     xxHash::xxhash
     ${DEPENDENCIES}
 PUBLIC

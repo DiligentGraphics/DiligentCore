@@ -43,20 +43,44 @@ struct RenderStateCacheCreateInfo
     /// if the object was found in the cache or not.
     bool EnableLogging DEFAULT_INITIALIZER(false);
 
+    /// Whether to enable hot shader and pipeline state reloading.
+    ///
+    /// \note   Hot reloading introduces some overhead and should
+    ///         generally be disabled in production builds.
+    bool EnableHotReload DEFAULT_INITIALIZER(false);
+
+    /// Optional shader source input stream factory to use when reloading
+    /// shaders. If null, original source factory will be used.
+    IShaderSourceInputStreamFactory* pReloadSource DEFAULT_INITIALIZER(nullptr);
+
 #if DILIGENT_CPP_INTERFACE
     constexpr RenderStateCacheCreateInfo() noexcept
     {}
 
     constexpr explicit RenderStateCacheCreateInfo(
-        IRenderDevice* _pDevice,
-        bool           _EnableLogging = RenderStateCacheCreateInfo{}.EnableLogging) noexcept :
+        IRenderDevice*                   _pDevice,
+        bool                             _EnableLogging   = RenderStateCacheCreateInfo{}.EnableLogging,
+        bool                             _EnableHotReload = RenderStateCacheCreateInfo{}.EnableHotReload,
+        IShaderSourceInputStreamFactory* _pReloadSource   = RenderStateCacheCreateInfo{}.pReloadSource) noexcept :
         pDevice{_pDevice},
-        EnableLogging{_EnableLogging}
+        EnableLogging{_EnableLogging},
+        EnableHotReload{_EnableHotReload},
+        pReloadSource{_pReloadSource}
     {}
 #endif
 };
 typedef struct RenderStateCacheCreateInfo RenderStateCacheCreateInfo;
 
+#if DILIGENT_C_INTERFACE
+#    define REF *
+#else
+#    define REF &
+#endif
+
+/// Type of the callback function called by the IRenderStateCache::Reload method.
+typedef void(DILIGENT_CALL_TYPE* ModifyPipelineReloadInfoCallbackType)(PipelineStateCreateInfo REF CreateInfo, void* pUserData);
+
+#undef REF
 
 // clang-format on
 
@@ -161,6 +185,23 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
 
     /// Resets the cache to default state.
     VIRTUAL void METHOD(Reset)(THIS) PURE;
+
+    /// Reloads render states in the cache.
+
+    /// \param [in]  ModifyReloadInfo - An optional callback function that will be called by the render state cache
+    ///                                 to let the application modify pipeline state create info before creating new
+    ///                                 pipeline.
+    ///
+    /// \return     The total number of render states (shaders and pipelines) that were reloaded.
+    ///
+    /// \remars     Reloading is only enabled if the cache was created with the EnableHotReload member of
+    ///             RenderStateCacheCreateInfo member set to true.
+    ///
+    ///             ModifyReloadInfo callback is not allowed to modify shaders, resource layout or pipeline resource
+    ///             signatures. Its main use is to modify the graphics states of a graphics pipeline (blend state,
+    ///             rasterizer state, depth state, etc.).
+    VIRTUAL Uint32 METHOD(Reload)(THIS_
+                                  ModifyPipelineReloadInfoCallbackType ModifyReloadInfo DEFAULT_VALUE(nullptr)) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -178,6 +219,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderStateCache_WriteToBlob(This, ...)                   CALL_IFACE_METHOD(RenderStateCache, WriteToBlob,                  This, __VA_ARGS__)
 #    define IRenderStateCache_WriteToStream(This, ...)                 CALL_IFACE_METHOD(RenderStateCache, WriteToStream,                This, __VA_ARGS__)
 #    define IRenderStateCache_Reset(This)                              CALL_IFACE_METHOD(RenderStateCache, Reset,                        This)
+#    define IRenderStateCache_Reload(This, ...)                        CALL_IFACE_METHOD(RenderStateCache, Reload,                       This, __VA_ARGS__)
 // clang-format on
 
 #endif

@@ -30,8 +30,10 @@
 #include <unordered_map>
 #include <mutex>
 #include <vector>
+#include <memory>
 
 #include "ObjectBase.hpp"
+#include "ShaderBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "SerializationDevice.h"
 #include "SerializedShader.h"
@@ -45,6 +47,187 @@
 
 namespace Diligent
 {
+
+#define PROXY_METHOD(Object, RetType, MethodName)                  \
+    virtual RetType DILIGENT_CALL_TYPE MethodName() override final \
+    {                                                              \
+        return Object->MethodName();                               \
+    }
+
+#define PROXY_CONST_METHOD(Object, RetType, MethodName)                  \
+    virtual RetType DILIGENT_CALL_TYPE MethodName() const override final \
+    {                                                                    \
+        return Object->MethodName();                                     \
+    }
+
+#define PROXY_METHOD1(Object, RetType, MethodName, Type1, Arg1)              \
+    virtual RetType DILIGENT_CALL_TYPE MethodName(Type1 Arg1) override final \
+    {                                                                        \
+        return Object->MethodName(Arg1);                                     \
+    }
+
+#define PROXY_CONST_METHOD1(Object, RetType, MethodName, Type1, Arg1)              \
+    virtual RetType DILIGENT_CALL_TYPE MethodName(Type1 Arg1) const override final \
+    {                                                                              \
+        return Object->MethodName(Arg1);                                           \
+    }
+
+#define PROXY_METHOD2(Object, RetType, MethodName, Type1, Arg1, Type2, Arg2)             \
+    virtual RetType DILIGENT_CALL_TYPE MethodName(Type1 Arg1, Type2 Arg2) override final \
+    {                                                                                    \
+        return Object->MethodName(Arg1, Arg2);                                           \
+    }
+
+#define PROXY_CONST_METHOD2(Object, RetType, MethodName, Type1, Arg1, Type2, Arg2)             \
+    virtual RetType DILIGENT_CALL_TYPE MethodName(Type1 Arg1, Type2 Arg2) const override final \
+    {                                                                                          \
+        return Object->MethodName(Arg1, Arg2);                                                 \
+    }
+
+#define PROXY_METHOD3(Object, RetType, MethodName, Type1, Arg1, Type2, Arg2, Type3, Arg3)            \
+    virtual RetType DILIGENT_CALL_TYPE MethodName(Type1 Arg1, Type2 Arg2, Type3 Arg3) override final \
+    {                                                                                                \
+        return Object->MethodName(Arg1, Arg2, Arg3);                                                 \
+    }
+
+class RenderStateCacheImpl;
+
+class ReloadableShader final : public ObjectBase<IShader>
+{
+public:
+    using TBase = ObjectBase<IShader>;
+
+    // {6BFAAABD-FE55-4420-B0C8-5C4B4F5F8D65}
+    static constexpr INTERFACE_ID IID_InternalImpl =
+        {0x6bfaaabd, 0xfe55, 0x4420, {0xb0, 0xc8, 0x5c, 0x4b, 0x4f, 0x5f, 0x8d, 0x65}};
+
+    ReloadableShader(IReferenceCounters*     pRefCounters,
+                     RenderStateCacheImpl*   pStateCache,
+                     IShader*                pShader,
+                     const ShaderCreateInfo& CreateInfo);
+
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+    {
+        if (ppInterface == nullptr)
+            return;
+
+        if (IID == IID_InternalImpl || IID == IID_Shader || IID == IID_DeviceObject || IID == IID_Unknown)
+        {
+            *ppInterface = this;
+            (*ppInterface)->AddRef();
+        }
+        else
+        {
+            m_pShader->QueryInterface(IID, ppInterface);
+        }
+    }
+
+    PROXY_CONST_METHOD(m_pShader, const ShaderDesc&, GetDesc)
+    PROXY_CONST_METHOD(m_pShader, Int32, GetUniqueID)
+    PROXY_METHOD1(m_pShader, void, SetUserData, IObject*, pUserData)
+    PROXY_CONST_METHOD(m_pShader, IObject*, GetUserData)
+    PROXY_CONST_METHOD(m_pShader, Uint32, GetResourceCount)
+    PROXY_CONST_METHOD2(m_pShader, void, GetResourceDesc, Uint32, Index, ShaderResourceDesc&, ResourceDesc)
+    PROXY_CONST_METHOD2(m_pShader, void, GetBytecode, const void**, ppBytecode, Uint64&, Size)
+
+    static void Create(RenderStateCacheImpl*   pStateCache,
+                       IShader*                pShader,
+                       const ShaderCreateInfo& CreateInfo,
+                       IShader**               ppReloadableShader)
+    {
+        try
+        {
+            RefCntAutoPtr<ReloadableShader> pReloadableShader{MakeNewRCObj<ReloadableShader>()(pStateCache, pShader, CreateInfo)};
+            *ppReloadableShader = pReloadableShader.Detach();
+        }
+        catch (...)
+        {
+            LOG_ERROR("Failed to create reloadable shader");
+        }
+    }
+
+    bool Reload();
+
+private:
+    RefCntAutoPtr<RenderStateCacheImpl> m_pStateCache;
+    RefCntAutoPtr<IShader>              m_pShader;
+    ShaderCreateInfoWrapper             m_CreateInfo;
+};
+
+constexpr INTERFACE_ID ReloadableShader::IID_InternalImpl;
+
+class ReloadablePipelineState final : public ObjectBase<IPipelineState>
+{
+public:
+    using TBase = ObjectBase<IPipelineState>;
+
+    // {1F325E25-496B-41B4-A1F9-242302ABCDD4}
+    static constexpr INTERFACE_ID IID_InternalImpl =
+        {0x1f325e25, 0x496b, 0x41b4, {0xa1, 0xf9, 0x24, 0x23, 0x2, 0xab, 0xcd, 0xd4}};
+
+    ReloadablePipelineState(IReferenceCounters*            pRefCounters,
+                            RenderStateCacheImpl*          pStateCache,
+                            IPipelineState*                pPipeline,
+                            const PipelineStateCreateInfo& CreateInfo);
+
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+    {
+        if (ppInterface == nullptr)
+            return;
+
+        if (IID == IID_InternalImpl || IID == IID_PipelineState || IID == IID_DeviceObject || IID == IID_Unknown)
+        {
+            *ppInterface = this;
+            (*ppInterface)->AddRef();
+        }
+        else
+        {
+            m_pPipeline->QueryInterface(IID, ppInterface);
+        }
+    }
+
+    PROXY_CONST_METHOD(m_pPipeline, const PipelineStateDesc&, GetDesc)
+    PROXY_CONST_METHOD(m_pPipeline, Int32, GetUniqueID)
+    PROXY_METHOD1(m_pPipeline, void, SetUserData, IObject*, pUserData)
+    PROXY_CONST_METHOD(m_pPipeline, IObject*, GetUserData)
+    PROXY_CONST_METHOD(m_pPipeline, const GraphicsPipelineDesc&, GetGraphicsPipelineDesc)
+    PROXY_CONST_METHOD(m_pPipeline, const RayTracingPipelineDesc&, GetRayTracingPipelineDesc)
+    PROXY_CONST_METHOD(m_pPipeline, const TilePipelineDesc&, GetTilePipelineDesc)
+    PROXY_METHOD3(m_pPipeline, void, BindStaticResources, SHADER_TYPE, ShaderStages, IResourceMapping*, pResourceMapping, BIND_SHADER_RESOURCES_FLAGS, Flags)
+    PROXY_CONST_METHOD1(m_pPipeline, Uint32, GetStaticVariableCount, SHADER_TYPE, ShaderType)
+    PROXY_METHOD2(m_pPipeline, IShaderResourceVariable*, GetStaticVariableByName, SHADER_TYPE, ShaderType, const Char*, Name)
+    PROXY_METHOD2(m_pPipeline, IShaderResourceVariable*, GetStaticVariableByIndex, SHADER_TYPE, ShaderType, Uint32, Index)
+    PROXY_METHOD2(m_pPipeline, void, CreateShaderResourceBinding, IShaderResourceBinding**, ppShaderResourceBinding, bool, InitStaticResources)
+    PROXY_CONST_METHOD1(m_pPipeline, void, InitializeStaticSRBResources, IShaderResourceBinding*, pShaderResourceBinding)
+    PROXY_CONST_METHOD1(m_pPipeline, bool, IsCompatibleWith, const IPipelineState*, pPSO)
+    PROXY_CONST_METHOD(m_pPipeline, Uint32, GetResourceSignatureCount)
+    PROXY_CONST_METHOD1(m_pPipeline, IPipelineResourceSignature*, GetResourceSignature, Uint32, Index)
+
+    static void Create(RenderStateCacheImpl*          pStateCache,
+                       IPipelineState*                pPipeline,
+                       const PipelineStateCreateInfo& CreateInfo,
+                       IPipelineState**               ppReloadablePipeline)
+    {
+        try
+        {
+            RefCntAutoPtr<ReloadablePipelineState> pReloadablePipeline{MakeNewRCObj<ReloadablePipelineState>()(pStateCache, pPipeline, CreateInfo)};
+            *ppReloadablePipeline = pReloadablePipeline.Detach();
+        }
+        catch (...)
+        {
+            LOG_ERROR("Failed to create reloadable shader");
+        }
+    }
+
+    bool Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo);
+
+private:
+    RefCntAutoPtr<RenderStateCacheImpl> m_pStateCache;
+    RefCntAutoPtr<IPipelineState>       m_pPipeline;
+};
+
+constexpr INTERFACE_ID ReloadablePipelineState::IID_InternalImpl;
+
 
 /// Implementation of IRenderStateCache
 class RenderStateCacheImpl final : public ObjectBase<IRenderStateCache>
@@ -139,6 +322,15 @@ public:
         m_Pipelines.clear();
     }
 
+    virtual Uint32 DILIGENT_CALL_TYPE Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo) override final;
+
+    bool CreateShaderInternal(const ShaderCreateInfo& ShaderCI,
+                              IShader**               ppShader);
+
+    template <typename CreateInfoType>
+    bool CreatePipelineStateInternal(const CreateInfoType& PSOCreateInfo,
+                                     IPipelineState**      ppPipelineState);
+
 private:
     static std::string HashToStr(Uint64 Low, Uint64 High)
     {
@@ -174,18 +366,25 @@ private:
                              IPipelineState**      ppPipelineState);
 
 private:
-    RefCntAutoPtr<IRenderDevice>        m_pDevice;
-    const RENDER_DEVICE_TYPE            m_DeviceType;
-    const bool                          m_EnableLogging;
-    RefCntAutoPtr<ISerializationDevice> m_pSerializationDevice;
-    RefCntAutoPtr<IArchiver>            m_pArchiver;
-    RefCntAutoPtr<IDearchiver>          m_pDearchiver;
+    RefCntAutoPtr<IRenderDevice>                   m_pDevice;
+    const RENDER_DEVICE_TYPE                       m_DeviceType;
+    const RenderStateCacheCreateInfo               m_CI;
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> m_pReloadSource;
+    RefCntAutoPtr<ISerializationDevice>            m_pSerializationDevice;
+    RefCntAutoPtr<IArchiver>                       m_pArchiver;
+    RefCntAutoPtr<IDearchiver>                     m_pDearchiver;
 
     std::mutex                                             m_ShadersMtx;
     std::unordered_map<XXH128Hash, RefCntWeakPtr<IShader>> m_Shaders;
 
+    std::mutex                                           m_ReloadableShadersMtx;
+    std::unordered_map<IShader*, RefCntWeakPtr<IShader>> m_ReloadableShaders;
+
     std::mutex                                                    m_PipelinesMtx;
     std::unordered_map<XXH128Hash, RefCntWeakPtr<IPipelineState>> m_Pipelines;
+
+    std::mutex                                                         m_ReloadablePipelinesMtx;
+    std::unordered_map<IPipelineState*, RefCntWeakPtr<IPipelineState>> m_ReloadablePipelines;
 };
 
 RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRefCounters,
@@ -194,7 +393,8 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
     // clang-format off
     m_pDevice      {CreateInfo.pDevice},
     m_DeviceType   {CreateInfo.pDevice != nullptr ? CreateInfo.pDevice->GetDeviceInfo().Type : RENDER_DEVICE_TYPE_UNDEFINED},
-    m_EnableLogging{CreateInfo.EnableLogging}
+    m_CI           {CreateInfo},
+    m_pReloadSource{CreateInfo.pReloadSource}
 // clang-format on
 {
     if (CreateInfo.pDevice == nullptr)
@@ -261,7 +461,7 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
 #define RENDER_STATE_CACHE_LOG(...)                                \
     do                                                             \
     {                                                              \
-        if (m_EnableLogging)                                       \
+        if (m_CI.EnableLogging)                                    \
         {                                                          \
             LOG_INFO_MESSAGE("Render state cache: ", __VA_ARGS__); \
         }                                                          \
@@ -278,6 +478,49 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
     DEV_CHECK_ERR(*ppShader == nullptr, "Overwriting reference to existing shader may cause memory leaks");
 
     *ppShader = nullptr;
+
+    RefCntAutoPtr<IShader> pShader;
+
+    const auto FoundInCache = CreateShaderInternal(ShaderCI, &pShader);
+    if (!pShader)
+        return false;
+
+    if (m_CI.EnableHotReload)
+    {
+        {
+            std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
+
+            auto it = m_ReloadableShaders.find(pShader);
+            if (it != m_ReloadableShaders.end())
+            {
+                if (auto pReloadableShader = it->second.Lock())
+                    *ppShader = pReloadableShader.Detach();
+            }
+        }
+
+        if (*ppShader == nullptr)
+        {
+            auto _ShaderCI = ShaderCI;
+            if (m_pReloadSource)
+                _ShaderCI.pShaderSourceStreamFactory = m_pReloadSource;
+            ReloadableShader::Create(this, pShader, _ShaderCI, ppShader);
+
+            std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
+            m_ReloadableShaders.emplace(pShader, RefCntWeakPtr<IShader>(*ppShader));
+        }
+    }
+    else
+    {
+        *ppShader = pShader.Detach();
+    }
+
+    return FoundInCache;
+}
+
+bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI,
+                                                IShader**               ppShader)
+{
+    VERIFY_EXPR(ppShader != nullptr && *ppShader == nullptr);
 
     XXH128State Hasher;
 #ifdef DILIGENT_DEBUG
@@ -634,6 +877,47 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
 
     *ppPipelineState = nullptr;
 
+    RefCntAutoPtr<IPipelineState> pPSO;
+
+    const auto FoundInCache = CreatePipelineStateInternal(PSOCreateInfo, &pPSO);
+    if (!pPSO)
+        return false;
+
+    if (m_CI.EnableHotReload)
+    {
+        {
+            std::lock_guard<std::mutex> Guard{m_ReloadablePipelinesMtx};
+
+            auto it = m_ReloadablePipelines.find(pPSO);
+            if (it != m_ReloadablePipelines.end())
+            {
+                if (auto pReloadablePSO = it->second.Lock())
+                    *ppPipelineState = pReloadablePSO.Detach();
+            }
+        }
+
+        if (*ppPipelineState == nullptr)
+        {
+            ReloadablePipelineState::Create(this, pPSO, PSOCreateInfo, ppPipelineState);
+
+            std::lock_guard<std::mutex> Guard{m_ReloadablePipelinesMtx};
+            m_ReloadablePipelines.emplace(pPSO, RefCntWeakPtr<IPipelineState>(*ppPipelineState));
+        }
+    }
+    else
+    {
+        *ppPipelineState = pPSO.Detach();
+    }
+
+    return FoundInCache;
+}
+
+template <typename CreateInfoType>
+bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSOCreateInfo,
+                                                       IPipelineState**      ppPipelineState)
+{
+    VERIFY_EXPR(ppPipelineState != nullptr && *ppPipelineState == nullptr);
+
     XXH128State Hasher;
     Hasher.Update(PSOCreateInfo, m_DeviceType);
     const auto Hash = Hasher.Digest();
@@ -736,6 +1020,100 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
     {
     }
 
+    return false;
+}
+
+Uint32 RenderStateCacheImpl::Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo)
+{
+    if (!m_CI.EnableHotReload)
+    {
+        DEV_ERROR("This render state cache was not created with hot reload enabled. Set EnableHotReload to true.");
+        return 0;
+    }
+
+    Uint32 NumStatesReloaded = 0;
+
+    {
+        std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
+        for (auto shader_it : m_ReloadableShaders)
+        {
+            if (auto pShader = shader_it.second.Lock())
+            {
+                RefCntAutoPtr<ReloadableShader> pReloadableShader{pShader, ReloadableShader::IID_InternalImpl};
+                if (pReloadableShader)
+                {
+                    if (pReloadableShader->Reload())
+                        ++NumStatesReloaded;
+                }
+                else
+                {
+                    UNEXPECTED("Shader object is not a ReloadableShader");
+                }
+            }
+        }
+    }
+
+    {
+        std::lock_guard<std::mutex> Guard{m_ReloadablePipelinesMtx};
+        for (auto pso_it : m_ReloadablePipelines)
+        {
+            if (auto pPSO = pso_it.second.Lock())
+            {
+                RefCntAutoPtr<ReloadablePipelineState> pReloadablePSO{pPSO, ReloadablePipelineState::IID_InternalImpl};
+                if (pPSO)
+                {
+                    if (pReloadablePSO->Reload(ModifyReloadInfo))
+                        ++NumStatesReloaded;
+                }
+                else
+                {
+                    UNEXPECTED("Shader object is not a ReloadableShader");
+                }
+            }
+        }
+    }
+
+    return NumStatesReloaded;
+}
+
+ReloadableShader::ReloadableShader(IReferenceCounters*     pRefCounters,
+                                   RenderStateCacheImpl*   pStateCache,
+                                   IShader*                pShader,
+                                   const ShaderCreateInfo& CreateInfo) :
+    TBase{pRefCounters},
+    m_pStateCache{pStateCache},
+    m_pShader{pShader},
+    m_CreateInfo{CreateInfo, GetRawAllocator()}
+{}
+
+bool ReloadableShader::Reload()
+{
+    RefCntAutoPtr<IShader> pNewShader;
+    bool                   FoundInCache = m_pStateCache->CreateShaderInternal(m_CreateInfo, &pNewShader);
+    if (pNewShader)
+    {
+        m_pShader = pNewShader;
+    }
+    else
+    {
+        const auto* Name = m_CreateInfo.Get().Desc.Name;
+        LOG_ERROR_MESSAGE("Failed to reload shader '", (Name ? Name : "<unnamed>"), ";.");
+    }
+    return !FoundInCache;
+}
+
+
+ReloadablePipelineState::ReloadablePipelineState(IReferenceCounters*            pRefCounters,
+                                                 RenderStateCacheImpl*          pStateCache,
+                                                 IPipelineState*                pPipeline,
+                                                 const PipelineStateCreateInfo& CreateInfo) :
+    TBase{pRefCounters},
+    m_pStateCache{pStateCache},
+    m_pPipeline{pPipeline}
+{}
+
+bool ReloadablePipelineState::Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo)
+{
     return false;
 }
 
