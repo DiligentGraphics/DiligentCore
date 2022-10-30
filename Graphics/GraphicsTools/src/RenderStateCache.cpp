@@ -1226,10 +1226,19 @@ template <>
 struct ReloadablePipelineState::CreateInfoWrapper<GraphicsPipelineStateCreateInfo> : CreateInfoWrapperBase<GraphicsPipelineStateCreateInfo>
 {
     CreateInfoWrapper(const GraphicsPipelineStateCreateInfo& CI) :
-        CreateInfoWrapperBase<GraphicsPipelineStateCreateInfo>{CI}
+        CreateInfoWrapperBase<GraphicsPipelineStateCreateInfo>{CI},
+        m_LayoutElements{CI.GraphicsPipeline.InputLayout.LayoutElements, CI.GraphicsPipeline.InputLayout.LayoutElements + CI.GraphicsPipeline.InputLayout.NumElements}
     {
         m_Objects.emplace_back(CI.GraphicsPipeline.pRenderPass);
+
+        for (auto& Elem : m_LayoutElements)
+            Elem.HLSLSemantic = m_Strings.emplace(Elem.HLSLSemantic != nullptr ? Elem.HLSLSemantic : LayoutElement{}.HLSLSemantic).first->c_str();
+
+        m_CI.GraphicsPipeline.InputLayout.LayoutElements = m_LayoutElements.data();
     }
+
+private:
+    std::vector<LayoutElement> m_LayoutElements;
 };
 
 template <>
