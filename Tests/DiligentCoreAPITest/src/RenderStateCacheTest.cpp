@@ -29,6 +29,8 @@
 #include "RenderStateCache.h"
 #include "RenderStateCache.hpp"
 #include "FastRand.hpp"
+#include "GraphicsTypesX.hpp"
+#include "CallbackWrapper.hpp"
 
 #include "InlineShaders/RayTracingTestHLSL.h"
 
@@ -49,7 +51,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-void TestDraw(IShader* pVS, IShader* pPS, IPipelineState* pPSO, bool UseRenderPass)
+void TestDraw(IShader* pVS, IShader* pPS, IPipelineState* pPSO, bool UseRenderPass, IBuffer* pVertexBuffer = nullptr)
 {
     VERIFY_EXPR((pVS != nullptr && pPS != nullptr) ^ (pPSO != nullptr));
 
@@ -120,6 +122,12 @@ void TestDraw(IShader* pVS, IShader* pPS, IPipelineState* pPSO, bool UseRenderPa
         ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
         pCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         pCtx->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
+
+    if (pVertexBuffer != nullptr)
+    {
+        IBuffer* pVBs[] = {pVertexBuffer};
+        pCtx->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
     }
 
     pCtx->SetPipelineState(pPSO);
@@ -354,10 +362,41 @@ TEST(RenderStateCacheTest, BrokenShader)
     }
 }
 
+RefCntAutoPtr<IRenderPass> CreateRenderPass(TEXTURE_FORMAT ColorBufferFormat)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    RenderPassAttachmentDesc Attachments[1];
+    Attachments[0].Format       = ColorBufferFormat;
+    Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
+
+    constexpr AttachmentReference RTAttachmentRefs0[] =
+        {
+            {0, RESOURCE_STATE_RENDER_TARGET},
+        };
+    SubpassDesc Subpasses[1];
+    Subpasses[0].RenderTargetAttachmentCount = _countof(RTAttachmentRefs0);
+    Subpasses[0].pRenderTargetAttachments    = RTAttachmentRefs0;
+
+    RenderPassDesc RPDesc;
+    RPDesc.Name            = "Render State Cache Test";
+    RPDesc.AttachmentCount = _countof(Attachments);
+    RPDesc.pAttachments    = Attachments;
+    RPDesc.SubpassCount    = _countof(Subpasses);
+    RPDesc.pSubpasses      = Subpasses;
+
+    RefCntAutoPtr<IRenderPass> pRenderPass;
+    pDevice->CreateRenderPass(RPDesc, &pRenderPass);
+    return pRenderPass;
+}
+
 void CreateGraphicsPSO(IRenderStateCache* pCache, bool PresentInCache, IShader* pVS, IShader* pPS, bool UseRenderPass, IPipelineState** ppPSO)
 {
     auto* pEnv       = GPUTestingEnvironment::GetInstance();
-    auto* pDevice    = pEnv->GetDevice();
     auto* pSwapChain = pEnv->GetSwapChain();
 
     GraphicsPipelineStateCreateInfo PsoCI;
@@ -371,29 +410,7 @@ void CreateGraphicsPSO(IRenderStateCache* pCache, bool PresentInCache, IShader* 
     RefCntAutoPtr<IRenderPass> pRenderPass;
     if (UseRenderPass)
     {
-        RenderPassAttachmentDesc Attachments[1];
-        Attachments[0].Format       = ColorBufferFormat;
-        Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
-        Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
-        Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
-        Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
-
-        constexpr AttachmentReference RTAttachmentRefs0[] =
-            {
-                {0, RESOURCE_STATE_RENDER_TARGET},
-            };
-        SubpassDesc Subpasses[1];
-        Subpasses[0].RenderTargetAttachmentCount = _countof(RTAttachmentRefs0);
-        Subpasses[0].pRenderTargetAttachments    = RTAttachmentRefs0;
-
-        RenderPassDesc RPDesc;
-        RPDesc.Name            = "Render State Cache Test";
-        RPDesc.AttachmentCount = _countof(Attachments);
-        RPDesc.pAttachments    = Attachments;
-        RPDesc.SubpassCount    = _countof(Subpasses);
-        RPDesc.pSubpasses      = Subpasses;
-
-        pDevice->CreateRenderPass(RPDesc, &pRenderPass);
+        pRenderPass = CreateRenderPass(ColorBufferFormat);
         ASSERT_NE(pRenderPass, nullptr);
         PsoCI.GraphicsPipeline.pRenderPass = pRenderPass;
     }
@@ -891,8 +908,10 @@ TEST(RenderStateCacheTest, RenderDeviceWithCache)
 
 void TestPipelineReload(bool UseRenderPass)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pCtx       = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
 
     GPUTestingEnvironment::ScopedReset AutoReset;
 
@@ -905,6 +924,51 @@ void TestPipelineReload(bool UseRenderPass)
     ASSERT_TRUE(pShaderSourceFactory);
 
     constexpr auto HotReload = true;
+
+    RefCntAutoPtr<IBuffer> pVertBuff;
+    {
+        struct Vertex
+        {
+            float4 Pos;
+            float3 Color;
+        };
+
+        constexpr float4 Pos[] =
+            {
+                float4{-1.0, -0.5, 0.0, 1.0},
+                float4{-0.5, +0.5, 0.0, 1.0},
+                float4{+0.0, -0.5, 0.0, 1.0},
+
+                float4{+0.0, -0.5, 0.0, 1.0},
+                float4{+0.5, +0.5, 0.0, 1.0},
+                float4{+1.0, -0.5, 0.0, 1.0},
+            };
+
+        constexpr float3 Color[] =
+            {
+                float3{1.0, 0.0, 0.0},
+                float3{0.0, 1.0, 0.0},
+                float3{0.0, 0.0, 1.0},
+            };
+
+        constexpr Vertex Vert[] =
+            {
+                {Pos[0], Color[0]},
+                {Pos[1], Color[1]},
+                {Pos[2], Color[2]},
+
+                {Pos[3], Color[0]},
+                {Pos[4], Color[1]},
+                {Pos[5], Color[2]},
+            };
+
+        RenderDeviceX<> Device{pDevice};
+        pVertBuff = Device.CreateBuffer("Vert buffer", sizeof(Vert), USAGE_DEFAULT, BIND_VERTEX_BUFFER, CPU_ACCESS_NONE, Vert);
+        ASSERT_NE(pVertBuff, nullptr);
+
+        StateTransitionDesc Barrier{pVertBuff, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE};
+        pCtx->TransitionResourceStates(1, &Barrier);
+    }
 
     RefCntAutoPtr<IDataBlob> pData;
     for (Uint32 pass = 0; pass < 3; ++pass)
@@ -921,13 +985,57 @@ void TestPipelineReload(bool UseRenderPass)
         ASSERT_NE(pVS, nullptr);
         ASSERT_NE(pPS, nullptr);
 
+        constexpr char PSOName[] = "Render State Cache Reload Test";
+
         RefCntAutoPtr<IPipelineState> pPSO;
-        CreateGraphicsPSO(pCache, pData != nullptr, pVS, pPS, UseRenderPass, &pPSO);
+        {
+            GraphicsPipelineStateCreateInfo PsoCI;
+            PsoCI.PSODesc.Name = PSOName;
+
+            auto& GraphicsPipeline{PsoCI.GraphicsPipeline};
+            GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+            GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+            GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+            InputLayoutDescX InputLayout{
+                LayoutElement{0, 0, 4, VT_FLOAT32},
+                LayoutElement{1, 0, 3, VT_FLOAT32},
+            };
+
+            GraphicsPipeline.InputLayout = InputLayout;
+
+            const auto ColorBufferFormat = pSwapChain->GetDesc().ColorBufferFormat;
+
+            RefCntAutoPtr<IRenderPass> pRenderPass;
+            if (UseRenderPass)
+            {
+                pRenderPass = CreateRenderPass(ColorBufferFormat);
+                ASSERT_NE(pRenderPass, nullptr);
+                PsoCI.GraphicsPipeline.pRenderPass = pRenderPass;
+            }
+            else
+            {
+                PsoCI.GraphicsPipeline.NumRenderTargets = 1;
+                PsoCI.GraphicsPipeline.RTVFormats[0]    = ColorBufferFormat;
+            }
+            PsoCI.pVS = pVS;
+            PsoCI.pPS = pPS;
+
+            EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO), pData != nullptr);
+        }
         ASSERT_NE(pPSO, nullptr);
 
-        EXPECT_EQ(pCache->Reload(), pass == 0 ? 3u : 0u);
+        auto ModifyPSO = MakeCallback(
+            [&](PipelineStateCreateInfo& CreateInfo) {
+                ASSERT_STREQ(CreateInfo.PSODesc.Name, PSOName);
+                auto& GraphicsPsoCI = static_cast<GraphicsPipelineStateCreateInfo&>(CreateInfo);
 
-        VerifyGraphicsPSO(pPSO, UseRenderPass);
+                GraphicsPsoCI.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            });
+
+        EXPECT_EQ(pCache->Reload(ModifyPSO, ModifyPSO), pass == 0 ? 3u : 0u);
+
+        TestDraw(nullptr, nullptr, pPSO, UseRenderPass, pVertBuff);
 
         pData.Release();
         pCache->WriteToBlob(&pData);

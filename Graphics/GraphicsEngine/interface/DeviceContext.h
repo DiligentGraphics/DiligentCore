@@ -2188,7 +2188,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                           IBuffer**                      ppBuffers,
                                           const Uint64*                  pOffsets,
                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
-                                          SET_VERTEX_BUFFERS_FLAGS       Flags) PURE;
+                                          SET_VERTEX_BUFFERS_FLAGS       Flags DEFAULT_VALUE(SET_VERTEX_BUFFERS_FLAG_NONE)) PURE;
 
 
     /// Invalidates the cached context state.

@@ -1241,7 +1241,7 @@ public:
                                         USAGE            Usage          = USAGE_DYNAMIC,
                                         BIND_FLAGS       BindFlags      = BIND_UNIFORM_BUFFER,
                                         CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE,
-                                        void*            pData          = nullptr) noexcept(!ThrowOnError)
+                                        const void*      pData          = nullptr) noexcept(!ThrowOnError)
     {
         BufferDesc Desc;
         Desc.Name      = Name;
