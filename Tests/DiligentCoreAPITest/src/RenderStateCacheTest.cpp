@@ -183,9 +183,12 @@ void VerifyComputePSO(IPipelineState* pPSO, bool UseSignature = false)
     pSwapChain->Present();
 }
 
-RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice* pDevice, bool HotReload, IDataBlob* pCacheData = nullptr)
+RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pDevice,
+                                             bool                             HotReload,
+                                             IDataBlob*                       pCacheData           = nullptr,
+                                             IShaderSourceInputStreamFactory* pShaderReloadFactory = nullptr)
 {
-    RenderStateCacheCreateInfo CacheCI{pDevice, true, HotReload};
+    RenderStateCacheCreateInfo CacheCI{pDevice, true, HotReload, pShaderReloadFactory};
 
     RefCntAutoPtr<IRenderStateCache> pCache;
     CreateRenderStateCache(CacheCI, &pCache);
@@ -883,6 +886,62 @@ TEST(RenderStateCacheTest, RenderDeviceWithCache)
             pPSO.Release();
         }
     }
+}
+
+
+void TestPipelineReload(bool UseRenderPass)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
+    ASSERT_TRUE(pShaderSourceFactory);
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderReloadFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache/Reload;shaders/RenderStateCache", &pShaderReloadFactory);
+    ASSERT_TRUE(pShaderSourceFactory);
+
+    constexpr auto HotReload = true;
+
+    RefCntAutoPtr<IDataBlob> pData;
+    for (Uint32 pass = 0; pass < 3; ++pass)
+    {
+        // 0: empty cache
+        // 1: loaded cache
+        // 2: reloaded cache (loaded -> stored -> loaded)
+
+        auto pCache = CreateCache(pDevice, HotReload, pData, pShaderReloadFactory);
+        ASSERT_TRUE(pCache);
+
+        RefCntAutoPtr<IShader> pVS, pPS;
+        CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr, "VertexShaderRld.vsh", "PixelShaderRld.psh");
+        ASSERT_NE(pVS, nullptr);
+        ASSERT_NE(pPS, nullptr);
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        CreateGraphicsPSO(pCache, pData != nullptr, pVS, pPS, UseRenderPass, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+
+        EXPECT_EQ(pCache->Reload(), pass == 0 ? 3u : 0u);
+
+        VerifyGraphicsPSO(pPSO, UseRenderPass);
+
+        pData.Release();
+        pCache->WriteToBlob(&pData);
+    }
+}
+
+TEST(RenderStateCacheTest, Reload)
+{
+    TestPipelineReload(/*UseRenderPass = */ false);
+}
+
+TEST(RenderStateCacheTest, Reload_RenderPass)
+{
+    TestPipelineReload(/*UseRenderPass = */ true);
 }
 
 } // namespace

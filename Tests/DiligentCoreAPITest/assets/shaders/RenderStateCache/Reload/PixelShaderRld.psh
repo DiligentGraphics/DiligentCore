@@ -1,0 +1,7 @@
+#include "GraphicsCommon.h"
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    return float4(PSIn.Color.rgb, 1.0);
+    // NB: no new line at the end of file!
+}

@@ -195,7 +195,8 @@ void ArchiverFactoryImpl::CreateSerializationDevice(const SerializationDeviceCre
 
 void ArchiverFactoryImpl::CreateDefaultShaderSourceStreamFactory(const Char* SearchDirectories, struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) const
 {
-    DEV_CHECK_ERR(ppShaderSourceFactory != nullptr, "ppShaderSourceFactory must not be null");
+    DEV_CHECK_ERR(ppShaderSourceFactory != nullptr, "ppShaderSourceFactory must not be null.");
+    DEV_CHECK_ERR(*ppShaderSourceFactory == nullptr, "*ppShaderSourceFactory is not null. Make sure the pointer is null to avoid memory leaks.");
     if (!ppShaderSourceFactory)
         return;
 
