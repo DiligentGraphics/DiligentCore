@@ -191,6 +191,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
     /// \param [in]  ModifyReloadInfo - An optional callback function that will be called by the render state cache
     ///                                 to let the application modify pipeline state create info before creating new
     ///                                 pipeline.
+    /// \param [in]  pUserData        - A pointer to user-specific data to pass to ModifyReloadInfo callback.
     ///
     /// \return     The total number of render states (shaders and pipelines) that were reloaded.
     ///
@@ -201,7 +202,8 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
     ///             signatures. Its main use is to modify the graphics states of a graphics pipeline (blend state,
     ///             rasterizer state, depth state, etc.).
     VIRTUAL Uint32 METHOD(Reload)(THIS_
-                                  ModifyPipelineReloadInfoCallbackType ModifyReloadInfo DEFAULT_VALUE(nullptr)) PURE;
+                                  ModifyPipelineReloadInfoCallbackType ModifyReloadInfo DEFAULT_VALUE(nullptr), 
+                                  void*                                pUserData        DEFAULT_VALUE(nullptr)) PURE;
 };
 DILIGENT_END_INTERFACE
 

@@ -31,6 +31,8 @@
 #include <mutex>
 #include <vector>
 #include <memory>
+#include <unordered_set>
+#include <string>
 
 #include "ObjectBase.hpp"
 #include "ShaderBase.hpp"
@@ -219,11 +221,27 @@ public:
         }
     }
 
-    bool Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo);
+    bool Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData);
 
 private:
-    RefCntAutoPtr<RenderStateCacheImpl> m_pStateCache;
-    RefCntAutoPtr<IPipelineState>       m_pPipeline;
+    template <typename CreateInfoType>
+    bool Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData);
+
+    struct DynamicHeapObjectBase
+    {
+        virtual ~DynamicHeapObjectBase() {}
+    };
+
+    template <typename CreateInfoType>
+    struct CreateInfoWrapperBase;
+
+    template <typename CreateInfoType>
+    struct CreateInfoWrapper;
+
+    RefCntAutoPtr<RenderStateCacheImpl>    m_pStateCache;
+    RefCntAutoPtr<IPipelineState>          m_pPipeline;
+    std::unique_ptr<DynamicHeapObjectBase> m_pCreateInfo;
+    const PIPELINE_TYPE                    m_Type;
 };
 
 constexpr INTERFACE_ID ReloadablePipelineState::IID_InternalImpl;
@@ -322,7 +340,7 @@ public:
         m_Pipelines.clear();
     }
 
-    virtual Uint32 DILIGENT_CALL_TYPE Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo) override final;
+    virtual Uint32 DILIGENT_CALL_TYPE Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData) override final;
 
     bool CreateShaderInternal(const ShaderCreateInfo& ShaderCI,
                               IShader**               ppShader);
@@ -330,6 +348,21 @@ public:
     template <typename CreateInfoType>
     bool CreatePipelineStateInternal(const CreateInfoType& PSOCreateInfo,
                                      IPipelineState**      ppPipelineState);
+
+    RefCntAutoPtr<IShader> FindReloadableShader(IShader* pShader)
+    {
+        std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
+
+        auto it = m_ReloadableShaders.find(pShader);
+        if (it == m_ReloadableShaders.end())
+            return {};
+
+        auto pReloadableShader = it->second.Lock();
+        if (!pReloadableShader)
+            m_ReloadableShaders.erase(it);
+
+        return pReloadableShader;
+    }
 
 private:
     static std::string HashToStr(Uint64 Low, Uint64 High)
@@ -358,8 +391,7 @@ private:
     struct SerializedPsoCIWrapperBase;
 
     template <typename CreateInfoType>
-    struct SerializedPsoCIWrapper : SerializedPsoCIWrapperBase<CreateInfoType>
-    {};
+    struct SerializedPsoCIWrapper;
 
     template <typename CreateInfoType>
     bool CreatePipelineState(const CreateInfoType& PSOCreateInfo,
@@ -495,6 +527,8 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
             {
                 if (auto pReloadableShader = it->second.Lock())
                     *ppShader = pReloadableShader.Detach();
+                else
+                    m_ReloadableShaders.erase(it);
             }
         }
 
@@ -663,6 +697,61 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
     return false;
 }
 
+template <typename HandlerType>
+void ProcessPsoCreateInfoShaders(GraphicsPipelineStateCreateInfo& CI, HandlerType&& Handler)
+{
+    Handler(CI.pVS);
+    Handler(CI.pPS);
+    Handler(CI.pDS);
+    Handler(CI.pHS);
+    Handler(CI.pGS);
+    Handler(CI.pAS);
+    Handler(CI.pMS);
+}
+
+template <typename HandlerType>
+void ProcessPsoCreateInfoShaders(ComputePipelineStateCreateInfo& CI, HandlerType&& Handler)
+{
+    Handler(CI.pCS);
+}
+
+template <typename HandlerType>
+void ProcessPsoCreateInfoShaders(TilePipelineStateCreateInfo& CI, HandlerType&& Handler)
+{
+    Handler(CI.pTS);
+}
+
+template <typename HandlerType>
+void ProcessPsoCreateInfoShaders(RayTracingPipelineStateCreateInfo& CI, HandlerType&& Handler)
+{
+}
+
+template <typename HandlerType>
+void ProcessRtPsoCreateInfoShaders(
+    std::vector<RayTracingGeneralShaderGroup>&       pGeneralShaders,
+    std::vector<RayTracingTriangleHitShaderGroup>&   pTriangleHitShaders,
+    std::vector<RayTracingProceduralHitShaderGroup>& pProceduralHitShaders,
+    HandlerType&&                                    Handler)
+{
+    for (auto& GeneralShader : pGeneralShaders)
+    {
+        Handler(GeneralShader.pShader);
+    }
+
+    for (auto& TriHitShader : pTriangleHitShaders)
+    {
+        Handler(TriHitShader.pAnyHitShader);
+        Handler(TriHitShader.pClosestHitShader);
+    }
+
+    for (auto& ProcHitShader : pProceduralHitShaders)
+    {
+        Handler(ProcHitShader.pAnyHitShader);
+        Handler(ProcHitShader.pClosestHitShader);
+        Handler(ProcHitShader.pIntersectionShader);
+    }
+}
+
 template <typename CreateInfoType>
 struct RenderStateCacheImpl::SerializedPsoCIWrapperBase
 {
@@ -690,6 +779,11 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapperBase
             pSign = pSerializedSign;
             SerializedObjects.emplace_back(std::move(pSerializedSign));
         }
+
+        ProcessPsoCreateInfoShaders(CI,
+                                    [&](IShader*& pShader) {
+                                        SerializeShader(pSerializationDevice, DeviceType, pShader);
+                                    });
     }
 
     SerializedPsoCIWrapperBase(const SerializedPsoCIWrapperBase&) = delete;
@@ -763,14 +857,6 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapper<GraphicsPipelineStateCreateI
     SerializedPsoCIWrapper(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const GraphicsPipelineStateCreateInfo& _CI) :
         SerializedPsoCIWrapperBase<GraphicsPipelineStateCreateInfo>{pSerializationDevice, DeviceType, _CI}
     {
-        SerializeShader(pSerializationDevice, DeviceType, CI.pVS);
-        SerializeShader(pSerializationDevice, DeviceType, CI.pPS);
-        SerializeShader(pSerializationDevice, DeviceType, CI.pDS);
-        SerializeShader(pSerializationDevice, DeviceType, CI.pHS);
-        SerializeShader(pSerializationDevice, DeviceType, CI.pGS);
-        SerializeShader(pSerializationDevice, DeviceType, CI.pAS);
-        SerializeShader(pSerializationDevice, DeviceType, CI.pMS);
-
         // Replace render pass with serialized render pass
         if (CI.GraphicsPipeline.pRenderPass != nullptr)
         {
@@ -794,7 +880,6 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapper<ComputePipelineStateCreateIn
     SerializedPsoCIWrapper(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const ComputePipelineStateCreateInfo& _CI) :
         SerializedPsoCIWrapperBase<ComputePipelineStateCreateInfo>{pSerializationDevice, DeviceType, _CI}
     {
-        SerializeShader(pSerializationDevice, DeviceType, CI.pCS);
     }
 };
 
@@ -804,7 +889,6 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapper<TilePipelineStateCreateInfo>
     SerializedPsoCIWrapper(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const TilePipelineStateCreateInfo& _CI) :
         SerializedPsoCIWrapperBase<TilePipelineStateCreateInfo>{pSerializationDevice, DeviceType, _CI}
     {
-        SerializeShader(pSerializationDevice, DeviceType, CI.pTS);
     }
 };
 
@@ -823,23 +907,10 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapper<RayTracingPipelineStateCreat
         CI.pTriangleHitShaders   = pTriangleHitShaders.data();
         CI.pProceduralHitShaders = pProceduralHitShaders.data();
 
-        for (auto& GeneralShader : pGeneralShaders)
-        {
-            SerializeShader(pSerializationDevice, DeviceType, GeneralShader.pShader);
-        }
-
-        for (auto& TriHitShader : pTriangleHitShaders)
-        {
-            SerializeShader(pSerializationDevice, DeviceType, TriHitShader.pAnyHitShader);
-            SerializeShader(pSerializationDevice, DeviceType, TriHitShader.pClosestHitShader);
-        }
-
-        for (auto& ProcHitShader : pProceduralHitShaders)
-        {
-            SerializeShader(pSerializationDevice, DeviceType, ProcHitShader.pAnyHitShader);
-            SerializeShader(pSerializationDevice, DeviceType, ProcHitShader.pClosestHitShader);
-            SerializeShader(pSerializationDevice, DeviceType, ProcHitShader.pIntersectionShader);
-        }
+        ProcessRtPsoCreateInfoShaders(pGeneralShaders, pTriangleHitShaders, pProceduralHitShaders,
+                                      [&](IShader*& pShader) {
+                                          SerializeShader(pSerializationDevice, DeviceType, pShader);
+                                      });
     }
 
 private:
@@ -893,6 +964,8 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
             {
                 if (auto pReloadablePSO = it->second.Lock())
                     *ppPipelineState = pReloadablePSO.Detach();
+                else
+                    m_ReloadablePipelines.erase(it);
             }
         }
 
@@ -1023,7 +1096,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
     return false;
 }
 
-Uint32 RenderStateCacheImpl::Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo)
+Uint32 RenderStateCacheImpl::Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData)
 {
     if (!m_CI.EnableHotReload)
     {
@@ -1062,7 +1135,7 @@ Uint32 RenderStateCacheImpl::Reload(ModifyPipelineReloadInfoCallbackType ModifyR
                 RefCntAutoPtr<ReloadablePipelineState> pReloadablePSO{pPSO, ReloadablePipelineState::IID_InternalImpl};
                 if (pPSO)
                 {
-                    if (pReloadablePSO->Reload(ModifyReloadInfo))
+                    if (pReloadablePSO->Reload(ModifyReloadInfo, pUserData))
                         ++NumStatesReloaded;
                 }
                 else
@@ -1076,6 +1149,138 @@ Uint32 RenderStateCacheImpl::Reload(ModifyPipelineReloadInfoCallbackType ModifyR
     return NumStatesReloaded;
 }
 
+
+template <typename CreateInfoType>
+struct ReloadablePipelineState::CreateInfoWrapperBase : DynamicHeapObjectBase
+{
+    CreateInfoWrapperBase(const CreateInfoType& CI) :
+        m_CI{CI},
+        m_Variables{CI.PSODesc.ResourceLayout.Variables, CI.PSODesc.ResourceLayout.Variables + CI.PSODesc.ResourceLayout.NumVariables},
+        m_ImtblSamplers{CI.PSODesc.ResourceLayout.ImmutableSamplers, CI.PSODesc.ResourceLayout.ImmutableSamplers + CI.PSODesc.ResourceLayout.NumImmutableSamplers},
+        m_ppSignatures{CI.ppResourceSignatures, CI.ppResourceSignatures + CI.ResourceSignaturesCount}
+    {
+        m_CI.PSODesc.Name = m_Strings.emplace(CI.PSODesc.Name ? CI.PSODesc.Name : "<unnamed>").first->c_str();
+
+        for (auto& Var : m_Variables)
+            Var.Name = m_Strings.emplace(Var.Name).first->c_str();
+        for (auto& ImtblSam : m_ImtblSamplers)
+            ImtblSam.SamplerOrTextureName = m_Strings.emplace(ImtblSam.SamplerOrTextureName).first->c_str();
+
+        m_CI.PSODesc.ResourceLayout.Variables         = m_Variables.data();
+        m_CI.PSODesc.ResourceLayout.ImmutableSamplers = m_ImtblSamplers.data();
+
+        m_CI.ppResourceSignatures = !m_ppSignatures.empty() ? m_ppSignatures.data() : nullptr;
+        for (auto* pSign : m_ppSignatures)
+            m_Objects.emplace_back(pSign);
+
+        m_Objects.emplace_back(m_CI.pPSOCache);
+
+        // Replace shaders with reloadable shaders
+        ProcessPsoCreateInfoShaders(m_CI,
+                                    [&](IShader* pShader) {
+                                        AddShader(pShader);
+                                    });
+    }
+
+    CreateInfoWrapperBase(const CreateInfoWrapperBase&) = delete;
+    CreateInfoWrapperBase(CreateInfoWrapperBase&&)      = delete;
+    CreateInfoWrapperBase& operator=(const CreateInfoWrapperBase&) = delete;
+    CreateInfoWrapperBase& operator=(CreateInfoWrapperBase&&) = delete;
+
+    const CreateInfoType& Get() const
+    {
+        return m_CI;
+    }
+
+    operator const CreateInfoType&()
+    {
+        return m_CI;
+    }
+
+    void AddShader(IShader* pShader)
+    {
+        if (pShader == nullptr)
+            return;
+
+        if (!RefCntAutoPtr<IShader>{pShader, ReloadableShader::IID_InternalImpl})
+        {
+            const auto* Name = pShader->GetDesc().Name;
+            LOG_WARNING_MESSAGE("Shader '", (Name ? Name : "<unnamed>"),
+                                "' is not a reloadable shader. To enable hot pipeline state reload, all shaders must be created through the render state cache.");
+        }
+
+        m_Objects.emplace_back(pShader);
+    }
+
+protected:
+    CreateInfoType m_CI;
+
+    std::unordered_set<std::string>          m_Strings;
+    std::vector<ShaderResourceVariableDesc>  m_Variables;
+    std::vector<ImmutableSamplerDesc>        m_ImtblSamplers;
+    std::vector<IPipelineResourceSignature*> m_ppSignatures;
+    std::vector<RefCntAutoPtr<IObject>>      m_Objects;
+};
+
+template <>
+struct ReloadablePipelineState::CreateInfoWrapper<GraphicsPipelineStateCreateInfo> : CreateInfoWrapperBase<GraphicsPipelineStateCreateInfo>
+{
+    CreateInfoWrapper(const GraphicsPipelineStateCreateInfo& CI) :
+        CreateInfoWrapperBase<GraphicsPipelineStateCreateInfo>{CI}
+    {
+        m_Objects.emplace_back(CI.GraphicsPipeline.pRenderPass);
+    }
+};
+
+template <>
+struct ReloadablePipelineState::CreateInfoWrapper<ComputePipelineStateCreateInfo> : CreateInfoWrapperBase<ComputePipelineStateCreateInfo>
+{
+    CreateInfoWrapper(const ComputePipelineStateCreateInfo& CI) :
+        CreateInfoWrapperBase<ComputePipelineStateCreateInfo>{CI}
+    {
+    }
+};
+
+template <>
+struct ReloadablePipelineState::CreateInfoWrapper<TilePipelineStateCreateInfo> : CreateInfoWrapperBase<TilePipelineStateCreateInfo>
+{
+    CreateInfoWrapper(const TilePipelineStateCreateInfo& CI) :
+        CreateInfoWrapperBase<TilePipelineStateCreateInfo>{CI}
+    {
+    }
+};
+
+template <>
+struct ReloadablePipelineState::CreateInfoWrapper<RayTracingPipelineStateCreateInfo> : CreateInfoWrapperBase<RayTracingPipelineStateCreateInfo>
+{
+    CreateInfoWrapper(const RayTracingPipelineStateCreateInfo& CI) :
+        CreateInfoWrapperBase<RayTracingPipelineStateCreateInfo>{CI},
+        // clang-format off
+        m_pGeneralShaders      {CI.pGeneralShaders,       CI.pGeneralShaders       + CI.GeneralShaderCount},
+        m_pTriangleHitShaders  {CI.pTriangleHitShaders,   CI.pTriangleHitShaders   + CI.TriangleHitShaderCount},
+        m_pProceduralHitShaders{CI.pProceduralHitShaders, CI.pProceduralHitShaders + CI.ProceduralHitShaderCount}
+    // clang-format on
+    {
+        m_CI.pGeneralShaders       = m_pGeneralShaders.data();
+        m_CI.pTriangleHitShaders   = m_pTriangleHitShaders.data();
+        m_CI.pProceduralHitShaders = m_pProceduralHitShaders.data();
+
+        if (m_CI.pShaderRecordName != nullptr)
+            m_CI.pShaderRecordName = m_Strings.emplace(m_CI.pShaderRecordName).first->c_str();
+
+        // Replace shaders with reloadable shaders
+        ProcessRtPsoCreateInfoShaders(m_pGeneralShaders, m_pTriangleHitShaders, m_pProceduralHitShaders,
+                                      [&](IShader*& pShader) {
+                                          AddShader(pShader);
+                                      });
+    }
+
+private:
+    std::vector<RayTracingGeneralShaderGroup>       m_pGeneralShaders;
+    std::vector<RayTracingTriangleHitShaderGroup>   m_pTriangleHitShaders;
+    std::vector<RayTracingProceduralHitShaderGroup> m_pProceduralHitShaders;
+};
+
 ReloadableShader::ReloadableShader(IReferenceCounters*     pRefCounters,
                                    RenderStateCacheImpl*   pStateCache,
                                    IShader*                pShader,
@@ -1084,7 +1289,8 @@ ReloadableShader::ReloadableShader(IReferenceCounters*     pRefCounters,
     m_pStateCache{pStateCache},
     m_pShader{pShader},
     m_CreateInfo{CreateInfo, GetRawAllocator()}
-{}
+{
+}
 
 bool ReloadableShader::Reload()
 {
@@ -1097,7 +1303,7 @@ bool ReloadableShader::Reload()
     else
     {
         const auto* Name = m_CreateInfo.Get().Desc.Name;
-        LOG_ERROR_MESSAGE("Failed to reload shader '", (Name ? Name : "<unnamed>"), ";.");
+        LOG_ERROR_MESSAGE("Failed to reload shader '", (Name ? Name : "<unnamed>"), "'.");
     }
     return !FoundInCache;
 }
@@ -1109,12 +1315,89 @@ ReloadablePipelineState::ReloadablePipelineState(IReferenceCounters*            
                                                  const PipelineStateCreateInfo& CreateInfo) :
     TBase{pRefCounters},
     m_pStateCache{pStateCache},
-    m_pPipeline{pPipeline}
-{}
-
-bool ReloadablePipelineState::Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo)
+    m_pPipeline{pPipeline},
+    m_Type{CreateInfo.PSODesc.PipelineType}
 {
-    return false;
+    static_assert(PIPELINE_TYPE_COUNT == 5, "Did you add a new pipeline type? You may need to handle it here.");
+    switch (CreateInfo.PSODesc.PipelineType)
+    {
+        case PIPELINE_TYPE_GRAPHICS:
+        case PIPELINE_TYPE_MESH:
+            m_pCreateInfo = std::make_unique<CreateInfoWrapper<GraphicsPipelineStateCreateInfo>>(static_cast<const GraphicsPipelineStateCreateInfo&>(CreateInfo));
+            break;
+
+        case PIPELINE_TYPE_COMPUTE:
+            m_pCreateInfo = std::make_unique<CreateInfoWrapper<ComputePipelineStateCreateInfo>>(static_cast<const ComputePipelineStateCreateInfo&>(CreateInfo));
+            break;
+
+        case PIPELINE_TYPE_RAY_TRACING:
+            m_pCreateInfo = std::make_unique<CreateInfoWrapper<RayTracingPipelineStateCreateInfo>>(static_cast<const RayTracingPipelineStateCreateInfo&>(CreateInfo));
+            break;
+
+        case PIPELINE_TYPE_TILE:
+            m_pCreateInfo = std::make_unique<CreateInfoWrapper<TilePipelineStateCreateInfo>>(static_cast<const TilePipelineStateCreateInfo&>(CreateInfo));
+            break;
+
+        default:
+            UNEXPECTED("Unexpected pipeline type");
+    }
+}
+
+template <typename CreateInfoType>
+bool ReloadablePipelineState::Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData)
+{
+    const auto& CreateInfo = static_cast<const CreateInfoWrapper<CreateInfoType>&>(*m_pCreateInfo).Get();
+
+    RefCntAutoPtr<IPipelineState> pNewPSO;
+    bool                          FoundInCache = false;
+    if (ModifyReloadInfo != nullptr)
+    {
+        auto _CreateInfo = CreateInfo;
+        ModifyReloadInfo(_CreateInfo, pUserData);
+        FoundInCache = m_pStateCache->CreatePipelineStateInternal(_CreateInfo, &pNewPSO);
+    }
+    else
+    {
+        FoundInCache = m_pStateCache->CreatePipelineStateInternal(CreateInfo, &pNewPSO);
+    }
+
+    if (pNewPSO)
+    {
+        m_pPipeline = pNewPSO;
+    }
+    else
+    {
+        const auto* Name = CreateInfo.PSODesc.Name;
+        LOG_ERROR_MESSAGE("Failed to reload pipeline state '", (Name ? Name : "<unnamed>"), "'.");
+    }
+    return !FoundInCache;
+}
+
+
+bool ReloadablePipelineState::Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData)
+{
+    static_assert(PIPELINE_TYPE_COUNT == 5, "Did you add a new pipeline type? You may need to handle it here.");
+    // Note that all shaders in Create Info are reloadable shaders, so they will automatically redirect all calls
+    // to the updated internal shader
+    switch (m_Type)
+    {
+        case PIPELINE_TYPE_GRAPHICS:
+        case PIPELINE_TYPE_MESH:
+            return Reload<GraphicsPipelineStateCreateInfo>(ModifyReloadInfo, pUserData);
+
+        case PIPELINE_TYPE_COMPUTE:
+            return Reload<ComputePipelineStateCreateInfo>(ModifyReloadInfo, pUserData);
+
+        case PIPELINE_TYPE_RAY_TRACING:
+            return Reload<RayTracingPipelineStateCreateInfo>(ModifyReloadInfo, pUserData);
+
+        case PIPELINE_TYPE_TILE:
+            return Reload<TilePipelineStateCreateInfo>(ModifyReloadInfo, pUserData);
+
+        default:
+            UNEXPECTED("Unexpected pipeline type");
+            return false;
+    }
 }
 
 } // namespace Diligent

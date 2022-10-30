@@ -460,6 +460,7 @@ void TestGraphicsPSO(bool UseRenderPass)
                 EXPECT_EQ(pPSO, pPSO2);
             }
 
+            if (!HotReload)
             {
                 RefCntAutoPtr<IPipelineState> pPSO2;
                 CreateGraphicsPSO(pCache, pData != nullptr, pUncachedVS, pUncachedPS, UseRenderPass, &pPSO2);

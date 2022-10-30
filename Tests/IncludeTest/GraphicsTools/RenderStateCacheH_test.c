@@ -46,5 +46,5 @@ void TestRenderStateCacheCInterface()
     IRenderStateCache_WriteToBlob(pCache, (IDataBlob**)NULL);
     IRenderStateCache_WriteToStream(pCache, (IFileStream*)NULL);
     IRenderStateCache_Reset(pCache);
-    IRenderStateCache_Reload(pCache, NULL);
+    IRenderStateCache_Reload(pCache, NULL, NULL);
 }
