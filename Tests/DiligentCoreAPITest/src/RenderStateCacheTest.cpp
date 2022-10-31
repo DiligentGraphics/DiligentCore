@@ -898,7 +898,7 @@ TEST(RenderStateCacheTest, RenderDeviceWithCache)
 }
 
 
-void TestPipelineReload(bool UseRenderPass)
+void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false)
 {
     auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
@@ -1043,6 +1043,24 @@ void TestPipelineReload(bool UseRenderPass)
         pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "Colors")->Set(pConstBuff);
         pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static0")->Set(RefTextures.GetView(0));
 
+        auto CreateSRB = [&]() {
+            pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static1")->Set(RefTextures.GetView(1));
+
+            RefCntAutoPtr<IShaderResourceBinding> pSRB;
+            pPSO->CreateShaderResourceBinding(&pSRB, true);
+
+            pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->Set(RefTextures.GetView(2));
+            pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
+            return pSRB;
+        };
+
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        if (CreateSrbBeforeReload)
+        {
+            // Init SRB before reloading the PSO
+            pSRB = CreateSRB();
+        }
+
         auto ModifyPSO = MakeCallback(
             [&](PipelineStateCreateInfo& CreateInfo) {
                 ASSERT_STREQ(CreateInfo.PSODesc.Name, PSOName);
@@ -1053,13 +1071,12 @@ void TestPipelineReload(bool UseRenderPass)
 
         EXPECT_EQ(pCache->Reload(ModifyPSO, ModifyPSO), pass == 0 ? 3u : 0u);
 
-        pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static1")->Set(RefTextures.GetView(1));
-
-        RefCntAutoPtr<IShaderResourceBinding> pSRB;
-        pPSO->CreateShaderResourceBinding(&pSRB, true);
-
-        pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->Set(RefTextures.GetView(2));
-        pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
+        if (!pSRB)
+        {
+            // Init SRB after reloading the PSO
+            EXPECT_FALSE(CreateSrbBeforeReload);
+            pSRB = CreateSRB();
+        }
 
         TestDraw(nullptr, nullptr, pPSO, UseRenderPass,
                  [&]() {
@@ -1081,6 +1098,11 @@ TEST(RenderStateCacheTest, Reload)
 TEST(RenderStateCacheTest, Reload_RenderPass)
 {
     TestPipelineReload(/*UseRenderPass = */ true);
+}
+
+TEST(RenderStateCacheTest, Reload_SrbBeforeReload)
+{
+    TestPipelineReload(/*UseRenderPass = */ false, /*TestSRB = */ true);
 }
 
 } // namespace
