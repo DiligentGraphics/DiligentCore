@@ -1,6 +1,27 @@
 #include "GraphicsCommon.h"
 
+cbuffer Colors
+{
+    ReloadTestData g_Data;
+};
+
+Texture2D g_Tex2D_Static0;
+Texture2D g_Tex2D_Static1;
+Texture2D g_Tex2D_Mut;
+Texture2D g_Tex2D_Dyn;
+
+SamplerState g_Tex2D_Static0_sampler;
+SamplerState g_Tex2D_Static1_sampler;
+SamplerState g_Tex2D_Mut_sampler;
+SamplerState g_Tex2D_Dyn_sampler;
+ 
 float4 main(in PSInput PSIn) : SV_Target
 {
-    return float4(0.0, 0.0, 0.0, PSIn.Color.r);
+    float2 UV = float2(0.5, 0.5);
+    return float4(0.0, 0.0, 0.0, PSIn.Color.r) *
+        g_Tex2D_Static0.Sample(g_Tex2D_Static0_sampler, UV.xy) * 
+        g_Tex2D_Static1.Sample(g_Tex2D_Static1_sampler, UV.xy) *
+        g_Tex2D_Mut.Sample(g_Tex2D_Mut_sampler, UV.xy) *
+        g_Tex2D_Dyn.Sample(g_Tex2D_Dyn_sampler, UV.xy) * 
+        g_Data.RefTexColors[0];
 }

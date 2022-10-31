@@ -1373,7 +1373,11 @@ bool ReloadablePipelineState::Reload(ModifyPipelineReloadInfoCallbackType Modify
 
     if (pNewPSO)
     {
-        m_pPipeline = pNewPSO;
+        if (m_pPipeline != pNewPSO)
+        {
+            m_pPipeline->CopyStaticResources(pNewPSO);
+            m_pPipeline = pNewPSO;
+        }
     }
     else
     {

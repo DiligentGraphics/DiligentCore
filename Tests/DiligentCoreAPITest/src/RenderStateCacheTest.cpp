@@ -24,6 +24,8 @@
  *  of the possibility of such damages.
  */
 
+#include <functional>
+
 #include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
 #include "RenderStateCache.h"
@@ -31,19 +33,11 @@
 #include "FastRand.hpp"
 #include "GraphicsTypesX.hpp"
 #include "CallbackWrapper.hpp"
+#include "ResourceLayoutTestCommon.hpp"
 
 #include "InlineShaders/RayTracingTestHLSL.h"
 
 #include "gtest/gtest.h"
-
-namespace Diligent
-{
-namespace Testing
-{
-void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
-void ComputeShaderReference(ISwapChain* pSwapChain);
-} // namespace Testing
-} // namespace Diligent
 
 using namespace Diligent;
 using namespace Diligent::Testing;
@@ -51,7 +45,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-void TestDraw(IShader* pVS, IShader* pPS, IPipelineState* pPSO, bool UseRenderPass, IBuffer* pVertexBuffer = nullptr)
+void TestDraw(IShader* pVS, IShader* pPS, IPipelineState* pPSO, bool UseRenderPass, std::function<void()> PreDraw = nullptr)
 {
     VERIFY_EXPR((pVS != nullptr && pPS != nullptr) ^ (pPSO != nullptr));
 
@@ -124,13 +118,11 @@ void TestDraw(IShader* pVS, IShader* pPS, IPipelineState* pPSO, bool UseRenderPa
         pCtx->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
-    if (pVertexBuffer != nullptr)
-    {
-        IBuffer* pVBs[] = {pVertexBuffer};
-        pCtx->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
-    }
-
     pCtx->SetPipelineState(pPSO);
+
+    if (PreDraw != nullptr)
+        PreDraw();
+
     pCtx->Draw({6, DRAW_FLAG_VERIFY_ALL});
 
     if (UseRenderPass)
@@ -925,14 +917,24 @@ void TestPipelineReload(bool UseRenderPass)
 
     constexpr auto HotReload = true;
 
-    RefCntAutoPtr<IBuffer> pVertBuff;
-    {
-        struct Vertex
-        {
-            float4 Pos;
-            float3 Color;
-        };
+    ReferenceTextures RefTextures{
+        4,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_SHADER_RESOURCE,
+        TEXTURE_VIEW_SHADER_RESOURCE //
+    };
 
+    {
+        RefCntAutoPtr<ISampler> pSampler;
+        pDevice->CreateSampler(SamplerDesc{}, &pSampler);
+        RefTextures.GetView(1)->SetSampler(pSampler);
+        RefTextures.GetView(3)->SetSampler(pSampler);
+    }
+
+    RefCntAutoPtr<IBuffer> pVertBuff;
+    RefCntAutoPtr<IBuffer> pConstBuff;
+    {
         constexpr float4 Pos[] =
             {
                 float4{-1.0, -0.5, 0.0, 1.0},
@@ -944,30 +946,33 @@ void TestPipelineReload(bool UseRenderPass)
                 float4{+1.0, -0.5, 0.0, 1.0},
             };
 
-        constexpr float3 Color[] =
+        const float4 Color[] =
             {
-                float3{1.0, 0.0, 0.0},
-                float3{0.0, 1.0, 0.0},
-                float3{0.0, 0.0, 1.0},
-            };
-
-        constexpr Vertex Vert[] =
-            {
-                {Pos[0], Color[0]},
-                {Pos[1], Color[1]},
-                {Pos[2], Color[2]},
-
-                {Pos[3], Color[0]},
-                {Pos[4], Color[1]},
-                {Pos[5], Color[2]},
+                float4{1.0, 0.0, 0.0, 1.0},
+                float4{0.0, 1.0, 0.0, 1.0},
+                float4{0.0, 0.0, 1.0, 1.0},
+                RefTextures.GetColor(0),
+                RefTextures.GetColor(1),
+                RefTextures.GetColor(2),
+                RefTextures.GetColor(3),
             };
 
         RenderDeviceX<> Device{pDevice};
-        pVertBuff = Device.CreateBuffer("Vert buffer", sizeof(Vert), USAGE_DEFAULT, BIND_VERTEX_BUFFER, CPU_ACCESS_NONE, Vert);
+        pVertBuff = Device.CreateBuffer("Pos buffer", sizeof(Pos), USAGE_DEFAULT, BIND_VERTEX_BUFFER, CPU_ACCESS_NONE, Pos);
         ASSERT_NE(pVertBuff, nullptr);
 
-        StateTransitionDesc Barrier{pVertBuff, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pCtx->TransitionResourceStates(1, &Barrier);
+        pConstBuff = Device.CreateBuffer("Color buffer", sizeof(Color), USAGE_DEFAULT, BIND_UNIFORM_BUFFER, CPU_ACCESS_NONE, Color);
+        ASSERT_NE(pVertBuff, nullptr);
+
+        StateTransitionDesc Barriers[] = {
+            {pVertBuff, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE},
+            {pConstBuff, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_CONSTANT_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE},
+            {RefTextures.GetView(0)->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE},
+            {RefTextures.GetView(1)->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE},
+            {RefTextures.GetView(2)->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE},
+            {RefTextures.GetView(3)->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE},
+        };
+        pCtx->TransitionResourceStates(_countof(Barriers), Barriers);
     }
 
     RefCntAutoPtr<IDataBlob> pData;
@@ -999,10 +1004,21 @@ void TestPipelineReload(bool UseRenderPass)
 
             InputLayoutDescX InputLayout{
                 LayoutElement{0, 0, 4, VT_FLOAT32},
-                LayoutElement{1, 0, 3, VT_FLOAT32},
             };
-
             GraphicsPipeline.InputLayout = InputLayout;
+
+            PipelineResourceLayoutDescX ResLayout{
+                {
+                    {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "Colors", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+                    {SHADER_TYPE_PIXEL, "g_Tex2D_Static1", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+                    {SHADER_TYPE_PIXEL, "g_Tex2D_Mut", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                    {SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+                },
+                {
+                    {SHADER_TYPE_PIXEL, "g_Tex2D_Static0", SamplerDesc{}},
+                    {SHADER_TYPE_PIXEL, "g_Tex2D_Mut", SamplerDesc{}},
+                }};
+            PsoCI.PSODesc.ResourceLayout = ResLayout;
 
             const auto ColorBufferFormat = pSwapChain->GetDesc().ColorBufferFormat;
 
@@ -1024,6 +1040,8 @@ void TestPipelineReload(bool UseRenderPass)
             EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO), pData != nullptr);
         }
         ASSERT_NE(pPSO, nullptr);
+        pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "Colors")->Set(pConstBuff);
+        pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static0")->Set(RefTextures.GetView(0));
 
         auto ModifyPSO = MakeCallback(
             [&](PipelineStateCreateInfo& CreateInfo) {
@@ -1035,7 +1053,20 @@ void TestPipelineReload(bool UseRenderPass)
 
         EXPECT_EQ(pCache->Reload(ModifyPSO, ModifyPSO), pass == 0 ? 3u : 0u);
 
-        TestDraw(nullptr, nullptr, pPSO, UseRenderPass, pVertBuff);
+        pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static1")->Set(RefTextures.GetView(1));
+
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        pPSO->CreateShaderResourceBinding(&pSRB, true);
+
+        pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->Set(RefTextures.GetView(2));
+        pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
+
+        TestDraw(nullptr, nullptr, pPSO, UseRenderPass,
+                 [&]() {
+                     IBuffer* pVBs[] = {pVertBuff};
+                     pCtx->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+                     pCtx->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_NONE);
+                 });
 
         pData.Release();
         pCache->WriteToBlob(&pData);

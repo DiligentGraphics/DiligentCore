@@ -1,7 +1,35 @@
 #include "GraphicsCommon.h"
 
+cbuffer Colors
+{
+    ReloadTestData g_Data;
+};
+
+Texture2D g_Tex2D_Static0;
+Texture2D g_Tex2D_Static1;
+Texture2D g_Tex2D_Mut;
+Texture2D g_Tex2D_Dyn;
+
+SamplerState g_Tex2D_Static0_sampler;
+SamplerState g_Tex2D_Static1_sampler;
+SamplerState g_Tex2D_Mut_sampler;
+SamplerState g_Tex2D_Dyn_sampler;
+
+float4 CheckValue(float4 Val, float4 Expected)
+{
+    return float4(Val.x == Expected.x ? 1.0 : 0.0,
+                  Val.y == Expected.y ? 1.0 : 0.0,
+                  Val.z == Expected.z ? 1.0 : 0.0,
+                  Val.w == Expected.w ? 1.0 : 0.0);
+}
+
 float4 main(in PSInput PSIn) : SV_Target
 {
-    return float4(PSIn.Color.rgb, 1.0);
+    float2 UV = float2(0.5, 0.5);
+    return float4(PSIn.Color.rgb, 1.0) * 
+        CheckValue(g_Tex2D_Static0.Sample(g_Tex2D_Static0_sampler, UV.xy), g_Data.RefTexColors[0]) *
+        CheckValue(g_Tex2D_Static1.Sample(g_Tex2D_Static1_sampler, UV.xy), g_Data.RefTexColors[1]) *
+        CheckValue(g_Tex2D_Mut.Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[2]) *
+        CheckValue(g_Tex2D_Dyn.Sample(g_Tex2D_Dyn_sampler, UV.xy), g_Data.RefTexColors[3]);
     // NB: no new line at the end of file!
 }
