@@ -767,13 +767,17 @@ bool ShaderResourceCacheD3D11::CopyResource(const ShaderResourceCacheD3D11& SrcC
         const Uint32 Binding = BindPoints[ShaderInd];
         VERIFY(Binding < GetResourceCount<ResRange>(ShaderInd), "Index is out of range");
         VERIFY(Binding < SrcCache.GetResourceCount<ResRange>(ShaderInd), "Index is out of range");
-        if (!SrcResArrays.first[Binding])
+        if (SrcResArrays.first[Binding])
+        {
+            DstResArrays.first[Binding]  = SrcResArrays.first[Binding];
+            DstResArrays.second[Binding] = SrcResArrays.second[Binding];
+
+            UpdateDynamicCBOffsetFlag<ResRange>(DstResArrays.first[Binding], ShaderInd, Binding);
+        }
+        else if (!DstResArrays.first[Binding])
+        {
             IsBound = false;
-
-        DstResArrays.first[Binding]  = SrcResArrays.first[Binding];
-        DstResArrays.second[Binding] = SrcResArrays.second[Binding];
-
-        UpdateDynamicCBOffsetFlag<ResRange>(DstResArrays.first[Binding], ShaderInd, Binding);
+        }
     }
 
     this->UpdateRevision();

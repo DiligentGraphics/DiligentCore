@@ -460,6 +460,31 @@ public:
         return this->GetResourceSignature(0)->InitializeStaticSRBResources(pSRB);
     }
 
+    virtual void DILIGENT_CALL_TYPE CopyStaticResources(IPipelineState* pDstPipeline) const override final
+    {
+        if (pDstPipeline == nullptr)
+        {
+            DEV_ERROR("Destination pipeline must not be null");
+            return;
+        }
+
+        if (pDstPipeline == this)
+        {
+            DEV_ERROR("Source and destination pipelines must be different");
+            return;
+        }
+
+        if (!m_UsingImplicitSignature)
+        {
+            LOG_ERROR_MESSAGE("IPipelineState::CopyStaticResources is not allowed for pipelines that use explicit "
+                              "resource signatures. Use IPipelineResourceSignature::CopyStaticResources instead.");
+            return;
+        }
+
+        auto* pDstSign = static_cast<PipelineStateImplType*>(pDstPipeline)->GetResourceSignature(0);
+        return this->GetResourceSignature(0)->CopyStaticResources(pDstSign);
+    }
+
     /// Implementation of IPipelineState::GetResourceSignatureCount().
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final
     {

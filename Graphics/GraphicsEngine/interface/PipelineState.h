@@ -1094,6 +1094,20 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
                                                       struct IShaderResourceBinding* pShaderResourceBinding) CONST PURE;
 
 
+    /// Copies static resource bindings to the destination pipeline.
+
+    /// \param [in] pDstPipeline - Destination pipeline state.
+    ///
+    /// \note   Destination pipeline state must be compatible with this pipeline.
+    ///
+    /// \remarks    This method is only allowed for pipelines that use implicit resource signature
+    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    ///             For pipelines that use explicit resource signatures, use
+    ///             IPipelineResourceSignature::CopyStaticResources() method.
+    VIRTUAL void METHOD(CopyStaticResources)(THIS_
+                                             IPipelineState* pDstPipeline) CONST PURE;
+
+
     /// Checks if this pipeline state object is compatible with another PSO
 
     /// If two pipeline state objects are compatible, they can use shader resource binding
@@ -1155,6 +1169,7 @@ DILIGENT_END_INTERFACE
 #    define IPipelineState_GetStaticVariableByIndex(This, ...)     CALL_IFACE_METHOD(PipelineState, GetStaticVariableByIndex,     This, __VA_ARGS__)
 #    define IPipelineState_CreateShaderResourceBinding(This, ...)  CALL_IFACE_METHOD(PipelineState, CreateShaderResourceBinding,  This, __VA_ARGS__)
 #    define IPipelineState_InitializeStaticSRBResources(This, ...) CALL_IFACE_METHOD(PipelineState, InitializeStaticSRBResources, This, __VA_ARGS__)
+#    define IPipelineState_CopyStaticResources(This, ...)          CALL_IFACE_METHOD(PipelineState, CopyStaticResources,          This, __VA_ARGS__)
 #    define IPipelineState_IsCompatibleWith(This, ...)             CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,             This, __VA_ARGS__)
 #    define IPipelineState_GetResourceSignatureCount(This)         CALL_IFACE_METHOD(PipelineState, GetResourceSignatureCount,    This)
 #    define IPipelineState_GetResourceSignature(This, ...)         CALL_IFACE_METHOD(PipelineState, GetResourceSignature,         This, __VA_ARGS__)

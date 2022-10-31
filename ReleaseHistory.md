@@ -1,5 +1,6 @@
 # Current progress
 
+* Added `IPipelineResourceSignature::CopyStaticResources` and `IPipelineState::CopyStaticResources` methods (API252008)
 * Added render state cache (`IRenderStateCache` interface and related data types) (API252007)
 * Moved `UseCombinedTextureSamplers` and `CombinedSamplerSuffix` members from `ShaderCreateInfo` to `ShaderDesc` (API252006)
 * Added `IntanceLayerCount` and `ppInstanceLayerNames` members to EngineVkCreateInfo struct (API252005)

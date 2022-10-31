@@ -408,6 +408,14 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     VIRTUAL void METHOD(InitializeStaticSRBResources)(THIS_
                                                       struct IShaderResourceBinding* pShaderResourceBinding) CONST PURE;
 
+    /// Copies static resource bindings to the destination signature.
+
+    /// \param [in] pDstSignature - Destination pipeline resource signature.
+    ///
+    /// \note   Destination signature must be compatible with this signature.
+    VIRTUAL void METHOD(CopyStaticResources)(THIS_
+                                             IPipelineResourceSignature* pDstSignature) CONST PURE;
+
     /// Returns true if the signature is compatible with another one.
 
     /// \remarks    Two signatures are compatible if they contain identical resources and immutabke samplers,
@@ -431,6 +439,7 @@ DILIGENT_END_INTERFACE
 #    define IPipelineResourceSignature_GetStaticVariableByIndex(This, ...)     CALL_IFACE_METHOD(PipelineResourceSignature, GetStaticVariableByIndex,    This, __VA_ARGS__)
 #    define IPipelineResourceSignature_GetStaticVariableCount(This, ...)       CALL_IFACE_METHOD(PipelineResourceSignature, GetStaticVariableCount,      This, __VA_ARGS__)
 #    define IPipelineResourceSignature_InitializeStaticSRBResources(This, ...) CALL_IFACE_METHOD(PipelineResourceSignature, InitializeStaticSRBResources,This, __VA_ARGS__)
+#    define IPipelineResourceSignature_CopyStaticResources(This, ...)          CALL_IFACE_METHOD(PipelineResourceSignature, CopyStaticResources,         This, __VA_ARGS__)
 #    define IPipelineResourceSignature_IsCompatibleWith(This, ...)             CALL_IFACE_METHOD(PipelineResourceSignature, IsCompatibleWith,            This, __VA_ARGS__)
 
 // clang-format on

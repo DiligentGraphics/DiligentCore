@@ -523,6 +523,33 @@ public:
         pSRBImpl->SetStaticResourcesInitialized();
     }
 
+    /// Implementation of IPipelineResourceSignature::CopyStaticResources.
+    virtual void DILIGENT_CALL_TYPE CopyStaticResources(IPipelineResourceSignature* pDstSignature) const override final
+    {
+        if (pDstSignature == nullptr)
+        {
+            DEV_ERROR("Destination signature must not be null");
+            return;
+        }
+
+        if (pDstSignature == this)
+        {
+            DEV_ERROR("Source and destination signatures must be different");
+            return;
+        }
+
+        const auto* const pThisImpl    = static_cast<const PipelineResourceSignatureImplType*>(this);
+        auto* const       pDstSignImpl = static_cast<const PipelineResourceSignatureImplType*>(pDstSignature);
+        if (!pDstSignImpl->IsCompatibleWith(pThisImpl))
+        {
+            LOG_ERROR_MESSAGE("Can't copy static resources: destination pipeline resource signature '", pDstSignImpl->m_Desc.Name,
+                              "' is not compatible with the source signature '", pThisImpl->m_Desc.Name, "'.");
+            return;
+        }
+
+        pThisImpl->CopyStaticResources(*pDstSignImpl->m_pStaticResCache);
+    }
+
     /// Implementation of IPipelineResourceSignature::IsCompatibleWith.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineResourceSignature* pPRS) const override final
     {

@@ -201,6 +201,7 @@ public:
     PROXY_METHOD2(m_pPipeline, IShaderResourceVariable*, GetStaticVariableByIndex, SHADER_TYPE, ShaderType, Uint32, Index)
     PROXY_METHOD2(m_pPipeline, void, CreateShaderResourceBinding, IShaderResourceBinding**, ppShaderResourceBinding, bool, InitStaticResources)
     PROXY_CONST_METHOD1(m_pPipeline, void, InitializeStaticSRBResources, IShaderResourceBinding*, pShaderResourceBinding)
+    PROXY_CONST_METHOD1(m_pPipeline, void, CopyStaticResources, IPipelineState*, pPSO)
     PROXY_CONST_METHOD1(m_pPipeline, bool, IsCompatibleWith, const IPipelineState*, pPSO)
     PROXY_CONST_METHOD(m_pPipeline, Uint32, GetResourceSignatureCount)
     PROXY_CONST_METHOD1(m_pPipeline, IPipelineResourceSignature*, GetResourceSignature, Uint32, Index)
