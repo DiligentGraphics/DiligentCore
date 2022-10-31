@@ -1812,4 +1812,131 @@ TEST_F(ShaderResourceLayoutTest, CopyStaticResources)
     pSwapChain->Present();
 }
 
+TEST_F(ShaderResourceLayoutTest, CopyStaticResourcesCS)
+{
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    auto* const pSwapChain = pEnv->GetSwapChain();
+    auto* const pContext   = pEnv->GetDeviceContext();
+
+    ComputeShaderReference(pSwapChain);
+
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+
+    // Prepare buffers with reference values
+    ReferenceBuffers RefBuffers{
+        3,
+        USAGE_DEFAULT,
+        BIND_UNORDERED_ACCESS,
+        BUFFER_VIEW_UNORDERED_ACCESS,
+        BUFFER_MODE_STRUCTURED //
+    };
+
+    ReferenceTextures RefTextures{
+        3,
+        128, 128,
+        USAGE_DEFAULT,
+        BIND_UNORDERED_ACCESS,
+        TEXTURE_VIEW_UNORDERED_ACCESS //
+    };
+
+    // clang-format off
+    ShaderResourceDesc Resources[] =
+    {
+        {"g_tex2DUAV",  SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
+        {"g_RWTex2D_0", SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
+        {"g_RWTex2D_1", SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
+        {"g_RWTex2D_2", SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
+        {"g_RWBuff_0",  SHADER_RESOURCE_TYPE_BUFFER_UAV,  1},
+        {"g_RWBuff_1",  SHADER_RESOURCE_TYPE_BUFFER_UAV,  1},
+        {"g_RWBuff_2",  SHADER_RESOURCE_TYPE_BUFFER_UAV,  1}
+    };
+    // clang-format on
+
+    const char*            ShaderFileName = nullptr;
+    SHADER_SOURCE_LANGUAGE SrcLang        = SHADER_SOURCE_LANGUAGE_DEFAULT;
+    if (pDevice->GetDeviceInfo().IsD3DDevice())
+    {
+        ShaderFileName = "CopyStaticResourcesCS.hlsl";
+        SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
+    }
+    else if (DeviceInfo.IsVulkanDevice() || DeviceInfo.IsGLDevice() || DeviceInfo.IsMetalDevice())
+    {
+        ShaderFileName = "CopyStaticResourcesCS.glsl";
+        SrcLang        = SHADER_SOURCE_LANGUAGE_GLSL;
+    }
+    else
+    {
+        GTEST_FAIL() << "Unexpected device type";
+    }
+
+    ShaderMacroHelper Macros;
+    if (SrcLang == SHADER_SOURCE_LANGUAGE_GLSL)
+        Macros.AddShaderMacro("float4", "vec4");
+
+    // Add macros that define reference colors
+    Macros.AddShaderMacro("Buff_0_Ref", RefBuffers.GetValue(0));
+    Macros.AddShaderMacro("Buff_1_Ref", RefBuffers.GetValue(1));
+    Macros.AddShaderMacro("Buff_2_Ref", RefBuffers.GetValue(2));
+    Macros.AddShaderMacro("RWTex2D_0_Ref", RefTextures.GetColor(0));
+    Macros.AddShaderMacro("RWTex2D_1_Ref", RefTextures.GetColor(1));
+    Macros.AddShaderMacro("RWTex2D_2_Ref", RefTextures.GetColor(2));
+
+    auto ModifyShaderCI = [pEnv](ShaderCreateInfo& ShaderCI) {
+        if (pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
+        {
+            // Due to bug in D3D12 WARP, we have to use SM5.0 with old compiler
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
+        }
+    };
+
+    auto pCS = CreateShader("ShaderResourceLayoutTest.CopyStaticResourcesCS",
+                            ShaderFileName, "main",
+                            SHADER_TYPE_COMPUTE, SrcLang, Macros,
+                            Resources, _countof(Resources), ModifyShaderCI);
+    ASSERT_NE(pCS, nullptr);
+
+    PipelineResourceLayoutDesc ResourceLayout;
+    ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+
+    RefCntAutoPtr<IPipelineState>         pPSO1;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB1;
+    CreateComputePSO(pCS, ResourceLayout, pPSO1, pSRB1);
+    ASSERT_NE(pPSO1, nullptr);
+    ASSERT_NE(pSRB1, nullptr);
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    ASSERT_TRUE(pTestingSwapChain);
+    SET_STATIC_VAR(pPSO1, SHADER_TYPE_COMPUTE, "g_tex2DUAV", Set, pTestingSwapChain->GetCurrentBackBufferUAV());
+    SET_STATIC_VAR(pPSO1, SHADER_TYPE_COMPUTE, "g_RWBuff_0", Set, RefBuffers.GetView(0));
+    SET_STATIC_VAR(pPSO1, SHADER_TYPE_COMPUTE, "g_RWTex2D_0", Set, RefTextures.GetView(0));
+
+    RefCntAutoPtr<IPipelineState>         pPSO2;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB2;
+    CreateComputePSO(pCS, ResourceLayout, pPSO2, pSRB2);
+    ASSERT_NE(pPSO2, nullptr);
+    ASSERT_NE(pSRB2, nullptr);
+
+    SET_STATIC_VAR(pPSO2, SHADER_TYPE_COMPUTE, "g_RWBuff_1", Set, RefBuffers.GetView(1));
+    SET_STATIC_VAR(pPSO2, SHADER_TYPE_COMPUTE, "g_RWTex2D_1", Set, RefTextures.GetView(1));
+    pPSO1->CopyStaticResources(pPSO2);
+    SET_STATIC_VAR(pPSO2, SHADER_TYPE_COMPUTE, "g_RWBuff_2", Set, RefBuffers.GetView(2));
+    SET_STATIC_VAR(pPSO2, SHADER_TYPE_COMPUTE, "g_RWTex2D_2", Set, RefTextures.GetView(2));
+
+    pPSO2->InitializeStaticSRBResources(pSRB2);
+
+    pContext->SetPipelineState(pPSO2);
+    pContext->CommitShaderResources(pSRB2, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    const auto&            SCDesc = pSwapChain->GetDesc();
+    DispatchComputeAttribs DispatchAttribs((SCDesc.Width + 15) / 16, (SCDesc.Height + 15) / 16, 1);
+    pContext->CommitShaderResources(pSRB2, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->DispatchCompute(DispatchAttribs);
+
+    pSwapChain->Present();
+}
+
 } // namespace
