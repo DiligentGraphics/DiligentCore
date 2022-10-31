@@ -1062,11 +1062,9 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false)
         }
 
         auto ModifyPSO = MakeCallback(
-            [&](PipelineStateCreateInfo& CreateInfo) {
-                ASSERT_STREQ(CreateInfo.PSODesc.Name, PSOName);
-                auto& GraphicsPsoCI = static_cast<GraphicsPipelineStateCreateInfo&>(CreateInfo);
-
-                GraphicsPsoCI.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            [&](const char* PipelineName, GraphicsPipelineDesc& GraphicsPipeline) {
+                ASSERT_STREQ(PipelineName, PSOName);
+                GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             });
 
         EXPECT_EQ(pCache->Reload(ModifyPSO, ModifyPSO), pass == 0 ? 3u : 0u);

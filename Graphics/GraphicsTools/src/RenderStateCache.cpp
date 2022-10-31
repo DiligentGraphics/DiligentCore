@@ -222,11 +222,11 @@ public:
         }
     }
 
-    bool Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData);
+    bool Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData);
 
 private:
     template <typename CreateInfoType>
-    bool Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData);
+    bool Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData);
 
     struct DynamicHeapObjectBase
     {
@@ -341,7 +341,7 @@ public:
         m_Pipelines.clear();
     }
 
-    virtual Uint32 DILIGENT_CALL_TYPE Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData) override final;
+    virtual Uint32 DILIGENT_CALL_TYPE Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData) override final;
 
     bool CreateShaderInternal(const ShaderCreateInfo& ShaderCI,
                               IShader**               ppShader);
@@ -1097,7 +1097,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
     return false;
 }
 
-Uint32 RenderStateCacheImpl::Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData)
+Uint32 RenderStateCacheImpl::Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData)
 {
     if (!m_CI.EnableHotReload)
     {
@@ -1136,7 +1136,7 @@ Uint32 RenderStateCacheImpl::Reload(ModifyPipelineReloadInfoCallbackType ModifyR
                 RefCntAutoPtr<ReloadablePipelineState> pReloadablePSO{pPSO, ReloadablePipelineState::IID_InternalImpl};
                 if (pPSO)
                 {
-                    if (pReloadablePSO->Reload(ModifyReloadInfo, pUserData))
+                    if (pReloadablePSO->Reload(ReloadGraphicsPipeline, pUserData))
                         ++NumStatesReloaded;
                 }
                 else
@@ -1193,7 +1193,12 @@ struct ReloadablePipelineState::CreateInfoWrapperBase : DynamicHeapObjectBase
         return m_CI;
     }
 
-    operator const CreateInfoType&()
+    operator const CreateInfoType&() const
+    {
+        return m_CI;
+    }
+
+    operator CreateInfoType&()
     {
         return m_CI;
     }
@@ -1354,22 +1359,28 @@ ReloadablePipelineState::ReloadablePipelineState(IReferenceCounters*            
 }
 
 template <typename CreateInfoType>
-bool ReloadablePipelineState::Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData)
+void ModifyPsoCreateInfo(CreateInfoType& PsoCreateInfo, ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData)
 {
-    const auto& CreateInfo = static_cast<const CreateInfoWrapper<CreateInfoType>&>(*m_pCreateInfo).Get();
+}
+
+template <>
+void ModifyPsoCreateInfo(GraphicsPipelineStateCreateInfo& PsoCreateInfo, ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData)
+{
+    if (ReloadGraphicsPipeline != nullptr)
+    {
+        ReloadGraphicsPipeline(PsoCreateInfo.PSODesc.Name, PsoCreateInfo.GraphicsPipeline, pUserData);
+    }
+}
+
+template <typename CreateInfoType>
+bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData)
+{
+    auto& CreateInfo = static_cast<CreateInfoWrapper<CreateInfoType>&>(*m_pCreateInfo);
+    ModifyPsoCreateInfo<CreateInfoType>(static_cast<CreateInfoType&>(CreateInfo), ReloadGraphicsPipeline, pUserData);
 
     RefCntAutoPtr<IPipelineState> pNewPSO;
-    bool                          FoundInCache = false;
-    if (ModifyReloadInfo != nullptr)
-    {
-        auto _CreateInfo = CreateInfo;
-        ModifyReloadInfo(_CreateInfo, pUserData);
-        FoundInCache = m_pStateCache->CreatePipelineStateInternal(_CreateInfo, &pNewPSO);
-    }
-    else
-    {
-        FoundInCache = m_pStateCache->CreatePipelineStateInternal(CreateInfo, &pNewPSO);
-    }
+
+    const auto FoundInCache = m_pStateCache->CreatePipelineStateInternal(static_cast<const CreateInfoType&>(CreateInfo), &pNewPSO);
 
     if (pNewPSO)
     {
@@ -1381,14 +1392,14 @@ bool ReloadablePipelineState::Reload(ModifyPipelineReloadInfoCallbackType Modify
     }
     else
     {
-        const auto* Name = CreateInfo.PSODesc.Name;
+        const auto* Name = CreateInfo.Get().PSODesc.Name;
         LOG_ERROR_MESSAGE("Failed to reload pipeline state '", (Name ? Name : "<unnamed>"), "'.");
     }
     return !FoundInCache;
 }
 
 
-bool ReloadablePipelineState::Reload(ModifyPipelineReloadInfoCallbackType ModifyReloadInfo, void* pUserData)
+bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData)
 {
     static_assert(PIPELINE_TYPE_COUNT == 5, "Did you add a new pipeline type? You may need to handle it here.");
     // Note that all shaders in Create Info are reloadable shaders, so they will automatically redirect all calls
@@ -1397,16 +1408,16 @@ bool ReloadablePipelineState::Reload(ModifyPipelineReloadInfoCallbackType Modify
     {
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
-            return Reload<GraphicsPipelineStateCreateInfo>(ModifyReloadInfo, pUserData);
+            return Reload<GraphicsPipelineStateCreateInfo>(ReloadGraphicsPipeline, pUserData);
 
         case PIPELINE_TYPE_COMPUTE:
-            return Reload<ComputePipelineStateCreateInfo>(ModifyReloadInfo, pUserData);
+            return Reload<ComputePipelineStateCreateInfo>(ReloadGraphicsPipeline, pUserData);
 
         case PIPELINE_TYPE_RAY_TRACING:
-            return Reload<RayTracingPipelineStateCreateInfo>(ModifyReloadInfo, pUserData);
+            return Reload<RayTracingPipelineStateCreateInfo>(ReloadGraphicsPipeline, pUserData);
 
         case PIPELINE_TYPE_TILE:
-            return Reload<TilePipelineStateCreateInfo>(ModifyReloadInfo, pUserData);
+            return Reload<TilePipelineStateCreateInfo>(ReloadGraphicsPipeline, pUserData);
 
         default:
             UNEXPECTED("Unexpected pipeline type");

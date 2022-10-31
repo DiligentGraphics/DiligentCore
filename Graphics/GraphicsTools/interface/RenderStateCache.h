@@ -78,7 +78,7 @@ typedef struct RenderStateCacheCreateInfo RenderStateCacheCreateInfo;
 #endif
 
 /// Type of the callback function called by the IRenderStateCache::Reload method.
-typedef void(DILIGENT_CALL_TYPE* ModifyPipelineReloadInfoCallbackType)(PipelineStateCreateInfo REF CreateInfo, void* pUserData);
+typedef void(DILIGENT_CALL_TYPE* ReloadGraphicsPipelineCallbackType)(const char* PipelineName, GraphicsPipelineDesc REF GraphicsDesc, void* pUserData);
 
 #undef REF
 
@@ -188,22 +188,18 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
 
     /// Reloads render states in the cache.
 
-    /// \param [in]  ModifyReloadInfo - An optional callback function that will be called by the render state cache
-    ///                                 to let the application modify pipeline state create info before creating new
-    ///                                 pipeline.
-    /// \param [in]  pUserData        - A pointer to user-specific data to pass to ModifyReloadInfo callback.
+    /// \param [in]  ReloadGraphicsPipeline - An optional callback function that will be called by the render state cache
+    ///                                       to let the application modify graphics pipeline state info before creating new
+    ///                                       pipeline.
+    /// \param [in]  pUserData              - A pointer to the user-specific data to pass to ReloadGraphicsPipeline callback.
     ///
     /// \return     The total number of render states (shaders and pipelines) that were reloaded.
     ///
     /// \remars     Reloading is only enabled if the cache was created with the EnableHotReload member of
     ///             RenderStateCacheCreateInfo member set to true.
-    ///
-    ///             ModifyReloadInfo callback is not allowed to modify shaders, resource layout or pipeline resource
-    ///             signatures. Its main use is to modify the graphics states of a graphics pipeline (blend state,
-    ///             rasterizer state, depth state, etc.).
     VIRTUAL Uint32 METHOD(Reload)(THIS_
-                                  ModifyPipelineReloadInfoCallbackType ModifyReloadInfo DEFAULT_VALUE(nullptr), 
-                                  void*                                pUserData        DEFAULT_VALUE(nullptr)) PURE;
+                                  ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline DEFAULT_VALUE(nullptr), 
+                                  void*                              pUserData              DEFAULT_VALUE(nullptr)) PURE;
 };
 DILIGENT_END_INTERFACE
 
