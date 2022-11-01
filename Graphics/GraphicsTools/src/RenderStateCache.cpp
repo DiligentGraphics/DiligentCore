@@ -508,10 +508,10 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
         LOG_ERROR_AND_THROW("Failed to create dearchiver");
 }
 
-#define RENDER_STATE_CACHE_LOG(...)                                \
+#define RENDER_STATE_CACHE_LOG(Level, ...)                         \
     do                                                             \
     {                                                              \
-        if (m_CI.EnableLogging)                                    \
+        if (m_CI.LogLevel >= Level)                                \
         {                                                          \
             LOG_INFO_MESSAGE("Render state cache: ", __VA_ARGS__); \
         }                                                          \
@@ -594,7 +594,7 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
             if (auto pShader = it->second.Lock())
             {
                 *ppShader = pShader.Detach();
-                RENDER_STATE_CACHE_LOG("Reusing existing shader '", (ShaderCI.Desc.Name ? ShaderCI.Desc.Name : ""), "'.");
+                RENDER_STATE_CACHE_LOG(RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE, "Reusing existing shader '", (ShaderCI.Desc.Name ? ShaderCI.Desc.Name : ""), "'.");
                 return true;
             }
             else
@@ -650,7 +650,7 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
         {
             if (pShader->GetDesc() == ShaderCI.Desc)
             {
-                RENDER_STATE_CACHE_LOG("Found shader '", HashStr, "'.");
+                RENDER_STATE_CACHE_LOG(RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE, "Found shader '", HashStr, "' in the archive.");
                 *ppShader = pShader.Detach();
                 return true;
             }
@@ -676,7 +676,7 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
         if (pArchivedShader)
         {
             if (m_pArchiver->AddShader(pArchivedShader))
-                RENDER_STATE_CACHE_LOG("Added shader '", HashStr, "'.");
+                RENDER_STATE_CACHE_LOG(RENDER_STATE_CACHE_LOG_LEVEL_NORMAL, "Added shader '", HashStr, "'.");
             else
                 LOG_ERROR_MESSAGE("Failed to archive shader '", HashStr, "'.");
         }
@@ -1025,7 +1025,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
             if (auto pPSO = it->second.Lock())
             {
                 *ppPipelineState = pPSO.Detach();
-                RENDER_STATE_CACHE_LOG("Reusing existing PSO '", (PSOCreateInfo.PSODesc.Name ? PSOCreateInfo.PSODesc.Name : ""), "'.");
+                RENDER_STATE_CACHE_LOG(RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE, "Reusing existing pipeline '", (PSOCreateInfo.PSODesc.Name ? PSOCreateInfo.PSODesc.Name : ""), "'.");
                 return true;
             }
             else
@@ -1083,7 +1083,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
 
     if (FoundInCache)
     {
-        RENDER_STATE_CACHE_LOG("Found PSO '", HashStr, "'.");
+        RENDER_STATE_CACHE_LOG(RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE, "Found pipeline '", HashStr, "' in the archive.");
         return true;
     }
 
@@ -1104,7 +1104,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
         if (pSerializedPSO)
         {
             if (m_pArchiver->AddPipelineState(pSerializedPSO))
-                RENDER_STATE_CACHE_LOG("Added PSO '", HashStr, "'.");
+                RENDER_STATE_CACHE_LOG(RENDER_STATE_CACHE_LOG_LEVEL_NORMAL, "Added pipeline '", HashStr, "'.");
             else
                 LOG_ERROR_MESSAGE("Failed to archive PSO '", HashStr, "'.");
         }

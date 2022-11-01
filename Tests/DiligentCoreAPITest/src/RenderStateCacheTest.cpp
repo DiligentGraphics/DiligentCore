@@ -188,7 +188,7 @@ RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pD
                                              IDataBlob*                       pCacheData           = nullptr,
                                              IShaderSourceInputStreamFactory* pShaderReloadFactory = nullptr)
 {
-    RenderStateCacheCreateInfo CacheCI{pDevice, true, HotReload, pShaderReloadFactory};
+    RenderStateCacheCreateInfo CacheCI{pDevice, RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE, HotReload, pShaderReloadFactory};
 
     RefCntAutoPtr<IRenderStateCache> pCache;
     CreateRenderStateCache(CacheCI, &pCache);

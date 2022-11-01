@@ -33,15 +33,31 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
+// clang-format off
+
+/// Render state cache logging level.
+DILIGENT_TYPED_ENUM(RENDER_STATE_CACHE_LOG_LEVEL, Uint8)
+{
+    /// Logging is disabled.
+    RENDER_STATE_CACHE_LOG_LEVEL_DISABLED,
+
+    /// Normal logging level.
+    RENDER_STATE_CACHE_LOG_LEVEL_NORMAL,
+
+    /// Verbose logging level.
+    RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE
+};
+
+// clang-format on
+
 /// Render state cache create information.
 struct RenderStateCacheCreateInfo
 {
     /// A pointer to the render device, must not be null.
     IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
 
-    /// Whether to log the cache usage events such as
-    /// if the object was found in the cache or not.
-    bool EnableLogging DEFAULT_INITIALIZER(false);
+    /// Logging level, see Diligent::RENDER_STATE_CACHE_LOG_LEVEL.
+    RENDER_STATE_CACHE_LOG_LEVEL LogLevel DEFAULT_INITIALIZER(RENDER_STATE_CACHE_LOG_LEVEL_NORMAL);
 
     /// Whether to enable hot shader and pipeline state reloading.
     ///
@@ -59,11 +75,11 @@ struct RenderStateCacheCreateInfo
 
     constexpr explicit RenderStateCacheCreateInfo(
         IRenderDevice*                   _pDevice,
-        bool                             _EnableLogging   = RenderStateCacheCreateInfo{}.EnableLogging,
+        RENDER_STATE_CACHE_LOG_LEVEL     _LogLevel        = RenderStateCacheCreateInfo{}.LogLevel,
         bool                             _EnableHotReload = RenderStateCacheCreateInfo{}.EnableHotReload,
         IShaderSourceInputStreamFactory* _pReloadSource   = RenderStateCacheCreateInfo{}.pReloadSource) noexcept :
         pDevice{_pDevice},
-        EnableLogging{_EnableLogging},
+        LogLevel{_LogLevel},
         EnableHotReload{_EnableHotReload},
         pReloadSource{_pReloadSource}
     {}

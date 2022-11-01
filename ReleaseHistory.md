@@ -1,5 +1,6 @@
 # Current progress
 
+* Added `RENDER_STATE_CACHE_LOG_LEVEL` enum, replaced `EnableLogging` member of `RenderStateCacheCreateInfo` struct with `LoggingLevel` (API252009)
 * Added `IPipelineResourceSignature::CopyStaticResources` and `IPipelineState::CopyStaticResources` methods (API252008)
 * Added render state cache (`IRenderStateCache` interface and related data types) (API252007)
 * Moved `UseCombinedTextureSamplers` and `CombinedSamplerSuffix` members from `ShaderCreateInfo` to `ShaderDesc` (API252006)
