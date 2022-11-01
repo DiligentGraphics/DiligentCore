@@ -34,15 +34,16 @@
 #include <unordered_set>
 #include <string>
 
+#include "Archiver.h"
+#include "Dearchiver.h"
+#include "ArchiverFactory.h"
+#include "ArchiverFactoryLoader.h"
+
 #include "ObjectBase.hpp"
 #include "ShaderBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "SerializationDevice.h"
 #include "SerializedShader.h"
-#include "Archiver.h"
-#include "Dearchiver.h"
-#include "ArchiverFactory.h"
-#include "ArchiverFactoryLoader.h"
 #include "XXH128Hasher.hpp"
 #include "CallbackWrapper.hpp"
 #include "GraphicsUtilities.h"
@@ -94,6 +95,9 @@ namespace Diligent
 
 class RenderStateCacheImpl;
 
+
+/// Reloadable shader implements the IShader interface and delegates all
+/// calls to the internal shader object, which can be replaced at run-time.
 class ReloadableShader final : public ObjectBase<IShader>
 {
 public:
@@ -120,10 +124,14 @@ public:
         }
         else
         {
+            // This will handle implementation-specific interfaces such as ShaderD3D11Impl::IID_InternalImpl,
+            // ShaderD3D12Impl::IID_InternalImpl, etc. requested by e.g. pipeline state implementations
+            // (PipelineStateD3D11Impl, PipelineStateD3D12Impl, etc.)
             m_pShader->QueryInterface(IID, ppInterface);
         }
     }
 
+    // Delegate all calls to the internal shader object
     PROXY_CONST_METHOD(m_pShader, const ShaderDesc&, GetDesc)
     PROXY_CONST_METHOD(m_pShader, Int32, GetUniqueID)
     PROXY_METHOD1(m_pShader, void, SetUserData, IObject*, pUserData)
@@ -144,7 +152,7 @@ public:
         }
         catch (...)
         {
-            LOG_ERROR("Failed to create reloadable shader");
+            LOG_ERROR("Failed to create reloadable shader '", (CreateInfo.Desc.Name ? CreateInfo.Desc.Name : "<unnamed>"), "'.");
         }
     }
 
@@ -158,6 +166,9 @@ private:
 
 constexpr INTERFACE_ID ReloadableShader::IID_InternalImpl;
 
+
+/// Reloadable pipeline state implements the IPipelineState interface and delegates all
+/// calls to the internal pipeline object, which can be replaced at run-time.
 class ReloadablePipelineState final : public ObjectBase<IPipelineState>
 {
 public:
@@ -184,10 +195,14 @@ public:
         }
         else
         {
+            // This will handle implementation-specific interfaces such as PipelineStateD3D11Impl::IID_InternalImpl,
+            // PipelineStateD3D12Impl::IID_InternalImpl, etc. requested by e.g. device context implementations
+            // (DeviceContextD3D11Impl::SetPipelineState, DeviceContextD3D12Impl::SetPipelineState, etc.)
             m_pPipeline->QueryInterface(IID, ppInterface);
         }
     }
 
+    // Delegate all calls to the internal pipeline object
     PROXY_CONST_METHOD(m_pPipeline, const PipelineStateDesc&, GetDesc)
     PROXY_CONST_METHOD(m_pPipeline, Int32, GetUniqueID)
     PROXY_METHOD1(m_pPipeline, void, SetUserData, IObject*, pUserData)
@@ -218,7 +233,7 @@ public:
         }
         catch (...)
         {
-            LOG_ERROR("Failed to create reloadable shader");
+            LOG_ERROR("Failed to create reloadable pipeline state '", (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : "<unnamed>"), "'.");
         }
     }
 
@@ -311,7 +326,7 @@ public:
 
         if (!m_pDearchiver->LoadArchive(pNewData))
         {
-            LOG_ERROR_MESSAGE("Failed to load new render state data");
+            LOG_ERROR_MESSAGE("Failed to add new render state data to existing archive");
             return false;
         }
 
@@ -338,7 +353,9 @@ public:
         m_pDearchiver->Reset();
         m_pArchiver->Reset();
         m_Shaders.clear();
+        m_ReloadableShaders.clear();
         m_Pipelines.clear();
+        m_ReloadablePipelines.clear();
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData) override final;
@@ -520,6 +537,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
 
     if (m_CI.EnableHotReload)
     {
+        // Wrap shader in a reloadable shader object
         {
             std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
 
@@ -541,7 +559,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
             ReloadableShader::Create(this, pShader, _ShaderCI, ppShader);
 
             std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
-            m_ReloadableShaders.emplace(pShader, RefCntWeakPtr<IShader>(*ppShader));
+            m_ReloadableShaders.emplace(pShader, RefCntWeakPtr<IShader>{*ppShader});
         }
     }
     else
@@ -569,7 +587,8 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
     // First, try to check if the shader has already been requested
     {
         std::lock_guard<std::mutex> Guard{m_ShadersMtx};
-        auto                        it = m_Shaders.find(Hash);
+
+        auto it = m_Shaders.find(Hash);
         if (it != m_Shaders.end())
         {
             if (auto pShader = it->second.Lock())
@@ -639,14 +658,14 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
             {
                 LOG_ERROR_MESSAGE("Description of shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : "<unnamed>"),
                                   "' does not match the description of the shader unpacked from the cache. This may be the result of a "
-                                  "hash conflict, but the probability of this should be virtually zero.");
+                                  "hash conflict, though the probability of this should be virtually zero.");
             }
         }
     }
 
     // Next, try to find the shader in the archiver
     RefCntAutoPtr<IShader> pArchivedShader{m_pArchiver->GetShader(HashStr.c_str())};
-    const auto             FoundInArchive = pArchivedShader != nullptr;
+    const auto             FoundInArchive = (pArchivedShader != nullptr);
     if (!pArchivedShader)
     {
         auto ArchiveShaderCI      = ShaderCI;
@@ -680,7 +699,7 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
                 {
                     LOG_ERROR_MESSAGE("Description of shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : "<unnamed>"),
                                       "' does not match the description of the shader recently added to the cache. This may be the result of a "
-                                      "hash conflict, but the probability of this should be virtually zero.");
+                                      "hash conflict, though the probability of this should be virtually zero.");
                 }
             }
             else
@@ -932,7 +951,7 @@ void CreateRenderStateCache(const RenderStateCacheCreateInfo& CreateInfo,
     }
     catch (...)
     {
-        LOG_ERROR("Failed to create the bytecode cache");
+        LOG_ERROR("Failed to create the render state cache");
     }
 }
 
@@ -1045,7 +1064,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
             {
                 LOG_ERROR_MESSAGE("Description of pipeline state '", (PSOCreateInfo.PSODesc.Name != nullptr ? PSOCreateInfo.PSODesc.Name : "<unnamed>"),
                                   "' does not match the description of the pipeline unpacked from the cache. This may be the result of a "
-                                  "hash conflict, but the probability of this should be virtually zero.");
+                                  "hash conflict, though the probability of this should be virtually zero.");
             }
         }
     }
@@ -1107,6 +1126,7 @@ Uint32 RenderStateCacheImpl::Reload(ReloadGraphicsPipelineCallbackType ReloadGra
 
     Uint32 NumStatesReloaded = 0;
 
+    // Reload all shaders first
     {
         std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
         for (auto shader_it : m_ReloadableShaders)
@@ -1127,6 +1147,9 @@ Uint32 RenderStateCacheImpl::Reload(ReloadGraphicsPipelineCallbackType ReloadGra
         }
     }
 
+    // Reload pipelines.
+    // Note that create info structs reference reloadable shaders, so that when pipelines
+    // are re-created, they will automatically use reloaded shaders.
     {
         std::lock_guard<std::mutex> Guard{m_ReloadablePipelinesMtx};
         for (auto pso_it : m_ReloadablePipelines)
@@ -1141,7 +1164,7 @@ Uint32 RenderStateCacheImpl::Reload(ReloadGraphicsPipelineCallbackType ReloadGra
                 }
                 else
                 {
-                    UNEXPECTED("Shader object is not a ReloadableShader");
+                    UNEXPECTED("Pipeline state object is not a ReloadablePipelineState");
                 }
             }
         }
@@ -1160,7 +1183,8 @@ struct ReloadablePipelineState::CreateInfoWrapperBase : DynamicHeapObjectBase
         m_ImtblSamplers{CI.PSODesc.ResourceLayout.ImmutableSamplers, CI.PSODesc.ResourceLayout.ImmutableSamplers + CI.PSODesc.ResourceLayout.NumImmutableSamplers},
         m_ppSignatures{CI.ppResourceSignatures, CI.ppResourceSignatures + CI.ResourceSignaturesCount}
     {
-        m_CI.PSODesc.Name = m_Strings.emplace(CI.PSODesc.Name ? CI.PSODesc.Name : "<unnamed>").first->c_str();
+        if (CI.PSODesc.Name != nullptr)
+            m_CI.PSODesc.Name = m_Strings.emplace(CI.PSODesc.Name).first->c_str();
 
         for (auto& Var : m_Variables)
             Var.Name = m_Strings.emplace(Var.Name).first->c_str();
@@ -1380,6 +1404,7 @@ bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGr
 
     RefCntAutoPtr<IPipelineState> pNewPSO;
 
+    // Note that the create info struct references reloadable shaders, so that the pipeline will use the updated shaders
     const auto FoundInCache = m_pStateCache->CreatePipelineStateInternal(static_cast<const CreateInfoType&>(CreateInfo), &pNewPSO);
 
     if (pNewPSO)
