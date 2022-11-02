@@ -370,7 +370,10 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
         if (pShader == nullptr)
             return VK_SHADER_UNUSED_KHR;
 
-        const auto ShaderType = pShader->GetDesc().ShaderType;
+        RefCntAutoPtr<ShaderVkImpl> pShaderVk{const_cast<IShader*>(pShader), ShaderVkImpl::IID_InternalImpl};
+        VERIFY(pShaderVk, "Unexpected shader object implementation");
+
+        const auto ShaderType = pShaderVk->GetDesc().ShaderType;
         // Shader modules are initialized in the same order by InitPipelineShaderStages().
         uint32_t idx = 0;
         for (const auto& Stage : ShaderStages)
@@ -379,10 +382,10 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
             {
                 for (Uint32 i = 0; i < Stage.Shaders.size(); ++i, ++idx)
                 {
-                    if (Stage.Shaders[i] == pShader)
+                    if (Stage.Shaders[i] == pShaderVk)
                         return idx;
                 }
-                UNEXPECTED("Unable to find shader '", pShader->GetDesc().Name, "' in the shader stage. This should never happen and is a bug.");
+                UNEXPECTED("Unable to find shader '", pShaderVk->GetDesc().Name, "' in the shader stage. This should never happen and is a bug.");
                 return VK_SHADER_UNUSED_KHR;
             }
             else
@@ -390,7 +393,7 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
                 idx += static_cast<Uint32>(Stage.Count());
             }
         }
-        UNEXPECTED("Unable to find corresponding shader stage for shader '", pShader->GetDesc().Name, "'. This should never happen and is a bug.");
+        UNEXPECTED("Unable to find corresponding shader stage for shader '", pShaderVk->GetDesc().Name, "'. This should never happen and is a bug.");
         return VK_SHADER_UNUSED_KHR;
     };
 

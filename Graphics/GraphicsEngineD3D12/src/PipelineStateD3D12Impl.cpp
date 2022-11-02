@@ -151,12 +151,13 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
             auto&       ShaderIndex = ShaderIndices[StageIdx];
 
             // shaders must be in same order as in ExtractShaders()
-            VERIFY_EXPR(Stage.Shaders[ShaderIndex] == pShader);
+            RefCntAutoPtr<ShaderD3D12Impl> pShaderD3D12{pShader, ShaderD3D12Impl::IID_InternalImpl};
+            VERIFY(pShaderD3D12, "Unexpected shader object implementation");
+            VERIFY_EXPR(Stage.Shaders[ShaderIndex] == pShaderD3D12);
 
-            auto&       LibDesc      = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
-            auto&       ExportDesc   = *TempPool.Construct<D3D12_EXPORT_DESC>();
-            const auto* pShaderD3D12 = ClassPtrCast<ShaderD3D12Impl>(pShader);
-            const auto& pBlob        = Stage.ByteCodes[ShaderIndex];
+            auto&       LibDesc    = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
+            auto&       ExportDesc = *TempPool.Construct<D3D12_EXPORT_DESC>();
+            const auto& pBlob      = Stage.ByteCodes[ShaderIndex];
             ++ShaderIndex;
 
             LibDesc.DXILLibrary.BytecodeLength  = pBlob->GetBufferSize();
