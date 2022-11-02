@@ -116,6 +116,8 @@ public:
     {
         if (ppInterface == nullptr)
             return;
+        DEV_CHECK_ERR(*ppInterface == nullptr, "Overwriting reference to an existing object may result in memory leaks");
+        *ppInterface = nullptr;
 
         if (IID == IID_InternalImpl || IID == IID_Shader || IID == IID_DeviceObject || IID == IID_Unknown)
         {
@@ -128,6 +130,14 @@ public:
             // ShaderD3D12Impl::IID_InternalImpl, etc. requested by e.g. pipeline state implementations
             // (PipelineStateD3D11Impl, PipelineStateD3D12Impl, etc.)
             m_pShader->QueryInterface(IID, ppInterface);
+        }
+
+        if (*ppInterface == nullptr)
+        {
+            // This will handle IID_SerializedShader.
+            RefCntAutoPtr<IObject> pObject;
+            m_pShader->GetReferenceCounters()->QueryObject(&pObject);
+            pObject->QueryInterface(IID, ppInterface);
         }
     }
 
@@ -187,6 +197,8 @@ public:
     {
         if (ppInterface == nullptr)
             return;
+        DEV_CHECK_ERR(*ppInterface == nullptr, "Overwriting reference to an existing object may result in memory leaks");
+        *ppInterface = nullptr;
 
         if (IID == IID_InternalImpl || IID == IID_PipelineState || IID == IID_DeviceObject || IID == IID_Unknown)
         {
