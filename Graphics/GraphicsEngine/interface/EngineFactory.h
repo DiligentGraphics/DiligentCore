@@ -32,6 +32,7 @@
 
 #include "../../../Primitives/interface/Object.h"
 #include "../../../Primitives/interface/DebugOutput.h"
+#include "../../../Primitives/interface/DataBlob.h"
 #include "GraphicsTypes.h"
 
 
@@ -72,6 +73,16 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
 {
     /// Returns API info structure, see Diligent::APIInfo.
     VIRTUAL const APIInfo REF METHOD(GetAPIInfo)(THIS) CONST PURE;
+
+    /// Creates a data blob.
+
+    /// \param [in]  InitialSize - The size of the internal data buffer.
+    /// \param [in]  pData       - Pointer to the data to write to the internal buffer.
+    /// \param [out] ppDataBlob  - Memory address where the pointer to the data blob will be written.
+    VIRTUAL void METHOD(CreateDataBlob)(THIS_
+                                        size_t      InitialSize,
+                                        const void* pData,
+                                        IDataBlob** ppDataBlob) CONST PURE;
 
     /// Creates default shader source input stream factory
 
