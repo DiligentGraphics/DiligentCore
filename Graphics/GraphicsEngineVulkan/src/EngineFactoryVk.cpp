@@ -653,7 +653,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         InstanceCI.EnableValidation          = EngineCI.EnableValidation;
         InstanceCI.EnableDeviceSimulation    = m_EnableDeviceSimulation;
         InstanceCI.LogExtensions             = true;
-        InstanceCI.EnabledLayerCount         = EngineCI.IntanceLayerCount;
+        InstanceCI.EnabledLayerCount         = EngineCI.InstanceLayerCount;
         InstanceCI.ppEnabledLayerNames       = EngineCI.ppInstanceLayerNames;
         InstanceCI.ExtensionCount            = EngineCI.InstanceExtensionCount;
         InstanceCI.ppExtensionNames          = EngineCI.ppInstanceExtensionNames;
