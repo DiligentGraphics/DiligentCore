@@ -32,6 +32,7 @@
 
 #include "../../../Primitives/interface/Object.h"
 #include "../../../Primitives/interface/DebugOutput.h"
+#include "../../../Primitives/interface/DataBlob.h"
 #include "GraphicsTypes.h"
 
 
@@ -81,6 +82,17 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
                         THIS_
                         const Char*                              SearchDirectories,
                         struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) CONST PURE;
+
+    /// Creates a data blob.
+
+    /// \param [in]  InitialSize - The size of the internal data buffer.
+    /// \param [in]  pData       - Pointer to the data to write to the internal buffer.
+    ///                            If null, no data will be written.
+    /// \param [out] ppDataBlob  - Memory address where the pointer to the data blob will be written.
+    VIRTUAL void METHOD(CreateDataBlob)(THIS_
+                                        size_t      InitialSize,
+                                        const void* pData,
+                                        IDataBlob** ppDataBlob) CONST PURE;
 
     /// Enumerates adapters available on this machine.
 
@@ -147,6 +159,7 @@ DILIGENT_END_INTERFACE
 
 #    define IEngineFactory_GetAPIInfo(This)                                  CALL_IFACE_METHOD(EngineFactory, GetAPIInfo,                             This)
 #    define IEngineFactory_CreateDefaultShaderSourceStreamFactory(This, ...) CALL_IFACE_METHOD(EngineFactory, CreateDefaultShaderSourceStreamFactory, This, __VA_ARGS__)
+#    define IEngineFactory_CreateDataBlob(This, ...)                         CALL_IFACE_METHOD(EngineFactory, CreateDataBlob,                         This, __VA_ARGS__)
 #    define IEngineFactory_EnumerateAdapters(This, ...)                      CALL_IFACE_METHOD(EngineFactory, EnumerateAdapters,                      This, __VA_ARGS__)
 #    define IEngineFactory_InitAndroidFileSystem(This, ...)                  CALL_IFACE_METHOD(EngineFactory, InitAndroidFileSystem,                  This, __VA_ARGS__)
 #    define IEngineFactory_CreateDearchiver(This, ...)                       CALL_IFACE_METHOD(EngineFactory, CreateDearchiver,                       This, __VA_ARGS__)
