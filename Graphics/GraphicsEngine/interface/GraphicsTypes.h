@@ -3653,7 +3653,7 @@ typedef struct VulkanDescriptorPoolSize VulkanDescriptorPoolSize;
 struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// The number of Vulkan instance layers in ppInstanceLayerNames array.
-    Uint32             IntanceLayerCount        DEFAULT_INITIALIZER(0);
+    Uint32             InstanceLayerCount       DEFAULT_INITIALIZER(0);
 
     /// A list of additional Vulkan instance layers to enable.
     const char* const* ppInstanceLayerNames     DEFAULT_INITIALIZER(nullptr);
