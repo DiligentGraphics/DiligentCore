@@ -1861,9 +1861,14 @@ struct BindSparseResourceMemoryAttribs
 };
 typedef struct BindSparseResourceMemoryAttribs BindSparseResourceMemoryAttribs;
 
+/// The special constant for all remaining mipmap levels.
+#define DILIGENT_REMAINING_MIP_LEVELS 0xFFFFFFFFU
 
-static const Uint32 REMAINING_MIP_LEVELS   = ~0u;
-static const Uint32 REMAINING_ARRAY_SLICES = ~0u;
+/// The special constant for all remaining array slices.
+#define DILIGENT_REMAINING_ARRAY_SLICES 0xFFFFFFFFU
+
+static const Uint32 REMAINING_MIP_LEVELS   = DILIGENT_REMAINING_MIP_LEVELS;
+static const Uint32 REMAINING_ARRAY_SLICES = DILIGENT_REMAINING_ARRAY_SLICES;
 
 /// Resource state transition flags.
 DILIGENT_TYPED_ENUM(STATE_TRANSITION_FLAGS, Uint8)

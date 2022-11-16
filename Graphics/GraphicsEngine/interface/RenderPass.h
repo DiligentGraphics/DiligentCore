@@ -149,7 +149,10 @@ struct RenderPassAttachmentDesc
 };
 typedef struct RenderPassAttachmentDesc RenderPassAttachmentDesc;
 
-#define ATTACHMENT_UNUSED (~0U)
+/// The special constant indicating that a render pass attachment is not used.
+#define DILIGENT_ATTACHMENT_UNUSED 0xFFFFFFFFU
+
+static const Uint32 ATTACHMENT_UNUSED = DILIGENT_ATTACHMENT_UNUSED;
 
 /// Attachment reference description.
 struct AttachmentReference
@@ -352,8 +355,10 @@ struct SubpassDesc
 };
 typedef struct SubpassDesc SubpassDesc;
 
+/// The special subpass index value expanding synchronization scope outside a subpass.
+#define DILIGENT_SUBPASS_EXTERNAL 0xFFFFFFFFU
 
-#define SUBPASS_EXTERNAL (~0U)
+static const Uint32 SUBPASS_EXTERNAL = DILIGENT_SUBPASS_EXTERNAL;
 
 /// Subpass dependency description
 struct SubpassDependencyDesc
