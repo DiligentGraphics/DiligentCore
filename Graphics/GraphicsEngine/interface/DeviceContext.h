@@ -71,7 +71,7 @@ struct DeviceContextDesc
 {
     /// Device context name. This name is what was specified in
     /// ImmediateContextCreateInfo::Name when the engine was initialized.
-    const char*  Name            DEFAULT_INITIALIZER(nullptr);
+    const Char*  Name            DEFAULT_INITIALIZER(nullptr);
 
     /// Command queue type that this context uses.
 
@@ -120,7 +120,7 @@ struct DeviceContextDesc
     constexpr DeviceContextDesc() noexcept {}
 
     /// Initializes the structure with user-specified values.
-    constexpr DeviceContextDesc(const char*        _Name,
+    constexpr DeviceContextDesc(const Char*        _Name,
                                 COMMAND_QUEUE_TYPE _QueueType,
                                 Bool               _IsDeferred,
                                 Uint32             _ContextId,
@@ -1100,7 +1100,7 @@ struct BLASBuildTriangleData
 {
     /// Geometry name used to map a geometry to a hit group in the shader binding table.
     /// Add geometry data to the geometry that is allocated by BLASTriangleDesc with the same name.
-    const char* GeometryName          DEFAULT_INITIALIZER(nullptr);
+    const Char* GeometryName          DEFAULT_INITIALIZER(nullptr);
 
     /// Triangle vertices data source.
     /// Triangles are considered "inactive" if the x component of each vertex is NaN.
@@ -1168,7 +1168,7 @@ struct BLASBuildBoundingBoxData
 {
     /// Geometry name used to map geometry to hit group in shader binding table.
     /// Put geometry data to geometry that allocated by BLASBoundingBoxDesc with the same name.
-    const char* GeometryName DEFAULT_INITIALIZER(nullptr);
+    const Char* GeometryName DEFAULT_INITIALIZER(nullptr);
 
     /// AABB data source.
     /// Each AABB defined as { float3 Min; float3 Max } structure.
@@ -1321,7 +1321,7 @@ typedef struct InstanceMatrix InstanceMatrix;
 struct TLASBuildInstanceData
 {
     /// Instance name that is used to map an instance to a hit group in shader binding table.
-    const char*               InstanceName    DEFAULT_INITIALIZER(nullptr);
+    const Char*               InstanceName    DEFAULT_INITIALIZER(nullptr);
 
     /// Bottom-level AS that represents instance geometry.
     /// Once built, TLAS will hold strong reference to pBLAS until next build or copy operation.

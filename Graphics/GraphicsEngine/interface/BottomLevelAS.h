@@ -55,7 +55,7 @@ struct BLASTriangleDesc
 {
     /// Geometry name.
     /// The name is used to map triangle data (BLASBuildTriangleData) to this geometry.
-    const char*               GeometryName          DEFAULT_INITIALIZER(nullptr);
+    const Char*               GeometryName          DEFAULT_INITIALIZER(nullptr);
 
     /// The maximum vertex count in this geometry.
     /// Current number of vertices is defined in BLASBuildTriangleData::VertexCount.
@@ -111,7 +111,7 @@ struct BLASBoundingBoxDesc
 {
     /// Geometry name.
     /// The name is used to map AABB data (BLASBuildBoundingBoxData) to this geometry.
-    const char*               GeometryName  DEFAULT_INITIALIZER(nullptr);
+    const Char*               GeometryName  DEFAULT_INITIALIZER(nullptr);
 
     /// The maximum AABB count.
     /// Current number of AABBs is defined in BLASBuildBoundingBoxData::BoxCount.
@@ -120,7 +120,7 @@ struct BLASBoundingBoxDesc
 #if DILIGENT_CPP_INTERFACE
     constexpr BLASBoundingBoxDesc() noexcept {}
 
-    constexpr BLASBoundingBoxDesc(const char* _GeometryName,
+    constexpr BLASBoundingBoxDesc(const Char* _GeometryName,
                                   Uint32      _MaxBoxCount) noexcept :
         GeometryName{_GeometryName},
         MaxBoxCount {_MaxBoxCount }
@@ -292,7 +292,7 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     ///
     /// \note Access to the BLAS must be externally synchronized.
     VIRTUAL Uint32 METHOD(GetGeometryDescIndex)(THIS_
-                                                const char* Name) CONST PURE;
+                                                const Char* Name) CONST PURE;
 
 
     /// Returns the geometry index that can be used in a shader binding table.
@@ -302,7 +302,7 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     ///
     /// \note Access to the BLAS must be externally synchronized.
     VIRTUAL Uint32 METHOD(GetGeometryIndex)(THIS_
-                                            const char* Name) CONST PURE;
+                                            const Char* Name) CONST PURE;
 
 
     /// Returns the geometry count that was used to build AS.

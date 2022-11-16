@@ -121,7 +121,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
     ///        recommended to store and reuse the pointer as it never changes.
     VIRTUAL IShaderResourceVariable* METHOD(GetVariableByName)(THIS_
                                                                SHADER_TYPE ShaderType,
-                                                               const char* Name) PURE;
+                                                               const Char* Name) PURE;
 
 
     /// Returns the total variable count for the specific shader stage.
