@@ -1264,7 +1264,10 @@ typedef struct BuildBLASAttribs BuildBLASAttribs;
 ///         Instance.ContributionToHitGroupIndex = InstanceOffset;
 ///         if (BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY) InstanceOffset += Instance.pBLAS->GeometryCount() * HitGroupStride;
 ///         if (BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE) InstanceOffset += HitGroupStride;
-static const Uint32 TLAS_INSTANCE_OFFSET_AUTO = ~0u;
+
+#define DILIGENT_TLAS_INSTANCE_OFFSET_AUTO 0xFFFFFFFFU
+
+static const Uint32 TLAS_INSTANCE_OFFSET_AUTO = DILIGENT_TLAS_INSTANCE_OFFSET_AUTO;
 
 
 /// Row-major matrix
@@ -1354,7 +1357,10 @@ typedef struct TLASBuildInstanceData TLASBuildInstanceData;
 
 /// Top-level AS instance size in bytes in GPU side.
 /// Used to calculate size of BuildTLASAttribs::pInstanceBuffer.
-static const Uint32 TLAS_INSTANCE_DATA_SIZE = 64;
+
+#define DILIGENT_TLAS_INSTANCE_DATA_SIZE 64
+
+static const Uint32 TLAS_INSTANCE_DATA_SIZE = DILIGENT_TLAS_INSTANCE_DATA_SIZE;
 
 
 /// This structure is used by IDeviceContext::BuildTLAS().
