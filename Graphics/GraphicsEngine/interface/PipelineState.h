@@ -373,7 +373,7 @@ typedef struct GraphicsPipelineDesc GraphicsPipelineDesc;
 struct RayTracingGeneralShaderGroup
 {
     /// Unique group name.
-    const char* Name    DEFAULT_INITIALIZER(nullptr);
+    const Char* Name    DEFAULT_INITIALIZER(nullptr);
 
     /// Shader type must be SHADER_TYPE_RAY_GEN, SHADER_TYPE_RAY_MISS or SHADER_TYPE_CALLABLE.
     IShader*    pShader DEFAULT_INITIALIZER(nullptr);
@@ -382,7 +382,7 @@ struct RayTracingGeneralShaderGroup
     constexpr RayTracingGeneralShaderGroup() noexcept
     {}
 
-    constexpr RayTracingGeneralShaderGroup(const char* _Name,
+    constexpr RayTracingGeneralShaderGroup(const Char* _Name,
                                            IShader*    _pShader) noexcept:
         Name   {_Name   },
         pShader{_pShader}
@@ -404,7 +404,7 @@ typedef struct RayTracingGeneralShaderGroup RayTracingGeneralShaderGroup;
 struct RayTracingTriangleHitShaderGroup
 {
     /// Unique group name.
-    const char* Name              DEFAULT_INITIALIZER(nullptr);
+    const Char* Name              DEFAULT_INITIALIZER(nullptr);
 
     /// Closest hit shader.
     /// The shader type must be SHADER_TYPE_RAY_CLOSEST_HIT.
@@ -418,7 +418,7 @@ struct RayTracingTriangleHitShaderGroup
     constexpr RayTracingTriangleHitShaderGroup() noexcept
     {}
 
-    constexpr RayTracingTriangleHitShaderGroup(const char* _Name,
+    constexpr RayTracingTriangleHitShaderGroup(const Char* _Name,
                                                IShader*    _pClosestHitShader,
                                                IShader*    _pAnyHitShader    = nullptr) noexcept:
         Name             {_Name             },
@@ -444,7 +444,7 @@ typedef struct RayTracingTriangleHitShaderGroup RayTracingTriangleHitShaderGroup
 struct RayTracingProceduralHitShaderGroup
 {
     /// Unique group name.
-    const char* Name                DEFAULT_INITIALIZER(nullptr);
+    const Char* Name                DEFAULT_INITIALIZER(nullptr);
 
     /// Intersection shader.
     /// The shader type must be SHADER_TYPE_RAY_INTERSECTION.
@@ -462,7 +462,7 @@ struct RayTracingProceduralHitShaderGroup
     constexpr RayTracingProceduralHitShaderGroup() noexcept
     {}
 
-    constexpr RayTracingProceduralHitShaderGroup(const char* _Name,
+    constexpr RayTracingProceduralHitShaderGroup(const Char* _Name,
                                                  IShader*    _pIntersectionShader,
                                                  IShader*    _pClosestHitShader  = nullptr,
                                                  IShader*    _pAnyHitShader      = nullptr) noexcept:
@@ -822,7 +822,7 @@ struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo
     /// Direct3D12 only: the name of the constant buffer that will be used by the local root signature.
     /// Ignored if RayTracingPipelineDesc::ShaderRecordSize is zero.
     /// In Vulkan backend in HLSL add [[vk::shader_record_ext]] attribute to the constant buffer, in GLSL add shaderRecord layout to buffer.
-    const char*                               pShaderRecordName        DEFAULT_INITIALIZER(nullptr);
+    const Char*                               pShaderRecordName        DEFAULT_INITIALIZER(nullptr);
 
     /// Direct3D12 only: the maximum hit shader attribute size in bytes.
     /// If zero then maximum allowed size will be used.

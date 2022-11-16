@@ -3121,7 +3121,7 @@ typedef struct CommandQueueInfo CommandQueueInfo;
 struct GraphicsAdapterInfo
 {
     /// A string that contains the adapter description.
-    char Description[128]   DEFAULT_INITIALIZER({});
+    Char Description[128]   DEFAULT_INITIALIZER({});
 
     /// Adapter type, see Diligent::ADAPTER_TYPE.
     ADAPTER_TYPE   Type     DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
@@ -3230,7 +3230,7 @@ typedef struct GraphicsAdapterInfo GraphicsAdapterInfo;
 struct ImmediateContextCreateInfo
 {
     /// Context name.
-    const char*    Name         DEFAULT_INITIALIZER(nullptr);
+    const Char*    Name         DEFAULT_INITIALIZER(nullptr);
 
     /// Queue index in GraphicsAdapterInfo::Queues.
 
@@ -3250,7 +3250,7 @@ struct ImmediateContextCreateInfo
 #if DILIGENT_CPP_INTERFACE
     constexpr ImmediateContextCreateInfo() noexcept {}
 
-    constexpr ImmediateContextCreateInfo(const char*    _Name,
+    constexpr ImmediateContextCreateInfo(const Char*    _Name,
                                          Uint8          _QueueId,
                                          QUEUE_PRIORITY _Priority = ImmediateContextCreateInfo{}.Priority) noexcept :
         Name    {_Name},
@@ -3461,7 +3461,7 @@ DEFINE_FLAG_ENUM_OPERATORS(D3D12_VALIDATION_FLAGS)
 struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Name of the D3D12 DLL to load. Ignored on UWP.
-    const char* D3D12DllName       DEFAULT_INITIALIZER("d3d12.dll");
+    const Char* D3D12DllName       DEFAULT_INITIALIZER("d3d12.dll");
     /// Direct3D12-specific validation options, see Diligent::D3D12_VALIDATION_FLAGS.
     D3D12_VALIDATION_FLAGS D3D12ValidationFlags DEFAULT_INITIALIZER(D3D12_VALIDATION_FLAG_BREAK_ON_CORRUPTION);
 
@@ -3565,7 +3565,7 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Path to DirectX Shader Compiler, which is required to use Shader Model 6.0+ features.
     /// By default, the engine will search for "dxcompiler.dll".
-    const char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
+    const Char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     EngineD3D12CreateInfo() noexcept :
@@ -3656,19 +3656,19 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     Uint32             InstanceLayerCount       DEFAULT_INITIALIZER(0);
 
     /// A list of additional Vulkan instance layers to enable.
-    const char* const* ppInstanceLayerNames     DEFAULT_INITIALIZER(nullptr);
+    const Char* const* ppInstanceLayerNames     DEFAULT_INITIALIZER(nullptr);
 
     /// The number of Vulkan instance extensions in ppInstanceExtensionNames array.
     Uint32             InstanceExtensionCount   DEFAULT_INITIALIZER(0);
 
     /// A list of additional Vulkan instance extensions to enable.
-    const char* const* ppInstanceExtensionNames DEFAULT_INITIALIZER(nullptr);
+    const Char* const* ppInstanceExtensionNames DEFAULT_INITIALIZER(nullptr);
 
     /// Number of Vulkan device extensions in ppDeviceExtensionNames array.
     Uint32             DeviceExtensionCount     DEFAULT_INITIALIZER(0);
 
     /// A list of additional Vulkan device extensions to enable.
-    const char* const* ppDeviceExtensionNames   DEFAULT_INITIALIZER(nullptr);
+    const Char* const* ppDeviceExtensionNames   DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to Vulkan device extension features.
     /// Will be added to VkDeviceCreateInfo::pNext.
@@ -3681,7 +3681,7 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     Uint32             IgnoreDebugMessageCount  DEFAULT_INITIALIZER(0);
 
     /// An optional list of IgnoreDebugMessageCount Vulkan validation message names to ignore.
-    const char* const* ppIgnoreDebugMessageNames DEFAULT_INITIALIZER(nullptr);
+    const Char* const* ppIgnoreDebugMessageNames DEFAULT_INITIALIZER(nullptr);
 
     /// Size of the main descriptor pool that is used to allocate descriptor sets
     /// for static and mutable variables. If allocation from the current pool fails,
@@ -3752,7 +3752,7 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Path to DirectX Shader Compiler, which is required to use Shader Model 6.0+
     /// features when compiling shaders from HLSL.
-    const char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
+    const Char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     EngineVkCreateInfo() noexcept :

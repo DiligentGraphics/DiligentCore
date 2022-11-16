@@ -138,7 +138,7 @@ DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_RESOURCE_FLAGS);
 struct PipelineResourceDesc
 {
     /// Resource name in the shader
-    const char*                    Name          DEFAULT_INITIALIZER(nullptr);
+    const Char*                    Name          DEFAULT_INITIALIZER(nullptr);
 
     /// Shader stages that this resource applies to. When multiple shader stages are specified,
     /// all stages will share the same resource.
@@ -163,7 +163,7 @@ struct PipelineResourceDesc
     constexpr PipelineResourceDesc() noexcept {}
 
     constexpr PipelineResourceDesc(SHADER_TYPE                   _ShaderStages,
-                                   const char*                   _Name,
+                                   const Char*                   _Name,
                                    Uint32                        _ArraySize,
                                    SHADER_RESOURCE_TYPE          _ResourceType,
                                    SHADER_RESOURCE_VARIABLE_TYPE _VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,

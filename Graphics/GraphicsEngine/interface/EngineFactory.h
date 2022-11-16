@@ -143,7 +143,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
     /// \remarks See AndroidFileSystem::Init.
     VIRTUAL void METHOD(InitAndroidFileSystem)(THIS_
                                                struct ANativeActivity*  NativeActivity,
-                                               const char*              NativeActivityClassName,
+                                               const Char*              NativeActivityClassName,
                                                struct AAssetManager*    AssetManager) CONST PURE;
 #endif
 };
