@@ -44,8 +44,9 @@ static const INTERFACE_ID IID_BottomLevelAS =
 
 // clang-format off
 
-static const Uint32 INVALID_INDEX = ~0u;
+#define DILIGENT_INVALID_INDEX 0xFFFFFFFFU
 
+static const Uint32 INVALID_INDEX = DILIGENT_INVALID_INDEX;
 
 /// Defines bottom level acceleration structure triangles description.
 
