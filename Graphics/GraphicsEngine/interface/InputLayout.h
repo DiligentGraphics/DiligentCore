@@ -39,10 +39,10 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 /// The maximum number of layout elements.
 #define DILIGENT_MAX_LAYOUT_ELEMENTS 16
 
-/// See Diligent::LayoutElement::RelativeOffset for details.
+/// Compute layout element offset automatically, see Diligent::LayoutElement::RelativeOffset for details.
 #define DILIGENT_LAYOUT_ELEMENT_AUTO_OFFSET 0xFFFFFFFFU
 
-/// See Diligen::LayoutElement::Stride for details.
+/// Compute layout element stride automatically, see Diligen::LayoutElement::Stride for details.
 #define DILIGENT_LAYOUT_ELEMENT_AUTO_STRIDE 0xFFFFFFFFU
 
 static const Uint32 MAX_LAYOUT_ELEMENTS        = DILIGENT_MAX_LAYOUT_ELEMENTS;

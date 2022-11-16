@@ -50,10 +50,10 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 /// The maximum number of queues in graphics adapter description.
 #define DILIGENT_MAX_ADAPTER_QUEUES 16
 
-/// The special constant for a default adapter index.
+/// Special constant for the default adapter index.
 #define DILIGENT_DEFAULT_ADAPTER_ID 0xFFFFFFFFU
 
-/// The special constant for a default queue index.
+/// Special constant for the default queue index.
 #define DILIGENT_DEFAULT_QUEUE_ID 0xFF
 
 /// The maximum number of shading rate modes.
