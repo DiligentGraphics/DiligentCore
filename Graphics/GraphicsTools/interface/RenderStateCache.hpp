@@ -101,6 +101,11 @@ public:
         return CreateTilePipelineState(CreateInfo);
     }
 
+    IRenderStateCache* GetCache() const
+    {
+        return m_pCache.RawPtr<IRenderStateCache>();
+    }
+
 private:
     template <typename ObjectType, typename CreateMethodType, typename... CreateArgsType>
     RefCntAutoPtr<ObjectType> UnpackCachedObject(const char* ObjectTypeName, const char* ObjectName, CreateMethodType Create, CreateArgsType&&... Args) noexcept(!ThrowOnError)
