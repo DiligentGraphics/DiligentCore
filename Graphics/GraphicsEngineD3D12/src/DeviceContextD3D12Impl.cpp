@@ -1666,6 +1666,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
             DEV_CHECK_ERR(pd3d12Resource != nullptr, "USAGE_STAGING buffer mapped for writing must initialize D3D12 resource");
             if (MapFlags & MAP_FLAG_DISCARD)
             {
+                // Nothing to do
             }
             pd3d12Resource->Map(0, nullptr, &pMappedData);
         }

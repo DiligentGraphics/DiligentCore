@@ -238,8 +238,6 @@ WindowsFile::WindowsFile(const FileOpenAttribs& OpenAttribs) :
                  err == EMFILE)   // Too many open files
         {
             // No more file descriptors are available: we have to wait
-            //g_SystemMetricsStream << "Failed to open file " << FileName;
-            //g_SystemMetricsStream << "\nWaiting 50 ms...\n";
             Sleep(50);
             continue;
         }

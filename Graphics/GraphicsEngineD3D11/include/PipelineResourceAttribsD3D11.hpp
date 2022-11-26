@@ -67,6 +67,7 @@ struct D3D11ResourceBindPoints
     }
 
     D3D11ResourceBindPoints(const D3D11ResourceBindPoints&) noexcept = default;
+    D3D11ResourceBindPoints& operator=(const D3D11ResourceBindPoints&) = default;
 
     SHADER_TYPE GetActiveStages() const
     {
