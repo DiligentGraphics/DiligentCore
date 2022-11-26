@@ -198,8 +198,17 @@ TBuiltInResource InitResources()
     Resources.maxTaskWorkGroupSizeY_NV                  = 1;
     Resources.maxTaskWorkGroupSizeZ_NV                  = 1;
     Resources.maxMeshViewCountNV                        = 4;
+    Resources.maxMeshOutputVerticesEXT                  = 256;
+    Resources.maxMeshOutputPrimitivesEXT                = 256;
+    Resources.maxMeshWorkGroupSizeX_EXT                 = 128;
+    Resources.maxMeshWorkGroupSizeY_EXT                 = 128;
+    Resources.maxMeshWorkGroupSizeZ_EXT                 = 128;
+    Resources.maxTaskWorkGroupSizeX_EXT                 = 128;
+    Resources.maxTaskWorkGroupSizeY_EXT                 = 128;
+    Resources.maxTaskWorkGroupSizeZ_EXT                 = 128;
+    Resources.maxMeshViewCountEXT                       = 4;
     Resources.maxDualSourceDrawBuffersEXT               = 1;
-    ASSERT_SIZEOF(Resources, 384, "Please initialize new members of Resources struct");
+    ASSERT_SIZEOF(Resources, 420, "Please initialize new members of Resources struct");
 
     Resources.limits.nonInductiveForLoops                 = true;
     Resources.limits.whileLoops                           = true;
