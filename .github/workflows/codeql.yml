@@ -18,7 +18,7 @@ jobs:
 
           - host_name:       "Linux"
             platform:        "Linux"
-            os:              "ubuntu-latest"
+            os:              "ubuntu-20.04"
             cmake_generator: "Ninja"
             cc:              "clang-12"
             cxx:             "clang++-12"
