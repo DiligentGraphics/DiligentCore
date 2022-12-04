@@ -506,8 +506,11 @@ public:
         if (pPSO == this)
             return true;
 
+        RefCntAutoPtr<PipelineStateImplType> pPSOImpl{const_cast<IPipelineState*>(pPSO), PipelineStateImplType::IID_InternalImpl};
+        VERIFY(pPSOImpl, "Unknown PSO implementation type");
+
         const auto& lhs = *static_cast<const PipelineStateImplType*>(this);
-        const auto& rhs = *ClassPtrCast<const PipelineStateImplType>(pPSO);
+        const auto& rhs = *pPSOImpl;
 
         const auto SignCount = lhs.GetResourceSignatureCount();
         if (SignCount != rhs.GetResourceSignatureCount())

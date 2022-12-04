@@ -1017,7 +1017,10 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
     if (pPSO == this)
         return true;
 
-    bool IsCompatible = (m_RootSig == ClassPtrCast<const PipelineStateD3D12Impl>(pPSO)->m_RootSig);
+    RefCntAutoPtr<PipelineStateD3D12Impl> pPSOImpl{const_cast<IPipelineState*>(pPSO), PipelineStateImplType::IID_InternalImpl};
+    VERIFY(pPSOImpl, "Unknown PSO implementation type");
+
+    bool IsCompatible = (m_RootSig == pPSOImpl->m_RootSig);
     VERIFY_EXPR(IsCompatible == TPipelineStateBase::IsCompatibleWith(pPSO));
     return IsCompatible;
 }

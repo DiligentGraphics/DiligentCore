@@ -390,7 +390,10 @@ bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState* pPSO) const
     if (!TPipelineStateBase::IsCompatibleWith(pPSO))
         return false;
 
-    const auto& rhs = *ClassPtrCast<const PipelineStateD3D11Impl>(pPSO);
+    RefCntAutoPtr<PipelineStateD3D11Impl> pPSOImpl{const_cast<IPipelineState*>(pPSO), PipelineStateImplType::IID_InternalImpl};
+    VERIFY(pPSOImpl, "Unknown PSO implementation type");
+
+    const auto& rhs = *pPSOImpl;
     if (m_ActiveShaderStages != rhs.m_ActiveShaderStages)
         return false;
 

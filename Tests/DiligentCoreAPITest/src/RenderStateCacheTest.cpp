@@ -412,7 +412,17 @@ void CreateGraphicsPSO(IRenderStateCache* pCache, bool PresentInCache, IShader* 
         PsoCI.GraphicsPipeline.RTVFormats[0]    = ColorBufferFormat;
     }
 
-    EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, ppPSO), PresentInCache);
+    if (pCache != nullptr)
+    {
+        EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, ppPSO), PresentInCache);
+    }
+    else
+    {
+        EXPECT_FALSE(PresentInCache);
+        pEnv->GetDevice()->CreateGraphicsPipelineState(PsoCI, ppPSO);
+        ASSERT_NE(*ppPSO, nullptr);
+    }
+
     if (*ppPSO != nullptr)
     {
         const auto& Desc = (*ppPSO)->GetDesc();
@@ -443,6 +453,10 @@ void TestGraphicsPSO(bool UseRenderPass)
     ASSERT_NE(pUncachedVS, nullptr);
     ASSERT_NE(pUncachedPS, nullptr);
 
+    RefCntAutoPtr<IPipelineState> pRefPSO;
+    CreateGraphicsPSO(nullptr, false, pUncachedVS, pUncachedPS, UseRenderPass, &pRefPSO);
+    ASSERT_NE(pRefPSO, nullptr);
+
     for (Uint32 HotReload = 0; HotReload < 2; ++HotReload)
     {
         RefCntAutoPtr<IDataBlob> pData;
@@ -463,6 +477,8 @@ void TestGraphicsPSO(bool UseRenderPass)
             RefCntAutoPtr<IPipelineState> pPSO;
             CreateGraphicsPSO(pCache, pData != nullptr, pVS1, pPS1, UseRenderPass, &pPSO);
             ASSERT_NE(pPSO, nullptr);
+            EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO));
+            EXPECT_TRUE(pPSO->IsCompatibleWith(pRefPSO));
 
             VerifyGraphicsPSO(pPSO, UseRenderPass);
 
@@ -476,6 +492,9 @@ void TestGraphicsPSO(bool UseRenderPass)
             {
                 RefCntAutoPtr<IPipelineState> pPSO2;
                 CreateGraphicsPSO(pCache, pData != nullptr, pUncachedVS, pUncachedPS, UseRenderPass, &pPSO2);
+                ASSERT_NE(pPSO2, nullptr);
+                EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO2));
+                EXPECT_TRUE(pPSO2->IsCompatibleWith(pRefPSO));
                 VerifyGraphicsPSO(pPSO2, UseRenderPass);
             }
 
@@ -539,7 +558,17 @@ void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* p
         PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
     }
 
-    EXPECT_EQ(pCache->CreateComputePipelineState(PsoCI, ppPSO), PresentInCache);
+    if (pCache != nullptr)
+    {
+        EXPECT_EQ(pCache->CreateComputePipelineState(PsoCI, ppPSO), PresentInCache);
+    }
+    else
+    {
+        EXPECT_FALSE(PresentInCache);
+        pEnv->GetDevice()->CreateComputePipelineState(PsoCI, ppPSO);
+        ASSERT_NE(*ppPSO, nullptr);
+    }
+
     if (*ppPSO != nullptr)
     {
         const auto& Desc = (*ppPSO)->GetDesc();
@@ -569,6 +598,16 @@ void TestComputePSO(bool UseSignature)
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
     ASSERT_TRUE(pShaderSourceFactory);
 
+    RefCntAutoPtr<IPipelineState> pRefPSO;
+    {
+        RefCntAutoPtr<IShader> pUncachedCS;
+        CreateComputeShader(nullptr, pShaderSourceFactory, pUncachedCS, false);
+        ASSERT_NE(pUncachedCS, nullptr);
+
+        CreateComputePSO(nullptr, false, pUncachedCS, UseSignature, &pRefPSO);
+        ASSERT_NE(pRefPSO, nullptr);
+    }
+
     for (Uint32 HotReload = 0; HotReload < 2; ++HotReload)
     {
         RefCntAutoPtr<IDataBlob> pData;
@@ -588,6 +627,8 @@ void TestComputePSO(bool UseSignature)
             RefCntAutoPtr<IPipelineState> pPSO;
             CreateComputePSO(pCache, pData != nullptr, pCS, UseSignature, &pPSO);
             ASSERT_NE(pPSO, nullptr);
+            EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO));
+            EXPECT_TRUE(pPSO->IsCompatibleWith(pRefPSO));
 
             VerifyComputePSO(pPSO, /* UseSignature = */ true);
 
