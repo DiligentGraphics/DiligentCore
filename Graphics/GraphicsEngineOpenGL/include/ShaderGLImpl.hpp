@@ -79,7 +79,7 @@ public:
     }
 
 private:
-    const SHADER_SOURCE_LANGUAGE             m_SourceLanguage;
+    SHADER_SOURCE_LANGUAGE                   m_SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
     std::string                              m_GLSLSourceString;
     GLObjectWrappers::GLShaderObj            m_GLShaderObj;
     std::shared_ptr<const ShaderResourcesGL> m_pShaderResources;

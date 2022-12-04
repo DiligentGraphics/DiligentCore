@@ -279,7 +279,7 @@ IMPLEMENT_QUERY_INTERFACE(RenderDeviceGLImpl, IID_RenderDeviceGL, TRenderDeviceB
 
 void RenderDeviceGLImpl::InitTexRegionRender()
 {
-    m_pTexRegionRender.reset(new TexRegionRender(this));
+    m_pTexRegionRender = std::make_unique<TexRegionRender>(this);
 }
 
 void RenderDeviceGLImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer, bool bIsDeviceInternal)

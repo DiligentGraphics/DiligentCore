@@ -1,6 +1,10 @@
 #include "GraphicsCommon.h"
 
+Texture2D    g_Tex2D;
+SamplerState g_Tex2D_sampler;
+
 float4 main(in PSInput PSIn) : SV_Target
 {
-    return float4(PSIn.Color.bgr, 1.0);
+    float2 UV = float2(0.5, 0.5);
+    return float4(PSIn.Color.bgr, 1.0) * g_Tex2D.Sample(g_Tex2D_sampler, UV.xy);
 }

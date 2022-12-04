@@ -81,6 +81,10 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         // Read the source file directly and use it as is
         SourceData         = ReadShaderSourceFile(ShaderCI);
         m_GLSLSourceString = std::string{SourceData.Source, SourceData.SourceLength};
+
+        auto SourceLang = ParseShaderSourceLanguageDefinition(m_GLSLSourceString);
+        if (SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT)
+            m_SourceLanguage = SourceLang;
     }
     else
     {
@@ -91,6 +95,8 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         m_GLSLSourceString = BuildGLSLSourceString(
             ShaderCI, DeviceInfo, AdapterInfo, TargetGLSLCompiler::driver,
             (DeviceInfo.NDC.MinZ >= 0 ? NDCDefine : nullptr));
+
+        AppendShaderSourceLanguageDefinition(m_GLSLSourceString, ShaderCI.SourceLanguage);
     }
 
     if (pDeviceGL == nullptr)
@@ -179,7 +185,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         VERIFY_EXPR(pImmediateCtx);
         auto& GLState = pImmediateCtx->GetContextState();
 
-        std::unique_ptr<ShaderResourcesGL> pResources{new ShaderResourcesGL{}};
+        auto pResources = std::make_unique<ShaderResourcesGL>();
         pResources->LoadUniforms(m_Desc.ShaderType,
                                  m_SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ?
                                      PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with other backends

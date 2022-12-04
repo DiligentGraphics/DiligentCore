@@ -40,20 +40,20 @@ namespace Diligent
 namespace
 {
 
-const ShaderMacro VSMacros[]  = {{"VERTEX_SHADER", "1"}, {}};
-const ShaderMacro PSMacros[]  = {{"FRAGMENT_SHADER", "1"}, {"PIXEL_SHADER", "1"}, {}};
-const ShaderMacro GSMacros[]  = {{"GEOMETRY_SHADER", "1"}, {}};
-const ShaderMacro HSMacros[]  = {{"TESS_CONTROL_SHADER", "1"}, {"HULL_SHADER", "1"}, {}};
-const ShaderMacro DSMacros[]  = {{"TESS_EVALUATION_SHADER", "1"}, {"DOMAIN_SHADER", "1"}, {}};
-const ShaderMacro CSMacros[]  = {{"COMPUTE_SHADER", "1"}, {}};
-const ShaderMacro ASMacros[]  = {{"TASK_SHADER", "1"}, {"AMPLIFICATION_SHADER", "1"}, {}};
-const ShaderMacro MSMacros[]  = {{"MESH_SHADER", "1"}, {}};
-const ShaderMacro RGMacros[]  = {{"RAY_GEN_SHADER", "1"}, {}};
-const ShaderMacro RMMacros[]  = {{"RAY_MISS_SHADER", "1"}, {}};
-const ShaderMacro RCHMacros[] = {{"RAY_CLOSEST_HIT_SHADER", "1"}, {}};
-const ShaderMacro RAHMacros[] = {{"RAY_ANY_HIT_SHADER", "1"}, {}};
-const ShaderMacro RIMacros[]  = {{"RAY_INTERSECTION_SHADER", "1"}, {}};
-const ShaderMacro RCMacros[]  = {{"RAY_CALLABLE_SHADER", "1"}, {}};
+constexpr ShaderMacro VSMacros[]  = {{"VERTEX_SHADER", "1"}, {}};
+constexpr ShaderMacro PSMacros[]  = {{"FRAGMENT_SHADER", "1"}, {"PIXEL_SHADER", "1"}, {}};
+constexpr ShaderMacro GSMacros[]  = {{"GEOMETRY_SHADER", "1"}, {}};
+constexpr ShaderMacro HSMacros[]  = {{"TESS_CONTROL_SHADER", "1"}, {"HULL_SHADER", "1"}, {}};
+constexpr ShaderMacro DSMacros[]  = {{"TESS_EVALUATION_SHADER", "1"}, {"DOMAIN_SHADER", "1"}, {}};
+constexpr ShaderMacro CSMacros[]  = {{"COMPUTE_SHADER", "1"}, {}};
+constexpr ShaderMacro ASMacros[]  = {{"TASK_SHADER", "1"}, {"AMPLIFICATION_SHADER", "1"}, {}};
+constexpr ShaderMacro MSMacros[]  = {{"MESH_SHADER", "1"}, {}};
+constexpr ShaderMacro RGMacros[]  = {{"RAY_GEN_SHADER", "1"}, {}};
+constexpr ShaderMacro RMMacros[]  = {{"RAY_MISS_SHADER", "1"}, {}};
+constexpr ShaderMacro RCHMacros[] = {{"RAY_CLOSEST_HIT_SHADER", "1"}, {}};
+constexpr ShaderMacro RAHMacros[] = {{"RAY_ANY_HIT_SHADER", "1"}, {}};
+constexpr ShaderMacro RIMacros[]  = {{"RAY_INTERSECTION_SHADER", "1"}, {}};
+constexpr ShaderMacro RCMacros[]  = {{"RAY_CALLABLE_SHADER", "1"}, {}};
 
 } // namespace
 
@@ -107,6 +107,88 @@ void AppendShaderTypeDefinitions(std::string& Source, SHADER_TYPE Type)
     AppendShaderMacros(Source, GetShaderTypeMacros(Type));
 }
 
+
+static const std::string ShaderSourceLanguageKey = "$SHADER_SOURCE_LANGUAGE";
+
+void AppendShaderSourceLanguageDefinition(std::string& Source, SHADER_SOURCE_LANGUAGE Language)
+{
+    Source += "/*";
+    Source += ShaderSourceLanguageKey;
+    Source += '=';
+    Source += std::to_string(static_cast<Uint32>(Language));
+    Source += "*/";
+}
+
+SHADER_SOURCE_LANGUAGE ParseShaderSourceLanguageDefinition(const std::string& Source)
+{
+    //  /*$SHADER_SOURCE_LANGUAGE=1*/
+    //                               ^
+    auto it = Source.end();
+    if (it == Source.begin())
+        return SHADER_SOURCE_LANGUAGE_DEFAULT;
+
+    --it;
+    //  /*$SHADER_SOURCE_LANGUAGE=1*/
+    //                              ^
+    if (it == Source.begin() || *it != '/')
+        return SHADER_SOURCE_LANGUAGE_DEFAULT;
+
+    --it;
+    //  /*$SHADER_SOURCE_LANGUAGE=1*/
+    //                             ^
+    if (it == Source.begin() || *it != '*')
+        return SHADER_SOURCE_LANGUAGE_DEFAULT;
+
+    --it;
+    while (true)
+    {
+        if (it == Source.begin())
+            return SHADER_SOURCE_LANGUAGE_DEFAULT;
+
+        if (*it == '*')
+        {
+            //  /*$SHADER_SOURCE_LANGUAGE=1*/
+            //   ^
+            --it;
+            if (*it == '/')
+                break;
+        }
+        else
+        {
+            --it;
+        }
+    }
+
+    //  /*$SHADER_SOURCE_LANGUAGE=1*/
+    //  ^
+    const auto KeyPos = Source.find(ShaderSourceLanguageKey, it - Source.begin() + 2);
+    if (KeyPos == std::string::npos)
+        return SHADER_SOURCE_LANGUAGE_DEFAULT;
+
+    it = Source.begin() + KeyPos + ShaderSourceLanguageKey.length();
+    while (it != Source.end() && *it == ' ')
+        ++it;
+
+    //  /*$SHADER_SOURCE_LANGUAGE=1*/
+    //                           ^
+    if (it == Source.end() || *it != '=')
+        return SHADER_SOURCE_LANGUAGE_DEFAULT;
+
+    ++it;
+    while (it != Source.end() && *it == ' ')
+        ++it;
+
+    if (it == Source.end() || !IsNum(*it))
+        return SHADER_SOURCE_LANGUAGE_DEFAULT;
+
+    Uint32 Lang = 0;
+    for (; it != Source.end() && IsNum(*it); ++it)
+        Lang = Lang * 10 + (*it - '0');
+
+    return Lang >= 0 && Lang < SHADER_SOURCE_LANGUAGE_COUNT ?
+        static_cast<SHADER_SOURCE_LANGUAGE>(Lang) :
+        SHADER_SOURCE_LANGUAGE_DEFAULT;
+}
 
 ShaderSourceFileData ReadShaderSourceFile(const char*                      SourceCode,
                                           size_t                           SourceLength,

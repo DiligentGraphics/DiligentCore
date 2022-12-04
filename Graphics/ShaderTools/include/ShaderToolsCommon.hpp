@@ -70,6 +70,18 @@ void AppendShaderMacros(std::string& Source, const ShaderMacro* Macros);
 void AppendShaderTypeDefinitions(std::string& Source, SHADER_TYPE Type);
 
 
+/// Appends a special comment that contains the shader source language definition.
+/// For example, for HLSL:
+///
+///     /*$SHADER_SOURCE_LANGUAGE=1*/
+void AppendShaderSourceLanguageDefinition(std::string& Source, SHADER_SOURCE_LANGUAGE Language);
+
+
+/// Parses the shader source language definition comment and returns the result.
+/// If the comment is not present or can't be parsed, returns SHADER_SOURCE_LANGUAGE_DEFAULT.
+SHADER_SOURCE_LANGUAGE ParseShaderSourceLanguageDefinition(const std::string& Source);
+
+
 struct ShaderSourceFileData
 {
     RefCntAutoPtr<IDataBlob> pFileData;
