@@ -238,7 +238,7 @@ public:
             }
             else
             {
-                m_CurrAlignment = std::min(m_CurrAlignment, Alignment);
+                m_CurrAlignment = (std::min)(m_CurrAlignment, Alignment);
             }
         }
 

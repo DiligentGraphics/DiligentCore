@@ -176,7 +176,7 @@ inline std::size_t ComputeHashRaw(const void* pData, size_t Size) noexcept
     {
         HashCombine(Hash, static_cast<Uint32>(Buffer & ~Uint32{0}));
         Buffer = Buffer >> Uint64{32};
-        Shift -= std::min(Shift, Uint64{32});
+        Shift -= (std::min)(Shift, Uint64{32});
     }
 
     return Hash;

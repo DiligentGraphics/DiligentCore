@@ -34,6 +34,13 @@ if(NOT METAL_SUPPORTED)
     list(REMOVE_ITEM SOURCE ${GRAPHICS_ENGINE_MTL_INC_TEST})
 endif()
 
+if(NOT PLATFORM_WIN32 AND NOT PLATFORM_UNIVERSAL_WINDOWS)
+    list(REMOVE_ITEM SOURCE
+         ${CMAKE_CURRENT_SOURCE_DIR}/Common/CommonH_Wnd_test.cpp
+         ${CMAKE_CURRENT_SOURCE_DIR}/GraphicsAccessories/GraphicsAccessoriesH_Wnd_test.cpp
+         )
+endif()
+
 add_library(DiligentCore-IncludeTest ${SOURCE})
 
 target_include_directories(DiligentCore-IncludeTest PRIVATE ../../..)
