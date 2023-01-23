@@ -41,49 +41,59 @@ namespace Diligent
 
 constexpr INTERFACE_ID ShaderD3D12Impl::IID_InternalImpl;
 
-static ShaderVersion GetD3D12ShaderModel(const ShaderVersion& HLSLVersion,
-                                         SHADER_COMPILER      ShaderCompiler,
-                                         IDXCompiler*         pDXCompiler,
-                                         const ShaderVersion  DeviceSM)
+static ShaderVersion GetD3D12ShaderModel(const ShaderCreateInfo& ShaderCI,
+                                         IDXCompiler*            pDXCompiler,
+                                         const ShaderVersion&    DeviceSM)
 {
-    ShaderVersion CompilerSM;
-    if (ShaderCompiler == SHADER_COMPILER_DXC)
+    auto HLSLVersion = ShaderCI.HLSLVersion;
+    if (HLSLVersion > DeviceSM)
     {
-        if (pDXCompiler && pDXCompiler->IsLoaded())
-        {
-            CompilerSM = pDXCompiler->GetMaxShaderModel();
-        }
-        else
-        {
-            LOG_ERROR_MESSAGE("DXC compiler is not loaded");
-            CompilerSM = ShaderVersion{5, 1};
-        }
-    }
-    else
-    {
-        VERIFY(ShaderCompiler == SHADER_COMPILER_FXC || ShaderCompiler == SHADER_COMPILER_DEFAULT, "Unexpected compiler");
-        // Direct3D12 supports shader model 5.1 on all feature levels.
-        // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
-        CompilerSM = ShaderVersion{5, 1};
+        LOG_WARNING_MESSAGE("Requested shader model ", Uint32{HLSLVersion.Major}, '_', Uint32{HLSLVersion.Minor},
+                            " exceeds maximum version supported by device (",
+                            Uint32{DeviceSM.Major}, '_', Uint32{DeviceSM.Minor}, ").");
     }
 
-    const auto MaxSupportedSM = ShaderVersion::Min(DeviceSM, CompilerSM);
-    if (HLSLVersion == ShaderVersion{0, 0})
+    auto MaxSupportedSM = DeviceSM;
+    if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
     {
-        return MaxSupportedSM;
+        ShaderVersion CompilerSM;
+        if (ShaderCI.ShaderCompiler == SHADER_COMPILER_DXC)
+        {
+            if (pDXCompiler && pDXCompiler->IsLoaded())
+            {
+                CompilerSM = pDXCompiler->GetMaxShaderModel();
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("DXC compiler is not loaded");
+                CompilerSM = ShaderVersion{5, 1};
+            }
+        }
+        else
+        {
+            VERIFY(ShaderCI.ShaderCompiler == SHADER_COMPILER_FXC || ShaderCI.ShaderCompiler == SHADER_COMPILER_DEFAULT, "Unexpected compiler");
+            // Direct3D12 supports shader model 5.1 on all feature levels.
+            // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
+            CompilerSM = ShaderVersion{5, 1};
+        }
+
+        if (HLSLVersion > CompilerSM)
+        {
+            LOG_WARNING_MESSAGE("Requested shader model ", Uint32{HLSLVersion.Major}, '_', Uint32{HLSLVersion.Minor},
+                                " exceeds maximum version supported by compiler (",
+                                Uint32{CompilerSM.Major}, '_', Uint32{CompilerSM.Minor}, ").");
+        }
+
+        MaxSupportedSM = ShaderVersion::Min(MaxSupportedSM, CompilerSM);
     }
     else
     {
-        if (HLSLVersion > MaxSupportedSM)
-        {
-            LOG_WARNING_MESSAGE("Requested shader model ", Uint32{HLSLVersion.Major}, '_', Uint32{HLSLVersion.Minor},
-                                " is not supported by the device/compiler. Downgrading to maximum supported version ",
-                                Uint32{MaxSupportedSM.Major}, '_', Uint32{MaxSupportedSM.Minor});
-            return MaxSupportedSM;
-        }
-        else
-            return HLSLVersion;
+        VERIFY(ShaderCI.ByteCode != nullptr, "ByteCode must not be null when both Source and FilePath are null");
     }
+
+    return (HLSLVersion == ShaderVersion{0, 0}) ?
+        MaxSupportedSM :
+        ShaderVersion::Min(HLSLVersion, MaxSupportedSM);
 }
 
 ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
@@ -104,7 +114,7 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
     ShaderD3DBase
     {
         ShaderCI,
-        GetD3D12ShaderModel(ShaderCI.HLSLVersion, ShaderCI.ShaderCompiler, D3D12ShaderCI.pDXCompiler, D3D12ShaderCI.MaxShaderVersion),
+        GetD3D12ShaderModel(ShaderCI, D3D12ShaderCI.pDXCompiler, D3D12ShaderCI.MaxShaderVersion),
         D3D12ShaderCI.pDXCompiler
     },
     m_EntryPoint{ShaderCI.EntryPoint}
