@@ -28,11 +28,13 @@
 #pragma once
 
 #include <functional>
+#include <vector>
 
 #include "GraphicsTypes.h"
 #include "Shader.h"
 #include "RefCntAutoPtr.hpp"
 #include "DataBlob.h"
+#include "FixedLinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -124,5 +126,103 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
 
 ///  Unrolls all include files into a single file
 std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI) noexcept(false);
+
+
+
+struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
+{
+    ShaderCodeVariableDescX(const ShaderCodeVariableDesc& Member) noexcept :
+        ShaderCodeVariableDesc{Member}
+    {}
+
+    size_t AddMember(const ShaderCodeVariableDesc& Member)
+    {
+        const auto idx = Members.size();
+        Members.emplace_back(Member);
+        NumMembers = static_cast<Uint32>(Members.size());
+        return idx;
+    }
+
+    ShaderCodeVariableDescX& GetMember(size_t idx)
+    {
+        return Members[idx];
+    }
+
+    static void ReserveSpaceForMembers(FixedLinearAllocator& Allocator, const std::vector<ShaderCodeVariableDescX>& Members)
+    {
+        if (Members.empty())
+            return;
+
+        Allocator.AddSpace<ShaderCodeVariableDesc>(Members.size());
+        for (const auto& Member : Members)
+        {
+            Allocator.AddSpaceForString(Member.Name);
+            Allocator.AddSpaceForString(Member.TypeName);
+        }
+
+        for (const auto& Member : Members)
+            ReserveSpaceForMembers(Allocator, Member.Members);
+    }
+
+    static ShaderCodeVariableDesc* CopyMembers(FixedLinearAllocator& Allocator, const std::vector<ShaderCodeVariableDescX>& Members)
+    {
+        if (Members.empty())
+            return nullptr;
+
+        auto* pMembers = Allocator.ConstructArray<ShaderCodeVariableDesc>(Members.size());
+        for (size_t i = 0; i < Members.size(); ++i)
+        {
+            pMembers[i]          = Members[i];
+            pMembers[i].Name     = Allocator.CopyString(Members[i].Name);
+            pMembers[i].TypeName = Allocator.CopyString(Members[i].TypeName);
+        }
+
+        for (size_t i = 0; i < Members.size(); ++i)
+            pMembers[i].pMembers = CopyMembers(Allocator, Members[i].Members);
+
+        return pMembers;
+    }
+
+private:
+    std::vector<ShaderCodeVariableDescX> Members;
+};
+
+struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
+{
+    ShaderCodeBufferDescX() noexcept
+    {}
+
+    ShaderCodeBufferDescX(const ShaderCodeBufferDesc& Desc) noexcept :
+        ShaderCodeBufferDesc{Desc}
+    {}
+
+    size_t AddVariable(const ShaderCodeVariableDesc& Var)
+    {
+        const auto idx = Variables.size();
+        Variables.emplace_back(Var);
+        NumVariables = static_cast<Uint32>(Variables.size());
+        return idx;
+    }
+
+    ShaderCodeVariableDescX& GetVariable(size_t idx)
+    {
+        return Variables[idx];
+    }
+
+    void ReserveSpace(FixedLinearAllocator& Allocator) const
+    {
+        ShaderCodeVariableDescX::ReserveSpaceForMembers(Allocator, Variables);
+    }
+
+    ShaderCodeBufferDesc MakeCopy(FixedLinearAllocator& Allocator) const
+    {
+        ShaderCodeBufferDesc Desc{*this};
+        Desc.pVariables = ShaderCodeVariableDescX::CopyMembers(Allocator, Variables);
+        return Desc;
+    }
+
+private:
+    std::vector<ShaderCodeVariableDescX> Variables;
+};
 
 } // namespace Diligent

@@ -288,4 +288,19 @@ void ShaderGLImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDes
     }
 }
 
+
+const ShaderCodeBufferDesc* ShaderGLImpl::GetConstantBufferDesc(Uint32 Index) const
+{
+    if (m_pDevice->GetFeatures().SeparablePrograms)
+    {
+        DEV_CHECK_ERR(Index < GetResourceCount(), "Index is out of range");
+        return nullptr;
+    }
+    else
+    {
+        LOG_WARNING_MESSAGE("Shader resource queries are not available when separate shader objects are unsupported");
+        return nullptr;
+    }
+}
+
 } // namespace Diligent

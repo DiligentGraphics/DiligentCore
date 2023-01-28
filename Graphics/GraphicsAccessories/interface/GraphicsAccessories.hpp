@@ -415,6 +415,13 @@ const char* GetAdapterTypeString(ADAPTER_TYPE AdapterType, bool bGetEnumString =
 
 String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFullName = false, const char* DelimiterString = "|");
 
+const char* GetShaderCodeVariableClassString(SHADER_CODE_VARIABLE_CLASS Class);
+
+const char* GetShaderCodeBasicTypeString(SHADER_CODE_BASIC_TYPE Type);
+
+/// Returns the string containing the shader buffer description.
+String GetShaderCodeBufferDescString(const ShaderCodeBufferDesc& Desc, size_t GlobalIdent = 0, size_t MemberIdent = 2);
+
 PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE ResourceType);
 
 PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIABLE_FLAGS Flags);

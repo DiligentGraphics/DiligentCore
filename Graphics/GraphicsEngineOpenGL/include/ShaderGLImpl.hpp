@@ -65,6 +65,9 @@ public:
     /// Implementation of IShader::GetResource() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
 
+    /// Implementation of IShader::GetConstantBufferDesc() in OpenGL backend.
+    virtual const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override final;
+
     static GLObjectWrappers::GLProgramObj LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram);
 
     const std::shared_ptr<const ShaderResourcesGL>& GetShaderResources() const { return m_pShaderResources; }

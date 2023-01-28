@@ -82,6 +82,15 @@ public:
             ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
+    /// Implementation of IShader::GetConstantBufferDesc() in Direct3D11 backend.
+    virtual const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override final
+    {
+        return m_pShaderResources ?
+            // Constant buffer always go first in the list of resources
+            m_pShaderResources->GetConstantBufferDesc(Index) :
+            nullptr;
+    }
+
     /// Implementation of IShaderD3D::GetHLSLResource() method.
     virtual void DILIGENT_CALL_TYPE GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
     {

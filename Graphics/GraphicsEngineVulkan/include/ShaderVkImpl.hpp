@@ -73,6 +73,9 @@ public:
     /// Implementation of IShader::GetResource() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
 
+    /// Implementation of IShader::GetConstantBufferDesc() in Vulkan backend.
+    virtual const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override final;
+
     /// Implementation of IShaderVk::GetSPIRV().
     virtual const std::vector<uint32_t>& DILIGENT_CALL_TYPE GetSPIRV() const override final
     {

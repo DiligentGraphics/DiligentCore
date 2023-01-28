@@ -563,6 +563,12 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
 
 ShaderResourceDesc ShaderResourcesGL::GetResourceDesc(Uint32 Index) const
 {
+    if (Index >= GetVariableCount())
+    {
+        LOG_ERROR_MESSAGE("Resource index ", Index, " is invalid");
+        return ShaderResourceDesc{};
+    }
+
     if (Index < m_NumUniformBuffers)
         return GetUniformBuffer(Index).GetResourceDesc();
     else
@@ -583,7 +589,7 @@ ShaderResourceDesc ShaderResourcesGL::GetResourceDesc(Uint32 Index) const
     else
         Index -= m_NumStorageBlocks;
 
-    LOG_ERROR_MESSAGE("Resource index ", Index + GetVariableCount(), " is invalid");
+    UNEXPECTED("This should never be executed - appears to be a bug.");
     return ShaderResourceDesc{};
 }
 

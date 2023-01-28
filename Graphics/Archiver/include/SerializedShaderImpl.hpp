@@ -60,6 +60,7 @@ public:
 
     UNSUPPORTED_CONST_METHOD(Uint32, GetResourceCount)
     UNSUPPORTED_CONST_METHOD(void, GetResourceDesc, Uint32 Index, ShaderResourceDesc& ResourceDesc)
+    UNSUPPORTED_CONST_METHOD(const ShaderCodeBufferDesc*, GetConstantBufferDesc, Uint32 Index)
     UNSUPPORTED_CONST_METHOD(Int32, GetUniqueID)
     UNSUPPORTED_METHOD(void, SetUserData, IObject* pUserData)
     UNSUPPORTED_CONST_METHOD(IObject*, GetUserData)

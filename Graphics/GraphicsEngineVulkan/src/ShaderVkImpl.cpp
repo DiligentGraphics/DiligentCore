@@ -289,4 +289,11 @@ void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDes
     }
 }
 
+const ShaderCodeBufferDesc* ShaderVkImpl::GetConstantBufferDesc(Uint32 Index) const
+{
+    auto ResCount = GetResourceCount();
+    DEV_CHECK_ERR(Index < ResCount, "Resource index (", Index, ") is out of range");
+    return nullptr;
+}
+
 } // namespace Diligent

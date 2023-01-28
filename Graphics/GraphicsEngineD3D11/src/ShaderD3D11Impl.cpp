@@ -108,7 +108,11 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
     {
         auto& Allocator  = GetRawAllocator();
         auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
-        auto* pResources = new (pRawMem) ShaderResourcesD3D11{m_pShaderByteCode, m_Desc, m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr};
+        auto* pResources = new (pRawMem) ShaderResourcesD3D11{
+            m_pShaderByteCode,
+            m_Desc,
+            m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
+            ShaderCI.LoadConstantBufferReflection};
         m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
     }
 }

@@ -148,6 +148,7 @@ public:
     PROXY_CONST_METHOD(m_pShader, IObject*, GetUserData)
     PROXY_CONST_METHOD(m_pShader, Uint32, GetResourceCount)
     PROXY_CONST_METHOD2(m_pShader, void, GetResourceDesc, Uint32, Index, ShaderResourceDesc&, ResourceDesc)
+    PROXY_CONST_METHOD1(m_pShader, const ShaderCodeBufferDesc*, GetConstantBufferDesc, Uint32, Index)
     PROXY_CONST_METHOD2(m_pShader, void, GetBytecode, const void**, ppBytecode, Uint64&, Size)
 
     static void Create(RenderStateCacheImpl*   pStateCache,
