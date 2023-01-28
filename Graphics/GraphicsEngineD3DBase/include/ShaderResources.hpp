@@ -73,7 +73,6 @@
 #include "D3DShaderResourceLoader.hpp"
 #include "PipelineState.h"
 #include "D3DCommonTypeConversions.hpp"
-#include "FixedLinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -631,20 +630,7 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
     {
         VERIFY_EXPR(LoadConstantBufferReflection);
         VERIFY_EXPR(CBReflections.size() == GetNumCBs());
-        auto&                RawAllocator{GetRawAllocator()};
-        FixedLinearAllocator Allocator{RawAllocator};
-
-        Allocator.AddSpace<ShaderCodeBufferDesc>(CBReflections.size());
-        for (const auto& Refl : CBReflections)
-            Refl.ReserveSpace(Allocator);
-
-        Allocator.Reserve();
-        m_CBReflectionBuffer = decltype(m_CBReflectionBuffer){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
-
-        auto* pRefl = Allocator.ConstructArray<ShaderCodeBufferDesc>(CBReflections.size());
-        VERIFY_EXPR(pRefl == m_CBReflectionBuffer.get());
-        for (const auto& Refl : CBReflections)
-            *(pRefl++) = Refl.MakeCopy(Allocator);
+        m_CBReflectionBuffer = ShaderCodeBufferDescX::PackArray(CBReflections.cbegin(), CBReflections.cend(), GetRawAllocator());
     }
 }
 

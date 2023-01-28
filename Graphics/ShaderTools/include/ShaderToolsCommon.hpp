@@ -35,6 +35,7 @@
 #include "RefCntAutoPtr.hpp"
 #include "DataBlob.h"
 #include "FixedLinearAllocator.hpp"
+#include "STDAllocator.hpp"
 
 namespace Diligent
 {
@@ -219,6 +220,27 @@ struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
         ShaderCodeBufferDesc Desc{*this};
         Desc.pVariables = ShaderCodeVariableDescX::CopyMembers(Allocator, Variables);
         return Desc;
+    }
+
+    template <typename IterType>
+    static std::unique_ptr<void, STDDeleterRawMem<void>> PackArray(IterType RangeStart, IterType RangeEnd, IMemoryAllocator& RawAllocator)
+    {
+        FixedLinearAllocator Allocator{RawAllocator};
+
+        const auto Size = RangeEnd - RangeStart;
+        Allocator.AddSpace<ShaderCodeBufferDesc>(Size);
+        for (auto Refl = RangeStart; Refl != RangeEnd; ++Refl)
+            Refl->ReserveSpace(Allocator);
+
+        Allocator.Reserve();
+        std::unique_ptr<void, STDDeleterRawMem<void>> DataBuffer{Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
+
+        auto* pRefl = Allocator.ConstructArray<ShaderCodeBufferDesc>(Size);
+        VERIFY_EXPR(pRefl == DataBuffer.get());
+        for (auto Refl = RangeStart; Refl != RangeEnd; ++Refl)
+            *(pRefl++) = Refl->MakeCopy(Allocator);
+
+        return DataBuffer;
     }
 
 private:
