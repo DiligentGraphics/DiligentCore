@@ -275,4 +275,22 @@ std::vector<std::string> SplitString(IterType Start, IterType End, const char* D
     return Strings;
 }
 
+
+/// Returns the print width of a number Num
+template <typename Type>
+size_t GetPrintWidth(Type Num, Type Base = 10)
+{
+    if (Num == 0)
+        return 1;
+
+    size_t W = Num < 0 ? 1 : 0;
+    while (Num != 0)
+    {
+        ++W;
+        Num /= Base;
+    }
+
+    return W;
+}
+
 } // namespace Diligent
