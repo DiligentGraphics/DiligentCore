@@ -75,12 +75,12 @@ cbuffer CBuffer1
     float4 f4;
 
     float4x4 f4x4;
-    uint4x4  u4x4;
+    float4x2 f4x2;
 
     Struct1 s1;
 
-    float4 af4[2];
-    int4x4 ai4x4[4];
+    float4   af4[2];
+    float4x4 af4x4[4];
 }
 
 cbuffer CBuffer2
@@ -89,9 +89,8 @@ cbuffer CBuffer2
     int4     i4;
     bool4    b4;
     Struct2  s2;
-    int4x4   i4x4;
+    float4x4 f4x4_2;
     Struct3  s3;
-    bool4x4  b4x4;
 }
 
 void main(out float4 pos : SV_POSITION)
@@ -138,15 +137,15 @@ void CheckConstantBufferReflection(IShader* pShader, bool PrintBufferContents = 
 
             {"f4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 16},
             {"f4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 32},
-            {"u4x4", "uint4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_UINT, 4, 4, 96},
+            {"f4x2", "float4x2", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 2, 96},
 
-            {"s1", "Struct1", _countof(Struct1), Struct1, 160},
+            {"s1", "Struct1", _countof(Struct1), Struct1, 128},
 
-            {"af4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 192, 2},
-            {"ai4x4", "int4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_INT, 4, 4, 224, 4},
+            {"af4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 160, 2},
+            {"af4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 192, 4},
         };
 
-    static constexpr ShaderCodeBufferDesc CBuffer1{480, _countof(CBuffer1Vars), CBuffer1Vars};
+    static constexpr ShaderCodeBufferDesc CBuffer1{448, _countof(CBuffer1Vars), CBuffer1Vars};
 
     static constexpr ShaderCodeVariableDesc CBuffer2Vars[] =
         {
@@ -154,12 +153,11 @@ void CheckConstantBufferReflection(IShader* pShader, bool PrintBufferContents = 
             {"i4", "int4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 1, 4, 16},
             {"b4", "bool4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_BOOL, 1, 4, 32},
             {"s2", "Struct2", _countof(Struct2), Struct2, 48},
-            {"i4x4", "int4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_INT, 4, 4, 96},
+            {"f4x4_2", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 96},
             {"s3", "Struct3", _countof(Struct3), Struct3, 160},
-            {"b4x4", "bool4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_BOOL, 4, 4, 288},
         };
 
-    static constexpr ShaderCodeBufferDesc CBuffer2{352, _countof(CBuffer2Vars), CBuffer2Vars};
+    static constexpr ShaderCodeBufferDesc CBuffer2{288, _countof(CBuffer2Vars), CBuffer2Vars};
 
     auto ResCount = pShader->GetResourceCount();
     for (Uint32 i = 0; i < ResCount; ++i)
