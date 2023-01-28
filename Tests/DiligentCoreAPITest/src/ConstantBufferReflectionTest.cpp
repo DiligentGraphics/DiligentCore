@@ -108,25 +108,8 @@ void main(out float4 pos : SV_POSITION)
 }
 )";
 
-TEST(ShaderReflectionTest, ConstantBuffer)
+void CheckConstantBufferReflection(IShader* pShader, bool PrintBufferContents = false)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().IsD3DDevice())
-        GTEST_SKIP();
-
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage               = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.ShaderCompiler               = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-    ShaderCI.Desc                         = {"Constant buffer reflection test", SHADER_TYPE_VERTEX, true};
-    ShaderCI.EntryPoint                   = "main";
-    ShaderCI.Source                       = g_TestShaderSource;
-    ShaderCI.LoadConstantBufferReflection = true;
-
-    RefCntAutoPtr<IShader> pShader;
-    pDevice->CreateShader(ShaderCI, &pShader);
-    ASSERT_NE(pShader, nullptr);
-
     static constexpr ShaderCodeVariableDesc Struct1[] =
         {
             {"f4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 0},
@@ -193,9 +176,12 @@ TEST(ShaderReflectionTest, ConstantBuffer)
             if (pBuffDesc != nullptr)
             {
                 EXPECT_EQ(*pBuffDesc, CBuffer1);
-                std::cout << std::endl
-                          << "CBuffer1" << std::endl
-                          << GetShaderCodeBufferDescString(*pBuffDesc, 4);
+                if (PrintBufferContents)
+                {
+                    std::cout << std::endl
+                              << "CBuffer1" << std::endl
+                              << GetShaderCodeBufferDescString(*pBuffDesc, 4);
+                }
             }
         }
         else if (strcmp(ResDesc.Name, "CBuffer2") == 0)
@@ -205,9 +191,12 @@ TEST(ShaderReflectionTest, ConstantBuffer)
             if (pBuffDesc != nullptr)
             {
                 EXPECT_EQ(*pBuffDesc, CBuffer2);
-                std::cout << std::endl
-                          << "CBuffer2" << std::endl
-                          << GetShaderCodeBufferDescString(*pBuffDesc, 4);
+                if (PrintBufferContents)
+                {
+                    std::cout << std::endl
+                              << "CBuffer2" << std::endl
+                              << GetShaderCodeBufferDescString(*pBuffDesc, 4);
+                }
             }
         }
         else
@@ -215,6 +204,60 @@ TEST(ShaderReflectionTest, ConstantBuffer)
             GTEST_FAIL() << "Unexpected constant buffer " << ResDesc.Name;
         }
     }
+}
+
+void TestShaderReflection(SHADER_COMPILER Compiler, bool PrintBufferContents = false)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage               = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler               = Compiler;
+    ShaderCI.Desc                         = {"Constant buffer reflection test", SHADER_TYPE_VERTEX, true};
+    ShaderCI.EntryPoint                   = "main";
+    ShaderCI.Source                       = g_TestShaderSource;
+    ShaderCI.LoadConstantBufferReflection = true;
+
+    RefCntAutoPtr<IShader> pShader;
+    pDevice->CreateShader(ShaderCI, &pShader);
+    ASSERT_NE(pShader, nullptr);
+
+    CheckConstantBufferReflection(pShader, PrintBufferContents);
+
+    // Create shader from byte code
+    Uint64 ByteCodeSize = 0;
+    pShader->GetBytecode(&ShaderCI.ByteCode, ByteCodeSize);
+    ShaderCI.ByteCodeSize = static_cast<size_t>(ByteCodeSize);
+    ShaderCI.Source       = nullptr;
+
+    RefCntAutoPtr<IShader> pShader2;
+    pDevice->CreateShader(ShaderCI, &pShader2);
+    ASSERT_NE(pShader2, nullptr);
+
+    pShader.Release();
+    CheckConstantBufferReflection(pShader2);
+}
+
+TEST(ConstantBufferReflectionTest, HLSL)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsD3DDevice())
+        GTEST_SKIP();
+
+    constexpr auto PrintBufferContents = true;
+    TestShaderReflection(SHADER_COMPILER_DEFAULT, PrintBufferContents);
+}
+
+TEST(ConstantBufferReflectionTest, HLSL_DXC)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+        GTEST_SKIP();
+
+    TestShaderReflection(SHADER_COMPILER_DXC);
 }
 
 } // namespace
