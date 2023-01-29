@@ -53,7 +53,7 @@ float4 VerifyResources()
     AllCorrect *= CheckValue(g_FmtBuff_1.Load(0), FmtBuff_1_Ref);
     AllCorrect *= CheckValue(g_FmtBuff_2.Load(0), FmtBuff_2_Ref);
 
-	return AllCorrect;
+    return AllCorrect;
 }
 
 void VSMain(in  uint    VertId    : SV_VertexID,

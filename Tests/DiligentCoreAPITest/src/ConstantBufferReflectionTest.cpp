@@ -354,7 +354,6 @@ TEST(ConstantBufferReflectionTest, HLSL_D3D)
     CheckConstantBufferReflectionD3D(TestShaders.second);
 }
 
-
 TEST(ConstantBufferReflectionTest, HLSL_D3D_DXC)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
