@@ -28,7 +28,8 @@
 #pragma once
 
 #include <functional>
-#include <vector>
+#include <string>
+#include <memory>
 
 #include "GraphicsTypes.h"
 #include "Shader.h"
@@ -128,7 +129,11 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
 ///  Unrolls all include files into a single file
 std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI) noexcept(false);
 
-
+std::string GetShaderCodeTypeName(SHADER_CODE_BASIC_TYPE     BasicType,
+                                  SHADER_CODE_VARIABLE_CLASS Class,
+                                  Uint32                     NumRows,
+                                  Uint32                     NumCols,
+                                  SHADER_SOURCE_LANGUAGE     Lang);
 
 struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
 {
@@ -136,12 +141,23 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
         ShaderCodeVariableDesc{Member}
     {}
 
+    ShaderCodeVariableDescX(const ShaderCodeVariableDescX&) = delete;
+    ShaderCodeVariableDescX(ShaderCodeVariableDescX&&)      = default;
+
     size_t AddMember(const ShaderCodeVariableDesc& Member)
     {
         const auto idx = Members.size();
         Members.emplace_back(Member);
         NumMembers = static_cast<Uint32>(Members.size());
         return idx;
+    }
+
+    void SetDefaultTypeName(SHADER_SOURCE_LANGUAGE Language)
+    {
+        auto DefaultTypeName = GetShaderCodeTypeName(BasicType, Class, NumRows, NumColumns, Language);
+        TypeNameCopy         = std::make_unique<char[]>(DefaultTypeName.length() + 1);
+        memcpy(TypeNameCopy.get(), DefaultTypeName.c_str(), DefaultTypeName.length() + 1);
+        TypeName = TypeNameCopy.get();
     }
 
     ShaderCodeVariableDescX& GetMember(size_t idx)
@@ -186,6 +202,8 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
 
 private:
     std::vector<ShaderCodeVariableDescX> Members;
+    // Use unique ptr as the address of std::string may change after move
+    std::unique_ptr<char[]> TypeNameCopy;
 };
 
 struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
@@ -196,6 +214,9 @@ struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
     ShaderCodeBufferDescX(const ShaderCodeBufferDesc& Desc) noexcept :
         ShaderCodeBufferDesc{Desc}
     {}
+
+    ShaderCodeBufferDescX(const ShaderCodeBufferDescX&) = delete;
+    ShaderCodeBufferDescX(ShaderCodeBufferDescX&&)      = default;
 
     size_t AddVariable(const ShaderCodeVariableDesc& Var)
     {

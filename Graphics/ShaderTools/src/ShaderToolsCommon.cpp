@@ -33,6 +33,7 @@
 #include "DebugUtilities.hpp"
 #include "DataBlobImpl.hpp"
 #include "StringDataBlobImpl.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -544,6 +545,41 @@ std::string UnrollShaderIncludes(const ShaderCreateInfo& ShaderCI) noexcept(fals
         return "";
     }
     // Let other exceptions (e.g. 'Failed to load shader source file...') pass through
+}
+
+std::string GetShaderCodeTypeName(SHADER_CODE_BASIC_TYPE     BasicType,
+                                  SHADER_CODE_VARIABLE_CLASS Class,
+                                  Uint32                     NumRows,
+                                  Uint32                     NumCols,
+                                  SHADER_SOURCE_LANGUAGE     Lang)
+{
+    if (Class == SHADER_CODE_VARIABLE_CLASS_STRUCT)
+        return "struct";
+
+    std::string BasicTypeStr = GetShaderCodeBasicTypeString(BasicType);
+
+    std::string Suffix;
+    if (Class == SHADER_CODE_VARIABLE_CLASS_VECTOR)
+    {
+        Uint32 Dim =
+            (Lang == SHADER_SOURCE_LANGUAGE_GLSL ||
+             Lang == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM) ?
+            NumRows :
+            NumCols;
+        Suffix = std::to_string(Dim);
+    }
+    else if (Class == SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS ||
+             Class == SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS)
+    {
+        if (Lang == SHADER_SOURCE_LANGUAGE_GLSL ||
+            Lang == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
+        {
+            BasicTypeStr = "mat";
+        }
+        Suffix = std::to_string(NumRows) + "x" + std::to_string(NumCols);
+    }
+
+    return BasicTypeStr + Suffix;
 }
 
 } // namespace Diligent

@@ -68,10 +68,6 @@ void LoadShaderCodeVariableDesc(TD3DShaderReflectionType* pd3dReflecionType, Sha
     D3D_SHADER_TYPE_DESC d3dTypeDesc = {};
     pd3dReflecionType->GetDesc(&d3dTypeDesc);
 
-    TypeDesc.TypeName = d3dTypeDesc.Name;
-    if (d3dTypeDesc.Type == D3D_SVT_UINT && strcmp(TypeDesc.TypeName, "dword") == 0)
-        TypeDesc.TypeName = "uint";
-
     TypeDesc.Class = D3DShaderVariableClassToShaderCodeVaraibleClass(d3dTypeDesc.Class);
     if (d3dTypeDesc.Class != D3D_SVC_STRUCT)
     {
@@ -81,6 +77,13 @@ void LoadShaderCodeVariableDesc(TD3DShaderReflectionType* pd3dReflecionType, Sha
         // Number of columns in a matrix. Otherwise a numeric type returns 1, any other type returns 0.
         TypeDesc.NumColumns = StaticCast<decltype(TypeDesc.NumRows)>(d3dTypeDesc.Columns);
     }
+
+    TypeDesc.TypeName = d3dTypeDesc.Name;
+    if (TypeDesc.TypeName == nullptr)
+        TypeDesc.SetDefaultTypeName(SHADER_SOURCE_LANGUAGE_HLSL);
+    if (d3dTypeDesc.Type == D3D_SVT_UINT && strcmp(TypeDesc.TypeName, "dword") == 0)
+        TypeDesc.TypeName = "uint";
+
     // Number of elements in an array; otherwise 0.
     TypeDesc.ArraySize = d3dTypeDesc.Elements;
     // Offset, in bytes, between the start of the parent structure and this variable. Can be 0 if not a structure member.

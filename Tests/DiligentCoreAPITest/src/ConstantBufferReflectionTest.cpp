@@ -47,7 +47,7 @@ Buffer<float4> g_Buffer;
 struct Struct1
 {
     float4 f4;
-    bool4  b4;
+    uint4  u4;
 };
 
 StructuredBuffer<Struct1> g_StructBuff;
@@ -70,7 +70,7 @@ cbuffer CBuffer1
     float f;
     uint  u;
     int   i;
-    bool  b;
+    uint  u2;
 
     float4 f4;
 
@@ -87,7 +87,7 @@ cbuffer CBuffer2
 {
     uint4    u4;
     int4     i4;
-    bool4    b4;
+    float4   f4_2;
     Struct2  s2;
     float4x4 f4x4_2;
     Struct3  s3;
@@ -112,7 +112,7 @@ void CheckConstantBufferReflection(IShader* pShader, bool PrintBufferContents = 
     static constexpr ShaderCodeVariableDesc Struct1[] =
         {
             {"f4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 0},
-            {"b4", "bool4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_BOOL, 1, 4, 16},
+            {"u4", "uint4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 1, 4, 16},
         };
 
     static constexpr ShaderCodeVariableDesc Struct2[] =
@@ -133,7 +133,7 @@ void CheckConstantBufferReflection(IShader* pShader, bool PrintBufferContents = 
             {"f", "float", SHADER_CODE_BASIC_TYPE_FLOAT, 0},
             {"u", "uint", SHADER_CODE_BASIC_TYPE_UINT, 4},
             {"i", "int", SHADER_CODE_BASIC_TYPE_INT, 8},
-            {"b", "bool", SHADER_CODE_BASIC_TYPE_BOOL, 12},
+            {"u2", "uint", SHADER_CODE_BASIC_TYPE_UINT, 12},
 
             {"f4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 16},
             {"f4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 32},
@@ -151,7 +151,7 @@ void CheckConstantBufferReflection(IShader* pShader, bool PrintBufferContents = 
         {
             {"u4", "uint4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 1, 4, 0},
             {"i4", "int4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 1, 4, 16},
-            {"b4", "bool4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_BOOL, 1, 4, 32},
+            {"f4_2", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 32},
             {"s2", "Struct2", _countof(Struct2), Struct2, 48},
             {"f4x4_2", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 96},
             {"s3", "Struct3", _countof(Struct3), Struct3, 160},
@@ -241,7 +241,7 @@ TEST(ConstantBufferReflectionTest, HLSL)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().IsD3DDevice())
+    if (!pDevice->GetDeviceInfo().IsD3DDevice() && !pDevice->GetDeviceInfo().IsVulkanDevice())
         GTEST_SKIP();
 
     constexpr auto PrintBufferContents = true;
@@ -252,7 +252,7 @@ TEST(ConstantBufferReflectionTest, HLSL_DXC)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12 && pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
         GTEST_SKIP();
 
     TestShaderReflection(SHADER_COMPILER_DXC);
