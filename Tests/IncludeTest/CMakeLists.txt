@@ -41,6 +41,12 @@ if(NOT PLATFORM_WIN32 AND NOT PLATFORM_UNIVERSAL_WINDOWS)
          )
 endif()
 
+# TODO: remove if vulkan_core.h is fixed (https://github.com/KhronosGroup/Vulkan-Docs/issues/1769)
+if(VULKAN_SUPPORTED)
+    file(GLOB GRAPHICS_ENGINE_VK_INC_TEST LIST_DIRECTORIES false GraphicsEngineVk/*.cpp GraphicsEngineVk/*.c)
+    set_property(SOURCE ${GRAPHICS_ENGINE_VK_INC_TEST} APPEND PROPERTY INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/../../ThirdParty/Vulkan-Headers/include")
+endif()
+
 add_library(DiligentCore-IncludeTest ${SOURCE})
 
 target_include_directories(DiligentCore-IncludeTest PRIVATE ../../..)
