@@ -561,11 +561,28 @@ std::string GetShaderCodeTypeName(SHADER_CODE_BASIC_TYPE     BasicType,
     std::string Suffix;
     if (Class == SHADER_CODE_VARIABLE_CLASS_VECTOR)
     {
-        Uint32 Dim =
-            (Lang == SHADER_SOURCE_LANGUAGE_GLSL ||
-             Lang == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM) ?
-            NumRows :
-            NumCols;
+        Uint32 Dim = 0;
+        if (Lang == SHADER_SOURCE_LANGUAGE_GLSL ||
+            Lang == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
+        {
+            Dim = NumRows;
+            switch (BasicType)
+            {
+                // clang-format off
+                case SHADER_CODE_BASIC_TYPE_FLOAT: BasicTypeStr ="vec"; break;
+                case SHADER_CODE_BASIC_TYPE_INT:   BasicTypeStr ="ivec";break;
+                case SHADER_CODE_BASIC_TYPE_UINT:  BasicTypeStr ="uvec";break;
+                case SHADER_CODE_BASIC_TYPE_BOOL:  BasicTypeStr ="bvec";break;
+                // clang-format on
+                default:
+                    UNEXPECTED("Unexpected vector basic type");
+            }
+        }
+        else
+        {
+            Dim = NumCols;
+        }
+
         Suffix = std::to_string(Dim);
     }
     else if (Class == SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS ||
@@ -575,8 +592,12 @@ std::string GetShaderCodeTypeName(SHADER_CODE_BASIC_TYPE     BasicType,
             Lang == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
         {
             BasicTypeStr = "mat";
+            Suffix       = std::to_string(NumCols) + "x" + std::to_string(NumRows);
         }
-        Suffix = std::to_string(NumRows) + "x" + std::to_string(NumCols);
+        else
+        {
+            Suffix = std::to_string(NumRows) + "x" + std::to_string(NumCols);
+        }
     }
 
     return BasicTypeStr + Suffix;

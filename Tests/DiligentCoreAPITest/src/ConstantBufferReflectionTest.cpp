@@ -128,7 +128,8 @@ void CheckShaderConstantBuffers(IShader* pShader, bool PrintBufferContents, cons
             EXPECT_NE(pBuffDesc, nullptr);
             if (pBuffDesc != nullptr)
             {
-                EXPECT_EQ(*pBuffDesc, it->second);
+                const auto& RefDesc = it->second;
+                EXPECT_EQ(*pBuffDesc, RefDesc);
                 if (PrintBufferContents)
                 {
                     std::cout << std::endl
@@ -366,6 +367,133 @@ TEST(ConstantBufferReflectionTest, HLSL_D3D_DXC)
 
     CheckConstantBufferReflectionD3D(TestShaders.first);
     CheckConstantBufferReflectionD3D(TestShaders.second);
+}
+
+
+
+static const char g_TestShaderSourceGLSL[] = R"(
+
+uniform sampler2D g_Tex2D;
+
+layout(std140) readonly buffer g_Buff
+{
+    vec4 data;
+}g_StorageBuff;
+
+
+struct Struct1
+{
+    vec4  f4;
+    ivec4 i4;
+};
+
+struct Struct2
+{
+    vec4    f4;
+    Struct1 s1;
+    uvec4   u4;
+};
+
+layout(std140) uniform UBuffer 
+{
+    float f;
+    uint  u;
+    int   i;
+    bool  b;
+
+    vec4  f4;
+    uvec4 u4;
+    ivec4 i4;
+    bvec4 b4;
+
+    vec2  f2;
+    uvec2 u2;
+    ivec2 i2;
+    bvec2 b2;
+
+    Struct1 s1;
+    Struct2 s2;
+
+    mat2x4 m2x4;
+    mat4x4 m4x4;
+
+    vec4   af4[2];
+    mat4x4 am4x4[3];
+};
+
+void main()
+{
+    gl_Position = f4;
+    gl_Position += s1.f4;
+    gl_Position += s2.s1.f4;
+
+    gl_Position += textureLod(g_Tex2D, vec2(0.5,0.5), 0.0);
+    gl_Position += g_StorageBuff.data;
+}
+)";
+
+void CheckConstantBufferReflectionGLSL(IShader* pShader, bool PrintBufferContents = false)
+{
+    static constexpr ShaderCodeVariableDesc Struct1[] =
+        {
+            {"f4", "vec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 0},
+            {"i4", "ivec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 4, 1, 16},
+        };
+
+    static constexpr ShaderCodeVariableDesc Struct2[] =
+        {
+            {"f4", "vec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 0},
+            {"s1", "Struct1", _countof(Struct1), Struct1, 16},
+            {"u4", "uvec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 4, 1, 48},
+        };
+
+    static constexpr ShaderCodeVariableDesc UBufferVars[] =
+        {
+            {"f", "float", SHADER_CODE_BASIC_TYPE_FLOAT, 0},
+            {"u", "uint", SHADER_CODE_BASIC_TYPE_UINT, 4},
+            {"i", "int", SHADER_CODE_BASIC_TYPE_INT, 8},
+            {"b", "uint", SHADER_CODE_BASIC_TYPE_UINT, 12},
+
+            {"f4", "vec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 16},
+            {"u4", "uvec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 4, 1, 32},
+            {"i4", "ivec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 4, 1, 48},
+            {"b4", "uvec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 4, 1, 64},
+
+            {"f2", "vec2", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 2, 1, 80},
+            {"u2", "uvec2", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 2, 1, 88},
+            {"i2", "ivec2", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 2, 1, 96},
+            {"b2", "uvec2", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 2, 1, 104},
+
+            {"s1", "Struct1", _countof(Struct1), Struct1, 112},
+            {"s2", "Struct2", _countof(Struct2), Struct2, 144},
+
+            {"m2x4", "mat2x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 2, 208},
+            {"m4x4", "mat4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 240},
+
+            {"af4", "vec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 304, 2},
+            {"am4x4", "mat4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 336, 3},
+        };
+
+    static constexpr ShaderCodeBufferDesc UBuffer{528, _countof(UBufferVars), UBufferVars};
+
+    BufferDescMappingType BufferMapping;
+    BufferMapping.emplace_back("UBuffer", UBuffer);
+    CheckShaderConstantBuffers(pShader, PrintBufferContents, BufferMapping);
+}
+
+TEST(ConstantBufferReflectionTest, GLSL)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsVulkanDevice())
+        GTEST_SKIP();
+
+    auto TestShaders = CreateTestShaders(g_TestShaderSourceGLSL, SHADER_COMPILER_DEFAULT, SHADER_SOURCE_LANGUAGE_GLSL);
+    ASSERT_TRUE(TestShaders.first && TestShaders.second);
+
+    constexpr auto PrintBufferContents = true;
+    CheckConstantBufferReflectionGLSL(TestShaders.first, PrintBufferContents);
+    CheckConstantBufferReflectionGLSL(TestShaders.second);
 }
 
 } // namespace
