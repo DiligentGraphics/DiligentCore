@@ -34,7 +34,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-static const char g_TestShaderSource[] = R"(
+static const char g_TestShaderSource_HLSL[] = R"(
 
 Texture2D    g_Tex1;
 SamplerState g_Tex1_sampler;
@@ -107,7 +107,47 @@ void main(out float4 pos : SV_POSITION)
 }
 )";
 
-void CheckConstantBufferReflection(IShader* pShader, bool PrintBufferContents = false)
+using BufferDescMappingType = std::vector<std::pair<std::string, const ShaderCodeBufferDesc&>>;
+void CheckShaderConstantBuffers(IShader* pShader, bool PrintBufferContents, const BufferDescMappingType& Buffers)
+{
+    auto ResCount = pShader->GetResourceCount();
+    for (Uint32 i = 0; i < ResCount; ++i)
+    {
+        ShaderResourceDesc ResDesc;
+        pShader->GetResourceDesc(i, ResDesc);
+        if (ResDesc.Type != SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
+            continue;
+
+        auto it = Buffers.begin();
+        while (it != Buffers.end() && it->first != ResDesc.Name)
+            ++it;
+
+        if (it != Buffers.end())
+        {
+            const auto* pBuffDesc = pShader->GetConstantBufferDesc(i);
+            EXPECT_NE(pBuffDesc, nullptr);
+            if (pBuffDesc != nullptr)
+            {
+                EXPECT_EQ(*pBuffDesc, it->second);
+                if (PrintBufferContents)
+                {
+                    std::cout << std::endl
+                              << ResDesc.Name << ':' << std::endl
+                              << GetShaderCodeBufferDescString(*pBuffDesc, 4);
+                }
+            }
+        }
+        else
+        {
+            GTEST_FAIL() << "Unexpected constant buffer " << ResDesc.Name;
+        }
+    }
+
+    if (PrintBufferContents)
+        std::cout << std::endl;
+}
+
+void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContents = false)
 {
     static constexpr ShaderCodeVariableDesc Struct1[] =
         {
@@ -159,82 +199,42 @@ void CheckConstantBufferReflection(IShader* pShader, bool PrintBufferContents = 
 
     static constexpr ShaderCodeBufferDesc CBuffer2{288, _countof(CBuffer2Vars), CBuffer2Vars};
 
-    auto ResCount = pShader->GetResourceCount();
-    for (Uint32 i = 0; i < ResCount; ++i)
-    {
-        ShaderResourceDesc ResDesc;
-        pShader->GetResourceDesc(i, ResDesc);
-        if (ResDesc.Type != SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
-            continue;
-
-        if (strcmp(ResDesc.Name, "CBuffer1") == 0)
-        {
-            const auto* pBuffDesc = pShader->GetConstantBufferDesc(i);
-            EXPECT_NE(pBuffDesc, nullptr);
-            if (pBuffDesc != nullptr)
-            {
-                EXPECT_EQ(*pBuffDesc, CBuffer1);
-                if (PrintBufferContents)
-                {
-                    std::cout << std::endl
-                              << "CBuffer1" << std::endl
-                              << GetShaderCodeBufferDescString(*pBuffDesc, 4);
-                }
-            }
-        }
-        else if (strcmp(ResDesc.Name, "CBuffer2") == 0)
-        {
-            const auto* pBuffDesc = pShader->GetConstantBufferDesc(i);
-            EXPECT_NE(pBuffDesc, nullptr);
-            if (pBuffDesc != nullptr)
-            {
-                EXPECT_EQ(*pBuffDesc, CBuffer2);
-                if (PrintBufferContents)
-                {
-                    std::cout << std::endl
-                              << "CBuffer2" << std::endl
-                              << GetShaderCodeBufferDescString(*pBuffDesc, 4);
-                }
-            }
-        }
-        else
-        {
-            GTEST_FAIL() << "Unexpected constant buffer " << ResDesc.Name;
-        }
-    }
+    BufferDescMappingType BufferMapping;
+    BufferMapping.emplace_back("CBuffer1", CBuffer1);
+    BufferMapping.emplace_back("CBuffer2", CBuffer2);
+    CheckShaderConstantBuffers(pShader, PrintBufferContents, BufferMapping);
 }
 
-void TestShaderReflection(SHADER_COMPILER Compiler, bool PrintBufferContents = false)
+std::pair<RefCntAutoPtr<IShader>, RefCntAutoPtr<IShader>> CreateTestShaders(const char* Source, SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE Language)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
     ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage               = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.SourceLanguage               = Language;
     ShaderCI.ShaderCompiler               = Compiler;
     ShaderCI.Desc                         = {"Constant buffer reflection test", SHADER_TYPE_VERTEX, true};
     ShaderCI.EntryPoint                   = "main";
-    ShaderCI.Source                       = g_TestShaderSource;
+    ShaderCI.Source                       = Source;
     ShaderCI.LoadConstantBufferReflection = true;
 
-    RefCntAutoPtr<IShader> pShader;
-    pDevice->CreateShader(ShaderCI, &pShader);
-    ASSERT_NE(pShader, nullptr);
-
-    CheckConstantBufferReflection(pShader, PrintBufferContents);
+    RefCntAutoPtr<IShader> pShaderSrc;
+    pDevice->CreateShader(ShaderCI, &pShaderSrc);
+    if (!pShaderSrc)
+        return {};
 
     // Create shader from byte code
     Uint64 ByteCodeSize = 0;
-    pShader->GetBytecode(&ShaderCI.ByteCode, ByteCodeSize);
+    pShaderSrc->GetBytecode(&ShaderCI.ByteCode, ByteCodeSize);
     ShaderCI.ByteCodeSize = static_cast<size_t>(ByteCodeSize);
     ShaderCI.Source       = nullptr;
 
-    RefCntAutoPtr<IShader> pShader2;
-    pDevice->CreateShader(ShaderCI, &pShader2);
-    ASSERT_NE(pShader2, nullptr);
+    RefCntAutoPtr<IShader> pShaderBC;
+    pDevice->CreateShader(ShaderCI, &pShaderBC);
+    if (!pShaderBC)
+        return {};
 
-    pShader.Release();
-    CheckConstantBufferReflection(pShader2);
+    return {pShaderSrc, pShaderBC};
 }
 
 TEST(ConstantBufferReflectionTest, HLSL)
@@ -244,8 +244,12 @@ TEST(ConstantBufferReflectionTest, HLSL)
     if (!pDevice->GetDeviceInfo().IsD3DDevice() && !pDevice->GetDeviceInfo().IsVulkanDevice())
         GTEST_SKIP();
 
+    auto TestShaders = CreateTestShaders(g_TestShaderSource_HLSL, SHADER_COMPILER_DEFAULT, SHADER_SOURCE_LANGUAGE_HLSL);
+    ASSERT_TRUE(TestShaders.first && TestShaders.second);
+
     constexpr auto PrintBufferContents = true;
-    TestShaderReflection(SHADER_COMPILER_DEFAULT, PrintBufferContents);
+    CheckConstantBufferReflectionHLSL(TestShaders.first, PrintBufferContents);
+    CheckConstantBufferReflectionHLSL(TestShaders.second);
 }
 
 TEST(ConstantBufferReflectionTest, HLSL_DXC)
@@ -255,7 +259,114 @@ TEST(ConstantBufferReflectionTest, HLSL_DXC)
     if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12 && pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
         GTEST_SKIP();
 
-    TestShaderReflection(SHADER_COMPILER_DXC);
+    auto TestShaders = CreateTestShaders(g_TestShaderSource_HLSL, SHADER_COMPILER_DXC, SHADER_SOURCE_LANGUAGE_HLSL);
+    ASSERT_TRUE(TestShaders.first && TestShaders.second);
+
+    CheckConstantBufferReflectionHLSL(TestShaders.first);
+    CheckConstantBufferReflectionHLSL(TestShaders.second);
+}
+
+
+static const char g_TestShaderSourceD3D[] = R"(
+
+Texture2D    g_Tex1;
+SamplerState g_Tex1_sampler;
+
+Texture2D    g_Tex2;
+SamplerState g_Tex2_sampler;
+
+Buffer<float4> g_Buffer;
+
+struct Struct1
+{
+    float4 f4;
+    uint4  u4;
+};
+
+StructuredBuffer<Struct1> g_StructBuff;
+
+cbuffer CBuffer
+{
+    bool  b;
+    int   i;
+    bool2 b2;
+
+    bool4 b4;
+
+    bool4x4 b4x4;
+    bool4x2 b4x2;
+    
+    int4x4 i4x4;
+    int4x2 i4x2;
+
+    uint4x4 u4x4;
+    uint4x2 u4x2;
+
+    float4 f4;
+}
+
+void main(out float4 pos : SV_POSITION)
+{
+    pos = f4;
+    pos += g_Tex1.SampleLevel(g_Tex1_sampler, float2(0.5, 0.5), 0.0);
+    pos += g_Tex2.SampleLevel(g_Tex2_sampler, float2(0.5, 0.5), 0.0);
+    pos += g_Buffer.Load(0);
+    pos += g_StructBuff[0].f4;
+}
+)";
+
+void CheckConstantBufferReflectionD3D(IShader* pShader, bool PrintBufferContents = false)
+{
+    static constexpr ShaderCodeVariableDesc CBufferVars[] =
+        {
+            {"b", "bool", SHADER_CODE_BASIC_TYPE_BOOL, 0},
+            {"i", "int", SHADER_CODE_BASIC_TYPE_INT, 4},
+            {"b2", "bool2", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_BOOL, 1, 2, 8},
+            {"b4", "bool4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_BOOL, 1, 4, 16},
+            {"b4x4", "bool4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_BOOL, 4, 4, 32},
+            {"b4x2", "bool4x2", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_BOOL, 4, 2, 96},
+            {"i4x4", "int4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_INT, 4, 4, 128},
+            {"i4x2", "int4x2", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_INT, 4, 2, 192},
+            {"u4x4", "uint4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_UINT, 4, 4, 224},
+            {"u4x2", "uint4x2", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_UINT, 4, 2, 288},
+            {"f4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 320},
+        };
+
+    static constexpr ShaderCodeBufferDesc CBuffer{336, _countof(CBufferVars), CBufferVars};
+
+    BufferDescMappingType BufferMapping;
+    BufferMapping.emplace_back("CBuffer", CBuffer);
+    CheckShaderConstantBuffers(pShader, PrintBufferContents, BufferMapping);
+}
+
+TEST(ConstantBufferReflectionTest, HLSL_D3D)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().IsD3DDevice())
+        GTEST_SKIP();
+
+    auto TestShaders = CreateTestShaders(g_TestShaderSourceD3D, SHADER_COMPILER_DEFAULT, SHADER_SOURCE_LANGUAGE_HLSL);
+    ASSERT_TRUE(TestShaders.first && TestShaders.second);
+
+    constexpr auto PrintBufferContents = true;
+    CheckConstantBufferReflectionD3D(TestShaders.first, PrintBufferContents);
+    CheckConstantBufferReflectionD3D(TestShaders.second);
+}
+
+
+TEST(ConstantBufferReflectionTest, HLSL_D3D_DXC)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+        GTEST_SKIP();
+
+    auto TestShaders = CreateTestShaders(g_TestShaderSourceD3D, SHADER_COMPILER_DXC, SHADER_SOURCE_LANGUAGE_HLSL);
+    ASSERT_TRUE(TestShaders.first && TestShaders.second);
+
+    CheckConstantBufferReflectionD3D(TestShaders.first);
+    CheckConstantBufferReflectionD3D(TestShaders.second);
 }
 
 } // namespace
