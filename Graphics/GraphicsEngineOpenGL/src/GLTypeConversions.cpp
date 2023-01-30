@@ -764,4 +764,321 @@ WAVE_FEATURE GLSubgroupFeatureBitsToWaveFeatures(GLenum FeatureBits)
     return Result;
 }
 
+ShaderCodeVariableDesc GLDataTypeToShaderCodeVariableDesc(GLenum glDataType)
+{
+    ShaderCodeVariableDesc Desc;
+    switch (glDataType)
+    {
+        case GL_FLOAT:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_SCALAR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 1;
+            Desc.TypeName   = "float";
+            break;
+
+        case GL_FLOAT_VEC2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "vec2";
+            break;
+
+        case GL_FLOAT_VEC3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "vec3";
+            break;
+
+        case GL_FLOAT_VEC4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "vec4";
+            break;
+
+        case GL_DOUBLE:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_SCALAR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 1;
+            Desc.TypeName   = "double";
+            break;
+
+        case GL_DOUBLE_VEC2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "dvec2";
+            break;
+
+        case GL_DOUBLE_VEC3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "dvec3";
+            break;
+
+        case GL_DOUBLE_VEC4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "dvec4";
+            break;
+
+        case GL_INT:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_INT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_SCALAR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 1;
+            Desc.TypeName   = "int";
+            break;
+
+        case GL_INT_VEC2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_INT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "ivec2";
+            break;
+
+        case GL_INT_VEC3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_INT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "ivec3";
+            break;
+
+        case GL_INT_VEC4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_INT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "ivec4";
+            break;
+
+        case GL_UNSIGNED_INT:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_UINT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_SCALAR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 1;
+            Desc.TypeName   = "uint";
+            break;
+
+        case GL_UNSIGNED_INT_VEC2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_UINT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "uvec2";
+            break;
+
+        case GL_UNSIGNED_INT_VEC3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_UINT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "uvec3";
+            break;
+
+        case GL_UNSIGNED_INT_VEC4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_UINT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "uvec4";
+            break;
+
+        case GL_BOOL:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_BOOL;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_SCALAR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 1;
+            Desc.TypeName   = "bool";
+            break;
+
+        case GL_BOOL_VEC2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_BOOL;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "bvec2";
+            break;
+
+        case GL_BOOL_VEC3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_BOOL;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "bvec3";
+            break;
+
+        case GL_BOOL_VEC4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_BOOL;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+            Desc.NumColumns = 1;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "bvec4";
+            break;
+
+        case GL_FLOAT_MAT2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 2;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "mat2x2";
+            break;
+
+        case GL_FLOAT_MAT3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 3;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "mat3x3";
+            break;
+
+        case GL_FLOAT_MAT4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 4;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "mat4x4";
+            break;
+
+        case GL_FLOAT_MAT2x3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 2;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "mat2x3";
+            break;
+
+        case GL_FLOAT_MAT2x4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 2;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "mat2x4";
+            break;
+
+        case GL_FLOAT_MAT3x2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 3;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "mat3x2";
+            break;
+
+        case GL_FLOAT_MAT3x4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 3;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "mat3x4";
+            break;
+
+        case GL_FLOAT_MAT4x2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 4;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "mat4x2";
+            break;
+
+        case GL_FLOAT_MAT4x3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_FLOAT;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 4;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "mat4x3";
+            break;
+
+        case GL_DOUBLE_MAT2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 2;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "dmat2";
+            break;
+
+        case GL_DOUBLE_MAT3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 3;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "dmat3";
+            break;
+
+        case GL_DOUBLE_MAT4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 4;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "dmat4";
+            break;
+
+        case GL_DOUBLE_MAT2x3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 2;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "dmat2x3";
+            break;
+
+        case GL_DOUBLE_MAT2x4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 2;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "dmat2x4";
+            break;
+
+        case GL_DOUBLE_MAT3x2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 3;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "dmat3x2";
+            break;
+
+        case GL_DOUBLE_MAT3x4:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 3;
+            Desc.NumRows    = 4;
+            Desc.TypeName   = "dmat3x4";
+            break;
+
+        case GL_DOUBLE_MAT4x2:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 4;
+            Desc.NumRows    = 2;
+            Desc.TypeName   = "dmat4x2";
+            break;
+
+        case GL_DOUBLE_MAT4x3:
+            Desc.BasicType  = SHADER_CODE_BASIC_TYPE_DOUBLE;
+            Desc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+            Desc.NumColumns = 4;
+            Desc.NumRows    = 3;
+            Desc.TypeName   = "dmat4x3";
+            break;
+
+        default:
+            // Unknown type - skip
+            break;
+    }
+
+    return Desc;
+}
+
 } // namespace Diligent

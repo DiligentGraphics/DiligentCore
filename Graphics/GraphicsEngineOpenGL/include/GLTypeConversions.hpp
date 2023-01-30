@@ -431,4 +431,6 @@ SHADER_TYPE GLShaderBitsToShaderTypes(GLenum ShaderBits);
 
 WAVE_FEATURE GLSubgroupFeatureBitsToWaveFeatures(GLenum FeatureBits);
 
+ShaderCodeVariableDesc GLDataTypeToShaderCodeVariableDesc(GLenum glDataType);
+
 } // namespace Diligent

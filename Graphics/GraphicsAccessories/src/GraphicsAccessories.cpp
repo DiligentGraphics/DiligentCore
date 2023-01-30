@@ -1437,6 +1437,13 @@ String GetShaderCodeBufferDescString(const ShaderCodeBufferDesc& Desc, size_t Gl
     return ss.str();
 }
 
+String GetShaderCodeVariableDescString(const ShaderCodeVariableDesc& Desc, size_t GlobalIdent, size_t MemberIdent)
+{
+    std::stringstream ss;
+    PrintShaderCodeVariables(ss, GlobalIdent, MemberIdent, &Desc, 1);
+    return ss.str();
+}
+
 PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE ResourceType)
 {
     static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");

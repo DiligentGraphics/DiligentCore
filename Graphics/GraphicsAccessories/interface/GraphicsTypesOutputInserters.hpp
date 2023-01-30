@@ -68,6 +68,7 @@ DEFINE_TYPE_PRINTER(RESOURCE_STATE, GetResourceStateFlagString)
 DEFINE_TYPE_PRINTER(AttachmentReference, GetAttachmentReferenceString)
 DEFINE_TYPE_PRINTER(ShaderDesc, GetShaderDescString)
 DEFINE_TYPE_PRINTER(ShaderCodeBufferDesc, GetShaderCodeBufferDescString)
+DEFINE_TYPE_PRINTER(ShaderCodeVariableDesc, GetShaderCodeVariableDescString)
 #undef DEFINE_TYPE_PRINTER
 
 } // namespace Diligent
