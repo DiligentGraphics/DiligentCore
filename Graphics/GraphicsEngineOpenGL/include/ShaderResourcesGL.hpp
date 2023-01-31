@@ -63,12 +63,17 @@ public:
     ShaderResourcesGL& operator = (      ShaderResourcesGL&&) = delete;
     // clang-format on
 
+    struct LoadUniformsAttribs
+    {
+        const SHADER_TYPE                     ShaderStages;
+        const PIPELINE_RESOURCE_FLAGS         SamplerResourceFlag;
+        const GLObjectWrappers::GLProgramObj& GLProgram;
+        class GLContextState&                 State;
+        const bool                            LoadUniformBufferReflection = false;
+        const SHADER_SOURCE_LANGUAGE          SourceLang                  = SHADER_SOURCE_LANGUAGE_DEFAULT;
+    };
     /// Loads program uniforms and assigns bindings
-    void LoadUniforms(SHADER_TYPE                           ShaderStages,
-                      PIPELINE_RESOURCE_FLAGS               SamplerResourceFlag,
-                      const GLObjectWrappers::GLProgramObj& GLProgram,
-                      class GLContextState&                 State,
-                      bool                                  LoadUniformBufferReflection);
+    void LoadUniforms(const LoadUniformsAttribs& Attribs);
 
     struct GLResourceAttribs
     {

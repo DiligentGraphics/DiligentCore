@@ -150,26 +150,29 @@ void CheckShaderConstantBuffers(IShader* pShader, bool PrintBufferContents, cons
 
 void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContents = false)
 {
+    auto*      pEnv = GPUTestingEnvironment::GetInstance();
+    const auto IsGL = pEnv->GetDevice()->GetDeviceInfo().IsGLDevice();
+
     static constexpr ShaderCodeVariableDesc Struct1[] =
         {
             {"f4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 0},
             {"u4", "uint4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 1, 4, 16},
         };
 
-    static constexpr ShaderCodeVariableDesc Struct2[] =
+    const ShaderCodeVariableDesc Struct2[] =
         {
             {"u4", "uint4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 1, 4, 0},
-            {"s1", "Struct1", _countof(Struct1), Struct1, 16},
+            {"s1", !IsGL ? "Struct1" : "", _countof(Struct1), Struct1, 16},
         };
 
-    static constexpr ShaderCodeVariableDesc Struct3[] =
+    const ShaderCodeVariableDesc Struct3[] =
         {
-            {"s1", "Struct1", _countof(Struct1), Struct1, 0, 2},
+            {"s1", !IsGL ? "Struct1" : "", _countof(Struct1), Struct1, 0, 2},
             {"i4", "int4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 1, 4, 64},
-            {"s2", "Struct2", _countof(Struct2), Struct2, 80},
+            {"s2", !IsGL ? "Struct2" : "", _countof(Struct2), Struct2, 80},
         };
 
-    static constexpr ShaderCodeVariableDesc CBuffer1Vars[] =
+    const ShaderCodeVariableDesc CBuffer1Vars[] =
         {
             {"f", "float", SHADER_CODE_BASIC_TYPE_FLOAT, 0},
             {"u", "uint", SHADER_CODE_BASIC_TYPE_UINT, 4},
@@ -180,25 +183,25 @@ void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContent
             {"f4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 32},
             {"f4x2", "float4x2", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 2, 96},
 
-            {"s1", "Struct1", _countof(Struct1), Struct1, 128},
+            {"s1", !IsGL ? "Struct1" : "", _countof(Struct1), Struct1, 128},
 
             {"af4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 160, 2},
             {"af4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 192, 4},
         };
 
-    static constexpr ShaderCodeBufferDesc CBuffer1{448, _countof(CBuffer1Vars), CBuffer1Vars};
+    const ShaderCodeBufferDesc CBuffer1{448, _countof(CBuffer1Vars), CBuffer1Vars};
 
-    static constexpr ShaderCodeVariableDesc CBuffer2Vars[] =
+    const ShaderCodeVariableDesc CBuffer2Vars[] =
         {
             {"u4", "uint4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 1, 4, 0},
             {"i4", "int4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 1, 4, 16},
             {"f4_2", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 32},
-            {"s2", "Struct2", _countof(Struct2), Struct2, 48},
+            {"s2", !IsGL ? "Struct2" : "", _countof(Struct2), Struct2, 48},
             {"f4x4_2", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 96},
-            {"s3", "Struct3", _countof(Struct3), Struct3, 160},
+            {"s3", !IsGL ? "Struct3" : "", _countof(Struct3), Struct3, 160},
         };
 
-    static constexpr ShaderCodeBufferDesc CBuffer2{288, _countof(CBuffer2Vars), CBuffer2Vars};
+    const ShaderCodeBufferDesc CBuffer2{288, _countof(CBuffer2Vars), CBuffer2Vars};
 
     BufferDescMappingType BufferMapping;
     BufferMapping.emplace_back("CBuffer1", CBuffer1);
@@ -243,17 +246,23 @@ std::pair<RefCntAutoPtr<IShader>, RefCntAutoPtr<IShader>> CreateTestShaders(cons
 
 TEST(ConstantBufferReflectionTest, HLSL)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().IsD3DDevice() && !pDevice->GetDeviceInfo().IsVulkanDevice())
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    if (DeviceInfo.IsGLDevice() && !DeviceInfo.Features.SeparablePrograms)
         GTEST_SKIP();
 
     auto TestShaders = CreateTestShaders(g_TestShaderSource_HLSL, SHADER_COMPILER_DEFAULT, SHADER_SOURCE_LANGUAGE_HLSL);
-    ASSERT_TRUE(TestShaders.first && TestShaders.second);
+    ASSERT_TRUE(TestShaders.first);
 
     constexpr auto PrintBufferContents = true;
     CheckConstantBufferReflectionHLSL(TestShaders.first, PrintBufferContents);
-    CheckConstantBufferReflectionHLSL(TestShaders.second);
+
+    if (!DeviceInfo.IsGLDevice())
+    {
+        ASSERT_TRUE(TestShaders.second);
+        CheckConstantBufferReflectionHLSL(TestShaders.second);
+    }
 }
 
 TEST(ConstantBufferReflectionTest, HLSL_DXC)
@@ -299,7 +308,7 @@ cbuffer CBuffer
 
     bool4x4 b4x4;
     bool4x2 b4x2;
-    
+
     int4x4 i4x4;
     int4x2 i4x2;
 

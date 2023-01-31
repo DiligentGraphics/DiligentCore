@@ -213,7 +213,8 @@ ShaderResourcesGL::~ShaderResourcesGL()
 static void AddUniformBufferVariable(GLuint                                             glProgram,
                                      GLuint                                             UniformIndex,
                                      const ShaderCodeVariableDesc&                      VarDesc,
-                                     std::vector<std::vector<ShaderCodeVariableDescX>>& UniformVars)
+                                     std::vector<std::vector<ShaderCodeVariableDescX>>& UniformVars,
+                                     SHADER_SOURCE_LANGUAGE                             SourceLang)
 {
     GLint UniformBlockIndex = -1;
     glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_BLOCK_INDEX, &UniformBlockIndex);
@@ -227,6 +228,13 @@ static void AddUniformBufferVariable(GLuint                                     
     auto& BuffVars = UniformVars[UniformBlockIndex];
     BuffVars.emplace_back(VarDesc);
     auto& Var = BuffVars.back();
+
+    if (SourceLang == SHADER_SOURCE_LANGUAGE_HLSL)
+    {
+        if (Var.Class == SHADER_CODE_VARIABLE_CLASS_VECTOR)
+            std::swap(Var.NumColumns, Var.NumRows);
+        Var.SetDefaultTypeName(SourceLang);
+    }
 
     if (Var.Class == SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS || Var.Class == SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS)
     {
@@ -341,7 +349,7 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
             }
 
             Name = Dot + 1;
-            Dot  = strrchr(Name, '.');
+            Dot  = strchr(Name, '.');
         }
 
         std::string NameWithoutBrackets;
@@ -375,13 +383,9 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
     return BuffDesc;
 }
 
-void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           ShaderStages,
-                                     PIPELINE_RESOURCE_FLAGS               SamplerResourceFlag,
-                                     const GLObjectWrappers::GLProgramObj& GLProgram,
-                                     GLContextState&                       State,
-                                     bool                                  LoadUniformBufferReflection)
+void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
 {
-    VERIFY(SamplerResourceFlag == PIPELINE_RESOURCE_FLAG_NONE || SamplerResourceFlag == PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER,
+    VERIFY(Attribs.SamplerResourceFlag == PIPELINE_RESOURCE_FLAG_NONE || Attribs.SamplerResourceFlag == PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER,
            "Only NONE (for GLSL source) and COMBINED_SAMPLER (for HLSL source) are valid sampler resource flags");
 
     // Load uniforms to temporary arrays. We will then pack all variables into a single chunk of memory.
@@ -394,10 +398,11 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
     // Uniform buffer reflections
     std::vector<std::vector<ShaderCodeVariableDescX>> UniformVars;
 
-    VERIFY(GLProgram != 0, "Null GL program");
-    State.SetProgram(GLProgram);
+    VERIFY(Attribs.GLProgram, "Null GL program");
+    Attribs.State.SetProgram(Attribs.GLProgram);
 
-    m_ShaderStages = ShaderStages;
+    GLuint GLProgram = Attribs.GLProgram;
+    m_ShaderStages   = Attribs.ShaderStages;
 
     GLint numActiveUniforms = 0;
     glGetProgramiv(GLProgram, GL_ACTIVE_UNIFORMS, &numActiveUniforms);
@@ -530,15 +535,15 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
                     SHADER_RESOURCE_TYPE_TEXTURE_SRV;
                 const auto ResourceFlags = IsBuffer ?
                     PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER :
-                    SamplerResourceFlag // PIPELINE_RESOURCE_FLAG_NONE for HLSL source or
-                                        // PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER for GLSL source
+                    Attribs.SamplerResourceFlag // PIPELINE_RESOURCE_FLAG_NONE for HLSL source or
+                                                // PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER for GLSL source
                     ;
 
                 RemoveArrayBrackets(Name.data());
 
                 Textures.emplace_back(
                     NamesPool.emplace(Name.data()).first->c_str(),
-                    ShaderStages,
+                    Attribs.ShaderStages,
                     ResourceType,
                     ResourceFlags,
                     static_cast<Uint32>(size),
@@ -599,7 +604,7 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
 
                 Images.emplace_back(
                     NamesPool.emplace(Name.data()).first->c_str(),
-                    ShaderStages,
+                    Attribs.ShaderStages,
                     ResourceType,
                     ResourceFlags,
                     static_cast<Uint32>(size),
@@ -613,13 +618,13 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
 
             default:
                 // Some other uniform type like scalar, matrix etc.
-                if (LoadUniformBufferReflection)
+                if (Attribs.LoadUniformBufferReflection)
                 {
                     auto VarDesc = GLDataTypeToShaderCodeVariableDesc(dataType);
                     if (VarDesc.BasicType != SHADER_CODE_BASIC_TYPE_UNKNOWN)
                     {
                         VarDesc.Name = Name.data();
-                        AddUniformBufferVariable(GLProgram, i, VarDesc, UniformVars);
+                        AddUniformBufferVariable(GLProgram, i, VarDesc, UniformVars, Attribs.SourceLang);
                     }
                 }
                 break;
@@ -678,7 +683,7 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
         {
             UniformBlocks.emplace_back(
                 NamesPool.emplace(Name.data()).first->c_str(),
-                ShaderStages,
+                Attribs.ShaderStages,
                 SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
                 static_cast<Uint32>(ArraySize),
                 UniformBlockIndex //
@@ -730,7 +735,7 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
         {
             StorageBlocks.emplace_back(
                 NamesPool.emplace(Name.data()).first->c_str(),
-                ShaderStages,
+                Attribs.ShaderStages,
                 SHADER_RESOURCE_TYPE_BUFFER_UAV,
                 static_cast<Uint32>(ArraySize),
                 SBIndex //
@@ -739,13 +744,13 @@ void ShaderResourcesGL::LoadUniforms(SHADER_TYPE                           Shade
     }
 #endif
 
-    State.SetProgram(GLObjectWrappers::GLProgramObj::Null());
+    Attribs.State.SetProgram(GLObjectWrappers::GLProgramObj::Null());
 
     AllocateResources(UniformBlocks, Textures, Images, StorageBlocks);
 
     if (!UniformVars.empty())
     {
-        VERIFY_EXPR(LoadUniformBufferReflection);
+        VERIFY_EXPR(Attribs.LoadUniformBufferReflection);
 
         std::vector<ShaderCodeBufferDescX> UBReflections;
         for (const auto& UB : UniformBlocks)

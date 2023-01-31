@@ -186,11 +186,15 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         auto& GLState = pImmediateCtx->GetContextState();
 
         auto pResources = std::make_unique<ShaderResourcesGL>();
-        pResources->LoadUniforms(m_Desc.ShaderType,
-                                 m_SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ?
-                                     PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with other backends
-                                     PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, // Reflect samplers as combined
-                                 Program, GLState, ShaderCI.LoadConstantBufferReflection);
+
+        pResources->LoadUniforms({m_Desc.ShaderType,
+                                  m_SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ?
+                                      PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with other backends
+                                      PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, // Reflect samplers as combined
+                                  Program,
+                                  GLState,
+                                  ShaderCI.LoadConstantBufferReflection,
+                                  m_SourceLanguage});
         m_pShaderResources.reset(pResources.release());
     }
 }
