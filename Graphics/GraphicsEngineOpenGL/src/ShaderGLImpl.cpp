@@ -190,7 +190,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
                                  m_SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ?
                                      PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with other backends
                                      PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, // Reflect samplers as combined
-                                 Program, GLState);
+                                 Program, GLState, ShaderCI.LoadConstantBufferReflection);
         m_pShaderResources.reset(pResources.release());
     }
 }
@@ -293,8 +293,14 @@ const ShaderCodeBufferDesc* ShaderGLImpl::GetConstantBufferDesc(Uint32 Index) co
 {
     if (m_pDevice->GetFeatures().SeparablePrograms)
     {
-        DEV_CHECK_ERR(Index < GetResourceCount(), "Index is out of range");
-        return nullptr;
+        if (Index >= GetResourceCount())
+        {
+            UNEXPECTED("Constant buffer index (", Index, ") is out of range");
+            return nullptr;
+        }
+
+        // Uniform buffers always go first in the list of resources
+        return m_pShaderResources->GetUniformBufferDesc(Index);
     }
     else
     {

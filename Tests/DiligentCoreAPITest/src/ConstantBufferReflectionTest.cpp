@@ -225,15 +225,18 @@ std::pair<RefCntAutoPtr<IShader>, RefCntAutoPtr<IShader>> CreateTestShaders(cons
         return {};
 
     // Create shader from byte code
-    Uint64 ByteCodeSize = 0;
-    pShaderSrc->GetBytecode(&ShaderCI.ByteCode, ByteCodeSize);
-    ShaderCI.ByteCodeSize = static_cast<size_t>(ByteCodeSize);
-    ShaderCI.Source       = nullptr;
-
     RefCntAutoPtr<IShader> pShaderBC;
-    pDevice->CreateShader(ShaderCI, &pShaderBC);
-    if (!pShaderBC)
-        return {};
+    if (!pDevice->GetDeviceInfo().IsGLDevice())
+    {
+        Uint64 ByteCodeSize = 0;
+        pShaderSrc->GetBytecode(&ShaderCI.ByteCode, ByteCodeSize);
+        ShaderCI.ByteCodeSize = static_cast<size_t>(ByteCodeSize);
+        ShaderCI.Source       = nullptr;
+
+        pDevice->CreateShader(ShaderCI, &pShaderBC);
+        if (!pShaderBC)
+            return {};
+    }
 
     return {pShaderSrc, pShaderBC};
 }
@@ -421,11 +424,20 @@ layout(std140) uniform UBuffer
     mat4x4 am4x4[3];
 };
 
+#ifndef GL_ES
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+#endif
+
 void main()
 {
     gl_Position = f4;
     gl_Position += s1.f4;
     gl_Position += s2.s1.f4;
+    gl_Position += af4[0] + af4[1];
+    gl_Position += am4x4[0][0] + am4x4[2][0];
 
     gl_Position += textureLod(g_Tex2D, vec2(0.5,0.5), 0.0);
     gl_Position += g_StorageBuff.data;
@@ -434,38 +446,47 @@ void main()
 
 void CheckConstantBufferReflectionGLSL(IShader* pShader, bool PrintBufferContents = false)
 {
+    auto*      pEnv = GPUTestingEnvironment::GetInstance();
+    const auto IsGL = pEnv->GetDevice()->GetDeviceInfo().IsGLDevice();
+
     static constexpr ShaderCodeVariableDesc Struct1[] =
         {
             {"f4", "vec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 0},
             {"i4", "ivec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 4, 1, 16},
         };
 
-    static constexpr ShaderCodeVariableDesc Struct2[] =
+    static const ShaderCodeVariableDesc Struct2[] =
         {
             {"f4", "vec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 0},
-            {"s1", "Struct1", _countof(Struct1), Struct1, 16},
+            {"s1", !IsGL ? "Struct1" : "", _countof(Struct1), Struct1, 16},
             {"u4", "uvec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 4, 1, 48},
         };
 
-    static constexpr ShaderCodeVariableDesc UBufferVars[] =
+    const auto* _bool_    = IsGL ? "bool" : "uint";
+    const auto* _bool2_   = IsGL ? "bvec2" : "uvec2";
+    const auto* _bool4_   = IsGL ? "bvec4" : "uvec4";
+    const auto  BOOL_TYPE = IsGL ? SHADER_CODE_BASIC_TYPE_BOOL : SHADER_CODE_BASIC_TYPE_UINT;
+
+
+    static const ShaderCodeVariableDesc UBufferVars[] =
         {
             {"f", "float", SHADER_CODE_BASIC_TYPE_FLOAT, 0},
             {"u", "uint", SHADER_CODE_BASIC_TYPE_UINT, 4},
             {"i", "int", SHADER_CODE_BASIC_TYPE_INT, 8},
-            {"b", "uint", SHADER_CODE_BASIC_TYPE_UINT, 12},
+            {"b", _bool_, BOOL_TYPE, 12},
 
             {"f4", "vec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 16},
             {"u4", "uvec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 4, 1, 32},
             {"i4", "ivec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 4, 1, 48},
-            {"b4", "uvec4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 4, 1, 64},
+            {"b4", _bool4_, SHADER_CODE_VARIABLE_CLASS_VECTOR, BOOL_TYPE, 4, 1, 64},
 
             {"f2", "vec2", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 2, 1, 80},
             {"u2", "uvec2", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 2, 1, 88},
             {"i2", "ivec2", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 2, 1, 96},
-            {"b2", "uvec2", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 2, 1, 104},
+            {"b2", _bool2_, SHADER_CODE_VARIABLE_CLASS_VECTOR, BOOL_TYPE, 2, 1, 104},
 
-            {"s1", "Struct1", _countof(Struct1), Struct1, 112},
-            {"s2", "Struct2", _countof(Struct2), Struct2, 144},
+            {"s1", !IsGL ? "Struct1" : "", _countof(Struct1), Struct1, 112},
+            {"s2", !IsGL ? "Struct2" : "", _countof(Struct2), Struct2, 144},
 
             {"m2x4", "mat2x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 2, 208},
             {"m4x4", "mat4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 240},
@@ -483,17 +504,23 @@ void CheckConstantBufferReflectionGLSL(IShader* pShader, bool PrintBufferContent
 
 TEST(ConstantBufferReflectionTest, GLSL)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceInfo().IsVulkanDevice())
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    if (!(DeviceInfo.IsVulkanDevice() || (DeviceInfo.IsGLDevice() && DeviceInfo.Features.SeparablePrograms)))
         GTEST_SKIP();
 
     auto TestShaders = CreateTestShaders(g_TestShaderSourceGLSL, SHADER_COMPILER_DEFAULT, SHADER_SOURCE_LANGUAGE_GLSL);
-    ASSERT_TRUE(TestShaders.first && TestShaders.second);
 
+    ASSERT_TRUE(TestShaders.first);
     constexpr auto PrintBufferContents = true;
     CheckConstantBufferReflectionGLSL(TestShaders.first, PrintBufferContents);
-    CheckConstantBufferReflectionGLSL(TestShaders.second);
+
+    if (!DeviceInfo.IsGLDevice())
+    {
+        ASSERT_TRUE(TestShaders.second);
+        CheckConstantBufferReflectionGLSL(TestShaders.second);
+    }
 }
 
 } // namespace

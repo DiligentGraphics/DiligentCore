@@ -137,12 +137,54 @@ std::string GetShaderCodeTypeName(SHADER_CODE_BASIC_TYPE     BasicType,
 
 struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
 {
+    ShaderCodeVariableDescX() noexcept {}
+
     ShaderCodeVariableDescX(const ShaderCodeVariableDesc& Member) noexcept :
-        ShaderCodeVariableDesc{Member}
-    {}
+        ShaderCodeVariableDesc{Member},
+        // clang-format off
+        NameCopy    {Member.Name     != nullptr ? Member.Name     : ""},
+        TypeNameCopy{Member.TypeName != nullptr ? Member.TypeName : ""}
+    // clang-format on
+    {
+        Name     = NameCopy.c_str();
+        TypeName = TypeNameCopy.c_str();
+
+        Members.reserve(Member.NumMembers);
+        for (Uint32 i = 0; i < Member.NumMembers; ++i)
+            AddMember(Member.pMembers[i]);
+    }
 
     ShaderCodeVariableDescX(const ShaderCodeVariableDescX&) = delete;
-    ShaderCodeVariableDescX(ShaderCodeVariableDescX&&)      = default;
+    ShaderCodeVariableDescX& operator=(const ShaderCodeVariableDescX&) = delete;
+
+    ShaderCodeVariableDescX(ShaderCodeVariableDescX&& Other) noexcept :
+        ShaderCodeVariableDesc{Other},
+        // clang-format off
+        NameCopy    {std::move(Other.NameCopy)},
+        TypeNameCopy{std::move(Other.TypeNameCopy)},
+        Members     {std::move(Other.Members)}
+    // clang-format on
+    {
+        Name     = NameCopy.c_str();
+        TypeName = TypeNameCopy.c_str();
+        pMembers = Members.data();
+    }
+
+
+    ShaderCodeVariableDescX& operator=(ShaderCodeVariableDescX&& RHS)
+    {
+        static_cast<ShaderCodeVariableDesc&>(*this) = RHS;
+
+        Members      = std::move(RHS.Members);
+        NameCopy     = std::move(RHS.NameCopy);
+        TypeNameCopy = std::move(RHS.TypeNameCopy);
+
+        Name     = NameCopy.c_str();
+        TypeName = TypeNameCopy.c_str();
+        pMembers = Members.data();
+
+        return *this;
+    }
 
     size_t AddMember(const ShaderCodeVariableDesc& Member)
     {
@@ -152,17 +194,53 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
         return idx;
     }
 
+    size_t AddMember(ShaderCodeVariableDescX&& Member)
+    {
+        const auto idx = Members.size();
+        Members.emplace_back(std::move(Member));
+        NumMembers = static_cast<Uint32>(Members.size());
+        return idx;
+    }
+
+    void SetName(std::string NewName)
+    {
+        NameCopy = std::move(NewName);
+        Name     = NameCopy.c_str();
+    }
+
+    void SetTypeName(std::string NewTypeName)
+    {
+        TypeNameCopy = std::move(NewTypeName);
+        TypeName     = TypeNameCopy.c_str();
+    }
+
     void SetDefaultTypeName(SHADER_SOURCE_LANGUAGE Language)
     {
-        auto DefaultTypeName = GetShaderCodeTypeName(BasicType, Class, NumRows, NumColumns, Language);
-        TypeNameCopy         = std::make_unique<char[]>(DefaultTypeName.length() + 1);
-        memcpy(TypeNameCopy.get(), DefaultTypeName.c_str(), DefaultTypeName.length() + 1);
-        TypeName = TypeNameCopy.get();
+        SetTypeName(GetShaderCodeTypeName(BasicType, Class, NumRows, NumColumns, Language));
     }
 
     ShaderCodeVariableDescX& GetMember(size_t idx)
     {
         return Members[idx];
+    }
+
+    template <typename HandlerType>
+    void ProcessMembers(HandlerType&& Handler)
+    {
+        Handler(Members);
+        pMembers   = Members.data();
+        NumMembers = StaticCast<Uint32>(Members.size());
+    }
+
+    ShaderCodeVariableDescX* FindMember(const char* MemberName)
+    {
+        VERIFY_EXPR(MemberName != nullptr);
+        for (auto& Member : Members)
+        {
+            if (strcmp(Member.Name, MemberName) == 0)
+                return &Member;
+        }
+        return nullptr;
     }
 
     static void ReserveSpaceForMembers(FixedLinearAllocator& Allocator, const std::vector<ShaderCodeVariableDescX>& Members)
@@ -201,9 +279,11 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
     }
 
 private:
+    std::string NameCopy;
+    std::string TypeNameCopy;
+
     std::vector<ShaderCodeVariableDescX> Members;
-    // Use unique ptr as the address of std::string may change after move
-    std::unique_ptr<char[]> TypeNameCopy;
+    // When adding new members, don't forget to update move ctor/assignment
 };
 
 struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
@@ -226,9 +306,24 @@ struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
         return idx;
     }
 
+    size_t AddVariable(ShaderCodeVariableDescX&& Var)
+    {
+        const auto idx = Variables.size();
+        Variables.emplace_back(std::move(Var));
+        NumVariables = static_cast<Uint32>(Variables.size());
+        return idx;
+    }
+
     ShaderCodeVariableDescX& GetVariable(size_t idx)
     {
         return Variables[idx];
+    }
+
+    void AssignVariables(std::vector<ShaderCodeVariableDescX>&& _Variables)
+    {
+        Variables    = std::move(_Variables);
+        pVariables   = Variables.data();
+        NumVariables = static_cast<Uint32>(Variables.size());
     }
 
     void ReserveSpace(FixedLinearAllocator& Allocator) const

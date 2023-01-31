@@ -315,9 +315,9 @@ void LoadShaderCodeVariableDesc(const diligent_spirv_cross::Compiler& Compiler, 
             std::swap(TypeDesc.NumRows, TypeDesc.NumColumns);
     }
 
-    TypeDesc.TypeName = Compiler.get_name(TypeID).c_str();
+    TypeDesc.SetTypeName(Compiler.get_name(TypeID));
     if (TypeDesc.TypeName == nullptr || TypeDesc.TypeName[0] == '\0')
-        TypeDesc.TypeName = Compiler.get_name(SpvType.parent_type).c_str();
+        TypeDesc.SetTypeName(Compiler.get_name(SpvType.parent_type));
     if (TypeDesc.TypeName == nullptr || TypeDesc.TypeName[0] == '\0')
         TypeDesc.SetDefaultTypeName(IsHLSLSource ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL);
 

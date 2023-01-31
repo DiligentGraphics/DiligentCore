@@ -78,11 +78,11 @@ void LoadShaderCodeVariableDesc(TD3DShaderReflectionType* pd3dReflecionType, Sha
         TypeDesc.NumColumns = StaticCast<decltype(TypeDesc.NumRows)>(d3dTypeDesc.Columns);
     }
 
-    TypeDesc.TypeName = d3dTypeDesc.Name;
+    TypeDesc.SetTypeName(d3dTypeDesc.Name);
     if (TypeDesc.TypeName == nullptr)
         TypeDesc.SetDefaultTypeName(SHADER_SOURCE_LANGUAGE_HLSL);
     if (d3dTypeDesc.Type == D3D_SVT_UINT && strcmp(TypeDesc.TypeName, "dword") == 0)
-        TypeDesc.TypeName = "uint";
+        TypeDesc.SetTypeName("uint");
 
     // Number of elements in an array; otherwise 0.
     TypeDesc.ArraySize = d3dTypeDesc.Elements;
@@ -183,7 +183,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
         if (BindingDesc.BindPoint == UINT32_MAX)
             BindingDesc.BindPoint = D3DShaderResourceAttribs::InvalidBindPoint;
 
-        std::string Name(BindingDesc.Name);
+        std::string Name{BindingDesc.Name};
 
         SkipCount = 1;
 
