@@ -1393,29 +1393,29 @@ static void PrintShaderCodeVariables(std::stringstream& ss, size_t LevelIdent, s
     if (pVars == nullptr || NumVars == 0)
         return;
 
-    size_t MaxNameLen      = 0;
-    size_t MaxTypeLen      = 0;
-    size_t MaxArraySizeLen = 0;
-    size_t MaxOffsetLen    = 0;
-    size_t MaxClassLen     = 0;
-    size_t MaxBasicTypeLen = 0;
+    int MaxNameLen      = 0;
+    int MaxTypeLen      = 0;
+    int MaxArraySizeLen = 0;
+    int MaxOffsetLen    = 0;
+    int MaxClassLen     = 0;
+    int MaxBasicTypeLen = 0;
     for (Uint32 i = 0; i < NumVars; ++i)
     {
         const auto& Var = pVars[i];
         if (Var.Name != nullptr)
-            MaxNameLen = std::max(MaxNameLen, strlen(Var.Name));
+            MaxNameLen = std::max(MaxNameLen, static_cast<int>(strlen(Var.Name)));
         if (Var.TypeName != nullptr)
-            MaxTypeLen = std::max(MaxTypeLen, strlen(Var.TypeName));
-        MaxArraySizeLen = std::max(MaxArraySizeLen, GetPrintWidth(Var.ArraySize));
-        MaxOffsetLen    = std::max(MaxOffsetLen, GetPrintWidth(Var.Offset));
-        MaxClassLen     = std::max(MaxClassLen, strlen(GetShaderCodeVariableClassString(Var.Class)));
-        MaxBasicTypeLen = std::max(MaxBasicTypeLen, strlen(GetShaderCodeBasicTypeString(Var.BasicType)));
+            MaxTypeLen = std::max(MaxTypeLen, static_cast<int>(strlen(Var.TypeName)));
+        MaxArraySizeLen = std::max(MaxArraySizeLen, static_cast<int>(GetPrintWidth(Var.ArraySize)));
+        MaxOffsetLen    = std::max(MaxOffsetLen, static_cast<int>(GetPrintWidth(Var.Offset)));
+        MaxClassLen     = std::max(MaxClassLen, static_cast<int>(strlen(GetShaderCodeVariableClassString(Var.Class))));
+        MaxBasicTypeLen = std::max(MaxBasicTypeLen, static_cast<int>(strlen(GetShaderCodeBasicTypeString(Var.BasicType))));
     }
 
     for (Uint32 i = 0; i < NumVars; ++i)
     {
         const auto& Var = pVars[i];
-        ss << std::setw(LevelIdent + MaxNameLen) << (Var.Name ? Var.Name : "?")
+        ss << std::setw(static_cast<int>(LevelIdent) + MaxNameLen) << (Var.Name ? Var.Name : "?")
            << ": " << std::setw(MaxTypeLen) << (Var.TypeName ? Var.TypeName : "")
            << ' ' << std::setw(MaxClassLen) << GetShaderCodeVariableClassString(Var.Class)
            << ' ' << std::setw(MaxBasicTypeLen) << GetShaderCodeBasicTypeString(Var.BasicType)
@@ -1430,8 +1430,8 @@ static void PrintShaderCodeVariables(std::stringstream& ss, size_t LevelIdent, s
 String GetShaderCodeBufferDescString(const ShaderCodeBufferDesc& Desc, size_t GlobalIdent, size_t MemberIdent)
 {
     std::stringstream ss;
-    ss << std::setw(GlobalIdent) << ' ' << "Size: " << Desc.Size << std::endl
-       << std::setw(GlobalIdent) << ' ' << "Vars: " << Desc.NumVariables << std::endl;
+    ss << std::setw(static_cast<int>(GlobalIdent)) << ' ' << "Size: " << Desc.Size << std::endl
+       << std::setw(static_cast<int>(GlobalIdent)) << ' ' << "Vars: " << Desc.NumVariables << std::endl;
     PrintShaderCodeVariables(ss, GlobalIdent + MemberIdent, MemberIdent, Desc.pVariables, Desc.NumVariables);
 
     return ss.str();
