@@ -150,12 +150,13 @@ void CheckShaderConstantBuffers(IShader* pShader, bool PrintBufferContents, cons
 
 void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContents = false)
 {
-    auto*      pEnv = GPUTestingEnvironment::GetInstance();
-    const auto IsGL = pEnv->GetDevice()->GetDeviceInfo().IsGLDevice();
-    const auto IsVK = pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice();
+    auto*      pEnv  = GPUTestingEnvironment::GetInstance();
+    const auto IsGL  = pEnv->GetDevice()->GetDeviceInfo().IsGLDevice();
+    const auto IsVK  = pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice();
+    const auto IsMtl = pEnv->GetDevice()->GetDeviceInfo().IsMetalDevice();
 
-    const auto* _bool_    = IsVK ? "uint" : "bool";
-    const auto  BOOL_TYPE = IsVK ? SHADER_CODE_BASIC_TYPE_UINT : SHADER_CODE_BASIC_TYPE_BOOL;
+    const auto* _bool_    = IsVK || IsMtl ? "uint" : "bool";
+    const auto  BOOL_TYPE = IsVK || IsMtl ? SHADER_CODE_BASIC_TYPE_UINT : SHADER_CODE_BASIC_TYPE_BOOL;
     const auto* _Struct1_ = !IsGL ? "Struct1" : "";
     const auto* _Struct2_ = !IsGL ? "Struct2" : "";
     const auto* _Struct3_ = !IsGL ? "Struct3" : "";
@@ -236,7 +237,7 @@ std::pair<RefCntAutoPtr<IShader>, RefCntAutoPtr<IShader>> CreateTestShaders(cons
 
     // Create shader from byte code
     RefCntAutoPtr<IShader> pShaderBC;
-    if (!pDevice->GetDeviceInfo().IsGLDevice())
+    if (pDevice->GetDeviceInfo().IsD3DDevice() || pDevice->GetDeviceInfo().IsVulkanDevice())
     {
         Uint64 ByteCodeSize = 0;
         pShaderSrc->GetBytecode(&ShaderCI.ByteCode, ByteCodeSize);
@@ -265,7 +266,7 @@ TEST(ConstantBufferReflectionTest, HLSL)
     constexpr auto PrintBufferContents = true;
     CheckConstantBufferReflectionHLSL(TestShaders.first, PrintBufferContents);
 
-    if (!DeviceInfo.IsGLDevice())
+    if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsVulkanDevice())
     {
         ASSERT_TRUE(TestShaders.second);
         CheckConstantBufferReflectionHLSL(TestShaders.second);
@@ -483,7 +484,6 @@ void CheckConstantBufferReflectionGLSL(IShader* pShader, bool PrintBufferContent
     const auto* _bool4_   = IsGL ? "bvec4" : "uvec4";
     const auto  BOOL_TYPE = IsGL ? SHADER_CODE_BASIC_TYPE_BOOL : SHADER_CODE_BASIC_TYPE_UINT;
 
-
     static const ShaderCodeVariableDesc UBufferVars[] =
         {
             {"f", "float", SHADER_CODE_BASIC_TYPE_FLOAT, 0},
@@ -523,7 +523,7 @@ TEST(ConstantBufferReflectionTest, GLSL)
     auto*       pEnv       = GPUTestingEnvironment::GetInstance();
     auto*       pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
-    if (!(DeviceInfo.IsVulkanDevice() || (DeviceInfo.IsGLDevice() && DeviceInfo.Features.SeparablePrograms)))
+    if (!(DeviceInfo.IsVulkanDevice() || DeviceInfo.IsMetalDevice() || (DeviceInfo.IsGLDevice() && DeviceInfo.Features.SeparablePrograms)))
         GTEST_SKIP();
 
     auto TestShaders = CreateTestShaders(g_TestShaderSourceGLSL, SHADER_COMPILER_DEFAULT, SHADER_SOURCE_LANGUAGE_GLSL);
@@ -532,7 +532,7 @@ TEST(ConstantBufferReflectionTest, GLSL)
     constexpr auto PrintBufferContents = true;
     CheckConstantBufferReflectionGLSL(TestShaders.first, PrintBufferContents);
 
-    if (!DeviceInfo.IsGLDevice())
+    if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsVulkanDevice())
     {
         ASSERT_TRUE(TestShaders.second);
         CheckConstantBufferReflectionGLSL(TestShaders.second);

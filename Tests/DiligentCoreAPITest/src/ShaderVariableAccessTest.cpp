@@ -253,11 +253,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         ASSERT_NE(pVS, nullptr);
         TestShaderCInterface(pVS);
 
-        if (!DeviceInfo.IsMetalDevice())
-        {
-            // Resource queries from shader are not supported in Metal
-            Diligent::Testing::PrintShaderResources(pVS);
-        }
+        Diligent::Testing::PrintShaderResources(pVS);
     }
 
     // clang-format off
@@ -333,11 +329,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
 
-        if (!DeviceInfo.IsMetalDevice())
-        {
-            // Resource queries from shader are not supported in Metal
-            Diligent::Testing::PrintShaderResources(pPS);
-        }
+        Diligent::Testing::PrintShaderResources(pPS);
     }
 
 
