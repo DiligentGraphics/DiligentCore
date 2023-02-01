@@ -275,6 +275,7 @@ static void AddUniformBufferVariable(GLuint                                     
     }
 
     {
+        // Offset from the beginning of the uniform block
         GLint Offset = -1;
         glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_OFFSET, &Offset);
         CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_OFFSET parameter");
@@ -314,6 +315,7 @@ static void ProcessUBVariable(ShaderCodeVariableDescX& Var, Uint32 BaseOffset)
         ProcessUBVariable(Member, Var.Offset);
     }
     VERIFY_EXPR(Var.Offset >= BaseOffset);
+    // Convert global offset to relative
     Var.Offset -= BaseOffset;
 }
 
@@ -346,24 +348,38 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
             // NameWithoutBrackets = "s2"
 
             // Searh for the variable with the same name
-            if (auto* pArray = pLevel->FindMember(NameWithoutBrackets.c_str()))
+            if (auto* pVar = pLevel->FindMember(NameWithoutBrackets.c_str()))
             {
-                // Variable already exists - we are processing an element of an existing array:
+                // Variable already exists - we are processing an element of an existing array or struct:
                 //
-                //      Level
+                // Existing struct:
+                //
+                //      Level         Offset
+                //     0  1  2
+                //
+                //    s2.s1.f4          16
+                //    s2.s1.u4          32
+                //    s2.f4             48
+                //
+                //
+                // Existing array:
+                //
+                //      Level         Offset
                 //    0    1   2
                 //
-                //  s2[0].s1.f4[2]
-                //  s2[0].s1.u4
-                //  s2[1].s1.f4[2] <- s2 already exists in level 0
-                //
+                //  s2[0].s1.f4[0]      16      Note that s2[0].s1.f4[1] is not enumerated
+                //  s2[0].s1.u4         48
+                //  s2[0].f4            64
+                //  s2[1].s1.f4[0]      80
+                //  s2[1].s1.u4        112
+                //  s2[1].f4           128
 
                 // Update the array size.
-                pArray->ArraySize = std::max(pArray->ArraySize, StaticCast<Uint32>(ArrayInd + 1));
-                // The struct offset should be the minimal offset of its members,
-                // which should always be the first variable.
-                VERIFY_EXPR(Var.Offset >= pArray->Offset);
-                pLevel = pArray;
+                pVar->ArraySize = std::max(pVar->ArraySize, StaticCast<Uint32>(ArrayInd + 1));
+                // The struct offset is the minimal offset of its members,
+                // which should always be the first variable in the list.
+                VERIFY_EXPR(Var.Offset >= pVar->Offset);
+                pLevel = pVar;
             }
             else
             {
@@ -404,6 +420,9 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
         if (auto* pArray = pLevel->FindMember(NameWithoutBrackets.c_str()))
         {
             // Array already exists
+            // s2[0].s1.f4[0]
+            // s2[1].s1.f4[0]
+            //          ^
             pArray->ArraySize = std::max(pArray->ArraySize, StaticCast<Uint32>(ArrayInd + 1));
             VERIFY_EXPR(Var.Offset >= pArray->Offset);
         }
@@ -412,6 +431,19 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
             if (NameWithoutBrackets != Var.Name)
                 Var.SetName(NameWithoutBrackets);
 
+            // Note that individual members of innermost arrays are not enumrated, e.g. for
+            // the following struct
+            //
+            //  struct S2
+            //  {
+            //      struct S1
+            //      {
+            //          vec4 f4[2]
+            //      }s1;
+            //  }s2;
+            //
+            // only a single uniform is enumerated: s2.s1.f4[0]. The array size will be
+            // determined by AddUniformBufferVariable() from the value of GL_UNIFORM_SIZE parameter.
             Var.ArraySize = std::max(Var.ArraySize, StaticCast<Uint32>(ArrayInd + 1));
             pLevel->AddMember(std::move(Var));
         }
@@ -673,7 +705,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
                     auto VarDesc = GLDataTypeToShaderCodeVariableDesc(dataType);
                     if (VarDesc.BasicType != SHADER_CODE_BASIC_TYPE_UNKNOWN)
                     {
-                        // All uniforms are reported as unrolled variables, e.g. s2.s1[0].f4[1]
+                        // All uniforms are reported as unrolled variables, e.g. s2.s1[1].f4[0]
                         VarDesc.Name = Name.data();
                         AddUniformBufferVariable(GLProgram, i, VarDesc, UniformVars, Attribs.SourceLang);
                     }

@@ -191,6 +191,7 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
         const auto idx = Members.size();
         Members.emplace_back(Member);
         NumMembers = static_cast<Uint32>(Members.size());
+        pMembers   = Members.data();
         return idx;
     }
 
@@ -199,6 +200,7 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
         const auto idx = Members.size();
         Members.emplace_back(std::move(Member));
         NumMembers = static_cast<Uint32>(Members.size());
+        pMembers   = Members.data();
         return idx;
     }
 
@@ -303,6 +305,7 @@ struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
         const auto idx = Variables.size();
         Variables.emplace_back(Var);
         NumVariables = static_cast<Uint32>(Variables.size());
+        pVariables   = Variables.data();
         return idx;
     }
 
@@ -311,6 +314,7 @@ struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
         const auto idx = Variables.size();
         Variables.emplace_back(std::move(Var));
         NumVariables = static_cast<Uint32>(Variables.size());
+        pVariables   = Variables.data();
         return idx;
     }
 
