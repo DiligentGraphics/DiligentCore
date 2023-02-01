@@ -46,7 +46,7 @@ Buffer<float4> g_Buffer;
 
 struct Struct1
 {
-    float4 f4;
+    float4 f4[2];
     uint4  u4;
 };
 
@@ -70,7 +70,7 @@ cbuffer CBuffer1
     float f;
     uint  u;
     int   i;
-    uint  u2;
+    bool  b;
 
     float4 f4;
 
@@ -96,14 +96,14 @@ cbuffer CBuffer2
 void main(out float4 pos : SV_POSITION)
 {
     pos = f4;
-    pos += s1.f4;
-    pos += s2.s1.f4;
-    pos += s3.s1[1].f4;
-    pos += s3.s2.s1.f4;
+    pos += s1.f4[1];
+    pos += s2.s1.f4[1];
+    pos += s3.s1[1].f4[1];
+    pos += s3.s2.s1.f4[1];
     pos += g_Tex1.SampleLevel(g_Tex1_sampler, float2(0.5, 0.5), 0.0);
     pos += g_Tex2.SampleLevel(g_Tex2_sampler, float2(0.5, 0.5), 0.0);
     pos += g_Buffer.Load(0);
-    pos += g_StructBuff[0].f4;
+    pos += g_StructBuff[0].f4[1];
 }
 )";
 
@@ -152,24 +152,31 @@ void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContent
 {
     auto*      pEnv = GPUTestingEnvironment::GetInstance();
     const auto IsGL = pEnv->GetDevice()->GetDeviceInfo().IsGLDevice();
+    const auto IsVK = pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice();
+
+    const auto* _bool_    = IsVK ? "uint" : "bool";
+    const auto  BOOL_TYPE = IsVK ? SHADER_CODE_BASIC_TYPE_UINT : SHADER_CODE_BASIC_TYPE_BOOL;
+    const auto* _Struct1_ = !IsGL ? "Struct1" : "";
+    const auto* _Struct2_ = !IsGL ? "Struct2" : "";
+    const auto* _Struct3_ = !IsGL ? "Struct3" : "";
 
     static constexpr ShaderCodeVariableDesc Struct1[] =
         {
-            {"f4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 0},
-            {"u4", "uint4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 1, 4, 16},
+            {"f4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 0, 2},
+            {"u4", "uint4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 1, 4, 32},
         };
 
     const ShaderCodeVariableDesc Struct2[] =
         {
             {"u4", "uint4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 1, 4, 0},
-            {"s1", !IsGL ? "Struct1" : "", _countof(Struct1), Struct1, 16},
+            {"s1", _Struct1_, _countof(Struct1), Struct1, 16},
         };
 
     const ShaderCodeVariableDesc Struct3[] =
         {
-            {"s1", !IsGL ? "Struct1" : "", _countof(Struct1), Struct1, 0, 2},
-            {"i4", "int4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 1, 4, 64},
-            {"s2", !IsGL ? "Struct2" : "", _countof(Struct2), Struct2, 80},
+            {"s1", _Struct1_, _countof(Struct1), Struct1, 0, 2},
+            {"i4", "int4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 1, 4, 96},
+            {"s2", _Struct2_, _countof(Struct2), Struct2, 112},
         };
 
     const ShaderCodeVariableDesc CBuffer1Vars[] =
@@ -177,31 +184,31 @@ void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContent
             {"f", "float", SHADER_CODE_BASIC_TYPE_FLOAT, 0},
             {"u", "uint", SHADER_CODE_BASIC_TYPE_UINT, 4},
             {"i", "int", SHADER_CODE_BASIC_TYPE_INT, 8},
-            {"u2", "uint", SHADER_CODE_BASIC_TYPE_UINT, 12},
+            {"b", _bool_, BOOL_TYPE, 12},
 
             {"f4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 16},
             {"f4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 32},
             {"f4x2", "float4x2", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 2, 96},
 
-            {"s1", !IsGL ? "Struct1" : "", _countof(Struct1), Struct1, 128},
+            {"s1", _Struct1_, _countof(Struct1), Struct1, 128},
 
-            {"af4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 160, 2},
-            {"af4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 192, 4},
+            {"af4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 176, 2},
+            {"af4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 208, 4},
         };
 
-    const ShaderCodeBufferDesc CBuffer1{448, _countof(CBuffer1Vars), CBuffer1Vars};
+    const ShaderCodeBufferDesc CBuffer1{464, _countof(CBuffer1Vars), CBuffer1Vars};
 
     const ShaderCodeVariableDesc CBuffer2Vars[] =
         {
             {"u4", "uint4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 1, 4, 0},
             {"i4", "int4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 1, 4, 16},
             {"f4_2", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 32},
-            {"s2", !IsGL ? "Struct2" : "", _countof(Struct2), Struct2, 48},
-            {"f4x4_2", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 96},
-            {"s3", !IsGL ? "Struct3" : "", _countof(Struct3), Struct3, 160},
+            {"s2", _Struct2_, _countof(Struct2), Struct2, 48},
+            {"f4x4_2", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 112},
+            {"s3", _Struct3_, _countof(Struct3), Struct3, 176},
         };
 
-    const ShaderCodeBufferDesc CBuffer2{288, _countof(CBuffer2Vars), CBuffer2Vars};
+    const ShaderCodeBufferDesc CBuffer2{352, _countof(CBuffer2Vars), CBuffer2Vars};
 
     BufferDescMappingType BufferMapping;
     BufferMapping.emplace_back("CBuffer1", CBuffer1);

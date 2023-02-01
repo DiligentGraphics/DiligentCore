@@ -218,11 +218,11 @@ static void AddUniformBufferVariable(GLuint                                     
 {
     GLint UniformBlockIndex = -1;
     glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_BLOCK_INDEX, &UniformBlockIndex);
-    CHECK_GL_ERROR("Failed to get the active uniform block index");
+    CHECK_GL_ERROR("Failed to get the uniform block index for uniform ", UniformIndex);
     if (UniformBlockIndex < 0)
         return;
 
-    if (UniformBlockIndex >= StaticCast<GLint>(UniformVars.size()))
+    if (static_cast<size_t>(UniformBlockIndex) >= UniformVars.size())
         UniformVars.resize(static_cast<size_t>(UniformBlockIndex) + 1);
 
     auto& BuffVars = UniformVars[UniformBlockIndex];
@@ -232,7 +232,15 @@ static void AddUniformBufferVariable(GLuint                                     
     if (SourceLang == SHADER_SOURCE_LANGUAGE_HLSL)
     {
         if (Var.Class == SHADER_CODE_VARIABLE_CLASS_VECTOR)
+        {
+            // OpenGL uses column-vectors, while HLSL uses row-vectors, so
+            // we need to swap the number of columns and rows.
             std::swap(Var.NumColumns, Var.NumRows);
+
+            // Note that we do not need to swap column and rows for matrix types
+            // as the HLSL->GLSL converter translates the types (e.g. float4x2 -> mat2x4).
+        }
+
         Var.SetDefaultTypeName(SourceLang);
     }
 
@@ -240,7 +248,7 @@ static void AddUniformBufferVariable(GLuint                                     
     {
         GLint IsRowMajor = -1;
         glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_IS_ROW_MAJOR, &IsRowMajor);
-        CHECK_GL_ERROR("Failed to get the value for GL_UNIFORM_IS_ROW_MAJOR parameter");
+        CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_IS_ROW_MAJOR parameter");
         if (IsRowMajor >= 0)
         {
             Var.Class = IsRowMajor ?
@@ -254,13 +262,13 @@ static void AddUniformBufferVariable(GLuint                                     
         // The byte stride for elements of the array, for uniforms in a uniform block.
         // For non-array uniforms in a block, this value is 0. For uniforms not in a block, the value will be -1.
         glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_ARRAY_STRIDE, &ArrayStride);
-        CHECK_GL_ERROR("Failed to get the value for GL_UNIFORM_ARRAY_STRIDE parameter");
+        CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_ARRAY_STRIDE parameter");
         if (ArrayStride > 0)
         {
             GLint ArraySize = -1;
             // Retrieves the size of the uniform. For arrays, this is the length of the array. For non-arrays, this is 1.
             glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_SIZE, &ArraySize);
-            CHECK_GL_ERROR("Failed to get the value for GL_UNIFORM_SIZE parameter");
+            CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_SIZE parameter");
             if (ArraySize > 0)
                 Var.ArraySize = StaticCast<decltype(Var.ArraySize)>(ArraySize);
         }
@@ -269,7 +277,7 @@ static void AddUniformBufferVariable(GLuint                                     
     {
         GLint Offset = -1;
         glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_OFFSET, &Offset);
-        CHECK_GL_ERROR("Failed to get the value for GL_UNIFORM_OFFSET parameter");
+        CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_OFFSET parameter");
         if (Offset >= 0)
             Var.Offset = StaticCast<decltype(Var.Offset)>(Offset);
     }
@@ -309,35 +317,57 @@ static void ProcessUBVariable(ShaderCodeVariableDescX& Var, Uint32 BaseOffset)
     Var.Offset -= BaseOffset;
 }
 
+// Recovers structures and arrays from the linear list of unrolled uniforms
 static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableDescX>&& Vars, Uint32 Size)
 {
-    // Sort variables by offset
+    // Sort variables by offset - they are reflected in some arbitrary order
     std::sort(Vars.begin(), Vars.end(),
               [](const ShaderCodeVariableDescX& Var1, const ShaderCodeVariableDescX& Var2) {
                   return Var1.Offset < Var2.Offset;
               });
 
-    ShaderCodeVariableDescX StructuredVars;
+    // Proxy variable for global variables in the block
+    ShaderCodeVariableDescX GlobalVars;
     for (auto& Var : Vars)
     {
-        auto* pLevel = &StructuredVars;
+        auto* pLevel = &GlobalVars;
 
         const auto* Name = Var.Name;
         const auto* Dot  = strchr(Name, '.');
         while (Dot != nullptr)
         {
-            std::string Prefix{Name, Dot};
+            // s2[1].s1.f4[2]
+            //      ^
+            //     Dot
+            std::string Prefix{Name, Dot}; // "s2[1]"
             std::string NameWithoutBrackets;
             const auto  ArrayInd = GetArrayIndex(Prefix.c_str(), NameWithoutBrackets);
+            // ArrayInd = 1
+            // NameWithoutBrackets = "s2"
 
+            // Searh for the variable with the same name
             if (auto* pArray = pLevel->FindMember(NameWithoutBrackets.c_str()))
             {
+                // Variable already exists - we are processing an element of an existing array:
+                //
+                //      Level
+                //    0    1   2
+                //
+                //  s2[0].s1.f4[2]
+                //  s2[0].s1.u4
+                //  s2[1].s1.f4[2] <- s2 already exists in level 0
+                //
+
+                // Update the array size.
                 pArray->ArraySize = std::max(pArray->ArraySize, StaticCast<Uint32>(ArrayInd + 1));
-                pArray->Offset    = std::min(pArray->Offset, Var.Offset);
-                pLevel            = pArray;
+                // The struct offset should be the minimal offset of its members,
+                // which should always be the first variable.
+                VERIFY_EXPR(Var.Offset >= pArray->Offset);
+                pLevel = pArray;
             }
             else
             {
+                // Add a new structure variable.
                 ShaderCodeVariableDesc StructVarDesc;
                 StructVarDesc.Name   = NameWithoutBrackets.c_str();
                 StructVarDesc.Class  = SHADER_CODE_VARIABLE_CLASS_STRUCT;
@@ -348,16 +378,34 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
                 pLevel->ArraySize = std::max(pLevel->ArraySize, StaticCast<Uint32>(ArrayInd + 1));
             }
 
+            // s2[1].s1.f4[2]
+            //      ^
+            //     Dot
+
             Name = Dot + 1;
-            Dot  = strchr(Name, '.');
+            // s2[1].s1.f4[2]
+            //       ^
+            //      Name
+
+            Dot = strchr(Name, '.');
+            // s2[1].s1.f4[2]
+            //         ^
+            //        Dot
         }
+
+        // s2[1].s1.f4[2]
+        //          ^
+        //         Name
 
         std::string NameWithoutBrackets;
         const auto  ArrayInd = GetArrayIndex(Name, NameWithoutBrackets);
+        // ArrayInd = 2
+        // NameWithoutBrackets = "f4"
         if (auto* pArray = pLevel->FindMember(NameWithoutBrackets.c_str()))
         {
+            // Array already exists
             pArray->ArraySize = std::max(pArray->ArraySize, StaticCast<Uint32>(ArrayInd + 1));
-            pArray->Offset    = std::min(pArray->Offset, Var.Offset);
+            VERIFY_EXPR(Var.Offset >= pArray->Offset);
         }
         else
         {
@@ -372,7 +420,7 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
     ShaderCodeBufferDescX BuffDesc;
     BuffDesc.Size = Size;
 
-    StructuredVars.ProcessMembers(
+    GlobalVars.ProcessMembers(
         [&BuffDesc](auto& Members) {
             BuffDesc.AssignVariables(std::move(Members));
         });
@@ -395,7 +443,9 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
     std::vector<StorageBlockInfo>  StorageBlocks;
     std::unordered_set<String>     NamesPool;
 
-    // Uniform buffer reflections
+    // Linear list of unrolled uniform variables grouped by the uniform block index, e.g.:
+    //   0: f4, u4, s1.f4[0]
+    //   1: s2.s1.f4[0], s3.s2[0].s1.f4[1]
     std::vector<std::vector<ShaderCodeVariableDescX>> UniformVars;
 
     VERIFY(Attribs.GLProgram, "Null GL program");
@@ -623,6 +673,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
                     auto VarDesc = GLDataTypeToShaderCodeVariableDesc(dataType);
                     if (VarDesc.BasicType != SHADER_CODE_BASIC_TYPE_UNKNOWN)
                     {
+                        // All uniforms are reported as unrolled variables, e.g. s2.s1[0].f4[1]
                         VarDesc.Name = Name.data();
                         AddUniformBufferVariable(GLProgram, i, VarDesc, UniformVars, Attribs.SourceLang);
                     }
@@ -761,9 +812,13 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
 
                 GLint BufferSize = 0;
                 glGetActiveUniformBlockiv(GLProgram, UB.UBIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &BufferSize);
-                CHECK_GL_ERROR("Failed to get the value for GL_UNIFORM_BLOCK_DATA_SIZE parameter");
+                CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_BLOCK_DATA_SIZE parameter");
 
                 UBReflections.emplace_back(PrepareUBReflection(std::move(Vars), StaticCast<Uint32>(BufferSize)));
+            }
+            else
+            {
+                UNEXPECTED("Uniform block ", UB.UBIndex, " has no variables.");
             }
         }
 
