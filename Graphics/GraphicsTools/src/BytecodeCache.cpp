@@ -86,7 +86,7 @@ public:
     {
         if (pDataBlob == nullptr)
         {
-            UNEXPECTED("Data blob must not be null");
+            DEV_ERROR("Data blob must not be null");
             return false;
         }
 
@@ -121,7 +121,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE GetBytecode(const ShaderCreateInfo& ShaderCI, IDataBlob** ppByteCode) override final
     {
-        VERIFY_EXPR(ppByteCode != nullptr);
+        DEV_CHECK_ERR(ppByteCode != nullptr, "ppByteCode must not be null.");
+        DEV_CHECK_ERR(*ppByteCode == nullptr, "*ppByteCode is not null. Make sure you are not overwriting reference to an existing object as this may result in memory leaks.");
         const auto Hash = ComputeHash(ShaderCI);
         const auto Iter = m_HashMap.find(Hash);
         if (Iter != m_HashMap.end())
@@ -133,7 +134,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE AddBytecode(const ShaderCreateInfo& ShaderCI, IDataBlob* pByteCode) override final
     {
-        VERIFY_EXPR(pByteCode != nullptr);
+        DEV_CHECK_ERR(pByteCode != nullptr, "pByteCode must not be null.");
         const auto Hash = ComputeHash(ShaderCI);
         const auto Iter = m_HashMap.emplace(Hash, pByteCode);
         if (!Iter.second)
@@ -148,7 +149,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE Store(IDataBlob** ppDataBlob) override final
     {
-        VERIFY_EXPR(ppDataBlob != nullptr);
+        DEV_CHECK_ERR(ppDataBlob != nullptr, "ppDataBlob must not be null.");
+        DEV_CHECK_ERR(*ppDataBlob == nullptr, "*ppDataBlob is not null. Make sure you are not overwriting reference to an existing object as this may result in memory leaks.");
 
         auto WriteData = [&](auto& Stream) //
         {
