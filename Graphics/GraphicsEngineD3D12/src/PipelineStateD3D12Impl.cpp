@@ -739,7 +739,12 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
                 d3d12PSODesc.InputLayout.pInputElementDescs = nullptr;
             }
 
-            d3d12PSODesc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+            d3d12PSODesc.IBStripCutValue = (GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
+                                            GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ ||
+                                            GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP ||
+                                            GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ) ?
+                D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF :
+                D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
             static const PrimitiveTopology_To_D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimTopologyToD3D12TopologyType;
             d3d12PSODesc.PrimitiveTopologyType = PrimTopologyToD3D12TopologyType[GraphicsPipeline.PrimitiveTopology];
 

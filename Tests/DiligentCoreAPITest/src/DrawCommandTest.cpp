@@ -567,7 +567,15 @@ protected:
         ASSERT_NE(sm_pDrawPSO, nullptr);
 
 
+        PSODesc.Name = "Draw command test - tri strip";
+
+        GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDrawStripPSO);
+        ASSERT_NE(sm_pDrawStripPSO, nullptr);
+
         PSODesc.Name = "Draw command test - 2x VB stride";
+
+        GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
         Elems[0].Stride = sizeof(Vertex) * 2;
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDraw_2xStride_PSO);
@@ -597,6 +605,7 @@ protected:
         sm_pDrawPSO.Release();
         sm_pDraw_2xStride_PSO.Release();
         sm_pDrawInstancedPSO.Release();
+        sm_pDrawStripPSO.Release();
 
         auto* pEnv = GPUTestingEnvironment::GetInstance();
         pEnv->Reset();
@@ -722,6 +731,7 @@ protected:
     static RefCntAutoPtr<IPipelineState> sm_pDrawPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDraw_2xStride_PSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawInstancedPSO;
+    static RefCntAutoPtr<IPipelineState> sm_pDrawStripPSO;
     static FastRandFloat                 sm_Rnd;
 };
 
@@ -729,6 +739,7 @@ RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawProceduralPSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawPSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDraw_2xStride_PSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawInstancedPSO;
+RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawStripPSO;
 FastRandFloat                 DrawCommandTest::sm_Rnd{0, 0.f, 1.f};
 
 TEST_F(DrawCommandTest, DrawProcedural)
@@ -920,6 +931,39 @@ TEST_F(DrawCommandTest, DrawIndexed)
 
     Present();
 }
+
+
+TEST_F(DrawCommandTest, DrawIndexed_StripCut)
+{
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawStripPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {},
+        Vert[2], {}, Vert[0], {}, Vert[1],
+        Vert[3], {}, {}, Vert[4], {}, {}, Vert[5]
+    };
+    const Uint32 Indices[] = {2,4,6, 0xFFFFFFFFu, 7,10,13};
+    // clang-format on
+
+    auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer*     pVBs[]    = {pVB};
+    const Uint64 Offsets[] = {0};
+    pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{7, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
 
 TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
 {
@@ -1770,6 +1814,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
 
     Present();
 }
+
 
 TEST_F(DrawCommandTest, MultiDrawIndirect)
 {

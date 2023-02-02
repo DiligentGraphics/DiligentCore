@@ -224,6 +224,29 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     }
 #endif
 
+#if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
+    if (m_DeviceInfo.APIVersion >= Version{4, 6} || CheckExtension("GL_ARB_ES3_compatibility"))
+    {
+        glEnable(GL_PRIMITIVE_RESTART_FIXED_INDEX);
+        if (glGetError() != GL_NO_ERROR)
+            LOG_ERROR_MESSAGE("Failed to enable primitive restart fixed index");
+    }
+    else
+    {
+        glEnable(GL_PRIMITIVE_RESTART);
+        if (glGetError() == GL_NO_ERROR)
+        {
+            glPrimitiveRestartIndex(0xFFFFFFFFu);
+            if (glGetError() != GL_NO_ERROR)
+                LOG_ERROR_MESSAGE("Failed to set the primitive restart index");
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("Failed to enable primitive restart");
+        }
+    }
+#endif
+
     InitAdapterInfo();
 
     // Enable requested device features

@@ -181,11 +181,17 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     }
 
     VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI{};
-    InputAssemblyCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    InputAssemblyCI.pNext                  = nullptr;
-    InputAssemblyCI.flags                  = 0; // reserved for future use
-    InputAssemblyCI.primitiveRestartEnable = VK_FALSE;
-    PipelineCI.pInputAssemblyState         = &InputAssemblyCI;
+    InputAssemblyCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    InputAssemblyCI.pNext = nullptr;
+    InputAssemblyCI.flags = 0; // reserved for future use
+    InputAssemblyCI.primitiveRestartEnable =
+        (GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
+         GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ ||
+         GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP ||
+         GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ) ?
+        VK_TRUE :
+        VK_FALSE;
+    PipelineCI.pInputAssemblyState = &InputAssemblyCI;
 
 
     VkPipelineTessellationStateCreateInfo TessStateCI{};
