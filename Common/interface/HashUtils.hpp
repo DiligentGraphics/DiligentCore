@@ -576,6 +576,7 @@ struct HashCombiner<HasherType, TextureViewDesc> : HashCombinerBase<HasherType>
         ASSERT_SIZEOF(TexViewDesc.Format, 2, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(TexViewDesc.AccessFlags, 1, "Hash logic below may be incorrect.");
         ASSERT_SIZEOF(TexViewDesc.Flags, 1, "Hash logic below may be incorrect.");
+        ASSERT_SIZEOF(TexViewDesc.Swizzle, 4, "Hash logic below may be incorrect.");
 
         // Ignore Name. This is consistent with the operator==
         this->m_Hasher(
@@ -587,8 +588,9 @@ struct HashCombiner<HasherType, TextureViewDesc> : HashCombinerBase<HasherType>
             TexViewDesc.FirstArraySlice,
             TexViewDesc.NumArraySlices,
             ((static_cast<uint32_t>(TexViewDesc.AccessFlags) << 0u) |
-             (static_cast<uint32_t>(TexViewDesc.Flags) << 8u)));
-        ASSERT_SIZEOF64(TexViewDesc, 32, "Did you add new members to TextureViewDesc? Please handle them here.");
+             (static_cast<uint32_t>(TexViewDesc.Flags) << 8u)),
+            TexViewDesc.Swizzle.AsUint32());
+        ASSERT_SIZEOF64(TexViewDesc, 40, "Did you add new members to TextureViewDesc? Please handle them here.");
     }
 };
 

@@ -1940,6 +1940,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.BindlessResources             = DEVICE_FEATURE_STATE_ENABLED;
     Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
     Features.SubpassFramebufferFetch       = DEVICE_FEATURE_STATE_ENABLED;
+    Features.TextureComponentSwizzle       = DEVICE_FEATURE_STATE_ENABLED;
 
     // Timestamps are not a feature and can't be disabled. They are either supported by the device, or not.
     Features.TimestampQueries = vkDeviceProps.limits.timestampComputeAndGraphics ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
@@ -2036,7 +2037,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.DurationQueries        = DEVICE_FEATURE_STATE_DISABLED;
 #endif
 
-    ASSERT_SIZEOF(DeviceFeatures, 40, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeatures, 41, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return Features;
 }
@@ -2165,6 +2166,31 @@ void GetAllowedStagesAndAccessMask(BIND_FLAGS Flags, VkPipelineStageFlags& Stage
                 break;
         }
     }
+}
+
+VkComponentSwizzle TextureComponentSwizzleToVkComponentSwizzle(TEXTURE_COMPONENT_SWIZZLE Swizzle)
+{
+    static_assert(TEXTURE_COMPONENT_SWIZZLE_COUNT == 7, "Did you add a new swizzle type? Please handle it here.");
+    // clang-format off
+    static_assert(static_cast<VkComponentSwizzle>(TEXTURE_COMPONENT_SWIZZLE_IDENTITY) == VK_COMPONENT_SWIZZLE_IDENTITY, "Unexpected value of TEXTURE_COMPONENT_SWIZZLE_IDENTITY enum.");
+    static_assert(static_cast<VkComponentSwizzle>(TEXTURE_COMPONENT_SWIZZLE_ZERO)     == VK_COMPONENT_SWIZZLE_ZERO,     "Unexpected value of TEXTURE_COMPONENT_SWIZZLE_ZERO enum.");
+    static_assert(static_cast<VkComponentSwizzle>(TEXTURE_COMPONENT_SWIZZLE_ONE)      == VK_COMPONENT_SWIZZLE_ONE,      "Unexpected value of TEXTURE_COMPONENT_SWIZZLE_ONE enum.");
+    static_assert(static_cast<VkComponentSwizzle>(TEXTURE_COMPONENT_SWIZZLE_R)        == VK_COMPONENT_SWIZZLE_R,        "Unexpected value of TEXTURE_COMPONENT_SWIZZLE_R enum.");
+    static_assert(static_cast<VkComponentSwizzle>(TEXTURE_COMPONENT_SWIZZLE_G)        == VK_COMPONENT_SWIZZLE_G,        "Unexpected value of TEXTURE_COMPONENT_SWIZZLE_G enum.");
+    static_assert(static_cast<VkComponentSwizzle>(TEXTURE_COMPONENT_SWIZZLE_B)        == VK_COMPONENT_SWIZZLE_B,        "Unexpected value of TEXTURE_COMPONENT_SWIZZLE_B enum.");
+    static_assert(static_cast<VkComponentSwizzle>(TEXTURE_COMPONENT_SWIZZLE_A)        == VK_COMPONENT_SWIZZLE_A,        "Unexpected value of TEXTURE_COMPONENT_SWIZZLE_A enum.");
+    // clang-format on
+    return static_cast<VkComponentSwizzle>(Swizzle);
+}
+
+VkComponentMapping TextureComponentMappingToVkComponentMapping(const TextureComponentMapping& Mapping)
+{
+    return VkComponentMapping{
+        TextureComponentSwizzleToVkComponentSwizzle(Mapping.R),
+        TextureComponentSwizzleToVkComponentSwizzle(Mapping.G),
+        TextureComponentSwizzleToVkComponentSwizzle(Mapping.B),
+        TextureComponentSwizzleToVkComponentSwizzle(Mapping.A) //
+    };
 }
 
 } // namespace Diligent

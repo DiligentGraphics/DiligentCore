@@ -433,4 +433,6 @@ WAVE_FEATURE GLSubgroupFeatureBitsToWaveFeatures(GLenum FeatureBits);
 
 ShaderCodeVariableDesc GLDataTypeToShaderCodeVariableDesc(GLenum glDataType);
 
+GLint TextureComponentSwizzleToGLTextureSwizzle(TEXTURE_COMPONENT_SWIZZLE Swizzle, GLint IdentitySwizzle);
+
 } // namespace Diligent

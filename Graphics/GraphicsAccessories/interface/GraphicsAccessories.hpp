@@ -741,4 +741,7 @@ inline uint3 GetNumSparseTilesInMipLevel(const TextureDesc& Desc,
     return GetNumSparseTilesInBox(Box{0, MipProps.StorageWidth, 0, MipProps.StorageHeight, 0, MipProps.Depth}, TileSize);
 }
 
+/// Returns true if the Mapping defines an identity texture component swizzle
+bool IsIdentityComponentMapping(const TextureComponentMapping& Mapping);
+
 } // namespace Diligent

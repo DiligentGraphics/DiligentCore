@@ -541,7 +541,7 @@ TEST(Common_HashUtils, BlendStateDescXXH128Hash)
 template <template <typename T> class HelperType>
 void TestTextureViewDescHasher()
 {
-    ASSERT_SIZEOF64(TextureViewDesc, 32, "Did you add new members to TextureViewDesc? Please update the tests.");
+    ASSERT_SIZEOF64(TextureViewDesc, 40, "Did you add new members to TextureViewDesc? Please update the tests.");
     DEFINE_HELPER(TextureViewDesc);
 
     TEST_RANGE(ViewType, static_cast<TEXTURE_VIEW_TYPE>(1), TEXTURE_VIEW_NUM_VIEWS);
@@ -553,6 +553,10 @@ void TestTextureViewDescHasher()
     TEST_RANGE(NumArraySlices, 1u, 2048u);
     TEST_FLAGS(AccessFlags, static_cast<UAV_ACCESS_FLAG>(1u), UAV_ACCESS_FLAG_LAST);
     TEST_FLAGS(Flags, static_cast<TEXTURE_VIEW_FLAGS>(1u), TEXTURE_VIEW_FLAG_LAST);
+    TEST_RANGE(Swizzle.R, static_cast<TEXTURE_COMPONENT_SWIZZLE>(1), TEXTURE_COMPONENT_SWIZZLE_COUNT);
+    TEST_RANGE(Swizzle.G, static_cast<TEXTURE_COMPONENT_SWIZZLE>(1), TEXTURE_COMPONENT_SWIZZLE_COUNT);
+    TEST_RANGE(Swizzle.B, static_cast<TEXTURE_COMPONENT_SWIZZLE>(1), TEXTURE_COMPONENT_SWIZZLE_COUNT);
+    TEST_RANGE(Swizzle.A, static_cast<TEXTURE_COMPONENT_SWIZZLE>(1), TEXTURE_COMPONENT_SWIZZLE_COUNT);
 }
 
 TEST(Common_HashUtils, TextureViewDescStdHash)

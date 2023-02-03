@@ -1081,4 +1081,24 @@ ShaderCodeVariableDesc GLDataTypeToShaderCodeVariableDesc(GLenum glDataType)
     return Desc;
 }
 
+GLint TextureComponentSwizzleToGLTextureSwizzle(TEXTURE_COMPONENT_SWIZZLE Swizzle, GLint IdentitySwizzle)
+{
+    static_assert(TEXTURE_COMPONENT_SWIZZLE_COUNT == 7, "Did you add a new swizzle mode? Please handle it here.");
+    switch (Swizzle)
+    {
+        // clang-format off
+        case TEXTURE_COMPONENT_SWIZZLE_IDENTITY: return IdentitySwizzle;
+        case TEXTURE_COMPONENT_SWIZZLE_ZERO:     return GL_ZERO;
+        case TEXTURE_COMPONENT_SWIZZLE_ONE:      return GL_ONE;
+        case TEXTURE_COMPONENT_SWIZZLE_R:        return GL_RED;
+        case TEXTURE_COMPONENT_SWIZZLE_G:        return GL_GREEN;
+        case TEXTURE_COMPONENT_SWIZZLE_B:        return GL_BLUE;
+        case TEXTURE_COMPONENT_SWIZZLE_A:        return GL_ALPHA;
+        // clang-format on
+        default:
+            UNEXPECTED("Unknown swizzle");
+            return IdentitySwizzle;
+    }
+}
+
 } // namespace Diligent

@@ -2291,4 +2291,12 @@ SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& Te
     return Props;
 }
 
+bool IsIdentityComponentMapping(const TextureComponentMapping& Mapping)
+{
+    return ((Mapping.R == TEXTURE_COMPONENT_SWIZZLE_IDENTITY || Mapping.R == TEXTURE_COMPONENT_SWIZZLE_R) &&
+            (Mapping.G == TEXTURE_COMPONENT_SWIZZLE_IDENTITY || Mapping.G == TEXTURE_COMPONENT_SWIZZLE_G) &&
+            (Mapping.B == TEXTURE_COMPONENT_SWIZZLE_IDENTITY || Mapping.B == TEXTURE_COMPONENT_SWIZZLE_B) &&
+            (Mapping.A == TEXTURE_COMPONENT_SWIZZLE_IDENTITY || Mapping.A == TEXTURE_COMPONENT_SWIZZLE_A));
+}
+
 } // namespace Diligent

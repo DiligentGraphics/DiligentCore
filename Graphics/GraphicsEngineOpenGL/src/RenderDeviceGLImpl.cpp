@@ -723,6 +723,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         Features.NativeFence                = DEVICE_FEATURE_STATE_DISABLED;
         Features.TileShaders                = DEVICE_FEATURE_STATE_DISABLED;
         Features.SubpassFramebufferFetch    = DEVICE_FEATURE_STATE_DISABLED;
+        Features.TextureComponentSwizzle    = DEVICE_FEATURE_STATE_DISABLED;
 
         {
             bool WireframeFillSupported = (glPolygonMode != nullptr);
@@ -795,6 +796,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             ENABLE_FEATURE(ShaderInt8,                    CheckExtension("GL_EXT_shader_explicit_arithmetic_types_int8"));
             ENABLE_FEATURE(ResourceBuffer8BitAccess,      CheckExtension("GL_EXT_shader_8bit_storage"));
             ENABLE_FEATURE(UniformBuffer8BitAccess,       CheckExtension("GL_EXT_shader_8bit_storage"));
+            ENABLE_FEATURE(TextureComponentSwizzle,       IsGL46OrAbove || CheckExtension("GL_ARB_texture_swizzle"));
             // clang-format on
 
             TexProps.MaxTexture1DDimension      = MaxTextureSize;
@@ -861,6 +863,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             ENABLE_FEATURE(ShaderInt8,                strstr(Extensions, "shader_explicit_arithmetic_types_int8"));
             ENABLE_FEATURE(ResourceBuffer8BitAccess,  strstr(Extensions, "shader_8bit_storage"));
             ENABLE_FEATURE(UniformBuffer8BitAccess,   strstr(Extensions, "shader_8bit_storage"));
+            ENABLE_FEATURE(TextureComponentSwizzle,   true);
             // clang-format on
 
             TexProps.MaxTexture1DDimension      = 0; // Not supported in GLES 3.2
@@ -1020,7 +1023,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         m_AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 40, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 41, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 }
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()
