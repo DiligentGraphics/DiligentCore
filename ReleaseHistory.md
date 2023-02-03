@@ -1,6 +1,13 @@
 ## Current progress
 
-* Added shader constant buffer reflection API (`IShader::GetConstantBufferDesc` and related types) - API253001
+* Added texture component swizzle (API253002)
+  * Added `TEXTURE_COMPONENT_SWIZZLE` enum and `TextureComponentMapping` struct
+  * Added `Swizzle` member to `TextureViewDesc` struct
+  * Added `TextureComponentSwizzle` member to `DeviceFeatures` struct
+* Added shader constant buffer reflection API (API253001)
+  * Added `SHADER_CODE_BASIC_TYPE` and `SHADER_CODE_VARIABLE_CLASS` enums
+  * Added `ShaderCodeVariableDesc` and `ShaderCodeBufferDesc` structs
+  * Added `IShader::GetConstantBufferDesc` method
 
 ## v2.5.3
 
