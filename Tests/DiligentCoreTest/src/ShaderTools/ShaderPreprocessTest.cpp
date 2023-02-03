@@ -141,7 +141,7 @@ TEST(ShaderPreprocessTest, InvalidInclude)
     CreateDefaultShaderSourceStreamFactory("shaders/ShaderPreprocessor", &pShaderSourceFactory);
     ASSERT_NE(pShaderSourceFactory, nullptr);
 
-    constexpr size_t TestCount = 8;
+    constexpr size_t TestCount = 12;
     for (size_t TestId = 0; TestId < TestCount; ++TestId)
     {
         String FilePath = "IncludeInvalidCase" + std::to_string(TestId) + ".hlsl";
@@ -175,6 +175,7 @@ TEST(ShaderPreprocessTest, UnrollIncludes)
             "// Start InlineIncludeShaderCommon1.hlsl\n"
             "// #include \"InlineIncludeShaderCommon0.hlsl\"\n"
             "\n"
+            "#define MACRO\n"
             "// End InlineIncludeShaderCommon1.hlsl\n"
             "\n"
             "// Start InlineIncludeShaderCommon2.hlsl\n"

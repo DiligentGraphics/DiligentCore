@@ -34,9 +34,12 @@
 #include "DataBlobImpl.hpp"
 #include "StringDataBlobImpl.hpp"
 #include "GraphicsAccessories.hpp"
+#include "ParsingTools.hpp"
 
 namespace Diligent
 {
+
+using namespace Parsing;
 
 namespace
 {
@@ -240,7 +243,7 @@ void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderC
     Source.append(SourceData.Source, SourceData.SourceLength);
 }
 
-static String ParserErrorMessage(const char* Message, const Char* pBuffer, const char* pCurrPos)
+static String ParserErrorMessage(const char* Message, const Char* pBuffer, const Char* pBufferEnd, const char* pCurrPos)
 {
     size_t      Line       = 0;
     const auto* pLineStart = pBuffer;
@@ -255,7 +258,8 @@ static String ParserErrorMessage(const char* Message, const Char* pBuffer, const
     size_t LineOffset = pCurrPos - pLineStart;
 
     std::stringstream Stream;
-    Stream << "[" << Line << "," << LineOffset << "]: " << Message;
+    Stream << "[" << Line << "," << LineOffset << "]: " << Message << std::endl
+           << GetContext(pBuffer, pBufferEnd, pCurrPos, 1);
     return Stream.str();
 }
 
@@ -267,162 +271,100 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType&& IncludeH
     if (BufferSize == 0)
         return true;
 
-    enum State
-    {
-        None,
-        AfterHash,
-        AfterInclude,
-        InsideIncludeAngleBrackets,
-        InsideIncludeQuotes
-    } PreprocessorState = None;
-
-    constexpr const Char* MissingEndComment     = "missing end comment.";
-    constexpr const Char* MissingOpeningSymbol  = "missing opening quote or angle bracket after the include directive.";
-    constexpr const Char* MissingClosingQuote   = "missing closing quote in the include directive.";
-    constexpr const Char* MissingClosingBracket = "missing closing angle bracket in the include directive.";
-
-    // Find positions of the first hash and slash
-    const Char* NextHash  = static_cast<const char*>(memchr(pBuffer, '#', BufferSize));
-    const Char* NextSlash = static_cast<const char*>(memchr(pBuffer, '/', BufferSize));
-    size_t      Start     = 0;
-
-    // We iterate over the characters of the buffer
     const auto*       pCurrPos   = pBuffer;
     const auto* const pBufferEnd = pBuffer + BufferSize;
-    while (pCurrPos < pBufferEnd)
+
+    using ErrorType = std::pair<const char*, const char*>;
+    try
     {
-        switch (PreprocessorState)
+        while (pCurrPos < pBufferEnd)
         {
-            case None:
+            pCurrPos = SkipDelimitersAndComments(pCurrPos, pBufferEnd); // May throw
+            if (pCurrPos == pBufferEnd)
+                return true;
+
+            if (*pCurrPos != '#')
             {
-                // Find a hash character if the current position is greater NextHash
-                if (NextHash && NextHash < pCurrPos)
-                    NextHash = static_cast<const Char*>(memchr(pCurrPos, '#', pBufferEnd - pCurrPos));
-
-                // Exit from the function if a hash is not found in the buffer
-                if (NextHash == nullptr)
-                    return true;
-
-                // Find a slash character if the current position is greater NextSlash
-                if (NextSlash && NextSlash < pCurrPos)
-                    NextSlash = static_cast<const Char*>(memchr(pCurrPos, '/', pBufferEnd - pCurrPos));
-
-                if (NextSlash && NextSlash < NextHash)
-                {
-                    // Skip all characters if the slash character is before the hash character in the buffer
-                    pCurrPos = NextSlash;
-                    if (pCurrPos[+1] == '/')
-                    {
-                        pCurrPos = static_cast<const Char*>(memchr(pCurrPos, '\n', pBufferEnd - pCurrPos));
-                    }
-                    else if (pCurrPos[+1] == '*')
-                    {
-                        do
-                        {
-                            const char* EndSlash = static_cast<const Char*>(memchr(pCurrPos + 1, '/', pBufferEnd - pCurrPos - 1));
-                            if (!EndSlash)
-                            {
-                                ErrorHandler(ParserErrorMessage(MissingEndComment, pBuffer, pCurrPos));
-                                return false;
-                            }
-
-                            pCurrPos = EndSlash;
-                        } while (pCurrPos[-1] != '*');
-                    }
-                }
-                else
-                {
-                    // Move the current position to the position after the hash
-                    pCurrPos          = NextHash;
-                    PreprocessorState = AfterHash;
-                }
+                ++pCurrPos;
+                continue;
             }
-            break;
-            case AfterHash:
-                // Try to find the 'include' substring in the buffer if the current position is after the hash
-                if (!isspace(*pCurrPos))
-                {
-                    static constexpr auto Len = 7;
-                    if (strncmp(pCurrPos, "include", Len) == 0)
-                    {
-                        PreprocessorState = AfterInclude;
-                        pCurrPos += Len;
-                    }
-                    else
-                    {
-                        PreprocessorState = None;
-                    }
-                }
-                break;
-            case AfterInclude:
-                // Try to find the opening quotes character after the 'include' substring
-                if (!isspace(*pCurrPos))
-                {
-                    if (*pCurrPos == '"')
-                    {
-                        Start             = pCurrPos - pBuffer + 1;
-                        PreprocessorState = InsideIncludeQuotes;
-                    }
-                    else if (*pCurrPos == '<')
-                    {
-                        Start             = pCurrPos - pBuffer + 1;
-                        PreprocessorState = InsideIncludeAngleBrackets;
-                    }
-                    else
-                    {
-                        ErrorHandler(ParserErrorMessage(MissingOpeningSymbol, pBuffer, pCurrPos));
-                        return false;
-                    }
-                }
-                break;
-            case InsideIncludeQuotes:
-                // Try to find the closing quotes after the opening quotes and extract the substring for IncludeHandler(...)
-                switch (*pCurrPos)
-                {
-                    case '\n':
-                        ErrorHandler(ParserErrorMessage(MissingClosingQuote, pBuffer, pCurrPos));
-                        return false;
-                    case '"':
-                        IncludeHandler(std::string{pBuffer + Start, pCurrPos}, NextHash - pBuffer, pCurrPos - pBuffer + 1);
-                        PreprocessorState = None;
-                        break;
-                }
-                break;
-            case InsideIncludeAngleBrackets:
-                // Try to find the closing quotes after the opening quotes and extract the substring for IncludeHandler(...)
-                switch (*pCurrPos)
-                {
-                    case '\n':
-                        ErrorHandler(ParserErrorMessage(MissingClosingBracket, pBuffer, pCurrPos));
-                        return false;
-                    case '>':
-                        IncludeHandler(std::string{pBuffer + Start, pCurrPos}, NextHash - pBuffer, pCurrPos - pBuffer + 1);
-                        PreprocessorState = None;
-                        break;
-                }
-                break;
+
+            const auto pIncludeStart = pCurrPos;
+            // # /* ... */ include <File.h>
+            // ^
+
+            auto pLineEnd = SkipLine(pCurrPos, pBufferEnd);
+
+            pCurrPos = SkipDelimitersAndComments(pIncludeStart + 1, pBufferEnd, " \t", SKIP_COMMENT_FLAG_MULTILINE); // May throw
+            if (pCurrPos == pBufferEnd)
+                return true;
+
+            if (pCurrPos >= pLineEnd)
+                continue;
+
+            // # /* ... */ include <File.h>
+            //             ^
+
+            static constexpr auto IncludeStrLen                 = 7;
+            static constexpr char IncludeStr[IncludeStrLen + 1] = "include";
+
+            if (strncmp(pCurrPos, IncludeStr, IncludeStrLen) != 0)
+            {
+                // #define MACRO
+                //  ^
+                pCurrPos = pLineEnd;
+                continue;
+            }
+
+            pCurrPos += IncludeStrLen;
+
+
+            // # /* ... */ include <File.h>
+            //                    ^
+            auto pOpenQuoteOrAngleBracket = SkipDelimitersAndComments(pCurrPos, pBufferEnd, " \t", SKIP_COMMENT_FLAG_MULTILINE); // May throw
+            if (pOpenQuoteOrAngleBracket == pBufferEnd)
+                throw ErrorType{pCurrPos, "Unexpected end of file."};
+
+            if (pOpenQuoteOrAngleBracket >= pLineEnd)
+                throw ErrorType{pLineEnd, "New line in the include directive."};
+
+            pCurrPos = pOpenQuoteOrAngleBracket;
+            // # /* ... */ include <File.h>
+            //                     ^
+
+            if (pCurrPos < pBufferEnd && *pCurrPos != '<' && *pCurrPos != '"')
+                throw ErrorType{pCurrPos, "\'<\' or \'\"\' is expected"};
+
+            auto ClosingChar = *pCurrPos == '<' ? '>' : '"';
+            ++pCurrPos;
+            while (pCurrPos < pBufferEnd && *pCurrPos != ClosingChar)
+                ++pCurrPos;
+
+            if (pCurrPos == pBufferEnd)
+                throw ErrorType{pOpenQuoteOrAngleBracket, (ClosingChar == '>' ? "Unable to find the matching angle bracket" : "Unable to find the matching closing quote")};
+
+            if (pCurrPos >= pLineEnd)
+                throw ErrorType{pLineEnd, "New line in the file name."};
+
+            IncludeHandler(std::string{pOpenQuoteOrAngleBracket + 1, pCurrPos}, pIncludeStart - pBuffer, pCurrPos - pBuffer + 1);
+
+            ++pCurrPos;
         }
-        ++pCurrPos;
+    }
+    catch (const std::pair<const char*, const char*>& err)
+    {
+        const auto* pos = err.first;
+        const auto* msg = err.second;
+        ErrorHandler(ParserErrorMessage(msg, pBuffer, pBufferEnd, pos));
+        return false;
+    }
+    catch (...)
+    {
+        ErrorHandler("Unknown error");
+        return false;
     }
 
-    switch (PreprocessorState)
-    {
-        case None:
-        case AfterHash:
-            return true;
-        case AfterInclude:
-            ErrorHandler(ParserErrorMessage(MissingOpeningSymbol, pBuffer, pCurrPos));
-            return false;
-        case InsideIncludeQuotes:
-            ErrorHandler(ParserErrorMessage(MissingClosingQuote, pBuffer, pCurrPos));
-            return false;
-        case InsideIncludeAngleBrackets:
-            ErrorHandler(ParserErrorMessage(MissingClosingBracket, pBuffer, pCurrPos));
-            return false;
-        default:
-            UNEXPECTED("Unknown preprocessor state");
-            return false;
-    }
+    return true;
 }
 
 static void ProcessIncludeErrorHandler(const ShaderCreateInfo& ShaderCI, const std::string& Error) noexcept(false)
