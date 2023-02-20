@@ -45,7 +45,14 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     list(APPEND SOURCE src/Archiver_GL.cpp)
 endif()
 if(METAL_SUPPORTED)
-    list(APPEND SOURCE src/Archiver_Mtl.mm)
+    set(MTL_SOURCE src/Archiver_Mtl.mm)
+    list(APPEND SOURCE ${MTL_SOURCE})
+    
+    set_property(SOURCE ${MTL_SOURCE} APPEND_STRING PROPERTY
+        # Disable Metal API deprecation warnings such as
+        #   'MTLArgumentType' is deprecated: first deprecated in macOS 13.0
+        COMPILE_FLAGS " -Wno-deprecated-declarations"
+    )
 endif()
 
 set(DLL_SOURCE
