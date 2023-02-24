@@ -72,21 +72,7 @@ TEST(GLTypeConversionsTest, PrimitiveTopologyToGLTopology)
 
 TEST(GLTypeConversionsTest, TypeToGLType)
 {
-#define CHECK_VALUE_TYPE_ENUM_VALUE(EnumElement, ExpectedValue) static_assert(EnumElement == ExpectedValue, "TypeToGLType function assumes that " #EnumElement " equals " #ExpectedValue ": fix TypeToGLTypeMap array and update this assertion.")
-    // clang-format off
-    CHECK_VALUE_TYPE_ENUM_VALUE(VT_UNDEFINED, 0);
-    CHECK_VALUE_TYPE_ENUM_VALUE(VT_INT8,      1);
-    CHECK_VALUE_TYPE_ENUM_VALUE(VT_INT16,     2);
-    CHECK_VALUE_TYPE_ENUM_VALUE(VT_INT32,     3);
-    CHECK_VALUE_TYPE_ENUM_VALUE(VT_UINT8,     4);
-    CHECK_VALUE_TYPE_ENUM_VALUE(VT_UINT16,    5);
-    CHECK_VALUE_TYPE_ENUM_VALUE(VT_UINT32,    6);
-    CHECK_VALUE_TYPE_ENUM_VALUE(VT_FLOAT16,   7);
-    CHECK_VALUE_TYPE_ENUM_VALUE(VT_FLOAT32,   8);
-    // clang-format on
-    static_assert(VT_NUM_TYPES == 9, "Did you add a new VALUE_TYPE enum value? Please update TypeToGLType function.");
-#undef CHECK_VALUE_TYPE_ENUM_VALUE
-
+    static_assert(VT_NUM_TYPES == 10, "Did you add a new VALUE_TYPE enum value? Please update the tests.");
     // clang-format off
     EXPECT_EQ(TypeToGLType(VT_UNDEFINED), GLenum{0});
     EXPECT_EQ(TypeToGLType(VT_INT8),      GLenum{GL_BYTE});
@@ -97,6 +83,7 @@ TEST(GLTypeConversionsTest, TypeToGLType)
     EXPECT_EQ(TypeToGLType(VT_UINT32),    GLenum{GL_UNSIGNED_INT});
     EXPECT_EQ(TypeToGLType(VT_FLOAT16),   GLenum{GL_HALF_FLOAT});
     EXPECT_EQ(TypeToGLType(VT_FLOAT32),   GLenum{GL_FLOAT});
+    EXPECT_EQ(TypeToGLType(VT_FLOAT64),   GLenum{GL_DOUBLE});
     // clang-format on
 }
 

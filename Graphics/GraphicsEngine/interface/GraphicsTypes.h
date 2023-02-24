@@ -60,6 +60,7 @@ DILIGENT_TYPED_ENUM(VALUE_TYPE, Uint8)
     VT_UINT32,        ///< Unsigned 32-bit integer
     VT_FLOAT16,       ///< Half-precision 16-bit floating point
     VT_FLOAT32,       ///< Full-precision 32-bit floating point
+    VT_FLOAT64,       ///< Double-precision 64-bit floating point
     VT_NUM_TYPES      ///< Helper value storing total number of types in the enumeration
 };
 

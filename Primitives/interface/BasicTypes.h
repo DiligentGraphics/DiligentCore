@@ -38,7 +38,8 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-typedef float Float32; ///< 32-bit float
+typedef float  Float32; ///< 32-bit float
+typedef double Float64; ///< 64-bit float
 
 typedef int64_t Int64; ///< 64-bit signed integer
 typedef int32_t Int32; ///< 32-bit signed integer
