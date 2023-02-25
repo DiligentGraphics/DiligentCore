@@ -370,7 +370,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     m_ShaderType{shaderDesc.ShaderType}
 {
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
-    diligent_spirv_cross::Parser parser{move(spirv_binary)};
+    diligent_spirv_cross::Parser parser{std::move(spirv_binary)};
     parser.parse();
     const auto ParsedIRSource = parser.get_parsed_ir().source;
     m_IsHLSLSource            = ParsedIRSource.hlsl;
