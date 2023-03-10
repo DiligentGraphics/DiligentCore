@@ -197,14 +197,14 @@ protected:
                 {
                     {SHADER_TYPE_PIXEL, "g_Sampler", SamLinearWrapDesc} //
                 };
-            ShaderResourceVariableDesc Veriables[] =
+            ShaderResourceVariableDesc Variables[] =
                 {
                     {SHADER_TYPE_PIXEL, "g_Sampler", SHADER_RESOURCE_VARIABLE_TYPE_STATIC} //
                 };
             PSODesc.ResourceLayout.ImmutableSamplers    = ImmutableSamplers;
             PSODesc.ResourceLayout.NumImmutableSamplers = _countof(ImmutableSamplers);
-            PSODesc.ResourceLayout.Variables            = Veriables;
-            PSODesc.ResourceLayout.NumVariables         = _countof(Veriables);
+            PSODesc.ResourceLayout.Variables            = Variables;
+            PSODesc.ResourceLayout.NumVariables         = _countof(Variables);
             PSODesc.ResourceLayout.DefaultVariableType  = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
             RefCntAutoPtr<IShader> pBlendPS;
