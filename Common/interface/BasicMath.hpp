@@ -2006,6 +2006,11 @@ struct Quaternion
         return q == right.q;
     }
 
+    constexpr bool operator!=(const Quaternion& right) const
+    {
+        return !(q == right.q);
+    }
+
     template <typename Y>
     constexpr static Quaternion MakeQuaternion(const Y& vals)
     {
