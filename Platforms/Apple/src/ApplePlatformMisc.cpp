@@ -1,6 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,18 +24,15 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-#include "../../Basic/interface/BasicPlatformMisc.hpp"
-#include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
-#include "../../Linux/interface/LinuxPlatformMisc.hpp"
+#include "ApplePlatformMisc.hpp"
 
 namespace Diligent
 {
 
-struct AppleMisc : public LinuxMisc
+Uint64 AppleMisc::SetCurrentThreadAffinity(Uint64 Mask)
 {
-    static Uint64 SetCurrentThreadAffinity(Uint64 Mask);
-};
+    // MacOS does not support affinity setting
+    return 0;
+}
 
 } // namespace Diligent
