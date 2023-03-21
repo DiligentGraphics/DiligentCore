@@ -881,6 +881,12 @@ template <class T> struct Matrix2x2
         Inv *= static_cast<T>(1) / Determinant();
         return Inv;
     }
+
+    template <typename Y>
+    constexpr Matrix2x2<Y> Recast() const
+    {
+        return Matrix2x2<Y>::MakeMatrix(Data());
+    }
 };
 
 
@@ -1154,6 +1160,12 @@ template <class T> struct Matrix3x3
         Inv *= static_cast<T>(1) / det;
 
         return Inv;
+    }
+
+    template <typename Y>
+    constexpr Matrix3x3<Y> Recast() const
+    {
+        return Matrix3x3<Y>::MakeMatrix(Data());
     }
 };
 
@@ -1709,6 +1721,12 @@ template <class T> struct Matrix4x4
                 _31, _32, _33, _34,
                   0,   0,   0, _44 // clang-format on
             };
+    }
+
+    template <typename Y>
+    constexpr Matrix4x4<Y> Recast() const
+    {
+        return Matrix4x4<Y>::MakeMatrix(Data());
     }
 };
 
