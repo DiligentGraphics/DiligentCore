@@ -2041,11 +2041,11 @@ struct Quaternion
         const auto norm = length(axis);
         if (norm != 0)
         {
-            auto sina2 = std::sin(0.5f * angle);
+            auto sina2 = std::sin(T{0.5} * angle);
             out.q[0]   = sina2 * axis[0] / norm;
             out.q[1]   = sina2 * axis[1] / norm;
             out.q[2]   = sina2 * axis[2] / norm;
-            out.q[3]   = std::cos(0.5f * angle);
+            out.q[3]   = std::cos(T{0.5} * angle);
         }
         return out;
     }
@@ -2053,8 +2053,8 @@ struct Quaternion
     void GetAxisAngle(Vector3<T>& outAxis, T& outAngle) const
     {
         auto sina2 = std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]);
-        outAngle   = 2.0f * std::atan2(sina2, q[3]);
-        auto r     = (sina2 > 0) ? (1.0f / sina2) : 0;
+        outAngle   = T{2} * std::atan2(sina2, q[3]);
+        auto r     = (sina2 > 0) ? (T{1} / sina2) : 0;
         outAxis[0] = r * q[0];
         outAxis[1] = r * q[1];
         outAxis[2] = r * q[2];
@@ -2114,7 +2114,7 @@ struct Quaternion
     Vector3<T> RotateVector(const Vector3<T>& v) const
     {
         const Vector3<T> axis{q.x, q.y, q.z};
-        return v + 2.f * cross(axis, cross(axis, v) + q.w * v);
+        return v + T{2} * cross(axis, cross(axis, v) + q.w * v);
     }
 };
 using QuaternionF = Quaternion<float>;
