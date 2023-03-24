@@ -401,6 +401,43 @@ struct ShaderCreateInfo
     IDataBlob** ppCompilerOutput DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
+    constexpr ShaderCreateInfo() noexcept
+    {}
+
+    constexpr ShaderCreateInfo(const Char*                      _FilePath,
+                               IShaderSourceInputStreamFactory* _pSourceFactory,
+                               SHADER_SOURCE_LANGUAGE           _SourceLanguage = ShaderCreateInfo{}.SourceLanguage,
+                               const ShaderDesc&                _Desc           = ShaderDesc{}) noexcept :
+        // clang-format off
+        FilePath                  {_FilePath},
+        pShaderSourceStreamFactory{_pSourceFactory},
+        Desc                      {_Desc},
+        SourceLanguage            {_SourceLanguage}
+    // clang-format on
+    {}
+
+    constexpr ShaderCreateInfo(const Char*                      _FilePath,
+                               IShaderSourceInputStreamFactory* _pSourceFactory,
+                               const Char*                      _EntryPoint,
+                               const ShaderMacro*               _Macros         = ShaderCreateInfo{}.Macros,
+                               SHADER_SOURCE_LANGUAGE           _SourceLanguage = ShaderCreateInfo{}.SourceLanguage,
+                               const ShaderDesc&                _Desc           = ShaderDesc{}) noexcept :
+        // clang-format off
+        FilePath                  {_FilePath},
+        pShaderSourceStreamFactory{_pSourceFactory},
+        EntryPoint                {_EntryPoint},
+        Macros                    {_Macros},
+        Desc                      {_Desc},
+        SourceLanguage            {_SourceLanguage}
+    // clang-format on
+    {}
+
+    constexpr ShaderCreateInfo(const void* _ByteCode,
+                               size_t      _ByteCodeSize) noexcept :
+        ByteCode{_ByteCode},
+        ByteCodeSize{_ByteCodeSize}
+    {}
+
     /// Comparison operator tests if two structures are equivalent.
     ///
     /// \note   Comparison ignores shader name.
