@@ -1,5 +1,5 @@
 /*  Copyright 2019-2023 Diligent Graphics LLC
- 
+
  *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF ANY PROPRIETARY RIGHTS.
@@ -30,7 +30,7 @@
 namespace Diligent
 {
 
-/// This class implements a thread-safe LRU cache.
+/// A thread-safe and exception-safe LRU cache.
 ///
 /// Usage example:
 ///
@@ -41,10 +41,12 @@ namespace Diligent
 ///     LRUCache<std::string, CacheData> Cache;
 ///     Cache.SetMaxSize(32768);
 ///     auto Data = Cache.Get("DataKey",
-///                           [&](CacheData& Data, size_t& Size) //
+///                           [](CacheData& Data, size_t& Size) //
 ///                           {
-///                               Data.pData = ...;
-///                               Size       = 1024;
+///                               // Create the data and return its size.
+///                               // May throw an exception in case of an error.
+///                               Data.pData = pData;
+///                               Size       = pData->GetSize();
 ///                           });
 ///
 /// \note   The Get() method returns the data by value, as the copy kept by the cache
@@ -63,13 +65,23 @@ public:
         m_MaxSize{MaxSize}
     {}
 
-    /// Finds the data in the cache and returns it. If the data is not found, it is atomically created using the provided initializer.
+    /// Finds the data in the cache and returns it. If the data is not found, it is atomically created
+    /// using the provided initializer.
+    ///
+    /// \param [in] Key      - The data key.
+    /// \param [in] InitData - Initializer function that is called if the data is not found in the cache.
+    ///
+    /// \return     Data with the specified key, either retrieved from the cache or initialized with
+    ///             the InitData function.
+    ///
+    /// \remarks    InitData function may throw in case of an error.
     template <typename InitDataType>
-    DataType Get(const KeyType& Key, InitDataType&& InitData) noexcept(false) // InitData may throw
+    DataType Get(const KeyType& Key,
+                 InitDataType&& InitData // May throw
+                 ) noexcept(false)
     {
-        // Get the data wrapper. Since this is a shared pointer, it may not be
-        // destroyed while we keep one, even if it is popped from the cache
-        // by other thread.
+        // Get the data wrapper. Since this is a shared pointer, it may not be destroyed
+        // while we keep one, even if it is popped from the cache by another thread.
         auto pDataWrpr = GetDataWrapper(Key);
         VERIFY_EXPR(pDataWrpr);
 
@@ -89,24 +101,39 @@ public:
             {
                 VERIFY_EXPR(pDataWrpr->GetState() == DataWrapper::DataState::InitializedUnaccounted);
 
-                // NB: since we released the cache mutex, there is no guarantee that
-                //     pDataWrpr is still in the cache as it could have been
-                //     removed by other thread!
+                // NB: since we released the cache mutex, there is no guarantee that pDataWrpr is
+                //     still in the cache as it could have been removed by another thread in <Erase>.
                 auto it = m_Cache.find(Key);
                 if (it != m_Cache.end())
                 {
                     // Check that the object wrapper is the same.
                     if (it->second == pDataWrpr)
                     {
-                        // Only a single thread can initialize accounted size as only a single thread can
-                        // initialize the object and obtain IsNewObject == true.
-                        pDataWrpr->InitAccountedSize();
+                        // The wrapper is in the cache - label it as accounted and update the cache size.
 
-                        // The wrapper has indeed been added to the cache - update the cache size.
+                        // Only a single thread can initialize accounted size as only a single thread can
+                        // initialize the object and obtain IsNewObject == true in <NewObj>.
+                        pDataWrpr->SetAccounted(); /* <SA> */
+
                         m_CurrSize += pDataWrpr->GetAccountedSize();
                         // Note that since we hold the mutex, no other thread can access the
-                        // LRUQueue and remove this wrapper from the cache.
+                        // LRUQueue and remove this wrapper from the cache in <Erase>.
                     }
+                    else
+                    {
+                        /* <Discard1> */
+
+                        // There is a new wrapper with the same key in the cache.
+                        // The one we have is a dangling pointer that will be released when the
+                        // function exits.
+                    }
+                }
+                else
+                {
+                    /* <Discard2> */
+
+                    // pDataWrpr has been removed from the cache by another thread and is now a dangling
+                    // pointer. We need to do nothing as it will be released when the function exits.
                 }
             }
 
@@ -117,29 +144,53 @@ public:
 
                 VERIFY_EXPR(!m_LRUQueue.empty());
 
+                // State stransition table:
+                //                                                     Protected by m_Mtx   Accounted Size
+                //   Default                -> InitializedUnaccounted         No                 0          <D2U>
+                //   Default                -> InitFailure                    No                 0          <D2F>
+                //   InitFailure            -> Default                        No                 0          <F2D>
+                //   InitializedUnaccounted -> InitializedAccounted          Yes                !0          <U2A>
+                //   InitializedAccounted                                 Final State
+                //
                 const auto& cache_it = m_LRUQueue[idx];
-                const auto  State    = cache_it->second->GetState();
+                const auto  State    = cache_it->second->GetState(); /* <ReadState> */
                 if (State == DataWrapper::DataState::Default)
                 {
-                    // The object is being initialized in another thread.
+                    // The object is being initialized in another thread in DataWrapper::Get().
+                    // Possible actual states here are Default, InitializedUnaccounted or InitFailure.
                     continue;
                 }
                 if (State == DataWrapper::DataState::InitializedUnaccounted)
                 {
                     // Object has been initialized in another thread, but has not been accounted for
                     // in the cache yet as this thread acquired the mutex first.
+                    // The only possible actual state here is InitializedUnaccounted as transition to
+                    // InitializedAccounted in <SA> requires mutex.
                     continue;
                 }
 
-                VERIFY_EXPR(State == DataWrapper::DataState::InitializedAccounted ||
-                            State == DataWrapper::DataState::InitFailure);
-                // Note that for data wrappers in InitFailure state, the accounted size
-                // can't be updated since we hold the mutex. Even if other thread successfully
-                // initializes the wrapper, it will not be in the cache by that time,
-                // and the wrapper will be discarded.
+                // Note that the wrapper may be in ANY state here.
+
+                // If the State was InitFailure when we read it in <ReadState>, the wrapper could be in any of
+                // InitFailure, Default, or InitializedUnaccounted states now (see the state transition table).
+                // HOWEVER, it CAN'T be in InitializedAccounted state as that transition requires a mutex and
+                // can only be performed in <SA>.
+
+                // There is a chance that we may remove a wrapper in InitializedUnaccounted state here,
+                // but this is not a problem as this may only happen for a wrapper that was in InitFailure
+                // state, and never for a wrapper that was successfully initialized on the first attempt.
+                // This wrapper will become dangling and will be discarded in <Discard1> or <Discard2>.
+
+                // NB: if the state was not InitializedAccounted when we read it in <ReadState>, it can't be
+                //     InitializedAccounted now since the transition <U2A> is protected by mutex in <SA>.
+                VERIFY_EXPR((State == DataWrapper::DataState::InitializedAccounted && cache_it->second->GetState() == DataWrapper::DataState::InitializedAccounted) ||
+                            (State != DataWrapper::DataState::InitializedAccounted && cache_it->second->GetState() != DataWrapper::DataState::InitializedAccounted));
+
+                // Note that transition to InitializedAccounted state is protected by the mutex in <SA>, so
+                // we can't remove a wrapper before it was accounted for.
                 const auto AccountedSize = cache_it->second->GetAccountedSize();
                 DeleteList.emplace_back(std::move(cache_it->second));
-                m_Cache.erase(cache_it);
+                m_Cache.erase(cache_it); /* <Erase> */
                 m_LRUQueue.erase(m_LRUQueue.begin() + idx);
                 VERIFY_EXPR(m_CurrSize >= AccountedSize);
                 m_CurrSize -= AccountedSize;
@@ -200,42 +251,44 @@ private:
             std::lock_guard<std::mutex> Lock{m_InitDataMtx};
             if (m_DataSize == 0)
             {
-                m_State.store(DataState::Default);
+                VERIFY_EXPR(m_State == DataState::Default || m_State == DataState::InitFailure);
+                m_State.store(DataState::Default); /* <F2D> */
                 try
                 {
                     size_t DataSize = 0;
                     InitData(m_Data, DataSize); // May throw
                     VERIFY_EXPR(DataSize > 0);
                     m_DataSize.store((std::max)(DataSize, size_t{1}));
-                    m_State.store(DataState::InitializedUnaccounted);
-                    IsNewObject = true;
+                    m_State.store(DataState::InitializedUnaccounted); /* <D2U> */
+                    IsNewObject = true;                               /* <NewObj> */
                 }
                 catch (...)
                 {
                     m_Data = {};
-                    m_State.store(DataState::InitFailure);
+                    m_State.store(DataState::InitFailure); /* <D2F> */
                     throw;
                 }
             }
             else
             {
                 VERIFY_EXPR(m_State == DataState::InitializedUnaccounted || m_State == DataState::InitializedAccounted);
+                VERIFY_EXPR(m_DataSize != 0);
             }
             return m_Data;
         }
 
-        void InitAccountedSize()
+        void SetAccounted()
         {
             VERIFY(m_State == DataState::InitializedUnaccounted, "Initializing accounted size for an object that is not initialized.");
             VERIFY(m_AccountedSize == 0, "Accounted size has already been initialized.");
+            VERIFY(m_DataSize != 0, "Data size has not been initialized.");
             m_AccountedSize.store(m_DataSize.load());
-            m_State.store(DataState::InitializedAccounted);
+            m_State.store(DataState::InitializedAccounted); /* <U2A> */
         }
 
         size_t GetAccountedSize() const
         {
-            VERIFY_EXPR((m_State == DataState::InitFailure && m_AccountedSize == 0) ||
-                        (m_State == DataState::InitializedAccounted && m_AccountedSize != 0));
+            VERIFY_EXPR((m_State == DataState::InitializedAccounted && m_AccountedSize != 0) || (m_AccountedSize == 0));
             return m_AccountedSize.load();
         }
 
