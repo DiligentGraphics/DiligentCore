@@ -40,7 +40,7 @@ namespace
 
 struct CacheData
 {
-    Uint32 Value = 0;
+    Uint32 Value = ~0u;
 };
 
 TEST(Common_LRUCache, Get)
@@ -122,6 +122,63 @@ TEST(Common_LRUCache, ReleaseQueue)
         for (Uint32 i = 0; i < Data.size(); ++i)
         {
             EXPECT_EQ(Data[i].Value, i);
+        }
+    }
+}
+
+
+TEST(Common_LRUCache, Exceptions)
+{
+    LRUCache<int, CacheData> Cache{16};
+
+    constexpr Uint32                    NumThreads = 15; // Use odd number
+    std::vector<std::thread>            Threads(NumThreads);
+    std::vector<std::vector<CacheData>> ThreadsData(NumThreads);
+
+    Threading::Signal StartSignal;
+    for (Uint32 i = 0; i < NumThreads; ++i)
+    {
+        ThreadsData[i].resize(128);
+
+        Threads[i] = std::thread(
+            [&](Uint32 ThreadId) {
+                StartSignal.Wait();
+
+                auto& Data = ThreadsData[ThreadId];
+                for (Uint32 i = 0; i < Data.size(); ++i)
+                {
+                    try
+                    {
+                        // Set elements with the same keys from all threads
+                        Data[i] = Cache.Get(i,
+                                            [&](CacheData& Data, size_t& Size) //
+                                            {
+                                                // Throw exception from every other request.
+                                                if ((i * NumThreads + ThreadId) % 2 == 0)
+                                                    throw std::runtime_error("test error");
+
+                                                Data.Value = i;
+                                                Size       = 1;
+                                            });
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+            },
+            i);
+    }
+    StartSignal.Trigger(true);
+
+    for (auto& T : Threads)
+        T.join();
+
+    for (auto& Data : ThreadsData)
+    {
+        for (Uint32 i = 0; i < Data.size(); ++i)
+        {
+            auto Value = Data[i].Value;
+            EXPECT_TRUE(Value == ~0u || Value == i);
         }
     }
 }

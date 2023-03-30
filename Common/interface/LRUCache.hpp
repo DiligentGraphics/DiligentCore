@@ -23,6 +23,7 @@
 #include <memory>
 #include <algorithm>
 #include <atomic>
+#include <vector>
 
 #include "../../../DiligentCore/Platforms/Basic/interface/DebugUtilities.hpp"
 
@@ -62,9 +63,9 @@ public:
         m_MaxSize{MaxSize}
     {}
 
-    /// Finds the data in the cache and returns it. If the data is not found, it is created using the provided initializer.
+    /// Finds the data in the cache and returns it. If the data is not found, it is atomically created using the provided initializer.
     template <typename InitDataType>
-    DataType Get(const KeyType& Key, InitDataType InitData)
+    DataType Get(const KeyType& Key, InitDataType&& InitData) noexcept(false) // InitData may throw
     {
         // Get the data wrapper. Since this is a shared pointer, it may not be
         // destroyed while we keep one, even if it is popped from the cache
@@ -73,64 +74,81 @@ public:
         VERIFY_EXPR(pDataWrpr);
 
         // Get data by value. It will be atomically initialized if necessary,
-        // while the main cache mutex will not be locked.
-        bool     IsNewObject = false;
-        DataType Data        = pDataWrpr->Get(InitData, IsNewObject);
+        // while the main cache mutex is not locked.
+        bool IsNewObject = false;
+        // InitData may throw, which will leave the wrapper in the cache in the 'InitFailure' state.
+        // It will be removed from the cache later when the LRU queue is processed.
+        auto Data = pDataWrpr->GetData(std::forward<InitDataType>(InitData), IsNewObject);
 
-        // Process release queue
+        // Process the release queue
+        std::vector<std::shared_ptr<DataWrapper>> DeleteList;
         {
             std::lock_guard<std::mutex> Lock{m_Mtx};
 
             if (IsNewObject)
             {
-                // NB: since we released the mutex, there is no guarantee that
+                VERIFY_EXPR(pDataWrpr->GetState() == DataWrapper::DataState::InitializedUnaccounted);
+
+                // NB: since we released the cache mutex, there is no guarantee that
                 //     pDataWrpr is still in the cache as it could have been
                 //     removed by other thread!
                 auto it = m_Cache.find(Key);
                 if (it != m_Cache.end())
                 {
-                    // Check that the object is the same (though another object should
-                    // never be found in the cache as only objects with AccountedSize > 0 can
-                    // be removed).
+                    // Check that the object wrapper is the same.
                     if (it->second == pDataWrpr)
                     {
-                        // The wrapper has indeed been added to the cache - update its size.
-                        m_CurrSize += pDataWrpr->DataSize;
-                        // Only a single thread can write to AccountedSize as only a single thread can
-                        // initialize the object and obtain IsNewObject = true.
-                        VERIFY_EXPR(pDataWrpr->AccountedSize.load() == 0);
-                        pDataWrpr->AccountedSize.store(pDataWrpr->DataSize);
-                        // Note also that we write to AccountedSize while holding the cache
-                        // mutex, so no other thread can read it, and the LRUQueue can not be
-                        // processed at this time by another thread.
+                        // Only a single thread can initialize accounted size as only a single thread can
+                        // initialize the object and obtain IsNewObject == true.
+                        pDataWrpr->InitAccountedSize();
+
+                        // The wrapper has indeed been added to the cache - update the cache size.
+                        m_CurrSize += pDataWrpr->GetAccountedSize();
+                        // Note that since we hold the mutex, no other thread can access the
+                        // LRUQueue and remove this wrapper from the cache.
                     }
                 }
             }
 
-            while (m_CurrSize > m_MaxSize)
+            for (int idx = static_cast<int>(m_LRUQueue.size()) - 1; idx >= 0; --idx)
             {
+                if (m_CurrSize <= m_MaxSize)
+                    break;
+
                 VERIFY_EXPR(!m_LRUQueue.empty());
 
-                auto last_it = m_LRUQueue.back();
-
-                const auto AccountedSize = last_it->second->AccountedSize.load();
-                if (AccountedSize == 0)
+                const auto& cache_it = m_LRUQueue[idx];
+                const auto  State    = cache_it->second->GetState();
+                if (State == DataWrapper::DataState::Default)
                 {
-                    // The size of this wrapper has not been accounted for yet, which
-                    // means another thread is waiting to update the cache size.
-                    // Stop the loop - the queue will be processed again when the
-                    // waiting thread gets unlocked.
-                    break;
+                    // The object is being initialized in another thread.
+                    continue;
+                }
+                if (State == DataWrapper::DataState::InitializedUnaccounted)
+                {
+                    // Object has been initialized in another thread, but has not been accounted for
+                    // in the cache yet as this thread acquired the mutex first.
+                    continue;
                 }
 
-                // Pop the last object from the queue
-                m_LRUQueue.pop_back();
+                VERIFY_EXPR(State == DataWrapper::DataState::InitializedAccounted ||
+                            State == DataWrapper::DataState::InitFailure);
+                // Note that for data wrappers in InitFailure state, the accounted size
+                // can't be updated since we hold the mutex. Even if other thread successfully
+                // initializes the wrapper, it will not be in the cache by that time,
+                // and the wrapper will be discarded.
+                const auto AccountedSize = cache_it->second->GetAccountedSize();
+                DeleteList.emplace_back(std::move(cache_it->second));
+                m_Cache.erase(cache_it);
+                m_LRUQueue.erase(m_LRUQueue.begin() + idx);
                 VERIFY_EXPR(m_CurrSize >= AccountedSize);
                 m_CurrSize -= AccountedSize;
-                m_Cache.erase(last_it);
             }
             VERIFY_EXPR(m_Cache.size() == m_LRUQueue.size());
         }
+
+        // Delete objects after releasing the cache mutex
+        DeleteList.clear();
 
         return Data;
     }
@@ -156,8 +174,7 @@ public:
         {
             auto last_it = m_LRUQueue.back();
             m_LRUQueue.pop_back();
-            VERIFY_EXPR(last_it->second->DataSize == last_it->second->AccountedSize);
-            DbgSize += last_it->second->DataSize;
+            DbgSize += last_it->second->GetAccountedSize();
             m_Cache.erase(last_it);
         }
         VERIFY_EXPR(m_Cache.empty());
@@ -166,28 +183,73 @@ public:
     }
 
 private:
-    struct DataWrapper
+    class DataWrapper
     {
-        template <typename InitDataType>
-        const DataType& Get(InitDataType InitData, bool& IsNewObject)
+    public:
+        enum class DataState
         {
-            std::lock_guard<std::mutex> Lock{InitDataMtx};
-            IsNewObject = (DataSize == 0);
-            if (IsNewObject)
+            InitFailure = -1,
+            Default,
+            InitializedUnaccounted,
+            InitializedAccounted
+        };
+
+        template <typename InitDataType>
+        const DataType& GetData(InitDataType&& InitData, bool& IsNewObject) noexcept(false)
+        {
+            std::lock_guard<std::mutex> Lock{m_InitDataMtx};
+            if (m_DataSize == 0)
             {
-                InitData(Data, DataSize);
-                VERIFY_EXPR(DataSize > 0);
-                DataSize = (std::max)(DataSize, size_t{1});
+                m_State.store(DataState::Default);
+                try
+                {
+                    size_t DataSize = 0;
+                    InitData(m_Data, DataSize); // May throw
+                    VERIFY_EXPR(DataSize > 0);
+                    m_DataSize.store((std::max)(DataSize, size_t{1}));
+                    m_State.store(DataState::InitializedUnaccounted);
+                    IsNewObject = true;
+                }
+                catch (...)
+                {
+                    m_Data = {};
+                    m_State.store(DataState::InitFailure);
+                    throw;
+                }
             }
-            return Data;
+            else
+            {
+                VERIFY_EXPR(m_State == DataState::InitializedUnaccounted || m_State == DataState::InitializedAccounted);
+            }
+            return m_Data;
         }
 
-        std::mutex InitDataMtx;
-        DataType   Data;
-        // Actual data size
-        size_t DataSize = 0;
-        // The size that was accounted for in the cache
-        std::atomic<size_t> AccountedSize{0};
+        void InitAccountedSize()
+        {
+            VERIFY(m_State == DataState::InitializedUnaccounted, "Initializing accounted size for an object that is not initialized.");
+            VERIFY(m_AccountedSize == 0, "Accounted size has already been initialized.");
+            m_AccountedSize.store(m_DataSize.load());
+            m_State.store(DataState::InitializedAccounted);
+        }
+
+        size_t GetAccountedSize() const
+        {
+            VERIFY_EXPR((m_State == DataState::InitFailure && m_AccountedSize == 0) ||
+                        (m_State == DataState::InitializedAccounted && m_AccountedSize != 0));
+            return m_AccountedSize.load();
+        }
+
+        DataState GetState() const { return m_State; }
+
+    private:
+        std::mutex m_InitDataMtx;
+        DataType   m_Data;
+
+        std::atomic<DataState> m_State{DataState::Default};
+
+        std::atomic<size_t> m_DataSize{0};
+        // The size that was accounted in the cache
+        std::atomic<size_t> m_AccountedSize{0};
     };
 
     std::shared_ptr<DataWrapper> GetDataWrapper(const KeyType& Key)
