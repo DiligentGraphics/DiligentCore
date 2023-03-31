@@ -156,7 +156,7 @@ struct BufferSuballocatorCreateInfo
     Uint32 SuballocationObjAllocationGranularity = 64;
 
 
-    /// If Desc.Usage == USAGE_SPARSE, the irtual buffer size; ignored otherwise.
+    /// If Desc.Usage == USAGE_SPARSE, the virtual buffer size; ignored otherwise.
     Uint64 VirtualSize = 0;
 };
 
