@@ -919,6 +919,42 @@ void TestGatherCmp()
 #endif
 }
 
+#ifdef FRAGMENT_SHADER
+void TestCalculateLevelOfDetail()
+{
+    float2 f2UV = float2(0.2, 0.3);
+    float3 f3UVW = float3(0.2, 0.3, 0.5);
+    float Level = 1.8;
+    const int3 Offset = int3(3, 6, 2);
+    float4 f4UVWQ = float4(0.2, 0.3, 0.5, 10.0);
+    float LOD;
+
+    //Texture2D
+    LOD = Tex2D_F1.CalculateLevelOfDetail( Tex2D_F1_sampler, f3UVW.xy );
+    LOD = Tex2D_F6.CalculateLevelOfDetail( Tex2D_F6_sampler, Tex2D_F1.SampleLevel( Tex2D_F1_sampler, f3UVW.xy, Level ).xy + Tex2D_F1.SampleLevel( Tex2D_F1_sampler, f3UVW.xy, Level ).xy );
+    LOD = Tex2D_F1.CalculateLevelOfDetail( Tex2D_F1_sampler, f3UVW.xy );
+    LOD = Tex2D_F1.CalculateLevelOfDetail( Tex2D_F1_sampler, float2(0.1, 0.3) );
+    LOD = Tex2D_F1.CalculateLevelOfDetail( Tex2D_F1_sampler, float2(0.1, (0.3+0.1) ) );
+
+    //Texture2DArray
+    LOD = Tex2D_F_A1.CalculateLevelOfDetail( Tex2D_F_A1_sampler, f3UVW.xy );
+    LOD = Tex2D_F_A3.CalculateLevelOfDetail( Tex2D_F_A3_sampler, f3UVW.xy );
+
+    //Texture3D
+    LOD = Tex3D_F1.CalculateLevelOfDetail(Tex3D_F1_sampler, f3UVW.xyz );
+
+    //TextureCube
+    LOD = TexC_F1.CalculateLevelOfDetail(TexC_F1_sampler, f3UVW.xyz );
+
+#ifndef GL_ES
+    // TextureCubeArray
+    LOD = TexC_F_A1.CalculateLevelOfDetail( TexC_F_A1_sampler, f4UVWQ.xyz );
+    LOD = TexC_F_A1.CalculateLevelOfDetail( TexC_F_A1_sampler, float3(0.5, (0.2+(0.01+0.02)), 0.4) );
+#endif
+}
+#endif
+
+
 struct InnerStruct
 {
     float f[4];
