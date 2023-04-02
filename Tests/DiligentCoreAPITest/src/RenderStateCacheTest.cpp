@@ -1005,7 +1005,7 @@ TEST(RenderStateCacheTest, RenderDeviceWithCache)
 }
 
 
-void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false)
+void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, bool UseSignatures = false)
 {
     auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
@@ -1099,7 +1099,8 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false)
 
         constexpr char PSOName[] = "Render State Cache Reload Test";
 
-        RefCntAutoPtr<IPipelineState> pPSO;
+        RefCntAutoPtr<IPipelineState>             pPSO;
+        RefCntAutoPtr<IPipelineResourceSignature> pSign0, pSign1;
         {
             GraphicsPipelineStateCreateInfo PsoCI;
             PsoCI.PSODesc.Name = PSOName;
@@ -1114,18 +1115,65 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false)
             };
             GraphicsPipeline.InputLayout = InputLayout;
 
-            PipelineResourceLayoutDescX ResLayout{
+            PipelineResourceLayoutDescX ResLayout;
+            IPipelineResourceSignature* ppSignatures[2] = {};
+            if (UseSignatures)
+            {
                 {
-                    {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "Colors", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-                    {SHADER_TYPE_PIXEL, "g_Tex2D_Static1", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-                    {SHADER_TYPE_PIXEL, "g_Tex2D_Mut", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
-                    {SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
-                },
+                    PipelineResourceSignatureDescX Sign0Desc{
+                        {
+                            {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "Colors", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+                            {SHADER_TYPE_PIXEL, "g_Tex2D_Static0", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+                            {SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+                            {SHADER_TYPE_PIXEL, "g_Tex2D_Dyn_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+                        },
+                        {
+                            {SHADER_TYPE_PIXEL, "g_Tex2D_Static0", SamplerDesc{}},
+                        },
+                    };
+                    Sign0Desc.Name                       = "Pipeline reload test sign 0";
+                    Sign0Desc.BindingIndex               = 0;
+                    Sign0Desc.UseCombinedTextureSamplers = true;
+                    pDevice->CreatePipelineResourceSignature(Sign0Desc, &pSign0);
+                    ASSERT_TRUE(pSign0);
+                }
+
                 {
-                    {SHADER_TYPE_PIXEL, "g_Tex2D_Static0", SamplerDesc{}},
-                    {SHADER_TYPE_PIXEL, "g_Tex2D_Mut", SamplerDesc{}},
-                }};
-            PsoCI.PSODesc.ResourceLayout = ResLayout;
+                    PipelineResourceSignatureDescX Sign1Desc{
+                        {
+                            {SHADER_TYPE_PIXEL, "g_Tex2D_Static1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+                            {SHADER_TYPE_PIXEL, "g_Tex2D_Mut", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                            {SHADER_TYPE_PIXEL, "g_Tex2D_Mut_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                            {SHADER_TYPE_PIXEL, "g_Tex2D_Static1_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+                        },
+                        {
+                            {SHADER_TYPE_PIXEL, "g_Tex2D_Mut", SamplerDesc{}},
+                        },
+                    };
+                    Sign1Desc.Name                       = "Pipeline reload test sign 1";
+                    Sign1Desc.BindingIndex               = 1;
+                    Sign1Desc.UseCombinedTextureSamplers = true;
+                    pDevice->CreatePipelineResourceSignature(Sign1Desc, &pSign1);
+                    ASSERT_TRUE(pSign1);
+                }
+
+                ppSignatures[0]               = pSign0;
+                ppSignatures[1]               = pSign1;
+                PsoCI.ppResourceSignatures    = ppSignatures;
+                PsoCI.ResourceSignaturesCount = _countof(ppSignatures);
+            }
+            else
+            {
+                ResLayout.AddVariable(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "Colors", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+                ResLayout.AddVariable(SHADER_TYPE_PIXEL, "g_Tex2D_Static1", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+                ResLayout.AddVariable(SHADER_TYPE_PIXEL, "g_Tex2D_Mut", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+                ResLayout.AddVariable(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+
+                ResLayout.AddImmutableSampler(SHADER_TYPE_PIXEL, "g_Tex2D_Static0", SamplerDesc{});
+                ResLayout.AddImmutableSampler(SHADER_TYPE_PIXEL, "g_Tex2D_Mut", SamplerDesc{});
+
+                PsoCI.PSODesc.ResourceLayout = ResLayout;
+            }
 
             const auto ColorBufferFormat = pSwapChain->GetDesc().ColorBufferFormat;
 
@@ -1147,26 +1195,47 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false)
             EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO), pData != nullptr);
         }
         ASSERT_NE(pPSO, nullptr);
-        pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "Colors")->Set(pConstBuff);
-        pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static0")->Set(RefTextures.GetView(0));
 
-        auto CreateSRB = [&]() {
-            pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static1")->Set(RefTextures.GetView(1));
+        if (UseSignatures)
+        {
+            pSign0->GetStaticVariableByName(SHADER_TYPE_VERTEX, "Colors")->Set(pConstBuff);
+            pSign0->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static0")->Set(RefTextures.GetView(0));
+        }
+        else
+        {
+            pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "Colors")->Set(pConstBuff);
+            pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static0")->Set(RefTextures.GetView(0));
+        }
 
-            RefCntAutoPtr<IShaderResourceBinding> pSRB;
-            pPSO->CreateShaderResourceBinding(&pSRB, true);
+        auto CreateSRB = [&](RefCntAutoPtr<IShaderResourceBinding>& pSRB0, RefCntAutoPtr<IShaderResourceBinding>& pSRB1) {
+            if (UseSignatures)
+            {
+                pSign0->CreateShaderResourceBinding(&pSRB0, true);
+                pSign1->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static1")->Set(RefTextures.GetView(1));
+                pSign1->CreateShaderResourceBinding(&pSRB1, true);
+            }
+            else
+            {
+                pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static1")->Set(RefTextures.GetView(1));
+                pPSO->CreateShaderResourceBinding(&pSRB0, true);
 
-            pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->Set(RefTextures.GetView(2));
-            pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
-            pCtx->TransitionShaderResources(pPSO, pSRB);
-            return pSRB;
+                pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->Set(RefTextures.GetView(2));
+                pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
+            }
+
+            (UseSignatures ? pSRB1 : pSRB0)->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->Set(RefTextures.GetView(2));
+            pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
+
+            pCtx->TransitionShaderResources(pPSO, pSRB0);
+            if (pSRB1)
+                pCtx->TransitionShaderResources(pPSO, pSRB1);
         };
 
-        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        RefCntAutoPtr<IShaderResourceBinding> pSRB0, pSRB1;
         if (CreateSrbBeforeReload)
         {
             // Init SRB before reloading the PSO
-            pSRB = CreateSRB();
+            CreateSRB(pSRB0, pSRB1);
         }
 
         auto ModifyPSO = MakeCallback(
@@ -1177,17 +1246,19 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false)
 
         EXPECT_EQ(pCache->Reload(ModifyPSO, ModifyPSO), pass == 0 ? 3u : 0u);
 
-        if (!pSRB)
+        if (!pSRB0)
         {
             // Init SRB after reloading the PSO
             EXPECT_FALSE(CreateSrbBeforeReload);
-            pSRB = CreateSRB();
+            CreateSRB(pSRB0, pSRB1);
         }
 
-        TestDraw(nullptr, nullptr, pPSO, pSRB, nullptr, UseRenderPass,
+        TestDraw(nullptr, nullptr, pPSO, pSRB0, nullptr, UseRenderPass,
                  [&]() {
                      IBuffer* pVBs[] = {pVertBuff};
                      pCtx->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+                     if (pSRB1)
+                         pCtx->CommitShaderResources(pSRB1, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
                  });
 
         pData.Release();
@@ -1208,6 +1279,16 @@ TEST(RenderStateCacheTest, Reload_RenderPass)
 TEST(RenderStateCacheTest, Reload_SrbBeforeReload)
 {
     TestPipelineReload(/*UseRenderPass = */ false, /*CreateSrbBeforeReload = */ true);
+}
+
+TEST(RenderStateCacheTest, Reload_Signatures)
+{
+    TestPipelineReload(/*UseRenderPass = */ false, /*CreateSrbBeforeReload = */ false, /*UseSignatures = */ true);
+}
+
+TEST(RenderStateCacheTest, Reload_Signatures_SrbBeforeReload)
+{
+    TestPipelineReload(/*UseRenderPass = */ false, /*CreateSrbBeforeReload = */ true, /*UseSignatures = */ true);
 }
 
 } // namespace

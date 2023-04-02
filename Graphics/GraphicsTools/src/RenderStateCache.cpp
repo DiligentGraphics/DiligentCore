@@ -1424,7 +1424,22 @@ bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGr
     {
         if (m_pPipeline != pNewPSO)
         {
-            m_pPipeline->CopyStaticResources(pNewPSO);
+            const auto SrcSignCount = m_pPipeline->GetResourceSignatureCount();
+            const auto DstSignCount = pNewPSO->GetResourceSignatureCount();
+            if (SrcSignCount == DstSignCount)
+            {
+                for (Uint32 s = 0; s < SrcSignCount; ++s)
+                {
+                    auto* pSrcSign = m_pPipeline->GetResourceSignature(s);
+                    auto* pDstSign = pNewPSO->GetResourceSignature(s);
+                    if (pSrcSign != pDstSign)
+                        pSrcSign->CopyStaticResources(pDstSign);
+                }
+            }
+            else
+            {
+                UNEXPECTED("The number of resource signatures in old pipeline (", SrcSignCount, ") does not match the number of signatures in new pipeline (", DstSignCount, ")");
+            }
             m_pPipeline = pNewPSO;
         }
     }
