@@ -475,6 +475,11 @@ public:
         }
     }
 
+    virtual Uint32 GetAllocationAlignment(Uint32 Width, Uint32 Height) const override final
+    {
+        return ComputeTextureAtlasSuballocationAlignment(Width, Height, m_MinAlignment);
+    }
+
     virtual void Allocate(Uint32                       Width,
                           Uint32                       Height,
                           ITextureAtlasSuballocation** ppSuballocation) override final
@@ -491,16 +496,7 @@ public:
             return;
         }
 
-        Uint32 Alignment = m_MinAlignment;
-        if (Alignment > 0)
-        {
-            while (std::min(Width, Height) > Alignment)
-                Alignment *= 2;
-        }
-        else
-        {
-            Alignment = 1;
-        }
+        const auto Alignment     = GetAllocationAlignment(Width, Height);
         const auto AlignedWidth  = AlignUp(Width, Alignment);
         const auto AlignedHeight = AlignUp(Height, Alignment);
 
@@ -767,6 +763,20 @@ float4 TextureAtlasSuballocationImpl::GetUVScaleBias() const
         };
 }
 
+Uint32 ComputeTextureAtlasSuballocationAlignment(Uint32 Width, Uint32 Height, Uint32 MinAlignment)
+{
+    Uint32 Alignment = MinAlignment;
+    if (Alignment > 0)
+    {
+        while (std::min(Width, Height) > Alignment)
+            Alignment *= 2;
+    }
+    else
+    {
+        Alignment = 1;
+    }
+    return Alignment;
+}
 
 void CreateDynamicTextureAtlas(IRenderDevice*                       pDevice,
                                const DynamicTextureAtlasCreateInfo& CreateInfo,

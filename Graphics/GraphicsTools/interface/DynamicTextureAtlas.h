@@ -159,6 +159,14 @@ struct IDynamicTextureAtlas : public IObject
 
     /// Returns the usage stats, see Diligent::DynamicTextureAtlasUsageStats.
     virtual void GetUsageStats(DynamicTextureAtlasUsageStats& Stats) const = 0;
+
+
+    /// Computes the allocation alignment for the region of a given size.
+
+    /// \param [in] Width  - Region width.
+    /// \param [in] Height - Region height.
+    /// \return            - Allocation alignment.
+    virtual Uint32 GetAllocationAlignment(Uint32 Width, Uint32 Height) const = 0;
 };
 
 
@@ -227,6 +235,16 @@ struct DynamicTextureAtlasCreateInfo
     /// Silence allocation errors.
     bool Silent = false;
 };
+
+
+/// Computes the texture atlas suballocation alignment for the region of a given size.
+
+/// \param [in] Width        - Region width.
+/// \param [in] Height       - Region height.
+/// \param [in] MinAlignment - Minimum required alignment, see DynamicTextureAtlasCreateInfo::MinAlignment.
+/// \return                  - Allocation alignment.
+Uint32 ComputeTextureAtlasSuballocationAlignment(Uint32 Width, Uint32 Height, Uint32 MinAlignment);
+
 
 /// Creates a new dynamic texture atlas.
 
