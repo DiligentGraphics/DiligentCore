@@ -65,6 +65,9 @@ struct ITextureAtlasSuballocation : public IObject
     /// Returns the texture coordinate scale (xy) and bias (zw).
     virtual float4 GetUVScaleBias() const = 0;
 
+    /// Returns the suballocation alignment.
+    virtual Uint32 GetAlignment() const = 0;
+
     /// Returns the pointer to the parent texture atlas.
     virtual IDynamicTextureAtlas* GetAtlas() = 0;
 

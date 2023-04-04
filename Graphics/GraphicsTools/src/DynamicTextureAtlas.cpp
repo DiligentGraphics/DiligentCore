@@ -108,6 +108,11 @@ public:
 
     virtual float4 GetUVScaleBias() const override final;
 
+    virtual Uint32 GetAlignment() const override final
+    {
+        return m_Alignment;
+    }
+
     virtual IDynamicTextureAtlas* GetAtlas() override final;
 
     virtual void SetUserData(IObject* pUserData) override final
