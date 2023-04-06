@@ -25,6 +25,7 @@
  */
 
 #include "RenderStateCache.h"
+#include "RenderStateCache.hpp"
 
 #include <array>
 #include <unordered_map>
@@ -47,6 +48,7 @@
 #include "XXH128Hasher.hpp"
 #include "CallbackWrapper.hpp"
 #include "GraphicsUtilities.h"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -1476,6 +1478,49 @@ bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGr
             UNEXPECTED("Unexpected pipeline type");
             return false;
     }
+}
+
+static constexpr char RenderStateCacheFileExtension[] = ".diligentcache";
+
+std::string GetRenderStateCacheFilePath(const char* CacheLocation, const char* AppName, RENDER_DEVICE_TYPE DeviceType)
+{
+    if (CacheLocation == nullptr)
+    {
+        UNEXPECTED("Cache location is null");
+        return "";
+    }
+
+    std::string StateCachePath = CacheLocation;
+    if (StateCachePath == RenderStateCacheLocationAppData)
+    {
+        // Use the app data directory.
+        StateCachePath = FileSystem::GetLocalAppDataDirectory(AppName);
+    }
+    else if (!StateCachePath.empty() && !FileSystem::PathExists(StateCachePath.c_str()))
+    {
+        // Use the user-provided directory
+        FileSystem::CreateDirectory(StateCachePath.c_str());
+    }
+
+    if (!StateCachePath.empty() && !FileSystem::IsSlash(StateCachePath.back()))
+        StateCachePath.push_back(FileSystem::SlashSymbol);
+
+    if (AppName != nullptr)
+    {
+        StateCachePath += AppName;
+        StateCachePath += '_';
+    }
+    StateCachePath += GetRenderDeviceTypeShortString(DeviceType);
+    // Use different cache files for debug and release modes.
+    // This is not required, but is convenient.
+#ifdef DILIGENT_DEBUG
+    StateCachePath += "_d";
+#else
+    StateCachePath += "_r";
+#endif
+    StateCachePath += RenderStateCacheFileExtension;
+
+    return StateCachePath;
 }
 
 } // namespace Diligent

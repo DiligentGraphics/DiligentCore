@@ -1224,11 +1224,20 @@ template <bool ThrowOnError = true>
 class RenderDeviceX
 {
 public:
+    RenderDeviceX() noexcept {}
+
     explicit RenderDeviceX(IRenderDevice* pDevice) noexcept :
         m_pDevice{pDevice}
     {
         DEV_CHECK_ERR(pDevice, "Device must not be null");
     }
+
+    // clang-format off
+    RenderDeviceX           (const RenderDeviceX&) noexcept = default;
+    RenderDeviceX& operator=(const RenderDeviceX&) noexcept = default;
+    RenderDeviceX           (RenderDeviceX&&)      noexcept = default;
+    RenderDeviceX& operator=(RenderDeviceX&&)      noexcept = default;
+    // clang-format on
 
     RefCntAutoPtr<IBuffer> CreateBuffer(const BufferDesc& BuffDesc,
                                         const BufferData* pBuffData = nullptr) noexcept(!ThrowOnError)
@@ -1417,9 +1426,14 @@ public:
         return m_pDevice->GetEngineFactory();
     }
 
-    operator IRenderDevice*()
+    IRenderDevice* GetDevice() const noexcept
     {
-        return m_pDevice;
+        return m_pDevice.RawPtr<IRenderDevice>();
+    }
+
+    operator IRenderDevice*() const noexcept
+    {
+        return GetDevice();
     }
 
 private:
