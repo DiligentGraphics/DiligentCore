@@ -1332,4 +1332,28 @@ TEST(Common_HashUtils, TilePipelineStateCIXXH128Hash)
     TestTilePipelineStateCIHasher<XXH128HasherTestHelper>();
 }
 
+
+template <template <typename T> class HelperType>
+void TestVertexPoolElementDescHasher()
+{
+    DEFINE_HELPER(VertexPoolElementDesc);
+    Helper.Get().BindFlags = BIND_NONE;
+    Helper.Get().Usage     = static_cast<USAGE>(0);
+
+    TEST_RANGE(Size, 32u, 48000u, 1024u);
+    TEST_FLAGS(BindFlags, static_cast<BIND_FLAGS>(1), BIND_FLAG_LAST);
+    TEST_RANGE(Usage, static_cast<USAGE>(1), USAGE_NUM_USAGES);
+    TEST_RANGE(CPUAccessFlags, static_cast<CPU_ACCESS_FLAGS>(1), CPU_ACCESS_FLAG_LAST);
+    TEST_RANGE(Mode, static_cast<BUFFER_MODE>(1), BUFFER_MODE_NUM_MODES);
+}
+
+TEST(Common_HashUtils, VertexPoolElementDescStdHash)
+{
+    TestVertexPoolElementDescHasher<StdHasherTestHelper>();
+}
+
+TEST(Common_HashUtils, VertexPoolElementDescXXH128Hash)
+{
+    TestVertexPoolElementDescHasher<XXH128HasherTestHelper>();
+}
 } // namespace

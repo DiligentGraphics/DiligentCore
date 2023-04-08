@@ -131,6 +131,22 @@ struct VertexPoolElementDesc
         Mode          {_Mode}
     // clang-format on
     {}
+
+    constexpr bool operator==(const VertexPoolElementDesc& RHS) const
+    {
+        // clang-format off
+        return Size           == RHS.Size           &&
+               BindFlags      == RHS.BindFlags      &&
+               Usage          == RHS.Usage          &&
+               CPUAccessFlags == RHS.CPUAccessFlags &&
+               Mode           == RHS.Mode;
+        // clang-format on
+    }
+
+    constexpr bool operator!=(const VertexPoolElementDesc& RHS) const
+    {
+        return !(*this == RHS);
+    }
 };
 
 /// Vertex pool description.

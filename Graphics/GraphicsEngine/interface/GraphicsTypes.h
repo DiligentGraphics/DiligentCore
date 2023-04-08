@@ -228,9 +228,11 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
 /// \note Only USAGE_DYNAMIC resources can be mapped
 DILIGENT_TYPED_ENUM(CPU_ACCESS_FLAGS, Uint8)
 {
-    CPU_ACCESS_NONE  = 0x00, ///< No CPU access
-    CPU_ACCESS_READ  = 0x01, ///< A resource can be mapped for reading
-    CPU_ACCESS_WRITE = 0x02  ///< A resource can be mapped for writing
+    CPU_ACCESS_NONE  = 0u,       ///< No CPU access
+    CPU_ACCESS_READ  = 1u << 0u, ///< A resource can be mapped for reading
+    CPU_ACCESS_WRITE = 1u << 1u, ///< A resource can be mapped for writing
+
+    CPU_ACCESS_FLAG_LAST = CPU_ACCESS_WRITE
 };
 DEFINE_FLAG_ENUM_OPERATORS(CPU_ACCESS_FLAGS)
 
