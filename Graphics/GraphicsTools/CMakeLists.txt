@@ -4,6 +4,7 @@ project(Diligent-GraphicsTools CXX)
 
 set(INTERFACE
     interface/BufferSuballocator.h
+    interface/BytecodeCache.h
     interface/CommonlyUsedStates.h
     interface/DynamicBuffer.hpp
     interface/DynamicTextureArray.hpp
@@ -20,11 +21,12 @@ set(INTERFACE
     interface/TextureUploader.hpp
     interface/TextureUploaderBase.hpp
     interface/XXH128Hasher.hpp
-    interface/BytecodeCache.h  
+    interface/VertexPool.h
 )
 
 set(SOURCE
     src/BufferSuballocator.cpp
+    src/BytecodeCache.cpp
     src/DurationQueryHelper.cpp
     src/DynamicBuffer.cpp
     src/DynamicTextureArray.cpp
@@ -38,7 +40,7 @@ set(SOURCE
     src/ScreenCapture.cpp
     src/TextureUploader.cpp
     src/XXH128Hasher.cpp
-    src/BytecodeCache.cpp
+    src/VertexPool.cpp
 )
 
 if(ARCHIVER_SUPPORTED)
