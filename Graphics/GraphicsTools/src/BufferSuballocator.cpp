@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -93,6 +93,8 @@ public:
 
     virtual IBufferSuballocator* GetAllocator() override final;
 
+    virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) override final;
+
     virtual void SetUserData(IObject* pUserData) override final
     {
         m_pUserData = pUserData;
@@ -144,7 +146,10 @@ public:
         {
             DefaultRawMemoryAllocator::GetAllocator(),
             sizeof(BufferSuballocationImpl),
-            CreateInfo.SuballocationObjAllocationGranularity
+            CreateInfo.SuballocationObjAllocationGranularity != 0 ?
+                CreateInfo.SuballocationObjAllocationGranularity : 
+                1024u / Uint32{sizeof(BufferSuballocationImpl)
+            }
         }
     // clang-format on
     {}
@@ -184,6 +189,14 @@ public:
             UNEXPECTED("Alignment (", Alignment, ") is not a power of two");
             return;
         }
+
+        if (ppSuballocation == nullptr)
+        {
+            UNEXPECTED("ppSuballocation must not be null");
+            return;
+        }
+
+        DEV_CHECK_ERR(*ppSuballocation == nullptr, "Overwriting reference to existing object may cause memory leaks");
 
         VariableSizeAllocationsManager::Allocation Subregion;
         {
@@ -291,6 +304,11 @@ BufferSuballocationImpl::~BufferSuballocationImpl()
 IBufferSuballocator* BufferSuballocationImpl::GetAllocator()
 {
     return m_pParentAllocator;
+}
+
+IBuffer* BufferSuballocationImpl::GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext)
+{
+    return m_pParentAllocator->GetBuffer(pDevice, pContext);
 }
 
 

@@ -59,6 +59,11 @@ struct IVertexPoolAllocation : public IObject
     /// Returns a pointer to the parent vertex pool.
     virtual IVertexPool* GetPool() = 0;
 
+    /// Returns a pointer to the internal buffer at given index.
+
+    /// \remarks    This method is a shortcut for GetPool()->GetBuffer(Index, pDevice, pContext).
+    virtual IBuffer* GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+
     /// Stores a pointer to the user-provided data object, which
     /// may later be retrieved through GetUserData().
     ///

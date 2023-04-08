@@ -93,6 +93,8 @@ public:
 
     virtual IVertexPool* GetPool() override final;
 
+    virtual IBuffer* GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) override final;
+
     virtual void SetUserData(IObject* pUserData) override final
     {
         m_pUserData = pUserData;
@@ -363,6 +365,10 @@ IVertexPool* VertexPoolAllocationImpl::GetPool()
     return m_pParentPool;
 }
 
+IBuffer* VertexPoolAllocationImpl::GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext)
+{
+    return m_pParentPool->GetBuffer(Index, pDevice, pContext);
+}
 
 void CreateVertexPool(IRenderDevice*              pDevice,
                       const VertexPoolCreateInfo& CreateInfo,
