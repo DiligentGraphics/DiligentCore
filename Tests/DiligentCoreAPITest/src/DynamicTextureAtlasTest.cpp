@@ -90,7 +90,7 @@ TEST(DynamicTextureAtlas, Create)
     EXPECT_EQ(Stats.TotalArea, CI.Desc.Width * CI.Desc.Height);
     EXPECT_EQ(Stats.AllocatedArea, 128u * 128u);
     EXPECT_EQ(Stats.UsedArea, 128u * 128u);
-    EXPECT_GE(Stats.Size, 0u);
+    EXPECT_GE(Stats.CommittedSize, 0u);
 }
 
 TEST(DynamicTextureAtlas, CreateArray)
@@ -132,7 +132,7 @@ TEST(DynamicTextureAtlas, CreateArray)
         EXPECT_EQ(Stats.TotalArea, CI.Desc.Width * CI.Desc.Height * 2u);
         EXPECT_EQ(Stats.AllocatedArea, 128u * 128u);
         EXPECT_EQ(Stats.UsedArea, 128u * 128u);
-        EXPECT_GE(Stats.Size, 0u);
+        EXPECT_GE(Stats.CommittedSize, 0u);
     }
 
     CI.Desc.ArraySize = 2;

@@ -86,10 +86,10 @@ struct IBufferSuballocation : public IObject
 /// Buffer suballocator usage stats.
 struct BufferSuballocatorUsageStats
 {
-    /// The size of the internal buffer, in bytes.
-    Uint64 Size = 0;
+    /// Committed memory size of the internal buffer, in bytes.
+    Uint64 CommittedSize = 0;
 
-    /// The total used size, in bytes.
+    /// The total memory size used by all allocations, in bytes.
     Uint64 UsedSize = 0;
 
     /// The maximum size of the continuous free chunk in the buffer, in bytes.

@@ -87,13 +87,16 @@ struct VertexPoolUsageStats
     /// The total number of vertices in the pool.
     Uint64 TotalVertexCount = 0;
 
-    /// The total number of allocated vertices.
+    /// The number of vertices allocated from the pool.
     Uint64 AllocatedVertexCount = 0;
 
-    /// The total allocated memory size, in bytes.
-    Uint64 AllocatedMemorySize = 0;
+    /// Committed memory size, in bytes.
+    Uint64 CommittedMemorySize = 0;
 
-    /// The current number of allocations.
+    /// The total memory size used by all allocations, in bytes.
+    Uint64 UsedMemorySize = 0;
+
+    /// The number of allocations.
     Uint32 AllocationCount = 0;
 };
 

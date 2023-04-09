@@ -261,7 +261,7 @@ public:
     virtual void GetUsageStats(BufferSuballocatorUsageStats& UsageStats) override final
     {
         // NB: mutex must not be locked here to avoid stalling render thread
-        UsageStats.Size             = m_BufferSize.load();
+        UsageStats.CommittedSize    = m_BufferSize.load();
         UsageStats.UsedSize         = m_UsedSize.load();
         UsageStats.MaxFreeChunkSize = m_MaxFreeBlockSize.load();
         UsageStats.AllocationCount  = m_AllocationCount.load();

@@ -311,8 +311,14 @@ public:
         // NB: mutex must not be locked here to avoid stalling render thread
         UsageStats.TotalVertexCount     = m_TotalVertexCount.load();
         UsageStats.AllocatedVertexCount = m_AllocatedVertexCount.load();
-        UsageStats.AllocatedMemorySize  = m_AllocatedMemorySize.load();
-        UsageStats.AllocationCount      = m_AllocationCount.load();
+        UsageStats.CommittedMemorySize  = m_CommittedMemorySize.load();
+
+        Uint64 VertexSize = 0;
+        for (size_t Elem = 0; Elem < m_Desc.NumElements; ++Elem)
+            VertexSize += m_Desc.pElements[Elem].Size;
+        UsageStats.UsedMemorySize = UsageStats.AllocatedVertexCount * VertexSize;
+
+        UsageStats.AllocationCount = m_AllocationCount.load();
     }
 
 private:
@@ -320,10 +326,10 @@ private:
     {
         m_AllocatedVertexCount.store(m_Mgr.GetUsedSize());
         m_TotalVertexCount.store(m_Mgr.GetMaxSize());
-        Uint64 AllocatedMemorySize = 0;
+        Uint64 CommittedMemorySize = 0;
         for (const auto& BuffSize : m_BufferSizes)
-            AllocatedMemorySize += BuffSize.load();
-        m_AllocatedMemorySize.store(AllocatedMemorySize);
+            CommittedMemorySize += BuffSize.load();
+        m_CommittedMemorySize.store(CommittedMemorySize);
     }
 
 private:
@@ -344,7 +350,7 @@ private:
 
     std::atomic<Int32>  m_AllocationCount{0};
     std::atomic<Uint64> m_AllocatedVertexCount{0};
-    std::atomic<Uint64> m_AllocatedMemorySize{0};
+    std::atomic<Uint64> m_CommittedMemorySize{0};
     std::atomic<Uint64> m_TotalVertexCount{0};
 
     FixedBlockMemoryAllocator m_AllocationObjAllocator;

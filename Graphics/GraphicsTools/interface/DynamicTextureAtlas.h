@@ -91,8 +91,8 @@ struct ITextureAtlasSuballocation : public IObject
 /// Dynamic texture atlas usage stats.
 struct DynamicTextureAtlasUsageStats
 {
-    /// The total size of the atlas, in bytes.
-    Uint64 Size = 0;
+    /// The total committed memory size of the atlas, in bytes.
+    Uint64 CommittedSize = 0;
 
     /// The total number of allocations in the atlas.
     Uint32 AllocationCount = 0;

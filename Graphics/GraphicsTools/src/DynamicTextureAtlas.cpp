@@ -648,16 +648,16 @@ public:
     {
         if (m_DynamicTexArray)
         {
-            Stats.Size = m_DynamicTexArray->GetMemoryUsage();
+            Stats.CommittedSize = m_DynamicTexArray->GetMemoryUsage();
             const auto& Desc{m_DynamicTexArray->GetDesc()};
             Stats.TotalArea = Uint64{Desc.Width} * Uint64{Desc.Height} * Uint64{Desc.ArraySize};
         }
         else
         {
             VERIFY_EXPR(m_Desc.Type == RESOURCE_DIM_TEX_2D);
-            Stats.Size = 0;
+            Stats.CommittedSize = 0;
             for (Uint32 mip = 0; mip < m_Desc.MipLevels; ++mip)
-                Stats.Size += GetMipLevelProperties(m_Desc, mip).MipSize;
+                Stats.CommittedSize += GetMipLevelProperties(m_Desc, mip).MipSize;
             Stats.TotalArea = Uint64{m_Desc.Width} * Uint64{m_Desc.Height};
         }
 
