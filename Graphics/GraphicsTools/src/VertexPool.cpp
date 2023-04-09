@@ -139,9 +139,7 @@ public:
         {
             DefaultRawMemoryAllocator::GetAllocator(),
             sizeof(VertexPoolAllocationImpl),
-            CreateInfo.AllocationObjAllocationGranularity != 0 ?
-                CreateInfo.AllocationObjAllocationGranularity :
-                1024u / Uint32{sizeof(VertexPoolAllocationImpl)}
+            1024u / Uint32{sizeof(VertexPoolAllocationImpl)} // Use 1 Kb pages.
         }
     // clang-format on
     {

@@ -390,9 +390,7 @@ public:
         {
             DefaultRawMemoryAllocator::GetAllocator(),
             sizeof(TextureAtlasSuballocationImpl),
-            CreateInfo.SuballocationObjAllocationGranularity != 0 ?
-                CreateInfo.SuballocationObjAllocationGranularity : 
-                1024u / Uint32{sizeof(TextureAtlasSuballocationImpl)}
+            1024u / Uint32{sizeof(TextureAtlasSuballocationImpl)} // Use 1KB pages.
         }
     // clang-format on
     {

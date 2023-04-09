@@ -144,23 +144,12 @@ struct BufferSuballocatorCreateInfo
     /// Buffer description
     BufferDesc Desc;
 
-
     /// Buffer expansion size, in bytes.
 
     /// When non-zero, the buffer will be expanded by the specified amount every time
     /// there is insufficient space. If zero, the buffer size will be doubled when
     /// more space is needed.
     Uint32 ExpansionSize = 0;
-
-
-    /// Allocation granularity for IBufferSuballocator objects.
-
-    /// Buffer suballocator uses FixedBlockMemoryAllocator to allocate instances
-    /// of IBufferSuballocation implementation class. This member defines
-    /// the number of objects in one page.
-    /// If 0, default value will be used.
-    Uint32 SuballocationObjAllocationGranularity = 0;
-
 
     /// If Desc.Usage == USAGE_SPARSE, the virtual buffer size; ignored otherwise.
     Uint64 VirtualSize = 0;

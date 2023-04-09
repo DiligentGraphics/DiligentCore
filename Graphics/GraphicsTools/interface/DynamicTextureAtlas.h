@@ -224,15 +224,6 @@ struct DynamicTextureAtlasCreateInfo
     /// Maximum number of slices in texture array.
     Uint32 MaxSliceCount = 2048;
 
-
-    /// Allocation granularity for ITextureAtlasSuballocation objects.
-
-    /// Texture atlas uses FixedBlockMemoryAllocator to allocate instances
-    /// of ITextureAtlasSuballocation implementation class. This member defines
-    /// the number of objects in one page.
-    /// If zero, the default value will be used.
-    Uint32 SuballocationObjAllocationGranularity = 0;
-
     /// Silence allocation errors.
     bool Silent = false;
 };

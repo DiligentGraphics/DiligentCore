@@ -146,10 +146,7 @@ public:
         {
             DefaultRawMemoryAllocator::GetAllocator(),
             sizeof(BufferSuballocationImpl),
-            CreateInfo.SuballocationObjAllocationGranularity != 0 ?
-                CreateInfo.SuballocationObjAllocationGranularity : 
-                1024u / Uint32{sizeof(BufferSuballocationImpl)
-            }
+            1024u / Uint32{sizeof(BufferSuballocationImpl)} // Use 1 Kb pages.
         }
     // clang-format on
     {}

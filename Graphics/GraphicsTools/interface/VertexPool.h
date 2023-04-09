@@ -220,14 +220,6 @@ struct VertexPoolCreateInfo
     /// every time there is insufficient space. If zero, the pool size will be doubled
     /// when more space is needed.
     Uint32 ExtraVertexCount = 0;
-
-    /// Allocation granularity for IVertexPoolAllocation objects.
-
-    /// Vertex pool uses FixedBlockMemoryAllocator to allocate instances
-    /// of IVertexPoolAllocation implementation class. This member defines
-    /// the number of objects in one page.
-    /// If zero, the default value will be used.
-    Uint32 AllocationObjAllocationGranularity = 0;
 };
 
 /// Creates a new vertex pool.
