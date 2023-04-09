@@ -157,9 +157,6 @@ public:
             Name += " - buffer ";
             Name += std::to_string(i);
 
-            // 32 GB should be enough for any use case.
-            Uint64 VirtualSize = Uint64{32} << Uint64{30};
-
             DynamicBufferCreateInfo DynBuffCI;
             DynBuffCI.Desc.Name           = Name.c_str();
             DynBuffCI.Desc.Size           = m_Desc.VertexCount * VtxElem.Size;
@@ -170,19 +167,20 @@ public:
             if (DynBuffCI.Desc.BindFlags & (BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS))
             {
                 DynBuffCI.Desc.ElementByteStride = VtxElem.Size;
-
-                // Structured buffer size must be a multiple of the element stride.
-                VirtualSize = AlignDownNonPw2(VirtualSize, DynBuffCI.Desc.ElementByteStride);
             }
             DynBuffCI.MemoryPageSize = CreateInfo.ExtraVertexCount != 0 ?
                 CreateInfo.ExtraVertexCount * VtxElem.Size :
                 static_cast<Uint32>(DynBuffCI.Desc.Size);
 
+            // 1 GB should be enough for any use case.
+            DynBuffCI.VirtualSize = Uint64{1} << Uint64{30};
+
             m_Buffers.emplace_back(std::make_unique<DynamicBuffer>(pDevice, DynBuffCI));
             if (!m_Buffers.back())
                 LOG_ERROR_AND_THROW("Failed to create dynamic buffer ", i);
 
-            m_BufferSizes[i].store(DynBuffCI.Desc.Size);
+            // NB: request the size from the buffer. It may be different from DynBuffCI.Desc.Size.
+            m_BufferSizes[i].store(m_Buffers.back()->GetDesc().Size);
         }
     }
 

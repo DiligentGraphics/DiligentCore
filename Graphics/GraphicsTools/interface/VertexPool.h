@@ -110,25 +110,25 @@ struct VertexPoolElementDesc
     /// Buffer usage, see Diligent::USAGE.
     USAGE Usage DEFAULT_INITIALIZER(USAGE_DEFAULT);
 
-    /// CPU access flags, see Diligent::CPU_ACCESS_FLAGS.
-    CPU_ACCESS_FLAGS CPUAccessFlags DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
-
     /// Buffer mode, see Diligent::BUFFER_MODE.
     BUFFER_MODE Mode DEFAULT_INITIALIZER(BUFFER_MODE_UNDEFINED);
+
+    /// CPU access flags, see Diligent::CPU_ACCESS_FLAGS.
+    CPU_ACCESS_FLAGS CPUAccessFlags DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
 
     constexpr VertexPoolElementDesc() noexcept {}
 
     constexpr explicit VertexPoolElementDesc(Uint32           _Size,
                                              BIND_FLAGS       _BindFlags      = VertexPoolElementDesc{}.BindFlags,
                                              USAGE            _Usage          = VertexPoolElementDesc{}.Usage,
-                                             CPU_ACCESS_FLAGS _CPUAccessFlags = VertexPoolElementDesc{}.CPUAccessFlags,
-                                             BUFFER_MODE      _Mode           = VertexPoolElementDesc{}.Mode) noexcept :
+                                             BUFFER_MODE      _Mode           = VertexPoolElementDesc{}.Mode,
+                                             CPU_ACCESS_FLAGS _CPUAccessFlags = VertexPoolElementDesc{}.CPUAccessFlags) noexcept :
         // clang-format off
         Size          {_Size},
         BindFlags     {_BindFlags},
         Usage         {_Usage},
-        CPUAccessFlags{_CPUAccessFlags},
-        Mode          {_Mode}
+        Mode          {_Mode},
+        CPUAccessFlags{_CPUAccessFlags}
     // clang-format on
     {}
 

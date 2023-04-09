@@ -230,7 +230,8 @@ struct DynamicTextureAtlasCreateInfo
     /// Texture atlas uses FixedBlockMemoryAllocator to allocate instances
     /// of ITextureAtlasSuballocation implementation class. This member defines
     /// the number of objects in one page.
-    Uint32 SuballocationObjAllocationGranularity = 64;
+    /// If zero, the default value will be used.
+    Uint32 SuballocationObjAllocationGranularity = 0;
 
     /// Silence allocation errors.
     bool Silent = false;

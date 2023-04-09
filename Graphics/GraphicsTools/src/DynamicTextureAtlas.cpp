@@ -390,7 +390,9 @@ public:
         {
             DefaultRawMemoryAllocator::GetAllocator(),
             sizeof(TextureAtlasSuballocationImpl),
-            CreateInfo.SuballocationObjAllocationGranularity
+            CreateInfo.SuballocationObjAllocationGranularity != 0 ?
+                CreateInfo.SuballocationObjAllocationGranularity : 
+                1024u / Uint32{sizeof(TextureAtlasSuballocationImpl)}
         }
     // clang-format on
     {

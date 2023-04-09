@@ -52,7 +52,7 @@ TEST(VertexPoolTest, Create)
     constexpr VertexPoolElementDesc Elements[] =
         {
             VertexPoolElementDesc{16},
-            VertexPoolElementDesc{24, BIND_SHADER_RESOURCE, USAGE_DEFAULT, CPU_ACCESS_NONE, BUFFER_MODE_STRUCTURED},
+            VertexPoolElementDesc{24, BIND_SHADER_RESOURCE, USAGE_DEFAULT, BUFFER_MODE_STRUCTURED, CPU_ACCESS_NONE},
         };
     VertexPoolCreateInfo CI;
     CI.Desc.Name        = "Test vertex pool";
@@ -99,7 +99,7 @@ TEST(VertexPoolTest, Allocate)
     constexpr VertexPoolElementDesc Elements[] =
         {
             VertexPoolElementDesc{16},
-            VertexPoolElementDesc{24, BIND_SHADER_RESOURCE, USAGE_DEFAULT, CPU_ACCESS_NONE, BUFFER_MODE_STRUCTURED},
+            VertexPoolElementDesc{24, BIND_SHADER_RESOURCE, USAGE_DEFAULT, BUFFER_MODE_STRUCTURED, CPU_ACCESS_NONE},
         };
     VertexPoolCreateInfo CI;
     CI.Desc.Name        = "Test vertex pool";
