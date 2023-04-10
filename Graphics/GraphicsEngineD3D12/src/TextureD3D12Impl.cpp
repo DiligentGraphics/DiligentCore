@@ -285,6 +285,9 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create committed resource in an upload heap");
 
+            const auto UploadBufferName = std::wstring{L"Upload buffer for texture '"} + WidenString(m_Desc.Name) + L'\'';
+            UploadBuffer->SetName(UploadBufferName.c_str());
+
             auto InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
             // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
             VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
