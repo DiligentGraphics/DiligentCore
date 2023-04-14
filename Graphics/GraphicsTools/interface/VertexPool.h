@@ -138,11 +138,11 @@ struct VertexPoolElementDesc
     constexpr bool operator==(const VertexPoolElementDesc& RHS) const
     {
         // clang-format off
-        return Size           == RHS.Size           &&
-               BindFlags      == RHS.BindFlags      &&
-               Usage          == RHS.Usage          &&
-               CPUAccessFlags == RHS.CPUAccessFlags &&
-               Mode           == RHS.Mode;
+        return Size           == RHS.Size      &&
+               BindFlags      == RHS.BindFlags &&
+               Usage          == RHS.Usage     &&
+               Mode           == RHS.Mode      &&
+               CPUAccessFlags == RHS.CPUAccessFlags;
         // clang-format on
     }
 
@@ -181,7 +181,7 @@ struct IVertexPool : public IObject
     /// \param[in]  pContext - A pointer to the device context that will be used to
     ///                        copy existing contents to the new buffer, if necessary.
     ///
-    /// \remarks    If the internal buffer need to be resized, pDevice and pContext will
+    /// \remarks    If the internal buffer needs to be resized, pDevice and pContext will
     ///             be used to create a new buffer and copy existing contents to the new buffer.
     ///             The method is not thread-safe and an application must externally synchronize the
     ///             access.
@@ -203,7 +203,7 @@ struct IVertexPool : public IObject
     virtual void GetUsageStats(VertexPoolUsageStats& UsageStats) = 0;
 
     /// Returns the internal buffer version. The version is incremented every time
-    /// any internal buffer is expanded.
+    /// any internal buffer is recreated.
     virtual Uint32 GetVersion() const = 0;
 
     /// Returns the pool description.
