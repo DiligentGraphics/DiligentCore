@@ -80,6 +80,11 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineOpenGLInterface)
 endif()
 
+if(METAL_SUPPORTED)
+    list(APPEND SOURCE src/GraphicsUtilitiesMtl.mm)
+    list(APPEND DEPENDENCIES Diligent-GraphicsEngineMetalInterface)
+endif()
+
 add_library(Diligent-GraphicsTools STATIC ${SOURCE} ${INTERFACE})
 
 target_include_directories(Diligent-GraphicsTools

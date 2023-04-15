@@ -33,21 +33,7 @@
 #include "MapHelper.hpp"
 #include "Align.hpp"
 #include "BasicMath.hpp"
-
-#if METAL_SUPPORTED
-namespace Diligent
-{
-namespace Testing
-{
-
-extern void CreateSparseTextureMtl(IRenderDevice*     pDevice,
-                                   const TextureDesc& TexDesc,
-                                   IDeviceMemory*     pMemory,
-                                   ITexture**         ppTexture);
-
-} // namespace Testing
-} // namespace Diligent
-#endif
+#include "GraphicsUtilities.h"
 
 #include "InlineShaders/SparseResourcesTest.h"
 
@@ -363,7 +349,6 @@ protected:
         Desc.MiscFlags   = (Aliasing ? MISC_TEXTURE_FLAG_SPARSE_ALIASING : MISC_TEXTURE_FLAG_NONE);
 
         TextureAndMemory Result;
-#if METAL_SUPPORTED
         if (pDevice->GetDeviceInfo().IsMetalDevice())
         {
             Result.pMemory = CreateMemory(AlignUp(64u << 10, BlockSize), NumMemoryPages, nullptr);
@@ -373,7 +358,6 @@ protected:
             CreateSparseTextureMtl(pDevice, Desc, Result.pMemory, &Result.pTexture);
         }
         else
-#endif
         {
             pDevice->CreateTexture(Desc, nullptr, &Result.pTexture);
             if (Result.pTexture == nullptr)

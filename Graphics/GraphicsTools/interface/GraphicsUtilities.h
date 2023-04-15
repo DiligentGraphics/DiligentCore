@@ -141,4 +141,21 @@ typedef struct ComputeMipLevelAttribs ComputeMipLevelAttribs;
 
 void DILIGENT_GLOBAL_FUNCTION(ComputeMipLevel)(const ComputeMipLevelAttribs REF Attribs);
 
+
+/// Creates a sparse texture in Metal backend.
+
+/// \param [in]  pDevice   - A pointer to the render device.
+/// \param [in]  TexDesc   - Texture description.
+/// \param [in]  pMemory   - A pointer to the device memory.
+/// \param [out] ppTexture - Address of the memory location where a pointer to the
+///                          sparse texture will be written.
+///
+/// \remarks    If pDevice is a pointer to Metal device (IRenderDeviceMtl), this function
+///             creates a sparse texture using IRenderDeviceMtl::CreateSparseTexture method.
+///             Otherwise, it does nothing.
+void DILIGENT_GLOBAL_FUNCTION(CreateSparseTextureMtl)(IRenderDevice*        pDevice,
+                                                      const TextureDesc REF TexDesc,
+                                                      IDeviceMemory*        pMemory,
+                                                      ITexture**            ppTexture);
+
 DILIGENT_END_NAMESPACE // namespace Diligent

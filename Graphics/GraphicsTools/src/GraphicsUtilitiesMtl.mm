@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,51 +24,34 @@
  *  of the possibility of such damages.
  */
 
-#include "Metal/TestingEnvironmentMtl.hpp"
+#include "GraphicsUtilities.h"
+
+#include <Metal/Metal.h>
 
 #include "RenderDeviceMtl.h"
-#include "DeviceContextMtl.h"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
 
-namespace Testing
+void CreateSparseTextureMtl(IRenderDevice*     pDevice,
+                            const TextureDesc& TexDesc,
+                            IDeviceMemory*     pMemory,
+                            ITexture**         ppTexture)
 {
-
-void CreateTestingSwapChainMtl(TestingEnvironmentMtl* pEnv,
-                               const SwapChainDesc&   SCDesc,
-                               ISwapChain**           ppSwapChain);
-
-TestingEnvironmentMtl::TestingEnvironmentMtl(const CreateInfo&    CI,
-                                             const SwapChainDesc& SCDesc) :
-    GPUTestingEnvironment{CI, SCDesc}
-{
-    m_MtlDevice = m_pDevice.Cast<IRenderDeviceMtl>(IID_RenderDeviceMtl)->GetMtlDevice();
-    auto* Ctx   = ClassPtrCast<IDeviceContextMtl>(GetDeviceContext());
-    auto* Queue = ClassPtrCast<ICommandQueueMtl>(Ctx->LockCommandQueue());
-    m_MtlQueue  = Queue->GetMtlCommandQueue();
-    Ctx->UnlockCommandQueue();
-
-    if (m_pSwapChain == nullptr)
+    RefCntAutoPtr<IRenderDeviceMtl> pDeviceMtl{pDevice, IID_RenderDeviceMtl};
+    if (!pDeviceMtl)
+        return;
+        
+    if (pMemory == nullptr)
     {
-        CreateTestingSwapChainMtl(this, SCDesc, &m_pSwapChain);
+        UNEXPECTED("Device memory must not be null");
+        return;
     }
+    
+    DEV_CHECK_ERR(TexDesc.Usage == USAGE_SPARSE, "This function should be used to create sparse textures.");
+    
+    pDeviceMtl->CreateSparseTexture(TexDesc, pMemory, ppTexture);
 }
-
-TestingEnvironmentMtl::~TestingEnvironmentMtl()
-{
-}
-
-void TestingEnvironmentMtl::Reset()
-{
-}
-
-GPUTestingEnvironment* CreateTestingEnvironmentMtl(const GPUTestingEnvironment::CreateInfo& CI,
-                                                   const SwapChainDesc&                     SCDesc)
-{
-    return new TestingEnvironmentMtl{CI, SCDesc};
-}
-
-} // namespace Testing
 
 } // namespace Diligent
