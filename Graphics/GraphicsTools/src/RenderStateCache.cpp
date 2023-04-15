@@ -47,7 +47,6 @@
 #include "SerializedShader.h"
 #include "XXH128Hasher.hpp"
 #include "CallbackWrapper.hpp"
-#include "GraphicsUtilities.h"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent
@@ -488,7 +487,7 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
             break;
 
         case RENDER_DEVICE_TYPE_D3D12:
-            GetRenderDeviceD3D12MaxShaderVersion(m_pDevice, SerializationDeviceCI.D3D12.ShaderVersion);
+            SerializationDeviceCI.D3D12.ShaderVersion = SerializationDeviceCI.DeviceInfo.MaxShaderVersion.HLSL;
             break;
 
         case RENDER_DEVICE_TYPE_GL:

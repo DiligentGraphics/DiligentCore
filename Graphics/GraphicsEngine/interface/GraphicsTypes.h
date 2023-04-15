@@ -2354,6 +2354,39 @@ struct NDCAttribs
 typedef struct NDCAttribs NDCAttribs;
 
 
+/// Render device shader version information
+struct RenderDeviceShaderVersionInfo
+{
+    /// HLSL shader model.
+    Version HLSL DEFAULT_INITIALIZER({});
+
+    /// GLSL version.
+    Version GLSL DEFAULT_INITIALIZER({});
+
+    /// GLSL-ES version.
+    Version GLESSL DEFAULT_INITIALIZER({});
+
+    /// MSL version.
+    Version MSL DEFAULT_INITIALIZER({});
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr bool operator == (const RenderDeviceShaderVersionInfo& RHS) const 
+    {
+        return HLSL   == RHS.HLSL   &&
+               GLSL   == RHS.GLSL   &&
+               GLESSL == RHS.GLESSL &&
+               MSL    == RHS.MSL;
+    }
+
+    constexpr bool operator != (const RenderDeviceShaderVersionInfo& RHS) const 
+    {
+        return !(*this == RHS);
+    }
+#endif
+};
+typedef struct RenderDeviceShaderVersionInfo RenderDeviceShaderVersionInfo;
+
+
 /// Render device information
 struct RenderDeviceInfo
 {
@@ -2377,6 +2410,9 @@ struct RenderDeviceInfo
 
     /// Normalized device coordinates
     NDCAttribs NDC DEFAULT_INITIALIZER({});
+
+    /// Maximum supported version for each shader language, see Diligent::RenderDeviceShaderVersionInfo.
+    RenderDeviceShaderVersionInfo MaxShaderVersion DEFAULT_INITIALIZER({});
 
 #if DILIGENT_CPP_INTERFACE
     constexpr bool IsGLDevice()const
@@ -2410,12 +2446,12 @@ struct RenderDeviceInfo
     /// - False otherwise.
     constexpr bool operator == (const RenderDeviceInfo& RHS) const 
     {
-        return Type       == RHS.Type       &&
-               APIVersion == RHS.APIVersion &&
-               Features   == RHS.Features   &&
-               NDC        == RHS.NDC; 
+        return Type             == RHS.Type       &&
+               APIVersion       == RHS.APIVersion &&
+               Features         == RHS.Features   &&
+               NDC              == RHS.NDC        &&
+               MaxShaderVersion == RHS.MaxShaderVersion; 
     }
-
 #endif
 };
 typedef struct RenderDeviceInfo RenderDeviceInfo;
