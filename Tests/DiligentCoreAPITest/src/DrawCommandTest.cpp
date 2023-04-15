@@ -367,12 +367,12 @@ out gl_PerVertex
 #   define gl_InstanceID gl_InstanceIndex
 #endif
 
-layout(location = 0)out vec3 out_Color;
+layout(location = 0)out vec3 _PSIn_Color;
 
 void main()
 {
     gl_Position = g_StorageBuffers[0].data[gl_VertexID];
-    out_Color = g_StorageBuffers[1].data[gl_VertexID].rgb;
+    _PSIn_Color = g_StorageBuffers[1].data[gl_VertexID].rgb;
 }
 )"
 };
