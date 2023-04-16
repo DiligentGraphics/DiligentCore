@@ -1436,6 +1436,11 @@ public:
         return GetDevice();
     }
 
+    explicit operator bool() const noexcept
+    {
+        return m_pDevice != nullptr;
+    }
+
 private:
     template <typename ObjectType, typename CreateMethodType, typename... CreateArgsType>
     RefCntAutoPtr<ObjectType> CreateDeviceObject(const char* ObjectTypeName, const char* ObjectName, CreateMethodType Create, CreateArgsType&&... Args) noexcept(!ThrowOnError)
