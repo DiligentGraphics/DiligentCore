@@ -51,6 +51,9 @@ if(ARCHIVER_SUPPORTED)
     list(APPEND SOURCE
         src/RenderStateCache.cpp
     )
+    set(RENDER_STATE_CACHE_SUPPORTED TRUE CACHE INTERNAL "Render state cache is supported")
+else()
+    set(RENDER_STATE_CACHE_SUPPORTED FALSE CACHE INTERNAL "Render state cache is not supported")
 endif()
 
 set(DEPENDENCIES)
@@ -113,6 +116,10 @@ if(ARCHIVER_SUPPORTED)
     PRIVATE
         Diligent-Archiver-static
     )
+endif()
+
+if(RENDER_STATE_CACHE_SUPPORTED)
+    target_compile_definitions(Diligent-GraphicsTools PUBLIC DILIGENT_RENDER_STATE_CACHE_SUPPORTED=1)
 endif()
 
 if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
