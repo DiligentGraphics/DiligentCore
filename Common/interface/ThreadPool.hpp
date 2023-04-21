@@ -42,6 +42,9 @@ namespace Diligent
 /// Asynchronous task status
 enum ASYNC_TASK_STATUS
 {
+    /// The asynchronous task status is unknown.
+    ASYNC_TASK_STATUS_UNKNOWN = 0,
+
     /// The asynchronous task has not been started yet.
     ASYNC_TASK_STATUS_NOT_STARTED,
 
@@ -291,6 +294,10 @@ public:
         {
             switch (Status)
             {
+                case ASYNC_TASK_STATUS_UNKNOWN:
+                    DEV_ERROR("UNKNOWN is invalid status.");
+                    break;
+
                 case ASYNC_TASK_STATUS_NOT_STARTED:
                     DEV_ERROR("NOT_STARTED is only allowed as initial task status.");
                     break;
