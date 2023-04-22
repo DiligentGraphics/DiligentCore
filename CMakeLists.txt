@@ -420,9 +420,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CLANG_RELEASE_OPTIONS -Wno-unused-variable ${DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS})
     target_compile_options(Diligent-BuildSettings INTERFACE $<$<NOT:$<CONFIG:Debug>>:${CLANG_RELEASE_OPTIONS}>)
 
-    if ((PLATFORM_IOS  AND CMAKE_OSX_SYSROOT STREQUAL "iphonesimulator")  OR PLATFORM_IOS_SIMULATOR OR
-        (PLATFORM_TVOS AND CMAKE_OSX_SYSROOT STREQUAL "appletvsimulator") OR PLATFORM_TVOS_SIMULATOR)
-        # There is a known long-standing issue in simulator SDK:
+    if (PLATFORM_APPLE)
+        # Allow unavailable API warnings not being errors as they tend to randomly
+        # appear in new versions of XCode.
+        # Besides, there is a known long-standing issue in simulator SDK:
         # the compiler generates a lot of bogus warnings in Metal
         # headers about unavailable API
         target_compile_options(Diligent-BuildSettings
