@@ -158,12 +158,11 @@ public:
 
     /// Removes the task from the queue, if possible.
 
-    /// \param[in] pTask           - Task to remove from the queue.
-    /// \param[in] CancelIfRunning - Whether to cancel the tasks if it is already running.
+    /// \param[in] pTask - Task to remove from the queue.
     ///
-    /// \return    true if the task has been successfully removed from the queue
-    ///            or if it has already finished, and false otherwise.
-    virtual bool RemoveTask(IAsyncTask* pTask, bool CancelIfRunning) = 0;
+    /// \return    true if the task was successfully removed from the queue,
+    ///            and false otherwise.
+    virtual bool RemoveTask(IAsyncTask* pTask) = 0;
 
 
     /// Waits until all tasks in the queue are finished.

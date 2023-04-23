@@ -220,7 +220,7 @@ TEST(Common_ThreadPool, RemoveTask)
     // Dummy tasks can't start since all threads are waiting for the signal
     for (auto& Task : DummyTasks)
     {
-        auto res = pThreadPool->RemoveTask(Task, true);
+        auto res = pThreadPool->RemoveTask(Task);
         EXPECT_TRUE(res);
     }
 
@@ -236,7 +236,7 @@ TEST(Common_ThreadPool, RemoveTask)
     for (auto& Task : WaitTasks)
     {
         // The task will not be removed since it is running
-        auto res = pThreadPool->RemoveTask(Task, true);
+        auto res = pThreadPool->RemoveTask(Task);
         EXPECT_FALSE(res);
     }
 
