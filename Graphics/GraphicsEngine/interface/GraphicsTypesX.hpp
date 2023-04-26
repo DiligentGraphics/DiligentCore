@@ -1069,6 +1069,15 @@ struct RayTracingPipelineStateCreateInfoX : RayTracingPipelineStateCreateInfo
         RayTracingPipelineStateCreateInfoX{static_cast<const RayTracingPipelineStateCreateInfo&>(_DescX)}
     {}
 
+    explicit RayTracingPipelineStateCreateInfoX(const char* Name)
+    {
+        SetName(Name);
+    }
+    explicit RayTracingPipelineStateCreateInfoX(const std::string& Name)
+    {
+        SetName(Name);
+    }
+
     RayTracingPipelineStateCreateInfoX& operator=(const RayTracingPipelineStateCreateInfoX& _DescX)
     {
         RayTracingPipelineStateCreateInfoX Copy{_DescX};
@@ -1083,8 +1092,19 @@ struct RayTracingPipelineStateCreateInfoX : RayTracingPipelineStateCreateInfo
     {
         GeneralShaders.push_back(GenShader);
         GeneralShaders.back().Name = StringPool.emplace(GenShader.Name).first->c_str();
-        SyncDesc();
+        return SyncDesc();
+    }
+
+    RayTracingPipelineStateCreateInfoX& SetName(const char* Name)
+    {
+        if (Name != nullptr)
+            this->PSODesc.Name = StringPool.emplace(Name).first->c_str();
+
         return *this;
+    }
+    RayTracingPipelineStateCreateInfoX& SetName(const std::string& Name)
+    {
+        return SetName(Name.c_str());
     }
 
     template <typename... ArgsType>
@@ -1098,8 +1118,7 @@ struct RayTracingPipelineStateCreateInfoX : RayTracingPipelineStateCreateInfo
     {
         TriangleHitShaders.push_back(TriHitShader);
         TriangleHitShaders.back().Name = StringPool.emplace(TriHitShader.Name).first->c_str();
-        SyncDesc();
-        return *this;
+        return SyncDesc();
     }
 
     template <typename... ArgsType>
@@ -1113,8 +1132,7 @@ struct RayTracingPipelineStateCreateInfoX : RayTracingPipelineStateCreateInfo
     {
         ProceduralHitShaders.push_back(ProcHitShader);
         ProceduralHitShaders.back().Name = StringPool.emplace(ProcHitShader.Name).first->c_str();
-        SyncDesc();
-        return *this;
+        return SyncDesc();
     }
 
     template <typename... ArgsType>
@@ -1124,54 +1142,56 @@ struct RayTracingPipelineStateCreateInfoX : RayTracingPipelineStateCreateInfo
         return AddProceduralHitShader(ProcHitShader);
     }
 
-    void RemoveGeneralShader(const char* ShaderName)
+    RayTracingPipelineStateCreateInfoX& RemoveGeneralShader(const char* ShaderName)
     {
-        RemoveShader(ShaderName, GeneralShaders);
+        return RemoveShader(ShaderName, GeneralShaders);
     }
 
-    void RemoveTriangleHitShader(const char* ShaderName)
+    RayTracingPipelineStateCreateInfoX& RemoveTriangleHitShader(const char* ShaderName)
     {
-        RemoveShader(ShaderName, TriangleHitShaders);
+        return RemoveShader(ShaderName, TriangleHitShaders);
     }
 
-    void RemoveProceduralHitShader(const char* ShaderName)
+    RayTracingPipelineStateCreateInfoX& RemoveProceduralHitShader(const char* ShaderName)
     {
-        RemoveShader(ShaderName, ProceduralHitShaders);
+        return RemoveShader(ShaderName, ProceduralHitShaders);
     }
 
-    void SetShaderRecordName(const char* RecordName)
+    RayTracingPipelineStateCreateInfoX& SetShaderRecordName(const char* RecordName)
     {
         pShaderRecordName = RecordName != nullptr ?
             StringPool.emplace(RecordName).first->c_str() :
             nullptr;
+        return *this;
     }
 
-    void ClearGeneralShaders()
+    RayTracingPipelineStateCreateInfoX& ClearGeneralShaders()
     {
         GeneralShaders.clear();
-        SyncDesc();
+        return SyncDesc();
     }
 
-    void ClearTriangleHitShaders()
+    RayTracingPipelineStateCreateInfoX& ClearTriangleHitShaders()
     {
         TriangleHitShaders.clear();
-        SyncDesc();
+        return SyncDesc();
     }
 
-    void ClearProceduralHitShaders()
+    RayTracingPipelineStateCreateInfoX& ClearProceduralHitShaders()
     {
         ProceduralHitShaders.clear();
-        SyncDesc();
+        return SyncDesc();
     }
 
-    void Clear()
+    RayTracingPipelineStateCreateInfoX& Clear()
     {
         RayTracingPipelineStateCreateInfoX CleanDesc;
         std::swap(*this, CleanDesc);
+        return *this;
     }
 
 private:
-    void SyncDesc(bool UpdateStrings = false)
+    RayTracingPipelineStateCreateInfoX& SyncDesc(bool UpdateStrings = false)
     {
         GeneralShaderCount = static_cast<Uint32>(GeneralShaders.size());
         pGeneralShaders    = GeneralShaderCount > 0 ? GeneralShaders.data() : nullptr;
@@ -1196,10 +1216,12 @@ private:
             if (pShaderRecordName != nullptr)
                 pShaderRecordName = StringPool.emplace(pShaderRecordName).first->c_str();
         }
+
+        return *this;
     }
 
     template <typename ShaderGroupType>
-    void RemoveShader(const char* ShaderName, std::vector<ShaderGroupType>& Shaders)
+    RayTracingPipelineStateCreateInfoX& RemoveShader(const char* ShaderName, std::vector<ShaderGroupType>& Shaders)
     {
         VERIFY_EXPR(!IsNullOrEmptyStr(ShaderName));
         for (auto it = Shaders.begin(); it != Shaders.end();)
@@ -1209,7 +1231,7 @@ private:
             else
                 ++it;
         }
-        SyncDesc();
+        return SyncDesc();
     }
 
     std::vector<RayTracingGeneralShaderGroup>       GeneralShaders;

@@ -679,6 +679,8 @@ TEST(GraphicsTypesXTest, RayTracingPipelineStateCreateInfoX)
     };
 
     RayTracingPipelineStateCreateInfo Ref;
+    Ref.PSODesc.Name = "RayTracingPipelineStateCreateInfoX test";
+
     Ref.GeneralShaderCount = _countof(GeneralShaders);
     Ref.pGeneralShaders    = GeneralShaders;
     TestCtorsAndAssignments<RayTracingPipelineStateCreateInfoX>(Ref);
@@ -717,6 +719,7 @@ TEST(GraphicsTypesXTest, RayTracingPipelineStateCreateInfoX)
         StringPool                         Pool;
         RayTracingPipelineStateCreateInfoX DescX;
         DescX
+            .SetName(std::string{"RayTracingPipelineState"} + std::string{"CreateInfoX test"})
             .AddGeneralShader({GENERAL_SHADER_1(Pool)})
             .AddGeneralShader(GENERAL_SHADER_2(Pool))
             .AddTriangleHitShader({TRI_HIT_SHADER_1(Pool)})
