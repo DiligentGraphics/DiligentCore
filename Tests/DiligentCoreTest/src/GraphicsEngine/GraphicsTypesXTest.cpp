@@ -25,6 +25,7 @@
  */
 
 #include "GraphicsTypesX.hpp"
+#include "CommonlyUsedStates.h"
 
 #include "gtest/gtest.h"
 
@@ -646,6 +647,15 @@ TEST(GraphicsTypesXTest, BottomLevelASDescX)
 
 TEST(GraphicsTypesXTest, RayTracingPipelineStateCreateInfoX)
 {
+    {
+        RayTracingPipelineStateCreateInfoX DescX{"Test Name"};
+        EXPECT_STREQ(DescX.PSODesc.Name, "Test Name");
+    }
+    {
+        RayTracingPipelineStateCreateInfoX DescX{std::string{"Test "} + std::string{"Name"}};
+        EXPECT_STREQ(DescX.PSODesc.Name, "Test Name");
+    }
+
     // clang-format off
 
 #define GENERAL_SHADER_1(POOL) POOL("General Shader 1"), reinterpret_cast<IShader*>(uintptr_t{0x01})
@@ -771,6 +781,89 @@ TEST(GraphicsTypesXTest, RayTracingPipelineStateCreateInfoX)
 #undef PROC_HIT_SHADER_3
 }
 
+TEST(GraphicsTypesXTest, GraphicsPipelineStateCreateInfoX)
+{
+    {
+        GraphicsPipelineStateCreateInfoX DescX{"Test Name"};
+        EXPECT_STREQ(DescX.PSODesc.Name, "Test Name");
+    }
+    {
+        GraphicsPipelineStateCreateInfoX DescX{std::string{"Test "} + std::string{"Name"}};
+        EXPECT_STREQ(DescX.PSODesc.Name, "Test Name");
+    }
+
+    GraphicsPipelineStateCreateInfoX DescX{std::string{"Test "} + std::string{"Name"}};
+    GraphicsPipelineStateCreateInfo  Ref;
+    Ref.PSODesc.Name = "Test Name";
+    EXPECT_EQ(DescX, Ref);
+
+    PipelineResourceLayoutDescX ResLayoutDescX;
+    ResLayoutDescX.AddVariable(SHADER_TYPE_VERTEX, "Test Var", SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    ResLayoutDescX.AddImmutableSampler(SHADER_TYPE_VERTEX, "Test Sampler", SamplerDesc{});
+
+    InputLayoutDescX InputLayoutX;
+    InputLayoutX
+        .Add(0u, 0u, 3u, VT_FLOAT32)
+        .Add(1u, 1u, 4u, VT_FLOAT32);
+
+    constexpr Uint64 ImmediateCtxMask         = 0x1234;
+    constexpr Uint32 SRBAllocationGranularity = 100;
+
+    DescX
+        .SetName(std::string{"Test "} + std::string{"Name2"})
+        .SetFlags(PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES)
+        .SetResourceLayout(ResLayoutDescX)
+        .SetImmediateContextMask(ImmediateCtxMask)
+        .SetSRBAllocationGranularity(SRBAllocationGranularity)
+        .SetBlendDesc(BS_AlphaBlend)
+        .SetSampleMask(0x12345678)
+        .SetRasterizerDesc(RS_WireFillNoCull)
+        .SetDepthStencilDesc(DSS_DisableDepth)
+        .SetInputLayout(InputLayoutX)
+        .SetNumViewports(7)
+        .SetSubpassIndex(6)
+        .SetShadingRateFlags(PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE)
+        .AddRenderTarget(TEX_FORMAT_RGBA8_UNORM_SRGB)
+        .AddRenderTarget(TEX_FORMAT_RGBA32_FLOAT)
+        .SetDepthFormat(TEX_FORMAT_D32_FLOAT)
+        .SetSampleDesc({1, 5})
+        .SetNodeMask(0x7531);
+
+
+    if (Ref.Flags != PSO_CREATE_FLAG_NONE)
+    {
+        UNEXPECTED("This code should never run - it is there to check that it compiles properly");
+        DescX.AddSignature(nullptr);
+        DescX.RemoveSignature(nullptr);
+        DescX.ClearSignatures();
+        DescX.SetPipelineStateCache(nullptr);
+        DescX.AddShader(nullptr);
+        DescX.RemoveShader(nullptr);
+        DescX.SetRenderPass(nullptr);
+    }
+
+    Ref.PSODesc.Name                      = "Test Name2";
+    Ref.Flags                             = PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES;
+    Ref.PSODesc.ResourceLayout            = ResLayoutDescX;
+    Ref.PSODesc.ImmediateContextMask      = ImmediateCtxMask;
+    Ref.PSODesc.SRBAllocationGranularity  = SRBAllocationGranularity;
+    Ref.GraphicsPipeline.BlendDesc        = BS_AlphaBlend;
+    Ref.GraphicsPipeline.SampleMask       = 0x12345678;
+    Ref.GraphicsPipeline.RasterizerDesc   = RS_WireFillNoCull;
+    Ref.GraphicsPipeline.DepthStencilDesc = DSS_DisableDepth;
+    Ref.GraphicsPipeline.InputLayout      = InputLayoutX;
+    Ref.GraphicsPipeline.NumViewports     = 7;
+    Ref.GraphicsPipeline.NumRenderTargets = 2;
+    Ref.GraphicsPipeline.SubpassIndex     = 6;
+    Ref.GraphicsPipeline.ShadingRateFlags = PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE;
+    Ref.GraphicsPipeline.RTVFormats[0]    = TEX_FORMAT_RGBA8_UNORM_SRGB;
+    Ref.GraphicsPipeline.RTVFormats[1]    = TEX_FORMAT_RGBA32_FLOAT;
+    Ref.GraphicsPipeline.DSVFormat        = TEX_FORMAT_D32_FLOAT;
+    Ref.GraphicsPipeline.SmplDesc         = {1, 5};
+    Ref.GraphicsPipeline.NodeMask         = 0x7531;
+    EXPECT_STREQ(DescX.PSODesc.Name, Ref.PSODesc.Name);
+    EXPECT_EQ(DescX, Ref);
+}
 
 TEST(GraphicsTypesXTest, RenderDeviceX)
 {
