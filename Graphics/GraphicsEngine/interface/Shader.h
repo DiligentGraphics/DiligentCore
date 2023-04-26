@@ -432,6 +432,36 @@ struct ShaderCreateInfo
     // clang-format on
     {}
 
+    constexpr ShaderCreateInfo(const Char*            _Source,
+                               size_t                 _SourceLength,
+                               const Char*            _EntryPoint     = ShaderCreateInfo{}.EntryPoint,
+                               const ShaderMacro*     _Macros         = ShaderCreateInfo{}.Macros,
+                               SHADER_SOURCE_LANGUAGE _SourceLanguage = ShaderCreateInfo{}.SourceLanguage,
+                               const ShaderDesc&      _Desc           = ShaderDesc{}) noexcept :
+        // clang-format off
+        Source        {_Source},
+        SourceLength  {_SourceLength},
+        EntryPoint    {_EntryPoint},
+        Macros        {_Macros},
+        Desc          {_Desc},
+        SourceLanguage{_SourceLanguage}
+    // clang-format on
+    {}
+
+    constexpr ShaderCreateInfo(const Char*            _Source,
+                               size_t                 _SourceLength,
+                               const Char*            _EntryPoint     = ShaderCreateInfo{}.EntryPoint,
+                               SHADER_SOURCE_LANGUAGE _SourceLanguage = ShaderCreateInfo{}.SourceLanguage,
+                               const ShaderDesc&      _Desc           = ShaderDesc{}) noexcept :
+        // clang-format off
+        Source        {_Source},
+        SourceLength  {_SourceLength},
+        EntryPoint    {_EntryPoint},
+        Desc          {_Desc},
+        SourceLanguage{_SourceLanguage}
+    // clang-format on
+    {}
+
     constexpr ShaderCreateInfo(const void* _ByteCode,
                                size_t      _ByteCodeSize) noexcept :
         ByteCode{_ByteCode},
