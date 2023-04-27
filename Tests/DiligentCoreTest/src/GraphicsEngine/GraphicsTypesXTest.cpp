@@ -117,6 +117,9 @@ TEST(GraphicsTypesXTest, SubpassDescX)
     Ref.pShadingRateAttachment  = &ShadingRate;
     TestCtorsAndAssignments<SubpassDescX>(Ref);
 
+    SubpassDescX DescCopy;
+    SubpassDescX DescMove;
+    SubpassDesc  Ref2;
     {
         SubpassDescX DescX;
         DescX
@@ -152,6 +155,13 @@ TEST(GraphicsTypesXTest, SubpassDescX)
             .AddRenderTarget(RenderTargets[1], &Resolves2[1]);
         EXPECT_EQ(DescX, Ref);
 
+        {
+            DescCopy       = DescX;
+            auto DescCopy2 = DescCopy;
+            DescMove       = std::move(DescCopy2);
+            Ref2           = Ref;
+        }
+
         DescX.ClearInputs();
         Ref.InputAttachmentCount = 0;
         Ref.pInputAttachments    = nullptr;
@@ -170,6 +180,15 @@ TEST(GraphicsTypesXTest, SubpassDescX)
         Ref.pShadingRateAttachment = nullptr;
         EXPECT_EQ(DescX, Ref);
     }
+
+    EXPECT_EQ(DescCopy, Ref2);
+    EXPECT_EQ(DescMove, Ref2);
+
+    SubpassDescX DescCopy2{DescCopy};
+    SubpassDescX DescMove2{std::move(DescMove)};
+    EXPECT_EQ(DescCopy2, Ref2);
+    EXPECT_EQ(DescMove2, Ref2);
+    EXPECT_EQ(DescCopy2, DescMove2);
 }
 
 TEST(GraphicsTypesXTest, RenderPassDescX)
@@ -214,6 +233,9 @@ TEST(GraphicsTypesXTest, RenderPassDescX)
     Ref.pDependencies   = Dependencies;
     TestCtorsAndAssignments<RenderPassDescX>(Ref);
 
+    RenderPassDescX DescCopy;
+    RenderPassDescX DescMove;
+    RenderPassDesc  Ref2;
     {
         RenderPassDescX DescX;
         DescX
@@ -227,6 +249,13 @@ TEST(GraphicsTypesXTest, RenderPassDescX)
             .AddDependency(Dependencies[1])
             .AddDependency(Dependencies[2]);
         EXPECT_EQ(DescX, Ref);
+
+        {
+            DescCopy       = DescX;
+            auto DescCopy2 = DescCopy;
+            DescMove       = std::move(DescCopy2);
+            Ref2           = Ref;
+        }
 
         DescX.ClearAttachments();
         Ref.AttachmentCount = 0;
@@ -243,6 +272,15 @@ TEST(GraphicsTypesXTest, RenderPassDescX)
         Ref.pDependencies   = nullptr;
         EXPECT_EQ(DescX, Ref);
     }
+
+    EXPECT_EQ(DescCopy, Ref2);
+    EXPECT_EQ(DescMove, Ref2);
+
+    RenderPassDescX DescCopy2{DescCopy};
+    RenderPassDescX DescMove2{std::move(DescMove)};
+    EXPECT_EQ(DescCopy2, Ref2);
+    EXPECT_EQ(DescMove2, Ref2);
+    EXPECT_EQ(DescCopy2, DescMove2);
 }
 
 
@@ -282,6 +320,8 @@ TEST(GraphicsTypesXTest, InputLayoutDescX)
         EXPECT_EQ(DescX, InputLayoutDesc{});
     }
 
+    InputLayoutDescX DescCopy;
+    InputLayoutDescX DescMove;
     {
         StringPool       Pool;
         InputLayoutDescX DescX{
@@ -293,7 +333,19 @@ TEST(GraphicsTypesXTest, InputLayoutDescX)
         };
         Pool.Clear();
         EXPECT_EQ(DescX, Ref);
+
+        DescCopy = DescX;
+        DescMove = std::move(DescX);
     }
+
+    EXPECT_EQ(DescCopy, Ref);
+    EXPECT_EQ(DescMove, Ref);
+
+    InputLayoutDescX DescCopy2{DescCopy};
+    InputLayoutDescX DescMove2{std::move(DescMove)};
+    EXPECT_EQ(DescCopy2, Ref);
+    EXPECT_EQ(DescMove2, Ref);
+    EXPECT_EQ(DescCopy2, DescMove2);
 
 #undef ATTRIB1
 #undef ATTRIB2
@@ -318,6 +370,9 @@ TEST(GraphicsTypesXTest, FramebufferDescX)
     Ref.NumArraySlices  = 6;
     TestCtorsAndAssignments<FramebufferDescX>(Ref);
 
+    FramebufferDescX DescCopy;
+    FramebufferDescX DescMove;
+    FramebufferDesc  Ref2;
     {
         FramebufferDescX DescX;
 
@@ -335,6 +390,13 @@ TEST(GraphicsTypesXTest, FramebufferDescX)
             .AddAttachment(ppAttachments[2]);
         EXPECT_EQ(DescX, Ref);
 
+        {
+            DescCopy       = DescX;
+            auto DescCopy2 = DescCopy;
+            DescMove       = std::move(DescCopy2);
+            Ref2           = Ref;
+        }
+
         DescX.ClearAttachments();
         Ref.AttachmentCount = 0;
         Ref.ppAttachments   = nullptr;
@@ -343,6 +405,15 @@ TEST(GraphicsTypesXTest, FramebufferDescX)
         DescX.Clear();
         EXPECT_EQ(DescX, FramebufferDesc{});
     }
+
+    EXPECT_EQ(DescCopy, Ref2);
+    EXPECT_EQ(DescMove, Ref2);
+
+    FramebufferDescX DescCopy2{DescCopy};
+    FramebufferDescX DescMove2{std::move(DescMove)};
+    EXPECT_EQ(DescCopy2, Ref2);
+    EXPECT_EQ(DescMove2, Ref2);
+    EXPECT_EQ(DescCopy2, DescMove2);
 }
 
 TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
@@ -405,6 +476,10 @@ TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
         EXPECT_EQ(DescX, Ref);
     }
 
+
+    PipelineResourceSignatureDescX DescCopy;
+    PipelineResourceSignatureDescX DescMove;
+    PipelineResourceSignatureDesc  Ref2;
     {
         Ref.NumImmutableSamplers = 0;
         Ref.ImmutableSamplers    = nullptr;
@@ -432,6 +507,13 @@ TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
         Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
+        {
+            DescCopy       = DescX;
+            auto DescCopy2 = DescCopy;
+            DescMove       = std::move(DescCopy2);
+            Ref2           = Ref;
+        }
+
         DescX.RemoveImmutableSampler("g_Sampler2");
         --Ref.NumImmutableSamplers;
         EXPECT_EQ(DescX, Ref);
@@ -450,6 +532,15 @@ TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
         Ref.Resources    = nullptr;
         EXPECT_EQ(DescX, Ref);
     }
+
+    EXPECT_EQ(DescCopy, Ref2);
+    EXPECT_EQ(DescMove, Ref2);
+
+    PipelineResourceSignatureDescX DescCopy2{DescCopy};
+    PipelineResourceSignatureDescX DescMove2{std::move(DescMove)};
+    EXPECT_EQ(DescCopy2, Ref2);
+    EXPECT_EQ(DescMove2, Ref2);
+    EXPECT_EQ(DescCopy2, DescMove2);
 
 #undef RES1
 #undef RES2
@@ -510,6 +601,10 @@ TEST(GraphicsTypesXTest, PipelineResourceLayoutDescX)
         EXPECT_EQ(DescX, Ref);
     }
 
+
+    PipelineResourceLayoutDescX DescCopy;
+    PipelineResourceLayoutDescX DescMove;
+    PipelineResourceLayoutDesc  Ref2;
     {
         Ref.NumImmutableSamplers = 0;
         Ref.ImmutableSamplers    = nullptr;
@@ -536,6 +631,13 @@ TEST(GraphicsTypesXTest, PipelineResourceLayoutDescX)
         Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
+        {
+            DescCopy       = DescX;
+            auto DescCopy2 = DescCopy;
+            DescMove       = std::move(DescCopy2);
+            Ref2           = Ref;
+        }
+
         DescX.RemoveImmutableSampler("g_Sampler2");
         --Ref.NumImmutableSamplers;
         EXPECT_EQ(DescX, Ref);
@@ -554,6 +656,15 @@ TEST(GraphicsTypesXTest, PipelineResourceLayoutDescX)
         Ref.Variables    = nullptr;
         EXPECT_EQ(DescX, Ref);
     }
+
+    EXPECT_EQ(DescCopy, Ref2);
+    EXPECT_EQ(DescMove, Ref2);
+
+    PipelineResourceLayoutDescX DescCopy2{DescCopy};
+    PipelineResourceLayoutDescX DescMove2{std::move(DescMove)};
+    EXPECT_EQ(DescCopy2, Ref2);
+    EXPECT_EQ(DescMove2, Ref2);
+    EXPECT_EQ(DescCopy2, DescMove2);
 
 #undef VAR1
 #undef VAR2
@@ -613,6 +724,9 @@ TEST(GraphicsTypesXTest, BottomLevelASDescX)
         EXPECT_EQ(DescX, Ref);
     }
 
+    BottomLevelASDescX DescCopy;
+    BottomLevelASDescX DescMove;
+    BottomLevelASDesc  Ref2;
     {
         Ref.Flags                = RAYTRACING_BUILD_AS_ALLOW_UPDATE;
         Ref.CompactedSize        = 1024;
@@ -633,6 +747,13 @@ TEST(GraphicsTypesXTest, BottomLevelASDescX)
         Pool.Clear();
         EXPECT_EQ(DescX, Ref);
 
+        {
+            DescCopy       = DescX;
+            auto DescCopy2 = DescCopy;
+            DescMove       = std::move(DescCopy2);
+            Ref2           = Ref;
+        }
+
         DescX.RemoveTriangleGeomerty("Tri3");
         --Ref.TriangleCount;
         EXPECT_EQ(DescX, Ref);
@@ -651,6 +772,15 @@ TEST(GraphicsTypesXTest, BottomLevelASDescX)
         Ref.pBoxes   = nullptr;
         EXPECT_EQ(DescX, Ref);
     }
+
+    EXPECT_EQ(DescCopy, Ref2);
+    EXPECT_EQ(DescMove, Ref2);
+
+    BottomLevelASDescX DescCopy2{DescCopy};
+    BottomLevelASDescX DescMove2{std::move(DescMove)};
+    EXPECT_EQ(DescCopy2, Ref2);
+    EXPECT_EQ(DescMove2, Ref2);
+    EXPECT_EQ(DescCopy2, DescMove2);
 
 #undef TRI1
 #undef TRI2
@@ -740,6 +870,9 @@ TEST(GraphicsTypesXTest, RayTracingPipelineStateCreateInfoX)
         EXPECT_EQ(DescX, Ref);
     }
 
+    RayTracingPipelineStateCreateInfoX DescCopy;
+    RayTracingPipelineStateCreateInfoX DescMove;
+    RayTracingPipelineStateCreateInfo  Ref2;
     {
         StringPool                         Pool;
         RayTracingPipelineStateCreateInfoX DescX;
@@ -765,6 +898,13 @@ TEST(GraphicsTypesXTest, RayTracingPipelineStateCreateInfoX)
         Ref.pGeneralShaders    = nullptr;
         EXPECT_EQ(DescX, Ref);
 
+        {
+            DescCopy       = DescX;
+            auto DescCopy2 = DescCopy;
+            DescMove       = std::move(DescCopy2);
+            Ref2           = Ref;
+        }
+
         DescX.RemoveTriangleHitShader("Tri Hit Shader 3");
         --Ref.TriangleHitShaderCount;
         EXPECT_EQ(DescX, Ref);
@@ -783,6 +923,15 @@ TEST(GraphicsTypesXTest, RayTracingPipelineStateCreateInfoX)
         Ref.pProceduralHitShaders    = nullptr;
         EXPECT_EQ(DescX, Ref);
     }
+
+    EXPECT_EQ(DescCopy, Ref2);
+    EXPECT_EQ(DescMove, Ref2);
+
+    RayTracingPipelineStateCreateInfoX DescCopy2{DescCopy};
+    RayTracingPipelineStateCreateInfoX DescMove2{std::move(DescMove)};
+    EXPECT_EQ(DescCopy2, Ref2);
+    EXPECT_EQ(DescMove2, Ref2);
+    EXPECT_EQ(DescCopy2, DescMove2);
 
 #undef GENERAL_SHADER_1
 #undef GENERAL_SHADER_2
@@ -877,6 +1026,65 @@ TEST(GraphicsTypesXTest, GraphicsPipelineStateCreateInfoX)
     Ref.GraphicsPipeline.SmplDesc         = {1, 5};
     Ref.GraphicsPipeline.NodeMask         = 0x7531;
     EXPECT_STREQ(DescX.PSODesc.Name, Ref.PSODesc.Name);
+    EXPECT_EQ(DescX, Ref);
+
+    {
+        GraphicsPipelineStateCreateInfoX DescX2{DescX};
+        EXPECT_EQ(DescX2, Ref);
+        EXPECT_EQ(DescX2, DescX);
+    }
+
+    {
+        GraphicsPipelineStateCreateInfoX DescX2;
+        DescX2 = DescX;
+        EXPECT_EQ(DescX2, Ref);
+        EXPECT_EQ(DescX2, DescX);
+    }
+
+    {
+        GraphicsPipelineStateCreateInfoX DescX2{std::move(DescX)};
+        EXPECT_EQ(DescX2, Ref);
+
+        GraphicsPipelineStateCreateInfoX DescX3;
+        DescX3 = std::move(DescX2);
+    }
+}
+
+TEST(GraphicsTypesXTest, ComputePipelineStateCreateInfoX)
+{
+    {
+        ComputePipelineStateCreateInfoX DescX{"Test Name"};
+        EXPECT_STREQ(DescX.PSODesc.Name, "Test Name");
+    }
+    {
+        ComputePipelineStateCreateInfoX DescX{std::string{"Test "} + std::string{"Name"}};
+        EXPECT_STREQ(DescX.PSODesc.Name, "Test Name");
+    }
+}
+
+
+TEST(GraphicsTypesXTest, TilePipelineStateCreateInfoX)
+{
+    {
+        TilePipelineStateCreateInfoX DescX{"Test Name"};
+        EXPECT_STREQ(DescX.PSODesc.Name, "Test Name");
+    }
+    {
+        TilePipelineStateCreateInfoX DescX{std::string{"Test "} + std::string{"Name"}};
+        EXPECT_STREQ(DescX.PSODesc.Name, "Test Name");
+    }
+
+    TilePipelineStateCreateInfoX DescX;
+    DescX
+        .AddRenderTarget(TEX_FORMAT_RGBA8_UNORM_SRGB)
+        .AddRenderTarget(TEX_FORMAT_RGBA32_FLOAT)
+        .SetSampleCount(5);
+
+    TilePipelineStateCreateInfo Ref;
+    Ref.TilePipeline.NumRenderTargets = 2;
+    Ref.TilePipeline.RTVFormats[0]    = TEX_FORMAT_RGBA8_UNORM_SRGB;
+    Ref.TilePipeline.RTVFormats[1]    = TEX_FORMAT_RGBA32_FLOAT;
+    Ref.TilePipeline.SampleCount      = 5;
     EXPECT_EQ(DescX, Ref);
 }
 

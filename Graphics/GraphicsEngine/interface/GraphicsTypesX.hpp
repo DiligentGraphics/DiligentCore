@@ -1482,6 +1482,146 @@ struct GraphicsPipelineStateCreateInfoX : PipelineStateCreateInfoX<GraphicsPipel
 };
 
 
+/// C++ wrapper over ComputePipelineStateCreateInfo
+struct ComputePipelineStateCreateInfoX : PipelineStateCreateInfoX<ComputePipelineStateCreateInfoX, ComputePipelineStateCreateInfo>
+{
+    ComputePipelineStateCreateInfoX() noexcept
+    {}
+
+    ComputePipelineStateCreateInfoX(const ComputePipelineStateCreateInfo& CI) :
+        PipelineStateCreateInfoX{CI}
+    {
+        if (pCS != nullptr) Objects.emplace_back(pCS);
+    }
+
+    ComputePipelineStateCreateInfoX(const ComputePipelineStateCreateInfoX& _DescX) :
+        ComputePipelineStateCreateInfoX{static_cast<const ComputePipelineStateCreateInfo&>(_DescX)}
+    {}
+
+    explicit ComputePipelineStateCreateInfoX(const char* Name) :
+        PipelineStateCreateInfoX{Name}
+    {
+    }
+    explicit ComputePipelineStateCreateInfoX(const std::string& Name) :
+        PipelineStateCreateInfoX{Name}
+    {
+    }
+
+    ComputePipelineStateCreateInfoX& operator=(const ComputePipelineStateCreateInfoX& _DescX)
+    {
+        ComputePipelineStateCreateInfoX Copy{_DescX};
+        std::swap(*this, Copy);
+        return *this;
+    }
+
+    ComputePipelineStateCreateInfoX(ComputePipelineStateCreateInfoX&&) noexcept = default;
+    ComputePipelineStateCreateInfoX& operator=(ComputePipelineStateCreateInfoX&&) noexcept = default;
+
+    ComputePipelineStateCreateInfoX& AddShader(IShader* pShader)
+    {
+        if (pShader == nullptr)
+        {
+            UNEXPECTED("Shader must not be null");
+            return *this;
+        }
+        if (pShader->GetDesc().ShaderType == SHADER_TYPE_COMPUTE)
+            return SetShader(pCS, pShader);
+
+        UNEXPECTED("Unexpected shader type");
+        return *this;
+    }
+
+    ComputePipelineStateCreateInfoX& RemoveShader(IShader* pShader)
+    {
+        if (pShader == nullptr)
+        {
+            UNEXPECTED("Shader must not be null");
+            return *this;
+        }
+
+        if (pCS == pShader) pCS = nullptr;
+
+        return RemoveObject(pShader);
+    }
+};
+
+
+/// C++ wrapper over TilePipelineStateCreateInfo
+struct TilePipelineStateCreateInfoX : PipelineStateCreateInfoX<TilePipelineStateCreateInfoX, TilePipelineStateCreateInfo>
+{
+    TilePipelineStateCreateInfoX() noexcept
+    {}
+
+    TilePipelineStateCreateInfoX(const TilePipelineStateCreateInfo& CI) :
+        PipelineStateCreateInfoX{CI}
+    {
+        if (pTS != nullptr) Objects.emplace_back(pTS);
+    }
+
+    TilePipelineStateCreateInfoX(const TilePipelineStateCreateInfoX& _DescX) :
+        TilePipelineStateCreateInfoX{static_cast<const TilePipelineStateCreateInfo&>(_DescX)}
+    {}
+
+    explicit TilePipelineStateCreateInfoX(const char* Name) :
+        PipelineStateCreateInfoX{Name}
+    {
+    }
+    explicit TilePipelineStateCreateInfoX(const std::string& Name) :
+        PipelineStateCreateInfoX{Name}
+    {
+    }
+
+    TilePipelineStateCreateInfoX& operator=(const TilePipelineStateCreateInfoX& _DescX)
+    {
+        TilePipelineStateCreateInfoX Copy{_DescX};
+        std::swap(*this, Copy);
+        return *this;
+    }
+
+    TilePipelineStateCreateInfoX(TilePipelineStateCreateInfoX&&) noexcept = default;
+    TilePipelineStateCreateInfoX& operator=(TilePipelineStateCreateInfoX&&) noexcept = default;
+
+    TilePipelineStateCreateInfoX& SetSampleCount(Uint8 SampleCount) noexcept
+    {
+        TilePipeline.SampleCount = SampleCount;
+        return *this;
+    }
+
+    TilePipelineStateCreateInfoX& AddShader(IShader* pShader)
+    {
+        if (pShader == nullptr)
+        {
+            UNEXPECTED("Shader must not be null");
+            return *this;
+        }
+        if (pShader->GetDesc().ShaderType == SHADER_TYPE_TILE)
+            return SetShader(pTS, pShader);
+
+        UNEXPECTED("Unexpected shader type");
+        return *this;
+    }
+
+    TilePipelineStateCreateInfoX& RemoveShader(IShader* pShader)
+    {
+        if (pShader == nullptr)
+        {
+            UNEXPECTED("Shader must not be null");
+            return *this;
+        }
+
+        if (pTS == pShader) pTS = nullptr;
+
+        return RemoveObject(pShader);
+    }
+
+    TilePipelineStateCreateInfoX& AddRenderTarget(TEXTURE_FORMAT RTVFormat) noexcept
+    {
+        VERIFY_EXPR(TilePipeline.NumRenderTargets < MAX_RENDER_TARGETS);
+        TilePipeline.RTVFormats[TilePipeline.NumRenderTargets++] = RTVFormat;
+        return *this;
+    }
+};
+
 /// C++ wrapper over RayTracingPipelineStateCreateInfo
 struct RayTracingPipelineStateCreateInfoX : PipelineStateCreateInfoX<RayTracingPipelineStateCreateInfoX, RayTracingPipelineStateCreateInfo>
 {
