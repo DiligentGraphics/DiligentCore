@@ -1121,6 +1121,8 @@ TEST(GraphicsTypesXTest, RenderDeviceX)
         {
             auto pShader = Device.CreateShader(ShaderCreateInfo{});
             pShader.Release();
+            pShader = Device.CreateShader("FilePath", nullptr, SHADER_SOURCE_LANGUAGE_HLSL, ShaderDesc{"Shader Name", SHADER_TYPE_VERTEX});
+            pShader.Release();
         }
         {
             auto pSampler = Device.CreateSampler(SamplerDesc{});

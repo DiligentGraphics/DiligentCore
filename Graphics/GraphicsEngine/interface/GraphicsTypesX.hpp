@@ -1907,6 +1907,13 @@ public:
         return CreateDeviceObject<IShader>("shader", ShaderCI.Desc.Name, &IRenderDevice::CreateShader, ShaderCI);
     }
 
+    template <typename... ArgsType>
+    RefCntAutoPtr<IShader> CreateShader(ArgsType&&... args) noexcept(!ThrowOnError)
+    {
+        const ShaderCreateInfo ShaderCI{std::forward<ArgsType>(args)...};
+        return CreateShader(ShaderCI);
+    }
+
     RefCntAutoPtr<ISampler> CreateSampler(const SamplerDesc& SamDesc) noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<ISampler>("sampler", SamDesc.Name, &IRenderDevice::CreateSampler, SamDesc);
