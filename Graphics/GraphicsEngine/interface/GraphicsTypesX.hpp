@@ -1185,6 +1185,12 @@ struct PipelineStateCreateInfoX : CreateInfoType
         this->PSODesc.ResourceLayout = LayoutDesc;
         return static_cast<DerivedType&>(*this);
     }
+    template <typename... ArgsType>
+    DerivedType& SetResourceLayout(ArgsType&&... args) noexcept
+    {
+        const PipelineResourceLayoutDesc Layout{std::forward<ArgsType>(args)...};
+        return SetResourceLayout(Layout);
+    }
 
     DerivedType& SetImmediateContextMask(Uint64 ImmediateContextMask) noexcept
     {
@@ -1390,6 +1396,13 @@ struct GraphicsPipelineStateCreateInfoX : PipelineStateCreateInfoX<GraphicsPipel
         return *this;
     }
 
+    template <typename... ArgsType>
+    GraphicsPipelineStateCreateInfoX& SetBlendDesc(ArgsType&&... args) noexcept
+    {
+        const BlendStateDesc BSDesc{std::forward<ArgsType>(args)...};
+        return SetBlendDesc(BSDesc);
+    }
+
     GraphicsPipelineStateCreateInfoX& SetSampleMask(Uint32 SampleMask) noexcept
     {
         GraphicsPipeline.SampleMask = SampleMask;
@@ -1402,10 +1415,24 @@ struct GraphicsPipelineStateCreateInfoX : PipelineStateCreateInfoX<GraphicsPipel
         return *this;
     }
 
+    template <typename... ArgsType>
+    GraphicsPipelineStateCreateInfoX& SetRasterizerDesc(ArgsType&&... args) noexcept
+    {
+        const RasterizerStateDesc RSDesc{std::forward<ArgsType>(args)...};
+        return SetRasterizerDesc(RSDesc);
+    }
+
     GraphicsPipelineStateCreateInfoX& SetDepthStencilDesc(const DepthStencilStateDesc& DSDesc) noexcept
     {
         GraphicsPipeline.DepthStencilDesc = DSDesc;
         return *this;
+    }
+
+    template <typename... ArgsType>
+    GraphicsPipelineStateCreateInfoX& SetDepthStencilDesc(ArgsType&&... args) noexcept
+    {
+        const DepthStencilStateDesc DSSDesc{std::forward<ArgsType>(args)...};
+        return SetDepthStencilDesc(DSSDesc);
     }
 
     GraphicsPipelineStateCreateInfoX& SetInputLayout(const InputLayoutDesc& LayoutDesc) noexcept

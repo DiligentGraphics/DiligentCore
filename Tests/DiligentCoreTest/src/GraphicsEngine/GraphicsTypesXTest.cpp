@@ -954,6 +954,18 @@ TEST(GraphicsTypesXTest, GraphicsPipelineStateCreateInfoX)
     {
         GraphicsPipelineStateCreateInfoX DescX{std::string{"Test "} + std::string{"Name"}};
         EXPECT_STREQ(DescX.PSODesc.Name, "Test Name");
+
+        DescX.SetResourceLayout(SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_TYPE_MESH);
+        DescX.SetBlendDesc(true, true);
+        DescX.SetRasterizerDesc(FILL_MODE_WIREFRAME, CULL_MODE_NONE);
+        DescX.SetDepthStencilDesc(true, false, COMPARISON_FUNC_GREATER_EQUAL);
+
+        GraphicsPipelineStateCreateInfo Ref;
+        Ref.PSODesc.ResourceLayout            = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_TYPE_MESH};
+        Ref.GraphicsPipeline.BlendDesc        = {true, true};
+        Ref.GraphicsPipeline.RasterizerDesc   = {FILL_MODE_WIREFRAME, CULL_MODE_NONE};
+        Ref.GraphicsPipeline.DepthStencilDesc = {true, false, COMPARISON_FUNC_GREATER_EQUAL};
+        EXPECT_EQ(DescX, Ref);
     }
 
     GraphicsPipelineStateCreateInfoX DescX{std::string{"Test "} + std::string{"Name"}};
