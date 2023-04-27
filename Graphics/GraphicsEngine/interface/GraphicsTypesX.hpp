@@ -510,6 +510,15 @@ struct DeviceObjectAttribsX : BaseType
         this->Name = NameCopy.c_str();
     }
 
+    explicit DeviceObjectAttribsX(const char* Name)
+    {
+        SetName(Name);
+    }
+    explicit DeviceObjectAttribsX(const std::string& Name)
+    {
+        SetName(Name);
+    }
+
     DeviceObjectAttribsX& operator=(const DeviceObjectAttribsX& Other)
     {
         static_cast<BaseType&>(*this) = Other;
@@ -537,6 +546,11 @@ struct DeviceObjectAttribsX : BaseType
         return static_cast<DerivedType&>(*this);
     }
 
+    DerivedType& SetName(const std::string& NewName)
+    {
+        return SetName(NewName.c_str());
+    }
+
 private:
     std::string NameCopy;
 };
@@ -561,6 +575,16 @@ struct FramebufferDescX : DeviceObjectAttribsX<FramebufferDescX, FramebufferDesc
     FramebufferDescX(const FramebufferDescX& _DescX) :
         FramebufferDescX{static_cast<const FramebufferDesc&>(_DescX)}
     {}
+
+    explicit FramebufferDescX(const char* Name) :
+        DeviceObjectAttribsX{Name}
+    {
+    }
+
+    explicit FramebufferDescX(const std::string& Name) :
+        DeviceObjectAttribsX{Name}
+    {
+    }
 
     FramebufferDescX& operator=(const FramebufferDescX& _DescX)
     {
@@ -651,6 +675,16 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
     PipelineResourceSignatureDescX(const PipelineResourceSignatureDescX& _DescX) :
         PipelineResourceSignatureDescX{static_cast<const PipelineResourceSignatureDesc&>(_DescX)}
     {}
+
+    explicit PipelineResourceSignatureDescX(const char* Name) :
+        DeviceObjectAttribsX{Name}
+    {
+    }
+
+    explicit PipelineResourceSignatureDescX(const std::string& Name) :
+        DeviceObjectAttribsX{Name}
+    {
+    }
 
     PipelineResourceSignatureDescX& operator=(const PipelineResourceSignatureDescX& _DescX)
     {
@@ -964,6 +998,15 @@ struct BottomLevelASDescX : DeviceObjectAttribsX<BottomLevelASDescX, BottomLevel
     BottomLevelASDescX(const BottomLevelASDescX& _DescX) :
         BottomLevelASDescX{static_cast<const BottomLevelASDesc&>(_DescX)}
     {}
+
+    explicit BottomLevelASDescX(const char* Name) :
+        DeviceObjectAttribsX{Name}
+    {
+    }
+    explicit BottomLevelASDescX(const std::string& Name) :
+        DeviceObjectAttribsX{Name}
+    {
+    }
 
     BottomLevelASDescX& operator=(const BottomLevelASDescX& _DescX)
     {
