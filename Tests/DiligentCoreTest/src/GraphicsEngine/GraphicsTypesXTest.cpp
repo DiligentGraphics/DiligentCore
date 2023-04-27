@@ -325,13 +325,14 @@ TEST(GraphicsTypesXTest, FramebufferDescX)
         DescX.SetName(Pool("Test"));
         Pool.Clear();
 
-        DescX.pRenderPass    = reinterpret_cast<IRenderPass*>(uintptr_t{0xA});
-        DescX.Width          = 256;
-        DescX.Height         = 128;
-        DescX.NumArraySlices = 6;
-        DescX.AddAttachment(ppAttachments[0]);
-        DescX.AddAttachment(ppAttachments[1]);
-        DescX.AddAttachment(ppAttachments[2]);
+        DescX
+            .SetRenderPass(reinterpret_cast<IRenderPass*>(uintptr_t{0xA}))
+            .SetWidth(256)
+            .SetHeight(128)
+            .SetNumArraySlices(6)
+            .AddAttachment(ppAttachments[0])
+            .AddAttachment(ppAttachments[1])
+            .AddAttachment(ppAttachments[2]);
         EXPECT_EQ(DescX, Ref);
 
         DescX.ClearAttachments();
@@ -395,10 +396,11 @@ TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
             } //
         };
         Pool.Clear();
-        DescX.SetName(Pool("Test"));
-        DescX.SetCombinedSamplerSuffix(Pool("Suffix"));
-        DescX.BindingIndex               = 4;
-        DescX.UseCombinedTextureSamplers = true;
+        DescX
+            .SetName(Pool("Test"))
+            .SetCombinedSamplerSuffix(Pool("Suffix"))
+            .SetBindingIndex(4)
+            .SetUseCombinedTextureSamplers(true);
         Pool.Clear();
         EXPECT_EQ(DescX, Ref);
     }
@@ -512,9 +514,14 @@ TEST(GraphicsTypesXTest, PipelineResourceLayoutDescX)
         Ref.NumImmutableSamplers = 0;
         Ref.ImmutableSamplers    = nullptr;
 
+        Ref.DefaultVariableType        = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+        Ref.DefaultVariableMergeStages = SHADER_TYPE_ALL_GRAPHICS;
+
         StringPool                  Pool;
         PipelineResourceLayoutDescX DescX;
         DescX
+            .SetDefaultVariableType(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+            .SetDefaultVariableMergeStages(SHADER_TYPE_ALL_GRAPHICS)
             .AddVariable({VAR1(Pool)})
             .AddVariable(VAR2(Pool))
             .AddVariable({VAR3(Pool)});
@@ -607,9 +614,17 @@ TEST(GraphicsTypesXTest, BottomLevelASDescX)
     }
 
     {
+        Ref.Flags                = RAYTRACING_BUILD_AS_ALLOW_UPDATE;
+        Ref.CompactedSize        = 1024;
+        Ref.ImmediateContextMask = 0x0F;
+
         StringPool         Pool;
         BottomLevelASDescX DescX;
         DescX
+            .SetName("BLAS test")
+            .SetFlags(RAYTRACING_BUILD_AS_ALLOW_UPDATE)
+            .SetCompactedSize(1024)
+            .SetImmediateContextMask(0x0F)
             .AddTriangleGeomerty({TRI1(Pool)})
             .AddTriangleGeomerty(TRI2(Pool))
             .AddTriangleGeomerty({TRI3(Pool)})
