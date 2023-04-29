@@ -37,11 +37,26 @@
 namespace Diligent
 {
 
-// Structure describing a plane
+/// A plane in 3D space described by the plane equation:
+///     dot(Normal, Point) + Distance = 0
 struct Plane3D
 {
+    /// Plane normal.
+    ///
+    /// \note  The normal does not have to be normalized as long
+    ///        as it is measured in the same units as Distance.
     float3 Normal;
-    float  Distance = 0; //Distance from the coordinate system origin to the plane along the normal direction
+
+    /// Distance from the plane to the coordinate system origin along the normal direction:
+    ///     dot(Normal, Point) = -Distance
+    ///
+    ///
+    ///   O         |   N
+    ///   *<--------|==>
+    ///             |
+    ///
+    /// \note   The distance is measured in the same units as the normal vector.
+    float Distance = 0;
 
     operator float4&()
     {
@@ -224,6 +239,13 @@ struct BoundBox
     }
 };
 
+struct OrientedBoundingBox
+{
+    float3 Center;         // Center of the box
+    float3 Axes[3];        // Normalized axes
+    float  HalfExtents[3]; // Half extents along each axis
+};
+
 enum class BoxVisibility
 {
     //  Bounding box is guaranteed to be outside the view frustum
@@ -283,6 +305,17 @@ inline float3 GetBoxFarthestCorner(const float3& Direction, const BoundBox& Box)
         };
 }
 
+/// Tests if the bounding box is fully visible, intersecting or invisible with
+/// respect to the plane.
+///
+/// \remarks Plane normal doesn't have to be normalized.
+///          The box is visible when it is in the positive halfspace of the plane.
+///
+///   Invisible    |        Visible
+///                |   N
+///                |===>
+///                |
+///                |
 inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const BoundBox& Box)
 {
     const float3& Normal = Plane.Normal;
@@ -309,6 +342,50 @@ inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const Bo
 
     return BoxVisibility::Intersecting;
 }
+
+/// Tests if the oriented bounding box is fully visible, intersecting or invisible with
+/// respect to the plane.
+inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const OrientedBoundingBox& Box)
+{
+    // Calculate the distance from the box center to the plane
+    float Distance = dot(Box.Center, Plane.Normal) + Plane.Distance;
+
+    // Calculate the projected half extents of the box onto the plane normal
+    float ProjHalfExtents =
+        std::abs(dot(Box.Axes[0], Plane.Normal)) * Box.HalfExtents[0] +
+        std::abs(dot(Box.Axes[1], Plane.Normal)) * Box.HalfExtents[1] +
+        std::abs(dot(Box.Axes[2], Plane.Normal)) * Box.HalfExtents[2];
+
+    // Check if the box is completely outside the plane
+    if (Distance < -ProjHalfExtents)
+    {
+        ///       .        |
+        ///     .' '.      |   N
+        ///    '.   .'     |===>
+        ///      '.'       |
+        ///       |        |
+        ///       |<-------|
+        ///        Distance
+        return BoxVisibility::Invisible;
+    }
+
+    // Check if the box is fully inside the plane
+    if (Distance > ProjHalfExtents)
+    {
+        ///     |            .
+        ///     |   N      .' '.
+        ///     |===>     '.   .'
+        ///     |           '.'
+        ///     |            |
+        ///     |----------->|
+        ///        Distance
+        return BoxVisibility::FullyVisible;
+    }
+
+    // Box intersects the plane
+    return BoxVisibility::Intersecting;
+}
+
 
 // Flags must be listed in the same order as planes in the ViewFrustum struct:
 // LeftPlane, RightPlane, BottomPlane, TopPlane, NearPlane, FarPlane
@@ -338,8 +415,9 @@ enum FRUSTUM_PLANE_FLAGS : Uint32
 DEFINE_FLAG_ENUM_OPERATORS(FRUSTUM_PLANE_FLAGS);
 
 // Tests if bounding box is visible by the camera
+template <typename BoundBoxType>
 inline BoxVisibility GetBoxVisibility(const ViewFrustum&  ViewFrustum,
-                                      const BoundBox&     Box,
+                                      const BoundBoxType& Box,
                                       FRUSTUM_PLANE_FLAGS PlaneFlags = FRUSTUM_PLANE_FLAG_FULL_FRUSTUM)
 {
     int NumPlanesInside = 0;
@@ -412,6 +490,62 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustumExt& ViewFrustumExt,
                 float CurrCornerCoord = ViewFrustumExt.FrustumCorners[iCorner][iCoordOrder];
                 // Dot product is simply the coordinate difference multiplied by the sign
                 if (fSign * (CurrPlaneCoord - CurrCornerCoord) > 0)
+                {
+                    bAllCornersOutside = false;
+                    break;
+                }
+            }
+            if (bAllCornersOutside)
+                return BoxVisibility::Invisible;
+        }
+    }
+
+    return BoxVisibility::Intersecting;
+}
+
+inline BoxVisibility GetBoxVisibility(const ViewFrustumExt&      ViewFrustumExt,
+                                      const OrientedBoundingBox& Box,
+                                      FRUSTUM_PLANE_FLAGS        PlaneFlags = FRUSTUM_PLANE_FLAG_FULL_FRUSTUM)
+{
+    auto Visibility = GetBoxVisibility(static_cast<const ViewFrustum&>(ViewFrustumExt), Box, PlaneFlags);
+    if (Visibility == BoxVisibility::FullyVisible || Visibility == BoxVisibility::Invisible)
+        return Visibility;
+
+    if ((PlaneFlags & FRUSTUM_PLANE_FLAG_FULL_FRUSTUM) == FRUSTUM_PLANE_FLAG_FULL_FRUSTUM)
+    {
+        // Test if the whole frustum is outside one of the bounding box planes.
+
+        const float3 Corners[] =
+            {
+                ViewFrustumExt.FrustumCorners[0] - Box.Center,
+                ViewFrustumExt.FrustumCorners[1] - Box.Center,
+                ViewFrustumExt.FrustumCorners[2] - Box.Center,
+                ViewFrustumExt.FrustumCorners[3] - Box.Center,
+                ViewFrustumExt.FrustumCorners[4] - Box.Center,
+                ViewFrustumExt.FrustumCorners[5] - Box.Center,
+                ViewFrustumExt.FrustumCorners[6] - Box.Center,
+                ViewFrustumExt.FrustumCorners[7] - Box.Center,
+            };
+
+        // Test all frustum corners against every box plane
+        for (int iBoundBoxPlane = 0; iBoundBoxPlane < 6; ++iBoundBoxPlane)
+        {
+            const auto AxisIdx = iBoundBoxPlane / 2;
+            const auto Normal  = Box.Axes[AxisIdx] * (iBoundBoxPlane & 0x01 ? -1.f : +1.f);
+
+            bool bAllCornersOutside = true;
+            for (int iCorner = 0; iCorner < 8; iCorner++)
+            {
+                float Dist = dot(Corners[iCorner], Normal) - Box.HalfExtents[AxisIdx];
+                //
+                //     _______
+                //    |       |  N      .'
+                //    |   |   |===>   .'
+                //    |___|___|       '.
+                //        |           | '.
+                //        |---------->|
+                //            Dist
+                if (Dist < 0)
                 {
                     bAllCornersOutside = false;
                     break;

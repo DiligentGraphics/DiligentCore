@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -2380,6 +2380,92 @@ TEST(Common_AdvancedMath, CheckLineSectionOverlap)
     EXPECT_TRUE(CheckLineSectionOverlap<true>(10, 20, 0, 10));
     EXPECT_FALSE(CheckLineSectionOverlap<false>(0, 10, 10, 20));
     EXPECT_FALSE(CheckLineSectionOverlap<false>(10, 20, 0, 10));
+}
+
+
+TEST(Common_AdvancedMath, GetBoxVisibilityAgainstPlane)
+{
+    BoundBox Box{
+        float3{1, 2, 4},
+        float3{3, 5, 7},
+    };
+    for (float s = 0.25f; s <= 4.f; s *= 2.f)
+    {
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{1 * s, 0, 0}, -0.999f * s}, Box), BoxVisibility::FullyVisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{1 * s, 0, 0}, -1.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{1 * s, 0, 0}, -2.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{1 * s, 0, 0}, -3.001f * s}, Box), BoxVisibility::Invisible);
+
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{-1 * s, 0, 0}, 0.999f * s}, Box), BoxVisibility::Invisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{-1 * s, 0, 0}, 1.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{-1 * s, 0, 0}, 2.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{-1 * s, 0, 0}, 3.001f * s}, Box), BoxVisibility::FullyVisible);
+
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 1 * s, 0}, -1.999f * s}, Box), BoxVisibility::FullyVisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 1 * s, 0}, -2.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 1 * s, 0}, -4.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 1 * s, 0}, -5.001f * s}, Box), BoxVisibility::Invisible);
+
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, -1 * s, 0}, 1.999f * s}, Box), BoxVisibility::Invisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, -1 * s, 0}, 2.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, -1 * s, 0}, 4.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, -1 * s, 0}, 5.001f * s}, Box), BoxVisibility::FullyVisible);
+
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, 1 * s}, -3.999f * s}, Box), BoxVisibility::FullyVisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, 1 * s}, -4.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, 1 * s}, -6.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, 1 * s}, -7.001f * s}, Box), BoxVisibility::Invisible);
+
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, -1 * s}, 3.999f * s}, Box), BoxVisibility::Invisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, -1 * s}, 4.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, -1 * s}, 6.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, -1 * s}, 7.001f * s}, Box), BoxVisibility::FullyVisible);
+    }
+}
+
+TEST(Common_AdvancedMath, GetOrientedBoxVisibilityAgainstPlane)
+{
+    OrientedBoundingBox Box{
+        float3{2, 4, 6},
+        {
+            float3{1, 0, 0},
+            float3{0, 1, 0},
+            float3{0, 0, 1},
+        },
+        {1, 2, 3},
+    };
+    for (float s = 0.25f; s <= 4.f; s *= 2.f)
+    {
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{1 * s, 0, 0}, -0.999f * s}, Box), BoxVisibility::FullyVisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{1 * s, 0, 0}, -1.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{1 * s, 0, 0}, -2.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{1 * s, 0, 0}, -3.001f * s}, Box), BoxVisibility::Invisible);
+
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{-1 * s, 0, 0}, 0.999f * s}, Box), BoxVisibility::Invisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{-1 * s, 0, 0}, 1.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{-1 * s, 0, 0}, 2.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{-1 * s, 0, 0}, 3.001f * s}, Box), BoxVisibility::FullyVisible);
+
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 1 * s, 0}, -1.999f * s}, Box), BoxVisibility::FullyVisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 1 * s, 0}, -2.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 1 * s, 0}, -5.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 1 * s, 0}, -6.001f * s}, Box), BoxVisibility::Invisible);
+
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, -1 * s, 0}, 1.999f * s}, Box), BoxVisibility::Invisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, -1 * s, 0}, 2.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, -1 * s, 0}, 5.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, -1 * s, 0}, 6.001f * s}, Box), BoxVisibility::FullyVisible);
+
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, 1 * s}, -2.999f * s}, Box), BoxVisibility::FullyVisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, 1 * s}, -3.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, 1 * s}, -8.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, 1 * s}, -9.001f * s}, Box), BoxVisibility::Invisible);
+
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, -1 * s}, 2.999f * s}, Box), BoxVisibility::Invisible);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, -1 * s}, 3.001f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, -1 * s}, 8.999f * s}, Box), BoxVisibility::Intersecting);
+        EXPECT_EQ(GetBoxVisibilityAgainstPlane(Plane3D{float3{0, 0, -1 * s}, 9.001f * s}, Box), BoxVisibility::FullyVisible);
+    }
 }
 
 } // namespace
