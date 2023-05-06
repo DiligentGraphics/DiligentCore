@@ -78,8 +78,9 @@ void LoadShaderCodeVariableDesc(TD3DShaderReflectionType* pd3dReflecionType, Sha
         TypeDesc.NumColumns = StaticCast<decltype(TypeDesc.NumRows)>(d3dTypeDesc.Columns);
     }
 
-    TypeDesc.SetTypeName(d3dTypeDesc.Name);
-    if (TypeDesc.TypeName == nullptr)
+    if (d3dTypeDesc.Name != nullptr)
+        TypeDesc.SetTypeName(d3dTypeDesc.Name);
+    else
         TypeDesc.SetDefaultTypeName(SHADER_SOURCE_LANGUAGE_HLSL);
     if (d3dTypeDesc.Type == D3D_SVT_UINT && strcmp(TypeDesc.TypeName, "dword") == 0)
         TypeDesc.SetTypeName("uint");
