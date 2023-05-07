@@ -153,6 +153,15 @@ struct BufferSuballocatorCreateInfo
 
     /// If Desc.Usage == USAGE_SPARSE, the virtual buffer size; ignored otherwise.
     Uint64 VirtualSize = 0;
+
+    /// Whether to disable debug validation of the internal buffer structure.
+
+    /// \remarks    By default, internal buffer structure is validated in debug
+    ///             mode after each allocation and deallocation. This may be expensive
+    ///             when the buffer contains many allocations. When this flag is set
+    ///             to true, the validation is disabled.
+    ///             The flag is ignored in release builds as the validation is always disabled.
+    bool DisableDebugValidation = false;
 };
 
 /// Creates a new buffer suballocator.

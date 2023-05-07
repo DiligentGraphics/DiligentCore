@@ -223,6 +223,15 @@ struct VertexPoolCreateInfo
     /// every time there is insufficient space. If zero, the pool size will be doubled
     /// when more space is needed.
     Uint32 ExtraVertexCount = 0;
+
+    /// Whether to disable debug validation of the internal pool structure.
+
+    /// \remarks    By default, internal pool structure is validated in debug
+    ///             mode after each allocation and deallocation. This may be expensive
+    ///             when the pool contains many allocations. When this flag is set
+    ///             to true, the validation is disabled.
+    ///             The flag is ignored in release builds as the validation is always disabled.
+    bool DisableDebugValidation = false;
 };
 
 /// Creates a new vertex pool.

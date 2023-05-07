@@ -128,10 +128,18 @@ public:
                    const VertexPoolCreateInfo& CreateInfo) :
         // clang-format off
         TBase{pRefCounters},
-        m_Name            {CreateInfo.Desc.Name != nullptr ? CreateInfo.Desc.Name : "Vertex pool"},
-        m_Elements        {CreateInfo.Desc.pElements, CreateInfo.Desc.pElements + CreateInfo.Desc.NumElements},
-        m_Desc            {CreateInfo.Desc},
-        m_Mgr             {CreateInfo.Desc.VertexCount, DefaultRawMemoryAllocator::GetAllocator()},
+        m_Name    {CreateInfo.Desc.Name != nullptr ? CreateInfo.Desc.Name : "Vertex pool"},
+        m_Elements{CreateInfo.Desc.pElements, CreateInfo.Desc.pElements + CreateInfo.Desc.NumElements},
+        m_Desc    {CreateInfo.Desc},
+        m_Mgr
+        {
+            VariableSizeAllocationsManager::CreateInfo
+            {
+                DefaultRawMemoryAllocator::GetAllocator(),
+                CreateInfo.Desc.VertexCount,
+                CreateInfo.DisableDebugValidation
+            }
+        },
         m_MgrSize         {m_Mgr.GetMaxSize()},
         m_BufferSizes     (m_Desc.NumElements),
         m_ExtraVertexCount{CreateInfo.ExtraVertexCount},

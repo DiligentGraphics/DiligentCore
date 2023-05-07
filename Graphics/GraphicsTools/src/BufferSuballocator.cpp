@@ -128,7 +128,15 @@ public:
                            const BufferSuballocatorCreateInfo& CreateInfo) :
         // clang-format off
         TBase{pRefCounters},
-        m_Mgr{StaticCast<size_t>(CreateInfo.Desc.Size), DefaultRawMemoryAllocator::GetAllocator()},
+        m_Mgr
+        {
+            VariableSizeAllocationsManager::CreateInfo
+            {
+                DefaultRawMemoryAllocator::GetAllocator(),
+                StaticCast<size_t>(CreateInfo.Desc.Size),
+                CreateInfo.DisableDebugValidation
+            }
+        },
         m_MgrSize{m_Mgr.GetMaxSize()},
         m_Buffer
         {
