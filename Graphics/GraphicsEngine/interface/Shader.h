@@ -733,9 +733,13 @@ typedef struct ShaderCodeVariableDesc
     SHADER_CODE_BASIC_TYPE BasicType DEFAULT_INITIALIZER(SHADER_CODE_BASIC_TYPE_UNKNOWN);
 
     /// For a matrix type, the number of rows.
+    ///
+    /// \note   For shaders compiled from GLSL, NumRows and NumColumns are swapped.
     Uint8 NumRows DEFAULT_INITIALIZER(0);
 
     /// For a matrix type, the number of columns. For a vector, the number of components.
+    ///
+    /// \note   For shaders compiled from GLSL, NumRows and NumColumns are swapped.
     Uint8 NumColumns DEFAULT_INITIALIZER(0);
 
     /// Offset, in bytes, between the start of the parent structure and this variable.
