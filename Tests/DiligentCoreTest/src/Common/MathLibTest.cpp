@@ -2468,4 +2468,64 @@ TEST(Common_AdvancedMath, GetOrientedBoxVisibilityAgainstPlane)
     }
 }
 
+TEST(Common_AdvancedMath, GetPointToBoxDistance)
+{
+    BoundBox Box{float3{1, 2, 3}, float3{4, 5, 6}};
+
+    EXPECT_EQ(GetPointToBoxDistance(Box, float3{0, 3, 4}), 1.f);
+    EXPECT_EQ(GetPointToBoxDistance(Box, float3{6, 3, 4}), 2.f);
+    EXPECT_EQ(GetPointToBoxDistance(Box, float3{3, 0, 4}), 2.f);
+    EXPECT_EQ(GetPointToBoxDistance(Box, float3{3, 8, 4}), 3.f);
+    EXPECT_EQ(GetPointToBoxDistance(Box, float3{3, 4, 1}), 2.f);
+    EXPECT_EQ(GetPointToBoxDistance(Box, float3{3, 4, 9}), 3.f);
+    EXPECT_EQ(GetPointToBoxDistanceSqr(Box, float3{0, 0, 0}), 14.f);
+    EXPECT_EQ(GetPointToBoxDistanceSqr(Box, float3{5, 6, 7}), 3.f);
+
+    for (float x = -10.f; x <= +10.f; x += 0.5f)
+    {
+        for (float y = -10.f; y <= +10.f; y += 0.5f)
+        {
+            for (float z = -10.f; z <= +10.f; z += 0.5f)
+            {
+                float dx = x < Box.Min.x ?
+                    Box.Min.x - x :
+                    (x > Box.Max.x ? x - Box.Max.x : 0);
+                float dy = y < Box.Min.y ?
+                    Box.Min.y - y :
+                    (y > Box.Max.y ? y - Box.Max.y : 0);
+                float dz = z < Box.Min.z ?
+                    Box.Min.z - z :
+                    (z > Box.Max.z ? z - Box.Max.z : 0);
+                float DistSqr = dx * dx + dy * dy + dz * dz;
+                EXPECT_EQ(GetPointToBoxDistanceSqr(Box, float3{x, y, z}), DistSqr);
+            }
+        }
+    }
+}
+
+TEST(Common_AdvancedMath, GetPointToOrientedBoxDistance)
+{
+    OrientedBoundingBox OBB{
+        float3{1, -1.5, 3.5},
+        {
+            float3{1, 0, 0},
+            float3{0, -1, 0},
+            float3{0, 0, 1},
+        },
+        {2, 0.5, 1.5},
+    };
+
+    BoundBox AABB{float3{-1, -2, 2}, float3{3, -1, 5}};
+    for (float x = -10.f; x <= +10.f; x += 0.5f)
+    {
+        for (float y = -10.f; y <= +10.f; y += 0.5f)
+        {
+            for (float z = -10.f; z <= +10.f; z += 0.5f)
+            {
+                EXPECT_EQ(GetPointToBoxDistanceSqr(OBB, float3{x, y, z}), GetPointToBoxDistanceSqr(AABB, float3{x, y, z}));
+            }
+        }
+    }
+}
+
 } // namespace

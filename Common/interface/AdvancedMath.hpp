@@ -559,18 +559,44 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustumExt&      ViewFrustumExt,
     return BoxVisibility::Intersecting;
 }
 
-inline float GetPointToBoxDistance(const BoundBox& BndBox, const float3& Pos)
+inline float GetPointToBoxDistanceSqr(const BoundBox& BB, const float3& Pos)
 {
-    VERIFY_EXPR(BndBox.Max.x >= BndBox.Min.x &&
-                BndBox.Max.y >= BndBox.Min.y &&
-                BndBox.Max.z >= BndBox.Min.z);
-    float fdX = (Pos.x > BndBox.Max.x) ? (Pos.x - BndBox.Max.x) : ((Pos.x < BndBox.Min.x) ? (BndBox.Min.x - Pos.x) : 0.f);
-    float fdY = (Pos.y > BndBox.Max.y) ? (Pos.y - BndBox.Max.y) : ((Pos.y < BndBox.Min.y) ? (BndBox.Min.y - Pos.y) : 0.f);
-    float fdZ = (Pos.z > BndBox.Max.z) ? (Pos.z - BndBox.Max.z) : ((Pos.z < BndBox.Min.z) ? (BndBox.Min.z - Pos.z) : 0.f);
-    VERIFY_EXPR(fdX >= 0 && fdY >= 0 && fdZ >= 0);
+    VERIFY_EXPR(BB.Max.x >= BB.Min.x &&
+                BB.Max.y >= BB.Min.y &&
+                BB.Max.z >= BB.Min.z);
+    const float3 OffsetVec{
+        (max)(Pos.x - BB.Max.x, BB.Min.x - Pos.x, 0.f),
+        (max)(Pos.y - BB.Max.y, BB.Min.y - Pos.y, 0.f),
+        (max)(Pos.z - BB.Max.z, BB.Min.z - Pos.z, 0.f),
+    };
+    return dot(OffsetVec, OffsetVec);
+}
 
-    float3 RangeVec(fdX, fdY, fdZ);
-    return length(RangeVec);
+inline float GetPointToBoxDistance(const BoundBox& BB, const float3& Pos)
+{
+    return sqrt(GetPointToBoxDistanceSqr(BB, Pos));
+}
+
+inline float GetPointToBoxDistanceSqr(const OrientedBoundingBox& OBB, const float3& Pos)
+{
+    const auto  RelPos = Pos - OBB.Center;
+    const float Projs[3] =
+        {
+            dot(RelPos, OBB.Axes[0]),
+            dot(RelPos, OBB.Axes[1]),
+            dot(RelPos, OBB.Axes[2]),
+        };
+    const float3 OffsetVec{
+        (max)(Projs[0] - OBB.HalfExtents[0], -OBB.HalfExtents[0] - Projs[0], 0.f),
+        (max)(Projs[1] - OBB.HalfExtents[1], -OBB.HalfExtents[1] - Projs[1], 0.f),
+        (max)(Projs[2] - OBB.HalfExtents[2], -OBB.HalfExtents[2] - Projs[2], 0.f),
+    };
+    return dot(OffsetVec, OffsetVec);
+}
+
+inline float GetPointToBoxDistance(const OrientedBoundingBox& OBB, const float3& Pos)
+{
+    return sqrt(GetPointToBoxDistanceSqr(OBB, Pos));
 }
 
 inline bool operator==(const Plane3D& p1, const Plane3D& p2) noexcept
