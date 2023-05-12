@@ -44,7 +44,7 @@ TEST(Common_FixedBlockMemoryAllocator, AllocDealloc)
     constexpr Uint32 AllocSize             = 32;
     constexpr int    NumAllocationsPerPage = 16;
 
-    FixedBlockMemoryAllocator TestAllocator(DefaultRawMemoryAllocator::GetAllocator(), AllocSize, NumAllocationsPerPage);
+    FixedBlockMemoryAllocator TestAllocator{DefaultRawMemoryAllocator::GetAllocator(), AllocSize, NumAllocationsPerPage};
 
     void* Allocations[NumAllocationsPerPage][2] = {};
     for (int p = 0; p < 2; ++p)
@@ -89,7 +89,7 @@ TEST(Common_FixedBlockMemoryAllocator, SmallObject)
     constexpr Uint32 AllocSize             = 4;
     constexpr Uint32 NumAllocationsPerPage = 1;
 
-    FixedBlockMemoryAllocator TestAllocator(DefaultRawMemoryAllocator::GetAllocator(), AllocSize, NumAllocationsPerPage);
+    FixedBlockMemoryAllocator TestAllocator{DefaultRawMemoryAllocator::GetAllocator(), AllocSize, NumAllocationsPerPage};
 
     {
         void* pRawMem0 = TestAllocator.Allocate(AllocSize, "Small object allocation test", __FILE__, __LINE__);
@@ -109,7 +109,7 @@ TEST(Common_FixedBlockMemoryAllocator, UnalignedSize)
     constexpr Uint32 AllocSize             = 10;
     constexpr Uint32 NumAllocationsPerPage = 1;
 
-    FixedBlockMemoryAllocator TestAllocator(DefaultRawMemoryAllocator::GetAllocator(), AllocSize, NumAllocationsPerPage);
+    FixedBlockMemoryAllocator TestAllocator{DefaultRawMemoryAllocator::GetAllocator(), AllocSize, NumAllocationsPerPage};
 
     {
         void* pRawMem0 = TestAllocator.Allocate(AllocSize, "Unaligned-size object allocation test", __FILE__, __LINE__);
