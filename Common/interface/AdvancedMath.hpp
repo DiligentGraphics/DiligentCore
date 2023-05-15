@@ -318,27 +318,40 @@ inline float3 GetBoxFarthestCorner(const float3& Direction, const BoundBox& Box)
 ///                |
 inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const BoundBox& Box)
 {
-    const float3& Normal = Plane.Normal;
+    // Calculate the distance from the box center to the plane:
+    //   Center = (Box.Max + Box.Min) * 0.5
+    //   Distance = dot(Center, Plane.Normal) + Plane.Distance
+    //            = dot(Box.Max + Box.Min, Plane.Normal) * 0.5 + Plane.Distance
+    const auto DistanceToCenter = dot(Box.Max + Box.Min, Plane.Normal) * 0.5f + Plane.Distance;
 
-    float3 MaxPoint //
-        {
-            (Normal.x > 0) ? Box.Max.x : Box.Min.x,
-            (Normal.y > 0) ? Box.Max.y : Box.Min.y,
-            (Normal.z > 0) ? Box.Max.z : Box.Min.z //
-        };
-    float DMax = dot(MaxPoint, Normal) + Plane.Distance;
-    if (DMax < 0)
+    // Calculate the projected half extents of the box onto the plane normal:
+    const auto ProjHalfLen = dot(Box.Max - Box.Min, abs(Plane.Normal)) * 0.5f;
+
+    // Check if the box is completely outside the plane
+    if (DistanceToCenter < -ProjHalfLen)
+    {
+        ///       .        |
+        ///     .' '.      |   N
+        ///    '.   .'     |===>
+        ///      '.'       |
+        ///       |        |
+        ///       |<-------|
+        ///        Distance
         return BoxVisibility::Invisible;
+    }
 
-    float3 MinPoint //
-        {
-            (Normal.x > 0) ? Box.Min.x : Box.Max.x,
-            (Normal.y > 0) ? Box.Min.y : Box.Max.y,
-            (Normal.z > 0) ? Box.Min.z : Box.Max.z //
-        };
-    float DMin = dot(MinPoint, Normal) + Plane.Distance;
-    if (DMin > 0)
+    // Check if the box is fully inside the plane
+    if (DistanceToCenter > ProjHalfLen)
+    {
+        ///     |            .
+        ///     |   N      .' '.
+        ///     |===>     '.   .'
+        ///     |           '.'
+        ///     |            |
+        ///     |----------->|
+        ///        Distance
         return BoxVisibility::FullyVisible;
+    }
 
     return BoxVisibility::Intersecting;
 }
