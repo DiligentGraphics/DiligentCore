@@ -32,10 +32,6 @@ set(SOURCE
     src/DynamicTextureArray.cpp
     src/DynamicTextureAtlas.cpp
     src/GraphicsUtilities.cpp
-    src/GraphicsUtilitiesD3D11.cpp
-    src/GraphicsUtilitiesD3D12.cpp
-    src/GraphicsUtilitiesGL.cpp
-    src/GraphicsUtilitiesVk.cpp
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
     src/TextureUploader.cpp
@@ -59,16 +55,18 @@ endif()
 set(DEPENDENCIES)
 
 if(D3D11_SUPPORTED)
-    list(APPEND SOURCE src/TextureUploaderD3D11.cpp)
+    list(APPEND SOURCE src/TextureUploaderD3D11.cpp src/GraphicsUtilitiesD3D11.cpp)
     list(APPEND INTERFACE interface/TextureUploaderD3D11.hpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineD3D11Interface)
 endif()
 
 if(D3D12_SUPPORTED)
+    list(APPEND SOURCE src/GraphicsUtilitiesD3D12.cpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineD3D12Interface)
 endif()
 
 if(VULKAN_SUPPORTED)
+    list(APPEND SOURCE src/GraphicsUtilitiesVk.cpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineVkInterface Vulkan::Headers)
 endif()
 
@@ -78,7 +76,7 @@ if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
-    list(APPEND SOURCE src/TextureUploaderGL.cpp)
+    list(APPEND SOURCE src/TextureUploaderGL.cpp src/GraphicsUtilitiesGL.cpp)
     list(APPEND INTERFACE interface/TextureUploaderGL.hpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineOpenGLInterface)
 endif()
