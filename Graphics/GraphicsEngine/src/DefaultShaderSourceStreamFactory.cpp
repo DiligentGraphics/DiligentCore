@@ -46,7 +46,7 @@ public:
                                                        CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
                                                        IFileStream**                           ppStream) override final;
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderSourceInputStreamFactory, ObjectBase<IShaderSourceInputStreamFactory>);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderSourceInputStreamFactory, ObjectBase<IShaderSourceInputStreamFactory>)
 
 private:
     std::vector<String> m_SearchDirectories;
