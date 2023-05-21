@@ -28,6 +28,7 @@
 #pragma once
 
 #include <float.h>
+#include <vector>
 
 #include "../../Platforms/interface/PlatformDefinitions.h"
 #include "../../Primitives/interface/FlagEnum.h"
@@ -1176,6 +1177,144 @@ bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
     {
         return !(Min0 >= Max1 || Min1 >= Max0);
     }
+}
+
+
+/// Triangulates a simple polygon using the ear-clipping algorithm.
+
+/// \tparam [in] IndexType - Index type (e.g. Uint32 or Uint16).
+/// \tparam [in] VertType  - Polygon vertex type (e.g. Int32 or float).
+///
+/// \param [in]  Polygon   - A list of polygon vertices. The last vertex is
+///                          assumed to be connected to the first one.
+///
+/// \return     The triangle list.
+///
+/// \remarks    The winding order of each triangle is the same as the winding
+///             order of the polygon.
+///
+///             The function does not check if the polygon is simple, e.g.
+///             that it does not self-intersect.
+template <typename IndexType, typename VertType>
+std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<VertType>>& Polygon)
+{
+    const auto VertCount = static_cast<int>(Polygon.size());
+    if (VertCount <= 2)
+    {
+        DEV_ERROR("At least three vertices are required.");
+        return {};
+    }
+
+    const auto TriangleCount = VertCount - 2;
+    if (TriangleCount == 1)
+        return {0, 1, 2};
+
+    // Find the leftmost vertex to determine the winding order
+    int LeftmostVertIdx = 0;
+    for (int i = 1; i < VertCount; ++i)
+    {
+        if (Polygon[i].x < Polygon[LeftmostVertIdx].x)
+            LeftmostVertIdx = i;
+    }
+
+    auto WrapIndex = [](int idx, int Count) {
+        return ((idx % Count) + Count) % Count;
+    };
+
+    // Returns the winding order of the triangle formed by the given vertices.
+    //
+    //    V0    V2
+    //      \  /
+    //       \/
+    //       V1
+    auto GetWinding = [](const auto& V0, const auto& V1, const auto& V2) {
+        return (V1.x - V0.x) * (V2.y - V1.y) - (V2.x - V1.x) * (V1.y - V0.y);
+    };
+
+    // Find the winding order of the polygon
+    VertType PolygonWinding = 0;
+    for (int i = 0; i < VertCount && PolygonWinding == 0; ++i)
+    {
+        const auto& V0 = Polygon[WrapIndex(LeftmostVertIdx + i - 1, VertCount)];
+        const auto& V1 = Polygon[WrapIndex(LeftmostVertIdx + i + 0, VertCount)];
+        const auto& V2 = Polygon[WrapIndex(LeftmostVertIdx + i + 1, VertCount)];
+        PolygonWinding = GetWinding(V0, V1, V2);
+    }
+    if (PolygonWinding == 0)
+    {
+        DEV_ERROR("All vertices are collinear.");
+        return {};
+    }
+
+    std::vector<IndexType> Triangles;
+    Triangles.reserve(TriangleCount * 3);
+
+    std::vector<int> RemainingVertIds(VertCount);
+    for (int i = 0; i < VertCount; ++i)
+        RemainingVertIds[i] = i;
+
+    // Clip ears one by one until only three vertices are left
+    while (RemainingVertIds.size() > 3)
+    {
+        const auto RemainingVertCount = static_cast<int>(RemainingVertIds.size());
+
+        int Idx0 = -1;
+        int Idx1 = -1;
+        int Idx2 = -1;
+
+        int eart_vert_id = 0;
+        for (; eart_vert_id < RemainingVertCount; ++eart_vert_id)
+        {
+            Idx0 = RemainingVertIds[WrapIndex(eart_vert_id - 1, RemainingVertCount)];
+            Idx1 = RemainingVertIds[eart_vert_id];
+            Idx2 = RemainingVertIds[WrapIndex(eart_vert_id + 1, RemainingVertCount)];
+
+            const auto& V0 = Polygon[Idx0];
+            const auto& V1 = Polygon[Idx1];
+            const auto& V2 = Polygon[Idx2];
+            if (GetWinding(V0, V1, V2) * PolygonWinding < 0)
+            {
+                // Reflex vertex
+                continue;
+            }
+
+            bool IsEar = true;
+            for (const auto Idx : RemainingVertIds)
+            {
+                if (Idx == Idx0 || Idx == Idx1 || Idx == Idx2)
+                    continue;
+
+                // Do not treat vertices exactly on the edge as inside the triangle,
+                // so that we can clip out degenerate triangles.
+                if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false))
+                {
+                    // The vertex is inside the triangle
+                    IsEar = false;
+                    break;
+                }
+            }
+
+            if (IsEar)
+                break;
+        };
+
+        if (eart_vert_id == RemainingVertCount)
+        {
+            UNEXPECTED("Failed to find an ear.");
+            return {};
+        }
+
+        Triangles.emplace_back(Idx0);
+        Triangles.emplace_back(Idx1);
+        Triangles.emplace_back(Idx2);
+        RemainingVertIds.erase(RemainingVertIds.begin() + eart_vert_id);
+    }
+
+    Triangles.emplace_back(RemainingVertIds[0]);
+    Triangles.emplace_back(RemainingVertIds[1]);
+    Triangles.emplace_back(RemainingVertIds[2]);
+
+    return Triangles;
 }
 
 } // namespace Diligent

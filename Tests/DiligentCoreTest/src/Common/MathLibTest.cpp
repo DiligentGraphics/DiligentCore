@@ -2528,4 +2528,226 @@ TEST(Common_AdvancedMath, GetPointToOrientedBoxDistance)
     }
 }
 
+
+TEST(Common_AdvancedMath, TriangulatePolygon)
+{
+    {
+        const std::vector<int2> Verts = {
+            {0, 0},
+            {1, 0},
+            {0, 1}};
+        const std::vector<Uint32> RefTris = {0, 1, 2};
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        EXPECT_EQ(Tris, RefTris);
+    }
+
+    for (size_t start_vert = 0; start_vert < 4; ++start_vert)
+    {
+        std::vector<int2> Verts(4);
+        {
+            //   3 ______ 2
+            //    |'.    |
+            //    |  '.  |
+            //    |____'.|
+            //   0        1
+            const std::vector<int2> BaseVerts = {
+                {0, 0},
+                {1, 0},
+                {1, 1},
+                {0, 1}};
+            for (size_t i = 0; i < 4; ++i)
+                Verts[i] = BaseVerts[(start_vert + i) % 4];
+        }
+
+        const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        EXPECT_EQ(Tris, RefTris);
+    }
+
+    for (size_t start_vert = 0; start_vert < 4; ++start_vert)
+    {
+        std::vector<float2> Verts(4);
+        {
+            //   1 ______ 2
+            //    |'.    |
+            //    |  '.  |
+            //    |____'.|
+            //   0        3
+            const std::vector<float2> BaseVerts = {
+                {0, 0},
+                {0, 1},
+                {1, 1},
+                {1, 0}};
+            for (size_t i = 0; i < 4; ++i)
+                Verts[i] = BaseVerts[(start_vert + i) % 4];
+        }
+        const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        EXPECT_EQ(Tris, RefTris);
+    }
+
+    for (size_t start_vert = 0; start_vert < 4; ++start_vert)
+    {
+        std::vector<int2> Verts(4);
+        {
+            //
+            //  3.       .1
+            //   \'. 2 .'/
+            //    \ '.' /
+            //     \   /
+            //      \ /
+            //       0
+            //
+            const std::vector<int2> BaseVerts = {
+                {0, 0},
+                {2, 3},
+                {0, 2},
+                {-1, 4}};
+
+            for (size_t i = 0; i < 4; ++i)
+                Verts[i] = BaseVerts[(start_vert + i) % 4];
+        }
+
+        std::vector<Uint32> RefTris;
+        switch (start_vert)
+        {
+            //
+            //  3.       .1
+            //   \'. 2 .'/
+            //    \ '.' /
+            //     \   /
+            //      \ /
+            //       0
+            //
+            case 0: RefTris = {0, 1, 2, 0, 2, 3}; break;
+
+            //
+            //  2.       .0
+            //   \'. 1 .'/
+            //    \ '.' /
+            //     \   /
+            //      \ /
+            //       3
+            //
+            case 1: RefTris = {3, 0, 1, 1, 2, 3}; break;
+
+            //
+            //  1.       .3
+            //   \'. 0 .'/
+            //    \ '.' /
+            //     \   /
+            //      \ /
+            //       2
+            //
+            case 2: RefTris = {0, 1, 2, 0, 2, 3}; break;
+
+            //
+            //  0.       .2
+            //   \'. 3 .'/
+            //    \ '.' /
+            //     \   /
+            //      \ /
+            //       1
+            //
+            case 3: RefTris = {3, 0, 1, 1, 2, 3}; break;
+        }
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        EXPECT_EQ(Tris, RefTris);
+    }
+
+    for (size_t start_vert = 0; start_vert < 4; ++start_vert)
+    {
+        std::vector<double2> Verts(4);
+        {
+            //
+            //  1.       .3
+            //   \'. 2 .'/
+            //    \ '.' /
+            //     \   /
+            //      \ /
+            //       0
+            //
+            const std::vector<double2> BaseVerts = {
+                {0, 0},
+                {-1, 4},
+                {0, 2},
+                {2, 3}};
+
+            for (size_t i = 0; i < 4; ++i)
+                Verts[i] = BaseVerts[(start_vert + i) % 4];
+        }
+
+        std::vector<Uint32> RefTris;
+        switch (start_vert)
+        {
+            // Same as above
+            case 0: RefTris = {0, 1, 2, 0, 2, 3}; break;
+            case 1: RefTris = {3, 0, 1, 1, 2, 3}; break;
+            case 2: RefTris = {0, 1, 2, 0, 2, 3}; break;
+            case 3: RefTris = {3, 0, 1, 1, 2, 3}; break;
+        }
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        EXPECT_EQ(Tris, RefTris);
+    }
+
+    for (size_t start_vert = 0; start_vert < 4; ++start_vert)
+    {
+        std::vector<int2> Verts(4);
+        {
+            //   0
+            //    |'.
+            //    |  '.
+            //    |    '.
+            //   1|    .'3
+            //    |  .'
+            //    |.'
+            //   2
+            const std::vector<int2> BaseVerts = {
+                {0, 1},
+                {0, 0},
+                {0, -1},
+                {1, 0}};
+            for (size_t i = 0; i < 4; ++i)
+                Verts[i] = BaseVerts[(start_vert + i) % 4];
+        }
+
+        const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        EXPECT_EQ(Tris, RefTris);
+    }
+
+    for (size_t start_vert = 0; start_vert < 4; ++start_vert)
+    {
+        std::vector<float2> Verts(4);
+        {
+            //   0
+            //    |'.
+            //    |  '.
+            //    |    '.
+            //   3|    .'1
+            //    |  .'
+            //    |.'
+            //   2
+            const std::vector<float2> BaseVerts = {
+                {0, 1},
+                {1, 0},
+                {0, -1},
+                {0, 0}};
+            for (size_t i = 0; i < 4; ++i)
+                Verts[i] = BaseVerts[(start_vert + i) % 4];
+        }
+
+        const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        EXPECT_EQ(Tris, RefTris);
+    }
+}
+
 } // namespace
