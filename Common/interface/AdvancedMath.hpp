@@ -1182,8 +1182,8 @@ bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
 
 /// Triangulates a simple polygon using the ear-clipping algorithm.
 
-/// \tparam [in] IndexType - Index type (e.g. Uint32 or Uint16).
-/// \tparam [in] VertType  - Polygon vertex type (e.g. Int32 or float).
+/// \tparam [in] IndexType     - Index type (e.g. Uint32 or Uint16).
+/// \tparam [in] ComponentType - Vertex component type (e.g. Int32 or float).
 ///
 /// \param [in]  Polygon   - A list of polygon vertices. The last vertex is
 ///                          assumed to be connected to the first one.
@@ -1195,8 +1195,8 @@ bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
 ///
 ///             The function does not check if the polygon is simple, e.g.
 ///             that it does not self-intersect.
-template <typename IndexType, typename VertType>
-std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<VertType>>& Polygon)
+template <typename IndexType, typename ComponentType>
+std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentType>>& Polygon)
 {
     const auto VertCount = static_cast<int>(Polygon.size());
     if (VertCount <= 2)
@@ -1232,7 +1232,7 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<VertType>>& 
     };
 
     // Find the winding order of the polygon
-    VertType PolygonWinding = 0;
+    ComponentType PolygonWinding = 0;
     for (int i = 0; i < VertCount && PolygonWinding == 0; ++i)
     {
         const auto& V0 = Polygon[WrapIndex(LeftmostVertIdx + i - 1, VertCount)];
@@ -1246,68 +1246,141 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<VertType>>& 
         return {};
     }
 
-    std::vector<IndexType> Triangles;
-    Triangles.reserve(TriangleCount * 3);
-
     std::vector<int> RemainingVertIds(VertCount);
     for (int i = 0; i < VertCount; ++i)
         RemainingVertIds[i] = i;
 
-    // Clip ears one by one until only three vertices are left
-    while (RemainingVertIds.size() > 3)
+    //        Reflex
+    //   Ear.   |   .Ear
+    //      \'. V .'/
+    //       \ '.' /
+    //        \   /
+    //         \ /
+    //          V
+    //       Convex
+    //
+    enum class VertexType : Uint8
     {
+        Convexx, // X11 #defines 'Convex'
+        Reflex,
+        Ear
+    };
+    std::vector<VertexType> VertTypes(VertCount);
+
+    auto CheckConvex = [&](int vert_id) {
         const auto RemainingVertCount = static_cast<int>(RemainingVertIds.size());
 
-        int Idx0 = -1;
-        int Idx1 = -1;
-        int Idx2 = -1;
+        const auto Idx0 = RemainingVertIds[WrapIndex(vert_id - 1, RemainingVertCount)];
+        const auto Idx1 = RemainingVertIds[WrapIndex(vert_id + 0, RemainingVertCount)];
+        const auto Idx2 = RemainingVertIds[WrapIndex(vert_id + 1, RemainingVertCount)];
 
-        int eart_vert_id = 0;
-        for (; eart_vert_id < RemainingVertCount; ++eart_vert_id)
+        const auto& V0 = Polygon[Idx0];
+        const auto& V1 = Polygon[Idx1];
+        const auto& V2 = Polygon[Idx2];
+
+        return GetWinding(V0, V1, V2) * PolygonWinding < 0 ?
+            VertexType::Reflex :
+            VertexType::Convexx;
+    };
+
+    auto CheckEar = [&](int vert_id) {
+        const auto RemainingVertCount = static_cast<int>(RemainingVertIds.size());
+
+        const auto Idx0 = RemainingVertIds[WrapIndex(vert_id - 1, RemainingVertCount)];
+        const auto Idx1 = RemainingVertIds[WrapIndex(vert_id + 0, RemainingVertCount)];
+        const auto Idx2 = RemainingVertIds[WrapIndex(vert_id + 1, RemainingVertCount)];
+
+        VERIFY_EXPR(VertTypes[Idx1] == VertexType::Convexx);
+
+        const auto& V0 = Polygon[Idx0];
+        const auto& V1 = Polygon[Idx1];
+        const auto& V2 = Polygon[Idx2];
+
+        for (const auto Idx : RemainingVertIds)
         {
-            Idx0 = RemainingVertIds[WrapIndex(eart_vert_id - 1, RemainingVertCount)];
-            Idx1 = RemainingVertIds[eart_vert_id];
-            Idx2 = RemainingVertIds[WrapIndex(eart_vert_id + 1, RemainingVertCount)];
+            if (Idx == Idx0 || Idx == Idx1 || Idx == Idx2)
+                continue;
 
-            const auto& V0 = Polygon[Idx0];
-            const auto& V1 = Polygon[Idx1];
-            const auto& V2 = Polygon[Idx2];
-            if (GetWinding(V0, V1, V2) * PolygonWinding < 0)
+            if (VertTypes[Idx] == VertexType::Convexx || VertTypes[Idx] == VertexType::Ear)
             {
-                // Reflex vertex
+                VERIFY(!IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false), "Convex and ear vertices must always be outside the triangle");
                 continue;
             }
 
-            bool IsEar = true;
-            for (const auto Idx : RemainingVertIds)
+            // Do not treat vertices exactly on the edge as inside the triangle,
+            // so that we can clip out degenerate triangles.
+            if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false))
             {
-                if (Idx == Idx0 || Idx == Idx1 || Idx == Idx2)
-                    continue;
-
-                // Do not treat vertices exactly on the edge as inside the triangle,
-                // so that we can clip out degenerate triangles.
-                if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false))
-                {
-                    // The vertex is inside the triangle
-                    IsEar = false;
-                    break;
-                }
+                // The vertex is inside the triangle
+                return VertexType::Convexx;
             }
+        }
 
-            if (IsEar)
+        return VertexType::Ear;
+    };
+
+    // First label vertices as reflex or convex
+    for (int vert_id = 0; vert_id < VertCount; ++vert_id)
+    {
+        VertTypes[vert_id] = CheckConvex(vert_id);
+    }
+
+    // Next, check convex vertices for ears
+    for (int vert_id = 0; vert_id < VertCount; ++vert_id)
+    {
+        auto& VertType = VertTypes[vert_id];
+        if (VertType == VertexType::Convexx)
+            VertType = CheckEar(vert_id);
+    }
+
+    std::vector<IndexType> Triangles;
+    Triangles.reserve(TriangleCount * 3);
+
+    // Clip ears one by one until only three vertices are left
+    while (RemainingVertIds.size() > 3)
+    {
+        auto RemainingVertCount = static_cast<int>(RemainingVertIds.size());
+
+        // Find the first ear
+        int ear_vert_id = 0;
+        for (; ear_vert_id < RemainingVertCount; ++ear_vert_id)
+        {
+            const auto Idx = RemainingVertIds[ear_vert_id];
+            if (VertTypes[Idx] == VertexType::Ear)
                 break;
         };
 
-        if (eart_vert_id == RemainingVertCount)
+        if (ear_vert_id == RemainingVertCount)
         {
             UNEXPECTED("Failed to find an ear.");
             return {};
         }
 
+        const auto Idx0 = RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
+        const auto Idx1 = RemainingVertIds[ear_vert_id];
+        const auto Idx2 = RemainingVertIds[WrapIndex(ear_vert_id + 1, RemainingVertCount)];
+
         Triangles.emplace_back(Idx0);
         Triangles.emplace_back(Idx1);
         Triangles.emplace_back(Idx2);
-        RemainingVertIds.erase(RemainingVertIds.begin() + eart_vert_id);
+        RemainingVertIds.erase(RemainingVertIds.begin() + ear_vert_id);
+
+        --RemainingVertCount;
+        // Update adjacent vertices
+        if (RemainingVertCount > 3)
+        {
+            const auto IdxL = RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
+            const auto IdxR = RemainingVertIds[WrapIndex(ear_vert_id, RemainingVertCount)];
+            // First check for convex
+            VertTypes[IdxL] = CheckConvex(ear_vert_id - 1);
+            VertTypes[IdxR] = CheckConvex(ear_vert_id);
+
+            // Next, check for ears
+            if (VertTypes[IdxL] == VertexType::Convexx)
+                VertTypes[IdxL] = CheckEar(ear_vert_id - 1);
+            if (VertTypes[IdxR] == VertexType::Convexx)
+                VertTypes[IdxR] = CheckEar(ear_vert_id);
+        }
     }
 
     Triangles.emplace_back(RemainingVertIds[0]);
@@ -1315,7 +1388,7 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<VertType>>& 
     Triangles.emplace_back(RemainingVertIds[2]);
 
     return Triangles;
-}
+} // namespace Diligent
 
 } // namespace Diligent
 

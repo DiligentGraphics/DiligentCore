@@ -2748,6 +2748,28 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
         const auto Tris = TriangulatePolygon<Uint32>(Verts);
         EXPECT_EQ(Tris, RefTris);
     }
+
+    {
+        //
+        //  4.       .2
+        //   |'. 3 .'|
+        //   |  '.'  |
+        //   |  .'.  |
+        //   |.' 0 '.|
+        //  5         1
+        //
+        const std::vector<float2> Verts = {
+            {0, -0.125},
+            {1, -2},
+            {1, +1},
+            {0, +0.125},
+            {-1, +1},
+            {-1, -2}};
+        const std::vector<Uint32> RefTris = {0, 1, 2, 0, 2, 3, 5, 0, 3, 3, 4, 5};
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        EXPECT_EQ(Tris, RefTris);
+    }
 }
 
 } // namespace
