@@ -1183,7 +1183,7 @@ bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
 /// Triangulates a simple polygon using the ear-clipping algorithm.
 
 /// \tparam [in] IndexType     - Index type (e.g. Uint32 or Uint16).
-/// \tparam [in] ComponentType - Vertex component type (e.g. Int32 or float).
+/// \tparam [in] ComponentType - Vertex component type (e.g. float, double or int).
 ///
 /// \param [in]  Polygon   - A list of polygon vertices. The last vertex is
 ///                          assumed to be connected to the first one.
@@ -1233,6 +1233,14 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
 
     // Find the winding order of the polygon
     ComponentType PolygonWinding = 0;
+    // Handle the case when the leftmost vertex is collinear with its neighbors:
+    // *.
+    // | '.
+    // |   '.
+    // *    .*
+    // |  .'
+    // |.'
+    // *
     for (int i = 0; i < VertCount && PolygonWinding == 0; ++i)
     {
         const auto& V0 = Polygon[WrapIndex(LeftmostVertIdx + i - 1, VertCount)];
@@ -1371,7 +1379,7 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
         {
             const auto IdxL = RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
             const auto IdxR = RemainingVertIds[WrapIndex(ear_vert_id, RemainingVertCount)];
-            // First check for convex
+            // First check for convex vs reflex
             VertTypes[IdxL] = CheckConvex(ear_vert_id - 1);
             VertTypes[IdxR] = CheckConvex(ear_vert_id);
 
@@ -1388,7 +1396,7 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
     Triangles.emplace_back(RemainingVertIds[2]);
 
     return Triangles;
-} // namespace Diligent
+}
 
 } // namespace Diligent
 

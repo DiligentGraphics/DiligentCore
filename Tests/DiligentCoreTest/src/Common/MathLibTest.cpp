@@ -2544,7 +2544,7 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
 
     for (size_t start_vert = 0; start_vert < 4; ++start_vert)
     {
-        std::vector<int2> Verts(4);
+        std::vector<int2> Verts;
         {
             //   3 ______ 2
             //    |'.    |
@@ -2556,8 +2556,8 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
                 {1, 0},
                 {1, 1},
                 {0, 1}};
-            for (size_t i = 0; i < 4; ++i)
-                Verts[i] = BaseVerts[(start_vert + i) % 4];
+            for (size_t i = 0; i < BaseVerts.size(); ++i)
+                Verts.push_back(BaseVerts[(start_vert + i) % BaseVerts.size()]);
         }
 
         const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
@@ -2568,7 +2568,7 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
 
     for (size_t start_vert = 0; start_vert < 4; ++start_vert)
     {
-        std::vector<float2> Verts(4);
+        std::vector<float2> Verts;
         {
             //   1 ______ 2
             //    |'.    |
@@ -2580,8 +2580,8 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
                 {0, 1},
                 {1, 1},
                 {1, 0}};
-            for (size_t i = 0; i < 4; ++i)
-                Verts[i] = BaseVerts[(start_vert + i) % 4];
+            for (size_t i = 0; i < BaseVerts.size(); ++i)
+                Verts.push_back(BaseVerts[(start_vert + i) % BaseVerts.size()]);
         }
         const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
 
@@ -2591,7 +2591,7 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
 
     for (size_t start_vert = 0; start_vert < 4; ++start_vert)
     {
-        std::vector<int2> Verts(4);
+        std::vector<int2> Verts;
         {
             //
             //  3.       .1
@@ -2607,8 +2607,8 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
                 {0, 2},
                 {-1, 4}};
 
-            for (size_t i = 0; i < 4; ++i)
-                Verts[i] = BaseVerts[(start_vert + i) % 4];
+            for (size_t i = 0; i < BaseVerts.size(); ++i)
+                Verts.push_back(BaseVerts[(start_vert + i) % BaseVerts.size()]);
         }
 
         std::vector<Uint32> RefTris;
@@ -2661,7 +2661,7 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
 
     for (size_t start_vert = 0; start_vert < 4; ++start_vert)
     {
-        std::vector<double2> Verts(4);
+        std::vector<double2> Verts;
         {
             //
             //  1.       .3
@@ -2677,8 +2677,8 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
                 {0, 2},
                 {2, 3}};
 
-            for (size_t i = 0; i < 4; ++i)
-                Verts[i] = BaseVerts[(start_vert + i) % 4];
+            for (size_t i = 0; i < BaseVerts.size(); ++i)
+                Verts.push_back(BaseVerts[(start_vert + i) % BaseVerts.size()]);
         }
 
         std::vector<Uint32> RefTris;
@@ -2697,7 +2697,7 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
 
     for (size_t start_vert = 0; start_vert < 4; ++start_vert)
     {
-        std::vector<int2> Verts(4);
+        std::vector<int2> Verts;
         {
             //   0
             //    |'.
@@ -2712,8 +2712,8 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
                 {0, 0},
                 {0, -1},
                 {1, 0}};
-            for (size_t i = 0; i < 4; ++i)
-                Verts[i] = BaseVerts[(start_vert + i) % 4];
+            for (size_t i = 0; i < BaseVerts.size(); ++i)
+                Verts.push_back(BaseVerts[(start_vert + i) % BaseVerts.size()]);
         }
 
         const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
@@ -2724,7 +2724,7 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
 
     for (size_t start_vert = 0; start_vert < 4; ++start_vert)
     {
-        std::vector<float2> Verts(4);
+        std::vector<float2> Verts;
         {
             //   0
             //    |'.
@@ -2739,8 +2739,8 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
                 {1, 0},
                 {0, -1},
                 {0, 0}};
-            for (size_t i = 0; i < 4; ++i)
-                Verts[i] = BaseVerts[(start_vert + i) % 4];
+            for (size_t i = 0; i < BaseVerts.size(); ++i)
+                Verts.push_back(BaseVerts[(start_vert + i) % BaseVerts.size()]);
         }
 
         const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
@@ -2749,23 +2749,84 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
         EXPECT_EQ(Tris, RefTris);
     }
 
+    for (size_t start_vert = 0; start_vert < 6; ++start_vert)
     {
-        //
-        //  4.       .2
-        //   |'. 3 .'|
-        //   |  '.'  |
-        //   |  .'.  |
-        //   |.' 0 '.|
-        //  5         1
-        //
-        const std::vector<float2> Verts = {
-            {0, -0.125},
-            {1, -2},
-            {1, +1},
-            {0, +0.125},
-            {-1, +1},
-            {-1, -2}};
-        const std::vector<Uint32> RefTris = {0, 1, 2, 0, 2, 3, 5, 0, 3, 3, 4, 5};
+        std::vector<float2> Verts;
+        {
+            //
+            //  4.       .2
+            //   |'. 3 .'|
+            //   |  '.'  |
+            //   |   .   |
+            //   |  /0\  |
+            //   | /   \ |
+            //   |/     \|
+            //  5         1
+            const std::vector<float2> BaseVerts = {
+                {0, -0.125},
+                {1, -2},
+                {1, +1},
+                {0, +0.125},
+                {-1, +1},
+                {-1, -2}};
+            for (size_t i = 0; i < BaseVerts.size(); ++i)
+                Verts.push_back(BaseVerts[(start_vert + i) % BaseVerts.size()]);
+        }
+        std::vector<Uint32> RefTris;
+        switch (start_vert)
+        {
+            case 0: RefTris = {0, 1, 2, 0, 2, 3, 5, 0, 3, 3, 4, 5}; break;
+
+            //  3.       .1
+            //   |'. 2 .'|
+            //   |  '.'  |
+            //   |   .   |
+            //   |  /5\  |
+            //   | /   \ |
+            //   |/     \|
+            //  4         0
+            case 1: RefTris = {5, 0, 1, 5, 1, 2, 5, 2, 3, 3, 4, 5}; break;
+
+            //  2.       .0
+            //   |'. 1 .'|
+            //   |  '.'  |
+            //   |   .   |
+            //   |  /4\  |
+            //   | /   \ |
+            //   |/     \|
+            //  3         5
+            case 2: RefTris = {5, 0, 1, 1, 2, 3, 1, 3, 4, 1, 4, 5}; break;
+
+            //  1.       .5
+            //   |'. 0 .'|
+            //   |  '.'  |
+            //   |   .   |
+            //   |  /3\  |
+            //   | /   \ |
+            //   |/     \|
+            //  2         4
+            case 3: RefTris = {0, 1, 2, 0, 2, 3, 5, 0, 3, 3, 4, 5}; break;
+
+            //  0.       .4
+            //   |'. 5 .'|
+            //   |  '.'  |
+            //   |   .   |
+            //   |  /2\  |
+            //   | /   \ |
+            //   |/     \|
+            //  1         3
+            case 4: RefTris = {5, 0, 1, 5, 1, 2, 5, 2, 3, 3, 4, 5}; break;
+
+            //  5.       .3
+            //   |'. 4 .'|
+            //   |  '.'  |
+            //   |   .   |
+            //   |  /1\  |
+            //   | /   \ |
+            //   |/     \|
+            //  0         2
+            case 5: RefTris = {5, 0, 1, 1, 2, 3, 1, 3, 4, 1, 4, 5}; break;
+        }
 
         const auto Tris = TriangulatePolygon<Uint32>(Verts);
         EXPECT_EQ(Tris, RefTris);
