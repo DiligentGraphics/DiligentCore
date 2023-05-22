@@ -2529,7 +2529,7 @@ TEST(Common_AdvancedMath, GetPointToOrientedBoxDistance)
 }
 
 
-TEST(Common_AdvancedMath, TriangulatePolygon)
+TEST(Common_AdvancedMath, TriangulatePolygon2D)
 {
     {
         const std::vector<int2> Verts = {
@@ -2829,6 +2829,47 @@ TEST(Common_AdvancedMath, TriangulatePolygon)
         }
 
         const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        EXPECT_EQ(Tris, RefTris);
+    }
+}
+
+TEST(Common_AdvancedMath, TriangulatePolygon3D)
+{
+    for (size_t proj = 0; proj < 3; ++proj)
+    {
+        std::vector<float3> Verts;
+        {
+            //
+            //  4.       .2
+            //   |'. 3 .'|
+            //   |  '.'  |
+            //   |   .   |
+            //   |  /0\  |
+            //   | /   \ |
+            //   |/     \|
+            //  5         1
+            const std::vector<float2> BaseVerts = {
+                {0, -0.125},
+                {1, -2},
+                {1, +1},
+                {0, +0.125},
+                {-1, +1},
+                {-1, -2}};
+            for (size_t i = 0; i < BaseVerts.size(); ++i)
+            {
+                const auto v2 = BaseVerts[i];
+                switch (proj)
+                {
+                    case 0: Verts.push_back(float3{v2.x, v2.y, 0.75}); break;
+                    case 1: Verts.push_back(float3{v2.x, -2.5, v2.y}); break;
+                    case 2: Verts.push_back(float3{10.5, v2.x, v2.y}); break;
+                }
+            }
+        }
+
+        const std::vector<Uint32> RefTris = {0, 1, 2, 0, 2, 3, 5, 0, 3, 3, 4, 5};
+
+        const auto Tris = TriangulatePolygon3D<Uint32>(Verts);
         EXPECT_EQ(Tris, RefTris);
     }
 }

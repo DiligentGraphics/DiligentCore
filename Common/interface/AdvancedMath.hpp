@@ -29,6 +29,7 @@
 
 #include <float.h>
 #include <vector>
+#include <type_traits>
 
 #include "../../Platforms/interface/PlatformDefinitions.h"
 #include "../../Primitives/interface/FlagEnum.h"
@@ -1396,6 +1397,71 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
     Triangles.emplace_back(RemainingVertIds[2]);
 
     return Triangles;
+}
+
+
+/// Triangulates a simple polygon in 3D.
+
+/// \remarks This function first projects the polygon onto the plane and then
+///          triangulates the resulting 2D polygon.
+///
+///          If vertices are not coplanar, the result is undefined.
+template <typename IndexType, typename ComponentType>
+typename std::enable_if<std::is_floating_point<ComponentType>::value, std::vector<IndexType>>::type
+TriangulatePolygon3D(const std::vector<Vector3<ComponentType>>& Polygon)
+{
+    // Find the normal
+    Vector3<ComponentType> Normal;
+
+    // Use the normal with the largest length.
+    // Note that it does not matter if the vertex is convex or reflex as
+    // the TriangulatePolygon() function handles any orinetation.
+    ComponentType NormalLength = 0;
+    for (size_t i = 0; i < Polygon.size(); ++i)
+    {
+        const auto& V0 = Polygon[i];
+        const auto& V1 = Polygon[(i + 1) % Polygon.size()];
+        const auto& V2 = Polygon[(i + 2) % Polygon.size()];
+
+        const auto EdgeCross       = cross(V1 - V0, V2 - V1);
+        const auto EdgeCrossLength = length(EdgeCross);
+        if (EdgeCrossLength > NormalLength)
+        {
+            Normal       = EdgeCross;
+            NormalLength = EdgeCrossLength;
+        }
+    }
+
+    if (NormalLength == 0)
+    {
+        UNEXPECTED("Failed to find a plane for the polygon, which means that all vertices are collinear.");
+        return {};
+    }
+    const auto AbsNormal = abs(Normal);
+
+    Vector3<ComponentType> Tangent;
+    if (AbsNormal.z > std::max(AbsNormal.x, AbsNormal.y))
+        Tangent = cross(Vector3<ComponentType>{ComponentType{0}, ComponentType{1}, ComponentType{0}}, Normal);
+    else if (AbsNormal.y > std::max(AbsNormal.x, AbsNormal.z))
+        Tangent = cross(Vector3<ComponentType>{ComponentType{1}, ComponentType{0}, ComponentType{0}}, Normal);
+    else
+        Tangent = cross(Vector3<ComponentType>{ComponentType{0}, ComponentType{0}, ComponentType{1}}, Normal);
+    VERIFY_EXPR(length(Tangent) > 0);
+    Tangent = normalize(Tangent);
+
+    auto Bitangent = cross(Normal, Tangent);
+    VERIFY_EXPR(length(Bitangent) > 0);
+    Bitangent = normalize(Bitangent);
+
+    // Project the polygon
+    std::vector<Vector2<ComponentType>> PolygonProj;
+    PolygonProj.reserve(Polygon.size());
+    for (const auto& Vert : Polygon)
+    {
+        PolygonProj.emplace_back(dot(Tangent, Vert), dot(Bitangent, Vert));
+    }
+
+    return TriangulatePolygon<IndexType>(PolygonProj);
 }
 
 } // namespace Diligent
