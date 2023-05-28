@@ -337,6 +337,16 @@ TEST(Platforms_FileSystem, GetPathComponents)
     TestComponents("\\a\\b\\c\\file", "\\a\\b\\c", "file");
 }
 
+TEST(Platforms_FileSystem, BuildPathFromComponents)
+{
+    EXPECT_STREQ(FileSystem::BuildPathFromComponents({{}}).c_str(), "");
+    EXPECT_STREQ(FileSystem::BuildPathFromComponents({{"a"}}, '\\').c_str(), "a");
+    EXPECT_STREQ(FileSystem::BuildPathFromComponents({{"a"}}, '/').c_str(), "a");
+    EXPECT_STREQ(FileSystem::BuildPathFromComponents({{"a"}, {"b"}}, '\\').c_str(), "a\\b");
+    EXPECT_STREQ(FileSystem::BuildPathFromComponents({{"a"}, {"b"}}, '/').c_str(), "a/b");
+    EXPECT_STREQ(FileSystem::BuildPathFromComponents({{"a"}, {"b"}, {"c"}}, '\\').c_str(), "a\\b\\c");
+    EXPECT_STREQ(FileSystem::BuildPathFromComponents({{"a"}, {"b"}, {"c"}}, '/').c_str(), "a/b/c");
+}
 
 TEST(Platforms_FileSystem, GetRelativePath)
 {
