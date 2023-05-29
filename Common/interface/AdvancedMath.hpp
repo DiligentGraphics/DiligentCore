@@ -1189,6 +1189,14 @@ bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
 /// \param [in]  Polygon   - A list of polygon vertices. The last vertex is
 ///                          assumed to be connected to the first one.
 ///
+/// \param [in]  VerifyEarAndConvexVerts - If true, the function will verify that convex
+///                                        and ear vertices lie outside of the polygon.
+///                                        This is a debug-only check, which is disabled
+///                                        in release builds. It may be triggered if
+///                                        the polygon contains collinear vertices due to
+///                                        floating point imprecision. In this case you may
+///                                        disable the check by setting this parameter to false.
+///
 /// \return     The triangle list.
 ///
 /// \remarks    The winding order of each triangle is the same as the winding
@@ -1197,7 +1205,7 @@ bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
 ///             The function does not check if the polygon is simple, e.g.
 ///             that it does not self-intersect.
 template <typename IndexType, typename ComponentType>
-std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentType>>& Polygon)
+std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentType>>& Polygon, bool VerifyEarAndConvexVerts = true)
 {
     const auto VertCount = static_cast<int>(Polygon.size());
     if (VertCount <= 2)
@@ -1312,7 +1320,12 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
 
             if (VertTypes[Idx] == VertexType::Convexx || VertTypes[Idx] == VertexType::Ear)
             {
-                VERIFY(!IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false), "Convex and ear vertices must always be outside the triangle");
+                if (VerifyEarAndConvexVerts)
+                {
+                    // This check may fail due to floating point imprecision if there are collinear vertices.
+                    // Fix your polygon or disable the check.
+                    VERIFY(!IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false), "Convex and ear vertices must always be outside the triangle");
+                }
                 continue;
             }
 
@@ -1408,7 +1421,7 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
 ///          If vertices are not coplanar, the result is undefined.
 template <typename IndexType, typename ComponentType>
 typename std::enable_if<std::is_floating_point<ComponentType>::value, std::vector<IndexType>>::type
-TriangulatePolygon3D(const std::vector<Vector3<ComponentType>>& Polygon)
+TriangulatePolygon3D(const std::vector<Vector3<ComponentType>>& Polygon, bool VerifyEarAndConvexVerts = true)
 {
     // Find the normal
     Vector3<ComponentType> Normal;
@@ -1461,7 +1474,7 @@ TriangulatePolygon3D(const std::vector<Vector3<ComponentType>>& Polygon)
         PolygonProj.emplace_back(dot(Tangent, Vert), dot(Bitangent, Vert));
     }
 
-    return TriangulatePolygon<IndexType>(PolygonProj);
+    return TriangulatePolygon<IndexType>(PolygonProj, VerifyEarAndConvexVerts);
 }
 
 } // namespace Diligent
