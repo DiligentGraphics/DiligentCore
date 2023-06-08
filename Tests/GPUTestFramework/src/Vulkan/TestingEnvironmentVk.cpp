@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -753,7 +753,7 @@ void TestingEnvironmentVk::TransitionImageLayout(VkCommandBuffer                
 bool TestingEnvironmentVk::SupportsRayTracing() const
 {
     // DXC requires Vulkan 1.2 otherwise tests will fail.
-    RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice.RawPtr<IRenderDevice>(), IID_RenderDeviceVk};
+    RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice, IID_RenderDeviceVk};
     return pRenderDeviceVk->GetDeviceInfo().Features.RayTracing &&
         (pRenderDeviceVk->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) != 0 &&
         pRenderDeviceVk->GetVkVersion() >= VK_API_VERSION_1_2 &&
