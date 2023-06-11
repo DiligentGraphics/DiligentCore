@@ -288,28 +288,7 @@ struct CompiledShaderMtl final : SerializedShaderImpl::CompiledShader
 
     virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
     {
-        const auto& Source = ShaderMtl.GetMslData().Source;
-                        
-        // Pack shader Mtl acrhive data into the source.
-        // The data is unpacked by DearchiverMtlImpl::UnpackShader().
-        const ShaderMtlImpl::ArchiveData ShaderMtlArchiveData{
-            ShaderMtl.GetParsedMsl().BufferInfoMap,
-            ShaderMtl.GetMslData().ComputeGroupSize,
-            ShaderMtlImpl::ArchiveData::IORemappingMode::Undefined
-        };
-
-        SerializedData ShaderData;
-        {
-            Serializer<SerializerMode::Measure> Ser;
-            ShaderMtlSerializer<SerializerMode::Measure>::SerializeSource(Ser, Source.c_str(), Source.length(), ShaderMtlArchiveData);
-            ShaderData = Ser.AllocateData(GetRawAllocator());
-        }
-
-        {
-            Serializer<SerializerMode::Write> Ser{ShaderData};
-            ShaderMtlSerializer<SerializerMode::Write>::SerializeSource(Ser, Source.c_str(), Source.length(), ShaderMtlArchiveData);
-            VERIFY_EXPR(Ser.IsEnded());
-        }
+        SerializedData ShaderData = SerializeMslSourceAndMtlArchiveData(ShaderMtl);
         
         ShaderCI.FilePath       = nullptr;
         ShaderCI.Source         = nullptr;
