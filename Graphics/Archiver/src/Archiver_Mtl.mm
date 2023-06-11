@@ -289,14 +289,41 @@ struct CompiledShaderMtl final : SerializedShaderImpl::CompiledShader
     virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
     {
         const auto& Source = ShaderMtl.GetMslData().Source;
+                        
+        // Pack shader Mtl acrhive data into the source.
+        // The data is unpacked by DearchiverMtlImpl::UnpackShader().
+        ShaderMtlImpl::ArchiveData ShaderMtlArchiveData{
+            ShaderMtl.GetParsedMsl().BufferInfoMap,
+            ShaderMtl.GetMslData().ComputeGroupSize,
+            ShaderMtlImpl::ArchiveData::IORemappingMode::Undefined
+        };
+
+        auto SerializeShaderData = [&](auto& Ser){
+            Ser.SerializeBytes(Source.c_str(), Source.length());
+            constexpr auto SerMode = std::remove_reference<decltype(Ser)>::type::GetMode();
+            ShaderMtlSerializer<SerMode>::SerializeArchiveData(Ser, ShaderMtlArchiveData);
+        };
+
+        SerializedData ShaderData;
+        {
+            Serializer<SerializerMode::Measure> Ser;
+            SerializeShaderData(Ser);
+            ShaderData = Ser.AllocateData(GetRawAllocator());
+        }
+
+        {
+            Serializer<SerializerMode::Write> Ser{ShaderData};
+            SerializeShaderData(Ser);
+            VERIFY_EXPR(Ser.IsEnded());
+        }
         
         ShaderCI.FilePath       = nullptr;
         ShaderCI.ByteCode       = nullptr;
         ShaderCI.Macros         = nullptr;
         ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL_VERBATIM;
-        ShaderCI.Source         = Source.c_str();
-        ShaderCI.SourceLength   = Source.length();
-        
+        ShaderCI.Source         = static_cast<const char*>(ShaderData.Ptr());
+        ShaderCI.SourceLength   = ShaderData.Size();
+
         return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
     }
     
@@ -435,6 +462,8 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
 
 #undef LOG_PATCH_SHADER_ERROR_AND_THROW
     
+    // Pack shader Mtl acrhive data into the byte code.
+    // The data is unpacked by DearchiverMtlImpl::UnpackShader().
     ShaderMtlImpl::ArchiveData ShaderMtlArchiveData{
         std::move(ParsedMsl.BufferInfoMap),
         MslData.ComputeGroupSize,
@@ -443,7 +472,6 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
     
     auto SerializeShaderData = [&](auto& Ser){
         Ser.SerializeBytes(pByteCode->GetConstDataPtr(), pByteCode->GetSize());
-        ShaderMtlImpl::ArchiveData ArchiveData;
         constexpr auto SerMode = std::remove_reference<decltype(Ser)>::type::GetMode();
         ShaderMtlSerializer<SerMode>::SerializeArchiveData(Ser, ShaderMtlArchiveData);
     };
