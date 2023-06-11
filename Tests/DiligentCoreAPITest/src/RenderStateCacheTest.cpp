@@ -1004,6 +1004,18 @@ TEST(RenderStateCacheTest, RenderDeviceWithCache)
     }
 }
 
+// clang-format off
+constexpr float4 TriangleVerts[] =
+{
+    float4{-1.0, -0.5, 0.0, 1.0},
+    float4{-0.5, +0.5, 0.0, 1.0},
+    float4{+0.0, -0.5, 0.0, 1.0},
+
+    float4{+0.0, -0.5, 0.0, 1.0},
+    float4{+0.5, +0.5, 0.0, 1.0},
+    float4{+1.0, -0.5, 0.0, 1.0},
+};
+// clang-format on
 
 void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, bool UseSignatures = false)
 {
@@ -1042,17 +1054,6 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
     RefCntAutoPtr<IBuffer> pVertBuff;
     RefCntAutoPtr<IBuffer> pConstBuff;
     {
-        constexpr float4 Pos[] =
-            {
-                float4{-1.0, -0.5, 0.0, 1.0},
-                float4{-0.5, +0.5, 0.0, 1.0},
-                float4{+0.0, -0.5, 0.0, 1.0},
-
-                float4{+0.0, -0.5, 0.0, 1.0},
-                float4{+0.5, +0.5, 0.0, 1.0},
-                float4{+1.0, -0.5, 0.0, 1.0},
-            };
-
         const float4 Color[] =
             {
                 float4{1.0, 0.0, 0.0, 1.0},
@@ -1065,7 +1066,7 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
             };
 
         RenderDeviceX<> Device{pDevice};
-        pVertBuff = Device.CreateBuffer("Pos buffer", sizeof(Pos), USAGE_DEFAULT, BIND_VERTEX_BUFFER, CPU_ACCESS_NONE, Pos);
+        pVertBuff = Device.CreateBuffer("Pos buffer", sizeof(TriangleVerts), USAGE_DEFAULT, BIND_VERTEX_BUFFER, CPU_ACCESS_NONE, TriangleVerts);
         ASSERT_NE(pVertBuff, nullptr);
 
         pConstBuff = Device.CreateBuffer("Color buffer", sizeof(Color), USAGE_DEFAULT, BIND_UNIFORM_BUFFER, CPU_ACCESS_NONE, Color);
@@ -1306,7 +1307,26 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
     auto                pTex = pEnv->CreateTexture("RenderStateCacheTest.Reload_Signatures2", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 128, 128, Data.data());
     ASSERT_TRUE(pTex);
 
-    StateTransitionDesc Barriers[] = {{pTex, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE}};
+    RenderDeviceX<> Device{pDevice};
+
+    auto pVertBuff = RenderDeviceX<>{pDevice}.CreateBuffer("Pos buffer", sizeof(TriangleVerts), USAGE_DEFAULT, BIND_VERTEX_BUFFER, CPU_ACCESS_NONE, TriangleVerts);
+    ASSERT_NE(pVertBuff, nullptr);
+
+    constexpr float4 Colors[] =
+        {
+            float4{1.0, 0.0, 0.0, 1.0},
+            float4{0.0, 1.0, 0.0, 1.0},
+            float4{0.0, 0.0, 1.0, 1.0},
+        };
+
+    auto pConstBuff = Device.CreateBuffer("Color buffer", sizeof(Colors), USAGE_DEFAULT, BIND_UNIFORM_BUFFER, CPU_ACCESS_NONE, Colors);
+    ASSERT_NE(pConstBuff, nullptr);
+
+    StateTransitionDesc Barriers[] = {
+        {pTex, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE},
+        {pVertBuff, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_VERTEX_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE},
+        {pConstBuff, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_CONSTANT_BUFFER, STATE_TRANSITION_FLAG_UPDATE_STATE},
+    };
     pCtx->TransitionResourceStates(_countof(Barriers), Barriers);
 
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
@@ -1332,7 +1352,7 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
             ASSERT_TRUE(pCache);
 
             RefCntAutoPtr<IShader> pVS, pPS;
-            CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr, "VertexShader.vsh", "PixelShader.psh");
+            CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr, "VertexShader3.vsh", "PixelShader.psh");
             ASSERT_NE(pVS, nullptr);
             ASSERT_NE(pPS, nullptr);
 
@@ -1347,7 +1367,10 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
                 }
             }
             PipelineResourceSignatureDescX SignDesc{
-                {{SHADER_TYPE_PIXEL, "g_Tex2D", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType}},
+                {
+                    {SHADER_TYPE_PIXEL, "g_Tex2D", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
+                    {SHADER_TYPE_VERTEX, "Colors", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
+                },
                 {{SHADER_TYPE_PIXEL, "g_Tex2D", SamplerDesc{}}},
             };
 
@@ -1364,6 +1387,11 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
             GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
             GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+            InputLayoutDescX InputLayout{
+                LayoutElement{0, 0, 4, VT_FLOAT32},
+            };
+            GraphicsPipeline.InputLayout = InputLayout;
 
             IPipelineResourceSignature* ppSignatures[] = {pSign};
             PsoCI.ppResourceSignatures                 = ppSignatures;
@@ -1382,10 +1410,15 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
                 RefCntAutoPtr<IShaderResourceBinding> pSRB;
                 pSign->CreateShaderResourceBinding(&pSRB, true);
                 pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+                pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Colors")->Set(pConstBuff);
 
                 EXPECT_EQ(pCache->Reload(), pass == 1 ? 2u : (use_different_signatures ? 1 : 0));
 
-                TestDraw(nullptr, nullptr, pPSO, pSRB, nullptr, false);
+                TestDraw(nullptr, nullptr, pPSO, pSRB, nullptr, false,
+                         [&]() {
+                             IBuffer* pVBs[] = {pVertBuff};
+                             pCtx->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+                         });
             }
 
             pData.Release();
