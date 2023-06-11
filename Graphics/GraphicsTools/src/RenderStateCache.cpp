@@ -862,16 +862,15 @@ protected:
             Uint64 Size = 0;
             pShader->GetBytecode(&ShaderCI.ByteCode, Size);
             ShaderCI.ByteCodeSize = static_cast<size_t>(Size);
-            if (DeviceType == RENDER_DEVICE_TYPE_GL || DeviceType == RENDER_DEVICE_TYPE_METAL)
+            if (DeviceType == RENDER_DEVICE_TYPE_GL)
             {
-                ShaderCI.Source   = static_cast<const char*>(ShaderCI.ByteCode);
-                ShaderCI.ByteCode = nullptr;
-                if (DeviceType == RENDER_DEVICE_TYPE_GL)
-                    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
-                else if (DeviceType == RENDER_DEVICE_TYPE_METAL)
-                    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL_VERBATIM;
-                else
-                    UNEXPECTED("Unexpected device type");
+                ShaderCI.Source         = static_cast<const char*>(ShaderCI.ByteCode);
+                ShaderCI.ByteCode       = nullptr;
+                ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+            }
+            else if (DeviceType == RENDER_DEVICE_TYPE_METAL)
+            {
+                ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL_VERBATIM;
             }
             ShaderArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << DeviceType);
