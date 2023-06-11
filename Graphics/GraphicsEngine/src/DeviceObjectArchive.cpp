@@ -532,13 +532,16 @@ void DeviceObjectArchive::Merge(const DeviceObjectArchive& Src) noexcept(false)
     // Copy named resources
     for (auto& src_res_it : Src.m_NamedResources)
     {
-        const auto  ResType     = src_res_it.first.GetType();
-        const auto* ResName     = src_res_it.first.GetName();
-        auto        it_inserted = m_NamedResources.emplace(NamedResourceKey{ResType, ResName, /*CopyName = */ true}, src_res_it.second.MakeCopy(Allocator));
+        const auto  ResType = src_res_it.first.GetType();
+        const auto* ResName = src_res_it.first.GetName();
 
+        auto it_inserted = m_NamedResources.emplace(NamedResourceKey{ResType, ResName, /*CopyName = */ true}, src_res_it.second.MakeCopy(Allocator));
         if (!it_inserted.second)
         {
-            LOG_WARNING_MESSAGE("Failed to copy resource '", ResName, "': resource with the same name already exists.");
+            // Silently skip duplicate resources
+            if (it_inserted.first->second != src_res_it.second)
+                LOG_WARNING_MESSAGE("Failed to copy resource '", ResName, "': resource with the same name already exists.");
+
             continue;
         }
 

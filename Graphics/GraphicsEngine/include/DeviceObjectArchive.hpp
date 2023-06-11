@@ -155,6 +155,25 @@ public:
                 DataCopy.DeviceSpecific[i] = DeviceSpecific[i].MakeCopy(Allocator);
             return DataCopy;
         }
+
+        bool operator==(const ResourceData& Other) const noexcept
+        {
+            if (Common != Other.Common)
+                return false;
+
+            for (size_t i = 0; i < DeviceSpecific.size(); ++i)
+            {
+                if (DeviceSpecific[i] != Other.DeviceSpecific[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        bool operator!=(const ResourceData& Other) const noexcept
+        {
+            return !(*this == Other);
+        }
     };
 
     struct NamedResourceKey

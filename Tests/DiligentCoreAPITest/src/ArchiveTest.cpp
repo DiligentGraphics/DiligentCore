@@ -2604,9 +2604,19 @@ TEST(ArchiveTest, MergeArchives)
 
 
     RefCntAutoPtr<IDataBlob> pArchive;
-    const IDataBlob*         ppArchives[] = {pPRSArchive1, pPRSArchive2, pShaderArchive1, pShaderArchive2, pGraphicsArchive};
-    pArchiverFactory->MergeArchives(ppArchives, _countof(ppArchives), &pArchive);
-    ASSERT_NE(pArchive, nullptr);
+    {
+        const IDataBlob* ppArchives[] = {pPRSArchive1, pPRSArchive2, pShaderArchive1, pShaderArchive2, pGraphicsArchive};
+        pArchiverFactory->MergeArchives(ppArchives, _countof(ppArchives), &pArchive);
+        ASSERT_NE(pArchive, nullptr);
+    }
+
+    {
+        // Duplicate resources should be silently ignored
+        RefCntAutoPtr<IDataBlob> pArchive2;
+        const IDataBlob*         ppArchives[] = {pArchive, pPRSArchive1, pPRSArchive2, pShaderArchive1, pShaderArchive2, pGraphicsArchive};
+        pArchiverFactory->MergeArchives(ppArchives, _countof(ppArchives), &pArchive2);
+        EXPECT_NE(pArchive2, nullptr);
+    }
 
     pPRSArchive1.Release();
     pPRSArchive2.Release();
