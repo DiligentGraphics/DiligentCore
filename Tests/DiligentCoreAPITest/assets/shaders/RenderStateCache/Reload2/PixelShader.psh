@@ -1,0 +1,18 @@
+#include "GraphicsCommon.h"
+
+Texture2D    g_Tex2D;
+SamplerState g_Tex2D_sampler;
+
+float4 CheckValue(float4 Val, float4 Expected)
+{
+    return float4(Val.x == Expected.x ? 1.0 : 0.0,
+                  Val.y == Expected.y ? 1.0 : 0.0,
+                  Val.z == Expected.z ? 1.0 : 0.0,
+                  Val.w == Expected.w ? 1.0 : 0.0);
+}
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    float2 UV = float2(0.25, 0.25);
+    return float4(PSIn.Color.rgb, 1.0) * CheckValue(g_Tex2D.Sample(g_Tex2D_sampler, UV.xy), float4(0.0, 1.0, 0.0, 1.0));
+}

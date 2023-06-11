@@ -1291,4 +1291,94 @@ TEST(RenderStateCacheTest, Reload_Signatures_SrbBeforeReload)
     TestPipelineReload(/*UseRenderPass = */ false, /*CreateSrbBeforeReload = */ true, /*UseSignatures = */ true);
 }
 
+TEST(RenderStateCacheTest, Reload_Signatures2)
+{
+    // Create PSO with signature -> store to archive -> load from archive -> reload
+
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pCtx       = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    std::vector<Uint32> Data(128 * 128, 0xFF00FF00);
+    auto                pTex = pEnv->CreateTexture("RenderStateCacheTest.Reload_Signatures2", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 128, 128, Data.data());
+    ASSERT_TRUE(pTex);
+
+    StateTransitionDesc Barriers[] = {{pTex, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_SHADER_RESOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE}};
+    pCtx->TransitionResourceStates(_countof(Barriers), Barriers);
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
+    ASSERT_TRUE(pShaderSourceFactory);
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderReloadFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache/Reload2;shaders/RenderStateCache", &pShaderReloadFactory);
+    ASSERT_TRUE(pShaderSourceFactory);
+
+    constexpr auto HotReload = true;
+
+    RefCntAutoPtr<IDataBlob> pData;
+    for (Uint32 pass = 0; pass < 3; ++pass)
+    {
+        // 0: store cache
+        // 1: load cache, reload shaders, store
+        // 2: load cache, reload shaders
+
+        auto pCache = CreateCache(pDevice, HotReload, pData, pShaderReloadFactory);
+        ASSERT_TRUE(pCache);
+
+        RefCntAutoPtr<IShader> pVS, pPS;
+        CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr, "VertexShader.vsh", "PixelShader.psh");
+        ASSERT_NE(pVS, nullptr);
+        ASSERT_NE(pPS, nullptr);
+
+        PipelineResourceSignatureDescX SignDesc{
+            {{SHADER_TYPE_PIXEL, "g_Tex2D", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}},
+            {{SHADER_TYPE_PIXEL, "g_Tex2D", SamplerDesc{}}},
+        };
+
+        SignDesc.Name                       = "RenderStateCacheTest.Reload_Signatures2";
+        SignDesc.UseCombinedTextureSamplers = true;
+        RefCntAutoPtr<IPipelineResourceSignature> pSign;
+        pDevice->CreatePipelineResourceSignature(SignDesc, &pSign);
+        ASSERT_TRUE(pSign);
+
+        GraphicsPipelineStateCreateInfo PsoCI;
+        PsoCI.PSODesc.Name = "RenderStateCacheTest.Reload_Signatures2";
+
+        auto& GraphicsPipeline{PsoCI.GraphicsPipeline};
+        GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+        IPipelineResourceSignature* ppSignatures[] = {pSign};
+        PsoCI.ppResourceSignatures                 = ppSignatures;
+        PsoCI.ResourceSignaturesCount              = _countof(ppSignatures);
+        PsoCI.GraphicsPipeline.NumRenderTargets    = 1;
+        PsoCI.GraphicsPipeline.RTVFormats[0]       = pSwapChain->GetDesc().ColorBufferFormat;
+        PsoCI.pVS                                  = pVS;
+        PsoCI.pPS                                  = pPS;
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO), pData != nullptr);
+        ASSERT_NE(pPSO, nullptr);
+
+        if (pass > 0)
+        {
+            RefCntAutoPtr<IShaderResourceBinding> pSRB;
+            pSign->CreateShaderResourceBinding(&pSRB, true);
+            pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+
+            EXPECT_EQ(pCache->Reload(), pass == 1 ? 2u : 0);
+
+            TestDraw(nullptr, nullptr, pPSO, pSRB, nullptr, false);
+        }
+
+        pData.Release();
+        pCache->WriteToBlob(&pData);
+    }
+}
+
 } // namespace

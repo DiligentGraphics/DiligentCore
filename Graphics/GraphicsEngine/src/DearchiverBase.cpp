@@ -674,10 +674,19 @@ bool DearchiverBase::LoadArchive(const IDataBlob* pArchiveData, bool MakeCopy)
             const auto*    ResName      = it.first.GetName();
             constexpr auto MakeNameCopy = true;
 
-            const auto inserted = m_ResNameToArchiveIdx.emplace(NamedResourceKey{ResType, ResName, MakeNameCopy}, ArchiveIdx).second;
-            if (!inserted)
+            const auto it_inserted = m_ResNameToArchiveIdx.emplace(NamedResourceKey{ResType, ResName, MakeNameCopy}, ArchiveIdx);
+            if (!it_inserted.second)
             {
-                LOG_ERROR_MESSAGE("Resource with name '", ResName, "' already exists in the archive.");
+                const auto& OtherArchiveResources = m_Archives[it_inserted.first->second].pObjArchive->GetNamedResources();
+                const auto  it_other              = OtherArchiveResources.find(NamedResourceKey{ResType, ResName});
+
+                const auto IsDuplicate =
+                    (it_other != OtherArchiveResources.end()) &&
+                    (it.second == it_other->second);
+                if (!IsDuplicate)
+                {
+                    LOG_ERROR_MESSAGE("Resource with name '", ResName, "' already exists in the archive.");
+                }
             }
         }
 
