@@ -312,11 +312,11 @@ struct CompiledShaderMtl final : SerializedShaderImpl::CompiledShader
         }
         
         ShaderCI.FilePath       = nullptr;
-        ShaderCI.ByteCode       = nullptr;
+        ShaderCI.Source         = nullptr;
         ShaderCI.Macros         = nullptr;
         ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL_VERBATIM;
-        ShaderCI.Source         = static_cast<const char*>(ShaderData.Ptr());
-        ShaderCI.SourceLength   = ShaderData.Size();
+        ShaderCI.ByteCode       = ShaderData.Ptr();
+        ShaderCI.ByteCodeSize   = ShaderData.Size();
 
         return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
     }
