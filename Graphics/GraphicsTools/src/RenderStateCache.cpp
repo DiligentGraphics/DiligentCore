@@ -801,7 +801,15 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapperBase
             auto& pSign = ppSignatures[i];
             if (pSign == nullptr)
                 continue;
-            const auto&                  SignDesc = pSign->GetDesc();
+
+            auto SignDesc = pSign->GetDesc();
+            // Add hash to the signature name
+            XXH128State Hasher;
+            Hasher.Update(SignDesc, DeviceType);
+            const auto Hash    = Hasher.Digest();
+            const auto HashStr = MakeHashStr(SignDesc.Name, Hash);
+            SignDesc.Name      = HashStr.c_str();
+
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << DeviceType);
             RefCntAutoPtr<IPipelineResourceSignature> pSerializedSign;
@@ -894,7 +902,13 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapper<GraphicsPipelineStateCreateI
         // Replace render pass with serialized render pass
         if (CI.GraphicsPipeline.pRenderPass != nullptr)
         {
-            const auto& RPDesc = CI.GraphicsPipeline.pRenderPass->GetDesc();
+            auto RPDesc = CI.GraphicsPipeline.pRenderPass->GetDesc();
+            // Add hash to the render pass name
+            XXH128State Hasher;
+            Hasher.Update(RPDesc, DeviceType);
+            const auto Hash    = Hasher.Digest();
+            const auto HashStr = MakeHashStr(RPDesc.Name, Hash);
+            RPDesc.Name        = HashStr.c_str();
 
             RefCntAutoPtr<IRenderPass> pSerializedRP;
             pSerializationDevice->CreateRenderPass(RPDesc, &pSerializedRP);

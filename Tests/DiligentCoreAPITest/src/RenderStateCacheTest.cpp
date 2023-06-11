@@ -1319,65 +1319,78 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
 
     constexpr auto HotReload = true;
 
-    RefCntAutoPtr<IDataBlob> pData;
-    for (Uint32 pass = 0; pass < 3; ++pass)
+    for (Uint32 use_different_signatures = 0; use_different_signatures < 2; ++use_different_signatures)
     {
-        // 0: store cache
-        // 1: load cache, reload shaders, store
-        // 2: load cache, reload shaders
-
-        auto pCache = CreateCache(pDevice, HotReload, pData, pShaderReloadFactory);
-        ASSERT_TRUE(pCache);
-
-        RefCntAutoPtr<IShader> pVS, pPS;
-        CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr, "VertexShader.vsh", "PixelShader.psh");
-        ASSERT_NE(pVS, nullptr);
-        ASSERT_NE(pPS, nullptr);
-
-        PipelineResourceSignatureDescX SignDesc{
-            {{SHADER_TYPE_PIXEL, "g_Tex2D", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE}},
-            {{SHADER_TYPE_PIXEL, "g_Tex2D", SamplerDesc{}}},
-        };
-
-        SignDesc.Name                       = "RenderStateCacheTest.Reload_Signatures2";
-        SignDesc.UseCombinedTextureSamplers = true;
-        RefCntAutoPtr<IPipelineResourceSignature> pSign;
-        pDevice->CreatePipelineResourceSignature(SignDesc, &pSign);
-        ASSERT_TRUE(pSign);
-
-        GraphicsPipelineStateCreateInfo PsoCI;
-        PsoCI.PSODesc.Name = "RenderStateCacheTest.Reload_Signatures2";
-
-        auto& GraphicsPipeline{PsoCI.GraphicsPipeline};
-        GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
-        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
-
-        IPipelineResourceSignature* ppSignatures[] = {pSign};
-        PsoCI.ppResourceSignatures                 = ppSignatures;
-        PsoCI.ResourceSignaturesCount              = _countof(ppSignatures);
-        PsoCI.GraphicsPipeline.NumRenderTargets    = 1;
-        PsoCI.GraphicsPipeline.RTVFormats[0]       = pSwapChain->GetDesc().ColorBufferFormat;
-        PsoCI.pVS                                  = pVS;
-        PsoCI.pPS                                  = pPS;
-
-        RefCntAutoPtr<IPipelineState> pPSO;
-        EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO), pData != nullptr);
-        ASSERT_NE(pPSO, nullptr);
-
-        if (pass > 0)
+        RefCntAutoPtr<IDataBlob> pData;
+        for (Uint32 pass = 0; pass < 3; ++pass)
         {
-            RefCntAutoPtr<IShaderResourceBinding> pSRB;
-            pSign->CreateShaderResourceBinding(&pSRB, true);
-            pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+            // 0: store cache
+            // 1: load cache, reload shaders, store
+            // 2: load cache, reload shaders
 
-            EXPECT_EQ(pCache->Reload(), pass == 1 ? 2u : 0);
+            auto pCache = CreateCache(pDevice, HotReload, pData, pShaderReloadFactory);
+            ASSERT_TRUE(pCache);
 
-            TestDraw(nullptr, nullptr, pPSO, pSRB, nullptr, false);
+            RefCntAutoPtr<IShader> pVS, pPS;
+            CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr, "VertexShader.vsh", "PixelShader.psh");
+            ASSERT_NE(pVS, nullptr);
+            ASSERT_NE(pPS, nullptr);
+
+            auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+            if (use_different_signatures)
+            {
+                switch (pass)
+                {
+                    case 0: VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; break;
+                    case 1: VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE; break;
+                    case 2: VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC; break;
+                }
+            }
+            PipelineResourceSignatureDescX SignDesc{
+                {{SHADER_TYPE_PIXEL, "g_Tex2D", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType}},
+                {{SHADER_TYPE_PIXEL, "g_Tex2D", SamplerDesc{}}},
+            };
+
+            SignDesc.Name                       = "RenderStateCacheTest.Reload_Signatures2";
+            SignDesc.UseCombinedTextureSamplers = true;
+            RefCntAutoPtr<IPipelineResourceSignature> pSign;
+            pDevice->CreatePipelineResourceSignature(SignDesc, &pSign);
+            ASSERT_TRUE(pSign);
+
+            GraphicsPipelineStateCreateInfo PsoCI;
+            PsoCI.PSODesc.Name = "RenderStateCacheTest.Reload_Signatures2";
+
+            auto& GraphicsPipeline{PsoCI.GraphicsPipeline};
+            GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+            GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+            IPipelineResourceSignature* ppSignatures[] = {pSign};
+            PsoCI.ppResourceSignatures                 = ppSignatures;
+            PsoCI.ResourceSignaturesCount              = _countof(ppSignatures);
+            PsoCI.GraphicsPipeline.NumRenderTargets    = 1;
+            PsoCI.GraphicsPipeline.RTVFormats[0]       = pSwapChain->GetDesc().ColorBufferFormat;
+            PsoCI.pVS                                  = pVS;
+            PsoCI.pPS                                  = pPS;
+
+            RefCntAutoPtr<IPipelineState> pPSO;
+            EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO), pData != nullptr && !use_different_signatures);
+            ASSERT_NE(pPSO, nullptr);
+
+            if (pass > 0)
+            {
+                RefCntAutoPtr<IShaderResourceBinding> pSRB;
+                pSign->CreateShaderResourceBinding(&pSRB, true);
+                pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+
+                EXPECT_EQ(pCache->Reload(), pass == 1 ? 2u : (use_different_signatures ? 1 : 0));
+
+                TestDraw(nullptr, nullptr, pPSO, pSRB, nullptr, false);
+            }
+
+            pData.Release();
+            pCache->WriteToBlob(&pData);
         }
-
-        pData.Release();
-        pCache->WriteToBlob(&pData);
     }
 }
 
