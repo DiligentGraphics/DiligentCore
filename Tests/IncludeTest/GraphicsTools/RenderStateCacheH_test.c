@@ -33,7 +33,7 @@ void TestRenderStateCacheCInterface()
 
     IRenderStateCache* pCache = NULL;
     Diligent_CreateRenderStateCache(&CI, &pCache);
-    IRenderStateCache_Load(pCache, (IDataBlob*)NULL, true);
+    IRenderStateCache_Load(pCache, (IDataBlob*)NULL, 1234, true);
 
     IShader* pShader = NULL;
     IRenderStateCache_CreateShader(pCache, (ShaderCreateInfo*)NULL, &pShader);
@@ -43,8 +43,8 @@ void TestRenderStateCacheCInterface()
     IRenderStateCache_CreateComputePipelineState(pCache, (ComputePipelineStateCreateInfo*)NULL, &pPSO);
     IRenderStateCache_CreateRayTracingPipelineState(pCache, (RayTracingPipelineStateCreateInfo*)NULL, &pPSO);
     IRenderStateCache_CreateTilePipelineState(pCache, (TilePipelineStateCreateInfo*)NULL, &pPSO);
-    IRenderStateCache_WriteToBlob(pCache, (IDataBlob**)NULL);
-    IRenderStateCache_WriteToStream(pCache, (IFileStream*)NULL);
+    IRenderStateCache_WriteToBlob(pCache, 1234, (IDataBlob**)NULL);
+    IRenderStateCache_WriteToStream(pCache, 1234, (IFileStream*)NULL);
     IRenderStateCache_Reset(pCache);
     IRenderStateCache_Reload(pCache, NULL, NULL);
 }

@@ -45,6 +45,8 @@ using namespace Diligent::Testing;
 namespace
 {
 
+static constexpr Uint32 ContentVersion = 987;
+
 PipelineResourceLayoutDesc GetGraphicsPSOLayout()
 {
     PipelineResourceLayoutDesc Layout;
@@ -245,7 +247,7 @@ RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pD
     CreateRenderStateCache(CacheCI, &pCache);
 
     if (pCacheData != nullptr)
-        pCache->Load(pCacheData);
+        pCache->Load(pCacheData, ContentVersion);
 
     return pCache;
 }
@@ -367,7 +369,7 @@ TEST(RenderStateCacheTest, CreateShader)
             }
 
             pData.Release();
-            pCache->WriteToBlob(&pData);
+            pCache->WriteToBlob(ContentVersion, &pData);
 
             if (HotReload)
                 EXPECT_EQ(pCache->Reload(), 0u);
@@ -563,7 +565,7 @@ void TestGraphicsPSO(bool UseRenderPass)
             }
 
             pData.Release();
-            pCache->WriteToBlob(&pData);
+            pCache->WriteToBlob(ContentVersion, &pData);
 
             if (HotReload)
                 EXPECT_EQ(pCache->Reload(), 0u);
@@ -703,7 +705,7 @@ void TestComputePSO(bool UseSignature)
             }
 
             pData.Release();
-            pCache->WriteToBlob(&pData);
+            pCache->WriteToBlob(ContentVersion, &pData);
 
             if (HotReload)
                 EXPECT_EQ(pCache->Reload(), 0u);
@@ -853,7 +855,7 @@ TEST(RenderStateCacheTest, CreateRayTracingPSO)
             }
 
             pData.Release();
-            pCache->WriteToBlob(&pData);
+            pCache->WriteToBlob(ContentVersion, &pData);
 
             if (HotReload)
                 EXPECT_EQ(pCache->Reload(), 0u);
@@ -938,7 +940,7 @@ TEST(RenderStateCacheTest, AppendData)
             CreateComputePSO(pCache, /*PresentInCache = */ false, pCS, UseSignature, &pPSO);
             ASSERT_NE(pPSO, nullptr);
 
-            pCache->WriteToBlob(&pData);
+            pCache->WriteToBlob(ContentVersion, &pData);
             ASSERT_NE(pData, nullptr);
         }
 
@@ -958,7 +960,7 @@ TEST(RenderStateCacheTest, AppendData)
             VerifyGraphicsPSO(pPSO, nullptr, pWhiteTexture, UseRenderPass);
 
             pData.Release();
-            pCache->WriteToBlob(&pData);
+            pCache->WriteToBlob(ContentVersion, &pData);
             ASSERT_NE(pData, nullptr);
 
             if (HotReload)
@@ -1263,7 +1265,7 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
                  });
 
         pData.Release();
-        pCache->WriteToBlob(&pData);
+        pCache->WriteToBlob(ContentVersion, &pData);
     }
 }
 
@@ -1422,7 +1424,7 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
             }
 
             pData.Release();
-            pCache->WriteToBlob(&pData);
+            pCache->WriteToBlob(ContentVersion, &pData);
         }
     }
 }

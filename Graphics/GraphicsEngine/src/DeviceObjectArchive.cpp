@@ -84,7 +84,8 @@ struct ArchiveSerializer
 
     bool SerializeHeader(ConstQual<ArchiveHeader>& Header) const
     {
-        return Ser(Header.MagicNumber, Header.Version, Header.APIVersion, Header.GitHash);
+        ASSERT_SIZEOF64(Header, 24, "Please handle new members here");
+        return Ser(Header.MagicNumber, Header.Version, Header.APIVersion, Header.ContentVersion, Header.GitHash);
     }
 
     bool SerializeResourceData(ConstQual<ResourceData>& ResData) const
@@ -141,13 +142,19 @@ bool ArchiveSerializer<SerializerMode::Read>::SerializeShaders(ShadersVector& Sh
 
 } // namespace
 
-DeviceObjectArchive::DeviceObjectArchive() noexcept
+DeviceObjectArchive::DeviceObjectArchive(Uint32 ContentVersion) noexcept :
+    m_ContentVersion{ContentVersion}
 {
 }
 
-void DeviceObjectArchive::Deserialize(const void* pData, size_t Size) noexcept(false)
+void DeviceObjectArchive::Deserialize(const CreateInfo& CI) noexcept(false)
 {
-    Serializer<SerializerMode::Read>        Reader{SerializedData{const_cast<void*>(pData), Size}};
+    Serializer<SerializerMode::Read> Reader{
+        SerializedData{
+            const_cast<void*>(CI.pData->GetConstDataPtr()),
+            CI.pData->GetSize(),
+        },
+    };
     ArchiveSerializer<SerializerMode::Read> ArchiveReader{Reader};
 
     ArchiveHeader Header;
@@ -159,6 +166,10 @@ void DeviceObjectArchive::Deserialize(const void* pData, size_t Size) noexcept(f
 
     if (Header.Version != ArchiveVersion)
         LOG_ERROR_AND_THROW("Unsupported device object archive version: ", Header.Version, ". Expected version: ", Uint32{ArchiveVersion});
+
+    if (CI.ContentVersion != CreateInfo{}.ContentVersion && Header.ContentVersion != CI.ContentVersion)
+        LOG_ERROR_AND_THROW("Invalid archive content version: ", Header.ContentVersion, ". Expected version: ", CI.ContentVersion);
+    m_ContentVersion = Header.ContentVersion;
 
     Uint32 NumResources = 0;
     if (!Reader(NumResources))
@@ -200,7 +211,10 @@ void DeviceObjectArchive::Serialize(IDataBlob** ppDataBlob) const
         constexpr auto SerMode    = std::remove_reference<decltype(Ser)>::type::GetMode();
         const auto     ArchiveSer = ArchiveSerializer<SerMode>{Ser};
 
-        auto res = ArchiveSer.SerializeHeader(ArchiveHeader{});
+        ArchiveHeader Header;
+        Header.ContentVersion = m_ContentVersion;
+
+        auto res = ArchiveSer.SerializeHeader(Header);
         VERIFY(res, "Failed to serialize header");
 
         Uint32 NumResources = StaticCast<Uint32>(m_NamedResources.size());
@@ -287,17 +301,17 @@ const char* ResourceTypeToString(DeviceObjectArchive::ResourceType Type)
 } // namespace
 
 
-DeviceObjectArchive::DeviceObjectArchive(const IDataBlob* pData, bool MakeCopy) noexcept(false) :
+DeviceObjectArchive::DeviceObjectArchive(const CreateInfo& CI) noexcept(false) :
     m_pArchiveData{
-        MakeCopy ?
-            DataBlobImpl::MakeCopy(pData) :
-            const_cast<IDataBlob*>(pData) // Need to remove const for AddRef/Release
+        CI.MakeCopy ?
+            DataBlobImpl::MakeCopy(CI.pData) :
+            const_cast<IDataBlob*>(CI.pData) // Need to remove const for AddRef/Release
     }
 {
     if (!m_pArchiveData)
         LOG_ERROR_AND_THROW("pData must not be null");
 
-    Deserialize(pData->GetConstDataPtr(), StaticCast<size_t>(pData->GetSize()));
+    Deserialize(CI);
 }
 
 const SerializedData& DeviceObjectArchive::GetDeviceSpecificData(ResourceType Type,
@@ -327,7 +341,8 @@ std::string DeviceObjectArchive::ToString() const
     // Print header
     {
         Output << "Header\n"
-               << Ident1 << "version: " << ArchiveVersion << '\n';
+               << Ident1 << "Archive version: " << ArchiveVersion << '\n'
+               << Ident1 << "Content version: " << m_ContentVersion << '\n';
     }
 
     constexpr char CommonDataName[] = "Common";
@@ -510,6 +525,9 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
 
 void DeviceObjectArchive::Merge(const DeviceObjectArchive& Src) noexcept(false)
 {
+    if (m_ContentVersion != Src.m_ContentVersion)
+        LOG_WARNING_MESSAGE("Merging archives with different content versions (", m_ContentVersion, " and ", Src.m_ContentVersion, ").");
+
     static_assert(static_cast<size_t>(ResourceType::Count) == 8, "Did you add a new resource type? You may need to handle it here.");
 
     auto&                  Allocator = GetRawAllocator();

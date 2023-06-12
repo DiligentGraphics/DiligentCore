@@ -127,16 +127,17 @@ public:
     };
 
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
-    static constexpr Uint32 ArchiveVersion    = 4;
+    static constexpr Uint32 ArchiveVersion    = 5;
 
     struct ArchiveHeader
     {
         ArchiveHeader() noexcept;
 
-        Uint32      MagicNumber = HeaderMagicNumber;
-        Uint32      Version     = ArchiveVersion;
-        Uint32      APIVersion  = DILIGENT_API_VERSION;
-        const char* GitHash     = nullptr;
+        Uint32      MagicNumber    = HeaderMagicNumber;
+        Uint32      Version        = ArchiveVersion;
+        Uint32      APIVersion     = DILIGENT_API_VERSION;
+        Uint32      ContentVersion = 0;
+        const char* GitHash        = nullptr;
     };
 
     struct ResourceData
@@ -218,18 +219,29 @@ public:
         return m_pArchiveData;
     }
 
+    Uint32 GetContentVersion() const
+    {
+        return m_ContentVersion;
+    }
+
 public:
+    struct CreateInfo
+    {
+        const IDataBlob* pData          = nullptr;
+        Uint32           ContentVersion = ~0u;
+        bool             MakeCopy       = false;
+    };
     /// Initializes a new device object archive from pData.
-    DeviceObjectArchive(const IDataBlob* pData, bool MakeCopy = false) noexcept(false);
+    explicit DeviceObjectArchive(const CreateInfo& CI) noexcept(false);
 
     /// Initializes an empty archive.
-    DeviceObjectArchive() noexcept;
+    explicit DeviceObjectArchive(Uint32 ContentVersion = 0) noexcept;
 
     void RemoveDeviceData(DeviceType Dev) noexcept(false);
     void AppendDeviceData(const DeviceObjectArchive& Src, DeviceType Dev) noexcept(false);
     void Merge(const DeviceObjectArchive& Src) noexcept(false);
 
-    void Deserialize(const void* pData, size_t Size) noexcept(false);
+    void Deserialize(const CreateInfo& CI) noexcept(false);
     void Serialize(IFileStream* pStream) const;
     void Serialize(IDataBlob** ppDataBlob) const;
 
@@ -297,6 +309,8 @@ private:
     // Strong reference to the original data blob.
     // Resources will not make copies and reference this data.
     RefCntAutoPtr<IDataBlob> m_pArchiveData;
+
+    Uint32 m_ContentVersion = 0;
 };
 
 DeviceObjectArchive::DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type);

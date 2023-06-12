@@ -48,6 +48,8 @@ using namespace Diligent::Testing;
 namespace
 {
 
+static constexpr Uint32 ContentVersion = 1234;
+
 constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
 {
     ARCHIVE_DEVICE_DATA_FLAGS DeviceBits = ARCHIVE_DEVICE_DATA_FLAG_NONE;
@@ -174,7 +176,7 @@ void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
         ASSERT_NE(pRefPRS_2, nullptr);
     }
 
-    pArchiver->SerializeToBlob(&pArchive);
+    pArchiver->SerializeToBlob(ContentVersion, &pArchive);
     ASSERT_NE(pArchive, nullptr);
 }
 
@@ -195,7 +197,7 @@ void UnpackPRS(IDataBlob*                  pArchive,
 
     ASSERT_NE(pArchive, nullptr);
     EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
-    pDearchiver->LoadArchive(pArchive);
+    pDearchiver->LoadArchive(pArchive, ContentVersion);
 
     // Unpack PRS 1
     {
@@ -963,11 +965,11 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         }
 
         RefCntAutoPtr<IDataBlob> pArchive;
-        pArchiver->SerializeToBlob(&pArchive);
+        pArchiver->SerializeToBlob(ContentVersion, &pArchive);
         ASSERT_NE(pArchive, nullptr);
 
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
-        pDearchiver->LoadArchive(pArchive);
+        pDearchiver->LoadArchive(pArchive, ContentVersion);
     }
 
     // Unpack Render pass
@@ -1197,11 +1199,11 @@ TEST(ArchiveTest, Shaders)
     EXPECT_EQ(pArchiver->GetShader("Non-existing shader name"), nullptr);
 
     RefCntAutoPtr<IDataBlob> pArchive;
-    pArchiver->SerializeToBlob(&pArchive);
+    pArchiver->SerializeToBlob(ContentVersion, &pArchive);
     ASSERT_NE(pArchive, nullptr);
     EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
 
-    pDearchiver->LoadArchive(pArchive);
+    pDearchiver->LoadArchive(pArchive, ContentVersion);
 
     auto UnpackShader = [](IRenderDevice* pDevice, IDearchiver* pDearchiver, const ShaderCreateInfo& CI) {
         RefCntAutoPtr<IShader> pUnpackedShader;
@@ -1379,7 +1381,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             EXPECT_EQ(pArchiver->GetPipelineState(PIPELINE_TYPE_COMPUTE, "Non-existing PSO name"), nullptr);
 
             {
-                pArchiver->SerializeToBlob(&pArchive);
+                pArchiver->SerializeToBlob(ContentVersion, &pArchive);
                 ASSERT_NE(pArchive, nullptr);
                 EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
             }
@@ -1389,15 +1391,15 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 pArchiver->Reset();
                 ASSERT_TRUE(pArchiver->AddPipelineResourceSignature(pSerializedPRS));
 
-                pArchiver->SerializeToBlob(&pSignArchive);
+                pArchiver->SerializeToBlob(ContentVersion, &pSignArchive);
                 ASSERT_NE(pSignArchive, nullptr);
                 EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pSignArchive));
             }
         }
 
-        pDearchiver->LoadArchive(pArchive);
+        pDearchiver->LoadArchive(pArchive, ContentVersion);
         if (pSignArchive)
-            pDearchiver->LoadArchive(pSignArchive);
+            pDearchiver->LoadArchive(pSignArchive, ContentVersion);
     }
 
     // Unpack PSO
@@ -1599,11 +1601,11 @@ TEST(ArchiveTest, RayTracingPipeline)
             EXPECT_EQ(pArchiver->GetPipelineState(PIPELINE_TYPE_RAY_TRACING, "Non-existing PSO name"), nullptr);
         }
         RefCntAutoPtr<IDataBlob> pArchive;
-        pArchiver->SerializeToBlob(&pArchive);
+        pArchiver->SerializeToBlob(ContentVersion, &pArchive);
         ASSERT_NE(pArchive, nullptr);
 
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
-        pDearchiver->LoadArchive(pArchive);
+        pDearchiver->LoadArchive(pArchive, ContentVersion);
     }
 
     // Unpack PSO
@@ -2382,11 +2384,11 @@ TEST_P(TestSamplers, GraphicsPipeline)
         EXPECT_EQ(pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, PSOCreateInfo.PSODesc.Name), pSerializedPSO);
 
         RefCntAutoPtr<IDataBlob> pArchive;
-        pArchiver->SerializeToBlob(&pArchive);
+        pArchiver->SerializeToBlob(ContentVersion, &pArchive);
         ASSERT_NE(pArchive, nullptr);
 
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pArchive));
-        pDearchiver->LoadArchive(pArchive);
+        pDearchiver->LoadArchive(pArchive, ContentVersion);
     }
 
     RefCntAutoPtr<IPipelineState> pPSO;
@@ -2538,7 +2540,7 @@ TEST(ArchiveTest, MergeArchives)
 
         EXPECT_TRUE(pArchiver->AddShader(pSerCS));
 
-        pArchiver->SerializeToBlob(&pShaderArchive1);
+        pArchiver->SerializeToBlob(ContentVersion, &pShaderArchive1);
         ASSERT_NE(pShaderArchive1, nullptr);
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pShaderArchive1));
 
@@ -2558,7 +2560,7 @@ TEST(ArchiveTest, MergeArchives)
         EXPECT_TRUE(pArchiver->AddShader(pSerVS));
         EXPECT_TRUE(pArchiver->AddShader(pSerPS));
 
-        pArchiver->SerializeToBlob(&pShaderArchive2);
+        pArchiver->SerializeToBlob(ContentVersion, &pShaderArchive2);
         ASSERT_NE(pShaderArchive2, nullptr);
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pShaderArchive2));
 
@@ -2597,7 +2599,7 @@ TEST(ArchiveTest, MergeArchives)
 
         EXPECT_TRUE(pArchiver->AddPipelineState(pSerializedPSO));
 
-        pArchiver->SerializeToBlob(&pGraphicsArchive);
+        pArchiver->SerializeToBlob(ContentVersion, &pGraphicsArchive);
         ASSERT_NE(pGraphicsArchive, nullptr);
         EXPECT_TRUE(pArchiverFactory->PrintArchiveContent(pGraphicsArchive));
     }
@@ -2624,7 +2626,7 @@ TEST(ArchiveTest, MergeArchives)
     pShaderArchive2.Release();
     pGraphicsArchive.Release();
 
-    pDearchiver->LoadArchive(pArchive);
+    pDearchiver->LoadArchive(pArchive, ContentVersion);
 
     UnpackPRS(pArchive, PRS1Name, PRS2Name, pRefPRS_1, pRefPRS_2);
 

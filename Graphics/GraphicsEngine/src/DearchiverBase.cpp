@@ -648,7 +648,7 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
         m_Cache.PSO.Set(ResType, UnpackInfo.Name, *ppPSO);
 }
 
-bool DearchiverBase::LoadArchive(const IDataBlob* pArchiveData, bool MakeCopy)
+bool DearchiverBase::LoadArchive(const IDataBlob* pArchiveData, Uint32 ContentVersion, bool MakeCopy)
 {
     if (pArchiveData == nullptr)
         return false;
@@ -664,7 +664,7 @@ bool DearchiverBase::LoadArchive(const IDataBlob* pArchiveData, bool MakeCopy)
             }
         }
 
-        auto       pObjArchive = std::make_unique<DeviceObjectArchive>(pArchiveData, MakeCopy);
+        auto       pObjArchive = std::make_unique<DeviceObjectArchive>(DeviceObjectArchive::CreateInfo{pArchiveData, ContentVersion, MakeCopy});
         const auto ArchiveIdx  = m_Archives.size();
 
         const auto& ArchiveResources = pObjArchive->GetNamedResources();
@@ -874,7 +874,7 @@ bool DearchiverBase::Store(IDataBlob** ppArchive) const
 
     try
     {
-        DeviceObjectArchive MergedArchive;
+        DeviceObjectArchive MergedArchive{!m_Archives.empty() ? m_Archives.front().pObjArchive->GetContentVersion() : 0};
         for (const auto& Archive : m_Archives)
         {
             if (Archive.pObjArchive)
@@ -893,6 +893,11 @@ bool DearchiverBase::Store(IDataBlob** ppArchive) const
 void DearchiverBase::Reset()
 {
     m_Archives.clear();
+}
+
+Uint32 DearchiverBase::GetContentVersion() const
+{
+    return !m_Archives.empty() ? m_Archives.front().pObjArchive->GetContentVersion() : ~0u;
 }
 
 } // namespace Diligent
