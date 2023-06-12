@@ -183,6 +183,9 @@ public:
         if (UpdateOnExit)
             m_CacheFilePath = FilePath;
 
+        if (CacheContentVersion != ~0u)
+            m_CacheContentVersion = CacheContentVersion;
+
         if (!FileSystem::FileExists(FilePath))
             return;
 
@@ -206,9 +209,15 @@ public:
             return;
         }
 
-        m_CacheContentVersion = m_pCache->GetContentVersion();
-        if (m_CacheContentVersion == ~0u)
-            m_CacheContentVersion = 0;
+        if (CacheContentVersion == ~0u)
+        {
+            m_CacheContentVersion = m_pCache->GetContentVersion();
+            VERIFY(m_CacheContentVersion != ~0u, "Content version should be valid as the data was loaded successfully");
+        }
+        else
+        {
+            VERIFY_EXPR(m_CacheContentVersion == m_pCache->GetContentVersion());
+        }
     }
 
 private:
