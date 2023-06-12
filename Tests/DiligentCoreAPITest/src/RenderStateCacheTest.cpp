@@ -565,7 +565,7 @@ void TestGraphicsPSO(bool UseRenderPass)
             }
 
             pData.Release();
-            pCache->WriteToBlob(ContentVersion, &pData);
+            pCache->WriteToBlob(pass == 0 ? ContentVersion : ~0u, &pData);
 
             if (HotReload)
                 EXPECT_EQ(pCache->Reload(), 0u);
@@ -705,7 +705,7 @@ void TestComputePSO(bool UseSignature)
             }
 
             pData.Release();
-            pCache->WriteToBlob(ContentVersion, &pData);
+            pCache->WriteToBlob(pass == 0 ? ContentVersion : ~0u, &pData);
 
             if (HotReload)
                 EXPECT_EQ(pCache->Reload(), 0u);
@@ -855,7 +855,7 @@ TEST(RenderStateCacheTest, CreateRayTracingPSO)
             }
 
             pData.Release();
-            pCache->WriteToBlob(ContentVersion, &pData);
+            pCache->WriteToBlob(pass == 0 ? ContentVersion : ~0u, &pData);
 
             if (HotReload)
                 EXPECT_EQ(pCache->Reload(), 0u);
@@ -960,7 +960,7 @@ TEST(RenderStateCacheTest, AppendData)
             VerifyGraphicsPSO(pPSO, nullptr, pWhiteTexture, UseRenderPass);
 
             pData.Release();
-            pCache->WriteToBlob(ContentVersion, &pData);
+            pCache->WriteToBlob(~0u, &pData);
             ASSERT_NE(pData, nullptr);
 
             if (HotReload)
@@ -1265,7 +1265,7 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
                  });
 
         pData.Release();
-        pCache->WriteToBlob(ContentVersion, &pData);
+        pCache->WriteToBlob(pass == 0 ? ContentVersion : ~0u, &pData);
     }
 }
 
@@ -1424,7 +1424,7 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
             }
 
             pData.Release();
-            pCache->WriteToBlob(ContentVersion, &pData);
+            pCache->WriteToBlob(pass == 0 ? ContentVersion : ~0u, &pData);
         }
     }
 }

@@ -183,8 +183,7 @@ public:
         if (UpdateOnExit)
             m_CacheFilePath = FilePath;
 
-        if (CacheContentVersion != ~0u)
-            m_CacheContentVersion = CacheContentVersion;
+        m_CacheContentVersion = CacheContentVersion;
 
         if (!FileSystem::FileExists(FilePath))
             return;
@@ -207,16 +206,6 @@ public:
         {
             LOG_ERROR_MESSAGE("Failed to load render state cache data from file ", FilePath);
             return;
-        }
-
-        if (CacheContentVersion == ~0u)
-        {
-            m_CacheContentVersion = m_pCache->GetContentVersion();
-            VERIFY(m_CacheContentVersion != ~0u, "Content version should be valid as the data was loaded successfully");
-        }
-        else
-        {
-            VERIFY_EXPR(m_CacheContentVersion == m_pCache->GetContentVersion());
         }
     }
 

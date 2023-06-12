@@ -35,4 +35,6 @@ void TestDearchiver_CInterface(IDearchiver* pDearchiver)
     IDearchiver_UnpackRenderPass(pDearchiver, (const RenderPassUnpackInfo*)NULL, (IRenderPass**)NULL);
     IDearchiver_Store(pDearchiver, (IDataBlob**)NULL);
     IDearchiver_Reset(pDearchiver);
+    Uint32 Ver = IDearchiver_GetContentVersion(pDearchiver);
+    (void)Ver;
 }

@@ -226,7 +226,8 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     /// \param [in] ContentVersion - The expected version of the content in the archive.
     ///                              If the version of the content in the archive does not
     ///                              match the expected version, the method will fail.
-    ///                              If default value is used (~0u), the version will not be checked.
+    ///                              If default value is used (~0u aka 0xFFFFFFFF), the version
+    ///                              will not be checked.
     /// \param [in] MakeCopy       - Whether to make a copy of the archive, or use the
     ///                              the original contents.
     ///
@@ -319,7 +320,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     VIRTUAL void METHOD(Reset)(THIS) PURE;
 
     /// Returns the content version of the archive.
-    /// If no data has been loaded, returns ~0u.
+    /// If no data has been loaded, returns ~0u (aka 0xFFFFFFFF).
     VIRTUAL Uint32 METHOD(GetContentVersion)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
@@ -335,6 +336,7 @@ DILIGENT_END_INTERFACE
 #    define IDearchiver_UnpackRenderPass(This, ...)        CALL_IFACE_METHOD(Dearchiver, UnpackRenderPass,        This, __VA_ARGS__)
 #    define IDearchiver_Store(This, ...)                   CALL_IFACE_METHOD(Dearchiver, Store,                   This, __VA_ARGS__)
 #    define IDearchiver_Reset(This)                        CALL_IFACE_METHOD(Dearchiver, Reset,                   This)
+#    define IDearchiver_GetContentVersion(This)            CALL_IFACE_METHOD(Dearchiver, GetContentVersion,       This)
 
 #endif
 

@@ -329,6 +329,13 @@ public:
 
     virtual Bool DILIGENT_CALL_TYPE WriteToBlob(Uint32 ContentVersion, IDataBlob** ppBlob) override final
     {
+        if (ContentVersion == ~0u)
+        {
+            ContentVersion = GetContentVersion();
+            if (ContentVersion == ~0u)
+                ContentVersion = 0;
+        }
+
         // Load new render states from archiver to dearchiver
 
         RefCntAutoPtr<IDataBlob> pNewData;
