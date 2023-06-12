@@ -85,6 +85,7 @@ struct ArchiveSerializer
     bool SerializeHeader(ConstQual<ArchiveHeader>& Header) const
     {
         ASSERT_SIZEOF64(Header, 24, "Please handle new members here");
+        // NB: this must match header deserialization in DeviceObjectArchive::Deserialize
         return Ser(Header.MagicNumber, Header.Version, Header.APIVersion, Header.ContentVersion, Header.GitHash);
     }
 
@@ -157,19 +158,33 @@ void DeviceObjectArchive::Deserialize(const CreateInfo& CI) noexcept(false)
     };
     ArchiveSerializer<SerializerMode::Read> ArchiveReader{Reader};
 
+    // NB: this must match header serialization in DeviceObjectArchive::SerializeHeader
     ArchiveHeader Header;
-    if (!ArchiveReader.SerializeHeader(Header))
-        LOG_ERROR_AND_THROW("Failed to read device object archive header.");
+    ASSERT_SIZEOF64(Header, 24, "Please handle new members here");
+    if (!ArchiveReader.Ser(Header.MagicNumber))
+        LOG_ERROR_AND_THROW("Failed to read device object archive header magic number.");
 
     if (Header.MagicNumber != HeaderMagicNumber)
         LOG_ERROR_AND_THROW("Invalid device object archive header.");
 
+    if (!ArchiveReader.Ser(Header.Version))
+        LOG_ERROR_AND_THROW("Failed to read device object archive version.");
+
     if (Header.Version != ArchiveVersion)
         LOG_ERROR_AND_THROW("Unsupported device object archive version: ", Header.Version, ". Expected version: ", Uint32{ArchiveVersion});
+
+    if (!ArchiveReader.Ser(Header.APIVersion))
+        LOG_ERROR_AND_THROW("Failed to read Diligent API version.");
+
+    if (!ArchiveReader.Ser(Header.ContentVersion))
+        LOG_ERROR_AND_THROW("Failed to read device object archive content version.");
 
     if (CI.ContentVersion != CreateInfo{}.ContentVersion && Header.ContentVersion != CI.ContentVersion)
         LOG_ERROR_AND_THROW("Invalid archive content version: ", Header.ContentVersion, ". Expected version: ", CI.ContentVersion);
     m_ContentVersion = Header.ContentVersion;
+
+    if (!ArchiveReader.Ser(Header.GitHash))
+        LOG_ERROR_AND_THROW("Failed to read Git Hash.");
 
     Uint32 NumResources = 0;
     if (!Reader(NumResources))
