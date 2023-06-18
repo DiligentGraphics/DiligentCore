@@ -73,6 +73,10 @@ std::string WindowsFileSystem::GetLocalAppDataDirectory(const char* AppName, boo
 #pragma comment(lib, "Shlwapi.lib")
 #include <shlobj.h>
 
+#if !(defined(__MINGW64__) || defined(__MINGW32__))
+#    include <atlbase.h>
+#endif
+
 namespace Diligent
 {
 
@@ -512,6 +516,57 @@ std::string WindowsFileSystem::FileDialog(const FileDialogAttribs& DialogAttribs
         FileName = buffer;
     }
     return FileName;
+}
+
+std::string WindowsFileSystem::OpenFolderDialog(const char* Title)
+{
+#if !(defined(__MINGW64__) || defined(__MINGW32__))
+    if (Title == nullptr)
+        Title = "Select Folder";
+
+    CComPtr<IFileOpenDialog> pDialog;
+    // Create the FileOpenDialog object.
+    auto hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_IFileOpenDialog, reinterpret_cast<void**>(&pDialog));
+    if (FAILED(hr))
+    {
+        UNEXPECTED("Failed to create File Open Dialog");
+        return "";
+    }
+
+    DWORD dwOptions = 0;
+    if (SUCCEEDED(pDialog->GetOptions(&dwOptions)))
+    {
+        pDialog->SetOptions(dwOptions | FOS_PICKFOLDERS | FOS_NOCHANGEDIR);
+    }
+    pDialog->SetTitle(WidenString(Title).c_str());
+
+    // Show the dialog box.
+    hr = pDialog->Show(NULL);
+    if (FAILED(hr))
+    {
+        // The user pressed Cancel
+        return "";
+    }
+
+    // Get the file name from the dialog box.
+    CComPtr<IShellItem> pItem;
+    hr = pDialog->GetResult(&pItem);
+    if (FAILED(hr))
+        return "";
+
+    PWSTR pszFilePath = nullptr;
+    hr                = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+    if (FAILED(hr))
+        return "";
+
+    std::string FolderPath{NarrowString(pszFilePath)};
+    CoTaskMemFree(pszFilePath);
+
+    return FolderPath;
+#else
+    LOG_WARNING_MESSAGE("Open folder dialog is not supported on MinGW");
+    return "";
+#endif
 }
 
 bool WindowsFileSystem::IsDirectory(const Char* strPath)
