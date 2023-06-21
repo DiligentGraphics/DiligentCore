@@ -348,10 +348,19 @@ protected:
 
             if (TexDesc.BindFlags & BIND_DEPTH_STENCIL)
             {
-                ViewDesc.ViewType = TEXTURE_VIEW_DEPTH_STENCIL;
-                RefCntAutoPtr<ITextureView> pDSV;
-                pTestTex->CreateView(ViewDesc, &pDSV);
-                EXPECT_NE(pDSV, nullptr) << GetObjectDescString(TexDesc);
+                {
+                    ViewDesc.ViewType = TEXTURE_VIEW_DEPTH_STENCIL;
+                    RefCntAutoPtr<ITextureView> pDSV;
+                    pTestTex->CreateView(ViewDesc, &pDSV);
+                    EXPECT_NE(pDSV, nullptr) << GetObjectDescString(TexDesc);
+                }
+
+                {
+                    ViewDesc.ViewType = TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL;
+                    RefCntAutoPtr<ITextureView> pDSV;
+                    pTestTex->CreateView(ViewDesc, &pDSV);
+                    EXPECT_NE(pDSV, nullptr) << GetObjectDescString(TexDesc);
+                }
             }
 
             if (TexDesc.BindFlags & BIND_UNORDERED_ACCESS)
@@ -475,12 +484,20 @@ protected:
 
             if (TexDesc.BindFlags & BIND_DEPTH_STENCIL)
             {
-                ViewDesc.ViewType        = TEXTURE_VIEW_DEPTH_STENCIL;
                 ViewDesc.TextureDim      = RESOURCE_DIM_TEX_2D;
                 ViewDesc.NumArraySlices  = 1;
                 ViewDesc.FirstArraySlice = 0;
                 ViewDesc.MostDetailedMip = 2;
                 {
+                    ViewDesc.ViewType = TEXTURE_VIEW_DEPTH_STENCIL;
+
+                    RefCntAutoPtr<ITextureView> pDSV;
+                    pTestCubemap->CreateView(ViewDesc, &pDSV);
+                    EXPECT_NE(pDSV, nullptr) << GetObjectDescString(TexDesc);
+                }
+                {
+                    ViewDesc.ViewType = TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL;
+
                     RefCntAutoPtr<ITextureView> pDSV;
                     pTestCubemap->CreateView(ViewDesc, &pDSV);
                     EXPECT_NE(pDSV, nullptr) << GetObjectDescString(TexDesc);
@@ -490,6 +507,15 @@ protected:
                 ViewDesc.NumArraySlices  = 3;
                 ViewDesc.FirstArraySlice = 2;
                 {
+                    ViewDesc.ViewType = TEXTURE_VIEW_DEPTH_STENCIL;
+
+                    RefCntAutoPtr<ITextureView> pDSV;
+                    pTestCubemap->CreateView(ViewDesc, &pDSV);
+                    EXPECT_NE(pDSV, nullptr) << GetObjectDescString(TexDesc);
+                }
+                {
+                    ViewDesc.ViewType = TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL;
+
                     RefCntAutoPtr<ITextureView> pDSV;
                     pTestCubemap->CreateView(ViewDesc, &pDSV);
                     EXPECT_NE(pDSV, nullptr) << GetObjectDescString(TexDesc);
