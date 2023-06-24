@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +26,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <cstdio>
 #include <sys/stat.h>
@@ -243,6 +244,8 @@ std::string LinuxFileSystem::GetLocalAppDataDirectory(const char* AppName, bool 
     {
 #ifdef _GNU_SOURCE
         AppName = program_invocation_short_name;
+#elif defined(__APPLE__)
+        AppName = getprogname();
 #endif
     }
 

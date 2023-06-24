@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -125,16 +125,11 @@ bool AppleFileSystem::FileExists(const Char* strFilePath)
     return !resource_path.empty();
 }
 
-#if PLATFORM_IOS
-std::string AppleFileSystem::GetLocalAppDataDirectory(const char* AppName, bool Create)
+#if PLATFORM_IOS || PLATFORM_TVOS
+std::string AppleFileSystem::GetLocalAppDataDirectory(const char* /*AppName*/, bool /*Create*/)
 {
     std::string AppDataDir = getenv("HOME");
     AppDataDir += "/Library/Caches";
-    if (AppName != nullptr)
-    {
-        AppDataDir += SlashSymbol;
-        AppDataDir += AppName;
-    }
     return AppDataDir;
 }
 #endif
