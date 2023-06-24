@@ -34,6 +34,7 @@
 #include <glob.h>
 #include <mutex>
 #include <pwd.h>
+#include <errno.h>
 
 #include "LinuxFileSystem.hpp"
 #include "Errors.hpp"
@@ -237,6 +238,13 @@ std::string LinuxFileSystem::GetLocalAppDataDirectory(const char* AppName, bool 
 #else
     AppDataDir += ".cache";
 #endif
+
+    if (AppName == nullptr)
+    {
+#ifdef _GNU_SOURCE
+        AppName = program_invocation_short_name;
+#endif
+    }
 
     if (AppName != nullptr)
     {
