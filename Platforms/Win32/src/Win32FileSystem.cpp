@@ -596,14 +596,31 @@ std::string GetLocalAppDataDirectoryImpl(const char* AppName, bool Create)
     {
         VERIFY_EXPR(Path != nullptr);
         AppDataDir = NarrowString(Path);
+        if (!WindowsFileSystem::IsSlash(AppDataDir.back()))
+            AppDataDir.push_back(WindowsFileSystem::SlashSymbol);
+
         if (AppName != nullptr)
         {
-            if (!WindowsFileSystem::IsSlash(AppDataDir.back()))
-                AppDataDir.push_back(WindowsFileSystem::SlashSymbol);
             AppDataDir.append(AppName);
-            if (Create && !WindowsFileSystem::PathExists(AppDataDir.c_str()))
-                CreateDirectoryImpl(AppDataDir.c_str());
         }
+        else
+        {
+            CHAR ExeFilePath[MAX_PATH];
+            // If the GetModuleFileNameA succeeds, the return value is the length of the string that is
+            // copied to the buffer, in characters, not including the terminating null character.
+            if (GetModuleFileNameA(NULL, ExeFilePath, MAX_PATH) > 0)
+            {
+                std::string FileName;
+                WindowsFileSystem::GetPathComponents(ExeFilePath, nullptr, &FileName);
+                // Remove extension
+                auto DotPos = FileName.find_last_of('.');
+                if (DotPos != std::string::npos)
+                    FileName.resize(DotPos);
+                AppDataDir.append(FileName);
+            }
+        }
+        if (Create && !WindowsFileSystem::PathExists(AppDataDir.c_str()))
+            CreateDirectoryImpl(AppDataDir.c_str());
     }
 
     if (Path != nullptr)
