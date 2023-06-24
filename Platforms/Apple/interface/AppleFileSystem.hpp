@@ -45,6 +45,10 @@ public:
     static AppleFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
     static bool FileExists(const Char* strFilePath);
+
+#if PLATFORM_IOS
+    static std::string GetLocalAppDataDirectory(const char* AppName = nullptr, bool Create = true);
+#endif
 };
 
 } // namespace Diligent
