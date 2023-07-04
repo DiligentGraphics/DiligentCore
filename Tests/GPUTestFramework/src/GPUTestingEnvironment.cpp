@@ -384,6 +384,10 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
                                   return std::vector<DisplayModeAttribs>{};
                               });
 
+            // TODO: Remove when AMD fixes vkGetPhysicalDeviceImageFormatProperties2
+            std::vector<const char*> IgnoreDebugMessages = {
+                "VUID-VkImageCreateInfo-imageCreateMaxMipLevels-02251"};
+
             EngineVkCreateInfo EngineCI;
             EngineCI.AdapterId = FindAdapter(Adapters, EnvCI.AdapterType, EnvCI.AdapterId);
             AddContext(COMMAND_QUEUE_TYPE_GRAPHICS, "Graphics", EngineCI.AdapterId);
@@ -401,7 +405,9 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             EngineCI.UploadHeapPageSize        = 32 * 1024;
             //EngineCI.DeviceLocalMemoryReserveSize = 32 << 20;
             //EngineCI.HostVisibleMemoryReserveSize = 48 << 20;
-            EngineCI.Features = EnvCI.Features;
+            EngineCI.Features                  = EnvCI.Features;
+            EngineCI.IgnoreDebugMessageCount   = static_cast<Uint32>(IgnoreDebugMessages.size());
+            EngineCI.ppIgnoreDebugMessageNames = IgnoreDebugMessages.data();
 
             NumDeferredCtx               = EnvCI.NumDeferredContexts;
             EngineCI.NumDeferredContexts = NumDeferredCtx;
