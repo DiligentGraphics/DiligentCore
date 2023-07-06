@@ -589,6 +589,9 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
         MemInfo.buffer = Ctx.vkInstanceBuffer;
         vkGetBufferMemoryRequirements2(Ctx.vkDevice, &MemInfo, &MemReqs);
 
+        //VUID-vkCmdBuildAccelerationStructuresKHR-pInfos-03715
+        MemReqs.memoryRequirements.alignment = std::max(MemReqs.memoryRequirements.alignment, static_cast<VkDeviceSize>(16));
+
         MemSize = AlignUp(MemSize, MemReqs.memoryRequirements.alignment);
         MemSize += MemReqs.memoryRequirements.size;
         MemTypeBits |= MemReqs.memoryRequirements.memoryTypeBits;
@@ -612,6 +615,10 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
 
         MemInfo.buffer = Ctx.vkScratchBuffer;
         vkGetBufferMemoryRequirements2(Ctx.vkDevice, &MemInfo, &MemReqs);
+
+        // VUID-vkCmdBuildAccelerationStructuresKHR-pInfos-03710
+        MemReqs.memoryRequirements.alignment = std::max(MemReqs.memoryRequirements.alignment,
+                                                        static_cast<VkDeviceSize>(Ctx.AccelStructProps.minAccelerationStructureScratchOffsetAlignment));
 
         MemSize = AlignUp(MemSize, MemReqs.memoryRequirements.alignment);
         MemSize += MemReqs.memoryRequirements.size;
@@ -641,6 +648,9 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
 
         MemInfo.buffer = Ctx.vkSBTBuffer;
         vkGetBufferMemoryRequirements2(Ctx.vkDevice, &MemInfo, &MemReqs);
+
+        //  VUID-vkCmdTraceRaysKHR-pRayGenShaderBindingTable-03682
+        MemReqs.memoryRequirements.alignment = std::max(MemReqs.memoryRequirements.alignment, static_cast<VkDeviceSize>(Ctx.RayTracingProps.shaderGroupBaseAlignment));
 
         MemSize = AlignUp(MemSize, MemReqs.memoryRequirements.alignment);
         MemSize += MemReqs.memoryRequirements.size;
@@ -763,8 +773,8 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
 
         VkAccelerationStructureBuildGeometryInfoKHR     ASBuildInfo = {};
-        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {};
         VkAccelerationStructureGeometryKHR              Geometry    = {};
+        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {};
         VkAccelerationStructureBuildRangeInfoKHR const* OffsetPtr   = &Offset;
 
         Geometry.sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -774,7 +784,6 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
         Geometry.geometry.triangles.maxVertex    = _countof(Vertices);
         Geometry.geometry.triangles.vertexStride = sizeof(Vertices[0]);
-        Geometry.geometry.triangles.maxVertex    = _countof(Vertices);
         Geometry.geometry.triangles.indexType    = VK_INDEX_TYPE_NONE_KHR;
 
         CreateBLAS(Ctx, &Geometry, OffsetPtr, 1, Ctx.BLAS);
