@@ -924,22 +924,25 @@ struct PipelineResourceLayoutDescX : PipelineResourceLayoutDesc
         return SyncDesc();
     }
 
-    void ClearVariables()
+    PipelineResourceLayoutDescX& ClearVariables()
     {
         VarCopy.clear();
         SyncDesc();
+        return *this;
     }
 
-    void ClearImmutableSamplers()
+    PipelineResourceLayoutDescX& ClearImmutableSamplers()
     {
         ImtblSamCopy.clear();
         SyncDesc();
+        return *this;
     }
 
-    void Clear()
+    PipelineResourceLayoutDescX& Clear()
     {
         PipelineResourceLayoutDescX CleanDesc;
         std::swap(*this, CleanDesc);
+        return *this;
     }
 
 private:
