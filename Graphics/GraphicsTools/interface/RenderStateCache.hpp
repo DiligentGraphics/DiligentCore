@@ -209,6 +209,19 @@ public:
         }
     }
 
+    void SetCacheFilePath(const char* FilePath)
+    {
+        if (FilePath == nullptr)
+            m_CacheFilePath.clear();
+        else
+            m_CacheFilePath = FilePath;
+    }
+
+    const std::string& GetCacheFilePath() const
+    {
+        return m_CacheFilePath;
+    }
+
 private:
     template <typename ObjectType, typename CreateMethodType, typename... CreateArgsType>
     RefCntAutoPtr<ObjectType> UnpackCachedObject(const char* ObjectTypeName, const char* ObjectName, CreateMethodType Create, CreateArgsType&&... Args) noexcept(!ThrowOnError)
