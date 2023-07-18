@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added `PSO_CACHE_FLAGS` enum and `PipelineStateCacheDesc::Flags` member (API253005)
 * Archiver and render state cache: added content version (API253004)
 * Added `RenderDeviceShaderVersionInfo` struct and `RenderDeviceInfo::MaxShaderVersion` member (API253003)
 * Added texture component swizzle (API253002)
