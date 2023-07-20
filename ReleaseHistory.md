@@ -1,5 +1,8 @@
 ## Current progress
 
+* Enabled read-only depth-stencil buffers (API253006)
+  * Added `TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL` view type
+  * Added `UseReadOnlyDSV` member to `GraphicsPipelineDesc` struct
 * Added `PSO_CACHE_FLAGS` enum and `PipelineStateCacheDesc::Flags` member (API253005)
 * Archiver and render state cache: added content version (API253004)
 * Added `RenderDeviceShaderVersionInfo` struct and `RenderDeviceInfo::MaxShaderVersion` member (API253003)

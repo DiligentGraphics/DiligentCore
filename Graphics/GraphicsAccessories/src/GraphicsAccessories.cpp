@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +26,7 @@
  */
 
 #include <algorithm>
+#include <array>
 
 #include "GraphicsAccessories.hpp"
 #include "DebugUtilities.hpp"
@@ -77,18 +78,13 @@ public:
     TexFormatToViewFormatConverter()
     {
         // clang-format off
-        static_assert(TEXTURE_VIEW_SHADER_RESOURCE == 1, "TEXTURE_VIEW_SHADER_RESOURCE == 1 expected");
-        static_assert(TEXTURE_VIEW_RENDER_TARGET == 2, "TEXTURE_VIEW_RENDER_TARGET == 2 expected");
-        static_assert(TEXTURE_VIEW_DEPTH_STENCIL == 3, "TEXTURE_VIEW_DEPTH_STENCIL == 3 expected");
-        static_assert(TEXTURE_VIEW_UNORDERED_ACCESS == 4, "TEXTURE_VIEW_UNORDERED_ACCESS == 4 expected");
-        static_assert(TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL == 6, "TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL == 6 expected");
 #define INIT_TEX_VIEW_FORMAT_INFO(TexFmt, SRVFmt, RTVFmt, DSVFmt, UAVFmt)\
         {\
-            m_ViewFormats[ TexFmt ][TEXTURE_VIEW_SHADER_RESOURCE-1]         = TEX_FORMAT_##SRVFmt; \
-            m_ViewFormats[ TexFmt ][TEXTURE_VIEW_RENDER_TARGET-1]           = TEX_FORMAT_##RTVFmt; \
-            m_ViewFormats[ TexFmt ][TEXTURE_VIEW_DEPTH_STENCIL-1]           = TEX_FORMAT_##DSVFmt; \
-            m_ViewFormats[ TexFmt ][TEXTURE_VIEW_UNORDERED_ACCESS-1]        = TEX_FORMAT_##UAVFmt; \
-            m_ViewFormats[ TexFmt ][TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL-1] = TEX_FORMAT_##DSVFmt; \
+            m_ViewFormats[TexFmt][TEXTURE_VIEW_SHADER_RESOURCE-1]         = TEX_FORMAT_##SRVFmt; \
+            m_ViewFormats[TexFmt][TEXTURE_VIEW_RENDER_TARGET-1]           = TEX_FORMAT_##RTVFmt; \
+            m_ViewFormats[TexFmt][TEXTURE_VIEW_DEPTH_STENCIL-1]           = TEX_FORMAT_##DSVFmt; \
+            m_ViewFormats[TexFmt][TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL-1] = TEX_FORMAT_##DSVFmt; \
+            m_ViewFormats[TexFmt][TEXTURE_VIEW_UNORDERED_ACCESS-1]        = TEX_FORMAT_##UAVFmt; \
         }
 
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_UNKNOWN,                 UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN);
@@ -228,12 +224,21 @@ public:
             {
                 if (BindFlags & BIND_DEPTH_STENCIL)
                 {
-                    // clang-format off
-                    static TEXTURE_FORMAT D16_ViewFmts[] =
-                    {
-                        TEX_FORMAT_R16_UNORM, TEX_FORMAT_R16_UNORM, TEX_FORMAT_D16_UNORM, TEX_FORMAT_R16_UNORM
-                    };
-                    // clang-format on
+                    static_assert(TEXTURE_VIEW_SHADER_RESOURCE == 1, "TEXTURE_VIEW_SHADER_RESOURCE == 1 expected");
+                    static_assert(TEXTURE_VIEW_RENDER_TARGET == 2, "TEXTURE_VIEW_RENDER_TARGET == 2 expected");
+                    static_assert(TEXTURE_VIEW_DEPTH_STENCIL == 3, "TEXTURE_VIEW_DEPTH_STENCIL == 3 expected");
+                    static_assert(TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL == 4, "TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL == 4 expected");
+                    static_assert(TEXTURE_VIEW_UNORDERED_ACCESS == 5, "TEXTURE_VIEW_UNORDERED_ACCESS == 5 expected");
+                    static_assert(TEXTURE_VIEW_SHADING_RATE == 6, "TEXTURE_VIEW_SHADING_RATE == 6 expected");
+                    static const std::array<TEXTURE_FORMAT, TEXTURE_VIEW_NUM_VIEWS - 1> D16_ViewFmts =
+                        {
+                            TEX_FORMAT_R16_UNORM, // TEXTURE_VIEW_SHADER_RESOURCE
+                            TEX_FORMAT_R16_UNORM, // TEXTURE_VIEW_RENDER_TARGET
+                            TEX_FORMAT_D16_UNORM, // TEXTURE_VIEW_DEPTH_STENCIL
+                            TEX_FORMAT_D16_UNORM, // TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL
+                            TEX_FORMAT_R16_UNORM, // TEXTURE_VIEW_UNORDERED_ACCESS
+                            TEX_FORMAT_UNKNOWN,   // TEXTURE_VIEW_SHADING_RATE
+                        };
                     return D16_ViewFmts[ViewType - 1];
                 }
             }
@@ -424,16 +429,16 @@ const Char* GetTexViewTypeLiteralName(TEXTURE_VIEW_TYPE ViewType)
     {
         // clang-format off
 #define INIT_TEX_VIEW_TYPE_NAME(ViewType)TexViewLiteralNames[ViewType] = #ViewType
-        INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_UNDEFINED );
-        INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_SHADER_RESOURCE );
-        INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_RENDER_TARGET );
-        INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_DEPTH_STENCIL );
-        INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_UNORDERED_ACCESS );
-        INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_SHADING_RATE );
-        INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL );
+        INIT_TEX_VIEW_TYPE_NAME(TEXTURE_VIEW_UNDEFINED);
+        INIT_TEX_VIEW_TYPE_NAME(TEXTURE_VIEW_SHADER_RESOURCE);
+        INIT_TEX_VIEW_TYPE_NAME(TEXTURE_VIEW_RENDER_TARGET);
+        INIT_TEX_VIEW_TYPE_NAME(TEXTURE_VIEW_DEPTH_STENCIL);
+        INIT_TEX_VIEW_TYPE_NAME(TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL);
+        INIT_TEX_VIEW_TYPE_NAME(TEXTURE_VIEW_UNORDERED_ACCESS);
+        INIT_TEX_VIEW_TYPE_NAME(TEXTURE_VIEW_SHADING_RATE);
 #undef  INIT_TEX_VIEW_TYPE_NAME
         // clang-format on
-        static_assert(TEXTURE_VIEW_NUM_VIEWS == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL + 1, "Not all texture views names initialized.");
+        static_assert(TEXTURE_VIEW_NUM_VIEWS == TEXTURE_VIEW_SHADING_RATE + 1, "Not all texture views names initialized.");
 
         bIsInit = true;
     }

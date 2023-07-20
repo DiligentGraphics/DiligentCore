@@ -69,9 +69,9 @@ const std::string ReadOnlyDepthTest_PSColor{
 R"(
 Texture2D<float4> g_Input;
 
-float4 main() : SV_Target
+float4 main(float4 Pos : SV_Position) : SV_Target
 {
-    float depth = g_Input.Load(int3(0, 0, 0)).r;
+    float depth = g_Input.Load(int3(Pos.xy, 0)).r;
     return float4(depth, depth * 0.5, 0.75, 1.0);
 }
 )"
@@ -128,7 +128,7 @@ protected:
         auto* pSwapChain = pEnv->GetSwapChain();
         auto* pContext   = pEnv->GetDeviceContext();
 
-        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+        RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
         if (pTestingSwapChain)
         {
             ITextureView* pRTV = pSwapChain->GetCurrentBackBufferRTV();
@@ -180,7 +180,7 @@ protected:
         auto& PSODesc          = PSOCreateInfo.PSODesc;
         auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-        PSODesc.Name = "Draw command test - procedural triangles";
+        PSODesc.Name = "Read-only depth test";
 
         PSODesc.PipelineType                     = PIPELINE_TYPE_GRAPHICS;
         GraphicsPipeline.PrimitiveTopology       = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
@@ -382,8 +382,8 @@ private:
         }
         else
         {
-            GraphicsPipeline.DSVFormat      = GetDepthFormat();
-            GraphicsPipeline.UseReadOnlyDSV = bReadOnlyDSV;
+            GraphicsPipeline.DSVFormat   = GetDepthFormat();
+            GraphicsPipeline.ReadOnlyDSV = bReadOnlyDSV;
             if (ColorFormat != TEX_FORMAT_UNKNOWN)
             {
                 GraphicsPipeline.NumRenderTargets = 1;
@@ -534,7 +534,7 @@ std::string PrintTextureFormatsTestName(const testing::TestParamInfo<std::tuple<
     return name_ss.str();
 }
 
-INSTANTIATE_TEST_SUITE_P(TextureFormats,
+INSTANTIATE_TEST_SUITE_P(ReadOnlyDepth,
                          ReadOnlyDepthTest,
                          testing::Combine(
                              testing::Values<int>(TEX_FORMAT_D16_UNORM,
