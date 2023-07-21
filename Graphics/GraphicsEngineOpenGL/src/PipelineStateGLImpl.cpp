@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,6 +37,7 @@
 #include "GLTypeConversions.hpp"
 
 #include "EngineMemory.h"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -441,6 +442,19 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
     return ctx_pipeline.second;
 }
 
+GLuint PipelineStateGLImpl::GetGLProgramHandle(SHADER_TYPE Stage) const
+{
+    DEV_CHECK_ERR(IsPowerOfTwo(Stage), "Exactly one shader stage must be specified");
+
+    for (size_t i = 0; i < m_NumPrograms; ++i)
+    {
+        // Note: in case of non-separable programs, m_ShaderTypes[0] contains
+        //       all shader stages in the pipeline.
+        if ((m_ShaderTypes[i] & Stage) != 0)
+            return m_GLPrograms[i];
+    }
+    return 0;
+}
 
 void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderResourcesGL> pShaderResources, const char* ShaderName, SHADER_TYPE ShaderStages)
 {

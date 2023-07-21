@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,4 +25,5 @@
  *  of the possibility of such damages.
  */
 
+typedef unsigned int GLuint;
 #include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/PipelineStateGL.h"

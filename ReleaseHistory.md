@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added `IPipelineStateGL::GetGLProgramHandle` and `IShaderGL::GetGLShaderHandle` methods (API253007)
 * Enabled read-only depth-stencil buffers (API253006)
   * Added `TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL` view type
   * Added `UseReadOnlyDSV` member to `GraphicsPipelineDesc` struct
