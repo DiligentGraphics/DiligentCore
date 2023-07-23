@@ -320,7 +320,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    
             ShaderCI.Source          = "void main(){}";
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
             ShaderCI.Desc.Name       = "Dummy fragment shader";
-            pDeviceGL->CreateShader(ShaderCI, pTempPS.DblPtr<IShader>());
+            pDeviceGL->CreateShader(ShaderCI, pTempPS.DblPtr<IShader>(), nullptr);
 
             Shaders.emplace_back(pTempPS);
         }

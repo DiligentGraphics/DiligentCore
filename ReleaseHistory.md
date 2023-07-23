@@ -1,5 +1,6 @@
 ## Current progress
 
+* Removed `ppCompilerOutput` member of the `ShaderCreateInfo` struct and added it as parameter to the `IRenderDevice::CreateShader` method (API253008)
 * Added `IPipelineStateGL::GetGLProgramHandle` and `IShaderGL::GetGLShaderHandle` methods (API253007)
 * Enabled read-only depth-stencil buffers (API253006)
   * Added `TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL` view type

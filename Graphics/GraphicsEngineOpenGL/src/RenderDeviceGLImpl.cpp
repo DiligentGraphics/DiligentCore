@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -335,18 +335,24 @@ void RenderDeviceGLImpl::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferD
     CreateBufferImpl(ppBuffer, BuffDesc, std::ref(pDeviceContext->GetContextState()), GLHandle, /*bIsDeviceInternal =*/false);
 }
 
-void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal)
+void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo,
+                                      IShader**               ppShader,
+                                      IDataBlob**             ppCompilerOutput,
+                                      bool                    bIsDeviceInternal)
 {
     const ShaderGLImpl::CreateInfo GLShaderCI{
         GetDeviceInfo(),
-        GetAdapterInfo() //
+        GetAdapterInfo(),
+        ppCompilerOutput,
     };
     CreateShaderImpl(ppShader, ShaderCreateInfo, GLShaderCI, bIsDeviceInternal);
 }
 
-void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader)
+void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo,
+                                      IShader**               ppShader,
+                                      IDataBlob**             ppCompilerOutput)
 {
-    CreateShader(ShaderCreateInfo, ppShader, false);
+    CreateShader(ShaderCreateInfo, ppShader, ppCompilerOutput, false);
 }
 
 void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture, bool bIsDeviceInternal)

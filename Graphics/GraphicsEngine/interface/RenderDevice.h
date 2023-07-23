@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,14 +98,23 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 
     /// Creates a new shader object
 
-    /// \param [in] ShaderCI  - Shader create info, see Diligent::ShaderCreateInfo for details.
+    /// \param [in]  ShaderCI - Shader create info, see Diligent::ShaderCreateInfo for details.
     /// \param [out] ppShader - Address of the memory location where a pointer to the
     ///                         shader interface will be written.
     ///                         The function calls AddRef(), so that the new object will have
     ///                         one reference.
+    /// \param [out] ppCompilerOutput - Address of the memory location where a pointer to the
+    ///                                 the compiler output data blob will be written.
+    ///                                 If null, the compiler output will be ignored.
+    ///
+    /// \remarks    The buffer returned in ppCompilerOutput contains two null-terminated strings.
+    ///             The first one is the compiler output message. The second one is the full
+    ///             shader source code including definitions added by the engine. The data blob
+    ///             object must be released by the client.
     VIRTUAL void METHOD(CreateShader)(THIS_
                                       const ShaderCreateInfo REF ShaderCI,
-                                      IShader**                   ppShader) PURE;
+                                      IShader**                  ppShader,
+                                      IDataBlob**                ppCompilerOutput DEFAULT_VALUE(nullptr)) PURE;
 
     /// Creates a new texture object
 

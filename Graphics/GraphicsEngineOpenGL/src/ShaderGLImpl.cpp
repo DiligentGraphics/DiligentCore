@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -154,7 +154,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
                        << infoLog.data() << std::endl;
         }
 
-        if (ShaderCI.ppCompilerOutput != nullptr)
+        if (GLShaderCI.ppCompilerOutput != nullptr)
         {
             // infoLogLen accounts for null terminator
             auto  pOutputDataBlob = DataBlobImpl::Create(infoLogLen + FullSource.length() + 1);
@@ -162,7 +162,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
             if (infoLogLen > 0)
                 memcpy(DataPtr, infoLog.data(), infoLogLen);
             memcpy(DataPtr + infoLogLen, FullSource.data(), FullSource.length() + 1);
-            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
+            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(GLShaderCI.ppCompilerOutput));
         }
         else
         {

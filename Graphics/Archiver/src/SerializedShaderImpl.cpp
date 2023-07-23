@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -43,7 +43,8 @@ const INTERFACE_ID SerializedShaderImpl::IID_InternalImpl;
 SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters,
                                            SerializationDeviceImpl* pDevice,
                                            const ShaderCreateInfo&  ShaderCI,
-                                           const ShaderArchiveInfo& ArchiveInfo) :
+                                           const ShaderArchiveInfo& ArchiveInfo,
+                                           IDataBlob**              ppCompilerOutput) :
     TBase{pRefCounters},
     m_pDevice{pDevice}
 {
@@ -80,33 +81,33 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
         {
 #if D3D11_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
-                CreateShaderD3D11(pRefCounters, ShaderCI);
+                CreateShaderD3D11(pRefCounters, ShaderCI, ppCompilerOutput);
                 break;
 #endif
 
 #if D3D12_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
-                CreateShaderD3D12(pRefCounters, ShaderCI);
+                CreateShaderD3D12(pRefCounters, ShaderCI, ppCompilerOutput);
                 break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_GL:
             case ARCHIVE_DEVICE_DATA_FLAG_GLES:
-                CreateShaderGL(pRefCounters, ShaderCI, Flag == ARCHIVE_DEVICE_DATA_FLAG_GL ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES);
+                CreateShaderGL(pRefCounters, ShaderCI, Flag == ARCHIVE_DEVICE_DATA_FLAG_GL ? RENDER_DEVICE_TYPE_GL : RENDER_DEVICE_TYPE_GLES, ppCompilerOutput);
                 break;
 #endif
 
 #if VULKAN_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
-                CreateShaderVk(pRefCounters, ShaderCI);
+                CreateShaderVk(pRefCounters, ShaderCI, ppCompilerOutput);
                 break;
 #endif
 
 #if METAL_SUPPORTED
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
-                CreateShaderMtl(pRefCounters, ShaderCI, Flag == ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS ? DeviceType::Metal_MacOS : DeviceType::Metal_iOS);
+                CreateShaderMtl(pRefCounters, ShaderCI, Flag == ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS ? DeviceType::Metal_MacOS : DeviceType::Metal_iOS, ppCompilerOutput);
                 break;
 #endif
 

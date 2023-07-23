@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -398,9 +398,6 @@ TEST_P(TestBrokenShader, CompileFailure)
     ShaderCI.EntryPoint = "main";
     ShaderCI.Source     = "Not even a shader source";
 
-    RefCntAutoPtr<IDataBlob> pCompilerOutput;
-    ShaderCI.ppCompilerOutput = pCompilerOutput.RawDblPtr();
-
     const auto IsD3D = DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D11 || DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D12;
     pEnv->SetErrorAllowance(IsD3D ? 2 : 3, "No worries, errors are expected: testing broken shader\n");
     pEnv->PushExpectedErrorSubstring("Failed to create Shader object 'Archive test broken shader'");
@@ -408,8 +405,9 @@ TEST_P(TestBrokenShader, CompileFailure)
     if (!IsD3D)
         pEnv->PushExpectedErrorSubstring("Failed to parse shader source", false);
 
-    RefCntAutoPtr<IShader> pSerializedShader;
-    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, &pSerializedShader);
+    RefCntAutoPtr<IShader>   pSerializedShader;
+    RefCntAutoPtr<IDataBlob> pCompilerOutput;
+    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, &pSerializedShader, &pCompilerOutput);
     EXPECT_EQ(pSerializedShader, nullptr);
     EXPECT_NE(pCompilerOutput, nullptr);
 }

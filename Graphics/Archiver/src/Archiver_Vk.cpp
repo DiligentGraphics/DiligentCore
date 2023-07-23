@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -192,7 +192,9 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersVk)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureVkImpl)
 
-void SerializedShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI)
+void SerializedShaderImpl::CreateShaderVk(IReferenceCounters*     pRefCounters,
+                                          const ShaderCreateInfo& ShaderCI,
+                                          IDataBlob**             ppCompilerOutput)
 {
     const auto& VkProps         = m_pDevice->GetVkProperties();
     const auto& DeviceInfo      = m_pDevice->GetDeviceInfo();
@@ -204,7 +206,10 @@ void SerializedShaderImpl::CreateShaderVk(IReferenceCounters* pRefCounters, cons
         DeviceInfo,
         AdapterInfo,
         VkProps.VkVersion,
-        VkProps.SupportsSpirv14 //
+        VkProps.SupportsSpirv14,
+        // Do not overwrite compiler output from other APIs.
+        // TODO: collect all outputs.
+        ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
     };
     CreateShader<CompiledShaderVk>(DeviceType::Vulkan, pRefCounters, ShaderCI, VkShaderCI, pRenderDeviceVk);
 }

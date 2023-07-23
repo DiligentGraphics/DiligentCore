@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -143,9 +143,10 @@ SerializationDeviceImpl::~SerializationDeviceImpl()
 
 void SerializationDeviceImpl::CreateShader(const ShaderCreateInfo&  ShaderCI,
                                            const ShaderArchiveInfo& ArchiveInfo,
-                                           IShader**                ppShader)
+                                           IShader**                ppShader,
+                                           IDataBlob**              ppCompilerOutput)
 {
-    CreateShaderImpl(ppShader, ShaderCI, ArchiveInfo);
+    CreateShaderImpl(ppShader, ShaderCI, ArchiveInfo, ppCompilerOutput);
 }
 
 void SerializationDeviceImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)

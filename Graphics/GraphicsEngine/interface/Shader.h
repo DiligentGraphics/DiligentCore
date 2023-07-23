@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,7 +68,7 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
 
     /// The source language is Metal shading language (MSL)
     SHADER_SOURCE_LANGUAGE_MSL,
-    
+
     /// The source language is Metal shading language (MSL) that should be compiled verbatim
 
     /// Note that shader macros are ignored when compiling MSL verbatim, and an application
@@ -392,13 +392,6 @@ struct ShaderCreateInfo
     /// \note Loading constant buffer reflection introduces some overhead,
     ///       and should be disabled when it is not needed.
     bool LoadConstantBufferReflection DEFAULT_INITIALIZER(false);
-
-    /// Memory address where pointer to the compiler messages data blob will be written
-
-    /// The buffer contains two null-terminated strings. The first one is the compiler
-    /// output message. The second one is the full shader source code including definitions added
-    /// by the engine. Data blob object must be released by the client.
-    IDataBlob** ppCompilerOutput DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     constexpr ShaderCreateInfo() noexcept

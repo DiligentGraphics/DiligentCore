@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,7 +71,7 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
     ShaderAttrs.Desc.ShaderType           = SHADER_TYPE_VERTEX;
     ShaderAttrs.Source                    = VertexShaderSource;
     constexpr bool IsInternalDeviceObject = true;
-    pDeviceGL->CreateShader(ShaderAttrs, &m_pVertexShader, IsInternalDeviceObject);
+    pDeviceGL->CreateShader(ShaderAttrs, &m_pVertexShader, nullptr, IsInternalDeviceObject);
 
 
     static const char* SamplerType[RESOURCE_DIM_NUM_DIMENSIONS] = {};
@@ -148,7 +148,7 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
             auto Source          = SourceSS.str();
             ShaderAttrs.Source   = Source.c_str();
             auto& FragmentShader = m_pFragmentShaders[Dim * 3 + Fmt];
-            pDeviceGL->CreateShader(ShaderAttrs, &FragmentShader, IsInternalDeviceObject);
+            pDeviceGL->CreateShader(ShaderAttrs, &FragmentShader, nullptr, IsInternalDeviceObject);
             PSOCreateInfo.pPS = FragmentShader;
 
             auto& ResourceLayout = PSOCreateInfo.PSODesc.ResourceLayout;

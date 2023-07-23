@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -147,13 +147,16 @@ DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IRenderDevice)
     /// \param [in]  ArchiveInfo - Shader archive info, see Diligent::ShaderArchiveInfo for details.
     /// \param [out] ppShader    - Address of the memory location where a pointer to the
     ///                            shader interface will be written.
-    ///
+    /// \param [out] ppCompilerOutput - Address of the memory location where a pointer to the
+    ///                                 shader compiler output will be written.
+    ///                                 If null, the output will be ignored.
     /// \note
     ///     The method is thread-safe and may be called from multiple threads simultaneously.
     VIRTUAL void METHOD(CreateShader)(THIS_
                                       const ShaderCreateInfo REF  ShaderCI,
                                       const ShaderArchiveInfo REF ArchiveInfo,
-                                      IShader**                   ppShader) PURE;
+                                      IShader**                   ppShader,
+                                      IDataBlob**                 ppCompilerOutput DEFAULT_VALUE(nullptr)) PURE;
 
  
     /// Creates a serialized pipeline resource signature.

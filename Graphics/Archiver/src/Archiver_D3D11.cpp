@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -197,12 +197,17 @@ void SerializedPipelineStateImpl::PatchShadersD3D11(const CreateInfoType& Create
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D11)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D11Impl)
 
-void SerializedShaderImpl::CreateShaderD3D11(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI) noexcept(false)
+void SerializedShaderImpl::CreateShaderD3D11(IReferenceCounters*     pRefCounters,
+                                             const ShaderCreateInfo& ShaderCI,
+                                             IDataBlob**             ppCompilerOutput) noexcept(false)
 {
     const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
         m_pDevice->GetDeviceInfo(),
         m_pDevice->GetAdapterInfo(),
-        static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11Properties().FeatureLevel) //
+        static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11Properties().FeatureLevel),
+        // Do not overwrite compiler output from other APIs.
+        // TODO: collect all outputs.
+        ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
     };
     CreateShader<CompiledShaderD3D11>(DeviceType::Direct3D11, pRefCounters, ShaderCI, D3D11ShaderCI, m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_D3D11));
 }

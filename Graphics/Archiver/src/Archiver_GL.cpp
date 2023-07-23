@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -226,11 +226,15 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsGL(const PipelineResour
 
 void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
                                           const ShaderCreateInfo& ShaderCI,
-                                          RENDER_DEVICE_TYPE      DeviceType) noexcept(false)
+                                          RENDER_DEVICE_TYPE      DeviceType,
+                                          IDataBlob**             ppCompilerOutput) noexcept(false)
 {
     const ShaderGLImpl::CreateInfo GLShaderCI{
         m_pDevice->GetDeviceInfo(),
-        m_pDevice->GetAdapterInfo() //
+        m_pDevice->GetAdapterInfo(),
+        // Do not overwrite compiler output from other APIs.
+        // TODO: collect all outputs.
+        ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
     };
     CreateShader<CompiledShaderGL>(DeviceType::OpenGL, pRefCounters, ShaderCI, GLShaderCI, m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_GL));
 
@@ -250,7 +254,7 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
     VERIFY_EXPR(DeviceType == RENDER_DEVICE_TYPE_GL || DeviceType == RENDER_DEVICE_TYPE_GLES);
     Attribs.Version = DeviceType == RENDER_DEVICE_TYPE_GL ? GLSLangUtils::SpirvVersion::GL : GLSLangUtils::SpirvVersion::GLES;
 
-    Attribs.ppCompilerOutput = ShaderCI.ppCompilerOutput;
+    Attribs.ppCompilerOutput = ppCompilerOutput;
     Attribs.ShaderSource     = static_cast<const char*>(Source);
     Attribs.SourceCodeLen    = static_cast<int>(SourceLen);
 

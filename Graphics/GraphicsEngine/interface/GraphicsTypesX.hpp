@@ -1908,7 +1908,11 @@ public:
 
     RefCntAutoPtr<IShader> CreateShader(const ShaderCreateInfo& ShaderCI) noexcept(!ThrowOnError)
     {
-        return CreateDeviceObject<IShader>("shader", ShaderCI.Desc.Name, &IRenderDevice::CreateShader, ShaderCI);
+        RefCntAutoPtr<IShader> pShader;
+        m_pDevice->CreateShader(ShaderCI, &pShader, nullptr);
+        if (!pShader && ThrowOnError)
+            LOG_ERROR_AND_THROW("Failed to create shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : "<unnamed>"), "'.");
+        return pShader;
     }
 
     template <typename... ArgsType>

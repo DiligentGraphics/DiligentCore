@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,6 +59,7 @@ public:
         const RenderDeviceInfo&    DeviceInfo;
         const GraphicsAdapterInfo& AdapterInfo;
         const D3D_FEATURE_LEVEL    FeatureLevel;
+        IDataBlob** const          ppCompilerOutput;
     };
     ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                     class RenderDeviceD3D11Impl* pRenderDeviceD3D11,

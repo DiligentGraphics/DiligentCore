@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -85,17 +85,14 @@ void TestBrokenShader(const char* Source, const char* Name, SHADER_SOURCE_LANGUA
     ShaderMacro Macros[] = {{"TEST", "MACRO"}, {}};
     ShaderCI.Macros      = Macros;
 
-    IDataBlob* pErrors        = nullptr;
-    ShaderCI.ppCompilerOutput = &pErrors;
-
     pEnv->SetErrorAllowance(ErrorAllowance, "\n\nNo worries, testing broken shader...\n\n");
-    RefCntAutoPtr<IShader> pBrokenShader;
-    pDevice->CreateShader(ShaderCI, &pBrokenShader);
+    RefCntAutoPtr<IShader>   pBrokenShader;
+    RefCntAutoPtr<IDataBlob> pErrors;
+    pDevice->CreateShader(ShaderCI, &pBrokenShader, &pErrors);
     EXPECT_FALSE(pBrokenShader);
     ASSERT_NE(pErrors, nullptr);
     const char* Msg = reinterpret_cast<const char*>(pErrors->GetDataPtr());
     LOG_INFO_MESSAGE("Compiler output:\n", Msg);
-    pErrors->Release();
 }
 
 TEST(Shader, BrokenHLSL)

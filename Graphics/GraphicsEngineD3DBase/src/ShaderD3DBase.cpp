@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -133,7 +133,10 @@ static HRESULT CompileShader(const char*             Source,
     return D3DCompile(Source, SourceLength, nullptr, Macros, &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
 }
 
-ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersion ShaderModel, IDXCompiler* DxCompiler)
+ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI,
+                             const ShaderVersion     ShaderModel,
+                             IDXCompiler*            DxCompiler,
+                             IDataBlob**             ppCompilerOutput)
 {
     if (ShaderCI.Source || ShaderCI.FilePath)
     {
@@ -165,7 +168,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
         if (UseDXC)
         {
             VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
-            DxCompiler->Compile(ShaderCI, ShaderModel, nullptr, reinterpret_cast<IDxcBlob**>(&m_pShaderByteCode), nullptr, ShaderCI.ppCompilerOutput);
+            DxCompiler->Compile(ShaderCI, ShaderModel, nullptr, reinterpret_cast<IDxcBlob**>(&m_pShaderByteCode), nullptr, ppCompilerOutput);
         }
         else
         {
@@ -176,7 +179,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
             CComPtr<ID3DBlob> CompilerOutput;
 
             auto hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &CompilerOutput);
-            HandleHLSLCompilerResult(SUCCEEDED(hr), CompilerOutput.p, ShaderSource, ShaderCI.Desc.Name, ShaderCI.ppCompilerOutput);
+            HandleHLSLCompilerResult(SUCCEEDED(hr), CompilerOutput.p, ShaderSource, ShaderCI.Desc.Name, ppCompilerOutput);
         }
     }
     else if (ShaderCI.ByteCode)

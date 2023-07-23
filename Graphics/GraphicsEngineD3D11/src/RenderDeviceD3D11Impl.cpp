@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -191,12 +191,15 @@ void RenderDeviceD3D11Impl::CreateBuffer(const BufferDesc& BuffDesc, const Buffe
     CreateBufferImpl(ppBuffer, BuffDesc, pBuffData);
 }
 
-void RenderDeviceD3D11Impl::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
+void RenderDeviceD3D11Impl::CreateShader(const ShaderCreateInfo& ShaderCI,
+                                         IShader**               ppShader,
+                                         IDataBlob**             ppCompilerOutput)
 {
     const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
         GetDeviceInfo(),
         GetAdapterInfo(),
-        GetD3D11Device()->GetFeatureLevel() //
+        GetD3D11Device()->GetFeatureLevel(),
+        ppCompilerOutput,
     };
     CreateShaderImpl(ppShader, ShaderCI, D3D11ShaderCI);
 }

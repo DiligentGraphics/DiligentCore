@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,7 +71,7 @@ std::vector<uint32_t> CompileShaderDXC(const ShaderCreateInfo&         ShaderCI,
     auto* pDXCompiler = VkShaderCI.pDXCompiler;
     VERIFY_EXPR(pDXCompiler != nullptr && pDXCompiler->IsLoaded());
     std::vector<uint32_t> SPIRV;
-    pDXCompiler->Compile(ShaderCI, ShaderCI.HLSLVersion, VulkanDefine, nullptr, &SPIRV, ShaderCI.ppCompilerOutput);
+    pDXCompiler->Compile(ShaderCI, ShaderCI.HLSLVersion, VulkanDefine, nullptr, &SPIRV, VkShaderCI.ppCompilerOutput);
 
 #if !DILIGENT_NO_HLSL
     // SPIR-V bytecode generated from HLSL must be legalized to
@@ -97,7 +97,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
 #else
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
-        SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, VulkanDefine, ShaderCI.ppCompilerOutput);
+        SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, VulkanDefine, VkShaderCI.ppCompilerOutput);
     }
     else
     {
@@ -131,7 +131,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
         Attribs.Macros                     = Macros;
         Attribs.AssignBindings             = true;
         Attribs.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
-        Attribs.ppCompilerOutput           = ShaderCI.ppCompilerOutput;
+        Attribs.ppCompilerOutput           = VkShaderCI.ppCompilerOutput;
 
         if (VkShaderCI.VkVersion >= VK_API_VERSION_1_2)
             Attribs.Version = GLSLangUtils::SpirvVersion::Vk120;

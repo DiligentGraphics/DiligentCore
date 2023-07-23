@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -115,7 +115,8 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
     {
         ShaderCI,
         GetD3D12ShaderModel(ShaderCI, D3D12ShaderCI.pDXCompiler, D3D12ShaderCI.MaxShaderVersion),
-        D3D12ShaderCI.pDXCompiler
+        D3D12ShaderCI.pDXCompiler,
+        D3D12ShaderCI.ppCompilerOutput
     },
     m_EntryPoint{ShaderCI.EntryPoint}
 // clang-format on

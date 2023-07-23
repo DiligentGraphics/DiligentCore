@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -120,7 +120,8 @@ int TestRenderDeviceCInterface_CreateShader(struct IRenderDevice* pRenderDevice)
 {
     static const char*      ShaderSource = "float4 main() : SV_Target {return float4(0.0, 0.0, 0.0, 0.0);}";
     struct ShaderCreateInfo ShaderCI;
-    struct IShader*         pShader = NULL;
+    struct IShader*         pShader         = NULL;
+    struct IDataBlob*       pCompilerOutput = NULL;
 
     int num_errors = 0;
 
@@ -133,11 +134,14 @@ int TestRenderDeviceCInterface_CreateShader(struct IRenderDevice* pRenderDevice)
     ShaderCI.EntryPoint     = "main";
     ShaderCI.Source         = ShaderSource;
 
-    IRenderDevice_CreateShader(pRenderDevice, &ShaderCI, &pShader);
+    IRenderDevice_CreateShader(pRenderDevice, &ShaderCI, &pShader, &pCompilerOutput);
     if (pShader != NULL)
         IObject_Release(pShader);
     else
         ++num_errors;
+
+    if (pCompilerOutput != NULL)
+        IObject_Release(pCompilerOutput);
 
     return num_errors;
 }

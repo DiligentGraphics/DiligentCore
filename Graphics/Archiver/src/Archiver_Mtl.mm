@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -434,7 +434,7 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
         LOG_PATCH_SHADER_ERROR_AND_THROW("Failed to read Metal shader library.");
 
 #undef LOG_PATCH_SHADER_ERROR_AND_THROW
-    
+
     // Pack shader Mtl acrhive data into the byte code.
     // The data is unpacked by DearchiverMtlImpl::UnpackShader().
     const ShaderMtlImpl::ArchiveData ShaderMtlArchiveData{
@@ -442,7 +442,7 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
         MslData.ComputeGroupSize,
         IORemapping
     };
-    
+
     SerializedData ShaderData;
     {
         Serializer<SerializerMode::Measure> Ser;
@@ -551,18 +551,26 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersMtl, DeviceType DevType, const std::string& DumpDir)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureMtlImpl)
 
-void SerializedShaderImpl::CreateShaderMtl(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI, DeviceType Type) noexcept(false)
+void SerializedShaderImpl::CreateShaderMtl(IReferenceCounters*     pRefCounters,
+                                           const ShaderCreateInfo& ShaderCI,
+                                           DeviceType              Type,
+                                           IDataBlob**             ppCompilerOutput) noexcept(false)
 {
     const auto& DeviceInfo       = m_pDevice->GetDeviceInfo();
     const auto& AdapterInfo      = m_pDevice->GetAdapterInfo();
     const auto& MtlProps         = m_pDevice->GetMtlProperties();
     auto*       pRenderDeviceMtl = m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_METAL);
-        
+
     ShaderMtlImpl::CreateInfo MtlShaderCI
     {
         DeviceInfo,
         AdapterInfo,
         nullptr, // pDearchiveData
+
+        // Do not overwrite compiler output from other APIs.
+        // TODO: collect all outputs.
+        ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
+
         std::function<void(std::string&)>{
             [&](std::string& MslSource)
             {
@@ -570,7 +578,7 @@ void SerializedShaderImpl::CreateShaderMtl(IReferenceCounters* pRefCounters, con
             }
         }
     };
-    
+
     CreateShader<CompiledShaderMtl>(Type, pRefCounters, ShaderCI, MtlShaderCI, pRenderDeviceMtl);
 }
 

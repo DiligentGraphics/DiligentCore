@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ XXH128Hash XXH128State::Digest() noexcept
 
 void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
 {
-    ASSERT_SIZEOF64(ShaderCI, 144, "Did you add new members to ShaderCreateInfo? Please handle them here.");
+    ASSERT_SIZEOF64(ShaderCI, 136, "Did you add new members to ShaderCreateInfo? Please handle them here.");
 
     Update(ShaderCI.SourceLength, // Aka ByteCodeSize
            ShaderCI.EntryPoint,

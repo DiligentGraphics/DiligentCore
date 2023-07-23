@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -170,7 +170,9 @@ INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersD3D12)
 INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureD3D12Impl)
 
 
-void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, const ShaderCreateInfo& ShaderCI) noexcept(false)
+void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters*     pRefCounters,
+                                             const ShaderCreateInfo& ShaderCI,
+                                             IDataBlob**             ppCompilerOutput) noexcept(false)
 {
     const auto& D3D12Props         = m_pDevice->GetD3D12Properties();
     const auto& DeviceInfo         = m_pDevice->GetDeviceInfo();
@@ -181,7 +183,10 @@ void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters* pRefCounters, c
         D3D12Props.pDxCompiler,
         DeviceInfo,
         AdapterInfo,
-        D3D12Props.ShaderVersion //
+        D3D12Props.ShaderVersion,
+        // Do not overwrite compiler output from other APIs.
+        // TODO: collect all outputs.
+        ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
     };
     CreateShader<CompiledShaderD3D12>(DeviceType::Direct3D12, pRefCounters, ShaderCI, D3D12ShaderCI, pRenderDeviceD3D12);
 }

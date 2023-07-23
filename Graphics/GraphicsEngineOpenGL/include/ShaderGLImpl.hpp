@@ -48,6 +48,7 @@ public:
     {
         const RenderDeviceInfo&    DeviceInfo;
         const GraphicsAdapterInfo& AdapterInfo;
+        IDataBlob** const          ppCompilerOutput;
     };
 
     ShaderGLImpl(IReferenceCounters*     pRefCounters,
