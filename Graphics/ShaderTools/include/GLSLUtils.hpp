@@ -40,10 +40,22 @@ enum class TargetGLSLCompiler
     driver
 };
 
-String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
-                             const RenderDeviceInfo&    DeviceInfo,
-                             const GraphicsAdapterInfo& AdapterInfo,
-                             TargetGLSLCompiler         TargetCompiler,
-                             const char*                ExtraDefinitions = nullptr) noexcept(false);
+struct IHLSL2GLSLConversionStream;
+
+// If HLSL->GLSL converter is used to convert HLSL shader source to
+// GLSL, this member can provide pointer to the conversion stream. It is useful
+// when the same file is used to create a number of different shaders. If
+// ppConversionStream is null, the converter will parse the same file
+// every time new shader is converted. If ppConversionStream is not null,
+// the converter will write pointer to the conversion stream to *ppConversionStream
+// the first time and will use it in all subsequent times.
+// For all subsequent conversions, FilePath member must be the same, or
+// new stream will be created and warning message will be displayed.
+String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
+                             const RenderDeviceInfo&      DeviceInfo,
+                             const GraphicsAdapterInfo&   AdapterInfo,
+                             TargetGLSLCompiler           TargetCompiler,
+                             const char*                  ExtraDefinitions   = nullptr,
+                             IHLSL2GLSLConversionStream** ppConversionStream = nullptr) noexcept(false);
 
 } // namespace Diligent

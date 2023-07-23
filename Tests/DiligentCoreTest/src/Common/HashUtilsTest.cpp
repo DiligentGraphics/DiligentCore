@@ -1142,7 +1142,7 @@ TEST(Common_HashUtils, VersionXXH128Hash)
 
 TEST(XXH128HasherTest, ShaderCreateInfo)
 {
-    ASSERT_SIZEOF64(ShaderCreateInfo, 136, "Did you add new members to ShaderCreateInfo? Please update the tests.");
+    ASSERT_SIZEOF64(ShaderCreateInfo, 128, "Did you add new members to ShaderCreateInfo? Please update the tests.");
     XXH128HasherTestHelper<ShaderCreateInfo> Helper{"ShaderCreateInfo"};
 
     TEST_STRINGS(Source, "Source1", "Source2", "Source3");

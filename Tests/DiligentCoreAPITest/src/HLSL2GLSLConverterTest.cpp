@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,10 +36,9 @@ using namespace Diligent::Testing;
 namespace
 {
 
-RefCntAutoPtr<IShader> CreateTestShader(const char*                  FileName,
-                                        const char*                  EntryPoint,
-                                        SHADER_TYPE                  ShaderType,
-                                        IHLSL2GLSLConversionStream** ppConversionStream = nullptr)
+RefCntAutoPtr<IShader> CreateTestShader(const char* FileName,
+                                        const char* EntryPoint,
+                                        SHADER_TYPE ShaderType)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -56,7 +55,6 @@ RefCntAutoPtr<IShader> CreateTestShader(const char*                  FileName,
     ShaderCI.Desc.Name                       = "Test converted shader";
     ShaderCI.Desc.ShaderType                 = ShaderType;
     ShaderCI.Desc.UseCombinedTextureSamplers = pDevice->GetDeviceInfo().IsGLDevice();
-    ShaderCI.ppConversionStream              = ppConversionStream;
 
     RefCntAutoPtr<IShader> pShader;
     pDevice->CreateShader(ShaderCI, &pShader);
@@ -68,11 +66,9 @@ TEST(HLSL2GLSLConverterTest, VS_PS)
 {
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    RefCntAutoPtr<IHLSL2GLSLConversionStream> pStream;
-
-    auto pVS = CreateTestShader("VS_PS.hlsl", "TestVS", SHADER_TYPE_VERTEX, &pStream);
+    auto pVS = CreateTestShader("VS_PS.hlsl", "TestVS", SHADER_TYPE_VERTEX);
     EXPECT_NE(pVS, nullptr);
-    auto pPS = CreateTestShader("VS_PS.hlsl", "TestPS", SHADER_TYPE_PIXEL, &pStream);
+    auto pPS = CreateTestShader("VS_PS.hlsl", "TestPS", SHADER_TYPE_PIXEL);
     EXPECT_NE(pPS, nullptr);
 }
 

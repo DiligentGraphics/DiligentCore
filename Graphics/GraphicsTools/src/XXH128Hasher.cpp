@@ -62,7 +62,7 @@ XXH128Hash XXH128State::Digest() noexcept
 
 void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
 {
-    ASSERT_SIZEOF64(ShaderCI, 136, "Did you add new members to ShaderCreateInfo? Please handle them here.");
+    ASSERT_SIZEOF64(ShaderCI, 128, "Did you add new members to ShaderCreateInfo? Please handle them here.");
 
     Update(ShaderCI.SourceLength, // Aka ByteCodeSize
            ShaderCI.EntryPoint,

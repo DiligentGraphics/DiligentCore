@@ -35,8 +35,6 @@ ShaderCreateInfoWrapper::ShaderCreateInfoWrapper(const ShaderCreateInfo& ShaderC
     m_CreateInfo{ShaderCI},
     m_SourceFactory{ShaderCI.pShaderSourceStreamFactory}
 {
-    m_CreateInfo.ppConversionStream = nullptr;
-
     FixedLinearAllocator Allocator{RawAllocator};
 
     Allocator.AddSpaceForString(ShaderCI.EntryPoint);

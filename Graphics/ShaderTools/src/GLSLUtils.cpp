@@ -40,11 +40,12 @@
 namespace Diligent
 {
 
-String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
-                             const RenderDeviceInfo&    DeviceInfo,
-                             const GraphicsAdapterInfo& AdapterInfo,
-                             TargetGLSLCompiler         TargetCompiler,
-                             const char*                ExtraDefinitions) noexcept(false)
+String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
+                             const RenderDeviceInfo&      DeviceInfo,
+                             const GraphicsAdapterInfo&   AdapterInfo,
+                             TargetGLSLCompiler           TargetCompiler,
+                             const char*                  ExtraDefinitions,
+                             IHLSL2GLSLConversionStream** ppConversionStream) noexcept(false)
 {
     // clang-format off
     VERIFY(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
@@ -301,7 +302,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
 
         HLSL2GLSLConverterImpl::ConversionAttribs Attribs;
         Attribs.pSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
-        Attribs.ppConversionStream   = ShaderCI.ppConversionStream;
+        Attribs.ppConversionStream   = ppConversionStream;
         Attribs.HLSLSource           = SourceData.Source;
         Attribs.NumSymbols           = SourceData.SourceLength;
         Attribs.EntryPoint           = ShaderCI.EntryPoint;
