@@ -1907,10 +1907,9 @@ struct Version
     constexpr Version() noexcept
     {}
 
-    template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
-    constexpr Version(T _Major, T _Minor) noexcept :
-        Major{static_cast<decltype(Major)>(_Major)},
-        Minor{static_cast<decltype(Minor)>(_Minor)}
+    constexpr Version(Uint32 _Major, Uint32 _Minor) noexcept :
+        Major{_Major},
+        Minor{_Minor}
     {
     }
 

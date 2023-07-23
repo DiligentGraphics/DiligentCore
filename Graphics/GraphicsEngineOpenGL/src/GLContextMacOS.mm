@@ -98,8 +98,8 @@ namespace Diligent
             LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
         DevType          = RENDER_DEVICE_TYPE_GL;
-        APIVersion.Major = static_cast<Uint8>(MajorVersion);
-        APIVersion.Minor = static_cast<Uint8>(MinorVersion);
+        APIVersion.Major = static_cast<Uint32>(MajorVersion);
+        APIVersion.Minor = static_cast<Uint32>(MinorVersion);
     }
 
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()

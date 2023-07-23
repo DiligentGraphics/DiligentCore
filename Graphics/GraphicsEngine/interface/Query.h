@@ -61,7 +61,7 @@ struct QueryDataBinaryOcclusion
 
     /// Indicates if at least one sample passed depth and stencil testing in between
     /// IDeviceContext::BeginQuery and IDeviceContext::EndQuery.
-    Bool AnySamplePassed DEFAULT_INITIALIZER(0);
+    Bool AnySamplePassed DEFAULT_INITIALIZER(False);
 };
 typedef struct QueryDataBinaryOcclusion QueryDataBinaryOcclusion;
 

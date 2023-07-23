@@ -275,7 +275,7 @@ void LoadGLFunctions()
     {
         glGetIntegerv(GL_MINOR_VERSION, &MinorVersion);
         if (glGetError() == GL_NO_ERROR)
-            glesVer = {MajorVersion, MinorVersion};
+            glesVer = {static_cast<Diligent::Uint32>(MajorVersion), static_cast<Diligent::Uint32>(MinorVersion)};
     }
     VERIFY_EXPR(glesVer >= Diligent::Version(3, 0));
 

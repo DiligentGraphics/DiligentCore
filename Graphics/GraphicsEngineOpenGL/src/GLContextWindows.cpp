@@ -216,7 +216,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
         LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
     DevType    = RENDER_DEVICE_TYPE_GL;
-    APIVersion = Version{MajorVersion, MinorVersion};
+    APIVersion = Version{static_cast<Uint32>(MajorVersion), static_cast<Uint32>(MinorVersion)};
     VERIFY(static_cast<int>(APIVersion.Major) == MajorVersion && static_cast<int>(APIVersion.Minor) == MinorVersion,
            "Not enough bits to store version number");
 }

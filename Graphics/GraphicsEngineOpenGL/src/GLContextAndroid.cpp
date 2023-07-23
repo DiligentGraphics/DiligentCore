@@ -275,8 +275,8 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
     Init(NativeWindow);
 
     DevType          = RENDER_DEVICE_TYPE_GLES;
-    APIVersion.Major = static_cast<Uint8>(major_version_);
-    APIVersion.Minor = static_cast<Uint8>(minor_version_);
+    APIVersion.Major = static_cast<Uint32>(major_version_);
+    APIVersion.Minor = static_cast<Uint32>(minor_version_);
 }
 
 GLContext::~GLContext()
