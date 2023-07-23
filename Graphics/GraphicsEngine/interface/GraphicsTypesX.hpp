@@ -1927,10 +1927,10 @@ public:
         return CreateDeviceObject<ISampler>("sampler", SamDesc.Name, &IRenderDevice::CreateSampler, SamDesc);
     }
 
-    RefCntAutoPtr<IResourceMapping> CreateResourceMapping(const ResourceMappingDesc& Desc) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IResourceMapping> CreateResourceMapping(const ResourceMappingCreateInfo& ResMappingCI) noexcept(!ThrowOnError)
     {
         RefCntAutoPtr<IResourceMapping> pResMapping;
-        m_pDevice->CreateResourceMapping(Desc, &pResMapping);
+        m_pDevice->CreateResourceMapping(ResMappingCI, &pResMapping);
         if (!pResMapping && ThrowOnError)
             LOG_ERROR_AND_THROW("Failed to create resource mapping.");
         return pResMapping;

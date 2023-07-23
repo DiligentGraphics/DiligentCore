@@ -1,5 +1,7 @@
 ## Current progress
 
+* Replaced `ResourceMappingDesc` with `ResourceMappingCreateInfo` (API253010)
+  * Use `ResourceMappingCreateInfo::NumEntries` to define the number of entries instead of the trailing null entry
 * Removed `ShaderCreateInfo::ppConversionStream` (API253009)
 * Removed `ppCompilerOutput` member of the `ShaderCreateInfo` struct and added it as parameter to the `IRenderDevice::CreateShader` method (API253008)
 * Added `IPipelineStateGL::GetGLProgramHandle` and `IShaderGL::GetGLShaderHandle` methods (API253007)

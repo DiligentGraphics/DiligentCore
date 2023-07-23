@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -208,15 +208,15 @@ TEST(ShaderResourceLayout, ResourceArray)
         ResourceMappingEntry{"g_tex2DTest", pTextures[1]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 1},
         ResourceMappingEntry{"g_tex2DTest", pTextures[2]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 2},
         ResourceMappingEntry{"g_tex2DTest2", pTextures[5]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 0},
-        ResourceMappingEntry{"g_tex2D", pTextures[6]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 0},
-        ResourceMappingEntry{}
+        ResourceMappingEntry{"g_tex2D", pTextures[6]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), 0}
     };
     // clang-format on
 
-    ResourceMappingDesc ResMappingDesc;
-    ResMappingDesc.pEntries = ResMpEntries;
+    ResourceMappingCreateInfo ResMappingCI;
+    ResMappingCI.pEntries   = ResMpEntries;
+    ResMappingCI.NumEntries = _countof(ResMpEntries);
     RefCntAutoPtr<IResourceMapping> pResMapping;
-    pDevice->CreateResourceMapping(ResMappingDesc, &pResMapping);
+    pDevice->CreateResourceMapping(ResMappingCI, &pResMapping);
 
     //pVS->BindResources(m_pResourceMapping, 0);
     IDeviceObject* ppSRVs[] = {pTextures[3]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE)};

@@ -30,7 +30,7 @@
 /// \file
 /// Diligent API information
 
-#define DILIGENT_API_VERSION 253009
+#define DILIGENT_API_VERSION 253010
 
 #include "../../../Primitives/interface/BasicTypes.h"
 
@@ -87,7 +87,7 @@ struct APIInfo
     size_t RayTracingPipelineStateCreateInfoSize DEFAULT_INITIALIZER(0);
     size_t RasterizerStateDescSize               DEFAULT_INITIALIZER(0);
     size_t ResourceMappingEntrySize              DEFAULT_INITIALIZER(0);
-    size_t ResourceMappingDescSize               DEFAULT_INITIALIZER(0);
+    size_t ResourceMappingCreateInfoSize         DEFAULT_INITIALIZER(0);
     size_t SamplerDescSize                       DEFAULT_INITIALIZER(0);
     size_t ShaderDescSize                        DEFAULT_INITIALIZER(0);
     size_t ShaderMacroSize                       DEFAULT_INITIALIZER(0);

@@ -219,14 +219,14 @@ int TestRenderDeviceCInterface_CreateSampler(struct IRenderDevice* pRenderDevice
 
 int TestRenderDeviceCInterface_CreateResourceMapping(struct IRenderDevice* pRenderDevice)
 {
-    struct ResourceMappingDesc ResMappingDesc;
-    struct IResourceMapping*   pResMapping = NULL;
+    struct ResourceMappingCreateInfo ResMappingCI;
+    struct IResourceMapping*         pResMapping = NULL;
 
     int num_errors = 0;
 
-    memset(&ResMappingDesc, 0, sizeof(ResMappingDesc));
+    memset(&ResMappingCI, 0, sizeof(ResMappingCI));
 
-    IRenderDevice_CreateResourceMapping(pRenderDevice, &ResMappingDesc, &pResMapping);
+    IRenderDevice_CreateResourceMapping(pRenderDevice, &ResMappingCI, &pResMapping);
     if (pResMapping != NULL)
         IObject_Release(pResMapping);
     else

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,9 +34,9 @@ int TestResourceMappingCInterface(struct IResourceMapping* pResourceMapping)
     IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    ResourceMappingDesc SCDesc;
+    ResourceMappingCreateInfo ResMappingCI;
 
-    memset(&SCDesc, 0, sizeof(SCDesc));
+    memset(&ResMappingCI, 0, sizeof(ResMappingCI));
 
     int num_errors = TestObjectCInterface((struct IObject*)pResourceMapping);
 

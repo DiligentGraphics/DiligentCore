@@ -560,13 +560,13 @@ actual resources:
 ```cpp
 ResourceMappingEntry Entries[] =
 {
-    {"g_Texture", pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE)},
-    ResourceMappingEntry{}
+    {"g_Texture", pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE)}
 };
-ResourceMappingDesc ResMappingDesc;
-ResMappingDesc.pEntries= Entries;
+ResourceMappingCreateInfo ResMappingCI;
+ResMappingCI.pEntries   = Entries;
+ResMappingCI.NumEntries = _countof(Entries);
 RefCntAutoPtr<IResourceMapping> pResMapping;
-pRenderDevice->CreateResourceMapping( ResMappingDesc, &pResMapping );
+pRenderDevice->CreateResourceMapping(ResMappingCI, &pResMapping);
 ```
 
 The resource mapping can then be used to bind all static resources in a pipeline state (`IPipelineState::BindStaticResources()`):

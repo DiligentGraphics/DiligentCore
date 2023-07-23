@@ -159,14 +159,14 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 
     /// Creates a new resource mapping
 
-    /// \param [in]  MappingDesc - Resource mapping description, see Diligent::ResourceMappingDesc for details.
-    /// \param [out] ppMapping   - Address of the memory location where a pointer to the
-    ///                            resource mapping interface will be written.
-    ///                            The function calls AddRef(), so that the new object will have
-    ///                            one reference.
+    /// \param [in]  ResMappingCI - Resource mapping create info, see Diligent::ResourceMappingCreateInfo for details.
+    /// \param [out] ppMapping    - Address of the memory location where a pointer to the
+    ///                             resource mapping interface will be written.
+    ///                             The function calls AddRef(), so that the new object will have
+    ///                             one reference.
     VIRTUAL void METHOD(CreateResourceMapping)(THIS_
-                                               const ResourceMappingDesc REF MappingDesc,
-                                               IResourceMapping**            ppMapping) PURE;
+                                               const ResourceMappingCreateInfo REF ResMappingCI,
+                                               IResourceMapping**                  ppMapping) PURE;
 
     /// Creates a new graphics pipeline state object
 

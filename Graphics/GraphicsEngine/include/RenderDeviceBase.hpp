@@ -217,20 +217,25 @@ public:
     }
 
     /// Implementation of IRenderDevice::CreateResourceMapping().
-    virtual void DILIGENT_CALL_TYPE CreateResourceMapping(const ResourceMappingDesc& MappingDesc, IResourceMapping** ppMapping) override final
+    virtual void DILIGENT_CALL_TYPE CreateResourceMapping(const ResourceMappingCreateInfo& ResMappingCI, IResourceMapping** ppMapping) override final
     {
         DEV_CHECK_ERR(ppMapping != nullptr, "Null pointer provided");
         if (ppMapping == nullptr)
             return;
         DEV_CHECK_ERR(*ppMapping == nullptr, "Overwriting reference to existing object may cause memory leaks");
+        DEV_CHECK_ERR(ResMappingCI.pEntries == nullptr || ResMappingCI.NumEntries != 0, "Starting with API253010, the number of entries is defined through the NumEntries member.");
 
         auto* pResourceMapping{NEW_RC_OBJ(m_ResMappingAllocator, "ResourceMappingImpl instance", ResourceMappingImpl)(GetRawAllocator())};
         pResourceMapping->QueryInterface(IID_ResourceMapping, reinterpret_cast<IObject**>(ppMapping));
-        if (MappingDesc.pEntries)
+        if (ResMappingCI.pEntries != nullptr)
         {
-            for (auto* pEntry = MappingDesc.pEntries; pEntry->Name && pEntry->pObject; ++pEntry)
+            for (Uint32 i = 0; i < ResMappingCI.NumEntries; ++i)
             {
-                (*ppMapping)->AddResourceArray(pEntry->Name, pEntry->ArrayIndex, &pEntry->pObject, 1, true);
+                const auto& Entry = ResMappingCI.pEntries[i];
+                if (Entry.Name != nullptr && Entry.pObject != nullptr)
+                    (*ppMapping)->AddResourceArray(Entry.Name, Entry.ArrayIndex, &Entry.pObject, 1, true);
+                else
+                    DEV_ERROR("Name and pObject must not be null. Note that starting with API253010, the number of entries is defined through the NumEntries member.");
             }
         }
     }
