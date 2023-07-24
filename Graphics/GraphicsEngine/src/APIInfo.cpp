@@ -101,6 +101,7 @@ static APIInfo InitAPIInfo()
     INIT_STRUCTURE_SIZE(SamplerDesc);
     INIT_STRUCTURE_SIZE(ShaderDesc);
     INIT_STRUCTURE_SIZE(ShaderMacro);
+    INIT_STRUCTURE_SIZE(ShaderMacroArray);
     INIT_STRUCTURE_SIZE(ShaderCreateInfo);
     INIT_STRUCTURE_SIZE(ShaderResourceDesc);
     INIT_STRUCTURE_SIZE(DepthStencilClearValue);

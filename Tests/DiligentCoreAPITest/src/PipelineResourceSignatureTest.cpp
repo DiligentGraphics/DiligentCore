@@ -102,12 +102,12 @@ protected:
     }
 
     template <typename ModifyCIHandlerType>
-    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE           ShaderType,
-                                                       const char*           File,
-                                                       const char*           EntryPoint,
-                                                       const char*           Name,
-                                                       const ShaderMacro*    Macros,
-                                                       ModifyCIHandlerType&& ModifyCIHandler)
+    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE             ShaderType,
+                                                       const char*             File,
+                                                       const char*             EntryPoint,
+                                                       const char*             Name,
+                                                       const ShaderMacroArray& Macros,
+                                                       ModifyCIHandlerType&&   ModifyCIHandler)
     {
         auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
@@ -131,20 +131,20 @@ protected:
         return pShader;
     }
 
-    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE        ShaderType,
-                                                       const char*        File,
-                                                       const char*        EntryPoint,
-                                                       const char*        Name,
-                                                       const ShaderMacro* Macros = nullptr)
+    static RefCntAutoPtr<IShader> CreateShaderFromFile(SHADER_TYPE             ShaderType,
+                                                       const char*             File,
+                                                       const char*             EntryPoint,
+                                                       const char*             Name,
+                                                       const ShaderMacroArray& Macros = {})
     {
         return CreateShaderFromFile(ShaderType, File, EntryPoint, Name, Macros, [&](ShaderCreateInfo& ShaderCI) {});
     }
 
-    static RefCntAutoPtr<IShader> CreateShaderFromFileDXC(SHADER_TYPE        ShaderType,
-                                                          const char*        File,
-                                                          const char*        EntryPoint,
-                                                          const char*        Name,
-                                                          const ShaderMacro* Macros = nullptr)
+    static RefCntAutoPtr<IShader> CreateShaderFromFileDXC(SHADER_TYPE             ShaderType,
+                                                          const char*             File,
+                                                          const char*             EntryPoint,
+                                                          const char*             Name,
+                                                          const ShaderMacroArray& Macros = {})
     {
         return CreateShaderFromFile(ShaderType, File, EntryPoint, Name, Macros, [&](ShaderCreateInfo& ShaderCI) { ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC; });
     }

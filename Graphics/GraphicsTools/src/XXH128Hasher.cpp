@@ -62,7 +62,7 @@ XXH128Hash XXH128State::Digest() noexcept
 
 void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
 {
-    ASSERT_SIZEOF64(ShaderCI, 128, "Did you add new members to ShaderCreateInfo? Please handle them here.");
+    ASSERT_SIZEOF64(ShaderCI, 136, "Did you add new members to ShaderCreateInfo? Please handle them here.");
 
     Update(ShaderCI.SourceLength, // Aka ByteCodeSize
            ShaderCI.EntryPoint,
@@ -87,11 +87,12 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
         UpdateRaw(ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
     }
 
-    if (ShaderCI.Macros != nullptr)
+    if (ShaderCI.Macros)
     {
-        for (auto* Macro = ShaderCI.Macros; *Macro != ShaderMacro{}; ++Macro)
+        for (size_t i = 0; i < ShaderCI.Macros.Count; ++i)
         {
-            Update(Macro->Name, Macro->Definition);
+            const auto& Macro = ShaderCI.Macros[i];
+            Update(Macro.Name, Macro.Definition);
         }
     }
 }

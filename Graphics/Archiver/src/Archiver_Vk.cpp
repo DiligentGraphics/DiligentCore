@@ -57,7 +57,7 @@ struct CompiledShaderVk : SerializedShaderImpl::CompiledShader
 
         ShaderCI.Source       = nullptr;
         ShaderCI.FilePath     = nullptr;
-        ShaderCI.Macros       = nullptr;
+        ShaderCI.Macros       = {};
         ShaderCI.ByteCode     = SPIRV.data();
         ShaderCI.ByteCodeSize = SPIRV.size() * sizeof(SPIRV[0]);
         return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
@@ -181,7 +181,7 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
             auto        ShaderCI  = ShaderStages[j].Serialized[i]->GetCreateInfo();
             ShaderCI.Source       = nullptr;
             ShaderCI.FilePath     = nullptr;
-            ShaderCI.Macros       = nullptr;
+            ShaderCI.Macros       = {};
             ShaderCI.ByteCode     = SPIRV.data();
             ShaderCI.ByteCodeSize = SPIRV.size() * sizeof(SPIRV[0]);
             SerializeShaderCreateInfo(DeviceType::Vulkan, ShaderCI);

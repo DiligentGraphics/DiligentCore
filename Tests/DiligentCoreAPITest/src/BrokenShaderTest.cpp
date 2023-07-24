@@ -82,8 +82,8 @@ void TestBrokenShader(const char* Source, const char* Name, SHADER_SOURCE_LANGUA
     ShaderCI.SourceLanguage = SourceLanguage;
     ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
-    ShaderMacro Macros[] = {{"TEST", "MACRO"}, {}};
-    ShaderCI.Macros      = Macros;
+    ShaderMacro Macros[] = {{"TEST", "MACRO"}};
+    ShaderCI.Macros      = {Macros, _countof(Macros)};
 
     pEnv->SetErrorAllowance(ErrorAllowance, "\n\nNo worries, testing broken shader...\n\n");
     RefCntAutoPtr<IShader>   pBrokenShader;

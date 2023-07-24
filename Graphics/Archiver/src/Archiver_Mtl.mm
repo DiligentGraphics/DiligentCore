@@ -289,17 +289,17 @@ struct CompiledShaderMtl final : SerializedShaderImpl::CompiledShader
     virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
     {
         SerializedData ShaderData = SerializeMslSourceAndMtlArchiveData(ShaderMtl);
-        
+
         ShaderCI.FilePath       = nullptr;
         ShaderCI.Source         = nullptr;
-        ShaderCI.Macros         = nullptr;
+        ShaderCI.Macros         = {};
         ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL_VERBATIM;
         ShaderCI.ByteCode       = ShaderData.Ptr();
         ShaderCI.ByteCodeSize   = ShaderData.Size();
 
         return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
     }
-    
+
     virtual IShader* GetDeviceShader() override final
     {
         return &ShaderMtl;
@@ -538,7 +538,7 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
             auto ShaderCI           = Stage.pShader->GetCreateInfo();
             ShaderCI.Source         = nullptr;
             ShaderCI.FilePath       = nullptr;
-            ShaderCI.Macros         = nullptr;
+            ShaderCI.Macros         = {};
             ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MTLB;
             ShaderCI.ByteCode       = ShaderData.Ptr();
             ShaderCI.ByteCodeSize   = ShaderData.Size();

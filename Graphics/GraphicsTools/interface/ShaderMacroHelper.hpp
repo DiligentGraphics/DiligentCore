@@ -78,8 +78,7 @@ public:
     // NB: we need to make sure that string pointers in m_Macros don't become invalid
     //     after the copy or move due to short string optimization in std::string
     ShaderMacroHelper(const ShaderMacroHelper& rhs) :
-        m_Macros{rhs.m_Macros},
-        m_bIsFinalized{rhs.m_bIsFinalized}
+        m_Macros{rhs.m_Macros}
     {
         for (auto& Macros : m_Macros)
         {
@@ -99,37 +98,18 @@ public:
     ShaderMacroHelper(ShaderMacroHelper&&) = default;
     ShaderMacroHelper& operator=(ShaderMacroHelper&&) = default;
 
-    void Finalize()
-    {
-        if (!m_bIsFinalized)
-        {
-            m_Macros.emplace_back(nullptr, nullptr);
-            m_bIsFinalized = true;
-        }
-    }
-
-    void Reopen()
-    {
-        if (m_bIsFinalized)
-        {
-            VERIFY_EXPR(!m_Macros.empty() && m_Macros.back().Name == nullptr && m_Macros.back().Definition == nullptr);
-            m_Macros.pop_back();
-            m_bIsFinalized = false;
-        }
-    }
-
     void Clear()
     {
         m_Macros.clear();
         m_StringPool.clear();
-        m_bIsFinalized = false;
     }
 
-    operator const ShaderMacro*()
+    operator ShaderMacroArray() const
     {
-        if (!m_Macros.empty() && !m_bIsFinalized)
-            Finalize();
-        return !m_Macros.empty() ? m_Macros.data() : nullptr;
+        return {
+            !m_Macros.empty() ? m_Macros.data() : nullptr,
+            static_cast<Uint32>(m_Macros.size()),
+        };
     }
 
     void RemoveMacro(const Char* Name)
@@ -159,13 +139,11 @@ public:
 private:
     std::vector<ShaderMacro> m_Macros;
     std::set<std::string>    m_StringPool;
-    bool                     m_bIsFinalized = false;
 };
 
 template <>
 inline ShaderMacroHelper& ShaderMacroHelper::AddShaderMacro(const Char* Name, const Char* Definition)
 {
-    Reopen();
     const auto* PooledDefinition = m_StringPool.insert(Definition).first->c_str();
     const auto* PooledName       = m_StringPool.insert(Name).first->c_str();
     m_Macros.emplace_back(PooledName, PooledDefinition);

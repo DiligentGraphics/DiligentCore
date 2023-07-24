@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -438,7 +438,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     if (ExtraDefinitions != nullptr)
         Defines += ExtraDefinitions;
 
-    if (ShaderCI.Macros != nullptr)
+    if (ShaderCI.Macros)
     {
         Defines += '\n';
         AppendShaderMacros(Defines, ShaderCI.Macros);
@@ -495,7 +495,7 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
     Shader.setStringsWithLengths(ShaderStrings, Lengths, 1);
 
     std::string Defines{"#define GLSLANG\n\n"};
-    if (Attribs.Macros != nullptr)
+    if (Attribs.Macros)
         AppendShaderMacros(Defines, Attribs.Macros);
     Shader.setPreamble(Defines.c_str());
 

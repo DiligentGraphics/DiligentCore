@@ -1,5 +1,7 @@
 ## Current progress
 
+* Added `ShaderMacroArray` struct (API253011)
+  * The `Macros` member of `ShaderCreateInfo` struct is now of type `ShaderMacroArray`
 * Replaced `ResourceMappingDesc` with `ResourceMappingCreateInfo` (API253010)
   * Use `ResourceMappingCreateInfo::NumEntries` to define the number of entries instead of the trailing null entry
 * Removed `ShaderCreateInfo::ppConversionStream` (API253009)

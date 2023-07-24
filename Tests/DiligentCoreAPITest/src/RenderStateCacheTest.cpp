@@ -268,8 +268,8 @@ void CreateShader(IRenderStateCache*               pCache,
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
-    constexpr ShaderMacro Macros[] = {{"EXTERNAL_MACROS", "2"}, {}};
-    ShaderCI.Macros                = Macros;
+    constexpr ShaderMacro Macros[] = {{"EXTERNAL_MACROS", "2"}};
+    ShaderCI.Macros                = {Macros, _countof(Macros)};
 
     {
         ShaderCI.Desc     = {Name, Type, true};
@@ -395,8 +395,8 @@ TEST(RenderStateCacheTest, BrokenShader)
         ShaderCI.Source       = NotASource;
         ShaderCI.SourceLength = sizeof(NotASource);
 
-        constexpr ShaderMacro Macros[] = {{"EXTERNAL_MACROS", "2"}, {}};
-        ShaderCI.Macros                = Macros;
+        constexpr ShaderMacro Macros[] = {{"EXTERNAL_MACROS", "2"}};
+        ShaderCI.Macros                = {Macros, _countof(Macros)};
         ShaderCI.Desc                  = {"Broken shader", SHADER_TYPE_VERTEX, true};
         RefCntAutoPtr<IShader> pShader;
         pEnv->SetErrorAllowance(6, "\n\nNo worries, testing broken shader...\n\n");

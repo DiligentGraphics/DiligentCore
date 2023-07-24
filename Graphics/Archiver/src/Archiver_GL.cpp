@@ -91,7 +91,7 @@ struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
         ShaderCI.Source         = UnrolledSource.c_str();
         ShaderCI.SourceLength   = UnrolledSource.length();
         ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
-        ShaderCI.Macros         = nullptr; // Macros are inlined into unrolled source
+        ShaderCI.Macros         = {}; // Macros are inlined into unrolled source
 
         return ShaderCI;
     }
@@ -111,7 +111,7 @@ private:
     static String UnrollSource(const ShaderCreateInfo& CI)
     {
         String Source;
-        if (CI.Macros != nullptr)
+        if (CI.Macros)
         {
             if (CI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
                 AppendShaderMacros(Source, CI.Macros);

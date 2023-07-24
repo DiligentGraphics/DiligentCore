@@ -105,7 +105,7 @@ protected:
                                                const char*               EntryPoint,
                                                SHADER_TYPE               ShaderType,
                                                SHADER_SOURCE_LANGUAGE    SrcLang,
-                                               const ShaderMacro*        Macros,
+                                               const ShaderMacroArray&   Macros,
                                                const ShaderResourceDesc* ExpectedResources,
                                                Uint32                    NumExpectedResources,
                                                TModifyShaderCI           ModifyShaderCI)
@@ -146,7 +146,7 @@ protected:
                                                const char*               EntryPoint,
                                                SHADER_TYPE               ShaderType,
                                                SHADER_SOURCE_LANGUAGE    SrcLang,
-                                               const ShaderMacro*        Macros,
+                                               const ShaderMacroArray&   Macros,
                                                const ShaderResourceDesc* ExpectedResources,
                                                Uint32                    NumExpectedResources)
     {
@@ -342,7 +342,7 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
         for (Uint32 i = 0; i < DynamicTexArraySize; ++i)
             Macros.AddShaderMacro((std::string{"Tex2DArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_DynIdx[s] + i));
 
-        return static_cast<const ShaderMacro*>(Macros);
+        return static_cast<ShaderMacroArray>(Macros);
     };
 
     auto ModifyShaderCI = [TestImtblSamplers, ShaderLang, pEnv](ShaderCreateInfo& ShaderCI) {
@@ -608,7 +608,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         for (Uint32 i = 0; i < DynamicBuffArraySize; ++i)
             Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_DynIdx[s] + i));
 
-        return static_cast<const ShaderMacro*>(Macros);
+        return static_cast<ShaderMacroArray>(Macros);
     };
 
     // Vulkan only allows 16 dynamic storage buffer bindings among all stages, so
@@ -1259,7 +1259,7 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
         for (Uint32 i = 0; i < DynamicCBArraySize; ++i)
             Macros.AddShaderMacro((std::string{"BuffArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefBuffers.GetValue(BuffArr_DynIdx[s] + i));
 
-        return static_cast<const ShaderMacro*>(Macros);
+        return static_cast<ShaderMacroArray>(Macros);
     };
 
     // clang-format off

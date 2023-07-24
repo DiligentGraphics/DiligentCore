@@ -73,7 +73,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     ShaderSourceFileData SourceData;
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
     {
-        if (ShaderCI.Macros != nullptr)
+        if (ShaderCI.Macros)
         {
             LOG_WARNING_MESSAGE("Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
         }

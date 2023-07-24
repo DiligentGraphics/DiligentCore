@@ -58,14 +58,11 @@ ShaderCreateInfoWrapper::ShaderCreateInfoWrapper(const ShaderCreateInfo& ShaderC
         LOG_ERROR_AND_THROW("Shader create info must contain Source, Bytecode or FilePath with pShaderSourceStreamFactory");
     }
 
-    size_t MacroCount = 0;
     if (ShaderCI.Macros)
     {
-        for (auto* Macro = ShaderCI.Macros; Macro->Name != nullptr && Macro->Definition != nullptr; ++Macro, ++MacroCount)
-        {}
-        Allocator.AddSpace<ShaderMacro>(MacroCount + 1);
+        Allocator.AddSpace<ShaderMacro>(ShaderCI.Macros.Count);
 
-        for (size_t i = 0; i < MacroCount; ++i)
+        for (size_t i = 0; i < ShaderCI.Macros.Count; ++i)
         {
             Allocator.AddSpaceForString(ShaderCI.Macros[i].Name);
             Allocator.AddSpaceForString(ShaderCI.Macros[i].Definition);
@@ -98,17 +95,15 @@ ShaderCreateInfoWrapper::ShaderCreateInfoWrapper(const ShaderCreateInfo& ShaderC
         m_CreateInfo.FilePath = Allocator.CopyString(ShaderCI.FilePath);
     }
 
-    if (MacroCount > 0)
+    if (ShaderCI.Macros)
     {
-        auto* pMacros       = Allocator.ConstructArray<ShaderMacro>(MacroCount + 1);
-        m_CreateInfo.Macros = pMacros;
-        for (auto* Macro = ShaderCI.Macros; Macro->Name != nullptr && Macro->Definition != nullptr; ++Macro, ++pMacros)
+        auto* pMacros                = Allocator.ConstructArray<ShaderMacro>(ShaderCI.Macros.Count);
+        m_CreateInfo.Macros.Elements = pMacros;
+        for (size_t i = 0; i < ShaderCI.Macros.Count; ++i)
         {
-            pMacros->Name       = Allocator.CopyString(Macro->Name);
-            pMacros->Definition = Allocator.CopyString(Macro->Definition);
+            pMacros[i].Name       = Allocator.CopyString(ShaderCI.Macros[i].Name);
+            pMacros[i].Definition = Allocator.CopyString(ShaderCI.Macros[i].Definition);
         }
-        pMacros->Name       = nullptr;
-        pMacros->Definition = nullptr;
     }
 }
 

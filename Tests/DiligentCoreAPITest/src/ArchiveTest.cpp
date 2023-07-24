@@ -2212,7 +2212,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
             for (Uint32 i = 0; i < DynamicTexArraySize; ++i)
                 Macros.AddShaderMacro((std::string{"Tex2DArr_Dyn_Ref"} + std::to_string(i)).c_str(), RefTextures.GetColor(Tex2DArr_DynIdx[s] + i));
 
-            return static_cast<const ShaderMacro*>(Macros);
+            return static_cast<ShaderMacroArray>(Macros);
         };
 
         RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;

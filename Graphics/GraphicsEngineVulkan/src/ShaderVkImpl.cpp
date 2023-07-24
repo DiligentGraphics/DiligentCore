@@ -104,7 +104,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
         std::string          GLSLSourceString;
         ShaderSourceFileData SourceData;
 
-        const ShaderMacro* Macros = nullptr;
+        ShaderMacroArray Macros;
         if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
         {
             // Read the source file directly and use it as is

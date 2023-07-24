@@ -227,9 +227,13 @@ DILIGENT_END_INTERFACE
 #endif
 
 
+/// Shader Macro
 struct ShaderMacro
 {
-    const Char* Name       DEFAULT_INITIALIZER(nullptr);
+    /// Macro name
+    const Char* Name DEFAULT_INITIALIZER(nullptr);
+
+    /// Macro definition
     const Char* Definition DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
@@ -254,6 +258,59 @@ struct ShaderMacro
 #endif
 };
 typedef struct ShaderMacro ShaderMacro;
+
+
+/// Shader macro array
+struct ShaderMacroArray
+{
+    /// A pointer to the array elements
+    const ShaderMacro* Elements DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of elements in the array
+    Uint32 Count DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr ShaderMacroArray() noexcept
+    {}
+
+    constexpr ShaderMacroArray(const ShaderMacro* _Elements,
+                               Uint32             _Count) noexcept :
+        Elements{_Elements},
+        Count{_Count}
+    {}
+
+    constexpr bool operator==(const ShaderMacroArray& RHS) const noexcept
+    {
+        if (Count != RHS.Count)
+            return false;
+
+        if ((Count != 0 && Elements == nullptr) || (RHS.Count != 0 && RHS.Elements == nullptr))
+            return false;
+        for (Uint32 i = 0; i < Count; ++i)
+        {
+            if (Elements[i] != RHS.Elements[i])
+                return false;
+        }
+        return true;
+    }
+
+    constexpr bool operator!=(const ShaderMacroArray& RHS) const noexcept
+    {
+        return !(*this == RHS);
+    }
+
+    explicit constexpr operator bool() const noexcept
+    {
+        return Elements != nullptr && Count > 0;
+    }
+
+    const ShaderMacro& operator[](size_t index) const noexcept
+    {
+        return Elements[index];
+    }
+#endif
+};
+typedef struct ShaderMacroArray ShaderMacroArray;
 
 
 // clang-format off
@@ -333,10 +390,8 @@ struct ShaderCreateInfo
     /// This member is ignored if ByteCode is not null
     const Char* EntryPoint DEFAULT_INITIALIZER("main");
 
-    /// Shader macros
-
-    /// This member is ignored if ByteCode is not null
-    const ShaderMacro* Macros DEFAULT_INITIALIZER(nullptr);
+    /// Shader macros (see Diligent::ShaderMacroArray)
+    ShaderMacroArray Macros;
 
     /// Shader description. See Diligent::ShaderDesc.
     ShaderDesc Desc;
@@ -399,14 +454,15 @@ struct ShaderCreateInfo
     constexpr ShaderCreateInfo(const Char*                      _FilePath,
                                IShaderSourceInputStreamFactory* _pSourceFactory,
                                const Char*                      _EntryPoint,
-                               const ShaderMacro*               _Macros         = ShaderCreateInfo{}.Macros,
+                               const ShaderMacro*               _Macros         = nullptr,
+                               Uint32                           _NumMacros      = 0,
                                SHADER_SOURCE_LANGUAGE           _SourceLanguage = ShaderCreateInfo{}.SourceLanguage,
                                const ShaderDesc&                _Desc           = ShaderDesc{}) noexcept :
         // clang-format off
         FilePath                  {_FilePath},
         pShaderSourceStreamFactory{_pSourceFactory},
         EntryPoint                {_EntryPoint},
-        Macros                    {_Macros},
+        Macros                    {_Macros, _NumMacros},
         Desc                      {_Desc},
         SourceLanguage            {_SourceLanguage}
     // clang-format on
@@ -415,14 +471,15 @@ struct ShaderCreateInfo
     constexpr ShaderCreateInfo(const Char*            _Source,
                                size_t                 _SourceLength,
                                const Char*            _EntryPoint     = ShaderCreateInfo{}.EntryPoint,
-                               const ShaderMacro*     _Macros         = ShaderCreateInfo{}.Macros,
+                               const ShaderMacro*     _Macros         = nullptr,
+                               Uint32                 _NumMacros      = 0,
                                SHADER_SOURCE_LANGUAGE _SourceLanguage = ShaderCreateInfo{}.SourceLanguage,
                                const ShaderDesc&      _Desc           = ShaderDesc{}) noexcept :
         // clang-format off
         Source        {_Source},
         SourceLength  {_SourceLength},
         EntryPoint    {_EntryPoint},
-        Macros        {_Macros},
+        Macros        {_Macros, _NumMacros},
         Desc          {_Desc},
         SourceLanguage{_SourceLanguage}
     // clang-format on
@@ -480,20 +537,7 @@ struct ShaderCreateInfo
         if (!SafeStrEqual(CI1.EntryPoint, CI2.EntryPoint))
             return false;
 
-        const auto* m1 = CI1.Macros;
-        const auto* m2 = CI2.Macros;
-        while (m1 != nullptr && m2 != nullptr)
-        {
-            if (*m1 != *m2)
-                return false;
-            ++m1;
-            ++m2;
-            if (*m1 == ShaderMacro{})
-                m1 = nullptr;
-            if (*m2 == ShaderMacro{})
-                m2 = nullptr;
-        }
-        if (m1 != nullptr || m2 != nullptr)
+        if (CI1.Macros != CI2.Macros)
             return false;
 
         if (CI1.Desc != CI2.Desc)
