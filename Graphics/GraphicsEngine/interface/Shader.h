@@ -454,32 +454,30 @@ struct ShaderCreateInfo
     constexpr ShaderCreateInfo(const Char*                      _FilePath,
                                IShaderSourceInputStreamFactory* _pSourceFactory,
                                const Char*                      _EntryPoint,
-                               const ShaderMacro*               _Macros         = nullptr,
-                               Uint32                           _NumMacros      = 0,
+                               const ShaderMacroArray&          _Macros         = ShaderCreateInfo{}.Macros,
                                SHADER_SOURCE_LANGUAGE           _SourceLanguage = ShaderCreateInfo{}.SourceLanguage,
                                const ShaderDesc&                _Desc           = ShaderDesc{}) noexcept :
         // clang-format off
         FilePath                  {_FilePath},
         pShaderSourceStreamFactory{_pSourceFactory},
         EntryPoint                {_EntryPoint},
-        Macros                    {_Macros, _NumMacros},
+        Macros                    {_Macros},
         Desc                      {_Desc},
         SourceLanguage            {_SourceLanguage}
     // clang-format on
     {}
 
-    constexpr ShaderCreateInfo(const Char*            _Source,
-                               size_t                 _SourceLength,
-                               const Char*            _EntryPoint     = ShaderCreateInfo{}.EntryPoint,
-                               const ShaderMacro*     _Macros         = nullptr,
-                               Uint32                 _NumMacros      = 0,
-                               SHADER_SOURCE_LANGUAGE _SourceLanguage = ShaderCreateInfo{}.SourceLanguage,
-                               const ShaderDesc&      _Desc           = ShaderDesc{}) noexcept :
+    constexpr ShaderCreateInfo(const Char*             _Source,
+                               size_t                  _SourceLength,
+                               const Char*             _EntryPoint     = ShaderCreateInfo{}.EntryPoint,
+                               const ShaderMacroArray& _Macros         = ShaderCreateInfo{}.Macros,
+                               SHADER_SOURCE_LANGUAGE  _SourceLanguage = ShaderCreateInfo{}.SourceLanguage,
+                               const ShaderDesc&       _Desc           = ShaderDesc{}) noexcept :
         // clang-format off
         Source        {_Source},
         SourceLength  {_SourceLength},
         EntryPoint    {_EntryPoint},
-        Macros        {_Macros, _NumMacros},
+        Macros        {_Macros},
         Desc          {_Desc},
         SourceLanguage{_SourceLanguage}
     // clang-format on
