@@ -2232,6 +2232,9 @@ struct _FastFloatIntermediateType<float>
 {
     // All floats that have fractional part are representable as 32-bit int
     using Type = Int32;
+
+    // First float that does not have fractional part
+    static constexpr float NoFracThreshold = 8388608; // 2^23
 };
 
 template <>
@@ -2239,6 +2242,9 @@ struct _FastFloatIntermediateType<double>
 {
     // All doubles that have fractional part are representable as 64-bit int
     using Type = Int64;
+
+    // First double that does not have fractional part
+    static constexpr double NoFracThreshold = 9007199254740992; // 2^53
 };
 
 // At least on MSVC std::floor is an actual function call into ucrtbase.dll.
@@ -2247,6 +2253,10 @@ struct _FastFloatIntermediateType<double>
 template <typename T>
 constexpr T FastFloor(T x)
 {
+    constexpr auto NoFracThreshold = _FastFloatIntermediateType<T>::NoFracThreshold;
+    if (x >= NoFracThreshold || x <= -NoFracThreshold)
+        return x;
+
     auto i   = static_cast<typename _FastFloatIntermediateType<T>::Type>(x);
     auto flr = static_cast<T>(i);
     //   x         flr    floor(x)  flr <= x

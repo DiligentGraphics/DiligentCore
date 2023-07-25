@@ -1194,6 +1194,43 @@ TEST(Common_BasicMath, StdFloorCeilVector)
     EXPECT_EQ(std::ceil(float4(0.1f, 1.2f, 2.3f, 3.4f)), float4(1, 2, 3, 4));
 }
 
+TEST(Common_BasicMath, FastFloorCeil)
+{
+    for (float x = 1.f; x < FLT_MAX / 2.f; x *= 2.f)
+    {
+        EXPECT_EQ(FastFloor(x), x);
+        EXPECT_EQ(FastFloor(x + 0.5f), std::floor(x + 0.5f));
+        EXPECT_EQ(FastFloor(x - 0.5f), std::floor(x - 0.5f));
+        EXPECT_EQ(FastFloor(-x), -x);
+        EXPECT_EQ(FastFloor(-x + 0.5f), std::floor(-x + 0.5f));
+        EXPECT_EQ(FastFloor(-x - 0.5f), std::floor(-x - 0.5f));
+
+        EXPECT_EQ(FastCeil(x), x);
+        EXPECT_EQ(FastCeil(x + 0.5f), std::ceil(x + 0.5f));
+        EXPECT_EQ(FastCeil(x - 0.5f), std::ceil(x - 0.5f));
+        EXPECT_EQ(FastCeil(-x), -x);
+        EXPECT_EQ(FastCeil(-x + 0.5f), std::ceil(-x + 0.5f));
+        EXPECT_EQ(FastCeil(-x - 0.5f), std::ceil(-x - 0.5f));
+    }
+
+    for (double x = 1.0; x < DBL_MAX / 2.0; x *= 2.0)
+    {
+        EXPECT_EQ(FastFloor(x), x);
+        EXPECT_EQ(FastFloor(x + 0.5), std::floor(x + 0.5));
+        EXPECT_EQ(FastFloor(x - 0.5), std::floor(x - 0.5));
+        EXPECT_EQ(FastFloor(-x), -x);
+        EXPECT_EQ(FastFloor(-x + 0.5), std::floor(-x + 0.5));
+        EXPECT_EQ(FastFloor(-x - 0.5), std::floor(-x - 0.5));
+
+        EXPECT_EQ(FastCeil(x), x);
+        EXPECT_EQ(FastCeil(x + 0.5), std::ceil(x + 0.5));
+        EXPECT_EQ(FastCeil(x - 0.5), std::ceil(x - 0.5));
+        EXPECT_EQ(FastCeil(-x), -x);
+        EXPECT_EQ(FastCeil(-x + 0.5), std::ceil(-x + 0.5));
+        EXPECT_EQ(FastCeil(-x - 0.5), std::ceil(-x - 0.5));
+    }
+}
+
 TEST(Common_BasicMath, FastFloorCeilVector)
 {
     EXPECT_EQ(FastFloor(float2(-0.1f, 1.2f)), float2(-1, 1));
