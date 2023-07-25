@@ -1,0 +1,29 @@
+name: Publish NuGet package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  MSBuildEnableWorkloadResolver: false
+  NUGET_SOURCE_URL: 'https://api.nuget.org/v3/index.json'
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    name: Deploying NuGet package
+
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        submodules: recursive 
+    - name: Build and run
+      working-directory: ${{github.workspace}}
+      run: python dotnet-build-package.py -c Release --dotnet-publish
+
+    - name: Publish NuGet package
+      run: dotnet nuget push *.nupkg -k ${{secrets.NUGET_AUTH_TOKEN}} -s ${{env.NUGET_SOURCE_URL}}
+      working-directory: ${{github.workspace}}/build/.NET/Graphics/GraphicsEngine.NET/bin/Release

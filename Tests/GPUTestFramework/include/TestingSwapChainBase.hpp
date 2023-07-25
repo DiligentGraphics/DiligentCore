@@ -53,6 +53,14 @@ void CompareTestImages(const Uint8*                          pReferencePixels,
                        TEXTURE_FORMAT                        Format,
                        std::unordered_map<std::string, int>& FailureCounters);
 
+void DumpTestImage(const Uint8*   pPixels,
+                   Uint64         PixelsStride,
+                   Uint32         Width,
+                   Uint32         Height,
+                   TEXTURE_FORMAT Format,
+                   const char*    DumpName,
+                   bool           bIsOpenGL);
+
 // {41BF4655-9B33-4E6C-9300-0CB45FBFE104}
 static constexpr INTERFACE_ID IID_TestingSwapChain =
     {0x41bf4655, 0x9b33, 0x4e6c, {0x93, 0x0, 0xc, 0xb4, 0x5f, 0xbf, 0xe1, 0x4}};
@@ -63,6 +71,8 @@ public:
     virtual void TakeSnapshot(ITexture* pCopyFrom = nullptr) = 0;
 
     virtual ITextureView* GetCurrentBackBufferUAV() = 0;
+
+    virtual void DumpBackBuffer(const char* FileName) = 0;
 };
 
 template <typename SwapChainInterface>
@@ -227,6 +237,35 @@ public:
     virtual const SwapChainDesc& DILIGENT_CALL_TYPE GetDesc() const override final
     {
         return m_SwapChainDesc;
+    }
+
+    virtual void DumpBackBuffer(const char* FileName) override final
+    {
+        m_pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+        CopyTextureAttribs CopyInfo //
+            {
+                m_pRenderTarget,
+                RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                m_pStagingTexture,
+                RESOURCE_STATE_TRANSITION_MODE_TRANSITION //
+            };
+        m_pContext->CopyTexture(CopyInfo);
+        m_pContext->WaitForIdle();
+        MappedTextureSubresource MapData;
+
+        auto MapFlag = MAP_FLAG_DO_NOT_WAIT;
+        if (m_pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+        {
+            // As a matter of fact, we should be able to always use MAP_FLAG_DO_NOT_WAIT flag
+            // as we flush the context and idle the GPU before mapping the staging texture.
+            // Intel driver, however, still returns null unless we don't use D3D11_MAP_FLAG_DO_NOT_WAIT flag.
+            MapFlag = MAP_FLAG_NONE;
+        }
+
+        m_pContext->MapTextureSubresource(m_pStagingTexture, 0, 0, MAP_READ, MapFlag, nullptr, MapData);
+        DumpTestImage(static_cast<const Uint8*>(MapData.pData), MapData.Stride, m_SwapChainDesc.Width, m_SwapChainDesc.Height, m_SwapChainDesc.ColorBufferFormat, FileName, m_pDevice->GetDeviceInfo().IsGLDevice());
+        m_pContext->UnmapTextureSubresource(m_pStagingTexture, 0, 0);
     }
 
 protected:

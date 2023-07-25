@@ -1,0 +1,26 @@
+name: Build NuGet package
+
+on: [push, pull_request]
+
+env:
+  MSBuildEnableWorkloadResolver: false
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        toolset: [x64]
+        config: [Debug, Release]
+
+    runs-on: windows-latest
+    name: Windows 10, ${{ matrix.config }} ${{ matrix.toolset }}
+
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        submodules: recursive 
+    - name: Build and run
+      working-directory: ${{github.workspace}}
+      run: python dotnet-build-package.py -c ${{matrix.config}} --dotnet-tests --free-memory

@@ -31,6 +31,7 @@
 
 #include "TestingSwapChainBase.hpp"
 #include "GraphicsAccessories.hpp"
+#include "FileSystem.hpp"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../../../ThirdParty/stb/stb_image_write.h"
@@ -123,6 +124,42 @@ void CompareTestImages(const Uint8*                          pReferencePixels,
         }
         ADD_FAILURE() << "Image rendered by the test is not identical to the reference image";
         ++FailureCounter;
+    }
+}
+
+void DumpTestImage(const Uint8*   pPixels,
+                   Uint64         PixelsStride,
+                   Uint32         Width,
+                   Uint32         Height,
+                   TEXTURE_FORMAT Format,
+                   const char*    DumpName,
+                   bool           bIsOpenGL)
+{
+
+    VERIFY_EXPR(pPixels != nullptr);
+    VERIFY_EXPR(Width != 0);
+    VERIFY_EXPR(Height != 0);
+    VERIFY_EXPR(PixelsStride != 0);
+    VERIFY(Format == TEX_FORMAT_RGBA8_UNORM, GetTextureFormatAttribs(Format).Name, " is not supported");
+
+    const auto         DumpImageStride = Width * 3;
+    std::vector<Uint8> DumpImage(DumpImageStride * Height);
+    for (Uint32 y = 0; y < Height; ++y)
+    {
+        for (Uint32 x = 0; x < Width; ++x)
+        {
+            for (Uint32 c = 0; c < 3; ++c)
+            {
+                const Uint32 FlipCoord                     = bIsOpenGL ? (Height - 1 - y) : y;
+                DumpImage[y * DumpImageStride + x * 3 + c] = pPixels[FlipCoord * PixelsStride + x * 4 + c];
+            }
+        }
+    }
+
+    const String FileName = String{DumpName} + ".png";
+    if (stbi_write_png(FileName.c_str(), Width, Height, 3, DumpImage.data(), static_cast<int>(DumpImageStride)) == 0)
+    {
+        LOG_ERROR_MESSAGE("Failed to write ", FileName);
     }
 }
 

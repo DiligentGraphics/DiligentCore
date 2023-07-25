@@ -35,8 +35,14 @@
 
 #else
 
+
+#    if defined(DILIGENT_SHARP_GEN)
+template <typename EnumType>
+using _UNDERLYING_ENUM_T = Diligent::Uint64;
+#    else
 template <typename EnumType>
 using _UNDERLYING_ENUM_T = typename std::underlying_type<EnumType>::type;
+#    endif
 
 #    define DEFINE_FLAG_ENUM_OPERATORS(ENUMTYPE)                                                                                                                                                                      \
         extern "C++"                                                                                                                                                                                                  \

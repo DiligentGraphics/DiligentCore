@@ -368,6 +368,9 @@ struct ShaderCreateInfo
     ///        HLSL shaders need to be compiled against 4.0 profile or higher.
     const void* ByteCode DEFAULT_INITIALIZER(nullptr);
 
+#if defined(DILIGENT_SHARP_GEN)
+    size_t ByteCodeSize DEFAULT_INITIALIZER(0);
+#else
     union
     {
         /// Length of the source code, when Source is not null.
@@ -384,6 +387,7 @@ struct ShaderCreateInfo
         /// Byte code size (in bytes) must not be zero if ByteCode is not null.
         size_t ByteCodeSize;
     };
+#endif
 
     /// Shader entry point
 
@@ -435,7 +439,7 @@ struct ShaderCreateInfo
     ///       and should be disabled when it is not needed.
     bool LoadConstantBufferReflection DEFAULT_INITIALIZER(false);
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_CPP_INTERFACE && !defined(DILIGENT_SHARP_GEN)
     constexpr ShaderCreateInfo() noexcept
     {}
 
