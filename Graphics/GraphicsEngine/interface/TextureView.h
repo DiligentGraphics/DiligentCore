@@ -187,6 +187,9 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// will be referenced.
     Uint32 NumMipLevels            DEFAULT_INITIALIZER(0);
 
+#if defined(DILIGENT_SHARP_GEN)
+    Uint32 FirstSlice DEFAULT_INITIALIZER(0);
+#else
     union
     {
         /// For a texture array, first array slice to address in the view
@@ -195,7 +198,11 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         /// For a 3D texture, first depth slice to address the view
         Uint32 FirstDepthSlice;
     };
+#endif
 
+#if defined(DILIGENT_SHARP_GEN)
+    Uint32 NumSlices DEFAULT_INITIALIZER(0);
+#else
     union
     {
         /// For a texture array, number of array slices to address in the view.
@@ -206,6 +213,7 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         /// Set to 0 to address all depth slices.
         Uint32 NumDepthSlices;
     };
+#endif
 
     /// For an unordered access view, allowed access flags. See Diligent::UAV_ACCESS_FLAG
     /// for details.
@@ -221,7 +229,7 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     // NB: when adding new members, don't forget to update std::hash<Diligent::TextureViewDesc>
     //
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_CPP_INTERFACE && !defined(DILIGENT_SHARP_GEN)
 
     constexpr TextureViewDesc() noexcept {}
 
