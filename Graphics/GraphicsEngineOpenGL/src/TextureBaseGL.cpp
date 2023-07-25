@@ -628,11 +628,12 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
         // Note: texture view allocates memory for the copy of the name
         // If the name is empty, memory should not be allocated
         // We have to provide allocator even though it will never be used
-        TextureViewGLImpl SRV(GetReferenceCounters(), GetDevice(), SRVDesc, pSrcTextureGL,
-                              false, // Do NOT create texture view OpenGL object
-                              true   // The view, like default view, should not
-                                     // keep strong reference to the texture
-        );
+        TextureViewGLImpl SRV{
+            GetReferenceCounters(), GetDevice(), SRVDesc, pSrcTextureGL,
+            false, // Do NOT create texture view OpenGL object
+            true,  // The view, like default view, should not
+                   // keep strong reference to the texture
+        };
 
         for (Uint32 DepthSlice = 0; DepthSlice < pSrcBox->Depth(); ++DepthSlice)
         {
@@ -647,11 +648,12 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
             // Note: texture view allocates memory for the copy of the name
             // If the name is empty, memory should not be allocated
             // We have to provide allocator even though it will never be used
-            TextureViewGLImpl RTV(GetReferenceCounters(), GetDevice(), RTVDesc, this,
-                                  false, // Do NOT create texture view OpenGL object
-                                  true   // The view, like default view, should not
-                                         // keep strong reference to the texture
-            );
+            TextureViewGLImpl RTV{
+                GetReferenceCounters(), GetDevice(), RTVDesc, this,
+                false, // Do NOT create texture view OpenGL object
+                true,  // The view, like default view, should not
+                       // keep strong reference to the texture
+            };
 
             ITextureView* pRTVs[] = {&RTV};
             pDeviceCtxGL->SetRenderTargets(_countof(pRTVs), pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -666,6 +668,9 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                                    static_cast<Int32>(pSrcBox->MinY) - static_cast<Int32>(DstY),
                                    SrcSlice + pSrcBox->MinZ + DepthSlice,
                                    SrcMipLevel);
+
+            // NB: we must unbind RTV before it goes out of scope!
+            pDeviceCtxGL->ResetRenderTargets();
         }
 
         TexRegionRender.RestoreStates(pDeviceCtxGL);
