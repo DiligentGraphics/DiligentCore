@@ -60,7 +60,7 @@ constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
     return DeviceBits;
 }
 
-TEST(GenerateArhiveDotNetTest, GenerateCubeArchive)
+TEST(GenerateArchiveDotNetTest, GenerateCubeArchive)
 {
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 

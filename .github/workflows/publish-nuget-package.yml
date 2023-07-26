@@ -19,10 +19,15 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
-        submodules: recursive 
+        submodules: recursive
+
+    - name: Install python packages
+      working-directory: ${{github.workspace}}
+      run: python -m pip install -r ./BuildTools/.NET/requirements.txt
+         
     - name: Build and run
       working-directory: ${{github.workspace}}
-      run: python dotnet-build-package.py -c Release --dotnet-publish
+      run:  python ./BuildTools/.NET/dotnet-build-package.py -c Release -s ./BuildTools/.NET/dotnet-build-settings.json -d ./ --dotnet-publish
 
     - name: Publish NuGet package
       run: dotnet nuget push *.nupkg -k ${{secrets.NUGET_AUTH_TOKEN}} -s ${{env.NUGET_SOURCE_URL}}
