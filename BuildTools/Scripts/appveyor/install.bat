@@ -1,4 +1,4 @@
-set CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-windows-x86_64.zip"
+set CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.23.3/cmake-3.23.3-windows-x86_64.zip"
 appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
 7z x cmake.zip -oC:\projects\deps > nul
 move C:\projects\deps\cmake-* C:\projects\deps\cmake
