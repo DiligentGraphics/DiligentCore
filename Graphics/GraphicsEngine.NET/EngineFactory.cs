@@ -36,6 +36,8 @@ public partial class IEngineFactory
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void MessageCallbackDelegate(DebugMessageSeverity severity, string message, string function, string file, int line);
 
+    private MessageCallbackDelegate m_MessageCallbackRef;
+
     public unsafe GraphicsAdapterInfo[] EnumerateAdapters(Version minVersion)
     {
         uint numAdapters = default;
@@ -58,7 +60,8 @@ public partial class IEngineFactory
 
     public void SetMessageCallback(MessageCallbackDelegate callback)
     {
-        SetMessageCallback(new FunctionCallback(Marshal.GetFunctionPointerForDelegate(callback)));
+        m_MessageCallbackRef = callback;
+        SetMessageCallback(Marshal.GetFunctionPointerForDelegate(m_MessageCallbackRef));
     }
 
     public IDataBlob CreateDataBlob<T>(T[] data) where T : unmanaged
