@@ -703,7 +703,7 @@ See [Apache 2.0 license](License.txt).
 
 This project has some third-party dependencies, each of which may have independent licensing:
 
-* [Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers): Vulkan Header files and API registry ([Apache License 2.0](https://github.com/DiligentGraphics/Vulkan-Headers/blob/master/LICENSE.txt)).
+* [Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers): Vulkan Header files and API registry ([Apache License 2.0](https://github.com/DiligentGraphics/Vulkan-Headers/blob/master/LICENSE.md)).
 * [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross): SPIRV parsing and cross-compilation tools ([Apache License 2.0](https://github.com/DiligentGraphics/SPIRV-Cross/blob/master/LICENSE)).
 * [SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers): SPIRV header files ([Khronos MIT-like license](https://github.com/DiligentGraphics/SPIRV-Headers/blob/master/LICENSE)).
 * [SPIRV-Tools](https://github.com/KhronosGroup/SPIRV-Tools): SPIRV optimization and validation tools ([Apache License 2.0](https://github.com/DiligentGraphics/SPIRV-Tools/blob/master/LICENSE)).
