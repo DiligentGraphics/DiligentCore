@@ -179,7 +179,7 @@ def get_latest_tag_without_prefix():
             postfix_tag_ver = tag_ver.lstrip("v").replace(".", "")
             if postfix_tag_api.startswith(postfix_tag_ver):
                 postfix = postfix_tag_api[len(postfix_tag_ver):].lstrip("0")
-                result = f"{tag_ver[1:]}-{postfix}"
+                result = f"{tag_ver[1:]}-api{postfix}"
             else:
                 raise Exception(f"Not expected tag: {tag_lst}")
 
