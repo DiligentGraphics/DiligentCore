@@ -8,8 +8,7 @@
     <PackageId>DiligentGraphics.DiligentEngine.Core</PackageId>
     <Authors>Diligent Graphics</Authors>
     <Company>Diligent Graphics</Company>
-    <!-- <Version>$(PackageGitVersion)</Version> -->
-    <Version>2.5.3-beta.11</Version>
+    <Version>$(PackageGitVersion)</Version>
     <Description>A modern cross-platform low-level graphics library designed
 to take full advantage of Direct3D12 and Vulkan, while supporting
 older platforms via Direct3D11, OpenGL and OpenGLES.</Description>

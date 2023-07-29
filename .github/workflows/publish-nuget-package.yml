@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - 'API*'
   workflow_dispatch:
 
 env:

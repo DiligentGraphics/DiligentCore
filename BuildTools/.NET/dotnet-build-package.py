@@ -25,6 +25,7 @@
 # ----------------------------------------------------------------------------
 
 import os
+import re
 import json
 import jsonschema
 import shutil
@@ -168,12 +169,27 @@ def cmake_build_project(config, settings):
 
 def get_latest_tag_without_prefix():
     try:
-        output = subprocess.check_output(['git', 'tag', '--list', 'v*', '--sort=-v:refname'], encoding='utf-8')
+        output = subprocess.check_output(['git', 'tag', '--list', '--sort=-creatordate'], encoding='utf-8')
         tags = output.strip().split('\n')
-        latest_tag = tags[0][1:] if tags else None
+        tag_lst = tags[0]
+        tag_api = next(filter(lambda item: item.startswith("API"), tags), None)
+        tag_ver = next(filter(lambda item: item.startswith("v"), tags), None)
+        if tag_lst.startswith("API"):
+            postfix_tag_api = tag_lst.lstrip("API")
+            postfix_tag_ver = tag_ver.lstrip("v").replace(".", "")
+            if postfix_tag_api.startswith(postfix_tag_ver):
+                postfix = postfix_tag_api[len(postfix_tag_ver):].lstrip("0")
+                result = f"{tag_ver[1:]}-{postfix}"
+            else:
+                raise Exception(f"Not expected tag: {tag_lst}")
+
+        elif tag_lst.startswith("v"):
+            result = tag_lst.lstrip("v")
+        else:
+            raise Exception(f"Not expected tag: {tag_lst}")
     except subprocess.CalledProcessError as exc:
         raise Exception(exc.output)
-    return latest_tag
+    return result
 
 
 def dotnet_generate_version(path, is_local=True):
