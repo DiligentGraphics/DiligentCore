@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -216,7 +216,13 @@ public:
     HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource) override
     {
         if (pFilename == nullptr)
-            return E_FAIL;
+            return E_INVALIDARG;
+
+
+        if (ppIncludeSource == nullptr)
+            return E_INVALIDARG;
+
+        *ppIncludeSource = nullptr;
 
         String fileName;
         fileName.resize(wcslen(pFilename));

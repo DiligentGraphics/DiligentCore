@@ -175,7 +175,7 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
     }
 
 
-    ShaderCodeVariableDescX& operator=(ShaderCodeVariableDescX&& RHS)
+    ShaderCodeVariableDescX& operator=(ShaderCodeVariableDescX&& RHS) noexcept
     {
         static_cast<ShaderCodeVariableDesc&>(*this) = RHS;
 

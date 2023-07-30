@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,7 +82,7 @@ void LoadShaderCodeVariableDesc(TD3DShaderReflectionType* pd3dReflecionType, Sha
         TypeDesc.SetTypeName(d3dTypeDesc.Name);
     if (TypeDesc.TypeName == nullptr)
         TypeDesc.SetDefaultTypeName(SHADER_SOURCE_LANGUAGE_HLSL);
-    if (d3dTypeDesc.Type == D3D_SVT_UINT && strcmp(TypeDesc.TypeName, "dword") == 0)
+    if (d3dTypeDesc.Type == D3D_SVT_UINT && SafeStrEqual(TypeDesc.TypeName, "dword"))
         TypeDesc.SetTypeName("uint");
 
     // Number of elements in an array; otherwise 0.
@@ -318,7 +318,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
                     {
                         D3D_SHADER_BUFFER_DESC ShaderBuffDesc = {};
                         pBuffReflection->GetDesc(&ShaderBuffDesc);
-                        VERIFY_EXPR(strcmp(Res.Name, ShaderBuffDesc.Name) == 0);
+                        VERIFY_EXPR(SafeStrEqual(Res.Name, ShaderBuffDesc.Name));
                         VERIFY_EXPR(ShaderBuffDesc.Type == D3D_CT_CBUFFER);
 
                         BufferDesc.Size = ShaderBuffDesc.Size;
