@@ -28,7 +28,7 @@ jobs:
         toolset:         ["Win32", "x64"]
         build_type:      ["Debug", "Release"]
         cmake_generator: ["Visual Studio 17 2022"]
-        cmake_args:      ["-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_VULKAN=ON -DDILIGENT_NO_OPENGL=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF"]
+        cmake_args:      ["-DILIGENT_BUILD_CORE_TESTS=ON -DDILIGENT_NO_VULKAN=ON -DDILIGENT_NO_OPENGL=ON"]
         platform:        ["Win32"]
 
     name: Win10 -> ${{ matrix.name }}-${{ matrix.toolset }}, ${{ matrix.build_type }}
@@ -65,7 +65,7 @@ jobs:
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3
-      if: ${{ success() && matrix.build_type != 'Debug' }}
+      if: ${{ success() }}
       with:
         name: DiligentCore-${{ matrix.name }}-${{ matrix.toolset }}-${{ matrix.build_type }}
         path: |
