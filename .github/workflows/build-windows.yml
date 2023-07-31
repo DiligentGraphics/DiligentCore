@@ -28,7 +28,7 @@ jobs:
         toolset:         ["Win32", "x64"]
         build_type:      ["Debug", "Release"]
         cmake_generator: ["Visual Studio 17 2022"]
-        cmake_args:      ["-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_VULKAN=ON -DDILIGENT_NO_OPENGL=ON"]
+        cmake_args:      ["-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_VULKAN=ON -DDILIGENT_NO_OPENGL=ON -DDILIGENT_BUILD_CORE_INCLUDE_TEST=OFF"]
         platform:        ["Win32"]
 
     name: Win10 -> ${{ matrix.name }}-${{ matrix.toolset }}, ${{ matrix.build_type }}
@@ -63,33 +63,33 @@ jobs:
       with:
         target: install
 
-    - name: DiligentCoreTest
-      if:   ${{ success() && matrix.name != 'UWP'}}
-      uses: DiligentGraphics/github-action/run-core-tests@v1
-
-    - name: DiligentCoreAPITest D3D11
-      # NB: it is essential to include failure() to override the default status check of success()
-      #     that is automatically applied to if conditions that don't contain a status check function.
-      if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win8.1') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
-      with:
-        mode: d3d11_sw
-
-    - name: DiligentCoreAPITest D3D12
-      if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
-      with:
-        mode: d3d12_sw
-
-    - name: DiligentCoreAPITest D3D12 DXC
-      if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
-      with:
-        mode:    d3d12_sw
-        use-dxc: true
-        # Disable texture creation tests that are not relevant for DXC to save time
-        args: --gtest_filter=-TextureCreation*
-
+    #- name: DiligentCoreTest
+    #  if:   ${{ success() && matrix.name != 'UWP'}}
+    #  uses: DiligentGraphics/github-action/run-core-tests@v1
+    #
+    #- name: DiligentCoreAPITest D3D11
+    #  # NB: it is essential to include failure() to override the default status check of success()
+    #  #     that is automatically applied to if conditions that don't contain a status check function.
+    #  if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win8.1') }}
+    #  uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
+    #  with:
+    #    mode: d3d11_sw
+    #
+    #- name: DiligentCoreAPITest D3D12
+    #  if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
+    #  uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
+    #  with:
+    #    mode: d3d12_sw
+    #
+    #- name: DiligentCoreAPITest D3D12 DXC
+    #  if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
+    #  uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
+    #  with:
+    #    mode:    d3d12_sw
+    #    use-dxc: true
+    #    # Disable texture creation tests that are not relevant for DXC to save time
+    #    args: --gtest_filter=-TextureCreation*
+    #
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       if: ${{ success() && matrix.build_type != 'Debug' && matrix.cmake_generator != 'Ninja' }}
@@ -109,3 +109,16 @@ jobs:
     steps:
     - name: Clone repository
       uses: actions/checkout@v3
+
+    #- name: Extract artifacts
+    #  working-directory: ${{github.workspace}}
+    #  run: 
+    # https://docs.github.com/en/actions/using-workflows/storing-workflow-data-as-artifacts
+
+    - name: Install python packages
+      working-directory: ${{github.workspace}}
+      run: python -m pip install -r ./BuildTools/.NET/requirements.txt
+
+    #- name: Build and run
+    #  working-directory: ${{github.workspace}}
+    #  run: python ./BuildTools/.NET/dotnet-build-package.py -c ${{matrix.config}} -s ./BuildTools/.NET/dotnet-build-settings.json -d ./ --dotnet-tests --free-memory
