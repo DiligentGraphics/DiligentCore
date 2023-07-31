@@ -1,4 +1,4 @@
-name: Win32/UWP build
+name: Build NuGet package
 
 on: [push, pull_request]
 
@@ -17,7 +17,7 @@ jobs:
       run: validate_format_win.bat
 
 
-  build:
+  native-build:
     needs:   precheks
     runs-on: windows-2022
 
@@ -63,47 +63,21 @@ jobs:
       with:
         target: install
 
-    #- name: DiligentCoreTest
-    #  if:   ${{ success() && matrix.name != 'UWP'}}
-    #  uses: DiligentGraphics/github-action/run-core-tests@v1
-    #
-    #- name: DiligentCoreAPITest D3D11
-    #  # NB: it is essential to include failure() to override the default status check of success()
-    #  #     that is automatically applied to if conditions that don't contain a status check function.
-    #  if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win8.1') }}
-    #  uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
-    #  with:
-    #    mode: d3d11_sw
-    #
-    #- name: DiligentCoreAPITest D3D12
-    #  if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
-    #  uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
-    #  with:
-    #    mode: d3d12_sw
-    #
-    #- name: DiligentCoreAPITest D3D12 DXC
-    #  if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
-    #  uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
-    #  with:
-    #    mode:    d3d12_sw
-    #    use-dxc: true
-    #    # Disable texture creation tests that are not relevant for DXC to save time
-    #    args: --gtest_filter=-TextureCreation*
-    #
     - name: Upload artifact
       uses: actions/upload-artifact@v3
-      if: ${{ success() && matrix.build_type != 'Debug' && matrix.cmake_generator != 'Ninja' }}
+      if: ${{ success() && matrix.build_type != 'Debug' }}
       with:
         name: DiligentCore-${{ matrix.name }}-${{ matrix.toolset }}-${{ matrix.build_type }}
         path: |
           ${{env.DILIGENT_INSTALL_DIR}}
           !${{env.DILIGENT_INSTALL_DIR}}/**/*.lib
           !${{env.DILIGENT_INSTALL_DIR}}/**/*.a
+          ${{env.DILIGENT_BUILD_DIR}}/Tests/DiligentCoreAPITest/${{ matrix.build_type }}/*.exe
         retention-days: 90
 
 
   build-nuget-package:
-    needs:   build
+    needs:   native-build
     runs-on: windows-2022
 
     steps:
