@@ -498,6 +498,30 @@ endif()
 
 include(BuildUtils.cmake)
 
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+    # Find available .NET SDKs
+    execute_process(COMMAND dotnet --list-sdks
+                    RESULTS_VARIABLE RES
+                    OUTPUT_VARIABLE DOT_NET_SDK_LIST)
+    if (${RES} EQUAL 0)
+        # Extract versions only from the list
+        string(REGEX MATCHALL "[0-9]+\\.[0-9]+\\.[0-9]+" DOT_NET_SDK_VERSIONS "${DOT_NET_SDK_LIST}")
+        set(DOT_NET_SDK_VERSIONS ${DOT_NET_SDK_VERSIONS} CACHE STRING "Available .NET SDK versions" FORCE)
+        message("Available .NET SDK versions: ${DOT_NET_SDK_VERSIONS}")
+
+        set(MAX_DOT_NET_SDK_VERSION "")
+        foreach(VER IN LISTS DOT_NET_SDK_VERSIONS)
+            if(VER VERSION_GREATER MAX_DOT_NET_SDK_VERSION)
+                set(MAX_DOT_NET_SDK_VERSION "${VER}")
+            endif()
+        endforeach()
+        set(MAX_DOT_NET_SDK_VERSION ${MAX_DOT_NET_SDK_VERSION} CACHE STRING "Maximum .NET SDK version" FORCE)
+        message("Maximum .NET SDK version: ${MAX_DOT_NET_SDK_VERSION}")
+    else()
+        message("dotnet command is not found. This indicates that .NET SDK is not installed on this machine.")
+    endif()
+endif()
+
 add_subdirectory(ThirdParty)
 add_subdirectory(BuildTools)
 add_subdirectory(Primitives)
