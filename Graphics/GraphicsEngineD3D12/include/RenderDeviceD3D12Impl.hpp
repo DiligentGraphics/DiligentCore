@@ -33,6 +33,7 @@
 #include <atomic>
 #include <vector>
 #include <memory>
+#include <unordered_map>
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "RenderDeviceD3DBase.hpp"
@@ -287,10 +288,10 @@ private:
     GPUDescriptorHeap m_GPUDescriptorHeaps[2]; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV == 0
                                                // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER	 == 1
 
-    CommandListManager m_CmdListManagers[3];
+    CommandListManager m_CmdListManagers[3]; // 0 - direct, 1 - compute, 2 - copy
 
-    std::mutex                                                                  m_ContextPoolMutex;
-    std::vector<PooledCommandContext, STDAllocatorRawMem<PooledCommandContext>> m_ContextPool;
+    std::mutex                                                             m_ContextPoolMutex;
+    std::unordered_multimap<D3D12_COMMAND_LIST_TYPE, PooledCommandContext> m_ContextPool;
 #ifdef DILIGENT_DEVELOPMENT
     std::atomic_int m_AllocatedCtxCounter{0};
 #endif

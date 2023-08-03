@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,6 +71,7 @@ void CommandContext::Reset(CommandListManager& CmdListManager)
     // We only call Reset() on previously freed contexts. The command list persists, but we need to
     // request a new allocator
     VERIFY_EXPR(m_pCommandList != nullptr);
+    VERIFY_EXPR(m_pCommandList->GetType() == CmdListManager.GetCommandListType());
     if (!m_pCurrentAllocator)
     {
         CmdListManager.RequestAllocator(&m_pCurrentAllocator);

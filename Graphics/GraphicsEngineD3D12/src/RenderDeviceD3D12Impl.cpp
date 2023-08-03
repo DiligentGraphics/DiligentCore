@@ -160,7 +160,6 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         {RawMemAllocator, *this, EngineCI.GPUDescriptorHeapSize[0], EngineCI.GPUDescriptorHeapDynamicSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE},
         {RawMemAllocator, *this, EngineCI.GPUDescriptorHeapSize[1], EngineCI.GPUDescriptorHeapDynamicSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
     },
-    m_ContextPool           (STD_ALLOCATOR_RAW_MEM(PooledCommandContext, GetRawAllocator(), "Allocator for vector<PooledCommandContext>")),
     m_DynamicMemoryManager  {GetRawAllocator(), *this, EngineCI.NumDynamicHeapPagesToReserve, EngineCI.DynamicHeapPageSize},
     m_MipsGenerator         {pd3d12Device},
     m_pDxCompiler           {CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, EngineCI.pDxCompilerPath)},
@@ -316,8 +315,10 @@ void RenderDeviceD3D12Impl::DisposeCommandContext(PooledCommandContext&& Ctx)
 
 void RenderDeviceD3D12Impl::FreeCommandContext(PooledCommandContext&& Ctx)
 {
-    std::lock_guard<std::mutex> LockGuard(m_ContextPoolMutex);
-    m_ContextPool.emplace_back(std::move(Ctx));
+    const auto CmdListType = Ctx->GetCommandListType();
+
+    std::lock_guard<std::mutex> Guard{m_ContextPoolMutex};
+    m_ContextPool.emplace(CmdListType, std::move(Ctx));
 #ifdef DILIGENT_DEVELOPMENT
     m_AllocatedCtxCounter.fetch_add(-1);
 #endif
@@ -454,11 +455,13 @@ RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateComma
 {
     auto& CmdListMngr = GetCmdListManager(CommandQueueId);
     {
-        std::lock_guard<std::mutex> LockGuard(m_ContextPoolMutex);
-        if (!m_ContextPool.empty())
+        std::lock_guard<std::mutex> Guard{m_ContextPoolMutex};
+
+        auto pool_it = m_ContextPool.find(CmdListMngr.GetCommandListType());
+        if (pool_it != m_ContextPool.end())
         {
-            PooledCommandContext Ctx = std::move(m_ContextPool.back());
-            m_ContextPool.pop_back();
+            PooledCommandContext Ctx = std::move(pool_it->second);
+            m_ContextPool.erase(pool_it);
             Ctx->Reset(CmdListMngr);
             Ctx->SetID(ID);
 #ifdef DILIGENT_DEVELOPMENT
