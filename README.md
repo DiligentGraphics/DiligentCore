@@ -45,6 +45,7 @@ The module's cmake script defines a number of variables that are required to gen
   - [Binding Shader Resources](#binding_resources)
   - [Setting the Pipeline State and Invoking Draw Command](#draw_command)
 - [Low-level API interoperability](#low_level_api_interoperability)
+- [NuGet package build instructions](#nuget_build_instructions)
 - [License](#license)
 - [Contributing](#contributing)
 - [Release History](#release_history)
@@ -695,6 +696,39 @@ objects. Refer to the following pages for more information:
 
 [Vulkan Interoperability](https://github.com/DiligentGraphics/DiligentCore/tree/master/Graphics/GraphicsEngineVulkan#interoperability-with-vulkan)
 
+
+<a name="nuget_build_instructions"></a>
+# NuGet Package Build Instructions
+
+Follow the following steps to build the NuGet package:
+
+1. Install the required Python packages
+
+
+```
+python -m pip install -r ./BuildTools/.NET/requirements.txt
+```
+
+2. Run the NuGet package build script, for example:
+
+
+```
+python ./BuildTools/.NET/dotnet-build-package.py -c Debug -d ./
+```
+
+## Command Line Arguments
+
+|       Argument             |         Description                                                             |   Required          |
+|----------------------------|---------------------------------------------------------------------------------|---------------------|
+| `-c` (`configuration`)     | Native dynamic libraries build configuration (e.g. Debug, Release, etc.)        |  Yes                |
+| `-d` (`root-dir`)          | The path to the root directory of DiligentCore                                  |  Yes                |
+| `-s` (`settings`)          | The path to the settings file                                                   |  No                 |
+| `dotnet-tests`             | Flag indicating whether to run .NET tests                                       |  No                 |
+| `dotnet-publish`           | Flag indicating whether to publish the package to NuGet Gallery                 |  No                 |
+| `free-memory`              | Use this argument if you encounter insufficient memory during the build process |  No                 |
+
+You can override the default settings using a settings file 
+(check the `default_settings` dictionary in `dotnet-build-package.py`)
 
 <a name="license"></a>
 # License
