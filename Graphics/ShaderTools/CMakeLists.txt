@@ -63,10 +63,13 @@ if (DXC_SUPPORTED)
     if(PLATFORM_LINUX)
         list(APPEND INCLUDE
             ../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h
-            ../../ThirdParty/DirectXShaderCompiler/dxc/Support/WinAdapter.h
-            ../../ThirdParty/DirectXShaderCompiler/dxc/Support/WinFunctions.h)
+            ../../ThirdParty/DirectXShaderCompiler/dxc/WinAdapter.h
+            ../../ThirdParty/DirectXShaderCompiler/dxc/Support/WinFunctions.h
+            ../../ThirdParty/DirectXShaderCompiler/dxc/Support/WinIncludes.h
+            ../../ThirdParty/DirectXShaderCompiler/dxc/Support/Unicode.h
+            ../../ThirdParty/DirectXShaderCompiler/dxc/DxilContainer/DxilContainer.h
+            ../../ThirdParty/DirectXShaderCompiler/dxc/DXIL/DxilConstants.h)
         list(APPEND SOURCE
-            ../../ThirdParty/DirectXShaderCompiler/dxc/Support/dxcapi.cpp
             ../../ThirdParty/DirectXShaderCompiler/dxc/Support/WinAdapter.cpp)
     endif()
 else()

@@ -32,7 +32,8 @@
 #include <typeinfo>
 #include <vector>
 #endif // __cplusplus
-#include <execinfo.h>
+
+#define COM_NO_WINDOWS_H // needed to inform d3d headers that this isn't windows
 
 //===----------------------------------------------------------------------===//
 //
@@ -45,25 +46,12 @@
 #define CoTaskMemAlloc malloc
 #define CoTaskMemFree free
 
-#define SysFreeString free
-#define SysAllocStringLen(ptr, size)                                           \
-  (wchar_t *)realloc(ptr, (size + 1) * sizeof(wchar_t))
-
 #define ARRAYSIZE(array) (sizeof(array) / sizeof(array[0]))
 
-#undef _countof
-#define _countof(a) (sizeof(a) / sizeof(*(a)))
-
 // If it is GCC, there is no UUID support and we must emulate it.
-#ifdef __APPLE__
-#define __EMULATE_UUID 1
-#else // __APPLE__
-#ifdef __GNUC__
 #ifndef __clang__
 #define __EMULATE_UUID 1
-#endif // __GNUC__
 #endif // __clang__
-#endif // __APPLE__
 
 #ifdef __EMULATE_UUID
 #define __declspec(x)
@@ -76,10 +64,12 @@
 #endif // __EMULATE_UUID
 
 #define STDMETHODCALLTYPE
-#define STDAPI extern "C" HRESULT STDAPICALLTYPE
-#define STDAPI_(type) extern "C" type STDAPICALLTYPE
-#define STDMETHODIMP HRESULT STDMETHODCALLTYPE
 #define STDMETHODIMP_(type) type STDMETHODCALLTYPE
+#define STDMETHODIMP STDMETHODIMP_(HRESULT)
+#define STDMETHOD_(type,name) virtual STDMETHODIMP_(type) name
+#define STDMETHOD(name) STDMETHOD_(HRESULT, name)
+#define EXTERN_C extern "C"
+
 
 #define UNREFERENCED_PARAMETER(P) (void)(P)
 
@@ -100,13 +90,12 @@
 #define FALSE 0
 #define TRUE 1
 
-#define REGDB_E_CLASSNOTREG 1
-
 // We ignore the code page completely on Linux.
 #define GetConsoleOutputCP() 0
 
 #define _HRESULT_TYPEDEF_(_sc) ((HRESULT)_sc)
 #define DISP_E_BADINDEX _HRESULT_TYPEDEF_(0x8002000BL)
+#define REGDB_E_CLASSNOTREG _HRESULT_TYPEDEF_(0x80040154L)
 
 // This is an unsafe conversion. If needed, we can later implement a safe
 // conversion that throws exceptions for overflow cases.
@@ -130,7 +119,8 @@
 #define ERROR_OUT_OF_STRUCTURES ENOMEM
 #define ERROR_NOT_CAPABLE EPERM
 #define ERROR_NOT_FOUND ENOTSUP
-#define ERROR_UNHANDLED_EXCEPTION EINTR
+#define ERROR_UNHANDLED_EXCEPTION EBADF
+#define ERROR_BROKEN_PIPE EPIPE
 
 // Used by HRESULT <--> WIN32 error code conversion
 #define SEVERITY_ERROR 1
@@ -192,7 +182,7 @@
 #define _strdup strdup
 #define _strnicmp strnicmp
 
-#define vsprintf_s vsprintf
+#define vsnprintf_s vsnprintf
 #define strcat_s strcat
 #define strcpy_s(dst, n, src) strncpy(dst, src, n)
 #define _vscwprintf vwprintf
@@ -205,10 +195,6 @@
 
 #define OutputDebugStringA(msg) fputs(msg, stderr)
 #define OutputDebugFormatA(...) fprintf(stderr, __VA_ARGS__)
-
-#define CaptureStackBackTrace(FramesToSkip, FramesToCapture, BackTrace,        \
-                              BackTraceHash)                                   \
-  backtrace(BackTrace, FramesToCapture)
 
 // Event Tracing for Windows (ETW) provides application programmers the ability
 // to start and stop event tracing sessions, instrument an application to
@@ -325,7 +311,6 @@
 
 #define _Printf_format_string_
 #define _Null_terminated_
-#define __fallthrough
 
 #define _Field_size_(size)
 #define _Field_size_full_(size)
@@ -342,6 +327,9 @@
 #define _Null_
 #define _Notnull_
 #define _Maybenull_
+#define THIS_
+#define THIS
+#define PURE = 0
 
 #define _Outptr_result_bytebuffer_(size)
 
@@ -366,7 +354,7 @@
 
 #ifdef __cplusplus
 
-typedef unsigned char BYTE;
+typedef unsigned char BYTE, UINT8;
 typedef unsigned char *LPBYTE;
 
 typedef BYTE BOOLEAN;
@@ -381,6 +369,7 @@ typedef unsigned int UINT;
 typedef unsigned long ULONG;
 typedef long long LONGLONG;
 typedef long long LONG_PTR;
+typedef unsigned long long ULONG_PTR;
 typedef unsigned long long ULONGLONG;
 
 typedef uint16_t WORD;
@@ -420,6 +409,7 @@ typedef signed int HRESULT;
 //===--------------------- Handle Types -----------------------------------===//
 
 typedef void *HANDLE;
+typedef void *RPC_IF_HANDLE;
 
 #define DECLARE_HANDLE(name)                                                   \
   struct name##__ {                                                            \
@@ -457,15 +447,14 @@ typedef GUID CLSID;
 typedef const GUID &REFGUID;
 typedef const GUID &REFCLSID;
 
-#ifdef __EMULATE_UUID
-typedef const void *REFIID;
-#define IsEqualIID(a, b) a == b
-#define IsEqualCLSID(a, b) !memcmp(&a, &b, sizeof(GUID))
-#else  // __EMULATE_UUID
 typedef GUID IID;
 typedef IID *LPIID;
 typedef const IID &REFIID;
 inline bool IsEqualGUID(REFGUID rguid1, REFGUID rguid2) {
+  // Optimization:
+  if (&rguid1 == &rguid2)
+    return true;
+
   return !memcmp(&rguid1, &rguid2, sizeof(GUID));
 }
 
@@ -484,7 +473,6 @@ inline bool IsEqualIID(REFIID riid1, REFIID riid2) {
 inline bool IsEqualCLSID(REFCLSID rclsid1, REFCLSID rclsid2) {
   return IsEqualGUID(rclsid1, rclsid2);
 }
-#endif // __EMULATE_UUID
 
 //===--------------------- Struct Types -----------------------------------===//
 
@@ -564,27 +552,63 @@ enum tagSTATFLAG {
 
 #ifdef __EMULATE_UUID
 
-size_t UuidStrHash(const char* k);
-
 // The following macros are defined to facilitate the lack of 'uuid' on Linux.
-#define DECLARE_CROSS_PLATFORM_UUIDOF(T)                                       \
-public:                                                                        \
-  static REFIID uuidof() { return reinterpret_cast<REFIID>(T##_ID); }          \
-                                                                               \
-private:                                                                       \
-  __attribute__((visibility("hidden"))) static const size_t T##_ID;
 
-#define DEFINE_CROSS_PLATFORM_UUIDOF(T)                                        \
-  __attribute__((visibility("hidden"))) const size_t T::T##_ID =              \
-      UuidStrHash(#T);
-#define __uuidof(T) T::uuidof()
+constexpr uint8_t nybble_from_hex(char c) {
+  return ((c >= '0' && c <= '9')
+              ? (c - '0')
+              : ((c >= 'a' && c <= 'f')
+                     ? (c - 'a' + 10)
+                     : ((c >= 'A' && c <= 'F') ? (c - 'A' + 10)
+                                               : /* Should be an error */ -1)));
+}
+
+constexpr uint8_t byte_from_hex(char c1, char c2) {
+  return nybble_from_hex(c1) << 4 | nybble_from_hex(c2);
+}
+
+constexpr uint8_t byte_from_hexstr(const char str[2]) {
+  return nybble_from_hex(str[0]) << 4 | nybble_from_hex(str[1]);
+}
+
+constexpr GUID guid_from_string(const char str[37]) {
+  return GUID{static_cast<uint32_t>(byte_from_hexstr(str)) << 24 |
+                  static_cast<uint32_t>(byte_from_hexstr(str + 2)) << 16 |
+                  static_cast<uint32_t>(byte_from_hexstr(str + 4)) << 8 |
+                  byte_from_hexstr(str + 6),
+              static_cast<uint16_t>(
+                  static_cast<uint16_t>(byte_from_hexstr(str + 9)) << 8 |
+                  byte_from_hexstr(str + 11)),
+              static_cast<uint16_t>(
+                  static_cast<uint16_t>(byte_from_hexstr(str + 14)) << 8 |
+                  byte_from_hexstr(str + 16)),
+              {byte_from_hexstr(str + 19), byte_from_hexstr(str + 21),
+               byte_from_hexstr(str + 24), byte_from_hexstr(str + 26),
+               byte_from_hexstr(str + 28), byte_from_hexstr(str + 30),
+               byte_from_hexstr(str + 32), byte_from_hexstr(str + 34)}};
+}
+
+template <typename interface> inline GUID __emulated_uuidof();
+
+#define CROSS_PLATFORM_UUIDOF(interface, spec)                                 \
+  struct interface;                                                            \
+  template <> inline GUID __emulated_uuidof<interface>() {                     \
+    static const IID _IID = guid_from_string(spec);                            \
+    return _IID;                                                               \
+  }
+
+#define __uuidof(T) __emulated_uuidof<typename std::decay<T>::type>()
+
 #define IID_PPV_ARGS(ppType)                                                   \
-  (**(ppType)).uuidof(), reinterpret_cast<void **>(ppType)
+  __uuidof(decltype(**(ppType))), reinterpret_cast<void **>(ppType)
 
 #else // __EMULATE_UUID
 
-#define DECLARE_CROSS_PLATFORM_UUIDOF(T)
-#define DEFINE_CROSS_PLATFORM_UUIDOF(T)
+#ifndef CROSS_PLATFORM_UUIDOF
+// Warning: This macro exists in dxcapi.h as well
+#define CROSS_PLATFORM_UUIDOF(interface, spec)                                 \
+  struct __declspec(uuid(spec)) interface;
+#endif
 
 template <typename T> inline void **IID_PPV_ARGS_Helper(T **pp) {
   return reinterpret_cast<void **>(pp);
@@ -593,47 +617,37 @@ template <typename T> inline void **IID_PPV_ARGS_Helper(T **pp) {
 
 #endif // __EMULATE_UUID
 
+// Needed for d3d headers, but fail to create actual interfaces
+#define DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) const GUID name = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
+#define DECLSPEC_UUID(x)
+#define MIDL_INTERFACE(x) struct DECLSPEC_UUID(x)
+#define DECLARE_INTERFACE(iface)                struct iface
+#define DECLARE_INTERFACE_(iface, parent)       DECLARE_INTERFACE(iface) : parent
+
 //===--------------------- COM Interfaces ---------------------------------===//
 
-struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) IUnknown {
-  IUnknown() : m_count(0){};
+CROSS_PLATFORM_UUIDOF(IUnknown, "00000000-0000-0000-C000-000000000046")
+struct IUnknown {
+  IUnknown() {};
   virtual HRESULT QueryInterface(REFIID riid, void **ppvObject) = 0;
-  virtual ULONG AddRef();
-  virtual ULONG Release();
-  virtual ~IUnknown();
+  virtual ULONG AddRef() = 0;
+  virtual ULONG Release() = 0;
   template <class Q> HRESULT QueryInterface(Q **pp) {
     return QueryInterface(__uuidof(Q), (void **)pp);
   }
-
-private:
-  std::atomic<unsigned long> m_count;
-
-  DECLARE_CROSS_PLATFORM_UUIDOF(IUnknown)
 };
 
-struct __declspec(uuid("ECC8691B-C1DB-4DC0-855E-65F6C551AF49")) INoMarshal
-    : public IUnknown {
-  DECLARE_CROSS_PLATFORM_UUIDOF(INoMarshal)
-};
+CROSS_PLATFORM_UUIDOF(INoMarshal, "ECC8691B-C1DB-4DC0-855E-65F6C551AF49")
+struct INoMarshal : public IUnknown {};
 
-struct __declspec(uuid("00000002-0000-0000-C000-000000000046")) IMalloc
-    : public IUnknown {
-  virtual void *Alloc(size_t size);
-  virtual void *Realloc(void *ptr, size_t size);
-  virtual void Free(void *ptr);
-  virtual HRESULT QueryInterface(REFIID riid, void **ppvObject);
-};
-
-struct __declspec(uuid("0C733A30-2A1C-11CE-ADE5-00AA0044773D"))
-    ISequentialStream : public IUnknown {
+CROSS_PLATFORM_UUIDOF(ISequentialStream, "0C733A30-2A1C-11CE-ADE5-00AA0044773D")
+struct ISequentialStream : public IUnknown {
   virtual HRESULT Read(void *pv, ULONG cb, ULONG *pcbRead) = 0;
   virtual HRESULT Write(const void *pv, ULONG cb, ULONG *pcbWritten) = 0;
-
-  DECLARE_CROSS_PLATFORM_UUIDOF(ISequentialStream)
 };
 
-struct __declspec(uuid("0000000c-0000-0000-C000-000000000046")) IStream
-    : public ISequentialStream {
+CROSS_PLATFORM_UUIDOF(IStream, "0000000c-0000-0000-C000-000000000046")
+struct IStream : public ISequentialStream {
   virtual HRESULT Seek(LARGE_INTEGER dlibMove, DWORD dwOrigin,
                        ULARGE_INTEGER *plibNewPosition) = 0;
   virtual HRESULT SetSize(ULARGE_INTEGER libNewSize) = 0;
@@ -654,9 +668,12 @@ struct __declspec(uuid("0000000c-0000-0000-C000-000000000046")) IStream
   virtual HRESULT Stat(STATSTG *pstatstg, DWORD grfStatFlag) = 0;
 
   virtual HRESULT Clone(IStream **ppstm) = 0;
-
-  DECLARE_CROSS_PLATFORM_UUIDOF(IStream)
 };
+
+// These don't need stub implementations as they come from the DirectX Headers
+// They still need the __uuidof() though
+CROSS_PLATFORM_UUIDOF(ID3D12LibraryReflection, "8E349D19-54DB-4A56-9DC9-119D87BDB804")
+CROSS_PLATFORM_UUIDOF(ID3D12ShaderReflection, "5A58797D-A72C-478D-8BA2-EFC6B0EFE88E")
 
 //===--------------------- COM Pointer Types ------------------------------===//
 
@@ -917,6 +934,12 @@ public:
 
 #define CComHeapPtr CHeapPtr
 
+//===--------------------------- BSTR Allocation --------------------------===//
+
+void SysFreeString(BSTR bstrString);
+// Allocate string with length prefix
+BSTR SysAllocStringLen(const OLECHAR *strIn, UINT ui);
+
 //===--------------------- UTF-8 Related Types ----------------------------===//
 
 // Code Page
@@ -1005,8 +1028,60 @@ private:
   HANDLE m_h;
 };
 
+
+/////////////////////////////////////////////////////////////////////////////
+// CComBSTR
+
+class CComBSTR
+{
+public:
+    BSTR m_str;
+    CComBSTR() : m_str(nullptr) {};
+    CComBSTR(_In_ int nSize, LPCWSTR sz);
+    ~CComBSTR() throw() {
+      SysFreeString(m_str);
+    }
+
+    operator BSTR() const throw()
+    {
+        return m_str;
+    }
+
+    bool operator==(_In_ const CComBSTR& bstrSrc) const throw();
+
+    BSTR* operator&() throw()
+    {
+        return &m_str;
+    }
+
+    BSTR Detach() throw()
+    {
+        BSTR s = m_str;
+        m_str = NULL;
+        return s;
+    }
+
+};
+
+
 #endif // __cplusplus
 
 #endif // _WIN32
+
+#ifdef __cplusplus
+
+#include <string>
+#include <vector>
+//===--------- Convert argv to wchar ----------------===//
+class WArgV {
+  std::vector<std::wstring> WStringVector;
+  std::vector<const wchar_t *> WCharPtrVector;
+
+public:
+  WArgV(int argc, const char **argv);
+  WArgV(int argc, const wchar_t **argv);
+  const wchar_t **argv() { return WCharPtrVector.data();}
+};
+#endif
 
 #endif // LLVM_SUPPORT_WIN_ADAPTER_H
