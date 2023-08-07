@@ -313,6 +313,13 @@ protected:
         Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_LOAD;
         Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_DISCARD;
 
+        if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
+        {
+            // The tests fail on NVidia GPU in D3D12 mode when the store op is discard.
+            // This might be a driver bug as everything looks correct otherwise.
+            Attachments[0].StoreOp = ATTACHMENT_STORE_OP_STORE;
+        }
+
         Attachments[1].Format       = RTVFormat;
         Attachments[1].InitialState = RESOURCE_STATE_RENDER_TARGET;
         Attachments[1].FinalState   = RESOURCE_STATE_RENDER_TARGET;
