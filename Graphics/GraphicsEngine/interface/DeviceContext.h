@@ -540,20 +540,43 @@ typedef struct DrawIndexedIndirectAttribs DrawIndexedIndirectAttribs;
 /// This structure is used by IDeviceContext::DrawMesh().
 struct DrawMeshAttribs
 {
-    /// The number of dispatched groups
-    Uint32 ThreadGroupCount DEFAULT_INITIALIZER(1);
+    /// The number of groups dispatched in X direction.
+    Uint32 ThreadGroupCountX DEFAULT_INITIALIZER(1);
+
+    /// The number of groups dispatched in Y direction.
+    Uint32 ThreadGroupCountY DEFAULT_INITIALIZER(1);
+
+    /// The number of groups dispatched in Y direction.
+    Uint32 ThreadGroupCountZ DEFAULT_INITIALIZER(1);
 
     /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags        DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+    DRAW_FLAGS Flags         DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
 #if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values.
     constexpr DrawMeshAttribs() noexcept {}
 
-    /// Initializes the structure with user-specified values.
-    constexpr DrawMeshAttribs(Uint32     _ThreadGroupCount,
-                              DRAW_FLAGS _Flags) noexcept :
-        ThreadGroupCount {_ThreadGroupCount},
+    explicit constexpr DrawMeshAttribs(Uint32     _ThreadGroupCountX,
+                                       DRAW_FLAGS _Flags = DRAW_FLAG_NONE) noexcept :
+        ThreadGroupCountX{_ThreadGroupCountX},
+        Flags            {_Flags}
+    {}
+
+    constexpr DrawMeshAttribs(Uint32     _ThreadGroupCountX,
+                              Uint32     _ThreadGroupCountY,
+                              DRAW_FLAGS _Flags = DRAW_FLAG_NONE) noexcept :
+        ThreadGroupCountX{_ThreadGroupCountX},
+        ThreadGroupCountY{_ThreadGroupCountY},
+        Flags            {_Flags}
+    {}
+
+    constexpr DrawMeshAttribs(Uint32     _ThreadGroupCountX,
+                              Uint32     _ThreadGroupCountY,
+                              Uint32     _ThreadGroupCountZ,
+                              DRAW_FLAGS _Flags = DRAW_FLAG_NONE) noexcept :
+        ThreadGroupCountX{_ThreadGroupCountX},
+        ThreadGroupCountY{_ThreadGroupCountY},
+        ThreadGroupCountZ{_ThreadGroupCountZ},
         Flags            {_Flags}
     {}
 #endif

@@ -166,14 +166,14 @@ public:
 #endif
     }
 
-    __forceinline void DrawMesh(uint32_t TaskCount, uint32_t FirstTask)
+    __forceinline void DrawMesh(uint32_t TaskCountX, uint32_t TaskCountY, uint32_t TaskCountZ)
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksEXT() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
-        vkCmdDrawMeshTasksEXT(m_VkCmdBuffer, TaskCount, 1, 1);
+        vkCmdDrawMeshTasksEXT(m_VkCmdBuffer, TaskCountX, TaskCountY, TaskCountZ);
 #else
         UNSUPPORTED("DrawMesh is not supported when vulkan library is linked statically");
 #endif

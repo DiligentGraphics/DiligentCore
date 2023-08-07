@@ -909,9 +909,9 @@ void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
 
     PrepareForDraw(Attribs.Flags);
 
-    if (Attribs.ThreadGroupCount > 0)
+    if (Attribs.ThreadGroupCountX > 0 && Attribs.ThreadGroupCountY > 0 && Attribs.ThreadGroupCountZ > 0)
     {
-        m_CommandBuffer.DrawMesh(Attribs.ThreadGroupCount, 0);
+        m_CommandBuffer.DrawMesh(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
         ++m_State.NumCommands;
     }
 }

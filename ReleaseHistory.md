@@ -1,5 +1,6 @@
 ## Current progress
 
+* Use thread group count X/Y/Z for mesh draw commands (API253012)
 * Added `ShaderMacroArray` struct (API253011)
   * The `Macros` member of `ShaderCreateInfo` struct is now of type `ShaderMacroArray`
 * Replaced `ResourceMappingDesc` with `ResourceMappingCreateInfo` (API253010)

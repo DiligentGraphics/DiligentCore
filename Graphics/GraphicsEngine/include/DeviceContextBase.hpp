@@ -62,7 +62,7 @@ bool VerifyDispatchComputeAttribs        (const DispatchComputeAttribs&         
 bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& Attribs);
 // clang-format on
 
-bool VerifyDrawMeshAttribs(Uint32 MaxDrawMeshTasksCount, const DrawMeshAttribs& Attribs);
+bool VerifyDrawMeshAttribs(const MeshShaderProperties& MeshShaderProps, const DrawMeshAttribs& Attribs);
 bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, Uint32 IndirectCmdStride);
 
 bool VerifyResolveTextureSubresourceAttribs(const ResolveTextureSubresourceAttribs& ResolveAttribs,
@@ -2170,7 +2170,7 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshArguments(
                   "DrawMesh command arguments are invalid: pipeline state '",
                   m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
 
-    DEV_CHECK_ERR(VerifyDrawMeshAttribs(m_pDevice->GetAdapterInfo().MeshShader.MaxTaskCount, Attribs), "DrawMeshAttribs are invalid");
+    DEV_CHECK_ERR(VerifyDrawMeshAttribs(m_pDevice->GetAdapterInfo().MeshShader, Attribs), "DrawMeshAttribs are invalid");
 }
 
 template <typename ImplementationTraits>

@@ -262,8 +262,11 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
     if (AdapterInfo.Features.MeshShaders)
     {
         auto& MeshProps{AdapterInfo.MeshShader};
-        MeshProps.MaxTaskCount = vkDeviceExtProps.MeshShader.maxTaskWorkGroupCount[0];
-        ASSERT_SIZEOF(MeshProps, 4, "Did you add a new member to MeshShaderProperties? Please initialize it here.");
+        MeshProps.MaxThreadGroupCountX     = vkDeviceExtProps.MeshShader.maxMeshWorkGroupCount[0];
+        MeshProps.MaxThreadGroupCountY     = vkDeviceExtProps.MeshShader.maxMeshWorkGroupCount[1];
+        MeshProps.MaxThreadGroupCountZ     = vkDeviceExtProps.MeshShader.maxMeshWorkGroupCount[2];
+        MeshProps.MaxThreadGroupTotalCount = vkDeviceExtProps.MeshShader.maxMeshWorkGroupTotalCount;
+        ASSERT_SIZEOF(MeshProps, 16, "Did you add a new member to MeshShaderProperties? Please initialize it here.");
     }
 
     // Compute shader properties

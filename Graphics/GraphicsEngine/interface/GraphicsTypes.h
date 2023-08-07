@@ -2254,8 +2254,17 @@ typedef struct RayTracingProperties RayTracingProperties;
 /// Mesh Shader Properties
 struct MeshShaderProperties
 {
-    /// The maximum number of mesh shader tasks per draw command.
-    Uint32 MaxTaskCount DEFAULT_INITIALIZER(0);
+    /// The maximum number of mesh shader thread groups in X direction.
+    Uint32 MaxThreadGroupCountX DEFAULT_INITIALIZER(0);
+
+    /// The maximum number of mesh shader thread groups in Y direction.
+    Uint32 MaxThreadGroupCountY DEFAULT_INITIALIZER(0);
+
+    /// The maximum number of mesh shader thread groups in Z direction.
+    Uint32 MaxThreadGroupCountZ DEFAULT_INITIALIZER(0);
+
+    /// The total maximum number of mesh shader groups per draw command.
+    Uint32 MaxThreadGroupTotalCount DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     /// Comparison operator tests if two structures are equivalent
@@ -2266,7 +2275,10 @@ struct MeshShaderProperties
     /// - False otherwise.
     constexpr bool operator==(const MeshShaderProperties& RHS) const
     {
-        return MaxTaskCount == RHS.MaxTaskCount;
+        return MaxThreadGroupCountX     == RHS.MaxThreadGroupCountX &&
+               MaxThreadGroupCountY     == RHS.MaxThreadGroupCountY &&
+               MaxThreadGroupCountZ     == RHS.MaxThreadGroupCountZ &&
+               MaxThreadGroupTotalCount == RHS.MaxThreadGroupTotalCount;
     }
 #endif
 };

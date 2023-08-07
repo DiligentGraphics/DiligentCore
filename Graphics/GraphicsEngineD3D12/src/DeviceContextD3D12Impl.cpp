@@ -794,9 +794,9 @@ void DeviceContextD3D12Impl::DrawMesh(const DrawMeshAttribs& Attribs)
     auto& GraphCtx = GetCmdContext().AsGraphicsContext6();
     PrepareForDraw(GraphCtx, Attribs.Flags);
 
-    if (Attribs.ThreadGroupCount > 0)
+    if (Attribs.ThreadGroupCountX > 0 && Attribs.ThreadGroupCountY > 0 && Attribs.ThreadGroupCountZ > 0)
     {
-        GraphCtx.DrawMesh(Attribs.ThreadGroupCount, 1, 1);
+        GraphCtx.DrawMesh(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
         ++m_State.NumCommands;
     }
 }
