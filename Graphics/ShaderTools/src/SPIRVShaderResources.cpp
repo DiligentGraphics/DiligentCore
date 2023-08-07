@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -205,8 +205,8 @@ spv::ExecutionModel ShaderTypeToSpvExecutionModel(SHADER_TYPE ShaderType)
         case SHADER_TYPE_GEOMETRY:         return spv::ExecutionModelGeometry;
         case SHADER_TYPE_PIXEL:            return spv::ExecutionModelFragment;
         case SHADER_TYPE_COMPUTE:          return spv::ExecutionModelGLCompute;
-        case SHADER_TYPE_AMPLIFICATION:    return spv::ExecutionModelTaskNV;
-        case SHADER_TYPE_MESH:             return spv::ExecutionModelMeshNV;
+        case SHADER_TYPE_AMPLIFICATION:    return spv::ExecutionModelTaskEXT;
+        case SHADER_TYPE_MESH:             return spv::ExecutionModelMeshEXT;
         case SHADER_TYPE_RAY_GEN:          return spv::ExecutionModelRayGenerationKHR;
         case SHADER_TYPE_RAY_MISS:         return spv::ExecutionModelMissKHR;
         case SHADER_TYPE_RAY_CLOSEST_HIT:  return spv::ExecutionModelClosestHitKHR;

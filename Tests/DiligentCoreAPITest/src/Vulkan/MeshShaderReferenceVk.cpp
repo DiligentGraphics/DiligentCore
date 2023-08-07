@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,7 +64,7 @@ void MeshShaderDrawReferenceVk(ISwapChain* pSwapChain)
     VkPipelineShaderStageCreateInfo ShaderStages[2] = {};
 
     ShaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    ShaderStages[0].stage  = VK_SHADER_STAGE_MESH_BIT_NV;
+    ShaderStages[0].stage  = VK_SHADER_STAGE_MESH_BIT_EXT;
     ShaderStages[0].module = vkMSModule;
     ShaderStages[0].pName  = "main";
 
@@ -184,9 +184,9 @@ void MeshShaderDrawReferenceVk(ISwapChain* pSwapChain)
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 
-    pTestingSwapChainVk->BeginRenderPass(vkCmdBuffer, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    pTestingSwapChainVk->BeginRenderPass(vkCmdBuffer, VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     vkCmdBindPipeline(vkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline);
-    vkCmdDrawMeshTasksNV(vkCmdBuffer, 1, 0);
+    vkCmdDrawMeshTasksEXT(vkCmdBuffer, 1, 1, 1);
     pTestingSwapChainVk->EndRenderPass(vkCmdBuffer);
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
@@ -224,7 +224,7 @@ void MeshShaderIndirectDrawReferenceVk(ISwapChain* pSwapChain)
     VkPipelineShaderStageCreateInfo ShaderStages[2] = {};
 
     ShaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    ShaderStages[0].stage  = VK_SHADER_STAGE_MESH_BIT_NV;
+    ShaderStages[0].stage  = VK_SHADER_STAGE_MESH_BIT_EXT;
     ShaderStages[0].module = vkMSModule;
     ShaderStages[0].pName  = "main";
 
@@ -348,7 +348,7 @@ void MeshShaderIndirectDrawReferenceVk(ISwapChain* pSwapChain)
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 
-    Uint32 taskData[2] = {1, 0}; // count, first
+    Uint32 taskData[3] = {1, 1, 1};
     vkCmdUpdateBuffer(vkCmdBuffer, vkIndirectBuffer, 0, sizeof(taskData), &taskData);
 
     VkBufferMemoryBarrier barrier = {};
@@ -362,9 +362,9 @@ void MeshShaderIndirectDrawReferenceVk(ISwapChain* pSwapChain)
     barrier.size                  = VK_WHOLE_SIZE;
     vkCmdPipelineBarrier(vkCmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 
-    pTestingSwapChainVk->BeginRenderPass(vkCmdBuffer, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    pTestingSwapChainVk->BeginRenderPass(vkCmdBuffer, VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     vkCmdBindPipeline(vkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline);
-    vkCmdDrawMeshTasksIndirectNV(vkCmdBuffer, vkIndirectBuffer, 0, 1, 0);
+    vkCmdDrawMeshTasksIndirectEXT(vkCmdBuffer, vkIndirectBuffer, 0, 1, 0);
     pTestingSwapChainVk->EndRenderPass(vkCmdBuffer);
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
@@ -406,12 +406,12 @@ void AmplificationShaderDrawReferenceVk(ISwapChain* pSwapChain)
     VkPipelineShaderStageCreateInfo ShaderStages[3] = {};
 
     ShaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    ShaderStages[0].stage  = VK_SHADER_STAGE_TASK_BIT_NV;
+    ShaderStages[0].stage  = VK_SHADER_STAGE_TASK_BIT_EXT;
     ShaderStages[0].module = vkTSModule;
     ShaderStages[0].pName  = "main";
 
     ShaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    ShaderStages[1].stage  = VK_SHADER_STAGE_MESH_BIT_NV;
+    ShaderStages[1].stage  = VK_SHADER_STAGE_MESH_BIT_EXT;
     ShaderStages[1].module = vkMSModule;
     ShaderStages[1].pName  = "main";
 
@@ -531,9 +531,9 @@ void AmplificationShaderDrawReferenceVk(ISwapChain* pSwapChain)
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 
-    pTestingSwapChainVk->BeginRenderPass(vkCmdBuffer, VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV | VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    pTestingSwapChainVk->BeginRenderPass(vkCmdBuffer, VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT | VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     vkCmdBindPipeline(vkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline);
-    vkCmdDrawMeshTasksNV(vkCmdBuffer, 8, 0);
+    vkCmdDrawMeshTasksEXT(vkCmdBuffer, 8, 1, 1);
     pTestingSwapChainVk->EndRenderPass(vkCmdBuffer);
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");

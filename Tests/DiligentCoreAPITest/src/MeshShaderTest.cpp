@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -269,23 +269,10 @@ TEST(MeshShaderTest, DrawTriangleIndirect)
     struct IndirectAndCountBuffData
     {
         char   Unused[16];
-        Uint32 IndirectData[3] = {};
+        Uint32 IndirectData[3] = {1, 1, 1};
         Uint32 End;
     };
     IndirectAndCountBuffData Data;
-
-    if (pDevice->GetDeviceInfo().IsVulkanDevice())
-    {
-        Data.IndirectData[0] = 1;   // TaskCount
-        Data.IndirectData[1] = 0;   // FirstTask
-        Data.IndirectData[2] = ~0u; // ignored
-    }
-    else
-    {
-        Data.IndirectData[0] = 1; // ThreadGroupCountX
-        Data.IndirectData[1] = 1; // ThreadGroupCountY
-        Data.IndirectData[2] = 1; // ThreadGroupCountZ
-    }
 
     BufferDesc IndirectBufferDesc;
     IndirectBufferDesc.Name      = "Indirect buffer";
@@ -414,24 +401,10 @@ TEST(MeshShaderTest, DrawTriangleIndirectCount)
     struct IndirectAndCountBuffData
     {
         char   Unused[16];
-        Uint32 Count;
-        Uint32 IndirectData[3];
+        Uint32 Count           = 1;
+        Uint32 IndirectData[3] = {1, 1, 1};
     };
     IndirectAndCountBuffData Data;
-
-    if (pDevice->GetDeviceInfo().IsVulkanDevice())
-    {
-        Data.IndirectData[0] = 1;   // TaskCount
-        Data.IndirectData[1] = 0;   // FirstTask
-        Data.IndirectData[2] = ~0u; // ignored
-    }
-    else
-    {
-        Data.IndirectData[0] = 1; // ThreadGroupCountX
-        Data.IndirectData[1] = 1; // ThreadGroupCountY
-        Data.IndirectData[2] = 1; // ThreadGroupCountZ
-    }
-    Data.Count = 1;
 
     BufferDesc IndirectBufferDesc;
     IndirectBufferDesc.Name      = "Indirect & Count buffer";

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,18 +37,17 @@ namespace GLSL
 const std::string MeshShaderTest_MS{
 R"(
 #version 460
-#extension GL_NV_mesh_shader : require
+#extension GL_EXT_mesh_shader : require
 
 layout(local_size_x=4) in;
 layout(max_vertices=4, max_primitives=2) out;
 layout(triangles) out;
 
-//out uint gl_PrimitiveCountNV;
-//out uint gl_PrimitiveIndicesNV[max_primitives * 3]
+//out uvec3 gl_PrimitiveTriangleIndicesEXT[max_primitives]
 
-//out gl_MeshPerVertexNV {
+//out gl_MeshPerVertexEXT {
 //  vec4 gl_Position;
-//} gl_MeshVerticesNV[max_vertices]
+//} gl_MeshVerticesEXT[max_vertices]
 
 layout(location = 0) out vec3 out_Color[];
 
@@ -58,31 +57,29 @@ void main ()
 {
     const uint I = gl_LocalInvocationID.x;
 
-    // only one thread writes output primitive count
-    if (I == 0)
-    {
-        gl_PrimitiveCountNV = 2;
-    }
-
     // first triangle
     if (I == 0)
     {
-        gl_PrimitiveIndicesNV[0] = 0;
-        gl_PrimitiveIndicesNV[1] = 1;
-        gl_PrimitiveIndicesNV[2] = 2;
+        gl_PrimitiveTriangleIndicesEXT[0] = uvec3(0, 1, 2);
     }
 
     // second triangle
     if (I == 3)
     {
-        gl_PrimitiveIndicesNV[3] = 2;
-        gl_PrimitiveIndicesNV[4] = 1;
-        gl_PrimitiveIndicesNV[5] = 3;
+        gl_PrimitiveTriangleIndicesEXT[1] = uvec3(2, 1, 3);
     }
 
-    gl_MeshVerticesNV[I].gl_Position = vec4(float(I >> 1) * 2.0 - 1.0, float(I & 1) * 2.0 - 1.0, 0.0, 1.0);
+    gl_MeshVerticesEXT[I].gl_Position = vec4(float(I >> 1) * 2.0 - 1.0, float(I & 1) * 2.0 - 1.0, 0.0, 1.0);
 
     out_Color[I] = colors[I];
+
+    // only one thread writes output primitive count
+    if (I == 0)
+    {
+        uint vertexCount    = 4;
+        uint primitiveCount = 2;
+        SetMeshOutputsEXT(vertexCount, primitiveCount);
+    }
 }
 )"
 };
@@ -105,26 +102,28 @@ void main()
 const std::string AmplificationShaderTest_TS{
 R"(
 #version 460
-#extension GL_NV_mesh_shader : require
+#extension GL_EXT_mesh_shader : require
 
 layout(local_size_x = 8) in;
 
-taskNV out Task {
+struct Payload
+{    
     uint baseID;
     uint subIDs[8];
-} Output;
+};
+taskPayloadSharedEXT Payload Output;
 
 void main()
 {
     const uint I = gl_LocalInvocationID.x;
 
+    Output.subIDs[I] = I;
+
     if (I == 0)
     {
-        gl_TaskCountNV = 8;
         Output.baseID = gl_WorkGroupID.x * 8;
+        EmitMeshTasksEXT(8, 1, 1);
     }
-
-    Output.subIDs[I] = I;
 }
 )"
 };
@@ -132,16 +131,18 @@ void main()
 const std::string AmplificationShaderTest_MS{
 R"(
 #version 460
-#extension GL_NV_mesh_shader : require
+#extension GL_EXT_mesh_shader : require
 
 layout(local_size_x = 1) in;
 layout(max_vertices = 3, max_primitives = 1) out;
 layout(triangles) out;
 
-taskNV in Task {
+struct Payload
+{    
     uint baseID;
     uint subIDs[8];
-} Input;
+};
+taskPayloadSharedEXT Payload Input;
 
 layout(location = 0) out vec3 out_Color[];
 
@@ -155,19 +156,19 @@ void main ()
     center.x = (float((meshletID % 9) + 1) / 10.0) * 2.0 - 1.0;
     center.y = (float((meshletID / 9) + 1) / 10.0) * 2.0 - 1.0;
 
-    gl_PrimitiveCountNV = 1;
+    gl_PrimitiveTriangleIndicesEXT[0] = uvec3(2, 1, 0);
 
-    gl_PrimitiveIndicesNV[0] = 2;
-    gl_PrimitiveIndicesNV[1] = 1;
-    gl_PrimitiveIndicesNV[2] = 0;
-
-    gl_MeshVerticesNV[0].gl_Position = vec4(center.x, center.y + 0.09, 0.0, 1.0);
-    gl_MeshVerticesNV[1].gl_Position = vec4(center.x - 0.09, center.y - 0.09, 0.0, 1.0);
-    gl_MeshVerticesNV[2].gl_Position = vec4(center.x + 0.09, center.y - 0.09, 0.0, 1.0);
+    gl_MeshVerticesEXT[0].gl_Position = vec4(center.x, center.y + 0.09, 0.0, 1.0);
+    gl_MeshVerticesEXT[1].gl_Position = vec4(center.x - 0.09, center.y - 0.09, 0.0, 1.0);
+    gl_MeshVerticesEXT[2].gl_Position = vec4(center.x + 0.09, center.y - 0.09, 0.0, 1.0);
 
     out_Color[0] = colors[meshletID & 3];
     out_Color[1] = colors[meshletID & 3];
     out_Color[2] = colors[meshletID & 3];
+
+    uint vertexCount    = 3;
+    uint primitiveCount = 1;
+    SetMeshOutputsEXT(vertexCount, primitiveCount);
 }
 )"
 };

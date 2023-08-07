@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -102,9 +102,7 @@ groupshared Payload s_payload;
 void main(in uint I : SV_GroupIndex,
           in uint gid : SV_GroupID)
 {
-    if (I == 0)
-        s_payload.baseID = gid * 8;
-
+    s_payload.baseID    = (I == 0) ? gid * 8 : 0;
     s_payload.subIDs[I] = I;
 
     DispatchMesh(8, 1, 1, s_payload);

@@ -378,7 +378,7 @@ VkShaderModule TestingEnvironmentVk::CreateShaderModule(const SHADER_TYPE Shader
     Attribs.ShaderType     = ShaderType;
     Attribs.ShaderSource   = ShaderSource.c_str();
     Attribs.SourceCodeLen  = static_cast<int>(ShaderSource.length());
-    Attribs.Version        = (ShaderType >= SHADER_TYPE_RAY_GEN ? GLSLangUtils::SpirvVersion::Vk120 : GLSLangUtils::SpirvVersion::Vk100);
+    Attribs.Version        = (ShaderType >= SHADER_TYPE_AMPLIFICATION ? GLSLangUtils::SpirvVersion::Vk120 : GLSLangUtils::SpirvVersion::Vk100);
     Attribs.AssignBindings = false;
 
     auto Bytecode = GLSLangUtils::GLSLtoSPIRV(Attribs);

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1570,8 +1570,8 @@ ASSERT_SAME(PIPELINE_STAGE_FLAG_CONDITIONAL_RENDERING,        VK_PIPELINE_STAGE_
 ASSERT_SAME(PIPELINE_STAGE_FLAG_SHADING_RATE_TEXTURE,         VK_PIPELINE_STAGE_SHADING_RATE_IMAGE_BIT_NV);
 ASSERT_SAME(PIPELINE_STAGE_FLAG_RAY_TRACING_SHADER,           VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV);
 ASSERT_SAME(PIPELINE_STAGE_FLAG_ACCELERATION_STRUCTURE_BUILD, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV);
-ASSERT_SAME(PIPELINE_STAGE_FLAG_TASK_SHADER,                  VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV);
-ASSERT_SAME(PIPELINE_STAGE_FLAG_MESH_SHADER,                  VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
+ASSERT_SAME(PIPELINE_STAGE_FLAG_TASK_SHADER,                  VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT);
+ASSERT_SAME(PIPELINE_STAGE_FLAG_MESH_SHADER,                  VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT);
 ASSERT_SAME(PIPELINE_STAGE_FLAG_FRAGMENT_DENSITY_PROCESS,     VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT);
 // clang-format on
 VkPipelineStageFlags PipelineStageFlagsToVkPipelineStageFlags(PIPELINE_STAGE_FLAGS PipelineStageFlags)
@@ -1639,8 +1639,8 @@ VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
         case SHADER_TYPE_GEOMETRY:         return VK_SHADER_STAGE_GEOMETRY_BIT;
         case SHADER_TYPE_PIXEL:            return VK_SHADER_STAGE_FRAGMENT_BIT;
         case SHADER_TYPE_COMPUTE:          return VK_SHADER_STAGE_COMPUTE_BIT;
-        case SHADER_TYPE_AMPLIFICATION:    return VK_SHADER_STAGE_TASK_BIT_NV;
-        case SHADER_TYPE_MESH:             return VK_SHADER_STAGE_MESH_BIT_NV;
+        case SHADER_TYPE_AMPLIFICATION:    return VK_SHADER_STAGE_TASK_BIT_EXT;
+        case SHADER_TYPE_MESH:             return VK_SHADER_STAGE_MESH_BIT_EXT;
         case SHADER_TYPE_RAY_GEN:          return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
         case SHADER_TYPE_RAY_MISS:         return VK_SHADER_STAGE_MISS_BIT_KHR;
         case SHADER_TYPE_RAY_CLOSEST_HIT:  return VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
@@ -1695,8 +1695,8 @@ SHADER_TYPE VkShaderStageFlagsToShaderTypes(VkShaderStageFlags StageFlags)
             case VK_SHADER_STAGE_GEOMETRY_BIT:                Result |= SHADER_TYPE_GEOMETRY;         break;
             case VK_SHADER_STAGE_FRAGMENT_BIT:                Result |= SHADER_TYPE_PIXEL;            break;
             case VK_SHADER_STAGE_COMPUTE_BIT:                 Result |= SHADER_TYPE_COMPUTE;          break;
-            case VK_SHADER_STAGE_TASK_BIT_NV:                 Result |= SHADER_TYPE_AMPLIFICATION;    break;
-            case VK_SHADER_STAGE_MESH_BIT_NV:                 Result |= SHADER_TYPE_MESH;             break;
+            case VK_SHADER_STAGE_TASK_BIT_EXT:                Result |= SHADER_TYPE_AMPLIFICATION;    break;
+            case VK_SHADER_STAGE_MESH_BIT_EXT:                Result |= SHADER_TYPE_MESH;             break;
             case VK_SHADER_STAGE_RAYGEN_BIT_KHR:              Result |= SHADER_TYPE_RAY_GEN;          break;
             case VK_SHADER_STAGE_MISS_BIT_KHR:                Result |= SHADER_TYPE_RAY_MISS;         break;
             case VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:         Result |= SHADER_TYPE_RAY_CLOSEST_HIT;  break;

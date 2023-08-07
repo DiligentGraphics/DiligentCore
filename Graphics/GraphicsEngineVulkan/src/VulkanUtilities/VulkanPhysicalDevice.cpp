@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,17 +118,17 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const CreateInfo& CI) :
         }
 
         // Get mesh shader features and properties.
-        if (IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
+        if (IsExtensionSupported(VK_EXT_MESH_SHADER_EXTENSION_NAME))
         {
             *NextFeat = &m_ExtFeatures.MeshShader;
             NextFeat  = &m_ExtFeatures.MeshShader.pNext;
 
-            m_ExtFeatures.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+            m_ExtFeatures.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
 
             *NextProp = &m_ExtProperties.MeshShader;
             NextProp  = &m_ExtProperties.MeshShader.pNext;
 
-            m_ExtProperties.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+            m_ExtProperties.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
         }
 
         // Get acceleration structure features and properties.

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -237,7 +237,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
         if (vkFeatures.tessellationShader != VK_FALSE)
             SupportedStages |= WaveOpStages & (VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
         if (vkExtFeatures.MeshShader.meshShader != VK_FALSE && vkExtFeatures.MeshShader.taskShader != VK_FALSE)
-            SupportedStages |= WaveOpStages & (VK_SHADER_STAGE_TASK_BIT_NV | VK_SHADER_STAGE_MESH_BIT_NV);
+            SupportedStages |= WaveOpStages & (VK_SHADER_STAGE_TASK_BIT_EXT | VK_SHADER_STAGE_MESH_BIT_EXT);
         if (vkExtFeatures.RayTracingPipeline.rayTracingPipeline != VK_FALSE)
         {
             constexpr auto VK_SHADER_STAGE_ALL_RAY_TRACING =
@@ -262,7 +262,7 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
     if (AdapterInfo.Features.MeshShaders)
     {
         auto& MeshProps{AdapterInfo.MeshShader};
-        MeshProps.MaxTaskCount = vkDeviceExtProps.MeshShader.maxDrawMeshTasksCount;
+        MeshProps.MaxTaskCount = vkDeviceExtProps.MeshShader.maxTaskWorkGroupCount[0];
         ASSERT_SIZEOF(MeshProps, 4, "Did you add a new member to MeshShaderProperties? Please initialize it here.");
     }
 
@@ -840,10 +840,12 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             {
                 EnabledExtFeats.MeshShader = DeviceExtFeatures.MeshShader;
                 VERIFY_EXPR(EnabledExtFeats.MeshShader.taskShader != VK_FALSE && EnabledExtFeats.MeshShader.meshShader != VK_FALSE);
-                VERIFY(PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME),
-                       "VK_NV_mesh_shader extension must be supported as it has already been checked by VulkanPhysicalDevice and "
+                const auto* MeshShaderExtensionName = VK_EXT_MESH_SHADER_EXTENSION_NAME;
+                VERIFY(PhysicalDevice->IsExtensionSupported(MeshShaderExtensionName),
+                       MeshShaderExtensionName,
+                       " extension must be supported as it has already been checked by VulkanPhysicalDevice and "
                        "both taskShader and meshShader features are TRUE");
-                DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+                DeviceExtensions.push_back(MeshShaderExtensionName);
                 *NextExt = &EnabledExtFeats.MeshShader;
                 NextExt  = &EnabledExtFeats.MeshShader.pNext;
             }

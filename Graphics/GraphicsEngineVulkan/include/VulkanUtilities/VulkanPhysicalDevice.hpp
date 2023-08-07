@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +48,7 @@ public:
 
     struct ExtensionFeatures
     {
-        VkPhysicalDeviceMeshShaderFeaturesNV              MeshShader             = {};
+        VkPhysicalDeviceMeshShaderFeaturesEXT             MeshShader             = {};
         VkPhysicalDevice16BitStorageFeaturesKHR           Storage16Bit           = {};
         VkPhysicalDevice8BitStorageFeaturesKHR            Storage8Bit            = {};
         VkPhysicalDeviceShaderFloat16Int8FeaturesKHR      ShaderFloat16Int8      = {};
@@ -76,7 +76,7 @@ public:
 
     struct ExtensionProperties
     {
-        VkPhysicalDeviceMeshShaderPropertiesNV              MeshShader             = {};
+        VkPhysicalDeviceMeshShaderPropertiesEXT             MeshShader             = {};
         VkPhysicalDeviceAccelerationStructurePropertiesKHR  AccelStruct            = {};
         VkPhysicalDeviceRayTracingPipelinePropertiesKHR     RayTracingPipeline     = {};
         VkPhysicalDeviceDescriptorIndexingPropertiesEXT     DescriptorIndexing     = {};
