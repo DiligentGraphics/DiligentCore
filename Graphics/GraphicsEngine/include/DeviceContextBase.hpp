@@ -1175,7 +1175,9 @@ inline bool DeviceContextBase<ImplementationTraits>::SetSubpassRenderTargets()
         if (DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
         {
             VERIFY_EXPR(DSAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
-            pDSV = FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex];
+            pDSV = DSAttachmentRef.State == RESOURCE_STATE_DEPTH_READ ?
+                m_pBoundFramebuffer->GetReadOnlyDSV(m_SubpassIndex) :
+                FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex];
             if (pDSV != nullptr)
             {
                 if (m_FramebufferSamples == 0)

@@ -474,7 +474,6 @@ TEST_P(ReadOnlyDepthTest, InRenderPass)
     // Draw color fullscreen quad that reads depth from the texture and performs depth test simultaneously
     pContext->NextSubpass();
 
-
     pContext->SetPipelineState(m_pColorPSO);
     pContext->CommitShaderResources(m_pColorSRB, RESOURCE_STATE_TRANSITION_MODE_NONE);
     pContext->Draw({4, DRAW_FLAG_VERIFY_ALL});
