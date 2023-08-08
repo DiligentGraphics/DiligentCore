@@ -170,7 +170,7 @@ protected:
         VERIFY_EXPR(m_pReadWriteDSV);
     }
 
-    void InitializePipelineStates(IRenderPass* pDepthRenderPass, IRenderPass* pColorRenderPass)
+    void InitializePipelineStates(IRenderPass* pRenderPass)
     {
         auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
@@ -227,7 +227,10 @@ protected:
             GraphicsPipeline.DepthStencilDesc.DepthWriteEnable                = True;
             GraphicsPipeline.BlendDesc.RenderTargets[0].RenderTargetWriteMask = COLOR_MASK_NONE;
 
-            InitializeRenderPassOrRenderTargets(GraphicsPipeline, TEX_FORMAT_UNKNOWN, pDepthRenderPass, false);
+            if (pRenderPass != nullptr)
+                InitializeRenderPass(GraphicsPipeline, pRenderPass, 0);
+            else
+                InitializeRenderTargets(GraphicsPipeline, TEX_FORMAT_UNKNOWN, false);
 
             PSOCreateInfo.pVS = pVS;
             PSOCreateInfo.pPS = pPSDepth;
@@ -244,7 +247,10 @@ protected:
             GraphicsPipeline.DepthStencilDesc.DepthWriteEnable                = False;
             GraphicsPipeline.BlendDesc.RenderTargets[0].RenderTargetWriteMask = COLOR_MASK_ALL;
 
-            InitializeRenderPassOrRenderTargets(GraphicsPipeline, RTVFormat, pColorRenderPass, true);
+            if (pRenderPass != nullptr)
+                InitializeRenderPass(GraphicsPipeline, pRenderPass, 1);
+            else
+                InitializeRenderTargets(GraphicsPipeline, RTVFormat, true);
 
             PSOCreateInfo.pVS = pVS;
             PSOCreateInfo.pPS = pPSColor;
@@ -263,54 +269,16 @@ protected:
         m_pColorSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Input")->Set(pDepthSRV);
     }
 
-    void CreateDepthRenderPassAndFramebuffer(RefCntAutoPtr<IRenderPass>& pRenderPass, RefCntAutoPtr<IFramebuffer>& pFramebuffer)
-    {
-        auto* pEnv    = GPUTestingEnvironment::GetInstance();
-        auto* pDevice = pEnv->GetDevice();
-
-        RenderPassAttachmentDesc Attachments[1];
-        Attachments[0].Format       = GetDepthFormat();
-        Attachments[0].InitialState = RESOURCE_STATE_DEPTH_WRITE;
-        Attachments[0].FinalState   = RESOURCE_STATE_DEPTH_WRITE;
-        Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
-        Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
-
-        SubpassDesc Subpasses[1];
-
-        AttachmentReference ReadWriteDepthAttachmentRef{0, RESOURCE_STATE_DEPTH_WRITE};
-        Subpasses[0].pDepthStencilAttachment = &ReadWriteDepthAttachmentRef;
-
-        RenderPassDesc RPDesc;
-        RPDesc.Name            = "Read only depth test -- depth render pass";
-        RPDesc.AttachmentCount = _countof(Attachments);
-        RPDesc.pAttachments    = Attachments;
-        RPDesc.SubpassCount    = _countof(Subpasses);
-        RPDesc.pSubpasses      = Subpasses;
-
-        pDevice->CreateRenderPass(RPDesc, &pRenderPass);
-        VERIFY_EXPR(pRenderPass);
-
-        FramebufferDesc FBDesc;
-        FBDesc.Name               = "Read only depth test -- depth framebuffer";
-        FBDesc.pRenderPass        = pRenderPass;
-        FBDesc.AttachmentCount    = _countof(Attachments);
-        ITextureView* pTexViews[] = {m_pReadWriteDSV};
-        FBDesc.ppAttachments      = pTexViews;
-
-        pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
-        VERIFY_EXPR(pFramebuffer);
-    }
-
-    void CreateColorRenderPassAndFramebuffer(RefCntAutoPtr<IRenderPass>& pRenderPass, RefCntAutoPtr<IFramebuffer>& pFramebuffer)
+    void CreateRenderPassAndFramebuffer(RefCntAutoPtr<IRenderPass>& pRenderPass, RefCntAutoPtr<IFramebuffer>& pFramebuffer)
     {
         auto* pEnv    = GPUTestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
         RenderPassAttachmentDesc Attachments[2];
         Attachments[0].Format       = GetDepthFormat();
-        Attachments[0].InitialState = RESOURCE_STATE_DEPTH_READ;
+        Attachments[0].InitialState = RESOURCE_STATE_DEPTH_WRITE;
         Attachments[0].FinalState   = RESOURCE_STATE_DEPTH_READ;
-        Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_LOAD;
+        Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
         Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_DISCARD;
 
         if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D12)
@@ -326,29 +294,43 @@ protected:
         Attachments[1].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
         Attachments[1].StoreOp      = ATTACHMENT_STORE_OP_STORE;
 
-        SubpassDesc Subpasses[1];
+        SubpassDesc Subpasses[2];
 
-        Subpasses[0].RenderTargetAttachmentCount = 1;
+        AttachmentReference ReadWriteDepthAttachmentRef{0, RESOURCE_STATE_DEPTH_WRITE};
         AttachmentReference ReadOnlyDepthAttachmentRef{0, RESOURCE_STATE_DEPTH_READ};
-        Subpasses[0].pDepthStencilAttachment = &ReadOnlyDepthAttachmentRef;
         AttachmentReference RTAttachmentRef{1, RESOURCE_STATE_RENDER_TARGET};
-        Subpasses[0].pRenderTargetAttachments = &RTAttachmentRef;
+
+        Subpasses[0].pDepthStencilAttachment = &ReadWriteDepthAttachmentRef;
+
+        Subpasses[1].RenderTargetAttachmentCount = 1;
+        Subpasses[1].pDepthStencilAttachment     = &ReadOnlyDepthAttachmentRef;
+        Subpasses[1].pRenderTargetAttachments    = &RTAttachmentRef;
+
+        SubpassDependencyDesc Dependencies[1];
+        Dependencies[0].SrcSubpass    = 0;
+        Dependencies[0].DstSubpass    = 1;
+        Dependencies[0].SrcAccessMask = ACCESS_FLAG_DEPTH_STENCIL_WRITE;
+        Dependencies[0].DstAccessMask = ACCESS_FLAG_DEPTH_STENCIL_READ | ACCESS_FLAG_SHADER_READ;
+        Dependencies[0].SrcStageMask  = PIPELINE_STAGE_FLAG_LATE_FRAGMENT_TESTS;
+        Dependencies[0].DstStageMask  = PIPELINE_STAGE_FLAG_PIXEL_SHADER | PIPELINE_STAGE_FLAG_EARLY_FRAGMENT_TESTS;
 
         RenderPassDesc RPDesc;
-        RPDesc.Name            = "Read only depth test -- color render pass";
+        RPDesc.Name            = "Read only depth test";
         RPDesc.AttachmentCount = _countof(Attachments);
         RPDesc.pAttachments    = Attachments;
         RPDesc.SubpassCount    = _countof(Subpasses);
         RPDesc.pSubpasses      = Subpasses;
+        RPDesc.DependencyCount = _countof(Dependencies);
+        RPDesc.pDependencies   = Dependencies;
 
         pDevice->CreateRenderPass(RPDesc, &pRenderPass);
         VERIFY_EXPR(pRenderPass);
 
         FramebufferDesc FBDesc;
-        FBDesc.Name               = "Read only depth test -- color framebuffer";
+        FBDesc.Name               = "Read only depth test";
         FBDesc.pRenderPass        = pRenderPass;
         FBDesc.AttachmentCount    = _countof(Attachments);
-        ITextureView* pTexViews[] = {m_pReadOnlyDSV, m_pRTV};
+        ITextureView* pTexViews[] = {m_pReadWriteDSV, m_pRTV};
         FBDesc.ppAttachments      = pTexViews;
 
         pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
@@ -379,27 +361,24 @@ protected:
     RefCntAutoPtr<IShaderResourceBinding> m_pColorSRB;
 
 private:
-    void InitializeRenderPassOrRenderTargets(GraphicsPipelineDesc& GraphicsPipeline, TEXTURE_FORMAT ColorFormat, IRenderPass* pRenderPass, bool bReadOnlyDSV)
+    void InitializeRenderPass(GraphicsPipelineDesc& GraphicsPipeline, IRenderPass* pRenderPass, Uint8 SubpassIndex)
     {
-        if (pRenderPass)
+        GraphicsPipeline.pRenderPass  = pRenderPass;
+        GraphicsPipeline.SubpassIndex = SubpassIndex;
+    }
+
+    void InitializeRenderTargets(GraphicsPipelineDesc& GraphicsPipeline, TEXTURE_FORMAT ColorFormat, bool bReadOnlyDSV)
+    {
+        GraphicsPipeline.DSVFormat   = GetDepthFormat();
+        GraphicsPipeline.ReadOnlyDSV = bReadOnlyDSV;
+        if (ColorFormat != TEX_FORMAT_UNKNOWN)
         {
-            GraphicsPipeline.pRenderPass      = pRenderPass;
-            GraphicsPipeline.DSVFormat        = TEX_FORMAT_UNKNOWN;
-            GraphicsPipeline.NumRenderTargets = 0;
+            GraphicsPipeline.NumRenderTargets = 1;
+            GraphicsPipeline.RTVFormats[0]    = ColorFormat;
         }
         else
         {
-            GraphicsPipeline.DSVFormat   = GetDepthFormat();
-            GraphicsPipeline.ReadOnlyDSV = bReadOnlyDSV;
-            if (ColorFormat != TEX_FORMAT_UNKNOWN)
-            {
-                GraphicsPipeline.NumRenderTargets = 1;
-                GraphicsPipeline.RTVFormats[0]    = ColorFormat;
-            }
-            else
-            {
-                GraphicsPipeline.NumRenderTargets = 0;
-            }
+            GraphicsPipeline.NumRenderTargets = 0;
         }
     }
 };
@@ -422,7 +401,7 @@ TEST_P(ReadOnlyDepthTest, AsRenderTarget)
     TakeSnapshot();
 
     InitializeDepthTexture();
-    InitializePipelineStates(nullptr, nullptr);
+    InitializePipelineStates(nullptr);
     InitializeSRB();
 
     // Clear color and depth to unused colors
@@ -465,69 +444,42 @@ TEST_P(ReadOnlyDepthTest, InRenderPass)
     // Create render passes and framebuffers
     InitializeDepthTexture();
 
-    RefCntAutoPtr<IRenderPass>  pDepthRenderPass;
-    RefCntAutoPtr<IFramebuffer> pDepthFramebuffer;
-    CreateDepthRenderPassAndFramebuffer(pDepthRenderPass, pDepthFramebuffer);
-
-    RefCntAutoPtr<IRenderPass>  pColorRenderPass;
-    RefCntAutoPtr<IFramebuffer> pColorFramebuffer;
-    CreateColorRenderPassAndFramebuffer(pColorRenderPass, pColorFramebuffer);
-
-    InitializePipelineStates(pDepthRenderPass, pColorRenderPass);
+    RefCntAutoPtr<IRenderPass>  pRenderPass;
+    RefCntAutoPtr<IFramebuffer> pFramebuffer;
+    CreateRenderPassAndFramebuffer(pRenderPass, pFramebuffer);
+    InitializePipelineStates(pRenderPass);
     InitializeSRB();
 
-    // Clear color and depth to unused colors
-    pContext->SetRenderTargets(1, &m_pRTV, m_pReadWriteDSV, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-    pContext->ClearRenderTarget(m_pRTV, ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-    pContext->ClearDepthStencil(m_pReadWriteDSV, GetDepthStencilClearFlags(), ClearDepth, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-
     // Draw depth-only fullscreen quad
-    {
-        OptimizedClearValue    ClearValues[1];
-        BeginRenderPassAttribs RPBeginAttribs;
-
-        ClearValues[0].DepthStencil.Depth = ClearDepth;
-
-        RPBeginAttribs.pRenderPass         = pDepthRenderPass;
-        RPBeginAttribs.pFramebuffer        = pDepthFramebuffer;
-        RPBeginAttribs.ClearValueCount     = _countof(ClearValues);
-        RPBeginAttribs.pClearValues        = ClearValues;
-        RPBeginAttribs.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-
-        pContext->BeginRenderPass(RPBeginAttribs);
-
-        DrawAttribs drawAttrs{4, DRAW_FLAG_VERIFY_ALL};
-        pContext->SetPipelineState(m_pDepthPSO);
-        pContext->Draw(drawAttrs);
-
-        pContext->EndRenderPass();
-    }
-
-    pContext->CommitShaderResources(m_pColorSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-
-    // Draw color fullscreen quad that reads depth from the texture and performs depth test simultaneously
     {
         OptimizedClearValue    ClearValues[2];
         BeginRenderPassAttribs RPBeginAttribs;
 
-        ClearValues[0].Format = RTVFormat;
-        memcpy(ClearValues[0].Color, ClearColor, sizeof(ClearColor));
+        ClearValues[0].DepthStencil.Depth = ClearDepth;
+        ClearValues[1].Format             = RTVFormat;
+        memcpy(ClearValues[1].Color, ClearColor, sizeof(ClearColor));
 
-        RPBeginAttribs.pRenderPass         = pColorRenderPass;
-        RPBeginAttribs.pFramebuffer        = pColorFramebuffer;
+        RPBeginAttribs.pRenderPass         = pRenderPass;
+        RPBeginAttribs.pFramebuffer        = pFramebuffer;
         RPBeginAttribs.ClearValueCount     = _countof(ClearValues);
         RPBeginAttribs.pClearValues        = ClearValues;
         RPBeginAttribs.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
 
         pContext->BeginRenderPass(RPBeginAttribs);
-
-        DrawAttribs drawAttrs{4, DRAW_FLAG_VERIFY_ALL};
-        pContext->SetPipelineState(m_pColorPSO);
-        pContext->Draw(drawAttrs);
-
-        pContext->EndRenderPass();
     }
 
+    pContext->SetPipelineState(m_pDepthPSO);
+    pContext->Draw({4, DRAW_FLAG_VERIFY_ALL});
+
+    // Draw color fullscreen quad that reads depth from the texture and performs depth test simultaneously
+    pContext->NextSubpass();
+
+
+    pContext->SetPipelineState(m_pColorPSO);
+    pContext->CommitShaderResources(m_pColorSRB, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    pContext->Draw({4, DRAW_FLAG_VERIFY_ALL});
+
+    pContext->EndRenderPass();
 
     pSwapChain->Present();
 }
