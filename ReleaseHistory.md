@@ -1,4 +1,4 @@
-## Current progress
+## v2.5.4
 
 * Use thread group count X/Y/Z for mesh draw commands (API253012)
 * Added `ShaderMacroArray` struct (API253011)
