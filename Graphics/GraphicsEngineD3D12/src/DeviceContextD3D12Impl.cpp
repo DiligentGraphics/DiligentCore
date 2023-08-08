@@ -1264,9 +1264,15 @@ void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE 
     {
         const auto ViewType = m_pBoundDepthStencil->GetDesc().ViewType;
         VERIFY_EXPR(ViewType == TEXTURE_VIEW_DEPTH_STENCIL || ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL);
-        const auto NewState = ViewType == TEXTURE_VIEW_DEPTH_STENCIL ?
+        auto NewState = ViewType == TEXTURE_VIEW_DEPTH_STENCIL ?
             RESOURCE_STATE_DEPTH_WRITE :
             RESOURCE_STATE_DEPTH_READ;
+        if (NewState == RESOURCE_STATE_DEPTH_READ && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+        {
+            // Read-only depth is likely to be used as shader resource, so set this flag.
+            // If this is not intended, the app should manually transition resource states.
+            NewState |= RESOURCE_STATE_SHADER_RESOURCE;
+        }
 
         auto* pTexture = ClassPtrCast<TextureD3D12Impl>(pDSV->GetTexture());
 
@@ -1481,10 +1487,13 @@ void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
 
         const auto& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
         VERIFY_EXPR(Subpass.pDepthStencilAttachment != nullptr && DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED);
-        VERIFY(m_pBoundDepthStencil == FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex],
-               "Depth-stencil buffer in the device context is inconsistent with the framebuffer");
         const auto  FirstLastUse     = m_pActiveRenderPass->GetAttachmentFirstLastUse(DSAttachmentRef.AttachmentIndex);
         const auto& DSAttachmentDesc = RPDesc.pAttachments[DSAttachmentRef.AttachmentIndex];
+        VERIFY(m_pBoundDepthStencil ==
+                   (DSAttachmentRef.State == RESOURCE_STATE_DEPTH_READ ?
+                        m_pBoundFramebuffer->GetReadOnlyDSV(m_SubpassIndex) :
+                        FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex]),
+               "Depth-stencil buffer in the device context is inconsistent with the framebuffer");
 
         RenderPassDS.cpuDescriptor = m_pBoundDepthStencil->GetCPUDescriptorHandle();
         if (FirstLastUse.first == m_SubpassIndex)
