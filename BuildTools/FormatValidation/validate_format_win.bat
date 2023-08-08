@@ -2,6 +2,6 @@ python clang-format-validate.py --color never --clang-format-executable clang-fo
 -r ../../Common ../../Graphics ../../Platforms ../../Primitives ../../Tests ^
 --exclude ../../Graphics/HLSL2GLSLConverterLib/include/GLSLDefinitions.h ^
 --exclude ../../Graphics/HLSL2GLSLConverterLib/include/GLSLDefinitions_inc.h ^
---exclude ../../Graphics/GraphicsEngineVulkan/shaders/* ^
---exclude ../../Graphics/GraphicsEngine.NET/* ^
---exclude ../../Tests/DiligentCoreAPITest/assets/*
+--exclude ../../Graphics/GraphicsEngineVulkan/shaders ^
+--exclude ../../Graphics/GraphicsEngine.NET ^
+--exclude ../../Tests/DiligentCoreAPITest/assets

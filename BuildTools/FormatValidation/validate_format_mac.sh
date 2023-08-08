@@ -3,5 +3,6 @@ python3 clang-format-validate.py --clang-format-executable ./clang-format_mac_10
 -r ../../Common ../../Graphics ../../Platforms ../../Primitives ../../Tests \
 --exclude ../../Graphics/HLSL2GLSLConverterLib/include/GLSLDefinitions.h \
 --exclude ../../Graphics/HLSL2GLSLConverterLib/include/GLSLDefinitions_inc.h \
---exclude ../../Graphics/GraphicsEngineVulkan/shaders/GenerateMipsCS_inc.h \
---exclude ../../Tests/DiligentCoreAPITest/assets/*
+--exclude ../../Graphics/GraphicsEngineVulkan/shaders \
+--exclude ../../Graphics/GraphicsEngine.NET \
+--exclude ../../Tests/DiligentCoreAPITest/assets
