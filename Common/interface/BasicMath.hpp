@@ -2006,7 +2006,7 @@ using double2x2 = Matrix2x2<double>;
 template <typename T = float>
 struct Quaternion
 {
-    Vector4<T> q;
+    Vector4<T> q{0, 0, 0, 1};
 
     constexpr Quaternion(const Vector4<T>& _q) noexcept :
         q{_q}
