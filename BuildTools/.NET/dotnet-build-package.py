@@ -255,8 +255,8 @@ def dotnet_restore_nuget_package(src_dir):
     subprocess.run(f"dotnet restore --no-cache {src_dir}", check=True)
 
 
-def dotnet_build_and_run_tests(config, settings, arch):
-    dotnet_generate_version(f"{project_paths['dotnet-build']}/{project_paths['dotnet-tests']}")
+def dotnet_build_and_run_tests(config, settings, arch, is_local):
+    dotnet_generate_version(f"{project_paths['dotnet-build']}/{project_paths['dotnet-tests']}", is_local)
     dotnet_copy_nuget_package(f"{project_paths['dotnet-build']}/{project_paths['dotnet-proj']}/bin/{config}",
                               f"{project_paths['dotnet-build']}/{project_paths['dotnet-tests']}/LocalPackages")
     dotnet_restore_nuget_package(project_paths['dotnet-tests'])
@@ -292,12 +292,10 @@ def main():
                         required=True)
     parser.add_argument("-s", "--settings",
                         required=False)
-
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--dotnet-tests',
+    parser.add_argument('--dotnet-tests',
                        action=BooleanOptionalAction,
                        help="Use this flag to build and run .NET tests")
-    group.add_argument('--dotnet-publish',
+    parser.add_argument('--dotnet-publish',
                        action=BooleanOptionalAction,
                        help="Use this flag to publish nuget package")
     parser.add_argument('--free-memory',
@@ -320,12 +318,10 @@ def main():
         for arch in arch_settings.keys():
             free_disk_memory(arch_settings[arch])
 
+    dotnet_pack_project(args.configuration, not args.dotnet_publish)
     if args.dotnet_tests:
-        dotnet_pack_project(args.configuration, True)
         for arch in arch_settings.keys():
-            dotnet_build_and_run_tests(args.configuration, os_settings, arch)
-    elif args.dotnet_publish:
-        dotnet_pack_project(args.configuration, False)
+            dotnet_build_and_run_tests(args.configuration, os_settings, arch, not args.dotnet_publish)
 
 
 if __name__ == "__main__":
