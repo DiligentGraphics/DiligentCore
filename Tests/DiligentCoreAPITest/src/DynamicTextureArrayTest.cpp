@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -86,8 +86,9 @@ TEST_P(DynamicTextureArrayCreateTest, Run)
         ASSERT_NE(pDynTexArray, nullptr);
 
         EXPECT_FALSE(pDynTexArray->PendingUpdate());
-        auto* pTexture = pDynTexArray->GetTexture(nullptr, nullptr);
+        auto* pTexture = pDynTexArray->Update(nullptr, nullptr);
         EXPECT_EQ(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     }
 
     Desc.Name      = "Dynamic texture array create test 2";
@@ -97,8 +98,9 @@ TEST_P(DynamicTextureArrayCreateTest, Run)
         ASSERT_NE(pDynTexArray, nullptr);
 
         EXPECT_TRUE(pDynTexArray->PendingUpdate());
-        auto* pTexture = pDynTexArray->GetTexture(pDevice, Desc.Usage == USAGE_SPARSE ? pContext : nullptr);
+        auto* pTexture = pDynTexArray->Update(pDevice, Desc.Usage == USAGE_SPARSE ? pContext : nullptr);
         EXPECT_NE(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     }
 
     Desc.Name = "Dynamic texture array create test 3";
@@ -107,8 +109,9 @@ TEST_P(DynamicTextureArrayCreateTest, Run)
         ASSERT_NE(pDynTexArray, nullptr);
 
         EXPECT_EQ(pDynTexArray->PendingUpdate(), Desc.Usage == USAGE_SPARSE);
-        auto* pTexture = pDynTexArray->GetTexture(nullptr, Desc.Usage == USAGE_SPARSE ? pContext : nullptr);
+        auto* pTexture = pDynTexArray->Update(nullptr, Desc.Usage == USAGE_SPARSE ? pContext : nullptr);
         EXPECT_NE(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     }
 }
 
@@ -268,24 +271,28 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
 
     pDynTexArray->Resize(pDevice, nullptr, 1);
     EXPECT_EQ(pDynTexArray->PendingUpdate(), Desc.Usage == USAGE_SPARSE);
-    auto* pTexture = pDynTexArray->GetTexture(pDevice, pContext);
+    auto* pTexture = pDynTexArray->Update(pDevice, pContext);
     EXPECT_NE(pTexture, nullptr);
+    EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     UpdateSlice(pContext, pTexture, 0);
     VerifySlices(pContext, pTexture, 0, 1);
 
     pDynTexArray->Resize(pDevice, pContext, 2);
-    pTexture = pDynTexArray->GetTexture(nullptr, nullptr);
+    pTexture = pDynTexArray->Update(nullptr, nullptr);
+    EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     UpdateSlice(pContext, pTexture, 1);
     VerifySlices(pContext, pTexture, 1, 1);
 
 
     pDynTexArray->Resize(pDevice, nullptr, 16);
-    pTexture = pDynTexArray->GetTexture(pDevice, pContext);
+    pTexture = pDynTexArray->Update(pDevice, pContext);
+    EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     UpdateSlice(pContext, pTexture, 2);
     VerifySlices(pContext, pTexture, 2, 1);
 
     pDynTexArray->Resize(pDevice, nullptr, 9);
-    pTexture = pDynTexArray->GetTexture(pDevice, pContext);
+    pTexture = pDynTexArray->Update(pDevice, pContext);
+    EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     UpdateSlice(pContext, pTexture, 3);
     UpdateSlice(pContext, pTexture, 4);
     UpdateSlice(pContext, pTexture, 5);
@@ -293,7 +300,8 @@ TEST_P(DynamicTextureArrayResizeTest, Run)
     VerifySlices(pContext, pTexture, 0, NumTestSlices);
 
     pDynTexArray->Resize(nullptr, nullptr, 0);
-    pTexture = pDynTexArray->GetTexture(nullptr, pContext);
+    pTexture = pDynTexArray->Update(nullptr, pContext);
+    EXPECT_EQ(pTexture, pDynTexArray->GetTexture());
     if (Desc.Usage != USAGE_SPARSE)
         EXPECT_EQ(pTexture, nullptr);
 }
