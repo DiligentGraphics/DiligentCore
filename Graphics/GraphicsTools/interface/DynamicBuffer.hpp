@@ -122,14 +122,14 @@ public:
                     bool            DiscardContent = false);
 
 
-    /// Returns the pointer to the buffer object, initializing it if necessary.
+    /// Returns a pointer to the buffer object, initializing it if necessary.
 
-    /// \param[in] pDevice  - Render device that will be used to create the new buffer,
+    /// \param[in] pDevice  - Render device that will be used to create a new buffer,
     ///                       if necessary (see remarks).
     /// \param[in] pContext - Device context that will be used to copy existing
     ///                       buffer contents or commit memory pages, if necessary
     ///                       (see remarks).
-    /// \return               The pointer to the buffer object.
+    /// \return               A pointer to the buffer object.
     ///
     /// \remarks    If the buffer has been resized, but internal buffer object has not been
     ///             initialized, pDevice and pContext must not be null.
@@ -139,6 +139,16 @@ public:
     IBuffer* GetBuffer(IRenderDevice*  pDevice,
                        IDeviceContext* pContext);
 
+
+    /// Returns a pointer to the buffer object.
+    ///
+    /// \remarks    If the buffer has not been initialized, the method returns null.
+    ///             If the buffer may need to be updated (resized or initialized), use the overload
+    ///             that takes pDevice and pContext parameters.
+    IBuffer* GetBuffer() const
+    {
+        return m_pBuffer;
+    }
 
     /// Returns true if the buffer must be updated before use (e.g. it has been resized,
     /// but internal buffer has not been initialized or updated).

@@ -95,6 +95,8 @@ public:
 
     virtual IBuffer* GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) override final;
 
+    virtual IBuffer* GetBuffer(Uint32 Index) const override final;
+
     virtual void SetUserData(IObject* pUserData) override final
     {
         m_pUserData = pUserData;
@@ -216,6 +218,17 @@ public:
             BufferSize.store(Buffer.GetDesc().Size);
         }
         return Buffer.GetBuffer(pDevice, pContext);
+    }
+
+    virtual IBuffer* GetBuffer(Uint32 Index) const override final
+    {
+        if (Index >= m_Buffers.size())
+        {
+            UNEXPECTED("Index (", Index, ") is out of range: there are only ", m_Buffers.size(), " buffers.");
+            return nullptr;
+        }
+
+        return m_Buffers[Index]->GetBuffer();
     }
 
     virtual void Allocate(Uint32                  NumVertices,
@@ -378,6 +391,11 @@ IVertexPool* VertexPoolAllocationImpl::GetPool()
 IBuffer* VertexPoolAllocationImpl::GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext)
 {
     return m_pParentPool->GetBuffer(Index, pDevice, pContext);
+}
+
+IBuffer* VertexPoolAllocationImpl::GetBuffer(Uint32 Index) const
+{
+    return m_pParentPool->GetBuffer(Index);
 }
 
 void CreateVertexPool(IRenderDevice*              pDevice,

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -116,15 +116,15 @@ public:
                      bool            DiscardContent = false);
 
 
-    /// Returns the pointer to the texture object, initializing it if necessary.
+    /// Returns a pointer to the texture object, initializing it if necessary.
 
-    /// \param[in] pDevice  - Render device that will be used to create the new texture,
+    /// \param[in] pDevice  - Render device that will be used to create a new texture,
     ///                       if necessary (see remarks).
     /// \param[in] pContext - Device context that will be used to copy existing
     ///                       texture contents (when using non-sparse texture), or bind
     ///                       memory tiles (when using sparse textures), if necessary
     ///                       (see remarks).
-    /// \return               The pointer to the texture object.
+    /// \return               A pointer to the texture object.
     ///
     /// \remarks    If the texture has been resized, but internal texture object has not been
     ///             initialized, pDevice and pContext must not be null.
@@ -134,6 +134,16 @@ public:
     ITexture* GetTexture(IRenderDevice*  pDevice,
                          IDeviceContext* pContext);
 
+
+    /// Returns a pointer to the texture object.
+
+    /// \remarks    If the texture has not be initialized, the method returns null.
+    ///             If the texture may need to be updated (initialized or resized),
+    ///             use the overload that takes pDevice and pContext parameters.
+    ITexture* GetTexture() const
+    {
+        return m_pTexture;
+    }
 
     /// Returns true if the texture must be updated before use (e.g. it has been resized,
     /// but internal texture has not been initialized or updated).

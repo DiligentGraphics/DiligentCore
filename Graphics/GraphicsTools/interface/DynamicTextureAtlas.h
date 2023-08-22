@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -117,11 +117,11 @@ struct DynamicTextureAtlasUsageStats
 /// Dynamic texture atlas.
 struct IDynamicTextureAtlas : public IObject
 {
-    /// Returns the pointer to the internal texture object.
+    /// Returns a pointer to the internal texture object.
 
-    /// \param[in]  pDevice  - Pointer to the render device that will be used to
+    /// \param[in]  pDevice  - A pointer to the render device that will be used to
     ///                        create a new internal texture array, if necessary.
-    /// \param[in]  pContext - Pointer to the device context that will be used to
+    /// \param[in]  pContext - A pointer to the device context that will be used to
     ///                        copy existing contents to the new texture array, if
     ///                        necessary.
     ///
@@ -131,6 +131,14 @@ struct IDynamicTextureAtlas : public IObject
     ///             The method is not thread safe. An application must externally synchronize
     ///             the access.
     virtual ITexture* GetTexture(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+
+
+    /// Returns a pointer to the internal texture object.
+
+    /// \remarks    If the texture has not been created yet, the method returns null.
+    ///             If the texture may need to be updated (initialzed or resized), use
+    ///             the overload that takes pDevice and pContext parameters.
+    virtual ITexture* GetTexture() const = 0;
 
 
     /// Performs suballocation from the atlas.

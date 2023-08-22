@@ -64,6 +64,11 @@ struct IVertexPoolAllocation : public IObject
     /// \remarks    This method is a shortcut for GetPool()->GetBuffer(Index, pDevice, pContext).
     virtual IBuffer* GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
 
+    /// Returns a pointer to the internal buffer at given index.
+
+    /// \remarks    This method is a shortcut for GetPool()->GetBuffer(Index).
+    virtual IBuffer* GetBuffer(Uint32 Index) const = 0;
+
     /// Stores a pointer to the user-provided data object, which
     /// may later be retrieved through GetUserData().
     ///
@@ -186,6 +191,14 @@ struct IVertexPool : public IObject
     ///             The method is not thread-safe and an application must externally synchronize the
     ///             access.
     virtual IBuffer* GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+
+
+    /// Returns a pointer to the internal buffer at given index.
+    ///
+    /// \remarks    If the internal buffer has not been initialized yet, the method will return null.
+    ///             If the buffer may need to be updated (resized or initialized), use the overload
+    ///             that takes pDevice and pContext parameters.
+    virtual IBuffer* GetBuffer(Uint32 Index) const = 0;
 
 
     /// Allocates vertices from the pool.

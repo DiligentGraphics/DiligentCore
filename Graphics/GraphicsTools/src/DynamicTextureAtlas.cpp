@@ -475,6 +475,11 @@ public:
         }
     }
 
+    virtual ITexture* GetTexture() const override final
+    {
+        return m_pTexture;
+    }
+
     virtual Uint32 GetAllocationAlignment(Uint32 Width, Uint32 Height) const override final
     {
         return ComputeTextureAtlasSuballocationAlignment(Width, Height, m_MinAlignment);
