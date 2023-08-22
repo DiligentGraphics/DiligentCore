@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,8 +58,9 @@ TEST(BufferSuballocatorTest, Create)
     RefCntAutoPtr<IBufferSuballocator> pAllocator;
     CreateBufferSuballocator(pDevice, CI, &pAllocator);
 
-    auto* pBuffer = pAllocator->GetBuffer(pDevice, pContext);
+    auto* pBuffer = pAllocator->Update(pDevice, pContext);
     EXPECT_NE(pBuffer, nullptr);
+    EXPECT_EQ(pBuffer, pAllocator->GetBuffer());
 
     RefCntAutoPtr<IBufferSuballocation> pAlloc;
     pAllocator->Allocate(256, 16, &pAlloc);
@@ -125,8 +126,9 @@ TEST(BufferSuballocatorTest, Allocate)
                 Thread.join();
         }
 
-        auto* pBuffer = pAllocator->GetBuffer(pDevice, pContext);
+        auto* pBuffer = pAllocator->Update(pDevice, pContext);
         EXPECT_NE(pBuffer, nullptr);
+        EXPECT_EQ(pBuffer, pAllocator->GetBuffer());
 
         {
             std::vector<std::thread> Threads(NumThreads);

@@ -136,7 +136,7 @@ struct IDynamicTextureAtlas : public IObject
     /// Returns a pointer to the internal texture object.
 
     /// \remarks    If the texture has not been created yet, the method returns null.
-    ///             If the texture may need to be updated (initialzed or resized), use
+    ///             If the texture may need to be updated (initialized or resized), use
     ///             the overload that takes pDevice and pContext parameters.
     virtual ITexture* GetTexture() const = 0;
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,7 +77,7 @@ public:
     /// \param[in] CreateInfo - Create information, see Diligent::DynamicBufferCreateInfo.
     ///
     /// \remarks            If pDevice is null, internal buffer creation will be postponed
-    ///                     until GetBuffer() or Resize() is called.
+    ///                     until Update() or Resize() is called.
     DynamicBuffer(IRenderDevice* pDevice, const DynamicBufferCreateInfo& CreateInfo);
 
     // clang-format off
@@ -104,14 +104,14 @@ public:
     ///             are not null:
     ///             - Both pDevice and pContext are not null: the new internal buffer is created
     ///               and existing contents is copied (for non-sparse buffer), or memory pages
-    ///               are committed (for sparse buffer). GetBuffer() may be called with
+    ///               are committed (for sparse buffer). Update() may be called with
     ///               both pDevice and pContext being null.
     ///             - pDevice is not null, pContext is null: internal buffer is created,
     ///               but existing contents is not copied or memory is not committed. An
-    ///               application must provide non-null device context when calling GetBuffer().
+    ///               application must provide non-null device context when calling Update().
     ///             - Both pDevice and pContext are null: internal buffer is not created.
     ///               An application must provide non-null device and device context when calling
-    ///               GetBuffer().
+    ///               Update().
     ///
     ///             Typically pDevice and pContext should be null when the method is called from a worker thread.
     ///
@@ -122,7 +122,7 @@ public:
                     bool            DiscardContent = false);
 
 
-    /// Returns a pointer to the buffer object, initializing it if necessary.
+    /// Updates the internal buffer object, initializing or resizing it if necessary.
 
     /// \param[in] pDevice  - Render device that will be used to create a new buffer,
     ///                       if necessary (see remarks).
@@ -136,15 +136,15 @@ public:
     ///
     ///             If buffer does not need to be updated (PendingUpdate() returns false),
     ///             both pDevice and pContext may be null.
-    IBuffer* GetBuffer(IRenderDevice*  pDevice,
-                       IDeviceContext* pContext);
+    IBuffer* Update(IRenderDevice*  pDevice,
+                    IDeviceContext* pContext);
 
 
     /// Returns a pointer to the buffer object.
     ///
     /// \remarks    If the buffer has not been initialized, the method returns null.
-    ///             If the buffer may need to be updated (resized or initialized), use the overload
-    ///             that takes pDevice and pContext parameters.
+    ///             If the buffer may need to be updated (resized or initialized), use the Update()
+    ///             method.
     IBuffer* GetBuffer() const
     {
         return m_pBuffer;
@@ -152,7 +152,7 @@ public:
 
     /// Returns true if the buffer must be updated before use (e.g. it has been resized,
     /// but internal buffer has not been initialized or updated).
-    /// When update is not pending, GetBuffer() may be called with null device and context.
+    /// When update is not pending, Update() may be called with null device and context.
     bool PendingUpdate() const
     {
         return m_PendingSize != m_Desc.Size;
