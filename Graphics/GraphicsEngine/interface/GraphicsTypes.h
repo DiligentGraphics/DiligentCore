@@ -1678,6 +1678,12 @@ struct DeviceFeatures
     DEVICE_FEATURE_STATE DepthBiasClamp                DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports depth clamping
+    ///
+    /// \remarks    By default polygon faces are clipped against the near and far planes of the view
+    ///             frustum. If depth clipping is disabled in the PSO, the depth of the fragments that
+    ///             would be clipped is clamped to the near/far plane instead of discarding them.
+    ///             If this feature is enabled, the DepthClipEnable member of the RasterizerStateDesc
+    ///             struct can be set to False. Otherwise it must always be set to True.
     DEVICE_FEATURE_STATE DepthClamp                    DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports depth clamping
