@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@
 
 #include "ObjectBase.hpp"
 #include "ShaderBase.hpp"
+#include "PipelineStateBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "SerializationDevice.h"
 #include "SerializedShader.h"
@@ -911,6 +912,8 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapper<GraphicsPipelineStateCreateI
     SerializedPsoCIWrapper(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType, const GraphicsPipelineStateCreateInfo& _CI) :
         SerializedPsoCIWrapperBase<GraphicsPipelineStateCreateInfo>{pSerializationDevice, DeviceType, _CI}
     {
+        CorrectGraphicsPipelineDesc(CI.GraphicsPipeline, pSerializationDevice->GetDeviceInfo().Features);
+
         // Replace render pass with serialized render pass
         if (CI.GraphicsPipeline.pRenderPass != nullptr)
         {
