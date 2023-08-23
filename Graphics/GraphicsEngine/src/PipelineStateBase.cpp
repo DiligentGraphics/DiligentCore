@@ -644,8 +644,8 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
             auto RTVFmt = GraphicsPipeline.RTVFormats[rt];
             if (RTVFmt != TEX_FORMAT_UNKNOWN)
             {
-                LOG_ERROR_MESSAGE("Render target format (", GetTextureFormatAttribs(RTVFmt).Name, ") of unused slot ", rt,
-                                  " must be set to TEX_FORMAT_UNKNOWN.");
+                LOG_WARNING_MESSAGE("Render target format (", GetTextureFormatAttribs(RTVFmt).Name, ") of unused slot ", rt,
+                                    " must be set to TEX_FORMAT_UNKNOWN.");
             }
         }
 
