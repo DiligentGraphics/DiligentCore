@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -113,7 +113,7 @@ void CopyRTShaderGroupNames(std::unordered_map<HashMapStringKey, Uint32>& NameTo
                             const RayTracingPipelineStateCreateInfo&      CreateInfo,
                             FixedLinearAllocator&                         MemPool) noexcept;
 
-void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept;
+void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline, const DeviceFeatures& Features) noexcept;
 
 
 /// Finds a pipeline resource layout variable with the name 'Name' in shader stage 'ShaderStage'
@@ -784,7 +784,7 @@ protected:
         auto& pStrides         = this->m_pGraphicsPipelineData->pStrides;
 
         GraphicsPipeline = CreateInfo.GraphicsPipeline;
-        CorrectGraphicsPipelineDesc(GraphicsPipeline);
+        CorrectGraphicsPipelineDesc(GraphicsPipeline, this->GetDevice()->GetDeviceInfo().Features);
 
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
         CopyResourceSignatures(CreateInfo, MemPool);
