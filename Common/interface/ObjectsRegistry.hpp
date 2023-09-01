@@ -21,6 +21,7 @@
 #include <mutex>
 #include <memory>
 #include <algorithm>
+#include <atomic>
 
 #include "../../../DiligentCore/Platforms/Basic/interface/DebugUtilities.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -55,6 +56,19 @@ template <typename T>
 auto _LockWeakPtr(std::weak_ptr<T>& pWeakPtr)
 {
     return pWeakPtr.lock();
+}
+
+
+template <typename T>
+auto _IsWeakPtrExpired(RefCntWeakPtr<T>& pWeakPtr)
+{
+    return !pWeakPtr.IsValid();
+}
+
+template <typename T>
+auto _IsWeakPtrExpired(std::weak_ptr<T>& pWeakPtr)
+{
+    return pWeakPtr.expired();
 }
 
 /// A thread-safe and exception-safe object registry that works with std::shared_ptr or RefCntAutoPtr.
@@ -102,7 +116,8 @@ class ObjectsRegistry
 public:
     using WeakPtrType = typename _StrongPtrHelper<StrongPtrType>::WeakPtrType;
 
-    ObjectsRegistry() noexcept
+    explicit ObjectsRegistry(Uint32 NumRequestsToPurge = 1024) noexcept :
+        m_NumRequestsToPurge{NumRequestsToPurge}
     {}
 
     /// Finds the object in the registry and returns strong pointer to it (std::shared_ptr or RefCntAutoPtr).
@@ -129,7 +144,7 @@ public:
         // while we keep one, even if it is popped from the registry by another thread.
         std::shared_ptr<ObjectWrapper> pObjectWrpr;
         {
-            std::lock_guard<std::mutex> Lock{m_CacheMtx};
+            std::lock_guard<std::mutex> Guard{m_CacheMtx};
 
             auto it = m_Cache.find(Key);
             if (it == m_Cache.end())
@@ -146,7 +161,7 @@ public:
         }
         catch (...)
         {
-            std::lock_guard<std::mutex> Lock{m_CacheMtx};
+            std::lock_guard<std::mutex> Guard{m_CacheMtx};
 
             auto it = m_Cache.find(Key);
             if (it != m_Cache.end())
@@ -167,7 +182,7 @@ public:
         }
 
         {
-            std::lock_guard<std::mutex> Lock{m_CacheMtx};
+            std::lock_guard<std::mutex> Guard{m_CacheMtx};
 
             auto it = m_Cache.find(Key);
             if (pObject)
@@ -189,6 +204,9 @@ public:
                         m_Cache.erase(it);
                 }
             }
+
+            if (m_NumRequestsSinceLastPurge.fetch_add(1) + 1 >= m_NumRequestsToPurge)
+                PurgeUnguarded();
         }
 
         return pObject;
@@ -203,7 +221,10 @@ public:
     ///             or empty pointer otherwise.
     StrongPtrType Get(const KeyType& Key)
     {
-        std::lock_guard<std::mutex> Lock{m_CacheMtx};
+        std::lock_guard<std::mutex> Guard{m_CacheMtx};
+
+        if (m_NumRequestsSinceLastPurge.fetch_add(1) + 1 >= m_NumRequestsToPurge)
+            PurgeUnguarded();
 
         auto it = m_Cache.find(Key);
         if (it != m_Cache.end())
@@ -222,6 +243,13 @@ public:
         return {};
     }
 
+    /// Removes all expired pointers from the cache
+    void Purge()
+    {
+        std::lock_guard<std::mutex> Guard{m_CacheMtx};
+        PurgeUnguarded();
+    }
+
 private:
     class ObjectWrapper
     {
@@ -231,7 +259,7 @@ private:
         {
             StrongPtrType pObject;
 
-            std::lock_guard<std::mutex> Lock{m_CreateObjectMtx};
+            std::lock_guard<std::mutex> Guard{m_CreateObjectMtx};
             pObject = _LockWeakPtr(m_wpObject);
             if (!pObject)
             {
@@ -247,13 +275,39 @@ private:
             return _LockWeakPtr(m_wpObject);
         }
 
+        bool IsExpired()
+        {
+            return _IsWeakPtrExpired(m_wpObject);
+        }
+
     private:
         std::mutex  m_CreateObjectMtx;
         WeakPtrType m_wpObject;
     };
 
+    void PurgeUnguarded()
+    {
+        for (auto it = m_Cache.begin(); it != m_Cache.end();)
+        {
+            if (it->second->IsExpired())
+            {
+                it = m_Cache.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        m_NumRequestsSinceLastPurge.store(0);
+    }
+
 private:
     using CacheType = std::unordered_map<KeyType, std::shared_ptr<ObjectWrapper>, KeyHasher, KeyEqual>;
+
+    const Uint32 m_NumRequestsToPurge;
+
+    std::atomic<Uint32> m_NumRequestsSinceLastPurge{0};
 
     std::mutex m_CacheMtx;
     CacheType  m_Cache;

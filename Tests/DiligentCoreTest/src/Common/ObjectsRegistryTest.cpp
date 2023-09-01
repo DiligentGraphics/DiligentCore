@@ -135,7 +135,7 @@ TEST(Common_ObjectsRegistry, Get_RefCntAutoPtr)
 template <template <typename T> class StrongPtrType, typename DataType>
 void TestObjectRegistryCreateDestroyRace()
 {
-    ObjectsRegistry<int, StrongPtrType<DataType>> Registry;
+    ObjectsRegistry<int, StrongPtrType<DataType>> Registry{64};
 
     constexpr Uint32         NumThreads = 16;
     std::vector<std::thread> Threads(NumThreads);
@@ -172,7 +172,7 @@ TEST(Common_ObjectsRegistry, CreateDestroyRace_RefCntAutoPtr)
 template <template <typename T> class StrongPtrType, typename DataType>
 void TestObjectRegistryExceptions()
 {
-    ObjectsRegistry<int, StrongPtrType<DataType>> Registry;
+    ObjectsRegistry<int, StrongPtrType<DataType>> Registry{128};
 
     constexpr Uint32         NumThreads = 15; // Use odd number
     std::vector<std::thread> Threads(NumThreads);
