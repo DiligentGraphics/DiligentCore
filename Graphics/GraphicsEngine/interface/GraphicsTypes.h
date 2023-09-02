@@ -86,6 +86,10 @@ DILIGENT_TYPED_ENUM(SHADER_TYPE, Uint32)
     SHADER_TYPE_TILE             = 0x4000, ///< Tile shader (Only for Metal backend)
     SHADER_TYPE_LAST             = SHADER_TYPE_TILE,
 
+    /// Vertex and pixel shader stages
+    SHADER_TYPE_VS_PS           = SHADER_TYPE_VERTEX |
+                                  SHADER_TYPE_PIXEL,
+
     /// All graphics pipeline shader stages
     SHADER_TYPE_ALL_GRAPHICS    = SHADER_TYPE_VERTEX   |
                                   SHADER_TYPE_PIXEL    |

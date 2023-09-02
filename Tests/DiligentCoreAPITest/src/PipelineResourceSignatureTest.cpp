@@ -259,7 +259,6 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
     PipelineResourceSignatureDesc PRSDesc;
     PRSDesc.Name = "Variable types test";
 
-    constexpr auto SHADER_TYPE_VS_PS = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
     // clang-format off
     PipelineResourceDesc Resources[]
     {
@@ -629,7 +628,6 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers)
     PipelineResourceSignatureDesc PRSDesc;
     PRSDesc.Name = "Variable types test";
 
-    constexpr auto SHADER_TYPE_VS_PS = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
     // clang-format off
     PipelineResourceDesc Resources[]
     {
@@ -1405,7 +1403,6 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
 
     VERIFY_EXPR(ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL || !UseEmulatedSamplers);
 
-    constexpr auto SHADER_TYPE_VS_PS = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
     // clang-format off
     std::vector<PipelineResourceDesc> Resources =
     {
@@ -1584,8 +1581,7 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
     PipelineResourceSignatureDesc PRSDesc;
     PRSDesc.Name = "Formatted buffer test";
 
-    constexpr auto SHADER_TYPE_VS_PS   = SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL;
-    const auto     FormattedBufferFlag = BufferMode == BUFFER_MODE_FORMATTED ? PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER : PIPELINE_RESOURCE_FLAG_NONE;
+    const auto FormattedBufferFlag = BufferMode == BUFFER_MODE_FORMATTED ? PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER : PIPELINE_RESOURCE_FLAG_NONE;
     // clang-format off
     PipelineResourceDesc Resources[]
     {
