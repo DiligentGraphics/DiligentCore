@@ -7,7 +7,8 @@
         android:label="DE"
         android:hasCode="false">
         <activity android:name="android.app.NativeActivity"
-            android:configChanges="orientation|keyboardHidden">
+            android:configChanges="orientation|keyboardHidden"
+            android:exported="true">
             <meta-data android:name="android.app.lib_name" android:value="DETestLauncher"/>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
