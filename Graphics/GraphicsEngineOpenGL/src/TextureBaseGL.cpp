@@ -97,6 +97,14 @@ static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarge
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
     if (glGetError() == GL_NO_ERROR && GlFormat != 0)
     {
+        if (GlFormat == GL_RGBA)
+        {
+            // Note: GL_RGBA is not a valid internal format (GL_RGBA8 is).
+            // However, Android returns this as an internal format of the external camera
+            // texture (which is incorrect), so we have to handle it.
+            GlFormat = GL_RGBA8;
+        }
+
         VERIFY(TexFmtFromDesc == TEX_FORMAT_UNKNOWN || static_cast<GLenum>(GlFormat) == TexFormatToGLInternalTexFormat(TexFmtFromDesc), "Texture format does not match the format specified by the texture description");
     }
     else

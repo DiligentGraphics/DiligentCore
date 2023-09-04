@@ -250,6 +250,14 @@ public:
         }
         else
         {
+            if (GlFormat == GL_RGBA)
+            {
+                // Note: GL_RGBA is not a valid internal format (GL_RGBA8 is).
+                // However, Android returns this as an internal format of the external camera
+                // texture (which is incorrect), so we have to handle it.
+                return TEX_FORMAT_RGBA8_UNORM;
+            }
+
             UNEXPECTED("Unknown GL format");
             return TEX_FORMAT_UNKNOWN;
         }
