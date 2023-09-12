@@ -61,10 +61,15 @@ struct IBufferSuballocation : public IObject
     /// Returns a pointer to the parent allocator.
     virtual IBufferSuballocator* GetAllocator() = 0;
 
+    /// Updates the internal buffer object.
+
+    /// \remarks    This method is a shortcut for GetAllocator()->Update(pDevice, pContext).
+    virtual IBuffer* Update(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+
     /// Returns a pointer to the internal buffer object.
 
-    /// \remarks    This method is a shortcut for GetAllocator()->GetBuffer(pDevice, pContext).
-    virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+    /// \remarks    This method is a shortcut for GetAllocator()->GetBuffer().
+    virtual IBuffer* GetBuffer() const = 0;
 
     /// Stores a pointer to the user-provided data object, which
     /// may later be retrieved through GetUserData().
@@ -102,7 +107,7 @@ struct BufferSuballocatorUsageStats
 /// Buffer suballocator.
 struct IBufferSuballocator : public IObject
 {
-    /// Returns a pointer to the internal buffer object.
+    /// Updates the internal buffer object.
 
     /// \param[in]  pDevice  - A pointer to the render device that will be used to
     ///                        create a new internal buffer, if necessary.
@@ -113,7 +118,13 @@ struct IBufferSuballocator : public IObject
     ///             be used to create a new buffer and copy existing contents to the new buffer.
     ///             The method is not thread-safe and an application must externally synchronize the
     ///             access.
-    virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+    virtual IBuffer* Update(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+
+    /// Returns a pointer to the internal buffer object.
+    ///
+    /// \remarks    If the buffer has not been created yet, the method returns null.
+    ///             If the buffer may need to be updated, use the Update() method instead.
+    virtual IBuffer* GetBuffer() const = 0;
 
 
     /// Performs suballocation from the buffer.
@@ -168,7 +179,7 @@ struct BufferSuballocatorCreateInfo
 
 /// \param[in]  pDevice              - A pointer to the render device that will be used to initialize
 ///                                    the internal buffer object. If this parameter is null, the
-///                                    buffer will be created when GetBuffer() is called.
+///                                    buffer will be created when Update() is called.
 /// \param[in]  CreateInfo           - Suballocator create info, see Diligent::BufferSuballocatorCreateInfo.
 /// \param[in]  ppBufferSuballocator - Memory location where pointer to the buffer suballocator will be stored.
 void CreateBufferSuballocator(IRenderDevice*                      pDevice,

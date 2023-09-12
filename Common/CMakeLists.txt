@@ -25,6 +25,7 @@ set(INTERFACE
     interface/DynamicLinearAllocator.hpp
     interface/MemoryFileStream.hpp
     interface/ObjectBase.hpp
+    interface/ObjectsRegistry.hpp
     interface/ParsingTools.hpp
     interface/RefCntAutoPtr.hpp
     interface/RefCountedObjectImpl.hpp

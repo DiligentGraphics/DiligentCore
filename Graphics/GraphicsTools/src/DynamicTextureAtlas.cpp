@@ -449,7 +449,7 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DynamicTextureAtlas, TBase)
 
-    virtual ITexture* GetTexture(IRenderDevice* pDevice, IDeviceContext* pContext) override final
+    virtual ITexture* Update(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
         if (m_DynamicTexArray)
         {
@@ -459,7 +459,7 @@ public:
                 m_DynamicTexArray->Resize(pDevice, pContext, ArraySize);
             }
 
-            return m_DynamicTexArray->GetTexture(pDevice, pContext);
+            return m_DynamicTexArray->Update(pDevice, pContext);
         }
         else
         {
@@ -473,6 +473,13 @@ public:
 
             return m_pTexture;
         }
+    }
+
+    virtual ITexture* GetTexture() const override final
+    {
+        return m_DynamicTexArray ?
+            m_DynamicTexArray->GetTexture() :
+            m_pTexture;
     }
 
     virtual Uint32 GetAllocationAlignment(Uint32 Width, Uint32 Height) const override final

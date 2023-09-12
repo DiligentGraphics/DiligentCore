@@ -86,6 +86,10 @@ DILIGENT_TYPED_ENUM(SHADER_TYPE, Uint32)
     SHADER_TYPE_TILE             = 0x4000, ///< Tile shader (Only for Metal backend)
     SHADER_TYPE_LAST             = SHADER_TYPE_TILE,
 
+    /// Vertex and pixel shader stages
+    SHADER_TYPE_VS_PS           = SHADER_TYPE_VERTEX |
+                                  SHADER_TYPE_PIXEL,
+
     /// All graphics pipeline shader stages
     SHADER_TYPE_ALL_GRAPHICS    = SHADER_TYPE_VERTEX   |
                                   SHADER_TYPE_PIXEL    |
@@ -1678,6 +1682,12 @@ struct DeviceFeatures
     DEVICE_FEATURE_STATE DepthBiasClamp                DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports depth clamping
+    ///
+    /// \remarks    By default polygon faces are clipped against the near and far planes of the view
+    ///             frustum. If depth clipping is disabled in the PSO, the depth of the fragments that
+    ///             would be clipped is clamped to the near/far plane instead of discarding them.
+    ///             If this feature is enabled, the DepthClipEnable member of the RasterizerStateDesc
+    ///             struct can be set to False. Otherwise it must always be set to True.
     DEVICE_FEATURE_STATE DepthClamp                    DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports depth clamping

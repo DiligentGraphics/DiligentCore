@@ -666,6 +666,10 @@ void GLContextState::SetDepthClamp(bool bEnableDepthClamp)
                 glEnable(GL_DEPTH_CLAMP);
                 DEV_CHECK_GL_ERROR("Failed to enable depth clamp");
             }
+            else
+            {
+                LOG_WARNING_MESSAGE("Depth clamp is not supported by this device. Check the value of the DepthClamp device feature.");
+            }
         }
         else
         {
@@ -673,10 +677,6 @@ void GLContextState::SetDepthClamp(bool bEnableDepthClamp)
             {
                 glDisable(GL_DEPTH_CLAMP);
                 DEV_CHECK_GL_ERROR("Failed to disable depth clamp");
-            }
-            else
-            {
-                LOG_WARNING_MESSAGE("Disabling depth clamp is not supported");
             }
 #pragma warning(pop)
         }

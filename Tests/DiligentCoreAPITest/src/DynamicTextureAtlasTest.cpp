@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,8 +77,9 @@ TEST(DynamicTextureAtlas, Create)
     RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
     CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
 
-    auto* pTexture = pAtlas->GetTexture(pDevice, nullptr);
+    auto* pTexture = pAtlas->Update(pDevice, nullptr);
     EXPECT_NE(pTexture, nullptr);
+    EXPECT_EQ(pTexture, pAtlas->GetTexture());
 
     RefCntAutoPtr<ITextureAtlasSuballocation> pSuballoc;
     pAtlas->Allocate(128, 128, &pSuballoc);
@@ -116,15 +117,17 @@ TEST(DynamicTextureAtlas, CreateArray)
         RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
         CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
 
-        auto* pTexture = pAtlas->GetTexture(nullptr, nullptr);
+        auto* pTexture = pAtlas->Update(nullptr, nullptr);
         EXPECT_EQ(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pAtlas->GetTexture());
 
         RefCntAutoPtr<ITextureAtlasSuballocation> pSuballoc;
         pAtlas->Allocate(128, 128, &pSuballoc);
         EXPECT_TRUE(pSuballoc);
 
-        pTexture = pAtlas->GetTexture(pDevice, pContext);
+        pTexture = pAtlas->Update(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pAtlas->GetTexture());
 
         DynamicTextureAtlasUsageStats Stats;
         pAtlas->GetUsageStats(Stats);
@@ -140,16 +143,18 @@ TEST(DynamicTextureAtlas, CreateArray)
         RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
         CreateDynamicTextureAtlas(nullptr, CI, &pAtlas);
 
-        auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
+        auto* pTexture = pAtlas->Update(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pAtlas->GetTexture());
     }
 
     {
         RefCntAutoPtr<IDynamicTextureAtlas> pAtlas;
         CreateDynamicTextureAtlas(pDevice, CI, &pAtlas);
 
-        auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
+        auto* pTexture = pAtlas->Update(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pAtlas->GetTexture());
 
         RefCntAutoPtr<ITextureAtlasSuballocation> pSuballoc;
         pAtlas->Allocate(128, 128, &pSuballoc);
@@ -226,8 +231,9 @@ TEST(DynamicTextureAtlas, Allocate)
                 Thread.join();
         }
 
-        auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
+        auto* pTexture = pAtlas->Update(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pAtlas->GetTexture());
 
         {
             std::vector<std::thread> Threads(NumThreads);
@@ -309,8 +315,9 @@ TEST(DynamicTextureAtlas, Overflow)
                 Thread.join();
         }
 
-        auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
+        auto* pTexture = pAtlas->Update(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pAtlas->GetTexture());
     }
 }
 
@@ -402,8 +409,9 @@ TEST(DynamicTextureAtlas, AllocRace)
 
         ReleaseCompleteSignal.Wait(true, 1);
 
-        auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
+        auto* pTexture = pAtlas->Update(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pAtlas->GetTexture());
     }
 
     AllocSignal.Trigger(true, -1);
@@ -528,8 +536,9 @@ TEST(DynamicTextureAtlas, AllocFreeRace)
 
         ReleaseCompleteSignal.Wait(true, 1);
 
-        auto* pTexture = pAtlas->GetTexture(pDevice, pContext);
+        auto* pTexture = pAtlas->Update(pDevice, pContext);
         EXPECT_NE(pTexture, nullptr);
+        EXPECT_EQ(pTexture, pAtlas->GetTexture());
     }
 
     AllocSignal.Trigger(true, -1);

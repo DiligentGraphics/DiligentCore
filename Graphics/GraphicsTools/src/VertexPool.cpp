@@ -93,7 +93,9 @@ public:
 
     virtual IVertexPool* GetPool() override final;
 
-    virtual IBuffer* GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) override final;
+    virtual IBuffer* Update(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) override final;
+
+    virtual IBuffer* GetBuffer(Uint32 Index) const override final;
 
     virtual void SetUserData(IObject* pUserData) override final
     {
@@ -195,7 +197,7 @@ public:
         VERIFY_EXPR(m_AllocationCount.load() == 0);
     }
 
-    virtual IBuffer* GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) override final
+    virtual IBuffer* Update(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
         if (Index >= m_Buffers.size())
         {
@@ -215,7 +217,18 @@ public:
             // while m_Buffer internally does not use mutex or other synchronization.
             BufferSize.store(Buffer.GetDesc().Size);
         }
-        return Buffer.GetBuffer(pDevice, pContext);
+        return Buffer.Update(pDevice, pContext);
+    }
+
+    virtual IBuffer* GetBuffer(Uint32 Index) const override final
+    {
+        if (Index >= m_Buffers.size())
+        {
+            UNEXPECTED("Index (", Index, ") is out of range: there are only ", m_Buffers.size(), " buffers.");
+            return nullptr;
+        }
+
+        return m_Buffers[Index]->GetBuffer();
     }
 
     virtual void Allocate(Uint32                  NumVertices,
@@ -375,9 +388,14 @@ IVertexPool* VertexPoolAllocationImpl::GetPool()
     return m_pParentPool;
 }
 
-IBuffer* VertexPoolAllocationImpl::GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext)
+IBuffer* VertexPoolAllocationImpl::Update(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext)
 {
-    return m_pParentPool->GetBuffer(Index, pDevice, pContext);
+    return m_pParentPool->Update(Index, pDevice, pContext);
+}
+
+IBuffer* VertexPoolAllocationImpl::GetBuffer(Uint32 Index) const
+{
+    return m_pParentPool->GetBuffer(Index);
 }
 
 void CreateVertexPool(IRenderDevice*              pDevice,

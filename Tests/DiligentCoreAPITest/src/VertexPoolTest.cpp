@@ -64,11 +64,13 @@ TEST(VertexPoolTest, Create)
     CreateVertexPool(pDevice, CI, &pVtxPool);
     EXPECT_NE(pVtxPool, nullptr);
 
-    auto* pBuffer0 = pVtxPool->GetBuffer(0, pDevice, pContext);
+    auto* pBuffer0 = pVtxPool->Update(0, pDevice, pContext);
     EXPECT_NE(pBuffer0, nullptr);
+    EXPECT_EQ(pBuffer0, pVtxPool->GetBuffer(0));
 
-    auto* pBuffer1 = pVtxPool->GetBuffer(1, pDevice, pContext);
+    auto* pBuffer1 = pVtxPool->Update(1, pDevice, pContext);
     EXPECT_NE(pBuffer1, nullptr);
+    EXPECT_EQ(pBuffer1, pVtxPool->GetBuffer(1));
 
     RefCntAutoPtr<IVertexPoolAllocation> pAlloc0;
     pVtxPool->Allocate(256, &pAlloc0);
@@ -152,10 +154,13 @@ TEST(VertexPoolTest, Allocate)
                 Thread.join();
         }
 
-        auto* pBuffer0 = pVtxPool->GetBuffer(0, pDevice, pContext);
+        auto* pBuffer0 = pVtxPool->Update(0, pDevice, pContext);
         EXPECT_NE(pBuffer0, nullptr);
-        auto* pBuffer1 = pVtxPool->GetBuffer(1, pDevice, pContext);
+        EXPECT_EQ(pBuffer0, pVtxPool->GetBuffer(0));
+
+        auto* pBuffer1 = pVtxPool->Update(1, pDevice, pContext);
         EXPECT_NE(pBuffer1, nullptr);
+        EXPECT_EQ(pBuffer1, pVtxPool->GetBuffer(1));
 
         {
             std::vector<std::thread> Threads(NumThreads);

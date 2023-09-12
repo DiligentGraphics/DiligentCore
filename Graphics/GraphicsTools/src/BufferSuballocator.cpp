@@ -93,7 +93,9 @@ public:
 
     virtual IBufferSuballocator* GetAllocator() override final;
 
-    virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) override final;
+    virtual IBuffer* Update(IRenderDevice* pDevice, IDeviceContext* pContext) override final;
+
+    virtual IBuffer* GetBuffer() const override final;
 
     virtual void SetUserData(IObject* pUserData) override final
     {
@@ -164,7 +166,7 @@ public:
         VERIFY_EXPR(m_AllocationCount.load() == 0);
     }
 
-    virtual IBuffer* GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext) override final
+    virtual IBuffer* Update(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
         // NB: mutex must not be locked here to avoid stalling render thread
         const auto MgrSize = m_MgrSize.load();
@@ -176,7 +178,12 @@ public:
             // while m_Buffer internally does not use mutex or other synchronization.
             m_BufferSize.store(m_Buffer.GetDesc().Size);
         }
-        return m_Buffer.GetBuffer(pDevice, pContext);
+        return m_Buffer.Update(pDevice, pContext);
+    }
+
+    virtual IBuffer* GetBuffer() const override final
+    {
+        return m_Buffer.GetBuffer();
     }
 
     virtual void Allocate(Uint32                 Size,
@@ -311,9 +318,14 @@ IBufferSuballocator* BufferSuballocationImpl::GetAllocator()
     return m_pParentAllocator;
 }
 
-IBuffer* BufferSuballocationImpl::GetBuffer(IRenderDevice* pDevice, IDeviceContext* pContext)
+IBuffer* BufferSuballocationImpl::Update(IRenderDevice* pDevice, IDeviceContext* pContext)
 {
-    return m_pParentAllocator->GetBuffer(pDevice, pContext);
+    return m_pParentAllocator->Update(pDevice, pContext);
+}
+
+IBuffer* BufferSuballocationImpl::GetBuffer() const
+{
+    return m_pParentAllocator->GetBuffer();
 }
 
 

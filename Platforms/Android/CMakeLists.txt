@@ -14,6 +14,7 @@ set(INTERFACE
 set(SOURCE
     src/AndroidDebug.cpp
     src/AndroidFileSystem.cpp
+    src/AndroidPlatformMisc.cpp
 )
 
 add_library(Diligent-AndroidPlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})

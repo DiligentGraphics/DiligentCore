@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -87,7 +87,8 @@ TEST_P(DynamicBufferCreateTest, Run)
         EXPECT_STREQ(DynBuff.GetDesc().Name, BuffDesc.Name);
         EXPECT_FALSE(DynBuff.PendingUpdate());
 
-        auto* pBuffer = DynBuff.GetBuffer(nullptr, nullptr);
+        auto* pBuffer = DynBuff.Update(nullptr, nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         EXPECT_FALSE(DynBuff.PendingUpdate());
         if (Usage == USAGE_SPARSE)
             EXPECT_NE(pBuffer, nullptr);
@@ -106,8 +107,9 @@ TEST_P(DynamicBufferCreateTest, Run)
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
         EXPECT_EQ(DynBuff.PendingUpdate(), BuffDesc.Usage == USAGE_SPARSE);
 
-        auto* pBuffer = DynBuff.GetBuffer(nullptr, BuffDesc.Usage == USAGE_SPARSE ? pContext : nullptr);
+        auto* pBuffer = DynBuff.Update(nullptr, BuffDesc.Usage == USAGE_SPARSE ? pContext : nullptr);
         ASSERT_NE(pBuffer, nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         BuffDesc.Size = 256 << 10;
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
         if (BuffDesc.Usage != USAGE_SPARSE)
@@ -124,7 +126,8 @@ TEST_P(DynamicBufferCreateTest, Run)
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
         EXPECT_TRUE(DynBuff.PendingUpdate());
 
-        auto* pBuffer = DynBuff.GetBuffer(pDevice, BuffDesc.Usage == USAGE_SPARSE ? pContext : nullptr);
+        auto* pBuffer = DynBuff.Update(pDevice, BuffDesc.Usage == USAGE_SPARSE ? pContext : nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         EXPECT_FALSE(DynBuff.PendingUpdate());
         ASSERT_NE(pBuffer, nullptr);
         BuffDesc.Size = 256 << 10;
@@ -220,7 +223,8 @@ TEST_P(DynamicBufferResizeTest, Run)
         DynBuff.Resize(nullptr, nullptr, BuffDesc.Size);
         EXPECT_TRUE(DynBuff.PendingUpdate());
 
-        auto* pBuffer = DynBuff.GetBuffer(pDevice, Usage == USAGE_SPARSE ? pContext : nullptr);
+        auto* pBuffer = DynBuff.Update(pDevice, Usage == USAGE_SPARSE ? pContext : nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         EXPECT_EQ(DynBuff.GetVersion(), Uint32{1});
         EXPECT_FALSE(DynBuff.PendingUpdate());
         ASSERT_NE(pBuffer, nullptr);
@@ -250,7 +254,8 @@ TEST_P(DynamicBufferResizeTest, Run)
             EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
         EXPECT_TRUE(DynBuff.PendingUpdate());
 
-        auto* pBuffer = DynBuff.GetBuffer(nullptr, pContext);
+        auto* pBuffer = DynBuff.Update(nullptr, pContext);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         EXPECT_FALSE(DynBuff.PendingUpdate());
         BuffDesc.Size = 512 << 10;
         if (Usage != USAGE_SPARSE)
@@ -269,8 +274,9 @@ TEST_P(DynamicBufferResizeTest, Run)
         BuffDesc = GetSparseBuffDesc("Dynamic buffer resize test 2", Usage, 256 << 10);
         DynamicBuffer DynBuff{pDevice, CI};
 
-        auto* pBuffer = DynBuff.GetBuffer(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr);
+        auto* pBuffer = DynBuff.Update(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr);
         EXPECT_NE(pBuffer, nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         UpdateBuffer(pBuffer, 0, BuffDesc.Size);
         EXPECT_TRUE(VerifyBuffer(pBuffer, 0, BuffDesc.Size));
 
@@ -278,13 +284,15 @@ TEST_P(DynamicBufferResizeTest, Run)
         DynBuff.Resize(pDevice, pContext, BuffDesc.Size);
         EXPECT_FALSE(DynBuff.PendingUpdate());
         EXPECT_EQ(DynBuff.GetVersion(), Usage == USAGE_SPARSE ? 1u : 2u);
-        pBuffer = DynBuff.GetBuffer(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr);
+        pBuffer = DynBuff.Update(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr);
         EXPECT_NE(pBuffer, nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         UpdateBuffer(pBuffer, 256 << 10, 256 << 10);
         EXPECT_TRUE(VerifyBuffer(pBuffer, 256 << 10, 256 << 10));
 
-        pBuffer = DynBuff.GetBuffer(nullptr, nullptr);
+        pBuffer = DynBuff.Update(nullptr, nullptr);
         ASSERT_NE(pBuffer, nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         if (Usage != USAGE_SPARSE)
             EXPECT_EQ(pBuffer->GetDesc(), BuffDesc);
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
@@ -294,8 +302,9 @@ TEST_P(DynamicBufferResizeTest, Run)
         EXPECT_FALSE(DynBuff.PendingUpdate());
         EXPECT_EQ(DynBuff.GetVersion(), Usage == USAGE_SPARSE ? 1u : 3u);
 
-        pBuffer = DynBuff.GetBuffer(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr);
+        pBuffer = DynBuff.Update(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr);
         ASSERT_NE(pBuffer, nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         if (Usage != USAGE_SPARSE)
             EXPECT_EQ(pBuffer->GetDesc(), BuffDesc);
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
@@ -319,7 +328,8 @@ TEST_P(DynamicBufferResizeTest, Run)
         EXPECT_FALSE(DynBuff.PendingUpdate());
         EXPECT_EQ(DynBuff.GetVersion(), Usage == USAGE_SPARSE ? 1u : 2u);
 
-        auto* pBuffer = DynBuff.GetBuffer(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr);
+        auto* pBuffer = DynBuff.Update(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         EXPECT_FALSE(DynBuff.PendingUpdate());
         ASSERT_NE(pBuffer, nullptr);
     }
@@ -330,7 +340,7 @@ TEST_P(DynamicBufferResizeTest, Run)
         auto& BuffDesc{CI.Desc};
         BuffDesc = GetSparseBuffDesc("Dynamic buffer resize test 4", Usage, 256 << 10);
         DynamicBuffer DynBuff{pDevice, CI};
-        EXPECT_NE(DynBuff.GetBuffer(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr), nullptr);
+        EXPECT_NE(DynBuff.Update(nullptr, Usage == USAGE_SPARSE ? pContext : nullptr), nullptr);
 
         DynBuff.Resize(nullptr, nullptr, 1024 << 10);
 
@@ -340,9 +350,10 @@ TEST_P(DynamicBufferResizeTest, Run)
         if (Usage != USAGE_SPARSE)
             EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
 
-        auto* pBuffer = DynBuff.GetBuffer(pDevice, Usage == USAGE_SPARSE ? pContext : nullptr);
+        auto* pBuffer = DynBuff.Update(pDevice, Usage == USAGE_SPARSE ? pContext : nullptr);
         if (Usage != USAGE_SPARSE)
             EXPECT_EQ(pBuffer, nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
 
         DynBuff.Resize(pDevice, pContext, 512 << 10);
         EXPECT_FALSE(DynBuff.PendingUpdate());
@@ -350,7 +361,7 @@ TEST_P(DynamicBufferResizeTest, Run)
         DynBuff.Resize(pDevice, nullptr, 1024 << 10);
         DynBuff.Resize(nullptr, nullptr, 0);
         EXPECT_EQ(DynBuff.PendingUpdate(), Usage == USAGE_SPARSE);
-        pBuffer = DynBuff.GetBuffer(pDevice, Usage == USAGE_SPARSE ? pContext : nullptr);
+        pBuffer = DynBuff.Update(pDevice, Usage == USAGE_SPARSE ? pContext : nullptr);
         if (Usage != USAGE_SPARSE)
             EXPECT_EQ(pBuffer, nullptr);
     }
@@ -362,8 +373,9 @@ TEST_P(DynamicBufferResizeTest, Run)
         BuffDesc = GetSparseBuffDesc("Dynamic buffer resize test 5", Usage, 256 << 10);
         DynamicBuffer DynBuff{pDevice, CI};
 
-        auto* pBuffer = DynBuff.GetBuffer(pDevice, pContext);
+        auto* pBuffer = DynBuff.Update(pDevice, pContext);
         ASSERT_NE(pBuffer, nullptr);
+        EXPECT_EQ(pBuffer, DynBuff.GetBuffer());
         EXPECT_EQ(DynBuff.GetDesc(), BuffDesc);
         UpdateBuffer(pBuffer, 0, BuffDesc.Size);
         EXPECT_TRUE(VerifyBuffer(pBuffer, 0, BuffDesc.Size));

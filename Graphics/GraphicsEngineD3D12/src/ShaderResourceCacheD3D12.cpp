@@ -621,9 +621,17 @@ void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
         {
             const auto* pTexViewD3D12 = pObject.ConstPtr<TextureViewD3D12Impl>();
             const auto* pTexD3D12     = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
-            if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckAnyState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT))
+            const auto& TexDesc       = pTexD3D12->GetDesc();
+            const auto& FmtAttribs    = GetTextureFormatAttribs(TexDesc.Format);
+
+            auto RequiredStates = RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT;
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH || FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
             {
-                LOG_ERROR_MESSAGE("Texture '", pTexD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_SHADER_RESOURCE state. Actual state: ",
+                RequiredStates |= RESOURCE_STATE_DEPTH_READ;
+            }
+            if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckAnyState(RequiredStates))
+            {
+                LOG_ERROR_MESSAGE("Texture '", pTexD3D12->GetDesc().Name, "' must be in one of ", GetResourceStateString(RequiredStates), " states. Actual state: ",
                                   GetResourceStateString(pTexD3D12->GetState()),
                                   ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
                                   "when calling IDeviceContext::CommitShaderResources() or explicitly transition the texture state "

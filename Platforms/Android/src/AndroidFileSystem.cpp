@@ -353,13 +353,19 @@ void AndroidFileSystem::DeleteFile(const Char* strPath)
     UNSUPPORTED("Not implemented");
 }
 
+bool AndroidFileSystem::IsDirectory(const Char* strPath)
+{
+    UNSUPPORTED("Not implemented");
+    return false;
+}
+
 std::vector<std::unique_ptr<FindFileData>> AndroidFileSystem::Search(const Char* SearchPattern)
 {
     UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();
 }
 
-std::string GetLocalAppDataDirectory(const char* AppName /*= nullptr*/, bool Create /*= true*/)
+std::string AndroidFileSystem::GetLocalAppDataDirectory(const char* AppName /*= nullptr*/, bool Create /*= true*/)
 {
     UNSUPPORTED("GetLocalAppDataDirectory() is not supported on Android");
     return "";

@@ -59,10 +59,15 @@ struct IVertexPoolAllocation : public IObject
     /// Returns a pointer to the parent vertex pool.
     virtual IVertexPool* GetPool() = 0;
 
-    /// Returns a pointer to the internal buffer at given index.
+    /// Updates internal buffer at the given index.
 
-    /// \remarks    This method is a shortcut for GetPool()->GetBuffer(Index, pDevice, pContext).
-    virtual IBuffer* GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+    /// \remarks    This method is a shortcut for GetPool()->Update(Index, pDevice, pContext).
+    virtual IBuffer* Update(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+
+    /// Returns a pointer to the internal buffer at the given index.
+
+    /// \remarks    This method is a shortcut for GetPool()->GetBuffer(Index).
+    virtual IBuffer* GetBuffer(Uint32 Index) const = 0;
 
     /// Stores a pointer to the user-provided data object, which
     /// may later be retrieved through GetUserData().
@@ -173,7 +178,7 @@ struct VertexPoolDesc
 /// The vertex pool is a collection of dynamic buffers that can be used to store vertex data.
 struct IVertexPool : public IObject
 {
-    /// Returns a pointer to the internal buffer at given index.
+    /// Updates the internal buffer object at the given index.
 
     /// \param[in]  Index    - The vertex buffer index. Must be in range [0, Desc.NumElements-1].
     /// \param[in]  pDevice  - A pointer to the render device that will be used to
@@ -181,11 +186,21 @@ struct IVertexPool : public IObject
     /// \param[in]  pContext - A pointer to the device context that will be used to
     ///                        copy existing contents to the new buffer, if necessary.
     ///
+    /// \return                A pointer to the internal buffer object.
+    ///
     /// \remarks    If the internal buffer needs to be resized, pDevice and pContext will
     ///             be used to create a new buffer and copy existing contents to the new buffer.
     ///             The method is not thread-safe and an application must externally synchronize the
     ///             access.
-    virtual IBuffer* GetBuffer(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+    virtual IBuffer* Update(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
+
+
+    /// Returns a pointer to the internal buffer at the given index.
+    ///
+    /// \remarks    If the internal buffer has not been initialized yet, the method will return null.
+    ///             If the buffer may need to be updated (resized or initialized), use the Update()
+    ///             method.
+    virtual IBuffer* GetBuffer(Uint32 Index) const = 0;
 
 
     /// Allocates vertices from the pool.
@@ -238,7 +253,7 @@ struct VertexPoolCreateInfo
 
 /// \param[in]  pDevice      - A pointer to the render device that will be used to initialize
 ///                            internal buffer objects. If this parameter is null, the
-///                            buffers will be created when GetBuffer() is called.
+///                            buffers will be created when Update() is called.
 /// \param[in]  CreateInfo   - Vertex pool create info, see Diligent::VertexPoolCreateInfo.
 /// \param[in]  ppVertexPool - Memory location where a pointer to the vertex pool will be stored.
 void CreateVertexPool(IRenderDevice*              pDevice,

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -308,7 +308,7 @@ IBuffer* DynamicBuffer::Resize(IRenderDevice*  pDevice,
                               "There is a non-null stale buffer. This likely indicates that "
                               "Resize() has been called multiple times with different sizes, "
                               "but copy has not been committed by providing non-null device "
-                              "context to either Resize() or GetBuffer()");
+                              "context to either Resize() or Update()");
             }
 
             if (m_PendingSize == 0)
@@ -328,8 +328,8 @@ IBuffer* DynamicBuffer::Resize(IRenderDevice*  pDevice,
     return m_pBuffer;
 }
 
-IBuffer* DynamicBuffer::GetBuffer(IRenderDevice*  pDevice,
-                                  IDeviceContext* pContext)
+IBuffer* DynamicBuffer::Update(IRenderDevice*  pDevice,
+                               IDeviceContext* pContext)
 {
     CommitResize(pDevice, pContext, false /*AllowNull*/);
 

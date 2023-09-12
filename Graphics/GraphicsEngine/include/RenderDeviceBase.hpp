@@ -34,7 +34,7 @@
 #include "DeviceObjectBase.hpp"
 #include "Defines.h"
 #include "ResourceMappingImpl.hpp"
-#include "StateObjectsRegistry.hpp"
+#include "ObjectsRegistry.hpp"
 #include "HashUtils.hpp"
 #include "ObjectBase.hpp"
 #include "DeviceContext.h"
@@ -127,7 +127,6 @@ public:
         m_pEngineFactory      {pEngineFactory},
         m_ValidationFlags     {EngineCI.ValidationFlags},
         m_AdapterInfo         {AdapterInfo},
-        m_SamplersRegistry    {RawMemAllocator, "sampler"},
         m_TextureFormatsInfo  (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>")),
         m_TexFmtInfoInitFlags (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
         m_wpImmediateContexts (std::max(1u, EngineCI.NumImmediateContexts), RefCntWeakPtr<DeviceContextImplType>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<DeviceContextImplType>, RawMemAllocator, "Allocator for vector<RefCntWeakPtr<DeviceContextImplType>>")),
@@ -289,8 +288,6 @@ public:
         UNSUPPORTED("Tile pipeline is not supported by this device. Please check DeviceFeatures.TileShaders feature.");
     }
 
-    StateObjectsRegistry<SamplerDesc>& GetSamplerRegistry() { return m_SamplersRegistry; }
-
     /// Set weak reference to the immediate context
     void SetImmediateContext(size_t Ctx, DeviceContextImplType* pImmediateContext)
     {
@@ -442,13 +439,13 @@ protected:
         CreateDeviceObject("Sampler", SamplerDesc, ppSampler,
                            [&]() //
                            {
-                               m_SamplersRegistry.Find(SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler));
-                               if (*ppSampler == nullptr)
-                               {
-                                   auto* pSamplerImpl = NEW_RC_OBJ(m_SamplerObjAllocator, "Sampler instance", SamplerImplType)(static_cast<RenderDeviceImplType*>(this), SamplerDesc, ExtraArgs...);
-                                   pSamplerImpl->QueryInterface(IID_Sampler, reinterpret_cast<IObject**>(ppSampler));
-                                   m_SamplersRegistry.Add(SamplerDesc, *ppSampler);
-                               }
+                               auto pSampler = m_SamplersRegistry.Get(
+                                   SamplerDesc,
+                                   [&]() {
+                                       return RefCntAutoPtr<ISampler>{NEW_RC_OBJ(m_SamplerObjAllocator, "Sampler instance", SamplerImplType)(static_cast<RenderDeviceImplType*>(this), SamplerDesc, ExtraArgs...)};
+                                   });
+
+                               *ppSampler = pSampler.Detach();
                            });
     }
 
@@ -569,7 +566,7 @@ protected:
     // All state object registries hold raw pointers.
     // This is safe because every object unregisters itself
     // when it is deleted.
-    StateObjectsRegistry<SamplerDesc>                                           m_SamplersRegistry; ///< Sampler state registry
+    ObjectsRegistry<SamplerDesc, RefCntAutoPtr<ISampler>>                       m_SamplersRegistry; ///< Sampler state registry
     std::vector<TextureFormatInfoExt, STDAllocatorRawMem<TextureFormatInfoExt>> m_TextureFormatsInfo;
     std::vector<bool, STDAllocatorRawMem<bool>>                                 m_TexFmtInfoInitFlags;
 

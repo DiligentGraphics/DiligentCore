@@ -34,7 +34,6 @@ set(INCLUDE
     include/ShaderResourceCacheCommon.hpp
     include/ShaderResourceVariableBase.hpp
     include/ShaderBindingTableBase.hpp
-    include/StateObjectsRegistry.hpp
     include/SwapChainBase.hpp
     include/TextureBase.hpp
     include/TextureViewBase.hpp

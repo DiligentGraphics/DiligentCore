@@ -1854,7 +1854,13 @@ class RenderDeviceX
 public:
     RenderDeviceX() noexcept {}
 
-    explicit RenderDeviceX(IRenderDevice* pDevice) noexcept :
+    RenderDeviceX(IRenderDevice* pDevice) noexcept :
+        m_pDevice{pDevice}
+    {
+        DEV_CHECK_ERR(pDevice, "Device must not be null");
+    }
+
+    RenderDeviceX(const RefCntAutoPtr<IRenderDevice>& pDevice) noexcept :
         m_pDevice{pDevice}
     {
         DEV_CHECK_ERR(pDevice, "Device must not be null");
@@ -1868,7 +1874,7 @@ public:
     // clang-format on
 
     RefCntAutoPtr<IBuffer> CreateBuffer(const BufferDesc& BuffDesc,
-                                        const BufferData* pBuffData = nullptr) noexcept(!ThrowOnError)
+                                        const BufferData* pBuffData = nullptr) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IBuffer>("buffer", BuffDesc.Name, &IRenderDevice::CreateBuffer, BuffDesc, pBuffData);
     }
@@ -1878,7 +1884,7 @@ public:
                                         USAGE            Usage          = USAGE_DYNAMIC,
                                         BIND_FLAGS       BindFlags      = BIND_UNIFORM_BUFFER,
                                         CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE,
-                                        const void*      pData          = nullptr) noexcept(!ThrowOnError)
+                                        const void*      pData          = nullptr) const noexcept(!ThrowOnError)
     {
         BufferDesc Desc;
         Desc.Name      = Name;
@@ -1901,12 +1907,12 @@ public:
     }
 
     RefCntAutoPtr<ITexture> CreateTexture(const TextureDesc& TexDesc,
-                                          const TextureData* pData = nullptr) noexcept(!ThrowOnError)
+                                          const TextureData* pData = nullptr) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<ITexture>("texture", TexDesc.Name, &IRenderDevice::CreateTexture, TexDesc, pData);
     }
 
-    RefCntAutoPtr<IShader> CreateShader(const ShaderCreateInfo& ShaderCI) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IShader> CreateShader(const ShaderCreateInfo& ShaderCI) const noexcept(!ThrowOnError)
     {
         RefCntAutoPtr<IShader> pShader;
         m_pDevice->CreateShader(ShaderCI, &pShader, nullptr);
@@ -1916,18 +1922,18 @@ public:
     }
 
     template <typename... ArgsType>
-    RefCntAutoPtr<IShader> CreateShader(ArgsType&&... args) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IShader> CreateShader(ArgsType&&... args) const noexcept(!ThrowOnError)
     {
         const ShaderCreateInfo ShaderCI{std::forward<ArgsType>(args)...};
         return CreateShader(ShaderCI);
     }
 
-    RefCntAutoPtr<ISampler> CreateSampler(const SamplerDesc& SamDesc) noexcept(!ThrowOnError)
+    RefCntAutoPtr<ISampler> CreateSampler(const SamplerDesc& SamDesc) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<ISampler>("sampler", SamDesc.Name, &IRenderDevice::CreateSampler, SamDesc);
     }
 
-    RefCntAutoPtr<IResourceMapping> CreateResourceMapping(const ResourceMappingCreateInfo& ResMappingCI) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IResourceMapping> CreateResourceMapping(const ResourceMappingCreateInfo& ResMappingCI) const noexcept(!ThrowOnError)
     {
         RefCntAutoPtr<IResourceMapping> pResMapping;
         m_pDevice->CreateResourceMapping(ResMappingCI, &pResMapping);
@@ -1936,89 +1942,89 @@ public:
         return pResMapping;
     }
 
-    RefCntAutoPtr<IPipelineState> CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IPipelineState> CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& CreateInfo) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IPipelineState>("graphics pipeline", CreateInfo.PSODesc.Name, &IRenderDevice::CreateGraphicsPipelineState, CreateInfo);
     }
 
-    RefCntAutoPtr<IPipelineState> CreateComputePipelineState(const ComputePipelineStateCreateInfo& CreateInfo) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IPipelineState> CreateComputePipelineState(const ComputePipelineStateCreateInfo& CreateInfo) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IPipelineState>("compute pipeline", CreateInfo.PSODesc.Name, &IRenderDevice::CreateComputePipelineState, CreateInfo);
     }
 
-    RefCntAutoPtr<IPipelineState> CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IPipelineState> CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& CreateInfo) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IPipelineState>("ray-tracing pipeline", CreateInfo.PSODesc.Name, &IRenderDevice::CreateRayTracingPipelineState, CreateInfo);
     }
 
-    RefCntAutoPtr<IPipelineState> CreateTilePipelineState(const TilePipelineStateCreateInfo& CreateInfo) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IPipelineState> CreateTilePipelineState(const TilePipelineStateCreateInfo& CreateInfo) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IPipelineState>("tile pipeline", CreateInfo.PSODesc.Name, &IRenderDevice::CreateTilePipelineState, CreateInfo);
     }
 
-    RefCntAutoPtr<IPipelineState> CreatePipelineState(const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IPipelineState> CreatePipelineState(const GraphicsPipelineStateCreateInfo& CreateInfo) const noexcept(!ThrowOnError)
     {
         return CreateGraphicsPipelineState(CreateInfo);
     }
-    RefCntAutoPtr<IPipelineState> CreatePipelineState(const ComputePipelineStateCreateInfo& CreateInfo) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IPipelineState> CreatePipelineState(const ComputePipelineStateCreateInfo& CreateInfo) const noexcept(!ThrowOnError)
     {
         return CreateComputePipelineState(CreateInfo);
     }
-    RefCntAutoPtr<IPipelineState> CreatePipelineState(const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IPipelineState> CreatePipelineState(const RayTracingPipelineStateCreateInfo& CreateInfo) const noexcept(!ThrowOnError)
     {
         return CreateRayTracingPipelineState(CreateInfo);
     }
-    RefCntAutoPtr<IPipelineState> CreatePipelineState(const TilePipelineStateCreateInfo& CreateInfo) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IPipelineState> CreatePipelineState(const TilePipelineStateCreateInfo& CreateInfo) const noexcept(!ThrowOnError)
     {
         return CreateTilePipelineState(CreateInfo);
     }
 
-    RefCntAutoPtr<IFence> CreateFence(const FenceDesc& Desc) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IFence> CreateFence(const FenceDesc& Desc) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IFence>("fence", Desc.Name, &IRenderDevice::CreateFence, Desc);
     }
 
-    RefCntAutoPtr<IQuery> CreateQuery(const QueryDesc& Desc) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IQuery> CreateQuery(const QueryDesc& Desc) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IQuery>("query", Desc.Name, &IRenderDevice::CreateQuery, Desc);
     }
 
-    RefCntAutoPtr<IRenderPass> CreateRenderPass(const RenderPassDesc& Desc) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IRenderPass> CreateRenderPass(const RenderPassDesc& Desc) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IRenderPass>("render pass", Desc.Name, &IRenderDevice::CreateRenderPass, Desc);
     }
 
-    RefCntAutoPtr<IFramebuffer> CreateFramebuffer(const FramebufferDesc& Desc) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IFramebuffer> CreateFramebuffer(const FramebufferDesc& Desc) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IFramebuffer>("framebuffer", Desc.Name, &IRenderDevice::CreateFramebuffer, Desc);
     }
 
-    RefCntAutoPtr<IBottomLevelAS> CreateBLAS(const BottomLevelASDesc& Desc) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IBottomLevelAS> CreateBLAS(const BottomLevelASDesc& Desc) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IBottomLevelAS>("bottom-level AS", Desc.Name, &IRenderDevice::CreateBLAS, Desc);
     }
 
-    RefCntAutoPtr<ITopLevelAS> CreateTLAS(const TopLevelASDesc& Desc) noexcept(!ThrowOnError)
+    RefCntAutoPtr<ITopLevelAS> CreateTLAS(const TopLevelASDesc& Desc) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<ITopLevelAS>("top-level AS", Desc.Name, &IRenderDevice::CreateTLAS, Desc);
     }
 
-    RefCntAutoPtr<IShaderBindingTable> CreateSBT(const ShaderBindingTableDesc& Desc) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IShaderBindingTable> CreateSBT(const ShaderBindingTableDesc& Desc) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IShaderBindingTable>("shader binding table", Desc.Name, &IRenderDevice::CreateSBT, Desc);
     }
 
-    RefCntAutoPtr<IPipelineResourceSignature> CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IPipelineResourceSignature> CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IPipelineResourceSignature>("pipeline resource signature", Desc.Name, &IRenderDevice::CreatePipelineResourceSignature, Desc);
     }
 
-    RefCntAutoPtr<IDeviceMemory> CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IDeviceMemory> CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IDeviceMemory>("device memory", CreateInfo.Desc.Name, &IRenderDevice::CreateDeviceMemory, CreateInfo);
     }
 
-    RefCntAutoPtr<IPipelineStateCache> CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo) noexcept(!ThrowOnError)
+    RefCntAutoPtr<IPipelineStateCache> CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<IPipelineStateCache>("PSO cache", CreateInfo.Desc.Name, &IRenderDevice::CreatePipelineStateCache, CreateInfo);
     }
@@ -2033,29 +2039,29 @@ public:
         return m_pDevice->GetAdapterInfo();
     }
 
-    const TextureFormatInfo& GetTextureFormatInfo(TEXTURE_FORMAT TexFormat) noexcept
+    const TextureFormatInfo& GetTextureFormatInfo(TEXTURE_FORMAT TexFormat) const noexcept
     {
         return m_pDevice->GetTextureFormatInfo(TexFormat);
     }
 
-    const TextureFormatInfoExt& GetTextureFormatInfoExt(TEXTURE_FORMAT TexFormat) noexcept
+    const TextureFormatInfoExt& GetTextureFormatInfoExt(TEXTURE_FORMAT TexFormat) const noexcept
     {
         return m_pDevice->GetTextureFormatInfoExt(TexFormat);
     }
 
     SparseTextureFormatInfo GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
                                                        RESOURCE_DIMENSION Dimension,
-                                                       Uint32             SampleCount) noexcept
+                                                       Uint32             SampleCount) const noexcept
     {
         return m_pDevice->GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount);
     }
 
-    void ReleaseStaleResources(bool ForceRelease = false) noexcept
+    void ReleaseStaleResources(bool ForceRelease = false) const noexcept
     {
         return m_pDevice->ReleaseStaleResources(ForceRelease);
     }
 
-    void IdleGPU() noexcept
+    void IdleGPU() const noexcept
     {
         return m_pDevice->IdleGPU();
     }
@@ -2082,7 +2088,10 @@ public:
 
 private:
     template <typename ObjectType, typename CreateMethodType, typename... CreateArgsType>
-    RefCntAutoPtr<ObjectType> CreateDeviceObject(const char* ObjectTypeName, const char* ObjectName, CreateMethodType Create, CreateArgsType&&... Args) noexcept(!ThrowOnError)
+    RefCntAutoPtr<ObjectType> CreateDeviceObject(const char*      ObjectTypeName,
+                                                 const char*      ObjectName,
+                                                 CreateMethodType Create,
+                                                 CreateArgsType&&... Args) const noexcept(!ThrowOnError)
     {
         RefCntAutoPtr<ObjectType> pObject;
         (m_pDevice->*Create)(std::forward<CreateArgsType>(Args)..., &pObject);
@@ -2097,5 +2106,11 @@ private:
 private:
     RefCntAutoPtr<IRenderDevice> m_pDevice;
 };
+
+// Throws an Exception if object creation failed
+using RenderDeviceX_E = RenderDeviceX<true>;
+
+// Returns Null pointer if object creation failed
+using RenderDeviceX_N = RenderDeviceX<false>;
 
 } // namespace Diligent
