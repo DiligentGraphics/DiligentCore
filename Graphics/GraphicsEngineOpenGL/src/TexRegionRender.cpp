@@ -74,8 +74,7 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
     pDeviceGL->CreateShader(ShaderAttrs, &m_pVertexShader, nullptr, IsInternalDeviceObject);
 
 
-    static const char* SamplerType[RESOURCE_DIM_NUM_DIMENSIONS] = {};
-
+    const char* SamplerType[RESOURCE_DIM_NUM_DIMENSIONS]{};
     SamplerType[RESOURCE_DIM_TEX_1D]       = "sampler1D";
     SamplerType[RESOURCE_DIM_TEX_1D_ARRAY] = "sampler1DArray";
     SamplerType[RESOURCE_DIM_TEX_2D]       = "sampler2D";
@@ -86,8 +85,7 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
     //SamplerType[RESOURCE_DIM_TEX_CUBE_ARRAY]   = "samplerCubeArray";
 
 
-    static const char* SrcLocations[RESOURCE_DIM_NUM_DIMENSIONS] = {};
-
+    const char* SrcLocations[RESOURCE_DIM_NUM_DIMENSIONS]{};
     SrcLocations[RESOURCE_DIM_TEX_1D]       = "int(gl_FragCoord.x) + Constants.x";
     SrcLocations[RESOURCE_DIM_TEX_1D_ARRAY] = "ivec2(int(gl_FragCoord.x) + Constants.x, Constants.z)";
     SrcLocations[RESOURCE_DIM_TEX_2D]       = "ivec2(gl_FragCoord.xy) + Constants.xy";

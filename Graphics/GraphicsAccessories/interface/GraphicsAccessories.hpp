@@ -140,8 +140,8 @@ template <> struct VALUE_TYPE2CType<VT_FLOAT64>
     typedef Float64 CType;
 };
 
-static const Uint32 ValueTypeToSizeMap[] =
-    // clang-format off
+// clang-format off
+static constexpr Uint32 ValueTypeToSizeMap[] =
 {
     0,
     sizeof(VALUE_TYPE2CType<VT_INT8>    :: CType),

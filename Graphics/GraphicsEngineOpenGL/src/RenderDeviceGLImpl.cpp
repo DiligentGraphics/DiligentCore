@@ -1402,7 +1402,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ColorTex, 0);
                     CHECK_GL_ERROR("Failed to bind dummy render target to framebuffer");
 
-                    static const GLenum DrawBuffers[] = {GL_COLOR_ATTACHMENT0};
+                    static constexpr GLenum DrawBuffers[] = {GL_COLOR_ATTACHMENT0};
                     glDrawBuffers(_countof(DrawBuffers), DrawBuffers);
                     CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
 
@@ -1416,7 +1416,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                 glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TestGLTex2D, 0);
                 if (glGetError() == GL_NO_ERROR)
                 {
-                    static const GLenum DrawBuffers[] = {GL_COLOR_ATTACHMENT0};
+                    static constexpr GLenum DrawBuffers[] = {GL_COLOR_ATTACHMENT0};
                     glDrawBuffers(_countof(DrawBuffers), DrawBuffers);
                     CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
 

@@ -860,7 +860,7 @@ void DeviceContextD3D11Impl::ClearRenderTarget(ITextureView* pView, const float*
     auto* pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pView);
     auto* pd3d11RTV  = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
 
-    static const float Zero[4] = {0.f, 0.f, 0.f, 0.f};
+    static constexpr float Zero[4] = {0.f, 0.f, 0.f, 0.f};
     if (RGBA == nullptr)
         RGBA = Zero;
 

@@ -46,7 +46,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_BottomLevelAS =
 
 #define DILIGENT_INVALID_INDEX 0xFFFFFFFFU
 
-static const Uint32 INVALID_INDEX = DILIGENT_INVALID_INDEX;
+static DILIGENT_CONSTEXPR Uint32 INVALID_INDEX = DILIGENT_INVALID_INDEX;
 
 /// Defines bottom level acceleration structure triangles description.
 

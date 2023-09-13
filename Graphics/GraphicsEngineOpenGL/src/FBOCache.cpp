@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -171,7 +171,7 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
     // color attachments. This largely redundant step is performed
     // by glDrawBuffers()
     // clang-format off
-    static const GLenum DrawBuffers[] =
+    static constexpr GLenum DrawBuffers[] =
     {
         GL_COLOR_ATTACHMENT0,
         GL_COLOR_ATTACHMENT1,
