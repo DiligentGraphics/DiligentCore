@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -182,25 +182,16 @@ inline void ExtractViewFrustumPlanesFromMatrix(const float4x4& Matrix, ViewFrust
     // Compute frustum corners
     float4x4 InvMatrix = Matrix.Inverse();
 
-    float nearClipZ = bIsOpenGL ? -1.f : 0.f;
-
-    static const float3 ProjSpaceCorners[] =
-        {
-            // clang-format off
-            float3(-1, -1, nearClipZ),
-            float3( 1, -1, nearClipZ),
-            float3(-1,  1, nearClipZ),
-            float3( 1,  1, nearClipZ),
-
-            float3(-1, -1, 1),
-            float3( 1, -1, 1),
-            float3(-1,  1, 1),
-            float3( 1,  1, 1),
-            // clang-format on
+    float NearClipZ = bIsOpenGL ? -1.f : 0.f;
+    for (Uint32 i = 0; i < 8; ++i)
+    {
+        const float3 ProjSpaceCorner{
+            (i & 0x01u) ? +1.f : -1.f,
+            (i & 0x02u) ? +1.f : -1.f,
+            (i & 0x04u) ? +1.f : NearClipZ,
         };
-
-    for (int i = 0; i < 8; ++i)
-        FrustumExt.FrustumCorners[i] = ProjSpaceCorners[i] * InvMatrix;
+        FrustumExt.FrustumCorners[i] = ProjSpaceCorner * InvMatrix;
+    }
 }
 
 struct BoundBox
