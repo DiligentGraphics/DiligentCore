@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ enum ASYNC_TASK_STATUS
 
 
 // {B06D1DDA-AEA0-4CFD-969A-C8E2011DC294}
-static const INTERFACE_ID IID_AsyncTask =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_AsyncTask =
     {0xb06d1dda, 0xaea0, 0x4cfd, {0x96, 0x9a, 0xc8, 0xe2, 0x1, 0x1d, 0xc2, 0x94}};
 
 /// Asynchronous task interface
@@ -119,7 +119,7 @@ public:
 
 
 // {8BB92B5E-3EAB-4CC3-9DA2-5470DBBA7120}
-static const INTERFACE_ID IID_ThreadPool =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_ThreadPool =
     {0x8bb92b5e, 0x3eab, 0x4cc3, {0x9d, 0xa2, 0x54, 0x70, 0xdb, 0xba, 0x71, 0x20}};
 
 /// Thread pool interface

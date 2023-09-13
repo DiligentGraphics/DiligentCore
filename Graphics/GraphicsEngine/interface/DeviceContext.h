@@ -63,7 +63,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
 // {DC92711B-A1BE-4319-B2BD-C662D1CC19E4}
-static const INTERFACE_ID IID_DeviceContext =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_DeviceContext =
     {0xdc92711b, 0xa1be, 0x4319, {0xb2, 0xbd, 0xc6, 0x62, 0xd1, 0xcc, 0x19, 0xe4}};
 
 /// Device context description.

@@ -40,12 +40,12 @@ namespace Diligent
 struct IBufferSuballocator;
 
 // {562552DA-67F0-40C2-A4AF-F286DFCA1626}
-static const INTERFACE_ID IID_BufferSuballocation =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_BufferSuballocation =
     {0x562552da, 0x67f0, 0x40c2, {0xa4, 0xaf, 0xf2, 0x86, 0xdf, 0xca, 0x16, 0x26}};
 
 
 // {71F59B50-7D13-49A7-A4F7-FC986715FFAC}
-static const INTERFACE_ID IID_BufferSuballocator =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_BufferSuballocator =
     {0x71f59b50, 0x7d13, 0x49a7, {0xa4, 0xf7, 0xfc, 0x98, 0x67, 0x15, 0xff, 0xac}};
 
 

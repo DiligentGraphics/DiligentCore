@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -101,7 +101,7 @@ typedef void(DILIGENT_CALL_TYPE* ReloadGraphicsPipelineCallbackType)(const char*
 // clang-format on
 
 // {5B356268-256C-401F-BDE2-B9832157141A}
-static const INTERFACE_ID IID_RenderStateCache =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_RenderStateCache =
     {0x5b356268, 0x256c, 0x401f, {0xbd, 0xe2, 0xb9, 0x83, 0x21, 0x57, 0x14, 0x1a}};
 
 #define DILIGENT_INTERFACE_NAME IRenderStateCache

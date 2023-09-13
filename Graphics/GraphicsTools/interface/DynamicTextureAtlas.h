@@ -41,12 +41,12 @@ namespace Diligent
 struct IDynamicTextureAtlas;
 
 // {F7ACDCFB-074F-4E31-94C5-DD4C988E4532}
-static const INTERFACE_ID IID_TextureAtlasSuballocation =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_TextureAtlasSuballocation =
     {0xf7acdcfb, 0x74f, 0x4e31, {0x94, 0xc5, 0xdd, 0x4c, 0x98, 0x8e, 0x45, 0x32}};
 
 
 // {00E1D6FA-47B4-4062-B96C-D3E191A02351}
-static const INTERFACE_ID IID_DynamicTextureAtlas =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_DynamicTextureAtlas =
     {0xe1d6fa, 0x47b4, 0x4062, {0xb9, 0x6c, 0xd3, 0xe1, 0x91, 0xa0, 0x23, 0x51}};
 
 

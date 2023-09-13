@@ -37,7 +37,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {2989B45C-143D-4886-B89C-C3271C2DCC5D}
-static const INTERFACE_ID IID_Shader =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_Shader =
     {0x2989b45c, 0x143d, 0x4886, {0xb8, 0x9c, 0xc3, 0x27, 0x1c, 0x2d, 0xcc, 0x5d}};
 
 // clang-format off
@@ -188,7 +188,7 @@ typedef struct ShaderDesc ShaderDesc;
 // clang-format on
 
 // {3EA98781-082F-4413-8C30-B9BA6D82DBB7}
-static const INTERFACE_ID IID_IShaderSourceInputStreamFactory =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_IShaderSourceInputStreamFactory =
     {0x3ea98781, 0x82f, 0x4413, {0x8c, 0x30, 0xb9, 0xba, 0x6d, 0x82, 0xdb, 0xb7}};
 
 

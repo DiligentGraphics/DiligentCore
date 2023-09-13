@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -299,7 +299,7 @@ typedef struct PipelineResourceSignatureDesc PipelineResourceSignatureDesc;
 
 
 // {DCE499A5-F812-4C93-B108-D684A0B56118}
-static const INTERFACE_ID IID_PipelineResourceSignature =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_PipelineResourceSignature =
     {0xdce499a5, 0xf812, 0x4c93, {0xb1, 0x8, 0xd6, 0x84, 0xa0, 0xb5, 0x61, 0x18}};
 
 #define DILIGENT_INTERFACE_NAME IPipelineResourceSignature

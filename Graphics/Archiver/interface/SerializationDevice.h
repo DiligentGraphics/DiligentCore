@@ -39,7 +39,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {205BB0B2-0966-4F51-9380-46EE5BCED28B}
-static const INTERFACE_ID IID_SerializationDevice =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_SerializationDevice =
     {0x205bb0b2, 0x966, 0x4f51, {0x93, 0x80, 0x46, 0xee, 0x5b, 0xce, 0xd2, 0x8b}};
 
 

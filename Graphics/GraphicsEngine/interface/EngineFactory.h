@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,7 +47,7 @@ struct IShaderSourceInputStreamFactory;
 struct IDearchiver;
 
 // {D932B052-4ED6-4729-A532-F31DEEC100F3}
-static const INTERFACE_ID IID_EngineFactory =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_EngineFactory =
     {0xd932b052, 0x4ed6, 0x4729, {0xa5, 0x32, 0xf3, 0x1d, 0xee, 0xc1, 0x0, 0xf3}};
 
 #define DILIGENT_INTERFACE_NAME IEngineFactory

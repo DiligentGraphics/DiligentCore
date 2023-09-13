@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {6C1AC7A6-B429-4139-9433-9E54E93E384A}
-static const INTERFACE_ID IID_ResourceMapping =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_ResourceMapping =
     {0x6c1ac7a6, 0xb429, 0x4139, {0x94, 0x33, 0x9e, 0x54, 0xe9, 0x3e, 0x38, 0x4a}};
 
 /// Describes the resource mapping object entry

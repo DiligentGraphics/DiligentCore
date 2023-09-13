@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {D8EBEC99-5A44-41A3-968F-1D7127ABEC79}
-static const INTERFACE_ID IID_Archiver =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_Archiver =
     {0xd8ebec99, 0x5a44, 0x41a3, {0x96, 0x8f, 0x1d, 0x71, 0x27, 0xab, 0xec, 0x79}};
 
 #define DILIGENT_INTERFACE_NAME IArchiver

@@ -39,11 +39,11 @@ namespace Diligent
 struct IVertexPool;
 
 // {7649D93A-E8A8-4BE8-8FEB-24CA8E232179}
-static const INTERFACE_ID IID_VertexPoolAllocation =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_VertexPoolAllocation =
     {0x7649d93a, 0xe8a8, 0x4be8, {0x8f, 0xeb, 0x24, 0xca, 0x8e, 0x23, 0x21, 0x79}};
 
 // {972DA1D1-A587-45FE-95FF-831637F37601}
-static const INTERFACE_ID IID_VertexPool =
+static DILIGENT_CONSTEXPR INTERFACE_ID IID_VertexPool =
     {0x972da1d1, 0xa587, 0x45fe, {0x95, 0xff, 0x83, 0x16, 0x37, 0xf3, 0x76, 0x1}};
 
 
