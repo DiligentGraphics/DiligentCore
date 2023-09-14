@@ -329,6 +329,11 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
                 CommitScissorRects();
             }
             m_State.vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+            m_State.NullRenderTargets =
+                GraphicsPipeline.pRenderPass == nullptr &&
+                GraphicsPipeline.NumRenderTargets == 0 &&
+                GraphicsPipeline.DSVFormat == TEX_FORMAT_UNKNOWN;
             break;
         }
         case PIPELINE_TYPE_COMPUTE:
@@ -722,6 +727,13 @@ void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
 
 void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 {
+    if (m_vkFramebuffer == VK_NULL_HANDLE && m_State.NullRenderTargets)
+    {
+        DEV_CHECK_ERR(m_FramebufferWidth > 0 && m_FramebufferHeight > 0,
+                      "Framebuffer width/height is zero. Call SetViewports to set the framebuffer sizes when no render targets are set.");
+        ChooseRenderPassAndFramebuffer();
+    }
+
 #ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();
@@ -1605,6 +1617,23 @@ void DeviceContextVkImpl::SetViewports(Uint32 NumViewports, const Viewport* pVie
     TDeviceContextBase::SetViewports(NumViewports, pViewports, RTWidth, RTHeight);
     VERIFY(NumViewports == m_NumViewports, "Unexpected number of viewports");
 
+    if (m_State.NullRenderTargets)
+    {
+        DEV_CHECK_ERR(m_NumViewports == 1, "Only a single viewport is supported when rendering without render targets");
+
+        const auto VPWidth  = static_cast<Uint32>(m_Viewports[0].Width);
+        const auto VPHeight = static_cast<Uint32>(m_Viewports[0].Height);
+        if (m_FramebufferWidth != VPWidth || m_FramebufferHeight != VPHeight)
+        {
+            // We need to bind another framebuffer since the size has changed
+            m_vkFramebuffer = VK_NULL_HANDLE;
+        }
+        m_FramebufferWidth   = VPWidth;
+        m_FramebufferHeight  = VPHeight;
+        m_FramebufferSlices  = 1;
+        m_FramebufferSamples = 1;
+    }
+
     CommitViewports();
 }
 
@@ -1754,6 +1783,9 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
             RenderPassKey.RTVFormats[rt] = TEX_FORMAT_UNKNOWN;
         }
     }
+
+    if (RenderPassKey.SampleCount == 0)
+        RenderPassKey.SampleCount = static_cast<Uint8>(m_FramebufferSamples);
 
     if (m_pBoundShadingRateMap)
     {

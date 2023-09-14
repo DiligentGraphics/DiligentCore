@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -146,7 +146,7 @@ TEST(ComputeShaderTest, FillTexture)
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-    ShaderCI.Desc           = {"Compute shader test", SHADER_TYPE_COMPUTE, true};
+    ShaderCI.Desc           = {"Compute shader test - FillTextureCS", SHADER_TYPE_COMPUTE, true};
     ShaderCI.EntryPoint     = "main";
     ShaderCI.Source         = HLSL::FillTextureCS.c_str();
     RefCntAutoPtr<IShader> pCS;
@@ -211,7 +211,7 @@ TEST(ComputeShaderTest, GenerateMips_CSInterference)
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-    ShaderCI.Desc           = {"Compute shader test", SHADER_TYPE_COMPUTE, true};
+    ShaderCI.Desc           = {"Compute shader test - FillTextureCS2", SHADER_TYPE_COMPUTE, true};
     ShaderCI.EntryPoint     = "main";
     ShaderCI.Source         = HLSL::FillTextureCS2.c_str();
     RefCntAutoPtr<IShader> pCS;
@@ -278,6 +278,83 @@ TEST(ComputeShaderTest, GenerateMips_CSInterference)
     DispatchAttribs.ThreadGroupCountX = (SCDesc.Width + 15) / 16;
     DispatchAttribs.ThreadGroupCountY = (SCDesc.Height + 15) / 16;
     pContext->DispatchCompute(DispatchAttribs);
+
+    pSwapChain->Present();
+}
+
+
+TEST(ComputeShaderTest, FillTexturePS)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.ComputeShaders)
+    {
+        GTEST_SKIP() << "Compute shaders are not supported by this device";
+    }
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pContext   = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    if (!pTestingSwapChain)
+    {
+        GTEST_SKIP() << "Compute shader test requires testing swap chain";
+    }
+
+    pContext->Flush();
+    pContext->InvalidateState();
+
+    ComputeShaderReference(pSwapChain);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    ShaderCI.Desc       = {"Compute shader test - FillTextureVS", SHADER_TYPE_VERTEX, true};
+    ShaderCI.EntryPoint = "main";
+    ShaderCI.Source     = HLSL::FillTextureVS.c_str();
+    RefCntAutoPtr<IShader> pVS;
+    pDevice->CreateShader(ShaderCI, &pVS);
+    ASSERT_NE(pVS, nullptr);
+
+    ShaderCI.Desc       = {"Compute shader test - FillTexturePS", SHADER_TYPE_PIXEL, true};
+    ShaderCI.EntryPoint = "main";
+    ShaderCI.Source     = HLSL::FillTexturePS.c_str();
+    RefCntAutoPtr<IShader> pPS;
+    pDevice->CreateShader(ShaderCI, &pPS);
+    ASSERT_NE(pPS, nullptr);
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    PSOCreateInfo.PSODesc.Name                                  = "Compute shader test - output from PS";
+    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    PSOCreateInfo.pVS = pVS;
+    PSOCreateInfo.pPS = pPS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_tex2DUAV")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPSO->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_NE(pSRB, nullptr);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    const auto& SCDesc = pSwapChain->GetDesc();
+    Viewport    VP{SCDesc};
+    pContext->SetViewports(1, &VP, SCDesc.Width, SCDesc.Height);
+
+    pContext->Draw(DrawAttribs{3, DRAW_FLAG_VERIFY_ALL});
 
     pSwapChain->Present();
 }

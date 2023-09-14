@@ -882,7 +882,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetViewports(
     DEV_CHECK_ERR(NumViewports < MAX_VIEWPORTS, "Number of viewports (", NumViewports, ") exceeds the limit (", MAX_VIEWPORTS, ")");
     m_NumViewports = std::min(MAX_VIEWPORTS, NumViewports);
 
-    Viewport DefaultVP(0, 0, static_cast<float>(RTWidth), static_cast<float>(RTHeight));
+    Viewport DefaultVP{RTWidth, RTHeight};
     // If no viewports are specified, use default viewport
     if (m_NumViewports == 1 && pViewports == nullptr)
     {

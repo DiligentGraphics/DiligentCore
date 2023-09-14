@@ -875,6 +875,23 @@ struct Viewport
         MaxDepth {_MaxDepth}
     {}
 
+    constexpr Viewport(Uint32  _Width,        Uint32  _Height,
+                       Float32 _MinDepth = 0, Float32 _MaxDepth = 1) noexcept :
+        Width   {static_cast<Float32>(_Width) },
+        Height  {static_cast<Float32>(_Height)},
+        MinDepth{_MinDepth},
+        MaxDepth{_MaxDepth}
+    {}
+
+    constexpr Viewport(Float32 _Width, Float32 _Height) noexcept :
+        Width {_Width },
+        Height{_Height}
+    {}
+
+    explicit constexpr Viewport(const SwapChainDesc& SCDesc) noexcept :
+        Viewport{SCDesc.Width, SCDesc.Height}
+    {}
+
     constexpr Viewport() noexcept {}
 #endif
 };

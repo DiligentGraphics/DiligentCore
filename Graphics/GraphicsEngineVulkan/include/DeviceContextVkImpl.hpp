@@ -500,6 +500,9 @@ private:
         /// vkCmdSetFragmentShadingRateKHR must be called before the draw.
         bool ShadingRateIsSet = false;
 
+        /// Current graphics PSO uses no depth/render targets.
+        bool NullRenderTargets = false;
+
         Uint32 NumCommands = 0;
 
         VkPipelineBindPoint vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;

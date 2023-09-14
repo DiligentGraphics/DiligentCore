@@ -69,6 +69,43 @@ void main(uint3 DTid : SV_DispatchThreadID)
 )"
 };
 
+
+const std::string FillTextureVS{
+R"(
+struct VSOutput
+{
+    float4 Pos : SV_Position;
+};
+
+void main(in uint VertID : SV_VertexID,
+          out VSOutput VSOut)
+{
+    float2 PosXY[3];
+    PosXY[0] = float2(-1.0, -1.0);
+    PosXY[1] = float2(-1.0, +3.0);
+    PosXY[2] = float2(+3.0, -1.0);
+
+    VSOut.Pos = float4(PosXY[VertID], 0.0, 1.0);
+}
+)"
+};
+
+const std::string FillTexturePS{
+R"(
+struct VSOutput
+{
+    float4 Pos : SV_Position;
+};
+
+RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
+
+void main(in VSOutput VSOut)
+{
+	g_tex2DUAV[uint2(VSOut.Pos.xy)] = float4(float2(uint2(VSOut.Pos.xy) % 256u) / 256.0, 0.0, 1.0);
+}
+)"
+};
+
 // clang-format on
 
 } // namespace HLSL
