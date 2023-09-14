@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -44,6 +44,10 @@ TestingEnvironment::TestingEnvironment()
 {
     VERIFY(m_pTheEnvironment == nullptr, "Testing environment object has already been initialized!");
     m_pTheEnvironment = this;
+    if (!PlatformDebug::ColoredTextSupported())
+    {
+        GTEST_FLAG_SET(color, "no");
+    }
     SetDebugMessageCallback(MessageCallback);
 }
 
@@ -85,7 +89,11 @@ void TestingEnvironment::SetErrorAllowance(int NumErrorsToAllow, const char* Inf
     m_NumAllowedErrors = NumErrorsToAllow;
     if (InfoMessage != nullptr)
     {
-        std::cout << TextColorCode::Cyan << InfoMessage << TextColorCode::Default;
+        if (PlatformDebug::ColoredTextSupported())
+            std::cout << TextColorCode::Cyan;
+        std::cout << InfoMessage;
+        if (PlatformDebug::ColoredTextSupported())
+            std::cout << TextColorCode::Default;
     }
     if (m_NumAllowedErrors == 0)
     {
@@ -101,23 +109,37 @@ void TestingEnvironment::PushExpectedErrorSubstring(const char* Str, bool ClearS
     m_ExpectedErrorSubstrings.push_back(Str);
 }
 
-
 const char* TestingEnvironment::GetCurrentTestStatusString()
 {
-    static constexpr char TestFailedString[] = "\033[0;91m"
-                                               "[  FAILED  ]"
-                                               "\033[0;0m";
-    static constexpr char TestPassedString[] = "\033[0;92m"
-                                               "[  PASSED  ]"
-                                               "\033[0;0m";
-    return testing::Test::HasFailure() ? TestFailedString : TestPassedString;
+    auto TestFailed = testing::Test::HasFailure();
+    if (PlatformDebug::ColoredTextSupported())
+    {
+        static constexpr char TestFailedString[] = "\033[0;91m"
+                                                   "[  FAILED  ]"
+                                                   "\033[0;0m";
+        static constexpr char TestPassedString[] = "\033[0;92m"
+                                                   "[  PASSED  ]"
+                                                   "\033[0;0m";
+        return TestFailed ? TestFailedString : TestPassedString;
+    }
+    else
+    {
+        return TestFailed ? "[  FAILED  ]" : "[  PASSED  ]";
+    }
 }
 
 const char* TestingEnvironment::GetTestSkippedString()
 {
-    return "\033[0;32m"
-           "[  SKIPPED ]"
-           "\033[0;0m";
+    if (PlatformDebug::ColoredTextSupported())
+    {
+        return "\033[0;32m"
+               "[  SKIPPED ]"
+               "\033[0;0m";
+    }
+    else
+    {
+        return "[  SKIPPED ]";
+    }
 }
 
 } // namespace Testing

@@ -1,4 +1,6 @@
-/*     Copyright 2015-2019 Egor Yusov
+/*
+ *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -40,6 +42,18 @@ void AppleDebug::AssertionFailed(const Char *Message, const char *Function, cons
     raise( SIGTRAP );
 };
 
+bool AppleDebug::ColoredTextSupported()
+{
+    static const bool StartedFromXCode =
+        []()
+        {
+            NSDictionary* environment = [[NSProcessInfo processInfo] environment];
+            return [environment[@"OS_ACTIVITY_DT_MODE"] boolValue];
+        }();
+    // XCode does not support colored console
+    return !StartedFromXCode;
+}
+
 void AppleDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
                                     const Char*            Message,
                                     const char*            Function,
@@ -48,10 +62,18 @@ void AppleDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
                                     TextColor              Color)
 {
     auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
-    const auto* ColorCode = TextColorToTextColorCode(Severity, Color);
-    printf("%s%s%s\n", ColorCode, msg.c_str(), TextColorCode::Default);
-    // NSLog truncates the log at 1024 symbols
-    //NSLog(@"%s", str.c_str());
+    
+    if (ColoredTextSupported())
+    {
+        const auto* ColorCode = TextColorToTextColorCode(Severity, Color);
+        printf("%s%s%s\n", ColorCode, msg.c_str(), TextColorCode::Default);
+        // NSLog truncates the log at 1024 symbols
+        //NSLog(@"%s", str.c_str());
+    }
+    else
+    {
+        printf("%s\n",msg.c_str());
+    }
 }
 
 void DebugAssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
