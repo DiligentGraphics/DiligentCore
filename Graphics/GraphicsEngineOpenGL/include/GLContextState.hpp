@@ -104,6 +104,7 @@ public:
         m_FBOId = -1;
     }
     bool IsValidVAOBound() const { return m_VAOId > 0; }
+    bool IsValidFBOBound() const { return m_FBOId >= 0; }
 
     void SetCurrentGLContext(GLContext::NativeGLContextType Context) { m_CurrentGLContext = Context; }
 

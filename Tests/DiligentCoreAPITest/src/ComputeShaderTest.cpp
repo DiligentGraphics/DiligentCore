@@ -282,8 +282,7 @@ TEST(ComputeShaderTest, GenerateMips_CSInterference)
     pSwapChain->Present();
 }
 
-
-TEST(ComputeShaderTest, FillTexturePS)
+static void TestFillTexturePS(bool UseRenderPass)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -294,6 +293,8 @@ TEST(ComputeShaderTest, FillTexturePS)
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
+
+    const auto& SCDesc = pSwapChain->GetDesc();
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -335,6 +336,30 @@ TEST(ComputeShaderTest, FillTexturePS)
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;
 
+    RefCntAutoPtr<IRenderPass>  pRenderPass;
+    RefCntAutoPtr<IFramebuffer> pFramebuffer;
+    if (UseRenderPass)
+    {
+        SubpassDesc    Subpass;
+        RenderPassDesc RPDesc;
+        RPDesc.Name         = "Compute shader test - render pass";
+        RPDesc.pSubpasses   = &Subpass;
+        RPDesc.SubpassCount = 1;
+        pDevice->CreateRenderPass(RPDesc, &pRenderPass);
+        ASSERT_TRUE(pRenderPass != nullptr);
+
+        PSOCreateInfo.GraphicsPipeline.pRenderPass = pRenderPass;
+
+        FramebufferDesc FBDesc;
+        FBDesc.Name           = "Compute shader test - framebuffer";
+        FBDesc.pRenderPass    = pRenderPass;
+        FBDesc.Width          = SCDesc.Width;
+        FBDesc.Height         = SCDesc.Height;
+        FBDesc.NumArraySlices = 1;
+        pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
+        ASSERT_TRUE(pFramebuffer != nullptr);
+    }
+
     RefCntAutoPtr<IPipelineState> pPSO;
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
@@ -345,18 +370,45 @@ TEST(ComputeShaderTest, FillTexturePS)
     pPSO->CreateShaderResourceBinding(&pSRB, true);
     ASSERT_NE(pSRB, nullptr);
 
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, pSwapChain->GetDepthBufferDSV(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
     pContext->SetPipelineState(pPSO);
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    if (UseRenderPass)
+    {
+        BeginRenderPassAttribs BeginRPAttribs;
+        BeginRPAttribs.pRenderPass  = pRenderPass;
+        BeginRPAttribs.pFramebuffer = pFramebuffer;
+        pContext->BeginRenderPass(BeginRPAttribs);
+    }
+    else
+    {
+        pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+    }
 
-    const auto& SCDesc = pSwapChain->GetDesc();
-    Viewport    VP{SCDesc};
+    Viewport VP{SCDesc};
     pContext->SetViewports(1, &VP, SCDesc.Width, SCDesc.Height);
 
     pContext->Draw(DrawAttribs{3, DRAW_FLAG_VERIFY_ALL});
 
+    if (UseRenderPass)
+    {
+        pContext->EndRenderPass();
+    }
+
     pSwapChain->Present();
+}
+
+TEST(ComputeShaderTest, FillTexturePS)
+{
+    TestFillTexturePS(false);
+}
+
+TEST(ComputeShaderTest, FillTexturePS_InRenderPass)
+{
+    TestFillTexturePS(true);
 }
 
 } // namespace

@@ -1204,7 +1204,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetSubpassRenderTargets()
     m_FramebufferWidth  = FBDesc.Width;
     m_FramebufferHeight = FBDesc.Height;
     m_FramebufferSlices = FBDesc.NumArraySlices;
-    VERIFY_EXPR(m_FramebufferSamples > 0);
+    VERIFY_EXPR((m_FramebufferSamples > 0) || (Subpass.RenderTargetAttachmentCount == 0 && Subpass.pDepthStencilAttachment == nullptr));
 
     return BindRenderTargets;
 }

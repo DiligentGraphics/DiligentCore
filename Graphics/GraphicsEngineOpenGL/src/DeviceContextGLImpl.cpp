@@ -294,6 +294,25 @@ void DeviceContextGLImpl::SetViewports(Uint32 NumViewports, const Viewport* pVie
             DEV_CHECK_GL_ERROR("Failed to set depth range for viewport #", i);
         }
     }
+
+    if (m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
+    {
+        // Rendering without render targets
+
+        DEV_CHECK_ERR(m_NumViewports == 1, "Only a single viewport is supported when rendering without render targets");
+
+        const auto VPWidth  = static_cast<Uint32>(m_Viewports[0].Width);
+        const auto VPHeight = static_cast<Uint32>(m_Viewports[0].Height);
+        if (m_FramebufferWidth != VPWidth || m_FramebufferHeight != VPHeight)
+        {
+            // We need to bind another framebuffer since the size has changed
+            m_ContextState.InvalidateFBO();
+        }
+        m_FramebufferWidth   = VPWidth;
+        m_FramebufferHeight  = VPHeight;
+        m_FramebufferSlices  = 1;
+        m_FramebufferSamples = 1;
+    }
 }
 
 void DeviceContextGLImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight)
@@ -719,6 +738,16 @@ void DeviceContextGLImpl::BindProgramResources(Uint32 BindSRBMask)
 
 void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenum& GlTopology)
 {
+    if (!m_ContextState.IsValidFBOBound() && m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
+    {
+        // Framebuffer without attachments
+        DEV_CHECK_ERR(m_FramebufferWidth > 0 && m_FramebufferHeight > 0,
+                      "Framebuffer width and height must be positive when rendering without attachments. Call SetViewports() to set the framebuffer size.");
+        auto&       FBOCache = m_pDevice->GetFBOCache(m_ContextState.GetCurrentGLContext());
+        const auto& FBO      = FBOCache.GetFBO(m_FramebufferWidth, m_FramebufferHeight, m_ContextState);
+        m_ContextState.BindFBO(FBO);
+    }
+
 #ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();

@@ -40,7 +40,7 @@ bool FBOCache::FBOCacheKey::operator==(const FBOCacheKey& Key) const noexcept
     if (Hash != 0 && Key.Hash != 0 && Hash != Key.Hash)
         return false;
 
-    if (NumRenderTargets != Key.NumRenderTargets)
+    if (NumRenderTargets != Key.NumRenderTargets || Width != Key.Width || Height != Key.Height)
         return false;
     for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
     {
@@ -68,7 +68,7 @@ std::size_t FBOCache::FBOCacheKeyHashFunc::operator()(const FBOCacheKey& Key) co
     {
         std::hash<TextureViewDesc> TexViewDescHasher;
         Key.Hash = 0;
-        HashCombine(Key.Hash, Key.NumRenderTargets);
+        HashCombine(Key.Hash, Key.NumRenderTargets, Key.Width, Key.Height);
         for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
         {
             HashCombine(Key.Hash, Key.RTIds[rt]);
@@ -91,7 +91,13 @@ FBOCache::FBOCache()
 
 FBOCache::~FBOCache()
 {
-    VERIFY(m_Cache.empty(), "FBO cache is not empty. Are there any unreleased objects?");
+#ifdef DILIGENT_DEBUG
+    for (const auto& fbo_it : m_Cache)
+    {
+        const auto& Key = fbo_it.first;
+        VERIFY(Key.NumRenderTargets == 0 && Key.DSId == 0, "Only framebuffers without attachments can be left in the cache");
+    }
+#endif
     VERIFY(m_TexIdToKey.empty(), "TexIdToKey cache is not empty.");
 }
 
@@ -112,7 +118,9 @@ void FBOCache::OnReleaseTexture(ITexture* pTexture)
 GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    ContextState,
                                                        Uint32             NumRenderTargets,
                                                        TextureViewGLImpl* ppRTVs[],
-                                                       TextureViewGLImpl* pDSV)
+                                                       TextureViewGLImpl* pDSV,
+                                                       Uint32             DefaultWidth,
+                                                       Uint32             DefaultHeight)
 {
     GLObjectWrappers::GLFrameBufferObj FBO{true};
 
@@ -167,35 +175,56 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
         pDepthTexGL->AttachToFramebuffer(DSVDesc, AttachmentPoint);
     }
 
-    // We now need to set mapping between shader outputs and
-    // color attachments. This largely redundant step is performed
-    // by glDrawBuffers()
-    // clang-format off
-    static constexpr GLenum DrawBuffers[] =
+    if (NumRenderTargets > 0)
     {
-        GL_COLOR_ATTACHMENT0,
-        GL_COLOR_ATTACHMENT1,
-        GL_COLOR_ATTACHMENT2,
-        GL_COLOR_ATTACHMENT3,
-        GL_COLOR_ATTACHMENT4,
-        GL_COLOR_ATTACHMENT5,
-        GL_COLOR_ATTACHMENT6,
-        GL_COLOR_ATTACHMENT7,
-        GL_COLOR_ATTACHMENT8,
-        GL_COLOR_ATTACHMENT9,
-        GL_COLOR_ATTACHMENT10,
-        GL_COLOR_ATTACHMENT11,
-        GL_COLOR_ATTACHMENT12,
-        GL_COLOR_ATTACHMENT13,
-        GL_COLOR_ATTACHMENT14,
-        GL_COLOR_ATTACHMENT15
-    };
-    // clang-format on
+        // We now need to set mapping between shader outputs and
+        // color attachments. This largely redundant step is performed
+        // by glDrawBuffers()
+        static constexpr GLenum DrawBuffers[] =
+            {
+                GL_COLOR_ATTACHMENT0,
+                GL_COLOR_ATTACHMENT1,
+                GL_COLOR_ATTACHMENT2,
+                GL_COLOR_ATTACHMENT3,
+                GL_COLOR_ATTACHMENT4,
+                GL_COLOR_ATTACHMENT5,
+                GL_COLOR_ATTACHMENT6,
+                GL_COLOR_ATTACHMENT7,
+                GL_COLOR_ATTACHMENT8,
+                GL_COLOR_ATTACHMENT9,
+                GL_COLOR_ATTACHMENT10,
+                GL_COLOR_ATTACHMENT11,
+                GL_COLOR_ATTACHMENT12,
+                GL_COLOR_ATTACHMENT13,
+                GL_COLOR_ATTACHMENT14,
+                GL_COLOR_ATTACHMENT15,
+            };
 
-    // The state set by glDrawBuffers() is part of the state of the framebuffer.
-    // So it can be set up once and left it set.
-    glDrawBuffers(NumRenderTargets, DrawBuffers);
-    CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
+        // The state set by glDrawBuffers() is part of the state of the framebuffer.
+        // So it can be set up once and left it set.
+        glDrawBuffers(NumRenderTargets, DrawBuffers);
+        CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
+    }
+    else if (pDSV == nullptr)
+    {
+        // Framebuffer without attachments
+        DEV_CHECK_ERR(DefaultWidth > 0 && DefaultHeight > 0, "Framebuffer without attachment requires non-zero default width and height");
+#ifdef GL_ARB_framebuffer_no_attachments
+        glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_WIDTH, DefaultWidth);
+        CHECK_GL_ERROR("Failed to set framebuffer default width");
+
+        glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_HEIGHT, DefaultHeight);
+        CHECK_GL_ERROR("Failed to set framebuffer default height");
+
+        glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_LAYERS, 1);
+        CHECK_GL_ERROR("Failed to set framebuffer default layer count");
+
+        glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_SAMPLES, 1);
+        CHECK_GL_ERROR("Failed to set framebuffer default sample count");
+#else
+        DEV_ERROR("Framebuffers without attachments are not supported on this platform");
+#endif
+    }
 
     GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (Status != GL_FRAMEBUFFER_COMPLETE)
@@ -230,9 +259,6 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             Nu
 
     VERIFY(NumRenderTargets != 0 || pDSV != nullptr, "At least one render target or a depth-stencil buffer must be provided");
 
-    // Lock the cache
-    Threading::SpinLockGuard CacheGuard{m_CacheLock};
-
     // Construct the key
     FBOCacheKey Key;
     VERIFY(NumRenderTargets < MAX_RENDER_TARGETS, "Too many render targets are being set");
@@ -264,13 +290,12 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             Nu
         Key.DSVDesc = pDSV->GetDesc();
     }
 
+    // Lock the cache
+    Threading::SpinLockGuard CacheGuard{m_CacheLock};
+
     // Try to find FBO in the map
-    auto It = m_Cache.find(Key);
-    if (It != m_Cache.end())
-    {
-        return It->second;
-    }
-    else
+    auto fbo_it = m_Cache.find(Key);
+    if (fbo_it == m_Cache.end())
     {
         // Create a new FBO
         auto NewFBO = CreateFBO(ContextState, NumRenderTargets, ppRTVs, pDSV);
@@ -286,8 +311,33 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             Nu
                 m_TexIdToKey.insert(std::make_pair(Key.RTIds[rt], Key));
         }
 
-        return NewElems.first->second;
+        fbo_it = NewElems.first;
     }
+    return fbo_it->second;
+}
+
+const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32 Width, Uint32 Height, GLContextState& ContextState)
+{
+    FBOCacheKey Key;
+    Key.Width  = Width;
+    Key.Height = Height;
+
+    // Lock the cache
+    Threading::SpinLockGuard CacheGuard{m_CacheLock};
+
+    // Try to find FBO in the map
+    auto fbo_it = m_Cache.find(Key);
+    if (fbo_it == m_Cache.end())
+    {
+        // Create a new FBO
+        auto NewFBO = CreateFBO(ContextState, 0, nullptr, nullptr, Width, Height);
+
+        auto NewElems = m_Cache.emplace(std::make_pair(Key, std::move(NewFBO)));
+        // New element must be actually inserted
+        VERIFY(NewElems.second, "New element was not inserted");
+        fbo_it = NewElems.first;
+    }
+    return fbo_it->second;
 }
 
 } // namespace Diligent

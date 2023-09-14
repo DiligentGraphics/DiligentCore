@@ -55,12 +55,16 @@ public:
     static GLObjectWrappers::GLFrameBufferObj CreateFBO(GLContextState&    ContextState,
                                                         Uint32             NumRenderTargets,
                                                         TextureViewGLImpl* ppRTVs[],
-                                                        TextureViewGLImpl* pDSV);
+                                                        TextureViewGLImpl* pDSV,
+                                                        Uint32             DefaultWidth  = 0,
+                                                        Uint32             DefaultHeight = 0);
 
     const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32             NumRenderTargets,
                                                      TextureViewGLImpl* ppRTVs[],
                                                      TextureViewGLImpl* pDSV,
                                                      GLContextState&    ContextState);
+
+    const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32 Width, Uint32 Height, GLContextState& ContextState);
 
     void OnReleaseTexture(ITexture* pTexture);
 
@@ -79,6 +83,9 @@ private:
         // Unique IDs of texture bound as depth stencil
         UniqueIdentifier DSId    = 0;
         TextureViewDesc  DSVDesc = {};
+
+        Uint32 Width  = 0;
+        Uint32 Height = 0;
 
         mutable size_t Hash = 0;
 
