@@ -94,7 +94,7 @@ private:
     GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);
 
     template <typename PSOCreateInfoType>
-    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages);
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages) noexcept(false);
 
     void InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalFlags,
                             const TShaderStages&      ShaderStages,

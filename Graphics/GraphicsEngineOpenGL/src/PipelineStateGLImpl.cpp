@@ -238,7 +238,7 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
 }
 
 template <typename PSOCreateInfoType>
-void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages)
+void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages) noexcept(false)
 {
     const auto& DeviceInfo = GetDevice()->GetDeviceInfo();
     VERIFY(DeviceInfo.Type != RENDER_DEVICE_TYPE_UNDEFINED, "Device info is not initialized");
@@ -276,13 +276,13 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
             auto* pShaderGL  = ShaderStages[i];
-            m_GLPrograms[i]  = GLProgramObj{ShaderGLImpl::LinkProgram(&ShaderStages[i], 1, true)};
+            m_GLPrograms[i]  = GLProgramObj{ShaderGLImpl::LinkProgram(&ShaderStages[i], 1, true)}; // May throw
             m_ShaderTypes[i] = pShaderGL->GetDesc().ShaderType;
         }
     }
     else
     {
-        m_GLPrograms[0]  = ShaderGLImpl::LinkProgram(ShaderStages.data(), static_cast<Uint32>(ShaderStages.size()), false);
+        m_GLPrograms[0]  = ShaderGLImpl::LinkProgram(ShaderStages.data(), static_cast<Uint32>(ShaderStages.size()), false); // May throw
         m_ShaderTypes[0] = ActiveStages;
 
         m_GLPrograms[0].SetName(m_Desc.Name);

@@ -49,7 +49,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceGLImpl*     pDeviceGL,
                            const ShaderCreateInfo& ShaderCI,
                            const CreateInfo&       GLShaderCI,
-                           bool                    bIsDeviceInternal) :
+                           bool                    bIsDeviceInternal) noexcept(false) :
     // clang-format off
     TShaderBase
     {
@@ -179,7 +179,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     if (DeviceInfo.Features.SeparablePrograms /*&& (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0*/)
     {
         ShaderGLImpl* const            ThisShader[] = {this};
-        GLObjectWrappers::GLProgramObj Program      = LinkProgram(ThisShader, 1, true);
+        GLObjectWrappers::GLProgramObj Program      = LinkProgram(ThisShader, 1, true); // May throw
 
         auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
         VERIFY_EXPR(pImmediateCtx);
@@ -206,11 +206,11 @@ ShaderGLImpl::~ShaderGLImpl()
 IMPLEMENT_QUERY_INTERFACE2(ShaderGLImpl, IID_ShaderGL, IID_InternalImpl, TShaderBase)
 
 
-GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram)
+GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram) noexcept(false)
 {
     VERIFY(!IsSeparableProgram || NumShaders == 1, "Number of shaders must be 1 when separable program is created");
 
-    GLObjectWrappers::GLProgramObj GLProg(true);
+    GLObjectWrappers::GLProgramObj GLProg{true};
 
     // GL_PROGRAM_SEPARABLE parameter must be set before linking!
     if (IsSeparableProgram)
@@ -251,8 +251,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* pp
         // Notice that glGetProgramInfoLog  is used, not glGetShaderInfoLog.
         glGetProgramInfoLog(GLProg, LengthWithNull, &Length, shaderProgramInfoLog.data());
         VERIFY(Length == LengthWithNull - 1, "Incorrect program info log len");
-        LOG_ERROR_MESSAGE("Failed to link shader program:\n", shaderProgramInfoLog.data(), '\n');
-        UNEXPECTED("glLinkProgram failed");
+        LOG_ERROR_AND_THROW("Failed to link shader program:\n", shaderProgramInfoLog.data(), '\n');
     }
 
     for (Uint32 i = 0; i < NumShaders; ++i)
