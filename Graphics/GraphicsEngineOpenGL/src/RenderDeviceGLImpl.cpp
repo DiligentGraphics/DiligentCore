@@ -272,6 +272,37 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         m_DeviceInfo.NDC = NDCAttribs{-1.0f, 0.5f, 0.5f};
     }
 
+    if (m_GLCaps.FramebufferSRGB)
+    {
+        // When GL_FRAMEBUFFER_SRGB is enabled, and if the destination image is in the sRGB colorspace
+        // then OpenGL will assume the shader's output is in the linear RGB colorspace. It will therefore
+        // convert the output from linear RGB to sRGB.
+        // Any writes to images that are not in the sRGB format should not be affected.
+        // Thus this setting should be just set once and left that way
+        glEnable(GL_FRAMEBUFFER_SRGB);
+        if (glGetError() != GL_NO_ERROR)
+        {
+            LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
+            m_GLCaps.FramebufferSRGB = false;
+        }
+    }
+
+#if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
+    if (m_GLCaps.SemalessCubemaps)
+    {
+        // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap.
+        // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but
+        // modern hardware is capable of interpolating across a cube face boundary.
+        // GL_TEXTURE_CUBE_MAP_SEAMLESS is not defined in OpenGLES
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+        if (glGetError() != GL_NO_ERROR)
+        {
+            LOG_ERROR_MESSAGE("Failed to enable seamless cubemap filtering");
+            m_GLCaps.SemalessCubemaps = false;
+        }
+    }
+#endif
+
     // get device limits
     {
         glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &m_DeviceLimits.MaxUniformBlocks);
@@ -831,6 +862,9 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             SamProps.AnisotropicFilteringSupported = IsGL46OrAbove || CheckExtension("GL_ARB_texture_filter_anisotropic");
             SamProps.LODBiasSupported              = True;
             ASSERT_SIZEOF(SamProps, 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
+
+            m_GLCaps.FramebufferSRGB  = IsGL40OrAbove || CheckExtension("GL_ARB_framebuffer_sRGB");
+            m_GLCaps.SemalessCubemaps = IsGL40OrAbove || CheckExtension("GL_ARB_seamless_cube_map");
         }
         else
         {
@@ -898,6 +932,9 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             SamProps.AnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && strstr(Extensions, "texture_filter_anisotropic");
             SamProps.LODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
             ASSERT_SIZEOF(SamProps, 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
+
+            m_GLCaps.FramebufferSRGB  = strstr(Extensions, "sRGB_write_control");
+            m_GLCaps.SemalessCubemaps = false;
         }
 
 #ifdef GL_KHR_shader_subgroup

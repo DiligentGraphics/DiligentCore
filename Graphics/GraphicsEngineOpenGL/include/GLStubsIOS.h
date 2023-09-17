@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,6 +83,10 @@
 #endif
 
 #define glTexBuffer(...) 0
+
+#ifndef GL_FRAMEBUFFER_SRGB
+#    define GL_FRAMEBUFFER_SRGB 0x8DB9
+#endif
 
 #ifndef GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER
 #    define GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER 0x8CDB

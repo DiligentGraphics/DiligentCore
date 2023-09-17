@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -216,15 +216,6 @@ void GLContext::InitGLES()
         return;
 
     LoadGLFunctions();
-
-    // When GL_FRAMEBUFFER_SRGB is enabled, and if the destination image is in the sRGB colorspace
-    // then OpenGL will assume the shader's output is in the linear RGB colorspace. It will therefore
-    // convert the output from linear RGB to sRGB.
-    // Any writes to images that are not in the sRGB format should not be affected.
-    // Thus this setting should be just set once and left that way
-    glEnable(GL_FRAMEBUFFER_SRGB);
-    if (glGetError() != GL_NO_ERROR)
-        LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
     glEnable(GL_PRIMITIVE_RESTART_FIXED_INDEX);
     if (glGetError() != GL_NO_ERROR)

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,6 +50,17 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
     }
 // clang-format on
 {
+    if ((m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_RGBA8_UNORM_SRGB ||
+         m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_BGRA8_UNORM_SRGB) &&
+        !pRenderDeviceGL->GetGLCaps().FramebufferSRGB)
+    {
+        auto ColorFmt = m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_RGBA8_UNORM_SRGB ?
+            TEX_FORMAT_RGBA8_UNORM :
+            TEX_FORMAT_BGRA8_UNORM;
+        LOG_WARNING_MESSAGE("Changing the swap chain color format to ", GetTextureFormatAttribs(ColorFmt).Name, " because sRGB framebuffers are not enabled.");
+        m_SwapChainDesc.ColorBufferFormat = ColorFmt;
+    }
+
     if (m_DesiredPreTransform != SURFACE_TRANSFORM_OPTIMAL &&
         m_DesiredPreTransform != SURFACE_TRANSFORM_IDENTITY)
     {

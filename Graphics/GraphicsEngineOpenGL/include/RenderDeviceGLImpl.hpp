@@ -211,6 +211,13 @@ public:
     };
     const GLDeviceLimits& GetDeviceLimits() const { return m_DeviceLimits; }
 
+    struct GLDeviceCaps
+    {
+        bool FramebufferSRGB  = false;
+        bool SemalessCubemaps = false;
+    };
+    const GLDeviceCaps& GetGLCaps() const { return m_GLCaps; }
+
 protected:
     friend class DeviceContextGLImpl;
     friend class TextureBaseGL;
@@ -243,6 +250,7 @@ private:
     int m_ShowDebugGLOutput = 1;
 
     GLDeviceLimits m_DeviceLimits = {};
+    GLDeviceCaps   m_GLCaps       = {};
 };
 
 } // namespace Diligent
