@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -107,7 +107,7 @@ void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt
                 Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes,
                 [](Uint8* pDstTexel, Uint32 NumComponents, float fVal) //
                 {
-                    Uint8 uVal = static_cast<Uint8>(FastLinearToSRGB(fVal) * 255.f);
+                    Uint8 uVal = static_cast<Uint8>(FastLinearToGamma(fVal) * 255.f);
                     for (Uint32 c = 0; c < NumComponents; ++c)
                         pDstTexel[c] = uVal;
                 } //
@@ -146,8 +146,8 @@ ChannelType SRGBAverage(ChannelType c0, ChannelType c1, ChannelType c2, ChannelT
     float fc2 = static_cast<float>(c2) * MaxValInv;
     float fc3 = static_cast<float>(c3) * MaxValInv;
 
-    float fLinearAverage = (FastSRGBToLinear(fc0) + FastSRGBToLinear(fc1) + FastSRGBToLinear(fc2) + FastSRGBToLinear(fc3)) * 0.25f;
-    float fSRGBAverage   = FastLinearToSRGB(fLinearAverage) * MaxVal;
+    float fLinearAverage = (FastGammaToLinear(fc0) + FastGammaToLinear(fc1) + FastGammaToLinear(fc2) + FastGammaToLinear(fc3)) * 0.25f;
+    float fSRGBAverage   = FastLinearToGamma(fLinearAverage) * MaxVal;
 
     // Clamping on both ends is essential because fast SRGB math is imprecise
     fSRGBAverage = std::max(fSRGBAverage, 0.f);

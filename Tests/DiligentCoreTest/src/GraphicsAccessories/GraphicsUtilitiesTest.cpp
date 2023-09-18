@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -557,13 +557,13 @@ TEST(GraphicsTools_CalculateMipLevel, sRGB_BOX_AVE)
             for (Uint32 c = 0; c < NumChannels; ++c)
             {
                 float fLinearAverage =
-                    (FastSRGBToLinear(FineData[((x * 2 + 0) + (y * 2 + 0) * FineWidth) * NumChannels + c] / 255.f) +
-                     FastSRGBToLinear(FineData[((x * 2 + 1) + (y * 2 + 0) * FineWidth) * NumChannels + c] / 255.f) +
-                     FastSRGBToLinear(FineData[((x * 2 + 0) + (y * 2 + 1) * FineWidth) * NumChannels + c] / 255.f) +
-                     FastSRGBToLinear(FineData[((x * 2 + 1) + (y * 2 + 1) * FineWidth) * NumChannels + c] / 255.f)) *
+                    (FastGammaToLinear(FineData[((x * 2 + 0) + (y * 2 + 0) * FineWidth) * NumChannels + c] / 255.f) +
+                     FastGammaToLinear(FineData[((x * 2 + 1) + (y * 2 + 0) * FineWidth) * NumChannels + c] / 255.f) +
+                     FastGammaToLinear(FineData[((x * 2 + 0) + (y * 2 + 1) * FineWidth) * NumChannels + c] / 255.f) +
+                     FastGammaToLinear(FineData[((x * 2 + 1) + (y * 2 + 1) * FineWidth) * NumChannels + c] / 255.f)) *
                     0.25f;
                 fLinearAverage = std::min(std::max(fLinearAverage, 0.f), 255.f);
-                float fSRGB    = FastLinearToSRGB(fLinearAverage);
+                float fSRGB    = FastLinearToGamma(fLinearAverage);
 
                 RefCoarseData[(x + y * CoarseWidth) * NumChannels + c] = static_cast<Uint8>(fSRGB * 255.f);
             }
