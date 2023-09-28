@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,7 @@
 namespace Diligent
 {
 
+class TextureBaseGL;
 class TextureViewGLImpl;
 class GLContextState;
 
@@ -65,6 +66,9 @@ public:
                                                      GLContextState&    ContextState);
 
     const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32 Width, Uint32 Height, GLContextState& ContextState);
+
+    // NOTE: the function may bind a framebuffer, so the FBO in the GL context state must be invalidated.
+    const GLObjectWrappers::GLFrameBufferObj& GetReadFBO(TextureBaseGL* pTex, Uint32 ArraySlice, Uint32 MipLevel);
 
     void OnReleaseTexture(ITexture* pTexture);
 

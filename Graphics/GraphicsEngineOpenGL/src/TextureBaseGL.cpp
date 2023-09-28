@@ -550,20 +550,6 @@ void TextureBaseGL::UpdateData(GLContextState& CtxState, Uint32 MipLevel, Uint32
 //}
 //
 
-inline GLenum GetFramebufferAttachmentPoint(TEXTURE_FORMAT Format)
-{
-    const auto& FmtAttribs = GetTextureFormatAttribs(Format);
-    switch (FmtAttribs.ComponentType)
-    {
-        case COMPONENT_TYPE_DEPTH:
-            return GL_DEPTH_ATTACHMENT;
-        case COMPONENT_TYPE_DEPTH_STENCIL:
-            return GL_DEPTH_STENCIL_ATTACHMENT;
-        default:
-            return GL_COLOR_ATTACHMENT0;
-    }
-}
-
 inline GLbitfield GetFramebufferCopyMask(TEXTURE_FORMAT Format)
 {
     const auto& FmtAttribs = GetTextureFormatAttribs(Format);
@@ -640,38 +626,29 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
 #endif
     {
         auto& GLState = pDeviceCtxGL->GetContextState();
-        // Invalidate FBO as we will use glBindFramebuffer directly
-        GLState.InvalidateFBO();
-
-        GLObjectWrappers::GLFrameBufferObj ReadFBO{pSrcTextureGL->GetGLHandle() != 0};
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, ReadFBO ? ReadFBO : pDeviceCtxGL->GetDefaultFBO());
-        DEV_CHECK_GL_ERROR("Failed to bind read framebuffer");
 
         for (Uint32 DepthSlice = 0; DepthSlice < pSrcBox->Depth(); ++DepthSlice)
         {
-            if (ReadFBO)
+            GLuint SrcFboHandle = 0;
+            if (pSrcTextureGL->GetGLHandle() != 0)
             {
-                // Attach source subimage to read framebuffer
-                TextureViewDesc SRVVDesc;
-                SRVVDesc.TextureDim = SrcTexDesc.Type;
-                SRVVDesc.ViewType   = TEXTURE_VIEW_SHADER_RESOURCE;
+                // Get read framebuffer for the source subimage
+
+                auto& FBOCache = m_pDevice->GetFBOCache(GLState.GetCurrentGLContext());
                 VERIFY_EXPR(SrcSlice == 0 || SrcTexDesc.IsArray());
                 VERIFY_EXPR((pSrcBox->MinZ == 0 && DepthSlice == 0) || SrcTexDesc.Is3D());
-                SRVVDesc.FirstArraySlice = SrcSlice + pSrcBox->MinZ + DepthSlice;
-                SRVVDesc.MostDetailedMip = SrcMipLevel;
-                SRVVDesc.NumArraySlices  = 1;
-                ValidatedAndCorrectTextureViewDesc(m_Desc, SRVVDesc);
+                const auto SrcFramebufferSlice = SrcSlice + pSrcBox->MinZ + DepthSlice;
+                // NOTE: GetReadFBO may bind a framebuffer.
+                const auto& ReadFBO = FBOCache.GetReadFBO(pSrcTextureGL, SrcFramebufferSlice, SrcMipLevel);
 
-                pSrcTextureGL->AttachToFramebuffer(SRVVDesc, GetFramebufferAttachmentPoint(SrcTexDesc.Format));
-
-                GLenum Status = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER);
-                if (Status != GL_FRAMEBUFFER_COMPLETE)
-                {
-                    const Char* StatusString = GetFramebufferStatusString(Status);
-                    LOG_ERROR("Read framebuffer is incomplete. FB status: ", StatusString);
-                    UNEXPECTED("Read framebuffer is incomplete");
-                }
+                SrcFboHandle = ReadFBO;
             }
+            else
+            {
+                SrcFboHandle = pDeviceCtxGL->GetDefaultFBO();
+            }
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFboHandle);
+            DEV_CHECK_GL_ERROR("Failed to bind read framebuffer");
 
             if (!IsDefaultBackBuffer)
             {
@@ -710,6 +687,9 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                 DEV_CHECK_GL_ERROR("Failed to blit framebuffer");
             }
         }
+
+        // Invalidate FBO as we used glBindFramebuffer directly
+        GLState.InvalidateFBO();
 
         GLState.BindTexture(-1, GetBindTarget(), GLObjectWrappers::GLTextureObj::Null());
         pDeviceCtxGL->CommitRenderTargets();

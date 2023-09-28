@@ -67,18 +67,17 @@ std::size_t FBOCache::FBOCacheKeyHashFunc::operator()(const FBOCacheKey& Key) co
 {
     if (Key.Hash == 0)
     {
-        std::hash<TextureViewDesc> TexViewDescHasher;
         Key.Hash = 0;
         HashCombine(Key.Hash, Key.NumRenderTargets, Key.Width, Key.Height);
         for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
         {
             HashCombine(Key.Hash, Key.RTIds[rt]);
             if (Key.RTIds[rt])
-                HashCombine(Key.Hash, TexViewDescHasher(Key.RTVDescs[rt]));
+                HashCombine(Key.Hash, Key.RTVDescs[rt]);
         }
         HashCombine(Key.Hash, Key.DSId);
         if (Key.DSId)
-            HashCombine(Key.Hash, TexViewDescHasher(Key.DSVDesc));
+            HashCombine(Key.Hash, Key.DSVDesc);
     }
     return Key.Hash;
 }
@@ -289,18 +288,18 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             Nu
         // Create a new FBO
         auto NewFBO = CreateFBO(ContextState, NumRenderTargets, ppRTVs, pDSV);
 
-        auto NewElems = m_Cache.emplace(std::make_pair(Key, std::move(NewFBO)));
-        // New element must be actually inserted
-        VERIFY(NewElems.second, "New element was not inserted");
+        auto it_inserted = m_Cache.emplace(Key, std::move(NewFBO));
+        // New FBO must be actually inserted
+        VERIFY(it_inserted.second, "New FBO was not inserted");
         if (Key.DSId != 0)
-            m_TexIdToKey.insert(std::make_pair(Key.DSId, Key));
+            m_TexIdToKey.emplace(Key.DSId, Key);
         for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
         {
             if (Key.RTIds[rt] != 0)
-                m_TexIdToKey.insert(std::make_pair(Key.RTIds[rt], Key));
+                m_TexIdToKey.emplace(Key.RTIds[rt], Key);
         }
 
-        fbo_it = NewElems.first;
+        fbo_it = it_inserted.first;
     }
     return fbo_it->second;
 }
@@ -321,10 +320,74 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32 Width, Uint32 
         // Create a new FBO
         auto NewFBO = CreateFBO(ContextState, 0, nullptr, nullptr, Width, Height);
 
-        auto NewElems = m_Cache.emplace(std::make_pair(Key, std::move(NewFBO)));
-        // New element must be actually inserted
-        VERIFY(NewElems.second, "New element was not inserted");
-        fbo_it = NewElems.first;
+        auto it_inserted = m_Cache.emplace(Key, std::move(NewFBO));
+        // New FBO must be actually inserted
+        VERIFY(it_inserted.second, "New FBO was not inserted");
+        fbo_it = it_inserted.first;
+    }
+    return fbo_it->second;
+}
+
+inline GLenum GetFramebufferAttachmentPoint(TEXTURE_FORMAT Format)
+{
+    const auto& FmtAttribs = GetTextureFormatAttribs(Format);
+    switch (FmtAttribs.ComponentType)
+    {
+        case COMPONENT_TYPE_DEPTH:
+            return GL_DEPTH_ATTACHMENT;
+        case COMPONENT_TYPE_DEPTH_STENCIL:
+            return GL_DEPTH_STENCIL_ATTACHMENT;
+        default:
+            return GL_COLOR_ATTACHMENT0;
+    }
+}
+
+const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetReadFBO(TextureBaseGL* pTex, Uint32 ArraySlice, Uint32 MipLevel)
+{
+    const auto& TexDesc = pTex->GetDesc();
+
+    FBOCacheKey Key;
+    Key.NumRenderTargets = 1;
+    Key.RTIds[0]         = pTex->GetUniqueID();
+
+    auto& RTV0{Key.RTVDescs[0]};
+    RTV0.Format     = TexDesc.Format;
+    RTV0.TextureDim = TexDesc.Type;
+    // Use SRV to make AttachToFramebuffer only attach to read framebuffer
+    RTV0.ViewType        = TEXTURE_VIEW_SHADER_RESOURCE;
+    RTV0.FirstArraySlice = ArraySlice;
+    RTV0.MostDetailedMip = MipLevel;
+    RTV0.NumArraySlices  = 1;
+
+    // Lock the cache
+    Threading::SpinLockGuard CacheGuard{m_CacheLock};
+
+    // Try to find FBO in the map
+    auto fbo_it = m_Cache.find(Key);
+    if (fbo_it == m_Cache.end())
+    {
+        // Create a new FBO
+        GLObjectWrappers::GLFrameBufferObj NewFBO{true};
+
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, NewFBO);
+        DEV_CHECK_GL_ERROR("Failed to bind new FBO as read framebuffer");
+
+        pTex->AttachToFramebuffer(RTV0, GetFramebufferAttachmentPoint(TexDesc.Format));
+
+        GLenum Status = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER);
+        if (Status != GL_FRAMEBUFFER_COMPLETE)
+        {
+            const Char* StatusString = GetFramebufferStatusString(Status);
+            LOG_ERROR("Read framebuffer is incomplete. FB status: ", StatusString);
+            UNEXPECTED("Read framebuffer is incomplete");
+        }
+
+        auto it_inserted = m_Cache.emplace(Key, std::move(NewFBO));
+        // New FBO must be actually inserted
+        VERIFY(it_inserted.second, "New FBO was not inserted");
+        m_TexIdToKey.emplace(Key.RTIds[0], Key);
+
+        fbo_it = it_inserted.first;
     }
     return fbo_it->second;
 }
