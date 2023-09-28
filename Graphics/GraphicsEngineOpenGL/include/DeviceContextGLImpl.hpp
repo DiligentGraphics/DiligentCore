@@ -299,6 +299,7 @@ public:
 
     virtual void ResetRenderTargets() override final;
 
+    GLuint GetDefaultFBO() const;
 
 protected:
     friend class BufferGLImpl;

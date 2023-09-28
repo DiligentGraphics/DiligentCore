@@ -550,6 +550,34 @@ void TextureBaseGL::UpdateData(GLContextState& CtxState, Uint32 MipLevel, Uint32
 //}
 //
 
+inline GLenum GetFramebufferAttachmentPoint(TEXTURE_FORMAT Format)
+{
+    const auto& FmtAttribs = GetTextureFormatAttribs(Format);
+    switch (FmtAttribs.ComponentType)
+    {
+        case COMPONENT_TYPE_DEPTH:
+            return GL_DEPTH_ATTACHMENT;
+        case COMPONENT_TYPE_DEPTH_STENCIL:
+            return GL_DEPTH_STENCIL_ATTACHMENT;
+        default:
+            return GL_COLOR_ATTACHMENT0;
+    }
+}
+
+inline GLbitfield GetFramebufferCopyMask(TEXTURE_FORMAT Format)
+{
+    const auto& FmtAttribs = GetTextureFormatAttribs(Format);
+    switch (FmtAttribs.ComponentType)
+    {
+        case COMPONENT_TYPE_DEPTH:
+            return GL_DEPTH_BUFFER_BIT;
+        case COMPONENT_TYPE_DEPTH_STENCIL:
+            return GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+        default:
+            return GL_COLOR_BUFFER_BIT;
+    }
+}
+
 void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                              TextureBaseGL*       pSrcTextureGL,
                              Uint32               SrcMipLevel,
@@ -612,48 +640,77 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
 #endif
     {
         auto& GLState = pDeviceCtxGL->GetContextState();
+        // Invalidate FBO as we will use glBindFramebuffer directly
+        GLState.InvalidateFBO();
 
-        GLObjectWrappers::GLFrameBufferObj ReadFBO{!IsDefaultBackBuffer};
-        GLState.BindFBO(ReadFBO);
+        GLObjectWrappers::GLFrameBufferObj ReadFBO{pSrcTextureGL->GetGLHandle() != 0};
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, ReadFBO ? ReadFBO : pDeviceCtxGL->GetDefaultFBO());
+        DEV_CHECK_GL_ERROR("Failed to bind read framebuffer");
 
         for (Uint32 DepthSlice = 0; DepthSlice < pSrcBox->Depth(); ++DepthSlice)
         {
-            if (!IsDefaultBackBuffer)
+            if (ReadFBO)
             {
                 // Attach source subimage to read framebuffer
                 TextureViewDesc SRVVDesc;
-                SRVVDesc.TextureDim      = SrcTexDesc.Type;
-                SRVVDesc.ViewType        = TEXTURE_VIEW_SHADER_RESOURCE;
+                SRVVDesc.TextureDim = SrcTexDesc.Type;
+                SRVVDesc.ViewType   = TEXTURE_VIEW_SHADER_RESOURCE;
+                VERIFY_EXPR(SrcSlice == 0 || SrcTexDesc.IsArray());
+                VERIFY_EXPR((pSrcBox->MinZ == 0 && DepthSlice == 0) || SrcTexDesc.Is3D());
                 SRVVDesc.FirstArraySlice = SrcSlice + pSrcBox->MinZ + DepthSlice;
                 SRVVDesc.MostDetailedMip = SrcMipLevel;
                 SRVVDesc.NumArraySlices  = 1;
                 ValidatedAndCorrectTextureViewDesc(m_Desc, SRVVDesc);
 
-                pSrcTextureGL->AttachToFramebuffer(SRVVDesc, GL_COLOR_ATTACHMENT0);
+                pSrcTextureGL->AttachToFramebuffer(SRVVDesc, GetFramebufferAttachmentPoint(SrcTexDesc.Format));
 
                 GLenum Status = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER);
                 if (Status != GL_FRAMEBUFFER_COMPLETE)
                 {
                     const Char* StatusString = GetFramebufferStatusString(Status);
-                    LOG_ERROR("Framebuffer is incomplete. FB status: ", StatusString);
-                    UNEXPECTED("Framebuffer is incomplete");
+                    LOG_ERROR("Read framebuffer is incomplete. FB status: ", StatusString);
+                    UNEXPECTED("Read framebuffer is incomplete");
                 }
+            }
+
+            if (!IsDefaultBackBuffer)
+            {
+                CopyTexSubimageAttribs CopyAttribs{*pSrcBox};
+                CopyAttribs.DstMip   = DstMipLevel;
+                CopyAttribs.DstLayer = DstSlice;
+                CopyAttribs.DstX     = DstX;
+                CopyAttribs.DstY     = DstY;
+                CopyAttribs.DstZ     = DstZ + DepthSlice;
+                CopyTexSubimage(GLState, CopyAttribs);
             }
             else
             {
-                VERIFY(pSrcBox->Depth() == 1, "Default framebuffer only has one slice");
-            }
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, pDeviceCtxGL->GetDefaultFBO());
+                GLenum Status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+                if (Status != GL_FRAMEBUFFER_COMPLETE)
+                {
+                    const Char* StatusString = GetFramebufferStatusString(Status);
+                    LOG_ERROR("Draw framebuffer is incomplete. FB status: ", StatusString);
+                    UNEXPECTED("Draw framebuffer is incomplete");
+                }
 
-            CopyTexSubimageAttribs CopyAttribs{*pSrcBox};
-            CopyAttribs.DstMip   = DstMipLevel;
-            CopyAttribs.DstLayer = DstSlice;
-            CopyAttribs.DstX     = DstX;
-            CopyAttribs.DstY     = DstY;
-            CopyAttribs.DstZ     = DstZ + DepthSlice;
-            CopyTexSubimage(GLState, CopyAttribs);
+                const auto CopyMask = GetFramebufferCopyMask(SrcTexDesc.Format);
+                DEV_CHECK_ERR(CopyMask == GetFramebufferCopyMask(m_Desc.Format),
+                              "Src and dst framebuffer copy masks must be the same");
+                glBlitFramebuffer(pSrcBox->MinX,
+                                  pSrcBox->MinY,
+                                  pSrcBox->MaxX,
+                                  pSrcBox->MaxY,
+                                  DstX,
+                                  DstY,
+                                  DstX + pSrcBox->Width(),
+                                  DstY + pSrcBox->Height(),
+                                  CopyMask,
+                                  GL_NEAREST);
+                DEV_CHECK_GL_ERROR("Failed to blit framebuffer");
+            }
         }
 
-        GLState.InvalidateFBO();
         GLState.BindTexture(-1, GetBindTarget(), GLObjectWrappers::GLTextureObj::Null());
         pDeviceCtxGL->CommitRenderTargets();
     }

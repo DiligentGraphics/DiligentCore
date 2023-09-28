@@ -362,6 +362,11 @@ void DeviceContextGLImpl::SetSwapChain(ISwapChainGL* pSwapChain)
     m_pSwapChain = pSwapChain;
 }
 
+GLuint DeviceContextGLImpl::GetDefaultFBO() const
+{
+    return m_pSwapChain ? m_pSwapChain->GetDefaultFBO() : 0;
+}
+
 void DeviceContextGLImpl::CommitRenderTargets()
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "This method must not be called inside render pass");
@@ -374,7 +379,7 @@ void DeviceContextGLImpl::CommitRenderTargets()
         GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
         if (m_DefaultFBO != DefaultFBOHandle)
         {
-            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper(DefaultFBOHandle)};
+            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper{DefaultFBOHandle}};
         }
         m_ContextState.BindFBO(m_DefaultFBO);
     }
@@ -468,7 +473,7 @@ void DeviceContextGLImpl::BeginSubpass()
         GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
         if (m_DefaultFBO != DefaultFBOHandle)
         {
-            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper(DefaultFBOHandle)};
+            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper{DefaultFBOHandle}};
         }
         m_ContextState.BindFBO(m_DefaultFBO);
     }
