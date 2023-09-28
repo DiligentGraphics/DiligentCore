@@ -580,8 +580,8 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
         pSrcBox = &SrcBox;
     }
 
-#if GL_ARB_copy_image
     const bool IsDefaultBackBuffer = GetGLHandle() == 0;
+#if GL_ARB_copy_image
     // We can't use glCopyImageSubData with the proxy texture of a default framebuffer
     // because we don't have the texture handle. Resort to quad rendering in this case.
     if (glCopyImageSubData && !IsDefaultBackBuffer)
@@ -611,77 +611,51 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
     else
 #endif
     {
-        const auto& FmtAttribs = GetDevice()->GetTextureFormatInfoExt(m_Desc.Format);
-        if ((FmtAttribs.BindFlags & BIND_RENDER_TARGET) == 0)
-        {
-            LOG_ERROR_MESSAGE("Unable to perform copy operation because ", FmtAttribs.Name, " is not a color renderable format");
-            return;
-        }
+        auto& GLState = pDeviceCtxGL->GetContextState();
 
-        auto* pRenderDeviceGL = GetDevice();
-#ifdef DILIGENT_DEBUG
-        {
-            auto& TexViewObjAllocator = pRenderDeviceGL->GetTexViewObjAllocator();
-            VERIFY(&TexViewObjAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
-        }
-#endif
-        auto& TexRegionRender = *pRenderDeviceGL->m_pTexRegionRender;
-        TexRegionRender.SetStates(pDeviceCtxGL);
-
-        // Create temporary SRV for the entire source texture
-        TextureViewDesc SRVDesc;
-        SRVDesc.TextureDim = SrcTexDesc.Type;
-        SRVDesc.ViewType   = TEXTURE_VIEW_SHADER_RESOURCE;
-        ValidatedAndCorrectTextureViewDesc(m_Desc, SRVDesc);
-        // Note: texture view allocates memory for the copy of the name
-        // If the name is empty, memory should not be allocated
-        // We have to provide allocator even though it will never be used
-        TextureViewGLImpl SRV{
-            GetReferenceCounters(), GetDevice(), SRVDesc, pSrcTextureGL,
-            false, // Do NOT create texture view OpenGL object
-            true,  // The view, like default view, should not
-                   // keep strong reference to the texture
-        };
+        GLObjectWrappers::GLFrameBufferObj ReadFBO{!IsDefaultBackBuffer};
+        GLState.BindFBO(ReadFBO);
 
         for (Uint32 DepthSlice = 0; DepthSlice < pSrcBox->Depth(); ++DepthSlice)
         {
-            // Create temporary RTV for the target subresource
-            TextureViewDesc RTVDesc;
-            RTVDesc.TextureDim      = m_Desc.Type;
-            RTVDesc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
-            RTVDesc.FirstArraySlice = DepthSlice + DstSlice;
-            RTVDesc.MostDetailedMip = DstMipLevel;
-            RTVDesc.NumArraySlices  = 1;
-            ValidatedAndCorrectTextureViewDesc(m_Desc, RTVDesc);
-            // Note: texture view allocates memory for the copy of the name
-            // If the name is empty, memory should not be allocated
-            // We have to provide allocator even though it will never be used
-            TextureViewGLImpl RTV{
-                GetReferenceCounters(), GetDevice(), RTVDesc, this,
-                false, // Do NOT create texture view OpenGL object
-                true,  // The view, like default view, should not
-                       // keep strong reference to the texture
-            };
+            if (!IsDefaultBackBuffer)
+            {
+                // Attach source subimage to read framebuffer
+                TextureViewDesc SRVVDesc;
+                SRVVDesc.TextureDim      = SrcTexDesc.Type;
+                SRVVDesc.ViewType        = TEXTURE_VIEW_SHADER_RESOURCE;
+                SRVVDesc.FirstArraySlice = SrcSlice + pSrcBox->MinZ + DepthSlice;
+                SRVVDesc.MostDetailedMip = SrcMipLevel;
+                SRVVDesc.NumArraySlices  = 1;
+                ValidatedAndCorrectTextureViewDesc(m_Desc, SRVVDesc);
 
-            ITextureView* pRTVs[] = {&RTV};
-            pDeviceCtxGL->SetRenderTargets(_countof(pRTVs), pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                pSrcTextureGL->AttachToFramebuffer(SRVVDesc, GL_COLOR_ATTACHMENT0);
 
-            // No need to set up the viewport as SetRenderTargets() does that
+                GLenum Status = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER);
+                if (Status != GL_FRAMEBUFFER_COMPLETE)
+                {
+                    const Char* StatusString = GetFramebufferStatusString(Status);
+                    LOG_ERROR("Framebuffer is incomplete. FB status: ", StatusString);
+                    UNEXPECTED("Framebuffer is incomplete");
+                }
+            }
+            else
+            {
+                VERIFY(pSrcBox->Depth() == 1, "Default framebuffer only has one slice");
+            }
 
-            TexRegionRender.Render(pDeviceCtxGL,
-                                   &SRV,
-                                   SrcTexDesc.Type,
-                                   SrcTexDesc.Format,
-                                   static_cast<Int32>(pSrcBox->MinX) - static_cast<Int32>(DstX),
-                                   static_cast<Int32>(pSrcBox->MinY) - static_cast<Int32>(DstY),
-                                   SrcSlice + pSrcBox->MinZ + DepthSlice,
-                                   SrcMipLevel);
-
-            // NB: we must unbind RTV before it goes out of scope!
-            pDeviceCtxGL->ResetRenderTargets();
+            CopyTexSubimageAttribs CopyAttribs{*pSrcBox};
+            CopyAttribs.DstMip   = DstMipLevel;
+            CopyAttribs.DstLayer = DstSlice;
+            CopyAttribs.DstX     = DstX;
+            CopyAttribs.DstY     = DstY;
+            CopyAttribs.DstZ     = DstZ + DepthSlice;
+            CopyTexSubimage(GLState, CopyAttribs);
         }
 
-        TexRegionRender.RestoreStates(pDeviceCtxGL);
+        GLState.InvalidateFBO();
+        GLState.BindTexture(-1, GetBindTarget(), GLObjectWrappers::GLTextureObj::Null());
+        pDeviceCtxGL->CommitRenderTargets();
     }
 }
 

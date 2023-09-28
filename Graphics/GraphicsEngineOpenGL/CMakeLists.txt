@@ -32,7 +32,6 @@ set(INCLUDE
     include/ShaderResourcesGL.hpp
     include/ShaderVariableManagerGL.hpp
     include/SwapChainGLBase.hpp
-    include/TexRegionRender.hpp
     include/Texture1D_GL.hpp
     include/Texture1DArray_GL.hpp
     include/Texture2D_GL.hpp
@@ -87,7 +86,6 @@ set(SOURCE
     src/ShaderResourceCacheGL.cpp
     src/ShaderResourcesGL.cpp
     src/ShaderVariableManagerGL.cpp
-    src/TexRegionRender.cpp
     src/Texture1D_GL.cpp
     src/Texture1DArray_GL.cpp
     src/Texture2D_GL.cpp

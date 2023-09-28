@@ -635,6 +635,7 @@ static void (*glPolygonMode)(GLenum face, GLenum mode) = nullptr;
 #define glColorMaski(...)             UnsupportedGLFunctionStub("glColorMaski")
 #define glFramebufferTexture(...)     UnsupportedGLFunctionStub("glFramebufferTexture")
 #define glFramebufferTexture1D(...)   UnsupportedGLFunctionStub("glFramebufferTexture1D")
+#define glCopyTexSubImage1D(...)      UnsupportedGLFunctionStub("glCopyTexSubImage1D")
 #define glClipControl(...)            UnsupportedGLFunctionStub("glClipControl")
 static void (*glGetQueryObjectui64v)(GLuint id, GLenum pname, GLuint64* params) = nullptr;
 

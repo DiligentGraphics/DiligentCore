@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -199,8 +199,11 @@ void Texture3D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum A
     auto NumDepthSlicesInMip = m_Desc.Depth >> ViewDesc.MostDetailedMip;
     if (ViewDesc.NumDepthSlices == NumDepthSlicesInMip)
     {
-        glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-        CHECK_GL_ERROR("Failed to attach texture 3D to draw framebuffer");
+        if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+        {
+            glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
+            CHECK_GL_ERROR("Failed to attach texture 3D to draw framebuffer");
+        }
         glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
         CHECK_GL_ERROR("Failed to attach texture 3D to read framebuffer");
     }
@@ -212,8 +215,11 @@ void Texture3D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum A
 
         // On Android (at least on Intel HW), glFramebufferTexture3D() runs without errors, but the
         // FBO turns out to be incomplete. glFramebufferTextureLayer() seems to work fine.
-        glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstDepthSlice);
-        CHECK_GL_ERROR("Failed to attach texture 3D to draw framebuffer");
+        if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+        {
+            glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstDepthSlice);
+            CHECK_GL_ERROR("Failed to attach texture 3D to draw framebuffer");
+        }
         glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstDepthSlice);
         CHECK_GL_ERROR("Failed to attach texture 3D to read framebuffer");
     }
@@ -221,6 +227,22 @@ void Texture3D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum A
     {
         UNEXPECTED("Only one slice or the entire 3D texture can be attached to a framebuffer");
     }
+}
+
+void Texture3D_GL::CopyTexSubimage(GLContextState& GLState, const CopyTexSubimageAttribs& Attribs)
+{
+    GLState.BindTexture(-1, GetBindTarget(), GetGLHandle());
+
+    glCopyTexSubImage3D(GetBindTarget(),
+                        Attribs.DstMip,
+                        Attribs.DstX,
+                        Attribs.DstY,
+                        Attribs.DstZ,
+                        Attribs.SrcBox.MinX,
+                        Attribs.SrcBox.MinY,
+                        Attribs.SrcBox.Width(),
+                        Attribs.SrcBox.Height());
+    CHECK_GL_ERROR("Failed to copy subimage data to texture 3D");
 }
 
 } // namespace Diligent

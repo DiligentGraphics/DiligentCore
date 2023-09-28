@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,6 +64,9 @@ public:
     /// Implementation of TextureBaseGL::AttachToFramebuffer() for 3D texture.
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc,
                                      GLenum                        AttachmentPoint) override final;
+
+    /// Implementation of TextureBaseGL::CopyTexSubimage() for 3D texture.
+    virtual void CopyTexSubimage(GLContextState& GLState, const CopyTexSubimageAttribs& Attribs) override final;
 };
 
 } // namespace Diligent

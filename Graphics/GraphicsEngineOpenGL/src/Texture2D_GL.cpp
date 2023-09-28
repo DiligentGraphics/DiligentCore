@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -279,10 +279,28 @@ void Texture2D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum A
 {
     // For glFramebufferTexture2D(), if texture name is not zero, then texture target must be GL_TEXTURE_2D,
     // GL_TEXTURE_RECTANGLE or one of the 6 cubemap face targets GL_TEXTURE_CUBE_MAP_POSITIVE_X, ...
-    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
-    CHECK_GL_ERROR("Failed to attach texture 2D to draw framebuffer");
+    if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+    {
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
+        CHECK_GL_ERROR("Failed to attach texture 2D to draw framebuffer");
+    }
     glFramebufferTexture2D(GL_READ_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
     CHECK_GL_ERROR("Failed to attach texture 2D to read framebuffer");
+}
+
+void Texture2D_GL::CopyTexSubimage(GLContextState& GLState, const CopyTexSubimageAttribs& Attribs)
+{
+    GLState.BindTexture(-1, GetBindTarget(), GetGLHandle());
+
+    glCopyTexSubImage2D(GetBindTarget(),
+                        Attribs.DstMip,
+                        Attribs.DstX,
+                        Attribs.DstY,
+                        Attribs.SrcBox.MinX,
+                        Attribs.SrcBox.MinY,
+                        Attribs.SrcBox.Width(),
+                        Attribs.SrcBox.Height());
+    CHECK_GL_ERROR("Failed to copy subimage data to texture 2D");
 }
 
 } // namespace Diligent

@@ -31,6 +31,7 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "TextureBaseGL.hpp"
 #include "GLContextState.hpp"
+#include "GLTypeConversions.hpp"
 
 namespace Diligent
 {
@@ -229,19 +230,7 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
     GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (Status != GL_FRAMEBUFFER_COMPLETE)
     {
-        const Char* StatusString = "Unknown";
-        switch (Status)
-        {
-            // clang-format off
-            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:         StatusString = "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";         break;
-            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: StatusString = "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT"; break;
-            case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:        StatusString = "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER";        break;
-            case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:        StatusString = "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER";        break;
-            case GL_FRAMEBUFFER_UNSUPPORTED:                   StatusString = "GL_FRAMEBUFFER_UNSUPPORTED";                   break;
-            case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:        StatusString = "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";        break;
-            case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:      StatusString = "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";      break;
-                // clang-format on
-        }
+        const Char* StatusString = GetFramebufferStatusString(Status);
         LOG_ERROR("Framebuffer is incomplete. FB status: ", StatusString);
         UNEXPECTED("Framebuffer is incomplete");
     }

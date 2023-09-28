@@ -121,6 +121,19 @@ protected:
 
     void SetDefaultGLParameters();
 
+    struct CopyTexSubimageAttribs
+    {
+        const Box& SrcBox;
+
+        GLint DstMip   = 0;
+        GLint DstLayer = 0;
+        GLint DstX     = 0;
+        GLint DstY     = 0;
+        GLint DstZ     = 0;
+    };
+    virtual void CopyTexSubimage(GLContextState& GLState, const CopyTexSubimageAttribs& Attribs) = 0;
+
+protected:
     GLObjectWrappers::GLTextureObj m_GlTexture;
     RefCntAutoPtr<IBuffer>         m_pPBO; // For staging textures
     const GLenum                   m_BindTarget;

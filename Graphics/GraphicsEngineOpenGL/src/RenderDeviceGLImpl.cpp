@@ -340,11 +340,6 @@ RenderDeviceGLImpl::~RenderDeviceGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE(RenderDeviceGLImpl, IID_RenderDeviceGL, TRenderDeviceBase)
 
-void RenderDeviceGLImpl::InitTexRegionRender()
-{
-    m_pTexRegionRender = std::make_unique<TexRegionRender>(this);
-}
-
 void RenderDeviceGLImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer, bool bIsDeviceInternal)
 {
     auto pDeviceContext = GetImmediateContext(0);

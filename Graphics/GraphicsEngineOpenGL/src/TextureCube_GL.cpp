@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -143,20 +143,6 @@ TextureCube_GL::~TextureCube_GL()
 {
 }
 
-// Move static member initialization out of function to avoid
-// potential issues in multithreaded code
-// clang-format off
-static constexpr GLenum CubeMapFaces[6] =
-{
-    GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-    GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-    GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-    GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-    GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-    GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
-};
-// clang-format on
-
 void TextureCube_GL::UpdateData(GLContextState&          ContextState,
                                 Uint32                   MipLevel,
                                 Uint32                   Slice,
@@ -169,7 +155,7 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
     // then takes one of GL_TEXTURE_CUBE_MAP_POSITIVE_X ... GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
-    auto CubeMapFaceBindTarget = CubeMapFaces[Slice];
+    auto CubeMapFaceBindTarget = GetCubeMapFaceBindTarget(Slice);
 
     // Bind buffer if it is provided; copy from CPU memory otherwise
     GLuint UnpackBuffer = 0;
@@ -269,8 +255,11 @@ void TextureCube_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum
 {
     if (ViewDesc.NumArraySlices == m_Desc.ArraySize)
     {
-        glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-        CHECK_GL_ERROR("Failed to attach texture cube to draw framebuffer");
+        if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+        {
+            glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
+            CHECK_GL_ERROR("Failed to attach texture cube to draw framebuffer");
+        }
         glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
         CHECK_GL_ERROR("Failed to attach texture cube to read framebuffer");
     }
@@ -279,13 +268,16 @@ void TextureCube_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum
         // Texture name must either be zero or the name of an existing 3D texture, 1D or 2D array texture,
         // cube map array texture, or multisample array texture.
 
-        auto CubeMapFaceBindTarget = CubeMapFaces[ViewDesc.FirstArraySlice];
+        auto CubeMapFaceBindTarget = GetCubeMapFaceBindTarget(ViewDesc.FirstArraySlice);
         // For glFramebufferTexture2D, if texture is not zero, textarget must be one of GL_TEXTURE_2D, GL_TEXTURE_RECTANGLE,
         // GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
         // GL_TEXTURE_CUBE_MAP_NEGATIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
         // or GL_TEXTURE_2D_MULTISAMPLE.
-        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, AttachmentPoint, CubeMapFaceBindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
-        CHECK_GL_ERROR("Failed to attach texture cube face to draw framebuffer");
+        if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+        {
+            glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, AttachmentPoint, CubeMapFaceBindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
+            CHECK_GL_ERROR("Failed to attach texture cube face to draw framebuffer");
+        }
         glFramebufferTexture2D(GL_READ_FRAMEBUFFER, AttachmentPoint, CubeMapFaceBindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
         CHECK_GL_ERROR("Failed to attach texture cube face to read framebuffer");
     }
@@ -293,6 +285,22 @@ void TextureCube_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum
     {
         UNEXPECTED("Only one slice or the entire cubemap can be attached to a framebuffer");
     }
+}
+
+void TextureCube_GL::CopyTexSubimage(GLContextState& GLState, const CopyTexSubimageAttribs& Attribs)
+{
+    auto CubeMapFaceBindTarget = GetCubeMapFaceBindTarget(Attribs.DstLayer);
+    GLState.BindTexture(-1, CubeMapFaceBindTarget, GetGLHandle());
+
+    glCopyTexSubImage2D(CubeMapFaceBindTarget,
+                        Attribs.DstMip,
+                        Attribs.DstX,
+                        Attribs.DstY,
+                        Attribs.SrcBox.MinX,
+                        Attribs.SrcBox.MinY,
+                        Attribs.SrcBox.Width(),
+                        Attribs.SrcBox.Height());
+    CHECK_GL_ERROR("Failed to copy subimage data to texture cube");
 }
 
 } // namespace Diligent

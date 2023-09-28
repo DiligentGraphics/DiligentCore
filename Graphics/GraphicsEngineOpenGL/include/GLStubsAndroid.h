@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1286,6 +1286,11 @@ extern PFNGLFRAMEBUFFERTEXTUREPROC glFramebufferTexture;
 #define LOAD_GL_FRAMEBUFFER_TEXTURE_1D
 typedef void (GL_APIENTRY* PFNGLFRAMEBUFFERTEXTURE1DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
 extern PFNGLFRAMEBUFFERTEXTURE1DPROC glFramebufferTexture1D;
+
+// not supported
+#define LOAD_GL_COPY_TEX_SUBIMAGE_1D
+typedef void (GL_APIENTRY* PFNGLCOPYTEXSUBIMAGE1DEXTPROC) (GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width);
+extern PFNGLCOPYTEXSUBIMAGE1DEXTPROC glCopyTexSubImage1D;
 
 // GL_OES_texture_3D
 #define LOAD_GL_FRAMEBUFFER_TEXTURE_3D

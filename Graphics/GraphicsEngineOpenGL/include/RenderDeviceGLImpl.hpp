@@ -35,7 +35,6 @@
 #include "VAOCache.hpp"
 #include "BaseInterfacesGL.h"
 #include "FBOCache.hpp"
-#include "TexRegionRender.hpp"
 
 namespace Diligent
 {
@@ -200,8 +199,6 @@ public:
     size_t GetCommandQueueCount() const { return 1; }
     Uint64 GetCommandQueueMask() const { return Uint64{1}; }
 
-    void InitTexRegionRender();
-
     struct GLDeviceLimits
     {
         GLint MaxUniformBlocks;
@@ -238,8 +235,6 @@ protected:
 
     Threading::SpinLock                                          m_FBOCacheLock;
     std::unordered_map<GLContext::NativeGLContextType, FBOCache> m_FBOCache;
-
-    std::unique_ptr<TexRegionRender> m_pTexRegionRender;
 
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;

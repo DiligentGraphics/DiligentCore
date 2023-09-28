@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -171,6 +171,10 @@
 
 #ifdef LOAD_GL_FRAMEBUFFER_TEXTURE_1D
     DECLARE_GL_FUNCTION( glFramebufferTexture1D, PFNGLFRAMEBUFFERTEXTURE1DPROC, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level)
+#endif
+
+#ifdef LOAD_GL_COPY_TEX_SUBIMAGE_1D
+    DECLARE_GL_FUNCTION( glCopyTexSubImage1D, PFNGLCOPYTEXSUBIMAGE1DEXTPROC, GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width)
 #endif
 
 #ifdef LOAD_GL_FRAMEBUFFER_TEXTURE_3D
@@ -419,6 +423,10 @@ void LoadGLFunctions()
 
 #ifdef LOAD_GL_FRAMEBUFFER_TEXTURE_1D
     LOAD_GL_FUNCTION(glFramebufferTexture1D)
+#endif
+
+#ifdef LOAD_GL_COPY_TEX_SUBIMAGE_1D
+    LOAD_GL_FUNCTION(glCopyTexSubImage1D)
 #endif
 
 #ifdef LOAD_GL_FRAMEBUFFER_TEXTURE_3D

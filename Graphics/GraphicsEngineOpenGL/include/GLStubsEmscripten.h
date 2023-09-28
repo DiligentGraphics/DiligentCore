@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -684,6 +684,7 @@ static void (*glPolygonMode)(GLenum face, GLenum mode) = nullptr;
 #define glColorMaski(...)             UnsupportedGLFunctionStub("glColorMaski", __VA_ARGS__)
 #define glFramebufferTexture(...)     UnsupportedGLFunctionStub("glFramebufferTexture", __VA_ARGS__)
 #define glFramebufferTexture1D(...)   UnsupportedGLFunctionStub("glFramebufferTexture1D", __VA_ARGS__)
+#define glCopyTexSubImage1D(...)      UnsupportedGLFunctionStub("glCopyTexSubImage1D", __VA_ARGS__)
 static void (*glGetQueryObjectui64v)(GLuint id, GLenum pname, GLuint64* params) = nullptr;
 #define glGenProgramPipelines(...)     UnsupportedGLFunctionStub("glGenProgramPipelines", __VA_ARGS__)
 #define glBindProgramPipeline(...)     UnsupportedGLFunctionStub("glBindProgramPipeline", __VA_ARGS__)

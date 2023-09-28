@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -267,8 +267,11 @@ void TextureCubeArray_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, G
     if (ViewDesc.NumArraySlices == m_Desc.ArraySize)
     {
         // glFramebufferTexture() attaches the given mipmap level as a layered image with the number of layers that the given texture has.
-        glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-        CHECK_GL_ERROR("Failed to attach texture cubemap array to draw framebuffer");
+        if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+        {
+            glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
+            CHECK_GL_ERROR("Failed to attach texture cubemap array to draw framebuffer");
+        }
         glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
         CHECK_GL_ERROR("Failed to attach texture cubemap array to read framebuffer");
     }
@@ -276,8 +279,11 @@ void TextureCubeArray_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, G
     {
         // Texture name must either be zero or the name of an existing 3D texture, 1D or 2D array texture,
         // cube map array texture, or multisample array texture.
-        glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstArraySlice);
-        CHECK_GL_ERROR("Failed to attach texture cubemap array to draw framebuffer");
+        if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+        {
+            glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstArraySlice);
+            CHECK_GL_ERROR("Failed to attach texture cubemap array to draw framebuffer");
+        }
         glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstArraySlice);
         CHECK_GL_ERROR("Failed to attach texture cubemap array to read framebuffer");
     }
@@ -285,6 +291,22 @@ void TextureCubeArray_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, G
     {
         UNEXPECTED("Only one slice or the entire cubemap array can be attached to a framebuffer");
     }
+}
+
+void TextureCubeArray_GL::CopyTexSubimage(GLContextState& GLState, const CopyTexSubimageAttribs& Attribs)
+{
+    GLState.BindTexture(-1, GetBindTarget(), GetGLHandle());
+
+    glCopyTexSubImage3D(GetBindTarget(),
+                        Attribs.DstMip,
+                        Attribs.DstX,
+                        Attribs.DstY,
+                        Attribs.DstLayer,
+                        Attribs.SrcBox.MinX,
+                        Attribs.SrcBox.MinY,
+                        Attribs.SrcBox.Width(),
+                        Attribs.SrcBox.Height());
+    CHECK_GL_ERROR("Failed to copy subimage data to texture cube array");
 }
 
 } // namespace Diligent
