@@ -889,6 +889,23 @@ template <class T> struct Matrix2x2
     }
 };
 
+template <typename T>
+inline constexpr Matrix2x2<T> operator*(const Matrix2x2<T>& Mat, T s)
+{
+    // clang-format off
+    return 
+    {
+        Mat._11 * s, Mat._12 * s,
+        Mat._21 * s, Mat._22 * s
+    };
+    // clang-format on
+}
+
+template <typename T>
+inline constexpr Matrix2x2<T> operator*(T s, const Matrix2x2<T>& Mat)
+{
+    return Mat * s;
+}
 
 template <class T> struct Matrix3x3
 {
@@ -1168,6 +1185,26 @@ template <class T> struct Matrix3x3
         return Matrix3x3<Y>::MakeMatrix(Data());
     }
 };
+
+template <typename T>
+inline constexpr Matrix3x3<T> operator*(const Matrix3x3<T>& Mat, T s)
+{
+    // clang-format off
+    return 
+    {
+        Mat._11 * s, Mat._12 * s, Mat._13 * s,
+        Mat._21 * s, Mat._22 * s, Mat._23 * s,
+        Mat._31 * s, Mat._32 * s, Mat._33 * s
+    };
+    // clang-format on
+}
+
+template <typename T>
+inline constexpr Matrix3x3<T> operator*(T s, const Matrix3x3<T>& Mat)
+{
+    return Mat * s;
+}
+
 
 template <class T> struct Matrix4x4
 {
@@ -1730,6 +1767,26 @@ template <class T> struct Matrix4x4
     }
 };
 
+template <typename T>
+inline constexpr Matrix4x4<T> operator*(const Matrix4x4<T>& Mat, T s)
+{
+    // clang-format off
+    return 
+    {
+        Mat._11 * s, Mat._12 * s, Mat._13 * s, Mat._14 * s,
+        Mat._21 * s, Mat._22 * s, Mat._23 * s, Mat._24 * s,
+        Mat._31 * s, Mat._32 * s, Mat._33 * s, Mat._34 * s,
+        Mat._41 * s, Mat._42 * s, Mat._43 * s, Mat._44 * s
+    };
+    // clang-format on
+}
+
+template <typename T>
+inline constexpr Matrix4x4<T> operator*(T s, const Matrix4x4<T>& Mat)
+{
+    return Mat * s;
+}
+
 // Template Vector Operations
 
 
@@ -2002,6 +2059,10 @@ using float2x2 = Matrix2x2<float>;
 using double4x4 = Matrix4x4<double>;
 using double3x3 = Matrix3x3<double>;
 using double2x2 = Matrix2x2<double>;
+
+using int4x4 = Matrix4x4<Int32>;
+using int3x3 = Matrix3x3<Int32>;
+using int2x2 = Matrix2x2<Int32>;
 
 template <typename T = float>
 struct Quaternion

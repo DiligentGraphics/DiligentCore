@@ -1318,6 +1318,61 @@ TEST(Common_BasicMath, HighPrecisionCross)
     }
 }
 
+
+TEST(Common_BasicMath, MatrixScalarMultiply)
+{
+    // clang-format off
+    EXPECT_EQ(float2x2(1, 2,
+                       3, 4) * 2.f,
+              float2x2(2, 4,
+                       6, 8)
+              );
+    EXPECT_EQ(float3x3(1, 2, 3,
+                       4, 5, 6,
+                       7, 8, 9) * 2.f,
+              float3x3( 2,  4,  6,
+                        8, 10, 12,
+                       14, 16, 18)
+              );
+    EXPECT_EQ(float4x4( 1,  2,  3,  4,
+                        5,  6,  7,  8,
+                        9, 10 ,11, 12,
+                       13, 14, 15, 16) * 2.f,
+              float4x4( 2,  4,  6,  8,
+                       10, 12, 14, 16,
+                       18, 20 ,22, 24,
+                       26, 28, 30, 32)
+              );
+    // clang-format on
+}
+
+TEST(Common_BasicMath, ScalarMatrixMultiply)
+{
+    // clang-format off
+    EXPECT_EQ(2 * int2x2(1, 2,
+                         3, 4),
+              int2x2(2, 4,
+                     6, 8)
+              );
+    EXPECT_EQ(2 * int3x3(1, 2, 3,
+                         4, 5, 6,
+                         7, 8, 9),
+              int3x3( 2,  4,  6,
+                      8, 10, 12,
+                     14, 16, 18)
+              );
+    EXPECT_EQ(2 * int4x4( 1,  2,  3,  4,
+                          5,  6,  7,  8,
+                          9, 10 ,11, 12,
+                         13, 14, 15, 16),
+              int4x4( 2,  4,  6,  8,
+                     10, 12, 14, 16,
+                     18, 20 ,22, 24,
+                     26, 28, 30, 32)
+              );
+    // clang-format on
+}
+
 TEST(Common_AdvancedMath, Planes)
 {
     Plane3D plane = {};
