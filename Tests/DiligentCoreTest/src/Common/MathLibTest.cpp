@@ -1373,7 +1373,112 @@ TEST(Common_BasicMath, ScalarMatrixMultiply)
     // clang-format on
 }
 
-TEST(Common_BasicMath, ScalarMatrixOpeartorPlus)
+TEST(Common_BasicMath, ScalarMatrixMultiplyEqual)
+{
+    // clang-format off
+    {
+        auto Mat = int2x2{1, 2,
+                          3, 4};
+        Mat *= 2;
+        EXPECT_EQ(Mat,
+                  int2x2(2, 4,
+                         6, 8)
+                  );
+    }
+    {
+        auto Mat = int3x3{1, 2, 3,
+                          4, 5, 6,
+                          7, 8, 9};
+        Mat *= 2;
+        EXPECT_EQ(Mat,
+                  int3x3( 2,  4,  6,
+                          8, 10, 12,
+                         14, 16, 18)
+                  );
+    }
+    {
+        auto Mat = int4x4{ 1,  2,  3,  4,
+                           5,  6,  7,  8,
+                           9, 10 ,11, 12,
+                          13, 14, 15, 16};
+        Mat *= 2;
+        EXPECT_EQ(Mat,
+                  int4x4( 2,  4,  6,  8,
+                         10, 12, 14, 16,
+                         18, 20 ,22, 24,
+                         26, 28, 30, 32)
+                  );
+    }
+    // clang-format on
+}
+
+TEST(Common_BasicMath, MatrixScalarDivide)
+{
+    // clang-format off
+    EXPECT_EQ(float2x2(2, 4,
+                       6, 8) / 2.f,
+              float2x2(1, 2,
+                       3, 4)
+              );
+    EXPECT_EQ(float3x3( 2,  4,  6,
+                        8, 10, 12,
+                       14, 16, 18) / 2.f,
+              float3x3(1, 2, 3,
+                       4, 5, 6,
+                       7, 8, 9)
+              );
+    EXPECT_EQ(float4x4( 2,  4,  6,  8,
+                       10, 12, 14, 16,
+                       18, 20 ,22, 24,
+                       26, 28, 30, 32) / 2.f,
+              float4x4( 1,  2,  3,  4,
+                        5,  6,  7,  8,
+                        9, 10 ,11, 12,
+                       13, 14, 15, 16)
+              );
+    // clang-format on
+}
+
+TEST(Common_BasicMath, MatrixScalarDivideEqual)
+{
+    // clang-format off
+    {
+        auto Mat = float2x2{2, 4,
+                            6, 8};
+        Mat /= 2.f;
+        EXPECT_EQ(Mat,
+                  float2x2(1, 2,
+                           3, 4)
+                  );
+    }
+    {
+        auto Mat = float3x3{ 2,  4,  6,
+                             8, 10, 12,
+                            14, 16, 18};
+        Mat /= 2.f;
+        EXPECT_EQ(Mat,
+                  float3x3(1, 2, 3,
+                           4, 5, 6,
+                           7, 8, 9)
+                  );
+    }
+    {
+        auto Mat = float4x4{ 2,  4,  6,  8,
+                            10, 12, 14, 16,
+                            18, 20 ,22, 24,
+                            26, 28, 30, 32};
+        Mat /= 2.f;
+        EXPECT_EQ(Mat,
+                  float4x4( 1,  2,  3,  4,
+                            5,  6,  7,  8,
+                            9, 10 ,11, 12,
+                           13, 14, 15, 16)
+                  );
+    }
+    // clang-format on
+}
+
+TEST(Common_BasicMath, MatrixOpeartorPlus)
 {
     // clang-format off
     EXPECT_EQ(float2x2(1, 2,
@@ -1409,7 +1514,7 @@ TEST(Common_BasicMath, ScalarMatrixOpeartorPlus)
     // clang-format on
 }
 
-TEST(Common_BasicMath, ScalarMatrixOpeartorPlusEqual)
+TEST(Common_BasicMath, MatrixOpeartorPlusEqual)
 {
     // clang-format off
     {
@@ -1453,6 +1558,88 @@ TEST(Common_BasicMath, ScalarMatrixOpeartorPlusEqual)
     }
     // clang-format on
 }
+
+
+TEST(Common_BasicMath, MatrixOpeartorMinus)
+{
+    // clang-format off
+    EXPECT_EQ(float2x2( 6,  8,
+                       10, 12) -
+              float2x2(5, 6,
+                       7, 8),
+              float2x2(1, 2,
+                       3, 4));
+    EXPECT_EQ(float3x3(11, 13, 15,
+                       17, 19, 21,
+                       23, 25, 27) -
+              float3x3(10, 11, 12,
+                       13, 14, 15,
+                       16, 17, 18),
+              float3x3(1, 2, 3,
+                       4, 5, 6,
+                       7, 8, 9));
+    EXPECT_EQ(float4x4(18, 20, 22, 24,
+                       26, 28, 30, 32,
+                       34, 36, 38, 40,
+                       42, 44, 46, 48) -
+              float4x4(17, 18, 19, 20,
+                       21, 22, 23, 24,
+                       25, 26, 27, 28,
+                       29, 30, 31, 32),
+              float4x4( 1,  2,  3,  4,
+                        5,  6,  7,  8,
+                        9, 10 ,11, 12,
+                       13, 14, 15, 16)
+              );
+    // clang-format on
+}
+
+
+TEST(Common_BasicMath, MatrixOpeartorMinusEqual)
+{
+    // clang-format off
+    {
+        auto Mat = float2x2{ 6,  8,
+                            10, 12};
+        Mat -=     float2x2{5, 6,
+                            7, 8};
+        EXPECT_EQ(Mat,
+                  float2x2(1, 2,
+                           3, 4)
+                  );
+    }
+    {
+        auto Mat = float3x3{11, 13, 15,
+                            17, 19, 21,
+                            23, 25, 27};
+        Mat -=    float3x3{10, 11, 12,
+                           13, 14, 15,
+                           16, 17, 18};
+        EXPECT_EQ(Mat,
+                  float3x3(1, 2, 3,
+                           4, 5, 6,
+                           7, 8, 9)
+                  );
+    }
+    {
+        auto Mat = float4x4(18, 20, 22, 24,
+                           26, 28, 30, 32,
+                           34, 36, 38, 40,
+                           42, 44, 46, 48);
+        Mat -=     float4x4{17, 18, 19, 20,
+                            21, 22, 23, 24,
+                            25, 26, 27, 28,
+                            29, 30, 31, 32};
+        EXPECT_EQ(Mat,
+                  float4x4( 1,  2,  3,  4,
+                            5,  6,  7,  8,
+                            9, 10 ,11, 12,
+                           13, 14, 15, 16)
+                  );
+    }
+    // clang-format on
+}
+
 
 TEST(Common_AdvancedMath, Planes)
 {

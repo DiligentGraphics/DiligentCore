@@ -817,6 +817,14 @@ template <class T> struct Matrix2x2
         return *this;
     }
 
+    Matrix2x2& operator/=(T s)
+    {
+        for (int i = 0; i < 4; ++i)
+            (reinterpret_cast<T*>(this))[i] /= s;
+
+        return *this;
+    }
+
     Matrix2x2& operator*=(const Matrix2x2& right)
     {
         *this = Mul(*this, right);
@@ -837,6 +845,24 @@ template <class T> struct Matrix2x2
         {
             _11 + right._11, _12 + right._12,
             _21 + right._21, _22 + right._22
+        };
+        // clang-format on
+    }
+
+    Matrix2x2& operator-=(const Matrix2x2& right)
+    {
+        for (int i = 0; i < 4; ++i)
+            Data()[i] -= right.Data()[i];
+        return *this;
+    }
+
+    Matrix2x2 operator-(const Matrix2x2& right) const
+    {
+        // clang-format off
+        return Matrix2x2
+        {
+            _11 - right._11, _12 - right._12,
+            _21 - right._21, _22 - right._22
         };
         // clang-format on
     }
@@ -924,6 +950,19 @@ inline constexpr Matrix2x2<T> operator*(T s, const Matrix2x2<T>& Mat)
 {
     return Mat * s;
 }
+
+template <typename T>
+inline constexpr Matrix2x2<T> operator/(const Matrix2x2<T>& Mat, T s)
+{
+    // clang-format off
+    return 
+    {
+        Mat._11 / s, Mat._12 / s,
+        Mat._21 / s, Mat._22 / s
+    };
+    // clang-format on
+}
+
 
 template <class T> struct Matrix3x3
 {
@@ -1038,6 +1077,14 @@ template <class T> struct Matrix3x3
         return *this;
     }
 
+    Matrix3x3& operator/=(T s)
+    {
+        for (int i = 0; i < 9; ++i)
+            (reinterpret_cast<T*>(this))[i] /= s;
+
+        return *this;
+    }
+
     Matrix3x3& operator+=(const Matrix3x3& right)
     {
         for (int i = 0; i < 9; ++i)
@@ -1053,6 +1100,25 @@ template <class T> struct Matrix3x3
             _11 + right._11, _12 + right._12, _13 + right._13,
             _21 + right._21, _22 + right._22, _23 + right._23,
             _31 + right._31, _32 + right._32, _33 + right._33
+        };
+        // clang-format on
+    }
+
+    Matrix3x3& operator-=(const Matrix3x3& right)
+    {
+        for (int i = 0; i < 9; ++i)
+            Data()[i] -= right.Data()[i];
+        return *this;
+    }
+
+    Matrix3x3 operator-(const Matrix3x3& right) const
+    {
+        // clang-format off
+        return Matrix3x3
+        {
+            _11 - right._11, _12 - right._12, _13 - right._13,
+            _21 - right._21, _22 - right._22, _23 - right._23,
+            _31 - right._31, _32 - right._32, _33 - right._33
         };
         // clang-format on
     }
@@ -1242,6 +1308,19 @@ inline constexpr Matrix3x3<T> operator*(T s, const Matrix3x3<T>& Mat)
     return Mat * s;
 }
 
+template <typename T>
+inline constexpr Matrix3x3<T> operator/(const Matrix3x3<T>& Mat, T s)
+{
+    // clang-format off
+    return 
+    {
+        Mat._11 / s, Mat._12 / s, Mat._13 / s,
+        Mat._21 / s, Mat._22 / s, Mat._23 / s,
+        Mat._31 / s, Mat._32 / s, Mat._33 / s
+    };
+    // clang-format on
+}
+
 
 template <class T> struct Matrix4x4
 {
@@ -1378,6 +1457,14 @@ template <class T> struct Matrix4x4
         return *this;
     }
 
+    Matrix4x4& operator/=(T s)
+    {
+        for (int i = 0; i < 16; ++i)
+            (reinterpret_cast<T*>(this))[i] /= s;
+
+        return *this;
+    }
+
     Matrix4x4& operator*=(const Matrix4x4& right)
     {
         *this = Mul(*this, right);
@@ -1400,6 +1487,26 @@ template <class T> struct Matrix4x4
             _21 + right._21, _22 + right._22, _23 + right._23, _24 + right._24,
             _31 + right._31, _32 + right._32, _33 + right._33, _34 + right._34,
             _41 + right._41, _42 + right._42, _43 + right._43, _44 + right._44
+        };
+        // clang-format on
+    }
+
+    Matrix4x4& operator-=(const Matrix4x4& right)
+    {
+        for (int i = 0; i < 16; ++i)
+            Data()[i] -= right.Data()[i];
+        return *this;
+    }
+
+    Matrix4x4 operator-(const Matrix4x4& right) const
+    {
+        // clang-format off
+        return Matrix4x4
+        {
+            _11 - right._11, _12 - right._12, _13 - right._13, _14 - right._14,
+            _21 - right._21, _22 - right._22, _23 - right._23, _24 - right._24,
+            _31 - right._31, _32 - right._32, _33 - right._33, _34 - right._34,
+            _41 - right._41, _42 - right._42, _43 - right._43, _44 - right._44
         };
         // clang-format on
     }
@@ -1842,6 +1949,20 @@ template <typename T>
 inline constexpr Matrix4x4<T> operator*(T s, const Matrix4x4<T>& Mat)
 {
     return Mat * s;
+}
+
+template <typename T>
+inline constexpr Matrix4x4<T> operator/(const Matrix4x4<T>& Mat, T s)
+{
+    // clang-format off
+    return 
+    {
+        Mat._11 / s, Mat._12 / s, Mat._13 / s, Mat._14 / s,
+        Mat._21 / s, Mat._22 / s, Mat._23 / s, Mat._24 / s,
+        Mat._31 / s, Mat._32 / s, Mat._33 / s, Mat._34 / s,
+        Mat._41 / s, Mat._42 / s, Mat._43 / s, Mat._44 / s
+    };
+    // clang-format on
 }
 
 // Template Vector Operations
