@@ -823,6 +823,24 @@ template <class T> struct Matrix2x2
         return *this;
     }
 
+    Matrix2x2& operator+=(const Matrix2x2& right)
+    {
+        for (int i = 0; i < 4; ++i)
+            Data()[i] += right.Data()[i];
+        return *this;
+    }
+
+    Matrix2x2 operator+(const Matrix2x2& right) const
+    {
+        // clang-format off
+        return Matrix2x2
+        {
+            _11 + right._11, _12 + right._12,
+            _21 + right._21, _22 + right._22
+        };
+        // clang-format on
+    }
+
     constexpr Matrix2x2 Transpose() const
     {
         return Matrix2x2{
@@ -1018,6 +1036,25 @@ template <class T> struct Matrix3x3
             (reinterpret_cast<T*>(this))[i] *= s;
 
         return *this;
+    }
+
+    Matrix3x3& operator+=(const Matrix3x3& right)
+    {
+        for (int i = 0; i < 9; ++i)
+            Data()[i] += right.Data()[i];
+        return *this;
+    }
+
+    Matrix3x3 operator+(const Matrix3x3& right) const
+    {
+        // clang-format off
+        return Matrix3x3
+        {
+            _11 + right._11, _12 + right._12, _13 + right._13,
+            _21 + right._21, _22 + right._22, _23 + right._23,
+            _31 + right._31, _32 + right._32, _33 + right._33
+        };
+        // clang-format on
     }
 
     Matrix3x3& operator*=(const Matrix3x3& right)
@@ -1345,6 +1382,26 @@ template <class T> struct Matrix4x4
     {
         *this = Mul(*this, right);
         return *this;
+    }
+
+    Matrix4x4& operator+=(const Matrix4x4& right)
+    {
+        for (int i = 0; i < 16; ++i)
+            Data()[i] += right.Data()[i];
+        return *this;
+    }
+
+    Matrix4x4 operator+(const Matrix4x4& right) const
+    {
+        // clang-format off
+        return Matrix4x4
+        {
+            _11 + right._11, _12 + right._12, _13 + right._13, _14 + right._14,
+            _21 + right._21, _22 + right._22, _23 + right._23, _24 + right._24,
+            _31 + right._31, _32 + right._32, _33 + right._33, _34 + right._34,
+            _41 + right._41, _42 + right._42, _43 + right._43, _44 + right._44
+        };
+        // clang-format on
     }
 
     constexpr Matrix4x4 Transpose() const
