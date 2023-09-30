@@ -40,10 +40,13 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& 
         EmscriptenWebGLContextAttributes ContextAttributes = {};
         emscripten_webgl_init_context_attributes(&ContextAttributes);
 
-        // TODO: Initialization params
-        ContextAttributes.depth        = true;
-        ContextAttributes.majorVersion = 3;
-        ContextAttributes.minorVersion = 0;
+        ContextAttributes.depth                 = true;
+        ContextAttributes.majorVersion          = 3;
+        ContextAttributes.minorVersion          = 0;
+        ContextAttributes.alpha                 = InitAttribs.WebGLAttribs.Alpha;
+        ContextAttributes.antialias             = InitAttribs.WebGLAttribs.Antialias;
+        ContextAttributes.premultipliedAlpha    = InitAttribs.WebGLAttribs.PremultipliedAlpha;
+        ContextAttributes.preserveDrawingBuffer = InitAttribs.WebGLAttribs.PreserveDrawingBuffer;
 
         m_GLContext = emscripten_webgl_create_context(InitAttribs.Window.pCanvasId, &ContextAttributes);
         if (m_GLContext == 0)

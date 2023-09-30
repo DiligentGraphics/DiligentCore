@@ -3424,6 +3424,39 @@ struct EngineCreateInfo
 };
 typedef struct EngineCreateInfo EngineCreateInfo;
 
+#if PLATFORM_EMSCRIPTEN
+/// WebGL context attributes.
+///
+/// \remarks    This struct is used to set the members of the EmscriptenWebGLContextAttributes
+///             structure that is passed to emscripten_webgl_create_context().
+struct WebGLContextAttribs
+{
+    /// If true, request alpha channel for the context and enable blending of
+    /// the canvas with the underlying web page contents.
+    ///
+    /// \remarks    This corresponds to the alpha member of the EmscriptenWebGLContextAttributes struct.
+    Bool Alpha DEFAULT_INITIALIZER(true);
+
+    /// If true, enable antialiasing with a browser-specified algorithm and quality level.
+    ///
+    /// \remarks    This corresponds to the antialias member of the EmscriptenWebGLContextAttributes struct.
+    Bool Antialias DEFAULT_INITIALIZER(true);
+
+    /// If true, treat the rendered canvas contents as alpha-premultiplied.
+    ///
+    /// \remarks    This corresponds to the premultipliedAlpha member of the EmscriptenWebGLContextAttributes struct.
+    Bool PremultipliedAlpha DEFAULT_INITIALIZER(true);
+
+    /// If true, preserve the contents of the drawing buffer between consecutive requestAnimationFrame() calls.
+    /// If false, clear the color, depth and stencil at the beginning of each requestAnimationFrame().
+    /// Generally setting this to false gives better performance.
+    ///
+    /// \remarks    This corresponds to the preserveDrawingBuffer member of the EmscriptenWebGLContextAttributes struct.
+    Bool PreserveDrawingBuffer DEFAULT_INITIALIZER(false);
+};
+typedef struct WebGLContextAttribs WebGLContextAttribs;
+#endif
+
 /// Attributes of the OpenGL-based engine implementation
 struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
@@ -3433,6 +3466,11 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Enable 0..1 normalized-device Z range, if required extension is supported; -1..+1 otherwise.
     /// Use IRenderDevice::GetDeviceInfo().NDC to get current NDC.
     Bool         ZeroToOneNDZ DEFAULT_INITIALIZER(false);
+
+#if PLATFORM_EMSCRIPTEN
+    /// WebGL context attributes.
+    WebGLContextAttribs WebGLAttribs;
+#endif
 
 #if DILIGENT_CPP_INTERFACE
     EngineGLCreateInfo() noexcept : EngineGLCreateInfo{EngineCreateInfo{}}
