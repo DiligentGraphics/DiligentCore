@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -231,7 +231,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #    endif
 
             auto* pFactoryD3D11 = GetEngineFactoryD3D11();
-            pFactoryD3D11->SetMessageCallback(MessageCallback);
+            pFactoryD3D11->SetMessageCallback(EnvCI.MessageCallback);
 
             EngineD3D11CreateInfo EngineCI;
             EngineCI.GraphicsAPIVersion = Version{11, 0};
@@ -273,7 +273,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             }
 #    endif
             auto* pFactoryD3D12 = GetEngineFactoryD3D12();
-            pFactoryD3D12->SetMessageCallback(MessageCallback);
+            pFactoryD3D12->SetMessageCallback(EnvCI.MessageCallback);
 
             if (!pFactoryD3D12->LoadD3D12())
             {
@@ -338,7 +338,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             }
 #    endif
             auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
-            pFactoryOpenGL->SetMessageCallback(MessageCallback);
+            pFactoryOpenGL->SetMessageCallback(EnvCI.MessageCallback);
             EnumerateAdapters(pFactoryOpenGL, Version{},
                               [](const GraphicsAdapterInfo& AdapterInfo, Uint32 AdapterId) {
                                   return std::vector<DisplayModeAttribs>{};
@@ -374,7 +374,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #    endif
 
             auto* pFactoryVk = GetEngineFactoryVk();
-            pFactoryVk->SetMessageCallback(MessageCallback);
+            pFactoryVk->SetMessageCallback(EnvCI.MessageCallback);
 
             if (EnvCI.EnableDeviceSimulation)
                 pFactoryVk->EnableDeviceSimulation();
@@ -421,7 +421,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
         case RENDER_DEVICE_TYPE_METAL:
         {
             auto* pFactoryMtl = GetEngineFactoryMtl();
-            pFactoryMtl->SetMessageCallback(MessageCallback);
+            pFactoryMtl->SetMessageCallback(EnvCI.MessageCallback);
 
             EnumerateAdapters(pFactoryMtl, Version{},
                               [](const GraphicsAdapterInfo& AdapterInfo, Uint32 AdapterId) {
@@ -564,7 +564,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #    else
         m_ArchiverFactory = Diligent::GetArchiverFactory();
 #    endif
-        m_ArchiverFactory->SetMessageCallback(MessageCallback);
+        m_ArchiverFactory->SetMessageCallback(EnvCI.MessageCallback);
     }
 #endif
 }
