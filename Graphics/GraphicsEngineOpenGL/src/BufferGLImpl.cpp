@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -277,6 +277,18 @@ void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 M
     constexpr bool ResetVAO = true;
     CtxState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
 
+#if PLATFORM_EMSCRIPTEN
+    // Emscripten does not support mapping buffers for reading
+    if (MapType == MAP_READ)
+    {
+        m_MappedData.resize(static_cast<size_t>(Length));
+        glGetBufferSubData(m_BindTarget, StaticCast<GLintptr>(Offset), StaticCast<GLsizeiptr>(Length), m_MappedData.data());
+        CHECK_GL_ERROR("glGetBufferSubData() failed");
+        pMappedData = m_MappedData.data();
+        return;
+    }
+#endif
+
     // !!!WARNING!!! GL_MAP_UNSYNCHRONIZED_BIT is not the same thing as MAP_FLAG_DO_NOT_WAIT.
     // If GL_MAP_UNSYNCHRONIZED_BIT flag is set, OpenGL will not attempt to synchronize operations
     // on the buffer. This does not mean that map will fail if the buffer still in use. It is thus
@@ -328,6 +340,14 @@ void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 M
 
 void BufferGLImpl::Unmap(GLContextState& CtxState)
 {
+#if PLATFORM_EMSCRIPTEN
+    if (!m_MappedData.empty())
+    {
+        m_MappedData.clear();
+        return;
+    }
+#endif
+
     constexpr bool ResetVAO = true;
     CtxState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
     auto Result = glUnmapBuffer(m_BindTarget);

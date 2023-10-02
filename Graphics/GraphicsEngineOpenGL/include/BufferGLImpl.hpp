@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "EngineGLImplTraits.hpp"
 #include "BufferBase.hpp"
 #include "BufferViewGLImpl.hpp" // Required by BufferBase
@@ -92,6 +94,11 @@ private:
     GLObjectWrappers::GLBufferObj m_GlBuffer;
     const Uint32                  m_BindTarget;
     const GLenum                  m_GLUsageHint;
+
+#if PLATFORM_EMSCRIPTEN
+    // Used for devices that don't support glMapBufferRange (currently, Emscripten)
+    std::vector<Uint8> m_MappedData;
+#endif
 };
 
 void BufferGLImpl::BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLState)
