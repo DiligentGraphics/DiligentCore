@@ -1372,7 +1372,7 @@ void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
     const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
     VERIFY(Subpass.RenderTargetAttachmentCount == m_NumBoundRenderTargets,
            "The number of currently bound render targets (", m_NumBoundRenderTargets,
-           ") is not consistent with the number of redner target attachments (", Subpass.RenderTargetAttachmentCount,
+           ") is not consistent with the number of render target attachments (", Subpass.RenderTargetAttachmentCount,
            ") in current subpass");
 
     D3D12_RENDER_PASS_RENDER_TARGET_DESC RenderPassRTs[MAX_RENDER_TARGETS];

@@ -164,7 +164,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \return     A pointer to the shader object, or null if the object with that name was not added.
     ///
     /// \ note      The method does *not* increment the reference counter of the returned object,
-    ///             so the application must not call Release() unless it also explcitily calls AddRef().
+    ///             so the application must not call Release() unless it also explicitly calls AddRef().
     VIRTUAL IShader* METHOD(GetShader)(THIS_
                                        const char* ShaderName) PURE;
 
@@ -175,7 +175,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \return     A pointer to the pipeline state object, or null if the object with that name was not added.
     ///
     /// \ note      The method does *not* increment the reference counter of the returned object,
-    ///             so the application must not call Release() unless it also explcitily calls AddRef().
+    ///             so the application must not call Release() unless it also explicitly calls AddRef().
     VIRTUAL IPipelineState* METHOD(GetPipelineState)(THIS_
                                                      PIPELINE_TYPE PSOType,
                                                      const char*   PSOName) PURE;
@@ -186,7 +186,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \return     A pointer to the the pipeline resource signature object, or null if the object with that name was not added.
     ///
     /// \ note      The method does *not* increment the reference counter of the returned object,
-    ///             so the application must not call Release() unless it also explcitily calls AddRef().
+    ///             so the application must not call Release() unless it also explicitly calls AddRef().
     VIRTUAL IPipelineResourceSignature* METHOD(GetPipelineResourceSignature)(THIS_
                                                                              const char* PRSName) PURE;
 };

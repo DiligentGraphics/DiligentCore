@@ -153,7 +153,7 @@ DILIGENT_TYPED_ENUM(SET_SHADER_RESOURCE_FLAGS, Uint32)
     ///
     ///         When overwriting a mutable variable binding in Direct3D12 and Vulkan,
     ///         an application must ensure that the GPU is not accessing the SRB.
-    ///         This can be achieved using syncrhonization tools such as fences.
+    ///         This can be achieved using synchronization tools such as fences.
     ///         Synchronization with GPU is not required in OpenGL, Direct3D11,
     ///         and Metal backends.
     SET_SHADER_RESOURCE_FLAG_ALLOW_OVERWRITE = 1u << 0

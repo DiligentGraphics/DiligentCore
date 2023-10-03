@@ -346,7 +346,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
             DEV_CHECK_ERR(pAttrib->IsImmutableSamplerAssigned() == (SrcImmutableSamplerInd != InvalidImmutableSamplerIndex),
                           "Deserialized immutable sampler flag is invalid");
             DEV_CHECK_ERR(pAttrib->GetD3D12RootParamType() == d3d12RootParamType,
-                          "Deserailized root parameter type is invalid.");
+                          "Deserialized root parameter type is invalid.");
         }
     }
     ParamsBuilder.InitializeMgr(GetRawAllocator(), m_RootParams);
