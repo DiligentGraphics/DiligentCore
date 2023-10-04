@@ -43,7 +43,9 @@ static void VerifyMacros(const ShaderMacroHelper& TestHelper, const std::vector<
     {
         EXPECT_STREQ(Macros[i].Name, RefMacros[i].first);
         EXPECT_STREQ(Macros[i].Definition, RefMacros[i].second);
+        EXPECT_STREQ(Macros[i].Definition, TestHelper.Find(Macros[i].Name));
     }
+    EXPECT_EQ(TestHelper.Find("Nonexistent"), nullptr);
 }
 
 TEST(ShaderMacroHelper, AddInt)

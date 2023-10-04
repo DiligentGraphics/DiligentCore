@@ -176,6 +176,19 @@ public:
         return NewMacros;
     }
 
+    const char* Find(const char* Name) const
+    {
+        if (Name == nullptr)
+            return nullptr;
+
+        for (const auto& Macro : m_Macros)
+        {
+            if (strcmp(Macro.Name, Name) == 0)
+                return Macro.Definition != nullptr ? Macro.Definition : "";
+        }
+        return nullptr;
+    }
+
 private:
     std::vector<ShaderMacro> m_Macros;
     std::set<std::string>    m_StringPool;
