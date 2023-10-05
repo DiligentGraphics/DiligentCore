@@ -431,6 +431,14 @@ struct InputLayoutDescX
         return Add(Elem);
     }
 
+    InputLayoutDescX& Remove(Uint32 ElemIndex)
+    {
+        VERIFY_EXPR(ElemIndex < Desc.NumElements);
+        Elements.erase(Elements.begin() + ElemIndex);
+        SyncDesc();
+        return *this;
+    }
+
     void Clear()
     {
         InputLayoutDescX EmptyDesc;
@@ -440,6 +448,11 @@ struct InputLayoutDescX
     const InputLayoutDesc& Get() const noexcept
     {
         return Desc;
+    }
+
+    Uint32 GetNumElements() const noexcept
+    {
+        return Desc.NumElements;
     }
 
     operator const InputLayoutDesc&() const noexcept
@@ -463,6 +476,16 @@ struct InputLayoutDescX
     bool operator!=(const InputLayoutDescX& RHS) const noexcept
     {
         return *this != static_cast<const InputLayoutDesc&>(RHS);
+    }
+
+    const LayoutElement& operator[](size_t Index) const noexcept
+    {
+        return Elements[Index];
+    }
+
+    LayoutElement& operator[](size_t Index) noexcept
+    {
+        return Elements[Index];
     }
 
 private:

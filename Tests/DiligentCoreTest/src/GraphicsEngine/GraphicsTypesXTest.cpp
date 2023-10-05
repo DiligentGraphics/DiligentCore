@@ -290,7 +290,8 @@ TEST(GraphicsTypesXTest, InputLayoutDescX)
 
 #define ATTRIB1(POOL) POOL("ATTRIB1"), 0u, 0u, 2u, VT_FLOAT32
 #define ATTRIB2(POOL) POOL("ATTRIB2"), 1u, 0u, 2u, VT_FLOAT32
-#define ATTRIB3(POOL) POOL("ATTRIB2"), 2u, 0u, 4u, VT_UINT8, True
+#define ATTRIB3(POOL) POOL("ATTRIB3"), 2u, 0u, 4u, VT_UINT8, True
+#define ATTRIB4(POOL) POOL("ATTRIB4"), 3u, 0u, 3u, VT_INT32
 
     // clang-format on
 
@@ -347,9 +348,35 @@ TEST(GraphicsTypesXTest, InputLayoutDescX)
     EXPECT_EQ(DescMove2, Ref);
     EXPECT_EQ(DescCopy2, DescMove2);
 
+    {
+        StringPool       Pool;
+        InputLayoutDescX DescX;
+        DescX
+            .Add({ATTRIB1(Pool)})
+            .Add({ATTRIB4(Pool)})
+            .Add(ATTRIB2(Pool))
+            .Add(ATTRIB4(Pool))
+            .Add({ATTRIB3(Pool)})
+            .Add({ATTRIB4(Pool)});
+        Pool.Clear();
+
+        DescX
+            .Remove(5)
+            .Remove(1)
+            .Remove(2);
+        EXPECT_EQ(DescX, Ref);
+
+        EXPECT_EQ(DescX.GetNumElements(), 3u);
+        for (Uint32 i = 0; i < std::min(Ref.NumElements, DescX.GetNumElements()); ++i)
+        {
+            EXPECT_EQ(Ref.LayoutElements[i], DescX[i]);
+        }
+    }
+
 #undef ATTRIB1
 #undef ATTRIB2
 #undef ATTRIB3
+#undef ATTRIB4
 }
 
 
