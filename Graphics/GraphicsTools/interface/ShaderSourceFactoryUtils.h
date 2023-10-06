@@ -67,7 +67,7 @@ struct CompoundShaderSourceFactoryCreateInfo
     Uint32 NumFactories DEFAULT_INITIALIZER(0);
 
     /// An array of shader source file substitutes.
-    ShaderSourceFileSubstitueInfo* pFileSubstitutes DEFAULT_INITIALIZER(nullptr);
+    const ShaderSourceFileSubstitueInfo* pFileSubstitutes DEFAULT_INITIALIZER(nullptr);
 
     /// The number of file substitutes in pFileSubstitutes array.
     Uint32 NumFileSubstitutes DEFAULT_INITIALIZER(0);
@@ -76,10 +76,10 @@ struct CompoundShaderSourceFactoryCreateInfo
     constexpr CompoundShaderSourceFactoryCreateInfo() noexcept
     {}
 
-    constexpr CompoundShaderSourceFactoryCreateInfo(IShaderSourceInputStreamFactory** _ppFactories,
-                                                    Uint32                            _NumFactories,
-                                                    ShaderSourceFileSubstitueInfo*    _pFileSubstitutes   = nullptr,
-                                                    Uint32                            _NumFileSubstitutes = 0) noexcept :
+    constexpr CompoundShaderSourceFactoryCreateInfo(IShaderSourceInputStreamFactory**    _ppFactories,
+                                                    Uint32                               _NumFactories,
+                                                    const ShaderSourceFileSubstitueInfo* _pFileSubstitutes   = nullptr,
+                                                    Uint32                               _NumFileSubstitutes = 0) noexcept :
         ppFactories{_ppFactories},
         NumFactories{_NumFactories},
         pFileSubstitutes{_pFileSubstitutes},
@@ -139,7 +139,7 @@ typedef struct MemoryShaderSourceFileInfo MemoryShaderSourceFileInfo;
 struct MemoryShaderSourceFactoryCreateInfo
 {
     /// An array of shader source files.
-    MemoryShaderSourceFileInfo* pSources DEFAULT_INITIALIZER(nullptr);
+    const MemoryShaderSourceFileInfo* pSources DEFAULT_INITIALIZER(nullptr);
 
     /// The number of files in pSources array.
     Uint32 NumSources DEFAULT_INITIALIZER(0);
@@ -152,10 +152,12 @@ struct MemoryShaderSourceFactoryCreateInfo
     constexpr MemoryShaderSourceFactoryCreateInfo() noexcept
     {}
 
-    constexpr MemoryShaderSourceFactoryCreateInfo(MemoryShaderSourceFileInfo* _pSources,
-                                                  Uint32                      _NumSources) noexcept :
+    constexpr MemoryShaderSourceFactoryCreateInfo(const MemoryShaderSourceFileInfo* _pSources,
+                                                  Uint32                            _NumSources,
+                                                  bool                              _CopySources = false) noexcept :
         pSources{_pSources},
-        NumSources{_NumSources}
+        NumSources{_NumSources},
+        CopySources{_CopySources}
     {}
 #endif
 };

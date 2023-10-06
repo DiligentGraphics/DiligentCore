@@ -152,6 +152,8 @@ public:
         for (Uint32 i = 0; i < CI.NumSources; ++i)
         {
             const auto& Source = CI.pSources[i];
+            DEV_CHECK_ERR(Source.Name != nullptr && Source.Name[0] != '\0', "Source name must not be null or empty");
+            DEV_CHECK_ERR(Source.pData != nullptr, "Source data must not be null");
             m_NameToSourceMap.emplace(HashMapStringKey{Source.Name, true}, CI.CopySources ? m_Sources[i].c_str() : Source.pData);
         }
     }
