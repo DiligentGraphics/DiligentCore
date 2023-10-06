@@ -18,6 +18,7 @@ set(INTERFACE
     interface/ScreenCapture.hpp
     interface/ShaderMacroHelper.hpp
     interface/StreamingBuffer.hpp
+    interface/ShaderSourceFactoryUtils.h
     interface/TextureUploader.hpp
     interface/TextureUploaderBase.hpp
     interface/XXH128Hasher.hpp
@@ -34,6 +35,7 @@ set(SOURCE
     src/GraphicsUtilities.cpp
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
+    src/ShaderSourceFactoryUtils.cpp
     src/TextureUploader.cpp
     src/XXH128Hasher.cpp
     src/VertexPool.cpp
