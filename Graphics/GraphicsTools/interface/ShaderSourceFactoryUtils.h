@@ -54,6 +54,8 @@ struct ShaderSourceFileSubstitueInfo
     {}
 #endif
 };
+typedef struct ShaderSourceFileSubstitueInfo ShaderSourceFileSubstitueInfo;
+
 
 /// Compound shader source factory create info.
 struct CompoundShaderSourceFactoryCreateInfo
@@ -86,7 +88,7 @@ struct CompoundShaderSourceFactoryCreateInfo
 #endif
 };
 typedef struct CompoundShaderSourceFactoryCreateInfo CompoundShaderSourceFactoryCreateInfo;
-// clang-format on
+
 
 /// Creates a compound shader source factory.
 ///
@@ -100,7 +102,72 @@ typedef struct CompoundShaderSourceFactoryCreateInfo CompoundShaderSourceFactory
 ///
 ///             The factory also allows substituting source file names. This is useful when the same shader source
 ///             is used for multiple shaders, but some of them require a modified version of the source.
-void DILIGENT_GLOBAL_FUNCTION(CreateCompoundShaderSourceFactory)(const CompoundShaderSourceFactoryCreateInfo REF CreateInfo, IShaderSourceInputStreamFactory** ppFactory);
+void DILIGENT_GLOBAL_FUNCTION(CreateCompoundShaderSourceFactory)(const CompoundShaderSourceFactoryCreateInfo REF CreateInfo,
+                                                                 IShaderSourceInputStreamFactory**               ppFactory);
+
+
+/// Shader source file info.
+struct MemoryShaderSourceFileInfo
+{
+    /// File name.
+    const Char* Name DEFAULT_INITIALIZER(nullptr);
+
+    /// Shader source.
+    const Char* pData DEFAULT_INITIALIZER(nullptr);
+
+    /// Shader source length. If 0, the length will be calculated automatically
+    /// assuming that the source is null-terminated.
+    Uint32 Length DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr MemoryShaderSourceFileInfo() noexcept
+    {}
+
+    constexpr MemoryShaderSourceFileInfo(const Char* _Name,
+                                         const Char* _pData,
+                                         Uint32      _Length = 0) noexcept :
+        Name{_Name},
+        pData{_pData},
+        Length{_Length}
+    {}
+#endif
+};
+typedef struct MemoryShaderSourceFileInfo MemoryShaderSourceFileInfo;
+
+
+/// Memory shader source factory create info.
+struct MemoryShaderSourceFactoryCreateInfo
+{
+    /// An array of shader source files.
+    MemoryShaderSourceFileInfo* pSources DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of files in pSources array.
+    Uint32 NumSources DEFAULT_INITIALIZER(0);
+
+    /// Whether to copy shader sources. If false, the factory will assume that
+    /// the source data will remain valid for the lifetime of the factory.
+    Bool CopySources DEFAULT_INITIALIZER(False);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr MemoryShaderSourceFactoryCreateInfo() noexcept
+    {}
+
+    constexpr MemoryShaderSourceFactoryCreateInfo(MemoryShaderSourceFileInfo* _pSources,
+                                                  Uint32                      _NumSources) noexcept :
+        pSources{_pSources},
+        NumSources{_NumSources}
+    {}
+#endif
+};
+typedef struct MemoryShaderSourceFactoryCreateInfo MemoryShaderSourceFactoryCreateInfo;
+
+/// Crates a memory shader source factory.
+///
+/// \param [in]  CreateInfo - Memory shader source factory create info, see Diligent::MemoryShaderSourceFactoryCreateInfo.
+/// \param [out] ppFactory  - Address of the memory location where the pointer to the created factory will be written.
+void DILIGENT_GLOBAL_FUNCTION(CreateMemoryShaderSourceFactory)(const MemoryShaderSourceFactoryCreateInfo REF CreateInfo,
+                                                               IShaderSourceInputStreamFactory**             ppFactory);
+
 
 #include "../../Primitives/interface/UndefGlobalFuncHelperMacros.h"
 

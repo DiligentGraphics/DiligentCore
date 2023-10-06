@@ -28,10 +28,13 @@
 
 #include <vector>
 #include <unordered_map>
+#include <string>
 
 #include "ObjectBase.hpp"
 #include "HashUtils.hpp"
 #include "RefCntAutoPtr.hpp"
+#include "StringDataBlobImpl.hpp"
+#include "MemoryFileStream.hpp"
 
 namespace Diligent
 {
@@ -112,6 +115,89 @@ void CreateCompoundShaderSourceFactory(const CompoundShaderSourceFactoryCreateIn
     pFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, reinterpret_cast<IObject**>(ppFactory));
 }
 
+
+
+
+class MemoryShaderSourceFactory final : public ObjectBase<IShaderSourceInputStreamFactory>
+{
+public:
+    using TBase = ObjectBase<IShaderSourceInputStreamFactory>;
+
+    static RefCntAutoPtr<IShaderSourceInputStreamFactory> Create(const MemoryShaderSourceFactoryCreateInfo& CreateInfo)
+    {
+        return RefCntAutoPtr<IShaderSourceInputStreamFactory>{MakeNewRCObj<MemoryShaderSourceFactory>()(CreateInfo)};
+    }
+
+    MemoryShaderSourceFactory(IReferenceCounters*                        pRefCounters,
+                              const MemoryShaderSourceFactoryCreateInfo& CI) :
+        TBase{pRefCounters}
+    {
+        if (CI.CopySources)
+        {
+            m_Sources.resize(CI.NumSources);
+            for (Uint32 i = 0; i < CI.NumSources; ++i)
+            {
+                const auto& Source = CI.pSources[i];
+                if (Source.Length > 0)
+                {
+                    m_Sources[i].assign(Source.pData, Source.Length);
+                }
+                else
+                {
+                    m_Sources[i] = Source.pData;
+                }
+            }
+        }
+
+        for (Uint32 i = 0; i < CI.NumSources; ++i)
+        {
+            const auto& Source = CI.pSources[i];
+            m_NameToSourceMap.emplace(HashMapStringKey{Source.Name, true}, CI.CopySources ? m_Sources[i].c_str() : Source.pData);
+        }
+    }
+
+    virtual void DILIGENT_CALL_TYPE CreateInputStream(const Char* Name, IFileStream** ppStream) override final
+    {
+        CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
+    }
+
+    virtual void DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
+                                                       CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
+                                                       IFileStream**                           ppStream) override final
+    {
+        auto SourceIt = m_NameToSourceMap.find(Name);
+        if (SourceIt != m_NameToSourceMap.end())
+        {
+            RefCntAutoPtr<StringDataBlobImpl> pDataBlob{MakeNewRCObj<StringDataBlobImpl>()(SourceIt->second)};
+            RefCntAutoPtr<MemoryFileStream>   pMemStream{MakeNewRCObj<MemoryFileStream>()(pDataBlob)};
+
+            pMemStream->QueryInterface(IID_FileStream, reinterpret_cast<IObject**>(ppStream));
+        }
+        else
+        {
+            *ppStream = nullptr;
+            if ((Flags & CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT) == 0)
+            {
+                LOG_ERROR("Failed to create input stream for source file ", Name);
+            }
+        }
+    }
+
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderSourceInputStreamFactory, TBase)
+
+private:
+    std::vector<std::string> m_Sources;
+
+    std::unordered_map<HashMapStringKey, const Char*> m_NameToSourceMap;
+};
+
+void CreateMemoryShaderSourceFactory(const MemoryShaderSourceFactoryCreateInfo& CreateInfo, IShaderSourceInputStreamFactory** ppFactory)
+{
+    auto pFactory = MemoryShaderSourceFactory::Create(CreateInfo);
+    pFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, reinterpret_cast<IObject**>(ppFactory));
+}
+
+
 } // namespace Diligent
 
 extern "C"
@@ -120,5 +206,11 @@ extern "C"
                                                     Diligent::IShaderSourceInputStreamFactory**            ppFactory)
     {
         Diligent::CreateCompoundShaderSourceFactory(CreateInfo, ppFactory);
+    }
+
+    void Diligent_CreateMemoryShaderSourceFactory(const Diligent::MemoryShaderSourceFactoryCreateInfo& CreateInfo,
+                                                  Diligent::IShaderSourceInputStreamFactory**          ppFactory)
+    {
+        Diligent::CreateMemoryShaderSourceFactory(CreateInfo, ppFactory);
     }
 }
