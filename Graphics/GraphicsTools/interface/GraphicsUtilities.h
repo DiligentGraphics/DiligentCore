@@ -34,13 +34,9 @@
 #include "../../GraphicsEngine/interface/Buffer.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 
-#if DILIGENT_C_INTERFACE
-#    define REF *
-#else
-#    define REF &
-#endif
-
 DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+#include "../../../Primitives/interface/DefineRefMacro.h"
 
 void DILIGENT_GLOBAL_FUNCTION(CreateUniformBuffer)(IRenderDevice*                  pDevice,
                                                    Uint64                          Size,
@@ -157,5 +153,7 @@ void DILIGENT_GLOBAL_FUNCTION(CreateSparseTextureMtl)(IRenderDevice*        pDev
                                                       const TextureDesc REF TexDesc,
                                                       IDeviceMemory*        pMemory,
                                                       ITexture**            ppTexture);
+
+#include "../../../Primitives/interface/UndefRefMacro.h"
 
 DILIGENT_END_NAMESPACE // namespace Diligent

@@ -87,16 +87,12 @@ struct RenderStateCacheCreateInfo
 };
 typedef struct RenderStateCacheCreateInfo RenderStateCacheCreateInfo;
 
-#if DILIGENT_C_INTERFACE
-#    define REF *
-#else
-#    define REF &
-#endif
+#include "../../../Primitives/interface/DefineRefMacro.h"
 
 /// Type of the callback function called by the IRenderStateCache::Reload method.
 typedef void(DILIGENT_CALL_TYPE* ReloadGraphicsPipelineCallbackType)(const char* PipelineName, GraphicsPipelineDesc REF GraphicsDesc, void* pUserData);
 
-#undef REF
+#include "../../../Primitives/interface/UndefRefMacro.h"
 
 // clang-format on
 

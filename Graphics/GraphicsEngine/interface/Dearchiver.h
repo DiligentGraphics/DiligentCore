@@ -35,11 +35,7 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-#if DILIGENT_C_INTERFACE
-#    define REF *
-#else
-#    define REF &
-#endif
+#include "../../../Primitives/interface/DefineRefMacro.h"
 
 // clang-format off
 
@@ -198,7 +194,7 @@ struct RenderPassUnpackInfo
 };
 typedef struct RenderPassUnpackInfo RenderPassUnpackInfo;
 
-#undef REF
+#include "../../../Primitives/interface/UndefRefMacro.h"
 
 // clang-format on
 
