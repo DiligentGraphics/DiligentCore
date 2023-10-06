@@ -130,6 +130,14 @@ struct MemoryShaderSourceFileInfo
         pData{_pData},
         Length{_Length}
     {}
+
+    MemoryShaderSourceFileInfo(const Char*   _Name,
+                               const String& Data) noexcept :
+        Name{_Name},
+        pData{Data.c_str()},
+        Length{static_cast<Uint32>(Data.length())}
+    {}
+
 #endif
 };
 typedef struct MemoryShaderSourceFileInfo MemoryShaderSourceFileInfo;
