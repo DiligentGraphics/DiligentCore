@@ -43,6 +43,7 @@
 #include "RenderDevice.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "../../../Common/interface/RefCntAutoPtr.hpp"
+#include "../../GraphicsAccessories/interface/GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -486,6 +487,12 @@ struct InputLayoutDescX
     LayoutElement& operator[](size_t Index) noexcept
     {
         return Elements[Index];
+    }
+
+    std::vector<Uint32> ResolveAutoOffsetsAndStrides()
+    {
+        VERIFY_EXPR(Desc.NumElements == Elements.size());
+        return ResolveInputLayoutAutoOffsetsAndStrides(Elements.data(), Desc.NumElements);
     }
 
 private:

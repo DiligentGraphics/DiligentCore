@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,7 @@
 
 #include "GraphicsAccessories.hpp"
 #include "../../../../Graphics/GraphicsEngine/include/PrivateConstants.h"
+#include "GraphicsTypesOutputInserters.hpp"
 
 #include "gtest/gtest.h"
 
@@ -1123,6 +1124,119 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetAdapterTypeString)
     EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_SOFTWARE, true), "ADAPTER_TYPE_SOFTWARE");
     EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_INTEGRATED, true), "ADAPTER_TYPE_INTEGRATED");
     EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_DISCRETE, true), "ADAPTER_TYPE_DISCRETE");
+}
+
+
+TEST(GraphicsAccessories_GraphicsAccessories, ResolveInputLayoutAutoOffsetsAndStrides)
+{
+    auto Test = [](std::vector<LayoutElement> Elems, const std::vector<LayoutElement>& RefElems, const std::vector<Uint32>& RefStides) {
+        auto Stides = ResolveInputLayoutAutoOffsetsAndStrides(Elems.data(), static_cast<Uint32>(Elems.size()));
+        ASSERT_EQ(Elems.size(), RefElems.size());
+        for (size_t i = 0; i < Elems.size(); ++i)
+        {
+            EXPECT_EQ(Elems[i], RefElems[i]) << "i = " << i;
+        }
+
+        EXPECT_EQ(Stides, RefStides);
+    };
+
+    Test({}, {}, {});
+
+    Test({
+             {0, 0, 3, VT_FLOAT32},
+         },
+         {
+             {0, 0, 3, VT_FLOAT32, false, 0, 12},
+         },
+         {12});
+
+    Test({
+             {0, 3, 4, VT_FLOAT32},
+         },
+         {
+             {0, 3, 4, VT_FLOAT32, false, 0, 16},
+         },
+         {0, 0, 0, 16});
+
+    Test({
+             {0, 1, 4, VT_FLOAT32},
+             {0, 1, 2, VT_FLOAT32, false, 32},
+         },
+         {
+             {0, 1, 4, VT_FLOAT32, false, 0, 40},
+             {0, 1, 2, VT_FLOAT32, false, 32, 40},
+         },
+         {0, 40});
+
+    Test({
+             {0, 2, 1, VT_FLOAT32, false, LAYOUT_ELEMENT_AUTO_OFFSET, 32},
+         },
+         {
+             {0, 2, 1, VT_FLOAT32, false, 0, 32},
+         },
+         {0, 0, 32});
+
+    Test({
+             {0, 2, 1, VT_FLOAT32, false, 8},
+         },
+         {
+             {0, 2, 1, VT_FLOAT32, false, 8, 12},
+         },
+         {0, 0, 12});
+
+    Test({
+             {0, 2, 1, VT_FLOAT32, false, 8},
+             {0, 2, 3, VT_FLOAT32, false},
+             {0, 2, 4, VT_FLOAT32, false, 28},
+             {0, 2, 2, VT_FLOAT32, false, LAYOUT_ELEMENT_AUTO_OFFSET, 128},
+         },
+         {
+             {0, 2, 1, VT_FLOAT32, false, 8, 128},
+             {0, 2, 3, VT_FLOAT32, false, 12, 128},
+             {0, 2, 4, VT_FLOAT32, false, 28, 128},
+             {0, 2, 2, VT_FLOAT32, false, 44, 128},
+         },
+         {0, 0, 128});
+
+    Test({
+             {0, 2, 1, VT_FLOAT32, false, 32},
+             {0, 2, 2, VT_FLOAT32, false, 8},
+             {0, 2, 1, VT_FLOAT32, false, 20},
+             {0, 2, 3, VT_FLOAT32, false},
+         },
+         {
+             {0, 2, 1, VT_FLOAT32, false, 32, 48},
+             {0, 2, 2, VT_FLOAT32, false, 8, 48},
+             {0, 2, 1, VT_FLOAT32, false, 20, 48},
+             {0, 2, 3, VT_FLOAT32, false, 36, 48},
+         },
+         {0, 0, 48});
+
+    Test({
+             {0, 1, 1, VT_FLOAT32, false, 8},
+             {0, 3, 1, VT_FLOAT32, false},
+             {0, 1, 2, VT_FLOAT32, false},
+             {0, 3, 1, VT_FLOAT32, false, 12},
+         },
+         {
+             {0, 1, 1, VT_FLOAT32, false, 8, 20},
+             {0, 3, 1, VT_FLOAT32, false, 0, 16},
+             {0, 1, 2, VT_FLOAT32, false, 12, 20},
+             {0, 3, 1, VT_FLOAT32, false, 12, 16},
+         },
+         {0, 20, 0, 16});
+
+    Test({
+             {0, 2, 1, VT_FLOAT32, false, 8},
+             {1, 2, 1, VT_FLOAT32, false, 8},
+             {3, 2, 3, VT_FLOAT32, false, 8},
+         },
+         {
+             {0, 2, 1, VT_FLOAT32, false, 8, 20},
+             {1, 2, 1, VT_FLOAT32, false, 8, 20},
+             {3, 2, 3, VT_FLOAT32, false, 8, 20},
+         },
+         {0, 0, 20});
 }
 
 } // namespace

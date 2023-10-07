@@ -99,6 +99,17 @@ void ValidateGraphicsPipelineDesc(const PipelineStateDesc& PSODesc, const Graphi
             LOG_PSO_ERROR_AND_THROW("Multiple viewports with variable shading rate require SHADING_RATE_CAP_FLAG_PER_PRIMITIVE_WITH_MULTIPLE_VIEWPORTS capability");
         }
     }
+
+    const auto& InputLayout = GraphicsPipeline.InputLayout;
+    if (InputLayout.NumElements > 0 && GraphicsPipeline.InputLayout.LayoutElements == nullptr)
+        LOG_PSO_ERROR_AND_THROW("InputLayout.LayoutElements must not be null when InputLayout.NumElements (", InputLayout.NumElements, ") is not zero.");
+
+    for (Uint32 i = 0; i < GraphicsPipeline.InputLayout.NumElements; ++i)
+    {
+        const auto& Elem = GraphicsPipeline.InputLayout.LayoutElements[i];
+        if (Elem.BufferSlot >= MAX_BUFFER_SLOTS)
+            LOG_PSO_ERROR_AND_THROW("InputLayout.LayoutElements[", i, "].BufferSlot (", Elem.BufferSlot, ") exceeds the limit (", MAX_BUFFER_SLOTS, ").");
+    }
 }
 
 void CorrectDepthStencilDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,6 +69,7 @@ DEFINE_TYPE_PRINTER(AttachmentReference, GetAttachmentReferenceString)
 DEFINE_TYPE_PRINTER(ShaderDesc, GetShaderDescString)
 DEFINE_TYPE_PRINTER(ShaderCodeBufferDesc, GetShaderCodeBufferDescString)
 DEFINE_TYPE_PRINTER(ShaderCodeVariableDesc, GetShaderCodeVariableDescString)
+DEFINE_TYPE_PRINTER(LayoutElement, GetLayoutElementString)
 #undef DEFINE_TYPE_PRINTER
 
 } // namespace Diligent

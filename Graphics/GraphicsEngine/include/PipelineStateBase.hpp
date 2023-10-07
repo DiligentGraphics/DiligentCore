@@ -542,17 +542,20 @@ protected:
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
         ReserveResourceSignatures(CreateInfo, MemPool);
 
-        const auto& InputLayout     = CreateInfo.GraphicsPipeline.InputLayout;
-        Uint32      BufferSlotsUsed = 0;
-        MemPool.AddSpace<LayoutElement>(InputLayout.NumElements);
-        for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
+        const auto& InputLayout = CreateInfo.GraphicsPipeline.InputLayout;
+        if (InputLayout.NumElements > 0)
         {
-            auto& LayoutElem = InputLayout.LayoutElements[i];
-            MemPool.AddSpaceForString(LayoutElem.HLSLSemantic);
-            BufferSlotsUsed = std::max(BufferSlotsUsed, LayoutElem.BufferSlot + 1);
-        }
+            Uint32 BufferSlotsUsed = 0;
+            MemPool.AddSpace<LayoutElement>(InputLayout.NumElements);
+            for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
+            {
+                auto& LayoutElem = InputLayout.LayoutElements[i];
+                MemPool.AddSpaceForString(LayoutElem.HLSLSemantic);
+                BufferSlotsUsed = std::max(BufferSlotsUsed, LayoutElem.BufferSlot + 1);
+            }
 
-        MemPool.AddSpace<Uint32>(BufferSlotsUsed);
+            MemPool.AddSpace<Uint32>(BufferSlotsUsed);
+        }
 
         static_assert(std::is_trivially_destructible<decltype(*InputLayout.LayoutElements)>::value, "Add destructor for this object to Destruct()");
     }
@@ -819,93 +822,25 @@ protected:
         }
 
         const auto&    InputLayout     = GraphicsPipeline.InputLayout;
-        LayoutElement* pLayoutElements = MemPool.ConstructArray<LayoutElement>(InputLayout.NumElements);
-        for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
+        LayoutElement* pLayoutElements = nullptr;
+        if (InputLayout.NumElements > 0)
         {
-            const auto& SrcElem   = InputLayout.LayoutElements[Elem];
-            pLayoutElements[Elem] = SrcElem;
-            VERIFY_EXPR(SrcElem.HLSLSemantic != nullptr);
-            pLayoutElements[Elem].HLSLSemantic = MemPool.CopyString(SrcElem.HLSLSemantic);
+            pLayoutElements = MemPool.ConstructArray<LayoutElement>(InputLayout.NumElements);
+            for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
+            {
+                const auto& SrcElem   = InputLayout.LayoutElements[Elem];
+                pLayoutElements[Elem] = SrcElem;
+                VERIFY_EXPR(SrcElem.HLSLSemantic != nullptr);
+                pLayoutElements[Elem].HLSLSemantic = MemPool.CopyString(SrcElem.HLSLSemantic);
+            }
+
+            // Correct description and compute offsets and tight strides
+            const auto Strides = ResolveInputLayoutAutoOffsetsAndStrides(pLayoutElements, InputLayout.NumElements);
+            BufferSlotsUsed    = static_cast<Uint8>(Strides.size());
+
+            pStrides = MemPool.CopyConstructArray<Uint32>(Strides.data(), BufferSlotsUsed);
         }
         GraphicsPipeline.InputLayout.LayoutElements = pLayoutElements;
-
-
-        // Correct description and compute offsets and tight strides
-        std::array<Uint32, MAX_BUFFER_SLOTS> Strides, TightStrides = {};
-        // Set all strides to an invalid value because an application may want to use 0 stride
-        Strides.fill(LAYOUT_ELEMENT_AUTO_STRIDE);
-
-        for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
-        {
-            auto& LayoutElem = pLayoutElements[i];
-
-            if (LayoutElem.ValueType == VT_FLOAT32 || LayoutElem.ValueType == VT_FLOAT16)
-                LayoutElem.IsNormalized = false; // Floating point values cannot be normalized
-
-            auto BuffSlot = LayoutElem.BufferSlot;
-            if (BuffSlot >= Strides.size())
-            {
-                UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds the maximum allowed value (", Strides.size() - 1, ")");
-                continue;
-            }
-            BufferSlotsUsed = std::max(BufferSlotsUsed, static_cast<Uint8>(BuffSlot + 1));
-
-            auto& CurrAutoStride = TightStrides[BuffSlot];
-            // If offset is not explicitly specified, use current auto stride value
-            if (LayoutElem.RelativeOffset == LAYOUT_ELEMENT_AUTO_OFFSET)
-            {
-                LayoutElem.RelativeOffset = CurrAutoStride;
-            }
-
-            // If stride is explicitly specified, use it for the current buffer slot
-            if (LayoutElem.Stride != LAYOUT_ELEMENT_AUTO_STRIDE)
-            {
-                // Verify that the value is consistent with the previously specified stride, if any
-                if (Strides[BuffSlot] != LAYOUT_ELEMENT_AUTO_STRIDE && Strides[BuffSlot] != LayoutElem.Stride)
-                {
-                    LOG_ERROR_MESSAGE("Inconsistent strides are specified for buffer slot ", BuffSlot,
-                                      ". Input element at index ", LayoutElem.InputIndex, " explicitly specifies stride ",
-                                      LayoutElem.Stride, ", while current value is ", Strides[BuffSlot],
-                                      ". Specify consistent strides or use LAYOUT_ELEMENT_AUTO_STRIDE to allow "
-                                      "the engine compute strides automatically.");
-                }
-                Strides[BuffSlot] = LayoutElem.Stride;
-            }
-
-            CurrAutoStride = std::max(CurrAutoStride, LayoutElem.RelativeOffset + LayoutElem.NumComponents * GetValueSize(LayoutElem.ValueType));
-        }
-
-        for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
-        {
-            auto& LayoutElem = pLayoutElements[i];
-
-            auto BuffSlot = LayoutElem.BufferSlot;
-            // If no input elements explicitly specified stride for this buffer slot, use automatic stride
-            if (Strides[BuffSlot] == LAYOUT_ELEMENT_AUTO_STRIDE)
-            {
-                Strides[BuffSlot] = TightStrides[BuffSlot];
-            }
-            else
-            {
-                if (Strides[BuffSlot] < TightStrides[BuffSlot])
-                {
-                    LOG_ERROR_MESSAGE("Stride ", Strides[BuffSlot], " explicitly specified for slot ", BuffSlot,
-                                      " is smaller than the minimum stride ", TightStrides[BuffSlot],
-                                      " required to accommodate all input elements.");
-                }
-            }
-            if (LayoutElem.Stride == LAYOUT_ELEMENT_AUTO_STRIDE)
-                LayoutElem.Stride = Strides[BuffSlot];
-        }
-
-        pStrides = MemPool.ConstructArray<Uint32>(BufferSlotsUsed);
-
-        // Set strides for all unused slots to 0
-        for (Uint32 i = 0; i < BufferSlotsUsed; ++i)
-        {
-            auto Stride = Strides[i];
-            pStrides[i] = Stride != LAYOUT_ELEMENT_AUTO_STRIDE ? Stride : 0;
-        }
     }
 
     void InitializePipelineDesc(const ComputePipelineStateCreateInfo& CreateInfo,

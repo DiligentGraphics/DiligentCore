@@ -1507,6 +1507,36 @@ String GetShaderCodeVariableDescString(const ShaderCodeVariableDesc& Desc, size_
     return ss.str();
 }
 
+const char* GetInputElementFrequencyString(INPUT_ELEMENT_FREQUENCY Frequency)
+{
+    switch (Frequency)
+    {
+        case INPUT_ELEMENT_FREQUENCY_UNDEFINED: return "undefined";
+        case INPUT_ELEMENT_FREQUENCY_PER_VERTEX: return "per-vertex";
+        case INPUT_ELEMENT_FREQUENCY_PER_INSTANCE: return "per-instance";
+
+        default:
+            UNEXPECTED("Unknown/unsupported input element frequency");
+            return "UNKNOWN";
+    }
+}
+String GetLayoutElementString(const LayoutElement& Element)
+{
+    std::stringstream ss;
+    ss << "HLSLSemantic: " << Element.HLSLSemantic
+       << ", InputIndex: " << Element.InputIndex
+       << ", BufferSlot: " << Element.BufferSlot
+       << ", NumComponents: " << Element.NumComponents
+       << ", ValueType: " << GetValueTypeString(Element.ValueType)
+       << ", IsNormalized: " << Element.IsNormalized
+       << ", RelativeOffset: " << (Element.RelativeOffset == LAYOUT_ELEMENT_AUTO_OFFSET ? "auto" : std::to_string(Element.RelativeOffset))
+       << ", Stride: " << (Element.Stride == LAYOUT_ELEMENT_AUTO_STRIDE ? "auto" : std::to_string(Element.Stride))
+       << ", Frequency: " << GetInputElementFrequencyString(Element.Frequency)
+       << ", InstanceDataStepRate: " << Element.InstanceDataStepRate;
+
+    return ss.str();
+}
+
 PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE ResourceType)
 {
     static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
@@ -2360,6 +2390,85 @@ bool IsIdentityComponentMapping(const TextureComponentMapping& Mapping)
             (Mapping.G == TEXTURE_COMPONENT_SWIZZLE_IDENTITY || Mapping.G == TEXTURE_COMPONENT_SWIZZLE_G) &&
             (Mapping.B == TEXTURE_COMPONENT_SWIZZLE_IDENTITY || Mapping.B == TEXTURE_COMPONENT_SWIZZLE_B) &&
             (Mapping.A == TEXTURE_COMPONENT_SWIZZLE_IDENTITY || Mapping.A == TEXTURE_COMPONENT_SWIZZLE_A));
+}
+
+
+std::vector<Uint32> ResolveInputLayoutAutoOffsetsAndStrides(LayoutElement* pLayoutElements, Uint32 NumElements)
+{
+    Uint32 BufferSlotsUsed = 0;
+    for (Uint32 i = 0; i < NumElements; ++i)
+    {
+        BufferSlotsUsed = std::max(BufferSlotsUsed, pLayoutElements[i].BufferSlot + 1);
+    }
+
+    std::vector<Uint32> TightStrides(BufferSlotsUsed);
+    // Set all strides to an invalid value because an application may want to use 0 stride
+    std::vector<Uint32> Strides(BufferSlotsUsed, LAYOUT_ELEMENT_AUTO_STRIDE);
+
+    for (Uint32 i = 0; i < NumElements; ++i)
+    {
+        auto& LayoutElem = pLayoutElements[i];
+
+        if (LayoutElem.ValueType == VT_FLOAT32 || LayoutElem.ValueType == VT_FLOAT16)
+            LayoutElem.IsNormalized = false; // Floating point values cannot be normalized
+
+        auto  BuffSlot       = LayoutElem.BufferSlot;
+        auto& CurrAutoStride = TightStrides[BuffSlot];
+        // If offset is not explicitly specified, use current auto stride value
+        if (LayoutElem.RelativeOffset == LAYOUT_ELEMENT_AUTO_OFFSET)
+        {
+            LayoutElem.RelativeOffset = CurrAutoStride;
+        }
+
+        // If stride is explicitly specified, use it for the current buffer slot
+        if (LayoutElem.Stride != LAYOUT_ELEMENT_AUTO_STRIDE)
+        {
+            // Verify that the value is consistent with the previously specified stride, if any
+            if (Strides[BuffSlot] != LAYOUT_ELEMENT_AUTO_STRIDE && Strides[BuffSlot] != LayoutElem.Stride)
+            {
+                LOG_ERROR_MESSAGE("Inconsistent strides are specified for buffer slot ", BuffSlot,
+                                  ". Input element at index ", LayoutElem.InputIndex, " explicitly specifies stride ",
+                                  LayoutElem.Stride, ", while current value is ", Strides[BuffSlot],
+                                  ". Specify consistent strides or use LAYOUT_ELEMENT_AUTO_STRIDE to allow "
+                                  "the engine compute strides automatically.");
+            }
+            Strides[BuffSlot] = LayoutElem.Stride;
+        }
+
+        CurrAutoStride = std::max(CurrAutoStride, LayoutElem.RelativeOffset + LayoutElem.NumComponents * GetValueSize(LayoutElem.ValueType));
+    }
+
+    for (Uint32 i = 0; i < NumElements; ++i)
+    {
+        auto& LayoutElem = pLayoutElements[i];
+
+        auto BuffSlot = LayoutElem.BufferSlot;
+        // If no input elements explicitly defined stride for this buffer slot, use automatic stride
+        if (Strides[BuffSlot] == LAYOUT_ELEMENT_AUTO_STRIDE)
+        {
+            Strides[BuffSlot] = TightStrides[BuffSlot];
+        }
+        else
+        {
+            if (Strides[BuffSlot] < TightStrides[BuffSlot])
+            {
+                LOG_ERROR_MESSAGE("Stride ", Strides[BuffSlot], " explicitly specified for slot ", BuffSlot,
+                                  " is smaller than the minimum stride ", TightStrides[BuffSlot],
+                                  " required to accommodate all input elements.");
+            }
+        }
+        if (LayoutElem.Stride == LAYOUT_ELEMENT_AUTO_STRIDE)
+            LayoutElem.Stride = Strides[BuffSlot];
+    }
+
+    // Set strides for all unused slots to 0
+    for (auto& Stride : Strides)
+    {
+        if (Stride == LAYOUT_ELEMENT_AUTO_STRIDE)
+            Stride = 0;
+    }
+
+    return Strides;
 }
 
 } // namespace Diligent
