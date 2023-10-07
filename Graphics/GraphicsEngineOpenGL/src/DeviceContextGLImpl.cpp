@@ -169,7 +169,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     PrepareCommittedResources(m_BindInfo, DvpCompatibleSRBCount);
 }
 
-void DeviceContextGLImpl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
+void DeviceContextGLImpl::TransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding)
 {
     DEV_CHECK_ERR(!m_pActiveRenderPass, "State transitions are not allowed inside a render pass.");
 }

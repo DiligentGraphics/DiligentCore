@@ -37,7 +37,7 @@ void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
 
     IDeviceContext_Begin(pCtx, 0u);
 
-    IDeviceContext_TransitionShaderResources(pCtx, (struct IPipelineState*)NULL, (struct IShaderResourceBinding*)NULL);
+    IDeviceContext_TransitionShaderResources(pCtx, (struct IShaderResourceBinding*)NULL);
     IDeviceContext_TransitionResourceStates(pCtx, 1u, (const struct StateTransitionDesc*)NULL);
 
     IDeviceContext_SetPipelineState(pCtx, (struct IPipelineState*)NULL);

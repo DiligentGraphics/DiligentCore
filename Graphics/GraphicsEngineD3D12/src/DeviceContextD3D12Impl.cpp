@@ -424,9 +424,8 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
     RootInfo.StaleSRBMask &= ~RootInfo.ActiveSRBMask;
 }
 
-void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
+void DeviceContextD3D12Impl::TransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding)
 {
-    DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must not be null");
     DEV_CHECK_ERR(!m_pActiveRenderPass, "State transitions are not allowed inside a render pass.");
 
     auto& CmdCtx               = GetCmdContext();

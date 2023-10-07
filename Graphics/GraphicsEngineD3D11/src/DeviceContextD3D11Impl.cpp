@@ -199,9 +199,8 @@ static const decltype (&ID3D11DeviceContext1::VSSetConstantBuffers1) SetCB1Metho
 
 // clang-format on
 
-void DeviceContextD3D11Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
+void DeviceContextD3D11Impl::TransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding)
 {
-    DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must not be null");
     DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "Shader resource binding must not be null");
     if (m_pActiveRenderPass)
     {

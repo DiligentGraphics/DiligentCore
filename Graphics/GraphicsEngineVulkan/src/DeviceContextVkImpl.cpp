@@ -521,7 +521,7 @@ void DeviceContextVkImpl::DvpValidateCommittedShaderResources(ResourceBindInfo& 
 }
 #endif
 
-void DeviceContextVkImpl::TransitionShaderResources(IPipelineState*, IShaderResourceBinding* pShaderResourceBinding)
+void DeviceContextVkImpl::TransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding)
 {
     DEV_CHECK_ERR(!m_pActiveRenderPass, "State transitions are not allowed inside a render pass.");
     DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "pShaderResourceBinding must not be null");

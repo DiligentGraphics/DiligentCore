@@ -2681,14 +2681,14 @@ void DrawCommandTest::DrawWithStructuredOrFormattedBuffers(bool                 
 
     UpdateBuffer(pPositionsBuffView, Pos, 0, sizeof(float4) * 3);
     UpdateBuffer(pColorsBuffView, Color4, 4, sizeof(float4) * 3);
-    pContext->TransitionShaderResources(pPSO, pSRB);
+    pContext->TransitionShaderResources(pSRB);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
 
     UpdateBuffer(pPositionsBuffView, Pos + 3, 0, sizeof(float4) * 3);
     UpdateBuffer(pColorsBuffView, Color4, 4, sizeof(float4) * 3);
-    pContext->TransitionShaderResources(pPSO, pSRB);
+    pContext->TransitionShaderResources(pSRB);
 
     pContext->Draw(drawAttrs);
 

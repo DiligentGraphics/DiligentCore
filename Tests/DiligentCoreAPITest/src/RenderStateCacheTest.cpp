@@ -114,7 +114,7 @@ void TestDraw(IShader*                pVS,
         pPSO->CreateShaderResourceBinding(&_pSRB);
         VERIFY_EXPR(pTexSRV != nullptr);
         _pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->Set(pTexSRV);
-        pCtx->TransitionShaderResources(pPSO, _pSRB);
+        pCtx->TransitionShaderResources(_pSRB);
         pSRB = _pSRB;
     }
 
@@ -519,7 +519,7 @@ void TestGraphicsPSO(bool UseRenderPass)
     RefCntAutoPtr<IShaderResourceBinding> pRefSRB;
     pRefPSO->CreateShaderResourceBinding(&pRefSRB);
     pRefSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->Set(pTexSRV);
-    pCtx->TransitionShaderResources(pRefPSO, pRefSRB);
+    pCtx->TransitionShaderResources(pRefSRB);
 
     for (Uint32 HotReload = 0; HotReload < 2; ++HotReload)
     {
@@ -1229,9 +1229,9 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
             (UseSignatures ? pSRB1 : pSRB0)->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->Set(RefTextures.GetView(2));
             pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
 
-            pCtx->TransitionShaderResources(pPSO, pSRB0);
+            pCtx->TransitionShaderResources(pSRB0);
             if (pSRB1)
-                pCtx->TransitionShaderResources(pPSO, pSRB1);
+                pCtx->TransitionShaderResources(pSRB1);
         };
 
         RefCntAutoPtr<IShaderResourceBinding> pSRB0, pSRB1;

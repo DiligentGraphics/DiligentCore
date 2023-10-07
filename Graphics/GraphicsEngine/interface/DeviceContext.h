@@ -2122,7 +2122,6 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Transitions shader resources to the states required by Draw or Dispatch command.
     ///
-    /// \param [in] pPipelineState         - Pipeline state object that was used to create the shader resource binding.
     /// \param [in] pShaderResourceBinding - Shader resource binding whose resources will be transitioned.
     ///
     /// \remarks This method explicitly transitions all resources except ones in unknown state to the states required
@@ -2139,7 +2138,6 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
     VIRTUAL void METHOD(TransitionShaderResources)(THIS_
-                                                   IPipelineState*         pPipelineState,
                                                    IShaderResourceBinding* pShaderResourceBinding) PURE;
 
     /// Commits shader resources to the device context.
