@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -160,7 +160,9 @@ VAOCache::VAOHashKey::VAOHashKey(const VAOAttribs& Attribs) :
         const auto& LayoutElem = LayoutElements[i];
         const auto  BufferSlot = LayoutElem.BufferSlot;
         VERIFY_EXPR(BufferSlot < MAX_BUFFER_SLOTS);
-        DEV_CHECK_ERR(BufferSlot < Attribs.NumVertexStreams, "Input layout requires at least ", BufferSlot + 1, " buffer(s), but only ", Attribs.NumVertexStreams, " are bound.");
+        DEV_CHECK_ERR(BufferSlot < Attribs.NumVertexStreams, "Input layout requires at least ", BufferSlot + 1,
+                      " buffer", (BufferSlot > 0 ? "s" : ""), ", but only ", Attribs.NumVertexStreams, ' ',
+                      (Attribs.NumVertexStreams == 1 ? "is" : "are"), " bound.");
 
         const auto& SrcStream = Attribs.VertexStreams[BufferSlot];
         DEV_CHECK_ERR(SrcStream.pBuffer, "VAO requires buffer at slot ", BufferSlot, ", but none is bound in the context.");
