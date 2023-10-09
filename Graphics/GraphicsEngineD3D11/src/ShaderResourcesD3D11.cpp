@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,8 @@
 namespace Diligent
 {
 
-static constexpr Uint32 GetRegisterSpace(const D3D11_SHADER_INPUT_BIND_DESC&)
+template <>
+Uint32 GetRegisterSpace<>(const D3D11_SHADER_INPUT_BIND_DESC&)
 {
     return 0;
 }

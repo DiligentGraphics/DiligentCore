@@ -35,6 +35,7 @@
 #include "StringTools.hpp"
 #include "ShaderToolsCommon.hpp"
 #include "D3DCommonTypeConversions.hpp"
+#include "EngineMemory.h"
 
 /// \file
 /// D3D shader resource loading
@@ -134,8 +135,11 @@ void LoadD3DShaderConstantBufferReflection(TShaderReflection* pBuffReflection, S
     }
 }
 
+template <typename D3D_SHADER_INPUT_BIND_DESC>
+Uint32 GetRegisterSpace(const D3D_SHADER_INPUT_BIND_DESC&);
 
-template <typename TReflectionTraits,
+template <typename D3DShaderResourceAttribs,
+          typename TReflectionTraits,
           typename TShaderReflection,
           typename THandleShaderDesc,
           typename TOnResourcesCounted,
