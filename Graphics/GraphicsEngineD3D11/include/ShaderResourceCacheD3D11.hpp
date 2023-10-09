@@ -405,8 +405,8 @@ private:
                             typename CachedResourceTraits<ResRange>::D3D11ResourceType**>
     GetResourceArrays(Uint32 ShaderInd) const
     {
-        using CachedResourceType = CachedResourceTraits<ResRange>::CachedResourceType;
-        using D3D11ResourceType  = CachedResourceTraits<ResRange>::D3D11ResourceType;
+        using CachedResourceType = typename CachedResourceTraits<ResRange>::CachedResourceType;
+        using D3D11ResourceType  = typename CachedResourceTraits<ResRange>::D3D11ResourceType;
         static_assert(alignof(CachedResourceType) == alignof(D3D11ResourceType*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
 
         const auto  DataOffset      = GetResourceDataOffset<ResRange>(ShaderInd);

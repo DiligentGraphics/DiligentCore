@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,8 +83,10 @@ public:
     struct ShaderVariableD3D11Base : ShaderVariableBase<ThisImplType, ShaderVariableManagerD3D11, IShaderResourceVariableD3D>
     {
     public:
+        using TBase = ShaderVariableBase<ThisImplType, ShaderVariableManagerD3D11, IShaderResourceVariableD3D>;
+
         ShaderVariableD3D11Base(ShaderVariableManagerD3D11& ParentLayout, Uint32 ResIndex) :
-            ShaderVariableBase<ThisImplType, ShaderVariableManagerD3D11, IShaderResourceVariableD3D>{ParentLayout, ResIndex}
+            TBase{ParentLayout, ResIndex}
         {}
 
         // clang-format off
@@ -93,6 +95,9 @@ public:
         ShaderVariableD3D11Base& operator= (const ShaderVariableD3D11Base&)  = delete;
         ShaderVariableD3D11Base& operator= (      ShaderVariableD3D11Base&&) = delete;
         // clang-format on
+
+        using TBase::m_ParentManager;
+        using TBase::m_ResIndex;
 
         const ResourceAttribs& GetAttribs() const { return m_ParentManager.GetResourceAttribs(m_ResIndex); }
 
@@ -111,13 +116,13 @@ public:
 
         virtual void DILIGENT_CALL_TYPE GetHLSLResourceDesc(HLSLShaderResourceDesc& HLSLResDesc) const override final
         {
-            GetResourceDesc(HLSLResDesc);
+            this->GetResourceDesc(HLSLResDesc);
             HLSLResDesc.ShaderRegister = GetAttribs().BindPoints[m_ParentManager.m_ShaderTypeIndex];
         }
 
         virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
         {
-            VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
+            VERIFY_EXPR(ArrayIndex < this->GetDesc().ArraySize);
             return m_ParentManager.m_ResourceCache.GetResource<ResRange>(GetAttribs().BindPoints + ArrayIndex).Get();
         }
 

@@ -54,6 +54,13 @@
 namespace Diligent
 {
 
+bool CheckAdapterD3D12Compatibility(IDXGIAdapter1*    pDXGIAdapter,
+                                    D3D_FEATURE_LEVEL FeatureLevel)
+{
+    auto hr = D3D12CreateDevice(pDXGIAdapter, FeatureLevel, _uuidof(ID3D12Device), nullptr);
+    return SUCCEEDED(hr);
+}
+
 /// Engine factory for D3D12 implementation
 class EngineFactoryD3D12Impl : public EngineFactoryD3DBase<IEngineFactoryD3D12, RENDER_DEVICE_TYPE_D3D12>
 {

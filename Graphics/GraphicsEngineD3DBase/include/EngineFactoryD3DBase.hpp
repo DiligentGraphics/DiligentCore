@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,9 @@
 
 namespace Diligent
 {
+
+bool CheckAdapterD3D11Compatibility(IDXGIAdapter1* pDXGIAdapter, D3D_FEATURE_LEVEL FeatureLevel);
+bool CheckAdapterD3D12Compatibility(IDXGIAdapter1* pDXGIAdapter, D3D_FEATURE_LEVEL FeatureLevel);
 
 template <typename BaseInterface, RENDER_DEVICE_TYPE DevType>
 class EngineFactoryD3DBase : public EngineFactoryBase<BaseInterface>
@@ -302,27 +305,14 @@ private:
     bool CheckAdapterCompatibility<RENDER_DEVICE_TYPE_D3D11>(IDXGIAdapter1*    pDXGIAdapter,
                                                              D3D_FEATURE_LEVEL FeatureLevel) const
     {
-        auto hr = D3D11CreateDevice(
-            nullptr,
-            D3D_DRIVER_TYPE_NULL, // There is no need to create a real hardware device.
-            0,
-            0,                 // Flags.
-            &FeatureLevel,     // Feature levels.
-            1,                 // Number of feature levels
-            D3D11_SDK_VERSION, // Always set this to D3D11_SDK_VERSION for Windows Store apps.
-            nullptr,           // No need to keep the D3D device reference.
-            nullptr,           // Feature level of the created adapter.
-            nullptr            // No need to keep the D3D device context reference.
-        );
-        return SUCCEEDED(hr);
+        return CheckAdapterD3D11Compatibility(pDXGIAdapter, FeatureLevel);
     }
 
     template <>
     bool CheckAdapterCompatibility<RENDER_DEVICE_TYPE_D3D12>(IDXGIAdapter1*    pDXGIAdapter,
                                                              D3D_FEATURE_LEVEL FeatureLevel) const
     {
-        auto hr = D3D12CreateDevice(pDXGIAdapter, FeatureLevel, _uuidof(ID3D12Device), nullptr);
-        return SUCCEEDED(hr);
+        return CheckAdapterD3D12Compatibility(pDXGIAdapter, FeatureLevel);
     }
 };
 

@@ -43,7 +43,7 @@ const Char* GetD3D12DescriptorHeapTypeLiteralName(D3D12_DESCRIPTOR_HEAP_TYPE Typ
     static_assert(D3D12_DESCRIPTOR_HEAP_TYPE_RTV         == 2, "D3D12_DESCRIPTOR_HEAP_TYPE_RTV is expected to be 2");
     static_assert(D3D12_DESCRIPTOR_HEAP_TYPE_DSV         == 3, "D3D12_DESCRIPTOR_HEAP_TYPE_DSV is expected to be 3");
     // clang-format on
-    static constexpr std::array<Char*, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> HeapTypeNames{
+    static constexpr std::array<const Char*, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> HeapTypeNames{
         "D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV",
         "D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER",
         "D3D12_DESCRIPTOR_HEAP_TYPE_RTV",

@@ -1444,9 +1444,9 @@ TriangulatePolygon3D(const std::vector<Vector3<ComponentType>>& Polygon, bool Ve
     const auto AbsNormal = abs(Normal);
 
     Vector3<ComponentType> Tangent;
-    if (AbsNormal.z > std::max(AbsNormal.x, AbsNormal.y))
+    if (AbsNormal.z > (std::max)(AbsNormal.x, AbsNormal.y))
         Tangent = cross(Vector3<ComponentType>{ComponentType{0}, ComponentType{1}, ComponentType{0}}, Normal);
-    else if (AbsNormal.y > std::max(AbsNormal.x, AbsNormal.z))
+    else if (AbsNormal.y > (std::max)(AbsNormal.x, AbsNormal.z))
         Tangent = cross(Vector3<ComponentType>{ComponentType{1}, ComponentType{0}, ComponentType{0}}, Normal);
     else
         Tangent = cross(Vector3<ComponentType>{ComponentType{0}, ComponentType{0}, ComponentType{1}}, Normal);
