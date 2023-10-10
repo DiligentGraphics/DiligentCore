@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -581,6 +581,14 @@ protected:
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDraw_2xStride_PSO);
         ASSERT_NE(sm_pDraw_2xStride_PSO, nullptr);
 
+        PSODesc.Name = "Draw command test - Buffer 2";
+
+        Elems[0] = {0, 1, 4, VT_FLOAT32};
+        Elems[1] = {1, 3, 3, VT_FLOAT32};
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDraw_2VBs_PSO);
+        ASSERT_NE(sm_pDraw_2VBs_PSO, nullptr);
+
+
         PSODesc.Name = "Instanced draw command test";
         // clang-format off
         LayoutElement InstancedElems[] =
@@ -604,6 +612,7 @@ protected:
         sm_pDrawProceduralPSO.Release();
         sm_pDrawPSO.Release();
         sm_pDraw_2xStride_PSO.Release();
+        sm_pDraw_2VBs_PSO.Release();
         sm_pDrawInstancedPSO.Release();
         sm_pDrawStripPSO.Release();
 
@@ -730,6 +739,7 @@ protected:
     static RefCntAutoPtr<IPipelineState> sm_pDrawProceduralPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDraw_2xStride_PSO;
+    static RefCntAutoPtr<IPipelineState> sm_pDraw_2VBs_PSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawInstancedPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawStripPSO;
     static FastRandFloat                 sm_Rnd;
@@ -738,6 +748,7 @@ protected:
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawProceduralPSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawPSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDraw_2xStride_PSO;
+RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDraw_2VBs_PSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawInstancedPSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawStripPSO;
 FastRandFloat                 DrawCommandTest::sm_Rnd{0, 0.f, 1.f};
@@ -897,6 +908,42 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
     Present();
 }
 
+TEST_F(DrawCommandTest, Draw_2VBs)
+{
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
+#if PLATFORM_LINUX
+    if (pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice() && pEnv->GetDevice()->GetAdapterInfo().Type == ADAPTER_TYPE_SOFTWARE)
+    {
+        GTEST_SKIP() << "This test fails in Vulkan SW renderer because of a bug in the renderer";
+    }
+#endif
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDraw_2VBs_PSO);
+
+    // clang-format off
+    const float4 Positions[] =
+    {
+        Pos[0], Pos[1], Pos[2],
+        Pos[3], Pos[4], Pos[5]
+    };
+    const float3 Colors[] =
+    {
+        Color[0], Color[1], Color[2],
+        Color[0], Color[1], Color[2],
+    };
+    // clang-format on
+
+    auto     pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
+    auto     pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
+    IBuffer* pVBs[] = {nullptr, pPosVB, nullptr, pColVB};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(drawAttrs);
+
+    Present();
+}
 
 
 // Indexed draw calls (glDrawElements/DrawIndexed)
@@ -1024,6 +1071,48 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
 
     DrawIndexedAttribs drawAttrs{6, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
     drawAttrs.BaseVertex = bv;
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, Draw_2VBs_Indexed)
+{
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
+#if PLATFORM_LINUX
+    if (pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice() && pEnv->GetDevice()->GetAdapterInfo().Type == ADAPTER_TYPE_SOFTWARE)
+    {
+        GTEST_SKIP() << "This test fails in Vulkan SW renderer because of a bug in the renderer";
+    }
+#endif
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDraw_2VBs_PSO);
+
+    // clang-format off
+    const float4 Positions[] =
+    {
+        {}, Pos[0], {}, Pos[1], {}, Pos[2],
+        {}, {}, Pos[3], Pos[4], {}, {}, Pos[5]
+    };
+    const float3 Colors[] =
+    {
+        {}, Color[0], {}, Color[1], {}, Color[2],
+        {}, {}, Color[0], Color[1], {}, {}, Color[2],
+    };
+    const Uint32 Indices[] = {1,3,5, 8,9,12};
+    // clang-format on
+
+    auto     pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
+    auto     pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
+    IBuffer* pVBs[] = {nullptr, pPosVB, nullptr, pColVB};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{6, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
     pContext->DrawIndexed(drawAttrs);
 
     Present();
