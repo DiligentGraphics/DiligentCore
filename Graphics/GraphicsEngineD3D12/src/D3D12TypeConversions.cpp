@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -180,6 +180,12 @@ UINT TextureComponentMappingToD3D12Shader4ComponentMapping(const TextureComponen
         TextureComponentSwizzleToD3D12ShaderComponentMapping(Mapping.A, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3));
 }
 
+static UINT GetPlaneSlice(TEXTURE_FORMAT Format)
+{
+    // Stencil is in plane 1
+    return Format == TEX_FORMAT_X32_TYPELESS_G8X24_UINT || Format == TEX_FORMAT_X24_TYPELESS_G8_UINT ? 1 : 0;
+}
+
 void TextureViewDesc_to_D3D12_SRV_DESC(const TextureViewDesc&           SRVDesc,
                                        D3D12_SHADER_RESOURCE_VIEW_DESC& D3D12SRVDesc,
                                        Uint32                           SampleCount)
@@ -202,7 +208,7 @@ void TextureViewDesc_to_D3D12_SRV_DESC(const TextureViewDesc&           SRVDesc,
             }
             else
             {
-                D3D12SRVDesc.Texture2D.PlaneSlice          = 0;
+                D3D12SRVDesc.Texture2D.PlaneSlice          = GetPlaneSlice(SRVDesc.Format);
                 D3D12SRVDesc.Texture2D.ResourceMinLODClamp = 0;
             }
             break;
@@ -213,7 +219,7 @@ void TextureViewDesc_to_D3D12_SRV_DESC(const TextureViewDesc&           SRVDesc,
             }
             else
             {
-                D3D12SRVDesc.Texture2DArray.PlaneSlice          = 0;
+                D3D12SRVDesc.Texture2DArray.PlaneSlice          = GetPlaneSlice(SRVDesc.Format);
                 D3D12SRVDesc.Texture2DArray.ResourceMinLODClamp = 0;
             }
             break;
@@ -296,11 +302,11 @@ void TextureViewDesc_to_D3D12_UAV_DESC(const TextureViewDesc&            UAVDesc
             break;
 
         case RESOURCE_DIM_TEX_2D:
-            D3D12UAVDesc.Texture2D.PlaneSlice = 0;
+            D3D12UAVDesc.Texture2D.PlaneSlice = GetPlaneSlice(UAVDesc.Format);
             break;
 
         case RESOURCE_DIM_TEX_2D_ARRAY:
-            D3D12UAVDesc.Texture2DArray.PlaneSlice = 0;
+            D3D12UAVDesc.Texture2DArray.PlaneSlice = GetPlaneSlice(UAVDesc.Format);
             break;
 
         case RESOURCE_DIM_TEX_3D:

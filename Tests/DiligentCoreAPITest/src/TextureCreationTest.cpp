@@ -279,10 +279,11 @@ protected:
 
         if (!TexProps.TextureViewSupported)
         {
-            LOG_WARNING_MESSAGE_ONCE("Texture views are not supported!\n");
+            LOG_WARNING_MESSAGE("Texture views are not supported for format ", FmtInfo.Name, "!\n");
+            return;
         }
 
-        if (TexProps.TextureViewSupported && !FmtInfo.IsTypeless)
+        if (!FmtInfo.IsTypeless)
         {
             TextureViewDesc ViewDesc;
             ViewDesc.TextureDim = TexDesc.Type;
@@ -371,6 +372,22 @@ protected:
                 pTestTex->CreateView(ViewDesc, &pUAV);
                 EXPECT_NE(pUAV, nullptr) << GetObjectDescString(TexDesc);
             }
+        }
+
+        if ((TexDesc.BindFlags & BIND_SHADER_RESOURCE) &&
+            (TextureFormat == TEX_FORMAT_D32_FLOAT_S8X24_UINT || TextureFormat == TEX_FORMAT_R32G8X24_TYPELESS ||
+             TextureFormat == TEX_FORMAT_D24_UNORM_S8_UINT || TextureFormat == TEX_FORMAT_R24G8_TYPELESS) &&
+            !pDevice->GetDeviceInfo().IsGLDevice())
+        {
+            TextureViewDesc ViewDesc;
+            ViewDesc.Name     = "Stencil SRV";
+            ViewDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
+            if (TextureFormat == TEX_FORMAT_D32_FLOAT_S8X24_UINT || TextureFormat == TEX_FORMAT_R32G8X24_TYPELESS)
+                ViewDesc.Format = TEX_FORMAT_X32_TYPELESS_G8X24_UINT;
+            else if (TextureFormat == TEX_FORMAT_D24_UNORM_S8_UINT || TextureFormat == TEX_FORMAT_R24G8_TYPELESS)
+                ViewDesc.Format = TEX_FORMAT_X24_TYPELESS_G8_UINT;
+            RefCntAutoPtr<ITextureView> pSRV;
+            pTestTex->CreateView(ViewDesc, &pSRV);
         }
     }
 
