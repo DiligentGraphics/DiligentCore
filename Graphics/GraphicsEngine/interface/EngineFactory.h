@@ -136,15 +136,13 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
     /// On Android platform, it is necessary to initialize the file system before
     /// CreateDefaultShaderSourceStreamFactory() method can be called.
 
-    /// \param [in] NativeActivity          - Pointer to the native activity object (ANativeActivity).
-    /// \param [in] NativeActivityClassName - Native activity class name.
-    /// \param [in] AssetManager            - Pointer to the asset manager (AAssetManager).
+    /// \param [in] ExternalFilesDir - External files directory.
+    /// \param [in] AssetManager     - A pointer to the asset manager (AAssetManager).
     ///
     /// \remarks See AndroidFileSystem::Init.
     VIRTUAL void METHOD(InitAndroidFileSystem)(THIS_
-                                               struct ANativeActivity*  NativeActivity,
-                                               const Char*              NativeActivityClassName,
-                                               struct AAssetManager*    AssetManager) CONST PURE;
+                                               const char*           ExternalFilesDir,
+                                               struct AAssetManager* AssetManager) CONST PURE;
 #endif
 };
 DILIGENT_END_INTERFACE

@@ -8,6 +8,7 @@ set(INTERFACE
     interface/AndroidPlatformDefinitions.h
     interface/AndroidPlatformMisc.hpp
     interface/AndroidNativeWindow.h
+    interface/JNIMiniHelper.hpp
     ../Linux/interface/LinuxPlatformMisc.hpp
 )
 

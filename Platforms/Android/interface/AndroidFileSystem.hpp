@@ -74,18 +74,15 @@ struct AndroidFileSystem : public BasicFileSystem
 public:
     /// Initializes the file system.
 
-    /// \param [in] NativeActivity          - Pointer to the native activity object (ANativeActivity).
-    /// \param [in] NativeActivityClassName - Native activity class name.
-    /// \param [in] AssetManager            - Pointer to the asset manager (AAssetManager).
+    /// \param [in] ExternalFilesDir - External files directory.
+    /// \param [in] AssetManager     - A pointer to the asset manager (AAssetManager).
     ///
-    /// \remarks The file system can be initialized to use either native activity or asset manager, or both.
-    ///          When NativeActivity is not null, the file system will try to use it first when opening files.
-    ///          It will then resort to using the asset manager. When NativeActivity is not null, but AssetManager
-    ///          parameter is null, the file system will use the asset manager from the activity.
-    ///          If NativeActivity is null, the file system will only use the asset manager.
-    static void Init(struct ANativeActivity* NativeActivity,
-                     const char*             NativeActivityClassName,
-                     struct AAssetManager*   AssetManager);
+    /// \remarks The file system can be initialized to use either the external assets path or asset manager, or both.
+    ///          When ExternalFilesDir is not null, the file system will try to use it first when opening files.
+    ///          It will then resort to using the asset manager.
+    ///          If ExternalFilesDir is null, the file system will only use the asset manager.
+    static void Init(const char*           ExternalFilesDir,
+                     struct AAssetManager* AssetManager);
 
 
     static AndroidFile* OpenFile(const FileOpenAttribs& OpenAttribs);
