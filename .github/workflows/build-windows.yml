@@ -39,13 +39,6 @@ jobs:
             cmake_generator: "Visual Studio 17 2022"
             cmake_args:      "-DDILIGENT_BUILD_CORE_TESTS=ON -DDILIGENT_DEVELOPMENT=ON -DDILIGENT_LOAD_PIX_EVENT_RUNTIME=ON"
 
-          - name:            "Win8.1"
-            platform:        "Win32"
-            toolset:         "x64"
-            build_type:      "Release"
-            cmake_generator: "Visual Studio 17 2022"
-            cmake_args:      "-DDILIGENT_BUILD_CORE_TESTS=ON -DCMAKE_SYSTEM_VERSION=8.1"
-
           - name:            "Win10-Ninja"
             platform:        "Win32"
             toolset:         "x64"
