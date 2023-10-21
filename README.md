@@ -1,9 +1,10 @@
 # Diligent Core [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=An%20easy-to-use%20cross-platform%20graphics%20library%20that%20takes%20full%20advantage%20of%20%23Direct3D12%20and%20%23VulkanAPI&url=https://github.com/DiligentGraphics/DiligentEngine) <img src="media/diligentgraphics-logo.png" height=64 align="right" valign="middle">
 
-Diligent Core is a modern cross-platfrom low-level graphics API that makes the foundation of [Diligent Engine](https://github.com/DiligentGraphics/DiligentEngine).
+Diligent Core is a modern cross-platfrom low-level graphics API that makes the foundation of the [Diligent Engine](https://github.com/DiligentGraphics/DiligentEngine).
 The module implements Direct3D11, Direct3D12, OpenGL, OpenGLES, and Vulkan rendering backends (Metal implementation is available for commercial clients),
 as well as basic platform-specific utilities. It is self-contained and can be built by its own.
-The module's cmake script defines a number of variables that are required to generate build files for other modules, so it must always be included first.
+Please refer to the [main repository](https://github.com/DiligentGraphics/DiligentEngine) for information about the supported platforms and features,
+build instructions, etc.
 
 | Platform             | Build Status  |
 | ---------------------| ------------- |
