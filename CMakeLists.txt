@@ -157,9 +157,10 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
     try_compile(HAS_D3D11 "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/BuildTools/CMake/CheckD3D11.cpp")
     try_compile(HAS_D3D12 "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/BuildTools/CMake/CheckD3D12.cpp")
     try_compile(HAS_ATL "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/BuildTools/CMake/CheckATL.cpp")
+    message("")
     message("Checking for Direct3D11 and Direct3D12 support:")
-    message("  d3d11.h   found: " ${HAS_D3D11})
-    message("  d3d12.h   found: " ${HAS_D3D12})
+    message("  d3d11.h found:   " ${HAS_D3D11})
+    message("  d3d12.h found:   " ${HAS_D3D12})
     message("  atlbase.h found: " ${HAS_ATL})
 
     if (HAS_D3D11 AND HAS_ATL)
@@ -312,13 +313,14 @@ if(NOT (${D3D11_SUPPORTED} OR ${D3D12_SUPPORTED} OR ${GL_SUPPORTED} OR ${GLES_SU
     message(FATAL_ERROR "No rendering backends are select to build")
 endif()
 
-
+message("")
 message("D3D11_SUPPORTED:  " ${D3D11_SUPPORTED})
 message("D3D12_SUPPORTED:  " ${D3D12_SUPPORTED})
 message("GL_SUPPORTED:     " ${GL_SUPPORTED})
 message("GLES_SUPPORTED:   " ${GLES_SUPPORTED})
 message("VULKAN_SUPPORTED: " ${VULKAN_SUPPORTED})
 message("METAL_SUPPORTED:  " ${METAL_SUPPORTED})
+message("")
 
 target_compile_definitions(Diligent-PublicBuildSettings
 INTERFACE
