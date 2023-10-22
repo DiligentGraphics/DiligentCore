@@ -4152,6 +4152,11 @@ struct TextureFormatAttribs
     }
 
     constexpr TextureFormatAttribs() noexcept {}
+
+    constexpr bool IsDepthStencil() const noexcept
+    {
+        return ComponentType == COMPONENT_TYPE_DEPTH || ComponentType == COMPONENT_TYPE_DEPTH_STENCIL;
+    }
 #endif
 };
 typedef struct TextureFormatAttribs TextureFormatAttribs;
