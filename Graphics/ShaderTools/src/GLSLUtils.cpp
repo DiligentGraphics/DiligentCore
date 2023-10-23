@@ -318,7 +318,10 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
         // (search for "Input Layout Qualifiers" and "Output Layout Qualifiers").
         Attribs.UseInOutLocationQualifiers = DeviceInfo.Features.SeparablePrograms;
         auto ConvertedSource               = Converter.Convert(Attribs);
-
+        if (ConvertedSource.empty())
+        {
+            LOG_ERROR_AND_THROW("Failed to convert HLSL source to GLSL");
+        }
         GLSLSource.append(ConvertedSource);
 #endif
     }
