@@ -176,16 +176,20 @@ void Texture1D_GL::UpdateData(GLContextState&          ContextState,
     ContextState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
-void Texture1D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint)
+void Texture1D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint, FRAMEBUFFER_TARGET_FLAGS Targets)
 {
     // For glFramebufferTexture1D(), if texture name is not zero, then texture target must be GL_TEXTURE_1D
-    if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+    if (Targets & FRAMEBUFFER_TARGET_FLAG_DRAW)
     {
+        VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
         glFramebufferTexture1D(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
         CHECK_GL_ERROR("Failed to attach texture 1D to draw framebuffer");
     }
-    glFramebufferTexture1D(GL_READ_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
-    CHECK_GL_ERROR("Failed to attach texture 1D to read framebuffer");
+    if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
+    {
+        glFramebufferTexture1D(GL_READ_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
+        CHECK_GL_ERROR("Failed to attach texture 1D to read framebuffer");
+    }
 }
 
 void Texture1D_GL::CopyTexSubimage(GLContextState& GLState, const CopyTexSubimageAttribs& Attribs)

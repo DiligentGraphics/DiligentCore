@@ -275,17 +275,21 @@ void Texture2D_GL::UpdateData(GLContextState&          ContextState,
     ContextState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
-void Texture2D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint)
+void Texture2D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint, FRAMEBUFFER_TARGET_FLAGS Targets)
 {
     // For glFramebufferTexture2D(), if texture name is not zero, then texture target must be GL_TEXTURE_2D,
     // GL_TEXTURE_RECTANGLE or one of the 6 cubemap face targets GL_TEXTURE_CUBE_MAP_POSITIVE_X, ...
-    if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+    if (Targets & FRAMEBUFFER_TARGET_FLAG_DRAW)
     {
+        VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
         glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
         CHECK_GL_ERROR("Failed to attach texture 2D to draw framebuffer");
     }
-    glFramebufferTexture2D(GL_READ_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
-    CHECK_GL_ERROR("Failed to attach texture 2D to read framebuffer");
+    if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
+    {
+        glFramebufferTexture2D(GL_READ_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
+        CHECK_GL_ERROR("Failed to attach texture 2D to read framebuffer");
+    }
 }
 
 void Texture2D_GL::CopyTexSubimage(GLContextState& GLState, const CopyTexSubimageAttribs& Attribs)

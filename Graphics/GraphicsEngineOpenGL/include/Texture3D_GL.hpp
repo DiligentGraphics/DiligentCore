@@ -63,7 +63,8 @@ public:
 
     /// Implementation of TextureBaseGL::AttachToFramebuffer() for 3D texture.
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc,
-                                     GLenum                        AttachmentPoint) override final;
+                                     GLenum                        AttachmentPoint,
+                                     FRAMEBUFFER_TARGET_FLAGS      Targets) override final;
 
     /// Implementation of TextureBaseGL::CopyTexSubimage() for 3D texture.
     virtual void CopyTexSubimage(GLContextState& GLState, const CopyTexSubimageAttribs& Attribs) override final;

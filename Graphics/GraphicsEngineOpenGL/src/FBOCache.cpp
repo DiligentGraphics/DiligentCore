@@ -133,7 +133,7 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
         {
             const auto& RTVDesc     = pRTView->GetDesc();
             auto*       pColorTexGL = pRTView->GetTexture<TextureBaseGL>();
-            pColorTexGL->AttachToFramebuffer(RTVDesc, GL_COLOR_ATTACHMENT0 + rt);
+            pColorTexGL->AttachToFramebuffer(RTVDesc, GL_COLOR_ATTACHMENT0 + rt, TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_READ_DRAW);
         }
     }
 
@@ -172,7 +172,11 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
         {
             UNEXPECTED(GetTextureFormatAttribs(DSVDesc.Format).Name, " is not valid depth-stencil view format");
         }
-        pDepthTexGL->AttachToFramebuffer(DSVDesc, AttachmentPoint);
+        VERIFY_EXPR(DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL || DSVDesc.ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL);
+        pDepthTexGL->AttachToFramebuffer(DSVDesc, AttachmentPoint,
+                                         DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL ?
+                                             TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_READ_DRAW :
+                                             TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_READ);
     }
 
     if (NumRenderTargets > 0)
@@ -372,7 +376,7 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetReadFBO(TextureBaseGL* pT
         glBindFramebuffer(GL_READ_FRAMEBUFFER, NewFBO);
         DEV_CHECK_GL_ERROR("Failed to bind new FBO as read framebuffer");
 
-        pTex->AttachToFramebuffer(RTV0, GetFramebufferAttachmentPoint(TexDesc.Format));
+        pTex->AttachToFramebuffer(RTV0, GetFramebufferAttachmentPoint(TexDesc.Format), TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_READ);
 
         GLenum Status = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER);
         if (Status != GL_FRAMEBUFFER_COMPLETE)

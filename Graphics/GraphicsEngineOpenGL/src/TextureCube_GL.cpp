@@ -251,17 +251,21 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
     ContextState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
-void TextureCube_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint)
+void TextureCube_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint, FRAMEBUFFER_TARGET_FLAGS Targets)
 {
     if (ViewDesc.NumArraySlices == m_Desc.ArraySize)
     {
-        if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+        if (Targets & FRAMEBUFFER_TARGET_FLAG_DRAW)
         {
+            VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
             glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
             CHECK_GL_ERROR("Failed to attach texture cube to draw framebuffer");
         }
-        glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-        CHECK_GL_ERROR("Failed to attach texture cube to read framebuffer");
+        if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
+        {
+            glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
+            CHECK_GL_ERROR("Failed to attach texture cube to read framebuffer");
+        }
     }
     else if (ViewDesc.NumArraySlices == 1)
     {
@@ -273,13 +277,17 @@ void TextureCube_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum
         // GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
         // GL_TEXTURE_CUBE_MAP_NEGATIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
         // or GL_TEXTURE_2D_MULTISAMPLE.
-        if (ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+        if (Targets & FRAMEBUFFER_TARGET_FLAG_DRAW)
         {
+            VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
             glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, AttachmentPoint, CubeMapFaceBindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
             CHECK_GL_ERROR("Failed to attach texture cube face to draw framebuffer");
         }
-        glFramebufferTexture2D(GL_READ_FRAMEBUFFER, AttachmentPoint, CubeMapFaceBindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
-        CHECK_GL_ERROR("Failed to attach texture cube face to read framebuffer");
+        if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
+        {
+            glFramebufferTexture2D(GL_READ_FRAMEBUFFER, AttachmentPoint, CubeMapFaceBindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
+            CHECK_GL_ERROR("Failed to attach texture cube face to read framebuffer");
+        }
     }
     else
     {

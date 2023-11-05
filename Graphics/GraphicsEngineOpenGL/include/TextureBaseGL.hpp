@@ -82,7 +82,14 @@ public:
 
     __forceinline void TextureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, class GLContextState& GLContextState);
 
-    virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint) = 0;
+    enum FRAMEBUFFER_TARGET_FLAGS : Uint32
+    {
+        FRAMEBUFFER_TARGET_FLAG_NONE      = 0u,
+        FRAMEBUFFER_TARGET_FLAG_READ      = 1u << 0u,
+        FRAMEBUFFER_TARGET_FLAG_DRAW      = 1u << 1u,
+        FRAMEBUFFER_TARGET_FLAG_READ_DRAW = FRAMEBUFFER_TARGET_FLAG_READ | FRAMEBUFFER_TARGET_FLAG_DRAW
+    };
+    virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint, FRAMEBUFFER_TARGET_FLAGS Targets) = 0;
 
     void CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                   TextureBaseGL*       pSrcTextureGL,
@@ -140,6 +147,8 @@ protected:
     const GLenum                   m_GLTexFormat;
     //Uint32 m_uiMapTarget;
 };
+
+DEFINE_FLAG_ENUM_OPERATORS(TextureBaseGL::FRAMEBUFFER_TARGET_FLAGS);
 
 void TextureBaseGL::TextureMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContextState& GLContextState)
 {
