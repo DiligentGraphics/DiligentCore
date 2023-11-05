@@ -346,7 +346,10 @@ inline GLenum GetFramebufferAttachmentPoint(TEXTURE_FORMAT Format)
     }
 }
 
-const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetReadFBO(TextureBaseGL* pTex, Uint32 ArraySlice, Uint32 MipLevel)
+const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(TextureBaseGL*                          pTex,
+                                                           Uint32                                  ArraySlice,
+                                                           Uint32                                  MipLevel,
+                                                           TextureBaseGL::FRAMEBUFFER_TARGET_FLAGS Targets)
 {
     const auto& TexDesc = pTex->GetDesc();
 
@@ -357,8 +360,10 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetReadFBO(TextureBaseGL* pT
     auto& RTV0{Key.RTVDescs[0]};
     RTV0.Format     = TexDesc.Format;
     RTV0.TextureDim = TexDesc.Type;
-    // Use SRV to make AttachToFramebuffer only attach to read framebuffer
-    RTV0.ViewType        = TEXTURE_VIEW_SHADER_RESOURCE;
+    RTV0.ViewType   = (Targets & TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_DRAW) ?
+        TEXTURE_VIEW_RENDER_TARGET : // Also OK for depth attachments
+        TEXTURE_VIEW_SHADER_RESOURCE;
+
     RTV0.FirstArraySlice = ArraySlice;
     RTV0.MostDetailedMip = MipLevel;
     RTV0.NumArraySlices  = 1;
@@ -373,10 +378,18 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetReadFBO(TextureBaseGL* pT
         // Create a new FBO
         GLObjectWrappers::GLFrameBufferObj NewFBO{true};
 
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, NewFBO);
-        DEV_CHECK_GL_ERROR("Failed to bind new FBO as read framebuffer");
+        if (Targets & TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_READ)
+        {
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, NewFBO);
+            DEV_CHECK_GL_ERROR("Failed to bind new FBO as read framebuffer");
+        }
+        if (Targets & TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_DRAW)
+        {
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, NewFBO);
+            DEV_CHECK_GL_ERROR("Failed to bind new FBO as draw framebuffer");
+        }
 
-        pTex->AttachToFramebuffer(RTV0, GetFramebufferAttachmentPoint(TexDesc.Format), TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_READ);
+        pTex->AttachToFramebuffer(RTV0, GetFramebufferAttachmentPoint(TexDesc.Format), Targets);
 
         GLenum Status = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER);
         if (Status != GL_FRAMEBUFFER_COMPLETE)

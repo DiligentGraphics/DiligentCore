@@ -625,10 +625,22 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
     else
 #endif
     {
+        bool UseBlitFramebuffer = IsDefaultBackBuffer;
+        if (!UseBlitFramebuffer && m_pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_GLES)
+        {
+            const auto& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
+                FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            {
+                // glCopyTexSubImage* does not support depth formats in GLES
+                UseBlitFramebuffer = true;
+            }
+        }
+
         auto& GLState = pDeviceCtxGL->GetContextState();
 
-        // Copy operations (glCopyTexSubImage2D and family, glBindFramebuffer) are affected by scissor test!
-        GLboolean ScissorEnabled = GLState.GetScissorTestEnabled();
+        // Copy operations (glCopyTexSubImage* and glBindFramebuffer) are affected by scissor test!
+        auto ScissorEnabled = GLState.GetScissorTestEnabled();
         if (ScissorEnabled)
             GLState.EnableScissorTest(false);
 
@@ -643,8 +655,8 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                 VERIFY_EXPR(SrcSlice == 0 || SrcTexDesc.IsArray());
                 VERIFY_EXPR((pSrcBox->MinZ == 0 && DepthSlice == 0) || SrcTexDesc.Is3D());
                 const auto SrcFramebufferSlice = SrcSlice + pSrcBox->MinZ + DepthSlice;
-                // NOTE: GetReadFBO may bind a framebuffer.
-                const auto& ReadFBO = FBOCache.GetReadFBO(pSrcTextureGL, SrcFramebufferSlice, SrcMipLevel);
+                // NOTE: GetFBO may bind a framebuffer, so we need to invalidate it in the GL context state.
+                const auto& ReadFBO = FBOCache.GetFBO(pSrcTextureGL, SrcFramebufferSlice, SrcMipLevel, TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_READ);
 
                 SrcFboHandle = ReadFBO;
             }
@@ -654,8 +666,10 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
             }
             glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFboHandle);
             DEV_CHECK_GL_ERROR("Failed to bind read framebuffer");
+            DEV_CHECK_ERR(glCheckFramebufferStatus(GL_READ_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+                          "Read framebuffer is incomplete: ", GetFramebufferStatusString(glCheckFramebufferStatus(GL_READ_FRAMEBUFFER)));
 
-            if (!IsDefaultBackBuffer)
+            if (!UseBlitFramebuffer)
             {
                 CopyTexSubimageAttribs CopyAttribs{*pSrcBox};
                 CopyAttribs.DstMip   = DstMipLevel;
@@ -667,14 +681,29 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
             }
             else
             {
-                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, pDeviceCtxGL->GetDefaultFBO());
-                GLenum Status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
-                if (Status != GL_FRAMEBUFFER_COMPLETE)
+                GLuint DstFboHandle = 0;
+                if (IsDefaultBackBuffer)
                 {
-                    const Char* StatusString = GetFramebufferStatusString(Status);
-                    LOG_ERROR("Draw framebuffer is incomplete. FB status: ", StatusString);
-                    UNEXPECTED("Draw framebuffer is incomplete");
+                    DstFboHandle = pDeviceCtxGL->GetDefaultFBO();
                 }
+                else
+                {
+                    // Get draw framebuffer for the destination subimage
+
+                    auto& FBOCache = m_pDevice->GetFBOCache(GLState.GetCurrentGLContext());
+                    VERIFY_EXPR(DstSlice == 0 || m_Desc.IsArray());
+                    VERIFY_EXPR((DstZ == 0 && DepthSlice == 0) || m_Desc.Is3D());
+                    const auto DstFramebufferSlice = DstSlice + DstZ + DepthSlice;
+                    // NOTE: GetFBO may bind a framebuffer, so we need to invalidate it in the GL context state.
+                    const auto& DrawFBO = FBOCache.GetFBO(this, DstFramebufferSlice, DstMipLevel, TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_DRAW);
+
+                    DstFboHandle = DrawFBO;
+                }
+
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DstFboHandle);
+                DEV_CHECK_GL_ERROR("Failed to bind draw framebuffer");
+                DEV_CHECK_ERR(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+                              "Draw framebuffer is incomplete: ", GetFramebufferStatusString(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER)));
 
                 const auto CopyMask = GetFramebufferCopyMask(SrcTexDesc.Format);
                 DEV_CHECK_ERR(CopyMask == GetFramebufferCopyMask(m_Desc.Format),

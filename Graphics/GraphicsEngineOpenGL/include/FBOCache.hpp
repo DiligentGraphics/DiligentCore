@@ -32,11 +32,11 @@
 #include "SpinLock.hpp"
 #include "HashUtils.hpp"
 #include "GLObjectWrapper.hpp"
+#include "TextureBaseGL.hpp"
 
 namespace Diligent
 {
 
-class TextureBaseGL;
 class TextureViewGLImpl;
 class GLContextState;
 
@@ -68,7 +68,7 @@ public:
     const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32 Width, Uint32 Height, GLContextState& ContextState);
 
     // NOTE: the function may bind a framebuffer, so the FBO in the GL context state must be invalidated.
-    const GLObjectWrappers::GLFrameBufferObj& GetReadFBO(TextureBaseGL* pTex, Uint32 ArraySlice, Uint32 MipLevel);
+    const GLObjectWrappers::GLFrameBufferObj& GetFBO(TextureBaseGL* pTex, Uint32 ArraySlice, Uint32 MipLevel, TextureBaseGL::FRAMEBUFFER_TARGET_FLAGS Targets);
 
     void OnReleaseTexture(ITexture* pTexture);
 
