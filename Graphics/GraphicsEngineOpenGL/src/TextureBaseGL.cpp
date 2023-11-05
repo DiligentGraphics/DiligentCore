@@ -627,6 +627,11 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
     {
         auto& GLState = pDeviceCtxGL->GetContextState();
 
+        // Copy operations (glCopyTexSubImage2D and family, glBindFramebuffer) are affected by scissor test!
+        GLboolean ScissorEnabled = GLState.GetScissorTestEnabled();
+        if (ScissorEnabled)
+            GLState.EnableScissorTest(false);
+
         for (Uint32 DepthSlice = 0; DepthSlice < pSrcBox->Depth(); ++DepthSlice)
         {
             GLuint SrcFboHandle = 0;
@@ -687,6 +692,9 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                 DEV_CHECK_GL_ERROR("Failed to blit framebuffer");
             }
         }
+
+        if (ScissorEnabled)
+            GLState.EnableScissorTest(true);
 
         // Invalidate FBO as we used glBindFramebuffer directly
         GLState.InvalidateFBO();

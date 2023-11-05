@@ -120,6 +120,18 @@ public:
     };
     const ContextCaps& GetContextCaps() { return m_Caps; }
 
+    // glBlitFramebuffer respects scissor test, which is never what we want
+    void BlitFramebufferNoScissor(GLint      srcX0,
+                                  GLint      srcY0,
+                                  GLint      srcX1,
+                                  GLint      srcY1,
+                                  GLint      dstX0,
+                                  GLint      dstY0,
+                                  GLint      dstX1,
+                                  GLint      dstY1,
+                                  GLbitfield mask,
+                                  GLenum     filter);
+
 private:
     // It is unsafe to use GL handle to keep track of bound objects
     // When an object is released, GL is free to reuse its handle for

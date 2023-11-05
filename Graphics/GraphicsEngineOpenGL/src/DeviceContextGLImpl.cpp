@@ -563,12 +563,12 @@ void DeviceContextGLImpl::EndSubpass()
         DEV_CHECK_GL_ERROR("Failed to bind resolve destination FBO as draw framebuffer");
 
         const auto& FBODesc = m_pBoundFramebuffer->GetDesc();
-        glBlitFramebuffer(0, 0, static_cast<GLint>(FBODesc.Width), static_cast<GLint>(FBODesc.Height),
-                          0, 0, static_cast<GLint>(FBODesc.Width), static_cast<GLint>(FBODesc.Height),
-                          GL_COLOR_BUFFER_BIT,
-                          GL_NEAREST // Filter is ignored
+        m_ContextState.BlitFramebufferNoScissor(
+            0, 0, static_cast<GLint>(FBODesc.Width), static_cast<GLint>(FBODesc.Height),
+            0, 0, static_cast<GLint>(FBODesc.Width), static_cast<GLint>(FBODesc.Height),
+            GL_COLOR_BUFFER_BIT,
+            GL_NEAREST // Filter is ignored
         );
-        DEV_CHECK_GL_ERROR("glBlitFramebuffer() failed when resolving multi-sampled attachments");
     }
 
     if (glInvalidateFramebuffer != nullptr)
@@ -1741,12 +1741,12 @@ void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                   
     DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
 
     const auto& MipAttribs = GetMipLevelProperties(SrcTexDesc, ResolveAttribs.SrcMipLevel);
-    glBlitFramebuffer(0, 0, static_cast<GLint>(MipAttribs.LogicalWidth), static_cast<GLint>(MipAttribs.LogicalHeight),
-                      0, 0, static_cast<GLint>(MipAttribs.LogicalWidth), static_cast<GLint>(MipAttribs.LogicalHeight),
-                      GL_COLOR_BUFFER_BIT,
-                      GL_NEAREST // Filter is ignored
+    m_ContextState.BlitFramebufferNoScissor(
+        0, 0, static_cast<GLint>(MipAttribs.LogicalWidth), static_cast<GLint>(MipAttribs.LogicalHeight),
+        0, 0, static_cast<GLint>(MipAttribs.LogicalWidth), static_cast<GLint>(MipAttribs.LogicalHeight),
+        GL_COLOR_BUFFER_BIT,
+        GL_NEAREST // Filter is ignored
     );
-    DEV_CHECK_GL_ERROR("glBlitFramebuffer() failed when resolving multi-sampled texture");
 
     // Restore original FBO
     m_ContextState.InvalidateFBO();
