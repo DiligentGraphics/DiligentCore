@@ -1111,6 +1111,9 @@ float2x2 MatrixFromRows(float2 row0, float2 row1)
 out gl_PerVertex
 {
     vec4 gl_Position;
+#ifdef USE_GL_POINT_SIZE
+    float gl_PointSize;
+#endif
 };
 #endif
 
@@ -1140,14 +1143,18 @@ out gl_PerVertex
 in gl_PerVertex
 {
     vec4 gl_Position;
-    //float gl_PointSize;
+#ifdef USE_GL_POINT_SIZE
+    float gl_PointSize;
+#endif
     //float gl_ClipDistance[];
 } gl_in[];
 
 out gl_PerVertex
 {
     vec4 gl_Position;
-    //float gl_PointSize;
+#ifdef USE_GL_POINT_SIZE
+    float gl_PointSize;
+#endif
     //float gl_ClipDistance[];
 };
 
@@ -1166,14 +1173,18 @@ out gl_PerVertex
 in gl_PerVertex
 {
     vec4 gl_Position;
-    //float gl_PointSize;
+#ifdef USE_GL_POINT_SIZE
+    float gl_PointSize;
+#endif
     //float gl_ClipDistance[];
 } gl_in[gl_MaxPatchVertices];
 
 out gl_PerVertex
 {
     vec4 gl_Position;
-    //float gl_PointSize;
+#ifdef USE_GL_POINT_SIZE
+    float gl_PointSize;
+#endif
     //float gl_ClipDistance[];
 } gl_out[];
 
@@ -1219,14 +1230,18 @@ void _SetGLTessLevelInner(float InnerLevel)
 in gl_PerVertex
 {
     vec4 gl_Position;
-    //float gl_PointSize;
+#ifdef USE_GL_POINT_SIZE
+    float gl_PointSize;
+#endif
     //float gl_ClipDistance[];
 } gl_in[gl_MaxPatchVertices];
 
 out gl_PerVertex
 {
     vec4 gl_Position;
-    //float gl_PointSize;
+#ifdef USE_GL_POINT_SIZE
+    float gl_PointSize;
+#endif
     //float gl_ClipDistance[];
 };
 
