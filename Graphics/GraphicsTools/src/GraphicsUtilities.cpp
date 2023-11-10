@@ -48,6 +48,9 @@ void CreateUniformBuffer(IRenderDevice*   pDevice,
                          CPU_ACCESS_FLAGS CPUAccessFlags,
                          void*            pInitialData)
 {
+    if (Usage == USAGE_DEFAULT || Usage == USAGE_IMMUTABLE)
+        CPUAccessFlags = CPU_ACCESS_NONE;
+
     BufferDesc CBDesc;
     CBDesc.Name           = Name;
     CBDesc.Size           = Size;
