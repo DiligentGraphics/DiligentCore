@@ -213,6 +213,8 @@ void GLContextState::SetActiveTexture(Int32 Index)
 
 void GLContextState::BindTexture(Int32 Index, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& TexObj)
 {
+    VERIFY_EXPR(BindTarget != 0);
+
     if (Index < 0)
     {
         Index += m_Caps.MaxCombinedTexUnits;

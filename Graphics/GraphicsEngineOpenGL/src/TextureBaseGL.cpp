@@ -728,7 +728,9 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
         // Invalidate FBO as we used glBindFramebuffer directly
         GLState.InvalidateFBO();
 
-        GLState.BindTexture(-1, GetBindTarget(), GLObjectWrappers::GLTextureObj::Null());
+        if (!UseBlitFramebuffer)
+            GLState.BindTexture(-1, GetBindTarget(), GLObjectWrappers::GLTextureObj::Null());
+
         pDeviceCtxGL->CommitRenderTargets();
     }
 }
