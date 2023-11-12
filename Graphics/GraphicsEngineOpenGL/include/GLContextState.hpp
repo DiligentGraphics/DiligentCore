@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +28,7 @@
 #pragma once
 
 #include <limits>
+#include <vector>
 
 #include "GraphicsTypes.h"
 #include "GLObjectWrapper.hpp"
@@ -145,6 +146,20 @@ private:
     UniqueIdentifier m_VAOId        = -1;
     UniqueIdentifier m_FBOId        = -1;
 
+    struct BoundTextureInfo
+    {
+        UniqueIdentifier TexID      = -1;
+        GLenum           BindTarget = 0;
+
+        constexpr bool operator!=(const BoundTextureInfo& rhs) const
+        {
+            // clang-format off
+            return TexID      != rhs.TexID      ||
+                   BindTarget != rhs.BindTarget;
+            // clang-format on
+        }
+    };
+
     struct BoundBufferInfo
     {
         BoundBufferInfo() {}
@@ -161,7 +176,7 @@ private:
         GLintptr         Offset   = 0;
         GLsizeiptr       Size     = 0;
 
-        bool operator!=(const BoundBufferInfo& rhs) const
+        constexpr bool operator!=(const BoundBufferInfo& rhs) const
         {
             // clang-format off
             return BufferID != rhs.BufferID ||
@@ -201,7 +216,7 @@ private:
         // clang-format on
         {}
 
-        bool operator!=(const BoundImageInfo& rhs) const
+        constexpr bool operator!=(const BoundImageInfo& rhs) const
         {
             // clang-format off
             return InterfaceID != rhs.InterfaceID ||
@@ -215,7 +230,7 @@ private:
         }
     };
 
-    std::vector<UniqueIdentifier> m_BoundTextures;
+    std::vector<BoundTextureInfo> m_BoundTextures;
     std::vector<UniqueIdentifier> m_BoundSamplers;
     std::vector<BoundBufferInfo>  m_BoundUniformBuffers;
     std::vector<BoundImageInfo>   m_BoundImages;
