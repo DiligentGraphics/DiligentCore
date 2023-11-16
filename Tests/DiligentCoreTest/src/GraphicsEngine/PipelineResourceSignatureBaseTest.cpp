@@ -49,7 +49,7 @@ TEST(PipelineResourceSignatureBaseTest, Compatibility)
         EXPECT_NE(CalculatePipelineResourceSignatureDescHash(NullDesc1), CalculatePipelineResourceSignatureDescHash(NullDesc2));
     }
 
-    constexpr PipelineResourceDesc RefRes[] = //
+    const PipelineResourceDesc RefRes[] = //
         {
             {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "Buff", 2u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY},
             {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "Tex", 4u, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY} //
