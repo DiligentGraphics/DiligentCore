@@ -25,6 +25,8 @@
  *  of the possibility of such damages.
  */
 
+#include "GLSLangUtils.hpp"
+
 #include <unordered_set>
 #include <unordered_map>
 #include <memory>
@@ -39,7 +41,8 @@
 #    include "SPIRV/GlslangToSpv.h"
 #endif
 
-#include "GLSLangUtils.hpp"
+#include "glslang/Public/ShaderLang.h"
+
 #include "DebugUtilities.hpp"
 #include "DataBlobImpl.hpp"
 #include "RefCntAutoPtr.hpp"
