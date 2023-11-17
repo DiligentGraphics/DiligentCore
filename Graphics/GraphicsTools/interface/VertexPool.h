@@ -194,6 +194,10 @@ struct IVertexPool : public IObject
     ///             access.
     virtual IBuffer* Update(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
 
+    /// Updates all internal buffers.
+    ///
+    /// \remarks    This method is equivalent to calling Update() for each internal buffer.
+    virtual void UpdateAll(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
 
     /// Returns a pointer to the internal buffer at the given index.
     ///

@@ -220,6 +220,12 @@ public:
         return Buffer.Update(pDevice, pContext);
     }
 
+    virtual void UpdateAll(IRenderDevice* pDevice, IDeviceContext* pContext) override final
+    {
+        for (Uint32 i = 0; i < m_Buffers.size(); ++i)
+            Update(i, pDevice, pContext);
+    }
+
     virtual IBuffer* GetBuffer(Uint32 Index) const override final
     {
         if (Index >= m_Buffers.size())
