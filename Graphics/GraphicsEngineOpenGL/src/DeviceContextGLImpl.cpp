@@ -837,7 +837,7 @@ void DeviceContextGLImpl::PostDraw()
 
 void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
 {
-    DvpVerifyDrawArguments(Attribs);
+    TDeviceContextBase::Draw(Attribs, 0);
 
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, false, GlTopology);
@@ -863,7 +863,7 @@ void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
 
 void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedArguments(Attribs);
+    TDeviceContextBase::DrawIndexed(Attribs, 0);
 
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
@@ -948,7 +948,7 @@ void DeviceContextGLImpl::PrepareForIndirectDrawCount(IBuffer* pCountBuffer)
 
 void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndirectArguments(Attribs);
+    TDeviceContextBase::DrawIndirect(Attribs, 0);
 
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
@@ -1022,7 +1022,7 @@ void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 
 void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedIndirectArguments(Attribs);
+    TDeviceContextBase::DrawIndexedIndirect(Attribs, 0);
 
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
@@ -1114,7 +1114,7 @@ void DeviceContextGLImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
 
 void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 {
-    DvpVerifyDispatchArguments(Attribs);
+    TDeviceContextBase::DispatchCompute(Attribs, 0);
 
 #if GL_ARB_compute_shader
     // The program might have changed since the last SetPipelineState call if a shader was
@@ -1144,7 +1144,7 @@ void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 
 void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs)
 {
-    DvpVerifyDispatchIndirectArguments(Attribs);
+    TDeviceContextBase::DispatchComputeIndirect(Attribs, 0);
 
 #if GL_ARB_compute_shader
     // The program might have changed since the last SetPipelineState call if a shader was

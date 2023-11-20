@@ -301,6 +301,16 @@ public:
         UNSUPPORTED("Tile pipeline is not supported by this device. Please check DeviceFeatures.TileShaders feature.");
     }
 
+    virtual void DILIGENT_CALL_TYPE ClearStats() override final
+    {
+        m_Stats = {};
+    }
+
+    virtual const DeviceContextStats& DILIGENT_CALL_TYPE GetStats() const override final
+    {
+        return m_Stats;
+    }
+
     /// Returns currently bound pipeline state and blend factors
     inline void GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef);
 
@@ -514,16 +524,6 @@ protected:
 
 #ifdef DILIGENT_DEVELOPMENT
     // clang-format off
-    void DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs) const;
-    void DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs) const;
-    void DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs) const;
-    void DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs) const;
-    void DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs) const;
-    void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs) const;
-
-    void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const;
-    void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs) const;
-
     void DvpVerifyDispatchTileArguments(const DispatchTileAttribs& Attribs) const;
 
     void DvpVerifyRenderTargets() const;
@@ -540,16 +540,6 @@ protected:
         std::function<PipelineResourceSignatureImplType*(Uint32)> CustomGetSignature = nullptr) const;
 #else
     // clang-format off
-    void DvpVerifyDrawArguments                 (const DrawAttribs&                  Attribs) const {}
-    void DvpVerifyDrawIndexedArguments          (const DrawIndexedAttribs&           Attribs) const {}
-    void DvpVerifyDrawMeshArguments             (const DrawMeshAttribs&              Attribs) const {}
-    void DvpVerifyDrawIndirectArguments         (const DrawIndirectAttribs&          Attribs) const {}
-    void DvpVerifyDrawIndexedIndirectArguments  (const DrawIndexedIndirectAttribs&   Attribs) const {}
-    void DvpVerifyDrawMeshIndirectArguments     (const DrawMeshIndirectAttribs&      Attribs) const {}
-
-    void DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs) const {}
-    void DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs) const {}
-
     void DvpVerifyDispatchTileArguments(const DispatchTileAttribs& Attribs) const {}
 
     void DvpVerifyRenderTargets()const {}
@@ -561,15 +551,24 @@ protected:
     // clang-format on
 #endif
 
-    void BuildBLAS(const BuildBLASAttribs& Attribs, int) const;
-    void BuildTLAS(const BuildTLASAttribs& Attribs, int) const;
-    void CopyBLAS(const CopyBLASAttribs& Attribs, int) const;
-    void CopyTLAS(const CopyTLASAttribs& Attribs, int) const;
-    void WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const;
-    void WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const;
-    void TraceRays(const TraceRaysAttribs& Attribs, int) const;
-    void TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, int) const;
-    void UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const;
+    void Draw(const DrawAttribs& Attribs, int);
+    void DrawIndexed(const DrawIndexedAttribs& Attribs, int);
+    void DrawIndirect(const DrawIndirectAttribs& Attribs, int);
+    void DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, int);
+    void DrawMesh(const DrawMeshAttribs& Attribs, int);
+    void DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, int);
+    void DispatchCompute(const DispatchComputeAttribs& Attribs, int);
+    void DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, int);
+
+    void BuildBLAS(const BuildBLASAttribs& Attribs, int);
+    void BuildTLAS(const BuildTLASAttribs& Attribs, int);
+    void CopyBLAS(const CopyBLASAttribs& Attribs, int);
+    void CopyTLAS(const CopyTLASAttribs& Attribs, int);
+    void WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int);
+    void WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int);
+    void TraceRays(const TraceRaysAttribs& Attribs, int);
+    void TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, int);
+    void UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int);
 
     void BeginDebugGroup(const Char* Name, const float* pColor, int);
     void EndDebugGroup(int);
@@ -577,7 +576,7 @@ protected:
 
     void SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COMBINER PrimitiveCombiner, SHADING_RATE_COMBINER TextureCombiner, int) const;
 
-    void BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs, int) const;
+    void BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs, int);
 
 protected:
     static constexpr Uint32 DrawMeshIndirectCommandStride = sizeof(Uint32) * 3; // D3D12: 12 bytes (x, y, z dimension)
@@ -672,6 +671,8 @@ protected:
     // will be submitted.
     DeviceContextIndex m_DstImmediateContextId{INVALID_CONTEXT_ID};
 
+    DeviceContextStats m_Stats;
+
 #ifdef DILIGENT_DEBUG
     // std::unordered_map is unbelievably slow. Keeping track of mapped buffers
     // in release builds is not feasible
@@ -750,6 +751,8 @@ inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
     // Remove null buffers from the end of the array
     while (m_NumVertexStreams > 0 && !m_VertexStreams[m_NumVertexStreams - 1].pBuffer)
         m_VertexStreams[m_NumVertexStreams--] = VertexStreamInfo<BufferImplType>{};
+
+    ++m_Stats.CommandCounters.SetVertexBuffers;
 }
 
 template <typename ImplementationTraits>
@@ -762,6 +765,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetPipelineState(
                   "PSO '", pPipelineState->GetDesc().Name, "' can't be used in device context '", m_Desc.Name, "'.");
 
     m_pPipelineState = std::move(pPipelineState);
+    ++m_Stats.CommandCounters.SetPipelineState;
 }
 
 template <typename ImplementationTraits>
@@ -776,6 +780,8 @@ inline void DeviceContextBase<ImplementationTraits>::CommitShaderResources(
                   "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
     DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "pShaderResourceBinding must not be null");
+
+    ++m_Stats.CommandCounters.CommitShaderResources;
 }
 
 template <typename ImplementationTraits>
@@ -809,6 +815,8 @@ inline void DeviceContextBase<ImplementationTraits>::SetIndexBuffer(
                       "Buffer '", BuffDesc.Name ? BuffDesc.Name : "", "' being bound as index buffer was not created with BIND_INDEX_BUFFER flag");
     }
 #endif
+
+    ++m_Stats.CommandCounters.SetIndexBuffer;
 }
 
 
@@ -843,6 +851,9 @@ inline bool DeviceContextBase<ImplementationTraits>::SetBlendFactors(const float
             FactorsDiffer = true;
         m_BlendFactors[f] = BlendFactors[f];
     }
+    if (FactorsDiffer)
+        ++m_Stats.CommandCounters.SetBlendFactors;
+
     return FactorsDiffer;
 }
 
@@ -854,6 +865,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetStencilRef(Uint32 Stenci
     if (m_StencilRef != StencilRef)
     {
         m_StencilRef = StencilRef;
+        ++m_Stats.CommandCounters.SetStencilRef;
         return true;
     }
     return false;
@@ -897,6 +909,8 @@ inline void DeviceContextBase<ImplementationTraits>::SetViewports(
         DEV_CHECK_ERR(m_Viewports[vp].Height >= 0, "Incorrect viewport height (", m_Viewports[vp].Height, ")");
         DEV_CHECK_ERR(m_Viewports[vp].MaxDepth >= m_Viewports[vp].MinDepth, "Incorrect viewport depth range [", m_Viewports[vp].MinDepth, ", ", m_Viewports[vp].MaxDepth, "]");
     }
+
+    ++m_Stats.CommandCounters.SetViewports;
 }
 
 template <typename ImplementationTraits>
@@ -939,6 +953,8 @@ inline void DeviceContextBase<ImplementationTraits>::SetScissorRects(
         DEV_CHECK_ERR(m_ScissorRects[sr].left <= m_ScissorRects[sr].right, "Incorrect horizontal bounds for a scissor rect [", m_ScissorRects[sr].left, ", ", m_ScissorRects[sr].right, ")");
         DEV_CHECK_ERR(m_ScissorRects[sr].top <= m_ScissorRects[sr].bottom, "Incorrect vertical bounds for a scissor rect [", m_ScissorRects[sr].top, ", ", m_ScissorRects[sr].bottom, ")");
     }
+
+    ++m_Stats.CommandCounters.SetScissorRects;
 }
 
 template <typename ImplementationTraits>
@@ -1133,6 +1149,9 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
         }
     }
 #endif
+
+    if (bBindRenderTargets)
+        ++m_Stats.CommandCounters.SetRenderTargets;
 
     return bBindRenderTargets;
 }
@@ -1547,6 +1566,8 @@ inline void DeviceContextBase<ImplementationTraits>::ClearDepthStencil(ITextureV
         }
     }
 #endif
+
+    ++m_Stats.CommandCounters.ClearDepthStencil;
 }
 
 template <typename ImplementationTraits>
@@ -1590,6 +1611,8 @@ inline void DeviceContextBase<ImplementationTraits>::ClearRenderTarget(ITextureV
         }
     }
 #endif
+
+    ++m_Stats.CommandCounters.ClearRenderTarget;
 }
 
 template <typename ImplementationTraits>
@@ -1605,6 +1628,8 @@ inline void DeviceContextBase<ImplementationTraits>::BeginQuery(IQuery* pQuery, 
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "BeginQuery for query type ", GetQueryTypeString(QueryType));
 
     ClassPtrCast<QueryImplType>(pQuery)->OnBeginQuery(static_cast<DeviceContextImplType*>(this));
+
+    ++m_Stats.CommandCounters.BeginQuery;
 }
 
 template <typename ImplementationTraits>
@@ -1653,6 +1678,8 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateBuffer(
         DEV_CHECK_ERR(Size + Offset <= BuffDesc.Size, "Unable to update buffer '", BuffDesc.Name, "': Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,", BuffDesc.Size, ")");
     }
 #endif
+
+    ++m_Stats.CommandCounters.UpdateBuffer;
 }
 
 template <typename ImplementationTraits>
@@ -1677,6 +1704,8 @@ inline void DeviceContextBase<ImplementationTraits>::CopyBuffer(
         DEV_CHECK_ERR(SrcOffset + Size <= SrcBufferDesc.Size, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,", SrcBufferDesc.Size, ")");
     }
 #endif
+
+    ++m_Stats.CommandCounters.CopyBuffer;
 }
 
 template <typename ImplementationTraits>
@@ -1735,6 +1764,8 @@ inline void DeviceContextBase<ImplementationTraits>::MapBuffer(
         DEV_CHECK_ERR(BuffDesc.Usage == USAGE_DYNAMIC || BuffDesc.Usage == USAGE_STAGING, "Only dynamic and staging buffers can be mapped with discard flag");
         DEV_CHECK_ERR(MapType == MAP_WRITE, "MAP_FLAG_DISCARD is only valid when mapping buffer for writing");
     }
+
+    ++m_Stats.CommandCounters.MapBuffer;
 }
 
 template <typename ImplementationTraits>
@@ -1767,6 +1798,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateTexture(
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "UpdateTexture command must be used outside of render pass.");
 
     ValidateUpdateTextureParams(pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData);
+    ++m_Stats.CommandCounters.UpdateTexture;
 }
 
 template <typename ImplementationTraits>
@@ -1778,6 +1810,7 @@ inline void DeviceContextBase<ImplementationTraits>::CopyTexture(const CopyTextu
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "CopyTexture command must be used outside of render pass.");
 
     ValidateCopyTextureParams(CopyAttribs);
+    ++m_Stats.CommandCounters.CopyTexture;
 }
 
 template <typename ImplementationTraits>
@@ -1792,6 +1825,7 @@ inline void DeviceContextBase<ImplementationTraits>::MapTextureSubresource(
 {
     DEV_CHECK_ERR(pTexture, "pTexture must not be null");
     ValidateMapTextureParams(pTexture->GetDesc(), MipLevel, ArraySlice, MapType, MapFlags, pMapRegion);
+    ++m_Stats.CommandCounters.MapTextureSubresource;
 }
 
 template <typename ImplementationTraits>
@@ -1820,6 +1854,7 @@ inline void DeviceContextBase<ImplementationTraits>::GenerateMips(ITextureView* 
                       "' was not created with TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION flag and can't be used to generate mipmaps.");
     }
 #endif
+    ++m_Stats.CommandCounters.GenerateMips;
 }
 
 
@@ -1839,66 +1874,79 @@ void DeviceContextBase<ImplementationTraits>::ResolveTextureSubresource(
 
     VerifyResolveTextureSubresourceAttribs(ResolveAttribs, SrcTexDesc, DstTexDesc);
 #endif
+    ++m_Stats.CommandCounters.ResolveTextureSubresource;
 }
 
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::BuildBLAS(const BuildBLASAttribs& Attribs, int)
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "BuildBLAS");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::BuildBLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyBuildBLASAttribs(Attribs, m_pDevice), "BuildBLASAttribs are invalid");
+
+    ++m_Stats.CommandCounters.BuildBLAS;
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::BuildTLAS(const BuildTLASAttribs& Attribs, int)
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "BuildTLAS");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::BuildTLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyBuildTLASAttribs(Attribs, m_pDevice->GetAdapterInfo().RayTracing), "BuildTLASAttribs are invalid");
+
+    ++m_Stats.CommandCounters.BuildTLAS;
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int)
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "CopyBLAS");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::CopyBLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::CopyBLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyCopyBLASAttribs(m_pDevice, Attribs), "CopyBLASAttribs are invalid");
+
+    ++m_Stats.CommandCounters.CopyBLAS;
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int)
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "CopyTLAS");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::CopyTLAS command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyCopyTLASAttribs(Attribs), "CopyTLASAttribs are invalid");
     DEV_CHECK_ERR(ClassPtrCast<TopLevelASType>(Attribs.pSrc)->ValidateContent(), "IDeviceContext::CopyTLAS: pSrc acceleration structure is not valid");
+
+    ++m_Stats.CommandCounters.CopyTLAS;
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int)
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "WriteBLASCompactedSize");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::WriteBLASCompactedSize: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::WriteBLASCompactedSize: command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyWriteBLASCompactedSizeAttribs(m_pDevice, Attribs), "WriteBLASCompactedSizeAttribs are invalid");
+
+    ++m_Stats.CommandCounters.WriteBLASCompactedSize;
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int)
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "WriteTLASCompactedSize");
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::WriteTLASCompactedSize: ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "IDeviceContext::WriteTLASCompactedSize: command must be performed outside of render pass");
     DEV_CHECK_ERR(VerifyWriteTLASCompactedSizeAttribs(m_pDevice, Attribs), "WriteTLASCompactedSizeAttribs are invalid");
+
+    ++m_Stats.CommandCounters.WriteTLASCompactedSize;
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int)
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "TraceRays");
 
@@ -1934,10 +1982,12 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
     DEV_CHECK_ERR((Attribs.DimensionX * Attribs.DimensionY * Attribs.DimensionZ) <= RTProps.MaxRayGenThreads,
                   "IDeviceContext::TraceRays command arguments are invalid: the dimension must not exceed the ",
                   RTProps.MaxRayGenThreads, " threads");
+
+    ++m_Stats.CommandCounters.TraceRays;
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs, int)
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "TraceRaysIndirect");
 
@@ -1973,10 +2023,12 @@ void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
     VERIFY(pSBTImpl->GetInternalBuffer()->CheckState(RESOURCE_STATE_RAY_TRACING),
            "SBT '", pSBTImpl->GetDesc().Name, "' internal buffer is expected to be in RESOURCE_STATE_RAY_TRACING, but current state is ",
            GetResourceStateString(pSBTImpl->GetInternalBuffer()->GetState()));
+
+    ++m_Stats.CommandCounters.TraceRaysIndirect;
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int) const
+void DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs, int)
 {
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing, "IDeviceContext::UpdateSBT: ray tracing is not supported by this device");
     DEV_CHECK_ERR((m_pDevice->GetAdapterInfo().RayTracing.CapFlags & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) != 0,
@@ -1989,6 +2041,8 @@ void DeviceContextBase<ImplementationTraits>::UpdateSBT(IShaderBindingTable* pSB
         DEV_CHECK_ERR(pUpdateIndirectBufferAttribs->pAttribsBuffer != nullptr,
                       "IDeviceContext::UpdateSBT command arguments are invalid: pUpdateIndirectBufferAttribs->pAttribsBuffer must not be null");
     }
+
+    ++m_Stats.CommandCounters.UpdateSBT;
 }
 
 template <typename ImplementationTraits>
@@ -2049,7 +2103,7 @@ void DeviceContextBase<ImplementationTraits>::SetShadingRate(SHADING_RATE BaseRa
 }
 
 template <typename ImplementationTraits>
-void DeviceContextBase<ImplementationTraits>::BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs, int) const
+void DeviceContextBase<ImplementationTraits>::BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs, int)
 {
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_SPARSE_BINDING, "BindSparseResourceMemory");
 
@@ -2057,6 +2111,8 @@ void DeviceContextBase<ImplementationTraits>::BindSparseResourceMemory(const Bin
     DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.SparseResources, "IDeviceContext::BindSparseResourceMemory: SparseResources feature must be enabled");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Can not bind sparse memory inside an active render pass.");
     DEV_CHECK_ERR(VerifyBindSparseResourceMemoryAttribs(m_pDevice, Attribs), "BindSparseResourceMemoryAttribs are invalid");
+
+    ++m_Stats.CommandCounters.BindSparseResourceMemory;
 }
 
 template <typename ImplementationTraits>
@@ -2119,137 +2175,195 @@ inline void DeviceContextBase<ImplementationTraits>::PrepareCommittedResources(C
 #endif
 }
 
+inline Uint32 GetPrimitiveCount(PRIMITIVE_TOPOLOGY Topology, Uint32 Elements)
+{
+    if (Topology >= PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST && Topology <= PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST)
+    {
+        return Elements / (Topology - PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST + 1);
+    }
+    else
+    {
+        switch (Topology)
+        {
+            case PRIMITIVE_TOPOLOGY_UNDEFINED:
+                UNEXPECTED("Undefined primitive topology");
+                return 0;
+
+            // clang-format off
+            case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:      return Elements / 3;
+            case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:     return std::max(Elements, 2u) - 2;
+            case PRIMITIVE_TOPOLOGY_POINT_LIST:         return Elements;
+            case PRIMITIVE_TOPOLOGY_LINE_LIST:          return Elements / 2;
+            case PRIMITIVE_TOPOLOGY_LINE_STRIP:         return std::max(Elements, 1u) - 1;
+            case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ:  return Elements / 6;
+            case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ: return std::max(Elements, 4u) - 4;
+            case PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ:      return Elements / 4;
+            case PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ:     return std::max(Elements, 3u) - 3;
+            // clang-format on
+            default: UNEXPECTED("Unexpected primitive topology"); return 0;
+        }
+    }
+}
+
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::Draw(const DrawAttribs& Attribs, int)
+{
 #ifdef DILIGENT_DEVELOPMENT
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0)
+    {
+        DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "Draw");
 
-template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawArguments(const DrawAttribs& Attribs) const
-{
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
+        DEV_CHECK_ERR(m_pPipelineState, "Draw command arguments are invalid: no pipeline state is bound.");
 
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "Draw");
+        DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
+                      "Draw command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
 
-    DEV_CHECK_ERR(m_pPipelineState, "Draw command arguments are invalid: no pipeline state is bound.");
-
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
-                  "Draw command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
-
-    DEV_CHECK_ERR(VerifyDrawAttribs(Attribs), "DrawAttribs are invalid");
+        DEV_CHECK_ERR(VerifyDrawAttribs(Attribs), "DrawAttribs are invalid");
+    }
+#endif
+    if (m_pPipelineState)
+    {
+        const auto Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
+        m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.NumVertices);
+    }
+    ++m_Stats.CommandCounters.Draw;
 }
 
 template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedArguments(const DrawIndexedAttribs& Attribs) const
+inline void DeviceContextBase<ImplementationTraits>::DrawIndexed(const DrawIndexedAttribs& Attribs, int)
 {
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
+#ifdef DILIGENT_DEVELOPMENT
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0)
+    {
+        DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndexed");
 
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndexed");
+        DEV_CHECK_ERR(m_pPipelineState, "DrawIndexed command arguments are invalid: no pipeline state is bound.");
 
-    DEV_CHECK_ERR(m_pPipelineState, "DrawIndexed command arguments are invalid: no pipeline state is bound.");
+        DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
+                      "DrawIndexed command arguments are invalid: pipeline state '",
+                      m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
 
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
-                  "DrawIndexed command arguments are invalid: pipeline state '",
-                  m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
+        DEV_CHECK_ERR(m_pIndexBuffer, "DrawIndexed command arguments are invalid: no index buffer is bound.");
 
-    DEV_CHECK_ERR(m_pIndexBuffer, "DrawIndexed command arguments are invalid: no index buffer is bound.");
-
-    DEV_CHECK_ERR(VerifyDrawIndexedAttribs(Attribs), "DrawIndexedAttribs are invalid");
+        DEV_CHECK_ERR(VerifyDrawIndexedAttribs(Attribs), "DrawIndexedAttribs are invalid");
+    }
+#endif
+    if (m_pPipelineState)
+    {
+        const auto Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
+        m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.NumIndices);
+    }
+    ++m_Stats.CommandCounters.DrawIndexed;
 }
 
 template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshArguments(const DrawMeshAttribs& Attribs) const
+inline void DeviceContextBase<ImplementationTraits>::DrawMesh(const DrawMeshAttribs& Attribs, int)
 {
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
+#ifdef DILIGENT_DEVELOPMENT
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0)
+    {
+        DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawMesh");
 
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawMesh");
+        DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMesh: mesh shaders are not supported by this device");
 
-    DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMesh: mesh shaders are not supported by this device");
+        DEV_CHECK_ERR(m_pPipelineState, "DrawMesh command arguments are invalid: no pipeline state is bound.");
 
-    DEV_CHECK_ERR(m_pPipelineState, "DrawMesh command arguments are invalid: no pipeline state is bound.");
+        DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_MESH,
+                      "DrawMesh command arguments are invalid: pipeline state '",
+                      m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
 
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_MESH,
-                  "DrawMesh command arguments are invalid: pipeline state '",
-                  m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
-
-    DEV_CHECK_ERR(VerifyDrawMeshAttribs(m_pDevice->GetAdapterInfo().MeshShader, Attribs), "DrawMeshAttribs are invalid");
+        DEV_CHECK_ERR(VerifyDrawMeshAttribs(m_pDevice->GetAdapterInfo().MeshShader, Attribs), "DrawMeshAttribs are invalid");
+    }
+#endif
+    ++m_Stats.CommandCounters.DrawMesh;
 }
 
 template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndirectArguments(const DrawIndirectAttribs& Attribs) const
+inline void DeviceContextBase<ImplementationTraits>::DrawIndirect(const DrawIndirectAttribs& Attribs, int)
 {
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
+#ifdef DILIGENT_DEVELOPMENT
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0)
+    {
+        DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndirect");
 
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndirect");
+        DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
+                      "DrawIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
+        // There is no need to check DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT because an indirect buffer can only be created if this capability is supported.
 
-    DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
-                  "DrawIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
-    // There is no need to check DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT because an indirect buffer can only be created if this capability is supported.
+        DEV_CHECK_ERR(m_pPipelineState, "DrawIndirect command arguments are invalid: no pipeline state is bound.");
 
-    DEV_CHECK_ERR(m_pPipelineState, "DrawIndirect command arguments are invalid: no pipeline state is bound.");
+        DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
+                      "DrawIndirect command arguments are invalid: pipeline state '",
+                      m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
 
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
-                  "DrawIndirect command arguments are invalid: pipeline state '",
-                  m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
+        DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.AttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                      "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
+                      "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 
-    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.AttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
-                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
+        DEV_CHECK_ERR(VerifyDrawIndirectAttribs(Attribs), "DrawIndirectAttribs are invalid");
+    }
+#endif
+    ++m_Stats.CommandCounters.DrawIndirect;
+}
 
-    DEV_CHECK_ERR(VerifyDrawIndirectAttribs(Attribs), "DrawIndirectAttribs are invalid");
+
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, int)
+{
+#ifdef DILIGENT_DEVELOPMENT
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0)
+    {
+        DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndexedIndirect");
+
+        DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
+                      "DrawIndexedIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
+        // There is no need to check DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT because an indirect buffer can only be created if this capability is supported.
+
+        DEV_CHECK_ERR(m_pPipelineState, "DrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
+
+        DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
+                      "DrawIndexedIndirect command arguments are invalid: pipeline state '",
+                      m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
+
+        DEV_CHECK_ERR(m_pIndexBuffer, "DrawIndexedIndirect command arguments are invalid: no index buffer is bound.");
+
+        DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.AttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                      "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
+                      "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
+
+        DEV_CHECK_ERR(VerifyDrawIndexedIndirectAttribs(Attribs), "DrawIndexedIndirectAttribs are invalid");
+    }
+#endif
+    ++m_Stats.CommandCounters.DrawIndexedIndirect;
 }
 
 template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs) const
+inline void DeviceContextBase<ImplementationTraits>::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, int)
 {
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
+#ifdef DILIGENT_DEVELOPMENT
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0)
+    {
+        DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawMeshIndirect");
 
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawIndexedIndirect");
+        DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMeshIndirect: mesh shaders are not supported by this device");
 
-    DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
-                  "DrawIndexedIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
-    // There is no need to check DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT because an indirect buffer can only be created if this capability is supported.
+        DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
+                      "DrawMeshIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
+        // There is no need to check DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT because an indirect buffer can only be created if this capability is supported.
 
-    DEV_CHECK_ERR(m_pPipelineState, "DrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
+        DEV_CHECK_ERR(m_pPipelineState, "DrawMeshIndirect command arguments are invalid: no pipeline state is bound.");
 
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
-                  "DrawIndexedIndirect command arguments are invalid: pipeline state '",
-                  m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
+        DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_MESH,
+                      "DrawMeshIndirect command arguments are invalid: pipeline state '",
+                      m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
 
-    DEV_CHECK_ERR(m_pIndexBuffer, "DrawIndexedIndirect command arguments are invalid: no index buffer is bound.");
-
-    DEV_CHECK_ERR(m_pActiveRenderPass == nullptr || Attribs.AttribsBufferStateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                  "Resource state transitions are not allowed inside a render pass and may result in an undefined behavior. "
-                  "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
-
-    DEV_CHECK_ERR(VerifyDrawIndexedIndirectAttribs(Attribs), "DrawIndexedIndirectAttribs are invalid");
+        DEV_CHECK_ERR(VerifyDrawMeshIndirectAttribs(Attribs, DrawMeshIndirectCommandStride), "DrawMeshIndirectAttribs are invalid");
+    }
+#endif
+    ++m_Stats.CommandCounters.DrawMeshIndirect;
 }
 
-template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDrawMeshIndirectArguments(const DrawMeshIndirectAttribs& Attribs) const
-{
-    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
-        return;
-
-    DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "DrawMeshIndirect");
-
-    DEV_CHECK_ERR(m_pDevice->GetFeatures().MeshShaders, "DrawMeshIndirect: mesh shaders are not supported by this device");
-
-    DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr || (m_pDevice->GetAdapterInfo().DrawCommand.CapFlags & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) != 0,
-                  "DrawMeshIndirect command arguments are invalid: counter buffer requires DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER capability");
-    // There is no need to check DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT because an indirect buffer can only be created if this capability is supported.
-
-    DEV_CHECK_ERR(m_pPipelineState, "DrawMeshIndirect command arguments are invalid: no pipeline state is bound.");
-
-    DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_MESH,
-                  "DrawMeshIndirect command arguments are invalid: pipeline state '",
-                  m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
-
-    DEV_CHECK_ERR(VerifyDrawMeshIndirectAttribs(Attribs, DrawMeshIndirectCommandStride), "DrawMeshIndirectAttribs are invalid");
-}
-
+#ifdef DILIGENT_DEVELOPMENT
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() const
 {
@@ -2341,11 +2455,11 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() co
         }
     }
 }
-
+#endif
 
 
 template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchArguments(const DispatchComputeAttribs& Attribs) const
+inline void DeviceContextBase<ImplementationTraits>::DispatchCompute(const DispatchComputeAttribs& Attribs, int)
 {
     DEV_CHECK_ERR(m_pPipelineState, "DispatchCompute command arguments are invalid: no pipeline state is bound.");
 
@@ -2357,10 +2471,12 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchArguments(
                   "DispatchCompute command must be performed outside of render pass");
 
     DEV_CHECK_ERR(VerifyDispatchComputeAttribs(Attribs), "DispatchComputeAttribs attribs");
+
+    ++m_Stats.CommandCounters.DispatchCompute;
 }
 
 template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs) const
+inline void DeviceContextBase<ImplementationTraits>::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, int)
 {
     DEV_CHECK_ERR(m_pPipelineState, "DispatchComputeIndirect command arguments are invalid: no pipeline state is bound.");
 
@@ -2371,8 +2487,11 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchIndirectAr
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "DispatchComputeIndirect command must be performed outside of render pass");
 
     DEV_CHECK_ERR(VerifyDispatchComputeIndirectAttribs(Attribs), "DispatchComputeIndirectAttribs are invalid");
+
+    ++m_Stats.CommandCounters.DispatchComputeIndirect;
 }
 
+#ifdef DILIGENT_DEVELOPMENT
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::DvpVerifyDispatchTileArguments(const DispatchTileAttribs& Attribs) const
 {

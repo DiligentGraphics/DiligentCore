@@ -659,7 +659,7 @@ void DeviceContextD3D11Impl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE 
 
 void DeviceContextD3D11Impl::Draw(const DrawAttribs& Attribs)
 {
-    DvpVerifyDrawArguments(Attribs);
+    TDeviceContextBase::Draw(Attribs, 0);
 
     PrepareForDraw(Attribs.Flags);
 
@@ -674,7 +674,7 @@ void DeviceContextD3D11Impl::Draw(const DrawAttribs& Attribs)
 
 void DeviceContextD3D11Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedArguments(Attribs);
+    TDeviceContextBase::DrawIndexed(Attribs, 0);
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
@@ -689,7 +689,7 @@ void DeviceContextD3D11Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 
 void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndirectArguments(Attribs);
+    TDeviceContextBase::DrawIndirect(Attribs, 0);
     DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr, "Direct3D11 does not support indirect counter buffer");
 
     PrepareForDraw(Attribs.Flags);
@@ -726,7 +726,7 @@ void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 
 void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedIndirectArguments(Attribs);
+    TDeviceContextBase::DrawIndexedIndirect(Attribs, 0);
     DEV_CHECK_ERR(Attribs.pCounterBuffer == nullptr, "Direct3D11 does not support indirect counter buffer");
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
@@ -772,7 +772,7 @@ void DeviceContextD3D11Impl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Att
 
 void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 {
-    DvpVerifyDispatchArguments(Attribs);
+    TDeviceContextBase::DispatchCompute(Attribs, 0);
 
     if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask())
     {
@@ -802,7 +802,7 @@ void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attri
 
 void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs)
 {
-    DvpVerifyDispatchIndirectArguments(Attribs);
+    TDeviceContextBase::DispatchComputeIndirect(Attribs, 0);
 
     if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask())
     {

@@ -576,6 +576,61 @@ GPUTestingEnvironment::~GPUTestingEnvironment()
         auto* pCtx = GetDeviceContext(i);
         pCtx->Flush();
         pCtx->FinishFrame();
+
+        if (i == 0)
+        {
+            const auto& Stats       = pCtx->GetStats();
+            const auto& CmdCounters = Stats.CommandCounters;
+            LOG_INFO_MESSAGE(
+                "Device context stats"
+                "\n  Command counters",
+                "\n    SetPipelineState          ", CmdCounters.SetPipelineState,
+                "\n    CommitShaderResources     ", CmdCounters.CommitShaderResources,
+                "\n    SetVertexBuffers          ", CmdCounters.SetVertexBuffers,
+                "\n    SetIndexBuffer            ", CmdCounters.SetIndexBuffer,
+                "\n    SetRenderTargets          ", CmdCounters.SetRenderTargets,
+                "\n    SetBlendFactors           ", CmdCounters.SetBlendFactors,
+                "\n    SetStencilRef             ", CmdCounters.SetStencilRef,
+                "\n    SetViewports              ", CmdCounters.SetViewports,
+                "\n    SetScissorRects           ", CmdCounters.SetScissorRects,
+                "\n    ClearRenderTarget         ", CmdCounters.ClearRenderTarget,
+                "\n    ClearDepthStencil         ", CmdCounters.ClearDepthStencil,
+                "\n    Draw                      ", CmdCounters.Draw,
+                "\n    DrawIndexed               ", CmdCounters.DrawIndexed,
+                "\n    DrawIndirect              ", CmdCounters.DrawIndirect,
+                "\n    DrawIndexedIndirect       ", CmdCounters.DrawIndexedIndirect,
+                "\n    DispatchCompute           ", CmdCounters.DispatchCompute,
+                "\n    DispatchComputeIndirect   ", CmdCounters.DispatchComputeIndirect,
+                "\n    DispatchTile              ", CmdCounters.DispatchTile,
+                "\n    DrawMesh                  ", CmdCounters.DrawMesh,
+                "\n    DrawMeshIndirect          ", CmdCounters.DrawMeshIndirect,
+                "\n    BuildBLAS                 ", CmdCounters.BuildBLAS,
+                "\n    BuildTLAS                 ", CmdCounters.BuildTLAS,
+                "\n    CopyBLAS                  ", CmdCounters.CopyBLAS,
+                "\n    CopyTLAS                  ", CmdCounters.CopyTLAS,
+                "\n    WriteBLASCompactedSize    ", CmdCounters.WriteBLASCompactedSize,
+                "\n    WriteTLASCompactedSize    ", CmdCounters.WriteTLASCompactedSize,
+                "\n    TraceRays                 ", CmdCounters.TraceRays,
+                "\n    TraceRaysIndirect         ", CmdCounters.TraceRaysIndirect,
+                "\n    UpdateSBT                 ", CmdCounters.UpdateSBT,
+                "\n    UpdateBuffer              ", CmdCounters.UpdateBuffer,
+                "\n    CopyBuffer                ", CmdCounters.CopyBuffer,
+                "\n    MapBuffer                 ", CmdCounters.MapBuffer,
+                "\n    UpdateTexture             ", CmdCounters.UpdateTexture,
+                "\n    CopyTexture               ", CmdCounters.CopyTexture,
+                "\n    MapTextureSubresource     ", CmdCounters.MapTextureSubresource,
+                "\n    BeginQuery                ", CmdCounters.BeginQuery,
+                "\n    GenerateMips              ", CmdCounters.GenerateMips,
+                "\n    ResolveTextureSubresource ", CmdCounters.ResolveTextureSubresource,
+                "\n    BindSparseResourceMemory  ", CmdCounters.BindSparseResourceMemory,
+                "\n  Primitives",
+                "\n    TRIANGLE_LIST             ", Stats.PrimitiveCounts[PRIMITIVE_TOPOLOGY_TRIANGLE_LIST],
+                "\n    TRIANGLE_STRIP            ", Stats.PrimitiveCounts[PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP],
+                "\n    POINT_LIST                ", Stats.PrimitiveCounts[PRIMITIVE_TOPOLOGY_POINT_LIST],
+                "\n    LINE_LIST                 ", Stats.PrimitiveCounts[PRIMITIVE_TOPOLOGY_LINE_LIST],
+                "\n    LINE_STRIP                ", Stats.PrimitiveCounts[PRIMITIVE_TOPOLOGY_LINE_STRIP],
+                "\n    1_CONTROL_POINT_PATCHLIST ", Stats.PrimitiveCounts[PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST]);
+        }
     }
 }
 

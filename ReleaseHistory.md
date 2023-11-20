@@ -1,5 +1,8 @@
 ## Current progress
 
+* Added device context rendering statistics (API254002)
+  * Added `DeviceContextStats` struct
+  * Added `IDeviceContext::ClearStats` and `IDeviceContext::GetStats` methods
 * `IDeviceContext::TransitionShaderResources`: removed unused `pPipelineState` parameter (API254001)
 
 ## v2.5.4
