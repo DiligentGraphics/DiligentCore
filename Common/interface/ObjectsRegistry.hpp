@@ -23,7 +23,7 @@
 #include <algorithm>
 #include <atomic>
 
-#include "../../../DiligentCore/Platforms/Basic/interface/DebugUtilities.hpp"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "RefCntAutoPtr.hpp"
 
 namespace Diligent
