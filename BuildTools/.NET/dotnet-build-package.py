@@ -230,6 +230,7 @@ def dotnet_run_native_tests(config, settings, arch, gapi):
 
 def dotnet_run_managed_tests(config, arch, gapi):
     os.environ["DILIGENT_GAPI"] = gapi
+    os.environ["DOTNET_ROLL_FORWARD"] = "Major"
     subprocess.run(f"dotnet test -c {config} -p:Platform={arch} {project_paths['dotnet-tests']}", check=True)
 
 

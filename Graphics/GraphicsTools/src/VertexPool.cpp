@@ -216,6 +216,8 @@ public:
             // We must use atomic because this value is read in another thread,
             // while m_Buffer internally does not use mutex or other synchronization.
             BufferSize.store(Buffer.GetDesc().Size);
+
+            UpdateCommittedMemorySize();
         }
         return Buffer.Update(pDevice, pContext);
     }
@@ -353,6 +355,10 @@ private:
     {
         m_AllocatedVertexCount.store(m_Mgr.GetUsedSize());
         m_TotalVertexCount.store(m_Mgr.GetMaxSize());
+        UpdateCommittedMemorySize();
+    }
+    void UpdateCommittedMemorySize()
+    {
         Uint64 CommittedMemorySize = 0;
         for (const auto& BuffSize : m_BufferSizes)
             CommittedMemorySize += BuffSize.load();

@@ -667,7 +667,7 @@ void DeviceContextD3D12Impl::PrepareForIndexedDraw(GraphicsContext& GraphCtx, DR
 
 void DeviceContextD3D12Impl::Draw(const DrawAttribs& Attribs)
 {
-    DvpVerifyDrawArguments(Attribs);
+    TDeviceContextBase::Draw(Attribs, 0);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForDraw(GraphCtx, Attribs.Flags);
@@ -680,7 +680,7 @@ void DeviceContextD3D12Impl::Draw(const DrawAttribs& Attribs)
 
 void DeviceContextD3D12Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedArguments(Attribs);
+    TDeviceContextBase::DrawIndexed(Attribs, 0);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForIndexedDraw(GraphCtx, Attribs.Flags, Attribs.IndexType);
@@ -715,7 +715,7 @@ void DeviceContextD3D12Impl::PrepareIndirectAttribsBuffer(CommandContext&       
 
 void DeviceContextD3D12Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndirectArguments(Attribs);
+    TDeviceContextBase::DrawIndirect(Attribs, 0);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForDraw(GraphCtx, Attribs.Flags);
@@ -751,7 +751,7 @@ void DeviceContextD3D12Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 
 void DeviceContextD3D12Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedIndirectArguments(Attribs);
+    TDeviceContextBase::DrawIndexedIndirect(Attribs, 0);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForIndexedDraw(GraphCtx, Attribs.Flags, Attribs.IndexType);
@@ -788,7 +788,7 @@ void DeviceContextD3D12Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
 
 void DeviceContextD3D12Impl::DrawMesh(const DrawMeshAttribs& Attribs)
 {
-    DvpVerifyDrawMeshArguments(Attribs);
+    TDeviceContextBase::DrawMesh(Attribs, 0);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext6();
     PrepareForDraw(GraphCtx, Attribs.Flags);
@@ -802,7 +802,7 @@ void DeviceContextD3D12Impl::DrawMesh(const DrawMeshAttribs& Attribs)
 
 void DeviceContextD3D12Impl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawMeshIndirectArguments(Attribs);
+    TDeviceContextBase::DrawMeshIndirect(Attribs, 0);
 
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForDraw(GraphCtx, Attribs.Flags);
@@ -859,7 +859,7 @@ void DeviceContextD3D12Impl::PrepareForDispatchRays(GraphicsContext& GraphCtx)
 
 void DeviceContextD3D12Impl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 {
-    DvpVerifyDispatchArguments(Attribs);
+    TDeviceContextBase::DispatchCompute(Attribs, 0);
 
     auto& ComputeCtx = GetCmdContext().AsComputeContext();
     PrepareForDispatchCompute(ComputeCtx);
@@ -872,7 +872,7 @@ void DeviceContextD3D12Impl::DispatchCompute(const DispatchComputeAttribs& Attri
 
 void DeviceContextD3D12Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs)
 {
-    DvpVerifyDispatchIndirectArguments(Attribs);
+    TDeviceContextBase::DispatchComputeIndirect(Attribs, 0);
 
     auto& ComputeCtx = GetCmdContext().AsComputeContext();
     PrepareForDispatchCompute(ComputeCtx);

@@ -825,7 +825,7 @@ void DeviceContextVkImpl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE Ind
 
 void DeviceContextVkImpl::Draw(const DrawAttribs& Attribs)
 {
-    DvpVerifyDrawArguments(Attribs);
+    TDeviceContextBase::Draw(Attribs, 0);
 
     PrepareForDraw(Attribs.Flags);
 
@@ -838,7 +838,7 @@ void DeviceContextVkImpl::Draw(const DrawAttribs& Attribs)
 
 void DeviceContextVkImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedArguments(Attribs);
+    TDeviceContextBase::DrawIndexed(Attribs, 0);
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
@@ -851,7 +851,7 @@ void DeviceContextVkImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 
 void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndirectArguments(Attribs);
+    TDeviceContextBase::DrawIndirect(Attribs, 0);
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
@@ -886,7 +886,7 @@ void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 
 void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawIndexedIndirectArguments(Attribs);
+    TDeviceContextBase::DrawIndexedIndirect(Attribs, 0);
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
@@ -921,7 +921,7 @@ void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
 
 void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
 {
-    DvpVerifyDrawMeshArguments(Attribs);
+    TDeviceContextBase::DrawMesh(Attribs, 0);
 
     PrepareForDraw(Attribs.Flags);
 
@@ -934,7 +934,7 @@ void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
 
 void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs)
 {
-    DvpVerifyDrawMeshIndirectArguments(Attribs);
+    TDeviceContextBase::DrawMeshIndirect(Attribs, 0);
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
@@ -1006,7 +1006,7 @@ void DeviceContextVkImpl::PrepareForRayTracing()
 
 void DeviceContextVkImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 {
-    DvpVerifyDispatchArguments(Attribs);
+    TDeviceContextBase::DispatchCompute(Attribs, 0);
 
     PrepareForDispatchCompute();
 
@@ -1019,7 +1019,7 @@ void DeviceContextVkImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 
 void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs)
 {
-    DvpVerifyDispatchIndirectArguments(Attribs);
+    TDeviceContextBase::DispatchComputeIndirect(Attribs, 0);
 
     PrepareForDispatchCompute();
 

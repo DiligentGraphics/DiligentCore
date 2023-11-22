@@ -2078,6 +2078,160 @@ struct StateTransitionDesc
 };
 typedef struct StateTransitionDesc StateTransitionDesc;
 
+/// Device context command counters.
+struct DeviceContextCommandCounters
+{
+    /// The total number of SetPipelineState calls.
+    Uint32 SetPipelineState DEFAULT_INITIALIZER(0);
+
+    /// The total number of CommitShaderResources calls.
+    Uint32 CommitShaderResources DEFAULT_INITIALIZER(0);
+
+    /// The total number of SetVertexBuffers calls.
+    Uint32 SetVertexBuffers DEFAULT_INITIALIZER(0);
+
+    /// The total number of SetIndexBuffer calls.
+    Uint32 SetIndexBuffer DEFAULT_INITIALIZER(0);
+
+    /// The total number of SetRenderTargets calls.
+    Uint32 SetRenderTargets DEFAULT_INITIALIZER(0);
+
+    /// The total number of SetBlendFactors calls.
+    Uint32 SetBlendFactors DEFAULT_INITIALIZER(0);
+
+    /// The total number of SetStencilRef calls.
+    Uint32 SetStencilRef DEFAULT_INITIALIZER(0);
+
+    /// The total number of SetViewports calls.
+    Uint32 SetViewports DEFAULT_INITIALIZER(0);
+
+    /// The total number of SetScissorRects calls.
+    Uint32 SetScissorRects DEFAULT_INITIALIZER(0);
+
+    /// The total number of ClearRenderTarget calls.
+    Uint32 ClearRenderTarget DEFAULT_INITIALIZER(0);
+
+    /// The total number of ClearDepthStencil calls.
+    Uint32 ClearDepthStencil DEFAULT_INITIALIZER(0);
+
+    /// The total number of Draw calls.
+    Uint32 Draw DEFAULT_INITIALIZER(0);
+
+    /// The total number of DrawIndexed calls.
+    Uint32 DrawIndexed DEFAULT_INITIALIZER(0);
+
+    /// The total number of indirect DrawIndirect calls.
+    Uint32 DrawIndirect DEFAULT_INITIALIZER(0);
+
+    /// The total number of indexed indirect DrawIndexedIndirect calls.
+    Uint32 DrawIndexedIndirect DEFAULT_INITIALIZER(0);
+
+    /// The total number of DispatchCompute calls.
+    Uint32 DispatchCompute DEFAULT_INITIALIZER(0);
+
+    /// The total number of DispatchComputeIndirect calls.
+    Uint32 DispatchComputeIndirect DEFAULT_INITIALIZER(0);
+
+    /// The total number of DispatchTile calls.
+    Uint32 DispatchTile DEFAULT_INITIALIZER(0);
+
+    /// The total number of DrawMesh calls.
+    Uint32 DrawMesh DEFAULT_INITIALIZER(0);
+
+    /// The total number of DrawMeshIndirect calls.
+    Uint32 DrawMeshIndirect DEFAULT_INITIALIZER(0);
+
+    /// The total number of BuildBLAS calls.
+    Uint32 BuildBLAS DEFAULT_INITIALIZER(0);
+
+    /// The total number of BuildTLAS calls.
+    Uint32 BuildTLAS DEFAULT_INITIALIZER(0);
+
+    /// The total number of CopyBLAS calls.
+    Uint32 CopyBLAS DEFAULT_INITIALIZER(0);
+
+    /// The total number of CopyTLAS calls.
+    Uint32 CopyTLAS DEFAULT_INITIALIZER(0);
+
+    /// The total number of WriteBLASCompactedSize calls.
+    Uint32 WriteBLASCompactedSize DEFAULT_INITIALIZER(0);
+
+    /// The total number of WriteTLASCompactedSize calls.
+    Uint32 WriteTLASCompactedSize DEFAULT_INITIALIZER(0);
+
+    /// The total number of TraceRays calls.
+    Uint32 TraceRays DEFAULT_INITIALIZER(0);
+
+    /// The total number of TraceRaysIndirect calls.
+    Uint32 TraceRaysIndirect DEFAULT_INITIALIZER(0);
+
+    /// The total number of UpdateSBT calls.
+    Uint32 UpdateSBT DEFAULT_INITIALIZER(0);
+
+    /// The total number of UpdateBuffer calls.
+    Uint32 UpdateBuffer DEFAULT_INITIALIZER(0);
+
+    /// The total number of CopyBuffer calls.
+    Uint32 CopyBuffer DEFAULT_INITIALIZER(0);
+
+    /// The total number of MapBuffer calls.
+    Uint32 MapBuffer DEFAULT_INITIALIZER(0);
+
+    /// The total number of UpdateTexture calls.
+    Uint32 UpdateTexture DEFAULT_INITIALIZER(0);
+
+    /// The total number of CopyTexture calls.
+    Uint32 CopyTexture DEFAULT_INITIALIZER(0);
+
+    /// The total number of MapTextureSubresource calls.
+    Uint32 MapTextureSubresource DEFAULT_INITIALIZER(0);
+
+    /// The total number of BeginQuery calls.
+    Uint32 BeginQuery DEFAULT_INITIALIZER(0);
+
+    /// The total number of GenerateMips calls.
+    Uint32 GenerateMips DEFAULT_INITIALIZER(0);
+
+    /// The total number of ResolveTextureSubresource calls.
+    Uint32 ResolveTextureSubresource DEFAULT_INITIALIZER(0);
+
+    /// The total number of BindSparseResourceMemory calls.
+    Uint32 BindSparseResourceMemory DEFAULT_INITIALIZER(0);
+};
+typedef struct DeviceContextCommandCounters DeviceContextCommandCounters;
+
+/// Device context statistics.
+struct DeviceContextStats
+{
+    /// The total number of primitives rendered, for each primitive topology.
+    Uint32 PrimitiveCounts[PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES] DEFAULT_INITIALIZER({});
+    
+    /// Command counters, see Diligent::DeviceContextCommandCounters.
+    DeviceContextCommandCounters CommandCounters DEFAULT_INITIALIZER({});
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr Uint32 GetTotalTriangleCount() const noexcept
+    {
+        return PrimitiveCounts[PRIMITIVE_TOPOLOGY_TRIANGLE_LIST] +
+               PrimitiveCounts[PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP] +
+               PrimitiveCounts[PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ];
+    }
+
+    constexpr Uint32 GetTotalLineCount() const noexcept
+    {
+        return PrimitiveCounts[PRIMITIVE_TOPOLOGY_LINE_LIST] +
+               PrimitiveCounts[PRIMITIVE_TOPOLOGY_LINE_STRIP] +
+               PrimitiveCounts[PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ];
+    }
+
+    constexpr Uint32 GetTotalPointCount() const noexcept
+	{
+    	return PrimitiveCounts[PRIMITIVE_TOPOLOGY_POINT_LIST];
+    }
+#endif
+};
+typedef struct DeviceContextStats DeviceContextStats;
+
 
 #define DILIGENT_INTERFACE_NAME IDeviceContext
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
@@ -3243,6 +3397,12 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///          internal queue supports COMMAND_QUEUE_TYPE_SPARSE_BINDING.
     VIRTUAL void METHOD(BindSparseResourceMemory)(THIS_
                                                   const BindSparseResourceMemoryAttribs REF Attribs) PURE;
+
+    /// Clears the device context statistics.
+    VIRTUAL void METHOD(ClearStats)(THIS) PURE;
+
+    /// Returns the device context statistics, see Diligent::DeviceContextStats.
+    VIRTUAL const DeviceContextStats REF METHOD(GetStats)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -3320,6 +3480,8 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_UnlockCommandQueue(This)                 CALL_IFACE_METHOD(DeviceContext, UnlockCommandQueue,        This)
 #    define IDeviceContext_SetShadingRate(This, ...)                CALL_IFACE_METHOD(DeviceContext, SetShadingRate,            This, __VA_ARGS__)
 #    define IDeviceContext_BindSparseResourceMemory(This, ...)      CALL_IFACE_METHOD(DeviceContext, BindSparseResourceMemory,  This, __VA_ARGS__)
+#    define IDeviceContext_ClearStats(This)                         CALL_IFACE_METHOD(DeviceContext, ClearStats,                This)
+#    define IDeviceContext_GetStats(This)                           CALL_IFACE_METHOD(DeviceContext, GetStats,                  This)
 
 // clang-format on
 
