@@ -881,6 +881,13 @@ template <class T> struct Matrix2x2
             0, 1};
     }
 
+    constexpr static Matrix2x2 Scale(T x, T y)
+    {
+        return Matrix2x2{
+            x, 0,
+            0, y};
+    }
+
     constexpr static Matrix2x2 Mul(const Matrix2x2& m1, const Matrix2x2& m2)
     {
         Matrix2x2 mOut;
