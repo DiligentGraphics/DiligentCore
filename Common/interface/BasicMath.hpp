@@ -938,6 +938,18 @@ template <class T> struct Matrix2x2
     {
         return Matrix2x2<Y>::MakeMatrix(Data());
     }
+
+    template <typename Y = T>
+    constexpr Vector4<Y> ToVec4() const
+    {
+        return Vector4<Y>{static_cast<Y>(_11), static_cast<Y>(_12), static_cast<Y>(_21), static_cast<Y>(_22)};
+    }
+
+    template <typename Y>
+    static constexpr Matrix2x2 FromVec4(const Vector4<Y>& v)
+    {
+        return Matrix2x2{static_cast<T>(v.x), static_cast<T>(v.y), static_cast<T>(v.z), static_cast<T>(v.w)};
+    }
 };
 
 template <typename T>
