@@ -2388,7 +2388,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     VIRTUAL void METHOD(SetVertexBuffers)(THIS_
                                           Uint32                         StartSlot,
                                           Uint32                         NumBuffersSet,
-                                          IBuffer**                      ppBuffers,
+                                          IBuffer* const*                ppBuffers,
                                           const Uint64*                  pOffsets,
                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                           SET_VERTEX_BUFFERS_FLAGS       Flags DEFAULT_VALUE(SET_VERTEX_BUFFERS_FLAG_NONE)) PURE;

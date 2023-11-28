@@ -186,7 +186,7 @@ public:
     /// caches references to the buffers.
     inline virtual void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
                                                             Uint32                         NumBuffersSet,
-                                                            IBuffer**                      ppBuffers,
+                                                            IBuffer* const*                ppBuffers,
                                                             const Uint64*                  pOffsets,
                                                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                                             SET_VERTEX_BUFFERS_FLAGS       Flags) override = 0;
@@ -703,7 +703,7 @@ template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
     Uint32                         StartSlot,
     Uint32                         NumBuffersSet,
-    IBuffer**                      ppBuffers,
+    IBuffer* const*                ppBuffers,
     const Uint64*                  pOffsets,
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
     SET_VERTEX_BUFFERS_FLAGS       Flags)

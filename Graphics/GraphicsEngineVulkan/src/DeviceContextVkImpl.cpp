@@ -1521,7 +1521,7 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
 
 void DeviceContextVkImpl::SetVertexBuffers(Uint32                         StartSlot,
                                            Uint32                         NumBuffersSet,
-                                           IBuffer**                      ppBuffers,
+                                           IBuffer* const*                ppBuffers,
                                            const Uint64*                  pOffsets,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                            SET_VERTEX_BUFFERS_FLAGS       Flags)
