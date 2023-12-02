@@ -2647,6 +2647,15 @@ TEST(Common_AdvancedMath, TransformBoundBox)
     }
 }
 
+TEST(Common_AdvancedMath, CombineBoundBoxes)
+{
+    const BoundBox BB1{float3{1, 2, 3}, float3{4, 5, 6}};
+    const BoundBox BB2{float3{-2, -3, -4}, float3{50, 60, 70}};
+    const BoundBox RefBB{float3{-2, -3, -4}, float3{50, 60, 70}};
+    EXPECT_EQ(BB1.Combine(BB2), RefBB);
+    EXPECT_EQ(BB2.Combine(BB1), RefBB);
+}
+
 TEST(Common_AdvancedMath, CheckBox2DBox2DOverlap)
 {
     // clang-format off

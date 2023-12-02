@@ -230,6 +230,36 @@ struct BoundBox
 
         return NewBB;
     }
+
+    BoundBox Combine(const BoundBox& Box) const
+    {
+        return {
+            (std::min)(Min, Box.Min),
+            (std::max)(Max, Box.Max),
+        };
+    }
+
+    constexpr bool IsValid() const
+    {
+        return (Max.x >= Min.x &&
+                Max.y >= Min.y &&
+                Max.z >= Min.z);
+    }
+
+    explicit constexpr operator bool() const
+    {
+        return IsValid();
+    }
+
+    constexpr bool operator==(const BoundBox& rhs) const
+    {
+        return Min == rhs.Min && Max == rhs.Max;
+    }
+
+    constexpr bool operator!=(const BoundBox& rhs) const
+    {
+        return !(*this == rhs);
+    }
 };
 
 struct OrientedBoundingBox
