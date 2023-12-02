@@ -2160,17 +2160,19 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         CopyRegion.extent.height = std::max(pSrcBox->Height(), 1u);
         CopyRegion.extent.depth  = std::max(pSrcBox->Depth(), 1u);
 
-        const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
-
-        VkImageAspectFlags aspectMask = 0;
-        if (DstFmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        else if (DstFmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-        {
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-        else
-            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        auto GetAspectMak = [](TEXTURE_FORMAT Format) -> VkImageAspectFlags {
+            const auto& FmtAttribs = GetTextureFormatAttribs(Format);
+            switch (FmtAttribs.ComponentType)
+            {
+                // clang-format off
+                case COMPONENT_TYPE_DEPTH:         return VK_IMAGE_ASPECT_DEPTH_BIT;
+                case COMPONENT_TYPE_DEPTH_STENCIL: return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+                // clang-format on
+                default: return VK_IMAGE_ASPECT_COLOR_BIT;
+            }
+        };
+        VkImageAspectFlags aspectMask = GetAspectMak(SrcTexDesc.Format);
+        DEV_CHECK_ERR(aspectMask == GetAspectMak(DstTexDesc.Format), "Vulkan spec requires that dst and src aspect masks must match");
 
         CopyRegion.srcSubresource.baseArrayLayer = CopyAttribs.SrcSlice;
         CopyRegion.srcSubresource.layerCount     = 1;
