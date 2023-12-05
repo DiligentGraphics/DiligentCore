@@ -118,8 +118,9 @@ public:
     }
 
 #if PLATFORM_ANDROID
-    virtual void InitAndroidFileSystem(const char*           ExternalFilesDir,
-                                       struct AAssetManager* AssetManager) const override final;
+    virtual void InitAndroidFileSystem(struct AAssetManager* AssetManager,
+                                       const char*           ExternalFilesDir,
+                                       const char*           OutputFilesDir) const override final;
 #endif
 
 private:
@@ -1383,10 +1384,11 @@ void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
 
 
 #if PLATFORM_ANDROID
-void EngineFactoryVkImpl::InitAndroidFileSystem(const char*           ExternalFilesDir,
-                                                struct AAssetManager* AssetManager) const
+void EngineFactoryVkImpl::InitAndroidFileSystem(struct AAssetManager* AssetManager,
+                                                const char*           ExternalFilesDir,
+                                                const char*           OutputFilesDir) const
 {
-    AndroidFileSystem::Init(ExternalFilesDir, AssetManager);
+    AndroidFileSystem::Init(AssetManager, ExternalFilesDir, OutputFilesDir);
 }
 #endif
 

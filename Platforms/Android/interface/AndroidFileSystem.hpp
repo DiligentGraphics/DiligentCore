@@ -74,16 +74,19 @@ struct AndroidFileSystem : public BasicFileSystem
 public:
     /// Initializes the file system.
 
-    /// \param [in] ExternalFilesDir - External files directory.
     /// \param [in] AssetManager     - A pointer to the asset manager (AAssetManager).
+    /// \param [in] ExternalFilesDir - External files directory.
+    /// \param [in] OutputFilesDir   - Output files directory.
     ///
     /// \remarks The file system can be initialized to use either the external assets path or asset manager, or both.
     ///          When ExternalFilesDir is not null, the file system will try to use it first when opening files.
     ///          It will then resort to using the asset manager.
     ///          If ExternalFilesDir is null, the file system will only use the asset manager.
-    static void Init(const char*           ExternalFilesDir,
-                     struct AAssetManager* AssetManager);
-
+    // clang-format off
+    static void Init(struct AAssetManager* AssetManager,
+                     const char*           ExternalFilesDir DEFAULT_INITIALIZER(nullptr),
+                     const char*           OutputFilesDir   DEFAULT_INITIALIZER(nullptr));
+    // clang-format on
 
     static AndroidFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 

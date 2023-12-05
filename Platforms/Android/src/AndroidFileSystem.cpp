@@ -43,10 +43,11 @@ struct AndroidFileSystemHelper
         return Instance;
     }
 
-    void Init(const char* ExternalFilesDir, AAssetManager* AssetManager)
+    void Init(AAssetManager* AssetManager, const char* ExternalFilesDir, const char* OutputFilesDir)
     {
-        m_ExternalFilesDir = ExternalFilesDir != nullptr ? ExternalFilesDir : "";
         m_AssetManager     = AssetManager;
+        m_ExternalFilesDir = ExternalFilesDir != nullptr ? ExternalFilesDir : "";
+        m_OutputFilesDir   = OutputFilesDir != nullptr ? OutputFilesDir : "";
     }
 
     bool OpenFile(const char* fileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& FileSize)
@@ -109,12 +110,23 @@ struct AndroidFileSystemHelper
         }
     }
 
+    const std::string& GetExternalFilesDir() const
+    {
+        return m_ExternalFilesDir;
+    }
+
+    const std::string& GetOutputFilesDir() const
+    {
+        return m_OutputFilesDir;
+    }
+
 private:
     AndroidFileSystemHelper() {}
 
 private:
-    std::string    m_ExternalFilesDir;
     AAssetManager* m_AssetManager = nullptr;
+    std::string    m_ExternalFilesDir;
+    std::string    m_OutputFilesDir;
 };
 
 } // namespace
@@ -197,10 +209,11 @@ bool AndroidFile::SetPos(size_t Offset, FilePosOrigin Origin)
 }
 
 
-void AndroidFileSystem::Init(const char*           ExternalFilesPath,
-                             struct AAssetManager* AssetManager)
+void AndroidFileSystem::Init(struct AAssetManager* AssetManager,
+                             const char*           ExternalFilesDir,
+                             const char*           OutputFilesDir)
 {
-    AndroidFileSystemHelper::GetInstance().Init(ExternalFilesPath, AssetManager);
+    AndroidFileSystemHelper::GetInstance().Init(AssetManager, ExternalFilesDir, OutputFilesDir);
 }
 
 AndroidFile* AndroidFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
@@ -272,8 +285,12 @@ std::vector<std::unique_ptr<FindFileData>> AndroidFileSystem::Search(const Char*
 
 std::string AndroidFileSystem::GetLocalAppDataDirectory(const char* AppName /*= nullptr*/, bool Create /*= true*/)
 {
-    UNSUPPORTED("GetLocalAppDataDirectory() is not supported on Android");
-    return "";
+    const std::string& OutputFilesDir = AndroidFileSystemHelper::GetInstance().GetOutputFilesDir();
+    if (OutputFilesDir.empty())
+    {
+        LOG_ERROR_MESSAGE("Output files directory has not been initialized. Call AndroidFileSystem::Init().");
+    }
+    return OutputFilesDir;
 }
 
 } // namespace Diligent

@@ -112,8 +112,9 @@ public:
     }
 
 #if PLATFORM_ANDROID
-    virtual void InitAndroidFileSystem(const char*           ExternalFilesDir,
-                                       struct AAssetManager* AssetManager) const override final;
+    virtual void InitAndroidFileSystem(struct AAssetManager* AssetManager,
+                                       const char*           ExternalFilesDir,
+                                       const char*           OutputFilesDir) const override final;
 #endif
 };
 
@@ -376,10 +377,11 @@ void EngineFactoryOpenGLImpl::CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppC
 }
 
 #if PLATFORM_ANDROID
-void EngineFactoryOpenGLImpl::InitAndroidFileSystem(const char*           ExternalFilesDir,
-                                                    struct AAssetManager* AssetManager) const
+void EngineFactoryOpenGLImpl::InitAndroidFileSystem(struct AAssetManager* AssetManager,
+                                                    const char*           ExternalFilesDir,
+                                                    const char*           OutputFilesDir) const
 {
-    AndroidFileSystem::Init(ExternalFilesDir, AssetManager);
+    AndroidFileSystem::Init(AssetManager, ExternalFilesDir, OutputFilesDir);
 }
 #endif
 
