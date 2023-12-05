@@ -30,6 +30,8 @@
 #include <android/native_activity.h>
 #include <android/asset_manager.h>
 
+#include "JNIWrappers.hpp"
+
 namespace Diligent
 {
 
@@ -70,12 +72,21 @@ public:
 
             JNIEnv* env          = nullptr;
             bool    DetachThread = AttachCurrentThread(env);
-            if (jstring jstr_path = GetExternalFilesDirJString(env))
+            if (env != nullptr)
             {
-                const char* path  = env->GetStringUTFChars(jstr_path, nullptr);
-                ExternalFilesPath = std::string(path);
-                env->ReleaseStringUTFChars(jstr_path, path);
-                env->DeleteLocalRef(jstr_path);
+                if (JNIWrappers::Clazz activity_cls{*env, activity_class_name_.c_str()})
+                {
+                    if (JNIWrappers::Method get_external_files_dir_method{activity_cls.GetMethod("getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;")})
+                    {
+                        if (JNIWrappers::File file{*env, get_external_files_dir_method.Call<jobject>(activity_->clazz, NULL)})
+                        {
+                            if (JNIWrappers::String path = file.GetPath())
+                            {
+                                ExternalFilesPath = path.GetStdString();
+                            }
+                        }
+                    }
+                }
             }
             if (DetachThread)
                 DetachCurrentThread();
@@ -124,31 +135,6 @@ private:
     JNIMiniHelper           (JNIMiniHelper&&)      = delete;
     JNIMiniHelper& operator=(JNIMiniHelper&&)      = delete;
     // clang-format on
-
-    jstring GetExternalFilesDirJString(JNIEnv* env)
-    {
-        if (activity_ == nullptr)
-        {
-            LOG_ERROR_MESSAGE("JNIHelper has not been initialized. Call init() to initialize the helper");
-            return NULL;
-        }
-
-        jstring obj_Path = nullptr;
-        // Invoking getExternalFilesDir() java API
-        jclass    cls_Env  = env->FindClass(activity_class_name_.c_str());
-        jmethodID mid      = env->GetMethodID(cls_Env, "getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
-        jobject   obj_File = env->CallObjectMethod(activity_->clazz, mid, NULL);
-        if (obj_File)
-        {
-            jclass    cls_File    = env->FindClass("java/io/File");
-            jmethodID mid_getPath = env->GetMethodID(cls_File, "getPath", "()Ljava/lang/String;");
-            obj_Path              = (jstring)env->CallObjectMethod(obj_File, mid_getPath);
-            env->DeleteLocalRef(cls_File);
-            env->DeleteLocalRef(obj_File);
-        }
-        env->DeleteLocalRef(cls_Env);
-        return obj_Path;
-    }
 
     void DetachCurrentThread()
     {
