@@ -38,27 +38,30 @@ namespace Diligent
 class JNIMiniHelper
 {
 public:
-    void Init(ANativeActivity* activity, std::string activity_class_name)
+    JNIMiniHelper(ANativeActivity* activity, std::string activity_class_name) :
+        activity_{activity},
+        activity_class_name_{std::move(activity_class_name)}
     {
-        VERIFY(activity != nullptr && !activity_class_name.empty(), "Activity and class name can't be null");
-        activity_            = activity;
-        activity_class_name_ = std::move(activity_class_name);
+        VERIFY(activity != nullptr && !activity_class_name_.empty(), "Activity and class name can't be null");
     }
 
-    static JNIMiniHelper& GetInstance()
+    ~JNIMiniHelper()
     {
-        static JNIMiniHelper helper;
-        return helper;
     }
 
-    static std::string GetExternalFilesDir(ANativeActivity* activity, std::string activity_class_name)
-    {
-        JNIMiniHelper Helper;
-        Helper.Init(activity, activity_class_name);
-        return Helper.GetExternalFilesDir();
-    }
+    // clang-format off
+    JNIMiniHelper           (const JNIMiniHelper&) = delete;
+    JNIMiniHelper& operator=(const JNIMiniHelper&) = delete;
+    JNIMiniHelper           (JNIMiniHelper&&)      = delete;
+    JNIMiniHelper& operator=(JNIMiniHelper&&)      = delete;
+    // clang-format on
 
-    std::string GetExternalFilesDir()
+    enum FILES_DIR_TYPE
+    {
+        FILES_DIR_TYPE_EXTERNAL,
+        FILES_DIR_TYPE_OUTPUT
+    };
+    std::string GetFilesDir(FILES_DIR_TYPE type)
     {
         if (activity_ == nullptr)
         {
@@ -76,14 +79,27 @@ public:
             {
                 if (JNIWrappers::Clazz activity_cls{*env, activity_class_name_.c_str()})
                 {
-                    if (JNIWrappers::Method get_external_files_dir_method{activity_cls.GetMethod("getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;")})
+                    auto get_external_files_dir = [&]() {
+                        JNIWrappers::Method get_external_files_dir_method = activity_cls.GetMethod("getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
+                        return JNIWrappers::File{
+                            *env,
+                            get_external_files_dir_method.Call<jobject>(activity_->clazz, NULL)};
+                    };
+                    auto get_files_dir = [&]() {
+                        JNIWrappers::Method get_files_dir_method = activity_cls.GetMethod("getFilesDir", "()Ljava/io/File;");
+                        return JNIWrappers::File{
+                            *env,
+                            get_files_dir_method.Call<jobject>(activity_->clazz)};
+                    };
+
+                    JNIWrappers::File file = (type == FILES_DIR_TYPE_EXTERNAL) ?
+                        get_external_files_dir() :
+                        get_files_dir();
+                    if (file)
                     {
-                        if (JNIWrappers::File file{*env, get_external_files_dir_method.Call<jobject>(activity_->clazz, NULL)})
+                        if (JNIWrappers::String path = file.GetPath())
                         {
-                            if (JNIWrappers::String path = file.GetPath())
-                            {
-                                ExternalFilesPath = path.GetStdString();
-                            }
+                            ExternalFilesPath = path.GetStdString();
                         }
                     }
                 }
@@ -121,21 +137,6 @@ public:
     }
 
 private:
-    JNIMiniHelper()
-    {
-    }
-
-    ~JNIMiniHelper()
-    {
-    }
-
-    // clang-format off
-    JNIMiniHelper           (const JNIMiniHelper&) = delete;
-    JNIMiniHelper& operator=(const JNIMiniHelper&) = delete;
-    JNIMiniHelper           (JNIMiniHelper&&)      = delete;
-    JNIMiniHelper& operator=(JNIMiniHelper&&)      = delete;
-    // clang-format on
-
     void DetachCurrentThread()
     {
         activity_->vm->DetachCurrentThread();

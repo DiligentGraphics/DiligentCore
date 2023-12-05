@@ -44,9 +44,11 @@ public:
     }
 
     template <typename RetType, typename... Args>
-    RetType Call(jobject obj, Args&&... args)
+    RetType Call(jobject obj, Args&&... args) const
     {
-        return static_cast<RetType>(env_.CallObjectMethod(obj, mid_, std::forward<Args>(args)...));
+        return *this ?
+            static_cast<RetType>(env_.CallObjectMethod(obj, mid_, std::forward<Args>(args)...)) :
+            RetType{nullptr};
     }
 
     explicit operator bool() const
@@ -85,7 +87,7 @@ public:
         }
     }
 
-    Method GetMethod(const char* name, const char* sig)
+    Method GetMethod(const char* name, const char* sig) const
     {
         return Method{env_, cls_, name, sig};
     }
@@ -151,7 +153,7 @@ public:
     {
     }
 
-    std::string GetStdString()
+    std::string GetStdString() const
     {
         const char* chars = env_.GetStringUTFChars(obj_, nullptr);
         std::string str{chars};
@@ -175,7 +177,7 @@ public:
     {
     }
 
-    String GetPath()
+    String GetPath() const
     {
         return String{env_, get_path_method_.Call<jstring>(obj_)};
     }
