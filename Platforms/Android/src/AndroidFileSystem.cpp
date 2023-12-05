@@ -249,40 +249,6 @@ bool AndroidFileSystem::FileExists(const Char* strFilePath)
     return Exists;
 }
 
-bool AndroidFileSystem::PathExists(const Char* strPath)
-{
-    UNSUPPORTED("Not implemented");
-    return false;
-}
-
-bool AndroidFileSystem::CreateDirectory(const Char* strPath)
-{
-    UNSUPPORTED("Not implemented");
-    return false;
-}
-
-void AndroidFileSystem::ClearDirectory(const Char* strPath)
-{
-    UNSUPPORTED("Not implemented");
-}
-
-void AndroidFileSystem::DeleteFile(const Char* strPath)
-{
-    UNSUPPORTED("Not implemented");
-}
-
-bool AndroidFileSystem::IsDirectory(const Char* strPath)
-{
-    UNSUPPORTED("Not implemented");
-    return false;
-}
-
-std::vector<std::unique_ptr<FindFileData>> AndroidFileSystem::Search(const Char* SearchPattern)
-{
-    UNSUPPORTED("Not implemented");
-    return std::vector<std::unique_ptr<FindFileData>>();
-}
-
 std::string AndroidFileSystem::GetLocalAppDataDirectory(const char* AppName /*= nullptr*/, bool Create /*= true*/)
 {
     const std::string& OutputFilesDir = AndroidFileSystemHelper::GetInstance().GetOutputFilesDir();

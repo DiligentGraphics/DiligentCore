@@ -37,13 +37,14 @@
 #include <pwd.h>
 #include <errno.h>
 
-#include "LinuxFileSystem.hpp"
+#include "../interface/LinuxFileSystem.hpp"
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
 
 namespace Diligent
 {
 
+#if PLATFORM_LINUX || PLATFORM_APPLE
 LinuxFile* LinuxFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
     LinuxFile* pFile = nullptr;
@@ -56,6 +57,7 @@ LinuxFile* LinuxFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
     }
     return pFile;
 }
+#endif
 
 bool LinuxFileSystem::FileExists(const Char* strFilePath)
 {
@@ -108,6 +110,7 @@ bool LinuxFileSystem::CreateDirectory(const Char* strPath)
     return true;
 }
 
+// The maximum number of file descriptors that shall be used by nftw() while traversing the file tree.
 static constexpr int MaxOpenNTFWDescriptors = 32;
 
 void LinuxFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
@@ -182,6 +185,7 @@ std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Char* S
 {
     std::vector<std::unique_ptr<FindFileData>> SearchRes;
 
+#if PLATFORM_LINUX || PLATFORM_APPLE
     glob_t glob_result = {};
     if (glob(SearchPattern, GLOB_TILDE, NULL, &glob_result) == 0)
     {
@@ -198,6 +202,9 @@ std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Char* S
         }
     }
     globfree(&glob_result);
+#else
+    UNSUPPORTED("Not implemented");
+#endif
 
     return SearchRes;
 }
@@ -228,25 +235,27 @@ std::string LinuxFileSystem::GetCurrentDirectory()
     return CurrDir;
 }
 
+#if PLATFORM_LINUX || PLATFORM_APPLE
 std::string LinuxFileSystem::GetLocalAppDataDirectory(const char* AppName, bool Create)
 {
     const auto* pwuid = getpwuid(getuid());
     std::string AppDataDir{pwuid->pw_dir};
     if (!IsSlash(AppDataDir.back()))
         AppDataDir += SlashSymbol;
-#if PLATFORM_MACOS
+
+#    if PLATFORM_APPLE
     AppDataDir += "Library/Caches";
-#else
+#    else
     AppDataDir += ".cache";
-#endif
+#    endif
 
     if (AppName == nullptr)
     {
-#ifdef _GNU_SOURCE
+#    ifdef _GNU_SOURCE
         AppName = program_invocation_short_name;
-#elif defined(__APPLE__)
+#    elif defined(__APPLE__)
         AppName = getprogname();
-#endif
+#    endif
     }
 
     if (AppName != nullptr)
@@ -258,5 +267,6 @@ std::string LinuxFileSystem::GetLocalAppDataDirectory(const char* AppName, bool 
     }
     return AppDataDir;
 }
+#endif
 
 } // namespace Diligent

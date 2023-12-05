@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2023 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +32,7 @@
 #include <fstream>
 #include <android/asset_manager.h>
 
-#include "../../Basic/interface/BasicFileSystem.hpp"
+#include "../../Linux/interface/LinuxFileSystem.hpp"
 #include "../../../Primitives/interface/DataBlob.h"
 
 struct ANativeActivity;
@@ -69,7 +69,7 @@ private:
 
 
 /// Android file system implementation.
-struct AndroidFileSystem : public BasicFileSystem
+struct AndroidFileSystem : public LinuxFileSystem
 {
 public:
     /// Initializes the file system.
@@ -91,14 +91,6 @@ public:
     static AndroidFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
     static bool FileExists(const Char* strFilePath);
-    static bool PathExists(const Char* strPath);
-
-    static bool CreateDirectory(const Char* strPath);
-    static void ClearDirectory(const Char* strPath);
-    static void DeleteFile(const Char* strPath);
-    static bool IsDirectory(const Char* strPath);
-
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Char* SearchPattern);
 
     static std::string GetLocalAppDataDirectory(const char* AppName = nullptr, bool Create = true);
 };
