@@ -155,6 +155,16 @@ struct TextureComponentMapping
     {
         return !(*this == RHS);
     }
+
+    static constexpr TextureComponentMapping Identity()
+	{
+		return {
+            TEXTURE_COMPONENT_SWIZZLE_IDENTITY,
+            TEXTURE_COMPONENT_SWIZZLE_IDENTITY,
+            TEXTURE_COMPONENT_SWIZZLE_IDENTITY,
+            TEXTURE_COMPONENT_SWIZZLE_IDENTITY
+        };
+    }
 #endif
 };
 typedef struct TextureComponentMapping TextureComponentMapping;
