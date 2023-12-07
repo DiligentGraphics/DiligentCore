@@ -2245,6 +2245,28 @@ String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags)
     return Result;
 }
 
+String GetTextureComponentMappingString(const TextureComponentMapping& Mapping)
+{
+    static_assert(TEXTURE_COMPONENT_SWIZZLE_IDENTITY == 0, "TEXTURE_COMPONENT_SWIZZLE_IDENTITY == 0 is assumed below");
+    static_assert(TEXTURE_COMPONENT_SWIZZLE_ZERO == 1, "TEXTURE_COMPONENT_SWIZZLE_ZERO == 1 is assumed below");
+    static_assert(TEXTURE_COMPONENT_SWIZZLE_ONE == 2, "TEXTURE_COMPONENT_SWIZZLE_ONE == 2 is assumed below");
+    static_assert(TEXTURE_COMPONENT_SWIZZLE_R == 3, "TEXTURE_COMPONENT_SWIZZLE_R == 3 is assumed below");
+    static_assert(TEXTURE_COMPONENT_SWIZZLE_G == 4, "TEXTURE_COMPONENT_SWIZZLE_G == 4 is assumed below");
+    static_assert(TEXTURE_COMPONENT_SWIZZLE_B == 5, "TEXTURE_COMPONENT_SWIZZLE_B == 5 is assumed below");
+    static_assert(TEXTURE_COMPONENT_SWIZZLE_A == 6, "TEXTURE_COMPONENT_SWIZZLE_A == 6 is assumed below");
+    String Str;
+    Str.reserve(4);
+    for (size_t Comp = 0; Comp < 4; ++Comp)
+    {
+        TEXTURE_COMPONENT_SWIZZLE ComponentSwizzle = Mapping[Comp];
+        if (ComponentSwizzle == TEXTURE_COMPONENT_SWIZZLE_IDENTITY)
+            Str += "rgba"[Comp];
+        else
+            Str += "_01rgba"[ComponentSwizzle];
+    }
+    return Str;
+}
+
 SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& TexDesc)
 {
     constexpr Uint32 SparseBlockSize = 64 << 10;

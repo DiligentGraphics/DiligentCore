@@ -739,6 +739,43 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineShadingRateFlagsString)
     EXPECT_STREQ(GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAG_PER_PRIMITIVE | PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED).c_str(), "PER_PRIMITIVE | TEXTURE_BASED");
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, GetTextureComponentMappingString)
+{
+    EXPECT_STREQ(GetTextureComponentMappingString(TextureComponentMapping::Identity()).c_str(), "rgba");
+    EXPECT_STREQ(GetTextureComponentMappingString(
+                     TextureComponentMapping(TEXTURE_COMPONENT_SWIZZLE_ZERO, TEXTURE_COMPONENT_SWIZZLE_ZERO, TEXTURE_COMPONENT_SWIZZLE_ZERO, TEXTURE_COMPONENT_SWIZZLE_ZERO))
+                     .c_str(),
+                 "0000");
+    EXPECT_STREQ(GetTextureComponentMappingString(
+                     TextureComponentMapping(TEXTURE_COMPONENT_SWIZZLE_ONE, TEXTURE_COMPONENT_SWIZZLE_ONE, TEXTURE_COMPONENT_SWIZZLE_ONE, TEXTURE_COMPONENT_SWIZZLE_ONE))
+                     .c_str(),
+                 "1111");
+    EXPECT_STREQ(GetTextureComponentMappingString(
+                     TextureComponentMapping(TEXTURE_COMPONENT_SWIZZLE_R, TEXTURE_COMPONENT_SWIZZLE_R, TEXTURE_COMPONENT_SWIZZLE_R, TEXTURE_COMPONENT_SWIZZLE_R))
+                     .c_str(),
+                 "rrrr");
+    EXPECT_STREQ(GetTextureComponentMappingString(
+                     TextureComponentMapping(TEXTURE_COMPONENT_SWIZZLE_G, TEXTURE_COMPONENT_SWIZZLE_G, TEXTURE_COMPONENT_SWIZZLE_G, TEXTURE_COMPONENT_SWIZZLE_G))
+                     .c_str(),
+                 "gggg");
+    EXPECT_STREQ(GetTextureComponentMappingString(
+                     TextureComponentMapping(TEXTURE_COMPONENT_SWIZZLE_B, TEXTURE_COMPONENT_SWIZZLE_B, TEXTURE_COMPONENT_SWIZZLE_B, TEXTURE_COMPONENT_SWIZZLE_B))
+                     .c_str(),
+                 "bbbb");
+    EXPECT_STREQ(GetTextureComponentMappingString(
+                     TextureComponentMapping(TEXTURE_COMPONENT_SWIZZLE_A, TEXTURE_COMPONENT_SWIZZLE_A, TEXTURE_COMPONENT_SWIZZLE_A, TEXTURE_COMPONENT_SWIZZLE_A))
+                     .c_str(),
+                 "aaaa");
+    EXPECT_STREQ(GetTextureComponentMappingString(
+                     TextureComponentMapping(TEXTURE_COMPONENT_SWIZZLE_A, TEXTURE_COMPONENT_SWIZZLE_B, TEXTURE_COMPONENT_SWIZZLE_G, TEXTURE_COMPONENT_SWIZZLE_R))
+                     .c_str(),
+                 "abgr");
+    EXPECT_STREQ(GetTextureComponentMappingString(
+                     TextureComponentMapping(TEXTURE_COMPONENT_SWIZZLE_IDENTITY, TEXTURE_COMPONENT_SWIZZLE_IDENTITY, TEXTURE_COMPONENT_SWIZZLE_IDENTITY, TEXTURE_COMPONENT_SWIZZLE_ONE))
+                     .c_str(),
+                 "rgb1");
+}
+
 TEST(GraphicsAccessories_GraphicsAccessories, GetMipLevelProperties)
 {
     TextureDesc        Desc;

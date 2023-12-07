@@ -734,6 +734,8 @@ TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt);
 
 String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags);
 
+String GetTextureComponentMappingString(const TextureComponentMapping& Mapping);
+
 /// Returns the sparse texture properties assuming the standard tile shapes
 SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& TexDesc);
 

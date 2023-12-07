@@ -156,12 +156,12 @@ struct TextureComponentMapping
         return !(*this == RHS);
     }
 
-    constexpr TEXTURE_COMPONENT_SWIZZLE operator[](Uint32 Component) const
+    constexpr TEXTURE_COMPONENT_SWIZZLE operator[](size_t Component) const
 	{
 		return (&R)[Component];
 	}
 
-    constexpr TEXTURE_COMPONENT_SWIZZLE& operator[](Uint32 Component)
+    constexpr TEXTURE_COMPONENT_SWIZZLE& operator[](size_t Component)
 	{
 		return (&R)[Component];
 	}
