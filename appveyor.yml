@@ -29,7 +29,7 @@ clone_folder: c:\projects\DiligentCore
 install:
   # clone submodules
   - git submodule update --init --recursive
-  - BuildTools\Scripts\appveyor\install.bat
+  - ps: .\BuildTools\Scripts\appveyor\install.ps1
 
 before_build:
   - 'cd %APPVEYOR_BUILD_FOLDER%\BuildTools\FormatValidation'
