@@ -2267,6 +2267,33 @@ String GetTextureComponentMappingString(const TextureComponentMapping& Mapping)
     return Str;
 }
 
+bool TextureComponentMappingFromString(const String& MappingStr, TextureComponentMapping& Mapping)
+{
+    Mapping = TextureComponentMapping::Identity();
+
+    bool AllOK = MappingStr.length() <= 4;
+
+    for (size_t Comp = 0; Comp < MappingStr.length(); ++Comp)
+    {
+        const auto Chr = MappingStr[Comp];
+        if (Chr == 'r' || Chr == 'R')
+            Mapping[Comp] = Comp == 0 ? TEXTURE_COMPONENT_SWIZZLE_IDENTITY : TEXTURE_COMPONENT_SWIZZLE_R;
+        else if (Chr == 'g' || Chr == 'G')
+            Mapping[Comp] = Comp == 1 ? TEXTURE_COMPONENT_SWIZZLE_IDENTITY : TEXTURE_COMPONENT_SWIZZLE_G;
+        else if (Chr == 'b' || Chr == 'B')
+            Mapping[Comp] = Comp == 2 ? TEXTURE_COMPONENT_SWIZZLE_IDENTITY : TEXTURE_COMPONENT_SWIZZLE_B;
+        else if (Chr == 'a' || Chr == 'A')
+            Mapping[Comp] = Comp == 3 ? TEXTURE_COMPONENT_SWIZZLE_IDENTITY : TEXTURE_COMPONENT_SWIZZLE_A;
+        else if (Chr == '0')
+            Mapping[Comp] = TEXTURE_COMPONENT_SWIZZLE_ZERO;
+        else if (Chr == '1')
+            Mapping[Comp] = TEXTURE_COMPONENT_SWIZZLE_ONE;
+        else
+            AllOK = false;
+    }
+    return AllOK;
+}
+
 SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& TexDesc)
 {
     constexpr Uint32 SparseBlockSize = 64 << 10;

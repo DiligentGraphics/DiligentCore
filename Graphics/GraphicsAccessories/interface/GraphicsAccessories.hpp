@@ -734,7 +734,16 @@ TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt);
 
 String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags);
 
+/// Converts texture component mapping to a string, for example:
+/// {R, G, B, A} -> "rgba"
+/// {R, G, B, 1} -> "rgb1"
 String GetTextureComponentMappingString(const TextureComponentMapping& Mapping);
+
+/// Converts texture component mapping string to the mapping, for example:
+/// "rgba" -> {R, G, B, A}
+/// "rgb1" -> {R, G, B, 1}
+bool TextureComponentMappingFromString(const String& MappingStr, TextureComponentMapping& Mapping);
+
 
 /// Returns the sparse texture properties assuming the standard tile shapes
 SparseTextureProperties GetStandardSparseTextureProperties(const TextureDesc& TexDesc);

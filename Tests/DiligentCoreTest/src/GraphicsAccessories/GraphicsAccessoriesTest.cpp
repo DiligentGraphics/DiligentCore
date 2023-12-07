@@ -774,6 +774,79 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetTextureComponentMappingString)
                      TextureComponentMapping(TEXTURE_COMPONENT_SWIZZLE_IDENTITY, TEXTURE_COMPONENT_SWIZZLE_IDENTITY, TEXTURE_COMPONENT_SWIZZLE_IDENTITY, TEXTURE_COMPONENT_SWIZZLE_ONE))
                      .c_str(),
                  "rgb1");
+    for (size_t Comp = 0; Comp < 4; ++Comp)
+    {
+        for (Uint32 Swizzle = 0; Swizzle < TEXTURE_COMPONENT_SWIZZLE_COUNT; ++Swizzle)
+        {
+            TextureComponentMapping Mapping{TextureComponentMapping::Identity()};
+            Mapping[Comp]      = static_cast<TEXTURE_COMPONENT_SWIZZLE>(Swizzle);
+            std::string RefStr = "rgba";
+            if (Swizzle != TEXTURE_COMPONENT_SWIZZLE_IDENTITY)
+                RefStr[Comp] = " 01rgba"[Swizzle];
+            EXPECT_STREQ(GetTextureComponentMappingString(Mapping).c_str(), RefStr.c_str());
+        }
+    }
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, TextureComponentMappingFromString)
+{
+    {
+        TextureComponentMapping Mapping;
+        EXPECT_TRUE(TextureComponentMappingFromString("", Mapping));
+        EXPECT_EQ(Mapping, TextureComponentMapping::Identity());
+    }
+
+    for (Uint32 Swizzle = 0; Swizzle < TEXTURE_COMPONENT_SWIZZLE_COUNT; ++Swizzle)
+    {
+        {
+            const char*             Strings[TEXTURE_COMPONENT_SWIZZLE_COUNT] = {"r", "0", "1", "r", "g", "b", "a"};
+            TextureComponentMapping TestMapping;
+            EXPECT_TRUE(TextureComponentMappingFromString(Strings[Swizzle], TestMapping));
+
+            TextureComponentMapping RefMapping;
+            RefMapping[0] = Swizzle == TEXTURE_COMPONENT_SWIZZLE_R ? TEXTURE_COMPONENT_SWIZZLE_IDENTITY : static_cast<TEXTURE_COMPONENT_SWIZZLE>(Swizzle);
+            EXPECT_EQ(TestMapping, RefMapping);
+        }
+
+        {
+            const char*             Strings[TEXTURE_COMPONENT_SWIZZLE_COUNT] = {"rg", "00", "11", "rr", "gg", "bb", "aa"};
+            TextureComponentMapping TestMapping;
+            EXPECT_TRUE(TextureComponentMappingFromString(Strings[Swizzle], TestMapping));
+
+            TextureComponentMapping RefMapping;
+            RefMapping[0] = Swizzle == TEXTURE_COMPONENT_SWIZZLE_R ? TEXTURE_COMPONENT_SWIZZLE_IDENTITY : static_cast<TEXTURE_COMPONENT_SWIZZLE>(Swizzle);
+            RefMapping[1] = Swizzle == TEXTURE_COMPONENT_SWIZZLE_G ? TEXTURE_COMPONENT_SWIZZLE_IDENTITY : static_cast<TEXTURE_COMPONENT_SWIZZLE>(Swizzle);
+            EXPECT_EQ(TestMapping, RefMapping);
+        }
+
+        {
+            const char*             Strings[TEXTURE_COMPONENT_SWIZZLE_COUNT] = {"rgb", "000", "111", "rrr", "ggg", "bbb", "aaa"};
+            TextureComponentMapping TestMapping;
+            EXPECT_TRUE(TextureComponentMappingFromString(Strings[Swizzle], TestMapping));
+
+            TextureComponentMapping RefMapping;
+            RefMapping[0] = Swizzle == TEXTURE_COMPONENT_SWIZZLE_R ? TEXTURE_COMPONENT_SWIZZLE_IDENTITY : static_cast<TEXTURE_COMPONENT_SWIZZLE>(Swizzle);
+            RefMapping[1] = Swizzle == TEXTURE_COMPONENT_SWIZZLE_G ? TEXTURE_COMPONENT_SWIZZLE_IDENTITY : static_cast<TEXTURE_COMPONENT_SWIZZLE>(Swizzle);
+            RefMapping[2] = Swizzle == TEXTURE_COMPONENT_SWIZZLE_B ? TEXTURE_COMPONENT_SWIZZLE_IDENTITY : static_cast<TEXTURE_COMPONENT_SWIZZLE>(Swizzle);
+            EXPECT_EQ(TestMapping, RefMapping);
+        }
+
+        for (size_t Comp = 0; Comp < 4; ++Comp)
+        {
+            TextureComponentMapping Mapping{TextureComponentMapping::Identity()};
+            Mapping[Comp]   = static_cast<TEXTURE_COMPONENT_SWIZZLE>(Swizzle);
+            std::string Str = GetTextureComponentMappingString(Mapping);
+            if ((Comp == 0 && Swizzle == TEXTURE_COMPONENT_SWIZZLE_R) ||
+                (Comp == 1 && Swizzle == TEXTURE_COMPONENT_SWIZZLE_G) ||
+                (Comp == 2 && Swizzle == TEXTURE_COMPONENT_SWIZZLE_B) ||
+                (Comp == 3 && Swizzle == TEXTURE_COMPONENT_SWIZZLE_A))
+                Mapping[Comp] = TEXTURE_COMPONENT_SWIZZLE_IDENTITY;
+
+            TextureComponentMapping MappingFromStr;
+            EXPECT_TRUE(TextureComponentMappingFromString(Str, MappingFromStr));
+            EXPECT_EQ(Mapping, MappingFromStr);
+        }
+    }
 }
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetMipLevelProperties)
