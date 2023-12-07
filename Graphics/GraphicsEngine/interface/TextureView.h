@@ -156,6 +156,16 @@ struct TextureComponentMapping
         return !(*this == RHS);
     }
 
+    constexpr TEXTURE_COMPONENT_SWIZZLE operator[](Uint32 Component) const
+	{
+		return (&R)[Component];
+	}
+
+    constexpr TEXTURE_COMPONENT_SWIZZLE& operator[](Uint32 Component)
+	{
+		return (&R)[Component];
+	}
+
     static constexpr TextureComponentMapping Identity()
 	{
 		return {
