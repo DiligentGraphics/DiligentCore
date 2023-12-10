@@ -493,6 +493,19 @@ TEST(Platforms_FileSystem, Directories)
     EXPECT_TRUE(FileSystem::PathExists(TmpDirPath.c_str()));
 }
 
+static void CreateTestFile(const std::string& Dir, const std::string& FileName)
+{
+    const auto& Path = Dir + FileSystem::SlashSymbol + FileName;
+    {
+        FileWrapper File{Path.c_str(), EFileAccessMode::Overwrite};
+        ASSERT_TRUE(File);
+
+        std::vector<Int32> Data(512);
+        EXPECT_TRUE(File->Write(Data.data(), Data.size() * sizeof(Data[0])));
+    }
+    EXPECT_TRUE(FileSystem::FileExists(Path.c_str()));
+}
+
 TEST(Platforms_FileSystem, Search)
 {
     TempDirectory TmpDir;
@@ -500,19 +513,6 @@ TEST(Platforms_FileSystem, Search)
     ASSERT_TRUE(FileSystem::PathExists(TmpDirPath.c_str()));
     EXPECT_TRUE(FileSystem::IsDirectory(TmpDirPath.c_str()));
     std::unordered_set<std::string> FileNames = {"File1.ext", "File2.ext", "File3.ext"};
-
-    auto CreateTestFile = [](const std::string& Dir, const std::string& FileName) //
-    {
-        const auto& Path = Dir + FileSystem::SlashSymbol + FileName;
-        {
-            FileWrapper File{Path.c_str(), EFileAccessMode::Overwrite};
-            ASSERT_TRUE(File);
-
-            std::vector<Int32> Data(512);
-            EXPECT_TRUE(File->Write(Data.data(), Data.size() * sizeof(Data[0])));
-        }
-        EXPECT_TRUE(FileSystem::FileExists(Path.c_str()));
-    };
 
     for (auto& Name : FileNames)
     {
@@ -534,12 +534,12 @@ TEST(Platforms_FileSystem, Search)
     EXPECT_EQ(SearchRes.size(), FileNames.size() + DirNames.size());
     for (const auto& Res : SearchRes)
     {
-        if (FileNames.find(Res->Name()) != FileNames.end())
-            EXPECT_FALSE(Res->IsDirectory());
-        else if (DirNames.find(Res->Name()) != DirNames.end())
-            EXPECT_TRUE(Res->IsDirectory());
+        if (FileNames.find(Res.Name) != FileNames.end())
+            EXPECT_FALSE(Res.IsDirectory);
+        else if (DirNames.find(Res.Name) != DirNames.end())
+            EXPECT_TRUE(Res.IsDirectory);
         else
-            GTEST_FAIL() << Res->Name();
+            GTEST_FAIL() << Res.Name;
     }
 
     FileSystem::ClearDirectory(TmpDirPath.c_str(), false);
@@ -548,12 +548,61 @@ TEST(Platforms_FileSystem, Search)
     EXPECT_EQ(SearchRes.size(), DirNames.size());
     for (const auto& Res : SearchRes)
     {
-        EXPECT_TRUE(DirNames.find(Res->Name()) != DirNames.end());
+        EXPECT_TRUE(DirNames.find(Res.Name) != DirNames.end());
     }
 
     FileSystem::ClearDirectory(TmpDirPath.c_str(), true);
     SearchRes = FileSystem::Search(SearchPattern.c_str());
     EXPECT_TRUE(SearchRes.empty());
+}
+
+TEST(Platforms_FileSystem, SearchRecursive)
+{
+    TempDirectory TmpDir;
+    ASSERT_TRUE(FileSystem::PathExists(TmpDir.Get().c_str()));
+    auto BaseDir = TmpDir.Get() + FileSystem::SlashSymbol + "SearchRecursive";
+    if (FileSystem::PathExists(BaseDir.c_str()))
+        FileSystem::DeleteDirectory(BaseDir.c_str());
+    EXPECT_FALSE(FileSystem::PathExists(BaseDir.c_str()));
+    std::string SubDir1 = "Subdir1";
+    std::string SubDir2 = "Subdir2";
+    std::string SubDir3 = SubDir1 + FileSystem::SlashSymbol + "Subdir3";
+    BaseDir += FileSystem::SlashSymbol;
+    EXPECT_TRUE(FileSystem::CreateDirectory((BaseDir + SubDir1).c_str()));
+    EXPECT_TRUE(FileSystem::CreateDirectory((BaseDir + SubDir2).c_str()));
+    EXPECT_TRUE(FileSystem::CreateDirectory((BaseDir + SubDir3).c_str()));
+    std::unordered_set<std::string> TxtFiles = {
+        SubDir1 + FileSystem::SlashSymbol + "File1.txt",
+        SubDir2 + FileSystem::SlashSymbol + "File2.txt",
+        SubDir3 + FileSystem::SlashSymbol + "File3.txt",
+    };
+    std::unordered_set<std::string> DatFiles = {
+        SubDir1 + FileSystem::SlashSymbol + "File1.dat",
+        SubDir2 + FileSystem::SlashSymbol + "File2.dat",
+        SubDir3 + FileSystem::SlashSymbol + "File3.dat",
+    };
+    for (const auto& File : TxtFiles)
+        CreateTestFile(BaseDir, File);
+    for (const auto& File : DatFiles)
+        CreateTestFile(BaseDir, File);
+    {
+        auto TxtSearchRes = FileSystem::SearchRecursive(BaseDir.c_str(), "*.txt");
+        EXPECT_EQ(TxtSearchRes.size(), TxtFiles.size());
+        for (auto& Res : TxtSearchRes)
+        {
+            EXPECT_TRUE(TxtFiles.find(Res.Name) != TxtFiles.end());
+            EXPECT_FALSE(Res.IsDirectory);
+        }
+    }
+    {
+        auto DatSearchRes = FileSystem::SearchRecursive(BaseDir.c_str(), "*.dat");
+        EXPECT_EQ(DatSearchRes.size(), TxtFiles.size());
+        for (auto& Res : DatSearchRes)
+        {
+            EXPECT_TRUE(DatFiles.find(Res.Name) != DatFiles.end());
+            EXPECT_FALSE(Res.IsDirectory);
+        }
+    }
 }
 
 void TestGetLocalAppDataDirectory(const char* AppName)

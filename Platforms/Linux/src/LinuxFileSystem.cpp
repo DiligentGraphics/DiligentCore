@@ -40,6 +40,7 @@
 #include "../interface/LinuxFileSystem.hpp"
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
+#include "../../Basic/include/SearchRecursive.inl"
 
 namespace Diligent
 {
@@ -166,24 +167,9 @@ bool LinuxFileSystem::IsDirectory(const Char* strPath)
     return S_ISDIR(StatBuff.st_mode);
 }
 
-struct LinuxFindFileData : public FindFileData
+LinuxFileSystem::SearchFilesResult LinuxFileSystem::Search(const Char* SearchPattern)
 {
-    virtual const Char* Name() const override { return m_Name.c_str(); }
-
-    virtual bool IsDirectory() const override { return m_IsDirectory; }
-
-    const std::string m_Name;
-    const bool        m_IsDirectory;
-
-    LinuxFindFileData(std::string _Name, bool _IsDirectory) :
-        m_Name{std::move(_Name)},
-        m_IsDirectory{_IsDirectory}
-    {}
-};
-
-std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Char* SearchPattern)
-{
-    std::vector<std::unique_ptr<FindFileData>> SearchRes;
+    LinuxFileSystem::SearchFilesResult SearchRes;
 
 #if PLATFORM_LINUX || PLATFORM_APPLE
     glob_t glob_result = {};
@@ -198,7 +184,7 @@ std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Char* S
 
             std::string FileName;
             GetPathComponents(path, nullptr, &FileName);
-            SearchRes.emplace_back(std::make_unique<LinuxFindFileData>(std::move(FileName), S_ISDIR(StatBuff.st_mode)));
+            SearchRes.emplace_back(FindFileData{std::move(FileName), S_ISDIR(StatBuff.st_mode)});
         }
     }
     globfree(&glob_result);
@@ -207,6 +193,16 @@ std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Char* S
 #endif
 
     return SearchRes;
+}
+
+LinuxFileSystem::SearchFilesResult LinuxFileSystem::SearchRecursive(const Char* Dir, const Char* SearchPattern)
+{
+#if PLATFORM_LINUX || PLATFORM_APPLE
+    return Diligent::SearchRecursive<LinuxFileSystem>(Dir, SearchPattern);
+#else
+    UNSUPPORTED("Not implemented");
+    return {};
+#endif
 }
 
 // popen/pclose are not thread-safe
