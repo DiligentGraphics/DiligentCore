@@ -220,13 +220,17 @@ template <class T> struct Vector2
 
     const T* Data() const { return reinterpret_cast<const T*>(this); }
 
+    static constexpr size_t GetComponentCount() { return 2; }
+
     T& operator[](size_t index)
     {
+        VERIFY_EXPR(index < GetComponentCount());
         return Data()[index];
     }
 
     const T& operator[](size_t index) const
     {
+        VERIFY_EXPR(index < GetComponentCount());
         return Data()[index];
     }
 
@@ -431,13 +435,17 @@ template <class T> struct Vector3
 
     const T* Data() const { return reinterpret_cast<const T*>(this); }
 
+    static constexpr size_t GetComponentCount() { return 3; }
+
     T& operator[](size_t index)
     {
+        VERIFY_EXPR(index < GetComponentCount());
         return Data()[index];
     }
 
     const T& operator[](size_t index) const
     {
+        VERIFY_EXPR(index < GetComponentCount());
         return Data()[index];
     }
 
@@ -659,13 +667,17 @@ template <class T> struct Vector4
 
     const T* Data() const { return reinterpret_cast<const T*>(this); }
 
+    static constexpr size_t GetComponentCount() { return 4; }
+
     T& operator[](size_t index)
     {
+        VERIFY_EXPR(index < GetComponentCount());
         return Data()[index];
     }
 
     const T& operator[](size_t index) const
     {
+        VERIFY_EXPR(index < GetComponentCount());
         return Data()[index];
     }
 
