@@ -73,6 +73,8 @@ template <class T> struct Vector4;
 
 template <class T> struct Vector2
 {
+    using ValueType = T;
+
     union
     {
         struct
@@ -268,6 +270,8 @@ constexpr Vector2<T> operator*(T s, const Vector2<T>& a)
 
 template <class T> struct Vector3
 {
+    using ValueType = T;
+
     union
     {
         struct
@@ -490,6 +494,8 @@ constexpr Vector3<T> operator*(T s, const Vector3<T>& a)
 
 template <class T> struct Vector4
 {
+    using ValueType = T;
+
     union
     {
         struct
@@ -731,6 +737,8 @@ constexpr Vector4<T> operator*(T s, const Vector4<T>& a)
 
 template <class T> struct Matrix2x2
 {
+    using ValueType = T;
+
     union
     {
         struct
@@ -997,6 +1005,8 @@ inline constexpr Matrix2x2<T> operator/(const Matrix2x2<T>& Mat, T s)
 
 template <class T> struct Matrix3x3
 {
+    using ValueType = T;
+
     union
     {
         struct
@@ -1355,6 +1365,8 @@ inline constexpr Matrix3x3<T> operator/(const Matrix3x3<T>& Mat, T s)
 
 template <class T> struct Matrix4x4
 {
+    using ValueType = T;
+
     union
     {
         struct
@@ -2276,6 +2288,8 @@ using int2x2 = Matrix2x2<Int32>;
 template <typename T = float>
 struct Quaternion
 {
+    using ValueType = T;
+
     Vector4<T> q{0, 0, 0, 1};
 
     constexpr Quaternion(const Vector4<T>& _q) noexcept :
