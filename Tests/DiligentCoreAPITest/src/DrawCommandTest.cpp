@@ -339,6 +339,30 @@ void main(in  uint    VertId : SV_VertexID,
 }
 )"
 };
+
+const std::string DrawTest_VS_Attribs{
+R"(
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
+};
+
+struct VSInput
+{
+    float4 Pos   : ATTRIB5;
+    float3 Color : ATTRIB2;
+};
+
+void main(in  VSInput VSIn,
+          out PSInput PSIn)
+{
+    PSIn.Pos   = VSIn.Pos;
+    PSIn.Color = VSIn.Color;
+}
+)"
+};
+
 // clang-format on
 
 } // namespace HLSL
@@ -585,6 +609,15 @@ protected:
 
         Elems[0] = {0, 1, 4, VT_FLOAT32};
         Elems[1] = {1, 3, 3, VT_FLOAT32};
+#if PLATFORM_LINUX
+        if (pDevice->GetDeviceInfo().IsVulkanDevice() && pDevice->GetAdapterInfo().Type == ADAPTER_TYPE_SOFTWARE)
+        {
+            sm_UseNullBoundVBWorkaround = true;
+            // On Linux, Vulkan software rasterizer fails if there are null buffers bound.
+            Elems[0].BufferSlot = 0;
+            Elems[1].BufferSlot = 1;
+        }
+#endif
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDraw_2VBs_PSO);
         ASSERT_NE(sm_pDraw_2VBs_PSO, nullptr);
 
@@ -743,6 +776,10 @@ protected:
     static RefCntAutoPtr<IPipelineState> sm_pDrawInstancedPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawStripPSO;
     static FastRandFloat                 sm_Rnd;
+
+    // On Linux, Vulkan software rasterizer fails if there are
+    // null buffers bound.
+    static bool sm_UseNullBoundVBWorkaround;
 };
 
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawProceduralPSO;
@@ -752,6 +789,8 @@ RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDraw_2VBs_PSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawInstancedPSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawStripPSO;
 FastRandFloat                 DrawCommandTest::sm_Rnd{0, 0.f, 1.f};
+
+bool DrawCommandTest::sm_UseNullBoundVBWorkaround = false;
 
 TEST_F(DrawCommandTest, DrawProcedural)
 {
@@ -910,13 +949,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
 
 TEST_F(DrawCommandTest, Draw_2VBs)
 {
-    auto* pEnv = GPUTestingEnvironment::GetInstance();
-#if PLATFORM_LINUX
-    if (pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice() && pEnv->GetDevice()->GetAdapterInfo().Type == ADAPTER_TYPE_SOFTWARE)
-    {
-        GTEST_SKIP() << "This test fails in Vulkan SW renderer because of a bug in the renderer";
-    }
-#endif
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDraw_2VBs_PSO);
@@ -934,11 +967,18 @@ TEST_F(DrawCommandTest, Draw_2VBs)
     };
     // clang-format on
 
-    auto     pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
-    auto     pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
-    IBuffer* pVBs[] = {nullptr, pPosVB, nullptr, pColVB};
-    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
-
+    auto pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
+    auto pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
+    if (sm_UseNullBoundVBWorkaround)
+    {
+        IBuffer* pVBs[] = {pPosVB, pColVB};
+        pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    }
+    else
+    {
+        IBuffer* pVBs[] = {nullptr, pPosVB, nullptr, pColVB};
+        pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    }
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
 
@@ -1078,14 +1118,7 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
 
 TEST_F(DrawCommandTest, Draw_2VBs_Indexed)
 {
-    auto* pEnv = GPUTestingEnvironment::GetInstance();
-#if PLATFORM_LINUX
-    if (pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice() && pEnv->GetDevice()->GetAdapterInfo().Type == ADAPTER_TYPE_SOFTWARE)
-    {
-        GTEST_SKIP() << "This test fails in Vulkan SW renderer because of a bug in the renderer";
-    }
-#endif
-
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDraw_2VBs_PSO);
@@ -1104,11 +1137,18 @@ TEST_F(DrawCommandTest, Draw_2VBs_Indexed)
     const Uint32 Indices[] = {1,3,5, 8,9,12};
     // clang-format on
 
-    auto     pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
-    auto     pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
-    IBuffer* pVBs[] = {nullptr, pPosVB, nullptr, pColVB};
-    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
-
+    auto pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
+    auto pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
+    if (sm_UseNullBoundVBWorkaround)
+    {
+        IBuffer* pVBs[] = {pPosVB, pColVB};
+        pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    }
+    else
+    {
+        IBuffer* pVBs[] = {nullptr, pPosVB, nullptr, pColVB};
+        pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    }
     auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
@@ -3262,6 +3302,100 @@ TEST_F(DrawCommandTest, UniformBufferOffsets_MSL)
 
     DrawWithUniOrStructBufferOffsets(pVS, pPS, BUFFER_MODE_UNDEFINED, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
                                      USAGE_DYNAMIC, SHADER_VARIABLE_FLAG_NONE);
+}
+
+TEST_F(DrawCommandTest, VertexAttributes)
+{
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pContext   = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+    GraphicsPipeline.NumRenderTargets             = 1;
+    GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc       = {"Draw command test - vertex attributes", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::DrawTest_VS_Attribs.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc       = {"Draw command test pixel shader", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::DrawTest_PS.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    LayoutElement Elems[] =
+        {
+            LayoutElement{5, 3, 4, VT_FLOAT32},
+            LayoutElement{2, 1, 3, VT_FLOAT32},
+        };
+    if (sm_UseNullBoundVBWorkaround)
+    {
+        Elems[0].BufferSlot = 0;
+        Elems[1].BufferSlot = 1;
+    }
+    GraphicsPipeline.InputLayout.LayoutElements = Elems;
+    GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
+
+    PSOCreateInfo.pVS = pVS;
+    PSOCreateInfo.pPS = pPS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    SetRenderTargets(pPSO);
+
+    // clang-format off
+    const float4 Positions[] =
+        {
+            Pos[0], Pos[1], Pos[2],
+            Pos[3], Pos[4], Pos[5]
+    };
+    const float3 Colors[] =
+        {
+            Color[0], Color[1], Color[2],
+            Color[0], Color[1], Color[2]
+        };
+    // clang-format on
+
+    auto pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
+    auto pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
+    if (sm_UseNullBoundVBWorkaround)
+    {
+        IBuffer* pVBs[] = {pPosVB, pColVB};
+        pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    }
+    else
+    {
+        IBuffer* pVBs[] = {nullptr, pColVB, nullptr, pPosVB};
+        pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    }
+    DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(drawAttrs);
+
+    Present();
 }
 
 } // namespace
