@@ -443,7 +443,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Wall -Wextra -Wuninitialized -Wconditional-uninitialized -Wextra-tokens -Wpointer-arith -Wloop-analysis -Wunused
         # Disable few warnings
         -Wno-overloaded-virtual -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unknown-pragmas
-        -Wno-zero-as-null-pointer-constant -Wno-unused-parameter
+        -Wno-zero-as-null-pointer-constant -Wno-unused-parameter -Wno-invalid-offsetof
     )
     target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DILIGENT_CLANG_DEBUG_COMPILE_OPTIONS}>")
 
