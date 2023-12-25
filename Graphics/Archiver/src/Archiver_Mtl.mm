@@ -386,13 +386,22 @@ SerializedData CompileMtlShader(const CompileMtlShaderAttribs& Attribs) noexcept
             PSOName},
             ResRemapping); // may throw exception
 
-        if (ShDesc.ShaderType == SHADER_TYPE_PIXEL && Attribs.pRenderPass != nullptr)
+        if (ShDesc.ShaderType == SHADER_TYPE_VERTEX)
+        {
+            // Remap vertex input attributes
+            PipelineStateMtlImpl::GetVSInputMap({
+                ParsedMsl,
+                MslData
+            },
+            ResRemapping);
+        }
+        else if (ShDesc.ShaderType == SHADER_TYPE_PIXEL && Attribs.pRenderPass != nullptr)
         {
             const auto& RPDesc   = Attribs.pRenderPass->GetDesc();
             const auto& Features = Attribs.pSerializationDevice->GetDeviceInfo().Features;
 
             RenderPassMtlImpl RenderPassMtl{RPDesc, Features};
-            PipelineStateMtlImpl::GetInputOutputMap({
+            PipelineStateMtlImpl::GetPSInputOutputMap({
                     ParsedMsl,
                     RenderPassMtl,
                     ShDesc,
