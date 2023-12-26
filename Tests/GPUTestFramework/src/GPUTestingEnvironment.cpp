@@ -386,7 +386,9 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 
             // TODO: Remove when AMD fixes vkGetPhysicalDeviceImageFormatProperties2
             std::vector<const char*> IgnoreDebugMessages = {
-                "VUID-VkImageCreateInfo-imageCreateMaxMipLevels-02251"};
+                "VUID-VkImageCreateInfo-imageCreateMaxMipLevels-02251",
+                "UNASSIGNED-CoreValidation-Shader-OutputNotConsumed",
+            };
 
             EngineVkCreateInfo EngineCI;
             EngineCI.AdapterId = FindAdapter(Adapters, EnvCI.AdapterType, EnvCI.AdapterId);

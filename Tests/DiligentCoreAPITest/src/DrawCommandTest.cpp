@@ -350,8 +350,11 @@ struct PSInput
 
 struct VSInput
 {
-    float4 Pos   : ATTRIB5;
-    float3 Color : ATTRIB2;
+    float4 Pos     : ATTRIB5;
+    float4 Unused0 : ATTRIB1;
+    float4 Unused1 : ATTRIB4;
+    float3 Color   : ATTRIB2;
+    float4 Unused2 : ATTRIB7;
 };
 
 void main(in  VSInput VSIn,
@@ -3349,6 +3352,9 @@ TEST_F(DrawCommandTest, VertexAttributes)
         {
             LayoutElement{5, 3, 4, VT_FLOAT32},
             LayoutElement{2, 1, 3, VT_FLOAT32},
+            LayoutElement{1, 2, 4, VT_FLOAT32},
+            LayoutElement{4, 2, 4, VT_FLOAT32},
+            LayoutElement{7, 2, 4, VT_FLOAT32},
         };
     if (sm_UseNullBoundVBWorkaround)
     {
@@ -3369,27 +3375,29 @@ TEST_F(DrawCommandTest, VertexAttributes)
 
     // clang-format off
     const float4 Positions[] =
-        {
-            Pos[0], Pos[1], Pos[2],
-            Pos[3], Pos[4], Pos[5]
+    {
+        Pos[0], Pos[1], Pos[2],
+        Pos[3], Pos[4], Pos[5]
     };
     const float3 Colors[] =
-        {
-            Color[0], Color[1], Color[2],
-            Color[0], Color[1], Color[2]
-        };
+    {
+        Color[0], Color[1], Color[2],
+        Color[0], Color[1], Color[2]
+    };
+    const float4 Zero[_countof(Positions)];
     // clang-format on
 
-    auto pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
-    auto pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
+    auto pPosVB  = CreateVertexBuffer(Positions, sizeof(Positions));
+    auto pColVB  = CreateVertexBuffer(Colors, sizeof(Colors));
+    auto pZeroVB = CreateVertexBuffer(Zero, sizeof(Zero));
     if (sm_UseNullBoundVBWorkaround)
     {
-        IBuffer* pVBs[] = {pPosVB, pColVB};
+        IBuffer* pVBs[] = {pPosVB, pColVB, pZeroVB};
         pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     }
     else
     {
-        IBuffer* pVBs[] = {nullptr, pColVB, nullptr, pPosVB};
+        IBuffer* pVBs[] = {nullptr, pColVB, pZeroVB, pPosVB};
         pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     }
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
