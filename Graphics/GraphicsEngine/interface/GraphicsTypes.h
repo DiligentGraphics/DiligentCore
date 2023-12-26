@@ -3425,6 +3425,19 @@ struct EngineCreateInfo
 typedef struct EngineCreateInfo EngineCreateInfo;
 
 #if PLATFORM_EMSCRIPTEN
+/// WebGL power preference.
+DILIGENT_TYPED_ENUM(WEBGL_POWER_PREFERENCE, Uint8)
+{
+    /// Default power preference.
+	WEBGL_POWER_PREFERENCE_DEFAULT = 0,
+
+    /// Low power preference.
+	WEBGL_POWER_PREFERENCE_LOW_POWER,
+
+    /// High performance power preference.
+	WEBGL_POWER_PREFERENCE_HIGH_PERFORMANCE
+};
+
 /// WebGL context attributes.
 ///
 /// \remarks    This struct is used to set the members of the EmscriptenWebGLContextAttributes
@@ -3453,6 +3466,11 @@ struct WebGLContextAttribs
     ///
     /// \remarks    This corresponds to the preserveDrawingBuffer member of the EmscriptenWebGLContextAttributes struct.
     Bool PreserveDrawingBuffer DEFAULT_INITIALIZER(false);
+
+    /// Specifies a hint to the WebGL canvas implementation to how it should choose the use of available GPU resources.
+    ///
+    /// \remarks    This corresponds to the powerPreference member of the EmscriptenWebGLContextAttributes struct.
+    WEBGL_POWER_PREFERENCE PowerPreference DEFAULT_INITIALIZER(WEBGL_POWER_PREFERENCE_DEFAULT);
 };
 typedef struct WebGLContextAttribs WebGLContextAttribs;
 #endif

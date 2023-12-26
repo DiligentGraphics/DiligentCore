@@ -48,6 +48,16 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& 
         ContextAttributes.premultipliedAlpha    = InitAttribs.WebGLAttribs.PremultipliedAlpha;
         ContextAttributes.preserveDrawingBuffer = InitAttribs.WebGLAttribs.PreserveDrawingBuffer;
 
+        switch (InitAttribs.WebGLAttribs.PowerPreference)
+        {
+            // clang-format off
+            case WEBGL_POWER_PREFERENCE_DEFAULT:          ContextAttributes.powerPreference = EM_WEBGL_POWER_PREFERENCE_DEFAULT;          break;
+            case WEBGL_POWER_PREFERENCE_LOW_POWER:        ContextAttributes.powerPreference = EM_WEBGL_POWER_PREFERENCE_LOW_POWER;        break;
+            case WEBGL_POWER_PREFERENCE_HIGH_PERFORMANCE: ContextAttributes.powerPreference = EM_WEBGL_POWER_PREFERENCE_HIGH_PERFORMANCE; break;
+            // clang-format on
+            default: UNEXPECTED("Unknown power preference");
+        }
+
         m_GLContext = emscripten_webgl_create_context(InitAttribs.Window.pCanvasId, &ContextAttributes);
         if (m_GLContext == 0)
         {
