@@ -2788,13 +2788,27 @@ const char* HLSL2GLSLConverterImpl::ConversionStream::GetInterpolationQualifier(
     return "";
 }
 
-void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(std::vector<ShaderParameterInfo>& Params,
+void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(TokenListType::iterator&          TypeToken,
+                                                                              std::vector<ShaderParameterInfo>& Params,
                                                                               String&                           GlobalVariables,
                                                                               std::stringstream&                ReturnHandlerSS,
                                                                               String&                           Prologue)
 {
+    auto Token = TypeToken;
+    // [earlydepthstencil]
+    // void main(
+    // ^
+
     stringstream GlobalVarsSS, PrologueSS, InterfaceVarsSS;
-    int          InLocation = 0;
+
+    std::unordered_map<HashMapStringKey, String> Attributes;
+    ProcessShaderAttributes(Token, Attributes);
+    if (Attributes.find("earlydepthstencil") != Attributes.end())
+    {
+        GlobalVarsSS << "layout(early_fragment_tests) in;\n";
+    }
+
+    int InLocation = 0;
     for (const auto& Param : Params)
     {
         if (Param.storageQualifier == ShaderParameterInfo::StorageQualifier::In)
@@ -3387,18 +3401,29 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderAttributes(TokenList
         StrToLowerInPlace(Attrib);
 
         ++TmpToken;
-        VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::OpenParen, "\'(\' expected");
+        VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end(), "Unexpected end of file");
         String AttribValue;
-        ProcessScope(
-            TmpToken, m_Tokens.end(), TokenType::OpenParen, TokenType::ClosingParen,
-            [&](TokenListType::iterator& tkn, int) //
-            {
-                AttribValue.append(tkn->Delimiter);
-                AttribValue.append(tkn->Literal);
-                ++tkn;
-            } //
-        );
-        VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::ClosingParen, "\']\' expected");
+        if (TmpToken->Type == TokenType::OpenParen)
+        {
+            // [domain("quad")]
+            //        ^
+            ProcessScope(
+                TmpToken, m_Tokens.end(), TokenType::OpenParen, TokenType::ClosingParen,
+                [&](TokenListType::iterator& tkn, int) //
+                {
+                    AttribValue.append(tkn->Delimiter);
+                    AttribValue.append(tkn->Literal);
+                    ++tkn;
+                } //
+            );
+            VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::ClosingParen, "\')\' expected");
+        }
+        else
+        {
+            // [earlydepthstencil]
+            //                   ^
+            VERIFY_PARSER_STATE(TmpToken, TmpToken != m_Tokens.end() && TmpToken->Type == TokenType::ClosingSquareBracket, "\']\' expected");
+        }
         Attributes.emplace(make_pair(HashMapStringKey(std::move(Attrib)), AttribValue));
 
         --Token;
@@ -4010,7 +4035,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessShaderDeclaration(TokenLis
     {
         if (ShaderType == SHADER_TYPE_PIXEL)
         {
-            ProcessFragmentShaderArguments(ShaderParams, GlobalVariables, ReturnHandlerSS, Prologue);
+            ProcessFragmentShaderArguments(TypeToken, ShaderParams, GlobalVariables, ReturnHandlerSS, Prologue);
         }
         else if (ShaderType == SHADER_TYPE_VERTEX)
         {
@@ -4246,6 +4271,23 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSpecialShaderAttributes()
                 ++Token;
                 // [numthreads(16, 16, 1)]
                 // void CS(uint3 ThreadId  : SV_DispatchThreadID)
+                // ^
+                if (Token != m_Tokens.end())
+                    Token->Delimiter = OpenStaple->Delimiter + Token->Delimiter;
+                m_Tokens.erase(OpenStaple, Token);
+            }
+            else if (Token->Literal == "earlydepthstencil")
+            {
+                ++Token;
+                // [earlydepthstencil]
+                //                   ^
+                while (Token != m_Tokens.end() && Token->Type != TokenType::ClosingSquareBracket)
+                    ++Token;
+                if (Token == m_Tokens.end())
+                    return;
+                ++Token;
+                // [earlydepthstencil]
+                // void main
                 // ^
                 if (Token != m_Tokens.end())
                     Token->Delimiter = OpenStaple->Delimiter + Token->Delimiter;

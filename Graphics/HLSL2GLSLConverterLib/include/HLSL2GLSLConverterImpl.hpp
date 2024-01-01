@@ -513,7 +513,8 @@ private:
 
         const char* GetInterpolationQualifier(const ShaderParameterInfo& ParamInfo) const;
 
-        void ProcessFragmentShaderArguments(std::vector<ShaderParameterInfo>& Params,
+        void ProcessFragmentShaderArguments(TokenListType::iterator&          Token,
+                                            std::vector<ShaderParameterInfo>& Params,
                                             String&                           GlobalVariables,
                                             std::stringstream&                ReturnHandlerSS,
                                             String&                           Prologue);
