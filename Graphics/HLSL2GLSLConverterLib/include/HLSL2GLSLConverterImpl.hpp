@@ -614,6 +614,9 @@ private:
     // Set of all HLSL atomic operations (InterlockedAdd, InterlockedOr, ...)
     std::unordered_set<HashMapStringKey> m_AtomicOperations;
 
+    // Set of all HLSL special shader attributes (numthreads, earlydepthstencil, ...)
+    std::unordered_set<HashMapStringKey> m_SpecialShaderAttributes;
+
     // HLSL semantic -> glsl variable, for every shader stage and input/output type (in == 0, out == 1)
     // Example: [vertex, output] SV_Position -> gl_Position
     //          [fragment, input] SV_Position -> gl_FragCoord

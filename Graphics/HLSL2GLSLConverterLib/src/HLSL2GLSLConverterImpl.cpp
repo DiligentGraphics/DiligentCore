@@ -636,6 +636,12 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
     DEFINE_VARIABLE(CSInd, InVar, "sv_groupthreadid", "_GET_GL_LOCAL_INVOCATION_ID");
     DEFINE_VARIABLE(CSInd, InVar, "sv_groupindex", "_GET_GL_LOCAL_INVOCATION_INDEX");
 #undef DEFINE_VARIABLE
+
+    for (const char* Attrib : {"numthreads", "earlydepthstencil", "domain", "partitioning", "outputtopology",
+                               "outputcontrolpoints", "patchconstantfunc", "maxvertexcount"})
+    {
+        m_SpecialShaderAttributes.emplace(Attrib);
+    }
 }
 
 // IteratorType may be String::iterator or String::const_iterator.
@@ -4255,13 +4261,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSpecialShaderAttributes()
                 return;
             // [numthreads(16, 16, 1)]
             //  ^
-            if (Token->Literal == "numthreads")
+            if (m_Converter.m_SpecialShaderAttributes.find(Token->Literal.c_str()) != m_Converter.m_SpecialShaderAttributes.end())
             {
-                ++Token;
-                // [numthreads(16, 16, 1)]
-                //            ^
-                if (Token->Type != TokenType::OpenParen)
-                    return;
                 while (Token != m_Tokens.end() && Token->Type != TokenType::ClosingSquareBracket)
                     ++Token;
                 // [numthreads(16, 16, 1)]
@@ -4271,23 +4272,6 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSpecialShaderAttributes()
                 ++Token;
                 // [numthreads(16, 16, 1)]
                 // void CS(uint3 ThreadId  : SV_DispatchThreadID)
-                // ^
-                if (Token != m_Tokens.end())
-                    Token->Delimiter = OpenStaple->Delimiter + Token->Delimiter;
-                m_Tokens.erase(OpenStaple, Token);
-            }
-            else if (Token->Literal == "earlydepthstencil")
-            {
-                ++Token;
-                // [earlydepthstencil]
-                //                   ^
-                while (Token != m_Tokens.end() && Token->Type != TokenType::ClosingSquareBracket)
-                    ++Token;
-                if (Token == m_Tokens.end())
-                    return;
-                ++Token;
-                // [earlydepthstencil]
-                // void main
                 // ^
                 if (Token != m_Tokens.end())
                     Token->Delimiter = OpenStaple->Delimiter + Token->Delimiter;
