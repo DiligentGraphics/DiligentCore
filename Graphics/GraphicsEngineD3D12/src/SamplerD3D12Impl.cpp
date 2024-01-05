@@ -41,9 +41,12 @@ SamplerD3D12Impl::SamplerD3D12Impl(IReferenceCounters*    pRefCounters,
 {
     auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
+    auto filter = FilterTypeToD3D12Filter(SamplerDesc.MinFilter, SamplerDesc.MagFilter, SamplerDesc.MipFilter);
+    DEV_CHECK_ERR(!(filter == D3D12_FILTER_ANISOTROPIC || filter == D3D12_FILTER_COMPARISON_ANISOTROPIC) || (m_Desc.MaxAnisotropy >= 1 && m_Desc.MaxAnisotropy <= 16),
+                  "MaxAnisotropy (", m_Desc.MaxAnisotropy, ") must be in range 1 .. 16.");
     D3D12_SAMPLER_DESC D3D12SamplerDesc =
         {
-            FilterTypeToD3D12Filter(SamplerDesc.MinFilter, SamplerDesc.MagFilter, SamplerDesc.MipFilter),
+            filter,
             TexAddressModeToD3D12AddressMode(SamplerDesc.AddressU),
             TexAddressModeToD3D12AddressMode(SamplerDesc.AddressV),
             TexAddressModeToD3D12AddressMode(SamplerDesc.AddressW),

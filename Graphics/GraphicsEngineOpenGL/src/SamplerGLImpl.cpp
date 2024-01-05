@@ -102,7 +102,15 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
     }
 
     if (SamPrpos.AnisotropicFilteringSupported) // Can be unsupported
+    {
+#if defined(DILIGENT_DEBUG) || defined(DILIGENT_DEVELOPMENT)
+        float maxLevel;
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxLevel);
+        DEV_CHECK_ERR((m_Desc.MaxAnisotropy >= 1 && static_cast<float>(m_Desc.MaxAnisotropy) <= maxLevel),
+                      "MaxAnisotropy (", m_Desc.MaxAnisotropy, ") must be in range 1 .. ", maxLevel, ".");
+#endif
         glSamplerParameterf(m_GlSampler, GL_TEXTURE_MAX_ANISOTROPY_EXT, bMipAnisotropic ? static_cast<float>(SamplerDesc.MaxAnisotropy) : 1.f);
+    }
     else
     {
         if (bMipAnisotropic && SamplerDesc.MaxAnisotropy != 1)
