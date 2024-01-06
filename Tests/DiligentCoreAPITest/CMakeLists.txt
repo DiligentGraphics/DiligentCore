@@ -27,6 +27,8 @@ endif()
 
 if(NOT ARCHIVER_SUPPORTED)
     list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/ArchiveTest.cpp)
+    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/GenerateArchiveDotNetTest.cpp)
+    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/RenderStateCacheTest.cpp)
 endif()
 
 if(D3D11_SUPPORTED)

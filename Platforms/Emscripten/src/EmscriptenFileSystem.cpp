@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ bool EmscriptenFileSystem::CreateDirectory(const Char* strPath)
     return false;
 }
 
-void EmscriptenFileSystem::ClearDirectory(const Char* strPath)
+void EmscriptenFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
 {
     UNSUPPORTED("Not implemented");
 }
@@ -83,10 +83,40 @@ void EmscriptenFileSystem::DeleteFile(const Char* strPath)
     remove(strPath);
 }
 
-std::vector<std::unique_ptr<FindFileData>> EmscriptenFileSystem::Search(const Char* SearchPattern)
+bool EmscriptenFileSystem::DeleteDirectory(const Char* strPath)
 {
     UNSUPPORTED("Not implemented");
-    return std::vector<std::unique_ptr<FindFileData>>();
+    return false;
+}
+
+bool EmscriptenFileSystem::IsDirectory(const Char* strPath)
+{
+    UNSUPPORTED("Not implemented");
+    return false;
+}
+
+EmscriptenFileSystem::SearchFilesResult EmscriptenFileSystem::Search(const Char* SearchPattern)
+{
+    UNSUPPORTED("Not implemented");
+    return EmscriptenFileSystem::SearchFilesResult{};
+}
+
+EmscriptenFileSystem::SearchFilesResult EmscriptenFileSystem::SearchRecursive(const Char* Dir, const Char* SearchPattern)
+{
+    UNSUPPORTED("Not implemented");
+    return EmscriptenFileSystem::SearchFilesResult{};
+}
+
+std::string EmscriptenFileSystem::GetCurrentDirectory()
+{
+    UNSUPPORTED("Not implemented");
+    return std::string();
+}
+
+std::string EmscriptenFileSystem::GetLocalAppDataDirectory(const char* AppName, bool Create)
+{
+    UNSUPPORTED("Not implemented");
+    return std::string();
 }
 
 } // namespace Diligent

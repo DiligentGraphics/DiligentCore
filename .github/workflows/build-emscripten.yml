@@ -44,7 +44,7 @@ jobs:
       uses: DiligentGraphics/github-action/configure-cmake@v1
       with:
         build-type: ${{ matrix.build_type }}
-        cmake-args: "-DDILIGENT_BUILD_CORE_INCLUDE_TEST=ON"
+        cmake-args: "-DDILIGENT_BUILD_CORE_INCLUDE_TEST=ON -DDILIGENT_BUILD_CORE_TESTS=ON"
 
     - name: Build
       if:   success()

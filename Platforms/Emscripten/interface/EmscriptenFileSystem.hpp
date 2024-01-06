@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -46,10 +46,16 @@ public:
     static bool PathExists(const Char* strPath);
 
     static bool CreateDirectory(const Char* strPath);
-    static void ClearDirectory(const Char* strPath);
+    static void ClearDirectory(const Char* strPath, bool Recursive = false);
     static void DeleteFile(const Char* strPath);
+    static bool DeleteDirectory(const Char* strPath);
+    static bool IsDirectory(const Char* strPath);
 
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Char* SearchPattern);
+    static SearchFilesResult Search(const Char* SearchPattern);
+    static SearchFilesResult SearchRecursive(const Char* Dir, const Char* SearchPattern);
+
+    static std::string GetCurrentDirectory();
+    static std::string GetLocalAppDataDirectory(const char* AppName = nullptr, bool Create = true);
 };
 
 } // namespace Diligent
