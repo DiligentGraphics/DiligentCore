@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -447,5 +447,11 @@ protected:
     // a pointer to the owner, which is not what we need.
     T* m_pObject;
 };
+
+template <typename DstType, typename SrcType>
+NODISCARD DstType StaticCast(const RefCntAutoPtr<SrcType>& Src)
+{
+    return static_cast<DstType>(Src.RawPtr());
+}
 
 } // namespace Diligent
