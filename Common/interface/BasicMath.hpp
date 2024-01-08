@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1710,10 +1710,13 @@ template <class T> struct Matrix4x4
             };
     }
 
-
-    void SetNearFarClipPlanes(T zNear, T zFar, T bIsGL)
+    // All graphics APIs except for OpenGL use [0, 1] as NDC Z range.
+    // OpenGL uses [-1, 1] unless glClipControl is used to change it.
+    // Use IRenderDevice::GetDeviceInfo().NDC to get the NDC Z range.
+    // See https://github.com/DiligentGraphics/DiligentCore/blob/master/doc/CoordinateSystem.md
+    void SetNearFarClipPlanes(T zNear, T zFar, bool NegativeOneToOneZ)
     {
-        if (bIsGL)
+        if (NegativeOneToOneZ)
         {
             // https://www.opengl.org/sdk/docs/man2/xhtml/gluPerspective.xml
             // http://www.terathon.com/gdc07_lengyel.pdf
@@ -1742,9 +1745,9 @@ template <class T> struct Matrix4x4
         }
     }
 
-    void GetNearFarClipPlanes(T& zNear, T& zFar, bool bIsGL) const
+    void GetNearFarClipPlanes(T& zNear, T& zFar, bool NegativeOneToOneZ) const
     {
-        if (bIsGL)
+        if (NegativeOneToOneZ)
         {
             zNear = _43 / (-1 - _33);
             zFar  = _43 / (+1 - _33);
@@ -1756,7 +1759,7 @@ template <class T> struct Matrix4x4
         }
     }
 
-    static Matrix4x4 Projection(T fov, T aspectRatio, T zNear, T zFar, bool bIsGL) // Left-handed projection
+    static Matrix4x4 Projection(T fov, T aspectRatio, T zNear, T zFar, bool NegativeOneToOneZ) // Left-handed projection
     {
         Matrix4x4 mOut;
         auto      yScale = static_cast<T>(1) / std::tan(fov / static_cast<T>(2));
@@ -1764,15 +1767,15 @@ template <class T> struct Matrix4x4
         mOut._11         = xScale;
         mOut._22         = yScale;
 
-        mOut.SetNearFarClipPlanes(zNear, zFar, bIsGL);
+        mOut.SetNearFarClipPlanes(zNear, zFar, NegativeOneToOneZ);
 
         return mOut;
     }
 
-    static Matrix4x4 OrthoOffCenter(T left, T right, T bottom, T top, T zNear, T zFar, bool bIsGL) // Left-handed ortho projection
+    static Matrix4x4 OrthoOffCenter(T left, T right, T bottom, T top, T zNear, T zFar, bool NegativeOneToOneZ) // Left-handed ortho projection
     {
-        auto _22 = (bIsGL ? 2 : 1) / (zFar - zNear);
-        auto _32 = (bIsGL ? zNear + zFar : zNear) / (zNear - zFar);
+        auto _22 = (NegativeOneToOneZ ? 2 : 1) / (zFar - zNear);
+        auto _32 = (NegativeOneToOneZ ? zNear + zFar : zNear) / (zNear - zFar);
         // clang-format off
         return Matrix4x4
             {
@@ -1784,14 +1787,14 @@ template <class T> struct Matrix4x4
         // clang-format on
     }
 
-    static Matrix4x4 Ortho(T width, T height, T zNear, T zFar, bool bIsGL) // Left-handed ortho projection
+    static Matrix4x4 Ortho(T width, T height, T zNear, T zFar, bool NegativeOneToOneZ) // Left-handed ortho projection
     {
         return OrthoOffCenter(
             -width * static_cast<T>(0.5),
             +width * static_cast<T>(0.5),
             -height * static_cast<T>(0.5),
             +height * static_cast<T>(0.5),
-            zNear, zFar, bIsGL);
+            zNear, zFar, NegativeOneToOneZ);
     }
 
     static Matrix4x4 Mul(const Matrix4x4& m1, const Matrix4x4& m2)
