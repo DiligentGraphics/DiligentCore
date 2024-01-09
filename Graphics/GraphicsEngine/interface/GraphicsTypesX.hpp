@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -2142,5 +2142,98 @@ using RenderDeviceX_E = RenderDeviceX<true>;
 
 // Returns Null pointer if object creation failed
 using RenderDeviceX_N = RenderDeviceX<false>;
+
+
+/// C++ wrapper over IShaderResourceVariable.
+class ShaderResourceVariableX
+{
+public:
+    ShaderResourceVariableX() noexcept {}
+    explicit ShaderResourceVariableX(IShaderResourceVariable* pVar) noexcept :
+        m_pVar{pVar}
+    {
+    }
+
+    ShaderResourceVariableX(IShaderResourceBinding* pSRB, SHADER_TYPE ShaderStage, const char* Name) noexcept :
+        m_pVar{pSRB->GetVariableByName(ShaderStage, Name)}
+    {
+    }
+
+    ShaderResourceVariableX(IPipelineState* pPSO, SHADER_TYPE ShaderStage, const char* Name) noexcept :
+        m_pVar{pPSO->GetStaticVariableByName(ShaderStage, Name)}
+    {
+    }
+
+    explicit operator bool() const noexcept
+    {
+        return m_pVar != nullptr;
+    }
+
+    operator IShaderResourceVariable*() const noexcept
+    {
+        return m_pVar;
+    }
+
+    IShaderResourceVariable* operator->() const noexcept
+    {
+        return m_pVar;
+    }
+
+    bool Set(IDeviceObject* pObject, SET_SHADER_RESOURCE_FLAGS Flags = SET_SHADER_RESOURCE_FLAG_NONE)
+    {
+        if (m_pVar)
+        {
+            m_pVar->Set(pObject, Flags);
+            return true;
+        }
+        return false;
+    }
+
+    bool SetArray(IDeviceObject* const*     ppObjects,
+                  Uint32                    FirstElement,
+                  Uint32                    NumElements,
+                  SET_SHADER_RESOURCE_FLAGS Flags = SET_SHADER_RESOURCE_FLAG_NONE)
+    {
+        if (m_pVar)
+        {
+            m_pVar->SetArray(ppObjects, FirstElement, NumElements, Flags);
+            return true;
+        }
+        return false;
+    }
+
+    bool SetBufferRange(IDeviceObject*            pObject,
+                        Uint64                    Offset,
+                        Uint64                    Size,
+                        Uint32                    ArrayIndex = 0,
+                        SET_SHADER_RESOURCE_FLAGS Flags      = SET_SHADER_RESOURCE_FLAG_NONE)
+    {
+        if (m_pVar)
+        {
+            m_pVar->SetBufferRange(pObject, Offset, Size, ArrayIndex, Flags);
+            return true;
+        }
+        return false;
+    }
+
+    bool SetBufferOffset(Uint32 Offset,
+                         Uint32 ArrayIndex = 0)
+    {
+        if (m_pVar)
+        {
+            m_pVar->SetBufferOffset(Offset, ArrayIndex);
+            return true;
+        }
+        return false;
+    }
+
+    IDeviceObject* Get(Uint32 ArrayIndex = 0) const
+    {
+        return m_pVar ? m_pVar->Get(ArrayIndex) : nullptr;
+    }
+
+private:
+    IShaderResourceVariable* m_pVar = nullptr;
+};
 
 } // namespace Diligent
