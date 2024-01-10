@@ -442,6 +442,8 @@ private:
         void   RemoveSemanticsFromBlock(TokenListType::iterator& Token, TokenType OpenBracketType, TokenType ClosingBracketType);
         void   RemoveSamplerRegister(TokenListType::iterator& Token);
 
+        TokenListType::iterator FindMacroDefinition(const std::string& MacroName);
+
         // IteratorType may be String::iterator or String::const_iterator.
         // While iterator is convertible to const_iterator,
         // iterator& cannot be converted to const_iterator& (Microsoft compiler allows

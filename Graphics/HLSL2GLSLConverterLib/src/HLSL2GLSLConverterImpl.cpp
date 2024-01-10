@@ -903,6 +903,34 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseGlobalPreprocessorDefines()
     }
 }
 
+HLSL2GLSLConverterImpl::TokenListType::iterator HLSL2GLSLConverterImpl::ConversionStream::FindMacroDefinition(const std::string& MacroName)
+{
+    auto define_it = m_PreprocessorDefinitions.find(MacroName.c_str());
+    if (define_it == m_PreprocessorDefinitions.end())
+        return m_Tokens.end();
+
+    auto Token = define_it->second;
+    // #define PS_OUTPUT PSOutput
+    // ^
+
+    ++Token;
+    // #define PS_OUTPUT PSOutput
+    //         ^
+    if (Token == m_Tokens.end() || Token->Literal != MacroName)
+        return m_Tokens.end();
+
+    ++Token;
+    // #define PS_OUTPUT PSOutput
+    //                   ^
+
+    // Check that the definition is on the same line (we don't handle multiline definitions)
+    if (Token == m_Tokens.end() || Token->Delimiter.find_first_of("\r\n") != std::string::npos)
+        return m_Tokens.end();
+
+    return (Token->IsBuiltInType() || Token->Type == TokenType::Identifier) ? Token : m_Tokens.end();
+}
+
+
 // The function replaces cbuffer with uniform and adds semicolon if it is missing after the closing brace:
 // cbuffer
 // {
@@ -2403,6 +2431,14 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseShaderParameter(TokenListTyp
 
     if (!TypeToken->IsBuiltInType())
     {
+        {
+            auto DefinedTypeToken = FindMacroDefinition(TypeToken->Literal);
+            // Check that the define directive is before the type token
+            if (DefinedTypeToken != m_Tokens.end() && DefinedTypeToken->Idx < TypeToken->Idx)
+            {
+                TypeToken = DefinedTypeToken;
+            }
+        }
         const auto& StructName = TypeToken->Literal;
         auto        it         = m_StructDefinitions.find(StructName.c_str());
         if (it == m_StructDefinitions.end())
@@ -2459,38 +2495,15 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
 
     auto ActualTypeToken = TypeToken;
     {
-        // PS_OUTPUT TestPS  ( in VSOutput In,
-
-        auto define_it = m_PreprocessorDefinitions.find(ActualTypeToken->Literal.c_str());
-        if (define_it != m_PreprocessorDefinitions.end())
+        auto DefinedTypeToken = FindMacroDefinition(TypeToken->Literal);
+        // Check that the define directive is before the type token
+        if (DefinedTypeToken != m_Tokens.end() && DefinedTypeToken->Idx < TypeToken->Idx)
         {
-            auto DefinedTypeToken = define_it->second;
-            // #define PS_OUTPUT PSOutput
+            // PS_OUTPUT TestPS  ( in VSOutput In,
             // ^
-            // DefinedTypeToken
-
-            // Check that the define directive is before the type token
-            if (DefinedTypeToken->Idx < TypeToken->Idx)
-            {
-                ++DefinedTypeToken;
-                // #define PS_OUTPUT PSOutput
-                //         ^
-                //  DefinedTypeToken
-                if (DefinedTypeToken != m_Tokens.end() && DefinedTypeToken->Literal == TypeToken->Literal)
-                {
-                    ++DefinedTypeToken;
-                    // #define PS_OUTPUT PSOutput
-                    //                   ^
-                    //          DefinedTypeToken
-                    if (DefinedTypeToken != m_Tokens.end() &&
-                        // Check that the definition is on the same line (we don't handle backslash at the moment)
-                        DefinedTypeToken->Delimiter.find_first_of("\r\n") == std::string::npos &&
-                        (DefinedTypeToken->IsBuiltInType() || DefinedTypeToken->Type == TokenType::Identifier))
-                    {
-                        ActualTypeToken = DefinedTypeToken;
-                    }
-                }
-            }
+            ActualTypeToken = DefinedTypeToken;
+            // #define PS_OUTPUT PSOutput
+            //                   ^
         }
     }
 
@@ -2755,7 +2768,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFunctionParameters(TokenLi
         else
         {
             // VSOut TestVS  ()
-            auto TmpTypeToken = ActualTypeToken;
+            auto TmpTypeToken = TypeToken;
             ParseShaderParameter(TmpTypeToken, RetParam);
         }
         TypeToken->Type    = TokenType::Identifier;

@@ -17,7 +17,7 @@ struct PSInput
 #   define PS_OUTPUT xyz
 #endif
 
-PS_OUTPUT main1(in PSInput PSIn)
+PS_OUTPUT main1(in PS_INPUT PSIn)
 {
     PS_OUTPUT PSOut;
     PSOut.Color = float4(PSIn.Pos.xy, 0.0, 0.0);
@@ -27,7 +27,7 @@ PS_OUTPUT main1(in PSInput PSIn)
 #define FLOAT4 float4
 #define FLOAT3 float3
 
-FLOAT4 main2(in PSInput PSIn) : SV_Target
+FLOAT4 main2(in PS_INPUT PSIn) : SV_Target
 {
     return FLOAT4(PSIn.Pos.xy, 0.0, 0.0);
 }
