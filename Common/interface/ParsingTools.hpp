@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1082,6 +1082,45 @@ std::string GetTokenContext(const TokenIterType& Start,
     }
 
     return Ctx.str();
+}
+
+/// Extracts the preprocessor directive from the given range
+template <typename InteratorType>
+std::string RefinePreprocessorDirective(const InteratorType& Start, const InteratorType& End) noexcept
+{
+    // # /* Comment */ define
+    // ^
+    // Pos
+    if (Start == End || *Start != '#')
+        return "";
+
+    const auto DirectiveStart = SkipDelimitersAndComments(Start + 1, End, " \t", SKIP_COMMENT_FLAG_MULTILINE);
+    // # /* Comment */ define
+    //                 ^
+    //          DirectiveStart
+
+    const auto DirectiveEnd = SkipIdentifier(DirectiveStart, End);
+    // # /* Comment */ define
+    //                       ^
+    //                      Pos
+
+    return std::string{DirectiveStart, DirectiveEnd};
+}
+
+inline std::string RefinePreprocessorDirective(const std::string& Str) noexcept
+{
+    return RefinePreprocessorDirective(Str.begin(), Str.end());
+}
+
+inline std::string RefinePreprocessorDirective(const char* Str, size_t Len = 0) noexcept
+{
+    if (Str == nullptr)
+        return "";
+
+    if (Len == 0)
+        Len = strlen(Str);
+
+    return RefinePreprocessorDirective(Str, Str + Len);
 }
 
 } // namespace Parsing

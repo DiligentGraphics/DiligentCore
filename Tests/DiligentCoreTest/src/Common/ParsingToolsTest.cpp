@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1339,6 +1339,34 @@ TEST(Common_ParsingTools, GetTokenContext)
         std::vector<TestToken> Empty;
         EXPECT_STREQ(GetTokenContext(Empty.begin(), Empty.end(), Empty.begin(), 2).c_str(), "");
     }
+}
+
+
+TEST(Common_ParsingTools, RefinePreprocessorDirective)
+{
+    auto TestRefine = [](const std::string& Str, const char* RefStr) {
+        EXPECT_STREQ(RefinePreprocessorDirective(Str).c_str(), RefStr);
+        EXPECT_STREQ(RefinePreprocessorDirective(Str.c_str()).c_str(), RefStr);
+        EXPECT_STREQ(RefinePreprocessorDirective(Str.c_str(), Str.length()).c_str(), RefStr);
+    };
+
+    TestRefine("", "");
+    TestRefine(" ", "");
+    TestRefine("#", "");
+    TestRefine("# ", "");
+    TestRefine("# \t", "");
+    TestRefine("# \n", "");
+    TestRefine("# /*Comment*/", "");
+
+    TestRefine("define", "");
+    TestRefine("#\ndefine", "");
+    TestRefine("# // define", "");
+    TestRefine(",define", "");
+
+    TestRefine("#define", "define");
+    TestRefine("#   define", "define");
+    TestRefine("#  \t define", "define");
+    TestRefine("#  \t /* Comment*/ define", "define");
 }
 
 } // namespace
