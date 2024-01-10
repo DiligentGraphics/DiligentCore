@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -140,6 +140,17 @@ TEST(HLSL2GLSLConverterTest, GS)
 
     auto pGS = CreateTestShader("GS.hlsl", "main", SHADER_TYPE_GEOMETRY);
     EXPECT_NE(pGS, nullptr);
+}
+
+TEST(HLSL2GLSLConverterTest, Preprocessor)
+{
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    for (const char* Entry : {"main1", "main2", "main3"})
+    {
+        auto pVS = CreateTestShader("PreprocessorTest.hlsl", Entry, SHADER_TYPE_PIXEL);
+        EXPECT_NE(pVS, nullptr);
+    }
 }
 
 } // namespace

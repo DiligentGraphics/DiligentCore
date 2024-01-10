@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -257,6 +257,7 @@ private:
         TokenType Type = TokenType::Undefined;
         String    Literal;
         String    Delimiter;
+        size_t    Idx = ~size_t{0};
 
         void SetType(TokenType _Type)
         {
@@ -303,19 +304,22 @@ private:
                                 const std::string::const_iterator& DelimStart,
                                 const std::string::const_iterator& DelimEnd,
                                 const std::string::const_iterator& LiteralStart,
-                                const std::string::const_iterator& LiteralEnd)
+                                const std::string::const_iterator& LiteralEnd,
+                                size_t                             Idx)
         {
-            return TokenInfo{_Type, std::string{LiteralStart, LiteralEnd}, std::string{DelimStart, DelimEnd}};
+            return TokenInfo{_Type, std::string{LiteralStart, LiteralEnd}, std::string{DelimStart, DelimEnd}, Idx};
         }
 
         TokenInfo() {}
 
         TokenInfo(TokenType   _Type,
                   std::string _Literal,
-                  std::string _Delimiter = "") :
+                  std::string _Delimiter = "",
+                  size_t      _Idx       = ~size_t{0}) :
             Type{_Type},
             Literal{std::move(_Literal)},
-            Delimiter{std::move(_Delimiter)}
+            Delimiter{std::move(_Delimiter)},
+            Idx{_Idx}
         {}
 
         size_t GetDelimiterLen() const
@@ -401,6 +405,8 @@ private:
         typedef std::unordered_map<String, bool> SamplerHashType;
 
         const HLSLObjectInfo* FindHLSLObject(const String& Name);
+
+        void ParseGlobalPreprocessorDefines();
 
         void ProcessShaderDeclaration(TokenListType::iterator EntryPointToken, SHADER_TYPE ShaderType);
 
@@ -585,6 +591,9 @@ private:
 
         // List of tokens defining structs
         std::unordered_map<HashMapStringKey, TokenListType::iterator> m_StructDefinitions;
+
+        // List of preprocessor macro definitions in global scope
+        std::unordered_map<HashMapStringKey, TokenListType::iterator> m_PreprocessorDefinitions;
 
         // Stack of parsed objects, for every scope level.
         // There are currently only two levels:
