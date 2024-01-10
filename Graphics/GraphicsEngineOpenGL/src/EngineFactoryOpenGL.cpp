@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -137,6 +137,38 @@ static void SetDefaultGraphicsAdapterInfo(GraphicsAdapterInfo& AdapterInfo)
     AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
 }
 
+static void SetPreferredAdapter(const EngineGLCreateInfo& EngineCI)
+{
+    bool EnableDedicatedGPU = EngineCI.PreferredAdapterType == ADAPTER_TYPE_DISCRETE;
+#if PLATFORM_WIN32
+    const HMODULE ModuleHandle                         = GetModuleHandle(nullptr);
+    Uint64* const NvOptimusEnablement                  = reinterpret_cast<Uint64*>(GetProcAddress(ModuleHandle, "NvOptimusEnablement"));
+    Uint64* const AmdPowerXpressRequestHighPerformance = reinterpret_cast<Uint64*>(GetProcAddress(ModuleHandle, "AmdPowerXpressRequestHighPerformance"));
+    if (!NvOptimusEnablement && !AmdPowerXpressRequestHighPerformance)
+    {
+        LOG_WARNING_MESSAGE("Neither NvOptimusEnablement nor AmdPowerXpressRequestHighPerformance symbols found. "
+                            "You need to explicitly define these variables in your executable file: "
+                            "https://gist.github.com/statico/6809850727c708f08458XpressRequestHighPerformance, "
+                            "or you can use the `Diligent-GLAdapterSelector` object library as source input to your executable target: "
+                            "`target_sources(MyExecutable PRIVATE $<TARGET_OBJECTS:Diligent-GLAdapterSelector>)`, "
+                            "see https://cmake.org/cmake/help/v3.16/manual/cmake-buildsystem.7.html#object-libraries).");
+    }
+    if (AmdPowerXpressRequestHighPerformance)
+    {
+        *AmdPowerXpressRequestHighPerformance = EnableDedicatedGPU;
+    }
+    if (NvOptimusEnablement)
+    {
+        *NvOptimusEnablement = EnableDedicatedGPU;
+    }
+#elif PLAtTFORM_LINUX
+    setenv("DRI_PRIME", EnableDedicatedGPU ? "1" : "0", 1);
+#else
+    if (EnableDedicatedGPU)
+        LOG_WARNING_MESSAGE("Setting preferred adapter type isn't supported on this platform");
+#endif
+}
+
 void EngineFactoryOpenGLImpl::EnumerateAdapters(Version              MinVersion,
                                                 Uint32&              NumAdapters,
                                                 GraphicsAdapterInfo* Adapters) const
@@ -205,6 +237,7 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto& RawMemAllocator = GetRawAllocator();
 
+        SetPreferredAdapter(EngineCI);
         RenderDeviceGLImpl* pRenderDeviceOpenGL{
             NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(
                 RawMemAllocator, this, EngineCI, &SCDesc //
@@ -303,6 +336,7 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto& RawMemAllocator = GetRawAllocator();
 
+        SetPreferredAdapter(EngineCI);
         RenderDeviceGLImpl* pRenderDeviceOpenGL{
             NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(
                 RawMemAllocator, this, EngineCI //

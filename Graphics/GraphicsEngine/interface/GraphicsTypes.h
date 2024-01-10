@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -3484,6 +3484,25 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Enable 0..1 normalized-device Z range, if required extension is supported; -1..+1 otherwise.
     /// Use IRenderDevice::GetDeviceInfo().NDC to get current NDC.
     Bool         ZeroToOneNDZ DEFAULT_INITIALIZER(false);
+
+    /// The GPU preference allows you to request either the integrated or dedicated GPU
+    /// on systems having both onboard and dedicated GPUs. Currently this works only on Windows and Linux.
+    ///
+    /// * On Windows this is done by setting the `NvOptimusEnablement` and `AmdPowerXpressRequestHighPerformance`.
+    ///   When the Nvidia and AMD drivers see their respective symbol exported and set to nonzero in a program,
+    ///   they will take precedence over the integrated GPU when creating the OpenGL context.
+    ///
+    ///   Unfortunately, there is no way to transfer exported symbols from static libraries
+    ///   to the executable file without explicitly creating a Module-Definition File (.def).
+    ///
+    ///   Therefore you need to explicitly define these variables in your executable file:
+    ///   https://gist.github.com/statico/6809850727c708f08458
+    ///   or you can use the `Diligent-GLAdapterSelector` object library as source input to your executable target:
+    ///   `target_sources(MyExecutable PRIVATE $<TARGET_OBJECTS:Diligent-GLAdapterSelector>)`,
+    ///   see https://cmake.org/cmake/help/v3.16/manual/cmake-buildsystem.7.html#object-libraries.
+    ///
+    /// * On Linux this affects the `DRI_PRIME` environment variable that is used by Mesa drivers that support PRIME.
+    ADAPTER_TYPE PreferredAdapterType DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
 
 #if PLATFORM_EMSCRIPTEN
     /// WebGL context attributes.

@@ -281,8 +281,12 @@ else()
     )
 endif()
 
+add_library(Diligent-GLAdapterSelector OBJECT "src/GLAdapterSelector.cpp")
+target_link_libraries(Diligent-GLAdapterSelector PRIVATE Diligent-BuildSettings)
+
 set_common_target_properties(Diligent-GraphicsEngineOpenGL-shared)
 set_common_target_properties(Diligent-GraphicsEngineOpenGL-static)
+set_common_target_properties(Diligent-GLAdapterSelector)
 
 source_group("src" FILES ${SOURCE})
 if(PLATFORM_WIN32)
@@ -298,6 +302,9 @@ set_target_properties(Diligent-GraphicsEngineOpenGL-static PROPERTIES
 set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
     FOLDER DiligentCore/Graphics
 )
+set_target_properties(Diligent-GLAdapterSelector PROPERTIES 
+    FOLDER DiligentCore/Graphics
+)
 
 set_source_files_properties(
     readme.md PROPERTIES HEADER_FILE_ONLY TRUE
@@ -306,4 +313,5 @@ set_source_files_properties(
 if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-GraphicsEngineOpenGL-shared)
     install_core_lib(Diligent-GraphicsEngineOpenGL-static)
+    install_core_lib(Diligent-GLAdapterSelector)
 endif()
