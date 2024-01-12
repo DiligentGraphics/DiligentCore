@@ -188,9 +188,9 @@ GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::
     // Sampler properties
     {
         auto& SamProps{AdapterInfo.Sampler};
-        SamProps.BorderSamplingModeSupported   = True;
-        SamProps.AnisotropicFilteringSupported = vkFeatures.samplerAnisotropy;
-        SamProps.LODBiasSupported              = True;
+        SamProps.BorderSamplingModeSupported = True;
+        SamProps.MaxAnisotropy               = static_cast<Uint8>(vkDeviceLimits.maxSamplerAnisotropy);
+        SamProps.LODBiasSupported            = True;
         ASSERT_SIZEOF(SamProps, 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
     }
 

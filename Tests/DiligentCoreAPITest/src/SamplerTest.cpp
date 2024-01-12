@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -117,7 +117,9 @@ TEST(FilterTypeTest, AnisotropicFilter)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetAdapterInfo().Sampler.AnisotropicFilteringSupported)
+
+    const Uint32 MaxAnisotropy = pDevice->GetAdapterInfo().Sampler.MaxAnisotropy;
+    if (MaxAnisotropy <= 1)
         GTEST_SKIP() << "Anisotropic filtering is not supported by this device";
 
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
@@ -129,7 +131,7 @@ TEST(FilterTypeTest, AnisotropicFilter)
         SamplerDesc.MagFilter = FILTER_TYPE_ANISOTROPIC;
         SamplerDesc.MipFilter = FILTER_TYPE_ANISOTROPIC;
 
-        SamplerDesc.MaxAnisotropy = 4;
+        SamplerDesc.MaxAnisotropy = std::min(4u, MaxAnisotropy);
         RefCntAutoPtr<ISampler> pSampler;
         pDevice->CreateSampler(SamplerDesc, &pSampler);
         ASSERT_TRUE(pSampler);
@@ -143,7 +145,7 @@ TEST(FilterTypeTest, AnisotropicFilter)
         SamplerDesc.MagFilter = FILTER_TYPE_COMPARISON_ANISOTROPIC;
         SamplerDesc.MipFilter = FILTER_TYPE_COMPARISON_ANISOTROPIC;
 
-        SamplerDesc.MaxAnisotropy = 4;
+        SamplerDesc.MaxAnisotropy = std::min(4u, MaxAnisotropy);
         RefCntAutoPtr<ISampler> pSampler;
         pDevice->CreateSampler(SamplerDesc, &pSampler);
         ASSERT_TRUE(pSampler);

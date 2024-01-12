@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -552,6 +552,15 @@
 
 #ifndef GL_TRIANGLE_STRIP_ADJACENCY
 #    define GL_TRIANGLE_STRIP_ADJACENCY 0x000D
+#endif
+
+
+#ifndef GL_TEXTURE_MAX_ANISOTROPY_EXT
+#    define GL_TEXTURE_MAX_ANISOTROPY_EXT 0x84FE
+#endif
+
+#ifndef GL_MAX_TEXTURE_MAX_ANISOTROPY
+#    define GL_MAX_TEXTURE_MAX_ANISOTROPY 0x84FF
 #endif
 
 

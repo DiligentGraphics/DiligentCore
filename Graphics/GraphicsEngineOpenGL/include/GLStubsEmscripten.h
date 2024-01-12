@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -290,7 +290,11 @@
 #endif
 
 #ifndef GL_TEXTURE_MAX_ANISOTROPY_EXT
-#    define GL_TEXTURE_MAX_ANISOTROPY_EXT 0
+#    define GL_TEXTURE_MAX_ANISOTROPY_EXT 0x84FE
+#endif
+
+#ifndef GL_MAX_TEXTURE_MAX_ANISOTROPY
+#    define GL_MAX_TEXTURE_MAX_ANISOTROPY 0x84FF
 #endif
 
 #ifndef GL_TEXTURE_BORDER_COLOR

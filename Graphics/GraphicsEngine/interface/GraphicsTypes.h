@@ -2081,8 +2081,9 @@ struct SamplerProperties
     /// Indicates if device supports border texture addressing mode
     Bool BorderSamplingModeSupported   DEFAULT_INITIALIZER(False);
 
-    /// Indicates if device supports anisotropic filtering
-    Bool AnisotropicFilteringSupported DEFAULT_INITIALIZER(False);
+    /// Maximum anisotropy level supported by the device.
+    /// If anisotropic filtering is not supported, this value is 1.
+    Uint8 MaxAnisotropy DEFAULT_INITIALIZER(1);
 
     /// Indicates if device supports MIP load bias
     Bool LODBiasSupported              DEFAULT_INITIALIZER(False);
@@ -2096,9 +2097,9 @@ struct SamplerProperties
     /// - False otherwise.
     constexpr bool operator==(const SamplerProperties& RHS) const
     {
-        return BorderSamplingModeSupported   == RHS.BorderSamplingModeSupported   &&
-               AnisotropicFilteringSupported == RHS.AnisotropicFilteringSupported &&
-               LODBiasSupported              == RHS.LODBiasSupported;
+        return BorderSamplingModeSupported == RHS.BorderSamplingModeSupported   &&
+               MaxAnisotropy               == RHS.MaxAnisotropy &&
+               LODBiasSupported            == RHS.LODBiasSupported;
     }
 #endif
 

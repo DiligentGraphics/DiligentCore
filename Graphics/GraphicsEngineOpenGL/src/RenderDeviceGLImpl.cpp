@@ -854,9 +854,16 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             TexProps.TextureView2DOn3DSupported = TexProps.TextureViewSupported;
             ASSERT_SIZEOF(TexProps, 32, "Did you add a new member to TextureProperites? Please initialize it here.");
 
-            SamProps.BorderSamplingModeSupported   = True;
-            SamProps.AnisotropicFilteringSupported = IsGL46OrAbove || CheckExtension("GL_ARB_texture_filter_anisotropic");
-            SamProps.LODBiasSupported              = True;
+            SamProps.BorderSamplingModeSupported = True;
+            if (IsGL46OrAbove || CheckExtension("GL_ARB_texture_filter_anisotropic"))
+            {
+                GLint MaxAnisotropy = 0;
+                glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &MaxAnisotropy);
+                CHECK_GL_ERROR("glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY)");
+                SamProps.MaxAnisotropy = static_cast<Uint8>(MaxAnisotropy);
+            }
+
+            SamProps.LODBiasSupported = True;
             ASSERT_SIZEOF(SamProps, 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
 
             m_GLCaps.FramebufferSRGB  = IsGL40OrAbove || CheckExtension("GL_ARB_framebuffer_sRGB");
@@ -925,9 +932,15 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             TexProps.TextureView2DOn3DSupported = TexProps.TextureViewSupported;
             ASSERT_SIZEOF(TexProps, 32, "Did you add a new member to TextureProperites? Please initialize it here.");
 
-            SamProps.BorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
-            SamProps.AnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && strstr(Extensions, "texture_filter_anisotropic");
-            SamProps.LODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
+            SamProps.BorderSamplingModeSupported = GL_TEXTURE_BORDER_COLOR && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
+            if (strstr(Extensions, "texture_filter_anisotropic"))
+            {
+                GLint MaxAnisotropy = 0;
+                glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &MaxAnisotropy);
+                CHECK_GL_ERROR("glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY)");
+                SamProps.MaxAnisotropy = static_cast<Uint8>(MaxAnisotropy);
+            }
+            SamProps.LODBiasSupported = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
             ASSERT_SIZEOF(SamProps, 3, "Did you add a new member to SamplerProperites? Please initialize it here.");
 
             m_GLCaps.FramebufferSRGB  = strstr(Extensions, "sRGB_write_control");

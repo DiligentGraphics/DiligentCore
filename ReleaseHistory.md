@@ -1,5 +1,6 @@
 ## Current progress
 
+* Replaced `AnisotropicFilteringSupported` member of `SamplerProperties` struct with `MaxAnisotropy` (API254004)
 * Added `TextureSubresourceViews` device feature (API254003)
 * Added device context rendering statistics (API254002)
   * Added `DeviceContextStats` struct
