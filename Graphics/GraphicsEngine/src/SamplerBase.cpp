@@ -62,9 +62,12 @@ void ValidateSamplerDesc(const SamplerDesc& Desc, const IRenderDevice* pDevice)
     }
     if (IsAnisotropicFilter(Desc.MinFilter))
     {
-        VERIFY_SAMPLER(AdapterInfo.Sampler.MaxAnisotropy >= Desc.MaxAnisotropy,
-                       "MaxAnisotropy (", Uint32{Desc.MaxAnisotropy}, ") exceeds the maximum supported anisotropy (", Uint32{AdapterInfo.Sampler.MaxAnisotropy},
-                       "). Check the value of AdapterInfo.Sampler.MaxAnisotropy to make sure it is correct.");
+        if (Desc.MaxAnisotropy > AdapterInfo.Sampler.MaxAnisotropy)
+        {
+            LOG_WARNING_MESSAGE("MaxAnisotropy (", Uint32{Desc.MaxAnisotropy}, ") requested for sampler '", Desc.Name,
+                                "' exceeds the maximum supported anisotropy (", Uint32{AdapterInfo.Sampler.MaxAnisotropy},
+                                "). Check the value of AdapterInfo.Sampler.MaxAnisotropy.");
+        }
     }
 }
 
