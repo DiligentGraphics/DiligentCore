@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added `TextureSubresourceViews` device feature (API254003)
 * Added device context rendering statistics (API254002)
   * Added `DeviceContextStats` struct
   * Added `IDeviceContext::ClearStats` and `IDeviceContext::GetStats` methods

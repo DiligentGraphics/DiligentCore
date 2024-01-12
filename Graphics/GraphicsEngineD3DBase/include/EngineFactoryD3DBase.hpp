@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -219,6 +219,7 @@ public:
             Features.TileShaders                   = DEVICE_FEATURE_STATE_DISABLED;
             Features.SubpassFramebufferFetch       = DEVICE_FEATURE_STATE_DISABLED;
             Features.TextureComponentSwizzle       = DEVICE_FEATURE_STATE_DISABLED;
+            Features.TextureSubresourceViews       = DEVICE_FEATURE_STATE_ENABLED;
         }
 
         // Set memory properties

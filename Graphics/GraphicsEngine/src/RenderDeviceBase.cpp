@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -113,10 +113,11 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(SparseResources,                   "Sparse resources are");
     ENABLE_FEATURE(SubpassFramebufferFetch,           "Subpass framebuffer fetch is");
     ENABLE_FEATURE(TextureComponentSwizzle,           "Texture component swizzle is");
+    ENABLE_FEATURE(TextureSubresourceViews,           "Texture subresource views are");
     // clang-format on
 #undef ENABLE_FEATURE
 
-    ASSERT_SIZEOF(Diligent::DeviceFeatures, 41, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(Diligent::DeviceFeatures, 42, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return EnabledFeatures;
 }
