@@ -168,9 +168,13 @@ endif()
 
 set(HLSL_DEFINITIONS include/HLSLDefinitions.fxh)
 
+set(GENERATED_SHADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/GeneratedShaders)
+file(MAKE_DIRECTORY ${GENERATED_SHADERS_DIR})
+target_include_directories(Diligent-ShaderTools PRIVATE ${GENERATED_SHADERS_DIR})
+
 # We must use the full path, otherwise the build system will not be able to properly detect
 # changes and shader conversion custom command will run every time
-set(HLSL_DEFINITIONS_INC ${CMAKE_CURRENT_SOURCE_DIR}/include/HLSLDefinitions_inc.fxh)
+set(HLSL_DEFINITIONS_INC ${GENERATED_SHADERS_DIR}/HLSLDefinitions_inc.fxh)
 set_source_files_properties(${HLSL_DEFINITIONS_INC} PROPERTIES GENERATED TRUE)
 
 target_sources(Diligent-ShaderTools PRIVATE
@@ -179,18 +183,14 @@ target_sources(Diligent-ShaderTools PRIVATE
     ${HLSL_DEFINITIONS_INC}
 )
 
-if(NOT "${FILE2STRING_PATH}" STREQUAL "")
-    find_package(Python3 REQUIRED)
-    add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
-                       COMMAND ${Python3_EXECUTABLE} ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} include/HLSLDefinitions_inc.fxh
-                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                       MAIN_DEPENDENCY ${HLSL_DEFINITIONS}
-                       COMMENT "Processing HLSLDefinitions.fxh"
-                       VERBATIM
-    )
-else()
-    message(WARNING "File2String utility is currently unavailable on this host system. This is not an issue unless you modify HLSLDefinitions.fxh file")
-endif()
+find_package(Python3 REQUIRED)
+add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
+                   COMMAND ${Python3_EXECUTABLE} ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} ${HLSL_DEFINITIONS_INC}
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                   MAIN_DEPENDENCY ${HLSL_DEFINITIONS}
+                   COMMENT "Processing HLSLDefinitions.fxh"
+                   VERBATIM
+)
 
 set_common_target_properties(Diligent-ShaderTools)
 
@@ -200,7 +200,7 @@ source_group("interface" FILES ${INTERFACE})
 if (DXBC_CHECKSUM_SOURCE)
     source_group("ThirdParty\\DXBCChecksum" FILES ${DXBC_CHECKSUM_SOURCE})
 endif()
-source_group("generated" FILES include/HLSLDefinitions_inc.fxh)
+source_group("generated" FILES ${HLSL_DEFINITIONS_INC})
 
 set_target_properties(Diligent-ShaderTools PROPERTIES
     FOLDER DiligentCore/Graphics
