@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -153,6 +153,58 @@ void DILIGENT_GLOBAL_FUNCTION(CreateSparseTextureMtl)(IRenderDevice*        pDev
                                                       const TextureDesc REF TexDesc,
                                                       IDeviceMemory*        pMemory,
                                                       ITexture**            ppTexture);
+
+#if DILIGENT_CPP_INTERFACE
+
+/// Returns default shader resource view of a texture.
+/// If the texture is null, returns null.
+ITextureView* DILIGENT_GLOBAL_FUNCTION(GetDefaultSRV)(ITexture* pTexture);
+
+/// Returns default render target view of a texture.
+/// If the texture is null, returns null.
+ITextureView* DILIGENT_GLOBAL_FUNCTION(GetDefaultRTV)(ITexture* pTexture);
+
+/// Returns default depth-stencil view of a texture.
+/// If the texture is null, returns null.
+ITextureView* DILIGENT_GLOBAL_FUNCTION(GetDefaultDSV)(ITexture* pTexture);
+
+/// Returns default unordered access view of a texture.
+/// If the texture is null, returns null.
+ITextureView* DILIGENT_GLOBAL_FUNCTION(GetDefaultUAV)(ITexture* pTexture);
+
+/// Returns default shader resource view of a buffer.
+/// If the buffer is null, returns null.
+IBufferView* DILIGENT_GLOBAL_FUNCTION(GetDefaultSRV)(IBuffer* pBuffer);
+
+/// Returns default unordered access view of a buffer.
+/// If the buffer is null, returns null.
+IBufferView* DILIGENT_GLOBAL_FUNCTION(GetDefaultUAV)(IBuffer* pBuffer);
+
+#endif
+
+/// Returns default shader resource view of a texture.
+/// If the texture is null, returns null.
+ITextureView* DILIGENT_GLOBAL_FUNCTION(GetTextureDefaultSRV)(IObject* pTexture);
+
+/// Returns default render target view of a texture.
+/// If the texture is null, returns null.
+ITextureView* DILIGENT_GLOBAL_FUNCTION(GetTextureDefaultRTV)(IObject* pTexture);
+
+/// Returns default depth-stencil view of a texture.
+/// If the texture is null, returns null.
+ITextureView* DILIGENT_GLOBAL_FUNCTION(GetTextureDefaultDSV)(IObject* pTexture);
+
+/// Returns default unordered access view of a texture.
+/// If the texture is null, returns null.
+ITextureView* DILIGENT_GLOBAL_FUNCTION(GetTextureDefaultUAV)(IObject* pTexture);
+
+/// Returns default shader resource view of a buffer.
+/// If the buffer is null, returns null.
+IBufferView* DILIGENT_GLOBAL_FUNCTION(GetBufferDefaultSRV)(IObject* pBuffer);
+
+/// Returns default unordered access view of a buffer.
+/// If the buffer is null, returns null.
+IBufferView* DILIGENT_GLOBAL_FUNCTION(GetBufferDefaultUAV)(IObject* pBuffer);
 
 #include "../../../Primitives/interface/UndefRefMacro.h"
 
