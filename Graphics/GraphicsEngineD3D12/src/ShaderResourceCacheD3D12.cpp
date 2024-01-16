@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -411,6 +411,7 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::CopyResource
                 VERIFY(DstRes.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Null CPU descriptor is only allowed for constant buffers");
                 const auto* pBuffer = DstRes.pObject.ConstPtr<BufferD3D12Impl>();
                 VERIFY(DstRes.BufferRangeSize < pBuffer->GetDesc().Size, "Null CPU descriptor is only allowed for partial views of constant buffers");
+                VERIFY(DstRes.BufferRangeSize < D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16, "Constant buffer range must not exceed 64Kb");
                 pBuffer->CreateCBV(DstDescrHandle, DstRes.BufferBaseOffset, DstRes.BufferRangeSize);
             }
         }
