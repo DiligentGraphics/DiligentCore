@@ -54,66 +54,100 @@ public:
         m_Resources.resize(ResourceCount);
     }
 
+    size_t GetSize() const
+    {
+        return m_Resources.size();
+    }
+
     void Insert(ResourceIdType Id, IDeviceObject* pObject)
     {
         DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
         m_Resources[Id] = pObject;
     }
 
-    bool IsInitialized(ResourceIdType Id) const
+    struct ResourceAccessor
     {
-        DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
-        return m_Resources[Id] != nullptr;
-    }
+        explicit operator bool() const
+        {
+            return Object != nullptr;
+        }
 
-    ITexture* GetTexture(ResourceIdType Id) const
-    {
-        DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
-        DEV_CHECK_ERR(RefCntAutoPtr<ITexture>(m_Resources[Id], IID_Texture), "Resource is not a texture");
-        return StaticCast<ITexture*>(m_Resources[Id]);
-    }
+        ITexture* AsTexture() const
+        {
+            DEV_CHECK_ERR(Object != nullptr, "Resource is null");
+            DEV_CHECK_ERR(RefCntAutoPtr<ITexture>(Object, IID_Texture), "Resource is not a texture");
+            return StaticCast<ITexture*>(Object);
+        }
 
-    IBuffer* GetBuffer(ResourceIdType Id) const
-    {
-        DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
-        DEV_CHECK_ERR(RefCntAutoPtr<IBuffer>(m_Resources[Id], IID_Buffer), "Resource is not a buffer");
-        return StaticCast<IBuffer*>(m_Resources[Id]);
-    }
+        IBuffer* AsBuffer() const
+        {
+            DEV_CHECK_ERR(Object != nullptr, "Resource is null");
+            DEV_CHECK_ERR(RefCntAutoPtr<IBuffer>(Object, IID_Buffer), "Resource is not a buffer");
+            return StaticCast<IBuffer*>(Object);
+        }
 
-    ITextureView* GetTextureSRV(ResourceIdType Id) const
-    {
-        DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
-        return GetTextureDefaultSRV(m_Resources[Id]);
-    }
+        operator ITexture*() const
+        {
+            return AsTexture();
+        }
 
-    ITextureView* GetTextureRTV(ResourceIdType Id) const
-    {
-        DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
-        return GetTextureDefaultRTV(m_Resources[Id]);
-    }
+        operator IBuffer*() const
+        {
+            return AsBuffer();
+        }
 
-    ITextureView* GetTextureDSV(ResourceIdType Id) const
-    {
-        DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
-        return GetTextureDefaultDSV(m_Resources[Id]);
-    }
+        operator IDeviceObject*() const
+        {
+            return Object;
+        }
 
-    ITextureView* GetTextureUAV(ResourceIdType Id) const
-    {
-        DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
-        return GetTextureDefaultUAV(m_Resources[Id]);
-    }
+        IDeviceObject* operator->() const
+        {
+            return Object;
+        }
 
-    IBufferView* GetBufferSRV(ResourceIdType Id) const
-    {
-        DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
-        return GetBufferDefaultSRV(m_Resources[Id]);
-    }
+        ITextureView* GetTextureSRV() const
+        {
+            return GetTextureDefaultSRV(Object);
+        }
 
-    IBufferView* GetBufferUAV(ResourceIdType Id) const
+        ITextureView* GetTextureRTV() const
+        {
+            return GetTextureDefaultRTV(Object);
+        }
+
+        ITextureView* GetTextureDSV() const
+        {
+            return GetTextureDefaultDSV(Object);
+        }
+
+        ITextureView* GetTextureUAV() const
+        {
+            return GetTextureDefaultUAV(Object);
+        }
+
+        IBufferView* GetBufferSRV() const
+        {
+            return GetBufferDefaultSRV(Object);
+        }
+
+        IBufferView* GetBufferUAV() const
+        {
+            return GetBufferDefaultUAV(Object);
+        }
+
+    private:
+        ResourceAccessor(const RefCntAutoPtr<IDeviceObject>& _Object) :
+            Object{_Object}
+        {}
+        friend ResourceRegistry;
+        const RefCntAutoPtr<IDeviceObject>& Object;
+    };
+
+    ResourceAccessor operator[](ResourceIdType Id) const
     {
         DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
-        return GetBufferDefaultUAV(m_Resources[Id]);
+        return ResourceAccessor{m_Resources[Id]};
     }
 
 private:
