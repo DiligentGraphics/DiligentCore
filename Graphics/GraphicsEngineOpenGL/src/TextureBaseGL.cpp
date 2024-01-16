@@ -595,6 +595,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
     }
 
     const bool IsDefaultBackBuffer = GetGLHandle() == 0;
+
 #if GL_ARB_copy_image
     // We can't use glCopyImageSubData with the proxy texture of a default framebuffer
     // because we don't have the texture handle. Resort to quad rendering in this case.
@@ -625,18 +626,6 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
     else
 #endif
     {
-        bool UseBlitFramebuffer = IsDefaultBackBuffer;
-        if (!UseBlitFramebuffer && m_pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_GLES)
-        {
-            const auto& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
-            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
-                FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-            {
-                // glCopyTexSubImage* does not support depth formats in GLES
-                UseBlitFramebuffer = true;
-            }
-        }
-
         auto& GLState = pDeviceCtxGL->GetContextState();
 
         // Copy operations (glCopyTexSubImage* and glBindFramebuffer) are affected by scissor test!
@@ -669,57 +658,44 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
             DEV_CHECK_ERR(glCheckFramebufferStatus(GL_READ_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
                           "Read framebuffer is incomplete: ", GetFramebufferStatusString(glCheckFramebufferStatus(GL_READ_FRAMEBUFFER)));
 
-            if (!UseBlitFramebuffer)
+            GLuint DstFboHandle = 0;
+            if (IsDefaultBackBuffer)
             {
-                CopyTexSubimageAttribs CopyAttribs{*pSrcBox};
-                CopyAttribs.DstMip   = DstMipLevel;
-                CopyAttribs.DstLayer = DstSlice;
-                CopyAttribs.DstX     = DstX;
-                CopyAttribs.DstY     = DstY;
-                CopyAttribs.DstZ     = DstZ + DepthSlice;
-                CopyTexSubimage(GLState, CopyAttribs);
+                DstFboHandle = pDeviceCtxGL->GetDefaultFBO();
             }
             else
             {
-                GLuint DstFboHandle = 0;
-                if (IsDefaultBackBuffer)
-                {
-                    DstFboHandle = pDeviceCtxGL->GetDefaultFBO();
-                }
-                else
-                {
-                    // Get draw framebuffer for the destination subimage
+                // Get draw framebuffer for the destination subimage
 
-                    auto& FBOCache = m_pDevice->GetFBOCache(GLState.GetCurrentGLContext());
-                    VERIFY_EXPR(DstSlice == 0 || m_Desc.IsArray());
-                    VERIFY_EXPR((DstZ == 0 && DepthSlice == 0) || m_Desc.Is3D());
-                    const auto DstFramebufferSlice = DstSlice + DstZ + DepthSlice;
-                    // NOTE: GetFBO may bind a framebuffer, so we need to invalidate it in the GL context state.
-                    const auto& DrawFBO = FBOCache.GetFBO(this, DstFramebufferSlice, DstMipLevel, TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_DRAW);
+                auto& FBOCache = m_pDevice->GetFBOCache(GLState.GetCurrentGLContext());
+                VERIFY_EXPR(DstSlice == 0 || m_Desc.IsArray());
+                VERIFY_EXPR((DstZ == 0 && DepthSlice == 0) || m_Desc.Is3D());
+                const auto DstFramebufferSlice = DstSlice + DstZ + DepthSlice;
+                // NOTE: GetFBO may bind a framebuffer, so we need to invalidate it in the GL context state.
+                const auto& DrawFBO = FBOCache.GetFBO(this, DstFramebufferSlice, DstMipLevel, TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_DRAW);
 
-                    DstFboHandle = DrawFBO;
-                }
-
-                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DstFboHandle);
-                DEV_CHECK_GL_ERROR("Failed to bind draw framebuffer");
-                DEV_CHECK_ERR(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
-                              "Draw framebuffer is incomplete: ", GetFramebufferStatusString(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER)));
-
-                const auto CopyMask = GetFramebufferCopyMask(SrcTexDesc.Format);
-                DEV_CHECK_ERR(CopyMask == GetFramebufferCopyMask(m_Desc.Format),
-                              "Src and dst framebuffer copy masks must be the same");
-                glBlitFramebuffer(pSrcBox->MinX,
-                                  pSrcBox->MinY,
-                                  pSrcBox->MaxX,
-                                  pSrcBox->MaxY,
-                                  DstX,
-                                  DstY,
-                                  DstX + pSrcBox->Width(),
-                                  DstY + pSrcBox->Height(),
-                                  CopyMask,
-                                  GL_NEAREST);
-                DEV_CHECK_GL_ERROR("Failed to blit framebuffer");
+                DstFboHandle = DrawFBO;
             }
+
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DstFboHandle);
+            DEV_CHECK_GL_ERROR("Failed to bind draw framebuffer");
+            DEV_CHECK_ERR(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+                          "Draw framebuffer is incomplete: ", GetFramebufferStatusString(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER)));
+
+            const auto CopyMask = GetFramebufferCopyMask(SrcTexDesc.Format);
+            DEV_CHECK_ERR(CopyMask == GetFramebufferCopyMask(m_Desc.Format),
+                          "Src and dst framebuffer copy masks must be the same");
+            glBlitFramebuffer(pSrcBox->MinX,
+                              pSrcBox->MinY,
+                              pSrcBox->MaxX,
+                              pSrcBox->MaxY,
+                              DstX,
+                              DstY,
+                              DstX + pSrcBox->Width(),
+                              DstY + pSrcBox->Height(),
+                              CopyMask,
+                              GL_NEAREST);
+            DEV_CHECK_GL_ERROR("Failed to blit framebuffer");
         }
 
         if (ScissorEnabled)
@@ -727,10 +703,6 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
 
         // Invalidate FBO as we used glBindFramebuffer directly
         GLState.InvalidateFBO();
-
-        if (!UseBlitFramebuffer)
-            GLState.BindTexture(-1, GetBindTarget(), GLObjectWrappers::GLTextureObj::Null());
-
         pDeviceCtxGL->CommitRenderTargets();
     }
 }
