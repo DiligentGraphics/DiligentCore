@@ -625,6 +625,11 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
     else
 #endif
     {
+#if PLATFORM_EMSCRIPTEN
+        // Always use BlitFramebuffer on WebGL as CopyTexSubimage has
+        // a very high performance penalty.
+        bool UseBlitFramebuffer = true;
+#else
         bool UseBlitFramebuffer = IsDefaultBackBuffer;
         if (!UseBlitFramebuffer && m_pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_GLES)
         {
@@ -636,6 +641,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                 UseBlitFramebuffer = true;
             }
         }
+#endif
 
         auto& GLState = pDeviceCtxGL->GetContextState();
 
