@@ -95,9 +95,9 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
     m_SwapChainDesc.Width  = 1024;
     m_SwapChainDesc.Height = 768;
 #elif PLATFORM_EMSCRIPTEN
-    double CanvasWidth  = 0;
-    double CanvasHeight = 0;
-    emscripten_get_element_css_size(InitAttribs.Window.pCanvasId, &CanvasWidth, &CanvasHeight);
+    int32_t CanvasWidth  = 0;
+    int32_t CanvasHeight = 0;
+    emscripten_get_canvas_element_size(InitAttribs.Window.pCanvasId, &CanvasWidth, &CanvasHeight);
     m_SwapChainDesc.Width  = static_cast<uint32_t>(CanvasWidth);
     m_SwapChainDesc.Height = static_cast<uint32_t>(CanvasHeight);
 #else
