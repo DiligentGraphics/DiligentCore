@@ -152,4 +152,125 @@ RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateMemoryShaderSourceFactory(c
     return CreateMemoryShaderSourceFactory(CI);
 }
 
+
+/// C++ wrapper over PipelineResourceSignatureDesc.
+struct CompoundShaderSourceFactoryCreateInfoX : CompoundShaderSourceFactoryCreateInfo
+{
+    CompoundShaderSourceFactoryCreateInfoX() noexcept
+    {}
+
+    explicit CompoundShaderSourceFactoryCreateInfoX(const CompoundShaderSourceFactoryCreateInfo& _Desc) :
+        CompoundShaderSourceFactoryCreateInfo{_Desc}
+    {
+        if (NumFactories != 0)
+            Factories.assign(ppFactories, ppFactories + NumFactories);
+
+        if (NumFileSubstitutes != 0)
+            FileSubstitutes.assign(pFileSubstitutes, pFileSubstitutes + NumFileSubstitutes);
+
+        SyncDesc(true);
+    }
+
+    explicit CompoundShaderSourceFactoryCreateInfoX(const std::initializer_list<IShaderSourceInputStreamFactory*>& _Factories,
+                                                    const std::initializer_list<ShaderSourceFileSubstitueInfo>&    _FileSubstitutes = {}) :
+        Factories{_Factories},
+        FileSubstitutes{_FileSubstitutes}
+    {
+        SyncDesc(true);
+    }
+
+    CompoundShaderSourceFactoryCreateInfoX(const CompoundShaderSourceFactoryCreateInfoX& _DescX) :
+        CompoundShaderSourceFactoryCreateInfoX{static_cast<const CompoundShaderSourceFactoryCreateInfo&>(_DescX)}
+    {}
+
+    CompoundShaderSourceFactoryCreateInfoX& operator=(const CompoundShaderSourceFactoryCreateInfoX& _DescX)
+    {
+        CompoundShaderSourceFactoryCreateInfoX Copy{_DescX};
+        std::swap(*this, Copy);
+        return *this;
+    }
+
+    CompoundShaderSourceFactoryCreateInfoX(CompoundShaderSourceFactoryCreateInfoX&&) noexcept = default;
+    CompoundShaderSourceFactoryCreateInfoX& operator=(CompoundShaderSourceFactoryCreateInfoX&&) noexcept = default;
+
+    CompoundShaderSourceFactoryCreateInfoX& AddFactory(IShaderSourceInputStreamFactory* pFactory)
+    {
+        Factories.push_back(pFactory);
+        return SyncDesc();
+    }
+
+    CompoundShaderSourceFactoryCreateInfoX& AddFileSusbtitute(const ShaderSourceFileSubstitueInfo& Substitute)
+    {
+        FileSubstitutes.push_back(Substitute);
+        FileSubstitutes.back().Name       = StringPool.emplace(Substitute.Name).first->c_str();
+        FileSubstitutes.back().Substitute = StringPool.emplace(Substitute.Substitute).first->c_str();
+        return SyncDesc();
+    }
+
+    template <typename... ArgsType>
+    CompoundShaderSourceFactoryCreateInfoX& AddFileSusbtitute(ArgsType&&... args)
+    {
+        const ShaderSourceFileSubstitueInfo Sam{std::forward<ArgsType>(args)...};
+        return AddFileSusbtitute(Sam);
+    }
+
+    CompoundShaderSourceFactoryCreateInfoX& ClearFactories()
+    {
+        Factories.clear();
+        return SyncDesc();
+    }
+
+    CompoundShaderSourceFactoryCreateInfoX& ClearFileSubstitutes()
+    {
+        FileSubstitutes.clear();
+        return SyncDesc();
+    }
+
+    CompoundShaderSourceFactoryCreateInfoX& Clear()
+    {
+        CompoundShaderSourceFactoryCreateInfoX CleanDesc;
+        std::swap(*this, CleanDesc);
+        return *this;
+    }
+
+private:
+    CompoundShaderSourceFactoryCreateInfoX& SyncDesc(bool UpdateStrings = false)
+    {
+        NumFactories = static_cast<Uint32>(Factories.size());
+        ppFactories  = NumFactories > 0 ? Factories.data() : nullptr;
+
+        NumFileSubstitutes = static_cast<Uint32>(FileSubstitutes.size());
+        pFileSubstitutes   = NumFileSubstitutes > 0 ? FileSubstitutes.data() : nullptr;
+
+        if (UpdateStrings)
+        {
+            for (auto& FileSubs : FileSubstitutes)
+            {
+                FileSubs.Name       = StringPool.emplace(FileSubs.Name).first->c_str();
+                FileSubs.Substitute = StringPool.emplace(FileSubs.Substitute).first->c_str();
+            }
+        }
+
+        return *this;
+    }
+
+    std::vector<IShaderSourceInputStreamFactory*> Factories;
+    std::vector<ShaderSourceFileSubstitueInfo>    FileSubstitutes;
+    std::unordered_set<std::string>               StringPool;
+};
+
+inline RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateCompoundShaderSourceFactory(const CompoundShaderSourceFactoryCreateInfo& CI)
+{
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pFactory;
+    CreateCompoundShaderSourceFactory(CI, &pFactory);
+    return pFactory;
+}
+
+RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateCompoundShaderSourceFactory(const std::initializer_list<IShaderSourceInputStreamFactory*>& Factories,
+                                                                                 const std::initializer_list<ShaderSourceFileSubstitueInfo>&    FileSubstitutes = {})
+{
+    CompoundShaderSourceFactoryCreateInfoX CI{Factories, FileSubstitutes};
+    return CreateCompoundShaderSourceFactory(CI);
+}
+
 } // namespace Diligent
