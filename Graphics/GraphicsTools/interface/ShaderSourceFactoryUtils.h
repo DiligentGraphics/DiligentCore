@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023 Diligent Graphics LLC
+ *  Copyright 2023-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-#include "../../Primitives/interface/DefineGlobalFuncHelperMacros.h"
+#include "../../../Primitives/interface/DefineGlobalFuncHelperMacros.h"
 
 /// Shader source file substitute info.
 struct ShaderSourceFileSubstitueInfo
@@ -179,6 +179,6 @@ void DILIGENT_GLOBAL_FUNCTION(CreateMemoryShaderSourceFactory)(const MemoryShade
                                                                IShaderSourceInputStreamFactory**             ppFactory);
 
 
-#include "../../Primitives/interface/UndefGlobalFuncHelperMacros.h"
+#include "../../../Primitives/interface/UndefGlobalFuncHelperMacros.h"
 
 DILIGENT_END_NAMESPACE // namespace Diligent

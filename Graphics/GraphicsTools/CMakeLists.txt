@@ -20,6 +20,7 @@ set(INTERFACE
     interface/ShaderMacroHelper.hpp
     interface/StreamingBuffer.hpp
     interface/ShaderSourceFactoryUtils.h
+    interface/ShaderSourceFactoryUtils.hpp
     interface/TextureUploader.hpp
     interface/TextureUploaderBase.hpp
     interface/XXH128Hasher.hpp
