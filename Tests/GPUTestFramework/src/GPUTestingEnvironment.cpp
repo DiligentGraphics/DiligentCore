@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -886,7 +886,11 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
         }
         else if (strcmp(arg, "--mode=gl") == 0)
         {
+#if PLATFORM_EMSCRIPTEN || PLATFORM_ANDROID
+            TestEnvCI.deviceType = RENDER_DEVICE_TYPE_GLES;
+#else
             TestEnvCI.deviceType = RENDER_DEVICE_TYPE_GL;
+#endif
         }
         else if (strcmp(arg, "--mode=mtl") == 0)
         {

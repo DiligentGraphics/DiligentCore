@@ -1,5 +1,9 @@
 cmake_minimum_required (VERSION 3.17)
 
+if (PLATFORM_EMSCRIPTEN)
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+endif()
+
 project(DiligentCoreAPITest)
 
 file(GLOB COMMON_SOURCE LIST_DIRECTORIES false src/* src/ObjectCreationFailure/*)
@@ -77,6 +81,13 @@ add_executable(DiligentCoreAPITest ${ALL_SOURCE})
 set_common_target_properties(DiligentCoreAPITest)
 
 get_supported_backends(ENGINE_LIBRARIES)
+
+if (PLATFORM_EMSCRIPTEN)  
+    set(RESOURCE_PATH "${PROJECT_SOURCE_DIR}/assets/")
+    set(HTML_TEMPLATE_FILE ${PROJECT_SOURCE_DIR}/resources/emscripten_template.html)      
+    target_link_options(DiligentCoreAPITest PRIVATE "SHELL: -s SINGLE_FILE -s ALLOW_MEMORY_GROWTH=1 --preload-file '${RESOURCE_PATH}@'")      
+    target_link_options(DiligentCoreAPITest PRIVATE "SHELL: --shell-file '${HTML_TEMPLATE_FILE}'") 
+endif()
 
 target_link_libraries(DiligentCoreAPITest
 PRIVATE

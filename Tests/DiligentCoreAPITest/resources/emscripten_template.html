@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@4.19.0/css/xterm.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@4.19.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.5.0/lib/xterm-addon-fit.min.js"></script>
+    <title>DiligentCoreAPITest</title>
+    <style>
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        div::-webkit-scrollbar {
+            display: none;
+            width: 0;
+        }
+
+        html,
+        body {
+            margin: 0;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        div#terminal {
+            height: 100%;
+            left: 0;
+            position: absolute;
+            top: 0;
+            width: 100%;
+        }
+
+        div#terminal div {
+            height: 100%;
+        }
+
+        .xterm-viewport,
+        .xterm-screen {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .terminal.xterm {
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal"></div>
+    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <script type='text/javascript'>
+        var term = new Terminal({
+            screenKeys: true,
+            useStyle: true,
+            cursorBlink: true,
+            cursorStyle: 'bar',
+            fullscreenWin: true,
+            maximizeWin: true,
+            screenReaderMode: true,
+            theme: {
+                foreground: 'white',
+                background: '#2A2C34',
+                cursor: 'help',
+                lineHeight: 16,
+            },
+        });
+
+        var fitAddon = new FitAddon.FitAddon();
+        term.open(document.getElementById('terminal'));
+        term.loadAddon(fitAddon);
+        term._initialized = true;
+        terminal.focus();
+        fitAddon.fit();
+
+        function terminal_write(text) {
+            text = Array.prototype.slice.call(arguments).join(' ');
+            term.writeln(text);
+        };
+
+        var argv = [ "--mode=gl" ];
+        var Module = {
+            preRun: [],
+            postRun: [],
+            arguments: argv,
+            print: terminal_write,
+            printErr: terminal_write,
+            canvas: (function () {
+                var canvas = document.getElementById('canvas');
+                canvas.addEventListener("webglcontextlost", function(e) { alert('FIXME: WebGL context lost, please reload the page'); e.preventDefault(); }, false);
+                return canvas;
+            })(),
+            setStatus: function (text) {
+                console.log("status: " + text);
+            }
+        };
+        window.onerror = function () {
+            console.log("onerror: " + event);
+        };
+    </script>
+    {{{ SCRIPT }}}
+</body>
+</html>

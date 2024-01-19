@@ -1,5 +1,9 @@
 cmake_minimum_required (VERSION 3.6)
 
+if (PLATFORM_EMSCRIPTEN)
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+endif()
+
 project(DiligentCoreTest)
 
 file(GLOB_RECURSE SOURCE  src/*.*)
@@ -18,6 +22,13 @@ endif()
 
 add_executable(DiligentCoreTest ${SOURCE} ${SHADERS})
 set_common_target_properties(DiligentCoreTest)
+
+if (PLATFORM_EMSCRIPTEN)  
+    set(RESOURCE_PATH "${PROJECT_SOURCE_DIR}/assets/")
+    set(HTML_TEMPLATE_FILE ${PROJECT_SOURCE_DIR}/resources/emscripten_template.html)      
+    target_link_options(DiligentCoreTest PRIVATE "SHELL: -s SINGLE_FILE -s ALLOW_MEMORY_GROWTH=1 --preload-file '${RESOURCE_PATH}@'")      
+    target_link_options(DiligentCoreTest PRIVATE "SHELL: --shell-file '${HTML_TEMPLATE_FILE}'") 
+endif()
 
 target_link_libraries(DiligentCoreTest
 PRIVATE
