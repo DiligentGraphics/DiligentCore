@@ -146,7 +146,7 @@ inline RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateMemoryShaderSourceFa
     return pFactory;
 }
 
-RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateMemoryShaderSourceFactory(const std::initializer_list<MemoryShaderSourceFileInfo>& Sources)
+inline RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateMemoryShaderSourceFactory(const std::initializer_list<MemoryShaderSourceFileInfo>& Sources)
 {
     MemoryShaderSourceFactoryCreateInfoX CI{Sources};
     return CreateMemoryShaderSourceFactory(CI);
@@ -266,8 +266,8 @@ inline RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateCompoundShaderSource
     return pFactory;
 }
 
-RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateCompoundShaderSourceFactory(const std::initializer_list<IShaderSourceInputStreamFactory*>& Factories,
-                                                                                 const std::initializer_list<ShaderSourceFileSubstitueInfo>&    FileSubstitutes = {})
+inline RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateCompoundShaderSourceFactory(const std::initializer_list<IShaderSourceInputStreamFactory*>& Factories,
+                                                                                        const std::initializer_list<ShaderSourceFileSubstitueInfo>&    FileSubstitutes = {})
 {
     CompoundShaderSourceFactoryCreateInfoX CI{Factories, FileSubstitutes};
     return CreateCompoundShaderSourceFactory(CI);
