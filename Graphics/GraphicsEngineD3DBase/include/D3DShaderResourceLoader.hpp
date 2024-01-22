@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,7 @@
 #include "ShaderToolsCommon.hpp"
 #include "D3DCommonTypeConversions.hpp"
 #include "EngineMemory.h"
+#include "ParsingTools.hpp"
 
 /// \file
 /// D3D shader resource loading
@@ -185,12 +186,20 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
         D3D_SHADER_INPUT_BIND_DESC BindingDesc = {};
         pShaderReflection->GetResourceBindingDesc(Res, &BindingDesc);
 
+        std::string Name;
+        const auto  ArrayIndex = Parsing::GetArrayIndex(BindingDesc.Name, Name);
+
         if (BindingDesc.BindPoint == UINT32_MAX)
+        {
             BindingDesc.BindPoint = D3DShaderResourceAttribs::InvalidBindPoint;
-
-        std::string Name{BindingDesc.Name};
-
-        SkipCount = 1;
+        }
+        else if (ArrayIndex > 0)
+        {
+            // Adjust bind point for array index
+            VERIFY(BindingDesc.BindPoint >= static_cast<UINT>(ArrayIndex), "Resource '", BindingDesc.Name, "' uses bind point point ", BindingDesc.BindPoint,
+                   ", which is invalid for its array index ", ArrayIndex);
+            BindingDesc.BindPoint -= static_cast<UINT>(ArrayIndex);
+        }
 
         UINT BindCount = BindingDesc.BindCount;
         if (BindCount == UINT_MAX)
@@ -217,17 +226,11 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
         //
         // Notice that if some array element is not used by the shader, it will not be enumerated
 
-        auto OpenBracketPos = Name.find('[');
-        if (String::npos != OpenBracketPos)
+        SkipCount = 1;
+        if (ArrayIndex >= 0)
         {
             VERIFY(BindCount == 1, "When array elements are enumerated individually, BindCount is expected to always be 1");
 
-            // Name == "g_tex2DDiffuse[0]"
-            //                        ^
-            //                   OpenBracketPos
-            Name.erase(OpenBracketPos, Name.length() - OpenBracketPos);
-            // Name == "g_tex2DDiffuse"
-            VERIFY_EXPR(Name.length() == OpenBracketPos);
 #ifdef DILIGENT_DEBUG
             for (const auto& ExistingRes : Resources)
             {
@@ -236,21 +239,23 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
 #endif
             for (UINT ArrElem = Res + 1; ArrElem < shaderDesc.BoundResources; ++ArrElem)
             {
-                D3D_SHADER_INPUT_BIND_DESC ArrElemBindingDesc = {};
-                pShaderReflection->GetResourceBindingDesc(ArrElem, &ArrElemBindingDesc);
+                D3D_SHADER_INPUT_BIND_DESC NextElemBindingDesc = {};
+                pShaderReflection->GetResourceBindingDesc(ArrElem, &NextElemBindingDesc);
+
+                std::string NextElemName;
+                const auto  NextElemIndex = Parsing::GetArrayIndex(NextElemBindingDesc.Name, NextElemName);
 
                 // Make sure this case is handled correctly:
                 // "g_tex2DDiffuse[.]" != "g_tex2DDiffuse2[.]"
-                if (strncmp(Name.c_str(), ArrElemBindingDesc.Name, OpenBracketPos) == 0 && ArrElemBindingDesc.Name[OpenBracketPos] == '[')
+                if (Name == NextElemName)
                 {
-                    //g_tex2DDiffuse[2]
-                    //               ^
-                    UINT Ind  = atoi(ArrElemBindingDesc.Name + OpenBracketPos + 1);
-                    BindCount = std::max(BindCount, Ind + 1);
-                    VERIFY(ArrElemBindingDesc.BindPoint == BindingDesc.BindPoint + Ind,
+                    VERIFY_EXPR(NextElemIndex > 0);
+
+                    BindCount = std::max(BindCount, static_cast<UINT>(NextElemIndex) + 1);
+                    VERIFY(NextElemBindingDesc.BindPoint == BindingDesc.BindPoint + NextElemIndex,
                            "Array elements are expected to use contiguous bind points.\n",
-                           BindingDesc.Name, " uses slot ", BindingDesc.BindPoint, ", so ", ArrElemBindingDesc.Name,
-                           " is expected to use slot ", BindingDesc.BindPoint + Ind, " while ", ArrElemBindingDesc.BindPoint,
+                           BindingDesc.Name, " uses slot ", BindingDesc.BindPoint, ", so ", NextElemBindingDesc.Name,
+                           " is expected to use slot ", BindingDesc.BindPoint + NextElemIndex, " while ", NextElemBindingDesc.BindPoint,
                            " is actually used");
 
                     // Note that skip count may not necessarily be the same as BindCount.

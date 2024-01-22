@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +39,7 @@
 #include "Align.hpp"
 #include "GLTypeConversions.hpp"
 #include "ShaderToolsCommon.hpp"
+#include "ParsingTools.hpp"
 
 namespace Diligent
 {
@@ -284,20 +285,6 @@ static void AddUniformBufferVariable(GLuint                                     
     }
 }
 
-int GetArrayIndex(const char* VarName, std::string& NameWithoutBrackets)
-{
-    NameWithoutBrackets        = VarName;
-    const auto* OpenBracketPtr = strchr(VarName, '[');
-    if (OpenBracketPtr == nullptr)
-        return -1;
-
-    auto Ind = atoi(OpenBracketPtr + 1);
-    if (Ind >= 0)
-        NameWithoutBrackets = std::string{VarName, OpenBracketPtr};
-
-    return Ind;
-}
-
 static void ProcessUBVariable(ShaderCodeVariableDescX& Var, Uint32 BaseOffset)
 {
     // Re-sort by offset
@@ -343,7 +330,7 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
             //     Dot
             std::string Prefix{Name, Dot}; // "s2[1]"
             std::string NameWithoutBrackets;
-            const auto  ArrayInd = GetArrayIndex(Prefix.c_str(), NameWithoutBrackets);
+            const auto  ArrayInd = Parsing::GetArrayIndex(Prefix, NameWithoutBrackets);
             // ArrayInd = 1
             // NameWithoutBrackets = "s2"
 
@@ -414,7 +401,7 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
         //         Name
 
         std::string NameWithoutBrackets;
-        const auto  ArrayInd = GetArrayIndex(Name, NameWithoutBrackets);
+        const auto  ArrayInd = Parsing::GetArrayIndex(Name, NameWithoutBrackets);
         // ArrayInd = 2
         // NameWithoutBrackets = "f4"
         if (auto* pArray = pLevel->FindMember(NameWithoutBrackets.c_str()))
