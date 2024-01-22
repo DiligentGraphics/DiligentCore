@@ -26,6 +26,8 @@
 
 #include "ParsingTools.hpp"
 
+#include <limits.h>
+
 #include "gtest/gtest.h"
 
 #include "TestingEnvironment.hpp"
@@ -1368,5 +1370,39 @@ TEST(Common_ParsingTools, RefinePreprocessorDirective)
     TestRefine("#  \t define", "define");
     TestRefine("#  \t /* Comment*/ define", "define");
 }
+
+
+TEST(Common_ParsingTools, ParseInteger)
+{
+    auto Test = [](const std::string Str, size_t RefPos, int RefValue) {
+        int  Value = INT_MAX;
+        auto Pos   = ParseInteger(Str.begin(), Str.end(), Value);
+        EXPECT_EQ(Pos, Str.begin() + RefPos);
+        EXPECT_EQ(Value, RefValue);
+    };
+
+    Test("", 0, INT_MAX);
+    Test(" ", 0, INT_MAX);
+    Test("+", 0, INT_MAX);
+    Test("-", 0, INT_MAX);
+    Test("x", 0, INT_MAX);
+    Test("abcd", 0, INT_MAX);
+    Test("+x", 0, INT_MAX);
+    Test("-y", 0, INT_MAX);
+    Test("x123", 0, INT_MAX);
+    Test("+0", 2, 0);
+    Test("-0", 2, 0);
+    Test("234", 3, 234);
+    Test("+468", 4, 468);
+    Test("-135", 4, -135);
+    Test("234x567", 3, 234);
+    Test("+468x087", 4, 468);
+    Test("-135x124", 4, -135);
+    for (int i = -100; i <= 100; ++i)
+    {
+        std::string Str = std::to_string(i);
+        Test(Str, Str.length(), i);
+    }
+};
 
 } // namespace

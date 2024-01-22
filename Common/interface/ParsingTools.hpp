@@ -75,9 +75,9 @@ inline bool IsDigit(Char Symbol) noexcept
 
 /// Skips all characters until the end of the line.
 
-/// \param[inout] Pos          - starting position.
-/// \param[in]    End          - end of the input string.
-/// \param[in]    GoToNextLine - whether to go to the next line.
+/// \param[in] Start        - starting position.
+/// \param[in] End          - end of the input string.
+/// \param[in] GoToNextLine - whether to go to the next line.
 ///
 /// \return       If GoToNextLine is true, the position following the
 ///               new line character at the end of the string.
@@ -124,9 +124,9 @@ DEFINE_FLAG_ENUM_OPERATORS(SKIP_COMMENT_FLAGS)
 
 /// Skips single-line and multi-line comments starting from the given position.
 
-/// \param[inout] Start - starting position.
-/// \param[in]    End   - end of the input string.
-/// \param[in]    Flags - flags controlling what kind of comments to skip.
+/// \param[in] Start - starting position.
+/// \param[in] End   - end of the input string.
+/// \param[in] Flags - flags controlling what kind of comments to skip.
 ///
 /// \return     if the comment is found, the position immediately following
 ///             the end of the comment; starting position otherwise.
@@ -211,9 +211,9 @@ InteratorType SkipComment(const InteratorType& Start, const InteratorType& End, 
 
 /// Skips all delimiters starting from the given position.
 
-/// \param[inout] Pos        - starting position.
-/// \param[in]    End        - end of the input string.
-/// \param[in]    Delimiters - optional string containing custom delimiters.
+/// \param[in] Start      - starting position.
+/// \param[in] End        - end of the input string.
+/// \param[in] Delimiters - optional string containing custom delimiters.
 ///
 /// \return       position of the first non-delimiter character.
 template <typename InteratorType>
@@ -236,10 +236,10 @@ InteratorType SkipDelimiters(const InteratorType& Start, const InteratorType& En
 
 /// Skips all comments and all delimiters starting from the given position.
 
-/// \param[inout] Pos          - starting position.
-/// \param[in]    End          - end of the input string.
-/// \param[in]    Delimiters   - optional string containing custom delimiters.
-/// \param[in]    CommentFlags - optional flags controlling what kind of comments to skip.
+/// \param[in] Start        - starting position.
+/// \param[in] End          - end of the input string.
+/// \param[in] Delimiters   - optional string containing custom delimiters.
+/// \param[in] CommentFlags - optional flags controlling what kind of comments to skip.
 ///
 /// \return true  position of the first non-comment non-delimiter character.
 ///
@@ -270,8 +270,8 @@ IteratorType SkipDelimitersAndComments(const IteratorType& Start,
 
 /// Skips one identifier starting from the given position.
 
-/// \param[inout] Pos - starting position.
-/// \param[in]    End - end of the input string.
+/// \param[in] Start - starting position.
+/// \param[in] End   - end of the input string.
 ///
 /// \return     position immediately following the last character of identifier.
 template <typename IteratorType>
@@ -295,8 +295,8 @@ IteratorType SkipIdentifier(const IteratorType& Start, const IteratorType& End) 
 
 /// Skips a floating point number starting from the given position.
 
-/// \param[inout] Pos - starting position.
-/// \param[in]    End - end of the input string.
+/// \param[in] Start - starting position.
+/// \param[in] End   - end of the input string.
 ///
 /// \return     position immediately following the last character of the number.
 template <typename IteratorType>
@@ -385,6 +385,38 @@ IteratorType SkipFloatNumber(const IteratorType& Start, const IteratorType& End)
     return Pos;
 }
 
+/// Parses an integer starting from the given position.
+///
+/// \param[in]  Start - starting position.
+/// \param[in]  End   - end of the input string
+/// \param[out] Value - parsed integer value.
+/// \return     position immediately following the last character of the number.
+template <typename IteratorType, typename ValueType>
+IteratorType ParseInteger(const IteratorType& Start, const IteratorType& End, ValueType& Value) noexcept
+{
+    auto Pos = Start;
+    if (Pos == End)
+        return Pos;
+
+    const bool IsNegative = *Pos == '-';
+    if (*Pos == '+' || *Pos == '-')
+        ++Pos;
+
+    if (Pos == End || !IsNum(*Pos))
+        return Start;
+
+    Value = 0;
+    while (Pos != End && IsNum(*Pos))
+    {
+        Value = Value * 10 + (*Pos - '0');
+        ++Pos;
+    }
+
+    if (IsNegative)
+        Value = -Value;
+
+    return Pos;
+}
 
 /// Splits string into chunks separated by comments and delimiters.
 ///
