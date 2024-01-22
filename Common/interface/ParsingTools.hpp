@@ -31,6 +31,7 @@
 
 #include <cstring>
 #include <sstream>
+#include <limits>
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/FlagEnum.h"
@@ -1153,6 +1154,75 @@ inline std::string RefinePreprocessorDirective(const char* Str, size_t Len = 0) 
         Len = strlen(Str);
 
     return RefinePreprocessorDirective(Str, Str + Len);
+}
+
+static constexpr int InvalidArrayIndex = std::numeric_limits<int>::min();
+
+/// Returns the array index if the given variable name is an indexed array element.
+///
+/// \param [in]  Start   - starting position.
+/// \param [in]  End     - end of the input string.
+/// \param [out] NameEnd - ending position of the variable name.
+///
+/// \return     - Array index if the given variable name is an array element.
+///             - -1 if the given variable name is a valid identifier and is not an array element.
+///             - INT_MIN if the array index is invalid.
+template <typename InteratorType>
+inline int GetArrayIndex(const InteratorType& Start, const InteratorType& End, InteratorType& NameEnd)
+{
+    NameEnd = SkipIdentifier(Start, End);
+    // Empty name is not a valid identifier
+    if (NameEnd == Start)
+    {
+        //
+        //  ^
+        return InvalidArrayIndex;
+    }
+
+    if (NameEnd == End)
+    {
+        // MyArray
+        //        ^
+        return -1;
+    }
+    // MyArray [ 16 ]
+    //        ^
+
+    auto Pos = SkipDelimiters(NameEnd, End, " \t");
+    // MyArray [ 16 ]
+    //         ^
+    if (Pos == End || *Pos != '[')
+        return InvalidArrayIndex;
+
+    Pos = SkipDelimiters(Pos + 1, End, " \t");
+    // MyArray [ 16 ]
+    //           ^
+    if (Pos == End)
+        return InvalidArrayIndex;
+
+    int Index = InvalidArrayIndex;
+    Pos       = ParseInteger(Pos, End, Index);
+    // MyArray [ 16 ]
+    //             ^
+
+    Pos = SkipDelimiters(Pos, End, " \t");
+    // MyArray [ 16 ]
+    //              ^
+    return (Pos != End && *Pos == ']') ? Index : InvalidArrayIndex;
+}
+
+template <typename InteratorType>
+inline int GetArrayIndex(const InteratorType& Start, const InteratorType& End, std::string& NameWithoutBrackets)
+{
+    InteratorType NameEnd = End;
+    const auto    Index   = GetArrayIndex(Start, End, NameEnd);
+    NameWithoutBrackets.assign(Start, NameEnd);
+    return Index;
+}
+
+inline int GetArrayIndex(const std::string& Var, std::string& NameWithoutBrackets)
+{
+    return GetArrayIndex(Var.begin(), Var.end(), NameWithoutBrackets);
 }
 
 } // namespace Parsing

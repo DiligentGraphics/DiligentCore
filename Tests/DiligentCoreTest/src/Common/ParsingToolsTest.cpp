@@ -1405,4 +1405,41 @@ TEST(Common_ParsingTools, ParseInteger)
     }
 };
 
+
+TEST(Common_ParsingTools, GetArrayIndex)
+{
+    auto Test = [](const std::string Var, size_t RefNameEndPos, int RefIndex) {
+        std::string NameWOBrackets;
+        int         Index = GetArrayIndex(Var, NameWOBrackets);
+
+        EXPECT_EQ(NameWOBrackets, Var.substr(0, RefNameEndPos));
+        EXPECT_EQ(Index, RefIndex);
+    };
+
+    Test("", 0, InvalidArrayIndex);
+    Test(" ", 0, InvalidArrayIndex);
+    Test("1", 0, InvalidArrayIndex);
+    Test("?", 0, InvalidArrayIndex);
+    Test("x", 1, -1);
+    Test("abc", 3, -1);
+    Test("xy1 ", 3, InvalidArrayIndex);
+    Test("xy2[", 3, InvalidArrayIndex);
+    Test("xy3 [", 3, InvalidArrayIndex);
+    Test("xy4[ ", 3, InvalidArrayIndex);
+    Test("xy5 [ ", 3, InvalidArrayIndex);
+    Test("xy6[10]", 3, 10);
+    Test("xy7[11 ]", 3, 11);
+    Test("xy8[ 12]", 3, 12);
+    Test("xy9[ 13 ]", 3, 13);
+    Test("xy0 [14]", 3, 14);
+    Test("xy1 [ 15]", 3, 15);
+    Test("xy2 [16 ]", 3, 16);
+    Test("xy3 [ 18 ]", 3, 18);
+    Test("xy4[x]", 3, INT_MIN);
+    Test("xy5 [ x ] ", 3, INT_MIN);
+    Test("xy6[12x]", 3, INT_MIN);
+    Test("xy7[12", 3, INT_MIN);
+    Test("xy7[12 ", 3, INT_MIN);
+}
+
 } // namespace
