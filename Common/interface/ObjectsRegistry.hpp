@@ -1,4 +1,4 @@
-/*  Copyright 2023 Diligent Graphics LLC
+/*  Copyright 2023-2024 Diligent Graphics LLC
 
  *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -248,6 +248,20 @@ public:
     {
         std::lock_guard<std::mutex> Guard{m_CacheMtx};
         PurgeUnguarded();
+    }
+
+    /// Processes each element in the cache with the specified handler.
+    template <typename HandlerType>
+    void ProcessElements(HandlerType&& Handler)
+    {
+        std::lock_guard<std::mutex> Guard{m_CacheMtx};
+        for (auto& Entry : m_Cache)
+        {
+            if (auto pObject = Entry.second->Lock())
+            {
+                Handler(Entry.first, *pObject);
+            }
+        }
     }
 
 private:
