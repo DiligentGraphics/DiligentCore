@@ -1156,7 +1156,7 @@ inline std::string RefinePreprocessorDirective(const char* Str, size_t Len = 0) 
     return RefinePreprocessorDirective(Str, Str + Len);
 }
 
-static constexpr int InvalidArrayIndex = std::numeric_limits<int>::min();
+static constexpr int InvalidArrayIndex = (std::numeric_limits<int>::min)();
 
 /// Returns the array index if the given variable name is an indexed array element.
 ///
