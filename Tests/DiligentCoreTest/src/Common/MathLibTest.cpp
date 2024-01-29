@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -2291,6 +2291,38 @@ TEST(Common_BasicMath, VectorAll)
     EXPECT_FALSE(all(float4{1, 1, 0, 1}));
     EXPECT_FALSE(all(double4{1, 1, 1, 0}));
 }
+
+
+TEST(Common_BasicMath, Wrap)
+{
+    EXPECT_EQ(WrapToRange(10, 1, 0), 1);
+    EXPECT_EQ(WrapToRange(10, 1, 1), 1);
+    EXPECT_EQ(WrapToRange(-10, 1, 0), 1);
+    EXPECT_EQ(WrapToRange(-10, 1, 1), 1);
+
+    EXPECT_EQ(WrapToRange(0, 200, 10), 200);
+    EXPECT_EQ(WrapToRange(1, 200, 10), 201);
+    EXPECT_EQ(WrapToRange(9, 200, 10), 209);
+    EXPECT_EQ(WrapToRange(10, 200, 10), 200);
+
+    EXPECT_EQ(WrapToRange(-1, 200, 10), 209);
+    EXPECT_EQ(WrapToRange(-9, 200, 10), 201);
+    EXPECT_EQ(WrapToRange(-10, 200, 10), 200);
+
+    for (int Range : {1, 2, 7, 8, 9, 10, 15, 16, 17})
+    {
+        int Min = -Range / 2;
+        for (int i = -2; i <= 2; ++i)
+        {
+            for (int Ref = Min; Ref < Min + Range; ++Ref)
+            {
+                int Value = i * Range + Ref;
+                EXPECT_EQ(WrapToRange(Value, Min, Range), Ref) << Value << " " << Min << " " << Range;
+            }
+        }
+    }
+}
+
 
 TEST(Common_AdvancedMath, IsPointInsideTriangleF)
 {

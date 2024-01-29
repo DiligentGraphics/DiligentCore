@@ -2668,6 +2668,20 @@ typename std::enable_if<std::is_enum<T>::value, T>::type ExtractLSB(T& bits)
     return static_cast<T>(ExtractLSB(reinterpret_cast<typename std::underlying_type<T>::type&>(bits)));
 }
 
+/// Wraps Value to the range [Min, Min + Range)
+template <typename T>
+T WrapToRange(T Value, T Min, T Range)
+{
+    VERIFY_EXPR(Range >= 0);
+    if (Range <= 0)
+        return Min;
+
+    T Result = (Value - Min) % Range;
+    if (Result < 0)
+        Result += Range;
+
+    return Result + Min;
+}
 
 inline std::ostream& operator<<(std::ostream& os, const float4& vec)
 {
