@@ -399,20 +399,22 @@ function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
         set(RUN_VALIDATION_SCRIPT ./validate_format_linux.sh)
     elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
         set(RUN_VALIDATION_SCRIPT ./validate_format_mac.sh)
-    else()
-        message(FATAL_ERROR "Unexpected host system")
     endif()
 
-    # Run the format validation script
-    add_custom_command(TARGET ${MODULE_NAME}-ValidateFormatting
-        COMMAND ${RUN_VALIDATION_SCRIPT}
-        WORKING_DIRECTORY "${MODULE_ROOT_PATH}/BuildTools/FormatValidation"
-        COMMENT "Validating ${MODULE_NAME} module's source code formatting..."
-        VERBATIM
-    )
+    if (RUN_VALIDATION_SCRIPT)
+        # Run the format validation script
+        add_custom_command(TARGET ${MODULE_NAME}-ValidateFormatting
+            COMMAND ${RUN_VALIDATION_SCRIPT}
+            WORKING_DIRECTORY "${MODULE_ROOT_PATH}/BuildTools/FormatValidation"
+            COMMENT "Validating ${MODULE_NAME} module's source code formatting..."
+            VERBATIM
+        )
 
-    if(TARGET ${MODULE_NAME}-ValidateFormatting)
-        set_target_properties(${MODULE_NAME}-ValidateFormatting PROPERTIES FOLDER ${IDE_FOLDER})
+        if(TARGET ${MODULE_NAME}-ValidateFormatting)
+            set_target_properties(${MODULE_NAME}-ValidateFormatting PROPERTIES FOLDER ${IDE_FOLDER})
+        endif()
+    else()
+		message(DEBUG "${MODULE_NAME}-ValidateFormatting target will be disabled because format validation script is not available on ${CMAKE_HOST_SYSTEM_NAME} host platform.")
     endif()
 
 endfunction()
