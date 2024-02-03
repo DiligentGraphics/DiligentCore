@@ -1909,6 +1909,12 @@ public:
         return CreateDeviceObject<IBuffer>("buffer", BuffDesc.Name, &IRenderDevice::CreateBuffer, BuffDesc, pBuffData);
     }
 
+    RefCntAutoPtr<IBuffer> CreateBuffer(const BufferDesc& BuffDesc,
+                                        const BufferData& BuffData) const noexcept(!ThrowOnError)
+    {
+        return CreateBuffer(BuffDesc, &BuffData);
+    }
+
     RefCntAutoPtr<IBuffer> CreateBuffer(const Char*      Name,
                                         Uint64           Size,
                                         USAGE            Usage          = USAGE_DYNAMIC,
@@ -1940,6 +1946,12 @@ public:
                                           const TextureData* pData = nullptr) const noexcept(!ThrowOnError)
     {
         return CreateDeviceObject<ITexture>("texture", TexDesc.Name, &IRenderDevice::CreateTexture, TexDesc, pData);
+    }
+
+    RefCntAutoPtr<ITexture> CreateTexture(const TextureDesc& TexDesc,
+                                          const TextureData& Data) const noexcept(!ThrowOnError)
+    {
+        return CreateTexture(TexDesc, &Data);
     }
 
     RefCntAutoPtr<IShader> CreateShader(const ShaderCreateInfo& ShaderCI) const noexcept(!ThrowOnError)
