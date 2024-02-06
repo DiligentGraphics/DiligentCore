@@ -28,6 +28,10 @@
 
 #include <pthread.h>
 
+#ifdef PLATFORM_FREEBSD
+#    include <pthread_np.h>
+#endif
+
 namespace Diligent
 {
 

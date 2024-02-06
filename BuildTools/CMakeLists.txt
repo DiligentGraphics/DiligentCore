@@ -9,7 +9,3 @@ elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
 elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
     set(CLANG_FORMAT_EXECUTABLE "${CMAKE_CURRENT_SOURCE_DIR}/FormatValidation/clang-format_mac_10.0.0" CACHE INTERNAL "clang-format executable path")
 endif()
-
-if (NOT EXISTS ${CLANG_FORMAT_EXECUTABLE})
-    message(FATAL_ERROR "clang-format executable is not found.")
-endif()
