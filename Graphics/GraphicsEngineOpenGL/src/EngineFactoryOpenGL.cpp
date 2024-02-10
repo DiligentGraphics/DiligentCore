@@ -148,10 +148,10 @@ static void SetPreferredAdapter(const EngineGLCreateInfo& EngineCI)
     {
         LOG_WARNING_MESSAGE("Neither NvOptimusEnablement nor AmdPowerXpressRequestHighPerformance symbols found. "
                             "You need to explicitly define these variables in your executable file: "
-                            "https://gist.github.com/statico/6809850727c708f08458XpressRequestHighPerformance, "
+                            "https://gist.github.com/statico/6809850727c708f08458, "
                             "or you can use the `Diligent-GLAdapterSelector` object library as source input to your executable target: "
                             "`target_sources(MyExecutable PRIVATE $<TARGET_OBJECTS:Diligent-GLAdapterSelector>)`, "
-                            "see https://cmake.org/cmake/help/v3.16/manual/cmake-buildsystem.7.html#object-libraries).");
+                            "see https://cmake.org/cmake/help/v3.16/manual/cmake-buildsystem.7.html#object-libraries.");
     }
     if (AmdPowerXpressRequestHighPerformance)
     {
