@@ -25,6 +25,7 @@ set(INTERFACE
     interface/TextureUploaderBase.hpp
     interface/XXH128Hasher.hpp
     interface/VertexPool.h
+    interface/VertexPoolX.hpp
 )
 
 set(SOURCE

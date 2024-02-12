@@ -32,6 +32,7 @@
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/Buffer.h"
+#include "../../../Common/interface/StringTools.h"
 
 namespace Diligent
 {
@@ -171,6 +172,27 @@ struct VertexPoolDesc
 
     /// The number of vertices in the pool.
     Uint32 VertexCount DEFAULT_INITIALIZER(0);
+
+    bool operator==(const VertexPoolDesc& RHS) const
+    {
+        if (!SafeStrEqual(Name, RHS.Name) ||
+            NumElements != RHS.NumElements ||
+            VertexCount != RHS.VertexCount)
+            return false;
+
+        for (Uint32 i = 0; i < NumElements; ++i)
+        {
+            if (pElements[i] != RHS.pElements[i])
+                return false;
+        }
+
+        return true;
+    }
+
+    bool operator!=(const VertexPoolDesc& RHS) const
+    {
+        return !(*this == RHS);
+    }
 };
 
 /// Vertex pool interface.
@@ -255,6 +277,20 @@ struct VertexPoolCreateInfo
     ///             to true, the validation is disabled.
     ///             The flag is ignored in release builds as the validation is always disabled.
     bool DisableDebugValidation = false;
+
+
+    bool operator==(const VertexPoolCreateInfo& RHS) const
+    {
+        return Desc == RHS.Desc &&
+            ExtraVertexCount == RHS.ExtraVertexCount &&
+            MaxVertexCount == RHS.MaxVertexCount &&
+            DisableDebugValidation == RHS.DisableDebugValidation;
+    }
+
+    bool operator!=(const VertexPoolCreateInfo& RHS) const
+    {
+        return !(*this == RHS);
+    }
 };
 
 /// Creates a new vertex pool.
