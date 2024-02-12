@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -242,6 +242,10 @@ struct VertexPoolCreateInfo
     /// every time there is insufficient space. If zero, the pool size will be doubled
     /// when more space is needed.
     Uint32 ExtraVertexCount = 0;
+
+    /// The maximum number of vertices that can be stored in the pool.
+    /// If zero, the number of vertices is unlimited.
+    Uint32 MaxVertexCount = 0;
 
     /// Whether to disable debug validation of the internal pool structure.
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -145,13 +145,22 @@ public:
         m_MgrSize         {m_Mgr.GetMaxSize()},
         m_BufferSizes     (m_Desc.NumElements),
         m_ExtraVertexCount{CreateInfo.ExtraVertexCount},
-        m_AllocationObjAllocator
-        {
+        // clang-format on
+        m_MaxVertexCount{
+            [](Uint32 VertexCount, Uint32 MaxVertexCount) {
+                if (MaxVertexCount != 0 && MaxVertexCount < VertexCount)
+                {
+                    LOG_WARNING_MESSAGE("MaxVertexCount (", MaxVertexCount, ") is less than VertexCount (", VertexCount, ").");
+                    MaxVertexCount = VertexCount;
+                }
+                return MaxVertexCount;
+            }(CreateInfo.Desc.VertexCount, CreateInfo.MaxVertexCount),
+        },
+        m_AllocationObjAllocator{
             DefaultRawMemoryAllocator::GetAllocator(),
             sizeof(VertexPoolAllocationImpl),
             1024u / Uint32{sizeof(VertexPoolAllocationImpl)} // Use 1 Kb pages.
         }
-    // clang-format on
     {
         m_Desc.Name      = m_Name.c_str();
         m_Desc.pElements = m_Elements.data();
@@ -282,11 +291,14 @@ public:
 
             Region = m_Mgr.Allocate(NumVertices, 1);
 
-            while (!Region.IsValid())
+            while (!Region.IsValid() && (m_MaxVertexCount == 0 || m_Mgr.GetMaxSize() < m_MaxVertexCount))
             {
-                auto ExtraSize = m_ExtraVertexCount != 0 ?
+                size_t ExtraSize = m_ExtraVertexCount != 0 ?
                     std::max(m_ExtraVertexCount, NumVertices) :
                     m_Mgr.GetMaxSize();
+
+                if (m_MaxVertexCount != 0)
+                    ExtraSize = std::min(ExtraSize, size_t{m_MaxVertexCount} - m_Mgr.GetMaxSize());
 
                 m_Mgr.Extend(ExtraSize);
                 m_MgrSize.store(m_Mgr.GetMaxSize());
@@ -298,20 +310,23 @@ public:
             UpdateUsageStats();
         }
 
-        // clang-format off
-        VertexPoolAllocationImpl* pSuballocation{
-            NEW_RC_OBJ(m_AllocationObjAllocator, "VertexPoolAllocationImpl instance", VertexPoolAllocationImpl)
-            (
-                this,
-                static_cast<Uint32>(Region.UnalignedOffset),
-                NumVertices,
-                std::move(Region)
-            )
-        };
-        // clang-format on
+        if (Region.IsValid())
+        {
+            // clang-format off
+            VertexPoolAllocationImpl* pSuballocation{
+                NEW_RC_OBJ(m_AllocationObjAllocator, "VertexPoolAllocationImpl instance", VertexPoolAllocationImpl)
+                (
+                    this,
+                    static_cast<Uint32>(Region.UnalignedOffset),
+                    NumVertices,
+                    std::move(Region)
+                )
+            };
+            // clang-format on
 
-        pSuballocation->QueryInterface(IID_VertexPoolAllocation, reinterpret_cast<IObject**>(ppAllocation));
-        m_AllocationCount.fetch_add(1);
+            pSuballocation->QueryInterface(IID_VertexPoolAllocation, reinterpret_cast<IObject**>(ppAllocation));
+            m_AllocationCount.fetch_add(1);
+        }
     }
 
     void Free(VariableSizeAllocationsManager::Allocation&& Region)
@@ -380,6 +395,7 @@ private:
     std::vector<std::atomic<Uint64>>            m_BufferSizes;
 
     const Uint32 m_ExtraVertexCount;
+    const Uint32 m_MaxVertexCount;
 
     std::atomic<Int32>  m_AllocationCount{0};
     std::atomic<Uint64> m_AllocatedVertexCount{0};
