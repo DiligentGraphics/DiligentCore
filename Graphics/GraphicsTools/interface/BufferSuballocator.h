@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -164,6 +164,10 @@ struct BufferSuballocatorCreateInfo
 
     /// If Desc.Usage == USAGE_SPARSE, the virtual buffer size; ignored otherwise.
     Uint64 VirtualSize = 0;
+
+    /// The maximum buffer size, in bytes.
+    /// If zero, the buffer size is not limited.
+    Uint64 MaxSize = 0;
 
     /// Whether to disable debug validation of the internal buffer structure.
 
