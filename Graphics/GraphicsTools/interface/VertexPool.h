@@ -104,6 +104,16 @@ struct VertexPoolUsageStats
 
     /// The number of allocations.
     Uint32 AllocationCount = 0;
+
+    VertexPoolUsageStats& operator+=(const VertexPoolUsageStats& RHS)
+    {
+        TotalVertexCount += RHS.TotalVertexCount;
+        AllocatedVertexCount += RHS.AllocatedVertexCount;
+        CommittedMemorySize += RHS.CommittedMemorySize;
+        UsedMemorySize += RHS.UsedMemorySize;
+        AllocationCount += RHS.AllocationCount;
+        return *this;
+    }
 };
 
 
