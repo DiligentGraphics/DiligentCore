@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -171,6 +171,16 @@ public:
     Uint32 GetVersion() const
     {
         return m_Version.load();
+    }
+
+
+    /// Returns the virtual size of the sparse buffer.
+    ///
+    /// \remarks    If the internal buffer has not been initialized yet,
+    ///             the method returns zero.
+    Uint64 GetVirtualSize() const
+    {
+        return m_pBuffer ? m_VirtualSize : 0;
     }
 
 private:

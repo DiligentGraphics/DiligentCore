@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,7 +66,7 @@ DynamicBuffer::DynamicBuffer(IRenderDevice*                 pDevice,
                              const DynamicBufferCreateInfo& CI) :
     m_Name{CI.Desc.Name != nullptr ? CI.Desc.Name : "Dynamic buffer"},
     m_Desc{CI.Desc},
-    m_VirtualSize{CI.VirtualSize},
+    m_VirtualSize{CI.Desc.Usage == USAGE_SPARSE ? CI.VirtualSize : 0},
     m_MemoryPageSize{CI.MemoryPageSize}
 {
     if (m_Desc.BindFlags & (BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS))
