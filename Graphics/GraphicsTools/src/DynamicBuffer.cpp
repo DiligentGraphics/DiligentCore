@@ -69,11 +69,6 @@ DynamicBuffer::DynamicBuffer(IRenderDevice*                 pDevice,
     m_VirtualSize{CI.Desc.Usage == USAGE_SPARSE ? CI.VirtualSize : 0},
     m_MemoryPageSize{CI.MemoryPageSize}
 {
-    if (m_Desc.BindFlags & (BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS))
-    {
-        VERIFY_EXPR(m_Desc.ElementByteStride != 0);
-        m_VirtualSize = AlignDownNonPw2(m_VirtualSize, m_Desc.ElementByteStride);
-    }
     m_Desc.Name   = m_Name.c_str();
     m_PendingSize = m_Desc.Size;
     m_Desc.Size   = 0; // Current buffer size
@@ -99,12 +94,22 @@ void DynamicBuffer::CreateSparseBuffer(IRenderDevice* pDevice)
     const auto& SparseResources    = pDevice->GetAdapterInfo().SparseResources;
     const auto  SparseMemBlockSize = SparseResources.StandardBlockSize;
 
-    m_MemoryPageSize = std::max(AlignUp(m_MemoryPageSize, SparseMemBlockSize), SparseMemBlockSize);
-    m_VirtualSize    = std::min(m_VirtualSize, AlignDown(SparseResources.ResourceSpaceSize, m_MemoryPageSize));
+    m_MemoryPageSize = std::max(AlignUpNonPw2(m_MemoryPageSize, SparseMemBlockSize), SparseMemBlockSize);
 
     {
         auto Desc = m_Desc;
-        Desc.Size = m_VirtualSize;
+
+        Desc.Size    = AlignUpNonPw2(m_VirtualSize, m_MemoryPageSize);
+        auto MaxSize = AlignDownNonPw2(SparseResources.ResourceSpaceSize, m_MemoryPageSize);
+        if (m_Desc.BindFlags & (BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS))
+        {
+            VERIFY_EXPR(m_Desc.ElementByteStride != 0);
+            // Buffer size must be a multiple of the element stride
+            Desc.Size = AlignUpNonPw2(Desc.Size, m_Desc.ElementByteStride);
+            MaxSize   = AlignDownNonPw2(MaxSize, m_Desc.ElementByteStride);
+        }
+        Desc.Size = std::min(Desc.Size, MaxSize);
+
         pDevice->CreateBuffer(Desc, nullptr, &m_pBuffer);
         DEV_CHECK_ERR(m_pBuffer, "Failed to create sparse buffer");
         if (!m_pBuffer)
@@ -293,7 +298,10 @@ IBuffer* DynamicBuffer::Resize(IRenderDevice*  pDevice,
                                bool            DiscardContent)
 {
     if (m_Desc.Usage == USAGE_SPARSE)
-        NewSize = AlignUp(NewSize, m_MemoryPageSize);
+    {
+        DEV_CHECK_ERR(NewSize <= m_VirtualSize, "New size (", NewSize, ") exceeds the buffer virtual size (", m_VirtualSize, ").");
+        NewSize = AlignUpNonPw2(NewSize, m_MemoryPageSize);
+    }
 
     if (m_Desc.Size != NewSize)
     {

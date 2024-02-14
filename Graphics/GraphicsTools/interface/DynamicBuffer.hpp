@@ -174,13 +174,14 @@ public:
     }
 
 
-    /// Returns the virtual size of the sparse buffer.
+    /// Returns the logical virtual size of the sparse buffer.
     ///
-    /// \remarks    If the internal buffer has not been initialized yet,
-    ///             the method returns zero.
+    /// \note   The actual size of the sparse buffer may be larger
+    ///         than the logical size due to alignment requirements.
+    ///         Use GetBuffer()->GetDesc().Size to get the actual size.
     Uint64 GetVirtualSize() const
     {
-        return m_pBuffer ? m_VirtualSize : 0;
+        return m_VirtualSize;
     }
 
 private:
@@ -203,7 +204,8 @@ private:
     RefCntAutoPtr<IDeviceMemory> m_pMemory;
 
     Uint64 m_PendingSize = 0;
-    Uint64 m_VirtualSize = 0;
+
+    const Uint64 m_VirtualSize;
 
     Uint32 m_MemoryPageSize = 0;
 
