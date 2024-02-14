@@ -128,40 +128,38 @@ public:
     BufferSuballocatorImpl(IReferenceCounters*                 pRefCounters,
                            IRenderDevice*                      pDevice,
                            const BufferSuballocatorCreateInfo& CreateInfo) :
-        // clang-format off
         TBase{pRefCounters},
-        m_Mgr
-        {
-            VariableSizeAllocationsManager::CreateInfo
-            {
-                DefaultRawMemoryAllocator::GetAllocator(),
-                StaticCast<size_t>(CreateInfo.Desc.Size),
-                CreateInfo.DisableDebugValidation
-            }
-        },
-        m_MgrSize{m_Mgr.GetMaxSize()},
-        m_Buffer
-        {
-            pDevice,
-            DynamicBufferCreateInfo
-            {
-                CreateInfo.Desc,
-                CreateInfo.ExpansionSize != 0 ? CreateInfo.ExpansionSize : static_cast<Uint32>(CreateInfo.Desc.Size), // MemoryPageSize
-                CreateInfo.VirtualSize
-            }
-        },
-        m_BufferSize{m_Buffer.GetDesc().Size},
-        m_ExpansionSize{CreateInfo.ExpansionSize},
-        // clang-format on
         m_MaxSize{
             [](Uint64 Size, Uint64 MaxSize) {
-                if (MaxSize != 0 && MaxSize < Size)
+                if (MaxSize == 0)
+                    MaxSize = Size;
+
+                if (MaxSize < Size)
                 {
                     LOG_WARNING_MESSAGE("MaxSize (", MaxSize, ") is less than the initial buffer size (", Size, ").");
                     MaxSize = Size;
                 }
+
                 return MaxSize;
-            }(m_BufferSize, CreateInfo.MaxSize)},
+            }(CreateInfo.Desc.Size, CreateInfo.MaxSize)},
+        m_ExpansionSize{CreateInfo.ExpansionSize},
+        m_Mgr{
+            VariableSizeAllocationsManager::CreateInfo{
+                DefaultRawMemoryAllocator::GetAllocator(),
+                StaticCast<size_t>(CreateInfo.Desc.Size),
+                CreateInfo.DisableDebugValidation,
+            },
+        },
+        m_MgrSize{m_Mgr.GetMaxSize()},
+        m_Buffer{
+            pDevice,
+            DynamicBufferCreateInfo{
+                CreateInfo.Desc,
+                CreateInfo.ExpansionSize != 0 ? CreateInfo.ExpansionSize : static_cast<Uint32>(CreateInfo.Desc.Size), // MemoryPageSize
+                m_MaxSize,
+            },
+        },
+        m_BufferSize{m_Buffer.GetDesc().Size},
         m_SuballocationsAllocator{
             DefaultRawMemoryAllocator::GetAllocator(),
             sizeof(BufferSuballocationImpl),
@@ -305,6 +303,9 @@ private:
     }
 
 private:
+    const Uint64 m_MaxSize;
+    const Uint32 m_ExpansionSize;
+
     std::mutex                     m_MgrMtx;
     VariableSizeAllocationsManager m_Mgr;
 
@@ -312,9 +313,6 @@ private:
 
     DynamicBuffer       m_Buffer;
     std::atomic<Uint64> m_BufferSize{0};
-
-    const Uint32 m_ExpansionSize;
-    const Uint64 m_MaxSize;
 
     std::atomic<Int32>  m_AllocationCount{0};
     std::atomic<Uint64> m_UsedSize{0};

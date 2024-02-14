@@ -69,6 +69,8 @@ DynamicBuffer::DynamicBuffer(IRenderDevice*                 pDevice,
     m_VirtualSize{CI.Desc.Usage == USAGE_SPARSE ? CI.VirtualSize : 0},
     m_MemoryPageSize{CI.MemoryPageSize}
 {
+    DEV_CHECK_ERR(CI.Desc.Usage != USAGE_SPARSE || CI.VirtualSize > 0, "Virtual size must not be 0 for sparse buffers");
+
     m_Desc.Name   = m_Name.c_str();
     m_PendingSize = m_Desc.Size;
     m_Desc.Size   = 0; // Current buffer size

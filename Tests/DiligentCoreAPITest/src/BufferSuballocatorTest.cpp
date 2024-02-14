@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,7 +80,9 @@ TEST(BufferSuballocatorTest, Allocate)
     BufferSuballocatorCreateInfo CI;
     CI.Desc.Name      = "Buffer Suballocator Test";
     CI.Desc.BindFlags = BIND_VERTEX_BUFFER;
-    CI.Desc.Size      = 1024;
+    CI.Desc.Size      = 32;
+    CI.ExpansionSize  = 32;
+    CI.MaxSize        = 1u << 20u;
 
     RefCntAutoPtr<IBufferSuballocator> pAllocator;
     CreateBufferSuballocator(pDevice, CI, &pAllocator);

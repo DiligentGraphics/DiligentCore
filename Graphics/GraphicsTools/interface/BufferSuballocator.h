@@ -162,11 +162,10 @@ struct BufferSuballocatorCreateInfo
     /// more space is needed.
     Uint32 ExpansionSize = 0;
 
-    /// If Desc.Usage == USAGE_SPARSE, the virtual buffer size; ignored otherwise.
-    Uint64 VirtualSize = 0;
-
     /// The maximum buffer size, in bytes.
-    /// If zero, the buffer size is not limited.
+    /// If Desc.Usage == USAGE_SPARSE, also the buffer virtual size.
+    ///
+    /// \remarks    If MaxSize is zero, the buffer will not be expanded beyond the initial size.
     Uint64 MaxSize = 0;
 
     /// Whether to disable debug validation of the internal buffer structure.
