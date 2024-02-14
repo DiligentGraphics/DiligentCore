@@ -189,8 +189,10 @@ public:
                 CreateInfo.ExtraVertexCount * VtxElem.Size :
                 static_cast<Uint32>(DynBuffCI.Desc.Size);
 
-            // 1 GB should be enough for any use case.
-            DynBuffCI.VirtualSize = Uint64{1} << Uint64{30};
+            DynBuffCI.VirtualSize = m_MaxVertexCount != 0 ?
+                Uint64{m_MaxVertexCount} * Uint64{VtxElem.Size} :
+                // Use 2GB as the default virtual size
+                Uint64{2} << Uint64{30};
 
             m_Buffers.emplace_back(std::make_unique<DynamicBuffer>(pDevice, DynBuffCI));
             if (!m_Buffers.back())
