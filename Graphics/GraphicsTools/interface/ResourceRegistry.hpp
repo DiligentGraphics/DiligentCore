@@ -65,6 +65,7 @@ public:
         m_Resources[Id] = pObject;
     }
 
+    template <typename T>
     struct ResourceAccessor
     {
         explicit operator bool() const
@@ -136,18 +137,30 @@ public:
             return GetBufferDefaultUAV(Object);
         }
 
+        template <typename Y = T, typename = typename std::enable_if<!std::is_const<Y>::value>::type>
+        void Release()
+        {
+            Object.Release();
+        }
+
     private:
-        ResourceAccessor(const RefCntAutoPtr<IDeviceObject>& _Object) :
+        ResourceAccessor(T& _Object) :
             Object{_Object}
         {}
         friend ResourceRegistry;
-        const RefCntAutoPtr<IDeviceObject>& Object;
+        T& Object;
     };
 
-    ResourceAccessor operator[](ResourceIdType Id) const
+    ResourceAccessor<const RefCntAutoPtr<IDeviceObject>> operator[](ResourceIdType Id) const
     {
         DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
-        return ResourceAccessor{m_Resources[Id]};
+        return {m_Resources[Id]};
+    }
+
+    ResourceAccessor<RefCntAutoPtr<IDeviceObject>> operator[](ResourceIdType Id)
+    {
+        DEV_CHECK_ERR(Id < m_Resources.size(), "Resource index is out of range");
+        return {m_Resources[Id]};
     }
 
     void Clear()
