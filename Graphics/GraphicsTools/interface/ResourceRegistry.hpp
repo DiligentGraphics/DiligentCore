@@ -150,6 +150,12 @@ public:
         return ResourceAccessor{m_Resources[Id]};
     }
 
+    void Clear()
+    {
+        for (auto& pRes : m_Resources)
+            pRes.Release();
+    }
+
 private:
     std::vector<RefCntAutoPtr<IDeviceObject>> m_Resources;
 };
