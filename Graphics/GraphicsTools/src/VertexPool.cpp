@@ -191,8 +191,9 @@ public:
 
             DynBuffCI.VirtualSize = m_MaxVertexCount != 0 ?
                 Uint64{m_MaxVertexCount} * Uint64{VtxElem.Size} :
-                // Use 2GB as the default virtual size
-                Uint64{2} << Uint64{30};
+                // Use 2GB as the default virtual size, but reserve at least 1 MB for alignment.
+                // Resources above 2GB don't work in Direct3D11 (even though there are no errors).
+                (Uint64{2} << Uint64{30}) - AlignUp(DynBuffCI.MemoryPageSize, 1u << 20u);
 
             m_Buffers.emplace_back(std::make_unique<DynamicBuffer>(pDevice, DynBuffCI));
             if (!m_Buffers.back())
