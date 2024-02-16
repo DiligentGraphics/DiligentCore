@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -239,27 +239,30 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
     CreateShader<CompiledShaderGL>(DeviceType::OpenGL, pRefCounters, ShaderCI, GLShaderCI, m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_GL));
 
 #if !DILIGENT_NO_GLSLANG
-    const auto* pCompiledShaderGL = GetShader<CompiledShaderGL>(DeviceObjectArchive::DeviceType::OpenGL);
-    VERIFY_EXPR(pCompiledShaderGL != nullptr);
+    if (m_pDevice->GetGLProperties().ValidateShaders)
+    {
+        const auto* pCompiledShaderGL = GetShader<CompiledShaderGL>(DeviceObjectArchive::DeviceType::OpenGL);
+        VERIFY_EXPR(pCompiledShaderGL != nullptr);
 
-    const void* Source    = nullptr;
-    Uint64      SourceLen = 0;
-    // For OpenGL, GetBytecode returns the full GLSL source
-    pCompiledShaderGL->pShaderGL->GetBytecode(&Source, SourceLen);
-    VERIFY_EXPR(Source != nullptr && SourceLen != 0);
+        const void* Source    = nullptr;
+        Uint64      SourceLen = 0;
+        // For OpenGL, GetBytecode returns the full GLSL source
+        pCompiledShaderGL->pShaderGL->GetBytecode(&Source, SourceLen);
+        VERIFY_EXPR(Source != nullptr && SourceLen != 0);
 
-    GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
+        GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
 
-    Attribs.ShaderType = ShaderCI.Desc.ShaderType;
-    VERIFY_EXPR(DeviceType == RENDER_DEVICE_TYPE_GL || DeviceType == RENDER_DEVICE_TYPE_GLES);
-    Attribs.Version = DeviceType == RENDER_DEVICE_TYPE_GL ? GLSLangUtils::SpirvVersion::GL : GLSLangUtils::SpirvVersion::GLES;
+        Attribs.ShaderType = ShaderCI.Desc.ShaderType;
+        VERIFY_EXPR(DeviceType == RENDER_DEVICE_TYPE_GL || DeviceType == RENDER_DEVICE_TYPE_GLES);
+        Attribs.Version = DeviceType == RENDER_DEVICE_TYPE_GL ? GLSLangUtils::SpirvVersion::GL : GLSLangUtils::SpirvVersion::GLES;
 
-    Attribs.ppCompilerOutput = ppCompilerOutput;
-    Attribs.ShaderSource     = static_cast<const char*>(Source);
-    Attribs.SourceCodeLen    = static_cast<int>(SourceLen);
+        Attribs.ppCompilerOutput = ppCompilerOutput;
+        Attribs.ShaderSource     = static_cast<const char*>(Source);
+        Attribs.SourceCodeLen    = static_cast<int>(SourceLen);
 
-    if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
-        LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
+        if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
+            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
+    }
 #endif
 }
 

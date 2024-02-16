@@ -1,5 +1,7 @@
 ## Current progress
 
+* Added `SerializationDeviceGLInfo` struct (API254005)
+  * The `ValidateShaders` member allows disabling time-consuming shader compilation
 * Replaced `AnisotropicFilteringSupported` member of `SamplerProperties` struct with `MaxAnisotropy` (API254004)
 * Added `TextureSubresourceViews` device feature (API254003)
 * Added device context rendering statistics (API254002)

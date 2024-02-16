@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -143,6 +143,11 @@ public:
         Version      ShaderVersion;
     };
 
+    struct GLProperties
+    {
+        bool ValidateShaders = false;
+    };
+
     struct VkProperties
     {
         IDXCompiler* pDxCompiler     = nullptr;
@@ -162,6 +167,7 @@ public:
 
     const D3D11Properties& GetD3D11Properties() const { return m_D3D11Props; }
     const D3D12Properties& GetD3D12Properties() const { return m_D3D12Props; }
+    const GLProperties&    GetGLProperties() const { return m_GLProps; }
     const VkProperties&    GetVkProperties() const { return m_VkProps; }
     const MtlProperties&   GetMtlProperties() const { return m_MtlProps; }
 
@@ -198,6 +204,7 @@ private:
 
     D3D11Properties m_D3D11Props;
     D3D12Properties m_D3D12Props;
+    GLProperties    m_GLProps;
     VkProperties    m_VkProps;
     MtlProperties   m_MtlProps;
 

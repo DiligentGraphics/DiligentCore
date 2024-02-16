@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -95,6 +95,33 @@ struct SerializationDeviceD3D12Info
 typedef struct SerializationDeviceD3D12Info SerializationDeviceD3D12Info;
 
 
+/// Serialization device attributes for OpenGL backend
+struct SerializationDeviceGLInfo
+{
+    /// Whether to validate OpenGL shaders.
+
+    /// \remarks    In OpenGL backend, shaders are converted from HLSL to GLSL
+    ///             (if necessary) and packed into an archive as source code.
+    ///             When this flag is set to True, the archiver will compile
+    ///             the source code to validate it is correct.
+    ///             This may be time-consuming and could be disabled to speed up
+    ///             the archiving process.
+    Bool  ValidateShaders DEFAULT_INITIALIZER(True);
+
+#if DILIGENT_CPP_INTERFACE
+    bool operator==(const SerializationDeviceGLInfo& RHS) const noexcept
+    {
+        return ValidateShaders == RHS.ValidateShaders;
+    }
+    bool operator!=(const SerializationDeviceGLInfo& RHS) const noexcept
+    {
+        return !(*this == RHS);
+    }
+#endif
+};
+typedef struct SerializationDeviceGLInfo SerializationDeviceGLInfo;
+
+
 /// Serialization device attributes for Vulkan backend
 struct SerializationDeviceVkInfo
 {
@@ -175,6 +202,9 @@ struct SerializationDeviceCreateInfo
 
     /// Direct3D12 attributes, see Diligent::SerializationDeviceD3D12Info.
     SerializationDeviceD3D12Info D3D12;
+
+    /// OpenGL attributes, see Diligent::SerializationDeviceGLInfo.
+    SerializationDeviceGLInfo GL;
 
     /// Vulkan attributes, see Diligent::SerializationDeviceVkInfo.
     SerializationDeviceVkInfo Vulkan;
