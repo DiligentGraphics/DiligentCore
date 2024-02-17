@@ -139,34 +139,35 @@ static void SetDefaultGraphicsAdapterInfo(GraphicsAdapterInfo& AdapterInfo)
 
 static void SetPreferredAdapter(const EngineGLCreateInfo& EngineCI)
 {
-    bool EnableDedicatedGPU = EngineCI.PreferredAdapterType == ADAPTER_TYPE_DISCRETE;
+    if (EngineCI.PreferredAdapterType == ADAPTER_TYPE_DISCRETE)
+    {
 #if PLATFORM_WIN32
-    const HMODULE ModuleHandle                         = GetModuleHandle(nullptr);
-    Uint64* const NvOptimusEnablement                  = reinterpret_cast<Uint64*>(GetProcAddress(ModuleHandle, "NvOptimusEnablement"));
-    Uint64* const AmdPowerXpressRequestHighPerformance = reinterpret_cast<Uint64*>(GetProcAddress(ModuleHandle, "AmdPowerXpressRequestHighPerformance"));
-    if (!NvOptimusEnablement && !AmdPowerXpressRequestHighPerformance)
-    {
-        LOG_WARNING_MESSAGE("Neither NvOptimusEnablement nor AmdPowerXpressRequestHighPerformance symbols found. "
-                            "You need to explicitly define these variables in your executable file: "
-                            "https://gist.github.com/statico/6809850727c708f08458, "
-                            "or you can use the `Diligent-GLAdapterSelector` object library as source input to your executable target: "
-                            "`target_sources(MyExecutable PRIVATE $<TARGET_OBJECTS:Diligent-GLAdapterSelector>)`, "
-                            "see https://cmake.org/cmake/help/v3.16/manual/cmake-buildsystem.7.html#object-libraries.");
-    }
-    if (AmdPowerXpressRequestHighPerformance)
-    {
-        *AmdPowerXpressRequestHighPerformance = EnableDedicatedGPU;
-    }
-    if (NvOptimusEnablement)
-    {
-        *NvOptimusEnablement = EnableDedicatedGPU;
-    }
-#elif PLAtTFORM_LINUX
-    setenv("DRI_PRIME", EnableDedicatedGPU ? "1" : "0", 1);
+        const HMODULE ModuleHandle                         = GetModuleHandle(nullptr);
+        Uint64* const NvOptimusEnablement                  = reinterpret_cast<Uint64*>(GetProcAddress(ModuleHandle, "NvOptimusEnablement"));
+        Uint64* const AmdPowerXpressRequestHighPerformance = reinterpret_cast<Uint64*>(GetProcAddress(ModuleHandle, "AmdPowerXpressRequestHighPerformance"));
+        if (!NvOptimusEnablement && !AmdPowerXpressRequestHighPerformance)
+        {
+            LOG_WARNING_MESSAGE("Neither NvOptimusEnablement nor AmdPowerXpressRequestHighPerformance symbols found. "
+                                "You need to explicitly define these variables in your executable file: "
+                                "https://gist.github.com/statico/6809850727c708f08458, "
+                                "or you can use the `Diligent-GLAdapterSelector` object library as source input to your executable target: "
+                                "`target_sources(MyExecutable PRIVATE $<TARGET_OBJECTS:Diligent-GLAdapterSelector>)`, "
+                                "see https://cmake.org/cmake/help/v3.16/manual/cmake-buildsystem.7.html#object-libraries.");
+        }
+        if (AmdPowerXpressRequestHighPerformance)
+        {
+            *AmdPowerXpressRequestHighPerformance = 1;
+        }
+        if (NvOptimusEnablement)
+        {
+            *NvOptimusEnablement = 1;
+        }
+#elif PLATFORM_LINUX
+        setenv("DRI_PRIME", "1", 1);
 #else
-    if (EnableDedicatedGPU)
         LOG_WARNING_MESSAGE("Setting preferred adapter type isn't supported on this platform");
 #endif
+    }
 }
 
 void EngineFactoryOpenGLImpl::EnumerateAdapters(Version              MinVersion,
