@@ -877,7 +877,7 @@ protected:
             Uint64 Size = 0;
             pShader->GetBytecode(&ShaderCI.ByteCode, Size);
             ShaderCI.ByteCodeSize = static_cast<size_t>(Size);
-            if (DeviceType == RENDER_DEVICE_TYPE_GL)
+            if (DeviceType == RENDER_DEVICE_TYPE_GL || DeviceType == RENDER_DEVICE_TYPE_GLES)
             {
                 ShaderCI.Source         = static_cast<const char*>(ShaderCI.ByteCode);
                 ShaderCI.ByteCode       = nullptr;
