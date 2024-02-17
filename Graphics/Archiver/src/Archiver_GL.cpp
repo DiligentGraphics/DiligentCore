@@ -236,7 +236,8 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
         // TODO: collect all outputs.
         ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
     };
-    CreateShader<CompiledShaderGL>(DeviceType::OpenGL, pRefCounters, ShaderCI, GLShaderCI, m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_GL));
+
+    CreateShader<CompiledShaderGL>(DeviceType::OpenGL, pRefCounters, ShaderCI, GLShaderCI, m_pDevice->GetRenderDevice(DeviceType));
 
 #if !DILIGENT_NO_GLSLANG
     if (m_pDevice->GetGLProperties().ValidateShaders)

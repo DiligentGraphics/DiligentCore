@@ -43,6 +43,9 @@ static constexpr ARCHIVE_DEVICE_DATA_FLAGS GetSupportedDeviceFlags()
     Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_GL;
     Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_GLES;
 #endif
+#if GLES_SUPPORTED
+    Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_GLES;
+#endif
 #if D3D11_SUPPORTED
     Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_D3D11;
 #endif
