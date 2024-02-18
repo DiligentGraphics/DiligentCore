@@ -2176,6 +2176,11 @@ public:
     {
     }
 
+    ShaderResourceVariableX(IPipelineResourceSignature* pPRS, SHADER_TYPE ShaderStage, const char* Name) noexcept :
+        m_pVar{pPRS->GetStaticVariableByName(ShaderStage, Name)}
+    {
+    }
+
     explicit operator bool() const noexcept
     {
         return m_pVar != nullptr;
