@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,18 +53,17 @@ public:
 
     bool Write(const void* Data, size_t BufferSize);
 
-    size_t GetSize() { return m_Size; }
+    size_t GetSize();
 
     size_t GetPos();
 
     bool SetPos(size_t Offset, FilePosOrigin Origin);
 
-    static bool Open(const char* FileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& Size);
+    static bool Open(const FileOpenAttribs& OpenAttribs, std::fstream& FS, AAsset*& AssetFile);
 
 private:
-    std::ifstream m_IFS;
-    AAsset*       m_AssetFile = nullptr;
-    size_t        m_Size      = 0;
+    std::fstream m_FS;
+    AAsset*      m_AssetFile = nullptr;
 };
 
 

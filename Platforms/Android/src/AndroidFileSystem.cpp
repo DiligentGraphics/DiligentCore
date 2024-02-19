@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,34 @@ namespace Diligent
 namespace
 {
 
+std::ios_base::open_mode FileAccessModeToIosOpenMode(EFileAccessMode Mode)
+{
+    switch (Mode)
+    {
+        case EFileAccessMode::Read:
+            return std::ios::binary | std::ios::in;
+
+        case EFileAccessMode::Overwrite:
+            return std::ios::binary | std::ios::out | std::ios::trunc;
+
+        case EFileAccessMode::Append:
+            return std::ios::binary | std::ios::out | std::ios::app;
+
+        case EFileAccessMode::ReadUpdate:
+            return std::ios::binary | std::ios::in | std::ios::out;
+
+        case EFileAccessMode::OverwriteUpdate:
+            return std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc;
+
+        case EFileAccessMode::AppendUpdate:
+            return std::ios::binary | std::ios::in | std::ios::out | std::ios::app;
+
+        default:
+            UNEXPECTED("Unknown file access mode");
+            return std::ios::binary;
+    }
+}
+
 struct AndroidFileSystemHelper
 {
     static AndroidFileSystemHelper& GetInstance()
@@ -50,8 +78,9 @@ struct AndroidFileSystemHelper
         m_OutputFilesDir   = OutputFilesDir != nullptr ? OutputFilesDir : "";
     }
 
-    bool OpenFile(const char* fileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& FileSize)
+    bool OpenFile(const FileOpenAttribs& OpenAttribs, std::fstream& FS, AAsset*& AssetFile)
     {
+        const char* fileName = OpenAttribs.strFilePath;
         if (fileName == nullptr || fileName[0] == '\0')
         {
             return false;
@@ -67,7 +96,7 @@ struct AndroidFileSystemHelper
         // First, try reading from the external directory
         if (IsAbsolutePath)
         {
-            IFS.open(fileName, std::ios::binary);
+            FS.open(fileName, FileAccessModeToIosOpenMode(OpenAttribs.AccessMode));
         }
         else if (!m_ExternalFilesDir.empty())
         {
@@ -75,18 +104,21 @@ struct AndroidFileSystemHelper
             if (ExternalFilesPath.back() != '/')
                 ExternalFilesPath.append("/");
             ExternalFilesPath.append(fileName);
-            IFS.open(ExternalFilesPath.c_str(), std::ios::binary);
+            FS.open(ExternalFilesPath.c_str(), FileAccessModeToIosOpenMode(OpenAttribs.AccessMode));
         }
 
-        if (IFS && IFS.is_open())
+        if (FS && FS.is_open())
         {
-            IFS.seekg(0, std::ifstream::end);
-            FileSize = IFS.tellg();
-            IFS.seekg(0, std::ifstream::beg);
             return true;
         }
         else if (!IsAbsolutePath && m_AssetManager != nullptr)
         {
+            if (OpenAttribs.AccessMode != EFileAccessMode::Read)
+            {
+                LOG_ERROR_MESSAGE("Asset files can only be open for reading");
+                return false;
+            }
+
             // Fallback to assetManager
             AssetFile = AAssetManager_open(m_AssetManager, fileName, AASSET_MODE_BUFFER);
             if (!AssetFile)
@@ -101,7 +133,6 @@ struct AndroidFileSystemHelper
                 LOG_ERROR_MESSAGE("Failed to open: ", fileName);
                 return false;
             }
-            FileSize = AAsset_getLength(AssetFile);
             return true;
         }
         else
@@ -131,25 +162,24 @@ private:
 
 } // namespace
 
-bool AndroidFile::Open(const char* FileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& Size)
+bool AndroidFile::Open(const FileOpenAttribs& OpenAttribs, std::fstream& IFS, AAsset*& AssetFile)
 {
-    return AndroidFileSystemHelper::GetInstance().OpenFile(FileName, IFS, AssetFile, Size);
+    return AndroidFileSystemHelper::GetInstance().OpenFile(OpenAttribs, IFS, AssetFile);
 }
 
 AndroidFile::AndroidFile(const FileOpenAttribs& OpenAttribs) :
     BasicFile{OpenAttribs}
 {
-    auto FullPath = m_OpenAttribs.strFilePath;
-    if (!Open(FullPath, m_IFS, m_AssetFile, m_Size))
+    if (!Open(m_OpenAttribs, m_FS, m_AssetFile))
     {
-        LOG_ERROR_AND_THROW("Failed to open file ", FullPath);
+        LOG_ERROR_AND_THROW("Failed to open file ", m_OpenAttribs.strFilePath);
     }
 }
 
 AndroidFile::~AndroidFile()
 {
-    if (m_IFS && m_IFS.is_open())
-        m_IFS.close();
+    if (m_FS && m_FS.is_open())
+        m_FS.close();
 
     if (m_AssetFile != nullptr)
         AAsset_close(m_AssetFile);
@@ -163,17 +193,17 @@ bool AndroidFile::Read(IDataBlob* pData)
 
 bool AndroidFile::Read(void* Data, size_t BufferSize)
 {
-    VERIFY(BufferSize == m_Size, "Only whole file reads are currently supported");
-
-    if (m_IFS && m_IFS.is_open())
+    if (m_FS && m_FS.is_open())
     {
-        m_IFS.read((char*)Data, BufferSize);
+        m_FS.read((char*)Data, BufferSize);
         return true;
     }
     else if (m_AssetFile != nullptr)
     {
         const uint8_t* src_data = (uint8_t*)AAsset_getBuffer(m_AssetFile);
         off_t          FileSize = AAsset_getLength(m_AssetFile);
+
+        VERIFY(BufferSize == static_cast<size_t>(FileSize), "Only whole asset file reads are currently supported");
         if (FileSize > static_cast<off_t>(BufferSize))
         {
             LOG_WARNING_MESSAGE("Requested buffer size (", BufferSize, ") exceeds file size (", FileSize, ")");
@@ -190,21 +220,51 @@ bool AndroidFile::Read(void* Data, size_t BufferSize)
 
 bool AndroidFile::Write(const void* Data, size_t BufferSize)
 {
-    UNSUPPORTED("Not implemented");
+    if (m_FS && m_FS.is_open())
+    {
+        m_FS.write((char*)Data, BufferSize);
+        return true;
+    }
 
     return false;
 }
 
+size_t AndroidFile::GetSize()
+{
+    if (m_FS && m_FS.is_open())
+    {
+        auto Pos = m_FS.tellg();
+        m_FS.seekg(0, std::ios_base::end);
+        auto FileSize = m_FS.tellg();
+        m_FS.seekg(Pos, std::ios_base::beg);
+        return FileSize;
+    }
+    else if (m_AssetFile != nullptr)
+    {
+        return AAsset_getLength(m_AssetFile);
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 size_t AndroidFile::GetPos()
 {
-    UNSUPPORTED("Not implemented");
+    if (m_FS && m_FS.is_open())
+    {
+        return m_FS.tellg();
+    }
 
     return 0;
 }
 
 bool AndroidFile::SetPos(size_t Offset, FilePosOrigin Origin)
 {
-    UNSUPPORTED("Not implemented");
+    if (m_FS && m_FS.is_open())
+    {
+        m_FS.seekg(Offset, std::ios_base::beg);
+    }
     return false;
 }
 
@@ -232,17 +292,16 @@ AndroidFile* AndroidFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 
 bool AndroidFileSystem::FileExists(const Char* strFilePath)
 {
-    std::ifstream   IFS;
+    std::fstream    FS;
     AAsset*         AssetFile = nullptr;
-    size_t          Size      = 0;
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
     BasicFile   DummyFile{OpenAttribs};
     const auto& Path   = DummyFile.GetPath(); // This is necessary to correct slashes
-    bool        Exists = AndroidFile::Open(Path.c_str(), IFS, AssetFile, Size);
+    bool        Exists = AndroidFile::Open(Path.c_str(), FS, AssetFile);
 
-    if (IFS && IFS.is_open())
-        IFS.close();
+    if (FS && FS.is_open())
+        FS.close();
     if (AssetFile != nullptr)
         AAsset_close(AssetFile);
 
