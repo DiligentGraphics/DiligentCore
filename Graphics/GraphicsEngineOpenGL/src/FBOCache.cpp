@@ -230,6 +230,7 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
 #endif
     }
 
+#ifdef DILIGENT_DEVELOPMENT
     GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (Status != GL_FRAMEBUFFER_COMPLETE)
     {
@@ -237,6 +238,8 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
         LOG_ERROR("Framebuffer is incomplete. FB status: ", StatusString);
         UNEXPECTED("Framebuffer is incomplete");
     }
+#endif
+
     return FBO;
 }
 
@@ -391,6 +394,7 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(TextureBaseGL*       
 
         pTex->AttachToFramebuffer(RTV0, GetFramebufferAttachmentPoint(TexDesc.Format), Targets);
 
+#ifdef DILIGENT_DEVELOPMENT
         GLenum Status = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER);
         if (Status != GL_FRAMEBUFFER_COMPLETE)
         {
@@ -398,6 +402,7 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(TextureBaseGL*       
             LOG_ERROR("Read framebuffer is incomplete. FB status: ", StatusString);
             UNEXPECTED("Read framebuffer is incomplete");
         }
+#endif
 
         auto it_inserted = m_Cache.emplace(Key, std::move(NewFBO));
         // New FBO must be actually inserted

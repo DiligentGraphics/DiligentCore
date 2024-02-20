@@ -475,16 +475,16 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
 
     GLint numActiveUniforms = 0;
     glGetProgramiv(GLProgram, GL_ACTIVE_UNIFORMS, &numActiveUniforms);
-    CHECK_GL_ERROR_AND_THROW("Unable to get the number of active uniforms\n");
+    DEV_CHECK_GL_ERROR("Unable to get the number of active uniforms\n");
 
     // Query the maximum name length of the active uniform (including null terminator)
     GLint activeUniformMaxLength = 0;
     glGetProgramiv(GLProgram, GL_ACTIVE_UNIFORM_MAX_LENGTH, &activeUniformMaxLength);
-    CHECK_GL_ERROR_AND_THROW("Unable to get the maximum uniform name length\n");
+    DEV_CHECK_GL_ERROR("Unable to get the maximum uniform name length\n");
 
     GLint numActiveUniformBlocks = 0;
     glGetProgramiv(GLProgram, GL_ACTIVE_UNIFORM_BLOCKS, &numActiveUniformBlocks);
-    CHECK_GL_ERROR_AND_THROW("Unable to get the number of active uniform blocks\n");
+    DEV_CHECK_GL_ERROR("Unable to get the number of active uniform blocks\n");
 
     //
     // #### This parameter is currently unsupported by Intel OGL drivers.
@@ -493,12 +493,15 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
     GLint activeUniformBlockMaxLength = 0;
     // On Intel driver, this call might fail:
     glGetProgramiv(GLProgram, GL_ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH, &activeUniformBlockMaxLength);
-    //CHECK_GL_ERROR_AND_THROW("Unable to get the maximum uniform block name length\n");
+#ifdef DILIGENT_DEVELOPMENT
     if (glGetError() != GL_NO_ERROR)
     {
-        LOG_WARNING_MESSAGE("Unable to get the maximum uniform block name length. Using 1024 as a workaround\n");
-        activeUniformBlockMaxLength = 1024;
+        LOG_WARNING_MESSAGE("Unable to get the maximum uniform block name length.");
     }
+#endif
+
+    if (activeUniformBlockMaxLength <= 0)
+        activeUniformBlockMaxLength = 1024;
 
     auto MaxNameLength = std::max(activeUniformMaxLength, activeUniformBlockMaxLength);
 
@@ -507,12 +510,12 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
     if (glGetProgramInterfaceiv)
     {
         glGetProgramInterfaceiv(GLProgram, GL_SHADER_STORAGE_BLOCK, GL_ACTIVE_RESOURCES, &numActiveShaderStorageBlocks);
-        CHECK_GL_ERROR_AND_THROW("Unable to get the number of shader storage blocks blocks\n");
+        DEV_CHECK_GL_ERROR("Unable to get the number of shader storage blocks\n");
 
         // Query the maximum name length of the active shader storage block (including null terminator)
         GLint MaxShaderStorageBlockNameLen = 0;
         glGetProgramInterfaceiv(GLProgram, GL_SHADER_STORAGE_BLOCK, GL_MAX_NAME_LENGTH, &MaxShaderStorageBlockNameLen);
-        CHECK_GL_ERROR_AND_THROW("Unable to get the maximum shader storage block name length\n");
+        DEV_CHECK_GL_ERROR("Unable to get the maximum shader storage block name length\n");
         MaxNameLength = std::max(MaxNameLength, MaxShaderStorageBlockNameLen);
     }
 #endif
@@ -530,7 +533,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
         // Only one active uniform variable will be reported for a uniform array.
         // Uniform variables other than arrays will have a size of 1
         glGetActiveUniform(GLProgram, i, MaxNameLength, &NameLen, &size, &dataType, Name.data());
-        CHECK_GL_ERROR_AND_THROW("Unable to get active uniform\n");
+        DEV_CHECK_GL_ERROR("Unable to get active uniform\n");
         VERIFY(NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen(Name.data()), "Incorrect uniform name");
         VERIFY(size >= 1, "Size is expected to be at least 1");
         // Note that
@@ -706,7 +709,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
         // In contrast to shader uniforms, every element in uniform block array is enumerated individually
         GLsizei NameLen = 0;
         glGetActiveUniformBlockName(GLProgram, i, MaxNameLength, &NameLen, Name.data());
-        CHECK_GL_ERROR_AND_THROW("Unable to get active uniform block name\n");
+        DEV_CHECK_GL_ERROR("Unable to get active uniform block name\n");
         VERIFY(NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen(Name.data()), "Incorrect uniform block name");
 
         // glGetActiveUniformBlockName( program, uniformBlockIndex, bufSize, length, uniformBlockName );
@@ -714,7 +717,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
         // glGetProgramResourceName(program, GL_UNIFORM_BLOCK, uniformBlockIndex, bufSize, length, uniformBlockName);
 
         auto UniformBlockIndex = glGetUniformBlockIndex(GLProgram, Name.data());
-        CHECK_GL_ERROR_AND_THROW("Unable to get active uniform block index\n");
+        DEV_CHECK_GL_ERROR("Unable to get active uniform block index\n");
         // glGetUniformBlockIndex( program, uniformBlockName );
         // is equivalent to
         // glGetProgramResourceIndex( program, GL_UNIFORM_BLOCK, uniformBlockName );
@@ -766,11 +769,11 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
     {
         GLsizei Length = 0;
         glGetProgramResourceName(GLProgram, GL_SHADER_STORAGE_BLOCK, i, MaxNameLength, &Length, Name.data());
-        CHECK_GL_ERROR_AND_THROW("Unable to get shader storage block name\n");
+        DEV_CHECK_GL_ERROR("Unable to get shader storage block name\n");
         VERIFY(Length < MaxNameLength && static_cast<size_t>(Length) == strlen(Name.data()), "Incorrect shader storage block name");
 
         auto SBIndex = glGetProgramResourceIndex(GLProgram, GL_SHADER_STORAGE_BLOCK, Name.data());
-        CHECK_GL_ERROR_AND_THROW("Unable to get shader storage block index\n");
+        DEV_CHECK_GL_ERROR("Unable to get shader storage block index\n");
 
         bool  IsNewBlock     = true;
         Int32 ArraySize      = 1;
