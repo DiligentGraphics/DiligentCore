@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -207,7 +207,7 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
         // The state set by glDrawBuffers() is part of the state of the framebuffer.
         // So it can be set up once and left it set.
         glDrawBuffers(NumRenderTargets, DrawBuffers);
-        CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
+        DEV_CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
     }
     else if (pDSV == nullptr)
     {
@@ -215,16 +215,16 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
         DEV_CHECK_ERR(DefaultWidth > 0 && DefaultHeight > 0, "Framebuffer without attachment requires non-zero default width and height");
 #ifdef GL_ARB_framebuffer_no_attachments
         glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_WIDTH, DefaultWidth);
-        CHECK_GL_ERROR("Failed to set framebuffer default width");
+        DEV_CHECK_GL_ERROR("Failed to set framebuffer default width");
 
         glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_HEIGHT, DefaultHeight);
-        CHECK_GL_ERROR("Failed to set framebuffer default height");
+        DEV_CHECK_GL_ERROR("Failed to set framebuffer default height");
 
         glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_LAYERS, 1);
-        CHECK_GL_ERROR("Failed to set framebuffer default layer count");
+        DEV_CHECK_GL_ERROR("Failed to set framebuffer default layer count");
 
         glFramebufferParameteri(GL_FRAMEBUFFER, GL_FRAMEBUFFER_DEFAULT_SAMPLES, 1);
-        CHECK_GL_ERROR("Failed to set framebuffer default sample count");
+        DEV_CHECK_GL_ERROR("Failed to set framebuffer default sample count");
 #else
         DEV_ERROR("Framebuffers without attachments are not supported on this platform");
 #endif

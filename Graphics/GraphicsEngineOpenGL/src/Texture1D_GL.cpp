@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -168,7 +168,7 @@ void Texture1D_GL::UpdateData(GLContextState&          ContextState,
                     // as a byte offset into the buffer object's data store.
                     // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glTexSubImage1D.xml
                     SubresData.pSrcBuffer != nullptr ? reinterpret_cast<void*>(StaticCast<size_t>(SubresData.SrcOffset)) : SubresData.pData);
-    CHECK_GL_ERROR("Failed to update subimage data");
+    DEV_CHECK_GL_ERROR("Failed to update subimage data");
 
     if (UnpackBuffer != 0)
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -183,12 +183,12 @@ void Texture1D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum A
     {
         VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
         glFramebufferTexture1D(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
-        CHECK_GL_ERROR("Failed to attach texture 1D to draw framebuffer");
+        DEV_CHECK_GL_ERROR("Failed to attach texture 1D to draw framebuffer");
     }
     if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
     {
         glFramebufferTexture1D(GL_READ_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip);
-        CHECK_GL_ERROR("Failed to attach texture 1D to read framebuffer");
+        DEV_CHECK_GL_ERROR("Failed to attach texture 1D to read framebuffer");
     }
 }
 
@@ -202,7 +202,7 @@ void Texture1D_GL::CopyTexSubimage(GLContextState& GLState, const CopyTexSubimag
                         Attribs.SrcBox.MinX,
                         Attribs.SrcBox.MinY,
                         Attribs.SrcBox.Width());
-    CHECK_GL_ERROR("Failed to copy subimage data to texture 1D");
+    DEV_CHECK_GL_ERROR("Failed to copy subimage data to texture 1D");
 }
 
 } // namespace Diligent

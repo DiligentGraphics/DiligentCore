@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -546,7 +546,7 @@ void DeviceContextGLImpl::EndSubpass()
     {
         GLint glCurrReadFB = 0;
         glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &glCurrReadFB);
-        CHECK_GL_ERROR("Failed to get current read framebuffer");
+        DEV_CHECK_GL_ERROR("Failed to get current read framebuffer");
         GLuint glExpectedReadFB = SubpassFBOs.RenderTarget != 0 ? static_cast<GLuint>(SubpassFBOs.RenderTarget) : m_pSwapChain->GetDefaultFBO();
         VERIFY(static_cast<GLuint>(glCurrReadFB) == glExpectedReadFB, "Unexpected read framebuffer");
     }

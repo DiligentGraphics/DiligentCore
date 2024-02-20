@@ -165,11 +165,11 @@ static BufferDesc GetBufferDescFromGLHandle(GLContextState& GLState, BufferDesc 
 
     // Note that any glBindBufferBase, glBindBufferRange etc. also bind the buffer to the generic buffer binding point.
     glBindBuffer(BindTarget, BufferHandle);
-    CHECK_GL_ERROR("Failed to bind GL buffer to ", BindTarget, " target");
+    DEV_CHECK_GL_ERROR("Failed to bind GL buffer to ", BindTarget, " target");
 
     GLint BufferSize = 0;
     glGetBufferParameteriv(BindTarget, GL_BUFFER_SIZE, &BufferSize);
-    CHECK_GL_ERROR("glGetBufferParameteriv() failed");
+    DEV_CHECK_GL_ERROR("glGetBufferParameteriv() failed");
     VERIFY_EXPR(BufferSize > 0);
 
     VERIFY(BuffDesc.Size == 0 || BuffDesc.Size == static_cast<Uint32>(BufferSize), "Buffer size specified by the BufferDesc (", BuffDesc.Size, ") does not match the size recovered from gl buffer object (", BufferSize, ")");
@@ -177,7 +177,7 @@ static BufferDesc GetBufferDescFromGLHandle(GLContextState& GLState, BufferDesc 
         BuffDesc.Size = static_cast<Uint32>(BufferSize);
 
     glBindBuffer(BindTarget, 0);
-    CHECK_GL_ERROR("Failed to unbind GL buffer");
+    DEV_CHECK_GL_ERROR("Failed to unbind GL buffer");
 
     return BuffDesc;
 }
@@ -229,7 +229,7 @@ void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint64 Offset, Uint64 Si
     // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same
     // kind of objects. As a result they are all equivalent from a transfer point of view.
     glBufferSubData(m_BindTarget, StaticCast<GLintptr>(Offset), StaticCast<GLsizeiptr>(Size), pData);
-    CHECK_GL_ERROR("glBufferSubData() failed");
+    DEV_CHECK_GL_ERROR("glBufferSubData() failed");
     CtxState.BindBuffer(m_BindTarget, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 }
 
@@ -255,7 +255,7 @@ void BufferGLImpl::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL,
     CtxState.BindBuffer(GL_COPY_WRITE_BUFFER, m_GlBuffer, ResetVAO);
     CtxState.BindBuffer(GL_COPY_READ_BUFFER, SrcBufferGL.m_GlBuffer, ResetVAO);
     glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, StaticCast<GLintptr>(SrcOffset), StaticCast<GLintptr>(DstOffset), StaticCast<GLsizeiptr>(Size));
-    CHECK_GL_ERROR("glCopyBufferSubData() failed");
+    DEV_CHECK_GL_ERROR("glCopyBufferSubData() failed");
     CtxState.BindBuffer(GL_COPY_READ_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
     CtxState.BindBuffer(GL_COPY_WRITE_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 }
@@ -281,7 +281,7 @@ void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 M
 
         m_Mapped.Data.resize(static_cast<size_t>(Length));
         glGetBufferSubData(m_BindTarget, StaticCast<GLintptr>(Offset), StaticCast<GLsizeiptr>(Length), m_Mapped.Data.data());
-        CHECK_GL_ERROR("glGetBufferSubData() failed");
+        DEV_CHECK_GL_ERROR("glGetBufferSubData() failed");
         pMappedData = m_Mapped.Data.data();
     }
     else if (MapType == MAP_WRITE)
@@ -306,7 +306,7 @@ void BufferGLImpl::Unmap(GLContextState& CtxState)
 
         VERIFY_EXPR(!m_Mapped.Data.empty());
         glBufferSubData(m_BindTarget, StaticCast<GLintptr>(m_Mapped.Offset), StaticCast<GLsizeiptr>(m_Mapped.Data.size()), m_Mapped.Data.data());
-        CHECK_GL_ERROR("glBufferSubData() failed");
+        DEV_CHECK_GL_ERROR("glBufferSubData() failed");
     }
 
     m_Mapped.Data.clear();
@@ -371,7 +371,7 @@ void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 M
     }
 
     pMappedData = glMapBufferRange(m_BindTarget, StaticCast<GLintptr>(Offset), StaticCast<GLsizeiptr>(Length), Access);
-    CHECK_GL_ERROR("glMapBufferRange() failed");
+    DEV_CHECK_GL_ERROR("glMapBufferRange() failed");
     VERIFY(pMappedData, "Map failed");
 }
 

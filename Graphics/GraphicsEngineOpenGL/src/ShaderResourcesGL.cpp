@@ -219,7 +219,7 @@ static void AddUniformBufferVariable(GLuint                                     
 {
     GLint UniformBlockIndex = -1;
     glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_BLOCK_INDEX, &UniformBlockIndex);
-    CHECK_GL_ERROR("Failed to get the uniform block index for uniform ", UniformIndex);
+    DEV_CHECK_GL_ERROR("Failed to get the uniform block index for uniform ", UniformIndex);
     if (UniformBlockIndex < 0)
         return;
 
@@ -249,7 +249,7 @@ static void AddUniformBufferVariable(GLuint                                     
     {
         GLint IsRowMajor = -1;
         glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_IS_ROW_MAJOR, &IsRowMajor);
-        CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_IS_ROW_MAJOR parameter");
+        DEV_CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_IS_ROW_MAJOR parameter");
         if (IsRowMajor >= 0)
         {
             Var.Class = IsRowMajor ?
@@ -263,13 +263,13 @@ static void AddUniformBufferVariable(GLuint                                     
         // The byte stride for elements of the array, for uniforms in a uniform block.
         // For non-array uniforms in a block, this value is 0. For uniforms not in a block, the value will be -1.
         glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_ARRAY_STRIDE, &ArrayStride);
-        CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_ARRAY_STRIDE parameter");
+        DEV_CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_ARRAY_STRIDE parameter");
         if (ArrayStride > 0)
         {
             GLint ArraySize = -1;
             // Retrieves the size of the uniform. For arrays, this is the length of the array. For non-arrays, this is 1.
             glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_SIZE, &ArraySize);
-            CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_SIZE parameter");
+            DEV_CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_SIZE parameter");
             if (ArraySize > 0)
                 Var.ArraySize = StaticCast<decltype(Var.ArraySize)>(ArraySize);
         }
@@ -279,7 +279,7 @@ static void AddUniformBufferVariable(GLuint                                     
         // Offset from the beginning of the uniform block
         GLint Offset = -1;
         glGetActiveUniformsiv(glProgram, 1, &UniformIndex, GL_UNIFORM_OFFSET, &Offset);
-        CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_OFFSET parameter");
+        DEV_CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_OFFSET parameter");
         if (Offset >= 0)
             Var.Offset = StaticCast<decltype(Var.Offset)>(Offset);
     }
@@ -831,7 +831,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
 
                 GLint BufferSize = 0;
                 glGetActiveUniformBlockiv(GLProgram, UB.UBIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &BufferSize);
-                CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_BLOCK_DATA_SIZE parameter");
+                DEV_CHECK_GL_ERROR("Failed to get the value of the GL_UNIFORM_BLOCK_DATA_SIZE parameter");
 
                 UBReflections.emplace_back(PrepareUBReflection(std::move(Vars), StaticCast<Uint32>(BufferSize)));
             }

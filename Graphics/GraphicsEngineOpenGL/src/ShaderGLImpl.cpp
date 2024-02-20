@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -220,7 +220,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* pp
     {
         auto* pCurrShader = ppShaders[i];
         glAttachShader(GLProg, pCurrShader->m_GLShaderObj);
-        CHECK_GL_ERROR("glAttachShader() failed");
+        DEV_CHECK_GL_ERROR("glAttachShader() failed");
     }
 
     //With separable program objects, interfaces between shader stages may
@@ -234,10 +234,10 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* pp
     //between programs occurs, no GL error will be generated, but some or all
     //of the inputs on the interface will be undefined.
     glLinkProgram(GLProg);
-    CHECK_GL_ERROR("glLinkProgram() failed");
+    DEV_CHECK_GL_ERROR("glLinkProgram() failed");
     int IsLinked = GL_FALSE;
     glGetProgramiv(GLProg, GL_LINK_STATUS, &IsLinked);
-    CHECK_GL_ERROR("glGetProgramiv() failed");
+    DEV_CHECK_GL_ERROR("glGetProgramiv() failed");
     if (!IsLinked)
     {
         int LengthWithNull = 0, Length = 0;
@@ -258,7 +258,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* pp
     {
         auto* pCurrShader = ClassPtrCast<const ShaderGLImpl>(ppShaders[i]);
         glDetachShader(GLProg, pCurrShader->m_GLShaderObj);
-        CHECK_GL_ERROR("glDetachShader() failed");
+        DEV_CHECK_GL_ERROR("glDetachShader() failed");
     }
 
     return GLProg;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -186,7 +186,7 @@ void Texture3D_GL::UpdateData(GLContextState&          ContextState,
                     // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glTexSubImage3D.xhtml
                     SubresData.pSrcBuffer != nullptr ? reinterpret_cast<void*>(StaticCast<size_t>(SubresData.SrcOffset)) : SubresData.pData);
 
-    CHECK_GL_ERROR("Failed to update subimage data");
+    DEV_CHECK_GL_ERROR("Failed to update subimage data");
 
     if (UnpackBuffer != 0)
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
@@ -203,12 +203,12 @@ void Texture3D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum A
         {
             VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
             glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-            CHECK_GL_ERROR("Failed to attach texture 3D to draw framebuffer");
+            DEV_CHECK_GL_ERROR("Failed to attach texture 3D to draw framebuffer");
         }
         if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
         {
             glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-            CHECK_GL_ERROR("Failed to attach texture 3D to read framebuffer");
+            DEV_CHECK_GL_ERROR("Failed to attach texture 3D to read framebuffer");
         }
     }
     else if (ViewDesc.NumDepthSlices == 1)
@@ -223,12 +223,12 @@ void Texture3D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum A
         {
             VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
             glFramebufferTextureLayer(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstDepthSlice);
-            CHECK_GL_ERROR("Failed to attach texture 3D to draw framebuffer");
+            DEV_CHECK_GL_ERROR("Failed to attach texture 3D to draw framebuffer");
         }
         if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
         {
             glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstDepthSlice);
-            CHECK_GL_ERROR("Failed to attach texture 3D to read framebuffer");
+            DEV_CHECK_GL_ERROR("Failed to attach texture 3D to read framebuffer");
         }
     }
     else
@@ -250,7 +250,7 @@ void Texture3D_GL::CopyTexSubimage(GLContextState& GLState, const CopyTexSubimag
                         Attribs.SrcBox.MinY,
                         Attribs.SrcBox.Width(),
                         Attribs.SrcBox.Height());
-    CHECK_GL_ERROR("Failed to copy subimage data to texture 3D");
+    DEV_CHECK_GL_ERROR("Failed to copy subimage data to texture 3D");
 }
 
 } // namespace Diligent

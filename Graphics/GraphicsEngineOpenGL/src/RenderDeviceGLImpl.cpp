@@ -1213,7 +1213,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             bBPTC);
     // clang-format on
 
-#ifdef DILIGENT_DEBUG
+#ifdef DILIGENT_DEVELOPMENT
     const bool bGL43OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{4, 3};
 
     constexpr int      TestTextureDim = 8;
@@ -1282,15 +1282,15 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 
                 if (glGetError() != GL_NO_ERROR)
                 {
-                    LOG_WARNING_MESSAGE("Failed to upload data to a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name, " texture. "
-                                                                                                                                     "This likely indicates that the format is not supported despite being reported so by the device.");
+                    LOG_WARNING_MESSAGE("Failed to upload data to a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name,
+                                        " texture. This likely indicates that the format is not supported despite being reported so by the device.");
                     FmtInfo->Supported = false;
                 }
             }
             else
             {
-                LOG_WARNING_MESSAGE("Failed to allocate storage for a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name, " texture. "
-                                                                                                                                       "This likely indicates that the format is not supported despite being reported so by the device.");
+                LOG_WARNING_MESSAGE("Failed to allocate storage for a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name,
+                                    " texture. This likely indicates that the format is not supported despite being reported so by the device.");
                 FmtInfo->Supported = false;
             }
             glBindTexture(GL_TEXTURE_2D, 0);
@@ -1305,7 +1305,7 @@ bool CreateTestGLTexture(GLContextState& GlCtxState, GLenum BindTarget, const GL
     GlCtxState.BindTexture(-1, BindTarget, GLTexObj);
     CreateFunc();
     bool bSuccess = glGetError() == GL_NO_ERROR;
-    GlCtxState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false));
+    GlCtxState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj{false});
     return bSuccess;
 }
 
@@ -1337,6 +1337,9 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
     // Disable debug messages - errors are expected
     m_ShowDebugGLOutput = 0;
+
+    // Clear error code
+    glGetError();
 
     const auto& TexProps = GetAdapterInfo().Texture;
     // Create test texture 1D

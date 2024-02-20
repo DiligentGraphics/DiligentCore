@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,7 +95,8 @@ static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarge
 
 #if GL_TEXTURE_INTERNAL_FORMAT
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
-    if (glGetError() == GL_NO_ERROR && GlFormat != 0)
+    DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_INTERNAL_FORMAT) failed");
+    if (GlFormat != 0)
     {
         if (GlFormat == GL_RGBA)
         {
@@ -150,7 +151,8 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
 #if GL_TEXTURE_WIDTH
     GLint TexWidth = 0;
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_WIDTH, &TexWidth);
-    if (glGetError() == GL_NO_ERROR && TexWidth > 0)
+    DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_WIDTH) failed");
+    if (TexWidth > 0)
     {
         if (TexDesc.Width != 0 && TexDesc.Width != static_cast<Uint32>(TexWidth))
         {
@@ -182,7 +184,8 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
 #if GL_TEXTURE_HEIGHT
         GLint TexHeight = 0;
         glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_HEIGHT, &TexHeight);
-        if (glGetError() == GL_NO_ERROR && TexHeight > 0)
+        DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_HEIGHT) failed");
+        if (TexHeight > 0)
         {
             if (TexDesc.Height != 0 && TexDesc.Height != static_cast<Uint32>(TexHeight))
             {
@@ -217,7 +220,8 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
 #if GL_TEXTURE_DEPTH
         GLint TexDepth = 0;
         glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_DEPTH, &TexDepth);
-        if (glGetError() == GL_NO_ERROR && TexDepth > 0)
+        DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_DEPTH) failed");
+        if (TexDepth > 0)
         {
             if (TexDesc.Depth != 0 && TexDesc.Depth != static_cast<Uint32>(TexDepth))
             {
@@ -249,7 +253,8 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
 #if GL_TEXTURE_INTERNAL_FORMAT
     GLint GlFormat = 0;
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
-    if (glGetError() == GL_NO_ERROR && GlFormat != 0)
+    DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_INTERNAL_FORMAT) failed");
+    if (GlFormat != 0)
     {
         if (TexDesc.Format != TEX_FORMAT_UNKNOWN && static_cast<GLenum>(GlFormat) != TexFormatToGLInternalTexFormat(TexDesc.Format))
         {
@@ -278,7 +283,8 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
     // GL_TEXTURE_IMMUTABLE_LEVELS is only supported in GL4.3+ and GLES3.1+
     GLint MipLevels = 0;
     glGetTexParameteriv(BindTarget, GL_TEXTURE_IMMUTABLE_LEVELS, &MipLevels);
-    if (glGetError() == GL_NO_ERROR && MipLevels > 0)
+    DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_IMMUTABLE_LEVELS) failed");
+    if (MipLevels > 0)
     {
         if (TexDesc.MipLevels != 0 && TexDesc.MipLevels != static_cast<Uint32>(MipLevels))
         {
@@ -469,13 +475,13 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
 
                     GLState.BindTexture(-1, GLViewTarget, pViewOGL->GetHandle());
                     glTexParameteri(GLViewTarget, GL_TEXTURE_SWIZZLE_R, TextureComponentSwizzleToGLTextureSwizzle(ViewDesc.Swizzle.R, GL_RED));
-                    CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_R texture parameter");
+                    DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_R texture parameter");
                     glTexParameteri(GLViewTarget, GL_TEXTURE_SWIZZLE_G, TextureComponentSwizzleToGLTextureSwizzle(ViewDesc.Swizzle.G, GL_GREEN));
-                    CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_G texture parameter");
+                    DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_G texture parameter");
                     glTexParameteri(GLViewTarget, GL_TEXTURE_SWIZZLE_B, TextureComponentSwizzleToGLTextureSwizzle(ViewDesc.Swizzle.B, GL_BLUE));
-                    CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_B texture parameter");
+                    DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_B texture parameter");
                     glTexParameteri(GLViewTarget, GL_TEXTURE_SWIZZLE_A, TextureComponentSwizzleToGLTextureSwizzle(ViewDesc.Swizzle.A, GL_ALPHA));
-                    CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_A texture parameter");
+                    DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_A texture parameter");
                     GLState.BindTexture(-1, GLViewTarget, GLObjectWrappers::GLTextureObj::Null());
                 }
             }
@@ -620,7 +626,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
             pSrcBox->Width(),
             pSrcBox->Height(),
             pSrcBox->Depth());
-        CHECK_GL_ERROR("glCopyImageSubData() failed");
+        DEV_CHECK_GL_ERROR("glCopyImageSubData() failed");
     }
     else
 #endif
@@ -763,7 +769,7 @@ void TextureBaseGL::SetDefaultGLParameters()
                 // clang-format on
         }
         glGetIntegerv(TextureBinding, &BoundTex);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_MIN_FILTER texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_MIN_FILTER texture parameter");
         VERIFY(static_cast<GLuint>(BoundTex) == m_GlTexture, "Current texture is not bound to GL context");
     }
 #endif
@@ -773,26 +779,26 @@ void TextureBaseGL::SetDefaultGLParameters()
         // We need to do channel swizzling since TEX_FORMAT_A8_UNORM
         // is actually implemented using GL_RED
         glTexParameteri(m_BindTarget, GL_TEXTURE_SWIZZLE_R, GL_ZERO);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_R texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_R texture parameter");
         glTexParameteri(m_BindTarget, GL_TEXTURE_SWIZZLE_G, GL_ZERO);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_G texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_G texture parameter");
         glTexParameteri(m_BindTarget, GL_TEXTURE_SWIZZLE_B, GL_ZERO);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_B texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_B texture parameter");
         glTexParameteri(m_BindTarget, GL_TEXTURE_SWIZZLE_A, GL_RED);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_A texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_A texture parameter");
     }
     else if (m_Desc.Format == TEX_FORMAT_BGRA8_UNORM)
     {
         // We need to do channel swizzling since TEX_FORMAT_BGRA8_UNORM
         // is actually implemented using GL_RGBA
         glTexParameteri(m_BindTarget, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_R texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_R texture parameter");
         glTexParameteri(m_BindTarget, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_G texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_G texture parameter");
         glTexParameteri(m_BindTarget, GL_TEXTURE_SWIZZLE_B, GL_RED);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_B texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_B texture parameter");
         glTexParameteri(m_BindTarget, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_A texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_A texture parameter");
     }
 
     if (m_BindTarget != GL_TEXTURE_2D_MULTISAMPLE &&
@@ -806,11 +812,11 @@ void TextureBaseGL::SetDefaultGLParameters()
         // The default value of GL_TEXTURE_MIN_FILTER is GL_NEAREST_MIPMAP_LINEAR
         // Reset it to GL_NEAREST to avoid incompleteness issues with integer textures
         glTexParameteri(m_BindTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_MIN_FILTER texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_MIN_FILTER texture parameter");
 
         // The default value of GL_TEXTURE_MAG_FILTER is GL_LINEAR
         glTexParameteri(m_BindTarget, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        CHECK_GL_ERROR("Failed to set GL_TEXTURE_MAG_FILTER texture parameter");
+        DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_MAG_FILTER texture parameter");
     }
 }
 

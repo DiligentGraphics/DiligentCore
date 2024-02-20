@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -434,7 +434,7 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
         // then that code will be used by the pipeline. If program is 0, then the given
         // stages are cleared from the pipeline.
         glUseProgramStages(Pipeline, GLShaderBit, m_GLPrograms[i]);
-        CHECK_GL_ERROR("glUseProgramStages() failed");
+        DEV_CHECK_GL_ERROR("glUseProgramStages() failed");
     }
 
     ctx_pipeline.second.SetName(m_Desc.Name);
