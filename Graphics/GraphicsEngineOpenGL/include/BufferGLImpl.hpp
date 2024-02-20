@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,8 +96,12 @@ private:
     const GLenum                  m_GLUsageHint;
 
 #if PLATFORM_EMSCRIPTEN
-    // Used for devices that don't support glMapBufferRange (currently, Emscripten)
-    std::vector<Uint8> m_MappedData;
+    struct MappedData
+    {
+        std::vector<Uint8> Data;
+        MAP_TYPE           Type   = MAP_WRITE;
+        Uint64             Offset = 0;
+    } m_Mapped;
 #endif
 };
 

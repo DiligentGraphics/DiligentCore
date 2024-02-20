@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -265,6 +265,55 @@ void BufferGLImpl::Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFla
     MapRange(CtxState, MapType, MapFlags, 0, m_Desc.Size, pMappedData);
 }
 
+#if PLATFORM_EMSCRIPTEN
+
+void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, Uint64 Length, PVoid& pMappedData)
+{
+    m_Mapped.Type   = MapType;
+    m_Mapped.Offset = Offset;
+    if (MapType == MAP_READ)
+    {
+        // Emscripten does not support mapping buffers for reading
+
+        // We must unbind VAO because otherwise we will break the bindings
+        constexpr bool ResetVAO = true;
+        CtxState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
+
+        m_Mapped.Data.resize(static_cast<size_t>(Length));
+        glGetBufferSubData(m_BindTarget, StaticCast<GLintptr>(Offset), StaticCast<GLsizeiptr>(Length), m_Mapped.Data.data());
+        CHECK_GL_ERROR("glGetBufferSubData() failed");
+        pMappedData = m_Mapped.Data.data();
+    }
+    else if (MapType == MAP_WRITE)
+    {
+        // glMapBuffer*() is emulated in Emscripten and is suboptimal.
+        // https://emscripten.org/docs/optimizing/Optimizing-WebGL.html#which-gl-mode-to-target
+        m_Mapped.Data.resize(static_cast<size_t>(Length));
+        pMappedData = m_Mapped.Data.data();
+    }
+    else
+    {
+        UNEXPECTED("Only MAP_READ and MAP_WRITE are supported in Emscripten");
+    }
+}
+
+void BufferGLImpl::Unmap(GLContextState& CtxState)
+{
+    if (m_Mapped.Type == MAP_WRITE)
+    {
+        constexpr bool ResetVAO = true;
+        CtxState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
+
+        VERIFY_EXPR(!m_Mapped.Data.empty());
+        glBufferSubData(m_BindTarget, StaticCast<GLintptr>(m_Mapped.Offset), StaticCast<GLsizeiptr>(m_Mapped.Data.size()), m_Mapped.Data.data());
+        CHECK_GL_ERROR("glBufferSubData() failed");
+    }
+
+    m_Mapped.Data.clear();
+}
+
+#else
+
 void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, Uint64 Length, PVoid& pMappedData)
 {
     BufferMemoryBarrier(
@@ -276,18 +325,6 @@ void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 M
     // We must unbind VAO because otherwise we will break the bindings
     constexpr bool ResetVAO = true;
     CtxState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
-
-#if PLATFORM_EMSCRIPTEN
-    // Emscripten does not support mapping buffers for reading
-    if (MapType == MAP_READ)
-    {
-        m_MappedData.resize(static_cast<size_t>(Length));
-        glGetBufferSubData(m_BindTarget, StaticCast<GLintptr>(Offset), StaticCast<GLsizeiptr>(Length), m_MappedData.data());
-        CHECK_GL_ERROR("glGetBufferSubData() failed");
-        pMappedData = m_MappedData.data();
-        return;
-    }
-#endif
 
     // !!!WARNING!!! GL_MAP_UNSYNCHRONIZED_BIT is not the same thing as MAP_FLAG_DO_NOT_WAIT.
     // If GL_MAP_UNSYNCHRONIZED_BIT flag is set, OpenGL will not attempt to synchronize operations
@@ -340,14 +377,6 @@ void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 M
 
 void BufferGLImpl::Unmap(GLContextState& CtxState)
 {
-#if PLATFORM_EMSCRIPTEN
-    if (!m_MappedData.empty())
-    {
-        m_MappedData.clear();
-        return;
-    }
-#endif
-
     constexpr bool ResetVAO = true;
     CtxState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
     auto Result = glUnmapBuffer(m_BindTarget);
@@ -362,6 +391,8 @@ void BufferGLImpl::Unmap(GLContextState& CtxState)
     VERIFY(Result != GL_FALSE, "Failed to unmap buffer. The data may have been corrupted");
     (void)Result;
 }
+
+#endif
 
 void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView)
 {
