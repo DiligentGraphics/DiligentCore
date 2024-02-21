@@ -102,6 +102,15 @@ struct BufferSuballocatorUsageStats
 
     /// The current number of allocations.
     Uint32 AllocationCount = 0;
+
+    BufferSuballocatorUsageStats& operator+=(const BufferSuballocatorUsageStats& rhs)
+    {
+        CommittedSize += rhs.CommittedSize;
+        UsedSize += rhs.UsedSize;
+        MaxFreeChunkSize = std::max(MaxFreeChunkSize, rhs.MaxFreeChunkSize);
+        AllocationCount += rhs.AllocationCount;
+        return *this;
+    }
 };
 
 /// Buffer suballocator.
