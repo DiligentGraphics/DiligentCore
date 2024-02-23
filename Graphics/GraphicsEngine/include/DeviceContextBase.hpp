@@ -33,6 +33,7 @@
 #include <unordered_map>
 #include <array>
 #include <functional>
+#include <vector>
 
 #include "PrivateConstants.h"
 #include "DeviceContext.h"
@@ -160,7 +161,8 @@ public:
             Desc.IsDeferred,
             Desc.ContextId,
             Desc.QueueId
-        }
+        },
+        m_NativeMultiDrawSupported{pRenderDevice->GetDeviceInfo().Features.NativeMultiDraw != DEVICE_FEATURE_STATE_DISABLED}
     // clang-format on
     {
         VERIFY_EXPR(m_pDevice != nullptr);
@@ -670,12 +672,16 @@ protected:
 
     DeviceContextDesc m_Desc;
 
+    const bool m_NativeMultiDrawSupported;
+
     // For deferred contexts in recording state only, the index
     // of the destination immediate context where the command list
     // will be submitted.
     DeviceContextIndex m_DstImmediateContextId{INVALID_CONTEXT_ID};
 
     DeviceContextStats m_Stats;
+
+    std::vector<Uint8> m_ScratchSpace;
 
 #ifdef DILIGENT_DEBUG
     // std::unordered_map is unbelievably slow. Keeping track of mapped buffers

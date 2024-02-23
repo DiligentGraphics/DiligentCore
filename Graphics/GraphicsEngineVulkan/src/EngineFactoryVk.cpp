@@ -833,11 +833,11 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         // and add feature description to DeviceCreateInfo.pNext.
         const bool SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
-        void** NextExt = const_cast<void**>(&vkDeviceCreateInfo.pNext);
-
         // Enable extensions
         if (SupportsFeatures2)
         {
+            void** NextExt = const_cast<void**>(&vkDeviceCreateInfo.pNext);
+
             // Mesh shader
             if (EnabledFeatures.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
             {
@@ -1143,6 +1143,20 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                     DeviceExtensions.push_back(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
                 }
             }
+
+            if (EnabledFeatures.NativeMultiDraw != DEVICE_FEATURE_STATE_DISABLED)
+            {
+                VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_EXT_MULTI_DRAW_EXTENSION_NAME));
+                DeviceExtensions.push_back(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
+
+                EnabledExtFeats.MultiDraw = DeviceExtFeatures.MultiDraw;
+
+                *NextExt = &EnabledExtFeats.MultiDraw;
+                NextExt  = &EnabledExtFeats.MultiDraw.pNext;
+            }
+
+            // Append user-defined features
+            *NextExt = EngineCI.pDeviceExtensionFeatures;
         }
         else
         {
@@ -1150,14 +1164,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 LOG_ERROR_MESSAGE("Can not enable extended device features when VK_KHR_get_physical_device_properties2 extension is not supported by device");
         }
 
-        if (EnabledFeatures.NativeMultiDraw != DEVICE_FEATURE_STATE_DISABLED)
-        {
-        }
-
         ASSERT_SIZEOF(Diligent::DeviceFeatures, 43, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
-
-        // Append user-defined features
-        *NextExt = EngineCI.pDeviceExtensionFeatures;
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)
         {

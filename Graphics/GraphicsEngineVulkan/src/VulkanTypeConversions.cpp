@@ -2029,6 +2029,9 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
                   ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE ||
                   ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE));
 
+    INIT_FEATURE(NativeMultiDraw,
+                 ExtFeatures.MultiDraw.multiDraw != VK_FALSE);
+
 #undef INIT_FEATURE
 
     // Not supported in Vulkan on top of Metal.

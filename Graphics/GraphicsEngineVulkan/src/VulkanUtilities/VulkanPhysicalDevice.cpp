@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -316,6 +316,19 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const CreateInfo& CI) :
             NextProp  = &m_ExtProperties.Maintenance3.pNext;
 
             m_ExtProperties.Maintenance3.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES;
+        }
+
+        if (IsExtensionSupported(VK_EXT_MULTI_DRAW_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.MultiDraw;
+            NextFeat  = &m_ExtFeatures.MultiDraw.pNext;
+
+            m_ExtFeatures.MultiDraw.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT;
+
+            *NextProp = &m_ExtProperties.MultiDraw;
+            NextProp  = &m_ExtProperties.MultiDraw.pNext;
+
+            m_ExtProperties.MultiDraw.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_PROPERTIES_EXT;
         }
 
         // make sure that last pNext is null

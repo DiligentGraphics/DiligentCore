@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,6 +65,7 @@ public:
         VkPhysicalDeviceFragmentDensityMapFeaturesEXT     FragmentDensityMap     = {}; // Only for desktop devices
         VkPhysicalDeviceFragmentDensityMap2FeaturesEXT    FragmentDensityMap2    = {}; // Only for mobile devices
         VkPhysicalDeviceMultiviewFeaturesKHR              Multiview              = {}; // Required for RenderPass2
+        VkPhysicalDeviceMultiDrawFeaturesEXT              MultiDraw              = {};
 
         bool Spirv14              = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
         bool Spirv15              = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
@@ -89,6 +90,7 @@ public:
         VkPhysicalDeviceMultiviewPropertiesKHR              Multiview              = {};
         VkPhysicalDeviceMaintenance3Properties              Maintenance3           = {};
         VkPhysicalDeviceFragmentDensityMap2PropertiesEXT    FragmentDensityMap2    = {};
+        VkPhysicalDeviceMultiDrawPropertiesEXT              MultiDraw              = {};
     };
 
 public:
