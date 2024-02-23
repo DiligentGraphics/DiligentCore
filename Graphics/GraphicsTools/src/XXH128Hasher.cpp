@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ XXH128Hash XXH128State::Digest() noexcept
 
 void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
 {
-    ASSERT_SIZEOF64(ShaderCI, 136, "Did you add new members to ShaderCreateInfo? Please handle them here.");
+    ASSERT_SIZEOF64(ShaderCI, 144, "Did you add new members to ShaderCreateInfo? Please handle them here.");
 
     Update(ShaderCI.SourceLength, // Aka ByteCodeSize
            ShaderCI.EntryPoint,
@@ -73,7 +73,8 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
            ShaderCI.GLSLVersion,
            ShaderCI.GLESSLVersion,
            ShaderCI.MSLVersion,
-           ShaderCI.CompileFlags);
+           ShaderCI.CompileFlags,
+           ShaderCI.LoadConstantBufferReflection);
 
     if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
     {
@@ -94,6 +95,11 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
             const auto& Macro = ShaderCI.Macros[i];
             Update(Macro.Name, Macro.Definition);
         }
+    }
+
+    if (ShaderCI.GLSLExtensions != nullptr)
+    {
+        UpdateStr(ShaderCI.GLSLExtensions);
     }
 }
 

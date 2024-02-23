@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,6 +58,15 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
 
     const auto ShaderType = ShaderCI.Desc.ShaderType;
 
+    auto AppendGLSLExtensions = [&GLSLSource, &ShaderCI]() //
+    {
+        if (ShaderCI.GLSLExtensions != nullptr)
+        {
+            GLSLSource.append(ShaderCI.GLSLExtensions);
+            GLSLSource.push_back('\n');
+        }
+    };
+
 #if PLATFORM_WIN32 || PLATFORM_LINUX
 
     auto GLSLVer = ShaderCI.GLSLVersion;
@@ -71,6 +80,9 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
         verss << "#version " << Uint32{GLSLVer.Major} << Uint32{GLSLVer.Minor} << "0 core\n";
         GLSLSource.append(verss.str());
     }
+
+    AppendGLSLExtensions();
+
     GLSLSource.append("#define DESKTOP_GL 1\n");
 
 #    if PLATFORM_WIN32
@@ -96,6 +108,8 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
     {
         UNEXPECTED("Unexpected target GLSL compiler");
     }
+
+    AppendGLSLExtensions();
 
     GLSLSource.append(
         "#define DESKTOP_GL 1\n"
@@ -138,6 +152,8 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
 
     if ((ShaderType == SHADER_TYPE_HULL || ShaderType == SHADER_TYPE_DOMAIN) && !IsES32OrAbove)
         GLSLSource.append("#extension GL_EXT_tessellation_shader : enable\n");
+
+    AppendGLSLExtensions();
 
     GLSLSource.append(
         "#ifndef GL_ES\n"

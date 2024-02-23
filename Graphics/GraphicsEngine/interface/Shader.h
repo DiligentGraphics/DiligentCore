@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -439,6 +439,9 @@ struct ShaderCreateInfo
     ///       and should be disabled when it is not needed.
     bool LoadConstantBufferReflection DEFAULT_INITIALIZER(false);
 
+    /// An optional list of GLSL extensions to enable when compiling GLSL source code.
+    const char* GLSLExtensions DEFAULT_INITIALIZER(nullptr);
+
 #if DILIGENT_CPP_INTERFACE && !defined(DILIGENT_SHARP_GEN)
     constexpr ShaderCreateInfo() noexcept
     {}
@@ -558,6 +561,12 @@ struct ShaderCreateInfo
             return false;
 
         if (CI1.CompileFlags != CI2.CompileFlags)
+            return false;
+
+        if (CI1.LoadConstantBufferReflection != CI2.LoadConstantBufferReflection)
+            return false;
+
+        if (!SafeStrEqual(CI1.GLSLExtensions, CI2.GLSLExtensions))
             return false;
 
         return true;
