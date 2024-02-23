@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -678,6 +678,26 @@ void DeviceContextD3D12Impl::Draw(const DrawAttribs& Attribs)
     }
 }
 
+void DeviceContextD3D12Impl::MultiDraw(const MultiDrawAttribs& Attribs)
+{
+    TDeviceContextBase::MultiDraw(Attribs, 0);
+
+    auto& GraphCtx = GetCmdContext().AsGraphicsContext();
+    PrepareForDraw(GraphCtx, Attribs.Flags);
+    if (Attribs.NumInstances > 0)
+    {
+        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+        {
+            const auto& Item = Attribs.pDrawItems[i];
+            if (Item.NumVertices > 0)
+            {
+                GraphCtx.Draw(Item.NumVertices, Attribs.NumInstances, Item.StartVertexLocation, Attribs.FirstInstanceLocation);
+                ++m_State.NumCommands;
+            }
+        }
+    }
+}
+
 void DeviceContextD3D12Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
     TDeviceContextBase::DrawIndexed(Attribs, 0);
@@ -688,6 +708,26 @@ void DeviceContextD3D12Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     {
         GraphCtx.DrawIndexed(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
         ++m_State.NumCommands;
+    }
+}
+
+void DeviceContextD3D12Impl::MultiDrawIndexed(const MultiDrawIndexedAttribs& Attribs)
+{
+    TDeviceContextBase::MultiDrawIndexed(Attribs, 0);
+
+    auto& GraphCtx = GetCmdContext().AsGraphicsContext();
+    PrepareForIndexedDraw(GraphCtx, Attribs.Flags, Attribs.IndexType);
+    if (Attribs.NumInstances > 0)
+    {
+        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+        {
+            const auto& Item = Attribs.pDrawItems[i];
+            if (Item.NumIndices > 0)
+            {
+                GraphCtx.DrawIndexed(Item.NumIndices, Attribs.NumInstances, Item.FirstIndexLocation, Item.BaseVertex, Attribs.FirstInstanceLocation);
+                ++m_State.NumCommands;
+            }
+        }
     }
 }
 

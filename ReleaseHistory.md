@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added `MultiDraw` and `MultiDrawIndexed` commands (API254006)
 * Added `SerializationDeviceGLInfo` struct (API254005)
   * The `ValidateShaders` member allows disabling time-consuming shader compilation
 * Replaced `AnisotropicFilteringSupported` member of `SamplerProperties` struct with `MaxAnisotropy` (API254004)

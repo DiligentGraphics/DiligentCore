@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -150,6 +150,10 @@ public:
     virtual void DILIGENT_CALL_TYPE DrawMesh           (const DrawMeshAttribs& Attribs) override final;
     /// Implementation of IDeviceContext::DrawMeshIndirect() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE DrawMeshIndirect   (const DrawMeshIndirectAttribs& Attribs) override final;
+    /// Implementation of IDeviceContext::MultiDraw() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE MultiDraw          (const MultiDrawAttribs& Attribs) override final;
+    /// Implementation of IDeviceContext::MultiDrawIndexed() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE MultiDrawIndexed   (const MultiDrawIndexedAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::DispatchCompute() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE DispatchCompute        (const DispatchComputeAttribs& Attribs) override final;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -672,6 +672,36 @@ void DeviceContextD3D11Impl::Draw(const DrawAttribs& Attribs)
     }
 }
 
+void DeviceContextD3D11Impl::MultiDraw(const MultiDrawAttribs& Attribs)
+{
+    TDeviceContextBase::MultiDraw(Attribs, 0);
+
+    PrepareForDraw(Attribs.Flags);
+
+    if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
+    {
+        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+        {
+            const auto& Item = Attribs.pDrawItems[i];
+            if (Item.NumVertices > 0)
+            {
+                m_pd3d11DeviceContext->DrawInstanced(Item.NumVertices, Attribs.NumInstances, Item.StartVertexLocation, Attribs.FirstInstanceLocation);
+            }
+        }
+    }
+    else if (Attribs.NumInstances > 0)
+    {
+        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+        {
+            const auto& Item = Attribs.pDrawItems[i];
+            if (Item.NumVertices > 0)
+            {
+                m_pd3d11DeviceContext->Draw(Item.NumVertices, Item.StartVertexLocation);
+            }
+        }
+    }
+}
+
 void DeviceContextD3D11Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
     TDeviceContextBase::DrawIndexed(Attribs, 0);
@@ -684,6 +714,30 @@ void DeviceContextD3D11Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
             m_pd3d11DeviceContext->DrawIndexedInstanced(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
         else
             m_pd3d11DeviceContext->DrawIndexed(Attribs.NumIndices, Attribs.FirstIndexLocation, Attribs.BaseVertex);
+    }
+}
+
+void DeviceContextD3D11Impl::MultiDrawIndexed(const MultiDrawIndexedAttribs& Attribs)
+{
+    TDeviceContextBase::MultiDrawIndexed(Attribs, 0);
+
+    PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+
+    if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
+    {
+        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+        {
+            const auto& Item = Attribs.pDrawItems[i];
+            m_pd3d11DeviceContext->DrawIndexedInstanced(Item.NumIndices, Attribs.NumInstances, Item.FirstIndexLocation, Item.BaseVertex, Attribs.FirstInstanceLocation);
+        }
+    }
+    else if (Attribs.NumInstances > 0)
+    {
+        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+        {
+            const auto& Item = Attribs.pDrawItems[i];
+            m_pd3d11DeviceContext->DrawIndexed(Item.NumIndices, Item.FirstIndexLocation, Item.BaseVertex);
+        }
     }
 }
 

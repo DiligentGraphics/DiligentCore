@@ -114,10 +114,11 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(SubpassFramebufferFetch,           "Subpass framebuffer fetch is");
     ENABLE_FEATURE(TextureComponentSwizzle,           "Texture component swizzle is");
     ENABLE_FEATURE(TextureSubresourceViews,           "Texture subresource views are");
+    ENABLE_FEATURE(NativeMultiDraw,                   "Native multi-draw commands are");
     // clang-format on
 #undef ENABLE_FEATURE
 
-    ASSERT_SIZEOF(Diligent::DeviceFeatures, 42, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(Diligent::DeviceFeatures, 43, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return EnabledFeatures;
 }

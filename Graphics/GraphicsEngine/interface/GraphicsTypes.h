@@ -1797,6 +1797,17 @@ struct DeviceFeatures
     ///             texture can be created.
     DEVICE_FEATURE_STATE TextureSubresourceViews DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports native multi-draw commands.
+    ///
+    /// \remarks    When this feature is enabled, the GPU supports a dedicated command that
+    ///             can be used to issue multiple draw calls with a single command (e.g. vkCmdDrawMultiEXT,
+    ///             glMultiDrawElements, etc.). In OpenGL and Vulkan, the shader can access the draw
+    ///             command index using the gl_DrawID built-in variable.
+    ///
+    ///             When this feature is disabled, the engine emulates multi-draw commands by issuing
+    ///             multiple individual draw calls. The draw command index is unavailable.
+    DEVICE_FEATURE_STATE NativeMultiDraw DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
 
@@ -1842,11 +1853,12 @@ struct DeviceFeatures
     Handler(SparseResources)                   \
     Handler(SubpassFramebufferFetch)           \
     Handler(TextureComponentSwizzle)           \
-	Handler(TextureSubresourceViews)
+	Handler(TextureSubresourceViews)		   \
+	Handler(NativeMultiDraw)
 
     explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept
     {
-        static_assert(sizeof(*this) == 42, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
+        static_assert(sizeof(*this) == 43, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
     #define INIT_FEATURE(Feature) Feature = State;
         ENUMERATE_DEVICE_FEATURES(INIT_FEATURE)
     #undef INIT_FEATURE

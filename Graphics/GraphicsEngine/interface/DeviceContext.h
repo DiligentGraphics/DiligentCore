@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -650,6 +650,117 @@ struct DrawMeshIndirectAttribs
 #endif
 };
 typedef struct DrawMeshIndirectAttribs DrawMeshIndirectAttribs;
+
+
+/// Multi-draw command item.
+struct MultiDrawItem
+{
+    /// The number of vertices to draw.
+    Uint32     NumVertices           DEFAULT_INITIALIZER(0);
+
+    /// LOCATION (or INDEX, but NOT the byte offset) of the first vertex in the
+    /// vertex buffer to start reading vertices from.
+    Uint32     StartVertexLocation   DEFAULT_INITIALIZER(0);
+};
+typedef struct MultiDrawItem MultiDrawItem;
+
+/// MultiDraw command attributes.
+struct MultiDrawAttribs
+{
+    /// The number of draw items to execute.
+    Uint32               DrawCount   DEFAULT_INITIALIZER(0);
+
+    /// A pointer to the array of DrawCount draw command items.
+    const MultiDrawItem* pDrawItems  DEFAULT_INITIALIZER(nullptr);
+
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags                 DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+
+    /// The number of instances to draw. If more than one instance is specified,
+    /// instanced draw call will be performed.
+    Uint32     NumInstances          DEFAULT_INITIALIZER(1);
+
+    /// LOCATION (or INDEX, but NOT the byte offset) in the vertex buffer to start
+    /// reading instance data from.
+    Uint32     FirstInstanceLocation DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr MultiDrawAttribs() noexcept {}
+
+    constexpr MultiDrawAttribs(Uint32               _DrawCount,
+                               const MultiDrawItem* _pDrawItems,
+							   DRAW_FLAGS           _Flags,
+							   Uint32               _NumInstances          = 1,
+							   Uint32               _FirstInstanceLocation = 0) noexcept :
+		DrawCount            {_DrawCount            },
+		pDrawItems           {_pDrawItems           },
+		Flags                {_Flags                },
+		NumInstances         {_NumInstances         },
+		FirstInstanceLocation{_FirstInstanceLocation}
+	{}
+#endif
+};
+typedef struct MultiDrawAttribs MultiDrawAttribs;
+
+
+/// Multi-draw indexed command item.
+struct MultiDrawIndexedItem
+{
+    /// The number of indices to draw.
+    Uint32     NumIndices            DEFAULT_INITIALIZER(0);
+
+    /// LOCATION (NOT the byte offset) of the first index in
+    /// the index buffer to start reading indices from.
+    Uint32     FirstIndexLocation    DEFAULT_INITIALIZER(0);
+
+    /// A constant which is added to each index before accessing the vertex buffer.
+    Uint32     BaseVertex            DEFAULT_INITIALIZER(0);
+};
+typedef struct MultiDrawIndexedItem MultiDrawIndexedItem;
+
+/// MultiDraw command attributes.
+struct MultiDrawIndexedAttribs
+{
+    /// The number of draw items to execute.
+    Uint32                      DrawCount  DEFAULT_INITIALIZER(0);
+
+    /// A pointer to the array of DrawCount draw command items.
+    const MultiDrawIndexedItem* pDrawItems DEFAULT_INITIALIZER(nullptr);
+
+    /// The type of elements in the index buffer.
+    /// Allowed values: VT_UINT16 and VT_UINT32.
+    VALUE_TYPE IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED);
+
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags                 DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+
+    /// Number of instances to draw. If more than one instance is specified,
+    /// instanced draw call will be performed.
+    Uint32     NumInstances          DEFAULT_INITIALIZER(1);
+
+    /// LOCATION (or INDEX, but NOT the byte offset) in the vertex
+    /// buffer to start reading instance data from.
+    Uint32     FirstInstanceLocation DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+constexpr MultiDrawIndexedAttribs() noexcept {}
+
+	constexpr MultiDrawIndexedAttribs(Uint32                      _DrawCount,
+									  const MultiDrawIndexedItem* _pDrawItems,
+									  VALUE_TYPE                  _IndexType,
+									  DRAW_FLAGS                  _Flags,
+									  Uint32                      _NumInstances          = 1,
+									  Uint32                      _FirstInstanceLocation = 0) noexcept :
+		DrawCount            {_DrawCount            },
+		pDrawItems           {_pDrawItems           },
+		IndexType            {_IndexType            },
+		Flags                {_Flags                },
+		NumInstances         {_NumInstances         },
+		FirstInstanceLocation{_FirstInstanceLocation}
+	{}
+#endif
+};
+typedef struct MultiDrawIndexedAttribs MultiDrawIndexedAttribs;
 
 
 /// Defines which parts of the depth-stencil buffer to clear.
@@ -2126,6 +2237,12 @@ struct DeviceContextCommandCounters
     /// The total number of indexed indirect DrawIndexedIndirect calls.
     Uint32 DrawIndexedIndirect DEFAULT_INITIALIZER(0);
 
+    /// The total number of MultiDraw calls.
+    Uint32 MultiDraw DEFAULT_INITIALIZER(0);
+
+    /// The total number of MultiDrawIndexed calls.
+    Uint32 MultiDrawIndexed DEFAULT_INITIALIZER(0);
+
     /// The total number of DispatchCompute calls.
     Uint32 DispatchCompute DEFAULT_INITIALIZER(0);
 
@@ -2684,6 +2801,32 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(DrawMeshIndirect)(THIS_
                                           const DrawMeshIndirectAttribs REF Attribs) PURE;
+
+
+    /// Executes a multi-draw command.
+
+    /// \param [in] Attribs - Multi-draw command attributes, see Diligent::MultiDrawAttribs for details.
+    ///
+    /// \remarks  If the device does not support the NativeMultiDraw feature, the method will emulate it by
+    ///           issuing a sequence of individual draw commands. Note that draw command index is only
+    ///           available in the shader when the NativeMultiDraw feature is supported.
+    ///
+    /// \remarks Supported contexts: graphics.
+    VIRTUAL void METHOD(MultiDraw)(THIS_
+                                   const MultiDrawAttribs REF Attribs) PURE;
+    
+
+    /// Executes an indexed multi-draw command.
+
+    /// \param [in] Attribs - Multi-draw command attributes, see Diligent::MultiDrawIndexedAttribs for details.
+    ///
+    /// \remarks  If the device does not support the NativeMultiDraw feature, the method will emulate it by
+    ///           issuing a sequence of individual draw commands. Note that draw command index is only
+    ///           available in the shader when the NativeMultiDraw feature is supported.
+    ///
+    /// \remarks Supported contexts: graphics.
+    VIRTUAL void METHOD(MultiDrawIndexed)(THIS_
+                                          const MultiDrawIndexedAttribs REF Attribs) PURE;
 
 
     /// Executes a dispatch compute command.

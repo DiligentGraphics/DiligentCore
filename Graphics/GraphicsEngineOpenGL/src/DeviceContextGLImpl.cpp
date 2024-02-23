@@ -861,6 +861,18 @@ void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
     PostDraw();
 }
 
+void DeviceContextGLImpl::MultiDraw(const MultiDrawAttribs& Attribs)
+{
+    TDeviceContextBase::MultiDraw(Attribs, 0);
+
+    GLenum GlTopology;
+    PrepareForDraw(Attribs.Flags, false, GlTopology);
+
+    UNSUPPORTED("Not yet implemented");
+
+    PostDraw();
+}
+
 void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
     TDeviceContextBase::DrawIndexed(Attribs, 0);
@@ -904,6 +916,18 @@ void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
         }
         DEV_CHECK_GL_ERROR("OpenGL draw command failed");
     }
+
+    PostDraw();
+}
+
+void DeviceContextGLImpl::MultiDrawIndexed(const MultiDrawIndexedAttribs& Attribs)
+{
+    TDeviceContextBase::MultiDrawIndexed(Attribs, 0);
+
+    GLenum GlTopology;
+    PrepareForDraw(Attribs.Flags, true, GlTopology);
+
+    UNSUPPORTED("Not yet implemented");
 
     PostDraw();
 }

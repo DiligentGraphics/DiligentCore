@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -215,6 +215,32 @@ bool VerifyDrawMeshIndirectAttribs(const DrawMeshIndirectAttribs& Attribs, Uint3
     return true;
 }
 
+bool VerifyMultiDrawAttribs(const MultiDrawAttribs& Attribs)
+{
+    DEV_CHECK_ERR(Attribs.DrawCount == 0 || Attribs.pDrawItems != nullptr, "DrawCount is ", Attribs.DrawCount, ", but pDrawItems is null.");
+
+    if (Attribs.NumInstances == 0)
+        LOG_INFO_MESSAGE("MultiDrawAttribs.NumInstances is 0. This is OK as the draw command will be ignored, but may be unintentional.");
+
+    return true;
+}
+
+bool VerifyMultiDrawIndexedAttribs(const MultiDrawIndexedAttribs& Attribs)
+{
+    DEV_CHECK_ERR(Attribs.DrawCount == 0 || Attribs.pDrawItems != nullptr, "DrawCount is ", Attribs.DrawCount, ", but pDrawItems is null.");
+
+#define CHECK_MULTI_DRAW_INDEXED_ATTRIBS(Expr, ...) CHECK_PARAMETER(Expr, "Draw indexed attribs are invalid: ", __VA_ARGS__)
+
+    CHECK_MULTI_DRAW_INDEXED_ATTRIBS(Attribs.IndexType == VT_UINT16 || Attribs.IndexType == VT_UINT32,
+                                     "IndexType (", GetValueTypeString(Attribs.IndexType), ") must be VT_UINT16 or VT_UINT32.");
+
+    if (Attribs.NumInstances == 0)
+        LOG_INFO_MESSAGE("MultiDrawAttribs.NumInstances is 0. This is OK as the draw command will be ignored, but may be unintentional.");
+
+#undef CHECK_MULTI_DRAW_INDEXED_ATTRIBS
+
+    return true;
+}
 
 bool VerifyDispatchComputeAttribs(const DispatchComputeAttribs& Attribs)
 {

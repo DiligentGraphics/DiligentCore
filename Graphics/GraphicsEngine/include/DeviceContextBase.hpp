@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,6 +57,8 @@ bool VerifyDrawAttribs               (const DrawAttribs&                Attribs)
 bool VerifyDrawIndexedAttribs        (const DrawIndexedAttribs&         Attribs);
 bool VerifyDrawIndirectAttribs       (const DrawIndirectAttribs&        Attribs);
 bool VerifyDrawIndexedIndirectAttribs(const DrawIndexedIndirectAttribs& Attribs);
+bool VerifyMultiDrawAttribs          (const MultiDrawAttribs&           Attribs);
+bool VerifyMultiDrawIndexedAttribs   (const MultiDrawIndexedAttribs&    Attribs);
 
 bool VerifyDispatchComputeAttribs        (const DispatchComputeAttribs&         Attribs);
 bool VerifyDispatchComputeIndirectAttribs(const DispatchComputeIndirectAttribs& Attribs);
@@ -557,6 +559,8 @@ protected:
     void DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, int);
     void DrawMesh(const DrawMeshAttribs& Attribs, int);
     void DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, int);
+    void MultiDraw(const MultiDrawAttribs& Attribs, int);
+    void MultiDrawIndexed(const MultiDrawIndexedAttribs& Attribs, int);
     void DispatchCompute(const DispatchComputeAttribs& Attribs, int);
     void DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, int);
 
@@ -2361,6 +2365,59 @@ inline void DeviceContextBase<ImplementationTraits>::DrawMeshIndirect(const Draw
     }
 #endif
     ++m_Stats.CommandCounters.DrawMeshIndirect;
+}
+
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::MultiDraw(const MultiDrawAttribs& Attribs, int)
+{
+#ifdef DILIGENT_DEVELOPMENT
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0)
+    {
+        DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "MultiDraw");
+
+        DEV_CHECK_ERR(m_pPipelineState, "MultiDraw command arguments are invalid: no pipeline state is bound.");
+
+        DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
+                      "MultiDraw command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
+
+        DEV_CHECK_ERR(VerifyMultiDrawAttribs(Attribs), "MultiDrawAttribs are invalid");
+    }
+#endif
+    if (m_pPipelineState)
+    {
+        const auto Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
+        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+            m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.pDrawItems[i].NumVertices);
+    }
+    ++m_Stats.CommandCounters.MultiDraw;
+}
+
+template <typename ImplementationTraits>
+inline void DeviceContextBase<ImplementationTraits>::MultiDrawIndexed(const MultiDrawIndexedAttribs& Attribs, int)
+{
+#ifdef DILIGENT_DEVELOPMENT
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0)
+    {
+        DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_GRAPHICS, "MultiDrawIndexed");
+
+        DEV_CHECK_ERR(m_pPipelineState, "MultiDrawIndexed command arguments are invalid: no pipeline state is bound.");
+
+        DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS,
+                      "MultiDrawIndexed command arguments are invalid: pipeline state '",
+                      m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
+
+        DEV_CHECK_ERR(m_pIndexBuffer, "MultiDrawIndexed command arguments are invalid: no index buffer is bound.");
+
+        DEV_CHECK_ERR(VerifyMultiDrawIndexedAttribs(Attribs), "MultiDrawIndexedAttribs are invalid");
+    }
+#endif
+    if (m_pPipelineState)
+    {
+        const auto Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
+        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+            m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.pDrawItems[i].NumIndices);
+    }
+    ++m_Stats.CommandCounters.MultiDrawIndexed;
 }
 
 #ifdef DILIGENT_DEVELOPMENT
