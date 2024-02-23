@@ -835,6 +835,27 @@ void DeviceContextGLImpl::PostDraw()
     m_CommittedResourcesTentativeBarriers = MEMORY_BARRIER_NONE;
 }
 
+inline void DrawArrays(GLenum  GlTopology,
+                       GLsizei NumVertices,
+                       GLsizei NumInstances,
+                       GLint   StartVertexLocation,
+                       GLuint  FirstInstanceLocation)
+{
+    if (NumInstances > 1 || FirstInstanceLocation != 0)
+    {
+        if (FirstInstanceLocation != 0)
+            glDrawArraysInstancedBaseInstance(GlTopology, StartVertexLocation, NumVertices, NumInstances, FirstInstanceLocation);
+        else
+            glDrawArraysInstanced(GlTopology, StartVertexLocation, NumVertices, NumInstances);
+    }
+    else
+    {
+        glDrawArrays(GlTopology, StartVertexLocation, NumVertices);
+    }
+
+    DEV_CHECK_GL_ERROR("Draw failed");
+}
+
 void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
 {
     TDeviceContextBase::Draw(Attribs, 0);
@@ -844,18 +865,11 @@ void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
 
     if (Attribs.NumVertices > 0 && Attribs.NumInstances > 0)
     {
-        if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
-        {
-            if (Attribs.FirstInstanceLocation != 0)
-                glDrawArraysInstancedBaseInstance(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices, Attribs.NumInstances, Attribs.FirstInstanceLocation);
-            else
-                glDrawArraysInstanced(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices, Attribs.NumInstances);
-        }
-        else
-        {
-            glDrawArrays(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices);
-        }
-        DEV_CHECK_GL_ERROR("OpenGL draw command failed");
+        DrawArrays(GlTopology,
+                   Attribs.NumVertices,
+                   Attribs.NumInstances,
+                   Attribs.StartVertexLocation,
+                   Attribs.FirstInstanceLocation);
     }
 
     PostDraw();
@@ -868,9 +882,58 @@ void DeviceContextGLImpl::MultiDraw(const MultiDrawAttribs& Attribs)
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, false, GlTopology);
 
-    UNSUPPORTED("Not yet implemented");
-
+    if (Attribs.NumInstances > 0)
+    {
+        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+        {
+            const auto& DrawItem = Attribs.pDrawItems[i];
+            if (DrawItem.NumVertices > 0)
+            {
+                DrawArrays(GlTopology,
+                           DrawItem.NumVertices,
+                           Attribs.NumInstances,
+                           DrawItem.StartVertexLocation,
+                           Attribs.FirstInstanceLocation);
+            }
+        }
+    }
     PostDraw();
+}
+
+inline void DrawElements(GLenum  GlTopology,
+                         GLsizei NumIndices,
+                         GLenum  GLIndexType,
+                         GLsizei NumInstances,
+                         size_t  FirstIndexByteOffset,
+                         GLint   BaseVertex,
+                         GLuint  FirstInstanceLocation)
+{
+    if (NumInstances > 1 || FirstInstanceLocation != 0)
+    {
+        if (BaseVertex > 0)
+        {
+            if (FirstInstanceLocation != 0)
+                glDrawElementsInstancedBaseVertexBaseInstance(GlTopology, NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(FirstIndexByteOffset), NumInstances, BaseVertex, FirstInstanceLocation);
+            else
+                glDrawElementsInstancedBaseVertex(GlTopology, NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(FirstIndexByteOffset), NumInstances, BaseVertex);
+        }
+        else
+        {
+            if (FirstInstanceLocation != 0)
+                glDrawElementsInstancedBaseInstance(GlTopology, NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(FirstIndexByteOffset), NumInstances, FirstInstanceLocation);
+            else
+                glDrawElementsInstanced(GlTopology, NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(FirstIndexByteOffset), NumInstances);
+        }
+    }
+    else
+    {
+        if (BaseVertex > 0)
+            glDrawElementsBaseVertex(GlTopology, NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(FirstIndexByteOffset), BaseVertex);
+        else
+            glDrawElements(GlTopology, NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(FirstIndexByteOffset));
+    }
+
+    DEV_CHECK_GL_ERROR("DrawElements failed");
 }
 
 void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
@@ -890,31 +953,13 @@ void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 
     if (Attribs.NumIndices > 0 && Attribs.NumInstances > 0)
     {
-        if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
-        {
-            if (Attribs.BaseVertex > 0)
-            {
-                if (Attribs.FirstInstanceLocation != 0)
-                    glDrawElementsInstancedBaseVertexBaseInstance(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
-                else
-                    glDrawElementsInstancedBaseVertex(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances, Attribs.BaseVertex);
-            }
-            else
-            {
-                if (Attribs.FirstInstanceLocation != 0)
-                    glDrawElementsInstancedBaseInstance(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances, Attribs.FirstInstanceLocation);
-                else
-                    glDrawElementsInstanced(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.NumInstances);
-            }
-        }
-        else
-        {
-            if (Attribs.BaseVertex > 0)
-                glDrawElementsBaseVertex(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)), Attribs.BaseVertex);
-            else
-                glDrawElements(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>(static_cast<size_t>(FirstIndexByteOffset)));
-        }
-        DEV_CHECK_GL_ERROR("OpenGL draw command failed");
+        DrawElements(GlTopology,
+                     Attribs.NumIndices,
+                     GLIndexType,
+                     Attribs.NumInstances,
+                     FirstIndexByteOffset,
+                     Attribs.BaseVertex,
+                     Attribs.FirstInstanceLocation);
     }
 
     PostDraw();
@@ -926,8 +971,28 @@ void DeviceContextGLImpl::MultiDrawIndexed(const MultiDrawIndexedAttribs& Attrib
 
     GLenum GlTopology;
     PrepareForDraw(Attribs.Flags, true, GlTopology);
+    GLenum GLIndexType;
+    size_t FirstIndexByteOffset;
+    PrepareForIndexedDraw(Attribs.IndexType, 0, GLIndexType, FirstIndexByteOffset);
 
-    UNSUPPORTED("Not yet implemented");
+    if (Attribs.NumInstances > 0)
+    {
+        const auto IndexSize = GetValueSize(Attribs.IndexType);
+        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+        {
+            const auto& DrawItem = Attribs.pDrawItems[i];
+            if (DrawItem.NumIndices > 0)
+            {
+                DrawElements(GlTopology,
+                             DrawItem.NumIndices,
+                             GLIndexType,
+                             Attribs.NumInstances,
+                             FirstIndexByteOffset + StaticCast<size_t>(IndexSize * Uint64{DrawItem.FirstIndexLocation}),
+                             DrawItem.BaseVertex,
+                             Attribs.FirstInstanceLocation);
+            }
+        }
+    }
 
     PostDraw();
 }

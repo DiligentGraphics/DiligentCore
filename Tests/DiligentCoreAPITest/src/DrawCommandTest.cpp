@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -3402,6 +3402,65 @@ TEST_F(DrawCommandTest, VertexAttributes)
     }
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, MultiDraw)
+{
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawPSO);
+
+    auto     pVB    = CreateVertexBuffer(Vert, sizeof(Vert));
+    IBuffer* pVBs[] = {pVB};
+    pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    MultiDrawItem DrawItems[] =
+        {
+            {3, 0},
+            {3, 3},
+        };
+
+    MultiDrawAttribs drawAttrs{_countof(DrawItems), DrawItems, DRAW_FLAG_VERIFY_ALL};
+    pContext->MultiDraw(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, MultiDrawIndexed)
+{
+    auto* pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {},
+        Vert[0], {}, Vert[1], {}, {}, Vert[2],
+        Vert[3], {}, {}, Vert[5], Vert[4]
+    };
+    const Uint32 Indices[] = {2,4,7, 8,12,11};
+    // clang-format on
+
+    auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[] = {pVB};
+    pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    MultiDrawIndexedItem DrawItems[] =
+        {
+            {3, 0},
+            {3, 3},
+        };
+
+    MultiDrawIndexedAttribs drawAttrs{_countof(DrawItems), DrawItems, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    pContext->MultiDrawIndexed(drawAttrs);
 
     Present();
 }
