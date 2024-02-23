@@ -1441,4 +1441,16 @@ extern PFNGLCLIPCONTROLPROC glClipControl;
 #   define GL_KHR_debug 1
 #endif
 
+
+// GL_EXT_multi_draw_arrays
+#define LOAD_GL_MULTI_DRAW_ARRAYS
+typedef void (GL_APIENTRY* PFNGLMULTIDRAWARRAYSPROC) (GLenum mode, const GLint *first, const GLsizei *count, GLsizei drawcount);
+extern PFNGLMULTIDRAWARRAYSPROC glMultiDrawArrays;
+
+#define LOAD_GL_MULTI_DRAW_ELEMENTS
+typedef void (GL_APIENTRY* PFNGLMULTIDRAWELEMENTSPROC) (GLenum mode, const GLsizei *count, GLenum type, const void *const*indices, GLsizei drawcount);
+extern PFNGLMULTIDRAWELEMENTSPROC glMultiDrawElements;
+
+#define glMultiDrawElementsBaseVertex(...) UnsupportedGLFunctionStub("glMultiDrawElementsBaseVertex")
+
 void LoadGLFunctions();

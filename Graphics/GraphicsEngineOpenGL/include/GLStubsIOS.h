@@ -629,6 +629,10 @@ void UnsupportedGLFunctionStub(const T& Name)
 #define glDrawElementsInstancedBaseInstance(...)           UnsupportedGLFunctionStub("glDrawElementsInstancedBaseInstance")
 #define glDrawArraysInstancedBaseInstance(...)             UnsupportedGLFunctionStub("glDrawArraysInstancedBaseInstance")
 #define glDrawElementsBaseVertex(...)                      UnsupportedGLFunctionStub("glDrawElementsBaseVertex")
+#define glMultiDrawArrays(...)                             UnsupportedGLFunctionStub("glMultiDrawArrays")
+#define glMultiDrawElements(...)                           UnsupportedGLFunctionStub("glMultiDrawElements")
+#define glMultiDrawElementsBaseVertex(...)                 UnsupportedGLFunctionStub("glMultiDrawElementsBaseVertex")
+
 static void (*glTextureView)(GLuint texture, GLenum target, GLuint origtexture, GLenum internalformat, GLuint minlevel, GLuint numlevels, GLuint minlayer, GLuint numlayers) = nullptr;
 #define glTexStorage1D(...)            UnsupportedGLFunctionStub("glTexStorage1D")
 #define glTexSubImage1D(...)           UnsupportedGLFunctionStub("glTexSubImage1D")

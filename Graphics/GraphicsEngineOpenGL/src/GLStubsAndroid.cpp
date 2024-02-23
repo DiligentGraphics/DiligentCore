@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -269,6 +269,13 @@
     DECLARE_GL_FUNCTION( glMultiDrawElementsIndirect, PFNGLMULTIDRAWELEMENTSINDIRECTPROC, GLenum mode, GLenum type, const void *indirect, GLsizei primcount, GLsizei stride)
 #endif
 
+#ifdef LOAD_GL_MULTI_DRAW_ARRAYS
+    DECLARE_GL_FUNCTION( glMultiDrawArrays, PFNGLMULTIDRAWARRAYSPROC, GLenum mode, const GLint *first, const GLsizei *count, GLsizei drawcount)
+#endif
+
+#ifdef LOAD_GL_MULTI_DRAW_ELEMENTS
+	DECLARE_GL_FUNCTION( glMultiDrawElements, PFNGLMULTIDRAWELEMENTSPROC, GLenum mode, const GLsizei *count, GLenum type, const void *const*indices, GLsizei drawcount)
+#endif
 
 void LoadGLFunctions()
 {
@@ -519,5 +526,13 @@ void LoadGLFunctions()
 
 #ifdef LOAD_GL_MULTIDRAW_ELEMENTS_INDIRECT
     LOAD_GL_FUNCTION_NO_STUB(glMultiDrawElementsIndirect, {{"glMultiDrawElementsIndirectEXT", {3,1}}} );
+#endif
+
+#ifdef LOAD_GL_MULTI_DRAW_ARRAYS
+    LOAD_GL_FUNCTION_NO_STUB(glMultiDrawArrays, {{"glMultiDrawArraysEXT", {3,0}}} );
+#endif
+
+#ifdef LOAD_GL_MULTI_DRAW_ELEMENTS
+	LOAD_GL_FUNCTION_NO_STUB(glMultiDrawElements, {{"glMultiDrawElementsEXT", {3,0}}} );
 #endif
 }

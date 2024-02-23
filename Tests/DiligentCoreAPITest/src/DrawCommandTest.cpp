@@ -418,9 +418,18 @@ out gl_PerVertex
 #ifdef VULKAN
 #   define gl_VertexID gl_VertexIndex
 #   define gl_InstanceID gl_InstanceIndex
+#   define OUT_LOCATION(X) layout(location=X) // Requires separable programs
+#else
+#   define OUT_LOCATION(X)
 #endif
 
-layout(location = 0)out vec3 _PSIn_Color;
+#if __VERSION__ >= 460
+#   define DRAW_ID gl_DrawID
+#else
+#   define DRAW_ID gl_DrawIDARB
+#endif
+
+OUT_LOCATION(0) out vec3 _PSIn_Color;
 
 void main()
 {
@@ -439,7 +448,7 @@ void main()
     Colors[1] = vec3(0.0,  1.0,  0.0);
     Colors[2] = vec3(0.0,  0.0,  1.0);
 
-    gl_Position = Verts[gl_DrawID * 3 + gl_VertexID];
+    gl_Position = Verts[DRAW_ID * 3 + gl_VertexID];
     _PSIn_Color = Colors[gl_VertexID];
 }
 )"
@@ -3532,10 +3541,13 @@ RefCntAutoPtr<IPipelineState> CreateNativeMultiDrawPSO()
 
     RefCntAutoPtr<IShader> pVS;
     {
-        ShaderCI.Desc           = {"Draw command test - native multi draw", SHADER_TYPE_VERTEX, true};
-        ShaderCI.EntryPoint     = "main";
-        ShaderCI.Source         = GLSL::DrawTest_VS_DrawId.c_str();
-        ShaderCI.GLSLExtensions = "#extension GL_ARB_shader_draw_parameters : enable\n";
+        ShaderCI.Desc       = {"Draw command test - native multi draw", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = GLSL::DrawTest_VS_DrawId.c_str();
+        if (pDevice->GetDeviceInfo().IsGLDevice())
+        {
+            ShaderCI.GLSLExtensions = "#extension GL_ARB_shader_draw_parameters : enable\n";
+        }
         pDevice->CreateShader(ShaderCI, &pVS);
         if (!pVS) return {};
     }

@@ -853,7 +853,7 @@ inline void DrawArrays(GLenum  GlTopology,
         glDrawArrays(GlTopology, StartVertexLocation, NumVertices);
     }
 
-    DEV_CHECK_GL_ERROR("Draw failed");
+    DEV_CHECK_GL_ERROR("DrawaArrays failed");
 }
 
 void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
@@ -875,6 +875,25 @@ void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
     PostDraw();
 }
 
+inline void MultiDrawArrays(GLenum         GlTopology,
+                            GLsizei        DrawCount,
+                            const GLsizei* NumVertices,
+                            const GLint*   StartVertexLocation,
+                            GLsizei        NumInstances,
+                            GLuint         FirstInstanceLocation)
+{
+    if (NumInstances > 1 || FirstInstanceLocation != 0)
+    {
+        UNSUPPORTED("Instanced multi-draw is not currently supported in OpenGL");
+    }
+    else
+    {
+        glMultiDrawArrays(GlTopology, StartVertexLocation, NumVertices, DrawCount);
+    }
+
+    DEV_CHECK_GL_ERROR("MultiDrawArrays failed");
+}
+
 void DeviceContextGLImpl::MultiDraw(const MultiDrawAttribs& Attribs)
 {
     TDeviceContextBase::MultiDraw(Attribs, 0);
@@ -884,16 +903,49 @@ void DeviceContextGLImpl::MultiDraw(const MultiDrawAttribs& Attribs)
 
     if (Attribs.NumInstances > 0)
     {
-        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+        if (m_NativeMultiDrawSupported)
         {
-            const auto& DrawItem = Attribs.pDrawItems[i];
-            if (DrawItem.NumVertices > 0)
+            size_t NumVerticesDataSize = AlignUp(sizeof(GLsizei) * Attribs.DrawCount, sizeof(void*));
+            size_t StartVertexDataSize = AlignUp(sizeof(GLint) * Attribs.DrawCount, sizeof(void*));
+            m_ScratchSpace.resize(NumVerticesDataSize + StartVertexDataSize);
+
+            GLsizei* NumVertices         = reinterpret_cast<GLsizei*>(m_ScratchSpace.data());
+            GLint*   StartVertexLocation = reinterpret_cast<GLint*>(m_ScratchSpace.data() + NumVerticesDataSize);
+
+            GLsizei DrawCount = 0;
+            for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
             {
-                DrawArrays(GlTopology,
-                           DrawItem.NumVertices,
-                           Attribs.NumInstances,
-                           DrawItem.StartVertexLocation,
-                           Attribs.FirstInstanceLocation);
+                const auto& DrawItem = Attribs.pDrawItems[i];
+                if (DrawItem.NumVertices > 0)
+                {
+                    NumVertices[DrawCount]         = DrawItem.NumVertices;
+                    StartVertexLocation[DrawCount] = DrawItem.StartVertexLocation;
+                    ++DrawCount;
+                }
+            }
+            if (DrawCount > 0)
+            {
+                MultiDrawArrays(GlTopology,
+                                DrawCount,
+                                NumVertices,
+                                StartVertexLocation,
+                                Attribs.NumInstances,
+                                Attribs.FirstInstanceLocation);
+            }
+        }
+        else
+        {
+            for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+            {
+                const auto& DrawItem = Attribs.pDrawItems[i];
+                if (DrawItem.NumVertices > 0)
+                {
+                    DrawArrays(GlTopology,
+                               DrawItem.NumVertices,
+                               Attribs.NumInstances,
+                               DrawItem.StartVertexLocation,
+                               Attribs.FirstInstanceLocation);
+                }
             }
         }
     }
@@ -965,6 +1017,31 @@ void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     PostDraw();
 }
 
+inline void MultiDrawElements(GLenum   GlTopology,
+                              GLsizei  DrawCount,
+                              GLsizei* NumIndices,
+                              GLenum   GLIndexType,
+                              GLsizei  NumInstances,
+                              void**   FirstIndexByteOffset,
+                              GLint*   BaseVertex,
+                              GLuint   FirstInstanceLocation)
+{
+    if (NumInstances > 1 || FirstInstanceLocation != 0)
+    {
+        UNSUPPORTED("Instanced multi-draw is not currently supported in OpenGL");
+    }
+    else
+    {
+        if (BaseVertex != nullptr)
+            glMultiDrawElementsBaseVertex(GlTopology, NumIndices, GLIndexType, FirstIndexByteOffset, DrawCount, BaseVertex);
+        else
+            glMultiDrawElements(GlTopology, NumIndices, GLIndexType, FirstIndexByteOffset, DrawCount);
+    }
+
+    DEV_CHECK_GL_ERROR("MultiDrawElements failed");
+}
+
+
 void DeviceContextGLImpl::MultiDrawIndexed(const MultiDrawIndexedAttribs& Attribs)
 {
     TDeviceContextBase::MultiDrawIndexed(Attribs, 0);
@@ -977,19 +1054,61 @@ void DeviceContextGLImpl::MultiDrawIndexed(const MultiDrawIndexedAttribs& Attrib
 
     if (Attribs.NumInstances > 0)
     {
-        const auto IndexSize = GetValueSize(Attribs.IndexType);
-        for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+        const size_t IndexSize = GetValueSize(Attribs.IndexType);
+        if (m_NativeMultiDrawSupported)
         {
-            const auto& DrawItem = Attribs.pDrawItems[i];
-            if (DrawItem.NumIndices > 0)
+            const size_t IndexDataSize      = AlignUp(sizeof(GLsizei) * Attribs.DrawCount, sizeof(void*));
+            const size_t OffsetDataSize     = AlignUp(sizeof(void*) * Attribs.DrawCount, sizeof(void*));
+            const size_t BaseVertexDataSize = AlignUp(sizeof(GLint) * Attribs.DrawCount, sizeof(void*));
+
+            m_ScratchSpace.resize(IndexDataSize + OffsetDataSize + BaseVertexDataSize);
+
+            GLsizei* NumIndices = reinterpret_cast<GLsizei*>(m_ScratchSpace.data());
+            void**   Offsets    = reinterpret_cast<void**>(m_ScratchSpace.data() + IndexDataSize);
+            GLint*   BaseVertex = reinterpret_cast<GLint*>(m_ScratchSpace.data() + IndexDataSize + OffsetDataSize);
+
+            GLsizei DrawCount     = 0;
+            bool    HasBaseVertex = false;
+            for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
             {
-                DrawElements(GlTopology,
-                             DrawItem.NumIndices,
-                             GLIndexType,
-                             Attribs.NumInstances,
-                             FirstIndexByteOffset + StaticCast<size_t>(IndexSize * Uint64{DrawItem.FirstIndexLocation}),
-                             DrawItem.BaseVertex,
-                             Attribs.FirstInstanceLocation);
+                const auto& DrawItem = Attribs.pDrawItems[i];
+                if (DrawItem.NumIndices > 0)
+                {
+                    NumIndices[DrawCount] = DrawItem.NumIndices;
+                    Offsets[DrawCount]    = reinterpret_cast<void*>(FirstIndexByteOffset + IndexSize * static_cast<size_t>(DrawItem.FirstIndexLocation));
+                    BaseVertex[DrawCount] = DrawItem.BaseVertex;
+                    if (BaseVertex[DrawCount] != 0)
+                        HasBaseVertex = true;
+                    ++DrawCount;
+                }
+            }
+            if (DrawCount > 0)
+            {
+                MultiDrawElements(GlTopology,
+                                  DrawCount,
+                                  NumIndices,
+                                  GLIndexType,
+                                  Attribs.NumInstances,
+                                  Offsets,
+                                  HasBaseVertex ? BaseVertex : nullptr,
+                                  Attribs.FirstInstanceLocation);
+            }
+        }
+        else
+        {
+            for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
+            {
+                const auto& DrawItem = Attribs.pDrawItems[i];
+                if (DrawItem.NumIndices > 0)
+                {
+                    DrawElements(GlTopology,
+                                 DrawItem.NumIndices,
+                                 GLIndexType,
+                                 Attribs.NumInstances,
+                                 FirstIndexByteOffset + IndexSize * static_cast<size_t>(DrawItem.FirstIndexLocation),
+                                 DrawItem.BaseVertex,
+                                 Attribs.FirstInstanceLocation);
+                }
             }
         }
     }
