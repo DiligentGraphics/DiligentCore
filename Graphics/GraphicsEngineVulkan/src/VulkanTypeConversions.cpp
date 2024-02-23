@@ -2030,7 +2030,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
                   ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE));
 
     INIT_FEATURE(NativeMultiDraw,
-                 ExtFeatures.MultiDraw.multiDraw != VK_FALSE);
+                 ExtFeatures.MultiDraw.multiDraw != VK_FALSE && ExtFeatures.ShaderDrawParameters.shaderDrawParameters != VK_FALSE);
 
 #undef INIT_FEATURE
 

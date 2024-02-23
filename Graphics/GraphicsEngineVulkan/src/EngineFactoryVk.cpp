@@ -1153,6 +1153,12 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
 
                 *NextExt = &EnabledExtFeats.MultiDraw;
                 NextExt  = &EnabledExtFeats.MultiDraw.pNext;
+
+
+                EnabledExtFeats.ShaderDrawParameters = DeviceExtFeatures.ShaderDrawParameters;
+
+                *NextExt = &EnabledExtFeats.ShaderDrawParameters;
+                NextExt  = &EnabledExtFeats.ShaderDrawParameters.pNext;
             }
 
             // Append user-defined features

@@ -374,7 +374,9 @@ void main(in  VSInput VSIn,
 
 namespace GLSL
 {
+
 // clang-format off
+
 const std::string DrawTest_VSStructuredBufferArray{
 R"(
 layout(std140) readonly buffer g_Buffers
@@ -403,7 +405,48 @@ void main()
 }
 )"
 };
+
+const std::string DrawTest_VS_DrawId{
+R"(
+#ifndef GL_ES
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+#endif
+
+#ifdef VULKAN
+#   define gl_VertexID gl_VertexIndex
+#   define gl_InstanceID gl_InstanceIndex
+#endif
+
+layout(location = 0)out vec3 _PSIn_Color;
+
+void main()
+{
+    vec4 Verts[6];
+
+    Verts[0] = vec4(-1.0,  -0.5,  0.0,  1.0);
+    Verts[1] = vec4(-0.5,  +0.5,  0.0,  1.0);
+    Verts[2] = vec4( 0.0,  -0.5,  0.0,  1.0);
+
+    Verts[3] = vec4(+0.0,  -0.5,  0.0,  1.0);
+    Verts[4] = vec4(+0.5,  +0.5,  0.0,  1.0);
+    Verts[5] = vec4(+1.0,  -0.5,  0.0,  1.0);
+
+    vec3 Colors[3];
+    Colors[0] = vec3(1.0,  0.0,  0.0);
+    Colors[1] = vec3(0.0,  1.0,  0.0);
+    Colors[2] = vec3(0.0,  0.0,  1.0);
+
+    gl_Position = Verts[gl_DrawID * 3 + gl_VertexID];
+    _PSIn_Color = Colors[gl_VertexID];
+}
+)"
+};
+
 // clang-format on
+
 } // namespace GLSL
 
 namespace MSL
@@ -3459,6 +3502,114 @@ TEST_F(DrawCommandTest, MultiDrawIndexed)
             {3, 3},
         };
 
+    MultiDrawIndexedAttribs drawAttrs{_countof(DrawItems), DrawItems, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    pContext->MultiDrawIndexed(drawAttrs);
+
+    Present();
+}
+
+RefCntAutoPtr<IPipelineState> CreateNativeMultiDrawPSO()
+{
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    auto* const pSwapChain = pEnv->GetSwapChain();
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+    GraphicsPipeline.NumRenderTargets             = 1;
+    GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc           = {"Draw command test - native multi draw", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint     = "main";
+        ShaderCI.Source         = GLSL::DrawTest_VS_DrawId.c_str();
+        ShaderCI.GLSLExtensions = "#extension GL_ARB_shader_draw_parameters : enable\n";
+        pDevice->CreateShader(ShaderCI, &pVS);
+        if (!pVS) return {};
+    }
+
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc           = {"Draw command test pixel shader", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint     = "main";
+        ShaderCI.Source         = HLSL::DrawTest_PS.c_str();
+        ShaderCI.GLSLExtensions = nullptr;
+        pDevice->CreateShader(ShaderCI, &pPS);
+        if (!pPS) return {};
+    }
+
+    PSOCreateInfo.pVS = pVS;
+    PSOCreateInfo.pPS = pPS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    return pPSO;
+}
+
+TEST_F(DrawCommandTest, NativeMultiDraw)
+{
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.NativeMultiDraw)
+        GTEST_SKIP() << "Native multi draw is not supported by this device";
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    auto pPSO = CreateNativeMultiDrawPSO();
+    ASSERT_TRUE(pPSO);
+
+    SetRenderTargets(pPSO);
+
+    MultiDrawItem DrawItems[] =
+        {
+            {3, 0},
+            {3, 0},
+        };
+    MultiDrawAttribs drawAttrs{_countof(DrawItems), DrawItems, DRAW_FLAG_VERIFY_ALL};
+    pContext->MultiDraw(drawAttrs);
+
+    Present();
+}
+
+
+TEST_F(DrawCommandTest, NativeMultiDrawIndexed)
+{
+    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceInfo().Features.NativeMultiDraw)
+        GTEST_SKIP() << "Native multi draw is not supported by this device";
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    auto pPSO = CreateNativeMultiDrawPSO();
+    ASSERT_TRUE(pPSO);
+
+    SetRenderTargets(pPSO);
+
+    const Uint32 Indices[] = {0, 1, 2};
+
+    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    MultiDrawIndexedItem DrawItems[] =
+        {
+            {3, 0},
+            {3, 0},
+        };
     MultiDrawIndexedAttribs drawAttrs{_countof(DrawItems), DrawItems, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
     pContext->MultiDrawIndexed(drawAttrs);
 

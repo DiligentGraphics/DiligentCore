@@ -325,6 +325,11 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const CreateInfo& CI) :
 
             m_ExtFeatures.MultiDraw.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT;
 
+            *NextFeat = &m_ExtFeatures.ShaderDrawParameters;
+            NextFeat  = &m_ExtFeatures.ShaderDrawParameters.pNext;
+
+            m_ExtFeatures.ShaderDrawParameters.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETER_FEATURES;
+
             *NextProp = &m_ExtProperties.MultiDraw;
             NextProp  = &m_ExtProperties.MultiDraw.pNext;
 
