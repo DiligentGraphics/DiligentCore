@@ -606,6 +606,8 @@ GPUTestingEnvironment::~GPUTestingEnvironment()
                 "\n    DispatchTile              ", CmdCounters.DispatchTile,
                 "\n    DrawMesh                  ", CmdCounters.DrawMesh,
                 "\n    DrawMeshIndirect          ", CmdCounters.DrawMeshIndirect,
+                "\n    MultiDraw                 ", CmdCounters.MultiDraw,
+                "\n    MultiDrawIndexed          ", CmdCounters.MultiDrawIndexed,
                 "\n    BuildBLAS                 ", CmdCounters.BuildBLAS,
                 "\n    BuildTLAS                 ", CmdCounters.BuildTLAS,
                 "\n    CopyBLAS                  ", CmdCounters.CopyBLAS,
