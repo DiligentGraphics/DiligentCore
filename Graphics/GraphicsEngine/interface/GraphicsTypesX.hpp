@@ -2333,6 +2333,13 @@ public:
         return SyncDrawItems();
     }
 
+    template <typename... ArgsType>
+    MultiDrawAttribsX& AddDrawItem(ArgsType&&... args)
+    {
+        const MultiDrawItem Item{std::forward<ArgsType>(args)...};
+        return AddDrawItem(Item);
+    }
+
     MultiDrawAttribsX& ClearDrawItems()
     {
         m_DrawItems.clear();
@@ -2447,6 +2454,14 @@ public:
         m_DrawItems.push_back(Item);
         return SyncDrawItems();
     }
+
+    template <typename... ArgsType>
+    MultiDrawAttribsX& AddDrawItem(ArgsType&&... args)
+    {
+        const MultiDrawItem Item{std::forward<ArgsType>(args)...};
+        return AddDrawItem(Item);
+    }
+
 
     MultiDrawIndexedAttribsX& ClearDrawItems()
     {
