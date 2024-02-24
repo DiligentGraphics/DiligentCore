@@ -2253,4 +2253,233 @@ private:
     IShaderResourceVariable* m_pVar = nullptr;
 };
 
+
+/// C++ wrapper over MultiDrawAttribs.
+class MultiDrawAttribsX
+{
+public:
+    MultiDrawAttribsX() noexcept {}
+
+    MultiDrawAttribsX(const MultiDrawAttribs& Attribs) :
+        m_Attribs{Attribs},
+        m_DrawItems{Attribs.pDrawItems, Attribs.pDrawItems + Attribs.DrawCount}
+    {
+        SyncDrawItems();
+    }
+
+    MultiDrawAttribsX(const std::initializer_list<MultiDrawItem>& DrawItems,
+                      DRAW_FLAGS                                  Flags,
+                      Uint32                                      NumInstances          = 1,
+                      Uint32                                      FirstInstanceLocation = 0) :
+        m_Attribs{0, nullptr, Flags, NumInstances, FirstInstanceLocation},
+        m_DrawItems{DrawItems}
+    {
+        SyncDrawItems();
+    }
+
+    MultiDrawAttribsX(const MultiDrawAttribsX& Other) :
+        m_Attribs{Other.m_Attribs},
+        m_DrawItems{Other.m_DrawItems}
+    {
+        SyncDrawItems();
+    }
+
+    MultiDrawAttribsX(MultiDrawAttribsX&& Other) noexcept :
+        m_Attribs{std::move(Other.m_Attribs)},
+        m_DrawItems{std::move(Other.m_DrawItems)}
+    {
+        SyncDrawItems();
+        Other.m_Attribs.DrawCount  = 0;
+        Other.m_Attribs.pDrawItems = nullptr;
+    }
+
+    MultiDrawAttribsX& operator=(const MultiDrawAttribsX& Other)
+    {
+        MultiDrawAttribsX Copy{Other};
+        std::swap(*this, Copy);
+        return *this;
+    }
+
+    MultiDrawAttribsX& operator=(MultiDrawAttribsX&& Other) noexcept
+    {
+        MultiDrawAttribsX Copy{std::move(Other)};
+        std::swap(*this, Copy);
+        Other.m_Attribs.DrawCount  = 0;
+        Other.m_Attribs.pDrawItems = nullptr;
+        return *this;
+    }
+
+    MultiDrawAttribsX& SetFlags(DRAW_FLAGS Flags) noexcept
+    {
+        m_Attribs.Flags = Flags;
+        return *this;
+    }
+
+    MultiDrawAttribsX& SetNumInstances(Uint32 NumInstances) noexcept
+    {
+        m_Attribs.NumInstances = NumInstances;
+        return *this;
+    }
+
+    MultiDrawAttribsX& SetFirstInstanceLocation(Uint32 FirstInstanceLocation) noexcept
+    {
+        m_Attribs.FirstInstanceLocation = FirstInstanceLocation;
+        return *this;
+    }
+
+    MultiDrawAttribsX& AddDrawItem(const MultiDrawItem& Item)
+    {
+        m_DrawItems.push_back(Item);
+        return SyncDrawItems();
+    }
+
+    MultiDrawAttribsX& ClearDrawItems()
+    {
+        m_DrawItems.clear();
+        return SyncDrawItems();
+    }
+
+    MultiDrawItem& GetDrawItem(Uint32 Index)
+    {
+        return m_DrawItems[Index];
+    }
+
+    const MultiDrawItem& GetDrawItem(Uint32 Index) const
+    {
+        return m_DrawItems[Index];
+    }
+
+    operator const MultiDrawAttribs&() const
+    {
+        return m_Attribs;
+    }
+
+private:
+    MultiDrawAttribsX& SyncDrawItems()
+    {
+        m_Attribs.pDrawItems = m_DrawItems.data();
+        m_Attribs.DrawCount  = static_cast<Uint32>(m_DrawItems.size());
+        return *this;
+    }
+
+private:
+    MultiDrawAttribs           m_Attribs;
+    std::vector<MultiDrawItem> m_DrawItems;
+};
+
+
+/// C++ wrapper over MultiDrawIndexedAttribs.
+class MultiDrawIndexedAttribsX
+{
+public:
+    MultiDrawIndexedAttribsX() noexcept {}
+
+    MultiDrawIndexedAttribsX(const MultiDrawIndexedAttribs& Attribs) :
+        m_Attribs{Attribs},
+        m_DrawItems{Attribs.pDrawItems, Attribs.pDrawItems + Attribs.DrawCount}
+    {
+        SyncDrawItems();
+    }
+
+    MultiDrawIndexedAttribsX(const std::initializer_list<MultiDrawIndexedItem>& DrawItems,
+                             VALUE_TYPE                                         IndexType,
+                             DRAW_FLAGS                                         Flags,
+                             Uint32                                             NumInstances          = 1,
+                             Uint32                                             FirstInstanceLocation = 0) :
+        m_Attribs{0, nullptr, IndexType, Flags, NumInstances, FirstInstanceLocation},
+        m_DrawItems{DrawItems}
+    {
+        SyncDrawItems();
+    }
+
+    MultiDrawIndexedAttribsX(const MultiDrawIndexedAttribsX& Other) :
+        m_Attribs{Other.m_Attribs},
+        m_DrawItems{Other.m_DrawItems}
+    {
+        SyncDrawItems();
+    }
+
+    MultiDrawIndexedAttribsX(MultiDrawIndexedAttribsX&& Other) noexcept :
+        m_Attribs{std::move(Other.m_Attribs)},
+        m_DrawItems{std::move(Other.m_DrawItems)}
+    {
+        SyncDrawItems();
+        Other.m_Attribs.DrawCount  = 0;
+        Other.m_Attribs.pDrawItems = nullptr;
+    }
+
+    MultiDrawIndexedAttribsX& operator=(const MultiDrawIndexedAttribsX& Other)
+    {
+        MultiDrawIndexedAttribsX Copy{Other};
+        std::swap(*this, Copy);
+        return *this;
+    }
+
+    MultiDrawIndexedAttribsX& operator=(MultiDrawIndexedAttribsX&& Other) noexcept
+    {
+        MultiDrawIndexedAttribsX Copy{std::move(Other)};
+        std::swap(*this, Copy);
+        Other.m_Attribs.DrawCount  = 0;
+        Other.m_Attribs.pDrawItems = nullptr;
+        return *this;
+    }
+
+    MultiDrawIndexedAttribsX& SetFlags(DRAW_FLAGS Flags) noexcept
+    {
+        m_Attribs.Flags = Flags;
+        return *this;
+    }
+
+    MultiDrawIndexedAttribsX& SetNumInstances(Uint32 NumInstances) noexcept
+    {
+        m_Attribs.NumInstances = NumInstances;
+        return *this;
+    }
+
+    MultiDrawIndexedAttribsX& SetFirstInstanceLocation(Uint32 FirstInstanceLocation) noexcept
+    {
+        m_Attribs.FirstInstanceLocation = FirstInstanceLocation;
+        return *this;
+    }
+
+    MultiDrawIndexedAttribsX& AddDrawItem(const MultiDrawIndexedItem& Item)
+    {
+        m_DrawItems.push_back(Item);
+        return SyncDrawItems();
+    }
+
+    MultiDrawIndexedAttribsX& ClearDrawItems()
+    {
+        m_DrawItems.clear();
+        return SyncDrawItems();
+    }
+
+    MultiDrawIndexedItem& GetDrawItem(Uint32 Index)
+    {
+        return m_DrawItems[Index];
+    }
+
+    const MultiDrawIndexedItem& GetDrawItem(Uint32 Index) const
+    {
+        return m_DrawItems[Index];
+    }
+
+    operator const MultiDrawIndexedAttribs&() const
+    {
+        return m_Attribs;
+    }
+
+private:
+    MultiDrawIndexedAttribsX& SyncDrawItems()
+    {
+        m_Attribs.pDrawItems = m_DrawItems.data();
+        m_Attribs.DrawCount  = static_cast<Uint32>(m_DrawItems.size());
+        return *this;
+    }
+
+private:
+    MultiDrawIndexedAttribs           m_Attribs;
+    std::vector<MultiDrawIndexedItem> m_DrawItems;
+};
+
 } // namespace Diligent
