@@ -2395,7 +2395,10 @@ inline void DeviceContextBase<ImplementationTraits>::MultiDraw(const MultiDrawAt
         for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
             m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.pDrawItems[i].NumVertices);
     }
-    ++m_Stats.CommandCounters.MultiDraw;
+    if (m_NativeMultiDrawSupported)
+        ++m_Stats.CommandCounters.MultiDraw;
+    else
+        m_Stats.CommandCounters.Draw += Attribs.DrawCount;
 }
 
 template <typename ImplementationTraits>
@@ -2423,7 +2426,10 @@ inline void DeviceContextBase<ImplementationTraits>::MultiDrawIndexed(const Mult
         for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
             m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.pDrawItems[i].NumIndices);
     }
-    ++m_Stats.CommandCounters.MultiDrawIndexed;
+    if (m_NativeMultiDrawSupported)
+        ++m_Stats.CommandCounters.MultiDrawIndexed;
+    else
+        m_Stats.CommandCounters.DrawIndexed += Attribs.DrawCount;
 }
 
 #ifdef DILIGENT_DEVELOPMENT
