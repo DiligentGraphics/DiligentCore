@@ -33,6 +33,39 @@
 namespace Diligent
 {
 
+static void SetFirstVertexConvention(EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ContextHandle)
+{
+    // There is no c++ way to set the first vertex convention, so we have to use JavaScript.
+    EM_ASM(
+        {
+            try
+            {
+                const context = GL.getContext($0);
+                if (!context)
+                {
+                    console.error('Failed to get gl context from handle');
+                    return;
+                }
+
+                const epv = context.GLctx.getExtension('WEBGL_provoking_vertex');
+                if (epv)
+                {
+                    epv.provokingVertexWEBGL(epv.FIRST_VERTEX_CONVENTION_WEBGL);
+                }
+                else
+                {
+                    console.warn('WEBGL_provoking_vertex is not supported. Using flat shading may result in catastrophic performance degradation.');
+                }
+            }
+            catch (error)
+            {
+                console.error('An unexpected error occurred while setting the first vertex convention: ', error,
+                              '\nUsing flat shading may result in catastrophic performance degradation.');
+            }
+        },
+        ContextHandle);
+};
+
 GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& DevType, Version& APIVersion, const struct SwapChainDesc* /*pSCDesc*/)
 {
     if (InitAttribs.Window.pCanvasId != nullptr)
@@ -92,6 +125,14 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, RENDER_DEVICE_TYPE& 
 
     DevType    = RENDER_DEVICE_TYPE_GLES;
     APIVersion = Version{static_cast<Uint32>(MajorVersion), static_cast<Uint32>(MinorVersion)};
+
+    if (InitAttribs.Window.pCanvasId != nullptr)
+    {
+        // By default, OpenGL uses LAST_VERTEX_CONVENTION. Not only is this inconsistent with all other APIs,
+        // but most importantly this may result in catastrophic performance degradation.
+        // https://bugs.chromium.org/p/angleproject/issues/detail?id=8566
+        SetFirstVertexConvention(m_GLContext);
+    }
 }
 
 GLContext::~GLContext()
