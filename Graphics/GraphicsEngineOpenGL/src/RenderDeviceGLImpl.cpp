@@ -245,6 +245,15 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
             LOG_ERROR_MESSAGE("Failed to enable primitive restart");
         }
     }
+
+    {
+        // In all APIs except for OpenGL, the first primitive vertex is the provoking vertex
+        // for flat shading. In OpenGL, the last vertex is the provoking vertex by default.
+        // Make the behavior consistent across all APIs
+        glProvokingVertex(GL_FIRST_VERTEX_CONVENTION);
+        if (glGetError() != GL_NO_ERROR)
+            LOG_ERROR_MESSAGE("Failed to set provoking vertex convention to GL_FIRST_VERTEX_CONVENTION");
+    }
 #endif
 
     InitAdapterInfo();
