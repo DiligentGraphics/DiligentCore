@@ -264,22 +264,7 @@ void TextureCubeArray_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, G
 
     // Every OpenGL API call that operates on cubemap array textures takes layer-faces, not array layers.
     // So the parameters that represent the Z component are layer-faces.
-    if (ViewDesc.NumArraySlices == m_Desc.ArraySize)
-    {
-        // glFramebufferTexture() attaches the given mipmap level as a layered image with the number of layers that the given texture has.
-        if (Targets & FRAMEBUFFER_TARGET_FLAG_DRAW)
-        {
-            VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
-            glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-            DEV_CHECK_GL_ERROR("Failed to attach texture cubemap array to draw framebuffer");
-        }
-        if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
-        {
-            glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-            DEV_CHECK_GL_ERROR("Failed to attach texture cubemap array to read framebuffer");
-        }
-    }
-    else if (ViewDesc.NumArraySlices == 1)
+    if (ViewDesc.NumArraySlices == 1)
     {
         // Texture name must either be zero or the name of an existing 3D texture, 1D or 2D array texture,
         // cube map array texture, or multisample array texture.
@@ -292,6 +277,21 @@ void TextureCubeArray_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, G
         if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
         {
             glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstArraySlice);
+            DEV_CHECK_GL_ERROR("Failed to attach texture cubemap array to read framebuffer");
+        }
+    }
+    else if (ViewDesc.NumArraySlices == m_Desc.ArraySize)
+    {
+        // glFramebufferTexture() attaches the given mipmap level as a layered image with the number of layers that the given texture has.
+        if (Targets & FRAMEBUFFER_TARGET_FLAG_DRAW)
+        {
+            VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
+            glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
+            DEV_CHECK_GL_ERROR("Failed to attach texture cubemap array to draw framebuffer");
+        }
+        if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
+        {
+            glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
             DEV_CHECK_GL_ERROR("Failed to attach texture cubemap array to read framebuffer");
         }
     }

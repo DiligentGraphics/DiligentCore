@@ -197,21 +197,7 @@ void Texture3D_GL::UpdateData(GLContextState&          ContextState,
 void Texture3D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint, FRAMEBUFFER_TARGET_FLAGS Targets)
 {
     auto NumDepthSlicesInMip = m_Desc.Depth >> ViewDesc.MostDetailedMip;
-    if (ViewDesc.NumDepthSlices == NumDepthSlicesInMip)
-    {
-        if (Targets & FRAMEBUFFER_TARGET_FLAG_DRAW)
-        {
-            VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
-            glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-            DEV_CHECK_GL_ERROR("Failed to attach texture 3D to draw framebuffer");
-        }
-        if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
-        {
-            glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-            DEV_CHECK_GL_ERROR("Failed to attach texture 3D to read framebuffer");
-        }
-    }
-    else if (ViewDesc.NumDepthSlices == 1)
+    if (ViewDesc.NumDepthSlices == 1)
     {
         // For glFramebufferTexture3D(), if texture name is not zero, then texture target must be GL_TEXTURE_3D
         //glFramebufferTexture3D( GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_BindTarget, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstDepthSlice );
@@ -228,6 +214,20 @@ void Texture3D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum A
         if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
         {
             glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstDepthSlice);
+            DEV_CHECK_GL_ERROR("Failed to attach texture 3D to read framebuffer");
+        }
+    }
+    else if (ViewDesc.NumDepthSlices == NumDepthSlicesInMip)
+    {
+        if (Targets & FRAMEBUFFER_TARGET_FLAG_DRAW)
+        {
+            VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
+            glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
+            DEV_CHECK_GL_ERROR("Failed to attach texture 3D to draw framebuffer");
+        }
+        if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
+        {
+            glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
             DEV_CHECK_GL_ERROR("Failed to attach texture 3D to read framebuffer");
         }
     }

@@ -258,22 +258,7 @@ void Texture2DArray_GL::UpdateData(GLContextState&          ContextState,
 
 void Texture2DArray_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint, FRAMEBUFFER_TARGET_FLAGS Targets)
 {
-
-    if (ViewDesc.NumArraySlices == m_Desc.ArraySize)
-    {
-        if (Targets & FRAMEBUFFER_TARGET_FLAG_DRAW)
-        {
-            VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
-            glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-            DEV_CHECK_GL_ERROR("Failed to attach texture 2D array to draw framebuffer");
-        }
-        if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
-        {
-            glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
-            DEV_CHECK_GL_ERROR("Failed to attach texture 2D array to read framebuffer");
-        }
-    }
-    else if (ViewDesc.NumArraySlices == 1)
+    if (ViewDesc.NumArraySlices == 1)
     {
         // Texture name must either be zero or the name of an existing 3D texture, 1D or 2D array texture,
         // cube map array texture, or multisample array texture.
@@ -286,6 +271,22 @@ void Texture2DArray_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLe
         if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
         {
             glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip, ViewDesc.FirstArraySlice);
+            DEV_CHECK_GL_ERROR("Failed to attach texture 2D array to read framebuffer");
+        }
+    }
+    else if (ViewDesc.NumArraySlices == m_Desc.ArraySize)
+    {
+        // NOTE: there is no glFramebufferTexture in WebGL, so we must use glFramebufferTextureLayer for single-slice array textures.
+
+        if (Targets & FRAMEBUFFER_TARGET_FLAG_DRAW)
+        {
+            VERIFY_EXPR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL);
+            glFramebufferTexture(GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
+            DEV_CHECK_GL_ERROR("Failed to attach texture 2D array to draw framebuffer");
+        }
+        if (Targets & FRAMEBUFFER_TARGET_FLAG_READ)
+        {
+            glFramebufferTexture(GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, ViewDesc.MostDetailedMip);
             DEV_CHECK_GL_ERROR("Failed to attach texture 2D array to read framebuffer");
         }
     }
