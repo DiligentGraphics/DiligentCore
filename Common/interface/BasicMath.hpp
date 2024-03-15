@@ -2683,6 +2683,46 @@ T WrapToRange(T Value, T Min, T Range)
     return Result + Min;
 }
 
+/// Constructs an orthonormal basis from the given direction vector.
+///
+/// \param[in] Dir           - The direction vector.
+/// \param[in] IsRightHanded - Flag indicating if the basis should be right-handed.
+/// \param[out] X            - The resulting X basis vector.
+/// \param[out] Y            - The resulting Y basis vector.
+/// \param[out] Z            - The resulting Z basis vector.
+/// \return                    True if the basis was successfully constructed, and false otherwise.
+template <typename T>
+bool BasisFromDirection(const Vector3<T>& Dir, bool IsRightHanded, Vector3<T>& X, Vector3<T>& Y, Vector3<T>& Z)
+{
+    auto Len = length(Dir);
+    if (Len < static_cast<T>(1e-5))
+        return false;
+
+    Z = Dir / Len;
+
+    Vector3<T> AbsZ{
+        std::abs(Z.x),
+        std::abs(Z.y),
+        std::abs(Z.z),
+    };
+    auto min_cmp = (std::min)((std::min)(AbsZ.x, AbsZ.y), AbsZ.z);
+    if (min_cmp == AbsZ.x)
+        X = {1, 0, 0};
+    else if (min_cmp == AbsZ.y)
+        X = {0, 1, 0};
+    else
+        X = {0, 0, 1};
+
+    Y = cross(Z, X);
+    X = cross(Y, Z);
+    X = normalize(X);
+    Y = normalize(Y);
+    if (!IsRightHanded)
+        Y = -Y;
+
+    return true;
+}
+
 inline std::ostream& operator<<(std::ostream& os, const float4& vec)
 {
     return os << "float4(" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ')';
