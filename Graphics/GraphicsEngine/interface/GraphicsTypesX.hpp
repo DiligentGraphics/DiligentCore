@@ -767,6 +767,13 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
         return SyncDesc();
     }
 
+    PipelineResourceSignatureDescX& RemoveResource(size_t Idx)
+    {
+        VERIFY_EXPR(Idx < ResCopy.size());
+        ResCopy.erase(ResCopy.begin() + Idx);
+        return SyncDesc();
+    }
+
     PipelineResourceSignatureDescX& RemoveImmutableSampler(const char* SamName, SHADER_TYPE Stages = SHADER_TYPE_ALL)
     {
         VERIFY_EXPR(!IsNullOrEmptyStr(SamName));
@@ -777,6 +784,13 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
             else
                 ++it;
         }
+        return SyncDesc();
+    }
+
+    PipelineResourceSignatureDescX& RemoveImmutableSampler(size_t Idx)
+    {
+        VERIFY_EXPR(Idx < ImtblSamCopy.size());
+        ImtblSamCopy.erase(ImtblSamCopy.begin() + Idx);
         return SyncDesc();
     }
 
@@ -817,6 +831,16 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
         PipelineResourceSignatureDescX CleanDesc;
         std::swap(*this, CleanDesc);
         return *this;
+    }
+
+    const PipelineResourceDesc& GetResource(size_t Index) const
+    {
+        return ResCopy[Index];
+    }
+
+    const ImmutableSamplerDesc& GetImmutableSampler(size_t Index) const
+    {
+        return ImtblSamCopy[Index];
     }
 
 private:
