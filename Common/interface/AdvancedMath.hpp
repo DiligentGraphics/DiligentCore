@@ -231,6 +231,15 @@ struct BoundBox
         return NewBB;
     }
 
+    float3 GetCorner(size_t i) const
+    {
+        return {
+            (i & 0x01u) ? Max.x : Min.x,
+            (i & 0x02u) ? Max.y : Min.y,
+            (i & 0x04u) ? Max.z : Min.z,
+        };
+    }
+
     BoundBox Combine(const BoundBox& Box) const
     {
         return {
