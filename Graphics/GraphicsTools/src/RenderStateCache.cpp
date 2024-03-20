@@ -49,6 +49,7 @@
 #include "XXH128Hasher.hpp"
 #include "CallbackWrapper.hpp"
 #include "GraphicsAccessories.hpp"
+#include "ShaderSourceFactoryUtils.hpp"
 
 namespace Diligent
 {
@@ -583,8 +584,23 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
         if (*ppShader == nullptr)
         {
             auto _ShaderCI = ShaderCI;
+
+            RefCntAutoPtr<IShaderSourceInputStreamFactory> pCompoundReloadSource;
             if (m_pReloadSource)
-                _ShaderCI.pShaderSourceStreamFactory = m_pReloadSource;
+            {
+                if (ShaderCI.pShaderSourceStreamFactory)
+                {
+                    // Create compound shader source factory that will first try to load shader from the reload source
+                    // and if it fails, will fall back to the original source factory.
+                    pCompoundReloadSource =
+                        CreateCompoundShaderSourceFactory({m_pReloadSource, ShaderCI.pShaderSourceStreamFactory});
+                    _ShaderCI.pShaderSourceStreamFactory = pCompoundReloadSource;
+                }
+                else
+                {
+                    _ShaderCI.pShaderSourceStreamFactory = m_pReloadSource;
+                }
+            }
             ReloadableShader::Create(this, pShader, _ShaderCI, ppShader);
 
             std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};

@@ -55,9 +55,10 @@ struct MemoryShaderSourceFactoryCreateInfoX
         SyncDesc(true);
     }
 
-    MemoryShaderSourceFactoryCreateInfoX(const std::initializer_list<MemoryShaderSourceFileInfo>& _Sources) :
+    MemoryShaderSourceFactoryCreateInfoX(const std::initializer_list<MemoryShaderSourceFileInfo>& _Sources, bool CopySources) :
         Sources{_Sources}
     {
+        Desc.CopySources = CopySources;
         SyncDesc(true);
     }
 
@@ -146,9 +147,9 @@ inline RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateMemoryShaderSourceFa
     return pFactory;
 }
 
-inline RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateMemoryShaderSourceFactory(const std::initializer_list<MemoryShaderSourceFileInfo>& Sources)
+inline RefCntAutoPtr<IShaderSourceInputStreamFactory> CreateMemoryShaderSourceFactory(const std::initializer_list<MemoryShaderSourceFileInfo>& Sources, bool CopySources = false)
 {
-    MemoryShaderSourceFactoryCreateInfoX CI{Sources};
+    MemoryShaderSourceFactoryCreateInfoX CI{Sources, CopySources};
     return CreateMemoryShaderSourceFactory(CI);
 }
 
