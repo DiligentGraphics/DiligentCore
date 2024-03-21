@@ -196,6 +196,7 @@ bool PSOSerializer<Mode>::SerializeCreateInfo(
                CreateInfo.GraphicsPipeline.ShadingRateFlags,
                CreateInfo.GraphicsPipeline.RTVFormats,
                CreateInfo.GraphicsPipeline.DSVFormat,
+               CreateInfo.GraphicsPipeline.ReadOnlyDSV,
                CreateInfo.GraphicsPipeline.SmplDesc,
                RenderPassName); // for CreateInfo.GraphicsPipeline.pRenderPass
 

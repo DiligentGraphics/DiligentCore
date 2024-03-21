@@ -369,8 +369,12 @@ TEST(PSOSerializerTest, SerializeGraphicsPSOCreateInfo)
             {
                 GraphicsPipeline.RTVFormats[i] = Val(TEX_FORMAT_UNKNOWN, TEX_FORMAT_NUM_FORMATS - 1, i + 1);
             }
+            GraphicsPipeline.DSVFormat        = Val(TEX_FORMAT_UNKNOWN, TEX_FORMAT_NUM_FORMATS - 1, 9);
+            GraphicsPipeline.ReadOnlyDSV      = Val.Bool();
             GraphicsPipeline.SmplDesc.Count   = Val(Uint8{0}, Uint8{64});
             GraphicsPipeline.SmplDesc.Quality = Val(Uint8{0}, Uint8{8});
+
+            ASSERT_SIZEOF64(GraphicsPipelineStateCreateInfo, 344, "Did you add a new member to GraphicsPipelineStateCreateInfo? Please add serialization test here.");
         }
 
         void Measure(Serializer<SerializerMode::Measure>& Ser, const GraphicsPipelineStateCreateInfo& CI, const TPRSNames& PRSNames)
