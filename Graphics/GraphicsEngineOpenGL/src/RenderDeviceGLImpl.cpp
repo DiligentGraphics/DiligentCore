@@ -848,7 +848,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             ENABLE_FEATURE(UniformBuffer8BitAccess,       CheckExtension("GL_EXT_shader_8bit_storage"));
             ENABLE_FEATURE(TextureComponentSwizzle,       IsGL46OrAbove || CheckExtension("GL_ARB_texture_swizzle"));
             ENABLE_FEATURE(TextureSubresourceViews,       IsGL43OrAbove || CheckExtension("GL_ARB_texture_view"));
-            ENABLE_FEATURE(NativeMultiDraw,               true);
+            ENABLE_FEATURE(NativeMultiDraw,               IsGL46OrAbove || CheckExtension("GL_ARB_shader_draw_parameters")); // Requirements for gl_DrawID
             // clang-format on
 
             TexProps.MaxTexture1DDimension      = MaxTextureSize;
