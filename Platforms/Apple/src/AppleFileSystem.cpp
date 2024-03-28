@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,10 +38,10 @@
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
 
-namespace
+namespace Diligent
 {
 
-std::string FindResource(const std::string& FilePath)
+std::string AppleFileSystem::FindResource(const std::string& FilePath)
 {
     std::string dir, name;
     Diligent::BasicFileSystem::GetPathComponents(FilePath, &dir, &name);
@@ -72,11 +72,6 @@ std::string FindResource(const std::string& FilePath)
     }
     return resource_path;
 }
-
-} // namespace
-
-namespace Diligent
-{
 
 AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
