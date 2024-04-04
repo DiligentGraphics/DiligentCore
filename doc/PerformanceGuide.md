@@ -79,3 +79,4 @@ Metal backend and Vulkan on top of Metal don't natively support subpasses. To le
 * [PowerVR](http://cdn.imgtec.com/sdk-documentation/PowerVR_Performance_Recommendations.pdf) by Imagination Technologies
 * [Metal Best Practices Guide](https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/MTLBestPracticesGuide/index.html) by Apple
 * [Apple Tech Talks - Graphics & Games](https://developer.apple.com/videos/graphics-games)
+* [How to capture WebGL with Renderdoc](https://edw.is/renderdoc-webgl/)
