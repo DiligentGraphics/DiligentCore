@@ -173,7 +173,7 @@ private:
             if (ShaderCI.GLSLVersion != ShaderVersion{})
                 Options.version = ShaderCI.GLSLVersion.Major * 100 + ShaderCI.GLSLVersion.Minor * 10;
             else
-                Options.version = 450;
+                Options.version = 430;
         }
         else if (DeviceType == RENDER_DEVICE_TYPE_GLES)
         {
