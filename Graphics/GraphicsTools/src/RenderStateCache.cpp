@@ -447,6 +447,7 @@ private:
 private:
     RefCntAutoPtr<IRenderDevice>                   m_pDevice;
     const RENDER_DEVICE_TYPE                       m_DeviceType;
+    const size_t                                   m_DeviceHash; // Hash of the device-specific properties
     const RenderStateCacheCreateInfo               m_CI;
     RefCntAutoPtr<IShaderSourceInputStreamFactory> m_pReloadSource;
     RefCntAutoPtr<ISerializationDevice>            m_pSerializationDevice;
@@ -466,12 +467,22 @@ private:
     std::unordered_map<IPipelineState*, RefCntWeakPtr<IPipelineState>> m_ReloadablePipelines;
 };
 
+static size_t ComputeDeviceAttribsHash(IRenderDevice* pDevice)
+{
+    if (pDevice == nullptr)
+        return 0;
+
+    const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
+    return ComputeHash(DeviceInfo.Type, DeviceInfo.NDC.MinZ, DeviceInfo.Features.SeparablePrograms);
+}
+
 RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRefCounters,
                                            const RenderStateCacheCreateInfo& CreateInfo) :
     TBase{pRefCounters},
     // clang-format off
     m_pDevice      {CreateInfo.pDevice},
     m_DeviceType   {CreateInfo.pDevice != nullptr ? CreateInfo.pDevice->GetDeviceInfo().Type : RENDER_DEVICE_TYPE_UNDEFINED},
+    m_DeviceHash   {ComputeDeviceAttribsHash(CreateInfo.pDevice)},
     m_CI           {CreateInfo},
     m_pReloadSource{CreateInfo.pReloadSource}
 // clang-format on
@@ -625,7 +636,7 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
 #else
     constexpr bool IsDebug = false;
 #endif
-    Hasher.Update(ShaderCI, m_DeviceType, IsDebug);
+    Hasher.Update(ShaderCI, m_DeviceHash, IsDebug);
     const auto Hash = Hasher.Digest();
 
     // First, try to check if the shader has already been requested
@@ -1071,7 +1082,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
     VERIFY_EXPR(ppPipelineState != nullptr && *ppPipelineState == nullptr);
 
     XXH128State Hasher;
-    Hasher.Update(PSOCreateInfo, m_DeviceType);
+    Hasher.Update(PSOCreateInfo, m_DeviceHash);
     const auto Hash = Hasher.Digest();
 
     // First, try to check if the PSO has already been requested
