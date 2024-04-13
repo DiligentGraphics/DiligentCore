@@ -40,6 +40,7 @@
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLUtils.hpp"
 #    include "GLSLangUtils.hpp"
+#    include "spirv_glsl.hpp"
 #endif
 
 namespace Diligent
@@ -59,15 +60,28 @@ namespace
 
 struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
 {
-    const String           UnrolledSource;
+    String                 UnrolledSource;
     RefCntAutoPtr<IShader> pShaderGL;
+    bool                   IsOptimized = false;
 
-    CompiledShaderGL(IReferenceCounters*             pRefCounters,
-                     const ShaderCreateInfo&         ShaderCI,
-                     const ShaderGLImpl::CreateInfo& GLShaderCI,
-                     IRenderDevice*                  pRenderDeviceGL) :
-        UnrolledSource{UnrollSource(ShaderCI)}
+    CompiledShaderGL(IReferenceCounters*                          pRefCounters,
+                     const ShaderCreateInfo&                      ShaderCI,
+                     const ShaderGLImpl::CreateInfo&              GLShaderCI,
+                     IRenderDevice*                               pRenderDeviceGL,
+                     RENDER_DEVICE_TYPE                           DeviceType,
+                     const SerializationDeviceImpl::GLProperties& GLProps)
     {
+        if (GLProps.OptimizeShaders)
+        {
+            UnrolledSource = TransformSource(ShaderCI, GLShaderCI, DeviceType, GLProps);
+            IsOptimized    = !UnrolledSource.empty();
+        }
+        if (UnrolledSource.empty())
+        {
+            UnrolledSource = UnrollSource(ShaderCI);
+        }
+        VERIFY_EXPR(!UnrolledSource.empty());
+
         // Use serialization CI to be consistent with what will be saved in the archive.
         const auto SerializationCI = GetSerializationCI(ShaderCI);
         if (pRenderDeviceGL)
@@ -93,6 +107,11 @@ struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
         ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
         ShaderCI.Macros         = {}; // Macros are inlined into unrolled source
 
+        if (IsOptimized)
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
+            ShaderCI.EntryPoint     = "main";
+        }
         return ShaderCI;
     }
 
@@ -120,6 +139,88 @@ private:
         }
         Source.append(UnrollShaderIncludes(CI));
         return Source;
+    }
+
+    static String TransformSource(const ShaderCreateInfo&                      ShaderCI,
+                                  const ShaderGLImpl::CreateInfo&              GLShaderCI,
+                                  RENDER_DEVICE_TYPE                           DeviceType,
+                                  const SerializationDeviceImpl::GLProperties& GLProps)
+    {
+        std::string OptimizedGLSL;
+
+#if !DILIGENT_NO_GLSLANG
+        const std::string GLSLSourceString = ShaderGLImpl::BuildGLSLSourceString(
+            ShaderCI, GLShaderCI.DeviceInfo, GLShaderCI.AdapterInfo, GLProps.ZeroToOneClipZ);
+
+        GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
+        Attribs.ShaderType = ShaderCI.Desc.ShaderType;
+        VERIFY_EXPR(DeviceType == RENDER_DEVICE_TYPE_GL || DeviceType == RENDER_DEVICE_TYPE_GLES);
+        Attribs.Version = DeviceType == RENDER_DEVICE_TYPE_GL ? GLSLangUtils::SpirvVersion::GL : GLSLangUtils::SpirvVersion::GLES;
+
+        Attribs.ppCompilerOutput = GLShaderCI.ppCompilerOutput;
+        Attribs.ShaderSource     = GLSLSourceString.c_str();
+        Attribs.SourceCodeLen    = static_cast<int>(GLSLSourceString.length());
+
+        const std::vector<unsigned int> SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
+        if (SPIRV.empty())
+            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
+
+        diligent_spirv_cross::CompilerGLSL Compiler{SPIRV};
+
+        diligent_spirv_cross::CompilerGLSL::Options Options;
+        if (DeviceType == RENDER_DEVICE_TYPE_GL)
+        {
+            if (ShaderCI.GLSLVersion != ShaderVersion{})
+                Options.version = ShaderCI.GLSLVersion.Major * 100 + ShaderCI.GLSLVersion.Minor * 10;
+            else
+                Options.version = 450;
+        }
+        else if (DeviceType == RENDER_DEVICE_TYPE_GLES)
+        {
+            if (ShaderCI.GLESSLVersion != ShaderVersion{})
+                Options.version = ShaderCI.GLESSLVersion.Major * 100 + ShaderCI.GLESSLVersion.Minor * 10;
+            else
+                Options.version = 310;
+            Options.es = true;
+        }
+        else
+        {
+            UNEXPECTED("Unexpected device type");
+        }
+        Options.separate_shader_objects = GLShaderCI.DeviceInfo.Features.SeparablePrograms;
+        // On some targets (WebGPU), uninitialized variables are banned.
+        Options.force_zero_initialized_variables = true;
+        // For opcodes where we have to perform explicit additional nan checks, very ugly code is generated.
+        Options.relax_nan_checks = true;
+
+        Options.fragment.default_float_precision = diligent_spirv_cross::CompilerGLSL::Options::Precision::DontCare;
+        Options.fragment.default_int_precision   = diligent_spirv_cross::CompilerGLSL::Options::Precision::DontCare;
+
+        Compiler.set_common_options(Options);
+
+        OptimizedGLSL = Compiler.compile();
+        if (OptimizedGLSL.empty())
+            LOG_ERROR_AND_THROW("Failed to generate GLSL for shader '", ShaderCI.Desc.Name, "'");
+
+        // Remove #version directive
+        const size_t VersionPos = OptimizedGLSL.find("#version");
+        if (VersionPos != std::string::npos)
+        {
+            const size_t NewLinePos = OptimizedGLSL.find('\n', VersionPos);
+            if (NewLinePos != std::string::npos)
+                OptimizedGLSL.erase(VersionPos, NewLinePos - VersionPos + 1);
+        }
+
+        SHADER_SOURCE_LANGUAGE SourceLang = ParseShaderSourceLanguageDefinition(GLSLSourceString);
+        if (SourceLang == SHADER_SOURCE_LANGUAGE_DEFAULT)
+        {
+            SourceLang = ShaderCI.SourceLanguage;
+        }
+
+        AppendShaderSourceLanguageDefinition(OptimizedGLSL, SourceLang);
+#endif
+
+        return OptimizedGLSL;
     }
 };
 
@@ -237,34 +338,8 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
         ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
     };
 
-    CreateShader<CompiledShaderGL>(DeviceType::OpenGL, pRefCounters, ShaderCI, GLShaderCI, m_pDevice->GetRenderDevice(DeviceType));
-
-#if !DILIGENT_NO_GLSLANG
-    if (m_pDevice->GetGLProperties().ValidateShaders)
-    {
-        const auto* pCompiledShaderGL = GetShader<CompiledShaderGL>(DeviceObjectArchive::DeviceType::OpenGL);
-        VERIFY_EXPR(pCompiledShaderGL != nullptr);
-
-        const void* Source    = nullptr;
-        Uint64      SourceLen = 0;
-        // For OpenGL, GetBytecode returns the full GLSL source
-        pCompiledShaderGL->pShaderGL->GetBytecode(&Source, SourceLen);
-        VERIFY_EXPR(Source != nullptr && SourceLen != 0);
-
-        GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
-
-        Attribs.ShaderType = ShaderCI.Desc.ShaderType;
-        VERIFY_EXPR(DeviceType == RENDER_DEVICE_TYPE_GL || DeviceType == RENDER_DEVICE_TYPE_GLES);
-        Attribs.Version = DeviceType == RENDER_DEVICE_TYPE_GL ? GLSLangUtils::SpirvVersion::GL : GLSLangUtils::SpirvVersion::GLES;
-
-        Attribs.ppCompilerOutput = ppCompilerOutput;
-        Attribs.ShaderSource     = static_cast<const char*>(Source);
-        Attribs.SourceCodeLen    = static_cast<int>(SourceLen);
-
-        if (GLSLangUtils::GLSLtoSPIRV(Attribs).empty())
-            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
-    }
-#endif
+    CreateShader<CompiledShaderGL>(DeviceType::OpenGL, pRefCounters, ShaderCI, GLShaderCI, m_pDevice->GetRenderDevice(DeviceType),
+                                   DeviceType, m_pDevice->GetGLProperties());
 }
 
 } // namespace Diligent

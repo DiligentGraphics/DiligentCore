@@ -85,6 +85,11 @@ public:
         DataSize = m_GLSLSourceString.length();
     }
 
+    static std::string BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
+                                             const RenderDeviceInfo&    DeviceInfo,
+                                             const GraphicsAdapterInfo& AdapterInfo,
+                                             bool                       ZeroToOneClipZ);
+
 private:
     SHADER_SOURCE_LANGUAGE                   m_SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
     std::string                              m_GLSLSourceString;

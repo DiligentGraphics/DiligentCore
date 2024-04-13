@@ -126,7 +126,12 @@ if(VULKAN_SUPPORTED)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
-    target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineOpenGL-static)
+    target_link_libraries(Diligent-Archiver-static
+    PRIVATE
+        Diligent-GraphicsEngineOpenGL-static
+        spirv-cross-core
+        spirv-cross-glsl
+    )
     target_include_directories(Diligent-Archiver-static PRIVATE ../GraphicsEngineOpenGL/include)
 
     if(PLATFORM_WIN32)

@@ -86,7 +86,8 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
 
     if (m_ValidDeviceFlags & (ARCHIVE_DEVICE_DATA_FLAG_GL | ARCHIVE_DEVICE_DATA_FLAG_GLES))
     {
-        m_GLProps.ValidateShaders = CreateInfo.GL.ValidateShaders;
+        m_GLProps.OptimizeShaders = CreateInfo.GL.OptimizeShaders;
+        m_GLProps.ZeroToOneClipZ  = CreateInfo.GL.ZeroToOneClipZ;
     }
 
     if (m_ValidDeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_VULKAN)

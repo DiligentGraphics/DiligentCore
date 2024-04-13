@@ -507,8 +507,7 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
 
         case RENDER_DEVICE_TYPE_GL:
         case RENDER_DEVICE_TYPE_GLES:
-            // Do not validate shaders as compiling them is time-consuming
-            SerializationDeviceCI.GL.ValidateShaders = false;
+            SerializationDeviceCI.GL.ZeroToOneClipZ = SerializationDeviceCI.DeviceInfo.NDC.MinZ == 0;
             break;
 
         case RENDER_DEVICE_TYPE_VULKAN:

@@ -98,20 +98,33 @@ typedef struct SerializationDeviceD3D12Info SerializationDeviceD3D12Info;
 /// Serialization device attributes for OpenGL backend
 struct SerializationDeviceGLInfo
 {
-    /// Whether to validate OpenGL shaders.
+    /// Whether to optimize OpenGL shaders.
 
-    /// \remarks    In OpenGL backend, shaders are converted from HLSL to GLSL
-    ///             (if necessary) and packed into an archive as source code.
-    ///             When this flag is set to True, the archiver will compile
-    ///             the source code to validate it is correct.
-    ///             This may be time-consuming and could be disabled to speed up
-    ///             the archiving process.
-    Bool  ValidateShaders DEFAULT_INITIALIZER(True);
+    /// \remarks    In OpenGL backend, shaders are stored as source code in the archive.
+    ///             The source code can be rather large since all included files are inlined,
+    ///             helper shader definitions are added, etc. Compiling such shaders may take
+    ///             a significant amount of time, in particular on mobile devices and WebGL.
+    ///             When OptimizeShaders is set to true, the archiver will optimize the shader
+    ///             source code for run-time loading performance.
+    ///
+    ///             Technical details: the archiver will compile the shader source code to SPIRV
+    ///             with GLSLang and then translate SPIRV back to GLSL using SPIRV-Cross.
+    ///             The resulting GLSL code will be much more compact and will be stored in the
+    ///             archive instead of the original source code.
+    Bool  OptimizeShaders DEFAULT_INITIALIZER(True);
+
+    /// Whether to use zero-to-one clip-space Z range.
+    ///
+    /// \remarks    In OpenGL, the default clip-space Z range is -1 to 1.
+    ///             When this flag is set to True, the archiver will assume
+    ///             that the shaders use zero-to-one clip-space Z range.
+    Bool ZeroToOneClipZ DEFAULT_INITIALIZER(False);
 
 #if DILIGENT_CPP_INTERFACE
     bool operator==(const SerializationDeviceGLInfo& RHS) const noexcept
     {
-        return ValidateShaders == RHS.ValidateShaders;
+        return OptimizeShaders == RHS.OptimizeShaders &&
+			   ZeroToOneClipZ  == RHS.ZeroToOneClipZ;
     }
     bool operator!=(const SerializationDeviceGLInfo& RHS) const noexcept
     {

@@ -145,7 +145,8 @@ public:
 
     struct GLProperties
     {
-        bool ValidateShaders = false;
+        bool OptimizeShaders = false;
+        bool ZeroToOneClipZ  = false;
     };
 
     struct VkProperties
