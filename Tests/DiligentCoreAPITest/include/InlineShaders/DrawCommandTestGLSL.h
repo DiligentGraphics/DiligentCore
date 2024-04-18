@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -123,6 +123,54 @@ void main()
     out_Color.rgb = in_VSOutColor.rgb * 0.125;
     out_Color.rgb += (vec3(1.0, 1.0, 1.0) - texelFetch(g_SubpassInput, ivec2(gl_FragCoord.xy), 0).brg) * 0.875;
     out_Color.a   = 1.0;
+}
+)"
+};
+
+const std::string DrawTest_VS_DrawId{
+R"(
+#ifndef GL_ES
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+#endif
+
+#ifdef VULKAN
+#   define gl_VertexID gl_VertexIndex
+#   define gl_InstanceID gl_InstanceIndex
+#   define OUT_LOCATION(X) layout(location=X) // Requires separable programs
+#else
+#   define OUT_LOCATION(X)
+#endif
+
+#if __VERSION__ >= 460
+#   define DRAW_ID gl_DrawID
+#else
+#   define DRAW_ID gl_DrawIDARB
+#endif
+
+OUT_LOCATION(0) out vec3 _PSIn_Color;
+
+void main()
+{
+    vec4 Verts[6];
+
+    Verts[0] = vec4(-1.0,  -0.5,  0.0,  1.0);
+    Verts[1] = vec4(-0.5,  +0.5,  0.0,  1.0);
+    Verts[2] = vec4( 0.0,  -0.5,  0.0,  1.0);
+
+    Verts[3] = vec4(+0.0,  -0.5,  0.0,  1.0);
+    Verts[4] = vec4(+0.5,  +0.5,  0.0,  1.0);
+    Verts[5] = vec4(+1.0,  -0.5,  0.0,  1.0);
+
+    vec3 Colors[3];
+    Colors[0] = vec3(1.0,  0.0,  0.0);
+    Colors[1] = vec3(0.0,  1.0,  0.0);
+    Colors[2] = vec3(0.0,  0.0,  1.0);
+
+    gl_Position = Verts[DRAW_ID * 3 + gl_VertexID];
+    _PSIn_Color = Colors[gl_VertexID];
 }
 )"
 };
