@@ -45,32 +45,6 @@ namespace Diligent
 
 constexpr INTERFACE_ID ShaderGLImpl::IID_InternalImpl;
 
-std::string ShaderGLImpl::BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
-                                                const RenderDeviceInfo&    DeviceInfo,
-                                                const GraphicsAdapterInfo& AdapterInfo,
-                                                bool                       ZeroToOneClipZ)
-{
-    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
-    {
-        if (ShaderCI.Macros)
-        {
-            LOG_WARNING_MESSAGE("Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
-        }
-
-        // Read the source file directly and use it as is
-        ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
-        return std::string{SourceData.Source, SourceData.SourceLength};
-    }
-    else
-    {
-        static constexpr char NDCDefine[] = "#define _NDC_ZERO_TO_ONE 1\n";
-
-        // Build the full source code string that will contain GLSL version declaration,
-        // platform definitions, user-provided shader macros, etc.
-        return Diligent::BuildGLSLSourceString(ShaderCI, DeviceInfo, AdapterInfo, TargetGLSLCompiler::driver, (ZeroToOneClipZ ? NDCDefine : nullptr));
-    }
-}
-
 ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceGLImpl*     pDeviceGL,
                            const ShaderCreateInfo& ShaderCI,
@@ -96,7 +70,9 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     const auto& DeviceInfo  = GLShaderCI.DeviceInfo;
     const auto& AdapterInfo = GLShaderCI.AdapterInfo;
 
-    m_GLSLSourceString = BuildGLSLSourceString(ShaderCI, DeviceInfo, AdapterInfo, DeviceInfo.NDC.MinZ == 0);
+    // Build the full source code string that will contain GLSL version declaration,
+    // platform definitions, user-provided shader macros, etc.
+    m_GLSLSourceString = BuildGLSLSourceString(ShaderCI, DeviceInfo, AdapterInfo, TargetGLSLCompiler::driver, DeviceInfo.NDC.MinZ == 0);
 
     const SHADER_SOURCE_LANGUAGE SourceLang = ParseShaderSourceLanguageDefinition(m_GLSLSourceString);
     if (SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT)

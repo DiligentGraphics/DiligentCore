@@ -44,15 +44,29 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
                              const RenderDeviceInfo&      DeviceInfo,
                              const GraphicsAdapterInfo&   AdapterInfo,
                              TargetGLSLCompiler           TargetCompiler,
+                             bool                         ZeroToOneClipZ,
                              const char*                  ExtraDefinitions,
                              IHLSL2GLSLConversionStream** ppConversionStream) noexcept(false)
 {
-    // clang-format off
-    VERIFY(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
-           ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL    ||
-           ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL,
-           "Unsupported shader source language");
-    // clang-format on
+    if (!(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
+          ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL ||
+          ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM ||
+          ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL))
+    {
+        UNSUPPORTED("Unsupported shader source language");
+        return "";
+    }
+
+    const auto SourceData = ReadShaderSourceFile(ShaderCI);
+    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
+    {
+        if (ShaderCI.Macros)
+        {
+            LOG_WARNING_MESSAGE("Shader macros are ignored when compiling GLSL verbatim");
+        }
+
+        return std::string{SourceData.Source, SourceData.SourceLength};
+    }
 
     String GLSLSource;
 
@@ -294,14 +308,17 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
 
     AppendShaderTypeDefinitions(GLSLSource, ShaderType);
 
+    if (ZeroToOneClipZ)
+    {
+        GLSLSource.append("#define _NDC_ZERO_TO_ONE 1\n");
+    }
+
     if (ExtraDefinitions != nullptr)
     {
         GLSLSource.append(ExtraDefinitions);
     }
 
     AppendShaderMacros(GLSLSource, ShaderCI.Macros);
-
-    const auto SourceData = ReadShaderSourceFile(ShaderCI);
 
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {

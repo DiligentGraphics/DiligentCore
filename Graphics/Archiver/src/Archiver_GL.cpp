@@ -176,8 +176,13 @@ private:
         std::string OptimizedGLSL;
 
 #if !DILIGENT_NO_GLSLANG
-        const std::string GLSLSourceString = ShaderGLImpl::BuildGLSLSourceString(
-            ShaderCI, GLShaderCI.DeviceInfo, GLShaderCI.AdapterInfo, GLProps.ZeroToOneClipZ);
+        const std::string GLSLSourceString = BuildGLSLSourceString(
+            ShaderCI,
+            GLShaderCI.DeviceInfo,
+            GLShaderCI.AdapterInfo,
+            TargetGLSLCompiler::glslang,
+            GLProps.ZeroToOneClipZ // Note that this is not the same as GLShaderCI.DeviceInfo.NDC.MinZ == 0
+        );
 
         const SHADER_SOURCE_LANGUAGE SourceLang = ParseShaderSourceLanguageDefinition(GLSLSourceString);
         if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM && SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT)
@@ -240,15 +245,12 @@ private:
             LOG_ERROR_AND_THROW("Failed to generate GLSL for shader '", ShaderCI.Desc.Name, "'");
 
         // Remove #version directive
-        // The version is added by BuildGLSLSourceString().
+        // The version is added by BuildGLSLSourceString() in ShaderGLImpl.
         StripVersionDirective(OptimizedGLSL);
 
         // Remove #extension directives
-        // The extensions are added by BuildGLSLSourceString().
-        if (ShaderCI.GLSLExtensions != nullptr)
-        {
-            StripExtensionDirectives(OptimizedGLSL);
-        }
+        // The extensions are added by BuildGLSLSourceString() in ShaderGLImpl.
+        StripExtensionDirectives(OptimizedGLSL);
 
         AppendShaderSourceLanguageDefinition(OptimizedGLSL, (SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT) ? SourceLang : ShaderCI.SourceLanguage);
 #endif

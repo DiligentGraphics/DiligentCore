@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -84,11 +84,6 @@ public:
         *ppData  = !m_GLSLSourceString.empty() ? m_GLSLSourceString.c_str() : nullptr;
         DataSize = m_GLSLSourceString.length();
     }
-
-    static std::string BuildGLSLSourceString(const ShaderCreateInfo&    ShaderCI,
-                                             const RenderDeviceInfo&    DeviceInfo,
-                                             const GraphicsAdapterInfo& AdapterInfo,
-                                             bool                       ZeroToOneClipZ);
 
 private:
     SHADER_SOURCE_LANGUAGE                   m_SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;

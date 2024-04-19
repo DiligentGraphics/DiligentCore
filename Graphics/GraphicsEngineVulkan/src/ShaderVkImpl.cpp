@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,7 +118,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
         {
             // Build the full source code string that will contain GLSL version declaration,
             // platform definitions, user-provided shader macros, etc.
-            GLSLSourceString        = BuildGLSLSourceString(ShaderCI, VkShaderCI.DeviceInfo, VkShaderCI.AdapterInfo, TargetGLSLCompiler::glslang, VulkanDefine);
+            GLSLSourceString        = BuildGLSLSourceString(ShaderCI, VkShaderCI.DeviceInfo, VkShaderCI.AdapterInfo, TargetGLSLCompiler::glslang, true, VulkanDefine);
             SourceData.Source       = GLSLSourceString.c_str();
             SourceData.SourceLength = StaticCast<Uint32>(GLSLSourceString.length());
         }
