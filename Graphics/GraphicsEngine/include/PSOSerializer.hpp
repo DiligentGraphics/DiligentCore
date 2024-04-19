@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -131,5 +131,6 @@ DECL_TRIVIALLY_SERIALIZABLE(RasterizerStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(DepthStencilStateDesc);
 DECL_TRIVIALLY_SERIALIZABLE(SampleDesc);
 DECL_TRIVIALLY_SERIALIZABLE(ShaderCreateInfo);
+DECL_TRIVIALLY_SERIALIZABLE(Version);
 
 } // namespace Diligent

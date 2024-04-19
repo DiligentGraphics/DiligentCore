@@ -60,7 +60,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
 
     auto AppendGLSLExtensions = [&GLSLSource, &ShaderCI]() //
     {
-        if (ShaderCI.GLSLExtensions != nullptr)
+        if (ShaderCI.GLSLExtensions != nullptr && ShaderCI.GLSLExtensions[0] != '\0')
         {
             GLSLSource.append(ShaderCI.GLSLExtensions);
             GLSLSource.push_back('\n');

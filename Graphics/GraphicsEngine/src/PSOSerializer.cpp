@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -507,10 +507,19 @@ bool ShaderSerializer<Mode>::SerializeCI(Serializer<Mode>&            Ser,
              CI.Desc.CombinedSamplerSuffix,
              CI.EntryPoint,
              CI.SourceLanguage,
-             CI.ShaderCompiler))
+             CI.ShaderCompiler,
+             CI.HLSLVersion,
+             CI.GLSLVersion,
+             CI.GLESSLVersion,
+             CI.MSLVersion,
+             CI.CompileFlags,
+             CI.LoadConstantBufferReflection,
+             CI.GLSLExtensions))
         return false;
 
     return SerializeBytecodeOrSource(Ser, CI);
+
+    ASSERT_SIZEOF64(ShaderCreateInfo, 144, "Did you add a new member to ShaderCreateInfo? Please add serialization here.");
 }
 
 template struct PSOSerializer<SerializerMode::Read>;

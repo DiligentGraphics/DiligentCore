@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -127,7 +127,7 @@ public:
     };
 
     static constexpr Uint32 HeaderMagicNumber = 0xDE00000A;
-    static constexpr Uint32 ArchiveVersion    = 6;
+    static constexpr Uint32 ArchiveVersion    = 7;
 
     struct ArchiveHeader
     {
