@@ -96,16 +96,9 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
     }
 
     AppendGLSLExtensions();
-
+    AppendPlatformDefinition(GLSLSource);
     GLSLSource.append("#define DESKTOP_GL 1\n");
 
-#    if PLATFORM_WIN32
-    GLSLSource.append("#define PLATFORM_WIN32 1\n");
-#    elif PLATFORM_LINUX
-    GLSLSource.append("#define PLATFORM_LINUX 1\n");
-#    else
-#        error Unexpected platform
-#    endif
 
 #elif PLATFORM_MACOS
 
@@ -123,10 +116,8 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
     }
 
     AppendGLSLExtensions();
-
-    GLSLSource.append(
-        "#define DESKTOP_GL 1\n"
-        "#define PLATFORM_MACOS 1\n");
+    AppendPlatformDefinition(GLSLSource);
+    GLSLSource.append("#define DESKTOP_GL 1\n");
 
 #elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
 
@@ -167,23 +158,11 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
         GLSLSource.append("#extension GL_EXT_tessellation_shader : enable\n");
 
     AppendGLSLExtensions();
-
+    AppendPlatformDefinition(GLSLSource);
     GLSLSource.append(
         "#ifndef GL_ES\n"
         "#  define GL_ES 1\n"
         "#endif\n");
-
-#    if PLATFORM_ANDROID
-    GLSLSource.append("#define PLATFORM_ANDROID 1\n");
-#    elif PLATFORM_IOS
-    GLSLSource.append("#define PLATFORM_IOS 1\n");
-#    elif PLATFORM_TVOS
-    GLSLSource.append("#define PLATFORM_TVOS 1\n");
-#    elif PLATFORM_EMSCRIPTEN
-    GLSLSource.append("#define PLATFORM_EMSCRIPTEN 1\n");
-#    else
-#        error "Unexpected platform"
-#    endif
 
     GLSLSource.append(
         "precision highp float;\n"

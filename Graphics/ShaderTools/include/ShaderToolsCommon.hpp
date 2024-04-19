@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,6 +72,13 @@ void AppendShaderMacros(std::string& Source, const ShaderMacroArray& Macros);
 ///
 /// etc.
 void AppendShaderTypeDefinitions(std::string& Source, SHADER_TYPE Type);
+
+
+/// Appends platform definition macro, e.g. for Windows:
+///
+///    #define PLATFORM_WIN32 1
+///
+void AppendPlatformDefinition(std::string& Source);
 
 
 /// Appends a special comment that contains the shader source language definition.

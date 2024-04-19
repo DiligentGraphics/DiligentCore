@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -114,6 +114,28 @@ void AppendShaderTypeDefinitions(std::string& Source, SHADER_TYPE Type)
     AppendShaderMacros(Source, GetShaderTypeMacros(Type));
 }
 
+void AppendPlatformDefinition(std::string& Source)
+{
+#if PLATFORM_WIN32
+    Source.append("#define PLATFORM_WIN32 1\n");
+#elif PLATFORM_UNIVERSAL_WINDOWS
+    Source.append("#define PLATFORM_UWP 1\n");
+#elif PLATFORM_LINUX
+    Source.append("#define PLATFORM_LINUX 1\n");
+#elif PLATFORM_MACOS
+    Source.append("#define PLATFORM_MACOS 1\n");
+#elif PLATFORM_IOS
+    Source.append("#define PLATFORM_IOS 1\n");
+#elif PLATFORM_TVOS
+    Source.append("#define PLATFORM_TVOS 1\n");
+#elif PLATFORM_ANDROID
+    Source.append("#define PLATFORM_ANDROID 1\n");
+#elif PLATFORM_EMSCRIPTEN
+    Source.append("#define PLATFORM_EMSCRIPTEN 1\n");
+#else
+#    error Unexpected platform
+#endif
+}
 
 static const std::string ShaderSourceLanguageKey = "$SHADER_SOURCE_LANGUAGE";
 
