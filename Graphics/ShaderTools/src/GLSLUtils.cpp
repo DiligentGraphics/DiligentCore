@@ -101,8 +101,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
     }
     else if (TargetCompiler == TargetGLSLCompiler::driver)
     {
-        GLSLSource.append("#version 410 core\n"
-                          "#extension GL_ARB_shading_language_420pack : enable\n");
+        GLSLSource.append("#version 410 core\n");
     }
     else
     {
