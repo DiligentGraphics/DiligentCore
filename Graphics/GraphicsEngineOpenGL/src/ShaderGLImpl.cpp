@@ -142,50 +142,76 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     GLint compiled = GL_FALSE;
     // Get compilation status
     glGetShaderiv(m_GLShaderObj, GL_COMPILE_STATUS, &compiled);
-    if (!compiled)
+
+    std::vector<GLchar> InfoLog;
     {
-        std::string FullSource;
-        for (const auto* str : ShaderStrings)
-            FullSource.append(str);
-
-        std::stringstream ErrorMsgSS;
-        ErrorMsgSS << "Failed to compile shader file '" << (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : "") << '\'' << std::endl;
-        int infoLogLen = 0;
+        int InfoLogLen = 0;
         // The function glGetShaderiv() tells how many bytes to allocate; the length includes the NULL terminator.
-        glGetShaderiv(m_GLShaderObj, GL_INFO_LOG_LENGTH, &infoLogLen);
+        glGetShaderiv(m_GLShaderObj, GL_INFO_LOG_LENGTH, &InfoLogLen);
 
-        std::vector<GLchar> infoLog(infoLogLen);
-        if (infoLogLen > 0)
+        if (InfoLogLen > 0)
         {
-            int charsWritten = 0;
-            // Get the log. infoLogLen is the size of infoLog. This tells OpenGL how many bytes at maximum it will write
+            InfoLog.resize(InfoLogLen);
+
+            int CharsWritten = 0;
+            // Get the log. InfoLogLen is the size of InfoLog. This tells OpenGL how many bytes at maximum it will write
             // charsWritten is a return value, specifying how many bytes it actually wrote. One may pass NULL if he
             // doesn't care
-            glGetShaderInfoLog(m_GLShaderObj, infoLogLen, &charsWritten, infoLog.data());
-            VERIFY(charsWritten == infoLogLen - 1, "Unexpected info log length");
-            ErrorMsgSS << "InfoLog:" << std::endl
-                       << infoLog.data() << std::endl;
+            glGetShaderInfoLog(m_GLShaderObj, InfoLogLen, &CharsWritten, InfoLog.data());
+            VERIFY(CharsWritten == InfoLogLen - 1, "Unexpected info log length");
+
+            if (GLShaderCI.ppCompilerOutput != nullptr)
+            {
+                // InfoLogLen accounts for null terminator
+                auto pOutputDataBlob = DataBlobImpl::Create(InfoLogLen + m_GLSLSourceString.length() + 1);
+
+                char* DataPtr = static_cast<char*>(pOutputDataBlob->GetDataPtr());
+                if (!InfoLog.empty())
+                {
+                    // Copy info log including null terminator
+                    memcpy(DataPtr, InfoLog.data(), InfoLogLen);
+                }
+                // Copy source code including null terminator
+                memcpy(DataPtr + InfoLogLen, m_GLSLSourceString.data(), m_GLSLSourceString.length() + 1);
+
+                pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(GLShaderCI.ppCompilerOutput));
+            }
+        }
+    }
+
+    if (!compiled || !InfoLog.empty())
+    {
+        std::stringstream ss;
+        ss << (compiled ? "Compiler output for shader '" : "Failed to compile shader '")
+           << (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : "<unknown>")
+           << "'";
+
+        if (!InfoLog.empty())
+        {
+            ss << ":" << std::endl;
+            ss.write(InfoLog.data(), InfoLog.size() - 1);
+        }
+        else if (!compiled)
+        {
+            ss << " (no shader log available).";
         }
 
-        if (GLShaderCI.ppCompilerOutput != nullptr)
+        if (compiled)
         {
-            // infoLogLen accounts for null terminator
-            auto  pOutputDataBlob = DataBlobImpl::Create(infoLogLen + FullSource.length() + 1);
-            char* DataPtr         = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
-            if (infoLogLen > 0)
-                memcpy(DataPtr, infoLog.data(), infoLogLen);
-            memcpy(DataPtr + infoLogLen, FullSource.data(), FullSource.length() + 1);
-            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(GLShaderCI.ppCompilerOutput));
+            LOG_INFO_MESSAGE(ss.str());
         }
         else
         {
-            // Dump full source code to debug output
-            LOG_INFO_MESSAGE("Failed shader full source: \n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n",
-                             FullSource,
-                             "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
-        }
+            if (GLShaderCI.ppCompilerOutput == nullptr)
+            {
+                // Dump full source code to debug output
+                LOG_INFO_MESSAGE("Failed shader full source: \n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n",
+                                 m_GLSLSourceString,
+                                 "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
+            }
 
-        LOG_ERROR_AND_THROW(ErrorMsgSS.str().c_str());
+            LOG_ERROR_AND_THROW(ss.str());
+        }
     }
 
     // Note: we have to always read reflection information in OpenGL as bindings are always assigned at run time.
