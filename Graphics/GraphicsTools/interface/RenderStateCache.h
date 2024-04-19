@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -65,6 +65,13 @@ struct RenderStateCacheCreateInfo
     ///         generally be disabled in production builds.
     bool EnableHotReload DEFAULT_INITIALIZER(false);
 
+    /// Whether to optimize OpenGL shaders.
+    ///
+    /// \remarks    This option directly controls the value of the
+    ///             SerializationDeviceGLInfo::OptimizeShaders member
+    ///             of the internal serialization device.
+    bool OptimizeGLShaders DEFAULT_INITIALIZER(true);
+
     /// Optional shader source input stream factory to use when reloading
     /// shaders. If null, original source factory will be used.
     IShaderSourceInputStreamFactory* pReloadSource DEFAULT_INITIALIZER(nullptr);
@@ -75,12 +82,14 @@ struct RenderStateCacheCreateInfo
 
     constexpr explicit RenderStateCacheCreateInfo(
         IRenderDevice*                   _pDevice,
-        RENDER_STATE_CACHE_LOG_LEVEL     _LogLevel        = RenderStateCacheCreateInfo{}.LogLevel,
-        bool                             _EnableHotReload = RenderStateCacheCreateInfo{}.EnableHotReload,
-        IShaderSourceInputStreamFactory* _pReloadSource   = RenderStateCacheCreateInfo{}.pReloadSource) noexcept :
+        RENDER_STATE_CACHE_LOG_LEVEL     _LogLevel          = RenderStateCacheCreateInfo{}.LogLevel,
+        bool                             _EnableHotReload   = RenderStateCacheCreateInfo{}.EnableHotReload,
+        bool                             _OptimizeGLShaders = RenderStateCacheCreateInfo{}.OptimizeGLShaders,
+        IShaderSourceInputStreamFactory* _pReloadSource     = RenderStateCacheCreateInfo{}.pReloadSource) noexcept :
         pDevice{_pDevice},
         LogLevel{_LogLevel},
         EnableHotReload{_EnableHotReload},
+        OptimizeGLShaders{_OptimizeGLShaders},
         pReloadSource{_pReloadSource}
     {}
 #endif

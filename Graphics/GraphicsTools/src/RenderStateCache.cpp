@@ -518,7 +518,8 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
 
         case RENDER_DEVICE_TYPE_GL:
         case RENDER_DEVICE_TYPE_GLES:
-            SerializationDeviceCI.GL.ZeroToOneClipZ = SerializationDeviceCI.DeviceInfo.NDC.MinZ == 0;
+            SerializationDeviceCI.GL.ZeroToOneClipZ  = SerializationDeviceCI.DeviceInfo.NDC.MinZ == 0;
+            SerializationDeviceCI.GL.OptimizeShaders = m_CI.OptimizeGLShaders;
             break;
 
         case RENDER_DEVICE_TYPE_VULKAN:

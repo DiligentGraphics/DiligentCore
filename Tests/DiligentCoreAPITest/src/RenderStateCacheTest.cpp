@@ -240,10 +240,11 @@ void VerifyComputePSO(IPipelineState* pPSO, bool UseSignature = false)
 
 RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pDevice,
                                              bool                             HotReload,
+                                             bool                             OptimizeGLShaders,
                                              IDataBlob*                       pCacheData           = nullptr,
                                              IShaderSourceInputStreamFactory* pShaderReloadFactory = nullptr)
 {
-    RenderStateCacheCreateInfo CacheCI{pDevice, RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE, HotReload, pShaderReloadFactory};
+    RenderStateCacheCreateInfo CacheCI{pDevice, RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE, HotReload, OptimizeGLShaders, pShaderReloadFactory};
 
     RefCntAutoPtr<IRenderStateCache> pCache;
     CreateRenderStateCache(CacheCI, &pCache);
@@ -252,6 +253,15 @@ RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pD
         pCache->Load(pCacheData, ContentVersion);
 
     return pCache;
+}
+
+RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pDevice,
+                                             bool                             HotReload,
+                                             IDataBlob*                       pCacheData           = nullptr,
+                                             IShaderSourceInputStreamFactory* pShaderReloadFactory = nullptr)
+{
+    constexpr bool OptimizeGLShaders = true;
+    return CreateCache(pDevice, HotReload, OptimizeGLShaders, pCacheData, pShaderReloadFactory);
 }
 
 void CreateShader(IRenderStateCache*      pCache,
@@ -339,50 +349,54 @@ TEST(RenderStateCacheTest, CreateShader)
     ASSERT_TRUE(pShaderSourceFactory);
 
     auto pTexSRV = CreateWhiteTexture();
-    for (Uint32 HotReload = 0; HotReload < 2; ++HotReload)
+
+    for (Uint32 OptimizeGLShaders = pDevice->GetDeviceInfo().IsGLDevice() ? 0 : 1; OptimizeGLShaders < 2; ++OptimizeGLShaders)
     {
-        RefCntAutoPtr<IDataBlob> pData;
-        for (Uint32 pass = 0; pass < 3; ++pass)
+        for (Uint32 HotReload = 0; HotReload < 2; ++HotReload)
         {
-            // 0: empty cache
-            // 1: loaded cache
-            // 2: reloaded cache (loaded -> stored -> loaded)
-
-            auto pCache = CreateCache(pDevice, HotReload, pData);
-            ASSERT_TRUE(pCache);
-
+            RefCntAutoPtr<IDataBlob> pData;
+            for (Uint32 pass = 0; pass < 3; ++pass)
             {
-                RefCntAutoPtr<IShader> pVS, pPS;
-                CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr);
-                ASSERT_NE(pVS, nullptr);
-                ASSERT_NE(pPS, nullptr);
+                // 0: empty cache
+                // 1: loaded cache
+                // 2: reloaded cache (loaded -> stored -> loaded)
 
-                VerifyGraphicsShaders(pVS, pPS, pTexSRV);
+                auto pCache = CreateCache(pDevice, HotReload, OptimizeGLShaders, pData);
+                ASSERT_TRUE(pCache);
 
-                RefCntAutoPtr<IShader> pVS2, pPS2;
-                CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS2, pPS2, true);
-                EXPECT_EQ(pVS, pVS2);
-                EXPECT_EQ(pPS, pPS);
+                {
+                    RefCntAutoPtr<IShader> pVS, pPS;
+                    CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr);
+                    ASSERT_NE(pVS, nullptr);
+                    ASSERT_NE(pPS, nullptr);
+
+                    VerifyGraphicsShaders(pVS, pPS, pTexSRV);
+
+                    RefCntAutoPtr<IShader> pVS2, pPS2;
+                    CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS2, pPS2, true);
+                    EXPECT_EQ(pVS, pVS2);
+                    EXPECT_EQ(pPS, pPS);
+                }
+
+                {
+                    RefCntAutoPtr<IShader> pVS, pPS;
+                    CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, true);
+                    EXPECT_NE(pVS, nullptr);
+                    EXPECT_NE(pPS, nullptr);
+                }
+
+                {
+                    RefCntAutoPtr<IShader> pCS;
+                    CreateComputeShader(pCache, pShaderSourceFactory, pCS, pData != nullptr);
+                    EXPECT_NE(pCS, nullptr);
+                }
+
+                pData.Release();
+                pCache->WriteToBlob(ContentVersion, &pData);
+
+                if (HotReload)
+                    EXPECT_EQ(pCache->Reload(), 0u);
             }
-
-            {
-                RefCntAutoPtr<IShader> pVS, pPS;
-                CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, true);
-                EXPECT_NE(pVS, nullptr);
-                EXPECT_NE(pPS, nullptr);
-            }
-
-            {
-                RefCntAutoPtr<IShader> pCS;
-                CreateComputeShader(pCache, pShaderSourceFactory, pCS, pData != nullptr);
-                EXPECT_NE(pCS, nullptr);
-            }
-
-            pData.Release();
-            pCache->WriteToBlob(ContentVersion, &pData);
-
-            if (HotReload)
-                EXPECT_EQ(pCache->Reload(), 0u);
         }
     }
 }
