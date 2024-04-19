@@ -1538,7 +1538,7 @@ TEST(RenderStateCacheTest, GLExtensions)
                         PSOCreateInfo.pPS = pPS;
 
                         RefCntAutoPtr<IPipelineState> pPSO;
-                        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+                        pCache->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
                         ASSERT_NE(pPSO, nullptr);
 
                         ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};

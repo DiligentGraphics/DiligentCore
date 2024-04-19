@@ -179,6 +179,16 @@ private:
         const std::string GLSLSourceString = ShaderGLImpl::BuildGLSLSourceString(
             ShaderCI, GLShaderCI.DeviceInfo, GLShaderCI.AdapterInfo, GLProps.ZeroToOneClipZ);
 
+        const SHADER_SOURCE_LANGUAGE SourceLang = ParseShaderSourceLanguageDefinition(GLSLSourceString);
+        if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM && SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT)
+        {
+            // This combination of ShaderCI.SourceLanguage and SourceLang indicates that the shader source
+            // was retrieved from the existing shader object via IShader::GetBytecode (by e.g. Render State Cache,
+            // see RenderStateCacheImpl::SerializeShader).
+            // In this case, we don't need to do anything with the source.
+            return OptimizedGLSL;
+        }
+
         GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
         Attribs.ShaderType = ShaderCI.Desc.ShaderType;
         VERIFY_EXPR(DeviceType == RENDER_DEVICE_TYPE_GL || DeviceType == RENDER_DEVICE_TYPE_GLES);
@@ -240,13 +250,7 @@ private:
             StripExtensionDirectives(OptimizedGLSL);
         }
 
-        SHADER_SOURCE_LANGUAGE SourceLang = ParseShaderSourceLanguageDefinition(GLSLSourceString);
-        if (SourceLang == SHADER_SOURCE_LANGUAGE_DEFAULT)
-        {
-            SourceLang = ShaderCI.SourceLanguage;
-        }
-
-        AppendShaderSourceLanguageDefinition(OptimizedGLSL, SourceLang);
+        AppendShaderSourceLanguageDefinition(OptimizedGLSL, (SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT) ? SourceLang : ShaderCI.SourceLanguage);
 #endif
 
         return OptimizedGLSL;
