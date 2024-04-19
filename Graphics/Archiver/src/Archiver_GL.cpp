@@ -58,6 +58,33 @@ struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatur
 namespace
 {
 
+#if !DILIGENT_NO_GLSLANG
+void StripVersionDirective(std::string& Source)
+{
+    const size_t VersionPos = Source.find("#version");
+    if (VersionPos != std::string::npos)
+    {
+        const size_t NewLinePos = Source.find('\n', VersionPos);
+        if (NewLinePos != std::string::npos)
+            Source.erase(VersionPos, NewLinePos - VersionPos + 1);
+    }
+}
+
+void StripExtensionDirectives(std::string& Source)
+{
+    size_t pos = Source.find("#extension");
+    while (pos != std::string::npos)
+    {
+        size_t end = Source.find('\n', pos);
+        if (end == std::string::npos)
+            end = Source.length();
+        Source.erase(pos, end - pos + 1);
+
+        pos = Source.find("#extension", pos);
+    }
+}
+#endif
+
 struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
 {
     String                 UnrolledSource;
@@ -203,12 +230,14 @@ private:
             LOG_ERROR_AND_THROW("Failed to generate GLSL for shader '", ShaderCI.Desc.Name, "'");
 
         // Remove #version directive
-        const size_t VersionPos = OptimizedGLSL.find("#version");
-        if (VersionPos != std::string::npos)
+        // The version is added by BuildGLSLSourceString().
+        StripVersionDirective(OptimizedGLSL);
+
+        // Remove #extension directives
+        // The extensions are added by BuildGLSLSourceString().
+        if (ShaderCI.GLSLExtensions != nullptr)
         {
-            const size_t NewLinePos = OptimizedGLSL.find('\n', VersionPos);
-            if (NewLinePos != std::string::npos)
-                OptimizedGLSL.erase(VersionPos, NewLinePos - VersionPos + 1);
+            StripExtensionDirectives(OptimizedGLSL);
         }
 
         SHADER_SOURCE_LANGUAGE SourceLang = ParseShaderSourceLanguageDefinition(GLSLSourceString);
