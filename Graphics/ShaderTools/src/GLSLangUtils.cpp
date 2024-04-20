@@ -211,7 +211,7 @@ TBuiltInResource InitResources()
     Resources.maxTaskWorkGroupSizeZ_EXT                 = 128;
     Resources.maxMeshViewCountEXT                       = 4;
     Resources.maxDualSourceDrawBuffersEXT               = 1;
-    ASSERT_SIZEOF(Resources, 420, "Please initialize new members of Resources struct");
+    ASSERT_SIZEOF(Resources, 420, "Please initialize new members of Resources struct. Use glslang-default-resource-limits when this is tirggered.");
 
     Resources.limits.nonInductiveForLoops                 = true;
     Resources.limits.whileLoops                           = true;
@@ -222,7 +222,7 @@ TBuiltInResource InitResources()
     Resources.limits.generalSamplerIndexing               = true;
     Resources.limits.generalVariableIndexing              = true;
     Resources.limits.generalConstantMatrixVectorIndexing  = true;
-    ASSERT_SIZEOF(Resources.limits, 9, "Please initialize new members of Resources.limits struct");
+    ASSERT_SIZEOF(Resources.limits, 9, "Please initialize new members of Resources.limits struct. Use glslang-default-resource-limits when this is tirggered.");
 
     return Resources;
 }

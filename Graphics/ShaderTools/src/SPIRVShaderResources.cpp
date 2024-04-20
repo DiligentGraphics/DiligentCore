@@ -321,7 +321,7 @@ void LoadShaderCodeVariableDesc(const diligent_spirv_cross::Compiler& Compiler, 
     if (TypeDesc.TypeName == nullptr || TypeDesc.TypeName[0] == '\0')
         TypeDesc.SetDefaultTypeName(IsHLSLSource ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL);
 
-    TypeDesc.ArraySize = SpvType.array[0];
+    TypeDesc.ArraySize = !SpvType.array.empty() ? SpvType.array[0] : 0;
 
     for (uint32_t i = 0; i < SpvType.member_types.size(); ++i)
     {

@@ -84,7 +84,7 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR (ARCHIVER_SUPPORTED AND (GL_SUPPORTED
         # glslang "kindly" sets global CMAKE_DEBUG_POSTFIX to "d", which we have to unset now
         unset(CMAKE_DEBUG_POSTFIX CACHE)
 
-        list(APPEND THIRD_PARTY_LIBS GenericCodeGen glslang OGLCompiler OSDependent SPIRV HLSL MachineIndependent)
+        list(APPEND THIRD_PARTY_LIBS GenericCodeGen glslang OSDependent SPIRV MachineIndependent)
         install(FILES "${glslang_SOURCE_DIR}/LICENSE.txt" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME GLSLang-License.txt)
     endif()
 
