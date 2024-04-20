@@ -18,17 +18,7 @@ if (GL_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS) AND (N
     install(FILES glew/LICENSE.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME GLEW-License.txt)
 endif()
 
-if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
-    if (NOT TARGET SPIRV-Headers)
-        # Manually add the SPIRV-Headers target as this is all we need and the
-        # project's CMake creates unnecessary install targets
-        add_library(SPIRV-Headers INTERFACE)
-        # Note that SPIRV-Headers_SOURCE_DIR variable is normally created by project(SPIRV-Headers)
-        set(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers")
-        target_include_directories(SPIRV-Headers INTERFACE "${SPIRV-Headers_SOURCE_DIR}/include")
-        install(FILES "${SPIRV-Headers_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Headers-License.txt)
-    endif()
-
+if (VULKAN_SUPPORTED)
     if (NOT TARGET Vulkan::Headers)
         # Manually add the Vulkan-Headers target as this is all we need and the
         # project's CMake creates unnecessary targets
@@ -38,6 +28,18 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
         add_library(Vulkan::Headers ALIAS Vulkan-Headers)
         target_include_directories(Vulkan-Headers INTERFACE "${Vulkan-Headers_SOURCE_DIR}/include")
         install(FILES "${Vulkan-Headers_SOURCE_DIR}/LICENSE.md" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Vulkan-Headers-License.md)
+    endif()
+endif()
+
+if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
+    if (NOT TARGET SPIRV-Headers)
+        # Manually add the SPIRV-Headers target as this is all we need and the
+        # project's CMake creates unnecessary install targets
+        add_library(SPIRV-Headers INTERFACE)
+        # Note that SPIRV-Headers_SOURCE_DIR variable is normally created by project(SPIRV-Headers)
+        set(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers")
+        target_include_directories(SPIRV-Headers INTERFACE "${SPIRV-Headers_SOURCE_DIR}/include")
+        install(FILES "${SPIRV-Headers_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Headers-License.txt)
     endif()
 
     option(DILIGENT_NO_GLSLANG "Do NOT build glslang compiler" OFF)
