@@ -76,6 +76,7 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR (ARCHIVER_SUPPORTED AND (GL_SUPPORTED
         if (PLATFORM_EMSCRIPTEN)
             # Optimization has to be disabled on Web, see build instructions on https://github.com/KhronosGroup/glslang
             set(ENABLE_OPT OFF)
+            set(ENABLE_GLSLANG_JS ON)
         endif()
         add_subdirectory(glslang)
         set_directory_root_folder("glslang" "DiligentCore/ThirdParty/glslang")

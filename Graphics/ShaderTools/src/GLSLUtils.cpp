@@ -72,12 +72,21 @@ void GetGLSLVersion(const ShaderCreateInfo&              ShaderCI,
     IsES = IsESSL(DeviceType);
 
     ShaderVersion CompilerVer = IsES ? MaxShaderVersion.GLESSL : MaxShaderVersion.GLSL;
-#if PLATFORM_APPLE
     if (TargetCompiler == TargetGLSLCompiler::glslang)
     {
-        CompilerVer = IsES ? ShaderVersion{3, 1} : ShaderVersion{4, 3};
-    }
+        if (IsES)
+        {
+            // glslang requires at least GLES3.1
+            CompilerVer = ShaderVersion::Max(CompilerVer, ShaderVersion{3, 1});
+        }
+        else
+        {
+#if PLATFORM_APPLE
+            CompilerVer = ShaderVersion{4, 3};
 #endif
+        }
+    }
+
     GLSLVer = IsES ? ShaderCI.GLESSLVersion : ShaderCI.GLSLVersion;
     if (GLSLVer != ShaderVersion{})
     {

@@ -207,7 +207,6 @@ private:
         if (SPIRV.empty())
             LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
 
-
         ShaderVersion GLSLVersion;
         Bool          IsES = false;
         GetGLSLVersion(ShaderCI, TargetGLSLCompiler::driver, DeviceType, GLShaderCI.DeviceInfo.MaxShaderVersion, GLSLVersion, IsES);
