@@ -71,8 +71,13 @@ void GetGLSLVersion(const ShaderCreateInfo&              ShaderCI,
 {
     IsES = IsESSL(DeviceType);
 
-    const ShaderVersion CompilerVer = IsES ? MaxShaderVersion.GLESSL : MaxShaderVersion.GLSL;
-
+    ShaderVersion CompilerVer = IsES ? MaxShaderVersion.GLESSL : MaxShaderVersion.GLSL;
+#if PLATFORM_APPLE
+    if (TargetCompiler == TargetGLSLCompiler::glslang)
+    {
+        CompilerVer = IsES ? ShaderVersion{3, 1} : ShaderVersion{4, 3};
+    }
+#endif
     GLSLVer = IsES ? ShaderCI.GLESSLVersion : ShaderCI.GLSLVersion;
     if (GLSLVer != ShaderVersion{})
     {
@@ -98,18 +103,8 @@ void GetGLSLVersion(const ShaderCreateInfo&              ShaderCI,
 #elif PLATFORM_MACOS
         {
             VERIFY_EXPR(!IsES);
-            if (TargetCompiler == TargetGLSLCompiler::glslang)
-            {
-                GLSLVer = {4, 3};
-            }
-            else if (TargetCompiler == TargetGLSLCompiler::driver)
-            {
-                GLSLVer = {4, 1};
-            }
-            else
-            {
-                UNEXPECTED("Unexpected target GLSL compiler");
-            }
+            VERIFY_EXPR(TargetCompiler == TargetGLSLCompiler::driver);
+            GLSLVer = {4, 1};
         }
 #elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
         {
