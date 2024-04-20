@@ -40,6 +40,112 @@
 namespace Diligent
 {
 
+static void AppendGLESExtensions(SHADER_TYPE              ShaderType,
+                                 const DeviceFeatures&    Features,
+                                 const TextureProperties& TexProps,
+                                 const ShaderVersion&     LangVer,
+                                 std::string&             GLSLSource)
+{
+    const bool IsES31OrAbove = LangVer >= ShaderVersion{3, 1};
+    const bool IsES32OrAbove = LangVer >= ShaderVersion{3, 2};
+
+    if (Features.SeparablePrograms && !IsES31OrAbove)
+        GLSLSource.append("#extension GL_EXT_separate_shader_objects : enable\n");
+
+    if (TexProps.CubemapArraysSupported && !IsES32OrAbove)
+        GLSLSource.append("#extension GL_EXT_texture_cube_map_array : enable\n");
+
+    if (ShaderType == SHADER_TYPE_GEOMETRY && !IsES32OrAbove)
+        GLSLSource.append("#extension GL_EXT_geometry_shader : enable\n");
+
+    if ((ShaderType == SHADER_TYPE_HULL || ShaderType == SHADER_TYPE_DOMAIN) && !IsES32OrAbove)
+        GLSLSource.append("#extension GL_EXT_tessellation_shader : enable\n");
+}
+
+static void AppendPrecisionQualifiers(const DeviceFeatures&    Features,
+                                      const TextureProperties& TexProps,
+                                      const ShaderVersion&     LangVer,
+                                      std::string&             GLSLSource)
+{
+    const bool IsES32OrAbove = LangVer >= ShaderVersion{3, 2};
+
+    GLSLSource.append(
+        "precision highp float;\n"
+        "precision highp int;\n"
+        //"precision highp uint;\n"  // This line causes shader compilation error on NVidia!
+
+        "precision highp sampler2D;\n"
+        "precision highp sampler3D;\n"
+        "precision highp samplerCube;\n"
+        "precision highp samplerCubeShadow;\n"
+
+        "precision highp sampler2DShadow;\n"
+        "precision highp sampler2DArray;\n"
+        "precision highp sampler2DArrayShadow;\n"
+
+        "precision highp isampler2D;\n"
+        "precision highp isampler3D;\n"
+        "precision highp isamplerCube;\n"
+        "precision highp isampler2DArray;\n"
+
+        "precision highp usampler2D;\n"
+        "precision highp usampler3D;\n"
+        "precision highp usamplerCube;\n"
+        "precision highp usampler2DArray;\n");
+
+    if (IsES32OrAbove)
+    {
+        GLSLSource.append(
+            "precision highp samplerBuffer;\n"
+            "precision highp isamplerBuffer;\n"
+            "precision highp usamplerBuffer;\n");
+    }
+
+    if (TexProps.CubemapArraysSupported)
+    {
+        GLSLSource.append(
+            "precision highp samplerCubeArray;\n"
+            "precision highp samplerCubeArrayShadow;\n"
+            "precision highp isamplerCubeArray;\n"
+            "precision highp usamplerCubeArray;\n");
+    }
+
+    if (TexProps.Texture2DMSSupported)
+    {
+        GLSLSource.append(
+            "precision highp sampler2DMS;\n"
+            "precision highp isampler2DMS;\n"
+            "precision highp usampler2DMS;\n");
+    }
+
+    if (Features.ComputeShaders)
+    {
+        GLSLSource.append(
+            "precision highp image2D;\n"
+            "precision highp image3D;\n"
+            "precision highp imageCube;\n"
+            "precision highp image2DArray;\n"
+
+            "precision highp iimage2D;\n"
+            "precision highp iimage3D;\n"
+            "precision highp iimageCube;\n"
+            "precision highp iimage2DArray;\n"
+
+            "precision highp uimage2D;\n"
+            "precision highp uimage3D;\n"
+            "precision highp uimageCube;\n"
+            "precision highp uimage2DArray;\n");
+
+        if (IsES32OrAbove)
+        {
+            GLSLSource.append(
+                "precision highp imageBuffer;\n"
+                "precision highp iimageBuffer;\n"
+                "precision highp uimageBuffer;\n");
+        }
+    }
+}
+
 String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
                              const RenderDeviceInfo&      DeviceInfo,
                              const GraphicsAdapterInfo&   AdapterInfo,
@@ -68,184 +174,112 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
         return std::string{SourceData.Source, SourceData.SourceLength};
     }
 
-    String GLSLSource;
-
-    const auto ShaderType = ShaderCI.Desc.ShaderType;
-
-    auto AppendGLSLExtensions = [&GLSLSource, &ShaderCI]() //
-    {
-        if (ShaderCI.GLSLExtensions != nullptr && ShaderCI.GLSLExtensions[0] != '\0')
-        {
-            GLSLSource.append(ShaderCI.GLSLExtensions);
-            GLSLSource.push_back('\n');
-        }
-    };
-
+    ShaderVersion GLSLVer;
+    bool          IsES = false;
 #if PLATFORM_WIN32 || PLATFORM_LINUX
 
-    auto GLSLVer = ShaderCI.GLSLVersion;
+    GLSLVer = ShaderCI.GLSLVersion;
     if (GLSLVer == ShaderVersion{})
         GLSLVer = DeviceInfo.MaxShaderVersion.GLSL;
     if (GLSLVer == ShaderVersion{})
         GLSLVer = ShaderVersion{4, 3};
 
-    {
-        std::stringstream verss;
-        verss << "#version " << Uint32{GLSLVer.Major} << Uint32{GLSLVer.Minor} << "0 core\n";
-        GLSLSource.append(verss.str());
-    }
-
-    AppendGLSLExtensions();
-    AppendPlatformDefinition(GLSLSource);
-    GLSLSource.append("#define DESKTOP_GL 1\n");
-
-
 #elif PLATFORM_MACOS
 
     if (TargetCompiler == TargetGLSLCompiler::glslang)
     {
-        GLSLSource.append("#version 430 core\n");
+        GLSLVer = ShaderVersion{4, 3};
     }
     else if (TargetCompiler == TargetGLSLCompiler::driver)
     {
-        GLSLSource.append("#version 410 core\n");
+        GLSLVer = ShaderVersion{4, 1};
     }
     else
     {
         UNEXPECTED("Unexpected target GLSL compiler");
     }
 
-    AppendGLSLExtensions();
-    AppendPlatformDefinition(GLSLSource);
-    GLSLSource.append("#define DESKTOP_GL 1\n");
-
 #elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
 
-    bool IsES30        = false;
-    bool IsES31OrAbove = false;
-    bool IsES32OrAbove = false;
     if (DeviceInfo.Type == RENDER_DEVICE_TYPE_VULKAN || DeviceInfo.Type == RENDER_DEVICE_TYPE_METAL)
     {
-        IsES30        = false;
-        IsES31OrAbove = true;
-        IsES32OrAbove = false;
-        GLSLSource.append("#version 310 es\n");
+        GLSLVer = ShaderVersion{3, 1};
     }
     else if (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES)
     {
-        IsES30        = DeviceInfo.APIVersion == Version{3, 0};
-        IsES31OrAbove = DeviceInfo.APIVersion >= Version{3, 1};
-        IsES32OrAbove = DeviceInfo.APIVersion >= Version{3, 2};
-        std::stringstream versionss;
-        versionss << "#version " << Uint32{DeviceInfo.APIVersion.Major} << Uint32{DeviceInfo.APIVersion.Minor} << "0 es\n";
-        GLSLSource.append(versionss.str());
+        GLSLVer = DeviceInfo.APIVersion;
     }
     else
     {
         UNEXPECTED("Unexpected device type");
     }
+    IsES = true;
 
-    if (DeviceInfo.Features.SeparablePrograms && !IsES31OrAbove)
-        GLSLSource.append("#extension GL_EXT_separate_shader_objects : enable\n");
+#else
+#    error "Undefined platform"
+#endif
 
-    if (AdapterInfo.Texture.CubemapArraysSupported && !IsES32OrAbove)
-        GLSLSource.append("#extension GL_EXT_texture_cube_map_array : enable\n");
+    const auto ShaderType = ShaderCI.Desc.ShaderType;
 
-    if (ShaderType == SHADER_TYPE_GEOMETRY && !IsES32OrAbove)
-        GLSLSource.append("#extension GL_EXT_geometry_shader : enable\n");
+    String GLSLSource;
+    {
+        std::stringstream verss;
+        verss << "#version " << Uint32{GLSLVer.Major} << Uint32{GLSLVer.Minor} << (IsES ? "0 es\n" : "0 core\n");
+        GLSLSource = verss.str();
+    }
 
-    if ((ShaderType == SHADER_TYPE_HULL || ShaderType == SHADER_TYPE_DOMAIN) && !IsES32OrAbove)
-        GLSLSource.append("#extension GL_EXT_tessellation_shader : enable\n");
+    // All extensions must go right after the version directive
+    if (IsES)
+    {
+        AppendGLESExtensions(ShaderType, DeviceInfo.Features, AdapterInfo.Texture, GLSLVer, GLSLSource);
+    }
 
-    AppendGLSLExtensions();
+    if (ShaderCI.GLSLExtensions != nullptr && ShaderCI.GLSLExtensions[0] != '\0')
+    {
+        GLSLSource.append(ShaderCI.GLSLExtensions);
+        GLSLSource.push_back('\n');
+    }
+
+    if (IsES)
+    {
+        GLSLSource.append("#ifndef GL_ES\n"
+                          "#  define GL_ES 1\n"
+                          "#endif\n");
+    }
+    else
+    {
+        GLSLSource.append("#define DESKTOP_GL 1\n");
+    }
+
+    if (ZeroToOneClipZ)
+    {
+        GLSLSource.append("#define _NDC_ZERO_TO_ONE 1\n");
+    }
+
+    if (ExtraDefinitions != nullptr)
+    {
+        GLSLSource.append(ExtraDefinitions);
+    }
+
     AppendPlatformDefinition(GLSLSource);
-    GLSLSource.append(
-        "#ifndef GL_ES\n"
-        "#  define GL_ES 1\n"
-        "#endif\n");
+    AppendShaderTypeDefinitions(GLSLSource, ShaderType);
 
-    GLSLSource.append(
-        "precision highp float;\n"
-        "precision highp int;\n"
-        //"precision highp uint;\n"  // This line causes shader compilation error on NVidia!
-
-        "precision highp sampler2D;\n"
-        "precision highp sampler3D;\n"
-        "precision highp samplerCube;\n"
-        "precision highp samplerCubeShadow;\n"
-
-        "precision highp sampler2DShadow;\n"
-        "precision highp sampler2DArray;\n"
-        "precision highp sampler2DArrayShadow;\n"
-
-        "precision highp isampler2D;\n"
-        "precision highp isampler3D;\n"
-        "precision highp isamplerCube;\n"
-        "precision highp isampler2DArray;\n"
-
-        "precision highp usampler2D;\n"
-        "precision highp usampler3D;\n"
-        "precision highp usamplerCube;\n"
-        "precision highp usampler2DArray;\n" // clang-format off
-        ); // clang-format on
-
-    if (IsES32OrAbove)
+    if (IsES)
     {
-        GLSLSource.append(
-            "precision highp samplerBuffer;\n"
-            "precision highp isamplerBuffer;\n"
-            "precision highp usamplerBuffer;\n" // clang-format off
-        ); // clang-format on
+        AppendPrecisionQualifiers(DeviceInfo.Features, AdapterInfo.Texture, GLSLVer, GLSLSource);
     }
 
-    if (AdapterInfo.Texture.CubemapArraysSupported)
-    {
-        GLSLSource.append(
-            "precision highp samplerCubeArray;\n"
-            "precision highp samplerCubeArrayShadow;\n"
-            "precision highp isamplerCubeArray;\n"
-            "precision highp usamplerCubeArray;\n" // clang-format off
-        ); // clang-format on
-    }
+    // It would be much more convenient to use row_major matrices.
+    // But unfortunately on NVIDIA, the following directive
+    // layout(std140, row_major) uniform;
+    // does not have any effect on matrices that are part of structures
+    // So we have to use column-major matrices which are default in both
+    // DX and GLSL.
+    GLSLSource.append("layout(std140) uniform;\n");
 
-    if (AdapterInfo.Texture.Texture2DMSSupported)
-    {
-        GLSLSource.append(
-            "precision highp sampler2DMS;\n"
-            "precision highp isampler2DMS;\n"
-            "precision highp usampler2DMS;\n" // clang-format off
-        ); // clang-format on
-    }
+    AppendShaderMacros(GLSLSource, ShaderCI.Macros);
 
-    if (DeviceInfo.Features.ComputeShaders)
-    {
-        GLSLSource.append(
-            "precision highp image2D;\n"
-            "precision highp image3D;\n"
-            "precision highp imageCube;\n"
-            "precision highp image2DArray;\n"
-
-            "precision highp iimage2D;\n"
-            "precision highp iimage3D;\n"
-            "precision highp iimageCube;\n"
-            "precision highp iimage2DArray;\n"
-
-            "precision highp uimage2D;\n"
-            "precision highp uimage3D;\n"
-            "precision highp uimageCube;\n"
-            "precision highp uimage2DArray;\n" // clang-format off
-        ); // clang-format on
-        if (IsES32OrAbove)
-        {
-            GLSLSource.append(
-                "precision highp imageBuffer;\n"
-                "precision highp iimageBuffer;\n"
-                "precision highp uimageBuffer;\n" // clang-format off
-            ); // clang-format on
-        }
-    }
-
-    if (IsES30 && DeviceInfo.Features.SeparablePrograms && ShaderType == SHADER_TYPE_VERTEX)
+    if (IsES && GLSLVer == ShaderVersion{3, 0} && DeviceInfo.Features.SeparablePrograms && ShaderType == SHADER_TYPE_VERTEX)
     {
         // From https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_separate_shader_objects.gles.txt:
         //
@@ -271,33 +305,6 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
         //   without redeclaration."
         GLSLSource.append("out vec4 gl_Position;\n");
     }
-
-#else
-#    error "Undefined platform"
-#endif
-
-    // It would be much more convenient to use row_major matrices.
-    // But unfortunately on NVIDIA, the following directive
-    // layout(std140, row_major) uniform;
-    // does not have any effect on matrices that are part of structures
-    // So we have to use column-major matrices which are default in both
-    // DX and GLSL.
-    GLSLSource.append(
-        "layout(std140) uniform;\n");
-
-    AppendShaderTypeDefinitions(GLSLSource, ShaderType);
-
-    if (ZeroToOneClipZ)
-    {
-        GLSLSource.append("#define _NDC_ZERO_TO_ONE 1\n");
-    }
-
-    if (ExtraDefinitions != nullptr)
-    {
-        GLSLSource.append(ExtraDefinitions);
-    }
-
-    AppendShaderMacros(GLSLSource, ShaderCI.Macros);
 
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
