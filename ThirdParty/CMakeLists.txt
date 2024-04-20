@@ -31,7 +31,9 @@ if (VULKAN_SUPPORTED)
     endif()
 endif()
 
-if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
+if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR (ARCHIVER_SUPPORTED AND (GL_SUPPORTED OR GLES_SUPPORTED)))
+    set(DILIGENT_USE_SPIRV_TOOLCHAIN TRUE CACHE INTERNAL "Use SPIRV Toolchain")
+
     if (NOT TARGET SPIRV-Headers)
         # Manually add the SPIRV-Headers target as this is all we need and the
         # project's CMake creates unnecessary install targets
@@ -142,6 +144,8 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED)
         C_VISIBILITY_PRESET hidden # -fvisibility=hidden
         VISIBILITY_INLINES_HIDDEN TRUE
      )
+else()
+    set(DILIGENT_USE_SPIRV_TOOLCHAIN FALSE CACHE INTERNAL "")
 endif()
 
 if (VULKAN_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_ANDROID) AND (NOT TARGET volk::volk_headers))

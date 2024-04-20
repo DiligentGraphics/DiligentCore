@@ -76,8 +76,10 @@ else()
     list(APPEND SOURCE src/DXILUtilsStub.cpp)
 endif()
 
-if(VULKAN_SUPPORTED OR METAL_SUPPORTED)
+if(DILIGENT_USE_SPIRV_TOOLCHAIN)
     set(ENABLE_SPIRV TRUE)
+    # NB: do not use if(TARGET glsang) check here as glsang may be present
+    #     (e.g. added by external project), but DILIGENT_NO_GLSLANG may still be set
     if (NOT ${DILIGENT_NO_GLSLANG})
         set(USE_GLSLANG TRUE)
         set(USE_SPIRV_TOOLS TRUE)

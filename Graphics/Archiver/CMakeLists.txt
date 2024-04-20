@@ -83,7 +83,6 @@ PRIVATE
     ../GraphicsEngine/include
     ../GraphicsEngineD3DBase/include
     ../GraphicsEngineNextGenBase/include
-    ../ShaderTools/include
 )
 
 target_compile_definitions(Diligent-Archiver-static
@@ -105,6 +104,7 @@ PRIVATE
     Diligent-PlatformInterface
     Diligent-Common
     Diligent-GraphicsAccessories
+    Diligent-ShaderTools
 )
 
 if(D3D11_SUPPORTED)
