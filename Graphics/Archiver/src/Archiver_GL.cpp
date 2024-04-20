@@ -203,32 +203,19 @@ private:
         Attribs.ShaderSource     = GLSLSourceString.c_str();
         Attribs.SourceCodeLen    = static_cast<int>(GLSLSourceString.length());
 
-        const std::vector<unsigned int> SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
+        std::vector<unsigned int> SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
         if (SPIRV.empty())
             LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, "'");
 
-        diligent_spirv_cross::CompilerGLSL Compiler{SPIRV};
+
+        ShaderVersion GLSLVersion;
+        Bool          IsES = false;
+        GetGLSLVersion(ShaderCI, TargetGLSLCompiler::driver, DeviceType, GLShaderCI.DeviceInfo.MaxShaderVersion, GLSLVersion, IsES);
 
         diligent_spirv_cross::CompilerGLSL::Options Options;
-        if (DeviceType == RENDER_DEVICE_TYPE_GL)
-        {
-            if (ShaderCI.GLSLVersion != ShaderVersion{})
-                Options.version = ShaderCI.GLSLVersion.Major * 100 + ShaderCI.GLSLVersion.Minor * 10;
-            else
-                Options.version = 430;
-        }
-        else if (DeviceType == RENDER_DEVICE_TYPE_GLES)
-        {
-            if (ShaderCI.GLESSLVersion != ShaderVersion{})
-                Options.version = ShaderCI.GLESSLVersion.Major * 100 + ShaderCI.GLESSLVersion.Minor * 10;
-            else
-                Options.version = 310;
-            Options.es = true;
-        }
-        else
-        {
-            UNEXPECTED("Unexpected device type");
-        }
+        Options.es      = IsES;
+        Options.version = GLSLVersion.Major * 100 + GLSLVersion.Minor * 10;
+
         Options.separate_shader_objects = GLShaderCI.DeviceInfo.Features.SeparablePrograms;
         // On some targets (WebGPU), uninitialized variables are banned.
         Options.force_zero_initialized_variables = true;
@@ -238,6 +225,12 @@ private:
         Options.fragment.default_float_precision = diligent_spirv_cross::CompilerGLSL::Options::Precision::DontCare;
         Options.fragment.default_int_precision   = diligent_spirv_cross::CompilerGLSL::Options::Precision::DontCare;
 
+#    if PLATFORM_APPLE
+        // Apple does not support GL_ARB_shading_language_420pack extension
+        Options.enable_420pack_extension = false;
+#    endif
+
+        diligent_spirv_cross::CompilerGLSL Compiler{std::move(SPIRV)};
         Compiler.set_common_options(Options);
 
         OptimizedGLSL = Compiler.compile();

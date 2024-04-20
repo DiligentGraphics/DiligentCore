@@ -59,4 +59,11 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
                              const char*                  ExtraDefinitions   = nullptr,
                              IHLSL2GLSLConversionStream** ppConversionStream = nullptr) noexcept(false);
 
+void GetGLSLVersion(const ShaderCreateInfo&              ShaderCI,
+                    TargetGLSLCompiler                   TargetCompiler,
+                    RENDER_DEVICE_TYPE                   DeviceType,
+                    const RenderDeviceShaderVersionInfo& MaxShaderVersion,
+                    ShaderVersion&                       GLSLVer,
+                    bool&                                IsES);
+
 } // namespace Diligent

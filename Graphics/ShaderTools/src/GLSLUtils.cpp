@@ -40,6 +40,99 @@
 namespace Diligent
 {
 
+static bool IsESSL(RENDER_DEVICE_TYPE DeviceType)
+{
+    if (DeviceType == RENDER_DEVICE_TYPE_GL)
+    {
+        return false;
+    }
+    else if (DeviceType == RENDER_DEVICE_TYPE_GLES)
+    {
+        return true;
+    }
+    else
+    {
+#if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
+        return false;
+#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
+        return true;
+#else
+#    error Unknown platform
+#endif
+    }
+}
+
+void GetGLSLVersion(const ShaderCreateInfo&              ShaderCI,
+                    TargetGLSLCompiler                   TargetCompiler,
+                    RENDER_DEVICE_TYPE                   DeviceType,
+                    const RenderDeviceShaderVersionInfo& MaxShaderVersion,
+                    ShaderVersion&                       GLSLVer,
+                    bool&                                IsES)
+{
+    IsES = IsESSL(DeviceType);
+
+    const ShaderVersion CompilerVer = IsES ? MaxShaderVersion.GLESSL : MaxShaderVersion.GLSL;
+
+    GLSLVer = IsES ? ShaderCI.GLESSLVersion : ShaderCI.GLSLVersion;
+    if (GLSLVer != ShaderVersion{})
+    {
+        if (CompilerVer != ShaderVersion{} && GLSLVer > CompilerVer)
+        {
+            LOG_WARNING_MESSAGE("Requested GLSL version (", GLSLVer.Major, ".", GLSLVer.Minor,
+                                ") is greater than the maximum supported version (",
+                                CompilerVer.Major, ".", CompilerVer.Minor, ")");
+            GLSLVer = CompilerVer;
+        }
+    }
+    else if (CompilerVer != ShaderVersion{})
+    {
+        GLSLVer = CompilerVer;
+    }
+    else
+    {
+#if PLATFORM_WIN32 || PLATFORM_LINUX
+        {
+            VERIFY_EXPR(!IsES);
+            GLSLVer = {4, 3};
+        }
+#elif PLATFORM_MACOS
+        {
+            VERIFY_EXPR(!IsES);
+            if (TargetCompiler == TargetGLSLCompiler::glslang)
+            {
+                GLSLVer = {4, 3};
+            }
+            else if (TargetCompiler == TargetGLSLCompiler::driver)
+            {
+                GLSLVer = {4, 1};
+            }
+            else
+            {
+                UNEXPECTED("Unexpected target GLSL compiler");
+            }
+        }
+#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
+        {
+            VERIFY_EXPR(IsES);
+            if (DeviceType == RENDER_DEVICE_TYPE_VULKAN || DeviceType == RENDER_DEVICE_TYPE_METAL)
+            {
+                GLSLVer = {3, 1};
+            }
+            else if (DeviceType == RENDER_DEVICE_TYPE_GLES)
+            {
+                GLSLVer = {3, 0};
+            }
+            else
+            {
+                UNEXPECTED("Unexpected device type");
+            }
+        }
+#else
+#    error Unknown platform
+#endif
+    }
+}
+
 static void AppendGLESExtensions(SHADER_TYPE              ShaderType,
                                  const DeviceFeatures&    Features,
                                  const TextureProperties& TexProps,
@@ -176,48 +269,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
 
     ShaderVersion GLSLVer;
     bool          IsES = false;
-#if PLATFORM_WIN32 || PLATFORM_LINUX
-
-    GLSLVer = ShaderCI.GLSLVersion;
-    if (GLSLVer == ShaderVersion{})
-        GLSLVer = DeviceInfo.MaxShaderVersion.GLSL;
-    if (GLSLVer == ShaderVersion{})
-        GLSLVer = ShaderVersion{4, 3};
-
-#elif PLATFORM_MACOS
-
-    if (TargetCompiler == TargetGLSLCompiler::glslang)
-    {
-        GLSLVer = ShaderVersion{4, 3};
-    }
-    else if (TargetCompiler == TargetGLSLCompiler::driver)
-    {
-        GLSLVer = ShaderVersion{4, 1};
-    }
-    else
-    {
-        UNEXPECTED("Unexpected target GLSL compiler");
-    }
-
-#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
-
-    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_VULKAN || DeviceInfo.Type == RENDER_DEVICE_TYPE_METAL)
-    {
-        GLSLVer = ShaderVersion{3, 1};
-    }
-    else if (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES)
-    {
-        GLSLVer = DeviceInfo.APIVersion;
-    }
-    else
-    {
-        UNEXPECTED("Unexpected device type");
-    }
-    IsES = true;
-
-#else
-#    error "Undefined platform"
-#endif
+    GetGLSLVersion(ShaderCI, TargetCompiler, DeviceInfo.Type, DeviceInfo.MaxShaderVersion, GLSLVer, IsES);
 
     const auto ShaderType = ShaderCI.Desc.ShaderType;
 
