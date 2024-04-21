@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   precheks:
-    runs-on: macos-12
+    runs-on: macos-14
     name: MacOS -> Pre-Checks
 
     steps:
@@ -19,7 +19,7 @@ jobs:
 
   build:
     needs:   precheks
-    runs-on: macos-12
+    runs-on: macos-14
 
     strategy:
       matrix:

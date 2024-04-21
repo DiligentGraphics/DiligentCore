@@ -1291,30 +1291,36 @@ TEST(Common_BasicMath, HighPrecisionCross)
     constexpr float epsilon = 1.f / 32768.f;
 
     {
-        float3 v1{1.f + epsilon, 1.f, 0.f};
-        float3 v2{1.f, 1.f - epsilon, 0.f};
-        auto   v1xv2    = cross(v1, v2);
-        auto   v1xv2_hp = high_precision_cross(v1, v2);
-        EXPECT_EQ(v1xv2, float3{});
-        EXPECT_EQ(v1xv2_hp, float3(0, 0, -epsilon * epsilon));
+        constexpr float3 v1{1.f + epsilon, 1.f, 0.f};
+        constexpr float3 v2{1.f, 1.f - epsilon, 0.f};
+        constexpr float3 v1xv2_hp_ref{0, 0, -epsilon * epsilon};
+
+        float3 v1xv2    = cross(v1, v2);
+        float3 v1xv2_hp = high_precision_cross(v1, v2);
+        EXPECT_TRUE(v1xv2 == float3{} || v1xv2 == v1xv2_hp_ref);
+        EXPECT_EQ(v1xv2_hp, v1xv2_hp_ref);
     }
 
     {
-        float3 v1{1.f + epsilon, 0.f, 1.f};
-        float3 v2{1.f, 0.f, 1.f - epsilon};
-        auto   v1xv2    = cross(v1, v2);
-        auto   v1xv2_hp = high_precision_cross(v1, v2);
-        EXPECT_EQ(v1xv2, float3{});
-        EXPECT_EQ(v1xv2_hp, float3(0, epsilon * epsilon, 0));
+        constexpr float3 v1{1.f + epsilon, 0.f, 1.f};
+        constexpr float3 v2{1.f, 0.f, 1.f - epsilon};
+        constexpr float3 v1xv2_hp_ref{0, epsilon * epsilon, 0};
+
+        float3 v1xv2    = cross(v1, v2);
+        float3 v1xv2_hp = high_precision_cross(v1, v2);
+        EXPECT_TRUE(v1xv2 == float3{} || v1xv2 == v1xv2_hp_ref);
+        EXPECT_EQ(v1xv2_hp, v1xv2_hp_ref);
     }
 
     {
-        float3 v1{0.f, 1.f + epsilon, 1.f};
-        float3 v2{0.f, 1.f, 1.f - epsilon};
-        auto   v1xv2    = cross(v1, v2);
-        auto   v1xv2_hp = high_precision_cross(v1, v2);
-        EXPECT_EQ(v1xv2, float3{});
-        EXPECT_EQ(v1xv2_hp, float3(-epsilon * epsilon, 0, 0));
+        constexpr float3 v1{0.f, 1.f + epsilon, 1.f};
+        constexpr float3 v2{0.f, 1.f, 1.f - epsilon};
+        constexpr float3 v1xv2_hp_ref{-epsilon * epsilon, 0, 0};
+
+        float3 v1xv2    = cross(v1, v2);
+        float3 v1xv2_hp = high_precision_cross(v1, v2);
+        EXPECT_TRUE(v1xv2 == float3{} || v1xv2 == v1xv2_hp_ref);
+        EXPECT_EQ(v1xv2_hp, v1xv2_hp_ref);
     }
 }
 
