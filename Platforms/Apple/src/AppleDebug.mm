@@ -48,7 +48,7 @@ bool AppleDebug::ColoredTextSupported()
         []()
         {
             NSDictionary* environment = [[NSProcessInfo processInfo] environment];
-            return [environment[@"OS_ACTIVITY_DT_MODE"] boolValue];
+            return [environment[@"IDE_DISABLED_OS_ACTIVITY_DT_MODE"] boolValue];
         }();
     // XCode does not support colored console
     return !StartedFromXCode;
