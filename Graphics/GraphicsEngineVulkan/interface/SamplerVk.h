@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_SamplerVk =
 DILIGENT_BEGIN_INTERFACE(ISamplerVk, ISampler)
 {
     /// Returns a Vulkan handle of the internal sampler object.
-    VIRTUAL VkSampler METHOD(GetVkSampler)() CONST PURE;
+    VIRTUAL VkSampler METHOD(GetVkSampler)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
