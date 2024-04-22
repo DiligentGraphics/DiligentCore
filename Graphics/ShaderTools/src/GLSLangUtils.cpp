@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -352,12 +352,13 @@ private:
 };
 
 void SetupWithSpirvVersion(::glslang::TShader&  Shader,
-                           spv_target_env&      spvTarget,
                            ::EProfile&          shProfile,
                            EShLanguage          ShLang,
                            SpirvVersion         Version,
                            ::glslang::EShSource ShSource)
 {
+    static_assert(static_cast<int>(SpirvVersion::Count) == 6, "Did you add a new member to SpirvVersion? You may need to handle it here.");
+
     shProfile = EProfile::ENoProfile;
     switch (Version)
     {
@@ -365,44 +366,57 @@ void SetupWithSpirvVersion(::glslang::TShader&  Shader,
             Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientVulkan, 100);
             Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_0);
             Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_0);
-            spvTarget = SPV_ENV_VULKAN_1_0;
             break;
         case SpirvVersion::Vk110:
             Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientVulkan, 110);
             Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_1);
             Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_3);
-            spvTarget = SPV_ENV_VULKAN_1_1;
             break;
         case SpirvVersion::Vk110_Spirv14:
             Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientVulkan, 110);
             Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_1);
             Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_4);
-            spvTarget = SPV_ENV_VULKAN_1_1_SPIRV_1_4;
             break;
         case SpirvVersion::Vk120:
             Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientVulkan, 120);
             Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_2);
             Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_5);
-            spvTarget = SPV_ENV_VULKAN_1_2;
             break;
 
         case SpirvVersion::GL:
             Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientOpenGL, 450);
             Shader.setEnvClient(::glslang::EShClientOpenGL, ::glslang::EShTargetOpenGL_450);
             Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_0);
-            spvTarget = SPV_ENV_OPENGL_4_5;
             shProfile = EProfile::ECoreProfile;
             break;
         case SpirvVersion::GLES:
             Shader.setEnvInput(ShSource, ShLang, ::glslang::EShClientOpenGL, 450);
             Shader.setEnvClient(::glslang::EShClientOpenGL, ::glslang::EShTargetOpenGL_450);
             Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_0);
-            spvTarget = SPV_ENV_OPENGL_4_5;
             shProfile = EProfile::EEsProfile;
             break;
 
         default:
             UNEXPECTED("Unknown SPIRV version");
+    }
+}
+
+spv_target_env SpirvVersionToSpvTargetEnv(SpirvVersion Version)
+{
+    static_assert(static_cast<int>(SpirvVersion::Count) == 6, "Did you add a new member to SpirvVersion? You may need to handle it here.");
+    switch (Version)
+    {
+        // clang-format off
+        case SpirvVersion::Vk100:         return SPV_ENV_VULKAN_1_0;
+        case SpirvVersion::Vk110:         return SPV_ENV_VULKAN_1_1;
+        case SpirvVersion::Vk110_Spirv14: return SPV_ENV_VULKAN_1_1_SPIRV_1_4;
+        case SpirvVersion::Vk120:         return SPV_ENV_VULKAN_1_2;
+        case SpirvVersion::GL:            return SPV_ENV_OPENGL_4_5;
+        case SpirvVersion::GLES:          return SPV_ENV_OPENGL_4_5;
+        // clang-format on
+        default:
+            UNEXPECTED("Unknown SPIRV version");
+            return SPV_ENV_VULKAN_1_0;
     }
 }
 
@@ -416,10 +430,9 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     EShLanguage        ShLang = ShaderTypeToShLanguage(ShaderCI.Desc.ShaderType);
     ::glslang::TShader Shader{ShLang};
     EShMessages        messages  = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
-    spv_target_env     spvTarget = SPV_ENV_VULKAN_1_0;
     ::EProfile         shProfile = EProfile::ENoProfile;
 
-    SetupWithSpirvVersion(Shader, spvTarget, shProfile, ShLang, Version, ::glslang::EShSourceHlsl);
+    SetupWithSpirvVersion(Shader, shProfile, ShLang, Version, ::glslang::EShSourceHlsl);
 
     VERIFY_EXPR(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
 
@@ -465,7 +478,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 
     // SPIR-V bytecode generated from HLSL must be legalized to
     // turn it into a valid vulkan SPIR-V shader.
-    auto LegalizedSPIRV = OptimizeSPIRV(SPIRV, spvTarget, SPIRV_OPTIMIZATION_FLAG_LEGALIZATION | SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
+    auto LegalizedSPIRV = OptimizeSPIRV(SPIRV, SpirvVersionToSpvTargetEnv(Version), SPIRV_OPTIMIZATION_FLAG_LEGALIZATION | SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
     if (!LegalizedSPIRV.empty())
     {
         return LegalizedSPIRV;
@@ -483,10 +496,9 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
 
     const EShLanguage  ShLang = ShaderTypeToShLanguage(Attribs.ShaderType);
     ::glslang::TShader Shader(ShLang);
-    spv_target_env     spvTarget = SPV_ENV_VULKAN_1_0;
     ::EProfile         shProfile = EProfile::ENoProfile;
 
-    SetupWithSpirvVersion(Shader, spvTarget, shProfile, ShLang, Attribs.Version, ::glslang::EShSourceGlsl);
+    SetupWithSpirvVersion(Shader, shProfile, ShLang, Attribs.Version, ::glslang::EShSourceGlsl);
 
     EShMessages messages = EShMsgSpvRules;
     static_assert(static_cast<int>(SpirvVersion::Count) == 6, "Did you add a new member to SpirvVersion? You may need to handle it here.");
@@ -508,7 +520,7 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
     if (SPIRV.empty())
         return SPIRV;
 
-    auto OptimizedSPIRV = OptimizeSPIRV(SPIRV, spvTarget, SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
+    auto OptimizedSPIRV = OptimizeSPIRV(SPIRV, SpirvVersionToSpvTargetEnv(Attribs.Version), SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
     if (!OptimizedSPIRV.empty())
     {
         return OptimizedSPIRV;
