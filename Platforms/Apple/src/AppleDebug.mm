@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +48,18 @@ bool AppleDebug::ColoredTextSupported()
         []()
         {
             NSDictionary* environment = [[NSProcessInfo processInfo] environment];
-            return [environment[@"IDE_DISABLED_OS_ACTIVITY_DT_MODE"] boolValue];
+            if (NSString* DtMode = [environment objectForKey:@"IDE_DISABLED_OS_ACTIVITY_DT_MODE"]) // Since XCode 15
+            {
+                return [DtMode boolValue];
+            }
+            else if (NSString* DtMode = [environment objectForKey:@"OS_ACTIVITY_DT_MODE"]) // Before XCode 15
+            {
+                return [DtMode boolValue];
+            }
+            else
+            {
+                return false;
+            }
         }();
     // XCode does not support colored console
     return !StartedFromXCode;
