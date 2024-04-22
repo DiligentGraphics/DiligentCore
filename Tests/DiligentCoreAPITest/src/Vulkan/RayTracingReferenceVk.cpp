@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -393,7 +393,7 @@ void CreateBLAS(const RTContext&                                Ctx,
 
     BuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     BuffCI.size  = AccelStructSize;
-    BuffCI.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+    BuffCI.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
     res = vkCreateBuffer(Ctx.vkDevice, &BuffCI, nullptr, &BLAS.vkBuffer);
     ASSERT_GE(res, VK_SUCCESS);
@@ -402,12 +402,17 @@ void CreateBLAS(const RTContext&                                Ctx,
     VkMemoryRequirements MemReqs = {};
     vkGetBufferMemoryRequirements(Ctx.vkDevice, BLAS.vkBuffer, &MemReqs);
 
-    VkMemoryAllocateInfo MemAlloc = {};
+    VkMemoryAllocateInfo      MemAlloc    = {};
+    VkMemoryAllocateFlagsInfo MemFlagInfo = {};
 
     MemAlloc.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     MemAlloc.allocationSize  = MemReqs.size;
     MemAlloc.memoryTypeIndex = TestingEnvironmentVk::GetInstance()->GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     ASSERT_TRUE(MemAlloc.memoryTypeIndex != ~0u);
+
+    MemAlloc.pNext    = &MemFlagInfo;
+    MemFlagInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+    MemFlagInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
 
     res = vkAllocateMemory(Ctx.vkDevice, &MemAlloc, nullptr, &BLAS.vkMemory);
     ASSERT_GE(res, VK_SUCCESS);
@@ -471,7 +476,7 @@ void CreateTLAS(const RTContext& Ctx, Uint32 InstanceCount, RTContext::AccelStru
 
     BuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     BuffCI.size  = AccelStructSize;
-    BuffCI.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+    BuffCI.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
     res = vkCreateBuffer(Ctx.vkDevice, &BuffCI, nullptr, &TLAS.vkBuffer);
     ASSERT_GE(res, VK_SUCCESS);
@@ -480,12 +485,17 @@ void CreateTLAS(const RTContext& Ctx, Uint32 InstanceCount, RTContext::AccelStru
     VkMemoryRequirements MemReqs = {};
     vkGetBufferMemoryRequirements(Ctx.vkDevice, TLAS.vkBuffer, &MemReqs);
 
-    VkMemoryAllocateInfo MemAlloc = {};
+    VkMemoryAllocateInfo      MemAlloc    = {};
+    VkMemoryAllocateFlagsInfo MemFlagInfo = {};
 
     MemAlloc.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     MemAlloc.allocationSize  = MemReqs.size;
     MemAlloc.memoryTypeIndex = TestingEnvironmentVk::GetInstance()->GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     ASSERT_TRUE(MemAlloc.memoryTypeIndex != ~0u);
+
+    MemAlloc.pNext    = &MemFlagInfo;
+    MemFlagInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+    MemFlagInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
 
     res = vkAllocateMemory(Ctx.vkDevice, &MemAlloc, nullptr, &TLAS.vkMemory);
     ASSERT_GE(res, VK_SUCCESS);
@@ -525,8 +535,12 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
 
     BufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR;
 
-    BuffCI.sType  = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    BuffCI.usage  = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+    BuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    BuffCI.usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+        VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
     MemInfo.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2;
 
     std::vector<std::function<void(VkDeviceMemory Mem, VkDeviceSize & Offset)>> BindMem;
