@@ -388,6 +388,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             std::vector<const char*> IgnoreDebugMessages = {
                 "VUID-VkImageCreateInfo-imageCreateMaxMipLevels-02251",
                 "UNASSIGNED-CoreValidation-Shader-OutputNotConsumed",
+                "WARNING-Shader-OutputNotConsumed",
             };
 
             EngineVkCreateInfo EngineCI;
