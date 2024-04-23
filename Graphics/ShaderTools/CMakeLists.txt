@@ -76,15 +76,20 @@ else()
     list(APPEND SOURCE src/DXILUtilsStub.cpp)
 endif()
 
+set(ENABLE_SPIRV FALSE)
+set(USE_GLSLANG FALSE)
+set(USE_SPIRV_TOOLS FALSE)
 if(DILIGENT_USE_SPIRV_TOOLCHAIN)
     set(ENABLE_SPIRV TRUE)
     # NB: do not use if(TARGET glsang) check here as glsang may be present
     #     (e.g. added by external project), but DILIGENT_NO_GLSLANG may still be set
     if (NOT ${DILIGENT_NO_GLSLANG})
         set(USE_GLSLANG TRUE)
-        set(USE_SPIRV_TOOLS TRUE)
+        if (TARGET SPIRV-Tools-opt)
+            set(USE_SPIRV_TOOLS TRUE)
+        endif()
     endif()
-    if (NOT ${DILIGENT_NO_HLSL})
+    if (NOT ${DILIGENT_NO_HLSL} AND TARGET SPIRV-Tools-opt)
         set(USE_SPIRV_TOOLS TRUE)
     endif()
 endif()
@@ -156,6 +161,7 @@ if(ENABLE_SPIRV)
         PRIVATE
             SPIRV-Tools-opt
         )
+        target_compile_definitions(Diligent-ShaderTools PRIVATE USE_SPIRV_TOOLS=1)
     endif()
 
     if (${USE_GLSLANG})
