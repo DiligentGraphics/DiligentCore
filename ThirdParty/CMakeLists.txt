@@ -109,8 +109,11 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR (ARCHIVER_SUPPORTED AND (GL_SUPPORTED
         set_directory_root_folder("SPIRV-Cross" "DiligentCore/ThirdParty/SPIRV-Cross")
 
         list(APPEND THIRD_PARTY_LIBS spirv-cross-core)
-        if (METAL_SUPPORTED)
-            list(APPEND THIRD_PARTY_LIBS spirv-cross-msl spirv-cross-glsl)
+        if(SPIRV_CROSS_ENABLE_GLSL)
+            list(APPEND THIRD_PARTY_LIBS spirv-cross-glsl)
+        endif()
+        if (SPIRV_CROSS_ENABLE_MSL)
+            list(APPEND THIRD_PARTY_LIBS spirv-cross-msl)
         endif()
 
         install(FILES "${SPIRV-Cross_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Cross-License.txt)
