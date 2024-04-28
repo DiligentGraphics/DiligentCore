@@ -59,6 +59,85 @@ struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatur
 namespace
 {
 
+#if !DILIGENT_NO_GLSLANG
+static bool GetUseGLAngleMultiDrawWorkaround(const ShaderCreateInfo& ShaderCI)
+{
+    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM ||
+        ShaderCI.Desc.ShaderType != SHADER_TYPE_VERTEX)
+        return false;
+
+    const auto Extensions = GetGLSLExtensions(ShaderCI.GLSLExtensions);
+    for (const auto& Ext : Extensions)
+    {
+        if (Ext.first == "GL_ANGLE_multi_draw")
+        {
+            return Ext.second == "enable" || Ext.second == "require";
+        }
+    }
+
+    return false;
+}
+
+static void PatchSourceForWebGL(std::string& Source, SHADER_TYPE ShaderType)
+{
+    // Remove location qualifiers
+    {
+        // WebGL only supports location qualifiers for VS inputs and FS outputs.
+        const std::string InOutQualifier = ShaderType == SHADER_TYPE_VERTEX ? " out " : " in ";
+
+        auto layout_pos = Source.find("layout");
+        while (layout_pos != std::string::npos)
+        {
+            // layout(location = 3) flat out int _VSOut_PrimitiveID;
+            // ^
+            // layout_pos
+
+            const auto declaration_end_pos = Source.find_first_of(";{", layout_pos + 6);
+            if (declaration_end_pos == std::string::npos)
+                break;
+            // layout(location = 3) flat out int _VSOut_PrimitiveID;
+            //                                                     ^
+            //                                                  declaration_end_pos
+
+            // layout(std140) uniform cbPrimitiveAttribs {
+            //                                           ^
+            //                                      declaration_end_pos
+
+            const std::string Declaration = Source.substr(layout_pos, declaration_end_pos - layout_pos);
+            // layout(location = 3) flat out int _VSOut_PrimitiveID
+
+            if (Declaration.find(InOutQualifier) != std::string::npos)
+            {
+                const auto closing_paren_pos = Source.find(')', layout_pos);
+                if (closing_paren_pos == std::string::npos)
+                    break;
+
+                // layout(location = 3) flat out int _VSOut_PrimitiveID;
+                //                    ^
+                //              closing_paren_pos
+
+                for (size_t i = layout_pos; i <= closing_paren_pos; ++i)
+                    Source[i] = ' ';
+                //                      flat out int _VSOut_PrimitiveID;
+            }
+
+            layout_pos = Source.find("layout", layout_pos + 6);
+        }
+    }
+
+    if (ShaderType == SHADER_TYPE_VERTEX)
+    {
+        // Replace gl_DrawIDARB with gl_DrawID
+        size_t pos = Source.find("gl_DrawIDARB");
+        while (pos != std::string::npos)
+        {
+            Source.replace(pos, 12, "gl_DrawID");
+            pos = Source.find("gl_DrawIDARB", pos + 9);
+        }
+    }
+}
+#endif
+
 struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
 {
     String                 UnrolledSource;
@@ -150,13 +229,28 @@ private:
         std::string OptimizedGLSL;
 
 #if !DILIGENT_NO_GLSLANG
+
+        RENDER_DEVICE_TYPE            CompileDeviceType = DeviceType;
+        RenderDeviceShaderVersionInfo MaxShaderVersion  = GLShaderCI.DeviceInfo.MaxShaderVersion;
+
+        const bool UseGLAngleMultiDrawWorkaround = GetUseGLAngleMultiDrawWorkaround(ShaderCI);
+        if (UseGLAngleMultiDrawWorkaround)
+        {
+            // Since GLSLang does not support GL_ANGLE_multi_draw extension, we need to compile the shader
+            // for desktop GL.
+            CompileDeviceType = RENDER_DEVICE_TYPE_GL;
+
+            // Use GLSL4.6 as it uses the gl_DrawID built-in variable, same as the ANGLE extension.
+            MaxShaderVersion.GLSL = {4, 6};
+        }
+
         const std::string GLSLSourceString = BuildGLSLSourceString(
             {
                 ShaderCI,
                 GLShaderCI.AdapterInfo,
                 GLShaderCI.DeviceInfo.Features,
-                GLShaderCI.DeviceInfo.Type,
-                GLShaderCI.DeviceInfo.MaxShaderVersion,
+                CompileDeviceType,
+                MaxShaderVersion,
                 TargetGLSLCompiler::glslang,
                 GLProps.ZeroToOneClipZ, // Note that this is not the same as GLShaderCI.DeviceInfo.NDC.MinZ == 0
             });
@@ -192,6 +286,17 @@ private:
         Options.es      = IsES;
         Options.version = GLSLVersion.Major * 100 + GLSLVersion.Minor * 10;
 
+        if (UseGLAngleMultiDrawWorkaround)
+        {
+            // gl_DrawID is not supported in GLES, so compile the shader for desktop GL.
+            // This is OK as we strip the version directive and extensions and only leave the GLSL code.
+            Options.es = false;
+
+            // Use GLSL4.1 as WebGL does not support binding qualifiers.
+            Options.version                  = 410;
+            Options.enable_420pack_extension = false;
+        }
+
         Options.separate_shader_objects = GLShaderCI.DeviceInfo.Features.SeparablePrograms;
         // On some targets (WebGPU), uninitialized variables are banned.
         Options.force_zero_initialized_variables = true;
@@ -222,6 +327,11 @@ private:
         //   #error GL_ARB_shader_draw_parameters is not supported.
         //   #endif
         Parsing::StripPreprocessorDirectives(OptimizedGLSL, {{"version"}, {"extension"}, {"error"}});
+
+        if (UseGLAngleMultiDrawWorkaround)
+        {
+            PatchSourceForWebGL(OptimizedGLSL, ShaderCI.Desc.ShaderType);
+        }
 
         AppendShaderSourceLanguageDefinition(OptimizedGLSL, (SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT) ? SourceLang : ShaderCI.SourceLanguage);
 #endif
