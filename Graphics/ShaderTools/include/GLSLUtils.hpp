@@ -27,6 +27,10 @@
 
 #pragma once
 
+#include <vector>
+#include <string>
+#include <utility>
+
 #include "BasicTypes.h"
 #include "GraphicsTypes.h"
 #include "Shader.h"
@@ -72,5 +76,9 @@ void GetGLSLVersion(const ShaderCreateInfo&              ShaderCI,
                     const RenderDeviceShaderVersionInfo& MaxShaderVersion,
                     ShaderVersion&                       GLSLVer,
                     bool&                                IsES);
+
+/// Extracts all #extension directives from the GLSL source, returning them as a vector of pairs
+/// (extension name, extension behavior). The behavior is the string following the extension name.
+std::vector<std::pair<std::string, std::string>> GetGLSLExtensions(const char* Source, size_t SourceLen = 0);
 
 } // namespace Diligent

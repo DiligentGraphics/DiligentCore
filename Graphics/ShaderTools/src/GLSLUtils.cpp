@@ -36,6 +36,7 @@
 #include "RefCntAutoPtr.hpp"
 #include "DataBlobImpl.hpp"
 #include "ShaderToolsCommon.hpp"
+#include "ParsingTools.hpp"
 
 namespace Diligent
 {
@@ -401,6 +402,81 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
     }
 
     return GLSLSource;
+}
+
+std::vector<std::pair<std::string, std::string>> GetGLSLExtensions(const char* Source, size_t SourceLen)
+{
+    if (Source == nullptr)
+        return {};
+
+    if (SourceLen == 0)
+        SourceLen = std::strlen(Source);
+
+    std::vector<std::pair<std::string, std::string>> Extensions;
+
+    const auto*       Pos = Source;
+    const auto* const End = Source + SourceLen;
+    while (Pos != End)
+    {
+        const char *NameStart = nullptr, *NameEnd = nullptr;
+        Pos = Parsing::FindNextPreprocessorDirective(Pos, End, NameStart, NameEnd);
+        if (Pos == End)
+            break;
+
+        VERIFY_EXPR(*Pos == '#');
+
+        // # extension GL_ARB_shader_draw_parameters : enable
+        // ^ ^        ^
+        // | |      NameEnd
+        // | NameStart
+        // Pos
+
+        const auto* LineEnd = Parsing::SkipLine(NameEnd, End, /* GoToNextLine = */ false);
+
+        std::string DirectiveIdentifier{NameStart, NameEnd};
+        if (DirectiveIdentifier == "extension")
+        {
+            const auto* ExtNameStart = Parsing::SkipDelimiters(NameEnd, LineEnd, " \t");
+            // # extension GL_ARB_shader_draw_parameters : enable
+            //             ^
+            //             ExtNameStart
+
+            const auto* ExtNameEnd = Parsing::SkipIdentifier(ExtNameStart, LineEnd);
+            // # extension GL_ARB_shader_draw_parameters : enable
+            //                                          ^
+            //                                     ExtNameStart
+
+            std::string ExtensionName{ExtNameStart, ExtNameEnd};
+            if (!ExtensionName.empty())
+            {
+                Pos = ExtNameEnd;
+                while (Pos != LineEnd && *Pos != ':')
+                    ++Pos;
+
+                std::string ExtensionBehavior;
+                if (Pos != LineEnd && *Pos == ':')
+                {
+                    const auto* BehaviorStart = Parsing::SkipDelimiters(Pos + 1, LineEnd, " \t");
+                    // # extension GL_ARB_shader_draw_parameters : enable
+                    //                                             ^
+                    //                                         BehaviorStart
+
+                    const auto* BehaviorEnd = Parsing::SkipIdentifier(BehaviorStart, LineEnd);
+                    // # extension GL_ARB_shader_draw_parameters : enable
+                    //                                                   ^
+                    //                                               BehaviorEnd
+
+                    ExtensionBehavior.assign(BehaviorStart, BehaviorEnd);
+                }
+
+                Extensions.emplace_back(std::move(ExtensionName), std::move(ExtensionBehavior));
+            }
+        }
+
+        Pos = Parsing::SkipLine(LineEnd, End, /* GoToNextLine = */ true);
+    }
+
+    return Extensions;
 }
 
 } // namespace Diligent

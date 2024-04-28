@@ -9,6 +9,10 @@ project(DiligentCoreTest)
 file(GLOB_RECURSE SOURCE  src/*.*)
 file(GLOB_RECURSE SHADERS assets/shaders/*.*)
 
+if(NOT GL_SUPPORTED AND NOT GLES_SUPPORTED AND NOT VULKAN_SUPPORTED)
+    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/GLSLUtilsTest.cpp)
+endif()
+
 set_source_files_properties(${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
