@@ -1228,6 +1228,55 @@ inline int GetArrayIndex(const std::string& Var, std::string& NameWithoutBracket
 }
 
 
+/// Finds the next preprocessor directive in the given range.
+///
+/// # define MACRO
+/// ^ ^     ^
+/// | |    NameEnd
+/// | NameStart
+/// Return value
+template <typename InteratorType>
+inline InteratorType FindNextPreprocessorDirective(const InteratorType& Start, const InteratorType& End, InteratorType& NameStart, InteratorType& NameEnd)
+{
+    NameStart = End;
+    NameEnd   = End;
+
+    auto Pos = Start;
+    while (Pos != End)
+    {
+        // // Comment
+        // ^
+        Pos = SkipDelimitersAndComments(Pos, End);
+        if (Pos == End)
+            break;
+
+        if (*Pos == '#')
+        {
+            // #  define MACRO
+            // ^
+            // Pos
+
+            NameStart = SkipDelimiters(Pos + 1, End, " \t");
+            // # define MACRO
+            //   ^
+            // NameStart
+
+            NameEnd = SkipIdentifier(NameStart, End);
+            // # define MACRO
+            //         ^
+            //		 NameEnd
+
+            break;
+        }
+        else
+        {
+            Pos = SkipLine(Pos, End, /* GoToNextLine = */ true);
+        }
+    }
+
+    return Pos;
+}
+
 /// Strips all preprocessor directives from the source string.
 inline void StripPreprocessorDirectives(std::string& Source, const std::vector<std::string>& Directives)
 {
@@ -1237,41 +1286,29 @@ inline void StripPreprocessorDirectives(std::string& Source, const std::vector<s
     auto Pos = Source.begin();
     while (Pos != Source.end())
     {
-        // // Comment
-        // ^
-        Pos = SkipDelimitersAndComments(Pos, Source.end());
+        std::string::iterator NameStart, NameEnd;
+        Pos = FindNextPreprocessorDirective(Pos, Source.end(), NameStart, NameEnd);
         if (Pos == Source.end())
             break;
 
-        if (*Pos == '#')
+        // # version 450
+        // ^ ^      ^
+        // | |      NameEnd
+        // | NameStart
+        // Pos
+
+        const std::string DirectiveIdentifier{NameStart, NameEnd};
+        if (!DirectiveIdentifier.empty() && std::find(Directives.begin(), Directives.end(), DirectiveIdentifier) != Directives.end())
         {
-            const auto DirectiveStart = Pos;
-            // # version 450
-            // ^
+            // Keep the newline character
+            const auto LineEnd = SkipLine(NameEnd, Source.end(), /* GoToNextLine = */ false);
 
-            ++Pos;
+            Pos = Source.erase(Pos, LineEnd);
             if (Pos == Source.end())
                 break;
-
-            Pos = SkipDelimiters(Pos, Source.end(), " \t");
-            // # version 450
-            //   ^
-
-            if (Pos == Source.end())
-                break;
-
-            const std::string DirectiveIdentifier{Pos, SkipIdentifier(Pos, Source.end())};
-            if (!DirectiveIdentifier.empty() && std::find(Directives.begin(), Directives.end(), DirectiveIdentifier) != Directives.end())
-            {
-                const auto LineEnd = SkipLine(Pos, Source.end(), false);
-
-                Pos = Source.erase(DirectiveStart, LineEnd);
-                if (Pos == Source.end())
-                    break;
-            }
         }
 
-        Pos = SkipLine(Pos, Source.end(), true);
+        Pos = SkipLine(Pos, Source.end(), /* GoToNextLine = */ true);
     }
 }
 

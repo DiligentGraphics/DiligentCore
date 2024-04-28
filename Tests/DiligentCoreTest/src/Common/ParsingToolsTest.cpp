@@ -1442,6 +1442,33 @@ TEST(Common_ParsingTools, GetArrayIndex)
     Test("xy7[12 ", 3, INT_MIN);
 }
 
+
+TEST(Common_ParsingTools, FindNextPreprocessorDirective)
+{
+    auto Test = [](std::string Source, const std::string& RefDirectiveStart, const std::string& Directive) {
+        std::string::iterator NameStart, NameEnd;
+
+        auto DirectiveStart = FindNextPreprocessorDirective(Source.begin(), Source.end(), NameStart, NameEnd);
+        EXPECT_STREQ(RefDirectiveStart.c_str(), std::string(DirectiveStart, Source.end()).c_str());
+        EXPECT_STREQ(Directive.c_str(), std::string(NameStart, NameEnd).c_str());
+    };
+
+    Test("", "", "");
+    Test(" ", "", "");
+    Test("ABC", "", "");
+    Test("\r\n", "", "");
+    Test("#", "#", "");
+    Test("# ", "# ", "");
+    Test("# define XYZ", "# define XYZ", "define");
+    Test("/* Comment */ # define XYZ", "# define XYZ", "define");
+
+    Test(R"(
+// #version XYZ
+# define ABC)",
+         "# define ABC",
+         "define");
+}
+
 TEST(Common_ParsingTools, StripPreprocessorDirectives)
 {
     auto Test = [](std::string Source, const std::string& RefSource, const std::vector<std::string>& Directives) {
