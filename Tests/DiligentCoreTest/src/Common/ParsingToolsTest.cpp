@@ -1442,4 +1442,122 @@ TEST(Common_ParsingTools, GetArrayIndex)
     Test("xy7[12 ", 3, INT_MIN);
 }
 
+TEST(Common_ParsingTools, StripPreprocessorDirectives)
+{
+    auto Test = [](std::string Source, const std::string& RefSource, const std::vector<std::string>& Directives) {
+        StripPreprocessorDirectives(Source, Directives);
+        EXPECT_STREQ(Source.c_str(), RefSource.c_str());
+    };
+
+    Test("", "", {{"version"}});
+    Test(" ", " ", {{"version"}});
+    Test("// Comment", "// Comment", {{"version"}});
+    Test("/* Comment */", "/* Comment */", {{"version"}});
+    Test("#", "#", {{"version"}});
+    Test("#\n", "#\n", {{"version"}});
+    Test("#\nversion", "#\nversion", {{"version"}});
+    Test("#\n#version XYZ", "#\n", {{"version"}});
+    Test("# ", "# ", {{"version"}});
+    Test("# \n", "# \n", {{"version"}});
+    Test("#extension XYZ", "#extension XYZ", {{"version"}});
+    Test("// #version XYZ", "// #version XYZ", {{"version"}});
+
+    Test(R"(
+void main()
+{
+})",
+         R"(
+void main()
+{
+})",
+         {{"version"}});
+
+
+    Test(R"(
+#version 450
+void main()
+{
+})",
+         R"(
+
+void main()
+{
+})",
+         {{"version"}});
+
+
+    Test(R"(
+// Comment
+#  version 450
+void main()
+{
+})",
+         R"(
+// Comment
+
+void main()
+{
+})",
+         {{"version"}});
+
+
+    Test(R"(
+/* Comment */ #  version 450
+void main()
+{
+})",
+         R"(
+/* Comment */ 
+void main()
+{
+})",
+         {{"version"}});
+
+
+    Test(R"(
+/* #  version 450 */ 
+void main()
+{
+})",
+         R"(
+/* #  version 450 */ 
+void main()
+{
+})",
+         {{"version"}});
+
+
+    Test(R"(
+#version 450
+void main()
+{
+# error Error Message
+})",
+         R"(
+#version 450
+void main()
+{
+
+})",
+         {{"error"}});
+
+    Test(R"(#version 450
+#extension GL_ARB_separate_shader_objects : enable
+#ifndef GL_ARB_shader_draw_parameters
+#error GL_ARB_shader_draw_parameters is not supported.
+#endif
+void main()
+{
+})",
+         R"(
+
+#ifndef GL_ARB_shader_draw_parameters
+
+#endif
+void main()
+{
+})",
+         {{"version"}, {"extension"}, {"error"}});
+}
+
 } // namespace

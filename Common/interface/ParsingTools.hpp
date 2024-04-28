@@ -32,6 +32,8 @@
 #include <cstring>
 #include <sstream>
 #include <limits>
+#include <vector>
+#include <algorithm>
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/FlagEnum.h"
@@ -1223,6 +1225,54 @@ inline int GetArrayIndex(const InteratorType& Start, const InteratorType& End, s
 inline int GetArrayIndex(const std::string& Var, std::string& NameWithoutBrackets)
 {
     return GetArrayIndex(Var.begin(), Var.end(), NameWithoutBrackets);
+}
+
+
+/// Strips all preprocessor directives from the source string.
+inline void StripPreprocessorDirectives(std::string& Source, const std::vector<std::string>& Directives)
+{
+    if (Directives.empty())
+        return;
+
+    auto Pos = Source.begin();
+    while (Pos != Source.end())
+    {
+        // // Comment
+        // ^
+        Pos = SkipDelimitersAndComments(Pos, Source.end());
+        if (Pos == Source.end())
+            break;
+
+        if (*Pos == '#')
+        {
+            const auto DirectiveStart = Pos;
+            // # version 450
+            // ^
+
+            ++Pos;
+            if (Pos == Source.end())
+                break;
+
+            Pos = SkipDelimiters(Pos, Source.end(), " \t");
+            // # version 450
+            //   ^
+
+            if (Pos == Source.end())
+                break;
+
+            const std::string DirectiveIdentifier{Pos, SkipIdentifier(Pos, Source.end())};
+            if (!DirectiveIdentifier.empty() && std::find(Directives.begin(), Directives.end(), DirectiveIdentifier) != Directives.end())
+            {
+                const auto LineEnd = SkipLine(Pos, Source.end(), false);
+
+                Pos = Source.erase(DirectiveStart, LineEnd);
+                if (Pos == Source.end())
+                    break;
+            }
+        }
+
+        Pos = SkipLine(Pos, Source.end(), true);
+    }
 }
 
 } // namespace Parsing
