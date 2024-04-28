@@ -269,7 +269,7 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
 
     ShaderVersion GLSLVer;
     bool          IsES = false;
-    GetGLSLVersion(ShaderCI, Attribs.TargetCompiler, Attribs.DeviceInfo.Type, Attribs.DeviceInfo.MaxShaderVersion, GLSLVer, IsES);
+    GetGLSLVersion(ShaderCI, Attribs.TargetCompiler, Attribs.DeviceType, Attribs.MaxShaderVersion, GLSLVer, IsES);
 
     const auto ShaderType = ShaderCI.Desc.ShaderType;
 
@@ -283,7 +283,7 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
     // All extensions must go right after the version directive
     if (IsES)
     {
-        AppendGLESExtensions(ShaderType, Attribs.DeviceInfo.Features, Attribs.AdapterInfo.Texture, GLSLVer, GLSLSource);
+        AppendGLESExtensions(ShaderType, Attribs.Features, Attribs.AdapterInfo.Texture, GLSLVer, GLSLSource);
     }
 
     if (ShaderCI.GLSLExtensions != nullptr && ShaderCI.GLSLExtensions[0] != '\0')
@@ -318,7 +318,7 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
 
     if (IsES)
     {
-        AppendPrecisionQualifiers(Attribs.DeviceInfo.Features, Attribs.AdapterInfo.Texture, GLSLVer, GLSLSource);
+        AppendPrecisionQualifiers(Attribs.Features, Attribs.AdapterInfo.Texture, GLSLVer, GLSLSource);
     }
 
     // It would be much more convenient to use row_major matrices.
@@ -331,7 +331,7 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
 
     AppendShaderMacros(GLSLSource, ShaderCI.Macros);
 
-    if (IsES && GLSLVer == ShaderVersion{3, 0} && Attribs.DeviceInfo.Features.SeparablePrograms && ShaderType == SHADER_TYPE_VERTEX)
+    if (IsES && GLSLVer == ShaderVersion{3, 0} && Attribs.Features.SeparablePrograms && ShaderType == SHADER_TYPE_VERTEX)
     {
         // From https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_separate_shader_objects.gles.txt:
         //
@@ -386,7 +386,7 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
         // all shader stages.
         // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt
         // (search for "Input Layout Qualifiers" and "Output Layout Qualifiers").
-        ConvertAttribs.UseInOutLocationQualifiers = Attribs.DeviceInfo.Features.SeparablePrograms;
+        ConvertAttribs.UseInOutLocationQualifiers = Attribs.Features.SeparablePrograms;
         auto ConvertedSource                      = Converter.Convert(ConvertAttribs);
         if (ConvertedSource.empty())
         {

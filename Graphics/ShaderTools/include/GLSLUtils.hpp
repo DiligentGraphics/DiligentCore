@@ -53,13 +53,15 @@ struct IHLSL2GLSLConversionStream;
 // new stream will be created and warning message will be displayed.
 struct BuildGLSLSourceStringAttribs
 {
-    const ShaderCreateInfo&      ShaderCI;
-    const RenderDeviceInfo&      DeviceInfo;
-    const GraphicsAdapterInfo&   AdapterInfo;
-    TargetGLSLCompiler           TargetCompiler;
-    bool                         ZeroToOneClipZ     = false;
-    const char*                  ExtraDefinitions   = nullptr;
-    IHLSL2GLSLConversionStream** ppConversionStream = nullptr;
+    const ShaderCreateInfo&       ShaderCI;
+    const GraphicsAdapterInfo&    AdapterInfo;
+    const DeviceFeatures&         Features;
+    RENDER_DEVICE_TYPE            DeviceType         = RENDER_DEVICE_TYPE_UNDEFINED;
+    RenderDeviceShaderVersionInfo MaxShaderVersion   = {};
+    TargetGLSLCompiler            TargetCompiler     = TargetGLSLCompiler::glslang;
+    bool                          ZeroToOneClipZ     = false;
+    const char*                   ExtraDefinitions   = nullptr;
+    IHLSL2GLSLConversionStream**  ppConversionStream = nullptr;
 };
 
 String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexcept(false);

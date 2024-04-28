@@ -179,8 +179,10 @@ private:
         const std::string GLSLSourceString = BuildGLSLSourceString(
             {
                 ShaderCI,
-                GLShaderCI.DeviceInfo,
                 GLShaderCI.AdapterInfo,
+                GLShaderCI.DeviceInfo.Features,
+                GLShaderCI.DeviceInfo.Type,
+                GLShaderCI.DeviceInfo.MaxShaderVersion,
                 TargetGLSLCompiler::glslang,
                 GLProps.ZeroToOneClipZ, // Note that this is not the same as GLShaderCI.DeviceInfo.NDC.MinZ == 0
             });
