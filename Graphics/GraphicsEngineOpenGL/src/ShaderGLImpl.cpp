@@ -72,7 +72,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
 
     // Build the full source code string that will contain GLSL version declaration,
     // platform definitions, user-provided shader macros, etc.
-    m_GLSLSourceString = BuildGLSLSourceString(ShaderCI, DeviceInfo, AdapterInfo, TargetGLSLCompiler::driver, DeviceInfo.NDC.MinZ == 0);
+    m_GLSLSourceString = BuildGLSLSourceString({ShaderCI, DeviceInfo, AdapterInfo, TargetGLSLCompiler::driver, DeviceInfo.NDC.MinZ == 0});
 
     const SHADER_SOURCE_LANGUAGE SourceLang = ParseShaderSourceLanguageDefinition(m_GLSLSourceString);
     if (SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT)

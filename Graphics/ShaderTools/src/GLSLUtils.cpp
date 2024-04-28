@@ -243,14 +243,10 @@ static void AppendPrecisionQualifiers(const DeviceFeatures&    Features,
     }
 }
 
-String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
-                             const RenderDeviceInfo&      DeviceInfo,
-                             const GraphicsAdapterInfo&   AdapterInfo,
-                             TargetGLSLCompiler           TargetCompiler,
-                             bool                         ZeroToOneClipZ,
-                             const char*                  ExtraDefinitions,
-                             IHLSL2GLSLConversionStream** ppConversionStream) noexcept(false)
+String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexcept(false)
 {
+    const ShaderCreateInfo& ShaderCI = Attribs.ShaderCI;
+
     if (!(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
           ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL ||
           ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM ||
@@ -273,7 +269,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
 
     ShaderVersion GLSLVer;
     bool          IsES = false;
-    GetGLSLVersion(ShaderCI, TargetCompiler, DeviceInfo.Type, DeviceInfo.MaxShaderVersion, GLSLVer, IsES);
+    GetGLSLVersion(ShaderCI, Attribs.TargetCompiler, Attribs.DeviceInfo.Type, Attribs.DeviceInfo.MaxShaderVersion, GLSLVer, IsES);
 
     const auto ShaderType = ShaderCI.Desc.ShaderType;
 
@@ -287,7 +283,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
     // All extensions must go right after the version directive
     if (IsES)
     {
-        AppendGLESExtensions(ShaderType, DeviceInfo.Features, AdapterInfo.Texture, GLSLVer, GLSLSource);
+        AppendGLESExtensions(ShaderType, Attribs.DeviceInfo.Features, Attribs.AdapterInfo.Texture, GLSLVer, GLSLSource);
     }
 
     if (ShaderCI.GLSLExtensions != nullptr && ShaderCI.GLSLExtensions[0] != '\0')
@@ -307,14 +303,14 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
         GLSLSource.append("#define DESKTOP_GL 1\n");
     }
 
-    if (ZeroToOneClipZ)
+    if (Attribs.ZeroToOneClipZ)
     {
         GLSLSource.append("#define _NDC_ZERO_TO_ONE 1\n");
     }
 
-    if (ExtraDefinitions != nullptr)
+    if (Attribs.ExtraDefinitions != nullptr)
     {
-        GLSLSource.append(ExtraDefinitions);
+        GLSLSource.append(Attribs.ExtraDefinitions);
     }
 
     AppendPlatformDefinition(GLSLSource);
@@ -322,7 +318,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
 
     if (IsES)
     {
-        AppendPrecisionQualifiers(DeviceInfo.Features, AdapterInfo.Texture, GLSLVer, GLSLSource);
+        AppendPrecisionQualifiers(Attribs.DeviceInfo.Features, Attribs.AdapterInfo.Texture, GLSLVer, GLSLSource);
     }
 
     // It would be much more convenient to use row_major matrices.
@@ -335,7 +331,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
 
     AppendShaderMacros(GLSLSource, ShaderCI.Macros);
 
-    if (IsES && GLSLVer == ShaderVersion{3, 0} && DeviceInfo.Features.SeparablePrograms && ShaderType == SHADER_TYPE_VERTEX)
+    if (IsES && GLSLVer == ShaderVersion{3, 0} && Attribs.DeviceInfo.Features.SeparablePrograms && ShaderType == SHADER_TYPE_VERTEX)
     {
         // From https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_separate_shader_objects.gles.txt:
         //
@@ -374,24 +370,24 @@ String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
         // Convert HLSL to GLSL
         const auto& Converter = HLSL2GLSLConverterImpl::GetInstance();
 
-        HLSL2GLSLConverterImpl::ConversionAttribs Attribs;
-        Attribs.pSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
-        Attribs.ppConversionStream   = ppConversionStream;
-        Attribs.HLSLSource           = SourceData.Source;
-        Attribs.NumSymbols           = SourceData.SourceLength;
-        Attribs.EntryPoint           = ShaderCI.EntryPoint;
-        Attribs.ShaderType           = ShaderCI.Desc.ShaderType;
-        Attribs.IncludeDefinitions   = true;
-        Attribs.InputFileName        = ShaderCI.FilePath;
-        Attribs.SamplerSuffix        = ShaderCI.Desc.CombinedSamplerSuffix != nullptr ?
+        HLSL2GLSLConverterImpl::ConversionAttribs ConvertAttribs;
+        ConvertAttribs.pSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
+        ConvertAttribs.ppConversionStream   = Attribs.ppConversionStream;
+        ConvertAttribs.HLSLSource           = SourceData.Source;
+        ConvertAttribs.NumSymbols           = SourceData.SourceLength;
+        ConvertAttribs.EntryPoint           = ShaderCI.EntryPoint;
+        ConvertAttribs.ShaderType           = ShaderCI.Desc.ShaderType;
+        ConvertAttribs.IncludeDefinitions   = true;
+        ConvertAttribs.InputFileName        = ShaderCI.FilePath;
+        ConvertAttribs.SamplerSuffix        = ShaderCI.Desc.CombinedSamplerSuffix != nullptr ?
             ShaderCI.Desc.CombinedSamplerSuffix :
             ShaderDesc{}.CombinedSamplerSuffix;
         // Separate shader objects extension also allows input/output layout qualifiers for
         // all shader stages.
         // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt
         // (search for "Input Layout Qualifiers" and "Output Layout Qualifiers").
-        Attribs.UseInOutLocationQualifiers = DeviceInfo.Features.SeparablePrograms;
-        auto ConvertedSource               = Converter.Convert(Attribs);
+        ConvertAttribs.UseInOutLocationQualifiers = Attribs.DeviceInfo.Features.SeparablePrograms;
+        auto ConvertedSource                      = Converter.Convert(ConvertAttribs);
         if (ConvertedSource.empty())
         {
             LOG_ERROR_AND_THROW("Failed to convert HLSL source to GLSL");

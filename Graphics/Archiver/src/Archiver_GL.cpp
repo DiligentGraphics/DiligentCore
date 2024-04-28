@@ -177,12 +177,13 @@ private:
 
 #if !DILIGENT_NO_GLSLANG
         const std::string GLSLSourceString = BuildGLSLSourceString(
-            ShaderCI,
-            GLShaderCI.DeviceInfo,
-            GLShaderCI.AdapterInfo,
-            TargetGLSLCompiler::glslang,
-            GLProps.ZeroToOneClipZ // Note that this is not the same as GLShaderCI.DeviceInfo.NDC.MinZ == 0
-        );
+            {
+                ShaderCI,
+                GLShaderCI.DeviceInfo,
+                GLShaderCI.AdapterInfo,
+                TargetGLSLCompiler::glslang,
+                GLProps.ZeroToOneClipZ, // Note that this is not the same as GLShaderCI.DeviceInfo.NDC.MinZ == 0
+            });
 
         const SHADER_SOURCE_LANGUAGE SourceLang = ParseShaderSourceLanguageDefinition(GLSLSourceString);
         if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM && SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT)

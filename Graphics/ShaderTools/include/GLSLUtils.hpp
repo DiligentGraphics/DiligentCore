@@ -51,13 +51,18 @@ struct IHLSL2GLSLConversionStream;
 // the first time and will use it in all subsequent times.
 // For all subsequent conversions, FilePath member must be the same, or
 // new stream will be created and warning message will be displayed.
-String BuildGLSLSourceString(const ShaderCreateInfo&      ShaderCI,
-                             const RenderDeviceInfo&      DeviceInfo,
-                             const GraphicsAdapterInfo&   AdapterInfo,
-                             TargetGLSLCompiler           TargetCompiler,
-                             bool                         ZeroToOneClipZ     = false,
-                             const char*                  ExtraDefinitions   = nullptr,
-                             IHLSL2GLSLConversionStream** ppConversionStream = nullptr) noexcept(false);
+struct BuildGLSLSourceStringAttribs
+{
+    const ShaderCreateInfo&      ShaderCI;
+    const RenderDeviceInfo&      DeviceInfo;
+    const GraphicsAdapterInfo&   AdapterInfo;
+    TargetGLSLCompiler           TargetCompiler;
+    bool                         ZeroToOneClipZ     = false;
+    const char*                  ExtraDefinitions   = nullptr;
+    IHLSL2GLSLConversionStream** ppConversionStream = nullptr;
+};
+
+String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexcept(false);
 
 void GetGLSLVersion(const ShaderCreateInfo&              ShaderCI,
                     TargetGLSLCompiler                   TargetCompiler,
