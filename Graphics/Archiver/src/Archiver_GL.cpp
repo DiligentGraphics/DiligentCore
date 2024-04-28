@@ -36,6 +36,7 @@
 #include "DeviceObjectArchiveGL.hpp"
 #include "SerializedPipelineStateImpl.hpp"
 #include "ShaderToolsCommon.hpp"
+#include "ParsingTools.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLUtils.hpp"
@@ -57,33 +58,6 @@ struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatur
 
 namespace
 {
-
-#if !DILIGENT_NO_GLSLANG
-void StripVersionDirective(std::string& Source)
-{
-    const size_t VersionPos = Source.find("#version");
-    if (VersionPos != std::string::npos)
-    {
-        const size_t NewLinePos = Source.find('\n', VersionPos);
-        if (NewLinePos != std::string::npos)
-            Source.erase(VersionPos, NewLinePos - VersionPos + 1);
-    }
-}
-
-void StripExtensionDirectives(std::string& Source)
-{
-    size_t pos = Source.find("#extension");
-    while (pos != std::string::npos)
-    {
-        size_t end = Source.find('\n', pos);
-        if (end == std::string::npos)
-            end = Source.length();
-        Source.erase(pos, end - pos + 1);
-
-        pos = Source.find("#extension", pos);
-    }
-}
-#endif
 
 struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
 {
@@ -240,12 +214,14 @@ private:
             LOG_ERROR_AND_THROW("Failed to generate GLSL for shader '", ShaderCI.Desc.Name, "'");
 
         // Remove #version directive
-        // The version is added by BuildGLSLSourceString() in ShaderGLImpl.
-        StripVersionDirective(OptimizedGLSL);
-
+        //   The version is added by BuildGLSLSourceString() in ShaderGLImpl.
         // Remove #extension directives
-        // The extensions are added by BuildGLSLSourceString() in ShaderGLImpl.
-        StripExtensionDirectives(OptimizedGLSL);
+        //   The extensions are added by BuildGLSLSourceString() in ShaderGLImpl.
+        // Also remove #error directives like the following:
+        //   #ifndef GL_ARB_shader_draw_parameters
+        //   #error GL_ARB_shader_draw_parameters is not supported.
+        //   #endif
+        Parsing::StripPreprocessorDirectives(OptimizedGLSL, {{"version"}, {"extension"}, {"error"}});
 
         AppendShaderSourceLanguageDefinition(OptimizedGLSL, (SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT) ? SourceLang : ShaderCI.SourceLanguage);
 #endif
