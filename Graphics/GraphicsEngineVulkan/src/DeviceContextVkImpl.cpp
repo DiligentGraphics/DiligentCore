@@ -1720,7 +1720,12 @@ void DeviceContextVkImpl::SetViewports(Uint32 NumViewports, const Viewport* pVie
         m_FramebufferSamples = 1;
     }
 
-    CommitViewports();
+    // If no graphics PSO is currently bound, viewports will be committed by
+    // the SetPipelineState() when a graphics PSO is set.
+    if (m_pPipelineState && m_pPipelineState->GetDesc().IsAnyGraphicsPipeline())
+    {
+        CommitViewports();
+    }
 }
 
 void DeviceContextVkImpl::CommitScissorRects()
