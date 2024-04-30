@@ -571,7 +571,7 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
 
     if (IBSize > 0)
     {
-        BuffCI.size = VBSize;
+        BuffCI.size = IBSize;
         res         = vkCreateBuffer(Ctx.vkDevice, &BuffCI, nullptr, &Ctx.vkIndexBuffer);
         ASSERT_GE(res, VK_SUCCESS);
         ASSERT_TRUE(Ctx.vkIndexBuffer != VK_NULL_HANDLE);
@@ -788,7 +788,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
 
         VkAccelerationStructureBuildGeometryInfoKHR     ASBuildInfo = {};
         VkAccelerationStructureGeometryKHR              Geometry    = {};
-        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {};
+        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {1, 0, 0, 0};
         VkAccelerationStructureBuildRangeInfoKHR const* OffsetPtr   = &Offset;
 
         Geometry.sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -796,7 +796,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometryType                    = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
         Geometry.geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
         Geometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-        Geometry.geometry.triangles.maxVertex    = _countof(Vertices);
+        Geometry.geometry.triangles.maxVertex    = _countof(Vertices) - 1u;
         Geometry.geometry.triangles.vertexStride = sizeof(Vertices[0]);
         Geometry.geometry.triangles.indexType    = VK_INDEX_TYPE_NONE_KHR;
 
@@ -808,7 +808,6 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         AccelStructBarrier(Ctx);
 
         Geometry.geometry.triangles.vertexData.deviceAddress = Ctx.vkVertexBufferAddress;
-        Offset.primitiveCount                                = 1;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
@@ -838,8 +837,6 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometry.instances.pNext              = nullptr;
         Geometry.geometry.instances.arrayOfPointers    = VK_FALSE;
         Geometry.geometry.instances.data.deviceAddress = Ctx.vkInstanceBufferAddress;
-
-        Offset.primitiveCount = 1;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
@@ -947,7 +944,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         const auto& Vertices = TestingConstants::TriangleAnyHit::Vertices;
 
         VkAccelerationStructureBuildGeometryInfoKHR     ASBuildInfo = {};
-        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {};
+        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {3, 0, 0, 0};
         VkAccelerationStructureGeometryKHR              Geometry    = {};
         VkAccelerationStructureBuildRangeInfoKHR const* OffsetPtr   = &Offset;
 
@@ -957,7 +954,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
         Geometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
         Geometry.geometry.triangles.vertexStride = sizeof(Vertices[0]);
-        Geometry.geometry.triangles.maxVertex    = _countof(Vertices);
+        Geometry.geometry.triangles.maxVertex    = _countof(Vertices) - 1;
         Geometry.geometry.triangles.indexType    = VK_INDEX_TYPE_NONE_KHR;
 
         CreateBLAS(Ctx, &Geometry, OffsetPtr, 1, Ctx.BLAS);
@@ -968,7 +965,6 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         AccelStructBarrier(Ctx);
 
         Geometry.geometry.triangles.vertexData.deviceAddress = Ctx.vkVertexBufferAddress;
-        Offset.primitiveCount                                = 3;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
@@ -1107,7 +1103,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         const auto& Boxes = TestingConstants::ProceduralIntersection::Boxes;
 
         VkAccelerationStructureBuildGeometryInfoKHR     ASBuildInfo = {};
-        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {};
+        VkAccelerationStructureBuildRangeInfoKHR        Offset      = {1, 0, 0, 0};
         VkAccelerationStructureGeometryKHR              Geometry    = {};
         VkAccelerationStructureBuildRangeInfoKHR const* OffsetPtr   = &Offset;
 
@@ -1126,7 +1122,6 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         AccelStructBarrier(Ctx);
 
         Geometry.geometry.aabbs.data.deviceAddress = Ctx.vkVertexBufferAddress;
-        Offset.primitiveCount                      = 1;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
@@ -1156,8 +1151,6 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         Geometry.geometry.instances.pNext              = nullptr;
         Geometry.geometry.instances.arrayOfPointers    = VK_FALSE;
         Geometry.geometry.instances.data.deviceAddress = Ctx.vkInstanceBufferAddress;
-
-        Offset.primitiveCount = 1;
 
         ASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
         ASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
@@ -1291,7 +1284,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         Geometries[0].geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
         Geometries[0].geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
         Geometries[0].geometry.triangles.vertexStride = sizeof(Vertices[0]);
-        Geometries[0].geometry.triangles.maxVertex    = PrimitiveOffsets[1] * 3;
+        Geometries[0].geometry.triangles.maxVertex    = PrimitiveOffsets[1] * 3 - 1;
         Geometries[0].geometry.triangles.indexType    = VK_INDEX_TYPE_UINT32;
 
         Geometries[1].sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -1300,7 +1293,7 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         Geometries[1].geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
         Geometries[1].geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
         Geometries[1].geometry.triangles.vertexStride = sizeof(Vertices[0]);
-        Geometries[1].geometry.triangles.maxVertex    = (PrimitiveOffsets[2] - PrimitiveOffsets[1]) * 3;
+        Geometries[1].geometry.triangles.maxVertex    = (PrimitiveOffsets[2] - PrimitiveOffsets[1]) * 3 - 1;
         Geometries[1].geometry.triangles.indexType    = VK_INDEX_TYPE_UINT32;
 
         Geometries[2].sType                           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -1309,8 +1302,12 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
         Geometries[2].geometry.triangles.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
         Geometries[2].geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
         Geometries[2].geometry.triangles.vertexStride = sizeof(Vertices[0]);
-        Geometries[2].geometry.triangles.maxVertex    = (_countof(Primitives) - PrimitiveOffsets[2]) * 3;
+        Geometries[2].geometry.triangles.maxVertex    = (_countof(Primitives) - PrimitiveOffsets[2]) * 3 - 1;
         Geometries[2].geometry.triangles.indexType    = VK_INDEX_TYPE_UINT32;
+
+        Offsets[0].primitiveCount = PrimitiveOffsets[1];
+        Offsets[1].primitiveCount = PrimitiveOffsets[2] - PrimitiveOffsets[1];
+        Offsets[2].primitiveCount = _countof(Primitives) - PrimitiveOffsets[2];
 
         CreateBLAS(Ctx, Geometries, OffsetPtr, _countof(Geometries), Ctx.BLAS);
         CreateTLAS(Ctx, InstanceCount, Ctx.TLAS);
