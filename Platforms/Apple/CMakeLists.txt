@@ -26,6 +26,10 @@ set(SOURCE
     ../Linux/src/LinuxFileSystem.cpp
 )
 
+if(PLATFORM_MACOS)
+	list(APPEND SOURCE src/MacOSNativeWindow.mm)
+endif()
+
 add_library(Diligent-ApplePlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
 set_common_target_properties(Diligent-ApplePlatform)
 
