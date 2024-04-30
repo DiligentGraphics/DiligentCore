@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,14 +33,14 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 struct MacOSNativeWindow
 {
-    void* pNSView DEFAULT_INITIALIZER(nullptr);
+    void* pCALayer DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     MacOSNativeWindow() noexcept
     {}
 
-    explicit MacOSNativeWindow(void* _pNSView) noexcept :
-        pNSView(_pNSView)
+    explicit MacOSNativeWindow(void* _pCALayer) noexcept :
+        pCALayer{_pCALayer}
     {}
 #endif
 };

@@ -32,7 +32,7 @@
 #include <memory>
 #include <array>
 
-#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+#ifdef VK_USE_PLATFORM_METAL_EXT
 #    include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
 #else
 #    ifndef ENABLE_HLSL
