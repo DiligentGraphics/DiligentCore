@@ -24,94 +24,11 @@
  *  of the possibility of such damages.
  */
 
-#include <stdio.h>
-#include <unistd.h>
-#include <cstdio>
-
 #include "EmscriptenFileSystem.hpp"
-#include "Errors.hpp"
 #include "DebugUtilities.hpp"
 
 namespace Diligent
 {
-
-EmscriptenFile* EmscriptenFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
-{
-    EmscriptenFile* pFile = nullptr;
-    try
-    {
-        pFile = new EmscriptenFile{OpenAttribs};
-    }
-    catch (const std::runtime_error& err)
-    {
-    }
-    return pFile;
-}
-
-bool EmscriptenFileSystem::FileExists(const Char* strFilePath)
-{
-    FileOpenAttribs OpenAttribs;
-    OpenAttribs.strFilePath = strFilePath;
-    BasicFile   DummyFile{OpenAttribs};
-    const auto& Path   = DummyFile.GetPath(); // This is necessary to correct slashes
-    FILE*       pFile  = fopen(Path.c_str(), "r");
-    bool        Exists = (pFile != nullptr);
-    if (Exists)
-        fclose(pFile);
-    return Exists;
-}
-
-bool EmscriptenFileSystem::PathExists(const Char* strPath)
-{
-    UNSUPPORTED("Not implemented");
-    return false;
-}
-
-bool EmscriptenFileSystem::CreateDirectory(const Char* strPath)
-{
-    UNSUPPORTED("Not implemented");
-    return false;
-}
-
-void EmscriptenFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
-{
-    UNSUPPORTED("Not implemented");
-}
-
-void EmscriptenFileSystem::DeleteFile(const Char* strPath)
-{
-    remove(strPath);
-}
-
-bool EmscriptenFileSystem::DeleteDirectory(const Char* strPath)
-{
-    UNSUPPORTED("Not implemented");
-    return false;
-}
-
-bool EmscriptenFileSystem::IsDirectory(const Char* strPath)
-{
-    UNSUPPORTED("Not implemented");
-    return false;
-}
-
-EmscriptenFileSystem::SearchFilesResult EmscriptenFileSystem::Search(const Char* SearchPattern)
-{
-    UNSUPPORTED("Not implemented");
-    return EmscriptenFileSystem::SearchFilesResult{};
-}
-
-EmscriptenFileSystem::SearchFilesResult EmscriptenFileSystem::SearchRecursive(const Char* Dir, const Char* SearchPattern)
-{
-    UNSUPPORTED("Not implemented");
-    return EmscriptenFileSystem::SearchFilesResult{};
-}
-
-std::string EmscriptenFileSystem::GetCurrentDirectory()
-{
-    UNSUPPORTED("Not implemented");
-    return std::string();
-}
 
 std::string EmscriptenFileSystem::GetLocalAppDataDirectory(const char* AppName, bool Create)
 {

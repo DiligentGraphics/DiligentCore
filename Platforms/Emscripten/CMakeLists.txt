@@ -14,6 +14,7 @@ set(INTERFACE
 set(SOURCE
     src/EmscriptenDebug.cpp
     src/EmscriptenFileSystem.cpp
+    ../Linux/src/LinuxFileSystem.cpp
 )
 
 add_library(Diligent-EmscriptenPlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})

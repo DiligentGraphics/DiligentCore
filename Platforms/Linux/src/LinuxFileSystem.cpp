@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,7 @@
 namespace Diligent
 {
 
-#if PLATFORM_LINUX || PLATFORM_APPLE
+#if PLATFORM_LINUX || PLATFORM_APPLE || PLATFORM_EMSCRIPTEN
 LinuxFile* LinuxFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
     LinuxFile* pFile = nullptr;

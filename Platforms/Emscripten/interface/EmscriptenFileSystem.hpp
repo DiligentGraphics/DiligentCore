@@ -31,30 +31,15 @@
 
 #include "../../Basic/interface/BasicFileSystem.hpp"
 #include "../../Basic/interface/StandardFile.hpp"
+#include "../../Linux/interface/LinuxFileSystem.hpp"
 
 namespace Diligent
 {
 
 using EmscriptenFile = StandardFile;
 
-struct EmscriptenFileSystem : public BasicFileSystem
+struct EmscriptenFileSystem : public LinuxFileSystem
 {
-public:
-    static EmscriptenFile* OpenFile(const FileOpenAttribs& OpenAttribs);
-
-    static bool FileExists(const Char* strFilePath);
-    static bool PathExists(const Char* strPath);
-
-    static bool CreateDirectory(const Char* strPath);
-    static void ClearDirectory(const Char* strPath, bool Recursive = false);
-    static void DeleteFile(const Char* strPath);
-    static bool DeleteDirectory(const Char* strPath);
-    static bool IsDirectory(const Char* strPath);
-
-    static SearchFilesResult Search(const Char* SearchPattern);
-    static SearchFilesResult SearchRecursive(const Char* Dir, const Char* SearchPattern);
-
-    static std::string GetCurrentDirectory();
     static std::string GetLocalAppDataDirectory(const char* AppName = nullptr, bool Create = true);
 };
 
