@@ -3434,9 +3434,11 @@ void DeviceContextVkImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
             auto* const pVB = ClassPtrCast<BufferVkImpl>(SrcTris.pVertexBuffer);
 
             // vertex format in SrcTris may be undefined, so use vertex format from description
-            vkTris.vertexFormat             = TypeToVkFormat(TriDesc.VertexValueType, TriDesc.VertexComponentCount, TriDesc.VertexValueType < VT_FLOAT16);
-            vkTris.vertexStride             = SrcTris.VertexStride;
-            vkTris.maxVertex                = SrcTris.VertexCount;
+            vkTris.vertexFormat = TypeToVkFormat(TriDesc.VertexValueType, TriDesc.VertexComponentCount, TriDesc.VertexValueType < VT_FLOAT16);
+            vkTris.vertexStride = SrcTris.VertexStride;
+            // maxVertex is the number of vertices in vertexData minus one.
+            VERIFY(SrcTris.VertexCount > 0, "Vertex count must be greater than 0");
+            vkTris.maxVertex                = SrcTris.VertexCount - 1;
             vkTris.vertexData.deviceAddress = pVB->GetVkDeviceAddress() + SrcTris.VertexOffset;
 
             // geometry.triangles.vertexData.deviceAddress must be aligned to the size in bytes of the smallest component of the format in vertexFormat
