@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -69,24 +69,7 @@ public:
 
     ~RenderDeviceWithCache()
     {
-        if (m_pCache != nullptr && !m_CacheFilePath.empty())
-        {
-            // Save render state cache data to the file
-            RefCntAutoPtr<IDataBlob> pCacheData;
-            if (m_pCache->WriteToBlob(m_CacheContentVersion, &pCacheData))
-            {
-                if (pCacheData)
-                {
-                    FileWrapper CacheDataFile{m_CacheFilePath.c_str(), EFileAccessMode::Overwrite};
-                    if (CacheDataFile->Write(pCacheData->GetConstDataPtr(), pCacheData->GetSize()))
-                        LOG_INFO_MESSAGE("Successfully saved state cache file ", m_CacheFilePath, " (", FormatMemorySize(pCacheData->GetSize()), ").");
-                }
-            }
-            else
-            {
-                LOG_ERROR_MESSAGE("Failed to write cache data.");
-            }
-        }
+        SaveCache();
     }
 
     RefCntAutoPtr<IShader> CreateShader(const ShaderCreateInfo& ShaderCI) const noexcept(!ThrowOnError)
@@ -206,6 +189,34 @@ public:
         {
             LOG_ERROR_MESSAGE("Failed to load render state cache data from file ", FilePath);
             return;
+        }
+    }
+
+    void SaveCache(const char* FilePath = nullptr)
+    {
+        if (m_pCache == nullptr)
+            return;
+
+        if (FilePath == nullptr)
+            FilePath = m_CacheFilePath.c_str();
+
+        if (FilePath[0] == '\0')
+            return;
+
+        // Save render state cache data to the file
+        RefCntAutoPtr<IDataBlob> pCacheData;
+        if (m_pCache->WriteToBlob(m_CacheContentVersion, &pCacheData))
+        {
+            if (pCacheData)
+            {
+                FileWrapper CacheDataFile{FilePath, EFileAccessMode::Overwrite};
+                if (CacheDataFile->Write(pCacheData->GetConstDataPtr(), pCacheData->GetSize()))
+                    LOG_INFO_MESSAGE("Successfully saved state cache file ", FilePath, " (", FormatMemorySize(pCacheData->GetSize()), ").");
+            }
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("Failed to write cache data.");
         }
     }
 
