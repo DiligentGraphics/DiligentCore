@@ -400,7 +400,7 @@ public:
     {
         std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
 
-        auto it = m_ReloadableShaders.find(pShader);
+        auto it = m_ReloadableShaders.find(pShader->GetUniqueID());
         if (it == m_ReloadableShaders.end())
             return {};
 
@@ -457,14 +457,14 @@ private:
     std::mutex                                             m_ShadersMtx;
     std::unordered_map<XXH128Hash, RefCntWeakPtr<IShader>> m_Shaders;
 
-    std::mutex                                           m_ReloadableShadersMtx;
-    std::unordered_map<IShader*, RefCntWeakPtr<IShader>> m_ReloadableShaders;
+    std::mutex                                                   m_ReloadableShadersMtx;
+    std::unordered_map<UniqueIdentifier, RefCntWeakPtr<IShader>> m_ReloadableShaders;
 
     std::mutex                                                    m_PipelinesMtx;
     std::unordered_map<XXH128Hash, RefCntWeakPtr<IPipelineState>> m_Pipelines;
 
-    std::mutex                                                         m_ReloadablePipelinesMtx;
-    std::unordered_map<IPipelineState*, RefCntWeakPtr<IPipelineState>> m_ReloadablePipelines;
+    std::mutex                                                          m_ReloadablePipelinesMtx;
+    std::unordered_map<UniqueIdentifier, RefCntWeakPtr<IPipelineState>> m_ReloadablePipelines;
 };
 
 static size_t ComputeDeviceAttribsHash(IRenderDevice* pDevice)
@@ -582,7 +582,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
         {
             std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
 
-            auto it = m_ReloadableShaders.find(pShader);
+            auto it = m_ReloadableShaders.find(pShader->GetUniqueID());
             if (it != m_ReloadableShaders.end())
             {
                 if (auto pReloadableShader = it->second.Lock())
@@ -615,7 +615,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
             ReloadableShader::Create(this, pShader, _ShaderCI, ppShader);
 
             std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
-            m_ReloadableShaders.emplace(pShader, RefCntWeakPtr<IShader>{*ppShader});
+            m_ReloadableShaders.emplace(pShader->GetUniqueID(), RefCntWeakPtr<IShader>{*ppShader});
         }
     }
     else
@@ -1050,7 +1050,7 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
         {
             std::lock_guard<std::mutex> Guard{m_ReloadablePipelinesMtx};
 
-            auto it = m_ReloadablePipelines.find(pPSO);
+            auto it = m_ReloadablePipelines.find(pPSO->GetUniqueID());
             if (it != m_ReloadablePipelines.end())
             {
                 if (auto pReloadablePSO = it->second.Lock())
@@ -1065,7 +1065,7 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
             ReloadablePipelineState::Create(this, pPSO, PSOCreateInfo, ppPipelineState);
 
             std::lock_guard<std::mutex> Guard{m_ReloadablePipelinesMtx};
-            m_ReloadablePipelines.emplace(pPSO, RefCntWeakPtr<IPipelineState>(*ppPipelineState));
+            m_ReloadablePipelines.emplace(pPSO->GetUniqueID(), RefCntWeakPtr<IPipelineState>(*ppPipelineState));
         }
     }
     else
