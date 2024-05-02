@@ -117,13 +117,14 @@ TEST(DXCompilerTest, Reflection)
     auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
-    const auto MaxSM = pDXC->GetMaxShaderModel();
-    if (MaxSM.Major > 6)
+    auto MaxSM = pDXC->GetMaxShaderModel();
+    if (MaxSM > ShaderVersion{6, 6})
     {
-        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_* is expected by the test");
+        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_6 is expected by the test");
+        MaxSM = ShaderVersion{6, 6};
     }
 
-    for (Uint32 MinorVersion = 3; MinorVersion <= (MaxSM.Major == 6 ? MaxSM.Minor : 6); ++MinorVersion)
+    for (Uint32 MinorVersion = 3; MinorVersion <= MaxSM.Minor; ++MinorVersion)
     {
         std::wstring Profile = L"lib_6_" + std::to_wstring(MinorVersion);
         LOG_INFO_MESSAGE("Testing shader profile ", NarrowString(Profile));
@@ -197,13 +198,14 @@ TEST(DXCompilerTest, RemapBindingsRG)
     auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
-    const auto MaxSM = pDXC->GetMaxShaderModel();
-    if (MaxSM.Major > 6)
+    auto MaxSM = pDXC->GetMaxShaderModel();
+    if (MaxSM > ShaderVersion{6, 6})
     {
-        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_* is expected by the test");
+        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_6 is expected by the test");
+        MaxSM = ShaderVersion{6, 6};
     }
 
-    for (Uint32 MinorVersion = 3; MinorVersion <= (MaxSM.Major == 6 ? MaxSM.Minor : 6); ++MinorVersion)
+    for (Uint32 MinorVersion = 3; MinorVersion <= MaxSM.Minor; ++MinorVersion)
     {
         std::wstring Profile = L"lib_6_" + std::to_wstring(MinorVersion);
         LOG_INFO_MESSAGE("Testing shader profile ", NarrowString(Profile));
@@ -334,13 +336,14 @@ float4 main() : SV_TARGET
     auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
-    const auto MaxSM = pDXC->GetMaxShaderModel();
-    if (MaxSM.Major > 6)
+    auto MaxSM = pDXC->GetMaxShaderModel();
+    if (MaxSM > ShaderVersion{6, 6})
     {
-        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_* is expected by the test");
+        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_6 is expected by the test");
+        MaxSM = ShaderVersion{6, 6};
     }
 
-    for (Uint32 MinorVersion = 0; MinorVersion <= (MaxSM.Major == 6 ? MaxSM.Minor : 6); ++MinorVersion)
+    for (Uint32 MinorVersion = 0; MinorVersion <= MaxSM.Minor; ++MinorVersion)
     {
         std::wstring Profile = L"ps_6_" + std::to_wstring(MinorVersion);
         LOG_INFO_MESSAGE("Testing shader profile ", NarrowString(Profile));
@@ -456,8 +459,8 @@ float4 main() : SV_TARGET
 TEST(DXCompilerTest, RemapBindingsPS_2)
 {
     const std::string ShaderSource = R"hlsl(
-Texture2D     g_Tex[4];
-Texture3D     g_Tex3D;
+Texture2D     g_Tex[4] : register(t91, space7);
+Texture3D     g_Tex3D : register(t527);
 SamplerState  g_TexSampler;
 
 RWTexture2D<float4> g_ColorBuffer1;
@@ -465,7 +468,7 @@ RWTexture2D<float4> g_ColorBuffer2;
 RWTexture2D<float4> g_ColorBuffer3;
 
 StructuredBuffer<float4> g_Buffer1[5];
-RWByteAddressBuffer      g_Buffer2[] : register(u0, space1);
+RWByteAddressBuffer      g_Buffer2[] : register(u5, space1);
 
 struct Matrix
 {
@@ -496,8 +499,8 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
         col += g_Buffer2[j].Load4(j*4);
     }
 
-    return g_Tex[0].Sample(g_TexSampler, UV) *
-           g_Tex[2].Sample(g_TexSampler, UV) +
+    return g_Tex[1].Sample(g_TexSampler, UV) *
+           g_Tex[3].Sample(g_TexSampler, UV) +
            g_Tex3D.Sample(g_TexSampler, UV.xxy) +
            g_Buffer1[1][9] * g_Buffer1[4][100] +
            g_MatrixBuffer[3].m[0];
@@ -507,13 +510,14 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
     auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
-    const auto MaxSM = pDXC->GetMaxShaderModel();
-    if (MaxSM.Major > 6)
+    auto MaxSM = pDXC->GetMaxShaderModel();
+    if (MaxSM > ShaderVersion{6, 6})
     {
-        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_* is expected by the test");
+        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_6 is expected by the test");
+        MaxSM = ShaderVersion{6, 6};
     }
 
-    for (Uint32 MinorVersion = 0; MinorVersion <= (MaxSM.Major == 6 ? MaxSM.Minor : 6); ++MinorVersion)
+    for (Uint32 MinorVersion = 5; MinorVersion <= MaxSM.Minor; ++MinorVersion)
     {
         std::wstring Profile = L"ps_6_" + std::to_wstring(MinorVersion);
         LOG_INFO_MESSAGE("Testing shader profile ", NarrowString(Profile));
