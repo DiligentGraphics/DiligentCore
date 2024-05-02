@@ -32,6 +32,7 @@
 #include <memory>
 #include <mutex>
 #include <atomic>
+#include <array>
 
 // Platforms that support DXCompiler.
 #if PLATFORM_WIN32
@@ -177,7 +178,7 @@ private:
     static bool PatchDXIL(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, SHADER_TYPE ShaderType, String& DXIL);
     static void PatchResourceDeclaration(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false);
     static void PatchResourceDeclarationRT(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false);
-    static void PatchResourceHandle(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false);
+    static void PatchCreateHandle(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false);
 
     static ShaderVersion TestMaxShaderModel(DxcCreateInstanceProc CreateInstance, DXCompilerTarget Target);
 
@@ -909,7 +910,7 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
 
         TExtendedResourceMap ExtResourceMap;
 
-        for (auto& NameAndBinding : ResourceMap)
+        for (const auto& NameAndBinding : ResourceMap)
         {
             D3D12_SHADER_INPUT_BIND_DESC ResDesc = {};
             if (pd3d12Reflection->GetResourceBindingDescByName(NameAndBinding.first.GetStr(), &ResDesc) == S_OK)
@@ -1043,7 +1044,7 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, TExtended
         else
         {
             PatchResourceDeclaration(ResourceMap, ExtResMap, DXIL);
-            PatchResourceHandle(ResourceMap, ExtResMap, DXIL);
+            PatchCreateHandle(ResourceMap, ExtResMap, DXIL);
         }
         return true;
     }
@@ -1055,51 +1056,6 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, TExtended
 
 namespace
 {
-void ReplaceRecord(String& DXIL, size_t& pos, const String& NewValue, const char* Name, const char* RecordName, const Uint32 ExpectedPrevValue)
-{
-#define CHECK_PATCHING_ERROR(Cond, ...)                                                         \
-    if (!(Cond))                                                                                \
-    {                                                                                           \
-        LOG_ERROR_AND_THROW("Unable to patch DXIL for resource '", Name, "': ", ##__VA_ARGS__); \
-    }
-
-    static const String i32           = "i32 ";
-    static const String NumberSymbols = "+-0123456789";
-
-    // , i32 -1
-    // ^
-    CHECK_PATCHING_ERROR(pos + 1 < DXIL.length() && DXIL[pos] == ',' && DXIL[pos + 1] == ' ', RecordName, " record is not found")
-
-    pos += 2;
-    // , i32 -1
-    //   ^
-
-    CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "unexpected ", RecordName, " record type")
-    pos += i32.length();
-    // , i32 -1
-    //       ^
-
-    auto RecordEndPos = DXIL.find_first_not_of(NumberSymbols, pos);
-    CHECK_PATCHING_ERROR(pos != String::npos, "unable to find the end of the ", RecordName, " record data")
-    // , i32 -1
-    //         ^
-    //    RecordEndPos
-
-    Uint32 PrevValue = static_cast<Uint32>(std::stoi(DXIL.substr(pos, RecordEndPos - pos)));
-    CHECK_PATCHING_ERROR(PrevValue == ExpectedPrevValue, "previous value does not match the expected");
-
-    DXIL.replace(pos, RecordEndPos - pos, NewValue);
-    // , i32 1
-    //         ^
-    //    RecordEndPos
-
-    pos += NewValue.length();
-    // , i32 1
-    //        ^
-    //       pos
-
-#undef CHECK_PATCHING_ERROR
-}
 
 bool IsWordSymbol(char c)
 {
@@ -1109,6 +1065,116 @@ bool IsWordSymbol(char c)
 bool IsNumberSymbol(char c)
 {
     return (c >= '0' && c <= '9');
+}
+
+bool SkipSpaces(const String& DXIL, size_t& pos)
+{
+    while (pos < DXIL.length() && DXIL[pos] == ' ')
+        ++pos;
+
+    return pos < DXIL.length();
+}
+
+bool SkipCommaAndSpaces(const String& DXIL, size_t& pos)
+{
+    // , i32 -1
+    // ^
+    if (pos >= DXIL.length() || DXIL[pos] != ',')
+        return false;
+
+    ++pos;
+    // , i32 -1
+    //  ^
+
+    if (pos >= DXIL.length() || DXIL[pos] != ' ')
+        return false;
+
+    return SkipSpaces(DXIL, pos);
+    // , i32 -1
+    //   ^
+}
+
+template <typename T>
+size_t ParseIntRecord(const String& DXIL, size_t& pos, VALUE_TYPE Type, const char* RecordName, T* Value = nullptr)
+{
+#define CHECK_PARSING_ERROR(Cond, ...)                                                    \
+    if (!(Cond))                                                                          \
+    {                                                                                     \
+        LOG_ERROR_AND_THROW("Unable to read '", RecordName, "' record: ", ##__VA_ARGS__); \
+    }
+
+    CHECK_PARSING_ERROR(SkipSpaces(DXIL, pos), "unexpected end of file")
+
+    static const String i32 = "i32";
+    static const String i8  = "i8";
+    VERIFY_EXPR(Type == VT_INT32 || Type == VT_INT8);
+    const String& TypeStr = Type == VT_INT32 ? i32 : i8;
+
+    // i32 -1
+    // ^
+
+    CHECK_PARSING_ERROR(std::strncmp(&DXIL[pos], TypeStr.c_str(), TypeStr.length()) == 0, TypeStr, " is expected")
+    pos += TypeStr.length();
+    // i32 -1
+    //    ^
+
+    CHECK_PARSING_ERROR(pos < DXIL.length() && DXIL[pos] == ' ', "' ' is expected")
+    CHECK_PARSING_ERROR(SkipSpaces(DXIL, pos), "unexpected end of file")
+
+    const size_t ValueStartPos = pos;
+    // i32 -1
+    //     ^
+    //  ValueStartPos
+
+    if (DXIL[pos] == '-' || DXIL[pos] == '+')
+        ++pos;
+    while (IsNumberSymbol(DXIL[pos]))
+        ++pos;
+
+    CHECK_PARSING_ERROR(pos > ValueStartPos, "number is expected")
+
+    // i32 -1
+    //       ^
+
+    if (Value != nullptr)
+    {
+        const String ValueStr = DXIL.substr(ValueStartPos, pos - ValueStartPos);
+        *Value                = static_cast<T>(std::stoi(ValueStr));
+    }
+
+    return ValueStartPos;
+#undef CHECK_PARSING_ERROR
+}
+
+
+void ReplaceRecord(String& DXIL, size_t& pos, const String& NewValue, const char* Name, const char* RecordName, const Uint32 ExpectedPrevValue)
+{
+#define CHECK_PATCHING_ERROR(Cond, ...)                                                         \
+    if (!(Cond))                                                                                \
+    {                                                                                           \
+        LOG_ERROR_AND_THROW("Unable to patch DXIL for resource '", Name, "': ", ##__VA_ARGS__); \
+    }
+
+    // , i32 -1
+    // ^
+    CHECK_PATCHING_ERROR(SkipCommaAndSpaces(DXIL, pos), RecordName, " record is not found")
+
+    // , i32 -1
+    //   ^
+
+    Uint32       PrevValue     = 0;
+    const size_t ValueStartPos = ParseIntRecord(DXIL, pos, VT_INT32, RecordName, &PrevValue);
+    CHECK_PATCHING_ERROR(PrevValue == ExpectedPrevValue, "previous value does not match the expected");
+
+    DXIL.replace(ValueStartPos, pos - ValueStartPos, NewValue);
+    // , i32 1
+    //         ^
+
+    pos = ValueStartPos + NewValue.length();
+    // , i32 1
+    //        ^
+
+#undef CHECK_PATCHING_ERROR
 }
 
 } // namespace
@@ -1121,8 +1187,6 @@ void DXCompilerImpl::PatchResourceDeclarationRT(const TResourceBindingMap& Resou
         LOG_ERROR_AND_THROW("Unable to patch DXIL for resource '", Name, "': ", ##__VA_ARGS__); \
     }
 
-    static const String i32              = "i32 ";
-    static const String NumberSymbols    = "+-0123456789";
     static const String ResourceRecStart = "= !{";
 
     // This resource patching method is valid for ray tracing shaders and non-optimized shaders with metadata.
@@ -1165,18 +1229,11 @@ void DXCompilerImpl::PatchResourceDeclarationRT(const TResourceBindingMap& Resou
 
         // !5 = !{i32 0,
         //        ^
-        CHECK_PATCHING_ERROR(std::strncmp(DXIL.c_str() + pos, i32.c_str(), i32.length()) == 0, "");
+        Uint32 RecordId = 0;
+        ParseIntRecord(DXIL, pos, VT_INT32, "record ID", &RecordId);
 
         // !5 = !{i32 0,
-        //            ^
-        pos += i32.length();
-
-        const size_t RecordIdStartPos = pos;
-
-        pos = DXIL.find_first_not_of(NumberSymbols, pos);
-        CHECK_PATCHING_ERROR(pos != String::npos, "");
-
-        const Uint32 RecordId = static_cast<Uint32>(std::atoi(DXIL.c_str() + RecordIdStartPos));
+        //             ^
 
         VERIFY_EXPR(Ext.RecordId == ~0u || Ext.RecordId == RecordId);
         Ext.RecordId = RecordId;
@@ -1200,7 +1257,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
 {
     // This resource patching method is valid for optimized shaders without metadata.
 
-    static const String i32                   = "i32 ";
+    static const String i32_                  = "i32 ";
     static const String NumberSymbols         = "+-0123456789";
     static const String ResourceRecStart      = "= !{";
     static const String ResNameDecl           = ", !\"";
@@ -1252,9 +1309,9 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
         // , i32 -1
         //   ^
 
-        if (std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) != 0)
+        if (std::strncmp(&DXIL[pos], i32_.c_str(), i32_.length()) != 0)
             return false;
-        pos += i32.length();
+        pos += i32_.length();
         // , i32 -1
         //       ^
 
@@ -1333,7 +1390,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
 
         // !5 = !{i32 0,
         //        ^
-        if (std::strncmp(DXIL.c_str() + pos, i32.c_str(), i32.length()) != 0)
+        if (std::strncmp(DXIL.c_str() + pos, i32_.c_str(), i32_.length()) != 0)
         {
             // This is not a resource declaration record, continue searching.
             pos = BindingRecordStart;
@@ -1341,7 +1398,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
         }
         // !5 = !{i32 0,
         //            ^
-        pos += i32.length();
+        pos += i32_.length();
 
         const size_t RecordIdStartPos = pos;
 
@@ -1351,8 +1408,8 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
         //        ^
         const Uint32 RecordId = static_cast<Uint32>(std::atoi(DXIL.c_str() + RecordIdStartPos));
 
-        CHECK_PATCHING_ERROR(pos + 1 < DXIL.length() && DXIL[pos] == ',' && DXIL[pos + 1] == ' ', "failed to find the end of the Record ID record data");
-        pos += 2;
+        CHECK_PATCHING_ERROR(SkipCommaAndSpaces(DXIL, pos), "failed to find the end of the Record ID record data");
+
         // !{i32 0, %"class.Texture2D<...  or  !{i32 0, [4 x %"class.Texture2D<...
         //          ^                                   ^
 
@@ -1533,27 +1590,28 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
 #undef CHECK_PATCHING_ERROR
 }
 
-void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false)
+static bool NextArg(String& DXIL, size_t& pos)
+{
+    for (; pos < DXIL.size(); ++pos)
+    {
+        const char c = DXIL[pos];
+        if (c == ',')
+            return true; // More arguments
+        if (c == ')' || c == '}' || c == '\n')
+            return false; // End of declaration
+    }
+
+    return false; // end of bytecode
+}
+
+void DXCompilerImpl::PatchCreateHandle(const TResourceBindingMap& ResourceMap, TExtendedResourceMap& ExtResMap, String& DXIL) noexcept(false)
 {
     // Patch createHandle command
-    static const String   CallHandlePattern = " = call %dx.types.Handle @dx.op.createHandle(";
-    static const String   i32               = "i32 ";
-    static const String   i8                = "i8 ";
-    static const RES_TYPE ResClassToType[]  = {RES_TYPE_SRV, RES_TYPE_UAV, RES_TYPE_CBV, RES_TYPE_SAMPLER};
+    static const String CallHandlePattern = " = call %dx.types.Handle @dx.op.createHandle(";
+    static const String i32_              = "i32 ";
+    static const String i8_               = "i8 ";
 
-    const auto NextArg = [&DXIL](size_t& pos) //
-    {
-        for (; pos < DXIL.size(); ++pos)
-        {
-            const char c = DXIL[pos];
-            if (c == ',')
-                return true; // OK
-            if (c == ')' || c == '\n')
-                return false; // end of createHandle()
-        }
-        // end of bytecode
-        return false;
-    };
+    static constexpr std::array<RES_TYPE, 4> ResClassToType = {RES_TYPE_SRV, RES_TYPE_UAV, RES_TYPE_CBV, RES_TYPE_SAMPLER};
 
     const auto ReplaceBindPoint = [&](Uint32 ResClass, Uint32 RangeId, size_t IndexStartPos, size_t IndexEndPos) //
     {
@@ -1618,69 +1676,46 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
         //                     ^
 
         // Skip opcode.
-
-        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "Opcode record is not found");
-        pos += i32.length();
-        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
-        //                         ^
-
-        CHECK_PATCHING_ERROR(NextArg(pos), "failed to find end of the Opcode record data");
+        ParseIntRecord<Int32>(DXIL, pos, VT_INT32, "opcode");
         // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                           ^
 
         // Read resource class.
 
-        CHECK_PATCHING_ERROR(pos + 1 < DXIL.length() && DXIL[pos] == ',' && DXIL[pos + 1] == ' ', "Resource Class record is not found");
-        pos += 2;
+        CHECK_PATCHING_ERROR(SkipCommaAndSpaces(DXIL, pos), "Resource Class record is not found");
         // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                             ^
 
-        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i8.c_str(), i8.length()) == 0, "Resource Class record data is not found");
-        pos += i8.length();
-        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
-        //                                ^
-
-        const size_t ResClassStartPos = pos;
-
-        CHECK_PATCHING_ERROR(NextArg(pos), "failed to find end of the Resource class record data");
+        Uint32 ResClass = 0;
+        ParseIntRecord(DXIL, pos, VT_INT8, "resource class", &ResClass);
         // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                                 ^
-        const Uint32 ResClass = static_cast<Uint32>(std::atoi(DXIL.c_str() + ResClassStartPos));
 
         // Read resource range ID.
 
-        CHECK_PATCHING_ERROR(pos + 1 < DXIL.length() && DXIL[pos] == ',' && DXIL[pos + 1] == ' ', "Range ID record is not found");
-        pos += 2;
+        CHECK_PATCHING_ERROR(SkipCommaAndSpaces(DXIL, pos), "Range ID record is not found");
         // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                                   ^
 
-        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "Range ID record data is not found");
-        pos += i32.length();
-        // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
-        //                                       ^
-
-        const size_t RangeIdStartPos = pos;
-
-        CHECK_PATCHING_ERROR(NextArg(pos), "failed to find end of the Range ID record data");
+        Uint32 RangeId = 0;
+        ParseIntRecord(DXIL, pos, VT_INT32, "Range ID", &RangeId);
         // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                                        ^
-        const Uint32 RangeId = static_cast<Uint32>(std::atoi(DXIL.c_str() + RangeIdStartPos));
 
         // Read index in range.
 
-        CHECK_PATCHING_ERROR(pos + 1 < DXIL.length() && DXIL[pos] == ',' && DXIL[pos + 1] == ' ', "Index record is not found");
-        pos += 2;
+        CHECK_PATCHING_ERROR(SkipCommaAndSpaces(DXIL, pos), "Index record is not found");
         // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                                          ^
 
-        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32.c_str(), i32.length()) == 0, "Index record data is not found");
-        pos += i32.length();
+        CHECK_PATCHING_ERROR(std::strncmp(&DXIL[pos], i32_.c_str(), i32_.length()) == 0, "Index record data is not found");
+        pos += i32_.length();
         // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                                              ^
 
         const size_t IndexStartPos = pos;
 
-        CHECK_PATCHING_ERROR(NextArg(pos), "failed to find the end of the Index record data");
+        CHECK_PATCHING_ERROR(NextArg(DXIL, pos), "failed to find the end of the Index record data");
         // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                                               ^
 
@@ -1702,20 +1737,22 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
             //                 ^
             pos = IndexDeclPos + IndexDecl.length();
 
+            size_t ArgStart = std::string::npos;
+
             // check first arg
             if (DXIL[pos] == '%')
             {
                 // first arg is variable, move to second arg
-                CHECK_PATCHING_ERROR(NextArg(pos), "");
+                CHECK_PATCHING_ERROR(NextArg(DXIL, pos), "");
                 //   %22 = add i32 %17, 7  or  %24 = add i32 %j.0, 1
                 //                    ^                          ^
-                VERIFY_EXPR(pos + 1 < DXIL.length() && DXIL[pos] == ',' && DXIL[pos + 1] == ' ');
-                pos += 2; // skip ', '
+                CHECK_PATCHING_ERROR(SkipCommaAndSpaces(DXIL, pos), "unexpected end of file")
+                // skip ", "
 
                 // second arg must be a constant
                 CHECK_PATCHING_ERROR(IsNumberSymbol(DXIL[pos]), "second argument expected to be an integer constant");
 
-                const size_t ArgStart = pos;
+                ArgStart = pos;
                 for (; pos < DXIL.size(); ++pos)
                 {
                     const char c = DXIL[pos];
@@ -1726,16 +1763,13 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
 
                 //   %22 = add i32 %17, 7
                 //                       ^
-
-                const size_t ArgEnd = pos;
-                ReplaceBindPoint(ResClass, RangeId, ArgStart, ArgEnd);
             }
             else
             {
                 // first arg is a constant
                 VERIFY_EXPR(IsNumberSymbol(DXIL[pos]));
 
-                const size_t ArgStart = pos;
+                ArgStart = pos;
                 for (; pos < DXIL.size(); ++pos)
                 {
                     const char c = DXIL[pos];
@@ -1745,10 +1779,9 @@ void DXCompilerImpl::PatchResourceHandle(const TResourceBindingMap& ResourceMap,
                 CHECK_PATCHING_ERROR(DXIL[pos] == ',' || DXIL[pos] == '\n', "failed to parse second argument");
                 //   %22 = add i32 7, %17
                 //                  ^
-
-                const size_t ArgEnd = pos;
-                ReplaceBindPoint(ResClass, RangeId, ArgStart, ArgEnd);
             }
+
+            ReplaceBindPoint(ResClass, RangeId, ArgStart, pos);
 
 #ifdef DILIGENT_DEVELOPMENT
             Uint32 IndexVarUsageCount = 0;
