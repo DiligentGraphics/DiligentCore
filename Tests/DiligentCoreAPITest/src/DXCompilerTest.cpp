@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,7 @@
 
 #include "DXCompiler.hpp"
 #include "GPUTestingEnvironment.hpp"
+#include "StringTools.hpp"
 
 #include "gtest/gtest.h"
 
@@ -116,67 +117,79 @@ TEST(DXCompilerTest, Reflection)
     auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
-    IDXCompiler::CompileAttribs CA;
-    CA.Source       = ReflectionTest_RG.c_str();
-    CA.SourceLength = static_cast<Uint32>(ReflectionTest_RG.length());
-    CA.EntryPoint   = L"main";
-    CA.Profile      = L"lib_6_3";
-    CA.pArgs        = DXCArgs;
-    CA.ArgsCount    = _countof(DXCArgs);
+    const auto MaxSM = pDXC->GetMaxShaderModel();
+    if (MaxSM.Major > 6)
+    {
+        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_* is expected by the test");
+    }
 
-    DxcDefine Defines[] = {{L"ASSIGN_BINDINGS", L"1"}};
-    CA.pDefines         = Defines;
-    CA.DefinesCount     = _countof(Defines);
+    for (Uint32 MinorVersion = 3; MinorVersion <= (MaxSM.Major == 6 ? MaxSM.Minor : 6); ++MinorVersion)
+    {
+        std::wstring Profile = L"lib_6_" + std::to_wstring(MinorVersion);
+        LOG_INFO_MESSAGE("Testing shader profile ", NarrowString(Profile));
 
-    CComPtr<IDxcBlob> pDXIL, pOutput;
-    CA.ppBlobOut        = &pDXIL.p;
-    CA.ppCompilerOutput = &pOutput.p;
-    pDXC->Compile(CA);
-    ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
+        IDXCompiler::CompileAttribs CA;
+        CA.Source       = ReflectionTest_RG.c_str();
+        CA.SourceLength = static_cast<Uint32>(ReflectionTest_RG.length());
+        CA.EntryPoint   = L"main";
+        CA.Profile      = Profile.c_str();
+        CA.pArgs        = DXCArgs;
+        CA.ArgsCount    = _countof(DXCArgs);
 
-    CComPtr<ID3D12ShaderReflection> pReflection;
-    pDXC->GetD3D12ShaderReflection(pDXIL, &pReflection);
-    ASSERT_TRUE(pReflection);
+        DxcDefine Defines[] = {{L"ASSIGN_BINDINGS", L"1"}};
+        CA.pDefines         = Defines;
+        CA.DefinesCount     = _countof(Defines);
 
-    D3D12_SHADER_DESC ShaderDesc;
-    EXPECT_HRESULT_SUCCEEDED(pReflection->GetDesc(&ShaderDesc));
-    EXPECT_EQ(ShaderDesc.BoundResources, 5U);
+        CComPtr<IDxcBlob> pDXIL, pOutput;
+        CA.ppBlobOut        = &pDXIL.p;
+        CA.ppCompilerOutput = &pOutput.p;
+        pDXC->Compile(CA);
+        ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
-    D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
-    EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TLAS", &BindDesc));
-    EXPECT_STREQ(BindDesc.Name, "g_TLAS");
-    EXPECT_EQ(BindDesc.Type, D3D_SIT_RTACCELERATIONSTRUCTURE);
-    EXPECT_EQ(BindDesc.BindPoint, 11U);
-    EXPECT_EQ(BindDesc.BindCount, 1U);
-    EXPECT_EQ(BindDesc.Space, 2U);
+        CComPtr<ID3D12ShaderReflection> pReflection;
+        pDXC->GetD3D12ShaderReflection(pDXIL, &pReflection);
+        ASSERT_TRUE(pReflection);
 
-    EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer", &BindDesc));
-    EXPECT_STREQ(BindDesc.Name, "g_ColorBuffer");
-    EXPECT_EQ(BindDesc.Type, D3D_SIT_UAV_RWTYPED);
-    EXPECT_EQ(BindDesc.BindPoint, 2U);
-    EXPECT_EQ(BindDesc.BindCount, 1U);
-    EXPECT_EQ(BindDesc.Space, 1U);
+        D3D12_SHADER_DESC ShaderDesc;
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetDesc(&ShaderDesc));
+        EXPECT_EQ(ShaderDesc.BoundResources, 5U);
 
-    EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex", &BindDesc));
-    EXPECT_STREQ(BindDesc.Name, "g_Tex");
-    EXPECT_EQ(BindDesc.Type, D3D_SIT_TEXTURE);
-    EXPECT_EQ(BindDesc.BindPoint, 23U);
-    EXPECT_EQ(BindDesc.BindCount, 2U);
-    EXPECT_EQ(BindDesc.Space, 5U);
+        D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TLAS", &BindDesc));
+        EXPECT_STREQ(BindDesc.Name, "g_TLAS");
+        EXPECT_EQ(BindDesc.Type, D3D_SIT_RTACCELERATIONSTRUCTURE);
+        EXPECT_EQ(BindDesc.BindPoint, 11U);
+        EXPECT_EQ(BindDesc.BindCount, 1U);
+        EXPECT_EQ(BindDesc.Space, 2U);
 
-    EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
-    EXPECT_STREQ(BindDesc.Name, "g_TexSampler");
-    EXPECT_EQ(BindDesc.Type, D3D_SIT_SAMPLER);
-    EXPECT_EQ(BindDesc.BindPoint, 15U);
-    EXPECT_EQ(BindDesc.BindCount, 1U);
-    EXPECT_EQ(BindDesc.Space, 4U);
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer", &BindDesc));
+        EXPECT_STREQ(BindDesc.Name, "g_ColorBuffer");
+        EXPECT_EQ(BindDesc.Type, D3D_SIT_UAV_RWTYPED);
+        EXPECT_EQ(BindDesc.BindPoint, 2U);
+        EXPECT_EQ(BindDesc.BindCount, 1U);
+        EXPECT_EQ(BindDesc.Space, 1U);
 
-    EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants", &BindDesc));
-    EXPECT_STREQ(BindDesc.Name, "cbConstants");
-    EXPECT_EQ(BindDesc.Type, D3D_SIT_CBUFFER);
-    EXPECT_EQ(BindDesc.BindPoint, 17U);
-    EXPECT_EQ(BindDesc.BindCount, 1U);
-    EXPECT_EQ(BindDesc.Space, 15U);
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex", &BindDesc));
+        EXPECT_STREQ(BindDesc.Name, "g_Tex");
+        EXPECT_EQ(BindDesc.Type, D3D_SIT_TEXTURE);
+        EXPECT_EQ(BindDesc.BindPoint, 23U);
+        EXPECT_EQ(BindDesc.BindCount, 2U);
+        EXPECT_EQ(BindDesc.Space, 5U);
+
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
+        EXPECT_STREQ(BindDesc.Name, "g_TexSampler");
+        EXPECT_EQ(BindDesc.Type, D3D_SIT_SAMPLER);
+        EXPECT_EQ(BindDesc.BindPoint, 15U);
+        EXPECT_EQ(BindDesc.BindCount, 1U);
+        EXPECT_EQ(BindDesc.Space, 4U);
+
+        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants", &BindDesc));
+        EXPECT_STREQ(BindDesc.Name, "cbConstants");
+        EXPECT_EQ(BindDesc.Type, D3D_SIT_CBUFFER);
+        EXPECT_EQ(BindDesc.BindPoint, 17U);
+        EXPECT_EQ(BindDesc.BindCount, 1U);
+        EXPECT_EQ(BindDesc.Space, 15U);
+    }
 }
 
 TEST(DXCompilerTest, RemapBindingsRG)
@@ -184,96 +197,108 @@ TEST(DXCompilerTest, RemapBindingsRG)
     auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
-    IDXCompiler::CompileAttribs CA;
-    CA.Source       = ReflectionTest_RG.c_str();
-    CA.SourceLength = static_cast<Uint32>(ReflectionTest_RG.length());
-    CA.EntryPoint   = L"main";
-    CA.Profile      = L"lib_6_3";
-    CA.pArgs        = DXCArgs;
-    CA.ArgsCount    = _countof(DXCArgs);
-
-    CComPtr<IDxcBlob> pDXIL, pOutput;
-    CA.ppBlobOut        = &pDXIL.p;
-    CA.ppCompilerOutput = &pOutput.p;
-    pDXC->Compile(CA);
-    ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
-
-    IDXCompiler::TResourceBindingMap BindigMap;
-    // clang-format off
-    BindigMap["g_TLAS"]        = { 15, 0, 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT   };
-    BindigMap["g_ColorBuffer"] = {  7, 1, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["g_Tex"]         = {101, 0, 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_TexSampler"]  = {  0, 2, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    BindigMap["cbConstants"]   = {  9, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    BindigMap["g_AnotherRes"]  = {567, 5, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    // clang-format on
-    CComPtr<IDxcBlob> pRemappedDXIL;
-    pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
-    ASSERT_TRUE(pRemappedDXIL);
-
+    const auto MaxSM = pDXC->GetMaxShaderModel();
+    if (MaxSM.Major > 6)
     {
-        CComPtr<ID3D12ShaderReflection> pReflection;
-        pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
-        ASSERT_TRUE(pReflection);
-
-        D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TLAS", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 15U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 7U);
-        EXPECT_EQ(BindDesc.Space, 1U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 101U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 0U);
-        EXPECT_EQ(BindDesc.Space, 2U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 9U);
-        EXPECT_EQ(BindDesc.Space, 0U);
+        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_* is expected by the test");
     }
 
-    // clang-format off
-    BindigMap["g_TLAS"]        = {0, 0, 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT   };
-    BindigMap["g_ColorBuffer"] = {1, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["g_Tex"]         = {2, 0, 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_TexSampler"]  = {0, 1, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    BindigMap["cbConstants"]   = {1, 1, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    // clang-format on
-    CComPtr<IDxcBlob> pRemappedDXIL2;
-    pDXC->RemapResourceBindings(BindigMap, pRemappedDXIL, &pRemappedDXIL2);
-    ASSERT_TRUE(pRemappedDXIL2);
-
+    for (Uint32 MinorVersion = 3; MinorVersion <= (MaxSM.Major == 6 ? MaxSM.Minor : 6); ++MinorVersion)
     {
-        CComPtr<ID3D12ShaderReflection> pReflection;
-        pDXC->GetD3D12ShaderReflection(pRemappedDXIL2, &pReflection);
-        ASSERT_TRUE(pReflection);
+        std::wstring Profile = L"lib_6_" + std::to_wstring(MinorVersion);
+        LOG_INFO_MESSAGE("Testing shader profile ", NarrowString(Profile));
 
-        D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TLAS", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 0U);
-        EXPECT_EQ(BindDesc.Space, 0U);
+        IDXCompiler::CompileAttribs CA;
+        CA.Source       = ReflectionTest_RG.c_str();
+        CA.SourceLength = static_cast<Uint32>(ReflectionTest_RG.length());
+        CA.EntryPoint   = L"main";
+        CA.Profile      = Profile.c_str();
+        CA.pArgs        = DXCArgs;
+        CA.ArgsCount    = _countof(DXCArgs);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 1U);
-        EXPECT_EQ(BindDesc.Space, 0U);
+        CComPtr<IDxcBlob> pDXIL, pOutput;
+        CA.ppBlobOut        = &pDXIL.p;
+        CA.ppCompilerOutput = &pOutput.p;
+        pDXC->Compile(CA);
+        ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 2U);
-        EXPECT_EQ(BindDesc.Space, 0U);
+        IDXCompiler::TResourceBindingMap BindigMap;
+        // clang-format off
+        BindigMap["g_TLAS"]        = { 15, 0, 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT   };
+        BindigMap["g_ColorBuffer"] = {  7, 1, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+        BindigMap["g_Tex"]         = {101, 0, 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        BindigMap["g_TexSampler"]  = {  0, 2, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+        BindigMap["cbConstants"]   = {  9, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        BindigMap["g_AnotherRes"]  = {567, 5, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        // clang-format on
+        CComPtr<IDxcBlob> pRemappedDXIL;
+        pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
+        ASSERT_TRUE(pRemappedDXIL);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 0U);
-        EXPECT_EQ(BindDesc.Space, 1U);
+        {
+            CComPtr<ID3D12ShaderReflection> pReflection;
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
+            ASSERT_TRUE(pReflection);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 1U);
-        EXPECT_EQ(BindDesc.Space, 1U);
+            D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TLAS", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 15U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 7U);
+            EXPECT_EQ(BindDesc.Space, 1U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 101U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 0U);
+            EXPECT_EQ(BindDesc.Space, 2U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 9U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+        }
+
+        // clang-format off
+        BindigMap["g_TLAS"]        = {0, 0, 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT   };
+        BindigMap["g_ColorBuffer"] = {1, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+        BindigMap["g_Tex"]         = {2, 0, 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        BindigMap["g_TexSampler"]  = {0, 1, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+        BindigMap["cbConstants"]   = {1, 1, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        // clang-format on
+        CComPtr<IDxcBlob> pRemappedDXIL2;
+        pDXC->RemapResourceBindings(BindigMap, pRemappedDXIL, &pRemappedDXIL2);
+        ASSERT_TRUE(pRemappedDXIL2);
+
+        {
+            CComPtr<ID3D12ShaderReflection> pReflection;
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL2, &pReflection);
+            ASSERT_TRUE(pReflection);
+
+            D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TLAS", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 0U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 1U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 2U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 0U);
+            EXPECT_EQ(BindDesc.Space, 1U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 1U);
+            EXPECT_EQ(BindDesc.Space, 1U);
+        }
     }
 }
 
@@ -309,108 +334,122 @@ float4 main() : SV_TARGET
     auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
-    IDXCompiler::CompileAttribs CA;
-    CA.Source       = ShaderSource.c_str();
-    CA.SourceLength = static_cast<Uint32>(ShaderSource.length());
-    CA.EntryPoint   = L"main";
-    CA.Profile      = L"ps_6_0";
-    CA.pArgs        = DXCArgs;
-    CA.ArgsCount    = _countof(DXCArgs);
-
-    CComPtr<IDxcBlob> pDXIL, pOutput;
-    CA.ppBlobOut        = &pDXIL.p;
-    CA.ppCompilerOutput = &pOutput.p;
-    pDXC->Compile(CA);
-    ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
-
-    IDXCompiler::TResourceBindingMap BindigMap;
-    // clang-format off
-    BindigMap["g_Tex1"]       = {101, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_Tex2"]       = { 22, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_TexSampler"] = {  2, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    BindigMap["g_CmpSampler"] = {  6, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    BindigMap["cbConstants1"] = {  9, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    BindigMap["cbConstants2"] = {  3, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    BindigMap["g_AnotherRes"] = {567, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    // clang-format oN
-    CComPtr<IDxcBlob> pRemappedDXIL;
-    pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
-    ASSERT_TRUE(pRemappedDXIL);
-
+    const auto MaxSM = pDXC->GetMaxShaderModel();
+    if (MaxSM.Major > 6)
     {
-        CComPtr<ID3D12ShaderReflection> pReflection;
-        pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
-        ASSERT_TRUE(pReflection);
-
-        D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex1", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 101U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex2", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 22U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 2U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_CmpSampler", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 6U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants1", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 9U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants2", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 3U);
-        EXPECT_EQ(BindDesc.Space, 0U);
+        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_* is expected by the test");
     }
 
-    BindigMap.clear();
-    // clang-format off
-    BindigMap["g_Tex1"]       = {  0, 2, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_Tex2"]       = { 55, 4, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_TexSampler"] = {  1, 2, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    BindigMap["g_CmpSampler"] = {  4, 5, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    BindigMap["cbConstants1"] = {  8, 3, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    BindigMap["cbConstants2"] = {  4, 6, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    BindigMap["g_AnotherRes"] = {567, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    // clang-format oN
-    pRemappedDXIL             = nullptr;
-    pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
-    ASSERT_TRUE(pRemappedDXIL);
-
+    for (Uint32 MinorVersion = 0; MinorVersion <= (MaxSM.Major == 6 ? MaxSM.Minor : 6); ++MinorVersion)
     {
-        CComPtr<ID3D12ShaderReflection> pReflection;
-        pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
-        ASSERT_TRUE(pReflection);
+        std::wstring Profile = L"ps_6_" + std::to_wstring(MinorVersion);
+        LOG_INFO_MESSAGE("Testing shader profile ", NarrowString(Profile));
 
-        D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex1", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 0U);
-        EXPECT_EQ(BindDesc.Space, 2U);
+        IDXCompiler::CompileAttribs CA;
+        CA.Source       = ShaderSource.c_str();
+        CA.SourceLength = static_cast<Uint32>(ShaderSource.length());
+        CA.EntryPoint   = L"main";
+        CA.Profile      = Profile.c_str();
+        CA.pArgs        = DXCArgs;
+        CA.ArgsCount    = _countof(DXCArgs);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex2", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 55U);
-        EXPECT_EQ(BindDesc.Space, 4U);
+        CComPtr<IDxcBlob> pDXIL, pOutput;
+        CA.ppBlobOut        = &pDXIL.p;
+        CA.ppCompilerOutput = &pOutput.p;
+        pDXC->Compile(CA);
+        ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 1U);
-        EXPECT_EQ(BindDesc.Space, 2U);
+        IDXCompiler::TResourceBindingMap BindigMap;
+        // clang-format off
+        BindigMap["g_Tex1"]       = {101, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        BindigMap["g_Tex2"]       = { 22, 0, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        BindigMap["g_TexSampler"] = {  2, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+        BindigMap["g_CmpSampler"] = {  6, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+        BindigMap["cbConstants1"] = {  9, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        BindigMap["cbConstants2"] = {  3, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        BindigMap["g_AnotherRes"] = {567, 0, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        // clang-format on
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_CmpSampler", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 4U);
-        EXPECT_EQ(BindDesc.Space, 5U);
+        CComPtr<IDxcBlob> pRemappedDXIL;
+        pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
+        ASSERT_TRUE(pRemappedDXIL);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants1", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 8U);
-        EXPECT_EQ(BindDesc.Space, 3U);
+        {
+            CComPtr<ID3D12ShaderReflection> pReflection;
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
+            ASSERT_TRUE(pReflection);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants2", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 4U);
-        EXPECT_EQ(BindDesc.Space, 6U);
+            D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex1", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 101U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex2", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 22U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 2U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_CmpSampler", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 6U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants1", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 9U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants2", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 3U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+        }
+
+        BindigMap.clear();
+        // clang-format off
+        BindigMap["g_Tex1"]       = {  0, 2, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        BindigMap["g_Tex2"]       = { 55, 4, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        BindigMap["g_TexSampler"] = {  1, 2, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+        BindigMap["g_CmpSampler"] = {  4, 5, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+        BindigMap["cbConstants1"] = {  8, 3, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        BindigMap["cbConstants2"] = {  4, 6, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        BindigMap["g_AnotherRes"] = {567, 0, 1, SHADER_RESOURCE_TYPE_SAMPLER        };
+        // clang-format on
+
+        pRemappedDXIL = nullptr;
+        pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
+        ASSERT_TRUE(pRemappedDXIL);
+
+        {
+            CComPtr<ID3D12ShaderReflection> pReflection;
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
+            ASSERT_TRUE(pReflection);
+
+            D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex1", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 0U);
+            EXPECT_EQ(BindDesc.Space, 2U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex2", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 55U);
+            EXPECT_EQ(BindDesc.Space, 4U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 1U);
+            EXPECT_EQ(BindDesc.Space, 2U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_CmpSampler", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 4U);
+            EXPECT_EQ(BindDesc.Space, 5U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants1", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 8U);
+            EXPECT_EQ(BindDesc.Space, 3U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("cbConstants2", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 4U);
+            EXPECT_EQ(BindDesc.Space, 6U);
+        }
     }
 }
 
@@ -468,148 +507,161 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
     auto pDXC = CreateDXCompiler(DXCompilerTarget::Direct3D12, 0, nullptr);
     ASSERT_TRUE(pDXC);
 
-    IDXCompiler::CompileAttribs CA;
-    CA.Source       = ShaderSource.c_str();
-    CA.SourceLength = static_cast<Uint32>(ShaderSource.length());
-    CA.EntryPoint   = L"main";
-    CA.Profile      = L"ps_6_0";
-    CA.pArgs        = DXCArgs;
-    CA.ArgsCount    = _countof(DXCArgs);
-
-    CComPtr<IDxcBlob> pDXIL, pOutput;
-    CA.ppBlobOut        = &pDXIL.p;
-    CA.ppCompilerOutput = &pOutput.p;
-    pDXC->Compile(CA);
-    ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
-
-    IDXCompiler::TResourceBindingMap BindigMap;
-    // clang-format off
-    BindigMap["g_Tex"]              = {101, 0,  4, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_Tex3D"]            = { 22, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_TexSampler"]       = {  0, 0,  1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    BindigMap["g_Buffer1"]          = {  9, 0,  5, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
-    BindigMap["g_Buffer2"]          = {  0, 1, 10, SHADER_RESOURCE_TYPE_BUFFER_UAV     };
-    BindigMap["g_ColorBuffer1"]     = {180, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["g_ColorBuffer2"]     = {333, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["g_ColorBuffer3"]     = {  1, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["Texture2DConstants"] = {  8, 0,  1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    BindigMap["g_MatrixBuffer"]     = { 14, 0,  1, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
-    BindigMap["g_AnotherRes"]       = {567, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    // clang-format on
-    CComPtr<IDxcBlob> pRemappedDXIL;
-    pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
-    ASSERT_TRUE(pRemappedDXIL);
-
+    const auto MaxSM = pDXC->GetMaxShaderModel();
+    if (MaxSM.Major > 6)
     {
-        CComPtr<ID3D12ShaderReflection> pReflection;
-        pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
-        ASSERT_TRUE(pReflection);
-
-        D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 101U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex3D", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 22U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 0U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer1", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 9U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer2", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 0U);
-        EXPECT_EQ(BindDesc.Space, 1U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer1", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 180U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer2", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 333U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer3", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 1U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Texture2DConstants", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 8U);
-        EXPECT_EQ(BindDesc.Space, 0U);
-
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_MatrixBuffer", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 14U);
-        EXPECT_EQ(BindDesc.Space, 0U);
+        LOG_WARNING_MESSAGE("DXC reports maximum shader model ", MaxSM.Major, "_", MaxSM.Minor, ", but only up to 6_* is expected by the test");
     }
 
-    BindigMap.clear();
-    // clang-format off
-    BindigMap["g_Tex"]              = { 77,   1,   4, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_Tex3D"]            = { 90,   1,   1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
-    BindigMap["g_TexSampler"]       = {  0,   1,   1, SHADER_RESOURCE_TYPE_SAMPLER        };
-    BindigMap["g_Buffer1"]          = { 15,   6,   5, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
-    BindigMap["g_Buffer2"]          = {  2,   7, 100, SHADER_RESOURCE_TYPE_BUFFER_UAV     };
-    BindigMap["g_ColorBuffer1"]     = { 33,   6,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["g_ColorBuffer2"]     = { 10, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["g_ColorBuffer3"]     = { 11, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
-    BindigMap["Texture2DConstants"] = {  9,   3,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    BindigMap["g_MatrixBuffer"]     = { 10,   5,   1, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
-    BindigMap["g_AnotherRes"]       = {567,   0,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
-    // clang-format on
-    pRemappedDXIL = nullptr;
-    pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
-    ASSERT_TRUE(pRemappedDXIL);
-
+    for (Uint32 MinorVersion = 0; MinorVersion <= (MaxSM.Major == 6 ? MaxSM.Minor : 6); ++MinorVersion)
     {
-        CComPtr<ID3D12ShaderReflection> pReflection;
-        pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
-        ASSERT_TRUE(pReflection);
+        std::wstring Profile = L"ps_6_" + std::to_wstring(MinorVersion);
+        LOG_INFO_MESSAGE("Testing shader profile ", NarrowString(Profile));
 
-        D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 77U);
-        EXPECT_EQ(BindDesc.Space, 1U);
+        IDXCompiler::CompileAttribs CA;
+        CA.Source       = ShaderSource.c_str();
+        CA.SourceLength = static_cast<Uint32>(ShaderSource.length());
+        CA.EntryPoint   = L"main";
+        CA.Profile      = Profile.c_str();
+        CA.pArgs        = DXCArgs;
+        CA.ArgsCount    = _countof(DXCArgs);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex3D", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 90U);
-        EXPECT_EQ(BindDesc.Space, 1U);
+        CComPtr<IDxcBlob> pDXIL, pOutput;
+        CA.ppBlobOut        = &pDXIL.p;
+        CA.ppCompilerOutput = &pOutput.p;
+        pDXC->Compile(CA);
+        ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 0U);
-        EXPECT_EQ(BindDesc.Space, 1U);
+        IDXCompiler::TResourceBindingMap BindigMap;
+        // clang-format off
+        BindigMap["g_Tex"]              = {101, 0,  4, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        BindigMap["g_Tex3D"]            = { 22, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        BindigMap["g_TexSampler"]       = {  0, 0,  1, SHADER_RESOURCE_TYPE_SAMPLER        };
+        BindigMap["g_Buffer1"]          = {  9, 0,  5, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+        BindigMap["g_Buffer2"]          = {  0, 1, 10, SHADER_RESOURCE_TYPE_BUFFER_UAV     };
+        BindigMap["g_ColorBuffer1"]     = {180, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+        BindigMap["g_ColorBuffer2"]     = {333, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+        BindigMap["g_ColorBuffer3"]     = {  1, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+        BindigMap["Texture2DConstants"] = {  8, 0,  1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        BindigMap["g_MatrixBuffer"]     = { 14, 0,  1, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+        BindigMap["g_AnotherRes"]       = {567, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+        // clang-format on
+        CComPtr<IDxcBlob> pRemappedDXIL;
+        pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
+        ASSERT_TRUE(pRemappedDXIL);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer1", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 15U);
-        EXPECT_EQ(BindDesc.Space, 6U);
+        {
+            CComPtr<ID3D12ShaderReflection> pReflection;
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
+            ASSERT_TRUE(pReflection);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer2", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 2U);
-        EXPECT_EQ(BindDesc.Space, 7U);
+            D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 101U);
+            EXPECT_EQ(BindDesc.Space, 0U);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer1", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 33U);
-        EXPECT_EQ(BindDesc.Space, 6U);
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex3D", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 22U);
+            EXPECT_EQ(BindDesc.Space, 0U);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer2", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 10U);
-        EXPECT_EQ(BindDesc.Space, 100U);
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 0U);
+            EXPECT_EQ(BindDesc.Space, 0U);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer3", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 11U);
-        EXPECT_EQ(BindDesc.Space, 100U);
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer1", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 9U);
+            EXPECT_EQ(BindDesc.Space, 0U);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Texture2DConstants", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 9U);
-        EXPECT_EQ(BindDesc.Space, 3U);
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer2", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 0U);
+            EXPECT_EQ(BindDesc.Space, 1U);
 
-        EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_MatrixBuffer", &BindDesc));
-        EXPECT_EQ(BindDesc.BindPoint, 10U);
-        EXPECT_EQ(BindDesc.Space, 5U);
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer1", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 180U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer2", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 333U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer3", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 1U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Texture2DConstants", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 8U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_MatrixBuffer", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 14U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+        }
+
+        BindigMap.clear();
+        // clang-format off
+        BindigMap["g_Tex"]              = { 77,   1,   4, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        BindigMap["g_Tex3D"]            = { 90,   1,   1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
+        BindigMap["g_TexSampler"]       = {  0,   1,   1, SHADER_RESOURCE_TYPE_SAMPLER        };
+        BindigMap["g_Buffer1"]          = { 15,   6,   5, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+        BindigMap["g_Buffer2"]          = {  2,   7, 100, SHADER_RESOURCE_TYPE_BUFFER_UAV     };
+        BindigMap["g_ColorBuffer1"]     = { 33,   6,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+        BindigMap["g_ColorBuffer2"]     = { 10, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+        BindigMap["g_ColorBuffer3"]     = { 11, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
+        BindigMap["Texture2DConstants"] = {  9,   3,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        BindigMap["g_MatrixBuffer"]     = { 10,   5,   1, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+        BindigMap["g_AnotherRes"]       = {567,   0,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
+        // clang-format on
+        pRemappedDXIL = nullptr;
+        pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
+        ASSERT_TRUE(pRemappedDXIL);
+
+        {
+            CComPtr<ID3D12ShaderReflection> pReflection;
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
+            ASSERT_TRUE(pReflection);
+
+            D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 77U);
+            EXPECT_EQ(BindDesc.Space, 1U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Tex3D", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 90U);
+            EXPECT_EQ(BindDesc.Space, 1U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_TexSampler", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 0U);
+            EXPECT_EQ(BindDesc.Space, 1U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer1", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 15U);
+            EXPECT_EQ(BindDesc.Space, 6U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_Buffer2", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 2U);
+            EXPECT_EQ(BindDesc.Space, 7U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer1", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 33U);
+            EXPECT_EQ(BindDesc.Space, 6U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer2", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 10U);
+            EXPECT_EQ(BindDesc.Space, 100U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_ColorBuffer3", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 11U);
+            EXPECT_EQ(BindDesc.Space, 100U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Texture2DConstants", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 9U);
+            EXPECT_EQ(BindDesc.Space, 3U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_MatrixBuffer", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 10U);
+            EXPECT_EQ(BindDesc.Space, 5U);
+        }
     }
 }
+
 } // namespace

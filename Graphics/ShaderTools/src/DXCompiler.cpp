@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -886,21 +886,21 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
             const Uint32 ShType = D3D12_SHVER_GET_TYPE(ShDesc.Version);
             switch (ShType)
             {
-                    // clang-format off
-            case D3D12_SHVER_PIXEL_SHADER:    ShaderType = SHADER_TYPE_PIXEL;            break;
-            case D3D12_SHVER_VERTEX_SHADER:   ShaderType = SHADER_TYPE_VERTEX;           break;
-            case D3D12_SHVER_GEOMETRY_SHADER: ShaderType = SHADER_TYPE_GEOMETRY;         break;
-            case D3D12_SHVER_HULL_SHADER:     ShaderType = SHADER_TYPE_HULL;             break;
-            case D3D12_SHVER_DOMAIN_SHADER:   ShaderType = SHADER_TYPE_DOMAIN;           break;
-            case D3D12_SHVER_COMPUTE_SHADER:  ShaderType = SHADER_TYPE_COMPUTE;          break;
-            case 7:                           ShaderType = SHADER_TYPE_RAY_GEN;          break;
-            case 8:                           ShaderType = SHADER_TYPE_RAY_INTERSECTION; break;
-            case 9:                           ShaderType = SHADER_TYPE_RAY_ANY_HIT;      break;
-            case 10:                          ShaderType = SHADER_TYPE_RAY_CLOSEST_HIT;  break;
-            case 11:                          ShaderType = SHADER_TYPE_RAY_MISS;         break;
-            case 12:                          ShaderType = SHADER_TYPE_CALLABLE;         break;
-            case 13:                          ShaderType = SHADER_TYPE_MESH;             break;
-            case 14:                          ShaderType = SHADER_TYPE_AMPLIFICATION;    break;
+                // clang-format off
+                case D3D12_SHVER_PIXEL_SHADER:    ShaderType = SHADER_TYPE_PIXEL;            break;
+                case D3D12_SHVER_VERTEX_SHADER:   ShaderType = SHADER_TYPE_VERTEX;           break;
+                case D3D12_SHVER_GEOMETRY_SHADER: ShaderType = SHADER_TYPE_GEOMETRY;         break;
+                case D3D12_SHVER_HULL_SHADER:     ShaderType = SHADER_TYPE_HULL;             break;
+                case D3D12_SHVER_DOMAIN_SHADER:   ShaderType = SHADER_TYPE_DOMAIN;           break;
+                case D3D12_SHVER_COMPUTE_SHADER:  ShaderType = SHADER_TYPE_COMPUTE;          break;
+                case 7:                           ShaderType = SHADER_TYPE_RAY_GEN;          break;
+                case 8:                           ShaderType = SHADER_TYPE_RAY_INTERSECTION; break;
+                case 9:                           ShaderType = SHADER_TYPE_RAY_ANY_HIT;      break;
+                case 10:                          ShaderType = SHADER_TYPE_RAY_CLOSEST_HIT;  break;
+                case 11:                          ShaderType = SHADER_TYPE_RAY_MISS;         break;
+                case 12:                          ShaderType = SHADER_TYPE_CALLABLE;         break;
+                case 13:                          ShaderType = SHADER_TYPE_MESH;             break;
+                case 14:                          ShaderType = SHADER_TYPE_AMPLIFICATION;    break;
                 // clang-format on
                 default:
                     UNEXPECTED("Unknown shader type");
@@ -957,15 +957,15 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
                     RES_TYPE ExpectedResType = RES_TYPE_COUNT;
                     switch (NameAndBinding.second.ResType)
                     {
-                            // clang-format off
-                    case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  ExpectedResType = RES_TYPE_CBV;     break;
-                    case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      ExpectedResType = RES_TYPE_SRV;     break;
-                    case SHADER_RESOURCE_TYPE_BUFFER_SRV:       ExpectedResType = RES_TYPE_SRV;     break;
-                    case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      ExpectedResType = RES_TYPE_UAV;     break;
-                    case SHADER_RESOURCE_TYPE_BUFFER_UAV:       ExpectedResType = RES_TYPE_UAV;     break;
-                    case SHADER_RESOURCE_TYPE_SAMPLER:          ExpectedResType = RES_TYPE_SAMPLER; break;
-                    case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: ExpectedResType = RES_TYPE_SRV;     break;
-                    case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:     ExpectedResType = RES_TYPE_SRV;     break;
+                        // clang-format off
+                        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  ExpectedResType = RES_TYPE_CBV;     break;
+                        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      ExpectedResType = RES_TYPE_SRV;     break;
+                        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       ExpectedResType = RES_TYPE_SRV;     break;
+                        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      ExpectedResType = RES_TYPE_UAV;     break;
+                        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       ExpectedResType = RES_TYPE_UAV;     break;
+                        case SHADER_RESOURCE_TYPE_SAMPLER:          ExpectedResType = RES_TYPE_SAMPLER; break;
+                        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: ExpectedResType = RES_TYPE_SRV;     break;
+                        case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:     ExpectedResType = RES_TYPE_SRV;     break;
                         // clang-format on
                         default: UNEXPECTED("Unsupported shader resource type.");
                     }
