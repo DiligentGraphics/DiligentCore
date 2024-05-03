@@ -37,7 +37,7 @@ before_build:
   - 'cd %APPVEYOR_BUILD_FOLDER%'
   - echo %PLATFORM%
   - echo.%cmake_args%
-  - cmake %cmake_args% -S . -B ./build -D DILIGENT_BUILD_TESTS=TRUE -D CMAKE_INSTALL_PREFIX=install -G "Visual Studio 16 2019" -A %PLATFORM%
+  - cmake %cmake_args% -S . -B ./build -D DILIGENT_BUILD_CORE_TESTS=TRUE -D CMAKE_INSTALL_PREFIX=install -G "Visual Studio 16 2019" -A %PLATFORM%
 
 build:
   project: '%APPVEYOR_BUILD_FOLDER%\build\INSTALL.vcxproj'
