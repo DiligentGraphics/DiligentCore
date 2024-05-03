@@ -467,7 +467,7 @@ RWTexture2D<float4> g_ColorBuffer1;
 RWTexture2D<float4> g_ColorBuffer2;
 RWTexture2D<float4> g_ColorBuffer3;
 
-StructuredBuffer<float4> g_Buffer1[5];
+StructuredBuffer<float4> g_Buffer1[5] : register(t29, space5);
 RWByteAddressBuffer      g_Buffer2[] : register(u5, space1);
 
 struct Matrix
@@ -483,6 +483,13 @@ cbuffer Texture2DConstants
     uint2 Range1;
     uint2 Range2;
 };
+
+struct CBData
+{
+	float4 f4;
+	uint4  u4;
+};
+ConstantBuffer<CBData> g_CB[];
 
 float4 main(in float4 f4Position : SV_Position) : SV_TARGET
 {
@@ -503,7 +510,10 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
            g_Tex[3].Sample(g_TexSampler, UV) +
            g_Tex3D.Sample(g_TexSampler, UV.xxy) +
            g_Buffer1[1][9] * g_Buffer1[4][100] +
-           g_MatrixBuffer[3].m[0];
+           g_MatrixBuffer[3].m[0] + 
+           g_Buffer1[Range2.x + 1][26] + 
+           g_CB[15].f4 +
+           g_CB[Range2.y + 5].f4;
 }
 )hlsl";
 
@@ -517,7 +527,7 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
         MaxSM = ShaderVersion{6, 6};
     }
 
-    for (Uint32 MinorVersion = 5; MinorVersion <= MaxSM.Minor; ++MinorVersion)
+    for (Uint32 MinorVersion = 0; MinorVersion <= MaxSM.Minor; ++MinorVersion)
     {
         std::wstring Profile = L"ps_6_" + std::to_wstring(MinorVersion);
         LOG_INFO_MESSAGE("Testing shader profile ", NarrowString(Profile));
@@ -548,6 +558,7 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
         BindigMap["g_ColorBuffer3"]     = {  1, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
         BindigMap["Texture2DConstants"] = {  8, 0,  1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
         BindigMap["g_MatrixBuffer"]     = { 14, 0,  1, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+        BindigMap["g_CB"]               = {316, 0,  1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER };
         BindigMap["g_AnotherRes"]       = {567, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
         // clang-format on
         CComPtr<IDxcBlob> pRemappedDXIL;
@@ -596,6 +607,10 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
             EXPECT_EQ(BindDesc.BindPoint, 8U);
             EXPECT_EQ(BindDesc.Space, 0U);
 
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_CB", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 316U);
+            EXPECT_EQ(BindDesc.Space, 0U);
+
             EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_MatrixBuffer", &BindDesc));
             EXPECT_EQ(BindDesc.BindPoint, 14U);
             EXPECT_EQ(BindDesc.Space, 0U);
@@ -613,6 +628,7 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
         BindigMap["g_ColorBuffer3"]     = { 11, 100,   1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
         BindigMap["Texture2DConstants"] = {  9,   3,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
         BindigMap["g_MatrixBuffer"]     = { 10,   5,   1, SHADER_RESOURCE_TYPE_BUFFER_SRV     };
+        BindigMap["g_CB"]               = {132,   8,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER };
         BindigMap["g_AnotherRes"]       = {567,   0,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
         // clang-format on
         pRemappedDXIL = nullptr;
@@ -660,6 +676,10 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
             EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("Texture2DConstants", &BindDesc));
             EXPECT_EQ(BindDesc.BindPoint, 9U);
             EXPECT_EQ(BindDesc.Space, 3U);
+
+            EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_CB", &BindDesc));
+            EXPECT_EQ(BindDesc.BindPoint, 132U);
+            EXPECT_EQ(BindDesc.Space, 8U);
 
             EXPECT_HRESULT_SUCCEEDED(pReflection->GetResourceBindingDescByName("g_MatrixBuffer", &BindDesc));
             EXPECT_EQ(BindDesc.BindPoint, 10U);

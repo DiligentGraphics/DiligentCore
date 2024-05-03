@@ -1531,7 +1531,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
                     if (IsWordSymbol(c))
                         continue; // name is partially equal, continue searching
 
-                    VERIFY_EXPR((c == '*' && ResInfo.first->second.ArraySize == 1) || (c == ']' && ResInfo.first->second.ArraySize > 1));
+                    VERIFY_EXPR((c == '*' && ResInfo.first->second.ArraySize == 1) || (c == ']' && ResInfo.first->second.ArraySize >= 1));
 
                     ResType = RES_TYPE_CBV;
                     break;
@@ -1685,6 +1685,43 @@ const DXCompilerImpl::TExtendedResourceMap::value_type* DXCompilerImpl::FindReso
     return nullptr;
 }
 
+// Patch resource index in createHandle or createHandleFromBinding operation.
+//
+// Examples:
+//
+// Static Index
+//
+//      StructuredBuffer<float4> g_Buffer1[5] : register(t29, space5);
+//      ...
+//      g_Buffer1[1][9]
+//
+//  SM6.5
+//      %g_Buffer1_texture_structbuf41 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 2, i32 30, i1 false)
+//                                                                                                           ^
+//                                                                                                         29+1
+//  SM6.5
+//      %g_Buffer1_texture_structbuf42 = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 29, i32 33, i32 5, i8 0 }, i32 30, i1 false)
+//                                                                                                                                                             ^
+//                                                                                                                                                           29+1
+//
+// Dynamic Index
+//
+//      StructuredBuffer<float4> g_Buffer1[5] : register(t29, space5);
+//      ...
+//      g_Buffer1[DynamicIndex + 1][26]
+//
+//  SM6.5
+//      %69 = add i32 %68, 1 ;
+//      %70 = add i32 %69, 29 ; <- We will patch this index
+//      %g_Buffer1_texture_structbuf43 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 2, i32 %70, i1 false)
+//                                                                                                           ^
+//  SM6.6
+//     %85 = add i32 %84, 1 ;
+//     %86 = add i32 %85, 29 ;  <- We will patch this index
+//     %g_Buffer1_texture_structbuf43 = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 29, i32 33, i32 5, i8 0 }, i32 %86, i1 false)
+//                                                                                                                                                            ^
+
+
 void DXCompilerImpl::PatchResourceIndex(const ResourceExtendedInfo& ResInfo, const BindInfo& Bind, String& DXIL, size_t& pos)
 {
 #define CHECK_PATCHING_ERROR(Cond, ...)                                         \
@@ -1705,6 +1742,9 @@ void DXCompilerImpl::PatchResourceIndex(const ResourceExtendedInfo& ResInfo, con
         VERIFY(SrcIndex >= ResInfo.SrcBindPoint,
                "Source index (", SrcIndex, ") can't be less than the source bind point. (", ResInfo.SrcBindPoint,
                "). Either the byte code is corrupted or the source bind point is incorrect.");
+
+        // Texture2D              g_Textures[];        // SrcArraySize == 0
+        // ConstantBuffer<CBData> g_ConstantBuffers[]; // SrcArraySize == ~0u
         VERIFY(ResInfo.SrcArraySize == ~0u || SrcIndex < ResInfo.SrcBindPoint + std::max(ResInfo.SrcArraySize, 1u),
                "Source index (", SrcIndex, ") can't exceed the source bind point + array size. (", ResInfo.SrcBindPoint, " + ", ResInfo.SrcArraySize,
                "). Either the byte code is corrupted or the source bind point is incorrect.");
