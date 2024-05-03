@@ -1112,6 +1112,19 @@ inline bool SkipCommaAndSpaces(const String& DXIL, size_t& pos)
     //   ^
 }
 
+// Parses i32/i8 record
+//
+// Input:
+//     i32 78
+//     ^
+//    pos
+//
+// Output:
+//     i32 78
+//         ^ ^
+//         | pos
+//       Return value
+//       Value = 78
 template <typename T>
 size_t ParseIntRecord(const String& DXIL, size_t& pos, VALUE_TYPE Type, const char* RecordName, T* Value = nullptr)
 {
@@ -1164,7 +1177,17 @@ size_t ParseIntRecord(const String& DXIL, size_t& pos, VALUE_TYPE Type, const ch
 #undef CHECK_PARSING_ERROR
 }
 
-
+// Replaces i32 record
+//
+// Input:
+//    , i32 -1
+//    ^
+//    pos
+//
+// Output:
+//    , i32 1
+//           ^
+//           pos
 void ReplaceRecord(String& DXIL, size_t& pos, const String& NewValue, const char* Name, const char* RecordName, const Uint32 ExpectedPrevValue)
 {
 #define CHECK_PATCHING_ERROR(Cond, ...)                                                         \
@@ -1182,6 +1205,10 @@ void ReplaceRecord(String& DXIL, size_t& pos, const String& NewValue, const char
 
     Uint32       PrevValue     = 0;
     const size_t ValueStartPos = ParseIntRecord(DXIL, pos, VT_INT32, RecordName, &PrevValue);
+    // , i32 -1
+    //       ^ ^
+    //       | pos
+    //	ValueStartPos
     CHECK_PATCHING_ERROR(PrevValue == ExpectedPrevValue, "previous value does not match the expected");
 
     DXIL.replace(ValueStartPos, pos - ValueStartPos, NewValue);
@@ -1320,10 +1347,9 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
     {
         // , i32 -1
         // ^
-        if (pos + 1 >= DXIL.length() || DXIL[pos] != ',' || DXIL[pos + 1] != ' ')
+        if (!SkipCommaAndSpaces(DXIL, pos))
             return false;
 
-        pos += 2;
         // , i32 -1
         //   ^
 
@@ -1608,6 +1634,17 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
 #undef CHECK_PATCHING_ERROR
 }
 
+// Finds position of the next argument
+//
+// Input:
+//	 i32 78, i32 79, i32 80)
+//	 ^
+//	 pos
+//
+// Output:
+//	 i32 78, i32 79, i32 80)
+//	       ^
+//	       pos
 static bool NextArg(String& DXIL, size_t& pos)
 {
     for (; pos < DXIL.size(); ++pos)
@@ -1693,7 +1730,7 @@ const DXCompilerImpl::TExtendedResourceMap::value_type* DXCompilerImpl::FindReso
 //
 //      StructuredBuffer<float4> g_Buffer1[5] : register(t29, space5);
 //      ...
-//      g_Buffer1[1][9]
+//      g_Buffer1[1][9];
 //
 //  SM6.5
 //      %g_Buffer1_texture_structbuf41 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 2, i32 30, i1 false)
@@ -1708,7 +1745,7 @@ const DXCompilerImpl::TExtendedResourceMap::value_type* DXCompilerImpl::FindReso
 //
 //      StructuredBuffer<float4> g_Buffer1[5] : register(t29, space5);
 //      ...
-//      g_Buffer1[DynamicIndex + 1][26]
+//      g_Buffer1[DynamicIndex + 1][26];
 //
 //  SM6.5
 //      %69 = add i32 %68, 1 ;
@@ -1797,13 +1834,15 @@ void DXCompilerImpl::PatchResourceIndex(const ResourceExtendedInfo& ResInfo, con
         // dynamic bind point
         // SrcIndexStr == "%22"
 
-        // %22 = add i32 %17, 7 ;
-        // %g_Buffer2_UAV_rawbuf38 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 3, i32 %22, i1 false) ;
-        //																							    ^
+        // SM6.5
+        //   %22 = add i32 %17, 7 ;
+        //   %g_Buffer2_UAV_rawbuf38 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 3, i32 %22, i1 false) ;
+        //																							      ^
 
-        // %28 = add i32 %17, 7 ;
-        // %g_Buffer2_UAV_rawbuf38 = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 -1, i32 1, i8 1 }, i32 %28, i1 false) ;
-        //																							                                                     ^
+        // SM6.6
+        //   %28 = add i32 %17, 7 ;
+        //   %g_Buffer2_UAV_rawbuf38 = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 -1, i32 1, i8 1 }, i32 %28, i1 false) ;
+        //																							                                                       ^
 
         const String IndexDecl = SrcIndexStr + " = add i32 ";
         // IndexDecl == "%22 = add i32 "
@@ -1874,7 +1913,7 @@ void DXCompilerImpl::PatchResourceIndex(const ResourceExtendedInfo& ResInfo, con
             if (DXIL[pos] == ' ' || DXIL[pos] == ',')
                 ++IndexVarUsageCount;
         }
-        DEV_CHECK_ERR(IndexVarUsageCount == 2, "Temp variable '", SrcIndexStr, "' with resource bind point used more than 2 times, patching for this variable may lead to UB");
+        DEV_CHECK_ERR(IndexVarUsageCount == 2, "Temp variable '", SrcIndexStr, "' with resource bind point is used more than 2 times, patching for this variable may lead to UB");
 #endif
     }
     else
@@ -1957,13 +1996,12 @@ void DXCompilerImpl::PatchCreateHandle(const TResourceBindingMap& ResourceMap, T
         const ResourceExtendedInfo& ResInfo = pResInfo->second;
         const BindInfo&             Bind    = pResInfo->first->second;
 
-        // Read index in range.
+        // Patch index in range.
 
         CHECK_PATCHING_ERROR(SkipCommaAndSpaces(DXIL, pos), "Index record is not found");
         // @dx.op.createHandle(i32 57, i8 2, i32 0, i32 0, i1 false)
         //                                          ^
 
-        // Replace index.
         PatchResourceIndex(ResInfo, Bind, DXIL, pos);
     }
 #undef CHECK_PATCHING_ERROR
@@ -2112,6 +2150,10 @@ void DXCompilerImpl::PatchCreateHandleFromBinding(const TResourceBindingMap& Res
         // = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 2, i32 2, i32 0, i8 1 }, i32 2, i1 false)
         //  																		         ^                            ^
         //                                                                              ResBindRecordStartPos            pos
+
+        VERIFY_EXPR(RangeMin >= 0 && (RangeMax == -1 || RangeMax >= RangeMin));
+        VERIFY_EXPR(Space >= 0);
+        VERIFY_EXPR(ResClass >= 0 && ResClass < 4);
 
         // Register range and space are unique for each resource, so we can reliably find the resource by these values
         const auto* pResInfo = FindResourceByBindPoint(ExtResMap, ResClass, static_cast<Uint32>(RangeMin), static_cast<Uint32>(Space));
