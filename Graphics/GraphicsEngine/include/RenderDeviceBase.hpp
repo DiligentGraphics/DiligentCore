@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,8 @@
 
 /// \file
 /// Implementation of the Diligent::RenderDeviceBase template class and related structures
+
+#include <atomic>
 
 #include "RenderDevice.h"
 #include "DeviceObjectBase.hpp"
@@ -329,6 +331,11 @@ public:
         return m_DeviceInfo.Features;
     }
 
+    UniqueIdentifier GenerateUniqueId()
+    {
+        return m_UniqueId.fetch_add(1) + 1;
+    }
+
 protected:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) = 0;
 
@@ -597,6 +604,8 @@ protected:
     FixedBlockMemoryAllocator m_PipeResSignAllocator; ///< Allocator for pipeline resource signature objects
     FixedBlockMemoryAllocator m_MemObjAllocator;      ///< Allocator for device memory objects
     FixedBlockMemoryAllocator m_PSOCacheAllocator;    ///< Allocator for pipeline state cache objects
+
+    std::atomic<UniqueIdentifier> m_UniqueId{0};
 };
 
 } // namespace Diligent
