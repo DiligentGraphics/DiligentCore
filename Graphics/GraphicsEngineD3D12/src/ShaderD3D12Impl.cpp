@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -91,9 +91,15 @@ static ShaderVersion GetD3D12ShaderModel(const ShaderCreateInfo& ShaderCI,
         VERIFY(ShaderCI.ByteCode != nullptr, "ByteCode must not be null when both Source and FilePath are null");
     }
 
-    return (HLSLVersion == ShaderVersion{0, 0}) ?
-        MaxSupportedSM :
-        ShaderVersion::Min(HLSLVersion, MaxSupportedSM);
+    if (HLSLVersion == ShaderVersion{0, 0})
+    {
+        // Limit shader version to 6.6 to avoid issues with byte code changes in newer untested versions of DXC.
+        return ShaderVersion::Min(MaxSupportedSM, ShaderVersion{6, 6});
+    }
+    else
+    {
+        return ShaderVersion::Min(HLSLVersion, MaxSupportedSM);
+    }
 }
 
 ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
