@@ -170,6 +170,7 @@ private:
     struct ResourceExtendedInfo
     {
         Uint32   SrcBindPoint = ~0u;
+        Uint32   SrcArraySize = ~0u;
         Uint32   SrcSpace     = ~0u;
         Uint32   RecordId     = ~0u;
         RES_TYPE Type         = RES_TYPE_INVALID;
@@ -926,6 +927,7 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
             {
                 auto& Ext        = ExtResourceMap[&NameAndBinding];
                 Ext.SrcBindPoint = ResDesc.BindPoint;
+                Ext.SrcArraySize = ResDesc.BindCount;
                 Ext.SrcSpace     = ResDesc.Space;
 
 #    ifdef NO_D3D_SIT_ACCELSTRUCT_FEEDBACK_TEX
@@ -1068,17 +1070,22 @@ bool DXCompilerImpl::PatchDXIL(const TResourceBindingMap& ResourceMap, TExtended
 namespace
 {
 
-bool IsWordSymbol(char c)
+inline bool IsAlpha(char c)
 {
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-bool IsNumberSymbol(char c)
+inline bool IsNumber(char c)
 {
     return (c >= '0' && c <= '9');
 }
 
-bool SkipSpaces(const String& DXIL, size_t& pos)
+inline bool IsWordSymbol(char c)
+{
+    return IsAlpha(c) || IsNumber(c) || (c == '_');
+}
+
+inline bool SkipSpaces(const String& DXIL, size_t& pos)
 {
     while (pos < DXIL.length() && DXIL[pos] == ' ')
         ++pos;
@@ -1086,7 +1093,7 @@ bool SkipSpaces(const String& DXIL, size_t& pos)
     return pos < DXIL.length();
 }
 
-bool SkipCommaAndSpaces(const String& DXIL, size_t& pos)
+inline bool SkipCommaAndSpaces(const String& DXIL, size_t& pos)
 {
     // , i32 -1
     // ^
@@ -1139,7 +1146,7 @@ size_t ParseIntRecord(const String& DXIL, size_t& pos, VALUE_TYPE Type, const ch
 
     if (DXIL[pos] == '-' || DXIL[pos] == '+')
         ++pos;
-    while (IsNumberSymbol(DXIL[pos]))
+    while (IsNumber(DXIL[pos]))
         ++pos;
 
     CHECK_PARSING_ERROR(pos > ValueStartPos, "number is expected")
@@ -1431,7 +1438,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
             for (; pos < EndOfResTypeRecord; ++pos)
             {
                 const char c = DXIL[pos];
-                if (!(IsNumberSymbol(c) || (c == ' ') || (c == 'x')))
+                if (!(IsNumber(c) || (c == ' ') || (c == 'x')))
                     break;
             }
         }
@@ -1689,16 +1696,26 @@ void DXCompilerImpl::PatchResourceIndex(const ResourceExtendedInfo& ResInfo, con
     const auto ReplaceBindPoint = [&DXIL](const ResourceExtendedInfo& ResInfo, const BindInfo& Bind, size_t IndexStartPos, size_t IndexEndPos) //
     {
         const String SrcIndexStr = DXIL.substr(IndexStartPos, IndexEndPos - IndexStartPos);
-        VERIFY_EXPR(IsNumberSymbol(SrcIndexStr.front()));
+        VERIFY_EXPR(IsNumber(SrcIndexStr.front()));
 
         const Uint32 SrcIndex = static_cast<Uint32>(std::stoi(SrcIndexStr));
 
-        VERIFY_EXPR(SrcIndex >= ResInfo.SrcBindPoint && SrcIndex < ResInfo.SrcBindPoint + Bind.ArraySize);
         VERIFY_EXPR(ResInfo.SrcBindPoint != ~0u);
 
         VERIFY(SrcIndex >= ResInfo.SrcBindPoint,
-               "Source index can't be less than the source bind point. "
-               "Either the byte code is corrupted or the source bind point is incorrect.");
+               "Source index (", SrcIndex, ") can't be less than the source bind point. (", ResInfo.SrcBindPoint,
+               "). Either the byte code is corrupted or the source bind point is incorrect.");
+        VERIFY(ResInfo.SrcArraySize == ~0u || SrcIndex < ResInfo.SrcBindPoint + std::max(ResInfo.SrcArraySize, 1u),
+               "Source index (", SrcIndex, ") can't exceed the source bind point + array size. (", ResInfo.SrcBindPoint, " + ", ResInfo.SrcArraySize,
+               "). Either the byte code is corrupted or the source bind point is incorrect.");
+        // Texture2D g_Tex[4] : register(t8);
+        // ...
+        // g_Tex[2].Sample(...);
+        //
+        // ResInfo.SrcBindPoint:  8
+        // ResInfo.SrcArraySize:  4
+        // SrcIndex:             10
+        // IndexOffset:           2
         const Uint32 IndexOffset = SrcIndex - ResInfo.SrcBindPoint;
 
         const String NewIndexStr = std::to_string(Bind.BindPoint + IndexOffset);
@@ -1772,13 +1789,13 @@ void DXCompilerImpl::PatchResourceIndex(const ResourceExtendedInfo& ResInfo, con
             // skip ", "
 
             // second arg must be a constant
-            CHECK_PATCHING_ERROR(IsNumberSymbol(DXIL[pos]), "second argument expected to be an integer constant");
+            CHECK_PATCHING_ERROR(IsNumber(DXIL[pos]), "second argument expected to be an integer constant");
 
             ArgStart = pos;
             for (; pos < DXIL.size(); ++pos)
             {
                 const char c = DXIL[pos];
-                if (!IsNumberSymbol(c))
+                if (!IsNumber(c))
                     break;
             }
             CHECK_PATCHING_ERROR(DXIL[pos] == ',' || DXIL[pos] == '\n', "failed to parse second argument");
@@ -1789,13 +1806,13 @@ void DXCompilerImpl::PatchResourceIndex(const ResourceExtendedInfo& ResInfo, con
         else
         {
             // first arg is a constant
-            VERIFY_EXPR(IsNumberSymbol(DXIL[pos]));
+            VERIFY_EXPR(IsNumber(DXIL[pos]));
 
             ArgStart = pos;
             for (; pos < DXIL.size(); ++pos)
             {
                 const char c = DXIL[pos];
-                if (!IsNumberSymbol(c))
+                if (!IsNumber(c))
                     break;
             }
             CHECK_PATCHING_ERROR(DXIL[pos] == ',' || DXIL[pos] == '\n', "failed to parse second argument");
