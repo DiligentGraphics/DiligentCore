@@ -66,7 +66,7 @@ Texture1DArray_GL::Texture1DArray_GL(IReferenceCounters*        pRefCounters,
 
     //                             levels             format          width             height
     glTexStorage2D(m_BindTarget, m_Desc.MipLevels, m_GLTexFormat, m_Desc.Width, m_Desc.ArraySize);
-    CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 1D texture array");
+    DEV_CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 1D texture array");
     // When target is GL_TEXTURE_1D_ARRAY, calling glTexStorage2D() is equivalent to the following code:
     //for (i = 0; i < levels; i++)
     //{

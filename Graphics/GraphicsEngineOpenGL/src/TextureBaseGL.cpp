@@ -464,7 +464,7 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
                     LOG_ERROR_AND_THROW("glTextureView is not supported");
 
                 glTextureView(pViewOGL->GetHandle(), GLViewTarget, m_GlTexture, GLViewFormat, ViewDesc.MostDetailedMip, ViewDesc.NumMipLevels, ViewDesc.FirstArraySlice, NumLayers);
-                CHECK_GL_ERROR_AND_THROW("Failed to create texture view");
+                DEV_CHECK_GL_ERROR_AND_THROW("Failed to create texture view");
                 pViewOGL->SetBindTarget(GLViewTarget);
 
                 if (!IsIdentityComponentMapping(ViewDesc.Swizzle))

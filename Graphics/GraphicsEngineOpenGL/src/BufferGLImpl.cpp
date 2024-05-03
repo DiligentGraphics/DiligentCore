@@ -145,7 +145,7 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
     // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same
     // kind of objects. As a result they are all equivalent from a transfer point of view.
     glBufferData(m_BindTarget, StaticCast<GLsizeiptr>(BuffDesc.Size), pData, m_GLUsageHint);
-    CHECK_GL_ERROR_AND_THROW("glBufferData() failed");
+    DEV_CHECK_GL_ERROR("glBufferData() failed");
     GLState.BindBuffer(m_BindTarget, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 
     m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;

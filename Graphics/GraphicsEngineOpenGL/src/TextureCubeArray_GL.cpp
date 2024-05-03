@@ -76,7 +76,7 @@ TextureCubeArray_GL::TextureCubeArray_GL(IReferenceCounters*        pRefCounters
     VERIFY((m_Desc.ArraySize % 6) == 0, "Array size must be multiple of 6");
     //                             levels             format          width         height          depth
     glTexStorage3D(m_BindTarget, m_Desc.MipLevels, m_GLTexFormat, m_Desc.Width, m_Desc.Height, m_Desc.ArraySize);
-    CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the Cubemap texture array");
+    DEV_CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the Cubemap texture array");
     //When target is GL_TEXTURE_CUBE_MAP_ARRAY glTexStorage3D is equivalent to:
     //
     //for (i = 0; i < levels; i++) {

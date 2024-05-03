@@ -153,10 +153,16 @@
     } while (false)
 
 #ifdef DILIGENT_DEVELOPMENT
-#    define DEV_CHECK_GL_ERROR CHECK_GL_ERROR
+#    define DEV_CHECK_GL_ERROR           CHECK_GL_ERROR
+#    define DEV_CHECK_GL_ERROR_AND_THROW CHECK_GL_ERROR_AND_THROW
 #else
 #    define DEV_CHECK_GL_ERROR(...) \
         do                          \
         {                           \
+        } while (false)
+
+#    define DEV_CHECK_GL_ERROR_AND_THROW(...) \
+        do                                    \
+        {                                     \
         } while (false)
 #endif

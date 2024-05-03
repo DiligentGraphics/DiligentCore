@@ -67,7 +67,7 @@ Texture3D_GL::Texture3D_GL(IReferenceCounters*        pRefCounters,
 
     //                             levels             format          width        height          depth
     glTexStorage3D(m_BindTarget, m_Desc.MipLevels, m_GLTexFormat, m_Desc.Width, m_Desc.Height, m_Desc.Depth);
-    CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 3D texture");
+    DEV_CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 3D texture");
     // When target is GL_TEXTURE_3D, calling glTexStorage3D is equivalent to the following pseudo-code:
     //for (i = 0; i < levels; i++)
     //{

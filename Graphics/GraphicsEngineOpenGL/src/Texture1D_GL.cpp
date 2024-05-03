@@ -65,7 +65,7 @@ Texture1D_GL::Texture1D_GL(IReferenceCounters*        pRefCounters,
 
     //                             levels             format          width
     glTexStorage1D(m_BindTarget, m_Desc.MipLevels, m_GLTexFormat, m_Desc.Width);
-    CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 1D texture");
+    DEV_CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 1D texture");
     // When target is GL_TEXTURE_1D, calling glTexStorage1D is equivalent to the following pseudo-code:
     //for (i = 0; i < levels; i++)
     //{

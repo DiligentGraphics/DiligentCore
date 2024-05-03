@@ -73,7 +73,7 @@ Texture2D_GL::Texture2D_GL(IReferenceCounters*        pRefCounters,
         // The last parameter specifies whether the image will use identical sample locations and the same number of
         // samples for all texels in the image, and the sample locations will not depend on the internal format or size
         // of the image.
-        CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 2D multisample texture");
+        DEV_CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 2D multisample texture");
         // * An INVALID_ENUM error is generated if sizedinternalformat is not colorrenderable,
         //   depth - renderable, or stencil - renderable
         // * An INVALID_OPERATION error is generated if samples is greater than the maximum number of samples
@@ -91,7 +91,7 @@ Texture2D_GL::Texture2D_GL(IReferenceCounters*        pRefCounters,
     {
         //                             levels             format          width         height
         glTexStorage2D(m_BindTarget, m_Desc.MipLevels, m_GLTexFormat, m_Desc.Width, m_Desc.Height);
-        CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 2D texture");
+        DEV_CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the 2D texture");
         // When target is GL_TEXTURE_2D, calling glTexStorage2D is equivalent to the following pseudo-code:
         //for (i = 0; i < levels; i++)
         //{

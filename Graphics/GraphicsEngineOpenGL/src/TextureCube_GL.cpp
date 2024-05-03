@@ -72,7 +72,7 @@ TextureCube_GL::TextureCube_GL(IReferenceCounters*        pRefCounters,
     VERIFY(m_Desc.ArraySize == 6, "Cubemap texture is expected to have 6 slices");
     //                             levels             format          width         height
     glTexStorage2D(m_BindTarget, m_Desc.MipLevels, m_GLTexFormat, m_Desc.Width, m_Desc.Height);
-    CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the Cubemap texture");
+    DEV_CHECK_GL_ERROR_AND_THROW("Failed to allocate storage for the Cubemap texture");
     //When target is GL_TEXTURE_CUBE_MAP, glTexStorage2D is equivalent to:
     //
     //for (i = 0; i < levels; i++) {
