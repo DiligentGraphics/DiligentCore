@@ -527,6 +527,14 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
         MaxSM = ShaderVersion{6, 6};
     }
 
+    // NOTE: need to call this after GetMaxShaderModel() to load the compiler
+    Version DXCVersion;
+    pDXC->GetVersion(DXCVersion.Major, DXCVersion.Minor);
+    if (DXCVersion <= Version{1, 3})
+    {
+        GTEST_SKIP() << "DXC version 1.3 or older does not support ConstantBuffer<...> syntax";
+    }
+
     for (Uint32 MinorVersion = 0; MinorVersion <= MaxSM.Minor; ++MinorVersion)
     {
         std::wstring Profile = L"ps_6_" + std::to_wstring(MinorVersion);
