@@ -1,4 +1,4 @@
-## Current progress
+## v2.5.5
 
 * Added `MultiDraw` and `MultiDrawIndexed` commands (API254006)
 * Added `SerializationDeviceGLInfo` struct (API254005)
