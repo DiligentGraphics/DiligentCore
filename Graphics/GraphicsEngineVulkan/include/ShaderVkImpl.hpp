@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -92,6 +92,11 @@ public:
     {
         *ppBytecode = !m_SPIRV.empty() ? m_SPIRV.data() : nullptr;
         Size        = m_SPIRV.size() * sizeof(m_SPIRV[0]);
+    }
+
+    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    {
+        return SHADER_STATUS_READY;
     }
 
 private:

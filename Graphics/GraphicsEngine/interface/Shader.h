@@ -185,6 +185,21 @@ struct ShaderDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 };
 typedef struct ShaderDesc ShaderDesc;
 
+
+/// Shader status
+DILIGENT_TYPED_ENUM(SHADER_STATUS, Uint32)
+{
+    /// The shader is being compiled.
+	SHADER_STATUS_COMPILING = 0,
+
+	/// The shader has been successfully compiled
+    /// and is ready to be used.
+	SHADER_STATUS_READY,
+
+	/// The shader compilation has failed.
+	SHADER_STATUS_FAILED
+};
+
 // clang-format on
 
 // {3EA98781-082F-4413-8C30-B9BA6D82DBB7}
@@ -982,6 +997,9 @@ DILIGENT_BEGIN_INTERFACE(IShader, IDeviceObject)
     VIRTUAL void METHOD(GetBytecode)(THIS_
                                      const void** ppBytecode,
                                      Uint64 REF   Size) CONST PURE;
+
+    /// Returns the shader status, see Diligent::SHADER_STATUS.
+    VIRTUAL SHADER_STATUS METHOD(GetStatus)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -997,6 +1015,7 @@ DILIGENT_END_INTERFACE
 #    define IShader_GetResourceDesc(This, ...)       CALL_IFACE_METHOD(Shader, GetResourceDesc,  This, __VA_ARGS__)
 #    define IShader_GetConstantBufferDesc(This, ...) CALL_IFACE_METHOD(Shader, GetConstantBufferDesc,  This, __VA_ARGS__)
 #    define IShader_GetBytecode(This, ...)           CALL_IFACE_METHOD(Shader, GetBytecode,      This, __VA_ARGS__)
+#    define IShader_GetStatus(This)                  CALL_IFACE_METHOD(Shader, GetStatus,        This)
 
 // clang-format on
 

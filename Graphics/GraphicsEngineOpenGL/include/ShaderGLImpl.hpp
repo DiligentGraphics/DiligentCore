@@ -85,6 +85,11 @@ public:
         DataSize = m_GLSLSourceString.length();
     }
 
+    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    {
+        return SHADER_STATUS_READY;
+    }
+
 private:
     SHADER_SOURCE_LANGUAGE                   m_SourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
     std::string                              m_GLSLSourceString;

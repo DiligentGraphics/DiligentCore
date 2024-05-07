@@ -67,6 +67,11 @@ public:
     UNSUPPORTED_CONST_METHOD(IObject*, GetUserData)
     UNSUPPORTED_CONST_METHOD(void, GetBytecode, const void** ppBytecode, Uint64& Size);
 
+    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    {
+        return SHADER_STATUS_READY;
+    }
+
     virtual IShader* DILIGENT_CALL_TYPE GetDeviceShader(RENDER_DEVICE_TYPE Type) const override final;
 
     struct CompiledShader
