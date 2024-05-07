@@ -4232,6 +4232,13 @@ struct TextureFormatInfo DILIGENT_DERIVE(TextureFormatAttribs)
 
     // Explicitly pad the structure to 8-byte boundary
     Bool Padding[7] DEFAULT_INITIALIZER({});
+
+#if DILIGENT_CPP_INTERFACE
+    explicit constexpr operator bool() const
+    {
+        return Supported;
+    }
+#endif
 };
 typedef struct TextureFormatInfo TextureFormatInfo;
 
