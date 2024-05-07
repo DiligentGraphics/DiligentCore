@@ -221,6 +221,7 @@ public:
             Features.TextureComponentSwizzle       = DEVICE_FEATURE_STATE_DISABLED;
             Features.TextureSubresourceViews       = DEVICE_FEATURE_STATE_ENABLED;
             Features.NativeMultiDraw               = DEVICE_FEATURE_STATE_DISABLED;
+            Features.AsyncShaderCompilation        = DEVICE_FEATURE_STATE_DISABLED;
         }
 
         // Set memory properties

@@ -1096,7 +1096,9 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         m_AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 43, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    m_AdapterInfo.Features.AsyncShaderCompilation = DEVICE_FEATURE_STATE_DISABLED;
+
+    ASSERT_SIZEOF(DeviceFeatures, 44, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 }
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()

@@ -1808,6 +1808,13 @@ struct DeviceFeatures
     ///             multiple individual draw calls. The draw command index is unavailable.
     DEVICE_FEATURE_STATE NativeMultiDraw DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Whether the device supports asynchronous shader compilation.
+    ///
+    /// \remarks    When this feature is enabled, the engine can create shaders asynchronously
+    ///             in a separate thread without blocking the main thread. An application can
+    ///             query the shader status using the IShader::GetStatus() method.
+    DEVICE_FEATURE_STATE AsyncShaderCompilation DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
 
@@ -1854,11 +1861,12 @@ struct DeviceFeatures
     Handler(SubpassFramebufferFetch)           \
     Handler(TextureComponentSwizzle)           \
 	Handler(TextureSubresourceViews)		   \
-	Handler(NativeMultiDraw)
+	Handler(NativeMultiDraw)                   \
+    Handler(AsyncShaderCompilation)
 
     explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept
     {
-        static_assert(sizeof(*this) == 43, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
+        static_assert(sizeof(*this) == 44, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
     #define INIT_FEATURE(Feature) Feature = State;
         ENUMERATE_DEVICE_FEATURES(INIT_FEATURE)
     #undef INIT_FEATURE
