@@ -1104,11 +1104,13 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     const auto& DeviceInfo     = GetDeviceInfo();
     const auto  bGL33OrAbove   = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{3, 3};
     const auto  bGLES30OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 0};
+    const auto  bGLES32OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 2};
 
-    const bool bRGTC       = CheckExtension("GL_ARB_texture_compression_rgtc");
-    const bool bBPTC       = CheckExtension("GL_ARB_texture_compression_bptc");
+    const bool bRGTC       = CheckExtension("GL_ARB_texture_compression_rgtc") || CheckExtension("GL_EXT_texture_compression_rgtc");
+    const bool bBPTC       = CheckExtension("GL_ARB_texture_compression_bptc") || CheckExtension("GL_EXT_texture_compression_bptc");
     const bool bS3TC       = CheckExtension("GL_EXT_texture_compression_s3tc");
-    const bool bTexNorm16  = CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
+    const bool bTexNorm16  = bGL33OrAbove || CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
+    const bool bTexFloat16 = bGL33OrAbove || bGLES32OrAbove || CheckExtension("GL_EXT_color_buffer_half_float");
     const bool bTexSwizzle = bGL33OrAbove || bGLES30OrAbove || CheckExtension("GL_ARB_texture_swizzle");
 
 
@@ -1128,10 +1130,10 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FLAG_FORMAT(TEX_FORMAT_RGB32_UINT,                 true);
     FLAG_FORMAT(TEX_FORMAT_RGB32_SINT,                 true);
     FLAG_FORMAT(TEX_FORMAT_RGBA16_TYPELESS,            true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_FLOAT,               true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_UNORM,               bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_RGBA16_FLOAT,               bTexFloat16);
+    FLAG_FORMAT(TEX_FORMAT_RGBA16_UNORM,               bTexNorm16);
     FLAG_FORMAT(TEX_FORMAT_RGBA16_UINT,                true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA16_SNORM,               bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_RGBA16_SNORM,               bTexNorm16);
     FLAG_FORMAT(TEX_FORMAT_RGBA16_SINT,                true);
     FLAG_FORMAT(TEX_FORMAT_RG32_TYPELESS,              true);
     FLAG_FORMAT(TEX_FORMAT_RG32_FLOAT,                 true);
@@ -1152,10 +1154,10 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FLAG_FORMAT(TEX_FORMAT_RGBA8_SNORM,                true);
     FLAG_FORMAT(TEX_FORMAT_RGBA8_SINT,                 true);
     FLAG_FORMAT(TEX_FORMAT_RG16_TYPELESS,              true);
-    FLAG_FORMAT(TEX_FORMAT_RG16_FLOAT,                 true);
-    FLAG_FORMAT(TEX_FORMAT_RG16_UNORM,                 bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_RG16_FLOAT,                 bTexFloat16);
+    FLAG_FORMAT(TEX_FORMAT_RG16_UNORM,                 bTexNorm16);
     FLAG_FORMAT(TEX_FORMAT_RG16_UINT,                  true);
-    FLAG_FORMAT(TEX_FORMAT_RG16_SNORM,                 bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_RG16_SNORM,                 bTexNorm16);
     FLAG_FORMAT(TEX_FORMAT_RG16_SINT,                  true);
     FLAG_FORMAT(TEX_FORMAT_R32_TYPELESS,               true);
     FLAG_FORMAT(TEX_FORMAT_D32_FLOAT,                  true);
@@ -1172,11 +1174,11 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FLAG_FORMAT(TEX_FORMAT_RG8_SNORM,                  true);
     FLAG_FORMAT(TEX_FORMAT_RG8_SINT,                   true);
     FLAG_FORMAT(TEX_FORMAT_R16_TYPELESS,               true);
-    FLAG_FORMAT(TEX_FORMAT_R16_FLOAT,                  true);
+    FLAG_FORMAT(TEX_FORMAT_R16_FLOAT,                  bTexFloat16);
     FLAG_FORMAT(TEX_FORMAT_D16_UNORM,                  true);
-    FLAG_FORMAT(TEX_FORMAT_R16_UNORM,                  bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_R16_UNORM,                  bTexNorm16);
     FLAG_FORMAT(TEX_FORMAT_R16_UINT,                   true);
-    FLAG_FORMAT(TEX_FORMAT_R16_SNORM,                  bGL33OrAbove || bTexNorm16);
+    FLAG_FORMAT(TEX_FORMAT_R16_SNORM,                  bTexNorm16);
     FLAG_FORMAT(TEX_FORMAT_R16_SINT,                   true);
     FLAG_FORMAT(TEX_FORMAT_R8_TYPELESS,                true);
     FLAG_FORMAT(TEX_FORMAT_R8_UNORM,                   true);
@@ -1258,7 +1260,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 #    endif
 
         // Check that the format is indeed supported
-        if (FmtInfo->Supported)
+        if (FmtInfo->Supported && !FmtInfo->IsDepthStencil())
         {
             GLObjectWrappers::GLTextureObj TestGLTex(true);
             // Immediate context has not been created yet, so use raw GL functions
