@@ -1106,13 +1106,49 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     const auto  bGLES30OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 0};
     const auto  bGLES32OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 2};
 
-    const bool bRGTC       = CheckExtension("GL_ARB_texture_compression_rgtc") || CheckExtension("GL_EXT_texture_compression_rgtc");
-    const bool bBPTC       = CheckExtension("GL_ARB_texture_compression_bptc") || CheckExtension("GL_EXT_texture_compression_bptc");
-    const bool bS3TC       = CheckExtension("GL_EXT_texture_compression_s3tc");
-    const bool bTexNorm16  = bGL33OrAbove || CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
-    const bool bTexFloat16 = bGL33OrAbove || bGLES32OrAbove || CheckExtension("GL_EXT_color_buffer_half_float");
-    const bool bTexSwizzle = bGL33OrAbove || bGLES30OrAbove || CheckExtension("GL_ARB_texture_swizzle");
+    const bool bRGTC      = CheckExtension("GL_ARB_texture_compression_rgtc") || CheckExtension("GL_EXT_texture_compression_rgtc");
+    const bool bBPTC      = CheckExtension("GL_ARB_texture_compression_bptc") || CheckExtension("GL_EXT_texture_compression_bptc");
+    const bool bS3TC      = CheckExtension("GL_EXT_texture_compression_s3tc");
+    const bool bTexNorm16 = bGL33OrAbove || CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
 
+    //          GLES3.0
+    // | Format  |  CR  |  TF  |
+    // |---------|------|------|
+    // | R16F    |      |  V   |
+    // | RG16F   |      |  V   |
+    // | RGBA16F |      |  V   |
+    // | R32F    |      |      |
+    // | RG32F   |      |      |
+    // | RGBA32F |      |      |
+
+    //                       GLES3.1
+    // | Format  |  CR  |  TF  | Req RB | Req. Tex |
+    // |---------|------|------|--------|----------|
+    // | R16F    |      |  V   |        |    V     |
+    // | RG16F   |      |  V   |        |    V     |
+    // | RGBA16F |      |  V   |        |    V     |
+    // | R32F    |      |      |        |    V     |
+    // | RG32F   |      |      |        |    V     |
+    // | RGBA32F |      |      |        |    V     |
+
+    //                       GLES3.2
+    // | Format  |  CR  |  TF  | Req RB | Req. Tex |
+    // |---------|------|------|--------|----------|
+    // | R16F    |  V   |  V   |   V    |    V     |
+    // | RG16F   |  V   |  V   |   V    |    V     |
+    // | RGBA16F |  V   |  V   |   V    |    V     |
+    // | R32F    |  V   |      |   V    |    V     |
+    // | RG32F   |  V   |      |   V    |    V     |
+    // | RGBA32F |  V   |      |   V    |    V     |
+
+    // CR (Color Renderable)          - texture can be used as color attachment
+    // TF (Texture Filterable)        - texture can be filtered (mipmapping and minification/magnification filtering)
+    // Req RB (Required Renderbuffer) - texture supports renderbuffer usage
+    // Req. Tex (Required Texture)    - texture usage is supported
+
+    const bool bTexFloat16 = bGL33OrAbove || bGLES32OrAbove || CheckExtension("GL_EXT_color_buffer_half_float");
+    const bool bTexFloat32 = bGL33OrAbove || bGLES32OrAbove || CheckExtension("GL_EXT_color_buffer_float");
+    const bool bTexSwizzle = bGL33OrAbove || bGLES30OrAbove || CheckExtension("GL_ARB_texture_swizzle");
 
 #define FLAG_FORMAT(Fmt, IsSupported) \
     m_TextureFormatsInfo[Fmt].Supported = IsSupported
@@ -1122,11 +1158,11 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 
     // clang-format off
     FLAG_FORMAT(TEX_FORMAT_RGBA32_TYPELESS,            true);
-    FLAG_FORMAT(TEX_FORMAT_RGBA32_FLOAT,               true);
+    FLAG_FORMAT(TEX_FORMAT_RGBA32_FLOAT,               bTexFloat32);
     FLAG_FORMAT(TEX_FORMAT_RGBA32_UINT,                true);
     FLAG_FORMAT(TEX_FORMAT_RGBA32_SINT,                true);
     FLAG_FORMAT(TEX_FORMAT_RGB32_TYPELESS,             true);
-    FLAG_FORMAT(TEX_FORMAT_RGB32_FLOAT,                true);
+    FLAG_FORMAT(TEX_FORMAT_RGB32_FLOAT,                bTexFloat32);
     FLAG_FORMAT(TEX_FORMAT_RGB32_UINT,                 true);
     FLAG_FORMAT(TEX_FORMAT_RGB32_SINT,                 true);
     FLAG_FORMAT(TEX_FORMAT_RGBA16_TYPELESS,            true);
@@ -1136,7 +1172,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FLAG_FORMAT(TEX_FORMAT_RGBA16_SNORM,               bTexNorm16);
     FLAG_FORMAT(TEX_FORMAT_RGBA16_SINT,                true);
     FLAG_FORMAT(TEX_FORMAT_RG32_TYPELESS,              true);
-    FLAG_FORMAT(TEX_FORMAT_RG32_FLOAT,                 true);
+    FLAG_FORMAT(TEX_FORMAT_RG32_FLOAT,                 bTexFloat32);
     FLAG_FORMAT(TEX_FORMAT_RG32_UINT,                  true);
     FLAG_FORMAT(TEX_FORMAT_RG32_SINT,                  true);
     FLAG_FORMAT(TEX_FORMAT_R32G8X24_TYPELESS,          true);
@@ -1161,7 +1197,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FLAG_FORMAT(TEX_FORMAT_RG16_SINT,                  true);
     FLAG_FORMAT(TEX_FORMAT_R32_TYPELESS,               true);
     FLAG_FORMAT(TEX_FORMAT_D32_FLOAT,                  true);
-    FLAG_FORMAT(TEX_FORMAT_R32_FLOAT,                  true);
+    FLAG_FORMAT(TEX_FORMAT_R32_FLOAT,                  bTexFloat32);
     FLAG_FORMAT(TEX_FORMAT_R32_UINT,                   true);
     FLAG_FORMAT(TEX_FORMAT_R32_SINT,                   true);
     FLAG_FORMAT(TEX_FORMAT_R24G8_TYPELESS,             true);
