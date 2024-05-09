@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -175,6 +175,27 @@ const Char* GetValueTypeString(VALUE_TYPE Val);
 /// \return Constant reference to the TextureFormatAttribs structure containing
 ///         format attributes.
 const TextureFormatAttribs& GetTextureFormatAttribs(TEXTURE_FORMAT Format);
+
+/// Converts value type to component type, for example:
+///  * VT_UINT8, true,  false -> COMPONENT_TYPE_UNORM
+///  * VT_UINT8, false, false -> COMPONENT_TYPE_UINT
+///  * VT_UINT8, true,  true  -> COMPONENT_TYPE_UNORM_SRGB
+///
+/// \note Use GetValueSize() to get the component size.
+COMPONENT_TYPE ValueTypeToComponentType(VALUE_TYPE ValType, bool IsNormalized, bool IsSRGB);
+
+/// Converts component type and size to value type, for example:
+///  * COMPONENT_TYPE_UNORM, 1 -> VT_UINT8
+///  * COMPONENT_TYPE_FLOAT, 4 -> VT_FLOAT32
+VALUE_TYPE ComponentTypeToValueType(COMPONENT_TYPE CompType, Uint32 Size);
+
+/// Returns texture format for the specified component type, size and number of components, for example:
+/// * COMPONENT_TYPE_UNORM, 1, 4 -> TEX_FORMAT_RGBA8_UNORM
+/// * COMPONENT_TYPE_FLOAT, 4, 1 -> TEX_FORMAT_R32_FLOAT
+///
+/// If the format is not found, TEXTURE_FORMAT_UNKNOWN is returned.
+TEXTURE_FORMAT TextureComponentAttribsToTextureFormat(COMPONENT_TYPE CompType, Uint32 ComponentSize, Uint32 NumComponents);
+
 
 /// Returns the default format for a specified texture view type
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1347,6 +1347,66 @@ TEST(GraphicsAccessories_GraphicsAccessories, ResolveInputLayoutAutoOffsetsAndSt
              {3, 2, 3, VT_FLOAT32, false, 8, 20},
          },
          {0, 0, 20});
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, TextureComponentAttribsToTextureFormat)
+{
+    for (TEXTURE_FORMAT RefFmt : {
+             TEX_FORMAT_R8_UNORM,
+             TEX_FORMAT_R8_UINT,
+             TEX_FORMAT_RG8_UNORM,
+             TEX_FORMAT_RG8_UINT,
+             TEX_FORMAT_RGBA8_UNORM_SRGB,
+             TEX_FORMAT_RGBA8_UNORM,
+             TEX_FORMAT_RGBA8_UINT,
+             TEX_FORMAT_R8_SNORM,
+             TEX_FORMAT_R8_SINT,
+             TEX_FORMAT_RG8_SNORM,
+             TEX_FORMAT_RG8_SINT,
+             TEX_FORMAT_RGBA8_SNORM,
+             TEX_FORMAT_RGBA8_SINT,
+             TEX_FORMAT_R16_UNORM,
+             TEX_FORMAT_R16_UINT,
+             TEX_FORMAT_RG16_UNORM,
+             TEX_FORMAT_RG16_UINT,
+             TEX_FORMAT_RGBA16_UNORM,
+             TEX_FORMAT_RGBA16_UINT,
+             TEX_FORMAT_R16_SNORM,
+             TEX_FORMAT_R16_SINT,
+             TEX_FORMAT_RG16_SNORM,
+             TEX_FORMAT_RG16_SINT,
+             TEX_FORMAT_RGBA16_SNORM,
+             TEX_FORMAT_RGBA16_SINT,
+             TEX_FORMAT_R32_UINT,
+             TEX_FORMAT_RG32_UINT,
+             TEX_FORMAT_RGB32_UINT,
+             TEX_FORMAT_RGBA32_UINT,
+             TEX_FORMAT_R32_SINT,
+             TEX_FORMAT_RG32_SINT,
+             TEX_FORMAT_RGB32_SINT,
+             TEX_FORMAT_RGBA32_SINT,
+             TEX_FORMAT_R16_FLOAT,
+             TEX_FORMAT_RG16_FLOAT,
+             TEX_FORMAT_RGBA16_FLOAT,
+             TEX_FORMAT_R32_FLOAT,
+             TEX_FORMAT_RG32_FLOAT,
+             TEX_FORMAT_RGB32_FLOAT,
+             TEX_FORMAT_RGBA32_FLOAT})
+    {
+        const TextureFormatAttribs& RefFmtAttribs = GetTextureFormatAttribs(RefFmt);
+
+        const bool IsNormalized = RefFmtAttribs.ComponentType == COMPONENT_TYPE_UNORM ||
+            RefFmtAttribs.ComponentType == COMPONENT_TYPE_UNORM_SRGB ||
+            RefFmtAttribs.ComponentType == COMPONENT_TYPE_SNORM;
+        const VALUE_TYPE     TestValType  = ComponentTypeToValueType(RefFmtAttribs.ComponentType, RefFmtAttribs.ComponentSize);
+        const COMPONENT_TYPE TestCompType = ValueTypeToComponentType(TestValType, IsNormalized, RefFmt == TEX_FORMAT_RGBA8_UNORM_SRGB);
+        const Uint32         TestSize     = GetValueSize(TestValType);
+        EXPECT_EQ(Uint32{RefFmtAttribs.ComponentType}, Uint32{TestCompType}) << RefFmtAttribs.Name;
+        EXPECT_EQ(Uint32{RefFmtAttribs.ComponentSize}, TestSize) << RefFmtAttribs.Name;
+
+        const TEXTURE_FORMAT Fmt = TextureComponentAttribsToTextureFormat(RefFmtAttribs.ComponentType, RefFmtAttribs.ComponentSize, RefFmtAttribs.NumComponents);
+        EXPECT_EQ(Fmt, RefFmt) << GetTextureFormatAttribs(Fmt).Name << " != " << RefFmtAttribs.Name;
+    }
 }
 
 } // namespace

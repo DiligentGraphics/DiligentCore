@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -432,6 +432,254 @@ const TextureFormatAttribs& GetTextureFormatAttribs(TEXTURE_FORMAT Format)
     return FormatToTexFormatAttribs[Format];
 }
 
+COMPONENT_TYPE ValueTypeToComponentType(VALUE_TYPE ValType, bool IsNormalized, bool IsSRGB)
+{
+    static_assert(VT_NUM_TYPES == 10, "Please handle the new value type below");
+    switch (ValType)
+    {
+        case VT_UNDEFINED: return COMPONENT_TYPE_UNDEFINED;
+
+        case VT_UINT8:
+            return IsNormalized ? (IsSRGB ? COMPONENT_TYPE_UNORM_SRGB : COMPONENT_TYPE_UNORM) : COMPONENT_TYPE_UINT;
+
+        case VT_UINT16:
+            return IsNormalized ? COMPONENT_TYPE_UNORM : COMPONENT_TYPE_UINT;
+
+        case VT_INT8:
+        case VT_INT16:
+            return IsNormalized ? COMPONENT_TYPE_SNORM : COMPONENT_TYPE_SINT;
+
+        case VT_INT32:
+            return COMPONENT_TYPE_SINT;
+
+        case VT_UINT32:
+            return COMPONENT_TYPE_UINT;
+
+        case VT_FLOAT16:
+        case VT_FLOAT32:
+        case VT_FLOAT64:
+            return COMPONENT_TYPE_FLOAT;
+
+        default:
+            UNEXPECTED("Unknown value type");
+            return COMPONENT_TYPE_UNDEFINED;
+    }
+}
+
+VALUE_TYPE ComponentTypeToValueType(COMPONENT_TYPE CompType, Uint32 Size)
+{
+    switch (CompType)
+    {
+        case COMPONENT_TYPE_UNDEFINED:
+            return VT_UNDEFINED;
+
+        case COMPONENT_TYPE_FLOAT:
+            switch (Size)
+            {
+                case 2: return VT_FLOAT16;
+                case 4: return VT_FLOAT32;
+                case 8: return VT_FLOAT64;
+            }
+            break;
+
+        case COMPONENT_TYPE_SNORM:
+            switch (Size)
+            {
+                case 1: return VT_INT8;
+                case 2: return VT_INT16;
+            }
+            break;
+
+        case COMPONENT_TYPE_UNORM:
+            switch (Size)
+            {
+                case 1: return VT_UINT8;
+                case 2: return VT_UINT16;
+            }
+            break;
+
+        case COMPONENT_TYPE_UNORM_SRGB:
+            return Size == 1 ? VT_UINT8 : VT_UNDEFINED;
+
+        case COMPONENT_TYPE_SINT:
+            switch (Size)
+            {
+                case 1: return VT_INT8;
+                case 2: return VT_INT16;
+                case 4: return VT_INT32;
+            }
+            break;
+
+        case COMPONENT_TYPE_UINT:
+            switch (Size)
+            {
+                case 1: return VT_UINT8;
+                case 2: return VT_UINT16;
+                case 4: return VT_UINT32;
+            }
+            break;
+
+        case COMPONENT_TYPE_DEPTH:
+            return Size == 4 ? VT_FLOAT32 : VT_UNDEFINED;
+
+        default:
+            break;
+    }
+
+    return VT_UNDEFINED;
+}
+
+TEXTURE_FORMAT TextureComponentAttribsToTextureFormat(COMPONENT_TYPE CompType, Uint32 ComponentSize, Uint32 NumComponents)
+{
+    switch (CompType)
+    {
+        case COMPONENT_TYPE_FLOAT:
+            switch (ComponentSize)
+            {
+                case 2:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R16_FLOAT;
+                        case 2: return TEX_FORMAT_RG16_FLOAT;
+                        case 4: return TEX_FORMAT_RGBA16_FLOAT;
+                    }
+                    break;
+
+                case 4:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R32_FLOAT;
+                        case 2: return TEX_FORMAT_RG32_FLOAT;
+                        case 3: return TEX_FORMAT_RGB32_FLOAT;
+                        case 4: return TEX_FORMAT_RGBA32_FLOAT;
+                    }
+                    break;
+            }
+            break;
+
+        case COMPONENT_TYPE_SNORM:
+            switch (ComponentSize)
+            {
+                case 1:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R8_SNORM;
+                        case 2: return TEX_FORMAT_RG8_SNORM;
+                        case 4: return TEX_FORMAT_RGBA8_SNORM;
+                    }
+                    break;
+
+                case 2:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R16_SNORM;
+                        case 2: return TEX_FORMAT_RG16_SNORM;
+                        case 4: return TEX_FORMAT_RGBA16_SNORM;
+                    }
+                    break;
+            }
+            break;
+
+        case COMPONENT_TYPE_UNORM:
+            switch (ComponentSize)
+            {
+                case 1:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R8_UNORM;
+                        case 2: return TEX_FORMAT_RG8_UNORM;
+                        case 4: return TEX_FORMAT_RGBA8_UNORM;
+                    }
+
+                case 2:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R16_UNORM;
+                        case 2: return TEX_FORMAT_RG16_UNORM;
+                        case 4: return TEX_FORMAT_RGBA16_UNORM;
+                    }
+                    break;
+            }
+            break;
+
+        case COMPONENT_TYPE_UNORM_SRGB:
+            return ComponentSize == 1 && NumComponents == 4 ? TEX_FORMAT_RGBA8_UNORM_SRGB : TEX_FORMAT_UNKNOWN;
+
+        case COMPONENT_TYPE_SINT:
+            switch (ComponentSize)
+            {
+                case 1:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R8_SINT;
+                        case 2: return TEX_FORMAT_RG8_SINT;
+                        case 4: return TEX_FORMAT_RGBA8_SINT;
+                    }
+                    break;
+
+                case 2:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R16_SINT;
+                        case 2: return TEX_FORMAT_RG16_SINT;
+                        case 4: return TEX_FORMAT_RGBA16_SINT;
+                    }
+                    break;
+
+                case 4:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R32_SINT;
+                        case 2: return TEX_FORMAT_RG32_SINT;
+                        case 3: return TEX_FORMAT_RGB32_SINT;
+                        case 4: return TEX_FORMAT_RGBA32_SINT;
+                    }
+                    break;
+            }
+            break;
+
+        case COMPONENT_TYPE_UINT:
+            switch (ComponentSize)
+            {
+                case 1:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R8_UINT;
+                        case 2: return TEX_FORMAT_RG8_UINT;
+                        case 4: return TEX_FORMAT_RGBA8_UINT;
+                    }
+                    break;
+
+                case 2:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R16_UINT;
+                        case 2: return TEX_FORMAT_RG16_UINT;
+                        case 4: return TEX_FORMAT_RGBA16_UINT;
+                    }
+                    break;
+
+                case 4:
+                    switch (NumComponents)
+                    {
+                        case 1: return TEX_FORMAT_R32_UINT;
+                        case 2: return TEX_FORMAT_RG32_UINT;
+                        case 3: return TEX_FORMAT_RGB32_UINT;
+                        case 4: return TEX_FORMAT_RGBA32_UINT;
+                    }
+                    break;
+            }
+            break;
+
+        case COMPONENT_TYPE_DEPTH:
+            return ComponentSize == 4 && NumComponents == 1 ? TEX_FORMAT_D32_FLOAT : TEX_FORMAT_UNKNOWN;
+
+        default:
+            break;
+    }
+
+    return TEX_FORMAT_UNKNOWN;
+}
 
 const Char* GetTexViewTypeLiteralName(TEXTURE_VIEW_TYPE ViewType)
 {
