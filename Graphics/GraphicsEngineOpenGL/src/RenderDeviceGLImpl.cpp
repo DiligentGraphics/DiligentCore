@@ -1414,7 +1414,6 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     const int TestArraySlices  = 8;
     const int TestTextureDepth = 8;
 
-    TexFormatInfo.BindFlags  = BIND_SHADER_RESOURCE;
     TexFormatInfo.Dimensions = RESOURCE_DIMENSION_SUPPORT_NONE;
 
     // Disable debug messages - errors are expected
@@ -1494,10 +1493,12 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                 }
             }
 
-            bool bTestDepthAttachment =
-                TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
-                TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL;
-            bool bTestColorAttachment = !bTestDepthAttachment && TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED;
+            bool bTestDepthAttachment = (TexFormatInfo.BindFlags & BIND_DEPTH_STENCIL) != 0;
+            VERIFY_EXPR(!bTestDepthAttachment ||
+                        TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
+                        TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL);
+            bool bTestColorAttachment = (TexFormatInfo.BindFlags & BIND_RENDER_TARGET) != 0;
+            VERIFY_EXPR(!bTestColorAttachment || (!bTestDepthAttachment && TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED));
 
             GLObjectWrappers::GLFrameBufferObj NewFBO{false};
 
@@ -1539,8 +1540,12 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                     CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
 
                     GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-                    if ((glGetError() == GL_NO_ERROR) && (Status == GL_FRAMEBUFFER_COMPLETE))
-                        TexFormatInfo.BindFlags |= BIND_DEPTH_STENCIL;
+                    if ((glGetError() != GL_NO_ERROR) || (Status != GL_FRAMEBUFFER_COMPLETE))
+                        TexFormatInfo.BindFlags &= ~BIND_DEPTH_STENCIL;
+                }
+                else
+                {
+                    TexFormatInfo.BindFlags &= ~BIND_DEPTH_STENCIL;
                 }
             }
             else if (bTestColorAttachment)
@@ -1553,8 +1558,12 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                     CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
 
                     GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-                    if ((glGetError() == GL_NO_ERROR) && (Status == GL_FRAMEBUFFER_COMPLETE))
-                        TexFormatInfo.BindFlags |= BIND_RENDER_TARGET;
+                    if ((glGetError() != GL_NO_ERROR) || (Status != GL_FRAMEBUFFER_COMPLETE))
+                        TexFormatInfo.BindFlags &= ~BIND_RENDER_TARGET;
+                }
+                else
+                {
+                    TexFormatInfo.BindFlags &= ~BIND_RENDER_TARGET;
                 }
             }
 
@@ -1566,7 +1575,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
         }
 
 #if GL_ARB_shader_image_load_store
-        if (GetDeviceInfo().Features.PixelUAVWritesAndAtomics)
+        if (TexFormatInfo.BindFlags & BIND_UNORDERED_ACCESS)
         {
             GLuint    CurrentImg     = 0;
             GLint     CurrentLevel   = 0;
@@ -1577,12 +1586,11 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
             ContextState.GetBoundImage(0, CurrentImg, CurrentLevel, CurrentLayered, CurrentLayer, CurrenAccess, CurrenFormat);
 
             glBindImageTexture(0, TestGLTex2D, 0, GL_FALSE, 0, GL_READ_WRITE, GLFmt);
-            if (glGetError() == GL_NO_ERROR)
-                TexFormatInfo.BindFlags |= BIND_UNORDERED_ACCESS;
+            if (glGetError() != GL_NO_ERROR)
+                TexFormatInfo.BindFlags &= ~BIND_UNORDERED_ACCESS;
 
             glBindImageTexture(0, CurrentImg, CurrentLevel, CurrentLayered, CurrentLayer, CurrenAccess, CurrenFormat);
-            if (glGetError() != GL_NO_ERROR)
-                LOG_ERROR("Failed to restore original image");
+            CHECK_GL_ERROR("Failed to restore original image");
         }
 #endif
     }
