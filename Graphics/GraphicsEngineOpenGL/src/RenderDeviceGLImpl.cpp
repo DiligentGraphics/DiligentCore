@@ -1137,10 +1137,11 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     // Req RB (Required Renderbuffer) - texture supports renderbuffer usage
     // Req. Tex (Required Texture)    - texture usage is supported
 
+    static constexpr Version NotAvaiable = Version{~0u, ~0u};
 
     auto CheckBindFlagSupport = [&](BIND_FLAGS                     BindFlag,
                                     const Version&                 MinGLVersion,
-                                    const Version&                 MinGLESVersion = Version{1000, 0},
+                                    const Version&                 MinGLESVersion = Version{~0u, ~0u},
                                     const std::vector<const char*> Extensions     = {}) {
         if (DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= MinGLVersion)
             return BindFlag;
@@ -1163,11 +1164,11 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 
     BIND_FLAGS U8BindFlags         = TexBindFlags | BIND_RENDER_TARGET;
     BIND_FLAGS SRGBA8BindFlags     = TexBindFlags | BIND_RENDER_TARGET;
-    BIND_FLAGS S8BindFlags         = TexBindFlags | CheckBindFlagSupport(BIND_RENDER_TARGET, {4, 4}, {1000, 0}, {"GL_EXT_render_snorm"});
+    BIND_FLAGS S8BindFlags         = TexBindFlags | CheckBindFlagSupport(BIND_RENDER_TARGET, {4, 4}, NotAvaiable, {"GL_EXT_render_snorm"});
     BIND_FLAGS UI8BindFlags        = TexBindFlags | BIND_RENDER_TARGET;
     BIND_FLAGS SI8BindFlags        = TexBindFlags | BIND_RENDER_TARGET;
-    BIND_FLAGS U16BindFlags        = TexBindFlags | CheckBindFlagSupport(BIND_RENDER_TARGET, {4, 0}, {1000, 0}, {"GL_EXT_texture_norm16"});
-    BIND_FLAGS S16BindFlags        = TexBindFlags | CheckBindFlagSupport(BIND_RENDER_TARGET, {4, 4}, {1000, 0}, {"GL_EXT_render_snorm"});
+    BIND_FLAGS U16BindFlags        = TexBindFlags | CheckBindFlagSupport(BIND_RENDER_TARGET, {4, 0}, NotAvaiable, {"GL_EXT_texture_norm16"});
+    BIND_FLAGS S16BindFlags        = TexBindFlags | CheckBindFlagSupport(BIND_RENDER_TARGET, {4, 4}, NotAvaiable, {"GL_EXT_render_snorm"});
     BIND_FLAGS UI16BindFlags       = TexBindFlags | BIND_RENDER_TARGET;
     BIND_FLAGS SI16BindFlags       = TexBindFlags | BIND_RENDER_TARGET;
     BIND_FLAGS UI32BindFlags       = TexBindFlags | BIND_RENDER_TARGET;
@@ -1303,15 +1304,15 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     std::vector<Uint8> ZeroData(TestTextureDim * TestTextureDim * MaxTexelSize);
 
     // Go through all formats and try to create small 2D texture to check if the format is supported
-    for (auto FmtInfo = m_TextureFormatsInfo.begin(); FmtInfo != m_TextureFormatsInfo.end(); ++FmtInfo)
+    for (auto& FmtInfo : m_TextureFormatsInfo)
     {
-        if (FmtInfo->Format == TEX_FORMAT_UNKNOWN)
+        if (FmtInfo.Format == TEX_FORMAT_UNKNOWN)
             continue;
 
-        auto GLFmt = TexFormatToGLInternalTexFormat(FmtInfo->Format);
+        auto GLFmt = TexFormatToGLInternalTexFormat(FmtInfo.Format);
         if (GLFmt == 0)
         {
-            VERIFY(!FmtInfo->Supported, "Format should be marked as unsupported");
+            VERIFY(!FmtInfo.Supported, "Format should be marked as unsupported");
             continue;
         }
 
@@ -1322,14 +1323,14 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
             GLint params = 0;
             glGetInternalformativ(GL_TEXTURE_2D, GLFmt, GL_INTERNALFORMAT_SUPPORTED, 1, &params);
             CHECK_GL_ERROR("glGetInternalformativ() failed");
-            VERIFY(FmtInfo->Supported == (params == GL_TRUE), "This internal format should be supported");
+            VERIFY(FmtInfo.Supported == (params == GL_TRUE), "This internal format should be supported");
         }
 #    else
         (void)bGL43OrAbove; // To suppress warning
 #    endif
 
         // Check that the format is indeed supported
-        if (FmtInfo->Supported && !FmtInfo->IsDepthStencil() && !FmtInfo->IsTypeless)
+        if (FmtInfo.Supported && !FmtInfo.IsDepthStencil() && !FmtInfo.IsTypeless)
         {
             GLObjectWrappers::GLTextureObj TestGLTex{true};
             // Immediate context has not been created yet, so use raw GL functions
@@ -1342,10 +1343,10 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
                 // For some reason glTexStorage2D() may succeed, but upload operation
                 // will later fail. So we need to additionally try to upload some
                 // data to the texture
-                const auto& TransferAttribs = GetNativePixelTransferAttribs(FmtInfo->Format);
+                const auto& TransferAttribs = GetNativePixelTransferAttribs(FmtInfo.Format);
                 if (TransferAttribs.IsCompressed)
                 {
-                    const auto& FmtAttribs = GetTextureFormatAttribs(FmtInfo->Format);
+                    const auto& FmtAttribs = GetTextureFormatAttribs(FmtInfo.Format);
                     static_assert((TestTextureDim & (TestTextureDim - 1)) == 0, "Test texture dim must be power of two!");
                     auto BlockBytesInRow = (TestTextureDim / int{FmtAttribs.BlockWidth}) * int{FmtAttribs.ComponentSize};
                     glCompressedTexSubImage2D(GL_TEXTURE_2D, 0, // mip level
@@ -1364,16 +1365,16 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 
                 if (glGetError() != GL_NO_ERROR)
                 {
-                    LOG_WARNING_MESSAGE("Failed to upload data to a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name,
+                    LOG_WARNING_MESSAGE("Failed to upload data to a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo.Name,
                                         " texture. This likely indicates that the format is not supported despite being reported so by the device.");
-                    FmtInfo->Supported = false;
+                    FmtInfo.Supported = false;
                 }
             }
             else
             {
-                LOG_WARNING_MESSAGE("Failed to allocate storage for a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name,
+                LOG_WARNING_MESSAGE("Failed to allocate storage for a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo.Name,
                                     " texture. This likely indicates that the format is not supported despite being reported so by the device.");
-                FmtInfo->Supported = false;
+                FmtInfo.Supported = false;
             }
             glBindTexture(GL_TEXTURE_2D, 0);
         }
