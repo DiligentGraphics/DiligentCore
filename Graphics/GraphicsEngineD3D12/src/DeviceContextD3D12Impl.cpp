@@ -951,7 +951,7 @@ void DeviceContextD3D12Impl::ClearDepthStencil(ITextureView*                  pV
     ++m_State.NumCommands;
 }
 
-void DeviceContextD3D12Impl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+void DeviceContextD3D12Impl::ClearRenderTarget(ITextureView* pView, const void* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Direct3D12 does not allow render target clears inside a render pass");
 
@@ -969,7 +969,7 @@ void DeviceContextD3D12Impl::ClearRenderTarget(ITextureView* pView, const float*
 
     // The full extent of the resource view is always cleared.
     // Viewport and scissor settings are not applied??
-    CmdCtx.AsGraphicsContext().ClearRenderTarget(pViewD3D12->GetCPUDescriptorHandle(), RGBA);
+    CmdCtx.AsGraphicsContext().ClearRenderTarget(pViewD3D12->GetCPUDescriptorHandle(), static_cast<const float*>(RGBA));
     ++m_State.NumCommands;
 }
 

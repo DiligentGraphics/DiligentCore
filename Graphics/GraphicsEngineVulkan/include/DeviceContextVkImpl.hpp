@@ -173,7 +173,7 @@ public:
 
     /// Implementation of IDeviceContext::ClearRenderTarget() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE ClearRenderTarget(ITextureView*                  pView,
-                                                      const float*                   RGBA,
+                                                      const void*                    RGBA,
                                                       RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::UpdateBuffer() in Vulkan backend.

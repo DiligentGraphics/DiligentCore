@@ -1435,7 +1435,7 @@ void DeviceContextGLImpl::ClearDepthStencil(ITextureView*                  pView
     m_ContextState.EnableScissorTest(ScissorTestEnabled);
 }
 
-void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const void* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     TDeviceContextBase::ClearRenderTarget(pView);
 
@@ -1477,7 +1477,7 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     m_ContextState.GetColorWriteMask(RTIndex, WriteMask, bIndependentBlend);
     m_ContextState.SetColorWriteMask(RTIndex, COLOR_MASK_ALL, bIndependentBlend);
 
-    glClearBufferfv(GL_COLOR, RTIndex, RGBA);
+    glClearBufferfv(GL_COLOR, RTIndex, static_cast<const float*>(RGBA));
     DEV_CHECK_GL_ERROR("glClearBufferfv() failed");
 
     m_ContextState.SetColorWriteMask(RTIndex, WriteMask, bIndependentBlend);

@@ -162,7 +162,7 @@ public:
 
     /// Implementation of IDeviceContext::ClearRenderTarget() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE ClearRenderTarget(ITextureView*                  pView,
-                                                      const float*                   RGBA,
+                                                      const void*                    RGBA,
                                                       RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::UpdateBuffer() in Direct3D12 backend.

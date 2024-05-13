@@ -2919,7 +2919,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// \param [in] pView               - Pointer to ITextureView interface to clear. The view type must be
     ///                                   Diligent::TEXTURE_VIEW_RENDER_TARGET.
-    /// \param [in] RGBA                - A 4-component array that represents the color to fill the render target with.
+    /// \param [in] RGBA                - A 4-component array that represents the color to fill the render target with:
+    ///                                   - Float values for floating point render target formats.
+    ///                                   - Uint32 values for unsigned integer render target formats.
+    ///                                   - Int32 values for signed integer render target formats.
     ///                                   If nullptr is provided, the default array {0,0,0,0} will be used.
     /// \param [in] StateTransitionMode - Defines required state transitions (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
     ///
@@ -2944,7 +2947,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \remarks Supported contexts: graphics.
     VIRTUAL void METHOD(ClearRenderTarget)(THIS_
                                            ITextureView*                  pView,
-                                           const float*                   RGBA,
+                                           const void*                    RGBA,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
 
