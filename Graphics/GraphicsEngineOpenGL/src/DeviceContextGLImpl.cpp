@@ -1477,8 +1477,23 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
     m_ContextState.GetColorWriteMask(RTIndex, WriteMask, bIndependentBlend);
     m_ContextState.SetColorWriteMask(RTIndex, COLOR_MASK_ALL, bIndependentBlend);
 
-    glClearBufferfv(GL_COLOR, RTIndex, static_cast<const float*>(RGBA));
-    DEV_CHECK_GL_ERROR("glClearBufferfv() failed");
+    const TEXTURE_FORMAT        RTVFormat  = m_pBoundRenderTargets[RTIndex]->GetDesc().Format;
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(RTVFormat);
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_SINT)
+    {
+        glClearBufferiv(GL_COLOR, RTIndex, static_cast<const GLint*>(RGBA));
+        DEV_CHECK_GL_ERROR("glClearBufferiv() failed");
+    }
+    else if (FmtAttribs.ComponentType == COMPONENT_TYPE_UINT)
+    {
+        glClearBufferuiv(GL_COLOR, RTIndex, static_cast<const GLuint*>(RGBA));
+        DEV_CHECK_GL_ERROR("glClearBufferuiv() failed");
+    }
+    else
+    {
+        glClearBufferfv(GL_COLOR, RTIndex, static_cast<const float*>(RGBA));
+        DEV_CHECK_GL_ERROR("glClearBufferfv() failed");
+    }
 
     m_ContextState.SetColorWriteMask(RTIndex, WriteMask, bIndependentBlend);
     m_ContextState.EnableScissorTest(ScissorTestEnabled);

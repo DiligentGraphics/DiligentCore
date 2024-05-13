@@ -1223,24 +1223,24 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
     ++m_State.NumCommands;
 }
 
-VkClearColorValue ClearValueToVkClearValue(const float* RGBA, TEXTURE_FORMAT TexFmt)
+VkClearColorValue ClearValueToVkClearValue(const void* RGBA, TEXTURE_FORMAT TexFmt)
 {
     VkClearColorValue ClearValue;
     const auto&       FmtAttribs = GetTextureFormatAttribs(TexFmt);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_SINT)
     {
         for (int i = 0; i < 4; ++i)
-            ClearValue.int32[i] = static_cast<int32_t>(RGBA[i]);
+            ClearValue.int32[i] = static_cast<const int32_t*>(RGBA)[i];
     }
     else if (FmtAttribs.ComponentType == COMPONENT_TYPE_UINT)
     {
         for (int i = 0; i < 4; ++i)
-            ClearValue.uint32[i] = static_cast<uint32_t>(RGBA[i]);
+            ClearValue.uint32[i] = static_cast<const uint32_t*>(RGBA)[i];
     }
     else
     {
         for (int i = 0; i < 4; ++i)
-            ClearValue.float32[i] = RGBA[i];
+            ClearValue.float32[i] = static_cast<const float*>(RGBA)[i];
     }
 
     return ClearValue;
@@ -1297,7 +1297,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
         // structure of the current subpass which selects the color attachment to clear (17.2)
         // It is NOT the render pass attachment index
         ClearAttachment.colorAttachment  = attachmentIndex;
-        ClearAttachment.clearValue.color = ClearValueToVkClearValue(static_cast<const float*>(RGBA), ViewDesc.Format);
+        ClearAttachment.clearValue.color = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
         VkClearRect ClearRect;
         // m_FramebufferWidth, m_FramebufferHeight are scaled to the proper mip level
         ClearRect.rect = {{0, 0}, {m_FramebufferWidth, m_FramebufferHeight}};
@@ -1324,7 +1324,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
         TransitionOrVerifyTextureState(*pTextureVk, StateTransitionMode, RESOURCE_STATE_COPY_DEST, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                        "Clearing render target outside of render pass (DeviceContextVkImpl::ClearRenderTarget)");
 
-        auto ClearValue = ClearValueToVkClearValue(static_cast<const float*>(RGBA), ViewDesc.Format);
+        auto ClearValue = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
 
         VkImageSubresourceRange Subresource;
         Subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
