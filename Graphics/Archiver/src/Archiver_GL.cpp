@@ -136,6 +136,74 @@ static void PatchSourceForWebGL(std::string& Source, SHADER_TYPE ShaderType)
         }
     }
 }
+
+static constexpr char bitfieldReverseStub[] = R"(
+highp uint _bitfieldReverse(highp uint Value)
+{
+    highp uint Bits = (Value << 16u) | (Value >> 16u);
+    Bits = ((Bits & 0x55555555u) << 1u) | ((Bits & 0xAAAAAAAAu) >> 1u);
+    Bits = ((Bits & 0x33333333u) << 2u) | ((Bits & 0xCCCCCCCCu) >> 2u);
+    Bits = ((Bits & 0x0F0F0F0Fu) << 4u) | ((Bits & 0xF0F0F0F0u) >> 4u);
+    Bits = ((Bits & 0x00FF00FFu) << 8u) | ((Bits & 0xFF00FF00u) >> 8u);
+    return Bits;
+}
+highp uint bitfieldReverse(highp uint Value)
+{
+    return _bitfieldReverse(Value);
+}
+highp uvec2 bitfieldReverse(highp uvec2 Value)
+{
+    return uvec2(_bitfieldReverse(Value.x), _bitfieldReverse(Value.y));
+}
+highp uvec3 bitfieldReverse(highp uvec3 Value)
+{
+    return uvec3(_bitfieldReverse(Value.x), _bitfieldReverse(Value.y), _bitfieldReverse(Value.z));
+}
+highp uvec4 bitfieldReverse(highp uvec4 Value)
+{
+    return uvec4(_bitfieldReverse(Value.x), _bitfieldReverse(Value.y), _bitfieldReverse(Value.z), _bitfieldReverse(Value.w));
+}
+)";
+
+static constexpr char bitCountStub[] = R"(
+highp uint _countbits(highp uint Val)
+{
+    Val = Val - ((Val >> 1u) & 0x55555555u);
+    Val = (Val & 0x33333333u) + ((Val >> 2u) & 0x33333333u);
+    Val = (Val + (Val >> 4u)) & 0x0F0F0F0Fu;
+    Val *= 0x01010101u;
+    return  Val >> 24u;
+}
+highp uint countbits(highp uint Val)
+{
+    return _countbits(Val);
+}
+highp uvec2 countbits(highp uvec2 Val)
+{
+    return uvec2(_countbits(Val.x), _countbits(Val.y));
+}
+highp uvec3 countbits(highp uvec3 Val)
+{
+    return uvec3(_countbits(Val.x), _countbits(Val.y), _countbits(Val.z));
+}
+highp uvec4 countbits(highp uvec4 Val)
+{
+    return uvec4(_countbits(Val.x), _countbits(Val.y), _countbits(Val.z), _countbits(Val.w));
+}
+)";
+
+static void AppendGLES30Stubs(std::string& Source)
+{
+    if (Source.find("bitfieldReverse") != std::string::npos)
+    {
+        Source.insert(0, bitfieldReverseStub);
+    }
+    if (Source.find("bitCount") != std::string::npos)
+    {
+        Source.insert(0, bitCountStub);
+    }
+}
+
 #endif
 
 struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
@@ -331,6 +399,13 @@ private:
         if (UseGLAngleMultiDrawWorkaround)
         {
             PatchSourceForWebGL(OptimizedGLSL, ShaderCI.Desc.ShaderType);
+        }
+
+        if (IsES && GLSLVersion == ShaderVersion{3, 0})
+        {
+            // GLSLang requires GLES3.1. When targeting GLES3.0, there may be some functions that are not supported
+            // (e.g. bitfieldReverse). Add stubs for such functions.
+            AppendGLES30Stubs(OptimizedGLSL);
         }
 
         AppendShaderSourceLanguageDefinition(OptimizedGLSL, (SourceLang != SHADER_SOURCE_LANGUAGE_DEFAULT) ? SourceLang : ShaderCI.SourceLanguage);

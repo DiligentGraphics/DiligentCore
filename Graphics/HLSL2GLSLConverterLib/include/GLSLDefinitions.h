@@ -121,15 +121,15 @@ uint reversebits(uint Value)
 }
 uint2 reversebits(uint2 Value)
 {
-	return uint2(_reversebits(Value.x), _reversebits(Value.y));
+    return uint2(_reversebits(Value.x), _reversebits(Value.y));
 }
 uint3 reversebits(uint3 Value)
 {
-	return uint3(_reversebits(Value.x), _reversebits(Value.y), _reversebits(Value.z));
+    return uint3(_reversebits(Value.x), _reversebits(Value.y), _reversebits(Value.z));
 }
 uint4 reversebits(uint4 Value)
 {
-	return uint4(_reversebits(Value.x), _reversebits(Value.y), _reversebits(Value.z), _reversebits(Value.w));
+    return uint4(_reversebits(Value.x), _reversebits(Value.y), _reversebits(Value.z), _reversebits(Value.w));
 }
 
 uint _countbits(uint Val)
@@ -142,19 +142,19 @@ uint _countbits(uint Val)
 }
 uint countbits(uint Val)
 {
-	return _countbits(Val);
+    return _countbits(Val);
 }
 uint2 countbits(uint2 Val)
 {
-	return uint2(_countbits(Val.x), _countbits(Val.y));
+    return uint2(_countbits(Val.x), _countbits(Val.y));
 }
 uint3 countbits(uint3 Val)
 {
-	return uint3(_countbits(Val.x), _countbits(Val.y), _countbits(Val.z));
+    return uint3(_countbits(Val.x), _countbits(Val.y), _countbits(Val.z));
 }
 uint4 countbits(uint4 Val)
 {
-	return uint4(_countbits(Val.x), _countbits(Val.y), _countbits(Val.z), _countbits(Val.w));
+    return uint4(_countbits(Val.x), _countbits(Val.y), _countbits(Val.z), _countbits(Val.w));
 }
 
 #else
