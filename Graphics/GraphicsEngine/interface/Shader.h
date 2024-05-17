@@ -454,6 +454,13 @@ struct ShaderCreateInfo
     ///       and should be disabled when it is not needed.
     bool LoadConstantBufferReflection DEFAULT_INITIALIZER(false);
 
+    /// Whether to create the shader asynchronously.
+    ///
+    /// \remarks	When this flag is set to true, the shader will be compiled
+    ///             asynchronously in the background. An application should use
+    ///             the IShader::GetStatus() method to check the shader status.
+    bool CreateAsynchronously DEFAULT_INITIALIZER(false);
+
     /// An optional list of GLSL extensions to enable when compiling GLSL source code.
     const char* GLSLExtensions DEFAULT_INITIALIZER(nullptr);
 

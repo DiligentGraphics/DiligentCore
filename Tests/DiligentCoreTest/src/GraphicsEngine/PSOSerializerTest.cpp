@@ -711,6 +711,7 @@ void SerializeShaderCreateInfo(bool UseBytecode)
     RefCI.MSLVersion                   = {7, 8};
     RefCI.CompileFlags                 = SHADER_COMPILE_FLAG_SKIP_REFLECTION;
     RefCI.LoadConstantBufferReflection = true;
+    RefCI.CreateAsynchronously         = true;
     RefCI.GLSLExtensions               = "My extension";
 
     constexpr size_t RefBytecodeSize              = 7;
@@ -754,6 +755,14 @@ void SerializeShaderCreateInfo(bool UseBytecode)
     EXPECT_STREQ(CI.EntryPoint,     RefCI.EntryPoint);
     EXPECT_EQ   (CI.SourceLanguage, RefCI.SourceLanguage);
     EXPECT_EQ   (CI.ShaderCompiler, RefCI.ShaderCompiler);
+    EXPECT_EQ   (CI.HLSLVersion,    RefCI.HLSLVersion);
+    EXPECT_EQ   (CI.GLSLVersion,    RefCI.GLSLVersion);
+    EXPECT_EQ   (CI.GLESSLVersion,  RefCI.GLESSLVersion);
+    EXPECT_EQ   (CI.MSLVersion,     RefCI.MSLVersion);
+    EXPECT_EQ   (CI.CompileFlags,   RefCI.CompileFlags);
+    EXPECT_EQ   (CI.LoadConstantBufferReflection, RefCI.LoadConstantBufferReflection);
+    EXPECT_EQ   (CI.CreateAsynchronously,         RefCI.CreateAsynchronously);
+    EXPECT_STREQ(CI.GLSLExtensions, RefCI.GLSLExtensions);
     // clang-format on
 
     if (UseBytecode)
