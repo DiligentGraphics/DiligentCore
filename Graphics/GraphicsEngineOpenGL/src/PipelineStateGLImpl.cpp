@@ -275,14 +275,17 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
     {
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
-            auto* pShaderGL  = ShaderStages[i];
-            m_GLPrograms[i]  = GLProgramObj{ShaderGLImpl::LinkProgram(&ShaderStages[i], 1, true)}; // May throw
+            auto* pShaderGL = ShaderStages[i];
+            m_GLPrograms[i] = GLProgramObj{ShaderGLImpl::LinkProgram(&ShaderStages[i], 1, true)};
+            ShaderGLImpl::GetProgamLinkStatus(m_GLPrograms[i], &ShaderStages[i], 1, /*ThrowOnError = */ true); // May throw
             m_ShaderTypes[i] = pShaderGL->GetDesc().ShaderType;
         }
     }
     else
     {
-        m_GLPrograms[0]  = ShaderGLImpl::LinkProgram(ShaderStages.data(), static_cast<Uint32>(ShaderStages.size()), false); // May throw
+        m_GLPrograms[0] = ShaderGLImpl::LinkProgram(ShaderStages.data(), static_cast<Uint32>(ShaderStages.size()), false);
+        ShaderGLImpl::GetProgamLinkStatus(m_GLPrograms[0], ShaderStages.data(), static_cast<Uint32>(ShaderStages.size()), /*ThrowOnError = */ true); // May throw
+
         m_ShaderTypes[0] = ActiveStages;
 
         m_GLPrograms[0].SetName(m_Desc.Name);

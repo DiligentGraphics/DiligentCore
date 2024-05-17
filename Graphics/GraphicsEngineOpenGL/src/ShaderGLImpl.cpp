@@ -100,110 +100,15 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     if (pDeviceGL == nullptr)
         return;
 
-    // Note: there is a simpler way to create the program:
-    //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);
-    // NOTE: glCreateShaderProgramv() is considered equivalent to both a shader compilation and a program linking
-    // operation. Since it performs both at the same time, compiler or linker errors can be encountered. However,
-    // since this function only returns a program object, compiler-type errors will be reported as linker errors
-    // through the following API:
-    // GLint isLinked = 0;
-    // glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
-    // The log can then be queried in the same way
-
-
-    // Each element in the length array may contain the length of the corresponding string
-    // (the null character is not counted as part of the string length).
-    // Not specifying lengths causes shader compilation errors on Android
-    std::array<const char*, 1> ShaderStrings = {};
-    std::array<GLint, 1>       Lengths       = {};
-
-    ShaderStrings[0] = m_GLSLSourceString.c_str();
-    Lengths[0]       = static_cast<GLint>(m_GLSLSourceString.length());
-
-    // Provide source strings (the strings will be saved in internal OpenGL memory)
-    glShaderSource(m_GLShaderObj, static_cast<GLsizei>(ShaderStrings.size()), ShaderStrings.data(), Lengths.data());
-    // When the shader is compiled, it will be compiled as if all of the given strings were concatenated end-to-end.
-    glCompileShader(m_GLShaderObj);
-    GLint compiled = GL_FALSE;
-    // Get compilation status
-    glGetShaderiv(m_GLShaderObj, GL_COMPILE_STATUS, &compiled);
-
-    std::vector<GLchar> InfoLog;
-    {
-        int InfoLogLen = 0;
-        // The function glGetShaderiv() tells how many bytes to allocate; the length includes the NULL terminator.
-        glGetShaderiv(m_GLShaderObj, GL_INFO_LOG_LENGTH, &InfoLogLen);
-
-        if (InfoLogLen > 0)
-        {
-            InfoLog.resize(InfoLogLen);
-
-            int CharsWritten = 0;
-            // Get the log. InfoLogLen is the size of InfoLog. This tells OpenGL how many bytes at maximum it will write
-            // charsWritten is a return value, specifying how many bytes it actually wrote. One may pass NULL if he
-            // doesn't care
-            glGetShaderInfoLog(m_GLShaderObj, InfoLogLen, &CharsWritten, InfoLog.data());
-            VERIFY(CharsWritten == InfoLogLen - 1, "Unexpected info log length");
-
-            if (GLShaderCI.ppCompilerOutput != nullptr)
-            {
-                // InfoLogLen accounts for null terminator
-                auto pOutputDataBlob = DataBlobImpl::Create(InfoLogLen + m_GLSLSourceString.length() + 1);
-
-                char* DataPtr = static_cast<char*>(pOutputDataBlob->GetDataPtr());
-                if (!InfoLog.empty())
-                {
-                    // Copy info log including null terminator
-                    memcpy(DataPtr, InfoLog.data(), InfoLogLen);
-                }
-                // Copy source code including null terminator
-                memcpy(DataPtr + InfoLogLen, m_GLSLSourceString.data(), m_GLSLSourceString.length() + 1);
-
-                pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(GLShaderCI.ppCompilerOutput));
-            }
-        }
-    }
-
-    if (!compiled || !InfoLog.empty())
-    {
-        std::stringstream ss;
-        ss << (compiled ? "Compiler output for shader '" : "Failed to compile shader '")
-           << (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : "<unknown>")
-           << "'";
-
-        if (!InfoLog.empty())
-        {
-            ss << ":" << std::endl;
-            ss.write(InfoLog.data(), InfoLog.size() - 1);
-        }
-        else if (!compiled)
-        {
-            ss << " (no shader log available).";
-        }
-
-        if (compiled)
-        {
-            LOG_INFO_MESSAGE(ss.str());
-        }
-        else
-        {
-            if (GLShaderCI.ppCompilerOutput == nullptr)
-            {
-                // Dump full source code to debug output
-                LOG_INFO_MESSAGE("Failed shader full source: \n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n",
-                                 m_GLSLSourceString,
-                                 "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
-            }
-
-            LOG_ERROR_AND_THROW(ss.str());
-        }
-    }
+    CompileShader();
+    GetCompileStatus(GLShaderCI.ppCompilerOutput, true);
 
     // Note: we have to always read reflection information in OpenGL as bindings are always assigned at run time.
     if (DeviceInfo.Features.SeparablePrograms /*&& (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0*/)
     {
         ShaderGLImpl* const            ThisShader[] = {this};
         GLObjectWrappers::GLProgramObj Program      = LinkProgram(ThisShader, 1, true); // May throw
+        GetProgamLinkStatus(Program, ThisShader, 1, true);
 
         auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
         VERIFY_EXPR(pImmediateCtx);
@@ -229,8 +134,121 @@ ShaderGLImpl::~ShaderGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE2(ShaderGLImpl, IID_ShaderGL, IID_InternalImpl, TShaderBase)
 
+void ShaderGLImpl::CompileShader()
+{
+    // Note: there is a simpler way to create the program:
+    //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);
+    // NOTE: glCreateShaderProgramv() is considered equivalent to both a shader compilation and a program linking
+    // operation. Since it performs both at the same time, compiler or linker errors can be encountered. However,
+    // since this function only returns a program object, compiler-type errors will be reported as linker errors
+    // through the following API:
+    // GLint isLinked = 0;
+    // glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
+    // The log can then be queried in the same way
 
-GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram) noexcept(false)
+
+    // Each element in the length array may contain the length of the corresponding string
+    // (the null character is not counted as part of the string length).
+    // Not specifying lengths causes shader compilation errors on Android
+    std::array<const char*, 1> ShaderStrings = {};
+    std::array<GLint, 1>       Lengths       = {};
+
+    ShaderStrings[0] = m_GLSLSourceString.c_str();
+    Lengths[0]       = static_cast<GLint>(m_GLSLSourceString.length());
+
+    // Provide source strings (the strings will be saved in internal OpenGL memory)
+    glShaderSource(m_GLShaderObj, static_cast<GLsizei>(ShaderStrings.size()), ShaderStrings.data(), Lengths.data());
+    // When the shader is compiled, it will be compiled as if all of the given strings were concatenated end-to-end.
+    glCompileShader(m_GLShaderObj);
+}
+
+bool ShaderGLImpl::GetCompileStatus(IDataBlob** ppCompilerOutput, bool ThrowOnError) noexcept(false)
+{
+    GLint compiled = GL_FALSE;
+    // Get compilation status
+    glGetShaderiv(m_GLShaderObj, GL_COMPILE_STATUS, &compiled);
+
+    std::vector<GLchar> InfoLog;
+    {
+        int InfoLogLen = 0;
+        // The function glGetShaderiv() tells how many bytes to allocate; the length includes the NULL terminator.
+        glGetShaderiv(m_GLShaderObj, GL_INFO_LOG_LENGTH, &InfoLogLen);
+
+        if (InfoLogLen > 0)
+        {
+            InfoLog.resize(InfoLogLen);
+
+            int CharsWritten = 0;
+            // Get the log. InfoLogLen is the size of InfoLog. This tells OpenGL how many bytes at maximum it will write
+            // charsWritten is a return value, specifying how many bytes it actually wrote. One may pass NULL if he
+            // doesn't care
+            glGetShaderInfoLog(m_GLShaderObj, InfoLogLen, &CharsWritten, InfoLog.data());
+            VERIFY(CharsWritten == InfoLogLen - 1, "Unexpected info log length");
+
+            if (ppCompilerOutput != nullptr)
+            {
+                // InfoLogLen accounts for null terminator
+                auto pOutputDataBlob = DataBlobImpl::Create(InfoLogLen + m_GLSLSourceString.length() + 1);
+
+                char* DataPtr = static_cast<char*>(pOutputDataBlob->GetDataPtr());
+                if (!InfoLog.empty())
+                {
+                    // Copy info log including null terminator
+                    memcpy(DataPtr, InfoLog.data(), InfoLogLen);
+                }
+                // Copy source code including null terminator
+                memcpy(DataPtr + InfoLogLen, m_GLSLSourceString.data(), m_GLSLSourceString.length() + 1);
+
+                pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
+            }
+        }
+    }
+
+    if (!compiled || !InfoLog.empty())
+    {
+        std::stringstream ss;
+        ss << (compiled ? "Compiler output for shader '" : "Failed to compile shader '") << m_Desc.Name << "'";
+
+        if (!InfoLog.empty())
+        {
+            ss << ":" << std::endl;
+            ss.write(InfoLog.data(), InfoLog.size() - 1);
+        }
+        else if (!compiled)
+        {
+            ss << " (no shader log available).";
+        }
+
+        if (compiled)
+        {
+            LOG_INFO_MESSAGE(ss.str());
+        }
+        else
+        {
+            if (ppCompilerOutput == nullptr)
+            {
+                // Dump full source code to debug output
+                LOG_INFO_MESSAGE("Failed shader full source: \n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n",
+                                 m_GLSLSourceString,
+                                 "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
+            }
+
+            if (ThrowOnError)
+            {
+                LOG_ERROR_AND_THROW(ss.str());
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE(ss.str());
+            }
+        }
+    }
+
+    return compiled != GL_FALSE;
+}
+
+
+GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram)
 {
     VERIFY(!IsSeparableProgram || NumShaders == 1, "Number of shaders must be 1 when separable program is created");
 
@@ -259,9 +277,16 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* pp
     //of the inputs on the interface will be undefined.
     glLinkProgram(GLProg);
     DEV_CHECK_GL_ERROR("glLinkProgram() failed");
+
+    return GLProg;
+}
+
+bool ShaderGLImpl::GetProgamLinkStatus(GLuint GLProg, ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool ThrowOnError) noexcept(false)
+{
     int IsLinked = GL_FALSE;
     glGetProgramiv(GLProg, GL_LINK_STATUS, &IsLinked);
     DEV_CHECK_GL_ERROR("glGetProgramiv() failed");
+
     if (!IsLinked)
     {
         int LengthWithNull = 0, Length = 0;
@@ -275,17 +300,26 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* pp
         // Notice that glGetProgramInfoLog  is used, not glGetShaderInfoLog.
         glGetProgramInfoLog(GLProg, LengthWithNull, &Length, shaderProgramInfoLog.data());
         VERIFY(Length == LengthWithNull - 1, "Incorrect program info log len");
-        LOG_ERROR_AND_THROW("Failed to link shader program:\n", shaderProgramInfoLog.data(), '\n');
+        if (ThrowOnError)
+        {
+            LOG_ERROR_AND_THROW("Failed to link shader program:\n", shaderProgramInfoLog.data(), '\n');
+        }
+        else
+        {
+            LOG_ERROR("Failed to link shader program:\n", shaderProgramInfoLog.data(), '\n');
+        }
     }
-
-    for (Uint32 i = 0; i < NumShaders; ++i)
+    else
     {
-        auto* pCurrShader = ClassPtrCast<const ShaderGLImpl>(ppShaders[i]);
-        glDetachShader(GLProg, pCurrShader->m_GLShaderObj);
-        DEV_CHECK_GL_ERROR("glDetachShader() failed");
+        for (Uint32 i = 0; i < NumShaders; ++i)
+        {
+            auto* pCurrShader = ClassPtrCast<const ShaderGLImpl>(ppShaders[i]);
+            glDetachShader(GLProg, pCurrShader->m_GLShaderObj);
+            DEV_CHECK_GL_ERROR("glDetachShader() failed");
+        }
     }
 
-    return GLProg;
+    return IsLinked != GL_FALSE;
 }
 
 Uint32 ShaderGLImpl::GetResourceCount() const
@@ -314,7 +348,6 @@ void ShaderGLImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDes
         LOG_WARNING_MESSAGE("Shader resource queries are not available when separate shader objects are unsupported");
     }
 }
-
 
 const ShaderCodeBufferDesc* ShaderGLImpl::GetConstantBufferDesc(Uint32 Index) const
 {
