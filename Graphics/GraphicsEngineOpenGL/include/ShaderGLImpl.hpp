@@ -72,7 +72,7 @@ public:
     /// Implementation of IShaderGL::GetGLShaderHandle() in OpenGL backend.
     virtual GLuint DILIGENT_CALL_TYPE GetGLShaderHandle() const override final { return m_GLShaderObj; }
 
-    static GLObjectWrappers::GLProgramObj LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram);
+    static GLObjectWrappers::GLProgramObj LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram) noexcept;
     static bool                           GetProgamLinkStatus(GLuint GLProg, ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool ThrowOnError) noexcept(false);
 
     const std::shared_ptr<const ShaderResourcesGL>& GetShaderResources() const { return m_pShaderResources; }
@@ -86,13 +86,10 @@ public:
         DataSize = m_GLSLSourceString.length();
     }
 
-    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus() override final
-    {
-        return SHADER_STATUS_READY;
-    }
+    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus() override final;
 
 private:
-    void CompileShader();
+    void CompileShader() noexcept;
     bool GetCompileStatus(IDataBlob** ppCompilerOutput, bool ThrowOnError) noexcept(false);
 
 private:
@@ -100,6 +97,9 @@ private:
     std::string                              m_GLSLSourceString;
     GLObjectWrappers::GLShaderObj            m_GLShaderObj;
     std::shared_ptr<const ShaderResourcesGL> m_pShaderResources;
+
+    class ShaderBuilder;
+    std::unique_ptr<ShaderBuilder> m_Builder;
 };
 
 } // namespace Diligent

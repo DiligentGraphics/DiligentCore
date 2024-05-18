@@ -1080,6 +1080,13 @@
 #endif
 
 
+/* -------------------------- GL_KHR_parallel_shader_compile ------------------------- */
+
+#ifndef GL_COMPLETION_STATUS_KHR
+#   define GL_COMPLETION_STATUS_KHR 0x91B1
+#endif
+
+
 /* ------------------------------ GL_ARB_gpu_shader_fp64 ----------------------------- */
 
 #ifndef GL_DOUBLE

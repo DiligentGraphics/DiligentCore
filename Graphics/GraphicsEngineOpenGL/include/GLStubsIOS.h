@@ -617,6 +617,11 @@
 #endif
 
 
+#ifndef GL_COMPLETION_STATUS_KHR
+#    define GL_COMPLETION_STATUS_KHR 0x91B1
+#endif
+
+
 // Define unsupported GL function stubs
 template <typename T>
 void UnsupportedGLFunctionStub(const T& Name)
