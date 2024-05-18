@@ -87,7 +87,7 @@ public:
 
     UNSUPPORTED_CONST_METHOD(Uint32,                      GetResourceSignatureCount)
     UNSUPPORTED_CONST_METHOD(IPipelineResourceSignature*, GetResourceSignature, Uint32 Index)
-    UNSUPPORTED_METHOD      (PIPELINE_STATE_STATUS,       GetStatus)
+    UNSUPPORTED_METHOD      (PIPELINE_STATE_STATUS,       GetStatus, bool WaitForCompletion)
     // clang-format on
 
     virtual Uint32 DILIGENT_CALL_TYPE GetPatchedShaderCount(ARCHIVE_DEVICE_DATA_FLAGS DeviceType) const override final;

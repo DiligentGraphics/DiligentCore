@@ -241,7 +241,7 @@ public:
     PROXY_CONST_METHOD1(m_pPipeline, bool, IsCompatibleWith, const IPipelineState*, pPSO)
     PROXY_CONST_METHOD(m_pPipeline, Uint32, GetResourceSignatureCount)
     PROXY_CONST_METHOD1(m_pPipeline, IPipelineResourceSignature*, GetResourceSignature, Uint32, Index)
-    PROXY_METHOD(m_pPipeline, PIPELINE_STATE_STATUS, GetStatus)
+    PROXY_METHOD1(m_pPipeline, PIPELINE_STATE_STATUS, GetStatus, bool, WaitForCompletion)
 
     static void Create(RenderStateCacheImpl*          pStateCache,
                        IPipelineState*                pPipeline,

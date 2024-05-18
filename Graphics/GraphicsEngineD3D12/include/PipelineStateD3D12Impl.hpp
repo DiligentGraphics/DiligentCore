@@ -62,7 +62,7 @@ public:
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
     /// Implementation of IPipelineState::GetStatus() in Direct3D12 backend.
-    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
     {
         return PIPELINE_STATE_STATUS_READY;
     }

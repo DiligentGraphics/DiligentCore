@@ -64,7 +64,7 @@ public:
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IPipelineState::GetStatus().
-    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
     {
         return PIPELINE_STATE_STATUS_READY;
     }

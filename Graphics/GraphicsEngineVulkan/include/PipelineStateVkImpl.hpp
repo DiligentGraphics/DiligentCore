@@ -66,7 +66,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_PipelineStateVk, IID_InternalImpl, TPipelineStateBase)
 
     /// Implementation of IPipelineState::GetStatus().
-    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
     {
         return PIPELINE_STATE_STATUS_READY;
     }

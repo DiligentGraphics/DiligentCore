@@ -1216,7 +1216,13 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
                                                                      Uint32 Index) CONST PURE;
 
     /// Returns the pipeline state status, see Diligent::PIPELINE_STATE_STATUS.
-    VIRTUAL PIPELINE_STATE_STATUS METHOD(GetStatus)(THIS) PURE;
+
+    /// \param [in] WaitForCompletion - If true, the method will wait until the pipeline state is compiled.
+    ///                                 If false, the method will return the pipeline state status without waiting.
+    /// 							    This parameter is ignored if the pipeline state was compiled synchronously.
+    /// \return     The pipeline state status.
+    VIRTUAL PIPELINE_STATE_STATUS METHOD(GetStatus)(THIS_
+                                                    bool WaitForCompletion DEFAULT_VALUE(false)) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -1241,7 +1247,7 @@ DILIGENT_END_INTERFACE
 #    define IPipelineState_IsCompatibleWith(This, ...)             CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,             This, __VA_ARGS__)
 #    define IPipelineState_GetResourceSignatureCount(This)         CALL_IFACE_METHOD(PipelineState, GetResourceSignatureCount,    This)
 #    define IPipelineState_GetResourceSignature(This, ...)         CALL_IFACE_METHOD(PipelineState, GetResourceSignature,         This, __VA_ARGS__)
-#    define IPipelineState_GetStatus(This)                         CALL_IFACE_METHOD(PipelineState, GetStatus,                    This)
+#    define IPipelineState_GetStatus(This, ...)                    CALL_IFACE_METHOD(PipelineState, GetStatus,                    This, __VA_ARGS__)
 
 // clang-format on
 
