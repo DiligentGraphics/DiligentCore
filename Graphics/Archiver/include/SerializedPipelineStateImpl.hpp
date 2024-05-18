@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use  file except in compliance with the License.
@@ -87,6 +87,7 @@ public:
 
     UNSUPPORTED_CONST_METHOD(Uint32,                      GetResourceSignatureCount)
     UNSUPPORTED_CONST_METHOD(IPipelineResourceSignature*, GetResourceSignature, Uint32 Index)
+    UNSUPPORTED_METHOD      (PIPELINE_STATE_STATUS,       GetStatus)
     // clang-format on
 
     virtual Uint32 DILIGENT_CALL_TYPE GetPatchedShaderCount(ARCHIVE_DEVICE_DATA_FLAGS DeviceType) const override final;

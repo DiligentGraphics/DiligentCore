@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -641,7 +641,17 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     /// by the PSO's resource signatures.
     PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES       = 1u << 2u,
 
-    PSO_CREATE_FLAG_LAST = PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES
+    /// Create the pipeline state asynchronously.
+    
+    /// \remarks	When this flag is set to true and if the devices supports
+    ///             AsyncShaderCompilation feature, the pipeline will be created
+    ///             asynchronously in the background. An application should use
+    ///             the IPipelineState::GetStatus() method to check the pipeline status.
+    ///             If the device does not support asynchronous shader compilation,
+    ///             the flag is ignored and the pipeline is created synchronously.
+    PSO_CREATE_FLAG_ASYNCHRONOUS                      = 1u << 3u,
+
+    PSO_CREATE_FLAG_LAST = PSO_CREATE_FLAG_ASYNCHRONOUS
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);
 
@@ -989,6 +999,21 @@ struct TilePipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
 typedef struct TilePipelineStateCreateInfo TilePipelineStateCreateInfo;
 
 
+/// Pipeline state status
+DILIGENT_TYPED_ENUM(PIPELINE_STATE_STATUS, Uint32)
+{
+    /// The pipeline state is being compiled.
+	PIPELINE_STATE_STATUS_COMPILING = 0,
+
+	/// The pipeline state has been successfully compiled
+    /// and is ready to be used.
+	PIPELINE_STATE_STATUS_READY,
+
+	/// The pipeline state compilation has failed.
+	PIPELINE_STATE_STATUS_FAILED
+};
+
+
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
 static DILIGENT_CONSTEXPR struct INTERFACE_ID IID_PipelineState =
     {0x6084ae5, 0x6a71, 0x4fe8, {0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c}};
@@ -1189,6 +1214,9 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// \return     Pointer to pipeline resource signature interface.
     VIRTUAL IPipelineResourceSignature* METHOD(GetResourceSignature)(THIS_
                                                                      Uint32 Index) CONST PURE;
+
+    /// Returns the pipeline state status, see Diligent::PIPELINE_STATE_STATUS.
+    VIRTUAL PIPELINE_STATE_STATUS METHOD(GetStatus)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -1213,6 +1241,7 @@ DILIGENT_END_INTERFACE
 #    define IPipelineState_IsCompatibleWith(This, ...)             CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,             This, __VA_ARGS__)
 #    define IPipelineState_GetResourceSignatureCount(This)         CALL_IFACE_METHOD(PipelineState, GetResourceSignatureCount,    This)
 #    define IPipelineState_GetResourceSignature(This, ...)         CALL_IFACE_METHOD(PipelineState, GetResourceSignature,         This, __VA_ARGS__)
+#    define IPipelineState_GetStatus(This)                         CALL_IFACE_METHOD(PipelineState, GetStatus,                    This)
 
 // clang-format on
 

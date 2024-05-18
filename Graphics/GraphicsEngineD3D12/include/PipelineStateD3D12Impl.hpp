@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,6 +60,12 @@ public:
 
     /// Implementation of IPipelineState::IsCompatibleWith() in Direct3D12 backend.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
+
+    /// Implementation of IPipelineState::GetStatus() in Direct3D12 backend.
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    {
+        return PIPELINE_STATE_STATUS_READY;
+    }
 
     /// Implementation of IPipelineStateD3D12::GetD3D12PipelineState().
     virtual ID3D12PipelineState* DILIGENT_CALL_TYPE GetD3D12PipelineState() const override final { return static_cast<ID3D12PipelineState*>(m_pd3d12PSO.p); }

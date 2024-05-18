@@ -65,6 +65,12 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_PipelineStateVk, IID_InternalImpl, TPipelineStateBase)
 
+    /// Implementation of IPipelineState::GetStatus().
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    {
+        return PIPELINE_STATE_STATUS_READY;
+    }
+
     /// Implementation of IPipelineStateVk::GetRenderPass().
     virtual IRenderPassVk* DILIGENT_CALL_TYPE GetRenderPass() const override final { return GetRenderPassPtr().RawPtr<IRenderPassVk>(); }
 

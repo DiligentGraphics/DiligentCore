@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,6 +62,12 @@ public:
 
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+
+    /// Implementation of IPipelineState::GetStatus().
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    {
+        return PIPELINE_STATE_STATUS_READY;
+    }
 
     /// Implementation of IPipelineStateGL::GetGLProgramHandle()
     virtual GLuint DILIGENT_CALL_TYPE GetGLProgramHandle(SHADER_TYPE Stage) const override final;
