@@ -514,7 +514,6 @@ bool ShaderSerializer<Mode>::SerializeCI(Serializer<Mode>&            Ser,
              CI.MSLVersion,
              CI.CompileFlags,
              CI.LoadConstantBufferReflection,
-             CI.CreateAsynchronously,
              CI.GLSLExtensions))
         return false;
 

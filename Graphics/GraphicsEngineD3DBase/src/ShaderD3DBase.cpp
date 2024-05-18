@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -112,20 +112,9 @@ static HRESULT CompileShader(const char*             Source,
     // dwShaderFlags |= D3D10_SHADER_OPTIMIZATION_LEVEL3;
 #endif
 
-    for (auto CompileFlags = ShaderCI.CompileFlags; CompileFlags != SHADER_COMPILE_FLAG_NONE;)
-    {
-        auto Flag = ExtractLSB(CompileFlags);
-        static_assert(SHADER_COMPILE_FLAG_LAST == 2, "Please updated the switch below to handle the new shader flag");
-        switch (Flag)
-        {
-            case SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS:
-                dwShaderFlags |= D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES;
-                break;
-
-            default:
-                UNEXPECTED("Unexpected shader compile flag");
-        }
-    }
+    static_assert(SHADER_COMPILE_FLAG_LAST == 4, "Did you add a new shader compile flag? You may need to handle it here.");
+    if (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS)
+        dwShaderFlags |= D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES;
 
     D3D_SHADER_MACRO Macros[] = {{"D3DCOMPILER", ""}, {}};
 

@@ -53,7 +53,7 @@ public:
                   const CreateInfo&       GLShaderCI) :
         m_Shader{Shader},
         m_LoadConstantBufferReflection{ShaderCI.LoadConstantBufferReflection},
-        m_CreateAsynchronously{ShaderCI.CreateAsynchronously && Shader.GetDevice()->GetDeviceInfo().Features.AsyncShaderCompilation},
+        m_CreateAsynchronously{(ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) != 0 && Shader.GetDevice()->GetDeviceInfo().Features.AsyncShaderCompilation},
         m_ppCompilerOutput{GLShaderCI.ppCompilerOutput},
         m_Program{false}
     {}

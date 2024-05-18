@@ -334,15 +334,25 @@ typedef struct ShaderMacroArray ShaderMacroArray;
 DILIGENT_TYPED_ENUM(SHADER_COMPILE_FLAGS, Uint32)
 {
     /// No flags.
-    SHADER_COMPILE_FLAG_NONE = 0x0,
+    SHADER_COMPILE_FLAG_NONE = 0,
 
     /// Enable unbounded resource arrays (e.g. Texture2D g_Texture[]).
-    SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS = 0x01,
+    SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS = 1u << 0u,
 
     /// Don't load shader reflection.
-    SHADER_COMPILE_FLAG_SKIP_REFLECTION         = 0x02,
+    SHADER_COMPILE_FLAG_SKIP_REFLECTION         = 1u << 1u,
 
-    SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_SKIP_REFLECTION
+    /// Compile the shader asynchronously.
+    ///
+    /// \remarks	When this flag is set to true and if the devices supports
+    ///             AsyncShaderCompilation feature, the shader will be compiled
+    ///             asynchronously in the background. An application should use
+    ///             the IShader::GetStatus() method to check the shader status.
+    ///             If the device does not support asynchronous shader compilation,
+    ///             the flag is ignored and the shader is compiled synchronously.
+    SHADER_COMPILE_FLAG_ASYNCHRONOUS            = 1u << 2u,
+
+    SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_ASYNCHRONOUS
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_COMPILE_FLAGS);
 
@@ -453,13 +463,6 @@ struct ShaderCreateInfo
     /// \note Loading constant buffer reflection introduces some overhead,
     ///       and should be disabled when it is not needed.
     bool LoadConstantBufferReflection DEFAULT_INITIALIZER(false);
-
-    /// Whether to create the shader asynchronously.
-    ///
-    /// \remarks	When this flag is set to true, the shader will be compiled
-    ///             asynchronously in the background. An application should use
-    ///             the IShader::GetStatus() method to check the shader status.
-    bool CreateAsynchronously DEFAULT_INITIALIZER(false);
 
     /// An optional list of GLSL extensions to enable when compiling GLSL source code.
     const char* GLSLExtensions DEFAULT_INITIALIZER(nullptr);

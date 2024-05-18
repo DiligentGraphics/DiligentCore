@@ -74,8 +74,7 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
            ShaderCI.GLESSLVersion,
            ShaderCI.MSLVersion,
            ShaderCI.CompileFlags,
-           ShaderCI.LoadConstantBufferReflection,
-           ShaderCI.CreateAsynchronously);
+           ShaderCI.LoadConstantBufferReflection);
 
     if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
     {
