@@ -86,7 +86,7 @@ public:
         DataSize = m_GLSLSourceString.length();
     }
 
-    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus() override final;
+    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final;
 
 private:
     void CompileShader() noexcept;

@@ -154,7 +154,7 @@ public:
     PROXY_CONST_METHOD1(m_pShader, const ShaderCodeBufferDesc*, GetConstantBufferDesc, Uint32, Index)
     PROXY_CONST_METHOD2(m_pShader, void, GetBytecode, const void**, ppBytecode, Uint64&, Size)
 
-    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
     {
         return SHADER_STATUS_READY;
     }

@@ -1009,7 +1009,13 @@ DILIGENT_BEGIN_INTERFACE(IShader, IDeviceObject)
                                      Uint64 REF   Size) CONST PURE;
 
     /// Returns the shader status, see Diligent::SHADER_STATUS.
-    VIRTUAL SHADER_STATUS METHOD(GetStatus)(THIS) PURE;
+    ///
+    /// \param [in] WaitForCompletion - If true, the method will wait until the shader is compiled.
+    ///                                 If false, the method will return the shader status without waiting.
+    /// 							    This parameter is ignored if the shader was compiled synchronously.
+    /// \return     The shader status.
+    VIRTUAL SHADER_STATUS METHOD(GetStatus)(THIS_
+                                            bool WaitForCompletion DEFAULT_VALUE(false)) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -1025,7 +1031,7 @@ DILIGENT_END_INTERFACE
 #    define IShader_GetResourceDesc(This, ...)       CALL_IFACE_METHOD(Shader, GetResourceDesc,  This, __VA_ARGS__)
 #    define IShader_GetConstantBufferDesc(This, ...) CALL_IFACE_METHOD(Shader, GetConstantBufferDesc,  This, __VA_ARGS__)
 #    define IShader_GetBytecode(This, ...)           CALL_IFACE_METHOD(Shader, GetBytecode,      This, __VA_ARGS__)
-#    define IShader_GetStatus(This)                  CALL_IFACE_METHOD(Shader, GetStatus,        This)
+#    define IShader_GetStatus(This, ...)             CALL_IFACE_METHOD(Shader, GetStatus,        This, __VA_ARGS__)
 
 // clang-format on
 

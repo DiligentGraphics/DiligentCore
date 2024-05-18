@@ -58,23 +58,23 @@ public:
         m_Program{false}
     {}
 
-    bool Tick()
+    bool Tick(bool WaitForCompletion)
     {
         VERIFY(m_State != State::Complete && m_State != State::Failed, "The shader is already in final state, this method should not be called");
 
         if (m_State == State::Default)
         {
-            HandleDefaultState();
+            HandleDefaultState(WaitForCompletion);
         }
 
         if (m_State == State::Compiling)
         {
-            HandleCompilingState();
+            HandleCompilingState(WaitForCompletion);
         }
 
         if (m_State == State::Linking)
         {
-            HandleLinkingState();
+            HandleLinkingState(WaitForCompletion);
         }
 
         if (m_State == State::Failed)
@@ -86,7 +86,7 @@ public:
     }
 
 private:
-    void HandleDefaultState()
+    void HandleDefaultState(bool WaitForCompletion)
     {
         VERIFY_EXPR(m_State == State::Default);
 
@@ -94,12 +94,12 @@ private:
         m_State = State::Compiling;
     }
 
-    void HandleCompilingState()
+    void HandleCompilingState(bool WaitForCompletion)
     {
         VERIFY_EXPR(m_State == State::Compiling);
 
         GLint CompilationComplete = GL_FALSE;
-        if (m_CreateAsynchronously)
+        if (m_CreateAsynchronously && !WaitForCompletion)
         {
             glGetShaderiv(m_Shader.m_GLShaderObj, GL_COMPLETION_STATUS_KHR, &CompilationComplete);
         }
@@ -114,7 +114,7 @@ private:
         }
     }
 
-    void HandleLinkingState()
+    void HandleLinkingState(bool WaitForCompletion)
     {
         VERIFY_EXPR(m_State == State::Linking);
 
@@ -131,7 +131,7 @@ private:
             }
 
             GLint LinkingComplete = GL_FALSE;
-            if (m_CreateAsynchronously)
+            if (m_CreateAsynchronously && !WaitForCompletion)
             {
                 glGetProgramiv(m_Program, GL_COMPLETION_STATUS_KHR, &LinkingComplete);
             }
@@ -252,7 +252,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         return;
 
     // Force builder tick
-    GetStatus();
+    GetStatus(/*WaitForCompletion = */ (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) == 0);
 }
 
 ShaderGLImpl::~ShaderGLImpl()
@@ -374,11 +374,11 @@ bool ShaderGLImpl::GetCompileStatus(IDataBlob** ppCompilerOutput, bool ThrowOnEr
     return compiled != GL_FALSE;
 }
 
-SHADER_STATUS ShaderGLImpl::GetStatus()
+SHADER_STATUS ShaderGLImpl::GetStatus(bool WaitForCompletion)
 {
     if (m_Builder)
     {
-        if (m_Builder->Tick())
+        if (m_Builder->Tick(WaitForCompletion))
         {
             m_Builder.reset();
         }

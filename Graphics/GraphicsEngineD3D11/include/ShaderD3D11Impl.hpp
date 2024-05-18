@@ -111,7 +111,7 @@ public:
         ShaderD3DBase::GetBytecode(ppBytecode, Size);
     }
 
-    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus() override final
+    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
     {
         return SHADER_STATUS_READY;
     }
