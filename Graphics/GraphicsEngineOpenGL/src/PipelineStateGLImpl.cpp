@@ -277,10 +277,11 @@ public:
 
     virtual bool Tick(bool WaitForCompletion) override final
     {
+        VERIFY(m_State != State::Complete && m_State != State::Failed, "The shader is already in final state, this method should not be called");
+
         if (!m_CreateAsynchronously)
             WaitForCompletion = true;
 
-        VERIFY(m_State != State::Complete && m_State != State::Failed, "The shader is already in final state, this method should not be called");
         if (m_State == State::Default)
         {
             HandleDefaultState();
@@ -384,8 +385,9 @@ private:
 
         // Check program linking status
         bool AllProgramsLinked = true;
-        if (m_CreateAsynchronously && !WaitForCompletion)
+        if (!WaitForCompletion)
         {
+            VERIFY_EXPR(m_CreateAsynchronously);
             for (Uint32 i = 0; i < m_Pipeline.m_NumPrograms; ++i)
             {
                 GLint LinkingComplete = GL_FALSE;
@@ -494,7 +496,8 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    
         m_Builder = std::make_unique<PipelineBuilder<GraphicsPipelineStateCreateInfo, GraphicsPipelineStateCreateInfoX>>(*this, CreateInfo, std::move(Shaders));
 
         // Force builder tick
-        GetStatus(/*WaitForCompletion = */ (CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) == 0);
+        PIPELINE_STATE_STATUS Status = GetStatus(/*WaitForCompletion = */ (CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) == 0);
+        VERIFY_EXPR(Status == PIPELINE_STATE_STATUS_READY || (CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0);
     }
     catch (...)
     {
@@ -525,7 +528,8 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                   p
         m_Builder = std::make_unique<PipelineBuilder<ComputePipelineStateCreateInfo, ComputePipelineStateCreateInfoX>>(*this, CreateInfo, std::move(Shaders));
 
         // Force builder tick
-        GetStatus(/*WaitForCompletion = */ (CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) == 0);
+        PIPELINE_STATE_STATUS Status = GetStatus(/*WaitForCompletion = */ (CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) == 0);
+        VERIFY_EXPR(Status == PIPELINE_STATE_STATUS_READY || (CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0);
     }
     catch (...)
     {
