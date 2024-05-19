@@ -775,6 +775,10 @@ inline void DeviceContextBase<ImplementationTraits>::SetPipelineState(
                   "PSO '", pPipelineState->GetDesc().Name, "' can't be used in device context '", m_Desc.Name, "'.");
 
     m_pPipelineState = std::move(pPipelineState);
+    // Force compilation to complete
+    PIPELINE_STATE_STATUS PSOStatus = m_pPipelineState->GetStatus(/* WaitForCompletion = */ true);
+    DEV_CHECK_ERR(PSOStatus == PIPELINE_STATE_STATUS_READY, "PSO '", m_pPipelineState->GetDesc().Name, "' is in failed state.");
+
     ++m_Stats.CommandCounters.SetPipelineState;
 }
 
