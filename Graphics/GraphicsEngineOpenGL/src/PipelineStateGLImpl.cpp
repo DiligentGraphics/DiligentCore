@@ -38,6 +38,7 @@
 
 #include "EngineMemory.h"
 #include "Align.hpp"
+#include "GraphicsTypesX.hpp"
 
 namespace Diligent
 {
@@ -237,6 +238,200 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
         LOG_ERROR_AND_THROW("The number of bindings in range '", GetBindingRangeName(BINDING_RANGE_IMAGE), "' is greater than the maximum allowed (", Limits.MaxImagesUnits, ").");
 }
 
+class PipelineStateGLImpl::PipelineBuilderBase
+{
+public:
+    PipelineBuilderBase(PipelineStateGLImpl& Pipeline, const PipelineStateCreateInfo& CreateInfo, TShaderStages Shaders) :
+        m_Pipeline{Pipeline},
+        m_Shaders{std::move(Shaders)},
+        m_CreateAsynchronously{(CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && Pipeline.GetDevice()->GetDeviceInfo().Features.AsyncShaderCompilation}
+    {}
+
+    virtual ~PipelineBuilderBase() {}
+    virtual bool Tick(bool WaitForCompletion) = 0;
+
+protected:
+    enum class State
+    {
+        Default,
+        WaitingShaders,
+        LinkingPrograms,
+        Complete,
+        Failed
+    };
+
+    PipelineStateGLImpl& m_Pipeline;
+    TShaderStages        m_Shaders;
+    const bool           m_CreateAsynchronously;
+    State                m_State = State::Default;
+};
+
+template <typename PSOCreateInfoType, typename PSOCreateInfoTypeX>
+class PipelineStateGLImpl::PipelineBuilder : public PipelineBuilderBase
+{
+public:
+    PipelineBuilder(PipelineStateGLImpl& Pipeline, const PSOCreateInfoType& CreateInfo, TShaderStages Shaders) :
+        PipelineBuilderBase{Pipeline, CreateInfo, std::move(Shaders)},
+        m_CreateInfo{CreateInfo}
+    {}
+
+    virtual bool Tick(bool WaitForCompletion) override final
+    {
+        if (!m_CreateAsynchronously)
+            WaitForCompletion = true;
+
+        VERIFY(m_State != State::Complete && m_State != State::Failed, "The shader is already in final state, this method should not be called");
+        if (m_State == State::Default)
+        {
+            HandleDefaultState();
+        }
+
+        if (m_State == State::WaitingShaders)
+        {
+            HandleWaitingShaders(WaitForCompletion);
+        }
+
+        if (m_State == State::LinkingPrograms)
+        {
+            HandleLinkingPrograms(WaitForCompletion);
+        }
+
+        if (m_State == State::Failed)
+        {
+            for (Uint32 i = 0; i < m_Pipeline.m_NumPrograms; ++i)
+            {
+                m_Pipeline.m_GLPrograms[i].Release();
+            }
+        }
+
+        return m_State == State::Complete || m_State == State::Failed;
+    }
+
+private:
+    void HandleDefaultState()
+    {
+        VERIFY_EXPR(m_State == State::Default);
+        m_Pipeline.InitInternalObjects<PSOCreateInfoType>(m_CreateInfo, m_Shaders);
+        m_State = State::WaitingShaders;
+    }
+
+    void HandleWaitingShaders(bool WaitForCompletion)
+    {
+        VERIFY_EXPR(m_State == State::WaitingShaders);
+        bool AllShaderReady = true;
+        for (ShaderGLImpl* pShaderGL : m_Shaders)
+        {
+            SHADER_STATUS Status = pShaderGL->GetStatus(WaitForCompletion);
+            switch (Status)
+            {
+                case SHADER_STATUS_COMPILING:
+                    AllShaderReady = false;
+                    break;
+
+                case SHADER_STATUS_FAILED:
+                    m_State = State::Failed;
+                    return;
+
+                case SHADER_STATUS_READY:
+                    break;
+
+                default:
+                    UNEXPECTED("Unexpected shader status");
+            }
+        }
+
+        if (AllShaderReady)
+        {
+            m_State = State::LinkingPrograms;
+        }
+    }
+
+    void HandleLinkingPrograms(bool WaitForCompletion)
+    {
+        VERIFY_EXPR(m_State == State::LinkingPrograms);
+
+        // Get active shader stages
+        SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
+        for (auto* pShaderGL : m_Shaders)
+        {
+            const auto ShaderType = pShaderGL->GetDesc().ShaderType;
+            VERIFY((ActiveStages & ShaderType) == 0, "Shader stage ", GetShaderTypeLiteralName(ShaderType), " is already active");
+            ActiveStages |= ShaderType;
+        }
+
+        // Create programs
+        if (m_Pipeline.m_IsProgramPipelineSupported)
+        {
+            for (size_t i = 0; i < m_Shaders.size(); ++i)
+            {
+                if (!m_Pipeline.m_GLPrograms[i])
+                {
+                    ShaderGLImpl* pShaderGL     = m_Shaders[i];
+                    m_Pipeline.m_GLPrograms[i]  = ShaderGLImpl::LinkProgram(&pShaderGL, 1, true);
+                    m_Pipeline.m_ShaderTypes[i] = pShaderGL->GetDesc().ShaderType;
+                }
+            }
+        }
+        else
+        {
+            if (!m_Pipeline.m_GLPrograms[0])
+            {
+                m_Pipeline.m_GLPrograms[0]  = ShaderGLImpl::LinkProgram(m_Shaders.data(), static_cast<Uint32>(m_Shaders.size()), false);
+                m_Pipeline.m_ShaderTypes[0] = ActiveStages;
+                m_Pipeline.m_GLPrograms[0].SetName(m_Pipeline.m_Desc.Name);
+            }
+        }
+
+        // Check program linking status
+        bool AllProgramsLinked = true;
+        if (m_CreateAsynchronously && !WaitForCompletion)
+        {
+            for (Uint32 i = 0; i < m_Pipeline.m_NumPrograms; ++i)
+            {
+                GLint LinkingComplete = GL_FALSE;
+                glGetProgramiv(m_Pipeline.m_GLPrograms[i], GL_COMPLETION_STATUS_KHR, &LinkingComplete);
+                if (!LinkingComplete)
+                {
+                    AllProgramsLinked = false;
+                    break;
+                }
+            }
+        }
+
+        // Check if programs were linked successfully
+        if (AllProgramsLinked)
+        {
+            if (m_Pipeline.m_IsProgramPipelineSupported)
+            {
+                for (size_t i = 0; i < m_Shaders.size(); ++i)
+                {
+                    if (!ShaderGLImpl::GetProgamLinkStatus(m_Pipeline.m_GLPrograms[i], &m_Shaders[i], 1, /*ThrowOnError = */ !m_CreateAsynchronously))
+                    {
+                        m_State = State::Failed;
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                if (!ShaderGLImpl::GetProgamLinkStatus(m_Pipeline.m_GLPrograms[0], m_Shaders.data(), static_cast<Uint32>(m_Shaders.size()), /*ThrowOnError = */ !m_CreateAsynchronously))
+                {
+                    m_State = State::Failed;
+                    return;
+                }
+            }
+
+            m_Pipeline.InitResourceLayout(GetInternalCreateFlags(m_CreateInfo), m_Shaders, ActiveStages);
+
+            m_State = State::Complete;
+        }
+    }
+
+private:
+    PSOCreateInfoTypeX m_CreateInfo;
+};
+
+
 template <typename PSOCreateInfoType>
 void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages) noexcept(false)
 {
@@ -260,38 +455,6 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
     m_GLPrograms   = MemPool.ConstructArray<GLProgramObj>(m_NumPrograms, false);
     m_BaseBindings = MemPool.ConstructArray<TBindings>(SignCount);
     m_ShaderTypes  = MemPool.ConstructArray<SHADER_TYPE>(m_NumPrograms, SHADER_TYPE_UNKNOWN);
-
-    // Get active shader stages.
-    SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
-    for (auto* pShaderGL : ShaderStages)
-    {
-        const auto ShaderType = pShaderGL->GetDesc().ShaderType;
-        VERIFY((ActiveStages & ShaderType) == 0, "Shader stage ", GetShaderTypeLiteralName(ShaderType), " is already active");
-        ActiveStages |= ShaderType;
-    }
-
-    // Create programs.
-    if (m_IsProgramPipelineSupported)
-    {
-        for (size_t i = 0; i < ShaderStages.size(); ++i)
-        {
-            auto* pShaderGL = ShaderStages[i];
-            m_GLPrograms[i] = GLProgramObj{ShaderGLImpl::LinkProgram(&ShaderStages[i], 1, true)};
-            ShaderGLImpl::GetProgamLinkStatus(m_GLPrograms[i], &ShaderStages[i], 1, /*ThrowOnError = */ true); // May throw
-            m_ShaderTypes[i] = pShaderGL->GetDesc().ShaderType;
-        }
-    }
-    else
-    {
-        m_GLPrograms[0] = ShaderGLImpl::LinkProgram(ShaderStages.data(), static_cast<Uint32>(ShaderStages.size()), false);
-        ShaderGLImpl::GetProgamLinkStatus(m_GLPrograms[0], ShaderStages.data(), static_cast<Uint32>(ShaderStages.size()), /*ThrowOnError = */ true); // May throw
-
-        m_ShaderTypes[0] = ActiveStages;
-
-        m_GLPrograms[0].SetName(m_Desc.Name);
-    }
-
-    InitResourceLayout(GetInternalCreateFlags(CreateInfo), ShaderStages, ActiveStages);
 }
 
 PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    pRefCounters,
@@ -328,7 +491,10 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    
             Shaders.emplace_back(pTempPS);
         }
 
-        InitInternalObjects(CreateInfo, Shaders);
+        m_Builder = std::make_unique<PipelineBuilder<GraphicsPipelineStateCreateInfo, GraphicsPipelineStateCreateInfoX>>(*this, CreateInfo, std::move(Shaders));
+
+        // Force builder tick
+        GetStatus(/*WaitForCompletion = */ (CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) == 0);
     }
     catch (...)
     {
@@ -356,7 +522,10 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                   p
         TShaderStages Shaders;
         ExtractShaders<ShaderGLImpl>(CreateInfo, Shaders);
 
-        InitInternalObjects(CreateInfo, Shaders);
+        m_Builder = std::make_unique<PipelineBuilder<ComputePipelineStateCreateInfo, ComputePipelineStateCreateInfoX>>(*this, CreateInfo, std::move(Shaders));
+
+        // Force builder tick
+        GetStatus(/*WaitForCompletion = */ (CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) == 0);
     }
     catch (...)
     {
@@ -390,6 +559,18 @@ void PipelineStateGLImpl::Destruct()
 }
 
 IMPLEMENT_QUERY_INTERFACE2(PipelineStateGLImpl, IID_PipelineStateGL, IID_InternalImpl, TPipelineStateBase)
+
+PIPELINE_STATE_STATUS PipelineStateGLImpl::GetStatus(bool WaitForCompletion)
+{
+    if (m_Builder)
+    {
+        if (m_Builder->Tick(WaitForCompletion))
+        {
+            m_Builder.reset();
+        }
+    }
+    return m_Builder ? PIPELINE_STATE_STATUS_COMPILING : (m_GLPrograms[0] ? PIPELINE_STATE_STATUS_READY : PIPELINE_STATE_STATUS_FAILED);
+}
 
 SHADER_TYPE PipelineStateGLImpl::GetShaderStageType(Uint32 Index) const
 {

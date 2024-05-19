@@ -64,10 +64,7 @@ public:
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IPipelineState::GetStatus().
-    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
-    {
-        return PIPELINE_STATE_STATUS_READY;
-    }
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final;
 
     /// Implementation of IPipelineStateGL::GetGLProgramHandle()
     virtual GLuint DILIGENT_CALL_TYPE GetGLProgramHandle(SHADER_TYPE Stage) const override final;
@@ -137,6 +134,11 @@ private:
     SHADER_TYPE* m_ShaderTypes                = nullptr; // [m_NumPrograms]
 
     TBindings* m_BaseBindings = nullptr; // [m_SignatureCount]
+
+    class PipelineBuilderBase;
+    template <typename PSOCreateInfoType, typename PSOCreateInfoTypeX>
+    class PipelineBuilder;
+    std::unique_ptr<PipelineBuilderBase> m_Builder;
 
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages in the pipeline.
