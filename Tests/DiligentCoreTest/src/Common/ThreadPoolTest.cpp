@@ -169,7 +169,7 @@ public:
         m_WaitSignal{WaitSignal}
     {}
 
-    virtual void Run(Uint32 ThreadId) override final
+    virtual void DILIGENT_CALL_TYPE Run(Uint32 ThreadId) override final
     {
         m_WaitSignal.Wait();
         SetStatus(ASYNC_TASK_STATUS_COMPLETE);
@@ -187,7 +187,7 @@ public:
         AsyncTaskBase{pRefCounters, fPriority}
     {}
 
-    virtual void Run(Uint32 ThreadId) override final
+    virtual void DILIGENT_CALL_TYPE Run(Uint32 ThreadId) override final
     {
         SetStatus(ASYNC_TASK_STATUS_COMPLETE);
     }

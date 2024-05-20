@@ -36,6 +36,7 @@ set(INTERFACE
     interface/StringTools.h
     interface/StringTools.hpp
     interface/StringPool.hpp
+    interface/ThreadPool.h
     interface/ThreadPool.hpp
     interface/ThreadSignal.hpp
     interface/Timer.hpp
