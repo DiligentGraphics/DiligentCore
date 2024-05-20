@@ -18,6 +18,8 @@
 	<include file="$(THIS_CONFIG_PATH)/../../Primitives/interface/FileStream.h" namespace="Diligent" attach="true"/>
 	<include file="$(THIS_CONFIG_PATH)/../../Primitives/interface/CommonDefinitions.h" namespace="Diligent" attach="true"/>
 
+	<include file="$(THIS_CONFIG_PATH)/../../Common/interface/ThreadPool.h" namespace="Diligent" attach="true"/>
+
 	<include file="$(THIS_CONFIG_PATH)/../HLSL2GLSLConverterLib/interface/HLSL2GLSLConverter.h" namespace="Diligent" attach="true"/>
 
 	<include-dir>$(THIS_CONFIG_PATH)/../GraphicsEngine/interface/</include-dir>

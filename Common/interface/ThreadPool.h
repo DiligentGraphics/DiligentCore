@@ -90,7 +90,7 @@ DILIGENT_BEGIN_INTERFACE(IAsyncTask, IObject)
 
     /// Sets the task status, see Diligent::ASYNC_TASK_STATUS.
     VIRTUAL void METHOD(SetStatus)(THIS_
-                                   ASYNC_TASK_STATUS Status) PURE;
+                                   ASYNC_TASK_STATUS TaskStatus) PURE;
 
     /// Gets the task status, see Diligent::ASYNC_TASK_STATUS.
     VIRTUAL ASYNC_TASK_STATUS METHOD(GetStatus)(THIS) CONST PURE;

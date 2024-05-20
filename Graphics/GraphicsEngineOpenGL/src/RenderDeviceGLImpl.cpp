@@ -341,6 +341,13 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 #if !DILIGENT_NO_HLSL
     m_DeviceInfo.MaxShaderVersion.HLSL = {5, 0};
 #endif
+
+#if GL_KHR_parallel_shader_compile
+    if (m_DeviceInfo.Features.AsyncShaderCompilation)
+    {
+        glMaxShaderCompilerThreadsKHR(EngineCI.MaxShaderCompilerThreads);
+    }
+#endif
 }
 
 RenderDeviceGLImpl::~RenderDeviceGLImpl()

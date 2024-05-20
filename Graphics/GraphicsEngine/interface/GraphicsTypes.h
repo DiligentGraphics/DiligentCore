@@ -38,6 +38,7 @@
 #include "../../../Primitives/interface/FlagEnum.h"
 #include "../../../Platforms/interface/NativeWindow.h"
 #include "../../../Common/interface/StringTools.h"
+#include "../../../Common/interface/ThreadPool.h"
 #include "APIInfo.h"
 #include "Constants.h"
 
@@ -1810,9 +1811,10 @@ struct DeviceFeatures
 
     /// Whether the device supports asynchronous shader compilation.
     ///
-    /// \remarks    When this feature is enabled, the engine can create shaders asynchronously
-    ///             in a separate thread without blocking the main thread. An application can
-    ///             query the shader status using the IShader::GetStatus() method.
+    /// \remarks    When this feature is enabled, the engine can create shaders and pipeline states
+    ///             asynchronously in a separate thread without blocking the main thread. An application
+    ///             can query the shader status using the IShader::GetStatus() method and the pipeline
+    ///             state status using the IPipelineState::GetStatus() method.
     DEVICE_FEATURE_STATE AsyncShaderCompilation DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
 #if DILIGENT_CPP_INTERFACE
@@ -3535,6 +3537,11 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// * On Linux this affects the `DRI_PRIME` environment variable that is used by Mesa drivers that support PRIME.
     ADAPTER_TYPE PreferredAdapterType DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
 
+    /// When AsyncShaderCompilation is enabled, the maximum number of threads that can be used to compile shaders.
+    ///
+    /// \remarks    This valued is passed to glMaxShaderCompilerThreadsKHR() function.
+    Uint32 MaxShaderCompilerThreads DEFAULT_INITIALIZER(0xFFFFFFFFu);
+
 #if PLATFORM_EMSCRIPTEN
     /// WebGL context attributes.
     WebGLContextAttribs WebGLAttribs;
@@ -3575,6 +3582,13 @@ struct EngineD3D11CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Direct3D11-specific validation options, see Diligent::D3D11_VALIDATION_FLAGS.
     D3D11_VALIDATION_FLAGS D3D11ValidationFlags DEFAULT_INITIALIZER(D3D11_VALIDATION_FLAG_NONE);
+
+    /// Thread pool for asynchronous shader and pipeline state compilation.
+    ///
+    /// \remarks    If non-null thread pool is provided, the AsyncShaderCompilation device feature
+    ///             will be enabled allowing shaders an pipeline states to be created asynchronously. 
+    ///             Otherwise, the feature will be disabled.
+    IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     EngineD3D11CreateInfo() noexcept :
@@ -3757,6 +3771,13 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Path to DirectX Shader Compiler, which is required to use Shader Model 6.0+ features.
     /// By default, the engine will search for "dxcompiler.dll".
     const Char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
+
+    /// Thread pool for asynchronous shader and pipeline state compilation.
+    ///
+    /// \remarks    If non-null thread pool is provided, the AsyncShaderCompilation device feature
+    ///             will be enabled allowing shaders an pipeline states to be created asynchronously. 
+    ///             Otherwise, the feature will be disabled.
+    IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     EngineD3D12CreateInfo() noexcept :
@@ -4015,6 +4036,13 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Path to DirectX Shader Compiler, which is required to use Shader Model 6.0+
     /// features when compiling shaders from HLSL.
     const Char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
+
+    /// Thread pool for asynchronous shader and pipeline state compilation.
+    ///
+    /// \remarks    If non-null thread pool is provided, the AsyncShaderCompilation device feature
+    ///             will be enabled allowing shaders an pipeline states to be created asynchronously. 
+    ///             Otherwise, the feature will be disabled.
+    IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     EngineVkCreateInfo() noexcept :
