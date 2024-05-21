@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +28,8 @@
 #include "GPUTestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
+
+#include <thread>
 
 using namespace Diligent;
 using namespace Diligent::Testing;
@@ -68,7 +70,11 @@ vertex VSOut VSMain()
 }
 )";
 
-void TestBrokenShader(const char* Source, const char* Name, SHADER_SOURCE_LANGUAGE SourceLanguage, int ErrorAllowance)
+void TestBrokenShader(const char*            Source,
+                      const char*            Name,
+                      SHADER_SOURCE_LANGUAGE SourceLanguage,
+                      SHADER_COMPILE_FLAGS   CompileFlags,
+                      int                    ErrorAllowance)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -81,6 +87,7 @@ void TestBrokenShader(const char* Source, const char* Name, SHADER_SOURCE_LANGUA
     ShaderCI.Desc           = {Name, SHADER_TYPE_VERTEX, true};
     ShaderCI.SourceLanguage = SourceLanguage;
     ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.CompileFlags   = CompileFlags;
 
     ShaderMacro Macros[] = {{"TEST", "MACRO"}};
     ShaderCI.Macros      = {Macros, _countof(Macros)};
@@ -89,8 +96,22 @@ void TestBrokenShader(const char* Source, const char* Name, SHADER_SOURCE_LANGUA
     RefCntAutoPtr<IShader>   pBrokenShader;
     RefCntAutoPtr<IDataBlob> pErrors;
     pDevice->CreateShader(ShaderCI, &pBrokenShader, &pErrors);
-    EXPECT_FALSE(pBrokenShader);
-    ASSERT_NE(pErrors, nullptr);
+    if (CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS)
+    {
+        ASSERT_NE(pBrokenShader, nullptr);
+        Uint32 Iter = 0;
+        while (pBrokenShader->GetStatus() == SHADER_STATUS_COMPILING)
+        {
+            std::this_thread::yield();
+            ++Iter;
+        }
+        LOG_INFO_MESSAGE("Shader '", Name, "' was compiled in ", Iter, " iterations");
+    }
+    else
+    {
+        EXPECT_FALSE(pBrokenShader);
+        ASSERT_NE(pErrors, nullptr);
+    }
     const char* Msg = reinterpret_cast<const char*>(pErrors->GetDataPtr());
     LOG_INFO_MESSAGE("Compiler output:\n", Msg);
 }
@@ -99,7 +120,20 @@ TEST(Shader, BrokenHLSL)
 {
     const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     // HLSL is supported in all backends
-    TestBrokenShader(g_BrokenHLSL, "Broken HLSL test", SHADER_SOURCE_LANGUAGE_HLSL,
+    TestBrokenShader(g_BrokenHLSL, "Broken HLSL test", SHADER_SOURCE_LANGUAGE_HLSL, SHADER_COMPILE_FLAG_NONE,
+                     DeviceInfo.IsGLDevice() || DeviceInfo.IsD3DDevice() ? 2 : 3);
+}
+
+TEST(Shader, BrokenHLSL_Async)
+{
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!DeviceInfo.Features.AsyncShaderCompilation)
+    {
+        GTEST_SKIP() << "Asynchronous shader compilation is not supported by this device";
+    }
+
+    // HLSL is supported in all backends
+    TestBrokenShader(g_BrokenHLSL, "Broken HLSL test", SHADER_SOURCE_LANGUAGE_HLSL, SHADER_COMPILE_FLAG_ASYNCHRONOUS,
                      DeviceInfo.IsGLDevice() || DeviceInfo.IsD3DDevice() ? 2 : 3);
 }
 
@@ -111,7 +145,23 @@ TEST(Shader, BrokenGLSL)
         GTEST_SKIP() << "GLSL is not supported in Direct3D";
     }
 
-    TestBrokenShader(g_BrokenGLSL, "Broken GLSL test", SHADER_SOURCE_LANGUAGE_GLSL,
+    TestBrokenShader(g_BrokenGLSL, "Broken GLSL test", SHADER_SOURCE_LANGUAGE_GLSL, SHADER_COMPILE_FLAG_NONE,
+                     DeviceInfo.IsGLDevice() ? 2 : 3);
+}
+
+TEST(Shader, BrokenGLSL_ASYNC)
+{
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (DeviceInfo.IsD3DDevice())
+    {
+        GTEST_SKIP() << "GLSL is not supported in Direct3D";
+    }
+    if (!DeviceInfo.Features.AsyncShaderCompilation)
+    {
+        GTEST_SKIP() << "Asynchronous shader compilation is not supported by this device";
+    }
+
+    TestBrokenShader(g_BrokenGLSL, "Broken GLSL test", SHADER_SOURCE_LANGUAGE_GLSL, SHADER_COMPILE_FLAG_ASYNCHRONOUS,
                      DeviceInfo.IsGLDevice() ? 2 : 3);
 }
 
@@ -123,7 +173,22 @@ TEST(Shader, BrokenMSL)
         GTEST_SKIP() << "MSL is only supported in Metal";
     }
 
-    TestBrokenShader(g_BrokenMSL, "Broken MSL test", SHADER_SOURCE_LANGUAGE_MSL, 2);
+    TestBrokenShader(g_BrokenMSL, "Broken MSL test", SHADER_SOURCE_LANGUAGE_MSL, SHADER_COMPILE_FLAG_NONE, 2);
+}
+
+TEST(Shader, BrokenMSL_Async)
+{
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!DeviceInfo.IsMetalDevice())
+    {
+        GTEST_SKIP() << "MSL is only supported in Metal";
+    }
+    if (!DeviceInfo.Features.AsyncShaderCompilation)
+    {
+        GTEST_SKIP() << "Asynchronous shader compilation is not supported by this device";
+    }
+
+    TestBrokenShader(g_BrokenMSL, "Broken MSL test", SHADER_SOURCE_LANGUAGE_MSL, SHADER_COMPILE_FLAG_ASYNCHRONOUS, 2);
 }
 
 } // namespace
