@@ -95,7 +95,7 @@ void TestBrokenShader(const char*            Source,
     pEnv->SetErrorAllowance(ErrorAllowance, "\n\nNo worries, testing broken shader...\n\n");
     RefCntAutoPtr<IShader>   pBrokenShader;
     RefCntAutoPtr<IDataBlob> pErrors;
-    pDevice->CreateShader(ShaderCI, &pBrokenShader, &pErrors);
+    pDevice->CreateShader(ShaderCI, &pBrokenShader, pErrors.RawDblPtr());
     if (CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS)
     {
         ASSERT_NE(pBrokenShader, nullptr);
@@ -103,15 +103,18 @@ void TestBrokenShader(const char*            Source,
         while (pBrokenShader->GetStatus() == SHADER_STATUS_COMPILING)
         {
             std::this_thread::yield();
+            std::this_thread::sleep_for(std::chrono::milliseconds{10});
             ++Iter;
         }
         LOG_INFO_MESSAGE("Shader '", Name, "' was compiled in ", Iter, " iterations");
+        EXPECT_EQ(pBrokenShader->GetStatus(), SHADER_STATUS_FAILED);
     }
     else
     {
         EXPECT_FALSE(pBrokenShader);
         ASSERT_NE(pErrors, nullptr);
     }
+    ASSERT_NE(pErrors, nullptr);
     const char* Msg = reinterpret_cast<const char*>(pErrors->GetDataPtr());
     LOG_INFO_MESSAGE("Compiler output:\n", Msg);
 }

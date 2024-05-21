@@ -54,6 +54,7 @@ public:
         const GraphicsAdapterInfo& AdapterInfo;
         const ShaderVersion        MaxShaderVersion;
         IDataBlob** const          ppCompilerOutput;
+        IThreadPool* const         pShaderCompilationThreadPool;
     };
     ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
                     RenderDeviceD3D12Impl*  pRenderDeviceD3D12,
@@ -67,12 +68,14 @@ public:
     /// Implementation of IShader::GetResourceCount() in Direct3D12 backend.
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final
     {
+        DEV_CHECK_ERR(!m_pCompileTask, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         return m_pShaderResources ? m_pShaderResources->GetTotalResources() : 0;
     }
 
     /// Implementation of IShader::GetResource() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
     {
+        DEV_CHECK_ERR(!m_pCompileTask, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         if (m_pShaderResources)
             ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
@@ -80,6 +83,7 @@ public:
     /// Implementation of IShader::GetConstantBufferDesc() in Direct3D12 backend.
     virtual const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override final
     {
+        DEV_CHECK_ERR(!m_pCompileTask, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         return m_pShaderResources ?
             // Constant buffers always go first in the list of resources
             m_pShaderResources->GetConstantBufferDesc(Index) :
@@ -89,6 +93,7 @@ public:
     /// Implementation of IShaderD3D::GetHLSLResource() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
     {
+        DEV_CHECK_ERR(!m_pCompileTask, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         if (m_pShaderResources)
             ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
@@ -101,12 +106,16 @@ public:
 
     virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
     {
-        return SHADER_STATUS_READY;
+        return ShaderD3DBase::GetStatus(WaitForCompletion);
     }
 
     const Char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
 
-    const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources() const { return m_pShaderResources; }
+    const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources() const
+    {
+        DEV_CHECK_ERR(!m_pCompileTask, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
+        return m_pShaderResources;
+    }
 
 private:
     // ShaderResources class instance must be referenced through the shared pointer, because

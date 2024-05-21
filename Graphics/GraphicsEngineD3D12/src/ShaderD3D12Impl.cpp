@@ -107,41 +107,35 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
                                  const ShaderCreateInfo& ShaderCI,
                                  const CreateInfo&       D3D12ShaderCI,
                                  bool                    IsDeviceInternal) :
-    // clang-format off
-    TShaderBase
+    TShaderBase //
     {
         pRefCounters,
         pRenderDeviceD3D12,
         ShaderCI.Desc,
         D3D12ShaderCI.DeviceInfo,
         D3D12ShaderCI.AdapterInfo,
-        IsDeviceInternal
-    },
-    ShaderD3DBase
-    {
-        ShaderCI,
-        GetD3D12ShaderModel(ShaderCI, D3D12ShaderCI.pDXCompiler, D3D12ShaderCI.MaxShaderVersion),
-        D3D12ShaderCI.pDXCompiler,
-        D3D12ShaderCI.ppCompilerOutput
+        IsDeviceInternal,
     },
     m_EntryPoint{ShaderCI.EntryPoint}
-// clang-format on
 {
-    // Load shader resources
-    if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
-    {
-        auto& Allocator  = GetRawAllocator();
-        auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
-        auto* pResources = new (pRawMem) ShaderResourcesD3D12 //
-            {
-                m_pShaderByteCode,
-                m_Desc,
-                m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
-                D3D12ShaderCI.pDXCompiler,
-                ShaderCI.LoadConstantBufferReflection //
-            };
-        m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
-    }
+    Initialize(ShaderCI,
+               GetD3D12ShaderModel(ShaderCI, D3D12ShaderCI.pDXCompiler, D3D12ShaderCI.MaxShaderVersion),
+               D3D12ShaderCI.pDXCompiler,
+               D3D12ShaderCI.ppCompilerOutput,
+               D3D12ShaderCI.pShaderCompilationThreadPool,
+               [this, pDXCompiler = D3D12ShaderCI.pDXCompiler, LoadConstantBufferReflection = ShaderCI.LoadConstantBufferReflection]() {
+                   auto& Allocator  = GetRawAllocator();
+                   auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
+                   auto* pResources = new (pRawMem) ShaderResourcesD3D12 //
+                       {
+                           m_pShaderByteCode,
+                           m_Desc,
+                           m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
+                           pDXCompiler,
+                           LoadConstantBufferReflection,
+                       };
+                   m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
+               });
 }
 
 ShaderD3D12Impl::~ShaderD3D12Impl()

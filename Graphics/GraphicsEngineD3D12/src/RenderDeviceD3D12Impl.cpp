@@ -568,6 +568,7 @@ void RenderDeviceD3D12Impl::CreateShader(const ShaderCreateInfo& ShaderCI,
         GetAdapterInfo(),
         m_DeviceInfo.MaxShaderVersion.HLSL,
         ppCompilerOutput,
+        m_pShaderCompilationThreadPool,
     };
     CreateShaderImpl(ppShader, ShaderCI, D3D12ShaderCI);
 }

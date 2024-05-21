@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,11 @@
 #include <d3dcommon.h>
 #include "WinHPostface.h"
 
+#include <functional>
+
 #include "Shader.h"
+#include "ThreadPool.h"
+#include "RefCntAutoPtr.hpp"
 
 /// \file
 /// Base implementation of a D3D shader
@@ -39,18 +43,16 @@
 namespace Diligent
 {
 
+class IDXCompiler;
+
 /// Base implementation of a D3D shader
 class ShaderD3DBase
 {
 public:
-    ShaderD3DBase(const ShaderCreateInfo& ShaderCI,
-                  ShaderVersion           ShaderModel,
-                  class IDXCompiler*      DxCompiler,
-                  IDataBlob**             ppCompilerOutput);
-
     void GetBytecode(const void** ppBytecode,
                      Uint64&      Size) const
     {
+        DEV_CHECK_ERR(!m_pCompileTask, "Shader bytecode is not available until compilation is complete. Use GetStatus() to check the shader status.");
         if (m_pShaderByteCode)
         {
             *ppBytecode = m_pShaderByteCode->GetBufferPointer();
@@ -63,10 +65,47 @@ public:
         }
     }
 
-    ID3DBlob* GetD3DBytecode() const { return m_pShaderByteCode; }
+    SHADER_STATUS GetStatus(bool WaitForCompletion)
+    {
+        if (m_pCompileTask)
+        {
+            if (WaitForCompletion)
+                m_pCompileTask->WaitForCompletion();
+
+            if (m_pCompileTask->GetStatus() <= ASYNC_TASK_STATUS_RUNNING)
+                return SHADER_STATUS_COMPILING;
+            else
+                m_pCompileTask.Release();
+        }
+
+        return m_pShaderByteCode ? SHADER_STATUS_READY : SHADER_STATUS_FAILED;
+    }
+
+    ID3DBlob* GetD3DBytecode() const
+    {
+        DEV_CHECK_ERR(!m_pCompileTask, "Shader bytecode is not available until compilation is complete. Use GetStatus() to check the shader status.");
+        return m_pShaderByteCode;
+    }
 
 protected:
-    CComPtr<ID3DBlob> m_pShaderByteCode;
+    void Initialize(const ShaderCreateInfo& ShaderCI,
+                    const ShaderVersion     ShaderModel,
+                    IDXCompiler*            DxCompiler,
+                    IDataBlob**             ppCompilerOutput,
+                    IThreadPool*            pAsyncCompilationThreadPool,
+                    std::function<void()>   InitResources);
+
+private:
+    void InitializeInternal(const ShaderCreateInfo& ShaderCI,
+                            const ShaderVersion     ShaderModel,
+                            IDXCompiler*            DxCompiler,
+                            IDataBlob**             ppCompilerOutput,
+                            std::function<void()>   InitResources,
+                            bool                    ThrowOnError);
+
+protected:
+    CComPtr<ID3DBlob>         m_pShaderByteCode;
+    RefCntAutoPtr<IAsyncTask> m_pCompileTask;
 };
 
 } // namespace Diligent

@@ -30,8 +30,10 @@
 
 #include <thread>
 #include <random>
+#include <vector>
 
 #include "ShaderMacroHelper.hpp"
+#include "Timer.hpp"
 
 using namespace Diligent;
 using namespace Diligent::Testing;
@@ -80,16 +82,32 @@ TEST(Shader, AsyncCompilation)
         GTEST_SKIP() << "Async shader compilation is not supported by this device";
     }
 
-    auto pShader = CreateShader("AsyncShaderCompilationTest.psh", "Async compilation test", SHADER_COMPILE_FLAG_ASYNCHRONOUS);
-    ASSERT_NE(pShader, nullptr);
-
-    Uint32 Iter = 0;
-    while (pShader->GetStatus() == SHADER_STATUS_COMPILING)
+    std::vector<RefCntAutoPtr<IShader>> Shaders;
+    for (Uint32 i = 0; i < 10; ++i)
     {
+        auto pShader = CreateShader("AsyncShaderCompilationTest.psh", "Async compilation test", SHADER_COMPILE_FLAG_ASYNCHRONOUS);
+        ASSERT_NE(pShader, nullptr);
+        Shaders.emplace_back(std::move(pShader));
+    }
+
+    Timer  T;
+    auto   StartTime = T.GetElapsedTime();
+    Uint32 Iter      = 0;
+    while (true)
+    {
+        Uint32 NumShadersReady = 0;
+        for (auto& pShader : Shaders)
+        {
+            if (pShader->GetStatus() == SHADER_STATUS_READY)
+                ++NumShadersReady;
+        }
+        if (NumShadersReady == Shaders.size())
+            break;
         std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds{10});
         ++Iter;
     }
-    LOG_INFO_MESSAGE("Shader '", pShader->GetDesc().Name, "' was compiled in ", Iter, " iterations");
+    LOG_INFO_MESSAGE(Shaders.size(), " shaders were compiled after ", Iter, " iterations (", (T.GetElapsedTime() - StartTime) * 1000, " ms)");
 }
 
 } // namespace

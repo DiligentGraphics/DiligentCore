@@ -40,9 +40,11 @@
 #include "DataBlobImpl.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "ShaderD3DBase.hpp"
+#include "ShaderBase.hpp"
 #include "DXCompiler.hpp"
 #include "HLSLUtils.hpp"
 #include "BasicMath.hpp"
+#include "ThreadPool.hpp"
 
 #ifndef D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES
 #    define D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES (1 << 20)
@@ -122,10 +124,12 @@ static HRESULT CompileShader(const char*             Source,
     return D3DCompile(Source, SourceLength, nullptr, Macros, &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
 }
 
-ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI,
-                             const ShaderVersion     ShaderModel,
-                             IDXCompiler*            DxCompiler,
-                             IDataBlob**             ppCompilerOutput)
+void ShaderD3DBase::InitializeInternal(const ShaderCreateInfo& ShaderCI,
+                                       const ShaderVersion     ShaderModel,
+                                       IDXCompiler*            DxCompiler,
+                                       IDataBlob**             ppCompilerOutput,
+                                       std::function<void()>   InitResources,
+                                       bool                    ThrowOnError)
 {
     if (ShaderCI.Source || ShaderCI.FilePath)
     {
@@ -157,7 +161,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI,
         if (UseDXC)
         {
             VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
-            DxCompiler->Compile(ShaderCI, ShaderModel, nullptr, reinterpret_cast<IDxcBlob**>(&m_pShaderByteCode), nullptr, ppCompilerOutput);
+            DxCompiler->Compile(ShaderCI, ShaderModel, nullptr, reinterpret_cast<IDxcBlob**>(&m_pShaderByteCode), nullptr, ppCompilerOutput, ThrowOnError);
         }
         else
         {
@@ -168,7 +172,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI,
             CComPtr<ID3DBlob> CompilerOutput;
 
             auto hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &CompilerOutput);
-            HandleHLSLCompilerResult(SUCCEEDED(hr), CompilerOutput.p, ShaderSource, ShaderCI.Desc.Name, ppCompilerOutput);
+            HandleHLSLCompilerResult(SUCCEEDED(hr), CompilerOutput.p, ShaderSource, ShaderCI.Desc.Name, ppCompilerOutput, ThrowOnError);
         }
     }
     else if (ShaderCI.ByteCode)
@@ -179,7 +183,33 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI,
     }
     else
     {
-        LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
+        DEV_ERROR("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
+    }
+
+    if (m_pShaderByteCode && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
+    {
+        InitResources();
+    }
+}
+
+void ShaderD3DBase::Initialize(const ShaderCreateInfo& ShaderCI,
+                               const ShaderVersion     ShaderModel,
+                               IDXCompiler*            DxCompiler,
+                               IDataBlob**             ppCompilerOutput,
+                               IThreadPool*            pAsyncCompilationThreadPool,
+                               std::function<void()>   InitResources)
+{
+    if (pAsyncCompilationThreadPool == nullptr || (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) == 0 || ShaderCI.ByteCode != nullptr)
+    {
+        InitializeInternal(ShaderCI, ShaderModel, DxCompiler, ppCompilerOutput, InitResources, /*ThrowOnError = */ true);
+    }
+    else
+    {
+        ShaderCreateInfoWrapper ShaderCICopy{ShaderCI, GetRawAllocator()};
+        m_pCompileTask = EnqueueAsyncWork(pAsyncCompilationThreadPool,
+                                          [this, ShaderCI = std::move(ShaderCICopy), ShaderModel, DxCompiler, ppCompilerOutput, InitResources](Uint32 ThreadId) {
+                                              InitializeInternal(ShaderCI, ShaderModel, DxCompiler, ppCompilerOutput, InitResources, /*ThrowOnError = */ false);
+                                          });
     }
 }
 

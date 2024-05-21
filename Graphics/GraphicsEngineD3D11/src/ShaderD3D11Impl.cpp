@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -90,37 +90,33 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
                                  const ShaderCreateInfo& ShaderCI,
                                  const CreateInfo&       D3D11ShaderCI,
                                  bool                    IsDeviceInternal) :
-    // clang-format off
-    TShaderBase
+    TShaderBase //
     {
         pRefCounters,
         pRenderDeviceD3D11,
         ShaderCI.Desc,
         D3D11ShaderCI.DeviceInfo,
         D3D11ShaderCI.AdapterInfo,
-        IsDeviceInternal
-    },
-    ShaderD3DBase
-    {
-        ShaderCI,
-        GetD3D11ShaderModel(D3D11ShaderCI.FeatureLevel, ShaderCI.HLSLVersion),
-        nullptr, // DxCompiler
-        D3D11ShaderCI.ppCompilerOutput
+        IsDeviceInternal,
     }
-// clang-format on
 {
-    // Load shader resources
-    if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
-    {
-        auto& Allocator  = GetRawAllocator();
-        auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
-        auto* pResources = new (pRawMem) ShaderResourcesD3D11{
-            m_pShaderByteCode,
-            m_Desc,
-            m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
-            ShaderCI.LoadConstantBufferReflection};
-        m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
-    }
+    Initialize(ShaderCI,
+               GetD3D11ShaderModel(D3D11ShaderCI.FeatureLevel, ShaderCI.HLSLVersion),
+               nullptr, // DxCompiler
+               D3D11ShaderCI.ppCompilerOutput,
+               D3D11ShaderCI.pShaderCompilationThreadPool,
+               [this, LoadConstantBufferReflection = ShaderCI.LoadConstantBufferReflection]() {
+                   auto& Allocator  = GetRawAllocator();
+                   auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
+                   auto* pResources = new (pRawMem) ShaderResourcesD3D11 //
+                       {
+                           m_pShaderByteCode,
+                           m_Desc,
+                           m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
+                           LoadConstantBufferReflection,
+                       };
+                   m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
+               });
 }
 
 ShaderD3D11Impl::~ShaderD3D11Impl()

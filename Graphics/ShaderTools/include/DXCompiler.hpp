@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -84,7 +84,8 @@ public:
                          const char*             ExtraDefinitions,
                          IDxcBlob**              ppByteCodeBlob,
                          std::vector<uint32_t>*  pByteCode,
-                         IDataBlob**             ppCompilerOutput) noexcept(false) = 0;
+                         IDataBlob**             ppCompilerOutput,
+                         bool                    ThrowOnError) noexcept(false) = 0;
 
 
     using BindInfo            = ResourceBinding::BindInfo;

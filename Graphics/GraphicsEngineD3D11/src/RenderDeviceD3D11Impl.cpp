@@ -202,6 +202,7 @@ void RenderDeviceD3D11Impl::CreateShader(const ShaderCreateInfo& ShaderCI,
         GetAdapterInfo(),
         GetD3D11Device()->GetFeatureLevel(),
         ppCompilerOutput,
+        m_pShaderCompilationThreadPool,
     };
     CreateShaderImpl(ppShader, ShaderCI, D3D11ShaderCI);
 }
