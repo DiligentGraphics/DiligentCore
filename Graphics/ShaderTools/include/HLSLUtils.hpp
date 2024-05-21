@@ -49,8 +49,7 @@ void HandleHLSLCompilerResult(bool               CompilationSucceeded,
                               BlobType*          pCompilerMsgBlob,
                               const std::string& ShaderSource,
                               const char*        ShaderName,
-                              IDataBlob**        ppOutputLog,
-                              bool               ThrowOnError) noexcept(false)
+                              IDataBlob**        ppOutputLog) noexcept(false)
 {
     const char*  CompilerMsg    = pCompilerMsgBlob ? static_cast<const char*>(pCompilerMsgBlob->GetBufferPointer()) : nullptr;
     const size_t CompilerMsgLen = CompilerMsg ? pCompilerMsgBlob->GetBufferSize() : 0;
@@ -93,13 +92,9 @@ void HandleHLSLCompilerResult(bool               CompilationSucceeded,
         {
             LOG_INFO_MESSAGE(ss.str());
         }
-        else if (ThrowOnError)
-        {
-            LOG_ERROR_AND_THROW(ss.str());
-        }
         else
         {
-            LOG_ERROR_MESSAGE(ss.str());
+            LOG_ERROR_AND_THROW(ss.str());
         }
     }
 }

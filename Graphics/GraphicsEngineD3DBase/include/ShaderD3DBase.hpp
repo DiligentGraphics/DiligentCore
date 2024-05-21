@@ -100,8 +100,7 @@ private:
                             const ShaderVersion     ShaderModel,
                             IDXCompiler*            DxCompiler,
                             IDataBlob**             ppCompilerOutput,
-                            std::function<void()>   InitResources,
-                            bool                    ThrowOnError);
+                            std::function<void()>   InitResources) noexcept(false);
 
 protected:
     CComPtr<ID3DBlob>         m_pShaderByteCode;

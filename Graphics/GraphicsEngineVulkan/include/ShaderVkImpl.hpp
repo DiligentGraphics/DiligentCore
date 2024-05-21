@@ -112,8 +112,7 @@ public:
 
 private:
     void Initialize(const ShaderCreateInfo& ShaderCI,
-                    const CreateInfo&       VkShaderCI,
-                    bool                    ThrowOnError);
+                    const CreateInfo&       VkShaderCI) noexcept(false);
 
 private:
     void MapHLSLVertexShaderInputs();

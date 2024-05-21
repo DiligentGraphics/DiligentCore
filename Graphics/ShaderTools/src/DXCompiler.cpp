@@ -115,8 +115,7 @@ public:
                          const char*             ExtraDefinitions,
                          IDxcBlob**              ppByteCodeBlob,
                          std::vector<uint32_t>*  pByteCode,
-                         IDataBlob**             ppCompilerOutput,
-                         bool                    ThrowOnError) noexcept(false) override final;
+                         IDataBlob**             ppCompilerOutput) noexcept(false) override final;
 
     virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                           ID3D12ShaderReflection** ppShaderReflection) override final;
@@ -738,8 +737,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
                              const char*             ExtraDefinitions,
                              IDxcBlob**              ppByteCodeBlob,
                              std::vector<uint32_t>*  pByteCode,
-                             IDataBlob**             ppCompilerOutput,
-                             bool                    ThrowOnError) noexcept(false)
+                             IDataBlob**             ppCompilerOutput) noexcept(false)
 {
     if (!IsLoaded())
     {
@@ -847,7 +845,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     CA.ppCompilerOutput           = &pDxcLog;
 
     auto result = Compile(CA);
-    HandleHLSLCompilerResult(result, pDxcLog.p, Source, ShaderCI.Desc.Name, ppCompilerOutput, ThrowOnError);
+    HandleHLSLCompilerResult(result, pDxcLog.p, Source, ShaderCI.Desc.Name, ppCompilerOutput);
 
     if (result && pDXIL && pDXIL->GetBufferSize() > 0)
     {

@@ -84,8 +84,7 @@ public:
                          const char*             ExtraDefinitions,
                          IDxcBlob**              ppByteCodeBlob,
                          std::vector<uint32_t>*  pByteCode,
-                         IDataBlob**             ppCompilerOutput,
-                         bool                    ThrowOnError) noexcept(false) = 0;
+                         IDataBlob**             ppCompilerOutput) noexcept(false) = 0;
 
 
     using BindInfo            = ResourceBinding::BindInfo;

@@ -66,13 +66,12 @@ static constexpr char VulkanDefine[] =
     ;
 
 std::vector<uint32_t> CompileShaderDXC(const ShaderCreateInfo&         ShaderCI,
-                                       const ShaderVkImpl::CreateInfo& VkShaderCI,
-                                       bool                            ThrowOnError)
+                                       const ShaderVkImpl::CreateInfo& VkShaderCI)
 {
     auto* pDXCompiler = VkShaderCI.pDXCompiler;
     VERIFY_EXPR(pDXCompiler != nullptr && pDXCompiler->IsLoaded());
     std::vector<uint32_t> SPIRV;
-    pDXCompiler->Compile(ShaderCI, ShaderCI.HLSLVersion, VulkanDefine, nullptr, &SPIRV, VkShaderCI.ppCompilerOutput, ThrowOnError);
+    pDXCompiler->Compile(ShaderCI, ShaderCI.HLSLVersion, VulkanDefine, nullptr, &SPIRV, VkShaderCI.ppCompilerOutput);
 
 #if !DILIGENT_NO_HLSL
     if (!SPIRV.empty())
@@ -97,7 +96,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
     std::vector<uint32_t> SPIRV;
 
 #if DILIGENT_NO_GLSLANG
-    DEV_ERROR("Diligent engine was not linked with glslang, use DXC or precompiled SPIRV bytecode.");
+    LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use DXC or precompiled SPIRV bytecode.");
 #else
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
@@ -162,8 +161,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
 } // namespace
 
 void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
-                              const CreateInfo&       VkShaderCI,
-                              bool                    ThrowOnError)
+                              const CreateInfo&       VkShaderCI)
 {
     if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
     {
@@ -183,7 +181,7 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
         switch (ShaderCompiler)
         {
             case SHADER_COMPILER_DXC:
-                m_SPIRV = CompileShaderDXC(ShaderCI, VkShaderCI, ThrowOnError);
+                m_SPIRV = CompileShaderDXC(ShaderCI, VkShaderCI);
                 break;
 
             case SHADER_COMPILER_DEFAULT:
@@ -192,19 +190,12 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
                 break;
 
             default:
-                DEV_ERROR("Unsupported shader compiler");
+                LOG_ERROR_AND_THROW("Unsupported shader compiler");
         }
 
         if (m_SPIRV.empty())
         {
-            if (ThrowOnError)
-            {
-                LOG_ERROR_AND_THROW("Failed to compile shader '", m_Desc.Name, '\'');
-            }
-            else
-            {
-                LOG_ERROR_MESSAGE("Failed to compile shader '", m_Desc.Name, '\'');
-            }
+            LOG_ERROR_AND_THROW("Failed to compile shader '", m_Desc.Name, '\'');
         }
     }
     else if (ShaderCI.ByteCode != nullptr)
@@ -216,7 +207,7 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
     }
     else
     {
-        DEV_ERROR("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
+        LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
     }
 
     // We cannot create shader module here because resource bindings are assigned when
@@ -275,7 +266,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 {
     if (VkShaderCI.pCompilationThreadPool == nullptr || (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) == 0 || ShaderCI.ByteCode != nullptr)
     {
-        Initialize(ShaderCI, VkShaderCI, /*ThrowOnError = */ true);
+        Initialize(ShaderCI, VkShaderCI);
     }
     else
     {
@@ -289,8 +280,14 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                                            HasSpirv14       = VkShaderCI.HasSpirv14,
                                            ppCompilerOutput = VkShaderCI.ppCompilerOutput](Uint32 ThreadId) //
                                           {
-                                              const CreateInfo VkShaderCI{pDXCompiler, DeviceInfo, AdapterInfo, VkVersion, HasSpirv14, ppCompilerOutput, nullptr};
-                                              Initialize(ShaderCI, VkShaderCI, /*ThrowOnError = */ false);
+                                              try
+                                              {
+                                                  const CreateInfo VkShaderCI{pDXCompiler, DeviceInfo, AdapterInfo, VkVersion, HasSpirv14, ppCompilerOutput, nullptr};
+                                                  Initialize(ShaderCI, VkShaderCI);
+                                              }
+                                              catch (...)
+                                              {
+                                              }
                                           });
     }
 }
