@@ -1,0 +1,59 @@
+
+#define s2(a, b)				temp = a; a = min(a, b); b = max(temp, b);
+#define mn3(a, b, c)			s2(a, b); s2(a, c);
+#define mx3(a, b, c)			s2(b, c); s2(a, c);
+
+#define mnmx3(a, b, c)			mx3(a, b, c); s2(a, b);
+#define mnmx4(a, b, c, d)		s2(a, b); s2(c, d); s2(a, c); s2(b, d);
+#define mnmx5(a, b, c, d, e)	s2(a, b); s2(c, d); mn3(a, c, e); mx3(b, d, e);
+#define mnmx6(a, b, c, d, e, f) s2(a, d); s2(b, e); s2(c, f); mn3(a, b, c); mx3(d, e, f);
+
+Texture2D g_Tex2D;
+
+float4 LoadValue(int2 ij)
+{
+    return g_Tex2D.Load(int3(ij, 0));
+}
+
+#define median(IJ, res) \
+{ \
+  float4 v[9]; \
+  for (uint i=0u; i < 9u; ++i) \
+    v[i] = LoadValue(IJ + int2(i % 3u - 1u, i / 3u - 1u)); \
+  float4 temp; \
+  mnmx6(v[0], v[1], v[2], v[3], v[4], v[5]); \
+  mnmx5(v[1], v[2], v[3], v[4], v[6]); \
+  mnmx4(v[2], v[3], v[4], v[7]); \
+  mnmx3(v[3], v[4], v[8]); \
+  res += v[4]; \
+}
+
+float4 main(float4 Pos : SV_Position) : SV_Target
+{
+    int2 IJ = int2(Pos.xy);
+    float4 Res = float4(RANDOM, RANDOM, RANDOM, 0.0);
+    
+    median(IJ, Res);
+    median(IJ + int2(0,2), Res);
+    median(IJ + int2(0,4), Res);
+    median(IJ + int2(0,6), Res);
+    median(IJ + int2(0,8), Res);
+    median(IJ + int2(2,2), Res);
+    median(IJ + int2(2,4), Res);
+    median(IJ + int2(2,6), Res);
+    median(IJ + int2(2,8), Res);
+    median(IJ + int2(4,2), Res);
+    median(IJ + int2(4,4), Res);
+    median(IJ + int2(4,6), Res);
+    median(IJ + int2(4,8), Res);
+    median(IJ + int2(6,2), Res);
+    median(IJ + int2(6,4), Res);
+    median(IJ + int2(6,6), Res);
+    median(IJ + int2(6,8), Res);
+    median(IJ + int2(8,2), Res);
+    median(IJ + int2(8,4), Res);
+    median(IJ + int2(8,6), Res);
+    median(IJ + int2(8,8), Res);
+    
+    return Res;
+}
