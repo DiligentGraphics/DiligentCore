@@ -1370,8 +1370,11 @@ struct GraphicsPipelineStateCreateInfoX : PipelineStateCreateInfoX<GraphicsPipel
     {}
 
     GraphicsPipelineStateCreateInfoX(const GraphicsPipelineStateCreateInfo& CI) :
-        PipelineStateCreateInfoX{CI}
+        PipelineStateCreateInfoX{CI},
+        InputLayout{CI.GraphicsPipeline.InputLayout}
     {
+        GraphicsPipeline.InputLayout = InputLayout;
+
         if (pVS != nullptr) Objects.emplace_back(pVS);
         if (pPS != nullptr) Objects.emplace_back(pPS);
         if (pDS != nullptr) Objects.emplace_back(pDS);
@@ -1495,7 +1498,8 @@ struct GraphicsPipelineStateCreateInfoX : PipelineStateCreateInfoX<GraphicsPipel
 
     GraphicsPipelineStateCreateInfoX& SetInputLayout(const InputLayoutDesc& LayoutDesc) noexcept
     {
-        GraphicsPipeline.InputLayout = LayoutDesc;
+        InputLayout                  = LayoutDesc;
+        GraphicsPipeline.InputLayout = InputLayout;
         return *this;
     }
 
@@ -1564,6 +1568,9 @@ struct GraphicsPipelineStateCreateInfoX : PipelineStateCreateInfoX<GraphicsPipel
         std::swap(*this, CleanDesc);
         return *this;
     }
+
+private:
+    InputLayoutDescX InputLayout;
 };
 
 
@@ -1898,6 +1905,34 @@ private:
     std::vector<RayTracingGeneralShaderGroup>       GeneralShaders;
     std::vector<RayTracingTriangleHitShaderGroup>   TriangleHitShaders;
     std::vector<RayTracingProceduralHitShaderGroup> ProceduralHitShaders;
+};
+
+
+template <typename T>
+struct PipelineStateCreateInfoXTraits;
+
+template <>
+struct PipelineStateCreateInfoXTraits<GraphicsPipelineStateCreateInfo>
+{
+    using CreateInfoXType = GraphicsPipelineStateCreateInfoX;
+};
+
+template <>
+struct PipelineStateCreateInfoXTraits<ComputePipelineStateCreateInfo>
+{
+    using CreateInfoXType = ComputePipelineStateCreateInfoX;
+};
+
+template <>
+struct PipelineStateCreateInfoXTraits<RayTracingPipelineStateCreateInfo>
+{
+    using CreateInfoXType = RayTracingPipelineStateCreateInfoX;
+};
+
+template <>
+struct PipelineStateCreateInfoXTraits<TilePipelineStateCreateInfo>
+{
+    using CreateInfoXType = TilePipelineStateCreateInfoX;
 };
 
 
