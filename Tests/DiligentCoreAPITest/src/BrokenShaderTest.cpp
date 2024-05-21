@@ -152,7 +152,7 @@ TEST(Shader, BrokenGLSL)
                      DeviceInfo.IsGLDevice() ? 2 : 3);
 }
 
-TEST(Shader, BrokenGLSL_ASYNC)
+TEST(Shader, BrokenGLSL_Async)
 {
     const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (DeviceInfo.IsD3DDevice())

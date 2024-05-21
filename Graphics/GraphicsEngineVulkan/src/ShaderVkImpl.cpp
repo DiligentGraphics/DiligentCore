@@ -66,10 +66,9 @@ static constexpr char VulkanDefine[] =
     ;
 
 std::vector<uint32_t> CompileShaderDXC(const ShaderCreateInfo&         ShaderCI,
-                                       const ShaderVkImpl::CreateInfo& VkShaderCI)
+                                       const ShaderVkImpl::CreateInfo& VkShaderCI,
+                                       bool                            ThrowOnError)
 {
-    bool ThrowOnError = true;
-
     auto* pDXCompiler = VkShaderCI.pDXCompiler;
     VERIFY_EXPR(pDXCompiler != nullptr && pDXCompiler->IsLoaded());
     std::vector<uint32_t> SPIRV;
@@ -98,7 +97,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
     std::vector<uint32_t> SPIRV;
 
 #if DILIGENT_NO_GLSLANG
-    LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use DXC or precompiled SPIRV bytecode.");
+    DEV_ERROR("Diligent engine was not linked with glslang, use DXC or precompiled SPIRV bytecode.");
 #else
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
@@ -162,22 +161,9 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
 
 } // namespace
 
-ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
-                           RenderDeviceVkImpl*     pRenderDeviceVk,
-                           const ShaderCreateInfo& ShaderCI,
-                           const CreateInfo&       VkShaderCI,
-                           bool                    IsDeviceInternal) :
-    // clang-format off
-    TShaderBase
-    {
-        pRefCounters,
-        pRenderDeviceVk,
-        ShaderCI.Desc,
-        VkShaderCI.DeviceInfo,
-        VkShaderCI.AdapterInfo,
-        IsDeviceInternal
-    }
-// clang-format on
+void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
+                              const CreateInfo&       VkShaderCI,
+                              bool                    ThrowOnError)
 {
     if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
     {
@@ -197,7 +183,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         switch (ShaderCompiler)
         {
             case SHADER_COMPILER_DXC:
-                m_SPIRV = CompileShaderDXC(ShaderCI, VkShaderCI);
+                m_SPIRV = CompileShaderDXC(ShaderCI, VkShaderCI, ThrowOnError);
                 break;
 
             case SHADER_COMPILER_DEFAULT:
@@ -206,12 +192,19 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                 break;
 
             default:
-                LOG_ERROR_AND_THROW("Unsupported shader compiler");
+                DEV_ERROR("Unsupported shader compiler");
         }
 
         if (m_SPIRV.empty())
         {
-            LOG_ERROR_AND_THROW("Failed to compile shader '", m_Desc.Name, '\'');
+            if (ThrowOnError)
+            {
+                LOG_ERROR_AND_THROW("Failed to compile shader '", m_Desc.Name, '\'');
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("Failed to compile shader '", m_Desc.Name, '\'');
+            }
         }
     }
     else if (ShaderCI.ByteCode != nullptr)
@@ -223,39 +216,82 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     }
     else
     {
-        LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
+        DEV_ERROR("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
     }
 
     // We cannot create shader module here because resource bindings are assigned when
     // pipeline state is created
 
     // Load shader resources
-    if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
+    if (!m_SPIRV.empty())
     {
-        auto& Allocator        = GetRawAllocator();
-        auto* pRawMem          = ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1);
-        auto  LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
-        auto* pResources       = new (pRawMem) SPIRVShaderResources //
-            {
-                Allocator,
-                m_SPIRV,
-                m_Desc,
-                m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
-                LoadShaderInputs,
-                ShaderCI.LoadConstantBufferReflection,
-                m_EntryPoint //
-            };
-        VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint);
-        m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
-
-        if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
+        if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
         {
-            MapHLSLVertexShaderInputs();
+            auto& Allocator        = GetRawAllocator();
+            auto* pRawMem          = ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1);
+            auto  LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
+            auto* pResources       = new (pRawMem) SPIRVShaderResources //
+                {
+                    Allocator,
+                    m_SPIRV,
+                    m_Desc,
+                    m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
+                    LoadShaderInputs,
+                    ShaderCI.LoadConstantBufferReflection,
+                    m_EntryPoint //
+                };
+            VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint);
+            m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
+
+            if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
+            {
+                MapHLSLVertexShaderInputs();
+            }
         }
+        else
+        {
+            m_EntryPoint = ShaderCI.EntryPoint;
+        }
+    }
+}
+
+
+ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
+                           RenderDeviceVkImpl*     pRenderDeviceVk,
+                           const ShaderCreateInfo& ShaderCI,
+                           const CreateInfo&       VkShaderCI,
+                           bool                    IsDeviceInternal) :
+    // clang-format off
+    TShaderBase
+    {
+        pRefCounters,
+        pRenderDeviceVk,
+        ShaderCI.Desc,
+        VkShaderCI.DeviceInfo,
+        VkShaderCI.AdapterInfo,
+        IsDeviceInternal
+    }
+// clang-format on
+{
+    if (VkShaderCI.pCompilationThreadPool == nullptr || (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) == 0 || ShaderCI.ByteCode != nullptr)
+    {
+        Initialize(ShaderCI, VkShaderCI, /*ThrowOnError = */ true);
     }
     else
     {
-        m_EntryPoint = ShaderCI.EntryPoint;
+        m_pCompileTask = EnqueueAsyncWork(VkShaderCI.pCompilationThreadPool,
+                                          [this,
+                                           ShaderCI         = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},
+                                           pDXCompiler      = VkShaderCI.pDXCompiler,
+                                           DeviceInfo       = VkShaderCI.DeviceInfo,
+                                           AdapterInfo      = VkShaderCI.AdapterInfo,
+                                           VkVersion        = VkShaderCI.VkVersion,
+                                           HasSpirv14       = VkShaderCI.HasSpirv14,
+                                           ppCompilerOutput = VkShaderCI.ppCompilerOutput](Uint32 ThreadId) //
+                                          {
+                                              const CreateInfo VkShaderCI{pDXCompiler, DeviceInfo, AdapterInfo, VkVersion, HasSpirv14, ppCompilerOutput, nullptr};
+                                              Initialize(ShaderCI, VkShaderCI, /*ThrowOnError = */ false);
+                                          });
     }
 }
 
@@ -296,6 +332,8 @@ ShaderVkImpl::~ShaderVkImpl()
 
 void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const
 {
+    DEV_CHECK_ERR(m_pCompileTask == nullptr, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+
     auto ResCount = GetResourceCount();
     DEV_CHECK_ERR(Index < ResCount, "Resource index (", Index, ") is out of range");
     if (Index < ResCount)
@@ -307,6 +345,8 @@ void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDes
 
 const ShaderCodeBufferDesc* ShaderVkImpl::GetConstantBufferDesc(Uint32 Index) const
 {
+    DEV_CHECK_ERR(m_pCompileTask == nullptr, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+
     auto ResCount = GetResourceCount();
     if (Index >= ResCount)
     {
@@ -316,6 +356,22 @@ const ShaderCodeBufferDesc* ShaderVkImpl::GetConstantBufferDesc(Uint32 Index) co
 
     // Uniform buffers always go first in the list of resources
     return m_pShaderResources->GetUniformBufferDesc(Index);
+}
+
+SHADER_STATUS ShaderVkImpl::GetStatus(bool WaitForCompletion)
+{
+    if (m_pCompileTask)
+    {
+        if (WaitForCompletion)
+            m_pCompileTask->WaitForCompletion();
+
+        if (m_pCompileTask->GetStatus() <= ASYNC_TASK_STATUS_RUNNING)
+            return SHADER_STATUS_COMPILING;
+        else
+            m_pCompileTask.Release();
+    }
+
+    return !m_SPIRV.empty() ? SHADER_STATUS_READY : SHADER_STATUS_FAILED;
 }
 
 } // namespace Diligent

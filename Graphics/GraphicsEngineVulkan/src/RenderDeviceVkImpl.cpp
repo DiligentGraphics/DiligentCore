@@ -601,6 +601,7 @@ void RenderDeviceVkImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
         GetVkVersion(),
         GetLogicalDevice().GetEnabledExtFeatures().Spirv14,
         ppCompilerOutput,
+        m_pShaderCompilationThreadPool,
     };
     CreateShaderImpl(ppShader, ShaderCI, VkShaderCI);
 }

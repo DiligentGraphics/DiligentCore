@@ -34,6 +34,7 @@ float4 main(float4 Pos : SV_Position) : SV_Target
     float4 Res = float4(RANDOM, RANDOM, RANDOM, 0.0);
     
     median(IJ, Res);
+#ifndef SIMPLIFIED
     median(IJ + int2(0,2), Res);
     median(IJ + int2(0,4), Res);
     median(IJ + int2(0,6), Res);
@@ -54,6 +55,7 @@ float4 main(float4 Pos : SV_Position) : SV_Target
     median(IJ + int2(8,4), Res);
     median(IJ + int2(8,6), Res);
     median(IJ + int2(8,8), Res);
+#endif
     
     return Res;
 }

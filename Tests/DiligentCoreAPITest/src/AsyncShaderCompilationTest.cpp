@@ -65,6 +65,13 @@ RefCntAutoPtr<IShader> CreateShader(const char*          Path,
 
     ShaderMacroHelper Macros;
     Macros.Add("RANDOM", static_cast<int>(Rand()));
+#ifdef DILIGENT_DEBUG
+    if (pDevice->GetDeviceInfo().IsVulkanDevice())
+    {
+        // In debug mode in Vulkan it takes a lot of time to compile full shader
+        Macros.Add("SIMPLIFIED", 1);
+    }
+#endif
     ShaderCI.Macros = Macros;
 
     RefCntAutoPtr<IShader> pShader;

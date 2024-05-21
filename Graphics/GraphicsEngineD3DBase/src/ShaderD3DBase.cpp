@@ -205,9 +205,14 @@ void ShaderD3DBase::Initialize(const ShaderCreateInfo& ShaderCI,
     }
     else
     {
-        ShaderCreateInfoWrapper ShaderCICopy{ShaderCI, GetRawAllocator()};
         m_pCompileTask = EnqueueAsyncWork(pAsyncCompilationThreadPool,
-                                          [this, ShaderCI = std::move(ShaderCICopy), ShaderModel, DxCompiler, ppCompilerOutput, InitResources](Uint32 ThreadId) {
+                                          [this,
+                                           ShaderCI = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},
+                                           ShaderModel,
+                                           DxCompiler,
+                                           ppCompilerOutput,
+                                           InitResources](Uint32 ThreadId) //
+                                          {
                                               InitializeInternal(ShaderCI, ShaderModel, DxCompiler, ppCompilerOutput, InitResources, /*ThrowOnError = */ false);
                                           });
     }

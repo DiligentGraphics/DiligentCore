@@ -2041,7 +2041,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.DurationQueries        = DEVICE_FEATURE_STATE_DISABLED;
 #endif
 
-    Features.AsyncShaderCompilation = DEVICE_FEATURE_STATE_DISABLED;
+    Features.AsyncShaderCompilation = DEVICE_FEATURE_STATE_ENABLED;
 
     ASSERT_SIZEOF(DeviceFeatures, 44, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
