@@ -83,12 +83,12 @@ public:
         m_bSafelyCancel.store(true);
     }
 
-    virtual void DILIGENT_CALL_TYPE SetStatus(ASYNC_TASK_STATUS Status) override final
+    virtual void DILIGENT_CALL_TYPE SetStatus(ASYNC_TASK_STATUS TaskStatus) override final
     {
 #ifdef DILIGENT_DEVELOPMENT
-        if (Status != m_TaskStatus)
+        if (TaskStatus != m_TaskStatus)
         {
-            switch (Status)
+            switch (TaskStatus)
             {
                 case ASYNC_TASK_STATUS_UNKNOWN:
                     DEV_ERROR("UNKNOWN is invalid status.");
@@ -119,7 +119,7 @@ public:
             }
         }
 #endif
-        m_TaskStatus.store(Status);
+        m_TaskStatus.store(TaskStatus);
     }
 
     virtual ASYNC_TASK_STATUS DILIGENT_CALL_TYPE GetStatus() const override final

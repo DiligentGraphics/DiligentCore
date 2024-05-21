@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -125,6 +125,8 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
 
     // Initialize device features
     m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
+
+    InitShaderCompilationThreadPool(EngineCI.pAsyncShaderCompilationThreadPool);
 }
 
 RenderDeviceD3D11Impl::~RenderDeviceD3D11Impl()

@@ -3434,6 +3434,16 @@ struct EngineCreateInfo
     /// operations in the engine
     struct IMemoryAllocator* pRawMemAllocator       DEFAULT_INITIALIZER(nullptr);
 
+    /// An optional thread pool for asynchronous shader and pipeline state compilation.
+    ///
+    /// \remarks    When AsyncShaderCompilation device feature is enabled, the engine will use
+    ///             the provided thread pool to compile shaders and pipeline states asynchronously.
+    ///             If the thread pool is not provided, the engine will create a default thread pool.
+    /// 
+    /// \note       Thread pool is not used in OpenGL backend as asynchronous shader compilation
+    ///             is performed by the driver.
+    IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
+
 #if DILIGENT_CPP_INTERFACE
     EngineCreateInfo() noexcept
     {
@@ -3582,13 +3592,6 @@ struct EngineD3D11CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Direct3D11-specific validation options, see Diligent::D3D11_VALIDATION_FLAGS.
     D3D11_VALIDATION_FLAGS D3D11ValidationFlags DEFAULT_INITIALIZER(D3D11_VALIDATION_FLAG_NONE);
-
-    /// Thread pool for asynchronous shader and pipeline state compilation.
-    ///
-    /// \remarks    If non-null thread pool is provided, the AsyncShaderCompilation device feature
-    ///             will be enabled allowing shaders an pipeline states to be created asynchronously. 
-    ///             Otherwise, the feature will be disabled.
-    IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     EngineD3D11CreateInfo() noexcept :
@@ -3771,13 +3774,6 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Path to DirectX Shader Compiler, which is required to use Shader Model 6.0+ features.
     /// By default, the engine will search for "dxcompiler.dll".
     const Char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
-
-    /// Thread pool for asynchronous shader and pipeline state compilation.
-    ///
-    /// \remarks    If non-null thread pool is provided, the AsyncShaderCompilation device feature
-    ///             will be enabled allowing shaders an pipeline states to be created asynchronously. 
-    ///             Otherwise, the feature will be disabled.
-    IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     EngineD3D12CreateInfo() noexcept :
@@ -4036,13 +4032,6 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Path to DirectX Shader Compiler, which is required to use Shader Model 6.0+
     /// features when compiling shaders from HLSL.
     const Char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
-
-    /// Thread pool for asynchronous shader and pipeline state compilation.
-    ///
-    /// \remarks    If non-null thread pool is provided, the AsyncShaderCompilation device feature
-    ///             will be enabled allowing shaders an pipeline states to be created asynchronously. 
-    ///             Otherwise, the feature will be disabled.
-    IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     EngineVkCreateInfo() noexcept :

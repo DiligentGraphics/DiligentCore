@@ -31,6 +31,7 @@
 /// Implementation of the Diligent::RenderDeviceBase template class and related structures
 
 #include <atomic>
+#include <thread>
 
 #include "RenderDevice.h"
 #include "DeviceObjectBase.hpp"
@@ -46,6 +47,7 @@
 #include "EngineMemory.h"
 #include "STDAllocator.hpp"
 #include "IndexWrapper.hpp"
+#include "ThreadPool.hpp"
 
 namespace Diligent
 {
@@ -336,9 +338,30 @@ public:
         return m_UniqueId.fetch_add(1) + 1;
     }
 
+    IThreadPool* GetShaderCompilationThreadPool() const
+    {
+        return m_pShaderCompilationThreadPool;
+    }
+
 protected:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) = 0;
 
+    void InitShaderCompilationThreadPool(IThreadPool* pShaderCompilationThreadPool)
+    {
+        if (!m_DeviceInfo.Features.AsyncShaderCompilation)
+            return;
+
+        if (pShaderCompilationThreadPool != nullptr)
+        {
+            m_pShaderCompilationThreadPool = pShaderCompilationThreadPool;
+        }
+        else
+        {
+            ThreadPoolCreateInfo ThreadPoolCI;
+            ThreadPoolCI.NumThreads        = std::max(std::thread::hardware_concurrency(), 1u);
+            m_pShaderCompilationThreadPool = CreateThreadPool(ThreadPoolCI);
+        }
+    }
     /// Helper template function to facilitate device object creation
 
     /// \tparam ObjectType            - The type of the object being created (IBuffer, ITexture, etc.).
@@ -604,6 +627,8 @@ protected:
     FixedBlockMemoryAllocator m_PipeResSignAllocator; ///< Allocator for pipeline resource signature objects
     FixedBlockMemoryAllocator m_MemObjAllocator;      ///< Allocator for device memory objects
     FixedBlockMemoryAllocator m_PSOCacheAllocator;    ///< Allocator for pipeline state cache objects
+
+    RefCntAutoPtr<IThreadPool> m_pShaderCompilationThreadPool;
 
     std::atomic<UniqueIdentifier> m_UniqueId{0};
 };
