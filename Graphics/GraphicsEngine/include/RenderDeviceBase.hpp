@@ -208,10 +208,6 @@ public:
 
     ~RenderDeviceBase()
     {
-        if (m_pShaderCompilationThreadPool)
-        {
-            m_pShaderCompilationThreadPool->WaitForAllTasks();
-        }
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderDevice, ObjectBase<BaseInterface>)

@@ -116,6 +116,9 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
 
 ShaderD3D11Impl::~ShaderD3D11Impl()
 {
+    // Make sure that asynchrous task is complete as it references the shader object.
+    // This needs to be done in the final class before the destruction begins.
+    GetStatus(/*WaitForCompletion =*/true);
 }
 
 void ShaderD3D11Impl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)

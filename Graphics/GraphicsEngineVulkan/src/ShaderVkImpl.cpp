@@ -329,6 +329,9 @@ void ShaderVkImpl::MapHLSLVertexShaderInputs()
 
 ShaderVkImpl::~ShaderVkImpl()
 {
+    // Make sure that asynchrous task is complete as it references the shader object.
+    // This needs to be done in the final class before the destruction begins.
+    GetStatus(/*WaitForCompletion =*/true);
 }
 
 void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const
