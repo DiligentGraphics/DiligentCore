@@ -773,12 +773,9 @@ inline void DeviceContextBase<ImplementationTraits>::SetPipelineState(
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "SetPipelineState");
     DEV_CHECK_ERR((pPipelineState->GetDesc().ImmediateContextMask & (Uint64{1} << GetExecutionCtxId())) != 0,
                   "PSO '", pPipelineState->GetDesc().Name, "' can't be used in device context '", m_Desc.Name, "'.");
+    DEV_CHECK_ERR(pPipelineState->GetStatus() == PIPELINE_STATE_STATUS_READY, "PSO '", pPipelineState->GetDesc().Name, "' is not ready. Use GetStatus() to check the pipeline status.");
 
     m_pPipelineState = std::move(pPipelineState);
-    // Force compilation to complete
-    PIPELINE_STATE_STATUS PSOStatus = m_pPipelineState->GetStatus(/* WaitForCompletion = */ true);
-    DEV_CHECK_ERR(PSOStatus == PIPELINE_STATE_STATUS_READY, "PSO '", m_pPipelineState->GetDesc().Name, "' is in failed state.");
-
     ++m_Stats.CommandCounters.SetPipelineState;
 }
 

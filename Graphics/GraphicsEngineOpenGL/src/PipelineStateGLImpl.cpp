@@ -273,7 +273,9 @@ public:
     PipelineBuilder(PipelineStateGLImpl& Pipeline, const PSOCreateInfoType& CreateInfo, TShaderStages Shaders) :
         PipelineBuilderBase{Pipeline, CreateInfo, std::move(Shaders)},
         m_CreateInfo{CreateInfo}
-    {}
+    {
+        Pipeline.m_Status.store(PIPELINE_STATE_STATUS_COMPILING);
+    }
 
     virtual bool Tick(bool WaitForCompletion) override final
     {
@@ -297,12 +299,17 @@ public:
             HandleLinkingPrograms(WaitForCompletion);
         }
 
-        if (m_State == State::Failed)
+        if (m_State == State::Complete)
+        {
+            m_Pipeline.m_Status.store(PIPELINE_STATE_STATUS_READY);
+        }
+        else if (m_State == State::Failed)
         {
             for (Uint32 i = 0; i < m_Pipeline.m_NumPrograms; ++i)
             {
                 m_Pipeline.m_GLPrograms[i].Release();
             }
+            m_Pipeline.m_Status.store(PIPELINE_STATE_STATUS_FAILED);
         }
 
         return m_State == State::Complete || m_State == State::Failed;
@@ -447,15 +454,15 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
 
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
     MemPool.AddSpace<GLProgramObj>(m_NumPrograms);
-    const auto SignCount = GetResourceSignatureCount(); // Must be called after ReserveSpaceForPipelineDesc()
-    MemPool.AddSpace<TBindings>(SignCount);
+    // m_SignatureCount is initialized by ReserveSpaceForPipelineDesc()
+    MemPool.AddSpace<TBindings>(m_SignatureCount);
     MemPool.AddSpace<SHADER_TYPE>(m_NumPrograms);
 
     MemPool.Reserve();
 
     InitializePipelineDesc(CreateInfo, MemPool);
     m_GLPrograms   = MemPool.ConstructArray<GLProgramObj>(m_NumPrograms, false);
-    m_BaseBindings = MemPool.ConstructArray<TBindings>(SignCount);
+    m_BaseBindings = MemPool.ConstructArray<TBindings>(m_SignatureCount);
     m_ShaderTypes  = MemPool.ConstructArray<SHADER_TYPE>(m_NumPrograms, SHADER_TYPE_UNKNOWN);
 }
 
@@ -573,7 +580,7 @@ PIPELINE_STATE_STATUS PipelineStateGLImpl::GetStatus(bool WaitForCompletion)
             m_Builder.reset();
         }
     }
-    return m_Builder ? PIPELINE_STATE_STATUS_COMPILING : (m_GLPrograms[0] ? PIPELINE_STATE_STATUS_READY : PIPELINE_STATE_STATUS_FAILED);
+    return m_Status.load();
 }
 
 SHADER_TYPE PipelineStateGLImpl::GetShaderStageType(Uint32 Index) const

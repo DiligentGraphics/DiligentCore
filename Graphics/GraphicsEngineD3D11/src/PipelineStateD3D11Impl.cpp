@@ -294,14 +294,14 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
     MemPool.AddSpace<D3D11ShaderAutoPtrType>(m_NumShaders);
 
-    const auto SignCount = GetResourceSignatureCount(); // Must be called after ReserveSpaceForPipelineDesc()
-    MemPool.AddSpace<D3D11ShaderResourceCounters>(SignCount);
+    // m_SignatureCount is initialized by ReserveSpaceForPipelineDesc()
+    MemPool.AddSpace<D3D11ShaderResourceCounters>(m_SignatureCount);
 
     MemPool.Reserve();
 
     InitializePipelineDesc(CreateInfo, MemPool);
     m_ppd3d11Shaders = MemPool.ConstructArray<D3D11ShaderAutoPtrType>(m_NumShaders);
-    m_BaseBindings   = MemPool.ConstructArray<D3D11ShaderResourceCounters>(SignCount);
+    m_BaseBindings   = MemPool.ConstructArray<D3D11ShaderResourceCounters>(m_SignatureCount);
 
     InitResourceLayouts(CreateInfo, Shaders, pVSByteCode);
 }

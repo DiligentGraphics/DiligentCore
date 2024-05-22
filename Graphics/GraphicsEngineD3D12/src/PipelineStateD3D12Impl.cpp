@@ -878,6 +878,8 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         {
             m_pd3d12PSO->SetName(WName.c_str());
         }
+
+        m_Status.store(PIPELINE_STATE_STATUS_READY);
     }
     catch (...)
     {
@@ -940,6 +942,8 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         {
             m_pd3d12PSO->SetName(WName.c_str());
         }
+
+        m_Status.store(PIPELINE_STATE_STATUS_READY);
     }
     catch (...)
     {
@@ -989,6 +993,8 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         {
             m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
         }
+
+        m_Status.store(PIPELINE_STATE_STATUS_READY);
     }
     catch (...)
     {

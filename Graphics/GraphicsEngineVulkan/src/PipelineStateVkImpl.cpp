@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -832,6 +832,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         const auto vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
         CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, GetRenderPassPtr(), vkSPOCache);
+
+        m_Status.store(PIPELINE_STATE_STATUS_READY);
     }
     catch (...)
     {
@@ -852,6 +854,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
 
         const auto vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
         CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline, vkSPOCache);
+
+        m_Status.store(PIPELINE_STATE_STATUS_READY);
     }
     catch (...)
     {
@@ -882,6 +886,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, Rende
         auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(vkShaderGroups.size()), m_pRayTracingPipelineData->ShaderDataSize, m_pRayTracingPipelineData->ShaderHandles);
         DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to get shader group handles");
         (void)err;
+
+        m_Status.store(PIPELINE_STATE_STATUS_READY);
     }
     catch (...)
     {
@@ -944,9 +950,9 @@ void PipelineStateVkImpl::DvpValidateResourceLimits() const
     std::array<std::array<Uint32, DescCount>, MAX_SHADERS_IN_PIPELINE> PerStageDescriptorCount = {};
     std::array<bool, MAX_SHADERS_IN_PIPELINE>                          ShaderStagePresented    = {};
 
-    for (Uint32 s = 0; s < GetResourceSignatureCount(); ++s)
+    for (Uint32 s = 0; s < m_SignatureCount; ++s)
     {
-        const auto* pSignature = GetResourceSignature(s);
+        const PipelineResourceSignatureVkImpl* pSignature = m_Signatures[s];
         if (pSignature == nullptr)
             continue;
 

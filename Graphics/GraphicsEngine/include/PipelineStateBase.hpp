@@ -368,6 +368,8 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
                                                                 bool                     InitStaticResources) override final
     {
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
+
         *ppShaderResourceBinding = nullptr;
 
         if (!m_UsingImplicitSignature)
@@ -383,6 +385,8 @@ public:
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
                                                                                 const Char* Name) override final
     {
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
+
         if (!m_UsingImplicitSignature)
         {
             LOG_ERROR_MESSAGE("IPipelineState::GetStaticVariableByName is not allowed for pipelines that use explicit "
@@ -403,6 +407,8 @@ public:
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
                                                                                  Uint32      Index) override final
     {
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
+
         if (!m_UsingImplicitSignature)
         {
             LOG_ERROR_MESSAGE("IPipelineState::GetStaticVariableByIndex is not allowed for pipelines that use explicit "
@@ -422,6 +428,8 @@ public:
 
     virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
     {
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
+
         if (!m_UsingImplicitSignature)
         {
             LOG_ERROR_MESSAGE("IPipelineState::GetStaticVariableCount is not allowed for pipelines that use explicit "
@@ -443,6 +451,8 @@ public:
                                                         IResourceMapping*           pResourceMapping,
                                                         BIND_SHADER_RESOURCES_FLAGS Flags) override final
     {
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
+
         if (!m_UsingImplicitSignature)
         {
             LOG_ERROR_MESSAGE("IPipelineState::BindStaticResources is not allowed for pipelines that use explicit "
@@ -455,6 +465,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const override final
     {
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
+
         if (!m_UsingImplicitSignature)
         {
             LOG_ERROR_MESSAGE("IPipelineState::InitializeStaticSRBResources is not allowed for pipelines that use explicit "
@@ -467,6 +479,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE CopyStaticResources(IPipelineState* pDstPipeline) const override final
     {
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
+
         if (pDstPipeline == nullptr)
         {
             DEV_ERROR("Destination pipeline must not be null");
@@ -493,12 +507,16 @@ public:
     /// Implementation of IPipelineState::GetResourceSignatureCount().
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final
     {
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
+
         return m_SignatureCount;
     }
 
     /// Implementation of IPipelineState::GetResourceSignature().
     virtual PipelineResourceSignatureImplType* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
     {
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
+
         VERIFY_EXPR(Index < m_SignatureCount);
         return m_Signatures[Index];
     }
@@ -506,6 +524,8 @@ public:
     /// Implementation of IPipelineState::IsCompatibleWith().
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override // May be overridden
     {
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
+
         DEV_CHECK_ERR(pPSO != nullptr, "pPSO must not be null");
 
         if (pPSO == this)
@@ -532,7 +552,7 @@ public:
         return true;
     }
 
-    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion = false) override
     {
         VERIFY_EXPR(m_Status.load() != PIPELINE_STATE_STATUS_UNINITIALIZED);
         if (WaitForCompletion && m_InitializeTaskRunning.load())
