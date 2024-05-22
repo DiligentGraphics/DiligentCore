@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,6 +45,9 @@
 #include "FixedLinearAllocator.hpp"
 #include "HashUtils.hpp"
 #include "PipelineResourceSignatureBase.hpp"
+#include "RefCntAutoPtr.hpp"
+#include "ThreadPool.h"
+#include "SpinLock.hpp"
 
 namespace Diligent
 {
@@ -234,6 +237,8 @@ public:
 
     ~PipelineStateBase()
     {
+        VERIFY(!m_pInitializeTask, "Initialize task is still running. This may result in a crash if the task accesses resources owned by the pipeline state object.");
+
         /*
         /// \note Destructor cannot directly remove the object from the registry as this may cause a
         ///       deadlock at the point where StateObjectsRegistry::Find() locks the weak pointer: if we
@@ -525,6 +530,34 @@ public:
         }
 
         return true;
+    }
+
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override
+    {
+        VERIFY_EXPR(m_Status.load() != PIPELINE_STATE_STATUS_UNINITIALIZED);
+        if (WaitForCompletion)
+        {
+            if (m_Status.load() == PIPELINE_STATE_STATUS_COMPILING)
+            {
+                RefCntAutoPtr<IAsyncTask> pInitializeTask;
+                {
+                    Threading::SpinLockGuard Guard{m_InitializeTaskLock};
+                    pInitializeTask = m_pInitializeTask;
+                }
+                if (pInitializeTask)
+                {
+                    pInitializeTask->WaitForCompletion();
+                }
+            }
+
+            {
+                Threading::SpinLockGuard Guard{m_InitializeTaskLock};
+                VERIFY_EXPR(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING);
+                m_pInitializeTask.Release();
+            }
+        }
+
+        return m_Status.load();
     }
 
     SHADER_TYPE GetActiveShaderStages() const
@@ -1127,6 +1160,10 @@ protected:
 
     /// True if the pipeline was created using implicit root signature.
     const bool m_UsingImplicitSignature;
+
+    std::atomic<PIPELINE_STATE_STATUS> m_Status{PIPELINE_STATE_STATUS_UNINITIALIZED};
+    Threading::SpinLock                m_InitializeTaskLock;
+    RefCntAutoPtr<IAsyncTask>          m_pInitializeTask;
 
     /// The number of signatures in m_Signatures array.
     /// Note that this is not necessarily the same as the number of signatures

@@ -1002,8 +1002,11 @@ typedef struct TilePipelineStateCreateInfo TilePipelineStateCreateInfo;
 /// Pipeline state status
 DILIGENT_TYPED_ENUM(PIPELINE_STATE_STATUS, Uint32)
 {
+    /// Initial state.
+    PIPELINE_STATE_STATUS_UNINITIALIZED = 0,
+
     /// The pipeline state is being compiled.
-	PIPELINE_STATE_STATUS_COMPILING = 0,
+	PIPELINE_STATE_STATUS_COMPILING,
 
 	/// The pipeline state has been successfully compiled
     /// and is ready to be used.

@@ -999,6 +999,10 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 
 PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
 {
+    // Make sure that asynchrous task is complete as it references the pipeline object.
+    // This needs to be done in the final class before the destruction begins.
+    GetStatus(/*WaitForCompletion =*/true);
+
     Destruct();
 }
 

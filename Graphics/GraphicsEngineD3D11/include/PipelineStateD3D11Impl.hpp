@@ -61,12 +61,6 @@ public:
     /// Implementation of IPipelineState::IsCompatibleWith() in Direct3D11 backend.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
-    /// Implementation of IPipelineState::GetStatus() in Direct3D11 backend.
-    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
-    {
-        return PIPELINE_STATE_STATUS_READY;
-    }
-
     /// Implementation of IPipelineStateD3D11::GetD3D11BlendState() method.
     virtual ID3D11BlendState* DILIGENT_CALL_TYPE GetD3D11BlendState() override final { return m_pd3d11BlendState; }
 
@@ -144,6 +138,16 @@ private:
     void InitResourceLayouts(const PipelineStateCreateInfo&       CreateInfo,
                              const std::vector<ShaderD3D11Impl*>& Shaders,
                              CComPtr<ID3DBlob>&                   pVSByteCode);
+
+    void InitializePipeline(RenderDeviceD3D11Impl*                 pRenderDeviceD3D11,
+                            const GraphicsPipelineStateCreateInfo& CreateInfo);
+
+    void InitializePipeline(RenderDeviceD3D11Impl*                pRenderDeviceD3D11,
+                            const ComputePipelineStateCreateInfo& CreateInfo);
+
+    template <typename PSOCreateInfoType>
+    void Initialize(RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
+                    const PSOCreateInfoType& CreateInfo);
 
     void Destruct();
 

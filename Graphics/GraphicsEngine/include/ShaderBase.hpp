@@ -149,26 +149,34 @@ public:
             LOG_ERROR_AND_THROW("Tile shaders are not supported by this device.");
     }
 
+    ~ShaderBase()
+    {
+        VERIFY(!m_pCompileTask, "Compile task is still running. This may result in a crash if the task accesses resources owned by the shader object.");
+    }
+
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TDeviceObjectBase)
 
     virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override
     {
         VERIFY_EXPR(m_Status.load() != SHADER_STATUS_UNINITIALIZED);
-        if (m_Status.load() == SHADER_STATUS_COMPILING && WaitForCompletion)
+        if (WaitForCompletion)
         {
-            RefCntAutoPtr<IAsyncTask> pCompileTask;
+            if (m_Status.load() == SHADER_STATUS_COMPILING)
             {
-                Threading::SpinLockGuard Guard{m_CompileTaskLock};
-                pCompileTask = m_pCompileTask;
-            }
-            if (pCompileTask)
-            {
-                pCompileTask->WaitForCompletion();
-                VERIFY_EXPR(m_Status.load() > SHADER_STATUS_COMPILING);
+                RefCntAutoPtr<IAsyncTask> pCompileTask;
                 {
                     Threading::SpinLockGuard Guard{m_CompileTaskLock};
-                    m_pCompileTask.Release();
+                    pCompileTask = m_pCompileTask;
                 }
+                if (pCompileTask)
+                {
+                    pCompileTask->WaitForCompletion();
+                }
+            }
+            {
+                Threading::SpinLockGuard Guard{m_CompileTaskLock};
+                VERIFY_EXPR(m_Status.load() > SHADER_STATUS_COMPILING);
+                m_pCompileTask.Release();
             }
         }
 
