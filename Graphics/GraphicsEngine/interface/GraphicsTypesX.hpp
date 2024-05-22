@@ -1639,6 +1639,13 @@ struct ComputePipelineStateCreateInfoX : PipelineStateCreateInfoX<ComputePipelin
 
         return RemoveObject(pShader);
     }
+
+    ComputePipelineStateCreateInfoX& Clear()
+    {
+        ComputePipelineStateCreateInfoX CleanDesc;
+        std::swap(*this, CleanDesc);
+        return *this;
+    }
 };
 
 
@@ -1714,6 +1721,13 @@ struct TilePipelineStateCreateInfoX : PipelineStateCreateInfoX<TilePipelineState
     {
         VERIFY_EXPR(TilePipeline.NumRenderTargets < MAX_RENDER_TARGETS);
         TilePipeline.RTVFormats[TilePipeline.NumRenderTargets++] = RTVFormat;
+        return *this;
+    }
+
+    TilePipelineStateCreateInfoX& Clear()
+    {
+        TilePipelineStateCreateInfoX CleanDesc;
+        std::swap(*this, CleanDesc);
         return *this;
     }
 };
