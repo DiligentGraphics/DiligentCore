@@ -360,6 +360,7 @@ void PipelineStateD3D11Impl::Initialize(RenderDeviceD3D11Impl*   pRenderDeviceD3
     m_Status.store(PIPELINE_STATE_STATUS_COMPILING);
     if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && pRenderDeviceD3D11->GetShaderCompilationThreadPool() != nullptr)
     {
+        m_InitializeTaskRunning.store(true);
         m_pInitializeTask = EnqueueAsyncWork(pRenderDeviceD3D11->GetShaderCompilationThreadPool(),
                                              [this,
                                               CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo},

@@ -159,25 +159,23 @@ public:
     virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override
     {
         VERIFY_EXPR(m_Status.load() != SHADER_STATUS_UNINITIALIZED);
-        if (WaitForCompletion)
+        if (WaitForCompletion && m_CompileTaskRunning.load())
         {
-            if (m_Status.load() == SHADER_STATUS_COMPILING)
-            {
-                RefCntAutoPtr<IAsyncTask> pCompileTask;
-                {
-                    Threading::SpinLockGuard Guard{m_CompileTaskLock};
-                    pCompileTask = m_pCompileTask;
-                }
-                if (pCompileTask)
-                {
-                    pCompileTask->WaitForCompletion();
-                }
-            }
+            RefCntAutoPtr<IAsyncTask> pCompileTask;
             {
                 Threading::SpinLockGuard Guard{m_CompileTaskLock};
-                VERIFY_EXPR(m_Status.load() > SHADER_STATUS_COMPILING);
-                m_pCompileTask.Release();
+                pCompileTask = m_pCompileTask;
             }
+            if (pCompileTask)
+            {
+                pCompileTask->WaitForCompletion();
+                {
+                    Threading::SpinLockGuard Guard{m_CompileTaskLock};
+                    m_pCompileTask.Release();
+                    m_CompileTaskRunning.store(false);
+                }
+            }
+            VERIFY_EXPR(m_Status.load() > SHADER_STATUS_COMPILING);
         }
 
         return m_Status.load();
@@ -187,6 +185,7 @@ protected:
     const std::string m_CombinedSamplerSuffix;
 
     std::atomic<SHADER_STATUS> m_Status{SHADER_STATUS_UNINITIALIZED};
+    std::atomic<bool>          m_CompileTaskRunning{false};
     Threading::SpinLock        m_CompileTaskLock;
     RefCntAutoPtr<IAsyncTask>  m_pCompileTask;
 };

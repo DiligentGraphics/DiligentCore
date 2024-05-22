@@ -92,6 +92,7 @@ public:
         }
         else
         {
+            this->m_CompileTaskRunning.store(true);
             this->m_pCompileTask = EnqueueAsyncWork(
                 D3DShaderCI.pShaderCompilationThreadPool,
                 [this,

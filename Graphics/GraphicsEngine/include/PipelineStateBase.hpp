@@ -535,26 +535,23 @@ public:
     virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override
     {
         VERIFY_EXPR(m_Status.load() != PIPELINE_STATE_STATUS_UNINITIALIZED);
-        if (WaitForCompletion)
+        if (WaitForCompletion && m_InitializeTaskRunning.load())
         {
-            if (m_Status.load() == PIPELINE_STATE_STATUS_COMPILING)
-            {
-                RefCntAutoPtr<IAsyncTask> pInitializeTask;
-                {
-                    Threading::SpinLockGuard Guard{m_InitializeTaskLock};
-                    pInitializeTask = m_pInitializeTask;
-                }
-                if (pInitializeTask)
-                {
-                    pInitializeTask->WaitForCompletion();
-                }
-            }
-
+            RefCntAutoPtr<IAsyncTask> pInitializeTask;
             {
                 Threading::SpinLockGuard Guard{m_InitializeTaskLock};
-                VERIFY_EXPR(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING);
-                m_pInitializeTask.Release();
+                pInitializeTask = m_pInitializeTask;
             }
+            if (pInitializeTask)
+            {
+                pInitializeTask->WaitForCompletion();
+                {
+                    Threading::SpinLockGuard Guard{m_InitializeTaskLock};
+                    m_pInitializeTask.Release();
+                    m_InitializeTaskRunning.store(false);
+                }
+            }
+            VERIFY_EXPR(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING);
         }
 
         return m_Status.load();
@@ -1162,6 +1159,7 @@ protected:
     const bool m_UsingImplicitSignature;
 
     std::atomic<PIPELINE_STATE_STATUS> m_Status{PIPELINE_STATE_STATUS_UNINITIALIZED};
+    std::atomic<bool>                  m_InitializeTaskRunning{false};
     Threading::SpinLock                m_InitializeTaskLock;
     RefCntAutoPtr<IAsyncTask>          m_pInitializeTask;
 

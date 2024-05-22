@@ -273,6 +273,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     }
     else
     {
+        m_CompileTaskRunning.store(true);
         m_pCompileTask = EnqueueAsyncWork(VkShaderCI.pCompilationThreadPool,
                                           [this,
                                            ShaderCI         = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},
