@@ -1205,13 +1205,15 @@ struct PipelineStateCreateInfoX : CreateInfoType
     {}
 
     PipelineStateCreateInfoX(const CreateInfoType& CI) noexcept :
-        CreateInfoType{CI}
+        CreateInfoType{CI},
+        ResourceLayout{CI.PSODesc.ResourceLayout}
     {
         SetName(this->PSODesc.Name);
         for (size_t i = 0; i < CI.ResourceSignaturesCount; ++i)
             AddSignature(CI.ppResourceSignatures[i]);
         if (CI.pPSOCache != nullptr)
             SetPipelineStateCache(CI.pPSOCache);
+        this->PSODesc.ResourceLayout = ResourceLayout;
     }
 
     explicit PipelineStateCreateInfoX(const char* Name)
@@ -1240,7 +1242,8 @@ struct PipelineStateCreateInfoX : CreateInfoType
 
     DerivedType& SetResourceLayout(const PipelineResourceLayoutDesc& LayoutDesc) noexcept
     {
-        this->PSODesc.ResourceLayout = LayoutDesc;
+        ResourceLayout               = LayoutDesc;
+        this->PSODesc.ResourceLayout = ResourceLayout;
         return static_cast<DerivedType&>(*this);
     }
     template <typename... ArgsType>
@@ -1357,6 +1360,7 @@ protected:
     }
 
 protected:
+    PipelineResourceLayoutDescX               ResourceLayout;
     std::unordered_set<std::string>           StringPool;
     std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
     std::vector<IPipelineResourceSignature*>  Signatures;
