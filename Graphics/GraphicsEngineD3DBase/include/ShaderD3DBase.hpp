@@ -33,7 +33,7 @@
 
 #include <functional>
 
-#include "Shader.h"
+#include "ShaderBase.hpp"
 #include "ThreadPool.h"
 #include "RefCntAutoPtr.hpp"
 
@@ -45,14 +45,32 @@ namespace Diligent
 
 class IDXCompiler;
 
+CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo&        ShaderCI,
+                                     const ShaderVersion            ShaderModel,
+                                     IDXCompiler*                   DxCompiler,
+                                     IDataBlob**                    ppCompilerOutput,
+                                     std::function<void(ID3DBlob*)> InitResources) noexcept(false);
+
 /// Base implementation of a D3D shader
-class ShaderD3DBase
+template <typename EngineImplTraits>
+class ShaderD3DBase : public ShaderBase<EngineImplTraits>
 {
 public:
-    void GetBytecode(const void** ppBytecode,
-                     Uint64&      Size) const
+    using RenderDeviceImplType = typename EngineImplTraits::RenderDeviceImplType;
+
+    ShaderD3DBase(IReferenceCounters*        pRefCounters,
+                  RenderDeviceImplType*      pDevice,
+                  const ShaderDesc&          Desc,
+                  const RenderDeviceInfo&    DeviceInfo,
+                  const GraphicsAdapterInfo& AdapterInfo,
+                  bool                       bIsDeviceInternal = false) :
+        ShaderBase<EngineImplTraits>{pRefCounters, pDevice, Desc, DeviceInfo, AdapterInfo, bIsDeviceInternal}
+    {}
+
+    virtual void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode,
+                                                Uint64&      Size) const override final
     {
-        DEV_CHECK_ERR(!m_pCompileTask, "Shader bytecode is not available until compilation is complete. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(this->m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         if (m_pShaderByteCode)
         {
             *ppBytecode = m_pShaderByteCode->GetBufferPointer();
@@ -65,46 +83,51 @@ public:
         }
     }
 
-    SHADER_STATUS GetStatus(bool WaitForCompletion)
-    {
-        if (m_pCompileTask)
-        {
-            if (WaitForCompletion)
-                m_pCompileTask->WaitForCompletion();
-
-            if (m_pCompileTask->GetStatus() <= ASYNC_TASK_STATUS_RUNNING)
-                return SHADER_STATUS_COMPILING;
-            else
-                m_pCompileTask.Release();
-        }
-
-        return m_pShaderByteCode ? SHADER_STATUS_READY : SHADER_STATUS_FAILED;
-    }
-
     ID3DBlob* GetD3DBytecode() const
     {
-        DEV_CHECK_ERR(!m_pCompileTask, "Shader bytecode is not available until compilation is complete. Use GetStatus() to check the shader status.");
         return m_pShaderByteCode;
     }
 
 protected:
-    void Initialize(const ShaderCreateInfo& ShaderCI,
-                    const ShaderVersion     ShaderModel,
-                    IDXCompiler*            DxCompiler,
-                    IDataBlob**             ppCompilerOutput,
-                    IThreadPool*            pAsyncCompilationThreadPool,
-                    std::function<void()>   InitResources);
-
-private:
-    void InitializeInternal(const ShaderCreateInfo& ShaderCI,
-                            const ShaderVersion     ShaderModel,
-                            IDXCompiler*            DxCompiler,
-                            IDataBlob**             ppCompilerOutput,
-                            std::function<void()>   InitResources) noexcept(false);
+    RefCntAutoPtr<IAsyncTask> Initialize(const ShaderCreateInfo&        ShaderCI,
+                                         const ShaderVersion            ShaderModel,
+                                         IDXCompiler*                   DxCompiler,
+                                         IDataBlob**                    ppCompilerOutput,
+                                         IThreadPool*                   pAsyncCompilationThreadPool,
+                                         std::function<void(ID3DBlob*)> InitResources)
+    {
+        this->m_Status.store(SHADER_STATUS_COMPILING);
+        if (pAsyncCompilationThreadPool == nullptr || (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) == 0 || ShaderCI.ByteCode != nullptr)
+        {
+            m_pShaderByteCode = CompileD3DBytecode(ShaderCI, ShaderModel, DxCompiler, ppCompilerOutput, InitResources);
+            this->m_Status.store(SHADER_STATUS_READY);
+            return {};
+        }
+        else
+        {
+            return EnqueueAsyncWork(pAsyncCompilationThreadPool,
+                                    [this,
+                                     ShaderCI = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},
+                                     ShaderModel,
+                                     DxCompiler,
+                                     ppCompilerOutput,
+                                     InitResources](Uint32 ThreadId) //
+                                    {
+                                        try
+                                        {
+                                            m_pShaderByteCode = CompileD3DBytecode(ShaderCI, ShaderModel, DxCompiler, ppCompilerOutput, InitResources);
+                                            this->m_Status.store(SHADER_STATUS_READY);
+                                        }
+                                        catch (...)
+                                        {
+                                            this->m_Status.store(SHADER_STATUS_FAILED);
+                                        }
+                                    });
+        }
+    }
 
 protected:
-    CComPtr<ID3DBlob>         m_pShaderByteCode;
-    RefCntAutoPtr<IAsyncTask> m_pCompileTask;
+    CComPtr<ID3DBlob> m_pShaderByteCode;
 };
 
 } // namespace Diligent

@@ -71,7 +71,7 @@ public:
     /// Implementation of IShader::GetResourceCount() in Vulkan backend.
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final
     {
-        DEV_CHECK_ERR(m_pCompileTask == nullptr, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
         return m_pShaderResources ? m_pShaderResources->GetTotalResources() : 0;
     }
 
@@ -84,31 +84,29 @@ public:
     /// Implementation of IShaderVk::GetSPIRV().
     virtual const std::vector<uint32_t>& DILIGENT_CALL_TYPE GetSPIRV() const override final
     {
-        DEV_CHECK_ERR(m_pCompileTask == nullptr, "SPIRV is not available until the shader is compiled. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "SPIRV is not available until the shader is compiled. Use GetStatus() to check the shader status.");
         return m_SPIRV;
     }
 
     const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources() const
     {
-        DEV_CHECK_ERR(m_pCompileTask == nullptr, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
         return m_pShaderResources;
     }
 
     const char* GetEntryPoint() const
     {
-        DEV_CHECK_ERR(m_pCompileTask == nullptr, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
         return m_EntryPoint.c_str();
     }
 
     virtual void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode,
                                                 Uint64&      Size) const override final
     {
-        DEV_CHECK_ERR(m_pCompileTask == nullptr, "Shader byte code is not available until the shader is compiled. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader byte code is not available until the shader is compiled. Use GetStatus() to check the shader status.");
         *ppBytecode = !m_SPIRV.empty() ? m_SPIRV.data() : nullptr;
         Size        = m_SPIRV.size() * sizeof(m_SPIRV[0]);
     }
-
-    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final;
 
 private:
     void Initialize(const ShaderCreateInfo& ShaderCI,
@@ -121,8 +119,6 @@ private:
 
     std::string           m_EntryPoint;
     std::vector<uint32_t> m_SPIRV;
-
-    RefCntAutoPtr<IAsyncTask> m_pCompileTask;
 };
 
 } // namespace Diligent

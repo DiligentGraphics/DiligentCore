@@ -46,10 +46,10 @@ namespace Diligent
 {
 
 /// Shader implementation in Direct3D11 backend.
-class ShaderD3D11Impl final : public ShaderBase<EngineD3D11ImplTraits>, public ShaderD3DBase
+class ShaderD3D11Impl final : public ShaderD3DBase<EngineD3D11ImplTraits>
 {
 public:
-    using TShaderBase = ShaderBase<EngineD3D11ImplTraits>;
+    using TShaderBase = ShaderD3DBase<EngineD3D11ImplTraits>;
 
     static constexpr INTERFACE_ID IID_InternalImpl =
         {0xc6e1e44d, 0xb9d7, 0x4793, {0xb3, 0x8f, 0x4c, 0x2e, 0xb3, 0x9f, 0x20, 0xb0}};
@@ -74,14 +74,14 @@ public:
     /// Implementation of IShader::GetResourceCount() in Direct3D11 backend.
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final
     {
-        DEV_CHECK_ERR(!m_pCompileTask, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         return m_pShaderResources ? m_pShaderResources->GetTotalResources() : 0;
     }
 
     /// Implementation of IShader::GetResource() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
     {
-        DEV_CHECK_ERR(!m_pCompileTask, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         if (m_pShaderResources)
             ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
@@ -89,7 +89,7 @@ public:
     /// Implementation of IShader::GetConstantBufferDesc() in Direct3D11 backend.
     virtual const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override final
     {
-        DEV_CHECK_ERR(!m_pCompileTask, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         return m_pShaderResources ?
             // Constant buffers always go first in the list of resources
             m_pShaderResources->GetConstantBufferDesc(Index) :
@@ -99,7 +99,7 @@ public:
     /// Implementation of IShaderD3D::GetHLSLResource() method.
     virtual void DILIGENT_CALL_TYPE GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
     {
-        DEV_CHECK_ERR(!m_pCompileTask, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         if (m_pShaderResources)
             ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
@@ -107,24 +107,13 @@ public:
     /// Implementation of IShaderD3D11::GetD3D11Shader() method.
     virtual ID3D11DeviceChild* DILIGENT_CALL_TYPE GetD3D11Shader() override final
     {
-        DEV_CHECK_ERR(!m_pCompileTask, "Shader bytecode is not available until compilation is complete. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader bytecode is not available until compilation is complete. Use GetStatus() to check the shader status.");
         return GetD3D11Shader(m_pShaderByteCode);
-    }
-
-    virtual void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode,
-                                                Uint64&      Size) const override final
-    {
-        ShaderD3DBase::GetBytecode(ppBytecode, Size);
-    }
-
-    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
-    {
-        return ShaderD3DBase::GetStatus(WaitForCompletion);
     }
 
     const std::shared_ptr<const ShaderResourcesD3D11>& GetShaderResources() const
     {
-        DEV_CHECK_ERR(!m_pCompileTask, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         return m_pShaderResources;
     }
 

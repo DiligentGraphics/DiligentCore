@@ -189,8 +189,11 @@ typedef struct ShaderDesc ShaderDesc;
 /// Shader status
 DILIGENT_TYPED_ENUM(SHADER_STATUS, Uint32)
 {
+    /// Initial shader status.
+    SHADER_STATUS_UNINITIALIZED = 0,
+
     /// The shader is being compiled.
-	SHADER_STATUS_COMPILING = 0,
+	SHADER_STATUS_COMPILING,
 
 	/// The shader has been successfully compiled
     /// and is ready to be used.

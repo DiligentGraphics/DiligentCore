@@ -53,6 +53,9 @@
 namespace Diligent
 {
 
+namespace
+{
+
 class D3DIncludeImpl : public ID3DInclude
 {
 public:
@@ -94,12 +97,12 @@ private:
     std::unordered_map<LPCVOID, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
 };
 
-static HRESULT CompileShader(const char*             Source,
-                             size_t                  SourceLength,
-                             const ShaderCreateInfo& ShaderCI,
-                             LPCSTR                  profile,
-                             ID3DBlob**              ppBlobOut,
-                             ID3DBlob**              ppCompilerOutput)
+HRESULT CompileShader(const char*             Source,
+                      size_t                  SourceLength,
+                      const ShaderCreateInfo& ShaderCI,
+                      LPCSTR                  profile,
+                      ID3DBlob**              ppBlobOut,
+                      ID3DBlob**              ppCompilerOutput)
 {
     DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DILIGENT_DEBUG)
@@ -124,12 +127,16 @@ static HRESULT CompileShader(const char*             Source,
     return D3DCompile(Source, SourceLength, nullptr, Macros, &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
 }
 
-void ShaderD3DBase::InitializeInternal(const ShaderCreateInfo& ShaderCI,
-                                       const ShaderVersion     ShaderModel,
-                                       IDXCompiler*            DxCompiler,
-                                       IDataBlob**             ppCompilerOutput,
-                                       std::function<void()>   InitResources) noexcept(false)
+} // namespace
+
+CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo&        ShaderCI,
+                                     const ShaderVersion            ShaderModel,
+                                     IDXCompiler*                   DxCompiler,
+                                     IDataBlob**                    ppCompilerOutput,
+                                     std::function<void(ID3DBlob*)> InitResources) noexcept(false)
 {
+    CComPtr<ID3DBlob> pShaderByteCode;
+
     if (ShaderCI.Source || ShaderCI.FilePath)
     {
         DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
@@ -160,7 +167,7 @@ void ShaderD3DBase::InitializeInternal(const ShaderCreateInfo& ShaderCI,
         if (UseDXC)
         {
             VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
-            DxCompiler->Compile(ShaderCI, ShaderModel, nullptr, reinterpret_cast<IDxcBlob**>(&m_pShaderByteCode), nullptr, ppCompilerOutput);
+            DxCompiler->Compile(ShaderCI, ShaderModel, nullptr, reinterpret_cast<IDxcBlob**>(&pShaderByteCode), nullptr, ppCompilerOutput);
         }
         else
         {
@@ -170,57 +177,27 @@ void ShaderD3DBase::InitializeInternal(const ShaderCreateInfo& ShaderCI,
 
             CComPtr<ID3DBlob> CompilerOutput;
 
-            auto hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &CompilerOutput);
+            auto hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &pShaderByteCode, &CompilerOutput);
             HandleHLSLCompilerResult(SUCCEEDED(hr), CompilerOutput.p, ShaderSource, ShaderCI.Desc.Name, ppCompilerOutput);
         }
     }
     else if (ShaderCI.ByteCode)
     {
         DEV_CHECK_ERR(ShaderCI.ByteCodeSize != 0, "ByteCode size must be greater than 0");
-        CHECK_D3D_RESULT_THROW(D3DCreateBlob(ShaderCI.ByteCodeSize, &m_pShaderByteCode), "Failed to create D3D blob");
-        memcpy(m_pShaderByteCode->GetBufferPointer(), ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
+        CHECK_D3D_RESULT_THROW(D3DCreateBlob(ShaderCI.ByteCodeSize, &pShaderByteCode), "Failed to create D3D blob");
+        memcpy(pShaderByteCode->GetBufferPointer(), ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
     }
     else
     {
         DEV_ERROR("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
     }
 
-    if (m_pShaderByteCode && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
+    if (pShaderByteCode && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
     {
-        InitResources();
+        InitResources(pShaderByteCode);
     }
-}
 
-void ShaderD3DBase::Initialize(const ShaderCreateInfo& ShaderCI,
-                               const ShaderVersion     ShaderModel,
-                               IDXCompiler*            DxCompiler,
-                               IDataBlob**             ppCompilerOutput,
-                               IThreadPool*            pAsyncCompilationThreadPool,
-                               std::function<void()>   InitResources)
-{
-    if (pAsyncCompilationThreadPool == nullptr || (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) == 0 || ShaderCI.ByteCode != nullptr)
-    {
-        InitializeInternal(ShaderCI, ShaderModel, DxCompiler, ppCompilerOutput, InitResources);
-    }
-    else
-    {
-        m_pCompileTask = EnqueueAsyncWork(pAsyncCompilationThreadPool,
-                                          [this,
-                                           ShaderCI = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},
-                                           ShaderModel,
-                                           DxCompiler,
-                                           ppCompilerOutput,
-                                           InitResources](Uint32 ThreadId) //
-                                          {
-                                              try
-                                              {
-                                                  InitializeInternal(ShaderCI, ShaderModel, DxCompiler, ppCompilerOutput, InitResources);
-                                              }
-                                              catch (...)
-                                              {
-                                              }
-                                          });
-    }
+    return pShaderByteCode;
 }
 
 } // namespace Diligent

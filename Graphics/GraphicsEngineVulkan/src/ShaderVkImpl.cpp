@@ -243,6 +243,8 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
         {
             m_EntryPoint = ShaderCI.EntryPoint;
         }
+
+        m_Status.store(SHADER_STATUS_READY);
     }
 }
 
@@ -264,6 +266,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     }
 // clang-format on
 {
+    m_Status.store(SHADER_STATUS_COMPILING);
     if (VkShaderCI.pCompilationThreadPool == nullptr || (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) == 0 || ShaderCI.ByteCode != nullptr)
     {
         Initialize(ShaderCI, VkShaderCI);
@@ -287,6 +290,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                                               }
                                               catch (...)
                                               {
+                                                  m_Status.store(SHADER_STATUS_FAILED);
                                               }
                                           });
     }
@@ -329,7 +333,7 @@ ShaderVkImpl::~ShaderVkImpl()
 
 void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const
 {
-    DEV_CHECK_ERR(m_pCompileTask == nullptr, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+    DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
 
     auto ResCount = GetResourceCount();
     DEV_CHECK_ERR(Index < ResCount, "Resource index (", Index, ") is out of range");
@@ -342,7 +346,7 @@ void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDes
 
 const ShaderCodeBufferDesc* ShaderVkImpl::GetConstantBufferDesc(Uint32 Index) const
 {
-    DEV_CHECK_ERR(m_pCompileTask == nullptr, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+    DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
 
     auto ResCount = GetResourceCount();
     if (Index >= ResCount)
@@ -353,22 +357,6 @@ const ShaderCodeBufferDesc* ShaderVkImpl::GetConstantBufferDesc(Uint32 Index) co
 
     // Uniform buffers always go first in the list of resources
     return m_pShaderResources->GetUniformBufferDesc(Index);
-}
-
-SHADER_STATUS ShaderVkImpl::GetStatus(bool WaitForCompletion)
-{
-    if (m_pCompileTask)
-    {
-        if (WaitForCompletion)
-            m_pCompileTask->WaitForCompletion();
-
-        if (m_pCompileTask->GetStatus() <= ASYNC_TASK_STATUS_RUNNING)
-            return SHADER_STATUS_COMPILING;
-        else
-            m_pCompileTask.Release();
-    }
-
-    return !m_SPIRV.empty() ? SHADER_STATUS_READY : SHADER_STATUS_FAILED;
 }
 
 } // namespace Diligent
