@@ -39,22 +39,22 @@ namespace Diligent
 {
 
 /// Implementation of a shader object in Direct3D12 backend.
-class ShaderD3D12Impl final : public ShaderD3DBase<EngineD3D12ImplTraits>
+class ShaderD3D12Impl final : public ShaderD3DBase<EngineD3D12ImplTraits, ShaderResourcesD3D12>
 {
 public:
-    using TShaderBase = ShaderD3DBase<EngineD3D12ImplTraits>;
+    using TShaderBase = ShaderD3DBase<EngineD3D12ImplTraits, ShaderResourcesD3D12>;
 
     static constexpr INTERFACE_ID IID_InternalImpl =
         {0x98a800f1, 0x673, 0x4a39, {0xaf, 0x28, 0xa4, 0xa5, 0xd6, 0x3e, 0x84, 0xa2}};
 
-    struct CreateInfo
+    struct CreateInfo : TShaderBase::CreateInfo
     {
-        IDXCompiler* const         pDXCompiler;
-        const RenderDeviceInfo&    DeviceInfo;
-        const GraphicsAdapterInfo& AdapterInfo;
-        const ShaderVersion        MaxShaderVersion;
-        IDataBlob** const          ppCompilerOutput;
-        IThreadPool* const         pShaderCompilationThreadPool;
+        const ShaderVersion MaxShaderVersion;
+
+        CreateInfo(const TShaderBase::CreateInfo& _BaseCreateInfo, ShaderVersion _MaxShaderVersion) :
+            TShaderBase::CreateInfo{_BaseCreateInfo},
+            MaxShaderVersion{_MaxShaderVersion}
+        {}
     };
     ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
                     RenderDeviceD3D12Impl*  pRenderDeviceD3D12,
@@ -65,52 +65,9 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    /// Implementation of IShader::GetResourceCount() in Direct3D12 backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final
-    {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
-        return m_pShaderResources ? m_pShaderResources->GetTotalResources() : 0;
-    }
-
-    /// Implementation of IShader::GetResource() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
-    {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
-        if (m_pShaderResources)
-            ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
-    }
-
-    /// Implementation of IShader::GetConstantBufferDesc() in Direct3D12 backend.
-    virtual const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override final
-    {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
-        return m_pShaderResources ?
-            // Constant buffers always go first in the list of resources
-            m_pShaderResources->GetConstantBufferDesc(Index) :
-            nullptr;
-    }
-
-    /// Implementation of IShaderD3D::GetHLSLResource() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
-    {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
-        if (m_pShaderResources)
-            ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
-    }
-
     const Char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
 
-    const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources() const
-    {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
-        return m_pShaderResources;
-    }
-
 private:
-    // ShaderResources class instance must be referenced through the shared pointer, because
-    // it is referenced by PipelineStateD3D12Impl class instances
-    std::shared_ptr<const ShaderResourcesD3D12> m_pShaderResources;
-
     String m_EntryPoint;
 };
 

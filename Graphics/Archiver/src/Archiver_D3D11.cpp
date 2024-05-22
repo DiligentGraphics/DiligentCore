@@ -202,13 +202,16 @@ void SerializedShaderImpl::CreateShaderD3D11(IReferenceCounters*     pRefCounter
                                              IDataBlob**             ppCompilerOutput) noexcept(false)
 {
     const ShaderD3D11Impl::CreateInfo D3D11ShaderCI{
-        m_pDevice->GetDeviceInfo(),
-        m_pDevice->GetAdapterInfo(),
+        {
+            m_pDevice->GetDeviceInfo(),
+            m_pDevice->GetAdapterInfo(),
+            nullptr, // pDXCompiler
+            // Do not overwrite compiler output from other APIs.
+            // TODO: collect all outputs.
+            ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
+            nullptr, // pCompilationThreadPool
+        },
         static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11Properties().FeatureLevel),
-        // Do not overwrite compiler output from other APIs.
-        // TODO: collect all outputs.
-        ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
-        nullptr, // pCompilationThreadPool
     };
     CreateShader<CompiledShaderD3D11>(DeviceType::Direct3D11, pRefCounters, ShaderCI, D3D11ShaderCI, m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_D3D11));
 }

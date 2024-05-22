@@ -94,30 +94,24 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
     {
         pRefCounters,
         pRenderDeviceD3D11,
-        ShaderCI.Desc,
-        D3D11ShaderCI.DeviceInfo,
-        D3D11ShaderCI.AdapterInfo,
+        ShaderCI,
+        D3D11ShaderCI,
         IsDeviceInternal,
+        GetD3D11ShaderModel(D3D11ShaderCI.FeatureLevel, ShaderCI.HLSLVersion),
+        [LoadConstantBufferReflection = ShaderCI.LoadConstantBufferReflection](const ShaderDesc& Desc, ID3DBlob* pShaderByteCode) {
+            auto& Allocator  = GetRawAllocator();
+            auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
+            auto* pResources = new (pRawMem) ShaderResourcesD3D11 //
+                {
+                    pShaderByteCode,
+                    Desc,
+                    Desc.UseCombinedTextureSamplers ? Desc.CombinedSamplerSuffix : nullptr,
+                    LoadConstantBufferReflection,
+                };
+            return std::shared_ptr<const ShaderResourcesD3D11>{pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator)};
+        },
     }
 {
-    m_pCompileTask = Initialize(ShaderCI,
-                                GetD3D11ShaderModel(D3D11ShaderCI.FeatureLevel, ShaderCI.HLSLVersion),
-                                nullptr, // DxCompiler
-                                D3D11ShaderCI.ppCompilerOutput,
-                                D3D11ShaderCI.pShaderCompilationThreadPool,
-                                [this,
-                                 LoadConstantBufferReflection = ShaderCI.LoadConstantBufferReflection](ID3DBlob* pShaderByteCode) {
-                                    auto& Allocator  = GetRawAllocator();
-                                    auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
-                                    auto* pResources = new (pRawMem) ShaderResourcesD3D11 //
-                                        {
-                                            pShaderByteCode,
-                                            m_Desc,
-                                            m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
-                                            LoadConstantBufferReflection,
-                                        };
-                                    m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D11>(Allocator));
-                                });
 }
 
 ShaderD3D11Impl::~ShaderD3D11Impl()

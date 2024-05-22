@@ -180,14 +180,16 @@ void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters*     pRefCounter
     auto*       pRenderDeviceD3D12 = m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_D3D12);
 
     const ShaderD3D12Impl::CreateInfo D3D12ShaderCI{
-        D3D12Props.pDxCompiler,
-        DeviceInfo,
-        AdapterInfo,
+        {
+            DeviceInfo,
+            AdapterInfo,
+            D3D12Props.pDxCompiler,
+            // Do not overwrite compiler output from other APIs.
+            // TODO: collect all outputs.
+            ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
+            nullptr, // pCompilationThreadPool
+        },
         D3D12Props.ShaderVersion,
-        // Do not overwrite compiler output from other APIs.
-        // TODO: collect all outputs.
-        ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
-        nullptr, // pCompilationThreadPool
     };
     CreateShader<CompiledShaderD3D12>(DeviceType::Direct3D12, pRefCounters, ShaderCI, D3D12ShaderCI, pRenderDeviceD3D12);
 }

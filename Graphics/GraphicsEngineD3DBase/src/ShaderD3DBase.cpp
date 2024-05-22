@@ -129,11 +129,10 @@ HRESULT CompileShader(const char*             Source,
 
 } // namespace
 
-CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo&        ShaderCI,
-                                     const ShaderVersion            ShaderModel,
-                                     IDXCompiler*                   DxCompiler,
-                                     IDataBlob**                    ppCompilerOutput,
-                                     std::function<void(ID3DBlob*)> InitResources) noexcept(false)
+CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
+                                     const ShaderVersion     ShaderModel,
+                                     IDXCompiler*            DxCompiler,
+                                     IDataBlob**             ppCompilerOutput) noexcept(false)
 {
     CComPtr<ID3DBlob> pShaderByteCode;
 
@@ -161,7 +160,8 @@ CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo&        ShaderCI,
                 UseDXC = false;
                 break;
 
-            default: UNEXPECTED("Unsupported shader compiler");
+            default:
+                LOG_ERROR_AND_THROW("Unsupported shader compiler");
         }
 
         if (UseDXC)
@@ -189,12 +189,7 @@ CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo&        ShaderCI,
     }
     else
     {
-        DEV_ERROR("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
-    }
-
-    if (pShaderByteCode && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
-    {
-        InitResources(pShaderByteCode);
+        LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
     }
 
     return pShaderByteCode;

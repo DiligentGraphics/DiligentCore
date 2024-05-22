@@ -46,21 +46,22 @@ namespace Diligent
 {
 
 /// Shader implementation in Direct3D11 backend.
-class ShaderD3D11Impl final : public ShaderD3DBase<EngineD3D11ImplTraits>
+class ShaderD3D11Impl final : public ShaderD3DBase<EngineD3D11ImplTraits, ShaderResourcesD3D11>
 {
 public:
-    using TShaderBase = ShaderD3DBase<EngineD3D11ImplTraits>;
+    using TShaderBase = ShaderD3DBase<EngineD3D11ImplTraits, ShaderResourcesD3D11>;
 
     static constexpr INTERFACE_ID IID_InternalImpl =
         {0xc6e1e44d, 0xb9d7, 0x4793, {0xb3, 0x8f, 0x4c, 0x2e, 0xb3, 0x9f, 0x20, 0xb0}};
 
-    struct CreateInfo
+    struct CreateInfo : TShaderBase::CreateInfo
     {
-        const RenderDeviceInfo&    DeviceInfo;
-        const GraphicsAdapterInfo& AdapterInfo;
-        const D3D_FEATURE_LEVEL    FeatureLevel;
-        IDataBlob** const          ppCompilerOutput;
-        IThreadPool* const         pShaderCompilationThreadPool;
+        const D3D_FEATURE_LEVEL FeatureLevel;
+
+        CreateInfo(const TShaderBase::CreateInfo& _BaseCreateInfo, D3D_FEATURE_LEVEL _FeatureLevel) :
+            TShaderBase::CreateInfo{_BaseCreateInfo},
+            FeatureLevel{_FeatureLevel}
+        {}
     };
     ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                     class RenderDeviceD3D11Impl* pRenderDeviceD3D11,
@@ -71,50 +72,12 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    /// Implementation of IShader::GetResourceCount() in Direct3D11 backend.
-    virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final
-    {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
-        return m_pShaderResources ? m_pShaderResources->GetTotalResources() : 0;
-    }
-
-    /// Implementation of IShader::GetResource() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
-    {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
-        if (m_pShaderResources)
-            ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
-    }
-
-    /// Implementation of IShader::GetConstantBufferDesc() in Direct3D11 backend.
-    virtual const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override final
-    {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
-        return m_pShaderResources ?
-            // Constant buffers always go first in the list of resources
-            m_pShaderResources->GetConstantBufferDesc(Index) :
-            nullptr;
-    }
-
-    /// Implementation of IShaderD3D::GetHLSLResource() method.
-    virtual void DILIGENT_CALL_TYPE GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
-    {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
-        if (m_pShaderResources)
-            ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
-    }
 
     /// Implementation of IShaderD3D11::GetD3D11Shader() method.
     virtual ID3D11DeviceChild* DILIGENT_CALL_TYPE GetD3D11Shader() override final
     {
         DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader bytecode is not available until compilation is complete. Use GetStatus() to check the shader status.");
         return GetD3D11Shader(m_pShaderByteCode);
-    }
-
-    const std::shared_ptr<const ShaderResourcesD3D11>& GetShaderResources() const
-    {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
-        return m_pShaderResources;
     }
 
     ID3D11DeviceChild* GetD3D11Shader(ID3DBlob* pBlob) noexcept(false);
@@ -168,10 +131,6 @@ private:
 
     std::mutex                                                                       m_d3dShaderCacheMtx;
     std::unordered_map<BlobHashKey, CComPtr<ID3D11DeviceChild>, BlobHashKey::Hasher> m_d3dShaderCache;
-
-    // ShaderResources class instance must be referenced through the shared pointer, because
-    // it is referenced by ShaderResourceLayoutD3D11 class instances
-    std::shared_ptr<const ShaderResourcesD3D11> m_pShaderResources;
 };
 
 } // namespace Diligent
