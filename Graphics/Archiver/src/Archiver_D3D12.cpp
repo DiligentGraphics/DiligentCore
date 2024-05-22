@@ -108,8 +108,9 @@ template <typename CreateInfoType>
 void SerializedPipelineStateImpl::PatchShadersD3D12(const CreateInfoType& CreateInfo) noexcept(false)
 {
     std::vector<ShaderStageInfoD3D12> ShaderStages;
-    SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
-    PipelineStateD3D12Impl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+    SHADER_TYPE                       ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
+    constexpr bool                    WaitUntilShadersReady = true;
+    PipelineStateD3D12Impl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
     PipelineStateD3D12Impl::TShaderStages ShaderStagesD3D12{ShaderStages.size()};
     for (size_t i = 0; i < ShaderStagesD3D12.size(); ++i)
@@ -227,8 +228,9 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineRes
 void SerializedPipelineStateImpl::ExtractShadersD3D12(const RayTracingPipelineStateCreateInfo& CreateInfo, RayTracingShaderMapType& ShaderMap)
 {
     std::vector<ShaderStageInfoD3D12> ShaderStages;
-    SHADER_TYPE                       ActiveShaderStages = SHADER_TYPE_UNKNOWN;
-    PipelineStateD3D12Impl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+    SHADER_TYPE                       ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
+    constexpr bool                    WaitUntilShadersReady = true;
+    PipelineStateD3D12Impl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
     GetRayTracingShaderMap(ShaderStages, ShaderMap);
 }

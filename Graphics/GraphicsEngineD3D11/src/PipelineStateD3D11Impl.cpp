@@ -269,16 +269,7 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
                                                  CComPtr<ID3DBlob>&       pVSByteCode)
 {
     std::vector<ShaderD3D11Impl*> Shaders;
-    ExtractShaders<ShaderD3D11Impl>(CreateInfo, Shaders);
-
-    for (ShaderD3D11Impl* pShader : Shaders)
-    {
-        const SHADER_STATUS Status = pShader->GetStatus(/*WaitForCompletion = */ true);
-        if (Status != SHADER_STATUS_READY)
-        {
-            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' is in failed state.");
-        }
-    }
+    ExtractShaders<ShaderD3D11Impl>(CreateInfo, Shaders, /*WaitUntilShadersReady = */ true);
 
     m_NumShaders = static_cast<Uint8>(Shaders.size());
     for (Uint32 s = 0; s < m_NumShaders; ++s)
@@ -354,8 +345,8 @@ void PipelineStateD3D11Impl::InitializePipeline(RenderDeviceD3D11Impl*          
 }
 
 template <typename PSOCreateInfoType>
-void PipelineStateD3D11Impl::Initialize(RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
-                                        const PSOCreateInfoType& CreateInfo)
+void PipelineStateD3D11Impl::Construct(RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
+                                       const PSOCreateInfoType& CreateInfo)
 {
     m_Status.store(PIPELINE_STATE_STATUS_COMPILING);
     if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && pRenderDeviceD3D11->GetShaderCompilationThreadPool() != nullptr)
@@ -364,7 +355,7 @@ void PipelineStateD3D11Impl::Initialize(RenderDeviceD3D11Impl*   pRenderDeviceD3
         m_pInitializeTask = EnqueueAsyncWork(pRenderDeviceD3D11->GetShaderCompilationThreadPool(),
                                              [this,
                                               CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo},
-                                              pRenderDeviceD3D11](Uint32 ThreadId) //
+                                              pRenderDeviceD3D11](Uint32 ThreadId) mutable //
                                              {
                                                  try
                                                  {
@@ -375,6 +366,7 @@ void PipelineStateD3D11Impl::Initialize(RenderDeviceD3D11Impl*   pRenderDeviceD3
                                                  {
                                                      m_Status.store(PIPELINE_STATE_STATUS_FAILED);
                                                  }
+                                                 CreateInfo.Clear();
                                              });
     }
     else
@@ -397,7 +389,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pRenderDeviceD3D11, CreateInfo}
 {
-    Initialize(pRenderDeviceD3D11, CreateInfo);
+    Construct(pRenderDeviceD3D11, CreateInfo);
 }
 
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*                   pRefCounters,
@@ -405,7 +397,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
                                                const ComputePipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pRenderDeviceD3D11, CreateInfo}
 {
-    Initialize(pRenderDeviceD3D11, CreateInfo);
+    Construct(pRenderDeviceD3D11, CreateInfo);
 }
 
 PipelineStateD3D11Impl::~PipelineStateD3D11Impl()

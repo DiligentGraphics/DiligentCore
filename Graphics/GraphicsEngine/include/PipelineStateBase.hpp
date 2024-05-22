@@ -660,6 +660,7 @@ public:
     template <typename ShaderImplType, typename TShaderStages>
     static void ExtractShaders(const GraphicsPipelineStateCreateInfo& CreateInfo,
                                TShaderStages&                         ShaderStages,
+                               bool                                   WaitUntilShadersReady,
                                SHADER_TYPE&                           ActiveShaderStages)
     {
         VERIFY_EXPR(CreateInfo.PSODesc.IsAnyGraphicsPipeline());
@@ -672,6 +673,7 @@ public:
             {
                 RefCntAutoPtr<ShaderImplType> pShaderImpl{pShader, ShaderImplType::IID_InternalImpl};
                 VERIFY(pShaderImpl, "Unexpected shader object implementation");
+                WaitUntilShaderReadyIfRequested(pShaderImpl, WaitUntilShadersReady);
                 ShaderStages.emplace_back(pShaderImpl);
                 const auto ShaderType = pShader->GetDesc().ShaderType;
                 VERIFY((ActiveShaderStages & ShaderType) == 0,
@@ -716,6 +718,7 @@ public:
     template <typename ShaderImplType, typename TShaderStages>
     static void ExtractShaders(const ComputePipelineStateCreateInfo& CreateInfo,
                                TShaderStages&                        ShaderStages,
+                               bool                                  WaitUntilShadersReady,
                                SHADER_TYPE&                          ActiveShaderStages)
     {
         VERIFY_EXPR(CreateInfo.PSODesc.IsComputePipeline());
@@ -728,6 +731,7 @@ public:
 
         RefCntAutoPtr<ShaderImplType> pShaderImpl{CreateInfo.pCS, ShaderImplType::IID_InternalImpl};
         VERIFY(pShaderImpl, "Unexpected shader object implementation");
+        WaitUntilShaderReadyIfRequested(pShaderImpl, WaitUntilShadersReady);
         ShaderStages.emplace_back(pShaderImpl);
         ActiveShaderStages = SHADER_TYPE_COMPUTE;
 
@@ -737,13 +741,17 @@ public:
     template <typename ShaderImplType, typename TShaderStages>
     static void ExtractShaders(const RayTracingPipelineStateCreateInfo& CreateInfo,
                                TShaderStages&                           ShaderStages,
+                               bool                                     WaitUntilShadersReady,
                                SHADER_TYPE&                             ActiveShaderStages)
     {
         VERIFY_EXPR(CreateInfo.PSODesc.IsRayTracingPipeline());
 
         std::unordered_set<IShader*> UniqueShaders;
 
-        auto AddShader = [&ShaderStages, &UniqueShaders, &ActiveShaderStages](IShader* pShader) {
+        auto AddShader = [&ShaderStages,
+                          &UniqueShaders,
+                          &ActiveShaderStages,
+                          WaitUntilShadersReady](IShader* pShader) {
             if (pShader != nullptr && UniqueShaders.insert(pShader).second)
             {
                 const auto ShaderType = pShader->GetDesc().ShaderType;
@@ -752,6 +760,7 @@ public:
                 ActiveShaderStages |= ShaderType;
                 RefCntAutoPtr<ShaderImplType> pShaderImpl{pShader, ShaderImplType::IID_InternalImpl};
                 VERIFY(pShaderImpl, "Unexpected shader object implementation");
+                WaitUntilShaderReadyIfRequested(pShaderImpl, WaitUntilShadersReady);
                 Stage.Append(pShaderImpl);
             }
         };
@@ -797,6 +806,7 @@ public:
     template <typename ShaderImplType, typename TShaderStages>
     static void ExtractShaders(const TilePipelineStateCreateInfo& CreateInfo,
                                TShaderStages&                     ShaderStages,
+                               bool                               WaitUntilShadersReady,
                                SHADER_TYPE&                       ActiveShaderStages)
     {
         VERIFY_EXPR(CreateInfo.PSODesc.IsTilePipeline());
@@ -809,6 +819,7 @@ public:
 
         RefCntAutoPtr<ShaderImplType> pShaderImpl{CreateInfo.pTS, ShaderImplType::IID_InternalImpl};
         VERIFY(pShaderImpl, "Unexpected shader object implementation");
+        WaitUntilShaderReadyIfRequested(pShaderImpl, WaitUntilShadersReady);
         ShaderStages.emplace_back(pShaderImpl);
         ActiveShaderStages = SHADER_TYPE_TILE;
 
@@ -818,10 +829,11 @@ public:
 protected:
     template <typename ShaderImplType, typename PSOCreateInfoType, typename TShaderStages>
     void ExtractShaders(const PSOCreateInfoType& PSOCreateInfo,
-                        TShaderStages&           ShaderStages)
+                        TShaderStages&           ShaderStages,
+                        bool                     WaitUntilShadersReady = false)
     {
         VERIFY_EXPR(this->m_Desc.PipelineType == PSOCreateInfo.PSODesc.PipelineType);
-        ExtractShaders<ShaderImplType>(PSOCreateInfo, ShaderStages, m_ActiveShaderStages);
+        ExtractShaders<ShaderImplType>(PSOCreateInfo, ShaderStages, WaitUntilShadersReady, m_ActiveShaderStages);
     }
 
     void InitializePipelineDesc(const GraphicsPipelineStateCreateInfo& CreateInfo,
@@ -1167,6 +1179,19 @@ private:
 #endif
 
                 m_Signatures[Index] = pSignature;
+            }
+        }
+    }
+
+    template <typename ShaderImplType>
+    static void WaitUntilShaderReadyIfRequested(RefCntAutoPtr<ShaderImplType>& pShader, bool WaitForCompletion)
+    {
+        if (WaitForCompletion)
+        {
+            const SHADER_STATUS ShaderStatus = pShader->GetStatus(/*WaitForCompletion = */ true);
+            if (ShaderStatus != SHADER_STATUS_READY)
+            {
+                LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' is not ready and cannot be used to create a pipeline state. Use GetStatus() to check the shader status.");
             }
         }
     }

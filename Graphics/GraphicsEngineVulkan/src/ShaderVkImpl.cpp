@@ -282,7 +282,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                                            AdapterInfo      = VkShaderCI.AdapterInfo,
                                            VkVersion        = VkShaderCI.VkVersion,
                                            HasSpirv14       = VkShaderCI.HasSpirv14,
-                                           ppCompilerOutput = VkShaderCI.ppCompilerOutput](Uint32 ThreadId) //
+                                           ppCompilerOutput = VkShaderCI.ppCompilerOutput](Uint32 ThreadId) mutable //
                                           {
                                               try
                                               {
@@ -293,6 +293,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                                               {
                                                   m_Status.store(SHADER_STATUS_FAILED);
                                               }
+                                              ShaderCI = ShaderCreateInfoWrapper{};
                                           });
     }
 }
@@ -332,7 +333,7 @@ ShaderVkImpl::~ShaderVkImpl()
 {
     // Make sure that asynchrous task is complete as it references the shader object.
     // This needs to be done in the final class before the destruction begins.
-    GetStatus(/*WaitForCompletion =*/true);
+    GetStatus(/*WaitForCompletion = */ true);
 }
 
 void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const

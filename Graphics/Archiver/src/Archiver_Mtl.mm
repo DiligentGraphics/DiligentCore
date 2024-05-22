@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -487,8 +487,9 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
     VERIFY_EXPR(DevType == DeviceType::Metal_MacOS || DevType == DeviceType::Metal_iOS);
 
     std::vector<ShaderStageInfoMtl> ShaderStages;
-    SHADER_TYPE                     ActiveShaderStages = SHADER_TYPE_UNKNOWN;
-    PipelineStateMtlImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, ActiveShaderStages);
+    SHADER_TYPE                     ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
+    constexpr bool                  WaitUntilShadersReady = true;
+    PipelineStateMtlImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
     std::vector<const ParsedMSLInfo*> StageResources{ShaderStages.size()};
     for (size_t i = 0; i < StageResources.size(); ++i)

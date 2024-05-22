@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,6 +50,7 @@
 #include "StringTools.hpp"
 #include "DynamicLinearAllocator.hpp"
 #include "D3DShaderResourceValidation.hpp"
+#include "GraphicsTypesX.hpp"
 
 #include "DXBCUtils.hpp"
 #include "DXCompiler.hpp"
@@ -655,7 +656,7 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
                                                  TShaderStages&           ShaderStages,
                                                  LocalRootSignatureD3D12* pLocalRootSig) noexcept(false)
 {
-    ExtractShaders<ShaderD3D12Impl>(CreateInfo, ShaderStages);
+    ExtractShaders<ShaderD3D12Impl>(CreateInfo, ShaderStages, /*WaitUntilShadersReady = */ true);
 
     FixedLinearAllocator MemPool{GetRawAllocator()};
 
@@ -672,241 +673,87 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
 }
 
 
-PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                    pRefCounters,
-                                               RenderDeviceD3D12Impl*                 pDeviceD3D12,
-                                               const GraphicsPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
+void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*                 pDeviceD3D12,
+                                                const GraphicsPipelineStateCreateInfo& CreateInfo)
 {
-    try
+    const auto WName = WidenString(m_Desc.Name);
+
+    TShaderStages ShaderStages;
+    InitInternalObjects(CreateInfo, ShaderStages);
+
+    auto* pd3d12Device = pDeviceD3D12->GetD3D12Device();
+    if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
-        const auto WName = WidenString(m_Desc.Name);
+        const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
 
-        TShaderStages ShaderStages;
-        InitInternalObjects(CreateInfo, ShaderStages);
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
-        auto* pd3d12Device = pDeviceD3D12->GetD3D12Device();
-        if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
+        for (const auto& Stage : ShaderStages)
         {
-            const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
+            VERIFY_EXPR(Stage.Count() == 1);
+            const auto& pByteCode = Stage.ByteCodes[0];
 
-            D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12PSODesc = {};
-
-            for (const auto& Stage : ShaderStages)
+            D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
+            switch (Stage.Type)
             {
-                VERIFY_EXPR(Stage.Count() == 1);
-                const auto& pByteCode = Stage.ByteCodes[0];
-
-                D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
-                switch (Stage.Type)
-                {
-                    // clang-format off
-                    case SHADER_TYPE_VERTEX:   pd3d12ShaderBytecode = &d3d12PSODesc.VS; break;
-                    case SHADER_TYPE_PIXEL:    pd3d12ShaderBytecode = &d3d12PSODesc.PS; break;
-                    case SHADER_TYPE_GEOMETRY: pd3d12ShaderBytecode = &d3d12PSODesc.GS; break;
-                    case SHADER_TYPE_HULL:     pd3d12ShaderBytecode = &d3d12PSODesc.HS; break;
-                    case SHADER_TYPE_DOMAIN:   pd3d12ShaderBytecode = &d3d12PSODesc.DS; break;
-                    // clang-format on
-                    default: UNEXPECTED("Unexpected shader type");
-                }
-
-                pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetBufferPointer();
-                pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetBufferSize();
+                // clang-format off
+                case SHADER_TYPE_VERTEX:   pd3d12ShaderBytecode = &d3d12PSODesc.VS; break;
+                case SHADER_TYPE_PIXEL:    pd3d12ShaderBytecode = &d3d12PSODesc.PS; break;
+                case SHADER_TYPE_GEOMETRY: pd3d12ShaderBytecode = &d3d12PSODesc.GS; break;
+                case SHADER_TYPE_HULL:     pd3d12ShaderBytecode = &d3d12PSODesc.HS; break;
+                case SHADER_TYPE_DOMAIN:   pd3d12ShaderBytecode = &d3d12PSODesc.DS; break;
+                // clang-format on
+                default: UNEXPECTED("Unexpected shader type");
             }
 
-            d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
-
-            memset(&d3d12PSODesc.StreamOutput, 0, sizeof(d3d12PSODesc.StreamOutput));
-
-            BlendStateDesc_To_D3D12_BLEND_DESC(GraphicsPipeline.BlendDesc, d3d12PSODesc.BlendState);
-            // The sample mask for the blend state.
-            d3d12PSODesc.SampleMask = GraphicsPipeline.SampleMask;
-
-            RasterizerStateDesc_To_D3D12_RASTERIZER_DESC(GraphicsPipeline.RasterizerDesc, d3d12PSODesc.RasterizerState);
-            DepthStencilStateDesc_To_D3D12_DEPTH_STENCIL_DESC(GraphicsPipeline.DepthStencilDesc, d3d12PSODesc.DepthStencilState);
-
-            std::vector<D3D12_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D12_INPUT_ELEMENT_DESC>> d312InputElements(STD_ALLOCATOR_RAW_MEM(D3D12_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D12_INPUT_ELEMENT_DESC>"));
-
-            const auto& InputLayout = GetGraphicsPipelineDesc().InputLayout;
-            if (InputLayout.NumElements > 0)
-            {
-                LayoutElements_To_D3D12_INPUT_ELEMENT_DESCs(InputLayout, d312InputElements);
-                d3d12PSODesc.InputLayout.NumElements        = static_cast<UINT>(d312InputElements.size());
-                d3d12PSODesc.InputLayout.pInputElementDescs = d312InputElements.data();
-            }
-            else
-            {
-                d3d12PSODesc.InputLayout.NumElements        = 0;
-                d3d12PSODesc.InputLayout.pInputElementDescs = nullptr;
-            }
-
-            d3d12PSODesc.IBStripCutValue = (GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
-                                            GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ ||
-                                            GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP ||
-                                            GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ) ?
-                D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF :
-                D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-            static const PrimitiveTopology_To_D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimTopologyToD3D12TopologyType;
-            d3d12PSODesc.PrimitiveTopologyType = PrimTopologyToD3D12TopologyType[GraphicsPipeline.PrimitiveTopology];
-
-            d3d12PSODesc.NumRenderTargets = GraphicsPipeline.NumRenderTargets;
-            for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)
-                d3d12PSODesc.RTVFormats[rt] = TexFormatToDXGI_Format(GraphicsPipeline.RTVFormats[rt]);
-            for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(d3d12PSODesc.RTVFormats); ++rt)
-                d3d12PSODesc.RTVFormats[rt] = DXGI_FORMAT_UNKNOWN;
-            d3d12PSODesc.DSVFormat = TexFormatToDXGI_Format(GraphicsPipeline.DSVFormat);
-
-            d3d12PSODesc.SampleDesc.Count   = GraphicsPipeline.SmplDesc.Count;
-            d3d12PSODesc.SampleDesc.Quality = GraphicsPipeline.SmplDesc.Quality;
-
-            // For single GPU operation, set this to zero. If there are multiple GPU nodes,
-            // set bits to identify the nodes (the device's physical adapters) for which the
-            // graphics pipeline state is to apply. Each bit in the mask corresponds to a single node.
-            d3d12PSODesc.NodeMask = 0;
-
-            d3d12PSODesc.CachedPSO.pCachedBlob           = nullptr;
-            d3d12PSODesc.CachedPSO.CachedBlobSizeInBytes = 0;
-
-            // The only valid bit is D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
-            d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-
-            // Try to load from the cache
-            auto* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
-            if (pPSOCacheD3D12 != nullptr && !WName.empty())
-                m_pd3d12PSO = pPSOCacheD3D12->LoadGraphicsPipeline(WName.c_str(), d3d12PSODesc);
-            if (!m_pd3d12PSO)
-            {
-                // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
-                HRESULT hr = pd3d12Device->CreateGraphicsPipelineState(&d3d12PSODesc, __uuidof(ID3D12PipelineState), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
-                if (FAILED(hr))
-                    LOG_ERROR_AND_THROW("Failed to create pipeline state");
-
-                // Add to the cache
-                if (pPSOCacheD3D12 != nullptr && !WName.empty())
-                    pPSOCacheD3D12->StorePipeline(WName.c_str(), m_pd3d12PSO);
-            }
+            pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetBufferPointer();
+            pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetBufferSize();
         }
-#ifdef D3D12_H_HAS_MESH_SHADER
-        else if (m_Desc.PipelineType == PIPELINE_TYPE_MESH)
+
+        d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
+
+        memset(&d3d12PSODesc.StreamOutput, 0, sizeof(d3d12PSODesc.StreamOutput));
+
+        BlendStateDesc_To_D3D12_BLEND_DESC(GraphicsPipeline.BlendDesc, d3d12PSODesc.BlendState);
+        // The sample mask for the blend state.
+        d3d12PSODesc.SampleMask = GraphicsPipeline.SampleMask;
+
+        RasterizerStateDesc_To_D3D12_RASTERIZER_DESC(GraphicsPipeline.RasterizerDesc, d3d12PSODesc.RasterizerState);
+        DepthStencilStateDesc_To_D3D12_DEPTH_STENCIL_DESC(GraphicsPipeline.DepthStencilDesc, d3d12PSODesc.DepthStencilState);
+
+        std::vector<D3D12_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D12_INPUT_ELEMENT_DESC>> d312InputElements(STD_ALLOCATOR_RAW_MEM(D3D12_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D12_INPUT_ELEMENT_DESC>"));
+
+        const auto& InputLayout = GetGraphicsPipelineDesc().InputLayout;
+        if (InputLayout.NumElements > 0)
         {
-            const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
-
-            struct MESH_SHADER_PIPELINE_STATE_DESC
-            {
-                PSS_SubObject<D3D12_PIPELINE_STATE_FLAGS, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS>            Flags;
-                PSS_SubObject<UINT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_NODE_MASK>                              NodeMask;
-                PSS_SubObject<ID3D12RootSignature*, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE>         pRootSignature;
-                PSS_SubObject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS>                    PS;
-                PSS_SubObject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS>                    AS;
-                PSS_SubObject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS>                    MS;
-                PSS_SubObject<D3D12_BLEND_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND>                      BlendState;
-                PSS_SubObject<D3D12_DEPTH_STENCIL_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL>      DepthStencilState;
-                PSS_SubObject<D3D12_RASTERIZER_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER>            RasterizerState;
-                PSS_SubObject<DXGI_SAMPLE_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC>                SampleDesc;
-                PSS_SubObject<UINT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK>                            SampleMask;
-                PSS_SubObject<DXGI_FORMAT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT>            DSVFormat;
-                PSS_SubObject<D3D12_RT_FORMAT_ARRAY, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS> RTVFormatArray;
-                PSS_SubObject<D3D12_CACHED_PIPELINE_STATE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO>      CachedPSO;
-            };
-            MESH_SHADER_PIPELINE_STATE_DESC d3d12PSODesc = {};
-
-            for (const auto& Stage : ShaderStages)
-            {
-                VERIFY_EXPR(Stage.Count() == 1);
-                const auto& pByteCode = Stage.ByteCodes[0];
-
-                D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
-                switch (Stage.Type)
-                {
-                    // clang-format off
-                    case SHADER_TYPE_AMPLIFICATION: pd3d12ShaderBytecode = &d3d12PSODesc.AS; break;
-                    case SHADER_TYPE_MESH:          pd3d12ShaderBytecode = &d3d12PSODesc.MS; break;
-                    case SHADER_TYPE_PIXEL:         pd3d12ShaderBytecode = &d3d12PSODesc.PS; break;
-                    // clang-format on
-                    default: UNEXPECTED("Unexpected shader type");
-                }
-
-                pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetBufferPointer();
-                pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetBufferSize();
-            }
-
-            d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
-
-            BlendStateDesc_To_D3D12_BLEND_DESC(GraphicsPipeline.BlendDesc, *d3d12PSODesc.BlendState);
-            d3d12PSODesc.SampleMask = GraphicsPipeline.SampleMask;
-
-            RasterizerStateDesc_To_D3D12_RASTERIZER_DESC(GraphicsPipeline.RasterizerDesc, *d3d12PSODesc.RasterizerState);
-            DepthStencilStateDesc_To_D3D12_DEPTH_STENCIL_DESC(GraphicsPipeline.DepthStencilDesc, *d3d12PSODesc.DepthStencilState);
-
-            d3d12PSODesc.RTVFormatArray->NumRenderTargets = GraphicsPipeline.NumRenderTargets;
-            for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)
-                d3d12PSODesc.RTVFormatArray->RTFormats[rt] = TexFormatToDXGI_Format(GraphicsPipeline.RTVFormats[rt]);
-            for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(d3d12PSODesc.RTVFormatArray->RTFormats); ++rt)
-                d3d12PSODesc.RTVFormatArray->RTFormats[rt] = DXGI_FORMAT_UNKNOWN;
-            d3d12PSODesc.DSVFormat = TexFormatToDXGI_Format(GraphicsPipeline.DSVFormat);
-
-            d3d12PSODesc.SampleDesc->Count   = GraphicsPipeline.SmplDesc.Count;
-            d3d12PSODesc.SampleDesc->Quality = GraphicsPipeline.SmplDesc.Quality;
-
-            // For single GPU operation, set this to zero. If there are multiple GPU nodes,
-            // set bits to identify the nodes (the device's physical adapters) for which the
-            // graphics pipeline state is to apply. Each bit in the mask corresponds to a single node.
-            d3d12PSODesc.NodeMask = 0;
-
-            d3d12PSODesc.CachedPSO->pCachedBlob           = nullptr;
-            d3d12PSODesc.CachedPSO->CachedBlobSizeInBytes = 0;
-
-            // The only valid bit is D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
-            d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-
-            D3D12_PIPELINE_STATE_STREAM_DESC streamDesc;
-            streamDesc.SizeInBytes                   = sizeof(d3d12PSODesc);
-            streamDesc.pPipelineStateSubobjectStream = &d3d12PSODesc;
-
-            auto* pd3d12Device2 = pDeviceD3D12->GetD3D12Device2();
-            // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
-            HRESULT hr = pd3d12Device2->CreatePipelineState(&streamDesc, __uuidof(ID3D12PipelineState), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
-            if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to create pipeline state");
+            LayoutElements_To_D3D12_INPUT_ELEMENT_DESCs(InputLayout, d312InputElements);
+            d3d12PSODesc.InputLayout.NumElements        = static_cast<UINT>(d312InputElements.size());
+            d3d12PSODesc.InputLayout.pInputElementDescs = d312InputElements.data();
         }
-#endif // D3D12_H_HAS_MESH_SHADER
         else
         {
-            LOG_ERROR_AND_THROW("Unsupported pipeline type");
+            d3d12PSODesc.InputLayout.NumElements        = 0;
+            d3d12PSODesc.InputLayout.pInputElementDescs = nullptr;
         }
 
-        if (!WName.empty())
-        {
-            m_pd3d12PSO->SetName(WName.c_str());
-        }
+        d3d12PSODesc.IBStripCutValue = (GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
+                                        GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ ||
+                                        GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP ||
+                                        GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ) ?
+            D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF :
+            D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+        static const PrimitiveTopology_To_D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimTopologyToD3D12TopologyType;
+        d3d12PSODesc.PrimitiveTopologyType = PrimTopologyToD3D12TopologyType[GraphicsPipeline.PrimitiveTopology];
 
-        m_Status.store(PIPELINE_STATE_STATUS_READY);
-    }
-    catch (...)
-    {
-        Destruct();
-        throw;
-    }
-}
+        d3d12PSODesc.NumRenderTargets = GraphicsPipeline.NumRenderTargets;
+        for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)
+            d3d12PSODesc.RTVFormats[rt] = TexFormatToDXGI_Format(GraphicsPipeline.RTVFormats[rt]);
+        for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(d3d12PSODesc.RTVFormats); ++rt)
+            d3d12PSODesc.RTVFormats[rt] = DXGI_FORMAT_UNKNOWN;
+        d3d12PSODesc.DSVFormat = TexFormatToDXGI_Format(GraphicsPipeline.DSVFormat);
 
-PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                   pRefCounters,
-                                               RenderDeviceD3D12Impl*                pDeviceD3D12,
-                                               const ComputePipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
-{
-    try
-    {
-        TShaderStages ShaderStages;
-        InitInternalObjects(CreateInfo, ShaderStages);
-
-        auto* pd3d12Device = pDeviceD3D12->GetD3D12Device();
-
-        D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
-
-        VERIFY_EXPR(ShaderStages[0].Type == SHADER_TYPE_COMPUTE);
-        VERIFY_EXPR(ShaderStages[0].Count() == 1);
-        const auto& pByteCode           = ShaderStages[0].ByteCodes[0];
-        d3d12PSODesc.CS.pShaderBytecode = pByteCode->GetBufferPointer();
-        d3d12PSODesc.CS.BytecodeLength  = pByteCode->GetBufferSize();
+        d3d12PSODesc.SampleDesc.Count   = GraphicsPipeline.SmplDesc.Count;
+        d3d12PSODesc.SampleDesc.Quality = GraphicsPipeline.SmplDesc.Quality;
 
         // For single GPU operation, set this to zero. If there are multiple GPU nodes,
         // set bits to identify the nodes (the device's physical adapters) for which the
@@ -919,17 +766,14 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
         // The only valid bit is D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
         d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-        d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
-
         // Try to load from the cache
-        const auto  WName          = WidenString(m_Desc.Name);
         auto* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
         if (pPSOCacheD3D12 != nullptr && !WName.empty())
-            m_pd3d12PSO = pPSOCacheD3D12->LoadComputePipeline(WName.c_str(), d3d12PSODesc);
+            m_pd3d12PSO = pPSOCacheD3D12->LoadGraphicsPipeline(WName.c_str(), d3d12PSODesc);
         if (!m_pd3d12PSO)
         {
             // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
-            HRESULT hr = pd3d12Device->CreateComputePipelineState(&d3d12PSODesc, __uuidof(ID3D12PipelineState), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
+            HRESULT hr = pd3d12Device->CreateGraphicsPipelineState(&d3d12PSODesc, __uuidof(ID3D12PipelineState), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create pipeline state");
 
@@ -937,19 +781,248 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
             if (pPSOCacheD3D12 != nullptr && !WName.empty())
                 pPSOCacheD3D12->StorePipeline(WName.c_str(), m_pd3d12PSO);
         }
+    }
+#ifdef D3D12_H_HAS_MESH_SHADER
+    else if (m_Desc.PipelineType == PIPELINE_TYPE_MESH)
+    {
+        const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
 
-        if (!WName.empty())
+        struct MESH_SHADER_PIPELINE_STATE_DESC
         {
-            m_pd3d12PSO->SetName(WName.c_str());
+            PSS_SubObject<D3D12_PIPELINE_STATE_FLAGS, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS>            Flags;
+            PSS_SubObject<UINT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_NODE_MASK>                              NodeMask;
+            PSS_SubObject<ID3D12RootSignature*, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE>         pRootSignature;
+            PSS_SubObject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS>                    PS;
+            PSS_SubObject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS>                    AS;
+            PSS_SubObject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS>                    MS;
+            PSS_SubObject<D3D12_BLEND_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND>                      BlendState;
+            PSS_SubObject<D3D12_DEPTH_STENCIL_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL>      DepthStencilState;
+            PSS_SubObject<D3D12_RASTERIZER_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER>            RasterizerState;
+            PSS_SubObject<DXGI_SAMPLE_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC>                SampleDesc;
+            PSS_SubObject<UINT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK>                            SampleMask;
+            PSS_SubObject<DXGI_FORMAT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT>            DSVFormat;
+            PSS_SubObject<D3D12_RT_FORMAT_ARRAY, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS> RTVFormatArray;
+            PSS_SubObject<D3D12_CACHED_PIPELINE_STATE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO>      CachedPSO;
+        };
+        MESH_SHADER_PIPELINE_STATE_DESC d3d12PSODesc = {};
+
+        for (const auto& Stage : ShaderStages)
+        {
+            VERIFY_EXPR(Stage.Count() == 1);
+            const auto& pByteCode = Stage.ByteCodes[0];
+
+            D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
+            switch (Stage.Type)
+            {
+                // clang-format off
+                case SHADER_TYPE_AMPLIFICATION: pd3d12ShaderBytecode = &d3d12PSODesc.AS; break;
+                case SHADER_TYPE_MESH:          pd3d12ShaderBytecode = &d3d12PSODesc.MS; break;
+                case SHADER_TYPE_PIXEL:         pd3d12ShaderBytecode = &d3d12PSODesc.PS; break;
+                // clang-format on
+                default: UNEXPECTED("Unexpected shader type");
+            }
+
+            pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetBufferPointer();
+            pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetBufferSize();
         }
 
-        m_Status.store(PIPELINE_STATE_STATUS_READY);
+        d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
+
+        BlendStateDesc_To_D3D12_BLEND_DESC(GraphicsPipeline.BlendDesc, *d3d12PSODesc.BlendState);
+        d3d12PSODesc.SampleMask = GraphicsPipeline.SampleMask;
+
+        RasterizerStateDesc_To_D3D12_RASTERIZER_DESC(GraphicsPipeline.RasterizerDesc, *d3d12PSODesc.RasterizerState);
+        DepthStencilStateDesc_To_D3D12_DEPTH_STENCIL_DESC(GraphicsPipeline.DepthStencilDesc, *d3d12PSODesc.DepthStencilState);
+
+        d3d12PSODesc.RTVFormatArray->NumRenderTargets = GraphicsPipeline.NumRenderTargets;
+        for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)
+            d3d12PSODesc.RTVFormatArray->RTFormats[rt] = TexFormatToDXGI_Format(GraphicsPipeline.RTVFormats[rt]);
+        for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(d3d12PSODesc.RTVFormatArray->RTFormats); ++rt)
+            d3d12PSODesc.RTVFormatArray->RTFormats[rt] = DXGI_FORMAT_UNKNOWN;
+        d3d12PSODesc.DSVFormat = TexFormatToDXGI_Format(GraphicsPipeline.DSVFormat);
+
+        d3d12PSODesc.SampleDesc->Count   = GraphicsPipeline.SmplDesc.Count;
+        d3d12PSODesc.SampleDesc->Quality = GraphicsPipeline.SmplDesc.Quality;
+
+        // For single GPU operation, set this to zero. If there are multiple GPU nodes,
+        // set bits to identify the nodes (the device's physical adapters) for which the
+        // graphics pipeline state is to apply. Each bit in the mask corresponds to a single node.
+        d3d12PSODesc.NodeMask = 0;
+
+        d3d12PSODesc.CachedPSO->pCachedBlob           = nullptr;
+        d3d12PSODesc.CachedPSO->CachedBlobSizeInBytes = 0;
+
+        // The only valid bit is D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
+        d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+
+        D3D12_PIPELINE_STATE_STREAM_DESC streamDesc;
+        streamDesc.SizeInBytes                   = sizeof(d3d12PSODesc);
+        streamDesc.pPipelineStateSubobjectStream = &d3d12PSODesc;
+
+        auto* pd3d12Device2 = pDeviceD3D12->GetD3D12Device2();
+        // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
+        HRESULT hr = pd3d12Device2->CreatePipelineState(&streamDesc, __uuidof(ID3D12PipelineState), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
+        if (FAILED(hr))
+            LOG_ERROR_AND_THROW("Failed to create pipeline state");
     }
-    catch (...)
+#endif // D3D12_H_HAS_MESH_SHADER
+    else
     {
-        Destruct();
-        throw;
+        LOG_ERROR_AND_THROW("Unsupported pipeline type");
     }
+
+    if (!WName.empty())
+    {
+        m_pd3d12PSO->SetName(WName.c_str());
+    }
+}
+
+void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*                pDeviceD3D12,
+                                                const ComputePipelineStateCreateInfo& CreateInfo)
+{
+    TShaderStages ShaderStages;
+    InitInternalObjects(CreateInfo, ShaderStages);
+
+    auto* pd3d12Device = pDeviceD3D12->GetD3D12Device();
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
+
+    VERIFY_EXPR(ShaderStages[0].Type == SHADER_TYPE_COMPUTE);
+    VERIFY_EXPR(ShaderStages[0].Count() == 1);
+    const auto& pByteCode           = ShaderStages[0].ByteCodes[0];
+    d3d12PSODesc.CS.pShaderBytecode = pByteCode->GetBufferPointer();
+    d3d12PSODesc.CS.BytecodeLength  = pByteCode->GetBufferSize();
+
+    // For single GPU operation, set this to zero. If there are multiple GPU nodes,
+    // set bits to identify the nodes (the device's physical adapters) for which the
+    // graphics pipeline state is to apply. Each bit in the mask corresponds to a single node.
+    d3d12PSODesc.NodeMask = 0;
+
+    d3d12PSODesc.CachedPSO.pCachedBlob           = nullptr;
+    d3d12PSODesc.CachedPSO.CachedBlobSizeInBytes = 0;
+
+    // The only valid bit is D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
+    d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+
+    d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
+
+    // Try to load from the cache
+    const auto  WName          = WidenString(m_Desc.Name);
+    auto* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
+    if (pPSOCacheD3D12 != nullptr && !WName.empty())
+        m_pd3d12PSO = pPSOCacheD3D12->LoadComputePipeline(WName.c_str(), d3d12PSODesc);
+    if (!m_pd3d12PSO)
+    {
+        // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
+        HRESULT hr = pd3d12Device->CreateComputePipelineState(&d3d12PSODesc, __uuidof(ID3D12PipelineState), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
+        if (FAILED(hr))
+            LOG_ERROR_AND_THROW("Failed to create pipeline state");
+
+        // Add to the cache
+        if (pPSOCacheD3D12 != nullptr && !WName.empty())
+            pPSOCacheD3D12->StorePipeline(WName.c_str(), m_pd3d12PSO);
+    }
+
+    if (!WName.empty())
+    {
+        m_pd3d12PSO->SetName(WName.c_str());
+    }
+}
+
+void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*                   pDeviceD3D12,
+                                                const RayTracingPipelineStateCreateInfo& CreateInfo)
+{
+    LocalRootSignatureD3D12 LocalRootSig{CreateInfo.pShaderRecordName, CreateInfo.RayTracingPipeline.ShaderRecordSize};
+    TShaderStages           ShaderStages;
+    InitInternalObjects(CreateInfo, ShaderStages, &LocalRootSig);
+
+    auto* pd3d12Device = pDeviceD3D12->GetD3D12Device5();
+
+    DynamicLinearAllocator             TempPool{GetRawAllocator(), 4 << 10};
+    std::vector<D3D12_STATE_SUBOBJECT> Subobjects;
+    BuildRTPipelineDescription(CreateInfo, Subobjects, TempPool, ShaderStages);
+
+    D3D12_GLOBAL_ROOT_SIGNATURE GlobalRoot = {m_RootSig->GetD3D12RootSignature()};
+    Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &GlobalRoot});
+
+    D3D12_LOCAL_ROOT_SIGNATURE LocalRoot = {LocalRootSig.GetD3D12RootSignature()};
+    if (LocalRoot.pLocalRootSignature)
+        Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, &LocalRoot});
+
+    D3D12_STATE_OBJECT_DESC RTPipelineDesc = {};
+    RTPipelineDesc.Type                    = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
+    RTPipelineDesc.NumSubobjects           = static_cast<UINT>(Subobjects.size());
+    RTPipelineDesc.pSubobjects             = Subobjects.data();
+
+    HRESULT hr = pd3d12Device->CreateStateObject(&RTPipelineDesc, __uuidof(ID3D12StateObject), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
+    if (FAILED(hr))
+        LOG_ERROR_AND_THROW("Failed to create ray tracing state object");
+
+    // Extract shader identifiers from ray tracing pipeline and store them in ShaderHandles
+    GetShaderIdentifiers(m_pd3d12PSO, CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex,
+                         m_pRayTracingPipelineData->ShaderHandles, m_pRayTracingPipelineData->ShaderHandleSize);
+
+    if (*m_Desc.Name != 0)
+    {
+        m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
+    }
+}
+
+
+template <typename PSOCreateInfoType>
+void PipelineStateD3D12Impl::Construct(RenderDeviceD3D12Impl*   pDeviceD3D12,
+                                       const PSOCreateInfoType& CreateInfo)
+{
+    m_Status.store(PIPELINE_STATE_STATUS_COMPILING);
+    if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && pDeviceD3D12->GetShaderCompilationThreadPool() != nullptr)
+    {
+        m_InitializeTaskRunning.store(true);
+        m_pInitializeTask = EnqueueAsyncWork(pDeviceD3D12->GetShaderCompilationThreadPool(),
+                                             [this,
+                                              CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo},
+                                              pDeviceD3D12](Uint32 ThreadId) mutable //
+                                             {
+                                                 try
+                                                 {
+                                                     InitializePipeline(pDeviceD3D12, CreateInfo);
+                                                     m_Status.store(PIPELINE_STATE_STATUS_READY);
+                                                 }
+                                                 catch (...)
+                                                 {
+                                                     m_Status.store(PIPELINE_STATE_STATUS_FAILED);
+                                                 }
+                                                 CreateInfo.Clear();
+                                             });
+    }
+    else
+    {
+        try
+        {
+            InitializePipeline(pDeviceD3D12, CreateInfo);
+            m_Status.store(PIPELINE_STATE_STATUS_READY);
+        }
+        catch (...)
+        {
+            Destruct();
+            throw;
+        }
+    }
+}
+
+PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                    pRefCounters,
+                                               RenderDeviceD3D12Impl*                 pDeviceD3D12,
+                                               const GraphicsPipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
+{
+    Construct(pDeviceD3D12, CreateInfo);
+}
+
+PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                   pRefCounters,
+                                               RenderDeviceD3D12Impl*                pDeviceD3D12,
+                                               const ComputePipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
+{
+    Construct(pDeviceD3D12, CreateInfo);
 }
 
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                      pRefCounters,
@@ -957,50 +1030,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
                                                const RayTracingPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
-    try
-    {
-        LocalRootSignatureD3D12 LocalRootSig{CreateInfo.pShaderRecordName, CreateInfo.RayTracingPipeline.ShaderRecordSize};
-        TShaderStages           ShaderStages;
-        InitInternalObjects(CreateInfo, ShaderStages, &LocalRootSig);
-
-        auto* pd3d12Device = pDeviceD3D12->GetD3D12Device5();
-
-        DynamicLinearAllocator             TempPool{GetRawAllocator(), 4 << 10};
-        std::vector<D3D12_STATE_SUBOBJECT> Subobjects;
-        BuildRTPipelineDescription(CreateInfo, Subobjects, TempPool, ShaderStages);
-
-        D3D12_GLOBAL_ROOT_SIGNATURE GlobalRoot = {m_RootSig->GetD3D12RootSignature()};
-        Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &GlobalRoot});
-
-        D3D12_LOCAL_ROOT_SIGNATURE LocalRoot = {LocalRootSig.GetD3D12RootSignature()};
-        if (LocalRoot.pLocalRootSignature)
-            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, &LocalRoot});
-
-        D3D12_STATE_OBJECT_DESC RTPipelineDesc = {};
-        RTPipelineDesc.Type                    = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
-        RTPipelineDesc.NumSubobjects           = static_cast<UINT>(Subobjects.size());
-        RTPipelineDesc.pSubobjects             = Subobjects.data();
-
-        HRESULT hr = pd3d12Device->CreateStateObject(&RTPipelineDesc, __uuidof(ID3D12StateObject), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
-        if (FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to create ray tracing state object");
-
-        // Extract shader identifiers from ray tracing pipeline and store them in ShaderHandles
-        GetShaderIdentifiers(m_pd3d12PSO, CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex,
-                             m_pRayTracingPipelineData->ShaderHandles, m_pRayTracingPipelineData->ShaderHandleSize);
-
-        if (*m_Desc.Name != 0)
-        {
-            m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
-        }
-
-        m_Status.store(PIPELINE_STATE_STATUS_READY);
-    }
-    catch (...)
-    {
-        Destruct();
-        throw;
-    }
+    Construct(pDeviceD3D12, CreateInfo);
 }
 
 PipelineStateD3D12Impl::~PipelineStateD3D12Impl()

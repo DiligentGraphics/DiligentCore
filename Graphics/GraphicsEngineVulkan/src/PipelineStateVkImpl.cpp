@@ -800,7 +800,7 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
     std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules) noexcept(false)
 {
     TShaderStages ShaderStages;
-    ExtractShaders<ShaderVkImpl>(CreateInfo, ShaderStages);
+    ExtractShaders<ShaderVkImpl>(CreateInfo, ShaderStages, /*WaitUntilShadersReady = */ true);
 
     FixedLinearAllocator MemPool{GetRawAllocator()};
 

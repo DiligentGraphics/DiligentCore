@@ -124,6 +124,19 @@ private:
                            TShaderStages&                 ShaderStages,
                            LocalRootSignatureD3D12*       pLocalRootSig) noexcept(false);
 
+    void InitializePipeline(RenderDeviceD3D12Impl*                 pDeviceD3D12,
+                            const GraphicsPipelineStateCreateInfo& CreateInfo);
+
+    void InitializePipeline(RenderDeviceD3D12Impl*                pDeviceD3D12,
+                            const ComputePipelineStateCreateInfo& CreateInfo);
+
+    void InitializePipeline(RenderDeviceD3D12Impl*                   pDeviceD3D12,
+                            const RayTracingPipelineStateCreateInfo& CreateInfo);
+
+    template <typename PSOCreateInfoType>
+    void Construct(RenderDeviceD3D12Impl*   pDeviceD3D12,
+                   const PSOCreateInfoType& CreateInfo);
+
     void Destruct();
 
     void ValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig);

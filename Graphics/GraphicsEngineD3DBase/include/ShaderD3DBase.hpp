@@ -100,7 +100,7 @@ public:
                  ShaderModel,
                  pDXCompiler      = D3DShaderCI.pDXCompiler,
                  ppCompilerOutput = D3DShaderCI.ppCompilerOutput,
-                 InitResources](Uint32 ThreadId) //
+                 InitResources](Uint32 ThreadId) mutable //
                 {
                     try
                     {
@@ -110,6 +110,7 @@ public:
                     {
                         this->m_Status.store(SHADER_STATUS_FAILED);
                     }
+                    ShaderCI = ShaderCreateInfoWrapper{};
                 });
         }
     }

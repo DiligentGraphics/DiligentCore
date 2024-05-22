@@ -34,6 +34,7 @@
 
 #include "ShaderMacroHelper.hpp"
 #include "Timer.hpp"
+#include "GraphicsTypesX.hpp"
 
 using namespace Diligent;
 using namespace Diligent::Testing;
@@ -43,6 +44,7 @@ namespace
 
 RefCntAutoPtr<IShader> CreateShader(const char*          Path,
                                     const char*          Name,
+                                    SHADER_TYPE          ShaderType,
                                     SHADER_COMPILE_FLAGS CompileFlags)
 {
     ShaderCreateInfo ShaderCI;
@@ -56,7 +58,7 @@ RefCntAutoPtr<IShader> CreateShader(const char*          Path,
 
     ShaderCI.FilePath       = Path;
     ShaderCI.EntryPoint     = "main";
-    ShaderCI.Desc           = {Name, SHADER_TYPE_PIXEL, true};
+    ShaderCI.Desc           = {Name, ShaderType, true};
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
     ShaderCI.CompileFlags   = CompileFlags;
@@ -92,7 +94,7 @@ TEST(Shader, AsyncCompilation)
     std::vector<RefCntAutoPtr<IShader>> Shaders;
     for (Uint32 i = 0; i < 10; ++i)
     {
-        auto pShader = CreateShader("AsyncShaderCompilationTest.psh", "Async compilation test", SHADER_COMPILE_FLAG_ASYNCHRONOUS);
+        auto pShader = CreateShader("AsyncShaderCompilationTest.psh", "Async compilation test", SHADER_TYPE_PIXEL, SHADER_COMPILE_FLAG_ASYNCHRONOUS);
         ASSERT_NE(pShader, nullptr);
         Shaders.emplace_back(std::move(pShader));
     }
@@ -115,6 +117,62 @@ TEST(Shader, AsyncCompilation)
         ++Iter;
     }
     LOG_INFO_MESSAGE(Shaders.size(), " shaders were compiled after ", Iter, " iterations (", (T.GetElapsedTime() - StartTime) * 1000, " ms)");
+}
+
+TEST(Shader, ReleaseWhileCompiling)
+{
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!DeviceInfo.Features.AsyncShaderCompilation)
+    {
+        GTEST_SKIP() << "Async shader compilation is not supported by this device";
+    }
+
+    auto pShader = CreateShader("AsyncShaderCompilationTest.psh", "Async pipeline test PS", SHADER_TYPE_PIXEL, SHADER_COMPILE_FLAG_ASYNCHRONOUS);
+    ASSERT_NE(pShader, nullptr);
+
+    // Release the shader while it is still compiling
+    pShader.Release();
+}
+
+TEST(Shader, AsyncPipeline)
+{
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    IRenderDevice* pDevice    = GPUTestingEnvironment::GetInstance()->GetDevice();
+    const auto&    DeviceInfo = pDevice->GetDeviceInfo();
+    if (!DeviceInfo.Features.AsyncShaderCompilation)
+    {
+        GTEST_SKIP() << "Async shader compilation is not supported by this device";
+    }
+
+    auto pVS = CreateShader("AsyncShaderCompilationTest.vsh", "Async pipeline test VS", SHADER_TYPE_VERTEX, SHADER_COMPILE_FLAG_ASYNCHRONOUS);
+    ASSERT_NE(pVS, nullptr);
+    auto pPS = CreateShader("AsyncShaderCompilationTest.psh", "Async pipeline test PS", SHADER_TYPE_PIXEL, SHADER_COMPILE_FLAG_ASYNCHRONOUS);
+    ASSERT_NE(pPS, nullptr);
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    {
+        GraphicsPipelineStateCreateInfoX PSOCreateInfo;
+
+        InputLayoutDescX InputLayout;
+        InputLayout.Add(0u, 0u, 3u, VT_FLOAT32, False);
+
+        PipelineResourceLayoutDescX ResourceLayout;
+        ResourceLayout.AddVariable(SHADER_TYPE_PIXEL, "g_Tex2D", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+
+        PSOCreateInfo
+            .SetName("Async pipeline test PSO")
+            .AddShader(pVS)
+            .AddShader(pPS)
+            .SetInputLayout(InputLayout)
+            .SetResourceLayout(ResourceLayout)
+            .SetFlags(PSO_CREATE_FLAG_ASYNCHRONOUS);
+
+        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+    }
 }
 
 } // namespace
