@@ -334,7 +334,7 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
             // ArrayInd = 1
             // NameWithoutBrackets = "s2"
 
-            // Searh for the variable with the same name
+            // Search for the variable with the same name
             if (auto* pVar = pLevel->FindMember(NameWithoutBrackets.c_str()))
             {
                 // Variable already exists - we are processing an element of an existing array or struct:

@@ -45,9 +45,12 @@ namespace
 RefCntAutoPtr<IShader> CreateShader(const char*          Path,
                                     const char*          Name,
                                     SHADER_TYPE          ShaderType,
-                                    SHADER_COMPILE_FLAGS CompileFlags)
+                                    SHADER_COMPILE_FLAGS CompileFlags,
+                                    bool                 SimplifiedShader = false)
 {
-    ShaderCreateInfo ShaderCI;
+    // Allocate shader CI on the heap to check that all data is copied correctly
+    std::unique_ptr<ShaderCreateInfo> pShaderCI = std::make_unique<ShaderCreateInfo>();
+    ShaderCreateInfo&                 ShaderCI  = *pShaderCI;
 
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -71,9 +74,13 @@ RefCntAutoPtr<IShader> CreateShader(const char*          Path,
     if (pDevice->GetDeviceInfo().IsVulkanDevice())
     {
         // In debug mode in Vulkan it takes a lot of time to compile full shader
-        Macros.Add("SIMPLIFIED", 1);
+        SimplifiedShader = true;
     }
 #endif
+    if (SimplifiedShader)
+    {
+        Macros.Add("SIMPLIFIED", 1);
+    }
     ShaderCI.Macros = Macros;
 
     RefCntAutoPtr<IShader> pShader;
@@ -147,32 +154,67 @@ TEST(Shader, AsyncPipeline)
         GTEST_SKIP() << "Async shader compilation is not supported by this device";
     }
 
-    auto pVS = CreateShader("AsyncShaderCompilationTest.vsh", "Async pipeline test VS", SHADER_TYPE_VERTEX, SHADER_COMPILE_FLAG_ASYNCHRONOUS);
-    ASSERT_NE(pVS, nullptr);
-    auto pPS = CreateShader("AsyncShaderCompilationTest.psh", "Async pipeline test PS", SHADER_TYPE_PIXEL, SHADER_COMPILE_FLAG_ASYNCHRONOUS);
-    ASSERT_NE(pPS, nullptr);
-
-    RefCntAutoPtr<IPipelineState> pPSO;
+    std::vector<RefCntAutoPtr<IPipelineState>> pPSOs;
     {
-        GraphicsPipelineStateCreateInfoX PSOCreateInfo;
+        constexpr bool SimplifiedShader = true;
 
-        InputLayoutDescX InputLayout;
-        InputLayout.Add(0u, 0u, 3u, VT_FLOAT32, False);
+        auto pVS = CreateShader("AsyncShaderCompilationTest.vsh", "Async pipeline test VS", SHADER_TYPE_VERTEX, SHADER_COMPILE_FLAG_ASYNCHRONOUS, SimplifiedShader);
+        ASSERT_NE(pVS, nullptr);
 
-        PipelineResourceLayoutDescX ResourceLayout;
-        ResourceLayout.AddVariable(SHADER_TYPE_PIXEL, "g_Tex2D", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        for (size_t i = 0; i < 16; ++i)
+        {
+            auto pPS = CreateShader("AsyncShaderCompilationTest.psh", "Async pipeline test PS", SHADER_TYPE_PIXEL, SHADER_COMPILE_FLAG_ASYNCHRONOUS, SimplifiedShader);
+            ASSERT_NE(pPS, nullptr);
 
-        PSOCreateInfo
-            .SetName("Async pipeline test PSO")
-            .AddShader(pVS)
-            .AddShader(pPS)
-            .SetInputLayout(InputLayout)
-            .SetResourceLayout(ResourceLayout)
-            .SetFlags(PSO_CREATE_FLAG_ASYNCHRONOUS);
+            // Allocate pipeline CI on the heap to check that all data is copied correctly
+            std::unique_ptr<GraphicsPipelineStateCreateInfoX> pPSOCreateInfo = std::make_unique<GraphicsPipelineStateCreateInfoX>();
+            GraphicsPipelineStateCreateInfoX&                 PSOCreateInfo  = *pPSOCreateInfo;
 
-        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
-        ASSERT_NE(pPSO, nullptr);
+            InputLayoutDescX InputLayout;
+            InputLayout.Add(0u, 0u, 3u, VT_FLOAT32, False);
+
+            PipelineResourceLayoutDescX ResourceLayout;
+            ResourceLayout.AddVariable(SHADER_TYPE_PIXEL, "g_Tex2D", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+
+            PSOCreateInfo
+                .SetName("Async pipeline test PSO")
+                .AddShader(pVS)
+                .AddShader(pPS)
+                .AddRenderTarget(TEX_FORMAT_RGBA8_UNORM)
+                .SetInputLayout(InputLayout)
+                .SetResourceLayout(ResourceLayout)
+                .SetFlags(PSO_CREATE_FLAG_ASYNCHRONOUS);
+
+            // Create multiple pipelines that use the same shaders.
+            // In particular this reproduces the problem with the non-thread-safe ID3DBlob in D3D12.
+            for (size_t j = 0; j < 4; ++j)
+            {
+                RefCntAutoPtr<IPipelineState> pPSO;
+                pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+                ASSERT_NE(pPSO, nullptr);
+                pPSOs.emplace_back(std::move(pPSO));
+            }
+        }
     }
+
+    Timer  T;
+    auto   StartTime = T.GetElapsedTime();
+    Uint32 Iter      = 0;
+    while (true)
+    {
+        Uint32 NumPSOsReady = 0;
+        for (auto& pPSO : pPSOs)
+        {
+            if (pPSO->GetStatus() == PIPELINE_STATE_STATUS_READY)
+                ++NumPSOsReady;
+        }
+        if (NumPSOsReady == pPSOs.size())
+            break;
+        std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds{10});
+        ++Iter;
+    }
+    LOG_INFO_MESSAGE(pPSOs.size(), " PSOs were compiled after ", Iter, " iterations (", (T.GetElapsedTime() - StartTime) * 1000, " ms)");
 }
 
 } // namespace
