@@ -195,4 +195,12 @@ CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
     return pShaderByteCode;
 }
 
+CComPtr<ID3DBlob> CopyD3DBlob(ID3DBlob* pSrcBlob)
+{
+    CComPtr<ID3DBlob> pBlob;
+    D3DCreateBlob(pSrcBlob->GetBufferSize(), &pBlob);
+    memcpy(pBlob->GetBufferPointer(), pSrcBlob->GetBufferPointer(), pSrcBlob->GetBufferSize());
+    return pBlob;
+}
+
 } // namespace Diligent

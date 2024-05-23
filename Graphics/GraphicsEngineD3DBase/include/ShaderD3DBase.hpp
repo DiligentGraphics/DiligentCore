@@ -51,6 +51,8 @@ CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
                                      IDXCompiler*            DxCompiler,
                                      IDataBlob**             ppCompilerOutput) noexcept(false);
 
+CComPtr<ID3DBlob> CopyD3DBlob(ID3DBlob* pSrcBlob);
+
 /// Base implementation of a D3D shader
 template <typename EngineImplTraits, typename ShaderResourcesType>
 class ShaderD3DBase : public ShaderBase<EngineImplTraits>

@@ -53,7 +53,7 @@ struct CompiledShaderD3D12 final : SerializedShaderImpl::CompiledShader
 
     virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
     {
-        const auto& pBytecode = ShaderD3D12.GetD3DBytecode();
+        ID3DBlob* pBytecode = ShaderD3D12.GetD3DBytecode();
 
         ShaderCI.Source       = nullptr;
         ShaderCI.FilePath     = nullptr;
@@ -155,8 +155,8 @@ void SerializedPipelineStateImpl::PatchShadersD3D12(const CreateInfoType& Create
         const auto& Stage = ShaderStagesD3D12[j];
         for (size_t i = 0; i < Stage.Count(); ++i)
         {
-            const auto& pBytecode = Stage.ByteCodes[i];
-            auto        ShaderCI  = ShaderStages[j].Serialized[i]->GetCreateInfo();
+            ID3DBlob* pBytecode   = Stage.ByteCodes[i];
+            auto      ShaderCI    = ShaderStages[j].Serialized[i]->GetCreateInfo();
             ShaderCI.Source       = nullptr;
             ShaderCI.FilePath     = nullptr;
             ShaderCI.Macros       = {};

@@ -299,23 +299,13 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
     }
 }
 
-// NOTE: ID3DBlob is not thread-safe, so we need to make a copy of the bytecode
-CComPtr<ID3DBlob> CopyByteCode(const ShaderD3D12Impl* pShader)
-{
-    ID3DBlob* pSrcBytecode = pShader->GetD3DBytecode();
-
-    CComPtr<ID3DBlob> pBytecode;
-    D3DCreateBlob(pSrcBytecode->GetBufferSize(), &pBytecode);
-    memcpy(pBytecode->GetBufferPointer(), pSrcBytecode->GetBufferPointer(), pSrcBytecode->GetBufferSize());
-    return pBytecode;
-}
-
 } // namespace
 
 PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(const ShaderD3D12Impl* _pShader) :
     Type{_pShader->GetDesc().ShaderType},
     Shaders{_pShader},
-    ByteCodes{CopyByteCode(_pShader)}
+    // AddRef/Release methods of ID3DBlob are not thread-safe, so we need to make a copy of the bytecode
+    ByteCodes{CopyD3DBlob(_pShader->GetD3DBytecode())}
 {
 }
 
@@ -339,7 +329,8 @@ void PipelineStateD3D12Impl::ShaderStageInfo::Append(const ShaderD3D12Impl* pSha
     }
 
     Shaders.push_back(pShader);
-    ByteCodes.push_back(CopyByteCode(pShader));
+    // AddRef/Release methods of ID3DBlob are not thread-safe, so we need to make a copy of the bytecode
+    ByteCodes.push_back(CopyD3DBlob(pShader->GetD3DBytecode()));
 }
 
 size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const

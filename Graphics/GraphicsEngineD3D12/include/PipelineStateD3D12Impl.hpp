@@ -88,7 +88,8 @@ public:
 
         SHADER_TYPE                         Type = SHADER_TYPE_UNKNOWN;
         std::vector<const ShaderD3D12Impl*> Shaders;
-        std::vector<CComPtr<ID3DBlob>>      ByteCodes;
+        // WARNING: AddRef/Release methods of ID3DBlob are not thread-safe!
+        std::vector<CComPtr<ID3DBlob>> ByteCodes;
 
         friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }
     };

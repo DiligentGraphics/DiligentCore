@@ -122,7 +122,8 @@ void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&  
     {
         auto* const pShader    = Shaders[s];
         auto const  ShaderType = pShader->GetDesc().ShaderType;
-        auto* const pBytecode  = Shaders[s]->GetD3DBytecode();
+        // WARNING: AddRef/Release methods of ID3DBlob are not thread-safe!
+        ID3DBlob* pBytecode = Shaders[s]->GetD3DBytecode();
 
         ResourceBinding::TMap ResourceMap;
         for (Uint32 sign = 0; sign < SignatureCount; ++sign)
@@ -140,10 +141,7 @@ void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&  
 
         if (HandleRemappedBytecodeFn)
         {
-            CComPtr<ID3DBlob> pPatchedBytecode;
-            D3DCreateBlob(pBytecode->GetBufferSize(), &pPatchedBytecode);
-            memcpy(pPatchedBytecode->GetBufferPointer(), pBytecode->GetBufferPointer(), pBytecode->GetBufferSize());
-
+            CComPtr<ID3DBlob> pPatchedBytecode = CopyD3DBlob(pBytecode);
             if (!DXBCUtils::RemapResourceBindings(ResourceMap, pPatchedBytecode->GetBufferPointer(), pPatchedBytecode->GetBufferSize()))
                 LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
 
@@ -257,7 +255,10 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             VERIFY_EXPR(m_ppd3d11Shaders[s]);
 
             if (pShader->GetDesc().ShaderType == SHADER_TYPE_VERTEX)
-                pVSByteCode = pShader->GetD3DBytecode();
+            {
+                // AddRef/Release methods of ID3DBlob are not thread-safe, so we need to make a copy of the bytecode
+                pVSByteCode = CopyD3DBlob(pShader->GetD3DBytecode());
+            }
         }
     }
 }
