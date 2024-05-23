@@ -38,23 +38,15 @@ float4 main(float4 Pos : SV_Position) : SV_Target
     median(IJ + int2(0,2), Res);
     median(IJ + int2(0,4), Res);
     median(IJ + int2(0,6), Res);
-    median(IJ + int2(0,8), Res);
     median(IJ + int2(2,2), Res);
     median(IJ + int2(2,4), Res);
     median(IJ + int2(2,6), Res);
-    median(IJ + int2(2,8), Res);
     median(IJ + int2(4,2), Res);
     median(IJ + int2(4,4), Res);
     median(IJ + int2(4,6), Res);
-    median(IJ + int2(4,8), Res);
     median(IJ + int2(6,2), Res);
     median(IJ + int2(6,4), Res);
     median(IJ + int2(6,6), Res);
-    median(IJ + int2(6,8), Res);
-    median(IJ + int2(8,2), Res);
-    median(IJ + int2(8,4), Res);
-    median(IJ + int2(8,6), Res);
-    median(IJ + int2(8,8), Res);
 #endif
     
     return Res;
