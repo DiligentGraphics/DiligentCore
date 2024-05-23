@@ -50,7 +50,6 @@
 #include "StringTools.hpp"
 #include "DynamicLinearAllocator.hpp"
 #include "D3DShaderResourceValidation.hpp"
-#include "GraphicsTypesX.hpp"
 
 #include "DXBCUtils.hpp"
 #include "DXCompiler.hpp"
@@ -965,47 +964,6 @@ void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*          
     if (*m_Desc.Name != 0)
     {
         m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
-    }
-}
-
-
-template <typename PSOCreateInfoType>
-void PipelineStateD3D12Impl::Construct(RenderDeviceD3D12Impl*   pDeviceD3D12,
-                                       const PSOCreateInfoType& CreateInfo)
-{
-    m_Status.store(PIPELINE_STATE_STATUS_COMPILING);
-    if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && pDeviceD3D12->GetShaderCompilationThreadPool() != nullptr)
-    {
-        m_InitializeTaskRunning.store(true);
-        m_pInitializeTask = EnqueueAsyncWork(pDeviceD3D12->GetShaderCompilationThreadPool(),
-                                             [this,
-                                              CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo},
-                                              pDeviceD3D12](Uint32 ThreadId) mutable //
-                                             {
-                                                 try
-                                                 {
-                                                     InitializePipeline(pDeviceD3D12, CreateInfo);
-                                                     m_Status.store(PIPELINE_STATE_STATUS_READY);
-                                                 }
-                                                 catch (...)
-                                                 {
-                                                     m_Status.store(PIPELINE_STATE_STATUS_FAILED);
-                                                 }
-                                                 CreateInfo.Clear();
-                                             });
-    }
-    else
-    {
-        try
-        {
-            InitializePipeline(pDeviceD3D12, CreateInfo);
-            m_Status.store(PIPELINE_STATE_STATUS_READY);
-        }
-        catch (...)
-        {
-            Destruct();
-            throw;
-        }
     }
 }
 

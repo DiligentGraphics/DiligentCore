@@ -43,8 +43,6 @@
 #include "EngineMemory.h"
 #include "DXBCUtils.hpp"
 #include "D3DShaderResourceValidation.hpp"
-#include "GraphicsTypesX.hpp"
-#include "ThreadPool.hpp"
 
 namespace Diligent
 {
@@ -342,46 +340,6 @@ void PipelineStateD3D11Impl::InitializePipeline(RenderDeviceD3D11Impl*          
     CComPtr<ID3DBlob> pVSByteCode;
     InitInternalObjects(CreateInfo, pVSByteCode);
     VERIFY(!pVSByteCode, "There must be no VS in a compute pipeline.");
-}
-
-template <typename PSOCreateInfoType>
-void PipelineStateD3D11Impl::Construct(RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
-                                       const PSOCreateInfoType& CreateInfo)
-{
-    m_Status.store(PIPELINE_STATE_STATUS_COMPILING);
-    if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && pRenderDeviceD3D11->GetShaderCompilationThreadPool() != nullptr)
-    {
-        m_InitializeTaskRunning.store(true);
-        m_pInitializeTask = EnqueueAsyncWork(pRenderDeviceD3D11->GetShaderCompilationThreadPool(),
-                                             [this,
-                                              CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo},
-                                              pRenderDeviceD3D11](Uint32 ThreadId) mutable //
-                                             {
-                                                 try
-                                                 {
-                                                     InitializePipeline(pRenderDeviceD3D11, CreateInfo);
-                                                     m_Status.store(PIPELINE_STATE_STATUS_READY);
-                                                 }
-                                                 catch (...)
-                                                 {
-                                                     m_Status.store(PIPELINE_STATE_STATUS_FAILED);
-                                                 }
-                                                 CreateInfo.Clear();
-                                             });
-    }
-    else
-    {
-        try
-        {
-            InitializePipeline(pRenderDeviceD3D11, CreateInfo);
-            m_Status.store(PIPELINE_STATE_STATUS_READY);
-        }
-        catch (...)
-        {
-            Destruct();
-            throw;
-        }
-    }
 }
 
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*                    pRefCounters,

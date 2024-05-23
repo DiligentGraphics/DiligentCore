@@ -133,9 +133,8 @@ private:
     void InitializePipeline(RenderDeviceD3D12Impl*                   pDeviceD3D12,
                             const RayTracingPipelineStateCreateInfo& CreateInfo);
 
-    template <typename PSOCreateInfoType>
-    void Construct(RenderDeviceD3D12Impl*   pDeviceD3D12,
-                   const PSOCreateInfoType& CreateInfo);
+    // TPipelineStateBase::Construct needs access to InitializePipeline
+    friend TPipelineStateBase;
 
     void Destruct();
 

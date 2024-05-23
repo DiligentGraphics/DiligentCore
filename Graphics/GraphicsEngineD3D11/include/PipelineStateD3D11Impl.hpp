@@ -145,9 +145,8 @@ private:
     void InitializePipeline(RenderDeviceD3D11Impl*                pRenderDeviceD3D11,
                             const ComputePipelineStateCreateInfo& CreateInfo);
 
-    template <typename PSOCreateInfoType>
-    void Construct(RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
-                   const PSOCreateInfoType& CreateInfo);
+    // TPipelineStateBase::Construct needs access to InitializePipeline
+    friend TPipelineStateBase;
 
     void Destruct();
 

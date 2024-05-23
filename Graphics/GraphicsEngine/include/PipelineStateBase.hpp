@@ -46,8 +46,9 @@
 #include "HashUtils.hpp"
 #include "PipelineResourceSignatureBase.hpp"
 #include "RefCntAutoPtr.hpp"
-#include "ThreadPool.h"
+#include "ThreadPool.hpp"
 #include "SpinLock.hpp"
+#include "GraphicsTypesX.hpp"
 
 namespace Diligent
 {
@@ -827,6 +828,50 @@ public:
     }
 
 protected:
+    template <typename PSOCreateInfoType>
+    void Construct(RenderDeviceImplType*    pDevice,
+                   const PSOCreateInfoType& CreateInfo)
+    {
+        auto* const pThisImpl = static_cast<PipelineStateImplType*>(this);
+
+        m_Status.store(PIPELINE_STATE_STATUS_COMPILING);
+        if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && pDevice->GetShaderCompilationThreadPool() != nullptr)
+        {
+            m_InitializeTaskRunning.store(true);
+            m_pInitializeTask = EnqueueAsyncWork(pDevice->GetShaderCompilationThreadPool(),
+                                                 [pThisImpl,
+                                                  CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo},
+                                                  pDevice](Uint32 ThreadId) mutable //
+                                                 {
+                                                     try
+                                                     {
+                                                         pThisImpl->InitializePipeline(pDevice, CreateInfo);
+                                                         pThisImpl->m_Status.store(PIPELINE_STATE_STATUS_READY);
+                                                     }
+                                                     catch (...)
+                                                     {
+                                                         pThisImpl->m_Status.store(PIPELINE_STATE_STATUS_FAILED);
+                                                     }
+
+                                                     // Release create info objects
+                                                     CreateInfo.Clear();
+                                                 });
+        }
+        else
+        {
+            try
+            {
+                pThisImpl->InitializePipeline(pDevice, CreateInfo);
+                m_Status.store(PIPELINE_STATE_STATUS_READY);
+            }
+            catch (...)
+            {
+                pThisImpl->Destruct();
+                throw;
+            }
+        }
+    }
+
     template <typename ShaderImplType, typename PSOCreateInfoType, typename TShaderStages>
     void ExtractShaders(const PSOCreateInfoType& PSOCreateInfo,
                         TShaderStages&           ShaderStages,
