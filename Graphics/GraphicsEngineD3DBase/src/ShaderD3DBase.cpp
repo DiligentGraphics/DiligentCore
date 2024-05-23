@@ -34,16 +34,14 @@
 #include <atlcomcli.h>
 #include "WinHPostface.h"
 
+#include "ShaderD3DBase.hpp"
+
 #include "dxc/dxcapi.h"
 
 #include "D3DErrors.hpp"
 #include "DataBlobImpl.hpp"
-#include "RefCntAutoPtr.hpp"
-#include "ShaderD3DBase.hpp"
-#include "ShaderBase.hpp"
 #include "DXCompiler.hpp"
 #include "HLSLUtils.hpp"
-#include "BasicMath.hpp"
 #include "ThreadPool.hpp"
 
 #ifndef D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES
@@ -171,14 +169,13 @@ CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
         }
         else
         {
-            std::string strShaderProfile = GetHLSLProfileString(ShaderCI.Desc.ShaderType, ShaderModel);
-
-            String ShaderSource = BuildHLSLSourceString(ShaderCI);
+            const String Profile    = GetHLSLProfileString(ShaderCI.Desc.ShaderType, ShaderModel);
+            const String HLSLSource = BuildHLSLSourceString(ShaderCI);
 
             CComPtr<ID3DBlob> CompilerOutput;
 
-            auto hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &pShaderByteCode, &CompilerOutput);
-            HandleHLSLCompilerResult(SUCCEEDED(hr), CompilerOutput.p, ShaderSource, ShaderCI.Desc.Name, ppCompilerOutput);
+            auto hr = CompileShader(HLSLSource.c_str(), HLSLSource.length(), ShaderCI, Profile.c_str(), &pShaderByteCode, &CompilerOutput);
+            HandleHLSLCompilerResult(SUCCEEDED(hr), CompilerOutput.p, HLSLSource, ShaderCI.Desc.Name, ppCompilerOutput);
         }
     }
     else if (ShaderCI.ByteCode)

@@ -32,6 +32,7 @@
 #include "WinHPostface.h"
 
 #include <functional>
+#include <memory>
 
 #include "ShaderD3D.h"
 #include "ShaderBase.hpp"
@@ -94,6 +95,7 @@ public:
         }
         else
         {
+            // Set CompileTaskRunning flag before enqueuing the task
             this->m_CompileTaskRunning.store(true);
             this->m_pCompileTask = EnqueueAsyncWork(
                 D3DShaderCI.pShaderCompilationThreadPool,

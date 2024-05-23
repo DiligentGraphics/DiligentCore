@@ -89,7 +89,7 @@ private:
         CComPtr<ID3DBlob> pBlob;
 
         explicit BlobHashKey(ID3DBlob* _pBlob) :
-            Hash{ComputeHash(_pBlob)},
+            Hash{ComputeHashRaw(_pBlob->GetBufferPointer(), _pBlob->GetBufferSize())},
             pBlob{_pBlob}
         {}
 
@@ -112,20 +112,6 @@ private:
                 return false;
 
             return memcmp(pBlob->GetBufferPointer(), rhs.pBlob->GetBufferPointer(), Size0) == 0;
-        }
-
-    private:
-        static size_t ComputeHash(ID3DBlob* pBlob)
-        {
-            const auto* pData = reinterpret_cast<const Uint32*>(pBlob->GetBufferPointer());
-            const auto  Size  = pBlob->GetBufferSize();
-            VERIFY(Size % 4 == 0, "Bytecode size is expected to be a multiple of 4");
-            size_t Hash = 0;
-            for (Uint32 i = 0; i < Size / 4; ++i)
-            {
-                HashCombine(Hash, pData[i]);
-            }
-            return Hash;
         }
     };
 
