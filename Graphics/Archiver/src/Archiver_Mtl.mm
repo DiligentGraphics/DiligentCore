@@ -581,6 +581,8 @@ void SerializedShaderImpl::CreateShaderMtl(IReferenceCounters*     pRefCounters,
         // TODO: collect all outputs.
         ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
 
+        nullptr, //  pCompilationThreadPool
+
         std::function<void(std::string&)>{
             [&](std::string& MslSource)
             {
