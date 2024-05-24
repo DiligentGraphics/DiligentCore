@@ -151,7 +151,7 @@ public:
 
     ~ShaderBase()
     {
-        VERIFY(!m_pCompileTask, "Compile task is still running. This may result in a crash if the task accesses resources owned by the shader object.");
+        VERIFY(!m_wpCompileTask.IsValid(), "Compile task is still running. This may result in a crash if the task accesses resources owned by the shader object.");
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TDeviceObjectBase)
@@ -159,23 +159,31 @@ public:
     virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override
     {
         VERIFY_EXPR(m_Status.load() != SHADER_STATUS_UNINITIALIZED);
-        if (WaitForCompletion && m_CompileTaskRunning.load())
+        if (m_CompileTaskRunning.load())
         {
             RefCntAutoPtr<IAsyncTask> pCompileTask;
             {
                 Threading::SpinLockGuard Guard{m_CompileTaskLock};
-                pCompileTask = m_pCompileTask;
+                pCompileTask = m_wpCompileTask.Lock();
             }
+
+            bool TaskFinished = (pCompileTask == nullptr);
             if (pCompileTask)
             {
-                pCompileTask->WaitForCompletion();
+                if (WaitForCompletion)
                 {
-                    Threading::SpinLockGuard Guard{m_CompileTaskLock};
-                    m_pCompileTask.Release();
-                    m_CompileTaskRunning.store(false);
+                    pCompileTask->WaitForCompletion();
                 }
+                TaskFinished = pCompileTask->IsFinished();
             }
-            VERIFY_EXPR(m_Status.load() > SHADER_STATUS_COMPILING);
+
+            if (TaskFinished)
+            {
+                Threading::SpinLockGuard Guard{m_CompileTaskLock};
+                m_wpCompileTask.Release();
+                m_CompileTaskRunning.store(false);
+                VERIFY_EXPR(m_Status.load() > SHADER_STATUS_COMPILING);
+            }
         }
 
         return m_Status.load();
@@ -187,7 +195,7 @@ protected:
     std::atomic<SHADER_STATUS> m_Status{SHADER_STATUS_UNINITIALIZED};
     std::atomic<bool>          m_CompileTaskRunning{false};
     Threading::SpinLock        m_CompileTaskLock;
-    RefCntAutoPtr<IAsyncTask>  m_pCompileTask;
+    RefCntWeakPtr<IAsyncTask>  m_wpCompileTask;
 };
 
 } // namespace Diligent

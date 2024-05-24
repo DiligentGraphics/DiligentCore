@@ -238,7 +238,7 @@ public:
 
     ~PipelineStateBase()
     {
-        VERIFY(!m_pInitializeTask, "Initialize task is still running. This may result in a crash if the task accesses resources owned by the pipeline state object.");
+        VERIFY(!m_wpInitializeTask.IsValid(), "Initialize task is still running. This may result in a crash if the task accesses resources owned by the pipeline state object.");
 
         /*
         /// \note Destructor cannot directly remove the object from the registry as this may cause a
@@ -556,23 +556,31 @@ public:
     virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion = false) override
     {
         VERIFY_EXPR(m_Status.load() != PIPELINE_STATE_STATUS_UNINITIALIZED);
-        if (WaitForCompletion && m_InitializeTaskRunning.load())
+        if (m_InitializeTaskRunning.load())
         {
             RefCntAutoPtr<IAsyncTask> pInitializeTask;
             {
                 Threading::SpinLockGuard Guard{m_InitializeTaskLock};
-                pInitializeTask = m_pInitializeTask;
+                pInitializeTask = m_wpInitializeTask.Lock();
             }
+
+            bool TaskFinished = (pInitializeTask == nullptr);
             if (pInitializeTask)
             {
-                pInitializeTask->WaitForCompletion();
+                if (WaitForCompletion)
                 {
-                    Threading::SpinLockGuard Guard{m_InitializeTaskLock};
-                    m_pInitializeTask.Release();
-                    m_InitializeTaskRunning.store(false);
+                    pInitializeTask->WaitForCompletion();
                 }
+                TaskFinished = pInitializeTask->IsFinished();
             }
-            VERIFY_EXPR(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING);
+
+            if (TaskFinished)
+            {
+                Threading::SpinLockGuard Guard{m_InitializeTaskLock};
+                m_wpInitializeTask.Release();
+                m_InitializeTaskRunning.store(false);
+                VERIFY_EXPR(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING);
+            }
         }
 
         return m_Status.load();
@@ -837,23 +845,24 @@ protected:
         if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && this->m_pDevice->GetShaderCompilationThreadPool() != nullptr)
         {
             m_InitializeTaskRunning.store(true);
-            m_pInitializeTask = EnqueueAsyncWork(this->m_pDevice->GetShaderCompilationThreadPool(),
-                                                 [pThisImpl,
-                                                  CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo}](Uint32 ThreadId) mutable //
-                                                 {
-                                                     try
-                                                     {
-                                                         pThisImpl->InitializePipeline(CreateInfo);
-                                                         pThisImpl->m_Status.store(PIPELINE_STATE_STATUS_READY);
-                                                     }
-                                                     catch (...)
-                                                     {
-                                                         pThisImpl->m_Status.store(PIPELINE_STATE_STATUS_FAILED);
-                                                     }
+            m_wpInitializeTask = EnqueueAsyncWork(
+                this->m_pDevice->GetShaderCompilationThreadPool(),
+                [pThisImpl,
+                 CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo}](Uint32 ThreadId) mutable //
+                {
+                    try
+                    {
+                        pThisImpl->InitializePipeline(CreateInfo);
+                        pThisImpl->m_Status.store(PIPELINE_STATE_STATUS_READY);
+                    }
+                    catch (...)
+                    {
+                        pThisImpl->m_Status.store(PIPELINE_STATE_STATUS_FAILED);
+                    }
 
-                                                     // Release create info objects
-                                                     CreateInfo.Clear();
-                                                 });
+                    // Release create info objects
+                    CreateInfo.Clear();
+                });
         }
         else
         {
@@ -1249,7 +1258,7 @@ protected:
     std::atomic<PIPELINE_STATE_STATUS> m_Status{PIPELINE_STATE_STATUS_UNINITIALIZED};
     std::atomic<bool>                  m_InitializeTaskRunning{false};
     Threading::SpinLock                m_InitializeTaskLock;
-    RefCntAutoPtr<IAsyncTask>          m_pInitializeTask;
+    RefCntWeakPtr<IAsyncTask>          m_wpInitializeTask;
 
     /// The number of signatures in m_Signatures array.
     /// Note that this is not necessarily the same as the number of signatures

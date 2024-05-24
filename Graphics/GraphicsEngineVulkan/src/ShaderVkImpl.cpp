@@ -274,27 +274,36 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     else
     {
         m_CompileTaskRunning.store(true);
-        m_pCompileTask = EnqueueAsyncWork(VkShaderCI.pCompilationThreadPool,
-                                          [this,
-                                           ShaderCI         = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},
-                                           pDXCompiler      = VkShaderCI.pDXCompiler,
-                                           DeviceInfo       = VkShaderCI.DeviceInfo,
-                                           AdapterInfo      = VkShaderCI.AdapterInfo,
-                                           VkVersion        = VkShaderCI.VkVersion,
-                                           HasSpirv14       = VkShaderCI.HasSpirv14,
-                                           ppCompilerOutput = VkShaderCI.ppCompilerOutput](Uint32 ThreadId) mutable //
-                                          {
-                                              try
-                                              {
-                                                  const CreateInfo VkShaderCI{pDXCompiler, DeviceInfo, AdapterInfo, VkVersion, HasSpirv14, ppCompilerOutput, nullptr};
-                                                  Initialize(ShaderCI, VkShaderCI);
-                                              }
-                                              catch (...)
-                                              {
-                                                  m_Status.store(SHADER_STATUS_FAILED);
-                                              }
-                                              ShaderCI = ShaderCreateInfoWrapper{};
-                                          });
+        m_wpCompileTask = EnqueueAsyncWork(
+            VkShaderCI.pCompilationThreadPool,
+            [this,
+             ShaderCI         = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},
+             pDXCompiler      = VkShaderCI.pDXCompiler,
+             DeviceInfo       = VkShaderCI.DeviceInfo,
+             AdapterInfo      = VkShaderCI.AdapterInfo,
+             VkVersion        = VkShaderCI.VkVersion,
+             HasSpirv14       = VkShaderCI.HasSpirv14,
+             ppCompilerOutput = VkShaderCI.ppCompilerOutput](Uint32 ThreadId) mutable //
+            {
+                try
+                {
+                    const CreateInfo VkShaderCI{
+                        pDXCompiler,
+                        DeviceInfo,
+                        AdapterInfo,
+                        VkVersion,
+                        HasSpirv14,
+                        ppCompilerOutput,
+                        nullptr,
+                    };
+                    Initialize(ShaderCI, VkShaderCI);
+                }
+                catch (...)
+                {
+                    m_Status.store(SHADER_STATUS_FAILED);
+                }
+                ShaderCI = ShaderCreateInfoWrapper{};
+            });
     }
 }
 
