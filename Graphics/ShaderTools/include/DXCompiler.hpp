@@ -90,26 +90,20 @@ public:
     using BindInfo            = ResourceBinding::BindInfo;
     using TResourceBindingMap = ResourceBinding::TMap;
 
-    /// Remaps resource bindings (shader registers and spaces) in the source byte code using the
-    /// resource binding map.
-
-    /// \param [in]  ResourceMap     - Resource binding map. For every resource in the
-    ///                                source byte code it must define the binding
-    ///                                (shader register and space).
-    /// \param [in]  pSrcBytecode    - Pointer to the source byte code.
-    /// \param [in]  SrcBytecodeSize - Size of the source byte code.
-    /// \param [out] ppDstByteCode   - Memory location where the pointer to the byte code
-    ///                                with the remapped bindings will be written.
+    /// \param [in]  ResourceMap   - Resource binding map. For every resource in the
+    ///                              source byte code it must define the binding
+    ///                              (shader register and space).
+    /// \param [in]  pSrcBytecode  - Source byte code.
+    /// \param [out] ppDstByteCode - Memory location where the pointer to the byte code
+    ///                              with the remapped bindings will be written.
     ///
     /// \return     true if the remapping was successful, and false otherwise.
     virtual bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
-                                       const void*                pSrcBytecode,
-                                       size_t                     SrcBytecodeSize,
+                                       IDxcBlob*                  pSrcBytecode,
                                        IDxcBlob**                 ppDstByteCode) = 0;
 
     /// Attempts to extract shader reflection from the bytecode using DXC.
-    virtual void GetD3D12ShaderReflection(const void*              pBytecode,
-                                          size_t                   BytecodeSize,
+    virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                           ID3D12ShaderReflection** ppShaderReflection) = 0;
 };
 
@@ -119,5 +113,8 @@ public:
 std::unique_ptr<IDXCompiler> CreateDXCompiler(DXCompilerTarget Target, Uint32 APIVersion, const char* pLibraryName);
 
 bool IsDXILBytecode(const void* pBytecode, size_t Size);
+
+/// Creates a DXC blob wrapper around the provided data blob.
+void CreateDxcBlobWrapper(IDataBlob* pDataBlob, IDxcBlob** pDxcBlobWrapper);
 
 } // namespace Diligent

@@ -117,13 +117,11 @@ public:
                          std::vector<uint32_t>*  pByteCode,
                          IDataBlob**             ppCompilerOutput) noexcept(false) override final;
 
-    virtual void GetD3D12ShaderReflection(const void*              pBytecode,
-                                          size_t                   BytecodeSize,
+    virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                           ID3D12ShaderReflection** ppShaderReflection) override final;
 
     virtual bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
-                                       const void*                pSrcBytecode,
-                                       size_t                     SrcBytecodeSize,
+                                       IDxcBlob*                  pSrcBytecode,
                                        IDxcBlob**                 ppDstByteCode) override final;
 
 private:
@@ -306,10 +304,11 @@ private:
 class DxcBlobWrapper final : public IDxcBlob
 {
 public:
-    DxcBlobWrapper(const void* pData, size_t Size) :
-        m_pData{pData},
-        m_Size{Size}
-    {}
+    static void Create(IDataBlob* pDataBlob, IDxcBlob** ppBlob)
+    {
+        auto* pBlob = new DxcBlobWrapper{pDataBlob};
+        pBlob->QueryInterface(__uuidof(IDxcBlob), reinterpret_cast<void**>(ppBlob));
+    }
 
     ~DxcBlobWrapper()
     {
@@ -338,22 +337,31 @@ public:
 
     virtual ULONG STDMETHODCALLTYPE Release(void) override final
     {
-        return m_RefCount.fetch_add(-1) - 1;
+        auto RemainingRefs = m_RefCount.fetch_add(-1) - 1;
+        if (RemainingRefs == 0)
+            delete this;
+
+        return RemainingRefs;
     }
 
     virtual LPVOID STDMETHODCALLTYPE GetBufferPointer(void) override final
     {
-        return const_cast<void*>(m_pData);
+        return m_pData->GetDataPtr();
     }
 
     virtual SIZE_T STDMETHODCALLTYPE GetBufferSize(void) override final
     {
-        return m_Size;
+        return m_pData->GetSize();
     }
 
 private:
-    const void* const m_pData;
-    const size_t      m_Size;
+    DxcBlobWrapper(IDataBlob* pDataBlob) :
+        m_pData{pDataBlob}
+    {}
+
+private:
+    RefCntAutoPtr<IDataBlob> m_pData;
+
     std::atomic<long> m_RefCount{0};
 };
 
@@ -741,11 +749,10 @@ private:
 #endif // D3D12_SUPPORTED
 
 
-void DXCompilerImpl::GetD3D12ShaderReflection(const void*              pBytecode,
-                                              size_t                   BytecodeSize,
+void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                               ID3D12ShaderReflection** ppShaderReflection)
 {
-    DxcBlobWrapper ShaderBytecode{pBytecode, BytecodeSize};
+    // NOTE: a reference to pShaderBytecode may be kept in the returned object
 
 #if D3D12_SUPPORTED
     try
@@ -757,7 +764,7 @@ void DXCompilerImpl::GetD3D12ShaderReflection(const void*              pBytecode
         CComPtr<IDxcContainerReflection> pdxcReflection;
 
         CHECK_D3D_RESULT(CreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pdxcReflection)), "Failed to create DXC shader reflection instance");
-        CHECK_D3D_RESULT(pdxcReflection->Load(&ShaderBytecode), "Failed to load shader reflection from bytecode");
+        CHECK_D3D_RESULT(pdxcReflection->Load(pShaderBytecode), "Failed to load shader reflection from bytecode");
 
         UINT32 shaderIdx = 0;
         CHECK_D3D_RESULT(pdxcReflection->FindFirstPartKind(DXC_PART_DXIL, &shaderIdx), "Failed to get the shader reflection");
@@ -918,11 +925,10 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 }
 
 bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMap,
-                                           const void*                pSrcBytecode,
-                                           size_t                     SrcBytecodeSize,
+                                           IDxcBlob*                  pSrcBytecode,
                                            IDxcBlob**                 ppDstByteCode)
 {
-    DxcBlobWrapper SrcDxcBytecode{pSrcBytecode, SrcBytecodeSize};
+    // NOTE: a reference to pSrcBytecode may be kept in the returned object
 
 #if D3D12_SUPPORTED
     try
@@ -944,10 +950,10 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
         CHECK_D3D_RESULT(CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pdxcCompiler)), "Failed to create DXC Compiler");
 
         CComPtr<IDxcBlobEncoding> pdxcDisasm;
-        CHECK_D3D_RESULT(pdxcCompiler->Disassemble(&SrcDxcBytecode, &pdxcDisasm), "Failed to disassemble bytecode");
+        CHECK_D3D_RESULT(pdxcCompiler->Disassemble(pSrcBytecode, &pdxcDisasm), "Failed to disassemble bytecode");
 
         CComPtr<ID3D12ShaderReflection> pd3d12Reflection;
-        GetD3D12ShaderReflection(pSrcBytecode, SrcBytecodeSize, &pd3d12Reflection);
+        GetD3D12ShaderReflection(pSrcBytecode, &pd3d12Reflection);
         if (!pd3d12Reflection)
             LOG_ERROR_AND_THROW("Failed to get D3D12 shader reflection from shader bytecode");
 
@@ -2310,10 +2316,9 @@ bool IsDXILBytecode(const void* pBytecode, size_t Size)
     return false;
 }
 
-
 void CreateDxcBlobWrapper(IDataBlob* pDataBlob, IDxcBlob** pDxcBlobWrapper)
 {
-    UNSUPPORTED("Not implemented");
+    DxcBlobWrapper::Create(pDataBlob, pDxcBlobWrapper);
 }
 
 } // namespace Diligent

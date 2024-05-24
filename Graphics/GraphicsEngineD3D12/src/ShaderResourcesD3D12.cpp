@@ -37,6 +37,8 @@
 #include "ShaderBase.hpp"
 #include "DXCompiler.hpp"
 
+#include "dxc/dxcapi.h"
+
 namespace Diligent
 {
 
@@ -57,7 +59,9 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(IDataBlob*        pShaderBytecode,
     if (IsDXILBytecode(pShaderBytecode->GetConstDataPtr(), pShaderBytecode->GetSize()))
     {
         VERIFY(pDXCompiler != nullptr, "DXC is not initialized");
-        pDXCompiler->GetD3D12ShaderReflection(pShaderBytecode->GetConstDataPtr(), pShaderBytecode->GetSize(), &pShaderReflection);
+        CComPtr<IDxcBlob> pDxcBytecode;
+        CreateDxcBlobWrapper(pShaderBytecode, &pDxcBytecode);
+        pDXCompiler->GetD3D12ShaderReflection(pDxcBytecode, &pShaderReflection);
         if (!pShaderReflection)
         {
             LOG_ERROR_AND_THROW("Failed to read shader reflection from DXIL container");

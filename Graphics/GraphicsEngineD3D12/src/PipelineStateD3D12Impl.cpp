@@ -482,7 +482,9 @@ void PipelineStateD3D12Impl::RemapOrVerifyShaderResources(TShaderStages&        
                         LOG_ERROR_AND_THROW("DXC compiler does not exists, can not remap resource bindings");
 
                     CComPtr<IDxcBlob> pPatchedBytecode;
-                    if (!pDxCompiler->RemapResourceBindings(ResourceMap, pBytecode->GetConstDataPtr(), pBytecode->GetSize(), &pPatchedBytecode))
+                    CComPtr<IDxcBlob> pDxcBytecode;
+                    CreateDxcBlobWrapper(pBytecode, &pDxcBytecode);
+                    if (!pDxCompiler->RemapResourceBindings(ResourceMap, pDxcBytecode, &pPatchedBytecode))
                         LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
                     pBytecode = DataBlobImpl::Create(pPatchedBytecode->GetBufferSize(), pPatchedBytecode->GetBufferPointer());
                 }

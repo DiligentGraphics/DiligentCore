@@ -148,7 +148,7 @@ TEST(DXCompilerTest, Reflection)
         ASSERT_TRUE(pDXIL) << (pOutput ? std::string{reinterpret_cast<const char*>(pOutput->GetBufferPointer()), pOutput->GetBufferSize()} : "");
 
         CComPtr<ID3D12ShaderReflection> pReflection;
-        pDXC->GetD3D12ShaderReflection(pDXIL->GetBufferPointer(), pDXIL->GetBufferSize(), &pReflection);
+        pDXC->GetD3D12ShaderReflection(pDXIL, &pReflection);
         ASSERT_TRUE(pReflection);
 
         D3D12_SHADER_DESC ShaderDesc;
@@ -234,12 +234,12 @@ TEST(DXCompilerTest, RemapBindingsRG)
         BindigMap["g_AnotherRes"]  = {567, 5, 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV    };
         // clang-format on
         CComPtr<IDxcBlob> pRemappedDXIL;
-        pDXC->RemapResourceBindings(BindigMap, pDXIL->GetBufferPointer(), pDXIL->GetBufferSize(), &pRemappedDXIL);
+        pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
         ASSERT_TRUE(pRemappedDXIL);
 
         {
             CComPtr<ID3D12ShaderReflection> pReflection;
-            pDXC->GetD3D12ShaderReflection(pRemappedDXIL->GetBufferPointer(), pRemappedDXIL->GetBufferSize(), &pReflection);
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
             ASSERT_TRUE(pReflection);
 
             D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
@@ -272,12 +272,12 @@ TEST(DXCompilerTest, RemapBindingsRG)
         BindigMap["cbConstants"]   = {1, 1, 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
         // clang-format on
         CComPtr<IDxcBlob> pRemappedDXIL2;
-        pDXC->RemapResourceBindings(BindigMap, pRemappedDXIL->GetBufferPointer(), pRemappedDXIL->GetBufferSize(), &pRemappedDXIL2);
+        pDXC->RemapResourceBindings(BindigMap, pRemappedDXIL, &pRemappedDXIL2);
         ASSERT_TRUE(pRemappedDXIL2);
 
         {
             CComPtr<ID3D12ShaderReflection> pReflection;
-            pDXC->GetD3D12ShaderReflection(pRemappedDXIL2->GetBufferPointer(), pRemappedDXIL2->GetBufferSize(), &pReflection);
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL2, &pReflection);
             ASSERT_TRUE(pReflection);
 
             D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
@@ -374,12 +374,12 @@ float4 main() : SV_TARGET
         // clang-format on
 
         CComPtr<IDxcBlob> pRemappedDXIL;
-        pDXC->RemapResourceBindings(BindigMap, pDXIL->GetBufferPointer(), pDXIL->GetBufferSize(), &pRemappedDXIL);
+        pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
         ASSERT_TRUE(pRemappedDXIL);
 
         {
             CComPtr<ID3D12ShaderReflection> pReflection;
-            pDXC->GetD3D12ShaderReflection(pRemappedDXIL->GetBufferPointer(), pRemappedDXIL->GetBufferSize(), &pReflection);
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
             ASSERT_TRUE(pReflection);
 
             D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
@@ -420,12 +420,12 @@ float4 main() : SV_TARGET
         // clang-format on
 
         pRemappedDXIL = nullptr;
-        pDXC->RemapResourceBindings(BindigMap, pDXIL->GetBufferPointer(), pDXIL->GetBufferSize(), &pRemappedDXIL);
+        pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
         ASSERT_TRUE(pRemappedDXIL);
 
         {
             CComPtr<ID3D12ShaderReflection> pReflection;
-            pDXC->GetD3D12ShaderReflection(pRemappedDXIL->GetBufferPointer(), pRemappedDXIL->GetBufferSize(), &pReflection);
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
             ASSERT_TRUE(pReflection);
 
             D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
@@ -570,12 +570,12 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
         BindigMap["g_AnotherRes"]       = {567, 0,  1, SHADER_RESOURCE_TYPE_TEXTURE_UAV    };
         // clang-format on
         CComPtr<IDxcBlob> pRemappedDXIL;
-        pDXC->RemapResourceBindings(BindigMap, pDXIL->GetBufferPointer(), pDXIL->GetBufferSize(), &pRemappedDXIL);
+        pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
         ASSERT_TRUE(pRemappedDXIL);
 
         {
             CComPtr<ID3D12ShaderReflection> pReflection;
-            pDXC->GetD3D12ShaderReflection(pRemappedDXIL->GetBufferPointer(), pRemappedDXIL->GetBufferSize(), &pReflection);
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
             ASSERT_TRUE(pReflection);
 
             D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
@@ -640,12 +640,12 @@ float4 main(in float4 f4Position : SV_Position) : SV_TARGET
         BindigMap["g_AnotherRes"]       = {567,   0,   1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER};
         // clang-format on
         pRemappedDXIL = nullptr;
-        pDXC->RemapResourceBindings(BindigMap, pDXIL->GetBufferPointer(), pDXIL->GetBufferSize(), &pRemappedDXIL);
+        pDXC->RemapResourceBindings(BindigMap, pDXIL, &pRemappedDXIL);
         ASSERT_TRUE(pRemappedDXIL);
 
         {
             CComPtr<ID3D12ShaderReflection> pReflection;
-            pDXC->GetD3D12ShaderReflection(pRemappedDXIL->GetBufferPointer(), pRemappedDXIL->GetBufferSize(), &pReflection);
+            pDXC->GetD3D12ShaderReflection(pRemappedDXIL, &pReflection);
             ASSERT_TRUE(pReflection);
 
             D3D12_SHADER_INPUT_BIND_DESC BindDesc = {};
