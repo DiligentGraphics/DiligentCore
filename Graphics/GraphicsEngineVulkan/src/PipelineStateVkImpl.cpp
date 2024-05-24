@@ -820,8 +820,7 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
     return ShaderStages;
 }
 
-void PipelineStateVkImpl::InitializePipeline(RenderDeviceVkImpl*                    pDeviceVk,
-                                             const GraphicsPipelineStateCreateInfo& CreateInfo)
+void PipelineStateVkImpl::InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo)
 {
     std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
     std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
@@ -829,11 +828,10 @@ void PipelineStateVkImpl::InitializePipeline(RenderDeviceVkImpl*                
     InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
     const auto vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
-    CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, GetRenderPassPtr(), vkSPOCache);
+    CreateGraphicsPipeline(m_pDevice, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, GetRenderPassPtr(), vkSPOCache);
 }
 
-void PipelineStateVkImpl::InitializePipeline(RenderDeviceVkImpl*                   pDeviceVk,
-                                             const ComputePipelineStateCreateInfo& CreateInfo)
+void PipelineStateVkImpl::InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo)
 {
     std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
     std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
@@ -841,13 +839,12 @@ void PipelineStateVkImpl::InitializePipeline(RenderDeviceVkImpl*                
     InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
     const auto vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
-    CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline, vkSPOCache);
+    CreateComputePipeline(m_pDevice, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline, vkSPOCache);
 }
 
-void PipelineStateVkImpl::InitializePipeline(RenderDeviceVkImpl*                      pDeviceVk,
-                                             const RayTracingPipelineStateCreateInfo& CreateInfo)
+void PipelineStateVkImpl::InitializePipeline(const RayTracingPipelineStateCreateInfo& CreateInfo)
 {
-    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
+    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
 
     std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
     std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
@@ -856,7 +853,7 @@ void PipelineStateVkImpl::InitializePipeline(RenderDeviceVkImpl*                
     const auto vkShaderGroups = BuildRTShaderGroupDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderStages);
     const auto vkSPOCache     = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
 
-    CreateRayTracingPipeline(pDeviceVk, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline, vkSPOCache);
+    CreateRayTracingPipeline(m_pDevice, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline, vkSPOCache);
 
     VERIFY(m_pRayTracingPipelineData->NameToGroupIndex.size() == vkShaderGroups.size(),
            "The size of NameToGroupIndex map does not match the actual number of groups in the pipeline. This is a bug.");
@@ -870,19 +867,19 @@ void PipelineStateVkImpl::InitializePipeline(RenderDeviceVkImpl*                
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const GraphicsPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo}
 {
-    Construct(pDeviceVk, CreateInfo);
+    Construct(CreateInfo);
 }
 
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const ComputePipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo}
 {
-    Construct(pDeviceVk, CreateInfo);
+    Construct(CreateInfo);
 }
 
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const RayTracingPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo}
 {
-    Construct(pDeviceVk, CreateInfo);
+    Construct(CreateInfo);
 }
 
 PipelineStateVkImpl::~PipelineStateVkImpl()

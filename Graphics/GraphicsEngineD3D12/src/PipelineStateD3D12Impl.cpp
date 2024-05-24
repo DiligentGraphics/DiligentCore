@@ -669,15 +669,14 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
 }
 
 
-void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*                 pDeviceD3D12,
-                                                const GraphicsPipelineStateCreateInfo& CreateInfo)
+void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo)
 {
     const auto WName = WidenString(m_Desc.Name);
 
     TShaderStages ShaderStages;
     InitInternalObjects(CreateInfo, ShaderStages);
 
-    auto* pd3d12Device = pDeviceD3D12->GetD3D12Device();
+    auto* pd3d12Device = m_pDevice->GetD3D12Device();
     if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
         const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
@@ -855,7 +854,7 @@ void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*          
         streamDesc.SizeInBytes                   = sizeof(d3d12PSODesc);
         streamDesc.pPipelineStateSubobjectStream = &d3d12PSODesc;
 
-        auto* pd3d12Device2 = pDeviceD3D12->GetD3D12Device2();
+        auto* pd3d12Device2 = m_pDevice->GetD3D12Device2();
         // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
         HRESULT hr = pd3d12Device2->CreatePipelineState(&streamDesc, __uuidof(ID3D12PipelineState), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
         if (FAILED(hr))
@@ -873,13 +872,12 @@ void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*          
     }
 }
 
-void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*                pDeviceD3D12,
-                                                const ComputePipelineStateCreateInfo& CreateInfo)
+void PipelineStateD3D12Impl::InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo)
 {
     TShaderStages ShaderStages;
     InitInternalObjects(CreateInfo, ShaderStages);
 
-    auto* pd3d12Device = pDeviceD3D12->GetD3D12Device();
+    auto* pd3d12Device = m_pDevice->GetD3D12Device();
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
@@ -925,14 +923,13 @@ void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*          
     }
 }
 
-void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*                   pDeviceD3D12,
-                                                const RayTracingPipelineStateCreateInfo& CreateInfo)
+void PipelineStateD3D12Impl::InitializePipeline(const RayTracingPipelineStateCreateInfo& CreateInfo)
 {
     LocalRootSignatureD3D12 LocalRootSig{CreateInfo.pShaderRecordName, CreateInfo.RayTracingPipeline.ShaderRecordSize};
     TShaderStages           ShaderStages;
     InitInternalObjects(CreateInfo, ShaderStages, &LocalRootSig);
 
-    auto* pd3d12Device = pDeviceD3D12->GetD3D12Device5();
+    auto* pd3d12Device = m_pDevice->GetD3D12Device5();
 
     DynamicLinearAllocator             TempPool{GetRawAllocator(), 4 << 10};
     std::vector<D3D12_STATE_SUBOBJECT> Subobjects;
@@ -969,7 +966,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
-    Construct(pDeviceD3D12, CreateInfo);
+    Construct(CreateInfo);
 }
 
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                   pRefCounters,
@@ -977,7 +974,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
                                                const ComputePipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
-    Construct(pDeviceD3D12, CreateInfo);
+    Construct(CreateInfo);
 }
 
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                      pRefCounters,
@@ -985,7 +982,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
                                                const RayTracingPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
-    Construct(pDeviceD3D12, CreateInfo);
+    Construct(CreateInfo);
 }
 
 PipelineStateD3D12Impl::~PipelineStateD3D12Impl()

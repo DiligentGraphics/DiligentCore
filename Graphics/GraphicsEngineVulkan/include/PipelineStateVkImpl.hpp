@@ -129,14 +129,9 @@ private:
     void InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
                             TShaderStages&                 ShaderStages) noexcept(false);
 
-    void InitializePipeline(RenderDeviceVkImpl*                    pDeviceVk,
-                            const GraphicsPipelineStateCreateInfo& CreateInfo);
-
-    void InitializePipeline(RenderDeviceVkImpl*                   pDeviceVk,
-                            const ComputePipelineStateCreateInfo& CreateInfo);
-
-    void InitializePipeline(RenderDeviceVkImpl*                      pDeviceVk,
-                            const RayTracingPipelineStateCreateInfo& CreateInfo);
+    void InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo);
+    void InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo);
+    void InitializePipeline(const RayTracingPipelineStateCreateInfo& CreateInfo);
 
     // TPipelineStateBase::Construct needs access to InitializePipeline
     friend TPipelineStateBase;

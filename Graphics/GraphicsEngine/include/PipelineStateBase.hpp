@@ -829,23 +829,21 @@ public:
 
 protected:
     template <typename PSOCreateInfoType>
-    void Construct(RenderDeviceImplType*    pDevice,
-                   const PSOCreateInfoType& CreateInfo)
+    void Construct(const PSOCreateInfoType& CreateInfo)
     {
         auto* const pThisImpl = static_cast<PipelineStateImplType*>(this);
 
         m_Status.store(PIPELINE_STATE_STATUS_COMPILING);
-        if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && pDevice->GetShaderCompilationThreadPool() != nullptr)
+        if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && this->m_pDevice->GetShaderCompilationThreadPool() != nullptr)
         {
             m_InitializeTaskRunning.store(true);
-            m_pInitializeTask = EnqueueAsyncWork(pDevice->GetShaderCompilationThreadPool(),
+            m_pInitializeTask = EnqueueAsyncWork(this->m_pDevice->GetShaderCompilationThreadPool(),
                                                  [pThisImpl,
-                                                  CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo},
-                                                  pDevice](Uint32 ThreadId) mutable //
+                                                  CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo}](Uint32 ThreadId) mutable //
                                                  {
                                                      try
                                                      {
-                                                         pThisImpl->InitializePipeline(pDevice, CreateInfo);
+                                                         pThisImpl->InitializePipeline(CreateInfo);
                                                          pThisImpl->m_Status.store(PIPELINE_STATE_STATUS_READY);
                                                      }
                                                      catch (...)
@@ -861,7 +859,7 @@ protected:
         {
             try
             {
-                pThisImpl->InitializePipeline(pDevice, CreateInfo);
+                pThisImpl->InitializePipeline(CreateInfo);
                 m_Status.store(PIPELINE_STATE_STATUS_READY);
             }
             catch (...)

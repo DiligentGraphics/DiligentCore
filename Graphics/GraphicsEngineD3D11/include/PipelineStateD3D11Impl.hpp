@@ -139,11 +139,8 @@ private:
                              const std::vector<ShaderD3D11Impl*>& Shaders,
                              RefCntAutoPtr<IDataBlob>&            pVSByteCode);
 
-    void InitializePipeline(RenderDeviceD3D11Impl*                 pRenderDeviceD3D11,
-                            const GraphicsPipelineStateCreateInfo& CreateInfo);
-
-    void InitializePipeline(RenderDeviceD3D11Impl*                pRenderDeviceD3D11,
-                            const ComputePipelineStateCreateInfo& CreateInfo);
+    void InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo);
+    void InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo);
 
     // TPipelineStateBase::Construct needs access to InitializePipeline
     friend TPipelineStateBase;

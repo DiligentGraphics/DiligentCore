@@ -124,14 +124,9 @@ private:
                            TShaderStages&                 ShaderStages,
                            LocalRootSignatureD3D12*       pLocalRootSig) noexcept(false);
 
-    void InitializePipeline(RenderDeviceD3D12Impl*                 pDeviceD3D12,
-                            const GraphicsPipelineStateCreateInfo& CreateInfo);
-
-    void InitializePipeline(RenderDeviceD3D12Impl*                pDeviceD3D12,
-                            const ComputePipelineStateCreateInfo& CreateInfo);
-
-    void InitializePipeline(RenderDeviceD3D12Impl*                   pDeviceD3D12,
-                            const RayTracingPipelineStateCreateInfo& CreateInfo);
+    void InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo);
+    void InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo);
+    void InitializePipeline(const RayTracingPipelineStateCreateInfo& CreateInfo);
 
     // TPipelineStateBase::Construct needs access to InitializePipeline
     friend TPipelineStateBase;

@@ -295,8 +295,7 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType&  Creat
     InitResourceLayouts(CreateInfo, Shaders, pVSByteCode);
 }
 
-void PipelineStateD3D11Impl::InitializePipeline(RenderDeviceD3D11Impl*                 pRenderDeviceD3D11,
-                                                const GraphicsPipelineStateCreateInfo& CreateInfo)
+void PipelineStateD3D11Impl::InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo)
 {
     RefCntAutoPtr<IDataBlob> pVSByteCode;
     InitInternalObjects(CreateInfo, pVSByteCode);
@@ -305,7 +304,7 @@ void PipelineStateD3D11Impl::InitializePipeline(RenderDeviceD3D11Impl*          
         LOG_ERROR_AND_THROW("Vertex shader is null");
 
     const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
-    auto* const pDeviceD3D11     = pRenderDeviceD3D11->GetD3D11Device();
+    auto* const pDeviceD3D11     = m_pDevice->GetD3D11Device();
 
     D3D11_BLEND_DESC D3D11BSDesc = {};
     BlendStateDesc_To_D3D11_BLEND_DESC(GraphicsPipeline.BlendDesc, D3D11BSDesc);
@@ -334,8 +333,7 @@ void PipelineStateD3D11Impl::InitializePipeline(RenderDeviceD3D11Impl*          
     }
 }
 
-void PipelineStateD3D11Impl::InitializePipeline(RenderDeviceD3D11Impl*                pRenderDeviceD3D11,
-                                                const ComputePipelineStateCreateInfo& CreateInfo)
+void PipelineStateD3D11Impl::InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo)
 {
     RefCntAutoPtr<IDataBlob> pVSByteCode;
     InitInternalObjects(CreateInfo, pVSByteCode);
@@ -347,7 +345,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pRenderDeviceD3D11, CreateInfo}
 {
-    Construct(pRenderDeviceD3D11, CreateInfo);
+    Construct(CreateInfo);
 }
 
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*                   pRefCounters,
@@ -355,7 +353,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
                                                const ComputePipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pRenderDeviceD3D11, CreateInfo}
 {
-    Construct(pRenderDeviceD3D11, CreateInfo);
+    Construct(CreateInfo);
 }
 
 PipelineStateD3D11Impl::~PipelineStateD3D11Impl()
