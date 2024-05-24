@@ -35,6 +35,7 @@
 #include <memory>
 
 #include "ShaderD3D.h"
+#include "DataBlob.h"
 #include "ShaderBase.hpp"
 #include "ThreadPool.h"
 #include "RefCntAutoPtr.hpp"
@@ -47,12 +48,11 @@ namespace Diligent
 
 class IDXCompiler;
 
-CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
-                                     const ShaderVersion     ShaderModel,
-                                     IDXCompiler*            DxCompiler,
-                                     IDataBlob**             ppCompilerOutput) noexcept(false);
-
-CComPtr<ID3DBlob> CopyD3DBlob(ID3DBlob* pSrcBlob);
+// AddRef/Release methods of ID3DBlob are not thread safe, so use Diligent::IDataBlob.
+RefCntAutoPtr<IDataBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
+                                            const ShaderVersion     ShaderModel,
+                                            IDXCompiler*            DxCompiler,
+                                            IDataBlob**             ppCompilerOutput) noexcept(false);
 
 /// Base implementation of a D3D shader
 template <typename EngineImplTraits, typename ShaderResourcesType>
@@ -70,7 +70,7 @@ public:
         IThreadPool* const         pShaderCompilationThreadPool;
     };
 
-    using InitResourcesFuncType = std::function<std::shared_ptr<const ShaderResourcesType>(const ShaderDesc&, ID3DBlob*)>;
+    using InitResourcesFuncType = std::function<std::shared_ptr<const ShaderResourcesType>(const ShaderDesc&, IDataBlob*)>;
 
     ShaderD3DBase(IReferenceCounters*     pRefCounters,
                   RenderDeviceImplType*   pDevice,
@@ -162,8 +162,8 @@ public:
         DEV_CHECK_ERR(this->m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         if (m_pShaderByteCode)
         {
-            *ppBytecode = m_pShaderByteCode->GetBufferPointer();
-            Size        = m_pShaderByteCode->GetBufferSize();
+            *ppBytecode = m_pShaderByteCode->GetConstDataPtr();
+            Size        = m_pShaderByteCode->GetSize();
         }
         else
         {
@@ -172,7 +172,7 @@ public:
         }
     }
 
-    ID3DBlob* GetD3DBytecode() const
+    IDataBlob* GetD3DBytecode() const
     {
         DEV_CHECK_ERR(this->m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until compilation is complete. Use GetStatus() to check the shader status.");
         return m_pShaderByteCode;
@@ -200,7 +200,8 @@ private:
     }
 
 protected:
-    CComPtr<ID3DBlob> m_pShaderByteCode;
+    // AddRef/Release methods of ID3DBlob are not thread safe, so use Diligent::IDataBlob.
+    RefCntAutoPtr<IDataBlob> m_pShaderByteCode;
 
     // ShaderResources class instance must be referenced through the shared pointer, because
     // it is referenced by PipelineStateD3DXXImpl class instances

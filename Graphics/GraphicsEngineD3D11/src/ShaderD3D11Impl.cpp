@@ -98,7 +98,7 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
         D3D11ShaderCI,
         IsDeviceInternal,
         GetD3D11ShaderModel(D3D11ShaderCI.FeatureLevel, ShaderCI.HLSLVersion),
-        [LoadConstantBufferReflection = ShaderCI.LoadConstantBufferReflection](const ShaderDesc& Desc, ID3DBlob* pShaderByteCode) {
+        [LoadConstantBufferReflection = ShaderCI.LoadConstantBufferReflection](const ShaderDesc& Desc, IDataBlob* pShaderByteCode) {
             auto& Allocator  = GetRawAllocator();
             auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
             auto* pResources = new (pRawMem) ShaderResourcesD3D11 //
@@ -136,11 +136,11 @@ void ShaderD3D11Impl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterf
     }
 }
 
-ID3D11DeviceChild* ShaderD3D11Impl::GetD3D11Shader(ID3DBlob* pBlob) noexcept(false)
+ID3D11DeviceChild* ShaderD3D11Impl::GetD3D11Shader(IDataBlob* pBytecode) noexcept(false)
 {
     std::lock_guard<std::mutex> Lock{m_d3dShaderCacheMtx};
 
-    BlobHashKey BlobKey{pBlob};
+    BlobHashKey BlobKey{pBytecode};
 
     auto it = m_d3dShaderCache.find(BlobKey);
     if (it != m_d3dShaderCache.end())
@@ -148,7 +148,7 @@ ID3D11DeviceChild* ShaderD3D11Impl::GetD3D11Shader(ID3DBlob* pBlob) noexcept(fal
         return it->second;
     }
 
-    VERIFY(pBlob->GetBufferSize() == m_pShaderByteCode->GetBufferSize(), "The byte code size does not match the size of the original byte code");
+    VERIFY(pBytecode->GetSize() == m_pShaderByteCode->GetSize(), "The byte code size does not match the size of the original byte code");
 
     auto* pd3d11Device = GetDevice()->GetD3D11Device();
 
@@ -160,7 +160,7 @@ ID3D11DeviceChild* ShaderD3D11Impl::GetD3D11Shader(ID3DBlob* pBlob) noexcept(fal
     {                                                                                                                                                 \
         CComPtr<ID3D11##ShaderName##Shader> pd3d11SpecificShader;                                                                                     \
                                                                                                                                                       \
-        HRESULT hr = pd3d11Device->Create##ShaderName##Shader(pBlob->GetBufferPointer(), pBlob->GetBufferSize(),                                      \
+        HRESULT hr = pd3d11Device->Create##ShaderName##Shader(pBytecode->GetConstDataPtr(), pBytecode->GetSize(),                                     \
                                                               NULL, &pd3d11SpecificShader);                                                           \
         CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 shader");                                                                                  \
         pd3d11SpecificShader->QueryInterface(__uuidof(ID3D11DeviceChild), reinterpret_cast<void**>(static_cast<ID3D11DeviceChild**>(&pd3d11Shader))); \

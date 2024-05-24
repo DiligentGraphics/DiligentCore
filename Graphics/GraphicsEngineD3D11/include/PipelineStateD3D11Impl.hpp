@@ -111,7 +111,7 @@ public:
                                const BaseBindingsArrayType&        BaseBindings) const;
 #endif
 
-    using THandleRemappedBytecodeFn  = std::function<void(size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode)>;
+    using THandleRemappedBytecodeFn  = std::function<void(size_t ShaderIdx, ShaderD3D11Impl* pShader, IDataBlob* pPatchedBytecode)>;
     using TValidateShaderResourcesFn = std::function<void(ShaderD3D11Impl* pShader)>;
     using TValidateShaderBindingsFn  = std::function<void(const ShaderD3D11Impl* pShader, const ResourceBinding::TMap& BindingsMap)>;
     using TShaderStages              = std::vector<ShaderD3D11Impl*>;
@@ -132,12 +132,12 @@ public:
 
 private:
     template <typename PSOCreateInfoType>
-    void InitInternalObjects(const PSOCreateInfoType& CreateInfo,
-                             CComPtr<ID3DBlob>&       pVSByteCode);
+    void InitInternalObjects(const PSOCreateInfoType&  CreateInfo,
+                             RefCntAutoPtr<IDataBlob>& pVSByteCode);
 
     void InitResourceLayouts(const PipelineStateCreateInfo&       CreateInfo,
                              const std::vector<ShaderD3D11Impl*>& Shaders,
-                             CComPtr<ID3DBlob>&                   pVSByteCode);
+                             RefCntAutoPtr<IDataBlob>&            pVSByteCode);
 
     void InitializePipeline(RenderDeviceD3D11Impl*                 pRenderDeviceD3D11,
                             const GraphicsPipelineStateCreateInfo& CreateInfo);

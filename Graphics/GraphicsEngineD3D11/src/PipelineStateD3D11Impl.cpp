@@ -39,6 +39,7 @@
 #include "RenderDeviceD3D11Impl.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"
 #include "RenderPassD3D11Impl.hpp"
+#include "DataBlobImpl.hpp"
 
 #include "EngineMemory.h"
 #include "DXBCUtils.hpp"
@@ -120,10 +121,9 @@ void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&  
     // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
     for (size_t s = 0; s < Shaders.size(); ++s)
     {
-        auto* const pShader    = Shaders[s];
-        auto const  ShaderType = pShader->GetDesc().ShaderType;
-        // WARNING: AddRef/Release methods of ID3DBlob are not thread-safe!
-        ID3DBlob* pBytecode = Shaders[s]->GetD3DBytecode();
+        auto* const      pShader    = Shaders[s];
+        auto const       ShaderType = pShader->GetDesc().ShaderType;
+        const IDataBlob* pBytecode  = Shaders[s]->GetD3DBytecode();
 
         ResourceBinding::TMap ResourceMap;
         for (Uint32 sign = 0; sign < SignatureCount; ++sign)
@@ -141,8 +141,8 @@ void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&  
 
         if (HandleRemappedBytecodeFn)
         {
-            CComPtr<ID3DBlob> pPatchedBytecode = CopyD3DBlob(pBytecode);
-            if (!DXBCUtils::RemapResourceBindings(ResourceMap, pPatchedBytecode->GetBufferPointer(), pPatchedBytecode->GetBufferSize()))
+            RefCntAutoPtr<IDataBlob> pPatchedBytecode = DataBlobImpl::MakeCopy(pBytecode);
+            if (!DXBCUtils::RemapResourceBindings(ResourceMap, pPatchedBytecode->GetDataPtr(), pPatchedBytecode->GetSize()))
                 LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
 
             HandleRemappedBytecodeFn(s, pShader, pPatchedBytecode);
@@ -158,7 +158,7 @@ void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&  
 
 void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo&       CreateInfo,
                                                  const std::vector<ShaderD3D11Impl*>& Shaders,
-                                                 CComPtr<ID3DBlob>&                   pVSByteCode)
+                                                 RefCntAutoPtr<IDataBlob>&            pVSByteCode)
 {
     const auto InternalFlags = GetInternalCreateFlags(CreateInfo);
     if (m_UsingImplicitSignature && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
@@ -211,7 +211,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     }
 #endif
 
-    const auto HandleRemappedBytecode = [this, &pVSByteCode](size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode) //
+    const auto HandleRemappedBytecode = [this, &pVSByteCode](size_t ShaderIdx, ShaderD3D11Impl* pShader, IDataBlob* pPatchedBytecode) //
     {
         m_ppd3d11Shaders[ShaderIdx] = pShader->GetD3D11Shader(pPatchedBytecode);
         VERIFY_EXPR(m_ppd3d11Shaders[ShaderIdx]); // GetD3D11Shader() throws an exception in case of an error
@@ -256,16 +256,15 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
 
             if (pShader->GetDesc().ShaderType == SHADER_TYPE_VERTEX)
             {
-                // AddRef/Release methods of ID3DBlob are not thread-safe, so we need to make a copy of the bytecode
-                pVSByteCode = CopyD3DBlob(pShader->GetD3DBytecode());
+                pVSByteCode = pShader->GetD3DBytecode();
             }
         }
     }
 }
 
 template <typename PSOCreateInfoType>
-void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& CreateInfo,
-                                                 CComPtr<ID3DBlob>&       pVSByteCode)
+void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType&  CreateInfo,
+                                                 RefCntAutoPtr<IDataBlob>& pVSByteCode)
 {
     std::vector<ShaderD3D11Impl*> Shaders;
     ExtractShaders<ShaderD3D11Impl>(CreateInfo, Shaders, /*WaitUntilShadersReady = */ true);
@@ -299,7 +298,7 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
 void PipelineStateD3D11Impl::InitializePipeline(RenderDeviceD3D11Impl*                 pRenderDeviceD3D11,
                                                 const GraphicsPipelineStateCreateInfo& CreateInfo)
 {
-    CComPtr<ID3DBlob> pVSByteCode;
+    RefCntAutoPtr<IDataBlob> pVSByteCode;
     InitInternalObjects(CreateInfo, pVSByteCode);
 
     if (GetD3D11VertexShader() == nullptr)
@@ -330,7 +329,7 @@ void PipelineStateD3D11Impl::InitializePipeline(RenderDeviceD3D11Impl*          
         std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC>> d311InputElements(STD_ALLOCATOR_RAW_MEM(D3D11_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D11_INPUT_ELEMENT_DESC>"));
         LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(InputLayout, d311InputElements);
 
-        CHECK_D3D_RESULT_THROW(pDeviceD3D11->CreateInputLayout(d311InputElements.data(), static_cast<UINT>(d311InputElements.size()), pVSByteCode->GetBufferPointer(), pVSByteCode->GetBufferSize(), &m_pd3d11InputLayout),
+        CHECK_D3D_RESULT_THROW(pDeviceD3D11->CreateInputLayout(d311InputElements.data(), static_cast<UINT>(d311InputElements.size()), pVSByteCode->GetConstDataPtr(), pVSByteCode->GetSize(), &m_pd3d11InputLayout),
                                "Failed to create the Direct3D11 input layout");
     }
 }
@@ -338,7 +337,7 @@ void PipelineStateD3D11Impl::InitializePipeline(RenderDeviceD3D11Impl*          
 void PipelineStateD3D11Impl::InitializePipeline(RenderDeviceD3D11Impl*                pRenderDeviceD3D11,
                                                 const ComputePipelineStateCreateInfo& CreateInfo)
 {
-    CComPtr<ID3DBlob> pVSByteCode;
+    RefCntAutoPtr<IDataBlob> pVSByteCode;
     InitInternalObjects(CreateInfo, pVSByteCode);
     VERIFY(!pVSByteCode, "There must be no VS in a compute pipeline.");
 }

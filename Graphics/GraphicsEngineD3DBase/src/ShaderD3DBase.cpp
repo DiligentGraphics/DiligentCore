@@ -127,13 +127,11 @@ HRESULT CompileShader(const char*             Source,
 
 } // namespace
 
-CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
-                                     const ShaderVersion     ShaderModel,
-                                     IDXCompiler*            DxCompiler,
-                                     IDataBlob**             ppCompilerOutput) noexcept(false)
+RefCntAutoPtr<IDataBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
+                                            const ShaderVersion     ShaderModel,
+                                            IDXCompiler*            DxCompiler,
+                                            IDataBlob**             ppCompilerOutput) noexcept(false)
 {
-    CComPtr<ID3DBlob> pShaderByteCode;
-
     if (ShaderCI.Source || ShaderCI.FilePath)
     {
         DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
@@ -164,8 +162,9 @@ CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
 
         if (UseDXC)
         {
-            VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
-            DxCompiler->Compile(ShaderCI, ShaderModel, nullptr, reinterpret_cast<IDxcBlob**>(&pShaderByteCode), nullptr, ppCompilerOutput);
+            CComPtr<IDxcBlob> pShaderByteCode;
+            DxCompiler->Compile(ShaderCI, ShaderModel, nullptr, &pShaderByteCode, nullptr, ppCompilerOutput);
+            return DataBlobImpl::Create(pShaderByteCode->GetBufferSize(), pShaderByteCode->GetBufferPointer());
         }
         else
         {
@@ -173,31 +172,24 @@ CComPtr<ID3DBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
             const String HLSLSource = BuildHLSLSourceString(ShaderCI);
 
             CComPtr<ID3DBlob> CompilerOutput;
+            CComPtr<ID3DBlob> pShaderByteCode;
 
             auto hr = CompileShader(HLSLSource.c_str(), HLSLSource.length(), ShaderCI, Profile.c_str(), &pShaderByteCode, &CompilerOutput);
             HandleHLSLCompilerResult(SUCCEEDED(hr), CompilerOutput.p, HLSLSource, ShaderCI.Desc.Name, ppCompilerOutput);
+            return DataBlobImpl::Create(pShaderByteCode->GetBufferSize(), pShaderByteCode->GetBufferPointer());
         }
     }
     else if (ShaderCI.ByteCode)
     {
         DEV_CHECK_ERR(ShaderCI.ByteCodeSize != 0, "ByteCode size must be greater than 0");
-        CHECK_D3D_RESULT_THROW(D3DCreateBlob(ShaderCI.ByteCodeSize, &pShaderByteCode), "Failed to create D3D blob");
-        memcpy(pShaderByteCode->GetBufferPointer(), ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
+        return DataBlobImpl::Create(ShaderCI.ByteCodeSize, ShaderCI.ByteCode);
     }
     else
     {
         LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
     }
 
-    return pShaderByteCode;
-}
-
-CComPtr<ID3DBlob> CopyD3DBlob(ID3DBlob* pSrcBlob)
-{
-    CComPtr<ID3DBlob> pBlob;
-    D3DCreateBlob(pSrcBlob->GetBufferSize(), &pBlob);
-    memcpy(pBlob->GetBufferPointer(), pSrcBlob->GetBufferPointer(), pSrcBlob->GetBufferSize());
-    return pBlob;
+    return {};
 }
 
 } // namespace Diligent

@@ -44,7 +44,7 @@ Uint32 GetRegisterSpace<>(const D3D11_SHADER_INPUT_BIND_DESC&)
     return 0;
 }
 
-ShaderResourcesD3D11::ShaderResourcesD3D11(ID3DBlob*         pShaderBytecode,
+ShaderResourcesD3D11::ShaderResourcesD3D11(const IDataBlob*  pShaderBytecode,
                                            const ShaderDesc& ShdrDesc,
                                            const char*       CombinedSamplerSuffix,
                                            bool              LoadConstantBufferReflection) :
@@ -115,7 +115,7 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(ID3DBlob*         pShaderBytecode,
     };
 
     CComPtr<ID3D11ShaderReflection> pShaderReflection;
-    HRESULT                         hr = D3DReflect(pShaderBytecode->GetBufferPointer(), pShaderBytecode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
+    HRESULT                         hr = D3DReflect(pShaderBytecode->GetConstDataPtr(), pShaderBytecode->GetSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
     CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
 
 

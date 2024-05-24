@@ -80,16 +80,16 @@ public:
         return GetD3D11Shader(m_pShaderByteCode);
     }
 
-    ID3D11DeviceChild* GetD3D11Shader(ID3DBlob* pBlob) noexcept(false);
+    ID3D11DeviceChild* GetD3D11Shader(IDataBlob* pBytecode) noexcept(false);
 
 private:
     struct BlobHashKey
     {
-        const size_t      Hash;
-        CComPtr<ID3DBlob> pBlob;
+        const size_t             Hash;
+        RefCntAutoPtr<IDataBlob> pBlob;
 
-        explicit BlobHashKey(ID3DBlob* _pBlob) :
-            Hash{ComputeHashRaw(_pBlob->GetBufferPointer(), _pBlob->GetBufferSize())},
+        explicit BlobHashKey(IDataBlob* _pBlob) :
+            Hash{ComputeHashRaw(_pBlob->GetConstDataPtr(), _pBlob->GetSize())},
             pBlob{_pBlob}
         {}
 
@@ -106,12 +106,12 @@ private:
             if (Hash != rhs.Hash)
                 return false;
 
-            const auto Size0 = pBlob->GetBufferSize();
-            const auto Size1 = rhs.pBlob->GetBufferSize();
+            const auto Size0 = pBlob->GetSize();
+            const auto Size1 = rhs.pBlob->GetSize();
             if (Size0 != Size1)
                 return false;
 
-            return memcmp(pBlob->GetBufferPointer(), rhs.pBlob->GetBufferPointer(), Size0) == 0;
+            return memcmp(pBlob->GetConstDataPtr(), rhs.pBlob->GetConstDataPtr(), Size0) == 0;
         }
     };
 

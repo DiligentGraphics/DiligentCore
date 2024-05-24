@@ -116,7 +116,7 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
         IsDeviceInternal,
         GetD3D12ShaderModel(ShaderCI, D3D12ShaderCI.pDXCompiler, D3D12ShaderCI.MaxShaderVersion),
         [pDXCompiler      = D3D12ShaderCI.pDXCompiler,
-         LoadCBReflection = ShaderCI.LoadConstantBufferReflection](const ShaderDesc& Desc, ID3DBlob* pShaderByteCode) {
+         LoadCBReflection = ShaderCI.LoadConstantBufferReflection](const ShaderDesc& Desc, IDataBlob* pShaderByteCode) {
             auto& Allocator  = GetRawAllocator();
             auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
             auto* pResources = new (pRawMem) ShaderResourcesD3D12 //

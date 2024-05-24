@@ -86,10 +86,9 @@ public:
         void   Append(const ShaderD3D12Impl* pShader);
         size_t Count() const;
 
-        SHADER_TYPE                         Type = SHADER_TYPE_UNKNOWN;
-        std::vector<const ShaderD3D12Impl*> Shaders;
-        // WARNING: AddRef/Release methods of ID3DBlob are not thread-safe!
-        std::vector<CComPtr<ID3DBlob>> ByteCodes;
+        SHADER_TYPE                           Type = SHADER_TYPE_UNKNOWN;
+        std::vector<const ShaderD3D12Impl*>   Shaders;
+        std::vector<RefCntAutoPtr<IDataBlob>> ByteCodes;
 
         friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }
     };

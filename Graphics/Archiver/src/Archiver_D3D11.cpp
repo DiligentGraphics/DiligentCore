@@ -64,13 +64,13 @@ struct CompiledShaderD3D11 final : SerializedShaderImpl::CompiledShader
 
     virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
     {
-        const auto& pBytecode = ShaderD3D11.GetD3DBytecode();
+        const IDataBlob* pBytecode = ShaderD3D11.GetD3DBytecode();
 
         ShaderCI.Source       = nullptr;
         ShaderCI.FilePath     = nullptr;
         ShaderCI.Macros       = {};
-        ShaderCI.ByteCode     = pBytecode->GetBufferPointer();
-        ShaderCI.ByteCodeSize = pBytecode->GetBufferSize();
+        ShaderCI.ByteCode     = pBytecode->GetConstDataPtr();
+        ShaderCI.ByteCodeSize = pBytecode->GetSize();
         return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
     }
 
@@ -149,7 +149,7 @@ void SerializedPipelineStateImpl::PatchShadersD3D11(const CreateInfoType& Create
         ppSignatures         = DefaultSignatures;
     }
 
-    std::vector<CComPtr<ID3DBlob>> ShaderBytecode{ShaderStages.size()};
+    std::vector<RefCntAutoPtr<IDataBlob>> ShaderBytecode{ShaderStages.size()};
     {
         // Sort signatures by binding index.
         // Note that SignaturesCount will be overwritten with the maximum binding index.
@@ -174,7 +174,7 @@ void SerializedPipelineStateImpl::PatchShadersD3D11(const CreateInfoType& Create
             Signatures.data(),
             SignaturesCount,
             BaseBindings.data(),
-            [&ShaderBytecode](size_t ShaderIdx, ShaderD3D11Impl* pShader, ID3DBlob* pPatchedBytecode) //
+            [&ShaderBytecode](size_t ShaderIdx, ShaderD3D11Impl* pShader, IDataBlob* pPatchedBytecode) //
             {
                 ShaderBytecode[ShaderIdx] = pPatchedBytecode;
             });
@@ -183,13 +183,14 @@ void SerializedPipelineStateImpl::PatchShadersD3D11(const CreateInfoType& Create
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Direct3D11)].empty());
     for (size_t i = 0; i < ShadersD3D11.size(); ++i)
     {
-        ID3DBlob* pBytecode   = ShaderBytecode[i];
-        auto      ShaderCI    = ShaderStages[i].pSerialized->GetCreateInfo();
+        const IDataBlob* pBytecode = ShaderBytecode[i];
+        ShaderCreateInfo ShaderCI  = ShaderStages[i].pSerialized->GetCreateInfo();
+
         ShaderCI.Source       = nullptr;
         ShaderCI.FilePath     = nullptr;
         ShaderCI.Macros       = {};
-        ShaderCI.ByteCode     = pBytecode->GetBufferPointer();
-        ShaderCI.ByteCodeSize = pBytecode->GetBufferSize();
+        ShaderCI.ByteCode     = pBytecode->GetConstDataPtr();
+        ShaderCI.ByteCodeSize = pBytecode->GetSize();
         SerializeShaderCreateInfo(DeviceType::Direct3D11, ShaderCI);
     }
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Direct3D11)].size() == ShadersD3D11.size());

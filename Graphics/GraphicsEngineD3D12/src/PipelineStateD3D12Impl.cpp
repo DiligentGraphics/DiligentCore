@@ -50,6 +50,7 @@
 #include "StringTools.hpp"
 #include "DynamicLinearAllocator.hpp"
 #include "D3DShaderResourceValidation.hpp"
+#include "DataBlobImpl.hpp"
 
 #include "DXBCUtils.hpp"
 #include "DXCompiler.hpp"
@@ -155,13 +156,13 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
             VERIFY(pShaderD3D12, "Unexpected shader object implementation");
             VERIFY_EXPR(Stage.Shaders[ShaderIndex] == pShaderD3D12);
 
-            auto&       LibDesc    = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
-            auto&       ExportDesc = *TempPool.Construct<D3D12_EXPORT_DESC>();
-            const auto& pBlob      = Stage.ByteCodes[ShaderIndex];
+            auto&            LibDesc    = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
+            auto&            ExportDesc = *TempPool.Construct<D3D12_EXPORT_DESC>();
+            const IDataBlob* pByteCode  = Stage.ByteCodes[ShaderIndex];
             ++ShaderIndex;
 
-            LibDesc.DXILLibrary.BytecodeLength  = pBlob->GetBufferSize();
-            LibDesc.DXILLibrary.pShaderBytecode = pBlob->GetBufferPointer();
+            LibDesc.DXILLibrary.BytecodeLength  = pByteCode->GetSize();
+            LibDesc.DXILLibrary.pShaderBytecode = pByteCode->GetConstDataPtr();
             LibDesc.NumExports                  = 1;
             LibDesc.pExports                    = &ExportDesc;
 
@@ -303,9 +304,8 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
 
 PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(const ShaderD3D12Impl* _pShader) :
     Type{_pShader->GetDesc().ShaderType},
-    Shaders{_pShader},
-    // AddRef/Release methods of ID3DBlob are not thread-safe, so we need to make a copy of the bytecode
-    ByteCodes{CopyD3DBlob(_pShader->GetD3DBytecode())}
+    Shaders{{_pShader}},
+    ByteCodes{{RefCntAutoPtr<IDataBlob>{_pShader->GetD3DBytecode()}}}
 {
 }
 
@@ -328,9 +328,8 @@ void PipelineStateD3D12Impl::ShaderStageInfo::Append(const ShaderD3D12Impl* pSha
                GetShaderTypeLiteralName(Type), ").");
     }
 
-    Shaders.push_back(pShader);
-    // AddRef/Release methods of ID3DBlob are not thread-safe, so we need to make a copy of the bytecode
-    ByteCodes.push_back(CopyD3DBlob(pShader->GetD3DBytecode()));
+    Shaders.emplace_back(pShader);
+    ByteCodes.emplace_back(pShader->GetD3DBytecode());
 }
 
 size_t PipelineStateD3D12Impl::ShaderStageInfo::Count() const
@@ -477,20 +476,20 @@ void PipelineStateD3D12Impl::RemapOrVerifyShaderResources(TShaderStages&        
             else
             {
                 auto& pBytecode = ByteCodes[i];
-
-                if (IsDXILBytecode(pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
+                if (IsDXILBytecode(pBytecode->GetConstDataPtr(), pBytecode->GetSize()))
                 {
                     if (!pDxCompiler)
                         LOG_ERROR_AND_THROW("DXC compiler does not exists, can not remap resource bindings");
 
-                    CComPtr<ID3DBlob> pPatchedBytecode;
-                    if (!pDxCompiler->RemapResourceBindings(ResourceMap, reinterpret_cast<IDxcBlob*>(pBytecode.p), reinterpret_cast<IDxcBlob**>(&pPatchedBytecode)))
+                    CComPtr<IDxcBlob> pPatchedBytecode;
+                    if (!pDxCompiler->RemapResourceBindings(ResourceMap, pBytecode->GetConstDataPtr(), pBytecode->GetSize(), &pPatchedBytecode))
                         LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
-                    pBytecode = pPatchedBytecode;
+                    pBytecode = DataBlobImpl::Create(pPatchedBytecode->GetBufferSize(), pPatchedBytecode->GetBufferPointer());
                 }
                 else
                 {
-                    if (!DXBCUtils::RemapResourceBindings(ResourceMap, pBytecode->GetBufferPointer(), pBytecode->GetBufferSize()))
+                    pBytecode = DataBlobImpl::MakeCopy(pBytecode);
+                    if (!DXBCUtils::RemapResourceBindings(ResourceMap, pBytecode->GetDataPtr(), pBytecode->GetSize()))
                         LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
                 }
             }
@@ -688,7 +687,7 @@ void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*          
         for (const auto& Stage : ShaderStages)
         {
             VERIFY_EXPR(Stage.Count() == 1);
-            ID3DBlob* pByteCode = Stage.ByteCodes[0];
+            const IDataBlob* pByteCode = Stage.ByteCodes[0];
 
             D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
             switch (Stage.Type)
@@ -703,8 +702,8 @@ void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*          
                 default: UNEXPECTED("Unexpected shader type");
             }
 
-            pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetBufferPointer();
-            pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetBufferSize();
+            pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetConstDataPtr();
+            pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetSize();
         }
 
         d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
@@ -806,7 +805,7 @@ void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*          
         for (const auto& Stage : ShaderStages)
         {
             VERIFY_EXPR(Stage.Count() == 1);
-            ID3DBlob* pByteCode = Stage.ByteCodes[0];
+            const IDataBlob* pByteCode = Stage.ByteCodes[0];
 
             D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
             switch (Stage.Type)
@@ -819,8 +818,8 @@ void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*          
                 default: UNEXPECTED("Unexpected shader type");
             }
 
-            pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetBufferPointer();
-            pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetBufferSize();
+            pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetConstDataPtr();
+            pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetSize();
         }
 
         d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
@@ -886,9 +885,9 @@ void PipelineStateD3D12Impl::InitializePipeline(RenderDeviceD3D12Impl*          
 
     VERIFY_EXPR(ShaderStages[0].Type == SHADER_TYPE_COMPUTE);
     VERIFY_EXPR(ShaderStages[0].Count() == 1);
-    ID3DBlob* pByteCode             = ShaderStages[0].ByteCodes[0];
-    d3d12PSODesc.CS.pShaderBytecode = pByteCode->GetBufferPointer();
-    d3d12PSODesc.CS.BytecodeLength  = pByteCode->GetBufferSize();
+    const IDataBlob* pByteCode      = ShaderStages[0].ByteCodes[0];
+    d3d12PSODesc.CS.pShaderBytecode = pByteCode->GetConstDataPtr();
+    d3d12PSODesc.CS.BytecodeLength  = pByteCode->GetSize();
 
     // For single GPU operation, set this to zero. If there are multiple GPU nodes,
     // set bits to identify the nodes (the device's physical adapters) for which the
