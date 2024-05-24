@@ -70,16 +70,16 @@ vertex VSOut VSMain()
 }
 )";
 
-void TestBrokenShader(const char*            Source,
-                      const char*            Name,
-                      SHADER_SOURCE_LANGUAGE SourceLanguage,
-                      SHADER_COMPILE_FLAGS   CompileFlags,
-                      int                    ErrorAllowance)
+void CreateBrokenShader(const char*            Source,
+                        const char*            Name,
+                        SHADER_SOURCE_LANGUAGE SourceLanguage,
+                        SHADER_COMPILE_FLAGS   CompileFlags,
+                        int                    ErrorAllowance,
+                        IShader**              ppBrokenShader,
+                        IDataBlob**            ppErrors)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-
-    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.Source         = Source;
@@ -93,9 +93,20 @@ void TestBrokenShader(const char*            Source,
     ShaderCI.Macros      = {Macros, _countof(Macros)};
 
     pEnv->SetErrorAllowance(ErrorAllowance, "\n\nNo worries, testing broken shader...\n\n");
+    pDevice->CreateShader(ShaderCI, ppBrokenShader, ppErrors);
+}
+
+void TestBrokenShader(const char*            Source,
+                      const char*            Name,
+                      SHADER_SOURCE_LANGUAGE SourceLanguage,
+                      SHADER_COMPILE_FLAGS   CompileFlags,
+                      int                    ErrorAllowance)
+{
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     RefCntAutoPtr<IShader>   pBrokenShader;
     RefCntAutoPtr<IDataBlob> pErrors;
-    pDevice->CreateShader(ShaderCI, &pBrokenShader, pErrors.RawDblPtr());
+    CreateBrokenShader(Source, Name, SourceLanguage, CompileFlags, ErrorAllowance, &pBrokenShader, pErrors.RawDblPtr());
     if (CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS)
     {
         ASSERT_NE(pBrokenShader, nullptr);
@@ -192,6 +203,34 @@ TEST(Shader, BrokenMSL_Async)
     }
 
     TestBrokenShader(g_BrokenMSL, "Broken MSL test", SHADER_SOURCE_LANGUAGE_MSL, SHADER_COMPILE_FLAG_ASYNCHRONOUS, 2);
+}
+
+TEST(Shader, AsyncPipelineWithBrokenShader)
+{
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    if (!DeviceInfo.Features.AsyncShaderCompilation)
+    {
+        GTEST_SKIP() << "Asynchronous shader compilation is not supported by this device";
+    }
+
+    RefCntAutoPtr<IShader>   pBrokenShader;
+    RefCntAutoPtr<IDataBlob> pErrors;
+    CreateBrokenShader(g_BrokenHLSL, "Broken HLSL test", SHADER_SOURCE_LANGUAGE_HLSL, SHADER_COMPILE_FLAG_ASYNCHRONOUS,
+                       DeviceInfo.IsGLDevice() || DeviceInfo.IsD3DDevice() ? 2 : 3, &pBrokenShader, &pErrors);
+    ASSERT_NE(pBrokenShader, nullptr);
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+    PSOCreateInfo.pVS   = pBrokenShader;
+    PSOCreateInfo.Flags = PSO_CREATE_FLAG_ASYNCHRONOUS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    PIPELINE_STATE_STATUS Status = pPSO->GetStatus(true);
+    EXPECT_EQ(Status, PIPELINE_STATE_STATUS_FAILED);
 }
 
 } // namespace
