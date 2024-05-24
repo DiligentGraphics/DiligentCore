@@ -209,7 +209,7 @@ TEST(Shader, AsyncPipelineWithBrokenShader)
 {
     auto*       pEnv       = GPUTestingEnvironment::GetInstance();
     auto*       pDevice    = pEnv->GetDevice();
-    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
     if (!DeviceInfo.Features.AsyncShaderCompilation)
     {
         GTEST_SKIP() << "Asynchronous shader compilation is not supported by this device";
@@ -218,7 +218,7 @@ TEST(Shader, AsyncPipelineWithBrokenShader)
     RefCntAutoPtr<IShader>   pBrokenShader;
     RefCntAutoPtr<IDataBlob> pErrors;
     CreateBrokenShader(g_BrokenHLSL, "Broken HLSL test", SHADER_SOURCE_LANGUAGE_HLSL, SHADER_COMPILE_FLAG_ASYNCHRONOUS,
-                       DeviceInfo.IsGLDevice() || DeviceInfo.IsD3DDevice() ? 2 : 3, &pBrokenShader, &pErrors);
+                       DeviceInfo.IsGLDevice() || DeviceInfo.IsD3DDevice() ? 2 : 3, &pBrokenShader, pErrors.RawDblPtr());
     ASSERT_NE(pBrokenShader, nullptr);
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
