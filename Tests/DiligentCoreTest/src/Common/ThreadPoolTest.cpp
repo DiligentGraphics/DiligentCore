@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -353,6 +353,57 @@ TEST(Common_ThreadPool, Priorities)
         ASSERT_EQ(ExpectedOrder.size(), CompletionOrder.size());
         for (size_t i = 0; i < ExpectedOrder.size(); ++i)
             EXPECT_EQ(ExpectedOrder[i], CompletionOrder[i]) << "i=" << i << " (N=" << k << ")";
+    }
+}
+
+
+TEST(Common_ThreadPool, Prerequisites)
+{
+    for (Uint32 NumThreads : {1, 8})
+    {
+        auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{NumThreads});
+        ASSERT_NE(pThreadPool, nullptr);
+
+        constexpr Uint32               NumTasks = 16;
+        std::vector<std::atomic<bool>> TaskComplete(NumTasks);
+
+        std::atomic<int> NumTasksCorrectlyOrdered{0};
+        {
+            std::vector<IAsyncTask*>               Tasks(NumTasks);
+            std::vector<RefCntAutoPtr<IAsyncTask>> spTasks(NumTasks);
+            for (Uint32 task = 0; task < NumTasks; ++task)
+            {
+                spTasks[task] =
+                    EnqueueAsyncWork(
+                        pThreadPool,
+                        // Make the task dependent on all previous tasks
+                        task > 0 ? Tasks.data() : nullptr,
+                        task > 0 ? task - 1 : 0,
+                        [task, &TaskComplete, &NumTasksCorrectlyOrdered](Uint32 ThreadId) //
+                        {
+                            // Make earlier tasks longer to run
+                            std::this_thread::sleep_for(std::chrono::milliseconds(NumTasks - task));
+                            TaskComplete[task].store(true);
+
+                            bool CorrectOrder = true;
+                            for (Uint32 i = 0; i + 1 < task; ++i)
+                            {
+                                if (!TaskComplete[i].load())
+                                {
+                                    CorrectOrder = false;
+                                    break;
+                                }
+                            }
+                            if (CorrectOrder)
+                                NumTasksCorrectlyOrdered.fetch_add(1);
+                        },
+                        static_cast<float>(task) // Inverse priority so that the thread pool fixes it
+                    );
+                Tasks[task] = spTasks[task];
+            }
+        }
+        pThreadPool->WaitForAllTasks();
+        EXPECT_EQ(NumTasksCorrectlyOrdered.load(), NumTasks);
     }
 }
 

@@ -44,7 +44,7 @@ void TestAsyncTask()
 
 void TestThreadPool()
 {
-    IThreadPool_EnqueueTask((IThreadPool*)NULL, (IAsyncTask*)NULL);
+    IThreadPool_EnqueueTask((IThreadPool*)NULL, (IAsyncTask*)NULL, (IAsyncTask**)NULL, 0);
     IThreadPool_ReprioritizeTask((IThreadPool*)NULL, (IAsyncTask*)NULL);
     IThreadPool_ReprioritizeAllTasks((IThreadPool*)NULL);
     IThreadPool_RemoveTask((IThreadPool*)NULL, (IAsyncTask*)NULL);

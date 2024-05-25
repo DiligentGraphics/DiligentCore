@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@
 #include <map>
 #include <vector>
 #include <condition_variable>
+#include <cfloat>
 
 namespace Diligent
 {
@@ -71,7 +72,7 @@ public:
 
     virtual bool DILIGENT_CALL_TYPE ProcessTask(Uint32 ThreadId, bool WaitForTask) override final
     {
-        RefCntAutoPtr<IAsyncTask> pTask;
+        QueuedTaskInfo TaskInfo;
         {
             std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
             if (WaitForTask)
@@ -97,7 +98,7 @@ public:
             if (!m_TasksQueue.empty())
             {
                 auto front = m_TasksQueue.begin();
-                pTask      = std::move(front->second);
+                TaskInfo   = std::move(front->second);
                 // NB: we must increment the running task counter while holding the lock and
                 //     before removing the task from the queue, otherwise WaitForAllTasks() may
                 //     miss the task.
@@ -106,29 +107,65 @@ public:
             }
         }
 
-        if (pTask)
+        if (TaskInfo.pTask)
         {
-            pTask->SetStatus(ASYNC_TASK_STATUS_RUNNING);
-            pTask->Run(ThreadId);
-            DEV_CHECK_ERR((pTask->GetStatus() == ASYNC_TASK_STATUS_COMPLETE ||
-                           pTask->GetStatus() == ASYNC_TASK_STATUS_CANCELLED),
-                          "Finished tasks must be in COMPLETE or CANCELLED state");
+            // Check prerequisites
+            bool  PrerequisitesMet  = true;
+            float MinPrereqPriority = +FLT_MAX;
+            for (auto& pPrereq : TaskInfo.Prerequisites)
+            {
+                if (auto pPrereqTask = pPrereq.Lock())
+                {
+                    if (!pPrereqTask->IsFinished())
+                    {
+                        PrerequisitesMet  = false;
+                        MinPrereqPriority = std::min(MinPrereqPriority, pPrereqTask->GetPriority());
+                    }
+                }
+            }
+
+            if (PrerequisitesMet)
+            {
+                TaskInfo.pTask->SetStatus(ASYNC_TASK_STATUS_RUNNING);
+                TaskInfo.pTask->Run(ThreadId);
+                DEV_CHECK_ERR((TaskInfo.pTask->GetStatus() == ASYNC_TASK_STATUS_COMPLETE ||
+                               TaskInfo.pTask->GetStatus() == ASYNC_TASK_STATUS_CANCELLED),
+                              "Finished tasks must be in COMPLETE or CANCELLED state");
+            }
 
             {
                 std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
 
                 const auto NumRunningTasks = m_NumRunningTasks.fetch_add(-1) - 1;
-                if (m_TasksQueue.empty() && NumRunningTasks == 0)
+
+                if (PrerequisitesMet)
                 {
-                    m_TasksFinishedCond.notify_one();
+                    if (m_TasksQueue.empty() && NumRunningTasks == 0)
+                    {
+                        m_TasksFinishedCond.notify_one();
+                    }
                 }
+                else
+                {
+                    // If prerequisites are not met, re-enqueue the task with the minimum prerequisite priority
+                    if (TaskInfo.pTask->GetPriority() > MinPrereqPriority)
+                        TaskInfo.pTask->SetPriority(MinPrereqPriority);
+                    m_TasksQueue.emplace(TaskInfo.pTask->GetPriority(), std::move(TaskInfo));
+                }
+            }
+
+            if (!PrerequisitesMet)
+            {
+                m_NextTaskCond.notify_one();
             }
         }
 
         return true;
     }
 
-    virtual void DILIGENT_CALL_TYPE EnqueueTask(IAsyncTask* pTask) override final
+    virtual void DILIGENT_CALL_TYPE EnqueueTask(IAsyncTask*  pTask,
+                                                IAsyncTask** ppPrerequisites,
+                                                Uint32       NumPrerequisites) override final
     {
         VERIFY_EXPR(pTask != nullptr);
         if (pTask == nullptr)
@@ -138,7 +175,27 @@ public:
             std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
             DEV_CHECK_ERR(!m_Stop, "Enqueue on a stopped ThreadPool");
 
-            m_TasksQueue.emplace(pTask->GetPriority(), pTask);
+            QueuedTaskInfo TaskInfo;
+            TaskInfo.pTask = pTask;
+            if (ppPrerequisites != nullptr && NumPrerequisites > 0)
+            {
+                TaskInfo.Prerequisites.reserve(NumPrerequisites);
+                float MinPrereqPriority = +FLT_MAX;
+                for (Uint32 i = 0; i < NumPrerequisites; ++i)
+                {
+                    if (ppPrerequisites[i] != nullptr)
+                    {
+                        TaskInfo.Prerequisites.emplace_back(ppPrerequisites[i]);
+                        MinPrereqPriority = std::min(MinPrereqPriority, ppPrerequisites[i]->GetPriority());
+                    }
+                }
+                if (pTask->GetPriority() > MinPrereqPriority)
+                {
+                    TaskInfo.pTask->SetPriority(MinPrereqPriority);
+                }
+            }
+
+            m_TasksQueue.emplace(pTask->GetPriority(), std::move(TaskInfo));
         }
         m_NextTaskCond.notify_one();
     }
@@ -180,7 +237,7 @@ public:
         std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
 
         auto it = m_TasksQueue.begin();
-        while (it != m_TasksQueue.end() && it->second != pTask)
+        while (it != m_TasksQueue.end() && it->second.pTask != pTask)
             ++it;
         if (it != m_TasksQueue.end())
         {
@@ -198,15 +255,15 @@ public:
         std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
 
         auto it = m_TasksQueue.begin();
-        while (it != m_TasksQueue.end() && it->second != pTask)
+        while (it != m_TasksQueue.end() && it->second.pTask != pTask)
             ++it;
         if (it != m_TasksQueue.end())
         {
             if (it->first != Priority)
             {
-                auto pExistingTask = std::move(it->second);
+                auto ExistingTaskInfo = std::move(it->second);
                 m_TasksQueue.erase(it);
-                m_TasksQueue.emplace(Priority, std::move(pExistingTask));
+                m_TasksQueue.emplace(Priority, std::move(ExistingTaskInfo));
             }
 
             return true;
@@ -219,15 +276,14 @@ public:
         std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
 
         m_ReprioritizationList.clear();
-        auto it = m_TasksQueue.begin();
-        while (it != m_TasksQueue.end())
+        for (auto it = m_TasksQueue.begin(); it != m_TasksQueue.end();)
         {
-            auto pTask    = it->second;
-            auto Priority = pTask->GetPriority();
+            auto& TaskInfo = it->second;
+            auto  Priority = TaskInfo.pTask->GetPriority();
             if (it->first != Priority)
             {
+                m_ReprioritizationList.emplace_back(Priority, std::move(TaskInfo));
                 it = m_TasksQueue.erase(it);
-                m_ReprioritizationList.emplace_back(Priority, std::move(pTask));
             }
             else
             {
@@ -235,8 +291,10 @@ public:
             }
         }
 
-        if (!m_ReprioritizationList.empty())
-            m_TasksQueue.insert(m_ReprioritizationList.begin(), m_ReprioritizationList.end());
+        for (auto& it : m_ReprioritizationList)
+        {
+            m_TasksQueue.emplace(it.first, std::move(it.second));
+        }
 
         m_ReprioritizationList.clear();
     }
@@ -262,11 +320,16 @@ public:
 private:
     std::vector<std::thread> m_WorkerThreads;
 
+    struct QueuedTaskInfo
+    {
+        RefCntAutoPtr<IAsyncTask>              pTask;
+        std::vector<RefCntWeakPtr<IAsyncTask>> Prerequisites;
+    };
     // Priority queue
-    std::mutex                                                           m_TasksQueueMtx;
-    std::multimap<float, RefCntAutoPtr<IAsyncTask>, std::greater<float>> m_TasksQueue;
+    std::mutex                                                m_TasksQueueMtx;
+    std::multimap<float, QueuedTaskInfo, std::greater<float>> m_TasksQueue;
 
-    std::vector<std::pair<float, RefCntAutoPtr<IAsyncTask>>> m_ReprioritizationList;
+    std::vector<std::pair<float, QueuedTaskInfo>> m_ReprioritizationList;
 
     std::condition_variable m_NextTaskCond{};
     std::condition_variable m_TasksFinishedCond{};

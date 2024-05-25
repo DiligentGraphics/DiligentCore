@@ -155,12 +155,20 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
 {
     /// Enqueues asynchronous task for execution.
 
-    /// \param[in] pTask - Task to run.
+    /// \param[in] pTask            - Task to run.
+    /// \param[in] ppPrerequisites  - Array of task prerequisites, e.g. the tasks
+    ///                               that must be completed before this task can start.
+    /// \param[in] NumPrerequisites - Number of prerequisites.
     ///
-    /// \remarks   Thread pool will keep a strong reference to the task,
-    ///            so an application is free to release it after enqueuing.
+    /// \remarks    Thread pool will keep a strong reference to the task,
+    ///             so an application is free to release it after enqueuing.
+    /// 
+    /// \note       An application must ensure that the task prerequisites are not circular
+    ///             to avoid deadlocks.
     VIRTUAL void METHOD(EnqueueTask)(THIS_
-                                     IAsyncTask* pTask) PURE;
+                                     IAsyncTask*  pTask,
+                                     IAsyncTask** ppPrerequisites  DEFAULT_VALUE(nullptr),
+                                     Uint32       NumPrerequisites DEFAULT_VALUE(0)) PURE;
 
 
     /// Reprioritizes the task in the queue.

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -166,7 +166,11 @@ private:
 
 
 template <typename HanlderType>
-RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool, HanlderType Handler, float fPriority = 0)
+RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool,
+                                           IAsyncTask** ppPrerequisites,
+                                           Uint32       NumPrerequisites,
+                                           HanlderType  Handler,
+                                           float        fPriority = 0)
 {
     class TaskImpl final : public AsyncTaskBase
     {
@@ -189,9 +193,17 @@ RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool, HanlderType
     };
 
     RefCntAutoPtr<TaskImpl> pTask{MakeNewRCObj<TaskImpl>()(fPriority, std::move(Handler))};
-    pThreadPool->EnqueueTask(pTask);
+    pThreadPool->EnqueueTask(pTask, ppPrerequisites, NumPrerequisites);
 
     return pTask;
+}
+
+template <typename HanlderType>
+RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool,
+                                           HanlderType  Handler,
+                                           float        fPriority = 0)
+{
+    return EnqueueAsyncWork(pThreadPool, nullptr, 0, std::move(Handler), fPriority);
 }
 
 } // namespace Diligent
