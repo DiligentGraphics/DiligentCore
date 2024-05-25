@@ -382,7 +382,7 @@ TEST(Common_ThreadPool, Prerequisites)
                         [task, &TaskComplete, &NumTasksCorrectlyOrdered](Uint32 ThreadId) //
                         {
                             // Make earlier tasks longer to run
-                            std::this_thread::sleep_for(std::chrono::milliseconds(NumTasks - task));
+                            std::this_thread::sleep_for(std::chrono::milliseconds(TaskComplete.size() - task));
                             TaskComplete[task].store(true);
 
                             bool CorrectOrder = true;
