@@ -836,7 +836,7 @@ public:
     }
 
 protected:
-    template <typename PSOCreateInfoType>
+    template <typename ShaderImplType, typename PSOCreateInfoType>
     void Construct(const PSOCreateInfoType& CreateInfo)
     {
         auto* const pThisImpl = static_cast<PipelineStateImplType*>(this);
@@ -844,9 +844,28 @@ protected:
         m_Status.store(PIPELINE_STATE_STATUS_COMPILING);
         if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) != 0 && this->m_pDevice->GetShaderCompilationThreadPool() != nullptr)
         {
+            // Collect all asynchronous shader compile tasks
+            typename PipelineStateImplType::TShaderStages ShaderStages;
+            ExtractShaders<ShaderImplType>(CreateInfo, ShaderStages);
+
+            std::vector<RefCntAutoPtr<IAsyncTask>> ShaderCompileTasks;
+            for (const auto& Stage : ShaderStages)
+            {
+                std::vector<const ShaderImplType*> Shaders = GetStageShaders(Stage);
+                for (const ShaderImplType* pShader : Shaders)
+                {
+                    if (RefCntAutoPtr<IAsyncTask> pCompileTask = pShader->GetCompileTask())
+                        ShaderCompileTasks.emplace_back(std::move(pCompileTask));
+                }
+            }
+
+            std::vector<IAsyncTask*> Prerequisites{ShaderCompileTasks.begin(), ShaderCompileTasks.end()};
+
             m_InitializeTaskRunning.store(true);
             m_wpInitializeTask = EnqueueAsyncWork(
                 this->m_pDevice->GetShaderCompilationThreadPool(),
+                Prerequisites.data(),                      // Make sure that all asynchronous shader compile tasks are
+                static_cast<Uint32>(Prerequisites.size()), // completed before the pipeline initialization task starts
                 [pThisImpl,
                  CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo}](Uint32 ThreadId) mutable //
                 {
@@ -1240,6 +1259,7 @@ private:
     {
         if (WaitForCompletion)
         {
+            VERIFY(!pShader->IsCompiling(), "All shader compile tasks must have been completed since we used them as prerequisites for the pipeline initialization task. This appears to be a bug.");
             const SHADER_STATUS ShaderStatus = pShader->GetStatus(/*WaitForCompletion = */ true);
             if (ShaderStatus != SHADER_STATUS_READY)
             {

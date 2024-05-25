@@ -81,7 +81,7 @@ public:
     struct ShaderStageInfo
     {
         ShaderStageInfo() {}
-        explicit ShaderStageInfo(const ShaderD3D12Impl* _pShader);
+        explicit ShaderStageInfo(const ShaderD3D12Impl* pShader);
 
         void   Append(const ShaderD3D12Impl* pShader);
         size_t Count() const;

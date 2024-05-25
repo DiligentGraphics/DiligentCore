@@ -182,20 +182,31 @@ public:
                 Threading::SpinLockGuard Guard{m_CompileTaskLock};
                 m_wpCompileTask.Release();
                 m_CompileTaskRunning.store(false);
-                VERIFY_EXPR(m_Status.load() > SHADER_STATUS_COMPILING);
+                VERIFY_EXPR(!IsCompiling());
             }
         }
 
         return m_Status.load();
     }
 
+    bool IsCompiling() const
+    {
+        return m_Status.load() <= SHADER_STATUS_COMPILING;
+    }
+
+    RefCntAutoPtr<IAsyncTask> GetCompileTask() const
+    {
+        Threading::SpinLockGuard Guard{m_CompileTaskLock};
+        return m_wpCompileTask.Lock();
+    }
+
 protected:
     const std::string m_CombinedSamplerSuffix;
 
-    std::atomic<SHADER_STATUS> m_Status{SHADER_STATUS_UNINITIALIZED};
-    std::atomic<bool>          m_CompileTaskRunning{false};
-    Threading::SpinLock        m_CompileTaskLock;
-    RefCntWeakPtr<IAsyncTask>  m_wpCompileTask;
+    std::atomic<SHADER_STATUS>        m_Status{SHADER_STATUS_UNINITIALIZED};
+    std::atomic<bool>                 m_CompileTaskRunning{false};
+    mutable Threading::SpinLock       m_CompileTaskLock;
+    mutable RefCntWeakPtr<IAsyncTask> m_wpCompileTask;
 };
 
 } // namespace Diligent

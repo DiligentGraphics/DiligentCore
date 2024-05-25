@@ -340,12 +340,18 @@ void PipelineStateD3D11Impl::InitializePipeline(const ComputePipelineStateCreate
     VERIFY(!pVSByteCode, "There must be no VS in a compute pipeline.");
 }
 
+// Used by TPipelineStateBase::Construct()
+inline std::vector<const ShaderD3D11Impl*> GetStageShaders(const ShaderD3D11Impl* Stage)
+{
+    return {Stage};
+}
+
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*                    pRefCounters,
                                                RenderDeviceD3D11Impl*                 pRenderDeviceD3D11,
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pRenderDeviceD3D11, CreateInfo}
 {
-    Construct(CreateInfo);
+    Construct<ShaderD3D11Impl>(CreateInfo);
 }
 
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*                   pRefCounters,
@@ -353,7 +359,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
                                                const ComputePipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pRenderDeviceD3D11, CreateInfo}
 {
-    Construct(CreateInfo);
+    Construct<ShaderD3D11Impl>(CreateInfo);
 }
 
 PipelineStateD3D11Impl::~PipelineStateD3D11Impl()

@@ -347,7 +347,7 @@ ShaderVkImpl::~ShaderVkImpl()
 
 void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const
 {
-    DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+    DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
 
     auto ResCount = GetResourceCount();
     DEV_CHECK_ERR(Index < ResCount, "Resource index (", Index, ") is out of range");
@@ -360,7 +360,7 @@ void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDes
 
 const ShaderCodeBufferDesc* ShaderVkImpl::GetConstantBufferDesc(Uint32 Index) const
 {
-    DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+    DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
 
     auto ResCount = GetResourceCount();
     if (Index >= ResCount)

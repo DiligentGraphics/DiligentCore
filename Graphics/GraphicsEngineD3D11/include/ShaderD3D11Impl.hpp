@@ -76,7 +76,7 @@ public:
     /// Implementation of IShaderD3D11::GetD3D11Shader() method.
     virtual ID3D11DeviceChild* DILIGENT_CALL_TYPE GetD3D11Shader() override final
     {
-        DEV_CHECK_ERR(m_Status.load() > SHADER_STATUS_COMPILING, "Shader bytecode is not available until compilation is complete. Use GetStatus() to check the shader status.");
+        DEV_CHECK_ERR(!IsCompiling(), "Shader bytecode is not available until compilation is complete. Use GetStatus() to check the shader status.");
         return GetD3D11Shader(m_pShaderByteCode);
     }
 

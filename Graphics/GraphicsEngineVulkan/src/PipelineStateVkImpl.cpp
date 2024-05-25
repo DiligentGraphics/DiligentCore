@@ -863,23 +863,28 @@ void PipelineStateVkImpl::InitializePipeline(const RayTracingPipelineStateCreate
     (void)err;
 }
 
+// Used by TPipelineStateBase::Construct()
+inline std::vector<const ShaderVkImpl*> GetStageShaders(const PipelineStateVkImpl::ShaderStageInfo& Stage)
+{
+    return Stage.Shaders;
+}
 
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const GraphicsPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo}
 {
-    Construct(CreateInfo);
+    Construct<ShaderVkImpl>(CreateInfo);
 }
 
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const ComputePipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo}
 {
-    Construct(CreateInfo);
+    Construct<ShaderVkImpl>(CreateInfo);
 }
 
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const RayTracingPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo}
 {
-    Construct(CreateInfo);
+    Construct<ShaderVkImpl>(CreateInfo);
 }
 
 PipelineStateVkImpl::~PipelineStateVkImpl()
