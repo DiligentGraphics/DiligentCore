@@ -367,7 +367,7 @@ TEST(Common_ThreadPool, Prerequisites)
         constexpr Uint32               NumTasks = 16;
         std::vector<std::atomic<bool>> TaskComplete(NumTasks);
 
-        std::atomic<int> NumTasksCorrectlyOrdered{0};
+        std::atomic<Uint32> NumTasksCorrectlyOrdered{0};
         {
             std::vector<IAsyncTask*>               Tasks(NumTasks);
             std::vector<RefCntAutoPtr<IAsyncTask>> spTasks(NumTasks);
