@@ -302,10 +302,10 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
 
 } // namespace
 
-PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(const ShaderD3D12Impl* _pShader) :
-    Type{_pShader->GetDesc().ShaderType},
-    Shaders{{_pShader}},
-    ByteCodes{{RefCntAutoPtr<IDataBlob>{_pShader->GetD3DBytecode()}}}
+PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(const ShaderD3D12Impl* pShader) :
+    Type{pShader->GetDesc().ShaderType},
+    Shaders{{pShader}},
+    ByteCodes{{RefCntAutoPtr<IDataBlob>{pShader->GetD3DBytecode()}}}
 {
 }
 
@@ -963,12 +963,18 @@ void PipelineStateD3D12Impl::InitializePipeline(const RayTracingPipelineStateCre
     }
 }
 
+// Used by TPipelineStateBase::Construct()
+inline std::vector<const ShaderD3D12Impl*> GetStageShaders(const PipelineStateD3D12Impl::ShaderStageInfo& Stage)
+{
+    return Stage.Shaders;
+}
+
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                    pRefCounters,
                                                RenderDeviceD3D12Impl*                 pDeviceD3D12,
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
-    Construct(CreateInfo);
+    Construct<ShaderD3D12Impl>(CreateInfo);
 }
 
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                   pRefCounters,
@@ -976,7 +982,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
                                                const ComputePipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
-    Construct(CreateInfo);
+    Construct<ShaderD3D12Impl>(CreateInfo);
 }
 
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                      pRefCounters,
@@ -984,7 +990,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
                                                const RayTracingPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
-    Construct(CreateInfo);
+    Construct<ShaderD3D12Impl>(CreateInfo);
 }
 
 PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
