@@ -576,10 +576,10 @@ public:
 
             if (TaskFinished)
             {
+                VERIFY(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING, "Pipeline state status must be atomically set by the initialization task before it finishes");
                 Threading::SpinLockGuard Guard{m_InitializeTaskLock};
                 m_wpInitializeTask.Release();
                 m_InitializeTaskRunning.store(false);
-                VERIFY_EXPR(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING);
             }
         }
 
@@ -1277,8 +1277,13 @@ protected:
 
     std::atomic<PIPELINE_STATE_STATUS> m_Status{PIPELINE_STATE_STATUS_UNINITIALIZED};
     std::atomic<bool>                  m_InitializeTaskRunning{false};
-    Threading::SpinLock                m_InitializeTaskLock;
-    RefCntWeakPtr<IAsyncTask>          m_wpInitializeTask;
+
+    // Note that while RefCntAutoPtr/RefCntWeakPtr allow safely accessing the same object
+    // from multiple threads using different pointers, they are not thread-safe by themselves
+    // (e.g. it is not safe to call Lock() or Release() on the same pointer from multiple threads).
+    // Therefore, we need to use a lock to protect access to m_wpInitializeTask.
+    Threading::SpinLock       m_InitializeTaskLock;
+    RefCntWeakPtr<IAsyncTask> m_wpInitializeTask;
 
     /// The number of signatures in m_Signatures array.
     /// Note that this is not necessarily the same as the number of signatures

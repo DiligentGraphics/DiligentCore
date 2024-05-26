@@ -190,7 +190,7 @@ private:
                     const ShaderVersion     ShaderModel,
                     IDXCompiler*            pDxCompiler,
                     IDataBlob**             ppCompilerOutput,
-                    InitResourcesFuncType   InitResources)
+                    InitResourcesFuncType   InitResources) noexcept(false)
     {
         m_pShaderByteCode = CompileD3DBytecode(ShaderCI, ShaderModel, pDxCompiler, ppCompilerOutput);
         if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)

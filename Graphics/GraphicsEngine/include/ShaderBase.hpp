@@ -161,14 +161,8 @@ public:
         VERIFY_EXPR(m_Status.load() != SHADER_STATUS_UNINITIALIZED);
         if (m_CompileTaskRunning.load())
         {
-            RefCntAutoPtr<IAsyncTask> pCompileTask;
-            {
-                Threading::SpinLockGuard Guard{m_CompileTaskLock};
-                pCompileTask = m_wpCompileTask.Lock();
-            }
-
-            bool TaskFinished = (pCompileTask == nullptr);
-            if (pCompileTask)
+            bool TaskFinished = true;
+            if (RefCntAutoPtr<IAsyncTask> pCompileTask = GetCompileTask())
             {
                 if (WaitForCompletion)
                 {
@@ -179,10 +173,10 @@ public:
 
             if (TaskFinished)
             {
+                VERIFY(!IsCompiling(), "Shader status must be atomically set by the compiling task before it finishes");
                 Threading::SpinLockGuard Guard{m_CompileTaskLock};
                 m_wpCompileTask.Release();
                 m_CompileTaskRunning.store(false);
-                VERIFY_EXPR(!IsCompiling());
             }
         }
 
@@ -203,8 +197,13 @@ public:
 protected:
     const std::string m_CombinedSamplerSuffix;
 
-    std::atomic<SHADER_STATUS>        m_Status{SHADER_STATUS_UNINITIALIZED};
-    std::atomic<bool>                 m_CompileTaskRunning{false};
+    std::atomic<SHADER_STATUS> m_Status{SHADER_STATUS_UNINITIALIZED};
+    std::atomic<bool>          m_CompileTaskRunning{false};
+
+    // Note that while RefCntAutoPtr/RefCntWeakPtr allow safely accessing the same object
+    // from multiple threads using different pointers, they are not thread-safe by themselves
+    // (e.g. it is not safe to call Lock() or Release() on the same pointer from multiple threads).
+    // Therefore, we need to use a lock to protect access to m_wpCompileTask.
     mutable Threading::SpinLock       m_CompileTaskLock;
     mutable RefCntWeakPtr<IAsyncTask> m_wpCompileTask;
 };
