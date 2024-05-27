@@ -1,3 +1,13 @@
+## Current progress
+
+* Enabled asynchronous shdare and pipeline state compilation (API255001)
+  * Added `AsyncShaderCompilation` render device feature
+  * Added `pAsyncShaderCompilationThreadPool` and `NumAsyncShaderCompilerThreads` members to `EngineCreateInfo` struct
+  * Added `SHADER_COMPILE_FLAG_ASYNCHRONOUS` and `PSO_CREATE_FLAG_ASYNCHRONOUS` flags
+  * Added `SHADER_STATUS` and `PIPELINE_STATE_STATUS` enums
+  * Added `IShader::GetStatus` and `IPipelineState::GetStatus` methods
+
+
 ## v2.5.5
 
 * Added `MultiDraw` and `MultiDrawIndexed` commands (API254006)
