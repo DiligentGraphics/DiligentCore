@@ -345,7 +345,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 #if GL_KHR_parallel_shader_compile
     if (m_DeviceInfo.Features.AsyncShaderCompilation)
     {
-        glMaxShaderCompilerThreadsKHR(EngineCI.MaxShaderCompilerThreads);
+        glMaxShaderCompilerThreadsKHR(EngineCI.NumAsyncShaderCompilationThreads);
     }
 #endif
 }

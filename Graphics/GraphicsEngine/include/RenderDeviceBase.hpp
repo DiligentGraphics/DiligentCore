@@ -346,7 +346,7 @@ public:
 protected:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) = 0;
 
-    void InitShaderCompilationThreadPool(IThreadPool* pShaderCompilationThreadPool)
+    void InitShaderCompilationThreadPool(IThreadPool* pShaderCompilationThreadPool, Uint32 NumThreads)
     {
         if (!m_DeviceInfo.Features.AsyncShaderCompilation)
             return;
@@ -357,8 +357,18 @@ protected:
         }
         else
         {
+            const Uint32 NumCores = std::max(std::thread::hardware_concurrency(), 1u);
+
             ThreadPoolCreateInfo ThreadPoolCI;
-            ThreadPoolCI.NumThreads        = std::max(std::thread::hardware_concurrency(), 1u);
+            if (NumThreads == ~0u)
+            {
+                // Leave one core for the main thread
+                ThreadPoolCI.NumThreads = std::max(NumCores, 2u) - 1u;
+            }
+            else
+            {
+                ThreadPoolCI.NumThreads = std::min(NumThreads, std::max(NumCores * 4, 128u));
+            }
             m_pShaderCompilationThreadPool = CreateThreadPool(ThreadPoolCI);
         }
     }

@@ -3444,6 +3444,19 @@ struct EngineCreateInfo
     ///             is performed by the driver.
     IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
 
+    /// When AsyncShaderCompilation is enabled, the maximum number of threads that can be used to compile shaders.
+    ///
+    /// \remarks    If AsyncShaderCompilation device feature is enabled and pAsyncShaderCompilationThreadPool is null,
+    ///             this value is used to define the number of threads in the default thread pool.
+    ///             If the value is 0xFFFFFFFF, the number of threads will be determined automatically.
+    ///             
+    ///             If pAsyncShaderCompilationThreadPool is not null, the value is ignored as the user-provided
+    ///             thread pool is used instead.
+    ///             
+    ///             In OpenGL backend, the thread pool is not used and the value is passed to glMaxShaderCompilerThreadsKHR()
+    ///             function.
+    Uint32 NumAsyncShaderCompilationThreads DEFAULT_INITIALIZER(0xFFFFFFFFu);
+
 #if DILIGENT_CPP_INTERFACE
     EngineCreateInfo() noexcept
     {
@@ -3546,11 +3559,6 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     ///
     /// * On Linux this affects the `DRI_PRIME` environment variable that is used by Mesa drivers that support PRIME.
     ADAPTER_TYPE PreferredAdapterType DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
-
-    /// When AsyncShaderCompilation is enabled, the maximum number of threads that can be used to compile shaders.
-    ///
-    /// \remarks    This valued is passed to glMaxShaderCompilerThreadsKHR() function.
-    Uint32 MaxShaderCompilerThreads DEFAULT_INITIALIZER(0xFFFFFFFFu);
 
 #if PLATFORM_EMSCRIPTEN
     /// WebGL context attributes.

@@ -257,7 +257,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             }
         }
 
-        InitShaderCompilationThreadPool(EngineCI.pAsyncShaderCompilationThreadPool);
+        InitShaderCompilationThreadPool(EngineCI.pAsyncShaderCompilationThreadPool, EngineCI.NumAsyncShaderCompilationThreads);
     }
     catch (...)
     {

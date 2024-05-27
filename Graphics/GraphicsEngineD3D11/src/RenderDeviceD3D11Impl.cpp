@@ -126,7 +126,7 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     // Initialize device features
     m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
 
-    InitShaderCompilationThreadPool(EngineCI.pAsyncShaderCompilationThreadPool);
+    InitShaderCompilationThreadPool(EngineCI.pAsyncShaderCompilationThreadPool, EngineCI.NumAsyncShaderCompilationThreads);
 }
 
 RenderDeviceD3D11Impl::~RenderDeviceD3D11Impl()
