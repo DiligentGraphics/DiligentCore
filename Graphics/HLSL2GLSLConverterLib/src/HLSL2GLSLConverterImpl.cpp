@@ -70,6 +70,10 @@
 //  - float SampleCmpLevelZero( SamplerComparisonState S, float2 Location, float CompareValue [, int2 Offset] );
 //  -  ret Load( int2 Location, [int2 Offset ] );
 //  -  ret Gather( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherRed( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherGreen( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherBlue( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherAlpha( sampler_state S, float2 Location [, int2 Offset] );
 //  -  float4 GatherCmp( SamplerComparisonState S, float2 Location, float CompareValue [, int2 Offset] );
 //
 // * Texture2DArray:
@@ -82,6 +86,10 @@
 //  - float SampleCmp( SamplerComparisonState S, float2 Location, float CompareValue [, int2 Offset] );
 //  -  ret Load( int Location3 [, int2 Offset ] );
 //  -  ret Gather( sampler_state S, float3 Location [, int2 Offset] );
+//  -  ret GatherRed( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherGreen( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherBlue( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherAlpha( sampler_state S, float2 Location [, int2 Offset] );
 //  -  float4 GatherCmp( SamplerComparisonState S, float3 Location, float CompareValue [, int2 Offset] );
 //  Remarks:
 //  - Array index goes in Location.z
@@ -106,6 +114,10 @@
 //  -  ret SampleGrad( sampler_state S, float3 Location, float3 DDX, float3 DDY );
 //  - float SampleCmp( SamplerComparisonState S, float3 Location, float CompareValue );
 //  -  ret Gather( sampler_state S, float3 Location );
+//  -  ret GatherRed( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherGreen( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherBlue( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherAlpha( sampler_state S, float2 Location [, int2 Offset] );
 //  -  float4 GatherCmp( SamplerComparisonState S, float3 Location, float CompareValue );
 //  Remarks:
 //  - SampleCmpLevelZero() is not supported as there is no corresponding OpenGL instruction. The
@@ -120,6 +132,10 @@
 //  -  ret SampleGrad( sampler_state S, float4 Location, float3 DDX, float3 DDY );
 //  - float SampleCmp( SamplerComparisonState S, float4 Location, float CompareValue );
 //  -  ret Gather( sampler_state S, float4 Location );
+//  -  ret GatherRed( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherGreen( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherBlue( sampler_state S, float2 Location [, int2 Offset] );
+//  -  ret GatherAlpha( sampler_state S, float2 Location [, int2 Offset] );
 //  -  float4 GatherCmp( SamplerComparisonState S, float4 Location, float CompareValue );
 //  Remarks:
 //  - SampleCmpLevelZero() is not supported as there is no corresponding OpenGL instruction. The
@@ -488,8 +504,16 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
             {
                 // Gather always returns float4 independent of the number of components, so no swizzling
                 Swizzle = "";
-                DEFINE_STUB("Gather_2", GLSLSampler, "Gather", 2); // Gather( SamplerState, Location )
-                DEFINE_STUB("Gather_3", GLSLSampler, "Gather", 3); // Gather( SamplerState, Location, Offset )
+                DEFINE_STUB("Gather_2", GLSLSampler, "Gather", 2);           // Gather( SamplerState, Location )
+                DEFINE_STUB("Gather_3", GLSLSampler, "Gather", 3);           // Gather( SamplerState, Location, Offset )
+                DEFINE_STUB("GatherRed_2", GLSLSampler, "GatherRed", 2);     // GatherRed( SamplerState, Location )
+                DEFINE_STUB("GatherRed_3", GLSLSampler, "GatherRed", 3);     // GatherRed( SamplerState, Location, Offset )
+                DEFINE_STUB("GatherGreen_2", GLSLSampler, "GatherGreen", 2); // GatherGreen( SamplerState, Location )
+                DEFINE_STUB("GatherGreen_3", GLSLSampler, "GatherGreen", 3); // GatherGreen( SamplerState, Location, Offset )
+                DEFINE_STUB("GatherBlue_2", GLSLSampler, "GatherBlue", 2);   // GatherBlue( SamplerState, Location )
+                DEFINE_STUB("GatherBlue_3", GLSLSampler, "GatherBlue", 3);   // GatherBlue( SamplerState, Location, Offset )
+                DEFINE_STUB("GatherAlpha_2", GLSLSampler, "GatherAlpha", 2); // GatherAlpha( SamplerState, Location )
+                DEFINE_STUB("GatherAlpha_3", GLSLSampler, "GatherAlpha", 3); // GatherAlpha( SamplerState, Location, Offset )
             }
 
             Swizzle = "";

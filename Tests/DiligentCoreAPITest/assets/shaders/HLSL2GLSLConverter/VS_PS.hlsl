@@ -846,38 +846,47 @@ void TestGather()
     float4 Location = float4(0.2, 0.5, 0.1, 0.7);
     const int3 Offset = int3(5, 10, 20);
 
+    float4 Res = float4(0.0, 0.0, 0.0, 0.0);
     //Texture2D
     {
-        Tex2D_F1.Gather(Tex2D_F1_sampler, Location.xy);
-        Tex2D_F1.Gather(Tex2D_F1_sampler, Location.xy, Offset.xy);
-        //Tex2D_I.Gather(Location.xyz);
-        //Tex2D_I.Gather(Location.xyz, Offset.xy);
-        //Tex2D_U.Gather(Location.xyz);
-        //Tex2D_U.Gather(Location.xyz, Offset.xy);
+        Res += Tex2D_F1.Gather(Tex2D_F1_sampler, Location.xy);
+        Res += Tex2D_F1.Gather(Tex2D_F1_sampler, Location.xy, Offset.xy);
+        Res += Tex2D_F1.GatherRed(Tex2D_F1_sampler, Location.xy);
+        Res += Tex2D_F1.GatherRed(Tex2D_F1_sampler, Location.xy, Offset.xy);
+        Res += Tex2D_F1.GatherGreen(Tex2D_F1_sampler, Location.xy);
+        Res += Tex2D_F1.GatherGreen(Tex2D_F1_sampler, Location.xy, Offset.xy);
+        Res += Tex2D_F1.GatherBlue(Tex2D_F1_sampler, Location.xy);
+        Res += Tex2D_F1.GatherBlue(Tex2D_F1_sampler, Location.xy, Offset.xy);
+        Res += Tex2D_F1.GatherAlpha(Tex2D_F1_sampler, Location.xy);
+        Res += Tex2D_F1.GatherAlpha(Tex2D_F1_sampler, Location.xy, Offset.xy);
+        //Res += Tex2D_I.Gather(Location.xyz);
+        //Res += Tex2D_I.Gather(Location.xyz, Offset.xy);
+        //Res += Tex2D_U.Gather(Location.xyz);
+        //Res += Tex2D_U.Gather(Location.xyz, Offset.xy);
     }
 
     //Texture2DArray
     {
-        Tex2D_F_A1.Gather(Tex2D_F_A1_sampler, Location.xyz);
-        Tex2D_F_A1.Gather(Tex2D_F_A1_sampler, Location.xyz, Offset.xy);
-        //Tex2D_U_A.Gather(Location.xyzw);
-        //Tex2D_U_A.Gather(Location.xyzw, Offset.xy);
-        //Tex2D_I_A.Gather(Location.xyzw);
-        //Tex2D_I_A.Gather(Location.xyzw, Offset.xy);
+        Res += Tex2D_F_A1.Gather(Tex2D_F_A1_sampler, Location.xyz);
+        Res += Tex2D_F_A1.Gather(Tex2D_F_A1_sampler, Location.xyz, Offset.xy);
+        //Res += Tex2D_U_A.Gather(Location.xyzw);
+        //Res += Tex2D_U_A.Gather(Location.xyzw, Offset.xy);
+        //Res += Tex2D_I_A.Gather(Location.xyzw);
+        //Res += Tex2D_I_A.Gather(Location.xyzw, Offset.xy);
     }
 
     // TextureCube
     {
-        TexC_F1.Gather(TexC_F1_sampler, Location.xyz);
-        //TexC_I.Gather(Location.xyz);
-        //TexC_U.Gather(Location.xyz);
+        Res += TexC_F1.Gather(TexC_F1_sampler, Location.xyz);
+        //Res += TexC_I.Gather(Location.xyz);
+        //Res += TexC_U.Gather(Location.xyz);
     }
 #ifndef GL_ES
     // TextureCubeArray
     {
-        TexC_F_A1.Gather(TexC_F_A1_sampler, Location.xyzw);
-        //TexC_I_A.Gather(Location.xyzw);
-        //TexC_U_A.Gather(Location.xyzw);
+        Res += TexC_F_A1.Gather(TexC_F_A1_sampler, Location.xyzw);
+        //Res += TexC_I_A.Gather(Location.xyzw);
+        //Res += TexC_U_A.Gather(Location.xyzw);
     }
 #endif
 

@@ -1045,6 +1045,15 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 #define Gather_2(Tex, Sampler, Location)        textureGather      (Tex, _ToVec(Location))
 #define Gather_3(Tex, Sampler, Location, Offset)textureGatherOffset(Tex, _ToVec(Location), Offset)
 
+#define GatherRed_2(Tex, Sampler, Location)          textureGather      (Tex, _ToVec(Location), 0)
+#define GatherRed_3(Tex, Sampler, Location, Offset)  textureGatherOffset(Tex, _ToVec(Location), Offset, 0)
+#define GatherGreen_2(Tex, Sampler, Location)        textureGather      (Tex, _ToVec(Location), 1)
+#define GatherGreen_3(Tex, Sampler, Location, Offset)textureGatherOffset(Tex, _ToVec(Location), Offset, 1)
+#define GatherBlue_2(Tex, Sampler, Location)         textureGather      (Tex, _ToVec(Location), 2)
+#define GatherBlue_3(Tex, Sampler, Location, Offset) textureGatherOffset(Tex, _ToVec(Location), Offset, 2)
+#define GatherAlpha_2(Tex, Sampler, Location)        textureGather      (Tex, _ToVec(Location), 3)
+#define GatherAlpha_3(Tex, Sampler, Location, Offset)textureGatherOffset(Tex, _ToVec(Location), Offset, 3)
+
 #define GatherCmp_3(Tex, Sampler, Location, CompareVal)        textureGather      (Tex, _ToVec(Location), _ToFloat(CompareVal))
 #define GatherCmp_4(Tex, Sampler, Location, CompareVal, Offset)textureGatherOffset(Tex, _ToVec(Location), _ToFloat(CompareVal), Offset)
 
