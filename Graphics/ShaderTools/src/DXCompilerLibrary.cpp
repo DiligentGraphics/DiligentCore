@@ -24,78 +24,39 @@
  *  of the possibility of such damages.
  */
 
-#include "DXCompiler.hpp"
-
-#include <mutex>
-#include <atomic>
-
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-
 #    include "WinHPreface.h"
-#    include <Unknwn.h>
+#    include <atlbase.h>
 #    include "WinHPostface.h"
-
-#elif PLATFORM_LINUX
-
-#else
-#    error Unsupported platform
 #endif
 
-#include "dxc/dxcapi.h"
+#include "DXCompilerLibrary.hpp"
 
 namespace Diligent
 {
 
-class DXCompilerLibrary
+void DXCompilerLibrary::InitVersion()
 {
-public:
-    DXCompilerLibrary(const char* LibName) noexcept :
-        m_LibName{LibName != nullptr ? LibName : ""}
+    CComPtr<IDxcValidator> pdxcValidator;
+    if (SUCCEEDED(m_DxcCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&pdxcValidator))))
     {
-    }
-
-    ~DXCompilerLibrary()
-    {
-        Unload();
-    }
-
-    DxcCreateInstanceProc GetDxcCreateInstance()
-    {
-        if (!m_Loaded.load())
+        CComPtr<IDxcVersionInfo> pdxcVerInfo;
+        if (SUCCEEDED(pdxcValidator->QueryInterface(IID_PPV_ARGS(&pdxcVerInfo))))
         {
-            std::lock_guard<std::mutex> Lock{m_LibraryMtx};
-            if (!m_Loaded.load())
-            {
-                Load();
-                if (m_DxcCreateInstance != nullptr)
-                {
-                    InitVersion();
-                }
-                m_Loaded.store(true);
-            }
+            UINT32 MajorVer = 0;
+            UINT32 MinorVer = 0;
+            pdxcVerInfo->GetVersion(&MajorVer, &MinorVer);
+            m_Version = {MajorVer, MinorVer};
         }
-
-        return m_DxcCreateInstance;
+        else
+        {
+            UNEXPECTED("Failed to query IDxcVersionInfo interface from DXC validator");
+        }
     }
-
-    Version GetVersion() const
+    else
     {
-        return m_Version;
+        UNEXPECTED("Failed to create DXC validator instance");
     }
-
-private:
-    void Load();
-    void Unload();
-    void InitVersion();
-
-private:
-    const std::string m_LibName;
-
-    std::mutex            m_LibraryMtx;
-    void*                 m_Library = nullptr;
-    std::atomic<bool>     m_Loaded{false};
-    DxcCreateInstanceProc m_DxcCreateInstance = nullptr;
-    Version               m_Version;
-};
+}
 
 } // namespace Diligent

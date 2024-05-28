@@ -102,8 +102,8 @@ public:
 
     virtual void GetVersion(Uint32& MajorVersion, Uint32& MinorVersion) const override final
     {
-        MajorVersion = m_MajorVer;
-        MinorVersion = m_MinorVer;
+        MajorVersion = m_Version.Major;
+        MinorVersion = m_Version.Minor;
     }
 
     bool Compile(const CompileAttribs& Attribs) override final;
@@ -130,18 +130,9 @@ private:
         if (CreateInstance && m_MaxShaderModel == ShaderVersion{})
         {
             m_MaxShaderModel = TestMaxShaderModel(CreateInstance, m_Target);
+            m_Version        = m_Library.GetVersion();
 
-            CComPtr<IDxcValidator> pdxcValidator;
-            if (SUCCEEDED(CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&pdxcValidator))))
-            {
-                CComPtr<IDxcVersionInfo> pdxcVerInfo;
-                if (SUCCEEDED(pdxcValidator->QueryInterface(IID_PPV_ARGS(&pdxcVerInfo))))
-                {
-                    pdxcVerInfo->GetVersion(&m_MajorVer, &m_MinorVer);
-                }
-            }
-
-            LOG_INFO_MESSAGE("Loaded DX Shader Compiler ", m_MajorVer, ".", m_MinorVer, ". Max supported shader model: ", m_MaxShaderModel.Major, '.', m_MaxShaderModel.Minor);
+            LOG_INFO_MESSAGE("Loaded DX Shader Compiler ", m_Version.Major, ".", m_Version.Minor, ". Max supported shader model: ", m_MaxShaderModel.Major, '.', m_MaxShaderModel.Minor);
         }
 
         return CreateInstance;
@@ -189,9 +180,7 @@ private:
     ShaderVersion          m_MaxShaderModel;
     const DXCompilerTarget m_Target;
     const Uint32           m_APIVersion;
-    // Compiler version
-    UINT32 m_MajorVer = 0;
-    UINT32 m_MinorVer = 0;
+    Version                m_Version;
 };
 
 #define CHECK_D3D_RESULT(Expr, Message)   \
@@ -833,14 +822,14 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 #ifdef DILIGENT_DEBUG
         DxilArgs.push_back(DXC_ARG_DEBUG);              // Debug info
         DxilArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS); // Disable optimization
-        if (m_MajorVer > 1 || (m_MajorVer == 1 && m_MinorVer >= 5))
+        if (m_Version >= Version{1, 5})
         {
             // Silence the following warning:
             // no output provided for debug - embedding PDB in shader container.  Use -Qembed_debug to silence this warning.
             DxilArgs.push_back(L"-Qembed_debug");
         }
 #else
-        if (m_MajorVer > 1 || (m_MajorVer == 1 && m_MinorVer >= 5))
+        if (m_Version >= Version{1, 5})
             DxilArgs.push_back(DXC_ARG_OPTIMIZATION_LEVEL3); // Optimization level 3
         else
             DxilArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS); // TODO: something goes wrong if optimization is enabled

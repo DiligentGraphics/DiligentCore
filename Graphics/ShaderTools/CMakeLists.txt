@@ -48,7 +48,7 @@ endif()
 
 if (DXC_SUPPORTED)
     list(APPEND INCLUDE include/DXCompiler.hpp include/DXCompilerLibrary.hpp)
-    list(APPEND SOURCE src/DXCompiler.cpp)
+    list(APPEND SOURCE src/DXCompiler.cpp src/DXCompilerLibrary.cpp)
 
     if(PLATFORM_WIN32)
         list(APPEND SOURCE src/DXCompilerLibraryWin32.cpp)
