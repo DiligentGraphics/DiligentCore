@@ -35,20 +35,11 @@
 #include <array>
 #include <sstream>
 
-// Platforms that support DXCompiler.
-#if PLATFORM_WIN32
-#    include "DXCompilerBaseWin32.hpp"
-#elif PLATFORM_UNIVERSAL_WINDOWS
-#    include "DXCompilerBaseUWP.hpp"
-#elif PLATFORM_LINUX
-#    include "DXCompilerBaseLinux.hpp"
-#else
-#    error DXC is not supported on this platform
+#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
+#    include "WinHPreface.h"
+#    include <atlbase.h>
+#    include "WinHPostface.h"
 #endif
-
-#include "DataBlobImpl.hpp"
-#include "RefCntAutoPtr.hpp"
-#include "ShaderToolsCommon.hpp"
 
 #if D3D12_SUPPORTED
 #    include "WinHPreface.h"
@@ -63,6 +54,13 @@
 #    endif
 #endif
 
+#include "DXCompilerLibrary.hpp"
+#include "DXCompiler.hpp"
+
+#include "DataBlobImpl.hpp"
+#include "RefCntAutoPtr.hpp"
+#include "ShaderToolsCommon.hpp"
+
 #include "HLSLUtils.hpp"
 
 #include "dxc/DxilContainer/DxilContainer.h"
@@ -76,11 +74,11 @@ constexpr Uint32 VK_API_VERSION_1_1 = (1u << 22) | (1u << 12);
 constexpr Uint32 VK_API_VERSION_1_2 = (1u << 22) | (2u << 12);
 
 
-class DXCompilerImpl final : public DXCompilerBase
+class DXCompilerImpl final : public IDXCompiler
 {
 public:
-    DXCompilerImpl(DXCompilerTarget Target, Uint32 APIVersion, const char* pLibName) :
-        m_LibName{pLibName ? pLibName : (Target == DXCompilerTarget::Direct3D12 ? "dxcompiler" : "spv_dxcompiler")},
+    DXCompilerImpl(DXCompilerTarget Target, Uint32 APIVersion, const char* LibName) :
+        m_Library{LibName != nullptr && LibName[0] != '\0' ? LibName : (Target == DXCompilerTarget::Direct3D12 ? "dxcompiler" : "spv_dxcompiler")},
         m_Target{Target},
         m_APIVersion{APIVersion}
     {}
@@ -127,20 +125,14 @@ public:
 private:
     DxcCreateInstanceProc Load()
     {
-        std::unique_lock<std::mutex> lock{m_Guard};
+        DxcCreateInstanceProc CreateInstance = m_Library.GetDxcCreateInstance();
 
-        if (m_IsInitialized)
-            return m_pCreateInstance;
-
-        m_IsInitialized   = true;
-        m_pCreateInstance = DXCompilerBase::Load(m_Target, m_LibName);
-
-        if (m_pCreateInstance)
+        if (CreateInstance && m_MaxShaderModel == ShaderVersion{})
         {
-            m_MaxShaderModel = TestMaxShaderModel(m_pCreateInstance, m_Target);
+            m_MaxShaderModel = TestMaxShaderModel(CreateInstance, m_Target);
 
             CComPtr<IDxcValidator> pdxcValidator;
-            if (SUCCEEDED(m_pCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&pdxcValidator))))
+            if (SUCCEEDED(CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&pdxcValidator))))
             {
                 CComPtr<IDxcVersionInfo> pdxcVerInfo;
                 if (SUCCEEDED(pdxcValidator->QueryInterface(IID_PPV_ARGS(&pdxcVerInfo))))
@@ -152,7 +144,7 @@ private:
             LOG_INFO_MESSAGE("Loaded DX Shader Compiler ", m_MajorVer, ".", m_MinorVer, ". Max supported shader model: ", m_MaxShaderModel.Major, '.', m_MaxShaderModel.Minor);
         }
 
-        return m_pCreateInstance;
+        return CreateInstance;
     }
 
     bool ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* pdxcLibrary, CComPtr<IDxcBlob>& pCompiled, IDxcBlob** ppOutput) const noexcept(false);
@@ -193,11 +185,8 @@ private:
     static void PatchResourceIndex(const ResourceExtendedInfo& ResInfo, const BindInfo& Bind, String& DXIL, size_t& pos);
 
 private:
-    DxcCreateInstanceProc  m_pCreateInstance = nullptr;
-    bool                   m_IsInitialized   = false;
+    DXCompilerLibrary      m_Library;
     ShaderVersion          m_MaxShaderModel;
-    std::mutex             m_Guard;
-    const String           m_LibName;
     const DXCompilerTarget m_Target;
     const Uint32           m_APIVersion;
     // Compiler version

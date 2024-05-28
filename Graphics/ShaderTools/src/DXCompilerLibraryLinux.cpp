@@ -1,6 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
+ *  Copyright 2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,56 +24,35 @@
  *  of the possibility of such damages.
  */
 
+#include "DXCompilerLibrary.hpp"
 
-#include "WinHPreface.h"
-
-#include <Unknwn.h>
-#include <guiddef.h>
-#include <atlbase.h>
-#include <atlcom.h>
-
-#include "dxc/dxcapi.h"
-
-#include "WinHPostface.h"
-
-#include "DXCompiler.hpp"
+#include <dlfcn.h>
 
 namespace Diligent
 {
 
-namespace
+void DXCompilerLibrary::Load()
 {
+    if (!m_LibName.empty())
+        m_Library = dlopen(m_LibName.c_str(), RTLD_LOCAL | RTLD_LAZY);
 
-class DXCompilerBase : public IDXCompiler
+    if (m_Library == nullptr)
+        m_Library = dlopen("libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
+
+    // try to load from default path
+    if (m_Library == nullptr)
+        m_Library = dlopen("/usr/lib/dxc/libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
+
+    m_DxcCreateInstance = m_Library != nullptr ? reinterpret_cast<DxcCreateInstanceProc>(dlsym(m_Library, "DxcCreateInstance")) : nullptr;
+}
+
+void DXCompilerLibrary::Unload()
 {
-public:
-    ~DXCompilerBase() override
+    if (m_Library != nullptr)
     {
-        if (Module)
-            FreeLibrary(Module);
+        dlclose(m_Library);
+        m_Library = nullptr;
     }
-
-protected:
-    DxcCreateInstanceProc Load(DXCompilerTarget, const String& LibName)
-    {
-        if (LibName.size())
-        {
-            std::wstring wname{LibName.begin(), LibName.end()};
-            wname += L".dll";
-
-            Module = LoadPackagedLibrary(wname.c_str(), 0);
-        }
-
-        if (Module == nullptr)
-            Module = LoadPackagedLibrary(L"dxcompiler.dll", 0);
-
-        return Module ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance")) : nullptr;
-    }
-
-private:
-    HMODULE Module = nullptr;
-};
-
-} // namespace
+}
 
 } // namespace Diligent

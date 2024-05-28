@@ -1,6 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
+ *  Copyright 2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,56 +24,40 @@
  *  of the possibility of such damages.
  */
 
-#include "WinHPreface.h"
-
-#include <Unknwn.h>
-#include <guiddef.h>
-#include <atlbase.h>
-#include <atlcom.h>
-
-#include "dxc/dxcapi.h"
-
-#include "WinHPostface.h"
-
-#include "DXCompiler.hpp"
+#include "DXCompilerLibrary.hpp"
 
 namespace Diligent
 {
 
-namespace
+void DXCompilerLibrary::Load()
 {
-
-class DXCompilerBase : public IDXCompiler
-{
-public:
-    ~DXCompilerBase() override
+    HMODULE Library = nullptr;
+    if (!m_LibName.empty())
     {
-        if (Module)
-            FreeLibrary(Module);
-    }
-
-protected:
-    DxcCreateInstanceProc Load(DXCompilerTarget Target, const String& LibName)
-    {
-        if (LibName.size())
-            Module = LoadLibraryA(LibName.c_str());
-
-        if (Module == nullptr)
+        std::wstring wLibName{m_LibName.begin(), m_LibName.end()};
+        if (wLibName.find_last_of(L'.') == std::wstring::npos)
         {
-            switch (Target)
-            {
-                case DXCompilerTarget::Direct3D12: Module = LoadLibraryA("dxcompiler.dll"); break;
-                case DXCompilerTarget::Vulkan: Module = LoadLibraryA("spv_dxcompiler.dll"); break;
-            }
+            wLibName += L".dll";
         }
-
-        return Module ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance")) : nullptr;
+        Library = LoadPackagedLibrary(wLibName.c_str(), 0);
     }
 
-private:
-    HMODULE Module = nullptr;
-};
+    if (Library == nullptr)
+    {
+        Library = LoadPackagedLibrary(L"dxcompiler.dll", 0);
+    }
 
-} // namespace
+    m_Library           = Library;
+    m_DxcCreateInstance = Library != nullptr ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Library, "DxcCreateInstance")) : nullptr;
+}
+
+void DXCompilerLibrary::Unload()
+{
+    if (m_Library != nullptr)
+    {
+        FreeLibrary(static_cast<HMODULE>(m_Library));
+        m_Library = nullptr;
+    }
+}
 
 } // namespace Diligent

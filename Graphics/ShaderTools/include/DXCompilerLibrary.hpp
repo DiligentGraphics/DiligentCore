@@ -1,6 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
+ *  Copyright 2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,46 +24,67 @@
  *  of the possibility of such damages.
  */
 
-
 #include "DXCompiler.hpp"
+
+#include <mutex>
+#include <atomic>
+
+#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
+
+#    include "WinHPreface.h"
+#    include <Unknwn.h>
+#    include "WinHPostface.h"
+
+#elif PLATFORM_LINUX
+
+#else
+#    error Unsupported platform
+#endif
 
 #include "dxc/dxcapi.h"
 
 namespace Diligent
 {
 
-namespace
-{
-
-class DXCompilerBase : public IDXCompiler
+class DXCompilerLibrary
 {
 public:
-    ~DXCompilerBase() override
+    DXCompilerLibrary(const char* LibName) noexcept :
+        m_LibName{LibName != nullptr ? LibName : ""}
     {
-        if (Module)
-            dlclose(Module);
     }
 
-protected:
-    DxcCreateInstanceProc Load(DXCompilerTarget, const String& LibName)
+    ~DXCompilerLibrary()
     {
-        if (!LibName.empty())
-            Module = dlopen(LibName.c_str(), RTLD_LOCAL | RTLD_LAZY);
+        Unload();
+    }
 
-        if (Module == nullptr)
-            Module = dlopen("libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
+    DxcCreateInstanceProc GetDxcCreateInstance()
+    {
+        if (!m_Loaded.load())
+        {
+            std::lock_guard<std::mutex> Lock{m_LibraryMtx};
+            if (!m_Loaded.load())
+            {
+                Load();
+                m_Loaded.store(true);
+            }
+        }
 
-        // try to load from default path
-        if (Module == nullptr)
-            Module = dlopen("/usr/lib/dxc/libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
-
-        return Module ? reinterpret_cast<DxcCreateInstanceProc>(dlsym(Module, "DxcCreateInstance")) : nullptr;
+        return m_DxcCreateInstance;
     }
 
 private:
-    void* Module = nullptr;
-};
+    void Load();
+    void Unload();
 
-} // namespace
+private:
+    const std::string m_LibName;
+
+    std::mutex            m_LibraryMtx;
+    void*                 m_Library = nullptr;
+    std::atomic<bool>     m_Loaded{false};
+    DxcCreateInstanceProc m_DxcCreateInstance = nullptr;
+};
 
 } // namespace Diligent
