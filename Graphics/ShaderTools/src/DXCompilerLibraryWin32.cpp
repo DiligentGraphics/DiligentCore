@@ -31,13 +31,17 @@ namespace Diligent
 
 void DXCompilerLibrary::Load()
 {
-    if (m_LibName.empty())
+    HMODULE Library = nullptr;
+    if (!m_LibName.empty())
     {
-        UNEXPECTED("Library name must not be empty");
-        return;
+        Library = LoadLibraryA(m_LibName.c_str());
     }
 
-    HMODULE Library     = LoadLibraryA(m_LibName.c_str());
+    if (Library == nullptr)
+    {
+        Library = LoadLibraryA(m_Target == DXCompilerTarget::Direct3D12 ? "dxcompiler" : "spv_dxcompiler");
+    }
+
     m_Library           = Library;
     m_DxcCreateInstance = (Library != nullptr) ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Library, "DxcCreateInstance")) : nullptr;
 }

@@ -37,6 +37,8 @@ namespace Diligent
 
 void DXCompilerLibrary::InitVersion()
 {
+    VERIFY_EXPR(m_DxcCreateInstance != nullptr);
+
     CComPtr<IDxcValidator> pdxcValidator;
     if (SUCCEEDED(m_DxcCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&pdxcValidator))))
     {
@@ -56,6 +58,82 @@ void DXCompilerLibrary::InitVersion()
     else
     {
         UNEXPECTED("Failed to create DXC validator instance");
+    }
+}
+
+#define CHECK_D3D_RESULT(Expr, Message)   \
+    do                                    \
+    {                                     \
+        HRESULT hr = Expr;                \
+        if (FAILED(hr))                   \
+        {                                 \
+            LOG_ERROR_AND_THROW(Message); \
+        }                                 \
+    } while (false)
+
+
+void DXCompilerLibrary::DetectMaxShaderModel()
+{
+    VERIFY_EXPR(m_DxcCreateInstance != nullptr);
+    try
+    {
+        CComPtr<IDxcLibrary> pdxcLibrary;
+        CHECK_D3D_RESULT(m_DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&pdxcLibrary)), "Failed to create DXC Library");
+
+        CComPtr<IDxcCompiler> pdxcCompiler;
+        CHECK_D3D_RESULT(m_DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pdxcCompiler)), "Failed to create DXC Compiler");
+
+        constexpr char TestShader[] = R"(
+float4 main() : SV_Target0
+{
+    return float4(0.0, 0.0, 0.0, 0.0);
+}
+)";
+
+        CComPtr<IDxcBlobEncoding> pSourceBlob;
+        CHECK_D3D_RESULT(pdxcLibrary->CreateBlobWithEncodingFromPinned(TestShader, sizeof(TestShader), CP_UTF8, &pSourceBlob), "Failed to create DXC Blob Encoding");
+
+        ShaderVersion MaxSM{6, 0};
+
+        std::vector<const wchar_t*> DxilArgs;
+        if (m_Target == DXCompilerTarget::Vulkan)
+            DxilArgs.push_back(L"-spirv");
+
+        for (Uint32 MinorVer = 1;; ++MinorVer)
+        {
+            std::wstring Profile = L"ps_6_";
+            Profile += std::to_wstring(MinorVer);
+
+            CComPtr<IDxcOperationResult> pdxcResult;
+
+            auto hr = pdxcCompiler->Compile(
+                pSourceBlob,
+                L"",
+                L"main",
+                Profile.c_str(),
+                !DxilArgs.empty() ? DxilArgs.data() : nullptr,
+                static_cast<UINT32>(DxilArgs.size()),
+                nullptr, // Array of defines
+                0,       // Number of defines
+                nullptr, // Include handler
+                &pdxcResult);
+            if (FAILED(hr))
+                break;
+
+            HRESULT status = E_FAIL;
+            if (FAILED(pdxcResult->GetStatus(&status)))
+                break;
+            if (FAILED(status))
+                break;
+
+            MaxSM.Minor = MinorVer;
+        }
+
+        m_MaxShaderModel = MaxSM;
+    }
+    catch (...)
+    {
+        LOG_ERROR_MESSAGE("Failed to detect max shader model for DXC compiler");
     }
 }
 

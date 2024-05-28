@@ -49,7 +49,8 @@ namespace Diligent
 class DXCompilerLibrary
 {
 public:
-    DXCompilerLibrary(const char* LibName) noexcept :
+    DXCompilerLibrary(DXCompilerTarget Target, const char* LibName) noexcept :
+        m_Target{Target},
         m_LibName{LibName != nullptr ? LibName : ""}
     {
     }
@@ -70,6 +71,7 @@ public:
                 if (m_DxcCreateInstance != nullptr)
                 {
                     InitVersion();
+                    DetectMaxShaderModel();
                 }
                 m_Loaded.store(true);
             }
@@ -80,22 +82,32 @@ public:
 
     Version GetVersion() const
     {
+        VERIFY(m_Loaded.load(), "DXCompiler library is not loaded");
         return m_Version;
+    }
+
+    ShaderVersion GetMaxShaderModel() const
+    {
+        VERIFY(m_Loaded.load(), "DXCompiler library is not loaded");
+        return m_MaxShaderModel;
     }
 
 private:
     void Load();
     void Unload();
     void InitVersion();
+    void DetectMaxShaderModel();
 
 private:
-    const std::string m_LibName;
+    const DXCompilerTarget m_Target;
+    const std::string      m_LibName;
 
     std::mutex            m_LibraryMtx;
     void*                 m_Library = nullptr;
     std::atomic<bool>     m_Loaded{false};
     DxcCreateInstanceProc m_DxcCreateInstance = nullptr;
     Version               m_Version;
+    ShaderVersion         m_MaxShaderModel;
 };
 
 } // namespace Diligent
