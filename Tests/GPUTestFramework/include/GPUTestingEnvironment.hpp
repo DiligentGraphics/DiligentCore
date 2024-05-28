@@ -81,10 +81,9 @@ public:
     // Returns true if RayTracing feature is enabled and compiler can compile HLSL ray tracing shaders.
     virtual bool SupportsRayTracing() const { return false; }
 
-    virtual void GetDXCompilerVersion(Uint32& MajorVersion, Uint32& MinorVersion) const
+    virtual Version GetDXCompilerVersion() const
     {
-        MajorVersion = 0;
-        MinorVersion = 0;
+        return {0, 0};
     }
 
     void ReleaseResources();

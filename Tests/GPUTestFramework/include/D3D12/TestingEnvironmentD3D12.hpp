@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,10 +79,9 @@ public:
         return m_pDxCompiler != nullptr && m_pDxCompiler->IsLoaded();
     }
 
-    virtual void GetDXCompilerVersion(Uint32& MajorVersion, Uint32& MinorVersion) const override final
+    virtual Version GetDXCompilerVersion() const override final
     {
-        if (m_pDxCompiler != nullptr)
-            m_pDxCompiler->GetVersion(MajorVersion, MinorVersion);
+        return m_pDxCompiler != nullptr ? m_pDxCompiler->GetVersion() : Version{};
     }
 
     virtual bool SupportsRayTracing() const override final

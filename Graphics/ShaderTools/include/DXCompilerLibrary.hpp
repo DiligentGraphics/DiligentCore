@@ -72,12 +72,18 @@ public:
                 {
                     InitVersion();
                     DetectMaxShaderModel();
+                    LOG_INFO_MESSAGE("Loaded DX Shader Compiler ", m_Version.Major, ".", m_Version.Minor, ". Max supported shader model: ", m_MaxShaderModel.Major, '.', m_MaxShaderModel.Minor);
                 }
                 m_Loaded.store(true);
             }
         }
 
         return m_DxcCreateInstance;
+    }
+
+    DXCompilerTarget GetTarget() const
+    {
+        return m_Target;
     }
 
     Version GetVersion() const

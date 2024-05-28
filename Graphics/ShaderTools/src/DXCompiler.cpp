@@ -79,31 +79,26 @@ class DXCompilerImpl final : public IDXCompiler
 public:
     DXCompilerImpl(DXCompilerTarget Target, Uint32 APIVersion, const char* LibName) :
         m_Library{Target, LibName != nullptr && LibName[0] != '\0' ? LibName : (Target == DXCompilerTarget::Direct3D12 ? "dxcompiler" : "spv_dxcompiler")},
-        m_Target{Target},
         m_APIVersion{APIVersion}
     {}
 
     ShaderVersion GetMaxShaderModel() override final
     {
-        Load();
-        // mutex is not needed here
-        return m_MaxShaderModel;
+        // Force loading the library
+        m_Library.GetDxcCreateInstance();
+        return m_Library.GetMaxShaderModel();
     }
 
     bool IsLoaded() override final
     {
-        return GetCreateInstanceProc() != nullptr;
+        return m_Library.GetDxcCreateInstance() != nullptr;
     }
 
-    DxcCreateInstanceProc GetCreateInstanceProc()
+    virtual Version GetVersion() override final
     {
-        return Load();
-    }
-
-    virtual void GetVersion(Uint32& MajorVersion, Uint32& MinorVersion) const override final
-    {
-        MajorVersion = m_Version.Major;
-        MinorVersion = m_Version.Minor;
+        // Force loading the library
+        m_Library.GetDxcCreateInstance();
+        return m_Library.GetVersion();
     }
 
     bool Compile(const CompileAttribs& Attribs) override final;
@@ -123,21 +118,6 @@ public:
                                        IDxcBlob**                 ppDstByteCode) override final;
 
 private:
-    DxcCreateInstanceProc Load()
-    {
-        DxcCreateInstanceProc CreateInstance = m_Library.GetDxcCreateInstance();
-
-        if (CreateInstance && m_MaxShaderModel == ShaderVersion{})
-        {
-            m_MaxShaderModel = m_Library.GetMaxShaderModel();
-            m_Version        = m_Library.GetVersion();
-
-            LOG_INFO_MESSAGE("Loaded DX Shader Compiler ", m_Version.Major, ".", m_Version.Minor, ". Max supported shader model: ", m_MaxShaderModel.Major, '.', m_MaxShaderModel.Minor);
-        }
-
-        return CreateInstance;
-    }
-
     bool ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcLibrary* pdxcLibrary, CComPtr<IDxcBlob>& pCompiled, IDxcBlob** ppOutput) const noexcept(false);
 
     enum RES_TYPE : Uint32
@@ -174,11 +154,8 @@ private:
     static void PatchResourceIndex(const ResourceExtendedInfo& ResInfo, const BindInfo& Bind, String& DXIL, size_t& pos);
 
 private:
-    DXCompilerLibrary      m_Library;
-    ShaderVersion          m_MaxShaderModel;
-    const DXCompilerTarget m_Target;
-    const Uint32           m_APIVersion;
-    Version                m_Version;
+    DXCompilerLibrary m_Library;
+    const Uint32      m_APIVersion;
 };
 
 #define CHECK_D3D_RESULT(Expr, Message)   \
@@ -353,7 +330,7 @@ bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
 {
     try
     {
-        auto CreateInstance = GetCreateInstanceProc();
+        DxcCreateInstanceProc CreateInstance = m_Library.GetDxcCreateInstance();
         if (CreateInstance == nullptr)
             LOG_ERROR_AND_THROW("Failed to load DXCompiler");
 
@@ -419,7 +396,7 @@ bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
         CHECK_D3D_RESULT(pdxcResult->GetResult(&pCompiledBlob), "Failed to get compiled blob from DXC operation result");
 
         // Validate and sign
-        if (m_Target == DXCompilerTarget::Direct3D12)
+        if (m_Library.GetTarget() == DXCompilerTarget::Direct3D12)
         {
             return ValidateAndSign(CreateInstance, pdxcLibrary, pCompiledBlob, Attribs.ppBlobOut);
         }
@@ -668,7 +645,7 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
 #if D3D12_SUPPORTED
     try
     {
-        auto CreateInstance = GetCreateInstanceProc();
+        DxcCreateInstanceProc CreateInstance = m_Library.GetDxcCreateInstance();
         if (CreateInstance == nullptr)
             return;
 
@@ -747,7 +724,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     const std::wstring wstrEntryPoint{ShaderCI.EntryPoint, ShaderCI.EntryPoint + strlen(ShaderCI.EntryPoint)};
 
     std::vector<const wchar_t*> DxilArgs;
-    if (m_Target == DXCompilerTarget::Direct3D12)
+    if (m_Library.GetTarget() == DXCompilerTarget::Direct3D12)
     {
         DxilArgs.push_back(DXC_ARG_PACK_MATRIX_COLUMN_MAJOR); // Matrices in column-major order
 
@@ -755,20 +732,20 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 #ifdef DILIGENT_DEBUG
         DxilArgs.push_back(DXC_ARG_DEBUG);              // Debug info
         DxilArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS); // Disable optimization
-        if (m_Version >= Version{1, 5})
+        if (m_Library.GetVersion() >= Version{1, 5})
         {
             // Silence the following warning:
             // no output provided for debug - embedding PDB in shader container.  Use -Qembed_debug to silence this warning.
             DxilArgs.push_back(L"-Qembed_debug");
         }
 #else
-        if (m_Version >= Version{1, 5})
+        if (m_Library.GetVersion() >= Version{1, 5})
             DxilArgs.push_back(DXC_ARG_OPTIMIZATION_LEVEL3); // Optimization level 3
         else
             DxilArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS); // TODO: something goes wrong if optimization is enabled
 #endif
     }
-    else if (m_Target == DXCompilerTarget::Vulkan)
+    else if (m_Library.GetTarget() == DXCompilerTarget::Vulkan)
     {
         DxilArgs.assign(
             {
@@ -844,7 +821,7 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
 #if D3D12_SUPPORTED
     try
     {
-        auto CreateInstance = GetCreateInstanceProc();
+        DxcCreateInstanceProc CreateInstance = m_Library.GetDxcCreateInstance();
         if (CreateInstance == nullptr)
         {
             LOG_ERROR("Failed to load DXCompiler");

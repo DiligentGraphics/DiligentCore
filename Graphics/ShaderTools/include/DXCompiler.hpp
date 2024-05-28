@@ -61,7 +61,7 @@ public:
 
     virtual bool IsLoaded() = 0;
 
-    virtual void GetVersion(Uint32& MajorVersion, Uint32& MinorVersion) const = 0;
+    virtual Version GetVersion() = 0;
 
     struct CompileAttribs
     {
@@ -77,6 +77,10 @@ public:
         IDxcBlob**                       ppBlobOut                  = nullptr;
         IDxcBlob**                       ppCompilerOutput           = nullptr;
     };
+    /// Compiles HLSL source code to DXIL or SPIRV.
+    ///
+    /// \remarks    The method is thread-safe.
+    ///             For each compilation, the method creates a new IDxcCompiler instance.
     virtual bool Compile(const CompileAttribs& Attribs) = 0;
 
     virtual void Compile(const ShaderCreateInfo& ShaderCI,

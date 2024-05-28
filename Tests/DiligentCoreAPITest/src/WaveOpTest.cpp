@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,11 +55,7 @@ TEST(WaveOpTest, CompileShader_HLSL)
     const auto& WaveOpProps = pDevice->GetAdapterInfo().WaveOp;
 
     auto WaveOpFeatures = WaveOpProps.Features;
-
-    Uint32 DxcMajorVer = 0;
-    Uint32 DxcMinorVer = 0;
-    pEnv->GetDXCompilerVersion(DxcMajorVer, DxcMinorVer);
-    if (!(DxcMajorVer >= 2 || (DxcMajorVer == 1 && DxcMinorVer >= 5)))
+    if (pEnv->GetDXCompilerVersion() < Version{1, 5})
     {
         // There is a bug in older versions of DXC that causes the following error:
         //      opcode 'QuadReadAcross' should only be used in 'Pixel Shader'
