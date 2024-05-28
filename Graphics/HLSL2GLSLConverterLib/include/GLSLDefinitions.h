@@ -229,7 +229,7 @@ uvec2 asuint( vec2  x ){ return floatBitsToUint(x); }
 uvec3 asuint( vec3  x ){ return floatBitsToUint(x); }
 uvec4 asuint( vec4  x ){ return floatBitsToUint(x); }
 
-#if defined(GL_ES) && (__VERSION__>=310) || !defined(GL_ES) && (__VERSION__>=420)
+#if defined(GL_ES) && (__VERSION__>=300) || !defined(GL_ES) && (__VERSION__>=420)
 float f16tof32( uint u1 )
 {
     return unpackHalf2x16( u1 ).x;
