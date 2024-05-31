@@ -32,7 +32,7 @@
 #include <vector>
 
 #include "GraphicsTypesX.hpp"
-#include "GLObjectWrapper.hpp"
+#include "GLProgram.hpp"
 
 namespace Diligent
 {
@@ -52,8 +52,7 @@ public:
     GLProgramCache& operator = (      GLProgramCache&&) = delete;
     // clang-format on
 
-    using GLProgramObj          = GLObjectWrappers::GLProgramObj;
-    using SharedGLProgramObjPtr = std::shared_ptr<GLProgramObj>;
+    using SharedGLProgramObjPtr = std::shared_ptr<GLProgram>;
 
     struct GetProgramAttribs
     {
@@ -65,7 +64,7 @@ public:
         Uint32                       NumSignatures      = 0;
     };
 
-    SharedGLProgramObjPtr GetProgram(const GetProgramAttribs& Attribs, bool& IsNew);
+    SharedGLProgramObjPtr GetProgram(const GetProgramAttribs& Attribs);
 
 private:
     struct ProgramCacheKey
@@ -95,8 +94,8 @@ private:
         }
     };
 
-    std::mutex                                                                              m_CacheMtx;
-    std::unordered_map<ProgramCacheKey, std::weak_ptr<GLProgramObj>, ProgramCacheKeyHasher> m_Cache;
+    std::mutex                                                                           m_CacheMtx;
+    std::unordered_map<ProgramCacheKey, std::weak_ptr<GLProgram>, ProgramCacheKeyHasher> m_Cache;
 };
 
 } // namespace Diligent

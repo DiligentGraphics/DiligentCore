@@ -16,6 +16,7 @@ set(INCLUDE
     include/GLContext.hpp
     include/GLContextState.hpp
     include/GLObjectWrapper.hpp
+    include/GLProgram.hpp
     include/GLProgramCache.hpp
     include/GLStubs.h
     include/GLTypeConversions.hpp
@@ -75,6 +76,7 @@ set(SOURCE
     src/FramebufferGLImpl.cpp
     src/GLContextState.cpp
     src/GLObjectWrapper.cpp
+    src/GLProgram.cpp
     src/GLProgramCache.cpp
     src/GLTypeConversions.cpp
     src/PipelineResourceSignatureGLImpl.cpp

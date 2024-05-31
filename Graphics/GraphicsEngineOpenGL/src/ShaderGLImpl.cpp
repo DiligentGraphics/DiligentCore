@@ -37,6 +37,7 @@
 #include "GLSLUtils.hpp"
 #include "ShaderToolsCommon.hpp"
 #include "GLTypeConversions.hpp"
+#include "GLProgram.hpp"
 
 using namespace Diligent;
 
@@ -54,8 +55,7 @@ public:
         m_Shader{Shader},
         m_LoadConstantBufferReflection{ShaderCI.LoadConstantBufferReflection},
         m_CreateAsynchronously{(ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) != 0 && Shader.GetDevice()->GetDeviceInfo().Features.AsyncShaderCompilation},
-        m_ppCompilerOutput{GLShaderCI.ppCompilerOutput},
-        m_Program{false}
+        m_ppCompilerOutput{GLShaderCI.ppCompilerOutput}
     {}
 
     bool Tick(bool WaitForCompletion)
@@ -128,49 +128,49 @@ private:
         // Note: we have to always read reflection information in OpenGL as bindings are always assigned at run time.
         if (DeviceInfo.Features.SeparablePrograms /*&& (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0*/)
         {
-            ShaderGLImpl* const ThisShader[] = {&m_Shader};
             if (!m_Program)
             {
-                m_Program = LinkProgram(ThisShader, 1, true);
+                ShaderGLImpl* const ThisShader[]{&m_Shader};
+                m_Program = std::make_unique<GLProgram>(ThisShader, 1, /*IsSeparableProgram = */ true);
             }
 
-            GLint LinkingComplete = GL_FALSE;
-            if (!WaitForCompletion)
+            const GLProgram::LinkStatus LinkStatus = m_Program->GetLinkStatus(WaitForCompletion);
+            if (LinkStatus == GLProgram::LinkStatus::Succeeded)
             {
-                VERIFY_EXPR(m_CreateAsynchronously);
-                glGetProgramiv(m_Program, GL_COMPLETION_STATUS_KHR, &LinkingComplete);
-            }
-            else
-            {
-                LinkingComplete = GL_TRUE;
-            }
+                auto pImmediateCtx = pDevice->GetImmediateContext(0);
+                VERIFY_EXPR(pImmediateCtx);
+                auto& GLState = pImmediateCtx->GetContextState();
 
-            if (LinkingComplete)
+                m_Shader.m_pShaderResources = m_Program->LoadResources(
+                    {
+                        m_Shader.m_Desc.ShaderType,
+                        m_Shader.m_SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ?
+                            PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with other backends
+                            PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, // Reflect samplers as combined
+                        GLState,
+                        m_LoadConstantBufferReflection,
+                        m_Shader.m_SourceLanguage,
+                    });
+
+                m_State = State::Complete;
+            }
+            else if (LinkStatus == GLProgram::LinkStatus::Failed)
             {
-                if (GetProgamLinkStatus(m_Program, ThisShader, 1, /*ThrowOnError = */ !m_CreateAsynchronously))
+                std::stringstream ss;
+                ss << "Failed to link separable program for shader '" << m_Shader.m_Desc.Name << "': " << m_Program->GetInfoLog();
+                if (m_CreateAsynchronously)
                 {
-                    auto pImmediateCtx = pDevice->GetImmediateContext(0);
-                    VERIFY_EXPR(pImmediateCtx);
-                    auto& GLState = pImmediateCtx->GetContextState();
-
-                    auto pResources = std::make_unique<ShaderResourcesGL>();
-
-                    pResources->LoadUniforms({m_Shader.m_Desc.ShaderType,
-                                              m_Shader.m_SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ?
-                                                  PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with other backends
-                                                  PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, // Reflect samplers as combined
-                                              m_Program,
-                                              GLState,
-                                              m_LoadConstantBufferReflection,
-                                              m_Shader.m_SourceLanguage});
-                    m_Shader.m_pShaderResources.reset(pResources.release());
-
-                    m_State = State::Complete;
+                    LOG_ERROR_MESSAGE(ss.str());
                 }
                 else
                 {
-                    m_State = State::Failed;
+                    LOG_ERROR_AND_THROW(ss.str());
                 }
+                m_State = State::Failed;
+            }
+            else
+            {
+                VERIFY_EXPR(LinkStatus == GLProgram::LinkStatus::InProgress);
             }
         }
         else
@@ -187,7 +187,7 @@ private:
     IDataBlob** const m_ppCompilerOutput;
 
     // Temporary program object used to load shader resources
-    GLObjectWrappers::GLProgramObj m_Program;
+    std::unique_ptr<GLProgram> m_Program;
 
     enum class State
     {
@@ -390,80 +390,6 @@ SHADER_STATUS ShaderGLImpl::GetStatus(bool WaitForCompletion)
         }
     }
     return m_Builder ? SHADER_STATUS_COMPILING : (m_GLShaderObj ? SHADER_STATUS_READY : SHADER_STATUS_FAILED);
-}
-
-GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram) noexcept
-{
-    VERIFY(!IsSeparableProgram || NumShaders == 1, "Number of shaders must be 1 when separable program is created");
-
-    GLObjectWrappers::GLProgramObj GLProg{true};
-
-    // GL_PROGRAM_SEPARABLE parameter must be set before linking!
-    if (IsSeparableProgram)
-        glProgramParameteri(GLProg, GL_PROGRAM_SEPARABLE, GL_TRUE);
-
-    for (Uint32 i = 0; i < NumShaders; ++i)
-    {
-        auto* pCurrShader = ppShaders[i];
-        glAttachShader(GLProg, pCurrShader->m_GLShaderObj);
-        DEV_CHECK_GL_ERROR("glAttachShader() failed");
-    }
-
-    //With separable program objects, interfaces between shader stages may
-    //involve the outputs from one program object and the inputs from a
-    //second program object. For such interfaces, it is not possible to
-    //detect mismatches at link time, because the programs are linked
-    //separately. When each such program is linked, all inputs or outputs
-    //interfacing with another program stage are treated as active. The
-    //linker will generate an executable that assumes the presence of a
-    //compatible program on the other side of the interface. If a mismatch
-    //between programs occurs, no GL error will be generated, but some or all
-    //of the inputs on the interface will be undefined.
-    glLinkProgram(GLProg);
-    DEV_CHECK_GL_ERROR("glLinkProgram() failed");
-
-    return GLProg;
-}
-
-bool ShaderGLImpl::GetProgamLinkStatus(GLuint GLProg, ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool ThrowOnError) noexcept(false)
-{
-    int IsLinked = GL_FALSE;
-    glGetProgramiv(GLProg, GL_LINK_STATUS, &IsLinked);
-    DEV_CHECK_GL_ERROR("glGetProgramiv() failed");
-
-    if (!IsLinked)
-    {
-        int LengthWithNull = 0, Length = 0;
-        // Notice that glGetProgramiv is used to get the length for a shader program, not glGetShaderiv.
-        // The length of the info log includes a null terminator.
-        glGetProgramiv(GLProg, GL_INFO_LOG_LENGTH, &LengthWithNull);
-
-        // The maxLength includes the NULL character
-        std::vector<char> shaderProgramInfoLog(LengthWithNull);
-
-        // Notice that glGetProgramInfoLog  is used, not glGetShaderInfoLog.
-        glGetProgramInfoLog(GLProg, LengthWithNull, &Length, shaderProgramInfoLog.data());
-        VERIFY(Length == LengthWithNull - 1, "Incorrect program info log len");
-        if (ThrowOnError)
-        {
-            LOG_ERROR_AND_THROW("Failed to link shader program:\n", shaderProgramInfoLog.data(), '\n');
-        }
-        else
-        {
-            LOG_ERROR("Failed to link shader program:\n", shaderProgramInfoLog.data(), '\n');
-        }
-    }
-    else if (ppShaders != nullptr)
-    {
-        for (Uint32 i = 0; i < NumShaders; ++i)
-        {
-            auto* pCurrShader = ClassPtrCast<const ShaderGLImpl>(ppShaders[i]);
-            glDetachShader(GLProg, pCurrShader->m_GLShaderObj);
-            DEV_CHECK_GL_ERROR("glDetachShader() failed");
-        }
-    }
-
-    return IsLinked != GL_FALSE;
 }
 
 Uint32 ShaderGLImpl::GetResourceCount() const

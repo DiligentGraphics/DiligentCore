@@ -130,7 +130,6 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
         }
     };
 
-    ShaderResourcesGL ProgramResources;
     if (m_IsProgramPipelineSupported)
     {
         for (size_t i = 0; i < ShaderStages.size(); ++i)
@@ -143,11 +142,19 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
     {
         auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
         VERIFY_EXPR(pImmediateCtx);
-        VERIFY_EXPR(m_GLPrograms[0] != nullptr && *m_GLPrograms[0] != 0);
+        VERIFY_EXPR(m_GLPrograms[0] != nullptr && m_GLPrograms[0]->GetLinkStatus() == GLProgram::LinkStatus::Succeeded);
 
-        const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, true /*SilenceWarning*/);
-        ProgramResources.LoadUniforms({ActiveStages, SamplerResFlag, *m_GLPrograms[0], pImmediateCtx->GetContextState()});
-        ProgramResources.ProcessConstResources(HandleResource, HandleResource, HandleResource, HandleResource);
+        if (!m_GLPrograms[0]->GetResources())
+        {
+            const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, true /*SilenceWarning*/);
+            m_GLPrograms[0]->LoadResources(
+                {
+                    ActiveStages,
+                    SamplerResFlag,
+                    pImmediateCtx->GetContextState(),
+                });
+        }
+        m_GLPrograms[0]->GetResources()->ProcessConstResources(HandleResource, HandleResource, HandleResource, HandleResource);
 
         if (ResourceLayout.NumImmutableSamplers > 0)
         {
@@ -165,8 +172,7 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
 
 void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalFlags,
                                              const TShaderStages&      ShaderStages,
-                                             SHADER_TYPE               ActiveStages,
-                                             const std::vector<bool>&  IsNewProgram)
+                                             SHADER_TYPE               ActiveStages)
 {
     if (m_UsingImplicitSignature)
     {
@@ -200,12 +206,20 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
     {
         auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
         VERIFY_EXPR(pImmediateCtx != nullptr);
-        VERIFY_EXPR(m_GLPrograms[0] != nullptr && *m_GLPrograms[0] != 0);
+        VERIFY_EXPR(m_GLPrograms[0] != nullptr && m_GLPrograms[0]->GetLinkStatus() == GLProgram::LinkStatus::Succeeded);
 
-        const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, false /*SilenceWarning*/);
+        auto pResources = m_GLPrograms[0]->GetResources();
+        if (!pResources)
+        {
+            const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, false /*SilenceWarning*/);
 
-        auto pResources = std::make_shared<ShaderResourcesGL>();
-        pResources->LoadUniforms({ActiveStages, GetSamplerResourceFlag(ShaderStages, SamplerResFlag), *m_GLPrograms[0], pImmediateCtx->GetContextState()});
+            pResources = m_GLPrograms[0]->LoadResources(
+                {
+                    ActiveStages,
+                    GetSamplerResourceFlag(ShaderStages, SamplerResFlag),
+                    pImmediateCtx->GetContextState(),
+                });
+        }
         ProgResources[0] = pResources;
         ValidateShaderResources(std::move(pResources), m_Desc.Name, ActiveStages);
     }
@@ -223,10 +237,7 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
         m_BaseBindings[s] = Bindings;
         for (Uint32 p = 0; p < m_NumPrograms; ++p)
         {
-            if (IsNewProgram[p])
-            {
-                pSignature->ApplyBindings(*m_GLPrograms[p], *ProgResources[p], CtxState, Bindings);
-            }
+            m_GLPrograms[p]->ApplyBindings(pSignature, *ProgResources[p], CtxState, Bindings);
         }
 
         pSignature->ShiftBindings(Bindings);
@@ -326,7 +337,6 @@ private:
     {
         VERIFY_EXPR(m_State == State::Default);
         m_Pipeline.InitInternalObjects<PSOCreateInfoType>(m_CreateInfo, m_Shaders);
-        m_IsNewProgram.resize(m_Pipeline.m_NumPrograms);
         m_State = State::WaitingShaders;
     }
 
@@ -389,9 +399,7 @@ private:
                         m_CreateInfo.ppResourceSignatures,
                         m_CreateInfo.ResourceSignaturesCount,
                     };
-                    bool IsNewProgram           = false;
-                    m_Pipeline.m_GLPrograms[i]  = m_Pipeline.GetDevice()->GetProgramCache().GetProgram(ProgAttribs, IsNewProgram);
-                    m_IsNewProgram[i]           = IsNewProgram;
+                    m_Pipeline.m_GLPrograms[i]  = m_Pipeline.GetDevice()->GetProgramCache().GetProgram(ProgAttribs);
                     m_Pipeline.m_ShaderTypes[i] = m_Shaders[i]->GetDesc().ShaderType;
                 }
             }
@@ -408,62 +416,42 @@ private:
                     m_CreateInfo.ppResourceSignatures,
                     m_CreateInfo.ResourceSignaturesCount,
                 };
-                bool IsNewProgram           = false;
-                m_Pipeline.m_GLPrograms[0]  = m_Pipeline.GetDevice()->GetProgramCache().GetProgram(ProgAttribs, IsNewProgram);
-                m_IsNewProgram[0]           = IsNewProgram;
+                m_Pipeline.m_GLPrograms[0]  = m_Pipeline.GetDevice()->GetProgramCache().GetProgram(ProgAttribs);
                 m_Pipeline.m_ShaderTypes[0] = ActiveStages;
-                m_Pipeline.m_GLPrograms[0]->SetName(m_Pipeline.m_Desc.Name);
+                //m_Pipeline.m_GLPrograms[0]->SetName(m_Pipeline.m_Desc.Name);
             }
         }
 
         // Check program linking status
-        bool AllProgramsLinked = true;
-        if (!WaitForCompletion)
+        for (Uint32 i = 0; i < m_Pipeline.m_NumPrograms; ++i)
         {
-            VERIFY_EXPR(m_CreateAsynchronously);
-            for (Uint32 i = 0; i < m_Pipeline.m_NumPrograms; ++i)
+            GLProgram::LinkStatus LinkStatus = m_Pipeline.m_GLPrograms[i]->GetLinkStatus(WaitForCompletion);
+            if (LinkStatus == GLProgram::LinkStatus::InProgress)
             {
-                GLint LinkingComplete = GL_FALSE;
-                glGetProgramiv(*m_Pipeline.m_GLPrograms[i], GL_COMPLETION_STATUS_KHR, &LinkingComplete);
-                if (!LinkingComplete)
+                return;
+            }
+            else if (LinkStatus == GLProgram::LinkStatus::Failed)
+            {
+                std::ostringstream ss;
+                ss << "Failed to link program " << i << " for pipeline state '" << m_Pipeline.m_Desc.Name << "': " << m_Pipeline.m_GLPrograms[i]->GetInfoLog();
+                if (m_CreateAsynchronously)
                 {
-                    AllProgramsLinked = false;
-                    break;
+                    LOG_ERROR_MESSAGE(ss.str());
                 }
+                else
+                {
+                    LOG_ERROR_AND_THROW(ss.str());
+                }
+                m_State = State::Failed;
+                return;
             }
         }
 
-        // Check if programs were linked successfully
-        if (AllProgramsLinked)
-        {
-            if (m_Pipeline.m_IsProgramPipelineSupported)
-            {
-                for (size_t i = 0; i < m_Shaders.size(); ++i)
-                {
-                    if (!ShaderGLImpl::GetProgamLinkStatus(*m_Pipeline.m_GLPrograms[i], m_IsNewProgram[i] ? &m_Shaders[i] : nullptr, 1, /*ThrowOnError = */ !m_CreateAsynchronously))
-                    {
-                        m_State = State::Failed;
-                        return;
-                    }
-                }
-            }
-            else
-            {
-                if (!ShaderGLImpl::GetProgamLinkStatus(*m_Pipeline.m_GLPrograms[0], m_IsNewProgram[0] ? m_Shaders.data() : nullptr, static_cast<Uint32>(m_Shaders.size()), /*ThrowOnError = */ !m_CreateAsynchronously))
-                {
-                    m_State = State::Failed;
-                    return;
-                }
-            }
-
-            m_Pipeline.InitResourceLayout(GetInternalCreateFlags(m_CreateInfo), m_Shaders, ActiveStages, m_IsNewProgram);
-
-            m_State = State::Complete;
-        }
+        m_Pipeline.InitResourceLayout(GetInternalCreateFlags(m_CreateInfo), m_Shaders, ActiveStages);
+        m_State = State::Complete;
     }
 
 private:
-    std::vector<bool>  m_IsNewProgram;
     PSOCreateInfoTypeX m_CreateInfo;
 };
 
@@ -480,7 +468,7 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
     FixedLinearAllocator MemPool{GetRawAllocator()};
 
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
-    MemPool.AddSpace<SharedGLProgramObjPtr>(m_NumPrograms);
+    MemPool.AddSpace<SharedGLProgramPtr>(m_NumPrograms);
     // m_SignatureCount is initialized by ReserveSpaceForPipelineDesc()
     MemPool.AddSpace<TBindings>(m_SignatureCount);
     MemPool.AddSpace<SHADER_TYPE>(m_NumPrograms);
@@ -488,7 +476,7 @@ void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInf
     MemPool.Reserve();
 
     InitializePipelineDesc(CreateInfo, MemPool);
-    m_GLPrograms   = MemPool.ConstructArray<SharedGLProgramObjPtr>(m_NumPrograms);
+    m_GLPrograms   = MemPool.ConstructArray<SharedGLProgramPtr>(m_NumPrograms);
     m_BaseBindings = MemPool.ConstructArray<TBindings>(m_SignatureCount);
     m_ShaderTypes  = MemPool.ConstructArray<SHADER_TYPE>(m_NumPrograms, SHADER_TYPE_UNKNOWN);
 }
@@ -585,7 +573,7 @@ void PipelineStateGLImpl::Destruct()
     {
         for (Uint32 i = 0; i < m_NumPrograms; ++i)
         {
-            m_GLPrograms[i].~SharedGLProgramObjPtr();
+            m_GLPrograms[i].~SharedGLProgramPtr();
         }
         m_GLPrograms = nullptr;
     }
@@ -631,8 +619,8 @@ void PipelineStateGLImpl::CommitProgram(GLContextState& State)
     }
     else
     {
-        VERIFY_EXPR(m_GLPrograms != nullptr && *m_GLPrograms[0] != 0);
-        State.SetProgram(*m_GLPrograms[0]);
+        VERIFY_EXPR(m_GLPrograms != nullptr && m_GLPrograms[0]->GetGLHandle() != 0);
+        State.SetProgram(m_GLPrograms[0]->GetGLHandle());
     }
 }
 
@@ -655,7 +643,7 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
         // If the program has an active code for each stage mentioned in set flags,
         // then that code will be used by the pipeline. If program is 0, then the given
         // stages are cleared from the pipeline.
-        glUseProgramStages(Pipeline, GLShaderBit, *m_GLPrograms[i]);
+        glUseProgramStages(Pipeline, GLShaderBit, m_GLPrograms[i]->GetGLHandle());
         DEV_CHECK_GL_ERROR("glUseProgramStages() failed");
     }
 
@@ -673,7 +661,7 @@ GLuint PipelineStateGLImpl::GetGLProgramHandle(SHADER_TYPE Stage) const
         // Note: in case of non-separable programs, m_ShaderTypes[0] contains
         //       all shader stages in the pipeline.
         if ((m_ShaderTypes[i] & Stage) != 0)
-            return *m_GLPrograms[i];
+            return m_GLPrograms[i]->GetGLHandle();
     }
     return 0;
 }

@@ -88,7 +88,7 @@ bool GLProgramCache::ProgramCacheKey::operator==(const ProgramCacheKey& Key) con
     // clang-format on
 }
 
-GLProgramCache::SharedGLProgramObjPtr GLProgramCache::GetProgram(const GetProgramAttribs& Attribs, bool& IsNew)
+GLProgramCache::SharedGLProgramObjPtr GLProgramCache::GetProgram(const GetProgramAttribs& Attribs)
 {
     ProgramCacheKey Key{Attribs};
 
@@ -101,7 +101,6 @@ GLProgramCache::SharedGLProgramObjPtr GLProgramCache::GetProgram(const GetProgra
         {
             if (SharedGLProgramObjPtr Program = it->second.lock())
             {
-                IsNew = false;
                 return Program;
             }
             else
@@ -117,7 +116,7 @@ GLProgramCache::SharedGLProgramObjPtr GLProgramCache::GetProgram(const GetProgra
     // and the rest will be destroyed.
 
     // Linking the program may take a considerable amount of time.
-    std::shared_ptr<GLProgramObj> NewProgram = std::make_shared<GLProgramObj>(ShaderGLImpl::LinkProgram(Attribs.ppShaders, Attribs.NumShaders, Attribs.IsSeparableProgram));
+    std::shared_ptr<GLProgram> NewProgram = std::make_shared<GLProgram>(Attribs.ppShaders, Attribs.NumShaders, Attribs.IsSeparableProgram);
 
     std::lock_guard<std::mutex> Lock{m_CacheMtx};
 
@@ -125,13 +124,11 @@ GLProgramCache::SharedGLProgramObjPtr GLProgramCache::GetProgram(const GetProgra
     // Check if the proram is valid
     if (auto Program = it_inserted.first->second.lock())
     {
-        IsNew = it_inserted.second;
         return Program;
     }
     else
     {
         it_inserted.first->second = NewProgram;
-        IsNew                     = true;
         return NewProgram;
     }
 }

@@ -72,9 +72,6 @@ public:
     /// Implementation of IShaderGL::GetGLShaderHandle() in OpenGL backend.
     virtual GLuint DILIGENT_CALL_TYPE GetGLShaderHandle() const override final { return m_GLShaderObj; }
 
-    static GLObjectWrappers::GLProgramObj LinkProgram(ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool IsSeparableProgram) noexcept;
-    static bool                           GetProgamLinkStatus(GLuint GLProg, ShaderGLImpl* const* ppShaders, Uint32 NumShaders, bool ThrowOnError) noexcept(false);
-
     const std::shared_ptr<const ShaderResourcesGL>& GetShaderResources() const { return m_pShaderResources; }
 
     SHADER_SOURCE_LANGUAGE GetSourceLanguage() const { return m_SourceLanguage; }
