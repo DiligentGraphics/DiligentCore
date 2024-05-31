@@ -453,7 +453,7 @@ bool ShaderGLImpl::GetProgamLinkStatus(GLuint GLProg, ShaderGLImpl* const* ppSha
             LOG_ERROR("Failed to link shader program:\n", shaderProgramInfoLog.data(), '\n');
         }
     }
-    else
+    else if (ppShaders != nullptr)
     {
         for (Uint32 i = 0; i < NumShaders; ++i)
         {

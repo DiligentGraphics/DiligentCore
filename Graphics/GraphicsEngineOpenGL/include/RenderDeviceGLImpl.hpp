@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,7 @@
 #include "VAOCache.hpp"
 #include "BaseInterfacesGL.h"
 #include "FBOCache.hpp"
+#include "GLProgramCache.hpp"
 
 namespace Diligent
 {
@@ -196,6 +197,8 @@ public:
     void      OnDestroyPSO(PipelineStateGLImpl& PSO);
     void      OnDestroyBuffer(BufferGLImpl& Buffer);
 
+    GLProgramCache& GetProgramCache() { return m_ProgramCache; }
+
     size_t GetCommandQueueCount() const { return 1; }
     Uint64 GetCommandQueueMask() const { return Uint64{1}; }
 
@@ -235,6 +238,8 @@ protected:
 
     Threading::SpinLock                                          m_FBOCacheLock;
     std::unordered_map<GLContext::NativeGLContextType, FBOCache> m_FBOCache;
+
+    GLProgramCache m_ProgramCache;
 
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;

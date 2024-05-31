@@ -101,7 +101,8 @@ private:
 
     void InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalFlags,
                             const TShaderStages&      ShaderStages,
-                            SHADER_TYPE               ActiveStages);
+                            SHADER_TYPE               ActiveStages,
+                            const std::vector<bool>&  IsNewProgram);
 
     PipelineResourceSignatureDescWrapper GetDefaultSignatureDesc(
         const TShaderStages& ShaderStages,
@@ -122,8 +123,9 @@ private:
     // Linked GL programs for every shader stage. Every pipeline needs to have its own programs
     // because resource bindings assigned by PipelineResourceSignatureGLImpl::ApplyBindings depend on other
     // shader stages.
-    using GLProgramObj         = GLObjectWrappers::GLProgramObj;
-    GLProgramObj* m_GLPrograms = nullptr; // [m_NumPrograms]
+    using GLProgramObj                  = GLObjectWrappers::GLProgramObj;
+    using SharedGLProgramObjPtr         = std::shared_ptr<GLProgramObj>;
+    SharedGLProgramObjPtr* m_GLPrograms = nullptr; // [m_NumPrograms]
 
     Threading::SpinLock m_ProgPipelineLock;
 
