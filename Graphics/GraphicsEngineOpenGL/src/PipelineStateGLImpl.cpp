@@ -134,7 +134,7 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
     {
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
-            auto* pShaderGL = ShaderStages[i];
+            ShaderGLImpl* pShaderGL = ShaderStages[i];
             pShaderGL->GetShaderResources()->ProcessConstResources(HandleResource, HandleResource, HandleResource, HandleResource);
         }
     }
@@ -146,13 +146,12 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
 
         if (!m_GLPrograms[0]->GetResources())
         {
+            // Load resources first time this program is used
             const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, true /*SilenceWarning*/);
             m_GLPrograms[0]->LoadResources(
-                {
-                    ActiveStages,
-                    SamplerResFlag,
-                    pImmediateCtx->GetContextState(),
-                });
+                ActiveStages,
+                SamplerResFlag,
+                pImmediateCtx->GetContextState());
         }
         m_GLPrograms[0]->GetResources()->ProcessConstResources(HandleResource, HandleResource, HandleResource, HandleResource);
 
@@ -213,14 +212,13 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
         std::shared_ptr<const ShaderResourcesGL> pResources = m_GLPrograms[0]->GetResources();
         if (!pResources)
         {
+            // If resources are not loaded yet for this program, load them now
             const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, false /*SilenceWarning*/);
 
             pResources = m_GLPrograms[0]->LoadResources(
-                {
-                    ActiveStages,
-                    GetSamplerResourceFlag(ShaderStages, SamplerResFlag),
-                    CtxState,
-                });
+                ActiveStages,
+                GetSamplerResourceFlag(ShaderStages, SamplerResFlag),
+                CtxState);
         }
         ValidateShaderResources(std::move(pResources), m_Desc.Name, ActiveStages);
     }
@@ -236,6 +234,8 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
         m_BaseBindings[s] = Bindings;
         for (Uint32 p = 0; p < m_NumPrograms; ++p)
         {
+            // GL programs are keyed by shader IDs and resource signature IDs or resource layout.
+            // Consequently, any pipeline that uses a cached program will assign the same bindings.
             m_GLPrograms[p]->ApplyBindings(pSignature, CtxState, Bindings);
         }
 
@@ -376,7 +376,7 @@ private:
 
         // Get active shader stages
         SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
-        for (auto* pShaderGL : m_Shaders)
+        for (const ShaderGLImpl* pShaderGL : m_Shaders)
         {
             const auto ShaderType = pShaderGL->GetDesc().ShaderType;
             VERIFY((ActiveStages & ShaderType) == 0, "Shader stage ", GetShaderTypeLiteralName(ShaderType), " is already active");
@@ -384,6 +384,8 @@ private:
         }
 
         // Create programs
+
+        // Linking programs may be epxensive, so we cache programs keyed by shader IDs and resource signature IDs or resource layout.
         if (m_Pipeline.m_IsProgramPipelineSupported)
         {
             for (size_t i = 0; i < m_Shaders.size(); ++i)
@@ -417,7 +419,6 @@ private:
                 };
                 m_Pipeline.m_GLPrograms[0]  = m_Pipeline.GetDevice()->GetProgramCache().GetProgram(ProgAttribs);
                 m_Pipeline.m_ShaderTypes[0] = ActiveStages;
-                //m_Pipeline.m_GLPrograms[0]->SetName(m_Pipeline.m_Desc.Name);
             }
         }
 

@@ -42,7 +42,10 @@ GLProgram::GLProgram(ShaderGLImpl* const* ppShaders,
 
     // GL_PROGRAM_SEPARABLE parameter must be set before linking!
     if (IsSeparableProgram)
+    {
         glProgramParameteri(m_GLProg, GL_PROGRAM_SEPARABLE, GL_TRUE);
+        DEV_CHECK_GL_ERROR("glProgramParameteri(GL_PROGRAM_SEPARABLE) failed");
+    }
 
     for (Uint32 i = 0; i < NumShaders; ++i)
     {
@@ -63,6 +66,11 @@ GLProgram::GLProgram(ShaderGLImpl* const* ppShaders,
     //of the inputs on the interface will be undefined.
     glLinkProgram(m_GLProg);
     DEV_CHECK_GL_ERROR("glLinkProgram() failed");
+
+    // Note: according to the spec, shaders can be detached immediately after glLinkProgram call.
+    //       However, on NVidia GPUs this completely disables the GL_KHR_parallel_shader_compile
+    //       extension, which barely works already. So we keep shaders attached until the program
+    //       is linked.
 
     m_LinkStatus = LinkStatus::InProgress;
 }
@@ -100,31 +108,38 @@ GLProgram::LinkStatus GLProgram::GetLinkStatus(bool WaitForCompletion) noexcept
         // Notice that glGetProgramiv is used to get the length for a shader program, not glGetShaderiv.
         // The length of the info log includes a null terminator.
         glGetProgramiv(m_GLProg, GL_INFO_LOG_LENGTH, &LengthWithNull);
+        DEV_CHECK_GL_ERROR("glGetProgramiv(GL_INFO_LOG_LENGTH) failed");
 
         // The maxLength includes the NULL character
         std::vector<char> shaderProgramInfoLog(LengthWithNull);
 
         // Notice that glGetProgramInfoLog  is used, not glGetShaderInfoLog.
         glGetProgramInfoLog(m_GLProg, LengthWithNull, &Length, shaderProgramInfoLog.data());
+        DEV_CHECK_GL_ERROR("glGetProgramInfoLog() failed");
+
         VERIFY(Length == LengthWithNull - 1, "Incorrect program info log len");
         m_InfoLog.assign(shaderProgramInfoLog.data(), Length);
 
         m_LinkStatus = LinkStatus::Failed;
     }
 
-    for (ShaderGLImpl* pShader : m_AttachedShaders)
+    for (const ShaderGLImpl* pShader : m_AttachedShaders)
     {
         glDetachShader(m_GLProg, pShader->GetGLShaderHandle());
         DEV_CHECK_GL_ERROR("glDetachShader() failed");
     }
 
-    std::vector<ShaderGLImpl*> Null{};
+    std::vector<const ShaderGLImpl*> Null{};
     m_AttachedShaders.swap(Null);
 
     return m_LinkStatus;
 }
 
-std::shared_ptr<const ShaderResourcesGL>& GLProgram::LoadResources(const LoadResourcesAttribs& Attribs)
+std::shared_ptr<const ShaderResourcesGL>& GLProgram::LoadResources(SHADER_TYPE             ShaderStages,
+                                                                   PIPELINE_RESOURCE_FLAGS SamplerResourceFlag,
+                                                                   GLContextState&         State,
+                                                                   bool                    LoadUniformBufferReflection,
+                                                                   SHADER_SOURCE_LANGUAGE  SourceLang)
 {
     DEV_CHECK_ERR(m_LinkStatus == LinkStatus::Succeeded, "Program must be successfully linked to load resources");
     VERIFY(m_pResources == nullptr, "Resources have already been loaded");
@@ -132,12 +147,12 @@ std::shared_ptr<const ShaderResourcesGL>& GLProgram::LoadResources(const LoadRes
     std::unique_ptr<ShaderResourcesGL> pResources = std::make_unique<ShaderResourcesGL>();
     pResources->LoadUniforms(
         {
-            Attribs.ShaderStages,
-            Attribs.SamplerResourceFlag,
+            ShaderStages,
+            SamplerResourceFlag,
             m_GLProg,
-            Attribs.State,
-            Attribs.LoadUniformBufferReflection,
-            Attribs.SourceLang,
+            State,
+            LoadUniformBufferReflection,
+            SourceLang,
         });
     m_pResources.reset(pResources.release());
 
@@ -153,7 +168,7 @@ void GLProgram::SetResources(std::shared_ptr<const ShaderResourcesGL> pResources
     }
     else
     {
-        VERIFY(m_pResources == pResources, "Assigning different resources. This should not happen as cached programs are keyed by shaders");
+        VERIFY(m_pResources == pResources, "Assigning different resources. This should not happen as cached programs are keyed by shader IDs");
     }
 }
 
@@ -161,6 +176,9 @@ void GLProgram::ApplyBindings(const PipelineResourceSignatureGLImpl*            
                               GLContextState&                                   State,
                               const PipelineResourceSignatureGLImpl::TBindings& BaseBindings)
 {
+    // Since we check that assigned resources and base bindings are always the same, the same bindings
+    // will be applied by all pipelines that use this program.
+
     DEV_CHECK_ERR(m_LinkStatus == LinkStatus::Succeeded, "Program must be successfully linked to apply bindings");
     VERIFY(m_pResources, "Resources have not been loaded or assigned");
     if (!m_BindingsApplied)
@@ -174,7 +192,7 @@ void GLProgram::ApplyBindings(const PipelineResourceSignatureGLImpl*            
     {
 #ifdef DILIGENT_DEBUG
         VERIFY(m_DbgBaseBindings == BaseBindings, "Base bindings have changed since the last time they were applied. "
-                                                  "This should not happen as cached programs are keyed by pipeline resource signatures or resource layout.");
+                                                  "This should not happen as cached programs are keyed by pipeline resource signature IDs or resource layout.");
 #endif
     }
 }

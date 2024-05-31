@@ -39,6 +39,7 @@ namespace Diligent
 
 class ShaderGLImpl;
 
+/// Program cached contains linked programs for the given combination of shaders and resource layouts.
 class GLProgramCache
 {
 public:

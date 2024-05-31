@@ -37,6 +37,7 @@ namespace Diligent
 {
 
 class ShaderGLImpl;
+class GLContextState;
 
 class GLProgram
 {
@@ -59,15 +60,11 @@ public:
     };
     LinkStatus GetLinkStatus(bool WaitForCompletion = false) noexcept;
 
-    struct LoadResourcesAttribs
-    {
-        const SHADER_TYPE             ShaderStages;
-        const PIPELINE_RESOURCE_FLAGS SamplerResourceFlag;
-        class GLContextState&         State;
-        const bool                    LoadUniformBufferReflection = false;
-        const SHADER_SOURCE_LANGUAGE  SourceLang                  = SHADER_SOURCE_LANGUAGE_DEFAULT;
-    };
-    std::shared_ptr<const ShaderResourcesGL>& LoadResources(const LoadResourcesAttribs& Attribs);
+    std::shared_ptr<const ShaderResourcesGL>& LoadResources(SHADER_TYPE             ShaderStages,
+                                                            PIPELINE_RESOURCE_FLAGS SamplerResourceFlag,
+                                                            GLContextState&         State,
+                                                            bool                    LoadUniformBufferReflection = false,
+                                                            SHADER_SOURCE_LANGUAGE  SourceLang                  = SHADER_SOURCE_LANGUAGE_DEFAULT);
 
     void ApplyBindings(const PipelineResourceSignatureGLImpl*            pSignature,
                        GLContextState&                                   State,
@@ -81,9 +78,9 @@ public:
     }
 
 private:
-    GLObjectWrappers::GLProgramObj m_GLProg{true};
-    std::vector<ShaderGLImpl*>     m_AttachedShaders;
-    std::string                    m_InfoLog;
+    GLObjectWrappers::GLProgramObj   m_GLProg{true};
+    std::vector<const ShaderGLImpl*> m_AttachedShaders;
+    std::string                      m_InfoLog;
 
     LinkStatus m_LinkStatus      = LinkStatus::Undefined;
     bool       m_BindingsApplied = false;

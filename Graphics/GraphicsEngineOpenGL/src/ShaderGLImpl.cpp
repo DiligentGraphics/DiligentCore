@@ -142,15 +142,13 @@ private:
                 auto& GLState = pImmediateCtx->GetContextState();
 
                 m_Shader.m_pShaderResources = m_Program->LoadResources(
-                    {
-                        m_Shader.m_Desc.ShaderType,
-                        m_Shader.m_SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ?
-                            PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with other backends
-                            PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, // Reflect samplers as combined
-                        GLState,
-                        m_LoadConstantBufferReflection,
-                        m_Shader.m_SourceLanguage,
-                    });
+                    m_Shader.m_Desc.ShaderType,
+                    m_Shader.m_SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ?
+                        PIPELINE_RESOURCE_FLAG_NONE :            // Reflect samplers as separate for consistency with other backends
+                        PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER, // Reflect samplers as combined
+                    GLState,
+                    m_LoadConstantBufferReflection,
+                    m_Shader.m_SourceLanguage);
 
                 m_State = State::Complete;
             }
