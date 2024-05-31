@@ -30,13 +30,19 @@
 #include <cstdio>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <CoreFoundation/CoreFoundation.h>
 
+#include <CoreFoundation/CoreFoundation.h>
 #include "CFObjectWrapper.hpp"
+
+#if PLATFORM_MACOS
+#import <Cocoa/Cocoa.h>
+#endif
 
 #include "AppleFileSystem.hpp"
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
+
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 namespace Diligent
 {
@@ -72,6 +78,77 @@ std::string AppleFileSystem::FindResource(const std::string& FilePath)
     }
     return resource_path;
 }
+
+#if PLATFORM_MACOS
+std::string AppleFileSystem::FileDialog(const FileDialogAttribs& DialogAttribs)
+{
+    __block std::string Path;
+    
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        NSSavePanel* Panel = nil;
+                
+        if (DialogAttribs.Type == FILE_DIALOG_TYPE_OPEN) 
+        {
+            NSOpenPanel* OpenPanel = [NSOpenPanel openPanel];
+            OpenPanel.canChooseFiles = YES;
+            OpenPanel.canChooseDirectories = NO;
+            OpenPanel.allowsMultipleSelection = (DialogAttribs.Flags & FILE_DIALOG_FLAG_FILE_MUST_EXIST);
+            Panel = OpenPanel;
+        }
+        
+        if (DialogAttribs.Type == FILE_DIALOG_TYPE_SAVE) 
+        {
+            NSSavePanel* SavePanel = [NSSavePanel savePanel];
+            SavePanel.canCreateDirectories = YES;
+            if (DialogAttribs.Flags & FILE_DIALOG_FLAG_OVERWRITE_PROMPT)
+                SavePanel.treatsFilePackagesAsDirectories = YES;
+            Panel = SavePanel;
+        }
+
+        if (DialogAttribs.Title) 
+        {
+            NSString* Title = [NSString stringWithUTF8String:DialogAttribs.Title];
+            [Panel setTitle:Title];
+        }
+
+        if (DialogAttribs.Filter) 
+        {
+            NSString* Filter = [NSString stringWithUTF8String:DialogAttribs.Filter];
+            NSMutableArray<NSString *> *Extensions = [NSMutableArray array];
+            NSArray<NSString *> *Components = [Filter componentsSeparatedByString:@"\0"];
+            for (NSString *Component in Components)
+            {
+                if ([Component hasPrefix:@"*."])
+                {
+                    NSString *Extension = [Component substringFromIndex:2]; // Remove "*."
+                    if ([Extension length] > 0)
+                        [Extensions addObject:Extension];
+                }
+            }
+
+            [Panel setAllowedFileTypes:Extensions];
+        }
+
+        if (DialogAttribs.Flags & FILE_DIALOG_FLAG_NO_CHANGE_DIR) 
+        {
+            [Panel setDirectoryURL:[NSURL fileURLWithPath:NSHomeDirectory()]];
+        }
+
+        NSModalResponse Response = [Panel runModal];
+        
+        if (Response == NSModalResponseOK) 
+        {
+            NSURL* SelectedFileURL = [Panel URL];
+            NSString* FilePath = [SelectedFileURL path];
+            Path = std::string([FilePath UTF8String]);
+        } else 
+        {
+            Path = std::string();
+        }
+    });
+    return Path;
+}
+#endif
 
 AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {

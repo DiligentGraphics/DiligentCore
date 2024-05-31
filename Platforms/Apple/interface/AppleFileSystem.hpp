@@ -49,6 +49,10 @@ public:
 
     static std::string FindResource(const std::string& FilePath);
 
+#if PLATFORM_MACOS
+    static std::string FileDialog(const FileDialogAttribs& DialogAttribs);
+#endif
+
 #if PLATFORM_IOS || PLATFORM_TVOS
     static std::string GetLocalAppDataDirectory(const char* AppName = nullptr, bool Create = true);
 #endif
