@@ -21,7 +21,7 @@ set(INTERFACE
 
 set(SOURCE
     src/AppleDebug.mm
-    src/AppleFileSystem.cpp
+    src/AppleFileSystem.mm
     src/ApplePlatformMisc.cpp
     ../Linux/src/LinuxFileSystem.cpp
 )
