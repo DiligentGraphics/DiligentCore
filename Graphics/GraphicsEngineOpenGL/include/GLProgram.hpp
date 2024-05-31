@@ -70,10 +70,10 @@ public:
     std::shared_ptr<const ShaderResourcesGL>& LoadResources(const LoadResourcesAttribs& Attribs);
 
     void ApplyBindings(const PipelineResourceSignatureGLImpl*            pSignature,
-                       const ShaderResourcesGL&                          ProgResources,
                        GLContextState&                                   State,
                        const PipelineResourceSignatureGLImpl::TBindings& BaseBindings);
 
+    void SetResources(std::shared_ptr<const ShaderResourcesGL> pResources);
 
     std::shared_ptr<const ShaderResourcesGL>& GetResources()
     {
@@ -84,9 +84,15 @@ private:
     GLObjectWrappers::GLProgramObj m_GLProg{true};
     std::vector<ShaderGLImpl*>     m_AttachedShaders;
     std::string                    m_InfoLog;
-    LinkStatus                     m_LinkStatus = LinkStatus::Undefined;
+
+    LinkStatus m_LinkStatus      = LinkStatus::Undefined;
+    bool       m_BindingsApplied = false;
 
     std::shared_ptr<const ShaderResourcesGL> m_pResources;
+
+#ifdef DILIGENT_DEBUG
+    PipelineResourceSignatureGLImpl::TBindings m_DbgBaseBindings{};
+#endif
 };
 
 } // namespace Diligent

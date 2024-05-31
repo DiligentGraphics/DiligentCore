@@ -144,13 +144,39 @@ std::shared_ptr<const ShaderResourcesGL>& GLProgram::LoadResources(const LoadRes
     return m_pResources;
 }
 
+void GLProgram::SetResources(std::shared_ptr<const ShaderResourcesGL> pResources)
+{
+    DEV_CHECK_ERR(m_LinkStatus == LinkStatus::Succeeded, "Program must be successfully linked to set resources");
+    if (!m_pResources)
+    {
+        m_pResources = std::move(pResources);
+    }
+    else
+    {
+        VERIFY(m_pResources == pResources, "Assigning different resources. This should not happen as cached programs are keyed by shaders");
+    }
+}
+
 void GLProgram::ApplyBindings(const PipelineResourceSignatureGLImpl*            pSignature,
-                              const ShaderResourcesGL&                          ProgResources,
                               GLContextState&                                   State,
                               const PipelineResourceSignatureGLImpl::TBindings& BaseBindings)
 {
-    // TODO: do not apply bindings multiple times
-    pSignature->ApplyBindings(m_GLProg, ProgResources, State, BaseBindings);
+    DEV_CHECK_ERR(m_LinkStatus == LinkStatus::Succeeded, "Program must be successfully linked to apply bindings");
+    VERIFY(m_pResources, "Resources have not been loaded or assigned");
+    if (!m_BindingsApplied)
+    {
+        pSignature->ApplyBindings(m_GLProg, *m_pResources, State, BaseBindings);
+#ifdef DILIGENT_DEBUG
+        m_DbgBaseBindings = BaseBindings;
+#endif
+    }
+    else
+    {
+#ifdef DILIGENT_DEBUG
+        VERIFY(m_DbgBaseBindings == BaseBindings, "Base bindings have changed since the last time they were applied. "
+                                                  "This should not happen as cached programs are keyed by pipeline resource signatures or resource layout.");
+#endif
+    }
 }
 
 } // namespace Diligent

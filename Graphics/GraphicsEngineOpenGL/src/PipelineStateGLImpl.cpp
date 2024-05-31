@@ -192,23 +192,25 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
         VERIFY_EXPR(m_Signatures[0]);
     }
 
-    std::vector<std::shared_ptr<const ShaderResourcesGL>> ProgResources(m_NumPrograms);
+    DeviceContextGLImpl* pImmediateCtx = m_pDevice->GetImmediateContext(0);
+    VERIFY_EXPR(pImmediateCtx != nullptr);
+    auto& CtxState = pImmediateCtx->GetContextState();
+
     if (m_IsProgramPipelineSupported)
     {
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
-            auto* pShaderGL  = ShaderStages[i];
-            ProgResources[i] = pShaderGL->GetShaderResources();
-            ValidateShaderResources(ProgResources[i], pShaderGL->GetDesc().Name, pShaderGL->GetDesc().ShaderType);
+            const ShaderGLImpl*                      pShaderGL  = ShaderStages[i];
+            std::shared_ptr<const ShaderResourcesGL> pResources = pShaderGL->GetShaderResources();
+            m_GLPrograms[i]->SetResources(pResources);
+            ValidateShaderResources(std::move(pResources), pShaderGL->GetDesc().Name, pShaderGL->GetDesc().ShaderType);
         }
     }
     else
     {
-        auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
-        VERIFY_EXPR(pImmediateCtx != nullptr);
         VERIFY_EXPR(m_GLPrograms[0] != nullptr && m_GLPrograms[0]->GetLinkStatus() == GLProgram::LinkStatus::Succeeded);
 
-        auto pResources = m_GLPrograms[0]->GetResources();
+        std::shared_ptr<const ShaderResourcesGL> pResources = m_GLPrograms[0]->GetResources();
         if (!pResources)
         {
             const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, false /*SilenceWarning*/);
@@ -217,16 +219,13 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
                 {
                     ActiveStages,
                     GetSamplerResourceFlag(ShaderStages, SamplerResFlag),
-                    pImmediateCtx->GetContextState(),
+                    CtxState,
                 });
         }
-        ProgResources[0] = pResources;
         ValidateShaderResources(std::move(pResources), m_Desc.Name, ActiveStages);
     }
 
     // Apply resource bindings to programs.
-    auto& CtxState = m_pDevice->GetImmediateContext(0)->GetContextState();
-
     PipelineResourceSignatureGLImpl::TBindings Bindings = {};
     for (Uint32 s = 0; s < m_SignatureCount; ++s)
     {
@@ -237,7 +236,7 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
         m_BaseBindings[s] = Bindings;
         for (Uint32 p = 0; p < m_NumPrograms; ++p)
         {
-            m_GLPrograms[p]->ApplyBindings(pSignature, *ProgResources[p], CtxState, Bindings);
+            m_GLPrograms[p]->ApplyBindings(pSignature, CtxState, Bindings);
         }
 
         pSignature->ShiftBindings(Bindings);
