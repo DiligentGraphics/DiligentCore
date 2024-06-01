@@ -31,6 +31,8 @@
 #include "../../Basic/interface/BasicFileSystem.hpp"
 #include "../../Basic/interface/StandardFile.hpp"
 
+#define FILE_DIALOG_SUPPORTED 1
+
 namespace Diligent
 {
 

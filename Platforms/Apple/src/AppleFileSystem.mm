@@ -79,7 +79,7 @@ std::string AppleFileSystem::FindResource(const std::string& FilePath)
     return resource_path;
 }
 
-#if PLATFORM_MACOS
+#if FILE_DIALOG_SUPPORTED
 std::string AppleFileSystem::FileDialog(const FileDialogAttribs& DialogAttribs)
 {
     __block std::string Path;

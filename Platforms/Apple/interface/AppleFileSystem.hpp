@@ -35,6 +35,10 @@
 #include "../../Basic/interface/StandardFile.hpp"
 #include "../../Linux/interface/LinuxFileSystem.hpp"
 
+#if PLATFORM_MACOS
+#    define FILE_DIALOG_SUPPORTED 1
+#endif
+
 namespace Diligent
 {
 
@@ -49,7 +53,7 @@ public:
 
     static std::string FindResource(const std::string& FilePath);
 
-#if PLATFORM_MACOS
+#if FILE_DIALOG_SUPPORTED
     static std::string FileDialog(const FileDialogAttribs& DialogAttribs);
 #endif
 
