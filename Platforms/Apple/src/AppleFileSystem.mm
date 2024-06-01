@@ -84,68 +84,74 @@ std::string AppleFileSystem::FileDialog(const FileDialogAttribs& DialogAttribs)
 {
     __block std::string Path;
     
-    dispatch_sync(dispatch_get_main_queue(), ^{
-        NSSavePanel* Panel = nil;
-                
-        if (DialogAttribs.Type == FILE_DIALOG_TYPE_OPEN) 
+    auto FileDialogBlock = ^{
+        @autoreleasepool
         {
-            NSOpenPanel* OpenPanel = [NSOpenPanel openPanel];
-            OpenPanel.canChooseFiles = YES;
-            OpenPanel.canChooseDirectories = NO;
-            OpenPanel.allowsMultipleSelection = (DialogAttribs.Flags & FILE_DIALOG_FLAG_FILE_MUST_EXIST);
-            Panel = OpenPanel;
-        }
-        
-        if (DialogAttribs.Type == FILE_DIALOG_TYPE_SAVE) 
-        {
-            NSSavePanel* SavePanel = [NSSavePanel savePanel];
-            SavePanel.canCreateDirectories = YES;
-            if (DialogAttribs.Flags & FILE_DIALOG_FLAG_OVERWRITE_PROMPT)
-                SavePanel.treatsFilePackagesAsDirectories = YES;
-            Panel = SavePanel;
-        }
+            NSSavePanel* Panel = nil;
 
-        if (DialogAttribs.Title) 
-        {
-            NSString* Title = [NSString stringWithUTF8String:DialogAttribs.Title];
-            [Panel setTitle:Title];
-        }
-
-        if (DialogAttribs.Filter) 
-        {
-            NSString* Filter = [NSString stringWithUTF8String:DialogAttribs.Filter];
-            NSMutableArray<NSString *> *Extensions = [NSMutableArray array];
-            NSArray<NSString *> *Components = [Filter componentsSeparatedByString:@"\0"];
-            for (NSString *Component in Components)
+            if (DialogAttribs.Type == FILE_DIALOG_TYPE_OPEN)
             {
-                if ([Component hasPrefix:@"*."])
-                {
-                    NSString *Extension = [Component substringFromIndex:2]; // Remove "*."
-                    if ([Extension length] > 0)
-                        [Extensions addObject:Extension];
-                }
+                NSOpenPanel* OpenPanel = [NSOpenPanel openPanel];
+                OpenPanel.canChooseFiles       = YES;
+                OpenPanel.canChooseDirectories = NO;
+                Panel = OpenPanel;
             }
 
-            [Panel setAllowedFileTypes:Extensions];
-        }
+            if (DialogAttribs.Type == FILE_DIALOG_TYPE_SAVE)
+            {
+                NSSavePanel* SavePanel = [NSSavePanel savePanel];
+                SavePanel.canCreateDirectories = YES;
+                Panel = SavePanel;
+            }
 
-        if (DialogAttribs.Flags & FILE_DIALOG_FLAG_NO_CHANGE_DIR) 
-        {
-            [Panel setDirectoryURL:[NSURL fileURLWithPath:NSHomeDirectory()]];
-        }
+            if (DialogAttribs.Title)
+            {
+                NSString* Title = [NSString stringWithUTF8String:DialogAttribs.Title];
+                [Panel setTitle:Title];
+            }
 
-        NSModalResponse Response = [Panel runModal];
-        
-        if (Response == NSModalResponseOK) 
-        {
-            NSURL* SelectedFileURL = [Panel URL];
-            NSString* FilePath = [SelectedFileURL path];
-            Path = std::string([FilePath UTF8String]);
-        } else 
-        {
-            Path = std::string();
+            if (DialogAttribs.Filter)
+            {
+                NSString*                  Filter     = [NSString stringWithUTF8String:DialogAttribs.Filter];
+                NSMutableArray<NSString*>* Extensions = [NSMutableArray array];
+                NSArray<NSString*>*        Components = [Filter componentsSeparatedByString:@"\0"];
+                for (NSString* Component in Components)
+                {
+                    if ([Component hasPrefix:@"*."])
+                    {
+                        NSString *Extension = [Component substringFromIndex:2]; // Remove "*."
+                        if ([Extension length] > 0)
+                            [Extensions addObject:Extension];
+                    }
+                }
+
+                [Panel setAllowedFileTypes:Extensions];
+            }
+
+            NSModalResponse Response = [Panel runModal];
+
+            if (Response == NSModalResponseOK)
+            {
+                NSURL*    SelectedFileURL = [Panel URL];
+                NSString* FilePath        = [SelectedFileURL path];
+                Path = std::string([FilePath UTF8String]);
+            }
+            else
+            {
+                Path = std::string{};
+            }
         }
-    });
+    };
+
+    if ([NSThread isMainThread])
+    {
+        FileDialogBlock();
+    } 
+    else 
+    {
+        dispatch_sync(dispatch_get_main_queue(), FileDialogBlock);
+    }
+
     return Path;
 }
 #endif
