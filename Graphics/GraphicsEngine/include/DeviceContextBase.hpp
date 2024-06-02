@@ -361,7 +361,7 @@ protected:
         std::array<RefCntWeakPtr<ShaderResourceBindingImplType>, MAX_RESOURCE_SIGNATURES> SRBs;
 
         // Shader resource cache version for every SRB at the time when the SRB was set
-        std::array<Uint32, MAX_RESOURCE_SIGNATURES> CacheRevisions;
+        std::array<Uint32, MAX_RESOURCE_SIGNATURES> CacheRevisions = {};
 
         // Indicates if the resources have been validated since they were committed
         bool ResourcesValidated = false;
