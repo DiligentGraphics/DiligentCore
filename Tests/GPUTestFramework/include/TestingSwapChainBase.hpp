@@ -193,7 +193,7 @@ public:
         }
 
         m_pContext->MapTextureSubresource(m_pStagingTexture, 0, 0, MAP_READ, MapFlag, nullptr, MapData);
-        CompareTestImages(m_ReferenceData.data(), m_ReferenceDataPitch, reinterpret_cast<const Uint8*>(MapData.pData), MapData.Stride,
+        CompareTestImages(m_ReferenceData.data(), m_ReferenceDataPitch, static_cast<const Uint8*>(MapData.pData), MapData.Stride,
                           m_SwapChainDesc.Width, m_SwapChainDesc.Height, m_SwapChainDesc.ColorBufferFormat, m_FailureCounters);
 
         m_pContext->UnmapTextureSubresource(m_pStagingTexture, 0, 0);

@@ -27,6 +27,7 @@
 import os
 import re
 import json
+import stat
 import jsonschema
 import shutil
 import pathlib
@@ -281,7 +282,7 @@ def free_disk_memory(settings):
             if os.path.isfile(item_path):
                 os.remove(item_path)
             elif os.path.isdir(item_path):
-                shutil.rmtree(item_path)
+                shutil.rmtree(item_path, onerror=lambda func, path, exc_info: (os.chmod(path, stat.S_IWRITE), func(path)))
 
 
 def main():

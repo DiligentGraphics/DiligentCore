@@ -154,9 +154,9 @@ TEST(Shader, BrokenHLSL_Async)
 TEST(Shader, BrokenGLSL)
 {
     const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
-    if (DeviceInfo.IsD3DDevice())
+    if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsWebGPUDevice())
     {
-        GTEST_SKIP() << "GLSL is not supported in Direct3D";
+        GTEST_SKIP() << "GLSL is not supported in Direct3D and WebGPU";
     }
 
     TestBrokenShader(g_BrokenGLSL, "Broken GLSL test", SHADER_SOURCE_LANGUAGE_GLSL, SHADER_COMPILE_FLAG_NONE,
@@ -166,9 +166,9 @@ TEST(Shader, BrokenGLSL)
 TEST(Shader, BrokenGLSL_Async)
 {
     const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
-    if (DeviceInfo.IsD3DDevice())
+    if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsWebGPUDevice())
     {
-        GTEST_SKIP() << "GLSL is not supported in Direct3D";
+        GTEST_SKIP() << "GLSL is not supported in Direct3D and WebGPU";
     }
     if (!DeviceInfo.Features.AsyncShaderCompilation)
     {

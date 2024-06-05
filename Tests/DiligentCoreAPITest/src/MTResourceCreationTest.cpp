@@ -289,6 +289,12 @@ TEST_F(MultithreadedResourceCreationTest, CreateResources)
         GTEST_SKIP() << "Multithreading resource creation is not supported in OpenGL";
     }
 
+    if (pDevice->GetDeviceInfo().IsWebGPUDevice())
+    {
+        GTEST_SKIP() << "Multithreading resource creation is not supported in WebGPU";
+    }
+
+
 #if D3D12_SUPPORTED
     // There is a bug in D3D12 debug layer as of build version 10.0.18362: SetName() method
     // is not protected by a mutex internally. This, in combination with the fact that root signatures are

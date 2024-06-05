@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,6 +63,11 @@ void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, const float* p
 #if METAL_SUPPORTED
 void RenderPassMSResolveReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassInputAttachmentReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor, bool UseFramebufferFetch);
+#endif
+
+#if WEBGPU_SUPPORTED
+void RenderPassMSResolveReferenceWebGPU(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassInputAttachmentReferenceWebGPU(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor);
@@ -764,6 +769,11 @@ void RenderPassTest::TestInputAttachment(bool UseSignature, bool UseMemoryless)
                 break;
 #endif
 
+#if WEBGPU_SUPPORTED
+            case RENDER_DEVICE_TYPE_WEBGPU:
+                RenderPassInputAttachmentReferenceWebGPU(pSwapChain, ClearColor);
+                break;
+#endif
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }

@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.6)
+cmake_minimum_required (VERSION 3.11)
 
 # cmake_minimum_required(VERSION) resets all policies to their default
 # values for the VERSION, so calling cmake_policy(SET CMP0063 NEW) has
@@ -31,7 +31,7 @@ if (VULKAN_SUPPORTED)
     endif()
 endif()
 
-if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR (ARCHIVER_SUPPORTED AND (GL_SUPPORTED OR GLES_SUPPORTED)))
+if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR WEBGPU_SUPPORTED OR (ARCHIVER_SUPPORTED AND (GL_SUPPORTED OR GLES_SUPPORTED)))
     set(DILIGENT_USE_SPIRV_TOOLCHAIN TRUE CACHE INTERNAL "Use SPIRV Toolchain")
 
     if (NOT TARGET SPIRV-Headers)
@@ -47,7 +47,7 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR (ARCHIVER_SUPPORTED AND (GL_SUPPORTED
     option(DILIGENT_NO_GLSLANG "Do NOT build glslang compiler" OFF)
     option(DILIGENT_IMPROVE_SPIRV_TOOLS_DEBUG_PERF "Enable some optimizations for SPIRV-Tools, glslang, SPIRV-Cross and related projects in debug build to improve performance" ON)
 
-    if (NOT (${DILIGENT_NO_GLSLANG} AND ${DILIGENT_NO_HLSL}) AND (NOT TARGET SPIRV-Tools-static) AND (NOT ${PLATFORM_EMSCRIPTEN}))
+    if (NOT (${DILIGENT_NO_GLSLANG} AND ${DILIGENT_NO_HLSL}) AND (NOT TARGET SPIRV-Tools-static))
         set(SPIRV_SKIP_TESTS ON CACHE BOOL "Skip SPIRV tests")
         set(SPIRV_BUILD_COMPRESSION OFF CACHE BOOL "Do not build SPIRV compressing codec")
         set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Skip building SPIRV executable and tests along with the library")
@@ -157,6 +157,22 @@ if (VULKAN_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR 
     set(VOLK_HEADERS_ONLY ON)
     add_subdirectory(volk)
     install(FILES "${volk_SOURCE_DIR}/LICENSE.md" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Volk-License.md)
+endif()
+
+if (WEBGPU_SUPPORTED)
+    get_property(ARCH_CACHE_VALUE CACHE ARCH PROPERTY VALUE)
+    unset(ARCH CACHE)
+    add_subdirectory(webgpu)
+    set_directory_root_folder("webgpu" "DiligentCore/ThirdParty/webgpu")
+    set(ARCH "${ARCH_CACHE_VALUE}" CACHE INTERNAL "")
+
+    if (NOT DILIGENT_NO_HLSL)
+        add_subdirectory(abseil-cpp EXCLUDE_FROM_ALL)
+        set_directory_root_folder("abseil-cpp" "DiligentCore/ThirdParty/abseil-cpp")
+        
+        add_subdirectory(tint EXCLUDE_FROM_ALL)
+        set_directory_root_folder("tint" "DiligentCore/ThirdParty/tint")
+    endif()
 endif()
 
 if ((${DILIGENT_BUILD_GOOGLE_TEST}) AND (NOT TARGET gtest))

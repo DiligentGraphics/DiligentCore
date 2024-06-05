@@ -1181,7 +1181,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, SwapChainUsageFlagsToBindFlags)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetRenderDeviceTypeString)
 {
-    static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Please add the new device type to the test");
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 8, "Please add the new device type to the test");
 
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_UNDEFINED), "Undefined");
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_D3D11), "Direct3D11");
@@ -1190,6 +1190,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetRenderDeviceTypeString)
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_GLES), "OpenGLES");
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_VULKAN), "Vulkan");
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_METAL), "Metal");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_WEBGPU), "WebGPU");
 
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_UNDEFINED, true), "RENDER_DEVICE_TYPE_UNDEFINED");
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_D3D11, true), "RENDER_DEVICE_TYPE_D3D11");
@@ -1198,11 +1199,12 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetRenderDeviceTypeString)
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_GLES, true), "RENDER_DEVICE_TYPE_GLES");
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_VULKAN, true), "RENDER_DEVICE_TYPE_VULKAN");
     EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_METAL, true), "RENDER_DEVICE_TYPE_METAL");
+    EXPECT_STREQ(GetRenderDeviceTypeString(RENDER_DEVICE_TYPE_WEBGPU, true), "RENDER_DEVICE_TYPE_WEBGPU");
 }
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetRenderDeviceTypeShortString)
 {
-    static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Please add the new device type to the test");
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 8, "Please add the new device type to the test");
 
     EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_UNDEFINED), "undefined");
     EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_D3D11), "d3d11");
@@ -1211,6 +1213,8 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetRenderDeviceTypeShortString)
     EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_GLES), "gles");
     EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_VULKAN), "vk");
     EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_METAL), "mtl");
+    EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_WEBGPU), "wgpu");
+
 
     EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_UNDEFINED, true), "UNDEFINED");
     EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_D3D11, true), "D3D11");
@@ -1219,6 +1223,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetRenderDeviceTypeShortString)
     EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_GLES, true), "GLES");
     EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_VULKAN, true), "VK");
     EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_METAL, true), "MTL");
+    EXPECT_STREQ(GetRenderDeviceTypeShortString(RENDER_DEVICE_TYPE_WEBGPU, true), "WGPU");
 }
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetAdapterTypeString)

@@ -54,6 +54,13 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     list(APPEND SOURCE ${GL_SOURCE})
 endif()
 
+if(WEBGPU_SUPPORTED)
+    file(GLOB WEBGPU_SOURCE LIST_DIRECTORIES false src/WebGPU/*)
+    file(GLOB WEBGPU_INCLUDE LIST_DIRECTORIES false include/WebGPU/*)
+    list(APPEND INCLUDE ${WEBGPU_INCLUDE})
+    list(APPEND SOURCE ${WEBGPU_SOURCE})
+endif()
+
 set(ALL_SOURCE ${SOURCE} ${INCLUDE})
 add_library(Diligent-GPUTestFramework STATIC ${ALL_SOURCE})
 set_common_target_properties(Diligent-GPUTestFramework)
@@ -77,6 +84,10 @@ endif()
 
 if(D3D12_SUPPORTED)
     target_link_libraries(Diligent-GPUTestFramework PUBLIC d3d12.lib)
+endif()
+
+if(WEBGPU_SUPPORTED)
+    target_link_libraries(Diligent-GPUTestFramework PUBLIC webgpu)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
@@ -126,6 +137,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         )
     endif()
 endif()
+
 
 target_include_directories(Diligent-GPUTestFramework
 PUBLIC

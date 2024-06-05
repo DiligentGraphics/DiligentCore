@@ -16,6 +16,9 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
         if(METAL_SUPPORTED)
             list(APPEND ENGINE_DLLS Diligent-GraphicsEngineMetal-shared)
         endif()
+        if(WEBGPU_SUPPORTED)
+            list(APPEND ENGINE_DLLS Diligent-GraphicsEngineWebGPU-shared)
+        endif()
         if(TARGET Diligent-Archiver-shared)
             list(APPEND ENGINE_DLLS Diligent-Archiver-shared)
         endif()
@@ -69,6 +72,10 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                             ${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH}
                             "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/spv_dxcompiler.dll\"")
                 endif()
+            endif()
+
+            if (WEBGPU_SUPPORTED)
+                target_copy_webgpu_binaries(${TARGET_NAME})
             endif()
         endif()
     endfunction()
@@ -264,6 +271,10 @@ function(get_supported_backends _TARGETS)
     if(METAL_SUPPORTED)
         list(APPEND BACKENDS Diligent-GraphicsEngineMetal-${LIB_TYPE})
     endif()
+    if(WEBGPU_SUPPORTED)
+        list(APPEND BACKENDS Diligent-GraphicsEngineWebGPU-${LIB_TYPE})
+    endif()
+
     # ${_TARGETS} == ENGINE_LIBRARIES
     # ${${_TARGETS}} == ${ENGINE_LIBRARIES}
     set(${_TARGETS} ${${_TARGETS}} ${BACKENDS} PARENT_SCOPE)
@@ -286,7 +297,7 @@ function(install_core_lib _TARGET)
         list(APPEND DILIGENT_CORE_INSTALL_LIBS_LIST ${_TARGET})
         set(DILIGENT_CORE_INSTALL_LIBS_LIST ${DILIGENT_CORE_INSTALL_LIBS_LIST} CACHE INTERNAL "Core libraries installation list")
     elseif(TARGET_TYPE STREQUAL SHARED_LIBRARY)
-        install(TARGETS				 ${_TARGET}
+        install(TARGETS                 ${_TARGET}
                 ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
                 LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
                 RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
@@ -414,9 +425,28 @@ function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
             set_target_properties(${MODULE_NAME}-ValidateFormatting PROPERTIES FOLDER ${IDE_FOLDER})
         endif()
     else()
-		message(DEBUG "${MODULE_NAME}-ValidateFormatting target will be disabled because format validation script is not available on ${CMAKE_HOST_SYSTEM_NAME} host platform.")
+        message(DEBUG "${MODULE_NAME}-ValidateFormatting target will be disabled because format validation script is not available on ${CMAKE_HOST_SYSTEM_NAME} host platform.")
     endif()
 
 endfunction()
 
+# FetchContent's GIT_SHALLOW option is buggy and does not actually do a shallow
+# clone. This macro takes care of it.
+macro(FetchContent_DeclareShallowGit Name GIT_REPOSITORY GitRepository GIT_TAG GitTag)
+    include(FetchContent)
+    FetchContent_Declare(
+        "${Name}"
 
+        # This is what it'd look line if GIT_SHALLOW was indeed working:
+        #GIT_REPOSITORY "${GitRepository}"
+        #GIT_TAG        "${GitTag}"
+        #GIT_SHALLOW    ON
+
+        # Manual download mode instead:
+        DOWNLOAD_COMMAND
+            cd "${FETCHCONTENT_BASE_DIR}/${Name}-src" &&
+            git init &&
+            git fetch --depth=1 "${GitRepository}" "${GitTag}" &&
+            git reset --hard FETCH_HEAD
+    )
+endmacro()

@@ -39,7 +39,7 @@ namespace Diligent
 
 DeviceObjectArchive::DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVICE_TYPE Type)
 {
-    static_assert(RENDER_DEVICE_TYPE_COUNT == 7, "Did you add a new render device type? Please handle it here.");
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 8, "Did you add a new render device type? Please handle it here.");
     switch (Type)
     {
         // clang-format off

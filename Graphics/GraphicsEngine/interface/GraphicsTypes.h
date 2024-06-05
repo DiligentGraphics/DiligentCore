@@ -1586,6 +1586,7 @@ enum RENDER_DEVICE_TYPE
     RENDER_DEVICE_TYPE_GLES,           ///< OpenGLES device
     RENDER_DEVICE_TYPE_VULKAN,         ///< Vulkan device
     RENDER_DEVICE_TYPE_METAL,          ///< Metal device
+    RENDER_DEVICE_TYPE_WEBGPU,         ///< WebGPU device
     RENDER_DEVICE_TYPE_COUNT           ///< The total number of device types
 };
 
@@ -2474,21 +2475,25 @@ struct RenderDeviceInfo
     RenderDeviceShaderVersionInfo MaxShaderVersion DEFAULT_INITIALIZER({});
 
 #if DILIGENT_CPP_INTERFACE
-    constexpr bool IsGLDevice()const
+    constexpr bool IsGLDevice() const
     {
         return Type == RENDER_DEVICE_TYPE_GL || Type == RENDER_DEVICE_TYPE_GLES;
     }
-    constexpr bool IsD3DDevice()const
+    constexpr bool IsD3DDevice() const
     {
         return Type == RENDER_DEVICE_TYPE_D3D11 || Type == RENDER_DEVICE_TYPE_D3D12;
     }
-    constexpr bool IsVulkanDevice()const
+    constexpr bool IsVulkanDevice() const
     {
         return Type == RENDER_DEVICE_TYPE_VULKAN;
     }
-    constexpr bool IsMetalDevice()const
+    constexpr bool IsMetalDevice() const
     {
         return Type == RENDER_DEVICE_TYPE_METAL;
+    }
+    constexpr bool IsWebGPUDevice() const
+    {
+        return Type == RENDER_DEVICE_TYPE_WEBGPU;
     }
 
     // for backward compatibility
@@ -4097,6 +4102,26 @@ struct EngineMtlCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 };
 typedef struct EngineMtlCreateInfo EngineMtlCreateInfo;
 
+/// Attributes of the WebGPU-based engine implementation
+struct EngineWebGPUCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
+
+    /// 
+    Uint32 QueueSignalPoolSize DEFAULT_INITIALIZER(32);
+
+    ///
+    Uint32 DynamicHeapPageSize DEFAULT_INITIALIZER(4 << 20);
+
+#if DILIGENT_CPP_INTERFACE
+    EngineWebGPUCreateInfo() noexcept :
+        EngineWebGPUCreateInfo{EngineCreateInfo{}}
+    {}
+
+    explicit EngineWebGPUCreateInfo(const EngineCreateInfo &EngineCI) noexcept :
+        EngineCreateInfo{EngineCI}
+    {}
+#endif
+};
+typedef struct EngineWebGPUCreateInfo EngineWebGPUCreateInfo;
 
 /// Box
 struct Box

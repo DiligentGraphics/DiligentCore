@@ -64,6 +64,10 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearCol
 void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
+#if WEBGPU_SUPPORTED
+void RenderDrawCommandReferenceWebGPU(ISwapChain* pSwapChain, const float* pClearColor);
+#endif
+
 void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr)
 {
     auto* pEnv     = GPUTestingEnvironment::GetInstance();
@@ -111,6 +115,11 @@ void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor
                 break;
 #endif
 
+#if WEBGPU_SUPPORTED
+            case RENDER_DEVICE_TYPE_WEBGPU:
+                RenderDrawCommandReferenceWebGPU(pSwapChain, pClearColor);
+                break;
+#endif
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }

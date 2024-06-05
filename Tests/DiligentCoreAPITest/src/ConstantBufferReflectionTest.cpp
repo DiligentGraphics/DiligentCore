@@ -219,8 +219,9 @@ void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContent
 
 std::pair<RefCntAutoPtr<IShader>, RefCntAutoPtr<IShader>> CreateTestShaders(const char* Source, SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE Language)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage               = Language;
@@ -237,7 +238,7 @@ std::pair<RefCntAutoPtr<IShader>, RefCntAutoPtr<IShader>> CreateTestShaders(cons
 
     // Create shader from byte code
     RefCntAutoPtr<IShader> pShaderBC;
-    if (pDevice->GetDeviceInfo().IsD3DDevice() || pDevice->GetDeviceInfo().IsVulkanDevice())
+    if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsVulkanDevice() || DeviceInfo.IsWebGPUDevice())
     {
         Uint64 ByteCodeSize = 0;
         pShaderSrc->GetBytecode(&ShaderCI.ByteCode, ByteCodeSize);
@@ -266,7 +267,7 @@ TEST(ConstantBufferReflectionTest, HLSL)
     constexpr auto PrintBufferContents = true;
     CheckConstantBufferReflectionHLSL(TestShaders.first, PrintBufferContents);
 
-    if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsVulkanDevice())
+    if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsVulkanDevice() || DeviceInfo.IsWebGPUDevice())
     {
         ASSERT_TRUE(TestShaders.second);
         CheckConstantBufferReflectionHLSL(TestShaders.second);

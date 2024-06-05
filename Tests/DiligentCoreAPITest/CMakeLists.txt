@@ -76,6 +76,14 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     list(APPEND SOURCE ${GL_SOURCE})
 endif()
 
+if(WEBGPU_SUPPORTED)
+    file(GLOB WEBGPU_SOURCE LIST_DIRECTORIES false src/WebGPU/*)
+    file(GLOB WEBGPU_INCLUDE LIST_DIRECTORIES false include/WebGPU/*)
+    list(APPEND INCLUDE ${WEBGPU_INCLUDE})
+    list(APPEND SOURCE ${WEBGPU_SOURCE})
+endif()
+
+
 set(ALL_SOURCE ${SOURCE} ${INCLUDE} ${SHADERS} ${INLINE_SHADERS})
 add_executable(DiligentCoreAPITest ${ALL_SOURCE})
 set_common_target_properties(DiligentCoreAPITest)

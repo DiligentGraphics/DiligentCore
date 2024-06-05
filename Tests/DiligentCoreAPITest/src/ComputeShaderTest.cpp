@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,6 +58,11 @@ void ComputeShaderReferenceVk(ISwapChain* pSwapChain);
 void ComputeShaderReferenceMtl(ISwapChain* pSwapChain);
 #endif
 
+#if WEBGPU_SUPPORTED
+void ComputeShaderReferenceWebGPU(ISwapChain* pSwapChain);
+#endif
+
+
 void ComputeShaderReference(ISwapChain* pSwapChain)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
@@ -98,6 +103,11 @@ void ComputeShaderReference(ISwapChain* pSwapChain)
             break;
 #endif
 
+#if WEBGPU_SUPPORTED
+        case RENDER_DEVICE_TYPE_WEBGPU:
+            ComputeShaderReferenceWebGPU(pSwapChain);
+            break;
+#endif
         default:
             LOG_ERROR_AND_THROW("Unsupported device type");
     }

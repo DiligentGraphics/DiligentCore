@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +43,10 @@
 
 #if METAL_SUPPORTED
 #    include "Metal/CreateObjFromNativeResMtl.hpp"
+#endif
+
+#if WEBGPU_SUPPORTED
+#    include "WebGPU/CreateObjFromNativeResWebGPU.hpp"
 #endif
 
 #include "GraphicsAccessories.hpp"
@@ -105,6 +109,12 @@ protected:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResMtl(pDevice));
                 break;
 #endif
+#if WEBGPU_SUPPORTED
+            case RENDER_DEVICE_TYPE_WEBGPU:
+                pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResWebGPU(pDevice));
+                break;
+#endif
+
             default: UNEXPECTED("Unexpected device type");
         }
     }
