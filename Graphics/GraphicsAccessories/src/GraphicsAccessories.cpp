@@ -2747,7 +2747,7 @@ std::vector<Uint32> ResolveInputLayoutAutoOffsetsAndStrides(LayoutElement* pLayo
         }
         else
         {
-            if (Strides[BuffSlot] < TightStrides[BuffSlot])
+            if (Strides[BuffSlot] != 0 && Strides[BuffSlot] < TightStrides[BuffSlot])
             {
                 LOG_ERROR_MESSAGE("Stride ", Strides[BuffSlot], " explicitly specified for slot ", BuffSlot,
                                   " is smaller than the minimum stride ", TightStrides[BuffSlot],
