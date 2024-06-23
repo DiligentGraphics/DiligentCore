@@ -42,7 +42,7 @@ DeviceObjectArchive::DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVIC
     static_assert(RENDER_DEVICE_TYPE_COUNT == 8, "Did you add a new render device type? Please handle it here.");
     switch (Type)
     {
-        // clang-format off
+            // clang-format off
         case RENDER_DEVICE_TYPE_D3D11:  return DeviceObjectArchive::DeviceType::Direct3D11;
         case RENDER_DEVICE_TYPE_D3D12:  return DeviceObjectArchive::DeviceType::Direct3D12;
         case RENDER_DEVICE_TYPE_GL:     return DeviceObjectArchive::DeviceType::OpenGL;
@@ -53,6 +53,10 @@ DeviceObjectArchive::DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVIC
 #elif PLATFORM_IOS || PLATFORM_TVOS
         case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchive::DeviceType::Metal_iOS;
 #endif
+        case RENDER_DEVICE_TYPE_WEBGPU:
+            UNSUPPORTED("WebGPU is not yet supported");
+            return DeviceObjectArchive::DeviceType::Count;
+
         // clang-format on
         default:
             UNEXPECTED("Unexpected device type");
@@ -277,7 +281,7 @@ const char* ArchiveDeviceTypeToString(Uint32 dev)
     static_assert(static_cast<Uint32>(DeviceType::Count) == 6, "Please handle the new archive device type below");
     switch (static_cast<DeviceType>(dev))
     {
-        // clang-format off
+            // clang-format off
         case DeviceType::OpenGL:      return "OpenGL";
         case DeviceType::Direct3D11:  return "Direct3D11";
         case DeviceType::Direct3D12:  return "Direct3D12";
@@ -297,7 +301,7 @@ const char* ResourceTypeToString(DeviceObjectArchive::ResourceType Type)
     static_assert(static_cast<size_t>(ResourceType::Count) == 8, "Please handle the new chunk type below");
     switch (Type)
     {
-        // clang-format off
+            // clang-format off
         case ResourceType::Undefined:          return "Undefined";
         case ResourceType::StandaloneShader:   return "Standalone Shaders";
         case ResourceType::ResourceSignature:  return "Resource Signatures";

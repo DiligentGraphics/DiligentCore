@@ -52,7 +52,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureViewWebGPU, TTextureViewBase)
 
     /// Implementation of ITextureViewWebGPU::GetWebGPUTextureView() in WebGPU backend.
-    WGPUTextureView DILIGENT_CALL_TYPE GetWebGPUTextureView() const override { return m_wgpuTextureView.Get(); }
+    WGPUTextureView DILIGENT_CALL_TYPE GetWebGPUTextureView() const override final { return m_wgpuTextureView.Get(); }
 
 private:
     WebGPUTextureViewWrapper m_wgpuTextureView;

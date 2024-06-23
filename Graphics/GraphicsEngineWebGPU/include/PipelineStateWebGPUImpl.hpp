@@ -59,9 +59,9 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_PipelineStateWebGPU, IID_InternalImpl, TPipelineStateBase)
 
-    WGPURenderPipeline DILIGENT_CALL_TYPE GetWebGPURenderPipeline() const override;
+    WGPURenderPipeline DILIGENT_CALL_TYPE GetWebGPURenderPipeline() const override final;
 
-    WGPUComputePipeline DILIGENT_CALL_TYPE GetWebGPUComputePipeline() const override;
+    WGPUComputePipeline DILIGENT_CALL_TYPE GetWebGPUComputePipeline() const override final;
 
     void Destruct();
 
@@ -104,6 +104,5 @@ private:
     WebGPUComputePipelineWrapper m_wgpuComputePipeline;
     WebGPUPipelineLayoutWrapper  m_wgpuPipelineLayout;
 };
-
 
 } // namespace Diligent

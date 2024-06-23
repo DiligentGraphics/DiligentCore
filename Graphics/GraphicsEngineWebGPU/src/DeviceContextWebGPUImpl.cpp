@@ -47,33 +47,6 @@
 namespace Diligent
 {
 
-namespace
-{
-// TODO: Compare float by epsilon
-bool operator!=(const Viewport& LHS, const Viewport& RHS)
-{
-    // clang-format off
-    return LHS.TopLeftX != RHS.TopLeftX ||
-           LHS.TopLeftY != RHS.TopLeftY ||
-           LHS.Width    != RHS.Width    ||
-           LHS.Height   != RHS.Height   ||
-           LHS.MinDepth != RHS.MinDepth ||
-           LHS.MaxDepth != RHS.MaxDepth;
-    // clang-format on
-}
-
-bool operator!=(const Rect& LHS, const Rect& RHS)
-{
-    // clang-format off
-    return LHS.left   != RHS.left  ||
-           LHS.top    != RHS.top   ||
-           LHS.right  != RHS.right ||
-           LHS.bottom != RHS.bottom;
-    // clang-format on
-}
-
-} // namespace
-
 DeviceContextWebGPUImpl::DeviceContextWebGPUImpl(IReferenceCounters*           pRefCounters,
                                                  RenderDeviceWebGPUImpl*       pDevice,
                                                  const EngineWebGPUCreateInfo& EngineCI,
@@ -118,7 +91,9 @@ void DeviceContextWebGPUImpl::TransitionShaderResources(IShaderResourceBinding* 
 }
 
 void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*        pShaderResourceBinding,
-                                                    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) {}
+                                                    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+{
+}
 
 void DeviceContextWebGPUImpl::InvalidateState()
 {
@@ -275,9 +250,13 @@ void DeviceContextWebGPUImpl::MultiDrawIndexed(const MultiDrawIndexedAttribs& At
     }
 }
 
-void DeviceContextWebGPUImpl::DrawIndirect(const DrawIndirectAttribs& Attribs) {}
+void DeviceContextWebGPUImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
+{
+}
 
-void DeviceContextWebGPUImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs) {}
+void DeviceContextWebGPUImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs)
+{
+}
 
 void DeviceContextWebGPUImpl::DrawMesh(const DrawMeshAttribs& Attribs)
 {

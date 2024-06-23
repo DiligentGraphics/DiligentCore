@@ -51,10 +51,10 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryWebGPU, TQueryBase)
 
     /// Implementation of IQuery::GetData().
-    bool DILIGENT_CALL_TYPE GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override;
+    bool DILIGENT_CALL_TYPE GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;
 
     /// Implementation of IQuery::Invalidate().
-    void DILIGENT_CALL_TYPE Invalidate() override;
+    void DILIGENT_CALL_TYPE Invalidate() override final;
 
     bool OnBeginQuery(DeviceContextWebGPUImpl* pContext);
 

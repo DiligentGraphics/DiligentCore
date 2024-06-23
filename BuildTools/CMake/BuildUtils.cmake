@@ -437,7 +437,7 @@ macro(FetchContent_DeclareShallowGit Name GIT_REPOSITORY GitRepository GIT_TAG G
     FetchContent_Declare(
         "${Name}"
 
-        # This is what it'd look line if GIT_SHALLOW was indeed working:
+        # This is what it'd look like if GIT_SHALLOW was indeed working:
         #GIT_REPOSITORY "${GitRepository}"
         #GIT_TAG        "${GitTag}"
         #GIT_SHALLOW    ON

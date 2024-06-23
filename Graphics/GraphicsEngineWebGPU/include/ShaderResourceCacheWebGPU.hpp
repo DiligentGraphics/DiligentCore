@@ -43,11 +43,8 @@ public:
 
     // clang-format off
     ShaderResourceCacheWebGPU             (const ShaderResourceCacheWebGPU&) = delete;
-
     ShaderResourceCacheWebGPU& operator = (const ShaderResourceCacheWebGPU&) = delete;
-
     ShaderResourceCacheWebGPU             (ShaderResourceCacheWebGPU&&)      = delete;
-
     ShaderResourceCacheWebGPU& operator = (ShaderResourceCacheWebGPU&&)      = delete;
     // clang-format on
 

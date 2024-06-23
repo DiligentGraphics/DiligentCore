@@ -1003,6 +1003,21 @@ struct Viewport
         Viewport{SCDesc.Width, SCDesc.Height}
     {}
 
+    constexpr bool operator == (const Viewport& vp) const
+	{
+		return TopLeftX == vp.TopLeftX &&
+			   TopLeftY == vp.TopLeftY &&
+			   Width    == vp.Width    &&
+			   Height   == vp.Height   &&
+			   MinDepth == vp.MinDepth &&
+			   MaxDepth == vp.MaxDepth;
+	}
+
+    constexpr bool operator != (const Viewport& vp) const
+    {
+        return !(*this == vp);
+	}
+
     constexpr Viewport() noexcept {}
 #endif
 };
@@ -1038,6 +1053,19 @@ struct Rect
     {
         return right > left && bottom > top;
     }
+
+    constexpr bool operator == (const Rect& rc) const
+	{
+		return left   == rc.left   &&
+			   top    == rc.top    &&
+			   right  == rc.right  &&
+			   bottom == rc.bottom;
+	}
+
+    constexpr bool operator != (const Rect& rc) const
+	{
+		return !(*this == rc);
+	}
 #endif
 };
 typedef struct Rect Rect;

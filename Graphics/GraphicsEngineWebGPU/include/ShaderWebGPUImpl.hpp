@@ -64,22 +64,22 @@ public:
     IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_ShaderWebGPU, IID_InternalImpl, TShaderBase)
 
     /// Implementation of IShader::GetResourceCount() in WebGPU backend.
-    Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override;
+    Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final;
 
     /// Implementation of IShader::GetResourceDesc() in WebGPU backend.
-    void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override;
+    void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
 
     /// Implementation of IShader::GetConstantBufferDesc() in WebGPU backend.
-    const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override;
+    const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override final;
 
     /// Implementation of IShader::GetBytecode() in WebGPU backend.
-    void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode, Uint64& Size) const override;
+    void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode, Uint64& Size) const override final;
 
     /// Implementation of IShaderWebGPU::GetSPIRV() in WebGPU backend.
-    const std::vector<uint32_t>& DILIGENT_CALL_TYPE GetSPIRV() const override;
+    const std::vector<uint32_t>& DILIGENT_CALL_TYPE GetSPIRV() const override final;
 
     /// Implementation of IShaderWebGPU::GetWGSL() in WebGPU backend.
-    const std::string& DILIGENT_CALL_TYPE GetWGSL() const override;
+    const std::string& DILIGENT_CALL_TYPE GetWGSL() const override final;
 
     const char* GetEntryPoint() const;
 

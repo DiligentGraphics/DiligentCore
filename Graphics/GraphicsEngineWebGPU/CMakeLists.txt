@@ -77,7 +77,7 @@ set(SRC
    src/WebGPUTypeConversions.cpp
 )
 
-set(DLL_SRC
+set(DLL_SOURCE
     src/DLLMain.cpp
     src/GraphicsEngineWebGPU.def
 )
@@ -96,7 +96,7 @@ add_library(Diligent-GraphicsEngineWebGPU-shared SHARED
 )
 
 if(MSVC)
-    target_sources(Diligent-GraphicsEngineWebGPU-shared PRIVATE ${DLL_SRC})
+    target_sources(Diligent-GraphicsEngineWebGPU-shared PRIVATE ${DLL_SOURCE})
 endif()
 
 target_include_directories(Diligent-GraphicsEngineWebGPU-static 

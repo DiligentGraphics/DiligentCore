@@ -48,13 +48,13 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceWebGPU, TFenceBase)
 
     /// Implementation of IFence::GetCompletedValue() in WebGPU backend.
-    Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override;
+    Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;
 
     /// Implementation of IFence::Signal() in WebGPU backend.
-    void DILIGENT_CALL_TYPE Signal(Uint64 Value) override;
+    void DILIGENT_CALL_TYPE Signal(Uint64 Value) override final;
 
     /// Implementation of IFence::Wait() in WebGPU backend.
-    void DILIGENT_CALL_TYPE Wait(Uint64 Value) override;
+    void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
 
     void AddPendingSignal(WGPUCommandEncoder wgpuCmdEncoder, Uint64 Value);
 

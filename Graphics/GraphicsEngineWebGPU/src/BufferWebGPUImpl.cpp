@@ -45,6 +45,7 @@ Uint64 ComputeBufferAlignment(const RenderDeviceWebGPUImpl* pDevice, const Buffe
 
     if (Desc.BindFlags & BIND_UNORDERED_ACCESS)
         Alignment = pDevice->GetAdapterInfo().Buffer.StructuredBufferOffsetAlignment;
+
     return Alignment;
 }
 
@@ -136,12 +137,12 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
             }
         }
 
-        const auto IsInitializeBuffer = (pInitData != nullptr && pInitData->pData != nullptr);
+        const auto InitializeBuffer = (pInitData != nullptr && pInitData->pData != nullptr);
         m_wgpuBuffer.Reset(wgpuDeviceCreateBuffer(pDevice->GetWebGPUDevice(), &wgpuBufferDesc));
         if (!m_wgpuBuffer)
             LOG_ERROR_AND_THROW("Failed to create WebGPU buffer ", " '", m_Desc.Name ? m_Desc.Name : "", '\'');
 
-        if (IsInitializeBuffer)
+        if (InitializeBuffer)
             wgpuQueueWriteBuffer(wgpuDeviceGetQueue(pDevice->GetWebGPUDevice()), m_wgpuBuffer.Get(), 0, pInitData->pData, StaticCast<size_t>(pInitData->DataSize));
     }
 

@@ -59,20 +59,20 @@ public:
 
     void DILIGENT_CALL_TYPE EnumerateAdapters(Version              MinVersion,
                                               Uint32&              NumAdapters,
-                                              GraphicsAdapterInfo* Adapters) const override;
+                                              GraphicsAdapterInfo* Adapters) const override final;
 
     void DILIGENT_CALL_TYPE CreateDearchiver(const DearchiverCreateInfo& CreateInfo,
-                                             IDearchiver**               ppDearchiver) const override;
+                                             IDearchiver**               ppDearchiver) const override final;
 
     void DILIGENT_CALL_TYPE CreateDeviceAndContextsWebGPU(const EngineWebGPUCreateInfo& EngineCI,
                                                           IRenderDevice**               ppDevice,
-                                                          IDeviceContext**              ppContexts) override;
+                                                          IDeviceContext**              ppContexts) override final;
 
     void DILIGENT_CALL_TYPE CreateSwapChainWebGPU(IRenderDevice*       pDevice,
                                                   IDeviceContext*      pImmediateContext,
                                                   const SwapChainDesc& SCDesc,
                                                   const NativeWindow&  Window,
-                                                  ISwapChain**         ppSwapChain) override;
+                                                  ISwapChain**         ppSwapChain) override final;
 
     void DILIGENT_CALL_TYPE AttachToWebGPUDevice(WGPUInstance                  wgpuInstance,
                                                  WGPUAdapter                   wgpuAdapter,
@@ -316,7 +316,7 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
         TextureInfo.MaxTexture1DDimension   = wgpuSupportedLimits.limits.maxTextureDimension1D;
         TextureInfo.MaxTexture2DDimension   = wgpuSupportedLimits.limits.maxTextureDimension2D;
         TextureInfo.MaxTexture3DDimension   = wgpuSupportedLimits.limits.maxTextureDimension3D;
-        TextureInfo.MaxTexture1DArraySlices = 0;
+        TextureInfo.MaxTexture1DArraySlices = wgpuSupportedLimits.limits.maxTextureArrayLayers;
         TextureInfo.MaxTexture2DArraySlices = wgpuSupportedLimits.limits.maxTextureArrayLayers;
 
         TextureInfo.Texture2DMSSupported       = True;

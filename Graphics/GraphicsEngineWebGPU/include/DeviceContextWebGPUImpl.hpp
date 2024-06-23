@@ -58,23 +58,23 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextWebGPU, TDeviceContextBase)
 
     /// Implementation of IDeviceContext::Begin() in WebGPU backend.
-    void DILIGENT_CALL_TYPE Begin(Uint32 ImmediateContextId) override;
+    void DILIGENT_CALL_TYPE Begin(Uint32 ImmediateContextId) override final;
 
     /// Implementation of IDeviceContext::SetPipelineState() in WebGPU backend.
-    void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override;
+    void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;
 
     /// Implementation of IDeviceContext::TransitionShaderResources() in WebGPU backend.
-    void DILIGENT_CALL_TYPE TransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding) override;
+    void DILIGENT_CALL_TYPE TransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding) override final;
 
     /// Implementation of IDeviceContext::CommitShaderResources() in WebGPU backend.
     void DILIGENT_CALL_TYPE CommitShaderResources(IShaderResourceBinding*        pShaderResourceBinding,
-                                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override;
+                                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::SetStencilRef() in WebGPU backend.
-    void DILIGENT_CALL_TYPE SetStencilRef(Uint32 StencilRef) override;
+    void DILIGENT_CALL_TYPE SetStencilRef(Uint32 StencilRef) override final;
 
     /// Implementation of IDeviceContext::SetBlendFactors() in WebGPU backend.
-    void DILIGENT_CALL_TYPE SetBlendFactors(const float* pBlendFactors = nullptr) override;
+    void DILIGENT_CALL_TYPE SetBlendFactors(const float* pBlendFactors = nullptr) override final;
 
     /// Implementation of IDeviceContext::SetVertexBuffers() in WebGPU backend.
     void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
@@ -82,88 +82,88 @@ public:
                                              IBuffer* const*                ppBuffers,
                                              const Uint64*                  pOffsets,
                                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
-                                             SET_VERTEX_BUFFERS_FLAGS       Flags) override;
+                                             SET_VERTEX_BUFFERS_FLAGS       Flags) override final;
 
     /// Implementation of IDeviceContext::InvalidateState() in WebGPU backend.
-    void DILIGENT_CALL_TYPE InvalidateState() override;
+    void DILIGENT_CALL_TYPE InvalidateState() override final;
 
     /// Implementation of IDeviceContext::SetIndexBuffer() in WebGPU backend.
     void DILIGENT_CALL_TYPE SetIndexBuffer(IBuffer*                       pIndexBuffer,
                                            Uint64                         ByteOffset,
-                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override;
+                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::SetViewports() in WebGPU backend.
     void DILIGENT_CALL_TYPE SetViewports(Uint32          NumViewports,
                                          const Viewport* pViewports,
                                          Uint32          RTWidth,
-                                         Uint32          RTHeight) override;
+                                         Uint32          RTHeight) override final;
 
     /// Implementation of IDeviceContext::SetScissorRects() in WebGPU backend.
     void DILIGENT_CALL_TYPE SetScissorRects(Uint32      NumRects,
                                             const Rect* pRects,
                                             Uint32      RTWidth,
-                                            Uint32      RTHeight) override;
+                                            Uint32      RTHeight) override final;
 
     /// Implementation of IDeviceContext::SetRenderTargetsExt() in WebGPU backend.
-    void DILIGENT_CALL_TYPE SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::BeginRenderPass() in WebGPU backend.
-    void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::NextSubpass() in WebGPU backend.
-    void DILIGENT_CALL_TYPE NextSubpass() override;
+    void DILIGENT_CALL_TYPE NextSubpass() override final;
 
     /// Implementation of IDeviceContext::EndRenderPass() in WebGPU backend.
-    void DILIGENT_CALL_TYPE EndRenderPass() override;
+    void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     /// Implementation of IDeviceContext::Draw() in WebGPU backend.
-    void DILIGENT_CALL_TYPE Draw(const DrawAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE Draw(const DrawAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::DrawIndexed() in WebGPU backend.
-    void DILIGENT_CALL_TYPE DrawIndexed(const DrawIndexedAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE DrawIndexed(const DrawIndexedAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::DrawIndirect() in WebGPU backend.
-    void DILIGENT_CALL_TYPE DrawIndirect(const DrawIndirectAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE DrawIndirect(const DrawIndirectAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::DrawIndexedIndirect() in WebGPU backend.
-    void DILIGENT_CALL_TYPE DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::DrawMesh() in WebGPU backend.
-    void DILIGENT_CALL_TYPE DrawMesh(const DrawMeshAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE DrawMesh(const DrawMeshAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::DrawMeshIndirect() in WebGPU backend.
-    void DILIGENT_CALL_TYPE DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::MultiDraw() in WebGPU backend.
-    void DILIGENT_CALL_TYPE MultiDraw(const MultiDrawAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE MultiDraw(const MultiDrawAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::MultiDrawIndexed() in WebGPU backend.
-    void DILIGENT_CALL_TYPE MultiDrawIndexed(const MultiDrawIndexedAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE MultiDrawIndexed(const MultiDrawIndexedAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::DispatchCompute() in WebGPU backend.
-    void DILIGENT_CALL_TYPE DispatchCompute(const DispatchComputeAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE DispatchCompute(const DispatchComputeAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::DispatchComputeIndirect() in WebGPU backend.
-    void DILIGENT_CALL_TYPE DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::ClearDepthStencil() in WebGPU backend.
     void DILIGENT_CALL_TYPE ClearDepthStencil(ITextureView*                  pView,
                                               CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
                                               float                          fDepth,
                                               Uint8                          Stencil,
-                                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override;
+                                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::ClearRenderTarget() in WebGPU backend.
     void DILIGENT_CALL_TYPE ClearRenderTarget(ITextureView*                  pView,
                                               const void*                    RGBA,
-                                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override;
+                                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::UpdateBuffer() in WebGPU backend.
     void DILIGENT_CALL_TYPE UpdateBuffer(IBuffer*                       pBuffer,
                                          Uint64                         Offset,
                                          Uint64                         Size,
                                          const void*                    pData,
-                                         RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override;
+                                         RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::CopyBuffer() in WebGPU backend.
     void DILIGENT_CALL_TYPE CopyBuffer(IBuffer*                       pSrcBuffer,
@@ -172,16 +172,16 @@ public:
                                        IBuffer*                       pDstBuffer,
                                        Uint64                         DstOffset,
                                        Uint64                         Size,
-                                       RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) override;
+                                       RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) override final;
 
     /// Implementation of IDeviceContext::MapBuffer() in WebGPU backend.
     void DILIGENT_CALL_TYPE MapBuffer(IBuffer*  pBuffer,
                                       MAP_TYPE  MapType,
                                       MAP_FLAGS MapFlags,
-                                      PVoid&    pMappedData) override;
+                                      PVoid&    pMappedData) override final;
 
     /// Implementation of IDeviceContext::UnmapBuffer() in WebGPU backend.
-    void DILIGENT_CALL_TYPE UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType) override;
+    void DILIGENT_CALL_TYPE UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType) override final;
 
     /// Implementation of IDeviceContext::UpdateTexture() in WebGPU backend.
     void DILIGENT_CALL_TYPE UpdateTexture(ITexture*                      pTexture,
@@ -190,10 +190,10 @@ public:
                                           const Box&                     DstBox,
                                           const TextureSubResData&       SubresData,
                                           RESOURCE_STATE_TRANSITION_MODE SrcBufferStateTransitionMode,
-                                          RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionMode) override;
+                                          RESOURCE_STATE_TRANSITION_MODE TextureStateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::CopyTexture() in WebGPU backend.
-    void DILIGENT_CALL_TYPE CopyTexture(const CopyTextureAttribs& CopyAttribs) override;
+    void DILIGENT_CALL_TYPE CopyTexture(const CopyTextureAttribs& CopyAttribs) override final;
 
     /// Implementation of IDeviceContext::MapTextureSubresource() in WebGPU backend.
     void DILIGENT_CALL_TYPE MapTextureSubresource(ITexture*                 pTexture,
@@ -202,102 +202,102 @@ public:
                                                   MAP_TYPE                  MapType,
                                                   MAP_FLAGS                 MapFlags,
                                                   const Box*                pMapRegion,
-                                                  MappedTextureSubresource& MappedData) override;
+                                                  MappedTextureSubresource& MappedData) override final;
 
     /// Implementation of IDeviceContext::UnmapTextureSubresource() in WebGPU backend.
-    void DILIGENT_CALL_TYPE UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice) override;
+    void DILIGENT_CALL_TYPE UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice) override final;
 
     /// Implementation of IDeviceContext::FinishCommandList() in WebGPU backend.
-    void DILIGENT_CALL_TYPE FinishCommandList(ICommandList** ppCommandList) override;
+    void DILIGENT_CALL_TYPE FinishCommandList(ICommandList** ppCommandList) override final;
 
     /// Implementation of IDeviceContext::ExecuteCommandLists() in WebGPU backend.
     void DILIGENT_CALL_TYPE ExecuteCommandLists(Uint32               NumCommandLists,
-                                                ICommandList* const* ppCommandLists) override;
+                                                ICommandList* const* ppCommandLists) override final;
 
     /// Implementation of IDeviceContext::EnqueueSignal() in WebGPU backend.
-    void DILIGENT_CALL_TYPE EnqueueSignal(IFence* pFence, Uint64 Value) override;
+    void DILIGENT_CALL_TYPE EnqueueSignal(IFence* pFence, Uint64 Value) override final;
 
     /// Implementation of IDeviceContext::DeviceWaitForFence() in WebGPU backend.
-    void DILIGENT_CALL_TYPE DeviceWaitForFence(IFence* pFence, Uint64 Value) override;
+    void DILIGENT_CALL_TYPE DeviceWaitForFence(IFence* pFence, Uint64 Value) override final;
 
     /// Implementation of IDeviceContext::WaitForIdle() in WebGPU backend.
-    void DILIGENT_CALL_TYPE WaitForIdle() override;
+    void DILIGENT_CALL_TYPE WaitForIdle() override final;
 
     /// Implementation of IDeviceContext::BeginQuery() in WebGPU backend.
-    void DILIGENT_CALL_TYPE BeginQuery(IQuery* pQuery) override;
+    void DILIGENT_CALL_TYPE BeginQuery(IQuery* pQuery) override final;
 
     /// Implementation of IDeviceContext::EndQuery() in WebGPU backend.
-    void DILIGENT_CALL_TYPE EndQuery(IQuery* pQuery) override;
+    void DILIGENT_CALL_TYPE EndQuery(IQuery* pQuery) override final;
 
     /// Implementation of IDeviceContext::Flush() in WebGPU backend.
-    void DILIGENT_CALL_TYPE Flush() override;
+    void DILIGENT_CALL_TYPE Flush() override final;
 
     /// Implementation of IDeviceContext::BuildBLAS() in WebGPU backend.
-    void DILIGENT_CALL_TYPE BuildBLAS(const BuildBLASAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE BuildBLAS(const BuildBLASAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::BuildTLAS() in WebGPU backend.
-    void DILIGENT_CALL_TYPE BuildTLAS(const BuildTLASAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE BuildTLAS(const BuildTLASAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::CopyBLAS() in WebGPU backend.
-    void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::CopyTLAS() in WebGPU backend.
-    void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::WriteBLASCompactedSize() in WebGPU backend.
-    void DILIGENT_CALL_TYPE WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::WriteTLASCompactedSize() in WebGPU backend.
-    void DILIGENT_CALL_TYPE WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::TraceRays() in WebGPU backend.
-    void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::TraceRaysIndirect() in WebGPU backend.
-    void DILIGENT_CALL_TYPE TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE TraceRaysIndirect(const TraceRaysIndirectAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::UpdateSBT() in WebGPU backend.
-    void DILIGENT_CALL_TYPE UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs) override;
+    void DILIGENT_CALL_TYPE UpdateSBT(IShaderBindingTable* pSBT, const UpdateIndirectRTBufferAttribs* pUpdateIndirectBufferAttribs) override final;
 
     /// Implementation of IDeviceContext::BeginDebugGroup() in WebGPU backend.
-    void DILIGENT_CALL_TYPE BeginDebugGroup(const Char* Name, const float* pColor) override;
+    void DILIGENT_CALL_TYPE BeginDebugGroup(const Char* Name, const float* pColor) override final;
 
     /// Implementation of IDeviceContext::EndDebugGroup() in WebGPU backend.
-    void DILIGENT_CALL_TYPE EndDebugGroup() override;
+    void DILIGENT_CALL_TYPE EndDebugGroup() override final;
 
     /// Implementation of IDeviceContext::InsertDebugLabel() in WebGPU backend.
-    void DILIGENT_CALL_TYPE InsertDebugLabel(const Char* Label, const float* pColor) override;
+    void DILIGENT_CALL_TYPE InsertDebugLabel(const Char* Label, const float* pColor) override final;
 
     /// Implementation of IDeviceContext::SetShadingRate() in WebGPU backend.
     void DILIGENT_CALL_TYPE SetShadingRate(SHADING_RATE          BaseRate,
                                            SHADING_RATE_COMBINER PrimitiveCombiner,
-                                           SHADING_RATE_COMBINER TextureCombiner) override;
+                                           SHADING_RATE_COMBINER TextureCombiner) override final;
 
     /// Implementation of IDeviceContext::BindSparseResourceMemory() in WebGPU backend.
-    void DILIGENT_CALL_TYPE BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs) override;
+    void DILIGENT_CALL_TYPE BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContext::GenerateMips() in WebGPU backend.
-    void DILIGENT_CALL_TYPE GenerateMips(ITextureView* pTexView) override;
+    void DILIGENT_CALL_TYPE GenerateMips(ITextureView* pTexView) override final;
 
     /// Implementation of IDeviceContext::FinishFrame() in WebGPU backend.
-    void DILIGENT_CALL_TYPE FinishFrame() override;
+    void DILIGENT_CALL_TYPE FinishFrame() override final;
 
     /// Implementation of IDeviceContext::TransitionResourceStates() in WebGPU backend.
-    void DILIGENT_CALL_TYPE TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers) override;
+    void DILIGENT_CALL_TYPE TransitionResourceStates(Uint32 BarrierCount, const StateTransitionDesc* pResourceBarriers) override final;
 
     /// Implementation of IDeviceContext::LockCommandQueue() in WebGPU backend.
-    ICommandQueue* DILIGENT_CALL_TYPE LockCommandQueue() override;
+    ICommandQueue* DILIGENT_CALL_TYPE LockCommandQueue() override final;
 
     /// Implementation of IDeviceContext::UnlockCommandQueue() in WebGPU backend.
-    void DILIGENT_CALL_TYPE UnlockCommandQueue() override;
+    void DILIGENT_CALL_TYPE UnlockCommandQueue() override final;
 
     /// Implementation of IDeviceContext::ResolveTextureSubresource() in WebGPU backend.
     void DILIGENT_CALL_TYPE ResolveTextureSubresource(ITexture*                               pSrcTexture,
                                                       ITexture*                               pDstTexture,
-                                                      const ResolveTextureSubresourceAttribs& ResolveAttribs) override;
+                                                      const ResolveTextureSubresourceAttribs& ResolveAttribs) override final;
 
     /// Implementation of IDeviceContextWebGPU::GetWebGPUQueue() in WebGPU backend.
-    WGPUQueue DILIGENT_CALL_TYPE GetWebGPUQueue() override;
+    WGPUQueue DILIGENT_CALL_TYPE GetWebGPUQueue() override final;
 
 
     QueryManagerWebGPU& GetQueryManager();
@@ -333,8 +333,6 @@ private:
                          CLEAR_DEPTH_STENCIL_FLAGS DSFlags,
                          const float               ClearData[],
                          Uint8                     Stencil);
-
-
 
     WGPURenderPassEncoder PrepareForDraw(DRAW_FLAGS Flags);
 
