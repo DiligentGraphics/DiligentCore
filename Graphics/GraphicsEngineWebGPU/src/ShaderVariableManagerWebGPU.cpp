@@ -187,13 +187,15 @@ namespace
 #ifdef DILIGENT_DEVELOPMENT
 inline BUFFER_VIEW_TYPE DvpBindGroupEntryTypeToBufferView(BindGroupEntryType Type)
 {
-    static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 9, "Please update the switch below to handle the new bind group entry type");
+    static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
     switch (Type)
     {
         case BindGroupEntryType::StorageBuffer_ReadOnly:
+        case BindGroupEntryType::StorageBufferDynamic_ReadOnly:
             return BUFFER_VIEW_SHADER_RESOURCE;
 
         case BindGroupEntryType::StorageBuffer:
+        case BindGroupEntryType::StorageBufferDynamic:
             return BUFFER_VIEW_UNORDERED_ACCESS;
 
         default:
@@ -204,7 +206,7 @@ inline BUFFER_VIEW_TYPE DvpBindGroupEntryTypeToBufferView(BindGroupEntryType Typ
 
 inline TEXTURE_VIEW_TYPE DvpBindGroupEntryTypeToTextureView(BindGroupEntryType Type)
 {
-    static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 9, "Please update the switch below to handle the new bind group entry type");
+    static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
     switch (Type)
     {
         case BindGroupEntryType::StorageTexture_WriteOnly:
@@ -286,15 +288,18 @@ void BindResourceHelper::operator()(const BindResourceInfo& BindInfo) const
 
     if (BindInfo.pObject != nullptr)
     {
-        static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 9, "Please update the switch below to handle the new bind group entry type");
+        static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
         switch (m_DstRes.Type)
         {
             case BindGroupEntryType::UniformBuffer:
+            case BindGroupEntryType::UniformBufferDynamic:
                 CacheUniformBuffer(BindInfo);
                 break;
 
             case BindGroupEntryType::StorageBuffer:
+            case BindGroupEntryType::StorageBufferDynamic:
             case BindGroupEntryType::StorageBuffer_ReadOnly:
+            case BindGroupEntryType::StorageBufferDynamic_ReadOnly:
                 CacheStorageBuffer(BindInfo);
                 break;
 
@@ -376,7 +381,9 @@ bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObjec
 void BindResourceHelper::CacheUniformBuffer(const BindResourceInfo& BindInfo) const
 {
     VERIFY(BindInfo.pObject != nullptr, "Setting uniform buffer to null is handled by BindResourceHelper::operator()");
-    VERIFY((m_DstRes.Type == BindGroupEntryType::UniformBuffer), "Uniform buffer resource is expected");
+    VERIFY((m_DstRes.Type == BindGroupEntryType::UniformBuffer ||
+            m_DstRes.Type == BindGroupEntryType::UniformBufferDynamic),
+           "Uniform buffer resource is expected");
 
     // We cannot use ClassPtrCast<> here as the resource can have wrong type
     RefCntAutoPtr<BufferWebGPUImpl> pBufferWebGPU{BindInfo.pObject, IID_BufferWebGPU};
@@ -392,7 +399,9 @@ void BindResourceHelper::CacheStorageBuffer(const BindResourceInfo& BindInfo) co
 {
     VERIFY(BindInfo.pObject != nullptr, "Setting storage buffer to null is handled by BindResourceHelper::operator()");
     VERIFY((m_DstRes.Type == BindGroupEntryType::StorageBuffer ||
-            m_DstRes.Type == BindGroupEntryType::StorageBuffer_ReadOnly),
+            m_DstRes.Type == BindGroupEntryType::StorageBufferDynamic ||
+            m_DstRes.Type == BindGroupEntryType::StorageBuffer_ReadOnly ||
+            m_DstRes.Type == BindGroupEntryType::StorageBufferDynamic_ReadOnly),
            "Storage buffer resource is expected");
 
     RefCntAutoPtr<BufferViewWebGPUImpl> pBufferViewWebGPU{BindInfo.pObject, IID_BufferViewWebGPU};

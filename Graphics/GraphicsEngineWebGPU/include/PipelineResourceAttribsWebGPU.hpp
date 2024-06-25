@@ -37,8 +37,11 @@ namespace Diligent
 enum class BindGroupEntryType : Uint8
 {
     UniformBuffer,
+    UniformBufferDynamic,
     StorageBuffer,
+    StorageBufferDynamic,
     StorageBuffer_ReadOnly,
+    StorageBufferDynamic_ReadOnly,
     Texture,
     StorageTexture_WriteOnly,
     StorageTexture_ReadOnly,

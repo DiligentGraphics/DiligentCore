@@ -122,12 +122,22 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
 
 void ShaderResourceCacheWebGPU::Resource::SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint64 _BaseOffset, Uint64 _RangeSize)
 {
-    VERIFY_EXPR(Type == BindGroupEntryType::UniformBuffer);
+    VERIFY_EXPR(Type == BindGroupEntryType::UniformBuffer ||
+                Type == BindGroupEntryType::UniformBufferDynamic);
 
     pObject = std::move(_pBuffer);
 
     const BufferWebGPUImpl* pBuffWGPU = pObject.ConstPtr<BufferWebGPUImpl>();
-    VERIFY_EXPR(pBuffWGPU == nullptr || (pBuffWGPU->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) != 0);
+#ifdef DILIGENT_DEBUG
+    if (pBuffWGPU != nullptr)
+    {
+        // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
+        // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
+        VERIFY_EXPR((pBuffWGPU->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) != 0);
+        VERIFY(Type == BindGroupEntryType::UniformBufferDynamic || pBuffWGPU->GetDesc().Usage != USAGE_DYNAMIC,
+               "Dynamic buffer must be used with UniformBufferDynamic descriptor");
+    }
+#endif
 
     VERIFY(_BaseOffset + _RangeSize <= (pBuffWGPU != nullptr ? pBuffWGPU->GetDesc().Size : 0), "Specified range is out of buffer bounds");
     BufferBaseOffset = _BaseOffset;
@@ -142,7 +152,9 @@ void ShaderResourceCacheWebGPU::Resource::SetUniformBuffer(RefCntAutoPtr<IDevice
 void ShaderResourceCacheWebGPU::Resource::SetStorageBuffer(RefCntAutoPtr<IDeviceObject>&& _pBufferView)
 {
     VERIFY_EXPR(Type == BindGroupEntryType::StorageBuffer ||
-                Type == BindGroupEntryType::StorageBuffer_ReadOnly);
+                Type == BindGroupEntryType::StorageBufferDynamic ||
+                Type == BindGroupEntryType::StorageBuffer_ReadOnly ||
+                Type == BindGroupEntryType::StorageBufferDynamic_ReadOnly);
 
     pObject = std::move(_pBufferView);
 
@@ -163,9 +175,13 @@ void ShaderResourceCacheWebGPU::Resource::SetStorageBuffer(RefCntAutoPtr<IDevice
     {
         const BufferWebGPUImpl* pBuffWGPU = pBuffViewWGPU->GetBuffer<const BufferWebGPUImpl>();
         const BufferDesc&       BuffDesc  = pBuffWGPU->GetDesc();
+        VERIFY(Type == BindGroupEntryType::StorageBufferDynamic || Type == BindGroupEntryType::StorageBufferDynamic_ReadOnly || BuffDesc.Usage != USAGE_DYNAMIC,
+               "Dynamic buffer must be used with StorageBufferDynamic or StorageBufferDynamic_ReadOnly descriptor");
+
         VERIFY(BufferBaseOffset + BufferRangeSize <= BuffDesc.Size, "Specified view range is out of buffer bounds");
 
-        if (Type == BindGroupEntryType::StorageBuffer_ReadOnly)
+        if (Type == BindGroupEntryType::StorageBuffer_ReadOnly ||
+            Type == BindGroupEntryType::StorageBufferDynamic_ReadOnly)
         {
             VERIFY(ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Attempting to bind buffer view '", ViewDesc.Name,
                    "' as read-only storage buffer. Expected view type is BUFFER_VIEW_SHADER_RESOURCE. Actual type: ",
@@ -173,7 +189,8 @@ void ShaderResourceCacheWebGPU::Resource::SetStorageBuffer(RefCntAutoPtr<IDevice
             VERIFY((BuffDesc.BindFlags & BIND_SHADER_RESOURCE) != 0,
                    "Buffer '", BuffDesc.Name, "' being set as read-only storage buffer was not created with BIND_SHADER_RESOURCE flag");
         }
-        else if (Type == BindGroupEntryType::StorageBuffer)
+        else if (Type == BindGroupEntryType::StorageBuffer ||
+                 Type == BindGroupEntryType::StorageBufferDynamic)
         {
             VERIFY(ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Attempting to bind buffer view '", ViewDesc.Name,
                    "' as writable storage buffer. Expected view type is BUFFER_VIEW_UNORDERED_ACCESS. Actual type: ",
@@ -201,21 +218,32 @@ void ShaderResourceCacheWebGPU::InitializeResources(Uint32 GroupIdx, Uint32 Offs
     }
 }
 
+
+inline bool IsDynamicGroupEntryType(BindGroupEntryType EntryType)
+{
+    return (EntryType == BindGroupEntryType::UniformBufferDynamic ||
+            EntryType == BindGroupEntryType::StorageBufferDynamic ||
+            EntryType == BindGroupEntryType::StorageBufferDynamic_ReadOnly);
+}
+
 static bool IsDynamicBuffer(const ShaderResourceCacheWebGPU::Resource& Res)
 {
     if (!Res.pObject)
         return false;
 
     const BufferWebGPUImpl* pBuffer = nullptr;
-    static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 9, "Please update the switch below to handle the new bind group entry type");
+    static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
     switch (Res.Type)
     {
         case BindGroupEntryType::UniformBuffer:
+        case BindGroupEntryType::UniformBufferDynamic:
             pBuffer = Res.pObject.ConstPtr<BufferWebGPUImpl>();
             break;
 
         case BindGroupEntryType::StorageBuffer:
+        case BindGroupEntryType::StorageBufferDynamic:
         case BindGroupEntryType::StorageBuffer_ReadOnly:
+        case BindGroupEntryType::StorageBufferDynamic_ReadOnly:
             pBuffer = Res.pObject ? Res.pObject.ConstPtr<const BufferViewWebGPUImpl>()->GetBuffer<const BufferWebGPUImpl>() : nullptr;
             break;
 
@@ -231,6 +259,13 @@ static bool IsDynamicBuffer(const ShaderResourceCacheWebGPU::Resource& Res)
     const BufferDesc& BuffDesc = pBuffer->GetDesc();
 
     bool IsDynamic = (BuffDesc.Usage == USAGE_DYNAMIC);
+    if (!IsDynamic)
+    {
+        // Buffers that are not bound as a whole to a dynamic descriptor are also counted as dynamic
+        IsDynamic = (IsDynamicGroupEntryType(Res.Type) && Res.BufferRangeSize != 0 && Res.BufferRangeSize < BuffDesc.Size);
+    }
+
+    DEV_CHECK_ERR(!IsDynamic || IsDynamicGroupEntryType(Res.Type), "Dynamic buffers must only be used with dynamic descriptor type");
     return IsDynamic;
 }
 
@@ -248,15 +283,18 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
         --m_NumDynamicBuffers;
     }
 
-    static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 9, "Please update the switch below to handle the new bind group entry type");
+    static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
     switch (DstRes.Type)
     {
         case BindGroupEntryType::UniformBuffer:
+        case BindGroupEntryType::UniformBufferDynamic:
             DstRes.SetUniformBuffer(std::move(SrcRes.pObject), SrcRes.BufferBaseOffset, SrcRes.BufferRangeSize);
             break;
 
         case BindGroupEntryType::StorageBuffer:
+        case BindGroupEntryType::StorageBufferDynamic:
         case BindGroupEntryType::StorageBuffer_ReadOnly:
+        case BindGroupEntryType::StorageBufferDynamic_ReadOnly:
             DstRes.SetStorageBuffer(std::move(SrcRes.pObject));
             break;
 
@@ -275,10 +313,11 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
         WGPUBindGroupEntry& wgpuEntry = Group.m_wgpuEntries[CacheOffset + SrcRes.ArrayIndex];
         VERIFY_EXPR(wgpuEntry.binding == CacheOffset + SrcRes.ArrayIndex);
 
-        static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 9, "Please update the switch below to handle the new bind group entry type");
+        static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
         switch (DstRes.Type)
         {
             case BindGroupEntryType::UniformBuffer:
+            case BindGroupEntryType::UniformBufferDynamic:
             {
                 const BufferWebGPUImpl* pBuffWGPU = DstRes.pObject.ConstPtr<BufferWebGPUImpl>();
 
@@ -290,7 +329,9 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
             break;
 
             case BindGroupEntryType::StorageBuffer:
+            case BindGroupEntryType::StorageBufferDynamic:
             case BindGroupEntryType::StorageBuffer_ReadOnly:
+            case BindGroupEntryType::StorageBufferDynamic_ReadOnly:
             {
                 const BufferViewWebGPUImpl* pBuffViewWGPU = DstRes.pObject.ConstPtr<BufferViewWebGPUImpl>();
                 const BufferWebGPUImpl*     pBuffWGPU     = pBuffViewWGPU->GetBuffer<const BufferWebGPUImpl>();
