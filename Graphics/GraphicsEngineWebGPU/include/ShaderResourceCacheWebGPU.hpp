@@ -182,6 +182,10 @@ public:
         return SetResource(SetIndex, Offset, {});
     }
 
+    void SetDynamicBufferOffset(Uint32 DescrSetIndex,
+                                Uint32 CacheOffset,
+                                Uint32 DynamicBufferOffset);
+
     Uint32 GetNumBindGroups() const { return m_NumBindGroups; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
 

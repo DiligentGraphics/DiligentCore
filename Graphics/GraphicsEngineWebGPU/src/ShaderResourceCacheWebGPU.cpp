@@ -338,6 +338,23 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
 }
 
 
+void ShaderResourceCacheWebGPU::SetDynamicBufferOffset(Uint32 DescrSetIndex,
+                                                       Uint32 CacheOffset,
+                                                       Uint32 DynamicBufferOffset)
+{
+    BindGroup& Group  = GetBindGroup(DescrSetIndex);
+    Resource&  DstRes = Group.GetResource(CacheOffset);
+
+    DEV_CHECK_ERR(DstRes.pObject, "Setting dynamic offset when no object is bound");
+    const auto* pBufferWGPU = DstRes.Type == BindGroupEntryType::UniformBuffer ?
+        DstRes.pObject.ConstPtr<BufferWebGPUImpl>() :
+        DstRes.pObject.ConstPtr<BufferViewWebGPUImpl>()->GetBuffer<const BufferWebGPUImpl>();
+    DEV_CHECK_ERR(DstRes.BufferBaseOffset + DstRes.BufferRangeSize + DynamicBufferOffset <= pBufferWGPU->GetDesc().Size,
+                  "Specified offset is out of buffer bounds");
+
+    DstRes.BufferDynamicOffset = DynamicBufferOffset;
+}
+
 void ShaderResourceCacheWebGPU::CommitBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout)
 {
     BindGroup& Group = GetBindGroup(GroupIndex);

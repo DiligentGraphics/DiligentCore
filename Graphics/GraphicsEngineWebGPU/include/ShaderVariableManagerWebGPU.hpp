@@ -31,28 +31,22 @@
 
 #include "EngineWebGPUImplTraits.hpp"
 #include "ShaderResourceVariableBase.hpp"
+#include "ShaderResourceCacheWebGPU.hpp"
+#include "PipelineResourceAttribsWebGPU.hpp"
 
 namespace Diligent
 {
 
-class ShaderVariableManagerWebGPU : ShaderVariableManagerBase<EngineWebGPUImplTraits, void>
+class ShaderVariableWebGPUImpl;
+
+class ShaderVariableManagerWebGPU : ShaderVariableManagerBase<EngineWebGPUImplTraits, ShaderVariableWebGPUImpl>
 {
 public:
-    using TBase = ShaderVariableManagerBase<EngineWebGPUImplTraits, void>;
-
-    ShaderVariableManagerWebGPU(IObject& Owner, ShaderResourceCacheWebGPU& ResourceCache) noexcept;
-
-    ~ShaderVariableManagerWebGPU();
-
-    // clang-format off
-    ShaderVariableManagerWebGPU             (const ShaderVariableManagerWebGPU&)  = delete;
-
-    ShaderVariableManagerWebGPU& operator = (const ShaderVariableManagerWebGPU&)  = delete;
-
-    ShaderVariableManagerWebGPU             (      ShaderVariableManagerWebGPU&&) = delete;
-
-    ShaderVariableManagerWebGPU& operator = (      ShaderVariableManagerWebGPU&&) = delete;
-    // clang-format on
+    using TBase = ShaderVariableManagerBase<EngineWebGPUImplTraits, ShaderVariableWebGPUImpl>;
+    ShaderVariableManagerWebGPU(IObject&                   Owner,
+                                ShaderResourceCacheWebGPU& ResourceCache) noexcept :
+        TBase{Owner, ResourceCache}
+    {}
 
     void Initialize(const PipelineResourceSignatureWebGPUImpl& Signature,
                     IMemoryAllocator&                          Allocator,
@@ -62,16 +56,18 @@ public:
 
     void Destroy(IMemoryAllocator& Allocator);
 
-    static size_t GetRequiredMemorySize(const PipelineResourceSignatureWebGPUImpl& Signature,
-                                        const SHADER_RESOURCE_VARIABLE_TYPE*       AllowedVarTypes,
-                                        Uint32                                     NumAllowedTypes,
-                                        SHADER_TYPE                                ShaderType);
+    ShaderVariableWebGPUImpl* GetVariable(const Char* Name) const;
+    ShaderVariableWebGPUImpl* GetVariable(Uint32 Index) const;
 
-    using ResourceAttribs = PipelineResourceAttribsWebGPU;
+    // Binds object pObj to resource with index ResIndex and array index ArrayIndex.
+    void BindResource(Uint32 ResIndex, const BindResourceInfo& BindInfo);
 
-    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
+    void SetBufferDynamicOffset(Uint32 ResIndex,
+                                Uint32 ArrayIndex,
+                                Uint32 BufferDynamicOffset);
 
-    const ResourceAttribs& GetResourceAttribs(Uint32 Index) const;
+    IDeviceObject* Get(Uint32 ArrayIndex,
+                       Uint32 ResIndex) const;
 
     void BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags);
 
@@ -79,29 +75,65 @@ public:
                         BIND_SHADER_RESOURCES_FLAGS          Flags,
                         SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const;
 
-    IShaderResourceVariable* GetVariable(const Char* Name) const;
+    static size_t GetRequiredMemorySize(const PipelineResourceSignatureWebGPUImpl& Signature,
+                                        const SHADER_RESOURCE_VARIABLE_TYPE*       AllowedVarTypes,
+                                        Uint32                                     NumAllowedTypes,
+                                        SHADER_TYPE                                ShaderStages,
+                                        Uint32*                                    pNumVariables = nullptr);
 
-    IShaderResourceVariable* GetVariable(Uint32 Index) const;
+    Uint32 GetVariableCount() const { return m_NumVariables; }
 
     IObject& GetOwner() { return m_Owner; }
 
-    Uint32 GetVariableCount() const;
+private:
+    friend TBase;
+    friend ShaderVariableWebGPUImpl;
+    friend ShaderVariableBase<ShaderVariableWebGPUImpl, ShaderVariableManagerWebGPU, IShaderResourceVariable>;
 
-    Uint32 GetVariableIndex(const IShaderResourceVariable& Variable) const;
+    using ResourceAttribs = PipelineResourceAttribsWebGPU;
 
-    Uint32 GetNumCBs() const;
+    Uint32 GetVariableIndex(const ShaderVariableWebGPUImpl& Variable);
 
-    Uint32 GetNumTexSRVs() const;
-
-    Uint32 GetNumTexUAVs() const;
-
-    Uint32 GetNumBufSRVs() const;
-
-    Uint32 GetNumBufUAVs() const;
-
-    Uint32 GetNumSamplers() const;
+    // These two methods can't be implemented in the header because they depend on PipelineResourceSignatureWebGPUImpl
+    const PipelineResourceDesc& GetResourceDesc(Uint32 Index) const;
+    const ResourceAttribs&      GetResourceAttribs(Uint32 Index) const;
 
 private:
+    Uint32 m_NumVariables = 0;
+};
+
+class ShaderVariableWebGPUImpl final : public ShaderVariableBase<ShaderVariableWebGPUImpl, ShaderVariableManagerWebGPU, IShaderResourceVariable>
+{
+public:
+    using TBase = ShaderVariableBase<ShaderVariableWebGPUImpl, ShaderVariableManagerWebGPU, IShaderResourceVariable>;
+
+    ShaderVariableWebGPUImpl(ShaderVariableManagerWebGPU& ParentManager,
+                             Uint32                       ResIndex) :
+        TBase{ParentManager, ResIndex}
+    {}
+
+    // clang-format off
+    ShaderVariableWebGPUImpl           (const ShaderVariableWebGPUImpl&)  = delete;
+    ShaderVariableWebGPUImpl           (      ShaderVariableWebGPUImpl&&) = delete;
+    ShaderVariableWebGPUImpl& operator=(const ShaderVariableWebGPUImpl&)  = delete;
+    ShaderVariableWebGPUImpl& operator=(      ShaderVariableWebGPUImpl&&) = delete;
+    // clang-format on
+
+    virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
+    {
+        return m_ParentManager.Get(ArrayIndex, m_ResIndex);
+    }
+
+    void BindResource(const BindResourceInfo& BindInfo) const
+    {
+        m_ParentManager.BindResource(m_ResIndex, BindInfo);
+    }
+
+    void SetDynamicOffset(Uint32 ArrayIndex,
+                          Uint32 BufferDynamicOffset) const
+    {
+        m_ParentManager.SetBufferDynamicOffset(m_ResIndex, ArrayIndex, BufferDynamicOffset);
+    }
 };
 
 } // namespace Diligent

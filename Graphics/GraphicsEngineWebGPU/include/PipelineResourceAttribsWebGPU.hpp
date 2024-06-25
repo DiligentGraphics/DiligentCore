@@ -29,6 +29,7 @@
 /// Declaration of Diligent::PipelineResourceAttribsWebGPU struct
 
 #include "HashUtils.hpp"
+#include "ShaderResourceCacheCommon.hpp"
 
 namespace Diligent
 {
@@ -64,6 +65,9 @@ public:
     const Uint32 ImtblSamplerAssigned : _SamplerAssignedBits;
     // clang-format on
 
+    // TODO
+    Uint32 BindGroup    = ~0u;
+    Uint32 BindingIndex = ~0u;
 
     PipelineResourceAttribsWebGPU(Uint32 _SamplerInd,
                                   bool   _ImtblSamplerAssigned) noexcept :
@@ -73,6 +77,18 @@ public:
     // clang-format on
     {
         VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value.");
+    }
+
+    Uint32 CacheOffset(ResourceCacheContentType CacheType) const
+    {
+        UNSUPPORTED("Not implemented yet");
+        return ~0u;
+    }
+
+    BindGroupEntryType GetBindGroupEntryType() const
+    {
+        UNSUPPORTED("Not implemented yet");
+        return BindGroupEntryType::Count;
     }
 
     // Only for serialization
@@ -96,6 +112,12 @@ public:
         // clang-format off
         return IsImmutableSamplerAssigned() == RHS.IsImmutableSamplerAssigned();
         // clang-format on
+    }
+
+    bool IsCombinedWithSampler() const
+    {
+        UNSUPPORTED("Not implemented yet");
+        return false;
     }
 
     size_t GetHash() const

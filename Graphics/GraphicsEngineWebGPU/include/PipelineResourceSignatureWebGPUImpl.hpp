@@ -73,6 +73,8 @@ public:
 
     ~PipelineResourceSignatureWebGPUImpl();
 
+    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
+
     struct ImmutableSamplerAttribs : PipelineResourceImmutableSamplerAttribsWebGPU
     {
         RefCntAutoPtr<SamplerWebGPUImpl> pSampler;
