@@ -33,17 +33,17 @@
 namespace Diligent
 {
 
-enum class DescriptorType : Uint8
+enum class BindGroupEntryType : Uint8
 {
-    Sampler,
-    SampledTexture,
-    StorageTexture,
     UniformBuffer,
-    UniformBufferDynamic,
     StorageBuffer,
-    StorageBufferReadOnly,
-    StorageBufferDynamic,
-    StorageBufferDynamicReadOnly,
+    StorageBuffer_ReadOnly,
+    Texture,
+    StorageTexture_WriteOnly,
+    StorageTexture_ReadOnly,
+    StorageTexture_ReadWrite,
+    ExternalTexture,
+    Sampler,
     Count
 };
 
@@ -52,6 +52,9 @@ struct PipelineResourceAttribsWebGPU
 private:
     static constexpr Uint32 _SamplerIndBits      = 31;
     static constexpr Uint32 _SamplerAssignedBits = 1;
+
+public:
+    static constexpr Uint32 MaxBindGroups = 2; //(1u << _DescrSetBits);
 
 public:
     static constexpr Uint32 InvalidSamplerInd = (1u << _SamplerIndBits) - 1;

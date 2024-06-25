@@ -74,6 +74,11 @@ public:
         return m_ObjectHandle;
     }
 
+    operator WebGPUObjectType() const
+    {
+        return m_ObjectHandle;
+    }
+
     void Reset(WebGPUObjectType Handle = nullptr)
     {
         if (m_ObjectHandle != Handle)
