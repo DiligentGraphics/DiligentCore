@@ -207,7 +207,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
             NumMips,
             0, // Array slices are relative to the view's first array slice
             0,
-            1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight)};
+            {1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight)}};
 
         Ctx.GetCommandList()->SetComputeRoot32BitConstants(0, 6, &CBData, 0);
 

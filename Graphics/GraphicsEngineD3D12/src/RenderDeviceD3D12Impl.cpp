@@ -142,12 +142,6 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         AdapterInfo
     },
     m_pd3d12Device   {pd3d12Device},
-    m_CmdListManagers
-    {
-        {*this, D3D12_COMMAND_LIST_TYPE_DIRECT},
-        {*this, D3D12_COMMAND_LIST_TYPE_COMPUTE},
-        {*this, D3D12_COMMAND_LIST_TYPE_COPY}
-    },
     m_CPUDescriptorHeaps
     {
         {RawMemAllocator, *this, EngineCI.CPUDescriptorHeapAllocationSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
@@ -159,6 +153,12 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     {
         {RawMemAllocator, *this, EngineCI.GPUDescriptorHeapSize[0], EngineCI.GPUDescriptorHeapDynamicSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE},
         {RawMemAllocator, *this, EngineCI.GPUDescriptorHeapSize[1], EngineCI.GPUDescriptorHeapDynamicSize[1], D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE}
+    },
+    m_CmdListManagers
+    {
+        {*this, D3D12_COMMAND_LIST_TYPE_DIRECT},
+        {*this, D3D12_COMMAND_LIST_TYPE_COMPUTE},
+        {*this, D3D12_COMMAND_LIST_TYPE_COPY}
     },
     m_DynamicMemoryManager  {GetRawAllocator(), *this, EngineCI.NumDynamicHeapPagesToReserve, EngineCI.DynamicHeapPageSize},
     m_MipsGenerator         {pd3d12Device},
@@ -283,11 +283,11 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
     ReleaseStaleResources(true);
 
 #ifdef DILIGENT_DEVELOPMENT
-    for (auto i = 0; i < _countof(m_CPUDescriptorHeaps); ++i)
+    for (size_t i = 0; i < _countof(m_CPUDescriptorHeaps); ++i)
     {
         DEV_CHECK_ERR(m_CPUDescriptorHeaps[i].DvpGetTotalAllocationCount() == 0, "All CPU descriptor heap allocations must be released");
     }
-    for (auto i = 0; i < _countof(m_GPUDescriptorHeaps); ++i)
+    for (size_t i = 0; i < _countof(m_GPUDescriptorHeaps); ++i)
     {
         DEV_CHECK_ERR(m_GPUDescriptorHeaps[i].DvpGetTotalAllocationCount() == 0, "All GPU descriptor heap allocations must be released");
     }
@@ -490,7 +490,7 @@ void RenderDeviceD3D12Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
     auto DXGIFormat = TexFormatToDXGI_Format(TexFormat);
 
-    D3D12_FEATURE_DATA_FORMAT_SUPPORT FormatSupport = {DXGIFormat};
+    D3D12_FEATURE_DATA_FORMAT_SUPPORT FormatSupport = {DXGIFormat, {}, {}};
 
     auto hr = m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport));
     if (FAILED(hr))
@@ -524,7 +524,7 @@ void RenderDeviceD3D12Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     TexFormatInfo.SampleCounts = SAMPLE_COUNT_NONE;
     for (Uint32 SampleCount = 1; SampleCount <= D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; SampleCount *= 2)
     {
-        D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS QualityLevels = {DXGIFormat, SampleCount};
+        D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS QualityLevels = {DXGIFormat, SampleCount, {}, {}};
 
         hr = m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &QualityLevels, sizeof(QualityLevels));
         if (SUCCEEDED(hr) && QualityLevels.NumQualityLevels > 0)
@@ -718,8 +718,9 @@ SparseTextureFormatInfo RenderDeviceD3D12Impl::GetSparseTextureFormatInfo(TEXTUR
                                                                           Uint32             SampleCount) const
 {
     D3D12_FEATURE_DATA_FORMAT_SUPPORT FormatSupport{
-        TexFormatToDXGI_Format(TexFormat) // .Format
-    };
+        TexFormatToDXGI_Format(TexFormat), // .Format
+        {},
+        {}};
     if (FAILED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport))) ||
         (FormatSupport.Support2 & D3D12_FORMAT_SUPPORT2_TILED) != D3D12_FORMAT_SUPPORT2_TILED)
     {

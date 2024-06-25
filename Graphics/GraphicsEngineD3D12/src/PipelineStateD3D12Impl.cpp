@@ -304,7 +304,7 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
 
 PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(const ShaderD3D12Impl* pShader) :
     Type{pShader->GetDesc().ShaderType},
-    Shaders{{pShader}},
+    Shaders{pShader},
     ByteCodes{{RefCntAutoPtr<IDataBlob>{pShader->GetD3DBytecode()}}}
 {
 }

@@ -180,7 +180,7 @@ protected:
 template <typename EngineImplTraits>
 class PipelineStateBase : public DeviceObjectBase<typename EngineImplTraits::PipelineStateInterface, typename EngineImplTraits::RenderDeviceImplType, PipelineStateDesc>
 {
-private:
+protected:
     // Base interface this class inherits (IPipelineStateD3D12, IPipelineStateVk, etc.)
     using BaseInterface = typename EngineImplTraits::PipelineStateInterface;
 

@@ -150,7 +150,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
     }
 
     {
-        D3D12_RENDER_TARGET_VIEW_DESC NullRTVDesc{DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RTV_DIMENSION_TEXTURE2D};
+        D3D12_RENDER_TARGET_VIEW_DESC NullRTVDesc{DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RTV_DIMENSION_TEXTURE2D, {}};
         // A null pResource is used to initialize a null descriptor, which guarantees D3D11-like null binding behavior
         // (reading 0s, writes are discarded), but must have a valid pDesc in order to determine the descriptor type.
         // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createrendertargetview

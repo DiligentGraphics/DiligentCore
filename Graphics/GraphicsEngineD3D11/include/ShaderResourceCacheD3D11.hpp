@@ -563,10 +563,6 @@ __forceinline Uint32 ShaderResourceCacheD3D11::GetResourceDataOffset<D3D11_RESOU
     return m_Offsets[FirstUAVOffsetIdx + ShaderInd];
 }
 
-// Instantiate templates
-template void ShaderResourceCacheD3D11::TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Transition>(DeviceContextD3D11Impl& Ctx);
-template void ShaderResourceCacheD3D11::TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Verify>(DeviceContextD3D11Impl& Ctx);
-
 template <D3D11_RESOURCE_RANGE Range>
 inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindResources(
     Uint32                                                   ShaderInd,
@@ -838,7 +834,7 @@ inline void ShaderResourceCacheD3D11::SetResource(
         auto& pd3d11Res = ResArrays.second[Binding];
         // Do not move the resource as we need to set it for multiple stages!
         CachedRes.Set(pResource, ExtraArgs...);
-        pd3d11Res = ResArrays.first[Binding].GetD3D11Resource<ResRange>();
+        pd3d11Res = ResArrays.first[Binding].template GetD3D11Resource<ResRange>();
 
         VERIFY((CachedRes && pd3d11Res != nullptr || !CachedRes && pd3d11Res == nullptr),
                "Resource and D3D11 resource must be set/unset atomically");

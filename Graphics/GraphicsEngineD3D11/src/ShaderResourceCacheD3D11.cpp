@@ -186,6 +186,10 @@ void ShaderResourceCacheD3D11::TransitionResourceStates(DeviceContextD3D11Impl& 
     TransitionResources<Mode>(Ctx, static_cast<ID3D11UnorderedAccessView*>(nullptr));
 }
 
+// Instantiate templates
+template void ShaderResourceCacheD3D11::TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Transition>(DeviceContextD3D11Impl& Ctx);
+template void ShaderResourceCacheD3D11::TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Verify>(DeviceContextD3D11Impl& Ctx);
+
 template <ShaderResourceCacheD3D11::StateTransitionMode Mode>
 void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, const ID3D11Buffer* /*Selector*/) const
 {
