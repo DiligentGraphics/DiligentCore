@@ -200,14 +200,22 @@ void BufferWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData
 
     if (MapType == MAP_READ)
     {
+        struct CallbackCaptureData
+        {
+            BufferWebGPUImpl* pBuffer;
+            bool              IsMapped;
+        } CallbackCapture{this, false};
+
         auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
             if (MapStatus == WGPUBufferMapAsyncStatus_Success)
             {
-                auto*       pThis = static_cast<BufferWebGPUImpl*>(pUserData);
-                const auto* pData = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(pThis->m_wgpuBuffer.Get(), 0, StaticCast<size_t>(pThis->m_Desc.Size)));
+                auto*       pCaptureData = static_cast<CallbackCaptureData*>(pUserData);
+                auto*       pBuffer      = pCaptureData->pBuffer;
+                const auto* pData        = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(pBuffer->m_wgpuBuffer.Get(), 0, StaticCast<size_t>(pBuffer->m_Desc.Size)));
                 VERIFY_EXPR(pUserData != nullptr);
-                memcpy(pThis->m_MappedData.data(), pData, StaticCast<size_t>(pThis->m_Desc.Size));
-                wgpuBufferUnmap(pThis->m_wgpuBuffer.Get());
+                memcpy(pBuffer->m_MappedData.data(), pData, StaticCast<size_t>(pBuffer->m_Desc.Size));
+                wgpuBufferUnmap(pBuffer->m_wgpuBuffer.Get());
+                pCaptureData->IsMapped = true;
             }
             else
             {
@@ -215,10 +223,10 @@ void BufferWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData
             }
         };
 
-        wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Read, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, this);
-#if !PLATFORM_EMSCRIPTEN
-        wgpuQueueSubmit(wgpuDeviceGetQueue(m_pDevice->GetWebGPUDevice()), 0, nullptr);
-#endif
+        wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Read, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, &CallbackCapture);
+        while (!CallbackCapture.IsMapped)
+            m_pDevice->PollEvents(false);
+
         pMappedData = m_MappedData.data();
     }
     else if (MapType == MAP_WRITE)
@@ -245,14 +253,22 @@ void BufferWebGPUImpl::Unmap(MAP_TYPE MapType)
     }
     else if (MapType == MAP_WRITE)
     {
+        struct CallbackCaptureData
+        {
+            BufferWebGPUImpl* pBuffer;
+            bool              IsMapped;
+        } CallbackCapture{this, false};
+
         auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
             if (MapStatus == WGPUBufferMapAsyncStatus_Success)
             {
-                auto* pThis = static_cast<BufferWebGPUImpl*>(pUserData);
-                auto* pData = static_cast<uint8_t*>(wgpuBufferGetMappedRange(pThis->m_wgpuBuffer.Get(), 0, StaticCast<size_t>(pThis->m_Desc.Size)));
+                auto* pCaptureData = static_cast<CallbackCaptureData*>(pUserData);
+                auto* pBuffer      = pCaptureData->pBuffer;
+                auto* pData        = static_cast<uint8_t*>(wgpuBufferGetMappedRange(pBuffer->m_wgpuBuffer.Get(), 0, StaticCast<size_t>(pBuffer->m_Desc.Size)));
                 VERIFY_EXPR(pUserData != nullptr);
-                memcpy(pData, pThis->m_MappedData.data(), StaticCast<size_t>(pThis->m_Desc.Size));
-                wgpuBufferUnmap(pThis->m_wgpuBuffer.Get());
+                memcpy(pData, pBuffer->m_MappedData.data(), StaticCast<size_t>(pBuffer->m_Desc.Size));
+                wgpuBufferUnmap(pBuffer->m_wgpuBuffer.Get());
+                pCaptureData->IsMapped = true;
             }
             else
             {
@@ -260,10 +276,9 @@ void BufferWebGPUImpl::Unmap(MAP_TYPE MapType)
             }
         };
 
-        wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Write, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, this);
-#if !PLATFORM_EMSCRIPTEN
-        wgpuQueueSubmit(wgpuDeviceGetQueue(m_pDevice->GetWebGPUDevice()), 0, nullptr);
-#endif
+        wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Write, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, &CallbackCapture);
+        while (!CallbackCapture.IsMapped)
+            m_pDevice->PollEvents(false);
     }
     else if (MapType == MAP_READ_WRITE)
     {

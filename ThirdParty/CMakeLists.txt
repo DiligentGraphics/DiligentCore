@@ -160,19 +160,11 @@ if (VULKAN_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR 
 endif()
 
 if (WEBGPU_SUPPORTED)
-    get_property(ARCH_CACHE_VALUE CACHE ARCH PROPERTY VALUE)
-    unset(ARCH CACHE)
-    add_subdirectory(webgpu)
-    set_directory_root_folder("webgpu" "DiligentCore/ThirdParty/webgpu")
-    set(ARCH "${ARCH_CACHE_VALUE}" CACHE INTERNAL "")
+    add_subdirectory(abseil-cpp EXCLUDE_FROM_ALL)
+    set_directory_root_folder("abseil-cpp" "DiligentCore/ThirdParty")
 
-    if (NOT DILIGENT_NO_HLSL)
-        add_subdirectory(abseil-cpp EXCLUDE_FROM_ALL)
-        set_directory_root_folder("abseil-cpp" "DiligentCore/ThirdParty/abseil-cpp")
-        
-        add_subdirectory(tint EXCLUDE_FROM_ALL)
-        set_directory_root_folder("tint" "DiligentCore/ThirdParty/tint")
-    endif()
+    add_subdirectory(dawn EXCLUDE_FROM_ALL)
+    set_directory_root_folder("dawn" "DiligentCore/ThirdParty/dawn")
 endif()
 
 if ((${DILIGENT_BUILD_GOOGLE_TEST}) AND (NOT TARGET gtest))

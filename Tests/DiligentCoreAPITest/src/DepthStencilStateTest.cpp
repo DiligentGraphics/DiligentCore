@@ -78,7 +78,8 @@ TEST_F(DepthStencilStateTest, CreatePSO)
     EXPECT_EQ(TestRenderDeviceCInterface_CreateGraphicsPipelineState(pDevice, &PSOCreateInfo), 0);
 
     {
-        DSSDesc.DepthEnable = True;
+        DSSDesc.DepthEnable                      = True;
+        PSOCreateInfo.GraphicsPipeline.DSVFormat = TEX_FORMAT_D32_FLOAT_S8X24_UINT;
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);

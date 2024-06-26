@@ -483,7 +483,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
             {
                 case 2: return WGPUVertexFormat_Float16x2;
                 case 4: return WGPUVertexFormat_Float16x4;
-                default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
             }
         }
         case VT_FLOAT32:
@@ -495,7 +495,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 case 2: return WGPUVertexFormat_Float32x2;
                 case 3: return WGPUVertexFormat_Float32x3;
                 case 4: return WGPUVertexFormat_Float32x4;
-                default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
             }
         }
         case VT_INT32:
@@ -507,7 +507,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 case 2: return WGPUVertexFormat_Sint32x2;
                 case 3: return WGPUVertexFormat_Sint32x3;
                 case 4: return WGPUVertexFormat_Sint32x4;
-                default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
             }
         }
         case VT_UINT32:
@@ -519,7 +519,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 case 2: return WGPUVertexFormat_Uint32x2;
                 case 3: return WGPUVertexFormat_Uint32x3;
                 case 4: return WGPUVertexFormat_Uint32x4;
-                default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
             }
         }
         case VT_INT16:
@@ -530,7 +530,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 {
                     case 2: return WGPUVertexFormat_Snorm16x2;
                     case 4: return WGPUVertexFormat_Snorm16x4;
-                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
                 }
             }
             else
@@ -539,7 +539,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 {
                     case 2: return WGPUVertexFormat_Sint16x2;
                     case 4: return WGPUVertexFormat_Sint16x4;
-                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
                 }
             }
         }
@@ -551,7 +551,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 {
                     case 2: return WGPUVertexFormat_Unorm16x2;
                     case 4: return WGPUVertexFormat_Unorm16x4;
-                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
                 }
             }
             else
@@ -560,7 +560,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 {
                     case 2: return WGPUVertexFormat_Uint16x2;
                     case 4: return WGPUVertexFormat_Uint16x4;
-                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
                 }
             }
         }
@@ -572,7 +572,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 {
                     case 2: return WGPUVertexFormat_Snorm8x2;
                     case 4: return WGPUVertexFormat_Snorm8x4;
-                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
                 }
             }
             else
@@ -581,7 +581,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 {
                     case 2: return WGPUVertexFormat_Sint8x2;
                     case 4: return WGPUVertexFormat_Sint8x4;
-                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
                 }
             }
         }
@@ -593,7 +593,7 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 {
                     case 2: return WGPUVertexFormat_Unorm8x2;
                     case 4: return WGPUVertexFormat_Unorm8x4;
-                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
                 }
             }
             else
@@ -602,12 +602,12 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
                 {
                     case 2: return WGPUVertexFormat_Uint8x2;
                     case 4: return WGPUVertexFormat_Uint8x4;
-                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Undefined;
+                    default: UNEXPECTED("Unusupported number of components"); return WGPUVertexFormat_Force32;
                 }
             }
         }
 
-        default: UNEXPECTED("Unusupported format"); return WGPUVertexFormat_Undefined;
+        default: UNEXPECTED("Unusupported format"); return WGPUVertexFormat_Force32;
     }
 }
 

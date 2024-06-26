@@ -31,7 +31,7 @@
 #include "RenderDeviceWebGPU.h"
 #include "DeviceContextWebGPU.h"
 #include "TextureWebGPU.h"
-#include "webgpu/wgpu.h"
+#include "webgpu/webgpu.h"
 
 
 namespace Diligent
@@ -207,7 +207,8 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
             }
         },
         this);
-    wgpuDevicePoll(m_wgpuDevice, true, nullptr);
+
+    wgpuDeviceTick(m_wgpuDevice);
 }
 
 void CreateTestingSwapChainWebGPU(TestingEnvironmentWebGPU* pEnv,

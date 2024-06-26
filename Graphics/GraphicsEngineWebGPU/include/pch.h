@@ -37,7 +37,3 @@
 #include <unordered_map>
 
 #include <webgpu/webgpu.h>
-
-#if !PLATFORM_EMSCRIPTEN
-#    include <webgpu/wgpu.h>
-#endif

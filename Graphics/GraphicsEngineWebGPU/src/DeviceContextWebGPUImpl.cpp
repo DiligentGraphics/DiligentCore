@@ -1047,6 +1047,7 @@ void DeviceContextWebGPUImpl::ResolveTextureSubresource(ITexture*               
         wgpuRenderPassColorAttachment.storeOp       = WGPUStoreOp_Discard;
         wgpuRenderPassColorAttachment.view          = pSrcRTVWebGPU->GetWebGPUTextureView();
         wgpuRenderPassColorAttachment.resolveTarget = pDstRTVWebGPU->GetWebGPUTextureView();
+        wgpuRenderPassColorAttachment.depthSlice    = WGPU_DEPTH_SLICE_UNDEFINED;
 
         wgpuRenderPassDesc.colorAttachmentCount = 1;
         wgpuRenderPassDesc.colorAttachments     = &wgpuRenderPassColorAttachment;
@@ -1144,6 +1145,7 @@ void DeviceContextWebGPUImpl::CommitRenderTargets()
             wgpuRenderPassColorAttachments[RTIndex].storeOp    = WGPUStoreOp_Store;
             wgpuRenderPassColorAttachments[RTIndex].loadOp     = m_PendingClears.ColorPending(RTIndex) ? WGPULoadOp_Clear : WGPULoadOp_Load;
             wgpuRenderPassColorAttachments[RTIndex].clearValue = WGPUColor{ClearColor[0], ClearColor[1], ClearColor[2], ClearColor[3]};
+            wgpuRenderPassColorAttachments[RTIndex].depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
         }
 
         wgpuRenderPassDesc.colorAttachments     = wgpuRenderPassColorAttachments;
@@ -1194,8 +1196,9 @@ void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
             const auto  FirstLastUse     = m_pActiveRenderPass->GetAttachmentFirstLastUse(RTAttachmentRef.AttachmentIndex);
             const auto& RTAttachmentDesc = RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex];
 
-            RenderPassColorAttachments[RTIndex].view   = pRTV->GetWebGPUTextureView();
-            RenderPassColorAttachments[RTIndex].loadOp = FirstLastUse.first == m_SubpassIndex ? AttachmentLoadOpToWGPULoadOp(RTAttachmentDesc.LoadOp) : WGPULoadOp_Load;
+            RenderPassColorAttachments[RTIndex].view       = pRTV->GetWebGPUTextureView();
+            RenderPassColorAttachments[RTIndex].loadOp     = FirstLastUse.first == m_SubpassIndex ? AttachmentLoadOpToWGPULoadOp(RTAttachmentDesc.LoadOp) : WGPULoadOp_Load;
+            RenderPassColorAttachments[RTIndex].depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
             if (RTAttachmentDesc.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
             {

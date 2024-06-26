@@ -73,10 +73,6 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                             "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/spv_dxcompiler.dll\"")
                 endif()
             endif()
-
-            if (WEBGPU_SUPPORTED)
-                target_copy_webgpu_binaries(${TARGET_NAME})
-            endif()
         endif()
     endfunction()
 
@@ -385,9 +381,6 @@ function(install_combined_static_lib COMBINED_LIB_NAME LIBS_LIST CUSTOM_TARGET_N
     endif()
 
 endfunction()
-
-
-
 
 function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
 

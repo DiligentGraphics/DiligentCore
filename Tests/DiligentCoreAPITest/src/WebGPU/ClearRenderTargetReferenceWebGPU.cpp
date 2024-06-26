@@ -45,6 +45,7 @@ void ClearRenderTargetReferenceWebGPU(ISwapChain* pSwapChain, const float ClearC
     wgpuRenderPassColorAttachment.loadOp     = WGPULoadOp_Clear;
     wgpuRenderPassColorAttachment.storeOp    = WGPUStoreOp_Store;
     wgpuRenderPassColorAttachment.clearValue = WGPUColor{ClearColor[0], ClearColor[1], ClearColor[2], ClearColor[3]};
+    wgpuRenderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
     WGPURenderPassDescriptor wgpuRenderPassDesc = {};
     wgpuRenderPassDesc.colorAttachmentCount     = 1;

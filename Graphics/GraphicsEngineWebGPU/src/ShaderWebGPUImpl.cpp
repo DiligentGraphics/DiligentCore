@@ -72,25 +72,6 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&             S
     return SPIRV;
 }
 
-// TODO: Remove this code when WGPU can handle diagnostic pragmas
-void ExtractDiagnosticAttribute(std::string& WGSL)
-{
-    std::string DiagnosticStart = "diagnostic(";
-    std::string DiagnosticEnd   = ");";
-
-    size_t StartPos = WGSL.find(DiagnosticStart);
-    if (StartPos != std::string::npos)
-    {
-        size_t EndPos = WGSL.find(DiagnosticEnd, StartPos);
-        if (EndPos != std::string::npos)
-        {
-            EndPos += DiagnosticEnd.length();
-
-            WGSL.erase(StartPos, EndPos - StartPos);
-        }
-    }
-}
-
 std::string ConvertSPIRVtoWGSL(const std::vector<Uint32>& SPIRV)
 {
     std::string WGSL;
@@ -109,7 +90,6 @@ std::string ConvertSPIRVtoWGSL(const std::vector<Uint32>& SPIRV)
     if (GenerationResult != tint::Success)
         LOG_ERROR_AND_THROW("Tint WGSL writer failure:\nGeneate: " + GenerationResult.Failure().reason.Str() + "\n");
     WGSL = std::move(GenerationResult->wgsl);
-    ExtractDiagnosticAttribute(WGSL);
 #endif
     return WGSL;
 }
