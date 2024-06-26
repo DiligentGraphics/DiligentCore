@@ -53,7 +53,7 @@ static DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, D3D12_RESOURCE_FLAGS Flags)
             case DXGI_FORMAT_R16_TYPELESS:      return DXGI_FORMAT_D16_UNORM;
             case DXGI_FORMAT_R24G8_TYPELESS:    return DXGI_FORMAT_D24_UNORM_S8_UINT;
             case DXGI_FORMAT_R32G8X24_TYPELESS: return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-            default: break;
+            default: return Fmt;
         }
         // clang-format on
     }
@@ -75,7 +75,7 @@ static DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, D3D12_RESOURCE_FLAGS Flags)
             case DXGI_FORMAT_R8_TYPELESS:           return DXGI_FORMAT_R8_UNORM;
             case DXGI_FORMAT_B8G8R8A8_TYPELESS:     return DXGI_FORMAT_B8G8R8A8_UNORM;
             case DXGI_FORMAT_B8G8R8X8_TYPELESS:     return DXGI_FORMAT_B8G8R8X8_UNORM;
-            default: break;
+            default: return Fmt;
         }
         // clang-format on
     }
