@@ -466,7 +466,14 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CLANG_RELEASE_OPTIONS -Wno-unused-variable ${DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS})
     target_compile_options(Diligent-BuildSettings INTERFACE $<$<NOT:$<CONFIG:Debug>>:${CLANG_RELEASE_OPTIONS}>)
 
-    if (PLATFORM_APPLE)
+    if (PLATFORM_WIN32)
+        target_compile_options(Diligent-BuildSettings
+        INTERFACE
+            -Wno-microsoft-exception-spec
+            -Wno-tautological-constant-out-of-range-compare
+            -Wno-enum-constexpr-conversion
+        )
+    elseif (PLATFORM_APPLE)
         # Allow unavailable API warnings not being errors as they tend to randomly
         # appear in new versions of XCode.
         # Besides, there is a known long-standing issue in simulator SDK:

@@ -61,7 +61,11 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(const IDataBlob*  pShaderBytecode,
             CombinedSamplerSuffix{_CombinedSamplerSuffix},
             Resources            {_Resources            }
         // clang-format on
-        {}
+        {
+            // Silence "private field is never used" compile error
+            (void)ShdrDesc;
+            (void)CombinedSamplerSuffix;
+        }
 
         void OnNewCB(const D3DShaderResourceAttribs& CBAttribs)
         {

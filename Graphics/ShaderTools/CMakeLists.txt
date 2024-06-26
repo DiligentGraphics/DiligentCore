@@ -125,9 +125,11 @@ if (DXC_SUPPORTED)
         target_compile_options(Diligent-ShaderTools PRIVATE -fms-extensions)
     endif()
 
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
-        CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-        target_link_libraries(Diligent-ShaderTools PRIVATE dl)
+    if (NOT PLATFORM_WIN32)
+        if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
+            CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+            target_link_libraries(Diligent-ShaderTools PRIVATE dl)
+        endif()
     endif()
 endif()
 

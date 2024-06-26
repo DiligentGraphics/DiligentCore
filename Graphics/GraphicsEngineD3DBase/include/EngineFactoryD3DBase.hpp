@@ -109,13 +109,18 @@ public:
         }
 
         UINT numModes = 0;
+
         // Get the number of elements
         auto hr = pOutput->GetDisplayModeList(DXIGFormat, 0, &numModes, NULL);
+        (void)hr; // Suppress warning
+
         if (DisplayModes != nullptr)
         {
             // Get the list
             std::vector<DXGI_MODE_DESC> DXIDisplayModes(numModes);
             hr = pOutput->GetDisplayModeList(DXIGFormat, 0, &numModes, DXIDisplayModes.data());
+            (void)hr; // Suppress warning
+
             for (Uint32 m = 0; m < std::min(NumDisplayModes, numModes); ++m)
             {
                 const auto& SrcMode            = DXIDisplayModes[m];
@@ -300,7 +305,7 @@ protected:
     }
 
 private:
-    template <RENDER_DEVICE_TYPE DevType>
+    template <RENDER_DEVICE_TYPE MyDevType>
     bool CheckAdapterCompatibility(IDXGIAdapter1*    pDXGIAdapter,
                                    D3D_FEATURE_LEVEL FeatureLevels) const;
 

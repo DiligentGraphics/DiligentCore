@@ -430,7 +430,7 @@ void StateTransitionHelper::operator()(ResourceType& Resource)
         // must complete before any future UAV accesses (reads or writes) can begin.
 
         DEV_CHECK_ERR(m_Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "UAV barriers must not be split");
-        D3D12_RESOURCE_BARRIER d3d12Barrier{D3D12_RESOURCE_BARRIER_TYPE_UAV, D3D12_RESOURCE_BARRIER_FLAG_NONE};
+        D3D12_RESOURCE_BARRIER d3d12Barrier{D3D12_RESOURCE_BARRIER_TYPE_UAV, D3D12_RESOURCE_BARRIER_FLAG_NONE, {}};
         d3d12Barrier.UAV.pResource = m_pd3d12Resource;
         m_CmdCtx.ResourceBarrier(d3d12Barrier);
     }

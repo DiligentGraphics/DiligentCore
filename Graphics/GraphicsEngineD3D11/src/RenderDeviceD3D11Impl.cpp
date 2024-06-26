@@ -399,8 +399,8 @@ SparseTextureFormatInfo RenderDeviceD3D11Impl::GetSparseTextureFormatInfo(TEXTUR
                                                                           Uint32             SampleCount) const
 {
     D3D11_FEATURE_DATA_FORMAT_SUPPORT2 FormatSupport2{
-        TexFormatToDXGI_Format(TexFormat) // .InFormat
-    };
+        TexFormatToDXGI_Format(TexFormat), // .InFormat
+        {}};
     if (FAILED(m_pd3d11Device->CheckFeatureSupport(D3D11_FEATURE_FORMAT_SUPPORT2, &FormatSupport2, sizeof(FormatSupport2))) ||
         (FormatSupport2.OutFormatSupport2 & D3D11_FORMAT_SUPPORT2_TILED) != D3D11_FORMAT_SUPPORT2_TILED)
     {
