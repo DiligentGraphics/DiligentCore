@@ -65,6 +65,7 @@ void ComputeShaderReferenceWebGPU(ISwapChain* pSwapChain)
     VERIFY_EXPR(wgpuPipelineLayout != nullptr);
 
     WGPUComputePipelineDescriptor wgpuComputePipelineDesc{};
+    wgpuComputePipelineDesc.label              = "Compute shader test (reference)";
     wgpuComputePipelineDesc.layout             = wgpuPipelineLayout;
     wgpuComputePipelineDesc.compute.module     = wgpuCSModule;
     wgpuComputePipelineDesc.compute.entryPoint = "main";

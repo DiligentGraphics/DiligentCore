@@ -2,14 +2,24 @@ cmake_minimum_required (VERSION 3.11)
 
 FetchContent_DeclareShallowGit(
     abseil-cpp
-    GIT_REPOSITORY         https://github.com/abseil/abseil-cpp.git
-    GIT_TAG                54e1f14c6f9b1a764ffdf8c1aea7e823f95f3d01
+    GIT_REPOSITORY         https://chromium.googlesource.com/chromium/src/third_party/abseil-cpp
+    GIT_TAG                f81f6c011baf9b0132a5594c034fe0060820711d
 )
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
+
+if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
+    add_compile_options(
+        -Wno-array-parameter
+        -Wno-deprecated-builtins
+        -Wno-unknown-warning-option
+    )
+endif()
+
 FetchContent_MakeAvailable(abseil-cpp)
 FetchContent_GetProperties(abseil-cpp SOURCE_DIR abseil-cpp_SOURCE_DIR)
 install(FILES "${abseil-cpp_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME abseil-cpp-License.txt)
-
-# Hack for tint
-add_library(libabsl ALIAS absl_base)

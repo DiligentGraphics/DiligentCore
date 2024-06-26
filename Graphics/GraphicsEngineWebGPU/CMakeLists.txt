@@ -111,8 +111,8 @@ set(PRIVATE_DEPENDENCIES
     Diligent-Common
     Diligent-GraphicsEngine
     Diligent-GraphicsEngineNextGenBase
-    Diligent-ShaderTools 
-    webgpu
+    Diligent-ShaderTools
+    webgpu_dawn
 )
 
 set(PUBLIC_DEPENDENCIES

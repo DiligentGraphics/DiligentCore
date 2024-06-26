@@ -70,8 +70,8 @@ WGPUShaderModule TestingEnvironmentWebGPU::CreateShaderModule(const std::string&
     wgpuShaderCodeDesc.code        = ShaderSource.c_str();
 
     WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
-    wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-    WGPUShaderModule wgpuShaderModule{wgpuDeviceCreateShaderModule(m_wgpuDevice, &wgpuShaderModuleDesc)};
+    wgpuShaderModuleDesc.nextInChain  = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
+    WGPUShaderModule wgpuShaderModule = wgpuDeviceCreateShaderModule(m_wgpuDevice, &wgpuShaderModuleDesc);
     VERIFY_EXPR(wgpuShaderModule != nullptr);
     return wgpuShaderModule;
 }
@@ -87,7 +87,7 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
 
     wgpuQueueSubmit(wgpuCmdQueue, 1, &wgpuCmdBuffer);
     if (WaitForIdle)
-        wgpuDevicePoll(m_wgpuDevice, true, nullptr);
+        wgpuDeviceTick(m_wgpuDevice);
 }
 
 GPUTestingEnvironment* CreateTestingEnvironmentWebGPU(const GPUTestingEnvironment::CreateInfo& CI,

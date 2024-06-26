@@ -350,15 +350,23 @@ void* TextureWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags)
 
     if (MapType == MAP_READ)
     {
+        struct CallbackCaptureData
+        {
+            TextureWebGPUImpl* pTexture;
+            bool               IsMapped;
+        } CallbackCapture{this, false};
+
         auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
             if (MapStatus == WGPUBufferMapAsyncStatus_Success)
             {
-                auto* const pThis    = static_cast<TextureWebGPUImpl*>(pUserData);
-                const auto  DataSize = pThis->m_MappedData.size();
-                const auto* pData    = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(pThis->m_wgpuStagingBuffer.Get(), 0, DataSize));
+                auto*       pCaptureData = static_cast<CallbackCaptureData*>(pUserData);
+                auto*       pTexture     = pCaptureData->pTexture;
+                const auto  DataSize     = pTexture->m_MappedData.size();
+                const auto* pData        = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(pTexture->m_wgpuStagingBuffer.Get(), 0, DataSize));
                 VERIFY_EXPR(pUserData != nullptr);
-                memcpy(pThis->m_MappedData.data(), pData, DataSize);
-                wgpuBufferUnmap(pThis->m_wgpuStagingBuffer.Get());
+                memcpy(pTexture->m_MappedData.data(), pData, DataSize);
+                wgpuBufferUnmap(pTexture->m_wgpuStagingBuffer.Get());
+                pCaptureData->IsMapped = true;
             }
             else
             {
@@ -366,10 +374,10 @@ void* TextureWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags)
             }
         };
 
-        wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Read, 0, m_MappedData.size(), MapAsyncCallback, this);
-#if !PLATFORM_EMSCRIPTEN
-        wgpuQueueSubmit(wgpuDeviceGetQueue(m_pDevice->GetWebGPUDevice()), 0, nullptr);
-#endif
+        wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Read, 0, m_MappedData.size(), MapAsyncCallback, &CallbackCapture);
+        while (!CallbackCapture.IsMapped)
+            m_pDevice->PollEvents(false);
+
         m_MapState = TextureMapState::Read;
         return m_MappedData.data();
     }
@@ -399,16 +407,24 @@ void TextureWebGPUImpl::Unmap()
     }
     else if (m_MapState == TextureMapState::Write)
     {
+        struct CallbackCaptureData
+        {
+            TextureWebGPUImpl* pTexture;
+            bool               IsMapped;
+        } CallbackCapture{this, false};
+
         auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
             if (MapStatus == WGPUBufferMapAsyncStatus_Success)
             {
 
-                auto* const pThis    = static_cast<TextureWebGPUImpl*>(pUserData);
-                const auto  DataSize = pThis->m_MappedData.size();
-                auto* const pData    = static_cast<uint8_t*>(wgpuBufferGetMappedRange(pThis->m_wgpuStagingBuffer.Get(), 0, DataSize));
+                auto*       pCaptureData = static_cast<CallbackCaptureData*>(pUserData);
+                auto*       pTexture     = pCaptureData->pTexture;
+                const auto  DataSize     = pTexture->m_MappedData.size();
+                auto* const pData        = static_cast<uint8_t*>(wgpuBufferGetMappedRange(pTexture->m_wgpuStagingBuffer.Get(), 0, DataSize));
                 VERIFY_EXPR(pUserData != nullptr);
-                memcpy(pData, pThis->m_MappedData.data(), DataSize);
-                wgpuBufferUnmap(pThis->m_wgpuStagingBuffer.Get());
+                memcpy(pData, pTexture->m_MappedData.data(), DataSize);
+                wgpuBufferUnmap(pTexture->m_wgpuStagingBuffer.Get());
+                pCaptureData->IsMapped = true;
             }
             else
             {
@@ -416,10 +432,9 @@ void TextureWebGPUImpl::Unmap()
             }
         };
 
-        wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Write, 0, m_MappedData.size(), MapAsyncCallback, this);
-#if !PLATFORM_EMSCRIPTEN
-        wgpuQueueSubmit(wgpuDeviceGetQueue(m_pDevice->GetWebGPUDevice()), 0, nullptr);
-#endif
+        wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Write, 0, m_MappedData.size(), MapAsyncCallback, &CallbackCapture);
+        while (!CallbackCapture.IsMapped)
+            m_pDevice->PollEvents(false);
     }
     else
     {

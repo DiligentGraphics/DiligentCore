@@ -166,6 +166,7 @@ void RenderDrawCommandReferenceWebGPU(ISwapChain* pSwapChain, const float* pClea
     wgpuRenderPassColorAttachments[0].loadOp     = WGPULoadOp_Clear;
     wgpuRenderPassColorAttachments[0].storeOp    = WGPUStoreOp_Store;
     wgpuRenderPassColorAttachments[0].view       = pTestingSwapChainWebGPU->GetWebGPUColorTextureView();
+    wgpuRenderPassColorAttachments[0].depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
     WGPURenderPassDescriptor wgpuRenderPassDesc{};
     wgpuRenderPassDesc.colorAttachments     = wgpuRenderPassColorAttachments;
@@ -226,6 +227,7 @@ void RenderPassMSResolveReferenceWebGPU(ISwapChain* pSwapChain, const float* pCl
     wgpuRenderPassColorAttachments[0].storeOp       = WGPUStoreOp_Store;
     wgpuRenderPassColorAttachments[0].view          = wgpuMSTextureView;
     wgpuRenderPassColorAttachments[0].resolveTarget = pTestingSwapChainWebGPU->GetWebGPUColorTextureView();
+    wgpuRenderPassColorAttachments[0].depthSlice    = WGPU_DEPTH_SLICE_UNDEFINED;
 
     WGPURenderPassDescriptor wgpuRenderPassDesc{};
     wgpuRenderPassDesc.colorAttachments     = wgpuRenderPassColorAttachments;
@@ -289,6 +291,7 @@ void RenderPassInputAttachmentReferenceWebGPU(ISwapChain* pSwapChain, const floa
         wgpuRenderPassColorAttachments[0].loadOp     = WGPULoadOp_Clear;
         wgpuRenderPassColorAttachments[0].storeOp    = WGPUStoreOp_Store;
         wgpuRenderPassColorAttachments[0].view       = wgpuInputTextureView;
+        wgpuRenderPassColorAttachments[0].depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
         WGPURenderPassDescriptor wgpuRenderPassDesc{};
         wgpuRenderPassDesc.colorAttachments     = wgpuRenderPassColorAttachments;
@@ -308,6 +311,7 @@ void RenderPassInputAttachmentReferenceWebGPU(ISwapChain* pSwapChain, const floa
         wgpuRenderPassColorAttachments[0].loadOp     = WGPULoadOp_Clear;
         wgpuRenderPassColorAttachments[0].storeOp    = WGPUStoreOp_Store;
         wgpuRenderPassColorAttachments[0].view       = pTestingSwapChainWebGPU->GetWebGPUColorTextureView();
+        wgpuRenderPassColorAttachments[0].depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
         WGPURenderPassDescriptor wgpuRenderPassDesc{};
         wgpuRenderPassDesc.colorAttachments     = wgpuRenderPassColorAttachments;

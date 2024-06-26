@@ -242,9 +242,7 @@ WGPUDevice RenderDeviceWebGPUImpl::GetWebGPUDevice() const
 void RenderDeviceWebGPUImpl::IdleGPU()
 {
     // TODO How to wait GPU in Web?
-#if !PLATFOMR_EMSCRIPTEN
-    wgpuDevicePoll(m_wgpuDevice.Get(), true, nullptr);
-#endif
+    PollEvents(true);
 }
 
 void RenderDeviceWebGPUImpl::CreateTextureFromWebGPUTexture(WGPUTexture        wgpuTexture,
@@ -292,6 +290,17 @@ AttachmentCleanerWebGPU& RenderDeviceWebGPUImpl::GetAttachmentCleaner() const
 SharedMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetSharedMemoryPage(Uint64 Size)
 {
     return m_pMemoryManager->GetPage(Size);
+}
+
+void RenderDeviceWebGPUImpl::PollEvents(bool YieldToWebBrowser)
+{
+#if PLATFORM_EMSCRIPTEN
+    if (YieldToWebBrowser)
+        emscripten_sleep(1);
+#else
+    (void)YieldToWebBrowser;
+    wgpuDeviceTick(m_wgpuDevice.Get());
+#endif
 }
 
 void RenderDeviceWebGPUImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)

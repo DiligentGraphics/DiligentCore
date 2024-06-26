@@ -221,6 +221,7 @@ public:
         wgpuRenderPassColorAttachments[0].loadOp     = WGPULoadOp_Clear;
         wgpuRenderPassColorAttachments[0].storeOp    = WGPUStoreOp_Store;
         wgpuRenderPassColorAttachments[0].view       = wgpuTextureView.Get();
+        wgpuRenderPassColorAttachments[0].depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 
         WGPURenderPassDescriptor wgpuRenderPassDesc{};
         wgpuRenderPassDesc.colorAttachmentCount = _countof(wgpuRenderPassColorAttachments);

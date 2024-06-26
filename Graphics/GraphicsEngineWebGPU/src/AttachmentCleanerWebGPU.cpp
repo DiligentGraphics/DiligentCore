@@ -248,7 +248,7 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
         WGPUDepthStencilState wgpuDepthStencilState = Key.DepthState;
         wgpuDepthStencilState.format                = TextureFormatToWGPUFormat(RPInfo.DSVFormat);
 
-        WGPUFragmentState wgpuFragmentState;
+        WGPUFragmentState wgpuFragmentState{};
         wgpuFragmentState.module      = wgpuShaderModule.Get();
         wgpuFragmentState.entryPoint  = "PSMain";
         wgpuFragmentState.targetCount = RPInfo.NumRenderTargets;

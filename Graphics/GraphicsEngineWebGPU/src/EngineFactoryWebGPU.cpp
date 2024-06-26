@@ -161,27 +161,36 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
 
     std::vector<WGPUFeatureName> Features{};
     {
-        if (EngineCI.Features.DepthBiasClamp)
+        if (EngineCI.Features.DepthBiasClamp && wgpuAdapterHasFeature(Adapter, WGPUFeatureName_DepthClipControl))
             Features.push_back(WGPUFeatureName_DepthClipControl);
 
-        if (EngineCI.Features.TimestampQueries)
+        if (EngineCI.Features.TimestampQueries && wgpuAdapterHasFeature(Adapter, WGPUFeatureName_TimestampQuery))
             Features.push_back(WGPUFeatureName_TimestampQuery);
 
-        //   if (EngineCI.Features.PipelineStatisticsQueries)
-        //       Features.push_back(WGPUFeatureName_PipelineStatisticsQuery);
-
-        if (EngineCI.Features.TextureCompressionBC)
+        if (EngineCI.Features.TextureCompressionBC && wgpuAdapterHasFeature(Adapter, WGPUFeatureName_TextureCompressionBC))
             Features.push_back(WGPUFeatureName_TextureCompressionBC);
 
-        if (EngineCI.Features.ShaderFloat16)
+        if (EngineCI.Features.ShaderFloat16 && wgpuAdapterHasFeature(Adapter, WGPUFeatureName_ShaderF16))
             Features.push_back(WGPUFeatureName_ShaderF16);
+
+        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_Depth32FloatStencil8))
+            Features.push_back(WGPUFeatureName_Depth32FloatStencil8);
+
+        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_RG11B10UfloatRenderable))
+            Features.push_back(WGPUFeatureName_RG11B10UfloatRenderable);
     }
 
     WGPURequiredLimits   RequiredLimits{nullptr, SupportedLimits.limits};
     WGPUDeviceDescriptor DeviceDesc{};
-    DeviceDesc.requiredLimits       = &RequiredLimits;
-    DeviceDesc.requiredFeatureCount = Features.size();
-    DeviceDesc.requiredFeatures     = Features.data();
+    DeviceDesc.requiredLimits              = &RequiredLimits;
+    DeviceDesc.requiredFeatureCount        = Features.size();
+    DeviceDesc.requiredFeatures            = Features.data();
+    DeviceDesc.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
+    DeviceDesc.deviceLostCallbackInfo.callback =
+        [](WGPUDevice const* Device, WGPUDeviceLostReason Reason, char const* Message, void* pUserdata) {
+            if (Reason != WGPUDeviceLostReason_Destroyed && Reason != WGPUDeviceLostReason_InstanceDropped && Message != nullptr)
+                LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
+        };
 
     wgpuAdapterRequestDevice(
         Adapter,
@@ -252,9 +261,6 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
 
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TimestampQuery))
             Features.TimestampQueries = DEVICE_FEATURE_STATE_ENABLED;
-
-        //   if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_PipelineStatisticsQuery))
-        //       Features.PipelineStatisticsQueries = DEVICE_FEATURE_STATE_ENABLED;
 
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureCompressionBC))
             Features.TextureCompressionBC = DEVICE_FEATURE_STATE_ENABLED;

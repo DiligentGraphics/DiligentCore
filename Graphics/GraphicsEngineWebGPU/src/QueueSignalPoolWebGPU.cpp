@@ -100,7 +100,8 @@ Uint64 QueueSignalPoolWebGPU::GetQueryTimestamp(WGPUDevice wgpuDevice, Uint32 Qu
         QueueSignalPoolWebGPU* pQueueSignalPool;
         Uint64                 QueryTimestamp;
         Uint32                 QueryIdx;
-    } CallbackCapture{this, 0, QueryIdx};
+        bool                   IsMapped;
+    } CallbackCapture{this, 0, QueryIdx, false};
 
     auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
         if (MapStatus == WGPUBufferMapAsyncStatus_Success)
@@ -114,6 +115,7 @@ Uint64 QueueSignalPoolWebGPU::GetQueryTimestamp(WGPUDevice wgpuDevice, Uint32 Qu
             VERIFY_EXPR(pUserData != nullptr);
             pCaptureData->QueryTimestamp = *pQueryData;
             wgpuBufferUnmap(pQueueSignalSet->m_wgpuStagingBuffer.Get());
+            pCaptureData->IsMapped = true;
         }
         else
         {
@@ -122,9 +124,14 @@ Uint64 QueueSignalPoolWebGPU::GetQueryTimestamp(WGPUDevice wgpuDevice, Uint32 Qu
     };
 
     wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Read, QueryIdx * sizeof(Uint64), sizeof(Uint64), MapAsyncCallback, &CallbackCapture);
-#if !PLATFORM_EMSCRIPTEN
-    wgpuQueueSubmit(wgpuDeviceGetQueue(wgpuDevice), 0, nullptr);
+    while (!CallbackCapture.IsMapped)
+    {
+#if PLATFORM_EMSCRIPTEN
+        // TODO: Find a way to sleep in microseconds in Emscripten
+#else
+        wgpuDeviceTick(wgpuDevice);
 #endif
+    }
     return CallbackCapture.QueryTimestamp;
 }
 

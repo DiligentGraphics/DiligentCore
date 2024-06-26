@@ -237,11 +237,11 @@ void PipelineStateWebGPUImpl::InitializePipeline(const ComputePipelineStateCreat
 
     WebGPUShaderModuleWrapper wgpuShaderModule{};
 
-    WGPUShaderModuleDescriptor     wgpuShaderModuleDesc{};
     WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
     wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
     wgpuShaderCodeDesc.code        = pShaderWebGPU->GetWGSL().c_str();
 
+    WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
     wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
     wgpuShaderModuleDesc.label       = pShaderWebGPU->GetEntryPoint();
     wgpuShaderModule.Reset(wgpuDeviceCreateShaderModule(m_pDevice->GetWebGPUDevice(), &wgpuShaderModuleDesc));

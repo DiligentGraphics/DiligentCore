@@ -33,21 +33,22 @@ namespace WGSL
 {
 
 // clang-format off
-const std::string FillTextureCS = R"(
+const std::string FillTextureCS{
+    R"(
 @group(0) @binding(0) var g_tex2DUAV : texture_storage_2d<rgba8unorm, write>;
 
 @compute @workgroup_size(16, 16, 1)
-fn main(@builtin(workgroup_id) DTid : vec3u)
+fn main(@builtin(global_invocation_id) DTid: vec3<u32>)
 {
     let Dimensions = vec2u(textureDimensions(g_tex2DUAV).xy);
 	if (DTid.x >= Dimensions.x || DTid.y >= Dimensions.y) {
         return;
     }
-
     let Color = vec4f(vec2f(vec2u(DTid.xy % 256u)) / 256.0, 0.0, 1.0);
     textureStore(g_tex2DUAV, DTid.xy, Color);
 }
-)";
+)"
+};
 
 // clang-format on
 

@@ -186,6 +186,8 @@ public:
 
     SharedMemoryManagerWebGPU::Page GetSharedMemoryPage(Uint64 Size);
 
+    void PollEvents(bool YieldToWebBrowser);
+
 private:
     void TestTextureFormat(TEXTURE_FORMAT TexFormat) override;
 
