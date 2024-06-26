@@ -45,6 +45,8 @@ public:
     SamplerWebGPUImpl(IReferenceCounters*     pRefCounters,
                       RenderDeviceWebGPUImpl* pDevice,
                       const SamplerDesc&      Desc);
+    // Special constructor for serialization
+    SamplerWebGPUImpl(IReferenceCounters* pRefCounters, const SamplerDesc& SamplerDesc) noexcept;
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SamplerWebGPU, TSamplerBase)
 

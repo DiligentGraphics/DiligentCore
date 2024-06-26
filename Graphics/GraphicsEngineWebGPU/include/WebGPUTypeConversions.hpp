@@ -74,4 +74,6 @@ WGPUPrimitiveTopology PrimitiveTopologyWGPUPrimitiveType(PRIMITIVE_TOPOLOGY Prim
 
 WGPUCullMode CullModeToWGPUCullMode(CULL_MODE CullMode);
 
+WGPUShaderStageFlags ShaderStagesToWGPUShaderStageFlags(SHADER_TYPE Stages);
+
 } // namespace Diligent

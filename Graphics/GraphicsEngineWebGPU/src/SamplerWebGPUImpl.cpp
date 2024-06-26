@@ -76,6 +76,11 @@ SamplerWebGPUImpl::SamplerWebGPUImpl(IReferenceCounters*     pRefCounters,
         LOG_ERROR_AND_THROW("Failed to create WebGPU sampler ", " '", m_Desc.Name ? m_Desc.Name : "", '\'');
 }
 
+SamplerWebGPUImpl::SamplerWebGPUImpl(IReferenceCounters* pRefCounters, const SamplerDesc& SamplerDesc) noexcept :
+    TSamplerBase{pRefCounters, SamplerDesc}
+{
+}
+
 WGPUSampler SamplerWebGPUImpl::GetWebGPUSampler() const
 {
     return m_wgpuSampler.Get();

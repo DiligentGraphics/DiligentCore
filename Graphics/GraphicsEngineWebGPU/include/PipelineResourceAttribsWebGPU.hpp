@@ -30,6 +30,7 @@
 
 #include "HashUtils.hpp"
 #include "ShaderResourceCacheCommon.hpp"
+#include "PrivateConstants.h"
 
 namespace Diligent
 {
@@ -54,54 +55,79 @@ enum class BindGroupEntryType : Uint8
 struct PipelineResourceAttribsWebGPU
 {
 private:
-    static constexpr Uint32 _SamplerIndBits      = 31;
+    static constexpr Uint32 _BindingIndexBits    = 16;
+    static constexpr Uint32 _SamplerIndBits      = 16;
+    static constexpr Uint32 _ArraySizeBits       = 25;
+    static constexpr Uint32 _EntryTypeBits       = 5;
+    static constexpr Uint32 _BindGroupBits       = 1;
     static constexpr Uint32 _SamplerAssignedBits = 1;
 
-public:
-    static constexpr Uint32 MaxBindGroups = 2; //(1u << _DescrSetBits);
+    static_assert((_BindingIndexBits + _ArraySizeBits + _SamplerIndBits + _EntryTypeBits + _BindGroupBits + _SamplerAssignedBits) % 32 == 0, "Bits are not optimally packed");
+
+    // clang-format off
+    static_assert((1u << _EntryTypeBits)    >  static_cast<Uint32>(BindGroupEntryType::Count), "Not enough bits to store EntryType values");
+    static_assert((1u << _BindingIndexBits) >= MAX_RESOURCES_IN_SIGNATURE,                     "Not enough bits to store resource binding index");
+    static_assert((1u << _SamplerIndBits)   >= MAX_RESOURCES_IN_SIGNATURE,                     "Not enough bits to store sampler resource index");
+    // clang-format on
 
 public:
+    static constexpr Uint32 MaxBindGroups     = (1u << _BindGroupBits);
     static constexpr Uint32 InvalidSamplerInd = (1u << _SamplerIndBits) - 1;
 
     // clang-format off
-    const Uint32 SamplerInd           : _SamplerIndBits;       
-    const Uint32 ImtblSamplerAssigned : _SamplerAssignedBits;
+    const Uint32  BindingIndex         : _BindingIndexBits;    // Binding in the descriptor set
+    const Uint32  SamplerInd           : _SamplerIndBits;      // Index of the assigned sampler in m_Desc.Resources and m_pPipelineResourceAttribsVk
+    const Uint32  ArraySize            : _ArraySizeBits;       // Array size
+    const Uint32  EntryType            : _EntryTypeBits;       // Bind group entry type (BindGroupEntryType)
+    const Uint32  BindGroup            : _BindGroupBits;       // Bind group (0 or 1)
+    const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
+
+    const Uint32  SRBCacheOffset;                              // Offset in the SRB resource cache
+    const Uint32  StaticCacheOffset;                           // Offset in the static resource cache
     // clang-format on
 
-    // TODO
-    Uint32 BindGroup    = ~0u;
-    Uint32 BindingIndex = ~0u;
-
-    PipelineResourceAttribsWebGPU(Uint32 _SamplerInd,
-                                  bool   _ImtblSamplerAssigned) noexcept :
+    PipelineResourceAttribsWebGPU(Uint32             _BindingIndex,
+                                  Uint32             _SamplerInd,
+                                  Uint32             _ArraySize,
+                                  BindGroupEntryType _EntryType,
+                                  Uint32             _BindGroup,
+                                  bool               _ImtblSamplerAssigned,
+                                  Uint32             _SRBCacheOffset,
+                                  Uint32             _StaticCacheOffset) noexcept :
         // clang-format off
-        SamplerInd          {_SamplerInd                    },
-        ImtblSamplerAssigned{_ImtblSamplerAssigned ? 1u : 0u}
+        BindingIndex         {_BindingIndex                  },
+        SamplerInd           {_SamplerInd                    },
+        ArraySize            {_ArraySize                     },
+        EntryType            {static_cast<Uint32>(_EntryType)},
+        BindGroup            {_BindGroup                      },
+        ImtblSamplerAssigned {_ImtblSamplerAssigned ? 1u : 0u},
+        SRBCacheOffset       {_SRBCacheOffset                },
+        StaticCacheOffset    {_StaticCacheOffset             }
     // clang-format on
     {
-        VERIFY(SamplerInd == _SamplerInd, "Sampler index (", _SamplerInd, ") exceeds maximum representable value.");
-    }
-
-    Uint32 CacheOffset(ResourceCacheContentType CacheType) const
-    {
-        UNSUPPORTED("Not implemented yet");
-        return ~0u;
-    }
-
-    BindGroupEntryType GetBindGroupEntryType() const
-    {
-        UNSUPPORTED("Not implemented yet");
-        return BindGroupEntryType::Count;
+        // clang-format off
+        VERIFY(BindingIndex            == _BindingIndex, "Binding index (", _BindingIndex, ") exceeds maximum representable value");
+        VERIFY(ArraySize               == _ArraySize,    "Array size (", _ArraySize, ") exceeds maximum representable value");
+        VERIFY(SamplerInd              == _SamplerInd,   "Sampler index (", _SamplerInd, ") exceeds maximum representable value");
+        VERIFY(GetBindGroupEntryType() == _EntryType,    "Bind group entry type (", static_cast<Uint32>(_EntryType), ") exceeds maximum representable value");
+        VERIFY(BindGroup               == _BindGroup,    "Bind group (", _BindGroup, ") exceeds maximum representable value");
+        // clang-format on
     }
 
     // Only for serialization
     PipelineResourceAttribsWebGPU() noexcept :
-        PipelineResourceAttribsWebGPU{0, false}
+        PipelineResourceAttribsWebGPU{0, 0, 0, BindGroupEntryType::Count, 0, false, 0, 0}
     {}
 
-    bool IsSamplerAssigned() const
+
+    Uint32 CacheOffset(ResourceCacheContentType CacheType) const
     {
-        return SamplerInd != InvalidSamplerInd;
+        return CacheType == ResourceCacheContentType::SRB ? SRBCacheOffset : StaticCacheOffset;
+    }
+
+    BindGroupEntryType GetBindGroupEntryType() const
+    {
+        return static_cast<BindGroupEntryType>(EntryType);
     }
 
     bool IsImmutableSamplerAssigned() const
@@ -109,24 +135,28 @@ public:
         return ImtblSamplerAssigned != 0;
     }
 
-    bool IsCompatibleWith(const PipelineResourceAttribsWebGPU& RHS) const
-    {
-        // Ignore assigned sampler index.
-        // clang-format off
-        return IsImmutableSamplerAssigned() == RHS.IsImmutableSamplerAssigned();
-        // clang-format on
-    }
-
     bool IsCombinedWithSampler() const
     {
-        UNSUPPORTED("Not implemented yet");
-        return false;
+        return SamplerInd != InvalidSamplerInd;
+    }
+
+    bool IsCompatibleWith(const PipelineResourceAttribsWebGPU& rhs) const
+    {
+        // Ignore sampler index and cache offsets.
+        // clang-format off
+        return BindingIndex         == rhs.BindingIndex &&
+               ArraySize            == rhs.ArraySize    &&
+               EntryType            == rhs.EntryType    &&
+               BindGroup            == rhs.BindGroup     &&
+               ImtblSamplerAssigned == rhs.ImtblSamplerAssigned;
+        // clang-format on
     }
 
     size_t GetHash() const
     {
-        return ComputeHash(IsImmutableSamplerAssigned());
+        return ComputeHash(BindingIndex, ArraySize, EntryType, BindGroup, ImtblSamplerAssigned);
     }
 };
+ASSERT_SIZEOF(PipelineResourceAttribsWebGPU, 16, "The struct is used in serialization and must be tightly packed");
 
 } // namespace Diligent

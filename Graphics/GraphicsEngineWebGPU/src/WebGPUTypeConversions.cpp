@@ -883,4 +883,30 @@ WGPUCullMode CullModeToWGPUCullMode(CULL_MODE CullMode)
     }
 }
 
+WGPUShaderStageFlags ShaderTypeToToWGPUShaderStageFlag(SHADER_TYPE Type)
+{
+    switch (Type)
+    {
+        case SHADER_TYPE_VERTEX: return WGPUShaderStage_Vertex;
+        case SHADER_TYPE_PIXEL: return WGPUShaderStage_Fragment;
+        case SHADER_TYPE_COMPUTE: return WGPUShaderStage_Compute;
+
+        default:
+            UNSUPPORTED("Unsupported shader type");
+            return WGPUShaderStage_None;
+    }
+}
+
+WGPUShaderStageFlags ShaderStagesToWGPUShaderStageFlags(SHADER_TYPE Stages)
+{
+    WGPUShaderStageFlags Flags = WGPUShaderStage_None;
+    while (Stages != 0)
+    {
+        SHADER_TYPE ShaderType = ExtractLSB(Stages);
+        Flags |= ShaderTypeToToWGPUShaderStageFlag(ShaderType);
+        Stages &= ~ShaderType;
+    }
+    return Flags;
+}
+
 } // namespace Diligent

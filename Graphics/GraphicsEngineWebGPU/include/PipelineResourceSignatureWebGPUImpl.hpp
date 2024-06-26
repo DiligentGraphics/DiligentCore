@@ -30,11 +30,17 @@
 /// Declaration of Diligent::PipelineResourceSignatureWebGPUImpl class
 
 #include "EngineWebGPUImplTraits.hpp"
-#include "PipelineResourceAttribsWebGPU.hpp"
-#include "PipelineResourceImmutableSamplerAttribsWebGPU.hpp"
 #include "PipelineResourceSignatureBase.hpp"
-#include "ShaderResourceBindingWebGPUImpl.hpp"
+
+// ShaderResourceCacheWebGPU, ShaderVariableManagerWebGPU, and ShaderResourceBindingWebGPUImpl
+// are required by PipelineResourceSignatureBase
+#include "ShaderResourceCacheWebGPU.hpp"
 #include "ShaderVariableManagerWebGPU.hpp"
+#include "ShaderResourceBindingWebGPUImpl.hpp"
+
+#include "PipelineResourceAttribsWebGPU.hpp"
+#include "WebGPUObjectWrappers.hpp"
+#include "PipelineResourceImmutableSamplerAttribsWebGPU.hpp"
 #include "SamplerWebGPUImpl.hpp"
 
 namespace Diligent
@@ -60,6 +66,25 @@ class PipelineResourceSignatureWebGPUImpl final : public PipelineResourceSignatu
 public:
     using TPipelineResourceSignatureBase = PipelineResourceSignatureBase<EngineWebGPUImplTraits>;
 
+    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
+
+    // Bind group identifier (this is not the bind group set index in the layout!)
+    enum BIND_GROUP_ID : size_t
+    {
+        // Static/mutable variables bind group id
+        BIND_GROUP_ID_STATIC_MUTABLE = 0,
+
+        // Dynamic variables bind group id
+        BIND_GROUP_ID_DYNAMIC,
+
+        BIND_GROUP_ID_NUM_GROUPS
+    };
+
+    // Static/mutable and dynamic bind groups
+    static constexpr Uint32 MAX_BIND_GROUPS = BIND_GROUP_ID_NUM_GROUPS;
+
+    static_assert(ResourceAttribs::MaxBindGroups >= MAX_BIND_GROUPS, "Not enough bits to store bind group index");
+
     PipelineResourceSignatureWebGPUImpl(IReferenceCounters*                  pRefCounters,
                                         RenderDeviceWebGPUImpl*              pDevice,
                                         const PipelineResourceSignatureDesc& Desc,
@@ -75,6 +100,12 @@ public:
 
     using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
 
+    Uint32 GetNumBindGroups() const
+    {
+        static_assert(BIND_GROUP_ID_NUM_GROUPS == 2, "Please update this method with new bind group id");
+        return (HasBindGroup(BIND_GROUP_ID_STATIC_MUTABLE) ? 1 : 0) + (HasBindGroup(BIND_GROUP_ID_DYNAMIC) ? 1 : 0);
+    }
+
     struct ImmutableSamplerAttribs : PipelineResourceImmutableSamplerAttribsWebGPU
     {
         RefCntAutoPtr<SamplerWebGPUImpl> pSampler;
@@ -83,21 +114,73 @@ public:
 
         explicit ImmutableSamplerAttribs(const PipelineResourceImmutableSamplerAttribsWebGPU& Attribs) noexcept :
             PipelineResourceImmutableSamplerAttribsWebGPU{Attribs} {}
+
+        void Init(RenderDeviceWebGPUImpl* pDevice, const SamplerDesc& Desc);
+
+        explicit operator bool() const { return Ptr != nullptr; }
+
+        WGPUSampler GetWGPUSampler() const;
+
+    private:
+        RefCntAutoPtr<ISampler> Ptr;
     };
 
-    void CopyStaticResources(ShaderResourceCacheWebGPU& ResourceCache) const;
+    WGPUBindGroupLayout GetWGPUBindGroupLayout(BIND_GROUP_ID GroupId) const { return m_wgpuBindGroupLayouts[GroupId]; }
+
+    bool   HasBindGroup(BIND_GROUP_ID GroupId) const { return m_wgpuBindGroupLayouts[GroupId]; }
+    Uint32 GetBindGroupSize(BIND_GROUP_ID GroupId) const { return m_BindGroupSizes[GroupId]; }
 
     void InitSRBResourceCache(ShaderResourceCacheWebGPU& ResourceCache);
 
+    void CopyStaticResources(ShaderResourceCacheWebGPU& ResourceCache) const;
+    // Make the base class method visible
     using TPipelineResourceSignatureBase::CopyStaticResources;
 
+    // Returns the bind group index in the resource cache
+    template <BIND_GROUP_ID GroupId>
+    Uint32 GetBindGroupIndex() const;
+
 private:
-    void CreateLayout(bool IsSerialized);
+    void CreateBindGroupLayouts(bool IsSerialized);
 
     void Destruct();
 
+    // Resource cache group identifier
+    enum CACHE_GROUP : size_t
+    {
+        CACHE_GROUP_DYN_UB = 0,         // Uniform buffer with dynamic offset
+        CACHE_GROUP_DYN_SB,             // Storage buffer with dynamic offset
+        CACHE_GROUP_OTHER,              // Other resource type
+        CACHE_GROUP_COUNT_PER_VAR_TYPE, // Cache group count per shader variable type
+
+        CACHE_GROUP_DYN_UB_STAT_VAR = CACHE_GROUP_DYN_UB, // Uniform buffer with dynamic offset, static variable
+        CACHE_GROUP_DYN_SB_STAT_VAR = CACHE_GROUP_DYN_SB, // Storage buffer with dynamic offset, static variable
+        CACHE_GROUP_OTHER_STAT_VAR  = CACHE_GROUP_OTHER,  // Other resource type, static variable
+
+        CACHE_GROUP_DYN_UB_DYN_VAR, // Uniform buffer with dynamic offset, dynamic variable
+        CACHE_GROUP_DYN_SB_DYN_VAR, // Storage buffer with dynamic offset, dynamic variable
+        CACHE_GROUP_OTHER_DYN_VAR,  // Other resource type, dynamic variable
+
+        CACHE_GROUP_COUNT
+    };
+    static_assert(CACHE_GROUP_COUNT == CACHE_GROUP_COUNT_PER_VAR_TYPE * MAX_BIND_GROUPS, "Inconsistent cache group count");
+
+    using CacheOffsetsType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] including ArraySize
+    using BindingCountType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] not counting ArraySize
+
+    static inline CACHE_GROUP   GetResourceCacheGroup(const PipelineResourceDesc& Res);
+    static inline BIND_GROUP_ID VarTypeToBindGroupId(SHADER_RESOURCE_VARIABLE_TYPE VarType);
+
 private:
+    std::array<WebGPUBindGroupLayoutWrapper, BIND_GROUP_ID_NUM_GROUPS> m_wgpuBindGroupLayouts;
+
+    // Bind group sizes indexed by the group index in the layout (not BIND_GROUP_ID!)
+    std::array<Uint32, MAX_BIND_GROUPS> m_BindGroupSizes = {~0U, ~0U};
+
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 };
+
+template <> Uint32 PipelineResourceSignatureWebGPUImpl::GetBindGroupIndex<PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE>() const;
+template <> Uint32 PipelineResourceSignatureWebGPUImpl::GetBindGroupIndex<PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC>() const;
 
 } // namespace Diligent
