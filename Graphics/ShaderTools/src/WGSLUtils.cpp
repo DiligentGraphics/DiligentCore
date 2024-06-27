@@ -35,6 +35,10 @@
 #define TINT_BUILD_SPV_READER  1
 #define TINT_BUILD_WGSL_WRITER 1
 #include <tint/tint.h>
+#include "src/tint/lang/wgsl/ast/module.h"
+#include "src/tint/lang/wgsl/ast/identifier_expression.h"
+#include "src/tint/lang/wgsl/ast/identifier.h"
+#include "src/tint/lang/wgsl/sem/variable.h"
 
 #ifdef _MSC_VER
 #    pragma warning(pop)
@@ -58,6 +62,101 @@ std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
     if (GenerationResult != tint::Success)
     {
         LOG_ERROR_MESSAGE("Tint WGSL writer failure:\nGeneate: " + GenerationResult.Failure().reason.Str() + "\n");
+        return {};
+    }
+
+    return GenerationResult->wgsl;
+}
+
+std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourceMapping& ResMapping)
+{
+    tint::Source::File srcFile("", WGSL);
+    tint::Program      Program = tint::wgsl::reader::Parse(&srcFile, {tint::wgsl::AllowedFeatures::Everything()});
+
+    if (!Program.IsValid())
+    {
+        LOG_ERROR_MESSAGE("Tint WGSL reader failure:\nParser: ", Program.Diagnostics().Str(), "\n");
+        return {};
+    }
+
+    tint::ast::transform::BindingRemapper::BindingPoints BindingPoints;
+
+    // HLSL constant buffer names may be transformed to types, for example:
+    //
+    // HLSL:
+    //      cbuffer CB0
+    //      {
+    //          float4 g_Data0;
+    //      }
+    // WGSL:
+    //      struct CB0 {
+    //        g_Data0 : vec4f,
+    //      }
+    //      @group(0) @binding(0) var<uniform> x_13 : CB0;
+
+    auto FindAlternativeName = [](const tint::Program& Program, const tint::inspector::ResourceBinding& Binding) -> std::optional<std::string> {
+        if (Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kUniformBuffer ||
+            Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kStorageBuffer ||
+            Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kReadOnlyStorageBuffer)
+        {
+            for (const auto* Variable : Program.AST().GlobalVariables())
+            {
+                if (Variable->HasBindingPoint())
+                {
+                    const auto* SemVariable = Program.Sem().Get(Variable)->As<tint::sem::GlobalVariable>();
+                    if (SemVariable->Attributes().binding_point->group == Binding.bind_group &&
+                        SemVariable->Attributes().binding_point->binding == Binding.binding)
+                        return SemVariable->Declaration()->type->identifier->symbol.Name();
+                }
+            }
+        }
+        return std::nullopt;
+    };
+
+    tint::inspector::Inspector Inspector{Program};
+    for (auto& EntryPoint : Inspector.GetEntryPoints())
+    {
+        for (auto& Binding : Inspector.GetResourceBindings(EntryPoint.name))
+        {
+            const auto& DstBindigIt = ResMapping.find(Binding.variable_name);
+            if (DstBindigIt != ResMapping.end())
+            {
+                const auto& DstBindig = DstBindigIt->second;
+                BindingPoints.emplace(tint::ast::transform::BindingPoint{Binding.bind_group, Binding.binding}, tint::ast::transform::BindingPoint{DstBindig.Group, DstBindig.Index});
+            }
+            else if (auto VariableName = FindAlternativeName(Program, Binding))
+            {
+                const auto& AltDstBindigIt = ResMapping.find(VariableName.value());
+                if (AltDstBindigIt != ResMapping.end())
+                {
+                    const auto& DstBindig = AltDstBindigIt->second;
+                    BindingPoints.emplace(tint::ast::transform::BindingPoint{Binding.bind_group, Binding.binding}, tint::ast::transform::BindingPoint{DstBindig.Group, DstBindig.Index});
+                }
+                else
+                {
+                    LOG_ERROR_MESSAGE("Binding for variable '", Binding.variable_name, "' is not found in the remap indices");
+                }
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("Binding for variable '", Binding.variable_name, "' is not found in the remap indices");
+            }
+        }
+    }
+
+    tint::ast::transform::Manager Manager;
+    tint::ast::transform::DataMap Inputs;
+    tint::ast::transform::DataMap Outputs;
+
+    Inputs.Add<tint::ast::transform::BindingRemapper::Remappings>(BindingPoints, tint::ast::transform::BindingRemapper::AccessControls{}, true);
+    Manager.Add<tint::ast::transform::BindingRemapper>();
+    tint::ast::transform::Output TransformResult = Manager.Run(Program, Inputs, Outputs);
+
+    auto GenerationResult = tint::wgsl::writer::Generate(TransformResult.program, {});
+
+    if (GenerationResult != tint::Success)
+    {
+        LOG_ERROR_MESSAGE("Tint WGSL writer failure:\nGeneate: ", GenerationResult.Failure().reason.Str(), "\n");
         return {};
     }
 

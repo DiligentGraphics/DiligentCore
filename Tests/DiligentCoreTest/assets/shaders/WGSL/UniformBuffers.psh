@@ -1,0 +1,19 @@
+cbuffer CB0
+{
+    float4 g_Data0;
+}
+
+cbuffer CB1
+{
+    float4 g_Data1;
+}
+
+cbuffer CB2
+{
+    float4 g_Data2;
+}
+
+float4 main() : SV_Target
+{
+    return g_Data0 + g_Data1 + g_Data2;
+}

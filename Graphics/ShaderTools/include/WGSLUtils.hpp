@@ -28,10 +28,20 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 namespace Diligent
 {
 
 std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV);
+
+struct WGSLResourceBindingInfo
+{
+    uint32_t Group = 0;
+    uint32_t Index = 0;
+};
+using WGSLResourceMapping = std::unordered_map<std::string, WGSLResourceBindingInfo>;
+
+std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourceMapping& ResMapping);
 
 } // namespace Diligent
