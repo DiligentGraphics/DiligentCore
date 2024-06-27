@@ -1,0 +1,17 @@
+Texture1D                g_Tex1D;
+Texture2D                g_Tex2D;
+Texture2DArray<float4>   g_Tex2DArr;
+TextureCube              g_TexCube;
+TextureCubeArray<float4> g_TexCubeArr;
+Texture3D                g_Tex3D;
+SamplerState             g_Sampler;
+
+float4 main() : SV_Target
+{
+    return g_Tex1D.Sample(g_Sampler, 0.5) +
+           g_Tex2D.Sample(g_Sampler, float2(0.5, 0.5))+ 
+           g_Tex2DArr.Sample(g_Sampler, float3(0.5, 0.5, 0.5)) +
+           g_TexCube.Sample(g_Sampler, float3(0.5, 0.5, 0.5)) +
+           g_TexCubeArr.Sample(g_Sampler, float4(0.5, 0.5, 0.5, 0.5)) +
+           g_Tex3D.Sample(g_Sampler, float3(0.5, 0.5, 0.5));
+}

@@ -110,16 +110,16 @@ void TestResourceRemapping(const char* FilePath, const WGSLResourceMapping& ResR
                         RemappedBindingIt = ResRemapping.find(Variable->type->identifier->symbol.Name());
                     }
                 }
+            }
 
-                if (RemappedBindingIt == ResRemapping.end())
-                {
-                    GTEST_FAIL() << "Unable to find remapping for resource '" << Binding.variable_name << "'";
-                }
-                else
-                {
-                    EXPECT_EQ(Binding.bind_group, RemappedBindingIt->second.Group) << "Bind group mismatch (" << Binding.bind_group << " vs " << RemappedBindingIt->second.Group << " for resource '" << Binding.variable_name << "'";
-                    EXPECT_EQ(Binding.binding, RemappedBindingIt->second.Index) << "Binding index mismatch (" << Binding.binding << " vs " << RemappedBindingIt->second.Index << " for resource '" << Binding.variable_name << "'";
-                }
+            if (RemappedBindingIt == ResRemapping.end())
+            {
+                GTEST_FAIL() << "Unable to find remapping for resource '" << Binding.variable_name << "'";
+            }
+            else
+            {
+                EXPECT_EQ(Binding.bind_group, RemappedBindingIt->second.Group) << "Bind group mismatch (" << Binding.bind_group << " vs " << RemappedBindingIt->second.Group << " for resource '" << Binding.variable_name << "'";
+                EXPECT_EQ(Binding.binding, RemappedBindingIt->second.Index) << "Binding index mismatch (" << Binding.binding << " vs " << RemappedBindingIt->second.Index << " for resource '" << Binding.variable_name << "'";
             }
         }
     }
@@ -132,6 +132,20 @@ TEST(WGSLUtils, RemapUniformBuffers)
                               {"CB0", {1, 2}},
                               {"CB1", {3, 4}},
                               {"CB2", {5, 6}},
+                          });
+}
+
+TEST(WGSLUtils, RemapTextures)
+{
+    TestResourceRemapping("Textures.psh",
+                          {
+                              {"g_Tex1D", {1, 2}},
+                              {"g_Tex2D", {3, 4}},
+                              {"g_Tex2DArr", {5, 6}},
+                              {"g_TexCube", {7, 8}},
+                              {"g_TexCubeArr", {9, 10}},
+                              {"g_Tex3D", {11, 12}},
+                              {"g_Sampler", {13, 14}},
                           });
 }
 
