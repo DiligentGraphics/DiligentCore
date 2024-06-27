@@ -160,4 +160,26 @@ TEST(WGSLUtils, RemapRWTextures)
                           });
 }
 
+TEST(WGSLUtils, RemapStructBuffers)
+{
+    TestResourceRemapping("StructBuffers.psh",
+                          {
+                              {"g_Buff0", {1, 2}},
+                              {"g_Buff1", {3, 4}},
+                              {"g_Buff2", {5, 6}},
+                              {"g_Buff3", {7, 8}},
+                          });
+}
+
+TEST(WGSLUtils, RemapRWStructBuffers)
+{
+    TestResourceRemapping("RWStructBuffers.psh",
+                          {
+                              {"g_RWBuff0", {1, 2}},
+                              {"g_RWBuff1", {3, 4}},
+                              {"g_RWBuff2", {5, 6}},
+                              {"g_RWBuff3", {7, 8}},
+                          });
+}
+
 } // namespace

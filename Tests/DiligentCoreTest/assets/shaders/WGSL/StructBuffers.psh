@@ -1,0 +1,23 @@
+struct BufferData0
+{
+    float4 data;
+};
+
+struct BufferData1
+{
+    float4 data;
+};
+
+StructuredBuffer<BufferData0> g_Buff0;
+StructuredBuffer<BufferData0> g_Buff1;
+StructuredBuffer<BufferData1> g_Buff2;
+StructuredBuffer<BufferData1> g_Buff3;
+
+
+float4 main() : SV_Target
+{
+    return g_Buff0[0].data + 
+           g_Buff1[0].data +
+           g_Buff2[0].data +
+           g_Buff3[0].data;
+}

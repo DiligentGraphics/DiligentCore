@@ -81,7 +81,7 @@ std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourc
 
     tint::ast::transform::BindingRemapper::BindingPoints BindingPoints;
 
-    // HLSL constant buffer names may be transformed to types, for example:
+    // HLSL constant and structured buffer names may be transformed to types, for example:
     //
     // HLSL:
     //      cbuffer CB0
@@ -93,7 +93,21 @@ std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourc
     //        g_Data0 : vec4f,
     //      }
     //      @group(0) @binding(0) var<uniform> x_13 : CB0;
-
+    //
+    //
+    // HLSL:
+    //      struct BufferData0
+    //      {
+    //          float4 data;
+    //      };
+    //      StructuredBuffer<BufferData0> g_Buff0;
+    //      StructuredBuffer<BufferData0> g_Buff1;
+    // WGSL:
+    //      struct g_Buff0 {
+    //        x_data : RTArr,
+    //      }
+    //      @group(0) @binding(0) var<storage, read> g_Buff0_1 : g_Buff0;
+    //      @group(0) @binding(1) var<storage, read> g_Buff1 : g_Buff0;
     auto FindAlternativeName = [](const tint::Program& Program, const tint::inspector::ResourceBinding& Binding) -> std::optional<std::string> {
         if (Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kUniformBuffer ||
             Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kStorageBuffer ||

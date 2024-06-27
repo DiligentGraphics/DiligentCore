@@ -1,0 +1,29 @@
+struct BufferData0
+{
+    float4 data;
+};
+
+struct BufferData1
+{
+    float4 data;
+};
+
+RWStructuredBuffer<BufferData0> g_RWBuff0;
+RWStructuredBuffer<BufferData0> g_RWBuff1;
+RWStructuredBuffer<BufferData1> g_RWBuff2;
+RWStructuredBuffer<BufferData1> g_RWBuff3;
+
+float4 main() : SV_Target
+{
+    BufferData0 Data0;
+    Data0.data = float4(1.0, 2.0, 3.0, 4.0);
+    g_RWBuff0[0] = Data0;
+    g_RWBuff1[0] = Data0;
+
+    BufferData1 Data1;
+    Data1.data = float4(1.0, 2.0, 3.0, 4.0);
+    g_RWBuff2[0] = Data1;
+    g_RWBuff3[0] = Data1;
+
+    return float4(1.0, 0.0, 0.0, 1.0);
+}
