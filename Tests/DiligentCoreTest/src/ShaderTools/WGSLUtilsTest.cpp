@@ -149,4 +149,15 @@ TEST(WGSLUtils, RemapTextures)
                           });
 }
 
+TEST(WGSLUtils, RemapRWTextures)
+{
+    TestResourceRemapping("RWTextures.psh",
+                          {
+                              {"g_RWTex1D", {1, 2}},
+                              {"g_RWTex2D", {3, 4}},
+                              {"g_RWTex2DArr", {5, 6}},
+                              {"g_RWTex3D", {7, 8}},
+                          });
+}
+
 } // namespace

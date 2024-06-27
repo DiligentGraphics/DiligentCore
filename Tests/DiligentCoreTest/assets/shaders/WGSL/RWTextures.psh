@@ -1,0 +1,14 @@
+RWTexture1D<float4>      g_RWTex1D;
+RWTexture2D<float4>      g_RWTex2D;
+RWTexture2DArray<float4> g_RWTex2DArr;
+RWTexture3D<float4>      g_RWTex3D;
+
+float4 main() : SV_Target
+{
+    g_RWTex1D[0]                 = float4(0.0, 1.0, 2.0, 3.0);
+    g_RWTex2D[uint2(0, 0)]       = float4(0.0, 1.0, 2.0, 3.0);
+    g_RWTex2DArr[uint3(0, 0, 0)] = float4(0.0, 1.0, 2.0, 3.0);
+    g_RWTex3D[uint3(0, 0, 0)]    = float4(0.0, 1.0, 2.0, 3.0);
+
+    return float4(0.0, 1.0, 2.0, 3.0);
+}
