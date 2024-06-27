@@ -26,6 +26,11 @@ if(D3D11_SUPPORTED OR D3D12_SUPPORTED OR VULKAN_SUPPORTED OR METAL_SUPPORTED OR 
     set(ENABLE_HLSL TRUE)
 endif()
 
+set(ENABLE_WGSL FALSE)
+if(WEBGPU_SUPPORTED)
+	set(ENABLE_WGSL TRUE)
+endif()
+
 if(ENABLE_GLSL)
     list(APPEND SOURCE src/GLSLUtils.cpp)
     list(APPEND INCLUDE include/GLSLUtils.hpp)
@@ -34,6 +39,11 @@ endif()
 if(ENABLE_HLSL)
     list(APPEND SOURCE src/HLSLUtils.cpp)
     list(APPEND INCLUDE include/HLSLUtils.hpp)
+endif()
+
+if(ENABLE_WGSL)
+    list(APPEND SOURCE src/WGSLUtils.cpp)
+    list(APPEND INCLUDE include/WGSLUtils.hpp)
 endif()
 
 if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
@@ -175,6 +185,12 @@ if(ENABLE_SPIRV)
     endif()
 endif()
 
+if(ENABLE_WGSL)
+    target_link_libraries(Diligent-ShaderTools
+    PRIVATE
+        libtint
+    ) 
+endif()
 
 set(HLSL_DEFINITIONS include/HLSLDefinitions.fxh)
 
@@ -203,6 +219,11 @@ add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
 )
 
 set_common_target_properties(Diligent-ShaderTools)
+
+set_target_properties(Diligent-ShaderTools PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})

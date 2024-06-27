@@ -30,6 +30,7 @@
 #include "RenderDeviceWebGPUImpl.hpp"
 #include "GLSLUtils.hpp"
 #include "ShaderToolsCommon.hpp"
+#include "WGSLUtils.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLangUtils.hpp"
@@ -37,10 +38,6 @@
 
 #if !DILIGENT_NO_HLSL
 #    include "SPIRVTools.hpp"
-
-#    define TINT_BUILD_SPV_READER  1
-#    define TINT_BUILD_WGSL_WRITER 1
-#    include <tint/tint.h>
 #endif
 
 namespace Diligent
@@ -70,28 +67,6 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&             S
 #endif
 
     return SPIRV;
-}
-
-std::string ConvertSPIRVtoWGSL(const std::vector<Uint32>& SPIRV)
-{
-    std::string WGSL;
-
-#if DILIGENT_NO_HLSL
-    LOG_ERROR_AND_THROW("Diligent engine was not linked with SPIRV-Tools, we don't support raw WGSL code.");
-#else
-    tint::spirv::reader::Options SPIRVReaderOptions{true};
-    tint::Program                Program = Read(SPIRV, SPIRVReaderOptions);
-
-    if (!Program.IsValid())
-        LOG_ERROR_AND_THROW("Tint SPIR-V reader failure:\nParser: " + Program.Diagnostics().Str() + "\n");
-
-    auto GenerationResult = tint::wgsl::writer::Generate(Program, {});
-
-    if (GenerationResult != tint::Success)
-        LOG_ERROR_AND_THROW("Tint WGSL writer failure:\nGeneate: " + GenerationResult.Failure().reason.Str() + "\n");
-    WGSL = std::move(GenerationResult->wgsl);
-#endif
-    return WGSL;
 }
 
 } // namespace
