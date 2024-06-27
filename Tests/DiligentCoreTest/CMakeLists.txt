@@ -14,7 +14,10 @@ if(NOT GL_SUPPORTED AND NOT GLES_SUPPORTED AND NOT VULKAN_SUPPORTED)
 endif()
 
 if(NOT WEBGPU_SUPPORTED)
-    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/WGSLUtilsTest.cpp)
+    list(REMOVE_ITEM SOURCE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/WGSLUtilsTest.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/WGSLShaderResourcesTest.cpp
+    )
 endif()
 
 set_source_files_properties(${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
