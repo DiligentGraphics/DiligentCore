@@ -87,7 +87,7 @@ if(D3D12_SUPPORTED)
 endif()
 
 if(WEBGPU_SUPPORTED)
-    target_link_libraries(Diligent-GPUTestFramework PUBLIC webgpu_dawn)
+    target_link_libraries(Diligent-GPUTestFramework PUBLIC dawn_headers dawn_proc)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)

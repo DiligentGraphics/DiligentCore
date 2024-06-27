@@ -31,8 +31,6 @@
 #include "RenderDeviceWebGPU.h"
 #include "DeviceContextWebGPU.h"
 #include "TextureWebGPU.h"
-#include "webgpu/webgpu.h"
-
 
 namespace Diligent
 {

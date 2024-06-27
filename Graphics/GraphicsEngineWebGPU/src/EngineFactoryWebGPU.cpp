@@ -38,6 +38,8 @@
 #include "StringTools.hpp"
 #include "GraphicsAccessories.hpp"
 
+#include "dawn/native/DawnNative.h"
+
 namespace Diligent
 {
 
@@ -80,6 +82,8 @@ public:
                                                  const EngineWebGPUCreateInfo& EngineCI,
                                                  IRenderDevice**               ppDevice,
                                                  IDeviceContext**              ppContexts);
+
+    const void* DILIGENT_CALL_TYPE GetProcessTable() const override final;
 };
 
 namespace
@@ -522,6 +526,11 @@ void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(WGPUInstance                 
 
         LOG_ERROR("Failed to create WebGPU-based render device and context");
     }
+}
+
+const void* EngineFactoryWebGPUImpl::GetProcessTable() const
+{
+    return &dawn::native::GetProcs();
 }
 
 API_QUALIFIER IEngineFactoryWebGPU* GetEngineFactoryWebGPU()

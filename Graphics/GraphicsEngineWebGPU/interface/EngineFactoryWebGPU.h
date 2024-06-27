@@ -99,6 +99,9 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryWebGPU, IEngineFactory)
                                               const SwapChainDesc REF      SCDesc,
                                               const NativeWindow REF       Window,
                                               ISwapChain**                 ppSwapChain) PURE;
+
+    /// Return the pointer to DawnProcTable
+    VIRTUAL CONST void* METHOD(GetProcessTable)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 

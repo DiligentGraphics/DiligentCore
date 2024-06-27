@@ -27,6 +27,8 @@
 #include "WebGPU/TestingEnvironmentWebGPU.hpp"
 #include "RenderDeviceWebGPU.h"
 #include "DeviceContextWebGPU.h"
+#include "EngineFactoryWebGPU.h"
+#include <dawn/dawn_proc.h>
 
 namespace Diligent
 {
@@ -44,7 +46,9 @@ TestingEnvironmentWebGPU::TestingEnvironmentWebGPU(const CreateInfo&    CI,
 {
     RefCntAutoPtr<IRenderDeviceWebGPU>  pRenderDeviceWebGPU{m_pDevice, IID_RenderDeviceWebGPU};
     RefCntAutoPtr<IDeviceContextWebGPU> pDeviceContextWebGPU{GetDeviceContext(), IID_DeviceContextWebGPU};
+    RefCntAutoPtr<IEngineFactoryWebGPU> pEngineFactory{m_pDevice->GetEngineFactory(), IID_EngineFactoryWebGPU};
 
+    dawnProcSetProcs(static_cast<const DawnProcTable*>(pEngineFactory->GetProcessTable()));
     m_wgpuDevice = pRenderDeviceWebGPU->GetWebGPUDevice();
 
     if (m_pSwapChain == nullptr)

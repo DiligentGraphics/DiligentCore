@@ -60,8 +60,4 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(tint_api PRIVATE -Wno-switch-default)
 endif()
 
-FetchContent_GetProperties(dawn SOURCE_DIR dawn_SOURCE_DIR)
-FetchContent_GetProperties(tint SOURCE_DIR tint_SOURCE_DIR)
-
-install(FILES "${dawn_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME dawn-License.txt)
-install(FILES "${tint_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME tint-License.txt)
+install(FILES "${Dawn_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME dawn-License.txt)

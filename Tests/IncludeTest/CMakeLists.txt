@@ -59,7 +59,7 @@ target_link_libraries(DiligentCore-IncludeTest PRIVATE Diligent-BuildSettings)
 set_common_target_properties(DiligentCore-IncludeTest)
 
 if (WEBGPU_SUPPORTED)
-   target_link_libraries(DiligentCore-IncludeTest PUBLIC webgpu_dawn)
+   target_link_libraries(DiligentCore-IncludeTest PUBLIC dawn_headers)
 endif()
 
 if(MSVC)

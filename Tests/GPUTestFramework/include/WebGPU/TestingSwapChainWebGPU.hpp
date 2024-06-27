@@ -26,7 +26,6 @@
 #pragma once
 
 #include <webgpu/webgpu.h>
-
 #include "TestingSwapChainBase.hpp"
 
 namespace Diligent

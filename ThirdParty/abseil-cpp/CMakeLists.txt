@@ -21,5 +21,4 @@ if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR ("${CMAKE_CXX_COMPILER_ID}"
 endif()
 
 FetchContent_MakeAvailable(abseil-cpp)
-FetchContent_GetProperties(abseil-cpp SOURCE_DIR abseil-cpp_SOURCE_DIR)
 install(FILES "${abseil-cpp_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME abseil-cpp-License.txt)
