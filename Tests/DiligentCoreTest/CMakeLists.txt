@@ -51,10 +51,16 @@ PRIVATE
     Diligent-ShaderTools
 )
 
+if(WEBGPU_SUPPORTED)
+    target_link_libraries(DiligentCoreTest PRIVATE libtint)
+endif()
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${SHADERS}})
 
 set_target_properties(DiligentCoreTest
     PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED ON
         VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
         XCODE_SCHEME_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
 )

@@ -148,7 +148,7 @@ std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourc
     tint::ast::transform::DataMap Inputs;
     tint::ast::transform::DataMap Outputs;
 
-    Inputs.Add<tint::ast::transform::BindingRemapper::Remappings>(BindingPoints, tint::ast::transform::BindingRemapper::AccessControls{}, true);
+    Inputs.Add<tint::ast::transform::BindingRemapper::Remappings>(BindingPoints, tint::ast::transform::BindingRemapper::AccessControls{}, false);
     Manager.Add<tint::ast::transform::BindingRemapper>();
     tint::ast::transform::Output TransformResult = Manager.Run(Program, Inputs, Outputs);
 

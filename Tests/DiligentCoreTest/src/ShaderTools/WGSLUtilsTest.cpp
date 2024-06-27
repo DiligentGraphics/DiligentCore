@@ -32,6 +32,21 @@
 #include "TestingEnvironment.hpp"
 #include "gtest/gtest.h"
 
+#ifdef _MSC_VER
+#    pragma warning(push)
+#    pragma warning(disable : 4324) //  warning C4324: structure was padded due to alignment specifier
+#endif
+
+#include <tint/tint.h>
+#include "src/tint/lang/wgsl/ast/module.h"
+#include "src/tint/lang/wgsl/ast/identifier_expression.h"
+#include "src/tint/lang/wgsl/ast/identifier.h"
+#include "src/tint/lang/wgsl/sem/variable.h"
+
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
+
 using namespace Diligent;
 using namespace Diligent::Testing;
 
@@ -69,7 +84,45 @@ void TestResourceRemapping(const char* FilePath, const WGSLResourceMapping& ResR
     ASSERT_FALSE(WGSL.empty());
 
     const auto RemappedWGSL = RamapWGSLResourceBindings(WGSL, ResRemapping);
-    ASSERT_FALSE(WGSL.empty());
+    ASSERT_FALSE(RemappedWGSL.empty());
+
+    tint::Source::File srcFile("", RemappedWGSL);
+    tint::Program      Program = tint::wgsl::reader::Parse(&srcFile, {tint::wgsl::AllowedFeatures::Everything()});
+    ASSERT_TRUE(Program.IsValid()) << Program.Diagnostics().Str();
+
+    tint::inspector::Inspector Inspector{Program};
+    ASSERT_EQ(Inspector.GetEntryPoints().size(), size_t{1}) << "Program is expected to have a single entry point";
+    for (auto& EntryPoint : Inspector.GetEntryPoints())
+    {
+        for (auto& Binding : Inspector.GetResourceBindings(EntryPoint.name))
+        {
+            auto RemappedBindingIt = ResRemapping.find(Binding.variable_name);
+            if (RemappedBindingIt == ResRemapping.end() &&
+                (Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kUniformBuffer ||
+                 Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kStorageBuffer ||
+                 Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kReadOnlyStorageBuffer))
+            {
+                // Search variable by type
+                for (const auto* Variable : Program.AST().GlobalVariables())
+                {
+                    if (Variable->name->symbol.Name() == Binding.variable_name)
+                    {
+                        RemappedBindingIt = ResRemapping.find(Variable->type->identifier->symbol.Name());
+                    }
+                }
+
+                if (RemappedBindingIt == ResRemapping.end())
+                {
+                    GTEST_FAIL() << "Unable to find remapping for resource '" << Binding.variable_name << "'";
+                }
+                else
+                {
+                    EXPECT_EQ(Binding.bind_group, RemappedBindingIt->second.Group) << "Bind group mismatch (" << Binding.bind_group << " vs " << RemappedBindingIt->second.Group << " for resource '" << Binding.variable_name << "'";
+                    EXPECT_EQ(Binding.binding, RemappedBindingIt->second.Index) << "Binding index mismatch (" << Binding.binding << " vs " << RemappedBindingIt->second.Index << " for resource '" << Binding.variable_name << "'";
+                }
+            }
+        }
+    }
 }
 
 TEST(WGSLUtils, RemapUniformBuffers)
