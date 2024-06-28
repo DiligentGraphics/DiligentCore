@@ -76,6 +76,16 @@ struct WGSLShaderResourceAttribs
         NumResourceTypes
     };
 
+    enum TextureSampleType : Uint8
+    {
+        Unknown,
+        Float,
+        UInt,
+        SInt,
+        UnfilterableFloat,
+        Depth
+    };
+
     static SHADER_RESOURCE_TYPE GetShaderResourceType(ResourceType Type);
 
     // clang-format off
@@ -88,7 +98,8 @@ struct WGSLShaderResourceAttribs
 /* 12 */const TEXTURE_FORMAT    Format;      // Storage texture format
 /* 14 */const uint16_t          BindGroup;
 /* 16 */const uint16_t          BindIndex;
-/* 18 */
+/* 18 */const TextureSampleType SampleType;
+/* 19 */
 
 /* 20 */const Uint32            BufferStaticSize;
 /* 24 */ // End of structure
@@ -97,6 +108,16 @@ struct WGSLShaderResourceAttribs
 
     WGSLShaderResourceAttribs(const char*                             _Name,
                               const tint::inspector::ResourceBinding& TintBinding) noexcept;
+
+    WGSLShaderResourceAttribs(const char*        _Name,
+                              ResourceType       _Type,
+                              Uint16             _ArraySize        = 1,
+                              RESOURCE_DIMENSION _ResourceDim      = RESOURCE_DIM_UNDEFINED,
+                              TEXTURE_FORMAT     _Format           = TEX_FORMAT_UNKNOWN,
+                              TextureSampleType  _SampleType       = TextureSampleType::Unknown,
+                              uint16_t           _BindGroup        = 0,
+                              uint16_t           _BindIndex        = 0,
+                              Uint32             _BufferStaticSize = 0) noexcept;
 
     ShaderResourceDesc GetResourceDesc() const
     {

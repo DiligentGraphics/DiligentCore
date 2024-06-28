@@ -31,6 +31,8 @@
 #include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"
 
+#include <unordered_map>
+
 #include "TestingEnvironment.hpp"
 #include "gtest/gtest.h"
 
@@ -65,7 +67,8 @@ std::string HLSLtoWGLS(const char* FilePath)
     return ConvertSPIRVtoWGSL(SPIRV);
 }
 
-void TestWGSLResources(const char* FilePath)
+void TestWGSLResources(const char*                                   FilePath,
+                       const std::vector<WGSLShaderResourceAttribs>& RefResources)
 {
     const auto WGSL = HLSLtoWGLS(FilePath);
     ASSERT_FALSE(WGSL.empty());
@@ -79,31 +82,87 @@ void TestWGSLResources(const char* FilePath)
         nullptr, // EntryPoint
     };
     LOG_INFO_MESSAGE("WGSL Resources:\n", Resources.DumpResources());
+
+    EXPECT_EQ(size_t{Resources.GetTotalResources()}, RefResources.size());
+
+    std::unordered_map<std::string, const WGSLShaderResourceAttribs*> RefResourcesMap;
+    for (const auto& RefRes : RefResources)
+    {
+        RefResourcesMap[RefRes.Name] = &RefRes;
+    }
+
+    for (Uint32 i = 0; i < Resources.GetTotalResources(); ++i)
+    {
+        const auto& Res     = const_cast<const WGSLShaderResources&>(Resources).GetResource(i);
+        const auto* pRefRes = RefResourcesMap[Res.Name];
+        ASSERT_NE(pRefRes, nullptr) << "Resource '" << Res.Name << "' is not found in the reference list";
+
+        EXPECT_EQ(Res.ArraySize, pRefRes->ArraySize);
+        EXPECT_EQ(Res.Type, pRefRes->Type);
+        EXPECT_EQ(Res.ArraySize, pRefRes->ArraySize);
+        EXPECT_EQ(Res.ResourceDim, pRefRes->ResourceDim);
+        EXPECT_EQ(Res.Format, pRefRes->Format);
+        EXPECT_EQ(Res.SampleType, pRefRes->SampleType);
+    }
 }
 
+using WGSLResourceType = WGSLShaderResourceAttribs::ResourceType;
+using WGSLSampleType   = WGSLShaderResourceAttribs::TextureSampleType;
 TEST(WGSLShaderResources, UniformBuffers)
 {
-    TestWGSLResources("UniformBuffers.psh");
+    TestWGSLResources("UniformBuffers.psh",
+                      {
+                          {"CB0", WGSLResourceType::UniformBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"CB1", WGSLResourceType::UniformBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"CB2", WGSLResourceType::UniformBuffer, 1, RESOURCE_DIM_BUFFER},
+                      });
 }
 
 TEST(WGSLShaderResources, Textures)
 {
-    TestWGSLResources("Textures.psh");
+    TestWGSLResources("Textures.psh",
+                      {
+                          {"g_Tex1D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_1D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"g_Tex2D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"g_Tex2DArr", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"g_TexCube", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_CUBE, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"g_TexCubeArr", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_CUBE_ARRAY, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"g_Tex3D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"g_Sampler", WGSLResourceType::Sampler},
+                      });
 }
 
 TEST(WGSLShaderResources, RWTextures)
 {
-    TestWGSLResources("RWTextures.psh");
+    TestWGSLResources("RWTextures.psh",
+                      {
+                          {"g_RWTex1D", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_1D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+                          {"g_RWTex2D", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+                          {"g_RWTex2DArr", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+                          {"g_RWTex3D", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+                      });
 }
 
 TEST(WGSLShaderResources, StructBuffers)
 {
-    TestWGSLResources("StructBuffers.psh");
+    TestWGSLResources("StructBuffers.psh",
+                      {
+                          {"g_Buff0", WGSLResourceType::ROStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_Buff1", WGSLResourceType::ROStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_Buff2", WGSLResourceType::ROStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_Buff3", WGSLResourceType::ROStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                      });
 }
 
 TEST(WGSLShaderResources, RWStructBuffers)
 {
-    TestWGSLResources("RWStructBuffers.psh");
+    TestWGSLResources("RWStructBuffers.psh",
+                      {
+                          {"g_RWBuff0", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_RWBuff1", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_RWBuff2", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_RWBuff3", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                      });
 }
 
 } // namespace

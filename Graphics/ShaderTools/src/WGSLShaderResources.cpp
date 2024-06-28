@@ -120,6 +120,41 @@ WGSLShaderResourceAttribs::ResourceType TintResourceTypeToWGSLShaderAttribsResou
     }
 }
 
+WGSLShaderResourceAttribs::TextureSampleType TintSampleKindToWGSLShaderAttribsSampleType(const tint::inspector::ResourceBinding& TintBinding)
+{
+    using TintResourceType = tint::inspector::ResourceBinding::ResourceType;
+    using TintSampledKind  = tint::inspector::ResourceBinding::SampledKind;
+
+    if (TintBinding.resource_type != TintResourceType::kSampledTexture &&
+        TintBinding.resource_type != TintResourceType::kMultisampledTexture &&
+        TintBinding.resource_type != TintResourceType::kWriteOnlyStorageTexture &&
+        TintBinding.resource_type != TintResourceType::kReadOnlyStorageTexture &&
+        TintBinding.resource_type != TintResourceType::kReadWriteStorageTexture &&
+        TintBinding.resource_type != TintResourceType::kDepthTexture &&
+        TintBinding.resource_type != TintResourceType::kDepthMultisampledTexture &&
+        TintBinding.resource_type != TintResourceType::kExternalTexture)
+        return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
+
+    switch (TintBinding.sampled_kind)
+    {
+        case TintSampledKind::kFloat:
+            return WGSLShaderResourceAttribs::TextureSampleType::Float;
+
+        case TintSampledKind::kSInt:
+            return WGSLShaderResourceAttribs::TextureSampleType::SInt;
+
+        case TintSampledKind::kUInt:
+            return WGSLShaderResourceAttribs::TextureSampleType::UInt;
+
+        case TintSampledKind::kUnknown:
+            return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
+
+        default:
+            UNEXPECTED("Unexpected sample kind");
+            return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
+    }
+}
+
 RESOURCE_DIMENSION TintTextureDimensionToResourceDimension(tint::inspector::ResourceBinding::TextureDimension TintTexDim)
 {
     using TintTextureDim = tint::inspector::ResourceBinding::TextureDimension;
@@ -234,9 +269,31 @@ WGSLShaderResourceAttribs::WGSLShaderResourceAttribs(const char*                
     Format			 {TintTexelFormatToTextureFormat(TintBinding)},
     BindGroup        {static_cast<Uint16>(TintBinding.bind_group)},
     BindIndex        {static_cast<Uint16>(TintBinding.binding)},
+    SampleType       {TintSampleKindToWGSLShaderAttribsSampleType(TintBinding)},
     BufferStaticSize {TintBinding.resource_type == tint::inspector::ResourceBinding::ResourceType::kUniformBuffer ? static_cast<Uint32>(TintBinding.size) : 0}
 // clang-format on
 {}
+
+WGSLShaderResourceAttribs::WGSLShaderResourceAttribs(const char*        _Name,
+                                                     ResourceType       _Type,
+                                                     Uint16             _ArraySize,
+                                                     RESOURCE_DIMENSION _ResourceDim,
+                                                     TEXTURE_FORMAT     _Format,
+                                                     TextureSampleType  _SampleType,
+                                                     uint16_t           _BindGroup,
+                                                     uint16_t           _BindIndex,
+                                                     Uint32             _BufferStaticSize) noexcept :
+    Name{_Name},
+    ArraySize{_ArraySize},
+    Type{_Type},
+    ResourceDim{_ResourceDim},
+    Format{_Format},
+    BindGroup{_BindGroup},
+    BindIndex{_BindIndex},
+    SampleType{_SampleType},
+    BufferStaticSize{_BufferStaticSize}
+{
+}
 
 SHADER_RESOURCE_TYPE WGSLShaderResourceAttribs::GetShaderResourceType(ResourceType Type)
 {
