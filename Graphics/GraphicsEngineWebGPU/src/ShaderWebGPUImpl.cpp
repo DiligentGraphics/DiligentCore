@@ -244,7 +244,7 @@ const ShaderCodeBufferDesc* ShaderWebGPUImpl::GetConstantBufferDesc(Uint32 Index
     }
 
     // Uniform buffers always go first in the list of resources
-    return {}; //m_pShaderResources->GetUniformBufferDesc(Index);
+    return m_pShaderResources->GetUniformBufferDesc(Index);
 }
 
 void ShaderWebGPUImpl::GetBytecode(const void** ppBytecode, Uint64& Size) const
@@ -263,7 +263,7 @@ const std::string& ShaderWebGPUImpl::GetWGSL() const
 const char* ShaderWebGPUImpl::GetEntryPoint() const
 {
     DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
-    return nullptr; //m_EntryPoint.c_str();
+    return m_pShaderResources->GetEntryPoint();
 }
 
 } // namespace Diligent

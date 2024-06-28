@@ -178,6 +178,23 @@ public:
 
     // clang-format on
 
+    const ShaderCodeBufferDesc* GetUniformBufferDesc(Uint32 Index) const
+    {
+        if (Index >= GetNumUBs())
+        {
+            UNEXPECTED("Uniform buffer index (", Index, ") is out of range.");
+            return nullptr;
+        }
+
+        if (!m_UBReflectionBuffer)
+        {
+            UNEXPECTED("Uniform buffer reflection information is not loaded. Please set the LoadConstantBufferReflection flag when creating the shader.");
+            return nullptr;
+        }
+
+        return reinterpret_cast<const ShaderCodeBufferDesc*>(m_UBReflectionBuffer.get()) + Index;
+    }
+
     struct ResourceCounters
     {
         Uint32 NumUBs         = 0;
@@ -258,6 +275,7 @@ public:
 
     const char* GetCombinedSamplerSuffix() const { return m_CombinedSamplerSuffix; }
     const char* GetShaderName()            const { return m_ShaderName; }
+    const char* GetEntryPoint()            const { return m_EntryPoint; }
     bool        IsUsingCombinedSamplers()  const { return m_CombinedSamplerSuffix != nullptr; }
 
     // clang-format on
@@ -297,9 +315,11 @@ private:
     // Memory buffer that holds all resources as continuous chunk of memory:
     // |  UBs  |  SBs  |  Textures  |  StorageTex  |  Samplers |  ExternalTex | Resource Names |
     std::unique_ptr<void, STDDeleterRawMem<void>> m_MemoryBuffer;
+    std::unique_ptr<void, STDDeleterRawMem<void>> m_UBReflectionBuffer;
 
     const char* m_CombinedSamplerSuffix = nullptr;
     const char* m_ShaderName            = nullptr;
+    const char* m_EntryPoint            = nullptr;
 
     using OffsetType                   = Uint16;
     OffsetType m_StorageBufferOffset   = 0;

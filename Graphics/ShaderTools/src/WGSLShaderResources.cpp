@@ -467,6 +467,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     }
 
     ResourceNamesPoolSize += strlen(ShaderName) + 1;
+    ResourceNamesPoolSize += strlen(EntryPoint) + 1;
 
     // Resource names pool is only needed to facilitate string allocation.
     StringPool ResourceNamesPool;
@@ -545,6 +546,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     }
 
     m_ShaderName = ResourceNamesPool.CopyString(ShaderName);
+    m_EntryPoint = ResourceNamesPool.CopyString(EntryPoint);
     VERIFY(ResourceNamesPool.GetRemainingSize() == 0, "Names pool must be empty");
 }
 
