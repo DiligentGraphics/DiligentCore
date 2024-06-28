@@ -44,6 +44,10 @@
 #include "QueueSignalPoolWebGPU.hpp"
 #include "AttachmentCleanerWebGPU.hpp"
 
+#if !DILIGENT_NO_GLSLANG
+#    include "GLSLangUtils.hpp"
+#endif
+
 namespace Diligent
 {
 
@@ -96,9 +100,18 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
     m_pMemoryManager.reset(new SharedMemoryManagerWebGPU{m_wgpuDevice.Get(), EngineCI.DynamicHeapPageSize});
     m_pAttachmentCleaner.reset(new AttachmentCleanerWebGPU{m_wgpuDevice.Get()});
     m_pMipsGenerator.reset(new GenerateMipsHelperWebGPU{m_wgpuDevice.Get()});
+
+#if !DILIGENT_NO_GLSLANG
+    GLSLangUtils::InitializeGlslang();
+#endif
 }
 
-RenderDeviceWebGPUImpl::~RenderDeviceWebGPUImpl() = default;
+RenderDeviceWebGPUImpl::~RenderDeviceWebGPUImpl()
+{
+#if !DILIGENT_NO_GLSLANG
+    GLSLangUtils::FinalizeGlslang();
+#endif
+}
 
 void RenderDeviceWebGPUImpl::CreateBuffer(const BufferDesc& BuffDesc,
                                           const BufferData* pBuffData,

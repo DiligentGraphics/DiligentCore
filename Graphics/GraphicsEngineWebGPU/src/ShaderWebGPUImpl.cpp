@@ -61,9 +61,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&             S
 #if DILIGENT_NO_GLSLANG
     LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use precompiled SPIRV bytecode.");
 #else
-    GLSLangUtils::InitializeGlslang();
     SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, SPIRVDefine, WebGPUShaderCI.ppCompilerOutput);
-    GLSLangUtils::FinalizeGlslang();
 #endif
 
     return SPIRV;
