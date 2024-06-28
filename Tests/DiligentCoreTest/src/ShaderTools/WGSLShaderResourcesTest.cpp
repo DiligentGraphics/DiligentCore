@@ -123,12 +123,15 @@ TEST(WGSLShaderResources, Textures)
     TestWGSLResources("Textures.psh",
                       {
                           {"g_Tex1D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_1D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
-                          {"g_Tex2D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"g_Tex2D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN, WGSLSampleType::UInt},
                           {"g_Tex2DArr", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
                           {"g_TexCube", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_CUBE, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
                           {"g_TexCubeArr", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_CUBE_ARRAY, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
-                          {"g_Tex3D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"g_Tex3D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_UNKNOWN, WGSLSampleType::SInt},
+                          {"g_Tex2DMS", WGSLResourceType::TextureMS, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"g_Tex2DDepth", WGSLResourceType::DepthTexture, 1, RESOURCE_DIM_TEX_2D},
                           {"g_Sampler", WGSLResourceType::Sampler},
+                          {"g_SamplerCmp", WGSLResourceType::ComparisonSampler},
                       });
 }
 
@@ -136,10 +139,20 @@ TEST(WGSLShaderResources, RWTextures)
 {
     TestWGSLResources("RWTextures.psh",
                       {
-                          {"g_RWTex1D", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_1D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
-                          {"g_RWTex2D", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
-                          {"g_RWTex2DArr", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
-                          {"g_RWTex3D", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+                          {"g_WOTex1D", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_1D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+                          {"g_WOTex2D", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA32_SINT, WGSLSampleType::SInt},
+                          {"g_WOTex2DArr", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_RGBA32_UINT, WGSLSampleType::UInt},
+                          {"g_WOTex3D", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_RGBA32_FLOAT, WGSLSampleType::Float},
+
+                          {"g_ROTex1D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_1D, TEX_FORMAT_UNKNOWN, WGSLSampleType::SInt},
+                          {"g_ROTex2D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+                          {"g_ROTex2DArr", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_UNKNOWN, WGSLSampleType::UInt},
+                          {"g_ROTex3D", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
+
+                          {"g_RWTex1D", WGSLResourceType::RWStorageTexture, 1, RESOURCE_DIM_TEX_1D, TEX_FORMAT_R32_SINT, WGSLSampleType::SInt},
+                          {"g_RWTex2D", WGSLResourceType::RWStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_R32_FLOAT, WGSLSampleType::Float},
+                          {"g_RWTex2DArr", WGSLResourceType::RWStorageTexture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_R32_UINT, WGSLSampleType::UInt},
+                          {"g_RWTex3D", WGSLResourceType::RWStorageTexture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_R32_FLOAT, WGSLSampleType::Float},
                       });
 }
 

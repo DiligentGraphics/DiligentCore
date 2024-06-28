@@ -49,7 +49,7 @@ namespace Diligent
 
 std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
 {
-    tint::spirv::reader::Options SPIRVReaderOptions{true};
+    tint::spirv::reader::Options SPIRVReaderOptions{true, {tint::wgsl::AllowedFeatures::Everything()}};
     tint::Program                Program = Read(SPIRV, SPIRVReaderOptions);
 
     if (!Program.IsValid())

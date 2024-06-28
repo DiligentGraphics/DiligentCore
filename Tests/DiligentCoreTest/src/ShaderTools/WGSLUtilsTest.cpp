@@ -139,13 +139,18 @@ TEST(WGSLUtils, RemapTextures)
 {
     TestResourceRemapping("Textures.psh",
                           {
-                              {"g_Tex1D", {1, 2}},
-                              {"g_Tex2D", {3, 4}},
-                              {"g_Tex2DArr", {5, 6}},
-                              {"g_TexCube", {7, 8}},
+                              // clang-format off
+                              {"g_Tex1D",      {1, 2}},
+                              {"g_Tex2D",      {3, 4}},
+                              {"g_Tex2DArr",   {5, 6}},
+                              {"g_TexCube",    {7, 8}},
                               {"g_TexCubeArr", {9, 10}},
-                              {"g_Tex3D", {11, 12}},
-                              {"g_Sampler", {13, 14}},
+                              {"g_Tex3D",      {11, 12}},
+                              {"g_Tex2DMS",    {13, 14}},
+                              {"g_Tex2DDepth", {15, 16}},
+                              {"g_Sampler",    {17, 18}},
+                              {"g_SamplerCmp", {19, 20}},
+                              // clang-format on
                           });
 }
 
@@ -153,10 +158,22 @@ TEST(WGSLUtils, RemapRWTextures)
 {
     TestResourceRemapping("RWTextures.psh",
                           {
-                              {"g_RWTex1D", {1, 2}},
-                              {"g_RWTex2D", {3, 4}},
-                              {"g_RWTex2DArr", {5, 6}},
-                              {"g_RWTex3D", {7, 8}},
+                              // clang-format off
+                              {"g_WOTex1D",    {1, 2}},
+                              {"g_WOTex2D",    {3, 4}},
+                              {"g_WOTex2DArr", {5, 6}},
+                              {"g_WOTex3D",    {7, 8}},
+
+                              {"g_ROTex1D",    { 9, 10}},
+                              {"g_ROTex2D",    {11, 12}},
+                              {"g_ROTex2DArr", {13, 14}},
+                              {"g_ROTex3D",    {15, 16}},
+
+                              {"g_RWTex1D",    {17, 18}},
+                              {"g_RWTex2D",    {19, 20}},
+                              {"g_RWTex2DArr", {21, 22}},
+                              {"g_RWTex3D",    {23, 24}},
+                              // clang-format on
                           });
 }
 

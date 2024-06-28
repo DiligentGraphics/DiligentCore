@@ -130,8 +130,6 @@ WGSLShaderResourceAttribs::TextureSampleType TintSampleKindToWGSLShaderAttribsSa
         TintBinding.resource_type != TintResourceType::kWriteOnlyStorageTexture &&
         TintBinding.resource_type != TintResourceType::kReadOnlyStorageTexture &&
         TintBinding.resource_type != TintResourceType::kReadWriteStorageTexture &&
-        TintBinding.resource_type != TintResourceType::kDepthTexture &&
-        TintBinding.resource_type != TintResourceType::kDepthMultisampledTexture &&
         TintBinding.resource_type != TintResourceType::kExternalTexture)
         return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
 

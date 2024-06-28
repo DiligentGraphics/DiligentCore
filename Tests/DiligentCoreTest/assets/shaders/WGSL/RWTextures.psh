@@ -1,14 +1,29 @@
-RWTexture1D<float4>      g_RWTex1D;
-RWTexture2D<float4>      g_RWTex2D;
-RWTexture2DArray<float4> g_RWTex2DArr;
-RWTexture3D<float4>      g_RWTex3D;
+RWTexture1D<float4>     g_WOTex1D;
+RWTexture2D<int4>       g_WOTex2D;
+RWTexture2DArray<uint4> g_WOTex2DArr;
+RWTexture3D<float4>     g_WOTex3D;
+
+RWTexture1D<int2>       g_ROTex1D;
+RWTexture2D<float2>     g_ROTex2D;
+RWTexture2DArray<uint2> g_ROTex2DArr;
+RWTexture3D<float2>     g_ROTex3D;
+
+RWTexture1D<int>       g_RWTex1D;
+RWTexture2D<float>     g_RWTex2D;
+RWTexture2DArray<uint> g_RWTex2DArr;
+RWTexture3D<float>     g_RWTex3D;
 
 float4 main() : SV_Target
 {
-    g_RWTex1D[0]                 = float4(0.0, 1.0, 2.0, 3.0);
-    g_RWTex2D[uint2(0, 0)]       = float4(0.0, 1.0, 2.0, 3.0);
-    g_RWTex2DArr[uint3(0, 0, 0)] = float4(0.0, 1.0, 2.0, 3.0);
-    g_RWTex3D[uint3(0, 0, 0)]    = float4(0.0, 1.0, 2.0, 3.0);
+    g_WOTex1D[0]                 = float4(0.0, 1.0, 2.0, 3.0);
+    g_WOTex2D[uint2(0, 0)]       = int4(0, 1, 2, 3);
+    g_WOTex2DArr[uint3(0, 0, 0)] = uint4(0, 1, 2, 3);
+    g_WOTex3D[uint3(0, 0, 0)]    = float4(0.0, 1.0, 2.0, 3.0);
+
+    g_RWTex1D[0]                 += g_ROTex1D[0].x;
+    g_RWTex2D[uint2(0, 0)]       += g_ROTex2D[uint2(0, 0)].y;
+    g_RWTex2DArr[uint3(0, 0, 0)] += g_ROTex2DArr[uint3(0, 0, 0)].x;
+    g_RWTex3D[uint3(0, 0, 0)]    += g_ROTex3D[uint3(0, 0, 0)].y;
 
     return float4(0.0, 1.0, 2.0, 3.0);
 }
