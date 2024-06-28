@@ -125,7 +125,6 @@ if (${DILIGENT_NO_HLSL})
     message("HLSL support is disabled. WebGPU backend will not be able to consume SPIRV bytecode generated from HLSL")
 else()
     list(APPEND PRIVATE_DEPENDENCIES SPIRV-Tools-opt)
-    list(APPEND PRIVATE_DEPENDENCIES libtint)
 endif()
 
 target_link_libraries(Diligent-GraphicsEngineWebGPU-static

@@ -48,20 +48,69 @@ constexpr INTERFACE_ID ShaderWebGPUImpl::IID_InternalImpl;
 namespace
 {
 
-constexpr char SPIRVDefine[] =
+constexpr char WebGPUDefine[] =
     "#ifndef WEBGPU\n"
     "#   define WEBGPU 1\n"
     "#endif\n";
 
-std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&             ShaderCI,
+std::vector<uint32_t> CompileShaderToSPIRV(const ShaderCreateInfo&             ShaderCI,
                                            const ShaderWebGPUImpl::CreateInfo& WebGPUShaderCI)
 {
     std::vector<uint32_t> SPIRV;
 
 #if DILIGENT_NO_GLSLANG
-    LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use precompiled SPIRV bytecode.");
+    LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use DXC or precompiled SPIRV bytecode.");
 #else
-    SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, SPIRVDefine, WebGPUShaderCI.ppCompilerOutput);
+    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+    {
+        SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, WebGPUDefine, WebGPUShaderCI.ppCompilerOutput);
+    }
+    else
+    {
+        std::string          GLSLSourceString;
+        ShaderSourceFileData SourceData;
+
+        ShaderMacroArray Macros;
+        if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
+        {
+            // Read the source file directly and use it as is
+            SourceData = ReadShaderSourceFile(ShaderCI);
+
+            // Add user macros.
+            // BuildGLSLSourceString adds the macros to the source string, so we don't need to do this for SHADER_SOURCE_LANGUAGE_GLSL
+            Macros = ShaderCI.Macros;
+        }
+        else
+        {
+            // Build the full source code string that will contain GLSL version declaration,
+            // platform definitions, user-provided shader macros, etc.
+            GLSLSourceString = BuildGLSLSourceString(
+                {
+                    ShaderCI,
+                    WebGPUShaderCI.AdapterInfo,
+                    WebGPUShaderCI.DeviceInfo.Features,
+                    WebGPUShaderCI.DeviceInfo.Type,
+                    WebGPUShaderCI.DeviceInfo.MaxShaderVersion,
+                    TargetGLSLCompiler::glslang,
+                    true, // ZeroToOneClipZ
+                    WebGPUDefine,
+                });
+            SourceData.Source       = GLSLSourceString.c_str();
+            SourceData.SourceLength = StaticCast<Uint32>(GLSLSourceString.length());
+        }
+
+        GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
+        Attribs.ShaderType                 = ShaderCI.Desc.ShaderType;
+        Attribs.ShaderSource               = SourceData.Source;
+        Attribs.SourceCodeLen              = static_cast<int>(SourceData.SourceLength);
+        Attribs.Version                    = GLSLangUtils::SpirvVersion::Vk100;
+        Attribs.Macros                     = Macros;
+        Attribs.AssignBindings             = true;
+        Attribs.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
+        Attribs.ppCompilerOutput           = WebGPUShaderCI.ppCompilerOutput;
+
+        SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
+    }
 #endif
 
     return SPIRV;
@@ -87,36 +136,52 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
 // clang-format on
 {
     m_Status.store(SHADER_STATUS_COMPILING);
-    if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
+    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
+        ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_WGSL)
     {
-        DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
-        switch (ShaderCI.ShaderCompiler)
+        if (ShaderCI.Macros)
         {
-
-            case SHADER_COMPILER_DEFAULT:
-            case SHADER_COMPILER_GLSLANG:
-                m_SPIRV = CompileShaderGLSLang(ShaderCI, WebGPUShaderCI);
-                break;
-
-            default:
-                LOG_ERROR_AND_THROW("Unsupported shader compiler");
+            LOG_WARNING_MESSAGE("Shader macros are not supported for WGSL shaders and will be ignored.");
         }
-
-        if (m_SPIRV.empty())
-        {
-            LOG_ERROR_AND_THROW("Failed to compile shader '", m_Desc.Name, '\'');
-        }
+        // Read the source file directly and use it as is
+        ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
+        m_WGSL.assign(SourceData.Source, SourceData.SourceLength);
     }
-    else if (ShaderCI.ByteCode != nullptr)
+    else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ||
+             ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL ||
+             ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
     {
-        DEV_CHECK_ERR(ShaderCI.ByteCodeSize != 0, "ByteCodeSize must not be 0");
-        DEV_CHECK_ERR(ShaderCI.ByteCodeSize % 4 == 0, "Byte code size (", ShaderCI.ByteCodeSize, ") is not multiple of 4");
-        m_SPIRV.resize(ShaderCI.ByteCodeSize / 4);
-        memcpy(m_SPIRV.data(), ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
+        std::vector<uint32_t> SPIRV;
+        if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
+        {
+            DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
+            SPIRV = CompileShaderToSPIRV(ShaderCI, WebGPUShaderCI);
+            if (SPIRV.empty())
+            {
+                LOG_ERROR_AND_THROW("Failed to compile shader '", m_Desc.Name, '\'');
+            }
+        }
+        else if (ShaderCI.ByteCode != nullptr)
+        {
+            DEV_CHECK_ERR(ShaderCI.ByteCodeSize != 0, "ByteCodeSize must not be 0");
+            DEV_CHECK_ERR(ShaderCI.ByteCodeSize % 4 == 0, "Byte code size (", ShaderCI.ByteCodeSize, ") is not multiple of 4");
+            SPIRV.resize(ShaderCI.ByteCodeSize / 4);
+            memcpy(SPIRV.data(), ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
+        }
+        else
+        {
+            LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
+        }
+
+        m_WGSL = ConvertSPIRVtoWGSL(SPIRV);
+        if (m_WGSL.empty())
+        {
+            LOG_ERROR_AND_THROW("Failed to convert SPIRV to WGSL for shader '", m_Desc.Name, '\'');
+        }
     }
     else
     {
-        LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
+        LOG_ERROR_AND_THROW("Unsupported shader source language");
     }
 
     // We cannot create shader module here because resource bindings are assigned when
@@ -125,34 +190,21 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
     // Load shader resources
     if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
     {
-        auto& Allocator        = GetRawAllocator();
-        auto* pRawMem          = ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1);
-        auto  LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
-        auto* pResources       = new (pRawMem) SPIRVShaderResources //
+        auto& Allocator  = GetRawAllocator();
+        auto* pRawMem    = ALLOCATE(Allocator, "Memory for WGSLShaderResources", WGSLShaderResources, 1);
+        auto* pResources = new (pRawMem) WGSLShaderResources //
             {
                 Allocator,
-                m_SPIRV,
-                m_Desc,
+                m_WGSL,
+                ShaderCI.SourceLanguage,
+                m_Desc.Name,
                 m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
-                LoadShaderInputs,
+                ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_WGSL ? ShaderCI.EntryPoint : nullptr,
                 ShaderCI.LoadConstantBufferReflection,
-                m_EntryPoint //
             };
-        VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint);
-        m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
-
-        if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
-        {
-            // TODO
-            // MapHLSLVertexShaderInputs();
-        }
-    }
-    else
-    {
-        m_EntryPoint = ShaderCI.EntryPoint;
+        m_pShaderResources.reset(pResources, STDDeleterRawMem<WGSLShaderResources>(Allocator));
     }
 
-    m_WGSL = ConvertSPIRVtoWGSL(m_SPIRV);
     m_Status.store(SHADER_STATUS_READY);
 }
 
@@ -192,7 +244,7 @@ const ShaderCodeBufferDesc* ShaderWebGPUImpl::GetConstantBufferDesc(Uint32 Index
     }
 
     // Uniform buffers always go first in the list of resources
-    return m_pShaderResources->GetUniformBufferDesc(Index);
+    return {}; //m_pShaderResources->GetUniformBufferDesc(Index);
 }
 
 void ShaderWebGPUImpl::GetBytecode(const void** ppBytecode, Uint64& Size) const
@@ -200,12 +252,6 @@ void ShaderWebGPUImpl::GetBytecode(const void** ppBytecode, Uint64& Size) const
     DEV_CHECK_ERR(!IsCompiling(), "WGSL is not available until the shader is compiled. Use GetStatus() to check the shader status.");
     *ppBytecode = m_WGSL.data();
     Size        = m_WGSL.size();
-}
-
-const std::vector<uint32_t>& ShaderWebGPUImpl::GetSPIRV() const
-{
-    DEV_CHECK_ERR(!IsCompiling(), "SPIRV bytecode is not available until the shader is compiled. Use GetStatus() to check the shader status.");
-    return m_SPIRV;
 }
 
 const std::string& ShaderWebGPUImpl::GetWGSL() const
@@ -217,7 +263,7 @@ const std::string& ShaderWebGPUImpl::GetWGSL() const
 const char* ShaderWebGPUImpl::GetEntryPoint() const
 {
     DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
-    return m_EntryPoint.c_str();
+    return nullptr; //m_EntryPoint.c_str();
 }
 
 } // namespace Diligent

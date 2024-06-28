@@ -52,9 +52,6 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_ShaderWebGPU =
 class IShaderWebGPU : public IShader
 {
 public:
-    /// Returns SPIRV bytecode
-    virtual const std::vector<uint32_t>& DILIGENT_CALL_TYPE GetSPIRV() const = 0;
-
     /// Returns WGSL source code
     virtual const std::string& DILIGENT_CALL_TYPE GetWGSL() const = 0;
 };

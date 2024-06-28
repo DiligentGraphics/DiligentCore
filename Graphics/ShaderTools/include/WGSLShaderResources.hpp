@@ -142,7 +142,7 @@ class WGSLShaderResources
 {
 public:
     WGSLShaderResources(IMemoryAllocator&      Allocator,
-                        std::string            WGSL,
+                        const std::string&     WGSL,
                         SHADER_SOURCE_LANGUAGE SourceLanguage,
                         const char*            ShaderName,
                         const char*            CombinedSamplerSuffix,

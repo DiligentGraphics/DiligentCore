@@ -336,7 +336,7 @@ SHADER_RESOURCE_TYPE WGSLShaderResourceAttribs::GetShaderResourceType(ResourceTy
 }
 
 WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
-                                         std::string            WGSL,
+                                         const std::string&     WGSL,
                                          SHADER_SOURCE_LANGUAGE SourceLanguage,
                                          const char*            ShaderName,
                                          const char*            CombinedSamplerSuffix,

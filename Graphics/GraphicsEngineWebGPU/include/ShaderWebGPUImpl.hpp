@@ -31,7 +31,7 @@
 
 #include "EngineWebGPUImplTraits.hpp"
 #include "ShaderBase.hpp"
-#include "SPIRVShaderResources.hpp"
+#include "WGSLShaderResources.hpp"
 
 namespace Diligent
 {
@@ -75,20 +75,15 @@ public:
     /// Implementation of IShader::GetBytecode() in WebGPU backend.
     void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode, Uint64& Size) const override final;
 
-    /// Implementation of IShaderWebGPU::GetSPIRV() in WebGPU backend.
-    const std::vector<uint32_t>& DILIGENT_CALL_TYPE GetSPIRV() const override final;
-
     /// Implementation of IShaderWebGPU::GetWGSL() in WebGPU backend.
     const std::string& DILIGENT_CALL_TYPE GetWGSL() const override final;
 
     const char* GetEntryPoint() const;
 
 private:
-    std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;
+    std::string m_WGSL;
 
-    std::string           m_EntryPoint;
-    std::vector<uint32_t> m_SPIRV;
-    std::string           m_WGSL;
+    std::shared_ptr<const WGSLShaderResources> m_pShaderResources;
 };
 
 } // namespace Diligent
