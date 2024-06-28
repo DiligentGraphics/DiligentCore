@@ -104,16 +104,24 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
         WGPUBindGroupEntry* pCurrWGPUEntryPtr = reinterpret_cast<WGPUBindGroupEntry*>(pCurrResPtr + m_TotalResources);
         for (Uint32 t = 0; t < NumGroups; ++t)
         {
+            const Uint32 GroupSize = GroupSizes[t];
+            for (Uint32 Entry = 0; Entry < GroupSize; ++Entry)
+            {
+                pCurrWGPUEntryPtr[Entry]         = {};
+                pCurrWGPUEntryPtr[Entry].binding = Entry;
+            }
+
             new (&GetBindGroup(t)) BindGroup{
-                GroupSizes[t],
-                GroupSizes[t] > 0 ? pCurrResPtr : nullptr,
-                GroupSizes[t] > 0 ? pCurrWGPUEntryPtr : nullptr,
+                GroupSize,
+                GroupSize > 0 ? pCurrResPtr : nullptr,
+                GroupSize > 0 ? pCurrWGPUEntryPtr : nullptr,
             };
-            pCurrResPtr += GroupSizes[t];
-            pCurrWGPUEntryPtr += GroupSizes[t];
+
+            pCurrResPtr += GroupSize;
+            pCurrWGPUEntryPtr += GroupSize;
 
 #ifdef DILIGENT_DEBUG
-            m_DbgInitializedResources[t].resize(GroupSizes[t]);
+            m_DbgInitializedResources[t].resize(GroupSize);
 #endif
         }
         VERIFY_EXPR((char*)pCurrWGPUEntryPtr == (char*)m_pMemory.get() + MemorySize);

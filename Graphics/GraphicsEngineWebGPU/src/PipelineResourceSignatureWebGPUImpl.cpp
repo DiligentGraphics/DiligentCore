@@ -37,6 +37,12 @@ namespace Diligent
 namespace
 {
 
+constexpr SHADER_TYPE WEB_GPU_SUPPORTED_SHADER_STAGES =
+    SHADER_TYPE_VERTEX |
+    SHADER_TYPE_PIXEL |
+    SHADER_TYPE_COMPUTE;
+
+
 BindGroupEntryType GetBindGroupEntryType(const PipelineResourceDesc& Res)
 {
     VERIFY((Res.Flags & ~GetValidPipelineResourceFlags(Res.ResourceType)) == 0,
@@ -160,7 +166,7 @@ WGPUBindGroupLayoutEntry GetWGPUBindGroupLayoutEntry(const PipelineResourceAttri
     WGPUBindGroupLayoutEntry wgpuBGLayoutEntry{};
 
     wgpuBGLayoutEntry.binding    = Attribs.BindingIndex + ArrayElement;
-    wgpuBGLayoutEntry.visibility = ShaderStagesToWGPUShaderStageFlags(ResDesc.ShaderStages);
+    wgpuBGLayoutEntry.visibility = ShaderStagesToWGPUShaderStageFlags(ResDesc.ShaderStages & WEB_GPU_SUPPORTED_SHADER_STAGES);
 
     const BindGroupEntryType EntryType = Attribs.GetBindGroupEntryType();
     static_assert(static_cast<size_t>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
