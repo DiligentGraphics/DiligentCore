@@ -66,12 +66,16 @@ WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&     
     wgpuTextureDesc.usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_CopySrc;
     if (Desc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL))
         wgpuTextureDesc.usage |= WGPUTextureUsage_RenderAttachment;
-    if (Desc.BindFlags & BIND_UNORDERED_ACCESS)
+    if (Desc.BindFlags & BIND_UNORDERED_ACCESS || Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
         wgpuTextureDesc.usage |= WGPUTextureUsage_StorageBinding;
     if (Desc.BindFlags & BIND_SHADER_RESOURCE)
         wgpuTextureDesc.usage |= WGPUTextureUsage_TextureBinding;
 
-    wgpuTextureDesc.format        = TextureFormatToWGPUFormat(Desc.Format);
+    if (IsSRGBFormat(Desc.Format) && wgpuTextureDesc.usage & WGPUTextureUsage_StorageBinding)
+        wgpuTextureDesc.format = TextureFormatToWGPUFormat(SRGBFormatToUnorm(Desc.Format));
+    else
+        wgpuTextureDesc.format = TextureFormatToWGPUFormat(Desc.Format);
+
     wgpuTextureDesc.mipLevelCount = Desc.MipLevels;
     wgpuTextureDesc.sampleCount   = Desc.SampleCount;
     wgpuTextureDesc.size.width    = Desc.GetWidth();
@@ -465,7 +469,46 @@ void TextureWebGPUImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITex
         if (!wgpuTextureView)
             LOG_ERROR_AND_THROW("Failed to create WebGPU texture view ", " '", ViewDesc.Name ? ViewDesc.Name : "", '\'');
 
-        const auto pViewWebGPU = NEW_RC_OBJ(TexViewAllocator, "TextureViewWebGPUImpl instance", TextureViewWebGPUImpl, bIsDefaultView ? this : nullptr)(GetDevice(), UpdatedViewDesc, this, wgpuTextureView.Release(), bIsDefaultView);
+        std::vector<WebGPUTextureViewWrapper> wgpuTextureMipSRVs;
+        std::vector<WebGPUTextureViewWrapper> wgpuTextureMipUAVs;
+        if (UpdatedViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION)
+        {
+            VERIFY_EXPR((m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) != 0 && m_Desc.Is2D());
+
+            for (Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
+            {
+                TextureViewDesc TexMipSRVDesc = UpdatedViewDesc;
+                TexMipSRVDesc.TextureDim      = RESOURCE_DIM_TEX_2D_ARRAY;
+                TexMipSRVDesc.ViewType        = TEXTURE_VIEW_UNORDERED_ACCESS;
+                TexMipSRVDesc.MostDetailedMip = MipLevel;
+                TexMipSRVDesc.NumMipLevels    = 1;
+
+                auto wgpuTextureViewDescSRV = TextureViewDescToWGPUTextureViewDescriptor(m_Desc, TexMipSRVDesc, m_pDevice);
+                wgpuTextureMipSRVs.emplace_back(wgpuTextureCreateView(m_wgpuTexture.Get(), &wgpuTextureViewDescSRV));
+
+                if (!wgpuTextureMipSRVs.back())
+                    LOG_ERROR_AND_THROW("Failed to create WebGPU texture view ", " '", ViewDesc.Name ? ViewDesc.Name : "", '\'');
+            }
+
+            for (Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
+            {
+                TextureViewDesc TexMipUAVDesc = UpdatedViewDesc;
+                TexMipUAVDesc.TextureDim      = RESOURCE_DIM_TEX_2D_ARRAY;
+                TexMipUAVDesc.ViewType        = TEXTURE_VIEW_UNORDERED_ACCESS;
+                TexMipUAVDesc.MostDetailedMip = MipLevel;
+                TexMipUAVDesc.NumMipLevels    = 1;
+                TexMipUAVDesc.Format          = SRGBFormatToUnorm(TexMipUAVDesc.Format);
+
+                auto wgpuTextureViewDescUAV = TextureViewDescToWGPUTextureViewDescriptor(m_Desc, TexMipUAVDesc, m_pDevice);
+                wgpuTextureMipUAVs.emplace_back(wgpuTextureCreateView(m_wgpuTexture.Get(), &wgpuTextureViewDescUAV));
+
+                if (!wgpuTextureMipUAVs.back())
+                    LOG_ERROR_AND_THROW("Failed to create WebGPU texture view ", " '", ViewDesc.Name ? ViewDesc.Name : "", '\'');
+            }
+        }
+
+        const auto pViewWebGPU = NEW_RC_OBJ(TexViewAllocator, "TextureViewWebGPUImpl instance", TextureViewWebGPUImpl, bIsDefaultView ? this : nullptr)(
+            GetDevice(), UpdatedViewDesc, this, std::move(wgpuTextureView), std::move(wgpuTextureMipSRVs), std::move(wgpuTextureMipUAVs), bIsDefaultView);
         VERIFY(pViewWebGPU->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type");
 
         if (bIsDefaultView)

@@ -34,6 +34,7 @@
 #include "RenderPass.h"
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
+#include "InputLayout.h"
 
 namespace Diligent
 {
@@ -45,6 +46,8 @@ TEXTURE_FORMAT WGPUFormatToTextureFormat(WGPUTextureFormat TexFmt);
 WGPUTextureFormat BufferFormatToWGPUTextureFormat(const struct BufferFormat& BuffFmt);
 
 WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uint32 NumComponents, bool IsNormalized);
+
+WGPUIndexFormat IndexTypeToWGPUIndexFormat(VALUE_TYPE ValueType);
 
 WGPUTextureViewDimension ResourceDimensionToWGPUTextureViewDimension(RESOURCE_DIMENSION ResourceDim);
 
@@ -75,5 +78,7 @@ WGPUPrimitiveTopology PrimitiveTopologyWGPUPrimitiveType(PRIMITIVE_TOPOLOGY Prim
 WGPUCullMode CullModeToWGPUCullMode(CULL_MODE CullMode);
 
 WGPUShaderStageFlags ShaderStagesToWGPUShaderStageFlags(SHADER_TYPE Stages);
+
+WGPUVertexStepMode InputElementFrequencyToWGPUVertexStepMode(INPUT_ELEMENT_FREQUENCY StepRate);
 
 } // namespace Diligent

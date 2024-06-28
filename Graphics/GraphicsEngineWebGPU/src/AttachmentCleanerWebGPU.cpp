@@ -329,6 +329,8 @@ void AttachmentCleanerWebGPU::InitializePipelineStates()
 
 void AttachmentCleanerWebGPU::InitializeDynamicUniformBuffer()
 {
+    // Rework when push constants will be available https://github.com/gpuweb/gpuweb/pull/4612 in WebGPU
+
     WGPUSupportedLimits wgpuLimits{};
     wgpuDeviceGetLimits(m_wgpuDevice, &wgpuLimits);
 

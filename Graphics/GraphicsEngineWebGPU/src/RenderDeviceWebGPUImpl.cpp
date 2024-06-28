@@ -95,6 +95,7 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
     m_pQueueSignalPool.reset(new QueueSignalPoolWebGPU{this, EngineCI.QueueSignalPoolSize});
     m_pMemoryManager.reset(new SharedMemoryManagerWebGPU{m_wgpuDevice.Get(), EngineCI.DynamicHeapPageSize});
     m_pAttachmentCleaner.reset(new AttachmentCleanerWebGPU{m_wgpuDevice.Get()});
+    m_pMipsGenerator.reset(new GenerateMipsHelperWebGPU{m_wgpuDevice.Get()});
 }
 
 RenderDeviceWebGPUImpl::~RenderDeviceWebGPUImpl() = default;
@@ -275,6 +276,11 @@ void RenderDeviceWebGPUImpl::CreatePipelineResourceSignature(const PipelineResou
                                                              bool                                 IsDeviceInternal)
 {
     CreatePipelineResourceSignatureImpl(ppSignature, Desc, ShaderStages, IsDeviceInternal);
+}
+
+GenerateMipsHelperWebGPU& RenderDeviceWebGPUImpl::GetMipsGenerator() const
+{
+    return *m_pMipsGenerator.get();
 }
 
 QueueSignalPoolWebGPU& RenderDeviceWebGPUImpl::GetQueueSignalPool() const

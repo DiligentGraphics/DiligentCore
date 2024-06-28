@@ -35,6 +35,7 @@
 #include "WebGPUObjectWrappers.hpp"
 #include "ShaderWebGPUImpl.hpp"
 #include "SharedMemoryManagerWebGPU.hpp"
+#include "GenerateMipsHelperWebGPU.hpp"
 
 namespace Diligent
 {
@@ -43,6 +44,7 @@ using QueueSignalPoolWebGPUPtr     = std::unique_ptr<class QueueSignalPoolWebGPU
 using QueryManagerWebGPUPtr        = std::unique_ptr<class QueryManagerWebGPU>;
 using AttachmentCleanerWebGPUPtr   = std::unique_ptr<class AttachmentCleanerWebGPU>;
 using SharedMemoryManagerWebGPUPtr = std::unique_ptr<class SharedMemoryManagerWebGPU>;
+using GenerateMipsHelperWebGPUPtr  = std::unique_ptr<class GenerateMipsHelperWebGPU>;
 
 /// Render device implementation in WebGPU backend.
 class RenderDeviceWebGPUImpl final : public RenderDeviceBase<EngineWebGPUImplTraits>
@@ -180,6 +182,8 @@ public:
 
     Uint64 GetCommandQueueMask() const { return 1; }
 
+    GenerateMipsHelperWebGPU& GetMipsGenerator() const;
+
     QueueSignalPoolWebGPU& GetQueueSignalPool() const;
 
     AttachmentCleanerWebGPU& GetAttachmentCleaner() const;
@@ -198,6 +202,7 @@ private:
     QueueSignalPoolWebGPUPtr     m_pQueueSignalPool;
     AttachmentCleanerWebGPUPtr   m_pAttachmentCleaner;
     SharedMemoryManagerWebGPUPtr m_pMemoryManager;
+    GenerateMipsHelperWebGPUPtr  m_pMipsGenerator;
 
     std::vector<QueryManagerWebGPUPtr> m_QueryMgrs;
 };

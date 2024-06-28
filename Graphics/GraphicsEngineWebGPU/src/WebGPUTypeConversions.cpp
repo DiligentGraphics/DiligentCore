@@ -611,6 +611,16 @@ WGPUVertexFormat VertexFormatAttribsToWGPUVertexFormat(VALUE_TYPE ValueType, Uin
     }
 }
 
+WGPUIndexFormat IndexTypeToWGPUIndexFormat(VALUE_TYPE ValueType)
+{
+    switch (ValueType)
+    {
+        case VT_UINT16: return WGPUIndexFormat_Uint16;
+        case VT_UINT32: return WGPUIndexFormat_Uint32;
+        default: UNEXPECTED("Unsupported index type"); return WGPUIndexFormat_Undefined;
+    }
+}
+
 WGPUTextureFormat BufferFormatToWGPUTextureFormat(const BufferFormat& BuffFmt)
 {
     switch (BuffFmt.ValueType)
@@ -907,6 +917,20 @@ WGPUShaderStageFlags ShaderStagesToWGPUShaderStageFlags(SHADER_TYPE Stages)
         Stages &= ~ShaderType;
     }
     return Flags;
+}
+
+WGPUVertexStepMode InputElementFrequencyToWGPUVertexStepMode(INPUT_ELEMENT_FREQUENCY StepRate)
+{
+    switch (StepRate)
+    {
+        case INPUT_ELEMENT_FREQUENCY_PER_VERTEX:
+            return WGPUVertexStepMode_Vertex;
+        case INPUT_ELEMENT_FREQUENCY_PER_INSTANCE:
+            return WGPUVertexStepMode_Instance;
+        default:
+            UNEXPECTED("Unexpected input element frequency");
+            return WGPUVertexStepMode_Vertex;
+    }
 }
 
 } // namespace Diligent

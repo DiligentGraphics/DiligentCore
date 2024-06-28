@@ -74,9 +74,7 @@ private:
         QuerySetInfo& operator = (      QuerySetInfo&&) = delete;
         // clang-format on
 
-        void Init(WGPUDevice                    wgpuDevice,
-                  const WGPUQuerySetDescriptor& wgpuQuerySetDesc,
-                  QUERY_TYPE                    Type);
+        void Initialize(WGPUDevice wgpuDevice, const WGPUQuerySetDescriptor& wgpuQuerySetDesc, QUERY_TYPE Type);
 
         Uint32 Allocate();
 

@@ -2437,7 +2437,7 @@ const Char* GetFenceTypeString(FENCE_TYPE Type)
     }
 }
 
-TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt)
+TEXTURE_FORMAT UnormFormatToSRGB(TEXTURE_FORMAT Fmt)
 {
     switch (Fmt)
     {
@@ -2465,6 +2465,47 @@ TEXTURE_FORMAT TexFormatToSRGB(TEXTURE_FORMAT Fmt)
         default:
             return Fmt;
     }
+}
+
+TEXTURE_FORMAT SRGBFormatToUnorm(TEXTURE_FORMAT Fmt)
+{
+    switch (Fmt)
+    {
+        case TEX_FORMAT_RGBA8_UNORM_SRGB:
+            return TEX_FORMAT_RGBA8_UNORM;
+
+        case TEX_FORMAT_BC1_UNORM_SRGB:
+            return TEX_FORMAT_BC1_UNORM;
+
+        case TEX_FORMAT_BC2_UNORM_SRGB:
+            return TEX_FORMAT_BC2_UNORM;
+
+        case TEX_FORMAT_BC3_UNORM_SRGB:
+            return TEX_FORMAT_BC3_UNORM;
+
+        case TEX_FORMAT_BGRA8_UNORM_SRGB:
+            return TEX_FORMAT_BGRA8_UNORM;
+
+        case TEX_FORMAT_BGRX8_UNORM_SRGB:
+            return TEX_FORMAT_BGRX8_UNORM;
+
+        case TEX_FORMAT_BC7_UNORM_SRGB:
+            return TEX_FORMAT_BC7_UNORM;
+
+        default:
+            return Fmt;
+    }
+}
+
+bool IsSRGBFormat(TEXTURE_FORMAT Fmt)
+{
+    return (Fmt == TEX_FORMAT_RGBA8_UNORM_SRGB ||
+            Fmt == TEX_FORMAT_BC1_UNORM_SRGB ||
+            Fmt == TEX_FORMAT_BC2_UNORM_SRGB ||
+            Fmt == TEX_FORMAT_BC3_UNORM_SRGB ||
+            Fmt == TEX_FORMAT_BGRA8_UNORM_SRGB ||
+            Fmt == TEX_FORMAT_BGRX8_UNORM_SRGB ||
+            Fmt == TEX_FORMAT_BC7_UNORM_SRGB);
 }
 
 String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags)

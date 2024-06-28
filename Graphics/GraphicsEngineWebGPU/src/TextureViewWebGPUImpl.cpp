@@ -33,12 +33,14 @@
 namespace Diligent
 {
 
-TextureViewWebGPUImpl::TextureViewWebGPUImpl(IReferenceCounters*     pRefCounters,
-                                             RenderDeviceWebGPUImpl* pDevice,
-                                             const TextureViewDesc&  ViewDesc,
-                                             ITexture*               pTexture,
-                                             WGPUTextureView         wgpuTextureView,
-                                             bool                    bIsDefaultView) :
+TextureViewWebGPUImpl::TextureViewWebGPUImpl(IReferenceCounters*                     pRefCounters,
+                                             RenderDeviceWebGPUImpl*                 pDevice,
+                                             const TextureViewDesc&                  ViewDesc,
+                                             ITexture*                               pTexture,
+                                             WebGPUTextureViewWrapper&&              wgpuTextureView,
+                                             std::vector<WebGPUTextureViewWrapper>&& wgpuTextureMipSRVs,
+                                             std::vector<WebGPUTextureViewWrapper>&& wgpuTextureMipUAVs,
+                                             bool                                    bIsDefaultView) :
     // clang-format off
     TTextureViewBase
     {
@@ -47,9 +49,28 @@ TextureViewWebGPUImpl::TextureViewWebGPUImpl(IReferenceCounters*     pRefCounter
         ViewDesc,
         pTexture,
         bIsDefaultView
-    }, m_wgpuTextureView(wgpuTextureView)
+    }, m_wgpuTextureView(std::move(wgpuTextureView))
+     , m_wgpuTextureMipSRVs(std::move(wgpuTextureMipSRVs))
+     , m_wgpuTextureMipUAVs(std::move(wgpuTextureMipUAVs))
 // clang-format on
 {
+}
+
+WGPUTextureView TextureViewWebGPUImpl::GetWebGPUTextureView() const
+{
+    return m_wgpuTextureView.Get();
+}
+
+WGPUTextureView TextureViewWebGPUImpl::GetMipLevelUAV(Uint32 Mip)
+{
+    VERIFY_EXPR((m_Desc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0 && !m_wgpuTextureMipUAVs.empty() && Mip < m_Desc.NumMipLevels);
+    return m_wgpuTextureMipUAVs[Mip].Get();
+}
+
+WGPUTextureView TextureViewWebGPUImpl::GetMipLevelSRV(Uint32 Mip)
+{
+    VERIFY_EXPR((m_Desc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0 && !m_wgpuTextureMipSRVs.empty() && Mip < m_Desc.NumMipLevels);
+    return m_wgpuTextureMipSRVs[Mip].Get();
 }
 
 } // namespace Diligent

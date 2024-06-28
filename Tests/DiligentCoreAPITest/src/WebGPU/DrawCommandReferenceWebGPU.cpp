@@ -102,15 +102,18 @@ public:
             wgpuBindGroupDesc.entries    = &wgpuBindGroupEntry;
             wgpuBindGroupDesc.entryCount = 1;
             m_wgpuBindGroup              = wgpuDeviceCreateBindGroup(pEnvWebGPU->GetWebGPUDevice(), &wgpuBindGroupDesc);
+            VERIFY_EXPR(m_wgpuBindGroup != nullptr);
         }
 
         WGPUColorTargetState wgpuColorTargetStates[1]{};
         wgpuColorTargetStates[0].format    = ConvertTexFormatToWGPUTextureFormat(pSwapChain->GetDesc().ColorBufferFormat);
         wgpuColorTargetStates[0].writeMask = WGPUColorWriteMask_All;
 
-        WGPUFragmentState wgpuFragmentState;
-        wgpuFragmentState.module     = m_wgpuPSModule;
-        wgpuFragmentState.entryPoint = "main";
+        WGPUFragmentState wgpuFragmentState{};
+        wgpuFragmentState.module      = m_wgpuPSModule;
+        wgpuFragmentState.entryPoint  = "main";
+        wgpuFragmentState.targetCount = _countof(wgpuColorTargetStates);
+        wgpuFragmentState.targets     = wgpuColorTargetStates;
 
         WGPURenderPipelineDescriptor wgpuRenderPipelineDesc{};
         wgpuRenderPipelineDesc.layout             = m_wgpuPipelineLayout;
@@ -126,11 +129,18 @@ public:
 
     ~ReferenceTriangleRenderer()
     {
-        wgpuRenderPipelineRelease(m_wgpuRenderPipeline);
-        wgpuPipelineLayoutRelease(m_wgpuPipelineLayout);
-        wgpuBindGroupLayoutRelease(m_wgpuBindGroupLayout);
-        wgpuShaderModuleRelease(m_wgpuPSModule);
-        wgpuShaderModuleRelease(m_wgpuVSModule);
+        if (m_wgpuPipelineLayout)
+            wgpuPipelineLayoutRelease(m_wgpuPipelineLayout);
+        if (m_wgpuRenderPipeline)
+            wgpuRenderPipelineRelease(m_wgpuRenderPipeline);
+        if (m_wgpuPipelineLayout)
+            wgpuPipelineLayoutRelease(m_wgpuPipelineLayout);
+        if (m_wgpuBindGroupLayout)
+            wgpuBindGroupLayoutRelease(m_wgpuBindGroupLayout);
+        if (m_wgpuPSModule)
+            wgpuShaderModuleRelease(m_wgpuPSModule);
+        if (m_wgpuVSModule)
+            wgpuShaderModuleRelease(m_wgpuVSModule);
     }
 
     void Draw(WGPURenderPassEncoder wgpuRenderPassEncoder)

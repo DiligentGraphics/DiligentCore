@@ -42,20 +42,28 @@ class TextureViewWebGPUImpl final : public TextureViewBase<EngineWebGPUImplTrait
 public:
     using TTextureViewBase = TextureViewBase<EngineWebGPUImplTraits>;
 
-    TextureViewWebGPUImpl(IReferenceCounters*     pRefCounters,
-                          RenderDeviceWebGPUImpl* pDevice,
-                          const TextureViewDesc&  ViewDesc,
-                          ITexture*               pTexture,
-                          WGPUTextureView         wgpuTextureView,
-                          bool                    bIsDefaultView);
+    TextureViewWebGPUImpl(IReferenceCounters*                     pRefCounters,
+                          RenderDeviceWebGPUImpl*                 pDevice,
+                          const TextureViewDesc&                  ViewDesc,
+                          ITexture*                               pTexture,
+                          WebGPUTextureViewWrapper&&              wgpuTextureView,
+                          std::vector<WebGPUTextureViewWrapper>&& wgpuTextureMipSRVs,
+                          std::vector<WebGPUTextureViewWrapper>&& wgpuTextureMipUAVs,
+                          bool                                    bIsDefaultView);
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureViewWebGPU, TTextureViewBase)
 
     /// Implementation of ITextureViewWebGPU::GetWebGPUTextureView() in WebGPU backend.
-    WGPUTextureView DILIGENT_CALL_TYPE GetWebGPUTextureView() const override final { return m_wgpuTextureView.Get(); }
+    WGPUTextureView DILIGENT_CALL_TYPE GetWebGPUTextureView() const override;
+
+    WGPUTextureView GetMipLevelUAV(Uint32 Mip);
+
+    WGPUTextureView GetMipLevelSRV(Uint32 Mip);
 
 private:
-    WebGPUTextureViewWrapper m_wgpuTextureView;
+    WebGPUTextureViewWrapper              m_wgpuTextureView;
+    std::vector<WebGPUTextureViewWrapper> m_wgpuTextureMipSRVs;
+    std::vector<WebGPUTextureViewWrapper> m_wgpuTextureMipUAVs;
 };
 
 } // namespace Diligent

@@ -96,7 +96,7 @@ QueryManagerWebGPU::QueryManagerWebGPU(RenderDeviceWebGPUImpl* pRenderDeviceWebG
             wgpuQuerySetDesc.count *= 2;
 
         auto& QuerySetInfo = m_QuerySets[QueryType];
-        QuerySetInfo.Init(pRenderDeviceWebGPU->GetWebGPUDevice(), wgpuQuerySetDesc, QueryType);
+        QuerySetInfo.Initialize(pRenderDeviceWebGPU->GetWebGPUDevice(), wgpuQuerySetDesc, QueryType);
         VERIFY_EXPR(!QuerySetInfo.IsNull() && QuerySetInfo.GetQueryCount() == wgpuQuerySetDesc.count && QuerySetInfo.GetType() == QueryType);
     }
 }
@@ -152,7 +152,7 @@ QueryManagerWebGPU::QuerySetInfo::~QuerySetInfo()
     }
 }
 
-void QueryManagerWebGPU::QuerySetInfo::Init(WGPUDevice wgpuDevice, const WGPUQuerySetDescriptor& wgpuQuerySetDesc, QUERY_TYPE Type)
+void QueryManagerWebGPU::QuerySetInfo::Initialize(WGPUDevice wgpuDevice, const WGPUQuerySetDescriptor& wgpuQuerySetDesc, QUERY_TYPE Type)
 {
     m_Type       = Type;
     m_QueryCount = wgpuQuerySetDesc.count;

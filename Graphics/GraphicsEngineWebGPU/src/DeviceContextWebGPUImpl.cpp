@@ -990,7 +990,14 @@ void DeviceContextWebGPUImpl::InsertDebugLabel(const Char* Label, const float* p
         wgpuCommandEncoderInsertDebugMarker(GetCommandEncoder(), Label);
 }
 
-void DeviceContextWebGPUImpl::GenerateMips(ITextureView* pTexView) {}
+void DeviceContextWebGPUImpl::GenerateMips(ITextureView* pTexView)
+{
+    TDeviceContextBase::GenerateMips(pTexView);
+
+    auto& MipGenerator = m_pDevice->GetMipsGenerator();
+    auto  CmdEncoder   = GetComputePassCommandEncoder();
+    MipGenerator.GenerateMips(CmdEncoder, ClassPtrCast<TextureViewWebGPUImpl>(pTexView));
+}
 
 void DeviceContextWebGPUImpl::FinishFrame()
 {
@@ -1093,8 +1100,13 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::GetRenderPassCommandEncoder()
 WGPUComputePassEncoder DeviceContextWebGPUImpl::GetComputePassCommandEncoder()
 {
     if (!m_wgpuComputePassEncoder)
+    {
         EndCommandEncoders(COMMAND_ENCODER_FLAG_ALL & ~COMMAND_ENCODER_FLAG_COMPUTE);
 
+        WGPUComputePassDescriptor wgpuComputePassDesc{};
+        m_wgpuComputePassEncoder = wgpuCommandEncoderBeginComputePass(GetCommandEncoder(), &wgpuComputePassDesc);
+        DEV_CHECK_ERR(m_wgpuComputePassEncoder != nullptr, "Failed to begin compute pass");
+    }
     return m_wgpuComputePassEncoder;
 }
 
@@ -1454,7 +1466,19 @@ void DeviceContextWebGPUImpl::CommitVertexBuffers(WGPURenderPassEncoder CmdEncod
 {
     DEV_CHECK_ERR(m_pPipelineState, "No pipeline state to commit!");
 
-    // TODO
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_NumVertexStreams < m_pPipelineState->GetNumBufferSlotsUsed())
+        LOG_ERROR("Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
+#endif
+
+    for (Uint32 SlotIdx = 0; SlotIdx < m_NumVertexStreams; ++SlotIdx)
+    {
+        auto& CurrStream = m_VertexStreams[SlotIdx];
+        if (auto* pBufferWebGPU = CurrStream.pBuffer.RawPtr())
+            wgpuRenderPassEncoderSetVertexBuffer(CmdEncoder, SlotIdx, pBufferWebGPU->GetWebGPUBuffer(), CurrStream.Offset, WGPU_WHOLE_SIZE);
+        else
+            wgpuRenderPassEncoderSetVertexBuffer(CmdEncoder, SlotIdx, nullptr, 0, 0);
+    }
 
     m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_VERTEX_BUFFERS);
 }
@@ -1462,9 +1486,9 @@ void DeviceContextWebGPUImpl::CommitVertexBuffers(WGPURenderPassEncoder CmdEncod
 void DeviceContextWebGPUImpl::CommitIndexBuffer(WGPURenderPassEncoder CmdEncoder, VALUE_TYPE IndexType)
 {
     DEV_CHECK_ERR(m_pPipelineState, "No pipeline state to commit!");
+    DEV_CHECK_ERR(IndexType == VT_UINT16 || IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
 
-    // TODO
-
+    wgpuRenderPassEncoderSetIndexBuffer(CmdEncoder, m_pIndexBuffer->GetWebGPUBuffer(), IndexTypeToWGPUIndexFormat(IndexType), m_IndexDataStartOffset, WGPU_WHOLE_SIZE);
     m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_INDEX_BUFFER);
 }
 

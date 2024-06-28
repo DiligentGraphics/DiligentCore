@@ -182,6 +182,12 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
 
         if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_RG11B10UfloatRenderable))
             Features.push_back(WGPUFeatureName_RG11B10UfloatRenderable);
+
+        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_BGRA8UnormStorage))
+            Features.push_back(WGPUFeatureName_BGRA8UnormStorage);
+
+        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_Float32Filterable))
+            Features.push_back(WGPUFeatureName_Float32Filterable);
     }
 
     WGPURequiredLimits   RequiredLimits{nullptr, SupportedLimits.limits};

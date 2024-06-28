@@ -10,6 +10,7 @@ set(INCLUDE
     include/EngineWebGPUImplTraits.hpp
     include/FenceWebGPUImpl.hpp
     include/FramebufferWebGPUImpl.hpp
+    include/GenerateMipsHelperWebGPU.hpp
     include/pch.h
     include/PipelineResourceAttribsWebGPU.hpp
     include/PipelineResourceImmutableSamplerAttribsWebGPU.hpp
@@ -58,6 +59,7 @@ set(SRC
    src/EngineFactoryWebGPU.cpp
    src/FenceWebGPUImpl.cpp
    src/FramebufferWebGPUImpl.cpp
+   src/GenerateMipsHelperWebGPU.cpp
    src/PipelineResourceSignatureWebGPUImpl.cpp
    src/PipelineStateWebGPUImpl.cpp
    src/QueryManagerWebGPU.cpp
