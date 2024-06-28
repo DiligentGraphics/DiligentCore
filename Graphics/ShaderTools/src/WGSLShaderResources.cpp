@@ -176,6 +176,9 @@ RESOURCE_DIMENSION TintTextureDimensionToResourceDimension(tint::inspector::Reso
         case TintTextureDim::kCubeArray:
             return RESOURCE_DIM_TEX_CUBE_ARRAY;
 
+        case TintTextureDim::kNone:
+            return RESOURCE_DIM_UNDEFINED;
+
         default:
             UNEXPECTED("Unexpected texture dimension");
             return RESOURCE_DIM_UNDEFINED;
@@ -379,7 +382,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     }
     m_ShaderType = TintPipelineStageToShaderType(EntryPoints[EntryPointIdx].stage);
 
-    const auto& ResourceBindings = Inspector.GetResourceBindings(EntryPoint);
+    const auto ResourceBindings = Inspector.GetResourceBindings(EntryPoint);
 
     using TintResourceType = tint::inspector::ResourceBinding::ResourceType;
 

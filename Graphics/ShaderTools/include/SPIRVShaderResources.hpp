@@ -235,7 +235,6 @@ public:
         return m_ComputeGroupSize;
     }
 
-    // Process only resources listed in AllowedVarTypes
     template <typename THandleUB,
               typename THandleSB,
               typename THandleImg,

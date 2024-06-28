@@ -168,13 +168,13 @@ public:
     Uint32 GetNumExtTextures ()const noexcept{ return (m_TotalResources        - m_ExternalTextureOffset);}
     Uint32 GetTotalResources ()const noexcept{ return m_TotalResources; }
 
-    const WGSLShaderResourceAttribs& GetUB         (Uint32 n) const noexcept { return GetResAttribs(n, GetNumUBs(),          0                      ); }
-    const WGSLShaderResourceAttribs& GetSB         (Uint32 n) const noexcept { return GetResAttribs(n, GetNumSBs(),          m_StorageBufferOffset  ); }
-    const WGSLShaderResourceAttribs& GetTexture    (Uint32 n) const noexcept { return GetResAttribs(n, GetNumTextures(),     m_TextureOffset        ); }
-    const WGSLShaderResourceAttribs& GetStTexture  (Uint32 n) const noexcept { return GetResAttribs(n, GetNumStTextures(),   m_StorageTextureOffset ); }
-    const WGSLShaderResourceAttribs& GetSampler    (Uint32 n) const noexcept { return GetResAttribs(n, GetNumSamplers(),     m_SamplerOffset        ); }
-    const WGSLShaderResourceAttribs& GetExtTexture (Uint32 n) const noexcept { return GetResAttribs(n, GetNumExtTextures(),  m_ExternalTextureOffset); }
-    const WGSLShaderResourceAttribs& GetResource   (Uint32 n) const noexcept { return GetResAttribs(n, GetTotalResources(),  0                      ); }
+    const WGSLShaderResourceAttribs& GetUB        (Uint32 n) const noexcept { return GetResAttribs(n, GetNumUBs(),          0                      ); }
+    const WGSLShaderResourceAttribs& GetSB        (Uint32 n) const noexcept { return GetResAttribs(n, GetNumSBs(),          m_StorageBufferOffset  ); }
+    const WGSLShaderResourceAttribs& GetTexture   (Uint32 n) const noexcept { return GetResAttribs(n, GetNumTextures(),     m_TextureOffset        ); }
+    const WGSLShaderResourceAttribs& GetStTexture (Uint32 n) const noexcept { return GetResAttribs(n, GetNumStTextures(),   m_StorageTextureOffset ); }
+    const WGSLShaderResourceAttribs& GetSampler   (Uint32 n) const noexcept { return GetResAttribs(n, GetNumSamplers(),     m_SamplerOffset        ); }
+    const WGSLShaderResourceAttribs& GetExtTexture(Uint32 n) const noexcept { return GetResAttribs(n, GetNumExtTextures(),  m_ExternalTextureOffset); }
+    const WGSLShaderResourceAttribs& GetResource  (Uint32 n) const noexcept { return GetResAttribs(n, GetTotalResources(),  0                      ); }
 
     // clang-format on
 
@@ -190,7 +190,6 @@ public:
 
     SHADER_TYPE GetShaderType() const noexcept { return m_ShaderType; }
 
-    // Process only resources listed in AllowedVarTypes
     template <typename THandleUB,
               typename THandleSB,
               typename THandleTextures,
@@ -285,13 +284,13 @@ private:
 
     // clang-format off
 
-    WGSLShaderResourceAttribs& GetUB         (Uint32 n) noexcept { return GetResAttribs(n, GetNumUBs(),          0                      ); }
-    WGSLShaderResourceAttribs& GetSB         (Uint32 n) noexcept { return GetResAttribs(n, GetNumSBs(),          m_StorageBufferOffset  ); }
-    WGSLShaderResourceAttribs& GetTexture    (Uint32 n) noexcept { return GetResAttribs(n, GetNumTextures(),     m_TextureOffset        ); }
-    WGSLShaderResourceAttribs& GetStTexture  (Uint32 n) noexcept { return GetResAttribs(n, GetNumStTextures(),   m_StorageTextureOffset ); }
-    WGSLShaderResourceAttribs& GetSampler    (Uint32 n) noexcept { return GetResAttribs(n, GetNumSamplers(),     m_SamplerOffset        ); }
-    WGSLShaderResourceAttribs& GetExtTexture (Uint32 n) noexcept { return GetResAttribs(n, GetNumExtTextures(),  m_ExternalTextureOffset); }
-    WGSLShaderResourceAttribs& GetResource   (Uint32 n) noexcept { return GetResAttribs(n, GetTotalResources(),  0                      ); }
+    WGSLShaderResourceAttribs& GetUB        (Uint32 n) noexcept { return GetResAttribs(n, GetNumUBs(),          0                      ); }
+    WGSLShaderResourceAttribs& GetSB        (Uint32 n) noexcept { return GetResAttribs(n, GetNumSBs(),          m_StorageBufferOffset  ); }
+    WGSLShaderResourceAttribs& GetTexture   (Uint32 n) noexcept { return GetResAttribs(n, GetNumTextures(),     m_TextureOffset        ); }
+    WGSLShaderResourceAttribs& GetStTexture (Uint32 n) noexcept { return GetResAttribs(n, GetNumStTextures(),   m_StorageTextureOffset ); }
+    WGSLShaderResourceAttribs& GetSampler   (Uint32 n) noexcept { return GetResAttribs(n, GetNumSamplers(),     m_SamplerOffset        ); }
+    WGSLShaderResourceAttribs& GetExtTexture(Uint32 n) noexcept { return GetResAttribs(n, GetNumExtTextures(),  m_ExternalTextureOffset); }
+    WGSLShaderResourceAttribs& GetResource  (Uint32 n) noexcept { return GetResAttribs(n, GetTotalResources(),  0                      ); }
 
     // clang-format on
 
