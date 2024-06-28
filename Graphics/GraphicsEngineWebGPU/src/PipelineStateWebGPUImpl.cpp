@@ -31,6 +31,7 @@
 #include "ShaderWebGPUImpl.hpp"
 #include "RenderPassWebGPUImpl.hpp"
 #include "WebGPUTypeConversions.hpp"
+#include "WGSLUtils.hpp"
 
 namespace Diligent
 {
@@ -96,6 +97,119 @@ std::vector<PipelineStateWebGPUImpl::WebGPUPipelineShaderStageInfo> PipelineStat
     return ShaderStages;
 }
 
+
+void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
+    TShaderStages&                                           ShaderStages,
+    const RefCntAutoPtr<PipelineResourceSignatureWebGPUImpl> pSignatures[],
+    const Uint32                                             SignatureCount,
+    const TBindIndexToBindGroupIndex&                        BindIndexToBindGroupIndex,
+    bool                                                     bVerifyOnly,
+    const char*                                              PipelineName,
+    TShaderResources*                                        pDvpShaderResources,
+    TResourceAttibutions*                                    pDvpResourceAttibutions) noexcept(false)
+{
+    if (PipelineName == nullptr)
+        PipelineName = "<null>";
+
+    // Verify that pipeline layout is compatible with shader resources and
+    // remap resource bindings.
+    for (size_t s = 0; s < ShaderStages.size(); ++s)
+    {
+        const ShaderWebGPUImpl* pShader     = ShaderStages[s].pShader;
+        std::string&            PatchedWGSL = ShaderStages[s].WGSL;
+        const SHADER_TYPE       ShaderType  = ShaderStages[s].Type;
+
+        const auto& pShaderResources = pShader->GetShaderResources();
+        VERIFY_EXPR(pShaderResources);
+
+        if (pDvpShaderResources)
+            pDvpShaderResources->emplace_back(pShaderResources);
+
+        WGSLResourceMapping ResMapping;
+
+        pShaderResources->ProcessResources(
+            [&](const WGSLShaderResourceAttribs& WGSLAttribs, Uint32) //
+            {
+                const auto ResAttribution = GetResourceAttribution(WGSLAttribs.Name, ShaderType, pSignatures, SignatureCount);
+                if (!ResAttribution)
+                {
+                    LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", WGSLAttribs.Name,
+                                        "' that is not present in any pipeline resource signature used to create pipeline state '",
+                                        PipelineName, "'.");
+                }
+
+                const auto& SignDesc = ResAttribution.pSignature->GetDesc();
+                const auto  ResType  = WGSLShaderResourceAttribs::GetShaderResourceType(WGSLAttribs.Type);
+                const auto  Flags    = WGSLShaderResourceAttribs::GetPipelineResourceFlags(WGSLAttribs.Type);
+
+                Uint32 ResourceBinding = ~0u;
+                Uint32 BindGroup       = ~0u;
+                if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
+                {
+                    const auto& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                    ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, WGSLAttribs.ArraySize,
+                                                          pShader->GetDesc().Name, SignDesc.Name);
+
+                    const auto& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
+                    ResourceBinding = ResAttribs.BindingIndex;
+                    BindGroup       = ResAttribs.BindGroup;
+                }
+                else if (ResAttribution.ImmutableSamplerIndex != ResourceAttribution::InvalidResourceIndex)
+                {
+                    UNSUPPORTED("Immutable samplers are not implemented yet");
+                    //if (ResType != SHADER_RESOURCE_TYPE_SAMPLER)
+                    //{
+                    //    LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", WGSLAttribs.Name,
+                    //                        "' and type '", GetShaderResourceTypeLiteralName(ResType),
+                    //                        "' that is not compatible with immutable sampler defined in pipeline resource signature '",
+                    //                        SignDesc.Name, "'.");
+                    //}
+                    //const auto& SamAttribs{ResAttribution.pSignature->GetImmutableSamplerAttribs(ResAttribution.ImmutableSamplerIndex)};
+                    //ResourceBinding = SamAttribs.BindingIndex;
+                    //BindGroup       = SamAttribs.DescrSet;
+                }
+                else
+                {
+                    UNEXPECTED("Either immutable sampler or resource index should be valid");
+                }
+
+                VERIFY_EXPR(ResourceBinding != ~0u && BindGroup != ~0u);
+                BindGroup += BindIndexToBindGroupIndex[SignDesc.BindingIndex];
+                if (bVerifyOnly)
+                {
+                    if (WGSLAttribs.BindIndex != ResourceBinding)
+                    {
+                        LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' maps resource '", WGSLAttribs.Name,
+                                            "' to binding ", WGSLAttribs.BindIndex, ", but the same resource in pipeline resource signature '",
+                                            SignDesc.Name, "' is mapped to binding ", ResourceBinding, '.');
+                    }
+                    if (WGSLAttribs.BindGroup != BindGroup)
+                    {
+                        LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' maps resource '", WGSLAttribs.Name,
+                                            "' to bind group ", WGSLAttribs.BindGroup, ", but the same resource in pipeline resource signature '",
+                                            SignDesc.Name, "' is mapped to set ", BindGroup, '.');
+                    }
+                }
+                else
+                {
+                    ResMapping[WGSLAttribs.Name] = {BindGroup, ResourceBinding};
+                }
+
+                if (pDvpResourceAttibutions)
+                    pDvpResourceAttibutions->emplace_back(ResAttribution);
+            });
+
+        if (!bVerifyOnly)
+        {
+            PatchedWGSL = RamapWGSLResourceBindings(pShader->GetWGSL(), ResMapping);
+        }
+        else
+        {
+            PatchedWGSL = pShader->GetWGSL();
+        }
+    }
+}
+
 void PipelineStateWebGPUImpl::InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages)
 {
     const auto InternalFlags = GetInternalCreateFlags(CreateInfo);
@@ -107,6 +221,30 @@ void PipelineStateWebGPUImpl::InitPipelineLayout(const PipelineStateCreateInfo& 
     }
 
     m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
+
+    const auto RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
+    const auto VerifyBindings = !RemapResources && ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0);
+    if (RemapResources || VerifyBindings)
+    {
+        VERIFY_EXPR(RemapResources ^ VerifyBindings);
+        TBindIndexToBindGroupIndex BindIndexToBindGroupIndex = {};
+        for (Uint32 i = 0; i < m_SignatureCount; ++i)
+            BindIndexToBindGroupIndex[i] = m_PipelineLayout.GetFirstBindGroupIndex(i);
+
+        // Note that we always need to strip reflection information when it is present
+        RemapOrVerifyShaderResources(ShaderStages,
+                                     m_Signatures,
+                                     m_SignatureCount,
+                                     BindIndexToBindGroupIndex,
+                                     VerifyBindings, // VerifyOnly
+                                     m_Desc.Name,
+#ifdef DILIGENT_DEVELOPMENT
+                                     &m_ShaderResources, &m_ResourceAttibutions
+#else
+                                     nullptr, nullptr
+#endif
+        );
+    }
 }
 
 void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo)
@@ -271,13 +409,13 @@ void PipelineStateWebGPUImpl::InitializePipeline(const ComputePipelineStateCreat
     const auto ShaderStages = InitInternalObjects(CreateInfo);
     VERIFY(ShaderStages[0].Type == SHADER_TYPE_COMPUTE, "Incorrect shader type: compute shader is expected");
 
-    auto* pShaderWebGPU = ShaderStages[0].pShader;
+    ShaderWebGPUImpl* pShaderWebGPU = ShaderStages[0].pShader;
 
     WebGPUShaderModuleWrapper wgpuShaderModule{};
 
     WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
     wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-    wgpuShaderCodeDesc.code        = pShaderWebGPU->GetWGSL().c_str();
+    wgpuShaderCodeDesc.code        = ShaderStages[0].WGSL.c_str();
 
     WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
     wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);

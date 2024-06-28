@@ -71,6 +71,7 @@ private:
     {
         const SHADER_TYPE       Type;
         ShaderWebGPUImpl* const pShader;
+        std::string             WGSL;
 
         WebGPUPipelineShaderStageInfo(ShaderWebGPUImpl* _pShader) :
             Type{_pShader->GetDesc().ShaderType},
@@ -94,6 +95,19 @@ private:
 
     void InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo);
 
+    using TBindIndexToBindGroupIndex = std::array<Uint32, MAX_RESOURCE_SIGNATURES>;
+    using TShaderResources           = std::vector<std::shared_ptr<const WGSLShaderResources>>;
+    using TResourceAttibutions       = std::vector<ResourceAttribution>;
+    static void RemapOrVerifyShaderResources(
+        TShaderStages&                                           ShaderStages,
+        const RefCntAutoPtr<PipelineResourceSignatureWebGPUImpl> pSignatures[],
+        const Uint32                                             SignatureCount,
+        const TBindIndexToBindGroupIndex&                        BindIndexToBindGroupIndex,
+        bool                                                     bVerifyOnly,
+        const char*                                              PipelineName,
+        TShaderResources*                                        pShaderResources     = nullptr,
+        TResourceAttibutions*                                    pResourceAttibutions = nullptr) noexcept(false);
+
     static PipelineResourceSignatureDescWrapper GetDefaultResourceSignatureDesc(
         const TShaderStages&              ShaderStages,
         const char*                       PSOName,
@@ -104,6 +118,13 @@ private:
     WebGPURenderPipelineWrapper  m_wgpuRenderPipeline;
     WebGPUComputePipelineWrapper m_wgpuComputePipeline;
     PipelineLayoutWebGPU         m_PipelineLayout;
+
+#ifdef DILIGENT_DEVELOPMENT
+    // Shader resources for all shaders in all shader stages
+    TShaderResources m_ShaderResources;
+    // Resource attributions for every resource in m_ShaderResources, in the same order
+    TResourceAttibutions m_ResourceAttibutions;
+#endif
 };
 
 } // namespace Diligent

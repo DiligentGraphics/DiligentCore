@@ -335,6 +335,11 @@ SHADER_RESOURCE_TYPE WGSLShaderResourceAttribs::GetShaderResourceType(ResourceTy
     }
 }
 
+PIPELINE_RESOURCE_FLAGS WGSLShaderResourceAttribs::GetPipelineResourceFlags(ResourceType Type)
+{
+    return PIPELINE_RESOURCE_FLAG_NONE;
+}
+
 WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
                                          const std::string&     WGSL,
                                          SHADER_SOURCE_LANGUAGE SourceLanguage,

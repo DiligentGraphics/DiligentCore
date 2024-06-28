@@ -86,7 +86,8 @@ struct WGSLShaderResourceAttribs
         Depth
     };
 
-    static SHADER_RESOURCE_TYPE GetShaderResourceType(ResourceType Type);
+    static SHADER_RESOURCE_TYPE    GetShaderResourceType(ResourceType Type);
+    static PIPELINE_RESOURCE_FLAGS GetPipelineResourceFlags(ResourceType Type);
 
     // clang-format off
 

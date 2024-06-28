@@ -80,6 +80,12 @@ public:
 
     const char* GetEntryPoint() const;
 
+    const std::shared_ptr<const WGSLShaderResources>& GetShaderResources() const
+    {
+        DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+        return m_pShaderResources;
+    }
+
 private:
     std::string m_WGSL;
 
