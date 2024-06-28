@@ -78,6 +78,9 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
     /// The source language is Metal bytecode
     SHADER_SOURCE_LANGUAGE_MTLB,
 
+    /// The source language is WebGPU shading language (WGSL)
+    SHADER_SOURCE_LANGUAGE_WGSL,
+
     SHADER_SOURCE_LANGUAGE_COUNT
 };
 

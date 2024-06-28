@@ -73,6 +73,7 @@ void TestWGSLResources(const char* FilePath)
     WGSLShaderResources Resources{
         GetRawAllocator(),
         WGSL,
+        SHADER_SOURCE_LANGUAGE_HLSL,
         "WGSLResources test",
         nullptr, // CombinedSamplerSuffix
         nullptr, // EntryPoint

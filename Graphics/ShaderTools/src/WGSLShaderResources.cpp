@@ -27,6 +27,7 @@
 #include "WGSLShaderResources.hpp"
 #include "Align.hpp"
 #include "StringPool.hpp"
+#include "WGSLUtils.hpp"
 
 #ifdef _MSC_VER
 #    pragma warning(push)
@@ -276,12 +277,13 @@ SHADER_RESOURCE_TYPE WGSLShaderResourceAttribs::GetShaderResourceType(ResourceTy
     }
 }
 
-WGSLShaderResources::WGSLShaderResources(IMemoryAllocator& Allocator,
-                                         std::string       WGSL,
-                                         const char*       ShaderName,
-                                         const char*       CombinedSamplerSuffix,
-                                         const char*       EntryPoint,
-                                         bool              LoadUniformBufferReflection) noexcept(false)
+WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
+                                         std::string            WGSL,
+                                         SHADER_SOURCE_LANGUAGE SourceLanguage,
+                                         const char*            ShaderName,
+                                         const char*            CombinedSamplerSuffix,
+                                         const char*            EntryPoint,
+                                         bool                   LoadUniformBufferReflection) noexcept(false)
 {
     VERIFY_EXPR(ShaderName != nullptr);
 
@@ -325,6 +327,31 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator& Allocator,
     const auto& ResourceBindings = Inspector.GetResourceBindings(EntryPoint);
 
     using TintResourceType = tint::inspector::ResourceBinding::ResourceType;
+
+    auto GetResourceName = [SourceLanguage](const tint::Program& Program, const tint::inspector::ResourceBinding& Binding) {
+        if (SourceLanguage == SHADER_SOURCE_LANGUAGE_WGSL)
+        {
+            return Binding.variable_name;
+        }
+        else
+        {
+            //   HLSL:
+            //      struct BufferData0
+            //      {
+            //          float4 data;
+            //      };
+            //      StructuredBuffer<BufferData0> g_Buff0;
+            //      StructuredBuffer<BufferData0> g_Buff1;
+            //   WGSL:
+            //      struct g_Buff0 {
+            //        x_data : RTArr,
+            //      }
+            //      @group(0) @binding(0) var<storage, read> g_Buff0_1 : g_Buff0;
+            //      @group(0) @binding(1) var<storage, read> g_Buff1   : g_Buff0;
+            auto AltName = GetWGSLResourceAlternativeName(Program, Binding);
+            return !AltName.empty() ? AltName : Binding.variable_name;
+        }
+    };
 
     // Count resources
     ResourceCounters ResCounters;
@@ -372,7 +399,8 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator& Allocator,
                 UNEXPECTED("Unexpected resource type");
         }
 
-        ResourceNamesPoolSize += Binding.variable_name.length() + 1;
+        const std::string ResourceName = GetResourceName(Program, Binding);
+        ResourceNamesPoolSize += ResourceName.length() + 1;
     }
 
     if (CombinedSamplerSuffix != nullptr)
@@ -390,34 +418,27 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator& Allocator,
     ResourceCounters CurrRes;
     for (const auto& Binding : ResourceBindings)
     {
+        const std::string ResourceName = GetResourceName(Program, Binding);
+        const char*       PooledName   = ResourceNamesPool.CopyString(ResourceName);
         switch (Binding.resource_type)
         {
             case TintResourceType::kUniformBuffer:
             {
-                new (&GetUB(CurrRes.NumUBs++)) WGSLShaderResourceAttribs{
-                    ResourceNamesPool.CopyString(Binding.variable_name),
-                    Binding,
-                };
+                new (&GetUB(CurrRes.NumUBs++)) WGSLShaderResourceAttribs{PooledName, Binding};
             }
             break;
 
             case TintResourceType::kStorageBuffer:
             case TintResourceType::kReadOnlyStorageBuffer:
             {
-                new (&GetSB(CurrRes.NumSBs++)) WGSLShaderResourceAttribs{
-                    ResourceNamesPool.CopyString(Binding.variable_name),
-                    Binding,
-                };
+                new (&GetSB(CurrRes.NumSBs++)) WGSLShaderResourceAttribs{PooledName, Binding};
             }
             break;
 
             case TintResourceType::kSampler:
             case TintResourceType::kComparisonSampler:
             {
-                new (&GetSampler(CurrRes.NumSamplers++)) WGSLShaderResourceAttribs{
-                    ResourceNamesPool.CopyString(Binding.variable_name),
-                    Binding,
-                };
+                new (&GetSampler(CurrRes.NumSamplers++)) WGSLShaderResourceAttribs{PooledName, Binding};
             }
             break;
 
@@ -426,10 +447,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator& Allocator,
             case TintResourceType::kDepthTexture:
             case TintResourceType::kDepthMultisampledTexture:
             {
-                new (&GetTexture(CurrRes.NumTextures++)) WGSLShaderResourceAttribs{
-                    ResourceNamesPool.CopyString(Binding.variable_name),
-                    Binding,
-                };
+                new (&GetTexture(CurrRes.NumTextures++)) WGSLShaderResourceAttribs{PooledName, Binding};
             }
             break;
 
@@ -437,19 +455,13 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator& Allocator,
             case TintResourceType::kReadOnlyStorageTexture:
             case TintResourceType::kReadWriteStorageTexture:
             {
-                new (&GetStTexture(CurrRes.NumStTextures++)) WGSLShaderResourceAttribs{
-                    ResourceNamesPool.CopyString(Binding.variable_name),
-                    Binding,
-                };
+                new (&GetStTexture(CurrRes.NumStTextures++)) WGSLShaderResourceAttribs{PooledName, Binding};
             }
             break;
 
             case TintResourceType::kExternalTexture:
             {
-                new (&GetExtTexture(CurrRes.NumExtTextures++)) WGSLShaderResourceAttribs{
-                    ResourceNamesPool.CopyString(Binding.variable_name),
-                    Binding,
-                };
+                new (&GetExtTexture(CurrRes.NumExtTextures++)) WGSLShaderResourceAttribs{PooledName, Binding};
             }
             break;
 

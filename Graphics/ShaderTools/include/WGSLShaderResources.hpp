@@ -120,12 +120,13 @@ static_assert(sizeof(WGSLShaderResourceAttribs) % sizeof(void*) == 0, "Size of W
 class WGSLShaderResources
 {
 public:
-    WGSLShaderResources(IMemoryAllocator& Allocator,
-                        std::string       WGSL,
-                        const char*       ShaderName,
-                        const char*       CombinedSamplerSuffix,
-                        const char*       EntryPoint,
-                        bool              LoadUniformBufferReflection = false) noexcept(false);
+    WGSLShaderResources(IMemoryAllocator&      Allocator,
+                        std::string            WGSL,
+                        SHADER_SOURCE_LANGUAGE SourceLanguage,
+                        const char*            ShaderName,
+                        const char*            CombinedSamplerSuffix,
+                        const char*            EntryPoint,
+                        bool                   LoadUniformBufferReflection = false) noexcept(false);
 
     // clang-format off
     WGSLShaderResources             (const WGSLShaderResources&)  = delete;

@@ -30,6 +30,15 @@
 #include <vector>
 #include <unordered_map>
 
+namespace tint
+{
+class Program;
+namespace inspector
+{
+struct ResourceBinding;
+}
+} // namespace tint
+
 namespace Diligent
 {
 
@@ -43,5 +52,39 @@ struct WGSLResourceBindingInfo
 using WGSLResourceMapping = std::unordered_map<std::string, WGSLResourceBindingInfo>;
 
 std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourceMapping& ResMapping);
+
+
+/// When WGSL is generated from SPIR-V, the names of resources may be mangled
+///
+/// Constant buffers:
+///   HLSL:
+///      cbuffer CB0
+///      {
+///          float4 g_Data0;
+///      }
+///   WGSL:
+///      struct CB0 {
+///        g_Data0 : vec4f,
+///      }
+///      @group(0) @binding(0) var<uniform> x_13 : CB0;
+///
+///
+/// Structured buffers:
+///   HLSL:
+///      struct BufferData0
+///      {
+///          float4 data;
+///      };
+///      StructuredBuffer<BufferData0> g_Buff0;
+///      StructuredBuffer<BufferData0> g_Buff1;
+///   WGSL:
+///      struct g_Buff0 {
+///        x_data : RTArr,
+///      }
+///      @group(0) @binding(0) var<storage, read> g_Buff0_1 : g_Buff0;
+///      @group(0) @binding(1) var<storage, read> g_Buff1   : g_Buff0;
+///
+/// This function returns the alternative name of the resource binding.
+std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const tint::inspector::ResourceBinding& Binding);
 
 } // namespace Diligent
