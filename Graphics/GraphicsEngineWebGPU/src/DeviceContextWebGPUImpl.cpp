@@ -621,7 +621,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             wgpuAspectMask = WGPUTextureAspect_All;
 
         WGPUImageCopyTexture wgpuImageCopySrc{};
-        wgpuImageCopySrc.texture  = pDstTexWebGPU->GetWebGPUTexture();
+        wgpuImageCopySrc.texture  = pSrcTexWebGPU->GetWebGPUTexture();
         wgpuImageCopySrc.aspect   = wgpuAspectMask;
         wgpuImageCopySrc.origin.x = pSrcBox->MinX;
         wgpuImageCopySrc.origin.y = pSrcBox->MinY;
