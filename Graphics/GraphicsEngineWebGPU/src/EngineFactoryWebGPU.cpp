@@ -188,6 +188,9 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
 
         if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_Float32Filterable))
             Features.push_back(WGPUFeatureName_Float32Filterable);
+
+        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_IndirectFirstInstance))
+            Features.push_back(WGPUFeatureName_IndirectFirstInstance);
     }
 
     WGPURequiredLimits   RequiredLimits{nullptr, SupportedLimits.limits};
@@ -263,7 +266,6 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
         Features.MultiViewport             = DEVICE_FEATURE_STATE_ENABLED;
         Features.PixelUAVWritesAndAtomics  = DEVICE_FEATURE_STATE_ENABLED;
         Features.TextureUAVExtendedFormats = DEVICE_FEATURE_STATE_ENABLED;
-        Features.InstanceDataStepRate      = DEVICE_FEATURE_STATE_ENABLED;
         Features.DepthClamp                = DEVICE_FEATURE_STATE_ENABLED;
 
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_DepthClipControl))

@@ -340,6 +340,8 @@ private:
 
     WGPUComputePassEncoder PrepareForDispatchCompute();
 
+    WGPUBuffer PrepareForIndirectCommand(IBuffer* pAttribsBuffer, Uint64& IdirectBufferOffset);
+
     template <PIPELINE_TYPE PipelineType, typename CmdEncoderType>
     void CommitSRBs(CmdEncoderType CmdEncoder, Uint32 CommitSRBMask);
 

@@ -123,11 +123,12 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
     WGPUDepthStencilState wgpuDepthStencilState{};
     WGPUMultisampleState  wgpuMultisampleState{};
 
-    using WebGPUVertexAttributeIndices = std::array<int32_t, MAX_LAYOUT_ELEMENTS>;
-    using WebGPUVertexAttributeArray   = std::array<std::vector<WGPUVertexAttribute>, MAX_LAYOUT_ELEMENTS>;
+    using WebGPUVertexAttributeArray = std::array<std::vector<WGPUVertexAttribute>, MAX_LAYOUT_ELEMENTS>;
+    using WebGPUVertexBufferLayouts  = std::array<WGPUVertexBufferLayout, MAX_LAYOUT_ELEMENTS>;
 
-    WebGPUVertexAttributeArray             wgpuVertexAttributes{};
-    std::vector<WGPUVertexBufferLayout>    wgpuVertexBufferLayouts{};
+    WebGPUVertexAttributeArray wgpuVertexAttributes{};
+    WebGPUVertexBufferLayouts  wgpuVertexBufferLayouts{};
+
     std::vector<WGPUColorTargetState>      wgpuColorTargetStates{};
     std::vector<WGPUBlendState>            wgpuBlendStates{};
     std::vector<WebGPUShaderModuleWrapper> wgpuShaderModules{ShaderStages.size()};
@@ -147,43 +148,36 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
     {
         const auto& InputLayout = GraphicsPipeline.InputLayout;
 
-        WebGPUVertexAttributeIndices BufferSlotToBindingDescIndex;
-        BufferSlotToBindingDescIndex.fill(-1);
-
+        Uint32 MaxBufferSlot = 0;
         for (Uint32 Idx = 0; Idx < InputLayout.NumElements; ++Idx)
         {
             const auto& Item = InputLayout.LayoutElements[Idx];
 
-            auto& BindingDescIndex = BufferSlotToBindingDescIndex[Item.BufferSlot];
+            auto BindingDescIndex = Item.BufferSlot;
 
-            if (BindingDescIndex < 0)
-            {
-                BindingDescIndex = static_cast<int32_t>(wgpuVertexBufferLayouts.size());
-
-                WGPUVertexBufferLayout wgpuVertexBufferLayout{};
-                wgpuVertexBufferLayout.arrayStride = Item.Stride;
-                wgpuVertexBufferLayout.stepMode    = InputElementFrequencyToWGPUVertexStepMode(Item.Frequency);
-                wgpuVertexBufferLayouts.push_back(wgpuVertexBufferLayout);
-            }
+            wgpuVertexBufferLayouts[BindingDescIndex].arrayStride = Item.Stride;
+            wgpuVertexBufferLayouts[BindingDescIndex].stepMode    = InputElementFrequencyToWGPUVertexStepMode(Item.Frequency);
 
             WGPUVertexAttribute wgpuVertexAttribute{};
             wgpuVertexAttribute.format         = VertexFormatAttribsToWGPUVertexFormat(Item.ValueType, Item.NumComponents, Item.IsNormalized);
             wgpuVertexAttribute.offset         = Item.RelativeOffset;
             wgpuVertexAttribute.shaderLocation = Item.InputIndex;
             wgpuVertexAttributes[BindingDescIndex].push_back(wgpuVertexAttribute);
+
+            MaxBufferSlot = std::max(MaxBufferSlot, BindingDescIndex);
         }
 
-        for (size_t Idx = 0; Idx < wgpuVertexBufferLayouts.size(); ++Idx)
+        for (size_t Idx = 0; Idx < MaxBufferSlot + 1; ++Idx)
         {
+            wgpuVertexBufferLayouts[Idx].stepMode       = !wgpuVertexAttributes[Idx].empty() ? wgpuVertexBufferLayouts[Idx].stepMode : WGPUVertexStepMode_VertexBufferNotUsed;
             wgpuVertexBufferLayouts[Idx].attributeCount = static_cast<uint32_t>(wgpuVertexAttributes[Idx].size());
             wgpuVertexBufferLayouts[Idx].attributes     = wgpuVertexAttributes[Idx].data();
         }
 
         wgpuVertexState.module      = wgpuShaderModules[0].Get();
         wgpuVertexState.entryPoint  = ShaderStages[0].pShader->GetEntryPoint();
-        wgpuVertexState.bufferCount = static_cast<uint32_t>(wgpuVertexBufferLayouts.size());
+        wgpuVertexState.bufferCount = InputLayout.NumElements > 0 ? MaxBufferSlot + 1 : 0;
         wgpuVertexState.buffers     = wgpuVertexBufferLayouts.data();
-        wgpuVertexState.bufferCount = static_cast<uint32_t>(wgpuVertexBufferLayouts.size());
     }
 
     wgpuColorTargetStates.reserve(GraphicsPipeline.NumRenderTargets);

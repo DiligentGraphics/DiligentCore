@@ -252,10 +252,34 @@ void DeviceContextWebGPUImpl::MultiDrawIndexed(const MultiDrawIndexedAttribs& At
 
 void DeviceContextWebGPUImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 {
+    TDeviceContextBase::DrawIndirect(Attribs, 0);
+
+    auto wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
+
+    auto IndirectBufferOffset = Attribs.DrawArgsOffset;
+    auto wgpuIndirectBuffer   = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
+
+    for (Uint32 DrawIdx = 0; DrawIdx < Attribs.DrawCount; ++DrawIdx)
+    {
+        wgpuRenderPassEncoderDrawIndirect(wgpuRenderCmdEncoder, wgpuIndirectBuffer, IndirectBufferOffset);
+        IndirectBufferOffset += Attribs.DrawArgsStride;
+    }
 }
 
 void DeviceContextWebGPUImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs)
 {
+    TDeviceContextBase::DrawIndexedIndirect(Attribs, 0);
+
+    auto wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+
+    auto IndirectBufferOffset = Attribs.DrawArgsOffset;
+    auto wgpuIndirectBuffer   = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
+
+    for (Uint32 DrawIdx = 0; DrawIdx < Attribs.DrawCount; ++DrawIdx)
+    {
+        wgpuRenderPassEncoderDrawIndexedIndirect(wgpuRenderCmdEncoder, wgpuIndirectBuffer, IndirectBufferOffset);
+        IndirectBufferOffset += Attribs.DrawArgsStride;
+    }
 }
 
 void DeviceContextWebGPUImpl::DrawMesh(const DrawMeshAttribs& Attribs)
@@ -280,6 +304,14 @@ void DeviceContextWebGPUImpl::DispatchCompute(const DispatchComputeAttribs& Attr
 
 void DeviceContextWebGPUImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs)
 {
+    TDeviceContextBase::DispatchComputeIndirect(Attribs, 0);
+
+    auto wgpuComputeCmdEncoder = PrepareForDispatchCompute();
+
+    auto IndirectBufferOffset = Attribs.DispatchArgsByteOffset;
+    auto wgpuIndirectBuffer   = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
+
+    wgpuComputePassEncoderDispatchWorkgroupsIndirect(wgpuComputeCmdEncoder, wgpuIndirectBuffer, IndirectBufferOffset);
 }
 
 void DeviceContextWebGPUImpl::ClearDepthStencil(ITextureView*                  pView,
@@ -1398,6 +1430,8 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
 
 WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType)
 {
+    DEV_CHECK_ERR(m_pPipelineState != nullptr, "No PSO is bound in the context");
+
     auto wgpuRenderCmdEncoder = PrepareForDraw(Flags);
 
     if (!m_EncoderState.IsUpToDate((WebGPUEncoderState::CMD_ENCODER_STATE_INDEX_BUFFER)))
@@ -1419,6 +1453,25 @@ WGPUComputePassEncoder DeviceContextWebGPUImpl::PrepareForDispatchCompute()
         CommitSRBs<PIPELINE_TYPE_COMPUTE>(wgpuComputeCmdEncoder, CommitSRBMask);
 
     return wgpuComputeCmdEncoder;
+}
+
+WGPUBuffer DeviceContextWebGPUImpl::PrepareForIndirectCommand(IBuffer* pAttribsBuffer, Uint64& IdirectBufferOffset)
+{
+    VERIFY_EXPR(pAttribsBuffer != nullptr);
+
+    auto* pAttribsBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pAttribsBuffer);
+
+    auto wgpuIndirectBuffer = pAttribsBufferWebGPU->GetWebGPUBuffer();
+    if (wgpuIndirectBuffer == nullptr)
+    {
+        VERIFY_EXPR(pAttribsBufferWebGPU->GetDesc().Usage == USAGE_DYNAMIC);
+        const auto& DynamicAlloc = pAttribsBufferWebGPU->GetDynamicAllocation(GetContextId());
+
+        wgpuIndirectBuffer = DynamicAlloc.wgpuBuffer;
+        IdirectBufferOffset += DynamicAlloc.Offset;
+    }
+
+    return wgpuIndirectBuffer;
 }
 
 void DeviceContextWebGPUImpl::CommitGraphicsPSO(WGPURenderPassEncoder CmdEncoder)
