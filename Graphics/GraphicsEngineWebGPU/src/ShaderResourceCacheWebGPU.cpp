@@ -116,7 +116,7 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
             m_DbgInitializedResources[t].resize(GroupSizes[t]);
 #endif
         }
-        VERIFY_EXPR((char*)pCurrResPtr == (char*)m_pMemory.get() + MemorySize);
+        VERIFY_EXPR((char*)pCurrWGPUEntryPtr == (char*)m_pMemory.get() + MemorySize);
     }
 }
 

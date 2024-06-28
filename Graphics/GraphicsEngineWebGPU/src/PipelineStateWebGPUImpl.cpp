@@ -105,6 +105,8 @@ void PipelineStateWebGPUImpl::InitPipelineLayout(const PipelineStateCreateInfo& 
         InitDefaultSignature(SignDesc, GetActiveShaderStages(), false /*bIsDeviceInternal*/);
         VERIFY_EXPR(m_Signatures[0]);
     }
+
+    m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
 }
 
 void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo)

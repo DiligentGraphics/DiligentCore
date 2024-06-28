@@ -306,7 +306,7 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
         CacheGroupSizes[CacheGroup] += ResDesc.ArraySize;
     }
 
-    // Bind group mapping (static/mutable (0) or dynamic (1) -> set index)
+    // Bind group mapping (static/mutable (0) or dynamic (1) -> bind group index)
     std::array<Uint32, BIND_GROUP_ID_NUM_GROUPS> BindGroupMapping = {};
     {
         const auto TotalStaticBindings =
@@ -378,10 +378,9 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
 
         // The sampler may not be yet initialized, but this is OK as all resources are initialized
         // in the same order as in m_Desc.Resources
-        //const auto AssignedSamplerInd = DescrType == DescriptorType::SeparateImage ?
-        //    FindAssignedSampler(ResDesc, ResourceAttribs::InvalidSamplerInd) :
-        //    ResourceAttribs::InvalidSamplerInd;
-        const auto AssignedSamplerInd = FindAssignedSampler(ResDesc, ResourceAttribs::InvalidSamplerInd);
+        const auto AssignedSamplerInd = EntryType == BindGroupEntryType::Texture ?
+            FindAssignedSampler(ResDesc, ResourceAttribs::InvalidSamplerInd) :
+            ResourceAttribs::InvalidSamplerInd;
 
         WGPUSampler* pwgpuImmutableSamplers = nullptr;
         if ( //EntryType == BindGroupEntryType::CombinedImageSampler ||

@@ -16,6 +16,7 @@ set(INCLUDE
     include/PipelineResourceImmutableSamplerAttribsWebGPU.hpp
     include/PipelineResourceSignatureWebGPUImpl.hpp
     include/PipelineStateWebGPUImpl.hpp
+    include/PipelineLayoutWebGPU.hpp
     include/QueryManagerWebGPU.hpp
     include/QueryWebGPUImpl.hpp
     include/QueueSignalPoolWebGPU.hpp
@@ -62,6 +63,7 @@ set(SRC
    src/GenerateMipsHelperWebGPU.cpp
    src/PipelineResourceSignatureWebGPUImpl.cpp
    src/PipelineStateWebGPUImpl.cpp
+   src/PipelineLayoutWebGPU.cpp
    src/QueryManagerWebGPU.cpp
    src/QueryWebGPUImpl.cpp
    src/QueueSignalPoolWebGPU.cpp

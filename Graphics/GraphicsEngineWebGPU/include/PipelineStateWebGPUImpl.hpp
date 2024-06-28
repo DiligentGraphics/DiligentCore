@@ -34,6 +34,7 @@
 #include "PipelineResourceSignatureWebGPUImpl.hpp"
 #include "ShaderWebGPUImpl.hpp"
 #include "WebGPUObjectWrappers.hpp"
+#include "PipelineLayoutWebGPU.hpp"
 
 namespace Diligent
 {
@@ -102,7 +103,7 @@ private:
 private:
     WebGPURenderPipelineWrapper  m_wgpuRenderPipeline;
     WebGPUComputePipelineWrapper m_wgpuComputePipeline;
-    WebGPUPipelineLayoutWrapper  m_wgpuPipelineLayout;
+    PipelineLayoutWebGPU         m_PipelineLayout;
 };
 
 } // namespace Diligent
