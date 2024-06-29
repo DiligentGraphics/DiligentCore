@@ -130,6 +130,8 @@ struct WGSLShaderResourceAttribs
         return static_cast<RESOURCE_DIMENSION>(ResourceDim);
     }
 
+    WebGPUResourceAttribs GetWebGPUAttribs() const;
+
     bool IsMultisample() const
     {
         return Type == TextureMS || Type == DepthTextureMS;

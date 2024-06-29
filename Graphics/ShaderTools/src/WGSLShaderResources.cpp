@@ -47,6 +47,9 @@
 namespace Diligent
 {
 
+namespace
+{
+
 SHADER_TYPE TintPipelineStageToShaderType(tint::inspector::PipelineStage Stage)
 {
     switch (Stage)
@@ -260,6 +263,44 @@ TEXTURE_FORMAT TintTexelFormatToTextureFormat(const tint::inspector::ResourceBin
     }
 }
 
+WEB_GPU_BINDING_TYPE GetWebGPUTextureBindingType(WGSLShaderResourceAttribs::TextureSampleType SampleType, bool IsMultisample)
+{
+    using TextureSampleType = WGSLShaderResourceAttribs::TextureSampleType;
+    switch (SampleType)
+    {
+        case TextureSampleType::Float:
+            return IsMultisample ?
+                WEB_GPU_BINDING_TYPE_FLOAT_TEXTURE_MS :
+                WEB_GPU_BINDING_TYPE_FLOAT_TEXTURE;
+
+        case TextureSampleType::UInt:
+            return IsMultisample ?
+                WEB_GPU_BINDING_TYPE_UINT_TEXTURE_MS :
+                WEB_GPU_BINDING_TYPE_UINT_TEXTURE;
+
+        case TextureSampleType::SInt:
+            return IsMultisample ?
+                WEB_GPU_BINDING_TYPE_SINT_TEXTURE_MS :
+                WEB_GPU_BINDING_TYPE_SINT_TEXTURE;
+
+        case TextureSampleType::UnfilterableFloat:
+            return IsMultisample ?
+                WEB_GPU_BINDING_TYPE_UNFILTERABLE_FLOAT_TEXTURE_MS :
+                WEB_GPU_BINDING_TYPE_UNFILTERABLE_FLOAT_TEXTURE;
+
+        case TextureSampleType::Depth:
+            return IsMultisample ?
+                WEB_GPU_BINDING_TYPE_DEPTH_TEXTURE_MS :
+                WEB_GPU_BINDING_TYPE_DEPTH_TEXTURE;
+
+        default:
+            UNEXPECTED("Unexpected texture sample type");
+            return WEB_GPU_BINDING_TYPE_DEFAULT;
+    }
+}
+
+} // namespace
+
 WGSLShaderResourceAttribs::WGSLShaderResourceAttribs(const char*                             _Name,
                                                      const tint::inspector::ResourceBinding& TintBinding) noexcept :
     // clang-format off
@@ -338,6 +379,67 @@ SHADER_RESOURCE_TYPE WGSLShaderResourceAttribs::GetShaderResourceType(ResourceTy
 PIPELINE_RESOURCE_FLAGS WGSLShaderResourceAttribs::GetPipelineResourceFlags(ResourceType Type)
 {
     return PIPELINE_RESOURCE_FLAG_NONE;
+}
+
+WebGPUResourceAttribs WGSLShaderResourceAttribs::GetWebGPUAttribs() const
+{
+    WebGPUResourceAttribs WebGPUAttribs;
+    static_assert(Uint32{WGSLShaderResourceAttribs::ResourceType::NumResourceTypes} == 13, "Please handle the new resource type below");
+    switch (Type)
+    {
+        case ResourceType::UniformBuffer:
+        case ResourceType::ROStorageBuffer:
+        case ResourceType::RWStorageBuffer:
+            WebGPUAttribs.BindingType = WEB_GPU_BINDING_TYPE_DEFAULT;
+            break;
+
+        case ResourceType::Sampler:
+            WebGPUAttribs.BindingType = WEB_GPU_BINDING_TYPE_FILTERING_SAMPLER;
+            break;
+
+        case ResourceType::ComparisonSampler:
+            WebGPUAttribs.BindingType = WEB_GPU_BINDING_TYPE_COMPARISON_SAMPLER;
+            break;
+
+        case ResourceType::Texture:
+        case ResourceType::TextureMS:
+        case ResourceType::DepthTexture:
+        case ResourceType::DepthTextureMS:
+            WebGPUAttribs.BindingType = GetWebGPUTextureBindingType(SampleType, Type == ResourceType::TextureMS || Type == ResourceType::DepthTextureMS);
+            break;
+
+        case ResourceType::WOStorageTexture:
+            WebGPUAttribs.BindingType = WEB_GPU_BINDING_TYPE_WRITE_ONLY_TEXTURE_UAV;
+            break;
+
+        case ResourceType::ROStorageTexture:
+            WebGPUAttribs.BindingType = WEB_GPU_BINDING_TYPE_READ_ONLY_TEXTURE_UAV;
+            break;
+
+        case ResourceType::RWStorageTexture:
+            WebGPUAttribs.BindingType = WEB_GPU_BINDING_TYPE_READ_WRITE_TEXTURE_UAV;
+            break;
+
+        case ResourceType::ExternalTexture:
+            LOG_WARNING_MESSAGE("External textures are not currently supported");
+            break;
+
+        default:
+            UNEXPECTED("Unknown WGSL resource type");
+    }
+
+    if (Type == ResourceType::Texture ||
+        Type == ResourceType::TextureMS ||
+        Type == ResourceType::DepthTexture ||
+        Type == ResourceType::DepthTextureMS ||
+        Type == ResourceType::WOStorageTexture ||
+        Type == ResourceType::ROStorageTexture ||
+        Type == ResourceType::RWStorageTexture)
+    {
+        WebGPUAttribs.TextureViewDim = GetResourceDimension();
+    }
+    WebGPUAttribs.UAVTextureFormat = Format;
+    return WebGPUAttribs;
 }
 
 WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
