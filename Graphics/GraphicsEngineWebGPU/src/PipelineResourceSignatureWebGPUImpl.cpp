@@ -125,20 +125,69 @@ WGPUBufferBindingType GetWGPUBufferBindingType(BindGroupEntryType EntryType)
     }
 }
 
-WGPUSamplerBindingType GetWGPUSamplerBindingType(BindGroupEntryType EntryType)
+WGPUSamplerBindingType GetWGPUSamplerBindingType(BindGroupEntryType EntryType, WEB_GPU_BINDING_TYPE BindingType)
 {
-    // TODO: handle other sampler types
-    return EntryType == BindGroupEntryType::Sampler ?
-        WGPUSamplerBindingType_Filtering :
-        WGPUSamplerBindingType_Undefined;
+    if (EntryType == BindGroupEntryType::Sampler)
+    {
+        switch (BindingType)
+        {
+            case WEB_GPU_BINDING_TYPE_DEFAULT:
+            case WEB_GPU_BINDING_TYPE_FILTERING_SAMPLER:
+                return WGPUSamplerBindingType_Filtering;
+
+            case WEB_GPU_BINDING_TYPE_NON_FILTERING_SAMPLER:
+                return WGPUSamplerBindingType_NonFiltering;
+
+            case WEB_GPU_BINDING_TYPE_COMPARISON_SAMPLER:
+                return WGPUSamplerBindingType_Comparison;
+
+            default:
+                UNEXPECTED("Invalid sampler binding type");
+                return WGPUSamplerBindingType_Filtering;
+        }
+    }
+    else
+    {
+        return WGPUSamplerBindingType_Undefined;
+    }
 }
 
-WGPUTextureSampleType GetWGPUTextureSampleType(BindGroupEntryType EntryType)
+WGPUTextureSampleType GetWGPUTextureSampleType(BindGroupEntryType EntryType, WEB_GPU_BINDING_TYPE BindingType)
 {
-    // TODO: handle other texture types
-    return EntryType == BindGroupEntryType::Texture ?
-        WGPUTextureSampleType_Float :
-        WGPUTextureSampleType_Undefined;
+    if (EntryType == BindGroupEntryType::Texture)
+    {
+        switch (BindingType)
+        {
+            case WEB_GPU_BINDING_TYPE_DEFAULT:
+            case WEB_GPU_BINDING_TYPE_FLOAT_TEXTURE:
+            case WEB_GPU_BINDING_TYPE_FLOAT_TEXTURE_MS:
+                return WGPUTextureSampleType_Float;
+
+            case WEB_GPU_BINDING_TYPE_UNFILTERABLE_FLOAT_TEXTURE:
+            case WEB_GPU_BINDING_TYPE_UNFILTERABLE_FLOAT_TEXTURE_MS:
+                return WGPUTextureSampleType_UnfilterableFloat;
+
+            case WEB_GPU_BINDING_TYPE_DEPTH_TEXTURE:
+            case WEB_GPU_BINDING_TYPE_DEPTH_TEXTURE_MS:
+                return WGPUTextureSampleType_Depth;
+
+            case WEB_GPU_BINDING_TYPE_SINT_TEXTURE:
+            case WEB_GPU_BINDING_TYPE_SINT_TEXTURE_MS:
+                return WGPUTextureSampleType_Sint;
+
+            case WEB_GPU_BINDING_TYPE_UINT_TEXTURE:
+            case WEB_GPU_BINDING_TYPE_UINT_TEXTURE_MS:
+                return WGPUTextureSampleType_Uint;
+
+            default:
+                UNEXPECTED("Invalid texture binding type");
+                return WGPUTextureSampleType_Float;
+        }
+    }
+    else
+    {
+        return WGPUTextureSampleType_Undefined;
+    }
 }
 
 WGPUStorageTextureAccess GetWGPUStorageTextureAccess(BindGroupEntryType EntryType)
@@ -157,6 +206,15 @@ WGPUStorageTextureAccess GetWGPUStorageTextureAccess(BindGroupEntryType EntryTyp
         default:
             return WGPUStorageTextureAccess_Undefined;
     }
+}
+
+bool IsMSTextureGPUBinding(WEB_GPU_BINDING_TYPE BindingType)
+{
+    return (BindingType == WEB_GPU_BINDING_TYPE_FLOAT_TEXTURE_MS ||
+            BindingType == WEB_GPU_BINDING_TYPE_UNFILTERABLE_FLOAT_TEXTURE_MS ||
+            BindingType == WEB_GPU_BINDING_TYPE_DEPTH_TEXTURE_MS ||
+            BindingType == WEB_GPU_BINDING_TYPE_SINT_TEXTURE_MS ||
+            BindingType == WEB_GPU_BINDING_TYPE_UINT_TEXTURE_MS);
 }
 
 WGPUBindGroupLayoutEntry GetWGPUBindGroupLayoutEntry(const PipelineResourceAttribsWebGPU& Attribs,
@@ -182,25 +240,31 @@ WGPUBindGroupLayoutEntry GetWGPUBindGroupLayoutEntry(const PipelineResourceAttri
         // in the GPUBindGroup satisfies the minimum buffer binding size of the variable.
         wgpuBGLayoutEntry.buffer.minBindingSize = 0;
     }
-    else if (WGPUSamplerBindingType wgpuSamplerBindingType = GetWGPUSamplerBindingType(EntryType))
+    else if (WGPUSamplerBindingType wgpuSamplerBindingType = GetWGPUSamplerBindingType(EntryType, ResDesc.WebGPUAttribs.BindingType))
     {
         wgpuBGLayoutEntry.sampler.type = wgpuSamplerBindingType;
     }
-    else if (WGPUTextureSampleType wgpuTextureSampleType = GetWGPUTextureSampleType(EntryType))
+    else if (WGPUTextureSampleType wgpuTextureSampleType = GetWGPUTextureSampleType(EntryType, ResDesc.WebGPUAttribs.BindingType))
     {
         wgpuBGLayoutEntry.texture.sampleType = wgpuTextureSampleType;
-        // TODO: handle other view dimensions
-        wgpuBGLayoutEntry.texture.viewDimension = WGPUTextureViewDimension_2D;
-        // TODO: handle multisampled textures
-        wgpuBGLayoutEntry.texture.multisampled = false;
+
+        wgpuBGLayoutEntry.texture.viewDimension = ResDesc.WebGPUAttribs.TextureViewDim != RESOURCE_DIM_UNDEFINED ?
+            ResourceDimensionToWGPUTextureViewDimension(ResDesc.WebGPUAttribs.TextureViewDim) :
+            WGPUTextureViewDimension_2D;
+
+        wgpuBGLayoutEntry.texture.multisampled = IsMSTextureGPUBinding(ResDesc.WebGPUAttribs.BindingType);
     }
     else if (WGPUStorageTextureAccess wgpuStorageTextureAccess = GetWGPUStorageTextureAccess(EntryType))
     {
         wgpuBGLayoutEntry.storageTexture.access = wgpuStorageTextureAccess;
-        // TODO: handle other formats
-        wgpuBGLayoutEntry.storageTexture.format = WGPUTextureFormat_RGBA32Float;
-        // TODO: handle other view dimensions
-        wgpuBGLayoutEntry.storageTexture.viewDimension = WGPUTextureViewDimension_2D;
+
+        wgpuBGLayoutEntry.storageTexture.format = ResDesc.WebGPUAttribs.UAVTextureFormat != TEX_FORMAT_UNKNOWN ?
+            TextureFormatToWGPUFormat(ResDesc.WebGPUAttribs.UAVTextureFormat) :
+            WGPUTextureFormat_RGBA32Float;
+
+        wgpuBGLayoutEntry.storageTexture.viewDimension = ResDesc.WebGPUAttribs.TextureViewDim != RESOURCE_DIM_UNDEFINED ?
+            ResourceDimensionToWGPUTextureViewDimension(ResDesc.WebGPUAttribs.TextureViewDim) :
+            WGPUTextureViewDimension_2D;
     }
     else
     {
