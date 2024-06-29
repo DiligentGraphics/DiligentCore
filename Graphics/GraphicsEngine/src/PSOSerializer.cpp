@@ -78,7 +78,10 @@ bool PRSSerializer<Mode>::SerializeDesc(
                                            ResDesc.ArraySize,
                                            ResDesc.ResourceType,
                                            ResDesc.VarType,
-                                           ResDesc.Flags);
+                                           ResDesc.Flags,
+                                           ResDesc.WebGPUAttribs.BindingType,
+                                           ResDesc.WebGPUAttribs.TextureViewDim,
+                                           ResDesc.WebGPUAttribs.UAVTextureFormat);
                             }))
         return false;
 

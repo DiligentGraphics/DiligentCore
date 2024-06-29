@@ -110,7 +110,10 @@ TEST(PSOSerializerTest, SerializePRSDesc)
                 {SHADER_TYPE_UNKNOWN, "Resource2", 1, SHADER_RESOURCE_TYPE_UNKNOWN},
                 {SHADER_TYPE_UNKNOWN, "Resource3", 1, SHADER_RESOURCE_TYPE_UNKNOWN},
                 {SHADER_TYPE_UNKNOWN, "Resource4", 1, SHADER_RESOURCE_TYPE_UNKNOWN},
-                {SHADER_TYPE_UNKNOWN, "Resource5", 1, SHADER_RESOURCE_TYPE_UNKNOWN} //
+                {SHADER_TYPE_UNKNOWN, "Resource5", 1, SHADER_RESOURCE_TYPE_UNKNOWN},
+                {SHADER_TYPE_UNKNOWN, "Resource6", 1, SHADER_RESOURCE_TYPE_UNKNOWN},
+                {SHADER_TYPE_UNKNOWN, "Resource7", 1, SHADER_RESOURCE_TYPE_UNKNOWN},
+                {SHADER_TYPE_UNKNOWN, "Resource8", 1, SHADER_RESOURCE_TYPE_UNKNOWN},
             };
 
         Resources[0].ShaderStages = Val(SHADER_TYPE_VERTEX, (SHADER_TYPE_LAST << 1) - 1);
@@ -118,6 +121,10 @@ TEST(PSOSerializerTest, SerializePRSDesc)
         Resources[2].ResourceType = Val(static_cast<SHADER_RESOURCE_TYPE>(1), SHADER_RESOURCE_TYPE_LAST);
         Resources[3].VarType      = Val(SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES - 1);
         Resources[4].Flags        = Val(PIPELINE_RESOURCE_FLAG_NONE, (PIPELINE_RESOURCE_FLAG_LAST << 1) - 1);
+
+        Resources[5].WebGPUAttribs.BindingType      = Val(WEB_GPU_BINDING_TYPE_DEFAULT, WEB_GPU_BINDING_TYPE_COUNT);
+        Resources[6].WebGPUAttribs.TextureViewDim   = Val(RESOURCE_DIM_BUFFER, RESOURCE_DIM_NUM_DIMENSIONS);
+        Resources[7].WebGPUAttribs.UAVTextureFormat = Val(TEX_FORMAT_UNKNOWN, TEX_FORMAT_NUM_FORMATS);
 
         ImmutableSamplerDesc ImmutableSamplers[] = //
             {
