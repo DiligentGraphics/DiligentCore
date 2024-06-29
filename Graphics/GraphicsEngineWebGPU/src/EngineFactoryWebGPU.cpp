@@ -38,7 +38,10 @@
 #include "StringTools.hpp"
 #include "GraphicsAccessories.hpp"
 
-#include "dawn/native/DawnNative.h"
+#if !PLATFORM_EMSCRIPTEN
+#    include "dawn/native/DawnNative.h"
+#endif
+
 
 namespace Diligent
 {
@@ -193,23 +196,18 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
             Features.push_back(WGPUFeatureName_IndirectFirstInstance);
     }
 
+    auto DeviceLostCallback = [](WGPUDeviceLostReason Reason, char const* Message, void* pUserdata) {
+        if (Reason != WGPUDeviceLostReason_Destroyed && Message != nullptr)
+            LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
+    };
+
     WGPURequiredLimits   RequiredLimits{nullptr, SupportedLimits.limits};
     WGPUDeviceDescriptor DeviceDesc{};
-    DeviceDesc.requiredLimits              = &RequiredLimits;
-    DeviceDesc.requiredFeatureCount        = Features.size();
-    DeviceDesc.requiredFeatures            = Features.data();
-    DeviceDesc.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
-    DeviceDesc.deviceLostCallbackInfo.callback =
-        [](WGPUDevice const* Device, WGPUDeviceLostReason Reason, char const* Message, void* pUserdata) {
-            if (Reason != WGPUDeviceLostReason_Destroyed && Reason != WGPUDeviceLostReason_InstanceDropped && Message != nullptr)
-                LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
-        };
-
-    wgpuAdapterRequestDevice(
-        Adapter,
-        &DeviceDesc,
-        OnDeviceRequestEnded,
-        &UserData);
+    DeviceDesc.requiredLimits       = &RequiredLimits;
+    DeviceDesc.requiredFeatureCount = Features.size();
+    DeviceDesc.requiredFeatures     = Features.data();
+    DeviceDesc.deviceLostCallback   = DeviceLostCallback;
+    wgpuAdapterRequestDevice(Adapter, &DeviceDesc, OnDeviceRequestEnded, &UserData);
 
     if (UserData.RequestStatus != WGPURequestDeviceStatus_Success)
         LOG_ERROR_AND_THROW(UserData.Message);
@@ -538,7 +536,11 @@ void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(WGPUInstance                 
 
 const void* EngineFactoryWebGPUImpl::GetProcessTable() const
 {
+#if !PLATFORM_EMSCRIPTEN
     return &dawn::native::GetProcs();
+#else
+    return nullptr;
+#endif
 }
 
 API_QUALIFIER IEngineFactoryWebGPU* GetEngineFactoryWebGPU()

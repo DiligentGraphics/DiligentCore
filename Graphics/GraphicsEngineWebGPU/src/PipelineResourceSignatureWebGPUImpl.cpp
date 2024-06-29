@@ -289,6 +289,7 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
     // Initialize static resource cache first
     if (auto NumStaticResStages = GetNumStaticResStages())
     {
+        (void)NumStaticResStages;
         Uint32 StaticResourceCount = 0; // The total number of static resources in all stages
                                         // accounting for array sizes.
         for (Uint32 i = 0; i < m_Desc.NumResources; ++i)

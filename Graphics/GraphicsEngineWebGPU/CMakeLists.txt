@@ -114,9 +114,7 @@ set(PRIVATE_DEPENDENCIES
     Diligent-TargetPlatform
     Diligent-Common
     Diligent-GraphicsEngine
-    Diligent-GraphicsEngineNextGenBase
     Diligent-ShaderTools
-    webgpu_dawn
 )
 
 set(PUBLIC_DEPENDENCIES
@@ -127,6 +125,10 @@ if (${DILIGENT_NO_HLSL})
     message("HLSL support is disabled. WebGPU backend will not be able to consume SPIRV bytecode generated from HLSL")
 else()
     list(APPEND PRIVATE_DEPENDENCIES SPIRV-Tools-opt)
+endif()
+
+if (NOT PLATFORM_EMSCRIPTEN)
+    list(APPEND PRIVATE_DEPENDENCIES webgpu_dawn)
 endif()
 
 target_link_libraries(Diligent-GraphicsEngineWebGPU-static
@@ -180,7 +182,7 @@ PRIVATE
 )
 
 if (PLATFORM_EMSCRIPTEN)
-    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: -s DISABLE_EXCEPTION_CATCHING=0")
+    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: -s USE_WEBGPU=1 -s DISABLE_EXCEPTION_CATCHING=0")
 endif()
 
 target_compile_definitions(Diligent-GraphicsEngineWebGPU-shared PUBLIC ENGINE_DLL=1)

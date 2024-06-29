@@ -344,7 +344,7 @@ void SwapChainWebGPUImpl::CreateSurface()
 #elif PLATFORM_EMSCRIPTEN
     WGPUSurfaceDescriptorFromCanvasHTMLSelector wgpuSurfaceNativeDesc{};
     wgpuSurfaceNativeDesc.chain    = {nullptr, WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector};
-    wgpuSurfaceNativeDesc.selector = m_NativeWindow.Selector;
+    wgpuSurfaceNativeDesc.selector = m_NativeWindow.pCanvasId;
 #endif
 
     WGPUSurfaceDescriptor wgpuSurfaceDesc{};

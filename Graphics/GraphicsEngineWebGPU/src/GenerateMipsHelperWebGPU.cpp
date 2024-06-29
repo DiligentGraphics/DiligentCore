@@ -306,9 +306,8 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncode
         // expensive.  Maybe we can update the code later to compute sample weights for
         // each successive downsample.  We use _BitScanForward to count number of zeros
         // in the low bits.  Zeros indicate we can divide by two without truncating.
-        uint32_t AdditionalMips;
-        _BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
-        uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
+        uint32_t AdditionalMips = PlatformMisc::GetLSB(DstWidth | DstHeight);
+        uint32_t NumMips        = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
         if (TopMip + NumMips > BottomMip)
             NumMips = BottomMip - TopMip;
 

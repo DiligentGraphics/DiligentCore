@@ -255,8 +255,19 @@ WGPUDevice RenderDeviceWebGPUImpl::GetWebGPUDevice() const
 
 void RenderDeviceWebGPUImpl::IdleGPU()
 {
-    // TODO How to wait GPU in Web?
-    PollEvents(true);
+    bool IsWorkDone       = false;
+    auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
+        if (bool* pIsWorkDone = static_cast<bool*>(pUserData))
+            *pIsWorkDone = Status == WGPUQueueWorkDoneStatus_Success;
+        if (Status != WGPUQueueWorkDoneStatus_Success)
+            DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
+    };
+
+    WGPUQueue wgpuQueue = wgpuDeviceGetQueue(m_wgpuDevice);
+    wgpuQueueOnSubmittedWorkDone(wgpuQueue, WorkDoneCallback, &IsWorkDone);
+
+    while (!IsWorkDone)
+        PollEvents(true);
 }
 
 void RenderDeviceWebGPUImpl::CreateTextureFromWebGPUTexture(WGPUTexture        wgpuTexture,
@@ -315,7 +326,7 @@ void RenderDeviceWebGPUImpl::PollEvents(bool YieldToWebBrowser)
 {
 #if PLATFORM_EMSCRIPTEN
     if (YieldToWebBrowser)
-        emscripten_sleep(1);
+        std::this_thread::sleep_for(std::chrono::microseconds{100});
 #else
     (void)YieldToWebBrowser;
     wgpuDeviceTick(m_wgpuDevice.Get());

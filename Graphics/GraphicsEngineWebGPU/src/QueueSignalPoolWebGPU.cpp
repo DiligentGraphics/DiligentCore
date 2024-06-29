@@ -127,7 +127,10 @@ Uint64 QueueSignalPoolWebGPU::GetQueryTimestamp(WGPUDevice wgpuDevice, Uint32 Qu
     while (!CallbackCapture.IsMapped)
     {
 #if PLATFORM_EMSCRIPTEN
-        // TODO: Find a way to sleep in microseconds in Emscripten
+        // TODO:
+        // Function emscripten_sleep in get argument in milliseconds, but allows to execute async tasks
+        // What about std::this_thread::sleep_for?
+        std::this_thread::sleep_for(std::chrono::microseconds{100});
 #else
         wgpuDeviceTick(wgpuDevice);
 #endif

@@ -345,9 +345,12 @@ void AttachmentCleanerWebGPU::InitializeDynamicUniformBuffer()
 
 void AttachmentCleanerWebGPU::InitializePipelineResourceLayout()
 {
-    WGPUBindGroupLayoutEntry wgpuBindGroupLayoutEntries[] = {
-        {nullptr, 0, WGPUShaderStage_Vertex, {nullptr, WGPUBufferBindingType_Uniform, true, 0}},
-    };
+    WGPUBindGroupLayoutEntry wgpuBindGroupLayoutEntries[1]{};
+    wgpuBindGroupLayoutEntries[0].binding                 = 0;
+    wgpuBindGroupLayoutEntries[0].visibility              = WGPUShaderStage_Vertex;
+    wgpuBindGroupLayoutEntries[0].buffer.type             = WGPUBufferBindingType_Uniform;
+    wgpuBindGroupLayoutEntries[0].buffer.hasDynamicOffset = true;
+    wgpuBindGroupLayoutEntries[0].buffer.minBindingSize   = 0;
 
     WGPUBindGroupLayoutDescriptor wgpuBindGroupLayoutDesc{};
     wgpuBindGroupLayoutDesc.entries    = wgpuBindGroupLayoutEntries;
@@ -365,8 +368,11 @@ void AttachmentCleanerWebGPU::InitializePipelineResourceLayout()
     if (!m_PipelineResourceLayout.wgpuPipelineLayout)
         LOG_ERROR_AND_THROW("Failed to create clear attachment pipeline layout");
 
-    WGPUBindGroupEntry wgpuBindGroupEntry[] = {
-        {nullptr, 0, m_wgpuBuffer.Get(), 0, m_BufferElementSize}};
+    WGPUBindGroupEntry wgpuBindGroupEntry[1]{};
+    wgpuBindGroupEntry[0].binding = 0;
+    wgpuBindGroupEntry[0].buffer  = m_wgpuBuffer.Get();
+    wgpuBindGroupEntry[0].offset  = 0;
+    wgpuBindGroupEntry[0].size    = static_cast<Uint64>(m_BufferElementSize) * m_BufferMaxElementCount;
 
     WGPUBindGroupDescriptor wgpuBindGroupDesc{};
     wgpuBindGroupDesc.layout     = m_PipelineResourceLayout.wgpuBindGroupLayout.Get();

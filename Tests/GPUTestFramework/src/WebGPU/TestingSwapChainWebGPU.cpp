@@ -206,7 +206,9 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
         },
         this);
 
+#if !PLATFORM_EMSCRIPTEN
     wgpuDeviceTick(m_wgpuDevice);
+#endif
 }
 
 void CreateTestingSwapChainWebGPU(TestingEnvironmentWebGPU* pEnv,

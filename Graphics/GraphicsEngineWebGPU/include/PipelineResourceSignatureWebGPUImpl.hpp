@@ -98,8 +98,6 @@ public:
 
     ~PipelineResourceSignatureWebGPUImpl();
 
-    using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
-
     Uint32 GetNumBindGroups() const
     {
         static_assert(BIND_GROUP_ID_NUM_GROUPS == 2, "Please update this method with new bind group id");

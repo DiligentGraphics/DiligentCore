@@ -28,7 +28,13 @@
 #include "RenderDeviceWebGPU.h"
 #include "DeviceContextWebGPU.h"
 #include "EngineFactoryWebGPU.h"
-#include <dawn/dawn_proc.h>
+
+#if !PLATFORM_EMSCRIPTEN
+#    include <dawn/dawn_proc.h>
+#else
+#    include <thread>
+#endif
+
 
 namespace Diligent
 {
@@ -48,7 +54,9 @@ TestingEnvironmentWebGPU::TestingEnvironmentWebGPU(const CreateInfo&    CI,
     RefCntAutoPtr<IDeviceContextWebGPU> pDeviceContextWebGPU{GetDeviceContext(), IID_DeviceContextWebGPU};
     RefCntAutoPtr<IEngineFactoryWebGPU> pEngineFactory{m_pDevice->GetEngineFactory(), IID_EngineFactoryWebGPU};
 
+#if !PLATFORM_EMSCRIPTEN
     dawnProcSetProcs(static_cast<const DawnProcTable*>(pEngineFactory->GetProcessTable()));
+#endif
     m_wgpuDevice = pRenderDeviceWebGPU->GetWebGPUDevice();
 
     if (m_pSwapChain == nullptr)
@@ -91,7 +99,27 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
 
     wgpuQueueSubmit(wgpuCmdQueue, 1, &wgpuCmdBuffer);
     if (WaitForIdle)
-        wgpuDeviceTick(m_wgpuDevice);
+    {
+        bool IsWorkDone       = false;
+        auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
+            if (bool* pIsWorkDone = static_cast<bool*>(pUserData))
+                *pIsWorkDone = Status == WGPUQueueWorkDoneStatus_Success;
+            if (Status != WGPUQueueWorkDoneStatus_Success)
+                DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
+        };
+
+        WGPUQueue wgpuQueue = wgpuDeviceGetQueue(m_wgpuDevice);
+        wgpuQueueOnSubmittedWorkDone(wgpuQueue, WorkDoneCallback, &IsWorkDone);
+
+        while (!IsWorkDone)
+        {
+#if !PLATFORM_EMSCRIPTEN
+            wgpuDeviceTick(m_wgpuDevice);
+#else
+            std::this_thread::sleep_for(std::chrono::microseconds{100});
+#endif
+        }
+    }
 }
 
 GPUTestingEnvironment* CreateTestingEnvironmentWebGPU(const GPUTestingEnvironment::CreateInfo& CI,
