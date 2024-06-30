@@ -497,7 +497,9 @@ private:
     /// Strong references to committed D3D11 shaders
     CComPtr<ID3D11DeviceChild> m_CommittedD3DShaders[NumShaderTypes];
 
+#ifdef DILIGENT_DEVELOPMENT
     const D3D11_VALIDATION_FLAGS m_D3D11ValidationFlags;
+#endif
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
 

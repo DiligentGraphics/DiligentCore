@@ -61,7 +61,9 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRef
         Desc
     },
     m_pd3d11DeviceContext {pd3d11DeviceContext          },
+#ifdef DILIGENT_DEVELOPMENT
     m_D3D11ValidationFlags{EngineCI.D3D11ValidationFlags},
+#endif
     m_CmdListAllocator    {GetRawAllocator(), sizeof(CommandListD3D11Impl), 64}
 // clang-format on
 {
