@@ -127,6 +127,20 @@ WGPUSamplerBindingType GetWGPUSamplerBindingType(BindGroupEntryType EntryType, W
     }
 }
 
+WGPUSamplerBindingType SamplerDescToWGPUSamplerBindingType(const SamplerDesc& Desc)
+{
+    if (IsComparisonFilter(Desc.MinFilter))
+    {
+        VERIFY(IsComparisonFilter(Desc.MagFilter), "Inconsistent min/mag filters");
+        return WGPUSamplerBindingType_Comparison;
+    }
+    else
+    {
+        VERIFY(!IsComparisonFilter(Desc.MagFilter), "Inconsistent min/mag filters");
+        return WGPUSamplerBindingType_Filtering;
+    }
+}
+
 WGPUTextureSampleType GetWGPUTextureSampleType(BindGroupEntryType EntryType, WEB_GPU_BINDING_TYPE BindingType)
 {
     if (EntryType == BindGroupEntryType::Texture)
@@ -473,9 +487,9 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
                           "Deserialized sampler index (", pAttribs->SamplerInd, ") is invalid: ", AssignedSamplerInd, " is expected.");
             DEV_CHECK_ERR(pAttribs->ArraySize == ResDesc.ArraySize,
                           "Deserialized array size (", pAttribs->ArraySize, ") is invalid: ", ResDesc.ArraySize, " is expected.");
-            DEV_CHECK_ERR(pAttribs->GetBindGroupEntryType() == EntryType, "Deserialized descriptor type in invalid");
+            DEV_CHECK_ERR(pAttribs->GetBindGroupEntryType() == EntryType, "Deserialized bind group is invalid");
             DEV_CHECK_ERR(pAttribs->BindGroup == BindGroupMapping[GroupId],
-                          "Deserialized descriptor set (", pAttribs->BindGroup, ") is invalid: ", BindGroupMapping[GroupId], " is expected.");
+                          "Deserialized bind group (", pAttribs->BindGroup, ") is invalid: ", BindGroupMapping[GroupId], " is expected.");
             DEV_CHECK_ERR(pAttribs->IsImmutableSamplerAssigned() == (SrcImmutableSamplerInd != InvalidImmutableSamplerIndex), "Immutable sampler flag is invalid");
             DEV_CHECK_ERR(pAttribs->SRBCacheOffset == CacheGroupOffsets[CacheGroup],
                           "SRB cache offset (", pAttribs->SRBCacheOffset, ") is invalid: ", CacheGroupOffsets[CacheGroup], " is expected.");
@@ -526,9 +540,7 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
                 WGPUBindGroupLayoutEntry wgpuBGLayoutEntry{};
                 wgpuBGLayoutEntry.binding      = ImtblSampAttribs.BindingIndex + elem;
                 wgpuBGLayoutEntry.visibility   = ShaderStagesToWGPUShaderStageFlags(ImtblSamp.ShaderStages & WEB_GPU_SUPPORTED_SHADER_STAGES);
-                wgpuBGLayoutEntry.sampler.type = IsComparisonFilter(ImtblSamp.Desc.MinFilter) ?
-                    WGPUSamplerBindingType_Comparison :
-                    WGPUSamplerBindingType_Filtering;
+                wgpuBGLayoutEntry.sampler.type = SamplerDescToWGPUSamplerBindingType(ImtblSamp.Desc);
                 wgpuBGLayoutEntries[ImtblSampAttribs.BindGroup].push_back(wgpuBGLayoutEntry);
             }
         }

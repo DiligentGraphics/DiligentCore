@@ -332,7 +332,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
                           "Deserialized sampler index (", pAttribs->SamplerInd, ") is invalid: ", AssignedSamplerInd, " is expected.");
             DEV_CHECK_ERR(pAttribs->ArraySize == ResDesc.ArraySize,
                           "Deserialized array size (", pAttribs->ArraySize, ") is invalid: ", ResDesc.ArraySize, " is expected.");
-            DEV_CHECK_ERR(pAttribs->GetDescriptorType() == DescrType, "Deserialized descriptor type in invalid");
+            DEV_CHECK_ERR(pAttribs->GetDescriptorType() == DescrType, "Deserialized descriptor type is invalid");
             DEV_CHECK_ERR(pAttribs->DescrSet == DSMapping[SetId],
                           "Deserialized descriptor set (", pAttribs->DescrSet, ") is invalid: ", DSMapping[SetId], " is expected.");
             DEV_CHECK_ERR(pAttribs->IsImmutableSamplerAssigned() == (pVkImmutableSamplers != nullptr), "Immutable sampler flag is invalid");
