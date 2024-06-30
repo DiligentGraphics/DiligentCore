@@ -675,8 +675,8 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
     auto& CacheMemAllocator = m_SRBMemAllocator.GetResourceCacheDataAllocator(0);
     ResourceCache.InitializeGroups(CacheMemAllocator, NumGroups, m_BindGroupSizes.data());
 
-    const Uint32 TotalResources = GetTotalResourceCount();
-    const auto   CacheType      = ResourceCache.GetContentType();
+    const Uint32                   TotalResources = GetTotalResourceCount();
+    const ResourceCacheContentType CacheType      = ResourceCache.GetContentType();
     for (Uint32 r = 0; r < TotalResources; ++r)
     {
         const PipelineResourceDesc& ResDesc = GetResourceDesc(r);
@@ -723,28 +723,31 @@ void PipelineResourceSignatureWebGPUImpl::CopyStaticResources(ShaderResourceCach
     // SrcResourceCache contains only static resources.
     // In case of SRB, DstResourceCache contains static, mutable and dynamic resources.
     // In case of Signature, DstResourceCache contains only static resources.
-    const auto& SrcResourceCache = *m_pStaticResCache;
-    const auto  StaticGroupIdx   = GetBindGroupIndex<BIND_GROUP_ID_STATIC_MUTABLE>();
-    const auto& SrcBindGroup     = SrcResourceCache.GetBindGroup(StaticGroupIdx);
-    const auto& DstBindGroup     = const_cast<const ShaderResourceCacheWebGPU&>(DstResourceCache).GetBindGroup(StaticGroupIdx);
-    const auto  ResIdxRange      = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-    const auto  SrcCacheType     = SrcResourceCache.GetContentType();
-    const auto  DstCacheType     = DstResourceCache.GetContentType();
+    const ShaderResourceCacheWebGPU&            SrcResourceCache = *m_pStaticResCache;
+    const Uint32                                StaticGroupIdx   = GetBindGroupIndex<BIND_GROUP_ID_STATIC_MUTABLE>();
+    const ShaderResourceCacheWebGPU::BindGroup& SrcBindGroup     = SrcResourceCache.GetBindGroup(StaticGroupIdx);
+    const ShaderResourceCacheWebGPU::BindGroup& DstBindGroup     = const_cast<const ShaderResourceCacheWebGPU&>(DstResourceCache).GetBindGroup(StaticGroupIdx);
+    const std::pair<Uint32, Uint32>             ResIdxRange      = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    const ResourceCacheContentType              SrcCacheType     = SrcResourceCache.GetContentType();
+    const ResourceCacheContentType              DstCacheType     = DstResourceCache.GetContentType();
 
     for (Uint32 r = ResIdxRange.first; r < ResIdxRange.second; ++r)
     {
-        const auto& ResDesc = GetResourceDesc(r);
-        const auto& Attr    = GetResourceAttribs(r);
+        const PipelineResourceDesc& ResDesc = GetResourceDesc(r);
+        const ResourceAttribs&      Attr    = GetResourceAttribs(r);
         VERIFY_EXPR(ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && Attr.IsImmutableSamplerAssigned())
-            continue; // Skip immutable separate samplers
+        {
+            // Skip immutable samplers as they are initialized in InitSRBResourceCache()
+            continue;
+        }
 
         for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
         {
-            const auto     SrcCacheOffset = Attr.CacheOffset(SrcCacheType) + ArrInd;
-            const auto&    SrcCachedRes   = SrcBindGroup.GetResource(SrcCacheOffset);
-            IDeviceObject* pObject        = SrcCachedRes.pObject;
+            const Uint32                               SrcCacheOffset = Attr.CacheOffset(SrcCacheType) + ArrInd;
+            const ShaderResourceCacheWebGPU::Resource& SrcCachedRes   = SrcBindGroup.GetResource(SrcCacheOffset);
+            IDeviceObject*                             pObject        = SrcCachedRes.pObject;
             if (pObject == nullptr)
             {
                 if (DstCacheType == ResourceCacheContentType::SRB)
@@ -752,8 +755,8 @@ void PipelineResourceSignatureWebGPUImpl::CopyStaticResources(ShaderResourceCach
                 continue;
             }
 
-            const auto  DstCacheOffset = Attr.CacheOffset(DstCacheType) + ArrInd;
-            const auto& DstCachedRes   = DstBindGroup.GetResource(DstCacheOffset);
+            const Uint32                               DstCacheOffset = Attr.CacheOffset(DstCacheType) + ArrInd;
+            const ShaderResourceCacheWebGPU::Resource& DstCachedRes   = DstBindGroup.GetResource(DstCacheOffset);
             VERIFY_EXPR(SrcCachedRes.Type == DstCachedRes.Type);
 
             const IDeviceObject* pCachedResource = DstCachedRes.pObject;
@@ -764,8 +767,7 @@ void PipelineResourceSignatureWebGPUImpl::CopyStaticResources(ShaderResourceCach
                                              DstCacheOffset + ArrInd,
                                              SrcCachedRes.pObject,
                                              SrcCachedRes.BufferBaseOffset,
-                                             SrcCachedRes.BufferRangeSize //
-                );
+                                             SrcCachedRes.BufferRangeSize);
             }
         }
     }
