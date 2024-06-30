@@ -447,17 +447,6 @@ void BindResourceHelper::CacheTexture(const BindResourceInfo& BindInfo) const
     TextureViewWebGPUImpl* pTexViewWebGPU = pTexViewWebGPU0;
     if (UpdateCachedResource(std::move(pTexViewWebGPU0), BindInfo.Flags))
     {
-#ifdef DILIGENT_DEVELOPMENT
-        if (m_DstRes.Type == BindGroupEntryType::Texture && !m_Attribs.IsImmutableSamplerAssigned())
-        {
-            if (pTexViewWebGPU->GetSampler() == nullptr)
-            {
-                LOG_ERROR_MESSAGE("Error binding texture view '", pTexViewWebGPU->GetDesc().Name, "' to variable '",
-                                  GetShaderResourcePrintName(m_ResDesc, m_ArrayIndex), "'. No sampler is assigned to the view");
-            }
-        }
-#endif
-
         if (m_Attribs.IsCombinedWithSampler())
         {
             VERIFY(m_DstRes.Type == BindGroupEntryType::Texture,

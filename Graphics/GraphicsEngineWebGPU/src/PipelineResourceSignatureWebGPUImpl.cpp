@@ -679,27 +679,40 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
     const auto   CacheType      = ResourceCache.GetContentType();
     for (Uint32 r = 0; r < TotalResources; ++r)
     {
-        const auto& ResDesc = GetResourceDesc(r);
-        const auto& Attr    = GetResourceAttribs(r);
+        const PipelineResourceDesc& ResDesc = GetResourceDesc(r);
+        const ResourceAttribs&      Attr    = GetResourceAttribs(r);
         ResourceCache.InitializeResources(Attr.BindGroup, Attr.CacheOffset(CacheType), ResDesc.ArraySize,
                                           Attr.GetBindGroupEntryType(), Attr.IsImmutableSamplerAssigned());
+    }
+
+    const ShaderResourceCacheWebGPU& StaticResCache = *m_pStaticResCache;
+    // Initialize immutable samplers
+    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
+    {
+        const PipelineResourceImmutableSamplerAttribsWebGPU& ImtblSampAttr = m_ImmutableSamplers[i];
+        VERIFY_EXPR(ImtblSampAttr.IsAllocated());
+        VERIFY_EXPR(ImtblSampAttr.ArraySize > 0);
+        // Initialize immutable samplers that are not defined as resources
+        if (ImtblSampAttr.SamplerInd == ResourceAttribs::InvalidSamplerInd)
+        {
+            ResourceCache.InitializeResources(ImtblSampAttr.BindGroup, ImtblSampAttr.SRBCacheOffset, ImtblSampAttr.ArraySize,
+                                              BindGroupEntryType::Sampler, /*HasImmutableSampler = */ true);
+        }
+
+        const ShaderResourceCacheWebGPU::BindGroup& SrcBindGroup = StaticResCache.GetBindGroup(0);
+        for (Uint32 elem = 0; elem < ImtblSampAttr.ArraySize; ++elem)
+        {
+            const ShaderResourceCacheWebGPU::Resource& SrcSamplerRes = SrcBindGroup.GetResource(ImtblSampAttr.StaticCacheOffset + elem);
+            if (SrcSamplerRes.pObject)
+            {
+                ResourceCache.SetResource(ImtblSampAttr.BindGroup, ImtblSampAttr.SRBCacheOffset + elem, SrcSamplerRes.pObject);
+            }
+        }
     }
 
 #ifdef DILIGENT_DEBUG
     ResourceCache.DbgVerifyResourceInitialization();
 #endif
-
-    //    if (auto WebGPULayout = GetWGPUBindGroupLayout(BIND_GROUP_ID_STATIC_MUTABLE))
-    //    {
-    //        const char* DescrSetName = "Static/Mutable Descriptor Set";
-    //#ifdef DILIGENT_DEVELOPMENT
-    //        std::string _DescrSetName{m_Desc.Name};
-    //        _DescrSetName.append(" - static/mutable set");
-    //        DescrSetName = _DescrSetName.c_str();
-    //#endif
-    //        DescriptorSetAllocation SetAllocation = GetDevice()->AllocateDescriptorSet(~Uint64{0}, WebGPULayout, DescrSetName);
-    //        ResourceCache.AssignDescriptorSetAllocation(GetDescriptorSetIndex<BIND_GROUP_ID_STATIC_MUTABLE>(), std::move(SetAllocation));
-    //    }
 }
 
 void PipelineResourceSignatureWebGPUImpl::CopyStaticResources(ShaderResourceCacheWebGPU& DstResourceCache) const
