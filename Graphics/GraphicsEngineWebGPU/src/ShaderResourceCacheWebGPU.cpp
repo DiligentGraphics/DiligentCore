@@ -278,9 +278,11 @@ static bool IsDynamicBuffer(const ShaderResourceCacheWebGPU::Resource& Res)
 }
 
 const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResource(
-    Uint32            BindGroupIdx,
-    Uint32            CacheOffset,
-    SetResourceInfo&& SrcRes)
+    Uint32                       BindGroupIdx,
+    Uint32                       CacheOffset,
+    RefCntAutoPtr<IDeviceObject> pObject,
+    Uint64                       BufferBaseOffset,
+    Uint64                       BufferRangeSize)
 {
     BindGroup& Group  = GetBindGroup(BindGroupIdx);
     Resource&  DstRes = Group.GetResource(CacheOffset);
@@ -296,19 +298,19 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
     {
         case BindGroupEntryType::UniformBuffer:
         case BindGroupEntryType::UniformBufferDynamic:
-            DstRes.SetUniformBuffer(std::move(SrcRes.pObject), SrcRes.BufferBaseOffset, SrcRes.BufferRangeSize);
+            DstRes.SetUniformBuffer(std::move(pObject), BufferBaseOffset, BufferRangeSize);
             break;
 
         case BindGroupEntryType::StorageBuffer:
         case BindGroupEntryType::StorageBufferDynamic:
         case BindGroupEntryType::StorageBuffer_ReadOnly:
         case BindGroupEntryType::StorageBufferDynamic_ReadOnly:
-            DstRes.SetStorageBuffer(std::move(SrcRes.pObject));
+            DstRes.SetStorageBuffer(std::move(pObject));
             break;
 
         default:
-            VERIFY(SrcRes.BufferBaseOffset == 0 && SrcRes.BufferRangeSize == 0, "Buffer range can only be specified for uniform buffers");
-            DstRes.pObject = std::move(SrcRes.pObject);
+            VERIFY(BufferBaseOffset == 0 && BufferRangeSize == 0, "Buffer range can only be specified for uniform buffers");
+            DstRes.pObject = std::move(pObject);
     }
 
     if (IsDynamicBuffer(DstRes))
@@ -318,8 +320,8 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
 
     if (DstRes.pObject)
     {
-        WGPUBindGroupEntry& wgpuEntry = Group.m_wgpuEntries[CacheOffset + SrcRes.ArrayIndex];
-        VERIFY_EXPR(wgpuEntry.binding == CacheOffset + SrcRes.ArrayIndex);
+        WGPUBindGroupEntry& wgpuEntry = Group.m_wgpuEntries[CacheOffset];
+        VERIFY_EXPR(wgpuEntry.binding == CacheOffset);
 
         static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
         switch (DstRes.Type)

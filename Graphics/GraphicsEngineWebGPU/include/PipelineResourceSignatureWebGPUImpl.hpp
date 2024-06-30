@@ -40,11 +40,33 @@
 
 #include "PipelineResourceAttribsWebGPU.hpp"
 #include "WebGPUObjectWrappers.hpp"
-#include "PipelineResourceImmutableSamplerAttribsWebGPU.hpp"
 #include "SamplerWebGPUImpl.hpp"
 
 namespace Diligent
 {
+
+struct PipelineResourceImmutableSamplerAttribsWebGPU
+{
+public:
+    Uint16 BindGroup    = 0xFFFFu;
+    Uint16 BindingIndex = 0;
+
+    Uint32 ArraySize         = 1;
+    Uint32 SRBCacheOffset    = 0; // Offset in the SRB resource cache
+    Uint32 StaticCacheOffset = 0; // Offset in the static resource cache
+
+    // Index of the sampler resource in m_Desc.Resources, e.g.:
+    //
+    //      PipelineResourceDesc Resources[] = {{SHADER_TYPE_PIXEL, "g_Sampler", SHADER_RESOURCE_TYPE_SAMPLER, ...}, ... }
+    //      ImmutableSamplerDesc ImtblSams[] = {{SHADER_TYPE_PIXEL, "g_Sampler", ...}, ... }
+    //
+    Uint32 SamplerInd = PipelineResourceAttribsWebGPU::InvalidSamplerInd;
+
+    PipelineResourceImmutableSamplerAttribsWebGPU() noexcept {}
+
+    bool IsAllocated() const { return BindGroup != 0xFFFFu; }
+};
+ASSERT_SIZEOF(PipelineResourceImmutableSamplerAttribsWebGPU, 20, "The struct is used in serialization and must be tightly packed");
 
 struct PipelineResourceSignatureInternalDataWebGPU : PipelineResourceSignatureInternalData
 {
@@ -104,24 +126,7 @@ public:
         return (HasBindGroup(BIND_GROUP_ID_STATIC_MUTABLE) ? 1 : 0) + (HasBindGroup(BIND_GROUP_ID_DYNAMIC) ? 1 : 0);
     }
 
-    struct ImmutableSamplerAttribs : PipelineResourceImmutableSamplerAttribsWebGPU
-    {
-        RefCntAutoPtr<SamplerWebGPUImpl> pSampler;
-
-        ImmutableSamplerAttribs() noexcept = default;
-
-        explicit ImmutableSamplerAttribs(const PipelineResourceImmutableSamplerAttribsWebGPU& Attribs) noexcept :
-            PipelineResourceImmutableSamplerAttribsWebGPU{Attribs} {}
-
-        void Init(RenderDeviceWebGPUImpl* pDevice, const SamplerDesc& Desc);
-
-        explicit operator bool() const { return Ptr != nullptr; }
-
-        WGPUSampler GetWGPUSampler() const;
-
-    private:
-        RefCntAutoPtr<ISampler> Ptr;
-    };
+    using ImmutableSamplerAttribs = PipelineResourceImmutableSamplerAttribsWebGPU;
 
     WGPUBindGroupLayout GetWGPUBindGroupLayout(BIND_GROUP_ID GroupId) const { return m_wgpuBindGroupLayouts[GroupId]; }
 
@@ -163,8 +168,8 @@ private:
     };
     static_assert(CACHE_GROUP_COUNT == CACHE_GROUP_COUNT_PER_VAR_TYPE * MAX_BIND_GROUPS, "Inconsistent cache group count");
 
-    using CacheOffsetsType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] including ArraySize
-    using BindingCountType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [descriptor sets] not counting ArraySize
+    using CacheOffsetsType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [bind group] including ArraySize
+    using BindingCountType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [bind group] not counting ArraySize
 
     static inline CACHE_GROUP   GetResourceCacheGroup(const PipelineResourceDesc& Res);
     static inline BIND_GROUP_ID VarTypeToBindGroupId(SHADER_RESOURCE_VARIABLE_TYPE VarType);
@@ -174,6 +179,13 @@ private:
 
     // Bind group sizes indexed by the group index in the layout (not BIND_GROUP_ID!)
     std::array<Uint32, MAX_BIND_GROUPS> m_BindGroupSizes = {~0U, ~0U};
+
+    // The total number of uniform buffers with dynamic offsets in both bind groups,
+    // accounting for array size.
+    Uint16 m_DynamicUniformBufferCount = 0;
+    // The total number storage buffers with dynamic offsets in both bind groups,
+    // accounting for array size.
+    Uint16 m_DynamicStorageBufferCount = 0;
 
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 };

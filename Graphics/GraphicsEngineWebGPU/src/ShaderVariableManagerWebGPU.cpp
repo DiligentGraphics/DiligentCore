@@ -362,13 +362,9 @@ bool BindResourceHelper::UpdateCachedResource(RefCntAutoPtr<ObjectType>&& pObjec
 
         m_ResourceCache.SetResource(m_Attribs.BindGroup,
                                     m_DstResCacheOffset,
-                                    {
-                                        m_Attribs.BindingIndex,
-                                        m_ArrayIndex,
-                                        std::move(pObject),
-                                        BufferBaseOffset,
-                                        BufferRangeSize,
-                                    });
+                                    std::move(pObject),
+                                    BufferBaseOffset,
+                                    BufferRangeSize);
         return true;
     }
     else

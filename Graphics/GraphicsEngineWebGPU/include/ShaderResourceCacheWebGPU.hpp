@@ -142,39 +142,12 @@ public:
         return reinterpret_cast<const BindGroup*>(m_pMemory.get())[Index];
     }
 
-    struct SetResourceInfo
-    {
-        const Uint32 BindingIndex = 0;
-        const Uint32 ArrayIndex   = 0;
-
-        RefCntAutoPtr<IDeviceObject> pObject;
-
-        const Uint64 BufferBaseOffset = 0;
-        const Uint64 BufferRangeSize  = 0;
-
-        SetResourceInfo() noexcept
-        {
-        }
-
-        SetResourceInfo(Uint32                         _BindingIndex,
-                        Uint32                         _ArrayIndex,
-                        RefCntAutoPtr<IDeviceObject>&& _pObject,
-                        Uint64                         _BufferBaseOffset = 0,
-                        Uint64                         _BufferRangeSize  = 0) noexcept :
-            // clang-format off
-            BindingIndex    {_BindingIndex      },
-            ArrayIndex      {_ArrayIndex        },
-            pObject         {std::move(_pObject)},
-            BufferBaseOffset{_BufferBaseOffset  },
-            BufferRangeSize {_BufferRangeSize   }
-        // clang-format on
-        {
-        }
-    };
     // Sets the resource at the given descriptor set index and offset
-    const Resource& SetResource(Uint32            BindGroupIdx,
-                                Uint32            CacheOffset,
-                                SetResourceInfo&& SrcRes);
+    const Resource& SetResource(Uint32                       BindGroupIdx,
+                                Uint32                       CacheOffset,
+                                RefCntAutoPtr<IDeviceObject> pObject,
+                                Uint64                       BufferBaseOffset = 0,
+                                Uint64                       BufferRangeSize  = 0);
 
     const Resource& ResetResource(Uint32 SetIndex,
                                   Uint32 Offset)

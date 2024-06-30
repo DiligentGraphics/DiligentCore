@@ -13,7 +13,6 @@ set(INCLUDE
     include/GenerateMipsHelperWebGPU.hpp
     include/pch.h
     include/PipelineResourceAttribsWebGPU.hpp
-    include/PipelineResourceImmutableSamplerAttribsWebGPU.hpp
     include/PipelineResourceSignatureWebGPUImpl.hpp
     include/PipelineStateWebGPUImpl.hpp
     include/PipelineLayoutWebGPU.hpp
