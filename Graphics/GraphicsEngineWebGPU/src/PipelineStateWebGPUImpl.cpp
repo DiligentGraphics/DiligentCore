@@ -450,6 +450,36 @@ void PipelineStateWebGPUImpl::InitializePipeline(const ComputePipelineStateCreat
         LOG_ERROR_AND_THROW("Failed to create pipeline state");
 }
 
+
+static void VerifyResourceMerge(const char*                      PSOName,
+                                const WGSLShaderResourceAttribs& ExistingRes,
+                                const WGSLShaderResourceAttribs& NewResAttribs)
+{
+#define LOG_RESOURCE_MERGE_ERROR_AND_THROW(PropertyName)                                                  \
+    LOG_ERROR_AND_THROW("Shader variable '", NewResAttribs.Name,                                          \
+                        "' is shared between multiple shaders in pipeline '", (PSOName ? PSOName : ""),   \
+                        "', but its " PropertyName " varies. A variable shared between multiple shaders " \
+                        "must be defined identically in all shaders. Either use separate variables for "  \
+                        "different shader stages, change resource name or make sure that " PropertyName " is consistent.");
+
+    if (ExistingRes.Type != NewResAttribs.Type)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("type");
+
+    if (ExistingRes.ResourceDim != NewResAttribs.ResourceDim)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("resource dimension");
+
+    if (ExistingRes.ArraySize != NewResAttribs.ArraySize)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("array size");
+
+    if (ExistingRes.SampleType != NewResAttribs.SampleType)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("sample type");
+
+    if (ExistingRes.Format != NewResAttribs.Format)
+        LOG_RESOURCE_MERGE_ERROR_AND_THROW("texture format type");
+
+#undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
+}
+
 PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResourceSignatureDesc(const TShaderStages&              ShaderStages,
                                                                                               const char*                       PSOName,
                                                                                               const PipelineResourceLayoutDesc& ResourceLayout,
@@ -457,7 +487,49 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
 {
     PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
 
-    // TODO
+    std::unordered_map<ShaderResourceHashKey, const WGSLShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
+    for (auto& Stage : ShaderStages)
+    {
+        const ShaderWebGPUImpl*    pShader         = Stage.pShader;
+        const WGSLShaderResources& ShaderResources = *pShader->GetShaderResources();
+
+        ShaderResources.ProcessResources(
+            [&](const WGSLShaderResourceAttribs& Attribs, Uint32) //
+            {
+                const char* const SamplerSuffix =
+                    (ShaderResources.IsUsingCombinedSamplers() && Attribs.Type == WGSLShaderResourceAttribs::ResourceType::Sampler) ?
+                    ShaderResources.GetCombinedSamplerSuffix() :
+                    nullptr;
+
+                const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
+                // Note that Attribs.Name != VarDesc.Name for combined samplers
+                const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
+                if (it_assigned.second)
+                {
+                    if (Attribs.ArraySize == 0)
+                    {
+                        LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
+                                            "You must use explicit resource signature to specify the array size.");
+                    }
+
+                    const SHADER_RESOURCE_TYPE    ResType       = WGSLShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
+                    const PIPELINE_RESOURCE_FLAGS Flags         = WGSLShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+                    const WebGPUResourceAttribs   WebGPUAttribs = Attribs.GetWebGPUAttribs();
+                    SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, ResType, VarDesc.Type, Flags, WebGPUAttribs);
+                }
+                else
+                {
+                    VerifyResourceMerge(PSOName, it_assigned.first->second, Attribs);
+                }
+            });
+
+        // Merge combined sampler suffixes
+        if (ShaderResources.IsUsingCombinedSamplers() && ShaderResources.GetNumSamplers() > 0)
+        {
+            SignDesc.SetCombinedSamplerSuffix(ShaderResources.GetCombinedSamplerSuffix());
+        }
+    }
+
     return SignDesc;
 }
 
