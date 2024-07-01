@@ -202,12 +202,8 @@ private:
     // Bind group sizes indexed by the group index in the layout (not BIND_GROUP_ID!)
     std::array<Uint32, MAX_BIND_GROUPS> m_BindGroupSizes = {~0U, ~0U};
 
-    // The total number of uniform buffers with dynamic offsets in both bind groups,
-    // accounting for array size.
-    Uint16 m_DynamicUniformBufferCount = 0;
-    // The total number storage buffers with dynamic offsets in both bind groups,
-    // accounting for array size.
-    Uint16 m_DynamicStorageBufferCount = 0;
+    // The total number of uniform and storage buffers with dynamic offsets in each bind group.
+    std::array<Uint32, MAX_BIND_GROUPS> m_DynamicOffsetCounts = {0, 0};
 
     ImmutableSamplerAttribs* m_ImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
 };

@@ -311,7 +311,7 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
             },
             [this]() //
             {
-                return ShaderResourceCacheWebGPU::GetRequiredMemorySize(GetNumBindGroups(), m_BindGroupSizes.data());
+                return ShaderResourceCacheWebGPU::GetRequiredMemorySize(GetNumBindGroups(), m_BindGroupSizes.data(), m_DynamicOffsetCounts.data());
             });
     }
     catch (...)
@@ -397,7 +397,8 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
     if (StaticResourceCount != 0)
     {
         VERIFY_EXPR(m_pStaticResCache != nullptr);
-        m_pStaticResCache->InitializeGroups(GetRawAllocator(), 1, &StaticResourceCount);
+        const Uint32 DynamicOffsetCount = BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR] + BindingCount[CACHE_GROUP_DYN_SB_STAT_VAR];
+        m_pStaticResCache->InitializeGroups(GetRawAllocator(), 1, &StaticResourceCount, &DynamicOffsetCount);
     }
 
     // Bind group mapping (static/mutable (0) or dynamic (1) -> bind group index)
@@ -591,11 +592,6 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
     }
 #endif
 
-    m_DynamicUniformBufferCount = static_cast<Uint16>(CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR]);
-    m_DynamicStorageBufferCount = static_cast<Uint16>(CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR]);
-    VERIFY_EXPR(m_DynamicUniformBufferCount == CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR]);
-    VERIFY_EXPR(m_DynamicStorageBufferCount == CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR]);
-
     VERIFY_EXPR(m_pStaticResCache == nullptr || const_cast<const ShaderResourceCacheWebGPU*>(m_pStaticResCache)->GetBindGroup(0).GetSize() == StaticCacheOffset);
     VERIFY_EXPR(CacheGroupOffsets[CACHE_GROUP_DYN_UB_STAT_VAR] == CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR]);
     VERIFY_EXPR(CacheGroupOffsets[CACHE_GROUP_DYN_SB_STAT_VAR] == CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR]);
@@ -613,19 +609,27 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
     Uint32 NumGroups = 0;
     if (BindGroupMapping[BIND_GROUP_ID_STATIC_MUTABLE] < MAX_BIND_GROUPS)
     {
-        m_BindGroupSizes[BindGroupMapping[BIND_GROUP_ID_STATIC_MUTABLE]] =
+        const Uint32 BindGroupIndex = BindGroupMapping[BIND_GROUP_ID_STATIC_MUTABLE];
+        m_BindGroupSizes[BindGroupIndex] =
             CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
             CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
             CacheGroupSizes[CACHE_GROUP_OTHER_STAT_VAR];
+        m_DynamicOffsetCounts[BindGroupIndex] =
+            CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
+            CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR];
         ++NumGroups;
     }
 
     if (BindGroupMapping[BIND_GROUP_ID_DYNAMIC] < MAX_BIND_GROUPS)
     {
-        m_BindGroupSizes[BindGroupMapping[BIND_GROUP_ID_DYNAMIC]] =
+        const Uint32 BindGroupIndex = BindGroupMapping[BIND_GROUP_ID_DYNAMIC];
+        m_BindGroupSizes[BindGroupIndex] =
             CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
             CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
             CacheGroupSizes[CACHE_GROUP_OTHER_DYN_VAR];
+        m_DynamicOffsetCounts[BindGroupIndex] =
+            CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
+            CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR];
         ++NumGroups;
     }
 
@@ -688,7 +692,7 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
 #endif
 
     auto& CacheMemAllocator = m_SRBMemAllocator.GetResourceCacheDataAllocator(0);
-    ResourceCache.InitializeGroups(CacheMemAllocator, NumGroups, m_BindGroupSizes.data());
+    ResourceCache.InitializeGroups(CacheMemAllocator, NumGroups, m_BindGroupSizes.data(), m_DynamicOffsetCounts.data());
 
     const Uint32                   TotalResources = GetTotalResourceCount();
     const ResourceCacheContentType CacheType      = ResourceCache.GetContentType();
@@ -1017,7 +1021,7 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
             },
             [this]() //
             {
-                return ShaderResourceCacheWebGPU::GetRequiredMemorySize(GetNumBindGroups(), m_BindGroupSizes.data());
+                return ShaderResourceCacheWebGPU::GetRequiredMemorySize(GetNumBindGroups(), m_BindGroupSizes.data(), m_DynamicOffsetCounts.data());
             });
     }
     catch (...)

@@ -411,10 +411,16 @@ private:
 
     struct WebGPUResourceBindInfo : CommittedShaderResources
     {
+        struct BindGroupInfo
+        {
+            WGPUBindGroup   wgpuBindGroup      = nullptr;
+            const uint32_t* DynamicOffsets     = nullptr;
+            size_t          DynamicOffsetCount = 0;
+        };
         // Bind groups for each resource signature.
         // NOTE: bind groups in this array are not indexed by the bind group
         //       index in the pipeline layout, but by the resource signature index.
-        std::array<WGPUBindGroup, PipelineStateWebGPUImpl::MaxBindGroupsInPipeline> BindGroups = {};
+        std::array<BindGroupInfo, PipelineStateWebGPUImpl::MaxBindGroupsInPipeline> BindGroups = {};
 
         // Bind groups that are used by the current pipeline.
         Uint32 ActiveBindGroups = 0;

@@ -36,12 +36,20 @@
 namespace Diligent
 {
 
-size_t ShaderResourceCacheWebGPU::GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes)
+size_t ShaderResourceCacheWebGPU::GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes, const Uint32* DynamicOffsetCounts)
 {
-    Uint32 TotalResources = 0;
+    Uint32 TotalResources      = 0;
+    Uint32 TotalDynamicOffsets = 0;
     for (Uint32 t = 0; t < NumGroups; ++t)
+    {
         TotalResources += GroupSizes[t];
-    size_t MemorySize = NumGroups * sizeof(BindGroup) + TotalResources * sizeof(Resource) + TotalResources * sizeof(WGPUBindGroupEntry);
+        TotalDynamicOffsets += DynamicOffsetCounts[t];
+    }
+    size_t MemorySize =
+        NumGroups * sizeof(BindGroup) +
+        TotalResources * sizeof(Resource) +
+        TotalResources * sizeof(WGPUBindGroupEntry) +
+        TotalDynamicOffsets * sizeof(uint32_t);
     return MemorySize;
 }
 
@@ -62,7 +70,7 @@ ShaderResourceCacheWebGPU::~ShaderResourceCacheWebGPU()
     }
 }
 
-void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator, Uint32 NumGroups, const Uint32* GroupSizes)
+void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator, Uint32 NumGroups, const Uint32* GroupSizes, const Uint32* DynamicOffsetCounts)
 {
     VERIFY(!m_pMemory, "Memory has already been allocated");
 
@@ -71,7 +79,7 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
     //  m_pMemory
     //  |
     //  V
-    // ||  BindGroup[0]  |   ....    |  BindGroup[Ng-1]  |  Res[0]  |  ... |  Res[n-1]  |   ....   | Res[0]  |  ... |  Res[m-1]  | wgpuEntry[0] | ... | wgpuEntry[n-1] |   ....   | wgpuEntry[0] | ... | wgpuEntry[m-1] ||
+    // ||  BindGroup[0]  |   ....    |  BindGroup[Ng-1]  |  Res[0]  |  ... |  Res[n-1]  |   ....   | Res[0]  |  ... |  Res[m-1]  | wgpuEntry[0] | ... | wgpuEntry[n-1] |   ....   | wgpuEntry[0] | ... | wgpuEntry[m-1] | DynOffset[0] | ... | DynOffset[k-1] ||
     //
     //
     //  Ng = m_NumBindGroups
@@ -79,15 +87,21 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
     m_NumBindGroups = static_cast<Uint16>(NumGroups);
     VERIFY(m_NumBindGroups == NumGroups, "NumGroups (", NumGroups, ") exceeds maximum representable value");
 
-    m_TotalResources = 0;
+    m_TotalResources           = 0;
+    Uint32 TotalDynamicOffsets = 0;
     for (Uint32 t = 0; t < NumGroups; ++t)
     {
         VERIFY_EXPR(GroupSizes[t] > 0);
         m_TotalResources += GroupSizes[t];
+        TotalDynamicOffsets += DynamicOffsetCounts[t];
     }
 
-    const size_t MemorySize = NumGroups * sizeof(BindGroup) + m_TotalResources * sizeof(Resource) + m_TotalResources * sizeof(WGPUBindGroupEntry);
-    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumGroups, GroupSizes));
+    const size_t MemorySize =
+        NumGroups * sizeof(BindGroup) +
+        m_TotalResources * sizeof(Resource) +
+        m_TotalResources * sizeof(WGPUBindGroupEntry) +
+        TotalDynamicOffsets * sizeof(uint32_t);
+    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumGroups, GroupSizes, DynamicOffsetCounts));
 #ifdef DILIGENT_DEBUG
     m_DbgInitializedResources.resize(m_NumBindGroups);
 #endif
@@ -98,10 +112,12 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
             ALLOCATE_RAW(MemAllocator, "Memory for shader resource cache data", MemorySize),
             STDDeleter<void, IMemoryAllocator>(MemAllocator),
         };
+        memset(m_pMemory.get(), 0, MemorySize);
 
-        BindGroup*          pGroups           = reinterpret_cast<BindGroup*>(m_pMemory.get());
-        Resource*           pCurrResPtr       = reinterpret_cast<Resource*>(pGroups + m_NumBindGroups);
-        WGPUBindGroupEntry* pCurrWGPUEntryPtr = reinterpret_cast<WGPUBindGroupEntry*>(pCurrResPtr + m_TotalResources);
+        BindGroup*          pGroups               = reinterpret_cast<BindGroup*>(m_pMemory.get());
+        Resource*           pCurrResPtr           = reinterpret_cast<Resource*>(pGroups + m_NumBindGroups);
+        WGPUBindGroupEntry* pCurrWGPUEntryPtr     = reinterpret_cast<WGPUBindGroupEntry*>(pCurrResPtr + m_TotalResources);
+        uint32_t*           pCurrDynamicOffsetPtr = reinterpret_cast<uint32_t*>(pCurrWGPUEntryPtr + m_TotalResources);
         for (Uint32 t = 0; t < NumGroups; ++t)
         {
             const Uint32 GroupSize = GroupSizes[t];
@@ -111,20 +127,24 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
                 pCurrWGPUEntryPtr[Entry].binding = Entry;
             }
 
+            const Uint32 NumDynamicOffsets = DynamicOffsetCounts[t];
+
             new (&GetBindGroup(t)) BindGroup{
                 GroupSize,
                 GroupSize > 0 ? pCurrResPtr : nullptr,
                 GroupSize > 0 ? pCurrWGPUEntryPtr : nullptr,
+                NumDynamicOffsets,
+                NumDynamicOffsets > 0 ? pCurrDynamicOffsetPtr : nullptr,
             };
 
             pCurrResPtr += GroupSize;
             pCurrWGPUEntryPtr += GroupSize;
+            pCurrDynamicOffsetPtr += NumDynamicOffsets;
 
 #ifdef DILIGENT_DEBUG
             m_DbgInitializedResources[t].resize(GroupSize);
 #endif
         }
-        VERIFY_EXPR((char*)pCurrWGPUEntryPtr == (char*)m_pMemory.get() + MemorySize);
     }
 }
 
