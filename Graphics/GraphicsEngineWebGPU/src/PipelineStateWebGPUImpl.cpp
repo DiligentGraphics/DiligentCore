@@ -130,7 +130,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
         pShaderResources->ProcessResources(
             [&](const WGSLShaderResourceAttribs& WGSLAttribs, Uint32) //
             {
-                const auto ResAttribution = GetResourceAttribution(WGSLAttribs.Name, ShaderType, pSignatures, SignatureCount);
+                const ResourceAttribution ResAttribution = GetResourceAttribution(WGSLAttribs.Name, ShaderType, pSignatures, SignatureCount);
                 if (!ResAttribution)
                 {
                     LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", WGSLAttribs.Name,
@@ -138,9 +138,9 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
                                         PipelineName, "'.");
                 }
 
-                const auto& SignDesc = ResAttribution.pSignature->GetDesc();
-                const auto  ResType  = WGSLShaderResourceAttribs::GetShaderResourceType(WGSLAttribs.Type);
-                const auto  Flags    = WGSLShaderResourceAttribs::GetPipelineResourceFlags(WGSLAttribs.Type);
+                const PipelineResourceSignatureDesc& SignDesc = ResAttribution.pSignature->GetDesc();
+                const SHADER_RESOURCE_TYPE           ResType  = WGSLShaderResourceAttribs::GetShaderResourceType(WGSLAttribs.Type);
+                const PIPELINE_RESOURCE_FLAGS        Flags    = WGSLShaderResourceAttribs::GetPipelineResourceFlags(WGSLAttribs.Type);
 
                 Uint32 ResourceBinding = ~0u;
                 Uint32 BindGroup       = ~0u;
@@ -156,17 +156,33 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
                 }
                 else if (ResAttribution.ImmutableSamplerIndex != ResourceAttribution::InvalidResourceIndex)
                 {
-                    UNSUPPORTED("Immutable samplers are not implemented yet");
-                    //if (ResType != SHADER_RESOURCE_TYPE_SAMPLER)
-                    //{
-                    //    LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", WGSLAttribs.Name,
-                    //                        "' and type '", GetShaderResourceTypeLiteralName(ResType),
-                    //                        "' that is not compatible with immutable sampler defined in pipeline resource signature '",
-                    //                        SignDesc.Name, "'.");
-                    //}
-                    //const auto& SamAttribs{ResAttribution.pSignature->GetImmutableSamplerAttribs(ResAttribution.ImmutableSamplerIndex)};
-                    //ResourceBinding = SamAttribs.BindingIndex;
-                    //BindGroup       = SamAttribs.DescrSet;
+                    if (ResType != SHADER_RESOURCE_TYPE_SAMPLER)
+                    {
+                        LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", WGSLAttribs.Name,
+                                            "' and type '", GetShaderResourceTypeLiteralName(ResType),
+                                            "' that is not compatible with immutable sampler defined in pipeline resource signature '",
+                                            SignDesc.Name, "'.");
+                    }
+                    const PipelineResourceImmutableSamplerAttribsWebGPU& ImmtblSamAttribs{
+                        ResAttribution.pSignature->GetImmutableSamplerAttribs(ResAttribution.ImmutableSamplerIndex)};
+                    if (ImmtblSamAttribs.SamplerInd == PipelineResourceAttribsWebGPU::InvalidSamplerInd)
+                    {
+                        // Handle immutable samplers that do not have corresponding resources in m_Desc.Resources
+                        BindGroup       = ImmtblSamAttribs.BindGroup;
+                        ResourceBinding = ImmtblSamAttribs.BindingIndex;
+                    }
+                    else
+                    {
+#ifdef DILIGENT_DEBUG
+                        const PipelineResourceAttribsWebGPU& SamAttribs = ResAttribution.pSignature->GetResourceAttribs(ImmtblSamAttribs.SamplerInd);
+                        VERIFY(SamAttribs.BindGroup == ImmtblSamAttribs.BindGroup, "Immutable sampler bind group (", ImmtblSamAttribs.BindGroup,
+                               ") does not match the bind group of the corresponding sampler resource (", SamAttribs.BindGroup,
+                               "). This might be a bug in PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts.");
+                        VERIFY(SamAttribs.BindingIndex == ImmtblSamAttribs.BindingIndex, "Immutable sampler binding index (", ImmtblSamAttribs.BindingIndex,
+                               ") does not match the binding index of the corresponding sampler resource (", SamAttribs.BindingIndex,
+                               "). This might be a bug in PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts.");
+#endif
+                    }
                 }
                 else
                 {

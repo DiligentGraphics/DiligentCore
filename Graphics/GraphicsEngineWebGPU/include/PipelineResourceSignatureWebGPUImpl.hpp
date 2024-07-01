@@ -143,6 +143,12 @@ public:
     template <BIND_GROUP_ID GroupId>
     Uint32 GetBindGroupIndex() const;
 
+    const ImmutableSamplerAttribs& GetImmutableSamplerAttribs(Uint32 SampIndex) const
+    {
+        VERIFY_EXPR(SampIndex < m_Desc.NumImmutableSamplers);
+        return m_ImmutableSamplers[SampIndex];
+    }
+
 private:
     void CreateBindGroupLayouts(bool IsSerialized);
 
