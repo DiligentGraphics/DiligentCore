@@ -18,7 +18,6 @@ set(INCLUDE
     include/PipelineLayoutWebGPU.hpp
     include/QueryManagerWebGPU.hpp
     include/QueryWebGPUImpl.hpp
-    include/QueueSignalPoolWebGPU.hpp
     include/RenderDeviceWebGPUImpl.hpp
     include/RenderPassWebGPUImpl.hpp
     include/SamplerWebGPUImpl.hpp
@@ -65,7 +64,6 @@ set(SRC
    src/PipelineLayoutWebGPU.cpp
    src/QueryManagerWebGPU.cpp
    src/QueryWebGPUImpl.cpp
-   src/QueueSignalPoolWebGPU.cpp
    src/RenderDeviceWebGPUImpl.cpp
    src/RenderPassWebGPUImpl.cpp
    src/SamplerWebGPUImpl.cpp

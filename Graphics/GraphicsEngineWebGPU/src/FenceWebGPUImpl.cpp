@@ -28,7 +28,6 @@
 
 #include "FenceWebGPUImpl.hpp"
 #include "GraphicsAccessories.hpp"
-#include "QueueSignalPoolWebGPU.hpp"
 #include "RenderDeviceWebGPUImpl.hpp"
 
 namespace Diligent
@@ -45,27 +44,6 @@ FenceWebGPUImpl::FenceWebGPUImpl(IReferenceCounters*     pRefCounters,
 
 Uint64 FenceWebGPUImpl::GetCompletedValue()
 {
-    auto& SignalPoolWebGPU = m_pDevice->GetQueueSignalPool();
-
-    while (!m_PendingSignals.empty())
-    {
-        const auto& QueryData = m_PendingSignals.front();
-
-        // Timestamp values are implementation defined and may not increase monotonically.
-        // The physical device may reset the timestamp counter occasionally,
-        // which can result in unexpected values such as negative deltas between timestamps that logically should be monotonically increasing.
-        if (SignalPoolWebGPU.GetQueryTimestamp(m_pDevice->GetWebGPUDevice(), QueryData.QueryIdx) == QueryData.LastTimestamp)
-        {
-            SignalPoolWebGPU.ReleaseQuery(QueryData.QueryIdx);
-            UpdateLastCompletedFenceValue(QueryData.Value);
-            m_PendingSignals.pop_front();
-        }
-        else
-        {
-            break;
-        }
-    }
-
     return m_LastCompletedFenceValue.load();
 }
 
@@ -76,32 +54,15 @@ void FenceWebGPUImpl::Signal(Uint64 Value)
 
 void FenceWebGPUImpl::Wait(Uint64 Value)
 {
-    auto& SignalPoolWebGPU = m_pDevice->GetQueueSignalPool();
-
-    while (!m_PendingSignals.empty())
-    {
-        const auto& QueryData = m_PendingSignals.front();
-        if (QueryData.Value > Value)
-            break;
-
-        while (SignalPoolWebGPU.GetQueryTimestamp(m_pDevice->GetWebGPUDevice(), QueryData.QueryIdx) == QueryData.LastTimestamp)
-            std::this_thread::sleep_for(std::chrono::microseconds{1});
-
-        SignalPoolWebGPU.ReleaseQuery(QueryData.QueryIdx);
-        UpdateLastCompletedFenceValue(QueryData.Value);
-        m_PendingSignals.pop_front();
-    }
+    m_pDevice->PollEvents(true);
+    while (GetCompletedValue() < Value)
+        m_pDevice->PollEvents(true);
 }
 
-void FenceWebGPUImpl::AddPendingSignal(WGPUCommandEncoder wgpuCmdEncoder, Uint64 Value)
+void FenceWebGPUImpl::SetCompletedValue(Uint64 Value)
 {
-    auto&        SignalPoolWebGPU = m_pDevice->GetQueueSignalPool();
-    const Uint32 QueryIdx         = SignalPoolWebGPU.AllocateQuery();
-    const Uint64 QueryTimestamp   = SignalPoolWebGPU.GetQueryTimestamp(m_pDevice->GetWebGPUDevice(), QueryIdx);
-    SignalPoolWebGPU.WriteTimestamp(wgpuCmdEncoder, QueryIdx);
-    SignalPoolWebGPU.ResolveQuery(wgpuCmdEncoder, QueryIdx);
-    m_PendingSignals.emplace_back(Value, QueryTimestamp, QueryIdx);
     DvpSignal(Value);
+    UpdateLastCompletedFenceValue(Value);
 }
 
 } // namespace Diligent

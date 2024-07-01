@@ -41,11 +41,14 @@
 #include "SamplerWebGPUImpl.hpp"
 #include "FenceWebGPUImpl.hpp"
 #include "QueryWebGPUImpl.hpp"
-#include "QueueSignalPoolWebGPU.hpp"
 #include "AttachmentCleanerWebGPU.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLangUtils.hpp"
+#endif
+
+#if PLATFORM_EMSCRIPTEN
+#    include <emscripten.h>
 #endif
 
 namespace Diligent
@@ -96,7 +99,6 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
 
     m_DeviceInfo.Type     = RENDER_DEVICE_TYPE_WEBGPU;
     m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
-    m_pQueueSignalPool.reset(new QueueSignalPoolWebGPU{this, EngineCI.QueueSignalPoolSize});
     m_pMemoryManager.reset(new SharedMemoryManagerWebGPU{m_wgpuDevice.Get(), EngineCI.DynamicHeapPageSize});
     m_pAttachmentCleaner.reset(new AttachmentCleanerWebGPU{m_wgpuDevice.Get()});
     m_pMipsGenerator.reset(new GenerateMipsHelperWebGPU{m_wgpuDevice.Get()});
@@ -255,19 +257,9 @@ WGPUDevice RenderDeviceWebGPUImpl::GetWebGPUDevice() const
 
 void RenderDeviceWebGPUImpl::IdleGPU()
 {
-    bool IsWorkDone       = false;
-    auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
-        if (bool* pIsWorkDone = static_cast<bool*>(pUserData))
-            *pIsWorkDone = Status == WGPUQueueWorkDoneStatus_Success;
-        if (Status != WGPUQueueWorkDoneStatus_Success)
-            DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
-    };
-
-    WGPUQueue wgpuQueue = wgpuDeviceGetQueue(m_wgpuDevice);
-    wgpuQueueOnSubmittedWorkDone(wgpuQueue, WorkDoneCallback, &IsWorkDone);
-
-    while (!IsWorkDone)
-        PollEvents(true);
+    VERIFY_EXPR(m_wpImmediateContexts.size() == 1);
+    if (auto pImmediateCtx = m_wpImmediateContexts[0].Lock())
+        pImmediateCtx->WaitForIdle();
 }
 
 void RenderDeviceWebGPUImpl::CreateTextureFromWebGPUTexture(WGPUTexture        wgpuTexture,
@@ -307,11 +299,6 @@ GenerateMipsHelperWebGPU& RenderDeviceWebGPUImpl::GetMipsGenerator() const
     return *m_pMipsGenerator.get();
 }
 
-QueueSignalPoolWebGPU& RenderDeviceWebGPUImpl::GetQueueSignalPool() const
-{
-    return *m_pQueueSignalPool.get();
-}
-
 AttachmentCleanerWebGPU& RenderDeviceWebGPUImpl::GetAttachmentCleaner() const
 {
     return *m_pAttachmentCleaner.get();
@@ -326,7 +313,7 @@ void RenderDeviceWebGPUImpl::PollEvents(bool YieldToWebBrowser)
 {
 #if PLATFORM_EMSCRIPTEN
     if (YieldToWebBrowser)
-        std::this_thread::sleep_for(std::chrono::microseconds{100});
+        emscripten_sleep(0);
 #else
     (void)YieldToWebBrowser;
     wgpuDeviceTick(m_wgpuDevice.Get());

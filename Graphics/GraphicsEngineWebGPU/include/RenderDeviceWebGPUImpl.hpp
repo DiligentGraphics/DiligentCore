@@ -40,7 +40,6 @@
 namespace Diligent
 {
 
-using QueueSignalPoolWebGPUPtr     = std::unique_ptr<class QueueSignalPoolWebGPU>;
 using QueryManagerWebGPUPtr        = std::unique_ptr<class QueryManagerWebGPU>;
 using AttachmentCleanerWebGPUPtr   = std::unique_ptr<class AttachmentCleanerWebGPU>;
 using SharedMemoryManagerWebGPUPtr = std::unique_ptr<class SharedMemoryManagerWebGPU>;
@@ -184,8 +183,6 @@ public:
 
     GenerateMipsHelperWebGPU& GetMipsGenerator() const;
 
-    QueueSignalPoolWebGPU& GetQueueSignalPool() const;
-
     AttachmentCleanerWebGPU& GetAttachmentCleaner() const;
 
     SharedMemoryManagerWebGPU::Page GetSharedMemoryPage(Uint64 Size);
@@ -199,7 +196,6 @@ private:
     WebGPUInstanceWrapper        m_wgpuInstance;
     WebGPUAdapterWrapper         m_wgpuAdapter;
     WebGPUDeviceWrapper          m_wgpuDevice;
-    QueueSignalPoolWebGPUPtr     m_pQueueSignalPool;
     AttachmentCleanerWebGPUPtr   m_pAttachmentCleaner;
     SharedMemoryManagerWebGPUPtr m_pMemoryManager;
     GenerateMipsHelperWebGPUPtr  m_pMipsGenerator;

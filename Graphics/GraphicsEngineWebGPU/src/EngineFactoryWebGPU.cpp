@@ -123,11 +123,7 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
 #else
         WGPURequestAdapterOptions Options{nullptr, nullptr, powerPreference, WGPUBackendType_Undefined, false};
 #endif
-        wgpuInstanceRequestAdapter(
-            wgpuInstance,
-            &Options,
-            OnAdapterRequestEnded,
-            &UserData);
+        wgpuInstanceRequestAdapter(wgpuInstance, &Options, OnAdapterRequestEnded, &UserData);
 
         if (UserData.RequestStatus == WGPURequestAdapterStatus_Success)
         {
@@ -197,7 +193,11 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
     }
 
     auto DeviceLostCallback = [](WGPUDeviceLostReason Reason, char const* Message, void* pUserdata) {
-        if (Reason != WGPUDeviceLostReason_Destroyed && Message != nullptr)
+        bool Expression = Reason != WGPUDeviceLostReason_Destroyed;
+#if !PLATFORM_EMSCRIPTEN
+        Expression &= Reason != WGPUDeviceLostReason_InstanceDropped;
+#endif
+        if (Expression && Message != nullptr)
             LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
     };
 

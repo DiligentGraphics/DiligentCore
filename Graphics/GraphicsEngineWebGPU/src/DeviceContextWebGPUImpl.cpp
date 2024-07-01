@@ -38,7 +38,6 @@
 #include "RenderPassWebGPUImpl.hpp"
 #include "FramebufferWebGPUImpl.hpp"
 #include "FenceWebGPUImpl.hpp"
-#include "QueueSignalPoolWebGPU.hpp"
 #include "QueryManagerWebGPU.hpp"
 #include "QueryWebGPUImpl.hpp"
 #include "AttachmentCleanerWebGPU.hpp"
@@ -62,6 +61,8 @@ DeviceContextWebGPUImpl::DeviceContextWebGPUImpl(IReferenceCounters*           p
 {
     m_wgpuQueue = wgpuDeviceGetQueue(pDevice->GetWebGPUDevice());
     (void)m_ActiveQueriesCounter;
+
+    pDevice->CreateFence({}, &m_pFence);
 }
 
 void DeviceContextWebGPUImpl::Begin(Uint32 ImmediateContextId)
@@ -1011,8 +1012,10 @@ void DeviceContextWebGPUImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 
 void DeviceContextWebGPUImpl::WaitForIdle()
 {
+    m_FenceValue++;
+    EnqueueSignal(m_pFence, m_FenceValue);
     Flush();
-    m_pDevice->IdleGPU();
+    m_pFence->Wait(m_FenceValue);
 }
 
 void DeviceContextWebGPUImpl::BeginQuery(IQuery* pQuery)
@@ -1044,17 +1047,28 @@ void DeviceContextWebGPUImpl::Flush()
 
     if (m_wgpuCommandEncoder || !m_SignalFences.empty())
     {
-        for (auto& SignalItem : m_SignalFences)
-        {
-            auto* pFence = SignalItem.second.RawPtr<FenceWebGPUImpl>();
-            pFence->AddPendingSignal(GetCommandEncoder(), SignalItem.first);
-        }
-        m_SignalFences.clear();
+        auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
+            if (DeviceContextWebGPUImpl* pDeviceCxt = static_cast<DeviceContextWebGPUImpl*>(pUserData))
+            {
+                for (auto& SignalItem : pDeviceCxt->m_SignalFences)
+                {
+                    auto* pFence = SignalItem.second.RawPtr<FenceWebGPUImpl>();
+                    pFence->SetCompletedValue(SignalItem.first);
+                }
+                pDeviceCxt->m_SignalFences.clear();
+            }
+
+            if (Status != WGPUQueueWorkDoneStatus_Success)
+                DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
+        };
 
         WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
         WGPUCommandBuffer           wgpuCmdBuffer = wgpuCommandEncoderFinish(GetCommandEncoder(), &wgpuCmdBufferDesc);
         DEV_CHECK_ERR(wgpuCmdBuffer != nullptr, "Failed to finish command encoder");
+
+        wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, this);
         wgpuQueueSubmit(m_wgpuQueue, 1, &wgpuCmdBuffer);
+        wgpuCommandEncoderRelease(m_wgpuCommandEncoder);
         m_wgpuCommandEncoder = nullptr;
     }
 }
@@ -1290,6 +1304,7 @@ void DeviceContextWebGPUImpl::EndCommandEncoders(Uint32 EncoderFlags)
         if (m_wgpuRenderPassEncoder)
         {
             wgpuRenderPassEncoderEnd(m_wgpuRenderPassEncoder);
+            wgpuRenderPassEncoderRelease(m_wgpuRenderPassEncoder);
             m_wgpuRenderPassEncoder = nullptr;
             ClearEncoderState();
         }
@@ -1300,6 +1315,7 @@ void DeviceContextWebGPUImpl::EndCommandEncoders(Uint32 EncoderFlags)
         if (m_wgpuComputePassEncoder)
         {
             wgpuComputePassEncoderEnd(m_wgpuComputePassEncoder);
+            wgpuComputePassEncoderRelease(m_wgpuComputePassEncoder);
             m_wgpuComputePassEncoder = nullptr;
             ClearEncoderState();
         }
@@ -1565,9 +1581,7 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #endif
 
     if (m_BindInfo.DirtyBindGroups != 0)
-    {
         CommitBindGroups(wgpuRenderCmdEncoder);
-    }
 
     return wgpuRenderCmdEncoder;
 }

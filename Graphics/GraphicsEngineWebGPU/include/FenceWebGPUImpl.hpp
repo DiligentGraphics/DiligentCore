@@ -56,25 +56,7 @@ public:
     /// Implementation of IFence::Wait() in WebGPU backend.
     void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
 
-    void AddPendingSignal(WGPUCommandEncoder wgpuCmdEncoder, Uint64 Value);
-
-private:
-    struct PendingFenceData
-    {
-        const Uint64 Value;
-        const Uint64 LastTimestamp;
-        const Uint32 QueryIdx;
-
-        PendingFenceData(Uint64 _Value, Uint64 _LastTimestamp, Uint32 _QueryIdx) :
-            // clang-format off
-            Value         {_Value},
-            LastTimestamp {_LastTimestamp},
-            QueryIdx      {_QueryIdx}
-
-        // clang-format on
-        {}
-    };
-    std::deque<PendingFenceData> m_PendingSignals;
+    void SetCompletedValue(Uint64 Value);
 };
 
 } // namespace Diligent

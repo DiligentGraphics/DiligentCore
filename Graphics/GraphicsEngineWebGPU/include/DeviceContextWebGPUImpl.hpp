@@ -366,7 +366,6 @@ private:
     void DvpValidateCommittedShaderResources();
 #endif
 
-
 private:
     struct WebGPUEncoderState
     {
@@ -515,6 +514,7 @@ private:
             }
         };
     };
+
     struct MappedTexture
     {
         BufferToTextureCopyInfo               CopyInfo;
@@ -540,6 +540,9 @@ private:
 
     QueryManagerWebGPU* m_pQueryMgr            = nullptr;
     Int32               m_ActiveQueriesCounter = 0;
+
+    RefCntAutoPtr<IFence> m_pFence;
+    Uint64                m_FenceValue = 0;
 };
 
 } // namespace Diligent
