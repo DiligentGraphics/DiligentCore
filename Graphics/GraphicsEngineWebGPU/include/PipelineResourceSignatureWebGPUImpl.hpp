@@ -45,6 +45,8 @@
 namespace Diligent
 {
 
+struct WGSLShaderResourceAttribs;
+
 struct PipelineResourceImmutableSamplerAttribsWebGPU
 {
 public:
@@ -148,6 +150,15 @@ public:
         VERIFY_EXPR(SampIndex < m_Desc.NumImmutableSamplers);
         return m_ImmutableSamplers[SampIndex];
     }
+
+#ifdef DILIGENT_DEVELOPMENT
+    /// Verifies committed resource using the WGSL resource attributes from the PSO.
+    bool DvpValidateCommittedResource(const WGSLShaderResourceAttribs& WGSLAttribs,
+                                      Uint32                           ResIndex,
+                                      const ShaderResourceCacheWebGPU& ResourceCache,
+                                      const char*                      ShaderName,
+                                      const char*                      PSOName) const;
+#endif
 
 private:
     void UpdateStaticResStages(const PipelineResourceSignatureDesc& Desc);

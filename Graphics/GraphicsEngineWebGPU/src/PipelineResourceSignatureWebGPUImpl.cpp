@@ -29,6 +29,9 @@
 #include "RenderDeviceWebGPUImpl.hpp"
 #include "PipelineResourceSignatureWebGPUImpl.hpp"
 #include "WebGPUTypeConversions.hpp"
+#include "BufferWebGPUImpl.hpp"
+#include "BufferViewWebGPUImpl.hpp"
+#include "TextureViewWebGPUImpl.hpp"
 
 namespace Diligent
 {
@@ -851,7 +854,7 @@ void PipelineResourceSignatureWebGPUImpl::CommitDynamicResources(const ShaderRes
         const auto& Attr        = GetResourceAttribs(ResIdx);
         const auto  CacheOffset = Attr.CacheOffset(CacheType);
         const auto  ArraySize   = Attr.ArraySize;
-        const auto  DescrType   = Attr.GetDescriptorType();
+        const auto  DescrType   = Attr.GetBindGroupEntryType();
 
 #    ifdef DILIGENT_DEBUG
         {
@@ -868,9 +871,9 @@ void PipelineResourceSignatureWebGPUImpl::CommitDynamicResources(const ShaderRes
         VERIFY(WriteDescrSetIt->dstSet != WebGPU_NULL_HANDLE, "Vulkan descriptor set must not be null");
         WriteDescrSetIt->dstBinding      = Attr.BindingIndex;
         WriteDescrSetIt->dstArrayElement = ArrElem;
-        // descriptorType must be the same type as that specified in WebGPUDescriptorSetLayoutBinding for dstSet at dstBinding.
+        // BindGroupEntryType must be the same type as that specified in WebGPUDescriptorSetLayoutBinding for dstSet at dstBinding.
         // The type of the descriptor also controls which array the descriptors are taken from. (13.2.4)
-        WriteDescrSetIt->descriptorType  = DescriptorTypeToWebGPUDescriptorType(DescrType);
+        WriteDescrSetIt->BindGroupEntryType  = BindGroupEntryTypeToWebGPUBindGroupEntryType(DescrType);
         WriteDescrSetIt->descriptorCount = 0;
 
         auto WriteArrayElements = [&](auto DescrType, auto& DescrIt, const auto& DescrArr) //
@@ -894,50 +897,50 @@ void PipelineResourceSignatureWebGPUImpl::CommitDynamicResources(const ShaderRes
         };
 
         // For every resource type, try to batch as many descriptor updates as we can
-        static_assert(static_cast<Uint32>(DescriptorType::Count) == 16, "Please update the switch below to handle the new descriptor type");
+        static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 16, "Please update the switch below to handle the new descriptor type");
         switch (DescrType)
         {
-            case DescriptorType::UniformBuffer:
-            case DescriptorType::UniformBufferDynamic:
+            case BindGroupEntryType::UniformBuffer:
+            case BindGroupEntryType::UniformBufferDynamic:
                 WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
-                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::UniformBuffer>{}, DescrBuffIt, DescrBuffInfoArr);
+                WriteArrayElements(std::integral_constant<BindGroupEntryType, BindGroupEntryType::UniformBuffer>{}, DescrBuffIt, DescrBuffInfoArr);
                 break;
 
-            case DescriptorType::StorageBuffer:
-            case DescriptorType::StorageBufferDynamic:
-            case DescriptorType::StorageBuffer_ReadOnly:
-            case DescriptorType::StorageBufferDynamic_ReadOnly:
+            case BindGroupEntryType::StorageBuffer:
+            case BindGroupEntryType::StorageBufferDynamic:
+            case BindGroupEntryType::StorageBuffer_ReadOnly:
+            case BindGroupEntryType::StorageBufferDynamic_ReadOnly:
                 WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
-                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::StorageBuffer>{}, DescrBuffIt, DescrBuffInfoArr);
+                WriteArrayElements(std::integral_constant<BindGroupEntryType, BindGroupEntryType::StorageBuffer>{}, DescrBuffIt, DescrBuffInfoArr);
                 break;
 
-            case DescriptorType::UniformTexelBuffer:
-            case DescriptorType::StorageTexelBuffer:
-            case DescriptorType::StorageTexelBuffer_ReadOnly:
+            case BindGroupEntryType::UniformTexelBuffer:
+            case BindGroupEntryType::StorageTexelBuffer:
+            case BindGroupEntryType::StorageTexelBuffer_ReadOnly:
                 WriteDescrSetIt->pTexelBufferView = &(*BuffViewIt);
-                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::UniformTexelBuffer>{}, BuffViewIt, DescrBuffViewArr);
+                WriteArrayElements(std::integral_constant<BindGroupEntryType, BindGroupEntryType::UniformTexelBuffer>{}, BuffViewIt, DescrBuffViewArr);
                 break;
 
-            case DescriptorType::CombinedImageSampler:
-            case DescriptorType::SeparateImage:
-            case DescriptorType::StorageImage:
+            case BindGroupEntryType::CombinedImageSampler:
+            case BindGroupEntryType::SeparateImage:
+            case BindGroupEntryType::StorageImage:
                 WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
-                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::SeparateImage>{}, DescrImgIt, DescrImgInfoArr);
+                WriteArrayElements(std::integral_constant<BindGroupEntryType, BindGroupEntryType::SeparateImage>{}, DescrImgIt, DescrImgInfoArr);
                 break;
 
-            case DescriptorType::InputAttachment:
-            case DescriptorType::InputAttachment_General:
+            case BindGroupEntryType::InputAttachment:
+            case BindGroupEntryType::InputAttachment_General:
                 WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
-                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::InputAttachment>{}, DescrImgIt, DescrImgInfoArr);
+                WriteArrayElements(std::integral_constant<BindGroupEntryType, BindGroupEntryType::InputAttachment>{}, DescrImgIt, DescrImgInfoArr);
                 break;
 
-            case DescriptorType::Sampler:
+            case BindGroupEntryType::Sampler:
                 // Immutable samplers are permanently bound into the set layout; later binding a sampler
                 // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
                 if (!Attr.IsImmutableSamplerAssigned())
                 {
                     WriteDescrSetIt->pImageInfo = &(*DescrImgIt);
-                    WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::Sampler>{}, DescrImgIt, DescrImgInfoArr);
+                    WriteArrayElements(std::integral_constant<BindGroupEntryType, BindGroupEntryType::Sampler>{}, DescrImgIt, DescrImgInfoArr);
                 }
                 else
                 {
@@ -947,9 +950,9 @@ void PipelineResourceSignatureWebGPUImpl::CommitDynamicResources(const ShaderRes
                 }
                 break;
 
-            case DescriptorType::AccelerationStructure:
+            case BindGroupEntryType::AccelerationStructure:
                 WriteDescrSetIt->pNext = &(*AccelStructIt);
-                WriteArrayElements(std::integral_constant<DescriptorType, DescriptorType::AccelerationStructure>{}, AccelStructIt, DescrAccelStructArr);
+                WriteArrayElements(std::integral_constant<BindGroupEntryType, BindGroupEntryType::AccelerationStructure>{}, AccelStructIt, DescrAccelStructArr);
                 break;
 
             default:
@@ -991,151 +994,6 @@ void PipelineResourceSignatureWebGPUImpl::CommitDynamicResources(const ShaderRes
         LogicalDevice.UpdateDescriptorSets(DescrWriteCount, WriteDescrSetArr.data(), 0, nullptr);
 }
 
-
-#    ifdef DILIGENT_DEVELOPMENT
-bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const DeviceContextWebGPUImpl*    pDeviceCtx,
-                                                                       const SPIRVShaderResourceAttribs& SPIRVAttribs,
-                                                                       Uint32                            ResIndex,
-                                                                       const ShaderResourceCacheWebGPU&  ResourceCache,
-                                                                       const char*                       ShaderName,
-                                                                       const char*                       PSOName) const
-{
-    VERIFY_EXPR(ResIndex < m_Desc.NumResources);
-    const auto& ResDesc    = m_Desc.Resources[ResIndex];
-    const auto& ResAttribs = m_pResourceAttribs[ResIndex];
-    VERIFY(strcmp(ResDesc.Name, SPIRVAttribs.Name) == 0, "Inconsistent resource names");
-
-    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && ResAttribs.IsImmutableSamplerAssigned())
-        return true; // Skip immutable separate samplers
-
-    const auto& DescrSetResources = ResourceCache.GetDescriptorSet(ResAttribs.DescrSet);
-    const auto  CacheType         = ResourceCache.GetContentType();
-    const auto  CacheOffset       = ResAttribs.CacheOffset(CacheType);
-
-    VERIFY_EXPR(SPIRVAttribs.ArraySize <= ResAttribs.ArraySize);
-
-    bool BindingsOK = true;
-    for (Uint32 ArrIndex = 0; ArrIndex < SPIRVAttribs.ArraySize; ++ArrIndex)
-    {
-        const auto& Res = DescrSetResources.GetResource(CacheOffset + ArrIndex);
-        if (Res.IsNull())
-        {
-            LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(SPIRVAttribs, ArrIndex),
-                              "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
-            BindingsOK = false;
-            continue;
-        }
-
-        if (ResAttribs.IsCombinedWithSampler())
-        {
-            const auto& SamplerResDesc = GetResourceDesc(ResAttribs.SamplerInd);
-            const auto& SamplerAttribs = GetResourceAttribs(ResAttribs.SamplerInd);
-            VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
-            VERIFY_EXPR(SamplerResDesc.ArraySize == 1 || SamplerResDesc.ArraySize == ResDesc.ArraySize);
-            if (!SamplerAttribs.IsImmutableSamplerAssigned())
-            {
-                if (ArrIndex < SamplerResDesc.ArraySize)
-                {
-                    const auto& SamDescrSetResources = ResourceCache.GetDescriptorSet(SamplerAttribs.DescrSet);
-                    const auto  SamCacheOffset       = SamplerAttribs.CacheOffset(CacheType);
-                    const auto& Sam                  = SamDescrSetResources.GetResource(SamCacheOffset + ArrIndex);
-                    if (Sam.IsNull())
-                    {
-                        LOG_ERROR_MESSAGE("No sampler is bound to sampler variable '", GetShaderResourcePrintName(SamplerResDesc, ArrIndex),
-                                          "' combined with texture '", SPIRVAttribs.Name, "' in shader '", ShaderName, "' of PSO '", PSOName, "'.");
-                        BindingsOK = false;
-                    }
-                }
-            }
-        }
-
-        switch (ResAttribs.GetDescriptorType())
-        {
-            case DescriptorType::UniformBuffer:
-            case DescriptorType::UniformBufferDynamic:
-                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
-                // When can use raw cast here because the dynamic type is verified when the resource
-                // is bound. It will be null if the type is incorrect.
-                if (const auto* pBufferWebGPU = Res.pObject.RawPtr<BufferWebGPUImpl>())
-                {
-                    pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
-
-                    if ((pBufferWebGPU->GetDesc().Size < SPIRVAttribs.BufferStaticSize) &&
-                        (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
-                    {
-                        // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
-                        LOG_WARNING_MESSAGE("The size of uniform buffer '",
-                                            pBufferWebGPU->GetDesc().Name, "' bound to shader variable '",
-                                            GetShaderResourcePrintName(SPIRVAttribs, ArrIndex), "' is ", pBufferWebGPU->GetDesc().Size,
-                                            " bytes, but the shader expects at least ", SPIRVAttribs.BufferStaticSize,
-                                            " bytes.");
-                    }
-                }
-                break;
-
-            case DescriptorType::StorageBuffer:
-            case DescriptorType::StorageBuffer_ReadOnly:
-            case DescriptorType::StorageBufferDynamic:
-            case DescriptorType::StorageBufferDynamic_ReadOnly:
-                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
-                // When can use raw cast here because the dynamic type is verified when the resource
-                // is bound. It will be null if the type is incorrect.
-                if (auto* pBufferViewWebGPU = Res.pObject.RawPtr<BufferViewWebGPUImpl>())
-                {
-                    const auto* pBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pBufferViewWebGPU->GetBuffer());
-                    const auto& ViewDesc      = pBufferViewWebGPU->GetDesc();
-                    const auto& BuffDesc      = pBufferWebGPU->GetDesc();
-
-                    pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
-
-                    if (BuffDesc.ElementByteStride == 0)
-                    {
-                        if ((ViewDesc.ByteWidth < SPIRVAttribs.BufferStaticSize) &&
-                            (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
-                        {
-                            // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
-                            LOG_WARNING_MESSAGE("The size of buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
-                                                GetShaderResourcePrintName(SPIRVAttribs, ArrIndex), "' is ", ViewDesc.ByteWidth, " bytes, but the shader expects at least ",
-                                                SPIRVAttribs.BufferStaticSize, " bytes.");
-                        }
-                    }
-                    else
-                    {
-                        if ((ViewDesc.ByteWidth < SPIRVAttribs.BufferStaticSize || (ViewDesc.ByteWidth - SPIRVAttribs.BufferStaticSize) % BuffDesc.ElementByteStride != 0) &&
-                            (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
-                        {
-                            // For buffers with dynamic arrays we know only static part size and array element stride.
-                            // Element stride in the shader may be differ than in the code. Here we check that the buffer size is exactly the same as the array with N elements.
-                            LOG_WARNING_MESSAGE("The size (", ViewDesc.ByteWidth, ") and stride (", BuffDesc.ElementByteStride, ") of buffer view '",
-                                                ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
-                                                GetShaderResourcePrintName(SPIRVAttribs, ArrIndex), "' are incompatible with what the shader expects. This may be the result of the array element size mismatch.");
-                        }
-                    }
-                }
-                break;
-
-            case DescriptorType::StorageImage:
-            case DescriptorType::SeparateImage:
-            case DescriptorType::CombinedImageSampler:
-                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
-                // When can use raw cast here because the dynamic type is verified when the resource
-                // is bound. It will be null if the type is incorrect.
-                if (const auto* pTexViewWebGPU = Res.pObject.RawPtr<TextureViewWebGPUImpl>())
-                {
-                    if (!ValidateResourceViewDimension(SPIRVAttribs.Name, SPIRVAttribs.ArraySize, ArrIndex, pTexViewWebGPU, SPIRVAttribs.GetResourceDimension(), SPIRVAttribs.IsMultisample()))
-                        BindingsOK = false;
-                }
-                break;
-
-            default:
-                break;
-                // Nothing to do
-        }
-    }
-
-    return BindingsOK;
-}
-#    endif
 #endif
 
 PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IReferenceCounters*                                pRefCounters,
@@ -1196,6 +1054,160 @@ PipelineResourceSignatureInternalDataWebGPU PipelineResourceSignatureWebGPUImpl:
     return InternalData;
 }
 
+#endif
+
+
+#ifdef DILIGENT_DEVELOPMENT
+bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const WGSLShaderResourceAttribs& WGSLAttribs,
+                                                                       Uint32                           ResIndex,
+                                                                       const ShaderResourceCacheWebGPU& ResourceCache,
+                                                                       const char*                      ShaderName,
+                                                                       const char*                      PSOName) const
+{
+    VERIFY_EXPR(ResIndex < m_Desc.NumResources);
+    const PipelineResourceDesc& ResDesc    = m_Desc.Resources[ResIndex];
+    const ResourceAttribs&      ResAttribs = m_pResourceAttribs[ResIndex];
+    VERIFY(strcmp(ResDesc.Name, WGSLAttribs.Name) == 0, "Inconsistent resource names");
+
+    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && ResAttribs.IsImmutableSamplerAssigned())
+        return true; // Skip immutable samplers
+
+    const ShaderResourceCacheWebGPU::BindGroup& BindGroupResources = ResourceCache.GetBindGroup(ResAttribs.BindGroup);
+    const ResourceCacheContentType              CacheType          = ResourceCache.GetContentType();
+    const Uint32                                CacheOffset        = ResAttribs.CacheOffset(CacheType);
+
+    VERIFY_EXPR(WGSLAttribs.ArraySize <= ResAttribs.ArraySize);
+
+    bool BindingsOK = true;
+    for (Uint32 ArrIndex = 0; ArrIndex < WGSLAttribs.ArraySize; ++ArrIndex)
+    {
+        const ShaderResourceCacheWebGPU::Resource& Res = BindGroupResources.GetResource(CacheOffset + ArrIndex);
+        if (!Res)
+        {
+            LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(WGSLAttribs, ArrIndex),
+                              "' in shader '", ShaderName, "' of PSO '", PSOName, "'");
+            BindingsOK = false;
+            continue;
+        }
+
+        if (ResAttribs.IsCombinedWithSampler())
+        {
+            const PipelineResourceDesc& SamplerResDesc = GetResourceDesc(ResAttribs.SamplerInd);
+            const ResourceAttribs&      SamplerAttribs = GetResourceAttribs(ResAttribs.SamplerInd);
+            VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+            VERIFY_EXPR(SamplerResDesc.ArraySize == 1 || SamplerResDesc.ArraySize == ResDesc.ArraySize);
+            if (!SamplerAttribs.IsImmutableSamplerAssigned())
+            {
+                if (ArrIndex < SamplerResDesc.ArraySize)
+                {
+                    const ShaderResourceCacheWebGPU::BindGroup& SamBindGroupResources = ResourceCache.GetBindGroup(SamplerAttribs.BindGroup);
+                    const Uint32                                SamCacheOffset        = SamplerAttribs.CacheOffset(CacheType);
+                    const ShaderResourceCacheWebGPU::Resource&  Sam                   = SamBindGroupResources.GetResource(SamCacheOffset + ArrIndex);
+                    if (!Sam)
+                    {
+                        LOG_ERROR_MESSAGE("No sampler is bound to sampler variable '", GetShaderResourcePrintName(SamplerResDesc, ArrIndex),
+                                          "' combined with texture '", WGSLAttribs.Name, "' in shader '", ShaderName, "' of PSO '", PSOName, "'.");
+                        BindingsOK = false;
+                    }
+                }
+            }
+        }
+
+        static_assert(static_cast<size_t>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
+        switch (ResAttribs.GetBindGroupEntryType())
+        {
+            case BindGroupEntryType::UniformBuffer:
+            case BindGroupEntryType::UniformBufferDynamic:
+                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
+                // When can use raw cast here because the dynamic type is verified when the resource
+                // is bound. It will be null if the type is incorrect.
+                if (const BufferWebGPUImpl* pBufferWebGPU = Res.pObject.RawPtr<BufferWebGPUImpl>())
+                {
+                    //pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
+
+                    if ((pBufferWebGPU->GetDesc().Size < WGSLAttribs.BufferStaticSize) &&
+                        (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
+                    {
+                        // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
+                        LOG_WARNING_MESSAGE("The size of uniform buffer '",
+                                            pBufferWebGPU->GetDesc().Name, "' bound to shader variable '",
+                                            GetShaderResourcePrintName(WGSLAttribs, ArrIndex), "' is ", pBufferWebGPU->GetDesc().Size,
+                                            " bytes, but the shader expects at least ", WGSLAttribs.BufferStaticSize,
+                                            " bytes.");
+                    }
+                }
+                break;
+
+            case BindGroupEntryType::StorageBuffer:
+            case BindGroupEntryType::StorageBuffer_ReadOnly:
+            case BindGroupEntryType::StorageBufferDynamic:
+            case BindGroupEntryType::StorageBufferDynamic_ReadOnly:
+                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
+                // When can use raw cast here because the dynamic type is verified when the resource
+                // is bound. It will be null if the type is incorrect.
+                if (const BufferViewWebGPUImpl* pBufferViewWebGPU = Res.pObject.RawPtr<BufferViewWebGPUImpl>())
+                {
+                    const BufferWebGPUImpl* pBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pBufferViewWebGPU->GetBuffer());
+                    const BufferViewDesc&   ViewDesc      = pBufferViewWebGPU->GetDesc();
+                    const BufferDesc&       BuffDesc      = pBufferWebGPU->GetDesc();
+
+                    //pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
+
+                    if (BuffDesc.ElementByteStride == 0)
+                    {
+                        if ((ViewDesc.ByteWidth < WGSLAttribs.BufferStaticSize) &&
+                            (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
+                        {
+                            // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
+                            LOG_WARNING_MESSAGE("The size of buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
+                                                GetShaderResourcePrintName(WGSLAttribs, ArrIndex), "' is ", ViewDesc.ByteWidth, " bytes, but the shader expects at least ",
+                                                WGSLAttribs.BufferStaticSize, " bytes.");
+                        }
+                    }
+                    else
+                    {
+                        if ((ViewDesc.ByteWidth < WGSLAttribs.BufferStaticSize || (ViewDesc.ByteWidth - WGSLAttribs.BufferStaticSize) % BuffDesc.ElementByteStride != 0) &&
+                            (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
+                        {
+                            // For buffers with dynamic arrays we know only static part size and array element stride.
+                            // Element stride in the shader may be differ than in the code. Here we check that the buffer size is exactly the same as the array with N elements.
+                            LOG_WARNING_MESSAGE("The size (", ViewDesc.ByteWidth, ") and stride (", BuffDesc.ElementByteStride, ") of buffer view '",
+                                                ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' bound to shader variable '",
+                                                GetShaderResourcePrintName(WGSLAttribs, ArrIndex), "' are incompatible with what the shader expects. This may be the result of the array element size mismatch.");
+                        }
+                    }
+                }
+                break;
+
+            case BindGroupEntryType::Texture:
+            case BindGroupEntryType::StorageTexture_WriteOnly:
+            case BindGroupEntryType::StorageTexture_ReadOnly:
+            case BindGroupEntryType::StorageTexture_ReadWrite:
+                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+                // When can use raw cast here because the dynamic type is verified when the resource
+                // is bound. It will be null if the type is incorrect.
+                if (const TextureViewWebGPUImpl* pTexViewWebGPU = Res.pObject.RawPtr<TextureViewWebGPUImpl>())
+                {
+                    if (!ValidateResourceViewDimension(WGSLAttribs.Name, WGSLAttribs.ArraySize, ArrIndex, pTexViewWebGPU, WGSLAttribs.GetResourceDimension(), WGSLAttribs.IsMultisample()))
+                        BindingsOK = false;
+                }
+                break;
+
+            case BindGroupEntryType::Sampler:
+                // Nothing else to check
+                break;
+
+            case BindGroupEntryType::ExternalTexture:
+                break;
+
+            default:
+                break;
+                // Nothing to do
+        }
+    }
+
+    return BindingsOK;
+}
 #endif
 
 } // namespace Diligent

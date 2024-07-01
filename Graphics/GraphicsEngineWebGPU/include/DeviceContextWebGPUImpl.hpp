@@ -362,6 +362,11 @@ private:
 
     SharedMemoryManagerWebGPU::Allocation AllocateSharedMemory(Uint64 Size, Uint64 Alignment = 16);
 
+#ifdef DILIGENT_DEVELOPMENT
+    void DvpValidateCommittedShaderResources();
+#endif
+
+
 private:
     struct WebGPUEncoderState
     {

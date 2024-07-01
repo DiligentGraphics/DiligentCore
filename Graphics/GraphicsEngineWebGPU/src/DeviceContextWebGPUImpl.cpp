@@ -117,9 +117,42 @@ void DeviceContextWebGPUImpl::TransitionShaderResources(IShaderResourceBinding* 
     DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "Shader resource binding must not be null");
 }
 
+
+#ifdef DILIGENT_DEVELOPMENT
+void DeviceContextWebGPUImpl::DvpValidateCommittedShaderResources()
+{
+    if (m_BindInfo.ResourcesValidated)
+        return;
+
+    DvpVerifySRBCompatibility(m_BindInfo);
+
+    const Uint32 SignCount = m_pPipelineState->GetResourceSignatureCount();
+    for (Uint32 i = 0; i < SignCount; ++i)
+    {
+        const PipelineResourceSignatureWebGPUImpl* pSign = m_pPipelineState->GetResourceSignature(i);
+        if (pSign == nullptr || pSign->GetNumBindGroups() == 0)
+            continue; // Skip null and empty signatures
+
+        const Uint32 BGCount = pSign->GetNumBindGroups();
+        for (Uint32 bg = 0; bg < BGCount; ++bg)
+        {
+            DEV_CHECK_ERR(m_EncoderState.BindGroups[i * 2 + bg],
+                          "bind group with index ", bg, " is not bound for resource signature '",
+                          pSign->GetDesc().Name, "', binding index ", i, ".");
+        }
+    }
+
+    m_pPipelineState->DvpVerifySRBResources(m_BindInfo.ResourceCaches);
+
+    m_BindInfo.ResourcesValidated = true;
+}
+#endif
+
 void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*        pShaderResourceBinding,
                                                     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+    TDeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/);
+
     ShaderResourceBindingWebGPUImpl* pResBindingWebGPU = ClassPtrCast<ShaderResourceBindingWebGPUImpl>(pShaderResourceBinding);
     ShaderResourceCacheWebGPU&       ResourceCache     = pResBindingWebGPU->GetResourceCache();
     if (ResourceCache.GetNumBindGroups() == 0)
@@ -136,6 +169,7 @@ void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*     
 
     const Uint32                               SRBIndex   = pResBindingWebGPU->GetBindingIndex();
     const PipelineResourceSignatureWebGPUImpl* pSignature = pResBindingWebGPU->GetSignature();
+    m_BindInfo.Set(SRBIndex, pResBindingWebGPU);
 
     Uint32 BGIndex = 0;
     if (pSignature->HasBindGroup(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE))
@@ -184,6 +218,10 @@ void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder)
         if (WGPUBindGroup wgpuBindGroup = m_EncoderState.BindGroups[SrcBindGroupIndex])
         {
             SetBindGroup(CmdEncoder, BindGroupIndex, wgpuBindGroup, 0, nullptr);
+        }
+        else
+        {
+            DEV_ERROR("Active bind group at index ", SrcBindGroupIndex, " is not initialized");
         }
         m_EncoderState.DirtyBindGroups &= ~(1u << SrcBindGroupIndex);
     }
@@ -1519,6 +1557,10 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
         m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_STENCIL_REF);
     }
 
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
+
     if (m_EncoderState.DirtyBindGroups != 0)
     {
         CommitBindGroups(wgpuRenderCmdEncoder);
@@ -1550,6 +1592,10 @@ WGPUComputePassEncoder DeviceContextWebGPUImpl::PrepareForDispatchCompute()
 
     if (auto CommitSRBMask = m_BindInfo.GetCommitMask())
         CommitSRBs<PIPELINE_TYPE_COMPUTE>(wgpuComputeCmdEncoder, CommitSRBMask);
+
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 
     if (m_EncoderState.DirtyBindGroups != 0)
     {

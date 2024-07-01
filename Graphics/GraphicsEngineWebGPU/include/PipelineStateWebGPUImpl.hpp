@@ -70,6 +70,13 @@ public:
 
     const PipelineLayoutWebGPU& GetPipelineLayout() const { return m_PipelineLayout; }
 
+#ifdef DILIGENT_DEVELOPMENT
+    // Performs validation of SRB resource parameters that are not possible to validate
+    // when resource is bound.
+    using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheWebGPU*, MAX_RESOURCE_SIGNATURES>;
+    void DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const;
+#endif
+
 private:
     struct WebGPUPipelineShaderStageInfo
     {
