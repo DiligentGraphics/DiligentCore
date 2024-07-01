@@ -150,8 +150,8 @@ public:
     }
 
 private:
+    void UpdateStaticResStages(const PipelineResourceSignatureDesc& Desc);
     void CreateBindGroupLayouts(bool IsSerialized);
-
     void Destruct();
 
     // Resource cache group identifier

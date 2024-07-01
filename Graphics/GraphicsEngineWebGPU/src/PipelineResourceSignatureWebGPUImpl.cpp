@@ -299,6 +299,7 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
 {
     try
     {
+        UpdateStaticResStages(Desc);
         Initialize(
             GetRawAllocator(), DecoupleCombinedSamplers(Desc), m_ImmutableSamplers,
             [this]() //
@@ -314,6 +315,16 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
     {
         Destruct();
         throw;
+    }
+}
+
+void PipelineResourceSignatureWebGPUImpl::UpdateStaticResStages(const PipelineResourceSignatureDesc& Desc)
+{
+    // Immutable samplers are allocated in the static resource cache.
+    // Make sure that the cache is initialized even if there are no samplers in m_Desc.Resources.
+    for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
+    {
+        m_StaticResShaderStages |= Desc.ImmutableSamplers[i].ShaderStages;
     }
 }
 
@@ -382,6 +393,7 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
     // Initialize static resource cache
     if (StaticResourceCount != 0)
     {
+        VERIFY_EXPR(m_pStaticResCache != nullptr);
         m_pStaticResCache->InitializeGroups(GetRawAllocator(), 1, &StaticResourceCount);
     }
 
@@ -1136,6 +1148,7 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
 {
     try
     {
+        UpdateStaticResStages(Desc);
         Deserialize(
             GetRawAllocator(), DecoupleCombinedSamplers(Desc), InternalData, m_ImmutableSamplers,
             [this]() //
