@@ -68,6 +68,8 @@ public:
 
     static constexpr Uint32 MaxBindGroupsInPipeline = MAX_RESOURCE_SIGNATURES * PipelineResourceSignatureWebGPUImpl::MAX_BIND_GROUPS;
 
+    const PipelineLayoutWebGPU& GetPipelineLayout() const { return m_PipelineLayout; }
+
 private:
     struct WebGPUPipelineShaderStageInfo
     {

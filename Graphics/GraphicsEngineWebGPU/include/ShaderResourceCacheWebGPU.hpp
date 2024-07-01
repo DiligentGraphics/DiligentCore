@@ -164,7 +164,7 @@ public:
 
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
 
-    WGPUBindGroup CommitBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout, bool TmpIsDynamic = false);
+    WGPUBindGroup UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout, bool TmpIsDynamic = false);
 
 #ifdef DILIGENT_DEBUG
     // For debug purposes only

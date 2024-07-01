@@ -408,7 +408,9 @@ private:
         //       index in the pipeline layout, but by the resource signature index.
         std::array<WGPUBindGroup, PipelineStateWebGPUImpl::MaxBindGroupsInPipeline> BindGroups = {};
 
-        Uint32 DirtyBindGroups = (1u << BindGroups.size()) - 1u;
+        // Bind groups that are used by the current pipeline.
+        Uint32 ActiveBindGroups = 0;
+        Uint32 DirtyBindGroups  = (1u << BindGroups.size()) - 1u;
 
     } m_EncoderState;
 

@@ -59,6 +59,8 @@ public:
         return m_FirstBindGroupIndex[Index];
     }
 
+    Uint32 GetBindGroupCount() const { return m_BindGroupCount; }
+
 private:
     WebGPUPipelineLayoutWrapper m_wgpuPipelineLayout;
 

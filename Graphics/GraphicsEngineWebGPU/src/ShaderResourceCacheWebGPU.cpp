@@ -406,7 +406,7 @@ void ShaderResourceCacheWebGPU::SetDynamicBufferOffset(Uint32 DescrSetIndex,
     DstRes.BufferDynamicOffset = DynamicBufferOffset;
 }
 
-WGPUBindGroup ShaderResourceCacheWebGPU::CommitBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout, bool TmpIsDynamic)
+WGPUBindGroup ShaderResourceCacheWebGPU::UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout, bool TmpIsDynamic)
 {
     BindGroup& Group = GetBindGroup(GroupIndex);
     if (!Group.m_wgpuBindGroup || TmpIsDynamic)
