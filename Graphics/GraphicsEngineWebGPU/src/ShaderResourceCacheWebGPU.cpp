@@ -406,10 +406,10 @@ void ShaderResourceCacheWebGPU::SetDynamicBufferOffset(Uint32 DescrSetIndex,
     DstRes.BufferDynamicOffset = DynamicBufferOffset;
 }
 
-void ShaderResourceCacheWebGPU::CommitBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout)
+WGPUBindGroup ShaderResourceCacheWebGPU::CommitBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout, bool TmpIsDynamic)
 {
     BindGroup& Group = GetBindGroup(GroupIndex);
-    if (!Group.m_wgpuBindGroup)
+    if (!Group.m_wgpuBindGroup || TmpIsDynamic)
     {
         WGPUBindGroupDescriptor wgpuBindGroupDescriptor;
         wgpuBindGroupDescriptor.nextInChain = nullptr;
@@ -420,6 +420,8 @@ void ShaderResourceCacheWebGPU::CommitBindGroup(WGPUDevice wgpuDevice, Uint32 Gr
 
         Group.m_wgpuBindGroup.Reset(wgpuDeviceCreateBindGroup(wgpuDevice, &wgpuBindGroupDescriptor));
     }
+
+    return Group.m_wgpuBindGroup;
 }
 
 #ifdef DILIGENT_DEBUG

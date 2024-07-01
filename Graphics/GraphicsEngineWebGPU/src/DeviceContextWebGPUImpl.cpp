@@ -81,6 +81,9 @@ void DeviceContextWebGPUImpl::SetPipelineState(IPipelineState* pPipelineState)
 
     m_EncoderState.Invalidate(WebGPUEncoderState::CMD_ENCODER_STATE_PIPELINE_STATE);
 
+    const Uint32 SignatureCount    = m_pPipelineState->GetResourceSignatureCount();
+    m_EncoderState.DirtyBindGroups = (1u << (SignatureCount * 2u)) - 1u;
+
     Uint32 DvpCompatibleSRBCount = 0;
     PrepareCommittedResources(m_BindInfo, DvpCompatibleSRBCount);
 }
@@ -93,6 +96,69 @@ void DeviceContextWebGPUImpl::TransitionShaderResources(IShaderResourceBinding* 
 void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*        pShaderResourceBinding,
                                                     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+    ShaderResourceBindingWebGPUImpl* pResBindingWebGPU = ClassPtrCast<ShaderResourceBindingWebGPUImpl>(pShaderResourceBinding);
+    ShaderResourceCacheWebGPU&       ResourceCache     = pResBindingWebGPU->GetResourceCache();
+    if (ResourceCache.GetNumBindGroups() == 0)
+    {
+        // Ignore SRBs that contain no resources
+        return;
+    }
+
+#ifdef DILIGENT_DEBUG
+    //ResourceCache.DbgVerifyDynamicBuffersCounter();
+#endif
+
+    const WGPUDevice wgpuDevice = m_pDevice->GetWebGPUDevice();
+
+    const Uint32                               SRBIndex   = pResBindingWebGPU->GetBindingIndex();
+    const PipelineResourceSignatureWebGPUImpl* pSignature = pResBindingWebGPU->GetSignature();
+
+    Uint32 BGIndex = 0;
+    if (pSignature->HasBindGroup(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE))
+    {
+        VERIFY_EXPR(BGIndex == pSignature->GetBindGroupIndex<PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE>());
+        m_EncoderState.BindGroups[SRBIndex * 2 + BGIndex] = ResourceCache.CommitBindGroup(wgpuDevice, BGIndex, pSignature->GetWGPUBindGroupLayout(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE));
+        m_EncoderState.DirtyBindGroups |= 1u << (SRBIndex * 2 + BGIndex);
+        ++BGIndex;
+    }
+
+    if (pSignature->HasBindGroup(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC))
+    {
+        VERIFY_EXPR(BGIndex == pSignature->GetBindGroupIndex<PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC>());
+        m_EncoderState.BindGroups[SRBIndex * 2 + BGIndex] = ResourceCache.CommitBindGroup(wgpuDevice, BGIndex, pSignature->GetWGPUBindGroupLayout(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC), true);
+        m_EncoderState.DirtyBindGroups |= 1u << (SRBIndex * 2 + BGIndex);
+        ++BGIndex;
+    }
+
+    VERIFY_EXPR(BGIndex == ResourceCache.GetNumBindGroups());
+}
+
+void SetBindGroup(WGPURenderPassEncoder Encoder, uint32_t GroupIndex, WGPUBindGroup Group, size_t DynamicOffsetCount, uint32_t const* DynamicOffsets)
+{
+    wgpuRenderPassEncoderSetBindGroup(Encoder, GroupIndex, Group, DynamicOffsetCount, DynamicOffsets);
+}
+void SetBindGroup(WGPUComputePassEncoder Encoder, uint32_t GroupIndex, WGPUBindGroup Group, size_t DynamicOffsetCount, uint32_t const* DynamicOffsets)
+{
+    wgpuComputePassEncoderSetBindGroup(Encoder, GroupIndex, Group, DynamicOffsetCount, DynamicOffsets);
+}
+
+template <typename CmdEncoderType>
+void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder)
+{
+    // Bind groups in m_EncoderState.BindGroups are indexed by SRB index rather than bind group index
+    // in the pipeline layout.
+    Uint32 BindGroupIndex = 0;
+    while (m_EncoderState.DirtyBindGroups != 0)
+    {
+        const Uint32 SrcBindGroupIndex = PlatformMisc::GetLSB(m_EncoderState.DirtyBindGroups);
+        if (SrcBindGroupIndex >= m_EncoderState.BindGroups.size())
+            break;
+        if (WGPUBindGroup wgpuBindGroup = m_EncoderState.BindGroups[SrcBindGroupIndex])
+        {
+            SetBindGroup(CmdEncoder, BindGroupIndex++, wgpuBindGroup, 0, nullptr);
+        }
+        m_EncoderState.DirtyBindGroups &= ~(1u << SrcBindGroupIndex);
+    }
 }
 
 void DeviceContextWebGPUImpl::InvalidateState()
@@ -1425,6 +1491,11 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
         m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_STENCIL_REF);
     }
 
+    if (m_EncoderState.DirtyBindGroups != 0)
+    {
+        CommitBindGroups(wgpuRenderCmdEncoder);
+    }
+
     return wgpuRenderCmdEncoder;
 }
 
@@ -1451,6 +1522,11 @@ WGPUComputePassEncoder DeviceContextWebGPUImpl::PrepareForDispatchCompute()
 
     if (auto CommitSRBMask = m_BindInfo.GetCommitMask())
         CommitSRBs<PIPELINE_TYPE_COMPUTE>(wgpuComputeCmdEncoder, CommitSRBMask);
+
+    if (m_EncoderState.DirtyBindGroups != 0)
+    {
+        CommitBindGroups(wgpuComputeCmdEncoder);
+    }
 
     return wgpuComputeCmdEncoder;
 }

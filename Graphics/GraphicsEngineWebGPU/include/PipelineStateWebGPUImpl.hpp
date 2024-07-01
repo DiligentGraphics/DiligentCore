@@ -66,6 +66,8 @@ public:
 
     void Destruct();
 
+    static constexpr Uint32 MaxBindGroupsInPipeline = MAX_RESOURCE_SIGNATURES * PipelineResourceSignatureWebGPUImpl::MAX_BIND_GROUPS;
+
 private:
     struct WebGPUPipelineShaderStageInfo
     {

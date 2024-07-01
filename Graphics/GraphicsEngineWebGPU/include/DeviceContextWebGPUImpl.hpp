@@ -357,6 +357,9 @@ private:
 
     void CommitScissorRects(WGPURenderPassEncoder CmdEncoder);
 
+    template <typename CmdEncoderType>
+    void CommitBindGroups(CmdEncoderType CmdEncoder);
+
     SharedMemoryManagerWebGPU::Allocation AllocateSharedMemory(Uint64 Size, Uint64 Alignment = 16);
 
 private:
@@ -399,6 +402,13 @@ private:
 
         std::array<Viewport, MAX_VIEWPORTS> Viewports    = {};
         std::array<Rect, MAX_VIEWPORTS>     ScissorRects = {};
+
+        // Bind groups for each resource signature.
+        // NOTE: bind groups in this array are not indexed by the bind group
+        //       index in the pipeline layout, but by the resource signature index.
+        std::array<WGPUBindGroup, PipelineStateWebGPUImpl::MaxBindGroupsInPipeline> BindGroups = {};
+
+        Uint32 DirtyBindGroups = (1u << BindGroups.size()) - 1u;
 
     } m_EncoderState;
 

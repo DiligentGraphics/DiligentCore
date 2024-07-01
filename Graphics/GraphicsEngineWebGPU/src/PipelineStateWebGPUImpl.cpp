@@ -294,7 +294,7 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
         WGPUShaderModuleDescriptor     wgpuShaderModuleDesc{};
         WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
         wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-        wgpuShaderCodeDesc.code        = ShaderStages[ShaderIdx].pShader->GetWGSL().c_str();
+        wgpuShaderCodeDesc.code        = ShaderStages[ShaderIdx].WGSL.c_str();
 
         wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
         wgpuShaderModuleDesc.label       = ShaderStages[ShaderIdx].pShader->GetEntryPoint();
@@ -414,6 +414,7 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
     wgpuRenderPipelineDesc.depthStencil = GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN ? &wgpuDepthStencilState : nullptr;
     wgpuRenderPipelineDesc.primitive    = wgpuPrimitiveState;
     wgpuRenderPipelineDesc.multisample  = wgpuMultisampleState;
+    wgpuRenderPipelineDesc.layout       = m_PipelineLayout.GetWebGPUPipelineLayout();
 
     m_wgpuRenderPipeline.Reset(wgpuDeviceCreateRenderPipeline(m_pDevice->GetWebGPUDevice(), &wgpuRenderPipelineDesc));
     if (!m_wgpuRenderPipeline)
@@ -442,6 +443,7 @@ void PipelineStateWebGPUImpl::InitializePipeline(const ComputePipelineStateCreat
     wgpuComputePipelineDesc.label              = GetDesc().Name;
     wgpuComputePipelineDesc.compute.module     = wgpuShaderModule.Get();
     wgpuComputePipelineDesc.compute.entryPoint = pShaderWebGPU->GetEntryPoint();
+    wgpuComputePipelineDesc.layout             = m_PipelineLayout.GetWebGPUPipelineLayout();
 
     m_wgpuComputePipeline.Reset(wgpuDeviceCreateComputePipeline(m_pDevice->GetWebGPUDevice(), &wgpuComputePipelineDesc));
     if (!m_wgpuComputePipeline)
