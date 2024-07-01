@@ -227,19 +227,36 @@ protected:
         }
 
         TexDesc.MipLevels = SampleCount == 1 ? 0 : 1;
-        if ((TexDesc.Type == RESOURCE_DIM_TEX_1D || TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY) && DeviceInfo.IsMetalDevice())
-        {
-            // 1D textures in Metal must have 1 mip level
-            TexDesc.MipLevels = 1;
-        }
 
-        TexDesc.Format    = TextureFormat;
-        TexDesc.Usage     = USAGE_DEFAULT;
-        TexDesc.BindFlags = BindFlags;
+        TexDesc.Format      = TextureFormat;
+        TexDesc.Usage       = USAGE_DEFAULT;
+        TexDesc.BindFlags   = BindFlags;
+        TexDesc.SampleCount = SampleCount;
+
         if (SampleCount > 1)
             TexDesc.BindFlags &= ~BIND_UNORDERED_ACCESS;
 
-        TexDesc.SampleCount = SampleCount;
+        if (TexDesc.Is1D() && (DeviceInfo.IsMetalDevice() || DeviceInfo.IsWebGPUDevice()))
+        {
+            // 1D textures in Metal/WebGPU must have 1 mip level
+            TexDesc.MipLevels = 1;
+        }
+
+        if (DeviceInfo.IsWebGPUDevice())
+        {
+            if (TexDesc.Is1D())
+            {
+                // 1D textures in WebGPU can't be multisampled
+                TexDesc.SampleCount = 1;
+
+                // 1D textures in WebGPU must not have UAV/RTV/DSV flags
+                TexDesc.BindFlags &= ~BIND_UNORDERED_ACCESS;
+                TexDesc.BindFlags &= ~BIND_RENDER_TARGET;
+                TexDesc.BindFlags &= ~BIND_DEPTH_STENCIL;
+            }
+
+            TexDesc.BindFlags &= FmtInfo.BindFlags;
+        }
 
         RefCntAutoPtr<ITexture> pTestTex;
         TextureData             NullData;
@@ -425,13 +442,18 @@ protected:
         TexDesc.BindFlags   = BindFlags;
         TexDesc.SampleCount = 1;
 
+        const auto& FmtInfo = pDevice->GetTextureFormatInfoExt(TextureFormat);
+        if (DeviceInfo.IsWebGPUDevice())
+        {
+            TexDesc.BindFlags &= FmtInfo.BindFlags;
+        }
+
         RefCntAutoPtr<ITexture> pTestCubemap, pTestCubemapArr;
         pDevice->CreateTexture(TexDesc, nullptr, &pTestCubemap);
         ASSERT_NE(pTestCubemap, nullptr) << GetObjectDescString(TexDesc);
         pCreateObjFromNativeRes->CreateTexture(pTestCubemap);
         TexDesc.MipLevels = pTestCubemap->GetDesc().MipLevels;
 
-        const auto& FmtInfo = pDevice->GetTextureFormatInfoExt(TextureFormat);
         if (UploadData)
         {
             std::vector<std::vector<Uint8>> Data;

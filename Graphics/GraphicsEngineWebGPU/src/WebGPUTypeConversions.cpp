@@ -72,7 +72,7 @@ public:
 
         m_FmtToWGPUFmtMap[TEX_FORMAT_RGB10A2_TYPELESS] = WGPUTextureFormat_RGB10A2Unorm;
         m_FmtToWGPUFmtMap[TEX_FORMAT_RGB10A2_UNORM]    = WGPUTextureFormat_RGB10A2Unorm;
-        m_FmtToWGPUFmtMap[TEX_FORMAT_RGB10A2_UINT]     = WGPUTextureFormat_Undefined;
+        m_FmtToWGPUFmtMap[TEX_FORMAT_RGB10A2_UINT]     = WGPUTextureFormat_RGB10A2Uint;
         m_FmtToWGPUFmtMap[TEX_FORMAT_R11G11B10_FLOAT]  = WGPUTextureFormat_RG11B10Ufloat;
 
         m_FmtToWGPUFmtMap[TEX_FORMAT_RGBA8_TYPELESS]   = WGPUTextureFormat_RGBA8Unorm;

@@ -192,6 +192,8 @@ public:
 private:
     void TestTextureFormat(TEXTURE_FORMAT TexFormat) override;
 
+    void FindSupportedTextureFormats();
+
 private:
     WebGPUInstanceWrapper        m_wgpuInstance;
     WebGPUAdapterWrapper         m_wgpuAdapter;

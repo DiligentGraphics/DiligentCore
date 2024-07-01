@@ -182,6 +182,15 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
     if (m_Desc.Usage == USAGE_IMMUTABLE && (pInitData == nullptr || pInitData->pSubResources == nullptr))
         LOG_ERROR_AND_THROW("Immutable textures must be initialized with data at creation time: pInitData can't be null");
 
+    if (m_Desc.Is1D() && m_Desc.IsArray())
+        LOG_ERROR_AND_THROW("1D texture arrays are not supported in WebGPU");
+
+    if (m_Desc.Is1D() && (m_Desc.BindFlags & (BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS | BIND_DEPTH_STENCIL)))
+        LOG_ERROR_AND_THROW("1D textures cannot have bind flags for render target, unordered access, or depth stencil in WebGPU");
+
+    if (m_Desc.Is1D() && (m_Desc.SampleCount > 1))
+        LOG_ERROR_AND_THROW("1D textures cannot be multisampled in WebGPU");
+
     const auto& FmtAttribs          = GetTextureFormatAttribs(m_Desc.Format);
     const auto  IsInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
 

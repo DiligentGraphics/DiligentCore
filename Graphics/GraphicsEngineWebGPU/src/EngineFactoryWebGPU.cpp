@@ -179,17 +179,17 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
         if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_Depth32FloatStencil8))
             Features.push_back(WGPUFeatureName_Depth32FloatStencil8);
 
-        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_RG11B10UfloatRenderable))
-            Features.push_back(WGPUFeatureName_RG11B10UfloatRenderable);
-
-        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_BGRA8UnormStorage))
-            Features.push_back(WGPUFeatureName_BGRA8UnormStorage);
-
         if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_Float32Filterable))
             Features.push_back(WGPUFeatureName_Float32Filterable);
 
         if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_IndirectFirstInstance))
             Features.push_back(WGPUFeatureName_IndirectFirstInstance);
+
+        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_RG11B10UfloatRenderable))
+            Features.push_back(WGPUFeatureName_RG11B10UfloatRenderable);
+
+        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_BGRA8UnormStorage))
+            Features.push_back(WGPUFeatureName_BGRA8UnormStorage);
     }
 
     auto DeviceLostCallback = [](WGPUDeviceLostReason Reason, char const* Message, void* pUserdata) {
@@ -329,14 +329,15 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
     {
         auto& TextureInfo = AdapterInfo.Texture;
 
-        TextureInfo.MaxTexture1DDimension   = wgpuSupportedLimits.limits.maxTextureDimension1D;
-        TextureInfo.MaxTexture2DDimension   = wgpuSupportedLimits.limits.maxTextureDimension2D;
-        TextureInfo.MaxTexture3DDimension   = wgpuSupportedLimits.limits.maxTextureDimension3D;
-        TextureInfo.MaxTexture1DArraySlices = wgpuSupportedLimits.limits.maxTextureArrayLayers;
+        TextureInfo.MaxTexture1DArraySlices = 0; // Not supported in WebGPU
         TextureInfo.MaxTexture2DArraySlices = wgpuSupportedLimits.limits.maxTextureArrayLayers;
 
+        TextureInfo.MaxTexture1DDimension = wgpuSupportedLimits.limits.maxTextureDimension1D;
+        TextureInfo.MaxTexture2DDimension = wgpuSupportedLimits.limits.maxTextureDimension2D;
+        TextureInfo.MaxTexture3DDimension = wgpuSupportedLimits.limits.maxTextureDimension3D;
+
         TextureInfo.Texture2DMSSupported       = True;
-        TextureInfo.Texture2DMSArraySupported  = True;
+        TextureInfo.Texture2DMSArraySupported  = False;
         TextureInfo.TextureViewSupported       = True;
         TextureInfo.CubemapArraysSupported     = True;
         TextureInfo.TextureView2DOn3DSupported = True;
