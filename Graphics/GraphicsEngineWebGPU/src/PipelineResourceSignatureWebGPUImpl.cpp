@@ -1069,9 +1069,6 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const WGS
     const ResourceAttribs&      ResAttribs = m_pResourceAttribs[ResIndex];
     VERIFY(strcmp(ResDesc.Name, WGSLAttribs.Name) == 0, "Inconsistent resource names");
 
-    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && ResAttribs.IsImmutableSamplerAssigned())
-        return true; // Skip immutable samplers
-
     const ShaderResourceCacheWebGPU::BindGroup& BindGroupResources = ResourceCache.GetBindGroup(ResAttribs.BindGroup);
     const ResourceCacheContentType              CacheType          = ResourceCache.GetContentType();
     const Uint32                                CacheOffset        = ResAttribs.CacheOffset(CacheType);
@@ -1125,8 +1122,9 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const WGS
                 {
                     //pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
 
-                    if ((pBufferWebGPU->GetDesc().Size < WGSLAttribs.BufferStaticSize) &&
-                        (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
+                    if ((WGSLAttribs.BufferStaticSize != 0) &&
+                        (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0 &&
+                        (pBufferWebGPU->GetDesc().Size < WGSLAttribs.BufferStaticSize))
                     {
                         // It is OK if robustBufferAccess feature is enabled, otherwise access outside of buffer range may lead to crash or undefined behavior.
                         LOG_WARNING_MESSAGE("The size of uniform buffer '",
@@ -1206,6 +1204,33 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const WGS
         }
     }
 
+    return BindingsOK;
+}
+
+bool PipelineResourceSignatureWebGPUImpl::DvpValidateImmutableSampler(const WGSLShaderResourceAttribs& WGSLAttribs,
+                                                                      Uint32                           ImtblSamIndex,
+                                                                      const ShaderResourceCacheWebGPU& ResourceCache,
+                                                                      const char*                      ShaderName,
+                                                                      const char*                      PSOName) const
+{
+    VERIFY_EXPR(ImtblSamIndex < m_Desc.NumImmutableSamplers);
+    const ImmutableSamplerAttribs& ImtblSamAttribs = m_ImmutableSamplers[ImtblSamIndex];
+
+    const ShaderResourceCacheWebGPU::BindGroup& BindGroupResources = ResourceCache.GetBindGroup(ImtblSamAttribs.BindGroup);
+    VERIFY_EXPR(WGSLAttribs.ArraySize <= ImtblSamAttribs.ArraySize);
+
+    bool BindingsOK = true;
+    for (Uint32 ArrIndex = 0; ArrIndex < WGSLAttribs.ArraySize; ++ArrIndex)
+    {
+        const ShaderResourceCacheWebGPU::Resource& Res = BindGroupResources.GetResource(ImtblSamAttribs.SRBCacheOffset + ArrIndex);
+        DEV_CHECK_ERR(Res.HasImmutableSampler, "Resource must have immutable sampler assigned");
+        if (!Res)
+        {
+            DEV_ERROR("Immutable sampler is not initialized for variable '", GetShaderResourcePrintName(WGSLAttribs, ArrIndex),
+                      "' in shader '", ShaderName, "' of PSO '", PSOName, "'. This might be a bug as immutable samplers should be initialized by InitSRBResourceCache.");
+            BindingsOK = false;
+        }
+    }
     return BindingsOK;
 }
 #endif

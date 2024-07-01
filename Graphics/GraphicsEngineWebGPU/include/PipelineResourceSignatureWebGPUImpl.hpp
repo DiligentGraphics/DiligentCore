@@ -158,6 +158,11 @@ public:
                                       const ShaderResourceCacheWebGPU& ResourceCache,
                                       const char*                      ShaderName,
                                       const char*                      PSOName) const;
+    bool DvpValidateImmutableSampler(const WGSLShaderResourceAttribs& WGSLAttribs,
+                                     Uint32                           ImtblSamIndex,
+                                     const ShaderResourceCacheWebGPU& ResourceCache,
+                                     const char*                      ShaderName,
+                                     const char*                      PSOName) const;
 #endif
 
 private:

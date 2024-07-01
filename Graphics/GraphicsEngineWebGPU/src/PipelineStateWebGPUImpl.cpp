@@ -470,12 +470,17 @@ void PipelineStateWebGPUImpl::DvpVerifySRBResources(const ShaderResourceCacheArr
         pResources->ProcessResources(
             [&](const WGSLShaderResourceAttribs& ResAttribs, Uint32) //
             {
-                if (!res_info->IsImmutableSampler()) // There are also immutable samplers in the list
+                VERIFY_EXPR(res_info->pSignature != nullptr);
+                VERIFY_EXPR(res_info->pSignature->GetDesc().BindingIndex == res_info->SignatureIndex);
+                const ShaderResourceCacheWebGPU* pResourceCache = ResourceCaches[res_info->SignatureIndex];
+                DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", res_info->SignatureIndex, " is null.");
+                if (res_info->IsImmutableSampler())
                 {
-                    VERIFY_EXPR(res_info->pSignature != nullptr);
-                    VERIFY_EXPR(res_info->pSignature->GetDesc().BindingIndex == res_info->SignatureIndex);
-                    const ShaderResourceCacheWebGPU* pResourceCache = ResourceCaches[res_info->SignatureIndex];
-                    DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", res_info->SignatureIndex, " is null.");
+                    res_info->pSignature->DvpValidateImmutableSampler(ResAttribs, res_info->ImmutableSamplerIndex, *pResourceCache,
+                                                                      pResources->GetShaderName(), m_Desc.Name);
+                }
+                else
+                {
                     res_info->pSignature->DvpValidateCommittedResource(ResAttribs, res_info->ResourceIndex, *pResourceCache,
                                                                        pResources->GetShaderName(), m_Desc.Name);
                 }
