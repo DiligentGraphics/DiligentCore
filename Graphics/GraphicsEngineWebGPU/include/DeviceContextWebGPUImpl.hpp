@@ -408,6 +408,10 @@ private:
         std::array<Viewport, MAX_VIEWPORTS> Viewports    = {};
         std::array<Rect, MAX_VIEWPORTS>     ScissorRects = {};
 
+    } m_EncoderState;
+
+    struct WebGPUResourceBindInfo : CommittedShaderResources
+    {
         // Bind groups for each resource signature.
         // NOTE: bind groups in this array are not indexed by the bind group
         //       index in the pipeline layout, but by the resource signature index.
@@ -417,17 +421,10 @@ private:
         Uint32 ActiveBindGroups = 0;
         Uint32 DirtyBindGroups  = (1u << BindGroups.size()) - 1u;
 
-    } m_EncoderState;
-
-    struct WebGPUResourceBindInfo : CommittedShaderResources
-    {
-        WebGPUResourceBindInfo() = default;
-
-        void Invalidate()
+        void Reset()
         {
-            //*this = {};
+            *this = WebGPUResourceBindInfo{};
         }
-
     } m_BindInfo;
 
     struct PendingClears

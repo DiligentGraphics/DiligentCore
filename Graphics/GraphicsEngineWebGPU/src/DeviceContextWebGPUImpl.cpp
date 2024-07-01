@@ -84,6 +84,7 @@ void DeviceContextWebGPUImpl::SetPipelineState(IPipelineState* pPipelineState)
     const Uint32 SignatureCount = m_pPipelineState->GetResourceSignatureCount();
 
     Uint32 DbgActiveBindGroupIndex = 0;
+    m_BindInfo.ActiveBindGroups    = 0;
     for (Uint32 i = 0; i < SignatureCount; ++i)
     {
         PipelineResourceSignatureWebGPUImpl* pSign = m_pPipelineState->GetResourceSignature(i);
@@ -94,19 +95,19 @@ void DeviceContextWebGPUImpl::SetPipelineState(IPipelineState* pPipelineState)
         Uint32 BGIndex = i * PipelineResourceSignatureWebGPUImpl::MAX_BIND_GROUPS;
         if (pSign->HasBindGroup(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE))
         {
-            m_EncoderState.ActiveBindGroups |= 1u << (BGIndex++);
+            m_BindInfo.ActiveBindGroups |= 1u << (BGIndex++);
             ++DbgActiveBindGroupIndex;
         }
         if (pSign->HasBindGroup(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC))
         {
-            m_EncoderState.ActiveBindGroups |= 1u << (BGIndex++);
+            m_BindInfo.ActiveBindGroups |= 1u << (BGIndex++);
             ++DbgActiveBindGroupIndex;
         }
     }
     VERIFY(m_pPipelineState->GetPipelineLayout().GetBindGroupCount() == DbgActiveBindGroupIndex, "Bind group count mismatch");
     (void)DbgActiveBindGroupIndex;
 
-    m_EncoderState.DirtyBindGroups = m_EncoderState.ActiveBindGroups;
+    m_BindInfo.DirtyBindGroups = m_BindInfo.ActiveBindGroups;
 
     Uint32 DvpCompatibleSRBCount = 0;
     PrepareCommittedResources(m_BindInfo, DvpCompatibleSRBCount);
@@ -136,7 +137,7 @@ void DeviceContextWebGPUImpl::DvpValidateCommittedShaderResources()
         const Uint32 BGCount = pSign->GetNumBindGroups();
         for (Uint32 bg = 0; bg < BGCount; ++bg)
         {
-            DEV_CHECK_ERR(m_EncoderState.BindGroups[i * 2 + bg],
+            DEV_CHECK_ERR(m_BindInfo.BindGroups[i * 2 + bg],
                           "bind group with index ", bg, " is not bound for resource signature '",
                           pSign->GetDesc().Name, "', binding index ", i, ".");
         }
@@ -175,16 +176,16 @@ void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*     
     if (pSignature->HasBindGroup(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE))
     {
         VERIFY_EXPR(BGIndex == pSignature->GetBindGroupIndex<PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE>());
-        m_EncoderState.BindGroups[SRBIndex * 2 + BGIndex] = ResourceCache.UpdateBindGroup(wgpuDevice, BGIndex, pSignature->GetWGPUBindGroupLayout(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE));
-        m_EncoderState.DirtyBindGroups |= 1u << (SRBIndex * 2 + BGIndex);
+        m_BindInfo.BindGroups[SRBIndex * 2 + BGIndex] = ResourceCache.UpdateBindGroup(wgpuDevice, BGIndex, pSignature->GetWGPUBindGroupLayout(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE));
+        m_BindInfo.DirtyBindGroups |= 1u << (SRBIndex * 2 + BGIndex);
         ++BGIndex;
     }
 
     if (pSignature->HasBindGroup(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC))
     {
         VERIFY_EXPR(BGIndex == pSignature->GetBindGroupIndex<PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC>());
-        m_EncoderState.BindGroups[SRBIndex * 2 + BGIndex] = ResourceCache.UpdateBindGroup(wgpuDevice, BGIndex, pSignature->GetWGPUBindGroupLayout(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC), true);
-        m_EncoderState.DirtyBindGroups |= 1u << (SRBIndex * 2 + BGIndex);
+        m_BindInfo.BindGroups[SRBIndex * 2 + BGIndex] = ResourceCache.UpdateBindGroup(wgpuDevice, BGIndex, pSignature->GetWGPUBindGroupLayout(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC), true);
+        m_BindInfo.DirtyBindGroups |= 1u << (SRBIndex * 2 + BGIndex);
         ++BGIndex;
     }
 
@@ -205,17 +206,17 @@ void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder)
 {
     // Bind groups in m_EncoderState.BindGroups are indexed by SRB index rather than bind group index
     // in the pipeline layout.
-    m_EncoderState.DirtyBindGroups &= m_EncoderState.ActiveBindGroups;
-    while (m_EncoderState.DirtyBindGroups != 0)
+    m_BindInfo.DirtyBindGroups &= m_BindInfo.ActiveBindGroups;
+    while (m_BindInfo.DirtyBindGroups != 0)
     {
-        // m_EncoderState.DirtyBindGroups is indexed by SRB index
-        const Uint32 SrcBindGroupIndex = PlatformMisc::GetLSB(m_EncoderState.DirtyBindGroups);
+        // m_BindInfo.DirtyBindGroups is indexed by SRB index
+        const Uint32 SrcBindGroupIndex = PlatformMisc::GetLSB(m_BindInfo.DirtyBindGroups);
         // Count the number of active groups that are bound before the current group.
         // Note that there may be inactive groups if, for example, signature at preceding index
         // does not use dynamic resources.
-        const Uint32 BindGroupIndex = PlatformMisc::CountOneBits(m_EncoderState.ActiveBindGroups & ((1u << SrcBindGroupIndex) - 1u));
-        VERIFY_EXPR(BindGroupIndex < m_EncoderState.BindGroups.size());
-        if (WGPUBindGroup wgpuBindGroup = m_EncoderState.BindGroups[SrcBindGroupIndex])
+        const Uint32 BindGroupIndex = PlatformMisc::CountOneBits(m_BindInfo.ActiveBindGroups & ((1u << SrcBindGroupIndex) - 1u));
+        VERIFY_EXPR(BindGroupIndex < m_BindInfo.BindGroups.size());
+        if (WGPUBindGroup wgpuBindGroup = m_BindInfo.BindGroups[SrcBindGroupIndex])
         {
             SetBindGroup(CmdEncoder, BindGroupIndex, wgpuBindGroup, 0, nullptr);
         }
@@ -223,7 +224,7 @@ void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder)
         {
             DEV_ERROR("Active bind group at index ", SrcBindGroupIndex, " is not initialized");
         }
-        m_EncoderState.DirtyBindGroups &= ~(1u << SrcBindGroupIndex);
+        m_BindInfo.DirtyBindGroups &= ~(1u << SrcBindGroupIndex);
     }
 }
 
@@ -232,6 +233,7 @@ void DeviceContextWebGPUImpl::InvalidateState()
     TDeviceContextBase::InvalidateState();
     m_PendingClears.Clear();
     m_EncoderState.Clear();
+    m_BindInfo.Reset();
 }
 
 void DeviceContextWebGPUImpl::SetStencilRef(Uint32 StencilRef)
@@ -1458,6 +1460,7 @@ void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
 void DeviceContextWebGPUImpl::ClearEncoderState()
 {
     m_EncoderState.Clear();
+    m_BindInfo.Reset();
 }
 
 void DeviceContextWebGPUImpl::ClearAttachment(Int32                     RTIndex,
@@ -1561,7 +1564,7 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
     DvpValidateCommittedShaderResources();
 #endif
 
-    if (m_EncoderState.DirtyBindGroups != 0)
+    if (m_BindInfo.DirtyBindGroups != 0)
     {
         CommitBindGroups(wgpuRenderCmdEncoder);
     }
@@ -1597,7 +1600,7 @@ WGPUComputePassEncoder DeviceContextWebGPUImpl::PrepareForDispatchCompute()
     DvpValidateCommittedShaderResources();
 #endif
 
-    if (m_EncoderState.DirtyBindGroups != 0)
+    if (m_BindInfo.DirtyBindGroups != 0)
     {
         CommitBindGroups(wgpuComputeCmdEncoder);
     }
