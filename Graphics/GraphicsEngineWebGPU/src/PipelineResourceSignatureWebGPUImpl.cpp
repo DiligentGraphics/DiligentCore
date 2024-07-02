@@ -302,9 +302,8 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
 {
     try
     {
-        UpdateStaticResStages(Desc);
         Initialize(
-            GetRawAllocator(), DecoupleCombinedSamplers(Desc), m_ImmutableSamplers,
+            GetRawAllocator(), DecoupleCombinedSamplers(Desc), /*CreateImmutableSamplers = */ true,
             [this]() //
             {
                 CreateBindGroupLayouts(/*IsSerialized*/ false);
@@ -318,16 +317,6 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
     {
         Destruct();
         throw;
-    }
-}
-
-void PipelineResourceSignatureWebGPUImpl::UpdateStaticResStages(const PipelineResourceSignatureDesc& Desc)
-{
-    // Immutable samplers are allocated in the static resource cache.
-    // Make sure that the cache is initialized even if there are no samplers in m_Desc.Resources.
-    for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
-    {
-        m_StaticResShaderStages |= Desc.ImmutableSamplers[i].ShaderStages;
     }
 }
 
@@ -367,9 +356,10 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
             {
                 ResourceToImmutableSamplerInd[i] = SrcImmutableSamplerInd;
                 // Set the immutable sampler array size to match the resource array size
-                ImmutableSamplerAttribs& DstImtblSampAttribs = m_ImmutableSamplers[SrcImmutableSamplerInd];
+                ImmutableSamplerAttribsWebGPU& DstImtblSampAttribs = m_pImmutableSamplerAttribs[SrcImmutableSamplerInd];
                 // One immutable sampler may be used by different arrays in different shader stages - use the maximum array size
-                DstImtblSampAttribs.ArraySize  = std::max(DstImtblSampAttribs.ArraySize, ResDesc.ArraySize);
+                DstImtblSampAttribs.ArraySize = std::max(DstImtblSampAttribs.ArraySize, ResDesc.ArraySize);
+                VERIFY(DstImtblSampAttribs.SamplerInd == ResourceAttribs::InvalidSamplerInd, "Immutable sampler is already assigned to another resource. This should not happen.");
                 DstImtblSampAttribs.SamplerInd = i;
             }
         }
@@ -383,13 +373,11 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
     static constexpr CACHE_GROUP ImmutableSamplerCacheGroup = CACHE_GROUP_OTHER_STAT_VAR;
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
-        const ImmutableSamplerAttribs& ImtblSampAttribs = m_ImmutableSamplers[i];
+        const ImmutableSamplerAttribsWebGPU& ImtblSampAttribs = m_pImmutableSamplerAttribs[i];
         if (ImtblSampAttribs.SamplerInd == ResourceAttribs::InvalidSamplerInd)
         {
             BindingCount[ImmutableSamplerCacheGroup] += ImtblSampAttribs.ArraySize;
             CacheGroupSizes[ImmutableSamplerCacheGroup] += ImtblSampAttribs.ArraySize;
-            // Immutable samplers are stored in the static resource cache
-            StaticResourceCount += ImtblSampAttribs.ArraySize;
         }
     }
 
@@ -533,23 +521,17 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
 
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
-        const ImmutableSamplerDesc& ImtblSamp        = GetImmutableSamplerDesc(i);
-        ImmutableSamplerAttribs&    ImtblSampAttribs = m_ImmutableSamplers[i];
-        RefCntAutoPtr<ISampler>     pSampler;
-        if (HasDevice())
-            GetDevice()->CreateSampler(ImtblSamp.Desc, &pSampler);
-
+        const ImmutableSamplerDesc&    ImtblSamp        = GetImmutableSamplerDesc(i);
+        ImmutableSamplerAttribsWebGPU& ImtblSampAttribs = m_pImmutableSamplerAttribs[i];
         if (ImtblSampAttribs.SamplerInd == ResourceAttribs::InvalidSamplerInd)
         {
             // There is no corresponding resource for this immutable sampler, so we need
-            // to new bind group layout entries.
-            ImtblSampAttribs.BindGroup         = static_cast<Uint16>(BindGroupMapping[BIND_GROUP_ID_STATIC_MUTABLE]);
-            ImtblSampAttribs.BindingIndex      = static_cast<Uint16>(BindingIndices[ImmutableSamplerCacheGroup]);
-            ImtblSampAttribs.SRBCacheOffset    = CacheGroupOffsets[ImmutableSamplerCacheGroup];
-            ImtblSampAttribs.StaticCacheOffset = StaticCacheOffset;
+            // to add new bind group layout entries.
+            ImtblSampAttribs.BindGroup    = static_cast<Uint16>(BindGroupMapping[BIND_GROUP_ID_STATIC_MUTABLE]);
+            ImtblSampAttribs.BindingIndex = static_cast<Uint16>(BindingIndices[ImmutableSamplerCacheGroup]);
+            ImtblSampAttribs.CacheOffset  = CacheGroupOffsets[ImmutableSamplerCacheGroup];
             BindingIndices[ImmutableSamplerCacheGroup] += ImtblSampAttribs.ArraySize;
             CacheGroupOffsets[ImmutableSamplerCacheGroup] += ImtblSampAttribs.ArraySize;
-            StaticCacheOffset += ImtblSampAttribs.ArraySize;
 
             for (Uint32 elem = 0; elem < ImtblSampAttribs.ArraySize; ++elem)
             {
@@ -566,20 +548,9 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
             // bind group and binding index.
             ResourceAttribs& SamplerAttribs = m_pResourceAttribs[ImtblSampAttribs.SamplerInd];
             VERIFY_EXPR(SamplerAttribs.GetBindGroupEntryType() == BindGroupEntryType::Sampler);
-            ImtblSampAttribs.BindGroup      = static_cast<Uint16>(SamplerAttribs.BindGroup);
-            ImtblSampAttribs.BindingIndex   = static_cast<Uint16>(SamplerAttribs.BindingIndex);
-            ImtblSampAttribs.SRBCacheOffset = SamplerAttribs.SRBCacheOffset;
-        }
-
-        // Initialize immutable samplers in the static resource cache
-        m_pStaticResCache->InitializeResources(ImtblSampAttribs.BindGroup, ImtblSampAttribs.StaticCacheOffset, ImtblSampAttribs.ArraySize,
-                                               BindGroupEntryType::Sampler, /*HasImmutableSampler = */ true);
-        if (pSampler)
-        {
-            for (Uint32 elem = 0; elem < ImtblSampAttribs.ArraySize; ++elem)
-            {
-                m_pStaticResCache->SetResource(ImtblSampAttribs.BindGroup, ImtblSampAttribs.StaticCacheOffset + elem, pSampler);
-            }
+            ImtblSampAttribs.BindGroup    = static_cast<Uint16>(SamplerAttribs.BindGroup);
+            ImtblSampAttribs.BindingIndex = static_cast<Uint16>(SamplerAttribs.BindingIndex);
+            ImtblSampAttribs.CacheOffset  = SamplerAttribs.SRBCacheOffset;
         }
     }
 
@@ -669,20 +640,6 @@ PipelineResourceSignatureWebGPUImpl::~PipelineResourceSignatureWebGPUImpl()
     Destruct();
 }
 
-void PipelineResourceSignatureWebGPUImpl::Destruct()
-{
-    if (m_ImmutableSamplers != nullptr)
-    {
-        for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
-        {
-            m_ImmutableSamplers[i].~ImmutableSamplerAttribs();
-        }
-        m_ImmutableSamplers = nullptr;
-    }
-
-    TPipelineResourceSignatureBase::Destruct();
-}
-
 void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCacheWebGPU& ResourceCache)
 {
     const Uint32 NumGroups = GetNumBindGroups();
@@ -704,27 +661,24 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
                                           Attr.GetBindGroupEntryType(), Attr.IsImmutableSamplerAssigned());
     }
 
-    const ShaderResourceCacheWebGPU& StaticResCache = *m_pStaticResCache;
     // Initialize immutable samplers
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
-        const PipelineResourceImmutableSamplerAttribsWebGPU& ImtblSampAttr = m_ImmutableSamplers[i];
+        const ImmutableSamplerAttribsWebGPU& ImtblSampAttr = m_pImmutableSamplerAttribs[i];
         VERIFY_EXPR(ImtblSampAttr.IsAllocated());
         VERIFY_EXPR(ImtblSampAttr.ArraySize > 0);
         // Initialize immutable samplers that are not defined as resources
         if (ImtblSampAttr.SamplerInd == ResourceAttribs::InvalidSamplerInd)
         {
-            ResourceCache.InitializeResources(ImtblSampAttr.BindGroup, ImtblSampAttr.SRBCacheOffset, ImtblSampAttr.ArraySize,
+            ResourceCache.InitializeResources(ImtblSampAttr.BindGroup, ImtblSampAttr.CacheOffset, ImtblSampAttr.ArraySize,
                                               BindGroupEntryType::Sampler, /*HasImmutableSampler = */ true);
         }
 
-        const ShaderResourceCacheWebGPU::BindGroup& SrcBindGroup = StaticResCache.GetBindGroup(0);
-        for (Uint32 elem = 0; elem < ImtblSampAttr.ArraySize; ++elem)
+        if (const RefCntAutoPtr<SamplerWebGPUImpl>& pSampler = m_pImmutableSamplers[i])
         {
-            const ShaderResourceCacheWebGPU::Resource& SrcSamplerRes = SrcBindGroup.GetResource(ImtblSampAttr.StaticCacheOffset + elem);
-            if (SrcSamplerRes.pObject)
+            for (Uint32 elem = 0; elem < ImtblSampAttr.ArraySize; ++elem)
             {
-                ResourceCache.SetResource(ImtblSampAttr.BindGroup, ImtblSampAttr.SRBCacheOffset + elem, SrcSamplerRes.pObject);
+                ResourceCache.SetResource(ImtblSampAttr.BindGroup, ImtblSampAttr.CacheOffset + elem, pSampler);
             }
         }
     }
@@ -1010,9 +964,8 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
 {
     try
     {
-        UpdateStaticResStages(Desc);
         Deserialize(
-            GetRawAllocator(), DecoupleCombinedSamplers(Desc), InternalData, m_ImmutableSamplers,
+            GetRawAllocator(), DecoupleCombinedSamplers(Desc), InternalData, /*CreateImmutableSamplers = */ true,
             [this]() //
             {
                 CreateBindGroupLayouts(/*IsSerialized*/ true);
@@ -1030,36 +983,6 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
         throw;
     }
 }
-
-#if 0
-PipelineResourceSignatureInternalDataWebGPU PipelineResourceSignatureWebGPUImpl::GetInternalData() const
-{
-    PipelineResourceSignatureInternalDataWebGPU InternalData;
-
-    TPipelineResourceSignatureBase::GetInternalData(InternalData);
-
-    const auto NumImmutableSamplers = GetDesc().NumImmutableSamplers;
-    if (NumImmutableSamplers > 0)
-    {
-        VERIFY_EXPR(m_ImmutableSamplers != nullptr);
-        InternalData.m_pImmutableSamplers = std::make_unique<PipelineResourceImmutableSamplerAttribsWebGPU[]>(NumImmutableSamplers);
-
-        for (Uint32 i = 0; i < NumImmutableSamplers; ++i)
-            InternalData.m_pImmutableSamplers[i] = m_ImmutableSamplers[i];
-    }
-
-    InternalData.pResourceAttribs          = m_pResourceAttribs;
-    InternalData.NumResources              = GetDesc().NumResources;
-    InternalData.pImmutableSamplers        = InternalData.m_pImmutableSamplers.get();
-    InternalData.NumImmutableSamplers      = NumImmutableSamplers;
-    InternalData.DynamicStorageBufferCount = m_DynamicStorageBufferCount;
-    InternalData.DynamicUniformBufferCount = m_DynamicUniformBufferCount;
-
-    return InternalData;
-}
-
-#endif
-
 
 #ifdef DILIGENT_DEVELOPMENT
 bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const WGSLShaderResourceAttribs& WGSLAttribs,
@@ -1218,7 +1141,7 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateImmutableSampler(const WGSL
                                                                       const char*                      PSOName) const
 {
     VERIFY_EXPR(ImtblSamIndex < m_Desc.NumImmutableSamplers);
-    const ImmutableSamplerAttribs& ImtblSamAttribs = m_ImmutableSamplers[ImtblSamIndex];
+    const ImmutableSamplerAttribsWebGPU& ImtblSamAttribs = m_pImmutableSamplerAttribs[ImtblSamIndex];
 
     const ShaderResourceCacheWebGPU::BindGroup& BindGroupResources = ResourceCache.GetBindGroup(ImtblSamAttribs.BindGroup);
     VERIFY_EXPR(WGSLAttribs.ArraySize <= ImtblSamAttribs.ArraySize);
@@ -1226,7 +1149,7 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateImmutableSampler(const WGSL
     bool BindingsOK = true;
     for (Uint32 ArrIndex = 0; ArrIndex < WGSLAttribs.ArraySize; ++ArrIndex)
     {
-        const ShaderResourceCacheWebGPU::Resource& Res = BindGroupResources.GetResource(ImtblSamAttribs.SRBCacheOffset + ArrIndex);
+        const ShaderResourceCacheWebGPU::Resource& Res = BindGroupResources.GetResource(ImtblSamAttribs.CacheOffset + ArrIndex);
         DEV_CHECK_ERR(Res.HasImmutableSampler, "Resource must have immutable sampler assigned");
         if (!Res)
         {

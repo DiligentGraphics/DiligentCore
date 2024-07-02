@@ -163,7 +163,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
                                             "' that is not compatible with immutable sampler defined in pipeline resource signature '",
                                             SignDesc.Name, "'.");
                     }
-                    const PipelineResourceImmutableSamplerAttribsWebGPU& ImmtblSamAttribs{
+                    const ImmutableSamplerAttribsWebGPU& ImmtblSamAttribs{
                         ResAttribution.pSignature->GetImmutableSamplerAttribs(ResAttribution.ImmutableSamplerIndex)};
                     if (ImmtblSamAttribs.SamplerInd == PipelineResourceAttribsWebGPU::InvalidSamplerInd)
                     {

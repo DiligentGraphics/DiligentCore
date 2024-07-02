@@ -85,7 +85,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
     try
     {
         Initialize(
-            GetRawAllocator(), Desc, m_ImmutableSamplers,
+            GetRawAllocator(), Desc, /*CreateImmutableSamplers = */ true,
             [this]() //
             {
                 CreateLayout(/*IsSerialized*/ false);
@@ -105,12 +105,6 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
 void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
 {
     TBindings StaticResCounter = {};
-
-    if (HasDevice())
-    {
-        for (Uint32 s = 0; s < m_Desc.NumImmutableSamplers; ++s)
-            GetDevice()->CreateSampler(m_Desc.ImmutableSamplers[s].Desc, &m_ImmutableSamplers[s]);
-    }
 
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
@@ -210,19 +204,6 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
 PipelineResourceSignatureGLImpl::~PipelineResourceSignatureGLImpl()
 {
     Destruct();
-}
-
-void PipelineResourceSignatureGLImpl::Destruct()
-{
-    if (m_ImmutableSamplers != nullptr)
-    {
-        for (Uint32 s = 0; s < m_Desc.NumImmutableSamplers; ++s)
-            m_ImmutableSamplers[s].~SamplerPtr();
-
-        m_ImmutableSamplers = nullptr;
-    }
-
-    TPipelineResourceSignatureBase::Destruct();
 }
 
 namespace
@@ -543,7 +524,7 @@ void PipelineResourceSignatureGLImpl::InitSRBResourceCache(ShaderResourceCacheGL
         const auto ImtblSamplerIdx = GetImmutableSamplerIdx(ResAttr);
         if (ImtblSamplerIdx != InvalidImmutableSamplerIndex)
         {
-            ISampler* pSampler = m_ImmutableSamplers[ImtblSamplerIdx];
+            ISampler* pSampler = m_pImmutableSamplers[ImtblSamplerIdx];
             VERIFY(pSampler != nullptr, "Immutable sampler is not initialized - this is a bug");
 
             for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
@@ -622,7 +603,7 @@ bool PipelineResourceSignatureGLImpl::DvpValidateCommittedResource(const ShaderR
                 if (ImmutableSamplerIdx != InvalidImmutableSamplerIndex)
                 {
                     VERIFY(Tex.pSampler != nullptr, "Immutable sampler is not initialized in the cache - this is a bug");
-                    VERIFY(Tex.pSampler == m_ImmutableSamplers[ImmutableSamplerIdx], "Immutable sampler initialized in the cache is not valid");
+                    VERIFY(Tex.pSampler == m_pImmutableSamplers[ImmutableSamplerIdx], "Immutable sampler initialized in the cache is not valid");
                 }
             }
             break;
@@ -665,7 +646,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
     try
     {
         Deserialize(
-            GetRawAllocator(), Desc, InternalData, m_ImmutableSamplers,
+            GetRawAllocator(), Desc, InternalData, /*CreateImmutableSamplers = */ true,
             [this]() //
             {
                 CreateLayout(/*IsSerialized*/ true);
@@ -680,18 +661,6 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
         Destruct();
         throw;
     }
-}
-
-PipelineResourceSignatureInternalDataGL PipelineResourceSignatureGLImpl::GetInternalData() const
-{
-    PipelineResourceSignatureInternalDataGL InternalData;
-
-    TPipelineResourceSignatureBase::GetInternalData(InternalData);
-
-    InternalData.pResourceAttribs = m_pResourceAttribs;
-    InternalData.NumResources     = GetDesc().NumResources;
-
-    return InternalData;
 }
 
 } // namespace Diligent

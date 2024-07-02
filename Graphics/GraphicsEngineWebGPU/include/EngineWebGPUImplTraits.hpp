@@ -79,7 +79,7 @@ class ShaderResourceCacheWebGPU;
 class ShaderVariableManagerWebGPU;
 
 struct PipelineResourceAttribsWebGPU;
-struct PipelineResourceImmutableSamplerAttribsWebGPU;
+struct ImmutableSamplerAttribsWebGPU;
 struct PipelineResourceSignatureInternalDataWebGPU;
 
 struct EngineWebGPUImplTraits
@@ -132,7 +132,9 @@ struct EngineWebGPUImplTraits
     using ShaderResourceCacheImplType   = ShaderResourceCacheWebGPU;
     using ShaderVariableManagerImplType = ShaderVariableManagerWebGPU;
 
-    using PipelineResourceAttribsType = PipelineResourceAttribsWebGPU;
+    using PipelineResourceAttribsType               = PipelineResourceAttribsWebGPU;
+    using ImmutableSamplerAttribsType               = ImmutableSamplerAttribsWebGPU;
+    using PipelineResourceSignatureInternalDataType = PipelineResourceSignatureInternalDataWebGPU;
 };
 
 } // namespace Diligent
