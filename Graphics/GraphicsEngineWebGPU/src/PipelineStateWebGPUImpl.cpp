@@ -395,10 +395,16 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
     {
         const auto& RasterizerDesc = GraphicsPipeline.RasterizerDesc;
 
-        wgpuPrimitiveState.frontFace        = RasterizerDesc.FrontCounterClockwise ? WGPUFrontFace_CCW : WGPUFrontFace_CW;
-        wgpuPrimitiveState.cullMode         = CullModeToWGPUCullMode(RasterizerDesc.CullMode);
-        wgpuPrimitiveState.topology         = PrimitiveTopologyWGPUPrimitiveType(GraphicsPipeline.PrimitiveTopology);
-        wgpuPrimitiveState.stripIndexFormat = WGPUIndexFormat_Undefined;
+        wgpuPrimitiveState.frontFace = RasterizerDesc.FrontCounterClockwise ? WGPUFrontFace_CCW : WGPUFrontFace_CW;
+        wgpuPrimitiveState.cullMode  = CullModeToWGPUCullMode(RasterizerDesc.CullMode);
+        wgpuPrimitiveState.topology  = PrimitiveTopologyWGPUPrimitiveType(GraphicsPipeline.PrimitiveTopology);
+        // For pipelines with strip topologies ("line-strip" or "triangle-strip"), the index buffer format and primitive restart value
+        // ("uint16"/0xFFFF or "uint32"/0xFFFFFFFF). Not allowed on pipelines with non-strip topologies.
+        wgpuPrimitiveState.stripIndexFormat =
+            (GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP ||
+             GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP) ?
+            WGPUIndexFormat_Uint32 :
+            WGPUIndexFormat_Undefined;
     }
 
     {
