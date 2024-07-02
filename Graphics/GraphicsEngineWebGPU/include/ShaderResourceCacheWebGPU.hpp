@@ -146,6 +146,11 @@ public:
             VERIFY(CacheOffset < m_NumResources, "Offset ", CacheOffset, " is out of range");
             return m_pResources[CacheOffset];
         }
+        WGPUBindGroupEntry& GetWGPUEntry(Uint32 CacheOffset)
+        {
+            VERIFY(CacheOffset < m_NumResources, "Offset ", CacheOffset, " is out of range");
+            return m_wgpuEntries[CacheOffset];
+        }
     };
 
     const BindGroup& GetBindGroup(Uint32 Index) const

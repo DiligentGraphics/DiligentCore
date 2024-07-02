@@ -340,7 +340,7 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
 
     if (DstRes.pObject)
     {
-        WGPUBindGroupEntry& wgpuEntry = Group.m_wgpuEntries[CacheOffset];
+        WGPUBindGroupEntry& wgpuEntry = Group.GetWGPUEntry(CacheOffset);
         VERIFY_EXPR(wgpuEntry.binding == CacheOffset);
 
         static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
