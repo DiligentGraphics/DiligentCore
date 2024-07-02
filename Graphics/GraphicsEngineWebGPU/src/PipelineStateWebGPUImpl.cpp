@@ -113,11 +113,11 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
 
     // Verify that pipeline layout is compatible with shader resources and
     // remap resource bindings.
-    for (size_t s = 0; s < ShaderStages.size(); ++s)
+    for (auto& ShaderStage : ShaderStages)
     {
-        const ShaderWebGPUImpl* pShader     = ShaderStages[s].pShader;
-        std::string&            PatchedWGSL = ShaderStages[s].WGSL;
-        const SHADER_TYPE       ShaderType  = ShaderStages[s].Type;
+        const ShaderWebGPUImpl* pShader     = ShaderStage.pShader;
+        std::string&            PatchedWGSL = ShaderStage.WGSL;
+        const SHADER_TYPE       ShaderType  = ShaderStage.Type;
 
         const auto& pShaderResources = pShader->GetShaderResources();
         VERIFY_EXPR(pShaderResources);

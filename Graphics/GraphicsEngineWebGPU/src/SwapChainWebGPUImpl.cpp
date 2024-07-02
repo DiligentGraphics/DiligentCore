@@ -430,6 +430,7 @@ void SwapChainWebGPUImpl::ConfigureSurface()
     wgpuSurfaceConfig.height      = m_SwapChainDesc.Height;
     wgpuSurfaceConfig.format      = SwapChainFormat;
     wgpuSurfaceConfig.presentMode = SelectPresentMode(m_VSyncEnabled);
+    wgpuSurfaceConfig.alphaMode   = WGPUCompositeAlphaMode_Auto;
 
     wgpuSurfaceConfigure(m_wgpuSurface.Get(), &wgpuSurfaceConfig);
 }
