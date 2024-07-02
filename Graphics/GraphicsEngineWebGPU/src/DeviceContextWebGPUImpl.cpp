@@ -1624,9 +1624,7 @@ WGPUComputePassEncoder DeviceContextWebGPUImpl::PrepareForDispatchCompute()
 #endif
 
     if (m_BindInfo.DirtyBindGroups != 0)
-    {
         CommitBindGroups(wgpuComputeCmdEncoder);
-    }
 
     return wgpuComputeCmdEncoder;
 }

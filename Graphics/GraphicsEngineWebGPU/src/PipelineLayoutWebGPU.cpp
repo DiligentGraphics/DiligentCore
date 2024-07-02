@@ -52,7 +52,7 @@ void PipelineLayoutWebGPU::Create(RenderDeviceWebGPUImpl* pDeviceWebGPU, RefCntA
 {
     VERIFY(m_BindGroupCount == 0 && !m_wgpuPipelineLayout, "This pipeline layout is already initialized");
 
-    std::array<WGPUBindGroupLayout, MAX_RESOURCE_SIGNATURES * PipelineResourceSignatureWebGPUImpl::MAX_BIND_GROUPS> BindGroupLayouts;
+    std::array<WGPUBindGroupLayout, MAX_RESOURCE_SIGNATURES * PipelineResourceSignatureWebGPUImpl::MAX_BIND_GROUPS> BindGroupLayouts{};
 
     Uint32 BindGroupLayoutCount = 0;
     //Uint32 DynamicUniformBufferCount = 0;

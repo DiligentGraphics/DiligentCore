@@ -129,12 +129,12 @@ public:
 
     ~ReferenceTriangleRenderer()
     {
+        if (m_wgpuBindGroup)
+            wgpuBindGroupRelease(m_wgpuBindGroup);
         if (m_wgpuPipelineLayout)
             wgpuPipelineLayoutRelease(m_wgpuPipelineLayout);
         if (m_wgpuRenderPipeline)
             wgpuRenderPipelineRelease(m_wgpuRenderPipeline);
-        if (m_wgpuPipelineLayout)
-            wgpuPipelineLayoutRelease(m_wgpuPipelineLayout);
         if (m_wgpuBindGroupLayout)
             wgpuBindGroupLayoutRelease(m_wgpuBindGroupLayout);
         if (m_wgpuPSModule)
