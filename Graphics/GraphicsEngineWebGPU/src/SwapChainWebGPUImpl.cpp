@@ -266,6 +266,15 @@ SwapChainWebGPUImpl::SwapChainWebGPUImpl(IReferenceCounters*      pRefCounters,
     m_pCmdPresent(std::make_unique<WebGPUSwapChainPresentCommand>(pRenderDevice))
 // clang-format on
 {
+    if (m_DesiredPreTransform != SURFACE_TRANSFORM_OPTIMAL && m_DesiredPreTransform != SURFACE_TRANSFORM_IDENTITY)
+    {
+        LOG_WARNING_MESSAGE(GetSurfaceTransformString(m_DesiredPreTransform),
+                            " is not an allowed pretransform because WebGPU swap chains only support identity transform. "
+                            "Use SURFACE_TRANSFORM_OPTIMAL (recommended) or SURFACE_TRANSFORM_IDENTITY.");
+    }
+    m_DesiredPreTransform        = SURFACE_TRANSFORM_OPTIMAL;
+    m_SwapChainDesc.PreTransform = SURFACE_TRANSFORM_IDENTITY;
+
     CreateSurface();
     ConfigureSurface();
     CreateBuffersAndViews();
