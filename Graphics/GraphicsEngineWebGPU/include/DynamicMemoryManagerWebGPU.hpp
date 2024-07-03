@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +27,9 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::SharedMemoryManagerWebGPU class
+/// Declaration of Diligent::DynamicMemoryManagerWebGPU class
+
+#include <mutex>
 
 #include "WebGPUObjectWrappers.hpp"
 #include "BasicTypes.h"
@@ -35,7 +37,7 @@
 namespace Diligent
 {
 
-class SharedMemoryManagerWebGPU
+class DynamicMemoryManagerWebGPU
 {
 public:
     struct Allocation
@@ -51,7 +53,7 @@ public:
     struct Page
     {
         Page() noexcept = default;
-        Page(SharedMemoryManagerWebGPU* pMgr, Uint64 Size);
+        Page(DynamicMemoryManagerWebGPU* pMgr, Uint64 Size, Uint64 Offset);
 
         Page(const Page&) = delete;
         Page& operator=(const Page&) = delete;
@@ -65,20 +67,20 @@ public:
 
         void Recycle();
 
-        bool IsEmpty() const;
+        WGPUBuffer GetWGPUBuffer() const;
 
-        SharedMemoryManagerWebGPU* pMgr = nullptr;
-        WebGPUBufferWrapper        wgpuBuffer;
-        std::vector<Uint8>         MappedData;
+        const Uint8* GetMappedData() const;
 
-        Uint64 PageSize   = 0;
-        Uint64 CurrOffset = 0;
-        Uint8* pData      = nullptr;
+        DynamicMemoryManagerWebGPU* pMgr = nullptr;
+
+        Uint64 PageSize     = 0;
+        Uint64 CurrOffset   = 0;
+        Uint64 BufferOffset = 0;
     };
 
-    SharedMemoryManagerWebGPU(WGPUDevice wgpuDevice, Uint64 PageSize);
+    DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, Uint64 PageSize, Uint64 BufferSize);
 
-    ~SharedMemoryManagerWebGPU();
+    ~DynamicMemoryManagerWebGPU();
 
     Page GetPage(Uint64 Size);
 
@@ -86,12 +88,14 @@ private:
     void RecyclePage(Page&& page);
 
 private:
-    const Uint64      m_PageSize;
-    WGPUDevice        m_wgpuDevice;
-    std::vector<Page> m_AvailablePages;
-#if DILIGENT_DEBUG
-    Uint32 m_DbgPageCounter{0};
-#endif
+    const Uint64        m_PageSize;
+    const Uint64        m_BufferSize;
+    Uint64              m_CurrentOffset = 0;
+    WebGPUBufferWrapper m_wgpuBuffer;
+
+    std::mutex         m_AvailablePagesMtx;
+    std::vector<Page>  m_AvailablePages;
+    std::vector<Uint8> m_MappedData;
 };
 
 } // namespace Diligent

@@ -34,16 +34,18 @@
 #include "RenderDeviceWebGPU.h"
 #include "WebGPUObjectWrappers.hpp"
 #include "ShaderWebGPUImpl.hpp"
-#include "SharedMemoryManagerWebGPU.hpp"
+#include "UploadMemoryManagerWebGPU.hpp"
+#include "DynamicMemoryManagerWebGPU.hpp"
 #include "GenerateMipsHelperWebGPU.hpp"
 
 namespace Diligent
 {
 
-using QueryManagerWebGPUPtr        = std::unique_ptr<class QueryManagerWebGPU>;
-using AttachmentCleanerWebGPUPtr   = std::unique_ptr<class AttachmentCleanerWebGPU>;
-using SharedMemoryManagerWebGPUPtr = std::unique_ptr<class SharedMemoryManagerWebGPU>;
-using GenerateMipsHelperWebGPUPtr  = std::unique_ptr<class GenerateMipsHelperWebGPU>;
+using QueryManagerWebGPUPtr         = std::unique_ptr<class QueryManagerWebGPU>;
+using AttachmentCleanerWebGPUPtr    = std::unique_ptr<class AttachmentCleanerWebGPU>;
+using UploadMemoryManagerWebGPUPtr  = std::unique_ptr<class UploadMemoryManagerWebGPU>;
+using DynamicMemoryManagerWebGPUPtr = std::unique_ptr<class DynamicMemoryManagerWebGPU>;
+using GenerateMipsHelperWebGPUPtr   = std::unique_ptr<class GenerateMipsHelperWebGPU>;
 
 /// Render device implementation in WebGPU backend.
 class RenderDeviceWebGPUImpl final : public RenderDeviceBase<EngineWebGPUImplTraits>
@@ -185,7 +187,9 @@ public:
 
     AttachmentCleanerWebGPU& GetAttachmentCleaner() const;
 
-    SharedMemoryManagerWebGPU::Page GetSharedMemoryPage(Uint64 Size);
+    UploadMemoryManagerWebGPU::Page GetUploadMemoryPage(Uint64 Size);
+
+    DynamicMemoryManagerWebGPU::Page GetDynamicMemoryPage(Uint64 Size);
 
     void PollEvents(bool YieldToWebBrowser);
 
@@ -195,12 +199,14 @@ private:
     void FindSupportedTextureFormats();
 
 private:
-    WebGPUInstanceWrapper        m_wgpuInstance;
-    WebGPUAdapterWrapper         m_wgpuAdapter;
-    WebGPUDeviceWrapper          m_wgpuDevice;
-    AttachmentCleanerWebGPUPtr   m_pAttachmentCleaner;
-    SharedMemoryManagerWebGPUPtr m_pMemoryManager;
-    GenerateMipsHelperWebGPUPtr  m_pMipsGenerator;
+    WebGPUInstanceWrapper m_wgpuInstance;
+    WebGPUAdapterWrapper  m_wgpuAdapter;
+    WebGPUDeviceWrapper   m_wgpuDevice;
+
+    AttachmentCleanerWebGPUPtr    m_pAttachmentCleaner;
+    UploadMemoryManagerWebGPUPtr  m_pUploadMemoryManager;
+    DynamicMemoryManagerWebGPUPtr m_pDynamicMemoryManager;
+    GenerateMipsHelperWebGPUPtr   m_pMipsGenerator;
 
     std::vector<QueryManagerWebGPUPtr> m_QueryMgrs;
 };

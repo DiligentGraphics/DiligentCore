@@ -295,12 +295,12 @@ Uint64 BufferWebGPUImpl::GetAlignment() const
     return m_Alignment;
 }
 
-const SharedMemoryManagerWebGPU::Allocation& BufferWebGPUImpl::GetDynamicAllocation(DeviceContextIndex CtxId) const
+const DynamicMemoryManagerWebGPU::Allocation& BufferWebGPUImpl::GetDynamicAllocation(DeviceContextIndex CtxId) const
 {
     return m_DynamicAllocations[CtxId];
 }
 
-void BufferWebGPUImpl::SetDynamicAllocation(DeviceContextIndex CtxId, SharedMemoryManagerWebGPU::Allocation&& Allocation)
+void BufferWebGPUImpl::SetDynamicAllocation(DeviceContextIndex CtxId, DynamicMemoryManagerWebGPU::Allocation&& Allocation)
 {
     m_DynamicAllocations[CtxId] = std::move(Allocation);
 }

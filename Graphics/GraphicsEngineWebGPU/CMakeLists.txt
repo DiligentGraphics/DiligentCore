@@ -6,7 +6,9 @@ set(INCLUDE
     include/AttachmentCleanerWebGPU.hpp
     include/BufferViewWebGPUImpl.hpp
     include/BufferWebGPUImpl.hpp
-    include/DeviceContextWebGPUImpl.hpp  
+    include/DeviceContextWebGPUImpl.hpp
+    include/DynamicMemoryManagerWebGPU.hpp
+    include/UploadMemoryManagerWebGPU.hpp
     include/EngineWebGPUImplTraits.hpp
     include/FenceWebGPUImpl.hpp
     include/FramebufferWebGPUImpl.hpp
@@ -25,7 +27,6 @@ set(INCLUDE
     include/ShaderResourceCacheWebGPU.hpp
     include/ShaderVariableManagerWebGPU.hpp
     include/ShaderWebGPUImpl.hpp
-    include/SharedMemoryManagerWebGPU.hpp
     include/SwapChainWebGPUImpl.hpp
     include/TextureViewWebGPUImpl.hpp
     include/TextureWebGPUImpl.hpp
@@ -55,6 +56,8 @@ set(SRC
    src/BufferViewWebGPUImpl.cpp
    src/BufferWebGPUImpl.cpp
    src/DeviceContextWebGPUImpl.cpp
+   src/DynamicMemoryManagerWebGPU.cpp
+   src/UploadMemoryManagerWebGPU.cpp
    src/EngineFactoryWebGPU.cpp
    src/FenceWebGPUImpl.cpp
    src/FramebufferWebGPUImpl.cpp
@@ -71,7 +74,6 @@ set(SRC
    src/ShaderResourceCacheWebGPU.cpp
    src/ShaderVariableManagerWebGPU.cpp
    src/ShaderWebGPUImpl.cpp
-   src/SharedMemoryManagerWebGPU.cpp
    src/SwapChainWebGPUImpl.cpp
    src/TextureViewWebGPUImpl.cpp
    src/TextureWebGPUImpl.cpp

@@ -526,7 +526,7 @@ void DeviceContextWebGPUImpl::UpdateBuffer(IBuffer*                       pBuffe
     const auto& BuffDesc      = pBufferWebGPU->GetDesc();
     if (BuffDesc.Usage == USAGE_DEFAULT)
     {
-        const auto DynAllocation = AllocateSharedMemory(Size);
+        const auto DynAllocation = AllocateUploadMemory(Size);
         memcpy(DynAllocation.pData, pData, StaticCast<size_t>(Size));
         wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), DynAllocation.wgpuBuffer, DynAllocation.Offset,
                                              pBufferWebGPU->GetWebGPUBuffer(), Offset, Size);
@@ -592,7 +592,7 @@ void DeviceContextWebGPUImpl::MapBuffer(IBuffer*  pBuffer,
             const auto& DynAllocation = pBufferWebGPU->GetDynamicAllocation(GetContextId());
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.IsEmpty())
             {
-                auto Allocation = AllocateSharedMemory(BuffDesc.Size, pBufferWebGPU->GetAlignment());
+                auto Allocation = AllocateDynamicMemory(BuffDesc.Size, pBufferWebGPU->GetAlignment());
                 pMappedData     = Allocation.pData;
                 pBufferWebGPU->SetDynamicAllocation(GetContextId(), std::move(Allocation));
             }
@@ -694,7 +694,7 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
     const auto  UpdateDepth       = DstBox.Depth();
     const auto  UpdateRegionDepth = CopyInfo.Region.Depth();
 
-    const auto DynAllocation = AllocateSharedMemory(CopyInfo.MemorySize);
+    const auto DynAllocation = AllocateUploadMemory(CopyInfo.MemorySize);
 
     for (Uint32 LayerIdx = 0; LayerIdx < UpdateRegionDepth; ++LayerIdx)
     {
@@ -901,7 +901,7 @@ void DeviceContextWebGPUImpl::MapTextureSubresource(ITexture*                 pT
             LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE has no effect in WebGPU backend");
 
         const auto CopyInfo      = GetBufferToTextureCopyInfo(TexDesc.Format, *pMapRegion, TextureWebGPUImpl::CopyTextureRawStride);
-        const auto DynAllocation = AllocateSharedMemory(CopyInfo.MemorySize, TextureWebGPUImpl::CopyTextureRawStride);
+        const auto DynAllocation = AllocateUploadMemory(CopyInfo.MemorySize, TextureWebGPUImpl::CopyTextureRawStride);
 
         MappedData.pData       = DynAllocation.pData;
         MappedData.Stride      = CopyInfo.RowStride;
@@ -1051,7 +1051,10 @@ void DeviceContextWebGPUImpl::Flush()
 {
     EndCommandEncoders();
 
-    for (auto& MemPage : m_SharedMemPages)
+    for (auto& MemPage : m_DynamicMemPages)
+        wgpuQueueWriteBuffer(m_wgpuQueue, MemPage.GetWGPUBuffer(), MemPage.BufferOffset, MemPage.GetMappedData(), StaticCast<size_t>(MemPage.PageSize));
+
+    for (auto& MemPage : m_UploadMemPages)
         wgpuQueueWriteBuffer(m_wgpuQueue, MemPage.wgpuBuffer.Get(), 0, MemPage.pData, StaticCast<size_t>(MemPage.PageSize));
 
     if (m_wgpuCommandEncoder || !m_SignalFences.empty())
@@ -1065,6 +1068,10 @@ void DeviceContextWebGPUImpl::Flush()
                     pFence->SetCompletedValue(SignalItem.first);
                 }
                 pDeviceCxt->m_SignalFences.clear();
+
+                for (auto& MemPage : pDeviceCxt->m_UploadMemPages)
+                    MemPage.Recycle();
+                pDeviceCxt->m_UploadMemPages.clear();
             }
 
             if (Status != WGPUQueueWorkDoneStatus_Success)
@@ -1203,9 +1210,13 @@ void DeviceContextWebGPUImpl::FinishFrame()
     if (!m_MappedTextures.empty())
         LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
 
-    for (auto& MemPage : m_SharedMemPages)
+    for (auto& MemPage : m_DynamicMemPages)
         MemPage.Recycle();
-    m_SharedMemPages.clear();
+    m_DynamicMemPages.clear();
+
+    for (auto& MemPage : m_UploadMemPages)
+        MemPage.Recycle();
+    m_UploadMemPages.clear();
 
     TDeviceContextBase::EndFrame();
 }
@@ -1814,16 +1825,32 @@ void DeviceContextWebGPUImpl::CommitScissorRects(WGPURenderPassEncoder CmdEncode
 }
 
 
-SharedMemoryManagerWebGPU::Allocation DeviceContextWebGPUImpl::AllocateSharedMemory(Uint64 Size, Uint64 Alignment)
+UploadMemoryManagerWebGPU::Allocation DeviceContextWebGPUImpl::AllocateUploadMemory(Uint64 Size, Uint64 Alignment)
 {
-    SharedMemoryManagerWebGPU::Allocation Alloc;
-    if (!m_SharedMemPages.empty())
-        Alloc = m_SharedMemPages.back().Allocate(Size, Alignment);
+    UploadMemoryManagerWebGPU::Allocation Alloc;
+    if (!m_UploadMemPages.empty())
+        Alloc = m_UploadMemPages.back().Allocate(Size, Alignment);
 
     if (Alloc.IsEmpty())
     {
-        m_SharedMemPages.emplace_back(m_pDevice->GetSharedMemoryPage(Size));
-        Alloc = m_SharedMemPages.back().Allocate(Size, Alignment);
+        m_UploadMemPages.emplace_back(m_pDevice->GetUploadMemoryPage(Size));
+        Alloc = m_UploadMemPages.back().Allocate(Size, Alignment);
+    }
+
+    VERIFY_EXPR(!Alloc.IsEmpty());
+    return Alloc;
+}
+
+DynamicMemoryManagerWebGPU::Allocation DeviceContextWebGPUImpl::AllocateDynamicMemory(Uint64 Size, Uint64 Alignment)
+{
+    DynamicMemoryManagerWebGPU::Allocation Alloc;
+    if (!m_DynamicMemPages.empty())
+        Alloc = m_DynamicMemPages.back().Allocate(Size, Alignment);
+
+    if (Alloc.IsEmpty())
+    {
+        m_DynamicMemPages.emplace_back(m_pDevice->GetDynamicMemoryPage(Size));
+        Alloc = m_DynamicMemPages.back().Allocate(Size, Alignment);
     }
 
     VERIFY_EXPR(!Alloc.IsEmpty());

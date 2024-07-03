@@ -100,7 +100,8 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
 
     m_DeviceInfo.Type     = RENDER_DEVICE_TYPE_WEBGPU;
     m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
-    m_pMemoryManager.reset(new SharedMemoryManagerWebGPU{m_wgpuDevice.Get(), EngineCI.DynamicHeapPageSize});
+    m_pUploadMemoryManager.reset(new UploadMemoryManagerWebGPU{m_wgpuDevice.Get(), EngineCI.UploadHeapPageSize});
+    m_pDynamicMemoryManager.reset(new DynamicMemoryManagerWebGPU(m_wgpuDevice.Get(), EngineCI.DynamicHeapPageSize, EngineCI.DynamicHeapSize));
     m_pAttachmentCleaner.reset(new AttachmentCleanerWebGPU{m_wgpuDevice.Get()});
     m_pMipsGenerator.reset(new GenerateMipsHelperWebGPU{m_wgpuDevice.Get()});
 
@@ -305,9 +306,14 @@ AttachmentCleanerWebGPU& RenderDeviceWebGPUImpl::GetAttachmentCleaner() const
     return *m_pAttachmentCleaner.get();
 }
 
-SharedMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetSharedMemoryPage(Uint64 Size)
+UploadMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetUploadMemoryPage(Uint64 Size)
 {
-    return m_pMemoryManager->GetPage(Size);
+    return m_pUploadMemoryManager->GetPage(Size);
+}
+
+DynamicMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetDynamicMemoryPage(Uint64 Size)
+{
+    return m_pDynamicMemoryManager->GetPage(Size);
 }
 
 void RenderDeviceWebGPUImpl::PollEvents(bool YieldToWebBrowser)

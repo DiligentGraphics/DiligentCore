@@ -4109,7 +4109,14 @@ struct EngineWebGPUCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     Uint32 QueueSignalPoolSize DEFAULT_INITIALIZER(32);
 
     ///
-    Uint32 DynamicHeapPageSize DEFAULT_INITIALIZER(4 << 20);
+    Uint32 UploadHeapPageSize  DEFAULT_INITIALIZER(1 << 20);
+
+    ///
+    Uint32 DynamicHeapSize     DEFAULT_INITIALIZER(8 << 20);
+
+    ///
+    Uint32 DynamicHeapPageSize DEFAULT_INITIALIZER(256 << 10);
+
 
 #if DILIGENT_CPP_INTERFACE
     EngineWebGPUCreateInfo() noexcept :

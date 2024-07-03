@@ -33,11 +33,12 @@
 #include "DeviceContextBase.hpp"
 #include "TextureWebGPUImpl.hpp"
 #include "BufferWebGPUImpl.hpp"
+#include "DynamicMemoryManagerWebGPU.hpp"
 #include "PipelineStateWebGPUImpl.hpp"
 #include "ShaderWebGPUImpl.hpp"
 #include "FramebufferWebGPUImpl.hpp"
 #include "RenderPassWebGPUImpl.hpp"
-#include "SharedMemoryManagerWebGPU.hpp"
+#include "UploadMemoryManagerWebGPU.hpp"
 
 namespace Diligent
 {
@@ -360,7 +361,9 @@ private:
     template <typename CmdEncoderType>
     void CommitBindGroups(CmdEncoderType CmdEncoder);
 
-    SharedMemoryManagerWebGPU::Allocation AllocateSharedMemory(Uint64 Size, Uint64 Alignment = 16);
+    UploadMemoryManagerWebGPU::Allocation AllocateUploadMemory(Uint64 Size, Uint64 Alignment = 16);
+
+    DynamicMemoryManagerWebGPU::Allocation AllocateDynamicMemory(Uint64 Size, Uint64 Alignment = 16);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();
@@ -524,25 +527,28 @@ private:
     struct MappedTexture
     {
         BufferToTextureCopyInfo               CopyInfo;
-        SharedMemoryManagerWebGPU::Allocation Allocation;
+        UploadMemoryManagerWebGPU::Allocation Allocation;
     };
 
-    using PendingFenceList     = std::vector<std::pair<Uint64, RefCntAutoPtr<FenceWebGPUImpl>>>;
-    using PendingQueryList     = std::vector<PendingQuery>;
-    using AttachmentClearList  = std::vector<OptimizedClearValue>;
-    using SharedMemoryPageList = std::vector<SharedMemoryManagerWebGPU::Page>;
-    using MappedTextureCache   = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
+    using PendingFenceList      = std::vector<std::pair<Uint64, RefCntAutoPtr<FenceWebGPUImpl>>>;
+    using PendingQueryList      = std::vector<PendingQuery>;
+    using AttachmentClearList   = std::vector<OptimizedClearValue>;
+    using UploadMemoryPageList  = std::vector<UploadMemoryManagerWebGPU::Page>;
+    using DynamicMemoryPageList = std::vector<DynamicMemoryManagerWebGPU::Page>;
+    using MappedTextureCache    = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
 
     WGPUQueue              m_wgpuQueue              = nullptr;
     WGPUCommandEncoder     m_wgpuCommandEncoder     = nullptr;
     WGPURenderPassEncoder  m_wgpuRenderPassEncoder  = nullptr;
     WGPUComputePassEncoder m_wgpuComputePassEncoder = nullptr;
-    PendingFenceList       m_SignalFences;
-    PendingFenceList       m_WaitFences;
-    AttachmentClearList    m_AttachmentClearValues;
-    PendingQueryList       m_PendingTimeQueries;
-    SharedMemoryPageList   m_SharedMemPages;
-    MappedTextureCache     m_MappedTextures;
+
+    PendingFenceList      m_SignalFences;
+    PendingFenceList      m_WaitFences;
+    AttachmentClearList   m_AttachmentClearValues;
+    PendingQueryList      m_PendingTimeQueries;
+    UploadMemoryPageList  m_UploadMemPages;
+    DynamicMemoryPageList m_DynamicMemPages;
+    MappedTextureCache    m_MappedTextures;
 
     QueryManagerWebGPU* m_pQueryMgr            = nullptr;
     Int32               m_ActiveQueriesCounter = 0;

@@ -32,9 +32,10 @@
 #include "EngineWebGPUImplTraits.hpp"
 #include "BufferBase.hpp"
 #include "BufferViewWebGPUImpl.hpp" // Required by BufferBase
+#include "DynamicMemoryManagerWebGPU.hpp"
 #include "WebGPUObjectWrappers.hpp"
 #include "IndexWrapper.hpp"
-#include "SharedMemoryManagerWebGPU.hpp"
+#include "UploadMemoryManagerWebGPU.hpp"
 
 namespace Diligent
 {
@@ -76,9 +77,9 @@ public:
 
     Uint64 GetAlignment() const;
 
-    const SharedMemoryManagerWebGPU::Allocation& GetDynamicAllocation(DeviceContextIndex CtxId) const;
+    const DynamicMemoryManagerWebGPU::Allocation& GetDynamicAllocation(DeviceContextIndex CtxId) const;
 
-    void SetDynamicAllocation(DeviceContextIndex CtxId, SharedMemoryManagerWebGPU::Allocation&& Allocation);
+    void SetDynamicAllocation(DeviceContextIndex CtxId, DynamicMemoryManagerWebGPU::Allocation&& Allocation);
 
 private:
     void CreateViewInternal(const BufferViewDesc& ViewDesc, IBufferView** ppView, bool IsDefaultView) override;
@@ -86,11 +87,11 @@ private:
 private:
     // Use 64-byte alignment to avoid cache issues
     static constexpr size_t CacheLineSize = 64;
-    struct alignas(64) DynamicAllocation : SharedMemoryManagerWebGPU::Allocation
+    struct alignas(64) DynamicAllocation : DynamicMemoryManagerWebGPU::Allocation
     {
         DynamicAllocation& operator=(const Allocation& Allocation)
         {
-            *static_cast<SharedMemoryManagerWebGPU::Allocation*>(this) = Allocation;
+            *static_cast<DynamicMemoryManagerWebGPU::Allocation*>(this) = Allocation;
             return *this;
         }
         Uint8 Padding[CacheLineSize - sizeof(Allocation)] = {};

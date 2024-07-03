@@ -28,23 +28,23 @@
 
 #include "Cast.hpp"
 #include "Align.hpp"
-#include "SharedMemoryManagerWebGPU.hpp"
+#include "UploadMemoryManagerWebGPU.hpp"
 #include "DebugUtilities.hpp"
 
 namespace Diligent
 {
 
-bool SharedMemoryManagerWebGPU::Allocation::IsEmpty() const
+bool UploadMemoryManagerWebGPU::Allocation::IsEmpty() const
 {
     return wgpuBuffer == nullptr;
 }
 
-SharedMemoryManagerWebGPU::Page::Page(SharedMemoryManagerWebGPU* _pMgr, Uint64 _Size) :
+UploadMemoryManagerWebGPU::Page::Page(UploadMemoryManagerWebGPU* _pMgr, Uint64 _Size) :
     pMgr{_pMgr},
     PageSize{_Size}
 {
     WGPUBufferDescriptor wgpuBufferDesc{};
-    wgpuBufferDesc.label = "Shared memory page";
+    wgpuBufferDesc.label = "Upload memory page";
     wgpuBufferDesc.size  = _Size;
     wgpuBufferDesc.usage =
         WGPUBufferUsage_CopyDst |
@@ -57,10 +57,10 @@ SharedMemoryManagerWebGPU::Page::Page(SharedMemoryManagerWebGPU* _pMgr, Uint64 _
     wgpuBuffer.Reset(wgpuDeviceCreateBuffer(pMgr->m_wgpuDevice, &wgpuBufferDesc));
     MappedData.resize(StaticCast<size_t>(_Size));
     pData = MappedData.data();
-    LOG_INFO_MESSAGE("Created a new shared memory page, size: ", PageSize >> 10, " KB");
+    LOG_INFO_MESSAGE("Created a new upload memory page, size: ", PageSize >> 10, " KB");
 }
 
-SharedMemoryManagerWebGPU::Page::Page(Page&& RHS) noexcept :
+UploadMemoryManagerWebGPU::Page::Page(Page&& RHS) noexcept :
     //clang-format off
     pMgr{RHS.pMgr},
     wgpuBuffer{std::move(RHS.wgpuBuffer)},
@@ -73,7 +73,7 @@ SharedMemoryManagerWebGPU::Page::Page(Page&& RHS) noexcept :
     RHS = Page{};
 }
 
-SharedMemoryManagerWebGPU::Page& SharedMemoryManagerWebGPU::Page::operator=(Page&& RHS) noexcept
+UploadMemoryManagerWebGPU::Page& UploadMemoryManagerWebGPU::Page::operator=(Page&& RHS) noexcept
 {
     if (&RHS == this)
         return *this;
@@ -93,12 +93,12 @@ SharedMemoryManagerWebGPU::Page& SharedMemoryManagerWebGPU::Page::operator=(Page
     return *this;
 }
 
-SharedMemoryManagerWebGPU::Page::~Page()
+UploadMemoryManagerWebGPU::Page::~Page()
 {
     VERIFY(CurrOffset == 0, "Destroying a page that has not been recycled");
 }
 
-SharedMemoryManagerWebGPU::Allocation SharedMemoryManagerWebGPU::Page::Allocate(Uint64 Size, Uint64 Alignment)
+UploadMemoryManagerWebGPU::Allocation UploadMemoryManagerWebGPU::Page::Allocate(Uint64 Size, Uint64 Alignment)
 {
     VERIFY(IsPowerOfTwo(Alignment), "Alignment size must be a power of two");
     Allocation Alloc;
@@ -114,7 +114,7 @@ SharedMemoryManagerWebGPU::Allocation SharedMemoryManagerWebGPU::Page::Allocate(
     return Allocation{};
 }
 
-void SharedMemoryManagerWebGPU::Page::Recycle()
+void UploadMemoryManagerWebGPU::Page::Recycle()
 {
     if (pMgr == nullptr)
     {
@@ -125,57 +125,61 @@ void SharedMemoryManagerWebGPU::Page::Recycle()
     pMgr->RecyclePage(std::move(*this));
 }
 
-bool SharedMemoryManagerWebGPU::Page::IsEmpty() const
+bool UploadMemoryManagerWebGPU::Page::IsEmpty() const
 {
     return wgpuBuffer.Get() == nullptr;
 }
 
-SharedMemoryManagerWebGPU::SharedMemoryManagerWebGPU(WGPUDevice wgpuDevice, Uint64 PageSize) :
+UploadMemoryManagerWebGPU::UploadMemoryManagerWebGPU(WGPUDevice wgpuDevice, Uint64 PageSize) :
     m_PageSize{PageSize},
     m_wgpuDevice{wgpuDevice}
 {
     VERIFY(IsPowerOfTwo(m_PageSize), "Page size must be power of two");
 }
 
-SharedMemoryManagerWebGPU::~SharedMemoryManagerWebGPU()
+UploadMemoryManagerWebGPU::~UploadMemoryManagerWebGPU()
 {
     VERIFY(m_DbgPageCounter == m_AvailablePages.size(),
            "Not all pages have been recycled. This may result in a crash if the page is recycled later.");
     Uint64 TotalSize = 0;
     for (const auto& page : m_AvailablePages)
         TotalSize += page.PageSize;
-    LOG_INFO_MESSAGE("SharedMemoryManagerMtl: total allocated memory: ", TotalSize >> 10, " KB");
+    LOG_INFO_MESSAGE("SharedMemoryManagerWebGPU: total allocated memory: ", TotalSize >> 10, " KB");
 }
 
-SharedMemoryManagerWebGPU::Page SharedMemoryManagerWebGPU::GetPage(Uint64 Size)
+UploadMemoryManagerWebGPU::Page UploadMemoryManagerWebGPU::GetPage(Uint64 Size)
 {
     auto PageSize = m_PageSize;
     while (PageSize < Size)
         PageSize *= 2;
 
-    auto Iter = m_AvailablePages.begin();
-    while (Iter != m_AvailablePages.end())
     {
-        if (PageSize <= Iter->PageSize)
+        std::lock_guard Lock{m_AvailablePagesMtx};
+
+        auto Iter = m_AvailablePages.begin();
+        while (Iter != m_AvailablePages.end())
         {
-            auto Result = std::move(*Iter);
-            m_AvailablePages.erase(Iter);
-            return Result;
+            if (PageSize <= Iter->PageSize)
+            {
+                auto Result = std::move(*Iter);
+                m_AvailablePages.erase(Iter);
+                return Result;
+            }
+            ++Iter;
         }
-        ++Iter;
     }
 
 #if DILIGENT_DEBUG
-    m_DbgPageCounter++;
+    m_DbgPageCounter.fetch_add(1);
 #endif
-
     return Page{this, PageSize};
 }
 
-void SharedMemoryManagerWebGPU::RecyclePage(Page&& page)
+void UploadMemoryManagerWebGPU::RecyclePage(Page&& Item)
 {
-    page.CurrOffset = 0;
-    m_AvailablePages.emplace_back(std::move(page));
+    std::lock_guard Lock{m_AvailablePagesMtx};
+    Item.CurrOffset = 0;
+    m_AvailablePages.emplace_back(std::move(Item));
 }
 
 } // namespace Diligent
