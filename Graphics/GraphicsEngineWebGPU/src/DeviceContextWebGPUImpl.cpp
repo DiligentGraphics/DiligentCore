@@ -1083,13 +1083,12 @@ void DeviceContextWebGPUImpl::Flush()
         };
 
         WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
-        WGPUCommandBuffer           wgpuCmdBuffer = wgpuCommandEncoderFinish(GetCommandEncoder(), &wgpuCmdBufferDesc);
+        WebGPUCommandBufferWrapper  wgpuCmdBuffer{wgpuCommandEncoderFinish(GetCommandEncoder(), &wgpuCmdBufferDesc)};
         DEV_CHECK_ERR(wgpuCmdBuffer != nullptr, "Failed to finish command encoder");
 
         wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, this);
-        wgpuQueueSubmit(m_wgpuQueue, 1, &wgpuCmdBuffer);
-        wgpuCommandEncoderRelease(m_wgpuCommandEncoder);
-        m_wgpuCommandEncoder = nullptr;
+        wgpuQueueSubmit(m_wgpuQueue, 1, &wgpuCmdBuffer.Get());
+        m_wgpuCommandEncoder.Reset(nullptr);
     }
 }
 
@@ -1263,7 +1262,7 @@ void DeviceContextWebGPUImpl::ResolveTextureSubresource(ITexture*               
         wgpuRenderPassDesc.colorAttachmentCount = 1;
         wgpuRenderPassDesc.colorAttachments     = &wgpuRenderPassColorAttachment;
 
-        WGPURenderPassEncoder wgpuRenderPassEncoder = wgpuCommandEncoderBeginRenderPass(GetCommandEncoder(), &wgpuRenderPassDesc);
+        WebGPURenderPassEncoderWrapper wgpuRenderPassEncoder{wgpuCommandEncoderBeginRenderPass(GetCommandEncoder(), &wgpuRenderPassDesc)};
         DEV_CHECK_ERR(wgpuRenderPassEncoder != nullptr, "Failed to begin render pass");
         wgpuRenderPassEncoderEnd(wgpuRenderPassEncoder);
     }
@@ -1283,7 +1282,7 @@ WGPUCommandEncoder DeviceContextWebGPUImpl::GetCommandEncoder()
     if (!m_wgpuCommandEncoder)
     {
         WGPUCommandEncoderDescriptor wgpuCommandEncoderDesc{};
-        m_wgpuCommandEncoder = wgpuDeviceCreateCommandEncoder(m_pDevice->GetWebGPUDevice(), &wgpuCommandEncoderDesc);
+        m_wgpuCommandEncoder.Reset(wgpuDeviceCreateCommandEncoder(m_pDevice->GetWebGPUDevice(), &wgpuCommandEncoderDesc));
         DEV_CHECK_ERR(m_wgpuCommandEncoder != nullptr, "Failed wgpuDeviceCreateCommandEncoder");
     }
 
@@ -1308,7 +1307,7 @@ WGPUComputePassEncoder DeviceContextWebGPUImpl::GetComputePassCommandEncoder()
         EndCommandEncoders(COMMAND_ENCODER_FLAG_ALL & ~COMMAND_ENCODER_FLAG_COMPUTE);
 
         WGPUComputePassDescriptor wgpuComputePassDesc{};
-        m_wgpuComputePassEncoder = wgpuCommandEncoderBeginComputePass(GetCommandEncoder(), &wgpuComputePassDesc);
+        m_wgpuComputePassEncoder.Reset(wgpuCommandEncoderBeginComputePass(GetCommandEncoder(), &wgpuComputePassDesc));
         DEV_CHECK_ERR(m_wgpuComputePassEncoder != nullptr, "Failed to begin compute pass");
     }
     return m_wgpuComputePassEncoder;
@@ -1328,8 +1327,7 @@ void DeviceContextWebGPUImpl::EndCommandEncoders(Uint32 EncoderFlags)
         if (m_wgpuRenderPassEncoder)
         {
             wgpuRenderPassEncoderEnd(m_wgpuRenderPassEncoder);
-            wgpuRenderPassEncoderRelease(m_wgpuRenderPassEncoder);
-            m_wgpuRenderPassEncoder = nullptr;
+            m_wgpuRenderPassEncoder.Reset(nullptr);
             ClearEncoderState();
         }
     }
@@ -1339,8 +1337,7 @@ void DeviceContextWebGPUImpl::EndCommandEncoders(Uint32 EncoderFlags)
         if (m_wgpuComputePassEncoder)
         {
             wgpuComputePassEncoderEnd(m_wgpuComputePassEncoder);
-            wgpuComputePassEncoderRelease(m_wgpuComputePassEncoder);
-            m_wgpuComputePassEncoder = nullptr;
+            m_wgpuComputePassEncoder.Reset(nullptr);
             ClearEncoderState();
         }
     }
@@ -1387,7 +1384,7 @@ void DeviceContextWebGPUImpl::CommitRenderTargets()
         wgpuRenderPassDesc.depthStencilAttachment = &wgpuRenderPassDepthStencilAttachment;
     }
 
-    m_wgpuRenderPassEncoder = wgpuCommandEncoderBeginRenderPass(GetCommandEncoder(), &wgpuRenderPassDesc);
+    m_wgpuRenderPassEncoder.Reset(wgpuCommandEncoderBeginRenderPass(GetCommandEncoder(), &wgpuRenderPassDesc));
     DEV_CHECK_ERR(m_wgpuRenderPassEncoder != nullptr, "Failed to begin render pass");
     m_PendingClears.ResetFlags();
 }
@@ -1495,7 +1492,7 @@ void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
     wgpuRenderPassDesc.colorAttachmentCount   = Subpass.RenderTargetAttachmentCount;
     wgpuRenderPassDesc.depthStencilAttachment = m_pBoundDepthStencil ? &RenderPassDepthStencilAttachment : nullptr;
 
-    m_wgpuRenderPassEncoder = wgpuCommandEncoderBeginRenderPass(GetCommandEncoder(), &wgpuRenderPassDesc);
+    m_wgpuRenderPassEncoder.Reset(wgpuCommandEncoderBeginRenderPass(GetCommandEncoder(), &wgpuRenderPassDesc));
     DEV_CHECK_ERR(m_wgpuRenderPassEncoder != nullptr, "Failed to begin render pass");
     SetViewports(1, nullptr, 0, 0);
 }

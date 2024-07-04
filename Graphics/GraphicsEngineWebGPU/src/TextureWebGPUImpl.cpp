@@ -215,7 +215,7 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
             auto* pUploadData = static_cast<uint8_t*>(wgpuBufferGetMappedRange(wgpuUploadBuffer.Get(), 0, StaticCast<size_t>(wgpuBufferDesc.size)));
 
             WGPUCommandEncoderDescriptor wgpuEncoderDesc{};
-            WGPUCommandEncoder           wgpuCmdEncoder = wgpuDeviceCreateCommandEncoder(pDevice->GetWebGPUDevice(), &wgpuEncoderDesc);
+            WebGPUCommandEncoderWrapper  wgpuCmdEncoder{wgpuDeviceCreateCommandEncoder(pDevice->GetWebGPUDevice(), &wgpuEncoderDesc)};
 
             Uint32 CurrSubRes = 0;
             for (Uint32 LayerIdx = 0; LayerIdx < m_Desc.GetArraySize(); ++LayerIdx)
@@ -262,8 +262,8 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
             wgpuBufferUnmap(wgpuUploadBuffer.Get());
 
             WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
-            WGPUCommandBuffer           wgpuCmdBuffer = wgpuCommandEncoderFinish(wgpuCmdEncoder, &wgpuCmdBufferDesc);
-            wgpuQueueSubmit(wgpuDeviceGetQueue(pDevice->GetWebGPUDevice()), 1, &wgpuCmdBuffer);
+            WebGPUCommandBufferWrapper  wgpuCmdBuffer{wgpuCommandEncoderFinish(wgpuCmdEncoder, &wgpuCmdBufferDesc)};
+            wgpuQueueSubmit(wgpuDeviceGetQueue(pDevice->GetWebGPUDevice()), 1, &wgpuCmdBuffer.Get());
         }
     }
     else if (m_Desc.Usage == USAGE_STAGING)

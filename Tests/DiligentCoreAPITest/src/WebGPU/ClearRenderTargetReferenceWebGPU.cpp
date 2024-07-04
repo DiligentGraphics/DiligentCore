@@ -55,6 +55,8 @@ void ClearRenderTargetReferenceWebGPU(ISwapChain* pSwapChain, const float ClearC
     wgpuRenderPassEncoderEnd(wgpuRenderPass);
 
     pEnvWebGPU->SubmitCommandEncoder(wgpuCmdEncoder);
+    wgpuRenderPassEncoderRelease(wgpuRenderPass);
+    wgpuCommandEncoderRelease(wgpuCmdEncoder);
 }
 
 } // namespace Testing

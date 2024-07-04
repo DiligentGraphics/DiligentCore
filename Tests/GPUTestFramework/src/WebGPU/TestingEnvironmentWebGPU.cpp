@@ -32,7 +32,7 @@
 #if !PLATFORM_EMSCRIPTEN
 #    include <dawn/dawn_proc.h>
 #else
-#    include <thread>
+#    include <emscripten.h>
 #endif
 
 
@@ -116,10 +116,11 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
 #if !PLATFORM_EMSCRIPTEN
             wgpuDeviceTick(m_wgpuDevice);
 #else
-            std::this_thread::sleep_for(std::chrono::microseconds{100});
+            emscripten_sleep(0);
 #endif
         }
     }
+    wgpuCommandEncoderRelease(wgpuCmdEncoder);
 }
 
 GPUTestingEnvironment* CreateTestingEnvironmentWebGPU(const GPUTestingEnvironment::CreateInfo& CI,

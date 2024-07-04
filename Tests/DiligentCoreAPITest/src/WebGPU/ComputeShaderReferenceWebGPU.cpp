@@ -94,7 +94,7 @@ void ComputeShaderReferenceWebGPU(ISwapChain* pSwapChain)
     wgpuComputePassEncoderEnd(wgpuComputePassEncoder);
 
     pEnvWebGPU->SubmitCommandEncoder(wgpuCmdEncoder);
-
+    wgpuComputePassEncoderRelease(wgpuComputePassEncoder);
     wgpuBindGroupRelease(wgpuBindGroup);
     wgpuComputePipelineRelease(wgpuComputePipeline);
     wgpuPipelineLayoutRelease(wgpuPipelineLayout);

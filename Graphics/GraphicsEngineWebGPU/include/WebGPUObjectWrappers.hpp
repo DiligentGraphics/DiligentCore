@@ -133,6 +133,10 @@ DECLARE_WEBGPU_WRAPPER(WebGPUBindGroupLayout, WGPUBindGroupLayout, wgpuBindGroup
 DECLARE_WEBGPU_WRAPPER(WebGPUPipelineLayout, WGPUPipelineLayout, wgpuPipelineLayout);
 DECLARE_WEBGPU_WRAPPER(WebGPURenderPipeline, WGPURenderPipeline, wgpuRenderPipeline);
 DECLARE_WEBGPU_WRAPPER(WebGPUComputePipeline, WGPUComputePipeline, wgpuComputePipeline);
+DECLARE_WEBGPU_WRAPPER(WebGPUCommandBuffer, WGPUCommandBuffer, wgpuCommandBuffer);
+DECLARE_WEBGPU_WRAPPER(WebGPUCommandEncoder, WGPUCommandEncoder, wgpuCommandEncoder);
+DECLARE_WEBGPU_WRAPPER(WebGPURenderPassEncoder, WGPURenderPassEncoder, wgpuRenderPassEncoder);
+DECLARE_WEBGPU_WRAPPER(WebGPUComputePassEncoder, WGPUComputePassEncoder, wgpuComputePassEncoder);
 DECLARE_WEBGPU_WRAPPER(WebGPUBindGroup, WGPUBindGroup, wgpuBindGroup);
 DECLARE_WEBGPU_WRAPPER(WebGPUQuerySet, WGPUQuerySet, wgpuQuerySet);
 

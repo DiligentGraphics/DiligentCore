@@ -253,6 +253,8 @@ void RenderPassMSResolveReferenceWebGPU(ISwapChain* pSwapChain, const float* pCl
     wgpuRenderPassEncoderEnd(wgpuRenderPassEncoder);
     pEnvWebGPU->SubmitCommandEncoder(wgpuCmdEncoder);
 
+    wgpuRenderPassEncoderRelease(wgpuRenderPassEncoder);
+    wgpuCommandEncoderRelease(wgpuCmdEncoder);
     wgpuTextureViewRelease(wgpuMSTextureView);
     wgpuTextureRelease(wgpuMSTexture);
 }
@@ -312,6 +314,7 @@ void RenderPassInputAttachmentReferenceWebGPU(ISwapChain* pSwapChain, const floa
         wgpuRenderPassEncoderSetScissorRect(wgpuRenderPassEncoder, 0, 0, TextureWidth, TextureHeight);
         TriRenderInputWrite.Draw(wgpuRenderPassEncoder);
         wgpuRenderPassEncoderEnd(wgpuRenderPassEncoder);
+        wgpuRenderPassEncoderRelease(wgpuRenderPassEncoder);
     }
 
     ReferenceTriangleRenderer TriRenderInputRead{pSwapChain, 1, wgpuInputTextureView};
@@ -332,10 +335,12 @@ void RenderPassInputAttachmentReferenceWebGPU(ISwapChain* pSwapChain, const floa
         wgpuRenderPassEncoderSetScissorRect(wgpuRenderPassEncoder, 0, 0, TextureWidth, TextureHeight);
         TriRenderInputWrite.Draw(wgpuRenderPassEncoder);
         wgpuRenderPassEncoderEnd(wgpuRenderPassEncoder);
+        wgpuRenderPassEncoderRelease(wgpuRenderPassEncoder);
     }
 
     pEnvWebGPU->SubmitCommandEncoder(wgpuCmdEncoder);
 
+    wgpuCommandEncoderRelease(wgpuCmdEncoder);
     wgpuTextureViewRelease(wgpuInputTextureView);
     wgpuTextureRelease(wgpuMSTexture);
 }

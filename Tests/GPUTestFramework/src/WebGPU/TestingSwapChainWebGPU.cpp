@@ -182,6 +182,8 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
     WGPUCommandBuffer           wgpuCmdBuffer = wgpuCommandEncoderFinish(wgpuCmdEncoder, &wgpuCmdBufferDesc);
 
     wgpuQueueSubmit(wgpuDeviceGetQueue(m_wgpuDevice), 1, &wgpuCmdBuffer);
+    wgpuCommandEncoderRelease(wgpuCmdEncoder);
+    wgpuCommandBufferRelease(wgpuCmdBuffer);
 
     const size_t DataSize = 4 * m_SwapChainDesc.Width * m_SwapChainDesc.Height;
     wgpuBufferMapAsync(
