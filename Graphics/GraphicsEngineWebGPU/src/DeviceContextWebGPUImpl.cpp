@@ -659,10 +659,7 @@ void DeviceContextWebGPUImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
                               "copying the data from shared memory to private storage. This can only be "
                               "done by blit encoder outside of render pass.");
 
-                const auto& DynAllocation = pBufferWebGPU->GetDynamicAllocation(GetContextId());
-
                 EndCommandEncoders();
-                wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), DynAllocation.wgpuBuffer, DynAllocation.Offset, wgpuBuffer, 0, BuffDesc.Size);
             }
         }
         else
@@ -1081,7 +1078,7 @@ void DeviceContextWebGPUImpl::Flush()
                 pDeviceCxt->m_UploadMemPages.clear();
             }
 
-            if (Status != WGPUQueueWorkDoneStatus_Success)
+            if (Status != WGPUQueueWorkDoneStatus_Success && Status != WGPUQueueWorkDoneStatus_DeviceLost)
                 DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
         };
 

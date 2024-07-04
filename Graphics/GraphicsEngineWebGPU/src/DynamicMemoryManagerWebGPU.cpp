@@ -141,7 +141,7 @@ DynamicMemoryManagerWebGPU::DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, Ui
     m_CurrentOffset{0}
 {
     WGPUBufferDescriptor wgpuBufferDesc{};
-    wgpuBufferDesc.label = "Shared memory page";
+    wgpuBufferDesc.label = "Dynamic buffer";
     wgpuBufferDesc.size  = BufferSize;
     wgpuBufferDesc.usage =
         WGPUBufferUsage_CopyDst |

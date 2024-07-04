@@ -115,6 +115,7 @@ RenderDeviceWebGPUImpl::~RenderDeviceWebGPUImpl()
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::FinalizeGlslang();
 #endif
+    IdleGPU();
 }
 
 void RenderDeviceWebGPUImpl::CreateBuffer(const BufferDesc& BuffDesc,
