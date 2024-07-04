@@ -407,6 +407,12 @@ private:
         Uint32 CmdEncoderUpToDateStates = CMD_ENCODER_STATE_NONE;
         bool   HasDynamicVertexBuffers  = false;
 
+        std::array<Uint64, MAX_BUFFER_SLOTS> VertexBufferOffsets = []() {
+            std::array<Uint64, MAX_BUFFER_SLOTS> InvalidOffsets;
+            InvalidOffsets.fill(UINT64_MAX);
+            return InvalidOffsets;
+        }();
+
         std::array<Viewport, MAX_VIEWPORTS> Viewports    = {};
         std::array<Rect, MAX_VIEWPORTS>     ScissorRects = {};
 

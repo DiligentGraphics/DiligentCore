@@ -1716,8 +1716,7 @@ void DeviceContextWebGPUImpl::CommitVertexBuffers(WGPURenderPassEncoder CmdEncod
         LOG_ERROR("Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
 #endif
 
-    bool DynamicBufferPresent = false;
-    // TODO: optimize
+    m_EncoderState.HasDynamicVertexBuffers = false;
     for (Uint32 SlotIdx = 0; SlotIdx < m_NumVertexStreams; ++SlotIdx)
     {
         auto&      CurrStream = m_VertexStreams[SlotIdx];
@@ -1728,7 +1727,7 @@ void DeviceContextWebGPUImpl::CommitVertexBuffers(WGPURenderPassEncoder CmdEncod
             wgpuBuffer = pBufferWebGPU->GetWebGPUBuffer();
             if (pBufferWebGPU->GetDesc().Usage == USAGE_DYNAMIC)
             {
-                DynamicBufferPresent = true;
+                m_EncoderState.HasDynamicVertexBuffers = true;
 #ifdef DILIGENT_DEVELOPMENT
                 //pBufferWebGPU->DvpVerifyDynamicAllocation(this);
 #endif
@@ -1736,12 +1735,14 @@ void DeviceContextWebGPUImpl::CommitVertexBuffers(WGPURenderPassEncoder CmdEncod
             }
         }
 
-        wgpuRenderPassEncoderSetVertexBuffer(CmdEncoder, SlotIdx, wgpuBuffer, Offset, WGPU_WHOLE_SIZE);
+        if (m_EncoderState.VertexBufferOffsets[SlotIdx] != Offset || !m_EncoderState.IsUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_VERTEX_BUFFERS))
+        {
+            wgpuRenderPassEncoderSetVertexBuffer(CmdEncoder, SlotIdx, wgpuBuffer, Offset, WGPU_WHOLE_SIZE);
+            m_EncoderState.VertexBufferOffsets[SlotIdx] = Offset;
+        }
     }
 
-    // GPU offset for a dynamic vertex buffer can change every time a draw command is invoked
-    if (!DynamicBufferPresent)
-        m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_VERTEX_BUFFERS);
+    m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_VERTEX_BUFFERS);
 }
 
 void DeviceContextWebGPUImpl::CommitIndexBuffer(WGPURenderPassEncoder CmdEncoder, VALUE_TYPE IndexType)
