@@ -97,7 +97,7 @@ public:
         // clang-format off
         BindGroup(Uint32 NumResources, Resource* pResources, WGPUBindGroupEntry* pwgpuEntries, Uint32 NumDynamicOffsets, uint32_t* DynamicOffsets) :
             m_NumResources     {NumResources},
-            m_NumDynamicOffsets{NumDynamicOffsets},
+            m_NumDynamicOffsets{static_cast<Uint16>(NumDynamicOffsets)},
             m_pResources       {pResources  },
             m_wgpuEntries      {pwgpuEntries},
             m_pDynamicOffsets  {DynamicOffsets}
@@ -131,10 +131,12 @@ public:
         }
 
     private:
-        /* 0 */ const Uint32              m_NumResources      = 0;
-        /* 4 */ const Uint32              m_NumDynamicOffsets = 0;
-        /* 8 */ Resource* const           m_pResources        = nullptr;
-        /*16 */ WGPUBindGroupEntry* const m_wgpuEntries       = nullptr;
+        /* 0 */ const Uint32 m_NumResources      = 0;
+        /* 4 */ const Uint16 m_NumDynamicOffsets = 0;
+        /* 6*/ bool          m_ResourcesDirty    = true;
+        /* 7*/
+        /* 8 */ Resource* const           m_pResources  = nullptr;
+        /*16 */ WGPUBindGroupEntry* const m_wgpuEntries = nullptr;
         /*24 */ WebGPUBindGroupWrapper    m_wgpuBindGroup;
         /*40 */ const uint32_t*           m_pDynamicOffsets = nullptr;
         /*48 */ // End of structure
@@ -181,7 +183,7 @@ public:
 
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
 
-    WGPUBindGroup   UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout, bool TmpIsDynamic = false);
+    WGPUBindGroup   UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout);
     const uint32_t* GetDynamicOffsets(Uint32 GroupIndex) const
     {
         return GetBindGroup(GroupIndex).GetDynamicOffsets();

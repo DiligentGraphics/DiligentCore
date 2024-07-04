@@ -159,8 +159,6 @@ void ShaderResourceCacheWebGPU::Resource::SetUniformBuffer(RefCntAutoPtr<IDevice
 #ifdef DILIGENT_DEBUG
     if (pBuffWGPU != nullptr)
     {
-        // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
-        // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
         VERIFY_EXPR((pBuffWGPU->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) != 0);
         VERIFY(Type == BindGroupEntryType::UniformBufferDynamic || pBuffWGPU->GetDesc().Usage != USAGE_DYNAMIC,
                "Dynamic buffer must be used with UniformBufferDynamic descriptor");
@@ -313,6 +311,9 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
         --m_NumDynamicBuffers;
     }
 
+    if (DstRes.pObject != pObject)
+        Group.m_ResourcesDirty = true;
+
     static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
     switch (DstRes.Type)
     {
@@ -426,10 +427,10 @@ void ShaderResourceCacheWebGPU::SetDynamicBufferOffset(Uint32 DescrSetIndex,
     DstRes.BufferDynamicOffset = DynamicBufferOffset;
 }
 
-WGPUBindGroup ShaderResourceCacheWebGPU::UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout, bool TmpIsDynamic)
+WGPUBindGroup ShaderResourceCacheWebGPU::UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout)
 {
     BindGroup& Group = GetBindGroup(GroupIndex);
-    if (!Group.m_wgpuBindGroup || TmpIsDynamic)
+    if (!Group.m_wgpuBindGroup || Group.m_ResourcesDirty)
     {
         WGPUBindGroupDescriptor wgpuBindGroupDescriptor;
         wgpuBindGroupDescriptor.nextInChain = nullptr;
@@ -439,6 +440,7 @@ WGPUBindGroup ShaderResourceCacheWebGPU::UpdateBindGroup(WGPUDevice wgpuDevice, 
         wgpuBindGroupDescriptor.entries     = Group.m_wgpuEntries;
 
         Group.m_wgpuBindGroup.Reset(wgpuDeviceCreateBindGroup(wgpuDevice, &wgpuBindGroupDescriptor));
+        Group.m_ResourcesDirty = false;
     }
 
     return Group.m_wgpuBindGroup;

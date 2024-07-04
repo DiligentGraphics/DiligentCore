@@ -190,7 +190,7 @@ void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*     
     {
         VERIFY_EXPR(BGIndex == pSignature->GetBindGroupIndex<PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC>());
         m_BindInfo.BindGroups[SRBIndex * 2 + BGIndex] = {
-            ResourceCache.UpdateBindGroup(wgpuDevice, BGIndex, pSignature->GetWGPUBindGroupLayout(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC), true),
+            ResourceCache.UpdateBindGroup(wgpuDevice, BGIndex, pSignature->GetWGPUBindGroupLayout(PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC)),
             ResourceCache.GetDynamicOffsets(BGIndex),
             ResourceCache.GetDynamicOffsetCount(BGIndex),
         };
