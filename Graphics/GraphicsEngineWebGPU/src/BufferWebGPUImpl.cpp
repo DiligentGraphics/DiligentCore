@@ -191,7 +191,13 @@ SparseBufferProperties BufferWebGPUImpl::GetSparseProperties() const
 
 WGPUBuffer BufferWebGPUImpl::GetWebGPUBuffer() const
 {
-    return m_wgpuBuffer.Get();
+    if (m_wgpuBuffer)
+        return m_wgpuBuffer.Get();
+    else
+    {
+        VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer expected");
+        return m_pDevice->GetDynamicMemoryManager().GetWGPUBuffer();
+    }
 }
 
 void BufferWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)

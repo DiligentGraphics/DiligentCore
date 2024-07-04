@@ -322,7 +322,7 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
             },
             [this]() //
             {
-                return ShaderResourceCacheWebGPU::GetRequiredMemorySize(GetNumBindGroups(), m_BindGroupSizes.data(), m_DynamicOffsetCounts.data());
+                return ShaderResourceCacheWebGPU::GetRequiredMemorySize(GetNumBindGroups(), m_BindGroupSizes.data());
             });
     }
     catch (...)
@@ -405,8 +405,7 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
     if (StaticResourceCount != 0)
     {
         VERIFY_EXPR(m_pStaticResCache != nullptr);
-        const Uint32 DynamicOffsetCount = CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR];
-        m_pStaticResCache->InitializeGroups(GetRawAllocator(), 1, &StaticResourceCount, &DynamicOffsetCount);
+        m_pStaticResCache->InitializeGroups(GetRawAllocator(), 1, &StaticResourceCount);
     }
 
     // Bind group mapping (static/mutable (0) or dynamic (1) -> bind group index).
@@ -679,7 +678,7 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
 #endif
 
     auto& CacheMemAllocator = m_SRBMemAllocator.GetResourceCacheDataAllocator(0);
-    ResourceCache.InitializeGroups(CacheMemAllocator, NumGroups, m_BindGroupSizes.data(), m_DynamicOffsetCounts.data());
+    ResourceCache.InitializeGroups(CacheMemAllocator, NumGroups, m_BindGroupSizes.data());
 
     const Uint32                   TotalResources = GetTotalResourceCount();
     const ResourceCacheContentType CacheType      = ResourceCache.GetContentType();
@@ -1012,7 +1011,7 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
             },
             [this]() //
             {
-                return ShaderResourceCacheWebGPU::GetRequiredMemorySize(GetNumBindGroups(), m_BindGroupSizes.data(), m_DynamicOffsetCounts.data());
+                return ShaderResourceCacheWebGPU::GetRequiredMemorySize(GetNumBindGroups(), m_BindGroupSizes.data());
             });
     }
     catch (...)

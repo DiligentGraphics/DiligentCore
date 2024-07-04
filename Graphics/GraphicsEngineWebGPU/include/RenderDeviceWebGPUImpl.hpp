@@ -191,6 +191,11 @@ public:
 
     DynamicMemoryManagerWebGPU::Page GetDynamicMemoryPage(Uint64 Size);
 
+    DynamicMemoryManagerWebGPU& GetDynamicMemoryManager() const
+    {
+        return *m_pDynamicMemoryManager;
+    }
+
     void PollEvents(bool YieldToWebBrowser);
 
 private:

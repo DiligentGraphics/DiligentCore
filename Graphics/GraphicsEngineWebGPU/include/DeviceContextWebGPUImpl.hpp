@@ -416,9 +416,8 @@ private:
     {
         struct BindGroupInfo
         {
-            WGPUBindGroup   wgpuBindGroup      = nullptr;
-            const uint32_t* DynamicOffsets     = nullptr;
-            size_t          DynamicOffsetCount = 0;
+            WGPUBindGroup         wgpuBindGroup = nullptr;
+            std::vector<uint32_t> DynamicOffsets;
         };
         // Bind groups for each resource signature.
         // NOTE: bind groups in this array are not indexed by the bind group

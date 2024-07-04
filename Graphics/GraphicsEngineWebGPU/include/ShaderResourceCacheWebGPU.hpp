@@ -33,6 +33,7 @@
 #include "PipelineResourceAttribsWebGPU.hpp"
 #include "STDAllocator.hpp"
 #include "WebGPUObjectWrappers.hpp"
+#include "IndexWrapper.hpp"
 
 namespace Diligent
 {
@@ -53,9 +54,9 @@ public:
 
     ~ShaderResourceCacheWebGPU();
 
-    static size_t GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes, const Uint32* DynamicOffsetCounts);
+    static size_t GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes);
 
-    void InitializeGroups(IMemoryAllocator& MemAllocator, Uint32 NumGroups, const Uint32* GroupSizes, const Uint32* DynamicOffsetCounts);
+    void InitializeGroups(IMemoryAllocator& MemAllocator, Uint32 NumGroups, const Uint32* GroupSizes);
     void InitializeResources(Uint32 GroupIdx, Uint32 Offset, Uint32 ArraySize, BindGroupEntryType Type, bool HasImmutableSampler);
 
     struct Resource
@@ -95,12 +96,10 @@ public:
     {
     public:
         // clang-format off
-        BindGroup(Uint32 NumResources, Resource* pResources, WGPUBindGroupEntry* pwgpuEntries, Uint32 NumDynamicOffsets, uint32_t* DynamicOffsets) :
-            m_NumResources     {NumResources},
-            m_NumDynamicOffsets{static_cast<Uint16>(NumDynamicOffsets)},
-            m_pResources       {pResources  },
-            m_wgpuEntries      {pwgpuEntries},
-            m_pDynamicOffsets  {DynamicOffsets}
+        BindGroup(Uint32 NumResources, Resource* pResources, WGPUBindGroupEntry* pwgpuEntries) :
+            m_NumResources{NumResources},
+            m_pResources  {pResources  },
+            m_wgpuEntries {pwgpuEntries}
         {}
 
         BindGroup           (const BindGroup&)  = delete;
@@ -121,25 +120,14 @@ public:
         {
             return m_wgpuBindGroup;
         }
-        const uint32_t* GetDynamicOffsets() const
-        {
-            return m_pDynamicOffsets;
-        }
-        size_t GetNumDynamicOffsets() const
-        {
-            return m_NumDynamicOffsets;
-        }
 
     private:
-        /* 0 */ const Uint32 m_NumResources      = 0;
-        /* 4 */ const Uint16 m_NumDynamicOffsets = 0;
-        /* 6*/ bool          m_ResourcesDirty    = true;
-        /* 7*/
-        /* 8 */ Resource* const           m_pResources  = nullptr;
-        /*16 */ WGPUBindGroupEntry* const m_wgpuEntries = nullptr;
+        /* 0 */ const Uint32              m_NumResources   = 0;
+        /* 5*/ bool                       m_ResourcesDirty = true;
+        /* 8 */ Resource* const           m_pResources     = nullptr;
+        /*16 */ WGPUBindGroupEntry* const m_wgpuEntries    = nullptr;
         /*24 */ WebGPUBindGroupWrapper    m_wgpuBindGroup;
-        /*40 */ const uint32_t*           m_pDynamicOffsets = nullptr;
-        /*48 */ // End of structure
+        /*40 */ // End of structure
 
     private:
         friend ShaderResourceCacheWebGPU;
@@ -183,15 +171,11 @@ public:
 
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
 
-    WGPUBindGroup   UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout);
-    const uint32_t* GetDynamicOffsets(Uint32 GroupIndex) const
-    {
-        return GetBindGroup(GroupIndex).GetDynamicOffsets();
-    }
-    size_t GetDynamicOffsetCount(Uint32 GroupIndex) const
-    {
-        return GetBindGroup(GroupIndex).GetNumDynamicOffsets();
-    }
+    WGPUBindGroup UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout);
+
+    Uint32 GetDynamicBufferOffsets(DeviceContextIndex     CtxId,
+                                   std::vector<uint32_t>& Offsets,
+                                   Uint32                 GroupIdx) const;
 
 #ifdef DILIGENT_DEBUG
     // For debug purposes only

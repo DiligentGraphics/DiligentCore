@@ -123,6 +123,7 @@ public:
 
     bool   HasBindGroup(BIND_GROUP_ID GroupId) const { return m_BindGroupSizes[GroupId] != ~0u && m_BindGroupSizes[GroupId] > 0; }
     Uint32 GetBindGroupSize(BIND_GROUP_ID GroupId) const { return m_BindGroupSizes[GroupId]; }
+    Uint32 GetDynamicOffsetCount(BIND_GROUP_ID GroupId) const { return m_DynamicOffsetCounts[GroupId]; }
 
     void InitSRBResourceCache(ShaderResourceCacheWebGPU& ResourceCache);
 

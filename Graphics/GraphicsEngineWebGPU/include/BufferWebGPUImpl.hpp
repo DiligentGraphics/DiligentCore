@@ -71,6 +71,27 @@ public:
     /// Implementation of IBufferWebGPU::GetWebGPUBuffer().
     WGPUBuffer DILIGENT_CALL_TYPE GetWebGPUBuffer() const override final;
 
+    Uint64 GetDynamicOffset(DeviceContextIndex CtxId, const DeviceContextWebGPUImpl* pCtx) const
+    {
+        if (m_wgpuBuffer)
+        {
+            return 0;
+        }
+        else
+        {
+            VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
+            VERIFY_EXPR(!m_DynamicAllocations.empty());
+#ifdef DILIGENT_DEVELOPMENT
+            if (pCtx != nullptr)
+            {
+                //DvpVerifyDynamicAllocation(pCtx);
+            }
+#endif
+            auto& DynAlloc = GetDynamicAllocation(CtxId);
+            return DynAlloc.Offset;
+        }
+    }
+
     void Map(MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData);
 
     void Unmap(MAP_TYPE MapType);

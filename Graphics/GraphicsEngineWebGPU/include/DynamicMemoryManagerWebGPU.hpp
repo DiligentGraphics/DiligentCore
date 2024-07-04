@@ -84,6 +84,11 @@ public:
 
     Page GetPage(Uint64 Size);
 
+    WGPUBuffer GetWGPUBuffer() const
+    {
+        return m_wgpuBuffer;
+    }
+
 private:
     void RecyclePage(Page&& page);
 
