@@ -363,8 +363,8 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
         const auto& DepthStencilDesc = GraphicsPipeline.DepthStencilDesc;
 
         wgpuDepthStencilState.format            = TextureFormatToWGPUFormat(GraphicsPipeline.DSVFormat);
-        wgpuDepthStencilState.depthCompare      = ComparisonFuncToWGPUCompareFunction(DepthStencilDesc.DepthFunc);
-        wgpuDepthStencilState.depthWriteEnabled = DepthStencilDesc.DepthWriteEnable;
+        wgpuDepthStencilState.depthCompare      = DepthStencilDesc.DepthEnable ? ComparisonFuncToWGPUCompareFunction(DepthStencilDesc.DepthFunc) : WGPUCompareFunction_Always;
+        wgpuDepthStencilState.depthWriteEnabled = DepthStencilDesc.DepthEnable ? DepthStencilDesc.DepthWriteEnable : false;
 
         wgpuDepthStencilState.stencilBack.compare     = ComparisonFuncToWGPUCompareFunction(DepthStencilDesc.BackFace.StencilFunc);
         wgpuDepthStencilState.stencilBack.failOp      = StencilOpToWGPUStencilOperation(DepthStencilDesc.BackFace.StencilFailOp);
