@@ -772,7 +772,8 @@ protected:
                                                      IBufferView*                  pPositionsBuffView,
                                                      IBufferView*                  pColorsBuffView,
                                                      SHADER_RESOURCE_VARIABLE_TYPE PosBuffType,
-                                                     SHADER_RESOURCE_VARIABLE_TYPE ColBuffType);
+                                                     SHADER_RESOURCE_VARIABLE_TYPE ColBuffType,
+                                                     size_t                        ColorDataStartOffset);
 
     static void TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
                                                  bool        UseArray);
@@ -2725,7 +2726,8 @@ void DrawCommandTest::DrawWithStructuredOrFormattedBuffers(bool                 
                                                            IBufferView*                  pPositionsBuffView,
                                                            IBufferView*                  pColorsBuffView,
                                                            SHADER_RESOURCE_VARIABLE_TYPE PosBuffType,
-                                                           SHADER_RESOURCE_VARIABLE_TYPE ColBuffType)
+                                                           SHADER_RESOURCE_VARIABLE_TYPE ColBuffType,
+                                                           size_t                        ColorDataStartOffset)
 {
     if (UseArray)
         VERIFY(ColBuffType == 0, "Color buffer type is ignored when arrays are used");
@@ -2825,15 +2827,18 @@ void DrawCommandTest::DrawWithStructuredOrFormattedBuffers(bool                 
         }
     };
 
+    EXPECT_TRUE(ColorDataStartOffset % sizeof(float4) == 0) << "Color data start offset must be multiple of float4";
+    ColorDataStartOffset /= sizeof(float4);
+
     UpdateBuffer(pPositionsBuffView, Pos, 0, sizeof(float4) * 3);
-    UpdateBuffer(pColorsBuffView, Color4, 4, sizeof(float4) * 3);
+    UpdateBuffer(pColorsBuffView, Color4, ColorDataStartOffset, sizeof(float4) * 3);
     pContext->TransitionShaderResources(pSRB);
 
     DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
 
     UpdateBuffer(pPositionsBuffView, Pos + 3, 0, sizeof(float4) * 3);
-    UpdateBuffer(pColorsBuffView, Color4, 4, sizeof(float4) * 3);
+    UpdateBuffer(pColorsBuffView, Color4, ColorDataStartOffset, sizeof(float4) * 3);
     pContext->TransitionShaderResources(pSRB);
 
     pContext->Draw(drawAttrs);
@@ -2913,6 +2918,8 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
         ASSERT_NE(pPS, nullptr);
     }
 
+    const Uint32 StructuredBufferOffsetAlignment = pDevice->GetAdapterInfo().Buffer.StructuredBufferOffsetAlignment;
+    const Uint32 ColorDataStartOffset            = AlignUp(Uint32{sizeof(float4)} * 4, StructuredBufferOffsetAlignment);
     for (Uint32 UseDynamicBuffers = 0; UseDynamicBuffers < 2; ++UseDynamicBuffers)
     {
         if (BuffMode == BUFFER_MODE_STRUCTURED && UseArray && UseDynamicBuffers && DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12)
@@ -2935,7 +2942,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
         ASSERT_NE(pPositionsBuffer, nullptr);
 
         BuffDesc.Name = "Structured buffer draw test - colors";
-        BuffDesc.Size = sizeof(float4) * 8;
+        BuffDesc.Size = ColorDataStartOffset + sizeof(float4) * 4;
         RefCntAutoPtr<IBuffer> pColorsBuffer;
         pDevice->CreateBuffer(BuffDesc, nullptr, &pColorsBuffer);
         ASSERT_NE(pColorsBuffer, nullptr);
@@ -2947,7 +2954,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
 
             BufferViewDesc BuffSRVDesc;
             BuffSRVDesc.ViewType   = BUFFER_VIEW_SHADER_RESOURCE;
-            BuffSRVDesc.ByteOffset = sizeof(float4) * 4;
+            BuffSRVDesc.ByteOffset = ColorDataStartOffset;
             pColorsBuffer->CreateView(BuffSRVDesc, &pColorBufferView);
         }
         else
@@ -2957,7 +2964,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
             BuffSRVDesc.Format.NumComponents = 4;
             BuffSRVDesc.Format.ValueType     = VT_FLOAT32;
             pPositionsBuffer->CreateView(BuffSRVDesc, &pPosBuffView);
-            BuffSRVDesc.ByteOffset = sizeof(float4) * 4;
+            BuffSRVDesc.ByteOffset = ColorDataStartOffset;
             pColorsBuffer->CreateView(BuffSRVDesc, &pColorBufferView);
         }
 
@@ -2967,7 +2974,7 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
             {
                 const auto PosBuffType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_buff_type);
                 const auto ColBuffType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(col_buff_type);
-                DrawWithStructuredOrFormattedBuffers(UseArray, pVS, pPS, pPosBuffView, pColorBufferView, PosBuffType, ColBuffType);
+                DrawWithStructuredOrFormattedBuffers(UseArray, pVS, pPS, pPosBuffView, pColorBufferView, PosBuffType, ColBuffType, ColorDataStartOffset);
                 std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
                           << (UseDynamicBuffers ? "Dynamic" : "Default")
                           << " buff, " << GetShaderVariableTypeLiteralName(PosBuffType) << " Pos, "
