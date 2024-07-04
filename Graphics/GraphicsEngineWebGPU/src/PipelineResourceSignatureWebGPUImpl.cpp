@@ -51,7 +51,6 @@ BindGroupEntryType GetBindGroupEntryType(const PipelineResourceDesc& Res)
            "Invalid resource flags. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
 
     const bool WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
-    const bool IsReadOnly        = false;
 
     static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
     switch (Res.ResourceType)
@@ -66,12 +65,25 @@ BindGroupEntryType GetBindGroupEntryType(const PipelineResourceDesc& Res)
             return WithDynamicOffset ? BindGroupEntryType::StorageBufferDynamic_ReadOnly : BindGroupEntryType::StorageBuffer_ReadOnly;
 
         case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
-            return (IsReadOnly ? BindGroupEntryType::StorageBufferDynamic_ReadOnly : BindGroupEntryType::StorageTexture_ReadWrite);
+            switch (Res.WebGPUAttribs.BindingType)
+            {
+                case WEB_GPU_BINDING_TYPE_DEFAULT:
+                case WEB_GPU_BINDING_TYPE_WRITE_ONLY_TEXTURE_UAV:
+                    return BindGroupEntryType::StorageTexture_WriteOnly;
+
+                case WEB_GPU_BINDING_TYPE_READ_ONLY_TEXTURE_UAV:
+                    return BindGroupEntryType::StorageTexture_ReadOnly;
+
+                case WEB_GPU_BINDING_TYPE_READ_WRITE_TEXTURE_UAV:
+                    return BindGroupEntryType::StorageTexture_ReadWrite;
+
+                default:
+                    UNEXPECTED("Unknown texture UAV binding type");
+                    return BindGroupEntryType::StorageTexture_WriteOnly;
+            }
 
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-            return WithDynamicOffset ?
-                (IsReadOnly ? BindGroupEntryType::StorageBufferDynamic : BindGroupEntryType::StorageBufferDynamic_ReadOnly) :
-                (IsReadOnly ? BindGroupEntryType::StorageBuffer : BindGroupEntryType::StorageBuffer_ReadOnly);
+            return WithDynamicOffset ? BindGroupEntryType::StorageBufferDynamic : BindGroupEntryType::StorageBuffer;
 
         case SHADER_RESOURCE_TYPE_SAMPLER:
             return BindGroupEntryType::Sampler;
@@ -327,7 +339,18 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
     // Required cache size for each cache group
     CacheOffsetsType CacheGroupSizes = {};
 
-    // NB: since WebGPU does not support resource arrays, binding count is the same as the cache group size.
+    // Resource bindings as well as cache offsets are ordered by CACHE_GROUP in each bind group:
+    //
+    //      static/mutable vars group: |  Dynamic UBs  |  Dynamic SBs  |   The rest    |
+    //      dynamic vars group:        |  Dynamic UBs  |  Dynamic SBs  |   The rest    |
+    //
+    // Note also that resources in m_Desc.Resources are sorted by variable type
+
+    auto ReserveBindings = [&BindingCount, &CacheGroupSizes](CACHE_GROUP GroupId, Uint32 Count) {
+        // NB: since WebGPU does not support resource arrays, binding count is the same as the cache group size
+        BindingCount[GroupId] += Count;
+        CacheGroupSizes[GroupId] += Count;
+    };
 
     // The total number of static resources in all stages accounting for array sizes.
     Uint32 StaticResourceCount = 0;
@@ -339,12 +362,7 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
         const PipelineResourceDesc& ResDesc    = m_Desc.Resources[i];
         const CACHE_GROUP           CacheGroup = GetResourceCacheGroup(ResDesc);
 
-        BindingCount[CacheGroup] += ResDesc.ArraySize;
-        CacheGroupSizes[CacheGroup] += ResDesc.ArraySize;
-
-        if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-            StaticResourceCount += ResDesc.ArraySize;
-
+        bool IsImmutableSampler = false;
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
         {
             // We only need to search for immutable samplers for SHADER_RESOURCE_TYPE_SAMPLER.
@@ -359,38 +377,41 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
                 ImmutableSamplerAttribsWebGPU& DstImtblSampAttribs = m_pImmutableSamplerAttribs[SrcImmutableSamplerInd];
                 // One immutable sampler may be used by different arrays in different shader stages - use the maximum array size
                 DstImtblSampAttribs.ArraySize = std::max(DstImtblSampAttribs.ArraySize, ResDesc.ArraySize);
-                VERIFY(DstImtblSampAttribs.SamplerInd == ResourceAttribs::InvalidSamplerInd, "Immutable sampler is already assigned to another resource. This should not happen.");
-                DstImtblSampAttribs.SamplerInd = i;
+
+                IsImmutableSampler = true;
             }
+        }
+
+        // We allocate bindings for immutable samplers separately
+        if (!IsImmutableSampler)
+        {
+            ReserveBindings(CacheGroup, ResDesc.ArraySize);
+            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                StaticResourceCount += ResDesc.ArraySize;
         }
     }
 
-    // Reserve space for immutable samplers not defined as resources, e.g.:
-    //
-    //      PipelineResourceDesc Resources[] = {{SHADER_TYPE_PIXEL, "g_Texture", SHADER_RESOURCE_TYPE_TEXTURE_SRV, ...}, ... }
-    //      ImmutableSamplerDesc ImtblSams[] = {{SHADER_TYPE_PIXEL, "g_Texture", ...}, ... }
-    //
-    static constexpr CACHE_GROUP ImmutableSamplerCacheGroup = CACHE_GROUP_OTHER_STAT_VAR;
+    // Reserve bindings for immutable samplers
+    static constexpr BIND_GROUP_ID ImmutableSamplerBindGroupId = BIND_GROUP_ID_STATIC_MUTABLE;
+    static constexpr CACHE_GROUP   ImmutableSamplerCacheGroup  = CACHE_GROUP_OTHER_STAT_VAR;
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
         const ImmutableSamplerAttribsWebGPU& ImtblSampAttribs = m_pImmutableSamplerAttribs[i];
-        if (ImtblSampAttribs.SamplerInd == ResourceAttribs::InvalidSamplerInd)
-        {
-            BindingCount[ImmutableSamplerCacheGroup] += ImtblSampAttribs.ArraySize;
-            CacheGroupSizes[ImmutableSamplerCacheGroup] += ImtblSampAttribs.ArraySize;
-        }
+        ReserveBindings(ImmutableSamplerCacheGroup, ImtblSampAttribs.ArraySize);
     }
 
+    VERIFY_EXPR((StaticResourceCount != 0) == (GetNumStaticResStages() != 0));
     // Initialize static resource cache
     if (StaticResourceCount != 0)
     {
         VERIFY_EXPR(m_pStaticResCache != nullptr);
-        const Uint32 DynamicOffsetCount = BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR] + BindingCount[CACHE_GROUP_DYN_SB_STAT_VAR];
+        const Uint32 DynamicOffsetCount = CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR];
         m_pStaticResCache->InitializeGroups(GetRawAllocator(), 1, &StaticResourceCount, &DynamicOffsetCount);
     }
 
-    // Bind group mapping (static/mutable (0) or dynamic (1) -> bind group index)
-    std::array<Uint32, BIND_GROUP_ID_NUM_GROUPS> BindGroupMapping = {};
+    // Bind group mapping (static/mutable (0) or dynamic (1) -> bind group index).
+    // If all resources are dynamic, then the signature will contain a single group with index 0.
+    std::array<Uint32, BIND_GROUP_ID_NUM_GROUPS> BindGroupIdToIndex = {};
     {
         const Uint32 TotalStaticBindings =
             BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR] +
@@ -403,59 +424,82 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
 
         Uint32 Idx = 0;
 
-        BindGroupMapping[BIND_GROUP_ID_STATIC_MUTABLE] = (TotalStaticBindings != 0 ? Idx++ : 0xFF);
-        BindGroupMapping[BIND_GROUP_ID_DYNAMIC]        = (TotalDynamicBindings != 0 ? Idx++ : 0xFF);
+        BindGroupIdToIndex[BIND_GROUP_ID_STATIC_MUTABLE] = (TotalStaticBindings != 0 ? Idx++ : 0xFF);
+        BindGroupIdToIndex[BIND_GROUP_ID_DYNAMIC]        = (TotalDynamicBindings != 0 ? Idx++ : 0xFF);
         VERIFY_EXPR(Idx <= MAX_BIND_GROUPS);
     }
 
-    // Resource bindings as well as cache offsets are ordered by CACHE_GROUP in each bind group:
-    //
-    //      static/mutable vars set: |  Dynamic UBs  |  Dynamic SBs  |   The rest    |
-    //      dynamic vars set:        |  Dynamic UBs  |  Dynamic SBs  |   The rest    |
-    //
-    // Note that resources in m_Desc.Resources are sorted by variable type
+    // Get starting offsets and binding indices for each cache group
     CacheOffsetsType CacheGroupOffsets =
         {
-            // static/mutable set
+            // static/mutable group
             0,
             CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR],
             CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR],
-            // dynamic set
+            // dynamic group
             0,
             CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR],
             CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] + CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR],
         };
     BindingCountType BindingIndices =
         {
-            // static/mutable set
+            // static/mutable group
             0,
             BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR],
             BindingCount[CACHE_GROUP_DYN_UB_STAT_VAR] + BindingCount[CACHE_GROUP_DYN_SB_STAT_VAR],
-            // dynamic set
+            // dynamic group
             0,
             BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR],
             BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR],
         };
 
+    auto AllocateBindings = [&](BIND_GROUP_ID BindGroupId,
+                                CACHE_GROUP   CacheGroup,
+                                Uint32        Count,
+                                Uint32&       BindGroupIndex,
+                                Uint32&       BindingIndex,
+                                Uint32&       CacheOffset) {
+        // Remap GroupId to the actual bind group index.
+        BindGroupIndex = BindGroupIdToIndex[BindGroupId];
+        VERIFY_EXPR(BindGroupIndex < MAX_BIND_GROUPS);
+
+        BindingIndex = BindingIndices[CacheGroup];
+        CacheOffset  = CacheGroupOffsets[CacheGroup];
+
+        BindingIndices[CacheGroup] += Count;
+        CacheGroupOffsets[CacheGroup] += Count;
+    };
+
+    std::array<std::vector<WGPUBindGroupLayoutEntry>, BIND_GROUP_ID_NUM_GROUPS> wgpuBGLayoutEntries;
+
+    // Allocate bindings for immutable samplers first
+    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
+    {
+        const ImmutableSamplerDesc&    ImtblSamp        = GetImmutableSamplerDesc(i);
+        ImmutableSamplerAttribsWebGPU& ImtblSampAttribs = m_pImmutableSamplerAttribs[i];
+        AllocateBindings(ImmutableSamplerBindGroupId, ImmutableSamplerCacheGroup, ImtblSampAttribs.ArraySize,
+                         ImtblSampAttribs.BindGroup, ImtblSampAttribs.BindingIndex, ImtblSampAttribs.CacheOffset);
+
+        // Add layout entries
+        for (Uint32 elem = 0; elem < ImtblSampAttribs.ArraySize; ++elem)
+        {
+            WGPUBindGroupLayoutEntry wgpuBGLayoutEntry{};
+            wgpuBGLayoutEntry.binding      = ImtblSampAttribs.BindingIndex + elem;
+            wgpuBGLayoutEntry.visibility   = ShaderStagesToWGPUShaderStageFlags(ImtblSamp.ShaderStages & WEB_GPU_SUPPORTED_SHADER_STAGES);
+            wgpuBGLayoutEntry.sampler.type = SamplerDescToWGPUSamplerBindingType(ImtblSamp.Desc);
+            wgpuBGLayoutEntries[ImtblSampAttribs.BindGroup].push_back(wgpuBGLayoutEntry);
+        }
+    }
+
     // Current offset in the static resource cache
     Uint32 StaticCacheOffset = 0;
 
-    std::array<std::vector<WGPUBindGroupLayoutEntry>, BIND_GROUP_ID_NUM_GROUPS> wgpuBGLayoutEntries;
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
         const PipelineResourceDesc& ResDesc = m_Desc.Resources[i];
         VERIFY(i == 0 || ResDesc.VarType >= m_Desc.Resources[i - 1].VarType, "Resources must be sorted by variable type");
 
         const BindGroupEntryType EntryType = GetBindGroupEntryType(ResDesc);
-
-        // NB: GroupId is always 0 for static/mutable variables, and 1 - for dynamic ones.
-        //     It is not the actual bind group index in the group layout!
-        const BIND_GROUP_ID GroupId = VarTypeToBindGroupId(ResDesc.VarType);
-        // If all resources are dynamic, then the signature contains only one bind group layout with index 0,
-        // so remap GroupId to the actual bind group index.
-        const Uint32 BindGroupIndex = BindGroupMapping[GroupId];
-        VERIFY_EXPR(BindGroupIndex < MAX_BIND_GROUPS);
-        const CACHE_GROUP CacheGroup = GetResourceCacheGroup(ResDesc);
 
         Uint32 AssignedSamplerInd     = ResourceAttribs::InvalidSamplerInd;
         Uint32 SrcImmutableSamplerInd = ResourceToImmutableSamplerInd[i];
@@ -469,88 +513,74 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
             }
         }
 
+        const bool IsImmutableSampler = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && SrcImmutableSamplerInd != InvalidImmutableSamplerIndex);
+
+        Uint32 BindGroupIndex = ~0u;
+        Uint32 BindingIndex   = ~0u;
+        Uint32 CacheOffset    = ~0u;
+        if (IsImmutableSampler)
+        {
+            // Note that the same immutable sampler may be assigned to multiple sampler resources in different shader stages
+            const ImmutableSamplerAttribsWebGPU& ImtblSampAttribs = m_pImmutableSamplerAttribs[SrcImmutableSamplerInd];
+
+            BindGroupIndex = ImtblSampAttribs.BindGroup;
+            BindingIndex   = ImtblSampAttribs.BindingIndex;
+            CacheOffset    = ImtblSampAttribs.CacheOffset;
+        }
+        else
+        {
+            const BIND_GROUP_ID GroupId = VarTypeToBindGroupId(ResDesc.VarType);
+            AllocateBindings(GroupId, GetResourceCacheGroup(ResDesc), ResDesc.ArraySize, BindGroupIndex, BindingIndex, CacheOffset);
+        }
+        VERIFY_EXPR(BindGroupIndex != ~0u && BindingIndex != ~0u && CacheOffset != ~0u);
+
         auto* const pAttribs = m_pResourceAttribs + i;
         if (!IsSerialized)
         {
             new (pAttribs) ResourceAttribs{
-                BindingIndices[CacheGroup],
+                BindingIndex,
                 AssignedSamplerInd,
                 ResDesc.ArraySize,
                 EntryType,
                 BindGroupIndex,
                 SrcImmutableSamplerInd != InvalidImmutableSamplerIndex,
-                CacheGroupOffsets[CacheGroup],
-                ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u,
+                CacheOffset,
+                (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC && !IsImmutableSampler) ? StaticCacheOffset : ~0u,
             };
         }
         else
         {
-            DEV_CHECK_ERR(pAttribs->BindingIndex == BindingIndices[CacheGroup],
-                          "Deserialized binding index (", pAttribs->BindingIndex, ") is invalid: ", BindingIndices[CacheGroup], " is expected.");
+            DEV_CHECK_ERR(pAttribs->BindingIndex == BindingIndex,
+                          "Deserialized binding index (", pAttribs->BindingIndex, ") is invalid: ", BindingIndex, " is expected.");
             DEV_CHECK_ERR(pAttribs->SamplerInd == AssignedSamplerInd,
                           "Deserialized sampler index (", pAttribs->SamplerInd, ") is invalid: ", AssignedSamplerInd, " is expected.");
             DEV_CHECK_ERR(pAttribs->ArraySize == ResDesc.ArraySize,
                           "Deserialized array size (", pAttribs->ArraySize, ") is invalid: ", ResDesc.ArraySize, " is expected.");
-            DEV_CHECK_ERR(pAttribs->GetBindGroupEntryType() == EntryType, "Deserialized bind group is invalid");
-            DEV_CHECK_ERR(pAttribs->BindGroup == BindGroupMapping[GroupId],
-                          "Deserialized bind group (", pAttribs->BindGroup, ") is invalid: ", BindGroupMapping[GroupId], " is expected.");
-            DEV_CHECK_ERR(pAttribs->IsImmutableSamplerAssigned() == (SrcImmutableSamplerInd != InvalidImmutableSamplerIndex), "Immutable sampler flag is invalid");
-            DEV_CHECK_ERR(pAttribs->SRBCacheOffset == CacheGroupOffsets[CacheGroup],
-                          "SRB cache offset (", pAttribs->SRBCacheOffset, ") is invalid: ", CacheGroupOffsets[CacheGroup], " is expected.");
-            DEV_CHECK_ERR(pAttribs->StaticCacheOffset == (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u),
-                          "Static cache offset is invalid.");
+            DEV_CHECK_ERR(pAttribs->GetBindGroupEntryType() == EntryType, "Deserialized bind group entry type is invalid");
+            DEV_CHECK_ERR(pAttribs->BindGroup == BindGroupIndex,
+                          "Deserialized bind group index (", pAttribs->BindGroup, ") is invalid: ", BindGroupIndex, " is expected.");
+            DEV_CHECK_ERR(pAttribs->IsImmutableSamplerAssigned() == (SrcImmutableSamplerInd != InvalidImmutableSamplerIndex), "Deserialized immutable sampler flag is invalid");
+            DEV_CHECK_ERR(pAttribs->SRBCacheOffset == CacheOffset,
+                          "Deserialized SRB cache offset (", pAttribs->SRBCacheOffset, ") is invalid: ", CacheOffset, " is expected.");
+            DEV_CHECK_ERR(pAttribs->StaticCacheOffset == ((ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC && !IsImmutableSampler) ? StaticCacheOffset : ~0u),
+                          "Deserialized static cache offset is invalid.");
         }
 
-        BindingIndices[CacheGroup] += ResDesc.ArraySize;
-        CacheGroupOffsets[CacheGroup] += ResDesc.ArraySize;
-
-        for (Uint32 elem = 0; elem < ResDesc.ArraySize; ++elem)
+        if (!IsImmutableSampler)
         {
-            WGPUBindGroupLayoutEntry wgpuBGLayoutEntry = GetWGPUBindGroupLayoutEntry(*pAttribs, ResDesc, elem);
-            wgpuBGLayoutEntries[BindGroupIndex].push_back(wgpuBGLayoutEntry);
-        }
-
-        if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-        {
-            VERIFY(pAttribs->BindGroup == 0, "Static resources must always be allocated in bind group 0");
-            m_pStaticResCache->InitializeResources(pAttribs->BindGroup, StaticCacheOffset, ResDesc.ArraySize,
-                                                   pAttribs->GetBindGroupEntryType(), pAttribs->IsImmutableSamplerAssigned());
-            StaticCacheOffset += ResDesc.ArraySize;
-        }
-    }
-
-    for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
-    {
-        const ImmutableSamplerDesc&    ImtblSamp        = GetImmutableSamplerDesc(i);
-        ImmutableSamplerAttribsWebGPU& ImtblSampAttribs = m_pImmutableSamplerAttribs[i];
-        if (ImtblSampAttribs.SamplerInd == ResourceAttribs::InvalidSamplerInd)
-        {
-            // There is no corresponding resource for this immutable sampler, so we need
-            // to add new bind group layout entries.
-            ImtblSampAttribs.BindGroup    = static_cast<Uint16>(BindGroupMapping[BIND_GROUP_ID_STATIC_MUTABLE]);
-            ImtblSampAttribs.BindingIndex = static_cast<Uint16>(BindingIndices[ImmutableSamplerCacheGroup]);
-            ImtblSampAttribs.CacheOffset  = CacheGroupOffsets[ImmutableSamplerCacheGroup];
-            BindingIndices[ImmutableSamplerCacheGroup] += ImtblSampAttribs.ArraySize;
-            CacheGroupOffsets[ImmutableSamplerCacheGroup] += ImtblSampAttribs.ArraySize;
-
-            for (Uint32 elem = 0; elem < ImtblSampAttribs.ArraySize; ++elem)
+            for (Uint32 elem = 0; elem < ResDesc.ArraySize; ++elem)
             {
-                WGPUBindGroupLayoutEntry wgpuBGLayoutEntry{};
-                wgpuBGLayoutEntry.binding      = ImtblSampAttribs.BindingIndex + elem;
-                wgpuBGLayoutEntry.visibility   = ShaderStagesToWGPUShaderStageFlags(ImtblSamp.ShaderStages & WEB_GPU_SUPPORTED_SHADER_STAGES);
-                wgpuBGLayoutEntry.sampler.type = SamplerDescToWGPUSamplerBindingType(ImtblSamp.Desc);
-                wgpuBGLayoutEntries[ImtblSampAttribs.BindGroup].push_back(wgpuBGLayoutEntry);
+                WGPUBindGroupLayoutEntry wgpuBGLayoutEntry = GetWGPUBindGroupLayoutEntry(*pAttribs, ResDesc, elem);
+                wgpuBGLayoutEntries[BindGroupIndex].push_back(wgpuBGLayoutEntry);
             }
-        }
-        else
-        {
-            // There is a corresponding resource for this immutable sampler. Use its
-            // bind group and binding index.
-            ResourceAttribs& SamplerAttribs = m_pResourceAttribs[ImtblSampAttribs.SamplerInd];
-            VERIFY_EXPR(SamplerAttribs.GetBindGroupEntryType() == BindGroupEntryType::Sampler);
-            ImtblSampAttribs.BindGroup    = static_cast<Uint16>(SamplerAttribs.BindGroup);
-            ImtblSampAttribs.BindingIndex = static_cast<Uint16>(SamplerAttribs.BindingIndex);
-            ImtblSampAttribs.CacheOffset  = SamplerAttribs.SRBCacheOffset;
+
+            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                VERIFY(pAttribs->BindGroup == 0, "Static resources must always be allocated in bind group 0");
+                m_pStaticResCache->InitializeResources(pAttribs->BindGroup, StaticCacheOffset, ResDesc.ArraySize,
+                                                       pAttribs->GetBindGroupEntryType(), pAttribs->IsImmutableSamplerAssigned());
+                StaticCacheOffset += ResDesc.ArraySize;
+            }
         }
     }
 
@@ -578,9 +608,9 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
     VERIFY_EXPR(BindingIndices[CACHE_GROUP_OTHER_DYN_VAR] == BindingCount[CACHE_GROUP_DYN_UB_DYN_VAR] + BindingCount[CACHE_GROUP_DYN_SB_DYN_VAR] + BindingCount[CACHE_GROUP_OTHER_DYN_VAR]);
 
     Uint32 NumGroups = 0;
-    if (BindGroupMapping[BIND_GROUP_ID_STATIC_MUTABLE] < MAX_BIND_GROUPS)
+    if (BindGroupIdToIndex[BIND_GROUP_ID_STATIC_MUTABLE] < MAX_BIND_GROUPS)
     {
-        const Uint32 BindGroupIndex = BindGroupMapping[BIND_GROUP_ID_STATIC_MUTABLE];
+        const Uint32 BindGroupIndex = BindGroupIdToIndex[BIND_GROUP_ID_STATIC_MUTABLE];
         m_BindGroupSizes[BindGroupIndex] =
             CacheGroupSizes[CACHE_GROUP_DYN_UB_STAT_VAR] +
             CacheGroupSizes[CACHE_GROUP_DYN_SB_STAT_VAR] +
@@ -591,9 +621,9 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
         ++NumGroups;
     }
 
-    if (BindGroupMapping[BIND_GROUP_ID_DYNAMIC] < MAX_BIND_GROUPS)
+    if (BindGroupIdToIndex[BIND_GROUP_ID_DYNAMIC] < MAX_BIND_GROUPS)
     {
-        const Uint32 BindGroupIndex = BindGroupMapping[BIND_GROUP_ID_DYNAMIC];
+        const Uint32 BindGroupIndex = BindGroupIdToIndex[BIND_GROUP_ID_DYNAMIC];
         m_BindGroupSizes[BindGroupIndex] =
             CacheGroupSizes[CACHE_GROUP_DYN_UB_DYN_VAR] +
             CacheGroupSizes[CACHE_GROUP_DYN_SB_DYN_VAR] +
@@ -657,6 +687,13 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
     {
         const PipelineResourceDesc& ResDesc = GetResourceDesc(r);
         const ResourceAttribs&      Attr    = GetResourceAttribs(r);
+        if (Attr.GetBindGroupEntryType() == BindGroupEntryType::Sampler && Attr.IsImmutableSamplerAssigned())
+        {
+            // Skip immutable samplers
+            VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
+            continue;
+        }
+
         ResourceCache.InitializeResources(Attr.BindGroup, Attr.CacheOffset(CacheType), ResDesc.ArraySize,
                                           Attr.GetBindGroupEntryType(), Attr.IsImmutableSamplerAssigned());
     }
@@ -667,12 +704,8 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
         const ImmutableSamplerAttribsWebGPU& ImtblSampAttr = m_pImmutableSamplerAttribs[i];
         VERIFY_EXPR(ImtblSampAttr.IsAllocated());
         VERIFY_EXPR(ImtblSampAttr.ArraySize > 0);
-        // Initialize immutable samplers that are not defined as resources
-        if (ImtblSampAttr.SamplerInd == ResourceAttribs::InvalidSamplerInd)
-        {
-            ResourceCache.InitializeResources(ImtblSampAttr.BindGroup, ImtblSampAttr.CacheOffset, ImtblSampAttr.ArraySize,
-                                              BindGroupEntryType::Sampler, /*HasImmutableSampler = */ true);
-        }
+        ResourceCache.InitializeResources(ImtblSampAttr.BindGroup, ImtblSampAttr.CacheOffset, ImtblSampAttr.ArraySize,
+                                          BindGroupEntryType::Sampler, /*HasImmutableSampler = */ true);
 
         if (const RefCntAutoPtr<SamplerWebGPUImpl>& pSampler = m_pImmutableSamplers[i])
         {
@@ -713,6 +746,11 @@ void PipelineResourceSignatureWebGPUImpl::CopyStaticResources(ShaderResourceCach
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && Attr.IsImmutableSamplerAssigned())
         {
             // Skip immutable samplers as they are initialized in InitSRBResourceCache()
+            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+            {
+                VERIFY(DstBindGroup.GetResource(Attr.CacheOffset(DstCacheType) + ArrInd).pObject,
+                       "Immutable sampler must have been initialized in InitSRBResourceCache(). This is likely a bug.");
+            }
             continue;
         }
 
@@ -1020,17 +1058,22 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const WGS
             const ResourceAttribs&      SamplerAttribs = GetResourceAttribs(ResAttribs.SamplerInd);
             VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
             VERIFY_EXPR(SamplerResDesc.ArraySize == 1 || SamplerResDesc.ArraySize == ResDesc.ArraySize);
-            if (!SamplerAttribs.IsImmutableSamplerAssigned())
+            if (ArrIndex < SamplerResDesc.ArraySize)
             {
-                if (ArrIndex < SamplerResDesc.ArraySize)
+                const ShaderResourceCacheWebGPU::BindGroup& SamBindGroupResources = ResourceCache.GetBindGroup(SamplerAttribs.BindGroup);
+                const Uint32                                SamCacheOffset        = SamplerAttribs.CacheOffset(CacheType);
+                const ShaderResourceCacheWebGPU::Resource&  Sam                   = SamBindGroupResources.GetResource(SamCacheOffset + ArrIndex);
+                if (!Sam)
                 {
-                    const ShaderResourceCacheWebGPU::BindGroup& SamBindGroupResources = ResourceCache.GetBindGroup(SamplerAttribs.BindGroup);
-                    const Uint32                                SamCacheOffset        = SamplerAttribs.CacheOffset(CacheType);
-                    const ShaderResourceCacheWebGPU::Resource&  Sam                   = SamBindGroupResources.GetResource(SamCacheOffset + ArrIndex);
-                    if (!Sam)
+                    if (!SamplerAttribs.IsImmutableSamplerAssigned())
                     {
                         LOG_ERROR_MESSAGE("No sampler is bound to sampler variable '", GetShaderResourcePrintName(SamplerResDesc, ArrIndex),
                                           "' combined with texture '", WGSLAttribs.Name, "' in shader '", ShaderName, "' of PSO '", PSOName, "'.");
+                        BindingsOK = false;
+                    }
+                    else
+                    {
+                        UNEXPECTED("Immutable sampler must have been initialized in InitSRBResourceCache(). This is likely a bug.");
                         BindingsOK = false;
                     }
                 }
@@ -1154,7 +1197,7 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateImmutableSampler(const WGSL
         if (!Res)
         {
             DEV_ERROR("Immutable sampler is not initialized for variable '", GetShaderResourcePrintName(WGSLAttribs, ArrIndex),
-                      "' in shader '", ShaderName, "' of PSO '", PSOName, "'. This might be a bug as immutable samplers should be initialized by InitSRBResourceCache.");
+                      "' in shader '", ShaderName, "' of PSO '", PSOName, "'. This is likely a bug as immutable samplers should be initialized by InitSRBResourceCache.");
             BindingsOK = false;
         }
     }

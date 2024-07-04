@@ -50,22 +50,14 @@ struct WGSLShaderResourceAttribs;
 struct ImmutableSamplerAttribsWebGPU
 {
 public:
-    Uint16 BindGroup    = 0xFFFFu;
-    Uint16 BindingIndex = 0;
-
-    Uint32 ArraySize   = 1;
-    Uint32 CacheOffset = 0; // Offset in the SRB resource cache
-
-    // Index of the sampler resource in m_Desc.Resources, e.g.:
-    //
-    //      PipelineResourceDesc Resources[] = {{SHADER_TYPE_PIXEL, "g_Sampler", SHADER_RESOURCE_TYPE_SAMPLER, ...}, ... }
-    //      ImmutableSamplerDesc ImtblSams[] = {{SHADER_TYPE_PIXEL, "g_Sampler", ...}, ... }
-    //
-    Uint32 SamplerInd = PipelineResourceAttribsWebGPU::InvalidSamplerInd;
+    Uint32 BindGroup    = ~0u;
+    Uint32 BindingIndex = ~0u;
+    Uint32 CacheOffset  = 0; // Offset in the SRB resource cache
+    Uint32 ArraySize    = 1;
 
     ImmutableSamplerAttribsWebGPU() noexcept {}
 
-    bool IsAllocated() const { return BindGroup != 0xFFFFu; }
+    bool IsAllocated() const { return BindingIndex != ~0u; }
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsWebGPU, 16, "The struct is used in serialization and must be tightly packed");
 
@@ -91,7 +83,7 @@ public:
 
     using ResourceAttribs = TPipelineResourceSignatureBase::PipelineResourceAttribsType;
 
-    // Bind group identifier (this is not the bind group set index in the layout!)
+    // Bind group identifier (this is not the bind group index in the layout!)
     enum BIND_GROUP_ID : size_t
     {
         // Static/mutable variables bind group id
@@ -129,7 +121,7 @@ public:
 
     WGPUBindGroupLayout GetWGPUBindGroupLayout(BIND_GROUP_ID GroupId) const { return m_wgpuBindGroupLayouts[GroupId]; }
 
-    bool   HasBindGroup(BIND_GROUP_ID GroupId) const { return m_wgpuBindGroupLayouts[GroupId]; }
+    bool   HasBindGroup(BIND_GROUP_ID GroupId) const { return m_BindGroupSizes[GroupId] != ~0u && m_BindGroupSizes[GroupId] > 0; }
     Uint32 GetBindGroupSize(BIND_GROUP_ID GroupId) const { return m_BindGroupSizes[GroupId]; }
 
     void InitSRBResourceCache(ShaderResourceCacheWebGPU& ResourceCache);
@@ -179,8 +171,8 @@ private:
     };
     static_assert(CACHE_GROUP_COUNT == CACHE_GROUP_COUNT_PER_VAR_TYPE * MAX_BIND_GROUPS, "Inconsistent cache group count");
 
-    using CacheOffsetsType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [bind group] including ArraySize
-    using BindingCountType = std::array<Uint32, CACHE_GROUP_COUNT>; // [dynamic uniform buffers, dynamic storage buffers, other] x [bind group] not counting ArraySize
+    using CacheOffsetsType = std::array<Uint32, CACHE_GROUP_COUNT>; // [Dynamic UBs, Dynamic SBs, Other] x [bind group]
+    using BindingCountType = std::array<Uint32, CACHE_GROUP_COUNT>; // [Dynamic UBs, Dynamic SBs, Other] x [bind group]
 
     static inline CACHE_GROUP   GetResourceCacheGroup(const PipelineResourceDesc& Res);
     static inline BIND_GROUP_ID VarTypeToBindGroupId(SHADER_RESOURCE_VARIABLE_TYPE VarType);

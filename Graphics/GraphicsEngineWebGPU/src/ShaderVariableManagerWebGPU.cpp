@@ -449,9 +449,7 @@ void BindResourceHelper::CacheTexture(const BindResourceInfo& BindInfo) const
     {
         if (m_Attribs.IsCombinedWithSampler())
         {
-            VERIFY(m_DstRes.Type == BindGroupEntryType::Texture,
-                   "Only textures can be combined with samplers.");
-            VERIFY(!m_Attribs.IsImmutableSamplerAssigned(), "Separate image can't be assigned an immutable sampler.");
+            VERIFY(m_DstRes.Type == BindGroupEntryType::Texture, "Only textures can be combined with samplers.");
 
             const auto& SamplerResDesc = m_Signature.GetResourceDesc(m_Attribs.SamplerInd);
             const auto& SamplerAttribs = m_Signature.GetResourceAttribs(m_Attribs.SamplerInd);

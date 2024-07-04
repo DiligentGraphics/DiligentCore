@@ -165,24 +165,9 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
                     }
                     const ImmutableSamplerAttribsWebGPU& ImmtblSamAttribs{
                         ResAttribution.pSignature->GetImmutableSamplerAttribs(ResAttribution.ImmutableSamplerIndex)};
-                    if (ImmtblSamAttribs.SamplerInd == PipelineResourceAttribsWebGPU::InvalidSamplerInd)
-                    {
-                        // Handle immutable samplers that do not have corresponding resources in m_Desc.Resources
-                        BindGroup       = ImmtblSamAttribs.BindGroup;
-                        ResourceBinding = ImmtblSamAttribs.BindingIndex;
-                    }
-                    else
-                    {
-#ifdef DILIGENT_DEBUG
-                        const PipelineResourceAttribsWebGPU& SamAttribs = ResAttribution.pSignature->GetResourceAttribs(ImmtblSamAttribs.SamplerInd);
-                        VERIFY(SamAttribs.BindGroup == ImmtblSamAttribs.BindGroup, "Immutable sampler bind group (", ImmtblSamAttribs.BindGroup,
-                               ") does not match the bind group of the corresponding sampler resource (", SamAttribs.BindGroup,
-                               "). This might be a bug in PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts.");
-                        VERIFY(SamAttribs.BindingIndex == ImmtblSamAttribs.BindingIndex, "Immutable sampler binding index (", ImmtblSamAttribs.BindingIndex,
-                               ") does not match the binding index of the corresponding sampler resource (", SamAttribs.BindingIndex,
-                               "). This might be a bug in PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts.");
-#endif
-                    }
+                    // Handle immutable samplers that do not have corresponding resources in m_Desc.Resources
+                    BindGroup       = ImmtblSamAttribs.BindGroup;
+                    ResourceBinding = ImmtblSamAttribs.BindingIndex;
                 }
                 else
                 {
