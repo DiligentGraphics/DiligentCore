@@ -1749,8 +1749,9 @@ void DeviceContextWebGPUImpl::CommitIndexBuffer(WGPURenderPassEncoder CmdEncoder
     DEV_CHECK_ERR(m_pPipelineState, "No pipeline state to commit!");
     DEV_CHECK_ERR(IndexType == VT_UINT16 || IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
 
-    wgpuRenderPassEncoderSetIndexBuffer(CmdEncoder, m_pIndexBuffer->GetWebGPUBuffer(), IndexTypeToWGPUIndexFormat(IndexType), m_IndexDataStartOffset, WGPU_WHOLE_SIZE);
-    m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_INDEX_BUFFER);
+    wgpuRenderPassEncoderSetIndexBuffer(CmdEncoder, m_pIndexBuffer->GetWebGPUBuffer(), IndexTypeToWGPUIndexFormat(IndexType), m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(GetContextId(), this), WGPU_WHOLE_SIZE);
+    if (m_pIndexBuffer->GetDesc().Usage != USAGE_DYNAMIC)
+        m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_INDEX_BUFFER);
 }
 
 void DeviceContextWebGPUImpl::CommitViewports(WGPURenderPassEncoder CmdEncoder)
