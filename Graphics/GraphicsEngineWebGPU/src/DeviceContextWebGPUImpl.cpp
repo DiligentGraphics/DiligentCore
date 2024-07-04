@@ -1503,7 +1503,7 @@ void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
 void DeviceContextWebGPUImpl::ClearEncoderState()
 {
     m_EncoderState.Clear();
-    m_BindInfo.Reset();
+    m_BindInfo.DirtyBindGroups = m_BindInfo.ActiveBindGroups;
 }
 
 void DeviceContextWebGPUImpl::ClearAttachment(Int32                     RTIndex,
