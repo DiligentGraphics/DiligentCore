@@ -1362,9 +1362,12 @@ void DeviceContextWebGPUImpl::CommitRenderTargets()
         wgpuRenderPassDepthStencilAttachment.depthStoreOp    = WGPUStoreOp_Store;
         wgpuRenderPassDepthStencilAttachment.depthClearValue = m_PendingClears.Depth;
 
-        wgpuRenderPassDepthStencilAttachment.stencilLoadOp     = m_PendingClears.StencilPending() ? WGPULoadOp_Clear : WGPULoadOp_Load;
-        wgpuRenderPassDepthStencilAttachment.stencilStoreOp    = WGPUStoreOp_Store;
-        wgpuRenderPassDepthStencilAttachment.stencilClearValue = m_PendingClears.Stencil;
+        if (GetTextureFormatAttribs(m_pBoundDepthStencil->GetDesc().Format).ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        {
+            wgpuRenderPassDepthStencilAttachment.stencilLoadOp     = m_PendingClears.StencilPending() ? WGPULoadOp_Clear : WGPULoadOp_Load;
+            wgpuRenderPassDepthStencilAttachment.stencilStoreOp    = WGPUStoreOp_Store;
+            wgpuRenderPassDepthStencilAttachment.stencilClearValue = m_PendingClears.Stencil;
+        }
 
         wgpuRenderPassDesc.depthStencilAttachment = &wgpuRenderPassDepthStencilAttachment;
     }

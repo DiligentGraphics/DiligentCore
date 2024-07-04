@@ -390,6 +390,9 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
         wgpuDepthStencilState.stencilFront.failOp      = StencilOpToWGPUStencilOperation(DepthStencilDesc.FrontFace.StencilFailOp);
         wgpuDepthStencilState.stencilFront.depthFailOp = StencilOpToWGPUStencilOperation(DepthStencilDesc.FrontFace.StencilDepthFailOp);
         wgpuDepthStencilState.stencilFront.passOp      = StencilOpToWGPUStencilOperation(DepthStencilDesc.FrontFace.StencilPassOp);
+
+        wgpuDepthStencilState.stencilReadMask  = DepthStencilDesc.StencilReadMask;
+        wgpuDepthStencilState.stencilWriteMask = DepthStencilDesc.StencilWriteMask;
     }
 
     {

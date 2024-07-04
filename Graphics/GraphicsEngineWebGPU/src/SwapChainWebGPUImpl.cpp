@@ -129,7 +129,7 @@ public:
         wgpuColorTargetState.blend     = nullptr;
         wgpuColorTargetState.writeMask = WGPUColorWriteMask_All;
 
-        WGPUFragmentState wgpuFragmentState;
+        WGPUFragmentState wgpuFragmentState{};
         wgpuFragmentState.module      = wgpuShaderModule.Get();
         wgpuFragmentState.entryPoint  = "PSMain";
         wgpuFragmentState.targets     = &wgpuColorTargetState;
