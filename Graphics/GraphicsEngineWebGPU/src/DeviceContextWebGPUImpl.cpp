@@ -1716,16 +1716,32 @@ void DeviceContextWebGPUImpl::CommitVertexBuffers(WGPURenderPassEncoder CmdEncod
         LOG_ERROR("Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
 #endif
 
+    bool DynamicBufferPresent = false;
+    // TODO: optimize
     for (Uint32 SlotIdx = 0; SlotIdx < m_NumVertexStreams; ++SlotIdx)
     {
-        auto& CurrStream = m_VertexStreams[SlotIdx];
-        if (auto* pBufferWebGPU = CurrStream.pBuffer.RawPtr())
-            wgpuRenderPassEncoderSetVertexBuffer(CmdEncoder, SlotIdx, pBufferWebGPU->GetWebGPUBuffer(), CurrStream.Offset, WGPU_WHOLE_SIZE);
-        else
-            wgpuRenderPassEncoderSetVertexBuffer(CmdEncoder, SlotIdx, nullptr, 0, 0);
+        auto&      CurrStream = m_VertexStreams[SlotIdx];
+        WGPUBuffer wgpuBuffer = nullptr;
+        Uint64     Offset     = CurrStream.Offset;
+        if (BufferWebGPUImpl* pBufferWebGPU = CurrStream.pBuffer.RawPtr())
+        {
+            wgpuBuffer = pBufferWebGPU->GetWebGPUBuffer();
+            if (pBufferWebGPU->GetDesc().Usage == USAGE_DYNAMIC)
+            {
+                DynamicBufferPresent = true;
+#ifdef DILIGENT_DEVELOPMENT
+                //pBufferWebGPU->DvpVerifyDynamicAllocation(this);
+#endif
+                Offset += pBufferWebGPU->GetDynamicOffset(GetContextId(), this);
+            }
+        }
+
+        wgpuRenderPassEncoderSetVertexBuffer(CmdEncoder, SlotIdx, wgpuBuffer, Offset, WGPU_WHOLE_SIZE);
     }
 
-    m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_VERTEX_BUFFERS);
+    // GPU offset for a dynamic vertex buffer can change every time a draw command is invoked
+    if (!DynamicBufferPresent)
+        m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_VERTEX_BUFFERS);
 }
 
 void DeviceContextWebGPUImpl::CommitIndexBuffer(WGPURenderPassEncoder CmdEncoder, VALUE_TYPE IndexType)
