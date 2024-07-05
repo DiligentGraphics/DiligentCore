@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -802,9 +802,41 @@ SPIRVShaderResources::~SPIRVShaderResources()
     static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please add destructor for the new resource");
 }
 
+void SPIRVShaderResources::MapHLSLVertexShaderInputs(std::vector<uint32_t>& SPIRV) const
+{
+    VERIFY(IsHLSLSource(), "This method is only relevant for HLSL source");
 
+    for (Uint32 i = 0; i < GetNumShaderStageInputs(); ++i)
+    {
+        const SPIRVShaderStageInputAttribs& Input = GetShaderStageInputAttribs(i);
 
-std::string SPIRVShaderResources::DumpResources()
+        const char*        s      = Input.Semantic;
+        static const char* Prefix = "attrib";
+        const char*        p      = Prefix;
+        while (*s != 0 && *p != 0 && *p == std::tolower(static_cast<unsigned char>(*s)))
+        {
+            ++p;
+            ++s;
+        }
+
+        if (*p != 0)
+        {
+            LOG_ERROR_MESSAGE("Unable to map semantic '", Input.Semantic, "' to input location: semantics must have '", Prefix, "x' format.");
+            continue;
+        }
+
+        char*    EndPtr   = nullptr;
+        uint32_t Location = static_cast<uint32_t>(strtol(s, &EndPtr, 10));
+        if (*EndPtr != 0)
+        {
+            LOG_ERROR_MESSAGE("Unable to map semantic '", Input.Semantic, "' to input location: semantics must have '", Prefix, "x' format.");
+            continue;
+        }
+        SPIRV[Input.LocationDecorationOffset] = Location;
+    }
+}
+
+std::string SPIRVShaderResources::DumpResources() const
 {
     std::stringstream ss;
     ss << "Shader '" << m_ShaderName << "' resource stats: total resources: " << GetTotalResources() << ":" << std::endl

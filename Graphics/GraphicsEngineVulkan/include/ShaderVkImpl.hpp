@@ -115,8 +115,6 @@ private:
                     const CreateInfo&       VkShaderCI) noexcept(false);
 
 private:
-    void MapHLSLVertexShaderInputs();
-
     std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;
 
     std::string           m_EntryPoint;

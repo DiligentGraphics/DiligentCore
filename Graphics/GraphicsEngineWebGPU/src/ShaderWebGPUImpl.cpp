@@ -34,6 +34,7 @@
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLangUtils.hpp"
+#    include "SPIRVShaderResources.hpp"
 #endif
 
 #if !DILIGENT_NO_HLSL
@@ -64,6 +65,21 @@ std::vector<uint32_t> CompileShaderToSPIRV(const ShaderCreateInfo&             S
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
         SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, WebGPUDefine, WebGPUShaderCI.ppCompilerOutput);
+        if (ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX)
+        {
+            std::string EntryPoint;
+
+            SPIRVShaderResources Resources{
+                GetRawAllocator(),
+                SPIRV,
+                ShaderCI.Desc,
+                ShaderCI.Desc.UseCombinedTextureSamplers ? ShaderCI.Desc.CombinedSamplerSuffix : nullptr,
+                true,  // LoadShaderStageInputs
+                false, // LoadUniformBufferReflection
+                EntryPoint,
+            };
+            Resources.MapHLSLVertexShaderInputs(SPIRV);
+        }
     }
     else
     {

@@ -236,7 +236,7 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
 
             if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
             {
-                MapHLSLVertexShaderInputs();
+                m_pShaderResources->MapHLSLVertexShaderInputs(m_SPIRV);
             }
         }
         else
@@ -304,37 +304,6 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                 }
                 ShaderCI = ShaderCreateInfoWrapper{};
             });
-    }
-}
-
-void ShaderVkImpl::MapHLSLVertexShaderInputs()
-{
-    for (Uint32 i = 0; i < m_pShaderResources->GetNumShaderStageInputs(); ++i)
-    {
-        const auto&        Input  = m_pShaderResources->GetShaderStageInputAttribs(i);
-        const char*        s      = Input.Semantic;
-        static const char* Prefix = "attrib";
-        const char*        p      = Prefix;
-        while (*s != 0 && *p != 0 && *p == std::tolower(static_cast<unsigned char>(*s)))
-        {
-            ++p;
-            ++s;
-        }
-
-        if (*p != 0)
-        {
-            LOG_ERROR_MESSAGE("Unable to map semantic '", Input.Semantic, "' to input location: semantics must have 'ATTRIBx' format.");
-            continue;
-        }
-
-        char* EndPtr   = nullptr;
-        auto  Location = static_cast<uint32_t>(strtol(s, &EndPtr, 10));
-        if (*EndPtr != 0)
-        {
-            LOG_ERROR_MESSAGE("Unable to map semantic '", Input.Semantic, "' to input location: semantics must have 'ATTRIBx' format.");
-            continue;
-        }
-        m_SPIRV[Input.LocationDecorationOffset] = Location;
     }
 }
 

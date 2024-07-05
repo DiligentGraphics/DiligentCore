@@ -321,7 +321,7 @@ public:
         }
     }
 
-    std::string DumpResources();
+    std::string DumpResources() const;
 
     // clang-format off
 
@@ -332,6 +332,9 @@ public:
     // clang-format on
 
     bool IsHLSLSource() const { return m_IsHLSLSource; }
+
+    // Sets the input location decorations using the HLSL semantic names.
+    void MapHLSLVertexShaderInputs(std::vector<uint32_t>& SPIRV) const;
 
 private:
     void Initialize(IMemoryAllocator&       Allocator,

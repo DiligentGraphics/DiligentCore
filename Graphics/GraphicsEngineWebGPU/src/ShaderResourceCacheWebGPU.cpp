@@ -398,11 +398,11 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
 }
 
 
-void ShaderResourceCacheWebGPU::SetDynamicBufferOffset(Uint32 DescrSetIndex,
+void ShaderResourceCacheWebGPU::SetDynamicBufferOffset(Uint32 BindGroupIndex,
                                                        Uint32 CacheOffset,
                                                        Uint32 DynamicBufferOffset)
 {
-    BindGroup& Group  = GetBindGroup(DescrSetIndex);
+    BindGroup& Group  = GetBindGroup(BindGroupIndex);
     Resource&  DstRes = Group.GetResource(CacheOffset);
 
     DEV_CHECK_ERR(DstRes.pObject, "Setting dynamic offset when no object is bound");
