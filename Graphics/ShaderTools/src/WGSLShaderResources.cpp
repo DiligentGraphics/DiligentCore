@@ -28,7 +28,6 @@
 #include "Align.hpp"
 #include "StringPool.hpp"
 #include "WGSLUtils.hpp"
-#include "ParsingTools.hpp"
 
 #ifdef _MSC_VER
 #    pragma warning(push)
@@ -447,35 +446,6 @@ WebGPUResourceAttribs WGSLShaderResourceAttribs::GetWebGPUAttribs() const
 namespace
 {
 
-struct ResourceArrayElement
-{
-    std::string Name;
-    int         Index = -1;
-    bool        IsValid() const { return Index >= 0; }
-};
-
-ResourceArrayElement GetArrayElementNameAndIndex(const std::string& Name,
-                                                 const std::string& Suffix)
-{
-    size_t SuffixPos = Name.find_last_of(Suffix);
-    // g_Tex2DArr_15
-    //           ^
-    if (SuffixPos != std::string::npos && SuffixPos + 1 < Name.length())
-    {
-        int Index = 0;
-        if (Parsing::ParseInteger(Name.begin() + SuffixPos + 1, Name.end(), Index) == Name.end())
-        {
-            // g_Tex2DArr_15
-            //            ^
-            VERIFY_EXPR(Index >= 0);
-            return {Name.substr(0, SuffixPos), Index};
-        }
-    }
-
-    return {Name, -1};
-}
-
-
 bool ResourceBindingsCompatibile(const tint::inspector::ResourceBinding& Binding0,
                                  const tint::inspector::ResourceBinding& Binding1)
 {
@@ -496,7 +466,7 @@ bool ResourceBindingsCompatibile(const tint::inspector::ResourceBinding& Binding
 
 void MergeResources(std::vector<tint::inspector::ResourceBinding>& Bindings, std::vector<Uint32>& ArraySizes, const std::string& Suffix)
 {
-    std::vector<ResourceArrayElement> ArrayElements(Bindings.size());
+    std::vector<WGSLEmulatedResourceArrayElement> ArrayElements(Bindings.size());
 
     struct ArrayInfo
     {
@@ -510,9 +480,9 @@ void MergeResources(std::vector<tint::inspector::ResourceBinding>& Bindings, std
     for (size_t i = 0; i < Bindings.size(); ++i)
     {
         const tint::inspector::ResourceBinding& Binding = Bindings[i];
-        ResourceArrayElement&                   Element = ArrayElements[i];
+        WGSLEmulatedResourceArrayElement&       Element = ArrayElements[i];
 
-        Element = GetArrayElementNameAndIndex(Binding.variable_name, Suffix);
+        Element = GetWGSLEmulatedArrayElement(Binding.variable_name, Suffix);
         if (Element.IsValid())
         {
             Arrays[Element.Name].ElementInds.push_back(i);
@@ -539,8 +509,8 @@ void MergeResources(std::vector<tint::inspector::ResourceBinding>& Bindings, std
     std::vector<tint::inspector::ResourceBinding> MergedBindings;
     for (size_t i = 0; i < Bindings.size(); ++i)
     {
-        tint::inspector::ResourceBinding& Binding = Bindings[i];
-        const ResourceArrayElement&       Element = ArrayElements[i];
+        tint::inspector::ResourceBinding&       Binding = Bindings[i];
+        const WGSLEmulatedResourceArrayElement& Element = ArrayElements[i];
         if (Element.IsValid())
         {
             VERIFY_EXPR(Arrays.find(Element.Name) != Arrays.end());

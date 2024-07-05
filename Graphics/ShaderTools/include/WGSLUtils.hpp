@@ -46,8 +46,9 @@ std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV);
 
 struct WGSLResourceBindingInfo
 {
-    uint32_t Group = 0;
-    uint32_t Index = 0;
+    uint32_t Group     = 0;
+    uint32_t Index     = 0;
+    uint32_t ArraySize = 1;
 };
 using WGSLResourceMapping = std::unordered_map<std::string, WGSLResourceBindingInfo>;
 
@@ -86,5 +87,37 @@ std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourc
 ///
 /// This function returns the alternative name of the resource binding.
 std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const tint::inspector::ResourceBinding& Binding);
+
+struct WGSLEmulatedResourceArrayElement
+{
+    std::string Name;
+    int         Index = -1;
+
+    WGSLEmulatedResourceArrayElement() noexcept {}
+
+    explicit WGSLEmulatedResourceArrayElement(std::string _Name) :
+        Name{std::move(_Name)}
+    {}
+
+    WGSLEmulatedResourceArrayElement(std::string _Name, int _Index) :
+        Name{std::move(_Name)},
+        Index{_Index}
+    {}
+
+    constexpr bool IsValid() const { return Index >= 0; }
+
+    bool operator==(const WGSLEmulatedResourceArrayElement& rhs) const
+    {
+        return Name == rhs.Name && Index == rhs.Index;
+    }
+    bool operator!=(const WGSLEmulatedResourceArrayElement& rhs) const
+    {
+        return !(*this == rhs);
+    }
+};
+/// Returns WGSL emulated resource array element info, for example
+/// g_Tex2D_7 -> {Name = "g_Tex2D", Index =  7}
+/// g_Tex2D   -> {Name = "g_Tex2D", Index = -1}
+WGSLEmulatedResourceArrayElement GetWGSLEmulatedArrayElement(const std::string& Name, const std::string& Suffix);
 
 } // namespace Diligent

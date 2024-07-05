@@ -26,6 +26,7 @@
 
 #include "WGSLUtils.hpp"
 #include "DebugUtilities.hpp"
+#include "ParsingTools.hpp"
 
 #ifdef _MSC_VER
 #    pragma warning(push)
@@ -46,6 +47,29 @@
 
 namespace Diligent
 {
+
+WGSLEmulatedResourceArrayElement GetWGSLEmulatedArrayElement(const std::string& Name, const std::string& Suffix)
+{
+    if (Name.empty() || Suffix.empty())
+        return {Name, -1};
+
+    size_t SuffixPos = Name.find_last_of(Suffix);
+    // g_Tex2DArr_15
+    //           ^
+    if (SuffixPos != std::string::npos && SuffixPos + 1 < Name.length())
+    {
+        int Index = 0;
+        if (Parsing::ParseInteger(Name.begin() + SuffixPos + 1, Name.end(), Index) == Name.end())
+        {
+            // g_Tex2DArr_15
+            //            ^
+            VERIFY_EXPR(Index >= 0);
+            return {Name.substr(0, SuffixPos), Index};
+        }
+    }
+
+    return {Name, -1};
+}
 
 std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
 {

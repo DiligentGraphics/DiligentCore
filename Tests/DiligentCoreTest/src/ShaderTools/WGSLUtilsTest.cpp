@@ -50,8 +50,36 @@
 using namespace Diligent;
 using namespace Diligent::Testing;
 
+namespace Diligent
+{
+
+inline std::ostream& operator<<(std::ostream& os, const WGSLEmulatedResourceArrayElement& Elem)
+{
+    return os << '\'' << Elem.Name << "'[" << Elem.Index << ']';
+}
+
+} // namespace Diligent
+
 namespace
 {
+
+TEST(WGSLUtils, GetWGSLEmulatedArrayElementInfo)
+{
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("", ""), WGSLEmulatedResourceArrayElement{});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("", "_"), WGSLEmulatedResourceArrayElement{});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D", ""), WGSLEmulatedResourceArrayElement{"Tex2D"});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D", "_"), WGSLEmulatedResourceArrayElement{"Tex2D"});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_"});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_X", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_X"});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_123x", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_123x"});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_123_", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_123_"});
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_0", "_"), WGSLEmulatedResourceArrayElement("Tex2D", 0));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_1", "_"), WGSLEmulatedResourceArrayElement("Tex2D", 1));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_17", "_"), WGSLEmulatedResourceArrayElement("Tex2D", 17));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_0_5", "_"), WGSLEmulatedResourceArrayElement("Tex2D_0", 5));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_1_18", "_"), WGSLEmulatedResourceArrayElement("Tex2D_1", 18));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_17_3", "_"), WGSLEmulatedResourceArrayElement("Tex2D_17", 3));
+}
 
 std::string HLSLtoWGLS(const char* FilePath)
 {
