@@ -265,6 +265,7 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
         Features.PixelUAVWritesAndAtomics  = DEVICE_FEATURE_STATE_ENABLED;
         Features.TextureUAVExtendedFormats = DEVICE_FEATURE_STATE_ENABLED;
         Features.DepthClamp                = DEVICE_FEATURE_STATE_ENABLED;
+        Features.FormattedBuffers          = DEVICE_FEATURE_STATE_DISABLED;
 
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_DepthClipControl))
             Features.DepthBiasClamp = DEVICE_FEATURE_STATE_ENABLED;
@@ -278,6 +279,8 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_ShaderF16))
             Features.ShaderFloat16 = DEVICE_FEATURE_STATE_ENABLED;
     }
+
+    ASSERT_SIZEOF(DeviceFeatures, 45, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     WGPUSupportedLimits wgpuSupportedLimits{};
     wgpuAdapterGetLimits(wgpuAdapter, &wgpuSupportedLimits);

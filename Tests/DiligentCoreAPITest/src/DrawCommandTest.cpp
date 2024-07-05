@@ -2855,6 +2855,9 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
+    if (BuffMode == BUFFER_MODE_FORMATTED && !DeviceInfo.Features.FormattedBuffers)
+        GTEST_SKIP() << "Formatted buffers are not supported by this device";
+
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
 

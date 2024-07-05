@@ -1818,6 +1818,9 @@ struct DeviceFeatures
     ///             state status using the IPipelineState::GetStatus() method.
     DEVICE_FEATURE_STATE AsyncShaderCompilation DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports formatted buffers.
+    DEVICE_FEATURE_STATE FormattedBuffers       DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
 
@@ -1865,11 +1868,12 @@ struct DeviceFeatures
     Handler(TextureComponentSwizzle)           \
 	Handler(TextureSubresourceViews)		   \
 	Handler(NativeMultiDraw)                   \
-    Handler(AsyncShaderCompilation)
+    Handler(AsyncShaderCompilation)			   \
+	Handler(FormattedBuffers)
 
     explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept
     {
-        static_assert(sizeof(*this) == 44, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
+        static_assert(sizeof(*this) == 45, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
     #define INIT_FEATURE(Feature) Feature = State;
         ENUMERATE_DEVICE_FEATURES(INIT_FEATURE)
     #undef INIT_FEATURE

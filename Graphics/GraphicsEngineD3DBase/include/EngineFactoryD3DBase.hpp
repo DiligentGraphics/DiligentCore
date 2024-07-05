@@ -227,6 +227,7 @@ public:
             Features.TextureSubresourceViews       = DEVICE_FEATURE_STATE_ENABLED;
             Features.NativeMultiDraw               = DEVICE_FEATURE_STATE_DISABLED;
             Features.AsyncShaderCompilation        = DEVICE_FEATURE_STATE_ENABLED;
+            Features.FormattedBuffers              = DEVICE_FEATURE_STATE_ENABLED;
         }
 
         // Set memory properties

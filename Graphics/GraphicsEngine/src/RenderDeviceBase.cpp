@@ -116,10 +116,11 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(TextureSubresourceViews,           "Texture subresource views are");
     ENABLE_FEATURE(NativeMultiDraw,                   "Native multi-draw commands are");
     ENABLE_FEATURE(AsyncShaderCompilation,            "Async shader compilation is");
+    ENABLE_FEATURE(FormattedBuffers,                  "Formatted buffers are");
     // clang-format on
 #undef ENABLE_FEATURE
 
-    ASSERT_SIZEOF(DeviceFeatures, 44, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeatures, 45, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return EnabledFeatures;
 }

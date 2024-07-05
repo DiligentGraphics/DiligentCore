@@ -857,6 +857,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             ENABLE_FEATURE(TextureSubresourceViews,       IsGL43OrAbove || CheckExtension("GL_ARB_texture_view"));
             ENABLE_FEATURE(NativeMultiDraw,               IsGL46OrAbove || CheckExtension("GL_ARB_shader_draw_parameters")); // Requirements for gl_DrawID
             ENABLE_FEATURE(AsyncShaderCompilation,        CheckExtension("GL_KHR_parallel_shader_compile"));
+            ENABLE_FEATURE(FormattedBuffers,              IsGL40OrAbove);
             // clang-format on
 
             TexProps.MaxTexture1DDimension      = MaxTextureSize;
@@ -937,6 +938,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
             ENABLE_FEATURE(TextureSubresourceViews,   strstr(Extensions, "texture_view"));
             ENABLE_FEATURE(NativeMultiDraw,           strstr(Extensions, "multi_draw"));
             ENABLE_FEATURE(AsyncShaderCompilation,    strstr(Extensions, "parallel_shader_compile"));
+            ENABLE_FEATURE(FormattedBuffers,          IsGLES32OrAbove);
             // clang-format on
 
             TexProps.MaxTexture1DDimension      = 0; // Not supported in GLES 3.2
@@ -1105,7 +1107,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         m_AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 44, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 45, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 }
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()
