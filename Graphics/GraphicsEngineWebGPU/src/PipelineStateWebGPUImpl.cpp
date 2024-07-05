@@ -252,9 +252,9 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
 {
     const auto ShaderStages = InitInternalObjects(CreateInfo);
 
-    VERIFY(ShaderStages.size() == 2, "Incorrect shader count for graphics pipeline");
+    VERIFY(!ShaderStages.empty() && ShaderStages.size() <= 2, "Incorrect shader count for graphics pipeline");
     VERIFY(ShaderStages[0].Type == SHADER_TYPE_VERTEX, "Incorrect shader type: vertex shader is expected");
-    VERIFY(ShaderStages[1].Type == SHADER_TYPE_PIXEL, "Incorrect shader type: compute shader is expected");
+    VERIFY(ShaderStages.size() < 2 || ShaderStages[1].Type == SHADER_TYPE_PIXEL, "Incorrect shader type: compute shader is expected");
 
     const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
 
@@ -353,10 +353,14 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
             wgpuColorTargetStates.push_back(wgpuColorTargetState);
         }
 
-        wgpuFragmentState.targetCount = static_cast<uint32_t>(wgpuColorTargetStates.size());
-        wgpuFragmentState.targets     = wgpuColorTargetStates.data();
-        wgpuFragmentState.module      = wgpuShaderModules[1].Get();
-        wgpuFragmentState.entryPoint  = ShaderStages[1].pShader->GetEntryPoint();
+        if (ShaderStages.size() > 1)
+        {
+            VERIFY(ShaderStages[1].Type == SHADER_TYPE_PIXEL, "Incorrect shader type: pixel shader is expected");
+            wgpuFragmentState.targetCount = static_cast<uint32_t>(wgpuColorTargetStates.size());
+            wgpuFragmentState.targets     = wgpuColorTargetStates.data();
+            wgpuFragmentState.module      = wgpuShaderModules[1].Get();
+            wgpuFragmentState.entryPoint  = ShaderStages[1].pShader->GetEntryPoint();
+        }
     }
 
     {
@@ -404,7 +408,7 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
     WGPURenderPipelineDescriptor wgpuRenderPipelineDesc{};
     wgpuRenderPipelineDesc.label        = GetDesc().Name;
     wgpuRenderPipelineDesc.vertex       = wgpuVertexState;
-    wgpuRenderPipelineDesc.fragment     = wgpuFragmentState.targetCount > 0 ? &wgpuFragmentState : nullptr;
+    wgpuRenderPipelineDesc.fragment     = wgpuFragmentState.module != nullptr ? &wgpuFragmentState : nullptr;
     wgpuRenderPipelineDesc.depthStencil = GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN ? &wgpuDepthStencilState : nullptr;
     wgpuRenderPipelineDesc.primitive    = wgpuPrimitiveState;
     wgpuRenderPipelineDesc.multisample  = wgpuMultisampleState;
