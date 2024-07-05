@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1500,6 +1500,9 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
     auto* const pContext   = pEnv->GetDeviceContext();
     auto* const pSwapChain = pEnv->GetSwapChain();
     const auto& deviceCaps = pDevice->GetDeviceInfo();
+
+    if (BufferMode == BUFFER_MODE_FORMATTED && !deviceCaps.Features.FormattedBuffers)
+        GTEST_SKIP() << "Formatted buffers are not supported by this device";
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 

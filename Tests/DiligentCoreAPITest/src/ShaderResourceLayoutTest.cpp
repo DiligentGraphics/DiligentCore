@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -551,6 +551,9 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     auto* const pSwapChain = pEnv->GetSwapChain();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
+    if (IsFormatted && !DeviceInfo.Features.FormattedBuffers)
+        GTEST_SKIP() << "Formatted buffers are not supported by this device";
+
     float ClearColor[] = {0.625, 0.125, 0.25, 0.875};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
@@ -806,10 +809,11 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     auto* const pEnv       = GPUTestingEnvironment::GetInstance();
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pSwapChain = pEnv->GetSwapChain();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    if (IsFormatted && !DeviceInfo.Features.FormattedBuffers)
+        GTEST_SKIP() << "Formatted buffers are not supported by this device";
 
     ComputeShaderReference(pSwapChain);
-
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
     constexpr Uint32 MaxStaticBuffArraySize  = 4;
     constexpr Uint32 MaxMutableBuffArraySize = 3;
@@ -829,6 +833,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
         case RENDER_DEVICE_TYPE_GL:
         case RENDER_DEVICE_TYPE_GLES:
         case RENDER_DEVICE_TYPE_METAL:
+        case RENDER_DEVICE_TYPE_WEBGPU:
             UseReducedUAVCount = true;
             break;
 
@@ -1040,6 +1045,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
         case RENDER_DEVICE_TYPE_GL:
         case RENDER_DEVICE_TYPE_GLES:
         case RENDER_DEVICE_TYPE_METAL:
+        case RENDER_DEVICE_TYPE_WEBGPU:
             UseReducedUAVCount = true;
             break;
 

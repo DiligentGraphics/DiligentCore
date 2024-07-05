@@ -492,7 +492,7 @@ Uint32 ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(DeviceContextIndex    
         VERIFY((Res.Type != BindGroupEntryType::UniformBufferDynamic &&
                 Res.Type != BindGroupEntryType::StorageBufferDynamic &&
                 Res.Type != BindGroupEntryType::StorageBufferDynamic_ReadOnly),
-               "All dynamic uniform and storage buffers are expected to go first in the beginning of each descriptor set");
+               "All dynamic uniform and storage buffers are expected to go first in the beginning of each bind group");
     }
 #endif
 
