@@ -106,12 +106,17 @@ std::string HLSLtoWGLS(const char* FilePath)
     return ConvertSPIRVtoWGSL(SPIRV);
 }
 
-void TestResourceRemapping(const char* FilePath, const WGSLResourceMapping& ResRemapping)
+void TestResourceRemapping(const char*                FilePath,
+                           const WGSLResourceMapping& ResRemapping,
+                           WGSLResourceMapping        RefResources = {})
 {
+    if (RefResources.empty())
+        RefResources = ResRemapping;
+
     const auto WGSL = HLSLtoWGLS(FilePath);
     ASSERT_FALSE(WGSL.empty());
 
-    const auto RemappedWGSL = RamapWGSLResourceBindings(WGSL, ResRemapping);
+    const auto RemappedWGSL = RamapWGSLResourceBindings(WGSL, ResRemapping, "_");
     ASSERT_FALSE(RemappedWGSL.empty());
 
     tint::Source::File srcFile("", RemappedWGSL);
@@ -124,8 +129,8 @@ void TestResourceRemapping(const char* FilePath, const WGSLResourceMapping& ResR
     {
         for (auto& Binding : Inspector.GetResourceBindings(EntryPoint.name))
         {
-            auto RemappedBindingIt = ResRemapping.find(Binding.variable_name);
-            if (RemappedBindingIt == ResRemapping.end() &&
+            auto RemappedBindingIt = RefResources.find(Binding.variable_name);
+            if (RemappedBindingIt == RefResources.end() &&
                 (Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kUniformBuffer ||
                  Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kStorageBuffer ||
                  Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kReadOnlyStorageBuffer))
@@ -135,19 +140,19 @@ void TestResourceRemapping(const char* FilePath, const WGSLResourceMapping& ResR
                 {
                     if (Variable->name->symbol.Name() == Binding.variable_name)
                     {
-                        RemappedBindingIt = ResRemapping.find(Variable->type->identifier->symbol.Name());
+                        RemappedBindingIt = RefResources.find(Variable->type->identifier->symbol.Name());
                     }
                 }
             }
 
-            if (RemappedBindingIt == ResRemapping.end())
+            if (RemappedBindingIt == RefResources.end())
             {
                 GTEST_FAIL() << "Unable to find remapping for resource '" << Binding.variable_name << "'";
             }
             else
             {
-                EXPECT_EQ(Binding.bind_group, RemappedBindingIt->second.Group) << "Bind group mismatch (" << Binding.bind_group << " vs " << RemappedBindingIt->second.Group << " for resource '" << Binding.variable_name << "'";
-                EXPECT_EQ(Binding.binding, RemappedBindingIt->second.Index) << "Binding index mismatch (" << Binding.binding << " vs " << RemappedBindingIt->second.Index << " for resource '" << Binding.variable_name << "'";
+                EXPECT_EQ(Binding.bind_group, RemappedBindingIt->second.Group) << "Bind group mismatch (" << Binding.bind_group << " vs " << RemappedBindingIt->second.Group << ") for resource '" << Binding.variable_name << "'";
+                EXPECT_EQ(Binding.binding, RemappedBindingIt->second.Index) << "Binding index mismatch (" << Binding.binding << " vs " << RemappedBindingIt->second.Index << ") for resource '" << Binding.variable_name << "'";
             }
         }
     }
@@ -225,6 +230,148 @@ TEST(WGSLUtils, RemapRWStructBuffers)
                               {"g_RWBuff2", {5, 6}},
                               {"g_RWBuff3", {7, 8}},
                           });
+}
+
+TEST(WGSLUtils, RemapTextureArrays)
+{
+    TestResourceRemapping(
+        "TextureArrays.psh",
+        {
+            // clang-format off
+            {"g_Tex2DArr0",       {1, 2, 8}},
+            {"g_Tex2DNotArr0_2",  {3, 4}},
+            {"g_Tex2DNotArr0_4",  {5, 6}},
+            {"g_Tex2DNotArr1_1",  {7, 8}},
+            {"g_Tex2DNotArr1_2",  {9, 10}},
+            {"g_Tex2DNotArr2_3",  {11, 12}},
+            {"g_Tex2DNotArr2_5",  {13, 14}},
+            {"g_Tex2DNotArr3_3x", {15, 16}},
+            {"g_Tex2DNotArr4_",   {17, 18}}
+            // clang-format on
+        },
+        {
+            // clang-format off
+            {"g_Tex2DArr0_1",     {1, 3}},
+            {"g_Tex2DArr0_2",     {1, 4}},
+            {"g_Tex2DArr0_3",     {1, 5}},
+            {"g_Tex2DArr0_7",     {1, 9}},
+
+            {"g_Tex2DNotArr0_2",  {3, 4}},
+            {"g_Tex2DNotArr0_4",  {5, 6}},
+            {"g_Tex2DNotArr1_1",  {7, 8}},
+            {"g_Tex2DNotArr1_2",  {9, 10}},
+            {"g_Tex2DNotArr2_3",  {11, 12}},
+            {"g_Tex2DNotArr2_5",  {13, 14}},
+            {"g_Tex2DNotArr3_3x", {15, 16}},
+            {"g_Tex2DNotArr4_",   {17, 18}}
+            // clang-format on
+        });
+}
+
+TEST(WGSLUtils, RemapSamplerArrays)
+{
+    TestResourceRemapping(
+        "SamplerArrays.psh",
+        {
+            // clang-format off
+            {"g_Tex2D",            {1, 2}},
+			{"g_SamplerArr0",      {3, 4, 8}},
+			{"g_SamplerNotArr1_3", {9, 10}},
+			{"g_SamplerNotArr1_5", {11, 12}}
+            // clang-format on
+        },
+        {
+            // clang-format off
+            {"g_Tex2D",            {1, 2}},
+
+            {"g_SamplerArr0_2",    {3, 6}},
+			{"g_SamplerArr0_5",    {3, 9}},
+			{"g_SamplerArr0_7",    {3, 11}},
+
+			{"g_SamplerNotArr1_3", {9, 10}},
+			{"g_SamplerNotArr1_5", {11, 12}}
+            // clang-format on
+        });
+}
+
+TEST(WGSLUtils, RemapStructBufferArrays)
+{
+    TestResourceRemapping(
+        "StructBufferArrays.psh",
+        {
+            // clang-format off
+			{"g_BuffArr0", {1, 2, 6}},
+			{"g_BuffArr1", {3, 4, 3}},
+			{"g_BuffArr2", {5, 6, 5}}
+            // clang-format on
+        },
+        {
+            // clang-format off
+			{"g_BuffArr0_3", {1, 5}},
+			{"g_BuffArr0_5", {1, 7}},
+
+			{"g_BuffArr1_1", {3, 5}},
+			{"g_BuffArr1_2", {3, 6}},
+
+			{"g_BuffArr2_0", {5, 6}},
+			{"g_BuffArr2_4", {5, 10}}
+            // clang-format on
+        });
+}
+
+TEST(WGSLUtils, RemapRWTExtureArrays)
+{
+    TestResourceRemapping(
+        "RWTextureArrays.psh",
+        {
+            // clang-format off
+			{"g_WOTex2DArr0", {1, 2, 4}},
+			{"g_RWTex2DArr0", {3, 4, 3}},
+			{"g_WOTex2DNotArr1_2", {5, 6}},
+			{"g_WOTex2DNotArr1_4", {7, 8}},
+			{"g_RWTex2DNotArr2_5", {9, 10}},
+			{"g_RWTex2DNotArr2_9", {11, 12}},
+            // clang-format on
+        },
+        {
+            // clang-format off
+			{"g_WOTex2DArr0_1", {1, 3}},
+			{"g_WOTex2DArr0_3", {1, 5}},
+			
+            {"g_RWTex2DArr0_0", {3, 4}},
+            {"g_RWTex2DArr0_2", {3, 6}},
+
+			{"g_WOTex2DNotArr1_2", {5, 6}},
+			{"g_WOTex2DNotArr1_4", {7, 8}},
+			{"g_RWTex2DNotArr2_5", {9, 10}},
+			{"g_RWTex2DNotArr2_9", {11, 12}},
+            // clang-format on
+        });
+}
+
+TEST(WGSLUtils, RWStructBufferArrays)
+{
+    TestResourceRemapping(
+        "RWStructBufferArrays.psh",
+        {
+            // clang-format off
+			{"g_RWBuffArr0", {1, 2, 6}},
+			{"g_RWBuffArr1", {3, 4, 3}},
+			{"g_RWBuffArr2", {5, 6, 2}},
+            // clang-format on
+        },
+        {
+            // clang-format off
+			{"g_RWBuffArr0_3", {1, 5, 4}},
+			{"g_RWBuffArr0_5", {1, 7, 4}},
+
+			{"g_RWBuffArr1_0", {3, 4, 3}},
+			{"g_RWBuffArr1_2", {3, 6, 3}},
+
+            {"g_RWBuffArr2_0", {5, 6}},
+            {"g_RWBuffArr2_1", {5, 7}},
+            // clang-format on
+        });
 }
 
 } // namespace

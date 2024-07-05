@@ -144,6 +144,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
 
                 Uint32 ResourceBinding = ~0u;
                 Uint32 BindGroup       = ~0u;
+                Uint32 ArraySize       = 1;
                 if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
                 {
                     const auto& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
@@ -153,6 +154,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
                     const auto& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
                     ResourceBinding = ResAttribs.BindingIndex;
                     BindGroup       = ResAttribs.BindGroup;
+                    ArraySize       = ResAttribs.ArraySize;
                 }
                 else if (ResAttribution.ImmutableSamplerIndex != ResourceAttribution::InvalidResourceIndex)
                 {
@@ -168,6 +170,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
                     // Handle immutable samplers that do not have corresponding resources in m_Desc.Resources
                     BindGroup       = ImmtblSamAttribs.BindGroup;
                     ResourceBinding = ImmtblSamAttribs.BindingIndex;
+                    ArraySize       = ImmtblSamAttribs.ArraySize;
                 }
                 else
                 {
@@ -193,7 +196,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
                 }
                 else
                 {
-                    ResMapping[WGSLAttribs.Name] = {BindGroup, ResourceBinding};
+                    ResMapping[WGSLAttribs.Name] = {BindGroup, ResourceBinding, ArraySize};
                 }
 
                 if (pDvpResourceAttibutions)
@@ -202,7 +205,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
 
         if (!bVerifyOnly)
         {
-            PatchedWGSL = RamapWGSLResourceBindings(pShader->GetWGSL(), ResMapping);
+            PatchedWGSL = RamapWGSLResourceBindings(pShader->GetWGSL(), ResMapping, ShaderWebGPUImpl::GetEmulatedArrayIndexSuffix());
         }
         else
         {

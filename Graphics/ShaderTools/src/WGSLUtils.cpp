@@ -165,7 +165,31 @@ std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const t
     }
 }
 
-std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourceMapping& ResMapping)
+static WGSLResourceMapping::const_iterator FindResourceAsArrayElement(const WGSLResourceMapping& ResMapping,
+                                                                      const std::string&         EmulatedArrayIndexSuffix,
+                                                                      const std::string&         Name,
+                                                                      Uint32&                    ArrayIndex)
+{
+    if (EmulatedArrayIndexSuffix.empty())
+        return ResMapping.end();
+
+    if (WGSLEmulatedResourceArrayElement ArrayElem = GetWGSLEmulatedArrayElement(Name, EmulatedArrayIndexSuffix))
+    {
+        auto BindigIt = ResMapping.find(ArrayElem.Name);
+        if (BindigIt == ResMapping.end())
+            return ResMapping.end();
+
+        if (ArrayElem.Index < static_cast<int>(BindigIt->second.ArraySize))
+        {
+            ArrayIndex = static_cast<Uint32>(ArrayElem.Index);
+            return BindigIt;
+        }
+    }
+
+    return ResMapping.end();
+}
+
+std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourceMapping& ResMapping, const std::string& EmulatedArrayIndexSuffix)
 {
     tint::Source::File srcFile("", WGSL);
     tint::Program      Program = tint::wgsl::reader::Parse(&srcFile, {tint::wgsl::AllowedFeatures::Everything()});
@@ -183,20 +207,31 @@ std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourc
     {
         for (auto& Binding : Inspector.GetResourceBindings(EntryPoint.name))
         {
+            Uint32 ArrayIndex = 0;
+
             auto DstBindigIt = ResMapping.find(Binding.variable_name);
+            if (DstBindigIt == ResMapping.end())
+            {
+                DstBindigIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, Binding.variable_name, ArrayIndex);
+            }
+
             if (DstBindigIt == ResMapping.end())
             {
                 const auto AltName = GetWGSLResourceAlternativeName(Program, Binding);
                 if (!AltName.empty())
                 {
                     DstBindigIt = ResMapping.find(AltName);
+                    if (DstBindigIt == ResMapping.end())
+                    {
+                        DstBindigIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, AltName, ArrayIndex);
+                    }
                 }
             }
 
             if (DstBindigIt != ResMapping.end())
             {
                 const auto& DstBindig = DstBindigIt->second;
-                BindingPoints.emplace(tint::ast::transform::BindingPoint{Binding.bind_group, Binding.binding}, tint::ast::transform::BindingPoint{DstBindig.Group, DstBindig.Index});
+                BindingPoints.emplace(tint::ast::transform::BindingPoint{Binding.bind_group, Binding.binding}, tint::ast::transform::BindingPoint{DstBindig.Group, DstBindig.Index + ArrayIndex});
             }
             else
             {

@@ -52,7 +52,9 @@ struct WGSLResourceBindingInfo
 };
 using WGSLResourceMapping = std::unordered_map<std::string, WGSLResourceBindingInfo>;
 
-std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourceMapping& ResMapping);
+std::string RamapWGSLResourceBindings(const std::string&         WGSL,
+                                      const WGSLResourceMapping& ResMapping,
+                                      const std::string&         EmulatedArrayIndexSuffix);
 
 
 /// When WGSL is generated from SPIR-V, the names of resources may be mangled
@@ -104,7 +106,8 @@ struct WGSLEmulatedResourceArrayElement
         Index{_Index}
     {}
 
-    constexpr bool IsValid() const { return Index >= 0; }
+    constexpr bool     IsValid() const { return Index >= 0; }
+    constexpr explicit operator bool() const { return IsValid(); }
 
     bool operator==(const WGSLEmulatedResourceArrayElement& rhs) const
     {
