@@ -28,6 +28,7 @@
 #include "Align.hpp"
 #include "StringPool.hpp"
 #include "WGSLUtils.hpp"
+#include "ParsingTools.hpp"
 
 #ifdef _MSC_VER
 #    pragma warning(push)
@@ -302,10 +303,11 @@ WEB_GPU_BINDING_TYPE GetWebGPUTextureBindingType(WGSLShaderResourceAttribs::Text
 } // namespace
 
 WGSLShaderResourceAttribs::WGSLShaderResourceAttribs(const char*                             _Name,
-                                                     const tint::inspector::ResourceBinding& TintBinding) noexcept :
+                                                     const tint::inspector::ResourceBinding& TintBinding,
+                                                     Uint32                                  _ArraySize) noexcept :
     // clang-format off
     Name             {_Name},
-    ArraySize        {1},
+    ArraySize        {static_cast<Uint16>(_ArraySize)},
     Type             {TintResourceTypeToWGSLShaderAttribsResourceType(TintBinding.resource_type)},
     ResourceDim      {TintBindingToResourceDimension(TintBinding)},
     Format			 {TintTexelFormatToTextureFormat(TintBinding)},
@@ -442,12 +444,147 @@ WebGPUResourceAttribs WGSLShaderResourceAttribs::GetWebGPUAttribs() const
     return WebGPUAttribs;
 }
 
+namespace
+{
+
+struct ResourceArrayElement
+{
+    std::string Name;
+    int         Index = -1;
+    bool        IsValid() const { return Index >= 0; }
+};
+
+ResourceArrayElement GetArrayElementNameAndIndex(const std::string& Name,
+                                                 const std::string& Suffix)
+{
+    size_t SuffixPos = Name.find_last_of(Suffix);
+    // g_Tex2DArr_15
+    //           ^
+    if (SuffixPos != std::string::npos && SuffixPos + 1 < Name.length())
+    {
+        int Index = 0;
+        if (Parsing::ParseInteger(Name.begin() + SuffixPos + 1, Name.end(), Index) == Name.end())
+        {
+            // g_Tex2DArr_15
+            //            ^
+            VERIFY_EXPR(Index >= 0);
+            return {Name.substr(0, SuffixPos), Index};
+        }
+    }
+
+    return {Name, -1};
+}
+
+
+bool ResourceBindingsCompatibile(const tint::inspector::ResourceBinding& Binding0,
+                                 const tint::inspector::ResourceBinding& Binding1)
+{
+    if (Binding0.resource_type != Binding1.resource_type)
+        return false;
+
+    if (TintBindingToResourceDimension(Binding0) != TintBindingToResourceDimension(Binding1))
+        return false;
+
+    if (TintSampleKindToWGSLShaderAttribsSampleType(Binding0) != TintSampleKindToWGSLShaderAttribsSampleType(Binding1))
+        return false;
+
+    if (TintTexelFormatToTextureFormat(Binding0) != TintTexelFormatToTextureFormat(Binding1))
+        return false;
+
+    return true;
+}
+
+void MergeResources(std::vector<tint::inspector::ResourceBinding>& Bindings, std::vector<Uint32>& ArraySizes, const std::string& Suffix)
+{
+    std::vector<ResourceArrayElement> ArrayElements(Bindings.size());
+
+    struct ArrayInfo
+    {
+        bool                IsValid     = true;
+        int                 ResourceIdx = -1;
+        std::vector<size_t> ElementInds;
+    };
+    std::unordered_map<std::string, ArrayInfo> Arrays;
+
+    // Group resources into arrays
+    for (size_t i = 0; i < Bindings.size(); ++i)
+    {
+        const tint::inspector::ResourceBinding& Binding = Bindings[i];
+        ResourceArrayElement&                   Element = ArrayElements[i];
+
+        Element = GetArrayElementNameAndIndex(Binding.variable_name, Suffix);
+        if (Element.IsValid())
+        {
+            Arrays[Element.Name].ElementInds.push_back(i);
+        }
+    }
+
+    // Check that all array elements are compatible
+    for (auto& array_it : Arrays)
+    {
+        const std::vector<size_t>&              ElementInds = array_it.second.ElementInds;
+        const tint::inspector::ResourceBinding& Binding0    = Bindings[ElementInds[0]];
+        for (size_t i = 1; i < ElementInds.size(); ++i)
+        {
+            const tint::inspector::ResourceBinding& Binding = Bindings[ElementInds[i]];
+            if (!ResourceBindingsCompatibile(Binding0, Binding))
+            {
+                array_it.second.IsValid = false;
+                break;
+            }
+        }
+    }
+
+    // Merge arrays
+    std::vector<tint::inspector::ResourceBinding> MergedBindings;
+    for (size_t i = 0; i < Bindings.size(); ++i)
+    {
+        tint::inspector::ResourceBinding& Binding = Bindings[i];
+        const ResourceArrayElement&       Element = ArrayElements[i];
+        if (Element.IsValid())
+        {
+            VERIFY_EXPR(Arrays.find(Element.Name) != Arrays.end());
+            ArrayInfo& Array = Arrays[Element.Name];
+            if (Array.IsValid)
+            {
+                if (Array.ResourceIdx < 0)
+                {
+                    Array.ResourceIdx = static_cast<int>(MergedBindings.size());
+                    MergedBindings.push_back(std::move(Binding));
+                    MergedBindings.back().variable_name = Element.Name;
+                }
+                tint::inspector::ResourceBinding& ArrayBinding = MergedBindings[Array.ResourceIdx];
+                VERIFY_EXPR(ArrayBinding.variable_name == Element.Name);
+                if (ArraySizes.size() <= static_cast<size_t>(Array.ResourceIdx))
+                {
+                    ArraySizes.resize(Array.ResourceIdx + 1, 0);
+                }
+                ArraySizes[Array.ResourceIdx] = std::max(ArraySizes[Array.ResourceIdx], static_cast<Uint32>(Element.Index + 1));
+            }
+            else
+            {
+                MergedBindings.push_back(std::move(Binding));
+            }
+        }
+        else
+        {
+            // Not an array
+            VERIFY_EXPR(Arrays.find(Element.Name) == Arrays.end());
+            MergedBindings.push_back(std::move(Binding));
+        }
+    }
+    Bindings.swap(MergedBindings);
+}
+
+} // namespace
+
 WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
                                          const std::string&     WGSL,
                                          SHADER_SOURCE_LANGUAGE SourceLanguage,
                                          const char*            ShaderName,
                                          const char*            CombinedSamplerSuffix,
                                          const char*            EntryPoint,
+                                         const char*            EmulatedArrayIndexSuffix,
                                          bool                   LoadUniformBufferReflection) noexcept(false)
 {
     VERIFY_EXPR(ShaderName != nullptr);
@@ -489,34 +626,39 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     }
     m_ShaderType = TintPipelineStageToShaderType(EntryPoints[EntryPointIdx].stage);
 
-    const auto ResourceBindings = Inspector.GetResourceBindings(EntryPoint);
+    std::vector<tint::inspector::ResourceBinding> ResourceBindings = Inspector.GetResourceBindings(EntryPoint);
+    if (SourceLanguage != SHADER_SOURCE_LANGUAGE_WGSL)
+    {
+        //   HLSL:
+        //      struct BufferData0
+        //      {
+        //          float4 data;
+        //      };
+        //      StructuredBuffer<BufferData0> g_Buff0;
+        //      StructuredBuffer<BufferData0> g_Buff1;
+        //   WGSL:
+        //      struct g_Buff0 {
+        //        x_data : RTArr,
+        //      }
+        //      @group(0) @binding(0) var<storage, read> g_Buff0_1 : g_Buff0;
+        //      @group(0) @binding(1) var<storage, read> g_Buff1   : g_Buff0;
+        for (tint::inspector::ResourceBinding& Binding : ResourceBindings)
+        {
+            auto AltName = GetWGSLResourceAlternativeName(Program, Binding);
+            if (!AltName.empty())
+            {
+                Binding.variable_name = AltName;
+            }
+        }
+    }
+
+    std::vector<Uint32> ArraySizes;
+    if (EmulatedArrayIndexSuffix != nullptr && EmulatedArrayIndexSuffix[0] != '\0')
+    {
+        MergeResources(ResourceBindings, ArraySizes, EmulatedArrayIndexSuffix);
+    }
 
     using TintResourceType = tint::inspector::ResourceBinding::ResourceType;
-
-    auto GetResourceName = [SourceLanguage](const tint::Program& Program, const tint::inspector::ResourceBinding& Binding) {
-        if (SourceLanguage == SHADER_SOURCE_LANGUAGE_WGSL)
-        {
-            return Binding.variable_name;
-        }
-        else
-        {
-            //   HLSL:
-            //      struct BufferData0
-            //      {
-            //          float4 data;
-            //      };
-            //      StructuredBuffer<BufferData0> g_Buff0;
-            //      StructuredBuffer<BufferData0> g_Buff1;
-            //   WGSL:
-            //      struct g_Buff0 {
-            //        x_data : RTArr,
-            //      }
-            //      @group(0) @binding(0) var<storage, read> g_Buff0_1 : g_Buff0;
-            //      @group(0) @binding(1) var<storage, read> g_Buff1   : g_Buff0;
-            auto AltName = GetWGSLResourceAlternativeName(Program, Binding);
-            return !AltName.empty() ? AltName : Binding.variable_name;
-        }
-    };
 
     // Count resources
     ResourceCounters ResCounters;
@@ -564,8 +706,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
                 UNEXPECTED("Unexpected resource type");
         }
 
-        const std::string ResourceName = GetResourceName(Program, Binding);
-        ResourceNamesPoolSize += ResourceName.length() + 1;
+        ResourceNamesPoolSize += Binding.variable_name.length() + 1;
     }
 
     if (CombinedSamplerSuffix != nullptr)
@@ -582,29 +723,30 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
 
     // Allocate resources
     ResourceCounters CurrRes;
-    for (const auto& Binding : ResourceBindings)
+    for (size_t i = 0; i < ResourceBindings.size(); ++i)
     {
-        const std::string ResourceName = GetResourceName(Program, Binding);
-        const char*       PooledName   = ResourceNamesPool.CopyString(ResourceName);
+        const tint::inspector::ResourceBinding& Binding   = ResourceBindings[i];
+        const char*                             Name      = ResourceNamesPool.CopyString(Binding.variable_name);
+        const Uint32                            ArraySize = i < ArraySizes.size() && ArraySizes[i] != 0 ? ArraySizes[i] : 1;
         switch (Binding.resource_type)
         {
             case TintResourceType::kUniformBuffer:
             {
-                new (&GetUB(CurrRes.NumUBs++)) WGSLShaderResourceAttribs{PooledName, Binding};
+                new (&GetUB(CurrRes.NumUBs++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
             }
             break;
 
             case TintResourceType::kStorageBuffer:
             case TintResourceType::kReadOnlyStorageBuffer:
             {
-                new (&GetSB(CurrRes.NumSBs++)) WGSLShaderResourceAttribs{PooledName, Binding};
+                new (&GetSB(CurrRes.NumSBs++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
             }
             break;
 
             case TintResourceType::kSampler:
             case TintResourceType::kComparisonSampler:
             {
-                new (&GetSampler(CurrRes.NumSamplers++)) WGSLShaderResourceAttribs{PooledName, Binding};
+                new (&GetSampler(CurrRes.NumSamplers++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
             }
             break;
 
@@ -613,7 +755,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
             case TintResourceType::kDepthTexture:
             case TintResourceType::kDepthMultisampledTexture:
             {
-                new (&GetTexture(CurrRes.NumTextures++)) WGSLShaderResourceAttribs{PooledName, Binding};
+                new (&GetTexture(CurrRes.NumTextures++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
             }
             break;
 
@@ -621,13 +763,13 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
             case TintResourceType::kReadOnlyStorageTexture:
             case TintResourceType::kReadWriteStorageTexture:
             {
-                new (&GetStTexture(CurrRes.NumStTextures++)) WGSLShaderResourceAttribs{PooledName, Binding};
+                new (&GetStTexture(CurrRes.NumStTextures++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
             }
             break;
 
             case TintResourceType::kExternalTexture:
             {
-                new (&GetExtTexture(CurrRes.NumExtTextures++)) WGSLShaderResourceAttribs{PooledName, Binding};
+                new (&GetExtTexture(CurrRes.NumExtTextures++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
             }
             break;
 

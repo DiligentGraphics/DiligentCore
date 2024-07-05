@@ -1,0 +1,33 @@
+
+Texture2D<uint4> g_Tex2DArr0_3;
+Texture2D<uint4> g_Tex2DArr0_1;
+Texture2D<uint4> g_Tex2DArr0_7;
+Texture2D<uint4> g_Tex2DArr0_2;
+
+Texture2D<int4>   g_Tex2DNotArr0_2;
+Texture2D<float4> g_Tex2DNotArr0_4;
+
+Texture2D<float4> g_Tex2DNotArr1_1;
+Texture3D<float4> g_Tex2DNotArr1_2;
+
+Texture2D<float4>        g_Tex2DNotArr2_3;
+StructuredBuffer<float4> g_Tex2DNotArr2_5;
+
+Texture2D<float4> g_Tex2DNotArr3_3x;
+Texture2D<float4> g_Tex2DNotArr4_;
+
+float4 main() : SV_Target
+{
+    return float4(g_Tex2DArr0_1.Load(int3(0, 0, 0))) + 
+           float4(g_Tex2DArr0_3.Load(int3(0, 0, 0))) +
+           float4(g_Tex2DArr0_7.Load(int3(0, 0, 0))) +
+           float4(g_Tex2DArr0_2.Load(int3(0, 0, 0))) +
+           float4(g_Tex2DNotArr0_2.Load(int3(0, 0, 0))) +
+           g_Tex2DNotArr0_4.Load(int3(0, 0, 0)) + 
+           g_Tex2DNotArr1_1.Load(int3(0, 0, 0)) +
+           g_Tex2DNotArr1_2.Load(int4(0, 0, 0, 0)) + 
+           g_Tex2DNotArr2_3.Load(int3(0, 0, 0)) + 
+           g_Tex2DNotArr2_5[0] + 
+           g_Tex2DNotArr3_3x.Load(int3(0, 0, 0)) +
+           g_Tex2DNotArr4_.Load(int3(0, 0, 0));
+}

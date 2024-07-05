@@ -1,0 +1,29 @@
+struct BufferData0
+{
+    float4 data;
+};
+
+struct BufferData1
+{
+    float4 data;
+};
+
+StructuredBuffer<BufferData0> g_BuffArr0_5;
+StructuredBuffer<BufferData0> g_BuffArr0_3;
+
+StructuredBuffer<BufferData1> g_BuffArr1_2;
+StructuredBuffer<BufferData1> g_BuffArr1_1;
+
+StructuredBuffer<BufferData0> g_BuffArr2_4;
+StructuredBuffer<BufferData0> g_BuffArr2_0;
+
+
+float4 main() : SV_Target
+{
+    return g_BuffArr0_5[0].data + 
+           g_BuffArr0_3[0].data +
+           g_BuffArr1_2[0].data +
+           g_BuffArr1_1[0].data +
+           g_BuffArr2_4[0].data +
+           g_BuffArr2_0[0].data;
+}

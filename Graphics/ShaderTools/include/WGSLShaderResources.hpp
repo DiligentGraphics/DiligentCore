@@ -108,7 +108,8 @@ struct WGSLShaderResourceAttribs
     // clang-format on
 
     WGSLShaderResourceAttribs(const char*                             _Name,
-                              const tint::inspector::ResourceBinding& TintBinding) noexcept;
+                              const tint::inspector::ResourceBinding& TintBinding,
+                              Uint32                                  _ArraySize) noexcept;
 
     WGSLShaderResourceAttribs(const char*        _Name,
                               ResourceType       _Type,
@@ -150,7 +151,8 @@ public:
                         const char*            ShaderName,
                         const char*            CombinedSamplerSuffix,
                         const char*            EntryPoint,
-                        bool                   LoadUniformBufferReflection = false) noexcept(false);
+                        const char*            EmulatedArrayIndexSuffix,
+                        bool                   LoadUniformBufferReflection) noexcept(false);
 
     // clang-format off
     WGSLShaderResources             (const WGSLShaderResources&)  = delete;

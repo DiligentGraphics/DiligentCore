@@ -86,6 +86,11 @@ public:
         return m_pShaderResources;
     }
 
+    static const char* GetEmulatedArrayIndexSuffix()
+    {
+        return "_";
+    }
+
 private:
     std::string m_WGSL;
 

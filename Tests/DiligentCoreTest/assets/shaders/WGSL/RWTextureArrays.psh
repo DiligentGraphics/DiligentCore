@@ -1,0 +1,28 @@
+RWTexture2D<float4> g_WOTex2DArr0_3;
+RWTexture2D<float4> g_WOTex2DArr0_1;
+
+RWTexture2D<float4> g_RWTex2DArr0_2;
+RWTexture2D<float4> g_RWTex2DArr0_0;
+
+RWTexture2D<float4> g_WOTex2DNotArr1_2;
+RWTexture2D<int4>   g_WOTex2DNotArr1_4;
+
+RWTexture2D<float2> g_RWTex2DNotArr2_5;
+RWTexture2D<float>  g_RWTex2DNotArr2_9;
+
+float4 main() : SV_Target
+{
+    g_WOTex2DArr0_3[uint2(0, 0)] = float4(0.0, 1.0, 2.0, 3.0);
+    g_WOTex2DArr0_1[uint2(0, 0)] = float4(0.0, 1.0, 2.0, 3.0);
+
+    g_RWTex2DArr0_2[uint2(0, 0)] += float4(0.0, 1.0, 2.0, 3.0);
+    g_RWTex2DArr0_0[uint2(0, 0)] += float4(0.0, 1.0, 2.0, 3.0);
+    
+    g_WOTex2DNotArr1_2[uint2(0, 0)] = float4(0.0, 1.0, 2.0, 3.0);
+    g_WOTex2DNotArr1_4[uint2(0, 0)] = int4(0, 1, 2, 3);
+
+    g_RWTex2DNotArr2_5[uint2(0, 0)] += float2(0.0, 1.0);
+    g_RWTex2DNotArr2_9[uint2(0, 0)] += 1.0;
+
+    return float4(0.0, 1.0, 2.0, 3.0);
+}

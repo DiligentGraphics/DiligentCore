@@ -1,0 +1,17 @@
+
+Texture2D g_Tex2D;
+
+SamplerState g_SamplerArr0_5;
+SamplerState g_SamplerArr0_7;
+SamplerState g_SamplerArr0_2;
+
+SamplerState g_SamplerNotArr1_3;
+Texture2D    g_SamplerNotArr1_5;
+
+float4 main() : SV_Target
+{
+    return g_Tex2D.Sample(g_SamplerArr0_5, float2(0.5, 0.5)) +
+           g_Tex2D.Sample(g_SamplerArr0_7, float2(0.5, 0.5)) +
+           g_Tex2D.Sample(g_SamplerArr0_2, float2(0.5, 0.5)) +
+           g_SamplerNotArr1_5.Sample(g_SamplerNotArr1_3, float2(0.5, 0.5));
+}
