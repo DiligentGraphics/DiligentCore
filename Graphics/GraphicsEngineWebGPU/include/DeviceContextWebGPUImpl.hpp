@@ -542,7 +542,7 @@ private:
     using DynamicMemoryPageList = std::vector<DynamicMemoryManagerWebGPU::Page>;
     using MappedTextureCache    = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
 
-    WGPUQueue                       m_wgpuQueue = nullptr;
+    WebGPUQueueWrapper              m_wgpuQueue;
     WebGPUCommandEncoderWrapper     m_wgpuCommandEncoder;
     WebGPURenderPassEncoderWrapper  m_wgpuRenderPassEncoder;
     WebGPUComputePassEncoderWrapper m_wgpuComputePassEncoder;

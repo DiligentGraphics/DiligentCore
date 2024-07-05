@@ -177,7 +177,8 @@ void AttachmentCleanerWebGPU::ResetDynamicUniformBuffer()
     m_CurrBufferOffset = 0;
 }
 
-void AttachmentCleanerWebGPU::ClearColor(WGPURenderPassEncoder wgpuCmdEncoder,
+void AttachmentCleanerWebGPU::ClearColor(WGPUQueue             wgpuQueue,
+                                         WGPURenderPassEncoder wgpuCmdEncoder,
                                          const RenderPassInfo& RPInfo,
                                          COLOR_MASK            ColorMask,
                                          Uint32                RTIndex,
@@ -190,10 +191,11 @@ void AttachmentCleanerWebGPU::ClearColor(WGPURenderPassEncoder wgpuCmdEncoder,
     Key.DepthState = m_wgpuDisableDepth;
 
     std::array<float, 8> ClearData = {Color[0], Color[1], Color[2], Color[3]};
-    ClearAttachment(wgpuCmdEncoder, Key, ClearData);
+    ClearAttachment(wgpuQueue, wgpuCmdEncoder, Key, ClearData);
 }
 
-void AttachmentCleanerWebGPU::ClearDepthStencil(WGPURenderPassEncoder     wgpuCmdEncoder,
+void AttachmentCleanerWebGPU::ClearDepthStencil(WGPUQueue                 wgpuQueue,
+                                                WGPURenderPassEncoder     wgpuCmdEncoder,
                                                 const RenderPassInfo&     RPInfo,
                                                 CLEAR_DEPTH_STENCIL_FLAGS Flags,
                                                 float                     Depth,
@@ -215,7 +217,7 @@ void AttachmentCleanerWebGPU::ClearDepthStencil(WGPURenderPassEncoder     wgpuCm
     }
 
     std::array<float, 8> ClearData = {0, 0, 0, 0, Depth};
-    ClearAttachment(wgpuCmdEncoder, Key, ClearData);
+    ClearAttachment(wgpuQueue, wgpuCmdEncoder, Key, ClearData);
 }
 
 WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHashKey& Key) const
@@ -277,7 +279,7 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
     return wgpuPipeline;
 }
 
-void AttachmentCleanerWebGPU::ClearAttachment(WGPURenderPassEncoder wgpuCmdEncoder, const ClearPSOHashKey& Key, std::array<float, 8>& ClearData)
+void AttachmentCleanerWebGPU::ClearAttachment(WGPUQueue wgpuQueue, WGPURenderPassEncoder wgpuCmdEncoder, const ClearPSOHashKey& Key, std::array<float, 8>& ClearData)
 {
     auto Iter = m_PSOCache.find(Key);
     if (Iter == m_PSOCache.end())
@@ -293,9 +295,7 @@ void AttachmentCleanerWebGPU::ClearAttachment(WGPURenderPassEncoder wgpuCmdEncod
     Uint32 DynamicOffsets[] = {m_CurrBufferOffset};
     m_CurrBufferOffset += m_BufferElementSize;
     VERIFY(m_CurrBufferOffset < m_BufferMaxElementCount * m_BufferElementSize, "Buffer offset more then buffer size");
-
-    WGPUQueue wgpuQueue = wgpuDeviceGetQueue(m_wgpuDevice);
-    wgpuQueueWriteBuffer(wgpuQueue, m_wgpuBuffer.Get(), DynamicOffsets[0], ClearData.data(), sizeof(float) * ClearData.size());
+    wgpuQueueWriteBuffer(wgpuQueue, m_wgpuBuffer, DynamicOffsets[0], ClearData.data(), sizeof(float) * ClearData.size());
 
     wgpuRenderPassEncoderSetPipeline(wgpuCmdEncoder, wgpuPipelineState);
     wgpuRenderPassEncoderSetBindGroup(wgpuCmdEncoder, 0, m_PipelineResourceLayout.wgpuBindGroup.Get(), _countof(DynamicOffsets), DynamicOffsets);

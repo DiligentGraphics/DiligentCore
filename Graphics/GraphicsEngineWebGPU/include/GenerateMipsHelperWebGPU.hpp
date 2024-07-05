@@ -47,7 +47,7 @@ public:
     GenerateMipsHelperWebGPU& operator = (      GenerateMipsHelperWebGPU&&) = delete;
     // clang-format on
 
-    void GenerateMips(WGPUComputePassEncoder wgpuCmdEncoder, TextureViewWebGPUImpl* pTexView);
+    void GenerateMips(WGPUQueue wgpuQueue, WGPUComputePassEncoder wgpuCmdEncoder, TextureViewWebGPUImpl* pTexView);
 
 private:
     using UAVFormats = std::array<TEXTURE_FORMAT, 4>;

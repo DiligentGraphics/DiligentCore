@@ -92,9 +92,10 @@ void ComputeShaderReferenceWebGPU(ISwapChain* pSwapChain)
     wgpuComputePassEncoderSetBindGroup(wgpuComputePassEncoder, 0, wgpuBindGroup, 0, nullptr);
     wgpuComputePassEncoderDispatchWorkgroups(wgpuComputePassEncoder, (SCDesc.Width + 15) / 16, (SCDesc.Height + 15) / 16, 1);
     wgpuComputePassEncoderEnd(wgpuComputePassEncoder);
-
     pEnvWebGPU->SubmitCommandEncoder(wgpuCmdEncoder);
+
     wgpuComputePassEncoderRelease(wgpuComputePassEncoder);
+    wgpuCommandEncoderRelease(wgpuCmdEncoder);
     wgpuBindGroupRelease(wgpuBindGroup);
     wgpuComputePipelineRelease(wgpuComputePipeline);
     wgpuPipelineLayoutRelease(wgpuPipelineLayout);

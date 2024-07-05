@@ -120,7 +120,6 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
 #endif
         }
     }
-    wgpuCommandEncoderRelease(wgpuCmdEncoder);
 }
 
 GPUTestingEnvironment* CreateTestingEnvironmentWebGPU(const GPUTestingEnvironment::CreateInfo& CI,

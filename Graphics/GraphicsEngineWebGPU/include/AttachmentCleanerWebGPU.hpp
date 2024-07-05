@@ -57,13 +57,15 @@ public:
 
     void ResetDynamicUniformBuffer();
 
-    void ClearColor(WGPURenderPassEncoder wgpuCmdEncoder,
+    void ClearColor(WGPUQueue             wgpuQueue,
+                    WGPURenderPassEncoder wgpuCmdEncoder,
                     const RenderPassInfo& RPInfo,
                     COLOR_MASK            ColorMask,
                     Uint32                RTIndex,
                     const float           Color[]);
 
-    void ClearDepthStencil(WGPURenderPassEncoder     wgpuCmdEncoder,
+    void ClearDepthStencil(WGPUQueue                 wgpuQueue,
+                           WGPURenderPassEncoder     wgpuCmdEncoder,
                            const RenderPassInfo&     RPInfo,
                            CLEAR_DEPTH_STENCIL_FLAGS Flags,
                            float                     Depth,
@@ -90,7 +92,8 @@ private:
 
     WebGPURenderPipelineWrapper CreatePSO(const ClearPSOHashKey& Key) const;
 
-    void ClearAttachment(WGPURenderPassEncoder  wgpuCmdEncoder,
+    void ClearAttachment(WGPUQueue              wgpuQueue,
+                         WGPURenderPassEncoder  wgpuCmdEncoder,
                          const ClearPSOHashKey& Key,
                          std::array<float, 8>&  ClearData);
 

@@ -123,21 +123,22 @@ private:
 DECLARE_WEBGPU_WRAPPER(WebGPUInstance, WGPUInstance, wgpuInstance)
 DECLARE_WEBGPU_WRAPPER(WebGPUAdapter, WGPUAdapter, wgpuAdapter)
 DECLARE_WEBGPU_WRAPPER(WebGPUDevice, WGPUDevice, wgpuDevice)
+DECLARE_WEBGPU_WRAPPER(WebGPUQueue, WGPUQueue, wgpuQueue)
 DECLARE_WEBGPU_WRAPPER(WebGPUSurface, WGPUSurface, wgpuSurface)
 DECLARE_WEBGPU_WRAPPER(WebGPUTexture, WGPUTexture, wgpuTexture)
 DECLARE_WEBGPU_WRAPPER(WebGPUTextureView, WGPUTextureView, wgpuTextureView)
-DECLARE_WEBGPU_WRAPPER(WebGPUBuffer, WGPUBuffer, wgpuBuffer);
-DECLARE_WEBGPU_WRAPPER(WebGPUSampler, WGPUSampler, wgpuSampler);
-DECLARE_WEBGPU_WRAPPER(WebGPUShaderModule, WGPUShaderModule, wgpuShaderModule);
-DECLARE_WEBGPU_WRAPPER(WebGPUBindGroupLayout, WGPUBindGroupLayout, wgpuBindGroupLayout);
-DECLARE_WEBGPU_WRAPPER(WebGPUPipelineLayout, WGPUPipelineLayout, wgpuPipelineLayout);
-DECLARE_WEBGPU_WRAPPER(WebGPURenderPipeline, WGPURenderPipeline, wgpuRenderPipeline);
-DECLARE_WEBGPU_WRAPPER(WebGPUComputePipeline, WGPUComputePipeline, wgpuComputePipeline);
-DECLARE_WEBGPU_WRAPPER(WebGPUCommandBuffer, WGPUCommandBuffer, wgpuCommandBuffer);
-DECLARE_WEBGPU_WRAPPER(WebGPUCommandEncoder, WGPUCommandEncoder, wgpuCommandEncoder);
-DECLARE_WEBGPU_WRAPPER(WebGPURenderPassEncoder, WGPURenderPassEncoder, wgpuRenderPassEncoder);
-DECLARE_WEBGPU_WRAPPER(WebGPUComputePassEncoder, WGPUComputePassEncoder, wgpuComputePassEncoder);
-DECLARE_WEBGPU_WRAPPER(WebGPUBindGroup, WGPUBindGroup, wgpuBindGroup);
-DECLARE_WEBGPU_WRAPPER(WebGPUQuerySet, WGPUQuerySet, wgpuQuerySet);
+DECLARE_WEBGPU_WRAPPER(WebGPUBuffer, WGPUBuffer, wgpuBuffer)
+DECLARE_WEBGPU_WRAPPER(WebGPUSampler, WGPUSampler, wgpuSampler)
+DECLARE_WEBGPU_WRAPPER(WebGPUShaderModule, WGPUShaderModule, wgpuShaderModule)
+DECLARE_WEBGPU_WRAPPER(WebGPUBindGroupLayout, WGPUBindGroupLayout, wgpuBindGroupLayout)
+DECLARE_WEBGPU_WRAPPER(WebGPUPipelineLayout, WGPUPipelineLayout, wgpuPipelineLayout)
+DECLARE_WEBGPU_WRAPPER(WebGPURenderPipeline, WGPURenderPipeline, wgpuRenderPipeline)
+DECLARE_WEBGPU_WRAPPER(WebGPUComputePipeline, WGPUComputePipeline, wgpuComputePipeline)
+DECLARE_WEBGPU_WRAPPER(WebGPUCommandBuffer, WGPUCommandBuffer, wgpuCommandBuffer)
+DECLARE_WEBGPU_WRAPPER(WebGPUCommandEncoder, WGPUCommandEncoder, wgpuCommandEncoder)
+DECLARE_WEBGPU_WRAPPER(WebGPURenderPassEncoder, WGPURenderPassEncoder, wgpuRenderPassEncoder)
+DECLARE_WEBGPU_WRAPPER(WebGPUComputePassEncoder, WGPUComputePassEncoder, wgpuComputePassEncoder)
+DECLARE_WEBGPU_WRAPPER(WebGPUBindGroup, WGPUBindGroup, wgpuBindGroup)
+DECLARE_WEBGPU_WRAPPER(WebGPUQuerySet, WGPUQuerySet, wgpuQuerySet)
 
 } // namespace Diligent

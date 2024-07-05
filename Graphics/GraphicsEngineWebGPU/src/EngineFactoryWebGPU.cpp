@@ -521,6 +521,7 @@ void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(WGPUInstance                 
                     0      // Queue id
                 })};
         pDeviceContextWebGPU->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));
+        pRenderDeviceWebGPU->SetImmediateContext(0, pDeviceContextWebGPU);
     }
     catch (const std::runtime_error&)
     {

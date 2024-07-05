@@ -53,8 +53,8 @@ void ClearRenderTargetReferenceWebGPU(ISwapChain* pSwapChain, const float ClearC
 
     WGPURenderPassEncoder wgpuRenderPass = wgpuCommandEncoderBeginRenderPass(wgpuCmdEncoder, &wgpuRenderPassDesc);
     wgpuRenderPassEncoderEnd(wgpuRenderPass);
-
     pEnvWebGPU->SubmitCommandEncoder(wgpuCmdEncoder);
+
     wgpuRenderPassEncoderRelease(wgpuRenderPass);
     wgpuCommandEncoderRelease(wgpuCmdEncoder);
 }

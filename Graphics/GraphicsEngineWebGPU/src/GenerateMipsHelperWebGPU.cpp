@@ -269,7 +269,7 @@ GenerateMipsHelperWebGPU::GenerateMipsHelperWebGPU(WGPUDevice wgpuDevice) :
     InitializePlaceholderTextures();
 }
 
-void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncoder, TextureViewWebGPUImpl* pTexView)
+void GenerateMipsHelperWebGPU::GenerateMips(WGPUQueue wgpuQueue, WGPUComputePassEncoder wgpuCmdEncoder, TextureViewWebGPUImpl* pTexView)
 {
     auto*       pTexWGPU = pTexView->GetTexture<TextureWebGPUImpl>();
     const auto& TexDesc  = pTexWGPU->GetDesc();
@@ -288,7 +288,6 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncode
         m_CurrBufferOffset += m_BufferElementSize;
         VERIFY(m_CurrBufferOffset < m_BufferMaxElementCount * m_BufferElementSize, "Buffer offset more then buffer size");
 
-        WGPUQueue wgpuQueue = wgpuDeviceGetQueue(m_wgpuDevice);
         wgpuQueueWriteBuffer(wgpuQueue, m_wgpuBuffer.Get(), DynamicOffset, &BufferData, sizeof(BufferData));
         return DynamicOffset;
     };

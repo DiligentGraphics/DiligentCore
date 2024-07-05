@@ -59,7 +59,7 @@ DeviceContextWebGPUImpl::DeviceContextWebGPUImpl(IReferenceCounters*           p
     }
 // clang-format on
 {
-    m_wgpuQueue = wgpuDeviceGetQueue(pDevice->GetWebGPUDevice());
+    m_wgpuQueue.Reset(wgpuDeviceGetQueue(pDevice->GetWebGPUDevice()));
     (void)m_ActiveQueriesCounter;
 
     pDevice->CreateFence({}, &m_pFence);
@@ -1073,6 +1073,10 @@ void DeviceContextWebGPUImpl::Flush()
                 }
                 pDeviceCxt->m_SignalFences.clear();
 
+                for (auto& MemPage : pDeviceCxt->m_DynamicMemPages)
+                    MemPage.Recycle();
+                pDeviceCxt->m_DynamicMemPages.clear();
+
                 for (auto& MemPage : pDeviceCxt->m_UploadMemPages)
                     MemPage.Recycle();
                 pDeviceCxt->m_UploadMemPages.clear();
@@ -1086,8 +1090,9 @@ void DeviceContextWebGPUImpl::Flush()
         WebGPUCommandBufferWrapper  wgpuCmdBuffer{wgpuCommandEncoderFinish(GetCommandEncoder(), &wgpuCmdBufferDesc)};
         DEV_CHECK_ERR(wgpuCmdBuffer != nullptr, "Failed to finish command encoder");
 
-        wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, this);
         wgpuQueueSubmit(m_wgpuQueue, 1, &wgpuCmdBuffer.Get());
+        wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, this);
+
         m_wgpuCommandEncoder.Reset(nullptr);
     }
 }
@@ -1195,7 +1200,7 @@ void DeviceContextWebGPUImpl::GenerateMips(ITextureView* pTexView)
 
     auto& MipGenerator = m_pDevice->GetMipsGenerator();
     auto  CmdEncoder   = GetComputePassCommandEncoder();
-    MipGenerator.GenerateMips(CmdEncoder, ClassPtrCast<TextureViewWebGPUImpl>(pTexView));
+    MipGenerator.GenerateMips(m_wgpuQueue, CmdEncoder, ClassPtrCast<TextureViewWebGPUImpl>(pTexView));
 }
 
 void DeviceContextWebGPUImpl::FinishFrame()
@@ -1539,10 +1544,10 @@ void DeviceContextWebGPUImpl::ClearAttachment(Int32                     RTIndex,
     }
 
     if (RTIndex >= 0)
-        AttachmentCleaner.ClearColor(m_wgpuRenderPassEncoder, RPInfo, ColorMask, RTIndex, ClearData);
+        AttachmentCleaner.ClearColor(m_wgpuQueue, m_wgpuRenderPassEncoder, RPInfo, ColorMask, RTIndex, ClearData);
     else
     {
-        AttachmentCleaner.ClearDepthStencil(m_wgpuRenderPassEncoder, RPInfo, DSFlags, ClearData[0], Stencil);
+        AttachmentCleaner.ClearDepthStencil(m_wgpuQueue, m_wgpuRenderPassEncoder, RPInfo, DSFlags, ClearData[0], Stencil);
         if ((DSFlags & CLEAR_STENCIL_FLAG) != 0)
             m_EncoderState.Invalidate(WebGPUEncoderState::CMD_ENCODER_STATE_STENCIL_REF);
     }

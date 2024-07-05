@@ -172,7 +172,7 @@ public:
         m_IsInitializedResources = true;
     }
 
-    void Execute(ITextureViewWebGPU* pTexture, ISwapChainWebGPU* pSwapChain)
+    void Execute(ITextureViewWebGPU* pTexture, ISwapChainWebGPU* pSwapChain, IDeviceContextWebGPU* pDeviceContext)
     {
         WGPUSurfaceTexture wgpuSurfaceTexture{};
         wgpuSurfaceGetCurrentTexture(pSwapChain->GetWebGPUSurface(), &wgpuSurfaceTexture);
@@ -252,7 +252,8 @@ public:
 
         WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
         WebGPUCommandBufferWrapper  wgpuCmdBuffer{wgpuCommandEncoderFinish(wgpuCmdEncoder, &wgpuCmdBufferDesc)};
-        wgpuQueueSubmit(wgpuDeviceGetQueue(m_pRenderDevice->GetWebGPUDevice()), 1, &wgpuCmdBuffer.Get());
+
+        wgpuQueueSubmit(pDeviceContext->GetWebGPUQueue(), 1, &wgpuCmdBuffer.Get());
         wgpuSurfacePresent(pSwapChain->GetWebGPUSurface());
         wgpuTextureRelease(wgpuSurfaceTexture.texture);
     }
@@ -315,7 +316,7 @@ void SwapChainWebGPUImpl::Present(Uint32 SyncInterval)
     auto* pImmediateCtxWebGPU = pDeviceContext.RawPtr<DeviceContextWebGPUImpl>();
 
     pImmediateCtxWebGPU->Flush();
-    m_pCmdPresent->Execute(m_pBackBufferSRV, this);
+    m_pCmdPresent->Execute(m_pBackBufferSRV, this, pImmediateCtxWebGPU);
 
     if (m_SwapChainDesc.IsPrimary)
     {

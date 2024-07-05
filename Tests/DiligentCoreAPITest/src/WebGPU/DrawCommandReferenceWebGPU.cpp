@@ -191,6 +191,9 @@ void RenderDrawCommandReferenceWebGPU(ISwapChain* pSwapChain, const float* pClea
     TriRender.Draw(wgpuRenderPassEncoder);
     wgpuRenderPassEncoderEnd(wgpuRenderPassEncoder);
     pEnvWebGPU->SubmitCommandEncoder(wgpuCmdEncoder);
+
+    wgpuRenderPassEncoderRelease(wgpuRenderPassEncoder);
+    wgpuCommandEncoderRelease(wgpuCmdEncoder);
 }
 
 void RenderPassMSResolveReferenceWebGPU(ISwapChain* pSwapChain, const float* pClearColor)

@@ -261,9 +261,11 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
 
             wgpuBufferUnmap(wgpuUploadBuffer.Get());
 
+            VERIFY_EXPR(pDevice->GetNumImmediateContexts() == 1);
             WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
             WebGPUCommandBufferWrapper  wgpuCmdBuffer{wgpuCommandEncoderFinish(wgpuCmdEncoder, &wgpuCmdBufferDesc)};
-            wgpuQueueSubmit(wgpuDeviceGetQueue(pDevice->GetWebGPUDevice()), 1, &wgpuCmdBuffer.Get());
+            auto                        pContext = pDevice->GetImmediateContext(0);
+            wgpuQueueSubmit(pContext->GetWebGPUQueue(), 1, &wgpuCmdBuffer.Get());
         }
     }
     else if (m_Desc.Usage == USAGE_STAGING)
