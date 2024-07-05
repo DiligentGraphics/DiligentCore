@@ -88,6 +88,7 @@ private:
 
     void RecreateSwapChain();
 
+private:
     NativeWindow                                   m_NativeWindow;
     WebGPUSurfaceWrapper                           m_wgpuSurface;
     RefCntAutoPtr<ITextureViewWebGPU>              m_pBackBufferRTV;

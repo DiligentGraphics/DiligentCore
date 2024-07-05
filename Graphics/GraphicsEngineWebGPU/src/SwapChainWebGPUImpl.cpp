@@ -75,7 +75,20 @@ fn PSMain(Input: VertexOutput) -> @location(0) vec4f
 }
 )";
 
-}
+auto WGPUConverUnormToSRGB = [](WGPUTextureFormat Format) {
+    switch (Format)
+    {
+        case WGPUTextureFormat_RGBA8Unorm:
+            return WGPUTextureFormat_RGBA8UnormSrgb;
+        case WGPUTextureFormat_BGRA8Unorm:
+            return WGPUTextureFormat_BGRA8UnormSrgb;
+        default:
+            UNEXPECTED("Unexpected texture format");
+            return Format;
+    }
+};
+
+} // namespace
 
 class WebGPUSwapChainPresentCommand
 {
@@ -85,7 +98,7 @@ public:
     {
     }
 
-    void InitializePipelineState(ISwapChainWebGPU* pSwapChain)
+    void InitializePipelineState(WGPUTextureFormat wgpuFormat)
     {
         if (m_IsInitializedResources)
             return;
@@ -125,7 +138,7 @@ public:
             LOG_ERROR_AND_THROW("Failed to create pipeline layout");
 
         WGPUColorTargetState wgpuColorTargetState{};
-        wgpuColorTargetState.format    = TextureFormatToWGPUFormat(pSwapChain->GetDesc().ColorBufferFormat);
+        wgpuColorTargetState.format    = wgpuFormat;
         wgpuColorTargetState.blend     = nullptr;
         wgpuColorTargetState.writeMask = WGPUColorWriteMask_All;
 
@@ -161,8 +174,6 @@ public:
 
     void Execute(ITextureViewWebGPU* pTexture, ISwapChainWebGPU* pSwapChain)
     {
-        InitializePipelineState(pSwapChain);
-
         WGPUSurfaceTexture wgpuSurfaceTexture{};
         wgpuSurfaceGetCurrentTexture(pSwapChain->GetWebGPUSurface(), &wgpuSurfaceTexture);
 
@@ -184,10 +195,16 @@ public:
                 break;
         }
 
+        auto ViewFormat = wgpuTextureGetFormat(wgpuSurfaceTexture.texture);
+        if (IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat))
+            ViewFormat = WGPUConverUnormToSRGB(ViewFormat);
+
+        InitializePipelineState(ViewFormat);
+
         WGPUTextureViewDescriptor wgpuTextureViewDesc;
         wgpuTextureViewDesc.nextInChain     = nullptr;
         wgpuTextureViewDesc.label           = "SwapChainPresentTextureView";
-        wgpuTextureViewDesc.format          = wgpuTextureGetFormat(wgpuSurfaceTexture.texture);
+        wgpuTextureViewDesc.format          = ViewFormat;
         wgpuTextureViewDesc.dimension       = WGPUTextureViewDimension_2D;
         wgpuTextureViewDesc.baseMipLevel    = 0;
         wgpuTextureViewDesc.mipLevelCount   = 1;
@@ -428,18 +445,24 @@ void SwapChainWebGPUImpl::ConfigureSurface()
 #endif
     }
 
-    WGPUTextureFormat SwapChainFormat = wgpuSurfaceGetPreferredFormat(m_wgpuSurface.Get(), pRenderDeviceWebGPU->GetWebGPUAdapter());
-    m_SwapChainDesc.ColorBufferFormat = WGPUFormatToTextureFormat(SwapChainFormat);
+    const WGPUTextureFormat wgpuPreferredFormat = wgpuSurfaceGetPreferredFormat(m_wgpuSurface.Get(), pRenderDeviceWebGPU->GetWebGPUAdapter());
+
+    WGPUTextureFormat wgpuRTVFormats[] = {
+        wgpuPreferredFormat,
+        WGPUConverUnormToSRGB(wgpuPreferredFormat),
+    };
 
     WGPUSurfaceConfiguration wgpuSurfaceConfig{};
-    wgpuSurfaceConfig.nextInChain = nullptr;
-    wgpuSurfaceConfig.device      = pRenderDeviceWebGPU->GetWebGPUDevice();
-    wgpuSurfaceConfig.usage       = SelectUsage(m_SwapChainDesc.Usage);
-    wgpuSurfaceConfig.width       = m_SwapChainDesc.Width;
-    wgpuSurfaceConfig.height      = m_SwapChainDesc.Height;
-    wgpuSurfaceConfig.format      = SwapChainFormat;
-    wgpuSurfaceConfig.presentMode = SelectPresentMode(m_VSyncEnabled);
-    wgpuSurfaceConfig.alphaMode   = WGPUCompositeAlphaMode_Auto;
+    wgpuSurfaceConfig.nextInChain     = nullptr;
+    wgpuSurfaceConfig.device          = pRenderDeviceWebGPU->GetWebGPUDevice();
+    wgpuSurfaceConfig.usage           = SelectUsage(m_SwapChainDesc.Usage);
+    wgpuSurfaceConfig.width           = m_SwapChainDesc.Width;
+    wgpuSurfaceConfig.height          = m_SwapChainDesc.Height;
+    wgpuSurfaceConfig.format          = wgpuSurfaceGetPreferredFormat(m_wgpuSurface.Get(), pRenderDeviceWebGPU->GetWebGPUAdapter());
+    wgpuSurfaceConfig.presentMode     = SelectPresentMode(m_VSyncEnabled);
+    wgpuSurfaceConfig.alphaMode       = WGPUCompositeAlphaMode_Auto;
+    wgpuSurfaceConfig.viewFormats     = wgpuRTVFormats;
+    wgpuSurfaceConfig.viewFormatCount = _countof(wgpuRTVFormats);
 
     wgpuSurfaceConfigure(m_wgpuSurface.Get(), &wgpuSurfaceConfig);
     wgpuSurfaceCapabilitiesFreeMembers(wgpuSurfaceCapabilities);
