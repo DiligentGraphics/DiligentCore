@@ -251,21 +251,23 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
     {
         //TODO
         auto& Features{AdapterInfo.Features};
-        Features.SeparablePrograms         = DEVICE_FEATURE_STATE_ENABLED;
-        Features.ShaderResourceQueries     = DEVICE_FEATURE_STATE_ENABLED;
-        Features.WireframeFill             = DEVICE_FEATURE_STATE_ENABLED;
-        Features.ComputeShaders            = DEVICE_FEATURE_STATE_ENABLED;
-        Features.OcclusionQueries          = DEVICE_FEATURE_STATE_ENABLED;
-        Features.BinaryOcclusionQueries    = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DurationQueries           = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DepthBiasClamp            = DEVICE_FEATURE_STATE_ENABLED;
-        Features.IndependentBlend          = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DualSourceBlend           = DEVICE_FEATURE_STATE_ENABLED;
-        Features.MultiViewport             = DEVICE_FEATURE_STATE_ENABLED;
-        Features.PixelUAVWritesAndAtomics  = DEVICE_FEATURE_STATE_ENABLED;
-        Features.TextureUAVExtendedFormats = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DepthClamp                = DEVICE_FEATURE_STATE_ENABLED;
-        Features.FormattedBuffers          = DEVICE_FEATURE_STATE_DISABLED;
+        Features.SeparablePrograms           = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ShaderResourceQueries       = DEVICE_FEATURE_STATE_ENABLED;
+        Features.WireframeFill               = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ComputeShaders              = DEVICE_FEATURE_STATE_ENABLED;
+        Features.OcclusionQueries            = DEVICE_FEATURE_STATE_ENABLED;
+        Features.BinaryOcclusionQueries      = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DurationQueries             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DepthBiasClamp              = DEVICE_FEATURE_STATE_ENABLED;
+        Features.IndependentBlend            = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ShaderResourceStaticArrays  = DEVICE_FEATURE_STATE_DISABLED;
+        Features.ShaderResourceRuntimeArrays = DEVICE_FEATURE_STATE_DISABLED;
+        Features.DualSourceBlend             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.MultiViewport               = DEVICE_FEATURE_STATE_ENABLED;
+        Features.PixelUAVWritesAndAtomics    = DEVICE_FEATURE_STATE_ENABLED;
+        Features.TextureUAVExtendedFormats   = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DepthClamp                  = DEVICE_FEATURE_STATE_ENABLED;
+        Features.FormattedBuffers            = DEVICE_FEATURE_STATE_DISABLED;
 
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_DepthClipControl))
             Features.DepthBiasClamp = DEVICE_FEATURE_STATE_ENABLED;
@@ -280,7 +282,7 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
             Features.ShaderFloat16 = DEVICE_FEATURE_STATE_ENABLED;
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 45, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 46, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     WGPUSupportedLimits wgpuSupportedLimits{};
     wgpuAdapterGetLimits(wgpuAdapter, &wgpuSupportedLimits);

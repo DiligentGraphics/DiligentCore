@@ -103,7 +103,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             }
         }
 
-        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0 && Features.ShaderResourceRuntimeArray == DEVICE_FEATURE_STATE_DISABLED)
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0 && Features.ShaderResourceRuntimeArrays == DEVICE_FEATURE_STATE_DISABLED)
         {
             LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (RUNTIME_ARRAY). The flag can only be used if ShaderResourceRuntimeArray device feature is enabled.");
         }

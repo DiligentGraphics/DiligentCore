@@ -1648,7 +1648,7 @@ static void TestRunTimeResourceArray(bool IsGLSL, IShaderSourceInputStreamFactor
     auto* pDevice = pEnv->GetDevice();
 
     const auto& deviceCaps = pDevice->GetDeviceInfo();
-    if (!deviceCaps.Features.ShaderResourceRuntimeArray)
+    if (!deviceCaps.Features.ShaderResourceRuntimeArrays)
     {
         GTEST_SKIP() << "Shader Resource Runtime Arrays are not supported by this device";
     }

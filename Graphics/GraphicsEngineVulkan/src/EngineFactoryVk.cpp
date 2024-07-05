@@ -952,8 +952,8 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             }
 
             // clang-format off
-            if (EnabledFeatures.ShaderResourceRuntimeArray != DEVICE_FEATURE_STATE_DISABLED ||
-                EnabledFeatures.RayTracing                 != DEVICE_FEATURE_STATE_DISABLED)
+            if (EnabledFeatures.ShaderResourceRuntimeArrays != DEVICE_FEATURE_STATE_DISABLED ||
+                EnabledFeatures.RayTracing                  != DEVICE_FEATURE_STATE_DISABLED)
             // clang-format on
             {
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_MAINTENANCE3_EXTENSION_NAME), "VK_KHR_maintenance3 extension must be supported");
@@ -1170,7 +1170,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 LOG_ERROR_MESSAGE("Can not enable extended device features when VK_KHR_get_physical_device_properties2 extension is not supported by device");
         }
 
-        ASSERT_SIZEOF(DeviceFeatures, 45, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+        ASSERT_SIZEOF(DeviceFeatures, 46, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
         for (Uint32 i = 0; i < EngineCI.DeviceExtensionCount; ++i)
         {

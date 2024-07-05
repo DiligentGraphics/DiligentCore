@@ -103,7 +103,8 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(ShaderInt8,                        "8-bit int shader operations are");
     ENABLE_FEATURE(ResourceBuffer8BitAccess,          "8-bit resource buffer access is");
     ENABLE_FEATURE(UniformBuffer8BitAccess,           "8-bit uniform buffer access is");
-    ENABLE_FEATURE(ShaderResourceRuntimeArray,        "Shader resource runtime array is");
+    ENABLE_FEATURE(ShaderResourceStaticArrays,        "Shader resource static arrays are");
+    ENABLE_FEATURE(ShaderResourceRuntimeArrays,       "Shader resource runtime arrays are");
     ENABLE_FEATURE(WaveOp,                            "Wave operations are");
     ENABLE_FEATURE(InstanceDataStepRate,              "Instance data step rate is");
     ENABLE_FEATURE(NativeFence,                       "Native fence is");
@@ -120,7 +121,7 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     // clang-format on
 #undef ENABLE_FEATURE
 
-    ASSERT_SIZEOF(DeviceFeatures, 45, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeatures, 46, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return EnabledFeatures;
 }

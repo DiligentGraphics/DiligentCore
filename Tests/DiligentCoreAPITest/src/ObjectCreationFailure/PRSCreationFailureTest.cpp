@@ -239,7 +239,7 @@ TEST(PRSCreationFailureTest, InvalidInputAttachmentFlag)
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
     const char* ExpectedErrorSubstring;
-    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.ShaderResourceRuntimeArray)
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.ShaderResourceRuntimeArrays)
         ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). Only the following flags are valid for a input attachment: GENERAL_INPUT_ATTACHMENT";
     else
         ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). The flag can only be used if ShaderResourceRuntimeArray device feature is enabled";

@@ -773,14 +773,15 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &MaxLayers);
         CHECK_GL_ERROR("Failed to get maximum number of texture array layers");
 
-        Features.MeshShaders                = DEVICE_FEATURE_STATE_DISABLED;
-        Features.RayTracing                 = DEVICE_FEATURE_STATE_DISABLED;
-        Features.ShaderResourceRuntimeArray = DEVICE_FEATURE_STATE_DISABLED;
-        Features.InstanceDataStepRate       = DEVICE_FEATURE_STATE_ENABLED;
-        Features.NativeFence                = DEVICE_FEATURE_STATE_DISABLED;
-        Features.TileShaders                = DEVICE_FEATURE_STATE_DISABLED;
-        Features.SubpassFramebufferFetch    = DEVICE_FEATURE_STATE_DISABLED;
-        Features.TextureComponentSwizzle    = DEVICE_FEATURE_STATE_DISABLED;
+        Features.MeshShaders                 = DEVICE_FEATURE_STATE_DISABLED;
+        Features.RayTracing                  = DEVICE_FEATURE_STATE_DISABLED;
+        Features.ShaderResourceStaticArrays  = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ShaderResourceRuntimeArrays = DEVICE_FEATURE_STATE_DISABLED;
+        Features.InstanceDataStepRate        = DEVICE_FEATURE_STATE_ENABLED;
+        Features.NativeFence                 = DEVICE_FEATURE_STATE_DISABLED;
+        Features.TileShaders                 = DEVICE_FEATURE_STATE_DISABLED;
+        Features.SubpassFramebufferFetch     = DEVICE_FEATURE_STATE_DISABLED;
+        Features.TextureComponentSwizzle     = DEVICE_FEATURE_STATE_DISABLED;
 
         {
             bool WireframeFillSupported = (glPolygonMode != nullptr);
@@ -1107,7 +1108,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         m_AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 45, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 46, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 }
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()

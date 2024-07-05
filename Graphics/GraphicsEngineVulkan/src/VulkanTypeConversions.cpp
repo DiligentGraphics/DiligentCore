@@ -1939,9 +1939,12 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
     Features.BindlessResources             = DEVICE_FEATURE_STATE_ENABLED;
     Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
+    Features.ShaderResourceStaticArrays    = DEVICE_FEATURE_STATE_ENABLED;
     Features.SubpassFramebufferFetch       = DEVICE_FEATURE_STATE_ENABLED;
     Features.TextureComponentSwizzle       = DEVICE_FEATURE_STATE_ENABLED;
     Features.TextureSubresourceViews       = DEVICE_FEATURE_STATE_ENABLED;
+    Features.AsyncShaderCompilation        = DEVICE_FEATURE_STATE_ENABLED;
+    Features.FormattedBuffers              = DEVICE_FEATURE_STATE_ENABLED;
 
     // Timestamps are not a feature and can't be disabled. They are either supported by the device, or not.
     Features.TimestampQueries = vkDeviceProps.limits.timestampComputeAndGraphics ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
@@ -1988,7 +1991,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     // clang-format on
 
     const auto& DescrIndexingFeats = ExtFeatures.DescriptorIndexing;
-    INIT_FEATURE(ShaderResourceRuntimeArray, DescrIndexingFeats.runtimeDescriptorArray != VK_FALSE);
+    INIT_FEATURE(ShaderResourceRuntimeArrays, DescrIndexingFeats.runtimeDescriptorArray != VK_FALSE);
     const auto& AccelStructFeats = ExtFeatures.AccelStruct;
     const auto& RayTracingFeats  = ExtFeatures.RayTracingPipeline;
     const auto& RayQueryFeats    = ExtFeatures.RayQuery;
@@ -2041,10 +2044,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.DurationQueries        = DEVICE_FEATURE_STATE_DISABLED;
 #endif
 
-    Features.AsyncShaderCompilation = DEVICE_FEATURE_STATE_ENABLED;
-    Features.FormattedBuffers       = DEVICE_FEATURE_STATE_ENABLED;
-
-    ASSERT_SIZEOF(DeviceFeatures, 45, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeatures, 46, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return Features;
 }

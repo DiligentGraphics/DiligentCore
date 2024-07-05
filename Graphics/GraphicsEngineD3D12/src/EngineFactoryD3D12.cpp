@@ -774,7 +774,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
             ASSERT_SIZEOF(MeshProps, 16, "Did you add a new member to MeshShaderProperties? Please initialize it here.");
         }
 
-        Features.ShaderResourceRuntimeArray = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ShaderResourceRuntimeArrays = DEVICE_FEATURE_STATE_ENABLED;
 
         {
             D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features = {};
@@ -1067,7 +1067,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         ASSERT_SIZEOF(DrawCommandProps, 12, "Did you add a new member to DrawCommandProperties? Please initialize it here.");
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 45, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 46, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     return AdapterInfo;
 }

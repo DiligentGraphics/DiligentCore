@@ -1389,7 +1389,7 @@ TEST_F(PSOCreationFailureTest, InvalidRunTimeArray)
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (!DeviceInfo.Features.ShaderResourceRuntimeArray)
+    if (!DeviceInfo.Features.ShaderResourceRuntimeArrays)
     {
         GTEST_SKIP();
     }

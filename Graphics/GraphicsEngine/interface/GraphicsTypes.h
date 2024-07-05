@@ -1742,12 +1742,18 @@ struct DeviceFeatures
     /// Indicates if device supports reading 8-bit types from uniform buffers.
     DEVICE_FEATURE_STATE UniformBuffer8BitAccess          DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports static-sized shader arrays.
+    ///
+    /// \remarks    This feature is always enabled in all backends,
+    ///             except for WebGPU.
+    DEVICE_FEATURE_STATE ShaderResourceStaticArrays       DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
     /// Indicates if device supports runtime-sized shader arrays (e.g. arrays without a specific size).
     ///
     /// \remarks    This feature is always enabled in DirectX12 backend and
     ///             can optionally be enabled in Vulkan backend.
     ///             Run-time sized shader arrays are not available in other backends.
-    DEVICE_FEATURE_STATE ShaderResourceRuntimeArray       DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+    DEVICE_FEATURE_STATE ShaderResourceRuntimeArrays      DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports wave ops (Direct3D12) or subgroups (Vulkan).
     DEVICE_FEATURE_STATE WaveOp                           DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
@@ -1856,7 +1862,8 @@ struct DeviceFeatures
     Handler(ShaderInt8)                        \
     Handler(ResourceBuffer8BitAccess)          \
     Handler(UniformBuffer8BitAccess)           \
-    Handler(ShaderResourceRuntimeArray)        \
+    Handler(ShaderResourceStaticArrays)        \
+    Handler(ShaderResourceRuntimeArrays)       \
     Handler(WaveOp)                            \
     Handler(InstanceDataStepRate)              \
     Handler(NativeFence)                       \
@@ -1873,7 +1880,7 @@ struct DeviceFeatures
 
     explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept
     {
-        static_assert(sizeof(*this) == 45, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
+        static_assert(sizeof(*this) == 46, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
     #define INIT_FEATURE(Feature) Feature = State;
         ENUMERATE_DEVICE_FEATURES(INIT_FEATURE)
     #undef INIT_FEATURE
