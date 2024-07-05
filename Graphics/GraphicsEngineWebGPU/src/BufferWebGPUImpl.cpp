@@ -43,7 +43,7 @@ Uint64 ComputeBufferAlignment(const RenderDeviceWebGPUImpl* pDevice, const Buffe
     if (Desc.BindFlags & BIND_UNIFORM_BUFFER)
         Alignment = pDevice->GetAdapterInfo().Buffer.ConstantBufferOffsetAlignment;
 
-    if (Desc.BindFlags & BIND_UNORDERED_ACCESS)
+    if (Desc.BindFlags & (BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE))
         Alignment = pDevice->GetAdapterInfo().Buffer.StructuredBufferOffsetAlignment;
 
     return Alignment;
