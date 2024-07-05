@@ -3408,7 +3408,7 @@ TEST_F(DrawCommandTest, VertexAttributes)
         Color[0], Color[1], Color[2],
         Color[0], Color[1], Color[2]
     };
-    const float4 Zero[_countof(Positions)];
+    const float Zero[_countof(Positions) * sizeof(float) * (4 + 4 + 4)] = {};
     // clang-format on
 
     auto pPosVB  = CreateVertexBuffer(Positions, sizeof(Positions));
