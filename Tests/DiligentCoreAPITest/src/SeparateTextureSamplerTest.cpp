@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,6 +61,27 @@ void PSMain(out float4 col : SV_TARGET)
 }
 )";
 
+static const char g_PSShaderSourceWGPU[] = R"(
+Texture2D g_Tex;
+SamplerState g_Sam;
+Texture2D g_Tex2;
+SamplerState g_Sam2;
+SamplerState g_Sam3_0;
+SamplerState g_Sam3_1;
+SamplerState g_Sam4_0;
+SamplerState g_Sam4_1;
+
+void PSMain(out float4 col : SV_TARGET)
+{
+    col = g_Tex.Sample(g_Sam, float2(0.5, 0.5)) +
+          g_Tex2.Sample(g_Sam2, float2(0.5, 0.5)) +
+          g_Tex2.Sample(g_Sam3_0, float2(0.5, 0.5)) +
+          g_Tex2.Sample(g_Sam3_1, float2(0.5, 0.5)) +
+          g_Tex2.Sample(g_Sam4_0, float2(0.5, 0.5)) +
+          g_Tex2.Sample(g_Sam4_1, float2(0.5, 0.5));
+}
+)";
+
 TEST(SeparateTextureSampler, CreateSampler)
 {
     auto* pEnv     = GPUTestingEnvironment::GetInstance();
@@ -85,7 +106,7 @@ TEST(SeparateTextureSampler, CreateSampler)
     pDevice->CreateShader(Attrs, &pVS);
     ASSERT_TRUE(pVS);
 
-    Attrs.Source          = g_PSShaderSource;
+    Attrs.Source          = pDevice->GetDeviceInfo().IsWebGPUDevice() ? g_PSShaderSourceWGPU : g_PSShaderSource;
     Attrs.EntryPoint      = "PSMain";
     Attrs.Desc.ShaderType = SHADER_TYPE_PIXEL;
     Attrs.Desc.Name       = "PSMain (TestSeparateTextureSampler)";
