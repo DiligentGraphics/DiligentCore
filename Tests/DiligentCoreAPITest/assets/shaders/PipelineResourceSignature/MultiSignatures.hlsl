@@ -1,7 +1,7 @@
-Texture2D g_Tex2D_1;
-Texture2D g_Tex2D_2;
-Texture2D g_Tex2D_3;
-Texture2D g_Tex2D_4;
+Texture2D g_Tex2D_A;
+Texture2D g_Tex2D_B;
+Texture2D g_Tex2D_C;
+Texture2D g_Tex2D_D;
 
 SamplerState g_Sampler;
 
@@ -19,10 +19,10 @@ float4 VerifyResources()
 
     float2 UV = float2(0.5, 0.5);
 
-    AllCorrect *= CheckValue(g_Tex2D_1.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_1_Ref);
-    AllCorrect *= CheckValue(g_Tex2D_2.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_2_Ref);
-    AllCorrect *= CheckValue(g_Tex2D_3.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_3_Ref);
-    AllCorrect *= CheckValue(g_Tex2D_4.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_4_Ref);
+    AllCorrect *= CheckValue(g_Tex2D_A.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_1_Ref);
+    AllCorrect *= CheckValue(g_Tex2D_B.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_2_Ref);
+    AllCorrect *= CheckValue(g_Tex2D_C.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_3_Ref);
+    AllCorrect *= CheckValue(g_Tex2D_D.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_4_Ref);
 
 	return AllCorrect;
 }

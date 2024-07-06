@@ -65,9 +65,9 @@ protected:
         GPUTestingEnvironment::GetInstance()->Reset();
     }
 
-    static RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IShader*                                                         pVS,
-                                                           IShader*                                                         pPS,
-                                                           std::initializer_list<RefCntAutoPtr<IPipelineResourceSignature>> pSignatures)
+    static RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IShader*                                               pVS,
+                                                           IShader*                                               pPS,
+                                                           std::vector<RefCntAutoPtr<IPipelineResourceSignature>> pSignatures)
     {
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
@@ -323,11 +323,12 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
 
 void PipelineResourceSignatureTest::TestMultiSignatures(const std::vector<std::array<Uint8, 3>>& SignatureBindings)
 {
-    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice  = pEnv->GetDevice();
-    auto*       pContext = pEnv->GetDeviceContext();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    auto*       pContext   = pEnv->GetDeviceContext();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (!pDevice->GetDeviceInfo().Features.SeparablePrograms)
+    if (!DeviceInfo.Features.SeparablePrograms)
     {
         GTEST_SKIP();
     }
@@ -364,28 +365,29 @@ void PipelineResourceSignatureTest::TestMultiSignatures(const std::vector<std::a
     ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
+    const Uint32 NumSignatures = DeviceInfo.IsWebGPUDevice() ? 2 : 3;
     for (const auto& BindIndices : SignatureBindings)
     {
         PipelineResourceSignatureDesc PRSDesc;
 
-        RefCntAutoPtr<IPipelineResourceSignature> pPRS[3];
-        RefCntAutoPtr<IShaderResourceBinding>     pSRB[3];
-        std::vector<PipelineResourceDesc>         Resources[3];
+        std::vector<RefCntAutoPtr<IPipelineResourceSignature>> pPRS(NumSignatures);
+        std::vector<RefCntAutoPtr<IShaderResourceBinding>>     pSRB(NumSignatures);
+        std::vector<std::vector<PipelineResourceDesc>>         Resources(NumSignatures);
         // clang-format off
-        Resources[0].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-        Resources[0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
-        Resources[0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_3", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        Resources[0].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_A", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        Resources[0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_B", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        Resources[0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_C", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
 
-        Resources[1].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
-        Resources[1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
-        Resources[1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_3", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        Resources[1].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_A", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        Resources[1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_B", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        Resources[1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_C", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
-        Resources[2].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_4", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
-        Resources[2].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_4", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
-        Resources[2].emplace_back(SHADER_TYPE_PIXEL | SHADER_TYPE_VERTEX, "g_Sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        Resources[NumSignatures == 3 ? 2 : 0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_D", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        Resources[NumSignatures == 3 ? 2 : 1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_D", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        Resources[NumSignatures == 3 ? 2 : 0].emplace_back(SHADER_TYPE_PIXEL | SHADER_TYPE_VERTEX, "g_Sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
         // clang-format on
 
-        for (Uint32 i = 0; i < _countof(pPRS); ++i)
+        for (Uint32 i = 0; i < NumSignatures; ++i)
         {
             std::string PRSName  = "Multi signatures " + std::to_string(i);
             PRSDesc.Name         = PRSName.c_str();
@@ -398,34 +400,34 @@ void PipelineResourceSignatureTest::TestMultiSignatures(const std::vector<std::a
             ASSERT_TRUE(pPRS[i]);
         }
 
-        auto pPSO = CreateGraphicsPSO(pVS, pPS, {pPRS[0], pPRS[1], pPRS[2]});
+        auto pPSO = CreateGraphicsPSO(pVS, pPS, pPRS);
         ASSERT_TRUE(pPSO);
 
-        SET_STATIC_VAR(pPRS[0], SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
-        SET_STATIC_VAR(pPRS[1], SHADER_TYPE_VERTEX, "g_Tex2D_3", Set, RefTextures.GetView(2));
+        SET_STATIC_VAR(pPRS[0], SHADER_TYPE_VERTEX, "g_Tex2D_A", Set, RefTextures.GetView(0));
+        SET_STATIC_VAR(pPRS[1], SHADER_TYPE_VERTEX, "g_Tex2D_C", Set, RefTextures.GetView(2));
 
         if (!pDevice->GetDeviceInfo().IsGLDevice())
         {
             RefCntAutoPtr<ISampler> pSampler;
             pDevice->CreateSampler(SamplerDesc{}, &pSampler);
-            SET_STATIC_VAR(pPRS[2], SHADER_TYPE_PIXEL, "g_Sampler", Set, pSampler);
+            SET_STATIC_VAR(pPRS[NumSignatures == 3 ? 2 : 0], SHADER_TYPE_PIXEL, "g_Sampler", Set, pSampler);
         }
 
-        for (Uint32 i = 0; i < _countof(pPRS); ++i)
+        for (Uint32 i = 0; i < NumSignatures; ++i)
         {
             pPRS[i]->CreateShaderResourceBinding(&pSRB[i], true);
             ASSERT_NE(pSRB[i], nullptr);
         }
 
-        SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_2", Set, RefTextures.GetView(5));
-        SET_SRB_VAR(pSRB[1], SHADER_TYPE_PIXEL, "g_Tex2D_1", Set, RefTextures.GetView(4));
-        SET_SRB_VAR(pSRB[2], SHADER_TYPE_PIXEL, "g_Tex2D_4", Set, RefTextures.GetView(7));
+        SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_B", Set, RefTextures.GetView(5));
+        SET_SRB_VAR(pSRB[1], SHADER_TYPE_PIXEL, "g_Tex2D_A", Set, RefTextures.GetView(4));
+        SET_SRB_VAR(pSRB[NumSignatures == 3 ? 2 : 0], SHADER_TYPE_PIXEL, "g_Tex2D_D", Set, RefTextures.GetView(7));
 
-        SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_3", Set, RefTextures.GetView(6));
-        SET_SRB_VAR(pSRB[1], SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, RefTextures.GetView(1));
-        SET_SRB_VAR(pSRB[2], SHADER_TYPE_VERTEX, "g_Tex2D_4", Set, RefTextures.GetView(3));
+        SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_C", Set, RefTextures.GetView(6));
+        SET_SRB_VAR(pSRB[1], SHADER_TYPE_VERTEX, "g_Tex2D_B", Set, RefTextures.GetView(1));
+        SET_SRB_VAR(pSRB[NumSignatures == 3 ? 2 : 1], SHADER_TYPE_VERTEX, "g_Tex2D_D", Set, RefTextures.GetView(3));
 
-        for (Uint32 i = 0; i < _countof(pSRB); ++i)
+        for (Uint32 i = 0; i < NumSignatures; ++i)
         {
             pContext->CommitShaderResources(pSRB[i], RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         }
