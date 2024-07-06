@@ -73,12 +73,34 @@ TEST(WGSLUtils, GetWGSLEmulatedArrayElementInfo)
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_X", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_X"});
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_123x", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_123x"});
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_123_", "_"), WGSLEmulatedResourceArrayElement{"Tex2D_123_"});
+
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_0", "_"), WGSLEmulatedResourceArrayElement("Tex2D", 0));
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_1", "_"), WGSLEmulatedResourceArrayElement("Tex2D", 1));
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_17", "_"), WGSLEmulatedResourceArrayElement("Tex2D", 17));
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_0_5", "_"), WGSLEmulatedResourceArrayElement("Tex2D_0", 5));
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_1_18", "_"), WGSLEmulatedResourceArrayElement("Tex2D_1", 18));
     EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_17_3", "_"), WGSLEmulatedResourceArrayElement("Tex2D_17", 3));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_17__4", "_"), WGSLEmulatedResourceArrayElement("Tex2D_17_", 4));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_17___5", "_"), WGSLEmulatedResourceArrayElement("Tex2D_17__", 5));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_17____6", "_"), WGSLEmulatedResourceArrayElement("Tex2D_17___", 6));
+
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_i0", "_i"), WGSLEmulatedResourceArrayElement("Tex2D", 0));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_i0_1", "_i"), WGSLEmulatedResourceArrayElement("Tex2D_i0_1"));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_id1", "_id"), WGSLEmulatedResourceArrayElement("Tex2D", 1));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_id1_i1", "_id"), WGSLEmulatedResourceArrayElement("Tex2D_id1_i1"));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_ind19", "_ind"), WGSLEmulatedResourceArrayElement("Tex2D", 19));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_idx999", "_idx"), WGSLEmulatedResourceArrayElement("Tex2D", 999));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_idx0_idx35", "_idx"), WGSLEmulatedResourceArrayElement("Tex2D_idx0", 35));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_i1_i2_i3_i52", "_i"), WGSLEmulatedResourceArrayElement("Tex2D_i1_i2_i3", 52));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_i1_i2_i3_52", "_i"), WGSLEmulatedResourceArrayElement("Tex2D_i1_i2_i3_52"));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_i1_i2_i3_i4_i52", "_i"), WGSLEmulatedResourceArrayElement("Tex2D_i1_i2_i3_i4", 52));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_i1_i2_i3_i4_52", "_i"), WGSLEmulatedResourceArrayElement("Tex2D_i1_i2_i3_i4_52"));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2D_nn17_nn4", "_nn"), WGSLEmulatedResourceArrayElement("Tex2D_nn17", 4));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2Dxx1", "xx"), WGSLEmulatedResourceArrayElement("Tex2D", 1));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2Dxxx2", "xx"), WGSLEmulatedResourceArrayElement("Tex2Dx", 2));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2Dxxxx3", "xx"), WGSLEmulatedResourceArrayElement("Tex2Dxx", 3));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2Dxxxxx4", "xx"), WGSLEmulatedResourceArrayElement("Tex2Dxxx", 4));
+    EXPECT_EQ(GetWGSLEmulatedArrayElement("Tex2Dxxxxxx5", "xx"), WGSLEmulatedResourceArrayElement("Tex2Dxxxx", 5));
 }
 
 std::string HLSLtoWGLS(const char* FilePath)

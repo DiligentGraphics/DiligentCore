@@ -53,13 +53,26 @@ WGSLEmulatedResourceArrayElement GetWGSLEmulatedArrayElement(const std::string& 
     if (Name.empty() || Suffix.empty())
         return {Name, -1};
 
-    size_t SuffixPos = Name.find_last_of(Suffix);
+    size_t SuffixPos = Name.find(Suffix);
+    // g_Tex2DArr_15
+    //  ^
+    if (SuffixPos != std::string::npos)
+    {
+        // Properly handle self-overlapping suffixes, e.g. "g_Tex2Dxxx24", "xx" is the suffix
+        size_t NextSuffixPos = Name.find(Suffix, SuffixPos + 1);
+        while (NextSuffixPos != std::string::npos)
+        {
+            SuffixPos     = NextSuffixPos;
+            NextSuffixPos = Name.find(Suffix, SuffixPos + 1);
+        }
+    }
+
     // g_Tex2DArr_15
     //           ^
-    if (SuffixPos != std::string::npos && SuffixPos + 1 < Name.length())
+    if (SuffixPos != std::string::npos && SuffixPos + Suffix.length() < Name.length())
     {
         int Index = 0;
-        if (Parsing::ParseInteger(Name.begin() + SuffixPos + 1, Name.end(), Index) == Name.end())
+        if (Parsing::ParseInteger(Name.begin() + SuffixPos + Suffix.length(), Name.end(), Index) == Name.end())
         {
             // g_Tex2DArr_15
             //            ^
