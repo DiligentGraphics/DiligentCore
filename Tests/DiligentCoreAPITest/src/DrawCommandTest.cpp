@@ -280,6 +280,30 @@ void main(in  uint    VertId : SV_VertexID,
 )"
 };
 
+const std::string DrawTest_VSStructuredBufferArray_WGPU{
+R"(
+struct BufferData
+{
+    float4 data;
+};
+
+StructuredBuffer<BufferData> g_Buffers_0;
+StructuredBuffer<BufferData> g_Buffers_1;
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
+};
+
+void main(in  uint    VertId : SV_VertexID,
+          out PSInput PSIn)
+{
+    PSIn.Pos   = g_Buffers_0[VertId].data;
+    PSIn.Color = g_Buffers_1[VertId].data.rgb;
+}
+)"
+};
 
 const std::string DrawTest_VSFormattedBuffers{
 R"(
@@ -2887,6 +2911,10 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
             if (DeviceInfo.IsD3DDevice())
             {
                 ShaderCI.Source = UseArray ? HLSL::DrawTest_VSStructuredBufferArray.c_str() : HLSL::DrawTest_VSStructuredBuffers.c_str();
+            }
+            else if (DeviceInfo.IsWebGPUDevice())
+            {
+                ShaderCI.Source = UseArray ? HLSL::DrawTest_VSStructuredBufferArray_WGPU.c_str() : HLSL::DrawTest_VSStructuredBuffers.c_str();
             }
             else
             {
