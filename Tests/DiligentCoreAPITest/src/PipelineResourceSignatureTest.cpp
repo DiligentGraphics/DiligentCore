@@ -187,9 +187,10 @@ RefCntAutoPtr<IShaderSourceInputStreamFactory> PipelineResourceSignatureTest::pS
 
 TEST_F(PipelineResourceSignatureTest, VariableTypes)
 {
-    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice  = pEnv->GetDevice();
-    auto*       pContext = pEnv->GetDeviceContext();
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    auto*       pContext   = pEnv->GetDeviceContext();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -252,8 +253,13 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
             ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
     };
-    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, "shaders/ShaderResourceLayout/Textures.hlsl", "VSMain", "PRS variable types test: VS", Macros, ModifyShaderCI);
-    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, "shaders/ShaderResourceLayout/Textures.hlsl", "PSMain", "PRS variable types test: PS", Macros, ModifyShaderCI);
+
+    const char* ShaderPath = DeviceInfo.Features.ShaderResourceStaticArrays ?
+        "shaders/ShaderResourceLayout/Textures.hlsl" :
+        "shaders/ShaderResourceLayout/Textures_EmulatedArrays.hlsl";
+
+    auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, ShaderPath, "VSMain", "PRS variable types test: VS", Macros, ModifyShaderCI);
+    auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, ShaderPath, "PSMain", "PRS variable types test: PS", Macros, ModifyShaderCI);
     ASSERT_TRUE(pVS && pPS);
 
     PipelineResourceSignatureDesc PRSDesc;
@@ -518,10 +524,10 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
         const PipelineResourceDesc Resources[] = //
             {
-                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
-                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
-                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
-                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType}, //
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType}, //
             };
 
         std::string Name = std::string{"PRS test - "} + GetShaderVariableTypeLiteralName(VarType) + " vars";
@@ -549,10 +555,10 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
         if (VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, RefTextures.GetView(1));
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff_1", Set, RefBuffers.GetBuffer(0));
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff_2", Set, RefBuffers.GetBuffer(1));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D1", Set, RefTextures.GetView(0));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D2", Set, RefTextures.GetView(1));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff1", Set, RefBuffers.GetBuffer(0));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff2", Set, RefBuffers.GetBuffer(1));
         }
 
         RefCntAutoPtr<IShaderResourceBinding> pSRB;
@@ -568,10 +574,10 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
         if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, RefTextures.GetView(1));
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff_1", Set, RefBuffers.GetBuffer(0));
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff_2", Set, RefBuffers.GetBuffer(1));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D1", Set, RefTextures.GetView(0));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D2", Set, RefTextures.GetView(1));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff1", Set, RefBuffers.GetBuffer(0));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff2", Set, RefBuffers.GetBuffer(1));
         }
 
         pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -1317,8 +1323,8 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
     auto*       pContext   = pEnv->GetDeviceContext();
     auto*       pSwapChain = pEnv->GetSwapChain();
 
-    if (DeviceInfo.IsD3DDevice() && ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL)
-        GTEST_SKIP() << "Direct3D supports HLSL only";
+    if ((DeviceInfo.IsD3DDevice() || DeviceInfo.IsWebGPUDevice()) && ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL)
+        GTEST_SKIP() << "Direct3D and WebGPU support HLSL only";
 
     float ClearColor[] = {0.625, 0.25, 0.375, 1.0};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -1355,8 +1361,11 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
 
     RefCntAutoPtr<IShader> pVS;
     {
-        ShaderCI.Desc       = {"CombinedImageSamplers - VS", SHADER_TYPE_VERTEX, true};
-        ShaderCI.FilePath   = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplersGL.vsh";
+        ShaderCI.Desc = {"CombinedImageSamplers - VS", SHADER_TYPE_VERTEX, true};
+        if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
+            ShaderCI.FilePath = DeviceInfo.Features.ShaderResourceStaticArrays ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplers_EmulatedArrays.hlsl";
+        else
+            ShaderCI.FilePath = "CombinedImageSamplersGL.vsh";
         ShaderCI.EntryPoint = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "VSMain" : "main";
         pDevice->CreateShader(ShaderCI, &pVS);
     }
@@ -1364,8 +1373,11 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
 
     RefCntAutoPtr<IShader> pPS;
     {
-        ShaderCI.Desc       = {"CombinedImageSamplers - PS", SHADER_TYPE_PIXEL, true};
-        ShaderCI.FilePath   = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplersGL.psh";
+        ShaderCI.Desc = {"CombinedImageSamplers - PS", SHADER_TYPE_PIXEL, true};
+        if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
+            ShaderCI.FilePath = DeviceInfo.Features.ShaderResourceStaticArrays ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplers_EmulatedArrays.hlsl";
+        else
+            ShaderCI.FilePath = "CombinedImageSamplersGL.psh";
         ShaderCI.EntryPoint = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "PSMain" : "main";
         pDevice->CreateShader(ShaderCI, &pPS);
     }
@@ -1386,7 +1398,7 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
     }
     else if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
     {
-        if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsMetalDevice())
+        if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsWebGPUDevice() || DeviceInfo.IsMetalDevice())
             ResFlag = UseEmulatedSamplers ? PIPELINE_RESOURCE_FLAG_NONE : PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
         else if (DeviceInfo.IsVulkanDevice())
         {
@@ -1499,9 +1511,9 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pContext   = pEnv->GetDeviceContext();
     auto* const pSwapChain = pEnv->GetSwapChain();
-    const auto& deviceCaps = pDevice->GetDeviceInfo();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (BufferMode == BUFFER_MODE_FORMATTED && !deviceCaps.Features.FormattedBuffers)
+    if (BufferMode == BUFFER_MODE_FORMATTED && !DeviceInfo.Features.FormattedBuffers)
         GTEST_SKIP() << "Formatted buffers are not supported by this device";
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
@@ -1509,9 +1521,9 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
     float ClearColor[] = {0.875, 0.125, 0.75, 0.75};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
-    static constexpr Uint32 StaticBuffArraySize  = 4;
-    static constexpr Uint32 MutableBuffArraySize = 3;
-    static constexpr Uint32 DynamicBuffArraySize = 2;
+    const Uint32 StaticBuffArraySize  = !DeviceInfo.IsWebGPUDevice() ? 4 : 2;
+    const Uint32 MutableBuffArraySize = !DeviceInfo.IsWebGPUDevice() ? 3 : 2;
+    const Uint32 DynamicBuffArraySize = !DeviceInfo.IsWebGPUDevice() ? 2 : 1;
 
     ReferenceBuffers RefBuffers{
         3 + StaticBuffArraySize + MutableBuffArraySize + DynamicBuffArraySize,
@@ -1526,17 +1538,25 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
     static constexpr size_t Buff_MutIdx    = 1;
     static constexpr size_t Buff_DynIdx    = 2;
 
-    static constexpr size_t BuffArr_StaticIdx = 3;
-    static constexpr size_t BuffArr_MutIdx    = BuffArr_StaticIdx + StaticBuffArraySize;
-    static constexpr size_t BuffArr_DynIdx    = BuffArr_MutIdx + MutableBuffArraySize;
+    const size_t BuffArr_StaticIdx = 3;
+    const size_t BuffArr_MutIdx    = BuffArr_StaticIdx + StaticBuffArraySize;
+    const size_t BuffArr_DynIdx    = BuffArr_MutIdx + MutableBuffArraySize;
 
     ShaderMacroHelper Macros;
 
-    const char*            ShaderPath  = BufferMode == BUFFER_MODE_FORMATTED ? "shaders/ShaderResourceLayout/FormattedBuffers.hlsl" : "shaders/ShaderResourceLayout/StructuredBuffers.hlsl";
+    const char* ShaderPath = nullptr;
+    if (BufferMode == BUFFER_MODE_FORMATTED)
+        ShaderPath = "shaders/ShaderResourceLayout/FormattedBuffers.hlsl";
+    else
+    {
+        ShaderPath = DeviceInfo.Features.ShaderResourceStaticArrays ?
+            "shaders/ShaderResourceLayout/StructuredBuffers.hlsl" :
+            "shaders/ShaderResourceLayout/StructuredBuffers_WGPU.hlsl";
+    }
     const char*            VSEntry     = "VSMain";
     const char*            PSEntry     = "PSMain";
     SHADER_SOURCE_LANGUAGE SrcLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
-    if (!deviceCaps.IsD3DDevice() && BufferMode == BUFFER_MODE_STRUCTURED)
+    if (!DeviceInfo.IsD3DDevice() && !DeviceInfo.IsWebGPUDevice() && BufferMode == BUFFER_MODE_STRUCTURED)
     {
         ShaderPath  = "shaders/ShaderResourceLayout/StructuredBuffers.glsl";
         VSEntry     = "main";

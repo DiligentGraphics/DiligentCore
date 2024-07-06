@@ -774,7 +774,7 @@ void PipelineResourceSignatureWebGPUImpl::CopyStaticResources(ShaderResourceCach
             {
                 DEV_CHECK_ERR(pCachedResource == nullptr, "Static resource has already been initialized, and the new resource does not match previously assigned resource");
                 DstResourceCache.SetResource(StaticGroupIdx,
-                                             DstCacheOffset + ArrInd,
+                                             DstCacheOffset,
                                              SrcCachedRes.pObject,
                                              SrcCachedRes.BufferBaseOffset,
                                              SrcCachedRes.BufferRangeSize);

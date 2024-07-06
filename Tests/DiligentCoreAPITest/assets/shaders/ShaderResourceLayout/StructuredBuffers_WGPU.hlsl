@@ -1,17 +1,19 @@
-Texture2D g_Tex2D1;
-Texture2D g_Tex2D2;
-
-SamplerState g_Sampler;
-
-cbuffer ConstBuff1
+struct BufferData
 {
-    float4 g_Data_1;
-}
+    float4 data;
+};
 
-cbuffer ConstBuff2
-{
-    float4 g_Data_2;
-}
+StructuredBuffer<BufferData> g_Buff_Static;
+StructuredBuffer<BufferData> g_Buff_Mut;
+StructuredBuffer<BufferData> g_Buff_Dyn;
+
+StructuredBuffer<BufferData> g_BuffArr_Static_0;
+StructuredBuffer<BufferData> g_BuffArr_Static_1;
+
+StructuredBuffer<BufferData> g_BuffArr_Mut_0;
+StructuredBuffer<BufferData> g_BuffArr_Mut_1;
+
+StructuredBuffer<BufferData> g_BuffArr_Dyn_0;
 
 float4 CheckValue(float4 Val, float4 Expected)
 {
@@ -25,13 +27,19 @@ float4 VerifyResources()
 {
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
 
-    float2 UV = float2(0.5, 0.5);
-    AllCorrect *= CheckValue(g_Tex2D1.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_1_Ref);
-    AllCorrect *= CheckValue(g_Tex2D2.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_2_Ref);
-    AllCorrect *= CheckValue(g_Data_1, CB_1_Ref);
-    AllCorrect *= CheckValue(g_Data_2, CB_2_Ref);
+    AllCorrect *= CheckValue(g_Buff_Static[0].data, Buff_Static_Ref);
+    AllCorrect *= CheckValue(g_Buff_Mut   [0].data, Buff_Mut_Ref);
+    AllCorrect *= CheckValue(g_Buff_Dyn   [0].data, Buff_Dyn_Ref);
 
-	return AllCorrect;
+    AllCorrect *= CheckValue(g_BuffArr_Static_0[0].data, BuffArr_Static_Ref0);
+    AllCorrect *= CheckValue(g_BuffArr_Static_1[0].data, BuffArr_Static_Ref1);
+
+    AllCorrect *= CheckValue(g_BuffArr_Mut_0[0].data, BuffArr_Mut_Ref0);
+    AllCorrect *= CheckValue(g_BuffArr_Mut_1[0].data, BuffArr_Mut_Ref1);
+
+    AllCorrect *= CheckValue(g_BuffArr_Dyn_0[0].data, BuffArr_Dyn_Ref0);
+
+    return AllCorrect;
 }
 
 void VSMain(in  uint    VertId    : SV_VertexID,
