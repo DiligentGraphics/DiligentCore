@@ -100,8 +100,9 @@ TEST(ShaderResourceLayout, VariableAccess)
 
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders", &pShaderSourceFactory);
-    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.EntryPoint                 = "main";
+    ShaderCI.pShaderSourceStreamFactory     = pShaderSourceFactory;
+    ShaderCI.EntryPoint                     = "main";
+    ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
 
     RefCntAutoPtr<ISampler> pSamplers[2];
     IDeviceObject*          pSams[2] = {};

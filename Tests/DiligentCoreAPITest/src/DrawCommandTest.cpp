@@ -2914,7 +2914,8 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
             }
             else if (DeviceInfo.IsWebGPUDevice())
             {
-                ShaderCI.Source = UseArray ? HLSL::DrawTest_VSStructuredBufferArray_WGPU.c_str() : HLSL::DrawTest_VSStructuredBuffers.c_str();
+                ShaderCI.Source                         = UseArray ? HLSL::DrawTest_VSStructuredBufferArray_WGPU.c_str() : HLSL::DrawTest_VSStructuredBuffers.c_str();
+                ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
             }
             else
             {

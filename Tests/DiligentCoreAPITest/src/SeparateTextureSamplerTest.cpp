@@ -96,12 +96,13 @@ TEST(SeparateTextureSampler, CreateSampler)
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     ShaderCreateInfo Attrs;
-    Attrs.Source          = g_VSShaderSource;
-    Attrs.EntryPoint      = "VSMain";
-    Attrs.Desc.ShaderType = SHADER_TYPE_VERTEX;
-    Attrs.Desc.Name       = "VSMain (TestSeparateTextureSampler)";
-    Attrs.SourceLanguage  = SHADER_SOURCE_LANGUAGE_HLSL;
-    Attrs.ShaderCompiler  = pEnv->GetDefaultCompiler(Attrs.SourceLanguage);
+    Attrs.Source                         = g_VSShaderSource;
+    Attrs.EntryPoint                     = "VSMain";
+    Attrs.Desc.ShaderType                = SHADER_TYPE_VERTEX;
+    Attrs.Desc.Name                      = "VSMain (TestSeparateTextureSampler)";
+    Attrs.SourceLanguage                 = SHADER_SOURCE_LANGUAGE_HLSL;
+    Attrs.ShaderCompiler                 = pEnv->GetDefaultCompiler(Attrs.SourceLanguage);
+    Attrs.WebGPUEmulatedArrayIndexSuffix = "_";
     RefCntAutoPtr<IShader> pVS;
     pDevice->CreateShader(Attrs, &pVS);
     ASSERT_TRUE(pVS);

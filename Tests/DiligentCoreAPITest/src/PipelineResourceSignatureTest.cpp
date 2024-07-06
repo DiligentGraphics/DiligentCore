@@ -252,6 +252,7 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
             ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
             ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
+        ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
     };
 
     const char* ShaderPath = DeviceInfo.Features.ShaderResourceStaticArrays ?
@@ -374,16 +375,16 @@ void PipelineResourceSignatureTest::TestMultiSignatures(const std::vector<std::a
         std::vector<RefCntAutoPtr<IShaderResourceBinding>>     pSRB(NumSignatures);
         std::vector<std::vector<PipelineResourceDesc>>         Resources(NumSignatures);
         // clang-format off
-        Resources[0].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_A", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-        Resources[0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_B", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
-        Resources[0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_C", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        Resources[0].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        Resources[0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        Resources[0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_3", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
 
-        Resources[1].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_A", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
-        Resources[1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_B", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
-        Resources[1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_C", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+        Resources[1].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        Resources[1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        Resources[1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_3", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
-        Resources[NumSignatures == 3 ? 2 : 0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_D", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
-        Resources[NumSignatures == 3 ? 2 : 1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_D", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+        Resources[NumSignatures == 3 ? 2 : 0].emplace_back(SHADER_TYPE_PIXEL,  "g_Tex2D_4", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        Resources[NumSignatures == 3 ? 2 : 1].emplace_back(SHADER_TYPE_VERTEX, "g_Tex2D_4", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
         Resources[NumSignatures == 3 ? 2 : 0].emplace_back(SHADER_TYPE_PIXEL | SHADER_TYPE_VERTEX, "g_Sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
         // clang-format on
 
@@ -403,8 +404,8 @@ void PipelineResourceSignatureTest::TestMultiSignatures(const std::vector<std::a
         auto pPSO = CreateGraphicsPSO(pVS, pPS, pPRS);
         ASSERT_TRUE(pPSO);
 
-        SET_STATIC_VAR(pPRS[0], SHADER_TYPE_VERTEX, "g_Tex2D_A", Set, RefTextures.GetView(0));
-        SET_STATIC_VAR(pPRS[1], SHADER_TYPE_VERTEX, "g_Tex2D_C", Set, RefTextures.GetView(2));
+        SET_STATIC_VAR(pPRS[0], SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
+        SET_STATIC_VAR(pPRS[1], SHADER_TYPE_VERTEX, "g_Tex2D_3", Set, RefTextures.GetView(2));
 
         if (!pDevice->GetDeviceInfo().IsGLDevice())
         {
@@ -419,13 +420,13 @@ void PipelineResourceSignatureTest::TestMultiSignatures(const std::vector<std::a
             ASSERT_NE(pSRB[i], nullptr);
         }
 
-        SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_B", Set, RefTextures.GetView(5));
-        SET_SRB_VAR(pSRB[1], SHADER_TYPE_PIXEL, "g_Tex2D_A", Set, RefTextures.GetView(4));
-        SET_SRB_VAR(pSRB[NumSignatures == 3 ? 2 : 0], SHADER_TYPE_PIXEL, "g_Tex2D_D", Set, RefTextures.GetView(7));
+        SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_2", Set, RefTextures.GetView(5));
+        SET_SRB_VAR(pSRB[1], SHADER_TYPE_PIXEL, "g_Tex2D_1", Set, RefTextures.GetView(4));
+        SET_SRB_VAR(pSRB[NumSignatures == 3 ? 2 : 0], SHADER_TYPE_PIXEL, "g_Tex2D_4", Set, RefTextures.GetView(7));
 
-        SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_C", Set, RefTextures.GetView(6));
-        SET_SRB_VAR(pSRB[1], SHADER_TYPE_VERTEX, "g_Tex2D_B", Set, RefTextures.GetView(1));
-        SET_SRB_VAR(pSRB[NumSignatures == 3 ? 2 : 1], SHADER_TYPE_VERTEX, "g_Tex2D_D", Set, RefTextures.GetView(3));
+        SET_SRB_VAR(pSRB[0], SHADER_TYPE_PIXEL, "g_Tex2D_3", Set, RefTextures.GetView(6));
+        SET_SRB_VAR(pSRB[1], SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, RefTextures.GetView(1));
+        SET_SRB_VAR(pSRB[NumSignatures == 3 ? 2 : 1], SHADER_TYPE_VERTEX, "g_Tex2D_4", Set, RefTextures.GetView(3));
 
         for (Uint32 i = 0; i < NumSignatures; ++i)
         {
@@ -526,10 +527,10 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
         const PipelineResourceDesc Resources[] = //
             {
-                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
-                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
-                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
-                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType}, //
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "g_Tex2D_2", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_1", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
+                {SHADER_TYPE_ALL_GRAPHICS, "ConstBuff_2", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType}, //
             };
 
         std::string Name = std::string{"PRS test - "} + GetShaderVariableTypeLiteralName(VarType) + " vars";
@@ -557,10 +558,10 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
         if (VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D1", Set, RefTextures.GetView(0));
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D2", Set, RefTextures.GetView(1));
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff1", Set, RefBuffers.GetBuffer(0));
-            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff2", Set, RefBuffers.GetBuffer(1));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, RefTextures.GetView(1));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff_1", Set, RefBuffers.GetBuffer(0));
+            SET_STATIC_VAR(pPRS, SHADER_TYPE_VERTEX, "ConstBuff_2", Set, RefBuffers.GetBuffer(1));
         }
 
         RefCntAutoPtr<IShaderResourceBinding> pSRB;
@@ -576,10 +577,10 @@ TEST_F(PipelineResourceSignatureTest, SingleVarType)
 
         if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D1", Set, RefTextures.GetView(0));
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D2", Set, RefTextures.GetView(1));
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff1", Set, RefBuffers.GetBuffer(0));
-            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff2", Set, RefBuffers.GetBuffer(1));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_1", Set, RefTextures.GetView(0));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Tex2D_2", Set, RefTextures.GetView(1));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff_1", Set, RefBuffers.GetBuffer(0));
+            SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "ConstBuff_2", Set, RefBuffers.GetBuffer(1));
         }
 
         pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -1355,11 +1356,12 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
     Macros.AddShaderMacro("Tex2DArr_Dyn_Ref1", RefTextures.GetColor(8));
 
     ShaderCreateInfo ShaderCI;
-    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.SourceLanguage             = ShaderLang;
-    ShaderCI.Macros                     = Macros;
-    ShaderCI.ShaderCompiler             = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? SHADER_COMPILER_DEFAULT : pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-    ShaderCI.HLSLVersion                = {5, 0};
+    ShaderCI.pShaderSourceStreamFactory     = pShaderSourceFactory;
+    ShaderCI.SourceLanguage                 = ShaderLang;
+    ShaderCI.Macros                         = Macros;
+    ShaderCI.ShaderCompiler                 = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? SHADER_COMPILER_DEFAULT : pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.HLSLVersion                    = {5, 0};
+    ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
 
     RefCntAutoPtr<IShader> pVS;
     {
@@ -1597,6 +1599,8 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
             ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
             ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
+
+        ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
     };
 
     auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, ShaderPath, VSEntry, "PRS FormattedBuffers - VS", Macros, ModifyShaderCI);

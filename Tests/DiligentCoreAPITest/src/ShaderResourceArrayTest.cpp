@@ -46,8 +46,9 @@ TEST(ShaderResourceLayout, ResourceArray)
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders", &pShaderSourceFactory);
     ShaderCreateInfo ShaderCI;
-    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.HLSLVersion                = ShaderVersion{5, 0};
+    ShaderCI.pShaderSourceStreamFactory     = pShaderSourceFactory;
+    ShaderCI.HLSLVersion                    = ShaderVersion{5, 0};
+    ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
 
     RefCntAutoPtr<IShader> pVS, pPS;
     {
