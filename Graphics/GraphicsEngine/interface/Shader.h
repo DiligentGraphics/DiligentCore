@@ -473,6 +473,21 @@ struct ShaderCreateInfo
     /// An optional list of GLSL extensions to enable when compiling GLSL source code.
     const char* GLSLExtensions DEFAULT_INITIALIZER(nullptr);
 
+    /// An optional suffix to append to the name of emulated array variables to get
+    /// the indexed array element name.
+    ///
+    /// \remarks    Since WebGPU does not support arrays of resources, Diligent Engine
+    ///             emulates them by appending an index to the resource name.
+    ///             For instance, if the suffix is set to "_", resources named
+    ///             "g_Tex2D_0", "g_Tex2D_1", "g_Tex2D_2" will be grouped into an array
+    ///             of 3 textures named "g_Tex2D" . All resources must be the same type
+    ///             to be grouped into an array.
+    ///
+    ///             When suffix is null or empty, no array emulation is performed.
+    ///
+    /// \remarks    This member is ignored when compiling shaders for backends other than WebGPU.
+    const char* WebGPUEmulatedArrayIndexSuffix DEFAULT_INITIALIZER(nullptr);
+
 #if DILIGENT_CPP_INTERFACE && !defined(DILIGENT_SHARP_GEN)
     constexpr ShaderCreateInfo() noexcept
     {}
@@ -598,6 +613,9 @@ struct ShaderCreateInfo
             return false;
 
         if (!SafeStrEqual(CI1.GLSLExtensions, CI2.GLSLExtensions))
+            return false;
+
+        if (!SafeStrEqual(CI1.WebGPUEmulatedArrayIndexSuffix, CI2.WebGPUEmulatedArrayIndexSuffix))
             return false;
 
         return true;

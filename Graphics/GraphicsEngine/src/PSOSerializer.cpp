@@ -517,12 +517,13 @@ bool ShaderSerializer<Mode>::SerializeCI(Serializer<Mode>&            Ser,
              CI.MSLVersion,
              CI.CompileFlags,
              CI.LoadConstantBufferReflection,
-             CI.GLSLExtensions))
+             CI.GLSLExtensions,
+             CI.WebGPUEmulatedArrayIndexSuffix))
         return false;
 
     return SerializeBytecodeOrSource(Ser, CI);
 
-    ASSERT_SIZEOF64(ShaderCreateInfo, 144, "Did you add a new member to ShaderCreateInfo? Please add serialization here.");
+    ASSERT_SIZEOF64(ShaderCreateInfo, 152, "Did you add a new member to ShaderCreateInfo? Please add serialization here.");
 }
 
 template struct PSOSerializer<SerializerMode::Read>;

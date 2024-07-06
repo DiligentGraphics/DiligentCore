@@ -216,7 +216,7 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
                 m_Desc.Name,
                 m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
                 ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_WGSL ? ShaderCI.EntryPoint : nullptr,
-                GetEmulatedArrayIndexSuffix(),
+                ShaderCI.WebGPUEmulatedArrayIndexSuffix,
                 ShaderCI.LoadConstantBufferReflection,
             };
         m_pShaderResources.reset(pResources, STDDeleterRawMem<WGSLShaderResources>(Allocator));

@@ -708,17 +708,18 @@ TEST(PSOSerializerTest, SerializeRenderPassDesc)
 void SerializeShaderCreateInfo(bool UseBytecode)
 {
     ShaderCreateInfo RefCI;
-    RefCI.Desc                         = {"Serialized Shader", SHADER_TYPE_COMPUTE, true, "suff"};
-    RefCI.EntryPoint                   = "Entry_Point";
-    RefCI.SourceLanguage               = SHADER_SOURCE_LANGUAGE_HLSL;
-    RefCI.ShaderCompiler               = SHADER_COMPILER_GLSLANG;
-    RefCI.HLSLVersion                  = {1, 2};
-    RefCI.GLSLVersion                  = {3, 4};
-    RefCI.GLESSLVersion                = {5, 6};
-    RefCI.MSLVersion                   = {7, 8};
-    RefCI.CompileFlags                 = SHADER_COMPILE_FLAG_SKIP_REFLECTION;
-    RefCI.LoadConstantBufferReflection = true;
-    RefCI.GLSLExtensions               = "My extension";
+    RefCI.Desc                           = {"Serialized Shader", SHADER_TYPE_COMPUTE, true, "suff"};
+    RefCI.EntryPoint                     = "Entry_Point";
+    RefCI.SourceLanguage                 = SHADER_SOURCE_LANGUAGE_HLSL;
+    RefCI.ShaderCompiler                 = SHADER_COMPILER_GLSLANG;
+    RefCI.HLSLVersion                    = {1, 2};
+    RefCI.GLSLVersion                    = {3, 4};
+    RefCI.GLESSLVersion                  = {5, 6};
+    RefCI.MSLVersion                     = {7, 8};
+    RefCI.CompileFlags                   = SHADER_COMPILE_FLAG_SKIP_REFLECTION;
+    RefCI.LoadConstantBufferReflection   = true;
+    RefCI.GLSLExtensions                 = "My extension";
+    RefCI.WebGPUEmulatedArrayIndexSuffix = "My suffix";
 
     constexpr size_t RefBytecodeSize              = 7;
     const Uint8      RefBytecode[RefBytecodeSize] = {42, 13, 179, 211, 97, 65, 71};
@@ -768,6 +769,7 @@ void SerializeShaderCreateInfo(bool UseBytecode)
     EXPECT_EQ   (CI.CompileFlags,   RefCI.CompileFlags);
     EXPECT_EQ   (CI.LoadConstantBufferReflection, RefCI.LoadConstantBufferReflection);
     EXPECT_STREQ(CI.GLSLExtensions, RefCI.GLSLExtensions);
+    EXPECT_STREQ(CI.WebGPUEmulatedArrayIndexSuffix, RefCI.WebGPUEmulatedArrayIndexSuffix);
     // clang-format on
 
     if (UseBytecode)

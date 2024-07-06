@@ -278,10 +278,11 @@ public:
 
     // clang-format off
 
-    const char* GetCombinedSamplerSuffix() const { return m_CombinedSamplerSuffix; }
-    const char* GetShaderName()            const { return m_ShaderName; }
-    const char* GetEntryPoint()            const { return m_EntryPoint; }
-    bool        IsUsingCombinedSamplers()  const { return m_CombinedSamplerSuffix != nullptr; }
+    const char* GetCombinedSamplerSuffix()    const { return m_CombinedSamplerSuffix; }
+    const char* GetEmulatedArrayIndexSuffix() const { return m_EmulatedArrayIndexSuffix; }
+    const char* GetShaderName()               const { return m_ShaderName; }
+    const char* GetEntryPoint()               const { return m_EntryPoint; }
+    bool        IsUsingCombinedSamplers()     const { return m_CombinedSamplerSuffix != nullptr; }
 
     // clang-format on
 
@@ -322,9 +323,10 @@ private:
     std::unique_ptr<void, STDDeleterRawMem<void>> m_MemoryBuffer;
     std::unique_ptr<void, STDDeleterRawMem<void>> m_UBReflectionBuffer;
 
-    const char* m_CombinedSamplerSuffix = nullptr;
-    const char* m_ShaderName            = nullptr;
-    const char* m_EntryPoint            = nullptr;
+    const char* m_CombinedSamplerSuffix    = nullptr;
+    const char* m_EmulatedArrayIndexSuffix = nullptr;
+    const char* m_ShaderName               = nullptr;
+    const char* m_EntryPoint               = nullptr;
 
     using OffsetType                   = Uint16;
     OffsetType m_StorageBufferOffset   = 0;

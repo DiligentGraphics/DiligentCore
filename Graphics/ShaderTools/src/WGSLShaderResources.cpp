@@ -683,6 +683,10 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     {
         ResourceNamesPoolSize += strlen(CombinedSamplerSuffix) + 1;
     }
+    if (EmulatedArrayIndexSuffix != nullptr)
+    {
+        ResourceNamesPoolSize += strlen(EmulatedArrayIndexSuffix) + 1;
+    }
 
     ResourceNamesPoolSize += strlen(ShaderName) + 1;
     ResourceNamesPoolSize += strlen(EntryPoint) + 1;
@@ -762,6 +766,10 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     if (CombinedSamplerSuffix != nullptr)
     {
         m_CombinedSamplerSuffix = ResourceNamesPool.CopyString(CombinedSamplerSuffix);
+    }
+    if (EmulatedArrayIndexSuffix != nullptr)
+    {
+        m_EmulatedArrayIndexSuffix = ResourceNamesPool.CopyString(EmulatedArrayIndexSuffix);
     }
 
     m_ShaderName = ResourceNamesPool.CopyString(ShaderName);

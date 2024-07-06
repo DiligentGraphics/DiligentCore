@@ -62,7 +62,7 @@ XXH128Hash XXH128State::Digest() noexcept
 
 void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
 {
-    ASSERT_SIZEOF64(ShaderCI, 144, "Did you add new members to ShaderCreateInfo? Please handle them here.");
+    ASSERT_SIZEOF64(ShaderCI, 152, "Did you add new members to ShaderCreateInfo? Please handle them here.");
 
     Update(ShaderCI.SourceLength, // Aka ByteCodeSize
            ShaderCI.EntryPoint,
@@ -100,6 +100,11 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
     if (ShaderCI.GLSLExtensions != nullptr)
     {
         UpdateStr(ShaderCI.GLSLExtensions);
+    }
+
+    if (ShaderCI.WebGPUEmulatedArrayIndexSuffix != nullptr)
+    {
+        UpdateStr(ShaderCI.WebGPUEmulatedArrayIndexSuffix);
     }
 }
 

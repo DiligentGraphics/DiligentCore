@@ -86,9 +86,9 @@ public:
         return m_pShaderResources;
     }
 
-    static const char* GetEmulatedArrayIndexSuffix()
+    const char* GetEmulatedArrayIndexSuffix() const
     {
-        return "_";
+        return m_pShaderResources->GetEmulatedArrayIndexSuffix();
     }
 
 private:

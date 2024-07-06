@@ -54,7 +54,7 @@ using WGSLResourceMapping = std::unordered_map<std::string, WGSLResourceBindingI
 
 std::string RamapWGSLResourceBindings(const std::string&         WGSL,
                                       const WGSLResourceMapping& ResMapping,
-                                      const std::string&         EmulatedArrayIndexSuffix);
+                                      const char*                EmulatedArrayIndexSuffix);
 
 
 /// When WGSL is generated from SPIR-V, the names of resources may be mangled

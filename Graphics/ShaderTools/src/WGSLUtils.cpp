@@ -202,7 +202,9 @@ static WGSLResourceMapping::const_iterator FindResourceAsArrayElement(const WGSL
     return ResMapping.end();
 }
 
-std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourceMapping& ResMapping, const std::string& EmulatedArrayIndexSuffix)
+std::string RamapWGSLResourceBindings(const std::string&         WGSL,
+                                      const WGSLResourceMapping& ResMapping,
+                                      const char*                EmulatedArrayIndexSuffix)
 {
     tint::Source::File srcFile("", WGSL);
     tint::Program      Program = tint::wgsl::reader::Parse(&srcFile, {tint::wgsl::AllowedFeatures::Everything()});
@@ -223,7 +225,7 @@ std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourc
             Uint32 ArrayIndex = 0;
 
             auto DstBindigIt = ResMapping.find(Binding.variable_name);
-            if (DstBindigIt == ResMapping.end())
+            if (EmulatedArrayIndexSuffix != nullptr && DstBindigIt == ResMapping.end())
             {
                 DstBindigIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, Binding.variable_name, ArrayIndex);
             }
@@ -234,7 +236,7 @@ std::string RamapWGSLResourceBindings(const std::string& WGSL, const WGSLResourc
                 if (!AltName.empty())
                 {
                     DstBindigIt = ResMapping.find(AltName);
-                    if (DstBindigIt == ResMapping.end())
+                    if (EmulatedArrayIndexSuffix != nullptr && DstBindigIt == ResMapping.end())
                     {
                         DstBindigIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, AltName, ArrayIndex);
                     }
