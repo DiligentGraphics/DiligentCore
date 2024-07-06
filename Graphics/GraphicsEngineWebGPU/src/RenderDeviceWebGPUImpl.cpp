@@ -102,8 +102,8 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
     m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
     m_pUploadMemoryManager.reset(new UploadMemoryManagerWebGPU{m_wgpuDevice.Get(), EngineCI.UploadHeapPageSize});
     m_pDynamicMemoryManager.reset(new DynamicMemoryManagerWebGPU(m_wgpuDevice.Get(), EngineCI.DynamicHeapPageSize, EngineCI.DynamicHeapSize));
-    m_pAttachmentCleaner.reset(new AttachmentCleanerWebGPU{m_wgpuDevice.Get()});
-    m_pMipsGenerator.reset(new GenerateMipsHelperWebGPU{m_wgpuDevice.Get()});
+    m_pAttachmentCleaner.reset(new AttachmentCleanerWebGPU{*this});
+    m_pMipsGenerator.reset(new GenerateMipsHelperWebGPU{*this});
 
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();

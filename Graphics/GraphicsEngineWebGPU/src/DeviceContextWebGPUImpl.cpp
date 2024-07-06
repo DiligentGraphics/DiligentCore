@@ -536,7 +536,7 @@ void DeviceContextWebGPUImpl::UpdateBuffer(IBuffer*                       pBuffe
         const auto DynAllocation = AllocateUploadMemory(Size);
         memcpy(DynAllocation.pData, pData, StaticCast<size_t>(Size));
         wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), DynAllocation.wgpuBuffer, DynAllocation.Offset,
-                                             pBufferWebGPU->GetWebGPUBuffer(), Offset, Size);
+                                             pBufferWebGPU->m_wgpuBuffer, Offset, Size);
     }
     else
     {
@@ -559,8 +559,8 @@ void DeviceContextWebGPUImpl::CopyBuffer(IBuffer*                       pSrcBuff
     auto* const pSrcBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pSrcBuffer);
     auto* const pDstBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pDstBuffer);
 
-    auto wgpuSrcBuffer = pSrcBufferWebGPU->GetWebGPUBuffer();
-    auto wgpuDstBuffer = pDstBufferWebGPU->GetWebGPUBuffer();
+    auto wgpuSrcBuffer = pSrcBufferWebGPU->m_wgpuBuffer.Get();
+    auto wgpuDstBuffer = pDstBufferWebGPU->m_wgpuBuffer.Get();
 
     if (wgpuSrcBuffer == nullptr)
     {
@@ -651,15 +651,18 @@ void DeviceContextWebGPUImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
-            auto wgpuBuffer = pBufferWebGPU->GetWebGPUBuffer();
-            if (wgpuBuffer != nullptr)
+            auto wgpuBuffer = pBufferWebGPU->m_wgpuBuffer.Get();
+            if (pBufferWebGPU->m_wgpuBuffer != nullptr)
             {
                 DEV_CHECK_ERR(!m_pActiveRenderPass,
                               "Unmapping dynamic buffer with backing WebGPU resource requires "
                               "copying the data from shared memory to private storage. This can only be "
                               "done by blit encoder outside of render pass.");
 
+                const auto& DynAllocation = pBufferWebGPU->GetDynamicAllocation(GetContextId());
+
                 EndCommandEncoders();
+                wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), DynAllocation.wgpuBuffer, DynAllocation.Offset, wgpuBuffer, 0, BuffDesc.Size);
             }
         }
         else
@@ -1200,7 +1203,7 @@ void DeviceContextWebGPUImpl::GenerateMips(ITextureView* pTexView)
 
     auto& MipGenerator = m_pDevice->GetMipsGenerator();
     auto  CmdEncoder   = GetComputePassCommandEncoder();
-    MipGenerator.GenerateMips(m_wgpuQueue, CmdEncoder, ClassPtrCast<TextureViewWebGPUImpl>(pTexView));
+    MipGenerator.GenerateMips(CmdEncoder, this, ClassPtrCast<TextureViewWebGPUImpl>(pTexView));
 }
 
 void DeviceContextWebGPUImpl::FinishFrame()
@@ -1544,10 +1547,10 @@ void DeviceContextWebGPUImpl::ClearAttachment(Int32                     RTIndex,
     }
 
     if (RTIndex >= 0)
-        AttachmentCleaner.ClearColor(m_wgpuQueue, m_wgpuRenderPassEncoder, RPInfo, ColorMask, RTIndex, ClearData);
+        AttachmentCleaner.ClearColor(m_wgpuRenderPassEncoder, this, RPInfo, ColorMask, RTIndex, ClearData);
     else
     {
-        AttachmentCleaner.ClearDepthStencil(m_wgpuQueue, m_wgpuRenderPassEncoder, RPInfo, DSFlags, ClearData[0], Stencil);
+        AttachmentCleaner.ClearDepthStencil(m_wgpuRenderPassEncoder, this, RPInfo, DSFlags, ClearData[0], Stencil);
         if ((DSFlags & CLEAR_STENCIL_FLAG) != 0)
             m_EncoderState.Invalidate(WebGPUEncoderState::CMD_ENCODER_STATE_STENCIL_REF);
     }
@@ -1655,7 +1658,7 @@ WGPUBuffer DeviceContextWebGPUImpl::PrepareForIndirectCommand(IBuffer* pAttribsB
 
     auto* pAttribsBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pAttribsBuffer);
 
-    auto wgpuIndirectBuffer = pAttribsBufferWebGPU->GetWebGPUBuffer();
+    auto wgpuIndirectBuffer = pAttribsBufferWebGPU->m_wgpuBuffer.Get();
     if (wgpuIndirectBuffer == nullptr)
     {
         VERIFY_EXPR(pAttribsBufferWebGPU->GetDesc().Usage == USAGE_DYNAMIC);

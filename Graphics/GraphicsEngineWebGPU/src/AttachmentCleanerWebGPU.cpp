@@ -30,6 +30,8 @@
 
 #include "BasicMath.hpp"
 #include "DebugUtilities.hpp"
+#include "DeviceContextWebGPUImpl.hpp"
+#include "RenderDeviceWebGPUImpl.hpp"
 #include "WebGPUTypeConversions.hpp"
 #include "HashUtils.hpp"
 
@@ -163,26 +165,17 @@ size_t AttachmentCleanerWebGPU::ClearPSOHashKey::Hasher::operator()(const ClearP
     return Key.PSOHash;
 }
 
-AttachmentCleanerWebGPU::AttachmentCleanerWebGPU(WGPUDevice wgpuDevice, Uint32 CleanBufferMaxElementCount) :
-    m_wgpuDevice{wgpuDevice},
-    m_BufferMaxElementCount{CleanBufferMaxElementCount}
+AttachmentCleanerWebGPU::AttachmentCleanerWebGPU(RenderDeviceWebGPUImpl& DeviceWebGPU) :
+    m_DeviceWebGPU{DeviceWebGPU}
 {
-    InitializePipelineStates();
-    InitializeDynamicUniformBuffer();
-    InitializePipelineResourceLayout();
 }
 
-void AttachmentCleanerWebGPU::ResetDynamicUniformBuffer()
-{
-    m_CurrBufferOffset = 0;
-}
-
-void AttachmentCleanerWebGPU::ClearColor(WGPUQueue             wgpuQueue,
-                                         WGPURenderPassEncoder wgpuCmdEncoder,
-                                         const RenderPassInfo& RPInfo,
-                                         COLOR_MASK            ColorMask,
-                                         Uint32                RTIndex,
-                                         const float           Color[])
+void AttachmentCleanerWebGPU::ClearColor(WGPURenderPassEncoder    wgpuCmdEncoder,
+                                         DeviceContextWebGPUImpl* pDeviceContext,
+                                         const RenderPassInfo&    RPInfo,
+                                         COLOR_MASK               ColorMask,
+                                         Uint32                   RTIndex,
+                                         const float              Color[])
 {
     ClearPSOHashKey Key;
     Key.RPInfo     = RPInfo;
@@ -191,11 +184,11 @@ void AttachmentCleanerWebGPU::ClearColor(WGPUQueue             wgpuQueue,
     Key.DepthState = m_wgpuDisableDepth;
 
     std::array<float, 8> ClearData = {Color[0], Color[1], Color[2], Color[3]};
-    ClearAttachment(wgpuQueue, wgpuCmdEncoder, Key, ClearData);
+    ClearAttachment(wgpuCmdEncoder, pDeviceContext, Key, ClearData);
 }
 
-void AttachmentCleanerWebGPU::ClearDepthStencil(WGPUQueue                 wgpuQueue,
-                                                WGPURenderPassEncoder     wgpuCmdEncoder,
+void AttachmentCleanerWebGPU::ClearDepthStencil(WGPURenderPassEncoder     wgpuCmdEncoder,
+                                                DeviceContextWebGPUImpl*  pDeviceContext,
                                                 const RenderPassInfo&     RPInfo,
                                                 CLEAR_DEPTH_STENCIL_FLAGS Flags,
                                                 float                     Depth,
@@ -217,10 +210,10 @@ void AttachmentCleanerWebGPU::ClearDepthStencil(WGPUQueue                 wgpuQu
     }
 
     std::array<float, 8> ClearData = {0, 0, 0, 0, Depth};
-    ClearAttachment(wgpuQueue, wgpuCmdEncoder, Key, ClearData);
+    ClearAttachment(wgpuCmdEncoder, pDeviceContext, Key, ClearData);
 }
 
-WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHashKey& Key) const
+WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHashKey& Key)
 {
     WebGPURenderPipelineWrapper wgpuPipeline;
 
@@ -234,7 +227,8 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
 
         WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
         wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-        WebGPUShaderModuleWrapper wgpuShaderModule{wgpuDeviceCreateShaderModule(m_wgpuDevice, &wgpuShaderModuleDesc)};
+
+        WebGPUShaderModuleWrapper wgpuShaderModule{wgpuDeviceCreateShaderModule(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuShaderModuleDesc)};
         if (!wgpuShaderModule)
             LOG_ERROR_AND_THROW("Failed to create shader module");
 
@@ -267,7 +261,7 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
         wgpuRenderPipelineDesc.multisample.count  = RPInfo.SampleCount;
         wgpuRenderPipelineDesc.multisample.mask   = 0xFFFFFFFF;
 
-        wgpuPipeline.Reset(wgpuDeviceCreateRenderPipeline(m_wgpuDevice, &wgpuRenderPipelineDesc));
+        wgpuPipeline.Reset(wgpuDeviceCreateRenderPipeline(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuRenderPipelineDesc));
 
         if (!wgpuPipeline)
             LOG_ERROR_AND_THROW("Failed to create clear attachment render pipeline");
@@ -279,8 +273,17 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
     return wgpuPipeline;
 }
 
-void AttachmentCleanerWebGPU::ClearAttachment(WGPUQueue wgpuQueue, WGPURenderPassEncoder wgpuCmdEncoder, const ClearPSOHashKey& Key, std::array<float, 8>& ClearData)
+void AttachmentCleanerWebGPU::ClearAttachment(WGPURenderPassEncoder wgpuCmdEncoder, DeviceContextWebGPUImpl* pDeviceContext, const ClearPSOHashKey& Key, std::array<float, 8>& ClearData)
 {
+    VERIFY_EXPR(m_DeviceWebGPU.GetNumImmediateContexts() == 1);
+    if (!m_IsInitializedResources)
+    {
+        InitializePipelineStates();
+        InitializeConstantBuffer();
+        InitializePipelineResourceLayout();
+        m_IsInitializedResources = true;
+    }
+
     auto Iter = m_PSOCache.find(Key);
     if (Iter == m_PSOCache.end())
         Iter = m_PSOCache.emplace(Key, CreatePSO(Key)).first;
@@ -292,10 +295,13 @@ void AttachmentCleanerWebGPU::ClearAttachment(WGPUQueue wgpuQueue, WGPURenderPas
         return;
     }
 
-    Uint32 DynamicOffsets[] = {m_CurrBufferOffset};
-    m_CurrBufferOffset += m_BufferElementSize;
-    VERIFY(m_CurrBufferOffset < m_BufferMaxElementCount * m_BufferElementSize, "Buffer offset more then buffer size");
-    wgpuQueueWriteBuffer(wgpuQueue, m_wgpuBuffer, DynamicOffsets[0], ClearData.data(), sizeof(float) * ClearData.size());
+    void* pMappedData = nullptr;
+    pDeviceContext->MapBuffer(m_pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+    memcpy(pMappedData, ClearData.data(), sizeof(ClearData));
+    pDeviceContext->UnmapBuffer(m_pBuffer, MAP_WRITE);
+
+    const auto* pBufferImpl      = ClassPtrCast<BufferWebGPUImpl>(m_pBuffer.RawPtr());
+    Uint32      DynamicOffsets[] = {static_cast<Uint32>(pBufferImpl->GetDynamicOffset(pDeviceContext->GetContextId(), nullptr))};
 
     wgpuRenderPassEncoderSetPipeline(wgpuCmdEncoder, wgpuPipelineState);
     wgpuRenderPassEncoderSetBindGroup(wgpuCmdEncoder, 0, m_PipelineResourceLayout.wgpuBindGroup.Get(), _countof(DynamicOffsets), DynamicOffsets);
@@ -327,24 +333,22 @@ void AttachmentCleanerWebGPU::InitializePipelineStates()
     m_wgpuWriteDepthStencil.stencilBack       = m_wgpuWriteStencil.stencilBack;
 }
 
-void AttachmentCleanerWebGPU::InitializeDynamicUniformBuffer()
+void AttachmentCleanerWebGPU::InitializeConstantBuffer()
 {
     // Rework when push constants will be available https://github.com/gpuweb/gpuweb/pull/4612 in WebGPU
-
-    WGPUSupportedLimits wgpuLimits{};
-    wgpuDeviceGetLimits(m_wgpuDevice, &wgpuLimits);
-
-    constexpr Uint32 SizeofUniformBuffer = 2u * sizeof(float4);
-    m_BufferElementSize                  = AlignUp(SizeofUniformBuffer, wgpuLimits.limits.minUniformBufferOffsetAlignment);
-
-    WGPUBufferDescriptor wgpuBufferDesc{};
-    wgpuBufferDesc.size  = m_BufferMaxElementCount * static_cast<Uint64>(m_BufferElementSize);
-    wgpuBufferDesc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
-    m_wgpuBuffer.Reset(wgpuDeviceCreateBuffer(m_wgpuDevice, &wgpuBufferDesc));
+    BufferDesc CBDesc;
+    CBDesc.Name           = "AttachmentCleanerWebGPU::ConstantBuffer";
+    CBDesc.Size           = sizeof(std::array<float, 8>);
+    CBDesc.Usage          = USAGE_DYNAMIC;
+    CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
+    CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+    m_DeviceWebGPU.CreateBuffer(CBDesc, nullptr, &m_pBuffer);
 }
 
 void AttachmentCleanerWebGPU::InitializePipelineResourceLayout()
 {
+    WGPUDevice wgpuDevice = m_DeviceWebGPU.GetWebGPUDevice();
+
     WGPUBindGroupLayoutEntry wgpuBindGroupLayoutEntries[1]{};
     wgpuBindGroupLayoutEntries[0].binding                 = 0;
     wgpuBindGroupLayoutEntries[0].visibility              = WGPUShaderStage_Vertex;
@@ -356,7 +360,7 @@ void AttachmentCleanerWebGPU::InitializePipelineResourceLayout()
     wgpuBindGroupLayoutDesc.entries    = wgpuBindGroupLayoutEntries;
     wgpuBindGroupLayoutDesc.entryCount = _countof(wgpuBindGroupLayoutEntries);
 
-    m_PipelineResourceLayout.wgpuBindGroupLayout.Reset(wgpuDeviceCreateBindGroupLayout(m_wgpuDevice, &wgpuBindGroupLayoutDesc));
+    m_PipelineResourceLayout.wgpuBindGroupLayout.Reset(wgpuDeviceCreateBindGroupLayout(wgpuDevice, &wgpuBindGroupLayoutDesc));
     if (!m_PipelineResourceLayout.wgpuBindGroupLayout)
         LOG_ERROR_AND_THROW("Failed to create clear attachment bind group layout");
 
@@ -364,21 +368,23 @@ void AttachmentCleanerWebGPU::InitializePipelineResourceLayout()
     wgpuPipelineLayoutDesc.label                = "AttachmentCleanerLayout";
     wgpuPipelineLayoutDesc.bindGroupLayouts     = &m_PipelineResourceLayout.wgpuBindGroupLayout.Get();
     wgpuPipelineLayoutDesc.bindGroupLayoutCount = 1;
-    m_PipelineResourceLayout.wgpuPipelineLayout.Reset(wgpuDeviceCreatePipelineLayout(m_wgpuDevice, &wgpuPipelineLayoutDesc));
+    m_PipelineResourceLayout.wgpuPipelineLayout.Reset(wgpuDeviceCreatePipelineLayout(wgpuDevice, &wgpuPipelineLayoutDesc));
     if (!m_PipelineResourceLayout.wgpuPipelineLayout)
         LOG_ERROR_AND_THROW("Failed to create clear attachment pipeline layout");
 
+    const auto* pBufferImpl = ClassPtrCast<BufferWebGPUImpl>(m_pBuffer.RawPtr());
+
     WGPUBindGroupEntry wgpuBindGroupEntry[1]{};
     wgpuBindGroupEntry[0].binding = 0;
-    wgpuBindGroupEntry[0].buffer  = m_wgpuBuffer.Get();
+    wgpuBindGroupEntry[0].buffer  = pBufferImpl->GetWebGPUBuffer();
     wgpuBindGroupEntry[0].offset  = 0;
-    wgpuBindGroupEntry[0].size    = static_cast<Uint64>(m_BufferElementSize) * m_BufferMaxElementCount;
+    wgpuBindGroupEntry[0].size    = m_pBuffer->GetDesc().Size;
 
     WGPUBindGroupDescriptor wgpuBindGroupDesc{};
     wgpuBindGroupDesc.layout     = m_PipelineResourceLayout.wgpuBindGroupLayout.Get();
     wgpuBindGroupDesc.entries    = wgpuBindGroupEntry;
     wgpuBindGroupDesc.entryCount = _countof(wgpuBindGroupEntry);
-    m_PipelineResourceLayout.wgpuBindGroup.Reset(wgpuDeviceCreateBindGroup(m_wgpuDevice, &wgpuBindGroupDesc));
+    m_PipelineResourceLayout.wgpuBindGroup.Reset(wgpuDeviceCreateBindGroup(wgpuDevice, &wgpuBindGroupDesc));
     if (!m_PipelineResourceLayout.wgpuBindGroup)
         LOG_ERROR_AND_THROW("Failed to create clear attachment bind group");
 }

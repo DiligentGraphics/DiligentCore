@@ -32,6 +32,10 @@
 #include "DeviceContextWebGPU.h"
 #include "TextureWebGPU.h"
 
+#if PLATFORM_EMSCRIPTEN
+#    include <emscripten.h>
+#endif
+
 namespace Diligent
 {
 
@@ -146,6 +150,8 @@ TestingSwapChainWebGPU::~TestingSwapChainWebGPU()
 
 void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
 {
+    RefCntAutoPtr<IDeviceContextWebGPU> pContextWebGPU{m_pContext, IID_DeviceContextWebGPU};
+
     WGPUTexture wgpuSrcTexture = m_wgpuColorTexture;
     if (pCopyFrom != nullptr)
     {
@@ -181,7 +187,7 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
     WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
     WGPUCommandBuffer           wgpuCmdBuffer = wgpuCommandEncoderFinish(wgpuCmdEncoder, &wgpuCmdBufferDesc);
 
-    wgpuQueueSubmit(wgpuDeviceGetQueue(m_wgpuDevice), 1, &wgpuCmdBuffer);
+    wgpuQueueSubmit(pContextWebGPU->GetWebGPUQueue(), 1, &wgpuCmdBuffer);
     wgpuCommandEncoderRelease(wgpuCmdEncoder);
     wgpuCommandBufferRelease(wgpuCmdBuffer);
 
@@ -210,6 +216,8 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
 
 #if !PLATFORM_EMSCRIPTEN
     wgpuDeviceTick(m_wgpuDevice);
+#else
+    emscripten_sleep(0);
 #endif
 }
 

@@ -27,6 +27,8 @@
 #include "pch.h"
 
 #include "GenerateMipsHelperWebGPU.hpp"
+
+#include "DeviceContextWebGPUImpl.hpp"
 #include "RenderDeviceWebGPUImpl.hpp"
 #include "TextureWebGPUImpl.hpp"
 #include "TextureViewWebGPUImpl.hpp"
@@ -261,21 +263,26 @@ size_t GenerateMipsHelperWebGPU::ShaderModuleCacheKey::GetHash() const
     return Hash;
 }
 
-GenerateMipsHelperWebGPU::GenerateMipsHelperWebGPU(WGPUDevice wgpuDevice) :
-    m_wgpuDevice{wgpuDevice}
-{
-    InitializeDynamicUniformBuffer();
-    InitializeSampler();
-    InitializePlaceholderTextures();
-}
+GenerateMipsHelperWebGPU::GenerateMipsHelperWebGPU(RenderDeviceWebGPUImpl& DeviceWebGPU) :
+    m_DeviceWebGPU{DeviceWebGPU}
+{}
 
-void GenerateMipsHelperWebGPU::GenerateMips(WGPUQueue wgpuQueue, WGPUComputePassEncoder wgpuCmdEncoder, TextureViewWebGPUImpl* pTexView)
+void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncoder, DeviceContextWebGPUImpl* pDeviceContext, TextureViewWebGPUImpl* pTexView)
 {
+    VERIFY_EXPR(m_DeviceWebGPU.GetNumImmediateContexts() == 1);
+    if (!m_IsInitializedResources)
+    {
+        InitializeConstantBuffer();
+        InitializeSampler();
+        InitializePlaceholderTextures();
+        m_IsInitializedResources = true;
+    }
+
     auto*       pTexWGPU = pTexView->GetTexture<TextureWebGPUImpl>();
     const auto& TexDesc  = pTexWGPU->GetDesc();
     const auto& ViewDesc = pTexView->GetDesc();
 
-    auto UpdateUniformBuffer = [&](Uint32 TopMip, Uint32 NumMips, Uint32 DstWidth, Uint32 DstHeight) -> Uint32 {
+    auto UpdateUniformBuffer = [&](Uint32 TopMip, Uint32 NumMips, Uint32 DstWidth, Uint32 DstHeight) {
         struct
         {
             Uint32 NumMipLevels;
@@ -284,12 +291,10 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUQueue wgpuQueue, WGPUComputePass
         } BufferData{TopMip, 0, {1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight)}};
         static_assert(sizeof(BufferData) == SizeofUniformBuffer);
 
-        Uint32 DynamicOffset = m_CurrBufferOffset;
-        m_CurrBufferOffset += m_BufferElementSize;
-        VERIFY(m_CurrBufferOffset < m_BufferMaxElementCount * m_BufferElementSize, "Buffer offset more then buffer size");
-
-        wgpuQueueWriteBuffer(wgpuQueue, m_wgpuBuffer.Get(), DynamicOffset, &BufferData, sizeof(BufferData));
-        return DynamicOffset;
+        void* pMappedData = nullptr;
+        pDeviceContext->MapBuffer(m_pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+        memcpy(pMappedData, &BufferData, SizeofUniformBuffer);
+        pDeviceContext->UnmapBuffer(m_pBuffer, MAP_WRITE);
     };
 
     auto BottomMip = ViewDesc.NumMipLevels - 1;
@@ -310,19 +315,21 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUQueue wgpuQueue, WGPUComputePass
         if (TopMip + NumMips > BottomMip)
             NumMips = BottomMip - TopMip;
 
-        Uint32 DynamicOffset = UpdateUniformBuffer(TopMip, NumMips, DstWidth, DstHeight);
+        UpdateUniformBuffer(TopMip, NumMips, DstWidth, DstHeight);
+
+        const auto* pBufferImpl = ClassPtrCast<BufferWebGPUImpl>(m_pBuffer.RawPtr());
 
         WGPUBindGroupEntry wgpuBindGroupEntries[7]{};
         wgpuBindGroupEntries[0].binding = 0;
-        wgpuBindGroupEntries[0].buffer  = m_wgpuBuffer.Get();
-        wgpuBindGroupEntries[0].offset  = DynamicOffset;
-        wgpuBindGroupEntries[0].size    = m_BufferElementSize;
+        wgpuBindGroupEntries[0].buffer  = pBufferImpl->GetWebGPUBuffer();
+        wgpuBindGroupEntries[0].offset  = pBufferImpl->GetDynamicOffset(pDeviceContext->GetContextId(), nullptr);
+        wgpuBindGroupEntries[0].size    = pBufferImpl->GetDesc().Size;
 
         UAVFormats PipelineFormats{};
         for (Uint32 UAVIndex = 0; UAVIndex < 4; ++UAVIndex)
         {
             wgpuBindGroupEntries[UAVIndex + 1].binding     = UAVIndex + 1;
-            wgpuBindGroupEntries[UAVIndex + 1].textureView = UAVIndex < NumMips ? pTexView->GetMipLevelUAV(TopMip + UAVIndex + 1) : m_PlaceholderTextureViews[UAVIndex].Get();
+            wgpuBindGroupEntries[UAVIndex + 1].textureView = UAVIndex < NumMips ? pTexView->GetMipLevelUAV(TopMip + UAVIndex + 1) : m_PlaceholderTextureViews[UAVIndex]->GetWebGPUTextureView();
             PipelineFormats[UAVIndex]                      = UAVIndex < NumMips ? pTexView->GetDesc().Format : PlaceholderTextureFormat;
         }
 
@@ -330,7 +337,7 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUQueue wgpuQueue, WGPUComputePass
         wgpuBindGroupEntries[5].textureView = pTexView->GetMipLevelSRV(TopMip);
 
         wgpuBindGroupEntries[6].binding = 6;
-        wgpuBindGroupEntries[6].sampler = m_wgpuSampler.Get();
+        wgpuBindGroupEntries[6].sampler = m_pSampler->GetWebGPUSampler();
 
         // Determine if the first downsample is more than 2:1.  This happens whenever
         // the source width or height is odd.
@@ -342,7 +349,7 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUQueue wgpuQueue, WGPUComputePass
         wgpuBindGroupDesc.entryCount = _countof(wgpuBindGroupEntries);
         wgpuBindGroupDesc.entries    = wgpuBindGroupEntries;
 
-        WebGPUBindGroupWrapper wgpuBindGroup{wgpuDeviceCreateBindGroup(m_wgpuDevice, &wgpuBindGroupDesc)};
+        WebGPUBindGroupWrapper wgpuBindGroup{wgpuDeviceCreateBindGroup(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuBindGroupDesc)};
         wgpuComputePassEncoderSetPipeline(wgpuCmdEncoder, Pipeline.Get());
         wgpuComputePassEncoderSetBindGroup(wgpuCmdEncoder, 0, wgpuBindGroup.Get(), 0, nullptr);
         wgpuComputePassEncoderDispatchWorkgroups(wgpuCmdEncoder, (DstWidth + 7) / 8, (DstHeight + 7) / 8, ViewDesc.NumArraySlices);
@@ -351,60 +358,63 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUQueue wgpuQueue, WGPUComputePass
     }
 }
 
-void GenerateMipsHelperWebGPU::InitializeDynamicUniformBuffer()
+void GenerateMipsHelperWebGPU::InitializeConstantBuffer()
 {
     // Rework when push constants will be available https://github.com/gpuweb/gpuweb/pull/4612 in WebGPU
-    WGPUSupportedLimits wgpuLimits{};
-    wgpuDeviceGetLimits(m_wgpuDevice, &wgpuLimits);
+    BufferDesc CBDesc;
+    CBDesc.Name           = "GenerateMipsHelperWebGPU::ConstantBuffer";
+    CBDesc.Size           = SizeofUniformBuffer;
+    CBDesc.Usage          = USAGE_DYNAMIC;
+    CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
+    CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-    m_BufferElementSize = AlignUp(SizeofUniformBuffer, wgpuLimits.limits.minUniformBufferOffsetAlignment);
-
-    WGPUBufferDescriptor wgpuBufferDesc{};
-    wgpuBufferDesc.size  = m_BufferMaxElementCount * static_cast<Uint64>(m_BufferElementSize);
-    wgpuBufferDesc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
-    m_wgpuBuffer.Reset(wgpuDeviceCreateBuffer(m_wgpuDevice, &wgpuBufferDesc));
+    RefCntAutoPtr<IBuffer> pBuffer;
+    m_DeviceWebGPU.CreateBuffer(CBDesc, nullptr, &pBuffer);
+    pBuffer->QueryInterface(IID_BufferWebGPU, reinterpret_cast<IObject**>(m_pBuffer.RawDblPtr()));
 }
 
 void GenerateMipsHelperWebGPU::InitializeSampler()
 {
-    WGPUSamplerDescriptor wgpuSamplerDesc{};
-    wgpuSamplerDesc.minFilter     = WGPUFilterMode_Linear;
-    wgpuSamplerDesc.magFilter     = WGPUFilterMode_Linear;
-    wgpuSamplerDesc.mipmapFilter  = WGPUMipmapFilterMode_Nearest;
-    wgpuSamplerDesc.addressModeU  = WGPUAddressMode_ClampToEdge;
-    wgpuSamplerDesc.addressModeV  = WGPUAddressMode_ClampToEdge;
-    wgpuSamplerDesc.addressModeW  = WGPUAddressMode_ClampToEdge;
-    wgpuSamplerDesc.maxAnisotropy = 1;
-    m_wgpuSampler.Reset(wgpuDeviceCreateSampler(m_wgpuDevice, &wgpuSamplerDesc));
+    SamplerDesc SmpDesc{};
+    SmpDesc.MagFilter = FILTER_TYPE_LINEAR;
+    SmpDesc.MinFilter = FILTER_TYPE_LINEAR;
+    SmpDesc.MipFilter = FILTER_TYPE_POINT;
+
+    RefCntAutoPtr<ISampler> pSampler;
+    m_DeviceWebGPU.CreateSampler(SmpDesc, &pSampler);
+    pSampler->QueryInterface(IID_SamplerWebGPU, reinterpret_cast<IObject**>(m_pSampler.RawDblPtr()));
 }
 
 void GenerateMipsHelperWebGPU::InitializePlaceholderTextures()
 {
     for (Uint32 TextureIdx = 0; TextureIdx < 4; ++TextureIdx)
     {
-        WGPUExtent3D wgpuExtend3D{1, 1, 1};
+        TextureDesc TexDesc;
+        TexDesc.Name      = "GenerateMipsHelperWebGPU::Placeholder texture";
+        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
+        TexDesc.Width     = 1;
+        TexDesc.Height    = 1;
+        TexDesc.ArraySize = 1;
+        TexDesc.MipLevels = 1;
+        TexDesc.Format    = PlaceholderTextureFormat;
+        TexDesc.BindFlags = BIND_UNORDERED_ACCESS;
+        TexDesc.Usage     = USAGE_DEFAULT;
 
-        WGPUTextureDescriptor wgpuTextureDesc{};
-        wgpuTextureDesc.size          = wgpuExtend3D;
-        wgpuTextureDesc.sampleCount   = 1;
-        wgpuTextureDesc.mipLevelCount = 1;
-        wgpuTextureDesc.dimension     = WGPUTextureDimension_2D;
-        wgpuTextureDesc.format        = TextureFormatToWGPUFormat(PlaceholderTextureFormat);
-        wgpuTextureDesc.usage         = WGPUTextureUsage_StorageBinding;
-        wgpuTextureDesc.label         = "GenerateMipsHelperWebGPU::Placeholder texture";
-        WebGPUTextureWrapper wgpuTexture{wgpuDeviceCreateTexture(m_wgpuDevice, &wgpuTextureDesc)};
+        RefCntAutoPtr<ITexture> pTexture;
+        m_DeviceWebGPU.CreateTexture(TexDesc, nullptr, &pTexture);
 
-        WGPUTextureViewDescriptor wgpuTextureViewDesc{};
-        wgpuTextureViewDesc.format          = wgpuTextureDesc.format;
-        wgpuTextureViewDesc.dimension       = WGPUTextureViewDimension_2DArray;
-        wgpuTextureViewDesc.baseMipLevel    = 0;
-        wgpuTextureViewDesc.mipLevelCount   = 1;
-        wgpuTextureViewDesc.baseArrayLayer  = 0;
-        wgpuTextureViewDesc.arrayLayerCount = 1;
-        WebGPUTextureViewWrapper wgpuTextureView{wgpuTextureCreateView(wgpuTexture.Get(), &wgpuTextureViewDesc)};
+        TextureViewDesc ViewDesc;
+        ViewDesc.ViewType        = TEXTURE_VIEW_UNORDERED_ACCESS;
+        ViewDesc.Format          = PlaceholderTextureFormat;
+        ViewDesc.TextureDim      = RESOURCE_DIM_TEX_2D_ARRAY;
+        ViewDesc.NumArraySlices  = 1;
+        ViewDesc.NumMipLevels    = 1;
+        ViewDesc.MostDetailedMip = 0;
+        ViewDesc.FirstArraySlice = 0;
 
-        m_PlaceholderTextures.emplace_back(std::move(wgpuTexture));
-        m_PlaceholderTextureViews.push_back(std::move(wgpuTextureView));
+        RefCntAutoPtr<ITextureView> pTextureView;
+        pTexture->CreateView(ViewDesc, &pTextureView);
+        m_PlaceholderTextureViews.push_back(pTextureView.Cast<ITextureViewWebGPU>(IID_TextureViewWebGPU));
     }
 }
 
@@ -432,7 +442,7 @@ WebGPUShaderModuleWrapper& GenerateMipsHelperWebGPU::GetShaderModule(const UAVFo
     WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
     wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
 
-    WebGPUShaderModuleWrapper wgpuShaderModule{wgpuDeviceCreateShaderModule(m_wgpuDevice, &wgpuShaderModuleDesc)};
+    WebGPUShaderModuleWrapper wgpuShaderModule{wgpuDeviceCreateShaderModule(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuShaderModuleDesc)};
     if (!wgpuShaderModule)
         LOG_ERROR_AND_THROW("Failed to create mip generation shader module");
 
@@ -490,14 +500,14 @@ GenerateMipsHelperWebGPU::ComputePipelineGroupLayout& GenerateMipsHelperWebGPU::
     WGPUBindGroupLayoutDescriptor wgpuBindGroupLayoutDesc{};
     wgpuBindGroupLayoutDesc.entryCount = _countof(wgpuBindGroupLayoutEntries);
     wgpuBindGroupLayoutDesc.entries    = wgpuBindGroupLayoutEntries;
-    WebGPUBindGroupLayoutWrapper wgpuBindGroupLayout{wgpuDeviceCreateBindGroupLayout(m_wgpuDevice, &wgpuBindGroupLayoutDesc)};
+    WebGPUBindGroupLayoutWrapper wgpuBindGroupLayout{wgpuDeviceCreateBindGroupLayout(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuBindGroupLayoutDesc)};
     if (!wgpuBindGroupLayout)
         LOG_ERROR_AND_THROW("Failed to create mip generation bind group layout");
 
     WGPUPipelineLayoutDescriptor wgpuPipelineLayoutDesc{};
     wgpuPipelineLayoutDesc.bindGroupLayoutCount = 1;
     wgpuPipelineLayoutDesc.bindGroupLayouts     = &wgpuBindGroupLayout.Get();
-    WebGPUPipelineLayoutWrapper wgpuPipelineLayout{wgpuDeviceCreatePipelineLayout(m_wgpuDevice, &wgpuPipelineLayoutDesc)};
+    WebGPUPipelineLayoutWrapper wgpuPipelineLayout{wgpuDeviceCreatePipelineLayout(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuPipelineLayoutDesc)};
     if (!wgpuPipelineLayout)
         LOG_ERROR_AND_THROW("Failed to create mip generation pipeline layout");
 
@@ -511,7 +521,7 @@ GenerateMipsHelperWebGPU::ComputePipelineGroupLayout& GenerateMipsHelperWebGPU::
     wgpuComputePipelineDesc.compute.entryPoint    = "main";
     wgpuComputePipelineDesc.compute.constants     = wgpuContants;
     wgpuComputePipelineDesc.compute.constantCount = _countof(wgpuContants);
-    WebGPUComputePipelineWrapper wgpuComputePipeline{wgpuDeviceCreateComputePipeline(m_wgpuDevice, &wgpuComputePipelineDesc)};
+    WebGPUComputePipelineWrapper wgpuComputePipeline{wgpuDeviceCreateComputePipeline(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuComputePipelineDesc)};
     if (!wgpuComputePipeline)
         LOG_ERROR_AND_THROW("Failed to create mip generation compute pipeline");
 

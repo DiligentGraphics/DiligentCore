@@ -32,6 +32,7 @@
 #include "EngineWebGPUImplTraits.hpp"
 #include "GraphicsTypes.h"
 #include "DeviceContext.h"
+#include "RefCntAutoPtr.hpp"
 #include "WebGPUObjectWrappers.hpp"
 
 namespace Diligent
@@ -53,19 +54,24 @@ public:
         RTVFormatArray RTVFormats       = {};
     };
 
-    AttachmentCleanerWebGPU(WGPUDevice wgpuDevice, Uint32 CleanBufferMaxElementCount = 64);
+    AttachmentCleanerWebGPU(RenderDeviceWebGPUImpl& DeviceWebGPU);
 
-    void ResetDynamicUniformBuffer();
+    // clang-format off
+    AttachmentCleanerWebGPU             (const AttachmentCleanerWebGPU&) = delete;
+    AttachmentCleanerWebGPU             (AttachmentCleanerWebGPU&&)      = delete;
+    AttachmentCleanerWebGPU& operator = (const AttachmentCleanerWebGPU&) = delete;
+    AttachmentCleanerWebGPU& operator = (AttachmentCleanerWebGPU&&)      = delete;
+    // clang-format on
 
-    void ClearColor(WGPUQueue             wgpuQueue,
-                    WGPURenderPassEncoder wgpuCmdEncoder,
-                    const RenderPassInfo& RPInfo,
-                    COLOR_MASK            ColorMask,
-                    Uint32                RTIndex,
-                    const float           Color[]);
+    void ClearColor(WGPURenderPassEncoder    wgpuCmdEncoder,
+                    DeviceContextWebGPUImpl* pDeviceContext,
+                    const RenderPassInfo&    RPInfo,
+                    COLOR_MASK               ColorMask,
+                    Uint32                   RTIndex,
+                    const float              Color[]);
 
-    void ClearDepthStencil(WGPUQueue                 wgpuQueue,
-                           WGPURenderPassEncoder     wgpuCmdEncoder,
+    void ClearDepthStencil(WGPURenderPassEncoder     wgpuCmdEncoder,
+                           DeviceContextWebGPUImpl*  pDeviceContext,
                            const RenderPassInfo&     RPInfo,
                            CLEAR_DEPTH_STENCIL_FLAGS Flags,
                            float                     Depth,
@@ -90,20 +96,23 @@ private:
 
     using ClearPSOCache = std::unordered_map<ClearPSOHashKey, WebGPURenderPipelineWrapper, ClearPSOHashKey::Hasher>;
 
-    WebGPURenderPipelineWrapper CreatePSO(const ClearPSOHashKey& Key) const;
+    WebGPURenderPipelineWrapper CreatePSO(const ClearPSOHashKey& Key);
 
-    void ClearAttachment(WGPUQueue              wgpuQueue,
-                         WGPURenderPassEncoder  wgpuCmdEncoder,
-                         const ClearPSOHashKey& Key,
-                         std::array<float, 8>&  ClearData);
+    void ClearAttachment(WGPURenderPassEncoder    wgpuCmdEncoder,
+                         DeviceContextWebGPUImpl* pDeviceContext,
+                         const ClearPSOHashKey&   Key,
+                         std::array<float, 8>&    ClearData);
 
     void InitializePipelineStates();
 
-    void InitializeDynamicUniformBuffer();
+    void InitializeConstantBuffer();
 
     void InitializePipelineResourceLayout();
 
 private:
+    RenderDeviceWebGPUImpl& m_DeviceWebGPU;
+    RefCntAutoPtr<IBuffer>  m_pBuffer;
+
     struct
     {
         WebGPUBindGroupLayoutWrapper wgpuBindGroupLayout;
@@ -111,18 +120,13 @@ private:
         WebGPUBindGroupWrapper       wgpuBindGroup;
     } m_PipelineResourceLayout;
 
-    WGPUDevice          m_wgpuDevice = nullptr;
-    WebGPUBufferWrapper m_wgpuBuffer;
-    ClearPSOCache       m_PSOCache;
+    ClearPSOCache m_PSOCache;
 
-    const Uint32 m_BufferMaxElementCount = 64;
-    Uint32       m_BufferElementSize     = 0;
-    Uint32       m_CurrBufferOffset      = 0;
-
-    WGPUDepthStencilState m_wgpuDisableDepth      = {};
-    WGPUDepthStencilState m_wgpuWriteDepth        = {};
-    WGPUDepthStencilState m_wgpuWriteStencil      = {};
-    WGPUDepthStencilState m_wgpuWriteDepthStencil = {};
+    WGPUDepthStencilState m_wgpuDisableDepth       = {};
+    WGPUDepthStencilState m_wgpuWriteDepth         = {};
+    WGPUDepthStencilState m_wgpuWriteStencil       = {};
+    WGPUDepthStencilState m_wgpuWriteDepthStencil  = {};
+    bool                  m_IsInitializedResources = false;
 };
 
 } // namespace Diligent

@@ -30,6 +30,7 @@
 /// Implementation of mipmap generation routines
 
 #include "EngineWebGPUImplTraits.hpp"
+#include "RefCntAutoPtr.hpp"
 #include "WebGPUObjectWrappers.hpp"
 
 namespace Diligent
@@ -38,7 +39,7 @@ namespace Diligent
 class GenerateMipsHelperWebGPU
 {
 public:
-    GenerateMipsHelperWebGPU(WGPUDevice wgpuDevice);
+    GenerateMipsHelperWebGPU(RenderDeviceWebGPUImpl& pDevice);
 
     // clang-format off
     GenerateMipsHelperWebGPU             (const GenerateMipsHelperWebGPU&)  = delete;
@@ -47,7 +48,7 @@ public:
     GenerateMipsHelperWebGPU& operator = (      GenerateMipsHelperWebGPU&&) = delete;
     // clang-format on
 
-    void GenerateMips(WGPUQueue wgpuQueue, WGPUComputePassEncoder wgpuCmdEncoder, TextureViewWebGPUImpl* pTexView);
+    void GenerateMips(WGPUComputePassEncoder wgpuCmdEncoder, DeviceContextWebGPUImpl* pDeviceContext, TextureViewWebGPUImpl* pTexView);
 
 private:
     using UAVFormats = std::array<TEXTURE_FORMAT, 4>;
@@ -100,7 +101,7 @@ private:
     using ComputePipelineCache       = std::unordered_map<ComputePipelineHashKey, ComputePipelineGroupLayout, ComputePipelineHashKey::Hasher>;
     using ShaderModuleCache          = std::unordered_map<ShaderModuleCacheKey, WebGPUShaderModuleWrapper, ShaderModuleCacheKey::Hasher>;
 
-    void InitializeDynamicUniformBuffer();
+    void InitializeConstantBuffer();
 
     void InitializeSampler();
 
@@ -111,22 +112,19 @@ private:
     ComputePipelineGroupLayout& GetComputePipelineAndGroupLayout(const UAVFormats& Formats, Uint32 PowerOfTwo);
 
 private:
-    WGPUDevice          m_wgpuDevice = nullptr;
-    WebGPUBufferWrapper m_wgpuBuffer;
+    static constexpr TEXTURE_FORMAT PlaceholderTextureFormat = TEX_FORMAT_RGBA8_UNORM;
+    static constexpr Uint32         SizeofUniformBuffer      = 16u;
 
-    WebGPUSamplerWrapper m_wgpuSampler;
+    RenderDeviceWebGPUImpl& m_DeviceWebGPU;
+
+    RefCntAutoPtr<ISamplerWebGPU>                  m_pSampler;
+    RefCntAutoPtr<IBufferWebGPU>                   m_pBuffer;
+    std::vector<RefCntAutoPtr<ITextureViewWebGPU>> m_PlaceholderTextureViews;
+
     ComputePipelineCache m_PipelineLayoutCache;
     ShaderModuleCache    m_ShaderModuleCache;
 
-    static constexpr Uint32         SizeofUniformBuffer      = 16;
-    static constexpr TEXTURE_FORMAT PlaceholderTextureFormat = TEX_FORMAT_RGBA8_UNORM;
-
-    const Uint32 m_BufferMaxElementCount = 1024;
-    Uint32       m_BufferElementSize     = 0;
-    Uint32       m_CurrBufferOffset      = 0;
-
-    std::vector<WebGPUTextureWrapper>     m_PlaceholderTextures;
-    std::vector<WebGPUTextureViewWrapper> m_PlaceholderTextureViews;
+    bool m_IsInitializedResources = false;
 };
 
 } // namespace Diligent

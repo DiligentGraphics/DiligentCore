@@ -106,6 +106,8 @@ private:
     void CreateViewInternal(const BufferViewDesc& ViewDesc, IBufferView** ppView, bool IsDefaultView) override;
 
 private:
+    friend class DeviceContextWebGPUImpl;
+
     // Use 64-byte alignment to avoid cache issues
     static constexpr size_t CacheLineSize = 64;
     struct alignas(64) DynamicAllocation : DynamicMemoryManagerWebGPU::Allocation

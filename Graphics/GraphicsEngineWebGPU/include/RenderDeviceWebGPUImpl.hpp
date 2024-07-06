@@ -208,10 +208,11 @@ private:
     WebGPUAdapterWrapper  m_wgpuAdapter;
     WebGPUDeviceWrapper   m_wgpuDevice;
 
-    AttachmentCleanerWebGPUPtr    m_pAttachmentCleaner;
     UploadMemoryManagerWebGPUPtr  m_pUploadMemoryManager;
     DynamicMemoryManagerWebGPUPtr m_pDynamicMemoryManager;
-    GenerateMipsHelperWebGPUPtr   m_pMipsGenerator;
+
+    AttachmentCleanerWebGPUPtr  m_pAttachmentCleaner;
+    GenerateMipsHelperWebGPUPtr m_pMipsGenerator;
 
     std::vector<QueryManagerWebGPUPtr> m_QueryMgrs;
 };
