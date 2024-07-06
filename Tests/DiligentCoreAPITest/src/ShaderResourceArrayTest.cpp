@@ -60,7 +60,7 @@ TEST(ShaderResourceLayout, ResourceArray)
 
     {
         ShaderCI.Desc           = {"ShaderResourceArrayTest: PS", SHADER_TYPE_PIXEL, true};
-        ShaderCI.FilePath       = "ShaderResourceArrayTest.psh";
+        ShaderCI.FilePath       = pDevice->GetDeviceInfo().IsWebGPUDevice() ? "ShaderResourceArrayTestWGPU.psh" : "ShaderResourceArrayTest.psh";
         ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);

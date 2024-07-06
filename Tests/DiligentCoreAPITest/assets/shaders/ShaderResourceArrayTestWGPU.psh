@@ -1,0 +1,43 @@
+
+Texture2D<float4> g_tex2DTest_0;
+Texture2D<float4> g_tex2DTest_1;
+Texture2D<float4> g_tex2DTest_2;
+Texture2D<float4> g_tex2DTest_3;
+
+Texture2D<float4> g_tex2DTest2_1;
+Texture2D<float4> g_tex2DTest2_4;
+
+Texture2D<float4> g_tex2D_0;
+Texture2D<float4> g_tex2D_1;
+
+SamplerState g_tex2DTest_sampler_0;
+SamplerState g_tex2DTest_sampler_1;
+SamplerState g_tex2DTest_sampler_2;
+SamplerState g_tex2DTest_sampler_3;
+
+SamplerState g_tex2DTest2_sampler;
+SamplerState g_tex2D_sampler_0;
+SamplerState g_tex2D_sampler_1;
+struct VSOut
+{
+    float2 f2UV	: UV;
+};
+
+
+void main(in float4 f4Position : SV_Position,
+          in VSOut vsOut,
+          out float4 Color : SV_Target)
+{
+    float4 Color0 = (g_tex2DTest_0.SampleLevel(g_tex2DTest_sampler_0, vsOut.f2UV, 0) + g_tex2DTest2_1.SampleLevel(g_tex2DTest2_sampler, vsOut.f2UV, 0))/2.0;
+    float4 Color1 = (g_tex2DTest_0.SampleLevel(g_tex2DTest_sampler_0, vsOut.f2UV, 2) + g_tex2DTest2_4.SampleLevel(g_tex2DTest2_sampler, vsOut.f2UV, 0))/2.0;
+    float4 Color2 = (g_tex2DTest_2.SampleLevel(g_tex2DTest_sampler_2, vsOut.f2UV, 4) + g_tex2D_0.SampleLevel(g_tex2D_sampler_0, vsOut.f2UV, 0))/2.0;
+    float4 Color3 = (g_tex2DTest_3.SampleLevel(g_tex2DTest_sampler_3, vsOut.f2UV, 5) + g_tex2D_1.SampleLevel(g_tex2D_sampler_1, vsOut.f2UV, 0))/2.0;
+    if( vsOut.f2UV.x < 0.5 && vsOut.f2UV.y < 0.5 )
+        Color = Color0;
+    else if( vsOut.f2UV.x > 0.5 && vsOut.f2UV.y < 0.5 )
+        Color = Color1;
+    else if( vsOut.f2UV.x < 0.5 && vsOut.f2UV.y > 0.5 )
+        Color = Color2;
+    else
+        Color = Color3;
+}
