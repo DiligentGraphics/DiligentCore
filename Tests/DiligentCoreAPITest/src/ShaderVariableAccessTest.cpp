@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -186,10 +186,13 @@ TEST(ShaderResourceLayout, VariableAccess)
     //    pSBUAVs[i] = pStorgeBuffs[i]->GetDefaultView(BUFFER_VIEW_UNORDERED_ACCESS);
     //}
 
+    const bool FormattedBuffersSupported = DeviceInfo.Features.FormattedBuffers;
+
     RefCntAutoPtr<IBuffer>     pFormattedBuff0, pFormattedBuff[4], pRawBuff[2];
     IDeviceObject *            pFormattedBuffSRV = nullptr, *pFormattedBuffUAV[4] = {}, *pFormattedBuffSRVs[4] = {};
     RefCntAutoPtr<IBufferView> spFormattedBuffSRV, spFormattedBuffUAV[4], spFormattedBuffSRVs[4];
     RefCntAutoPtr<IBufferView> spRawBuffUAV[2], spRawBuffSRVs[2];
+    if (FormattedBuffersSupported)
     {
         BufferDesc TxlBuffDesc;
         TxlBuffDesc.Name              = "Uniform texel buffer test";
@@ -241,6 +244,11 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
             ShaderCI.FilePath       = "ShaderVariableAccessTestDX.vsh";
+        }
+        else if (DeviceInfo.IsWebGPUDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+            ShaderCI.FilePath       = "ShaderVariableAccessTestWGPU.vsh";
         }
         else
         {
@@ -320,6 +328,11 @@ TEST(ShaderResourceLayout, VariableAccess)
             ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
             ShaderCI.FilePath       = "ShaderVariableAccessTestDX.psh";
         }
+        else if (DeviceInfo.IsWebGPUDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+            ShaderCI.FilePath       = "ShaderVariableAccessTestWGPU.psh";
+        }
         else
         {
             ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
@@ -382,7 +395,7 @@ TEST(ShaderResourceLayout, VariableAccess)
     EXPECT_EQ(pTestPSO->GetStaticVariableByIndex(SHADER_TYPE_MESH, 0), nullptr);
 
     {
-        EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_VERTEX), 6u);
+        EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_VERTEX), FormattedBuffersSupported ? 6u : 4u);
 
         {
             auto tex2D_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_tex2D_Static");
@@ -460,6 +473,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(UniformBuff_Stat2->Get(), pUBs[0]);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_Static");
             ASSERT_NE(Buffer_Static, nullptr);
@@ -479,6 +493,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_Static->Get(), pFormattedBuffSRV);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_StaticArr = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_StaticArr");
             ASSERT_NE(Buffer_StaticArr, nullptr);
@@ -527,7 +542,7 @@ TEST(ShaderResourceLayout, VariableAccess)
 
 
     {
-        EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_PIXEL), 9u);
+        EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_PIXEL), FormattedBuffersSupported ? 9u : 6u);
 
         {
             auto tex2D_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_Static");
@@ -599,6 +614,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(UniformBuff_Stat2->Get(), pUBs[0]);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_Static");
             ASSERT_NE(Buffer_Static, nullptr);
@@ -610,6 +626,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_Static->Get(), pFormattedBuffSRV);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_StaticArr = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_StaticArr");
             ASSERT_NE(Buffer_StaticArr, nullptr);
@@ -655,6 +672,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(rwtex2D_Static2->Get(), pTexUAVs[1]);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto rwBuff_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_rwBuff_Static");
             ASSERT_NE(rwBuff_Static, nullptr);
@@ -846,6 +864,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(UniformBuff_Dyn->Get(0), pUBs[0]);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_Mut = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_Mut");
             ASSERT_NE(Buffer_Mut, nullptr);
@@ -865,6 +884,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_Mut->Get(0), pFormattedBuffSRV);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_MutArr = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_MutArr");
             ASSERT_NE(Buffer_MutArr, nullptr);
@@ -878,6 +898,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_MutArr->Get(1), pFormattedBuffSRV);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_Dyn = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_Dyn");
             ASSERT_NE(Buffer_Dyn, nullptr);
@@ -893,6 +914,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_Dyn->Get(0), pFormattedBuffSRV);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_DynArr = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_DynArr");
             ASSERT_NE(Buffer_DynArr, nullptr);
@@ -1034,6 +1056,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(UniformBuff_Dyn->Get(0), pUBs[0]);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_Mut = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_Mut");
             ASSERT_NE(Buffer_Mut, nullptr);
@@ -1053,6 +1076,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_Mut->Get(0), spRawBuffSRVs[1].RawPtr());
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_MutArr = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_MutArr");
             ASSERT_NE(Buffer_MutArr, nullptr);
@@ -1066,6 +1090,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_MutArr->Get(1), pFormattedBuffSRV);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_Dyn = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_Dyn");
             ASSERT_NE(Buffer_Dyn, nullptr);
@@ -1081,6 +1106,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(Buffer_Dyn->Get(0), pFormattedBuffSRVs[3]);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto Buffer_DynArr = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_DynArr");
             ASSERT_NE(Buffer_DynArr, nullptr);
@@ -1128,6 +1154,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(rwtex2D_Dyn->Get(0), pTexUAVs[3]);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto rwBuff_Mut = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwBuff_Mut");
             ASSERT_NE(rwBuff_Mut, nullptr);
@@ -1147,6 +1174,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             EXPECT_EQ(rwBuff_Mut->Get(0), pFormattedBuffUAV[1]);
         }
 
+        if (FormattedBuffersSupported)
         {
             auto rwBuff_Dyn = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwBuff_Dyn");
             ASSERT_NE(rwBuff_Dyn, nullptr);
@@ -1214,8 +1242,11 @@ TEST(ShaderResourceLayout, VariableAccess)
 
     pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwtex2D_Dyn")->Set(pTexUAVs[7]);
     pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_Dyn")->Set(pRWTexSRVs[3]);
-    pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwBuff_Dyn")->Set(pFormattedBuffUAV[3]);
-    pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_Dyn")->Set(pFormattedBuffSRVs[2]);
+    if (FormattedBuffersSupported)
+    {
+        pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwBuff_Dyn")->Set(pFormattedBuffUAV[3]);
+        pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_Dyn")->Set(pFormattedBuffSRVs[2]);
+    }
 
     {
         LOG_INFO_MESSAGE("No worries about 3 warnings below: testing accessing variables from inactive shader stage");

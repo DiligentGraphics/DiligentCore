@@ -1,0 +1,67 @@
+Texture2D g_tex2D_Static;
+Texture2D g_tex2D_Mut;
+Texture2D g_tex2D_MutArr_0;
+Texture2D g_tex2D_MutArr_1;
+Texture2D g_tex2D_Dyn;
+Texture2D g_tex2D_DynArr_0;
+Texture2D g_tex2D_DynArr_1;
+Texture2D g_tex2D_StaticArr_0;
+Texture2D g_tex2D_StaticArr_1;
+
+SamplerState g_tex2D_Static_sampler;
+SamplerState g_tex2D_Mut_sampler;
+SamplerState g_tex2D_Dyn_sampler;
+SamplerState g_tex2D_MutArr_sampler;
+SamplerState g_tex2D_DynArr_sampler;
+SamplerState g_tex2D_StaticArr_sampler;
+
+cbuffer UniformBuff_Stat
+{
+    float4 g_f4Color0;
+}
+
+cbuffer UniformBuff_Stat2
+{
+    float4 g_f4Color01;
+}
+
+cbuffer UniformBuff_Mut
+{
+    float4 g_f4Color1;
+}
+
+cbuffer UniformBuff_Dyn
+{
+    float4 g_f4Color2;
+}
+
+RWTexture2D<float4 /*format=rgba32f*/> g_rwtex2D_Static;
+RWTexture2D<float4 /*format=rgba32f*/> g_rwtex2D_Static2;
+RWTexture2D<float4 /*format=rgba32f*/>  g_rwtex2D_Mut;
+RWTexture2D<float4 /*format=rgba32f*/>  g_rwtex2D_Dyn;
+
+struct VSOut
+{
+    float4 f4Position : SV_Position;
+    float4 f4Color	: COLOR;
+};
+
+
+float4 main(VSOut In) : SV_Target
+{
+    float4 Color = In.f4Color;
+    Color += g_tex2D_Static.SampleLevel(g_tex2D_Static_sampler, float2(0.5,0.5), 0.0);
+    Color += g_tex2D_StaticArr_0.SampleLevel(g_tex2D_StaticArr_sampler, float2(0.5,0.5), 0.0) + g_tex2D_StaticArr_1.SampleLevel(g_tex2D_StaticArr_sampler, float2(0.5,0.5), 0.0);
+    Color += g_tex2D_Mut.SampleLevel(g_tex2D_Mut_sampler, float2(0.5,0.5), 0.0);
+    Color += g_tex2D_MutArr_0.SampleLevel(g_tex2D_MutArr_sampler, float2(0.5,0.5), 0.0) + g_tex2D_MutArr_1.SampleLevel(g_tex2D_MutArr_sampler, float2(0.5,0.5), 0.0);
+    Color += g_tex2D_Dyn.SampleLevel(g_tex2D_Dyn_sampler, float2(0.5,0.5), 0.0);
+    Color += g_tex2D_DynArr_0.SampleLevel(g_tex2D_DynArr_sampler, float2(0.5,0.5), 0.0) + g_tex2D_DynArr_1.SampleLevel(g_tex2D_DynArr_sampler, float2(0.5,0.5), 0.0);
+    Color += g_f4Color0 + g_f4Color01 + g_f4Color1 + g_f4Color2;
+
+    g_rwtex2D_Static[int2(0, 0)] = float4(0.5, 1.5, 2.5, 3.5);
+    g_rwtex2D_Mut[int2(0, 0)] = float4(0.5, 1.5, 2.5, 3.5);
+    g_rwtex2D_Dyn[int2(0, 0)] = float4(0.5, 1.5, 2.5, 3.5);
+    g_rwtex2D_Static2[int2(0, 0)] = float4(0.5, 1.5, 2.5, 3.5);
+    
+    return Color;
+}
