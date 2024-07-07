@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,6 +75,16 @@ SamplerState g_tex2D_sampler;
 float4 main() : SV_Target
 {
     return g_tex2D[0].Sample(g_tex2D_sampler, float2(0.0, 0.0)) + g_tex2D[1].Sample(g_tex2D_sampler, float2(0.0, 0.0));
+}
+)";
+
+static const char* PS_ArrOfTexWGPU = R"(
+Texture2D<float4> g_tex2D_i0;
+Texture2D<float4> g_tex2D_i1;
+SamplerState g_tex2D_sampler;
+float4 main() : SV_Target
+{
+    return g_tex2D_i0.Sample(g_tex2D_sampler, float2(0.0, 0.0)) + g_tex2D_i1.Sample(g_tex2D_sampler, float2(0.0, 0.0));
 }
 )";
 
@@ -217,8 +227,9 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(GPUTestingEnvironment* pEnv, con
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     ShaderCreateInfo CreationAttrs;
-    CreationAttrs.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
-    CreationAttrs.ShaderCompiler = pEnv->GetDefaultCompiler(CreationAttrs.SourceLanguage);
+    CreationAttrs.SourceLanguage                 = SHADER_SOURCE_LANGUAGE_HLSL;
+    CreationAttrs.ShaderCompiler                 = pEnv->GetDefaultCompiler(CreationAttrs.SourceLanguage);
+    CreationAttrs.WebGPUEmulatedArrayIndexSuffix = "_i";
 
     RefCntAutoPtr<IShader> pVS;
     {
@@ -226,7 +237,11 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(GPUTestingEnvironment* pEnv, con
         CreationAttrs.EntryPoint = "main";
         CreationAttrs.Source     = VSSource;
         pDevice->CreateShader(CreationAttrs, &pVS);
-        VERIFY_EXPR(pVS != nullptr);
+        if (!pVS)
+        {
+            ADD_FAILURE() << "Failed to create vertex shader '" << CreationAttrs.Desc.Name << '\'';
+            return {};
+        }
     }
 
     RefCntAutoPtr<IShader> pPS;
@@ -235,7 +250,11 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(GPUTestingEnvironment* pEnv, con
         CreationAttrs.EntryPoint = "main";
         CreationAttrs.Source     = PSSource;
         pDevice->CreateShader(CreationAttrs, &pPS);
-        VERIFY_EXPR(pPS != nullptr);
+        if (!pPS)
+        {
+            ADD_FAILURE() << "Failed to create pixel shader '" << CreationAttrs.Desc.Name << '\'';
+            return {};
+        }
     }
 
     PSOCreateInfo.pVS = pVS;
@@ -243,8 +262,6 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(GPUTestingEnvironment* pEnv, con
 
     RefCntAutoPtr<IPipelineState> pPSO;
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
-    VERIFY_EXPR(pPSO != nullptr);
-
     return pPSO;
 }
 
@@ -264,14 +281,16 @@ RefCntAutoPtr<IPipelineState> CreateComputePSO(GPUTestingEnvironment* pEnv, cons
         CreationAttrs.EntryPoint = "main";
         CreationAttrs.Source     = CSSource;
         pDevice->CreateShader(CreationAttrs, &pCS);
-        VERIFY_EXPR(pCS != nullptr);
+        if (!pCS)
+        {
+            ADD_FAILURE() << "Failed to create compute shader '" << CreationAttrs.Desc.Name << '\'';
+            return {};
+        }
     }
     PSOCreateInfo.pCS = pCS;
 
     RefCntAutoPtr<IPipelineState> pPSO;
     pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
-    VERIFY_EXPR(pPSO != nullptr);
-
     return pPSO;
 }
 
@@ -295,7 +314,7 @@ TEST(PSOCompatibility, IsCompatibleWith)
     auto PSO_Tex      = CreateGraphicsPSO(pEnv, VS0, PS_Tex);
     auto PSO_Tex2     = CreateGraphicsPSO(pEnv, VS0, PS_Tex2);
     auto PSO_TexArr   = CreateGraphicsPSO(pEnv, VS0, PS_TexArr);
-    auto PSO_ArrOfTex = CreateGraphicsPSO(pEnv, VS0, PS_ArrOfTex);
+    auto PSO_ArrOfTex = CreateGraphicsPSO(pEnv, VS0, pDevice->GetDeviceInfo().IsWebGPUDevice() ? PS_ArrOfTexWGPU : PS_ArrOfTex);
     ASSERT_TRUE(PSO_Tex);
     ASSERT_TRUE(PSO_Tex2);
     ASSERT_TRUE(PSO_TexArr);
