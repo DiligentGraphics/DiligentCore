@@ -437,7 +437,7 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
     SetTexFormatInfo({TEX_FORMAT_RGB10A2_TYPELESS, TEX_FORMAT_RGB10A2_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
     SetTexFormatInfo({TEX_FORMAT_RGB10A2_UINT}, BIND_SR, FMT_FLAG_MSAA);
 
-    SetTexFormatInfo({TEX_FORMAT_R11G11B10_FLOAT}, IsSupportedRG11B10UfloatRenderable ? BIND_SR : BIND_S, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_R11G11B10_FLOAT}, IsSupportedRG11B10UfloatRenderable ? BIND_SR : BIND_S, IsSupportedRG11B10UfloatRenderable ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_FILTER);
 
     // Depth-stencil formats
     SetTexFormatInfo({TEX_FORMAT_D16_UNORM}, BIND_D, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
