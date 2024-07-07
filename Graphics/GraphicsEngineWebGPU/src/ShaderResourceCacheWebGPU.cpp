@@ -299,8 +299,8 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
         --m_NumDynamicBuffers;
     }
 
-    if (DstRes.pObject != pObject)
-        Group.m_ResourcesDirty = true;
+    if ((DstRes.pObject != nullptr ? DstRes.pObject->GetUniqueID() : 0) != (pObject != nullptr ? pObject->GetUniqueID() : 0))
+        Group.m_IsDirty = true;
 
     static_assert(static_cast<Uint32>(BindGroupEntryType::Count) == 12, "Please update the switch below to handle the new bind group entry type");
     switch (DstRes.Type)
@@ -342,6 +342,10 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
 
                 wgpuEntry.buffer = pBuffWGPU->GetWebGPUBuffer();
                 VERIFY_EXPR(DstRes.BufferBaseOffset + DstRes.BufferRangeSize <= pBuffWGPU->GetDesc().Size);
+                if (wgpuEntry.offset != DstRes.BufferBaseOffset || wgpuEntry.size != DstRes.BufferRangeSize)
+                {
+                    Group.m_IsDirty = true;
+                }
                 wgpuEntry.offset = DstRes.BufferBaseOffset;
                 wgpuEntry.size   = DstRes.BufferRangeSize;
             }
@@ -357,6 +361,11 @@ const ShaderResourceCacheWebGPU::Resource& ShaderResourceCacheWebGPU::SetResourc
 
                 wgpuEntry.buffer = pBuffWGPU->GetWebGPUBuffer();
                 VERIFY_EXPR(DstRes.BufferBaseOffset + DstRes.BufferRangeSize <= pBuffWGPU->GetDesc().Size);
+                if (wgpuEntry.offset != DstRes.BufferBaseOffset ||
+                    wgpuEntry.size != DstRes.BufferRangeSize)
+                {
+                    Group.m_IsDirty = true;
+                }
                 wgpuEntry.offset = DstRes.BufferBaseOffset;
                 wgpuEntry.size   = DstRes.BufferRangeSize;
             }
@@ -419,7 +428,7 @@ void ShaderResourceCacheWebGPU::SetDynamicBufferOffset(Uint32 BindGroupIndex,
 WGPUBindGroup ShaderResourceCacheWebGPU::UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout)
 {
     BindGroup& Group = GetBindGroup(GroupIndex);
-    if (!Group.m_wgpuBindGroup || Group.m_ResourcesDirty)
+    if (!Group.m_wgpuBindGroup || Group.m_IsDirty)
     {
         WGPUBindGroupDescriptor wgpuBindGroupDescriptor;
         wgpuBindGroupDescriptor.nextInChain = nullptr;
@@ -429,7 +438,7 @@ WGPUBindGroup ShaderResourceCacheWebGPU::UpdateBindGroup(WGPUDevice wgpuDevice, 
         wgpuBindGroupDescriptor.entries     = Group.m_wgpuEntries;
 
         Group.m_wgpuBindGroup.Reset(wgpuDeviceCreateBindGroup(wgpuDevice, &wgpuBindGroupDescriptor));
-        Group.m_ResourcesDirty = false;
+        Group.m_IsDirty = false;
     }
 
     return Group.m_wgpuBindGroup;

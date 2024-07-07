@@ -122,10 +122,10 @@ public:
         }
 
     private:
-        /* 0 */ const Uint32              m_NumResources   = 0;
-        /* 5*/ bool                       m_ResourcesDirty = true;
-        /* 8 */ Resource* const           m_pResources     = nullptr;
-        /*16 */ WGPUBindGroupEntry* const m_wgpuEntries    = nullptr;
+        /* 0 */ const Uint32              m_NumResources = 0;
+        /* 5*/ bool                       m_IsDirty      = true;
+        /* 8 */ Resource* const           m_pResources   = nullptr;
+        /*16 */ WGPUBindGroupEntry* const m_wgpuEntries  = nullptr;
         /*24 */ WebGPUBindGroupWrapper    m_wgpuBindGroup;
         /*40 */ // End of structure
 
