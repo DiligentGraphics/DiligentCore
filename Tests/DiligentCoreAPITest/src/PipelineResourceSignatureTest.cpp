@@ -257,7 +257,7 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
 
     const char* ShaderPath = DeviceInfo.Features.ShaderResourceStaticArrays ?
         "shaders/ShaderResourceLayout/Textures.hlsl" :
-        "shaders/ShaderResourceLayout/Textures_EmulatedArrays.hlsl";
+        "shaders/ShaderResourceLayout/Textures_WGPU.hlsl";
 
     auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, ShaderPath, "VSMain", "PRS variable types test: VS", Macros, ModifyShaderCI);
     auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, ShaderPath, "PSMain", "PRS variable types test: PS", Macros, ModifyShaderCI);
@@ -1327,7 +1327,7 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
     auto*       pSwapChain = pEnv->GetSwapChain();
 
     if ((DeviceInfo.IsD3DDevice() || DeviceInfo.IsWebGPUDevice()) && ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL)
-        GTEST_SKIP() << "Direct3D and WebGPU support HLSL only";
+        GTEST_SKIP() << "GLSL-style combined samplers are not supported in Direct3D and WebGPU backends";
 
     float ClearColor[] = {0.625, 0.25, 0.375, 1.0};
     RenderDrawCommandReference(pSwapChain, ClearColor);
@@ -1367,7 +1367,7 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
     {
         ShaderCI.Desc = {"CombinedImageSamplers - VS", SHADER_TYPE_VERTEX, true};
         if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
-            ShaderCI.FilePath = DeviceInfo.Features.ShaderResourceStaticArrays ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplers_EmulatedArrays.hlsl";
+            ShaderCI.FilePath = DeviceInfo.Features.ShaderResourceStaticArrays ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplers_WGPU.hlsl";
         else
             ShaderCI.FilePath = "CombinedImageSamplersGL.vsh";
         ShaderCI.EntryPoint = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "VSMain" : "main";
@@ -1379,7 +1379,7 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
     {
         ShaderCI.Desc = {"CombinedImageSamplers - PS", SHADER_TYPE_PIXEL, true};
         if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
-            ShaderCI.FilePath = DeviceInfo.Features.ShaderResourceStaticArrays ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplers_EmulatedArrays.hlsl";
+            ShaderCI.FilePath = DeviceInfo.Features.ShaderResourceStaticArrays ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplers_WGPU.hlsl";
         else
             ShaderCI.FilePath = "CombinedImageSamplersGL.psh";
         ShaderCI.EntryPoint = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "PSMain" : "main";
