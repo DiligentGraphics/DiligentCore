@@ -41,7 +41,7 @@ namespace Diligent
 namespace
 {
 
-constexpr char ShaderSource[] = R"(
+constexpr char VSSource[] = R"(
 struct ClearConstants
 {
     Color: vec4f,
@@ -70,11 +70,32 @@ fn VSMain(@builtin(vertex_index) VertexId : u32) -> VertexOutput
     Output.Color    = UniformBuffer.Color;
     return Output;
 }
+)";
+
+constexpr char PSSourceFill[] = R"(
+struct VertexOutput
+{
+    @builtin(position) Position: vec4f,
+    @location(0)       Color: vec4f,
+}
 
 @fragment
-fn PSMain(Input: VertexOutput) -> @location(MACRO_RTV_INDEX) vec4f 
+fn PSMain(Input: VertexOutput) -> @location(${RTV_INDEX}) vec4f 
 {
     return Input.Color;
+}
+)";
+
+constexpr char PSSourceEmpty[] = R"(
+struct VertexOutput
+{
+    @builtin(position) Position: vec4f,
+    @location(0)       Color: vec4f,
+}
+
+@fragment
+fn PSMain(Input: VertexOutput)
+{
 }
 )";
 
@@ -91,32 +112,27 @@ bool operator==(const WGPUStencilFaceState& LHS, const WGPUStencilFaceState& RHS
 bool operator==(const WGPUDepthStencilState& LHS, const WGPUDepthStencilState& RHS)
 {
     // clang-format off
-    return LHS.format              == RHS.format            &&
-           LHS.depthWriteEnabled   == RHS.depthWriteEnabled &&
-           LHS.depthCompare        == RHS.depthCompare      &&
-           LHS.stencilFront        == RHS.stencilFront      &&
-           LHS.stencilBack         == RHS.stencilFront      &&
-           LHS.stencilReadMask     == RHS.stencilReadMask   &&
-           LHS.stencilWriteMask    == RHS.stencilWriteMask  &&
-           LHS.depthBias           == RHS.depthBias         &&
+    return LHS.format              == RHS.format              &&
+           LHS.depthWriteEnabled   == RHS.depthWriteEnabled   &&
+           LHS.depthCompare        == RHS.depthCompare        &&
+           LHS.stencilFront        == RHS.stencilFront        &&
+           LHS.stencilBack         == RHS.stencilFront        &&
+           LHS.stencilReadMask     == RHS.stencilReadMask     &&
+           LHS.stencilWriteMask    == RHS.stencilWriteMask    &&
+           LHS.depthBias           == RHS.depthBias           &&
            LHS.depthBiasSlopeScale == RHS.depthBiasSlopeScale &&
            LHS.depthBiasClamp      == RHS.depthBiasClamp;
     // clang-format on
 }
 
-std::string ReplaceRTVIndex(const std::string& SourceString, const std::string& NewValue)
+void ReplaceTemplateInString(std::string& Source, const std::string_view Target, const std::string_view Replacement)
 {
-    std::string Result = SourceString;
-    std::string Macro  = "MACRO_RTV_INDEX";
-    size_t      Iter   = Result.find(Macro);
-
-    while (Iter != std::string::npos)
+    size_t Location = 0;
+    while ((Location = Source.find(Target, Location)) != std::string::npos)
     {
-        Result.replace(Iter, Macro.length(), NewValue);
-        Iter = Result.find(Macro, Iter + NewValue.length());
+        Source.replace(Location, Target.length(), Replacement);
+        Location += Replacement.length();
     }
-
-    return Result;
 }
 
 } // namespace
@@ -177,6 +193,15 @@ void AttachmentCleanerWebGPU::ClearColor(WGPURenderPassEncoder    wgpuCmdEncoder
                                          Uint32                   RTIndex,
                                          const float              Color[])
 {
+    VERIFY_EXPR(m_DeviceWebGPU.GetNumImmediateContexts() == 1);
+    if (!m_IsInitializedResources)
+    {
+        InitializePipelineStates();
+        InitializeConstantBuffer();
+        InitializePipelineResourceLayout();
+        m_IsInitializedResources = true;
+    }
+
     ClearPSOHashKey Key;
     Key.RPInfo     = RPInfo;
     Key.ColorMask  = ColorMask;
@@ -194,6 +219,15 @@ void AttachmentCleanerWebGPU::ClearDepthStencil(WGPURenderPassEncoder     wgpuCm
                                                 float                     Depth,
                                                 Uint8                     Stencil)
 {
+    VERIFY_EXPR(m_DeviceWebGPU.GetNumImmediateContexts() == 1);
+    if (!m_IsInitializedResources)
+    {
+        InitializePipelineStates();
+        InitializeConstantBuffer();
+        InitializePipelineResourceLayout();
+        m_IsInitializedResources = true;
+    }
+
     ClearPSOHashKey Key{};
     Key.RPInfo  = RPInfo;
     Key.RTIndex = -1;
@@ -202,11 +236,13 @@ void AttachmentCleanerWebGPU::ClearDepthStencil(WGPURenderPassEncoder     wgpuCm
     {
         wgpuRenderPassEncoderSetStencilReference(wgpuCmdEncoder, Stencil);
         Key.DepthState = (Flags & CLEAR_DEPTH_FLAG) != 0 ? m_wgpuWriteDepthStencil : m_wgpuWriteStencil;
+        Key.ColorMask  = COLOR_MASK_NONE;
     }
     else
     {
         VERIFY((Flags & CLEAR_DEPTH_FLAG) != 0, "At least one of CLEAR_DEPTH_FLAG or CLEAR_STENCIL_FLAG flags should be set");
         Key.DepthState = m_wgpuWriteDepth;
+        Key.ColorMask  = COLOR_MASK_NONE;
     }
 
     std::array<float, 8> ClearData = {0, 0, 0, 0, Depth};
@@ -219,18 +255,45 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
 
     try
     {
-        std::string ModifiedShaderSource = ReplaceRTVIndex(ShaderSource, std::to_string(Key.RTIndex < 0 ? 0 : Key.RTIndex));
+        WebGPUShaderModuleWrapper wgpuVSShaderModule{};
+        {
+            WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
+            wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+            wgpuShaderCodeDesc.code        = VSSource;
 
-        WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
-        wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-        wgpuShaderCodeDesc.code        = ModifiedShaderSource.c_str();
+            WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
+            wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
 
-        WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
-        wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
+            wgpuVSShaderModule.Reset(wgpuDeviceCreateShaderModule(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuShaderModuleDesc));
+            if (!wgpuVSShaderModule)
+                LOG_ERROR_AND_THROW("Failed to create shader module");
+        }
 
-        WebGPUShaderModuleWrapper wgpuShaderModule{wgpuDeviceCreateShaderModule(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuShaderModuleDesc)};
-        if (!wgpuShaderModule)
-            LOG_ERROR_AND_THROW("Failed to create shader module");
+        WebGPUShaderModuleWrapper wgpuPSShaderModule{};
+        {
+            std::string PSSource;
+
+            if (Key.RTIndex < 0)
+            {
+                PSSource = PSSourceEmpty;
+            }
+            else
+            {
+                PSSource = PSSourceFill;
+                ReplaceTemplateInString(PSSource, "${RTV_INDEX}", std::to_string(Key.RTIndex));
+            }
+
+            WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
+            wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+            wgpuShaderCodeDesc.code        = PSSource.c_str();
+
+            WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
+            wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
+
+            wgpuPSShaderModule.Reset(wgpuDeviceCreateShaderModule(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuShaderModuleDesc));
+            if (!wgpuPSShaderModule)
+                LOG_ERROR_AND_THROW("Failed to create shader module");
+        }
 
         const auto& RPInfo = Key.RPInfo;
 
@@ -245,7 +308,7 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
         wgpuDepthStencilState.format                = TextureFormatToWGPUFormat(RPInfo.DSVFormat);
 
         WGPUFragmentState wgpuFragmentState{};
-        wgpuFragmentState.module      = wgpuShaderModule.Get();
+        wgpuFragmentState.module      = wgpuPSShaderModule.Get();
         wgpuFragmentState.entryPoint  = "PSMain";
         wgpuFragmentState.targetCount = RPInfo.NumRenderTargets;
         wgpuFragmentState.targets     = wgpuColorTargetState;
@@ -254,10 +317,10 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
         wgpuRenderPipelineDesc.label              = "AttachmentCleanerPSO";
         wgpuRenderPipelineDesc.layout             = m_PipelineResourceLayout.wgpuPipelineLayout.Get();
         wgpuRenderPipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
-        wgpuRenderPipelineDesc.vertex.module      = wgpuShaderModule.Get();
+        wgpuRenderPipelineDesc.vertex.module      = wgpuVSShaderModule.Get();
         wgpuRenderPipelineDesc.vertex.entryPoint  = "VSMain";
-        wgpuRenderPipelineDesc.fragment           = Key.RTIndex < 0 ? nullptr : &wgpuFragmentState; // Do we need empty fragment shader for depth-stencil clears?
-        wgpuRenderPipelineDesc.depthStencil       = wgpuDepthStencilState.depthWriteEnabled ? &wgpuDepthStencilState : nullptr;
+        wgpuRenderPipelineDesc.fragment           = RPInfo.NumRenderTargets > 0 ? &wgpuFragmentState : nullptr;
+        wgpuRenderPipelineDesc.depthStencil       = RPInfo.DSVFormat != TEX_FORMAT_UNKNOWN ? &wgpuDepthStencilState : nullptr;
         wgpuRenderPipelineDesc.multisample.count  = RPInfo.SampleCount;
         wgpuRenderPipelineDesc.multisample.mask   = 0xFFFFFFFF;
 
@@ -275,15 +338,6 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
 
 void AttachmentCleanerWebGPU::ClearAttachment(WGPURenderPassEncoder wgpuCmdEncoder, DeviceContextWebGPUImpl* pDeviceContext, const ClearPSOHashKey& Key, std::array<float, 8>& ClearData)
 {
-    VERIFY_EXPR(m_DeviceWebGPU.GetNumImmediateContexts() == 1);
-    if (!m_IsInitializedResources)
-    {
-        InitializePipelineStates();
-        InitializeConstantBuffer();
-        InitializePipelineResourceLayout();
-        m_IsInitializedResources = true;
-    }
-
     auto Iter = m_PSOCache.find(Key);
     if (Iter == m_PSOCache.end())
         Iter = m_PSOCache.emplace(Key, CreatePSO(Key)).first;
@@ -316,7 +370,7 @@ void AttachmentCleanerWebGPU::InitializePipelineStates()
     m_wgpuWriteDepth.depthCompare      = WGPUCompareFunction_Always;
     m_wgpuWriteDepth.depthWriteEnabled = true;
 
-    m_wgpuWriteStencil.depthCompare             = WGPUCompareFunction_Never;
+    m_wgpuWriteStencil.depthCompare             = WGPUCompareFunction_Always;
     m_wgpuWriteStencil.depthWriteEnabled        = true;
     m_wgpuWriteStencil.stencilFront.compare     = WGPUCompareFunction_Always;
     m_wgpuWriteStencil.stencilFront.depthFailOp = WGPUStencilOperation_Replace;
@@ -326,11 +380,15 @@ void AttachmentCleanerWebGPU::InitializePipelineStates()
     m_wgpuWriteStencil.stencilBack.depthFailOp  = WGPUStencilOperation_Replace;
     m_wgpuWriteStencil.stencilBack.failOp       = WGPUStencilOperation_Replace;
     m_wgpuWriteStencil.stencilBack.passOp       = WGPUStencilOperation_Replace;
+    m_wgpuWriteStencil.stencilWriteMask         = 0xFFFFFFFF;
+    m_wgpuWriteStencil.stencilReadMask          = 0xFFFFFFFF;
 
     m_wgpuWriteDepthStencil.depthCompare      = WGPUCompareFunction_Always;
     m_wgpuWriteDepthStencil.depthWriteEnabled = true;
     m_wgpuWriteDepthStencil.stencilFront      = m_wgpuWriteStencil.stencilFront;
     m_wgpuWriteDepthStencil.stencilBack       = m_wgpuWriteStencil.stencilBack;
+    m_wgpuWriteDepthStencil.stencilWriteMask  = m_wgpuWriteStencil.stencilWriteMask;
+    m_wgpuWriteDepthStencil.stencilReadMask   = m_wgpuWriteStencil.stencilReadMask;
 }
 
 void AttachmentCleanerWebGPU::InitializeConstantBuffer()

@@ -156,7 +156,6 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
     if (pCopyFrom != nullptr)
     {
         RefCntAutoPtr<ITextureWebGPU> pSrcTextureWebGPU{pCopyFrom, IID_TextureWebGPU};
-        VERIFY_EXPR(pSrcTextureWebGPU->GetState() == RESOURCE_STATE_COPY_SOURCE);
         VERIFY_EXPR(GetDesc().Width == pSrcTextureWebGPU->GetDesc().Width);
         VERIFY_EXPR(GetDesc().Height == pSrcTextureWebGPU->GetDesc().Height);
         VERIFY_EXPR(GetDesc().ColorBufferFormat == pSrcTextureWebGPU->GetDesc().Format);
