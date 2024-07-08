@@ -27,6 +27,7 @@ set(INTERFACE
     interface/ObjectBase.hpp
     interface/ObjectsRegistry.hpp
     interface/ParsingTools.hpp
+    interface/ShaderParsingTools.hpp
     interface/RefCntAutoPtr.hpp
     interface/RefCountedObjectImpl.hpp
     interface/Serializer.hpp
@@ -52,6 +53,7 @@ set(SOURCE
     src/DataBlobImpl.cpp
     src/DefaultRawMemoryAllocator.cpp
     src/FixedBlockMemoryAllocator.cpp
+    src/ShaderParsingTools.cpp
     src/MemoryFileStream.cpp
     src/Serializer.cpp
     src/SpinLock.cpp

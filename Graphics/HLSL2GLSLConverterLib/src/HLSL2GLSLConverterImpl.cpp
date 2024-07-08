@@ -380,6 +380,7 @@
 #include "StringTools.hpp"
 #include "ParsingTools.hpp"
 #include "EngineMemory.h"
+#include "ShaderParsingTools.hpp"
 
 using namespace std;
 
@@ -700,24 +701,6 @@ String HLSL2GLSLConverterImpl::ConversionStream::PrintTokenContext(IteratorType&
         }                                                                \
     } while (false)
 
-template <typename IterType>
-bool SkipPrefix(const Char* RefStr, IterType& begin, IterType end)
-{
-    auto pos = begin;
-    while (*RefStr && pos != end)
-    {
-        if (*(RefStr++) != *(pos++))
-            return false;
-    }
-    if (*RefStr == 0)
-    {
-        begin = pos;
-        return true;
-    }
-
-    return false;
-}
-
 // The method scans the source code and replaces
 // all #include directives with the contents of the
 // file. It maintains a set of already parsed includes
@@ -756,7 +739,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
                     }
                     // #   include "TestFile.fxh"
                     //     ^
-                    if (SkipPrefix("include", Pos, GLSLSource.end()))
+                    if (Parsing::SkipString(Pos, GLSLSource.end(), "include", Pos))
                     {
                         // #   include "TestFile.fxh"
                         //            ^
@@ -1281,59 +1264,6 @@ void HLSL2GLSLConverterImpl::ConversionStream::ParseSamplers(TokenListType::iter
     VERIFY_PARSER_STATE(Token, (ScopeDepth == 1 && Token == m_Tokens.end()) || ScopeDepth == 0, "Error parsing scope");
 }
 
-void ParseImageFormat(const String& Comment, String& ImageFormat)
-{
-    //    /* format = r32f */
-    // ^
-    auto Pos = SkipDelimiters(Comment.begin(), Comment.end());
-    if (Pos == Comment.end())
-        return;
-    //    /* format = r32f */
-    //    ^
-    if (*Pos != '/')
-        return;
-    ++Pos;
-    //    /* format = r32f */
-    //     ^
-    //    // format = r32f
-    //     ^
-    if (Pos == Comment.end() || (*Pos != '/' && *Pos != '*'))
-        return;
-    ++Pos;
-    //    /* format = r32f */
-    //      ^
-    Pos = SkipDelimiters(Pos, Comment.end());
-    if (Pos == Comment.end())
-        return;
-    //    /* format = r32f */
-    //       ^
-    if (!SkipPrefix("format", Pos, Comment.end()))
-        return;
-    //    /* format = r32f */
-    //             ^
-    Pos = SkipDelimiters(Pos, Comment.end());
-    if (Pos == Comment.end())
-        return;
-    //    /* format = r32f */
-    //              ^
-    if (*Pos != '=')
-        return;
-    ++Pos;
-    //    /* format = r32f */
-    //               ^
-    Pos = SkipDelimiters(Pos, Comment.end());
-    if (Pos == Comment.end())
-        return;
-    //    /* format = r32f */
-    //                ^
-
-    auto ImgFmtStartPos = Pos;
-    Pos                 = SkipIdentifier(Pos, Comment.end());
-
-    ImageFormat = String(ImgFmtStartPos, Pos);
-}
-
-
 // The function processes texture declaration that is indicated by Token, converts it to
 // corresponding GLSL sampler type and adds the new sampler into Objects hash map.
 //
@@ -1476,13 +1406,13 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration(TokenLi
         {
             // RWTexture2D<float /* format = r32f */ >
             //                                       ^
-            ParseImageFormat(Token->Delimiter, ImgFormat);
+            ImgFormat = Parsing::ExtractGLSLImageFormatFromComment(Token->Delimiter.begin(), Token->Delimiter.end());
             if (ImgFormat.length() == 0)
             {
                 // RWTexture2D</* format = r32f */ float >
                 //                                 ^
                 //                            TexFmtToken
-                ParseImageFormat(TexFmtToken->Delimiter, ImgFormat);
+                ImgFormat = Parsing::ExtractGLSLImageFormatFromComment(TexFmtToken->Delimiter.begin(), TexFmtToken->Delimiter.end());
             }
 
             if (ImgFormat.length() != 0)
@@ -3007,7 +2937,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(To
                         const auto& Semantic   = Param.Semantic;
                         auto        RTIndexPos = Semantic.begin();
                         Uint32      RTIndex    = ~0u;
-                        if (SkipPrefix("sv_target", RTIndexPos, Semantic.end()))
+                        if (Parsing::SkipString(RTIndexPos, Semantic.end(), "sv_target", RTIndexPos))
                         {
                             if (RTIndexPos != Semantic.end())
                             {
@@ -3073,7 +3003,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessVertexShaderArguments(std:
                         int         InputLocation  = AutoInputLocation;
                         const auto& Semantic       = Param.Semantic;
                         auto        SemanticEndPos = Semantic.begin();
-                        if (SkipPrefix("attrib", SemanticEndPos, Semantic.end()))
+                        if (Parsing::SkipString(SemanticEndPos, Semantic.end(), "attrib", SemanticEndPos))
                         {
                             char* EndPtr    = nullptr;
                             auto  AttribInd = static_cast<int>(strtol(&*SemanticEndPos, &EndPtr, 10));
