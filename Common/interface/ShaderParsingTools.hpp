@@ -27,6 +27,7 @@
 #pragma once
 
 #include "ParsingTools.hpp"
+#include "../../Graphics/GraphicsEngine/interface/GraphicsTypes.h"
 
 namespace Diligent
 {
@@ -41,8 +42,8 @@ namespace Parsing
 /// The function returns "r32f"
 /// If the comment does not contain format specifier, the function returns an empty string.
 ///
-/// \param Start - iterator to the beginning of the comment
-/// \param End   - iterator to the end of the comment
+/// \param[in] Start - iterator to the beginning of the comment
+/// \param[in] End   - iterator to the end of the comment
 ///
 /// \return GLSL image format
 template <typename InteratorType>
@@ -103,6 +104,12 @@ std::string ExtractGLSLImageFormatFromComment(const InteratorType& Start, const 
     auto ImgFmtEndPos = SkipIdentifier(Pos, End);
     return {Pos, ImgFmtEndPos};
 }
+
+/// Parses GLSL image format string, e.g. "rgba8" or "rg32f" and returns the corresponding texture format.
+///
+/// \param[in]  Format - GLSL image format string
+/// \return     Texture format, or TEXTURE_FORMAT_UNKNOWN if the format is not recognized.
+TEXTURE_FORMAT ParseGLSLImageFormat(const std::string& Format);
 
 } // namespace Parsing
 
