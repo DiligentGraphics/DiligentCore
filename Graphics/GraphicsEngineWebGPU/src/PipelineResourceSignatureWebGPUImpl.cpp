@@ -745,10 +745,13 @@ void PipelineResourceSignatureWebGPUImpl::CopyStaticResources(ShaderResourceCach
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && Attr.IsImmutableSamplerAssigned())
         {
             // Skip immutable samplers as they are initialized in InitSRBResourceCache()
-            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+            if (DstCacheType == ResourceCacheContentType::SRB)
             {
-                VERIFY(DstBindGroup.GetResource(Attr.CacheOffset(DstCacheType) + ArrInd).pObject,
-                       "Immutable sampler must have been initialized in InitSRBResourceCache(). This is likely a bug.");
+                for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+                {
+                    VERIFY(DstBindGroup.GetResource(Attr.CacheOffset(DstCacheType) + ArrInd).pObject,
+                           "Immutable sampler must have been initialized in InitSRBResourceCache(). This is likely a bug.");
+                }
             }
             continue;
         }

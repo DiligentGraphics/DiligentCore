@@ -23,9 +23,11 @@ cbuffer UniformBuff_2
     float4 g_Data2;
 }
 
+#if FORMATTED_BUFFERS_SUPPORTED
 Buffer g_FmtBuff_0;
 Buffer g_FmtBuff_1;
 Buffer g_FmtBuff_2;
+#endif
 
 float4 CheckValue(float4 Val, float4 Expected)
 {
@@ -49,9 +51,11 @@ float4 VerifyResources()
     AllCorrect *= CheckValue(g_Data1, UniformBuff_1_Ref);
     AllCorrect *= CheckValue(g_Data2, UniformBuff_2_Ref);
 
+#if FORMATTED_BUFFERS_SUPPORTED
     AllCorrect *= CheckValue(g_FmtBuff_0.Load(0), FmtBuff_0_Ref);
     AllCorrect *= CheckValue(g_FmtBuff_1.Load(0), FmtBuff_1_Ref);
     AllCorrect *= CheckValue(g_FmtBuff_2.Load(0), FmtBuff_2_Ref);
+#endif
 
     return AllCorrect;
 }
