@@ -319,6 +319,36 @@ TEST(Common_ParsingTools, SkipIdentifier)
     Test("_a1b2c3[5]", "[5]");
 }
 
+TEST(Common_ParsingTools, SkipString)
+{
+    auto Test = [](const std::string& Str, const std::string& SkipStr, bool RefStrFound) {
+        auto Pos = Str.begin();
+
+        if (SkipString(Pos, Str.end(), SkipStr.c_str(), Pos))
+        {
+            EXPECT_TRUE(RefStrFound);
+            EXPECT_EQ(Pos, Str.begin() + SkipStr.length());
+        }
+        else
+        {
+            EXPECT_FALSE(RefStrFound);
+            EXPECT_EQ(Pos, Str.begin());
+        }
+    };
+    Test("", "", false);
+    Test("", "abc", false);
+    Test("abc", "", false);
+    Test("abc", "xyz", false);
+    Test("xabc", "abc", false);
+    Test("abc", "a", true);
+    Test("abc", "b", false);
+    Test("abc", "ab", true);
+    Test("abc", "ad", false);
+    Test("abc", "abc", true);
+    Test("abc", "abd", false);
+    Test("abc", "abcd", false);
+}
+
 TEST(Common_ParsingTools, SplitString)
 {
     static const char* TestStr = R"(

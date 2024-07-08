@@ -388,6 +388,43 @@ IteratorType SkipFloatNumber(const IteratorType& Start, const IteratorType& End)
     return Pos;
 }
 
+/// Skips a specified string starting from the given position.
+///
+/// \param[in]  Start     - starting position.
+/// \param[in]  End       - end of the input string.
+/// \param[in]  Str       - string to skip.
+/// \param[out] StringEnd - position immediately following the last character of the string, if found,
+///                         or Start otherwise.
+///
+/// \return     true if the string has been found, false otherwise.
+template <typename IteratorType>
+bool SkipString(const IteratorType& Start, const IteratorType& End, const char* Str, IteratorType& StringEnd) noexcept
+{
+    if (Start == End || *Str == 0)
+    {
+        StringEnd = Start;
+        return false;
+    }
+
+    IteratorType Pos = Start;
+    while (*Str != 0 && Pos != End && *Str == *Pos)
+    {
+        ++Str;
+        ++Pos;
+    }
+
+    if (*Str == 0)
+    {
+        StringEnd = Pos;
+        return true;
+    }
+    else
+    {
+        StringEnd = Start;
+        return false;
+    }
+}
+
 /// Parses an integer starting from the given position.
 ///
 /// \param[in]  Start - starting position.
