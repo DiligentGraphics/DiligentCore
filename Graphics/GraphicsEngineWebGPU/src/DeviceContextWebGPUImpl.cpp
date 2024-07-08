@@ -1067,8 +1067,12 @@ void DeviceContextWebGPUImpl::Flush()
     if (m_wgpuCommandEncoder || !m_SignalFences.empty())
     {
         auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
-            if (DeviceContextWebGPUImpl* pDeviceCxt = static_cast<DeviceContextWebGPUImpl*>(pUserData))
+            if (Status != WGPUQueueWorkDoneStatus_Success && Status != WGPUQueueWorkDoneStatus_DeviceLost)
+                DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
+
+            if (Status == WGPUQueueWorkDoneStatus_Success && pUserData != nullptr)
             {
+                DeviceContextWebGPUImpl* pDeviceCxt = static_cast<DeviceContextWebGPUImpl*>(pUserData);
                 for (auto& SignalItem : pDeviceCxt->m_SignalFences)
                 {
                     auto* pFence = SignalItem.second.RawPtr<FenceWebGPUImpl>();
@@ -1084,9 +1088,6 @@ void DeviceContextWebGPUImpl::Flush()
                     MemPage.Recycle();
                 pDeviceCxt->m_UploadMemPages.clear();
             }
-
-            if (Status != WGPUQueueWorkDoneStatus_Success && Status != WGPUQueueWorkDoneStatus_DeviceLost)
-                DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
         };
 
         WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
