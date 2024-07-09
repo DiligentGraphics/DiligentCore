@@ -51,6 +51,7 @@ PRIVATE
     Diligent-Common
     Diligent-PlatformInterface
     Diligent-GraphicsEngine
+    Diligent-ShaderTools
 PUBLIC
     Diligent-GraphicsEngineInterface
 )

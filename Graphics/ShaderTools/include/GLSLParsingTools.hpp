@@ -27,7 +27,7 @@
 #pragma once
 
 #include "ParsingTools.hpp"
-#include "../../Graphics/GraphicsEngine/interface/GraphicsTypes.h"
+#include "GraphicsTypes.h"
 
 namespace Diligent
 {

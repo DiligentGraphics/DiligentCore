@@ -4,11 +4,13 @@ project(Diligent-ShaderTools CXX)
 
 set(INCLUDE
     include/ShaderToolsCommon.hpp
+    include/GLSLParsingTools.hpp
     include/HLSLDefinitions.fxh
 )
 
 set(SOURCE
     src/ShaderToolsCommon.cpp
+    src/GLSLParsingTools.cpp
 )
 
 set(DXC_SUPPORTED FALSE)

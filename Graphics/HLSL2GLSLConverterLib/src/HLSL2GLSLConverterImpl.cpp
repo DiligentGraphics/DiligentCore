@@ -380,7 +380,7 @@
 #include "StringTools.hpp"
 #include "ParsingTools.hpp"
 #include "EngineMemory.h"
-#include "ShaderParsingTools.hpp"
+#include "GLSLParsingTools.hpp"
 
 using namespace std;
 

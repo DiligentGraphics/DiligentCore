@@ -24,7 +24,7 @@
  *  of the possibility of such damages.
  */
 
-#include "ShaderParsingTools.hpp"
+#include "GLSLParsingTools.hpp"
 
 namespace Diligent
 {
