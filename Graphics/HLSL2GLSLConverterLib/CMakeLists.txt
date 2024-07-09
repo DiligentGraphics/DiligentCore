@@ -6,7 +6,6 @@ set(INCLUDE
     include/GLSLDefinitions.h
     include/HLSL2GLSLConverterImpl.hpp
     include/HLSL2GLSLConverterObject.hpp
-    include/HLSLKeywords.h
 )
 
 set(INTERFACE

@@ -39,6 +39,7 @@
 #include "HashUtils.hpp"
 #include "HLSLKeywords.h"
 #include "Constants.h"
+#include "HLSLTokenizer.hpp"
 
 namespace Diligent
 {
@@ -215,142 +216,9 @@ private:
     // Example: {"sampler2D", "Sample", 2} -> {"Sample_2", "_SWIZZLE"}
     std::unordered_map<FunctionStubHashKey, GLSLStubInfo, FunctionStubHashKey::Hasher> m_GLSLStubs;
 
-    // clang-format off
-    enum class TokenType
-    {
-        Undefined,
-#define ADD_KEYWORD(keyword)kw_##keyword,
-        ITERATE_HLSL_KEYWORDS(ADD_KEYWORD)
-#undef ADD_KEYWORD
-        PreprocessorDirective,
-        Operator,
-        OpenBrace,
-        ClosingBrace,
-        OpenParen,
-        ClosingParen,
-        OpenSquareBracket,
-        ClosingSquareBracket,
-        OpenAngleBracket,
-        ClosingAngleBracket,
-        Identifier,
-        NumericConstant,
-        StringConstant,
-        Semicolon,
-        Comma,
-        Colon,
-        DoubleColon,
-        QuestionMark,
-        TextBlock,
-        Assignment,
-        ComparisonOp,
-        LogicOp,
-        BitwiseOp,
-        IncDecOp,
-        MathOp
-    };
-    // clang-format on
-
-    struct TokenInfo
-    {
-        using TokenType = HLSL2GLSLConverterImpl::TokenType;
-
-        TokenType Type = TokenType::Undefined;
-        String    Literal;
-        String    Delimiter;
-        size_t    Idx = ~size_t{0};
-
-        void SetType(TokenType _Type)
-        {
-            Type = _Type;
-        }
-
-        TokenType GetType() const { return Type; }
-
-        bool CompareLiteral(const char* Str)
-        {
-            return Literal == Str;
-        }
-
-        bool CompareLiteral(const std::string::const_iterator& Start,
-                            const std::string::const_iterator& End)
-        {
-            const size_t Len = End - Start;
-            if (strncmp(Literal.c_str(), &*Start, Len) != 0)
-                return false;
-            return Literal.length() == Len;
-        }
-
-        void ExtendLiteral(const std::string::const_iterator& Start,
-                           const std::string::const_iterator& End)
-        {
-            Literal.append(Start, End);
-        }
-
-        bool IsBuiltInType() const
-        {
-            static_assert(static_cast<int>(TokenType::kw_bool) == 1 && static_cast<int>(TokenType::kw_void) == 191,
-                          "If you updated built-in types, double check that all types are defined between bool and void");
-            return Type >= TokenType::kw_bool && Type <= TokenType::kw_void;
-        }
-
-        bool IsFlowControl() const
-        {
-            static_assert(static_cast<int>(TokenType::kw_break) == 192 && static_cast<int>(TokenType::kw_while) == 202,
-                          "If you updated control flow keywords, double check that all keywords are defined between break and while");
-            return Type >= TokenType::kw_break && Type <= TokenType::kw_while;
-        }
-
-        static TokenInfo Create(TokenType                          _Type,
-                                const std::string::const_iterator& DelimStart,
-                                const std::string::const_iterator& DelimEnd,
-                                const std::string::const_iterator& LiteralStart,
-                                const std::string::const_iterator& LiteralEnd,
-                                size_t                             Idx)
-        {
-            return TokenInfo{_Type, std::string{LiteralStart, LiteralEnd}, std::string{DelimStart, DelimEnd}, Idx};
-        }
-
-        TokenInfo() {}
-
-        TokenInfo(TokenType   _Type,
-                  std::string _Literal,
-                  std::string _Delimiter = "",
-                  size_t      _Idx       = ~size_t{0}) :
-            Type{_Type},
-            Literal{std::move(_Literal)},
-            Delimiter{std::move(_Delimiter)},
-            Idx{_Idx}
-        {}
-
-        size_t GetDelimiterLen() const
-        {
-            return Delimiter.length();
-        }
-        size_t GetLiteralLen() const
-        {
-            return Literal.length();
-        }
-        const std::pair<const char*, const char*> GetDelimiter() const
-        {
-            return {Delimiter.c_str(), Delimiter.c_str() + GetDelimiterLen()};
-        }
-        const std::pair<const char*, const char*> GetLiteral() const
-        {
-            return {Literal.c_str(), Literal.c_str() + GetLiteralLen()};
-        }
-
-        std::ostream& OutputDelimiter(std::ostream& os) const
-        {
-            os << Delimiter;
-            return os;
-        }
-        std::ostream& OutputLiteral(std::ostream& os) const
-        {
-            os << Literal;
-            return os;
-        }
-    };
-    typedef std::list<TokenInfo> TokenListType;
+    using TokenType     = Parsing::HLSLTokenType;
+    using TokenInfo     = Parsing::HLSLTokenInfo;
+    using TokenListType = Parsing::HLSLTokenizer::TokenListType;
 
 
     class ConversionStream : public ObjectBase<IHLSL2GLSLConversionStream>
@@ -400,9 +268,8 @@ private:
 
     private:
         void InsertIncludes(String& GLSLSource, IShaderSourceInputStreamFactory* pSourceStreamFactory);
-        void Tokenize(const String& Source);
 
-        typedef std::unordered_map<String, bool> SamplerHashType;
+        using SamplerHashType = std::unordered_map<String, bool>;
 
         const HLSLObjectInfo* FindHLSLObject(const String& Name);
 
@@ -615,9 +482,7 @@ private:
         const String m_InputFileName;
     };
 
-    // HLSL keyword->token info hash map
-    // Example: "Texture2D" -> TokenInfo(TokenType::Texture2D, "Texture2D")
-    std::unordered_map<HashMapStringKey, TokenInfo> m_HLSLKeywords;
+    Parsing::HLSLTokenizer m_HLSLTokenizer;
 
     // Set of all GLSL image types (image1D, uimage1D, iimage1D, image2D, ... )
     std::unordered_set<HashMapStringKey> m_ImageTypes;

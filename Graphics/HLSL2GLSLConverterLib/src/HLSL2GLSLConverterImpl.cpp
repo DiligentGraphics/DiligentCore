@@ -403,11 +403,6 @@ const HLSL2GLSLConverterImpl& HLSL2GLSLConverterImpl::GetInstance()
 
 HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
 {
-    // Populate HLSL keywords hash map
-#define DEFINE_KEYWORD(keyword) m_HLSLKeywords.insert(std::make_pair(#keyword, TokenInfo(TokenType::kw_##keyword, #keyword)));
-    ITERATE_HLSL_KEYWORDS(DEFINE_KEYWORD)
-#undef DEFINE_KEYWORD
-
     // Prepare texture function stubs
     //                          sampler  usampler  isampler sampler*Shadow
     const String Prefixes[] = {"", "u", "i", ""};
@@ -815,33 +810,6 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
     {
         LOG_ERROR_AND_THROW("Unable to process includes: ", ErrInfo.second);
     }
-}
-
-// The function converts source code into a token list
-void HLSL2GLSLConverterImpl::ConversionStream::Tokenize(const String& Source)
-{
-    size_t TokenIdx = 0;
-
-    m_Tokens = Parsing::Tokenize<TokenInfo, decltype(m_Tokens)>(
-        Source.begin(), Source.end(),
-        [&TokenIdx](TokenType                          Type,
-                    const std::string::const_iterator& DelimStart,
-                    const std::string::const_iterator& DelimEnd,
-                    const std::string::const_iterator& LiteralStart,
-                    const std::string::const_iterator& LiteralEnd) //
-        {
-            return TokenInfo::Create(Type, DelimStart, DelimEnd, LiteralStart, LiteralEnd, TokenIdx++);
-        },
-        [&](const std::string::const_iterator& Start, const std::string::const_iterator& End) //
-        {
-            auto KeywordIt = m_Converter.m_HLSLKeywords.find(HashMapStringKey{std::string{Start, End}});
-            if (KeywordIt != m_Converter.m_HLSLKeywords.end())
-            {
-                VERIFY(std::string(Start, End) == KeywordIt->second.Literal, "Inconsistent literal");
-                return KeywordIt->second.Type;
-            }
-            return TokenType::Identifier;
-        });
 }
 
 void HLSL2GLSLConverterImpl::ConversionStream::ParseGlobalPreprocessorDefines()
@@ -2863,11 +2831,10 @@ const char* HLSL2GLSLConverterImpl::ConversionStream::GetInterpolationQualifier(
             break; // To avoid clang/gcc error
     }
 
-    auto keywordIt = m_Converter.m_HLSLKeywords.find(ParamInfo.Type.c_str());
-    if (keywordIt != m_Converter.m_HLSLKeywords.end())
+    if (const HLSLTokenInfo* Keyword = m_Converter.m_HLSLTokenizer.FindKeyword(ParamInfo.Type))
     {
-        VERIFY_EXPR(keywordIt->second.Literal == ParamInfo.Type);
-        auto kw = keywordIt->second.Type;
+        VERIFY_EXPR(Keyword->Literal == ParamInfo.Type);
+        auto kw = Keyword->Type;
         if ((kw >= TokenType::kw_int && kw <= TokenType::kw_int4x4) ||
             (kw >= TokenType::kw_uint && kw <= TokenType::kw_uint4x4) ||
             (kw >= TokenType::kw_min16int && kw <= TokenType::kw_min16int4x4) ||
@@ -4428,7 +4395,7 @@ HLSL2GLSLConverterImpl::ConversionStream::ConversionStream(IReferenceCounters*  
 
     InsertIncludes(Source, pInputStreamFactory);
 
-    Tokenize(Source);
+    m_Tokens = m_Converter.m_HLSLTokenizer.Tokenize(Source);
 }
 
 

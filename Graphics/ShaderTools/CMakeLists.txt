@@ -5,12 +5,15 @@ project(Diligent-ShaderTools CXX)
 set(INCLUDE
     include/ShaderToolsCommon.hpp
     include/GLSLParsingTools.hpp
+    include/HLSLTokenizer.hpp
     include/HLSLDefinitions.fxh
+    include/HLSLKeywords.h
 )
 
 set(SOURCE
     src/ShaderToolsCommon.cpp
     src/GLSLParsingTools.cpp
+    src/HLSLTokenizer.cpp
 )
 
 set(DXC_SUPPORTED FALSE)
