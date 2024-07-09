@@ -40,45 +40,45 @@ RWTexture1D<unorm float4 /*format=rgba8*/> g_rgba8;
 RWTexture2D<unorm  /*format=rg8*/ float4>  g_rg8;
 RWTexture3D</*format=r8*/ unorm float4>    g_r8;
 
-RWTexture1D<unorm float4 /*format=rgba16*/> g_rgba16[1];
-RWTexture2D<unorm  /*format=rg16*/ float4>  g_rg16[2];
-RWTexture3D</*format=r16*/ unorm float4>    g_r16[3];
+RWTexture1D<unorm float4 /*format =rgba16*/> g_rgba16[1];
+RWTexture2D<unorm  /*format =rg16*/ float4>  g_rg16[2];
+RWTexture3D</*format =r16*/ unorm float4>    g_r16[3];
 
-RWTexture1D<unorm float4 /*format=rgba16f*/> g_rgba16f[1];
-RWTexture2D<unorm  /*format=rg16f*/ float4>  g_rg16f[2];
-RWTexture3D</*format=r16f*/ unorm float4>    g_r16f[3];
+RWTexture1D<unorm float4 /*format= rgba16f*/> g_rgba16f[1];
+RWTexture2D<unorm  /*format= rg16f*/ float4>  g_rg16f[2];
+RWTexture3D</*format= r16f*/ unorm float4>    g_r16f[3];
 
-RWTexture1DArray<unorm float4 /*format=rgba32f*/> g_rgba32f[1];
-RWTexture2DArray<unorm  /*format=rg32f*/ float4>  g_rg32f[2];
-RWTexture3D     </*format=r32f*/ unorm float4>    g_r32f[3];
+RWTexture1DArray<unorm float4 /*format = rgba32f*/> g_rgba32f[1];
+RWTexture2DArray<unorm  /*format = rg32f*/ float4>  g_rg32f[2];
+RWTexture3D     </*format = r32f*/ unorm float4>    g_r32f[3];
 
 RWTexture1D<unorm float4 /*format=rgba8i*/> g_rgba8i;
 RWTexture2D<unorm  /*format=rg8i*/ float4>  g_rg8i;
 RWTexture3D</*format=r8i*/ unorm float4>    g_r8i;
 
-RWTexture1D<unorm float4 /*format=rgba16i*/> g_rgba16i;
-RWTexture2D<unorm  /*format=rg16i*/ float4>  g_rg16i;
-RWTexture3D</*format=r16i*/ unorm float4>    g_r16i;
+RWTexture1D<unorm float4 /* format=rgba16i */> g_rgba16i;
+RWTexture2D<unorm  /* format=rg16i */ float4>  g_rg16i;
+RWTexture3D</* format=r16i */ unorm float4>    g_r16i;
 
-RWTexture1D<unorm float4 /*format=rgba32i*/> g_rgba32i;
-RWTexture2D<unorm  /*format=rg32i*/ float4>  g_rg32i;
-RWTexture3D</*format=r32i*/ unorm float4>    g_r32i;
+RWTexture1D<unorm float4 /* format=rgba32i*/> g_rgba32i;
+RWTexture2D<unorm  /* format=rg32i*/ float4>  g_rg32i;
+RWTexture3D</* format=r32i*/ unorm float4>    g_r32i;
 
-RWTexture1D<unorm float4 /*format=rgba8ui*/> g_rgba8ui;
-RWTexture2D<unorm  /*format=rg8ui*/ float4>  g_rg8ui;
-RWTexture3D</*format=r8ui*/ unorm float4>    g_r8ui;
+RWTexture1D<unorm float4 /*format=rgba8ui */> g_rgba8ui;
+RWTexture2D<unorm  /*format=rg8ui */ float4>  g_rg8ui;
+RWTexture3D</*format=r8ui */ unorm float4>    g_r8ui;
 
-RWTexture1D<unorm float4 /*format=rgba16ui*/> g_rgba16ui;
-RWTexture2D<unorm  /*format=rg16ui*/ float4>  g_rg16ui;
-RWTexture3D</*format=r16ui*/ unorm float4>    g_r16ui;
+RWTexture1D<unorm float4 /*format =rgba16ui*/> g_rgba16ui;
+RWTexture2D<unorm  /*format =rg16ui*/ float4>  g_rg16ui;
+RWTexture3D</*format =r16ui*/ unorm float4>    g_r16ui;
 
-RWTexture1D<unorm float4 /*format=rgba32ui*/> g_rgba32ui;
-RWTexture2D<unorm  /*format=rg32ui*/ float4>  g_rg32ui;
-RWTexture3D</*format=r32ui*/ unorm float4>    g_r32ui;
+RWTexture1D<unorm float4 /*format= rgba32ui*/> g_rgba32ui;
+RWTexture2D<unorm  /*format= rg32ui*/ float4>  g_rg32ui;
+RWTexture3D</*format= r32ui*/ unorm float4>    g_r32ui;
 
-RWTexture1D<unorm float4 /*format=rgba8_snorm*/> g_rgba8_snorm;
-RWTexture2D<unorm  /*format=rg8_snorm*/ float4>  g_rg8_snorm;
-RWTexture3D</*format=r8_snorm*/ unorm float4>    g_r8_snorm;
+RWTexture1D<unorm float4 /*format = rgba8_snorm*/> g_rgba8_snorm;
+RWTexture2D<unorm  /*format = rg8_snorm*/ float4>  g_rg8_snorm;
+RWTexture3D</*format = r8_snorm*/ unorm float4>    g_r8_snorm;
 
 RWTexture1D<unorm float4 /*format=rgba16_snorm*/> g_rgba16_snorm[1];
 RWTexture2D<unorm  /*format=rg16_snorm*/ float4>  g_rg16_snorm[2];

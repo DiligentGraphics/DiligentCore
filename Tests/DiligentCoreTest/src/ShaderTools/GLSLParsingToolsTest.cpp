@@ -35,7 +35,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-TEST(ShaderParsingToolsTest, ExtractGLSLImageFormatFromComment)
+TEST(GLSLParsingToolsTest, ExtractGLSLImageFormatFromComment)
 {
     auto Test = [](const std::string& Str, const std::string& RefFormat) {
         std::string Format = Parsing::ExtractGLSLImageFormatFromComment(Str.begin(), Str.end());
@@ -65,10 +65,16 @@ TEST(ShaderParsingToolsTest, ExtractGLSLImageFormatFromComment)
     Test(" /* format=r16f\n", "r16f");
     Test(" /* format=r16f*/", "r16f");
     Test(" /* format=r16f */", "r16f");
+    Test(" /* format =rg16f ", "rg16f");
+    Test(" // format =rg16u\n", "rg16u");
+    Test(" /* format= rg16f ", "rg16f");
+    Test(" // format= rg16u\n", "rg16u");
+    Test(" /* format = rg16f ", "rg16f");
+    Test(" // format = rg16u\n", "rg16u");
 }
 
 
-TEST(ShaderParsingToolsTest, ParseGLSLImageFormat)
+TEST(GLSLParsingToolsTest, ParseGLSLImageFormat)
 {
     EXPECT_EQ(Parsing::ParseGLSLImageFormat(""), TEX_FORMAT_UNKNOWN);
     EXPECT_EQ(Parsing::ParseGLSLImageFormat(""), TEX_FORMAT_UNKNOWN);
