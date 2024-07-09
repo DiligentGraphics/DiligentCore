@@ -143,14 +143,6 @@ TEST(ShaderParsingToolsTest, ParseGLSLImageFormat)
         {"rg16_snorm", TEX_FORMAT_RG16_SNORM},
         {"rgba16_snorm", TEX_FORMAT_RGBA16_SNORM},
 
-        {"r8_unorm", TEX_FORMAT_R8_UNORM},
-        {"rg8_unorm", TEX_FORMAT_RG8_UNORM},
-        {"rgba8_unorm", TEX_FORMAT_RGBA8_UNORM},
-
-        {"r16_unorm", TEX_FORMAT_R16_UNORM},
-        {"rg16_unorm", TEX_FORMAT_RG16_UNORM},
-        {"rgba16_unorm", TEX_FORMAT_RGBA16_UNORM},
-
         {"r11f_g11f_b10f", TEX_FORMAT_R11G11B10_FLOAT},
         {"rgb10_a2", TEX_FORMAT_RGB10A2_UNORM},
         {"rgb10_a2ui", TEX_FORMAT_RGB10A2_UINT},

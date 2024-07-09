@@ -211,34 +211,6 @@ static TEXTURE_FORMAT ParseStandardGLSLImageFormat(const std::string& Format)
             default: return TEX_FORMAT_UNKNOWN;
         }
     }
-    else if (strcmp(&*Pos, "_unorm") == 0)
-    {
-        // Unsigned normalized
-        switch (ComponentSize)
-        {
-            case 8:
-                switch (NumComponents)
-                {
-                    case 1: return TEX_FORMAT_R8_UNORM;
-                    case 2: return TEX_FORMAT_RG8_UNORM;
-                    case 3: return TEX_FORMAT_UNKNOWN;
-                    case 4: return TEX_FORMAT_RGBA8_UNORM;
-                    default: return TEX_FORMAT_UNKNOWN;
-                }
-
-            case 16:
-                switch (NumComponents)
-                {
-                    case 1: return TEX_FORMAT_R16_UNORM;
-                    case 2: return TEX_FORMAT_RG16_UNORM;
-                    case 3: return TEX_FORMAT_UNKNOWN;
-                    case 4: return TEX_FORMAT_RGBA16_UNORM;
-                    default: return TEX_FORMAT_UNKNOWN;
-                }
-
-            default: return TEX_FORMAT_UNKNOWN;
-        }
-    }
     else
     {
         return TEX_FORMAT_UNKNOWN;
