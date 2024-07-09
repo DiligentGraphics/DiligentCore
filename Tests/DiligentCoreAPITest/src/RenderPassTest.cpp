@@ -475,7 +475,8 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
     pContext->BeginRenderPass(RPBeginInfo);
 
     if (DeviceType != RENDER_DEVICE_TYPE_D3D12 &&
-        DeviceType != RENDER_DEVICE_TYPE_METAL)
+        DeviceType != RENDER_DEVICE_TYPE_METAL &&
+        DeviceType != RENDER_DEVICE_TYPE_WEBGPU)
     {
         // ClearDepthStencil is not allowed inside a render pass in Direct3D12 and Metal
         pContext->ClearDepthStencil(pTexViews[3], CLEAR_DEPTH_FLAG, 1.0, 0, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
@@ -484,7 +485,8 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
     pContext->NextSubpass();
 
     if (DeviceType != RENDER_DEVICE_TYPE_D3D12 &&
-        DeviceType != RENDER_DEVICE_TYPE_METAL)
+        DeviceType != RENDER_DEVICE_TYPE_METAL &&
+        DeviceType != RENDER_DEVICE_TYPE_WEBGPU)
     {
         // ClearRenderTarget is not allowed inside a render pass in Direct3D12 and Metal
         constexpr float ClearColor[] = {0, 0, 0, 0};
@@ -604,6 +606,12 @@ void RenderPassTest::TestMSResolve(bool UseMemoryless)
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
                 RenderPassMSResolveReferenceMtl(pSwapChain, ClearColor);
+                break;
+#endif
+
+#if WEBGPU_SUPPORTED
+            case RENDER_DEVICE_TYPE_WEBGPU:
+                RenderPassMSResolveReferenceWebGPU(pSwapChain, ClearColor);
                 break;
 #endif
 

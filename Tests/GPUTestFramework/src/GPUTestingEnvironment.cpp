@@ -819,6 +819,19 @@ void GPUTestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
             }
             break;
 
+        case RENDER_DEVICE_TYPE_WEBGPU:
+            switch (compiler)
+            {
+                case SHADER_COMPILER_DEFAULT:
+                    m_ShaderCompiler = compiler;
+                    break;
+
+                default:
+                    LOG_WARNING_MESSAGE(GetShaderCompilerTypeString(compiler), " is not supported by WebGPU backend. Using default compiler");
+                    m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            }
+            break;
+
         default:
             LOG_WARNING_MESSAGE("Unexpected device type");
             m_ShaderCompiler = SHADER_COMPILER_DEFAULT;

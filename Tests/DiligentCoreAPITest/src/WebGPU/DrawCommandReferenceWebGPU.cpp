@@ -76,7 +76,7 @@ public:
             WGPUBindGroupLayoutEntry wgpuBindGroupLayoutEntries[1]{};
             wgpuBindGroupLayoutEntries[0].binding               = 0;
             wgpuBindGroupLayoutEntries[0].visibility            = WGPUShaderStage_Fragment;
-            wgpuBindGroupLayoutEntries[0].texture.sampleType    = WGPUTextureSampleType_Float;
+            wgpuBindGroupLayoutEntries[0].texture.sampleType    = WGPUTextureSampleType_UnfilterableFloat;
             wgpuBindGroupLayoutEntries[0].texture.viewDimension = WGPUTextureViewDimension_2D;
 
             WGPUBindGroupLayoutDescriptor wgpuBindGroupLayoutDesc{};
@@ -336,7 +336,7 @@ void RenderPassInputAttachmentReferenceWebGPU(ISwapChain* pSwapChain, const floa
         WGPURenderPassEncoder wgpuRenderPassEncoder = wgpuCommandEncoderBeginRenderPass(wgpuCmdEncoder, &wgpuRenderPassDesc);
         wgpuRenderPassEncoderSetViewport(wgpuRenderPassEncoder, 0, 0, static_cast<float>(TextureWidth), static_cast<float>(TextureHeight), 0, 1.0);
         wgpuRenderPassEncoderSetScissorRect(wgpuRenderPassEncoder, 0, 0, TextureWidth, TextureHeight);
-        TriRenderInputWrite.Draw(wgpuRenderPassEncoder);
+        TriRenderInputRead.Draw(wgpuRenderPassEncoder);
         wgpuRenderPassEncoderEnd(wgpuRenderPassEncoder);
         wgpuRenderPassEncoderRelease(wgpuRenderPassEncoder);
     }

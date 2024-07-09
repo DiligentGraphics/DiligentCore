@@ -95,11 +95,11 @@ struct PixelInput
 @fragment
 fn main(Input: PixelInput) -> @location(0) vec4f
 {
-    var Color: vec4f;
-    Color.rgb = Input.Color.rgb * 0.125;
-    Color.rgb += (float3(1.0, 1.0, 1.0) - textureLoad(g_SubpassInput, Input.Position.xy, 0)).brg) * 0.875;
-    Color.a = 1.0;
-    return Color;
+    let SampleColor = textureLoad(g_SubpassInput, vec2<u32>(Input.Position.xy), 0);
+    let Color0: vec3f = 0.125 * Input.Color.rgb;
+    let Color1: vec3f = (vec3f(1.0, 1.0, 1.0) - SampleColor.brg) * 0.875;
+    let Color2: vec4f = vec4f(Color0 + Color1, 1.0);
+    return Color2;
 }
 )";
 // clang-format on

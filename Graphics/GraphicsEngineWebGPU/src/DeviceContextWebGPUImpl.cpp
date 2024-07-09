@@ -1438,12 +1438,13 @@ void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
             {
                 if (Subpass.pResolveAttachments != nullptr && Subpass.pResolveAttachments[RTIndex].AttachmentIndex != ATTACHMENT_UNUSED)
                 {
-                    LOG_ERROR_MESSAGE("Not implemented");
+                    VERIFY_EXPR(Subpass.pResolveAttachments[RTIndex].AttachmentIndex < RPDesc.AttachmentCount);
+                    auto* pDstView = ClassPtrCast<TextureViewWebGPUImpl>(FBDesc.ppAttachments[Subpass.pResolveAttachments[RTIndex].AttachmentIndex]);
+
+                    RenderPassColorAttachments[RTIndex].resolveTarget = pDstView->GetWebGPUTextureView();
                 }
-                else
-                {
-                    RenderPassColorAttachments[RTIndex].storeOp = AttachmentStoreOpToWGPUStoreOp(RTAttachmentDesc.StoreOp);
-                }
+
+                RenderPassColorAttachments[RTIndex].storeOp = AttachmentStoreOpToWGPUStoreOp(RTAttachmentDesc.StoreOp);
             }
             else
             {
