@@ -88,6 +88,8 @@ RWTexture1D<unorm float4 /*format=r11f_g11f_b10f*/> g_r11f_g11f_b10f[1];
 RWTexture2D<unorm  /*format=rgb10_a2*/ float4>      g_rgb10_a2[2];
 RWTexture3D</*format=rgb10_a2ui*/ unorm float4>     g_rgb10_a2ui[3];
 
+RWTexture2D g_RWTex;
+
 void Function(RWTexture2D</*format=rg8*/ unorm float4> FunctionArg1,
               RWTexture2D<unorm /*format=rg8*/ float4> FunctionArg2,
               RWTexture2D<unorm float4 /*format=rg8*/> FunctionArg3)
@@ -166,6 +168,15 @@ TEST(HLSLParsingTools, ExtractGLSLImageFormatsFromHLSL)
             EXPECT_EQ(FmtIt->second, RefFmtIt.second) << "Incorrect format for resource " << RefFmtIt.first.GetStr();
         }
     }
+
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D<").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D<>").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D</*format=*/>").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D</*format=xyz*/>").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D</*format=rgba8*/>").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D</*format=rgba8*/> 123").empty());
 }
 
 } // namespace

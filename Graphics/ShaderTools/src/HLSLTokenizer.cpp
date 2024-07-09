@@ -42,28 +42,34 @@ HLSLTokenizer::HLSLTokenizer()
 
 HLSLTokenizer::TokenListType HLSLTokenizer::Tokenize(const String& Source) const
 {
-    size_t TokenIdx = 0;
-
-    return Parsing::Tokenize<HLSLTokenInfo, TokenListType>(
-        Source.begin(), Source.end(),
-        [&TokenIdx](HLSLTokenType                      Type,
-                    const std::string::const_iterator& DelimStart,
-                    const std::string::const_iterator& DelimEnd,
-                    const std::string::const_iterator& LiteralStart,
-                    const std::string::const_iterator& LiteralEnd) //
-        {
-            return HLSLTokenInfo::Create(Type, DelimStart, DelimEnd, LiteralStart, LiteralEnd, TokenIdx++);
-        },
-        [&](const std::string::const_iterator& Start, const std::string::const_iterator& End) //
-        {
-            auto KeywordIt = m_Keywords.find(HashMapStringKey{std::string{Start, End}});
-            if (KeywordIt != m_Keywords.end())
+    try
+    {
+        size_t TokenIdx = 0;
+        return Parsing::Tokenize<HLSLTokenInfo, TokenListType>(
+            Source.begin(), Source.end(),
+            [&TokenIdx](HLSLTokenType                      Type,
+                        const std::string::const_iterator& DelimStart,
+                        const std::string::const_iterator& DelimEnd,
+                        const std::string::const_iterator& LiteralStart,
+                        const std::string::const_iterator& LiteralEnd) //
             {
-                VERIFY(std::string(Start, End) == KeywordIt->second.Literal, "Inconsistent literal");
-                return KeywordIt->second.Type;
-            }
-            return HLSLTokenType::Identifier;
-        });
+                return HLSLTokenInfo::Create(Type, DelimStart, DelimEnd, LiteralStart, LiteralEnd, TokenIdx++);
+            },
+            [&](const std::string::const_iterator& Start, const std::string::const_iterator& End) //
+            {
+                auto KeywordIt = m_Keywords.find(HashMapStringKey{std::string{Start, End}});
+                if (KeywordIt != m_Keywords.end())
+                {
+                    VERIFY(std::string(Start, End) == KeywordIt->second.Literal, "Inconsistent literal");
+                    return KeywordIt->second.Type;
+                }
+                return HLSLTokenType::Identifier;
+            });
+    }
+    catch (...)
+    {
+        return {};
+    }
 }
 
 } // namespace Parsing
