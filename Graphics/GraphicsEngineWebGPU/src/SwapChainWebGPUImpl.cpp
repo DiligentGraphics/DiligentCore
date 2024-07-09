@@ -45,15 +45,16 @@
 #    include <Windows.h>
 #endif
 
+#if PLATFORM_EMSCRIPTEN
+#    include <emscripten/html5.h>
+#endif
+
 namespace Diligent
 {
 
 namespace
 {
-constexpr char ShaderSource[] = R"(
-@group(0) @binding(0) var TextureSrc: texture_2d<f32>;
-@group(0) @binding(1) var SamplerPoint: sampler;
-
+constexpr char VSSource[] = R"(
 struct VertexOutput 
 {
     @builtin(position) Position: vec4f,
@@ -67,6 +68,17 @@ fn VSMain(@builtin(vertex_index) VertexId: u32) -> VertexOutput
     let Position: vec4f = vec4f(Texcoord * vec2f(2.0f, -2.0f) + vec2f(-1.0f, 1.0f), 1.0f, 1.0f);
     return VertexOutput(Position, Texcoord);
 }
+)";
+
+constexpr char PSSourceNoneTransform[] = R"(
+@group(0) @binding(0) var TextureSrc: texture_2d<f32>;
+@group(0) @binding(1) var SamplerPoint: sampler;
+
+struct VertexOutput 
+{
+    @builtin(position) Position: vec4f,
+    @location(0)       Texcoord: vec2f,
+}
 
 @fragment
 fn PSMain(Input: VertexOutput) -> @location(0) vec4f 
@@ -75,7 +87,33 @@ fn PSMain(Input: VertexOutput) -> @location(0) vec4f
 }
 )";
 
-auto WGPUConverUnormToSRGB = [](WGPUTextureFormat Format) {
+constexpr char PSSourceTransform[] = R"(
+@group(0) @binding(0) var TextureSrc: texture_2d<f32>;
+@group(0) @binding(1) var SamplerPoint: sampler;
+
+struct VertexOutput 
+{
+    @builtin(position) Position: vec4f,
+    @location(0)       Texcoord: vec2f,
+}
+
+fn LinearToSRGB(RGB: vec3<f32>) -> vec3<f32> {
+    let threshold = vec3<f32>(0.0031308);
+    let bGreater = step(threshold, RGB);
+    let linearPart = RGB * 12.92;
+    let sRGBPart = (pow(RGB, vec3<f32>(1.0 / 2.4)) * 1.055) - vec3<f32>(0.055);
+    return mix(linearPart, sRGBPart, bGreater);
+}
+
+@fragment
+fn PSMain(Input: VertexOutput) -> @location(0) vec4f 
+{
+    var Color: vec4f = textureSample(TextureSrc, SamplerPoint, Input.Texcoord);
+    return vec4f(LinearToSRGB(Color.rgb), Color.a);
+}
+)";
+
+auto WGPUConvertUnormToSRGB = [](WGPUTextureFormat Format) {
     switch (Format)
     {
         case WGPUTextureFormat_RGBA8Unorm:
@@ -98,20 +136,36 @@ public:
     {
     }
 
-    void InitializePipelineState(WGPUTextureFormat wgpuFormat)
+    void InitializePipelineState(WGPUTextureFormat wgpuFormat, bool Transform)
     {
         if (m_IsInitializedResources)
             return;
 
-        WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
-        wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-        wgpuShaderCodeDesc.code        = ShaderSource;
+        WebGPUShaderModuleWrapper wgpuVSShaderModule{};
+        {
+            WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
+            wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+            wgpuShaderCodeDesc.code        = VSSource;
 
-        WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
-        wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-        WebGPUShaderModuleWrapper wgpuShaderModule{wgpuDeviceCreateShaderModule(m_pRenderDevice->GetWebGPUDevice(), &wgpuShaderModuleDesc)};
-        if (!wgpuShaderModule)
-            LOG_ERROR_AND_THROW("Failed to create shader module");
+            WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
+            wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
+            wgpuVSShaderModule.Reset(wgpuDeviceCreateShaderModule(m_pRenderDevice->GetWebGPUDevice(), &wgpuShaderModuleDesc));
+            if (!wgpuVSShaderModule)
+                LOG_ERROR_AND_THROW("Failed to create shader module");
+        }
+
+        WebGPUShaderModuleWrapper wgpuPSShaderModule{};
+        {
+            WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
+            wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+            wgpuShaderCodeDesc.code        = Transform ? PSSourceTransform : PSSourceNoneTransform;
+
+            WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
+            wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
+            wgpuPSShaderModule.Reset(wgpuDeviceCreateShaderModule(m_pRenderDevice->GetWebGPUDevice(), &wgpuShaderModuleDesc));
+            if (!wgpuPSShaderModule)
+                LOG_ERROR_AND_THROW("Failed to create shader module");
+        }
 
         WGPUBindGroupLayoutEntry wgpuBindGroupLayoutEntries[2]{};
         wgpuBindGroupLayoutEntries[0].binding               = 0;
@@ -143,7 +197,7 @@ public:
         wgpuColorTargetState.writeMask = WGPUColorWriteMask_All;
 
         WGPUFragmentState wgpuFragmentState{};
-        wgpuFragmentState.module      = wgpuShaderModule.Get();
+        wgpuFragmentState.module      = wgpuPSShaderModule.Get();
         wgpuFragmentState.entryPoint  = "PSMain";
         wgpuFragmentState.targets     = &wgpuColorTargetState;
         wgpuFragmentState.targetCount = 1;
@@ -153,7 +207,7 @@ public:
         wgpuRenderPipelineDesc.layout             = m_wgpuPipelineLayout.Get();
         wgpuRenderPipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
         wgpuRenderPipelineDesc.primitive.cullMode = WGPUCullMode_None;
-        wgpuRenderPipelineDesc.vertex.module      = wgpuShaderModule.Get();
+        wgpuRenderPipelineDesc.vertex.module      = wgpuVSShaderModule.Get();
         wgpuRenderPipelineDesc.vertex.entryPoint  = "VSMain";
         wgpuRenderPipelineDesc.fragment           = &wgpuFragmentState;
         wgpuRenderPipelineDesc.multisample.count  = 1;
@@ -196,10 +250,15 @@ public:
         }
 
         auto ViewFormat = wgpuTextureGetFormat(wgpuSurfaceTexture.texture);
-        if (IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat))
-            ViewFormat = WGPUConverUnormToSRGB(ViewFormat);
 
-        InitializePipelineState(ViewFormat);
+        // Simplify this code once the bug for sRGB texture view is fixed in Dawn
+#if !PLATFORM_EMSCRIPTEN
+        if (IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat))
+            ViewFormat = WGPUConvertUnormToSRGB(ViewFormat);
+        InitializePipelineState(ViewFormat, false);
+#else
+        InitializePipelineState(ViewFormat, IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat));
+#endif
 
         WGPUTextureViewDescriptor wgpuTextureViewDesc;
         wgpuTextureViewDesc.nextInChain     = nullptr;
@@ -254,7 +313,12 @@ public:
         WebGPUCommandBufferWrapper  wgpuCmdBuffer{wgpuCommandEncoderFinish(wgpuCmdEncoder, &wgpuCmdBufferDesc)};
 
         wgpuQueueSubmit(pDeviceContext->GetWebGPUQueue(), 1, &wgpuCmdBuffer.Get());
+
+#if PLATFORM_EMSCRIPTEN
+        emscripten_request_animation_frame([](double Time, void* pUserData) { return 0; }, nullptr);
+#else
         wgpuSurfacePresent(pSwapChain->GetWebGPUSurface());
+#endif
         wgpuTextureRelease(wgpuSurfaceTexture.texture);
     }
 
@@ -361,9 +425,9 @@ void SwapChainWebGPUImpl::CreateSurface()
     wgpuSurfaceNativeDesc.hinstance = GetModuleHandle(nullptr);
 #elif PLATFORM_LINUX
     WGPUSurfaceDescriptorFromXcbWindow wgpuSurfaceNativeDesc{};
-    wgpuSurfaceNativeDesc.chain      = {nullptr, WGPUSType_SurfaceDescriptorFromXcbWindow};
+    wgpuSurfaceNativeDesc.chain = {nullptr, WGPUSType_SurfaceDescriptorFromXcbWindow};
     wgpuSurfaceNativeDesc.connection = m_NativeWindow.pXCBConnection;
-    wgpuSurfaceNativeDesc.window     = m_NativeWindow.WindowId;
+    wgpuSurfaceNativeDesc.window = m_NativeWindow.WindowId;
 #elif PLATFROM_MACOS
     WGPUSurfaceDescriptorFromMetalLayer wgpuSurfaceNativeDesc{};
     wgpuSurfaceNativeDesc.chain  = {nullptr, WGPUSType_SurfaceDescriptorFromMetalLayer};
@@ -443,6 +507,13 @@ void SwapChainWebGPUImpl::ConfigureSurface()
 
         m_SwapChainDesc.Width  = WindowRect.right - WindowRect.left;
         m_SwapChainDesc.Height = WindowRect.bottom - WindowRect.top;
+#elif PLATFORM_EMSCRIPTEN
+        int32_t CanvasWidth = 0;
+        int32_t CanvasHeight = 0;
+        emscripten_get_canvas_element_size(m_NativeWindow.pCanvasId, &CanvasWidth, &CanvasHeight);
+
+        m_SwapChainDesc.Width = static_cast<Uint32>(CanvasWidth);
+        m_SwapChainDesc.Height = static_cast<Uint32>(CanvasHeight);
 #endif
     }
 
@@ -450,7 +521,7 @@ void SwapChainWebGPUImpl::ConfigureSurface()
 
     WGPUTextureFormat wgpuRTVFormats[] = {
         wgpuPreferredFormat,
-        WGPUConverUnormToSRGB(wgpuPreferredFormat),
+        WGPUConvertUnormToSRGB(wgpuPreferredFormat),
     };
 
     WGPUSurfaceConfiguration wgpuSurfaceConfig{};

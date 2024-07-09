@@ -235,7 +235,7 @@ void BufferWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData
 
         wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Read, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, &CallbackCapture);
         while (!CallbackCapture.IsMapped)
-            m_pDevice->PollEvents(false);
+            m_pDevice->PollEvents(true);
 
         pMappedData = m_MappedData.data();
     }
@@ -288,7 +288,7 @@ void BufferWebGPUImpl::Unmap(MAP_TYPE MapType)
 
         wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Write, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, &CallbackCapture);
         while (!CallbackCapture.IsMapped)
-            m_pDevice->PollEvents(false);
+            m_pDevice->PollEvents(true);
     }
     else if (MapType == MAP_READ_WRITE)
     {

@@ -391,7 +391,7 @@ void* TextureWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags)
 
         wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Read, 0, m_MappedData.size(), MapAsyncCallback, &CallbackCapture);
         while (!CallbackCapture.IsMapped)
-            m_pDevice->PollEvents(false);
+            m_pDevice->PollEvents(true);
 
         m_MapState = TextureMapState::Read;
         return m_MappedData.data();
@@ -431,7 +431,6 @@ void TextureWebGPUImpl::Unmap()
         auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
             if (MapStatus == WGPUBufferMapAsyncStatus_Success)
             {
-
                 auto*       pCaptureData = static_cast<CallbackCaptureData*>(pUserData);
                 auto*       pTexture     = pCaptureData->pTexture;
                 const auto  DataSize     = pTexture->m_MappedData.size();
@@ -449,7 +448,7 @@ void TextureWebGPUImpl::Unmap()
 
         wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Write, 0, m_MappedData.size(), MapAsyncCallback, &CallbackCapture);
         while (!CallbackCapture.IsMapped)
-            m_pDevice->PollEvents(false);
+            m_pDevice->PollEvents(true);
     }
     else
     {

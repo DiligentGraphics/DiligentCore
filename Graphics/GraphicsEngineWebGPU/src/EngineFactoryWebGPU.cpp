@@ -42,6 +42,9 @@
 #    include "dawn/native/DawnNative.h"
 #endif
 
+#if PLATFORM_EMSCRIPTEN
+#    include <emscripten.h>
+#endif
 
 namespace Diligent
 {
@@ -92,6 +95,15 @@ public:
 namespace
 {
 
+void InstancePoolEvents(WGPUInstance wgpuInstance)
+{
+#if PLATFORM_EMSCRIPTEN
+    emscripten_sleep(0);
+#else
+    wgpuInstanceProcessEvents(wgpuInstance);
+#endif
+}
+
 std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstance, Version MinVersion)
 {
     std::vector<WebGPUAdapterWrapper> wgpuAdapters;
@@ -101,14 +113,19 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
         WGPUAdapter              Adapter       = nullptr;
         WGPURequestAdapterStatus RequestStatus = {};
         String                   Message       = {};
+        bool                     IsReady       = {};
     };
 
     auto OnAdapterRequestEnded = [](WGPURequestAdapterStatus Status, WGPUAdapter Adapter, char const* Message, void* pCallbackUserData) {
-        auto* pUserData          = static_cast<CallbackUserData*>(pCallbackUserData);
-        pUserData->Adapter       = Adapter;
-        pUserData->RequestStatus = Status;
-        if (Message != nullptr)
-            pUserData->Message = Message;
+        if (pCallbackUserData != nullptr)
+        {
+            auto* pUserData          = static_cast<CallbackUserData*>(pCallbackUserData);
+            pUserData->Adapter       = Adapter;
+            pUserData->RequestStatus = Status;
+            pUserData->IsReady       = true;
+            if (Message != nullptr)
+                pUserData->Message = Message;
+        }
     };
 
     WGPUPowerPreference PowerPreferences[] = {
@@ -118,12 +135,12 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
     for (const auto& powerPreference : PowerPreferences)
     {
         CallbackUserData UserData{};
-#if PLATFORM_EMSCRIPTEN
+
         WGPURequestAdapterOptions Options{nullptr, nullptr, powerPreference, WGPUBackendType_Undefined, false, false};
-#else
-        WGPURequestAdapterOptions Options{nullptr, nullptr, powerPreference, WGPUBackendType_Undefined, false};
-#endif
         wgpuInstanceRequestAdapter(wgpuInstance, &Options, OnAdapterRequestEnded, &UserData);
+
+        while (!UserData.IsReady)
+            InstancePoolEvents(wgpuInstance);
 
         if (UserData.RequestStatus == WGPURequestAdapterStatus_Success)
         {
@@ -142,55 +159,60 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
     return wgpuAdapters;
 }
 
-WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineCI, WGPUAdapter Adapter)
+WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineCI, WGPUInstance wgpuInstance, WGPUAdapter wgpuAdapter)
 {
+    WGPUSupportedLimits SupportedLimits{};
+    wgpuAdapterGetLimits(wgpuAdapter, &SupportedLimits);
+
+    std::vector<WGPUFeatureName> Features{};
+    {
+        if (EngineCI.Features.DepthBiasClamp && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_DepthClipControl))
+            Features.push_back(WGPUFeatureName_DepthClipControl);
+
+        if (EngineCI.Features.TimestampQueries && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TimestampQuery))
+            Features.push_back(WGPUFeatureName_TimestampQuery);
+
+        if (EngineCI.Features.TextureCompressionBC && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureCompressionBC))
+            Features.push_back(WGPUFeatureName_TextureCompressionBC);
+
+        if (EngineCI.Features.ShaderFloat16 && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_ShaderF16))
+            Features.push_back(WGPUFeatureName_ShaderF16);
+
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_Depth32FloatStencil8))
+            Features.push_back(WGPUFeatureName_Depth32FloatStencil8);
+
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_Float32Filterable))
+            Features.push_back(WGPUFeatureName_Float32Filterable);
+
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_IndirectFirstInstance))
+            Features.push_back(WGPUFeatureName_IndirectFirstInstance);
+
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_RG11B10UfloatRenderable))
+            Features.push_back(WGPUFeatureName_RG11B10UfloatRenderable);
+
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_BGRA8UnormStorage))
+            Features.push_back(WGPUFeatureName_BGRA8UnormStorage);
+    }
+
     struct CallbackUserData
     {
         WGPUDevice              Device        = nullptr;
         WGPURequestDeviceStatus RequestStatus = {};
         String                  Message       = {};
+        bool                    IsReady       = {};
     } UserData;
 
     auto OnDeviceRequestEnded = [](WGPURequestDeviceStatus Status, WGPUDevice Device, char const* Message, void* pCallbackUserData) {
-        auto* pUserData          = static_cast<CallbackUserData*>(pCallbackUserData);
-        pUserData->Device        = Device;
-        pUserData->RequestStatus = Status;
-        if (Message != nullptr)
-            pUserData->Message = Message;
+        if (pCallbackUserData != nullptr)
+        {
+            auto* pUserData          = static_cast<CallbackUserData*>(pCallbackUserData);
+            pUserData->Device        = Device;
+            pUserData->RequestStatus = Status;
+            pUserData->IsReady       = true;
+            if (Message != nullptr)
+                pUserData->Message = Message;
+        }
     };
-
-    WGPUSupportedLimits SupportedLimits{};
-    wgpuAdapterGetLimits(Adapter, &SupportedLimits);
-
-    std::vector<WGPUFeatureName> Features{};
-    {
-        if (EngineCI.Features.DepthBiasClamp && wgpuAdapterHasFeature(Adapter, WGPUFeatureName_DepthClipControl))
-            Features.push_back(WGPUFeatureName_DepthClipControl);
-
-        if (EngineCI.Features.TimestampQueries && wgpuAdapterHasFeature(Adapter, WGPUFeatureName_TimestampQuery))
-            Features.push_back(WGPUFeatureName_TimestampQuery);
-
-        if (EngineCI.Features.TextureCompressionBC && wgpuAdapterHasFeature(Adapter, WGPUFeatureName_TextureCompressionBC))
-            Features.push_back(WGPUFeatureName_TextureCompressionBC);
-
-        if (EngineCI.Features.ShaderFloat16 && wgpuAdapterHasFeature(Adapter, WGPUFeatureName_ShaderF16))
-            Features.push_back(WGPUFeatureName_ShaderF16);
-
-        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_Depth32FloatStencil8))
-            Features.push_back(WGPUFeatureName_Depth32FloatStencil8);
-
-        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_Float32Filterable))
-            Features.push_back(WGPUFeatureName_Float32Filterable);
-
-        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_IndirectFirstInstance))
-            Features.push_back(WGPUFeatureName_IndirectFirstInstance);
-
-        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_RG11B10UfloatRenderable))
-            Features.push_back(WGPUFeatureName_RG11B10UfloatRenderable);
-
-        if (wgpuAdapterHasFeature(Adapter, WGPUFeatureName_BGRA8UnormStorage))
-            Features.push_back(WGPUFeatureName_BGRA8UnormStorage);
-    }
 
     auto DeviceLostCallback = [](WGPUDeviceLostReason Reason, char const* Message, void* pUserdata) {
         bool Expression = Reason != WGPUDeviceLostReason_Destroyed;
@@ -207,7 +229,10 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
     DeviceDesc.requiredFeatureCount = Features.size();
     DeviceDesc.requiredFeatures     = Features.data();
     DeviceDesc.deviceLostCallback   = DeviceLostCallback;
-    wgpuAdapterRequestDevice(Adapter, &DeviceDesc, OnDeviceRequestEnded, &UserData);
+    wgpuAdapterRequestDevice(wgpuAdapter, &DeviceDesc, OnDeviceRequestEnded, &UserData);
+
+    while (!UserData.IsReady)
+        InstancePoolEvents(wgpuInstance);
 
     if (UserData.RequestStatus != WGPURequestDeviceStatus_Success)
         LOG_ERROR_AND_THROW(UserData.Message);
@@ -251,23 +276,24 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
     {
         //TODO
         auto& Features{AdapterInfo.Features};
-        Features.SeparablePrograms           = DEVICE_FEATURE_STATE_ENABLED;
-        Features.ShaderResourceQueries       = DEVICE_FEATURE_STATE_ENABLED;
-        Features.WireframeFill               = DEVICE_FEATURE_STATE_ENABLED;
-        Features.ComputeShaders              = DEVICE_FEATURE_STATE_ENABLED;
-        Features.OcclusionQueries            = DEVICE_FEATURE_STATE_ENABLED;
-        Features.BinaryOcclusionQueries      = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DurationQueries             = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DepthBiasClamp              = DEVICE_FEATURE_STATE_ENABLED;
-        Features.IndependentBlend            = DEVICE_FEATURE_STATE_ENABLED;
+        Features.SeparablePrograms         = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ShaderResourceQueries     = DEVICE_FEATURE_STATE_ENABLED;
+        Features.WireframeFill             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ComputeShaders            = DEVICE_FEATURE_STATE_ENABLED;
+        Features.OcclusionQueries          = DEVICE_FEATURE_STATE_ENABLED;
+        Features.BinaryOcclusionQueries    = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DurationQueries           = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DepthBiasClamp            = DEVICE_FEATURE_STATE_ENABLED;
+        Features.IndependentBlend          = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DualSourceBlend           = DEVICE_FEATURE_STATE_ENABLED;
+        Features.MultiViewport             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.PixelUAVWritesAndAtomics  = DEVICE_FEATURE_STATE_ENABLED;
+        Features.TextureUAVExtendedFormats = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DepthClamp                = DEVICE_FEATURE_STATE_ENABLED;
+
+        Features.FormattedBuffers            = DEVICE_FEATURE_STATE_DISABLED;
         Features.ShaderResourceStaticArrays  = DEVICE_FEATURE_STATE_DISABLED;
         Features.ShaderResourceRuntimeArrays = DEVICE_FEATURE_STATE_DISABLED;
-        Features.DualSourceBlend             = DEVICE_FEATURE_STATE_ENABLED;
-        Features.MultiViewport               = DEVICE_FEATURE_STATE_ENABLED;
-        Features.PixelUAVWritesAndAtomics    = DEVICE_FEATURE_STATE_ENABLED;
-        Features.TextureUAVExtendedFormats   = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DepthClamp                  = DEVICE_FEATURE_STATE_ENABLED;
-        Features.FormattedBuffers            = DEVICE_FEATURE_STATE_DISABLED;
 
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_DepthClipControl))
             Features.DepthBiasClamp = DEVICE_FEATURE_STATE_ENABLED;
@@ -367,9 +393,13 @@ void EngineFactoryWebGPUImpl::EnumerateAdapters(Version              MinVersion,
                                                 Uint32&              NumAdapters,
                                                 GraphicsAdapterInfo* Adapters) const
 {
-
+    // Not implemented in Emscripten https://github.com/emscripten-core/emscripten/blob/217010a223375e6e9251669187d406ef2ddf266e/system/lib/webgpu/webgpu.cpp#L24
+#if PLATFORM_EMSCRIPTEN
+    WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(nullptr)};
+#else
     WGPUInstanceDescriptor wgpuInstanceDesc = {};
     WebGPUInstanceWrapper  wgpuInstance{wgpuCreateInstance(&wgpuInstanceDesc)};
+#endif
     if (!wgpuInstance)
         LOG_ERROR_AND_THROW("Failed to create WebGPU instance");
 
@@ -406,8 +436,13 @@ void EngineFactoryWebGPUImpl::CreateDeviceAndContextsWebGPU(const EngineWebGPUCr
 
     try
     {
+        // Not implemented in Emscripten https://github.com/emscripten-core/emscripten/blob/217010a223375e6e9251669187d406ef2ddf266e/system/lib/webgpu/webgpu.cpp#L24
+#if PLATFORM_EMSCRIPTEN
+        WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(nullptr)};
+#else
         WGPUInstanceDescriptor wgpuInstanceDesc = {};
         WebGPUInstanceWrapper  wgpuInstance{wgpuCreateInstance(&wgpuInstanceDesc)};
+#endif
         if (!wgpuInstance)
             LOG_ERROR_AND_THROW("Failed to create WebGPU instance");
 
@@ -426,7 +461,7 @@ void EngineFactoryWebGPUImpl::CreateDeviceAndContextsWebGPU(const EngineWebGPUCr
             SpecificAdapter = std::move(Adapters[0]);
         }
 
-        WebGPUDeviceWrapper Device = CreateDeviceForAdapter(EngineCI, SpecificAdapter.Get());
+        WebGPUDeviceWrapper Device = CreateDeviceForAdapter(EngineCI, wgpuInstance.Get(), SpecificAdapter.Get());
         AttachToWebGPUDevice(wgpuInstance.Release(), SpecificAdapter.Release(), Device.Release(), EngineCI, ppDevice, ppImmediateContext);
     }
     catch (const std::runtime_error&)

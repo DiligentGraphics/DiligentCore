@@ -147,7 +147,7 @@ PUBLIC
 
 if(PLATFORM_WIN32)
     # Do not add 'lib' prefix when building with MinGW
-    set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES PREFIX "")
+    set_target_properties(Diligent-GraphicsEngineWebGPU-shared PROPERTIES PREFIX "")
 
     # Set output name to GraphicsEngineWebGPU_{32|64}{r|d}
     set_dll_output_name(Diligent-GraphicsEngineWebGPU-shared GraphicsEngineWebGPU)
@@ -181,7 +181,7 @@ PRIVATE
 )
 
 if (PLATFORM_EMSCRIPTEN)
-    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: -s USE_WEBGPU=1 -s DISABLE_EXCEPTION_CATCHING=0")
+    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: -s USE_WEBGPU=1 -s ASYNCIFY=1 -s DISABLE_EXCEPTION_CATCHING=0")
 endif()
 
 target_compile_definitions(Diligent-GraphicsEngineWebGPU-shared PUBLIC ENGINE_DLL=1)
