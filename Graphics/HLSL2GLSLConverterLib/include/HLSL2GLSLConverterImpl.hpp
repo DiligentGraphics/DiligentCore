@@ -220,7 +220,7 @@ private:
     {
         Undefined,
 #define ADD_KEYWORD(keyword)kw_##keyword,
-        ITERATE_KEYWORDS(ADD_KEYWORD)
+        ITERATE_HLSL_KEYWORDS(ADD_KEYWORD)
 #undef ADD_KEYWORD
         PreprocessorDirective,
         Operator,

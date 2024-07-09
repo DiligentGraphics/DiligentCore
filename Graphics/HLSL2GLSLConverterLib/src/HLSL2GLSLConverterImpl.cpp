@@ -405,7 +405,7 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
 {
     // Populate HLSL keywords hash map
 #define DEFINE_KEYWORD(keyword) m_HLSLKeywords.insert(std::make_pair(#keyword, TokenInfo(TokenType::kw_##keyword, #keyword)));
-    ITERATE_KEYWORDS(DEFINE_KEYWORD)
+    ITERATE_HLSL_KEYWORDS(DEFINE_KEYWORD)
 #undef DEFINE_KEYWORD
 
     // Prepare texture function stubs
