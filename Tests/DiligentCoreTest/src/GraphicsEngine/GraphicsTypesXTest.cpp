@@ -93,6 +93,7 @@ TEST(GraphicsTypesXTest, SubpassDescX)
     constexpr AttachmentReference   Inputs[]        = {{2, RESOURCE_STATE_SHADER_RESOURCE}, {4, RESOURCE_STATE_SHADER_RESOURCE}};
     constexpr AttachmentReference   RenderTargets[] = {{1, RESOURCE_STATE_RENDER_TARGET}, {2, RESOURCE_STATE_RENDER_TARGET}};
     constexpr AttachmentReference   Resolves[]      = {{3, RESOURCE_STATE_RESOLVE_DEST}, {4, RESOURCE_STATE_RESOLVE_DEST}};
+    constexpr AttachmentReference   Resolves2[]     = {{ATTACHMENT_UNUSED, RESOURCE_STATE_UNKNOWN}, {4, RESOURCE_STATE_RESOLVE_DEST}};
     constexpr AttachmentReference   DepthStencil    = {5, RESOURCE_STATE_DEPTH_WRITE};
     constexpr Uint32                Preserves[]     = {1, 3, 5};
     constexpr ShadingRateAttachment ShadingRate     = {{6, RESOURCE_STATE_SHADING_RATE}, 128, 256};
@@ -147,8 +148,7 @@ TEST(GraphicsTypesXTest, SubpassDescX)
             .AddRenderTarget(RenderTargets[1]);
         EXPECT_EQ(DescX, Ref);
 
-        constexpr AttachmentReference Resolves2[] = {{ATTACHMENT_UNUSED, RESOURCE_STATE_UNKNOWN}, {4, RESOURCE_STATE_RESOLVE_DEST}};
-        Ref.pResolveAttachments                   = Resolves2;
+        Ref.pResolveAttachments = Resolves2;
         DescX.ClearRenderTargets();
         DescX
             .AddRenderTarget(RenderTargets[0])
