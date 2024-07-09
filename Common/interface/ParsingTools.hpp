@@ -545,6 +545,7 @@ std::string GetContext(const IteratorType& Start, const IteratorType& End, Itera
         Ctx << ' ';
     Ctx << '^';
 
+    if (Pos != End)
     {
         auto   CtxEnd    = Pos;
         size_t LineBelow = 0;

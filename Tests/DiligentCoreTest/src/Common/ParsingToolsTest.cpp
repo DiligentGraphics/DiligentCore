@@ -394,32 +394,36 @@ sint occaecat //cupidatat non proident.
 
 TEST(Common_ParsingTools, GetContext)
 {
-    static const char* TestStr =
+    const std::string TestStr =
         "A12345678\n"
         "B12345678\n"
         "C12345678\n"
         "D12345678\n"
         "E12345678\n"
         "F12345678\n";
-    const auto StrEnd = TestStr + strlen(TestStr);
+
+    auto Test = [&TestStr](size_t Offset, size_t NumLines, const char* RefStr) {
+        EXPECT_STREQ(GetContext(TestStr.begin(), TestStr.end(), TestStr.begin() + Offset, NumLines).c_str(), RefStr);
+        EXPECT_STREQ(GetContext(TestStr.c_str(), TestStr.c_str() + TestStr.length(), TestStr.c_str() + Offset, NumLines).c_str(), RefStr);
+    };
 
     {
         static const char* RefStr =
             "A12345678\n"
             "^";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 0, 0).c_str(), RefStr);
+        Test(0, 0, RefStr);
     }
     {
         static const char* RefStr =
             "A12345678\n"
             "        ^";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 8, 0).c_str(), RefStr);
+        Test(8, 0, RefStr);
     }
     {
         static const char* RefStr =
             "A12345678\n"
             "         ^";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 9, 0).c_str(), RefStr);
+        Test(9, 0, RefStr);
     }
 
 
@@ -427,19 +431,19 @@ TEST(Common_ParsingTools, GetContext)
         static const char* RefStr =
             "F12345678\n"
             "^";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 50, 0).c_str(), RefStr);
+        Test(50, 0, RefStr);
     }
     {
         static const char* RefStr =
             "F12345678\n"
             "        ^";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 58, 0).c_str(), RefStr);
+        Test(58, 0, RefStr);
     }
     {
         static const char* RefStr =
             "F12345678\n"
             "         ^";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 59, 0).c_str(), RefStr);
+        Test(59, 0, RefStr);
     }
 
 
@@ -448,21 +452,21 @@ TEST(Common_ParsingTools, GetContext)
             "A12345678\n"
             "^\n"
             "B12345678";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 0, 1).c_str(), RefStr);
+        Test(0, 1, RefStr);
     }
     {
         static const char* RefStr =
             "A12345678\n"
             "        ^\n"
             "B12345678";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 8, 1).c_str(), RefStr);
+        Test(8, 1, RefStr);
     }
     {
         static const char* RefStr =
             "A12345678\n"
             "         ^\n"
             "B12345678";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 9, 1).c_str(), RefStr);
+        Test(9, 1, RefStr);
     }
 
 
@@ -472,7 +476,7 @@ TEST(Common_ParsingTools, GetContext)
             "C12345678\n"
             "^\n"
             "D12345678";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 20, 1).c_str(), RefStr);
+        Test(20, 1, RefStr);
     }
     {
         static const char* RefStr =
@@ -480,7 +484,7 @@ TEST(Common_ParsingTools, GetContext)
             "C12345678\n"
             "        ^\n"
             "D12345678";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 28, 1).c_str(), RefStr);
+        Test(28, 1, RefStr);
     }
     {
         static const char* RefStr =
@@ -488,7 +492,7 @@ TEST(Common_ParsingTools, GetContext)
             "C12345678\n"
             "         ^\n"
             "D12345678";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 29, 1).c_str(), RefStr);
+        Test(29, 1, RefStr);
     }
 
 
@@ -497,21 +501,21 @@ TEST(Common_ParsingTools, GetContext)
             "E12345678\n"
             "F12345678\n"
             "^\n";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 50, 1).c_str(), RefStr);
+        Test(50, 1, RefStr);
     }
     {
         static const char* RefStr =
             "E12345678\n"
             "F12345678\n"
             "        ^\n";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 58, 1).c_str(), RefStr);
+        Test(58, 1, RefStr);
     }
     {
         static const char* RefStr =
             "E12345678\n"
             "F12345678\n"
             "         ^\n";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 59, 1).c_str(), RefStr);
+        Test(59, 1, RefStr);
     }
 
     {
@@ -519,19 +523,57 @@ TEST(Common_ParsingTools, GetContext)
         EXPECT_STREQ(GetContext(EmptyStr, EmptyStr, EmptyStr, 0).c_str(), EmptyStr);
         EXPECT_STREQ(GetContext(EmptyStr, EmptyStr, EmptyStr, 1).c_str(), EmptyStr);
     }
+
+    {
+        const std::string EmptyStr = "";
+        EXPECT_STREQ(GetContext(EmptyStr.begin(), EmptyStr.end(), EmptyStr.begin(), 0).c_str(), EmptyStr.c_str());
+        EXPECT_STREQ(GetContext(EmptyStr.begin(), EmptyStr.end(), EmptyStr.begin(), 1).c_str(), EmptyStr.c_str());
+    }
 }
 
+TEST(Common_ParsingTools, GetContext_SingleLine)
+{
+    const std::string TestStr = "A12345678";
+
+    auto Test = [&TestStr](size_t Offset, size_t NumLines, const char* RefStr) {
+        EXPECT_STREQ(GetContext(TestStr.begin(), TestStr.end(), TestStr.begin() + Offset, NumLines).c_str(), RefStr);
+        EXPECT_STREQ(GetContext(TestStr.c_str(), TestStr.c_str() + TestStr.length(), TestStr.c_str() + Offset, NumLines).c_str(), RefStr);
+    };
+
+    {
+        static const char* RefStr =
+            "A12345678\n"
+            "^";
+        Test(0, 0, RefStr);
+    }
+    {
+        static const char* RefStr =
+            "A12345678\n"
+            "        ^";
+        Test(8, 0, RefStr);
+    }
+    {
+        static const char* RefStr =
+            "A12345678\n"
+            "         ^";
+        Test(9, 0, RefStr);
+    }
+}
 
 TEST(Common_ParsingTools, GetContext_CRLF)
 {
-    static const char* TestStr =
+    const std::string TestStr =
         "A1234567\r\n"
         "B1234567\r\n"
         "C1234567\r\n"
         "D1234567\r\n"
         "E1234567\r\n"
         "F1234567\r\n";
-    const auto StrEnd = TestStr + strlen(TestStr);
+
+    auto Test = [&TestStr](size_t Offset, size_t NumLines, const char* RefStr) {
+        EXPECT_STREQ(GetContext(TestStr.begin(), TestStr.end(), TestStr.begin() + Offset, NumLines).c_str(), RefStr);
+        EXPECT_STREQ(GetContext(TestStr.c_str(), TestStr.c_str() + TestStr.length(), TestStr.c_str() + Offset, NumLines).c_str(), RefStr);
+    };
 
     {
         static const char* RefStr =
@@ -539,7 +581,7 @@ TEST(Common_ParsingTools, GetContext_CRLF)
             "C1234567\n"
             "^\r\n"
             "D1234567";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 20, 1).c_str(), RefStr);
+        Test(20, 1, RefStr);
     }
     {
         static const char* RefStr =
@@ -547,7 +589,7 @@ TEST(Common_ParsingTools, GetContext_CRLF)
             "C1234567\n"
             "       ^\r\n"
             "D1234567";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 27, 1).c_str(), RefStr);
+        Test(27, 1, RefStr);
     }
     {
         static const char* RefStr =
@@ -555,27 +597,30 @@ TEST(Common_ParsingTools, GetContext_CRLF)
             "C1234567\n"
             "        ^\r\n"
             "D1234567";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 28, 1).c_str(), RefStr);
+        Test(28, 1, RefStr);
     }
 }
 
 
 TEST(Common_ParsingTools, GetContext_EmptyLines)
 {
-    static const char* TestStr =
+    const std::string TestStr =
         "\n"
         "A12345678\n"
         "B12345678\n"
         "\n";
-    const auto StrEnd = TestStr + strlen(TestStr);
 
+    auto Test = [&](size_t Offset, size_t NumLines, const char* RefStr) {
+        EXPECT_STREQ(GetContext(TestStr.begin(), TestStr.end(), TestStr.begin() + Offset, NumLines).c_str(), RefStr);
+        EXPECT_STREQ(GetContext(TestStr.c_str(), TestStr.c_str() + TestStr.length(), TestStr.c_str() + Offset, NumLines).c_str(), RefStr);
+    };
     {
         static const char* RefStr =
             "\n"
             "A12345678\n"
             "^\n"
             "B12345678";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 1, 1).c_str(), RefStr);
+        Test(1, 1, RefStr);
     }
 
     {
@@ -583,7 +628,7 @@ TEST(Common_ParsingTools, GetContext_EmptyLines)
             "A12345678\n"
             "B12345678\n"
             "^\n";
-        EXPECT_STREQ(GetContext(TestStr, StrEnd, TestStr + 11, 1).c_str(), RefStr);
+        Test(11, 1, RefStr);
     }
 }
 
