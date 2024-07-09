@@ -37,7 +37,6 @@
 #include "ObjectBase.hpp"
 #include "Shader.h"
 #include "HashUtils.hpp"
-#include "HLSLKeywords.h"
 #include "Constants.h"
 #include "HLSLTokenizer.hpp"
 
@@ -219,7 +218,6 @@ private:
     using TokenType     = Parsing::HLSLTokenType;
     using TokenInfo     = Parsing::HLSLTokenInfo;
     using TokenListType = Parsing::HLSLTokenizer::TokenListType;
-
 
     class ConversionStream : public ObjectBase<IHLSL2GLSLConversionStream>
     {

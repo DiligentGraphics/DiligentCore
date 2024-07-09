@@ -50,9 +50,9 @@ PRIVATE
     Diligent-Common
     Diligent-PlatformInterface
     Diligent-GraphicsEngine
-    Diligent-ShaderTools
 PUBLIC
     Diligent-GraphicsEngineInterface
+    Diligent-ShaderTools
 )
 
 find_package(Python3 REQUIRED)
