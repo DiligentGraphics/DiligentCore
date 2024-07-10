@@ -382,6 +382,12 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
         BufferInfo.StructuredBufferOffsetAlignment = wgpuSupportedLimits.limits.minStorageBufferOffsetAlignment;
     }
 
+    // Set sampler info
+    {
+        auto& BufferInfo = AdapterInfo.Sampler;
+
+        BufferInfo.MaxAnisotropy = 16;
+    }
 
     wgpuAdapterPropertiesFreeMembers(wgpuAdapterDesc);
     return AdapterInfo;

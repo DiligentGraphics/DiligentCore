@@ -347,7 +347,7 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
     constexpr auto BIND_SU  = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
     constexpr auto BIND_D   = BIND_DEPTH_STENCIL;
 
-    auto SupportedSampleCounts = SAMPLE_COUNT_1 | SAMPLE_COUNT_4 | SAMPLE_COUNT_8; // We can't query supported sample counts in WebGPU
+    auto SupportedSampleCounts = SAMPLE_COUNT_1 | SAMPLE_COUNT_4; // We can't query supported sample counts in WebGPU
 
     auto SetTexFormatInfo = [&](std::initializer_list<TEXTURE_FORMAT> Formats, BIND_FLAGS BindFlags, Uint32 FmtFlags) {
         for (auto Fmt : Formats)

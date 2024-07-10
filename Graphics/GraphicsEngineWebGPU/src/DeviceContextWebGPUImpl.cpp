@@ -497,6 +497,10 @@ void DeviceContextWebGPUImpl::ClearRenderTarget(ITextureView*                  p
 {
     TDeviceContextBase::ClearRenderTarget(pView);
 
+    static constexpr float Zero[4] = {0.f, 0.f, 0.f, 0.f};
+    if (RGBA == nullptr)
+        RGBA = Zero;
+
     Int32 RTIndex = -1;
     for (Uint32 Index = 0; Index < m_NumBoundRenderTargets; ++Index)
     {
@@ -690,7 +694,7 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
 
     EndCommandEncoders();
 
-    constexpr auto BufferToTextureCopyAlignment = 16u;
+    constexpr auto BufferToTextureCopyAlignment = 256; // https://github.com/gpuweb/gpuweb/issues/3902
 
     auto* const pTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
 
@@ -724,7 +728,7 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
     wgpuImageCopyDst.aspect   = WGPUTextureAspect_All;
     wgpuImageCopyDst.origin.x = DstBox.MinX;
     wgpuImageCopyDst.origin.y = DstBox.MinY;
-    wgpuImageCopyDst.origin.z = DstBox.MaxZ;
+    wgpuImageCopyDst.origin.z = DstBox.MinZ;
     wgpuImageCopyDst.mipLevel = MipLevel;
 
     WGPUExtent3D wgpuCopySize{};
@@ -1161,7 +1165,7 @@ void DeviceContextWebGPUImpl::BindSparseResourceMemory(const BindSparseResourceM
 
 void DeviceContextWebGPUImpl::BeginDebugGroup(const Char* Name, const float* pColor)
 {
-    VERIFY(!m_wgpuRenderPassEncoder && !m_wgpuComputePassEncoder, "Another command encoder is currently active");
+    VERIFY(!(m_wgpuRenderPassEncoder && m_wgpuComputePassEncoder), "Another command encoder is currently active");
     TDeviceContextBase::BeginDebugGroup(Name, pColor, 0);
 
     if (m_wgpuRenderPassEncoder)
@@ -1174,7 +1178,7 @@ void DeviceContextWebGPUImpl::BeginDebugGroup(const Char* Name, const float* pCo
 
 void DeviceContextWebGPUImpl::EndDebugGroup()
 {
-    VERIFY(!m_wgpuRenderPassEncoder && !m_wgpuComputePassEncoder, "Another command encoder is currently active");
+    VERIFY(!(m_wgpuRenderPassEncoder && m_wgpuComputePassEncoder), "Another command encoder is currently active");
     TDeviceContextBase::EndDebugGroup(0);
 
     if (m_wgpuRenderPassEncoder)
@@ -1187,7 +1191,7 @@ void DeviceContextWebGPUImpl::EndDebugGroup()
 
 void DeviceContextWebGPUImpl::InsertDebugLabel(const Char* Label, const float* pColor)
 {
-    VERIFY(!m_wgpuRenderPassEncoder && !m_wgpuComputePassEncoder, "Another command encoder is currently active");
+    VERIFY(!(m_wgpuRenderPassEncoder && m_wgpuComputePassEncoder), "Another command encoder is currently active");
     TDeviceContextBase::InsertDebugLabel(Label, pColor, 0);
 
     if (m_wgpuRenderPassEncoder)
@@ -1466,17 +1470,18 @@ void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
         VERIFY(m_pBoundDepthStencil == FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex], "Depth-stencil buffer in the device context is inconsistent with the framebuffer");
         const auto  FirstLastUse     = m_pActiveRenderPass->GetAttachmentFirstLastUse(DSAttachmentRef.AttachmentIndex);
         const auto& DSAttachmentDesc = RPDesc.pAttachments[DSAttachmentRef.AttachmentIndex];
+        const auto  FormatAttribs    = GetTextureFormatAttribs(DSAttachmentDesc.Format);
 
         RenderPassDepthStencilAttachment.view = m_pBoundDepthStencil->GetWebGPUTextureView();
         if (FirstLastUse.first == m_SubpassIndex)
         {
             RenderPassDepthStencilAttachment.depthLoadOp   = AttachmentLoadOpToWGPULoadOp(DSAttachmentDesc.LoadOp);
-            RenderPassDepthStencilAttachment.stencilLoadOp = AttachmentLoadOpToWGPULoadOp(DSAttachmentDesc.StencilLoadOp);
+            RenderPassDepthStencilAttachment.stencilLoadOp = FormatAttribs.ComponentType & COMPONENT_TYPE_DEPTH_STENCIL ? AttachmentLoadOpToWGPULoadOp(DSAttachmentDesc.StencilLoadOp) : WGPULoadOp_Undefined;
         }
         else
         {
             RenderPassDepthStencilAttachment.depthLoadOp   = WGPULoadOp_Load;
-            RenderPassDepthStencilAttachment.stencilLoadOp = WGPULoadOp_Load;
+            RenderPassDepthStencilAttachment.stencilLoadOp = FormatAttribs.ComponentType & COMPONENT_TYPE_DEPTH_STENCIL ? WGPULoadOp_Load : WGPULoadOp_Undefined;
         }
 
         if (RenderPassDepthStencilAttachment.depthLoadOp == WGPULoadOp_Clear)
@@ -1488,12 +1493,12 @@ void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
         if (FirstLastUse.second == m_SubpassIndex)
         {
             RenderPassDepthStencilAttachment.depthStoreOp   = AttachmentStoreOpToWGPUStoreOp(DSAttachmentDesc.StoreOp);
-            RenderPassDepthStencilAttachment.stencilStoreOp = AttachmentStoreOpToWGPUStoreOp(DSAttachmentDesc.StencilStoreOp);
+            RenderPassDepthStencilAttachment.stencilStoreOp = FormatAttribs.ComponentType & COMPONENT_TYPE_DEPTH_STENCIL ? AttachmentStoreOpToWGPUStoreOp(DSAttachmentDesc.StencilStoreOp) : WGPUStoreOp_Undefined;
         }
         else
         {
             RenderPassDepthStencilAttachment.depthStoreOp   = WGPUStoreOp_Store;
-            RenderPassDepthStencilAttachment.stencilStoreOp = WGPUStoreOp_Store;
+            RenderPassDepthStencilAttachment.stencilStoreOp = FormatAttribs.ComponentType & COMPONENT_TYPE_DEPTH_STENCIL ? WGPUStoreOp_Store : WGPUStoreOp_Undefined;
         }
     }
 
