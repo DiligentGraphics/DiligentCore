@@ -22,8 +22,8 @@ float4 CheckValue(float4 Val, float4 Expected)
                   Val.w == Expected.w ? 1.0 : 0.0);
 }
 
-#ifdef METAL
-// Metal does not support read-write access to textures
+#ifdef WEBGPU
+// WebGPU does not support read-write access to textures
 #   define CHECK_VALUE(Val, Expected) float4(1.0, 1.0, 1.0, 1.0)
 #else
 #   define CHECK_VALUE CheckValue

@@ -31,6 +31,9 @@
 #include "GLSLUtils.hpp"
 #include "ShaderToolsCommon.hpp"
 #include "WGSLUtils.hpp"
+#include "HLSLUtils.hpp"
+#include "HLSLParsingTools.hpp"
+#include "SPIRVUtils.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLangUtils.hpp"
@@ -65,20 +68,38 @@ std::vector<uint32_t> CompileShaderToSPIRV(const ShaderCreateInfo&             S
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
         SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, WebGPUDefine, WebGPUShaderCI.ppCompilerOutput);
+
+        std::string EntryPoint;
+
+        SPIRVShaderResources Resources{
+            GetRawAllocator(),
+            SPIRV,
+            ShaderCI.Desc,
+            ShaderCI.Desc.UseCombinedTextureSamplers ? ShaderCI.Desc.CombinedSamplerSuffix : nullptr,
+            ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX, // LoadShaderStageInputs
+            false,                                          // LoadUniformBufferReflection
+            EntryPoint,
+        };
+
         if (ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX)
         {
-            std::string EntryPoint;
-
-            SPIRVShaderResources Resources{
-                GetRawAllocator(),
-                SPIRV,
-                ShaderCI.Desc,
-                ShaderCI.Desc.UseCombinedTextureSamplers ? ShaderCI.Desc.CombinedSamplerSuffix : nullptr,
-                true,  // LoadShaderStageInputs
-                false, // LoadUniformBufferReflection
-                EntryPoint,
-            };
             Resources.MapHLSLVertexShaderInputs(SPIRV);
+        }
+
+        if (Resources.GetNumImgs() > 0)
+        {
+            // Image formats are lost during HLSL->SPIRV conversion, so we need to patch them manually
+            const std::string HLSLSource = BuildHLSLSourceString(ShaderCI);
+            if (!HLSLSource.empty())
+            {
+                // Extract image formats from special comments in HLSL code:
+                //    Texture2D<float4 /*format=rgba32f*/> g_RWTexture;
+                const auto ImageFormats = Parsing::ExtractGLSLImageFormatsFromHLSL(HLSLSource);
+                if (!ImageFormats.empty())
+                {
+                    SPIRV = PatchImageFormats(SPIRV, ImageFormats);
+                }
+            }
         }
     }
     else
