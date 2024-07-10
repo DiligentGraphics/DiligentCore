@@ -498,7 +498,7 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
             [&](const WGSLShaderResourceAttribs& Attribs, Uint32) //
             {
                 const char* const SamplerSuffix =
-                    (ShaderResources.IsUsingCombinedSamplers() && Attribs.Type == WGSLShaderResourceAttribs::ResourceType::Sampler) ?
+                    (ShaderResources.IsUsingCombinedSamplers() && (Attribs.Type == WGSLShaderResourceAttribs::ResourceType::Sampler || Attribs.Type == WGSLShaderResourceAttribs::ResourceType::ComparisonSampler)) ?
                     ShaderResources.GetCombinedSamplerSuffix() :
                     nullptr;
 

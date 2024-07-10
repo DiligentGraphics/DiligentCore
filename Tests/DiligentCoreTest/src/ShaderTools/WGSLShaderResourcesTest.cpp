@@ -132,7 +132,7 @@ TEST(WGSLShaderResources, Textures)
                           {"g_TexCubeArr", WGSLResourceType::Texture,      1, RESOURCE_DIM_TEX_CUBE_ARRAY, TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
                           {"g_Tex3D",      WGSLResourceType::Texture,      1, RESOURCE_DIM_TEX_3D,         TEX_FORMAT_UNKNOWN, WGSLSampleType::SInt},
                           {"g_Tex2DMS",    WGSLResourceType::TextureMS,    1, RESOURCE_DIM_TEX_2D,         TEX_FORMAT_UNKNOWN, WGSLSampleType::Float},
-                          {"g_Tex2DDepth", WGSLResourceType::DepthTexture, 1, RESOURCE_DIM_TEX_2D},
+                          {"g_Tex2DDepth", WGSLResourceType::DepthTexture, 1, RESOURCE_DIM_TEX_2D,         TEX_FORMAT_UNKNOWN, WGSLSampleType::Depth},
                           {"g_Sampler",    WGSLResourceType::Sampler},
                           {"g_SamplerCmp", WGSLResourceType::ComparisonSampler},
                           // clang-format on

@@ -128,31 +128,40 @@ WGSLShaderResourceAttribs::TextureSampleType TintSampleKindToWGSLShaderAttribsSa
     using TintResourceType = tint::inspector::ResourceBinding::ResourceType;
     using TintSampledKind  = tint::inspector::ResourceBinding::SampledKind;
 
-    if (TintBinding.resource_type != TintResourceType::kSampledTexture &&
-        TintBinding.resource_type != TintResourceType::kMultisampledTexture &&
-        TintBinding.resource_type != TintResourceType::kWriteOnlyStorageTexture &&
-        TintBinding.resource_type != TintResourceType::kReadOnlyStorageTexture &&
-        TintBinding.resource_type != TintResourceType::kReadWriteStorageTexture &&
-        TintBinding.resource_type != TintResourceType::kExternalTexture)
-        return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
-
-    switch (TintBinding.sampled_kind)
+    if (TintBinding.resource_type == TintResourceType::kSampledTexture ||
+        TintBinding.resource_type == TintResourceType::kMultisampledTexture ||
+        TintBinding.resource_type == TintResourceType::kWriteOnlyStorageTexture ||
+        TintBinding.resource_type == TintResourceType::kReadOnlyStorageTexture ||
+        TintBinding.resource_type == TintResourceType::kReadWriteStorageTexture ||
+        TintBinding.resource_type == TintResourceType::kExternalTexture)
     {
-        case TintSampledKind::kFloat:
-            return WGSLShaderResourceAttribs::TextureSampleType::Float;
+        switch (TintBinding.sampled_kind)
+        {
+            case TintSampledKind::kFloat:
+                return WGSLShaderResourceAttribs::TextureSampleType::Float;
 
-        case TintSampledKind::kSInt:
-            return WGSLShaderResourceAttribs::TextureSampleType::SInt;
+            case TintSampledKind::kSInt:
+                return WGSLShaderResourceAttribs::TextureSampleType::SInt;
 
-        case TintSampledKind::kUInt:
-            return WGSLShaderResourceAttribs::TextureSampleType::UInt;
+            case TintSampledKind::kUInt:
+                return WGSLShaderResourceAttribs::TextureSampleType::UInt;
 
-        case TintSampledKind::kUnknown:
-            return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
+            case TintSampledKind::kUnknown:
+                return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
 
-        default:
-            UNEXPECTED("Unexpected sample kind");
-            return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
+            default:
+                UNEXPECTED("Unexpected sample kind");
+                return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
+        }
+    }
+    else if (TintBinding.resource_type == TintResourceType::kDepthTexture ||
+             TintBinding.resource_type == TintResourceType::kDepthMultisampledTexture)
+    {
+        return WGSLShaderResourceAttribs::TextureSampleType::Depth;
+    }
+    else
+    {
+        return WGSLShaderResourceAttribs::TextureSampleType::Unknown;
     }
 }
 
@@ -404,9 +413,15 @@ WebGPUResourceAttribs WGSLShaderResourceAttribs::GetWebGPUAttribs() const
 
         case ResourceType::Texture:
         case ResourceType::TextureMS:
+            WebGPUAttribs.BindingType = GetWebGPUTextureBindingType(SampleType, /* IsMultisample = */ Type == ResourceType::TextureMS);
+            break;
+
         case ResourceType::DepthTexture:
+            WebGPUAttribs.BindingType = WEB_GPU_BINDING_TYPE_DEPTH_TEXTURE;
+            break;
+
         case ResourceType::DepthTextureMS:
-            WebGPUAttribs.BindingType = GetWebGPUTextureBindingType(SampleType, Type == ResourceType::TextureMS || Type == ResourceType::DepthTextureMS);
+            WebGPUAttribs.BindingType = WEB_GPU_BINDING_TYPE_DEPTH_TEXTURE_MS;
             break;
 
         case ResourceType::WOStorageTexture:

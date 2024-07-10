@@ -704,7 +704,7 @@ void GPUTestingEnvironment::Reset()
     m_NumAllowedErrors = 0;
 }
 
-RefCntAutoPtr<ITexture> GPUTestingEnvironment::CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height, void* pInitData)
+RefCntAutoPtr<ITexture> GPUTestingEnvironment::CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height, const void* pInitData)
 {
     TextureDesc TexDesc;
 
