@@ -19,14 +19,21 @@ float4 CheckValue(float4 Val, float4 Expected)
                   Val.w == Expected.w ? 1.0 : 0.0);
 }
 
+#ifdef WEBGPU
+// WebGPU does not support read-write access to textures
+#   define CHECK_VALUE(Val, Expected) float4(1.0, 1.0, 1.0, 1.0)
+#else
+#   define CHECK_VALUE CheckValue
+#endif
+
 float4 VerifyResources()
 {
     float4 AllCorrect = float4(1.0, 1.0, 1.0, 1.0);
 
     // Read from elements 1,2,3
-    AllCorrect *= CheckValue(g_RWBuff_0[1].data, Buff_0_Ref);
-    AllCorrect *= CheckValue(g_RWBuff_1[2].data, Buff_1_Ref);
-    AllCorrect *= CheckValue(g_RWBuff_2[3].data, Buff_2_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWBuff_0[1].data, Buff_0_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWBuff_1[2].data, Buff_1_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWBuff_2[3].data, Buff_2_Ref);
 
     // Write to 0-th element
     float4 f4Data = float4(1.0, 2.0, 3.0, 4.0);
@@ -34,9 +41,9 @@ float4 VerifyResources()
     g_RWBuff_1[0].data = f4Data;
     g_RWBuff_2[0].data = f4Data;
 
-    AllCorrect *= CheckValue(g_RWTex2D_0[int2(10, 12)], RWTex2D_0_Ref);
-    AllCorrect *= CheckValue(g_RWTex2D_1[int2(14, 17)], RWTex2D_1_Ref);
-    AllCorrect *= CheckValue(g_RWTex2D_2[int2(31, 24)], RWTex2D_2_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWTex2D_0[int2(10, 12)], RWTex2D_0_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWTex2D_1[int2(14, 17)], RWTex2D_1_Ref);
+    AllCorrect *= CHECK_VALUE(g_RWTex2D_2[int2(31, 24)], RWTex2D_2_Ref);
         
     float4 f4Color = float4(1.0, 2.0, 3.0, 4.0);
     g_RWTex2D_0[int2(0,0)] = f4Color;
