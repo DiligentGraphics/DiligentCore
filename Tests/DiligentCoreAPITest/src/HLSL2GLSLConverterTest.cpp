@@ -64,6 +64,12 @@ RefCntAutoPtr<IShader> CreateTestShader(const char* FileName,
 
 TEST(HLSL2GLSLConverterTest, VS_PS)
 {
+    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    if (pEnv->GetDevice()->GetDeviceInfo().IsWebGPUDevice())
+    {
+        GTEST_SKIP() << "WebGPU can't handle shaders in this test";
+    }
+
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto pVS = CreateTestShader("VS_PS.hlsl", "TestVS", SHADER_TYPE_VERTEX);
@@ -75,6 +81,10 @@ TEST(HLSL2GLSLConverterTest, VS_PS)
 TEST(HLSL2GLSLConverterTest, CS_RWTex1D)
 {
     auto* pEnv = GPUTestingEnvironment::GetInstance();
+    if (pEnv->GetDevice()->GetDeviceInfo().IsWebGPUDevice())
+    {
+        GTEST_SKIP() << "WebGPU can't handle shaders in this test";
+    }
     if (!pEnv->GetDevice()->GetDeviceInfo().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
@@ -89,6 +99,10 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex1D)
 TEST(HLSL2GLSLConverterTest, CS_RWTex2D_1)
 {
     auto* pEnv = GPUTestingEnvironment::GetInstance();
+    if (pEnv->GetDevice()->GetDeviceInfo().IsWebGPUDevice())
+    {
+        GTEST_SKIP() << "WebGPU can't handle shaders in this test";
+    }
     if (!pEnv->GetDevice()->GetDeviceInfo().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
@@ -103,6 +117,10 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex2D_1)
 TEST(HLSL2GLSLConverterTest, CS_RWTex2D_2)
 {
     auto* pEnv = GPUTestingEnvironment::GetInstance();
+    if (pEnv->GetDevice()->GetDeviceInfo().IsWebGPUDevice())
+    {
+        GTEST_SKIP() << "WebGPU can't handle shaders in this test";
+    }
     if (!pEnv->GetDevice()->GetDeviceInfo().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
@@ -117,6 +135,10 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex2D_2)
 TEST(HLSL2GLSLConverterTest, CS_RWBuff)
 {
     auto* pEnv = GPUTestingEnvironment::GetInstance();
+    if (pEnv->GetDevice()->GetDeviceInfo().IsWebGPUDevice())
+    {
+        GTEST_SKIP() << "WebGPU can't handle shaders in this test";
+    }
     if (!pEnv->GetDevice()->GetDeviceInfo().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";

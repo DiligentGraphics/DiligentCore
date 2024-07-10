@@ -182,7 +182,7 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     const auto& DevInfo = pDevice->GetDeviceInfo();
-    if (!DevInfo.Features.ComputeShaders)
+    if (!DevInfo.Features.ComputeShaders || !DevInfo.Features.FormattedBuffers)
     {
         GTEST_SKIP();
     }
