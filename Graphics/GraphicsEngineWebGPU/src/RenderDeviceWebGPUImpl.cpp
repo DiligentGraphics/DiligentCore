@@ -105,6 +105,8 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
     m_pAttachmentCleaner.reset(new AttachmentCleanerWebGPU{*this});
     m_pMipsGenerator.reset(new GenerateMipsHelperWebGPU{*this});
 
+    m_DeviceInfo.NDC = NDCAttribs{0.0f, 1.0f, -0.5f};
+
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();
 #endif
