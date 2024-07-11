@@ -192,13 +192,17 @@ TEST_P(AddressModeTest, CreateSampler)
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TEXTURE_ADDRESS_MODE AddressMode = GetParam();
+    if (AddressMode == TEXTURE_ADDRESS_BORDER && !pDevice->GetAdapterInfo().Sampler.BorderSamplingModeSupported)
+        GTEST_SKIP() << "Border address mode is not supported by this device.";
+
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
     SamplerDesc SamplerDesc;
     SamplerDesc.MinFilter = FILTER_TYPE_LINEAR;
     SamplerDesc.MagFilter = FILTER_TYPE_LINEAR;
     SamplerDesc.MipFilter = FILTER_TYPE_LINEAR;
-    SamplerDesc.AddressU = SamplerDesc.AddressV = SamplerDesc.AddressW = GetParam();
+    SamplerDesc.AddressU = SamplerDesc.AddressV = SamplerDesc.AddressW = AddressMode;
     RefCntAutoPtr<ISampler> pSampler;
     pDevice->CreateSampler(SamplerDesc, &pSampler);
     ASSERT_TRUE(pSampler);

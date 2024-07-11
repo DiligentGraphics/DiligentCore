@@ -356,6 +356,11 @@ WGPUAddressMode TexAddressModeToWGPUAddressMode(TEXTURE_ADDRESS_MODE Mode)
         case TEXTURE_ADDRESS_MIRROR: return WGPUAddressMode_MirrorRepeat;
         case TEXTURE_ADDRESS_CLAMP:  return WGPUAddressMode_ClampToEdge;
             // clang-format on
+
+        case TEXTURE_ADDRESS_BORDER:
+            UNSUPPORTED("WebGPU does not support border address mode");
+            return WGPUAddressMode_ClampToEdge;
+
         default:
             UNEXPECTED("Unexpected texture address mode");
             return WGPUAddressMode_ClampToEdge;

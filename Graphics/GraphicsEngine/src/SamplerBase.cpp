@@ -69,6 +69,12 @@ void ValidateSamplerDesc(const SamplerDesc& Desc, const IRenderDevice* pDevice)
                                 "). Check the value of AdapterInfo.Sampler.MaxAnisotropy.");
         }
     }
+    if (!AdapterInfo.Sampler.BorderSamplingModeSupported)
+    {
+        VERIFY_SAMPLER(Desc.AddressU != TEXTURE_ADDRESS_BORDER, "Border address mode is not supported by this device. Check Sampler.BorderSamplingModeSupported adapter property");
+        VERIFY_SAMPLER(Desc.AddressV != TEXTURE_ADDRESS_BORDER, "Border address mode is not supported by this device. Check Sampler.BorderSamplingModeSupported adapter property");
+        VERIFY_SAMPLER(Desc.AddressW != TEXTURE_ADDRESS_BORDER, "Border address mode is not supported by this device. Check Sampler.BorderSamplingModeSupported adapter property");
+    }
 }
 
 } // namespace Diligent
