@@ -63,13 +63,8 @@ struct ImmutableSamplerAttribsGL
     Uint32 Dummy = 0;
 };
 
-struct PipelineResourceSignatureInternalDataGL : PipelineResourceSignatureInternalData
+struct PipelineResourceSignatureInternalDataGL : PipelineResourceSignatureInternalData<PipelineResourceAttribsGL, ImmutableSamplerAttribsGL>
 {
-    const PipelineResourceAttribsGL* pResourceAttribs     = nullptr; // [NumResources]
-    Uint32                           NumResources         = 0;
-    const ImmutableSamplerAttribsGL* pImmutableSamplers   = nullptr; // unused
-    Uint32                           NumImmutableSamplers = 0;       // unused
-
     PipelineResourceSignatureInternalDataGL() noexcept
     {}
 

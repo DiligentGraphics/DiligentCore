@@ -61,13 +61,8 @@ public:
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsWebGPU, 16, "The struct is used in serialization and must be tightly packed");
 
-struct PipelineResourceSignatureInternalDataWebGPU : PipelineResourceSignatureInternalData
+struct PipelineResourceSignatureInternalDataWebGPU : PipelineResourceSignatureInternalData<PipelineResourceAttribsWebGPU, ImmutableSamplerAttribsWebGPU>
 {
-    const PipelineResourceAttribsWebGPU* pResourceAttribs     = nullptr; // [NumResources]
-    Uint32                               NumResources         = 0;
-    const ImmutableSamplerAttribsWebGPU* pImmutableSamplers   = nullptr; // [NumImmutableSamplers]
-    Uint32                               NumImmutableSamplers = 0;
-
     PipelineResourceSignatureInternalDataWebGPU() noexcept = default;
 
     explicit PipelineResourceSignatureInternalDataWebGPU(const PipelineResourceSignatureInternalData& InternalData) noexcept :

@@ -58,14 +58,10 @@ struct ImmutableSamplerAttribsVk
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization and must be tightly packed");
 
-struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData
+struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData<PipelineResourceAttribsVk, ImmutableSamplerAttribsVk>
 {
-    const PipelineResourceAttribsVk* pResourceAttribs          = nullptr; // [NumResources]
-    Uint32                           NumResources              = 0;
-    const ImmutableSamplerAttribsVk* pImmutableSamplers        = nullptr; // [NumImmutableSamplers]
-    Uint32                           NumImmutableSamplers      = 0;
-    Uint16                           DynamicUniformBufferCount = 0;
-    Uint16                           DynamicStorageBufferCount = 0;
+    Uint16 DynamicUniformBufferCount = 0;
+    Uint16 DynamicStorageBufferCount = 0;
 
     PipelineResourceSignatureInternalDataVk() noexcept
     {}

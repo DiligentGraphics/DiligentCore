@@ -38,21 +38,13 @@ bool PRSSerializerVk<Mode>::SerializeInternalData(
     ConstQual<PipelineResourceSignatureInternalDataVk>& InternalData,
     DynamicLinearAllocator*                             Allocator)
 {
-    if (!PRSSerializer<Mode>::SerializeInternalData(Ser, InternalData, Allocator))
-        return false;
-
-    if (!Ser(InternalData.DynamicUniformBufferCount,
-             InternalData.DynamicStorageBufferCount))
-        return false;
-
-    if (!Ser.SerializeArrayRaw(Allocator, InternalData.pResourceAttribs, InternalData.NumResources))
-        return false;
-    if (!Ser.SerializeArrayRaw(Allocator, InternalData.pImmutableSamplers, InternalData.NumImmutableSamplers))
-        return false;
-
     ASSERT_SIZEOF64(InternalData, 48, "Did you add a new member to PipelineResourceSignatureInternalDataVk? Please add serialization here.");
 
-    return true;
+    if (!PRSSerializer<Mode>::template SerializeInternalData<PipelineResourceSignatureInternalDataVk>(Ser, InternalData, Allocator))
+        return false;
+
+    return Ser(InternalData.DynamicUniformBufferCount,
+               InternalData.DynamicStorageBufferCount);
 }
 
 template struct PRSSerializerVk<SerializerMode::Read>;

@@ -101,6 +101,7 @@ void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                    
                                        std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1>& ResourceOffsets);
 
 /// Pipeline resource signature internal data required for serialization/deserialization.
+template <typename PipelineResourceAttribsType, typename ImmutableSamplerAttribsType>
 struct PipelineResourceSignatureInternalData
 {
     SHADER_TYPE                               ShaderStages          = SHADER_TYPE_UNKNOWN;
@@ -108,19 +109,44 @@ struct PipelineResourceSignatureInternalData
     PIPELINE_TYPE                             PipelineType          = PIPELINE_TYPE_INVALID;
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> StaticResStageIndex   = {};
 
+    // The struct is used in serialization and must be tightly packed
     Uint8 _Padding = 0;
+
+    Uint32 NumResources         = 0;
+    Uint32 NumImmutableSamplers = 0;
+
+    const PipelineResourceAttribsType* pResourceAttribs   = nullptr; // [NumResources]
+    const ImmutableSamplerAttribsType* pImmutableSamplers = nullptr; // [NumImmutableSamplers]
 
     constexpr bool operator==(const PipelineResourceSignatureInternalData& Rhs) const
     {
         // clang-format off
-        return ShaderStages          == Rhs.ShaderStages          &&
-               StaticResShaderStages == Rhs.StaticResShaderStages &&
-               PipelineType          == Rhs.PipelineType          &&
-               StaticResStageIndex   == Rhs.StaticResStageIndex;
+        if (ShaderStages          != Rhs.ShaderStages ||
+            StaticResShaderStages != Rhs.StaticResShaderStages ||
+            PipelineType          != Rhs.PipelineType ||
+            StaticResStageIndex   != Rhs.StaticResStageIndex ||
+            NumResources          != Rhs.NumResources ||
+            NumImmutableSamplers  != Rhs.NumImmutableSamplers)
         // clang-format on
+        {
+            return false;
+        }
+
+        for (Uint32 i = 0; i < NumResources; ++i)
+        {
+            if (pResourceAttribs[i] != Rhs.pResourceAttribs[i])
+                return false;
+        }
+
+        for (Uint32 i = 0; i < NumImmutableSamplers; ++i)
+        {
+            if (pImmutableSamplers[i] != Rhs.pImmutableSamplers[i])
+                return false;
+        }
+
+        return true;
     }
 };
-ASSERT_SIZEOF(PipelineResourceSignatureInternalData, 16, "The struct is used in serialization and must be tightly packed");
 
 
 /// Helper class that wraps the pipeline resource signature description.
@@ -383,10 +409,10 @@ public:
         }
     }
 
-    PipelineResourceSignatureBase(IReferenceCounters*                          pRefCounters,
-                                  RenderDeviceImplType*                        pDevice,
-                                  const PipelineResourceSignatureDesc&         Desc,
-                                  const PipelineResourceSignatureInternalData& InternalData) :
+    PipelineResourceSignatureBase(IReferenceCounters*                              pRefCounters,
+                                  RenderDeviceImplType*                            pDevice,
+                                  const PipelineResourceSignatureDesc&             Desc,
+                                  const PipelineResourceSignatureInternalDataType& InternalData) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, false /*bIsDeviceInternal*/},
         // clang-format off
         m_ShaderStages         {InternalData.ShaderStages},

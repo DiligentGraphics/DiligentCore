@@ -92,18 +92,6 @@ bool PRSSerializer<Mode>::SerializeDesc(
 }
 
 template <SerializerMode Mode>
-bool PRSSerializer<Mode>::SerializeInternalData(Serializer<Mode>&                                 Ser,
-                                                ConstQual<PipelineResourceSignatureInternalData>& InternalData,
-                                                DynamicLinearAllocator*                           Allocator)
-{
-    return Ser(InternalData.ShaderStages,
-               InternalData.StaticResShaderStages,
-               InternalData.PipelineType,
-               InternalData.StaticResStageIndex);
-    ASSERT_SIZEOF(PipelineResourceSignatureInternalData, 16, "Did you add a new member to PipelineResourceSignatureInternalData? Please add serialization here.");
-}
-
-template <SerializerMode Mode>
 bool PSOSerializer<Mode>::SerializeCreateInfo(
     Serializer<Mode>&                   Ser,
     ConstQual<PipelineStateCreateInfo>& CreateInfo,

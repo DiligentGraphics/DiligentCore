@@ -34,8 +34,41 @@
 #include "gtest/gtest.h"
 
 #include "PipelineState.h"
+#include "Serializer.hpp"
 
 using namespace Diligent;
+
+namespace Diligent
+{
+
+struct TestResourceAttribs
+{
+    Uint32 Index = 0;
+    bool   operator==(const TestResourceAttribs& rhs) const
+    {
+        return Index == rhs.Index;
+    }
+    bool operator!=(const TestResourceAttribs& rhs) const
+    {
+        return !(*this == rhs);
+    }
+};
+struct TestImmutableSamplerAttribs
+{
+    Uint32 Index = 0;
+    bool   operator==(const TestImmutableSamplerAttribs& rhs) const
+    {
+        return Index == rhs.Index;
+    }
+    bool operator!=(const TestImmutableSamplerAttribs& rhs) const
+    {
+        return !(*this == rhs);
+    }
+};
+DECL_TRIVIALLY_SERIALIZABLE(TestResourceAttribs);
+DECL_TRIVIALLY_SERIALIZABLE(TestImmutableSamplerAttribs);
+
+} // namespace Diligent
 
 namespace
 {
@@ -98,6 +131,7 @@ private:
     Int64 m_Counter = 0;
 };
 
+using TestPRSInternalData = PipelineResourceSignatureInternalData<TestResourceAttribs, TestImmutableSamplerAttribs>;
 
 TEST(PSOSerializerTest, SerializePRSDesc)
 {
@@ -159,7 +193,26 @@ TEST(PSOSerializerTest, SerializePRSDesc)
 
         SrcPRSDesc.BindingIndex = Val(Uint8{0}, Uint8{DILIGENT_MAX_RESOURCE_SIGNATURES});
 
-        PipelineResourceSignatureInternalData SrcInternalData;
+        TestResourceAttribs ResAttribs[] =
+            {
+                {1},
+                {2},
+                {3},
+                {4},
+                {5},
+                {6},
+            };
+        TestImmutableSamplerAttribs ImmSamAttribs[] =
+            {
+                {7},
+                {8},
+                {9},
+            };
+        TestPRSInternalData SrcInternalData;
+        SrcInternalData.NumResources         = _countof(ResAttribs);
+        SrcInternalData.pResourceAttribs     = ResAttribs;
+        SrcInternalData.NumImmutableSamplers = _countof(ImmSamAttribs);
+        SrcInternalData.pImmutableSamplers   = ImmSamAttribs;
 
         SrcInternalData.ShaderStages          = Val(SHADER_TYPE_GEOMETRY, (SHADER_TYPE_LAST << 1) - 1);
         SrcInternalData.StaticResShaderStages = Val(SHADER_TYPE_HULL, (SHADER_TYPE_LAST << 1) - 1);
@@ -168,13 +221,12 @@ TEST(PSOSerializerTest, SerializePRSDesc)
         for (size_t i = 0; i < SrcInternalData.StaticResStageIndex.size(); ++i)
             SrcInternalData.StaticResStageIndex[i] = Val(static_cast<Int8>(i), Int8{127});
 
-
         DynamicLinearAllocator Allocator{GetRawAllocator()};
         SerializedData         Data;
         {
             Serializer<SerializerMode::Measure> MSer;
             EXPECT_TRUE(PRSSerializer<SerializerMode::Measure>::SerializeDesc(MSer, SrcPRSDesc, nullptr));
-            EXPECT_TRUE(PRSSerializer<SerializerMode::Measure>::SerializeInternalData(MSer, SrcInternalData, nullptr));
+            EXPECT_TRUE(PRSSerializer<SerializerMode::Measure>::SerializeInternalData<TestPRSInternalData>(MSer, SrcInternalData, nullptr));
 
             Data = MSer.AllocateData(GetRawAllocator());
         }
@@ -182,17 +234,17 @@ TEST(PSOSerializerTest, SerializePRSDesc)
         {
             Serializer<SerializerMode::Write> WSer{Data};
             EXPECT_TRUE(PRSSerializer<SerializerMode::Write>::SerializeDesc(WSer, SrcPRSDesc, nullptr));
-            EXPECT_TRUE(PRSSerializer<SerializerMode::Write>::SerializeInternalData(WSer, SrcInternalData, nullptr));
+            EXPECT_TRUE(PRSSerializer<SerializerMode::Write>::SerializeInternalData<TestPRSInternalData>(WSer, SrcInternalData, nullptr));
 
             EXPECT_EQ(Data.Size(), WSer.GetSize());
         }
 
-        PipelineResourceSignatureDesc         DstPRSDesc;
-        PipelineResourceSignatureInternalData DstInternalData;
+        PipelineResourceSignatureDesc DstPRSDesc;
+        TestPRSInternalData           DstInternalData;
         {
             Serializer<SerializerMode::Read> RSer{Data};
             EXPECT_TRUE(PRSSerializer<SerializerMode::Read>::SerializeDesc(RSer, DstPRSDesc, &Allocator));
-            EXPECT_TRUE(PRSSerializer<SerializerMode::Read>::SerializeInternalData(RSer, DstInternalData, nullptr));
+            EXPECT_TRUE(PRSSerializer<SerializerMode::Read>::SerializeInternalData<TestPRSInternalData>(RSer, DstInternalData, &Allocator));
 
             EXPECT_TRUE(RSer.IsEnded());
         }

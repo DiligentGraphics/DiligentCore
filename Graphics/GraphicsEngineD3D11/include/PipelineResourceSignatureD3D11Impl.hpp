@@ -61,13 +61,8 @@ public:
 ASSERT_SIZEOF(ImmutableSamplerAttribsD3D11, 12, "The struct is used in serialization and must be tightly packed");
 
 
-struct PipelineResourceSignatureInternalDataD3D11 : PipelineResourceSignatureInternalData
+struct PipelineResourceSignatureInternalDataD3D11 : PipelineResourceSignatureInternalData<PipelineResourceAttribsD3D11, ImmutableSamplerAttribsD3D11>
 {
-    const PipelineResourceAttribsD3D11* pResourceAttribs     = nullptr; // [NumResources]
-    Uint32                              NumResources         = 0;
-    const ImmutableSamplerAttribsD3D11* pImmutableSamplers   = nullptr; // [NumImmutableSamplers]
-    Uint32                              NumImmutableSamplers = 0;
-
     PipelineResourceSignatureInternalDataD3D11() noexcept
     {}
 
