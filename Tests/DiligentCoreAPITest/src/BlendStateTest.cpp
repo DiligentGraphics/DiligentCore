@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -191,17 +191,6 @@ TEST_F(BlendStateBasicTest, CreatePSO)
     }
 
     {
-        BSDesc.AlphaToCoverageEnable = !BSDesc.AlphaToCoverageEnable;
-
-        auto pPSO = CreateTestPSO(PSOCreateInfo, true);
-        EXPECT_NE(pPSO, nullptr);
-        if (pPSO != nullptr)
-        {
-            EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.AlphaToCoverageEnable, BSDesc.AlphaToCoverageEnable);
-        }
-    }
-
-    {
         RT0.RenderTargetWriteMask = COLOR_MASK_BLUE;
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
@@ -242,6 +231,18 @@ TEST_F(BlendStateBasicTest, CreatePSO)
         if (pPSO != nullptr)
         {
             EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_ALPHA);
+        }
+    }
+
+    {
+        BSDesc.AlphaToCoverageEnable                  = True;
+        PSOCreateInfo.GraphicsPipeline.SmplDesc.Count = 4;
+
+        auto pPSO = CreateTestPSO(PSOCreateInfo, true);
+        EXPECT_NE(pPSO, nullptr);
+        if (pPSO != nullptr)
+        {
+            EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.AlphaToCoverageEnable, BSDesc.AlphaToCoverageEnable);
         }
     }
 }
