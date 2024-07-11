@@ -126,6 +126,13 @@ jobs:
         # Disable texture creation tests that are not relevant for DXC to save time
         args: --gtest_filter=-TextureCreation*
 
+    - name: DiligentCoreAPITest WebGPU
+      if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
+      with:
+        mode: wgpu
+        args: --gtest_filter=-ShaderResourceLayout.VariableAccess:ComputeShaderTest*:PipelineResourceSignatureTest.UnusedNullResources:QueryTest.*:RenderPassTest.InputAttachmentWithSignature:RenderStateCacheTest*:StreamingBufferTest.MapUnmap:TextureUploaderTest*:ReadOnlyDepth*:NullResourceBindings*:ConstantBufferReflectionTest*:GenerateImagesDotNetTest.GenerateCubeTexture:DynamicTextureArray/DynamicTextureArrayResizeTest.Run/USAGE_DEFAULT__*
+
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       if: ${{ success() && matrix.build_type != 'Debug' && matrix.cmake_generator != 'Ninja' }}
