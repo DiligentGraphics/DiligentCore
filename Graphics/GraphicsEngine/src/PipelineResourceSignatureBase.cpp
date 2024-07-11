@@ -103,6 +103,14 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             }
         }
 
+        auto AllowedResourceFlags = GetValidPipelineResourceFlags(Res.ResourceType);
+        if ((Res.Flags & ~AllowedResourceFlags) != 0)
+        {
+            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                    "). Only the following flags are valid for a ", GetShaderResourceTypeLiteralName(Res.ResourceType),
+                                    ": ", GetPipelineResourceFlagsString(AllowedResourceFlags, false, ", "), ".");
+        }
+
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0 && Features.FormattedBuffers == DEVICE_FEATURE_STATE_DISABLED)
         {
             LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (FORMATTED_BUFFER). The flag can only be used if FormattedBuffers device feature is enabled.");
@@ -110,7 +118,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0 && Features.ShaderResourceRuntimeArrays == DEVICE_FEATURE_STATE_DISABLED)
         {
-            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (RUNTIME_ARRAY). The flag can only be used if ShaderResourceRuntimeArray device feature is enabled.");
+            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (RUNTIME_ARRAY). The flag can only be used if ShaderResourceRuntimeArrays device feature is enabled.");
         }
 
         if (Res.ResourceType == SHADER_RESOURCE_TYPE_ACCEL_STRUCT && Features.RayTracing == DEVICE_FEATURE_STATE_DISABLED)
@@ -121,14 +129,6 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         if (Res.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT && Res.ShaderStages != SHADER_TYPE_PIXEL)
         {
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ResourceType (INPUT_ATTACHMENT) is only supported in pixel shader but ShaderStages are ", GetShaderStagesString(Res.ShaderStages), ".");
-        }
-
-        auto AllowedResourceFlags = GetValidPipelineResourceFlags(Res.ResourceType);
-        if ((Res.Flags & ~AllowedResourceFlags) != 0)
-        {
-            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
-                                    "). Only the following flags are valid for a ", GetShaderResourceTypeLiteralName(Res.ResourceType),
-                                    ": ", GetPipelineResourceFlagsString(AllowedResourceFlags, false, ", "), ".");
         }
 
         if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsMetalDevice())

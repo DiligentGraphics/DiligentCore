@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -238,13 +238,7 @@ TEST(PRSCreationFailureTest, InvalidInputAttachmentFlag)
         {SHADER_TYPE_PIXEL, "g_InputAttachment", 1, SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY}};
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
-    const char* ExpectedErrorSubstring;
-    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.ShaderResourceRuntimeArrays)
-        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). Only the following flags are valid for a input attachment: GENERAL_INPUT_ATTACHMENT";
-    else
-        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). The flag can only be used if ShaderResourceRuntimeArray device feature is enabled";
-
-    TestCreatePRSFailure(PRSDesc, ExpectedErrorSubstring);
+    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). Only the following flags are valid for a input attachment: GENERAL_INPUT_ATTACHMENT");
 }
 
 TEST(PRSCreationFailureTest, InvalidAccelStructFlag)
@@ -256,13 +250,7 @@ TEST(PRSCreationFailureTest, InvalidAccelStructFlag)
         {SHADER_TYPE_PIXEL, "g_AS", 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS}};
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
-    const char* ExpectedErrorSubstring;
-    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.RayTracing)
-        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].Flags (NO_DYNAMIC_BUFFERS). Only the following flags are valid for a acceleration structure: RUNTIME_ARRAY";
-    else
-        ExpectedErrorSubstring = "Incorrect Desc.Resources[1].ResourceType (ACCEL_STRUCT): ray tracing is not supported by device";
-
-    TestCreatePRSFailure(PRSDesc, ExpectedErrorSubstring);
+    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].Flags (NO_DYNAMIC_BUFFERS). Only the following flags are valid for a acceleration structure: RUNTIME_ARRAY");
 }
 
 TEST(PRSCreationFailureTest, InvalidCombinedSamplerFlag)
@@ -508,6 +496,51 @@ TEST(PRSCreationFailureTest, InvalidInputAttachmentStages)
     PRSDesc.Resources                  = Resources;
     PRSDesc.NumResources               = _countof(Resources);
     TestCreatePRSFailure(PRSDesc, "Desc.Resources[0].ResourceType (INPUT_ATTACHMENT) is only supported in pixel shader but ShaderStages are SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL");
+}
+
+TEST(PRSCreationFailureTest, NoFormattedBuffers)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.FormattedBuffers)
+        GTEST_SKIP();
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "No formatted buffers";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_VERTEX, "g_Buffer", 1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].Flags (FORMATTED_BUFFER). The flag can only be used if FormattedBuffers device feature is enabled");
+}
+
+TEST(PRSCreationFailureTest, NoShaderResourceRuntimeArrays)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.ShaderResourceRuntimeArrays)
+        GTEST_SKIP();
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "No shader resource runtime arrays";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_VERTEX, "g_Buffer", 1, SHADER_RESOURCE_TYPE_BUFFER_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].Flags (RUNTIME_ARRAY). The flag can only be used if ShaderResourceRuntimeArrays device feature is enabled");
+}
+
+TEST(PRSCreationFailureTest, NoRayTracing)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.RayTracing)
+        GTEST_SKIP();
+
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name = "No ray tracing";
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_Texture", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_VERTEX, "g_AccelStruct", 1, SHADER_RESOURCE_TYPE_ACCEL_STRUCT, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].ResourceType (ACCEL_STRUCT): ray tracing is not supported by device.");
 }
 
 } // namespace
