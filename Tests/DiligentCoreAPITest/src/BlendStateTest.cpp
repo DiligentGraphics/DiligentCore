@@ -454,9 +454,23 @@ TEST_P(BlendOperationTest, CreatePSO)
             RT.SrcBlendAlpha  = BLEND_FACTOR_SRC_ALPHA;
             RT.DestBlendAlpha = BLEND_FACTOR_INV_SRC_ALPHA;
             if (TestingAlpha)
+            {
                 RT.BlendOpAlpha = BlendOp;
+                if (BlendOp == BLEND_OPERATION_MIN || BlendOp == BLEND_OPERATION_MAX)
+                {
+                    RT.SrcBlendAlpha  = BLEND_FACTOR_ONE;
+                    RT.DestBlendAlpha = BLEND_FACTOR_ONE;
+                }
+            }
             else
+            {
                 RT.BlendOp = BlendOp;
+                if (BlendOp == BLEND_OPERATION_MIN || BlendOp == BLEND_OPERATION_MAX)
+                {
+                    RT.SrcBlend  = BLEND_FACTOR_ONE;
+                    RT.DestBlend = BLEND_FACTOR_ONE;
+                }
+            }
         }
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
