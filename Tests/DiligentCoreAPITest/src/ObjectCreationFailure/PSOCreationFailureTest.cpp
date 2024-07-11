@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1342,14 +1342,26 @@ TEST_F(PSOCreationFailureTest, InvalidArraySize)
     }
     )";
 
+    static constexpr char PSSourceWGPU[] = R"(
+    Texture2D g_Texture_0;
+    Texture2D g_Texture_1;
+    Texture2D g_Texture_2;
+    float4 main() : SV_Target
+    {
+        return g_Texture_0.Load(int3(0,0,0)) + g_Texture_1.Load(int3(0,0,0)) + g_Texture_2.Load(int3(0,0,0));
+    }
+    )";
+
     auto* const pEnv    = GPUTestingEnvironment::GetInstance();
     auto* const pDevice = pEnv->GetDevice();
 
     ShaderCreateInfo ShaderCI;
-    ShaderCI.Source         = PSSource;
-    ShaderCI.Desc           = {"Invalid Array Size (PSOCreationFailureTest)", SHADER_TYPE_PIXEL, true};
-    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.Source                         = pDevice->GetDeviceInfo().IsWebGPUDevice() ? PSSourceWGPU : PSSource;
+    ShaderCI.Desc                           = {"Invalid Array Size (PSOCreationFailureTest)", SHADER_TYPE_PIXEL, true};
+    ShaderCI.SourceLanguage                 = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler                 = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
+
     RefCntAutoPtr<IShader> pPS;
     pDevice->CreateShader(ShaderCI, &pPS);
 
