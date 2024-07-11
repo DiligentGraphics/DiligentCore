@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -101,6 +101,11 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                                         ". When separable programs are not supported, every resource is always shared between all stages. "
                                         "Use distinct resource names for each stage or define a single resource for all stages.");
             }
+        }
+
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0 && Features.FormattedBuffers == DEVICE_FEATURE_STATE_DISABLED)
+        {
+            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (FORMATTED_BUFFER). The flag can only be used if FormattedBuffers device feature is enabled.");
         }
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) != 0 && Features.ShaderResourceRuntimeArrays == DEVICE_FEATURE_STATE_DISABLED)

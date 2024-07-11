@@ -287,9 +287,9 @@ inline PipelineResourceSignatureWebGPUImpl::CACHE_GROUP PipelineResourceSignatur
     //     It is not the actual bind group index in the group layout!
     const size_t GroupId           = VarTypeToBindGroupId(Res.VarType);
     const bool   WithDynamicOffset = (Res.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
-    const bool   UseTexelBuffer    = (Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
-
-    if (WithDynamicOffset && !UseTexelBuffer)
+    VERIFY((Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) == 0, "Formatted buffers are not supported");
+    VERIFY((Res.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0, "Run-time arrays are not supported");
+    if (WithDynamicOffset)
     {
         if (Res.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
             return static_cast<CACHE_GROUP>(GroupId * CACHE_GROUP_COUNT_PER_VAR_TYPE + CACHE_GROUP_DYN_UB);
