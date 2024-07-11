@@ -144,14 +144,19 @@ WGPUSamplerBindingType GetWGPUSamplerBindingType(BindGroupEntryType EntryType, W
 
 WGPUSamplerBindingType SamplerDescToWGPUSamplerBindingType(const SamplerDesc& Desc)
 {
+    VERIFY(IsComparisonFilter(Desc.MinFilter) == IsComparisonFilter(Desc.MagFilter), "Inconsistent min/mag filters");
     if (IsComparisonFilter(Desc.MinFilter))
     {
-        VERIFY(IsComparisonFilter(Desc.MagFilter), "Inconsistent min/mag filters");
         return WGPUSamplerBindingType_Comparison;
+    }
+    else if (Desc.MinFilter == FILTER_TYPE_POINT &&
+             Desc.MagFilter == FILTER_TYPE_POINT &&
+             Desc.MipFilter == FILTER_TYPE_POINT)
+    {
+        return WGPUSamplerBindingType_NonFiltering;
     }
     else
     {
-        VERIFY(!IsComparisonFilter(Desc.MagFilter), "Inconsistent min/mag filters");
         return WGPUSamplerBindingType_Filtering;
     }
 }
