@@ -39,6 +39,7 @@
 #include <string>
 
 #include "Shader.h"
+#include "PipelineState.h"
 #include "PipelineResourceSignature.h"
 #include "DebugUtilities.hpp"
 #include "STDAllocator.hpp"
@@ -131,7 +132,7 @@ struct WGSLShaderResourceAttribs
         return static_cast<RESOURCE_DIMENSION>(ResourceDim);
     }
 
-    WebGPUResourceAttribs GetWebGPUAttribs() const;
+    WebGPUResourceAttribs GetWebGPUAttribs(SHADER_VARIABLE_FLAGS Flags) const;
 
     bool IsMultisample() const
     {

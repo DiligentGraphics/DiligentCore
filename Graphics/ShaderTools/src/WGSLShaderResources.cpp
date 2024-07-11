@@ -272,15 +272,15 @@ TEXTURE_FORMAT TintTexelFormatToTextureFormat(const tint::inspector::ResourceBin
     }
 }
 
-WEB_GPU_BINDING_TYPE GetWebGPUTextureBindingType(WGSLShaderResourceAttribs::TextureSampleType SampleType, bool IsMultisample)
+WEB_GPU_BINDING_TYPE GetWebGPUTextureBindingType(WGSLShaderResourceAttribs::TextureSampleType SampleType, bool IsMultisample, bool IsUnfilterable)
 {
     using TextureSampleType = WGSLShaderResourceAttribs::TextureSampleType;
     switch (SampleType)
     {
         case TextureSampleType::Float:
             return IsMultisample ?
-                WEB_GPU_BINDING_TYPE_FLOAT_TEXTURE_MS :
-                WEB_GPU_BINDING_TYPE_FLOAT_TEXTURE;
+                (IsUnfilterable ? WEB_GPU_BINDING_TYPE_UNFILTERABLE_FLOAT_TEXTURE_MS : WEB_GPU_BINDING_TYPE_FLOAT_TEXTURE_MS) :
+                (IsUnfilterable ? WEB_GPU_BINDING_TYPE_UNFILTERABLE_FLOAT_TEXTURE : WEB_GPU_BINDING_TYPE_FLOAT_TEXTURE);
 
         case TextureSampleType::UInt:
             return IsMultisample ?
@@ -391,7 +391,7 @@ PIPELINE_RESOURCE_FLAGS WGSLShaderResourceAttribs::GetPipelineResourceFlags(Reso
     return PIPELINE_RESOURCE_FLAG_NONE;
 }
 
-WebGPUResourceAttribs WGSLShaderResourceAttribs::GetWebGPUAttribs() const
+WebGPUResourceAttribs WGSLShaderResourceAttribs::GetWebGPUAttribs(SHADER_VARIABLE_FLAGS Flags) const
 {
     WebGPUResourceAttribs WebGPUAttribs;
     static_assert(Uint32{WGSLShaderResourceAttribs::ResourceType::NumResourceTypes} == 13, "Please handle the new resource type below");
@@ -404,7 +404,7 @@ WebGPUResourceAttribs WGSLShaderResourceAttribs::GetWebGPUAttribs() const
             break;
 
         case ResourceType::Sampler:
-            WebGPUAttribs.BindingType = WEB_GPU_BINDING_TYPE_FILTERING_SAMPLER;
+            WebGPUAttribs.BindingType = (Flags & SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU) ? WEB_GPU_BINDING_TYPE_NON_FILTERING_SAMPLER : WEB_GPU_BINDING_TYPE_FILTERING_SAMPLER;
             break;
 
         case ResourceType::ComparisonSampler:
@@ -413,7 +413,7 @@ WebGPUResourceAttribs WGSLShaderResourceAttribs::GetWebGPUAttribs() const
 
         case ResourceType::Texture:
         case ResourceType::TextureMS:
-            WebGPUAttribs.BindingType = GetWebGPUTextureBindingType(SampleType, /* IsMultisample = */ Type == ResourceType::TextureMS);
+            WebGPUAttribs.BindingType = GetWebGPUTextureBindingType(SampleType, /* IsMultisample = */ Type == ResourceType::TextureMS, /* IsUnfilterable = */ (Flags & SHADER_VARIABLE_FLAG_UNFILTERABLE_FLOAT_TEXTURE_WEBGPU));
             break;
 
         case ResourceType::DepthTexture:

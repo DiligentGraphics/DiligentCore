@@ -1198,7 +1198,7 @@ void RenderPassTest::TestInputAttachmentGeneralLayout(bool UseSignature)
 
         constexpr ShaderResourceVariableDesc Variables[] =
             {
-                {SHADER_TYPE_PIXEL, "g_SubpassInput", SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT} //
+                {SHADER_TYPE_PIXEL, "g_SubpassInput", SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT_VK} //
             };
 
         RefCntAutoPtr<IPipelineResourceSignature> pSignature;

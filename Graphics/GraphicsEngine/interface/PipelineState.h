@@ -108,9 +108,19 @@ DILIGENT_TYPED_ENUM(SHADER_VARIABLE_FLAGS, Uint8)
     /// attachment.
     ///
     /// \note This flag is only valid in Vulkan.
-    SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT = 1u << 1,
+    SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT_VK = 1u << 1,
 
-    SHADER_VARIABLE_FLAG_LAST               = SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT
+    /// Indicates that the resource is an unfilterable-float texture.
+    ///
+    /// \note This flag is only valid in WebGPU and ignored in other backends.
+    SHADER_VARIABLE_FLAG_UNFILTERABLE_FLOAT_TEXTURE_WEBGPU = 1u << 2,
+
+    /// Indicates that the resource is a non-filtering sampler.
+    ///
+    /// \note This flag is only valid in WebGPU and ignored in other backends.
+    SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU = 1u << 3,
+
+    SHADER_VARIABLE_FLAG_LAST = SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_VARIABLE_FLAGS);
 
