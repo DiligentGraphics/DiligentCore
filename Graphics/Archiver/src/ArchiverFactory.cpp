@@ -40,7 +40,7 @@ DeviceObjectArchive::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE
 {
     using DeviceType = DeviceObjectArchive::DeviceType;
     VERIFY(IsPowerOfTwo(DeviceFlag), "Only single flag is expected");
-    static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 8, "Please handle the new data type below");
+    static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 7, "Please handle the new data type below");
     switch (DeviceFlag)
     {
         case ARCHIVE_DEVICE_DATA_FLAG_NONE:

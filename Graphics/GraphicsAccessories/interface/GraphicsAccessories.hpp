@@ -469,6 +469,9 @@ PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIAB
 
 BIND_FLAGS SwapChainUsageFlagsToBindFlags(SWAP_CHAIN_USAGE_FLAGS SwapChainUsage);
 
+ARCHIVE_DEVICE_DATA_FLAGS RenderDeviceTypeToArchiveDataFlag(RENDER_DEVICE_TYPE DevType);
+RENDER_DEVICE_TYPE        ArchiveDataFlagToRenderDeviceType(ARCHIVE_DEVICE_DATA_FLAGS Flag);
+
 Uint32 ComputeMipLevelsCount(Uint32 Width);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth);

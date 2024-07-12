@@ -231,9 +231,9 @@ struct WebGPUResourceAttribs
 #if DILIGENT_CPP_INTERFACE
     constexpr WebGPUResourceAttribs() noexcept {}
 
-    WebGPUResourceAttribs(WEB_GPU_BINDING_TYPE _BindingType,
-						  RESOURCE_DIMENSION   _TextureViewDim,
-						  TEXTURE_FORMAT       _UAVTextureFormat) noexcept :
+    constexpr WebGPUResourceAttribs(WEB_GPU_BINDING_TYPE _BindingType,
+						            RESOURCE_DIMENSION   _TextureViewDim,
+						            TEXTURE_FORMAT       _UAVTextureFormat) noexcept :
 		BindingType     {_BindingType    },
 		TextureViewDim  {_TextureViewDim },
 		UAVTextureFormat{_UAVTextureFormat}

@@ -55,28 +55,28 @@ DILIGENT_TYPED_ENUM(ARCHIVE_DEVICE_DATA_FLAGS, Uint32)
     ARCHIVE_DEVICE_DATA_FLAG_NONE        = 0u,
 
     /// Direct3D11 device data will be serialized.
-    ARCHIVE_DEVICE_DATA_FLAG_D3D11       = 1u << RENDER_DEVICE_TYPE_D3D11,
+    ARCHIVE_DEVICE_DATA_FLAG_D3D11       = 1u << 0u,
 
     /// Direct3D12 device data will be serialized.
-    ARCHIVE_DEVICE_DATA_FLAG_D3D12       = 1u << RENDER_DEVICE_TYPE_D3D12,
+    ARCHIVE_DEVICE_DATA_FLAG_D3D12       = 1u << 1u,
 
     /// OpenGL device data will be serialized.
-    ARCHIVE_DEVICE_DATA_FLAG_GL          = 1u << RENDER_DEVICE_TYPE_GL,
+    ARCHIVE_DEVICE_DATA_FLAG_GL          = 1u << 2u,
 
     /// OpenGLES device data will be serialized.
-    ARCHIVE_DEVICE_DATA_FLAG_GLES        = 1u << RENDER_DEVICE_TYPE_GLES,
+    ARCHIVE_DEVICE_DATA_FLAG_GLES        = 1u << 3u,
 
     /// Vulkan device data will be serialized.
-    ARCHIVE_DEVICE_DATA_FLAG_VULKAN      = 1u << RENDER_DEVICE_TYPE_VULKAN,
+    ARCHIVE_DEVICE_DATA_FLAG_VULKAN      = 1u << 4u,
 
     /// Metal device data for MacOS will be serialized.
-    ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS = 1u << RENDER_DEVICE_TYPE_METAL,
+    ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS = 1u << 5u,
 
     /// Metal device data for iOS will be serialized.
-    ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS   = 2u << RENDER_DEVICE_TYPE_METAL,
+    ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS   = 1u << 6u,
 
     /// WebGPU device data will be serialized.
-    ARCHIVE_DEVICE_DATA_FLAG_WEBGPU      = 2u << RENDER_DEVICE_TYPE_WEBGPU,
+    ARCHIVE_DEVICE_DATA_FLAG_WEBGPU      = 1u << 7u,
 
     ARCHIVE_DEVICE_DATA_FLAG_LAST        = ARCHIVE_DEVICE_DATA_FLAG_WEBGPU,
 

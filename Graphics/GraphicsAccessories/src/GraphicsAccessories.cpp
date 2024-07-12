@@ -1523,7 +1523,7 @@ const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler)
 
 const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool bGetFullName)
 {
-    static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 8, "Please update this function to handle the new archive device data flag");
+    static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 7, "Please update this function to handle the new archive device data flag");
     switch (Flag)
     {
         // clang-format off
@@ -1877,6 +1877,78 @@ BIND_FLAGS SwapChainUsageFlagsToBindFlags(SWAP_CHAIN_USAGE_FLAGS SwapChainUsage)
         }
     }
     return BindFlags;
+}
+
+ARCHIVE_DEVICE_DATA_FLAGS RenderDeviceTypeToArchiveDataFlag(RENDER_DEVICE_TYPE DevType)
+{
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 8, "Please update the switch below to handle the new device type");
+    switch (DevType)
+    {
+        case RENDER_DEVICE_TYPE_D3D11:
+            return ARCHIVE_DEVICE_DATA_FLAG_D3D11;
+
+        case RENDER_DEVICE_TYPE_D3D12:
+            return ARCHIVE_DEVICE_DATA_FLAG_D3D12;
+
+        case RENDER_DEVICE_TYPE_GL:
+            return ARCHIVE_DEVICE_DATA_FLAG_GL;
+
+        case RENDER_DEVICE_TYPE_GLES:
+            return ARCHIVE_DEVICE_DATA_FLAG_GLES;
+
+        case RENDER_DEVICE_TYPE_VULKAN:
+            return ARCHIVE_DEVICE_DATA_FLAG_VULKAN;
+
+        case RENDER_DEVICE_TYPE_METAL:
+#if PLATFORM_MACOS
+            return ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
+#elif PLATFORM_IOS
+            return ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
+#else
+            UNEXPECTED("Metal is not supported on this platform");
+            return ARCHIVE_DEVICE_DATA_FLAG_NONE;
+#endif
+
+        case RENDER_DEVICE_TYPE_WEBGPU:
+            return ARCHIVE_DEVICE_DATA_FLAG_WEBGPU;
+
+        default:
+            UNEXPECTED("Unexpected device type");
+            return ARCHIVE_DEVICE_DATA_FLAG_NONE;
+    }
+}
+
+RENDER_DEVICE_TYPE ArchiveDataFlagToRenderDeviceType(ARCHIVE_DEVICE_DATA_FLAGS Flag)
+{
+    VERIFY(IsPowerOfTwo(Flag), "Exactly one flag is expected");
+    switch (Flag)
+    {
+        case ARCHIVE_DEVICE_DATA_FLAG_D3D11:
+            return RENDER_DEVICE_TYPE_D3D11;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_D3D12:
+            return RENDER_DEVICE_TYPE_D3D12;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_GL:
+            return RENDER_DEVICE_TYPE_GL;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_GLES:
+            return RENDER_DEVICE_TYPE_GLES;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:
+            return RENDER_DEVICE_TYPE_VULKAN;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
+        case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
+            return RENDER_DEVICE_TYPE_METAL;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_WEBGPU:
+            return RENDER_DEVICE_TYPE_WEBGPU;
+
+        default:
+            UNEXPECTED("Unexpected archive device data flag");
+            return RENDER_DEVICE_TYPE_UNDEFINED;
+    }
 }
 
 Uint32 ComputeMipLevelsCount(Uint32 Width)

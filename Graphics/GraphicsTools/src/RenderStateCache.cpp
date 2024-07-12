@@ -733,7 +733,7 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
         auto ArchiveShaderCI      = ShaderCI;
         ArchiveShaderCI.Desc.Name = HashStr.c_str();
         ShaderArchiveInfo ArchiveInfo;
-        ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
+        ArchiveInfo.DeviceFlags = RenderDeviceTypeToArchiveDataFlag(m_DeviceType);
         m_pSerializationDevice->CreateShader(ArchiveShaderCI, ArchiveInfo, &pArchivedShader);
         if (pArchivedShader)
         {
@@ -859,7 +859,7 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapperBase
             SignDesc.Name      = HashStr.c_str();
 
             ResourceSignatureArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << DeviceType);
+            ArchiveInfo.DeviceFlags = RenderDeviceTypeToArchiveDataFlag(DeviceType);
             RefCntAutoPtr<IPipelineResourceSignature> pSerializedSign;
             pSerializationDevice->CreatePipelineResourceSignature(SignDesc, ArchiveInfo, &pSerializedSign);
             if (!pSerializedSign)
@@ -921,7 +921,7 @@ protected:
                 ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL_VERBATIM;
             }
             ShaderArchiveInfo ArchiveInfo;
-            ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << DeviceType);
+            ArchiveInfo.DeviceFlags = RenderDeviceTypeToArchiveDataFlag(DeviceType);
             pSerializationDevice->CreateShader(ShaderCI, ArchiveInfo, &pSerializedShader);
             if (!pSerializedShader)
             {
@@ -1174,7 +1174,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
         SerializedPsoCI.SetName(HashStr.c_str());
 
         PipelineStateArchiveInfo ArchiveInfo;
-        ArchiveInfo.DeviceFlags = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1 << m_DeviceType);
+        ArchiveInfo.DeviceFlags = RenderDeviceTypeToArchiveDataFlag(m_DeviceType);
         RefCntAutoPtr<IPipelineState> pSerializedPSO;
         m_pSerializationDevice->CreatePipelineState(SerializedPsoCI, ArchiveInfo, &pSerializedPSO);
 

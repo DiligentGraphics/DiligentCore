@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -275,7 +275,7 @@ TEST(ArchiveTest, RemoveDeviceData)
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
-    const auto CurrentDeviceFlag = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1u << pDevice->GetDeviceInfo().Type);
+    const auto CurrentDeviceFlag = RenderDeviceTypeToArchiveDataFlag(pDevice->GetDeviceInfo().Type);
     const auto AllDeviceFlags    = GetDeviceBits();
 
     if ((AllDeviceFlags & ~CurrentDeviceFlag) == 0)
@@ -314,7 +314,7 @@ TEST(ArchiveTest, AppendDeviceData)
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
-    const auto CurrentDeviceFlag = static_cast<ARCHIVE_DEVICE_DATA_FLAGS>(1u << pDevice->GetDeviceInfo().Type);
+    const auto CurrentDeviceFlag = RenderDeviceTypeToArchiveDataFlag(pDevice->GetDeviceInfo().Type);
     auto       AllDeviceFlags    = GetDeviceBits() & ~CurrentDeviceFlag;
     // OpenGL and GLES use the same device-specific data.
     // When one is removed, the other is removed too.
@@ -446,7 +446,7 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     EXPECT_EQ(pSerializedShader, nullptr);
 }
 
-static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 8, "Please add new device flag to the map");
+static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 7, "Please add new device flag to the map");
 INSTANTIATE_TEST_SUITE_P(ArchiveTest,
                          TestBrokenShader,
                          testing::Values<ARCHIVE_DEVICE_DATA_FLAGS>(
@@ -668,7 +668,7 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
         const auto Bits = GetDeviceBits();
         for (const auto Type : {RENDER_DEVICE_TYPE_D3D11, RENDER_DEVICE_TYPE_D3D12, RENDER_DEVICE_TYPE_VULKAN})
         {
-            if (Bits & (1 << Type))
+            if (Bits & RenderDeviceTypeToArchiveDataFlag(Type))
                 EXPECT_NE(pSerializedVS->GetDeviceShader(Type), nullptr);
         }
     }
@@ -694,7 +694,7 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
         const auto Bits = GetDeviceBits();
         for (const auto Type : {RENDER_DEVICE_TYPE_D3D11, RENDER_DEVICE_TYPE_D3D12, RENDER_DEVICE_TYPE_VULKAN})
         {
-            if (Bits & (1 << Type))
+            if (Bits & RenderDeviceTypeToArchiveDataFlag(Type))
                 EXPECT_NE(pSerializedPS->GetDeviceShader(Type), nullptr);
         }
     }
@@ -1313,7 +1313,9 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS;
     RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
     {
-        constexpr PipelineResourceDesc Resources[] = {{SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}};
+        constexpr PipelineResourceDesc Resources[] = {
+            {SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_NONE, {WEB_GPU_BINDING_TYPE_WRITE_ONLY_TEXTURE_UAV, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA8_UNORM}},
+        };
 
         PipelineResourceSignatureDesc PRSDesc;
         PRSDesc.Name         = "ArchiveTest.ComputePipeline - PRS";
@@ -1825,8 +1827,8 @@ TEST(ArchiveTest, ResourceSignatureBindings)
 
     for (auto AllDeviceBits = GetDeviceBits() & ~ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS; AllDeviceBits != 0;)
     {
-        const auto DeviceBit  = ExtractLSB(AllDeviceBits);
-        const auto DeviceType = static_cast<RENDER_DEVICE_TYPE>(PlatformMisc::GetLSB(DeviceBit));
+        const ARCHIVE_DEVICE_DATA_FLAGS DeviceBit  = ExtractLSB(AllDeviceBits);
+        const RENDER_DEVICE_TYPE        DeviceType = ArchiveDataFlagToRenderDeviceType(DeviceBit);
 
         const auto VS_PS = SHADER_TYPE_PIXEL | SHADER_TYPE_VERTEX;
         const auto PS    = SHADER_TYPE_PIXEL;

@@ -66,7 +66,7 @@ SerializedResourceSignatureImpl::SerializedResourceSignatureImpl(IReferenceCount
         const auto Flag    = ExtractLSB(DeviceFlags);
         const auto DevType = ArchiveDeviceDataFlagToArchiveDeviceType(Flag);
 
-        static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 8, "Please update the switch below to handle the new device data type");
+        static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 7, "Please update the switch below to handle the new device data type");
         switch (Flag)
         {
 #if D3D11_SUPPORTED

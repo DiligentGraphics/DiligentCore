@@ -217,7 +217,7 @@ SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*    
     {
         const auto Flag = ExtractLSB(DeviceBits);
 
-        static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 8, "Please update the switch below to handle the new data type");
+        static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 7, "Please update the switch below to handle the new data type");
         switch (Flag)
         {
 #if D3D11_SUPPORTED
