@@ -70,41 +70,24 @@ public:
 
     const PipelineLayoutWebGPU& GetPipelineLayout() const { return m_PipelineLayout; }
 
-#ifdef DILIGENT_DEVELOPMENT
-    // Performs validation of SRB resource parameters that are not possible to validate
-    // when resource is bound.
-    using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheWebGPU*, MAX_RESOURCE_SIGNATURES>;
-    void DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const;
-#endif
-
-private:
-    struct WebGPUPipelineShaderStageInfo
+    struct ShaderStageInfo
     {
-        const SHADER_TYPE       Type;
-        ShaderWebGPUImpl* const pShader;
-        std::string             WGSL;
+        SHADER_TYPE       Type    = SHADER_TYPE_UNKNOWN;
+        ShaderWebGPUImpl* pShader = nullptr;
+        std::string       WGSL;
 
-        WebGPUPipelineShaderStageInfo(ShaderWebGPUImpl* _pShader) :
+        ShaderStageInfo() {}
+        ShaderStageInfo(ShaderWebGPUImpl* _pShader) :
             Type{_pShader->GetDesc().ShaderType},
             pShader{_pShader}
         {}
 
-        friend SHADER_TYPE GetShaderStageType(const WebGPUPipelineShaderStageInfo& Stage) { return Stage.Type; }
+        friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }
 
-        friend std::vector<const ShaderWebGPUImpl*> GetStageShaders(const WebGPUPipelineShaderStageInfo& Stage) { return {Stage.pShader}; }
+        friend std::vector<const ShaderWebGPUImpl*> GetStageShaders(const ShaderStageInfo& Stage) { return {Stage.pShader}; }
     };
-    using TShaderStages = std::vector<WebGPUPipelineShaderStageInfo>;
+    using TShaderStages = std::vector<ShaderStageInfo>;
 
-    friend TPipelineStateBase; // TPipelineStateBase::Construct needs access to InitializePipeline
-
-    template <typename PSOCreateInfoType>
-    std::vector<WebGPUPipelineShaderStageInfo> InitInternalObjects(const PSOCreateInfoType& CreateInfo);
-
-    void InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages);
-
-    void InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo);
-
-    void InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo);
 
     using TBindIndexToBindGroupIndex = std::array<Uint32, MAX_RESOURCE_SIGNATURES>;
     using TShaderResources           = std::vector<std::shared_ptr<const WGSLShaderResources>>;
@@ -124,6 +107,25 @@ private:
         const char*                       PSOName,
         const PipelineResourceLayoutDesc& ResourceLayout,
         Uint32                            SRBAllocationGranularity);
+
+#ifdef DILIGENT_DEVELOPMENT
+    // Performs validation of SRB resource parameters that are not possible to validate
+    // when resource is bound.
+    using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheWebGPU*, MAX_RESOURCE_SIGNATURES>;
+    void DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const;
+#endif
+
+private:
+    friend TPipelineStateBase; // TPipelineStateBase::Construct needs access to InitializePipeline
+
+    template <typename PSOCreateInfoType>
+    std::vector<ShaderStageInfo> InitInternalObjects(const PSOCreateInfoType& CreateInfo);
+
+    void InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages);
+
+    void InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo);
+
+    void InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo);
 
 private:
     WebGPURenderPipelineWrapper  m_wgpuRenderPipeline;

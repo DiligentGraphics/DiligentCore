@@ -77,9 +77,9 @@ void PipelineStateWebGPUImpl::Destruct()
 }
 
 template <typename PSOCreateInfoType>
-std::vector<PipelineStateWebGPUImpl::WebGPUPipelineShaderStageInfo> PipelineStateWebGPUImpl::InitInternalObjects(const PSOCreateInfoType& CreateInfo)
+std::vector<PipelineStateWebGPUImpl::ShaderStageInfo> PipelineStateWebGPUImpl::InitInternalObjects(const PSOCreateInfoType& CreateInfo)
 {
-    std::vector<WebGPUPipelineShaderStageInfo> ShaderStages;
+    std::vector<ShaderStageInfo> ShaderStages;
     ExtractShaders<ShaderWebGPUImpl>(CreateInfo, ShaderStages, /*WaitUntilShadersReady = */ true);
     VERIFY(!ShaderStages.empty(),
            "There must be at least one shader stage in the pipeline. "
