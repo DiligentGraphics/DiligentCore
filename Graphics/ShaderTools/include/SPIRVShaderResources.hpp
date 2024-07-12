@@ -153,7 +153,7 @@ public:
                          const char*           CombinedSamplerSuffix,
                          bool                  LoadShaderStageInputs,
                          bool                  LoadUniformBufferReflection,
-                         std::string&          EntryPoint);
+                         std::string&          EntryPoint) noexcept(false);
 
     // clang-format off
     SPIRVShaderResources             (const SPIRVShaderResources&)  = delete;

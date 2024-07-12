@@ -218,10 +218,14 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
     {
         if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
         {
-            auto& Allocator        = GetRawAllocator();
-            auto* pRawMem          = ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1);
-            auto  LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
-            auto* pResources       = new (pRawMem) SPIRVShaderResources //
+            auto& Allocator = GetRawAllocator();
+
+            std::unique_ptr<void, STDDeleterRawMem<void>> pRawMem{
+                ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1),
+                STDDeleterRawMem<void>(Allocator),
+            };
+            auto LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
+            new (pRawMem.get()) SPIRVShaderResources // May throw
                 {
                     Allocator,
                     m_SPIRV,
@@ -232,7 +236,7 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
                     m_EntryPoint //
                 };
             VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint);
-            m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
+            m_pShaderResources.reset(static_cast<SPIRVShaderResources*>(pRawMem.release()), STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
             if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
             {

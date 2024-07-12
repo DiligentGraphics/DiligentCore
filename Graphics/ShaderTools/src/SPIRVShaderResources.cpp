@@ -366,7 +366,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
                                            const char*           CombinedSamplerSuffix,
                                            bool                  LoadShaderStageInputs,
                                            bool                  LoadUniformBufferReflection,
-                                           std::string&          EntryPoint) :
+                                           std::string&          EntryPoint) noexcept(false) :
     m_ShaderType{shaderDesc.ShaderType}
 {
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
