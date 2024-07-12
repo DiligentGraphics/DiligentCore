@@ -6,6 +6,7 @@ set(INCLUDE
     include/AttachmentCleanerWebGPU.hpp
     include/BufferViewWebGPUImpl.hpp
     include/BufferWebGPUImpl.hpp
+    include/DearchiverWebGPUImpl.hpp
     include/DeviceContextWebGPUImpl.hpp
     include/DeviceObjectArchiveWebGPU.hpp
     include/DynamicMemoryManagerWebGPU.hpp
@@ -56,6 +57,7 @@ set(SRC
    src/AttachmentCleanerWebGPU.cpp
    src/BufferViewWebGPUImpl.cpp
    src/BufferWebGPUImpl.cpp
+   src/DearchiverWebGPUImpl.cpp
    src/DeviceContextWebGPUImpl.cpp
    src/DeviceObjectArchiveWebGPU.cpp
    src/DynamicMemoryManagerWebGPU.cpp
