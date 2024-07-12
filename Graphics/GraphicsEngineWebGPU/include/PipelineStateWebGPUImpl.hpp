@@ -72,14 +72,14 @@ public:
 
     struct ShaderStageInfo
     {
-        SHADER_TYPE       Type    = SHADER_TYPE_UNKNOWN;
-        ShaderWebGPUImpl* pShader = nullptr;
-        std::string       WGSL;
+        const SHADER_TYPE       Type;
+        ShaderWebGPUImpl* const pShader;
+        std::string             WGSL;
 
-        ShaderStageInfo() {}
         ShaderStageInfo(ShaderWebGPUImpl* _pShader) :
             Type{_pShader->GetDesc().ShaderType},
-            pShader{_pShader}
+            pShader{_pShader},
+            WGSL{_pShader->GetWGSL()}
         {}
 
         friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }
