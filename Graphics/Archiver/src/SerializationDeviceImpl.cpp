@@ -59,6 +59,9 @@ static constexpr ARCHIVE_DEVICE_DATA_FLAGS GetSupportedDeviceFlags()
     Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
     Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
 #endif
+#if WEBGPU_SUPPORTED
+    Flags = Flags | ARCHIVE_DEVICE_DATA_FLAG_WEBGPU;
+#endif
     return Flags;
 }
 

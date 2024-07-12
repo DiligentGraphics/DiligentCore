@@ -44,6 +44,9 @@ endif()
 if(GL_SUPPORTED OR GLES_SUPPORTED)
     list(APPEND SOURCE src/Archiver_GL.cpp)
 endif()
+if(WEBGPU_SUPPORTED)
+    list(APPEND SOURCE src/Archiver_WebGPU.cpp)
+endif()
 if(METAL_SUPPORTED)
     set(MTL_SOURCE src/Archiver_Mtl.mm)
     list(APPEND SOURCE ${MTL_SOURCE})
@@ -162,6 +165,16 @@ if(METAL_SUPPORTED)
     target_include_directories(Diligent-Archiver-static PRIVATE ../../../DiligentCorePro/Graphics/GraphicsEngineMetal/include)
 endif()
 
+if(WEBGPU_SUPPORTED)
+    target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineWebGPU-static)
+    if (NOT PLATFORM_EMSCRIPTEN)
+        target_link_libraries(Diligent-Archiver-static PRIVATE webgpu_dawn)
+    endif()
+    target_include_directories(Diligent-Archiver-static
+    PRIVATE
+        ../GraphicsEngineWebGPU/include
+    )
+endif()
 
 target_link_libraries(Diligent-Archiver-shared
 PUBLIC

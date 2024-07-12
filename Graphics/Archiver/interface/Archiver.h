@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -75,7 +75,10 @@ DILIGENT_TYPED_ENUM(ARCHIVE_DEVICE_DATA_FLAGS, Uint32)
     /// Metal device data for iOS will be serialized.
     ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS   = 2u << RENDER_DEVICE_TYPE_METAL,
 
-    ARCHIVE_DEVICE_DATA_FLAG_LAST        = ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS,
+    /// WebGPU device data will be serialized.
+    ARCHIVE_DEVICE_DATA_FLAG_WEBGPU      = 2u << RENDER_DEVICE_TYPE_WEBGPU,
+
+    ARCHIVE_DEVICE_DATA_FLAG_LAST        = ARCHIVE_DEVICE_DATA_FLAG_WEBGPU,
 
     ARCHIVE_DEVICE_DATA_FLAG_ALL         = ARCHIVE_DEVICE_DATA_FLAG_LAST * 2 - 1
 };

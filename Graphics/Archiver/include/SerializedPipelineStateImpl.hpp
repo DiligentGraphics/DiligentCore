@@ -166,6 +166,9 @@ private:
     template <typename CreateInfoType>
     void PatchShadersMtl(const CreateInfoType& CreateInfo, DeviceType DevType, const std::string& DumpDir) noexcept(false);
 
+    template <typename CreateInfoType>
+    void PatchShadersWebGPU(const CreateInfoType& CreateInfo) noexcept(false);
+
     // Default signatures in OpenGL are not serialized and require special handling.
     template <typename CreateInfoType>
     void PrepareDefaultSignatureGL(const CreateInfoType& CreateInfo) noexcept(false);

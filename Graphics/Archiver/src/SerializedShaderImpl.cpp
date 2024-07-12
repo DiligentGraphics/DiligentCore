@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
     {
         const auto Flag = ExtractLSB(DeviceFlags);
 
-        static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please update the switch below to handle the new device data type");
+        static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 8, "Please update the switch below to handle the new device data type");
         switch (Flag)
         {
 #if D3D11_SUPPORTED
@@ -108,6 +108,12 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS:
             case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
                 CreateShaderMtl(pRefCounters, ShaderCI, Flag == ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS ? DeviceType::Metal_MacOS : DeviceType::Metal_iOS, ppCompilerOutput);
+                break;
+#endif
+
+#if WEBGPU_SUPPORTED
+            case ARCHIVE_DEVICE_DATA_FLAG_WEBGPU:
+                CreateShaderWebGPU(pRefCounters, ShaderCI, ppCompilerOutput);
                 break;
 #endif
 

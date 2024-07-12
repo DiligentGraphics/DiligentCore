@@ -91,6 +91,7 @@ public:
         Vulkan,
         Metal_MacOS,
         Metal_iOS,
+        WebGPU,
         Count
     };
 

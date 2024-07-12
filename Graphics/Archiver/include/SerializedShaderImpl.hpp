@@ -152,6 +152,12 @@ private:
                          DeviceType              Type,
                          IDataBlob**             ppCompilerOutput) noexcept(false);
 #endif
+
+#if WEBGPU_SUPPORTED
+    void CreateShaderWebGPU(IReferenceCounters*     pRefCounters,
+                            const ShaderCreateInfo& ShaderCI,
+                            IDataBlob**             ppCompilerOutput) noexcept(false);
+#endif
 };
 
 } // namespace Diligent

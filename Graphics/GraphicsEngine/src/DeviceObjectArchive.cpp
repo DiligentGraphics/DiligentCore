@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -54,8 +54,7 @@ DeviceObjectArchive::DeviceType RenderDeviceTypeToArchiveDeviceType(RENDER_DEVIC
         case RENDER_DEVICE_TYPE_METAL:  return DeviceObjectArchive::DeviceType::Metal_iOS;
 #endif
         case RENDER_DEVICE_TYPE_WEBGPU:
-            UNSUPPORTED("WebGPU is not yet supported");
-            return DeviceObjectArchive::DeviceType::Count;
+            return DeviceObjectArchive::DeviceType::WebGPU;
 
         // clang-format on
         default:
@@ -278,7 +277,7 @@ namespace
 const char* ArchiveDeviceTypeToString(Uint32 dev)
 {
     using DeviceType = DeviceObjectArchive::DeviceType;
-    static_assert(static_cast<Uint32>(DeviceType::Count) == 6, "Please handle the new archive device type below");
+    static_assert(static_cast<Uint32>(DeviceType::Count) == 7, "Please handle the new archive device type below");
     switch (static_cast<DeviceType>(dev))
     {
             // clang-format off
@@ -288,6 +287,7 @@ const char* ArchiveDeviceTypeToString(Uint32 dev)
         case DeviceType::Vulkan:      return "Vulkan";
         case DeviceType::Metal_MacOS: return "Metal for MacOS";
         case DeviceType::Metal_iOS:   return "Metal for iOS";
+        case DeviceType::WebGPU:      return "WebGPU";
         // clang-format on
         default:
             UNEXPECTED("Unexpected device type");

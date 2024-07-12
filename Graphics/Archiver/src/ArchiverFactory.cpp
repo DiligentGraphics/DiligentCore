@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ DeviceObjectArchive::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE
 {
     using DeviceType = DeviceObjectArchive::DeviceType;
     VERIFY(IsPowerOfTwo(DeviceFlag), "Only single flag is expected");
-    static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS, "Please handle the new data type below");
+    static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 8, "Please handle the new data type below");
     switch (DeviceFlag)
     {
         case ARCHIVE_DEVICE_DATA_FLAG_NONE:
@@ -65,6 +65,9 @@ DeviceObjectArchive::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE
 
         case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:
             return DeviceType::Metal_iOS;
+
+        case ARCHIVE_DEVICE_DATA_FLAG_WEBGPU:
+            return DeviceType::WebGPU;
 
         default:
             UNEXPECTED("Unexpected data type");

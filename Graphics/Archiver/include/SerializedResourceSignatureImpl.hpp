@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -186,6 +186,10 @@ DECLARE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureVkImpl)
 
 #if METAL_SUPPORTED
 DECLARE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureMtlImpl)
+#endif
+
+#if WEBGPU_SUPPORTED
+DECLARE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureWebGPUImpl)
 #endif
 
 } // namespace Diligent

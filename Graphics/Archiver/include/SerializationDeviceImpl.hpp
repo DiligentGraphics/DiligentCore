@@ -192,6 +192,8 @@ private:
     static void GetPipelineResourceBindingsMtl(const PipelineResourceBindingAttribs& Attribs,
                                                std::vector<PipelineResourceBinding>& ResourceBindings,
                                                const Uint32                          MaxBufferArgs);
+    static void GetPipelineResourceBindingsWebGPU(const PipelineResourceBindingAttribs& Attribs,
+                                                  std::vector<PipelineResourceBinding>& ResourceBindings);
 
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final
     {

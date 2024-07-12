@@ -446,7 +446,7 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     EXPECT_EQ(pSerializedShader, nullptr);
 }
 
-static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 128, "Please add new device flag to the map");
+static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 8, "Please add new device flag to the map");
 INSTANTIATE_TEST_SUITE_P(ArchiveTest,
                          TestBrokenShader,
                          testing::Values<ARCHIVE_DEVICE_DATA_FLAGS>(
@@ -456,7 +456,8 @@ INSTANTIATE_TEST_SUITE_P(ArchiveTest,
                              ARCHIVE_DEVICE_DATA_FLAG_GLES,
                              ARCHIVE_DEVICE_DATA_FLAG_VULKAN,
                              ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS,
-                             ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS),
+                             ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS,
+                             ARCHIVE_DEVICE_DATA_FLAG_WEBGPU),
                          [](const testing::TestParamInfo<ARCHIVE_DEVICE_DATA_FLAGS>& info) //
                          {
                              return GetArchiveDeviceDataFlagString(info.param);

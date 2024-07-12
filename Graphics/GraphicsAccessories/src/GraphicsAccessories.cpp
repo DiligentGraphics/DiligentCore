@@ -1523,7 +1523,7 @@ const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler)
 
 const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool bGetFullName)
 {
-    static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 2 << 6, "Please update this function to handle the new archive device data flag");
+    static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 8, "Please update this function to handle the new archive device data flag");
     switch (Flag)
     {
         // clang-format off
@@ -1535,6 +1535,7 @@ const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool 
         case ARCHIVE_DEVICE_DATA_FLAG_VULKAN:      return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_VULKAN"      : "Vulkan";
         case ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS: return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS" : "Metal_MacOS";
         case ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS:   return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS"   : "Metal_IOS";
+        case ARCHIVE_DEVICE_DATA_FLAG_WEBGPU:      return bGetFullName ? "ARCHIVE_DEVICE_DATA_FLAG_WEBGPU"      : "WebGPU";
         // clang-format on
         default:
             UNEXPECTED("Unexpected device data flag (", Uint32{Flag}, ")");

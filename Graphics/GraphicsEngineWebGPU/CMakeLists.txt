@@ -7,6 +7,7 @@ set(INCLUDE
     include/BufferViewWebGPUImpl.hpp
     include/BufferWebGPUImpl.hpp
     include/DeviceContextWebGPUImpl.hpp
+    include/DeviceObjectArchiveWebGPU.hpp
     include/DynamicMemoryManagerWebGPU.hpp
     include/UploadMemoryManagerWebGPU.hpp
     include/EngineWebGPUImplTraits.hpp
@@ -56,6 +57,7 @@ set(SRC
    src/BufferViewWebGPUImpl.cpp
    src/BufferWebGPUImpl.cpp
    src/DeviceContextWebGPUImpl.cpp
+   src/DeviceObjectArchiveWebGPU.cpp
    src/DynamicMemoryManagerWebGPU.cpp
    src/UploadMemoryManagerWebGPU.cpp
    src/EngineFactoryWebGPU.cpp
