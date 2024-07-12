@@ -153,7 +153,8 @@ public:
                         const char*            CombinedSamplerSuffix,
                         const char*            EntryPoint,
                         const char*            EmulatedArrayIndexSuffix,
-                        bool                   LoadUniformBufferReflection) noexcept(false);
+                        bool                   LoadUniformBufferReflection,
+                        IDataBlob**            ppTintOutput) noexcept(false);
 
     // clang-format off
     WGSLShaderResources             (const WGSLShaderResources&)  = delete;

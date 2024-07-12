@@ -227,9 +227,13 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
     // Load shader resources
     if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
     {
-        auto& Allocator  = GetRawAllocator();
-        auto* pRawMem    = ALLOCATE(Allocator, "Memory for WGSLShaderResources", WGSLShaderResources, 1);
-        auto* pResources = new (pRawMem) WGSLShaderResources //
+        auto& Allocator = GetRawAllocator();
+
+        std::unique_ptr<void, STDDeleterRawMem<void>> pRawMem{
+            ALLOCATE(Allocator, "Memory for WGSLShaderResources", WGSLShaderResources, 1),
+            STDDeleterRawMem<void>(Allocator),
+        };
+        new (pRawMem.get()) WGSLShaderResources // May throw
             {
                 Allocator,
                 m_WGSL,
@@ -239,8 +243,9 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
                 ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_WGSL ? ShaderCI.EntryPoint : nullptr,
                 ShaderCI.WebGPUEmulatedArrayIndexSuffix,
                 ShaderCI.LoadConstantBufferReflection,
+                WebGPUShaderCI.ppCompilerOutput,
             };
-        m_pShaderResources.reset(pResources, STDDeleterRawMem<WGSLShaderResources>(Allocator));
+        m_pShaderResources.reset(static_cast<WGSLShaderResources*>(pRawMem.release()), STDDeleterRawMem<WGSLShaderResources>(Allocator));
     }
 
     m_Status.store(SHADER_STATUS_READY);

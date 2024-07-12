@@ -28,6 +28,7 @@
 #include "Align.hpp"
 #include "StringPool.hpp"
 #include "WGSLUtils.hpp"
+#include "DataBlobImpl.hpp"
 
 #ifdef _MSC_VER
 #    pragma warning(push)
@@ -570,16 +571,29 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
                                          const char*            CombinedSamplerSuffix,
                                          const char*            EntryPoint,
                                          const char*            EmulatedArrayIndexSuffix,
-                                         bool                   LoadUniformBufferReflection) noexcept(false)
+                                         bool                   LoadUniformBufferReflection,
+                                         IDataBlob**            ppTintOutput) noexcept(false)
 {
     VERIFY_EXPR(ShaderName != nullptr);
 
     tint::Source::File SrcFile("", WGSL);
     tint::Program      Program = tint::wgsl::reader::Parse(&SrcFile, {tint::wgsl::AllowedFeatures::Everything()});
+
+    const std::string Diagnostics = Program.Diagnostics().Str();
+    if (!Diagnostics.empty() && ppTintOutput != nullptr)
+    {
+        RefCntAutoPtr<DataBlobImpl> pOutputDataBlob = DataBlobImpl::Create(WGSL.length() + 1 + Diagnostics.length() + 1);
+
+        char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
+        memcpy(DataPtr, Diagnostics.data(), Diagnostics.length() + 1);
+        memcpy(DataPtr + Diagnostics.length() + 1, WGSL.data(), WGSL.length() + 1);
+        pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppTintOutput));
+    }
+
     if (!Program.IsValid())
     {
-        LOG_ERROR_AND_THROW("Failed to parse shader '", ShaderName, "':\n",
-                            Program.Diagnostics().Str(), "\n");
+        LOG_ERROR_AND_THROW("Failed to parse shader source '", ShaderName, "':\n",
+                            Diagnostics, "\n");
     }
 
     tint::inspector::Inspector Inspector{Program};

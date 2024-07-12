@@ -81,7 +81,8 @@ void TestWGSLResources(const char*                                   FilePath,
         nullptr, // CombinedSamplerSuffix
         nullptr, // EntryPoint
         "_",     // ArrayIndexSuffix
-        false    // LoadUniformBufferReflection
+        false,   // LoadUniformBufferReflection
+        nullptr  // ppTintOutput
     };
     LOG_INFO_MESSAGE("WGSL Resources:\n", Resources.DumpResources());
 
