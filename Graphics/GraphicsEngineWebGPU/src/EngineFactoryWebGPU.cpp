@@ -272,6 +272,11 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         AdapterInfo.NumOutputs = 0;
     }
 
+    auto CheckWebGPUFeature = [wgpuAdapter, wgpuDevice](WGPUFeatureName Feature) {
+        return ((wgpuAdapter != nullptr && wgpuAdapterHasFeature(wgpuAdapter, Feature)) ||
+                (wgpuDevice != nullptr && wgpuDeviceHasFeature(wgpuDevice, Feature)));
+    };
+
     // Enable features
     {
         //TODO
@@ -295,16 +300,16 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         Features.ShaderResourceStaticArrays  = DEVICE_FEATURE_STATE_DISABLED;
         Features.ShaderResourceRuntimeArrays = DEVICE_FEATURE_STATE_DISABLED;
 
-        if ((wgpuAdapter && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_DepthClipControl)) || (wgpuDevice && wgpuDeviceHasFeature(wgpuDevice, WGPUFeatureName_DepthClipControl)))
+        if (CheckWebGPUFeature(WGPUFeatureName_DepthClipControl))
             Features.DepthBiasClamp = DEVICE_FEATURE_STATE_ENABLED;
 
-        if ((wgpuAdapter && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TimestampQuery)) || (wgpuDevice && wgpuDeviceHasFeature(wgpuDevice, WGPUFeatureName_TimestampQuery)))
+        if (CheckWebGPUFeature(WGPUFeatureName_TimestampQuery))
             Features.TimestampQueries = DEVICE_FEATURE_STATE_ENABLED;
 
-        if ((wgpuAdapter && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureCompressionBC)) || (wgpuDevice && wgpuDeviceHasFeature(wgpuDevice, WGPUFeatureName_TextureCompressionBC)))
+        if (CheckWebGPUFeature(WGPUFeatureName_TextureCompressionBC))
             Features.TextureCompressionBC = DEVICE_FEATURE_STATE_ENABLED;
 
-        if ((wgpuAdapter && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_ShaderF16)) || (wgpuDevice && wgpuDeviceHasFeature(wgpuDevice, WGPUFeatureName_ShaderF16)))
+        if (CheckWebGPUFeature(WGPUFeatureName_ShaderF16))
             Features.ShaderFloat16 = DEVICE_FEATURE_STATE_ENABLED;
     }
 
@@ -329,7 +334,7 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         DrawCommandInfo.MaxDrawIndirectCount = ~0u;
         DrawCommandInfo.CapFlags             = DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT;
 
-        if ((wgpuAdapter && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_IndirectFirstInstance)) && (wgpuDevice && wgpuDeviceHasFeature(wgpuDevice, WGPUFeatureName_IndirectFirstInstance)))
+        if (CheckWebGPUFeature(WGPUFeatureName_IndirectFirstInstance))
             DrawCommandInfo.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
     }
 
