@@ -187,10 +187,9 @@ RefCntAutoPtr<IShaderSourceInputStreamFactory> PipelineResourceSignatureTest::pS
 
 TEST_F(PipelineResourceSignatureTest, VariableTypes)
 {
-    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice    = pEnv->GetDevice();
-    auto*       pContext   = pEnv->GetDeviceContext();
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice  = pEnv->GetDevice();
+    auto*       pContext = pEnv->GetDeviceContext();
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -255,9 +254,7 @@ TEST_F(PipelineResourceSignatureTest, VariableTypes)
         ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
     };
 
-    const char* ShaderPath = DeviceInfo.Features.ShaderResourceStaticArrays ?
-        "shaders/ShaderResourceLayout/Textures.hlsl" :
-        "shaders/ShaderResourceLayout/Textures_WGPU.hlsl";
+    const char* ShaderPath = "shaders/ShaderResourceLayout/Textures.hlsl";
 
     auto pVS = CreateShaderFromFile(SHADER_TYPE_VERTEX, ShaderPath, "VSMain", "PRS variable types test: VS", Macros, ModifyShaderCI);
     auto pPS = CreateShaderFromFile(SHADER_TYPE_PIXEL, ShaderPath, "PSMain", "PRS variable types test: PS", Macros, ModifyShaderCI);
@@ -1365,11 +1362,8 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
 
     RefCntAutoPtr<IShader> pVS;
     {
-        ShaderCI.Desc = {"CombinedImageSamplers - VS", SHADER_TYPE_VERTEX, true};
-        if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
-            ShaderCI.FilePath = DeviceInfo.Features.ShaderResourceStaticArrays ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplers_WGPU.hlsl";
-        else
-            ShaderCI.FilePath = "CombinedImageSamplersGL.vsh";
+        ShaderCI.Desc       = {"CombinedImageSamplers - VS", SHADER_TYPE_VERTEX, true};
+        ShaderCI.FilePath   = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplersGL.vsh";
         ShaderCI.EntryPoint = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "VSMain" : "main";
         pDevice->CreateShader(ShaderCI, &pVS);
     }
@@ -1377,11 +1371,8 @@ void PipelineResourceSignatureTest::TestCombinedImageSamplers(SHADER_SOURCE_LANG
 
     RefCntAutoPtr<IShader> pPS;
     {
-        ShaderCI.Desc = {"CombinedImageSamplers - PS", SHADER_TYPE_PIXEL, true};
-        if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
-            ShaderCI.FilePath = DeviceInfo.Features.ShaderResourceStaticArrays ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplers_WGPU.hlsl";
-        else
-            ShaderCI.FilePath = "CombinedImageSamplersGL.psh";
+        ShaderCI.Desc       = {"CombinedImageSamplers - PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.FilePath   = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "CombinedImageSamplers.hlsl" : "CombinedImageSamplersGL.psh";
         ShaderCI.EntryPoint = ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL ? "PSMain" : "main";
         pDevice->CreateShader(ShaderCI, &pPS);
     }
@@ -1548,15 +1539,10 @@ void PipelineResourceSignatureTest::TestFormattedOrStructuredBuffer(BUFFER_MODE 
 
     ShaderMacroHelper Macros;
 
-    const char* ShaderPath = nullptr;
-    if (BufferMode == BUFFER_MODE_FORMATTED)
-        ShaderPath = "shaders/ShaderResourceLayout/FormattedBuffers.hlsl";
-    else
-    {
-        ShaderPath = DeviceInfo.Features.ShaderResourceStaticArrays ?
-            "shaders/ShaderResourceLayout/StructuredBuffers.hlsl" :
-            "shaders/ShaderResourceLayout/StructuredBuffers_WGPU.hlsl";
-    }
+    const char* ShaderPath = BufferMode == BUFFER_MODE_FORMATTED ?
+        "shaders/ShaderResourceLayout/FormattedBuffers.hlsl" :
+        "shaders/ShaderResourceLayout/StructuredBuffers.hlsl";
+
     const char*            VSEntry     = "VSMain";
     const char*            PSEntry     = "PSMain";
     SHADER_SOURCE_LANGUAGE SrcLanguage = SHADER_SOURCE_LANGUAGE_HLSL;

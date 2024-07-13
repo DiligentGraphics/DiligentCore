@@ -1,16 +1,42 @@
 Texture2D g_tex2D_Static;
 Texture2D g_tex2D_Mut;
-Texture2D g_tex2D_MutArr[2];
+#ifdef WEBGPU
+    Texture2D g_tex2D_MutArr_0;
+    Texture2D g_tex2D_MutArr_1;
+#else
+    Texture2D g_tex2D_MutArr[2];
+#endif
 Texture2D g_tex2D_Dyn;
-Texture2D g_tex2D_DynArr[2];
-Texture2D g_tex2D_StaticArr[2];
+#ifdef WEBGPU
+    Texture2D g_tex2D_DynArr_0;
+    Texture2D g_tex2D_DynArr_1;
+    Texture2D g_tex2D_StaticArr_0;
+    Texture2D g_tex2D_StaticArr_1;
+#else
+    Texture2D g_tex2D_DynArr[2];
+    Texture2D g_tex2D_StaticArr[2];
+#endif
 
 SamplerState g_tex2D_Static_sampler;
+
 SamplerState g_tex2D_Mut_sampler;
-SamplerState g_tex2D_MutArr_sampler[2];
+#ifdef WEBGPU
+    SamplerState g_tex2D_MutArr_sampler_0;
+    SamplerState g_tex2D_MutArr_sampler_1;
+#else
+    SamplerState g_tex2D_MutArr_sampler[2];
+#endif
+
 SamplerState g_tex2D_Dyn_sampler;
-SamplerState g_tex2D_DynArr_sampler[2];
-SamplerState g_tex2D_StaticArr_sampler[2];
+#ifdef WEBGPU
+    SamplerState g_tex2D_DynArr_sampler_0;
+    SamplerState g_tex2D_DynArr_sampler_1;
+    SamplerState g_tex2D_StaticArr_sampler_0;
+    SamplerState g_tex2D_StaticArr_sampler_1;
+#else
+    SamplerState g_tex2D_DynArr_sampler[2];
+    SamplerState g_tex2D_StaticArr_sampler[2];
+#endif
 
 float4 CheckValue(float4 Val, float4 Expected)
 {
@@ -30,6 +56,16 @@ float4 VerifyResources()
     AllCorrect *= CheckValue(g_tex2D_Mut.   SampleLevel(g_tex2D_Mut_sampler,    UV, 0.0), Tex2D_Mut_Ref);
     AllCorrect *= CheckValue(g_tex2D_Dyn.   SampleLevel(g_tex2D_Dyn_sampler,    UV, 0.0), Tex2D_Dyn_Ref);
 
+#ifdef WEBGPU
+    AllCorrect *= CheckValue(g_tex2D_StaticArr_0.SampleLevel(g_tex2D_StaticArr_sampler_0, UV, 0.0), Tex2DArr_Static_Ref0);
+    AllCorrect *= CheckValue(g_tex2D_StaticArr_1.SampleLevel(g_tex2D_StaticArr_sampler_1, UV, 0.0), Tex2DArr_Static_Ref1);
+
+    AllCorrect *= CheckValue(g_tex2D_MutArr_0.SampleLevel(g_tex2D_MutArr_sampler_0, UV, 0.0), Tex2DArr_Mut_Ref0);
+    AllCorrect *= CheckValue(g_tex2D_MutArr_1.SampleLevel(g_tex2D_MutArr_sampler_1, UV, 0.0), Tex2DArr_Mut_Ref1);
+
+    AllCorrect *= CheckValue(g_tex2D_DynArr_0.SampleLevel(g_tex2D_DynArr_sampler_0, UV, 0.0), Tex2DArr_Dyn_Ref0);
+    AllCorrect *= CheckValue(g_tex2D_DynArr_1.SampleLevel(g_tex2D_DynArr_sampler_1, UV, 0.0), Tex2DArr_Dyn_Ref1); 
+#else
     AllCorrect *= CheckValue(g_tex2D_StaticArr[0].SampleLevel(g_tex2D_StaticArr_sampler[0], UV, 0.0), Tex2DArr_Static_Ref0);
     AllCorrect *= CheckValue(g_tex2D_StaticArr[1].SampleLevel(g_tex2D_StaticArr_sampler[1], UV, 0.0), Tex2DArr_Static_Ref1);
 
@@ -38,6 +74,7 @@ float4 VerifyResources()
 
     AllCorrect *= CheckValue(g_tex2D_DynArr[0].SampleLevel(g_tex2D_DynArr_sampler[0], UV, 0.0), Tex2DArr_Dyn_Ref0);
     AllCorrect *= CheckValue(g_tex2D_DynArr[1].SampleLevel(g_tex2D_DynArr_sampler[1], UV, 0.0), Tex2DArr_Dyn_Ref1);
+#endif
 
 	return AllCorrect;
 }

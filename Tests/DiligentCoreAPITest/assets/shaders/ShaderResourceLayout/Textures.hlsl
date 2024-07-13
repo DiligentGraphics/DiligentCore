@@ -2,9 +2,23 @@ Texture2D g_Tex2D_Static;
 Texture2D g_Tex2D_Mut;
 Texture2D g_Tex2D_Dyn;
 
-Texture2D g_Tex2DArr_Static[STATIC_TEX_ARRAY_SIZE];  // 2
-Texture2D g_Tex2DArr_Mut   [MUTABLE_TEX_ARRAY_SIZE]; // 4
-Texture2D g_Tex2DArr_Dyn   [DYNAMIC_TEX_ARRAY_SIZE]; // 3
+#ifdef WEBGPU
+    Texture2D g_Tex2DArr_Static_0;
+    Texture2D g_Tex2DArr_Static_1;
+
+    Texture2D g_Tex2DArr_Mut_0;
+    Texture2D g_Tex2DArr_Mut_1;
+    Texture2D g_Tex2DArr_Mut_2;
+    Texture2D g_Tex2DArr_Mut_3;
+
+    Texture2D g_Tex2DArr_Dyn_0;
+    Texture2D g_Tex2DArr_Dyn_1;
+    Texture2D g_Tex2DArr_Dyn_2;
+#else
+    Texture2D g_Tex2DArr_Static[STATIC_TEX_ARRAY_SIZE];  // 2
+    Texture2D g_Tex2DArr_Mut   [MUTABLE_TEX_ARRAY_SIZE]; // 4
+    Texture2D g_Tex2DArr_Dyn   [DYNAMIC_TEX_ARRAY_SIZE]; // 3
+#endif
 
 SamplerState g_Sampler;
 
@@ -25,6 +39,19 @@ float4 VerifyResources()
     AllCorrect *= CheckValue(g_Tex2D_Mut.   SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_Mut_Ref);
     AllCorrect *= CheckValue(g_Tex2D_Dyn.   SampleLevel(g_Sampler, UV.xy, 0.0), Tex2D_Dyn_Ref);
 
+#ifdef WEBGPU
+    AllCorrect *= CheckValue(g_Tex2DArr_Static_0.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2DArr_Static_Ref0);
+    AllCorrect *= CheckValue(g_Tex2DArr_Static_1.SampleLevel(g_Sampler, UV.xy, 0.0), Tex2DArr_Static_Ref1);
+
+    AllCorrect *= CheckValue(g_Tex2DArr_Mut_0.SampleLevel(g_Sampler,  UV.xy, 0.0), Tex2DArr_Mut_Ref0);
+    AllCorrect *= CheckValue(g_Tex2DArr_Mut_1.SampleLevel(g_Sampler,  UV.xy, 0.0), Tex2DArr_Mut_Ref1);
+    AllCorrect *= CheckValue(g_Tex2DArr_Mut_2.SampleLevel(g_Sampler,  UV.xy, 0.0), Tex2DArr_Mut_Ref2);
+    AllCorrect *= CheckValue(g_Tex2DArr_Mut_3.SampleLevel(g_Sampler,  UV.xy, 0.0), Tex2DArr_Mut_Ref3);
+
+    AllCorrect *= CheckValue(g_Tex2DArr_Dyn_0.SampleLevel(g_Sampler,  UV.xy, 0.0), Tex2DArr_Dyn_Ref0);
+    AllCorrect *= CheckValue(g_Tex2DArr_Dyn_1.SampleLevel(g_Sampler,  UV.xy, 0.0), Tex2DArr_Dyn_Ref1);
+    AllCorrect *= CheckValue(g_Tex2DArr_Dyn_2.SampleLevel(g_Sampler,  UV.xy, 0.0), Tex2DArr_Dyn_Ref2);
+#else
     AllCorrect *= CheckValue(g_Tex2DArr_Static[0].SampleLevel(g_Sampler, UV.xy, 0.0), Tex2DArr_Static_Ref0);
     AllCorrect *= CheckValue(g_Tex2DArr_Static[1].SampleLevel(g_Sampler, UV.xy, 0.0), Tex2DArr_Static_Ref1);
 
@@ -36,6 +63,7 @@ float4 VerifyResources()
     AllCorrect *= CheckValue(g_Tex2DArr_Dyn[0].SampleLevel(g_Sampler,  UV.xy, 0.0), Tex2DArr_Dyn_Ref0);
     AllCorrect *= CheckValue(g_Tex2DArr_Dyn[1].SampleLevel(g_Sampler,  UV.xy, 0.0), Tex2DArr_Dyn_Ref1);
     AllCorrect *= CheckValue(g_Tex2DArr_Dyn[2].SampleLevel(g_Sampler,  UV.xy, 0.0), Tex2DArr_Dyn_Ref2);
+#endif
 
     return AllCorrect;
 }

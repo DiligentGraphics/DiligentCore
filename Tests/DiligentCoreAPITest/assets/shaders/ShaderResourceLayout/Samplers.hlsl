@@ -4,9 +4,23 @@ SamplerState g_Sam_Static;
 SamplerState g_Sam_Mut;
 SamplerState g_Sam_Dyn;
 
-SamplerState g_SamArr_Static[STATIC_SAM_ARRAY_SIZE];  // 2
-SamplerState g_SamArr_Mut   [MUTABLE_SAM_ARRAY_SIZE]; // 4
-SamplerState g_SamArr_Dyn   [DYNAMIC_SAM_ARRAY_SIZE]; // 3
+#ifdef WEBGPU
+    SamplerState g_SamArr_Static_0;
+    SamplerState g_SamArr_Static_1;
+
+    SamplerState g_SamArr_Mut_0;
+    SamplerState g_SamArr_Mut_1;
+    SamplerState g_SamArr_Mut_2;
+    SamplerState g_SamArr_Mut_3;
+
+    SamplerState g_SamArr_Dyn_0;
+    SamplerState g_SamArr_Dyn_1;
+    SamplerState g_SamArr_Dyn_2;
+#else
+    SamplerState g_SamArr_Static[STATIC_SAM_ARRAY_SIZE];  // 2
+    SamplerState g_SamArr_Mut   [MUTABLE_SAM_ARRAY_SIZE]; // 4
+    SamplerState g_SamArr_Dyn   [DYNAMIC_SAM_ARRAY_SIZE]; // 3
+#endif
 
 #define TexRefValue float4(1.0, 0.0, 1.0, 0.0)
 
@@ -28,6 +42,19 @@ float4 VerifyResources()
     AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_Sam_Mut, UV.xy, 0.0),    TexRefValue);
     AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_Sam_Dyn, UV.xy, 0.0),    TexRefValue);
 
+#ifdef WEBGPU
+    AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Static_0, UV.xy, 0.0), TexRefValue);
+    AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Static_1, UV.xy, 0.0), TexRefValue);
+
+    AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Mut_0, UV.xy, 0.0), TexRefValue);
+    AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Mut_1, UV.xy, 0.0), TexRefValue);
+    AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Mut_2, UV.xy, 0.0), TexRefValue);
+    AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Mut_3, UV.xy, 0.0), TexRefValue);
+
+    AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Dyn_0, UV.xy, 0.0), TexRefValue);
+    AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Dyn_1, UV.xy, 0.0), TexRefValue);
+    AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Dyn_2, UV.xy, 0.0), TexRefValue);    
+#else
     // glslang is not smart enough to unroll the loops even when explicitly told to do so
 
     AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Static[0], UV.xy, 0.0), TexRefValue);
@@ -41,6 +68,7 @@ float4 VerifyResources()
     AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Dyn[0], UV.xy, 0.0), TexRefValue);
     AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Dyn[1], UV.xy, 0.0), TexRefValue);
     AllCorrect *= CheckValue(g_Tex2D.SampleLevel(g_SamArr_Dyn[2], UV.xy, 0.0), TexRefValue);
+#endif
 
     return AllCorrect;
 }

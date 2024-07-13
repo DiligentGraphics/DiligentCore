@@ -7,9 +7,16 @@ RWStructuredBuffer<BufferData> g_RWBuff_Static;
 RWStructuredBuffer<BufferData> g_RWBuff_Mut;
 RWStructuredBuffer<BufferData> g_RWBuff_Dyn;
 
-RWStructuredBuffer<BufferData> g_RWBuffArr_Static[STATIC_BUFF_ARRAY_SIZE];  // 4 or 1 in D3D11
-RWStructuredBuffer<BufferData> g_RWBuffArr_Mut   [MUTABLE_BUFF_ARRAY_SIZE]; // 3 or 2 in D3D11
-RWStructuredBuffer<BufferData> g_RWBuffArr_Dyn   [DYNAMIC_BUFF_ARRAY_SIZE]; // 2
+#ifdef WEBGPU
+    RWStructuredBuffer<BufferData> g_RWBuffArr_Static_0;
+    RWStructuredBuffer<BufferData> g_RWBuffArr_Mut_0;
+    RWStructuredBuffer<BufferData> g_RWBuffArr_Dyn_0;
+    RWStructuredBuffer<BufferData> g_RWBuffArr_Dyn_1;
+#else
+    RWStructuredBuffer<BufferData> g_RWBuffArr_Static[STATIC_BUFF_ARRAY_SIZE];  // 4 or 1 in D3D11
+    RWStructuredBuffer<BufferData> g_RWBuffArr_Mut   [MUTABLE_BUFF_ARRAY_SIZE]; // 3 or 2 in D3D11
+    RWStructuredBuffer<BufferData> g_RWBuffArr_Dyn   [DYNAMIC_BUFF_ARRAY_SIZE]; // 2
+#endif
 
 float4 CheckValue(float4 Val, float4 Expected)
 {
@@ -34,6 +41,21 @@ float4 VerifyResources()
     g_RWBuff_Mut   [0].data = f4Data;
     g_RWBuff_Dyn   [0].data = f4Data;
 
+#ifdef WEBGPU
+    AllCorrect *= CheckValue(g_RWBuffArr_Static_0[1].data, BuffArr_Static_Ref0);
+
+    g_RWBuffArr_Static_0[0].data = f4Data;
+
+    AllCorrect *= CheckValue(g_RWBuffArr_Mut_0[1].data, BuffArr_Mut_Ref0);
+
+    g_RWBuffArr_Mut_0[0].data = f4Data;
+
+    AllCorrect *= CheckValue(g_RWBuffArr_Dyn_0[1].data, BuffArr_Dyn_Ref0);
+    AllCorrect *= CheckValue(g_RWBuffArr_Dyn_1[2].data, BuffArr_Dyn_Ref1);
+
+    g_RWBuffArr_Dyn_0[0].data = f4Data;
+    g_RWBuffArr_Dyn_1[0].data = f4Data; 
+#else
     // glslang is not smart enough to unroll the loops even when explicitly told to do so
 
     AllCorrect *= CheckValue(g_RWBuffArr_Static[0][1].data, BuffArr_Static_Ref0);
@@ -65,6 +87,7 @@ float4 VerifyResources()
 
     g_RWBuffArr_Dyn[0][0].data = f4Data;
     g_RWBuffArr_Dyn[1][0].data = f4Data;
+#endif
 
     return AllCorrect;
 }

@@ -7,9 +7,19 @@ StructuredBuffer<BufferData> g_Buff_Static;
 StructuredBuffer<BufferData> g_Buff_Mut;
 StructuredBuffer<BufferData> g_Buff_Dyn;
 
-StructuredBuffer<BufferData> g_BuffArr_Static[STATIC_BUFF_ARRAY_SIZE];  // 4
-StructuredBuffer<BufferData> g_BuffArr_Mut   [MUTABLE_BUFF_ARRAY_SIZE]; // 3
-StructuredBuffer<BufferData> g_BuffArr_Dyn   [DYNAMIC_BUFF_ARRAY_SIZE]; // 2
+#ifdef WEBGPU
+    StructuredBuffer<BufferData> g_BuffArr_Static_0;
+    StructuredBuffer<BufferData> g_BuffArr_Static_1;
+
+    StructuredBuffer<BufferData> g_BuffArr_Mut_0;
+    StructuredBuffer<BufferData> g_BuffArr_Mut_1;
+
+    StructuredBuffer<BufferData> g_BuffArr_Dyn_0;
+#else
+    StructuredBuffer<BufferData> g_BuffArr_Static[STATIC_BUFF_ARRAY_SIZE];  // 4
+    StructuredBuffer<BufferData> g_BuffArr_Mut   [MUTABLE_BUFF_ARRAY_SIZE]; // 3
+    StructuredBuffer<BufferData> g_BuffArr_Dyn   [DYNAMIC_BUFF_ARRAY_SIZE]; // 2
+#endif
 
 float4 CheckValue(float4 Val, float4 Expected)
 {
@@ -29,6 +39,15 @@ float4 VerifyResources()
 
     // glslang is not smart enough to unroll the loops even when explicitly told to do so
 
+#ifdef WEBGPU
+    AllCorrect *= CheckValue(g_BuffArr_Static_0[0].data, BuffArr_Static_Ref0);
+    AllCorrect *= CheckValue(g_BuffArr_Static_1[0].data, BuffArr_Static_Ref1);
+
+    AllCorrect *= CheckValue(g_BuffArr_Mut_0[0].data, BuffArr_Mut_Ref0);
+    AllCorrect *= CheckValue(g_BuffArr_Mut_1[0].data, BuffArr_Mut_Ref1);
+
+    AllCorrect *= CheckValue(g_BuffArr_Dyn_0[0].data, BuffArr_Dyn_Ref0);    
+#else
     AllCorrect *= CheckValue(g_BuffArr_Static[0][0].data, BuffArr_Static_Ref0);
     AllCorrect *= CheckValue(g_BuffArr_Static[1][0].data, BuffArr_Static_Ref1);
     AllCorrect *= CheckValue(g_BuffArr_Static[2][0].data, BuffArr_Static_Ref2);
@@ -40,6 +59,7 @@ float4 VerifyResources()
 
     AllCorrect *= CheckValue(g_BuffArr_Dyn[0][0].data, BuffArr_Dyn_Ref0);
     AllCorrect *= CheckValue(g_BuffArr_Dyn[1][0].data, BuffArr_Dyn_Ref1);
+#endif
 
     return AllCorrect;
 }

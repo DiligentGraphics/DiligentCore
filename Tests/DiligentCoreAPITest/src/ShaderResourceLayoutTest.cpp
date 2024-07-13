@@ -380,10 +380,7 @@ void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSample
     switch (ShaderLang)
     {
         case SHADER_SOURCE_LANGUAGE_HLSL:
-            if (deviceCaps.IsWebGPUDevice())
-                ShaderPath = TestImtblSamplers ? "ImmutableSamplers_WGPU.hlsl" : "Textures_WGPU.hlsl";
-            else
-                ShaderPath = TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl";
+            ShaderPath = TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl";
             Name += TestImtblSamplers ? "ImtblSamplers" : "Textures";
             break;
 
@@ -649,15 +646,10 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 
     const char*            ShaderFileName = nullptr;
     SHADER_SOURCE_LANGUAGE SrcLang        = SHADER_SOURCE_LANGUAGE_DEFAULT;
-    if (DeviceInfo.IsD3DDevice())
+    if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsWebGPUDevice())
     {
+        ASSERT_TRUE(DeviceInfo.Features.FormattedBuffers || !IsFormatted);
         ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.hlsl";
-        SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
-    }
-    else if (DeviceInfo.IsWebGPUDevice())
-    {
-        ASSERT_FALSE(IsFormatted);
-        ShaderFileName = "StructuredBuffers_WGPU.hlsl";
         SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
     }
     else if (DeviceInfo.IsVulkanDevice() || DeviceInfo.IsGLDevice() || DeviceInfo.IsMetalDevice())
@@ -914,15 +906,10 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
 
     const char*            ShaderFileName = nullptr;
     SHADER_SOURCE_LANGUAGE SrcLang        = SHADER_SOURCE_LANGUAGE_DEFAULT;
-    if (pDevice->GetDeviceInfo().IsD3DDevice())
+    if (pDevice->GetDeviceInfo().IsD3DDevice() || pDevice->GetDeviceInfo().IsWebGPUDevice())
     {
+        ASSERT_TRUE(DeviceInfo.Features.FormattedBuffers || !IsFormatted);
         ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.hlsl";
-        SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
-    }
-    else if (pDevice->GetDeviceInfo().IsWebGPUDevice())
-    {
-        ASSERT_FALSE(IsFormatted);
-        ShaderFileName = "RWStructuredBuffers_WGPU.hlsl";
         SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
     }
     else if (DeviceInfo.IsVulkanDevice() || DeviceInfo.IsGLDevice() || DeviceInfo.IsMetalDevice())
@@ -1147,6 +1134,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
         {"g_RWTex2DArr_Mut",    SHADER_RESOURCE_TYPE_TEXTURE_UAV, MutableTexArraySize},
         {"g_RWTex2DArr_Dyn",    SHADER_RESOURCE_TYPE_TEXTURE_UAV, DynamicTexArraySize}
     };
+    // clang-format on
 
     auto ModifyShaderCI = [pEnv](ShaderCreateInfo& ShaderCI) {
         if (pEnv->NeedWARPResourceArrayIndexingBugWorkaround())
@@ -1456,16 +1444,14 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
     };
     // clang-format on
 
-    const char* ShaderPath = pDevice->GetDeviceInfo().IsWebGPUDevice() ? "Samplers_WGPU.hlsl" : "Samplers.hlsl";
-
     auto ModifyShaderCI = [](ShaderCreateInfo& ShaderCI) {
         ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
     };
 
-    auto pVS = CreateShader("ShaderResourceLayoutTest.Samplers - VS", ShaderPath, "VSMain",
+    auto pVS = CreateShader("ShaderResourceLayoutTest.Samplers - VS", "Samplers.hlsl", "VSMain",
                             SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
                             Resources, _countof(Resources), ModifyShaderCI);
-    auto pPS = CreateShader("ShaderResourceLayoutTest.Samplers - PS", ShaderPath, "PSMain",
+    auto pPS = CreateShader("ShaderResourceLayoutTest.Samplers - PS", "Samplers.hlsl", "PSMain",
                             SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
                             Resources, _countof(Resources), ModifyShaderCI);
     ASSERT_NE(pVS, nullptr);
