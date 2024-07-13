@@ -110,7 +110,7 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
 
     const auto& FmtAttribs = GetTextureFormatAttribs(ViewDesc.Format);
 
-    if (ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL)
+    if (ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL || ViewDesc.ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL)
     {
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
             wgpuTextureViewDesc.aspect = WGPUTextureAspect_DepthOnly;
@@ -121,7 +121,25 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
     }
     else
     {
-        wgpuTextureViewDesc.aspect = WGPUTextureAspect_All;
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+        {
+            wgpuTextureViewDesc.aspect = WGPUTextureAspect_DepthOnly;
+        }
+        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        {
+            if (ViewDesc.Format == TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS || ViewDesc.Format == TEX_FORMAT_R24_UNORM_X8_TYPELESS)
+            {
+                wgpuTextureViewDesc.aspect = WGPUTextureAspect_DepthOnly;
+            }
+            else if (ViewDesc.Format == TEX_FORMAT_X32_TYPELESS_G8X24_UINT || ViewDesc.Format == TEX_FORMAT_X24_TYPELESS_G8_UINT)
+            {
+                wgpuTextureViewDesc.aspect = WGPUTextureAspect_StencilOnly;
+            }
+            else
+                UNEXPECTED("Unexpected depth-stencil texture format");
+        }
+        else
+            wgpuTextureViewDesc.aspect = WGPUTextureAspect_All;
     }
 
     return wgpuTextureViewDesc;

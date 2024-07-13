@@ -1414,16 +1414,28 @@ void DeviceContextWebGPUImpl::CommitRenderTargets()
 
     if (m_pBoundDepthStencil)
     {
+        const auto& FormatAttribs = GetTextureFormatAttribs(m_pBoundDepthStencil->GetDesc().Format);
+
         wgpuRenderPassDepthStencilAttachment.view            = m_pBoundDepthStencil->GetWebGPUTextureView();
         wgpuRenderPassDepthStencilAttachment.depthLoadOp     = m_PendingClears.DepthPending() ? WGPULoadOp_Clear : WGPULoadOp_Load;
         wgpuRenderPassDepthStencilAttachment.depthStoreOp    = WGPUStoreOp_Store;
         wgpuRenderPassDepthStencilAttachment.depthClearValue = m_PendingClears.Depth;
 
-        if (GetTextureFormatAttribs(m_pBoundDepthStencil->GetDesc().Format).ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        if (FormatAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
         {
             wgpuRenderPassDepthStencilAttachment.stencilLoadOp     = m_PendingClears.StencilPending() ? WGPULoadOp_Clear : WGPULoadOp_Load;
             wgpuRenderPassDepthStencilAttachment.stencilStoreOp    = WGPUStoreOp_Store;
             wgpuRenderPassDepthStencilAttachment.stencilClearValue = m_PendingClears.Stencil;
+        }
+
+        if (m_pBoundDepthStencil->GetDesc().ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL)
+        {
+            wgpuRenderPassDepthStencilAttachment.depthReadOnly   = true;
+            wgpuRenderPassDepthStencilAttachment.stencilReadOnly = FormatAttribs.ComponentType & COMPONENT_TYPE_DEPTH_STENCIL ? true : false;
+            wgpuRenderPassDepthStencilAttachment.depthStoreOp    = WGPUStoreOp_Undefined;
+            wgpuRenderPassDepthStencilAttachment.depthLoadOp     = WGPULoadOp_Undefined;
+            wgpuRenderPassDepthStencilAttachment.stencilStoreOp  = WGPUStoreOp_Undefined;
+            wgpuRenderPassDepthStencilAttachment.stencilLoadOp   = WGPULoadOp_Undefined;
         }
 
         wgpuRenderPassDesc.depthStencilAttachment = &wgpuRenderPassDepthStencilAttachment;
@@ -1499,7 +1511,8 @@ void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
     {
         const auto& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
         VERIFY_EXPR(Subpass.pDepthStencilAttachment != nullptr && DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED);
-        VERIFY(m_pBoundDepthStencil == FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex], "Depth-stencil buffer in the device context is inconsistent with the framebuffer");
+        VERIFY(m_pBoundDepthStencil == (DSAttachmentRef.State == RESOURCE_STATE_DEPTH_READ ? m_pBoundFramebuffer->GetReadOnlyDSV(m_SubpassIndex) : FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex]),
+               "Depth-stencil buffer in the device context is inconsistent with the framebuffer");
         const auto  FirstLastUse     = m_pActiveRenderPass->GetAttachmentFirstLastUse(DSAttachmentRef.AttachmentIndex);
         const auto& DSAttachmentDesc = RPDesc.pAttachments[DSAttachmentRef.AttachmentIndex];
         const auto  FormatAttribs    = GetTextureFormatAttribs(DSAttachmentDesc.Format);
@@ -1531,6 +1544,16 @@ void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
         {
             RenderPassDepthStencilAttachment.depthStoreOp   = WGPUStoreOp_Store;
             RenderPassDepthStencilAttachment.stencilStoreOp = FormatAttribs.ComponentType & COMPONENT_TYPE_DEPTH_STENCIL ? WGPUStoreOp_Store : WGPUStoreOp_Undefined;
+        }
+
+        if (m_pBoundDepthStencil->GetDesc().ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL)
+        {
+            RenderPassDepthStencilAttachment.depthReadOnly   = true;
+            RenderPassDepthStencilAttachment.stencilReadOnly = FormatAttribs.ComponentType & COMPONENT_TYPE_DEPTH_STENCIL ? true : false;
+            RenderPassDepthStencilAttachment.depthStoreOp    = WGPUStoreOp_Undefined;
+            RenderPassDepthStencilAttachment.depthLoadOp     = WGPULoadOp_Undefined;
+            RenderPassDepthStencilAttachment.stencilStoreOp  = WGPUStoreOp_Undefined;
+            RenderPassDepthStencilAttachment.stencilLoadOp   = WGPULoadOp_Undefined;
         }
     }
 

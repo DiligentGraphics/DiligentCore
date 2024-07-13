@@ -217,7 +217,13 @@ protected:
             VERIFY_EXPR(pPSColor);
         }
 
+        ShaderResourceVariableDesc Variables[] = {
+            {SHADER_TYPE_PIXEL, "g_Input", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, SHADER_VARIABLE_FLAG_UNFILTERABLE_FLOAT_TEXTURE_WEBGPU},
+        };
+
         PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+        PSODesc.ResourceLayout.Variables           = Variables;
+        PSODesc.ResourceLayout.NumVariables        = _countof(Variables);
 
         {
             PSODesc.Name = "Read only depth buffer test -- depth pre-pass";
