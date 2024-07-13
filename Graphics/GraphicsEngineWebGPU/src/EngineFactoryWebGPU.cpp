@@ -34,6 +34,7 @@
 #include "PipelineResourceAttribsWebGPU.hpp"
 #include "ShaderResourceCacheWebGPU.hpp"
 #include "FenceWebGPUImpl.hpp"
+#include "DearchiverWebGPUImpl.hpp"
 
 #include "StringTools.hpp"
 #include "GraphicsAccessories.hpp"
@@ -426,7 +427,7 @@ void EngineFactoryWebGPUImpl::EnumerateAdapters(Version              MinVersion,
 void EngineFactoryWebGPUImpl::CreateDearchiver(const DearchiverCreateInfo& CreateInfo,
                                                IDearchiver**               ppDearchiver) const
 {
-    // TBase::CreateDearchiver<DearchiverVkImpl>(CreateInfo, ppDearchiver);
+    TBase::CreateDearchiver<DearchiverWebGPUImpl>(CreateInfo, ppDearchiver);
 }
 
 void EngineFactoryWebGPUImpl::CreateDeviceAndContextsWebGPU(const EngineWebGPUCreateInfo& EngineCI,

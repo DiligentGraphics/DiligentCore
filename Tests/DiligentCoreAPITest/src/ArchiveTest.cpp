@@ -70,6 +70,9 @@ constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
 #endif
+#if WEBGPU_SUPPORTED
+    DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_WEBGPU;
+#endif
     return DeviceBits;
 }
 
@@ -402,7 +405,8 @@ TEST_P(TestBrokenShader, CompileFailure)
     const auto IsD3D = DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D11 || DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D12;
     pEnv->SetErrorAllowance(IsD3D ? 2 : 3, "No worries, errors are expected: testing broken shader\n");
     pEnv->PushExpectedErrorSubstring("Failed to create Shader object 'Archive test broken shader'");
-    pEnv->PushExpectedErrorSubstring("Failed to compile shader 'Archive test broken shader'", false);
+    if (DataFlag != ARCHIVE_DEVICE_DATA_FLAG_WEBGPU)
+        pEnv->PushExpectedErrorSubstring("Failed to compile shader 'Archive test broken shader'", false);
     if (!IsD3D)
         pEnv->PushExpectedErrorSubstring("Failed to parse shader source", false);
 
@@ -1825,7 +1829,7 @@ TEST(ArchiveTest, ResourceSignatureBindings)
     pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
-    for (auto AllDeviceBits = GetDeviceBits() & ~ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS; AllDeviceBits != 0;)
+    for (auto AllDeviceBits = GetDeviceBits() & ~(ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS | ARCHIVE_DEVICE_DATA_FLAG_WEBGPU); AllDeviceBits != 0;)
     {
         const ARCHIVE_DEVICE_DATA_FLAGS DeviceBit  = ExtractLSB(AllDeviceBits);
         const RENDER_DEVICE_TYPE        DeviceType = ArchiveDataFlagToRenderDeviceType(DeviceBit);
@@ -2098,8 +2102,8 @@ TEST_P(TestSamplers, GraphicsPipeline)
     const auto ShaderLang       = std::get<1>(Param);
     const auto UseSignature     = std::get<2>(Param);
 
-    if (ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL && deviceCaps.IsD3DDevice())
-        GTEST_SKIP() << "Direct3D backends support HLSL only";
+    if (ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL && (deviceCaps.IsD3DDevice() || deviceCaps.IsWebGPUDevice()))
+        GTEST_SKIP() << "GLSL-style combined samplers are not supported in Direct3D and WebGPU backends";
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
@@ -2223,8 +2227,9 @@ TEST_P(TestSamplers, GraphicsPipeline)
         pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
 
         ShaderCreateInfo ShaderCI;
-        ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.pShaderSourceStreamFactory     = pShaderSourceFactory;
+        ShaderCI.ShaderCompiler                 = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
 
         ShaderCI.SourceLanguage = ShaderLang;
         switch (ShaderLang)
@@ -2245,7 +2250,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
 
         auto PackFlags = GetDeviceBits();
         if (ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL)
-            PackFlags &= ~(ARCHIVE_DEVICE_DATA_FLAG_D3D11 | ARCHIVE_DEVICE_DATA_FLAG_D3D12);
+            PackFlags &= ~(ARCHIVE_DEVICE_DATA_FLAG_D3D11 | ARCHIVE_DEVICE_DATA_FLAG_D3D12 | ARCHIVE_DEVICE_DATA_FLAG_WEBGPU);
 
         RefCntAutoPtr<IShader> pSerializedVS;
         {

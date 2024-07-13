@@ -57,6 +57,10 @@ constexpr ARCHIVE_DEVICE_DATA_FLAGS GetDeviceBits()
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS;
     DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS;
 #endif
+#if WEBGPU_SUPPORTED
+    // TODO: enable when this test works on WebGPU
+    //DeviceBits = DeviceBits | ARCHIVE_DEVICE_DATA_FLAG_WEBGPU;
+#endif
     return DeviceBits;
 }
 

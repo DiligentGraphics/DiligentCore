@@ -35,9 +35,81 @@
 #include "ShaderWebGPUImpl.hpp"
 #include "DeviceObjectArchiveWebGPU.hpp"
 #include "SerializedPipelineStateImpl.hpp"
+#include "ShaderToolsCommon.hpp"
 
 namespace Diligent
 {
+
+namespace
+{
+
+struct CompiledShaderWebGPU final : SerializedShaderImpl::CompiledShader
+{
+    ShaderWebGPUImpl ShaderWebGPU;
+
+    CompiledShaderWebGPU(IReferenceCounters*                 pRefCounters,
+                         const ShaderCreateInfo&             ShaderCI,
+                         const ShaderWebGPUImpl::CreateInfo& WebGPUShaderCI,
+                         IRenderDevice*                      pRenderDeviceWebGPU) :
+        ShaderWebGPU{pRefCounters, ClassPtrCast<RenderDeviceWebGPUImpl>(pRenderDeviceWebGPU), ShaderCI, WebGPUShaderCI, true}
+    {}
+
+    virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
+    {
+        const std::string& WGSL = ShaderWebGPU.GetWGSL();
+
+        ShaderCI.Source         = WGSL.c_str();
+        ShaderCI.SourceLength   = WGSL.length();
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+        ShaderCI.FilePath       = nullptr;
+        ShaderCI.Macros         = {};
+        ShaderCI.ByteCode       = nullptr;
+        return SerializedShaderImpl::SerializeCreateInfo(ShaderCI);
+    }
+
+    virtual IShader* GetDeviceShader() override final
+    {
+        return &ShaderWebGPU;
+    }
+};
+
+
+struct ShaderStageInfoWebGPU
+{
+    ShaderStageInfoWebGPU() {}
+
+    ShaderStageInfoWebGPU(const SerializedShaderImpl* _pShader) :
+        Type{_pShader->GetDesc().ShaderType},
+        pShader{GetShaderWebGPU(_pShader)},
+        pSerialized{_pShader}
+    {
+    }
+
+    // Needed only for ray tracing
+    void Append(const SerializedShaderImpl*) {}
+
+    constexpr Uint32 Count() const { return 1; }
+
+    SHADER_TYPE                 Type        = SHADER_TYPE_UNKNOWN;
+    ShaderWebGPUImpl*           pShader     = nullptr;
+    const SerializedShaderImpl* pSerialized = nullptr;
+
+private:
+    static ShaderWebGPUImpl* GetShaderWebGPU(const SerializedShaderImpl* pShader)
+    {
+        auto* pCompiledShaderWebGPU = pShader->GetShader<CompiledShaderWebGPU>(DeviceObjectArchive::DeviceType::WebGPU);
+        return pCompiledShaderWebGPU != nullptr ? &pCompiledShaderWebGPU->ShaderWebGPU : nullptr;
+    }
+};
+
+#ifdef DILIGENT_DEBUG
+inline SHADER_TYPE GetShaderStageType(const ShaderStageInfoWebGPU& Stage)
+{
+    return Stage.Type;
+}
+#endif
+
+} // namespace
 
 template <>
 struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatureWebGPUImpl>
@@ -51,7 +123,83 @@ struct SerializedResourceSignatureImpl::SignatureTraits<PipelineResourceSignatur
 template <typename CreateInfoType>
 void SerializedPipelineStateImpl::PatchShadersWebGPU(const CreateInfoType& CreateInfo) noexcept(false)
 {
-    UNSUPPORTED("Not yet implemented");
+    std::vector<ShaderStageInfoWebGPU> ShaderStages;
+    SHADER_TYPE                        ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
+    constexpr bool                     WaitUntilShadersReady = true;
+    PipelineStateWebGPUImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
+
+    PipelineStateWebGPUImpl::TShaderStages ShaderStagesWebGPU;
+    ShaderStagesWebGPU.reserve(ShaderStages.size());
+    for (ShaderStageInfoWebGPU& Src : ShaderStages)
+    {
+        ShaderStagesWebGPU.emplace_back(Src.pShader);
+    }
+
+    auto** ppSignatures    = CreateInfo.ppResourceSignatures;
+    auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
+
+    IPipelineResourceSignature* DefaultSignatures[1] = {};
+    if (CreateInfo.ResourceSignaturesCount == 0)
+    {
+        CreateDefaultResourceSignature<PipelineStateWebGPUImpl, PipelineResourceSignatureWebGPUImpl>(DeviceType::WebGPU, CreateInfo.PSODesc, ActiveShaderStages, ShaderStagesWebGPU);
+
+        DefaultSignatures[0] = m_pDefaultSignature;
+        SignaturesCount      = 1;
+        ppSignatures         = DefaultSignatures;
+    }
+
+    {
+        // Sort signatures by binding index.
+        // Note that SignaturesCount will be overwritten with the maximum binding index.
+        SignatureArray<PipelineResourceSignatureWebGPUImpl> Signatures = {};
+        SortResourceSignatures(ppSignatures, SignaturesCount, Signatures, SignaturesCount);
+
+        // Same as PipelineLayoutWebGPU::Create()
+        PipelineStateWebGPUImpl::TBindIndexToBindGroupIndex BindIndexToBGIndex = {};
+
+        Uint32 BindGroupLayoutCount = 0;
+        for (Uint32 i = 0; i < SignaturesCount; ++i)
+        {
+            const auto& pSignature = Signatures[i];
+            if (pSignature == nullptr)
+                continue;
+
+            VERIFY_EXPR(pSignature->GetDesc().BindingIndex == i);
+            BindIndexToBGIndex[i] = StaticCast<PipelineStateWebGPUImpl::TBindIndexToBindGroupIndex::value_type>(BindGroupLayoutCount);
+
+            for (auto GroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE, PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
+            {
+                if (pSignature->HasBindGroup(GroupId))
+                    ++BindGroupLayoutCount;
+            }
+        }
+        VERIFY_EXPR(BindGroupLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
+
+        PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(ShaderStagesWebGPU,
+                                                              Signatures.data(),
+                                                              SignaturesCount,
+                                                              BindIndexToBGIndex,
+                                                              false, // bVerifyOnly
+                                                              CreateInfo.PSODesc.Name);
+    }
+
+    VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::WebGPU)].empty());
+    for (size_t i = 0; i < ShaderStagesWebGPU.size(); ++i)
+    {
+        std::string&     WGSL     = ShaderStagesWebGPU[i].WGSL;
+        ShaderCreateInfo ShaderCI = ShaderStages[i].pSerialized->GetCreateInfo();
+        // Append shader source language definition to the WGSL source, which will then be recovered in ShaderWebGPUImpl.
+        AppendShaderSourceLanguageDefinition(WGSL, ShaderCI.SourceLanguage);
+
+        ShaderCI.Source         = WGSL.c_str();
+        ShaderCI.SourceLength   = WGSL.length();
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+        ShaderCI.EntryPoint     = ShaderStagesWebGPU[i].pShader->GetEntryPoint();
+        ShaderCI.FilePath       = nullptr;
+        ShaderCI.Macros         = {};
+        ShaderCI.ByteCode       = nullptr;
+        SerializeShaderCreateInfo(DeviceType::WebGPU, ShaderCI);
+    }
 }
 
 INSTANTIATE_PATCH_SHADER_METHODS(PatchShadersWebGPU)
@@ -60,14 +208,53 @@ INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureWebGPUImpl)
 void SerializationDeviceImpl::GetPipelineResourceBindingsWebGPU(const PipelineResourceBindingAttribs& Info,
                                                                 std::vector<PipelineResourceBinding>& ResourceBindings)
 {
-    UNSUPPORTED("Not yet implemented");
+    const auto ShaderStages = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+
+    SignatureArray<PipelineResourceSignatureWebGPUImpl> Signatures      = {};
+    Uint32                                              SignaturesCount = 0;
+    SortResourceSignatures(Info.ppResourceSignatures, Info.ResourceSignaturesCount, Signatures, SignaturesCount);
+
+    Uint32 BindGroupCount = 0;
+    for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
+    {
+        const PipelineResourceSignatureWebGPUImpl* pSignature = Signatures[sign];
+        if (pSignature == nullptr)
+            continue;
+
+        for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+        {
+            const PipelineResourceDesc&          ResDesc = pSignature->GetResourceDesc(r);
+            const PipelineResourceAttribsWebGPU& ResAttr = pSignature->GetResourceAttribs(r);
+            if ((ResDesc.ShaderStages & ShaderStages) == 0)
+                continue;
+
+            ResourceBindings.push_back(ResDescToPipelineResBinding(ResDesc, ResDesc.ShaderStages, ResAttr.BindingIndex, BindGroupCount + ResAttr.BindGroup));
+        }
+
+        // Same as PipelineLayoutWebGPU::Create()
+        for (auto GroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE, PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
+        {
+            if (pSignature->HasBindGroup(GroupId))
+                ++BindGroupCount;
+        }
+    }
+    VERIFY_EXPR(BindGroupCount <= MAX_RESOURCE_SIGNATURES * 2);
+    VERIFY_EXPR(BindGroupCount >= Info.ResourceSignaturesCount);
 }
 
 void SerializedShaderImpl::CreateShaderWebGPU(IReferenceCounters*     pRefCounters,
                                               const ShaderCreateInfo& ShaderCI,
                                               IDataBlob**             ppCompilerOutput) noexcept(false)
 {
-    UNSUPPORTED("Not yet implemented");
+    const ShaderWebGPUImpl::CreateInfo WebGPUShaderCI{
+        m_pDevice->GetDeviceInfo(),
+        m_pDevice->GetAdapterInfo(),
+        // Do not overwrite compiler output from other APIs.
+        // TODO: collect all outputs.
+        ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
+        nullptr, // pCompilationThreadPool
+    };
+    CreateShader<CompiledShaderWebGPU>(DeviceType::WebGPU, pRefCounters, ShaderCI, WebGPUShaderCI, m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_WEBGPU));
 }
 
 } // namespace Diligent

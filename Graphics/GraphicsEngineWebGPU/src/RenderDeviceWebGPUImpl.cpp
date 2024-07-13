@@ -233,7 +233,6 @@ void RenderDeviceWebGPUImpl::CreateDeviceMemory(const DeviceMemoryCreateInfo& Cr
 void RenderDeviceWebGPUImpl::CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
                                                       IPipelineStateCache**               ppPSOCache)
 {
-    UNSUPPORTED("CreatePipelineStateCache is not supported in WebGPU");
     *ppPSOCache = nullptr;
 }
 

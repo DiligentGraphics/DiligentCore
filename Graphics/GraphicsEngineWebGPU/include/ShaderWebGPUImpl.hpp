@@ -93,6 +93,7 @@ public:
 
 private:
     std::string m_WGSL;
+    std::string m_EntryPoint;
 
     std::shared_ptr<const WGSLShaderResources> m_pShaderResources;
 };

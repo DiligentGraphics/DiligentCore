@@ -169,10 +169,13 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
         WebGPUShaderCI.DeviceInfo,
         WebGPUShaderCI.AdapterInfo,
         IsDeviceInternal
-    }
+    },
+    m_EntryPoint{ShaderCI.EntryPoint != nullptr ? ShaderCI.EntryPoint : ""}
 // clang-format on
 {
     m_Status.store(SHADER_STATUS_COMPILING);
+
+    SHADER_SOURCE_LANGUAGE SourceLanguage = ShaderCI.SourceLanguage;
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
         ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_WGSL)
     {
@@ -183,6 +186,11 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
         // Read the source file directly and use it as is
         ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
         m_WGSL.assign(SourceData.Source, SourceData.SourceLength);
+
+        // Shaders packed into archive are WGSL, but we need to recover the original source language
+        const SHADER_SOURCE_LANGUAGE ParsedSourceLanguage = ParseShaderSourceLanguageDefinition(m_WGSL);
+        if (ParsedSourceLanguage != SHADER_SOURCE_LANGUAGE_DEFAULT)
+            SourceLanguage = ParsedSourceLanguage;
     }
     else if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL ||
              ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL ||
@@ -237,15 +245,16 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
             {
                 Allocator,
                 m_WGSL,
-                ShaderCI.SourceLanguage,
+                SourceLanguage,
                 m_Desc.Name,
                 m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
-                ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_WGSL ? ShaderCI.EntryPoint : nullptr,
+                SourceLanguage == SHADER_SOURCE_LANGUAGE_WGSL ? ShaderCI.EntryPoint : nullptr,
                 ShaderCI.WebGPUEmulatedArrayIndexSuffix,
                 ShaderCI.LoadConstantBufferReflection,
                 WebGPUShaderCI.ppCompilerOutput,
             };
         m_pShaderResources.reset(static_cast<WGSLShaderResources*>(pRawMem.release()), STDDeleterRawMem<WGSLShaderResources>(Allocator));
+        m_EntryPoint = m_pShaderResources->GetEntryPoint();
     }
 
     m_Status.store(SHADER_STATUS_READY);
@@ -306,7 +315,7 @@ const std::string& ShaderWebGPUImpl::GetWGSL() const
 const char* ShaderWebGPUImpl::GetEntryPoint() const
 {
     DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
-    return m_pShaderResources->GetEntryPoint();
+    return m_EntryPoint.c_str();
 }
 
 } // namespace Diligent
