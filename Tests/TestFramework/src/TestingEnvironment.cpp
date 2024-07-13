@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -107,6 +107,17 @@ void TestingEnvironment::PushExpectedErrorSubstring(const char* Str, bool ClearS
         m_ExpectedErrorSubstrings.clear();
     VERIFY_EXPR(Str != nullptr && Str[0] != '\0');
     m_ExpectedErrorSubstrings.push_back(Str);
+}
+
+void TestingEnvironment::PushExpectedErrorSubstrings(const std::vector<const char*>& Messages, bool ClearStack)
+{
+    if (ClearStack)
+        m_ExpectedErrorSubstrings.clear();
+    for (auto const& Message : Messages)
+    {
+        VERIFY_EXPR(Message != nullptr && Message[0] != '\0');
+        m_ExpectedErrorSubstrings.push_back(Message);
+    }
 }
 
 const char* TestingEnvironment::GetCurrentTestStatusString()

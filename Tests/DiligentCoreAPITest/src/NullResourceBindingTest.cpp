@@ -58,7 +58,7 @@ RefCntAutoPtr<IShader> CreateShader(const char*            Name,
 }
 
 
-void DrawWithNullResources(IShader* pVS, IShader* pPS, SHADER_RESOURCE_VARIABLE_TYPE VarType)
+void DrawWithNullResources(IShader* pVS, IShader* pPS, SHADER_RESOURCE_VARIABLE_TYPE VarType, const std::vector<const char*>& ErrorMessages)
 {
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -66,6 +66,22 @@ void DrawWithNullResources(IShader* pVS, IShader* pPS, SHADER_RESOURCE_VARIABLE_
     auto* const pDevice    = pEnv->GetDevice();
     auto* const pContext   = pEnv->GetDeviceContext();
     auto* const pSwapChain = pEnv->GetSwapChain();
+
+    RefCntAutoPtr<IBuffer> pIndexBuffer;
+    {
+        Uint32 Indices[] = {0, 1, 2};
+
+        BufferDesc BuffDesc;
+        BuffDesc.Name      = "Index buffer";
+        BuffDesc.BindFlags = BIND_INDEX_BUFFER;
+        BuffDesc.Size      = sizeof(Indices);
+        BuffDesc.Usage     = USAGE_IMMUTABLE;
+        BufferData IBData;
+        IBData.pData    = Indices;
+        IBData.DataSize = sizeof(Indices);
+        pDevice->CreateBuffer(BuffDesc, &IBData, &pIndexBuffer);
+        ASSERT_NE(pIndexBuffer, nullptr);
+    }
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
@@ -86,19 +102,40 @@ void DrawWithNullResources(IShader* pVS, IShader* pPS, SHADER_RESOURCE_VARIABLE_
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
-    RefCntAutoPtr<IShaderResourceBinding> pSRB;
-    pPSO->CreateShaderResourceBinding(&pSRB, false);
+    RefCntAutoPtr<IShaderResourceBinding> pSRB[2];
+    pPSO->CreateShaderResourceBinding(&pSRB[0], false);
+    pPSO->CreateShaderResourceBinding(&pSRB[1], false);
 
     ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
-    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    pContext->Draw(DrawAttribs{0, DRAW_FLAG_VERIFY_ALL});
+    for (Uint32 IsIndexed = 0; IsIndexed < 2; ++IsIndexed)
+    {
+        if (pDevice->GetDeviceInfo().IsWebGPUDevice())
+        {
+            // Skip error message from WebGPU
+            pEnv->SetErrorAllowance(1, "No worries, error from WebGPU is expected\n");
+        }
+        pContext->CommitShaderResources(pSRB[IsIndexed], RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        pEnv->SetErrorAllowance(static_cast<int>(ErrorMessages.size()), "No worries, errors are expected: testing null resource bindings\n");
+        pEnv->PushExpectedErrorSubstrings(ErrorMessages);
+
+        if (IsIndexed)
+        {
+            pContext->SetIndexBuffer(pIndexBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pContext->DrawIndexed(DrawIndexedAttribs{0, VT_UINT32, DRAW_FLAG_VERIFY_ALL});
+        }
+        else
+        {
+            pContext->Draw(DrawAttribs{0, DRAW_FLAG_VERIFY_ALL});
+        }
+    }
 }
 
-void DispatchWithNullResources(IShader* pCS, SHADER_RESOURCE_VARIABLE_TYPE VarType)
+void DispatchWithNullResources(IShader* pCS, SHADER_RESOURCE_VARIABLE_TYPE VarType, std::vector<const char*> ErrorMessages)
 {
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -120,7 +157,15 @@ void DispatchWithNullResources(IShader* pCS, SHADER_RESOURCE_VARIABLE_TYPE VarTy
     pPSO->CreateShaderResourceBinding(&pSRB, false);
 
     pContext->SetPipelineState(pPSO);
+    if (pDevice->GetDeviceInfo().IsWebGPUDevice())
+    {
+        // Skip error message from WebGPU
+        pEnv->SetErrorAllowance(1, "No worries, error from WebGPU is expected\n");
+    }
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pEnv->SetErrorAllowance(static_cast<int>(ErrorMessages.size()), "No worries, errors are expected: testing null resource bindings\n");
+    pEnv->PushExpectedErrorSubstrings(ErrorMessages);
 
     pContext->DispatchCompute(DispatchComputeAttribs{0, 0, 0});
 }
@@ -177,16 +222,11 @@ TEST_P(NullConstantBuffer, Test)
     if (!DeviceInfo.Features.SeparablePrograms)
         GTEST_SKIP() << "Separable programs are required";
 
-    pEnv->SetErrorAllowance(DeviceInfo.IsWebGPUDevice() ? 3 : 2, "No worries, errors are expected: testing null resource bindings\n");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'MissingPSBuffer'");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'MissingVSBuffer'", false);
-    if (DeviceInfo.IsWebGPUDevice())
-    {
-        // Skip error message from Dawn
-        pEnv->PushExpectedErrorSubstring("WebGPU:", false);
-    }
-
-    DrawWithNullResources(pVS, pPS, VarType);
+    DrawWithNullResources(pVS, pPS, VarType,
+                          {
+                              "No resource is bound to variable 'MissingPSBuffer'",
+                              "No resource is bound to variable 'MissingVSBuffer'",
+                          });
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -253,16 +293,11 @@ TEST_P(NullStructBuffer, Test)
     if (!DeviceInfo.Features.SeparablePrograms)
         GTEST_SKIP() << "Separable programs are required";
 
-    pEnv->SetErrorAllowance(DeviceInfo.IsWebGPUDevice() ? 3 : 2, "No worries, errors are expected: testing null resource bindings\n");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSStructBuffer'");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSStructBuffer'", false);
-    if (DeviceInfo.IsWebGPUDevice())
-    {
-        // Skip error message from Dawn
-        pEnv->PushExpectedErrorSubstring("WebGPU:", false);
-    }
-
-    DrawWithNullResources(pVS, pPS, VarType);
+    DrawWithNullResources(pVS, pPS, VarType,
+                          {
+                              "No resource is bound to variable 'g_MissingPSStructBuffer'",
+                              "No resource is bound to variable 'g_MissingVSStructBuffer'",
+                          });
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -327,16 +362,11 @@ TEST_P(NullFormattedBuffer, Test)
     if (!DeviceInfo.Features.FormattedBuffers)
         GTEST_SKIP() << "Formatted buffers are not supported";
 
-    pEnv->SetErrorAllowance(DeviceInfo.IsWebGPUDevice() ? 3 : 2, "No worries, errors are expected: testing null resource bindings\n");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSFmtBuffer'");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSFmtBuffer'", false);
-    if (DeviceInfo.IsWebGPUDevice())
-    {
-        // Skip error message from Dawn
-        pEnv->PushExpectedErrorSubstring("WebGPU:", false);
-    }
-
-    DrawWithNullResources(pVS, pPS, VarType);
+    DrawWithNullResources(pVS, pPS, VarType,
+                          {
+                              "No resource is bound to variable 'g_MissingPSFmtBuffer'",
+                              "No resource is bound to variable 'g_MissingVSFmtBuffer'",
+                          });
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -397,16 +427,11 @@ TEST_P(NullTexture, Test)
     if (!DeviceInfo.Features.SeparablePrograms)
         GTEST_SKIP() << "Separable programs are required";
 
-    pEnv->SetErrorAllowance(DeviceInfo.IsWebGPUDevice() ? 3 : 2, "No worries, errors are expected: testing null resource bindings\n");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingPSTexture'");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingVSTexture'", false);
-    if (DeviceInfo.IsWebGPUDevice())
-    {
-        // Skip error message from Dawn
-        pEnv->PushExpectedErrorSubstring("WebGPU:", false);
-    }
-
-    DrawWithNullResources(pVS, pPS, VarType);
+    DrawWithNullResources(pVS, pPS, VarType,
+                          {
+                              "No resource is bound to variable 'g_MissingPSTexture'",
+                              "No resource is bound to variable 'g_MissingVSTexture'",
+                          });
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -474,30 +499,20 @@ TEST_P(NullSampler, Test)
     if (DeviceInfo.IsGLDevice())
         GTEST_SKIP() << "Separate samplers are not supported in GL";
 
-    pEnv->SetErrorAllowance(DeviceInfo.IsWebGPUDevice() ? 5 : 4, "No worries, errors are expected: testing null resource bindings\n");
-    const char* Messages[] = //
+    std::vector<const char*> Messages =
         {
             "No resource is bound to variable 'g_MissingPSTexture'",
             "No resource is bound to variable 'g_MissingPSSampler'",
             "No resource is bound to variable 'g_MissingVSTexture'",
-            "No resource is bound to variable 'g_MissingVSSampler'" //
+            "No resource is bound to variable 'g_MissingVSSampler'",
         };
-    size_t MsgOrder[] = {0, 1, 2, 3};
     if (DeviceInfo.IsMetalDevice() || DeviceInfo.IsWebGPUDevice())
     {
-        std::swap(MsgOrder[0], MsgOrder[1]);
-        std::swap(MsgOrder[2], MsgOrder[3]);
-    }
-    for (size_t i = 0; i < _countof(MsgOrder); ++i)
-        pEnv->PushExpectedErrorSubstring(Messages[MsgOrder[i]], i == 0);
-
-    if (DeviceInfo.IsWebGPUDevice())
-    {
-        // Skip error message from Dawn
-        pEnv->PushExpectedErrorSubstring("WebGPU:", false);
+        std::swap(Messages[0], Messages[1]);
+        std::swap(Messages[2], Messages[3]);
     }
 
-    DrawWithNullResources(pVS, pPS, VarType);
+    DrawWithNullResources(pVS, pPS, VarType, Messages);
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -537,19 +552,8 @@ RefCntAutoPtr<IShader> NullRWTexture::pCS;
 
 TEST_P(NullRWTexture, Test)
 {
-    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
-    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
-    const auto  VarType    = GetParam();
-
-    pEnv->SetErrorAllowance(DeviceInfo.IsWebGPUDevice() ? 2 : 1, "No worries, errors are expected: testing null resource bindings\n");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWTexture'", false);
-    if (DeviceInfo.IsWebGPUDevice())
-    {
-        // Skip error message from Dawn
-        pEnv->PushExpectedErrorSubstring("WebGPU:", false);
-    }
-
-    DispatchWithNullResources(pCS, VarType);
+    const auto VarType = GetParam();
+    DispatchWithNullResources(pCS, VarType, {"No resource is bound to variable 'g_MissingRWTexture'"});
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -600,15 +604,7 @@ TEST_P(NullRWFmtBuffer, Test)
     if (!DeviceInfo.Features.FormattedBuffers)
         GTEST_SKIP() << "Formatted buffers are not supported";
 
-    pEnv->SetErrorAllowance(DeviceInfo.IsWebGPUDevice() ? 2 : 1, "No worries, errors are expected: testing null resource bindings\n");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWBuffer'", false);
-    if (DeviceInfo.IsWebGPUDevice())
-    {
-        // Skip error message from Dawn
-        pEnv->PushExpectedErrorSubstring("WebGPU:", false);
-    }
-
-    DispatchWithNullResources(pCS, VarType);
+    DispatchWithNullResources(pCS, VarType, {"No resource is bound to variable 'g_MissingRWBuffer'"});
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,
@@ -672,19 +668,8 @@ RefCntAutoPtr<IShader> NullRWStructBuffer::pCS;
 
 TEST_P(NullRWStructBuffer, Test)
 {
-    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
-    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
-    const auto  VarType    = GetParam();
-
-    pEnv->SetErrorAllowance(DeviceInfo.IsWebGPUDevice() ? 2 : 1, "No worries, errors are expected: testing null resource bindings\n");
-    pEnv->PushExpectedErrorSubstring("No resource is bound to variable 'g_MissingRWStructBuffer'", false);
-    if (DeviceInfo.IsWebGPUDevice())
-    {
-        // Skip error message from Dawn
-        pEnv->PushExpectedErrorSubstring("WebGPU:", false);
-    }
-
-    DispatchWithNullResources(pCS, VarType);
+    const auto VarType = GetParam();
+    DispatchWithNullResources(pCS, VarType, {"No resource is bound to variable 'g_MissingRWStructBuffer'"});
 }
 
 INSTANTIATE_TEST_SUITE_P(NullResourceBindings,

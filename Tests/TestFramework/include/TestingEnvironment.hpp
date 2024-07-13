@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ public:
 
     static void SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage = nullptr);
     static void PushExpectedErrorSubstring(const char* Str, bool ClearStack = true);
+    static void PushExpectedErrorSubstrings(const std::vector<const char*>& Messages, bool ClearStack = true);
 
     static const char* GetCurrentTestStatusString();
     static const char* GetTestSkippedString();
