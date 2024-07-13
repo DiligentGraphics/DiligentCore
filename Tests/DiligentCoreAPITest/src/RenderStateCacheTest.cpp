@@ -623,7 +623,15 @@ void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* p
 
     constexpr PipelineResourceDesc Resources[] //
         {
-            PipelineResourceDesc{SHADER_TYPE_COMPUTE, "g_tex2DUAV", 1, SHADER_RESOURCE_TYPE_TEXTURE_UAV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
+            PipelineResourceDesc{
+                SHADER_TYPE_COMPUTE,
+                "g_tex2DUAV",
+                1,
+                SHADER_RESOURCE_TYPE_TEXTURE_UAV,
+                SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
+                PIPELINE_RESOURCE_FLAG_NONE,
+                {WEB_GPU_BINDING_TYPE_WRITE_ONLY_TEXTURE_UAV, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RGBA8_UNORM},
+            },
         };
 
     RefCntAutoPtr<IPipelineResourceSignature> pSign;

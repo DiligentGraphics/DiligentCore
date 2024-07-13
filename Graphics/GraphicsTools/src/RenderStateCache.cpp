@@ -535,6 +535,9 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
         case RENDER_DEVICE_TYPE_METAL:
             break;
 
+        case RENDER_DEVICE_TYPE_WEBGPU:
+            break;
+
         default:
             UNEXPECTED("Unknown device type");
     }
@@ -919,6 +922,12 @@ protected:
             else if (DeviceType == RENDER_DEVICE_TYPE_METAL)
             {
                 ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL_VERBATIM;
+            }
+            else if (DeviceType == RENDER_DEVICE_TYPE_WEBGPU)
+            {
+                ShaderCI.Source         = static_cast<const char*>(ShaderCI.ByteCode);
+                ShaderCI.ByteCode       = nullptr;
+                ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
             }
             ShaderArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = RenderDeviceTypeToArchiveDataFlag(DeviceType);

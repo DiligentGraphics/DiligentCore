@@ -188,8 +188,6 @@ void SerializedPipelineStateImpl::PatchShadersWebGPU(const CreateInfoType& Creat
     {
         std::string&     WGSL     = ShaderStagesWebGPU[i].WGSL;
         ShaderCreateInfo ShaderCI = ShaderStages[i].pSerialized->GetCreateInfo();
-        // Append shader source language definition to the WGSL source, which will then be recovered in ShaderWebGPUImpl.
-        AppendShaderSourceLanguageDefinition(WGSL, ShaderCI.SourceLanguage);
 
         ShaderCI.Source         = WGSL.c_str();
         ShaderCI.SourceLength   = WGSL.length();

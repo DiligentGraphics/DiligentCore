@@ -27,6 +27,7 @@
 #include "WGSLUtils.hpp"
 #include "DebugUtilities.hpp"
 #include "ParsingTools.hpp"
+#include "ShaderToolsCommon.hpp"
 
 #ifdef _MSC_VER
 #    pragma warning(push)
@@ -271,7 +272,14 @@ std::string RamapWGSLResourceBindings(const std::string&         WGSL,
         return {};
     }
 
-    return GenerationResult->wgsl;
+    std::string PatchedWGSL = std::move(GenerationResult->wgsl);
+
+    // If original WGSL contains shader source language definition, append it to the patched WGSL
+    SHADER_SOURCE_LANGUAGE SrcLang = ParseShaderSourceLanguageDefinition(WGSL);
+    if (SrcLang != SHADER_SOURCE_LANGUAGE_DEFAULT)
+        AppendShaderSourceLanguageDefinition(PatchedWGSL, SrcLang);
+
+    return PatchedWGSL;
 }
 
 } // namespace Diligent

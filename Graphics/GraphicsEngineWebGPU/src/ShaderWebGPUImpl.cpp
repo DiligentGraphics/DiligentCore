@@ -175,7 +175,8 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
 {
     m_Status.store(SHADER_STATUS_COMPILING);
 
-    SHADER_SOURCE_LANGUAGE SourceLanguage = ShaderCI.SourceLanguage;
+    SHADER_SOURCE_LANGUAGE ParsedSourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
+    SHADER_SOURCE_LANGUAGE SourceLanguage       = ShaderCI.SourceLanguage;
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
         ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_WGSL)
     {
@@ -188,7 +189,7 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
         m_WGSL.assign(SourceData.Source, SourceData.SourceLength);
 
         // Shaders packed into archive are WGSL, but we need to recover the original source language
-        const SHADER_SOURCE_LANGUAGE ParsedSourceLanguage = ParseShaderSourceLanguageDefinition(m_WGSL);
+        ParsedSourceLanguage = ParseShaderSourceLanguageDefinition(m_WGSL);
         if (ParsedSourceLanguage != SHADER_SOURCE_LANGUAGE_DEFAULT)
             SourceLanguage = ParsedSourceLanguage;
     }
@@ -228,6 +229,15 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
     {
         LOG_ERROR_AND_THROW("Unsupported shader source language");
     }
+
+    if (ParsedSourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT && SourceLanguage != SHADER_SOURCE_LANGUAGE_DEFAULT)
+    {
+        // Add source language definition. It will be needed if the shader source is requested through the GetBytecode method
+        // (e.g. by render state cache).
+        AppendShaderSourceLanguageDefinition(m_WGSL, SourceLanguage);
+    }
+    // Note that once we add the source language definition, it will always be kept in the WGSL source as
+    // RamapWGSLResourceBindings preserves it.
 
     // We cannot create shader module here because resource bindings are assigned when
     // pipeline state is created
