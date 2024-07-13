@@ -1929,6 +1929,9 @@ TEST_F(PipelineResourceSignatureTest, UnusedNullResources)
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pSwapChain = pEnv->GetSwapChain();
 
+    if (pDevice->GetDeviceInfo().IsWebGPUDevice())
+        GTEST_SKIP() << "WebGPU does not allow null resources in a SRB even if they are not used";
+
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     float ClearColor[] = {0.875, 0.375, 0.125, 0.25};
