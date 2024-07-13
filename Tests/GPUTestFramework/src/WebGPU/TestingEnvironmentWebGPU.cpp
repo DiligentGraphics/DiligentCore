@@ -115,8 +115,6 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
         {
 #if !PLATFORM_EMSCRIPTEN
             wgpuDeviceTick(m_wgpuDevice);
-#else
-            emscripten_sleep(0);
 #endif
         }
     }

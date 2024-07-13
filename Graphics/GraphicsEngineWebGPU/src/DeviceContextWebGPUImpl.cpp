@@ -319,7 +319,7 @@ void DeviceContextWebGPUImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs&
         }
     }
 
-    if (TDeviceContextBase::SetRenderTargets(Attribs))
+    if (TDeviceContextBase::SetRenderTargets(Attribs) || (Attribs.NumRenderTargets == 0 && Attribs.pDepthStencil == nullptr))
     {
         EndCommandEncoders(COMMAND_ENCODER_FLAG_RENDER);
         SetViewports(1, nullptr, 0, 0);

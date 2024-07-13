@@ -215,8 +215,6 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
 
 #if !PLATFORM_EMSCRIPTEN
     wgpuDeviceTick(m_wgpuDevice);
-#else
-    emscripten_sleep(0);
 #endif
 }
 

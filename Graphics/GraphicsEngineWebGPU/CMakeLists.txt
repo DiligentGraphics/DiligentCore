@@ -185,7 +185,7 @@ PRIVATE
 )
 
 if (PLATFORM_EMSCRIPTEN)
-    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: -s USE_WEBGPU=1 -s ASYNCIFY=1 -s DISABLE_EXCEPTION_CATCHING=0")
+    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: -s USE_WEBGPU=1")
 endif()
 
 target_compile_definitions(Diligent-GraphicsEngineWebGPU-shared PUBLIC ENGINE_DLL=1)

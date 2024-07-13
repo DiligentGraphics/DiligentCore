@@ -320,10 +320,7 @@ DynamicMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetDynamicMemoryPage(Ui
 
 void RenderDeviceWebGPUImpl::PollEvents(bool YieldToWebBrowser)
 {
-#if PLATFORM_EMSCRIPTEN
-    if (YieldToWebBrowser)
-        emscripten_sleep(0);
-#else
+#if !PLATFORM_EMSCRIPTEN
     (void)YieldToWebBrowser;
     wgpuDeviceTick(m_wgpuDevice.Get());
 #endif
@@ -389,11 +386,11 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
         }
     };
 
-    bool IsSupportedBGRA8UnormStorage       = wgpuAdapterHasFeature(m_wgpuAdapter.Get(), WGPUFeatureName_BGRA8UnormStorage);
-    bool IsSupportedFloat32Filterable       = wgpuAdapterHasFeature(m_wgpuAdapter.Get(), WGPUFeatureName_Float32Filterable);
-    bool IsSupportedRG11B10UfloatRenderable = wgpuAdapterHasFeature(m_wgpuAdapter.Get(), WGPUFeatureName_RG11B10UfloatRenderable);
-    bool IsSupportedDepth32FloatStencil8    = wgpuAdapterHasFeature(m_wgpuAdapter.Get(), WGPUFeatureName_Depth32FloatStencil8);
-    bool IsSupportedTextureCompressionBC    = wgpuAdapterHasFeature(m_wgpuAdapter.Get(), WGPUFeatureName_TextureCompressionBC);
+    bool IsSupportedBGRA8UnormStorage       = wgpuDeviceHasFeature(m_wgpuDevice.Get(), WGPUFeatureName_BGRA8UnormStorage);
+    bool IsSupportedFloat32Filterable       = wgpuDeviceHasFeature(m_wgpuDevice.Get(), WGPUFeatureName_Float32Filterable);
+    bool IsSupportedRG11B10UfloatRenderable = wgpuDeviceHasFeature(m_wgpuDevice.Get(), WGPUFeatureName_RG11B10UfloatRenderable);
+    bool IsSupportedDepth32FloatStencil8    = wgpuDeviceHasFeature(m_wgpuDevice.Get(), WGPUFeatureName_Depth32FloatStencil8);
+    bool IsSupportedTextureCompressionBC    = wgpuDeviceHasFeature(m_wgpuDevice.Get(), WGPUFeatureName_TextureCompressionBC);
 
     // https://www.w3.org/TR/webgpu/#texture-format-caps
 

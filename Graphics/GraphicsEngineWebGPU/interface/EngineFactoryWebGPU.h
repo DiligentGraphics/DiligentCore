@@ -100,6 +100,26 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryWebGPU, IEngineFactory)
                                               const NativeWindow REF       Window,
                                               ISwapChain**                 ppSwapChain) PURE;
 
+    /// Attaches to existing WebGPU render device, adapter and instance.
+
+    /// \param [in] wgpuInstance     - pointer to the native WebGPU instance.
+    /// \param [in] wgpuAdapter      - pointer to the native WebGPU adapter.
+    /// \param [in] wgpuDevice       - pointer to the native WebGPU device.
+    /// \param [in] EngineCI         - Engine creation info.
+    /// \param [out] ppDevice        - Address of the memory location where pointer to
+    ///                                      the created device will be written.
+    /// \param [out] ppContexts - Address of the memory location where pointers to
+    ///                           the contexts will be written. Immediate context goes at
+    ///                           position 0. If EngineCI.NumDeferredContexts > 0,
+    ///                           pointers to the deferred contexts are written afterwards.
+    VIRTUAL void METHOD(AttachToWebGPUDevice)(THIS_ 
+                                              void*                            wgpuInstance,
+                                              void*                            wgpuAdapter,
+                                              void*                            wgpuDevice,
+                                              const EngineWebGPUCreateInfo REF EngineCI,
+                                              IRenderDevice**                  ppDevice,
+                                              IDeviceContext**                 ppContexts) PURE;
+
     /// Return the pointer to DawnProcTable
     VIRTUAL CONST void* METHOD(GetProcessTable)(THIS) CONST PURE;
 };

@@ -83,12 +83,12 @@ public:
                                                   const NativeWindow&  Window,
                                                   ISwapChain**         ppSwapChain) override final;
 
-    void DILIGENT_CALL_TYPE AttachToWebGPUDevice(WGPUInstance                  wgpuInstance,
-                                                 WGPUAdapter                   wgpuAdapter,
-                                                 WGPUDevice                    wgpuDevice,
+    void DILIGENT_CALL_TYPE AttachToWebGPUDevice(void*                         wgpuInstance,
+                                                 void*                         wgpuAdapter,
+                                                 void*                         wgpuDevice,
                                                  const EngineWebGPUCreateInfo& EngineCI,
                                                  IRenderDevice**               ppDevice,
-                                                 IDeviceContext**              ppContexts);
+                                                 IDeviceContext**              ppContexts) override final;
 
     const void* DILIGENT_CALL_TYPE GetProcessTable() const override final;
 };
@@ -98,9 +98,7 @@ namespace
 
 void InstancePoolEvents(WGPUInstance wgpuInstance)
 {
-#if PLATFORM_EMSCRIPTEN
-    emscripten_sleep(0);
-#else
+#if !PLATFORM_EMSCRIPTEN
     wgpuInstanceProcessEvents(wgpuInstance);
 #endif
 }
@@ -241,10 +239,11 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
     return WebGPUDeviceWrapper{UserData.Device};
 }
 
-GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
+GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice wgpuDevice = nullptr /*Hack for Emscripten*/)
 {
     WGPUAdapterProperties wgpuAdapterDesc{};
-    wgpuAdapterGetProperties(wgpuAdapter, &wgpuAdapterDesc);
+    if (wgpuAdapter)
+        wgpuAdapterGetProperties(wgpuAdapter, &wgpuAdapterDesc);
 
     GraphicsAdapterInfo AdapterInfo{};
 
@@ -296,23 +295,26 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
         Features.ShaderResourceStaticArrays  = DEVICE_FEATURE_STATE_DISABLED;
         Features.ShaderResourceRuntimeArrays = DEVICE_FEATURE_STATE_DISABLED;
 
-        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_DepthClipControl))
+        if ((wgpuAdapter && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_DepthClipControl)) || (wgpuDevice && wgpuDeviceHasFeature(wgpuDevice, WGPUFeatureName_DepthClipControl)))
             Features.DepthBiasClamp = DEVICE_FEATURE_STATE_ENABLED;
 
-        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TimestampQuery))
+        if ((wgpuAdapter && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TimestampQuery)) || (wgpuDevice && wgpuDeviceHasFeature(wgpuDevice, WGPUFeatureName_TimestampQuery)))
             Features.TimestampQueries = DEVICE_FEATURE_STATE_ENABLED;
 
-        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureCompressionBC))
+        if ((wgpuAdapter && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureCompressionBC)) || (wgpuDevice && wgpuDeviceHasFeature(wgpuDevice, WGPUFeatureName_TextureCompressionBC)))
             Features.TextureCompressionBC = DEVICE_FEATURE_STATE_ENABLED;
 
-        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_ShaderF16))
+        if ((wgpuAdapter && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_ShaderF16)) || (wgpuDevice && wgpuDeviceHasFeature(wgpuDevice, WGPUFeatureName_ShaderF16)))
             Features.ShaderFloat16 = DEVICE_FEATURE_STATE_ENABLED;
     }
 
     ASSERT_SIZEOF(DeviceFeatures, 46, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     WGPUSupportedLimits wgpuSupportedLimits{};
-    wgpuAdapterGetLimits(wgpuAdapter, &wgpuSupportedLimits);
+    if (wgpuAdapter)
+        wgpuAdapterGetLimits(wgpuAdapter, &wgpuSupportedLimits);
+    else
+        wgpuDeviceGetLimits(wgpuDevice, &wgpuSupportedLimits);
 
     // Set adapter memory info
     {
@@ -327,7 +329,7 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter)
         DrawCommandInfo.MaxDrawIndirectCount = ~0u;
         DrawCommandInfo.CapFlags             = DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT;
 
-        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_IndirectFirstInstance))
+        if ((wgpuAdapter && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_IndirectFirstInstance)) && (wgpuDevice && wgpuDeviceHasFeature(wgpuDevice, WGPUFeatureName_IndirectFirstInstance)))
             DrawCommandInfo.CapFlags |= DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_FIRST_INSTANCE;
     }
 
@@ -509,9 +511,9 @@ void EngineFactoryWebGPUImpl::CreateSwapChainWebGPU(IRenderDevice*       pDevice
     }
 }
 
-void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(WGPUInstance                  wgpuInstance,
-                                                   WGPUAdapter                   wgpuAdapter,
-                                                   WGPUDevice                    wgpuDevice,
+void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(void*                         wgpuInstance,
+                                                   void*                         wgpuAdapter,
+                                                   void*                         wgpuDevice,
                                                    const EngineWebGPUCreateInfo& EngineCI,
                                                    IRenderDevice**               ppDevice,
                                                    IDeviceContext**              ppImmediateContext)
@@ -543,7 +545,7 @@ void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(WGPUInstance                 
 
     try
     {
-        const auto AdapterInfo = GetGraphicsAdapterInfo(wgpuAdapter);
+        const auto AdapterInfo = GetGraphicsAdapterInfo(static_cast<WGPUAdapter>(wgpuAdapter), static_cast<WGPUDevice>(wgpuDevice));
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
@@ -551,7 +553,7 @@ void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(WGPUInstance                 
 
         RenderDeviceWebGPUImpl* pRenderDeviceWebGPU{
             NEW_RC_OBJ(RawMemAllocator, "RenderDeviceWebGPUImpl instance", RenderDeviceWebGPUImpl)(
-                RawMemAllocator, this, EngineCI, AdapterInfo, wgpuInstance, wgpuAdapter, wgpuDevice)};
+                RawMemAllocator, this, EngineCI, AdapterInfo, static_cast<WGPUInstance>(wgpuInstance), static_cast<WGPUAdapter>(wgpuAdapter), static_cast<WGPUDevice>(wgpuDevice))};
         pRenderDeviceWebGPU->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         DeviceContextWebGPUImpl* pDeviceContextWebGPU{

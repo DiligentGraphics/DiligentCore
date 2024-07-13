@@ -525,16 +525,22 @@ void SwapChainWebGPUImpl::ConfigureSurface()
     };
 
     WGPUSurfaceConfiguration wgpuSurfaceConfig{};
-    wgpuSurfaceConfig.nextInChain     = nullptr;
-    wgpuSurfaceConfig.device          = pRenderDeviceWebGPU->GetWebGPUDevice();
-    wgpuSurfaceConfig.usage           = SelectUsage(m_SwapChainDesc.Usage);
-    wgpuSurfaceConfig.width           = m_SwapChainDesc.Width;
-    wgpuSurfaceConfig.height          = m_SwapChainDesc.Height;
-    wgpuSurfaceConfig.format          = wgpuSurfaceGetPreferredFormat(m_wgpuSurface.Get(), pRenderDeviceWebGPU->GetWebGPUAdapter());
-    wgpuSurfaceConfig.presentMode     = SelectPresentMode(m_VSyncEnabled);
-    wgpuSurfaceConfig.alphaMode       = WGPUCompositeAlphaMode_Auto;
+    wgpuSurfaceConfig.nextInChain = nullptr;
+    wgpuSurfaceConfig.device      = pRenderDeviceWebGPU->GetWebGPUDevice();
+    wgpuSurfaceConfig.usage       = SelectUsage(m_SwapChainDesc.Usage);
+    wgpuSurfaceConfig.width       = m_SwapChainDesc.Width;
+    wgpuSurfaceConfig.height      = m_SwapChainDesc.Height;
+    wgpuSurfaceConfig.format      = wgpuSurfaceGetPreferredFormat(m_wgpuSurface.Get(), pRenderDeviceWebGPU->GetWebGPUAdapter());
+    wgpuSurfaceConfig.presentMode = SelectPresentMode(m_VSyncEnabled);
+    wgpuSurfaceConfig.alphaMode   = WGPUCompositeAlphaMode_Auto;
+
+    // https://github.com/emscripten-core/emscripten/blob/20800de9644315f075e27c8a67dd811b4ec8884a/src/library_webgpu.js#L2749
+#if !PLATFORM_EMSCRIPTEN
     wgpuSurfaceConfig.viewFormats     = wgpuRTVFormats;
     wgpuSurfaceConfig.viewFormatCount = _countof(wgpuRTVFormats);
+#else
+    (void)wgpuRTVFormats;
+#endif
 
     wgpuSurfaceConfigure(m_wgpuSurface.Get(), &wgpuSurfaceConfig);
     wgpuSurfaceCapabilitiesFreeMembers(wgpuSurfaceCapabilities);
