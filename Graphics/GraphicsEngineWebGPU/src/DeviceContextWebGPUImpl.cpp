@@ -353,15 +353,24 @@ void DeviceContextWebGPUImpl::Draw(const DrawAttribs& Attribs)
 {
     TDeviceContextBase::Draw(Attribs, 0);
 
-    auto wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 
-    if (Attribs.NumVertices > 0 && Attribs.NumInstances > 0)
-        wgpuRenderPassEncoderDraw(wgpuRenderCmdEncoder, Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
+    if (Attribs.NumVertices == 0 || Attribs.NumInstances == 0)
+        return;
+
+    auto wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
+    wgpuRenderPassEncoderDraw(wgpuRenderCmdEncoder, Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
 }
 
 void DeviceContextWebGPUImpl::MultiDraw(const MultiDrawAttribs& Attribs)
 {
     TDeviceContextBase::MultiDraw(Attribs, 0);
+
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 
     if (Attribs.NumInstances == 0)
         return;
@@ -379,15 +388,24 @@ void DeviceContextWebGPUImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
 {
     TDeviceContextBase::DrawIndexed(Attribs, 0);
 
-    auto wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 
-    if (Attribs.NumIndices > 0 && Attribs.NumInstances > 0)
-        wgpuRenderPassEncoderDrawIndexed(wgpuRenderCmdEncoder, Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
+    if (Attribs.NumIndices == 0 || Attribs.NumInstances == 0)
+        return;
+
+    auto wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+    wgpuRenderPassEncoderDrawIndexed(wgpuRenderCmdEncoder, Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
 }
 
 void DeviceContextWebGPUImpl::MultiDrawIndexed(const MultiDrawIndexedAttribs& Attribs)
 {
     TDeviceContextBase::MultiDrawIndexed(Attribs, 0);
+
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 
     if (Attribs.NumInstances == 0)
         return;
@@ -405,8 +423,11 @@ void DeviceContextWebGPUImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 {
     TDeviceContextBase::DrawIndirect(Attribs, 0);
 
-    auto wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 
+    auto wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
     auto IndirectBufferOffset = Attribs.DrawArgsOffset;
     auto wgpuIndirectBuffer   = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
 
@@ -421,8 +442,11 @@ void DeviceContextWebGPUImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttri
 {
     TDeviceContextBase::DrawIndexedIndirect(Attribs, 0);
 
-    auto wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 
+    auto wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
     auto IndirectBufferOffset = Attribs.DrawArgsOffset;
     auto wgpuIndirectBuffer   = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
 
@@ -447,20 +471,28 @@ void DeviceContextWebGPUImpl::DispatchCompute(const DispatchComputeAttribs& Attr
 {
     TDeviceContextBase::DispatchCompute(Attribs, 0);
 
-    auto wgpuComputeCmdEncoder = PrepareForDispatchCompute();
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 
-    if (Attribs.ThreadGroupCountX > 0 && Attribs.ThreadGroupCountY > 0 && Attribs.ThreadGroupCountZ > 0)
-        wgpuComputePassEncoderDispatchWorkgroups(wgpuComputeCmdEncoder, Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
+    if (Attribs.ThreadGroupCountX == 0 || Attribs.ThreadGroupCountY == 0 || Attribs.ThreadGroupCountZ == 0)
+        return;
+
+    auto wgpuComputeCmdEncoder = PrepareForDispatchCompute();
+    wgpuComputePassEncoderDispatchWorkgroups(wgpuComputeCmdEncoder, Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
 }
 
 void DeviceContextWebGPUImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs)
 {
     TDeviceContextBase::DispatchComputeIndirect(Attribs, 0);
 
-    auto wgpuComputeCmdEncoder = PrepareForDispatchCompute();
+#ifdef DILIGENT_DEVELOPMENT
+    DvpValidateCommittedShaderResources();
+#endif
 
-    auto IndirectBufferOffset = Attribs.DispatchArgsByteOffset;
-    auto wgpuIndirectBuffer   = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
+    auto wgpuComputeCmdEncoder = PrepareForDispatchCompute();
+    auto IndirectBufferOffset  = Attribs.DispatchArgsByteOffset;
+    auto wgpuIndirectBuffer    = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
 
     wgpuComputePassEncoderDispatchWorkgroupsIndirect(wgpuComputeCmdEncoder, wgpuIndirectBuffer, IndirectBufferOffset);
 }
@@ -1615,10 +1647,6 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
         m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_STENCIL_REF);
     }
 
-#ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
-#endif
-
     if (m_BindInfo.DirtyBindGroups != 0)
         CommitBindGroups(wgpuRenderCmdEncoder);
 
@@ -1648,10 +1676,6 @@ WGPUComputePassEncoder DeviceContextWebGPUImpl::PrepareForDispatchCompute()
 
     if (auto CommitSRBMask = m_BindInfo.GetCommitMask())
         CommitSRBs<PIPELINE_TYPE_COMPUTE>(wgpuComputeCmdEncoder, CommitSRBMask);
-
-#ifdef DILIGENT_DEVELOPMENT
-    DvpValidateCommittedShaderResources();
-#endif
 
     if (m_BindInfo.DirtyBindGroups != 0)
         CommitBindGroups(wgpuComputeCmdEncoder);
