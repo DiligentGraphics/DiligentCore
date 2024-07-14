@@ -233,7 +233,7 @@ struct WebGPUResourceAttribs
 
     constexpr WebGPUResourceAttribs(WEB_GPU_BINDING_TYPE _BindingType,
 						            RESOURCE_DIMENSION   _TextureViewDim,
-						            TEXTURE_FORMAT       _UAVTextureFormat) noexcept :
+						            TEXTURE_FORMAT       _UAVTextureFormat = TEX_FORMAT_UNKNOWN) noexcept :
 		BindingType     {_BindingType    },
 		TextureViewDim  {_TextureViewDim },
 		UAVTextureFormat{_UAVTextureFormat}
