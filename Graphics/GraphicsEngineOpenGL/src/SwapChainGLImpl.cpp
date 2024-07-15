@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -122,7 +122,7 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
 #elif PLATFORM_MACOS
     LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
 #elif PLATFORM_EMSCRIPTEN
-    LOG_ERROR("Swap buffers operation must be performed by the app on Emscripten");
+    LOG_INFO_MESSAGE_ONCE("Swap buffers operation should be performed by the app on the Web");
 #else
 #    error Unsupported platform
 #endif
