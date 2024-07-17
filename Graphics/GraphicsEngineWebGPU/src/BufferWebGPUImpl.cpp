@@ -93,13 +93,13 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
         {
             if (m_Desc.CPUAccessFlags & CPU_ACCESS_READ)
             {
-                wgpuBufferDesc.usage |= WGPUMapMode_Read;
+                wgpuBufferDesc.usage |= WGPUBufferUsage_MapRead;
                 wgpuBufferDesc.usage |= WGPUBufferUsage_CopyDst;
             }
 
             if (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE)
             {
-                wgpuBufferDesc.usage |= WGPUMapMode_Write;
+                wgpuBufferDesc.usage |= WGPUBufferUsage_MapWrite;
                 wgpuBufferDesc.usage |= WGPUBufferUsage_CopySrc;
             }
 
