@@ -4467,7 +4467,9 @@ String HLSL2GLSLConverterImpl::Convert(ConversionAttribs& Attribs) const
         try
         {
             ConversionStream Stream(nullptr, *this, Attribs.InputFileName, Attribs.pSourceStreamFactory, Attribs.HLSLSource, Attribs.NumSymbols, false);
-            return Stream.Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix, Attribs.UseInOutLocationQualifiers);
+            return Stream.Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions,
+                                  Attribs.SamplerSuffix, Attribs.UseInOutLocationQualifiers,
+                                  Attribs.UseRowMajorMatrices);
         }
         catch (std::runtime_error&)
         {
@@ -4496,7 +4498,9 @@ String HLSL2GLSLConverterImpl::Convert(ConversionAttribs& Attribs) const
             pStream = ClassPtrCast<ConversionStream>(*Attribs.ppConversionStream);
         }
 
-        return pStream->Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix, Attribs.UseInOutLocationQualifiers);
+        return pStream->Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions,
+                                Attribs.SamplerSuffix, Attribs.UseInOutLocationQualifiers,
+                                Attribs.UseRowMajorMatrices);
     }
 }
 
@@ -4522,11 +4526,12 @@ void HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
                                                        bool        IncludeDefintions,
                                                        const char* SamplerSuffix,
                                                        bool        UseInOutLocationQualifiers,
+                                                       bool        UseRowMajorMatrices,
                                                        IDataBlob** ppGLSLSource)
 {
     try
     {
-        auto                GLSLSource = Convert(EntryPoint, ShaderType, IncludeDefintions, SamplerSuffix, UseInOutLocationQualifiers);
+        auto                GLSLSource = Convert(EntryPoint, ShaderType, IncludeDefintions, SamplerSuffix, UseInOutLocationQualifiers, UseRowMajorMatrices);
         StringDataBlobImpl* pDataBlob  = MakeNewRCObj<StringDataBlobImpl>()(std::move(GLSLSource));
         pDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppGLSLSource));
     }
@@ -4540,9 +4545,11 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
                                                          SHADER_TYPE ShaderType,
                                                          bool        IncludeDefintions,
                                                          const char* SamplerSuffix,
-                                                         bool        UseInOutLocationQualifiers)
+                                                         bool        UseInOutLocationQualifiers,
+                                                         bool        UseRowMajorMatrices)
 {
     m_bUseInOutLocationQualifiers = UseInOutLocationQualifiers;
+    m_bUseRowMajorMatrices        = UseRowMajorMatrices;
     TokenListType TokensCopy(m_bPreserveTokens ? m_Tokens : TokenListType());
 
     Uint32 ShaderStorageBlockBinding = 0;

@@ -451,19 +451,23 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 
     const auto SourceData = ReadShaderSourceFile(ShaderCI);
 
-    std::string Defines{"#define GLSLANG\n\n"};
-    Defines.append(g_HLSLDefinitions);
-    AppendShaderTypeDefinitions(Defines, ShaderCI.Desc.ShaderType);
+    std::string Preamble;
+    if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0)
+        Preamble += "#pragma pack_matrix(row_major)\n\n";
+    Preamble.append("#define GLSLANG\n\n");
+    Preamble.append(g_HLSLDefinitions);
+    AppendShaderTypeDefinitions(Preamble, ShaderCI.Desc.ShaderType);
 
     if (ExtraDefinitions != nullptr)
-        Defines += ExtraDefinitions;
+        Preamble += ExtraDefinitions;
 
     if (ShaderCI.Macros)
     {
-        Defines += '\n';
-        AppendShaderMacros(Defines, ShaderCI.Macros);
+        Preamble += '\n';
+        AppendShaderMacros(Preamble, ShaderCI.Macros);
     }
-    Shader.setPreamble(Defines.c_str());
+
+    Shader.setPreamble(Preamble.c_str());
 
     const char* ShaderStrings[]       = {SourceData.Source};
     const int   ShaderStringLengths[] = {static_cast<int>(SourceData.SourceLength)};
@@ -515,10 +519,13 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
     int         Lengths[]       = {Attribs.SourceCodeLen};
     Shader.setStringsWithLengths(ShaderStrings, Lengths, 1);
 
-    std::string Defines{"#define GLSLANG\n\n"};
+    std::string Preamble;
+    if (Attribs.UseRowMajorMatrices)
+        Preamble += "layout(row_major) uniform;\n\n";
+    Preamble.append("#define GLSLANG\n\n");
     if (Attribs.Macros)
-        AppendShaderMacros(Defines, Attribs.Macros);
-    Shader.setPreamble(Defines.c_str());
+        AppendShaderMacros(Preamble, Attribs.Macros);
+    Shader.setPreamble(Preamble.c_str());
 
     IncluderImpl Includer{Attribs.pShaderSourceStreamFactory};
 

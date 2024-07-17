@@ -726,8 +726,6 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     std::vector<const wchar_t*> DxilArgs;
     if (m_Library.GetTarget() == DXCompilerTarget::Direct3D12)
     {
-        DxilArgs.push_back(DXC_ARG_PACK_MATRIX_COLUMN_MAJOR); // Matrices in column-major order
-
         //DxilArgs.push_back(L"-WX");  // Warnings as errors
 #ifdef DILIGENT_DEBUG
         DxilArgs.push_back(DXC_ARG_DEBUG);              // Debug info
@@ -751,7 +749,6 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
             {
                 L"-spirv",
                 L"-fspv-reflect",
-                DXC_ARG_PACK_MATRIX_COLUMN_MAJOR, // Matrices in column-major order
 #ifdef DILIGENT_DEBUG
                 DXC_ARG_SKIP_OPTIMIZATIONS,
 #else
@@ -775,7 +772,9 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     {
         UNEXPECTED("Unknown compiler target");
     }
-
+    DxilArgs.push_back((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0 ?
+                           DXC_ARG_PACK_MATRIX_ROW_MAJOR :
+                           DXC_ARG_PACK_MATRIX_COLUMN_MAJOR);
 
     CComPtr<IDxcBlob> pDXIL;
     CComPtr<IDxcBlob> pDxcLog;
@@ -853,7 +852,7 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
             const Uint32 ShType = D3D12_SHVER_GET_TYPE(ShDesc.Version);
             switch (ShType)
             {
-                // clang-format off
+                    // clang-format off
                 case D3D12_SHVER_PIXEL_SHADER:    ShaderType = SHADER_TYPE_PIXEL;            break;
                 case D3D12_SHVER_VERTEX_SHADER:   ShaderType = SHADER_TYPE_VERTEX;           break;
                 case D3D12_SHVER_GEOMETRY_SHADER: ShaderType = SHADER_TYPE_GEOMETRY;         break;
@@ -925,7 +924,7 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
                     RES_TYPE ExpectedResType = RES_TYPE_COUNT;
                     switch (NameAndBinding.second.ResType)
                     {
-                        // clang-format off
+                            // clang-format off
                         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  ExpectedResType = RES_TYPE_CBV;     break;
                         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      ExpectedResType = RES_TYPE_SRV;     break;
                         case SHADER_RESOURCE_TYPE_BUFFER_SRV:       ExpectedResType = RES_TYPE_SRV;     break;

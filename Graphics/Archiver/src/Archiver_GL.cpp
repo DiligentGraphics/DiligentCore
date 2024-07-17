@@ -338,9 +338,10 @@ private:
         VERIFY_EXPR(DeviceType == RENDER_DEVICE_TYPE_GL || DeviceType == RENDER_DEVICE_TYPE_GLES);
         Attribs.Version = DeviceType == RENDER_DEVICE_TYPE_GL ? GLSLangUtils::SpirvVersion::GL : GLSLangUtils::SpirvVersion::GLES;
 
-        Attribs.ppCompilerOutput = GLShaderCI.ppCompilerOutput;
-        Attribs.ShaderSource     = GLSLSourceString.c_str();
-        Attribs.SourceCodeLen    = static_cast<int>(GLSLSourceString.length());
+        Attribs.ppCompilerOutput    = GLShaderCI.ppCompilerOutput;
+        Attribs.ShaderSource        = GLSLSourceString.c_str();
+        Attribs.SourceCodeLen       = static_cast<int>(GLSLSourceString.length());
+        Attribs.UseRowMajorMatrices = (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0;
 
         std::vector<unsigned int> SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
         if (SPIRV.empty())

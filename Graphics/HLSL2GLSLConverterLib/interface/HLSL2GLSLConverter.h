@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,6 +57,7 @@ DILIGENT_BEGIN_INTERFACE(IHLSL2GLSLConversionStream, IObject)
                                  bool        IncludeDefintions,
                                  const char* SamplerSuffix,
                                  bool        UseInOutLocationQualifiers,
+                                 bool        UseRowMajorMatrices,
                                  IDataBlob** ppGLSLSource) PURE;
 };
 DILIGENT_END_INTERFACE

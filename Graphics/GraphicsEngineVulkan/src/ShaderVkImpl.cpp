@@ -143,6 +143,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
         Attribs.Version                    = GLSLangUtils::SpirvVersion::Vk100;
         Attribs.Macros                     = Macros;
         Attribs.AssignBindings             = true;
+        Attribs.UseRowMajorMatrices        = (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0;
         Attribs.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
         Attribs.ppCompilerOutput           = VkShaderCI.ppCompilerOutput;
 

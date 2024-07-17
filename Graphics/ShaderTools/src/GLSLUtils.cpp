@@ -388,6 +388,7 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
         // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt
         // (search for "Input Layout Qualifiers" and "Output Layout Qualifiers").
         ConvertAttribs.UseInOutLocationQualifiers = Attribs.Features.SeparablePrograms;
+        ConvertAttribs.UseRowMajorMatrices        = (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0;
         auto ConvertedSource                      = Converter.Convert(ConvertAttribs);
         if (ConvertedSource.empty())
         {

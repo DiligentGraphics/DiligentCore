@@ -358,7 +358,18 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILE_FLAGS, Uint32)
     ///             the flag is ignored and the shader is compiled synchronously.
     SHADER_COMPILE_FLAG_ASYNCHRONOUS            = 1u << 2u,
 
-    SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_ASYNCHRONOUS
+    /// Pack matrices in row-major order.
+    ///
+    /// \remarks    By default, matrices are laid out in GPU memory in column-major order,
+    ///             which means that the first four values in a 4x4 matrix represent
+    ///             the first column, the next four values represent the second column,
+    ///             and so on.
+    ///
+    ///             If this flag is set, matrices are packed in row-major order, i.e.
+    ///             they are laid out in memory row-by-row.
+    SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR   = 1u << 3u,
+
+    SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_COMPILE_FLAGS);
 

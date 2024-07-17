@@ -134,6 +134,9 @@ public:
         /// This requires separate shader objects extension:
         /// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt
         bool                                UseInOutLocationQualifiers = true;
+
+        /// Whether to add layot(row_major) qualifier to uniform blocks.
+        bool                                UseRowMajorMatrices        = false;
     };
 
     // clang-format on
@@ -251,13 +254,15 @@ private:
                        SHADER_TYPE ShaderType,
                        bool        IncludeDefintions,
                        const char* SamplerSuffix,
-                       bool        UseInOutLocationQualifiers);
+                       bool        UseInOutLocationQualifiers,
+                       bool        UseRowMajorMatrices);
 
         virtual void DILIGENT_CALL_TYPE Convert(const Char* EntryPoint,
                                                 SHADER_TYPE ShaderType,
                                                 bool        IncludeDefintions,
                                                 const char* SamplerSuffix,
                                                 bool        UseInOutLocationQualifiers,
+                                                bool        UseRowMajorMatrices,
                                                 IDataBlob** ppGLSLSource) override final;
 
         IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_HLSL2GLSLConversionStream, TBase)
