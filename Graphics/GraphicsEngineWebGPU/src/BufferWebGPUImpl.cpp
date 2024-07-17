@@ -137,16 +137,17 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
             }
         }
 
-        const auto InitializeBuffer = (pInitData != nullptr && pInitData->pData != nullptr);
+        wgpuBufferDesc.mappedAtCreation = (pInitData != nullptr && pInitData->pData != nullptr);
+
         m_wgpuBuffer.Reset(wgpuDeviceCreateBuffer(pDevice->GetWebGPUDevice(), &wgpuBufferDesc));
         if (!m_wgpuBuffer)
             LOG_ERROR_AND_THROW("Failed to create WebGPU buffer ", " '", m_Desc.Name ? m_Desc.Name : "", '\'');
 
-        if (InitializeBuffer)
+        if (wgpuBufferDesc.mappedAtCreation)
         {
-            VERIFY_EXPR(pDevice->GetNumImmediateContexts() == 1);
-            auto pContext = pDevice->GetImmediateContext(0);
-            wgpuQueueWriteBuffer(pContext->GetWebGPUQueue(), m_wgpuBuffer, 0, pInitData->pData, StaticCast<size_t>(pInitData->DataSize));
+            void* pData = wgpuBufferGetMappedRange(m_wgpuBuffer, 0, StaticCast<size_t>(pInitData->DataSize));
+            memcpy(pData, pInitData->pData, StaticCast<size_t>(pInitData->DataSize));
+            wgpuBufferUnmap(m_wgpuBuffer);
         }
     }
 
