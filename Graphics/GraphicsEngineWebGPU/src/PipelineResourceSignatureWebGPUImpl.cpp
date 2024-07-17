@@ -88,6 +88,9 @@ BindGroupEntryType GetBindGroupEntryType(const PipelineResourceDesc& Res)
         case SHADER_RESOURCE_TYPE_SAMPLER:
             return BindGroupEntryType::Sampler;
 
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
+            return BindGroupEntryType::Texture;
+
         default:
             UNEXPECTED("Unknown resource type");
             return BindGroupEntryType::Count;
@@ -968,7 +971,9 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const WGS
             case BindGroupEntryType::StorageTexture_WriteOnly:
             case BindGroupEntryType::StorageTexture_ReadOnly:
             case BindGroupEntryType::StorageTexture_ReadWrite:
-                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
+                VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
+                            ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT ||
+                            ResDesc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
                 // When can use raw cast here because the dynamic type is verified when the resource
                 // is bound. It will be null if the type is incorrect.
                 if (const TextureViewWebGPUImpl* pTexViewWebGPU = Res.pObject.RawPtr<TextureViewWebGPUImpl>())

@@ -147,7 +147,10 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
                 Uint32 ArraySize       = 1;
                 if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
                 {
-                    const auto& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                    PipelineResourceDesc ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
+                        ResDesc.ResourceType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+
                     ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, WGSLAttribs.ArraySize,
                                                           pShader->GetDesc().Name, SignDesc.Name);
 
