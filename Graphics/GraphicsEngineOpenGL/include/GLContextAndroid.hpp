@@ -89,8 +89,10 @@ private:
 
     void InitGLES();
     void Terminate();
+    bool InitEGLDisplay();
     bool InitEGLSurface();
     bool InitEGLContext();
+    void AttachToCurrentEGLSurface();
     void AttachToCurrentEGLContext();
 };
 
