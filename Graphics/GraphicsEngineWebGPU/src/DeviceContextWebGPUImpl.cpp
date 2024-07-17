@@ -706,7 +706,7 @@ void DeviceContextWebGPUImpl::MapBuffer(IBuffer*  pBuffer,
             }
             else
             {
-                if (pBufferWebGPU->GetWebGPUBuffer() != nullptr)
+                if (pBufferWebGPU->m_wgpuBuffer != nullptr)
                 {
                     LOG_ERROR("Formatted or structured buffers require actual WebGPU backing resource and cannot be suballocated "
                               "from dynamic heap. In current implementation, the entire contents of the backing buffer is updated when the buffer is unmapped. "
