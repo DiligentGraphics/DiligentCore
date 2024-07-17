@@ -1,3 +1,5 @@
+#pragma pack_matrix(row_major)
+
 cbuffer Constants
 {
     float4x4 g_WorldViewProj;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -180,7 +180,7 @@ TEST(GenerateImagesDotNetTest, GenerateCubeTexture)
         auto W   = float4x4::RotationY(PI_F / 4.0f) * float4x4::RotationX(-PI_F * 0.1f);
         auto V   = float4x4::Translation(0.0f, 0.0f, 5.0f);
         auto P   = float4x4::Projection(PI_F / 4.0f, AspectRatio, 0.01f, 100.0f, pDevice->GetDeviceInfo().IsGLDevice());
-        auto WVP = (W * V * P).Transpose();
+        auto WVP = W * V * P;
 
         MapHelper<float4x4> pData{pContext, pUniformBuffer, MAP_WRITE, MAP_FLAG_DISCARD};
         *pData = WVP;
