@@ -208,7 +208,7 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
 
     // Create fences
     // Note: D3D11 does not support general fences
-    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D11)
+    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D11 && pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_WEBGPU)
     {
         FenceDesc Desc;
         Desc.Type = FENCE_TYPE_GENERAL;

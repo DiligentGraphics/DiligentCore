@@ -46,6 +46,71 @@
 namespace Diligent
 {
 
+namespace
+{
+
+Uint64 GetStagingTextureLocationOffsetWebGPU(const TextureDesc& TexDesc,
+                                             Uint32             ArraySlice,
+                                             Uint32             MipLevel,
+                                             Uint32             RowAlignment,
+                                             Uint32             LocationX,
+                                             Uint32             LocationY,
+                                             Uint32             LocationZ)
+{
+    VERIFY_EXPR(TexDesc.MipLevels > 0 && TexDesc.GetArraySize() > 0 && TexDesc.Width > 0 && TexDesc.Height > 0 && TexDesc.Format != TEX_FORMAT_UNKNOWN);
+    VERIFY_EXPR(ArraySlice < TexDesc.GetArraySize() && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.GetArraySize() && MipLevel == 0);
+
+    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+
+    Uint64 Offset = 0;
+    if (ArraySlice > 0)
+    {
+        Uint64 ArraySliceSize = 0;
+        for (Uint32 MipIdx = 0; MipIdx < TexDesc.MipLevels; ++MipIdx)
+        {
+            auto       MipInfo        = GetMipLevelProperties(TexDesc, MipIdx);
+            const auto DepthSliceSize = AlignUp(MipInfo.RowSize, RowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
+            ArraySliceSize += DepthSliceSize * MipInfo.Depth;
+        }
+
+        Offset = ArraySliceSize;
+        if (TexDesc.IsArray())
+            Offset *= ArraySlice;
+    }
+
+    for (Uint32 MipIdx = 0; MipIdx < MipLevel; ++MipIdx)
+    {
+        auto       MipInfo        = GetMipLevelProperties(TexDesc, MipIdx);
+        const auto DepthSliceSize = AlignUp(MipInfo.RowSize, RowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
+        Offset += DepthSliceSize * MipInfo.Depth;
+    }
+
+    if (ArraySlice == TexDesc.GetArraySize())
+    {
+        VERIFY(LocationX == 0 && LocationY == 0 && LocationZ == 0,
+               "Staging buffer size is requested: location must be (0,0,0).");
+    }
+    else if (LocationX != 0 || LocationY != 0 || LocationZ != 0)
+    {
+        const auto& MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
+
+        VERIFY(LocationX < MipLevelAttribs.LogicalWidth && LocationY < MipLevelAttribs.LogicalHeight && LocationZ < MipLevelAttribs.Depth,
+               "Specified location is out of bounds");
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            VERIFY((LocationX % FmtAttribs.BlockWidth) == 0 && (LocationY % FmtAttribs.BlockHeight) == 0,
+                   "For compressed texture formats, location must be a multiple of compressed block size.");
+        }
+
+        Offset += (LocationZ * MipLevelAttribs.StorageHeight + LocationY) / FmtAttribs.BlockHeight * AlignUp(MipLevelAttribs.RowSize, RowAlignment);
+        Offset += Uint64{LocationX / FmtAttribs.BlockWidth} * FmtAttribs.GetElementSize();
+    }
+
+    return Offset;
+}
+
+} // namespace
+
 DeviceContextWebGPUImpl::DeviceContextWebGPUImpl(IReferenceCounters*           pRefCounters,
                                                  RenderDeviceWebGPUImpl*       pDevice,
                                                  const EngineWebGPUCreateInfo& EngineCI,
@@ -726,20 +791,14 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
 
     EndCommandEncoders();
 
-    constexpr auto BufferToTextureCopyAlignment = 256; // https://github.com/gpuweb/gpuweb/issues/3902
-
     auto* const pTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
 
-    const auto& TexDesc           = pTextureWebGPU->GetDesc();
-    const auto  CopyInfo          = GetBufferToTextureCopyInfo(TexDesc.Format, DstBox, BufferToTextureCopyAlignment);
-    const auto  UpdateWidth       = DstBox.Width();
-    const auto  UpdateHeight      = DstBox.Height();
-    const auto  UpdateDepth       = DstBox.Depth();
-    const auto  UpdateRegionDepth = CopyInfo.Region.Depth();
+    const auto& TexDesc  = pTextureWebGPU->GetDesc();
+    const auto  CopyInfo = GetBufferToTextureCopyInfo(TexDesc.Format, DstBox, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
 
     const auto DynAllocation = AllocateUploadMemory(CopyInfo.MemorySize);
 
-    for (Uint32 LayerIdx = 0; LayerIdx < UpdateRegionDepth; ++LayerIdx)
+    for (Uint32 LayerIdx = 0; LayerIdx < CopyInfo.Region.Depth(); ++LayerIdx)
     {
         for (Uint32 RawIdx = 0; RawIdx < CopyInfo.RowCount; ++RawIdx)
         {
@@ -760,13 +819,21 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
     wgpuImageCopyDst.aspect   = WGPUTextureAspect_All;
     wgpuImageCopyDst.origin.x = DstBox.MinX;
     wgpuImageCopyDst.origin.y = DstBox.MinY;
-    wgpuImageCopyDst.origin.z = DstBox.MinZ;
+    wgpuImageCopyDst.origin.z = Slice != 0 ? Slice : DstBox.MinZ;
     wgpuImageCopyDst.mipLevel = MipLevel;
 
+    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+
     WGPUExtent3D wgpuCopySize{};
-    wgpuCopySize.width              = UpdateWidth;
-    wgpuCopySize.height             = UpdateHeight;
-    wgpuCopySize.depthOrArrayLayers = UpdateDepth;
+    wgpuCopySize.width              = DstBox.Width();
+    wgpuCopySize.height             = DstBox.Height();
+    wgpuCopySize.depthOrArrayLayers = DstBox.Depth();
+
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+    {
+        wgpuCopySize.width  = AlignUp(wgpuCopySize.width, FmtAttribs.BlockWidth);
+        wgpuCopySize.height = AlignUp(wgpuCopySize.height, FmtAttribs.BlockHeight);
+    }
 
     wgpuCommandEncoderCopyBufferToTexture(GetCommandEncoder(), &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
 }
@@ -812,7 +879,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         wgpuImageCopySrc.aspect   = wgpuAspectMask;
         wgpuImageCopySrc.origin.x = pSrcBox->MinX;
         wgpuImageCopySrc.origin.y = pSrcBox->MinY;
-        wgpuImageCopySrc.origin.z = pSrcBox->MinZ;
+        wgpuImageCopySrc.origin.z = CopyAttribs.SrcSlice != 0 ? CopyAttribs.SrcSlice : pSrcBox->MinZ;
         wgpuImageCopySrc.mipLevel = CopyAttribs.SrcMipLevel;
 
         WGPUImageCopyTexture wgpuImageCopyDst{};
@@ -820,7 +887,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         wgpuImageCopyDst.aspect   = wgpuAspectMask;
         wgpuImageCopyDst.origin.x = CopyAttribs.DstX;
         wgpuImageCopyDst.origin.y = CopyAttribs.DstY;
-        wgpuImageCopyDst.origin.z = CopyAttribs.DstZ;
+        wgpuImageCopyDst.origin.z = CopyAttribs.DstSlice != 0 ? CopyAttribs.DstSlice : CopyAttribs.DstZ;
         wgpuImageCopyDst.mipLevel = CopyAttribs.DstMipLevel;
 
         WGPUExtent3D wgpuCopySize{};
@@ -828,11 +895,17 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         wgpuCopySize.height             = std::max(pSrcBox->Height(), 1u);
         wgpuCopySize.depthOrArrayLayers = std::max(pSrcBox->Depth(), 1u);
 
+        if (DstFmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            wgpuCopySize.width  = AlignUp(wgpuCopySize.width, DstFmtAttribs.BlockWidth);
+            wgpuCopySize.height = AlignUp(wgpuCopySize.height, DstFmtAttribs.BlockHeight);
+        }
+
         wgpuCommandEncoderCopyTextureToTexture(wgpuCmdEncoder, &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
     }
     else if (SrcTexDesc.Usage == USAGE_STAGING && DstTexDesc.Usage != USAGE_STAGING)
     {
-        const auto SrcBufferOffset = GetStagingTextureLocationOffset(SrcTexDesc, CopyAttribs.SrcSlice, CopyAttribs.SrcMipLevel, TextureWebGPUImpl::StagingDataAlignment, pSrcBox->MinX, pSrcBox->MinY, pSrcBox->MinZ);
+        const auto SrcBufferOffset = GetStagingTextureLocationOffsetWebGPU(SrcTexDesc, CopyAttribs.SrcSlice, CopyAttribs.SrcMipLevel, TextureWebGPUImpl::ImageCopyBufferRowAlignment, pSrcBox->MinX, pSrcBox->MinY, pSrcBox->MinZ);
 
         const auto SrcMipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
 
@@ -847,7 +920,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         WGPUImageCopyBuffer wgpuImageCopySrc{};
         wgpuImageCopySrc.buffer              = pSrcTexWebGPU->GetWebGPUStagingBuffer();
         wgpuImageCopySrc.layout.offset       = SrcBufferOffset;
-        wgpuImageCopySrc.layout.bytesPerRow  = static_cast<Uint32>(SrcMipLevelAttribs.RowSize);
+        wgpuImageCopySrc.layout.bytesPerRow  = static_cast<Uint32>(AlignUp(SrcMipLevelAttribs.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment));
         wgpuImageCopySrc.layout.rowsPerImage = SrcMipLevelAttribs.StorageHeight / DstFmtAttribs.BlockHeight;
 
         WGPUImageCopyTexture wgpuImageCopyDst{};
@@ -855,7 +928,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         wgpuImageCopyDst.aspect   = wgpuAspectMask;
         wgpuImageCopyDst.origin.x = CopyAttribs.DstX;
         wgpuImageCopyDst.origin.y = CopyAttribs.DstY;
-        wgpuImageCopyDst.origin.z = CopyAttribs.DstZ;
+        wgpuImageCopyDst.origin.z = CopyAttribs.DstSlice != 0 ? CopyAttribs.DstSlice : CopyAttribs.DstZ;
         wgpuImageCopyDst.mipLevel = CopyAttribs.DstMipLevel;
 
         WGPUExtent3D wgpuCopySize{};
@@ -863,11 +936,17 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         wgpuCopySize.height             = std::max(pSrcBox->Height(), 1u);
         wgpuCopySize.depthOrArrayLayers = std::max(pSrcBox->Depth(), 1u);
 
+        if (DstFmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            wgpuCopySize.width  = AlignUp(wgpuCopySize.width, DstFmtAttribs.BlockWidth);
+            wgpuCopySize.height = AlignUp(wgpuCopySize.height, DstFmtAttribs.BlockHeight);
+        }
+
         wgpuCommandEncoderCopyBufferToTexture(wgpuCmdEncoder, &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
     }
     else if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage == USAGE_STAGING)
     {
-        const auto DstBufferOffset = GetStagingTextureLocationOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel, TextureWebGPUImpl::StagingDataAlignment, CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ);
+        const auto DstBufferOffset = GetStagingTextureLocationOffsetWebGPU(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel, TextureWebGPUImpl::ImageCopyBufferRowAlignment, CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ);
 
         const auto DstMipLevelAttribs = GetMipLevelProperties(DstTexDesc, CopyAttribs.DstMipLevel);
 
@@ -884,19 +963,25 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         wgpuImageCopySrc.aspect   = wgpuAspectMask;
         wgpuImageCopySrc.origin.x = pSrcBox->MinX;
         wgpuImageCopySrc.origin.y = pSrcBox->MinY;
-        wgpuImageCopySrc.origin.z = pSrcBox->MinZ;
+        wgpuImageCopySrc.origin.z = CopyAttribs.SrcSlice != 0 ? CopyAttribs.SrcSlice : pSrcBox->MinZ;
         wgpuImageCopySrc.mipLevel = CopyAttribs.SrcMipLevel;
 
         WGPUImageCopyBuffer wgpuImageCopyDst{};
         wgpuImageCopyDst.buffer              = pDstTexWebGPU->GetWebGPUStagingBuffer();
         wgpuImageCopyDst.layout.offset       = DstBufferOffset;
-        wgpuImageCopyDst.layout.bytesPerRow  = static_cast<Uint32>(DstMipLevelAttribs.RowSize);
+        wgpuImageCopyDst.layout.bytesPerRow  = static_cast<Uint32>(AlignUp(DstMipLevelAttribs.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment));
         wgpuImageCopyDst.layout.rowsPerImage = DstMipLevelAttribs.StorageHeight / SrcFmtAttribs.BlockHeight;
 
         WGPUExtent3D wgpuCopySize{};
         wgpuCopySize.width              = std::max(pSrcBox->Width(), 1u);
         wgpuCopySize.height             = std::max(pSrcBox->Height(), 1u);
         wgpuCopySize.depthOrArrayLayers = std::max(pSrcBox->Depth(), 1u);
+
+        if (SrcFmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            wgpuCopySize.width  = AlignUp(wgpuCopySize.width, SrcFmtAttribs.BlockWidth);
+            wgpuCopySize.height = AlignUp(wgpuCopySize.height, SrcFmtAttribs.BlockHeight);
+        }
 
         wgpuCommandEncoderCopyTextureToBuffer(wgpuCmdEncoder, &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
     }
@@ -943,8 +1028,8 @@ void DeviceContextWebGPUImpl::MapTextureSubresource(ITexture*                 pT
         if ((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0)
             LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE has no effect in WebGPU backend");
 
-        const auto CopyInfo      = GetBufferToTextureCopyInfo(TexDesc.Format, *pMapRegion, TextureWebGPUImpl::CopyTextureRawStride);
-        const auto DynAllocation = AllocateUploadMemory(CopyInfo.MemorySize, TextureWebGPUImpl::CopyTextureRawStride);
+        const auto CopyInfo      = GetBufferToTextureCopyInfo(TexDesc.Format, *pMapRegion, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
+        const auto DynAllocation = AllocateUploadMemory(CopyInfo.MemorySize, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
 
         MappedData.pData       = DynAllocation.pData;
         MappedData.Stride      = CopyInfo.RowStride;
@@ -956,14 +1041,18 @@ void DeviceContextWebGPUImpl::MapTextureSubresource(ITexture*                 pT
     }
     else if (TexDesc.Usage == USAGE_STAGING)
     {
-        auto LocationOffset = GetStagingTextureLocationOffset(
-            TexDesc, ArraySlice, MipLevel, TextureWebGPUImpl::StagingDataAlignment,
-            pMapRegion->MinX, pMapRegion->MinY, pMapRegion->MinZ);
-
         const auto MipInfo = GetMipLevelProperties(TexDesc, MipLevel);
 
-        MappedData.pData       = static_cast<Uint8*>(pTextureWebGPU->Map(MapType, MapFlags)) + LocationOffset;
-        MappedData.Stride      = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::StagingDataAlignment);
+        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+
+        const auto LocationOffset = GetStagingTextureLocationOffsetWebGPU(
+            TexDesc, ArraySlice, MipLevel, TextureWebGPUImpl::ImageCopyBufferRowAlignment,
+            pMapRegion->MinX, pMapRegion->MinY, pMapRegion->MinZ);
+
+        const auto DataSize = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
+
+        MappedData.pData       = static_cast<Uint8*>(pTextureWebGPU->Map(MapType, MapFlags, LocationOffset, DataSize));
+        MappedData.Stride      = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
         MappedData.DepthStride = MappedData.Stride * MipInfo.StorageHeight;
 
         if (MapType == MAP_READ)

@@ -67,13 +67,12 @@ public:
 
     WGPUBuffer GetWebGPUStagingBuffer() const;
 
-    void* Map(MAP_TYPE MapType, Uint32 MapFlags);
+    void* Map(MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, Uint64 Size);
 
     void Unmap();
 
-    static constexpr Uint32 StagingDataAlignment = 16;
-
-    static constexpr Uint64 CopyTextureRawStride = 256;
+    // The requirement is hard-coded in the spec: https://www.w3.org/TR/webgpu/#gpuimagecopybuffer
+    static constexpr Uint64 ImageCopyBufferRowAlignment = 256;
 
 private:
     void CreateViewInternal(const TextureViewDesc& ViewDesc,
@@ -92,6 +91,11 @@ private:
     WebGPUBufferWrapper  m_wgpuStagingBuffer;
     std::vector<uint8_t> m_MappedData;
     TextureMapState      m_MapState = TextureMapState::None;
+    struct
+    {
+        Uint64 DataOffset = 0;
+        Uint64 DataSize   = 0;
+    } m_MapWriteState;
 };
 
 } // namespace Diligent

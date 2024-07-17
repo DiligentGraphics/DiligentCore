@@ -283,7 +283,6 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         auto& Features{AdapterInfo.Features};
         Features.SeparablePrograms         = DEVICE_FEATURE_STATE_ENABLED;
         Features.ShaderResourceQueries     = DEVICE_FEATURE_STATE_ENABLED;
-        Features.WireframeFill             = DEVICE_FEATURE_STATE_ENABLED;
         Features.ComputeShaders            = DEVICE_FEATURE_STATE_ENABLED;
         Features.OcclusionQueries          = DEVICE_FEATURE_STATE_ENABLED;
         Features.BinaryOcclusionQueries    = DEVICE_FEATURE_STATE_ENABLED;
@@ -296,6 +295,7 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         Features.TextureUAVExtendedFormats = DEVICE_FEATURE_STATE_ENABLED;
         Features.DepthClamp                = DEVICE_FEATURE_STATE_ENABLED;
 
+        Features.WireframeFill               = DEVICE_FEATURE_STATE_DISABLED;
         Features.FormattedBuffers            = DEVICE_FEATURE_STATE_DISABLED;
         Features.ShaderResourceStaticArrays  = DEVICE_FEATURE_STATE_DISABLED;
         Features.ShaderResourceRuntimeArrays = DEVICE_FEATURE_STATE_DISABLED;
