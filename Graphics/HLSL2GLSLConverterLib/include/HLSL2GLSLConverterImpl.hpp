@@ -286,6 +286,7 @@ private:
 
         void ProcessConstantBuffer(TokenListType::iterator& Token);
         void ProcessStructuredBuffer(TokenListType::iterator& Token, Uint32& ShaderStorageBlockBinding);
+        void ProcessPreprocessorDirective(TokenListType::iterator& Token);
         void ParseSamplers(TokenListType::iterator& ScopeStart, SamplerHashType& SamplersHash);
 
         void ProcessTextureDeclaration(TokenListType::iterator&            Token,
@@ -472,6 +473,7 @@ private:
 
         const bool m_bPreserveTokens;
         bool       m_bUseInOutLocationQualifiers = true;
+        bool       m_bUseRowMajorMatrices        = false;
 
         const HLSL2GLSLConverterImpl& m_Converter;
 

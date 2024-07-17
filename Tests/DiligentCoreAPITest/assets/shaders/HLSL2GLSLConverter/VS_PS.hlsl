@@ -37,6 +37,10 @@ cbuffer cbTest6 :register(b2)
     float4 f;
 };
 
+
+# pragma pack_matrix( row_major )
+
+
 int cbuffer_fake;
 int fakecbuffer;
 

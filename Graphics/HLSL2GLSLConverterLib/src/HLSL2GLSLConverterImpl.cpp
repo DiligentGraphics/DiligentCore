@@ -917,7 +917,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessConstantBuffer(TokenListTy
     VERIFY_EXPR(Token->Type == TokenType::kw_cbuffer);
 
     // Replace "cbuffer" with "uniform"
-    Token->Literal = "uniform";
+    Token->Literal = m_bUseRowMajorMatrices ?
+        "layout(row_major) uniform" :
+        "uniform";
     ++Token;
     // cbuffer CBufferName
     //         ^
@@ -1069,6 +1071,65 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessStructuredBuffer(TokenList
     // buffer g_Data{DataType g_Data_data[]};
     // #define g_Data g_Data_data
     //                           ^
+}
+
+void HLSL2GLSLConverterImpl::ConversionStream::ProcessPreprocessorDirective(TokenListType::iterator& Token)
+{
+    const TokenListType::iterator DirectiveStart = Token;
+
+    TokenListType::iterator DirectiveEnd = Token;
+    ++DirectiveEnd;
+    while (DirectiveEnd != m_Tokens.end() && DirectiveEnd->Delimiter.find_first_of("\r\n") == std::string::npos)
+        ++DirectiveEnd;
+
+    const std::string Directive = RefinePreprocessorDirective(Token->Literal);
+    if (Directive == "pragma")
+    {
+        // # pragma pack_matrix( row_major )
+        // ^
+
+        ++Token;
+        // # pragma pack_matrix( row_major )
+        //          ^
+        if (Token != DirectiveEnd && Token->Literal == "pack_matrix")
+        {
+            auto ParsePragmaPackMatrix = [](TokenListType::iterator Token, TokenListType::iterator End) -> std::string {
+                // # pragma pack_matrix( row_major )
+                //          ^
+
+                ++Token;
+                // # pragma pack_matrix( row_major )
+                //                     ^
+                if (Token == End || Token->Type != TokenType::OpenParen)
+                    return "";
+
+                ++Token;
+                // # pragma pack_matrix( row_major )
+                //                       ^
+                if (Token == End || (Token->Type != TokenType::kw_row_major && Token->Type != TokenType::kw_column_major))
+                    return "";
+
+                const std::string& PackMatrix = Token->Literal;
+
+                ++Token;
+                // # pragma pack_matrix( row_major )
+                //                                 ^
+                if (Token == End || Token->Type != TokenType::ClosingParen)
+                    return "";
+
+                return PackMatrix;
+            };
+            const std::string PackMatrix = ParsePragmaPackMatrix(Token, DirectiveEnd);
+            if (PackMatrix == "row_major")
+                m_bUseRowMajorMatrices = true;
+
+            // Delete the directive
+            m_Tokens.erase(DirectiveStart, DirectiveEnd);
+        }
+    }
+
+    // Go to the end of the directive
+    Token = DirectiveEnd;
 }
 
 void HLSL2GLSLConverterImpl::ConversionStream::RegisterStruct(TokenListType::iterator& Token)
@@ -4522,6 +4583,10 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
             case TokenType::kw_SamplerState:
             case TokenType::kw_SamplerComparisonState:
                 RemoveSamplerRegister(Token);
+                break;
+
+            case TokenType::PreprocessorDirective:
+                ProcessPreprocessorDirective(Token);
                 break;
 
             default:
