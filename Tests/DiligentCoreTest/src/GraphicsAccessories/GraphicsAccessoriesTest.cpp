@@ -163,15 +163,20 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetFillModeLiteralName)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetCullModeLiteralName)
 {
-#define TEST_CULL_MODE_ENUM(ENUM_VAL)                              \
-    {                                                              \
-        EXPECT_STREQ(GetCullModeLiteralName(ENUM_VAL), #ENUM_VAL); \
+#define TEST_CULL_MODE_ENUM(ENUM_VAL)                                    \
+    {                                                                    \
+        EXPECT_STREQ(GetCullModeLiteralName(ENUM_VAL, true), #ENUM_VAL); \
     }
     TEST_CULL_MODE_ENUM(CULL_MODE_UNDEFINED);
     TEST_CULL_MODE_ENUM(CULL_MODE_NONE);
     TEST_CULL_MODE_ENUM(CULL_MODE_FRONT);
     TEST_CULL_MODE_ENUM(CULL_MODE_BACK);
 #undef TEST_CULL_MODE_ENUM
+
+    EXPECT_STREQ(GetCullModeLiteralName(CULL_MODE_UNDEFINED), "undefined");
+    EXPECT_STREQ(GetCullModeLiteralName(CULL_MODE_NONE), "none");
+    EXPECT_STREQ(GetCullModeLiteralName(CULL_MODE_FRONT), "front");
+    EXPECT_STREQ(GetCullModeLiteralName(CULL_MODE_BACK), "back");
 }
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetStencilOpLiteralName)

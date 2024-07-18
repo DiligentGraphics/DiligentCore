@@ -1032,24 +1032,21 @@ const Char* GetFillModeLiteralName(FILL_MODE FillMode)
 #undef FILL_MODE_TO_STR
 }
 
-const Char* GetCullModeLiteralName(CULL_MODE CullMode)
+const Char* GetCullModeLiteralName(CULL_MODE CullMode, bool GetEnumString)
 {
-#define CULL_MODE_TO_STR(Mode) \
-    case Mode: return #Mode
-
     static_assert(CULL_MODE_NUM_MODES == 4, "Please update the switch below to handle the new cull mode");
     switch (CullMode)
     {
-        CULL_MODE_TO_STR(CULL_MODE_UNDEFINED);
-        CULL_MODE_TO_STR(CULL_MODE_NONE);
-        CULL_MODE_TO_STR(CULL_MODE_FRONT);
-        CULL_MODE_TO_STR(CULL_MODE_BACK);
-
+        // clang-format off
+        case CULL_MODE_UNDEFINED: return GetEnumString ? "CULL_MODE_UNDEFINED" : "undefined";
+        case CULL_MODE_NONE:      return GetEnumString ? "CULL_MODE_NONE"      : "none";
+        case CULL_MODE_FRONT:     return GetEnumString ? "CULL_MODE_FRONT"     : "front";
+        case CULL_MODE_BACK:      return GetEnumString ? "CULL_MODE_BACK"      : "back";
+        // clang-format on
         default:
             UNEXPECTED("Unexpected cull mode (", static_cast<int>(CullMode), ")");
             return "UNKNOWN";
     }
-#undef CULL_MODE_TO_STR
 }
 
 const Char* GetMapTypeString(MAP_TYPE MapType)

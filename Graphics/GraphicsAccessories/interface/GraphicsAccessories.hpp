@@ -347,9 +347,12 @@ const Char* GetFillModeLiteralName(FILL_MODE FillMode);
 
 /// Returns the literal name of a cull mode.
 
-/// \param [in] CullMode - Cull mode, see Diligent::CULL_MODE.
-/// \return                Literal name of the cull mode.
-const Char* GetCullModeLiteralName(CULL_MODE CullMode);
+/// \param [in] CullMode      - Cull mode, see Diligent::CULL_MODE.
+/// \param [in] GetEnumString - Whether to return string representation of the enum value.
+
+/// \return                    Literal name of the cull mode (e.g. "CULL_MODE_BACK" when bGetFullName == true,
+///                            or "back" when GetEnumString == false).
+const Char* GetCullModeLiteralName(CULL_MODE CullMode, bool GetEnumString = false);
 
 /// Returns the string containing the map type
 const Char* GetMapTypeString(MAP_TYPE MapType);
