@@ -295,7 +295,7 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
         WGPUBufferDescriptor wgpuBufferDesc{};
         wgpuBufferDesc.size  = WebGPUGetTextureLocationOffset(m_Desc, m_Desc.GetArraySize(), 0, FmtAttribs.BlockHeight, ImageCopyBufferRowAlignment);
         wgpuBufferDesc.label = StagingBufferName.c_str();
-        m_MappedData.resize(StaticCast<size_t>(wgpuBufferDesc.size));
+
 
         if (m_Desc.CPUAccessFlags & CPU_ACCESS_READ)
         {
@@ -377,31 +377,26 @@ WGPUBuffer TextureWebGPUImpl::GetWebGPUStagingBuffer() const
     return m_wgpuStagingBuffer.Get();
 }
 
-void* TextureWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, Uint64 Size)
+void* TextureWebGPUImpl::Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, Uint64 Offset, Uint64 Size)
 {
     VERIFY(m_Desc.Usage == USAGE_STAGING, "Map working only for staging buffers");
+    VERIFY(m_MapState.State == TextureMapState::None, "Texture is already mapped");
+
+    // We use lazy initialization because in web applications we cannot use blocking Map operations and to reduce memory consumption.
+    if (m_MappedData.empty())
+        m_MappedData.resize(static_cast<size_t>(wgpuBufferGetSize(m_wgpuStagingBuffer)));
 
     if (MapType == MAP_READ)
     {
-        struct CallbackCaptureData
-        {
-            TextureWebGPUImpl* pTexture;
-            bool               IsMapped;
-            Uint64             Offset;
-            Uint64             DataSize;
-        } CallbackCapture{this, false, Offset, Size};
-
         auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
             if (MapStatus == WGPUBufferMapAsyncStatus_Success)
             {
-                auto* pCaptureData = static_cast<CallbackCaptureData*>(pUserData);
-                auto* pTexture     = pCaptureData->pTexture;
-
-                const auto* pData = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(pTexture->m_wgpuStagingBuffer.Get(), static_cast<size_t>(pCaptureData->Offset), static_cast<size_t>(pCaptureData->DataSize)));
-                VERIFY_EXPR(pUserData != nullptr);
-                memcpy(pTexture->m_MappedData.data() + pCaptureData->Offset, pData, static_cast<size_t>(pCaptureData->DataSize));
+                auto* pTexture = static_cast<TextureWebGPUImpl*>(pUserData);
+                VERIFY_EXPR(pTexture->m_MapState.State == TextureMapState::Read);
+                const auto* pData = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(pTexture->m_wgpuStagingBuffer.Get(), static_cast<size_t>(pTexture->m_MapState.DataOffset), static_cast<size_t>(pTexture->m_MapState.DataSize)));
+                VERIFY_EXPR(pData != nullptr);
+                memcpy(pTexture->m_MappedData.data() + pTexture->m_MapState.DataOffset, pData, static_cast<size_t>(pTexture->m_MapState.DataSize));
                 wgpuBufferUnmap(pTexture->m_wgpuStagingBuffer.Get());
-                pCaptureData->IsMapped = true;
             }
             else
             {
@@ -409,19 +404,21 @@ void* TextureWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, U
             }
         };
 
-        wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Read, static_cast<size_t>(Offset), static_cast<size_t>(Size), MapAsyncCallback, &CallbackCapture);
-        while (!CallbackCapture.IsMapped)
+        m_MapState.State      = TextureMapState::Read;
+        m_MapState.DataOffset = Offset;
+        m_MapState.DataSize   = Size;
+
+        wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Read, static_cast<size_t>(Offset), static_cast<size_t>(Size), MapAsyncCallback, this);
+        while (wgpuBufferGetMapState(m_wgpuStagingBuffer.Get()) != WGPUBufferMapState_Unmapped)
             m_pDevice->PollEvents(true);
 
-        m_MapState = TextureMapState::Read;
         return m_MappedData.data() + Offset;
     }
     else if (MapType == MAP_WRITE)
     {
-        m_MapState = TextureMapState::Write;
-
-        m_MapWriteState.DataOffset = Offset;
-        m_MapWriteState.DataSize   = Size;
+        m_MapState.State      = TextureMapState::Write;
+        m_MapState.DataOffset = Offset;
+        m_MapState.DataSize   = Size;
         return m_MappedData.data() + Offset;
     }
     else if (MapType == MAP_READ_WRITE)
@@ -435,34 +432,80 @@ void* TextureWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, U
     return nullptr;
 }
 
+void TextureWebGPUImpl::MapAsync(MAP_TYPE MapType, Uint64 Offset, Uint64 Size, Uint64 Stride, Uint64 DepthStride, MapTextureSubresourceAsyncCallback pCallback, PVoid pUserData)
+{
+    VERIFY(m_Desc.Usage == USAGE_STAGING, "MapAsync only works for staging textures");
+    VERIFY(pCallback != nullptr, "Callback must not be null");
+
+    auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
+        if (MapStatus == WGPUBufferMapAsyncStatus_Success)
+        {
+            auto* pTexture = static_cast<TextureWebGPUImpl*>(pUserData);
+            VERIFY_EXPR(pTexture->m_MapState.State == TextureMapState::ReadAsync || pTexture->m_MapState.State == TextureMapState::WriteAsync);
+
+            void* pData = nullptr;
+            if (pTexture->m_MapState.State == TextureMapState::WriteAsync)
+                pData = wgpuBufferGetMappedRange(pTexture->m_wgpuStagingBuffer.Get(), static_cast<size_t>(pTexture->m_MapState.DataOffset), static_cast<size_t>(pTexture->m_MapState.DataSize));
+            else if (pTexture->m_MapState.State == TextureMapState::ReadAsync)
+                pData = const_cast<void*>(wgpuBufferGetConstMappedRange(pTexture->m_wgpuStagingBuffer.Get(), static_cast<size_t>(pTexture->m_MapState.DataOffset), static_cast<size_t>(pTexture->m_MapState.DataSize)));
+            else
+                UNEXPECTED("Unknown map type");
+            VERIFY_EXPR(pData != nullptr);
+
+            MappedTextureSubresource DataInfo;
+            DataInfo.pData       = pData;
+            DataInfo.Stride      = pTexture->m_MapState.Stride;
+            DataInfo.DepthStride = pTexture->m_MapState.DepthStride;
+            if (pTexture->m_MapState.pCallback != nullptr)
+                pTexture->m_MapState.pCallback(DataInfo, pTexture->m_MapState.pUserData);
+        }
+        else
+        {
+            DEV_ERROR("wgpuBufferMapAsync failed: ", MapStatus);
+        }
+    };
+
+    if (MapType == MAP_READ || MapType == MAP_WRITE)
+    {
+        m_MapState.State       = MapType == MAP_READ ? TextureMapState::ReadAsync : TextureMapState::WriteAsync;
+        m_MapState.DataOffset  = Offset;
+        m_MapState.DataSize    = Size;
+        m_MapState.pCallback   = pCallback;
+        m_MapState.pUserData   = pUserData;
+        m_MapState.Stride      = Stride;
+        m_MapState.DepthStride = DepthStride;
+        wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), MapType == MAP_READ ? WGPUMapMode_Read : WGPUMapMode_Write, static_cast<size_t>(Offset), static_cast<size_t>(Size), MapAsyncCallback, this);
+    }
+    else if (MapType == MAP_READ_WRITE)
+    {
+        LOG_ERROR("MAP_READ_WRITE is not supported in WebGPU backend");
+    }
+    else
+    {
+        UNEXPECTED("Unknown map type");
+    }
+}
+
 void TextureWebGPUImpl::Unmap()
 {
     VERIFY(m_Desc.Usage == USAGE_STAGING, "Unmap working only for staging buffers");
+    VERIFY(m_MapState.State != TextureMapState::None, "Texture is not mapped");
 
-    if (m_MapState == TextureMapState::Read)
+    if (m_MapState.State == TextureMapState::Read)
     {
         // Nothing to do
     }
-    else if (m_MapState == TextureMapState::Write)
+    else if (m_MapState.State == TextureMapState::Write)
     {
-        struct CallbackCaptureData
-        {
-            TextureWebGPUImpl* pTexture;
-            bool               IsMapped;
-            Uint64             Offset;
-            Uint64             DataSize;
-        } CallbackCapture{this, false, m_MapWriteState.DataOffset, m_MapWriteState.DataSize};
-
         auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
             if (MapStatus == WGPUBufferMapAsyncStatus_Success)
             {
-                auto*       pCaptureData = static_cast<CallbackCaptureData*>(pUserData);
-                auto*       pTexture     = pCaptureData->pTexture;
-                auto* const pData        = static_cast<uint8_t*>(wgpuBufferGetMappedRange(pTexture->m_wgpuStagingBuffer.Get(), static_cast<size_t>(pCaptureData->Offset), static_cast<size_t>(pCaptureData->DataSize)));
-                VERIFY_EXPR(pUserData != nullptr);
-                memcpy(pData, pTexture->m_MappedData.data() + pCaptureData->Offset, static_cast<size_t>(pCaptureData->DataSize));
+                auto* pTexture = static_cast<TextureWebGPUImpl*>(pUserData);
+                VERIFY_EXPR(pTexture->m_MapState.State == TextureMapState::Read);
+                auto* const pData = static_cast<uint8_t*>(wgpuBufferGetMappedRange(pTexture->m_wgpuStagingBuffer.Get(), static_cast<size_t>(pTexture->m_MapState.DataOffset), static_cast<size_t>(pTexture->m_MapState.DataSize)));
+                VERIFY_EXPR(pData != nullptr);
+                memcpy(pData, pTexture->m_MappedData.data() + pTexture->m_MapState.DataOffset, static_cast<size_t>(pTexture->m_MapState.DataSize));
                 wgpuBufferUnmap(pTexture->m_wgpuStagingBuffer.Get());
-                pCaptureData->IsMapped = true;
             }
             else
             {
@@ -470,15 +513,20 @@ void TextureWebGPUImpl::Unmap()
             }
         };
 
-        wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Write, static_cast<size_t>(m_MapWriteState.DataOffset), static_cast<size_t>(m_MapWriteState.DataSize), MapAsyncCallback, &CallbackCapture);
-        while (!CallbackCapture.IsMapped)
+        wgpuBufferMapAsync(m_wgpuStagingBuffer.Get(), WGPUMapMode_Write, static_cast<size_t>(m_MapState.DataOffset), static_cast<size_t>(m_MapState.DataSize), MapAsyncCallback, this);
+        while (wgpuBufferGetMapState(m_wgpuStagingBuffer.Get()) != WGPUBufferMapState_Unmapped)
             m_pDevice->PollEvents(true);
+    }
+    else if (m_MapState.State == TextureMapState::ReadAsync || m_MapState.State == TextureMapState::WriteAsync)
+    {
+        wgpuBufferUnmap(m_wgpuStagingBuffer.Get());
     }
     else
     {
         UNEXPECTED("Call TextureWebGPUImpl::Map method before TextureWebGPUImpl::Unmap");
     }
-    m_MapState = TextureMapState::None;
+
+    m_MapState = {};
 }
 
 void TextureWebGPUImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)

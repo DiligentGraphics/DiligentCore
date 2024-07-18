@@ -1411,6 +1411,89 @@ WGPUQueue DeviceContextWebGPUImpl::GetWebGPUQueue()
     return m_wgpuQueue;
 }
 
+void DeviceContextWebGPUImpl::MapBufferAsync(IBuffer* pBuffer, MAP_TYPE MapType, MapBufferAsyncCallback pCallback, PVoid pUserData)
+{
+    auto* const pBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pBuffer);
+    const auto& BuffDesc      = pBufferWebGPU->GetDesc();
+
+    if (MapType == MAP_READ || MapType == MAP_WRITE)
+    {
+        if (BuffDesc.Usage == USAGE_STAGING)
+        {
+            pBufferWebGPU->MapAsync(MapType, pCallback, pUserData);
+        }
+        else
+        {
+            LOG_ERROR("Only USAGE_STAGING buffers can be mapped asynchronously");
+        }
+    }
+    else
+    {
+        LOG_ERROR("Only MAP_READ and MAP_WRITE are supported for asynchronous mapping");
+    }
+}
+
+void DeviceContextWebGPUImpl::MapTextureSubresourceAsync(ITexture*                          pTexture,
+                                                         Uint32                             MipLevel,
+                                                         Uint32                             ArraySlice,
+                                                         MAP_TYPE                           MapType,
+                                                         const Box*                         pMapRegion,
+                                                         MapTextureSubresourceAsyncCallback pCallback,
+                                                         PVoid                              pUserData)
+{
+    EndCommandEncoders();
+
+    auto* const pTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
+    const auto& TexDesc        = pTextureWebGPU->GetDesc();
+
+    Box FullExtentBox;
+    if (pMapRegion == nullptr)
+    {
+        auto MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
+        FullExtentBox.MaxX   = MipLevelAttribs.LogicalWidth;
+        FullExtentBox.MaxY   = MipLevelAttribs.LogicalHeight;
+        FullExtentBox.MaxZ   = MipLevelAttribs.Depth;
+        pMapRegion           = &FullExtentBox;
+    }
+
+    if (MapType == MAP_READ || MapType == MAP_WRITE)
+    {
+        if (TexDesc.Usage == USAGE_STAGING)
+        {
+            const auto MipInfo = GetMipLevelProperties(TexDesc, MipLevel);
+
+            const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+
+            const auto LocationOffset = GetStagingTextureLocationOffsetWebGPU(
+                TexDesc, ArraySlice, MipLevel, TextureWebGPUImpl::ImageCopyBufferRowAlignment,
+                pMapRegion->MinX, pMapRegion->MinY, pMapRegion->MinZ);
+
+            const auto DataSize    = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
+            const auto Stride      = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
+            const auto DepthStride = Stride * MipInfo.StorageHeight;
+
+            pTextureWebGPU->MapAsync(MapType, LocationOffset, DataSize, Stride, DepthStride, pCallback, pUserData);
+
+            if (MapType == MAP_READ)
+            {
+                DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_READ flag and can't be mapped for reading");
+            }
+            else if (MapType == MAP_WRITE)
+            {
+                DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_WRITE flag and can't be mapped for writing");
+            }
+        }
+        else
+        {
+            UNSUPPORTED(GetUsageString(TexDesc.Usage), " textures cannot be mapped in WebGPU back-end");
+        }
+    }
+    else
+    {
+        LOG_ERROR("Only MAP_READ and MAP_WRITE are supported for async mapping");
+    }
+}
+
 WGPUCommandEncoder DeviceContextWebGPUImpl::GetCommandEncoder()
 {
     if (!m_wgpuCommandEncoder)

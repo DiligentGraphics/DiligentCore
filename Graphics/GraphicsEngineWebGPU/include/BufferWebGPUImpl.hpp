@@ -92,7 +92,9 @@ public:
         }
     }
 
-    void Map(MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData);
+    void Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData);
+
+    void MapAsync(MAP_TYPE MapType, MapBufferAsyncCallback pCallback, void* pUserData);
 
     void Unmap(MAP_TYPE MapType);
 
@@ -123,10 +125,25 @@ private:
 
     using DynamicAllocationList = std::vector<DynamicAllocation, STDAllocatorRawMem<DynamicAllocation>>;
 
+    enum class BufferMapState
+    {
+        None,
+        Read,
+        Write,
+        ReadAsync,
+        WriteAsync,
+    };
+
     WebGPUBufferWrapper   m_wgpuBuffer;
     std::vector<uint8_t>  m_MappedData;
     DynamicAllocationList m_DynamicAllocations;
     Uint64                m_Alignment;
+    struct
+    {
+        BufferMapState         State     = BufferMapState::None;
+        MapBufferAsyncCallback pCallback = nullptr;
+        void*                  pUserData = nullptr;
+    } m_MapState;
 };
 
 } // namespace Diligent

@@ -39,7 +39,7 @@ namespace
 
 Uint64 ComputeBufferAlignment(const RenderDeviceWebGPUImpl* pDevice, const BufferDesc& Desc)
 {
-    Uint64 Alignment = 16;
+    Uint64 Alignment = 16; // Which alignment to use for buffers that don't have any specific requirements?
     if (Desc.BindFlags & BIND_UNIFORM_BUFFER)
         Alignment = pDevice->GetAdapterInfo().Buffer.ConstantBufferOffsetAlignment;
 
@@ -102,8 +102,6 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
                 wgpuBufferDesc.usage |= WGPUBufferUsage_MapWrite;
                 wgpuBufferDesc.usage |= WGPUBufferUsage_CopySrc;
             }
-
-            m_MappedData.resize(StaticCast<size_t>(m_Desc.Size));
         }
         else
         {
@@ -174,9 +172,6 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
 // clang-format on
 {
-    if (m_Desc.Usage == USAGE_STAGING)
-        m_MappedData.resize(StaticCast<size_t>(m_Desc.Size));
-
     m_Alignment = ComputeBufferAlignment(pDevice, Desc);
     VERIFY(m_Desc.Size % m_Alignment == 0, "Size of buffer must be aligned");
     SetState(InitialState);
@@ -198,35 +193,31 @@ WGPUBuffer BufferWebGPUImpl::GetWebGPUBuffer() const
 {
     if (m_wgpuBuffer)
         return m_wgpuBuffer.Get();
-    else
-    {
-        VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer expected");
-        return m_pDevice->GetDynamicMemoryManager().GetWGPUBuffer();
-    }
+
+    VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer expected");
+    return m_pDevice->GetDynamicMemoryManager().GetWGPUBuffer();
 }
 
-void BufferWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
+void BufferWebGPUImpl::Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)
 {
     VERIFY(m_Desc.Usage == USAGE_STAGING, "Map working only for staging buffers");
+    VERIFY(m_MapState.State == BufferMapState::None, "Buffer is already mapped");
+
+    // We use lazy initialization because in web applications we cannot use blocking Map operations and to reduce memory consumption.
+    if (m_MappedData.empty())
+        m_MappedData.resize(StaticCast<size_t>(m_Desc.Size));
 
     if (MapType == MAP_READ)
     {
-        struct CallbackCaptureData
-        {
-            BufferWebGPUImpl* pBuffer;
-            bool              IsMapped;
-        } CallbackCapture{this, false};
-
         auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
             if (MapStatus == WGPUBufferMapAsyncStatus_Success)
             {
-                auto*       pCaptureData = static_cast<CallbackCaptureData*>(pUserData);
-                auto*       pBuffer      = pCaptureData->pBuffer;
-                const auto* pData        = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(pBuffer->m_wgpuBuffer.Get(), 0, StaticCast<size_t>(pBuffer->m_Desc.Size)));
-                VERIFY_EXPR(pUserData != nullptr);
+                auto* pBuffer = static_cast<BufferWebGPUImpl*>(pUserData);
+                VERIFY_EXPR(pBuffer->m_MapState.State == BufferMapState::Read);
+                const auto* pData = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(pBuffer->m_wgpuBuffer.Get(), 0, StaticCast<size_t>(pBuffer->m_Desc.Size)));
+                VERIFY_EXPR(pData != nullptr);
                 memcpy(pBuffer->m_MappedData.data(), pData, StaticCast<size_t>(pBuffer->m_Desc.Size));
                 wgpuBufferUnmap(pBuffer->m_wgpuBuffer.Get());
-                pCaptureData->IsMapped = true;
             }
             else
             {
@@ -234,15 +225,61 @@ void BufferWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData
             }
         };
 
-        wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Read, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, &CallbackCapture);
-        while (!CallbackCapture.IsMapped)
+        m_MapState.State = BufferMapState::Read;
+        wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Read, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, this);
+        while (wgpuBufferGetMapState(m_wgpuBuffer.Get()) != WGPUBufferMapState_Unmapped)
             m_pDevice->PollEvents(true);
 
         pMappedData = m_MappedData.data();
     }
     else if (MapType == MAP_WRITE)
     {
-        pMappedData = m_MappedData.data();
+        m_MapState.State = BufferMapState::Write;
+        pMappedData      = m_MappedData.data();
+    }
+    else if (MapType == MAP_READ_WRITE)
+    {
+        LOG_ERROR("MAP_READ_WRITE is not supported in WebGPU backend");
+    }
+    else
+    {
+        UNEXPECTED("Unknown map type");
+    }
+}
+
+void BufferWebGPUImpl::MapAsync(MAP_TYPE MapType, MapBufferAsyncCallback pCallback, void* pUserData)
+{
+    VERIFY(m_Desc.Usage == USAGE_STAGING, "MapAsync only works for staging buffers");
+    VERIFY(pCallback != nullptr, "Callback must not be null");
+
+    auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
+        if (MapStatus == WGPUBufferMapAsyncStatus_Success)
+        {
+            auto* pBuffer = static_cast<BufferWebGPUImpl*>(pUserData);
+            void* pData   = nullptr;
+            if (pBuffer->m_MapState.State == BufferMapState::ReadAsync)
+                pData = wgpuBufferGetMappedRange(pBuffer->m_wgpuBuffer.Get(), 0, static_cast<size_t>(pBuffer->m_Desc.Size));
+            else if (pBuffer->m_MapState.State == BufferMapState::WriteAsync)
+                pData = const_cast<void*>(wgpuBufferGetConstMappedRange(pBuffer->m_wgpuBuffer.Get(), 0, static_cast<size_t>(pBuffer->m_Desc.Size)));
+            else
+                UNEXPECTED("Unknown map type");
+            VERIFY_EXPR(pData != nullptr);
+
+            if (pBuffer->m_MapState.pCallback != nullptr)
+                pBuffer->m_MapState.pCallback(pData, pBuffer->m_MapState.pUserData);
+        }
+        else
+        {
+            DEV_ERROR("wgpuBufferMapAsync failed: ", MapStatus);
+        }
+    };
+
+    if (MapType == MAP_READ || MapType == MAP_WRITE)
+    {
+        m_MapState.State     = MapType == MAP_READ ? BufferMapState::ReadAsync : BufferMapState::WriteAsync;
+        m_MapState.pUserData = pUserData;
+        m_MapState.pCallback = pCallback;
+        wgpuBufferMapAsync(m_wgpuBuffer.Get(), MapType == MAP_READ ? WGPUMapMode_Read : WGPUMapMode_Write, 0, static_cast<size_t>(m_Desc.Size), MapAsyncCallback, this);
     }
     else if (MapType == MAP_READ_WRITE)
     {
@@ -257,29 +294,23 @@ void BufferWebGPUImpl::Map(MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData
 void BufferWebGPUImpl::Unmap(MAP_TYPE MapType)
 {
     VERIFY(m_Desc.Usage == USAGE_STAGING, "Unmap working only for staging buffers");
+    VERIFY(m_MapState.State != BufferMapState::None, "Buffer is not mapped");
 
-    if (MapType == MAP_READ)
+    if (m_MapState.State == BufferMapState::Read)
     {
         // Nothing to do
     }
-    else if (MapType == MAP_WRITE)
+    else if (m_MapState.State == BufferMapState::Write)
     {
-        struct CallbackCaptureData
-        {
-            BufferWebGPUImpl* pBuffer;
-            bool              IsMapped;
-        } CallbackCapture{this, false};
-
         auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
             if (MapStatus == WGPUBufferMapAsyncStatus_Success)
             {
-                auto* pCaptureData = static_cast<CallbackCaptureData*>(pUserData);
-                auto* pBuffer      = pCaptureData->pBuffer;
-                auto* pData        = static_cast<uint8_t*>(wgpuBufferGetMappedRange(pBuffer->m_wgpuBuffer.Get(), 0, StaticCast<size_t>(pBuffer->m_Desc.Size)));
-                VERIFY_EXPR(pUserData != nullptr);
+                auto* pBuffer = static_cast<BufferWebGPUImpl*>(pUserData);
+                VERIFY_EXPR(pBuffer->m_MapState.State == BufferMapState::Write);
+                auto* pData = static_cast<uint8_t*>(wgpuBufferGetMappedRange(pBuffer->m_wgpuBuffer.Get(), 0, StaticCast<size_t>(pBuffer->m_Desc.Size)));
+                VERIFY_EXPR(pData != nullptr);
                 memcpy(pData, pBuffer->m_MappedData.data(), StaticCast<size_t>(pBuffer->m_Desc.Size));
                 wgpuBufferUnmap(pBuffer->m_wgpuBuffer.Get());
-                pCaptureData->IsMapped = true;
             }
             else
             {
@@ -287,18 +318,20 @@ void BufferWebGPUImpl::Unmap(MAP_TYPE MapType)
             }
         };
 
-        wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Write, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, &CallbackCapture);
-        while (!CallbackCapture.IsMapped)
+        wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Write, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, this);
+        while (wgpuBufferGetMapState(m_wgpuBuffer.Get()) != WGPUBufferMapState_Unmapped)
             m_pDevice->PollEvents(true);
     }
-    else if (MapType == MAP_READ_WRITE)
+    else if (m_MapState.State == BufferMapState::ReadAsync || m_MapState.State == BufferMapState::WriteAsync)
     {
-        LOG_ERROR("MAP_READ_WRITE is not supported in WebGPU backend");
+        wgpuBufferUnmap(m_wgpuBuffer.Get());
     }
     else
     {
         UNEXPECTED("Unknown map type");
     }
+
+    m_MapState = {};
 }
 
 Uint64 BufferWebGPUImpl::GetAlignment() const

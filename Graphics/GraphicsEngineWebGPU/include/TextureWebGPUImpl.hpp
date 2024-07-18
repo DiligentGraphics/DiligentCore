@@ -67,7 +67,9 @@ public:
 
     WGPUBuffer GetWebGPUStagingBuffer() const;
 
-    void* Map(MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, Uint64 Size);
+    void* Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, Uint64 Offset, Uint64 Size);
+
+    void MapAsync(MAP_TYPE MapType, Uint64 Offset, Uint64 Size, Uint64 Stride, Uint64 DepthStride, MapTextureSubresourceAsyncCallback pCallback, PVoid pUserData);
 
     void Unmap();
 
@@ -84,18 +86,25 @@ private:
     {
         None,
         Read,
-        Write
+        Write,
+        ReadAsync,
+        WriteAsync
     };
 
     WebGPUTextureWrapper m_wgpuTexture;
     WebGPUBufferWrapper  m_wgpuStagingBuffer;
     std::vector<uint8_t> m_MappedData;
-    TextureMapState      m_MapState = TextureMapState::None;
     struct
     {
-        Uint64 DataOffset = 0;
-        Uint64 DataSize   = 0;
-    } m_MapWriteState;
+        TextureMapState                    State       = TextureMapState::None;
+        Uint64                             DataOffset  = 0;
+        Uint64                             DataSize    = 0;
+        Uint64                             Stride      = 0;
+        Uint64                             DepthStride = 0;
+        MapTextureSubresourceAsyncCallback pCallback   = nullptr;
+        void*                              pUserData   = nullptr;
+
+    } m_MapState;
 };
 
 } // namespace Diligent

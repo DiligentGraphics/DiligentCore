@@ -297,9 +297,23 @@ public:
                                                       ITexture*                               pDstTexture,
                                                       const ResolveTextureSubresourceAttribs& ResolveAttribs) override final;
 
+    /// Implementation of IDeviceContextWebGPU::MapBufferAsync() in WebGPU backend.
+    void DILIGENT_CALL_TYPE MapBufferAsync(IBuffer*               pBuffer,
+                                           MAP_TYPE               MapType,
+                                           MapBufferAsyncCallback pCallback,
+                                           PVoid                  pUserData) override final;
+
+    /// Implementation of IDeviceContextWebGPU::MapTextureSubresourceAsync() in WebGPU backend.
+    void DILIGENT_CALL_TYPE MapTextureSubresourceAsync(ITexture*                          pTexture,
+                                                       Uint32                             MipLevel,
+                                                       Uint32                             ArraySlice,
+                                                       MAP_TYPE                           MapType,
+                                                       const Box*                         pMapRegion,
+                                                       MapTextureSubresourceAsyncCallback pCallback,
+                                                       PVoid                              pUserData) override final;
+
     /// Implementation of IDeviceContextWebGPU::GetWebGPUQueue() in WebGPU backend.
     WGPUQueue DILIGENT_CALL_TYPE GetWebGPUQueue() override final;
-
 
     QueryManagerWebGPU& GetQueryManager();
 
