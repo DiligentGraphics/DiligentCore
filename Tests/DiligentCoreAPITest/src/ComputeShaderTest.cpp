@@ -300,6 +300,10 @@ static void TestFillTexturePS(bool UseRenderPass)
     {
         GTEST_SKIP() << "Compute shaders are not supported by this device";
     }
+    if (pDevice->GetDeviceInfo().IsWebGPUDevice())
+    {
+        GTEST_SKIP() << "WebGPU does not support render passes without attachments (https://github.com/gpuweb/gpuweb/issues/503)";
+    }
 
     auto* pSwapChain = pEnv->GetSwapChain();
     auto* pContext   = pEnv->GetDeviceContext();
