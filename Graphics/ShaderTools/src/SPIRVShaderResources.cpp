@@ -294,17 +294,32 @@ static SHADER_CODE_BASIC_TYPE SpirvBaseTypeToShaderCodeBasicType(diligent_spirv_
     }
 }
 
-void LoadShaderCodeVariableDesc(const diligent_spirv_cross::Compiler& Compiler, const diligent_spirv_cross::TypeID& TypeID, bool IsHLSLSource, ShaderCodeVariableDescX& TypeDesc)
+void LoadShaderCodeVariableDesc(const diligent_spirv_cross::Compiler& Compiler,
+                                const diligent_spirv_cross::TypeID&   TypeID,
+                                const diligent_spirv_cross::Bitset&   Decoration,
+                                bool                                  IsHLSLSource,
+                                ShaderCodeVariableDescX&              TypeDesc)
 {
     const auto& SpvType = Compiler.get_type(TypeID);
     if (SpvType.basetype == diligent_spirv_cross::SPIRType::Struct)
+    {
         TypeDesc.Class = SHADER_CODE_VARIABLE_CLASS_STRUCT;
+    }
     else if (SpvType.vecsize > 1 && SpvType.columns > 1)
-        TypeDesc.Class = SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+    {
+        if (Decoration.get(spv::Decoration::DecorationRowMajor))
+            TypeDesc.Class = IsHLSLSource ? SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS : SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS;
+        else
+            TypeDesc.Class = IsHLSLSource ? SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS : SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS;
+    }
     else if (SpvType.vecsize > 1)
+    {
         TypeDesc.Class = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+    }
     else
+    {
         TypeDesc.Class = SHADER_CODE_VARIABLE_CLASS_SCALAR;
+    }
 
     if (TypeDesc.Class != SHADER_CODE_VARIABLE_CLASS_STRUCT)
     {
@@ -334,7 +349,7 @@ void LoadShaderCodeVariableDesc(const diligent_spirv_cross::Compiler& Compiler, 
 
         auto idx = TypeDesc.AddMember(VarDesc);
         VERIFY_EXPR(idx == i);
-        LoadShaderCodeVariableDesc(Compiler, SpvType.member_types[i], IsHLSLSource, TypeDesc.GetMember(i));
+        LoadShaderCodeVariableDesc(Compiler, SpvType.member_types[i], Compiler.get_member_decoration_bitset(TypeID, i), IsHLSLSource, TypeDesc.GetMember(i));
     }
 }
 
@@ -353,7 +368,7 @@ ShaderCodeBufferDescX LoadUBReflection(const diligent_spirv_cross::Compiler& Com
 
         auto idx = UBDesc.AddVariable(VarDesc);
         VERIFY_EXPR(idx == i);
-        LoadShaderCodeVariableDesc(Compiler, SpvType.member_types[i], IsHLSLSource, UBDesc.GetVariable(idx));
+        LoadShaderCodeVariableDesc(Compiler, SpvType.member_types[i], Compiler.get_member_decoration_bitset(SpvType.self, i), IsHLSLSource, UBDesc.GetVariable(idx));
     }
 
     return UBDesc;

@@ -29,6 +29,7 @@
 #include "StringPool.hpp"
 #include "WGSLUtils.hpp"
 #include "DataBlobImpl.hpp"
+#include "ShaderToolsCommon.hpp"
 
 #ifdef _MSC_VER
 #    pragma warning(push)
@@ -36,9 +37,19 @@
 #endif
 
 #include <tint/tint.h>
+
+#include "src/tint/lang/core/type/f32.h"
+#include "src/tint/lang/core/type/u32.h"
+#include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/array.h"
+#include "src/tint/lang/core/type/matrix.h"
+#include "src/tint/lang/core/type/scalar.h"
+#include "src/tint/lang/core/type/vector.h"
 #include "src/tint/lang/wgsl/ast/module.h"
 #include "src/tint/lang/wgsl/ast/identifier_expression.h"
 #include "src/tint/lang/wgsl/ast/identifier.h"
+#include "src/tint/lang/wgsl/ast/struct.h"
+#include "src/tint/lang/wgsl/sem/struct.h"
 #include "src/tint/lang/wgsl/sem/variable.h"
 
 #ifdef _MSC_VER
@@ -562,6 +573,158 @@ void MergeResources(std::vector<tint::inspector::ResourceBinding>& Bindings, std
     Bindings.swap(MergedBindings);
 }
 
+
+void LoadShaderCodeVariableDesc(const tint::Program&          Program,
+                                const tint::core::type::Type* WGSLType,
+                                SHADER_SOURCE_LANGUAGE        Language,
+                                ShaderCodeVariableDescX&      TypeDesc)
+{
+    auto GetBasicType = [](const tint::core::type::Type* Type) -> SHADER_CODE_BASIC_TYPE {
+        if (Type->Is<tint::core::type::F32>())
+            return SHADER_CODE_BASIC_TYPE_FLOAT;
+        if (Type->Is<tint::core::type::I32>())
+            return SHADER_CODE_BASIC_TYPE_INT;
+        if (Type->Is<tint::core::type::U32>())
+            return SHADER_CODE_BASIC_TYPE_UINT;
+        UNEXPECTED("Unexpected scalar type");
+        return SHADER_CODE_BASIC_TYPE_UNKNOWN;
+    };
+
+    auto GetArraySize = [](const tint::core::type::Array* ArrType) -> Uint8 {
+        if (ArrType->Count()->Is<tint::core::type::ConstantArrayCount>())
+        {
+            return static_cast<Uint8>(ArrType->Count()->As<tint::core::type::ConstantArrayCount>()->value);
+        }
+        UNEXPECTED("Unexpected type");
+        return 0;
+    };
+
+    if (WGSLType->Is<tint::core::type::Array>())
+    {
+        const tint::core::type::Array* ArrType  = WGSLType->As<tint::core::type::Array>();
+        const tint::core::type::Type*  ElemType = ArrType->ElemType();
+
+        // Path for HLSL
+        if (ElemType->FriendlyName() == "strided_arr" && Language == SHADER_SOURCE_LANGUAGE_HLSL)
+        {
+            const tint::core::type::StructMember* StructMember = ElemType->As<tint::core::type::Struct>()->Members().Front();
+            const tint::core::type::Vector*       MemberType   = StructMember->Type()->As<tint::core::type::Vector>();
+
+            TypeDesc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS;
+            TypeDesc.BasicType  = GetBasicType(MemberType->type());
+            TypeDesc.NumColumns = StaticCast<decltype(TypeDesc.NumColumns)>(MemberType->Width());
+            TypeDesc.NumRows    = GetArraySize(ArrType);
+        }
+        else
+        {
+            LoadShaderCodeVariableDesc(Program, ElemType, Language, TypeDesc);
+            TypeDesc.ArraySize = GetArraySize(ArrType);
+        }
+    }
+    else
+    {
+        if (WGSLType->Is<tint::core::type::Struct>())
+        {
+            TypeDesc.Class = SHADER_CODE_VARIABLE_CLASS_STRUCT;
+
+            for (const auto* Member : WGSLType->As<tint::core::type::Struct>()->Members())
+            {
+                ShaderCodeVariableDesc VarDesc;
+                VarDesc.Name   = Member->Name().NameView().data();
+                VarDesc.Offset = Member->Offset();
+
+                size_t VariableIdx = TypeDesc.AddMember(VarDesc);
+                LoadShaderCodeVariableDesc(Program, Member->Type(), Language, TypeDesc.GetMember(VariableIdx));
+            }
+
+            TypeDesc.SetTypeName(WGSLType->FriendlyName());
+        }
+        else
+        {
+            if (WGSLType->Is<tint::core::type::Scalar>())
+            {
+                TypeDesc.Class      = SHADER_CODE_VARIABLE_CLASS_SCALAR;
+                TypeDesc.BasicType  = GetBasicType(WGSLType);
+                TypeDesc.NumRows    = 1;
+                TypeDesc.NumColumns = 1;
+            }
+            else if (WGSLType->Is<tint::core::type::Vector>())
+            {
+                const tint::core::type::Vector* VecType = WGSLType->As<tint::core::type::Vector>();
+
+                TypeDesc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
+                TypeDesc.BasicType  = GetBasicType(VecType->type());
+                TypeDesc.NumRows    = StaticCast<decltype(TypeDesc.NumColumns)>(VecType->Width());
+                TypeDesc.NumColumns = 1;
+            }
+            else if (WGSLType->Is<tint::core::type::Matrix>())
+            {
+                const tint::core::type::Matrix* MatType = WGSLType->As<tint::core::type::Matrix>();
+
+                TypeDesc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS;
+                TypeDesc.BasicType  = GetBasicType(MatType->type());
+                TypeDesc.NumRows    = StaticCast<decltype(TypeDesc.NumColumns)>(MatType->rows());
+                TypeDesc.NumColumns = StaticCast<decltype(TypeDesc.NumColumns)>(MatType->columns());
+            }
+            else
+            {
+                UNEXPECTED("Unexpected type");
+            }
+        }
+
+        if (Language == SHADER_SOURCE_LANGUAGE_HLSL)
+            std::swap(TypeDesc.NumRows, TypeDesc.NumColumns);
+    }
+
+    if (TypeDesc.TypeName == nullptr || TypeDesc.TypeName[0] == '\0')
+    {
+        if (Language == SHADER_SOURCE_LANGUAGE_WGSL || Language == SHADER_SOURCE_LANGUAGE_DEFAULT)
+            TypeDesc.SetTypeName(WGSLType->FriendlyName());
+        else
+            TypeDesc.SetDefaultTypeName(Language);
+    }
+}
+
+ShaderCodeBufferDescX LoadUBReflection(const tint::Program& Program, const tint::inspector::ResourceBinding& UB, SHADER_SOURCE_LANGUAGE Language)
+{
+
+    const auto& Ast = Program.AST();
+    const auto& Sem = Program.Sem();
+
+    const tint::ast::Variable* Variable = nullptr;
+    for (const auto* Var : Ast.GlobalVariables())
+    {
+        if (Var->HasBindingPoint())
+        {
+            const auto* SemVariable = Sem.Get(Var)->As<tint::sem::GlobalVariable>();
+            if (SemVariable->Attributes().binding_point->group == UB.bind_group && SemVariable->Attributes().binding_point->binding == UB.binding)
+            {
+                Variable = Var;
+                break;
+            }
+        }
+    }
+    VERIFY(Variable, "Unexpected error");
+
+
+    const auto* WGSLType = Program.TypeOf(Variable->type)->As<tint::core::type::Struct>();
+    const auto  Size     = WGSLType->Size();
+
+    ShaderCodeBufferDescX UBDesc;
+    UBDesc.Size = StaticCast<decltype(UBDesc.Size)>(Size);
+    for (const auto* Member : WGSLType->Members())
+    {
+        ShaderCodeVariableDesc VarDesc;
+        VarDesc.Name   = Member->Name().NameView().data();
+        VarDesc.Offset = Member->Offset();
+
+        auto VariableIdx = UBDesc.AddVariable(VarDesc);
+        LoadShaderCodeVariableDesc(Program, Member->Type(), Language, UBDesc.GetVariable(VariableIdx));
+    }
+
+    return UBDesc;
+}
+
 } // namespace
 
 WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
@@ -724,6 +887,9 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     StringPool ResourceNamesPool;
     Initialize(Allocator, ResCounters, ResourceNamesPoolSize, ResourceNamesPool);
 
+    // Uniform buffer reflections
+    std::vector<ShaderCodeBufferDescX> UBReflections;
+
     // Allocate resources
     ResourceCounters CurrRes;
     for (size_t i = 0; i < ResourceBindings.size(); ++i)
@@ -736,6 +902,9 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
             case TintResourceType::kUniformBuffer:
             {
                 new (&GetUB(CurrRes.NumUBs++)) WGSLShaderResourceAttribs{Name, Binding, ArraySize};
+
+                if (LoadUniformBufferReflection)
+                    UBReflections.emplace_back(LoadUBReflection(Program, Binding, SourceLanguage));
             }
             break;
 
@@ -804,6 +973,13 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     m_ShaderName = ResourceNamesPool.CopyString(ShaderName);
     m_EntryPoint = ResourceNamesPool.CopyString(EntryPoint);
     VERIFY(ResourceNamesPool.GetRemainingSize() == 0, "Names pool must be empty");
+
+    if (!UBReflections.empty())
+    {
+        VERIFY_EXPR(LoadUniformBufferReflection);
+        VERIFY_EXPR(UBReflections.size() == GetNumUBs());
+        m_UBReflectionBuffer = ShaderCodeBufferDescX::PackArray(UBReflections.cbegin(), UBReflections.cend(), Allocator);
+    }
 }
 
 void WGSLShaderResources::Initialize(IMemoryAllocator&       Allocator,

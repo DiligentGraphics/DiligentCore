@@ -42,7 +42,9 @@ SamplerState g_Tex1_sampler;
 Texture2D    g_Tex2;
 SamplerState g_Tex2_sampler;
 
+#ifndef WEBGPU
 Buffer<float4> g_Buffer;
+#endif
 
 struct Struct1
 {
@@ -75,7 +77,7 @@ cbuffer CBuffer1
     float4 f4;
 
     float4x4 f4x4;
-    float4x2 f4x2;
+    float2x4 f2x4;
 
     Struct1 s1;
 
@@ -102,7 +104,9 @@ void main(out float4 pos : SV_POSITION)
     pos += s3.s2.s1.f4[1];
     pos += g_Tex1.SampleLevel(g_Tex1_sampler, float2(0.5, 0.5), 0.0);
     pos += g_Tex2.SampleLevel(g_Tex2_sampler, float2(0.5, 0.5), 0.0);
+#ifndef WEBGPU
     pos += g_Buffer.Load(0);
+#endif
     pos += g_StructBuff[0].f4[1];
 }
 )";
@@ -150,13 +154,13 @@ void CheckShaderConstantBuffers(IShader* pShader, bool PrintBufferContents, cons
 
 void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContents = false)
 {
-    auto*      pEnv  = GPUTestingEnvironment::GetInstance();
-    const auto IsGL  = pEnv->GetDevice()->GetDeviceInfo().IsGLDevice();
-    const auto IsVK  = pEnv->GetDevice()->GetDeviceInfo().IsVulkanDevice();
-    const auto IsMtl = pEnv->GetDevice()->GetDeviceInfo().IsMetalDevice();
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
+    const auto& DeviceInfo = pEnv->GetDevice()->GetDeviceInfo();
+    const auto  IsGL       = DeviceInfo.IsGLDevice();
+    const auto  IsIntBool  = DeviceInfo.IsVulkanDevice() || DeviceInfo.IsMetalDevice() || DeviceInfo.IsWebGPUDevice();
 
-    const auto* _bool_    = IsVK || IsMtl ? "uint" : "bool";
-    const auto  BOOL_TYPE = IsVK || IsMtl ? SHADER_CODE_BASIC_TYPE_UINT : SHADER_CODE_BASIC_TYPE_BOOL;
+    const auto* _bool_    = IsIntBool ? "uint" : "bool";
+    const auto  BOOL_TYPE = IsIntBool ? SHADER_CODE_BASIC_TYPE_UINT : SHADER_CODE_BASIC_TYPE_BOOL;
     const auto* _Struct1_ = !IsGL ? "Struct1" : "";
     const auto* _Struct2_ = !IsGL ? "Struct2" : "";
     const auto* _Struct3_ = !IsGL ? "Struct3" : "";
@@ -188,13 +192,13 @@ void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContent
             {"b", _bool_, BOOL_TYPE, 12},
 
             {"f4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 16},
-            {"f4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 32},
-            {"f4x2", "float4x2", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 2, 96},
+            {"f4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 32},
+            {"f2x4", "float2x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS, SHADER_CODE_BASIC_TYPE_FLOAT, 2, 4, 96},
 
             {"s1", _Struct1_, _countof(Struct1), Struct1, 128},
 
             {"af4", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 176, 2},
-            {"af4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 208, 4},
+            {"af4x4", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 208, 4},
         };
 
     const ShaderCodeBufferDesc CBuffer1{464, _countof(CBuffer1Vars), CBuffer1Vars};
@@ -205,7 +209,7 @@ void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContent
             {"i4", "int4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 1, 4, 16},
             {"f4_2", "float4", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 1, 4, 32},
             {"s2", _Struct2_, _countof(Struct2), Struct2, 48},
-            {"f4x4_2", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_COLUMNS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 112},
+            {"f4x4_2", "float4x4", SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 112},
             {"s3", _Struct3_, _countof(Struct3), Struct3, 176},
         };
 
@@ -217,7 +221,7 @@ void CheckConstantBufferReflectionHLSL(IShader* pShader, bool PrintBufferContent
     CheckShaderConstantBuffers(pShader, PrintBufferContents, BufferMapping);
 }
 
-std::pair<RefCntAutoPtr<IShader>, RefCntAutoPtr<IShader>> CreateTestShaders(const char* Source, SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE Language)
+std::pair<RefCntAutoPtr<IShader>, RefCntAutoPtr<IShader>> CreateTestShaders(const char* Source, SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE Language, SHADER_COMPILE_FLAGS CompileFlags = SHADER_COMPILE_FLAG_NONE)
 {
     auto*       pEnv       = GPUTestingEnvironment::GetInstance();
     auto*       pDevice    = pEnv->GetDevice();
@@ -230,6 +234,7 @@ std::pair<RefCntAutoPtr<IShader>, RefCntAutoPtr<IShader>> CreateTestShaders(cons
     ShaderCI.EntryPoint                   = "main";
     ShaderCI.Source                       = Source;
     ShaderCI.LoadConstantBufferReflection = true;
+    ShaderCI.CompileFlags                 = CompileFlags;
 
     RefCntAutoPtr<IShader> pShaderSrc;
     pDevice->CreateShader(ShaderCI, &pShaderSrc);
@@ -240,10 +245,20 @@ std::pair<RefCntAutoPtr<IShader>, RefCntAutoPtr<IShader>> CreateTestShaders(cons
     RefCntAutoPtr<IShader> pShaderBC;
     if (DeviceInfo.IsD3DDevice() || DeviceInfo.IsVulkanDevice() || DeviceInfo.IsWebGPUDevice())
     {
-        Uint64 ByteCodeSize = 0;
-        pShaderSrc->GetBytecode(&ShaderCI.ByteCode, ByteCodeSize);
-        ShaderCI.ByteCodeSize = static_cast<size_t>(ByteCodeSize);
-        ShaderCI.Source       = nullptr;
+        if (DeviceInfo.IsWebGPUDevice())
+        {
+            Uint64 ByteCodeSize = 0;
+            pShaderSrc->GetBytecode(reinterpret_cast<const void**>(&ShaderCI.Source), ByteCodeSize);
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+            ShaderCI.ByteCodeSize   = static_cast<size_t>(ByteCodeSize);
+        }
+        else
+        {
+            Uint64 ByteCodeSize = 0;
+            pShaderSrc->GetBytecode(&ShaderCI.ByteCode, ByteCodeSize);
+            ShaderCI.ByteCodeSize = static_cast<size_t>(ByteCodeSize);
+            ShaderCI.Source       = nullptr;
+        }
 
         pDevice->CreateShader(ShaderCI, &pShaderBC);
         if (!pShaderBC)
@@ -261,7 +276,7 @@ TEST(ConstantBufferReflectionTest, HLSL)
     if (DeviceInfo.IsGLDevice() && !DeviceInfo.Features.SeparablePrograms)
         GTEST_SKIP();
 
-    auto TestShaders = CreateTestShaders(g_TestShaderSource_HLSL, SHADER_COMPILER_DEFAULT, SHADER_SOURCE_LANGUAGE_HLSL);
+    auto TestShaders = CreateTestShaders(g_TestShaderSource_HLSL, SHADER_COMPILER_DEFAULT, SHADER_SOURCE_LANGUAGE_HLSL, SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR);
     ASSERT_TRUE(TestShaders.first);
 
     constexpr auto PrintBufferContents = true;
@@ -281,7 +296,7 @@ TEST(ConstantBufferReflectionTest, HLSL_DXC)
     if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12 && pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
         GTEST_SKIP();
 
-    auto TestShaders = CreateTestShaders(g_TestShaderSource_HLSL, SHADER_COMPILER_DXC, SHADER_SOURCE_LANGUAGE_HLSL);
+    auto TestShaders = CreateTestShaders(g_TestShaderSource_HLSL, SHADER_COMPILER_DXC, SHADER_SOURCE_LANGUAGE_HLSL, SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR);
     ASSERT_TRUE(TestShaders.first && TestShaders.second);
 
     CheckConstantBufferReflectionHLSL(TestShaders.first);
@@ -389,8 +404,6 @@ TEST(ConstantBufferReflectionTest, HLSL_D3D_DXC)
     CheckConstantBufferReflectionD3D(TestShaders.first);
     CheckConstantBufferReflectionD3D(TestShaders.second);
 }
-
-
 
 static const char g_TestShaderSourceGLSL[] = R"(
 
@@ -538,6 +551,135 @@ TEST(ConstantBufferReflectionTest, GLSL)
         ASSERT_TRUE(TestShaders.second);
         CheckConstantBufferReflectionGLSL(TestShaders.second);
     }
+}
+
+static const char g_TestShaderSourceWGSL[] = R"(
+@group(0) @binding(0) var g_Tex2D: texture_2d<f32>;
+@group(0) @binding(1) var g_Tex2D_sampler: sampler;
+@group(0) @binding(2) var<storage, read> g_StorageBuff: vec4f;
+
+struct Struct1 {
+    f4: vec4f,
+    i4: vec4i,
+};
+
+struct Struct2 {
+    f4: vec4f,
+    s1: Struct1,
+    u4: vec4u,
+};
+
+struct UBuffer {
+    f: f32,
+    u: u32,
+    i: i32,
+    b: u32,
+
+    f4: vec4f,
+    u4: vec4u,
+    i4: vec4i,
+    b4: vec4u,
+
+    f2: vec2f,
+    u2: vec2u,
+    i2: vec2i,
+    b2: vec2u,
+
+    s1: Struct1,
+    s2: Struct2,
+
+    m2x4: mat2x4f,
+    m4x4: mat4x4f,
+
+    af4:   array<vec4f,   2>,
+    am4x4: array<mat4x4f, 3>,
+};
+
+@group(0) @binding(3) var<uniform> uBuffer: UBuffer;
+
+@vertex
+fn main() ->  @builtin(position) vec4f 
+{
+    var out: vec4f;
+    
+    out = uBuffer.f4;
+    out += uBuffer.s1.f4;
+    out += uBuffer.s2.s1.f4;
+    out += uBuffer.af4[0] + uBuffer.af4[1];
+    out += uBuffer.am4x4[0][0] + uBuffer.am4x4[2][0];
+    out += textureSampleLevel(g_Tex2D, g_Tex2D_sampler, vec2(0.5, 0.5), 0.0);
+    out += g_StorageBuff;
+    return out;
+}
+)";
+
+void CheckConstantBufferReflectionWGSL(IShader* pShader, bool PrintBufferContents = false)
+{
+    static constexpr ShaderCodeVariableDesc Struct1[] =
+        {
+            {"f4", "vec4<f32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 0},
+            {"i4", "vec4<i32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 4, 1, 16},
+        };
+
+    static const ShaderCodeVariableDesc Struct2[] =
+        {
+            {"f4", "vec4<f32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 0},
+            {"s1", "Struct1", _countof(Struct1), Struct1, 16},
+            {"u4", "vec4<u32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 4, 1, 48},
+        };
+
+    const auto* _bool_    = "u32";
+    const auto* _bool2_   = "vec2<u32>";
+    const auto* _bool4_   = "vec4<u32>";
+    const auto  BOOL_TYPE = SHADER_CODE_BASIC_TYPE_UINT;
+
+    static const ShaderCodeVariableDesc UBufferVars[] =
+        {
+            {"f", "f32", SHADER_CODE_BASIC_TYPE_FLOAT, 0},
+            {"u", "u32", SHADER_CODE_BASIC_TYPE_UINT, 4},
+            {"i", "i32", SHADER_CODE_BASIC_TYPE_INT, 8},
+            {"b", _bool_, BOOL_TYPE, 12},
+
+            {"f4", "vec4<f32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 16},
+            {"u4", "vec4<u32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 4, 1, 32},
+            {"i4", "vec4<i32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 4, 1, 48},
+            {"b4", _bool4_, SHADER_CODE_VARIABLE_CLASS_VECTOR, BOOL_TYPE, 4, 1, 64},
+
+            {"f2", "vec2<f32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 2, 1, 80},
+            {"u2", "vec2<u32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_UINT, 2, 1, 88},
+            {"i2", "vec2<i32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_INT, 2, 1, 96},
+            {"b2", _bool2_, SHADER_CODE_VARIABLE_CLASS_VECTOR, BOOL_TYPE, 2, 1, 104},
+
+            {"s1", "Struct1", _countof(Struct1), Struct1, 112},
+            {"s2", "Struct2", _countof(Struct2), Struct2, 144},
+
+            {"m2x4", "mat2x4<f32>", SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 2, 208},
+            {"m4x4", "mat4x4<f32>", SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 240},
+
+            {"af4", "vec4<f32>", SHADER_CODE_VARIABLE_CLASS_VECTOR, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 1, 304, 2},
+            {"am4x4", "mat4x4<f32>", SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS, SHADER_CODE_BASIC_TYPE_FLOAT, 4, 4, 336, 3},
+        };
+
+    static constexpr ShaderCodeBufferDesc UBuffer{528, _countof(UBufferVars), UBufferVars};
+
+    BufferDescMappingType BufferMapping;
+    BufferMapping.emplace_back("uBuffer", UBuffer);
+    CheckShaderConstantBuffers(pShader, PrintBufferContents, BufferMapping);
+}
+
+TEST(ConstantBufferReflectionTest, WGSL)
+{
+    auto*       pEnv       = GPUTestingEnvironment::GetInstance();
+    auto*       pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    if (!DeviceInfo.IsWebGPUDevice())
+        GTEST_SKIP();
+
+    auto TestShaders = CreateTestShaders(g_TestShaderSourceWGSL, SHADER_COMPILER_DEFAULT, SHADER_SOURCE_LANGUAGE_WGSL, SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR);
+
+    ASSERT_TRUE(TestShaders.first);
+    constexpr auto PrintBufferContents = true;
+    CheckConstantBufferReflectionWGSL(TestShaders.first, PrintBufferContents);
 }
 
 } // namespace
