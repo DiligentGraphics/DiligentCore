@@ -23,7 +23,7 @@ build instructions, etc.
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore)
 [![CodeQL Scanning](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/codeql.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/codeql.yml?query=branch%3Amaster)
 [![MSVC Analysis](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/msvc_analysis.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/msvc_analysis.yml?query=branch%3Amaster)
-[![Lines of Code](https://tokei.rs/b1/github.com/DiligentGraphics/DiligentCore)](https://github.com/DiligentGraphics/DiligentCore)
+[![Lines of code](https://sloc.xyz/github/DiligentGraphics/DiligentCore)](https://github.com/DiligentGraphics/DiligentCore)
 
 
 # Table of Contents
