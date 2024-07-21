@@ -31,6 +31,7 @@
 /// Defines graphics engine utilities
 
 #include <vector>
+#include <cstring>
 
 #include "../../GraphicsEngine/interface/GraphicsTypes.h"
 #include "../../GraphicsEngine/interface/Shader.h"
@@ -806,5 +807,34 @@ bool IsIdentityComponentMapping(const TextureComponentMapping& Mapping);
 /// Resolves LAYOUT_ELEMENT_AUTO_OFFSET and LAYOUT_ELEMENT_AUTO_STRIDE values in the input layout,
 /// and returns an array of buffer strides for each used input buffer slot.
 std::vector<Uint32> ResolveInputLayoutAutoOffsetsAndStrides(LayoutElement* pLayoutElements, Uint32 NumElements);
+
+inline void WriteShaderMatrix(void* pDst, const float4x4& Mat, bool Transpose)
+{
+    if (!Transpose)
+    {
+        std::memcpy(pDst, &Mat, sizeof(float4x4));
+    }
+    else
+    {
+        const float4x4 TransposedMat = Mat.Transpose();
+        std::memcpy(pDst, &TransposedMat, sizeof(float4x4));
+    }
+}
+
+inline void WriteShaderMatrices(void* pDst, const float4x4* pMat, size_t NumMatrices, bool Transpose)
+{
+    if (!Transpose)
+    {
+        std::memcpy(pDst, pMat, sizeof(float4x4) * NumMatrices);
+    }
+    else
+    {
+        for (size_t i = 0; i < NumMatrices; ++i)
+        {
+            const float4x4 TransposedMat = pMat[i].Transpose();
+            std::memcpy(static_cast<float4x4*>(pDst) + i, &TransposedMat, sizeof(float4x4));
+        }
+    }
+}
 
 } // namespace Diligent
