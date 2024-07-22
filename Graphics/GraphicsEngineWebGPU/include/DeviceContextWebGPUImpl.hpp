@@ -395,7 +395,9 @@ private:
             CMD_ENCODER_STATE_VIEWPORTS      = 1 << 3,
             CMD_ENCODER_STATE_SCISSOR_RECTS  = 1 << 4,
             CMD_ENCODER_STATE_BLEND_FACTORS  = 1 << 5,
-            CMD_ENCODER_STATE_STENCIL_REF    = 1 << 6
+            CMD_ENCODER_STATE_STENCIL_REF    = 1 << 6,
+            CMD_ENCODER_STATE_LAST           = CMD_ENCODER_STATE_STENCIL_REF,
+            CMD_ENCODER_STATE_ALL            = 2 * CMD_ENCODER_STATE_LAST - 1
         };
 
         bool IsUpToDate(CMD_ENCODER_STATE_FLAGS StateFlag) const

@@ -131,7 +131,7 @@ jobs:
       uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
       with:
         mode: wgpu
-        args: --gtest_filter=-ShaderResourceLayout.VariableAccess:ComputeShaderTest.GenerateMips_CSInterference:QueryTest.*:TextureUploaderTest*
+        args: --gtest_filter=-ShaderResourceLayout.VariableAccess:QueryTest.*:TextureUploaderTest*
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3

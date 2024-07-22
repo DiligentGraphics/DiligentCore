@@ -1327,6 +1327,12 @@ void DeviceContextWebGPUImpl::GenerateMips(ITextureView* pTexView)
 {
     TDeviceContextBase::GenerateMips(pTexView);
 
+    if (m_pPipelineState)
+    {
+        m_EncoderState.Invalidate(WebGPUEncoderState::CMD_ENCODER_STATE_ALL);
+        m_BindInfo.DirtyBindGroups = true;
+    }
+
     auto& MipGenerator = m_pDevice->GetMipsGenerator();
     auto  CmdEncoder   = GetComputePassCommandEncoder();
     MipGenerator.GenerateMips(CmdEncoder, this, ClassPtrCast<TextureViewWebGPUImpl>(pTexView));
