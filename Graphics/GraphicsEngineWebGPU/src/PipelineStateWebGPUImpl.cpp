@@ -384,6 +384,10 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
 
         wgpuDepthStencilState.stencilReadMask  = DepthStencilDesc.StencilReadMask;
         wgpuDepthStencilState.stencilWriteMask = DepthStencilDesc.StencilWriteMask;
+
+        wgpuDepthStencilState.depthBias           = static_cast<int32_t>(GraphicsPipeline.RasterizerDesc.DepthBias);
+        wgpuDepthStencilState.depthBiasSlopeScale = GraphicsPipeline.RasterizerDesc.SlopeScaledDepthBias;
+        wgpuDepthStencilState.depthBiasClamp      = GraphicsPipeline.RasterizerDesc.DepthBiasClamp;
     }
 
     {
