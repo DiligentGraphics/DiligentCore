@@ -1290,11 +1290,20 @@ void DeviceContextWebGPUImpl::BeginDebugGroup(const Char* Name, const float* pCo
     TDeviceContextBase::BeginDebugGroup(Name, pColor, 0);
 
     if (m_wgpuRenderPassEncoder)
+    {
         wgpuRenderPassEncoderPushDebugGroup(GetRenderPassCommandEncoder(), Name);
+        m_DebugGroupsStack.push_back(COMMAND_ENCODER_FLAG_RENDER);
+    }
     else if (m_wgpuComputePassEncoder)
+    {
         wgpuComputePassEncoderPushDebugGroup(GetComputePassCommandEncoder(), Name);
+        m_DebugGroupsStack.push_back(COMMAND_ENCODER_FLAG_COMPUTE);
+    }
     else
+    {
         wgpuCommandEncoderPushDebugGroup(GetCommandEncoder(), Name);
+        m_DebugGroupsStack.push_back(COMMAND_ENCODER_FLAG_NONE);
+    }
 }
 
 void DeviceContextWebGPUImpl::EndDebugGroup()
@@ -1303,11 +1312,39 @@ void DeviceContextWebGPUImpl::EndDebugGroup()
     TDeviceContextBase::EndDebugGroup(0);
 
     if (m_wgpuRenderPassEncoder)
-        wgpuRenderPassEncoderPopDebugGroup(GetRenderPassCommandEncoder());
+    {
+        if (m_DebugGroupsStack.back() == COMMAND_ENCODER_FLAG_RENDER)
+            wgpuRenderPassEncoderPopDebugGroup(GetRenderPassCommandEncoder());
+        else
+            m_PendingDebugGroups.push_back(m_DebugGroupsStack.back());
+
+        m_DebugGroupsStack.pop_back();
+    }
     else if (m_wgpuComputePassEncoder)
-        wgpuComputePassEncoderPopDebugGroup(GetComputePassCommandEncoder());
+    {
+        if (m_DebugGroupsStack.back() == COMMAND_ENCODER_FLAG_COMPUTE)
+            wgpuComputePassEncoderPopDebugGroup(GetComputePassCommandEncoder());
+        else
+            m_PendingDebugGroups.push_back(m_DebugGroupsStack.back());
+
+        m_DebugGroupsStack.pop_back();
+    }
     else
-        wgpuCommandEncoderPopDebugGroup(GetCommandEncoder());
+    {
+        if (m_DebugGroupsStack.back() == COMMAND_ENCODER_FLAG_NONE)
+        {
+            wgpuCommandEncoderPopDebugGroup(GetCommandEncoder());
+            m_DebugGroupsStack.pop_back();
+        }
+        else if (m_DebugGroupsStack.back() == COMMAND_ENCODER_FLAG_DUMMY)
+        {
+            m_DebugGroupsStack.pop_back();
+        }
+        else
+        {
+            UNEXPECTED("Unexpected behavior");
+        }
+    }
 }
 
 void DeviceContextWebGPUImpl::InsertDebugLabel(const Char* Label, const float* pColor)
@@ -1549,6 +1586,12 @@ void DeviceContextWebGPUImpl::EndCommandEncoders(Uint32 EncoderFlags)
 
         if (m_wgpuRenderPassEncoder)
         {
+            for (auto Iter = m_DebugGroupsStack.rbegin(); Iter != m_DebugGroupsStack.rend() && *Iter == COMMAND_ENCODER_FLAG_RENDER; ++Iter)
+            {
+                wgpuRenderPassEncoderPopDebugGroup(m_wgpuRenderPassEncoder);
+                *Iter = COMMAND_ENCODER_FLAG_DUMMY;
+            }
+
             wgpuRenderPassEncoderEnd(m_wgpuRenderPassEncoder);
             m_wgpuRenderPassEncoder.Reset(nullptr);
             ClearEncoderState();
@@ -1559,10 +1602,22 @@ void DeviceContextWebGPUImpl::EndCommandEncoders(Uint32 EncoderFlags)
     {
         if (m_wgpuComputePassEncoder)
         {
+            for (auto Iter = m_DebugGroupsStack.rbegin(); Iter != m_DebugGroupsStack.rend() && *Iter == COMMAND_ENCODER_FLAG_COMPUTE; ++Iter)
+            {
+                wgpuComputePassEncoderPopDebugGroup(m_wgpuComputePassEncoder);
+                *Iter = COMMAND_ENCODER_FLAG_DUMMY;
+            }
+
             wgpuComputePassEncoderEnd(m_wgpuComputePassEncoder);
             m_wgpuComputePassEncoder.Reset(nullptr);
             ClearEncoderState();
         }
+    }
+
+    while (!m_PendingDebugGroups.empty())
+    {
+        wgpuCommandEncoderPopDebugGroup(m_wgpuCommandEncoder);
+        m_PendingDebugGroups.pop_back();
     }
 }
 

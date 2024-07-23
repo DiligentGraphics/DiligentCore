@@ -323,6 +323,7 @@ private:
         COMMAND_ENCODER_FLAG_NONE    = 0u,
         COMMAND_ENCODER_FLAG_RENDER  = 1u << 0,
         COMMAND_ENCODER_FLAG_COMPUTE = 1u << 1,
+        COMMAND_ENCODER_FLAG_DUMMY   = 1u << 2,
 
         COMMAND_ENCODER_FLAG_ALL =
             COMMAND_ENCODER_FLAG_RENDER |
@@ -557,6 +558,7 @@ private:
     using UploadMemoryPageList  = std::vector<UploadMemoryManagerWebGPU::Page>;
     using DynamicMemoryPageList = std::vector<DynamicMemoryManagerWebGPU::Page>;
     using MappedTextureCache    = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
+    using DebugGroupStack       = std::vector<COMMAND_ENCODER_FLAGS>;
 
     WebGPUQueueWrapper              m_wgpuQueue;
     WebGPUCommandEncoderWrapper     m_wgpuCommandEncoder;
@@ -570,6 +572,8 @@ private:
     UploadMemoryPageList  m_UploadMemPages;
     DynamicMemoryPageList m_DynamicMemPages;
     MappedTextureCache    m_MappedTextures;
+    DebugGroupStack       m_DebugGroupsStack;
+    DebugGroupStack       m_PendingDebugGroups;
 
     QueryManagerWebGPU* m_pQueryMgr            = nullptr;
     Int32               m_ActiveQueriesCounter = 0;
