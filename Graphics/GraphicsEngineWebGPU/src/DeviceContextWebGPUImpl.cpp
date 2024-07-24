@@ -1292,17 +1292,17 @@ void DeviceContextWebGPUImpl::BeginDebugGroup(const Char* Name, const float* pCo
     if (m_wgpuRenderPassEncoder)
     {
         wgpuRenderPassEncoderPushDebugGroup(GetRenderPassCommandEncoder(), Name);
-        m_DebugGroupsStack.push_back(COMMAND_ENCODER_FLAG_RENDER);
+        m_DebugGroupsStack.push_back(DEBUG_GROUP_TYPE_RENDER);
     }
     else if (m_wgpuComputePassEncoder)
     {
         wgpuComputePassEncoderPushDebugGroup(GetComputePassCommandEncoder(), Name);
-        m_DebugGroupsStack.push_back(COMMAND_ENCODER_FLAG_COMPUTE);
+        m_DebugGroupsStack.push_back(DEBUG_GROUP_TYPE_COMPUTE);
     }
     else
     {
         wgpuCommandEncoderPushDebugGroup(GetCommandEncoder(), Name);
-        m_DebugGroupsStack.push_back(COMMAND_ENCODER_FLAG_NONE);
+        m_DebugGroupsStack.push_back(DEBUG_GROUP_TYPE_OUTER);
     }
 }
 
@@ -1311,34 +1311,37 @@ void DeviceContextWebGPUImpl::EndDebugGroup()
     VERIFY(!(m_wgpuRenderPassEncoder && m_wgpuComputePassEncoder), "Another command encoder is currently active");
     TDeviceContextBase::EndDebugGroup(0);
 
+    if (m_DebugGroupsStack.empty())
+    {
+        UNEXPECTED("No matching BeginDebugGroup() call found");
+        return;
+    }
+
+    DEBUG_GROUP_TYPE DebugGroupType = m_DebugGroupsStack.back();
+    m_DebugGroupsStack.pop_back();
     if (m_wgpuRenderPassEncoder)
     {
-        if (m_DebugGroupsStack.back() == COMMAND_ENCODER_FLAG_RENDER)
+        if (DebugGroupType == DEBUG_GROUP_TYPE_RENDER)
             wgpuRenderPassEncoderPopDebugGroup(GetRenderPassCommandEncoder());
         else
-            m_PendingDebugGroups.push_back(m_DebugGroupsStack.back());
-
-        m_DebugGroupsStack.pop_back();
+            m_PendingDebugGroups.push_back(DebugGroupType);
     }
     else if (m_wgpuComputePassEncoder)
     {
-        if (m_DebugGroupsStack.back() == COMMAND_ENCODER_FLAG_COMPUTE)
+        if (DebugGroupType == DEBUG_GROUP_TYPE_COMPUTE)
             wgpuComputePassEncoderPopDebugGroup(GetComputePassCommandEncoder());
         else
-            m_PendingDebugGroups.push_back(m_DebugGroupsStack.back());
-
-        m_DebugGroupsStack.pop_back();
+            m_PendingDebugGroups.push_back(DebugGroupType);
     }
     else
     {
-        if (m_DebugGroupsStack.back() == COMMAND_ENCODER_FLAG_NONE)
+        if (DebugGroupType == DEBUG_GROUP_TYPE_OUTER)
         {
             wgpuCommandEncoderPopDebugGroup(GetCommandEncoder());
-            m_DebugGroupsStack.pop_back();
         }
-        else if (m_DebugGroupsStack.back() == COMMAND_ENCODER_FLAG_DUMMY)
+        else if (DebugGroupType == DEBUG_GROUP_TYPE_NULL)
         {
-            m_DebugGroupsStack.pop_back();
+            // Nothing to do
         }
         else
         {
@@ -1586,10 +1589,10 @@ void DeviceContextWebGPUImpl::EndCommandEncoders(Uint32 EncoderFlags)
 
         if (m_wgpuRenderPassEncoder)
         {
-            for (auto Iter = m_DebugGroupsStack.rbegin(); Iter != m_DebugGroupsStack.rend() && *Iter == COMMAND_ENCODER_FLAG_RENDER; ++Iter)
+            for (auto Iter = m_DebugGroupsStack.rbegin(); Iter != m_DebugGroupsStack.rend() && *Iter == DEBUG_GROUP_TYPE_RENDER; ++Iter)
             {
                 wgpuRenderPassEncoderPopDebugGroup(m_wgpuRenderPassEncoder);
-                *Iter = COMMAND_ENCODER_FLAG_DUMMY;
+                *Iter = DEBUG_GROUP_TYPE_NULL;
             }
 
             wgpuRenderPassEncoderEnd(m_wgpuRenderPassEncoder);
@@ -1602,10 +1605,10 @@ void DeviceContextWebGPUImpl::EndCommandEncoders(Uint32 EncoderFlags)
     {
         if (m_wgpuComputePassEncoder)
         {
-            for (auto Iter = m_DebugGroupsStack.rbegin(); Iter != m_DebugGroupsStack.rend() && *Iter == COMMAND_ENCODER_FLAG_COMPUTE; ++Iter)
+            for (auto Iter = m_DebugGroupsStack.rbegin(); Iter != m_DebugGroupsStack.rend() && *Iter == DEBUG_GROUP_TYPE_COMPUTE; ++Iter)
             {
                 wgpuComputePassEncoderPopDebugGroup(m_wgpuComputePassEncoder);
-                *Iter = COMMAND_ENCODER_FLAG_DUMMY;
+                *Iter = DEBUG_GROUP_TYPE_NULL;
             }
 
             wgpuComputePassEncoderEnd(m_wgpuComputePassEncoder);

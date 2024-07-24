@@ -323,11 +323,25 @@ private:
         COMMAND_ENCODER_FLAG_NONE    = 0u,
         COMMAND_ENCODER_FLAG_RENDER  = 1u << 0,
         COMMAND_ENCODER_FLAG_COMPUTE = 1u << 1,
-        COMMAND_ENCODER_FLAG_DUMMY   = 1u << 2,
 
         COMMAND_ENCODER_FLAG_ALL =
             COMMAND_ENCODER_FLAG_RENDER |
             COMMAND_ENCODER_FLAG_COMPUTE
+    };
+
+    enum DEBUG_GROUP_TYPE : Uint32
+    {
+        // Debug group was started within render pass encoder
+        DEBUG_GROUP_TYPE_RENDER,
+
+        // Debug group was started within compute pass encoder
+        DEBUG_GROUP_TYPE_COMPUTE,
+
+        // Debug group was started outside of any encoder
+        DEBUG_GROUP_TYPE_OUTER,
+
+        // Debug group has been ended when the encoder was ended
+        DEBUG_GROUP_TYPE_NULL
     };
 
     WGPUCommandEncoder GetCommandEncoder();
@@ -558,7 +572,7 @@ private:
     using UploadMemoryPageList  = std::vector<UploadMemoryManagerWebGPU::Page>;
     using DynamicMemoryPageList = std::vector<DynamicMemoryManagerWebGPU::Page>;
     using MappedTextureCache    = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
-    using DebugGroupStack       = std::vector<COMMAND_ENCODER_FLAGS>;
+    using DebugGroupStack       = std::vector<DEBUG_GROUP_TYPE>;
 
     WebGPUQueueWrapper              m_wgpuQueue;
     WebGPUCommandEncoderWrapper     m_wgpuCommandEncoder;
