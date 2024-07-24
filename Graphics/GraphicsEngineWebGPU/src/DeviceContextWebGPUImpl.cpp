@@ -1121,6 +1121,8 @@ void DeviceContextWebGPUImpl::UnmapTextureSubresource(ITexture* pTexture, Uint32
         const auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{pTextureWebGPU->GetUniqueID(), MipLevel, ArraySlice});
         if (UploadSpaceIt != m_MappedTextures.end())
         {
+            const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+
             const auto& Allocation = UploadSpaceIt->second.Allocation;
             const auto& CopyInfo   = UploadSpaceIt->second.CopyInfo;
 
@@ -1142,6 +1144,12 @@ void DeviceContextWebGPUImpl::UnmapTextureSubresource(ITexture* pTexture, Uint32
             wgpuCopySize.width              = CopyInfo.Region.Width();
             wgpuCopySize.height             = CopyInfo.Region.Height();
             wgpuCopySize.depthOrArrayLayers = CopyInfo.Region.Depth();
+
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+            {
+                wgpuCopySize.width  = AlignUp(wgpuCopySize.width, FmtAttribs.BlockWidth);
+                wgpuCopySize.height = AlignUp(wgpuCopySize.height, FmtAttribs.BlockHeight);
+            }
 
             wgpuCommandEncoderCopyBufferToTexture(GetCommandEncoder(), &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
             m_MappedTextures.erase(UploadSpaceIt);

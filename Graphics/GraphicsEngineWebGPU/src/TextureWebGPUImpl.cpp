@@ -273,6 +273,12 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
                     wgpuCopySize.height             = MipProps.LogicalHeight;
                     wgpuCopySize.depthOrArrayLayers = MipProps.Depth;
 
+                    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+                    {
+                        wgpuCopySize.width  = AlignUp(wgpuCopySize.width, FmtAttribs.BlockWidth);
+                        wgpuCopySize.height = AlignUp(wgpuCopySize.height, FmtAttribs.BlockHeight);
+                    }
+
                     wgpuCommandEncoderCopyBufferToTexture(wgpuCmdEncoder, &wgpuSourceCopyInfo, &wgpuDestinationCopyInfo, &wgpuCopySize);
                 }
             }
