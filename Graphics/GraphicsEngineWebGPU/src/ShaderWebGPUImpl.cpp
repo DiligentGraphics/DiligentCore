@@ -156,26 +156,9 @@ std::vector<uint32_t> CompileShaderToSPIRV(const ShaderCreateInfo&             S
 
 } // namespace
 
-ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
-                                   RenderDeviceWebGPUImpl* pDeviceWebGPU,
-                                   const ShaderCreateInfo& ShaderCI,
-                                   const CreateInfo&       WebGPUShaderCI,
-                                   bool                    IsDeviceInternal) :
-    // clang-format off
-    TShaderBase
-    {
-        pRefCounters,
-        pDeviceWebGPU,
-        ShaderCI.Desc,
-        WebGPUShaderCI.DeviceInfo,
-        WebGPUShaderCI.AdapterInfo,
-        IsDeviceInternal
-    },
-    m_EntryPoint{ShaderCI.EntryPoint != nullptr ? ShaderCI.EntryPoint : ""}
-// clang-format on
+void ShaderWebGPUImpl::Initialize(const ShaderCreateInfo& ShaderCI,
+                                  const CreateInfo&       WebGPUShaderCI) noexcept(false)
 {
-    m_Status.store(SHADER_STATUS_COMPILING);
-
     SHADER_SOURCE_LANGUAGE ParsedSourceLanguage = SHADER_SOURCE_LANGUAGE_DEFAULT;
     SHADER_SOURCE_LANGUAGE SourceLanguage       = ShaderCI.SourceLanguage;
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_DEFAULT ||
@@ -269,6 +252,59 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
     }
 
     m_Status.store(SHADER_STATUS_READY);
+}
+
+ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
+                                   RenderDeviceWebGPUImpl* pDeviceWebGPU,
+                                   const ShaderCreateInfo& ShaderCI,
+                                   const CreateInfo&       WebGPUShaderCI,
+                                   bool                    IsDeviceInternal) :
+    // clang-format off
+    TShaderBase
+    {
+        pRefCounters,
+        pDeviceWebGPU,
+        ShaderCI.Desc,
+        WebGPUShaderCI.DeviceInfo,
+        WebGPUShaderCI.AdapterInfo,
+        IsDeviceInternal
+    },
+    m_EntryPoint{ShaderCI.EntryPoint != nullptr ? ShaderCI.EntryPoint : ""}
+// clang-format on
+{
+    m_Status.store(SHADER_STATUS_COMPILING);
+    if (WebGPUShaderCI.pCompilationThreadPool == nullptr || (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) == 0)
+    {
+        Initialize(ShaderCI, WebGPUShaderCI);
+    }
+    else
+    {
+        m_CompileTaskRunning.store(true);
+        m_wpCompileTask = EnqueueAsyncWork(
+            WebGPUShaderCI.pCompilationThreadPool,
+            [this,
+             ShaderCI         = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},
+             DeviceInfo       = WebGPUShaderCI.DeviceInfo,
+             AdapterInfo      = WebGPUShaderCI.AdapterInfo,
+             ppCompilerOutput = WebGPUShaderCI.ppCompilerOutput](Uint32 ThreadId) mutable //
+            {
+                try
+                {
+                    const CreateInfo WebGPUShaderCI{
+                        DeviceInfo,
+                        AdapterInfo,
+                        ppCompilerOutput,
+                        nullptr,
+                    };
+                    Initialize(ShaderCI, WebGPUShaderCI);
+                }
+                catch (...)
+                {
+                    m_Status.store(SHADER_STATUS_FAILED);
+                }
+                ShaderCI = ShaderCreateInfoWrapper{};
+            });
+    }
 }
 
 ShaderWebGPUImpl::~ShaderWebGPUImpl()

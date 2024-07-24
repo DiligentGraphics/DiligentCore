@@ -60,6 +60,9 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_PipelineStateWebGPU, IID_InternalImpl, TPipelineStateBase)
 
+    /// Implementation of IPipelineState::GetStatus().
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion = false) override final;
+
     WGPURenderPipeline DILIGENT_CALL_TYPE GetWebGPURenderPipeline() const override final;
 
     WGPUComputePipeline DILIGENT_CALL_TYPE GetWebGPUComputePipeline() const override final;
@@ -74,13 +77,17 @@ public:
     {
         const SHADER_TYPE       Type;
         ShaderWebGPUImpl* const pShader;
-        std::string             WGSL;
+        std::string             PatchedWGSL;
 
         ShaderStageInfo(ShaderWebGPUImpl* _pShader) :
             Type{_pShader->GetDesc().ShaderType},
-            pShader{_pShader},
-            WGSL{_pShader->GetWGSL()}
+            pShader{_pShader}
         {}
+
+        const std::string& GetWGSL() const
+        {
+            return PatchedWGSL.empty() ? pShader->GetWGSL() : PatchedWGSL;
+        }
 
         friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }
 
@@ -124,13 +131,21 @@ private:
     void InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages);
 
     void InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo);
-
     void InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo);
+
+    struct AsyncPipelineBuilder;
+
+    void InitializeWebGPURenderPipeline(const TShaderStages&  ShaderStages,
+                                        AsyncPipelineBuilder* AsyncBuilder = nullptr);
+    void InitializeWebGPUComputePipeline(const TShaderStages&  ShaderStages,
+                                         AsyncPipelineBuilder* AsyncBuilder = nullptr);
 
 private:
     WebGPURenderPipelineWrapper  m_wgpuRenderPipeline;
     WebGPUComputePipelineWrapper m_wgpuComputePipeline;
     PipelineLayoutWebGPU         m_PipelineLayout;
+
+    RefCntAutoPtr<AsyncPipelineBuilder> m_AsyncBuilder;
 
 #ifdef DILIGENT_DEVELOPMENT
     // Shader resources for all shaders in all shader stages

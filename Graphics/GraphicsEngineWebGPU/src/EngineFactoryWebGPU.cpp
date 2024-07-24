@@ -294,6 +294,7 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         Features.PixelUAVWritesAndAtomics  = DEVICE_FEATURE_STATE_ENABLED;
         Features.TextureUAVExtendedFormats = DEVICE_FEATURE_STATE_ENABLED;
         Features.DepthClamp                = DEVICE_FEATURE_STATE_ENABLED;
+        Features.AsyncShaderCompilation    = DEVICE_FEATURE_STATE_ENABLED;
 
         Features.WireframeFill               = DEVICE_FEATURE_STATE_DISABLED;
         Features.FormattedBuffers            = DEVICE_FEATURE_STATE_DISABLED;

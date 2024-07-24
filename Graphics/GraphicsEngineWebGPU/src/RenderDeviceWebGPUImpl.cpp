@@ -110,6 +110,8 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();
 #endif
+
+    InitShaderCompilationThreadPool(EngineCI.pAsyncShaderCompilationThreadPool, EngineCI.NumAsyncShaderCompilationThreads);
 }
 
 RenderDeviceWebGPUImpl::~RenderDeviceWebGPUImpl()

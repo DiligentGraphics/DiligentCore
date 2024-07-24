@@ -56,7 +56,12 @@ PipelineStateWebGPUImpl::PipelineStateWebGPUImpl(IReferenceCounters*            
 
 PipelineStateWebGPUImpl::~PipelineStateWebGPUImpl()
 {
-    GetStatus(/*WaitForCompletion =*/true);
+    // Wait for asynchronous tasks to complete
+    TPipelineStateBase::GetStatus(/*WaitForCompletion =*/true);
+
+    // Note: we do not need to wait for the async callback to complete as
+    // it keeps a reference to the async pipeline builder object and
+    // can be called even if the pipeline is destroyed.
 
     Destruct();
 };
@@ -116,7 +121,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
     for (auto& ShaderStage : ShaderStages)
     {
         const ShaderWebGPUImpl* pShader     = ShaderStage.pShader;
-        std::string&            PatchedWGSL = ShaderStage.WGSL;
+        std::string&            PatchedWGSL = ShaderStage.PatchedWGSL;
         const SHADER_TYPE       ShaderType  = ShaderStage.Type;
 
         const auto& pShaderResources = pShader->GetShaderResources();
@@ -250,10 +255,106 @@ void PipelineStateWebGPUImpl::InitPipelineLayout(const PipelineStateCreateInfo& 
     }
 }
 
+struct PipelineStateWebGPUImpl::AsyncPipelineBuilder : public ObjectBase<IObject>
+{
+    TShaderStages ShaderStages;
+
+    // Shaders must be kept alive until the pipeline is created
+    std::vector<RefCntAutoPtr<IShader>> ShaderRefs;
+
+    WebGPURenderPipelineWrapper  wgpuRenderPipeline;
+    WebGPUComputePipelineWrapper wgpuComputePipeline;
+
+    enum CallbackStatus : int
+    {
+        NotStarted,
+        InProgress,
+        Completed
+    };
+    std::atomic<CallbackStatus> Status{CallbackStatus::NotStarted};
+
+    AsyncPipelineBuilder(IReferenceCounters* pRefCounters,
+                         TShaderStages&&     _ShaderStages) :
+        ObjectBase<IObject>{pRefCounters},
+        ShaderStages{std::move(_ShaderStages)}
+    {
+        ShaderRefs.reserve(ShaderStages.size());
+        for (const auto& ShaderStage : ShaderStages)
+        {
+            ShaderRefs.emplace_back(ShaderStage.pShader);
+        }
+    }
+
+    void InitializePipelines(WGPUCreatePipelineAsyncStatus PipelineStatus,
+                             WGPURenderPipeline            RenderPipeline,
+                             WGPUComputePipeline           ComputePipeline,
+                             const char*                   Message)
+    {
+        VERIFY_EXPR(Status.load() == CallbackStatus::InProgress);
+        if (PipelineStatus == WGPUCreatePipelineAsyncStatus_Success)
+        {
+            wgpuRenderPipeline.Reset(RenderPipeline);
+            wgpuComputePipeline.Reset(ComputePipeline);
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("Failed to create WebGPU render pipeline: ", Message);
+        }
+        Status.store(CallbackStatus::Completed);
+        Release();
+    }
+
+    static void CreateRenderPipelineCallback(WGPUCreatePipelineAsyncStatus Status, WGPURenderPipeline Pipeline, const char* Message, void* pUserData)
+    {
+        static_cast<AsyncPipelineBuilder*>(pUserData)->InitializePipelines(Status, Pipeline, nullptr, Message);
+    }
+
+    static void CreateRenderPipelineCallback2(WGPUCreatePipelineAsyncStatus Status, WGPURenderPipeline Pipeline, const char* Message, void* pUserData1, void* pUserData2)
+    {
+        CreateRenderPipelineCallback(Status, Pipeline, Message, pUserData1);
+    }
+
+    static void CreateComputePipelineCallback(WGPUCreatePipelineAsyncStatus Status, WGPUComputePipeline Pipeline, const char* Message, void* pUserData)
+    {
+        static_cast<AsyncPipelineBuilder*>(pUserData)->InitializePipelines(Status, nullptr, Pipeline, Message);
+    }
+
+    static void CreateComputePipelineCallback2(WGPUCreatePipelineAsyncStatus Status, WGPUComputePipeline Pipeline, const char* Message, void* pUserData1, void* pUserData2)
+    {
+        CreateComputePipelineCallback(Status, Pipeline, Message, pUserData1);
+    }
+};
+
 void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo)
 {
-    const auto ShaderStages = InitInternalObjects(CreateInfo);
+    TShaderStages ShaderStages = InitInternalObjects(CreateInfo);
+    if (!m_InitializeTaskRunning.load())
+    {
+        InitializeWebGPURenderPipeline(ShaderStages);
+    }
+    else
+    {
+        m_AsyncBuilder = MakeNewRCObj<AsyncPipelineBuilder>()(std::move(ShaderStages));
+    }
+}
 
+
+void PipelineStateWebGPUImpl::InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo)
+{
+    TShaderStages ShaderStages = InitInternalObjects(CreateInfo);
+    if (!m_InitializeTaskRunning.load())
+    {
+        InitializeWebGPUComputePipeline(ShaderStages);
+    }
+    else
+    {
+        m_AsyncBuilder = MakeNewRCObj<AsyncPipelineBuilder>()(std::move(ShaderStages));
+    }
+}
+
+void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages&  ShaderStages,
+                                                             AsyncPipelineBuilder* AsyncBuilder)
+{
     VERIFY(!ShaderStages.empty() && ShaderStages.size() <= 2, "Incorrect shader count for graphics pipeline");
     VERIFY(ShaderStages[0].Type == SHADER_TYPE_VERTEX, "Incorrect shader type: vertex shader is expected");
     VERIFY(ShaderStages.size() < 2 || ShaderStages[1].Type == SHADER_TYPE_PIXEL, "Incorrect shader type: compute shader is expected");
@@ -281,7 +382,7 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
         WGPUShaderModuleDescriptor     wgpuShaderModuleDesc{};
         WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
         wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-        wgpuShaderCodeDesc.code        = ShaderStages[ShaderIdx].WGSL.c_str();
+        wgpuShaderCodeDesc.code        = ShaderStages[ShaderIdx].GetWGSL().c_str();
 
         wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
         wgpuShaderModuleDesc.label       = ShaderStages[ShaderIdx].pShader->GetEntryPoint();
@@ -420,23 +521,42 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
     wgpuRenderPipelineDesc.multisample  = wgpuMultisampleState;
     wgpuRenderPipelineDesc.layout       = m_PipelineLayout.GetWebGPUPipelineLayout();
 
-    m_wgpuRenderPipeline.Reset(wgpuDeviceCreateRenderPipeline(m_pDevice->GetWebGPUDevice(), &wgpuRenderPipelineDesc));
-    if (!m_wgpuRenderPipeline)
-        LOG_ERROR_AND_THROW("Failed to create pipeline state");
+    if (AsyncBuilder)
+    {
+        // The reference will be released from the callback.
+        AsyncBuilder->AddRef();
+#if PLATFORM_EMSCRIPTEN
+        wgpuDeviceCreateRenderPipelineAsync(m_pDevice->GetWebGPUDevice(), &wgpuRenderPipelineDesc, AsyncPipelineBuilder::CreateRenderPipelineCallback, AsyncBuilder);
+#else
+        wgpuDeviceCreateRenderPipelineAsync2(m_pDevice->GetWebGPUDevice(), &wgpuRenderPipelineDesc,
+                                             {
+                                                 nullptr,
+                                                 WGPUCallbackMode_AllowSpontaneous,
+                                                 AsyncPipelineBuilder::CreateRenderPipelineCallback2,
+                                                 AsyncBuilder,
+                                                 nullptr,
+                                             });
+#endif
+    }
+    else
+    {
+        m_wgpuRenderPipeline.Reset(wgpuDeviceCreateRenderPipeline(m_pDevice->GetWebGPUDevice(), &wgpuRenderPipelineDesc));
+        if (!m_wgpuRenderPipeline)
+            LOG_ERROR_AND_THROW("Failed to create pipeline state");
+    }
 }
 
-void PipelineStateWebGPUImpl::InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo)
+void PipelineStateWebGPUImpl::InitializeWebGPUComputePipeline(const TShaderStages&  ShaderStages,
+                                                              AsyncPipelineBuilder* AsyncBuilder)
 {
-    const auto ShaderStages = InitInternalObjects(CreateInfo);
     VERIFY(ShaderStages[0].Type == SHADER_TYPE_COMPUTE, "Incorrect shader type: compute shader is expected");
-
     ShaderWebGPUImpl* pShaderWebGPU = ShaderStages[0].pShader;
 
     WebGPUShaderModuleWrapper wgpuShaderModule{};
 
     WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
     wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-    wgpuShaderCodeDesc.code        = ShaderStages[0].WGSL.c_str();
+    wgpuShaderCodeDesc.code        = ShaderStages[0].GetWGSL().c_str();
 
     WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
     wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
@@ -449,11 +569,77 @@ void PipelineStateWebGPUImpl::InitializePipeline(const ComputePipelineStateCreat
     wgpuComputePipelineDesc.compute.entryPoint = pShaderWebGPU->GetEntryPoint();
     wgpuComputePipelineDesc.layout             = m_PipelineLayout.GetWebGPUPipelineLayout();
 
-    m_wgpuComputePipeline.Reset(wgpuDeviceCreateComputePipeline(m_pDevice->GetWebGPUDevice(), &wgpuComputePipelineDesc));
-    if (!m_wgpuComputePipeline)
-        LOG_ERROR_AND_THROW("Failed to create pipeline state");
+    if (AsyncBuilder)
+    {
+        // The reference will be released from the callback.
+        AsyncBuilder->AddRef();
+#if PLATFORM_EMSCRIPTEN
+        wgpuDeviceCreateComputePipelineAsync(m_pDevice->GetWebGPUDevice(), &wgpuComputePipelineDesc, AsyncPipelineBuilder::CreateComputePipelineCallback, AsyncBuilder);
+#else
+        wgpuDeviceCreateComputePipelineAsync2(m_pDevice->GetWebGPUDevice(), &wgpuComputePipelineDesc,
+                                              {
+                                                  nullptr,
+                                                  WGPUCallbackMode_AllowSpontaneous,
+                                                  AsyncPipelineBuilder::CreateComputePipelineCallback2,
+                                                  AsyncBuilder,
+                                                  nullptr,
+                                              });
+#endif
+    }
+    else
+    {
+        m_wgpuComputePipeline.Reset(wgpuDeviceCreateComputePipeline(m_pDevice->GetWebGPUDevice(), &wgpuComputePipelineDesc));
+        if (!m_wgpuComputePipeline)
+            LOG_ERROR_AND_THROW("Failed to create pipeline state");
+    }
 }
 
+PIPELINE_STATE_STATUS PipelineStateWebGPUImpl::GetStatus(bool WaitForCompletion)
+{
+    // Check the status of asynchronous tasks
+    PIPELINE_STATE_STATUS Status = TPipelineStateBase::GetStatus(WaitForCompletion);
+    if (Status != PIPELINE_STATE_STATUS_READY)
+    {
+        if (Status == PIPELINE_STATE_STATUS_FAILED && m_AsyncBuilder)
+            m_AsyncBuilder.Release();
+
+        return Status;
+    }
+
+    if (m_AsyncBuilder)
+    {
+        AsyncPipelineBuilder::CallbackStatus CallbackStatus = m_AsyncBuilder->Status.load();
+        switch (CallbackStatus)
+        {
+            case AsyncPipelineBuilder::CallbackStatus::NotStarted:
+                m_AsyncBuilder->Status.store(AsyncPipelineBuilder::CallbackStatus::InProgress);
+                if (m_Desc.IsAnyGraphicsPipeline())
+                    InitializeWebGPURenderPipeline(m_AsyncBuilder->ShaderStages, m_AsyncBuilder);
+                else if (m_Desc.IsComputePipeline())
+                    InitializeWebGPUComputePipeline(m_AsyncBuilder->ShaderStages, m_AsyncBuilder);
+                else
+                    UNEXPECTED("Unexpected pipeline type");
+                // Do not change the m_Status
+                return PIPELINE_STATE_STATUS_COMPILING;
+
+            case AsyncPipelineBuilder::CallbackStatus::InProgress:
+                // Keep waiting
+                return PIPELINE_STATE_STATUS_COMPILING;
+
+            case AsyncPipelineBuilder::CallbackStatus::Completed:
+                m_wgpuRenderPipeline  = std::move(m_AsyncBuilder->wgpuRenderPipeline);
+                m_wgpuComputePipeline = std::move(m_AsyncBuilder->wgpuComputePipeline);
+                m_AsyncBuilder.Release();
+                m_Status.store(m_wgpuRenderPipeline || m_wgpuComputePipeline ? PIPELINE_STATE_STATUS_READY : PIPELINE_STATE_STATUS_FAILED);
+                break;
+
+            default:
+                UNEXPECTED("Unexpected status");
+        }
+    }
+
+    return m_Status.load();
+}
 
 static void VerifyResourceMerge(const char*                      PSOName,
                                 const WGSLShaderResourceAttribs& ExistingRes,

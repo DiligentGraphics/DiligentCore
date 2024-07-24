@@ -92,6 +92,9 @@ public:
     }
 
 private:
+    void Initialize(const ShaderCreateInfo& ShaderCI,
+                    const CreateInfo&       WebGPUShaderCI) noexcept(false);
+
     std::string m_WGSL;
     std::string m_EntryPoint;
 

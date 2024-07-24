@@ -186,8 +186,8 @@ void SerializedPipelineStateImpl::PatchShadersWebGPU(const CreateInfoType& Creat
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::WebGPU)].empty());
     for (size_t i = 0; i < ShaderStagesWebGPU.size(); ++i)
     {
-        std::string&     WGSL     = ShaderStagesWebGPU[i].WGSL;
-        ShaderCreateInfo ShaderCI = ShaderStages[i].pSerialized->GetCreateInfo();
+        const std::string& WGSL     = ShaderStagesWebGPU[i].GetWGSL();
+        ShaderCreateInfo   ShaderCI = ShaderStages[i].pSerialized->GetCreateInfo();
 
         ShaderCI.Source         = WGSL.c_str();
         ShaderCI.SourceLength   = WGSL.length();

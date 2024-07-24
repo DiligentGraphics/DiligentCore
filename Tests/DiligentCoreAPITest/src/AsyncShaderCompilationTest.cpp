@@ -71,9 +71,9 @@ RefCntAutoPtr<IShader> CreateShader(const char*          Path,
     ShaderMacroHelper Macros;
     Macros.Add("RANDOM", static_cast<int>(Rand()));
 #ifdef DILIGENT_DEBUG
-    if (pDevice->GetDeviceInfo().IsVulkanDevice())
+    if (pDevice->GetDeviceInfo().IsVulkanDevice() || pDevice->GetDeviceInfo().IsWebGPUDevice())
     {
-        // In debug mode in Vulkan it takes a lot of time to compile full shader
+        // In debug mode in Vulkan and WebGPU it takes a lot of time to compile full shader
         SimplifiedShader = true;
     }
 #endif
