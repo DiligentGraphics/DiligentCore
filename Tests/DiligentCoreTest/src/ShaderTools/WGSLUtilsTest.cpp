@@ -157,7 +157,7 @@ void TestResourceRemapping(const char*                FilePath,
                  Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kStorageBuffer ||
                  Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kReadOnlyStorageBuffer))
             {
-                // Search variable by type
+                // Search variable by alternative name
                 RemappedBindingIt = RefResources.find(GetWGSLResourceAlternativeName(Program, Binding));
             }
 

@@ -110,6 +110,30 @@ std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
     return GenerationResult->wgsl;
 }
 
+static bool IsAtomic(const tint::core::type::Type* WGSLType)
+{
+    if (WGSLType == nullptr || !WGSLType->Is<tint::core::type::Struct>())
+        return false;
+
+    const tint::core::type::Struct* WGSLStruct = WGSLType->As<tint::core::type::Struct>();
+    if (WGSLStruct == nullptr || WGSLStruct->Members().IsEmpty())
+        return false;
+
+    const tint::core::type::Type* WGSLMember = WGSLStruct->Members().Front()->Type();
+    if (WGSLMember == nullptr || !WGSLMember->Is<tint::core::type::Array>())
+        return false;
+
+    const tint::core::type::Array* WGSLArray = WGSLMember->As<tint::core::type::Array>();
+    if (WGSLArray == nullptr)
+        return false;
+
+    const tint::core::type::Type* WGSLArrayMember = WGSLArray->ElemType();
+    if (WGSLArrayMember == nullptr)
+        return false;
+
+    return WGSLArrayMember->Is<tint::core::type::Atomic>();
+}
+
 std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const tint::inspector::ResourceBinding& Binding)
 {
     if (Binding.resource_type != tint::inspector::ResourceBinding::ResourceType::kUniformBuffer &&
@@ -164,8 +188,8 @@ std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const t
         //      };
         //      StructuredBuffer<BufferData0> g_Buff0;
         //      StructuredBuffer<BufferData0> g_Buff1;
-        //      StructuredBuffer<int>         g_AtomicBuff0; // Used atomic operations for buffer
-        //      StructuredBuffer<int>         g_AtomicBuff1; // Used atomic operations for buffer
+        //      StructuredBuffer<int>         g_AtomicBuff0; // Used in atomic operations
+        //      StructuredBuffer<int>         g_AtomicBuff1; // Used in atomic operations
         //   WGSL:
         //      struct g_Buff0 {
         //        x_data : RTArr,
@@ -175,42 +199,15 @@ std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const t
         //      @group(0) @binding(2) var<storage, read> g_AtomicBuff0_1 : g_AtomicBuff0_atomic;
         //      @group(0) @binding(3) var<storage, read> g_AtomicBuff1   : g_AtomicBuff0_atomic;
 
-        auto RemoveAtomicPostfix = [&Program, &Variable](const std::string& TypeName) -> std::string {
+        if (IsAtomic(Program.TypeOf(Variable->type)))
+        {
+            // Remove "_atomic" postfix from the type name
             const std::string_view AtomicPostfix = "_atomic";
-            if (TypeName.length() >= AtomicPostfix.length() && TypeName.compare(TypeName.length() - AtomicPostfix.length(), AtomicPostfix.length(), AtomicPostfix) == 0)
+            if (TypeName.length() > AtomicPostfix.length() && TypeName.compare(TypeName.length() - AtomicPostfix.length(), AtomicPostfix.length(), AtomicPostfix) == 0)
             {
-                // We need to handle situation when user use _atomic postfix in the name of the storage buffer
-                const tint::core::type::Struct* WGSLType   = Program.TypeOf(Variable->type)->As<tint::core::type::Struct>();
-                const tint::core::type::Type*   WGSLMember = WGSLType->Members().Front()->Type();
-                if (WGSLMember && WGSLMember->Is<tint::core::type::Array>())
-                {
-                    const tint::core::type::Array* WGSLArray       = WGSLMember->As<tint::core::type::Array>();
-                    const tint::core::type::Type*  WGSLArrayMember = WGSLArray->ElemType();
-                    if (WGSLArrayMember->Is<tint::core::type::Atomic>())
-                    {
-                        // Return the modified string if it is an atomic buffer
-                        return TypeName.substr(0, TypeName.length() - AtomicPostfix.length());
-                    }
-                    else
-                    {
-                        // Return the original string if it is not an atomic buffer
-                        return TypeName;
-                    }
-                }
-                else
-                {
-                    // Return the original string if it is not an atomic buffer
-                    return TypeName;
-                }
+                TypeName.erase(TypeName.length() - AtomicPostfix.length());
             }
-            else
-            {
-                // Return the original string if it doesn't end with "_atomic"
-                return TypeName;
-            }
-        };
-
-        TypeName = RemoveAtomicPostfix(TypeName);
+        }
 
         if (strncmp(Binding.variable_name.c_str(), TypeName.c_str(), TypeName.length()) == 0)
         {

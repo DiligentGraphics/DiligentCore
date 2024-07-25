@@ -798,8 +798,8 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
         //      };
         //      StructuredBuffer<BufferData0> g_Buff0;
         //      StructuredBuffer<BufferData0> g_Buff1;
-        //      StructuredBuffer<int>         g_AtomicBuff0; // Used for atomic operations
-        //      StructuredBuffer<int>         g_AtomicBuff1; // Used for atomic operations
+        //      StructuredBuffer<int>         g_AtomicBuff0; // Used in atomic operations
+        //      StructuredBuffer<int>         g_AtomicBuff1; // Used in atomic operations
         //   WGSL:
         //      struct g_Buff0 {
         //        x_data : RTArr,
