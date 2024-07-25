@@ -143,7 +143,7 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
 
         if (wgpuBufferDesc.mappedAtCreation)
         {
-            void* pData = wgpuBufferGetMappedRange(m_wgpuBuffer, 0, StaticCast<size_t>(pInitData->DataSize));
+            void* pData = wgpuBufferGetMappedRange(m_wgpuBuffer, 0, WGPU_WHOLE_MAP_SIZE);
             memcpy(pData, pInitData->pData, StaticCast<size_t>(pInitData->DataSize));
             wgpuBufferUnmap(m_wgpuBuffer);
         }

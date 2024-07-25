@@ -230,7 +230,7 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
             if (!wgpuUploadBuffer)
                 LOG_ERROR_AND_THROW("Failed to create WebGPU texture upload buffer");
 
-            auto* pUploadData = static_cast<uint8_t*>(wgpuBufferGetMappedRange(wgpuUploadBuffer.Get(), 0, StaticCast<size_t>(wgpuBufferDesc.size)));
+            auto* pUploadData = static_cast<uint8_t*>(wgpuBufferGetMappedRange(wgpuUploadBuffer.Get(), 0, WGPU_WHOLE_MAP_SIZE));
 
             WGPUCommandEncoderDescriptor wgpuEncoderDesc{};
             WebGPUCommandEncoderWrapper  wgpuCmdEncoder{wgpuDeviceCreateCommandEncoder(pDevice->GetWebGPUDevice(), &wgpuEncoderDesc)};

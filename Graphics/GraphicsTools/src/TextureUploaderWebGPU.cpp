@@ -262,7 +262,6 @@ struct TextureUploaderWebGPU::InternalData
                     wgpuBufferDesc.usage            = WGPUBufferUsage_CopySrc | WGPUBufferUsage_MapWrite;
                     wgpuBufferDesc.mappedAtCreation = true;
 
-
                     WGPUBuffer wgpuBuffer = m_ProcessTable.DeviceCreateBuffer(m_pDeviceWebGPU->GetWebGPUDevice(), &wgpuBufferDesc);
 
                     RefCntAutoPtr<IBuffer> pStagingBuffer;
@@ -273,7 +272,7 @@ struct TextureUploaderWebGPU::InternalData
                     pBuffer->m_wgpuStagingBuffer = wgpuBuffer;
                 }
 
-                PVoid CpuAddress = m_ProcessTable.BufferGetMappedRange(pBuffer->m_pStagingBuffer->GetWebGPUBuffer(), 0, static_cast<size_t>(pBuffer->m_pStagingBuffer->GetDesc().Size));
+                PVoid CpuAddress = m_ProcessTable.BufferGetMappedRange(pBuffer->m_pStagingBuffer->GetWebGPUBuffer(), 0, WGPU_WHOLE_MAP_SIZE);
                 pBuffer->SetDataPtr(static_cast<Uint8*>(CpuAddress));
                 pBuffer->SignalMapped();
             }
