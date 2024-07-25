@@ -11,6 +11,8 @@ RWStructuredBuffer<StorageBufferStruct> RWStructBuff0 /*comment*/:/*comment*/ re
 RWStructuredBuffer<StorageBufferStruct> RWStructBuff1;
 RWStructuredBuffer<StorageBufferStruct> RWStructBuff2 : register(u2);
 
+RWStructuredBuffer</*comment*/ int /*comment*/> RWStructBuff3;
+
 void TestGetDimensions()
 {
     //RWBuffer
@@ -38,6 +40,8 @@ void TestLoad()
     StorageBufferStruct Data0 = RWStructBuff0[Location.x];
     StorageBufferStruct Data1 = RWStructBuff1[Location.y];
     StorageBufferStruct Data3 = RWStructBuff2[Location.w];
+    
+    int Data4 = RWStructBuff3[Location.z];
 }
 
 
@@ -55,7 +59,7 @@ void TestStore(uint3 Location)
     RWStructBuff0[Location.x] = Data0;
     RWStructBuff1[Location.z] = Data0;
     RWStructBuff2[Location.y] = Data0;
-
+    RWStructBuff3[Location.x] = 16;
 }
 
 struct CSInputSubstr

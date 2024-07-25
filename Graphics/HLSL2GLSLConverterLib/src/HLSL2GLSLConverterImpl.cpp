@@ -1010,7 +1010,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessStructuredBuffer(TokenList
     // buffer{DataType> g_Data;
     //        ^
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF after");
-    VERIFY_PARSER_STATE(Token, Token->Type == TokenType::Identifier, "Identifier expected in Structured Buffer definition");
+    VERIFY_PARSER_STATE(Token, Token->Type == TokenType::Identifier || Token->IsBuiltInType(), "Identifier or built-in type is expected in Structured Buffer definition");
 
     ++Token;
     // buffer{DataType> g_Data;
