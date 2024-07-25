@@ -158,13 +158,7 @@ void TestResourceRemapping(const char*                FilePath,
                  Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kReadOnlyStorageBuffer))
             {
                 // Search variable by type
-                for (const auto* Variable : Program.AST().GlobalVariables())
-                {
-                    if (Variable->name->symbol.Name() == Binding.variable_name)
-                    {
-                        RemappedBindingIt = RefResources.find(Variable->type->identifier->symbol.Name());
-                    }
-                }
+                RemappedBindingIt = RefResources.find(GetWGSLResourceAlternativeName(Program, Binding));
             }
 
             if (RemappedBindingIt == RefResources.end())
@@ -251,6 +245,12 @@ TEST(WGSLUtils, RemapRWStructBuffers)
                               {"g_RWBuff1", {3, 4}},
                               {"g_RWBuff2", {5, 6}},
                               {"g_RWBuff3", {7, 8}},
+                              {"g_RWBuffAtomic0", {9, 10}},
+                              {"g_RWBuffAtomic1", {11, 12}},
+                              {"g_RWBuff0_atomic", {13, 14}},
+                              {"g_RWBuff1_atomic", {15, 16}},
+                              {"g_RWBuff0Atomic_atomic", {17, 18}},
+                              {"g_RWBuff1Atomic_atomic", {19, 20}},
                           });
 }
 

@@ -798,12 +798,16 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
         //      };
         //      StructuredBuffer<BufferData0> g_Buff0;
         //      StructuredBuffer<BufferData0> g_Buff1;
+        //      StructuredBuffer<int>         g_AtomicBuff0; // Used for atomic operations
+        //      StructuredBuffer<int>         g_AtomicBuff1; // Used for atomic operations
         //   WGSL:
         //      struct g_Buff0 {
         //        x_data : RTArr,
         //      }
-        //      @group(0) @binding(0) var<storage, read> g_Buff0_1 : g_Buff0;
-        //      @group(0) @binding(1) var<storage, read> g_Buff1   : g_Buff0;
+        //      @group(0) @binding(0) var<storage, read> g_Buff0_1       : g_Buff0;
+        //      @group(0) @binding(1) var<storage, read> g_Buff1         : g_Buff0;
+        //      @group(0) @binding(2) var<storage, read> g_AtomicBuff0_1 : g_AtomicBuff0_atomic;
+        //      @group(0) @binding(3) var<storage, read> g_AtomicBuff1   : g_AtomicBuff0_atomic;
         for (tint::inspector::ResourceBinding& Binding : ResourceBindings)
         {
             auto AltName = GetWGSLResourceAlternativeName(Program, Binding);

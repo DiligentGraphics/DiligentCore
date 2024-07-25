@@ -182,6 +182,12 @@ TEST(WGSLShaderResources, RWStructBuffers)
                           {"g_RWBuff1", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
                           {"g_RWBuff2", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
                           {"g_RWBuff3", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_RWBuffAtomic0", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_RWBuffAtomic1", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_RWBuff0_atomic", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_RWBuff1_atomic", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_RWBuff0Atomic_atomic", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
+                          {"g_RWBuff1Atomic_atomic", WGSLResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER},
                       });
 }
 

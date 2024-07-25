@@ -41,6 +41,10 @@
 #include "src/tint/lang/wgsl/ast/identifier_expression.h"
 #include "src/tint/lang/wgsl/ast/identifier.h"
 #include "src/tint/lang/wgsl/sem/variable.h"
+#include "src/tint/lang/core/type/atomic.h"
+#include "src/tint/lang/core/type/array.h"
+#include "src/tint/lang/core/type/struct.h"
+
 
 #ifdef _MSC_VER
 #    pragma warning(pop)
@@ -134,7 +138,7 @@ std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const t
     VERIFY_EXPR(SemVariable->Attributes().binding_point->group == Binding.bind_group &&
                 SemVariable->Attributes().binding_point->binding == Binding.binding);
 
-    const std::string TypeName = SemVariable->Declaration()->type->identifier->symbol.Name();
+    std::string TypeName = SemVariable->Declaration()->type->identifier->symbol.Name();
     if (Binding.resource_type == tint::inspector::ResourceBinding::ResourceType::kUniformBuffer)
     {
         //   HLSL:
@@ -160,12 +164,54 @@ std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const t
         //      };
         //      StructuredBuffer<BufferData0> g_Buff0;
         //      StructuredBuffer<BufferData0> g_Buff1;
+        //      StructuredBuffer<int>         g_AtomicBuff0; // Used atomic operations for buffer
+        //      StructuredBuffer<int>         g_AtomicBuff1; // Used atomic operations for buffer
         //   WGSL:
         //      struct g_Buff0 {
         //        x_data : RTArr,
         //      }
-        //      @group(0) @binding(0) var<storage, read> g_Buff0_1 : g_Buff0;
-        //      @group(0) @binding(1) var<storage, read> g_Buff1   : g_Buff0;
+        //      @group(0) @binding(0) var<storage, read> g_Buff0_1       : g_Buff0;
+        //      @group(0) @binding(1) var<storage, read> g_Buff1         : g_Buff0;
+        //      @group(0) @binding(2) var<storage, read> g_AtomicBuff0_1 : g_AtomicBuff0_atomic;
+        //      @group(0) @binding(3) var<storage, read> g_AtomicBuff1   : g_AtomicBuff0_atomic;
+
+        auto RemoveAtomicPostfix = [&Program, &Variable](const std::string& TypeName) -> std::string {
+            const std::string_view AtomicPostfix = "_atomic";
+            if (TypeName.length() >= AtomicPostfix.length() && TypeName.compare(TypeName.length() - AtomicPostfix.length(), AtomicPostfix.length(), AtomicPostfix) == 0)
+            {
+                // We need to handle situation when user use _atomic postfix in the name of the storage buffer
+                const tint::core::type::Struct* WGSLType   = Program.TypeOf(Variable->type)->As<tint::core::type::Struct>();
+                const tint::core::type::Type*   WGSLMember = WGSLType->Members().Front()->Type();
+                if (WGSLMember && WGSLMember->Is<tint::core::type::Array>())
+                {
+                    const tint::core::type::Array* WGSLArray       = WGSLMember->As<tint::core::type::Array>();
+                    const tint::core::type::Type*  WGSLArrayMember = WGSLArray->ElemType();
+                    if (WGSLArrayMember->Is<tint::core::type::Atomic>())
+                    {
+                        // Return the modified string if it is an atomic buffer
+                        return TypeName.substr(0, TypeName.length() - AtomicPostfix.length());
+                    }
+                    else
+                    {
+                        // Return the original string if it is not an atomic buffer
+                        return TypeName;
+                    }
+                }
+                else
+                {
+                    // Return the original string if it is not an atomic buffer
+                    return TypeName;
+                }
+            }
+            else
+            {
+                // Return the original string if it doesn't end with "_atomic"
+                return TypeName;
+            }
+        };
+
+        TypeName = RemoveAtomicPostfix(TypeName);
+
         if (strncmp(Binding.variable_name.c_str(), TypeName.c_str(), TypeName.length()) == 0)
         {
             //      @group(0) @binding(0) var<storage, read> g_Buff0_1 : g_Buff0;

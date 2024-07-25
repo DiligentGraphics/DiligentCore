@@ -13,6 +13,15 @@ RWStructuredBuffer<BufferData0> g_RWBuff1;
 RWStructuredBuffer<BufferData1> g_RWBuff2;
 RWStructuredBuffer<BufferData1> g_RWBuff3;
 
+RWStructuredBuffer<int> g_RWBuffAtomic0;
+RWStructuredBuffer<int> g_RWBuffAtomic1;
+
+RWStructuredBuffer<int> g_RWBuff0_atomic;
+RWStructuredBuffer<int> g_RWBuff1_atomic;
+
+RWStructuredBuffer<int> g_RWBuff0Atomic_atomic;
+RWStructuredBuffer<int> g_RWBuff1Atomic_atomic;
+
 float4 main() : SV_Target
 {
     BufferData0 Data0;
@@ -25,5 +34,15 @@ float4 main() : SV_Target
     g_RWBuff2[0] = Data1;
     g_RWBuff3[0] = Data1;
 
+    int OriginalListIdx = 0;
+    InterlockedAdd(g_RWBuffAtomic0[0], 1, OriginalListIdx);
+    InterlockedAdd(g_RWBuffAtomic1[0], 1, OriginalListIdx);
+    
+    g_RWBuff0_atomic[0] = 1;
+    g_RWBuff1_atomic[0] = 1;
+    
+    InterlockedAdd(g_RWBuff0Atomic_atomic[0], 1, OriginalListIdx);
+    InterlockedAdd(g_RWBuff1Atomic_atomic[0], 1, OriginalListIdx);
+    
     return float4(1.0, 0.0, 0.0, 1.0);
 }
