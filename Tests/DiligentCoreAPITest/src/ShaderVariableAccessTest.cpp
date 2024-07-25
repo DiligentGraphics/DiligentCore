@@ -123,6 +123,8 @@ TEST(ShaderResourceLayout, VariableAccess)
     IDeviceObject* pSRVs[2] = {};
     for (size_t i = 0; i < _countof(pSRVs); ++i)
     {
+        std::string Name = "Texture" + std::to_string(i);
+        TexDesc.Name     = Name.c_str();
         pDevice->CreateTexture(TexDesc, nullptr, &(pTex[i]));
         auto* pSRV = pTex[i]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
         pSRV->SetSampler(pSamplers[i]);
@@ -136,6 +138,8 @@ TEST(ShaderResourceLayout, VariableAccess)
     TexDesc.Format                                       = TEX_FORMAT_RGBA32_FLOAT;
     for (size_t i = 0; i < _countof(pRWTex); ++i)
     {
+        std::string Name = "RWTexture" + std::to_string(i);
+        TexDesc.Name     = Name.c_str();
         pDevice->CreateTexture(TexDesc, nullptr, &(pRWTex[i]));
         pTexUAVs[i]   = pRWTex[i]->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS);
         pRWTexSRVs[i] = pRWTex[i]->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
@@ -992,12 +996,12 @@ TEST(ShaderResourceLayout, VariableAccess)
             tex2D_Dyn->GetResourceDesc(ResDesc);
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(tex2D_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
-            tex2D_Dyn->Set(pRWTexSRVs[6]);
-            EXPECT_EQ(tex2D_Dyn->Get(0), pRWTexSRVs[6]);
-            tex2D_Dyn->Set(nullptr);
-            EXPECT_EQ(tex2D_Dyn->Get(0), nullptr);
             tex2D_Dyn->Set(pRWTexSRVs[7]);
             EXPECT_EQ(tex2D_Dyn->Get(0), pRWTexSRVs[7]);
+            tex2D_Dyn->Set(nullptr);
+            EXPECT_EQ(tex2D_Dyn->Get(0), nullptr);
+            tex2D_Dyn->Set(pRWTexSRVs[6]);
+            EXPECT_EQ(tex2D_Dyn->Get(0), pRWTexSRVs[6]);
         }
 
         {
@@ -1242,7 +1246,7 @@ TEST(ShaderResourceLayout, VariableAccess)
     pContext->Draw(DrawAttrs);
 
     pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwtex2D_Dyn")->Set(pTexUAVs[7]);
-    pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_Dyn")->Set(pRWTexSRVs[3]);
+    pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_Dyn")->Set(pRWTexSRVs[4]);
     if (FormattedBuffersSupported)
     {
         pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwBuff_Dyn")->Set(pFormattedBuffUAV[3]);
