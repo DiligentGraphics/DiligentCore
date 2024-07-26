@@ -74,11 +74,10 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
         LOG_ERROR_AND_THROW("Unified and sparse resources are not supported in WebGPU");
 
     m_Alignment = ComputeBufferAlignment(pDevice, m_Desc);
-    m_Desc.Size = AlignUp(m_Desc.Size, m_Alignment);
 
     WGPUBufferDescriptor wgpuBufferDesc{};
     wgpuBufferDesc.label = m_Desc.Name;
-    wgpuBufferDesc.size  = m_Desc.Size;
+    wgpuBufferDesc.size  = AlignUp(m_Desc.Size, m_Alignment);
 
     const bool RequiresBackingBuffer = (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) != 0 || ((m_Desc.BindFlags & BIND_SHADER_RESOURCE) != 0 && m_Desc.Mode == BUFFER_MODE_FORMATTED);
 
