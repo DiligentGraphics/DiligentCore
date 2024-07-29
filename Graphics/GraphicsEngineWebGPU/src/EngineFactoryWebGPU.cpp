@@ -293,7 +293,6 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         Features.MultiViewport             = DEVICE_FEATURE_STATE_ENABLED;
         Features.PixelUAVWritesAndAtomics  = DEVICE_FEATURE_STATE_ENABLED;
         Features.TextureUAVExtendedFormats = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DepthClamp                = DEVICE_FEATURE_STATE_ENABLED;
         Features.AsyncShaderCompilation    = DEVICE_FEATURE_STATE_ENABLED;
 
         Features.WireframeFill               = DEVICE_FEATURE_STATE_DISABLED;
@@ -302,7 +301,7 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         Features.ShaderResourceRuntimeArrays = DEVICE_FEATURE_STATE_DISABLED;
 
         if (CheckWebGPUFeature(WGPUFeatureName_DepthClipControl))
-            Features.DepthBiasClamp = DEVICE_FEATURE_STATE_ENABLED;
+            Features.DepthClamp = DEVICE_FEATURE_STATE_ENABLED;
 
         if (CheckWebGPUFeature(WGPUFeatureName_TimestampQuery))
             Features.TimestampQueries = DEVICE_FEATURE_STATE_ENABLED;
