@@ -119,6 +119,8 @@ public:
     bool   HasBindGroup(BIND_GROUP_ID GroupId) const { return m_BindGroupSizes[GroupId] != ~0u && m_BindGroupSizes[GroupId] > 0; }
     Uint32 GetBindGroupSize(BIND_GROUP_ID GroupId) const { return m_BindGroupSizes[GroupId]; }
     Uint32 GetDynamicOffsetCount(BIND_GROUP_ID GroupId) const { return m_DynamicOffsetCounts[GroupId]; }
+    Uint32 GetDynamicUniformBufferCount() const { return m_DynamicUniformBufferCount; }
+    Uint32 GetDynamicStorageBufferCount() const { return m_DynamicStorageBufferCount; }
 
     void InitSRBResourceCache(ShaderResourceCacheWebGPU& ResourceCache);
 
@@ -184,6 +186,13 @@ private:
 
     // The total number of uniform and storage buffers with dynamic offsets in each bind group.
     std::array<Uint32, MAX_BIND_GROUPS> m_DynamicOffsetCounts = {0, 0};
+
+    // The total number of uniform buffers with dynamic offsets in both bind groups,
+    // accounting for array size.
+    Uint16 m_DynamicUniformBufferCount = 0;
+    // The total number storage buffers with dynamic offsets in both bind groups,
+    // accounting for array size.
+    Uint16 m_DynamicStorageBufferCount = 0;
 };
 
 template <> Uint32 PipelineResourceSignatureWebGPUImpl::GetBindGroupIndex<PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE>() const;

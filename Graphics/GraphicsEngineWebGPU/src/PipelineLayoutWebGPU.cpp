@@ -61,9 +61,9 @@ void PipelineLayoutWebGPU::Create(RenderDeviceWebGPUImpl* pDeviceWebGPU, RefCntA
     m_PipelineLayoutCreateInfo               = std::make_unique<WGPUPipelineLayoutCreateInfo>();
     m_PipelineLayoutCreateInfo->DeviceWebGPU = pDeviceWebGPU;
 
-    Uint32 BindGroupLayoutCount = 0;
-    //Uint32 DynamicUniformBufferCount = 0;
-    //Uint32 DynamicStorageBufferCount = 0;
+    Uint32 BindGroupLayoutCount      = 0;
+    Uint32 DynamicUniformBufferCount = 0;
+    Uint32 DynamicStorageBufferCount = 0;
 
     m_PipelineLayoutCreateInfo->Signatures.reserve(SignatureCount);
     for (Uint32 BindInd = 0; BindInd < SignatureCount; ++BindInd)
@@ -85,36 +85,35 @@ void PipelineLayoutWebGPU::Create(RenderDeviceWebGPUImpl* pDeviceWebGPU, RefCntA
                 ++BindGroupLayoutCount;
         }
 
-        // TODO
-        //DynamicUniformBufferCount += pSignature->GetDynamicUniformBufferCount();
-        //DynamicStorageBufferCount += pSignature->GetDynamicStorageBufferCount();
+        DynamicUniformBufferCount += pSignature->GetDynamicUniformBufferCount();
+        DynamicStorageBufferCount += pSignature->GetDynamicStorageBufferCount();
 #ifdef DILIGENT_DEBUG
         m_DbgMaxBindIndex = std::max(m_DbgMaxBindIndex, Uint32{pSignature->GetDesc().BindingIndex});
 #endif
     }
     VERIFY_EXPR(BindGroupLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
 
-    // TODO: check device limits
-#if 0
-    const auto& Limits = pDeviceWebGPU->GetPhysicalDevice().GetProperties().limits;
-    if (BindGroupLayoutCount > Limits.maxBoundDescriptorSets)
+    WGPUSupportedLimits wgpuSupportedLimits{};
+    wgpuDeviceGetLimits(pDeviceWebGPU->GetWebGPUDevice(), &wgpuSupportedLimits);
+    const WGPULimits& Limits = wgpuSupportedLimits.limits;
+
+    if (BindGroupLayoutCount > Limits.maxBindGroups)
     {
         LOG_ERROR_AND_THROW("The total number of descriptor sets (", BindGroupLayoutCount,
-                            ") used by the pipeline layout exceeds device limit (", Limits.maxBoundDescriptorSets, ")");
+                            ") used by the pipeline layout exceeds device limit (", Limits.maxBindGroups, ")");
     }
 
-    if (DynamicUniformBufferCount > Limits.maxDescriptorSetUniformBuffersDynamic)
+    if (DynamicUniformBufferCount > Limits.maxDynamicUniformBuffersPerPipelineLayout)
     {
         LOG_ERROR_AND_THROW("The number of dynamic uniform buffers  (", DynamicUniformBufferCount,
-                            ") used by the pipeline layout exceeds device limit (", Limits.maxDescriptorSetUniformBuffersDynamic, ")");
+                            ") used by the pipeline layout exceeds device limit (", Limits.maxDynamicUniformBuffersPerPipelineLayout, ")");
     }
 
-    if (DynamicStorageBufferCount > Limits.maxDescriptorSetStorageBuffersDynamic)
+    if (DynamicStorageBufferCount > Limits.maxDynamicStorageBuffersPerPipelineLayout)
     {
         LOG_ERROR_AND_THROW("The number of dynamic storage buffers (", DynamicStorageBufferCount,
-                            ") used by the pipeline layout exceeds device limit (", Limits.maxDescriptorSetStorageBuffersDynamic, ")");
+                            ") used by the pipeline layout exceeds device limit (", Limits.maxDynamicStorageBuffersPerPipelineLayout, ")");
     }
-#endif
 
     VERIFY(m_BindGroupCount <= std::numeric_limits<decltype(m_BindGroupCount)>::max(),
            "Descriptor set count (", BindGroupLayoutCount, ") exceeds the maximum representable value");
