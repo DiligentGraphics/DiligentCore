@@ -370,8 +370,9 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
     using WebGPUVertexAttributeArray = std::array<std::vector<WGPUVertexAttribute>, MAX_LAYOUT_ELEMENTS>;
     using WebGPUVertexBufferLayouts  = std::array<WGPUVertexBufferLayout, MAX_LAYOUT_ELEMENTS>;
 
-    WebGPUVertexAttributeArray wgpuVertexAttributes{};
-    WebGPUVertexBufferLayouts  wgpuVertexBufferLayouts{};
+    WebGPUVertexAttributeArray    wgpuVertexAttributes{};
+    WebGPUVertexBufferLayouts     wgpuVertexBufferLayouts{};
+    WGPUPrimitiveDepthClipControl wgpuDepthClipControl{};
 
     std::vector<WGPUColorTargetState>      wgpuColorTargetStates{};
     std::vector<WGPUBlendState>            wgpuBlendStates{};
@@ -504,6 +505,16 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
              GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_LINE_STRIP) ?
             WGPUIndexFormat_Uint32 :
             WGPUIndexFormat_Undefined;
+
+        if (!GraphicsPipeline.RasterizerDesc.DepthClipEnable)
+        {
+            wgpuDepthClipControl.chain.sType    = WGPUSType_PrimitiveDepthClipControl;
+            wgpuDepthClipControl.unclippedDepth = !GraphicsPipeline.RasterizerDesc.DepthClipEnable;
+            if (m_pDevice->GetDeviceInfo().Features.DepthClamp)
+                wgpuPrimitiveState.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuDepthClipControl);
+            else
+                LOG_WARNING_MESSAGE("Depth clamping is not supported by the device. The depth clip control will be ignored.");
+        }
     }
 
     {
