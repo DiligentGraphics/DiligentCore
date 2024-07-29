@@ -315,7 +315,7 @@ public:
         wgpuQueueSubmit(pDeviceContext->GetWebGPUQueue(), 1, &wgpuCmdBuffer.Get());
 
 #if PLATFORM_EMSCRIPTEN
-        emscripten_request_animation_frame([](double Time, void* pUserData) { return 0; }, nullptr);
+        emscripten_request_animation_frame([](double Time, void* pUserData) -> EM_BOOL { return false; }, nullptr);
 #else
         wgpuSurfacePresent(pSwapChain->GetWebGPUSurface());
 #endif
