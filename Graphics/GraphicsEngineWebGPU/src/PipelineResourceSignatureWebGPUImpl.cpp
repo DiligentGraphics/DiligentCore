@@ -340,6 +340,12 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
     }
 }
 
+struct PipelineResourceSignatureWebGPUImpl::WGPUBindGroupLayoutsCreateInfo
+{
+    using EntriesArrayType = std::array<std::vector<WGPUBindGroupLayoutEntry>, BIND_GROUP_ID_NUM_GROUPS>;
+    EntriesArrayType wgpuBGLayoutEntries;
+};
+
 void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSerialized)
 {
     // Binding count in each cache group.
@@ -477,7 +483,8 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
         CacheGroupOffsets[CacheGroup] += Count;
     };
 
-    std::array<std::vector<WGPUBindGroupLayoutEntry>, BIND_GROUP_ID_NUM_GROUPS> wgpuBGLayoutEntries;
+    m_BindGroupLayoutsCreateInfo                                          = std::make_unique<WGPUBindGroupLayoutsCreateInfo>();
+    WGPUBindGroupLayoutsCreateInfo::EntriesArrayType& wgpuBGLayoutEntries = m_BindGroupLayoutsCreateInfo->wgpuBGLayoutEntries;
 
     // Allocate bindings for immutable samplers first
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
@@ -647,9 +654,18 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
 #else
     (void)NumGroups;
 #endif
+    VERIFY_EXPR(NumGroups == GetNumBindGroups());
 
-    if (HasDevice())
+    // Since WebGPU does not support multithreading, we can't create the bind group layouts
+    // here as the signature may be created in a worker thread.
+}
+
+WGPUBindGroupLayout PipelineResourceSignatureWebGPUImpl::GetWGPUBindGroupLayout(BIND_GROUP_ID GroupId)
+{
+    if (m_BindGroupLayoutsCreateInfo)
     {
+        const WGPUBindGroupLayoutsCreateInfo::EntriesArrayType& wgpuBGLayoutEntries = m_BindGroupLayoutsCreateInfo->wgpuBGLayoutEntries;
+
         WGPUDevice wgpuDevice = GetDevice()->GetWebGPUDevice();
 
         for (size_t i = 0; i < wgpuBGLayoutEntries.size(); ++i)
@@ -668,8 +684,10 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
             m_wgpuBindGroupLayouts[i].Reset(wgpuDeviceCreateBindGroupLayout(wgpuDevice, &BGLayoutDesc));
             VERIFY_EXPR(m_wgpuBindGroupLayouts[i]);
         }
-        VERIFY_EXPR(NumGroups == GetNumBindGroups());
+
+        m_BindGroupLayoutsCreateInfo.reset();
     }
+    return m_wgpuBindGroupLayouts[GroupId];
 }
 
 PipelineResourceSignatureWebGPUImpl::~PipelineResourceSignatureWebGPUImpl()

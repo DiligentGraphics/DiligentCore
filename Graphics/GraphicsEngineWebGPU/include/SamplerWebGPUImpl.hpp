@@ -54,7 +54,7 @@ public:
     WGPUSampler DILIGENT_CALL_TYPE GetWebGPUSampler() const override final;
 
 private:
-    WebGPUSamplerWrapper m_wgpuSampler;
+    mutable WebGPUSamplerWrapper m_wgpuSampler;
 };
 
 } // namespace Diligent

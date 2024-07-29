@@ -30,6 +30,7 @@
 /// Declaration of Diligent::PipelineLayoutWebGPU class
 
 #include <array>
+#include <memory>
 
 #include "Constants.h"
 #include "WebGPUObjectWrappers.hpp"
@@ -50,7 +51,7 @@ public:
 
     void Create(RenderDeviceWebGPUImpl* pDeviceWebGPU, RefCntAutoPtr<PipelineResourceSignatureWebGPUImpl> ppSignatures[], Uint32 SignatureCount) noexcept(false);
 
-    WGPUPipelineLayout GetWebGPUPipelineLayout() const { return m_wgpuPipelineLayout; }
+    WGPUPipelineLayout GetWebGPUPipelineLayout();
 
     // Returns the index of the first bind group used by the resource signature at the given bind index
     Uint32 GetFirstBindGroupIndex(Uint32 Index) const
@@ -62,6 +63,9 @@ public:
     Uint32 GetBindGroupCount() const { return m_BindGroupCount; }
 
 private:
+    struct WGPUPipelineLayoutCreateInfo;
+    std::unique_ptr<WGPUPipelineLayoutCreateInfo> m_PipelineLayoutCreateInfo;
+
     WebGPUPipelineLayoutWrapper m_wgpuPipelineLayout;
 
     using FirstBindGroupIndexArrayType = std::array<Uint8, MAX_RESOURCE_SIGNATURES>;

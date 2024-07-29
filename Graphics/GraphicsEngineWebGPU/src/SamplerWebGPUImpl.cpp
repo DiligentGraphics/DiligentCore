@@ -70,19 +70,25 @@ SamplerWebGPUImpl::SamplerWebGPUImpl(IReferenceCounters*     pRefCounters,
     }
 // clang-format on
 {
-    WGPUSamplerDescriptor wgpuSamplerDesc = SamplerDescToWGPUSamplerDescriptor(m_Desc);
-    m_wgpuSampler.Reset(wgpuDeviceCreateSampler(pDevice->GetWebGPUDevice(), &wgpuSamplerDesc));
-    if (!m_wgpuSampler)
-        LOG_ERROR_AND_THROW("Failed to create WebGPU sampler ", " '", m_Desc.Name ? m_Desc.Name : "", '\'');
 }
 
 SamplerWebGPUImpl::SamplerWebGPUImpl(IReferenceCounters* pRefCounters, const SamplerDesc& SamplerDesc) noexcept :
     TSamplerBase{pRefCounters, SamplerDesc}
 {
+    // Samplers may be created in a worker thread by pipeline state.
+    // Since WebGPU does not support multithreading, we cannot create WebGPU sampler here.
 }
 
 WGPUSampler SamplerWebGPUImpl::GetWebGPUSampler() const
 {
+    if (!m_wgpuSampler)
+    {
+        const WGPUSamplerDescriptor wgpuSamplerDesc = SamplerDescToWGPUSamplerDescriptor(m_Desc);
+        m_wgpuSampler.Reset(wgpuDeviceCreateSampler(GetDevice()->GetWebGPUDevice(), &wgpuSamplerDesc));
+        if (!m_wgpuSampler)
+            LOG_ERROR_MESSAGE("Failed to create WebGPU sampler ", " '", m_Desc.Name ? m_Desc.Name : "", '\'');
+    }
+
     return m_wgpuSampler.Get();
 }
 

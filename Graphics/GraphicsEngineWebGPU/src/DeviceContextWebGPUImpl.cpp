@@ -235,8 +235,8 @@ void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*     
 
     const WGPUDevice wgpuDevice = m_pDevice->GetWebGPUDevice();
 
-    const Uint32                               SRBIndex   = pResBindingWebGPU->GetBindingIndex();
-    const PipelineResourceSignatureWebGPUImpl* pSignature = pResBindingWebGPU->GetSignature();
+    const Uint32                         SRBIndex   = pResBindingWebGPU->GetBindingIndex();
+    PipelineResourceSignatureWebGPUImpl* pSignature = pResBindingWebGPU->GetSignature();
     m_BindInfo.Set(SRBIndex, pResBindingWebGPU);
 
     Uint32 BGIndex = 0;

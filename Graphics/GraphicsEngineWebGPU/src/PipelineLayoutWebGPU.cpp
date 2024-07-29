@@ -48,22 +48,32 @@ PipelineLayoutWebGPU::~PipelineLayoutWebGPU()
 {
 }
 
+struct PipelineLayoutWebGPU::WGPUPipelineLayoutCreateInfo
+{
+    RefCntAutoPtr<RenderDeviceWebGPUImpl>                           DeviceWebGPU;
+    std::vector<RefCntAutoPtr<PipelineResourceSignatureWebGPUImpl>> Signatures;
+};
+
 void PipelineLayoutWebGPU::Create(RenderDeviceWebGPUImpl* pDeviceWebGPU, RefCntAutoPtr<PipelineResourceSignatureWebGPUImpl> ppSignatures[], Uint32 SignatureCount) noexcept(false)
 {
     VERIFY(m_BindGroupCount == 0 && !m_wgpuPipelineLayout, "This pipeline layout is already initialized");
 
-    std::array<WGPUBindGroupLayout, MAX_RESOURCE_SIGNATURES * PipelineResourceSignatureWebGPUImpl::MAX_BIND_GROUPS> BindGroupLayouts{};
+    m_PipelineLayoutCreateInfo               = std::make_unique<WGPUPipelineLayoutCreateInfo>();
+    m_PipelineLayoutCreateInfo->DeviceWebGPU = pDeviceWebGPU;
 
     Uint32 BindGroupLayoutCount = 0;
     //Uint32 DynamicUniformBufferCount = 0;
     //Uint32 DynamicStorageBufferCount = 0;
 
+    m_PipelineLayoutCreateInfo->Signatures.reserve(SignatureCount);
     for (Uint32 BindInd = 0; BindInd < SignatureCount; ++BindInd)
     {
         // Signatures are arranged by binding index by PipelineStateBase::CopyResourceSignatures
         const auto& pSignature = ppSignatures[BindInd];
         if (pSignature == nullptr)
             continue;
+
+        m_PipelineLayoutCreateInfo->Signatures.push_back(pSignature);
 
         VERIFY(BindGroupLayoutCount <= std::numeric_limits<FirstBindGroupIndexArrayType::value_type>::max(),
                "Bind group layout count (", BindGroupLayoutCount, ") exceeds the maximum representable value");
@@ -72,7 +82,7 @@ void PipelineLayoutWebGPU::Create(RenderDeviceWebGPUImpl* pDeviceWebGPU, RefCntA
         for (auto GroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE, PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
         {
             if (pSignature->HasBindGroup(GroupId))
-                BindGroupLayouts[BindGroupLayoutCount++] = pSignature->GetWGPUBindGroupLayout(GroupId);
+                ++BindGroupLayoutCount;
         }
 
         // TODO
@@ -109,15 +119,39 @@ void PipelineLayoutWebGPU::Create(RenderDeviceWebGPUImpl* pDeviceWebGPU, RefCntA
     VERIFY(m_BindGroupCount <= std::numeric_limits<decltype(m_BindGroupCount)>::max(),
            "Descriptor set count (", BindGroupLayoutCount, ") exceeds the maximum representable value");
 
-    WGPUPipelineLayoutDescriptor LayoutDescr{};
-    LayoutDescr.label                = "Diligent::PipelineLayoutWebGPU";
-    LayoutDescr.bindGroupLayoutCount = BindGroupLayoutCount;
-    LayoutDescr.bindGroupLayouts     = BindGroupLayoutCount ? BindGroupLayouts.data() : nullptr;
-
-    m_wgpuPipelineLayout.Reset(wgpuDeviceCreatePipelineLayout(pDeviceWebGPU->GetWebGPUDevice(), &LayoutDescr));
-    VERIFY_EXPR(m_wgpuPipelineLayout);
-
     m_BindGroupCount = static_cast<Uint8>(BindGroupLayoutCount);
+}
+
+WGPUPipelineLayout PipelineLayoutWebGPU::GetWebGPUPipelineLayout()
+{
+    if (m_PipelineLayoutCreateInfo)
+    {
+        std::array<WGPUBindGroupLayout, MAX_RESOURCE_SIGNATURES * PipelineResourceSignatureWebGPUImpl::MAX_BIND_GROUPS> BindGroupLayouts{};
+
+        Uint32 BindGroupLayoutCount = 0;
+        for (auto& Signature : m_PipelineLayoutCreateInfo->Signatures)
+        {
+            VERIFY_EXPR(Signature);
+            for (auto GroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE, PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
+            {
+                if (Signature->HasBindGroup(GroupId))
+                    BindGroupLayouts[BindGroupLayoutCount++] = Signature->GetWGPUBindGroupLayout(GroupId);
+            }
+        }
+        VERIFY_EXPR(BindGroupLayoutCount == m_BindGroupCount);
+
+        WGPUPipelineLayoutDescriptor LayoutDescr{};
+        LayoutDescr.label                = "Diligent::PipelineLayoutWebGPU";
+        LayoutDescr.bindGroupLayoutCount = BindGroupLayoutCount;
+        LayoutDescr.bindGroupLayouts     = BindGroupLayoutCount ? BindGroupLayouts.data() : nullptr;
+
+        m_wgpuPipelineLayout.Reset(wgpuDeviceCreatePipelineLayout(m_PipelineLayoutCreateInfo->DeviceWebGPU->GetWebGPUDevice(), &LayoutDescr));
+        VERIFY_EXPR(m_wgpuPipelineLayout);
+
+        m_PipelineLayoutCreateInfo.reset();
+    }
+
+    return m_wgpuPipelineLayout;
 }
 
 } // namespace Diligent

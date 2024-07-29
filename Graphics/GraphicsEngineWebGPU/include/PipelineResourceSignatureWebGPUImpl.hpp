@@ -114,7 +114,7 @@ public:
         return (HasBindGroup(BIND_GROUP_ID_STATIC_MUTABLE) ? 1 : 0) + (HasBindGroup(BIND_GROUP_ID_DYNAMIC) ? 1 : 0);
     }
 
-    WGPUBindGroupLayout GetWGPUBindGroupLayout(BIND_GROUP_ID GroupId) const { return m_wgpuBindGroupLayouts[GroupId]; }
+    WGPUBindGroupLayout GetWGPUBindGroupLayout(BIND_GROUP_ID GroupId);
 
     bool   HasBindGroup(BIND_GROUP_ID GroupId) const { return m_BindGroupSizes[GroupId] != ~0u && m_BindGroupSizes[GroupId] > 0; }
     Uint32 GetBindGroupSize(BIND_GROUP_ID GroupId) const { return m_BindGroupSizes[GroupId]; }
@@ -174,6 +174,9 @@ private:
     static inline BIND_GROUP_ID VarTypeToBindGroupId(SHADER_RESOURCE_VARIABLE_TYPE VarType);
 
 private:
+    struct WGPUBindGroupLayoutsCreateInfo;
+    std::unique_ptr<WGPUBindGroupLayoutsCreateInfo> m_BindGroupLayoutsCreateInfo;
+
     std::array<WebGPUBindGroupLayoutWrapper, BIND_GROUP_ID_NUM_GROUPS> m_wgpuBindGroupLayouts;
 
     // Bind group sizes indexed by the group index in the layout (not BIND_GROUP_ID!)
