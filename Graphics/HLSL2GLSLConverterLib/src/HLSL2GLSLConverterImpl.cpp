@@ -986,12 +986,12 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessStructuredBuffer(TokenList
     if (Token->Type == TokenType::kw_RWStructuredBuffer)
     {
         std::stringstream ss;
-        ss << "layout(std140, binding=" << ShaderStorageBlockBinding << ") buffer";
+        ss << "layout(binding=" << ShaderStorageBlockBinding << ") buffer";
         Token->Literal = ss.str();
         ++ShaderStorageBlockBinding;
     }
     else
-        Token->Literal = "layout(std140) readonly buffer";
+        Token->Literal = "readonly buffer";
     // buffer<DataType> g_Data;
     // ^
 
