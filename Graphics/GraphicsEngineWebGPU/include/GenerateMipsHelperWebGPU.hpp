@@ -117,9 +117,9 @@ private:
 
     RenderDeviceWebGPUImpl& m_DeviceWebGPU;
 
-    RefCntAutoPtr<ISamplerWebGPU>                  m_pSampler;
-    RefCntAutoPtr<IBufferWebGPU>                   m_pBuffer;
-    std::vector<RefCntAutoPtr<ITextureViewWebGPU>> m_PlaceholderTextureViews;
+    RefCntAutoPtr<ISampler>                  m_pSampler;
+    RefCntAutoPtr<IBuffer>                   m_pBuffer;
+    std::vector<RefCntAutoPtr<ITextureView>> m_PlaceholderTextureViews;
 
     ComputePipelineCache m_PipelineLayoutCache;
     ShaderModuleCache    m_ShaderModuleCache;

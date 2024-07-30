@@ -44,7 +44,8 @@ public:
 
     SamplerWebGPUImpl(IReferenceCounters*     pRefCounters,
                       RenderDeviceWebGPUImpl* pDevice,
-                      const SamplerDesc&      Desc);
+                      const SamplerDesc&      Desc,
+                      bool                    bIsDeviceInternal);
     // Special constructor for serialization
     SamplerWebGPUImpl(IReferenceCounters* pRefCounters, const SamplerDesc& SamplerDesc) noexcept;
 

@@ -60,19 +60,22 @@ WGPUSamplerDescriptor SamplerDescToWGPUSamplerDescriptor(const SamplerDesc& Desc
 
 SamplerWebGPUImpl::SamplerWebGPUImpl(IReferenceCounters*     pRefCounters,
                                      RenderDeviceWebGPUImpl* pDevice,
-                                     const SamplerDesc&      Desc) :
+                                     const SamplerDesc&      Desc,
+                                     bool                    bIsDeviceInternal) :
     // clang-format off
     TSamplerBase
     {
         pRefCounters,
         pDevice,
-        Desc
+        Desc,
+        bIsDeviceInternal
     }
 // clang-format on
 {
 }
 
-SamplerWebGPUImpl::SamplerWebGPUImpl(IReferenceCounters* pRefCounters, const SamplerDesc& SamplerDesc) noexcept :
+SamplerWebGPUImpl::SamplerWebGPUImpl(IReferenceCounters* pRefCounters,
+                                     const SamplerDesc&  SamplerDesc) noexcept :
     TSamplerBase{pRefCounters, SamplerDesc}
 {
     // Samplers may be created in a worker thread by pipeline state.

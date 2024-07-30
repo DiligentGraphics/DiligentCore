@@ -400,7 +400,7 @@ void AttachmentCleanerWebGPU::InitializeConstantBuffer()
     CBDesc.Usage          = USAGE_DYNAMIC;
     CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
     CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-    m_DeviceWebGPU.CreateBuffer(CBDesc, nullptr, &m_pBuffer);
+    m_DeviceWebGPU.CreateBuffer(CBDesc, nullptr, &m_pBuffer, true);
 }
 
 void AttachmentCleanerWebGPU::InitializePipelineResourceLayout()

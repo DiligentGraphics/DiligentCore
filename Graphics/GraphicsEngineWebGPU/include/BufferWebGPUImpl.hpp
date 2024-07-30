@@ -50,7 +50,8 @@ public:
                      FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
                      RenderDeviceWebGPUImpl*    pDevice,
                      const BufferDesc&          Desc,
-                     const BufferData*          pInitData = nullptr);
+                     const BufferData*          pInitData,
+                     bool                       bIsDeviceInternal);
 
     // Attaches to an existing WebGPU resource
     BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
@@ -58,7 +59,8 @@ public:
                      RenderDeviceWebGPUImpl*    pDevice,
                      const BufferDesc&          Desc,
                      RESOURCE_STATE             InitialState,
-                     WGPUBuffer                 wgpuBuffer);
+                     WGPUBuffer                 wgpuBuffer,
+                     bool                       bIsDeviceInternal);
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferWebGPU, TBufferBase)
 

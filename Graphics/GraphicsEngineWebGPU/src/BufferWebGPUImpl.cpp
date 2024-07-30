@@ -55,7 +55,8 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
                                    FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
                                    RenderDeviceWebGPUImpl*    pDevice,
                                    const BufferDesc&          Desc,
-                                   const BufferData*          pInitData) :
+                                   const BufferData*          pInitData,
+                                   bool                       bIsDeviceInternal) :
     // clang-format off
     TBufferBase
     {
@@ -63,7 +64,7 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
         BuffViewObjMemAllocator,
         pDevice,
         Desc,
-        false
+        bIsDeviceInternal
     },
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
 // clang-format on
@@ -157,7 +158,8 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
                                    RenderDeviceWebGPUImpl*    pDevice,
                                    const BufferDesc&          Desc,
                                    RESOURCE_STATE             InitialState,
-                                   WGPUBuffer                 wgpuBuffer) :
+                                   WGPUBuffer                 wgpuBuffer,
+                                   bool                       bIsDeviceInternal) :
     // clang-format off
     TBufferBase
     {
@@ -165,7 +167,7 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
         BuffViewObjMemAllocator,
         pDevice,
         Desc,
-        false
+        bIsDeviceInternal
     },
     m_wgpuBuffer{wgpuBuffer, {true}},
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
@@ -367,7 +369,7 @@ void BufferWebGPUImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IB
         VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buffer view allocator does not match allocator provided at buffer initialization");
 
         if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE)
-            *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewWebGPUImpl instance", BufferViewWebGPUImpl, IsDefaultView ? this : nullptr)(pDeviceWebGPU, ViewDesc, this, IsDefaultView);
+            *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewWebGPUImpl instance", BufferViewWebGPUImpl, IsDefaultView ? this : nullptr)(pDeviceWebGPU, ViewDesc, this, IsDefaultView, m_bIsDeviceInternal);
 
         if (!IsDefaultView && *ppView)
             (*ppView)->AddRef();
