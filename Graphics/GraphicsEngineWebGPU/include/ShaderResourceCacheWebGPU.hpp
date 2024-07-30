@@ -180,9 +180,16 @@ public:
 #ifdef DILIGENT_DEBUG
     // For debug purposes only
     void DbgVerifyResourceInitialization() const;
+    void DbgVerifyDynamicBuffersCounter() const;
 #endif
 
 private:
+#ifdef DILIGENT_DEBUG
+    const Resource* GetFirstResourcePtr() const
+    {
+        return reinterpret_cast<const Resource*>(reinterpret_cast<const BindGroup*>(m_pMemory.get()) + m_NumBindGroups);
+    }
+#endif
     Resource* GetFirstResourcePtr()
     {
         return reinterpret_cast<Resource*>(reinterpret_cast<BindGroup*>(m_pMemory.get()) + m_NumBindGroups);

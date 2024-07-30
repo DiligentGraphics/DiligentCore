@@ -230,7 +230,7 @@ void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*     
     }
 
 #ifdef DILIGENT_DEBUG
-    //ResourceCache.DbgVerifyDynamicBuffersCounter();
+    ResourceCache.DbgVerifyDynamicBuffersCounter();
 #endif
 
     const WGPUDevice wgpuDevice = m_pDevice->GetWebGPUDevice();

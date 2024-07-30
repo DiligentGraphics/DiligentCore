@@ -517,6 +517,18 @@ void ShaderResourceCacheWebGPU::DbgVerifyResourceInitialization() const
             VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");
     }
 }
+
+void ShaderResourceCacheWebGPU::DbgVerifyDynamicBuffersCounter() const
+{
+    const Resource* pResources        = GetFirstResourcePtr();
+    Uint32          NumDynamicBuffers = 0;
+    for (Uint32 res = 0; res < m_TotalResources; ++res)
+    {
+        if (IsDynamicBuffer(pResources[res]))
+            ++NumDynamicBuffers;
+    }
+    VERIFY(NumDynamicBuffers == m_NumDynamicBuffers, "The number of dynamic buffers (", m_NumDynamicBuffers, ") does not match the actual number (", NumDynamicBuffers, ")");
+}
 #endif
 
 } // namespace Diligent

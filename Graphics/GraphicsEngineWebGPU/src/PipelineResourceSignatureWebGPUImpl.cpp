@@ -817,7 +817,7 @@ void PipelineResourceSignatureWebGPUImpl::CopyStaticResources(ShaderResourceCach
     }
 
 #ifdef DILIGENT_DEBUG
-    //DstResourceCache.DbgVerifyDynamicBuffersCounter();
+    DstResourceCache.DbgVerifyDynamicBuffersCounter();
 #endif
 }
 
