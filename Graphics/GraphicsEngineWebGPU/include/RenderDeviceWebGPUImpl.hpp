@@ -169,6 +169,8 @@ public:
                                                          RESOURCE_STATE    InitialState,
                                                          IBuffer**         ppBuffer) override final;
 
+    const WGPULimits& GetLimits() const { return m_wgpuLimits; }
+
 public:
     void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                          IPipelineResourceSignature**         ppSignature,
@@ -207,6 +209,7 @@ private:
     WebGPUInstanceWrapper m_wgpuInstance;
     WebGPUAdapterWrapper  m_wgpuAdapter;
     WebGPUDeviceWrapper   m_wgpuDevice;
+    WGPULimits            m_wgpuLimits{};
 
     UploadMemoryManagerWebGPUPtr  m_pUploadMemoryManager;
     DynamicMemoryManagerWebGPUPtr m_pDynamicMemoryManager;

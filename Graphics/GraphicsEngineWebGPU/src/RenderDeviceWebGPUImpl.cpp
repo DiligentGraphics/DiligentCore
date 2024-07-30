@@ -95,13 +95,17 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
     m_wgpuDevice{wgpuDevice}
 // clang-format on
 {
-    wgpuDeviceSetUncapturedErrorCallback(m_wgpuDevice.Get(), DebugMessengerCallback, nullptr);
+    WGPUSupportedLimits wgpuSupportedLimits{};
+    wgpuDeviceGetLimits(m_wgpuDevice, &wgpuSupportedLimits);
+    m_wgpuLimits = wgpuSupportedLimits.limits;
+
+    wgpuDeviceSetUncapturedErrorCallback(m_wgpuDevice, DebugMessengerCallback, nullptr);
     FindSupportedTextureFormats();
 
     m_DeviceInfo.Type     = RENDER_DEVICE_TYPE_WEBGPU;
     m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
-    m_pUploadMemoryManager.reset(new UploadMemoryManagerWebGPU{m_wgpuDevice.Get(), EngineCI.UploadHeapPageSize});
-    m_pDynamicMemoryManager.reset(new DynamicMemoryManagerWebGPU(m_wgpuDevice.Get(), EngineCI.DynamicHeapPageSize, EngineCI.DynamicHeapSize));
+    m_pUploadMemoryManager.reset(new UploadMemoryManagerWebGPU{m_wgpuDevice, EngineCI.UploadHeapPageSize});
+    m_pDynamicMemoryManager.reset(new DynamicMemoryManagerWebGPU(m_wgpuDevice, EngineCI.DynamicHeapPageSize, EngineCI.DynamicHeapSize));
     m_pAttachmentCleaner.reset(new AttachmentCleanerWebGPU{*this});
     m_pMipsGenerator.reset(new GenerateMipsHelperWebGPU{*this});
 
@@ -258,7 +262,7 @@ WGPUAdapter RenderDeviceWebGPUImpl::GetWebGPUAdapter() const
 
 WGPUDevice RenderDeviceWebGPUImpl::GetWebGPUDevice() const
 {
-    return m_wgpuDevice.Get();
+    return m_wgpuDevice;
 }
 
 void RenderDeviceWebGPUImpl::IdleGPU()
@@ -324,7 +328,7 @@ void RenderDeviceWebGPUImpl::PollEvents(bool YieldToWebBrowser)
 {
 #if !PLATFORM_EMSCRIPTEN
     (void)YieldToWebBrowser;
-    wgpuDeviceTick(m_wgpuDevice.Get());
+    wgpuDeviceTick(m_wgpuDevice);
 #endif
 }
 
@@ -388,11 +392,11 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
         }
     };
 
-    bool IsSupportedBGRA8UnormStorage       = wgpuDeviceHasFeature(m_wgpuDevice.Get(), WGPUFeatureName_BGRA8UnormStorage);
-    bool IsSupportedFloat32Filterable       = wgpuDeviceHasFeature(m_wgpuDevice.Get(), WGPUFeatureName_Float32Filterable);
-    bool IsSupportedRG11B10UfloatRenderable = wgpuDeviceHasFeature(m_wgpuDevice.Get(), WGPUFeatureName_RG11B10UfloatRenderable);
-    bool IsSupportedDepth32FloatStencil8    = wgpuDeviceHasFeature(m_wgpuDevice.Get(), WGPUFeatureName_Depth32FloatStencil8);
-    bool IsSupportedTextureCompressionBC    = wgpuDeviceHasFeature(m_wgpuDevice.Get(), WGPUFeatureName_TextureCompressionBC);
+    bool IsSupportedBGRA8UnormStorage       = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_BGRA8UnormStorage);
+    bool IsSupportedFloat32Filterable       = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Float32Filterable);
+    bool IsSupportedRG11B10UfloatRenderable = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_RG11B10UfloatRenderable);
+    bool IsSupportedDepth32FloatStencil8    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Depth32FloatStencil8);
+    bool IsSupportedTextureCompressionBC    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureCompressionBC);
 
     // https://www.w3.org/TR/webgpu/#texture-format-caps
 

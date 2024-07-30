@@ -93,9 +93,7 @@ void PipelineLayoutWebGPU::Create(RenderDeviceWebGPUImpl* pDeviceWebGPU, RefCntA
     }
     VERIFY_EXPR(BindGroupLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
 
-    WGPUSupportedLimits wgpuSupportedLimits{};
-    wgpuDeviceGetLimits(pDeviceWebGPU->GetWebGPUDevice(), &wgpuSupportedLimits);
-    const WGPULimits& Limits = wgpuSupportedLimits.limits;
+    const WGPULimits& Limits = pDeviceWebGPU->GetLimits();
 
     if (BindGroupLayoutCount > Limits.maxBindGroups)
     {
