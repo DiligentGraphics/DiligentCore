@@ -128,22 +128,45 @@ RenderDeviceWebGPUImpl::~RenderDeviceWebGPUImpl()
 
 void RenderDeviceWebGPUImpl::CreateBuffer(const BufferDesc& BuffDesc,
                                           const BufferData* pBuffData,
+                                          IBuffer**         ppBuffer,
+                                          bool              bIsDeviceInternal)
+{
+    CreateBufferImpl(ppBuffer, BuffDesc, pBuffData, bIsDeviceInternal);
+}
+
+void RenderDeviceWebGPUImpl::CreateBuffer(const BufferDesc& BuffDesc,
+                                          const BufferData* pBuffData,
                                           IBuffer**         ppBuffer)
 {
-    CreateBufferImpl(ppBuffer, BuffDesc, pBuffData);
+    CreateBuffer(BuffDesc, pBuffData, ppBuffer, false);
 }
 
 void RenderDeviceWebGPUImpl::CreateTexture(const TextureDesc& TexDesc,
                                            const TextureData* pData,
                                            ITexture**         ppTexture)
 {
-    CreateTextureImpl(ppTexture, TexDesc, pData);
+    CreateTexture(TexDesc, pData, ppTexture, false);
+}
+
+void RenderDeviceWebGPUImpl::CreateTexture(const TextureDesc& TexDesc,
+                                           const TextureData* pData,
+                                           ITexture**         ppTexture,
+                                           bool               IsDeviceInternal)
+{
+    CreateTextureImpl(ppTexture, TexDesc, pData, IsDeviceInternal);
+}
+
+void RenderDeviceWebGPUImpl::CreateSampler(const SamplerDesc& SamplerDesc,
+                                           ISampler**         ppSampler,
+                                           bool               IsDeviceInternal)
+{
+    CreateSamplerImpl(ppSampler, SamplerDesc, IsDeviceInternal);
 }
 
 void RenderDeviceWebGPUImpl::CreateSampler(const SamplerDesc& SamplerDesc,
                                            ISampler**         ppSampler)
 {
-    CreateSamplerImpl(ppSampler, SamplerDesc);
+    CreateSampler(SamplerDesc, ppSampler, false);
 }
 
 void RenderDeviceWebGPUImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
@@ -277,7 +300,7 @@ void RenderDeviceWebGPUImpl::CreateTextureFromWebGPUTexture(WGPUTexture        w
                                                             RESOURCE_STATE     InitialState,
                                                             ITexture**         ppTexture)
 {
-    CreateTextureImpl(ppTexture, TexDesc, InitialState, wgpuTexture);
+    CreateTextureImpl(ppTexture, TexDesc, InitialState, wgpuTexture, false);
 }
 
 void RenderDeviceWebGPUImpl::CreateBufferFromWebGPUBuffer(WGPUBuffer        wgpuBuffer,
@@ -285,7 +308,7 @@ void RenderDeviceWebGPUImpl::CreateBufferFromWebGPUBuffer(WGPUBuffer        wgpu
                                                           RESOURCE_STATE    InitialState,
                                                           IBuffer**         ppBuffer)
 {
-    CreateBufferImpl(ppBuffer, BuffDesc, InitialState, wgpuBuffer);
+    CreateBufferImpl(ppBuffer, BuffDesc, InitialState, wgpuBuffer, false);
 }
 
 void RenderDeviceWebGPUImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc&               Desc,

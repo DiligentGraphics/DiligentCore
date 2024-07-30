@@ -47,7 +47,8 @@ public:
                       FixedBlockMemoryAllocator& TexViewObjAllocator,
                       RenderDeviceWebGPUImpl*    pDevice,
                       const TextureDesc&         Desc,
-                      const TextureData*         pInitData = nullptr);
+                      const TextureData*         pInitData,
+                      bool                       bIsDeviceInternal);
 
     // Attaches to an existing WebGPU resource
     TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
@@ -55,7 +56,8 @@ public:
                       RenderDeviceWebGPUImpl*    pDevice,
                       const TextureDesc&         Desc,
                       RESOURCE_STATE             InitialState,
-                      WGPUTexture                wgpuTextureHandle);
+                      WGPUTexture                wgpuTextureHandle,
+                      bool                       bIsDeviceInternal);
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureWebGPU, TTextureBase)
 

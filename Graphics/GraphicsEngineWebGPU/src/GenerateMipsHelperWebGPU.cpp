@@ -317,7 +317,8 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncode
 
         UpdateUniformBuffer(TopMip, NumMips, DstWidth, DstHeight);
 
-        const auto* pBufferImpl = ClassPtrCast<BufferWebGPUImpl>(m_pBuffer.RawPtr());
+        const auto* pBufferImpl  = ClassPtrCast<BufferWebGPUImpl>(m_pBuffer.RawPtr());
+        const auto* pSamplerImpl = ClassPtrCast<SamplerWebGPUImpl>(m_pSampler.RawPtr());
 
         WGPUBindGroupEntry wgpuBindGroupEntries[7]{};
         wgpuBindGroupEntries[0].binding = 0;
@@ -328,8 +329,9 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncode
         UAVFormats PipelineFormats{};
         for (Uint32 UAVIndex = 0; UAVIndex < 4; ++UAVIndex)
         {
+            const auto* pTextureViewImpl                   = ClassPtrCast<TextureViewWebGPUImpl>(m_PlaceholderTextureViews[UAVIndex].RawPtr());
             wgpuBindGroupEntries[UAVIndex + 1].binding     = UAVIndex + 1;
-            wgpuBindGroupEntries[UAVIndex + 1].textureView = UAVIndex < NumMips ? pTexView->GetMipLevelUAV(TopMip + UAVIndex + 1) : m_PlaceholderTextureViews[UAVIndex]->GetWebGPUTextureView();
+            wgpuBindGroupEntries[UAVIndex + 1].textureView = UAVIndex < NumMips ? pTexView->GetMipLevelUAV(TopMip + UAVIndex + 1) : pTextureViewImpl->GetWebGPUTextureView();
             PipelineFormats[UAVIndex]                      = UAVIndex < NumMips ? pTexView->GetDesc().Format : PlaceholderTextureFormat;
         }
 
@@ -337,7 +339,7 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncode
         wgpuBindGroupEntries[5].textureView = pTexView->GetMipLevelSRV(TopMip);
 
         wgpuBindGroupEntries[6].binding = 6;
-        wgpuBindGroupEntries[6].sampler = m_pSampler->GetWebGPUSampler();
+        wgpuBindGroupEntries[6].sampler = pSamplerImpl->GetWebGPUSampler();
 
         // Determine if the first downsample is more than 2:1.  This happens whenever
         // the source width or height is odd.
@@ -367,10 +369,7 @@ void GenerateMipsHelperWebGPU::InitializeConstantBuffer()
     CBDesc.Usage          = USAGE_DYNAMIC;
     CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
     CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-    RefCntAutoPtr<IBuffer> pBuffer;
-    m_DeviceWebGPU.CreateBuffer(CBDesc, nullptr, &pBuffer);
-    pBuffer->QueryInterface(IID_BufferWebGPU, reinterpret_cast<IObject**>(m_pBuffer.RawDblPtr()));
+    m_DeviceWebGPU.CreateBuffer(CBDesc, nullptr, &m_pBuffer, true);
 }
 
 void GenerateMipsHelperWebGPU::InitializeSampler()
@@ -379,14 +378,12 @@ void GenerateMipsHelperWebGPU::InitializeSampler()
     SmpDesc.MagFilter = FILTER_TYPE_LINEAR;
     SmpDesc.MinFilter = FILTER_TYPE_LINEAR;
     SmpDesc.MipFilter = FILTER_TYPE_POINT;
-
-    RefCntAutoPtr<ISampler> pSampler;
-    m_DeviceWebGPU.CreateSampler(SmpDesc, &pSampler);
-    pSampler->QueryInterface(IID_SamplerWebGPU, reinterpret_cast<IObject**>(m_pSampler.RawDblPtr()));
+    m_DeviceWebGPU.CreateSampler(SmpDesc, &m_pSampler, true);
 }
 
 void GenerateMipsHelperWebGPU::InitializePlaceholderTextures()
 {
+    m_PlaceholderTextureViews.resize(4);
     for (Uint32 TextureIdx = 0; TextureIdx < 4; ++TextureIdx)
     {
         TextureDesc TexDesc;
@@ -401,7 +398,7 @@ void GenerateMipsHelperWebGPU::InitializePlaceholderTextures()
         TexDesc.Usage     = USAGE_DEFAULT;
 
         RefCntAutoPtr<ITexture> pTexture;
-        m_DeviceWebGPU.CreateTexture(TexDesc, nullptr, &pTexture);
+        m_DeviceWebGPU.CreateTexture(TexDesc, nullptr, &pTexture, true);
 
         TextureViewDesc ViewDesc;
         ViewDesc.ViewType        = TEXTURE_VIEW_UNORDERED_ACCESS;
@@ -411,10 +408,7 @@ void GenerateMipsHelperWebGPU::InitializePlaceholderTextures()
         ViewDesc.NumMipLevels    = 1;
         ViewDesc.MostDetailedMip = 0;
         ViewDesc.FirstArraySlice = 0;
-
-        RefCntAutoPtr<ITextureView> pTextureView;
-        pTexture->CreateView(ViewDesc, &pTextureView);
-        m_PlaceholderTextureViews.push_back(pTextureView.Cast<ITextureViewWebGPU>(IID_TextureViewWebGPU));
+        pTexture->CreateView(ViewDesc, &m_PlaceholderTextureViews[TextureIdx]);
     }
 }
 

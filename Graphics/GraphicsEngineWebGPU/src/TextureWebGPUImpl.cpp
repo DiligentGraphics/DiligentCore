@@ -186,14 +186,16 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
                                      FixedBlockMemoryAllocator& TexViewObjAllocator,
                                      RenderDeviceWebGPUImpl*    pDevice,
                                      const TextureDesc&         Desc,
-                                     const TextureData*         pInitData) :
+                                     const TextureData*         pInitData,
+                                     bool                       bIsDeviceInternal) :
     // clang-format off
     TTextureBase
     {
         pRefCounters,
         TexViewObjAllocator,
         pDevice,
-        Desc
+        Desc,
+        bIsDeviceInternal
     }
 // clang-format on
 {
@@ -361,9 +363,19 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
                                      RenderDeviceWebGPUImpl*    pDevice,
                                      const TextureDesc&         Desc,
                                      RESOURCE_STATE             InitialState,
-                                     WGPUTexture                wgpuTextureHandle) :
-    TTextureBase{pRefCounters, TexViewObjAllocator, pDevice, Desc},
+                                     WGPUTexture                wgpuTextureHandle,
+                                     bool                       bIsDeviceInternal) :
+    // clang-format off
+    TTextureBase
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDevice,
+        Desc,
+        bIsDeviceInternal
+    },
     m_wgpuTexture{wgpuTextureHandle, {true}}
+// clang-format on
 {
     SetState(InitialState);
 }
@@ -596,7 +608,7 @@ void TextureWebGPUImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITex
         }
 
         const auto pViewWebGPU = NEW_RC_OBJ(TexViewAllocator, "TextureViewWebGPUImpl instance", TextureViewWebGPUImpl, bIsDefaultView ? this : nullptr)(
-            GetDevice(), UpdatedViewDesc, this, std::move(wgpuTextureView), std::move(wgpuTextureMipSRVs), std::move(wgpuTextureMipUAVs), bIsDefaultView);
+            GetDevice(), UpdatedViewDesc, this, std::move(wgpuTextureView), std::move(wgpuTextureMipSRVs), std::move(wgpuTextureMipUAVs), bIsDefaultView, m_bIsDeviceInternal);
         VERIFY(pViewWebGPU->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type");
 
         if (bIsDefaultView)

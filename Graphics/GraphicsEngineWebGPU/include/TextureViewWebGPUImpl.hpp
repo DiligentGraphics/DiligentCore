@@ -49,7 +49,8 @@ public:
                           WebGPUTextureViewWrapper&&              wgpuTextureView,
                           std::vector<WebGPUTextureViewWrapper>&& wgpuTextureMipSRVs,
                           std::vector<WebGPUTextureViewWrapper>&& wgpuTextureMipUAVs,
-                          bool                                    bIsDefaultView);
+                          bool                                    bIsDefaultView,
+                          bool                                    bIsDeviceInternal);
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureViewWebGPU, TTextureViewBase)
 

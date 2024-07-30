@@ -36,7 +36,8 @@ BufferViewWebGPUImpl::BufferViewWebGPUImpl(IReferenceCounters*     pRefCounters,
                                            RenderDeviceWebGPUImpl* pDevice,
                                            const BufferViewDesc&   Desc,
                                            IBuffer*                pBuffer,
-                                           bool                    IsDefaultView) :
+                                           bool                    bIsDefaultView,
+                                           bool                    bIsDeviceInternal) :
     // clang-format off
     TBufferViewBase
     {
@@ -44,7 +45,8 @@ BufferViewWebGPUImpl::BufferViewWebGPUImpl(IReferenceCounters*     pRefCounters,
         pDevice,
         Desc,
         pBuffer,
-        IsDefaultView
+        bIsDefaultView,
+        bIsDeviceInternal
     }
     // clang-format on 
 {

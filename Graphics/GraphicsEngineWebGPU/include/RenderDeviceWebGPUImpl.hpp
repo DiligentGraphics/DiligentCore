@@ -181,6 +181,20 @@ public:
                                          const PipelineResourceSignatureInternalDataWebGPU& InternalData,
                                          IPipelineResourceSignature**                       ppSignature);
 
+    void CreateBuffer(const BufferDesc& BuffDesc,
+                      const BufferData* pBuffData,
+                      IBuffer**         ppBuffer,
+                      bool              IsDeviceInternal);
+
+    void CreateTexture(const TextureDesc& TexDesc,
+                       const TextureData* pData,
+                       ITexture**         ppTexture,
+                       bool               IsDeviceInternal);
+
+    void CreateSampler(const SamplerDesc& SamplerDesc,
+                       ISampler**         ppSampler,
+                       bool               IsDeviceInternal);
+
     Uint64 GetCommandQueueCount() const { return 1; }
 
     Uint64 GetCommandQueueMask() const { return 1; }

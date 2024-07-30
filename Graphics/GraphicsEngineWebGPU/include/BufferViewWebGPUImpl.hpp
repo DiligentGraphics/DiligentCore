@@ -45,7 +45,8 @@ public:
                          RenderDeviceWebGPUImpl* pDevice,
                          const BufferViewDesc&   Desc,
                          IBuffer*                pBuffer,
-                         bool                    IsDefaultView);
+                         bool                    IsDefaultView,
+                         bool                    bIsDeviceInternal);
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferViewWebGPU, TBufferViewBase)
 };

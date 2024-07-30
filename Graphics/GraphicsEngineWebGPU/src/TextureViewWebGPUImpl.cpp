@@ -40,7 +40,8 @@ TextureViewWebGPUImpl::TextureViewWebGPUImpl(IReferenceCounters*                
                                              WebGPUTextureViewWrapper&&              wgpuTextureView,
                                              std::vector<WebGPUTextureViewWrapper>&& wgpuTextureMipSRVs,
                                              std::vector<WebGPUTextureViewWrapper>&& wgpuTextureMipUAVs,
-                                             bool                                    bIsDefaultView) :
+                                             bool                                    bIsDefaultView,
+                                             bool                                    bIsDeviceInternal) :
     // clang-format off
     TTextureViewBase
     {
@@ -48,7 +49,8 @@ TextureViewWebGPUImpl::TextureViewWebGPUImpl(IReferenceCounters*                
         pDevice,
         ViewDesc,
         pTexture,
-        bIsDefaultView
+        bIsDefaultView,
+        bIsDeviceInternal
     }, m_wgpuTextureView(std::move(wgpuTextureView))
      , m_wgpuTextureMipSRVs(std::move(wgpuTextureMipSRVs))
      , m_wgpuTextureMipUAVs(std::move(wgpuTextureMipUAVs))
