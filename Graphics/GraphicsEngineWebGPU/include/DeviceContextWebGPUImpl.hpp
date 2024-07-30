@@ -372,9 +372,6 @@ private:
 
     WGPUBuffer PrepareForIndirectCommand(IBuffer* pAttribsBuffer, Uint64& IdirectBufferOffset);
 
-    template <PIPELINE_TYPE PipelineType, typename CmdEncoderType>
-    void CommitSRBs(CmdEncoderType CmdEncoder, Uint32 CommitSRBMask);
-
     void CommitGraphicsPSO(WGPURenderPassEncoder CmdEncoder);
 
     void CommitComputePSO(WGPUComputePassEncoder CmdEncoder);
@@ -388,7 +385,7 @@ private:
     void CommitScissorRects(WGPURenderPassEncoder CmdEncoder);
 
     template <typename CmdEncoderType>
-    void CommitBindGroups(CmdEncoderType CmdEncoder);
+    void CommitBindGroups(CmdEncoderType CmdEncoder, Uint32 CommitSRBMask);
 
     UploadMemoryManagerWebGPU::Allocation AllocateUploadMemory(Uint64 Size, Uint64 Alignment = 16);
 
@@ -453,23 +450,35 @@ private:
     {
         struct BindGroupInfo
         {
-            WGPUBindGroup         wgpuBindGroup = nullptr;
-            std::vector<uint32_t> DynamicOffsets;
+            WGPUBindGroup wgpuBindGroup = nullptr;
+
+            // The total number of resources with dynamic offsets, given by pSignature->GetDynamicOffsetCount().
+            // Note that this is not the actual number of dynamic buffers in the resource cache.
+            Uint32 DynamicOffsetCount = 0;
+
+            // Bind index to use with wgpuEncoderSetBindGroup
+            Uint32 BindIndex = ~0u;
+
+            bool IsActive() const
+            {
+                return BindIndex != BindGroupInfo{}.BindIndex;
+            }
+            void MakeInactive()
+            {
+                BindIndex = BindGroupInfo{}.BindIndex;
+            }
         };
         // Bind groups for each resource signature.
-        // NOTE: bind groups in this array are not indexed by the bind group
-        //       index in the pipeline layout, but by the resource signature index.
-        std::array<BindGroupInfo, PipelineStateWebGPUImpl::MaxBindGroupsInPipeline> BindGroups = {};
-
-        // Bind groups that are used by the current pipeline.
-        Uint32 ActiveBindGroups = 0;
-        Uint32 DirtyBindGroups  = (1u << BindGroups.size()) - 1u;
+        std::array<std::array<BindGroupInfo, PipelineResourceSignatureWebGPUImpl::MAX_BIND_GROUPS>, MAX_RESOURCE_SIGNATURES> BindGroups = {};
 
         void Reset()
         {
             *this = WebGPUResourceBindInfo{};
         }
     } m_BindInfo;
+
+    // Memory to store dynamic buffer offsets for wgpuEncoderSetBindGroup.
+    std::vector<Uint32> m_DynamicBufferOffsets;
 
     struct PendingClears
     {

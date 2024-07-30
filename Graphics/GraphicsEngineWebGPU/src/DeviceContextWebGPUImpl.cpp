@@ -147,37 +147,55 @@ void DeviceContextWebGPUImpl::SetPipelineState(IPipelineState* pPipelineState)
 
     m_EncoderState.Invalidate(WebGPUEncoderState::CMD_ENCODER_STATE_PIPELINE_STATE);
 
-    const Uint32 SignatureCount = m_pPipelineState->GetResourceSignatureCount();
-
-    Uint32 DbgActiveBindGroupIndex = 0;
-    m_BindInfo.ActiveBindGroups    = 0;
-    for (Uint32 i = 0; i < SignatureCount; ++i)
-    {
-        PipelineResourceSignatureWebGPUImpl* pSign = m_pPipelineState->GetResourceSignature(i);
-        if (pSign == nullptr)
-            continue;
-
-        VERIFY(m_pPipelineState->GetPipelineLayout().GetFirstBindGroupIndex(i) == DbgActiveBindGroupIndex, "Bind group index mismatch");
-        Uint32 BGIndex = i * PipelineResourceSignatureWebGPUImpl::MAX_BIND_GROUPS;
-        for (PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID BindGroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE,
-                                                                               PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
-        {
-            if (pSign->HasBindGroup(BindGroupId))
-            {
-                // Reserve space for dynamic offsets
-                m_BindInfo.BindGroups[BGIndex].DynamicOffsets.resize(pSign->GetDynamicOffsetCount(BindGroupId));
-                m_BindInfo.ActiveBindGroups |= 1u << (BGIndex++);
-                ++DbgActiveBindGroupIndex;
-            }
-        }
-    }
-    VERIFY(m_pPipelineState->GetPipelineLayout().GetBindGroupCount() == DbgActiveBindGroupIndex, "Bind group count mismatch");
-    (void)DbgActiveBindGroupIndex;
-
-    m_BindInfo.DirtyBindGroups = m_BindInfo.ActiveBindGroups;
 
     Uint32 DvpCompatibleSRBCount = 0;
     PrepareCommittedResources(m_BindInfo, DvpCompatibleSRBCount);
+    // Commit all SRBs when PSO changes
+    m_BindInfo.StaleSRBMask |= m_BindInfo.ActiveSRBMask;
+
+    const Uint32 SignatureCount = m_pPipelineState->GetResourceSignatureCount();
+
+    Uint32 ActiveBindGroupIndex  = 0;
+    Uint32 MaxDynamicOffsetCount = 0;
+    for (Uint32 i = 0; i < SignatureCount; ++i)
+    {
+        PipelineResourceSignatureWebGPUImpl* pSign = m_pPipelineState->GetResourceSignature(i);
+        if (pSign == nullptr || pSign->GetNumBindGroups() == 0)
+        {
+            for (WebGPUResourceBindInfo::BindGroupInfo& BindGroup : m_BindInfo.BindGroups[i])
+            {
+                // Make the group inactive, but do not reset wgpuBindGroup - it might be used by a PSO that is set later
+                BindGroup.MakeInactive();
+            }
+            continue;
+        }
+
+        VERIFY_EXPR(i == pSign->GetDesc().BindingIndex);
+        VERIFY_EXPR(m_BindInfo.ActiveSRBMask & (1u << i));
+
+        VERIFY(m_pPipelineState->GetPipelineLayout().GetFirstBindGroupIndex(i) == ActiveBindGroupIndex, "Bind group index mismatch");
+        for (PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID BindGroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE,
+                                                                               PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
+        {
+            WebGPUResourceBindInfo::BindGroupInfo& BindGroup = m_BindInfo.BindGroups[i][BindGroupId];
+            if (pSign->HasBindGroup(BindGroupId))
+            {
+                const Uint32 DynamicOffsetCount = pSign->GetDynamicOffsetCount(BindGroupId);
+                MaxDynamicOffsetCount           = std::max(MaxDynamicOffsetCount, DynamicOffsetCount);
+
+                BindGroup.DynamicOffsetCount = DynamicOffsetCount;
+                BindGroup.BindIndex          = ActiveBindGroupIndex++;
+            }
+            else
+            {
+                // Make the group inactive, but do not reset wgpuBindGroup - it might be used by a PSO that is set later
+                BindGroup.MakeInactive();
+            }
+        }
+    }
+    VERIFY(m_pPipelineState->GetPipelineLayout().GetBindGroupCount() == ActiveBindGroupIndex, "Bind group count mismatch");
+
+    m_DynamicBufferOffsets.resize(MaxDynamicOffsetCount);
 }
 
 void DeviceContextWebGPUImpl::TransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding)
@@ -201,12 +219,15 @@ void DeviceContextWebGPUImpl::DvpValidateCommittedShaderResources()
         if (pSign == nullptr || pSign->GetNumBindGroups() == 0)
             continue; // Skip null and empty signatures
 
-        const Uint32 BGCount = pSign->GetNumBindGroups();
-        for (Uint32 bg = 0; bg < BGCount; ++bg)
+        VERIFY(i == pSign->GetDesc().BindingIndex, "Resource signature index mismatch");
+        for (PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID BindGroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE,
+                                                                               PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
         {
-            DEV_CHECK_ERR(m_BindInfo.BindGroups[i * 2 + bg].wgpuBindGroup,
-                          "bind group with index ", bg, " is not bound for resource signature '",
-                          pSign->GetDesc().Name, "', binding index ", i, ".");
+            const WebGPUResourceBindInfo::BindGroupInfo& BindGroup = m_BindInfo.BindGroups[i][BindGroupId];
+            DEV_CHECK_ERR(BindGroup.IsActive() == pSign->HasBindGroup(BindGroupId),
+                          "Active bind group flag mismatch for resource signature '", pSign->GetDesc().Name, "', binding index ", i, ", bind group id ", BindGroupId, ".");
+            DEV_CHECK_ERR(!BindGroup.IsActive() || BindGroup.wgpuBindGroup != nullptr,
+                          "Bind group is not initialized for resource signature '", pSign->GetDesc().Name, "', binding index ", i, ", bind group id ", BindGroupId, ".");
         }
     }
 
@@ -243,15 +264,17 @@ void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*     
     for (PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID BindGroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE,
                                                                            PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
     {
+        WebGPUResourceBindInfo::BindGroupInfo& BindGroup = m_BindInfo.BindGroups[SRBIndex][BindGroupId];
         if (pSignature->HasBindGroup(BindGroupId))
         {
-            m_BindInfo.BindGroups[SRBIndex * 2 + BGIndex].wgpuBindGroup =
-                ResourceCache.UpdateBindGroup(wgpuDevice, BGIndex, pSignature->GetWGPUBindGroupLayout(BindGroupId));
-            m_BindInfo.DirtyBindGroups |= 1u << (SRBIndex * 2 + BGIndex);
+            BindGroup.wgpuBindGroup = ResourceCache.UpdateBindGroup(wgpuDevice, BGIndex, pSignature->GetWGPUBindGroupLayout(BindGroupId));
             ++BGIndex;
         }
+        else
+        {
+            BindGroup.wgpuBindGroup = nullptr;
+        }
     }
-
     VERIFY_EXPR(BGIndex == ResourceCache.GetNumBindGroups());
 }
 
@@ -265,49 +288,47 @@ void SetBindGroup(WGPUComputePassEncoder Encoder, uint32_t GroupIndex, WGPUBindG
 }
 
 template <typename CmdEncoderType>
-void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder)
+void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder, Uint32 CommitSRBMask)
 {
-    // Bind groups in m_EncoderState.BindGroups are indexed by SRB index rather than bind group index
-    // in the pipeline layout.
-    m_BindInfo.DirtyBindGroups &= m_BindInfo.ActiveBindGroups;
-    Uint32 DirtyBindGroups = m_BindInfo.DirtyBindGroups;
-    while (m_BindInfo.DirtyBindGroups != 0)
+    VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
+
+    const Uint32 FirstSign = PlatformMisc::GetLSB(CommitSRBMask);
+    const Uint32 LastSign  = PlatformMisc::GetMSB(CommitSRBMask);
+    VERIFY_EXPR(LastSign < m_pPipelineState->GetResourceSignatureCount());
+
+    for (Uint32 sign = FirstSign; sign <= LastSign; ++sign)
     {
-        // m_BindInfo.DirtyBindGroups is indexed by SRB index
-        const Uint32 SrcBindGroupIndex = PlatformMisc::GetLSB(m_BindInfo.DirtyBindGroups);
-        // Count the number of active groups that are bound before the current group.
-        // Note that there may be inactive groups if, for example, signature at preceding index
-        // does not use dynamic resources.
-        const Uint32 BindGroupIndex = PlatformMisc::CountOneBits(m_BindInfo.ActiveBindGroups & ((1u << SrcBindGroupIndex) - 1u));
-        VERIFY_EXPR(BindGroupIndex < m_BindInfo.BindGroups.size());
-        WebGPUResourceBindInfo::BindGroupInfo& BindGroup = m_BindInfo.BindGroups[SrcBindGroupIndex];
-
-        // There are two bind groups per SRB: one for static/mutable and one for dynamic resources
-        const Uint32 SRBIndex            = SrcBindGroupIndex / 2;
-        const Uint32 BindGroupCacheIndex = SrcBindGroupIndex & 0x01u;
-
-        const ShaderResourceCacheWebGPU* ResourceCache = m_BindInfo.ResourceCaches[SRBIndex];
-        VERIFY_EXPR(ResourceCache != nullptr);
-        std::vector<uint32_t>& DynamicOffsets    = BindGroup.DynamicOffsets;
-        const Uint32           NumOffsetsWritten = ResourceCache->GetDynamicBufferOffsets(GetContextId(), DynamicOffsets, BindGroupCacheIndex);
-        VERIFY(NumOffsetsWritten == DynamicOffsets.size(),
-               "The number of dynamic offsets written (", NumOffsetsWritten, ") does not match the expected number (", DynamicOffsets.size(),
-               "). This likely indicates mismatch between the SRB and the PSO");
-        (void)NumOffsetsWritten;
-
-        if (WGPUBindGroup wgpuBindGroup = BindGroup.wgpuBindGroup)
+        Uint32 BindGroupCacheIndex = 0;
+        for (PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID BindGroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE,
+                                                                               PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
         {
-            SetBindGroup(CmdEncoder, BindGroupIndex, wgpuBindGroup, DynamicOffsets.size(), DynamicOffsets.data());
+            const WebGPUResourceBindInfo::BindGroupInfo& BindGroup = m_BindInfo.BindGroups[sign][BindGroupId];
+            if (!BindGroup.IsActive())
+                continue;
+
+            const ShaderResourceCacheWebGPU* ResourceCache = m_BindInfo.ResourceCaches[sign];
+            VERIFY_EXPR(ResourceCache != nullptr);
+            const Uint32 NumOffsetsWritten = ResourceCache->GetDynamicBufferOffsets(GetContextId(), m_DynamicBufferOffsets, BindGroupCacheIndex++);
+            VERIFY(NumOffsetsWritten == BindGroup.DynamicOffsetCount,
+                   "The number of dynamic offsets written (", NumOffsetsWritten, ") does not match the expected number (", BindGroup.DynamicOffsetCount,
+                   "). This likely indicates mismatch between the SRB and the PSO");
+            (void)NumOffsetsWritten;
+
+            if (WGPUBindGroup wgpuBindGroup = BindGroup.wgpuBindGroup)
+            {
+                SetBindGroup(CmdEncoder, BindGroup.BindIndex, wgpuBindGroup, BindGroup.DynamicOffsetCount, m_DynamicBufferOffsets.data());
+            }
+            else
+            {
+                DEV_ERROR("Active bind group at index ", BindGroup.BindIndex, " is not initialized");
+            }
         }
-        else
-        {
-            DEV_ERROR("Active bind group at index ", SrcBindGroupIndex, " is not initialized");
-        }
-        m_BindInfo.DirtyBindGroups &= ~(1u << SrcBindGroupIndex);
     }
 
-    // TEMPORARY: always commit bind groups until we track dynamic offsets
-    m_BindInfo.DirtyBindGroups = DirtyBindGroups;
+    // Note that there is one global dynamic buffer from which all dynamic resources are suballocated,
+    // and this buffer is not resizable, so the buffer handle can never change.
+
+    m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
 }
 
 void DeviceContextWebGPUImpl::InvalidateState()
@@ -1409,7 +1430,7 @@ void DeviceContextWebGPUImpl::GenerateMips(ITextureView* pTexView)
     if (m_pPipelineState)
     {
         m_EncoderState.Invalidate(WebGPUEncoderState::CMD_ENCODER_STATE_ALL);
-        m_BindInfo.DirtyBindGroups = m_BindInfo.ActiveBindGroups;
+        m_BindInfo.StaleSRBMask |= m_BindInfo.ActiveSRBMask;
     }
 
     auto& MipGenerator = m_pDevice->GetMipsGenerator();
@@ -1845,7 +1866,7 @@ void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
 void DeviceContextWebGPUImpl::ClearEncoderState()
 {
     m_EncoderState.Clear();
-    m_BindInfo.DirtyBindGroups = m_BindInfo.ActiveBindGroups;
+    m_BindInfo.StaleSRBMask |= m_BindInfo.ActiveSRBMask;
 }
 
 void DeviceContextWebGPUImpl::ClearAttachment(Int32                     RTIndex,
@@ -1895,12 +1916,6 @@ void DeviceContextWebGPUImpl::ClearAttachment(Int32                     RTIndex,
     m_EncoderState.Invalidate(WebGPUEncoderState::CMD_ENCODER_STATE_PIPELINE_STATE);
 }
 
-template <PIPELINE_TYPE, typename CmdEncoderType>
-void DeviceContextWebGPUImpl::CommitSRBs(CmdEncoderType CmdEncoder, Uint32 CommitSRBMask)
-{
-    // TODO
-}
-
 WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
 {
 #ifdef DILIGENT_DEVELOPMENT
@@ -1914,9 +1929,6 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
     // Handle pipeline state first because CommitGraphicsPSO may update another flags
     if (!m_EncoderState.IsUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_PIPELINE_STATE))
         CommitGraphicsPSO(wgpuRenderCmdEncoder);
-
-    if (auto CommitSRBMask = m_BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
-        CommitSRBs<PIPELINE_TYPE_GRAPHICS>(wgpuRenderCmdEncoder, CommitSRBMask);
 
     if (!m_EncoderState.IsUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_VERTEX_BUFFERS) || (m_EncoderState.HasDynamicVertexBuffers && (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) == 0))
         CommitVertexBuffers(wgpuRenderCmdEncoder);
@@ -1945,8 +1957,8 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
         m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_STENCIL_REF);
     }
 
-    if (m_BindInfo.DirtyBindGroups != 0)
-        CommitBindGroups(wgpuRenderCmdEncoder);
+    if (auto CommitSRBMask = m_BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+        CommitBindGroups(wgpuRenderCmdEncoder, CommitSRBMask);
 
     return wgpuRenderCmdEncoder;
 }
@@ -1973,10 +1985,7 @@ WGPUComputePassEncoder DeviceContextWebGPUImpl::PrepareForDispatchCompute()
         CommitComputePSO(wgpuComputeCmdEncoder);
 
     if (auto CommitSRBMask = m_BindInfo.GetCommitMask())
-        CommitSRBs<PIPELINE_TYPE_COMPUTE>(wgpuComputeCmdEncoder, CommitSRBMask);
-
-    if (m_BindInfo.DirtyBindGroups != 0)
-        CommitBindGroups(wgpuComputeCmdEncoder);
+        CommitBindGroups(wgpuComputeCmdEncoder, CommitSRBMask);
 
     return wgpuComputeCmdEncoder;
 }
