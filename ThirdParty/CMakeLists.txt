@@ -80,6 +80,10 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR WEBGPU_SUPPORTED OR (ARCHIVER_SUPPORT
         add_subdirectory(glslang)
         set_directory_root_folder("glslang" "DiligentCore/ThirdParty/glslang")
 
+        if (PLATFORM_EMSCRIPTEN)
+             set_targets_emscripten_properties(MachineIndependent)
+        endif()
+
         # glslang "kindly" sets global CMAKE_DEBUG_POSTFIX to "d", which we have to unset now
         unset(CMAKE_DEBUG_POSTFIX CACHE)
 
@@ -181,6 +185,11 @@ if ((${DILIGENT_BUILD_GOOGLE_TEST}) AND (NOT TARGET gtest))
 
     get_target_property(GTEST_SOURCE_DIR gtest SOURCE_DIR)
     install(FILES "googletest/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME googletest-License.txt)
+
+    if (PLATFORM_EMSCRIPTEN)
+        find_targets_in_directory(GTEST_TARGETS ${GTEST_SOURCE_DIR})
+        set_targets_emscripten_properties(${GTEST_TARGETS})
+    endif()
 endif()
 
 if (NOT TARGET xxHash::xxhash)

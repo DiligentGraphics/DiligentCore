@@ -443,3 +443,16 @@ macro(FetchContent_DeclareShallowGit Name GIT_REPOSITORY GitRepository GIT_TAG G
             git reset --hard FETCH_HEAD
     )
 endmacro()
+
+function(set_targets_emscripten_properties)
+    if (PLATFORM_EMSCRIPTEN)
+        foreach(_TARGET IN LISTS ARGN)
+            get_target_property(_TARGET_TYPE ${_TARGET} TYPE)
+            if (_TARGET_TYPE STREQUAL "STATIC_LIBRARY")
+                target_compile_options(${_TARGET} PRIVATE  
+                    "-pthread"
+                    "-mbulk-memory")
+            endif()
+        endforeach()
+    endif()
+endfunction()

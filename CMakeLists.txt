@@ -359,6 +359,14 @@ endif()
 
 
 add_library(Diligent-BuildSettings INTERFACE)
+
+if (PLATFORM_EMSCRIPTEN)
+    target_compile_options(Diligent-BuildSettings INTERFACE
+        "-pthread"
+        "-mbulk-memory"
+    )
+endif()
+
 target_link_libraries(Diligent-BuildSettings INTERFACE Diligent-PublicBuildSettings)
 
 foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})

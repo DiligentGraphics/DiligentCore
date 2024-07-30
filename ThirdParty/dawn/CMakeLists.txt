@@ -74,6 +74,11 @@ set(DAWN_ABSEIL_DIR         "${abseil-cpp_SOURCE_DIR}"     CACHE STRING "Directo
 
 FetchContent_MakeAvailable(dawn)
 
+if (PLATFORM_EMSCRIPTEN)
+    find_targets_in_directory(DAWN_TARGETS ${dawn_SOURCE_DIR})
+    set_targets_emscripten_properties(${DAWN_TARGETS})
+endif()
+
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(tint_api PRIVATE -Wno-switch-default)
 endif()
