@@ -190,14 +190,35 @@ std::string_view ConvertWebGPUFormatToString(WGPUTextureFormat TexFmt)
     {
         case WGPUTextureFormat_RGBA8Unorm:
             return "rgba8unorm";
+        case WGPUTextureFormat_RG8Unorm:
+            return "rg8unorm";
+        case WGPUTextureFormat_R8Unorm:
+            return "r8unorm";
+
         case WGPUTextureFormat_RGBA8Snorm:
             return "rgba8snorm";
+        case WGPUTextureFormat_RG8Snorm:
+            return "rg8snorm";
+        case WGPUTextureFormat_R8Snorm:
+            return "r8snorm";
+
         case WGPUTextureFormat_BGRA8Unorm:
             return "bgra8unorm";
+
         case WGPUTextureFormat_RGBA16Float:
             return "rgba16float";
+        case WGPUTextureFormat_RG16Float:
+            return "rg16float";
+        case WGPUTextureFormat_R16Float:
+            return "r16float";
+
         case WGPUTextureFormat_RGBA32Float:
             return "rgba32float";
+        case WGPUTextureFormat_RG32Float:
+            return "rg32float";
+        case WGPUTextureFormat_R32Float:
+            return "r32float";
+
         default:
             UNEXPECTED("Unsupported texture format");
             return "rgba8unorm";
