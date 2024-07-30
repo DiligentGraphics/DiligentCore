@@ -1409,7 +1409,7 @@ void DeviceContextWebGPUImpl::GenerateMips(ITextureView* pTexView)
     if (m_pPipelineState)
     {
         m_EncoderState.Invalidate(WebGPUEncoderState::CMD_ENCODER_STATE_ALL);
-        m_BindInfo.DirtyBindGroups = true;
+        m_BindInfo.DirtyBindGroups = m_BindInfo.ActiveBindGroups;
     }
 
     auto& MipGenerator = m_pDevice->GetMipsGenerator();
