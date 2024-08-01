@@ -344,6 +344,15 @@ private:
         DEBUG_GROUP_TYPE_NULL
     };
 
+    enum OCCLUSION_QUERY_TYPE : Uint32
+    {
+        // Occlusion query was started within render pass encoder
+        OCCLUSION_QUERY_TYPE_INNER,
+
+        // Occlusion query was started was started outside of render pass encoder
+        OCCLUSION_QUERY_TYPE_OUTER
+    };
+
     WGPUCommandEncoder GetCommandEncoder();
 
     WGPURenderPassEncoder GetRenderPassCommandEncoder();
@@ -582,6 +591,7 @@ private:
     using DynamicMemoryPageList = std::vector<DynamicMemoryManagerWebGPU::Page>;
     using MappedTextureCache    = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
     using DebugGroupStack       = std::vector<DEBUG_GROUP_TYPE>;
+    using OcclusionQueryStack   = std::vector<std::pair<OCCLUSION_QUERY_TYPE, Uint32>>;
 
     WebGPUQueueWrapper              m_wgpuQueue;
     WebGPUCommandEncoderWrapper     m_wgpuCommandEncoder;
@@ -597,9 +607,7 @@ private:
     MappedTextureCache    m_MappedTextures;
     DebugGroupStack       m_DebugGroupsStack;
     DebugGroupStack       m_PendingDebugGroups;
-
-    QueryManagerWebGPU* m_pQueryMgr            = nullptr;
-    Int32               m_ActiveQueriesCounter = 0;
+    OcclusionQueryStack   m_OcclusionQueriesStack;
 
     RefCntAutoPtr<IFence> m_pFence;
     Uint64                m_FenceValue = 0;

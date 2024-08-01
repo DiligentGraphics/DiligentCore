@@ -169,8 +169,6 @@ public:
                                                          RESOURCE_STATE    InitialState,
                                                          IBuffer**         ppBuffer) override final;
 
-    const WGPULimits& GetLimits() const { return m_wgpuLimits; }
-
 public:
     void CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                          IPipelineResourceSignature**         ppSignature,
@@ -195,6 +193,10 @@ public:
                        ISampler**         ppSampler,
                        bool               IsDeviceInternal);
 
+    const WGPULimits& GetLimits() const { return m_wgpuLimits; }
+
+    QueryManagerWebGPU& GetQueryManager() { return *m_pQueryManager; }
+
     Uint64 GetCommandQueueCount() const { return 1; }
 
     Uint64 GetCommandQueueMask() const { return 1; }
@@ -212,7 +214,7 @@ public:
         return *m_pDynamicMemoryManager;
     }
 
-    void PollEvents(bool YieldToWebBrowser);
+    void PollEvents();
 
 private:
     void TestTextureFormat(TEXTURE_FORMAT TexFormat) override;
@@ -230,8 +232,7 @@ private:
 
     AttachmentCleanerWebGPUPtr  m_pAttachmentCleaner;
     GenerateMipsHelperWebGPUPtr m_pMipsGenerator;
-
-    std::vector<QueryManagerWebGPUPtr> m_QueryMgrs;
+    QueryManagerWebGPUPtr       m_pQueryManager;
 };
 
 } // namespace Diligent

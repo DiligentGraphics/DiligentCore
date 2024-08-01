@@ -51,7 +51,7 @@ public:
     QueryManagerWebGPU& operator = (      QueryManagerWebGPU&&) = delete;
     // clang-format on
 
-    static constexpr Uint32 InvalidIndex = static_cast<Uint32>(-1);
+    static constexpr Uint32 InvalidIndex = UINT32_MAX;
 
     Uint32 AllocateQuery(QUERY_TYPE Type);
 
@@ -59,9 +59,34 @@ public:
 
     WGPUQuerySet GetQuerySet(QUERY_TYPE Type) const;
 
+    Uint32 GetReadbackBufferIdentifier(QUERY_TYPE Type, Uint64 EventValue) const;
+
+    Uint64 GetQueryResult(QUERY_TYPE Type, Uint32 Index, Uint32 BufferIdentifier) const;
+
+    Uint64 GetNextEventValue(QUERY_TYPE Type);
+
+    void ResolveQuerySet(RenderDeviceWebGPUImpl* pDevice, WGPUCommandEncoder wgpuCmdEncoder);
+
+    void ReadbackQuerySet(RenderDeviceWebGPUImpl* pDevice);
+
+    void FinishFrame(RenderDeviceWebGPUImpl* pDevice);
+
+    void WaitAllQuerySet(RenderDeviceWebGPUImpl* pDevice);
+
 private:
     class QuerySetInfo
     {
+    public:
+        struct ReadbackBufferInfo
+        {
+            WebGPUBufferWrapper ReadbackBuffer;
+            std::vector<Uint64> DataResult;
+            Uint32              BufferIdentifier;
+            Uint64              LastEventValue;
+            Uint64              PendingEventValue;
+        };
+        using ReadbackBufferList = std::vector<ReadbackBufferInfo>;
+
     public:
         QuerySetInfo() = default;
 
@@ -74,7 +99,7 @@ private:
         QuerySetInfo& operator = (      QuerySetInfo&&) = delete;
         // clang-format on
 
-        void Initialize(WGPUDevice wgpuDevice, const WGPUQuerySetDescriptor& wgpuQuerySetDesc, QUERY_TYPE Type);
+        void Initialize(RenderDeviceWebGPUImpl* pDevice, Uint32 HeapSize, QUERY_TYPE Type);
 
         Uint32 Allocate();
 
@@ -84,24 +109,45 @@ private:
 
         Uint32 GetQueryCount() const;
 
+        Uint64 GetQueryResult(Uint32 Index, Uint32 BufferIdentifier) const;
+
         WGPUQuerySet GetWebGPUQuerySet() const;
 
         Uint32 GetMaxAllocatedQueries() const;
 
         bool IsNull() const;
 
+        Uint32 ResolveQueries(RenderDeviceWebGPUImpl* pDevice, WGPUCommandEncoder wgpuCmdEncoder);
+
+        void ReadbackQueries(RenderDeviceWebGPUImpl* pDevice, Uint32 PendingRedbackIndex);
+
+        void WaitAllQueries(RenderDeviceWebGPUImpl* pDevice, Uint32 PendingRedbackIndex);
+
+        ReadbackBufferInfo& FindAvailableReadbackBuffer(RenderDeviceWebGPUImpl* pDevice);
+
+        Uint32 GetReadbackBufferIdentifier(Uint64 EventValue) const;
+
+        Uint64 GetNextEventValue();
+
+        Uint64 IncrementEventValue();
+
     private:
         WebGPUQuerySetWrapper m_wgpuQuerySet;
         WebGPUBufferWrapper   m_wgpuResolveBuffer;
-        WebGPUBufferWrapper   m_wgpuStagingBuffer;
         std::vector<Uint32>   m_AvailableQueries;
+        ReadbackBufferList    m_PendingReadbackBuffers;
 
         QUERY_TYPE m_Type                = QUERY_TYPE_UNDEFINED;
         Uint32     m_QueryCount          = 0;
         Uint32     m_MaxAllocatedQueries = 0;
+        Uint64     m_EventValue          = 0;
+
+        static constexpr Uint32 MaxPendingBuffers = 16;
     };
 
     std::array<QuerySetInfo, QUERY_TYPE_NUM_TYPES> m_QuerySets;
+    std::array<Uint32, QUERY_TYPE_NUM_TYPES>       m_PendingReadbackIndices;
+    Uint32                                         m_ActiveQuerySets = 0;
 };
 
 } // namespace Diligent

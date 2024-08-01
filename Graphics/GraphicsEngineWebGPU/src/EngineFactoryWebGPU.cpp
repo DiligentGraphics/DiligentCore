@@ -103,6 +103,30 @@ void InstancePoolEvents(WGPUInstance wgpuInstance)
 #endif
 }
 
+WebGPUInstanceWrapper InitializeWebGPUInstance(bool EnableUnsafe)
+{
+    // Not implemented in Emscripten https://github.com/emscripten-core/emscripten/blob/217010a223375e6e9251669187d406ef2ddf266e/system/lib/webgpu/webgpu.cpp#L24
+#if PLATFORM_EMSCRIPTEN
+    WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(nullptr)};
+#else
+    const char* ToggleNames[] = {
+        "allow_unsafe_apis"};
+
+    WGPUDawnTogglesDescriptor wgpuDawnTogglesDesc = {};
+    wgpuDawnTogglesDesc.chain.sType               = WGPUSType_DawnTogglesDescriptor;
+    wgpuDawnTogglesDesc.enabledToggleCount        = _countof(ToggleNames);
+    wgpuDawnTogglesDesc.enabledToggles            = ToggleNames;
+
+    WGPUInstanceDescriptor wgpuInstanceDesc = {};
+    if (EnableUnsafe)
+        wgpuInstanceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuDawnTogglesDesc);
+    WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(&wgpuInstanceDesc)};
+#endif
+    if (!wgpuInstance)
+        LOG_ERROR_AND_THROW("Failed to create WebGPU instance");
+    return wgpuInstance;
+}
+
 std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstance, Version MinVersion)
 {
     std::vector<WebGPUAdapterWrapper> wgpuAdapters;
@@ -171,6 +195,10 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
         if (EngineCI.Features.TimestampQueries && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TimestampQuery))
             Features.push_back(WGPUFeatureName_TimestampQuery);
 
+        //  WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses = 0x000003EE,
+        if (EngineCI.Features.TimestampQueries && wgpuAdapterHasFeature(wgpuAdapter, static_cast<WGPUFeatureName>(0x000003EE)))
+            Features.push_back(static_cast<WGPUFeatureName>(0x000003EE));
+
         if (EngineCI.Features.TextureCompressionBC && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureCompressionBC))
             Features.push_back(WGPUFeatureName_TextureCompressionBC);
 
@@ -222,12 +250,26 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
             LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
     };
 
-    WGPURequiredLimits   RequiredLimits{nullptr, SupportedLimits.limits};
+#if !PLATFORM_EMSCRIPTEN
+    const char* ToggleNames[] = {
+        "disable_timestamp_query_conversion"};
+
+    WGPUDawnTogglesDescriptor wgpuDawnTogglesDesc = {};
+    wgpuDawnTogglesDesc.chain.sType               = WGPUSType_DawnTogglesDescriptor;
+    wgpuDawnTogglesDesc.enabledToggleCount        = _countof(ToggleNames);
+    wgpuDawnTogglesDesc.enabledToggles            = ToggleNames;
+#endif
+
+    WGPURequiredLimits RequiredLimits{nullptr, SupportedLimits.limits};
+
     WGPUDeviceDescriptor DeviceDesc{};
     DeviceDesc.requiredLimits       = &RequiredLimits;
     DeviceDesc.requiredFeatureCount = Features.size();
     DeviceDesc.requiredFeatures     = Features.data();
     DeviceDesc.deviceLostCallback   = DeviceLostCallback;
+#if !PLATFORM_EMSCRIPTEN
+    DeviceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuDawnTogglesDesc);
+#endif
     wgpuAdapterRequestDevice(wgpuAdapter, &DeviceDesc, OnDeviceRequestEnded, &UserData);
 
     while (!UserData.IsReady)
@@ -285,8 +327,6 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         Features.ShaderResourceQueries     = DEVICE_FEATURE_STATE_ENABLED;
         Features.ComputeShaders            = DEVICE_FEATURE_STATE_ENABLED;
         Features.OcclusionQueries          = DEVICE_FEATURE_STATE_ENABLED;
-        Features.BinaryOcclusionQueries    = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DurationQueries           = DEVICE_FEATURE_STATE_ENABLED;
         Features.DepthBiasClamp            = DEVICE_FEATURE_STATE_ENABLED;
         Features.IndependentBlend          = DEVICE_FEATURE_STATE_ENABLED;
         Features.DualSourceBlend           = DEVICE_FEATURE_STATE_ENABLED;
@@ -311,6 +351,13 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
 
         if (CheckWebGPUFeature(WGPUFeatureName_ShaderF16))
             Features.ShaderFloat16 = DEVICE_FEATURE_STATE_ENABLED;
+
+        //  WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses = 0x000003EE,
+        if (CheckWebGPUFeature(WGPUFeatureName_TimestampQuery) && CheckWebGPUFeature(static_cast<WGPUFeatureName>(0x000003EE)))
+        {
+            Features.TimestampQueries = DEVICE_FEATURE_STATE_ENABLED;
+            Features.DurationQueries  = DEVICE_FEATURE_STATE_ENABLED;
+        }
     }
 
     ASSERT_SIZEOF(DeviceFeatures, 46, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
@@ -407,17 +454,9 @@ void EngineFactoryWebGPUImpl::EnumerateAdapters(Version              MinVersion,
                                                 Uint32&              NumAdapters,
                                                 GraphicsAdapterInfo* Adapters) const
 {
-    // Not implemented in Emscripten https://github.com/emscripten-core/emscripten/blob/217010a223375e6e9251669187d406ef2ddf266e/system/lib/webgpu/webgpu.cpp#L24
-#if PLATFORM_EMSCRIPTEN
-    WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(nullptr)};
-#else
-    WGPUInstanceDescriptor wgpuInstanceDesc = {};
-    WebGPUInstanceWrapper  wgpuInstance{wgpuCreateInstance(&wgpuInstanceDesc)};
-#endif
-    if (!wgpuInstance)
-        LOG_ERROR_AND_THROW("Failed to create WebGPU instance");
-
+    auto wgpuInstance = InitializeWebGPUInstance(true);
     auto wgpuAdapters = FindCompatibleAdapters(wgpuInstance.Get(), MinVersion);
+
     if (Adapters == nullptr)
         NumAdapters = static_cast<Uint32>(wgpuAdapters.size());
     else
@@ -450,29 +489,20 @@ void EngineFactoryWebGPUImpl::CreateDeviceAndContextsWebGPU(const EngineWebGPUCr
 
     try
     {
-        // Not implemented in Emscripten https://github.com/emscripten-core/emscripten/blob/217010a223375e6e9251669187d406ef2ddf266e/system/lib/webgpu/webgpu.cpp#L24
-#if PLATFORM_EMSCRIPTEN
-        WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(nullptr)};
-#else
-        WGPUInstanceDescriptor wgpuInstanceDesc = {};
-        WebGPUInstanceWrapper  wgpuInstance{wgpuCreateInstance(&wgpuInstanceDesc)};
-#endif
-        if (!wgpuInstance)
-            LOG_ERROR_AND_THROW("Failed to create WebGPU instance");
-
-        auto Adapters = FindCompatibleAdapters(wgpuInstance.Get(), EngineCI.GraphicsAPIVersion);
+        auto wgpuInstance = InitializeWebGPUInstance(true);
+        auto wgpuAdapters = FindCompatibleAdapters(wgpuInstance.Get(), EngineCI.GraphicsAPIVersion);
 
         WebGPUAdapterWrapper SpecificAdapter{};
         if (EngineCI.AdapterId != DEFAULT_ADAPTER_ID)
         {
-            if (EngineCI.AdapterId < Adapters.size())
-                SpecificAdapter = std::move(Adapters[EngineCI.AdapterId]);
+            if (EngineCI.AdapterId < wgpuAdapters.size())
+                SpecificAdapter = std::move(wgpuAdapters[EngineCI.AdapterId]);
             else
-                LOG_ERROR_AND_THROW(EngineCI.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
+                LOG_ERROR_AND_THROW(EngineCI.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", wgpuAdapters.size());
         }
         else
         {
-            SpecificAdapter = std::move(Adapters[0]);
+            SpecificAdapter = std::move(wgpuAdapters[0]);
         }
 
         WebGPUDeviceWrapper Device = CreateDeviceForAdapter(EngineCI, wgpuInstance.Get(), SpecificAdapter.Get());

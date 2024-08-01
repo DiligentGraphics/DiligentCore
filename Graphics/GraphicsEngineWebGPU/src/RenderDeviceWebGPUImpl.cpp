@@ -108,6 +108,7 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
     m_pDynamicMemoryManager.reset(new DynamicMemoryManagerWebGPU(m_wgpuDevice, EngineCI.DynamicHeapPageSize, EngineCI.DynamicHeapSize));
     m_pAttachmentCleaner.reset(new AttachmentCleanerWebGPU{*this});
     m_pMipsGenerator.reset(new GenerateMipsHelperWebGPU{*this});
+    m_pQueryManager.reset(new QueryManagerWebGPU{this, EngineCI.QueryPoolSizes});
 
     m_DeviceInfo.NDC = NDCAttribs{0.0f, 1.0f, -0.5f};
 
@@ -347,10 +348,9 @@ DynamicMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetDynamicMemoryPage(Ui
     return m_pDynamicMemoryManager->GetPage(Size);
 }
 
-void RenderDeviceWebGPUImpl::PollEvents(bool YieldToWebBrowser)
+void RenderDeviceWebGPUImpl::PollEvents()
 {
 #if !PLATFORM_EMSCRIPTEN
-    (void)YieldToWebBrowser;
     wgpuDeviceTick(m_wgpuDevice);
 #endif
 }

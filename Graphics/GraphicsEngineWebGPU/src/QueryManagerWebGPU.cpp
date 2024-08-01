@@ -32,33 +32,6 @@
 namespace Diligent
 {
 
-namespace
-{
-
-static Uint32 GetQueryDataSize(QUERY_TYPE QueryType)
-{
-    static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are tested");
-
-    // clang-format off
-    switch (QueryType)
-    {
-        case QUERY_TYPE_OCCLUSION:
-        case QUERY_TYPE_BINARY_OCCLUSION:
-        case QUERY_TYPE_TIMESTAMP:
-        case QUERY_TYPE_DURATION:
-            return sizeof(Uint64);
-        case QUERY_TYPE_PIPELINE_STATISTICS:
-            UNEXPECTED("Pipeline statistics queries aren't supported in WebGPU");
-            return 0;
-        default:
-            UNEXPECTED("Unexpected query type");
-            return 0;
-    }
-    // clang-format on
-}
-
-} // namespace
-
 QueryManagerWebGPU::QueryManagerWebGPU(RenderDeviceWebGPUImpl* pRenderDeviceWebGPU, const Uint32 QueryHeapSizes[])
 {
     const auto& DevInfo = pRenderDeviceWebGPU->GetDeviceInfo();
@@ -74,6 +47,8 @@ QueryManagerWebGPU::QueryManagerWebGPU(RenderDeviceWebGPUImpl* pRenderDeviceWebG
 
     for (Uint32 QueryTypeIdx = QUERY_TYPE_UNDEFINED + 1; QueryTypeIdx < QUERY_TYPE_NUM_TYPES; ++QueryTypeIdx)
     {
+        m_PendingReadbackIndices[QueryTypeIdx] = QueryManagerWebGPU::InvalidIndex;
+
         const auto QueryType = static_cast<QUERY_TYPE>(QueryTypeIdx);
 
         // clang-format off
@@ -85,19 +60,9 @@ QueryManagerWebGPU::QueryManagerWebGPU(RenderDeviceWebGPUImpl* pRenderDeviceWebG
             continue;
         // clang-format on
 
-        String QuerySetName = String{"QueryManagerWebGPU: Query set ["} + GetQueryTypeString(QueryType) + "]";
-
-        WGPUQuerySetDescriptor wgpuQuerySetDesc{};
-        wgpuQuerySetDesc.type  = QueryTypeToWGPUQueryType(QueryType);
-        wgpuQuerySetDesc.count = QueryHeapSizes[QueryType];
-        wgpuQuerySetDesc.label = QuerySetName.c_str();
-
-        if (QueryType == QUERY_TYPE_DURATION)
-            wgpuQuerySetDesc.count *= 2;
-
         auto& QuerySetInfo = m_QuerySets[QueryType];
-        QuerySetInfo.Initialize(pRenderDeviceWebGPU->GetWebGPUDevice(), wgpuQuerySetDesc, QueryType);
-        VERIFY_EXPR(!QuerySetInfo.IsNull() && QuerySetInfo.GetQueryCount() == wgpuQuerySetDesc.count && QuerySetInfo.GetType() == QueryType);
+        QuerySetInfo.Initialize(pRenderDeviceWebGPU, QueryHeapSizes[QueryType], QueryType);
+        VERIFY_EXPR(!QuerySetInfo.IsNull() && QuerySetInfo.GetType() == QueryType);
     }
 }
 
@@ -134,6 +99,65 @@ WGPUQuerySet QueryManagerWebGPU::GetQuerySet(QUERY_TYPE Type) const
     return m_QuerySets[Type].GetWebGPUQuerySet();
 }
 
+Uint32 QueryManagerWebGPU::GetReadbackBufferIdentifier(QUERY_TYPE Type, Uint64 EventValue) const
+{
+    return m_QuerySets[Type].GetReadbackBufferIdentifier(EventValue);
+}
+
+Uint64 QueryManagerWebGPU::GetQueryResult(QUERY_TYPE Type, Uint32 Index, Uint32 BufferIdentifier) const
+{
+    return m_QuerySets[Type].GetQueryResult(Index, BufferIdentifier);
+}
+
+Uint64 QueryManagerWebGPU::GetNextEventValue(QUERY_TYPE Type)
+{
+    return m_QuerySets[Type].GetNextEventValue();
+}
+
+void QueryManagerWebGPU::ResolveQuerySet(RenderDeviceWebGPUImpl* pDevice, WGPUCommandEncoder wgpuCmdEncoder)
+{
+    for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
+    {
+        auto& QuerySetInfo                  = m_QuerySets[QueryType];
+        m_PendingReadbackIndices[QueryType] = QuerySetInfo.ResolveQueries(pDevice, wgpuCmdEncoder);
+    }
+}
+
+void QueryManagerWebGPU::ReadbackQuerySet(RenderDeviceWebGPUImpl* pDevice)
+{
+    for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
+    {
+        auto& QuerySetInfo     = m_QuerySets[QueryType];
+        auto  RedbackBufferIdx = m_PendingReadbackIndices[QueryType];
+        if (RedbackBufferIdx != QueryManagerWebGPU::InvalidIndex)
+        {
+            QuerySetInfo.ReadbackQueries(pDevice, RedbackBufferIdx);
+            QuerySetInfo.IncrementEventValue();
+            m_ActiveQuerySets++;
+        }
+    }
+}
+
+void QueryManagerWebGPU::FinishFrame(RenderDeviceWebGPUImpl* pDevice)
+{
+    if (m_ActiveQuerySets > 0)
+    {
+        pDevice->PollEvents();
+        m_ActiveQuerySets = 0;
+    }
+}
+
+void QueryManagerWebGPU::WaitAllQuerySet(RenderDeviceWebGPUImpl* pDevice)
+{
+    for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
+    {
+        auto& QuerySetInfo     = m_QuerySets[QueryType];
+        auto  RedbackBufferIdx = m_PendingReadbackIndices[QueryType];
+        if (RedbackBufferIdx != QueryManagerWebGPU::InvalidIndex)
+            QuerySetInfo.WaitAllQueries(pDevice, RedbackBufferIdx);
+    }
+}
+
 QueryManagerWebGPU::QuerySetInfo::~QuerySetInfo()
 {
     if (m_AvailableQueries.size() != m_QueryCount)
@@ -152,27 +176,38 @@ QueryManagerWebGPU::QuerySetInfo::~QuerySetInfo()
     }
 }
 
-void QueryManagerWebGPU::QuerySetInfo::Initialize(WGPUDevice wgpuDevice, const WGPUQuerySetDescriptor& wgpuQuerySetDesc, QUERY_TYPE Type)
+void QueryManagerWebGPU::QuerySetInfo::Initialize(RenderDeviceWebGPUImpl* pDevice, Uint32 HeapSize, QUERY_TYPE QueryType)
 {
-    m_Type       = Type;
+    String QuerySetName = String{"QueryManagerWebGPU: Query set ["} + GetQueryTypeString(QueryType) + "]";
+
+    WGPUQuerySetDescriptor wgpuQuerySetDesc{};
+    wgpuQuerySetDesc.type  = QueryTypeToWGPUQueryType(QueryType);
+    wgpuQuerySetDesc.count = HeapSize;
+    wgpuQuerySetDesc.label = QuerySetName.c_str();
+
+    if (QueryType == QUERY_TYPE_DURATION)
+        wgpuQuerySetDesc.count *= 2;
+
+    m_Type       = QueryType;
     m_QueryCount = wgpuQuerySetDesc.count;
-    m_wgpuQuerySet.Reset(wgpuDeviceCreateQuerySet(wgpuDevice, &wgpuQuerySetDesc));
+    m_wgpuQuerySet.Reset(wgpuDeviceCreateQuerySet(pDevice->GetWebGPUDevice(), &wgpuQuerySetDesc));
     if (!m_wgpuQuerySet)
         LOG_ERROR_AND_THROW("Failed to create '", wgpuQuerySetDesc.label, "'");
 
+    String QueryResolveBufferName = String{"QueryManagerWebGPU: Query resolve buffer ["} + GetQueryTypeString(QueryType) + "]";
+
     WGPUBufferDescriptor wgpuResolveBufferDesc{};
     wgpuResolveBufferDesc.usage = WGPUBufferUsage_QueryResolve | WGPUBufferUsage_CopySrc;
-    wgpuResolveBufferDesc.size  = GetQueryDataSize(Type);
-    m_wgpuResolveBuffer.Reset(wgpuDeviceCreateBuffer(wgpuDevice, &wgpuResolveBufferDesc));
+    wgpuResolveBufferDesc.size  = static_cast<Uint64>(m_QueryCount) * sizeof(Uint64);
+    wgpuResolveBufferDesc.label = QueryResolveBufferName.c_str();
+    m_wgpuResolveBuffer.Reset(wgpuDeviceCreateBuffer(pDevice->GetWebGPUDevice(), &wgpuResolveBufferDesc));
     if (!m_wgpuResolveBuffer)
         LOG_ERROR_AND_THROW("Failed to create resolve buffer for '", wgpuQuerySetDesc.label, "'");
 
-    WGPUBufferDescriptor wgpuStagingBufferDesc{};
-    wgpuStagingBufferDesc.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
-    wgpuStagingBufferDesc.size  = GetQueryDataSize(Type);
-    m_wgpuStagingBuffer.Reset(wgpuDeviceCreateBuffer(wgpuDevice, &wgpuStagingBufferDesc));
-    if (!m_wgpuResolveBuffer)
-        LOG_ERROR_AND_THROW("Failed to create staging buffer for '", wgpuQuerySetDesc.label, "'");
+    m_PendingReadbackBuffers.reserve(MaxPendingBuffers);
+    m_AvailableQueries.resize(m_QueryCount);
+    for (Uint32 QueryIdx = 0; QueryIdx < m_QueryCount; ++QueryIdx)
+        m_AvailableQueries[QueryIdx] = QueryIdx;
 }
 
 Uint32 QueryManagerWebGPU::QuerySetInfo::Allocate()
@@ -206,6 +241,11 @@ Uint32 QueryManagerWebGPU::QuerySetInfo::GetQueryCount() const
     return m_QueryCount;
 }
 
+Uint64 QueryManagerWebGPU::QuerySetInfo::GetQueryResult(Uint32 Index, Uint32 BufferIdentifier) const
+{
+    return m_PendingReadbackBuffers[BufferIdentifier].DataResult[Index];
+}
+
 WGPUQuerySet QueryManagerWebGPU::QuerySetInfo::GetWebGPUQuerySet() const
 {
     return m_wgpuQuerySet.Get();
@@ -219,6 +259,101 @@ Uint32 QueryManagerWebGPU::QuerySetInfo::GetMaxAllocatedQueries() const
 bool QueryManagerWebGPU::QuerySetInfo::IsNull() const
 {
     return m_wgpuQuerySet.Get() == nullptr;
+}
+
+Uint32 QueryManagerWebGPU::QuerySetInfo::ResolveQueries(RenderDeviceWebGPUImpl* pDevice, WGPUCommandEncoder wgpuCmdEncoder)
+{
+    if (m_AvailableQueries.size() != m_QueryCount && !IsNull())
+    {
+        auto& ReadbackBuffer = FindAvailableReadbackBuffer(pDevice);
+        wgpuCommandEncoderResolveQuerySet(wgpuCmdEncoder, m_wgpuQuerySet, 0, m_QueryCount, m_wgpuResolveBuffer, 0);
+        wgpuCommandEncoderCopyBufferToBuffer(wgpuCmdEncoder, m_wgpuResolveBuffer, 0, ReadbackBuffer.ReadbackBuffer, 0, m_QueryCount * sizeof(Uint64));
+        return ReadbackBuffer.BufferIdentifier;
+    }
+    return QueryManagerWebGPU::InvalidIndex;
+}
+
+void QueryManagerWebGPU::QuerySetInfo::ReadbackQueries(RenderDeviceWebGPUImpl* pDevice, Uint32 PendingRedbackIndex)
+{
+    auto* pReadbackInfo = &m_PendingReadbackBuffers[PendingRedbackIndex];
+
+    auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
+        if (MapStatus != WGPUBufferMapAsyncStatus_Success && MapStatus != WGPUBufferMapAsyncStatus_DestroyedBeforeCallback)
+            DEV_ERROR("Failed wgpuBufferMapAsync: ", MapStatus);
+
+        if (MapStatus == WGPUBufferMapAsyncStatus_Success && pUserData != nullptr)
+        {
+            auto* pReadBackInfo = static_cast<QuerySetInfo::ReadbackBufferInfo*>(pUserData);
+
+            const auto* pData = static_cast<const uint64_t*>(wgpuBufferGetConstMappedRange(pReadBackInfo->ReadbackBuffer, 0, WGPU_WHOLE_MAP_SIZE));
+            VERIFY_EXPR(pData != nullptr);
+            pReadBackInfo->DataResult.assign(pData, pData + pReadBackInfo->DataResult.size());
+            pReadBackInfo->LastEventValue = pReadBackInfo->PendingEventValue;
+            wgpuBufferUnmap(pReadBackInfo->ReadbackBuffer);
+        }
+    };
+
+    pReadbackInfo->PendingEventValue = GetNextEventValue();
+    wgpuBufferMapAsync(pReadbackInfo->ReadbackBuffer, WGPUMapMode_Read, 0, WGPU_WHOLE_MAP_SIZE, MapAsyncCallback, pReadbackInfo);
+}
+
+void QueryManagerWebGPU::QuerySetInfo::WaitAllQueries(RenderDeviceWebGPUImpl* pDevice, Uint32 PendingRedbackIndex)
+{
+    const auto& ReabackBufferInfo = m_PendingReadbackBuffers[PendingRedbackIndex];
+    while (ReabackBufferInfo.PendingEventValue != ReabackBufferInfo.LastEventValue)
+        pDevice->PollEvents();
+}
+
+QueryManagerWebGPU::QuerySetInfo::ReadbackBufferInfo& QueryManagerWebGPU::QuerySetInfo::FindAvailableReadbackBuffer(RenderDeviceWebGPUImpl* pDevice)
+{
+    for (auto& ReadbackBuffer : m_PendingReadbackBuffers)
+    {
+        WGPUBufferMapState MapState = wgpuBufferGetMapState(ReadbackBuffer.ReadbackBuffer.Get());
+        if (MapState == WGPUBufferMapState_Unmapped && ReadbackBuffer.PendingEventValue == ReadbackBuffer.LastEventValue)
+            return ReadbackBuffer;
+    }
+
+    String QueryReadbackBufferName = String{"QueryManagerWebGPU: Query readback buffer ["} + GetQueryTypeString(m_Type) + "]";
+
+    ReadbackBufferInfo Result{};
+
+    WGPUBufferDescriptor wgpuReadbackBufferDesc{};
+    wgpuReadbackBufferDesc.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
+    wgpuReadbackBufferDesc.size  = m_QueryCount * sizeof(Uint64);
+    wgpuReadbackBufferDesc.label = QueryReadbackBufferName.c_str();
+
+    Result.ReadbackBuffer.Reset(wgpuDeviceCreateBuffer(pDevice->GetWebGPUDevice(), &wgpuReadbackBufferDesc));
+    Result.DataResult.resize(m_QueryCount);
+    Result.BufferIdentifier  = static_cast<Uint32>(m_PendingReadbackBuffers.size());
+    Result.LastEventValue    = 0;
+    Result.PendingEventValue = 0;
+
+    if (!Result.ReadbackBuffer)
+        LOG_ERROR_AND_THROW("Failed to create readback buffer '", wgpuReadbackBufferDesc.label, "'");
+
+    m_PendingReadbackBuffers.emplace_back(std::move(Result));
+    VERIFY_EXPR(m_PendingReadbackBuffers.capacity() <= MaxPendingBuffers);
+    return m_PendingReadbackBuffers.back();
+}
+
+Uint32 QueryManagerWebGPU::QuerySetInfo::GetReadbackBufferIdentifier(Uint64 EventValue) const
+{
+    for (const auto& ReadbackBuffer : m_PendingReadbackBuffers)
+        if (ReadbackBuffer.LastEventValue >= EventValue)
+            return ReadbackBuffer.BufferIdentifier;
+    return QueryManagerWebGPU::InvalidIndex;
+}
+
+Uint64 QueryManagerWebGPU::QuerySetInfo::GetNextEventValue()
+{
+    return m_EventValue + 1;
+}
+
+Uint64 QueryManagerWebGPU::QuerySetInfo::IncrementEventValue()
+{
+    Uint64 LastEventValue = m_EventValue;
+    m_EventValue++;
+    return LastEventValue;
 }
 
 } // namespace Diligent

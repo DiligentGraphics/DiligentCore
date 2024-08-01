@@ -53,12 +53,18 @@ QueryWebGPUImpl::~QueryWebGPUImpl()
 bool QueryWebGPUImpl::AllocateQueries()
 {
     ReleaseQueries();
+
+    VERIFY_EXPR(m_pQueryMgr == nullptr);
     VERIFY_EXPR(m_pContext != nullptr);
     m_pQueryMgr = &m_pContext->GetQueryManager();
-    for (Uint32 i = 0; i < (m_Desc.Type == QUERY_TYPE_DURATION ? Uint32{2} : Uint32{1}); ++i)
+    VERIFY_EXPR(m_pQueryMgr != nullptr);
+    for (Uint32 Index = 0; Index < (m_Desc.Type == QUERY_TYPE_DURATION ? Uint32{2} : Uint32{1}); ++Index)
     {
-        m_QuerySetIndex[i] = m_pQueryMgr->AllocateQuery(m_Desc.Type);
-        if (m_QuerySetIndex[i] == QueryManagerWebGPU::InvalidIndex)
+        auto& QuerySetIdx = m_QuerySetIndices[Index];
+        VERIFY_EXPR(QuerySetIdx == QueryManagerWebGPU::InvalidIndex);
+        QuerySetIdx = m_pQueryMgr->AllocateQuery(m_Desc.Type);
+
+        if (QuerySetIdx == QueryManagerWebGPU::InvalidIndex)
         {
             LOG_ERROR_MESSAGE("Failed to allocate WebGPU query for type ", GetQueryTypeString(m_Desc.Type),
                               ". Increase the query pool size in EngineWebGPUCreateInfo.");
@@ -71,12 +77,13 @@ bool QueryWebGPUImpl::AllocateQueries()
 
 void QueryWebGPUImpl::ReleaseQueries()
 {
-    for (const auto& SetIdx : m_QuerySetIndex)
+    for (auto& QuerySetIdx : m_QuerySetIndices)
     {
-        if (SetIdx != QueryManagerWebGPU::InvalidIndex)
+        if (QuerySetIdx != QueryManagerWebGPU::InvalidIndex)
         {
             VERIFY_EXPR(m_pQueryMgr != nullptr);
-            m_pQueryMgr->ReleaseQuery(m_Desc.Type, SetIdx);
+            m_pQueryMgr->ReleaseQuery(m_Desc.Type, QuerySetIdx);
+            QuerySetIdx = QueryManagerWebGPU::InvalidIndex;
         }
     }
     m_pQueryMgr = nullptr;
@@ -84,13 +91,72 @@ void QueryWebGPUImpl::ReleaseQueries()
 
 bool QueryWebGPUImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
-    return false;
+    TQueryBase::CheckQueryDataPtr(pData, DataSize);
+    DEV_CHECK_ERR(m_pQueryMgr != nullptr, "Requesting data from query that has not been ended or has been invalidated");
+
+    const Uint32 BufferIdx = m_pQueryMgr->GetReadbackBufferIdentifier(m_Desc.Type, m_QueryEventValue);
+    if (BufferIdx != QueryManagerWebGPU::InvalidIndex)
+    {
+        switch (m_Desc.Type)
+        {
+            case QUERY_TYPE_TIMESTAMP:
+            {
+                const auto Timestamp = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0], BufferIdx);
+                if (pData != nullptr)
+                {
+                    auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                    QueryData.Counter   = Timestamp;
+                    QueryData.Frequency = 1000000000u; // Nanoseconds to seconds
+                }
+                break;
+            }
+            case QUERY_TYPE_DURATION:
+            {
+                const auto T0 = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0], BufferIdx);
+                const auto T1 = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[1], BufferIdx);
+                if (pData != nullptr)
+                {
+                    auto& QueryData     = *reinterpret_cast<QueryDataDuration*>(pData);
+                    QueryData.Duration  = T1 - T0;
+                    QueryData.Frequency = 1000000000u; // Nanoseconds to seconds
+                }
+                break;
+            }
+            case QUERY_TYPE_OCCLUSION:
+            {
+                const auto NumSamples = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0], BufferIdx);
+                if (pData != nullptr)
+                {
+                    auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
+                    QueryData.NumSamples = NumSamples;
+                }
+                break;
+            }
+            default:
+                UNEXPECTED("Unexpected query type");
+        }
+
+        if (pData != nullptr && AutoInvalidate)
+            Invalidate();
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 void QueryWebGPUImpl::Invalidate()
 {
     ReleaseQueries();
     TQueryBase::Invalidate();
+}
+
+Uint32 QueryWebGPUImpl::GetIndexInsideQuerySet(Uint32 QueryId) const
+{
+    VERIFY_EXPR(QueryId == 0 || m_Desc.Type == QUERY_TYPE_DURATION && QueryId == 1);
+    return m_QuerySetIndices[QueryId];
 }
 
 bool QueryWebGPUImpl::OnBeginQuery(DeviceContextWebGPUImpl* pContext)
@@ -109,13 +175,14 @@ bool QueryWebGPUImpl::OnEndQuery(DeviceContextWebGPUImpl* pContext)
             return false;
     }
 
-    if (m_QuerySetIndex[0] == QueryManagerWebGPU::InvalidIndex || (m_Desc.Type == QUERY_TYPE_DURATION && m_QuerySetIndex[1] == QueryManagerWebGPU::InvalidIndex))
+    if (m_QuerySetIndices[0] == QueryManagerWebGPU::InvalidIndex || (m_Desc.Type == QUERY_TYPE_DURATION && m_QuerySetIndices[1] == QueryManagerWebGPU::InvalidIndex))
     {
         LOG_ERROR_MESSAGE("Query '", m_Desc.Name, "' is invalid: WebGPU query allocation failed");
         return false;
     }
 
     VERIFY_EXPR(m_pQueryMgr != nullptr);
+    m_QueryEventValue = m_pQueryMgr->GetNextEventValue(m_Desc.Type);
 
     return true;
 }

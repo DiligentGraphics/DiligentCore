@@ -55,7 +55,7 @@ void FenceWebGPUImpl::Signal(Uint64 Value)
 void FenceWebGPUImpl::Wait(Uint64 Value)
 {
     while (GetCompletedValue() < Value)
-        m_pDevice->PollEvents(true);
+        m_pDevice->PollEvents();
 }
 
 void FenceWebGPUImpl::SetCompletedValue(Uint64 Value)

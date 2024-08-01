@@ -125,8 +125,6 @@ DeviceContextWebGPUImpl::DeviceContextWebGPUImpl(IReferenceCounters*           p
 // clang-format on
 {
     m_wgpuQueue.Reset(wgpuDeviceGetQueue(pDevice->GetWebGPUDevice()));
-    (void)m_ActiveQueriesCounter;
-
     pDevice->CreateFence({}, &m_pFence);
 }
 
@@ -1217,26 +1215,105 @@ void DeviceContextWebGPUImpl::WaitForIdle()
     EnqueueSignal(m_pFence, m_FenceValue);
     Flush();
     m_pFence->Wait(m_FenceValue);
+    GetQueryManager().WaitAllQuerySet(m_pDevice);
 }
 
 void DeviceContextWebGPUImpl::BeginQuery(IQuery* pQuery)
 {
+    VERIFY(!(m_wgpuRenderPassEncoder && m_wgpuComputePassEncoder), "Another command encoder is currently active");
     TDeviceContextBase::BeginQuery(pQuery, 0);
 
-    // auto* pQueryWebGPUImpl = ClassPtrCast<QueryWebGPUImpl>(pQuery);
-    // auto  QueryType        = pQueryWebGPUImpl->GetDesc().Type;
+    auto* pQueryWebGPUImpl = ClassPtrCast<QueryWebGPUImpl>(pQuery);
+    auto  QueryType        = pQueryWebGPUImpl->GetDesc().Type;
+    auto  wgpuQuerySet     = GetQueryManager().GetQuerySet(QueryType);
+    auto  QuerySetIdx      = pQueryWebGPUImpl->GetIndexInsideQuerySet(0);
 
-    //TODO
+    VERIFY(wgpuQuerySet != nullptr, "Query set is not initialized for query type");
+
+    if (QueryType == QUERY_TYPE_TIMESTAMP)
+    {
+        LOG_ERROR_MESSAGE("BeginQuery() is disabled for timestamp queries");
+    }
+    else if (QueryType == QUERY_TYPE_DURATION)
+    {
+        if (m_wgpuRenderPassEncoder)
+            wgpuRenderPassEncoderWriteTimestamp(GetRenderPassCommandEncoder(), wgpuQuerySet, QuerySetIdx);
+        else if (m_wgpuComputePassEncoder)
+            wgpuComputePassEncoderWriteTimestamp(GetComputePassCommandEncoder(), wgpuQuerySet, QuerySetIdx);
+        else
+            wgpuCommandEncoderWriteTimestamp(GetCommandEncoder(), wgpuQuerySet, QuerySetIdx);
+    }
+    else if (QueryType == QUERY_TYPE_OCCLUSION)
+    {
+        if (m_OcclusionQueriesStack.size() > 1)
+        {
+            UNEXPECTED("WebGPU does not support nested occlusion queries");
+            return;
+        }
+
+        if (m_wgpuRenderPassEncoder)
+        {
+            wgpuRenderPassEncoderBeginOcclusionQuery(GetRenderPassCommandEncoder(), QuerySetIdx);
+            m_OcclusionQueriesStack.emplace_back(OCCLUSION_QUERY_TYPE_INNER, QuerySetIdx);
+        }
+        else
+        {
+            m_OcclusionQueriesStack.emplace_back(OCCLUSION_QUERY_TYPE_OUTER, QuerySetIdx);
+        }
+    }
+    else
+    {
+        UNEXPECTED("Unsupported query type");
+    }
 }
 
 void DeviceContextWebGPUImpl::EndQuery(IQuery* pQuery)
 {
+    VERIFY(!(m_wgpuRenderPassEncoder && m_wgpuComputePassEncoder), "Another command encoder is currently active");
     TDeviceContextBase::EndQuery(pQuery, 0);
 
-    // auto* pQueryWebGPUImpl = ClassPtrCast<QueryWebGPUImpl>(pQuery);
-    // auto  QueryType        = pQueryWebGPUImpl->GetDesc().Type;
+    auto* pQueryWebGPUImpl = ClassPtrCast<QueryWebGPUImpl>(pQuery);
+    auto  QueryType        = pQueryWebGPUImpl->GetDesc().Type;
+    auto  wgpuQuerySet     = GetQueryManager().GetQuerySet(QueryType);
+    auto  QuerySetIdx      = pQueryWebGPUImpl->GetIndexInsideQuerySet(QueryType == QUERY_TYPE_DURATION ? 1 : 0);
 
-    //TODO
+    VERIFY(wgpuQuerySet != nullptr, "Query set is not initialized for query type");
+
+    if (QueryType == QUERY_TYPE_TIMESTAMP || QueryType == QUERY_TYPE_DURATION)
+    {
+        if (m_wgpuRenderPassEncoder)
+            wgpuRenderPassEncoderWriteTimestamp(GetRenderPassCommandEncoder(), wgpuQuerySet, QuerySetIdx);
+        else if (m_wgpuComputePassEncoder)
+            wgpuComputePassEncoderWriteTimestamp(GetComputePassCommandEncoder(), wgpuQuerySet, QuerySetIdx);
+        else
+            wgpuCommandEncoderWriteTimestamp(GetCommandEncoder(), wgpuQuerySet, QuerySetIdx);
+    }
+    else if (QueryType == QUERY_TYPE_OCCLUSION)
+    {
+        if (m_OcclusionQueriesStack.empty())
+        {
+            UNEXPECTED("No matching BeginQuery() call found");
+            return;
+        }
+
+        auto OcclusionQueryItem = m_OcclusionQueriesStack.back();
+        m_OcclusionQueriesStack.pop_back();
+
+        if (OcclusionQueryItem.second != QuerySetIdx)
+        {
+            UNEXPECTED("Unexpected behavior");
+            return;
+        }
+
+        if (m_wgpuRenderPassEncoder)
+            wgpuRenderPassEncoderEndOcclusionQuery(GetRenderPassCommandEncoder());
+        else
+            UNEXPECTED("Unexpected behavior");
+    }
+    else
+    {
+        UNEXPECTED("Unsupported query type");
+    }
 }
 
 void DeviceContextWebGPUImpl::Flush()
@@ -1275,14 +1352,17 @@ void DeviceContextWebGPUImpl::Flush()
             }
         };
 
+        GetQueryManager().ResolveQuerySet(m_pDevice, GetCommandEncoder());
+
         WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
         WebGPUCommandBufferWrapper  wgpuCmdBuffer{wgpuCommandEncoderFinish(GetCommandEncoder(), &wgpuCmdBufferDesc)};
         DEV_CHECK_ERR(wgpuCmdBuffer != nullptr, "Failed to finish command encoder");
 
         wgpuQueueSubmit(m_wgpuQueue, 1, &wgpuCmdBuffer.Get());
         wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, this);
-
         m_wgpuCommandEncoder.Reset(nullptr);
+
+        GetQueryManager().ReadbackQuerySet(m_pDevice);
     }
 }
 
@@ -1379,6 +1459,7 @@ void DeviceContextWebGPUImpl::EndDebugGroup()
 
     DEBUG_GROUP_TYPE DebugGroupType = m_DebugGroupsStack.back();
     m_DebugGroupsStack.pop_back();
+
     if (m_wgpuRenderPassEncoder)
     {
         if (DebugGroupType == DEBUG_GROUP_TYPE_RENDER)
@@ -1396,17 +1477,9 @@ void DeviceContextWebGPUImpl::EndDebugGroup()
     else
     {
         if (DebugGroupType == DEBUG_GROUP_TYPE_OUTER)
-        {
             wgpuCommandEncoderPopDebugGroup(GetCommandEncoder());
-        }
-        else if (DebugGroupType == DEBUG_GROUP_TYPE_NULL)
-        {
-            // Nothing to do
-        }
-        else
-        {
+        else if (DebugGroupType != DEBUG_GROUP_TYPE_NULL)
             UNEXPECTED("Unexpected behavior");
-        }
     }
 }
 
@@ -1461,6 +1534,7 @@ void DeviceContextWebGPUImpl::FinishFrame()
         MemPage.Recycle();
     m_UploadMemPages.clear();
 
+    GetQueryManager().FinishFrame(m_pDevice);
     TDeviceContextBase::EndFrame();
 }
 
@@ -1737,9 +1811,15 @@ void DeviceContextWebGPUImpl::CommitRenderTargets()
         wgpuRenderPassDesc.depthStencilAttachment = &wgpuRenderPassDepthStencilAttachment;
     }
 
+    wgpuRenderPassDesc.occlusionQuerySet = GetQueryManager().GetQuerySet(QUERY_TYPE_OCCLUSION);
+
     m_wgpuRenderPassEncoder.Reset(wgpuCommandEncoderBeginRenderPass(GetCommandEncoder(), &wgpuRenderPassDesc));
     DEV_CHECK_ERR(m_wgpuRenderPassEncoder != nullptr, "Failed to begin render pass");
     m_PendingClears.ResetFlags();
+
+    // Occlusion query can't be nested
+    if (!m_OcclusionQueriesStack.empty() && (m_OcclusionQueriesStack.back().first == OCCLUSION_QUERY_TYPE_OUTER))
+        wgpuRenderPassEncoderBeginOcclusionQuery(GetRenderPassCommandEncoder(), m_OcclusionQueriesStack.back().second);
 }
 
 void DeviceContextWebGPUImpl::CommitSubpassRenderTargets()
@@ -2224,7 +2304,7 @@ DynamicMemoryManagerWebGPU::Allocation DeviceContextWebGPUImpl::AllocateDynamicM
 
 QueryManagerWebGPU& DeviceContextWebGPUImpl::GetQueryManager()
 {
-    return *m_pQueryMgr;
+    return m_pDevice->GetQueryManager();
 }
 
 } // namespace Diligent

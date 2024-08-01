@@ -4128,6 +4128,19 @@ struct EngineWebGPUCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     ///
     Uint32 DynamicHeapPageSize DEFAULT_INITIALIZER(256 << 10);
 
+    ///
+    Uint32 QueryPoolSizes[QUERY_TYPE_NUM_TYPES]
+#if DILIGENT_CPP_INTERFACE
+    {
+        0,   // Ignored
+        128, // QUERY_TYPE_OCCLUSION
+        0,   // QUERY_TYPE_BINARY_OCCLUSION
+        512, // QUERY_TYPE_TIMESTAMP
+        0,   // QUERY_TYPE_PIPELINE_STATISTICS
+        256  // QUERY_TYPE_DURATION
+    }
+#endif
+    ;
 
 #if DILIGENT_CPP_INTERFACE
     EngineWebGPUCreateInfo() noexcept :

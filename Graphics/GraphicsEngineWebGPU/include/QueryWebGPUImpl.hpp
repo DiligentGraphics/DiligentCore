@@ -56,6 +56,8 @@ public:
     /// Implementation of IQuery::Invalidate().
     void DILIGENT_CALL_TYPE Invalidate() override final;
 
+    Uint32 GetIndexInsideQuerySet(Uint32 QueryId) const;
+
     bool OnBeginQuery(DeviceContextWebGPUImpl* pContext);
 
     bool OnEndQuery(DeviceContextWebGPUImpl* pContext);
@@ -66,8 +68,9 @@ private:
     void ReleaseQueries();
 
 private:
-    std::array<Uint32, 2> m_QuerySetIndex = {QueryManagerWebGPU::InvalidIndex, QueryManagerWebGPU::InvalidIndex};
-    QueryManagerWebGPU*   m_pQueryMgr     = nullptr;
+    std::array<Uint32, 2> m_QuerySetIndices = {QueryManagerWebGPU::InvalidIndex, QueryManagerWebGPU::InvalidIndex};
+    QueryManagerWebGPU*   m_pQueryMgr       = nullptr;
+    Uint64                m_QueryEventValue = 0;
 };
 
 } // namespace Diligent

@@ -131,7 +131,6 @@ jobs:
       uses: DiligentGraphics/github-action/run-core-gpu-tests@v1
       with:
         mode: wgpu
-        args: --gtest_filter=-QueryTest.*
 
     - name: Upload artifact
       uses: actions/upload-artifact@v3
