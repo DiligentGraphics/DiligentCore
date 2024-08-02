@@ -257,7 +257,7 @@ public:
     }
 
     /// Implementation of IRenderDevice::GetTextureFormatInfo().
-    virtual const TextureFormatInfo& DILIGENT_CALL_TYPE GetTextureFormatInfo(TEXTURE_FORMAT TexFormat) override final
+    virtual const TextureFormatInfo& DILIGENT_CALL_TYPE GetTextureFormatInfo(TEXTURE_FORMAT TexFormat) const override final
     {
         VERIFY(TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS, "Texture format out of range");
         const auto& TexFmtInfo = m_TextureFormatsInfo[TexFormat];

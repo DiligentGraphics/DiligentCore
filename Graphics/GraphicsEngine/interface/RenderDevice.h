@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -350,7 +350,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     ///
     /// \remarks This method must be externally synchronized.
     VIRTUAL const TextureFormatInfo REF METHOD(GetTextureFormatInfo)(THIS_
-                                                                     TEXTURE_FORMAT TexFormat) PURE;
+                                                                     TEXTURE_FORMAT TexFormat) CONST PURE;
 
 
     /// Returns the extended texture format information.
