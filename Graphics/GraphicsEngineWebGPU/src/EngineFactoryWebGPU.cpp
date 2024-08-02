@@ -252,7 +252,9 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
 
 #if !PLATFORM_EMSCRIPTEN
     const char* ToggleNames[] = {
-        "disable_timestamp_query_conversion"};
+        "disable_timestamp_query_conversion",
+        "use_dxc",
+    };
 
     WGPUDawnTogglesDescriptor wgpuDawnTogglesDesc = {};
     wgpuDawnTogglesDesc.chain.sType               = WGPUSType_DawnTogglesDescriptor;
