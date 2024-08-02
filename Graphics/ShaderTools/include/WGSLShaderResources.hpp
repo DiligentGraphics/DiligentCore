@@ -229,37 +229,37 @@ public:
     {
         for (Uint32 n = 0; n < GetNumUBs(); ++n)
         {
-            const auto& UB = GetUB(n);
+            const WGSLShaderResourceAttribs& UB = GetUB(n);
             HandleUB(UB, n);
         }
 
         for (Uint32 n = 0; n < GetNumSBs(); ++n)
         {
-            const auto& SB = GetSB(n);
+            const WGSLShaderResourceAttribs& SB = GetSB(n);
             HandleSB(SB, n);
         }
 
         for (Uint32 n = 0; n < GetNumTextures(); ++n)
         {
-            const auto& Tex = GetTexture(n);
+            const WGSLShaderResourceAttribs& Tex = GetTexture(n);
             HandleTexture(Tex, n);
         }
 
         for (Uint32 n = 0; n < GetNumStTextures(); ++n)
         {
-            const auto& StTex = GetStTexture(n);
+            const WGSLShaderResourceAttribs& StTex = GetStTexture(n);
             HandleStTexture(StTex, n);
         }
 
         for (Uint32 n = 0; n < GetNumSamplers(); ++n)
         {
-            const auto& Sam = GetSampler(n);
+            const WGSLShaderResourceAttribs& Sam = GetSampler(n);
             HandleSampler(Sam, n);
         }
 
         for (Uint32 n = 0; n < GetNumExtTextures(); ++n)
         {
-            const auto& ExtTex = GetExtTexture(n);
+            const WGSLShaderResourceAttribs& ExtTex = GetExtTexture(n);
             HandleExtTexture(ExtTex, n);
         }
 
@@ -271,7 +271,7 @@ public:
     {
         for (Uint32 n = 0; n < GetTotalResources(); ++n)
         {
-            const auto& Res = GetResource(n);
+            const WGSLShaderResourceAttribs& Res = GetResource(n);
             Handler(Res, n);
         }
     }
@@ -320,6 +320,7 @@ private:
 
     // clang-format on
 
+private:
     // Memory buffer that holds all resources as continuous chunk of memory:
     // |  UBs  |  SBs  |  Textures  |  StorageTex  |  Samplers |  ExternalTex | Resource Names |
     std::unique_ptr<void, STDDeleterRawMem<void>> m_MemoryBuffer;

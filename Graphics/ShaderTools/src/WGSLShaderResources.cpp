@@ -41,6 +41,7 @@
 #include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/u32.h"
 #include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/f16.h"
 #include "src/tint/lang/core/type/array.h"
 #include "src/tint/lang/core/type/matrix.h"
 #include "src/tint/lang/core/type/scalar.h"
@@ -581,19 +582,32 @@ void LoadShaderCodeVariableDesc(const tint::Program&          Program,
 {
     auto GetBasicType = [](const tint::core::type::Type* Type) -> SHADER_CODE_BASIC_TYPE {
         if (Type->Is<tint::core::type::F32>())
+        {
             return SHADER_CODE_BASIC_TYPE_FLOAT;
-        if (Type->Is<tint::core::type::I32>())
+        }
+        else if (Type->Is<tint::core::type::I32>())
+        {
             return SHADER_CODE_BASIC_TYPE_INT;
-        if (Type->Is<tint::core::type::U32>())
+        }
+        else if (Type->Is<tint::core::type::U32>())
+        {
             return SHADER_CODE_BASIC_TYPE_UINT;
-        UNEXPECTED("Unexpected scalar type");
-        return SHADER_CODE_BASIC_TYPE_UNKNOWN;
+        }
+        else if (Type->Is<tint::core::type::F16>())
+        {
+            return SHADER_CODE_BASIC_TYPE_FLOAT16;
+        }
+        else
+        {
+            UNEXPECTED("Unexpected scalar type");
+            return SHADER_CODE_BASIC_TYPE_UNKNOWN;
+        }
     };
 
-    auto GetArraySize = [](const tint::core::type::Array* ArrType) -> Uint8 {
+    auto GetArraySize = [](const tint::core::type::Array* ArrType) -> Uint32 {
         if (ArrType->Count()->Is<tint::core::type::ConstantArrayCount>())
         {
-            return static_cast<Uint8>(ArrType->Count()->As<tint::core::type::ConstantArrayCount>()->value);
+            return ArrType->Count()->As<tint::core::type::ConstantArrayCount>()->value;
         }
         UNEXPECTED("Unexpected type");
         return 0;
@@ -613,7 +627,7 @@ void LoadShaderCodeVariableDesc(const tint::Program&          Program,
             TypeDesc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS;
             TypeDesc.BasicType  = GetBasicType(MemberType->type());
             TypeDesc.NumColumns = StaticCast<decltype(TypeDesc.NumColumns)>(MemberType->Width());
-            TypeDesc.NumRows    = GetArraySize(ArrType);
+            TypeDesc.NumRows    = static_cast<decltype(TypeDesc.NumRows)>(GetArraySize(ArrType));
         }
         else
         {
@@ -627,7 +641,7 @@ void LoadShaderCodeVariableDesc(const tint::Program&          Program,
         {
             TypeDesc.Class = SHADER_CODE_VARIABLE_CLASS_STRUCT;
 
-            for (const auto* Member : WGSLType->As<tint::core::type::Struct>()->Members())
+            for (const tint::core::type::StructMember* Member : WGSLType->As<tint::core::type::Struct>()->Members())
             {
                 ShaderCodeVariableDesc VarDesc;
                 VarDesc.Name   = Member->Name().NameView().data();
@@ -663,7 +677,7 @@ void LoadShaderCodeVariableDesc(const tint::Program&          Program,
 
                 TypeDesc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS;
                 TypeDesc.BasicType  = GetBasicType(MatType->type());
-                TypeDesc.NumRows    = StaticCast<decltype(TypeDesc.NumColumns)>(MatType->rows());
+                TypeDesc.NumRows    = StaticCast<decltype(TypeDesc.NumRows)>(MatType->rows());
                 TypeDesc.NumColumns = StaticCast<decltype(TypeDesc.NumColumns)>(MatType->columns());
             }
             else
@@ -688,15 +702,15 @@ void LoadShaderCodeVariableDesc(const tint::Program&          Program,
 ShaderCodeBufferDescX LoadUBReflection(const tint::Program& Program, const tint::inspector::ResourceBinding& UB, SHADER_SOURCE_LANGUAGE Language)
 {
 
-    const auto& Ast = Program.AST();
-    const auto& Sem = Program.Sem();
+    const tint::ast::Module& Ast = Program.AST();
+    const tint::sem::Info&   Sem = Program.Sem();
 
     const tint::ast::Variable* Variable = nullptr;
-    for (const auto* Var : Ast.GlobalVariables())
+    for (const tint::ast::Variable* Var : Ast.GlobalVariables())
     {
         if (Var->HasBindingPoint())
         {
-            const auto* SemVariable = Sem.Get(Var)->As<tint::sem::GlobalVariable>();
+            const tint::sem::GlobalVariable* SemVariable = Sem.Get(Var)->As<tint::sem::GlobalVariable>();
             if (SemVariable->Attributes().binding_point->group == UB.bind_group && SemVariable->Attributes().binding_point->binding == UB.binding)
             {
                 Variable = Var;
@@ -707,18 +721,18 @@ ShaderCodeBufferDescX LoadUBReflection(const tint::Program& Program, const tint:
     VERIFY(Variable, "Unexpected error");
 
 
-    const auto* WGSLType = Program.TypeOf(Variable->type)->As<tint::core::type::Struct>();
-    const auto  Size     = WGSLType->Size();
+    const tint::core::type::Struct* WGSLType = Program.TypeOf(Variable->type)->As<tint::core::type::Struct>();
+    const uint32_t                  Size     = WGSLType->Size();
 
     ShaderCodeBufferDescX UBDesc;
-    UBDesc.Size = StaticCast<decltype(UBDesc.Size)>(Size);
-    for (const auto* Member : WGSLType->Members())
+    UBDesc.Size = Size;
+    for (const tint::core::type::StructMember* Member : WGSLType->Members())
     {
         ShaderCodeVariableDesc VarDesc;
         VarDesc.Name   = Member->Name().NameView().data();
         VarDesc.Offset = Member->Offset();
 
-        auto VariableIdx = UBDesc.AddVariable(VarDesc);
+        size_t VariableIdx = UBDesc.AddVariable(VarDesc);
         LoadShaderCodeVariableDesc(Program, Member->Type(), Language, UBDesc.GetVariable(VariableIdx));
     }
 
@@ -739,7 +753,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
 {
     VERIFY_EXPR(ShaderName != nullptr);
 
-    tint::Source::File SrcFile("", WGSL);
+    tint::Source::File SrcFile{"", WGSL};
     tint::Program      Program = tint::wgsl::reader::Parse(&SrcFile, {tint::wgsl::AllowedFeatures::Everything()});
 
     const std::string Diagnostics = Program.Diagnostics().Str();
@@ -783,7 +797,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
         }
         if (EntryPointIdx == EntryPoints.size())
         {
-            LOG_ERROR_AND_THROW("Entry point '", EntryPoint, "' not found in the shader '", ShaderName, "'");
+            LOG_ERROR_AND_THROW("Entry point '", EntryPoint, "' is not found in shader '", ShaderName, "'");
         }
     }
     m_ShaderType = TintPipelineStageToShaderType(EntryPoints[EntryPointIdx].stage);
@@ -810,10 +824,10 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
         //      @group(0) @binding(3) var<storage, read> g_AtomicBuff1   : g_AtomicBuff0_atomic;
         for (tint::inspector::ResourceBinding& Binding : ResourceBindings)
         {
-            auto AltName = GetWGSLResourceAlternativeName(Program, Binding);
+            std::string AltName = GetWGSLResourceAlternativeName(Program, Binding);
             if (!AltName.empty())
             {
-                Binding.variable_name = AltName;
+                Binding.variable_name = std::move(AltName);
             }
         }
     }
@@ -993,15 +1007,15 @@ void WGSLShaderResources::Initialize(IMemoryAllocator&       Allocator,
 {
     Uint32           CurrentOffset = 0;
     constexpr Uint32 MaxOffset     = std::numeric_limits<OffsetType>::max();
-    auto             AdvanceOffset = [&CurrentOffset, MaxOffset](Uint32 NumResources) {
+    auto             AdvanceOffset = [&CurrentOffset, MaxOffset](Uint32 NumResources) -> OffsetType {
         VERIFY(CurrentOffset <= MaxOffset, "Current offset (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
         (void)MaxOffset;
-        auto Offset = static_cast<OffsetType>(CurrentOffset);
+        OffsetType Offset = static_cast<OffsetType>(CurrentOffset);
         CurrentOffset += NumResources;
         return Offset;
     };
 
-    auto UniformBufferOffset = AdvanceOffset(Counters.NumUBs);
+    OffsetType UniformBufferOffset = AdvanceOffset(Counters.NumUBs);
     (void)UniformBufferOffset;
     m_StorageBufferOffset   = AdvanceOffset(Counters.NumSBs);
     m_TextureOffset         = AdvanceOffset(Counters.NumTextures);
@@ -1011,12 +1025,12 @@ void WGSLShaderResources::Initialize(IMemoryAllocator&       Allocator,
     m_TotalResources        = AdvanceOffset(0);
     static_assert(Uint32{WGSLShaderResourceAttribs::ResourceType::NumResourceTypes} == 13, "Please update the new resource type offset");
 
-    auto AlignedResourceNamesPoolSize = AlignUp(ResourceNamesPoolSize, sizeof(void*));
+    size_t AlignedResourceNamesPoolSize = AlignUp(ResourceNamesPoolSize, sizeof(void*));
 
-    static_assert(sizeof(WGSLShaderResourceAttribs) % sizeof(void*) == 0, "Size of WGSLShaderResourceAttribs struct must be multiple of sizeof(void*)");
+    static_assert(sizeof(WGSLShaderResourceAttribs) % sizeof(void*) == 0, "Size of WGSLShaderResourceAttribs struct must be a multiple of sizeof(void*)");
     // clang-format off
-    auto MemorySize = m_TotalResources             * sizeof(WGSLShaderResourceAttribs) +
-                      AlignedResourceNamesPoolSize * sizeof(char);
+    size_t MemorySize = m_TotalResources             * sizeof(WGSLShaderResourceAttribs) +
+                        AlignedResourceNamesPoolSize * sizeof(char);
 
     VERIFY_EXPR(GetNumUBs()         == Counters.NumUBs);
     VERIFY_EXPR(GetNumSBs()         == Counters.NumSBs);
@@ -1027,9 +1041,9 @@ void WGSLShaderResources::Initialize(IMemoryAllocator&       Allocator,
     static_assert(Uint32{WGSLShaderResourceAttribs::ResourceType::NumResourceTypes} == 13, "Please update the new resource count verification");
     // clang-format on
 
-    if (MemorySize)
+    if (MemorySize > 0)
     {
-        auto* pRawMem   = Allocator.Allocate(MemorySize, "Memory for shader resources", __FILE__, __LINE__);
+        void* pRawMem   = Allocator.Allocate(MemorySize, "Memory for shader resources", __FILE__, __LINE__);
         m_MemoryBuffer  = std::unique_ptr<void, STDDeleterRawMem<void>>(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(m_MemoryBuffer.get()) +
             m_TotalResources * sizeof(WGSLShaderResourceAttribs);
