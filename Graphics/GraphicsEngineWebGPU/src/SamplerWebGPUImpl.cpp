@@ -38,8 +38,8 @@ namespace
 
 WGPUSamplerDescriptor SamplerDescToWGPUSamplerDescriptor(const SamplerDesc& Desc) noexcept
 {
-    bool IsCompareEnable = IsComparisonFilter(Desc.MinFilter);
-    DEV_CHECK_ERR(IsCompareEnable == IsComparisonFilter(Desc.MagFilter), "Min and mag filters must both be either comparison filters or non-comparison ones");
+    bool IsComparison = IsComparisonFilter(Desc.MinFilter);
+    DEV_CHECK_ERR(IsComparison == IsComparisonFilter(Desc.MagFilter), "Min and mag filters must both be either comparison filters or non-comparison ones");
 
     WGPUSamplerDescriptor wgpuSamplerDesc{};
     wgpuSamplerDesc.label         = Desc.Name;
@@ -51,7 +51,7 @@ WGPUSamplerDescriptor SamplerDescToWGPUSamplerDescriptor(const SamplerDesc& Desc
     wgpuSamplerDesc.mipmapFilter  = FilterTypeToWGPUMipMapMode(Desc.MipFilter);
     wgpuSamplerDesc.lodMinClamp   = Desc.MinLOD;
     wgpuSamplerDesc.lodMaxClamp   = Desc.MaxLOD;
-    wgpuSamplerDesc.compare       = IsCompareEnable ? ComparisonFuncToWGPUCompareFunction(Desc.ComparisonFunc) : WGPUCompareFunction_Undefined;
+    wgpuSamplerDesc.compare       = IsComparison ? ComparisonFuncToWGPUCompareFunction(Desc.ComparisonFunc) : WGPUCompareFunction_Undefined;
     wgpuSamplerDesc.maxAnisotropy = static_cast<Uint16>(IsAnisotropicFilter(Desc.MinFilter) ? Desc.MaxAnisotropy : 1);
     return wgpuSamplerDesc;
 }

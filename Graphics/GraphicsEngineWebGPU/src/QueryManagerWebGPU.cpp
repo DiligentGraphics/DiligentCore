@@ -142,7 +142,7 @@ void QueryManagerWebGPU::FinishFrame(RenderDeviceWebGPUImpl* pDevice)
 {
     if (m_ActiveQuerySets > 0)
     {
-        pDevice->PollEvents();
+        pDevice->DeviceTick();
         m_ActiveQuerySets = 0;
     }
 }
@@ -301,7 +301,7 @@ void QueryManagerWebGPU::QuerySetInfo::WaitAllQueries(RenderDeviceWebGPUImpl* pD
 {
     const auto& ReabackBufferInfo = m_PendingReadbackBuffers[PendingRedbackIndex];
     while (ReabackBufferInfo.PendingEventValue != ReabackBufferInfo.LastEventValue)
-        pDevice->PollEvents();
+        pDevice->DeviceTick();
 }
 
 QueryManagerWebGPU::QuerySetInfo::ReadbackBufferInfo& QueryManagerWebGPU::QuerySetInfo::FindAvailableReadbackBuffer(RenderDeviceWebGPUImpl* pDevice)

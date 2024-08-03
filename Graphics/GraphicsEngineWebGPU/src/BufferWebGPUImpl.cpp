@@ -229,7 +229,7 @@ void BufferWebGPUImpl::Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedD
         m_MapState.State = BufferMapState::Read;
         wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Read, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, this);
         while (wgpuBufferGetMapState(m_wgpuBuffer.Get()) != WGPUBufferMapState_Unmapped)
-            m_pDevice->PollEvents();
+            m_pDevice->DeviceTick();
 
         pMappedData = m_MappedData.data();
     }
@@ -321,7 +321,7 @@ void BufferWebGPUImpl::Unmap(MAP_TYPE MapType)
 
         wgpuBufferMapAsync(m_wgpuBuffer.Get(), WGPUMapMode_Write, 0, StaticCast<size_t>(m_Desc.Size), MapAsyncCallback, this);
         while (wgpuBufferGetMapState(m_wgpuBuffer.Get()) != WGPUBufferMapState_Unmapped)
-            m_pDevice->PollEvents();
+            m_pDevice->DeviceTick();
     }
     else if (m_MapState.State == BufferMapState::ReadAsync || m_MapState.State == BufferMapState::WriteAsync)
     {

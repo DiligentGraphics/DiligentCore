@@ -214,7 +214,7 @@ public:
         return *m_pDynamicMemoryManager;
     }
 
-    void PollEvents();
+    void DeviceTick();
 
 private:
     void TestTextureFormat(TEXTURE_FORMAT TexFormat) override;

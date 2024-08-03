@@ -68,7 +68,7 @@ class DeviceMemoryWebGPUImpl
 
 static void DebugMessengerCallback(WGPUErrorType MessageType, const char* Message, void* pUserData)
 {
-    if (Message != nullptr)
+    if (Message == nullptr)
         LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
 }
 
@@ -102,15 +102,16 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
     wgpuDeviceSetUncapturedErrorCallback(m_wgpuDevice, DebugMessengerCallback, nullptr);
     FindSupportedTextureFormats();
 
-    m_DeviceInfo.Type     = RENDER_DEVICE_TYPE_WEBGPU;
-    m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
-    m_pUploadMemoryManager.reset(new UploadMemoryManagerWebGPU{m_wgpuDevice, EngineCI.UploadHeapPageSize});
-    m_pDynamicMemoryManager.reset(new DynamicMemoryManagerWebGPU(m_wgpuDevice, EngineCI.DynamicHeapPageSize, EngineCI.DynamicHeapSize));
-    m_pAttachmentCleaner.reset(new AttachmentCleanerWebGPU{*this});
-    m_pMipsGenerator.reset(new GenerateMipsHelperWebGPU{*this});
-    m_pQueryManager.reset(new QueryManagerWebGPU{this, EngineCI.QueryPoolSizes});
+    m_DeviceInfo.Type = RENDER_DEVICE_TYPE_WEBGPU;
+    m_DeviceInfo.NDC  = NDCAttribs{0.0f, 1.0f, -0.5f};
 
-    m_DeviceInfo.NDC = NDCAttribs{0.0f, 1.0f, -0.5f};
+    m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
+
+    m_pUploadMemoryManager  = std::make_unique<UploadMemoryManagerWebGPU>(m_wgpuDevice, EngineCI.UploadHeapPageSize);
+    m_pDynamicMemoryManager = std::make_unique<DynamicMemoryManagerWebGPU>(m_wgpuDevice, EngineCI.DynamicHeapPageSize, EngineCI.DynamicHeapSize);
+    m_pAttachmentCleaner    = std::make_unique<AttachmentCleanerWebGPU>(*this);
+    m_pMipsGenerator        = std::make_unique<GenerateMipsHelperWebGPU>(*this);
+    m_pQueryManager         = std::make_unique<QueryManagerWebGPU>(this, EngineCI.QueryPoolSizes);
 
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();
@@ -348,7 +349,7 @@ DynamicMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetDynamicMemoryPage(Ui
     return m_pDynamicMemoryManager->GetPage(Size);
 }
 
-void RenderDeviceWebGPUImpl::PollEvents()
+void RenderDeviceWebGPUImpl::DeviceTick()
 {
 #if !PLATFORM_EMSCRIPTEN
     wgpuDeviceTick(m_wgpuDevice);
@@ -362,24 +363,24 @@ void RenderDeviceWebGPUImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
 void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
 {
-    const auto& TexCaps = GetAdapterInfo().Texture;
+    const TextureProperties& TexCaps = GetAdapterInfo().Texture;
 
     constexpr Uint32 FMT_FLAG_NONE   = 0x00;
     constexpr Uint32 FMT_FLAG_MSAA   = 0x01;
     constexpr Uint32 FMT_FLAG_FILTER = 0x02;
 
-    constexpr auto BIND_SRU = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
-    constexpr auto BIND_SR  = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
-    constexpr auto BIND_S   = BIND_SHADER_RESOURCE;
-    constexpr auto BIND_SU  = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-    constexpr auto BIND_D   = BIND_DEPTH_STENCIL;
+    constexpr BIND_FLAGS BIND_SRU = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
+    constexpr BIND_FLAGS BIND_SR  = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
+    constexpr BIND_FLAGS BIND_S   = BIND_SHADER_RESOURCE;
+    constexpr BIND_FLAGS BIND_SU  = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+    constexpr BIND_FLAGS BIND_D   = BIND_DEPTH_STENCIL;
 
-    auto SupportedSampleCounts = SAMPLE_COUNT_1 | SAMPLE_COUNT_4; // We can't query supported sample counts in WebGPU
+    SAMPLE_COUNT SupportedSampleCounts = SAMPLE_COUNT_1 | SAMPLE_COUNT_4; // We can't query supported sample counts in WebGPU
 
     auto SetTexFormatInfo = [&](std::initializer_list<TEXTURE_FORMAT> Formats, BIND_FLAGS BindFlags, Uint32 FmtFlags) {
-        for (auto Fmt : Formats)
+        for (TEXTURE_FORMAT Fmt : Formats)
         {
-            auto& FmtInfo = m_TextureFormatsInfo[Fmt];
+            TextureFormatInfoExt& FmtInfo = m_TextureFormatsInfo[Fmt];
             VERIFY(!FmtInfo.Supported, "The format has already been initialized");
 
             FmtInfo.Supported = true;
@@ -415,11 +416,11 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
         }
     };
 
-    bool IsSupportedBGRA8UnormStorage       = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_BGRA8UnormStorage);
-    bool IsSupportedFloat32Filterable       = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Float32Filterable);
-    bool IsSupportedRG11B10UfloatRenderable = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_RG11B10UfloatRenderable);
-    bool IsSupportedDepth32FloatStencil8    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Depth32FloatStencil8);
-    bool IsSupportedTextureCompressionBC    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureCompressionBC);
+    const bool BGRA8UnormStorageSupported       = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_BGRA8UnormStorage);
+    const bool Float32FilterableSupported       = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Float32Filterable);
+    const bool RG11B10UfloatRenderableSupported = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_RG11B10UfloatRenderable);
+    const bool Depth32FloatStencil8Supported    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Depth32FloatStencil8);
+    const bool TextureCompressionBCSupported    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureCompressionBC);
 
     // https://www.w3.org/TR/webgpu/#texture-format-caps
 
@@ -437,7 +438,7 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
     SetTexFormatInfo({TEX_FORMAT_RGBA8_SNORM}, BIND_SU, FMT_FLAG_FILTER);
     SetTexFormatInfo({TEX_FORMAT_RGBA8_UINT, TEX_FORMAT_RGBA8_SINT}, BIND_SRU, FMT_FLAG_MSAA);
 
-    SetTexFormatInfo({TEX_FORMAT_BGRA8_TYPELESS, TEX_FORMAT_BGRA8_UNORM}, IsSupportedBGRA8UnormStorage ? BIND_SRU : BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_BGRA8_TYPELESS, TEX_FORMAT_BGRA8_UNORM}, BGRA8UnormStorageSupported ? BIND_SRU : BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
     SetTexFormatInfo({TEX_FORMAT_BGRA8_UNORM_SRGB}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
 
     // Color formats with 16-bits per channel
@@ -452,31 +453,31 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
 
     // Color formats with 32-bits per channel
     SetTexFormatInfo({TEX_FORMAT_R32_UINT, TEX_FORMAT_R32_SINT, TEX_FORMAT_R32_TYPELESS}, BIND_SRU, FMT_FLAG_NONE);
-    SetTexFormatInfo({TEX_FORMAT_R32_FLOAT}, BIND_SRU, IsSupportedFloat32Filterable ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
+    SetTexFormatInfo({TEX_FORMAT_R32_FLOAT}, BIND_SRU, Float32FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
 
     SetTexFormatInfo({TEX_FORMAT_RG32_UINT, TEX_FORMAT_RG32_SINT, TEX_FORMAT_RG32_TYPELESS}, BIND_SRU, FMT_FLAG_NONE);
-    SetTexFormatInfo({TEX_FORMAT_RG32_FLOAT}, BIND_SR, IsSupportedFloat32Filterable ? FMT_FLAG_FILTER : FMT_FLAG_NONE);
+    SetTexFormatInfo({TEX_FORMAT_RG32_FLOAT}, BIND_SR, Float32FilterableSupported ? FMT_FLAG_FILTER : FMT_FLAG_NONE);
 
     SetTexFormatInfo({TEX_FORMAT_RGBA32_UINT, TEX_FORMAT_RGBA32_SINT, TEX_FORMAT_RGBA32_TYPELESS}, BIND_SRU, FMT_FLAG_NONE);
-    SetTexFormatInfo({TEX_FORMAT_RGBA32_FLOAT}, BIND_SRU, IsSupportedFloat32Filterable ? FMT_FLAG_FILTER : FMT_FLAG_NONE);
+    SetTexFormatInfo({TEX_FORMAT_RGBA32_FLOAT}, BIND_SRU, Float32FilterableSupported ? FMT_FLAG_FILTER : FMT_FLAG_NONE);
 
     // Color formats with mixed width
     SetTexFormatInfo({TEX_FORMAT_RGB10A2_TYPELESS, TEX_FORMAT_RGB10A2_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
     SetTexFormatInfo({TEX_FORMAT_RGB10A2_UINT}, BIND_SR, FMT_FLAG_MSAA);
 
-    SetTexFormatInfo({TEX_FORMAT_R11G11B10_FLOAT}, IsSupportedRG11B10UfloatRenderable ? BIND_SR : BIND_S, IsSupportedRG11B10UfloatRenderable ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_FILTER);
+    SetTexFormatInfo({TEX_FORMAT_R11G11B10_FLOAT}, RG11B10UfloatRenderableSupported ? BIND_SR : BIND_S, RG11B10UfloatRenderableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_FILTER);
 
     // Depth-stencil formats
     SetTexFormatInfo({TEX_FORMAT_D16_UNORM}, BIND_D, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
     SetTexFormatInfo({TEX_FORMAT_D24_UNORM_S8_UINT}, BIND_D, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
     SetTexFormatInfo({TEX_FORMAT_D32_FLOAT}, BIND_D, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-    if (IsSupportedDepth32FloatStencil8)
+    if (Depth32FloatStencil8Supported)
         SetTexFormatInfo({TEX_FORMAT_D32_FLOAT_S8X24_UINT}, BIND_D, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
 
     // Packed formats
     SetTexFormatInfo({TEX_FORMAT_RGB9E5_SHAREDEXP}, BIND_S, FMT_FLAG_FILTER);
 
-    if (IsSupportedTextureCompressionBC)
+    if (TextureCompressionBCSupported)
     {
         SetTexFormatInfo({TEX_FORMAT_BC1_TYPELESS,
                           TEX_FORMAT_BC1_UNORM,
