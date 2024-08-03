@@ -41,5 +41,4 @@ ShaderResourceBindingWebGPUImpl::ShaderResourceBindingWebGPUImpl(IReferenceCount
 
 ShaderResourceBindingWebGPUImpl::~ShaderResourceBindingWebGPUImpl() = default;
 
-
 } // namespace Diligent

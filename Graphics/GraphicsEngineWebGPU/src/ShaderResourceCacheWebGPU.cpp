@@ -415,8 +415,8 @@ void ShaderResourceCacheWebGPU::SetDynamicBufferOffset(Uint32 BindGroupIndex,
     Resource&  DstRes = Group.GetResource(CacheOffset);
 
     DEV_CHECK_ERR(DstRes.pObject, "Setting dynamic offset when no object is bound");
-    const auto* pBufferWGPU = (DstRes.Type == BindGroupEntryType::UniformBuffer ||
-                               DstRes.Type == BindGroupEntryType::UniformBufferDynamic) ?
+    const BufferWebGPUImpl* pBufferWGPU = (DstRes.Type == BindGroupEntryType::UniformBuffer ||
+                                           DstRes.Type == BindGroupEntryType::UniformBufferDynamic) ?
         DstRes.pObject.ConstPtr<BufferWebGPUImpl>() :
         DstRes.pObject.ConstPtr<BufferViewWebGPUImpl>()->GetBuffer<const BufferWebGPUImpl>();
     DEV_CHECK_ERR(DstRes.BufferBaseOffset + DstRes.BufferRangeSize + DynamicBufferOffset <= pBufferWGPU->GetDesc().Size,
@@ -513,7 +513,7 @@ void ShaderResourceCacheWebGPU::DbgVerifyResourceInitialization() const
 {
     for (const auto& SetFlags : m_DbgInitializedResources)
     {
-        for (auto ResInitialized : SetFlags)
+        for (bool ResInitialized : SetFlags)
             VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");
     }
 }
