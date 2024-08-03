@@ -452,15 +452,17 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
             const bool RTBlendEnable = (BlendDesc.RenderTargets[0].BlendEnable && !BlendDesc.IndependentBlendEnable) || (RT.BlendEnable && BlendDesc.IndependentBlendEnable);
             if (RTBlendEnable)
             {
+                const RenderTargetBlendDesc& BlendRT = BlendDesc.IndependentBlendEnable ? RT : BlendDesc.RenderTargets[0];
+
                 WGPUBlendState& wgpuBlendState = wgpuBlendStates[RTIndex];
 
-                wgpuBlendState.color.operation = BlendOpToWGPUBlendOperation(RT.BlendOp);
-                wgpuBlendState.color.srcFactor = BlendFactorToWGPUBlendFactor(RT.SrcBlend);
-                wgpuBlendState.color.dstFactor = BlendFactorToWGPUBlendFactor(RT.DestBlend);
+                wgpuBlendState.color.operation = BlendOpToWGPUBlendOperation(BlendRT.BlendOp);
+                wgpuBlendState.color.srcFactor = BlendFactorToWGPUBlendFactor(BlendRT.SrcBlend);
+                wgpuBlendState.color.dstFactor = BlendFactorToWGPUBlendFactor(BlendRT.DestBlend);
 
-                wgpuBlendState.alpha.operation = BlendOpToWGPUBlendOperation(RT.BlendOpAlpha);
-                wgpuBlendState.alpha.srcFactor = BlendFactorToWGPUBlendFactor(RT.SrcBlendAlpha);
-                wgpuBlendState.alpha.dstFactor = BlendFactorToWGPUBlendFactor(RT.DestBlendAlpha);
+                wgpuBlendState.alpha.operation = BlendOpToWGPUBlendOperation(BlendRT.BlendOpAlpha);
+                wgpuBlendState.alpha.srcFactor = BlendFactorToWGPUBlendFactor(BlendRT.SrcBlendAlpha);
+                wgpuBlendState.alpha.dstFactor = BlendFactorToWGPUBlendFactor(BlendRT.DestBlendAlpha);
 
                 wgpuColorTargetState.blend = &wgpuBlendState;
             }
