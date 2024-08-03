@@ -220,7 +220,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
 
 void PipelineStateWebGPUImpl::InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages)
 {
-    const auto InternalFlags = GetInternalCreateFlags(CreateInfo);
+    const PSO_CREATE_INTERNAL_FLAGS InternalFlags = GetInternalCreateFlags(CreateInfo);
     if (m_UsingImplicitSignature && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
         const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
@@ -230,8 +230,8 @@ void PipelineStateWebGPUImpl::InitPipelineLayout(const PipelineStateCreateInfo& 
 
     m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
 
-    const auto RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
-    const auto VerifyBindings = !RemapResources && ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0);
+    const bool RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
+    const bool VerifyBindings = !RemapResources && ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0);
     if (RemapResources || VerifyBindings)
     {
         VERIFY_EXPR(RemapResources ^ VerifyBindings);
@@ -356,60 +356,72 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
                                                              AsyncPipelineBuilder* AsyncBuilder)
 {
     VERIFY(!ShaderStages.empty() && ShaderStages.size() <= 2, "Incorrect shader count for graphics pipeline");
-    VERIFY(ShaderStages[0].Type == SHADER_TYPE_VERTEX, "Incorrect shader type: vertex shader is expected");
-    VERIFY(ShaderStages.size() < 2 || ShaderStages[1].Type == SHADER_TYPE_PIXEL, "Incorrect shader type: compute shader is expected");
 
-    const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
+    const GraphicsPipelineDesc& GraphicsPipeline = GetGraphicsPipelineDesc();
 
-    WGPUVertexState       wgpuVertexState{};
-    WGPUPrimitiveState    wgpuPrimitiveState{};
-    WGPUFragmentState     wgpuFragmentState{};
-    WGPUDepthStencilState wgpuDepthStencilState{};
-    WGPUMultisampleState  wgpuMultisampleState{};
+    WGPURenderPipelineDescriptor wgpuRenderPipelineDesc{};
+    wgpuRenderPipelineDesc.label  = GetDesc().Name;
+    wgpuRenderPipelineDesc.layout = m_PipelineLayout.GetWebGPUPipelineLayout();
 
-    using WebGPUVertexAttributeArray = std::array<std::vector<WGPUVertexAttribute>, MAX_LAYOUT_ELEMENTS>;
-    using WebGPUVertexBufferLayouts  = std::array<WGPUVertexBufferLayout, MAX_LAYOUT_ELEMENTS>;
+    WGPUFragmentState wgpuFragmentState{};
 
-    WebGPUVertexAttributeArray    wgpuVertexAttributes{};
-    WebGPUVertexBufferLayouts     wgpuVertexBufferLayouts{};
-    WGPUPrimitiveDepthClipControl wgpuDepthClipControl{};
-
-    std::vector<WGPUColorTargetState>      wgpuColorTargetStates{};
-    std::vector<WGPUBlendState>            wgpuBlendStates{};
     std::vector<WebGPUShaderModuleWrapper> wgpuShaderModules{ShaderStages.size()};
-
     for (size_t ShaderIdx = 0; ShaderIdx < ShaderStages.size(); ++ShaderIdx)
     {
-        WGPUShaderModuleDescriptor     wgpuShaderModuleDesc{};
+        const ShaderStageInfo& Stage = ShaderStages[ShaderIdx];
+
         WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
         wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-        wgpuShaderCodeDesc.code        = ShaderStages[ShaderIdx].GetWGSL().c_str();
+        wgpuShaderCodeDesc.code        = Stage.GetWGSL().c_str();
 
+        WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
         wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-        wgpuShaderModuleDesc.label       = ShaderStages[ShaderIdx].pShader->GetEntryPoint();
+        wgpuShaderModuleDesc.label       = Stage.pShader->GetDesc().Name;
         wgpuShaderModules[ShaderIdx].Reset(wgpuDeviceCreateShaderModule(m_pDevice->GetWebGPUDevice(), &wgpuShaderModuleDesc));
+        VERIFY(wgpuShaderModules[ShaderIdx], "Failed to create WGPU shader module for shader '", Stage.pShader->GetDesc().Name, "'.");
+
+        switch (Stage.Type)
+        {
+            case SHADER_TYPE_VERTEX:
+                VERIFY(wgpuRenderPipelineDesc.vertex.module == nullptr, "Only one vertex shader is allowed");
+                wgpuRenderPipelineDesc.vertex.module     = wgpuShaderModules[ShaderIdx].Get();
+                wgpuRenderPipelineDesc.vertex.entryPoint = Stage.pShader->GetEntryPoint();
+                break;
+
+            case SHADER_TYPE_PIXEL:
+                VERIFY(wgpuFragmentState.module == nullptr, "Only one vertex shader is allowed");
+                wgpuFragmentState.module        = wgpuShaderModules[ShaderIdx].Get();
+                wgpuFragmentState.entryPoint    = Stage.pShader->GetEntryPoint();
+                wgpuRenderPipelineDesc.fragment = &wgpuFragmentState;
+                break;
+
+            default:
+                UNEXPECTED("Unsupported shader type ", GetShaderTypeLiteralName(Stage.Type));
+        }
     }
 
+
+    std::array<std::vector<WGPUVertexAttribute>, MAX_LAYOUT_ELEMENTS> wgpuVertexAttributes{};
+    std::array<WGPUVertexBufferLayout, MAX_LAYOUT_ELEMENTS>           wgpuVertexBufferLayouts{};
     {
-        const auto& InputLayout = GraphicsPipeline.InputLayout;
+        const InputLayoutDesc& InputLayout = GraphicsPipeline.InputLayout;
 
         Uint32 MaxBufferSlot = 0;
         for (Uint32 Idx = 0; Idx < InputLayout.NumElements; ++Idx)
         {
-            const auto& Item = InputLayout.LayoutElements[Idx];
+            const LayoutElement& Item       = InputLayout.LayoutElements[Idx];
+            const Uint32         BufferSlot = Item.BufferSlot;
 
-            auto BindingDescIndex = Item.BufferSlot;
-
-            wgpuVertexBufferLayouts[BindingDescIndex].arrayStride = Item.Stride;
-            wgpuVertexBufferLayouts[BindingDescIndex].stepMode    = InputElementFrequencyToWGPUVertexStepMode(Item.Frequency);
+            wgpuVertexBufferLayouts[BufferSlot].arrayStride = Item.Stride;
+            wgpuVertexBufferLayouts[BufferSlot].stepMode    = InputElementFrequencyToWGPUVertexStepMode(Item.Frequency);
 
             WGPUVertexAttribute wgpuVertexAttribute{};
             wgpuVertexAttribute.format         = VertexFormatAttribsToWGPUVertexFormat(Item.ValueType, Item.NumComponents, Item.IsNormalized);
             wgpuVertexAttribute.offset         = Item.RelativeOffset;
             wgpuVertexAttribute.shaderLocation = Item.InputIndex;
-            wgpuVertexAttributes[BindingDescIndex].push_back(wgpuVertexAttribute);
+            wgpuVertexAttributes[BufferSlot].push_back(wgpuVertexAttribute);
 
-            MaxBufferSlot = std::max(MaxBufferSlot, BindingDescIndex);
+            MaxBufferSlot = std::max(MaxBufferSlot, BufferSlot);
         }
 
         for (size_t Idx = 0; Idx < MaxBufferSlot + 1; ++Idx)
@@ -419,29 +431,29 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
             wgpuVertexBufferLayouts[Idx].attributes     = wgpuVertexAttributes[Idx].data();
         }
 
-        wgpuVertexState.module      = wgpuShaderModules[0].Get();
-        wgpuVertexState.entryPoint  = ShaderStages[0].pShader->GetEntryPoint();
-        wgpuVertexState.bufferCount = InputLayout.NumElements > 0 ? MaxBufferSlot + 1 : 0;
-        wgpuVertexState.buffers     = wgpuVertexBufferLayouts.data();
+        WGPUVertexState& wgpuVertexState = wgpuRenderPipelineDesc.vertex;
+        wgpuVertexState.bufferCount      = InputLayout.NumElements > 0 ? MaxBufferSlot + 1 : 0;
+        wgpuVertexState.buffers          = wgpuVertexBufferLayouts.data();
     }
 
-    wgpuColorTargetStates.reserve(GraphicsPipeline.NumRenderTargets);
-    wgpuBlendStates.reserve(GraphicsPipeline.NumRenderTargets);
+    std::vector<WGPUColorTargetState> wgpuColorTargetStates(GraphicsPipeline.NumRenderTargets);
+    std::vector<WGPUBlendState>       wgpuBlendStates(GraphicsPipeline.NumRenderTargets);
     {
-        const auto& BlendDesc = GraphicsPipeline.BlendDesc;
-
+        const BlendStateDesc& BlendDesc = GraphicsPipeline.BlendDesc;
         for (Uint32 RTIndex = 0; RTIndex < GraphicsPipeline.NumRenderTargets; ++RTIndex)
         {
-            const auto& RT            = BlendDesc.RenderTargets[RTIndex];
-            const auto  RTBlendEnable = (BlendDesc.RenderTargets[0].BlendEnable && !BlendDesc.IndependentBlendEnable) || (RT.BlendEnable && BlendDesc.IndependentBlendEnable);
+            const RenderTargetBlendDesc& RT = BlendDesc.RenderTargets[RTIndex];
 
-            WGPUColorTargetState wgpuColorTargetState{};
+            WGPUColorTargetState& wgpuColorTargetState = wgpuColorTargetStates[RTIndex];
+
             wgpuColorTargetState.format    = TextureFormatToWGPUFormat(GraphicsPipeline.RTVFormats[RTIndex]);
             wgpuColorTargetState.writeMask = ColorMaskToWGPUColorWriteMask(RT.RenderTargetWriteMask);
 
+            const bool RTBlendEnable = (BlendDesc.RenderTargets[0].BlendEnable && !BlendDesc.IndependentBlendEnable) || (RT.BlendEnable && BlendDesc.IndependentBlendEnable);
             if (RTBlendEnable)
             {
-                WGPUBlendState wgpuBlendState{};
+                WGPUBlendState& wgpuBlendState = wgpuBlendStates[RTIndex];
+
                 wgpuBlendState.color.operation = BlendOpToWGPUBlendOperation(RT.BlendOp);
                 wgpuBlendState.color.srcFactor = BlendFactorToWGPUBlendFactor(RT.SrcBlend);
                 wgpuBlendState.color.dstFactor = BlendFactorToWGPUBlendFactor(RT.DestBlend);
@@ -450,25 +462,18 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
                 wgpuBlendState.alpha.srcFactor = BlendFactorToWGPUBlendFactor(RT.SrcBlendAlpha);
                 wgpuBlendState.alpha.dstFactor = BlendFactorToWGPUBlendFactor(RT.DestBlendAlpha);
 
-                wgpuBlendStates.push_back(wgpuBlendState);
-                wgpuColorTargetState.blend = &wgpuBlendStates.back();
+                wgpuColorTargetState.blend = &wgpuBlendState;
             }
-
-            wgpuColorTargetStates.push_back(wgpuColorTargetState);
         }
 
-        if (ShaderStages.size() > 1)
-        {
-            VERIFY(ShaderStages[1].Type == SHADER_TYPE_PIXEL, "Incorrect shader type: pixel shader is expected");
-            wgpuFragmentState.targetCount = static_cast<uint32_t>(wgpuColorTargetStates.size());
-            wgpuFragmentState.targets     = wgpuColorTargetStates.data();
-            wgpuFragmentState.module      = wgpuShaderModules[1].Get();
-            wgpuFragmentState.entryPoint  = ShaderStages[1].pShader->GetEntryPoint();
-        }
+        wgpuFragmentState.targetCount = GraphicsPipeline.NumRenderTargets;
+        wgpuFragmentState.targets     = wgpuColorTargetStates.data();
     }
 
+    WGPUDepthStencilState wgpuDepthStencilState{};
+    if (GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN)
     {
-        const auto& DepthStencilDesc = GraphicsPipeline.DepthStencilDesc;
+        const DepthStencilStateDesc& DepthStencilDesc = GraphicsPipeline.DepthStencilDesc;
 
         wgpuDepthStencilState.format            = TextureFormatToWGPUFormat(GraphicsPipeline.DSVFormat);
         wgpuDepthStencilState.depthCompare      = DepthStencilDesc.DepthEnable ? ComparisonFuncToWGPUCompareFunction(DepthStencilDesc.DepthFunc) : WGPUCompareFunction_Always;
@@ -490,14 +495,20 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
         wgpuDepthStencilState.depthBias           = static_cast<int32_t>(GraphicsPipeline.RasterizerDesc.DepthBias);
         wgpuDepthStencilState.depthBiasSlopeScale = GraphicsPipeline.RasterizerDesc.SlopeScaledDepthBias;
         wgpuDepthStencilState.depthBiasClamp      = GraphicsPipeline.RasterizerDesc.DepthBiasClamp;
+
+        wgpuRenderPipelineDesc.depthStencil = &wgpuDepthStencilState;
     }
 
+    WGPUPrimitiveDepthClipControl wgpuDepthClipControl{};
     {
-        const auto& RasterizerDesc = GraphicsPipeline.RasterizerDesc;
+        const RasterizerStateDesc& RasterizerDesc = GraphicsPipeline.RasterizerDesc;
+
+        WGPUPrimitiveState& wgpuPrimitiveState = wgpuRenderPipelineDesc.primitive;
 
         wgpuPrimitiveState.frontFace = RasterizerDesc.FrontCounterClockwise ? WGPUFrontFace_CCW : WGPUFrontFace_CW;
         wgpuPrimitiveState.cullMode  = CullModeToWGPUCullMode(RasterizerDesc.CullMode);
         wgpuPrimitiveState.topology  = PrimitiveTopologyWGPUPrimitiveType(GraphicsPipeline.PrimitiveTopology);
+
         // For pipelines with strip topologies ("line-strip" or "triangle-strip"), the index buffer format and primitive restart value
         // ("uint16"/0xFFFF or "uint32"/0xFFFFFFFF). Not allowed on pipelines with non-strip topologies.
         wgpuPrimitiveState.stripIndexFormat =
@@ -518,19 +529,12 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
     }
 
     {
+        WGPUMultisampleState& wgpuMultisampleState = wgpuRenderPipelineDesc.multisample;
+
         wgpuMultisampleState.alphaToCoverageEnabled = GraphicsPipeline.BlendDesc.AlphaToCoverageEnable;
         wgpuMultisampleState.mask                   = GraphicsPipeline.SampleMask;
         wgpuMultisampleState.count                  = GraphicsPipeline.SmplDesc.Count;
     }
-
-    WGPURenderPipelineDescriptor wgpuRenderPipelineDesc{};
-    wgpuRenderPipelineDesc.label        = GetDesc().Name;
-    wgpuRenderPipelineDesc.vertex       = wgpuVertexState;
-    wgpuRenderPipelineDesc.fragment     = wgpuFragmentState.module != nullptr ? &wgpuFragmentState : nullptr;
-    wgpuRenderPipelineDesc.depthStencil = GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN ? &wgpuDepthStencilState : nullptr;
-    wgpuRenderPipelineDesc.primitive    = wgpuPrimitiveState;
-    wgpuRenderPipelineDesc.multisample  = wgpuMultisampleState;
-    wgpuRenderPipelineDesc.layout       = m_PipelineLayout.GetWebGPUPipelineLayout();
 
     if (AsyncBuilder)
     {
@@ -571,7 +575,7 @@ void PipelineStateWebGPUImpl::InitializeWebGPUComputePipeline(const TShaderStage
 
     WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
     wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-    wgpuShaderModuleDesc.label       = pShaderWebGPU->GetEntryPoint();
+    wgpuShaderModuleDesc.label       = pShaderWebGPU->GetDesc().Name;
     wgpuShaderModule.Reset(wgpuDeviceCreateShaderModule(m_pDevice->GetWebGPUDevice(), &wgpuShaderModuleDesc));
 
     WGPUComputePipelineDescriptor wgpuComputePipelineDesc{};
@@ -689,7 +693,7 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
     PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
 
     std::unordered_map<ShaderResourceHashKey, const WGSLShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
-    for (auto& Stage : ShaderStages)
+    for (const ShaderStageInfo& Stage : ShaderStages)
     {
         const ShaderWebGPUImpl*    pShader         = Stage.pShader;
         const WGSLShaderResources& ShaderResources = *pShader->GetShaderResources();

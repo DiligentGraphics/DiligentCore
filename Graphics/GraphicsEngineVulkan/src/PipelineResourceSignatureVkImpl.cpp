@@ -942,8 +942,6 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
                                                                  const PipelineResourceSignatureDesc&           Desc,
                                                                  const PipelineResourceSignatureInternalDataVk& InternalData) :
     TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, InternalData}
-//m_DynamicUniformBufferCount{Serialized.DynamicUniformBufferCount}
-//m_DynamicStorageBufferCount{Serialized.DynamicStorageBufferCount}
 {
     try
     {
@@ -952,8 +950,6 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
             [this]() //
             {
                 CreateSetLayouts(/*IsSerialized*/ true);
-                //VERIFY_EXPR(m_DynamicUniformBufferCount == Serialized.DynamicUniformBufferCount);
-                //VERIFY_EXPR(m_DynamicStorageBufferCount == Serialized.DynamicStorageBufferCount);
             },
             [this]() //
             {

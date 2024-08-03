@@ -840,8 +840,6 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
                                                                          const PipelineResourceSignatureDesc&               Desc,
                                                                          const PipelineResourceSignatureInternalDataWebGPU& InternalData) :
     TPipelineResourceSignatureBase{pRefCounters, pDevice, Desc, InternalData}
-//m_DynamicUniformBufferCount{Serialized.DynamicUniformBufferCount}
-//m_DynamicStorageBufferCount{Serialized.DynamicStorageBufferCount}
 {
     try
     {
@@ -850,8 +848,6 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
             [this]() //
             {
                 CreateBindGroupLayouts(/*IsSerialized*/ true);
-                //VERIFY_EXPR(m_DynamicUniformBufferCount == Serialized.DynamicUniformBufferCount);
-                //VERIFY_EXPR(m_DynamicStorageBufferCount == Serialized.DynamicStorageBufferCount);
             },
             [this]() //
             {
