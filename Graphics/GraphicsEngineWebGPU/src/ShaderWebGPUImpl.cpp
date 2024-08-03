@@ -224,7 +224,7 @@ void ShaderWebGPUImpl::Initialize(const ShaderCreateInfo& ShaderCI,
     // RamapWGSLResourceBindings preserves it.
 
     // We cannot create shader module here because resource bindings are assigned when
-    // pipeline state is created
+    // pipeline state is created. Besides, WebGPU does not support multithreading.
 
     // Load shader resources
     if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
@@ -294,7 +294,7 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
                         DeviceInfo,
                         AdapterInfo,
                         ppCompilerOutput,
-                        nullptr,
+                        nullptr, // pCompilationThreadPool
                     };
                     Initialize(ShaderCI, WebGPUShaderCI);
                 }
@@ -322,12 +322,12 @@ void ShaderWebGPUImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& Resourc
 {
     DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
 
-    auto ResCount = GetResourceCount();
+    Uint32 ResCount = GetResourceCount();
     DEV_CHECK_ERR(Index < ResCount, "Resource index (", Index, ") is out of range");
     if (Index < ResCount)
     {
-        const auto& SPIRVResource = m_pShaderResources->GetResource(Index);
-        ResourceDesc              = SPIRVResource.GetResourceDesc();
+        const WGSLShaderResourceAttribs& WGSLResource = m_pShaderResources->GetResource(Index);
+        ResourceDesc                                  = WGSLResource.GetResourceDesc();
     }
 }
 
@@ -335,7 +335,7 @@ const ShaderCodeBufferDesc* ShaderWebGPUImpl::GetConstantBufferDesc(Uint32 Index
 {
     DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
 
-    auto ResCount = GetResourceCount();
+    Uint32 ResCount = GetResourceCount();
     if (Index >= ResCount)
     {
         UNEXPECTED("Resource index (", Index, ") is out of range");

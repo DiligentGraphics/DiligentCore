@@ -59,7 +59,6 @@ public:
     ShaderVariableWebGPUImpl* GetVariable(const Char* Name) const;
     ShaderVariableWebGPUImpl* GetVariable(Uint32 Index) const;
 
-    // Binds object pObj to resource with index ResIndex and array index ArrayIndex.
     void BindResource(Uint32 ResIndex, const BindResourceInfo& BindInfo);
 
     void SetBufferDynamicOffset(Uint32 ResIndex,

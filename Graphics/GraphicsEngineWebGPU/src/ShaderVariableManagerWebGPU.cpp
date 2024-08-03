@@ -49,7 +49,7 @@ void ProcessSignatureResources(const PipelineResourceSignatureWebGPUImpl& Signat
     Signature.ProcessResources(AllowedVarTypes, NumAllowedTypes, ShaderStages,
                                [&](const PipelineResourceDesc& ResDesc, Uint32 Index) //
                                {
-                                   const auto& ResAttr = Signature.GetResourceAttribs(Index);
+                                   const PipelineResourceAttribsWebGPU& ResAttr = Signature.GetResourceAttribs(Index);
 
                                    // When using HLSL-style combined image samplers, we need to skip separate samplers.
                                    // Also always skip immutable separate samplers.
@@ -119,7 +119,7 @@ ShaderVariableWebGPUImpl* ShaderVariableManagerWebGPU::GetVariable(const Char* N
 {
     for (Uint32 v = 0; v < m_NumVariables; ++v)
     {
-        auto& Var = m_pVariables[v];
+        ShaderVariableWebGPUImpl& Var = m_pVariables[v];
         if (strcmp(Var.GetDesc().Name, Name) == 0)
             return &Var;
     }
@@ -147,7 +147,7 @@ Uint32 ShaderVariableManagerWebGPU::GetVariableIndex(const ShaderVariableWebGPUI
 
     const auto Offset = reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<Uint8*>(m_pVariables);
     DEV_CHECK_ERR(Offset % sizeof(ShaderVariableWebGPUImpl) == 0, "Offset is not multiple of ShaderVariableWebGPUImpl class size");
-    const auto Index = static_cast<Uint32>(Offset / sizeof(ShaderVariableWebGPUImpl));
+    const Uint32 Index = static_cast<Uint32>(Offset / sizeof(ShaderVariableWebGPUImpl));
     if (Index < m_NumVariables)
         return Index;
     else
@@ -404,7 +404,7 @@ void BindResourceHelper::CacheStorageBuffer(const BindResourceInfo& BindInfo) co
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storage buffers in GLSL
-        const auto RequiredViewType = DvpBindGroupEntryTypeToBufferView(m_DstRes.Type);
+        const BUFFER_VIEW_TYPE RequiredViewType = DvpBindGroupEntryTypeToBufferView(m_DstRes.Type);
         VerifyResourceViewBinding(m_ResDesc, BindInfo, pBufferViewWebGPU.RawPtr(),
                                   {RequiredViewType},
                                   RESOURCE_DIM_BUFFER, // Expected resource dim
@@ -434,7 +434,7 @@ void BindResourceHelper::CacheTexture(const BindResourceInfo& BindInfo) const
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storage buffers in GLSL
-        auto RequiredViewType = DvpBindGroupEntryTypeToTextureView(m_DstRes.Type);
+        TEXTURE_VIEW_TYPE RequiredViewType = DvpBindGroupEntryTypeToTextureView(m_DstRes.Type);
         VerifyResourceViewBinding(m_ResDesc, BindInfo, pTexViewWebGPU0.RawPtr(),
                                   {RequiredViewType},
                                   RESOURCE_DIM_UNDEFINED, // Required resource dimension is not known
@@ -451,14 +451,13 @@ void BindResourceHelper::CacheTexture(const BindResourceInfo& BindInfo) const
         {
             VERIFY(m_DstRes.Type == BindGroupEntryType::Texture, "Only textures can be combined with samplers.");
 
-            const auto& SamplerResDesc = m_Signature.GetResourceDesc(m_Attribs.SamplerInd);
-            const auto& SamplerAttribs = m_Signature.GetResourceAttribs(m_Attribs.SamplerInd);
+            const PipelineResourceDesc&          SamplerResDesc = m_Signature.GetResourceDesc(m_Attribs.SamplerInd);
+            const PipelineResourceAttribsWebGPU& SamplerAttribs = m_Signature.GetResourceAttribs(m_Attribs.SamplerInd);
             VERIFY_EXPR(SamplerResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
 
             if (!SamplerAttribs.IsImmutableSamplerAssigned())
             {
-                auto* pSampler = pTexViewWebGPU->GetSampler();
-                if (pSampler != nullptr)
+                if (ISampler* pSampler = pTexViewWebGPU->GetSampler())
                 {
                     DEV_CHECK_ERR(SamplerResDesc.ArraySize == 1 || SamplerResDesc.ArraySize == m_ResDesc.ArraySize,
                                   "Array size (", SamplerResDesc.ArraySize,
@@ -517,13 +516,13 @@ void ShaderVariableManagerWebGPU::SetBufferDynamicOffset(Uint32 ResIndex,
                                                          Uint32 ArrayIndex,
                                                          Uint32 BufferDynamicOffset)
 {
-    const auto& Attribs           = m_pSignature->GetResourceAttribs(ResIndex);
-    const auto  DstResCacheOffset = Attribs.CacheOffset(m_ResourceCache.GetContentType()) + ArrayIndex;
+    const PipelineResourceAttribsWebGPU& Attribs           = m_pSignature->GetResourceAttribs(ResIndex);
+    const Uint32                         DstResCacheOffset = Attribs.CacheOffset(m_ResourceCache.GetContentType()) + ArrayIndex;
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& ResDesc = m_pSignature->GetResourceDesc(ResIndex);
-        const auto& Group   = const_cast<const ShaderResourceCacheWebGPU&>(m_ResourceCache).GetBindGroup(Attribs.BindGroup);
-        const auto& DstRes  = Group.GetResource(DstResCacheOffset);
+        const PipelineResourceDesc&                 ResDesc = m_pSignature->GetResourceDesc(ResIndex);
+        const ShaderResourceCacheWebGPU::BindGroup& Group   = const_cast<const ShaderResourceCacheWebGPU&>(m_ResourceCache).GetBindGroup(Attribs.BindGroup);
+        const ShaderResourceCacheWebGPU::Resource&  DstRes  = Group.GetResource(DstResCacheOffset);
         VerifyDynamicBufferOffset<BufferWebGPUImpl, BufferViewWebGPUImpl>(ResDesc, DstRes.pObject, DstRes.BufferBaseOffset, DstRes.BufferRangeSize, BufferDynamicOffset);
     }
 #endif
@@ -533,18 +532,18 @@ void ShaderVariableManagerWebGPU::SetBufferDynamicOffset(Uint32 ResIndex,
 
 IDeviceObject* ShaderVariableManagerWebGPU::Get(Uint32 ArrayIndex, Uint32 ResIndex) const
 {
-    const auto&  ResDesc     = GetResourceDesc(ResIndex);
-    const auto&  Attribs     = GetResourceAttribs(ResIndex);
-    const Uint32 CacheOffset = Attribs.CacheOffset(m_ResourceCache.GetContentType());
+    const PipelineResourceDesc&          ResDesc     = GetResourceDesc(ResIndex);
+    const PipelineResourceAttribsWebGPU& Attribs     = GetResourceAttribs(ResIndex);
+    const Uint32                         CacheOffset = Attribs.CacheOffset(m_ResourceCache.GetContentType());
 
     VERIFY_EXPR(ArrayIndex < ResDesc.ArraySize);
 
     if (Attribs.BindGroup < m_ResourceCache.GetNumBindGroups())
     {
-        const auto& Group = const_cast<const ShaderResourceCacheWebGPU&>(m_ResourceCache).GetBindGroup(Attribs.BindGroup);
+        const ShaderResourceCacheWebGPU::BindGroup& Group = const_cast<const ShaderResourceCacheWebGPU&>(m_ResourceCache).GetBindGroup(Attribs.BindGroup);
         if (CacheOffset + ArrayIndex < Group.GetSize())
         {
-            const auto& CachedRes = Group.GetResource(CacheOffset + ArrayIndex);
+            const ShaderResourceCacheWebGPU::Resource& CachedRes = Group.GetResource(CacheOffset + ArrayIndex);
             return CachedRes.pObject;
         }
     }
