@@ -328,31 +328,30 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
                     // Check if any resource in the range is currently bound as UAV to another slot and unbind it.
                     if (const Uint32 NumUAVSlots = m_CommittedRes.NumUAVs[CSInd])
                     {
-                        for (Uint32 slot = Slots.MinSlot; slot <= Slots.MaxSlot; ++slot)
+                        for (Uint32 slot = (Slots.MinSlot > 0) ? 0 : (Slots.MaxSlot + 1); slot < NumUAVSlots;)
                         {
-                            ID3D11Resource* pRes = d3d11UAVRes[slot];
-                            if (pRes == nullptr)
-                                continue;
-
-                            for (Uint32 s = Slots.MinSlot > 0 ? 0 : Slots.MaxSlot + 1; s < NumUAVSlots;)
+                            if (ID3D11Resource* pRes = d3d11UAVRes[slot])
                             {
-                                if (d3d11UAVRes[s] == pRes)
+                                for (Uint32 s = Slots.MinSlot; s <= Slots.MaxSlot; ++s)
                                 {
-                                    d3d11UAVRes[s] = nullptr;
-                                    d3d11UAVs[s]   = nullptr;
-                                    m_pd3d11DeviceContext->CSSetUnorderedAccessViews(s, 1, d3d11UAVs + s, nullptr);
+                                    if (d3d11UAVRes[s] == pRes)
+                                    {
+                                        d3d11UAVRes[slot] = nullptr;
+                                        d3d11UAVs[slot]   = nullptr;
+                                        m_pd3d11DeviceContext->CSSetUnorderedAccessViews(slot, 1, d3d11UAVs + slot, nullptr);
+                                    }
                                 }
-
-                                ++s;
-                                if (s == Slots.MinSlot)
-                                    s = Slots.MaxSlot + 1;
                             }
+
+                            ++slot;
+                            if (slot == Slots.MinSlot)
+                                slot = Slots.MaxSlot + 1;
                         }
                     }
 
                     // This can only be CS
-                    auto SetUAVMethod = SetUAVMethods[ShaderInd];
-                    (m_pd3d11DeviceContext->*SetUAVMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11UAVs + Slots.MinSlot, nullptr);
+                    VERIFY_EXPR(SetUAVMethods[ShaderInd] == &ID3D11DeviceContext::CSSetUnorderedAccessViews);
+                    m_pd3d11DeviceContext->CSSetUnorderedAccessViews(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11UAVs + Slots.MinSlot, nullptr);
                     m_CommittedRes.NumUAVs[ShaderInd] = std::max(m_CommittedRes.NumUAVs[ShaderInd], static_cast<Uint8>(Slots.MaxSlot + 1));
                 }
                 else
