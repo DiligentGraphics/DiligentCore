@@ -37,6 +37,7 @@
 
 namespace Diligent
 {
+
 class AttachmentCleanerWebGPU
 {
 public:
@@ -91,10 +92,9 @@ private:
         COLOR_MASK            ColorMask  = COLOR_MASK_ALL;
         Int32                 RTIndex    = 0; // -1 for depth
         WGPUDepthStencilState DepthState = {};
-        mutable size_t        PSOHash    = 0;
-    };
 
-    using ClearPSOCache = std::unordered_map<ClearPSOHashKey, WebGPURenderPipelineWrapper, ClearPSOHashKey::Hasher>;
+        mutable size_t Hash = 0;
+    };
 
     WebGPURenderPipelineWrapper CreatePSO(const ClearPSOHashKey& Key);
 
@@ -120,13 +120,18 @@ private:
         WebGPUBindGroupWrapper       wgpuBindGroup;
     } m_PipelineResourceLayout;
 
-    ClearPSOCache m_PSOCache;
+    WebGPUShaderModuleWrapper m_wgpuVSModule;
 
-    WGPUDepthStencilState m_wgpuDisableDepth       = {};
-    WGPUDepthStencilState m_wgpuWriteDepth         = {};
-    WGPUDepthStencilState m_wgpuWriteStencil       = {};
-    WGPUDepthStencilState m_wgpuWriteDepthStencil  = {};
-    bool                  m_IsInitializedResources = false;
+    using FSModuleCacheType = std::unordered_map<Int32, WebGPUShaderModuleWrapper>;
+    FSModuleCacheType m_wgpuFSModules;
+
+    using PSOCacheType = std::unordered_map<ClearPSOHashKey, WebGPURenderPipelineWrapper, ClearPSOHashKey::Hasher>;
+    PSOCacheType m_PSOCache;
+
+    WGPUDepthStencilState m_wgpuDisableDepth      = {};
+    WGPUDepthStencilState m_wgpuWriteDepth        = {};
+    WGPUDepthStencilState m_wgpuWriteStencil      = {};
+    WGPUDepthStencilState m_wgpuWriteDepthStencil = {};
 };
 
 } // namespace Diligent
