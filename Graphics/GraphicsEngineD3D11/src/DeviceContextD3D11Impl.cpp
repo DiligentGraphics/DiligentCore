@@ -324,6 +324,32 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
                 }
                 else if (ShaderInd == CSInd)
                 {
+                    // In Direct3D11, a resource can only be bound as UAV once.
+                    // Check if any resource in the range is currently bound as UAV to another slot and unbind it.
+                    if (const Uint32 NumUAVSlots = m_CommittedRes.NumUAVs[CSInd])
+                    {
+                        for (Uint32 slot = Slots.MinSlot; slot <= Slots.MaxSlot; ++slot)
+                        {
+                            ID3D11Resource* pRes = d3d11UAVRes[slot];
+                            if (pRes == nullptr)
+                                continue;
+
+                            for (Uint32 s = Slots.MinSlot > 0 ? 0 : Slots.MaxSlot + 1; s < NumUAVSlots;)
+                            {
+                                if (d3d11UAVRes[s] == pRes)
+                                {
+                                    d3d11UAVRes[s] = nullptr;
+                                    d3d11UAVs[s]   = nullptr;
+                                    m_pd3d11DeviceContext->CSSetUnorderedAccessViews(s, 1, d3d11UAVs + s, nullptr);
+                                }
+
+                                ++s;
+                                if (s == Slots.MinSlot)
+                                    s = Slots.MaxSlot + 1;
+                            }
+                        }
+                    }
+
                     // This can only be CS
                     auto SetUAVMethod = SetUAVMethods[ShaderInd];
                     (m_pd3d11DeviceContext->*SetUAVMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11UAVs + Slots.MinSlot, nullptr);
