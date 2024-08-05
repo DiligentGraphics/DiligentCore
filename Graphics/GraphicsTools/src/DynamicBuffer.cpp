@@ -161,7 +161,7 @@ void DynamicBuffer::InitBuffer(IRenderDevice* pDevice)
     }
 
     // NB: m_Desc.Usage may be changed by CreateSparseBuffer()
-    if (m_Desc.Usage == USAGE_DEFAULT && m_PendingSize > 0)
+    if ((m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC) && m_PendingSize > 0)
     {
         auto Desc = m_Desc;
         Desc.Size = m_PendingSize;
@@ -299,6 +299,9 @@ IBuffer* DynamicBuffer::Resize(IRenderDevice*  pDevice,
                                Uint64          NewSize,
                                bool            DiscardContent)
 {
+    DEV_CHECK_ERR(m_Desc.Usage == USAGE_DYNAMIC && DiscardContent,
+                  "Buffer content must be discarded when resizing USAGE_DEFAULT buffer");
+
     if (m_Desc.Usage == USAGE_SPARSE)
     {
         DEV_CHECK_ERR(NewSize <= m_VirtualSize, "New size (", NewSize, ") exceeds the buffer virtual size (", m_VirtualSize, ").");
