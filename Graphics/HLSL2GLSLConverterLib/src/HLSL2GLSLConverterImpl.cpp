@@ -4798,6 +4798,7 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
     if (IncludeDefintions)
         GLSLSource.insert(0, g_GLSLDefinitions);
 
+    GLSLSource.shrink_to_fit();
     return GLSLSource;
 }
 
