@@ -36,6 +36,7 @@
 #include "WebGPUObjectWrappers.hpp"
 #include "IndexWrapper.hpp"
 #include "UploadMemoryManagerWebGPU.hpp"
+#include "SyncPointWebGPU.hpp"
 
 namespace Diligent
 {
@@ -45,6 +46,16 @@ class BufferWebGPUImpl final : public BufferBase<EngineWebGPUImplTraits>
 {
 public:
     using TBufferBase = BufferBase<EngineWebGPUImplTraits>;
+
+    struct StagingBufferSyncInfo
+    {
+        WebGPUBufferWrapper                wgpuBuffer;
+        RefCntAutoPtr<SyncPointWebGPUImpl> pSyncPoint;
+        Uint32                             BufferIdentifier;
+        void*                              pMappedData;
+        size_t                             MappedSize;
+        BufferWebGPUImpl*                  pThis;
+    };
 
     BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
                      FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
@@ -96,8 +107,6 @@ public:
 
     void Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData);
 
-    void MapAsync(MAP_TYPE MapType, MapBufferAsyncCallback pCallback, void* pUserData);
-
     void Unmap(MAP_TYPE MapType);
 
     Uint64 GetAlignment() const;
@@ -106,8 +115,18 @@ public:
 
     void SetDynamicAllocation(DeviceContextIndex CtxId, DynamicMemoryManagerWebGPU::Allocation&& Allocation);
 
+    const StagingBufferSyncInfo* GetStagingBufferInfo();
+
+    void FlushPendingWrites(Uint32 BufferIdx);
+
+    void ProcessAsyncReadback(Uint32 BufferIdx);
+
 private:
     void CreateViewInternal(const BufferViewDesc& ViewDesc, IBufferView** ppView, bool IsDefaultView) override;
+
+    const StagingBufferSyncInfo* FindAvailableWriteMemoryBuffer();
+
+    const StagingBufferSyncInfo* FindAvailableReadMemoryBuffer();
 
 private:
     friend class DeviceContextWebGPUImpl;
@@ -131,21 +150,18 @@ private:
     {
         None,
         Read,
-        Write,
-        ReadAsync,
-        WriteAsync,
+        Write
     };
+    using StagingBufferInfoList = std::vector<StagingBufferSyncInfo>;
+
+    static constexpr Uint32 MaxPendingBuffers = 16;
 
     WebGPUBufferWrapper   m_wgpuBuffer;
+    StagingBufferInfoList m_StagingBufferInfo;
     std::vector<uint8_t>  m_MappedData;
     DynamicAllocationList m_DynamicAllocations;
     Uint64                m_Alignment;
-    struct
-    {
-        BufferMapState         State     = BufferMapState::None;
-        MapBufferAsyncCallback pCallback = nullptr;
-        void*                  pUserData = nullptr;
-    } m_MapState;
+    BufferMapState        m_MapState = {};
 };
 
 } // namespace Diligent

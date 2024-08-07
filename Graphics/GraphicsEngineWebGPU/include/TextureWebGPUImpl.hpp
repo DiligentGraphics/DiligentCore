@@ -33,6 +33,7 @@
 #include "TextureBase.hpp"
 #include "TextureViewWebGPUImpl.hpp" // Required by TextureBase
 #include "WebGPUObjectWrappers.hpp"
+#include "SyncPointWebGPU.hpp"
 
 namespace Diligent
 {
@@ -42,6 +43,16 @@ class TextureWebGPUImpl final : public TextureBase<EngineWebGPUImplTraits>
 {
 public:
     using TTextureBase = TextureBase<EngineWebGPUImplTraits>;
+
+    struct StagingBufferSyncInfo
+    {
+        WebGPUBufferWrapper                wgpuBuffer;
+        RefCntAutoPtr<SyncPointWebGPUImpl> pSyncPoint;
+        Uint32                             BufferIdentifier;
+        void*                              pMappedData;
+        size_t                             MappedSize;
+        TextureWebGPUImpl*                 pThis;
+    };
 
     TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
                       FixedBlockMemoryAllocator& TexViewObjAllocator,
@@ -67,13 +78,15 @@ public:
     /// Implementation of ITextureWebGPU::GetWebGPUTexture() in WebGPU backend.
     WGPUTexture DILIGENT_CALL_TYPE GetWebGPUTexture() const override final;
 
-    WGPUBuffer GetWebGPUStagingBuffer() const;
+    const StagingBufferSyncInfo* GetStagingBufferInfo();
 
     void* Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, Uint64 Offset, Uint64 Size);
 
-    void MapAsync(MAP_TYPE MapType, Uint64 Offset, Uint64 Size, Uint64 Stride, Uint64 DepthStride, MapTextureSubresourceAsyncCallback pCallback, PVoid pUserData);
-
     void Unmap();
+
+    void FlushPendingWrites(Uint32 BufferIdx);
+
+    void ProcessAsyncReadback(Uint32 BufferIdx);
 
     // The requirement is hard-coded in the spec: https://www.w3.org/TR/webgpu/#gpuimagecopybuffer
     static constexpr Uint64 ImageCopyBufferRowAlignment = 256;
@@ -83,30 +96,25 @@ private:
                             ITextureView**         ppView,
                             bool                   bIsDefaultView) override;
 
+    const StagingBufferSyncInfo* FindAvailableWriteMemoryBuffer();
+
+    const StagingBufferSyncInfo* FindAvailableReadMemoryBuffer();
+
 private:
     enum class TextureMapState
     {
         None,
         Read,
-        Write,
-        ReadAsync,
-        WriteAsync
+        Write
     };
+    using StagingBufferInfoList = std::vector<StagingBufferSyncInfo>;
 
-    WebGPUTextureWrapper m_wgpuTexture;
-    WebGPUBufferWrapper  m_wgpuStagingBuffer;
-    std::vector<uint8_t> m_MappedData;
-    struct
-    {
-        TextureMapState                    State       = TextureMapState::None;
-        Uint64                             DataOffset  = 0;
-        Uint64                             DataSize    = 0;
-        Uint64                             Stride      = 0;
-        Uint64                             DepthStride = 0;
-        MapTextureSubresourceAsyncCallback pCallback   = nullptr;
-        void*                              pUserData   = nullptr;
+    static constexpr Uint32 MaxPendingBuffers = 16;
 
-    } m_MapState;
+    WebGPUTextureWrapper  m_wgpuTexture;
+    StagingBufferInfoList m_StagingBufferInfo;
+    std::vector<uint8_t>  m_MappedData;
+    TextureMapState       m_MapState = {};
 };
 
 } // namespace Diligent

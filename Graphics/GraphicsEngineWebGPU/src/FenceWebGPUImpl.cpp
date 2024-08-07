@@ -44,6 +44,32 @@ FenceWebGPUImpl::FenceWebGPUImpl(IReferenceCounters*     pRefCounters,
 
 Uint64 FenceWebGPUImpl::GetCompletedValue()
 {
+    if (!m_SyncPoints.empty())
+    {
+        auto IsSyncPointCompleted = [](const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints) {
+            for (const auto& pSyncPoint : SyncPoints)
+                if (!pSyncPoint->GetValue())
+                    return false;
+            return true;
+        };
+
+        while (!m_SyncPoints.empty())
+        {
+            const auto& SyncPoint = m_SyncPoints.front();
+            if (IsSyncPointCompleted(SyncPoint.second))
+            {
+                UpdateLastCompletedFenceValue(SyncPoint.first);
+                m_SyncPoints.pop_front();
+            }
+            else
+            {
+                return m_LastCompletedFenceValue.load();
+            }
+        }
+
+        UpdateLastCompletedFenceValue(m_RequestedFenceValue.load());
+    }
+
     return m_LastCompletedFenceValue.load();
 }
 
@@ -58,10 +84,18 @@ void FenceWebGPUImpl::Wait(Uint64 Value)
         m_pDevice->DeviceTick();
 }
 
-void FenceWebGPUImpl::SetCompletedValue(Uint64 Value)
+void FenceWebGPUImpl::AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 EventOnComplete)
+{
+    m_SyncPoints.emplace_back(std::make_pair(EventOnComplete, SyncPoints));
+}
+
+void FenceWebGPUImpl::RequestedValue(Uint64 Value)
 {
     DvpSignal(Value);
-    UpdateLastCompletedFenceValue(Value);
+    if (!m_SyncPoints.empty())
+        m_RequestedFenceValue.store(Value);
+    else
+        UpdateLastCompletedFenceValue(Value);
 }
 
 } // namespace Diligent
