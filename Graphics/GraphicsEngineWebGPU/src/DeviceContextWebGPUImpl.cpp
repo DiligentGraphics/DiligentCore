@@ -42,6 +42,7 @@
 #include "QueryWebGPUImpl.hpp"
 #include "AttachmentCleanerWebGPU.hpp"
 #include "WebGPUTypeConversions.hpp"
+#include "SyncPointWebGPU.hpp"
 
 namespace Diligent
 {
@@ -679,19 +680,61 @@ void DeviceContextWebGPUImpl::CopyBuffer(IBuffer*                       pSrcBuff
     auto* const pSrcBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pSrcBuffer);
     auto* const pDstBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pDstBuffer);
 
-    auto wgpuSrcBuffer = pSrcBufferWebGPU->m_wgpuBuffer.Get();
-    auto wgpuDstBuffer = pDstBufferWebGPU->m_wgpuBuffer.Get();
-
-    if (wgpuSrcBuffer == nullptr)
+    if (pSrcBufferWebGPU->GetDesc().Usage != USAGE_STAGING && pDstBufferWebGPU->GetDesc().Usage != USAGE_STAGING)
     {
-        VERIFY_EXPR(pSrcBufferWebGPU->GetDesc().Usage == USAGE_DYNAMIC);
-        const auto& DynAlloc = pSrcBufferWebGPU->GetDynamicAllocation(GetContextId());
-        wgpuSrcBuffer        = DynAlloc.wgpuBuffer;
-        SrcOffset += DynAlloc.Offset;
-    }
-    DEV_CHECK_ERR(wgpuDstBuffer != nullptr, "Copying to dynamic buffers is not supported");
+        auto wgpuSrcBuffer = pSrcBufferWebGPU->m_wgpuBuffer.Get();
+        auto wgpuDstBuffer = pDstBufferWebGPU->m_wgpuBuffer.Get();
 
-    wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), wgpuSrcBuffer, SrcOffset, wgpuDstBuffer, DstOffset, Size);
+        if (wgpuSrcBuffer == nullptr)
+        {
+            VERIFY_EXPR(pSrcBufferWebGPU->GetDesc().Usage == USAGE_DYNAMIC);
+            const auto& DynAlloc = pSrcBufferWebGPU->GetDynamicAllocation(GetContextId());
+            wgpuSrcBuffer        = DynAlloc.wgpuBuffer;
+            SrcOffset += DynAlloc.Offset;
+        }
+
+        wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), wgpuSrcBuffer, SrcOffset, wgpuDstBuffer, DstOffset, Size);
+    }
+    else if (pSrcBufferWebGPU->GetDesc().Usage == USAGE_STAGING && pDstBufferWebGPU->GetDesc().Usage != USAGE_STAGING)
+    {
+        auto wgpuSrcBuffer = pSrcBufferWebGPU->GetStagingBufferInfo();
+        auto wgpuDstBuffer = pDstBufferWebGPU->m_wgpuBuffer.Get();
+
+        wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), wgpuSrcBuffer->wgpuBuffer, SrcOffset, wgpuDstBuffer, DstOffset, Size);
+
+        MapAsyncResourceInfo MapInfo{};
+        MapInfo.pResource          = pSrcBuffer;
+        MapInfo.ResourceType       = MapAsyncResourceInfo::Buffer;
+        MapInfo.pSyncPoint         = wgpuSrcBuffer->pSyncPoint;
+        MapInfo.ResourceIdentifier = wgpuSrcBuffer->BufferIdentifier;
+        m_PendingStagingResourcesWrite.insert(std::move(MapInfo));
+    }
+    else if (pSrcBufferWebGPU->GetDesc().Usage != USAGE_STAGING && pDstBufferWebGPU->GetDesc().Usage == USAGE_STAGING)
+    {
+        auto wgpuSrcBuffer = pSrcBufferWebGPU->m_wgpuBuffer.Get();
+        auto wgpuDstBuffer = pDstBufferWebGPU->GetStagingBufferInfo();
+
+        if (wgpuSrcBuffer == nullptr)
+        {
+            VERIFY_EXPR(pSrcBufferWebGPU->GetDesc().Usage == USAGE_DYNAMIC);
+            const auto& DynAlloc = pSrcBufferWebGPU->GetDynamicAllocation(GetContextId());
+            wgpuSrcBuffer        = DynAlloc.wgpuBuffer;
+            SrcOffset += DynAlloc.Offset;
+        }
+
+        wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), wgpuSrcBuffer, SrcOffset, wgpuDstBuffer->wgpuBuffer, DstOffset, Size);
+
+        MapAsyncResourceInfo MapInfo{};
+        MapInfo.pResource          = pDstBuffer;
+        MapInfo.ResourceType       = MapAsyncResourceInfo::Buffer;
+        MapInfo.pSyncPoint         = wgpuDstBuffer->pSyncPoint;
+        MapInfo.ResourceIdentifier = wgpuDstBuffer->BufferIdentifier;
+        m_PendingStagingResourcesRead.insert(std::move(MapInfo));
+    }
+    else
+    {
+        UNSUPPORTED("Copying data between staging buffers is not supported and is likely not want you really want to do");
+    }
 }
 
 void DeviceContextWebGPUImpl::MapBuffer(IBuffer*  pBuffer,
@@ -830,13 +873,25 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
             wgpuCopySize.height = AlignUp(wgpuCopySize.height, FmtAttribs.BlockHeight);
         }
 
+        auto pStagingBufferInfo = pSrcBufferWebGPU->GetStagingBufferInfo();
+
         WGPUImageCopyBuffer wgpuImageCopySrc{};
-        wgpuImageCopySrc.buffer              = pSrcBufferWebGPU->GetWebGPUBuffer();
+        wgpuImageCopySrc.buffer              = pSrcBufferWebGPU->GetDesc().Usage != USAGE_STAGING ? pSrcBufferWebGPU->GetWebGPUBuffer() : pStagingBufferInfo->wgpuBuffer;
         wgpuImageCopySrc.layout.offset       = SubresData.SrcOffset;
         wgpuImageCopySrc.layout.bytesPerRow  = static_cast<Uint32>(SubresData.Stride);
         wgpuImageCopySrc.layout.rowsPerImage = wgpuCopySize.height;
 
         wgpuCommandEncoderCopyBufferToTexture(GetCommandEncoder(), &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+
+        if (pSrcBufferWebGPU->GetDesc().Usage == USAGE_STAGING)
+        {
+            MapAsyncResourceInfo MapInfo{};
+            MapInfo.pResource          = pSrcBufferWebGPU;
+            MapInfo.ResourceType       = MapAsyncResourceInfo::Buffer;
+            MapInfo.pSyncPoint         = pStagingBufferInfo->pSyncPoint;
+            MapInfo.ResourceIdentifier = pStagingBufferInfo->BufferIdentifier;
+            m_PendingStagingResourcesWrite.insert(std::move(MapInfo));
+        }
     }
     else
     {
@@ -967,8 +1022,10 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         else
             wgpuAspectMask = WGPUTextureAspect_All;
 
+        auto wgpuSrcBuffer = pSrcTexWebGPU->GetStagingBufferInfo();
+
         WGPUImageCopyBuffer wgpuImageCopySrc{};
-        wgpuImageCopySrc.buffer              = pSrcTexWebGPU->GetWebGPUStagingBuffer();
+        wgpuImageCopySrc.buffer              = wgpuSrcBuffer->wgpuBuffer;
         wgpuImageCopySrc.layout.offset       = SrcBufferOffset;
         wgpuImageCopySrc.layout.bytesPerRow  = static_cast<Uint32>(AlignUp(SrcMipLevelAttribs.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment));
         wgpuImageCopySrc.layout.rowsPerImage = SrcMipLevelAttribs.StorageHeight / DstFmtAttribs.BlockHeight;
@@ -993,6 +1050,13 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         }
 
         wgpuCommandEncoderCopyBufferToTexture(wgpuCmdEncoder, &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+
+        MapAsyncResourceInfo MapInfo{};
+        MapInfo.pResource          = pSrcTexWebGPU;
+        MapInfo.ResourceType       = MapAsyncResourceInfo::Texture;
+        MapInfo.pSyncPoint         = wgpuSrcBuffer->pSyncPoint;
+        MapInfo.ResourceIdentifier = wgpuSrcBuffer->BufferIdentifier;
+        m_PendingStagingResourcesWrite.insert(std::move(MapInfo));
     }
     else if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage == USAGE_STAGING)
     {
@@ -1008,6 +1072,8 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         else
             wgpuAspectMask = WGPUTextureAspect_All;
 
+        auto wgpuDstBuffer = pDstTexWebGPU->GetStagingBufferInfo();
+
         WGPUImageCopyTexture wgpuImageCopySrc{};
         wgpuImageCopySrc.texture  = pSrcTexWebGPU->GetWebGPUTexture();
         wgpuImageCopySrc.aspect   = wgpuAspectMask;
@@ -1017,7 +1083,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         wgpuImageCopySrc.mipLevel = CopyAttribs.SrcMipLevel;
 
         WGPUImageCopyBuffer wgpuImageCopyDst{};
-        wgpuImageCopyDst.buffer              = pDstTexWebGPU->GetWebGPUStagingBuffer();
+        wgpuImageCopyDst.buffer              = wgpuDstBuffer->wgpuBuffer;
         wgpuImageCopyDst.layout.offset       = DstBufferOffset;
         wgpuImageCopyDst.layout.bytesPerRow  = static_cast<Uint32>(AlignUp(DstMipLevelAttribs.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment));
         wgpuImageCopyDst.layout.rowsPerImage = DstMipLevelAttribs.StorageHeight / SrcFmtAttribs.BlockHeight;
@@ -1034,6 +1100,13 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         }
 
         wgpuCommandEncoderCopyTextureToBuffer(wgpuCmdEncoder, &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+
+        MapAsyncResourceInfo MapInfo{};
+        MapInfo.pResource          = pDstTexWebGPU;
+        MapInfo.ResourceType       = MapAsyncResourceInfo::Texture;
+        MapInfo.pSyncPoint         = wgpuDstBuffer->pSyncPoint;
+        MapInfo.ResourceIdentifier = wgpuDstBuffer->BufferIdentifier;
+        m_PendingStagingResourcesRead.insert(std::move(MapInfo));
     }
     else
     {
@@ -1320,6 +1393,23 @@ void DeviceContextWebGPUImpl::Flush()
 {
     EndCommandEncoders();
 
+    for (const auto& ResourceInfo : m_PendingStagingResourcesWrite)
+    {
+        VERIFY_EXPR(ResourceInfo.pSyncPoint == nullptr);
+        if (ResourceInfo.ResourceType == MapAsyncResourceInfo::Texture)
+        {
+            auto* const pTexture = ClassPtrCast<TextureWebGPUImpl>(ResourceInfo.pResource.RawPtr());
+            pTexture->FlushPendingWrites(ResourceInfo.ResourceIdentifier);
+        }
+        else
+        {
+            auto* const pBuffer = ClassPtrCast<BufferWebGPUImpl>(ResourceInfo.pResource.RawPtr());
+            pBuffer->FlushPendingWrites(ResourceInfo.ResourceIdentifier);
+        }
+    }
+
+    m_PendingStagingResourcesWrite.clear();
+
     for (auto& MemPage : m_DynamicMemPages)
         wgpuQueueWriteBuffer(m_wgpuQueue, MemPage.GetWGPUBuffer(), MemPage.BufferOffset, MemPage.GetMappedData(), StaticCast<size_t>(MemPage.PageSize));
 
@@ -1335,10 +1425,11 @@ void DeviceContextWebGPUImpl::Flush()
             if (Status == WGPUQueueWorkDoneStatus_Success && pUserData != nullptr)
             {
                 DeviceContextWebGPUImpl* pDeviceCxt = static_cast<DeviceContextWebGPUImpl*>(pUserData);
-                for (auto& SignalItem : pDeviceCxt->m_SignalFences)
+
+                for (auto& [Signal, Fence] : pDeviceCxt->m_SignalFences)
                 {
-                    auto* pFence = SignalItem.second.RawPtr<FenceWebGPUImpl>();
-                    pFence->SetCompletedValue(SignalItem.first);
+                    auto* pFenceWebGPU = Fence.RawPtr<FenceWebGPUImpl>();
+                    pFenceWebGPU->RequestedValue(Signal);
                 }
                 pDeviceCxt->m_SignalFences.clear();
 
@@ -1352,6 +1443,16 @@ void DeviceContextWebGPUImpl::Flush()
             }
         };
 
+        std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>> SyncPoints;
+        for (const auto& ResourceInfo : m_PendingStagingResourcesRead)
+            SyncPoints.push_back(ResourceInfo.pSyncPoint);
+
+        for (const auto& [Signal, Fence] : m_SignalFences)
+        {
+            auto* pFenceWebGPU = Fence.RawPtr<FenceWebGPUImpl>();
+            pFenceWebGPU->AppendSyncPoints(SyncPoints, Signal);
+        }
+
         GetQueryManager().ResolveQuerySet(m_pDevice, GetCommandEncoder());
 
         WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
@@ -1363,6 +1464,25 @@ void DeviceContextWebGPUImpl::Flush()
         m_wgpuCommandEncoder.Reset(nullptr);
 
         GetQueryManager().ReadbackQuerySet(m_pDevice);
+
+        for (const auto& ResourceInfo : m_PendingStagingResourcesRead)
+        {
+            if (ResourceInfo.ResourceType == MapAsyncResourceInfo::Texture)
+            {
+                auto* const pTexture = ClassPtrCast<TextureWebGPUImpl>(ResourceInfo.pResource.RawPtr());
+                pTexture->ProcessAsyncReadback(ResourceInfo.ResourceIdentifier);
+            }
+            else
+            {
+                auto* const pBuffer = ClassPtrCast<BufferWebGPUImpl>(ResourceInfo.pResource.RawPtr());
+                pBuffer->ProcessAsyncReadback(ResourceInfo.ResourceIdentifier);
+            }
+        }
+
+        if (!m_PendingStagingResourcesRead.empty())
+            m_pDevice->DeviceTick();
+
+        m_PendingStagingResourcesRead.clear();
     }
 }
 
@@ -1535,6 +1655,7 @@ void DeviceContextWebGPUImpl::FinishFrame()
     m_UploadMemPages.clear();
 
     GetQueryManager().FinishFrame(m_pDevice);
+
     TDeviceContextBase::EndFrame();
 }
 
@@ -1589,89 +1710,6 @@ void DeviceContextWebGPUImpl::ResolveTextureSubresource(ITexture*               
 WGPUQueue DeviceContextWebGPUImpl::GetWebGPUQueue()
 {
     return m_wgpuQueue;
-}
-
-void DeviceContextWebGPUImpl::MapBufferAsync(IBuffer* pBuffer, MAP_TYPE MapType, MapBufferAsyncCallback pCallback, PVoid pUserData)
-{
-    auto* const pBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pBuffer);
-    const auto& BuffDesc      = pBufferWebGPU->GetDesc();
-
-    if (MapType == MAP_READ || MapType == MAP_WRITE)
-    {
-        if (BuffDesc.Usage == USAGE_STAGING)
-        {
-            pBufferWebGPU->MapAsync(MapType, pCallback, pUserData);
-        }
-        else
-        {
-            LOG_ERROR("Only USAGE_STAGING buffers can be mapped asynchronously");
-        }
-    }
-    else
-    {
-        LOG_ERROR("Only MAP_READ and MAP_WRITE are supported for asynchronous mapping");
-    }
-}
-
-void DeviceContextWebGPUImpl::MapTextureSubresourceAsync(ITexture*                          pTexture,
-                                                         Uint32                             MipLevel,
-                                                         Uint32                             ArraySlice,
-                                                         MAP_TYPE                           MapType,
-                                                         const Box*                         pMapRegion,
-                                                         MapTextureSubresourceAsyncCallback pCallback,
-                                                         PVoid                              pUserData)
-{
-    EndCommandEncoders();
-
-    auto* const pTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
-    const auto& TexDesc        = pTextureWebGPU->GetDesc();
-
-    Box FullExtentBox;
-    if (pMapRegion == nullptr)
-    {
-        auto MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
-        FullExtentBox.MaxX   = MipLevelAttribs.LogicalWidth;
-        FullExtentBox.MaxY   = MipLevelAttribs.LogicalHeight;
-        FullExtentBox.MaxZ   = MipLevelAttribs.Depth;
-        pMapRegion           = &FullExtentBox;
-    }
-
-    if (MapType == MAP_READ || MapType == MAP_WRITE)
-    {
-        if (TexDesc.Usage == USAGE_STAGING)
-        {
-            const auto MipInfo = GetMipLevelProperties(TexDesc, MipLevel);
-
-            const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-
-            const auto LocationOffset = GetStagingTextureLocationOffsetWebGPU(
-                TexDesc, ArraySlice, MipLevel, TextureWebGPUImpl::ImageCopyBufferRowAlignment,
-                pMapRegion->MinX, pMapRegion->MinY, pMapRegion->MinZ);
-
-            const auto DataSize    = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
-            const auto Stride      = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
-            const auto DepthStride = Stride * MipInfo.StorageHeight;
-
-            pTextureWebGPU->MapAsync(MapType, LocationOffset, DataSize, Stride, DepthStride, pCallback, pUserData);
-
-            if (MapType == MAP_READ)
-            {
-                DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_READ flag and can't be mapped for reading");
-            }
-            else if (MapType == MAP_WRITE)
-            {
-                DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_WRITE flag and can't be mapped for writing");
-            }
-        }
-        else
-        {
-            UNSUPPORTED(GetUsageString(TexDesc.Usage), " textures cannot be mapped in WebGPU back-end");
-        }
-    }
-    else
-    {
-        LOG_ERROR("Only MAP_READ and MAP_WRITE are supported for async mapping");
-    }
 }
 
 WGPUCommandEncoder DeviceContextWebGPUImpl::GetCommandEncoder()

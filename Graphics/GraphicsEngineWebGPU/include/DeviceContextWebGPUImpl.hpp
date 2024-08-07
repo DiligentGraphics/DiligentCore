@@ -297,21 +297,6 @@ public:
                                                       ITexture*                               pDstTexture,
                                                       const ResolveTextureSubresourceAttribs& ResolveAttribs) override final;
 
-    /// Implementation of IDeviceContextWebGPU::MapBufferAsync() in WebGPU backend.
-    void DILIGENT_CALL_TYPE MapBufferAsync(IBuffer*               pBuffer,
-                                           MAP_TYPE               MapType,
-                                           MapBufferAsyncCallback pCallback,
-                                           PVoid                  pUserData) override final;
-
-    /// Implementation of IDeviceContextWebGPU::MapTextureSubresourceAsync() in WebGPU backend.
-    void DILIGENT_CALL_TYPE MapTextureSubresourceAsync(ITexture*                          pTexture,
-                                                       Uint32                             MipLevel,
-                                                       Uint32                             ArraySlice,
-                                                       MAP_TYPE                           MapType,
-                                                       const Box*                         pMapRegion,
-                                                       MapTextureSubresourceAsyncCallback pCallback,
-                                                       PVoid                              pUserData) override final;
-
     /// Implementation of IDeviceContextWebGPU::GetWebGPUQueue() in WebGPU backend.
     WGPUQueue DILIGENT_CALL_TYPE GetWebGPUQueue() override final;
 
@@ -584,6 +569,38 @@ private:
         UploadMemoryManagerWebGPU::Allocation Allocation;
     };
 
+    struct MapAsyncResourceInfo
+    {
+        enum ResourceType
+        {
+            Buffer,
+            Texture
+        };
+
+        RefCntAutoPtr<IDeviceObject>       pResource;
+        RefCntAutoPtr<SyncPointWebGPUImpl> pSyncPoint;
+        ResourceType                       ResourceType       = {};
+        Uint32                             ResourceIdentifier = {};
+
+
+        bool operator==(const MapAsyncResourceInfo& RHS) const
+        {
+            // clang-format off
+            return pResource          == RHS.pResource &&
+                   pSyncPoint         == RHS.pSyncPoint &&
+                   ResourceType       == RHS.ResourceType &&
+                   ResourceIdentifier == RHS.ResourceIdentifier;
+            // clang-format on
+        }
+        struct Hasher
+        {
+            size_t operator()(const MapAsyncResourceInfo& Key) const
+            {
+                return ComputeHash(Key.pResource);
+            }
+        };
+    };
+
     using PendingFenceList      = std::vector<std::pair<Uint64, RefCntAutoPtr<FenceWebGPUImpl>>>;
     using PendingQueryList      = std::vector<PendingQuery>;
     using AttachmentClearList   = std::vector<OptimizedClearValue>;
@@ -592,6 +609,7 @@ private:
     using MappedTextureCache    = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
     using DebugGroupStack       = std::vector<DEBUG_GROUP_TYPE>;
     using OcclusionQueryStack   = std::vector<std::pair<OCCLUSION_QUERY_TYPE, Uint32>>;
+    using PendingResourceSet    = std::unordered_set<MapAsyncResourceInfo, MapAsyncResourceInfo::Hasher>;
 
     WebGPUQueueWrapper              m_wgpuQueue;
     WebGPUCommandEncoderWrapper     m_wgpuCommandEncoder;
@@ -608,6 +626,8 @@ private:
     DebugGroupStack       m_DebugGroupsStack;
     DebugGroupStack       m_PendingDebugGroups;
     OcclusionQueryStack   m_OcclusionQueriesStack;
+    PendingResourceSet    m_PendingStagingResourcesRead;
+    PendingResourceSet    m_PendingStagingResourcesWrite;
 
     RefCntAutoPtr<IFence> m_pFence;
     Uint64                m_FenceValue = 0;

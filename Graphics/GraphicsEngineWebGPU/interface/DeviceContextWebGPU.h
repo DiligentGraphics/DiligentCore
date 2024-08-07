@@ -53,34 +53,6 @@ typedef void (*MapTextureSubresourceAsyncCallback)(MappedTextureSubresource REF 
 /// Exposes WebGPU-specific functionality of a device context.
 DILIGENT_BEGIN_INTERFACE(IDeviceContextWebGPU, IDeviceContext)
 {
-    /// Maps the buffer asynchronously.
-    /// \param [in] pBuffer      - Pointer to the buffer to map.
-    /// \param [in] MapType      - Type of the map operation. See Diligent::MAP_TYPE.
-    /// \param [in] pCallback    - Pointer to the callback function that will be called when the operation is complete.
-    /// \param [in] pUserData    - Pointer to the user data that will be passed to the callback function.
-    VIRTUAL void METHOD(MapBufferAsync)(THIS_ 
-                                        IBuffer*               pBuffer,
-                                        MAP_TYPE               MapType,
-                                        MapBufferAsyncCallback pCallback,
-                                        PVoid                  pUserData) PURE;
-
-    /// Maps the texture subresource asynchronously.
-    /// \param [in] pTexture    - Pointer to the texture to map.
-    /// \param [in] MipLevel    - Mip level to map.
-    /// \param [in] ArraySlice  - Array slice to map. This parameter must be 0 for non-array textures.
-    /// \param [in] MapType     - Type of the map operation. See Diligent::MAP_TYPE.
-    /// \param [in] pMapRegion  - Texture region to map. If this parameter is null, the entire subresource is mapped.
-    /// \param [in] pCallback   - Pointer to the callback function that will be called when the operation is complete.
-    /// \param [in] pUserData   - Pointer to the user data that will be passed to the callback function.
-    VIRTUAL void METHOD(MapTextureSubresourceAsync)(THIS_ 
-                                                    ITexture*                          pTexture,
-                                                    Uint32                             MipLevel,
-                                                    Uint32                             ArraySlice,
-                                                    MAP_TYPE                           MapType,
-                                                    const Box*                         pMapRegion,
-                                                    MapTextureSubresourceAsyncCallback pCallback,
-                                                    PVoid                              pUserData) PURE;
-
     /// Returns a pointer to the WebGPU queue object associated with this device context.
     VIRTUAL WGPUQueue METHOD(GetWebGPUQueue)(THIS) PURE;
 };
