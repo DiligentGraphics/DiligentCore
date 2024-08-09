@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,44 +27,26 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::FenceWebGPUImpl class
+/// Declaration of Diligent::SyncPointWebGPUImpl class
 
-#include "EngineWebGPUImplTraits.hpp"
-#include "FenceBase.hpp"
-#include "SyncPointWebGPU.hpp"
+#include "ObjectBase.hpp"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
 
-/// Fence object implementation in WebGPU backend.
-class FenceWebGPUImpl final : public FenceBase<EngineWebGPUImplTraits>
+class SyncPointWebGPUImpl : public ObjectBase<IObject>
 {
 public:
-    using TFenceBase = FenceBase<EngineWebGPUImplTraits>;
+    SyncPointWebGPUImpl(IReferenceCounters* pRefCounters) :
+        ObjectBase<IObject>{pRefCounters} {}
 
-    FenceWebGPUImpl(IReferenceCounters*     pRefCounters,
-                    RenderDeviceWebGPUImpl* pDevice,
-                    const FenceDesc&        Desc);
+    virtual Bool GetValue() const { return m_Value.load(); }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceWebGPU, TFenceBase)
-
-    /// Implementation of IFence::GetCompletedValue() in WebGPU backend.
-    Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;
-
-    /// Implementation of IFence::Signal() in WebGPU backend.
-    void DILIGENT_CALL_TYPE Signal(Uint64 Value) override final;
-
-    /// Implementation of IFence::Wait() in WebGPU backend.
-    void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
-
-    void AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 EventOnComplete);
-
-    void RequestedValue(Uint64 Value);
+    virtual void SetValue(Bool Value) { m_Value.store(Value); }
 
 private:
-    using SyncPointEvent = std::pair<Uint64, std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>>;
-    std::atomic<Uint64>        m_RequestedFenceValue{0};
-    std::deque<SyncPointEvent> m_SyncPoints;
+    std::atomic<Bool> m_Value{false};
 };
 
 } // namespace Diligent

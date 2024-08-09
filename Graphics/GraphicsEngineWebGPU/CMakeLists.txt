@@ -30,6 +30,7 @@ set(INCLUDE
     include/ShaderVariableManagerWebGPU.hpp
     include/ShaderWebGPUImpl.hpp
     include/SwapChainWebGPUImpl.hpp
+    include/SyncPointWebGPU.hpp
     include/TextureViewWebGPUImpl.hpp
     include/TextureWebGPUImpl.hpp
     include/WebGPUObjectWrappers.hpp

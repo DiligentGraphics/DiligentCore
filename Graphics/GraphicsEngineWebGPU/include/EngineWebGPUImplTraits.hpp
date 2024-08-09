@@ -75,6 +75,7 @@ class PipelineStateCacheWebGPUImpl
 
 class FixedBlockMemoryAllocator;
 
+class SyncPointWebGPUImpl;
 class ShaderResourceCacheWebGPU;
 class ShaderVariableManagerWebGPU;
 

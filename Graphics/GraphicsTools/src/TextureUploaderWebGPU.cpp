@@ -27,11 +27,6 @@
 #include <mutex>
 #include <deque>
 #include <unordered_map>
-
-#if !PLATFORM_EMSCRIPTEN
-#    include <dawn/dawn_proc_table.h>
-#endif
-
 #include <webgpu/webgpu.h>
 
 #include "BufferWebGPU.h"
@@ -58,11 +53,9 @@ struct WebGPUProcessTable
 class UploadBufferWebGPU : public UploadBufferBase
 {
 public:
-    UploadBufferWebGPU(IReferenceCounters* pRefCounters, const UploadBufferDesc& Desc, const WebGPUProcessTable& ProcessTable) :
+    UploadBufferWebGPU(IReferenceCounters* pRefCounters, const UploadBufferDesc& Desc) :
         UploadBufferBase{pRefCounters, Desc},
-        m_ProcessTable{ProcessTable},
         m_pStagingBuffer{nullptr},
-        m_wgpuStagingBuffer{nullptr},
         m_SubresourceOffsets(size_t{Desc.MipLevels} * size_t{Desc.ArraySize} + 1),
         m_SubresourceStrides(size_t{Desc.MipLevels} * size_t{Desc.ArraySize})
     {
@@ -88,12 +81,6 @@ public:
                 ++SubRes;
             }
         }
-    }
-
-    ~UploadBufferWebGPU() override
-    {
-        if (m_wgpuStagingBuffer != nullptr)
-            m_ProcessTable.BufferRelease(m_wgpuStagingBuffer);
     }
 
     // http://en.cppreference.com/w/cpp/thread/condition_variable
@@ -159,13 +146,11 @@ public:
 
 private:
     friend TextureUploaderWebGPU;
-    const WebGPUProcessTable&    m_ProcessTable;
-    Threading::Signal            m_BufferMappedSignal;
-    Threading::Signal            m_CopyScheduledSignal;
-    RefCntAutoPtr<IBufferWebGPU> m_pStagingBuffer;
-    WGPUBuffer                   m_wgpuStagingBuffer;
-    std::vector<Uint32>          m_SubresourceOffsets;
-    std::vector<Uint32>          m_SubresourceStrides;
+    Threading::Signal      m_BufferMappedSignal;
+    Threading::Signal      m_CopyScheduledSignal;
+    RefCntAutoPtr<IBuffer> m_pStagingBuffer;
+    std::vector<Uint32>    m_SubresourceOffsets;
+    std::vector<Uint32>    m_SubresourceStrides;
 };
 
 } // namespace
@@ -206,18 +191,6 @@ struct TextureUploaderWebGPU::InternalData
         RefCntAutoPtr<IRenderDeviceWebGPU>  pDeviceWebGPU(pDevice, IID_RenderDeviceWebGPU);
         RefCntAutoPtr<IEngineFactoryWebGPU> pEngineFactory(pDevice->GetEngineFactory(), IID_EngineFactoryWebGPU);
         m_pDeviceWebGPU = pDeviceWebGPU;
-#if PLATFORM_EMSCRIPTEN
-        m_ProcessTable.DeviceCreateBuffer   = wgpuDeviceCreateBuffer;
-        m_ProcessTable.BufferGetMappedRange = wgpuBufferGetMappedRange;
-        m_ProcessTable.BufferUnmap          = wgpuBufferUnmap;
-        m_ProcessTable.BufferRelease        = wgpuBufferRelease;
-#else
-        const auto* pProcessTable           = static_cast<const DawnProcTable*>(pEngineFactory->GetProcessTable());
-        m_ProcessTable.DeviceCreateBuffer   = pProcessTable->deviceCreateBuffer;
-        m_ProcessTable.BufferGetMappedRange = pProcessTable->bufferGetMappedRange;
-        m_ProcessTable.BufferUnmap          = pProcessTable->bufferUnmap;
-        m_ProcessTable.BufferRelease        = pProcessTable->bufferRelease;
-#endif
     }
 
     void SwapMapQueues()
@@ -256,23 +229,13 @@ struct TextureUploaderWebGPU::InternalData
                     BuffDesc.Usage          = USAGE_STAGING;
                     BuffDesc.Size           = pBuffer->GetTotalSize();
 
-                    WGPUBufferDescriptor wgpuBufferDesc{};
-                    wgpuBufferDesc.label            = BuffDesc.Name;
-                    wgpuBufferDesc.size             = BuffDesc.Size;
-                    wgpuBufferDesc.usage            = WGPUBufferUsage_CopySrc | WGPUBufferUsage_MapWrite;
-                    wgpuBufferDesc.mappedAtCreation = true;
-
-                    WGPUBuffer wgpuBuffer = m_ProcessTable.DeviceCreateBuffer(m_pDeviceWebGPU->GetWebGPUDevice(), &wgpuBufferDesc);
-
                     RefCntAutoPtr<IBuffer> pStagingBuffer;
-                    m_pDeviceWebGPU->CreateBufferFromWebGPUBuffer(wgpuBuffer, BuffDesc, RESOURCE_STATE_UNKNOWN, &pStagingBuffer);
-
-                    RefCntAutoPtr<IBufferWebGPU> pStagingBufferWebGPU{pStagingBuffer, IID_BufferWebGPU};
-                    pBuffer->m_pStagingBuffer    = pStagingBufferWebGPU;
-                    pBuffer->m_wgpuStagingBuffer = wgpuBuffer;
+                    m_pDeviceWebGPU->CreateBuffer(BuffDesc, nullptr, &pBuffer->m_pStagingBuffer);
                 }
 
-                PVoid CpuAddress = m_ProcessTable.BufferGetMappedRange(pBuffer->m_pStagingBuffer->GetWebGPUBuffer(), 0, WGPU_WHOLE_MAP_SIZE);
+                PVoid CpuAddress = nullptr;
+                pContext->MapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE, MAP_FLAG_DISCARD, CpuAddress);
+
                 pBuffer->SetDataPtr(static_cast<Uint8*>(CpuAddress));
                 pBuffer->SignalMapped();
             }
@@ -280,11 +243,10 @@ struct TextureUploaderWebGPU::InternalData
 
             case PendingBufferOperation::Copy:
             {
-                VERIFY_EXPR(pBuffer->m_wgpuStagingBuffer != nullptr);
                 VERIFY_EXPR(pBuffer->m_pStagingBuffer != nullptr);
 
                 const auto& TexDesc = OperationInfo.pDstTexture->GetDesc();
-                m_ProcessTable.BufferUnmap(pBuffer->m_pStagingBuffer->GetWebGPUBuffer());
+                pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
 
                 for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
                 {
@@ -303,9 +265,6 @@ struct TextureUploaderWebGPU::InternalData
                                                 SubResData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
                     }
                 }
-                pBuffer->m_pStagingBuffer.Release();
-                m_ProcessTable.BufferRelease(pBuffer->m_wgpuStagingBuffer);
-                pBuffer->m_wgpuStagingBuffer = nullptr;
                 pBuffer->SignalCopyScheduled();
             }
             break;
@@ -318,7 +277,6 @@ struct TextureUploaderWebGPU::InternalData
     std::mutex                                                                          m_UploadBuffCacheMtx;
     std::unordered_map<UploadBufferDesc, std::deque<RefCntAutoPtr<UploadBufferWebGPU>>> m_UploadBufferCache;
 
-    WebGPUProcessTable                 m_ProcessTable;
     RefCntAutoPtr<IRenderDeviceWebGPU> m_pDeviceWebGPU;
 };
 
@@ -348,9 +306,8 @@ void TextureUploaderWebGPU::RenderThreadUpdate(IDeviceContext* pContext)
     if (!m_pInternalData->m_InWorkOperations.empty())
     {
         for (auto& OperationInfo : m_pInternalData->m_InWorkOperations)
-        {
             m_pInternalData->Execute(pContext, OperationInfo);
-        }
+
         m_pInternalData->m_InWorkOperations.clear();
     }
 }
@@ -382,7 +339,7 @@ void TextureUploaderWebGPU::AllocateUploadBuffer(IDeviceContext*         pContex
 
     if (!pUploadBuffer)
     {
-        pUploadBuffer = MakeNewRCObj<UploadBufferWebGPU>()(Desc, m_pInternalData->m_ProcessTable);
+        pUploadBuffer = MakeNewRCObj<UploadBufferWebGPU>()(Desc);
         LOG_INFO_MESSAGE("TextureUploaderWebGPU: created upload buffer for ", Desc.Width, 'x', Desc.Height, 'x',
                          Desc.Depth, ' ', Desc.MipLevels, "-mip ", Desc.ArraySize, "-slice ",
                          m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " texture");
