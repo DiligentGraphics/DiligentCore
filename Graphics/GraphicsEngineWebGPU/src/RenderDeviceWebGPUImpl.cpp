@@ -68,7 +68,7 @@ class DeviceMemoryWebGPUImpl
 
 static void DebugMessengerCallback(WGPUErrorType MessageType, const char* Message, void* pUserData)
 {
-    if (Message == nullptr)
+    if (Message != nullptr)
         LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
 }
 

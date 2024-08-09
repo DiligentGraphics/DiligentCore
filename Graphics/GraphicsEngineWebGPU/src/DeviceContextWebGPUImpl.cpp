@@ -1753,7 +1753,8 @@ void DeviceContextWebGPUImpl::EndCommandEncoders(Uint32 EncoderFlags)
 
     while (!m_PendingDebugGroups.empty())
     {
-        wgpuCommandEncoderPopDebugGroup(m_wgpuCommandEncoder);
+        if (m_PendingDebugGroups.back() != DEBUG_GROUP_TYPE_NULL)
+            wgpuCommandEncoderPopDebugGroup(m_wgpuCommandEncoder);
         m_PendingDebugGroups.pop_back();
     }
 }
