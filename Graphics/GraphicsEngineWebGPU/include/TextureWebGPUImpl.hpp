@@ -33,26 +33,16 @@
 #include "TextureBase.hpp"
 #include "TextureViewWebGPUImpl.hpp" // Required by TextureBase
 #include "WebGPUObjectWrappers.hpp"
-#include "SyncPointWebGPU.hpp"
+#include "WebGPUResourceBase.hpp"
 
 namespace Diligent
 {
 
 /// Texture implementation in WebGPU backend.
-class TextureWebGPUImpl final : public TextureBase<EngineWebGPUImplTraits>
+class TextureWebGPUImpl final : public TextureBase<EngineWebGPUImplTraits>, public WebGPUResourceBase
 {
 public:
     using TTextureBase = TextureBase<EngineWebGPUImplTraits>;
-
-    struct StagingBufferSyncInfo
-    {
-        WebGPUBufferWrapper                wgpuBuffer;
-        RefCntAutoPtr<SyncPointWebGPUImpl> pSyncPoint;
-        Uint32                             BufferIdentifier;
-        void*                              pMappedData;
-        size_t                             MappedSize;
-        TextureWebGPUImpl*                 pThis;
-    };
 
     TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
                       FixedBlockMemoryAllocator& TexViewObjAllocator,
@@ -78,15 +68,11 @@ public:
     /// Implementation of ITextureWebGPU::GetWebGPUTexture() in WebGPU backend.
     WGPUTexture DILIGENT_CALL_TYPE GetWebGPUTexture() const override final;
 
-    const StagingBufferSyncInfo* GetStagingBufferInfo();
+    StagingBufferInfo* GetStagingBufferInfo();
 
     void* Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, Uint64 Offset, Uint64 Size);
 
     void Unmap();
-
-    void FlushPendingWrites(Uint32 BufferIdx);
-
-    void ProcessAsyncReadback(Uint32 BufferIdx);
 
     // The requirement is hard-coded in the spec: https://www.w3.org/TR/webgpu/#gpuimagecopybuffer
     static constexpr Uint64 ImageCopyBufferRowAlignment = 256;
@@ -96,25 +82,10 @@ private:
                             ITextureView**         ppView,
                             bool                   bIsDefaultView) override;
 
-    const StagingBufferSyncInfo* FindAvailableWriteMemoryBuffer();
-
-    const StagingBufferSyncInfo* FindAvailableReadMemoryBuffer();
-
 private:
-    enum class TextureMapState
-    {
-        None,
-        Read,
-        Write
-    };
-    using StagingBufferInfoList = std::vector<StagingBufferSyncInfo>;
+    static constexpr Uint32 MaxStagingReadBuffers = 16;
 
-    static constexpr Uint32 MaxPendingBuffers = 16;
-
-    WebGPUTextureWrapper  m_wgpuTexture;
-    StagingBufferInfoList m_StagingBufferInfo;
-    std::vector<uint8_t>  m_MappedData;
-    TextureMapState       m_MapState = {};
+    WebGPUTextureWrapper m_wgpuTexture;
 };
 
 } // namespace Diligent

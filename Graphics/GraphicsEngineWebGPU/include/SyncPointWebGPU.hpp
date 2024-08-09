@@ -30,7 +30,6 @@
 /// Declaration of Diligent::SyncPointWebGPUImpl class
 
 #include "ObjectBase.hpp"
-#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
@@ -41,12 +40,12 @@ public:
     SyncPointWebGPUImpl(IReferenceCounters* pRefCounters) :
         ObjectBase<IObject>{pRefCounters} {}
 
-    virtual Bool GetValue() const { return m_Value.load(); }
-
-    virtual void SetValue(Bool Value) { m_Value.store(Value); }
+    bool IsTriggered() const { return m_Triggered.load(); }
+    void Trigger() { m_Triggered.store(true); }
+    void Reset() { m_Triggered.store(false); }
 
 private:
-    std::atomic<Bool> m_Value{false};
+    std::atomic<Bool> m_Triggered{false};
 };
 
 } // namespace Diligent

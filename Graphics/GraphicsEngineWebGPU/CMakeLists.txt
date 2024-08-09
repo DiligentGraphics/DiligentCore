@@ -35,6 +35,7 @@ set(INCLUDE
     include/TextureWebGPUImpl.hpp
     include/WebGPUObjectWrappers.hpp
     include/WebGPUTypeConversions.hpp
+    include/WebGPUResourceBase.hpp
 )
 
 set(INTERFACE 
@@ -83,6 +84,7 @@ set(SRC
    src/TextureViewWebGPUImpl.cpp
    src/TextureWebGPUImpl.cpp
    src/WebGPUTypeConversions.cpp
+   src/WebGPUResourceBase.cpp
 )
 
 set(DLL_SOURCE

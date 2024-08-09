@@ -196,7 +196,8 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
         pDevice,
         Desc,
         bIsDeviceInternal
-    }
+    },
+    WebGPUResourceBase{pRefCounters, Desc.Usage == USAGE_STAGING ? ((Desc.CPUAccessFlags & CPU_ACCESS_READ) ? MaxStagingReadBuffers : 1): 0}
 // clang-format on
 {
     if (m_Desc.Usage == USAGE_IMMUTABLE && (pInitData == nullptr || pInitData->pSubResources == nullptr))
@@ -296,7 +297,6 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
     }
     else if (m_Desc.Usage == USAGE_STAGING)
     {
-        m_StagingBufferInfo.reserve(MaxPendingBuffers);
         m_MappedData.resize(static_cast<size_t>(WebGPUGetTextureLocationOffset(m_Desc, m_Desc.GetArraySize(), 0, FmtAttribs.BlockHeight, ImageCopyBufferRowAlignment)));
 
         if (IsInitializeTexture)
@@ -348,9 +348,12 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
         Desc,
         bIsDeviceInternal
     },
+    WebGPUResourceBase{pRefCounters, 0},
     m_wgpuTexture{wgpuTextureHandle, {true}}
 // clang-format on
 {
+    DEV_CHECK_ERR(Desc.Usage != USAGE_STAGING, "Staging texture is not expected");
+
     SetState(InitialState);
 }
 
@@ -364,99 +367,22 @@ WGPUTexture TextureWebGPUImpl::GetWebGPUTexture() const
     return m_wgpuTexture.Get();
 }
 
-const TextureWebGPUImpl::StagingBufferSyncInfo* TextureWebGPUImpl::GetStagingBufferInfo()
+TextureWebGPUImpl::StagingBufferInfo* TextureWebGPUImpl::GetStagingBufferInfo()
 {
     VERIFY(m_Desc.Usage == USAGE_STAGING, "Staging buffer is expected");
-
-    if (m_Desc.CPUAccessFlags & CPU_ACCESS_READ)
-        return FindAvailableReadMemoryBuffer();
-    if (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE)
-        return FindAvailableWriteMemoryBuffer();
-
-    UNEXPECTED("Unexpected CPU access flags");
-    return nullptr;
+    return WebGPUResourceBase::GetStagingBufferInfo(m_pDevice->GetWebGPUDevice(), m_Desc.Name, m_Desc.CPUAccessFlags);
 }
 
 void* TextureWebGPUImpl::Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, Uint64 Offset, Uint64 Size)
 {
     VERIFY(m_Desc.Usage == USAGE_STAGING, "Map working only for staging buffers");
-    VERIFY(m_MapState == TextureMapState::None, "Texture is already mapped");
-
-    if (MapType == MAP_READ)
-    {
-        m_MapState = TextureMapState::Read;
-        return m_MappedData.data() + Offset;
-    }
-    else if (MapType == MAP_WRITE)
-    {
-        m_MapState = TextureMapState::Write;
-        return m_MappedData.data() + Offset;
-    }
-    else if (MapType == MAP_READ_WRITE)
-    {
-        LOG_ERROR("MAP_READ_WRITE is not supported in WebGPU backend");
-    }
-    else
-    {
-        UNEXPECTED("Unknown map type");
-    }
-    return nullptr;
+    return WebGPUResourceBase::Map(MapType, Offset);
 }
 
 void TextureWebGPUImpl::Unmap()
 {
     VERIFY(m_Desc.Usage == USAGE_STAGING, "Unmap working only for staging buffers");
-    VERIFY(m_MapState != TextureMapState::None, "Texture is not mapped");
-
-    if (m_MapState == TextureMapState::Read || m_MapState == TextureMapState::Write)
-    {
-        // Nothing to do
-    }
-    else
-    {
-        UNEXPECTED("Call TextureWebGPUImpl::Map method before TextureWebGPUImpl::Unmap");
-    }
-
-    m_MapState = {};
-}
-
-void TextureWebGPUImpl::FlushPendingWrites(Uint32 BufferIdx)
-{
-    VERIFY(m_Desc.Usage == USAGE_STAGING, "Staging buffer is expected");
-    VERIFY(m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE, "Unexpected CPUAccessFlags");
-    VERIFY_EXPR(BufferIdx < m_StagingBufferInfo.size());
-
-    const auto& BufferInfo = m_StagingBufferInfo[BufferIdx];
-
-    void* pData = wgpuBufferGetMappedRange(BufferInfo.wgpuBuffer, 0, WGPU_WHOLE_MAP_SIZE);
-    memcpy(pData, m_MappedData.data(), m_MappedData.size());
-    wgpuBufferUnmap(BufferInfo.wgpuBuffer);
-    m_StagingBufferInfo.clear();
-}
-
-void TextureWebGPUImpl::ProcessAsyncReadback(Uint32 BufferIdx)
-{
-    VERIFY_EXPR(BufferIdx < m_StagingBufferInfo.size());
-
-    auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
-        if (MapStatus != WGPUBufferMapAsyncStatus_Success && MapStatus != WGPUBufferMapAsyncStatus_DestroyedBeforeCallback)
-            DEV_ERROR("Failed wgpuBufferMapAsync: ", MapStatus);
-
-        if (MapStatus == WGPUBufferMapAsyncStatus_Success && pUserData != nullptr)
-        {
-            auto* pBufferInfo = static_cast<StagingBufferSyncInfo*>(pUserData);
-
-            const auto* pData = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(pBufferInfo->wgpuBuffer, 0, WGPU_WHOLE_MAP_SIZE));
-            VERIFY_EXPR(pData != nullptr);
-            memcpy(pBufferInfo->pMappedData, pData, pBufferInfo->MappedSize);
-            pBufferInfo->pSyncPoint->SetValue(true);
-            wgpuBufferUnmap(pBufferInfo->wgpuBuffer.Get());
-            pBufferInfo->pThis->Release();
-        }
-    };
-
-    this->AddRef();
-    wgpuBufferMapAsync(m_StagingBufferInfo[BufferIdx].wgpuBuffer, WGPUMapMode_Read, 0, WGPU_WHOLE_MAP_SIZE, MapAsyncCallback, &m_StagingBufferInfo[BufferIdx]);
+    WebGPUResourceBase::Unmap();
 }
 
 void TextureWebGPUImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
@@ -533,76 +459,6 @@ void TextureWebGPUImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITex
         const auto* ViewTypeName = GetTexViewTypeLiteralName(ViewDesc.ViewType);
         LOG_ERROR("Failed to create view \"", ViewDesc.Name ? ViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"");
     }
-}
-
-const TextureWebGPUImpl::StagingBufferSyncInfo* TextureWebGPUImpl::FindAvailableWriteMemoryBuffer()
-{
-    if (m_StagingBufferInfo.empty())
-    {
-        const auto& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
-
-        String StagingBufferName = "Staging buffer [WRITE] for '";
-        StagingBufferName += m_Desc.Name;
-        StagingBufferName += '\'';
-
-        WGPUBufferDescriptor wgpuBufferDesc{};
-        wgpuBufferDesc.label            = StagingBufferName.c_str();
-        wgpuBufferDesc.size             = WebGPUGetTextureLocationOffset(m_Desc, m_Desc.GetArraySize(), 0, FmtAttribs.BlockHeight, ImageCopyBufferRowAlignment);
-        wgpuBufferDesc.usage            = WGPUBufferUsage_MapWrite | WGPUBufferUsage_CopySrc;
-        wgpuBufferDesc.mappedAtCreation = true;
-
-        WebGPUBufferWrapper wgpuBuffer{wgpuDeviceCreateBuffer(m_pDevice->GetWebGPUDevice(), &wgpuBufferDesc)};
-        if (!wgpuBuffer)
-            LOG_ERROR_AND_THROW("Failed to create WebGPU buffer ", " '", m_Desc.Name ? m_Desc.Name : "", '\'');
-
-        StagingBufferSyncInfo BufferInfo{};
-        BufferInfo.wgpuBuffer       = std::move(wgpuBuffer);
-        BufferInfo.BufferIdentifier = StaticCast<Uint32>(m_StagingBufferInfo.size());
-
-        m_StagingBufferInfo.emplace_back(std::move(BufferInfo));
-    }
-
-    return &m_StagingBufferInfo.back();
-}
-
-const TextureWebGPUImpl::StagingBufferSyncInfo* TextureWebGPUImpl::FindAvailableReadMemoryBuffer()
-{
-    for (auto& BufferInfo : m_StagingBufferInfo)
-    {
-        if (wgpuBufferGetMapState(BufferInfo.wgpuBuffer) == WGPUBufferMapState_Unmapped)
-        {
-            BufferInfo.pSyncPoint->SetValue(false);
-            return &BufferInfo;
-        }
-    }
-
-    String StagingBufferName = "Staging buffer [READ] for '";
-    StagingBufferName += m_Desc.Name;
-    StagingBufferName += '\'';
-
-    WGPUBufferDescriptor wgpuBufferDesc{};
-    wgpuBufferDesc.label = StagingBufferName.c_str();
-    wgpuBufferDesc.size  = StaticCast<Uint64>(m_MappedData.size());
-    wgpuBufferDesc.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
-
-    WebGPUBufferWrapper wgpuBuffer{wgpuDeviceCreateBuffer(m_pDevice->GetWebGPUDevice(), &wgpuBufferDesc)};
-    if (!wgpuBuffer)
-    {
-        LOG_ERROR("Failed to create WebGPU buffer ", " '", m_Desc.Name ? m_Desc.Name : "", '\'');
-        return nullptr;
-    }
-
-    StagingBufferSyncInfo BufferInfo{};
-    BufferInfo.wgpuBuffer       = std::move(wgpuBuffer);
-    BufferInfo.BufferIdentifier = StaticCast<Uint32>(m_StagingBufferInfo.size());
-    BufferInfo.pMappedData      = m_MappedData.data();
-    BufferInfo.MappedSize       = m_MappedData.size();
-    BufferInfo.pSyncPoint       = RefCntAutoPtr<SyncPointWebGPUImpl>{MakeNewRCObj<SyncPointWebGPUImpl>()()};
-    BufferInfo.pThis            = this;
-
-    m_StagingBufferInfo.emplace_back(std::move(BufferInfo));
-    VERIFY_EXPR(m_StagingBufferInfo.capacity() <= MaxPendingBuffers);
-    return &m_StagingBufferInfo.back();
 }
 
 } // namespace Diligent

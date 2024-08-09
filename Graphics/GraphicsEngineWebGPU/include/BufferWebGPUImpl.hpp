@@ -36,26 +36,16 @@
 #include "WebGPUObjectWrappers.hpp"
 #include "IndexWrapper.hpp"
 #include "UploadMemoryManagerWebGPU.hpp"
-#include "SyncPointWebGPU.hpp"
+#include "WebGPUResourceBase.hpp"
 
 namespace Diligent
 {
 
 /// Buffer implementation in WebGPU backend.
-class BufferWebGPUImpl final : public BufferBase<EngineWebGPUImplTraits>
+class BufferWebGPUImpl final : public BufferBase<EngineWebGPUImplTraits>, public WebGPUResourceBase
 {
 public:
     using TBufferBase = BufferBase<EngineWebGPUImplTraits>;
-
-    struct StagingBufferSyncInfo
-    {
-        WebGPUBufferWrapper                wgpuBuffer;
-        RefCntAutoPtr<SyncPointWebGPUImpl> pSyncPoint;
-        Uint32                             BufferIdentifier;
-        void*                              pMappedData;
-        size_t                             MappedSize;
-        BufferWebGPUImpl*                  pThis;
-    };
 
     BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
                      FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
@@ -115,18 +105,10 @@ public:
 
     void SetDynamicAllocation(DeviceContextIndex CtxId, DynamicMemoryManagerWebGPU::Allocation&& Allocation);
 
-    const StagingBufferSyncInfo* GetStagingBufferInfo();
-
-    void FlushPendingWrites(Uint32 BufferIdx);
-
-    void ProcessAsyncReadback(Uint32 BufferIdx);
+    StagingBufferInfo* GetStagingBufferInfo();
 
 private:
     void CreateViewInternal(const BufferViewDesc& ViewDesc, IBufferView** ppView, bool IsDefaultView) override;
-
-    const StagingBufferSyncInfo* FindAvailableWriteMemoryBuffer();
-
-    const StagingBufferSyncInfo* FindAvailableReadMemoryBuffer();
 
 private:
     friend class DeviceContextWebGPUImpl;
@@ -146,22 +128,11 @@ private:
 
     using DynamicAllocationList = std::vector<DynamicAllocation, STDAllocatorRawMem<DynamicAllocation>>;
 
-    enum class BufferMapState
-    {
-        None,
-        Read,
-        Write
-    };
-    using StagingBufferInfoList = std::vector<StagingBufferSyncInfo>;
-
-    static constexpr Uint32 MaxPendingBuffers = 16;
+    static constexpr Uint32 MaxStagingReadBuffers = 16;
 
     WebGPUBufferWrapper   m_wgpuBuffer;
-    StagingBufferInfoList m_StagingBufferInfo;
-    std::vector<uint8_t>  m_MappedData;
     DynamicAllocationList m_DynamicAllocations;
     Uint64                m_Alignment;
-    BufferMapState        m_MapState = {};
 };
 
 } // namespace Diligent

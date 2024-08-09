@@ -569,65 +569,33 @@ private:
         UploadMemoryManagerWebGPU::Allocation Allocation;
     };
 
-    struct MapAsyncResourceInfo
-    {
-        enum ResourceType
-        {
-            Buffer,
-            Texture
-        };
-
-        RefCntAutoPtr<IDeviceObject>       pResource;
-        RefCntAutoPtr<SyncPointWebGPUImpl> pSyncPoint;
-        ResourceType                       ResourceType       = {};
-        Uint32                             ResourceIdentifier = {};
-
-
-        bool operator==(const MapAsyncResourceInfo& RHS) const
-        {
-            // clang-format off
-            return pResource          == RHS.pResource &&
-                   pSyncPoint         == RHS.pSyncPoint &&
-                   ResourceType       == RHS.ResourceType &&
-                   ResourceIdentifier == RHS.ResourceIdentifier;
-            // clang-format on
-        }
-        struct Hasher
-        {
-            size_t operator()(const MapAsyncResourceInfo& Key) const
-            {
-                return ComputeHash(Key.pResource);
-            }
-        };
-    };
-
-    using PendingFenceList      = std::vector<std::pair<Uint64, RefCntAutoPtr<FenceWebGPUImpl>>>;
-    using PendingQueryList      = std::vector<PendingQuery>;
-    using AttachmentClearList   = std::vector<OptimizedClearValue>;
-    using UploadMemoryPageList  = std::vector<UploadMemoryManagerWebGPU::Page>;
-    using DynamicMemoryPageList = std::vector<DynamicMemoryManagerWebGPU::Page>;
-    using MappedTextureCache    = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
-    using DebugGroupStack       = std::vector<DEBUG_GROUP_TYPE>;
-    using OcclusionQueryStack   = std::vector<std::pair<OCCLUSION_QUERY_TYPE, Uint32>>;
-    using PendingResourceSet    = std::unordered_set<MapAsyncResourceInfo, MapAsyncResourceInfo::Hasher>;
+    using PendingFenceList        = std::vector<std::pair<Uint64, RefCntAutoPtr<FenceWebGPUImpl>>>;
+    using PendingQueryList        = std::vector<PendingQuery>;
+    using AttachmentClearList     = std::vector<OptimizedClearValue>;
+    using UploadMemoryPageList    = std::vector<UploadMemoryManagerWebGPU::Page>;
+    using DynamicMemoryPageList   = std::vector<DynamicMemoryManagerWebGPU::Page>;
+    using MappedTextureCache      = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
+    using DebugGroupStack         = std::vector<DEBUG_GROUP_TYPE>;
+    using OcclusionQueryStack     = std::vector<std::pair<OCCLUSION_QUERY_TYPE, Uint32>>;
+    using PendingStagingResources = std::unordered_map<WebGPUResourceBase::StagingBufferInfo*, RefCntAutoPtr<IObject>>;
 
     WebGPUQueueWrapper              m_wgpuQueue;
     WebGPUCommandEncoderWrapper     m_wgpuCommandEncoder;
     WebGPURenderPassEncoderWrapper  m_wgpuRenderPassEncoder;
     WebGPUComputePassEncoderWrapper m_wgpuComputePassEncoder;
 
-    PendingFenceList      m_SignalFences;
-    PendingFenceList      m_WaitFences;
-    AttachmentClearList   m_AttachmentClearValues;
-    PendingQueryList      m_PendingTimeQueries;
-    UploadMemoryPageList  m_UploadMemPages;
-    DynamicMemoryPageList m_DynamicMemPages;
-    MappedTextureCache    m_MappedTextures;
-    DebugGroupStack       m_DebugGroupsStack;
-    DebugGroupStack       m_PendingDebugGroups;
-    OcclusionQueryStack   m_OcclusionQueriesStack;
-    PendingResourceSet    m_PendingStagingResourcesRead;
-    PendingResourceSet    m_PendingStagingResourcesWrite;
+    PendingFenceList        m_SignalFences;
+    PendingFenceList        m_WaitFences;
+    AttachmentClearList     m_AttachmentClearValues;
+    PendingQueryList        m_PendingTimeQueries;
+    UploadMemoryPageList    m_UploadMemPages;
+    DynamicMemoryPageList   m_DynamicMemPages;
+    MappedTextureCache      m_MappedTextures;
+    DebugGroupStack         m_DebugGroupsStack;
+    DebugGroupStack         m_PendingDebugGroups;
+    OcclusionQueryStack     m_OcclusionQueriesStack;
+    PendingStagingResources m_PendingStagingReads;
+    PendingStagingResources m_PendingStagingWrites;
 
     RefCntAutoPtr<IFence> m_pFence;
     Uint64                m_FenceValue = 0;

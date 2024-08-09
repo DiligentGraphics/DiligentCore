@@ -48,7 +48,7 @@ Uint64 FenceWebGPUImpl::GetCompletedValue()
     {
         auto IsSyncPointCompleted = [](const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints) {
             for (const auto& pSyncPoint : SyncPoints)
-                if (!pSyncPoint->GetValue())
+                if (!pSyncPoint->IsTriggered())
                     return false;
             return true;
         };
