@@ -48,10 +48,33 @@ public:
     GenerateMipsHelperWebGPU& operator = (      GenerateMipsHelperWebGPU&&) = delete;
     // clang-format on
 
-    void GenerateMips(WGPUComputePassEncoder wgpuCmdEncoder, DeviceContextWebGPUImpl* pDeviceContext, TextureViewWebGPUImpl* pTexView);
+    void GenerateMips(DeviceContextWebGPUImpl* pDeviceContext, TextureViewWebGPUImpl* pTexView);
 
 private:
     using UAVFormats = std::array<TEXTURE_FORMAT, 4>;
+
+    struct ShaderModuleCacheKey
+    {
+        struct Hasher
+        {
+            size_t operator()(const ShaderModuleCacheKey& Key) const;
+        };
+
+        ShaderModuleCacheKey(const UAVFormats& _Formats, SHADER_TYPE _ShaderType) :
+            Formats{_Formats},
+            ShaderType{_ShaderType}
+        {}
+
+        bool operator==(const ShaderModuleCacheKey& rhs) const;
+
+        size_t GetHash() const;
+
+        UAVFormats  Formats    = {};
+        SHADER_TYPE ShaderType = {};
+
+    private:
+        mutable size_t Hash = 0;
+    };
 
     struct ComputePipelineHashKey
     {
@@ -76,30 +99,26 @@ private:
         mutable size_t Hash = 0;
     };
 
-    struct ShaderModuleCacheKey
+    struct RenderPipelineHashKey
     {
         struct Hasher
         {
-            size_t operator()(const ShaderModuleCacheKey& Key) const;
+            size_t operator()(const RenderPipelineHashKey& Key) const;
         };
 
-        ShaderModuleCacheKey(const UAVFormats& Formats) :
-            Formats{Formats}
-        {}
+        RenderPipelineHashKey(TEXTURE_FORMAT _Format) :
+            Format{_Format} {};
 
-        bool operator==(const ShaderModuleCacheKey& rhs) const;
+        bool operator==(const RenderPipelineHashKey& rhs) const;
 
-        size_t GetHash() const;
-
-        UAVFormats Formats = {};
-
-    private:
-        mutable size_t Hash = 0;
+        TEXTURE_FORMAT Format = {};
     };
 
     using ComputePipelineGroupLayout = std::pair<WebGPUComputePipelineWrapper, WebGPUBindGroupLayoutWrapper>;
-    using ComputePipelineCache       = std::unordered_map<ComputePipelineHashKey, ComputePipelineGroupLayout, ComputePipelineHashKey::Hasher>;
+    using RenderPipelineGroupLayout  = std::pair<WebGPURenderPipelineWrapper, WebGPUBindGroupLayoutWrapper>;
     using ShaderModuleCache          = std::unordered_map<ShaderModuleCacheKey, WebGPUShaderModuleWrapper, ShaderModuleCacheKey::Hasher>;
+    using ComputePipelineCache       = std::unordered_map<ComputePipelineHashKey, ComputePipelineGroupLayout, ComputePipelineHashKey::Hasher>;
+    using RenderPipelineCache        = std::unordered_map<RenderPipelineHashKey, RenderPipelineGroupLayout, RenderPipelineHashKey::Hasher>;
 
     void InitializeConstantBuffer();
 
@@ -107,9 +126,15 @@ private:
 
     void InitializePlaceholderTextures();
 
-    WebGPUShaderModuleWrapper& GetShaderModule(const UAVFormats& Formats);
+    WebGPUShaderModuleWrapper& GetShaderModule(const UAVFormats& Formats, SHADER_TYPE ShaderType);
 
     ComputePipelineGroupLayout& GetComputePipelineAndGroupLayout(const UAVFormats& Formats, Uint32 PowerOfTwo);
+
+    RenderPipelineGroupLayout& GetRenderPipelineAndGroupLayout(TEXTURE_FORMAT Format);
+
+    void GenerateMips(WGPUComputePassEncoder wgpuCmdEncoder, DeviceContextWebGPUImpl* pDeviceContext, TextureViewWebGPUImpl* pTexView);
+
+    void GenerateMips(WGPUCommandEncoder wgpuCmdEncoder, DeviceContextWebGPUImpl* pDeviceContext, TextureViewWebGPUImpl* pTexView);
 
 private:
     static constexpr TEXTURE_FORMAT PlaceholderTextureFormat = TEX_FORMAT_RGBA8_UNORM;
@@ -121,10 +146,9 @@ private:
     RefCntAutoPtr<IBuffer>                   m_pBuffer;
     std::vector<RefCntAutoPtr<ITextureView>> m_PlaceholderTextureViews;
 
-    ComputePipelineCache m_PipelineLayoutCache;
+    ComputePipelineCache m_ComputePipelineLayoutCache;
+    RenderPipelineCache  m_RenderPipelineLayoutCache;
     ShaderModuleCache    m_ShaderModuleCache;
-
-    bool m_IsInitializedResources = false;
 };
 
 } // namespace Diligent

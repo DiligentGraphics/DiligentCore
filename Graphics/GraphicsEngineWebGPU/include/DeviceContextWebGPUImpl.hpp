@@ -405,6 +405,8 @@ private:
 #endif
 
 private:
+    friend class GenerateMipsHelperWebGPU;
+
     struct WebGPUEncoderState
     {
         enum CMD_ENCODER_STATE_FLAGS : Uint32
