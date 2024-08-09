@@ -47,7 +47,8 @@ TEST(GenerateMipsTest, GenerateMips)
         {
             TEX_FORMAT_RGBA8_UNORM,
             TEX_FORMAT_RGBA8_UNORM_SRGB,
-            TEX_FORMAT_RGBA32_FLOAT //
+            TEX_FORMAT_RGBA32_FLOAT,
+            TEX_FORMAT_R11G11B10_FLOAT,
         };
 
     for (size_t f = 0; f < _countof(TestFormats); ++f)

@@ -61,6 +61,10 @@ public:
 
     WGPUTextureView GetMipLevelSRV(Uint32 Mip);
 
+    WGPUTextureView GetMipLevelRTV(Uint32 Slice, Uint32 Mip);
+
+    WGPUTextureView GetMipLevelSRV(Uint32 Slice, Uint32 Mip);
+
 private:
     WebGPUTextureViewWrapper              m_wgpuTextureView;
     std::vector<WebGPUTextureViewWrapper> m_wgpuTextureMipSRVs;
