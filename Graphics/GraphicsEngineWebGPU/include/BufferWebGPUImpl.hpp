@@ -95,9 +95,9 @@ public:
         }
     }
 
-    void Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData);
+    void* Map(MAP_TYPE MapType);
 
-    void Unmap(MAP_TYPE MapType);
+    void Unmap();
 
     Uint64 GetAlignment() const;
 
@@ -105,7 +105,7 @@ public:
 
     void SetDynamicAllocation(DeviceContextIndex CtxId, DynamicMemoryManagerWebGPU::Allocation&& Allocation);
 
-    StagingBufferInfo* GetStagingBufferInfo();
+    StagingBufferInfo* GetStagingBuffer();
 
 private:
     void CreateViewInternal(const BufferViewDesc& ViewDesc, IBufferView** ppView, bool IsDefaultView) override;
@@ -132,7 +132,7 @@ private:
 
     WebGPUBufferWrapper   m_wgpuBuffer;
     DynamicAllocationList m_DynamicAllocations;
-    Uint64                m_Alignment;
+    const Uint64          m_Alignment;
 };
 
 } // namespace Diligent

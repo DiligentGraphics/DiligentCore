@@ -61,7 +61,7 @@ WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&     
     else if (Desc.Is3D())
         wgpuTextureDesc.dimension = WGPUTextureDimension_3D;
     else
-        LOG_ERROR_AND_THROW("Unknown texture type");
+        UNEXPECTED("Unknown texture type");
 
     wgpuTextureDesc.usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_CopySrc;
     if (Desc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL))
@@ -368,21 +368,22 @@ WGPUTexture TextureWebGPUImpl::GetWebGPUTexture() const
     return m_wgpuTexture.Get();
 }
 
-TextureWebGPUImpl::StagingBufferInfo* TextureWebGPUImpl::GetStagingBufferInfo()
+TextureWebGPUImpl::StagingBufferInfo* TextureWebGPUImpl::GetStagingBuffer()
 {
-    VERIFY(m_Desc.Usage == USAGE_STAGING, "Staging buffer is expected");
-    return WebGPUResourceBase::GetStagingBufferInfo(m_pDevice->GetWebGPUDevice(), m_Desc.CPUAccessFlags);
+    VERIFY(m_Desc.Usage == USAGE_STAGING, "USAGE_STAGING texture is expected");
+    return WebGPUResourceBase::GetStagingBuffer(m_pDevice->GetWebGPUDevice(), m_Desc.CPUAccessFlags);
 }
 
-void* TextureWebGPUImpl::Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, Uint64 Offset, Uint64 Size)
+void* TextureWebGPUImpl::Map(MAP_TYPE MapType, Uint64 Offset, Uint64 Size)
 {
-    VERIFY(m_Desc.Usage == USAGE_STAGING, "Map is only allowed for staging textures");
+    VERIFY(m_Desc.Usage == USAGE_STAGING, "Map is only allowed for USAGE_STAGING textures");
+    VERIFY(Offset + Size <= m_MappedData.size(), "Offset (", Offset, ") + size (", Size, ") exceeds the mapped data size (", m_MappedData.size(), ")");
     return WebGPUResourceBase::Map(MapType, Offset);
 }
 
 void TextureWebGPUImpl::Unmap()
 {
-    VERIFY(m_Desc.Usage == USAGE_STAGING, "Unmap is only allowed staging textures");
+    VERIFY(m_Desc.Usage == USAGE_STAGING, "Unmap is only allowed USAGE_STAGING textures");
     WebGPUResourceBase::Unmap();
 }
 

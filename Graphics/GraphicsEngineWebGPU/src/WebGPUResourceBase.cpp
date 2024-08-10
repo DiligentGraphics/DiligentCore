@@ -98,7 +98,7 @@ WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingReadBuffer
 
     WGPUBufferDescriptor wgpuBufferDesc{};
     wgpuBufferDesc.label = StagingBufferName.c_str();
-    wgpuBufferDesc.size  = StaticCast<Uint64>(m_MappedData.size());
+    wgpuBufferDesc.size  = m_MappedData.size();
     wgpuBufferDesc.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
 
     WebGPUBufferWrapper wgpuBuffer{wgpuDeviceCreateBuffer(wgpuDevice, &wgpuBufferDesc)};
@@ -118,7 +118,7 @@ WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingReadBuffer
 }
 
 
-WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::GetStagingBufferInfo(WGPUDevice wgpuDevice, CPU_ACCESS_FLAGS Access)
+WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::GetStagingBuffer(WGPUDevice wgpuDevice, CPU_ACCESS_FLAGS Access)
 {
     VERIFY(m_StagingBuffers.capacity() != 0, "Resource is not initialized as staging");
     VERIFY(Access == CPU_ACCESS_READ || Access == CPU_ACCESS_WRITE, "Read or write access is expected");
@@ -163,12 +163,19 @@ void WebGPUResourceBase::Unmap()
 void WebGPUResourceBase::FlushPendingWrites(StagingBufferInfo& Buffer)
 {
     VERIFY_EXPR(m_StagingBuffers.size() == 1);
-    VERIFY_EXPR(!Buffer.pSyncPoint);
+    VERIFY(!Buffer.pSyncPoint, "Staging write buffers do not need sync points");
 
-    void* pData = wgpuBufferGetMappedRange(Buffer.wgpuBuffer, 0, WGPU_WHOLE_MAP_SIZE);
-    memcpy(pData, m_MappedData.data(), m_MappedData.size());
+    if (void* pData = wgpuBufferGetMappedRange(Buffer.wgpuBuffer, 0, WGPU_WHOLE_MAP_SIZE))
+    {
+        memcpy(pData, m_MappedData.data(), m_MappedData.size());
+    }
+    else
+    {
+        UNEXPECTED("Mapped range is null");
+    }
     wgpuBufferUnmap(Buffer.wgpuBuffer);
 
+    // Clear staging buffers - we create a new write buffer that is mapped at creation each time.
     m_StagingBuffers.clear();
 }
 
@@ -180,9 +187,14 @@ void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
 
         if (MapStatus == WGPUBufferMapAsyncStatus_Success)
         {
-            const auto* pData = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(BufferInfo.wgpuBuffer, 0, WGPU_WHOLE_MAP_SIZE));
-            VERIFY_EXPR(pData != nullptr);
-            memcpy(BufferInfo.Resource.m_MappedData.data(), pData, BufferInfo.Resource.m_MappedData.size());
+            if (const void* pData = wgpuBufferGetConstMappedRange(BufferInfo.wgpuBuffer, 0, WGPU_WHOLE_MAP_SIZE))
+            {
+                memcpy(BufferInfo.Resource.m_MappedData.data(), pData, BufferInfo.Resource.m_MappedData.size());
+            }
+            else
+            {
+                UNEXPECTED("Mapped range is null");
+            }
             wgpuBufferUnmap(BufferInfo.wgpuBuffer.Get());
         }
 

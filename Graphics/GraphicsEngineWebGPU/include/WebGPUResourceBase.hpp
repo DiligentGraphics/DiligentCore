@@ -52,7 +52,7 @@ public:
     WebGPUResourceBase(IDeviceObject& Owner, size_t MaxPendingBuffers);
     ~WebGPUResourceBase();
 
-    StagingBufferInfo* GetStagingBufferInfo(WGPUDevice wgpuDevice, CPU_ACCESS_FLAGS Access);
+    StagingBufferInfo* GetStagingBuffer(WGPUDevice wgpuDevice, CPU_ACCESS_FLAGS Access);
 
     void FlushPendingWrites(StagingBufferInfo& Buffer);
     void ProcessAsyncReadback(StagingBufferInfo& Buffer);

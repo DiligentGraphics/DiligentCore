@@ -64,7 +64,6 @@ private:
 
 private:
     using SyncPointGroup = std::pair<Uint64, std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>>;
-    std::atomic<Uint64>        m_RequestedFenceValue{0};
     std::deque<SyncPointGroup> m_SyncGroups;
 };
 

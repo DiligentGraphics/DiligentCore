@@ -700,7 +700,7 @@ void DeviceContextWebGPUImpl::CopyBuffer(IBuffer*                       pSrcBuff
     }
     else if (SrcDesc.Usage == USAGE_STAGING && DstDesc.Usage != USAGE_STAGING)
     {
-        WebGPUResourceBase::StagingBufferInfo* pSrcStagingBuffer = pSrcBufferWebGPU->GetStagingBufferInfo();
+        WebGPUResourceBase::StagingBufferInfo* pSrcStagingBuffer = pSrcBufferWebGPU->GetStagingBuffer();
         if (pSrcStagingBuffer == nullptr)
         {
             DEV_ERROR("Unable to get staging buffer info from the source buffer");
@@ -715,7 +715,7 @@ void DeviceContextWebGPUImpl::CopyBuffer(IBuffer*                       pSrcBuff
     }
     else if (SrcDesc.Usage != USAGE_STAGING && DstDesc.Usage == USAGE_STAGING)
     {
-        WebGPUResourceBase::StagingBufferInfo* pDstStagingBuffer = pDstBufferWebGPU->GetStagingBufferInfo();
+        WebGPUResourceBase::StagingBufferInfo* pDstStagingBuffer = pDstBufferWebGPU->GetStagingBuffer();
         if (pDstStagingBuffer == nullptr)
         {
             DEV_ERROR("Unable to get staging buffer info from the destination buffer");
@@ -749,18 +749,25 @@ void DeviceContextWebGPUImpl::MapBuffer(IBuffer*  pBuffer,
 {
     TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
 
-    auto* const pBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pBuffer);
-    const auto& BuffDesc      = pBufferWebGPU->GetDesc();
+    BufferWebGPUImpl* const pBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pBuffer);
+    const BufferDesc&       BuffDesc      = pBufferWebGPU->GetDesc();
 
     if (MapType == MAP_READ)
     {
-        pBufferWebGPU->Map(MapType, MapFlags, pMappedData);
+        DEV_CHECK_ERR(BuffDesc.Usage == USAGE_STAGING, "Buffer must be created as USAGE_STAGING to be mapped for reading");
+        if ((MapFlags & MAP_FLAG_DO_NOT_WAIT) == 0)
+        {
+            LOG_WARNING_MESSAGE("WebGPU backend never waits for GPU when mapping staging buffers for reading. "
+                                "Applications must use fences or other synchronization methods to explicitly synchronize "
+                                "access and use MAP_FLAG_DO_NOT_WAIT flag.");
+        }
+        pMappedData = pBufferWebGPU->Map(MapType);
     }
     else if (MapType == MAP_WRITE)
     {
         if (BuffDesc.Usage == USAGE_STAGING)
         {
-            pBufferWebGPU->Map(MapType, MapFlags, pMappedData);
+            pMappedData = pBufferWebGPU->Map(MapType);
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
@@ -804,18 +811,18 @@ void DeviceContextWebGPUImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
 
-    auto* const pBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pBuffer);
-    const auto& BuffDesc      = pBufferWebGPU->GetDesc();
+    BufferWebGPUImpl* const pBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pBuffer);
+    const BufferDesc&       BuffDesc      = pBufferWebGPU->GetDesc();
 
     if (MapType == MAP_READ)
     {
-        pBufferWebGPU->Unmap(MapType);
+        pBufferWebGPU->Unmap();
     }
     else if (MapType == MAP_WRITE)
     {
         if (BuffDesc.Usage == USAGE_STAGING)
         {
-            pBufferWebGPU->Unmap(MapType);
+            pBufferWebGPU->Unmap();
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
@@ -878,7 +885,7 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
             wgpuCopySize.height = AlignUp(wgpuCopySize.height, FmtAttribs.BlockHeight);
         }
 
-        WebGPUResourceBase::StagingBufferInfo* pSrcStagingBuffer = pSrcBufferWebGPU->GetStagingBufferInfo();
+        WebGPUResourceBase::StagingBufferInfo* pSrcStagingBuffer = pSrcBufferWebGPU->GetStagingBuffer();
 
         WGPUImageCopyBuffer wgpuImageCopySrc{};
         wgpuImageCopySrc.buffer              = pSrcBufferWebGPU->GetDesc().Usage != USAGE_STAGING ? pSrcBufferWebGPU->GetWebGPUBuffer() : pSrcStagingBuffer->wgpuBuffer;
@@ -1022,7 +1029,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         else
             wgpuAspectMask = WGPUTextureAspect_All;
 
-        WebGPUResourceBase::StagingBufferInfo* pSrcStagingBuffer = pSrcTexWebGPU->GetStagingBufferInfo();
+        WebGPUResourceBase::StagingBufferInfo* pSrcStagingBuffer = pSrcTexWebGPU->GetStagingBuffer();
 
         WGPUImageCopyBuffer wgpuImageCopySrc{};
         wgpuImageCopySrc.buffer              = pSrcStagingBuffer->wgpuBuffer;
@@ -1067,7 +1074,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         else
             wgpuAspectMask = WGPUTextureAspect_All;
 
-        WebGPUResourceBase::StagingBufferInfo* pDstStagingBuffer = pDstTexWebGPU->GetStagingBufferInfo();
+        WebGPUResourceBase::StagingBufferInfo* pDstStagingBuffer = pDstTexWebGPU->GetStagingBuffer();
 
         WGPUImageCopyTexture wgpuImageCopySrc{};
         wgpuImageCopySrc.texture  = pSrcTexWebGPU->GetWebGPUTexture();
@@ -1164,7 +1171,7 @@ void DeviceContextWebGPUImpl::MapTextureSubresource(ITexture*                 pT
 
         const auto DataSize = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
 
-        MappedData.pData       = static_cast<Uint8*>(pTextureWebGPU->Map(MapType, MapFlags, LocationOffset, DataSize));
+        MappedData.pData       = pTextureWebGPU->Map(MapType, LocationOffset, DataSize);
         MappedData.Stride      = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
         MappedData.DepthStride = MappedData.Stride * MipInfo.StorageHeight;
 
@@ -1432,10 +1439,9 @@ void DeviceContextWebGPUImpl::Flush()
         for (const auto& PendingReadIt : m_PendingStagingReads)
             SyncPoints.push_back(PendingReadIt.first->pSyncPoint);
 
-        for (const auto& [Signal, Fence] : m_SignalFences)
+        for (const auto& [Value, Fence] : m_SignalFences)
         {
-            FenceWebGPUImpl* pFenceWebGPU = Fence.RawPtr<FenceWebGPUImpl>();
-            pFenceWebGPU->AppendSyncPoints(SyncPoints, Signal);
+            Fence->AppendSyncPoints(SyncPoints, Value);
         }
         m_SignalFences.clear();
 

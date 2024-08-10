@@ -68,9 +68,9 @@ public:
     /// Implementation of ITextureWebGPU::GetWebGPUTexture() in WebGPU backend.
     WGPUTexture DILIGENT_CALL_TYPE GetWebGPUTexture() const override final;
 
-    StagingBufferInfo* GetStagingBufferInfo();
+    StagingBufferInfo* GetStagingBuffer();
 
-    void* Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, Uint64 Offset, Uint64 Size);
+    void* Map(MAP_TYPE MapType, Uint64 Offset, Uint64 Size);
 
     void Unmap();
 

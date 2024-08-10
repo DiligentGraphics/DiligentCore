@@ -92,8 +92,9 @@ void FenceWebGPUImpl::Wait(Uint64 Value)
 
 void FenceWebGPUImpl::AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 Value)
 {
-    ProcessSyncPoints();
+    DEV_CHECK_ERR(m_SyncGroups.empty() || m_SyncGroups.back().first < Value, "Sync points must be appended in strictly increasing order");
     m_SyncGroups.emplace_back(std::make_pair(Value, SyncPoints));
+    ProcessSyncPoints();
 }
 
 } // namespace Diligent

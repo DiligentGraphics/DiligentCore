@@ -67,7 +67,8 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
         bIsDeviceInternal
     },
     WebGPUResourceBase{*this, Desc.Usage == USAGE_STAGING ? ((Desc.CPUAccessFlags & CPU_ACCESS_READ) ? MaxStagingReadBuffers : 1): 0},
-    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
+    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")),
+    m_Alignment{ComputeBufferAlignment(pDevice, m_Desc)}
 // clang-format on
 {
     ValidateBufferInitData(m_Desc, pInitData);
@@ -75,14 +76,15 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
     if (m_Desc.Usage == USAGE_UNIFIED || m_Desc.Usage == USAGE_SPARSE)
         LOG_ERROR_AND_THROW("Unified and sparse resources are not supported in WebGPU");
 
-    m_Alignment = ComputeBufferAlignment(pDevice, m_Desc);
+    if (m_Desc.Usage == USAGE_STAGING && (m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == (CPU_ACCESS_READ | CPU_ACCESS_WRITE))
+        LOG_ERROR_AND_THROW("Read-write staging buffers are not supported in WebGPU");
 
     const bool RequiresBackingBuffer = (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) != 0 || ((m_Desc.BindFlags & BIND_SHADER_RESOURCE) != 0 && m_Desc.Mode == BUFFER_MODE_FORMATTED);
     const bool InitializeBuffer      = (pInitData != nullptr && pInitData->pData != nullptr);
 
     if (m_Desc.Usage == USAGE_DYNAMIC && !RequiresBackingBuffer)
     {
-        auto CtxCount = pDevice->GetNumImmediateContexts() + pDevice->GetNumDeferredContexts();
+        size_t CtxCount = pDevice->GetNumImmediateContexts() + pDevice->GetNumDeferredContexts();
         m_DynamicAllocations.resize(CtxCount);
     }
     else
@@ -164,12 +166,12 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
     },
     WebGPUResourceBase{*this, 0},
     m_wgpuBuffer{wgpuBuffer, {true}},
-    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
+    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")),
+    m_Alignment{ComputeBufferAlignment(pDevice, Desc)}
 // clang-format on
 {
-    DEV_CHECK_ERR(Desc.Usage != USAGE_STAGING, "Staging buffer is not expected");
+    DEV_CHECK_ERR(Desc.Usage != USAGE_STAGING, "USAGE_STAGING buffer is not expected");
 
-    m_Alignment = ComputeBufferAlignment(pDevice, Desc);
     VERIFY(m_Desc.Size % m_Alignment == 0, "Size of buffer must be aligned");
     SetState(InitialState);
     m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
@@ -191,19 +193,19 @@ WGPUBuffer BufferWebGPUImpl::GetWebGPUBuffer() const
     if (m_wgpuBuffer)
         return m_wgpuBuffer.Get();
 
-    VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer expected");
+    VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
     return m_pDevice->GetDynamicMemoryManager().GetWGPUBuffer();
 }
 
-void BufferWebGPUImpl::Map(MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)
+void* BufferWebGPUImpl::Map(MAP_TYPE MapType)
 {
-    VERIFY(m_Desc.Usage == USAGE_STAGING, "Map working only for staging buffers");
-    pMappedData = WebGPUResourceBase::Map(MapType, 0);
+    VERIFY(m_Desc.Usage == USAGE_STAGING, "Map is only allowed USAGE_STAGING buffers");
+    return WebGPUResourceBase::Map(MapType, 0);
 }
 
-void BufferWebGPUImpl::Unmap(MAP_TYPE MapType)
+void BufferWebGPUImpl::Unmap()
 {
-    VERIFY(m_Desc.Usage == USAGE_STAGING, "Unmap working only for staging buffers");
+    VERIFY(m_Desc.Usage == USAGE_STAGING, "Unmap is only allowed for USAGE_STAGING buffers");
     WebGPUResourceBase::Unmap();
 }
 
@@ -222,10 +224,10 @@ void BufferWebGPUImpl::SetDynamicAllocation(DeviceContextIndex CtxId, DynamicMem
     m_DynamicAllocations[CtxId] = std::move(Allocation);
 }
 
-BufferWebGPUImpl::StagingBufferInfo* BufferWebGPUImpl::GetStagingBufferInfo()
+BufferWebGPUImpl::StagingBufferInfo* BufferWebGPUImpl::GetStagingBuffer()
 {
-    VERIFY(m_Desc.Usage == USAGE_STAGING, "Staging buffer is expected");
-    return WebGPUResourceBase::GetStagingBufferInfo(m_pDevice->GetWebGPUDevice(), m_Desc.CPUAccessFlags);
+    VERIFY(m_Desc.Usage == USAGE_STAGING, "USAGE_STAGING buffer is expected");
+    return WebGPUResourceBase::GetStagingBuffer(m_pDevice->GetWebGPUDevice(), m_Desc.CPUAccessFlags);
 }
 
 void BufferWebGPUImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool IsDefaultView)
@@ -238,7 +240,7 @@ void BufferWebGPUImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IB
 
     try
     {
-        auto* const pDeviceWebGPU = GetDevice();
+        RenderDeviceWebGPUImpl* const pDeviceWebGPU = GetDevice();
 
         BufferViewDesc ViewDesc = OrigViewDesc;
         ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, pDeviceWebGPU->GetAdapterInfo().Buffer.StructuredBufferOffsetAlignment);
