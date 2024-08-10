@@ -42,7 +42,6 @@ public:
 
     bool IsTriggered() const { return m_Triggered.load(); }
     void Trigger() { m_Triggered.store(true); }
-    void Reset() { m_Triggered.store(false); }
 
 private:
     std::atomic<Bool> m_Triggered{false};

@@ -31,8 +31,8 @@
 namespace Diligent
 {
 
-WebGPUResourceBase::WebGPUResourceBase(IReferenceCounters* pRefCounters, size_t MaxPendingBuffers) :
-    m_pRefCounters{pRefCounters}
+WebGPUResourceBase::WebGPUResourceBase(IDeviceObject& Owner, size_t MaxPendingBuffers) :
+    m_Owner{Owner}
 {
     m_StagingBuffers.reserve(MaxPendingBuffers);
 }
@@ -41,12 +41,12 @@ WebGPUResourceBase::~WebGPUResourceBase()
 {
 }
 
-WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingWriteBuffer(WGPUDevice wgpuDevice, const char* ResourceName)
+WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingWriteBuffer(WGPUDevice wgpuDevice)
 {
     if (m_StagingBuffers.empty())
     {
         String StagingBufferName = "Staging write buffer for '";
-        StagingBufferName += ResourceName;
+        StagingBufferName += m_Owner.GetDesc().Name;
         StagingBufferName += '\'';
 
         WGPUBufferDescriptor wgpuBufferDesc{};
@@ -71,19 +71,29 @@ WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingWriteBuffe
     return &m_StagingBuffers.back();
 }
 
-WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingReadBuffer(WGPUDevice wgpuDevice, const char* ResourceName)
+WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingReadBuffer(WGPUDevice wgpuDevice)
 {
     for (StagingBufferInfo& BufferInfo : m_StagingBuffers)
     {
         if (wgpuBufferGetMapState(BufferInfo.wgpuBuffer) == WGPUBufferMapState_Unmapped)
         {
-            BufferInfo.pSyncPoint->Reset();
+            if (BufferInfo.pSyncPoint->IsTriggered())
+            {
+                // Create a new sync point since the old one can still be referenced by fences
+                BufferInfo.pSyncPoint = MakeNewRCObj<SyncPointWebGPUImpl>()();
+            }
             return &BufferInfo;
         }
     }
 
+    if (m_StagingBuffers.size() == m_StagingBuffers.capacity())
+    {
+        LOG_ERROR("Unable to create a new staging read buffer: limit of ", m_StagingBuffers.capacity(), " buffers is reached");
+        return nullptr;
+    }
+
     String StagingBufferName = "Staging read buffer for '";
-    StagingBufferName += ResourceName;
+    StagingBufferName += m_Owner.GetDesc().Name;
     StagingBufferName += '\'';
 
     WGPUBufferDescriptor wgpuBufferDesc{};
@@ -98,12 +108,6 @@ WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingReadBuffer
         return nullptr;
     }
 
-    if (m_StagingBuffers.size() == m_StagingBuffers.capacity())
-    {
-        LOG_ERROR("Too many pending staging buffers.");
-        return nullptr;
-    }
-
     m_StagingBuffers.emplace_back(
         StagingBufferInfo{
             *this,
@@ -114,27 +118,29 @@ WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingReadBuffer
 }
 
 
-WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::GetStagingBufferInfo(WGPUDevice wgpuDevice, const char* ResourceName, CPU_ACCESS_FLAGS Access)
+WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::GetStagingBufferInfo(WGPUDevice wgpuDevice, CPU_ACCESS_FLAGS Access)
 {
+    VERIFY(m_StagingBuffers.capacity() != 0, "Resource is not initialized as staging");
     VERIFY(Access == CPU_ACCESS_READ || Access == CPU_ACCESS_WRITE, "Read or write access is expected");
     return Access == CPU_ACCESS_READ ?
-        FindStagingReadBuffer(wgpuDevice, ResourceName) :
-        FindStagingWriteBuffer(wgpuDevice, ResourceName);
+        FindStagingReadBuffer(wgpuDevice) :
+        FindStagingWriteBuffer(wgpuDevice);
 }
 
 void* WebGPUResourceBase::Map(MAP_TYPE MapType, Uint64 Offset)
 {
-    VERIFY(m_MapState == MapState::None, "Texture is already mapped");
+    VERIFY(m_MapState == MapState::None, "Resource is already mapped");
+    VERIFY(Offset < m_MappedData.size(), "Offset (", Offset, ") exceeds the mapped data size (", m_MappedData.size(), ")");
 
     if (MapType == MAP_READ)
     {
         m_MapState = MapState::Read;
-        return m_MappedData.data() + Offset;
+        return &m_MappedData[static_cast<size_t>(Offset)];
     }
     else if (MapType == MAP_WRITE)
     {
         m_MapState = MapState::Write;
-        return m_MappedData.data() + Offset;
+        return &m_MappedData[static_cast<size_t>(Offset)];
     }
     else if (MapType == MAP_READ_WRITE)
     {
@@ -150,24 +156,14 @@ void* WebGPUResourceBase::Map(MAP_TYPE MapType, Uint64 Offset)
 
 void WebGPUResourceBase::Unmap()
 {
-    VERIFY(m_MapState != MapState::None, "Texture is not mapped");
-
-    if (m_MapState == MapState::Read || m_MapState == MapState::Write)
-    {
-        // Nothing to do
-    }
-    else
-    {
-        UNEXPECTED("No matching call to Map()");
-    }
-
+    DEV_CHECK_ERR(m_MapState != MapState::None, "Resource is not mapped");
     m_MapState = MapState::None;
 }
 
 void WebGPUResourceBase::FlushPendingWrites(StagingBufferInfo& Buffer)
 {
-    VERIFY_EXPR(!Buffer.pSyncPoint);
     VERIFY_EXPR(m_StagingBuffers.size() == 1);
+    VERIFY_EXPR(!Buffer.pSyncPoint);
 
     void* pData = wgpuBufferGetMappedRange(Buffer.wgpuBuffer, 0, WGPU_WHOLE_MAP_SIZE);
     memcpy(pData, m_MappedData.data(), m_MappedData.size());
@@ -179,26 +175,25 @@ void WebGPUResourceBase::FlushPendingWrites(StagingBufferInfo& Buffer)
 void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
 {
     auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
-        if (MapStatus != WGPUBufferMapAsyncStatus_Success && MapStatus != WGPUBufferMapAsyncStatus_DestroyedBeforeCallback)
-            DEV_ERROR("Failed wgpuBufferMapAsync: ", MapStatus);
+        VERIFY_EXPR(pUserData != nullptr);
+        StagingBufferInfo& BufferInfo = *static_cast<StagingBufferInfo*>(pUserData);
 
-        if (MapStatus == WGPUBufferMapAsyncStatus_Success && pUserData != nullptr)
+        if (MapStatus == WGPUBufferMapAsyncStatus_Success)
         {
-            StagingBufferInfo* pBufferInfo = static_cast<StagingBufferInfo*>(pUserData);
-
-            const auto* pData = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(pBufferInfo->wgpuBuffer, 0, WGPU_WHOLE_MAP_SIZE));
+            const auto* pData = static_cast<const uint8_t*>(wgpuBufferGetConstMappedRange(BufferInfo.wgpuBuffer, 0, WGPU_WHOLE_MAP_SIZE));
             VERIFY_EXPR(pData != nullptr);
-            memcpy(pBufferInfo->Resource.m_MappedData.data(), pData, pBufferInfo->Resource.m_MappedData.size());
-            wgpuBufferUnmap(pBufferInfo->wgpuBuffer.Get());
-            pBufferInfo->pSyncPoint->Trigger();
-
-            // Release the reference to the resource
-            pBufferInfo->Resource.m_pRefCounters->ReleaseStrongRef();
+            memcpy(BufferInfo.Resource.m_MappedData.data(), pData, BufferInfo.Resource.m_MappedData.size());
+            wgpuBufferUnmap(BufferInfo.wgpuBuffer.Get());
         }
+
+        BufferInfo.pSyncPoint->Trigger();
+
+        // Release the reference to the resource
+        BufferInfo.Resource.m_Owner.Release();
     };
 
     // Keep the resource alive until the callback is called
-    m_pRefCounters->AddStrongRef();
+    m_Owner.AddRef();
     wgpuBufferMapAsync(Buffer.wgpuBuffer, WGPUMapMode_Read, 0, WGPU_WHOLE_MAP_SIZE, MapAsyncCallback, &Buffer);
 }
 

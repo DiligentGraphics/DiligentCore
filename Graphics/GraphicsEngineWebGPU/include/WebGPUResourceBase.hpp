@@ -27,6 +27,7 @@
 #pragma once
 
 #include "GraphicsTypes.h"
+#include "DeviceObject.h"
 #include "RefCntAutoPtr.hpp"
 #include "WebGPUObjectWrappers.hpp"
 #include "SyncPointWebGPU.hpp"
@@ -36,8 +37,6 @@
 
 namespace Diligent
 {
-
-class RenderDeviceWebGPUImpl;
 
 /// Base implementation of a WebGPU resource
 class WebGPUResourceBase
@@ -50,10 +49,10 @@ public:
         RefCntAutoPtr<SyncPointWebGPUImpl> pSyncPoint = {};
     };
 
-    WebGPUResourceBase(IReferenceCounters* pRefCounters, size_t MaxPendingBuffers);
+    WebGPUResourceBase(IDeviceObject& Owner, size_t MaxPendingBuffers);
     ~WebGPUResourceBase();
 
-    StagingBufferInfo* GetStagingBufferInfo(WGPUDevice wgpuDevice, const char* ResourceName, CPU_ACCESS_FLAGS Access);
+    StagingBufferInfo* GetStagingBufferInfo(WGPUDevice wgpuDevice, CPU_ACCESS_FLAGS Access);
 
     void FlushPendingWrites(StagingBufferInfo& Buffer);
     void ProcessAsyncReadback(StagingBufferInfo& Buffer);
@@ -63,24 +62,24 @@ protected:
     void  Unmap();
 
 private:
-    StagingBufferInfo* FindStagingWriteBuffer(WGPUDevice wgpuDevice, const char* ResourceName);
-    StagingBufferInfo* FindStagingReadBuffer(WGPUDevice wgpuDevice, const char* ResourceName);
+    StagingBufferInfo* FindStagingWriteBuffer(WGPUDevice wgpuDevice);
+    StagingBufferInfo* FindStagingReadBuffer(WGPUDevice wgpuDevice);
 
 private:
-    IReferenceCounters* const m_pRefCounters;
+    IDeviceObject& m_Owner;
 
-protected:
     enum class MapState
     {
         None,
         Read,
         Write
     };
-    using StagingBufferList = std::vector<StagingBufferInfo>;
+    MapState m_MapState = MapState::None;
 
-    StagingBufferList    m_StagingBuffers;
+    std::vector<StagingBufferInfo> m_StagingBuffers;
+
+protected:
     std::vector<uint8_t> m_MappedData;
-    MapState             m_MapState = MapState::None;
 };
 
 } // namespace Diligent

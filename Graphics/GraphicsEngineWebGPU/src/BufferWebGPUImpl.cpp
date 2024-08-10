@@ -66,7 +66,7 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
         Desc,
         bIsDeviceInternal
     },
-    WebGPUResourceBase{pRefCounters, Desc.Usage == USAGE_STAGING ? ((Desc.CPUAccessFlags & CPU_ACCESS_READ) ? MaxStagingReadBuffers : 1): 0},
+    WebGPUResourceBase{*this, Desc.Usage == USAGE_STAGING ? ((Desc.CPUAccessFlags & CPU_ACCESS_READ) ? MaxStagingReadBuffers : 1): 0},
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
 // clang-format on
 {
@@ -78,7 +78,7 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
     m_Alignment = ComputeBufferAlignment(pDevice, m_Desc);
 
     const bool RequiresBackingBuffer = (m_Desc.BindFlags & BIND_UNORDERED_ACCESS) != 0 || ((m_Desc.BindFlags & BIND_SHADER_RESOURCE) != 0 && m_Desc.Mode == BUFFER_MODE_FORMATTED);
-    const bool IsInitializeBuffer    = (pInitData != nullptr && pInitData->pData != nullptr);
+    const bool InitializeBuffer      = (pInitData != nullptr && pInitData->pData != nullptr);
 
     if (m_Desc.Usage == USAGE_DYNAMIC && !RequiresBackingBuffer)
     {
@@ -90,7 +90,7 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
         if (m_Desc.Usage == USAGE_STAGING)
         {
             m_MappedData.resize(static_cast<size_t>(AlignUp(m_Desc.Size, m_Alignment)));
-            if (IsInitializeBuffer)
+            if (InitializeBuffer)
                 memcpy(m_MappedData.data(), pInitData->pData, static_cast<size_t>(std::min(m_Desc.Size, pInitData->DataSize)));
         }
         else
@@ -100,9 +100,9 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
             wgpuBufferDesc.size  = AlignUp(m_Desc.Size, m_Alignment);
             wgpuBufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc;
 
-            for (auto BindFlags = m_Desc.BindFlags; BindFlags != 0;)
+            for (BIND_FLAGS BindFlags = m_Desc.BindFlags; BindFlags != 0;)
             {
-                const auto BindFlag = ExtractLSB(BindFlags);
+                const BIND_FLAGS BindFlag = ExtractLSB(BindFlags);
                 switch (BindFlag)
                 {
                     case BIND_UNIFORM_BUFFER:
@@ -127,7 +127,7 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
                 }
             }
 
-            wgpuBufferDesc.mappedAtCreation = IsInitializeBuffer;
+            wgpuBufferDesc.mappedAtCreation = InitializeBuffer;
 
             m_wgpuBuffer.Reset(wgpuDeviceCreateBuffer(pDevice->GetWebGPUDevice(), &wgpuBufferDesc));
             if (!m_wgpuBuffer)
@@ -162,7 +162,7 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
         Desc,
         bIsDeviceInternal
     },
-    WebGPUResourceBase{pRefCounters, 0},
+    WebGPUResourceBase{*this, 0},
     m_wgpuBuffer{wgpuBuffer, {true}},
     m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>"))
 // clang-format on
@@ -225,7 +225,7 @@ void BufferWebGPUImpl::SetDynamicAllocation(DeviceContextIndex CtxId, DynamicMem
 BufferWebGPUImpl::StagingBufferInfo* BufferWebGPUImpl::GetStagingBufferInfo()
 {
     VERIFY(m_Desc.Usage == USAGE_STAGING, "Staging buffer is expected");
-    return WebGPUResourceBase::GetStagingBufferInfo(m_pDevice->GetWebGPUDevice(), m_Desc.Name, m_Desc.CPUAccessFlags);
+    return WebGPUResourceBase::GetStagingBufferInfo(m_pDevice->GetWebGPUDevice(), m_Desc.CPUAccessFlags);
 }
 
 void BufferWebGPUImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool IsDefaultView)
@@ -240,7 +240,7 @@ void BufferWebGPUImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IB
     {
         auto* const pDeviceWebGPU = GetDevice();
 
-        auto ViewDesc = OrigViewDesc;
+        BufferViewDesc ViewDesc = OrigViewDesc;
         ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, pDeviceWebGPU->GetAdapterInfo().Buffer.StructuredBufferOffsetAlignment);
 
         auto& BuffViewAllocator = pDeviceWebGPU->GetBuffViewObjAllocator();
