@@ -654,9 +654,9 @@ void DeviceContextWebGPUImpl::UpdateBuffer(IBuffer*                       pBuffe
     const auto& BuffDesc      = pBufferWebGPU->GetDesc();
     if (BuffDesc.Usage == USAGE_DEFAULT)
     {
-        const auto DynAllocation = AllocateUploadMemory(Size);
-        memcpy(DynAllocation.pData, pData, StaticCast<size_t>(Size));
-        wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), DynAllocation.wgpuBuffer, DynAllocation.Offset,
+        const auto UploadAlloc = AllocateUploadMemory(Size);
+        memcpy(UploadAlloc.pData, pData, StaticCast<size_t>(Size));
+        wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), UploadAlloc.wgpuBuffer, UploadAlloc.Offset,
                                              pBufferWebGPU->m_wgpuBuffer, Offset, Size);
     }
     else
@@ -907,7 +907,7 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
         const auto& TexDesc  = pTextureWebGPU->GetDesc();
         const auto  CopyInfo = GetBufferToTextureCopyInfo(TexDesc.Format, DstBox, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
 
-        const auto DynAllocation = AllocateUploadMemory(CopyInfo.MemorySize);
+        const auto UploadAlloc = AllocateUploadMemory(CopyInfo.MemorySize);
 
         for (Uint32 LayerIdx = 0; LayerIdx < CopyInfo.Region.Depth(); ++LayerIdx)
         {
@@ -915,13 +915,13 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
             {
                 const auto SrcOffset = RawIdx * SubresData.Stride + LayerIdx * SubresData.DepthStride;
                 const auto DstOffset = RawIdx * CopyInfo.RowStride + LayerIdx * CopyInfo.DepthStride;
-                memcpy(DynAllocation.pData + DstOffset, static_cast<const uint8_t*>(SubresData.pData) + SrcOffset, StaticCast<size_t>(CopyInfo.RowSize));
+                memcpy(UploadAlloc.pData + DstOffset, static_cast<const uint8_t*>(SubresData.pData) + SrcOffset, StaticCast<size_t>(CopyInfo.RowSize));
             }
         }
 
         WGPUImageCopyBuffer wgpuImageCopySrc{};
-        wgpuImageCopySrc.buffer              = DynAllocation.wgpuBuffer;
-        wgpuImageCopySrc.layout.offset       = DynAllocation.Offset;
+        wgpuImageCopySrc.buffer              = UploadAlloc.wgpuBuffer;
+        wgpuImageCopySrc.layout.offset       = UploadAlloc.Offset;
         wgpuImageCopySrc.layout.bytesPerRow  = static_cast<Uint32>(CopyInfo.RowStride);
         wgpuImageCopySrc.layout.rowsPerImage = static_cast<Uint32>(CopyInfo.DepthStride / CopyInfo.RowStride);
 
@@ -1148,14 +1148,14 @@ void DeviceContextWebGPUImpl::MapTextureSubresource(ITexture*                 pT
         if ((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0)
             LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE has no effect in WebGPU backend");
 
-        const auto CopyInfo      = GetBufferToTextureCopyInfo(TexDesc.Format, *pMapRegion, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
-        const auto DynAllocation = AllocateUploadMemory(CopyInfo.MemorySize, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
+        const auto CopyInfo    = GetBufferToTextureCopyInfo(TexDesc.Format, *pMapRegion, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
+        const auto UploadAlloc = AllocateUploadMemory(CopyInfo.MemorySize, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
 
-        MappedData.pData       = DynAllocation.pData;
+        MappedData.pData       = UploadAlloc.pData;
         MappedData.Stride      = CopyInfo.RowStride;
         MappedData.DepthStride = CopyInfo.DepthStride;
 
-        const auto Iter = m_MappedTextures.emplace(MappedTextureKey{pTextureWebGPU->GetUniqueID(), MipLevel, ArraySlice}, MappedTexture{CopyInfo, DynAllocation});
+        const auto Iter = m_MappedTextures.emplace(MappedTextureKey{pTextureWebGPU->GetUniqueID(), MipLevel, ArraySlice}, MappedTexture{CopyInfo, UploadAlloc});
         if (!Iter.second)
             LOG_ERROR_MESSAGE("Mip level ", MipLevel, ", slice ", ArraySlice, " of texture '", TexDesc.Name, "' has already been mapped");
     }
@@ -1395,47 +1395,33 @@ void DeviceContextWebGPUImpl::Flush()
     }
     m_PendingStagingWrites.clear();
 
-    for (auto& MemPage : m_DynamicMemPages)
-        wgpuQueueWriteBuffer(m_wgpuQueue, MemPage.GetWGPUBuffer(), MemPage.BufferOffset, MemPage.GetMappedData(), StaticCast<size_t>(MemPage.PageSize));
+    for (DynamicMemoryManagerWebGPU::Page& MemPage : m_DynamicMemPages)
+    {
+        MemPage.FlushWrites(m_wgpuQueue);
+        MemPage.Recycle();
+    }
+    m_DynamicMemPages.clear();
 
-    for (auto& MemPage : m_UploadMemPages)
-        wgpuQueueWriteBuffer(m_wgpuQueue, MemPage.wgpuBuffer.Get(), 0, MemPage.pData, StaticCast<size_t>(MemPage.PageSize));
+    for (UploadMemoryManagerWebGPU::Page& MemPage : m_UploadMemPages)
+    {
+        MemPage.FlushWrites(m_wgpuQueue);
+        MemPage.Recycle();
+    }
+    m_UploadMemPages.clear();
 
     if (m_wgpuCommandEncoder || !m_SignalFences.empty())
     {
-        struct WorkDoneCallbackData
-        {
-            RefCntAutoPtr<DeviceContextWebGPUImpl> pDeviceCtx;
-            RefCntAutoPtr<SyncPointWebGPUImpl>     pSyncPoint;
-        };
-        WorkDoneCallbackData* pCallbackData = new WorkDoneCallbackData{
-            RefCntAutoPtr<DeviceContextWebGPUImpl>{this},
-            RefCntAutoPtr<SyncPointWebGPUImpl>{MakeNewRCObj<SyncPointWebGPUImpl>()()},
-        };
-
         auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
             VERIFY_EXPR(pUserData != nullptr);
-            WorkDoneCallbackData* pCallbackData = static_cast<WorkDoneCallbackData*>(pUserData);
-
-            if (Status == WGPUQueueWorkDoneStatus_Success)
-            {
-                DeviceContextWebGPUImpl* pDeviceCxt = pCallbackData->pDeviceCtx;
-
-                for (auto& MemPage : pDeviceCxt->m_DynamicMemPages)
-                    MemPage.Recycle();
-                pDeviceCxt->m_DynamicMemPages.clear();
-
-                for (auto& MemPage : pDeviceCxt->m_UploadMemPages)
-                    MemPage.Recycle();
-                pDeviceCxt->m_UploadMemPages.clear();
-            }
-            pCallbackData->pSyncPoint->Trigger();
-
-            delete pCallbackData;
+            SyncPointWebGPUImpl* pSyncPoint = static_cast<SyncPointWebGPUImpl*>(pUserData);
+            pSyncPoint->Trigger();
+            pSyncPoint->Release();
         };
 
+        RefCntAutoPtr<SyncPointWebGPUImpl> pWorkDoneSyncPoint{MakeNewRCObj<SyncPointWebGPUImpl>()()};
+
         std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>> SyncPoints;
-        SyncPoints.push_back(pCallbackData->pSyncPoint);
+        SyncPoints.push_back(pWorkDoneSyncPoint);
         for (const auto& PendingReadIt : m_PendingStagingReads)
             SyncPoints.push_back(PendingReadIt.first->pSyncPoint);
 
@@ -1452,7 +1438,7 @@ void DeviceContextWebGPUImpl::Flush()
         DEV_CHECK_ERR(wgpuCmdBuffer != nullptr, "Failed to finish command encoder");
 
         wgpuQueueSubmit(m_wgpuQueue, 1, &wgpuCmdBuffer.Get());
-        wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, pCallbackData);
+        wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, pWorkDoneSyncPoint.Detach());
         m_wgpuCommandEncoder.Reset(nullptr);
 
         GetQueryManager().ReadbackQuerySet(m_pDevice);
@@ -1627,14 +1613,6 @@ void DeviceContextWebGPUImpl::FinishFrame()
 
     if (!m_MappedTextures.empty())
         LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
-
-    for (auto& MemPage : m_DynamicMemPages)
-        MemPage.Recycle();
-    m_DynamicMemPages.clear();
-
-    for (auto& MemPage : m_UploadMemPages)
-        MemPage.Recycle();
-    m_UploadMemPages.clear();
 
     GetQueryManager().FinishFrame();
 

@@ -33,11 +33,6 @@
 namespace Diligent
 {
 
-bool DynamicMemoryManagerWebGPU::Allocation::IsEmpty() const
-{
-    return wgpuBuffer == nullptr;
-}
-
 DynamicMemoryManagerWebGPU::Page::Page(DynamicMemoryManagerWebGPU* _pMgr, Uint64 Size, Uint64 Offset) :
     pMgr{_pMgr},
     PageSize{Size},
@@ -101,6 +96,15 @@ DynamicMemoryManagerWebGPU::Allocation DynamicMemoryManagerWebGPU::Page::Allocat
     return Allocation{};
 }
 
+void DynamicMemoryManagerWebGPU::Page::FlushWrites(WGPUQueue wgpuQueue)
+{
+    if (CurrOffset > 0)
+    {
+        VERIFY_EXPR(pMgr != nullptr);
+        wgpuQueueWriteBuffer(wgpuQueue, pMgr->m_wgpuBuffer.Get(), BufferOffset, GetMappedData(), StaticCast<size_t>(CurrOffset));
+    }
+}
+
 void DynamicMemoryManagerWebGPU::Page::Recycle()
 {
     if (pMgr == nullptr)
@@ -108,19 +112,7 @@ void DynamicMemoryManagerWebGPU::Page::Recycle()
         UNEXPECTED("The page is empty.");
         return;
     }
-
     pMgr->RecyclePage(std::move(*this));
-}
-
-WGPUBuffer DynamicMemoryManagerWebGPU::Page::GetWGPUBuffer() const
-{
-    if (pMgr == nullptr)
-    {
-        UNEXPECTED("The page is empty.");
-        return nullptr;
-    }
-
-    return pMgr->m_wgpuBuffer.Get();
 }
 
 const Uint8* DynamicMemoryManagerWebGPU::Page::GetMappedData() const
@@ -131,7 +123,7 @@ const Uint8* DynamicMemoryManagerWebGPU::Page::GetMappedData() const
         return nullptr;
     }
 
-    return pMgr->m_MappedData.data() + BufferOffset;
+    return &pMgr->m_MappedData[static_cast<size_t>(BufferOffset)];
 }
 
 
@@ -169,7 +161,7 @@ DynamicMemoryManagerWebGPU::~DynamicMemoryManagerWebGPU()
 
 DynamicMemoryManagerWebGPU::Page DynamicMemoryManagerWebGPU::GetPage(Uint64 Size)
 {
-    auto PageSize = m_PageSize;
+    Uint64 PageSize = m_PageSize;
     while (PageSize < Size)
         PageSize *= 2;
 

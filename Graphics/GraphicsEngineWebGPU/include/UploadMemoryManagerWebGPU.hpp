@@ -30,6 +30,7 @@
 /// Declaration of Diligent::UploadMemoryManagerWebGPU class
 
 #include <mutex>
+#include <vector>
 
 #include "WebGPUObjectWrappers.hpp"
 #include "BasicTypes.h"
@@ -42,7 +43,10 @@ class UploadMemoryManagerWebGPU
 public:
     struct Allocation
     {
-        bool IsEmpty() const;
+        bool IsEmpty() const
+        {
+            return wgpuBuffer == nullptr;
+        }
 
         WGPUBuffer wgpuBuffer = nullptr;
         Uint64     Offset     = 0;
@@ -65,9 +69,13 @@ public:
 
         Allocation Allocate(Uint64 Size, Uint64 Alignment = 16);
 
+        void FlushWrites(WGPUQueue wgpuQueue);
         void Recycle();
 
-        bool IsEmpty() const;
+        bool IsEmpty() const
+        {
+            return wgpuBuffer.Get() == nullptr;
+        }
 
         UploadMemoryManagerWebGPU* pMgr = nullptr;
         WebGPUBufferWrapper        wgpuBuffer;

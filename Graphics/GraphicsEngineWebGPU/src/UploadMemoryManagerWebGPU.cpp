@@ -34,11 +34,6 @@
 namespace Diligent
 {
 
-bool UploadMemoryManagerWebGPU::Allocation::IsEmpty() const
-{
-    return wgpuBuffer == nullptr;
-}
-
 UploadMemoryManagerWebGPU::Page::Page(UploadMemoryManagerWebGPU* _pMgr, Uint64 _Size) :
     pMgr{_pMgr},
     PageSize{_Size}
@@ -57,7 +52,7 @@ UploadMemoryManagerWebGPU::Page::Page(UploadMemoryManagerWebGPU* _pMgr, Uint64 _
     wgpuBuffer.Reset(wgpuDeviceCreateBuffer(pMgr->m_wgpuDevice, &wgpuBufferDesc));
     MappedData.resize(StaticCast<size_t>(_Size));
     pData = MappedData.data();
-    LOG_INFO_MESSAGE("Created a new upload memory page, size: ", PageSize >> 10, " KB");
+    LOG_INFO_MESSAGE("Created a new upload memory page, size: ", FormatMemorySize(PageSize));
 }
 
 UploadMemoryManagerWebGPU::Page::Page(Page&& RHS) noexcept :
@@ -114,6 +109,14 @@ UploadMemoryManagerWebGPU::Allocation UploadMemoryManagerWebGPU::Page::Allocate(
     return Allocation{};
 }
 
+void UploadMemoryManagerWebGPU::Page::FlushWrites(WGPUQueue wgpuQueue)
+{
+    if (CurrOffset > 0)
+    {
+        wgpuQueueWriteBuffer(wgpuQueue, wgpuBuffer, 0, pData, StaticCast<size_t>(CurrOffset));
+    }
+}
+
 void UploadMemoryManagerWebGPU::Page::Recycle()
 {
     if (pMgr == nullptr)
@@ -125,10 +128,6 @@ void UploadMemoryManagerWebGPU::Page::Recycle()
     pMgr->RecyclePage(std::move(*this));
 }
 
-bool UploadMemoryManagerWebGPU::Page::IsEmpty() const
-{
-    return wgpuBuffer.Get() == nullptr;
-}
 
 UploadMemoryManagerWebGPU::UploadMemoryManagerWebGPU(WGPUDevice wgpuDevice, Uint64 PageSize) :
     m_PageSize{PageSize},
@@ -142,14 +141,14 @@ UploadMemoryManagerWebGPU::~UploadMemoryManagerWebGPU()
     VERIFY(m_DbgPageCounter == m_AvailablePages.size(),
            "Not all pages have been recycled. This may result in a crash if the page is recycled later.");
     Uint64 TotalSize = 0;
-    for (const auto& page : m_AvailablePages)
+    for (const Page& page : m_AvailablePages)
         TotalSize += page.PageSize;
     LOG_INFO_MESSAGE("SharedMemoryManagerWebGPU: total allocated memory: ", TotalSize >> 10, " KB");
 }
 
 UploadMemoryManagerWebGPU::Page UploadMemoryManagerWebGPU::GetPage(Uint64 Size)
 {
-    auto PageSize = m_PageSize;
+    Uint64 PageSize = m_PageSize;
     while (PageSize < Size)
         PageSize *= 2;
 
@@ -161,7 +160,7 @@ UploadMemoryManagerWebGPU::Page UploadMemoryManagerWebGPU::GetPage(Uint64 Size)
         {
             if (PageSize <= Iter->PageSize)
             {
-                auto Result = std::move(*Iter);
+                Page Result = std::move(*Iter);
                 m_AvailablePages.erase(Iter);
                 return Result;
             }
