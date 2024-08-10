@@ -138,13 +138,9 @@ void QueryManagerWebGPU::ReadbackQuerySet(RenderDeviceWebGPUImpl* pDevice)
     }
 }
 
-void QueryManagerWebGPU::FinishFrame(RenderDeviceWebGPUImpl* pDevice)
+void QueryManagerWebGPU::FinishFrame()
 {
-    if (m_ActiveQuerySets > 0)
-    {
-        pDevice->DeviceTick();
-        m_ActiveQuerySets = 0;
-    }
+    m_ActiveQuerySets = 0;
 }
 
 void QueryManagerWebGPU::WaitAllQuerySet(RenderDeviceWebGPUImpl* pDevice)

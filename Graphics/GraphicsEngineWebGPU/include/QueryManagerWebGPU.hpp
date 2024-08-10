@@ -69,7 +69,7 @@ public:
 
     void ReadbackQuerySet(RenderDeviceWebGPUImpl* pDevice);
 
-    void FinishFrame(RenderDeviceWebGPUImpl* pDevice);
+    void FinishFrame();
 
     void WaitAllQuerySet(RenderDeviceWebGPUImpl* pDevice);
 

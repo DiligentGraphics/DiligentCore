@@ -1455,12 +1455,11 @@ void DeviceContextWebGPUImpl::Flush()
         {
             PendingReadIt.first->Resource.ProcessAsyncReadback(*PendingReadIt.first);
         }
-
-        if (!m_PendingStagingReads.empty())
-            m_pDevice->DeviceTick();
-
         m_PendingStagingReads.clear();
     }
+
+    // Without DeviceTick(), the work done callback is never called
+    m_pDevice->DeviceTick();
 }
 
 void DeviceContextWebGPUImpl::BuildBLAS(const BuildBLASAttribs& Attribs)
@@ -1631,7 +1630,9 @@ void DeviceContextWebGPUImpl::FinishFrame()
         MemPage.Recycle();
     m_UploadMemPages.clear();
 
-    GetQueryManager().FinishFrame(m_pDevice);
+    GetQueryManager().FinishFrame();
+
+    m_pDevice->DeviceTick();
 
     TDeviceContextBase::EndFrame();
 }
