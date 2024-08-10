@@ -1274,8 +1274,7 @@ void DeviceContextWebGPUImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 
 void DeviceContextWebGPUImpl::WaitForIdle()
 {
-    m_FenceValue++;
-    EnqueueSignal(m_pFence, m_FenceValue);
+    EnqueueSignal(m_pFence, ++m_FenceValue);
     Flush();
     m_pFence->Wait(m_FenceValue);
     GetQueryManager().WaitAllQuerySet(m_pDevice);
@@ -1397,13 +1396,23 @@ void DeviceContextWebGPUImpl::Flush()
 
     if (m_wgpuCommandEncoder || !m_SignalFences.empty())
     {
-        auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
-            if (Status != WGPUQueueWorkDoneStatus_Success && Status != WGPUQueueWorkDoneStatus_DeviceLost)
-                DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
+        struct WorkDoneCallbackData
+        {
+            RefCntAutoPtr<DeviceContextWebGPUImpl> pDeviceCtx;
+            RefCntAutoPtr<SyncPointWebGPUImpl>     pSyncPoint;
+        };
+        WorkDoneCallbackData* pCallbackData = new WorkDoneCallbackData{
+            RefCntAutoPtr<DeviceContextWebGPUImpl>{this},
+            RefCntAutoPtr<SyncPointWebGPUImpl>{MakeNewRCObj<SyncPointWebGPUImpl>()()},
+        };
 
-            if (Status == WGPUQueueWorkDoneStatus_Success && pUserData != nullptr)
+        auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
+            VERIFY_EXPR(pUserData != nullptr);
+            WorkDoneCallbackData* pCallbackData = static_cast<WorkDoneCallbackData*>(pUserData);
+
+            if (Status == WGPUQueueWorkDoneStatus_Success)
             {
-                DeviceContextWebGPUImpl* pDeviceCxt = static_cast<DeviceContextWebGPUImpl*>(pUserData);
+                DeviceContextWebGPUImpl* pDeviceCxt = pCallbackData->pDeviceCtx;
 
                 for (auto& MemPage : pDeviceCxt->m_DynamicMemPages)
                     MemPage.Recycle();
@@ -1413,9 +1422,13 @@ void DeviceContextWebGPUImpl::Flush()
                     MemPage.Recycle();
                 pDeviceCxt->m_UploadMemPages.clear();
             }
+            pCallbackData->pSyncPoint->Trigger();
+
+            delete pCallbackData;
         };
 
         std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>> SyncPoints;
+        SyncPoints.push_back(pCallbackData->pSyncPoint);
         for (const auto& PendingReadIt : m_PendingStagingReads)
             SyncPoints.push_back(PendingReadIt.first->pSyncPoint);
 
@@ -1433,7 +1446,7 @@ void DeviceContextWebGPUImpl::Flush()
         DEV_CHECK_ERR(wgpuCmdBuffer != nullptr, "Failed to finish command encoder");
 
         wgpuQueueSubmit(m_wgpuQueue, 1, &wgpuCmdBuffer.Get());
-        wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, this);
+        wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, pCallbackData);
         m_wgpuCommandEncoder.Reset(nullptr);
 
         GetQueryManager().ReadbackQuerySet(m_pDevice);

@@ -42,7 +42,7 @@ FenceWebGPUImpl::FenceWebGPUImpl(IReferenceCounters*     pRefCounters,
         LOG_ERROR_AND_THROW("Description of Fence '", m_Desc.Name, "' is invalid: ", GetFenceTypeString(m_Desc.Type), " is not supported in WebGPU.");
 }
 
-Uint64 FenceWebGPUImpl::GetCompletedValue()
+void FenceWebGPUImpl::ProcessSyncPoints()
 {
     while (!m_SyncGroups.empty())
     {
@@ -71,7 +71,11 @@ Uint64 FenceWebGPUImpl::GetCompletedValue()
             break;
         }
     }
+}
 
+Uint64 FenceWebGPUImpl::GetCompletedValue()
+{
+    ProcessSyncPoints();
     return m_LastCompletedFenceValue.load();
 }
 
@@ -88,6 +92,7 @@ void FenceWebGPUImpl::Wait(Uint64 Value)
 
 void FenceWebGPUImpl::AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 Value)
 {
+    ProcessSyncPoints();
     m_SyncGroups.emplace_back(std::make_pair(Value, SyncPoints));
 }
 

@@ -60,6 +60,9 @@ public:
     void AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 Value);
 
 private:
+    void ProcessSyncPoints();
+
+private:
     using SyncPointGroup = std::pair<Uint64, std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>>;
     std::atomic<Uint64>        m_RequestedFenceValue{0};
     std::deque<SyncPointGroup> m_SyncGroups;
