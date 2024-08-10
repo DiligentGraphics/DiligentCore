@@ -1405,13 +1405,6 @@ void DeviceContextWebGPUImpl::Flush()
             {
                 DeviceContextWebGPUImpl* pDeviceCxt = static_cast<DeviceContextWebGPUImpl*>(pUserData);
 
-                for (auto& [Signal, Fence] : pDeviceCxt->m_SignalFences)
-                {
-                    auto* pFenceWebGPU = Fence.RawPtr<FenceWebGPUImpl>();
-                    pFenceWebGPU->RequestedValue(Signal);
-                }
-                pDeviceCxt->m_SignalFences.clear();
-
                 for (auto& MemPage : pDeviceCxt->m_DynamicMemPages)
                     MemPage.Recycle();
                 pDeviceCxt->m_DynamicMemPages.clear();
@@ -1428,9 +1421,10 @@ void DeviceContextWebGPUImpl::Flush()
 
         for (const auto& [Signal, Fence] : m_SignalFences)
         {
-            auto* pFenceWebGPU = Fence.RawPtr<FenceWebGPUImpl>();
+            FenceWebGPUImpl* pFenceWebGPU = Fence.RawPtr<FenceWebGPUImpl>();
             pFenceWebGPU->AppendSyncPoints(SyncPoints, Signal);
         }
+        m_SignalFences.clear();
 
         GetQueryManager().ResolveQuerySet(m_pDevice, GetCommandEncoder());
 

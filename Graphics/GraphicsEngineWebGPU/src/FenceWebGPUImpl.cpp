@@ -44,30 +44,32 @@ FenceWebGPUImpl::FenceWebGPUImpl(IReferenceCounters*     pRefCounters,
 
 Uint64 FenceWebGPUImpl::GetCompletedValue()
 {
-    if (!m_SyncPoints.empty())
+    while (!m_SyncGroups.empty())
     {
-        auto IsSyncPointCompleted = [](const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints) {
-            for (const auto& pSyncPoint : SyncPoints)
-                if (!pSyncPoint->IsTriggered())
-                    return false;
-            return true;
-        };
-
-        while (!m_SyncPoints.empty())
+        SyncPointGroup& SyncGroup  = m_SyncGroups.front();
+        auto&           SyncPoints = SyncGroup.second;
+        while (!SyncPoints.empty())
         {
-            const auto& SyncPoint = m_SyncPoints.front();
-            if (IsSyncPointCompleted(SyncPoint.second))
+            if (SyncPoints.front()->IsTriggered())
             {
-                UpdateLastCompletedFenceValue(SyncPoint.first);
-                m_SyncPoints.pop_front();
+                std::swap(SyncPoints.front(), SyncPoints.back());
+                SyncPoints.pop_back();
             }
             else
             {
-                return m_LastCompletedFenceValue.load();
+                break;
             }
         }
 
-        UpdateLastCompletedFenceValue(m_RequestedFenceValue.load());
+        if (SyncPoints.empty())
+        {
+            UpdateLastCompletedFenceValue(SyncGroup.first);
+            m_SyncGroups.pop_front();
+        }
+        else
+        {
+            break;
+        }
     }
 
     return m_LastCompletedFenceValue.load();
@@ -84,18 +86,9 @@ void FenceWebGPUImpl::Wait(Uint64 Value)
         m_pDevice->DeviceTick();
 }
 
-void FenceWebGPUImpl::AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 EventOnComplete)
+void FenceWebGPUImpl::AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 Value)
 {
-    m_SyncPoints.emplace_back(std::make_pair(EventOnComplete, SyncPoints));
-}
-
-void FenceWebGPUImpl::RequestedValue(Uint64 Value)
-{
-    DvpSignal(Value);
-    if (!m_SyncPoints.empty())
-        m_RequestedFenceValue.store(Value);
-    else
-        UpdateLastCompletedFenceValue(Value);
+    m_SyncGroups.emplace_back(std::make_pair(Value, SyncPoints));
 }
 
 } // namespace Diligent

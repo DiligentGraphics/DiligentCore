@@ -57,14 +57,12 @@ public:
     /// Implementation of IFence::Wait() in WebGPU backend.
     void DILIGENT_CALL_TYPE Wait(Uint64 Value) override final;
 
-    void AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 EventOnComplete);
-
-    void RequestedValue(Uint64 Value);
+    void AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 Value);
 
 private:
-    using SyncPointEvent = std::pair<Uint64, std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>>;
+    using SyncPointGroup = std::pair<Uint64, std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>>;
     std::atomic<Uint64>        m_RequestedFenceValue{0};
-    std::deque<SyncPointEvent> m_SyncPoints;
+    std::deque<SyncPointGroup> m_SyncGroups;
 };
 
 } // namespace Diligent
