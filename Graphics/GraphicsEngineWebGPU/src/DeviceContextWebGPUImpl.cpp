@@ -47,71 +47,6 @@
 namespace Diligent
 {
 
-namespace
-{
-
-Uint64 GetStagingTextureLocationOffsetWebGPU(const TextureDesc& TexDesc,
-                                             Uint32             ArraySlice,
-                                             Uint32             MipLevel,
-                                             Uint32             RowAlignment,
-                                             Uint32             LocationX,
-                                             Uint32             LocationY,
-                                             Uint32             LocationZ)
-{
-    VERIFY_EXPR(TexDesc.MipLevels > 0 && TexDesc.GetArraySize() > 0 && TexDesc.Width > 0 && TexDesc.Height > 0 && TexDesc.Format != TEX_FORMAT_UNKNOWN);
-    VERIFY_EXPR(ArraySlice < TexDesc.GetArraySize() && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.GetArraySize() && MipLevel == 0);
-
-    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-
-    Uint64 Offset = 0;
-    if (ArraySlice > 0)
-    {
-        Uint64 ArraySliceSize = 0;
-        for (Uint32 MipIdx = 0; MipIdx < TexDesc.MipLevels; ++MipIdx)
-        {
-            auto       MipInfo        = GetMipLevelProperties(TexDesc, MipIdx);
-            const auto DepthSliceSize = AlignUp(MipInfo.RowSize, RowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
-            ArraySliceSize += DepthSliceSize * MipInfo.Depth;
-        }
-
-        Offset = ArraySliceSize;
-        if (TexDesc.IsArray())
-            Offset *= ArraySlice;
-    }
-
-    for (Uint32 MipIdx = 0; MipIdx < MipLevel; ++MipIdx)
-    {
-        auto       MipInfo        = GetMipLevelProperties(TexDesc, MipIdx);
-        const auto DepthSliceSize = AlignUp(MipInfo.RowSize, RowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
-        Offset += DepthSliceSize * MipInfo.Depth;
-    }
-
-    if (ArraySlice == TexDesc.GetArraySize())
-    {
-        VERIFY(LocationX == 0 && LocationY == 0 && LocationZ == 0,
-               "Staging buffer size is requested: location must be (0,0,0).");
-    }
-    else if (LocationX != 0 || LocationY != 0 || LocationZ != 0)
-    {
-        const auto& MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
-
-        VERIFY(LocationX < MipLevelAttribs.LogicalWidth && LocationY < MipLevelAttribs.LogicalHeight && LocationZ < MipLevelAttribs.Depth,
-               "Specified location is out of bounds");
-        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
-        {
-            VERIFY((LocationX % FmtAttribs.BlockWidth) == 0 && (LocationY % FmtAttribs.BlockHeight) == 0,
-                   "For compressed texture formats, location must be a multiple of compressed block size.");
-        }
-
-        Offset += (LocationZ * MipLevelAttribs.StorageHeight + LocationY) / FmtAttribs.BlockHeight * AlignUp(MipLevelAttribs.RowSize, RowAlignment);
-        Offset += Uint64{LocationX / FmtAttribs.BlockWidth} * FmtAttribs.GetElementSize();
-    }
-
-    return Offset;
-}
-
-} // namespace
-
 DeviceContextWebGPUImpl::DeviceContextWebGPUImpl(IReferenceCounters*           pRefCounters,
                                                  RenderDeviceWebGPUImpl*       pDevice,
                                                  const EngineWebGPUCreateInfo& EngineCI,
@@ -126,7 +61,9 @@ DeviceContextWebGPUImpl::DeviceContextWebGPUImpl(IReferenceCounters*           p
 // clang-format on
 {
     m_wgpuQueue.Reset(wgpuDeviceGetQueue(pDevice->GetWebGPUDevice()));
-    pDevice->CreateFence({}, &m_pFence);
+    FenceDesc InternalFenceDesc;
+    InternalFenceDesc.Name = "Device context internal fence";
+    pDevice->CreateFence(InternalFenceDesc, &m_pFence);
 }
 
 void DeviceContextWebGPUImpl::Begin(Uint32 ImmediateContextId)
@@ -445,7 +382,7 @@ void DeviceContextWebGPUImpl::Draw(const DrawAttribs& Attribs)
     if (Attribs.NumVertices == 0 || Attribs.NumInstances == 0)
         return;
 
-    auto wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
+    WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
     wgpuRenderPassEncoderDraw(wgpuRenderCmdEncoder, Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
 }
 
@@ -460,10 +397,10 @@ void DeviceContextWebGPUImpl::MultiDraw(const MultiDrawAttribs& Attribs)
     if (Attribs.NumInstances == 0)
         return;
 
-    auto wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
+    WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
     for (Uint32 DrawIdx = 0; DrawIdx < Attribs.DrawCount; ++DrawIdx)
     {
-        const auto& Item = Attribs.pDrawItems[DrawIdx];
+        const MultiDrawItem& Item = Attribs.pDrawItems[DrawIdx];
         if (Item.NumVertices > 0)
             wgpuRenderPassEncoderDraw(wgpuRenderCmdEncoder, Item.NumVertices, Attribs.NumInstances, Item.StartVertexLocation, Attribs.FirstInstanceLocation);
     }
@@ -480,7 +417,7 @@ void DeviceContextWebGPUImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     if (Attribs.NumIndices == 0 || Attribs.NumInstances == 0)
         return;
 
-    auto wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+    WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
     wgpuRenderPassEncoderDrawIndexed(wgpuRenderCmdEncoder, Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
 }
 
@@ -495,10 +432,10 @@ void DeviceContextWebGPUImpl::MultiDrawIndexed(const MultiDrawIndexedAttribs& At
     if (Attribs.NumInstances == 0)
         return;
 
-    auto wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+    WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
     for (Uint32 DrawIdx = 0; DrawIdx < Attribs.DrawCount; ++DrawIdx)
     {
-        const auto& Item = Attribs.pDrawItems[DrawIdx];
+        const MultiDrawIndexedItem& Item = Attribs.pDrawItems[DrawIdx];
         if (Item.NumIndices > 0)
             wgpuRenderPassEncoderDrawIndexed(wgpuRenderCmdEncoder, Item.NumIndices, Attribs.NumInstances, Item.FirstIndexLocation, Item.BaseVertex, Attribs.FirstInstanceLocation);
     }
@@ -512,9 +449,9 @@ void DeviceContextWebGPUImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
     DvpValidateCommittedShaderResources();
 #endif
 
-    auto wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
-    auto IndirectBufferOffset = Attribs.DrawArgsOffset;
-    auto wgpuIndirectBuffer   = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
+    WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
+    Uint64                IndirectBufferOffset = Attribs.DrawArgsOffset;
+    WGPUBuffer            wgpuIndirectBuffer   = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
 
     for (Uint32 DrawIdx = 0; DrawIdx < Attribs.DrawCount; ++DrawIdx)
     {
@@ -531,9 +468,9 @@ void DeviceContextWebGPUImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttri
     DvpValidateCommittedShaderResources();
 #endif
 
-    auto wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
-    auto IndirectBufferOffset = Attribs.DrawArgsOffset;
-    auto wgpuIndirectBuffer   = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
+    WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+    Uint64                IndirectBufferOffset = Attribs.DrawArgsOffset;
+    WGPUBuffer            wgpuIndirectBuffer   = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
 
     for (Uint32 DrawIdx = 0; DrawIdx < Attribs.DrawCount; ++DrawIdx)
     {
@@ -563,7 +500,7 @@ void DeviceContextWebGPUImpl::DispatchCompute(const DispatchComputeAttribs& Attr
     if (Attribs.ThreadGroupCountX == 0 || Attribs.ThreadGroupCountY == 0 || Attribs.ThreadGroupCountZ == 0)
         return;
 
-    auto wgpuComputeCmdEncoder = PrepareForDispatchCompute();
+    WGPUComputePassEncoder wgpuComputeCmdEncoder = PrepareForDispatchCompute();
     wgpuComputePassEncoderDispatchWorkgroups(wgpuComputeCmdEncoder, Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
 }
 
@@ -575,9 +512,9 @@ void DeviceContextWebGPUImpl::DispatchComputeIndirect(const DispatchComputeIndir
     DvpValidateCommittedShaderResources();
 #endif
 
-    auto wgpuComputeCmdEncoder = PrepareForDispatchCompute();
-    auto IndirectBufferOffset  = Attribs.DispatchArgsByteOffset;
-    auto wgpuIndirectBuffer    = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
+    WGPUComputePassEncoder wgpuComputeCmdEncoder = PrepareForDispatchCompute();
+    Uint64                 IndirectBufferOffset  = Attribs.DispatchArgsByteOffset;
+    WGPUBuffer             wgpuIndirectBuffer    = PrepareForIndirectCommand(Attribs.pAttribsBuffer, IndirectBufferOffset);
 
     wgpuComputePassEncoderDispatchWorkgroupsIndirect(wgpuComputeCmdEncoder, wgpuIndirectBuffer, IndirectBufferOffset);
 }
@@ -650,11 +587,18 @@ void DeviceContextWebGPUImpl::UpdateBuffer(IBuffer*                       pBuffe
 
     EndCommandEncoders();
 
-    auto* const pBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pBuffer);
-    const auto& BuffDesc      = pBufferWebGPU->GetDesc();
+    BufferWebGPUImpl* const pBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pBuffer);
+    const BufferDesc&       BuffDesc      = pBufferWebGPU->GetDesc();
     if (BuffDesc.Usage == USAGE_DEFAULT)
     {
         const auto UploadAlloc = AllocateUploadMemory(StaticCast<size_t>(Size));
+        if (!UploadAlloc)
+        {
+            LOG_ERROR("Failed to allocate upload memory for buffer update");
+            return;
+        }
+
+        // The data will be flushed to GPU before the command buffer is submitted to the queue in Flush()
         memcpy(UploadAlloc.pData, pData, StaticCast<size_t>(Size));
         wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), UploadAlloc.wgpuBuffer, UploadAlloc.Offset,
                                              pBufferWebGPU->m_wgpuBuffer, Offset, Size);
@@ -775,7 +719,12 @@ void DeviceContextWebGPUImpl::MapBuffer(IBuffer*  pBuffer,
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || !DynAllocation)
             {
                 auto Allocation = AllocateDynamicMemory(StaticCast<size_t>(BuffDesc.Size), pBufferWebGPU->GetAlignment());
-                pMappedData     = Allocation.pData;
+                if (!Allocation)
+                {
+                    LOG_ERROR("Failed to allocate dynamic memory for buffer mapping. Try increasing the size of the dynamic heap in engine EngineWebGPUCreateInfo");
+                    return;
+                }
+                pMappedData = Allocation.pData;
                 pBufferWebGPU->SetDynamicAllocation(GetContextId(), std::move(Allocation));
             }
             else
@@ -794,7 +743,7 @@ void DeviceContextWebGPUImpl::MapBuffer(IBuffer*  pBuffer,
         }
         else
         {
-            LOG_ERROR("Only USAGE_DYNAMIC, USAGE_STAGING WebGPU buffers can be mapped for writing");
+            LOG_ERROR("Only USAGE_DYNAMIC or USAGE_STAGING WebGPU buffers can be mapped for writing");
         }
     }
     else if (MapType == MAP_READ_WRITE)
@@ -826,8 +775,7 @@ void DeviceContextWebGPUImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
-            auto wgpuBuffer = pBufferWebGPU->m_wgpuBuffer.Get();
-            if (pBufferWebGPU->m_wgpuBuffer != nullptr)
+            if (WGPUBuffer wgpuBuffer = pBufferWebGPU->m_wgpuBuffer)
             {
                 DEV_CHECK_ERR(!m_pActiveRenderPass,
                               "Unmapping dynamic buffer with backing WebGPU resource requires "
@@ -861,8 +809,9 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
 
     if (SubresData.pSrcBuffer != nullptr)
     {
-        auto* const pDstTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
-        auto* const pSrcBufferWebGPU  = ClassPtrCast<BufferWebGPUImpl>(SubresData.pSrcBuffer);
+        TextureWebGPUImpl* const pDstTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
+        BufferWebGPUImpl* const  pSrcBufferWebGPU  = ClassPtrCast<BufferWebGPUImpl>(SubresData.pSrcBuffer);
+        const BufferDesc&        SrcBuffDesc       = pSrcBufferWebGPU->GetDesc();
 
         WGPUImageCopyTexture wgpuImageCopyDst{};
         wgpuImageCopyDst.texture  = pDstTextureWebGPU->GetWebGPUTexture();
@@ -872,7 +821,7 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
         wgpuImageCopyDst.origin.z = Slice != 0 ? Slice : DstBox.MinZ;
         wgpuImageCopyDst.mipLevel = MipLevel;
 
-        const auto& FmtAttribs = GetTextureFormatAttribs(pDstTextureWebGPU->GetDesc().Format);
+        const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(pDstTextureWebGPU->GetDesc().Format);
 
         WGPUExtent3D wgpuCopySize{};
         wgpuCopySize.width              = DstBox.Width();
@@ -885,29 +834,43 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
             wgpuCopySize.height = AlignUp(wgpuCopySize.height, FmtAttribs.BlockHeight);
         }
 
-        WebGPUResourceBase::StagingBufferInfo* pSrcStagingBuffer = pSrcBufferWebGPU->GetStagingBuffer();
+        WebGPUResourceBase::StagingBufferInfo* pSrcStagingBuffer = nullptr;
+        if (SrcBuffDesc.Usage == USAGE_STAGING)
+        {
+            pSrcStagingBuffer = pSrcBufferWebGPU->GetStagingBuffer();
+            if (pSrcStagingBuffer == nullptr)
+            {
+                DEV_ERROR("Unable to get staging buffer info from the source buffer");
+                return;
+            }
+        }
 
         WGPUImageCopyBuffer wgpuImageCopySrc{};
-        wgpuImageCopySrc.buffer              = pSrcBufferWebGPU->GetDesc().Usage != USAGE_STAGING ? pSrcBufferWebGPU->GetWebGPUBuffer() : pSrcStagingBuffer->wgpuBuffer;
+        wgpuImageCopySrc.buffer              = pSrcStagingBuffer != nullptr ? pSrcStagingBuffer->wgpuBuffer : pSrcBufferWebGPU->GetWebGPUBuffer();
         wgpuImageCopySrc.layout.offset       = SubresData.SrcOffset;
         wgpuImageCopySrc.layout.bytesPerRow  = static_cast<Uint32>(SubresData.Stride);
         wgpuImageCopySrc.layout.rowsPerImage = wgpuCopySize.height;
 
         wgpuCommandEncoderCopyBufferToTexture(GetCommandEncoder(), &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
 
-        if (pSrcBufferWebGPU->GetDesc().Usage == USAGE_STAGING)
+        if (pSrcStagingBuffer != nullptr)
         {
             m_PendingStagingWrites.emplace(pSrcStagingBuffer, RefCntAutoPtr<IObject>{pSrcBufferWebGPU});
         }
     }
     else
     {
-        auto* const pTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
+        TextureWebGPUImpl* const pTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
 
-        const auto& TexDesc  = pTextureWebGPU->GetDesc();
-        const auto  CopyInfo = GetBufferToTextureCopyInfo(TexDesc.Format, DstBox, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
+        const TextureDesc&            TexDesc  = pTextureWebGPU->GetDesc();
+        const BufferToTextureCopyInfo CopyInfo = GetBufferToTextureCopyInfo(TexDesc.Format, DstBox, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
 
         const auto UploadAlloc = AllocateUploadMemory(StaticCast<size_t>(CopyInfo.MemorySize));
+        if (!UploadAlloc)
+        {
+            LOG_ERROR("Failed to allocate upload memory for texture update");
+            return;
+        }
 
         for (Uint32 LayerIdx = 0; LayerIdx < CopyInfo.Region.Depth(); ++LayerIdx)
         {
@@ -933,7 +896,7 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
         wgpuImageCopyDst.origin.z = Slice != 0 ? Slice : DstBox.MinZ;
         wgpuImageCopyDst.mipLevel = MipLevel;
 
-        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+        const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
         WGPUExtent3D wgpuCopySize{};
         wgpuCopySize.width              = DstBox.Width();
@@ -956,29 +919,30 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 
     EndCommandEncoders();
 
-    auto* const pSrcTexWebGPU = ClassPtrCast<TextureWebGPUImpl>(CopyAttribs.pSrcTexture);
-    auto* const pDstTexWebGPU = ClassPtrCast<TextureWebGPUImpl>(CopyAttribs.pDstTexture);
+    TextureWebGPUImpl* const pSrcTexWebGPU = ClassPtrCast<TextureWebGPUImpl>(CopyAttribs.pSrcTexture);
+    TextureWebGPUImpl* const pDstTexWebGPU = ClassPtrCast<TextureWebGPUImpl>(CopyAttribs.pDstTexture);
 
-    const auto& SrcTexDesc = pSrcTexWebGPU->GetDesc();
-    const auto& DstTexDesc = pDstTexWebGPU->GetDesc();
+    const TextureDesc& SrcTexDesc = pSrcTexWebGPU->GetDesc();
+    const TextureDesc& DstTexDesc = pDstTexWebGPU->GetDesc();
 
-    auto wgpuCmdEncoder = GetCommandEncoder();
+    WGPUCommandEncoder wgpuCmdEncoder = GetCommandEncoder();
 
-    auto  FullMipBox = Box{};
-    auto* pSrcBox    = CopyAttribs.pSrcBox;
+    Box        FullMipBox{};
+    const Box* pSrcBox = CopyAttribs.pSrcBox;
 
     if (pSrcBox == nullptr)
     {
-        auto MipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
-        FullMipBox.MaxX      = MipLevelAttribs.LogicalWidth;
-        FullMipBox.MaxY      = MipLevelAttribs.LogicalHeight;
-        FullMipBox.MaxZ      = MipLevelAttribs.Depth;
-        pSrcBox              = &FullMipBox;
+        MipLevelProperties MipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
+
+        FullMipBox.MaxX = MipLevelAttribs.LogicalWidth;
+        FullMipBox.MaxY = MipLevelAttribs.LogicalHeight;
+        FullMipBox.MaxZ = MipLevelAttribs.Depth;
+        pSrcBox         = &FullMipBox;
     }
 
     if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage != USAGE_STAGING)
     {
-        const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
+        const TextureFormatAttribs& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
 
         WGPUTextureAspect wgpuAspectMask = {};
         if (DstFmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
@@ -1017,11 +981,11 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
     }
     else if (SrcTexDesc.Usage == USAGE_STAGING && DstTexDesc.Usage != USAGE_STAGING)
     {
-        const auto SrcBufferOffset = GetStagingTextureLocationOffsetWebGPU(SrcTexDesc, CopyAttribs.SrcSlice, CopyAttribs.SrcMipLevel, TextureWebGPUImpl::ImageCopyBufferRowAlignment, pSrcBox->MinX, pSrcBox->MinY, pSrcBox->MinZ);
-
-        const auto SrcMipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
-
-        const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
+        const Uint64 SrcBufferOffset = TextureWebGPUImpl::GetStagingLocationOffset(
+            SrcTexDesc, CopyAttribs.SrcSlice, CopyAttribs.SrcMipLevel,
+            pSrcBox->MinX, pSrcBox->MinY, pSrcBox->MinZ);
+        const MipLevelProperties    SrcMipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
+        const TextureFormatAttribs& DstFmtAttribs      = GetTextureFormatAttribs(DstTexDesc.Format);
 
         WGPUTextureAspect wgpuAspectMask = {};
         if (DstFmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
@@ -1030,6 +994,11 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             wgpuAspectMask = WGPUTextureAspect_All;
 
         WebGPUResourceBase::StagingBufferInfo* pSrcStagingBuffer = pSrcTexWebGPU->GetStagingBuffer();
+        if (pSrcStagingBuffer == nullptr)
+        {
+            LOG_ERROR("Unable to get staging buffer info from the source texture");
+            return;
+        }
 
         WGPUImageCopyBuffer wgpuImageCopySrc{};
         wgpuImageCopySrc.buffer              = pSrcStagingBuffer->wgpuBuffer;
@@ -1062,11 +1031,11 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
     }
     else if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage == USAGE_STAGING)
     {
-        const auto DstBufferOffset = GetStagingTextureLocationOffsetWebGPU(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel, TextureWebGPUImpl::ImageCopyBufferRowAlignment, CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ);
-
-        const auto DstMipLevelAttribs = GetMipLevelProperties(DstTexDesc, CopyAttribs.DstMipLevel);
-
-        const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+        const Uint64 DstBufferOffset = TextureWebGPUImpl::GetStagingLocationOffset(
+            DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel,
+            CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ);
+        const MipLevelProperties    DstMipLevelAttribs = GetMipLevelProperties(DstTexDesc, CopyAttribs.DstMipLevel);
+        const TextureFormatAttribs& SrcFmtAttribs      = GetTextureFormatAttribs(SrcTexDesc.Format);
 
         WGPUTextureAspect wgpuAspectMask = {};
         if (SrcFmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
@@ -1075,6 +1044,11 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             wgpuAspectMask = WGPUTextureAspect_All;
 
         WebGPUResourceBase::StagingBufferInfo* pDstStagingBuffer = pDstTexWebGPU->GetStagingBuffer();
+        if (pDstStagingBuffer == nullptr)
+        {
+            LOG_ERROR("Unable to get staging buffer info from the destination texture");
+            return;
+        }
 
         WGPUImageCopyTexture wgpuImageCopySrc{};
         wgpuImageCopySrc.texture  = pSrcTexWebGPU->GetWebGPUTexture();
@@ -1123,24 +1097,25 @@ void DeviceContextWebGPUImpl::MapTextureSubresource(ITexture*                 pT
 
     EndCommandEncoders();
 
-    auto* const pTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
-    const auto& TexDesc        = pTextureWebGPU->GetDesc();
+    TextureWebGPUImpl* const pTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
+    const TextureDesc&       TexDesc        = pTextureWebGPU->GetDesc();
 
     Box FullExtentBox;
     if (pMapRegion == nullptr)
     {
-        auto MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
-        FullExtentBox.MaxX   = MipLevelAttribs.LogicalWidth;
-        FullExtentBox.MaxY   = MipLevelAttribs.LogicalHeight;
-        FullExtentBox.MaxZ   = MipLevelAttribs.Depth;
-        pMapRegion           = &FullExtentBox;
+        MipLevelProperties MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
+
+        FullExtentBox.MaxX = MipLevelAttribs.LogicalWidth;
+        FullExtentBox.MaxY = MipLevelAttribs.LogicalHeight;
+        FullExtentBox.MaxZ = MipLevelAttribs.Depth;
+        pMapRegion         = &FullExtentBox;
     }
 
     if (TexDesc.Usage == USAGE_DYNAMIC)
     {
         if (MapType != MAP_WRITE)
         {
-            LOG_ERROR("Dynamic textures can only be mapped for writing in WebGPU backend");
+            LOG_ERROR_MESSAGE("Dynamic textures can only be mapped for writing in WebGPU backend");
             MappedData = MappedTextureSubresource{};
             return;
         }
@@ -1150,6 +1125,12 @@ void DeviceContextWebGPUImpl::MapTextureSubresource(ITexture*                 pT
 
         const auto CopyInfo    = GetBufferToTextureCopyInfo(TexDesc.Format, *pMapRegion, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
         const auto UploadAlloc = AllocateUploadMemory(StaticCast<size_t>(CopyInfo.MemorySize), TextureWebGPUImpl::ImageCopyBufferRowAlignment);
+        if (!UploadAlloc)
+        {
+            LOG_ERROR("Failed to allocate upload memory for texture mapping");
+            MappedData = MappedTextureSubresource{};
+            return;
+        }
 
         MappedData.pData       = UploadAlloc.pData;
         MappedData.Stride      = CopyInfo.RowStride;
@@ -1161,15 +1142,13 @@ void DeviceContextWebGPUImpl::MapTextureSubresource(ITexture*                 pT
     }
     else if (TexDesc.Usage == USAGE_STAGING)
     {
-        const auto MipInfo = GetMipLevelProperties(TexDesc, MipLevel);
-
-        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-
-        const auto LocationOffset = GetStagingTextureLocationOffsetWebGPU(
-            TexDesc, ArraySlice, MipLevel, TextureWebGPUImpl::ImageCopyBufferRowAlignment,
+        const MipLevelProperties    MipInfo        = GetMipLevelProperties(TexDesc, MipLevel);
+        const TextureFormatAttribs& FmtAttribs     = GetTextureFormatAttribs(TexDesc.Format);
+        const Uint64                LocationOffset = TextureWebGPUImpl::GetStagingLocationOffset(
+            TexDesc, ArraySlice, MipLevel,
             pMapRegion->MinX, pMapRegion->MinY, pMapRegion->MinZ);
 
-        const auto DataSize = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
+        const Uint64 DataSize = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
 
         MappedData.pData       = pTextureWebGPU->Map(MapType, LocationOffset, DataSize);
         MappedData.Stride      = AlignUp(MipInfo.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
@@ -1202,15 +1181,15 @@ void DeviceContextWebGPUImpl::UnmapTextureSubresource(ITexture* pTexture, Uint32
 
     EndCommandEncoders();
 
-    auto* const pTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
-    const auto& TexDesc        = pTextureWebGPU->GetDesc();
+    TextureWebGPUImpl* const pTextureWebGPU = ClassPtrCast<TextureWebGPUImpl>(pTexture);
+    const TextureDesc&       TexDesc        = pTextureWebGPU->GetDesc();
 
     if (TexDesc.Usage == USAGE_DYNAMIC)
     {
         const auto UploadSpaceIt = m_MappedTextures.find(MappedTextureKey{pTextureWebGPU->GetUniqueID(), MipLevel, ArraySlice});
         if (UploadSpaceIt != m_MappedTextures.end())
         {
-            const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
             const auto& Allocation = UploadSpaceIt->second.Allocation;
             const auto& CopyInfo   = UploadSpaceIt->second.CopyInfo;
@@ -1271,7 +1250,7 @@ void DeviceContextWebGPUImpl::ExecuteCommandLists(Uint32 NumCommandLists, IComma
 void DeviceContextWebGPUImpl::EnqueueSignal(IFence* pFence, Uint64 Value)
 {
     TDeviceContextBase::EnqueueSignal(pFence, Value, 0);
-    m_SignalFences.emplace_back(std::make_pair(Value, ClassPtrCast<FenceWebGPUImpl>(pFence)));
+    m_SignaledFences.emplace_back(std::make_pair(Value, ClassPtrCast<FenceWebGPUImpl>(pFence)));
 }
 
 void DeviceContextWebGPUImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
@@ -1409,7 +1388,7 @@ void DeviceContextWebGPUImpl::Flush()
     }
     m_UploadMemPages.clear();
 
-    if (m_wgpuCommandEncoder || !m_SignalFences.empty())
+    if (m_wgpuCommandEncoder || !m_SignaledFences.empty())
     {
         auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
             VERIFY_EXPR(pUserData != nullptr);
@@ -1425,11 +1404,11 @@ void DeviceContextWebGPUImpl::Flush()
         for (const auto& PendingReadIt : m_PendingStagingReads)
             SyncPoints.push_back(PendingReadIt.first->pSyncPoint);
 
-        for (const auto& [Value, Fence] : m_SignalFences)
+        for (const auto& [Value, Fence] : m_SignaledFences)
         {
             Fence->AppendSyncPoints(SyncPoints, Value);
         }
-        m_SignalFences.clear();
+        m_SignaledFences.clear();
 
         GetQueryManager().ResolveQuerySet(m_pDevice, GetCommandEncoder());
 
@@ -1594,8 +1573,8 @@ void DeviceContextWebGPUImpl::GenerateMips(ITextureView* pTexView)
         m_BindInfo.StaleSRBMask |= m_BindInfo.ActiveSRBMask;
     }
 
-    auto& MipGenerator = m_pDevice->GetMipsGenerator();
-    auto  CmdEncoder   = GetComputePassCommandEncoder();
+    GenerateMipsHelperWebGPU& MipGenerator = m_pDevice->GetMipsGenerator();
+    WGPUComputePassEncoder    CmdEncoder   = GetComputePassCommandEncoder();
     MipGenerator.GenerateMips(CmdEncoder, this, ClassPtrCast<TextureViewWebGPUImpl>(pTexView));
 }
 
@@ -1639,13 +1618,13 @@ void DeviceContextWebGPUImpl::ResolveTextureSubresource(ITexture*               
 
     EndCommandEncoders();
 
-    const auto& SrcTexDesc = pSrcTexture->GetDesc();
-    const auto& FmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+    const TextureDesc&          SrcTexDesc = pSrcTexture->GetDesc();
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
 
     if (FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH && FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL)
     {
-        const auto* pSrcRTVWebGPU = ClassPtrCast<TextureViewWebGPUImpl>(pSrcTexture->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET));
-        const auto* pDstRTVWebGPU = ClassPtrCast<TextureViewWebGPUImpl>(pDstTexture->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET));
+        const TextureViewWebGPUImpl* pSrcRTVWebGPU = ClassPtrCast<TextureViewWebGPUImpl>(pSrcTexture->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET));
+        const TextureViewWebGPUImpl* pDstRTVWebGPU = ClassPtrCast<TextureViewWebGPUImpl>(pDstTexture->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET));
 
         WGPURenderPassDescriptor      wgpuRenderPassDesc{};
         WGPURenderPassColorAttachment wgpuRenderPassColorAttachment{};
@@ -1680,7 +1659,7 @@ WGPUCommandEncoder DeviceContextWebGPUImpl::GetCommandEncoder()
     {
         WGPUCommandEncoderDescriptor wgpuCommandEncoderDesc{};
         m_wgpuCommandEncoder.Reset(wgpuDeviceCreateCommandEncoder(m_pDevice->GetWebGPUDevice(), &wgpuCommandEncoderDesc));
-        DEV_CHECK_ERR(m_wgpuCommandEncoder != nullptr, "Failed wgpuDeviceCreateCommandEncoder");
+        DEV_CHECK_ERR(m_wgpuCommandEncoder != nullptr, "Failed to create command encoder");
     }
 
     return m_wgpuCommandEncoder;
@@ -2005,7 +1984,7 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #endif
     DEV_CHECK_ERR(m_pPipelineState != nullptr, "No PSO is bound in the context");
 
-    auto wgpuRenderCmdEncoder = GetRenderPassCommandEncoder();
+    WGPURenderPassEncoder wgpuRenderCmdEncoder = GetRenderPassCommandEncoder();
 
     // Handle pipeline state first because CommitGraphicsPSO may update another flags
     if (!m_EncoderState.IsUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_PIPELINE_STATE))
@@ -2048,7 +2027,7 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForIndexedDraw(DRAW_FLAGS 
 {
     DEV_CHECK_ERR(m_pPipelineState != nullptr, "No PSO is bound in the context");
 
-    auto wgpuRenderCmdEncoder = PrepareForDraw(Flags);
+    WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForDraw(Flags);
 
     if (!m_EncoderState.IsUpToDate((WebGPUEncoderState::CMD_ENCODER_STATE_INDEX_BUFFER)))
         CommitIndexBuffer(wgpuRenderCmdEncoder, IndexType);
@@ -2060,7 +2039,7 @@ WGPUComputePassEncoder DeviceContextWebGPUImpl::PrepareForDispatchCompute()
 {
     DEV_CHECK_ERR(m_pPipelineState != nullptr, "No PSO is bound in the context");
 
-    auto wgpuComputeCmdEncoder = GetComputePassCommandEncoder();
+    WGPUComputePassEncoder wgpuComputeCmdEncoder = GetComputePassCommandEncoder();
 
     if (!m_EncoderState.IsUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_PIPELINE_STATE))
         CommitComputePSO(wgpuComputeCmdEncoder);
@@ -2075,9 +2054,9 @@ WGPUBuffer DeviceContextWebGPUImpl::PrepareForIndirectCommand(IBuffer* pAttribsB
 {
     VERIFY_EXPR(pAttribsBuffer != nullptr);
 
-    auto* pAttribsBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pAttribsBuffer);
+    BufferWebGPUImpl* pAttribsBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pAttribsBuffer);
 
-    auto wgpuIndirectBuffer = pAttribsBufferWebGPU->m_wgpuBuffer.Get();
+    WGPUBuffer wgpuIndirectBuffer = pAttribsBufferWebGPU->m_wgpuBuffer.Get();
     if (wgpuIndirectBuffer == nullptr)
     {
         VERIFY_EXPR(pAttribsBufferWebGPU->GetDesc().Usage == USAGE_DYNAMIC);
@@ -2095,7 +2074,7 @@ void DeviceContextWebGPUImpl::CommitGraphicsPSO(WGPURenderPassEncoder CmdEncoder
     DEV_CHECK_ERR(m_pPipelineState, "No pipeline state to commit!");
     DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_GRAPHICS, "Current PSO is not a graphics pipeline");
 
-    auto wgpuPipeline = m_pPipelineState->GetWebGPURenderPipeline();
+    WGPURenderPipeline wgpuPipeline = m_pPipelineState->GetWebGPURenderPipeline();
     wgpuRenderPassEncoderSetPipeline(CmdEncoder, wgpuPipeline);
 
     const auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
@@ -2125,7 +2104,7 @@ void DeviceContextWebGPUImpl::CommitComputePSO(WGPUComputePassEncoder CmdEncoder
     DEV_CHECK_ERR(m_pPipelineState, "No pipeline state to commit!");
     DEV_CHECK_ERR(m_pPipelineState->GetDesc().PipelineType == PIPELINE_TYPE_COMPUTE, "Current PSO is not a compute pipeline");
 
-    auto wgpuPipeline = m_pPipelineState->GetWebGPUComputePipeline();
+    WGPUComputePipeline wgpuPipeline = m_pPipelineState->GetWebGPUComputePipeline();
     wgpuComputePassEncoderSetPipeline(CmdEncoder, wgpuPipeline);
 
     m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_PIPELINE_STATE);
@@ -2216,7 +2195,7 @@ void DeviceContextWebGPUImpl::CommitScissorRects(WGPURenderPassEncoder CmdEncode
 {
     DEV_CHECK_ERR(m_pPipelineState, "No pipeline state to commit!");
 
-    const auto ScissorEnabled = m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable;
+    const bool ScissorEnabled = m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable;
 
     bool UpdateScissorRects = false;
 

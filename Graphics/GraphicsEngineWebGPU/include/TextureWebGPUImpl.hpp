@@ -77,6 +77,13 @@ public:
     // The requirement is hard-coded in the spec: https://www.w3.org/TR/webgpu/#gpuimagecopybuffer
     static constexpr Uint64 ImageCopyBufferRowAlignment = 256;
 
+    static Uint64 GetStagingLocationOffset(const TextureDesc& TexDesc,
+                                           Uint32             ArraySlice,
+                                           Uint32             MipLevel,
+                                           Uint32             LocationX = 0,
+                                           Uint32             LocationY = 0,
+                                           Uint32             LocationZ = 0);
+
 private:
     void CreateViewInternal(const TextureViewDesc& ViewDesc,
                             ITextureView**         ppView,

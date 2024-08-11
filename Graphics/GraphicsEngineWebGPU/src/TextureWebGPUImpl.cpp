@@ -145,14 +145,19 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
     return wgpuTextureViewDesc;
 }
 
-Uint64 WebGPUGetTextureLocationOffset(const TextureDesc& TexDesc,
-                                      Uint32             ArraySlice,
-                                      Uint32             MipLevel,
-                                      Uint32             BlockHeight,
-                                      Uint32             ByteRawStride)
+} // namespace
+
+Uint64 TextureWebGPUImpl::GetStagingLocationOffset(const TextureDesc& TexDesc,
+                                                   Uint32             ArraySlice,
+                                                   Uint32             MipLevel,
+                                                   Uint32             LocationX,
+                                                   Uint32             LocationY,
+                                                   Uint32             LocationZ)
 {
     VERIFY_EXPR(TexDesc.MipLevels > 0 && TexDesc.GetArraySize() > 0 && TexDesc.Width > 0 && TexDesc.Height > 0 && TexDesc.Format != TEX_FORMAT_UNKNOWN);
     VERIFY_EXPR(ArraySlice < TexDesc.GetArraySize() && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.GetArraySize() && MipLevel == 0);
+
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
     Uint64 Offset = 0;
     if (ArraySlice > 0)
@@ -161,7 +166,7 @@ Uint64 WebGPUGetTextureLocationOffset(const TextureDesc& TexDesc,
         for (Uint32 MipIdx = 0; MipIdx < TexDesc.MipLevels; ++MipIdx)
         {
             const MipLevelProperties MipInfo        = GetMipLevelProperties(TexDesc, MipIdx);
-            const Uint64             DepthSliceSize = AlignUp(MipInfo.RowSize, ByteRawStride) * (MipInfo.StorageHeight / BlockHeight);
+            const Uint64             DepthSliceSize = AlignUp(MipInfo.RowSize, ImageCopyBufferRowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
             ArraySliceSize += DepthSliceSize * MipInfo.Depth;
         }
 
@@ -173,14 +178,34 @@ Uint64 WebGPUGetTextureLocationOffset(const TextureDesc& TexDesc,
     for (Uint32 MipIdx = 0; MipIdx < MipLevel; ++MipIdx)
     {
         const MipLevelProperties MipInfo        = GetMipLevelProperties(TexDesc, MipIdx);
-        const Uint64             DepthSliceSize = AlignUp(MipInfo.RowSize, ByteRawStride) * (MipInfo.StorageHeight / BlockHeight);
+        const Uint64             DepthSliceSize = AlignUp(MipInfo.RowSize, ImageCopyBufferRowAlignment) * (MipInfo.StorageHeight / FmtAttribs.BlockHeight);
         Offset += DepthSliceSize * MipInfo.Depth;
+    }
+
+    if (ArraySlice == TexDesc.GetArraySize())
+    {
+        VERIFY(LocationX == 0 && LocationY == 0 && LocationZ == 0,
+               "Staging buffer size is requested: location must be (0,0,0).");
+    }
+    else if (LocationX != 0 || LocationY != 0 || LocationZ != 0)
+    {
+        MipLevelProperties MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
+
+        VERIFY(LocationX < MipLevelAttribs.LogicalWidth && LocationY < MipLevelAttribs.LogicalHeight && LocationZ < MipLevelAttribs.Depth,
+               "Specified location is out of bounds");
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            VERIFY((LocationX % FmtAttribs.BlockWidth) == 0 && (LocationY % FmtAttribs.BlockHeight) == 0,
+                   "For compressed texture formats, location must be a multiple of compressed block size.");
+        }
+
+        Offset += (LocationZ * MipLevelAttribs.StorageHeight + LocationY) / FmtAttribs.BlockHeight * AlignUp(MipLevelAttribs.RowSize, ImageCopyBufferRowAlignment);
+        Offset += Uint64{LocationX / FmtAttribs.BlockWidth} * FmtAttribs.GetElementSize();
     }
 
     return Offset;
 }
 
-} // namespace
 
 TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
                                      FixedBlockMemoryAllocator& TexViewObjAllocator,
@@ -229,7 +254,7 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
         {
             WGPUBufferDescriptor wgpuBufferDesc{};
             wgpuBufferDesc.usage            = WGPUBufferUsage_MapWrite | WGPUBufferUsage_CopySrc;
-            wgpuBufferDesc.size             = WebGPUGetTextureLocationOffset(m_Desc, m_Desc.GetArraySize(), 0, FmtAttribs.BlockHeight, ImageCopyBufferRowAlignment);
+            wgpuBufferDesc.size             = GetStagingLocationOffset(m_Desc, m_Desc.GetArraySize(), 0);
             wgpuBufferDesc.mappedAtCreation = true;
 
             WebGPUBufferWrapper wgpuUploadBuffer{wgpuDeviceCreateBuffer(pDevice->GetWebGPUDevice(), &wgpuBufferDesc)};
@@ -249,7 +274,7 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
                     const MipLevelProperties MipProps   = GetMipLevelProperties(m_Desc, MipIdx);
                     const TextureSubResData& SubResData = pInitData->pSubResources[CurrSubRes++];
 
-                    const Uint64 DstSubResOffset = WebGPUGetTextureLocationOffset(m_Desc, LayerIdx, MipIdx, FmtAttribs.BlockHeight, ImageCopyBufferRowAlignment);
+                    const Uint64 DstSubResOffset = GetStagingLocationOffset(m_Desc, LayerIdx, MipIdx);
                     const Uint64 DstRawStride    = AlignUp(MipProps.RowSize, ImageCopyBufferRowAlignment);
                     const Uint64 DstDepthStride  = DstRawStride * (MipProps.StorageHeight / FmtAttribs.BlockHeight);
 
@@ -300,7 +325,7 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
     }
     else if (m_Desc.Usage == USAGE_STAGING)
     {
-        m_MappedData.resize(static_cast<size_t>(WebGPUGetTextureLocationOffset(m_Desc, m_Desc.GetArraySize(), 0, FmtAttribs.BlockHeight, ImageCopyBufferRowAlignment)));
+        m_MappedData.resize(static_cast<size_t>(GetStagingLocationOffset(m_Desc, m_Desc.GetArraySize(), 0)));
 
         if (InitializeTexture)
         {
@@ -311,7 +336,7 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
                 {
                     const MipLevelProperties MipProps        = GetMipLevelProperties(m_Desc, MipIdx);
                     const TextureSubResData& SubResData      = pInitData->pSubResources[CurrSubRes++];
-                    const Uint64             DstSubResOffset = WebGPUGetTextureLocationOffset(m_Desc, LayerIdx, MipIdx, FmtAttribs.BlockHeight, ImageCopyBufferRowAlignment);
+                    const Uint64             DstSubResOffset = GetStagingLocationOffset(m_Desc, LayerIdx, MipIdx);
 
                     CopyTextureSubresource(SubResData,
                                            MipProps.StorageHeight / FmtAttribs.BlockHeight, // NumRows

@@ -571,8 +571,7 @@ private:
     WebGPURenderPassEncoderWrapper  m_wgpuRenderPassEncoder;
     WebGPUComputePassEncoderWrapper m_wgpuComputePassEncoder;
 
-    PendingFenceList        m_SignalFences;
-    PendingFenceList        m_WaitFences;
+    PendingFenceList        m_SignaledFences;
     AttachmentClearList     m_AttachmentClearValues;
     PendingQueryList        m_PendingTimeQueries;
     UploadMemoryPageList    m_UploadMemPages;
