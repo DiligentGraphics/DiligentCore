@@ -167,7 +167,7 @@ void DeviceContextWebGPUImpl::DvpValidateCommittedShaderResources()
         }
     }
 
-    m_pPipelineState->DvpVerifySRBResources(m_BindInfo.ResourceCaches);
+    m_pPipelineState->DvpVerifySRBResources(this, m_BindInfo.ResourceCaches);
 
     m_BindInfo.ResourcesValidated = true;
 }
@@ -447,6 +447,8 @@ void DeviceContextWebGPUImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources();
+    if (Attribs.pAttribsBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+        ClassPtrCast<BufferWebGPUImpl>(Attribs.pAttribsBuffer)->DvpVerifyDynamicAllocation(this);
 #endif
 
     WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
@@ -466,6 +468,8 @@ void DeviceContextWebGPUImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttri
 
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources();
+    if (Attribs.pAttribsBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+        ClassPtrCast<BufferWebGPUImpl>(Attribs.pAttribsBuffer)->DvpVerifyDynamicAllocation(this);
 #endif
 
     WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
@@ -510,6 +514,8 @@ void DeviceContextWebGPUImpl::DispatchComputeIndirect(const DispatchComputeIndir
 
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources();
+    if (Attribs.pAttribsBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+        ClassPtrCast<BufferWebGPUImpl>(Attribs.pAttribsBuffer)->DvpVerifyDynamicAllocation(this);
 #endif
 
     WGPUComputePassEncoder wgpuComputeCmdEncoder = PrepareForDispatchCompute();
@@ -2132,7 +2138,7 @@ void DeviceContextWebGPUImpl::CommitVertexBuffers(WGPURenderPassEncoder CmdEncod
             {
                 m_EncoderState.HasDynamicVertexBuffers = true;
 #ifdef DILIGENT_DEVELOPMENT
-                //pBufferWebGPU->DvpVerifyDynamicAllocation(this);
+                pBufferWebGPU->DvpVerifyDynamicAllocation(this);
 #endif
                 Offset += pBufferWebGPU->GetDynamicOffset(GetContextId(), this);
             }
@@ -2279,6 +2285,9 @@ DynamicMemoryManagerWebGPU::Allocation DeviceContextWebGPUImpl::AllocateDynamicM
     }
 
     VERIFY_EXPR(Alloc);
+#ifdef DILIGENT_DEVELOPMENT
+    Alloc.dvpFrameNumber = GetFrameNumber();
+#endif
     return Alloc;
 }
 

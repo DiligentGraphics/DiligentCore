@@ -46,6 +46,7 @@ namespace Diligent
 {
 
 struct WGSLShaderResourceAttribs;
+class DeviceContextWebGPUImpl;
 
 struct ImmutableSamplerAttribsWebGPU
 {
@@ -134,7 +135,8 @@ public:
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the WGSL resource attributes from the PSO.
-    bool DvpValidateCommittedResource(const WGSLShaderResourceAttribs& WGSLAttribs,
+    bool DvpValidateCommittedResource(const DeviceContextWebGPUImpl*   pDeviceCtx,
+                                      const WGSLShaderResourceAttribs& WGSLAttribs,
                                       Uint32                           ResIndex,
                                       const ShaderResourceCacheWebGPU& ResourceCache,
                                       const char*                      ShaderName,

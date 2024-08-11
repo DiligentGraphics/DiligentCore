@@ -87,13 +87,17 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
             if (pCtx != nullptr)
             {
-                //DvpVerifyDynamicAllocation(pCtx);
+                DvpVerifyDynamicAllocation(pCtx);
             }
 #endif
             auto& DynAlloc = GetDynamicAllocation(CtxId);
             return DynAlloc.Offset;
         }
     }
+
+#ifdef DILIGENT_DEVELOPMENT
+    void DvpVerifyDynamicAllocation(const DeviceContextWebGPUImpl* pCtx) const;
+#endif
 
     void* Map(MAP_TYPE MapType);
 

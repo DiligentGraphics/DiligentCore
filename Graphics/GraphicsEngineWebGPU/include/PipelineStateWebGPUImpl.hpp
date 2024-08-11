@@ -39,6 +39,8 @@
 namespace Diligent
 {
 
+class DeviceContextWebGPUImpl;
+
 /// Pipeline state object implementation in WebGPU backend.
 class PipelineStateWebGPUImpl final : public PipelineStateBase<EngineWebGPUImplTraits>
 {
@@ -119,7 +121,7 @@ public:
     // Performs validation of SRB resource parameters that are not possible to validate
     // when resource is bound.
     using ShaderResourceCacheArrayType = std::array<ShaderResourceCacheWebGPU*, MAX_RESOURCE_SIGNATURES>;
-    void DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const;
+    void DvpVerifySRBResources(const DeviceContextWebGPUImpl* pDeviceCtx, const ShaderResourceCacheArrayType& ResourceCaches) const;
 #endif
 
 private:

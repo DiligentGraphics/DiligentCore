@@ -741,7 +741,7 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void PipelineStateWebGPUImpl::DvpVerifySRBResources(const ShaderResourceCacheArrayType& ResourceCaches) const
+void PipelineStateWebGPUImpl::DvpVerifySRBResources(const DeviceContextWebGPUImpl* pDeviceCtx, const ShaderResourceCacheArrayType& ResourceCaches) const
 {
     auto res_info = m_ResourceAttibutions.begin();
     for (const auto& pResources : m_ShaderResources)
@@ -760,7 +760,7 @@ void PipelineStateWebGPUImpl::DvpVerifySRBResources(const ShaderResourceCacheArr
                 }
                 else
                 {
-                    res_info->pSignature->DvpValidateCommittedResource(ResAttribs, res_info->ResourceIndex, *pResourceCache,
+                    res_info->pSignature->DvpValidateCommittedResource(pDeviceCtx, ResAttribs, res_info->ResourceIndex, *pResourceCache,
                                                                        pResources->GetShaderName(), m_Desc.Name);
                 }
                 ++res_info;

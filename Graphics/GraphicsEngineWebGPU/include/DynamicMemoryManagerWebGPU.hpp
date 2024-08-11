@@ -55,6 +55,9 @@ public:
         size_t     Offset     = 0;
         size_t     Size       = 0;
         Uint8*     pData      = nullptr;
+#ifdef DILIGENT_DEVELOPMENT
+        Uint64 dvpFrameNumber = 0;
+#endif
     };
 
     class Page

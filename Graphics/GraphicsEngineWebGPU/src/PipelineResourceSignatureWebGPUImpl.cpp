@@ -862,7 +862,8 @@ PipelineResourceSignatureWebGPUImpl::PipelineResourceSignatureWebGPUImpl(IRefere
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const WGSLShaderResourceAttribs& WGSLAttribs,
+bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const DeviceContextWebGPUImpl*   pDeviceCtx,
+                                                                       const WGSLShaderResourceAttribs& WGSLAttribs,
                                                                        Uint32                           ResIndex,
                                                                        const ShaderResourceCacheWebGPU& ResourceCache,
                                                                        const char*                      ShaderName,
@@ -929,7 +930,7 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const WGS
                 // is bound. It will be null if the type is incorrect.
                 if (const BufferWebGPUImpl* pBufferWebGPU = Res.pObject.RawPtr<BufferWebGPUImpl>())
                 {
-                    //pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
+                    pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
 
                     if ((WGSLAttribs.BufferStaticSize != 0) &&
                         (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0 &&
@@ -958,7 +959,7 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const WGS
                     const BufferViewDesc&   ViewDesc      = pBufferViewWebGPU->GetDesc();
                     const BufferDesc&       BuffDesc      = pBufferWebGPU->GetDesc();
 
-                    //pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
+                    pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
 
                     if (BuffDesc.ElementByteStride == 0)
                     {

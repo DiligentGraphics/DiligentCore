@@ -261,4 +261,21 @@ void BufferWebGPUImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IB
     }
 }
 
+
+#ifdef DILIGENT_DEVELOPMENT
+void BufferWebGPUImpl::DvpVerifyDynamicAllocation(const DeviceContextWebGPUImpl* pCtx) const
+{
+    if (!m_wgpuBuffer)
+    {
+        VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
+
+        const DeviceContextIndex ContextId    = pCtx->GetContextId();
+        const DynamicAllocation& DynAlloc     = m_DynamicAllocations[ContextId];
+        const Uint64             CurrentFrame = pCtx->GetFrameNumber();
+        DEV_CHECK_ERR(DynAlloc, "Dynamic buffer '", m_Desc.Name, "' has not been mapped before its first use. Context Id: ", ContextId, ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
+        DEV_CHECK_ERR(DynAlloc.dvpFrameNumber == CurrentFrame, "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
+    }
+}
+#endif
+
 } // namespace Diligent
