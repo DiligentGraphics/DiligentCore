@@ -37,9 +37,9 @@ namespace Diligent
 namespace
 {
 
-Uint64 ComputeBufferAlignment(const RenderDeviceWebGPUImpl* pDevice, const BufferDesc& Desc)
+Uint32 ComputeBufferAlignment(const RenderDeviceWebGPUImpl* pDevice, const BufferDesc& Desc)
 {
-    Uint64 Alignment = 16; // Which alignment to use for buffers that don't have any specific requirements?
+    Uint32 Alignment = 16; // Which alignment to use for buffers that don't have any specific requirements?
     if (Desc.BindFlags & BIND_UNIFORM_BUFFER)
         Alignment = pDevice->GetAdapterInfo().Buffer.ConstantBufferOffsetAlignment;
 
@@ -209,7 +209,7 @@ void BufferWebGPUImpl::Unmap()
     WebGPUResourceBase::Unmap();
 }
 
-Uint64 BufferWebGPUImpl::GetAlignment() const
+Uint32 BufferWebGPUImpl::GetAlignment() const
 {
     return m_Alignment;
 }

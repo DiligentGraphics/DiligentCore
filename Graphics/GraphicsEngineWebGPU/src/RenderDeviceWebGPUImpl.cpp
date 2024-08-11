@@ -339,12 +339,12 @@ AttachmentCleanerWebGPU& RenderDeviceWebGPUImpl::GetAttachmentCleaner() const
     return *m_pAttachmentCleaner.get();
 }
 
-UploadMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetUploadMemoryPage(Uint64 Size)
+UploadMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetUploadMemoryPage(size_t Size)
 {
     return m_pUploadMemoryManager->GetPage(Size);
 }
 
-DynamicMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetDynamicMemoryPage(Uint64 Size)
+DynamicMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetDynamicMemoryPage(size_t Size)
 {
     return m_pDynamicMemoryManager->GetPage(Size);
 }

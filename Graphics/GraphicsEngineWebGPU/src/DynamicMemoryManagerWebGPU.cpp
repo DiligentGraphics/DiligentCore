@@ -33,20 +33,20 @@
 namespace Diligent
 {
 
-DynamicMemoryManagerWebGPU::Page::Page(DynamicMemoryManagerWebGPU* _pMgr, Uint64 Size, Uint64 Offset) :
-    pMgr{_pMgr},
-    PageSize{Size},
-    BufferOffset{Offset}
+DynamicMemoryManagerWebGPU::Page::Page(DynamicMemoryManagerWebGPU* _pMgr, size_t Size, size_t Offset) :
+    m_pMgr{_pMgr},
+    m_Size{Size},
+    m_BufferOffset{Offset}
 {
-    VERIFY(IsPowerOfTwo(PageSize), "Page size must be power of two");
+    VERIFY(IsPowerOfTwo(Size), "Page size must be power of two");
 }
 
 DynamicMemoryManagerWebGPU::Page::Page(Page&& RHS) noexcept :
     //clang-format off
-    pMgr{RHS.pMgr},
-    PageSize{RHS.PageSize},
-    CurrOffset{RHS.CurrOffset},
-    BufferOffset{RHS.BufferOffset}
+    m_pMgr{RHS.m_pMgr},
+    m_Size{RHS.m_Size},
+    m_CurrOffset{RHS.m_CurrOffset},
+    m_BufferOffset{RHS.m_BufferOffset}
 // clang-format on
 {
     RHS = Page{};
@@ -57,40 +57,40 @@ DynamicMemoryManagerWebGPU::Page& DynamicMemoryManagerWebGPU::Page::operator=(Pa
     if (&RHS == this)
         return *this;
 
-    pMgr         = RHS.pMgr;
-    PageSize     = RHS.PageSize;
-    CurrOffset   = RHS.CurrOffset;
-    BufferOffset = RHS.BufferOffset;
+    m_pMgr         = RHS.m_pMgr;
+    m_Size         = RHS.m_Size;
+    m_CurrOffset   = RHS.m_CurrOffset;
+    m_BufferOffset = RHS.m_BufferOffset;
 
-    RHS.pMgr         = nullptr;
-    RHS.PageSize     = 0;
-    RHS.CurrOffset   = 0;
-    RHS.BufferOffset = 0;
+    RHS.m_pMgr         = nullptr;
+    RHS.m_Size         = 0;
+    RHS.m_CurrOffset   = 0;
+    RHS.m_BufferOffset = 0;
 
     return *this;
 }
 
 DynamicMemoryManagerWebGPU::Page::~Page()
 {
-    VERIFY(CurrOffset == 0, "Destroying a page that has not been recycled");
+    VERIFY(m_CurrOffset == 0, "Destroying a page that has not been recycled");
 }
 
-DynamicMemoryManagerWebGPU::Allocation DynamicMemoryManagerWebGPU::Page::Allocate(Uint64 Size, Uint64 Alignment)
+DynamicMemoryManagerWebGPU::Allocation DynamicMemoryManagerWebGPU::Page::Allocate(size_t Size, size_t Alignment)
 {
     VERIFY(IsPowerOfTwo(Alignment), "Alignment size must be a power of two");
 
-    Uint64 Offset    = AlignUp(CurrOffset, Alignment);
-    Uint64 AllocSize = AlignUp(Size, Alignment);
-    if (Offset + AllocSize <= PageSize)
+    size_t Offset    = AlignUp(m_CurrOffset, Alignment);
+    size_t AllocSize = AlignUp(Size, Alignment);
+    if (Offset + AllocSize <= m_Size)
     {
-        Uint64     MemoryOffset = BufferOffset + Offset;
+        size_t     MemoryOffset = m_BufferOffset + Offset;
         Allocation Alloc;
-        Alloc.wgpuBuffer = pMgr->m_wgpuBuffer.Get();
-        Alloc.pData      = pMgr->m_MappedData.data() + MemoryOffset;
+        Alloc.wgpuBuffer = m_pMgr->m_wgpuBuffer;
+        Alloc.pData      = &m_pMgr->m_MappedData[MemoryOffset];
         Alloc.Offset     = MemoryOffset;
         Alloc.Size       = AllocSize;
 
-        CurrOffset = Offset + AllocSize;
+        m_CurrOffset = Offset + AllocSize;
         return Alloc;
     }
     return Allocation{};
@@ -98,36 +98,25 @@ DynamicMemoryManagerWebGPU::Allocation DynamicMemoryManagerWebGPU::Page::Allocat
 
 void DynamicMemoryManagerWebGPU::Page::FlushWrites(WGPUQueue wgpuQueue)
 {
-    if (CurrOffset > 0)
+    if (m_CurrOffset > 0)
     {
-        VERIFY_EXPR(pMgr != nullptr);
-        wgpuQueueWriteBuffer(wgpuQueue, pMgr->m_wgpuBuffer.Get(), BufferOffset, GetMappedData(), StaticCast<size_t>(CurrOffset));
+        VERIFY_EXPR(m_pMgr != nullptr);
+        wgpuQueueWriteBuffer(wgpuQueue, m_pMgr->m_wgpuBuffer, m_BufferOffset, &m_pMgr->m_MappedData[m_BufferOffset], m_CurrOffset);
     }
 }
 
 void DynamicMemoryManagerWebGPU::Page::Recycle()
 {
-    if (pMgr == nullptr)
+    if (m_pMgr == nullptr)
     {
         UNEXPECTED("The page is empty.");
         return;
     }
-    pMgr->RecyclePage(std::move(*this));
+    m_CurrOffset = 0;
+    m_pMgr->RecyclePage(std::move(*this));
 }
 
-const Uint8* DynamicMemoryManagerWebGPU::Page::GetMappedData() const
-{
-    if (pMgr == nullptr)
-    {
-        UNEXPECTED("The page is empty.");
-        return nullptr;
-    }
-
-    return &pMgr->m_MappedData[static_cast<size_t>(BufferOffset)];
-}
-
-
-DynamicMemoryManagerWebGPU::DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, Uint64 PageSize, Uint64 BufferSize) :
+DynamicMemoryManagerWebGPU::DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, size_t PageSize, size_t BufferSize) :
     m_PageSize{PageSize},
     m_BufferSize{BufferSize},
     m_CurrentOffset{0}
@@ -144,7 +133,7 @@ DynamicMemoryManagerWebGPU::DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, Ui
         WGPUBufferUsage_Index |
         WGPUBufferUsage_Indirect;
     m_wgpuBuffer.Reset(wgpuDeviceCreateBuffer(wgpuDevice, &wgpuBufferDesc));
-    m_MappedData.resize(StaticCast<size_t>(BufferSize));
+    m_MappedData.resize(BufferSize);
 
     LOG_INFO_MESSAGE("Created dynamic buffer: ", BufferSize >> 10, " KB");
 }
@@ -156,12 +145,12 @@ DynamicMemoryManagerWebGPU::~DynamicMemoryManagerWebGPU()
                      FormatMemorySize(m_BufferSize, 2),
                      ". Peak allocated size: ", FormatMemorySize(m_CurrentOffset, 2, m_BufferSize),
                      ". Peak utilization: ",
-                     std::fixed, std::setprecision(1), static_cast<double>(m_CurrentOffset) / static_cast<double>(std::max(m_BufferSize, 1ull)) * 100.0, '%');
+                     std::fixed, std::setprecision(1), static_cast<double>(m_CurrentOffset) / static_cast<double>(std::max(m_BufferSize, size_t{1})) * 100.0, '%');
 }
 
-DynamicMemoryManagerWebGPU::Page DynamicMemoryManagerWebGPU::GetPage(Uint64 Size)
+DynamicMemoryManagerWebGPU::Page DynamicMemoryManagerWebGPU::GetPage(size_t Size)
 {
-    Uint64 PageSize = m_PageSize;
+    size_t PageSize = m_PageSize;
     while (PageSize < Size)
         PageSize *= 2;
 
@@ -169,7 +158,7 @@ DynamicMemoryManagerWebGPU::Page DynamicMemoryManagerWebGPU::GetPage(Uint64 Size
     auto            Iter = m_AvailablePages.begin();
     while (Iter != m_AvailablePages.end())
     {
-        if (PageSize <= Iter->PageSize)
+        if (PageSize <= Iter->GetSize())
         {
             auto Result = std::move(*Iter);
             m_AvailablePages.erase(Iter);
@@ -178,21 +167,21 @@ DynamicMemoryManagerWebGPU::Page DynamicMemoryManagerWebGPU::GetPage(Uint64 Size
         ++Iter;
     }
 
-    Uint64 LastOffset = m_CurrentOffset;
-    m_CurrentOffset += PageSize;
-
-    if (m_CurrentOffset >= m_BufferSize)
+    if (m_CurrentOffset + PageSize > m_BufferSize)
     {
-        LOG_ERROR("Requested dynamic allocation size ", m_CurrentOffset, " exceeds maximum dynamic memory size ", m_BufferSize, ". The app should increase dynamic heap size.");
+        LOG_ERROR("Requested dynamic allocation size ", m_CurrentOffset + PageSize, " exceeds maximum dynamic memory size ", m_BufferSize, ". The app should increase dynamic heap size.");
         return Page{};
     }
-    return Page{this, PageSize, LastOffset};
+
+    size_t Offset = m_CurrentOffset;
+    m_CurrentOffset += PageSize;
+
+    return Page{this, PageSize, Offset};
 }
 
 void DynamicMemoryManagerWebGPU::RecyclePage(Page&& Item)
 {
     std::lock_guard Lock{m_AvailablePagesMtx};
-    Item.CurrOffset = 0;
     m_AvailablePages.emplace_back(std::move(Item));
 }
 

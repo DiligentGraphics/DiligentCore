@@ -37,26 +37,31 @@
 namespace Diligent
 {
 
+// Dynamic memory manager provides dynamic memory allocations for dynamic buffers.
+// The data is copied to the CPU memory and is flushed to the GPU memory before the
+// command list is submitted to the queue.
+
 class DynamicMemoryManagerWebGPU
 {
 public:
     struct Allocation
     {
-        bool IsEmpty() const
+        operator bool() const
         {
-            return wgpuBuffer == nullptr;
+            return wgpuBuffer != nullptr;
         }
 
         WGPUBuffer wgpuBuffer = nullptr;
-        Uint64     Offset     = 0;
-        Uint64     Size       = 0;
+        size_t     Offset     = 0;
+        size_t     Size       = 0;
         Uint8*     pData      = nullptr;
     };
 
-    struct Page
+    class Page
     {
+    public:
         Page() noexcept = default;
-        Page(DynamicMemoryManagerWebGPU* pMgr, Uint64 Size, Uint64 Offset);
+        Page(DynamicMemoryManagerWebGPU* pMgr, size_t Size, size_t Offset);
 
         Page(const Page&) = delete;
         Page& operator=(const Page&) = delete;
@@ -66,25 +71,27 @@ public:
 
         ~Page();
 
-        Allocation Allocate(Uint64 Size, Uint64 Alignment = 16);
+        Allocation Allocate(size_t Size, size_t Alignment = 16);
 
         void FlushWrites(WGPUQueue wgpuQueue);
         void Recycle();
 
-        const Uint8* GetMappedData() const;
+        size_t GetSize() const { return m_Size; }
 
-        DynamicMemoryManagerWebGPU* pMgr = nullptr;
+    private:
+        DynamicMemoryManagerWebGPU* m_pMgr = nullptr;
 
-        Uint64 PageSize     = 0;
-        Uint64 CurrOffset   = 0;
-        Uint64 BufferOffset = 0;
+        size_t m_Size       = 0;
+        size_t m_CurrOffset = 0;
+        // Start offset in the buffer
+        size_t m_BufferOffset = 0;
     };
 
-    DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, Uint64 PageSize, Uint64 BufferSize);
+    DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, size_t PageSize, size_t BufferSize);
 
     ~DynamicMemoryManagerWebGPU();
 
-    Page GetPage(Uint64 Size);
+    Page GetPage(size_t Size);
 
     WGPUBuffer GetWGPUBuffer() const
     {
@@ -95,9 +102,9 @@ private:
     void RecyclePage(Page&& page);
 
 private:
-    const Uint64        m_PageSize;
-    const Uint64        m_BufferSize;
-    Uint64              m_CurrentOffset = 0;
+    const size_t        m_PageSize;
+    const size_t        m_BufferSize;
+    size_t              m_CurrentOffset = 0;
     WebGPUBufferWrapper m_wgpuBuffer;
 
     std::mutex         m_AvailablePagesMtx;

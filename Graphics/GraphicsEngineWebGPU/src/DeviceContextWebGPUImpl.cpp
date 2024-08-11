@@ -654,7 +654,7 @@ void DeviceContextWebGPUImpl::UpdateBuffer(IBuffer*                       pBuffe
     const auto& BuffDesc      = pBufferWebGPU->GetDesc();
     if (BuffDesc.Usage == USAGE_DEFAULT)
     {
-        const auto UploadAlloc = AllocateUploadMemory(Size);
+        const auto UploadAlloc = AllocateUploadMemory(StaticCast<size_t>(Size));
         memcpy(UploadAlloc.pData, pData, StaticCast<size_t>(Size));
         wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), UploadAlloc.wgpuBuffer, UploadAlloc.Offset,
                                              pBufferWebGPU->m_wgpuBuffer, Offset, Size);
@@ -772,9 +772,9 @@ void DeviceContextWebGPUImpl::MapBuffer(IBuffer*  pBuffer,
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
             const auto& DynAllocation = pBufferWebGPU->GetDynamicAllocation(GetContextId());
-            if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.IsEmpty())
+            if ((MapFlags & MAP_FLAG_DISCARD) != 0 || !DynAllocation)
             {
-                auto Allocation = AllocateDynamicMemory(BuffDesc.Size, pBufferWebGPU->GetAlignment());
+                auto Allocation = AllocateDynamicMemory(StaticCast<size_t>(BuffDesc.Size), pBufferWebGPU->GetAlignment());
                 pMappedData     = Allocation.pData;
                 pBufferWebGPU->SetDynamicAllocation(GetContextId(), std::move(Allocation));
             }
@@ -907,7 +907,7 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
         const auto& TexDesc  = pTextureWebGPU->GetDesc();
         const auto  CopyInfo = GetBufferToTextureCopyInfo(TexDesc.Format, DstBox, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
 
-        const auto UploadAlloc = AllocateUploadMemory(CopyInfo.MemorySize);
+        const auto UploadAlloc = AllocateUploadMemory(StaticCast<size_t>(CopyInfo.MemorySize));
 
         for (Uint32 LayerIdx = 0; LayerIdx < CopyInfo.Region.Depth(); ++LayerIdx)
         {
@@ -1149,7 +1149,7 @@ void DeviceContextWebGPUImpl::MapTextureSubresource(ITexture*                 pT
             LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE has no effect in WebGPU backend");
 
         const auto CopyInfo    = GetBufferToTextureCopyInfo(TexDesc.Format, *pMapRegion, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
-        const auto UploadAlloc = AllocateUploadMemory(CopyInfo.MemorySize, TextureWebGPUImpl::ImageCopyBufferRowAlignment);
+        const auto UploadAlloc = AllocateUploadMemory(StaticCast<size_t>(CopyInfo.MemorySize), TextureWebGPUImpl::ImageCopyBufferRowAlignment);
 
         MappedData.pData       = UploadAlloc.pData;
         MappedData.Stride      = CopyInfo.RowStride;
@@ -2271,35 +2271,35 @@ void DeviceContextWebGPUImpl::CommitScissorRects(WGPURenderPassEncoder CmdEncode
 }
 
 
-UploadMemoryManagerWebGPU::Allocation DeviceContextWebGPUImpl::AllocateUploadMemory(Uint64 Size, Uint64 Alignment)
+UploadMemoryManagerWebGPU::Allocation DeviceContextWebGPUImpl::AllocateUploadMemory(size_t Size, size_t Alignment)
 {
     UploadMemoryManagerWebGPU::Allocation Alloc;
     if (!m_UploadMemPages.empty())
         Alloc = m_UploadMemPages.back().Allocate(Size, Alignment);
 
-    if (Alloc.IsEmpty())
+    if (!Alloc)
     {
         m_UploadMemPages.emplace_back(m_pDevice->GetUploadMemoryPage(Size));
         Alloc = m_UploadMemPages.back().Allocate(Size, Alignment);
     }
 
-    VERIFY_EXPR(!Alloc.IsEmpty());
+    VERIFY_EXPR(Alloc);
     return Alloc;
 }
 
-DynamicMemoryManagerWebGPU::Allocation DeviceContextWebGPUImpl::AllocateDynamicMemory(Uint64 Size, Uint64 Alignment)
+DynamicMemoryManagerWebGPU::Allocation DeviceContextWebGPUImpl::AllocateDynamicMemory(size_t Size, size_t Alignment)
 {
     DynamicMemoryManagerWebGPU::Allocation Alloc;
     if (!m_DynamicMemPages.empty())
         Alloc = m_DynamicMemPages.back().Allocate(Size, Alignment);
 
-    if (Alloc.IsEmpty())
+    if (!Alloc)
     {
         m_DynamicMemPages.emplace_back(m_pDevice->GetDynamicMemoryPage(Size));
         Alloc = m_DynamicMemPages.back().Allocate(Size, Alignment);
     }
 
-    VERIFY_EXPR(!Alloc.IsEmpty());
+    VERIFY_EXPR(Alloc);
     return Alloc;
 }
 

@@ -205,9 +205,9 @@ public:
 
     AttachmentCleanerWebGPU& GetAttachmentCleaner() const;
 
-    UploadMemoryManagerWebGPU::Page GetUploadMemoryPage(Uint64 Size);
+    UploadMemoryManagerWebGPU::Page GetUploadMemoryPage(size_t Size);
 
-    DynamicMemoryManagerWebGPU::Page GetDynamicMemoryPage(Uint64 Size);
+    DynamicMemoryManagerWebGPU::Page GetDynamicMemoryPage(size_t Size);
 
     DynamicMemoryManagerWebGPU& GetDynamicMemoryManager() const
     {

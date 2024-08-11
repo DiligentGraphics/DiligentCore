@@ -338,18 +338,14 @@ private:
         OCCLUSION_QUERY_TYPE_OUTER
     };
 
-    WGPUCommandEncoder GetCommandEncoder();
-
-    WGPURenderPassEncoder GetRenderPassCommandEncoder();
-
+    WGPUCommandEncoder     GetCommandEncoder();
+    WGPURenderPassEncoder  GetRenderPassCommandEncoder();
     WGPUComputePassEncoder GetComputePassCommandEncoder();
 
     void EndCommandEncoders(Uint32 EncoderFlags = COMMAND_ENCODER_FLAG_ALL);
 
     void CommitRenderTargets();
-
     void CommitSubpassRenderTargets();
-
     void ClearEncoderState();
 
     void ClearAttachment(Int32                     RTIndex,
@@ -358,32 +354,23 @@ private:
                          const float               ClearData[],
                          Uint8                     Stencil);
 
-    WGPURenderPassEncoder PrepareForDraw(DRAW_FLAGS Flags);
-
-    WGPURenderPassEncoder PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType);
-
+    WGPURenderPassEncoder  PrepareForDraw(DRAW_FLAGS Flags);
+    WGPURenderPassEncoder  PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType);
     WGPUComputePassEncoder PrepareForDispatchCompute();
-
-    WGPUBuffer PrepareForIndirectCommand(IBuffer* pAttribsBuffer, Uint64& IdirectBufferOffset);
+    WGPUBuffer             PrepareForIndirectCommand(IBuffer* pAttribsBuffer, Uint64& IdirectBufferOffset);
 
     void CommitGraphicsPSO(WGPURenderPassEncoder CmdEncoder);
-
     void CommitComputePSO(WGPUComputePassEncoder CmdEncoder);
-
     void CommitVertexBuffers(WGPURenderPassEncoder CmdEncoder);
-
     void CommitIndexBuffer(WGPURenderPassEncoder CmdEncoder, VALUE_TYPE IndexType);
-
     void CommitViewports(WGPURenderPassEncoder CmdEncoder);
-
     void CommitScissorRects(WGPURenderPassEncoder CmdEncoder);
 
     template <typename CmdEncoderType>
     void CommitBindGroups(CmdEncoderType CmdEncoder, Uint32 CommitSRBMask);
 
-    UploadMemoryManagerWebGPU::Allocation AllocateUploadMemory(Uint64 Size, Uint64 Alignment = 16);
-
-    DynamicMemoryManagerWebGPU::Allocation AllocateDynamicMemory(Uint64 Size, Uint64 Alignment = 16);
+    UploadMemoryManagerWebGPU::Allocation  AllocateUploadMemory(size_t Size, size_t Alignment = 16);
+    DynamicMemoryManagerWebGPU::Allocation AllocateDynamicMemory(size_t Size, size_t Alignment = 16);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources();

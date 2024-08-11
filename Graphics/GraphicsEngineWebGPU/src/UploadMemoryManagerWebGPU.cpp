@@ -34,13 +34,13 @@
 namespace Diligent
 {
 
-UploadMemoryManagerWebGPU::Page::Page(UploadMemoryManagerWebGPU* _pMgr, Uint64 _Size) :
-    pMgr{_pMgr},
-    PageSize{_Size}
+UploadMemoryManagerWebGPU::Page::Page(UploadMemoryManagerWebGPU& Mgr, size_t Size) :
+    m_pMgr{&Mgr},
+    m_Data(Size)
 {
     WGPUBufferDescriptor wgpuBufferDesc{};
     wgpuBufferDesc.label = "Upload memory page";
-    wgpuBufferDesc.size  = _Size;
+    wgpuBufferDesc.size  = Size;
     wgpuBufferDesc.usage =
         WGPUBufferUsage_CopyDst |
         WGPUBufferUsage_CopySrc |
@@ -49,20 +49,16 @@ UploadMemoryManagerWebGPU::Page::Page(UploadMemoryManagerWebGPU* _pMgr, Uint64 _
         WGPUBufferUsage_Vertex |
         WGPUBufferUsage_Index |
         WGPUBufferUsage_Indirect;
-    wgpuBuffer.Reset(wgpuDeviceCreateBuffer(pMgr->m_wgpuDevice, &wgpuBufferDesc));
-    MappedData.resize(StaticCast<size_t>(_Size));
-    pData = MappedData.data();
-    LOG_INFO_MESSAGE("Created a new upload memory page, size: ", FormatMemorySize(PageSize));
+    m_wgpuBuffer.Reset(wgpuDeviceCreateBuffer(m_pMgr->m_wgpuDevice, &wgpuBufferDesc));
+    LOG_INFO_MESSAGE("Created a new upload memory page, size: ", FormatMemorySize(Size));
 }
 
 UploadMemoryManagerWebGPU::Page::Page(Page&& RHS) noexcept :
     //clang-format off
-    pMgr{RHS.pMgr},
-    wgpuBuffer{std::move(RHS.wgpuBuffer)},
-    MappedData{std::move(RHS.MappedData)},
-    PageSize{RHS.PageSize},
-    CurrOffset{RHS.CurrOffset},
-    pData{RHS.pData}
+    m_pMgr{RHS.m_pMgr},
+    m_wgpuBuffer{std::move(RHS.m_wgpuBuffer)},
+    m_Data{std::move(RHS.m_Data)},
+    m_CurrOffset{RHS.m_CurrOffset}
 // clang-format on
 {
     RHS = Page{};
@@ -73,37 +69,33 @@ UploadMemoryManagerWebGPU::Page& UploadMemoryManagerWebGPU::Page::operator=(Page
     if (&RHS == this)
         return *this;
 
-    pMgr       = RHS.pMgr;
-    wgpuBuffer = std::move(RHS.wgpuBuffer);
-    MappedData = std::move(RHS.MappedData);
-    PageSize   = RHS.PageSize;
-    CurrOffset = RHS.CurrOffset;
-    pData      = RHS.pData;
+    m_pMgr       = RHS.m_pMgr;
+    m_wgpuBuffer = std::move(RHS.m_wgpuBuffer);
+    m_Data       = std::move(RHS.m_Data);
+    m_CurrOffset = RHS.m_CurrOffset;
 
-    RHS.pMgr       = nullptr;
-    RHS.PageSize   = 0;
-    RHS.CurrOffset = 0;
-    RHS.pData      = nullptr;
+    RHS.m_pMgr       = nullptr;
+    RHS.m_CurrOffset = 0;
 
     return *this;
 }
 
 UploadMemoryManagerWebGPU::Page::~Page()
 {
-    VERIFY(CurrOffset == 0, "Destroying a page that has not been recycled");
+    VERIFY(m_CurrOffset == 0, "Destroying a page that has not been recycled");
 }
 
-UploadMemoryManagerWebGPU::Allocation UploadMemoryManagerWebGPU::Page::Allocate(Uint64 Size, Uint64 Alignment)
+UploadMemoryManagerWebGPU::Allocation UploadMemoryManagerWebGPU::Page::Allocate(size_t Size, size_t Alignment)
 {
     VERIFY(IsPowerOfTwo(Alignment), "Alignment size must be a power of two");
     Allocation Alloc;
-    Alloc.Offset = AlignUp(CurrOffset, Alignment);
+    Alloc.Offset = AlignUp(m_CurrOffset, Alignment);
     Alloc.Size   = AlignUp(Size, Alignment);
-    if (Alloc.Offset + Alloc.Size <= PageSize)
+    if (Alloc.Offset + Alloc.Size <= m_Data.size())
     {
-        Alloc.wgpuBuffer = wgpuBuffer.Get();
-        Alloc.pData      = pData + Alloc.Offset;
-        CurrOffset       = Alloc.Offset + Alloc.Size;
+        Alloc.wgpuBuffer = m_wgpuBuffer;
+        Alloc.pData      = &m_Data[Alloc.Offset];
+        m_CurrOffset     = Alloc.Offset + Alloc.Size;
         return Alloc;
     }
     return Allocation{};
@@ -111,25 +103,26 @@ UploadMemoryManagerWebGPU::Allocation UploadMemoryManagerWebGPU::Page::Allocate(
 
 void UploadMemoryManagerWebGPU::Page::FlushWrites(WGPUQueue wgpuQueue)
 {
-    if (CurrOffset > 0)
+    if (m_CurrOffset > 0)
     {
-        wgpuQueueWriteBuffer(wgpuQueue, wgpuBuffer, 0, pData, StaticCast<size_t>(CurrOffset));
+        wgpuQueueWriteBuffer(wgpuQueue, m_wgpuBuffer, 0, m_Data.data(), m_CurrOffset);
     }
 }
 
 void UploadMemoryManagerWebGPU::Page::Recycle()
 {
-    if (pMgr == nullptr)
+    if (m_pMgr == nullptr)
     {
         UNEXPECTED("The page is empty.");
         return;
     }
 
-    pMgr->RecyclePage(std::move(*this));
+    m_CurrOffset = 0;
+    m_pMgr->RecyclePage(std::move(*this));
 }
 
 
-UploadMemoryManagerWebGPU::UploadMemoryManagerWebGPU(WGPUDevice wgpuDevice, Uint64 PageSize) :
+UploadMemoryManagerWebGPU::UploadMemoryManagerWebGPU(WGPUDevice wgpuDevice, size_t PageSize) :
     m_PageSize{PageSize},
     m_wgpuDevice{wgpuDevice}
 {
@@ -140,15 +133,15 @@ UploadMemoryManagerWebGPU::~UploadMemoryManagerWebGPU()
 {
     VERIFY(m_DbgPageCounter == m_AvailablePages.size(),
            "Not all pages have been recycled. This may result in a crash if the page is recycled later.");
-    Uint64 TotalSize = 0;
+    size_t TotalSize = 0;
     for (const Page& page : m_AvailablePages)
-        TotalSize += page.PageSize;
-    LOG_INFO_MESSAGE("SharedMemoryManagerWebGPU: total allocated memory: ", TotalSize >> 10, " KB");
+        TotalSize += page.GetSize();
+    LOG_INFO_MESSAGE("SharedMemoryManagerWebGPU: total allocated memory: ", FormatMemorySize(TotalSize));
 }
 
-UploadMemoryManagerWebGPU::Page UploadMemoryManagerWebGPU::GetPage(Uint64 Size)
+UploadMemoryManagerWebGPU::Page UploadMemoryManagerWebGPU::GetPage(size_t Size)
 {
-    Uint64 PageSize = m_PageSize;
+    size_t PageSize = m_PageSize;
     while (PageSize < Size)
         PageSize *= 2;
 
@@ -158,7 +151,7 @@ UploadMemoryManagerWebGPU::Page UploadMemoryManagerWebGPU::GetPage(Uint64 Size)
         auto Iter = m_AvailablePages.begin();
         while (Iter != m_AvailablePages.end())
         {
-            if (PageSize <= Iter->PageSize)
+            if (PageSize <= Iter->GetSize())
             {
                 Page Result = std::move(*Iter);
                 m_AvailablePages.erase(Iter);
@@ -171,13 +164,12 @@ UploadMemoryManagerWebGPU::Page UploadMemoryManagerWebGPU::GetPage(Uint64 Size)
 #if DILIGENT_DEBUG
     m_DbgPageCounter.fetch_add(1);
 #endif
-    return Page{this, PageSize};
+    return Page{*this, PageSize};
 }
 
 void UploadMemoryManagerWebGPU::RecyclePage(Page&& Item)
 {
     std::lock_guard Lock{m_AvailablePagesMtx};
-    Item.CurrOffset = 0;
     m_AvailablePages.emplace_back(std::move(Item));
 }
 

@@ -38,26 +38,34 @@
 namespace Diligent
 {
 
+// Upload memory is used by device context to upload data to GPU resources in:
+// - UpdateBuffer
+// - UpdateTexture
+// - MapTextureSubresource
+//
+// The data is first written to the upload memory and the copy command is added to the command list.
+// Upload data is flushed to the GPU memory before the command list is submitted to the queue.
 class UploadMemoryManagerWebGPU
 {
 public:
     struct Allocation
     {
-        bool IsEmpty() const
+        operator bool() const
         {
-            return wgpuBuffer == nullptr;
+            return wgpuBuffer != nullptr;
         }
 
         WGPUBuffer wgpuBuffer = nullptr;
-        Uint64     Offset     = 0;
-        Uint64     Size       = 0;
+        size_t     Offset     = 0;
+        size_t     Size       = 0;
         Uint8*     pData      = nullptr;
     };
 
-    struct Page
+    class Page
     {
+    public:
         Page() noexcept = default;
-        Page(UploadMemoryManagerWebGPU* pMgr, Uint64 Size);
+        Page(UploadMemoryManagerWebGPU& Mgr, size_t Size);
 
         Page(const Page&) = delete;
         Page& operator=(const Page&) = delete;
@@ -67,36 +75,33 @@ public:
 
         ~Page();
 
-        Allocation Allocate(Uint64 Size, Uint64 Alignment = 16);
+        Allocation Allocate(size_t Size, size_t Alignment = 16);
 
         void FlushWrites(WGPUQueue wgpuQueue);
         void Recycle();
 
-        bool IsEmpty() const
+        size_t GetSize() const
         {
-            return wgpuBuffer.Get() == nullptr;
+            return m_Data.size();
         }
 
-        UploadMemoryManagerWebGPU* pMgr = nullptr;
-        WebGPUBufferWrapper        wgpuBuffer;
-        std::vector<Uint8>         MappedData;
-
-        Uint64 PageSize   = 0;
-        Uint64 CurrOffset = 0;
-        Uint8* pData      = nullptr;
+    private:
+        UploadMemoryManagerWebGPU* m_pMgr = nullptr;
+        WebGPUBufferWrapper        m_wgpuBuffer;
+        std::vector<Uint8>         m_Data;
+        size_t                     m_CurrOffset = 0;
     };
 
-    UploadMemoryManagerWebGPU(WGPUDevice wgpuDevice, Uint64 PageSize);
-
+    UploadMemoryManagerWebGPU(WGPUDevice wgpuDevice, size_t PageSize);
     ~UploadMemoryManagerWebGPU();
 
-    Page GetPage(Uint64 Size);
+    Page GetPage(size_t Size);
 
 private:
     void RecyclePage(Page&& page);
 
 private:
-    const Uint64 m_PageSize;
+    const size_t m_PageSize;
     WGPUDevice   m_wgpuDevice;
 
     std::mutex        m_AvailablePagesMtx;
