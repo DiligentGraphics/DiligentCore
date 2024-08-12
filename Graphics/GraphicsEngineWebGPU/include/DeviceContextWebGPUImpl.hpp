@@ -382,6 +382,7 @@ private:
 
 private:
     friend class QueryManagerWebGPU;
+    friend class GenerateMipsHelperWebGPU;
 
     struct WebGPUEncoderState
     {

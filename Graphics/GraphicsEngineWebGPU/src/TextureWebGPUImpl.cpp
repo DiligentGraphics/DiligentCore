@@ -30,6 +30,7 @@
 #include "RenderDeviceWebGPUImpl.hpp"
 #include "DeviceContextWebGPUImpl.hpp"
 #include "WebGPUTypeConversions.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -37,8 +38,8 @@ namespace Diligent
 namespace
 {
 
-WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&            Desc,
-                                                         const RenderDeviceWebGPUImpl* pRenderDevice) noexcept
+WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&      Desc,
+                                                         RenderDeviceWebGPUImpl* pRenderDevice) noexcept
 {
     WGPUTextureDescriptor wgpuTextureDesc{};
 
@@ -46,6 +47,8 @@ WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&     
         DEV_CHECK_ERR(Desc.ArraySize == 6, "Cube textures are expected to have exactly 6 array slices");
     if (Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
         DEV_CHECK_ERR(Desc.ArraySize % 6 == 0, "Cube texture arrays are expected to have a number of array slices that is a multiple of 6");
+
+    const auto& FmtInfo = pRenderDevice->GetTextureFormatInfoExt(SRGBFormatToUnorm(Desc.Format));
 
     if (Desc.IsArray())
         wgpuTextureDesc.size.depthOrArrayLayers = Desc.ArraySize;
@@ -66,10 +69,22 @@ WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&     
     wgpuTextureDesc.usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_CopySrc;
     if (Desc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL))
         wgpuTextureDesc.usage |= WGPUTextureUsage_RenderAttachment;
-    if (Desc.BindFlags & BIND_UNORDERED_ACCESS || Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
+    if (Desc.BindFlags & BIND_UNORDERED_ACCESS)
         wgpuTextureDesc.usage |= WGPUTextureUsage_StorageBinding;
     if (Desc.BindFlags & BIND_SHADER_RESOURCE)
         wgpuTextureDesc.usage |= WGPUTextureUsage_TextureBinding;
+    if (Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
+    {
+        if (FmtInfo.BindFlags & BIND_UNORDERED_ACCESS)
+            wgpuTextureDesc.usage |= WGPUTextureUsage_StorageBinding;
+        else if (FmtInfo.BindFlags & BIND_RENDER_TARGET)
+            wgpuTextureDesc.usage |= WGPUTextureUsage_RenderAttachment;
+        else
+            LOG_ERROR_AND_THROW("Automatic mipmap generation isn't supported for ", GetTextureFormatAttribs(Desc.Format).Name, " as the format can't be used as render target or storage texture");
+
+        if (!FmtInfo.Filterable)
+            LOG_ERROR_AND_THROW("Automatic mipmap generation isn't supported for ", GetTextureFormatAttribs(Desc.Format).Name, " as the format doesn't support linear filtering");
+    }
 
     if (IsSRGBFormat(Desc.Format) && wgpuTextureDesc.usage & WGPUTextureUsage_StorageBinding)
         wgpuTextureDesc.format = TextureFormatToWGPUFormat(SRGBFormatToUnorm(Desc.Format));
@@ -89,6 +104,15 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
                                                                      TextureViewDesc&              ViewDesc,
                                                                      const RenderDeviceWebGPUImpl* pRenderDevice) noexcept
 {
+    auto IsTextureArray = [](const TextureViewDesc& ViewDesc) {
+        // clang-format off
+        return ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D_ARRAY ||
+               ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D_ARRAY ||
+               ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE     ||
+               ViewDesc.TextureDim == RESOURCE_DIM_TEX_CUBE_ARRAY;
+        // clang-format on
+    };
+
     if (ViewDesc.Format == TEX_FORMAT_UNKNOWN)
         ViewDesc.Format = TexDesc.Format;
 
@@ -97,14 +121,14 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
     wgpuTextureViewDesc.baseMipLevel  = ViewDesc.MostDetailedMip;
     wgpuTextureViewDesc.mipLevelCount = ViewDesc.NumMipLevels;
 
-    if (TexDesc.IsArray())
+    if (IsTextureArray(ViewDesc))
     {
         wgpuTextureViewDesc.baseArrayLayer  = ViewDesc.FirstArraySlice;
         wgpuTextureViewDesc.arrayLayerCount = ViewDesc.NumArraySlices;
     }
     else
     {
-        wgpuTextureViewDesc.baseArrayLayer  = 0;
+        wgpuTextureViewDesc.baseArrayLayer  = ViewDesc.FirstArraySlice;
         wgpuTextureViewDesc.arrayLayerCount = 1;
     }
 
@@ -122,19 +146,13 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
     else
     {
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
-        {
             wgpuTextureViewDesc.aspect = WGPUTextureAspect_DepthOnly;
-        }
         else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
         {
             if (ViewDesc.Format == TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS || ViewDesc.Format == TEX_FORMAT_R24_UNORM_X8_TYPELESS)
-            {
                 wgpuTextureViewDesc.aspect = WGPUTextureAspect_DepthOnly;
-            }
             else if (ViewDesc.Format == TEX_FORMAT_X32_TYPELESS_G8X24_UINT || ViewDesc.Format == TEX_FORMAT_X24_TYPELESS_G8_UINT)
-            {
                 wgpuTextureViewDesc.aspect = WGPUTextureAspect_StencilOnly;
-            }
             else
                 UNEXPECTED("Unexpected depth-stencil texture format");
         }
@@ -437,37 +455,78 @@ void TextureWebGPUImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITex
         std::vector<WebGPUTextureViewWrapper> wgpuTextureMipUAVs;
         if (UpdatedViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION)
         {
+            const auto& FmtInfo = m_pDevice->GetTextureFormatInfoExt(SRGBFormatToUnorm(UpdatedViewDesc.Format));
             VERIFY_EXPR((m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) != 0 && m_Desc.Is2D());
 
-            for (Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
+            if (FmtInfo.BindFlags & BIND_UNORDERED_ACCESS)
             {
-                TextureViewDesc TexMipSRVDesc = UpdatedViewDesc;
-                TexMipSRVDesc.TextureDim      = RESOURCE_DIM_TEX_2D_ARRAY;
-                TexMipSRVDesc.ViewType        = TEXTURE_VIEW_UNORDERED_ACCESS;
-                TexMipSRVDesc.MostDetailedMip = MipLevel;
-                TexMipSRVDesc.NumMipLevels    = 1;
+                for (Uint32 MipLevel = 0; MipLevel < UpdatedViewDesc.NumMipLevels; ++MipLevel)
+                {
+                    TextureViewDesc TexMipSRVDesc = UpdatedViewDesc;
+                    TexMipSRVDesc.TextureDim      = RESOURCE_DIM_TEX_2D_ARRAY;
+                    TexMipSRVDesc.ViewType        = TEXTURE_VIEW_SHADER_RESOURCE;
+                    TexMipSRVDesc.MostDetailedMip = UpdatedViewDesc.MostDetailedMip + MipLevel;
+                    TexMipSRVDesc.NumMipLevels    = 1;
 
-                WGPUTextureViewDescriptor wgpuTextureViewDescSRV = TextureViewDescToWGPUTextureViewDescriptor(m_Desc, TexMipSRVDesc, m_pDevice);
-                wgpuTextureMipSRVs.emplace_back(wgpuTextureCreateView(m_wgpuTexture.Get(), &wgpuTextureViewDescSRV));
+                    WGPUTextureViewDescriptor wgpuTextureViewDescSRV = TextureViewDescToWGPUTextureViewDescriptor(m_Desc, TexMipSRVDesc, m_pDevice);
+                    wgpuTextureMipSRVs.emplace_back(wgpuTextureCreateView(m_wgpuTexture.Get(), &wgpuTextureViewDescSRV));
 
-                if (!wgpuTextureMipSRVs.back())
-                    LOG_ERROR_AND_THROW("Failed to create WebGPU texture view ", " '", ViewDesc.Name ? ViewDesc.Name : "", '\'');
+                    if (!wgpuTextureMipSRVs.back())
+                        LOG_ERROR_AND_THROW("Failed to create WebGPU texture view ", " '", UpdatedViewDesc.Name ? UpdatedViewDesc.Name : "", '\'');
+                }
+
+                for (Uint32 MipLevel = 0; MipLevel < UpdatedViewDesc.NumMipLevels; ++MipLevel)
+                {
+                    TextureViewDesc TexMipUAVDesc = UpdatedViewDesc;
+                    TexMipUAVDesc.TextureDim      = RESOURCE_DIM_TEX_2D_ARRAY;
+                    TexMipUAVDesc.ViewType        = TEXTURE_VIEW_UNORDERED_ACCESS;
+                    TexMipUAVDesc.MostDetailedMip = UpdatedViewDesc.MostDetailedMip + MipLevel;
+                    TexMipUAVDesc.NumMipLevels    = 1;
+                    TexMipUAVDesc.Format          = SRGBFormatToUnorm(TexMipUAVDesc.Format);
+
+                    WGPUTextureViewDescriptor wgpuTextureViewDescUAV = TextureViewDescToWGPUTextureViewDescriptor(m_Desc, TexMipUAVDesc, m_pDevice);
+                    wgpuTextureMipUAVs.emplace_back(wgpuTextureCreateView(m_wgpuTexture.Get(), &wgpuTextureViewDescUAV));
+
+                    if (!wgpuTextureMipUAVs.back())
+                        LOG_ERROR_AND_THROW("Failed to create WebGPU texture view ", " '", UpdatedViewDesc.Name ? UpdatedViewDesc.Name : "", '\'');
+                }
             }
-
-            for (Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
+            else
             {
-                TextureViewDesc TexMipUAVDesc = UpdatedViewDesc;
-                TexMipUAVDesc.TextureDim      = RESOURCE_DIM_TEX_2D_ARRAY;
-                TexMipUAVDesc.ViewType        = TEXTURE_VIEW_UNORDERED_ACCESS;
-                TexMipUAVDesc.MostDetailedMip = MipLevel;
-                TexMipUAVDesc.NumMipLevels    = 1;
-                TexMipUAVDesc.Format          = SRGBFormatToUnorm(TexMipUAVDesc.Format);
+                for (Uint32 Slice = 0; Slice < UpdatedViewDesc.NumArraySlices; ++Slice)
+                {
+                    for (Uint32 MipLevel = 0; MipLevel < UpdatedViewDesc.NumMipLevels; ++MipLevel)
+                    {
+                        TextureViewDesc TexMipSRVDesc = UpdatedViewDesc;
+                        TexMipSRVDesc.TextureDim      = RESOURCE_DIM_TEX_2D;
+                        TexMipSRVDesc.ViewType        = TEXTURE_VIEW_SHADER_RESOURCE;
+                        TexMipSRVDesc.MostDetailedMip = UpdatedViewDesc.MostDetailedMip + MipLevel;
+                        TexMipSRVDesc.NumMipLevels    = 1;
+                        TexMipSRVDesc.FirstArraySlice = UpdatedViewDesc.FirstArraySlice + Slice;
 
-                WGPUTextureViewDescriptor wgpuTextureViewDescUAV = TextureViewDescToWGPUTextureViewDescriptor(m_Desc, TexMipUAVDesc, m_pDevice);
-                wgpuTextureMipUAVs.emplace_back(wgpuTextureCreateView(m_wgpuTexture.Get(), &wgpuTextureViewDescUAV));
+                        WGPUTextureViewDescriptor wgpuTextureViewDescSRV = TextureViewDescToWGPUTextureViewDescriptor(m_Desc, TexMipSRVDesc, m_pDevice);
+                        wgpuTextureMipSRVs.emplace_back(wgpuTextureCreateView(m_wgpuTexture.Get(), &wgpuTextureViewDescSRV));
 
-                if (!wgpuTextureMipUAVs.back())
-                    LOG_ERROR_AND_THROW("Failed to create WebGPU texture view ", " '", ViewDesc.Name ? ViewDesc.Name : "", '\'');
+                        if (!wgpuTextureMipSRVs.back())
+                            LOG_ERROR_AND_THROW("Failed to create WebGPU texture view ", " '", UpdatedViewDesc.Name ? UpdatedViewDesc.Name : "", '\'');
+                    }
+
+                    for (Uint32 MipLevel = 0; MipLevel < UpdatedViewDesc.NumMipLevels; ++MipLevel)
+                    {
+                        TextureViewDesc TexMipRTVDesc = UpdatedViewDesc;
+                        TexMipRTVDesc.TextureDim      = RESOURCE_DIM_TEX_2D;
+                        TexMipRTVDesc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
+                        TexMipRTVDesc.MostDetailedMip = UpdatedViewDesc.MostDetailedMip + MipLevel;
+                        TexMipRTVDesc.NumMipLevels    = 1;
+                        TexMipRTVDesc.FirstArraySlice = UpdatedViewDesc.FirstArraySlice + Slice;
+
+                        WGPUTextureViewDescriptor wgpuTextureViewDescRTV = TextureViewDescToWGPUTextureViewDescriptor(m_Desc, TexMipRTVDesc, m_pDevice);
+                        wgpuTextureMipUAVs.emplace_back(wgpuTextureCreateView(m_wgpuTexture.Get(), &wgpuTextureViewDescRTV));
+
+                        if (!wgpuTextureMipUAVs.back())
+                            LOG_ERROR_AND_THROW("Failed to create WebGPU texture view ", " '", UpdatedViewDesc.Name ? UpdatedViewDesc.Name : "", '\'');
+                    }
+                }
             }
         }
 
