@@ -12,6 +12,7 @@ set(INTERFACE
     interface/DurationQueryHelper.hpp
     interface/GraphicsUtilities.h
     interface/MapHelper.hpp
+    interface/OffScreenSwapChain.hpp
     interface/ResourceRegistry.hpp
     interface/ScopedDebugGroup.hpp
     interface/GPUCompletionAwaitQueue.hpp
@@ -36,6 +37,7 @@ set(SOURCE
     src/DynamicTextureArray.cpp
     src/DynamicTextureAtlas.cpp
     src/GraphicsUtilities.cpp
+    src/OffScreenSwapChain.cpp
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
     src/ShaderSourceFactoryUtils.cpp
