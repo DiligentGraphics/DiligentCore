@@ -47,11 +47,16 @@ TEST(GenerateMipsTest, GenerateMips)
         {
             TEX_FORMAT_RGBA8_UNORM,
             TEX_FORMAT_RGBA8_UNORM_SRGB,
-            TEX_FORMAT_RGBA32_FLOAT //
+            TEX_FORMAT_RGBA32_FLOAT,
+            TEX_FORMAT_R11G11B10_FLOAT,
         };
 
     for (size_t f = 0; f < _countof(TestFormats); ++f)
     {
+        // On Vulkan we use blit operation for mips generation, , but this is not supported for the R11G11B10_FLOAT format on Ubuntu 20.04
+        if (pDevice->GetDeviceInfo().IsVulkanDevice() && (TestFormats[f] == TEX_FORMAT_R11G11B10_FLOAT))
+            continue;
+
         TextureDesc TexDesc;
         TexDesc.Name      = "Mips generation test texture";
         TexDesc.Type      = RESOURCE_DIM_TEX_2D;

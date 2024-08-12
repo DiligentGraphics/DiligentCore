@@ -1577,8 +1577,7 @@ void DeviceContextWebGPUImpl::GenerateMips(ITextureView* pTexView)
     }
 
     GenerateMipsHelperWebGPU& MipGenerator = m_pDevice->GetMipsGenerator();
-    WGPUComputePassEncoder    CmdEncoder   = GetComputePassCommandEncoder();
-    MipGenerator.GenerateMips(CmdEncoder, this, ClassPtrCast<TextureViewWebGPUImpl>(pTexView));
+    MipGenerator.GenerateMips(this, ClassPtrCast<TextureViewWebGPUImpl>(pTexView));
 }
 
 void DeviceContextWebGPUImpl::FinishFrame()
