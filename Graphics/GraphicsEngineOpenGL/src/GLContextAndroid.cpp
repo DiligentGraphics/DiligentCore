@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -198,7 +198,6 @@ bool GLContext::InitEGLContext()
     }
 
     LOG_INFO_MESSAGE("Created OpenGLES Context ", major_version_, '.', minor_version_);
-    context_valid_ = true;
     return true;
 }
 
@@ -217,7 +216,6 @@ void GLContext::AttachToCurrentEGLContext()
     {
         LOG_ERROR_AND_THROW("Failed to attach to EGLContext: no active context");
     }
-    context_valid_ = true;
     glGetIntegerv(GL_MAJOR_VERSION, &major_version_);
     glGetIntegerv(GL_MINOR_VERSION, &minor_version_);
 }
@@ -288,8 +286,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
     major_version_(0),
     minor_version_(0),
     gles_initialized_(false),
-    egl_context_initialized_(false),
-    context_valid_(false)
+    egl_context_initialized_(false)
 {
     auto* NativeWindow = reinterpret_cast<ANativeWindow*>(InitAttribs.Window.pAWindow);
     Init(NativeWindow);
@@ -346,7 +343,6 @@ void GLContext::SwapBuffers(int SwapInterval)
         else if (err == EGL_CONTEXT_LOST || err == EGL_BAD_CONTEXT)
         {
             //Context has been lost!!
-            context_valid_ = false;
             Terminate();
             if (context_)
             {
@@ -380,10 +376,9 @@ void GLContext::Terminate()
         eglTerminate(display_);
     }
 
-    display_       = EGL_NO_DISPLAY;
-    context_       = EGL_NO_CONTEXT;
-    surface_       = EGL_NO_SURFACE;
-    context_valid_ = false;
+    display_ = EGL_NO_DISPLAY;
+    context_ = EGL_NO_CONTEXT;
+    surface_ = EGL_NO_SURFACE;
 }
 
 
