@@ -65,12 +65,12 @@ public:
 private:
     bool AllocateQueries();
 
-    void ReleaseQueries();
+    void DiscardQueries();
 
 private:
-    std::array<Uint32, 2> m_QuerySetIndices = {QueryManagerWebGPU::InvalidIndex, QueryManagerWebGPU::InvalidIndex};
-    QueryManagerWebGPU*   m_pQueryMgr       = nullptr;
-    Uint64                m_QueryEventValue = 0;
+    std::array<Uint32, 2> m_QuerySetIndices    = {QueryManagerWebGPU::InvalidIndex, QueryManagerWebGPU::InvalidIndex};
+    QueryManagerWebGPU*   m_pQueryMgr          = nullptr;
+    Uint64                m_QueryEndFenceValue = 0;
 };
 
 } // namespace Diligent

@@ -47,12 +47,12 @@ QueryWebGPUImpl::QueryWebGPUImpl(IReferenceCounters*     pRefCounters,
 
 QueryWebGPUImpl::~QueryWebGPUImpl()
 {
-    ReleaseQueries();
+    DiscardQueries();
 }
 
 bool QueryWebGPUImpl::AllocateQueries()
 {
-    ReleaseQueries();
+    DiscardQueries();
 
     VERIFY_EXPR(m_pQueryMgr == nullptr);
     VERIFY_EXPR(m_pContext != nullptr);
@@ -68,21 +68,21 @@ bool QueryWebGPUImpl::AllocateQueries()
         {
             LOG_ERROR_MESSAGE("Failed to allocate WebGPU query for type ", GetQueryTypeString(m_Desc.Type),
                               ". Increase the query pool size in EngineWebGPUCreateInfo.");
-            ReleaseQueries();
+            DiscardQueries();
             return false;
         }
     }
     return true;
 }
 
-void QueryWebGPUImpl::ReleaseQueries()
+void QueryWebGPUImpl::DiscardQueries()
 {
     for (auto& QuerySetIdx : m_QuerySetIndices)
     {
         if (QuerySetIdx != QueryManagerWebGPU::InvalidIndex)
         {
             VERIFY_EXPR(m_pQueryMgr != nullptr);
-            m_pQueryMgr->ReleaseQuery(m_Desc.Type, QuerySetIdx);
+            m_pQueryMgr->DiscardQuery(m_Desc.Type, QuerySetIdx);
             QuerySetIdx = QueryManagerWebGPU::InvalidIndex;
         }
     }
@@ -94,14 +94,15 @@ bool QueryWebGPUImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
     TQueryBase::CheckQueryDataPtr(pData, DataSize);
     DEV_CHECK_ERR(m_pQueryMgr != nullptr, "Requesting data from query that has not been ended or has been invalidated");
 
-    const Uint32 BufferIdx = m_pQueryMgr->GetReadbackBufferIdentifier(m_Desc.Type, m_QueryEventValue);
-    if (BufferIdx != QueryManagerWebGPU::InvalidIndex)
+    VERIFY_EXPR(m_pDevice->GetNumImmediateContexts() == 1);
+    DeviceContextWebGPUImpl* pContext = m_pDevice->GetImmediateContext(0);
+    if (pContext->GetCompletedFenceValue() >= m_QueryEndFenceValue)
     {
         switch (m_Desc.Type)
         {
             case QUERY_TYPE_TIMESTAMP:
             {
-                const auto Timestamp = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0], BufferIdx);
+                const auto Timestamp = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0]);
                 if (pData != nullptr)
                 {
                     auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
@@ -112,8 +113,8 @@ bool QueryWebGPUImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             }
             case QUERY_TYPE_DURATION:
             {
-                const auto T0 = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0], BufferIdx);
-                const auto T1 = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[1], BufferIdx);
+                const auto T0 = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0]);
+                const auto T1 = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[1]);
                 if (pData != nullptr)
                 {
                     auto& QueryData     = *reinterpret_cast<QueryDataDuration*>(pData);
@@ -124,7 +125,7 @@ bool QueryWebGPUImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             }
             case QUERY_TYPE_OCCLUSION:
             {
-                const auto NumSamples = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0], BufferIdx);
+                const auto NumSamples = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0]);
                 if (pData != nullptr)
                 {
                     auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
@@ -149,7 +150,7 @@ bool QueryWebGPUImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
 void QueryWebGPUImpl::Invalidate()
 {
-    ReleaseQueries();
+    DiscardQueries();
     TQueryBase::Invalidate();
 }
 
@@ -181,9 +182,7 @@ bool QueryWebGPUImpl::OnEndQuery(DeviceContextWebGPUImpl* pContext)
         return false;
     }
 
-    VERIFY_EXPR(m_pQueryMgr != nullptr);
-    m_QueryEventValue = m_pQueryMgr->GetNextEventValue(m_Desc.Type);
-
+    m_QueryEndFenceValue = pContext->GetNextFenceValue();
     return true;
 }
 
