@@ -1266,10 +1266,8 @@ void DeviceContextWebGPUImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 
 void DeviceContextWebGPUImpl::WaitForIdle()
 {
-    EnqueueSignal(m_pFence, ++m_FenceValue);
     Flush();
     m_pFence->Wait(m_FenceValue);
-    GetQueryManager().WaitAllQuerySet(m_pDevice);
 }
 
 void DeviceContextWebGPUImpl::BeginQuery(IQuery* pQuery)
@@ -1372,6 +1370,7 @@ void DeviceContextWebGPUImpl::EndQuery(IQuery* pQuery)
 
 void DeviceContextWebGPUImpl::Flush()
 {
+    EnqueueSignal(m_pFence, ++m_FenceValue);
     EndCommandEncoders();
 
     for (auto& PendingWriteIt : m_PendingStagingWrites)
@@ -1403,6 +1402,8 @@ void DeviceContextWebGPUImpl::Flush()
             pSyncPoint->Release();
         };
 
+        GetQueryManager().ResolveQuerySet(m_pDevice, this);
+
         RefCntAutoPtr<SyncPointWebGPUImpl> pWorkDoneSyncPoint{MakeNewRCObj<SyncPointWebGPUImpl>()()};
 
         std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>> SyncPoints;
@@ -1416,8 +1417,6 @@ void DeviceContextWebGPUImpl::Flush()
         }
         m_SignaledFences.clear();
 
-        GetQueryManager().ResolveQuerySet(m_pDevice, GetCommandEncoder());
-
         WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
         WebGPUCommandBufferWrapper  wgpuCmdBuffer{wgpuCommandEncoderFinish(GetCommandEncoder(), &wgpuCmdBufferDesc)};
         DEV_CHECK_ERR(wgpuCmdBuffer != nullptr, "Failed to finish command encoder");
@@ -1425,8 +1424,6 @@ void DeviceContextWebGPUImpl::Flush()
         wgpuQueueSubmit(m_wgpuQueue, 1, &wgpuCmdBuffer.Get());
         wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, pWorkDoneSyncPoint.Detach());
         m_wgpuCommandEncoder.Reset(nullptr);
-
-        GetQueryManager().ReadbackQuerySet(m_pDevice);
 
         for (auto& PendingReadIt : m_PendingStagingReads)
         {
@@ -1598,8 +1595,6 @@ void DeviceContextWebGPUImpl::FinishFrame()
 
     if (!m_MappedTextures.empty())
         LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
-
-    GetQueryManager().FinishFrame();
 
     m_pDevice->DeviceTick();
 
@@ -2294,6 +2289,16 @@ DynamicMemoryManagerWebGPU::Allocation DeviceContextWebGPUImpl::AllocateDynamicM
 QueryManagerWebGPU& DeviceContextWebGPUImpl::GetQueryManager()
 {
     return m_pDevice->GetQueryManager();
+}
+
+Uint64 DeviceContextWebGPUImpl::GetNextFenceValue()
+{
+    return m_FenceValue + 1;
+}
+
+Uint64 DeviceContextWebGPUImpl::GetCompletedFenceValue()
+{
+    return m_pFence->GetCompletedValue();
 }
 
 } // namespace Diligent

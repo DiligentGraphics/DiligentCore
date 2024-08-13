@@ -117,7 +117,6 @@ WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingReadBuffer
     return &m_StagingBuffers.back();
 }
 
-
 WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::GetStagingBuffer(WGPUDevice wgpuDevice, CPU_ACCESS_FLAGS Access)
 {
     VERIFY(m_StagingBuffers.capacity() != 0, "Resource is not initialized as staging");

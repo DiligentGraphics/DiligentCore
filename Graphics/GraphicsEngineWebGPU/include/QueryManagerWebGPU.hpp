@@ -55,99 +55,58 @@ public:
 
     Uint32 AllocateQuery(QUERY_TYPE Type);
 
-    void ReleaseQuery(QUERY_TYPE Type, Uint32 Index);
+    void DiscardQuery(QUERY_TYPE Type, Uint32 Index);
 
     WGPUQuerySet GetQuerySet(QUERY_TYPE Type) const;
 
-    Uint32 GetReadbackBufferIdentifier(QUERY_TYPE Type, Uint64 EventValue) const;
+    Uint64 GetQueryResult(QUERY_TYPE Type, Uint32 Index) const;
 
-    Uint64 GetQueryResult(QUERY_TYPE Type, Uint32 Index, Uint32 BufferIdentifier) const;
-
-    Uint64 GetNextEventValue(QUERY_TYPE Type);
-
-    void ResolveQuerySet(RenderDeviceWebGPUImpl* pDevice, WGPUCommandEncoder wgpuCmdEncoder);
-
-    void ReadbackQuerySet(RenderDeviceWebGPUImpl* pDevice);
-
-    void FinishFrame();
-
-    void WaitAllQuerySet(RenderDeviceWebGPUImpl* pDevice);
+    void ResolveQuerySet(RenderDeviceWebGPUImpl* pDevice, DeviceContextWebGPUImpl* pDeviceContext);
 
 private:
-    class QuerySetInfo
+    class QuerySetObject : public ObjectBase<IDeviceObject>, public WebGPUResourceBase
     {
     public:
-        struct ReadbackBufferInfo
-        {
-            WebGPUBufferWrapper ReadbackBuffer;
-            std::vector<Uint64> DataResult;
-            Uint32              BufferIdentifier;
-            Uint64              LastEventValue;
-            Uint64              PendingEventValue;
-        };
-        using ReadbackBufferList = std::vector<ReadbackBufferInfo>;
+        QuerySetObject(IReferenceCounters* pRefCounters, RenderDeviceWebGPUImpl* pDevice, Uint32 HeapSize, QUERY_TYPE QueryType);
 
-    public:
-        QuerySetInfo() = default;
-
-        ~QuerySetInfo();
-
-        // clang-format off
-        QuerySetInfo             (const QuerySetInfo&)  = delete;
-        QuerySetInfo             (      QuerySetInfo&&) = delete;
-        QuerySetInfo& operator = (const QuerySetInfo&)  = delete;
-        QuerySetInfo& operator = (      QuerySetInfo&&) = delete;
-        // clang-format on
-
-        void Initialize(RenderDeviceWebGPUImpl* pDevice, Uint32 HeapSize, QUERY_TYPE Type);
+        ~QuerySetObject();
 
         Uint32 Allocate();
 
-        void Release(Uint32 Index);
+        void Discard(Uint32 Index);
 
         QUERY_TYPE GetType() const;
 
         Uint32 GetQueryCount() const;
 
-        Uint64 GetQueryResult(Uint32 Index, Uint32 BufferIdentifier) const;
+        Uint64 GetQueryResult(Uint32 Index) const;
 
         WGPUQuerySet GetWebGPUQuerySet() const;
 
         Uint32 GetMaxAllocatedQueries() const;
 
-        bool IsNull() const;
+        void ResolveQueries(RenderDeviceWebGPUImpl* pDevice, DeviceContextWebGPUImpl* pDeviceContext);
 
-        Uint32 ResolveQueries(RenderDeviceWebGPUImpl* pDevice, WGPUCommandEncoder wgpuCmdEncoder);
+        const DeviceObjectAttribs& DILIGENT_CALL_TYPE GetDesc() const override;
 
-        void ReadbackQueries(RenderDeviceWebGPUImpl* pDevice, Uint32 PendingRedbackIndex);
+        Int32 DILIGENT_CALL_TYPE GetUniqueID() const override;
 
-        void WaitAllQueries(RenderDeviceWebGPUImpl* pDevice, Uint32 PendingRedbackIndex);
+        void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override;
 
-        ReadbackBufferInfo& FindAvailableReadbackBuffer(RenderDeviceWebGPUImpl* pDevice);
-
-        Uint32 GetReadbackBufferIdentifier(Uint64 EventValue) const;
-
-        Uint64 GetNextEventValue();
-
-        Uint64 IncrementEventValue();
+        IObject* DILIGENT_CALL_TYPE GetUserData() const override;
 
     private:
+        DeviceObjectAttribs   m_Desc;
         WebGPUQuerySetWrapper m_wgpuQuerySet;
         WebGPUBufferWrapper   m_wgpuResolveBuffer;
         std::vector<Uint32>   m_AvailableQueries;
-        ReadbackBufferList    m_PendingReadbackBuffers;
 
         QUERY_TYPE m_Type                = QUERY_TYPE_UNDEFINED;
         Uint32     m_QueryCount          = 0;
         Uint32     m_MaxAllocatedQueries = 0;
-        Uint64     m_EventValue          = 0;
-
-        static constexpr Uint32 MaxPendingBuffers = 16;
     };
 
-    std::array<QuerySetInfo, QUERY_TYPE_NUM_TYPES> m_QuerySets;
-    std::array<Uint32, QUERY_TYPE_NUM_TYPES>       m_PendingReadbackIndices;
-    Uint32                                         m_ActiveQuerySets = 0;
+    std::array<RefCntAutoPtr<QuerySetObject>, QUERY_TYPE_NUM_TYPES> m_QuerySets;
 };
 
 } // namespace Diligent

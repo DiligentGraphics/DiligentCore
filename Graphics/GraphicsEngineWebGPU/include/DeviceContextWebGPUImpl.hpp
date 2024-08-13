@@ -302,6 +302,10 @@ public:
 
     QueryManagerWebGPU& GetQueryManager();
 
+    Uint64 GetNextFenceValue();
+
+    Uint64 GetCompletedFenceValue();
+
 private:
     enum COMMAND_ENCODER_FLAGS : Uint32
     {
@@ -377,6 +381,8 @@ private:
 #endif
 
 private:
+    friend class QueryManagerWebGPU;
+
     struct WebGPUEncoderState
     {
         enum CMD_ENCODER_STATE_FLAGS : Uint32
