@@ -144,6 +144,8 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
             m_MtlProps.DumpFolder = DumpFolder;
         }
     }
+
+    InitShaderCompilationThreadPool(CreateInfo.pAsyncShaderCompilationThreadPool, CreateInfo.NumAsyncShaderCompilationThreads);
 }
 
 SerializationDeviceImpl::~SerializationDeviceImpl()

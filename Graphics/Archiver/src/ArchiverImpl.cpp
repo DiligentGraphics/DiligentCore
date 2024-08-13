@@ -259,22 +259,37 @@ bool AddObjectToArchive(IfaceType*                                              
 
 Bool ArchiverImpl::AddShader(IShader* pShader)
 {
+    if (pShader == nullptr)
+        return false;
+
+    const SHADER_STATUS Status = pShader->GetStatus();
+    if (Status != SHADER_STATUS_READY)
+    {
+        LOG_ERROR_MESSAGE("Shader '", pShader->GetDesc().Name, "' is not ready. Only ready shaders can be added to the archive. Use GetStatus() to check the shader status.");
+        return False;
+    }
+
     return AddObjectToArchive<SerializedShaderImpl>(pShader, "Shader", IID_SerializedShader, m_ShadersMtx, m_Shaders);
 }
 
 bool ArchiverImpl::AddPipelineResourceSignature(IPipelineResourceSignature* pPRS)
 {
+    if (pPRS == nullptr)
+        return false;
+
     return AddObjectToArchive<SerializedResourceSignatureImpl>(pPRS, "Pipeline resource signature", IID_SerializedResourceSignature, m_SignaturesMtx, m_Signatures);
 }
 
 bool ArchiverImpl::AddRenderPass(IRenderPass* pRP)
 {
+    if (pRP == nullptr)
+        return false;
+
     return AddObjectToArchive<SerializedRenderPassImpl>(pRP, "Render pass", IID_SerializedRenderPass, m_RenderPassesMtx, m_RenderPasses);
 }
 
 Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
 {
-    DEV_CHECK_ERR(pPSO != nullptr, "Pipeline state must not be null");
     if (pPSO == nullptr)
         return false;
 

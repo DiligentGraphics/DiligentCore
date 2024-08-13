@@ -71,6 +71,11 @@ struct CompiledShaderWebGPU final : SerializedShaderImpl::CompiledShader
     {
         return &ShaderWebGPU;
     }
+
+    virtual bool IsCompiling() const override final
+    {
+        return ShaderWebGPU.IsCompiling();
+    }
 };
 
 
@@ -250,7 +255,7 @@ void SerializedShaderImpl::CreateShaderWebGPU(IReferenceCounters*     pRefCounte
         // Do not overwrite compiler output from other APIs.
         // TODO: collect all outputs.
         ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
-        nullptr, // pCompilationThreadPool
+        m_pDevice->GetShaderCompilationThreadPool(),
     };
     CreateShader<CompiledShaderWebGPU>(DeviceType::WebGPU, pRefCounters, ShaderCI, WebGPUShaderCI, m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_WEBGPU));
 }

@@ -225,6 +225,20 @@ struct SerializationDeviceCreateInfo
     /// Metal attributes, see Diligent::SerializationDeviceMtlInfo.
     SerializationDeviceMtlInfo Metal;
 
+    /// An optional thread pool for asynchronous shader and pipeline state compilation.
+    IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
+
+    /// The maximum number of threads that can be used to compile shaders.
+    ///
+    /// \remarks    If pAsyncShaderCompilationThreadPool is null, this value is used to define the number of threads in
+    ///             the default thread pool.
+    ///             If the value is 0xFFFFFFFF, the number of threads will be determined automatically.
+    ///             If the value is 0, the default thread pool will not be created.
+    ///             
+    ///             If pAsyncShaderCompilationThreadPool is not null, the value is ignored as the user-provided
+    ///             thread pool is used instead.
+    Uint32 NumAsyncShaderCompilationThreads DEFAULT_INITIALIZER(0);
+
 #if DILIGENT_CPP_INTERFACE
     SerializationDeviceCreateInfo() noexcept
     {

@@ -304,6 +304,11 @@ struct CompiledShaderMtl final : SerializedShaderImpl::CompiledShader
     {
         return &ShaderMtl;
     }
+
+    virtual bool IsCompiling() const override final
+    {
+        return ShaderMtl.IsCompiling();
+    }
 };
 
 inline const ParsedMSLInfo* GetParsedMsl(const SerializedShaderImpl* pShader, SerializedShaderImpl::DeviceType Type)
@@ -581,7 +586,7 @@ void SerializedShaderImpl::CreateShaderMtl(IReferenceCounters*     pRefCounters,
         // TODO: collect all outputs.
         ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
 
-        nullptr, //  pCompilationThreadPool
+        m_pDevice->GetShaderCompilationThreadPool(),
 
         std::function<void(std::string&)>{
             [&](std::string& MslSource)

@@ -67,6 +67,11 @@ struct CompiledShaderD3D12 final : SerializedShaderImpl::CompiledShader
     {
         return &ShaderD3D12;
     }
+
+    virtual bool IsCompiling() const override final
+    {
+        return ShaderD3D12.IsCompiling();
+    }
 };
 
 inline const ShaderD3D12Impl* GetShaderD3D12(const SerializedShaderImpl* pShader)
@@ -189,7 +194,7 @@ void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters*     pRefCounter
             // Do not overwrite compiler output from other APIs.
             // TODO: collect all outputs.
             ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
-            nullptr, // pCompilationThreadPool
+            m_pDevice->GetShaderCompilationThreadPool(),
         },
         D3D12Props.ShaderVersion,
     };

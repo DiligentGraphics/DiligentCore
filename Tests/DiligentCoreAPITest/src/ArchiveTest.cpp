@@ -26,6 +26,7 @@
 
 #include <array>
 #include <unordered_set>
+#include <thread>
 
 #include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
@@ -41,6 +42,8 @@
 
 #include "InlineShaders/RayTracingTestHLSL.h"
 #include "RayTracingTestConstants.hpp"
+
+#include "Timer.hpp"
 
 using namespace Diligent;
 using namespace Diligent::Testing;
@@ -1160,7 +1163,7 @@ TEST(ArchiveTest, GraphicsPipeline_NoReflection)
 }
 
 
-TEST(ArchiveTest, Shaders)
+void ArchiveGraphicsShaders(bool CompileAsync)
 {
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
@@ -1176,6 +1179,7 @@ TEST(ArchiveTest, Shaders)
 
     SerializationDeviceCreateInfo SerDeviceCI;
     SerDeviceCI.DeviceInfo.Features.SeparablePrograms = pDevice->GetDeviceInfo().Features.SeparablePrograms;
+    SerDeviceCI.NumAsyncShaderCompilationThreads      = CompileAsync ? 4 : 0;
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     pArchiverFactory->CreateSerializationDevice(SerDeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
@@ -1184,12 +1188,49 @@ TEST(ArchiveTest, Shaders)
     pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
     ASSERT_NE(pArchiver, nullptr);
 
-    ShaderCreateInfo       VertexShaderCI;
-    ShaderCreateInfo       PixelShaderCI;
+    ShaderCreateInfo VertexShaderCI;
+    ShaderCreateInfo PixelShaderCI;
+    if (CompileAsync)
+    {
+        VertexShaderCI.CompileFlags = SHADER_COMPILE_FLAG_ASYNCHRONOUS;
+        PixelShaderCI.CompileFlags  = SHADER_COMPILE_FLAG_ASYNCHRONOUS;
+    }
     RefCntAutoPtr<IShader> pSerializedVS, pSerializedVS2;
     RefCntAutoPtr<IShader> pSerializedPS, pSerializedPS2;
     CreateGraphicsShaders(pDevice, pSerializationDevice, VertexShaderCI, nullptr, &pSerializedVS, PixelShaderCI, nullptr, &pSerializedPS);
     CreateGraphicsShaders(pDevice, pSerializationDevice, VertexShaderCI, nullptr, &pSerializedVS2, PixelShaderCI, nullptr, &pSerializedPS2);
+
+    if (CompileAsync)
+    {
+        Timer T;
+        auto  StartTime = T.GetElapsedTime();
+
+        SHADER_STATUS OverallStatus = SHADER_STATUS_UNINITIALIZED;
+        while (true)
+        {
+            OverallStatus = SHADER_STATUS_READY;
+
+            Uint32 NumShadersReady = 0;
+            for (auto& pShader : {pSerializedVS, pSerializedVS2, pSerializedPS, pSerializedPS2})
+            {
+                SHADER_STATUS Status = pShader->GetStatus();
+                if (Status == SHADER_STATUS_READY)
+                    ++NumShadersReady;
+                else if (Status == SHADER_STATUS_FAILED)
+                {
+                    OverallStatus = SHADER_STATUS_FAILED;
+                    break;
+                }
+            }
+            if (NumShadersReady == 4 || OverallStatus == SHADER_STATUS_FAILED)
+                break;
+            std::this_thread::yield();
+            std::this_thread::sleep_for(std::chrono::milliseconds{10});
+        }
+        ASSERT_EQ(OverallStatus, SHADER_STATUS_READY);
+
+        LOG_INFO_MESSAGE("Shaders were compiled asynchronously in ", (T.GetElapsedTime() - StartTime) * 1000, " ms");
+    }
 
     EXPECT_TRUE(pArchiver->AddShader(pSerializedVS));
     EXPECT_TRUE(pArchiver->AddShader(pSerializedPS));
@@ -1225,6 +1266,15 @@ TEST(ArchiveTest, Shaders)
     UnpackShader(pDevice, pDearchiver, PixelShaderCI);
 }
 
+TEST(ArchiveTest, Shaders)
+{
+    ArchiveGraphicsShaders(false);
+}
+
+TEST(ArchiveTest, Shaders_Async)
+{
+    ArchiveGraphicsShaders(true);
+}
 
 namespace HLSL
 {

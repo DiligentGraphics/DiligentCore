@@ -274,6 +274,11 @@ struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
         return pShaderGL;
     }
 
+    virtual bool IsCompiling() const override final
+    {
+        return false;
+    }
+
 private:
     static String UnrollSource(const ShaderCreateInfo& CI)
     {

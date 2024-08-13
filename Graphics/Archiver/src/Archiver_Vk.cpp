@@ -67,6 +67,11 @@ struct CompiledShaderVk : SerializedShaderImpl::CompiledShader
     {
         return &ShaderVk;
     }
+
+    virtual bool IsCompiling() const override final
+    {
+        return ShaderVk.IsCompiling();
+    }
 };
 
 inline const ShaderVkImpl* GetShaderVk(const SerializedShaderImpl* pShader)
@@ -211,7 +216,7 @@ void SerializedShaderImpl::CreateShaderVk(IReferenceCounters*     pRefCounters,
         // Do not overwrite compiler output from other APIs.
         // TODO: collect all outputs.
         ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
-        nullptr, // pCompilationThreadPool
+        m_pDevice->GetShaderCompilationThreadPool(),
     };
     CreateShader<CompiledShaderVk>(DeviceType::Vulkan, pRefCounters, ShaderCI, VkShaderCI, pRenderDeviceVk);
 }

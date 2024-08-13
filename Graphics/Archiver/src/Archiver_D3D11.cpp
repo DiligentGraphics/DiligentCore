@@ -78,6 +78,11 @@ struct CompiledShaderD3D11 final : SerializedShaderImpl::CompiledShader
     {
         return &ShaderD3D11;
     }
+
+    virtual bool IsCompiling() const override final
+    {
+        return ShaderD3D11.IsCompiling();
+    }
 };
 
 struct ShaderStageInfoD3D11
@@ -211,7 +216,7 @@ void SerializedShaderImpl::CreateShaderD3D11(IReferenceCounters*     pRefCounter
             // Do not overwrite compiler output from other APIs.
             // TODO: collect all outputs.
             ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
-            nullptr, // pCompilationThreadPool
+            m_pDevice->GetShaderCompilationThreadPool(),
         },
         static_cast<D3D_FEATURE_LEVEL>(m_pDevice->GetD3D11Properties().FeatureLevel),
     };

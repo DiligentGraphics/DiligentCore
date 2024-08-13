@@ -67,17 +67,10 @@ public:
     UNSUPPORTED_CONST_METHOD(IObject*, GetUserData)
     UNSUPPORTED_CONST_METHOD(void, GetBytecode, const void** ppBytecode, Uint64& Size);
 
-    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
-    {
-        return SHADER_STATUS_READY;
-    }
+    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final;
+    virtual IShader* DILIGENT_CALL_TYPE      GetDeviceShader(RENDER_DEVICE_TYPE Type) const override final;
 
-    virtual IShader* DILIGENT_CALL_TYPE GetDeviceShader(RENDER_DEVICE_TYPE Type) const override final;
-
-    bool IsCompiling() const
-    {
-        return false;
-    }
+    bool IsCompiling() const;
 
     struct CompiledShader
     {
@@ -85,6 +78,8 @@ public:
         virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const = 0;
 
         virtual IShader* GetDeviceShader() = 0;
+
+        virtual bool IsCompiling() const = 0;
     };
 
     template <typename CompiledShaderType>

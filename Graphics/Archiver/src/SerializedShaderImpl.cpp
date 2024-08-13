@@ -129,7 +129,10 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
 }
 
 SerializedShaderImpl::~SerializedShaderImpl()
-{}
+{
+    // Make sure that all asynchrous tasks are complete.
+    GetStatus(/*WaitForCompletion = */ true);
+}
 
 void DILIGENT_CALL_TYPE SerializedShaderImpl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
 {
@@ -185,6 +188,57 @@ IShader* SerializedShaderImpl::GetDeviceShader(RENDER_DEVICE_TYPE Type) const
     return pCompiledShader ?
         pCompiledShader->GetDeviceShader() :
         nullptr;
+}
+
+SHADER_STATUS SerializedShaderImpl::GetStatus(bool WaitForCompletion)
+{
+    SHADER_STATUS OverallStatus = SHADER_STATUS_READY;
+    for (size_t type = 0; type < static_cast<size_t>(DeviceType::Count); ++type)
+    {
+        const auto& pCompiledShader = m_Shaders[type];
+
+        IShader* pShader = pCompiledShader ? pCompiledShader->GetDeviceShader() : nullptr;
+        if (pShader == nullptr)
+            continue;
+
+        const SHADER_STATUS Status = static_cast<DeviceType>(type) != DeviceType::OpenGL ?
+            pShader->GetStatus(WaitForCompletion) :
+            SHADER_STATUS_READY;
+        switch (Status)
+        {
+            case SHADER_STATUS_UNINITIALIZED:
+                UNEXPECTED("Shader status must not be uninitialized");
+                break;
+
+            case SHADER_STATUS_COMPILING:
+                OverallStatus = SHADER_STATUS_COMPILING;
+                break;
+
+            case SHADER_STATUS_READY:
+                // Nothing to do
+                break;
+
+            case SHADER_STATUS_FAILED:
+                return SHADER_STATUS_FAILED;
+
+            default:
+                UNEXPECTED("Unexpected shader status");
+                break;
+        }
+    }
+
+    return OverallStatus;
+}
+
+bool SerializedShaderImpl::IsCompiling() const
+{
+    for (const auto& pCompiledShader : m_Shaders)
+    {
+        if (pCompiledShader && pCompiledShader->IsCompiling())
+            return true;
+    }
+
+    return false;
 }
 
 } // namespace Diligent
