@@ -377,12 +377,14 @@ TEST(ArchiveTest, AppendDeviceData)
 }
 
 
-class TestBrokenShader : public testing::TestWithParam<ARCHIVE_DEVICE_DATA_FLAGS>
+class TestBrokenShader : public testing::TestWithParam<std::tuple<ARCHIVE_DEVICE_DATA_FLAGS, bool>>
 {};
 
 TEST_P(TestBrokenShader, CompileFailure)
 {
-    auto DataFlag    = GetParam();
+    ARCHIVE_DEVICE_DATA_FLAGS DataFlag     = std::get<ARCHIVE_DEVICE_DATA_FLAGS>(GetParam());
+    bool                      CompileAsync = std::get<bool>(GetParam());
+
     auto AllowedBits = GetDeviceBits();
     if ((DataFlag & AllowedBits) == 0)
         GTEST_SKIP() << GetArchiveDeviceDataFlagString(DataFlag) << " is not supported by archiver";
@@ -394,16 +396,20 @@ TEST_P(TestBrokenShader, CompileFailure)
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+    SerializationDeviceCreateInfo       SerializationDeviceCI;
+    if (CompileAsync)
+        SerializationDeviceCI.NumAsyncShaderCompilationThreads = 1;
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
     pArchiverFactory->CreateDefaultShaderSourceStreamFactory("shaders/Archiver", &pShaderSourceFactory);
 
     ShaderCreateInfo ShaderCI;
-    ShaderCI.Desc       = {"Archive test broken shader", SHADER_TYPE_VERTEX, true};
-    ShaderCI.EntryPoint = "main";
-    ShaderCI.Source     = "Not even a shader source";
+    ShaderCI.Desc         = {"Archive test broken shader", SHADER_TYPE_VERTEX, true};
+    ShaderCI.EntryPoint   = "main";
+    ShaderCI.Source       = "Not even a shader source";
+    ShaderCI.CompileFlags = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
 
     const auto IsD3D = DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D11 || DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D12;
     pEnv->SetErrorAllowance(IsD3D ? 2 : 3, "No worries, errors are expected: testing broken shader\n");
@@ -415,14 +421,33 @@ TEST_P(TestBrokenShader, CompileFailure)
 
     RefCntAutoPtr<IShader>   pSerializedShader;
     RefCntAutoPtr<IDataBlob> pCompilerOutput;
-    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, &pSerializedShader, &pCompilerOutput);
-    EXPECT_EQ(pSerializedShader, nullptr);
+    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, &pSerializedShader, pCompilerOutput.RawDblPtr());
+    if (CompileAsync && DataFlag != ARCHIVE_DEVICE_DATA_FLAG_GL && DataFlag != ARCHIVE_DEVICE_DATA_FLAG_GLES)
+    {
+        ASSERT_NE(pSerializedShader, nullptr);
+        SHADER_STATUS Status = SHADER_STATUS_UNINITIALIZED;
+        do
+        {
+            Status = pSerializedShader->GetStatus();
+            if (Status == SHADER_STATUS_COMPILING)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds{10});
+            }
+        } while (Status == SHADER_STATUS_COMPILING);
+        EXPECT_EQ(Status, SHADER_STATUS_FAILED);
+    }
+    else
+    {
+        EXPECT_EQ(pSerializedShader, nullptr);
+    }
     EXPECT_NE(pCompilerOutput, nullptr);
 }
 
 TEST_P(TestBrokenShader, MissingSourceFile)
 {
-    auto DataFlag    = GetParam();
+    ARCHIVE_DEVICE_DATA_FLAGS DataFlag     = std::get<ARCHIVE_DEVICE_DATA_FLAGS>(GetParam());
+    bool                      CompileAsync = std::get<bool>(GetParam());
+
     auto AllowedBits = GetDeviceBits();
     if ((DataFlag & AllowedBits) == 0)
         GTEST_SKIP() << GetArchiveDeviceDataFlagString(DataFlag) << " is not supported by archiver";
@@ -431,7 +456,10 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     auto* pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
-    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
+    SerializationDeviceCreateInfo       SerializationDeviceCI;
+    if (CompileAsync)
+        SerializationDeviceCI.NumAsyncShaderCompilationThreads = 1;
+    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
@@ -442,6 +470,7 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     ShaderCI.EntryPoint                 = "main";
     ShaderCI.FilePath                   = "non_existing.shader";
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
+    ShaderCI.CompileFlags               = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
 
     pEnv->SetErrorAllowance(3, "No worries, errors are expected: testing broken shader\n");
     pEnv->PushExpectedErrorSubstring("Failed to create Shader object 'Archive test broken shader'");
@@ -449,25 +478,47 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     pEnv->PushExpectedErrorSubstring("Failed to create input stream for source file non_existing.shader", false);
 
     RefCntAutoPtr<IShader> pSerializedShader;
-    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, &pSerializedShader);
-    EXPECT_EQ(pSerializedShader, nullptr);
+    pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, pSerializedShader.RawDblPtr());
+    if (CompileAsync && DataFlag != ARCHIVE_DEVICE_DATA_FLAG_GL && DataFlag != ARCHIVE_DEVICE_DATA_FLAG_GLES)
+    {
+        ASSERT_NE(pSerializedShader, nullptr);
+        SHADER_STATUS Status = SHADER_STATUS_UNINITIALIZED;
+        do
+        {
+            Status = pSerializedShader->GetStatus();
+            if (Status == SHADER_STATUS_COMPILING)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds{10});
+            }
+        } while (Status == SHADER_STATUS_COMPILING);
+        EXPECT_EQ(Status, SHADER_STATUS_FAILED);
+    }
+    else
+    {
+        EXPECT_EQ(pSerializedShader, nullptr);
+    }
 }
 
 static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 7, "Please add new device flag to the map");
 INSTANTIATE_TEST_SUITE_P(ArchiveTest,
                          TestBrokenShader,
-                         testing::Values<ARCHIVE_DEVICE_DATA_FLAGS>(
-                             ARCHIVE_DEVICE_DATA_FLAG_D3D11,
-                             ARCHIVE_DEVICE_DATA_FLAG_D3D12,
-                             ARCHIVE_DEVICE_DATA_FLAG_GL,
-                             ARCHIVE_DEVICE_DATA_FLAG_GLES,
-                             ARCHIVE_DEVICE_DATA_FLAG_VULKAN,
-                             ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS,
-                             ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS,
-                             ARCHIVE_DEVICE_DATA_FLAG_WEBGPU),
-                         [](const testing::TestParamInfo<ARCHIVE_DEVICE_DATA_FLAGS>& info) //
+                         testing::Combine(
+                             testing::Values<ARCHIVE_DEVICE_DATA_FLAGS>(
+                                 ARCHIVE_DEVICE_DATA_FLAG_D3D11,
+                                 ARCHIVE_DEVICE_DATA_FLAG_D3D12,
+                                 ARCHIVE_DEVICE_DATA_FLAG_GL,
+                                 ARCHIVE_DEVICE_DATA_FLAG_GLES,
+                                 ARCHIVE_DEVICE_DATA_FLAG_VULKAN,
+                                 ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS,
+                                 ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS,
+                                 ARCHIVE_DEVICE_DATA_FLAG_WEBGPU),
+                             testing::Values<bool>(true, false)),
+                         [](const testing::TestParamInfo<std::tuple<ARCHIVE_DEVICE_DATA_FLAGS, bool>>& info) //
                          {
-                             return GetArchiveDeviceDataFlagString(info.param);
+                             std::string Name = GetArchiveDeviceDataFlagString(std::get<ARCHIVE_DEVICE_DATA_FLAGS>(info.param));
+                             if (std::get<bool>(info.param))
+                                 Name += "_Async";
+                             return Name;
                          });
 
 void CreateTestRenderPass1(IRenderDevice*        pDevice,
