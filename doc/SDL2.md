@@ -36,7 +36,7 @@ Create GL Context if using OpenGL
     // Check if succeeded, etc.
 ```
     
-If necessary, get a handle to the platform's native window, then setting it in the Diligent NativeWindow struct. Example for Windows:
+If necessary, get a handle to the platform's native window, then set it in the Diligent NativeWindow struct. Example for Windows:
 ```cpp
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version);
@@ -56,30 +56,30 @@ while (true)
 {
     while (SDL_PollEvent(&event))
     {
-        switch(event.type)
+        switch (event.type)
         {
-        case SDL_WINDOWEVENT:
-        {
-            switch(event.window.event) 
+            case SDL_WINDOWEVENT:
             {
-            case SDL_WINDOWEVENT_FOCUS_LOST: 
-            {
-                // Suspend or destroy swapchain
+                switch (event.window.event) 
+                {
+                    case SDL_WINDOWEVENT_FOCUS_LOST: 
+                    {
+                        // Suspend or destroy swapchain
+                        break;
+                    }
+                    case SDL_WINDOWEVENT_FOCUS_GAINED: 
+                    {
+                        // Resume or recreate swapchain
+                        break;
+                    }
+                    case SDL_WINDOWEVENT_RESIZED:
+                    {
+                        // Handle window resize
+                        break;
+                    }
+                }
                 break;
             }
-            case SDL_WINDOWEVENT_FOCUS_GAINED: 
-            {
-                // Resume or recreate swapchain
-                break;
-            }
-            case SDL_WINDOWEVENT_RESIZED:
-            {
-                // Handle window resize
-                break;
-            }
-            }
-            break;
-        }
         }
     }
 }
@@ -93,7 +93,7 @@ auto window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOW
 ```
 
 
-Copy [SurfaceHelper.mm](https://github.com/DiligentGraphics/DiligentSamples/blob/9be93225a7fdf135583146c1175c232217f310b2/Samples/GLFWDemo/src/SurfaceHelper.mm) file from the GLFW sample into your project.
+Copy [SurfaceHelper.mm](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/GLFWDemo/src/SurfaceHelper.mm) file from the GLFW sample into your project.
 Modify the following from:
 ```objective-c
 #define GLFW_EXPOSE_NATIVE_COCOA 1
@@ -128,13 +128,13 @@ void* GetNSWindowView(SDL_Window* wnd)
 }
 ```
 
-Use the helper function to get the NSWindowView, setting it in the NativeWindow struct. Then create the vulkan swapchain as normal.
+Use the helper function to get the NSWindowView, setting it in the NativeWindow struct. Then create the Vulkan swapchain as normal.
 
 ## Android
 
 ### Project template
 
-Follow the [official documentation for setting up an android project](https://github.com/libsdl-org/SDL/blob/7fdf7943774d2a54e48718316ca6d55d51a37696/docs/README-android.md) for SDL2.
+Follow the [official documentation for setting up an android project](https://github.com/libsdl-org/SDL/blob/main/docs/README-android.md) for SDL2.
 
 #### Optional: Handle devices with screen notch in your derived SDLActivity class:
 ```java
@@ -266,7 +266,7 @@ Set the Vulkan and fullscreen / resizable window flags when creating the window.
 auto window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN);
 ```
 
-Then create the swapchain as normal. Keep the swapchain description used.
+Then create the swapchain as normal. Keep the swapchain description to be used.
 ```cpp
 auto *pFactoryVk = GetEngineFactoryVk();
 
@@ -303,7 +303,7 @@ if (device->GetDeviceInfo().IsVulkanDevice())
 
 ### OpenGLES
 
-Set the attributes Diligent wants, set the opengl and fullscreen / resizable window flags, create the window, create the context, and finally create the swapchain
+Set the attributes Diligent expects, set the OpenGL and fullscreen / resizable window flags, create the window, create the context, and finally create the swapchain
 ```cpp
 const auto color_size = 8;
 const auto depth_size = 24;
