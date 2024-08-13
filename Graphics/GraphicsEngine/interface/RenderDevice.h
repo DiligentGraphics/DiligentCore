@@ -395,10 +395,15 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 
 
     /// Returns engine factory this device was created from.
-    /// \remark This method does not increment the reference counter of the returned interface,
-    ///         so the application should not call Release().
+    /// \remarks This method does not increment the reference counter of the returned interface,
+    ///          so an application should not call Release().
     VIRTUAL IEngineFactory* METHOD(GetEngineFactory)(THIS) CONST PURE;
 
+
+    /// Returns a pointer to the shader compilation thread pool.
+    /// \remarks This method does not increment the reference counter of the returned interface,
+    ///          so an application should not call Release().
+    VIRTUAL IThreadPool* METHOD(GetShaderCompilationThreadPool)(THIS) CONST PURE;
 
 #if DILIGENT_CPP_INTERFACE
     /// Overloaded alias for CreateGraphicsPipelineState.
@@ -455,6 +460,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderDevice_ReleaseStaleResources(This, ...)           CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,           This, __VA_ARGS__)
 #    define IRenderDevice_IdleGPU(This)                              CALL_IFACE_METHOD(RenderDevice, IdleGPU,                         This)
 #    define IRenderDevice_GetEngineFactory(This)                     CALL_IFACE_METHOD(RenderDevice, GetEngineFactory,                This)
+#    define IRenderDevice_GetShaderCompilationThreadPool(This)       CALL_IFACE_METHOD(RenderDevice, GetShaderCompilationThreadPool,  This)
 // clang-format on
 
 #endif

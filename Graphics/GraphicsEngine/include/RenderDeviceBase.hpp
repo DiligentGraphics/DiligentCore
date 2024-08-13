@@ -338,7 +338,7 @@ public:
         return m_UniqueId.fetch_add(1) + 1;
     }
 
-    IThreadPool* GetShaderCompilationThreadPool() const
+    virtual IThreadPool* DILIGENT_CALL_TYPE GetShaderCompilationThreadPool() const override final
     {
         return m_pShaderCompilationThreadPool;
     }
