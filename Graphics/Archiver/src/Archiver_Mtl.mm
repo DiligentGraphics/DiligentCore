@@ -494,7 +494,7 @@ void SerializedPipelineStateImpl::PatchShadersMtl(const CreateInfoType& CreateIn
     std::vector<ShaderStageInfoMtl> ShaderStages;
     SHADER_TYPE                     ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
     constexpr bool                  WaitUntilShadersReady = true;
-    PipelineStateMtlImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
+    PipelineStateUtils::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
     std::vector<const ParsedMSLInfo*> StageResources{ShaderStages.size()};
     for (size_t i = 0; i < StageResources.size(); ++i)

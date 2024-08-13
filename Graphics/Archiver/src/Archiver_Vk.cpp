@@ -116,7 +116,7 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
     std::vector<ShaderStageInfoVk> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
     constexpr bool                 WaitUntilShadersReady = true;
-    PipelineStateVkImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
+    PipelineStateUtils::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
     PipelineStateVkImpl::TShaderStages ShaderStagesVk{ShaderStages.size()};
     for (size_t i = 0; i < ShaderStagesVk.size(); ++i)
@@ -263,7 +263,7 @@ void SerializedPipelineStateImpl::ExtractShadersVk(const RayTracingPipelineState
     std::vector<ShaderStageInfoVk> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
     constexpr bool                 WaitUntilShadersReady = true;
-    PipelineStateVkImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
+    PipelineStateUtils::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
     GetRayTracingShaderMap(ShaderStages, ShaderMap);
 }

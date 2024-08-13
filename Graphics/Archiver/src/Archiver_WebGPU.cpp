@@ -131,7 +131,7 @@ void SerializedPipelineStateImpl::PatchShadersWebGPU(const CreateInfoType& Creat
     std::vector<ShaderStageInfoWebGPU> ShaderStages;
     SHADER_TYPE                        ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
     constexpr bool                     WaitUntilShadersReady = true;
-    PipelineStateWebGPUImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
+    PipelineStateUtils::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
     PipelineStateWebGPUImpl::TShaderStages ShaderStagesWebGPU;
     ShaderStagesWebGPU.reserve(ShaderStages.size());

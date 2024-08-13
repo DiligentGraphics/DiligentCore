@@ -463,7 +463,7 @@ void SerializedPipelineStateImpl::PatchShadersGL(const CreateInfoType& CreateInf
     std::vector<ShaderStageInfoGL> ShaderStages;
     SHADER_TYPE                    ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
     constexpr bool                 WaitUntilShadersReady = true;
-    PipelineStateGLImpl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
+    PipelineStateUtils::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::OpenGL)].empty());
     for (size_t i = 0; i < ShaderStages.size(); ++i)

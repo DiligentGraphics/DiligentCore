@@ -135,7 +135,7 @@ void SerializedPipelineStateImpl::PatchShadersD3D11(const CreateInfoType& Create
     std::vector<ShaderStageInfoD3D11> ShaderStages;
     SHADER_TYPE                       ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
     constexpr bool                    WaitUntilShadersReady = true;
-    PipelineStateD3D11Impl::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
+    PipelineStateUtils::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
     std::vector<ShaderD3D11Impl*> ShadersD3D11{ShaderStages.size()};
     for (size_t i = 0; i < ShadersD3D11.size(); ++i)
