@@ -355,7 +355,7 @@ protected:
         {
             m_pShaderCompilationThreadPool = pShaderCompilationThreadPool;
         }
-        else
+        else if (NumThreads != 0)
         {
             const Uint32 NumCores = std::max(std::thread::hardware_concurrency(), 1u);
 
