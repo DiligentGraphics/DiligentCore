@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -169,7 +169,17 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
     for (const auto& shader_it : m_Shaders)
     {
         const auto* Name      = shader_it.first.GetStr();
-        const auto& SrcShader = *shader_it.second;
+        auto&       SrcShader = *shader_it.second;
+        {
+            const SHADER_STATUS Status = SrcShader.GetStatus(/*WaitForCompletion = */ false);
+            if (Status != SHADER_STATUS_READY)
+            {
+                LOG_ERROR_MESSAGE("Shader '", Name, "' is in ", GetShaderStatusString(Status),
+                                  " state and cannot be serialized. Only ready shaders can be serialized."
+                                  " Use GetStatus() to check the shader status before calling SerializeToBlob().");
+                continue;
+            }
+        }
         VERIFY_EXPR(SafeStrEqual(Name, SrcShader.GetDesc().Name));
 
         auto& DstData  = Archive.GetResourceData(ResourceType::StandaloneShader, Name);
@@ -261,13 +271,6 @@ Bool ArchiverImpl::AddShader(IShader* pShader)
 {
     if (pShader == nullptr)
         return false;
-
-    const SHADER_STATUS Status = pShader->GetStatus();
-    if (Status != SHADER_STATUS_READY)
-    {
-        LOG_ERROR_MESSAGE("Shader '", pShader->GetDesc().Name, "' is not ready. Only ready shaders can be added to the archive. Use GetStatus() to check the shader status.");
-        return False;
-    }
 
     return AddObjectToArchive<SerializedShaderImpl>(pShader, "Shader", IID_SerializedShader, m_ShadersMtx, m_Shaders);
 }

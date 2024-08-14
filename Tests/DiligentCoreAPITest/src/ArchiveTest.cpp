@@ -1251,38 +1251,6 @@ void ArchiveGraphicsShaders(bool CompileAsync)
     CreateGraphicsShaders(pDevice, pSerializationDevice, VertexShaderCI, nullptr, &pSerializedVS, PixelShaderCI, nullptr, &pSerializedPS);
     CreateGraphicsShaders(pDevice, pSerializationDevice, VertexShaderCI, nullptr, &pSerializedVS2, PixelShaderCI, nullptr, &pSerializedPS2);
 
-    if (CompileAsync)
-    {
-        Timer T;
-        auto  StartTime = T.GetElapsedTime();
-
-        SHADER_STATUS OverallStatus = SHADER_STATUS_UNINITIALIZED;
-        while (true)
-        {
-            OverallStatus = SHADER_STATUS_READY;
-
-            Uint32 NumShadersReady = 0;
-            for (auto& pShader : {pSerializedVS, pSerializedVS2, pSerializedPS, pSerializedPS2})
-            {
-                SHADER_STATUS Status = pShader->GetStatus();
-                if (Status == SHADER_STATUS_READY)
-                    ++NumShadersReady;
-                else if (Status == SHADER_STATUS_FAILED)
-                {
-                    OverallStatus = SHADER_STATUS_FAILED;
-                    break;
-                }
-            }
-            if (NumShadersReady == 4 || OverallStatus == SHADER_STATUS_FAILED)
-                break;
-            std::this_thread::yield();
-            std::this_thread::sleep_for(std::chrono::milliseconds{10});
-        }
-        ASSERT_EQ(OverallStatus, SHADER_STATUS_READY);
-
-        LOG_INFO_MESSAGE("Shaders were compiled asynchronously in ", (T.GetElapsedTime() - StartTime) * 1000, " ms");
-    }
-
     EXPECT_TRUE(pArchiver->AddShader(pSerializedVS));
     EXPECT_TRUE(pArchiver->AddShader(pSerializedPS));
     EXPECT_TRUE(pArchiver->AddShader(pSerializedVS));
