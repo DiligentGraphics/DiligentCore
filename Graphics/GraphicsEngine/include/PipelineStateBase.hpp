@@ -46,8 +46,7 @@
 #include "HashUtils.hpp"
 #include "PipelineResourceSignatureBase.hpp"
 #include "RefCntAutoPtr.hpp"
-#include "ThreadPool.hpp"
-#include "SpinLock.hpp"
+#include "AsyncInitializer.hpp"
 #include "GraphicsTypesX.hpp"
 
 namespace Diligent
@@ -428,7 +427,7 @@ public:
 
     ~PipelineStateBase()
     {
-        VERIFY(!m_wpInitializeTask.IsValid(), "Initialize task is still running. This may result in a crash if the task accesses resources owned by the pipeline state object.");
+        VERIFY(!AsyncInitializer::GetAsyncTask(m_AsyncInitializer), "Initialize task is still running. This may result in a crash if the task accesses resources owned by the pipeline state object.");
 
         /*
         /// \note Destructor cannot directly remove the object from the registry as this may cause a
@@ -766,33 +765,11 @@ public:
     virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion = false) override
     {
         VERIFY_EXPR(m_Status.load() != PIPELINE_STATE_STATUS_UNINITIALIZED);
-        if (m_InitializeTaskRunning.load())
+        ASYNC_TASK_STATUS InitTaskStatus = AsyncInitializer::Update(m_AsyncInitializer, WaitForCompletion);
+        if (InitTaskStatus == ASYNC_TASK_STATUS_COMPLETE)
         {
-            RefCntAutoPtr<IAsyncTask> pInitializeTask;
-            {
-                Threading::SpinLockGuard Guard{m_InitializeTaskLock};
-                pInitializeTask = m_wpInitializeTask.Lock();
-            }
-
-            bool TaskFinished = (pInitializeTask == nullptr);
-            if (pInitializeTask)
-            {
-                if (WaitForCompletion)
-                {
-                    pInitializeTask->WaitForCompletion();
-                }
-                TaskFinished = pInitializeTask->IsFinished();
-            }
-
-            if (TaskFinished)
-            {
-                VERIFY(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING, "Pipeline state status must be atomically set by the initialization task before it finishes");
-                Threading::SpinLockGuard Guard{m_InitializeTaskLock};
-                m_wpInitializeTask.Release();
-                m_InitializeTaskRunning.store(false);
-            }
+            VERIFY(m_Status.load() > PIPELINE_STATE_STATUS_COMPILING, "Pipeline state status must be atomically set by the initialization task before it finishes");
         }
-
         return m_Status.load();
     }
 
@@ -902,8 +879,7 @@ protected:
 
             std::vector<IAsyncTask*> Prerequisites{ShaderCompileTasks.begin(), ShaderCompileTasks.end()};
 
-            m_InitializeTaskRunning.store(true);
-            m_wpInitializeTask = EnqueueAsyncWork(
+            m_AsyncInitializer = AsyncInitializer::Start(
                 this->m_pDevice->GetShaderCompilationThreadPool(),
                 Prerequisites.data(),                      // Make sure that all asynchronous shader compile tasks are
                 static_cast<Uint32>(Prerequisites.size()), // completed before the pipeline initialization task starts
@@ -1296,6 +1272,8 @@ private:
     }
 
 protected:
+    std::unique_ptr<AsyncInitializer> m_AsyncInitializer;
+
     /// Shader stages that are active in this PSO.
     SHADER_TYPE m_ActiveShaderStages = SHADER_TYPE_UNKNOWN;
 
@@ -1303,14 +1281,6 @@ protected:
     const bool m_UsingImplicitSignature;
 
     std::atomic<PIPELINE_STATE_STATUS> m_Status{PIPELINE_STATE_STATUS_UNINITIALIZED};
-    std::atomic<bool>                  m_InitializeTaskRunning{false};
-
-    // Note that while RefCntAutoPtr/RefCntWeakPtr allow safely accessing the same object
-    // from multiple threads using different pointers, they are not thread-safe by themselves
-    // (e.g. it is not safe to call Lock() or Release() on the same pointer from multiple threads).
-    // Therefore, we need to use a lock to protect access to m_wpInitializeTask.
-    Threading::SpinLock       m_InitializeTaskLock;
-    RefCntWeakPtr<IAsyncTask> m_wpInitializeTask;
 
     /// The number of signatures in m_Signatures array.
     /// Note that this is not necessarily the same as the number of signatures

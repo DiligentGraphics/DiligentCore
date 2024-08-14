@@ -328,7 +328,7 @@ struct PipelineStateWebGPUImpl::AsyncPipelineBuilder : public ObjectBase<IObject
 void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo)
 {
     TShaderStages ShaderStages = InitInternalObjects(CreateInfo);
-    if (!m_InitializeTaskRunning.load())
+    if (!m_AsyncInitializer)
     {
         InitializeWebGPURenderPipeline(ShaderStages);
     }
@@ -342,7 +342,7 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
 void PipelineStateWebGPUImpl::InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo)
 {
     TShaderStages ShaderStages = InitInternalObjects(CreateInfo);
-    if (!m_InitializeTaskRunning.load())
+    if (!m_AsyncInitializer)
     {
         InitializeWebGPUComputePipeline(ShaderStages);
     }

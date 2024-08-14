@@ -40,9 +40,8 @@
 #include "PlatformMisc.hpp"
 #include "EngineMemory.h"
 #include "Align.hpp"
-#include "ThreadPool.h"
 #include "RefCntAutoPtr.hpp"
-#include "SpinLock.hpp"
+#include "AsyncInitializer.hpp"
 
 namespace Diligent
 {
@@ -151,7 +150,7 @@ public:
 
     ~ShaderBase()
     {
-        VERIFY(!m_wpCompileTask.IsValid(), "Compile task is still running. This may result in a crash if the task accesses resources owned by the shader object.");
+        VERIFY(!GetCompileTask(), "Compile task is still running. This may result in a crash if the task accesses resources owned by the shader object.");
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TDeviceObjectBase)
@@ -159,27 +158,11 @@ public:
     virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override
     {
         VERIFY_EXPR(m_Status.load() != SHADER_STATUS_UNINITIALIZED);
-        if (m_CompileTaskRunning.load())
+        ASYNC_TASK_STATUS InitTaskStatus = AsyncInitializer::Update(m_AsyncInitializer, WaitForCompletion);
+        if (InitTaskStatus == ASYNC_TASK_STATUS_COMPLETE)
         {
-            bool TaskFinished = true;
-            if (RefCntAutoPtr<IAsyncTask> pCompileTask = GetCompileTask())
-            {
-                if (WaitForCompletion)
-                {
-                    pCompileTask->WaitForCompletion();
-                }
-                TaskFinished = pCompileTask->IsFinished();
-            }
-
-            if (TaskFinished)
-            {
-                VERIFY(!IsCompiling(), "Shader status must be atomically set by the compiling task before it finishes");
-                Threading::SpinLockGuard Guard{m_CompileTaskLock};
-                m_wpCompileTask.Release();
-                m_CompileTaskRunning.store(false);
-            }
+            VERIFY(m_Status.load() > SHADER_STATUS_COMPILING, "Shader status must be atomically set by the compiling task before it finishes");
         }
-
         return m_Status.load();
     }
 
@@ -190,22 +173,15 @@ public:
 
     RefCntAutoPtr<IAsyncTask> GetCompileTask() const
     {
-        Threading::SpinLockGuard Guard{m_CompileTaskLock};
-        return m_wpCompileTask.Lock();
+        return AsyncInitializer::GetAsyncTask(m_AsyncInitializer);
     }
 
 protected:
+    std::unique_ptr<AsyncInitializer> m_AsyncInitializer;
+
     const std::string m_CombinedSamplerSuffix;
 
     std::atomic<SHADER_STATUS> m_Status{SHADER_STATUS_UNINITIALIZED};
-    std::atomic<bool>          m_CompileTaskRunning{false};
-
-    // Note that while RefCntAutoPtr/RefCntWeakPtr allow safely accessing the same object
-    // from multiple threads using different pointers, they are not thread-safe by themselves
-    // (e.g. it is not safe to call Lock() or Release() on the same pointer from multiple threads).
-    // Therefore, we need to use a lock to protect access to m_wpCompileTask.
-    mutable Threading::SpinLock       m_CompileTaskLock;
-    mutable RefCntWeakPtr<IAsyncTask> m_wpCompileTask;
 };
 
 } // namespace Diligent

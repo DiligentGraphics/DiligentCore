@@ -278,8 +278,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     }
     else
     {
-        m_CompileTaskRunning.store(true);
-        m_wpCompileTask = EnqueueAsyncWork(
+        this->m_AsyncInitializer = AsyncInitializer::Start(
             VkShaderCI.pCompilationThreadPool,
             [this,
              ShaderCI         = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},

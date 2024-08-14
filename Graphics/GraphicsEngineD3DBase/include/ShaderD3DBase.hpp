@@ -95,9 +95,7 @@ public:
         }
         else
         {
-            // Set CompileTaskRunning flag before enqueuing the task
-            this->m_CompileTaskRunning.store(true);
-            this->m_wpCompileTask = EnqueueAsyncWork(
+            this->m_AsyncInitializer = AsyncInitializer::Start(
                 D3DShaderCI.pShaderCompilationThreadPool,
                 [this,
                  ShaderCI = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},

@@ -279,8 +279,7 @@ ShaderWebGPUImpl::ShaderWebGPUImpl(IReferenceCounters*     pRefCounters,
     }
     else
     {
-        m_CompileTaskRunning.store(true);
-        m_wpCompileTask = EnqueueAsyncWork(
+        this->m_AsyncInitializer = AsyncInitializer::Start(
             WebGPUShaderCI.pCompilationThreadPool,
             [this,
              ShaderCI         = ShaderCreateInfoWrapper{ShaderCI, GetRawAllocator()},
