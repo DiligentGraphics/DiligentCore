@@ -2511,6 +2511,38 @@ const Char* GetFenceTypeString(FENCE_TYPE Type)
     }
 }
 
+const Char* GetShaderStatusString(SHADER_STATUS ShaderStatus, bool GetEnumString)
+{
+    switch (ShaderStatus)
+    {
+        // clang-format off
+        case SHADER_STATUS_UNINITIALIZED: return GetEnumString ? "SHADER_STATUS_UNINITIALIZED" : "Uninitialized";
+        case SHADER_STATUS_COMPILING:     return GetEnumString ? "SHADER_STATUS_COMPILING"     : "Compiling";
+        case SHADER_STATUS_READY: 	      return GetEnumString ? "SHADER_STATUS_READY"         : "Ready";
+        case SHADER_STATUS_FAILED: 	      return GetEnumString ? "SHADER_STATUS_FAILED"        : "Failed";
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected shader status");
+            return "Unknown";
+    }
+}
+
+const Char* GetPipelineStateStatusString(PIPELINE_STATE_STATUS PipelineStatus, bool GetEnumString)
+{
+    switch (PipelineStatus)
+    {
+        // clang-format off
+        case PIPELINE_STATE_STATUS_UNINITIALIZED: return GetEnumString ? "PIPELINE_STATE_STATUS_UNINITIALIZED" : "Uninitialized";
+        case PIPELINE_STATE_STATUS_COMPILING:     return GetEnumString ? "PIPELINE_STATE_STATUS_COMPILING"     : "Compiling";
+        case PIPELINE_STATE_STATUS_READY: 	      return GetEnumString ? "PIPELINE_STATE_STATUS_READY"         : "Ready";
+        case PIPELINE_STATE_STATUS_FAILED: 	      return GetEnumString ? "PIPELINE_STATE_STATUS_FAILED"        : "Failed";
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected pipeline state status");
+            return "Unknown";
+    }
+}
+
 TEXTURE_FORMAT UnormFormatToSRGB(TEXTURE_FORMAT Fmt)
 {
     switch (Fmt)

@@ -1246,6 +1246,31 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetAdapterTypeString)
     EXPECT_STREQ(GetAdapterTypeString(ADAPTER_TYPE_DISCRETE, true), "ADAPTER_TYPE_DISCRETE");
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, GetShaderStatusString)
+{
+    EXPECT_STREQ(GetShaderStatusString(SHADER_STATUS_UNINITIALIZED), "Uninitialized");
+    EXPECT_STREQ(GetShaderStatusString(SHADER_STATUS_COMPILING), "Compiling");
+    EXPECT_STREQ(GetShaderStatusString(SHADER_STATUS_READY), "Ready");
+    EXPECT_STREQ(GetShaderStatusString(SHADER_STATUS_FAILED), "Failed");
+
+    EXPECT_STREQ(GetShaderStatusString(SHADER_STATUS_UNINITIALIZED, true), "SHADER_STATUS_UNINITIALIZED");
+    EXPECT_STREQ(GetShaderStatusString(SHADER_STATUS_COMPILING, true), "SHADER_STATUS_COMPILING");
+    EXPECT_STREQ(GetShaderStatusString(SHADER_STATUS_READY, true), "SHADER_STATUS_READY");
+    EXPECT_STREQ(GetShaderStatusString(SHADER_STATUS_FAILED, true), "SHADER_STATUS_FAILED");
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, GetPipelineStateStatusString)
+{
+    EXPECT_STREQ(GetPipelineStateStatusString(PIPELINE_STATE_STATUS_UNINITIALIZED), "Uninitialized");
+    EXPECT_STREQ(GetPipelineStateStatusString(PIPELINE_STATE_STATUS_COMPILING), "Compiling");
+    EXPECT_STREQ(GetPipelineStateStatusString(PIPELINE_STATE_STATUS_READY), "Ready");
+    EXPECT_STREQ(GetPipelineStateStatusString(PIPELINE_STATE_STATUS_FAILED), "Failed");
+
+    EXPECT_STREQ(GetPipelineStateStatusString(PIPELINE_STATE_STATUS_UNINITIALIZED, true), "PIPELINE_STATE_STATUS_UNINITIALIZED");
+    EXPECT_STREQ(GetPipelineStateStatusString(PIPELINE_STATE_STATUS_COMPILING, true), "PIPELINE_STATE_STATUS_COMPILING");
+    EXPECT_STREQ(GetPipelineStateStatusString(PIPELINE_STATE_STATUS_READY, true), "PIPELINE_STATE_STATUS_READY");
+    EXPECT_STREQ(GetPipelineStateStatusString(PIPELINE_STATE_STATUS_FAILED, true), "PIPELINE_STATE_STATUS_FAILED");
+}
 
 TEST(GraphicsAccessories_GraphicsAccessories, ResolveInputLayoutAutoOffsetsAndStrides)
 {

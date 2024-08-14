@@ -398,6 +398,15 @@ String GetCommandQueueTypeString(COMMAND_QUEUE_TYPE Type);
 /// Returns the string containing the fence type
 const Char* GetFenceTypeString(FENCE_TYPE Type);
 
+/// Returns the string containing the shader status (e.g. "SHADER_STATUS_UNINITIALIZED" when GetEnumString is true,
+/// or "Uninitialized" when GetEnumString is false).
+const Char* GetShaderStatusString(SHADER_STATUS ShaderStatus, bool GetEnumString = false);
+
+/// Returns the string containing the pipeline state status (e.g. "PIPELINE_STATE_STATUS_UNINITIALIZED" when
+/// GetEnumString is true, or "Uninitialized" when GetEnumString is false).
+const Char* GetPipelineStateStatusString(PIPELINE_STATE_STATUS PipelineStatus, bool GetEnumString = false);
+
+
 /// Helper template function that converts object description into a string
 template <typename TObjectDescType>
 String GetObjectDescString(const TObjectDescType&)
