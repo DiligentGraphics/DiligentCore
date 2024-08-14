@@ -45,7 +45,7 @@ void AppleDebug::AssertionFailed(const Char *Message, const char *Function, cons
 bool AppleDebug::ColoredTextSupported()
 {
     static const bool StartedFromXCode =
-        []()
+        []() -> bool
         {
             NSDictionary* environment = [[NSProcessInfo processInfo] environment];
             if (NSString* DtMode = [environment objectForKey:@"IDE_DISABLED_OS_ACTIVITY_DT_MODE"]) // Since XCode 15
