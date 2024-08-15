@@ -279,6 +279,11 @@ struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
         return false;
     }
 
+    virtual RefCntAutoPtr<IAsyncTask> GetCompileTask() const override final
+    {
+        return {};
+    }
+
 private:
     static String UnrollSource(const ShaderCreateInfo& CI)
     {

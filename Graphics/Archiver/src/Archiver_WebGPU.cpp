@@ -76,6 +76,11 @@ struct CompiledShaderWebGPU final : SerializedShaderImpl::CompiledShader
     {
         return ShaderWebGPU.IsCompiling();
     }
+
+    virtual RefCntAutoPtr<IAsyncTask> GetCompileTask() const override final
+    {
+        return ShaderWebGPU.GetCompileTask();
+    }
 };
 
 

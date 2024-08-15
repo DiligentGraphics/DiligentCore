@@ -80,6 +80,8 @@ public:
         virtual IShader* GetDeviceShader() = 0;
 
         virtual bool IsCompiling() const = 0;
+
+        virtual RefCntAutoPtr<IAsyncTask> GetCompileTask() const = 0;
     };
 
     template <typename CompiledShaderType>
@@ -103,6 +105,8 @@ public:
     {
         return !(*this == Rhs);
     }
+
+    std::vector<RefCntAutoPtr<IAsyncTask>> GetCompileTasks() const;
 
 private:
     SerializationDeviceImpl* m_pDevice;

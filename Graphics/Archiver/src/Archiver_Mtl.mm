@@ -309,6 +309,11 @@ struct CompiledShaderMtl final : SerializedShaderImpl::CompiledShader
     {
         return ShaderMtl.IsCompiling();
     }
+
+    virtual RefCntAutoPtr<IAsyncTask> GetCompileTask() const override final
+    {
+        return ShaderMtl.GetCompileTask();
+    }
 };
 
 inline const ParsedMSLInfo* GetParsedMsl(const SerializedShaderImpl* pShader, SerializedShaderImpl::DeviceType Type)

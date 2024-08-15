@@ -85,7 +85,29 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
     {
         const auto* Name    = pso_it.first.GetName();
         const auto  ResType = pso_it.first.GetType();
-        const auto& SrcPSO  = *pso_it.second;
+        auto&       SrcPSO  = *pso_it.second;
+
+        const PIPELINE_STATE_STATUS PSOStatus = SrcPSO.GetStatus(/*WaitForCompletion = */ true);
+        if (PSOStatus != PIPELINE_STATE_STATUS_READY)
+        {
+            LOG_ERROR_MESSAGE("Pipeline state '", Name, "' is in ", GetPipelineStateStatusString(PSOStatus),
+                              " state and cannot be serialized. Only ready pipeline states can be serialized."
+                              " Use GetStatus() to check the pipeline state status before calling SerializeToBlob().");
+            continue;
+        }
+
+        if (!SrcPSO.GetData().DoNotPackSignatures)
+        {
+            const auto& Signatures = SrcPSO.GetSignatures();
+            for (auto& pSign : Signatures)
+            {
+                if (!AddPipelineResourceSignature(pSign))
+                {
+                    LOG_ERROR_MESSAGE("Failed to add pipeline resource signature '", pSign->GetDesc().Name, "' to the archive.");
+                }
+            }
+        }
+
         const auto& SrcData = SrcPSO.GetData();
         VERIFY_EXPR(SafeStrEqual(Name, SrcPSO.GetDesc().Name));
         VERIFY_EXPR(ResType == PipelineTypeToArchiveResourceType(SrcPSO.GetDesc().PipelineType));
@@ -324,16 +346,6 @@ Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
     {
         if (!AddRenderPass(pRenderPass))
             Res = false;
-    }
-
-    if (!pSerializedPSO->GetData().DoNotPackSignatures)
-    {
-        const auto& Signatures = pSerializedPSO->GetSignatures();
-        for (auto& pSign : Signatures)
-        {
-            if (!AddPipelineResourceSignature(pSign))
-                Res = false;
-        }
     }
 
     return Res;

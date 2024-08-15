@@ -74,7 +74,7 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
 
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
-        const auto Flag = ExtractLSB(DeviceFlags);
+        const ARCHIVE_DEVICE_DATA_FLAGS Flag = ExtractLSB(DeviceFlags);
 
         static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 7, "Please update the switch below to handle the new device data type");
         switch (Flag)
@@ -175,6 +175,8 @@ SerializedData SerializedShaderImpl::SerializeCreateInfo(const ShaderCreateInfo&
 
 SerializedData SerializedShaderImpl::GetDeviceData(DeviceType Type) const
 {
+    DEV_CHECK_ERR(!IsCompiling(), "Device data is not available until compilation is complete. Use GetStatus() to check the shader status.");
+
     const auto& pCompiledShader = m_Shaders[static_cast<size_t>(Type)];
     return pCompiledShader ?
         pCompiledShader->Serialize(GetCreateInfo()) :
@@ -183,8 +185,8 @@ SerializedData SerializedShaderImpl::GetDeviceData(DeviceType Type) const
 
 IShader* SerializedShaderImpl::GetDeviceShader(RENDER_DEVICE_TYPE Type) const
 {
-    const auto  ArchiveDeviceType = RenderDeviceTypeToArchiveDeviceType(Type);
-    const auto& pCompiledShader   = m_Shaders[static_cast<size_t>(ArchiveDeviceType)];
+    const DeviceType ArchiveDeviceType = RenderDeviceTypeToArchiveDeviceType(Type);
+    const auto&      pCompiledShader   = m_Shaders[static_cast<size_t>(ArchiveDeviceType)];
     return pCompiledShader ?
         pCompiledShader->GetDeviceShader() :
         nullptr;
@@ -239,6 +241,19 @@ bool SerializedShaderImpl::IsCompiling() const
     }
 
     return false;
+}
+
+std::vector<RefCntAutoPtr<IAsyncTask>> SerializedShaderImpl::GetCompileTasks() const
+{
+    std::vector<RefCntAutoPtr<IAsyncTask>> Tasks;
+    for (const auto& pCompiledShader : m_Shaders)
+    {
+        if (RefCntAutoPtr<IAsyncTask> pTask{pCompiledShader ? pCompiledShader->GetCompileTask() : RefCntAutoPtr<IAsyncTask>{}})
+        {
+            Tasks.emplace_back(std::move(pTask));
+        }
+    }
+    return Tasks;
 }
 
 } // namespace Diligent

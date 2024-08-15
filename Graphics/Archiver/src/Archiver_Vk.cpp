@@ -72,6 +72,11 @@ struct CompiledShaderVk : SerializedShaderImpl::CompiledShader
     {
         return ShaderVk.IsCompiling();
     }
+
+    virtual RefCntAutoPtr<IAsyncTask> GetCompileTask() const override final
+    {
+        return ShaderVk.GetCompileTask();
+    }
 };
 
 inline const ShaderVkImpl* GetShaderVk(const SerializedShaderImpl* pShader)

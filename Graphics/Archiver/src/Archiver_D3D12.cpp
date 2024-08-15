@@ -72,6 +72,11 @@ struct CompiledShaderD3D12 final : SerializedShaderImpl::CompiledShader
     {
         return ShaderD3D12.IsCompiling();
     }
+
+    virtual RefCntAutoPtr<IAsyncTask> GetCompileTask() const override final
+    {
+        return ShaderD3D12.GetCompileTask();
+    }
 };
 
 inline const ShaderD3D12Impl* GetShaderD3D12(const SerializedShaderImpl* pShader)

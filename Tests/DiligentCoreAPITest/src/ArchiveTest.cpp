@@ -397,8 +397,7 @@ TEST_P(TestBrokenShader, CompileFailure)
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     SerializationDeviceCreateInfo       SerializationDeviceCI;
-    if (CompileAsync)
-        SerializationDeviceCI.NumAsyncShaderCompilationThreads = 1;
+    SerializationDeviceCI.NumAsyncShaderCompilationThreads = CompileAsync ? 1 : 0;
     pArchiverFactory->CreateSerializationDevice(SerializationDeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
@@ -457,8 +456,7 @@ TEST_P(TestBrokenShader, MissingSourceFile)
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     SerializationDeviceCreateInfo       SerializationDeviceCI;
-    if (CompileAsync)
-        SerializationDeviceCI.NumAsyncShaderCompilationThreads = 1;
+    SerializationDeviceCI.NumAsyncShaderCompilationThreads = CompileAsync ? 1 : 0;
     pArchiverFactory->CreateSerializationDevice(SerializationDeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
@@ -784,7 +782,23 @@ void RenderGraphicsPSOTestImage(IDeviceContext*         pContext,
     pContext->EndRenderPass();
 }
 
-void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
+void WaitPSOCompilation(bool CompileAsync, IPipelineState* pPSO)
+{
+    if (CompileAsync)
+    {
+        size_t Iteration = 0;
+        Timer  T;
+        while (pPSO->GetStatus() == PIPELINE_STATE_STATUS_COMPILING)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds{10});
+            ++Iteration;
+        }
+        ASSERT_EQ(pPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+        LOG_INFO_MESSAGE("Waited for PSO '", pPSO->GetDesc().Name, "' compilation: ", T.GetElapsedTime() * 1000, " ms, ", Iteration, (Iteration > 1 ? " iterations" : " iteration"));
+    }
+}
+
+void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = false)
 {
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
@@ -816,6 +830,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     {
         SerializationDeviceCreateInfo DeviceCI;
+        DeviceCI.NumAsyncShaderCompilationThreads      = CompileAsync ? 2 : 0;
         DeviceCI.DeviceInfo.Features.SeparablePrograms = pDevice->GetDeviceInfo().Features.SeparablePrograms;
 
         DeviceCI.Metal.CompileOptionsMacOS = "-sdk macosx metal -std=macos-metal2.0 -mmacos-version-min=10.0";
@@ -876,8 +891,13 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
         ASSERT_NE(pArchiver, nullptr);
 
-        ShaderCreateInfo       VertexShaderCI;
-        ShaderCreateInfo       PixelShaderCI;
+        ShaderCreateInfo VertexShaderCI;
+        ShaderCreateInfo PixelShaderCI;
+        if (CompileAsync)
+        {
+            VertexShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_ASYNCHRONOUS;
+            PixelShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_ASYNCHRONOUS;
+        }
         RefCntAutoPtr<IShader> pVS;
         RefCntAutoPtr<IShader> pSerializedVS;
         RefCntAutoPtr<IShader> pPS;
@@ -885,6 +905,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         CreateGraphicsShaders(pDevice, pSerializationDevice, VertexShaderCI, &pVS, &pSerializedVS, PixelShaderCI, &pPS, &pSerializedPS);
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
+        PSOCreateInfo.Flags = CompileAsync ? PSO_CREATE_FLAG_ASYNCHRONOUS : PSO_CREATE_FLAG_NONE;
 
         auto& GraphicsPipeline{PSOCreateInfo.GraphicsPipeline};
         GraphicsPipeline.NumRenderTargets             = 1;
@@ -948,21 +969,24 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
                 EXPECT_EQ(pArchiver->GetPipelineState(PSOCreateInfo.PSODesc.PipelineType, PSOCreateInfo.PSODesc.Name), pSerializedPSO);
                 EXPECT_EQ(pArchiver->GetPipelineState(PIPELINE_TYPE_GRAPHICS, "Non-existing PSO name"), nullptr);
 
-                for (auto Flags = ArchiveInfo.DeviceFlags; Flags != ARCHIVE_DEVICE_DATA_FLAG_NONE;)
+                if (!CompileAsync)
                 {
-                    const auto Flag        = ExtractLSB(Flags);
-                    const auto ShaderCount = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCount(Flag);
-                    EXPECT_EQ(ShaderCount, 2u);
-                    for (Uint32 ShaderId = 0; ShaderId < ShaderCount; ++ShaderId)
+                    for (auto Flags = ArchiveInfo.DeviceFlags; Flags != ARCHIVE_DEVICE_DATA_FLAG_NONE;)
                     {
-                        auto ShaderCI = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCreateInfo(Flag, ShaderId);
+                        const auto Flag        = ExtractLSB(Flags);
+                        const auto ShaderCount = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCount(Flag);
+                        EXPECT_EQ(ShaderCount, 2u);
+                        for (Uint32 ShaderId = 0; ShaderId < ShaderCount; ++ShaderId)
+                        {
+                            auto ShaderCI = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCreateInfo(Flag, ShaderId);
 
-                        EXPECT_TRUE(ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX || ShaderCI.Desc.ShaderType == SHADER_TYPE_PIXEL);
-                        const auto& RefCI = ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX ? VertexShaderCI : PixelShaderCI;
-                        EXPECT_STREQ(ShaderCI.Desc.Name, RefCI.Desc.Name);
-                        EXPECT_EQ(ShaderCI.Desc, RefCI.Desc);
-                        EXPECT_STREQ(ShaderCI.EntryPoint, RefCI.EntryPoint);
-                        EXPECT_TRUE(ShaderCI.ByteCodeSize > 0 || ShaderCI.SourceLength > 0);
+                            EXPECT_TRUE(ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX || ShaderCI.Desc.ShaderType == SHADER_TYPE_PIXEL);
+                            const auto& RefCI = ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX ? VertexShaderCI : PixelShaderCI;
+                            EXPECT_STREQ(ShaderCI.Desc.Name, RefCI.Desc.Name);
+                            EXPECT_EQ(ShaderCI.Desc, RefCI.Desc);
+                            EXPECT_STREQ(ShaderCI.EntryPoint, RefCI.EntryPoint);
+                            EXPECT_TRUE(ShaderCI.ByteCodeSize > 0 || ShaderCI.SourceLength > 0);
+                        }
                     }
                 }
             }
@@ -1054,6 +1078,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSOWithLayout);
         ASSERT_NE(pUnpackedPSOWithLayout, nullptr);
 
+        WaitPSOCompilation(CompileAsync, pUnpackedPSOWithLayout);
+
         EXPECT_EQ(pUnpackedPSOWithLayout->GetGraphicsPipelineDesc(), pRefPSOWithLayout->GetGraphicsPipelineDesc());
         EXPECT_EQ(pUnpackedPSOWithLayout->GetResourceSignatureCount(), pRefPSOWithLayout->GetResourceSignatureCount());
 
@@ -1080,6 +1106,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSOWithLayout2);
         ASSERT_NE(pUnpackedPSOWithLayout2, nullptr);
 
+        WaitPSOCompilation(CompileAsync, pUnpackedPSOWithLayout2);
+
         EXPECT_EQ(pUnpackedPSOWithLayout2->GetResourceSignatureCount(), 1u);
         EXPECT_TRUE(pUnpackedPSOWithLayout2->GetResourceSignature(0)->IsCompatibleWith(pUnpackedPSOWithLayout->GetResourceSignature(0)));
     }
@@ -1095,6 +1123,9 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 
         pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSOWithSign);
         ASSERT_NE(pUnpackedPSOWithSign, nullptr);
+
+        WaitPSOCompilation(CompileAsync, pUnpackedPSOWithSign);
+        WaitPSOCompilation(CompileAsync, pRefPSOWithSign);
 
         EXPECT_EQ(pUnpackedPSOWithSign->GetGraphicsPipelineDesc(), pRefPSOWithSign->GetGraphicsPipelineDesc());
         EXPECT_EQ(pUnpackedPSOWithSign->GetGraphicsPipelineDesc().pRenderPass, pUnpackedRenderPass);
@@ -1213,6 +1244,10 @@ TEST(ArchiveTest, GraphicsPipeline_NoReflection)
     TestGraphicsPipeline(PSO_ARCHIVE_FLAG_STRIP_REFLECTION);
 }
 
+TEST(ArchiveTest, GraphicsPipeline_Async)
+{
+    TestGraphicsPipeline(PSO_ARCHIVE_FLAG_NONE, /*CompileAsync = */ true);
+}
 
 void ArchiveGraphicsShaders(bool CompileAsync)
 {
@@ -1349,7 +1384,7 @@ void CreateComputeShader(IRenderDevice*        pDevice,
     }
 }
 
-void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
+void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = false)
 {
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
@@ -1379,6 +1414,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
 
     SerializationDeviceCreateInfo SerDeviceCI;
     SerDeviceCI.DeviceInfo.Features.SeparablePrograms = pDevice->GetDeviceInfo().Features.SeparablePrograms;
+    SerDeviceCI.NumAsyncShaderCompilationThreads      = CompileAsync ? 2 : 0;
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     pArchiverFactory->CreateSerializationDevice(SerDeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
@@ -1408,7 +1444,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pArchiverFactory->CreateArchiver(pSerializationDevice, &pArchiver);
         ASSERT_NE(pArchiver, nullptr);
 
-        ShaderCreateInfo       ShaderCI;
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.CompileFlags = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
         RefCntAutoPtr<IShader> pCS;
         RefCntAutoPtr<IShader> pSerializedCS;
         CreateComputeShader(pDevice, pSerializationDevice, ShaderCI, &pCS, &pSerializedCS);
@@ -1420,6 +1457,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             PSOCreateInfo.PSODesc.Name         = PSO1Name;
             PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
             PSOCreateInfo.pCS                  = pCS;
+            PSOCreateInfo.Flags                = CompileAsync ? PSO_CREATE_FLAG_ASYNCHRONOUS : PSO_CREATE_FLAG_NONE;
 
             IPipelineResourceSignature* Signatures[] = {pRefPRS};
             PSOCreateInfo.ResourceSignaturesCount    = _countof(Signatures);
@@ -1436,6 +1474,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
             PSOCreateInfo.PSODesc.Name         = PSO1Name;
             PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
             PSOCreateInfo.pCS                  = pSerializedCS;
+            PSOCreateInfo.Flags                = CompileAsync ? PSO_CREATE_FLAG_ASYNCHRONOUS : PSO_CREATE_FLAG_NONE;
 
             IPipelineResourceSignature* Signatures[] = {pSerializedPRS};
             PSOCreateInfo.ResourceSignaturesCount    = _countof(Signatures);
@@ -1507,6 +1546,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
         pContext->DispatchCompute(DispatchAttribs);
     };
 
+    WaitPSOCompilation(CompileAsync, pRefPSO);
+
     // Dispatch reference
     Dispatch(pRefPSO, pTestingSwapChain->GetCurrentBackBufferUAV());
 
@@ -1518,6 +1559,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags)
     pContext->InvalidateState(); // because TakeSnapshot() will clear state in D3D11
 
     pTestingSwapChain->TakeSnapshot(pTexUAV);
+
+    WaitPSOCompilation(CompileAsync, pUnpackedPSO);
 
     // Dispatch
     Dispatch(pUnpackedPSO, pTestingSwapChain->GetCurrentBackBufferUAV());
@@ -1545,7 +1588,17 @@ TEST(ArchiveTest, ComputePipeline_NoReflection_SplitArchive)
     TestComputePipeline(PSO_ARCHIVE_FLAG_STRIP_REFLECTION | PSO_ARCHIVE_FLAG_DO_NOT_PACK_SIGNATURES);
 }
 
-TEST(ArchiveTest, RayTracingPipeline)
+TEST(ArchiveTest, ComputePipeline_Async)
+{
+    TestComputePipeline(PSO_ARCHIVE_FLAG_NONE, /*CompileAsync = */ true);
+}
+
+TEST(ArchiveTest, ComputePipeline_SplitArchive_Async)
+{
+    TestComputePipeline(PSO_ARCHIVE_FLAG_DO_NOT_PACK_SIGNATURES, /*CompileAsync = */ true);
+}
+
+void TestRayTracingPipeline(bool CompileAsync = false)
 {
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
     auto* pDevice          = pEnv->GetDevice();
@@ -1579,6 +1632,8 @@ TEST(ArchiveTest, RayTracingPipeline)
     DeviceCI.AdapterInfo.RayTracing.CapFlags          = RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS | RAY_TRACING_CAP_FLAG_INLINE_RAY_TRACING;
     DeviceCI.AdapterInfo.RayTracing.MaxRecursionDepth = 32;
 
+    DeviceCI.NumAsyncShaderCompilationThreads = CompileAsync ? 2 : 0;
+
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
@@ -1596,6 +1651,7 @@ TEST(ArchiveTest, RayTracingPipeline)
         ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
         ShaderCI.HLSLVersion    = {6, 3};
         ShaderCI.EntryPoint     = "main";
+        ShaderCI.CompileFlags   = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
 
         // Create ray generation shader.
         RefCntAutoPtr<IShader> pRG;
@@ -1640,6 +1696,7 @@ TEST(ArchiveTest, RayTracingPipeline)
 
         PSOCreateInfo.PSODesc.Name         = "Ray tracing PSO";
         PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_RAY_TRACING;
+        PSOCreateInfo.Flags                = CompileAsync ? PSO_CREATE_FLAG_ASYNCHRONOUS : PSO_CREATE_FLAG_NONE;
 
         PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth       = 1;
         PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
@@ -1844,6 +1901,9 @@ TEST(ArchiveTest, RayTracingPipeline)
         pContext->UpdateSBT(pSBT);
     };
 
+    WaitPSOCompilation(CompileAsync, pUnpackedPSO);
+    WaitPSOCompilation(CompileAsync, pRefPSO);
+
     RefCntAutoPtr<IShaderBindingTable> pRefPSO_SBT;
     CreateSBT(pRefPSO_SBT, pRefPSO);
 
@@ -1885,6 +1945,15 @@ TEST(ArchiveTest, RayTracingPipeline)
     pSwapChain->Present();
 }
 
+TEST(ArchiveTest, RayTracingPipeline)
+{
+    TestRayTracingPipeline();
+}
+
+TEST(ArchiveTest, RayTracingPipeline_Async)
+{
+    TestRayTracingPipeline(/*CompileAsync = */ true);
+}
 
 TEST(ArchiveTest, ResourceSignatureBindings)
 {

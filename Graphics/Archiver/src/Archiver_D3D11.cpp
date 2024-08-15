@@ -83,6 +83,11 @@ struct CompiledShaderD3D11 final : SerializedShaderImpl::CompiledShader
     {
         return ShaderD3D11.IsCompiling();
     }
+
+    virtual RefCntAutoPtr<IAsyncTask> GetCompileTask() const override final
+    {
+        return ShaderD3D11.GetCompileTask();
+    }
 };
 
 struct ShaderStageInfoD3D11
