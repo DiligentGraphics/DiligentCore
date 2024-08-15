@@ -79,6 +79,12 @@ public:
 
         virtual IShader* GetDeviceShader() = 0;
 
+        virtual SHADER_STATUS GetStatus(bool WaitForCompletion)
+        {
+            IShader* pShader = GetDeviceShader();
+            return pShader != nullptr ? pShader->GetStatus(WaitForCompletion) : SHADER_STATUS_UNINITIALIZED;
+        }
+
         virtual bool IsCompiling() const = 0;
 
         virtual RefCntAutoPtr<IAsyncTask> GetCompileTask() const = 0;

@@ -206,43 +206,77 @@ static void AppendGLES30Stubs(std::string& Source)
 
 #endif
 
-struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
+class CompiledShaderGL final : public SerializedShaderImpl::CompiledShader
 {
-    String                 UnrolledSource;
-    RefCntAutoPtr<IShader> pShaderGL;
-    bool                   IsOptimized = false;
-
-    CompiledShaderGL(IReferenceCounters*                          pRefCounters,
-                     const ShaderCreateInfo&                      ShaderCI,
-                     const ShaderGLImpl::CreateInfo&              GLShaderCI,
-                     IRenderDevice*                               pRenderDeviceGL,
-                     RENDER_DEVICE_TYPE                           DeviceType,
-                     const SerializationDeviceImpl::GLProperties& GLProps)
+public:
+    CompiledShaderGL(IReferenceCounters*             pRefCounters,
+                     const ShaderCreateInfo&         ShaderCI,
+                     const ShaderGLImpl::CreateInfo& GLShaderCI,
+                     const SerializationDeviceImpl*  pSerializationDevice,
+                     RENDER_DEVICE_TYPE              DeviceType) :
+        m_pSerializationDevice{pSerializationDevice},
+        m_ShaderCI{ShaderCI, GetRawAllocator()},
+        m_GLShaderCI{GLShaderCI},
+        m_DeviceType{DeviceType}
     {
-        if (GLProps.OptimizeShaders)
-        {
-            UnrolledSource = TransformSource(ShaderCI, GLShaderCI, DeviceType, GLProps);
-            IsOptimized    = !UnrolledSource.empty();
-        }
-        if (UnrolledSource.empty())
-        {
-            UnrolledSource = UnrollSource(ShaderCI);
-        }
-        VERIFY_EXPR(!UnrolledSource.empty());
+        IThreadPool* pCompilationThreadPool = pSerializationDevice->GetShaderCompilationThreadPool();
 
-        // Use serialization CI to be consistent with what will be saved in the archive.
-        const auto SerializationCI = GetSerializationCI(ShaderCI);
-        if (pRenderDeviceGL)
+        m_Status.store(SHADER_STATUS_COMPILING);
+        if (pCompilationThreadPool == nullptr || (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ASYNCHRONOUS) == 0)
         {
-            // GL shader must be created through the render device as GL functions
-            // are not loaded by the archiver.
-            pRenderDeviceGL->CreateShader(SerializationCI, &pShaderGL);
-            if (!pShaderGL)
-                LOG_ERROR_AND_THROW("Failed to create GL shader '", (ShaderCI.Desc.Name ? ShaderCI.Desc.Name : ""), "'.");
+            InitializeSource();
+            CreateGLShader();
         }
         else
         {
-            pShaderGL = NEW_RC_OBJ(GetRawAllocator(), "Shader instance", ShaderGLImpl)(nullptr, SerializationCI, GLShaderCI, true /*bIsDeviceInternal*/);
+            this->m_AsyncInitializer = AsyncInitializer::Start(
+                pCompilationThreadPool,
+                [this](Uint32 ThreadId) //
+                {
+                    try
+                    {
+                        InitializeSource();
+                    }
+                    catch (...)
+                    {
+                        m_Status.store(SHADER_STATUS_FAILED);
+                    }
+                });
+        }
+    }
+
+    void InitializeSource()
+    {
+        const SerializationDeviceImpl::GLProperties& GLProps = m_pSerializationDevice->GetGLProperties();
+        if (GLProps.OptimizeShaders)
+        {
+            m_UnrolledSource = TransformSource(m_ShaderCI, m_GLShaderCI, m_DeviceType, GLProps);
+            m_IsOptimized    = !m_UnrolledSource.empty();
+        }
+        if (m_UnrolledSource.empty())
+        {
+            m_UnrolledSource = UnrollSource(m_ShaderCI);
+        }
+        VERIFY_EXPR(!m_UnrolledSource.empty());
+
+        m_Status.store(SHADER_STATUS_READY);
+    }
+
+    void CreateGLShader()
+    {
+        // Use serialization CI to be consistent with what will be saved in the archive.
+        const ShaderCreateInfo SerializationCI = GetSerializationCI(m_ShaderCI);
+        if (IRenderDevice* pRenderDeviceGL = m_pSerializationDevice->GetRenderDevice(m_DeviceType))
+        {
+            // GL shader must be created through the render device as GL functions
+            // are not loaded by the archiver.
+            pRenderDeviceGL->CreateShader(SerializationCI, &m_pShaderGL);
+            if (!m_pShaderGL)
+                LOG_ERROR_AND_THROW("Failed to create GL shader '", (m_ShaderCI.Get().Desc.Name ? m_ShaderCI.Get().Desc.Name : ""), "'.");
+        }
+        else
+        {
+            m_pShaderGL = NEW_RC_OBJ(GetRawAllocator(), "Shader instance", ShaderGLImpl)(nullptr, SerializationCI, m_GLShaderCI, true /*bIsDeviceInternal*/);
         }
     }
 
@@ -250,12 +284,12 @@ struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
     {
         ShaderCI.FilePath       = nullptr;
         ShaderCI.ByteCode       = nullptr;
-        ShaderCI.Source         = UnrolledSource.c_str();
-        ShaderCI.SourceLength   = UnrolledSource.length();
+        ShaderCI.Source         = m_UnrolledSource.c_str();
+        ShaderCI.SourceLength   = m_UnrolledSource.length();
         ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
         ShaderCI.Macros         = {}; // Macros are inlined into unrolled source
 
-        if (IsOptimized)
+        if (m_IsOptimized)
         {
             ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
             ShaderCI.EntryPoint     = "main";
@@ -271,17 +305,42 @@ struct CompiledShaderGL final : SerializedShaderImpl::CompiledShader
 
     virtual IShader* GetDeviceShader() override final
     {
-        return pShaderGL;
+        if (m_pShaderGL == nullptr)
+        {
+            if (m_Status.load() == SHADER_STATUS_READY)
+            {
+                try
+                {
+                    CreateGLShader();
+                }
+                catch (...)
+                {
+                    m_Status.store(SHADER_STATUS_FAILED);
+                }
+            }
+        }
+        return m_pShaderGL;
     }
 
     virtual bool IsCompiling() const override final
     {
-        return false;
+        return m_Status.load() <= SHADER_STATUS_COMPILING;
+    }
+
+    virtual SHADER_STATUS GetStatus(bool WaitForCompletion) override final
+    {
+        VERIFY_EXPR(m_Status.load() != SHADER_STATUS_UNINITIALIZED);
+        ASYNC_TASK_STATUS InitTaskStatus = AsyncInitializer::Update(m_AsyncInitializer, WaitForCompletion);
+        if (InitTaskStatus == ASYNC_TASK_STATUS_COMPLETE)
+        {
+            VERIFY(m_Status.load() > SHADER_STATUS_COMPILING, "Shader status must be atomically set by the compiling task before it finishes");
+        }
+        return m_Status.load();
     }
 
     virtual RefCntAutoPtr<IAsyncTask> GetCompileTask() const override final
     {
-        return {};
+        return AsyncInitializer::GetAsyncTask(m_AsyncInitializer);
     }
 
 private:
@@ -424,6 +483,19 @@ private:
 
         return OptimizedGLSL;
     }
+
+private:
+    const SerializationDeviceImpl* const m_pSerializationDevice;
+    const ShaderCreateInfoWrapper        m_ShaderCI;
+    const ShaderGLImpl::CreateInfo       m_GLShaderCI;
+    const RENDER_DEVICE_TYPE             m_DeviceType;
+
+    std::unique_ptr<AsyncInitializer> m_AsyncInitializer;
+    std::atomic<SHADER_STATUS>        m_Status{SHADER_STATUS_UNINITIALIZED};
+
+    String                 m_UnrolledSource;
+    RefCntAutoPtr<IShader> m_pShaderGL;
+    bool                   m_IsOptimized = false;
 };
 
 struct ShaderStageInfoGL
@@ -541,8 +613,7 @@ void SerializedShaderImpl::CreateShaderGL(IReferenceCounters*     pRefCounters,
         ppCompilerOutput == nullptr || *ppCompilerOutput == nullptr ? ppCompilerOutput : nullptr,
     };
 
-    CreateShader<CompiledShaderGL>(DeviceType::OpenGL, pRefCounters, ShaderCI, GLShaderCI, m_pDevice->GetRenderDevice(DeviceType),
-                                   DeviceType, m_pDevice->GetGLProperties());
+    CreateShader<CompiledShaderGL>(DeviceType::OpenGL, pRefCounters, ShaderCI, GLShaderCI, m_pDevice, DeviceType);
 }
 
 } // namespace Diligent

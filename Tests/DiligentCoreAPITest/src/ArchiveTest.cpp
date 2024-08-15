@@ -421,7 +421,7 @@ TEST_P(TestBrokenShader, CompileFailure)
     RefCntAutoPtr<IShader>   pSerializedShader;
     RefCntAutoPtr<IDataBlob> pCompilerOutput;
     pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, &pSerializedShader, pCompilerOutput.RawDblPtr());
-    if (CompileAsync && DataFlag != ARCHIVE_DEVICE_DATA_FLAG_GL && DataFlag != ARCHIVE_DEVICE_DATA_FLAG_GLES)
+    if (CompileAsync)
     {
         ASSERT_NE(pSerializedShader, nullptr);
         SHADER_STATUS Status = SHADER_STATUS_UNINITIALIZED;
@@ -477,7 +477,7 @@ TEST_P(TestBrokenShader, MissingSourceFile)
 
     RefCntAutoPtr<IShader> pSerializedShader;
     pSerializationDevice->CreateShader(ShaderCI, ShaderArchiveInfo{DataFlag}, pSerializedShader.RawDblPtr());
-    if (CompileAsync && DataFlag != ARCHIVE_DEVICE_DATA_FLAG_GL && DataFlag != ARCHIVE_DEVICE_DATA_FLAG_GLES)
+    if (CompileAsync)
     {
         ASSERT_NE(pSerializedShader, nullptr);
         SHADER_STATUS Status = SHADER_STATUS_UNINITIALIZED;

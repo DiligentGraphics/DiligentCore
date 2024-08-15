@@ -193,7 +193,7 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
         const auto* Name      = shader_it.first.GetStr();
         auto&       SrcShader = *shader_it.second;
         {
-            const SHADER_STATUS Status = SrcShader.GetStatus(/*WaitForCompletion = */ false);
+            const SHADER_STATUS Status = SrcShader.GetStatus(/*WaitForCompletion = */ true);
             if (Status != SHADER_STATUS_READY)
             {
                 LOG_ERROR_MESSAGE("Shader '", Name, "' is in ", GetShaderStatusString(Status),

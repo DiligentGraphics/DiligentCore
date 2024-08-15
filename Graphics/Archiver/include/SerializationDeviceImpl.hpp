@@ -172,7 +172,7 @@ public:
     const VkProperties&    GetVkProperties() const { return m_VkProps; }
     const MtlProperties&   GetMtlProperties() const { return m_MtlProps; }
 
-    IRenderDevice* GetRenderDevice(RENDER_DEVICE_TYPE Type)
+    IRenderDevice* GetRenderDevice(RENDER_DEVICE_TYPE Type) const
     {
         return m_RenderDevices[Type];
     }

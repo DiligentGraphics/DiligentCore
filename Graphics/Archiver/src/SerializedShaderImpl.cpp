@@ -198,14 +198,10 @@ SHADER_STATUS SerializedShaderImpl::GetStatus(bool WaitForCompletion)
     for (size_t type = 0; type < static_cast<size_t>(DeviceType::Count); ++type)
     {
         const auto& pCompiledShader = m_Shaders[type];
-
-        IShader* pShader = pCompiledShader ? pCompiledShader->GetDeviceShader() : nullptr;
-        if (pShader == nullptr)
+        if (!pCompiledShader)
             continue;
 
-        const SHADER_STATUS Status = static_cast<DeviceType>(type) != DeviceType::OpenGL ?
-            pShader->GetStatus(WaitForCompletion) :
-            SHADER_STATUS_READY;
+        const SHADER_STATUS Status = pCompiledShader->GetStatus(WaitForCompletion);
         switch (Status)
         {
             case SHADER_STATUS_UNINITIALIZED:
