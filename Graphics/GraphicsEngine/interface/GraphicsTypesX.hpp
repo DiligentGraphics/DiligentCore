@@ -33,6 +33,7 @@
 #include <utility>
 #include <string>
 #include <unordered_set>
+#include <memory>
 
 #include "RenderPass.h"
 #include "InputLayout.h"
@@ -1196,6 +1197,8 @@ private:
     std::unordered_set<std::string>  StringPool;
 };
 
+std::unique_ptr<Uint8[]> CopyPSOCreateInternalInfo(void* pData);
+
 /// C++ wrapper over PipelineStateCreateInfo
 
 template <typename DerivedType, typename CreateInfoType>
@@ -1206,7 +1209,8 @@ struct PipelineStateCreateInfoX : CreateInfoType
 
     PipelineStateCreateInfoX(const CreateInfoType& CI) noexcept :
         CreateInfoType{CI},
-        ResourceLayout{CI.PSODesc.ResourceLayout}
+        ResourceLayout{CI.PSODesc.ResourceLayout},
+        InternalData{CopyPSOCreateInternalInfo(CI.pInternalData)}
     {
         SetName(this->PSODesc.Name);
         for (size_t i = 0; i < CI.ResourceSignaturesCount; ++i)
@@ -1214,6 +1218,7 @@ struct PipelineStateCreateInfoX : CreateInfoType
         if (CI.pPSOCache != nullptr)
             SetPipelineStateCache(CI.pPSOCache);
         this->PSODesc.ResourceLayout = ResourceLayout;
+        this->pInternalData          = InternalData.get();
     }
 
     explicit PipelineStateCreateInfoX(const char* Name)
@@ -1364,6 +1369,7 @@ protected:
     std::unordered_set<std::string>           StringPool;
     std::vector<RefCntAutoPtr<IDeviceObject>> Objects;
     std::vector<IPipelineResourceSignature*>  Signatures;
+    std::unique_ptr<Uint8[]>                  InternalData;
 };
 
 

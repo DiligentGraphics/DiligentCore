@@ -95,6 +95,7 @@ set(SOURCE
     src/EngineMemory.cpp
     src/EngineFactoryBase.cpp
     src/FramebufferBase.cpp
+    src/GraphicsTypesX.cpp
     src/PipelineResourceSignatureBase.cpp
     src/PipelineStateBase.cpp
     src/PipelineStateCacheBase.cpp
