@@ -25,6 +25,7 @@
  */
 
 #include <functional>
+#include <thread>
 
 #include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
@@ -287,6 +288,7 @@ void CreateShader(IRenderStateCache*      pCache,
 void CreateShader(IRenderStateCache*               pCache,
                   IShaderSourceInputStreamFactory* pShaderSourceFactory,
                   SHADER_TYPE                      Type,
+                  SHADER_COMPILE_FLAGS             CompileFlags,
                   const char*                      Name,
                   const char*                      Path,
                   bool                             PresentInCache,
@@ -298,6 +300,7 @@ void CreateShader(IRenderStateCache*               pCache,
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.CompileFlags               = CompileFlags;
 
     constexpr ShaderMacro Macros[] = {{"EXTERNAL_MACROS", "2"}};
     ShaderCI.Macros                = {Macros, _countof(Macros)};
@@ -309,18 +312,19 @@ void CreateShader(IRenderStateCache*               pCache,
 
 void CreateGraphicsShaders(IRenderStateCache*               pCache,
                            IShaderSourceInputStreamFactory* pShaderSourceFactory,
+                           SHADER_COMPILE_FLAGS             CompileFlags,
                            RefCntAutoPtr<IShader>&          pVS,
                            RefCntAutoPtr<IShader>&          pPS,
                            bool                             PresentInCache,
                            const char*                      VSPath = nullptr,
                            const char*                      PSPath = nullptr)
 {
-    CreateShader(pCache, pShaderSourceFactory, SHADER_TYPE_VERTEX,
+    CreateShader(pCache, pShaderSourceFactory, SHADER_TYPE_VERTEX, CompileFlags,
                  "RenderStateCache - VS", VSPath != nullptr ? VSPath : "VertexShader.vsh",
                  PresentInCache, pVS);
     ASSERT_TRUE(pVS);
 
-    CreateShader(pCache, pShaderSourceFactory, SHADER_TYPE_PIXEL,
+    CreateShader(pCache, pShaderSourceFactory, SHADER_TYPE_PIXEL, CompileFlags,
                  "RenderStateCache - PS", VSPath != nullptr ? PSPath : "PixelShader.psh",
                  PresentInCache, pPS);
     ASSERT_TRUE(pPS);
@@ -329,15 +333,16 @@ void CreateGraphicsShaders(IRenderStateCache*               pCache,
 
 void CreateComputeShader(IRenderStateCache*               pCache,
                          IShaderSourceInputStreamFactory* pShaderSourceFactory,
+                         SHADER_COMPILE_FLAGS             CompileFlags,
                          RefCntAutoPtr<IShader>&          pCS,
                          bool                             PresentInCache)
 {
-    CreateShader(pCache, pShaderSourceFactory, SHADER_TYPE_COMPUTE,
+    CreateShader(pCache, pShaderSourceFactory, SHADER_TYPE_COMPUTE, CompileFlags,
                  "RenderStateCache - CS", "ComputeShader.csh",
                  PresentInCache, pCS);
 }
 
-TEST(RenderStateCacheTest, CreateShader)
+void TestArchivingShaders(bool CompileAsync)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -350,6 +355,7 @@ TEST(RenderStateCacheTest, CreateShader)
 
     auto pTexSRV = CreateWhiteTexture();
 
+    const SHADER_COMPILE_FLAGS CompileFlags = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
     for (Uint32 OptimizeGLShaders = pDevice->GetDeviceInfo().IsGLDevice() ? 0 : 1; OptimizeGLShaders < 2; ++OptimizeGLShaders)
     {
         for (Uint32 HotReload = 0; HotReload < 2; ++HotReload)
@@ -366,28 +372,28 @@ TEST(RenderStateCacheTest, CreateShader)
 
                 {
                     RefCntAutoPtr<IShader> pVS, pPS;
-                    CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr);
+                    CreateGraphicsShaders(pCache, pShaderSourceFactory, CompileFlags, pVS, pPS, pData != nullptr);
                     ASSERT_NE(pVS, nullptr);
                     ASSERT_NE(pPS, nullptr);
 
                     VerifyGraphicsShaders(pVS, pPS, pTexSRV);
 
                     RefCntAutoPtr<IShader> pVS2, pPS2;
-                    CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS2, pPS2, true);
+                    CreateGraphicsShaders(pCache, pShaderSourceFactory, CompileFlags, pVS2, pPS2, true);
                     EXPECT_EQ(pVS, pVS2);
                     EXPECT_EQ(pPS, pPS);
                 }
 
                 {
                     RefCntAutoPtr<IShader> pVS, pPS;
-                    CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, true);
+                    CreateGraphicsShaders(pCache, pShaderSourceFactory, CompileFlags, pVS, pPS, true);
                     EXPECT_NE(pVS, nullptr);
                     EXPECT_NE(pPS, nullptr);
                 }
 
                 {
                     RefCntAutoPtr<IShader> pCS;
-                    CreateComputeShader(pCache, pShaderSourceFactory, pCS, pData != nullptr);
+                    CreateComputeShader(pCache, pShaderSourceFactory, CompileFlags, pCS, pData != nullptr);
                     EXPECT_NE(pCS, nullptr);
                 }
 
@@ -401,7 +407,17 @@ TEST(RenderStateCacheTest, CreateShader)
     }
 }
 
-TEST(RenderStateCacheTest, BrokenShader)
+TEST(RenderStateCacheTest, CreateShaders)
+{
+    TestArchivingShaders(false);
+}
+
+TEST(RenderStateCacheTest, CreateShaders_Async)
+{
+    TestArchivingShaders(true);
+}
+
+void TestBrokenShader(bool CompileAsync)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -418,6 +434,7 @@ TEST(RenderStateCacheTest, BrokenShader)
         ShaderCreateInfo ShaderCI;
         ShaderCI.Source       = NotASource;
         ShaderCI.SourceLength = sizeof(NotASource);
+        ShaderCI.CompileFlags = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
 
         constexpr ShaderMacro Macros[] = {{"EXTERNAL_MACROS", "2"}};
         ShaderCI.Macros                = {Macros, _countof(Macros)};
@@ -425,11 +442,32 @@ TEST(RenderStateCacheTest, BrokenShader)
         RefCntAutoPtr<IShader> pShader;
         pEnv->SetErrorAllowance(6, "\n\nNo worries, testing broken shader...\n\n");
         EXPECT_FALSE(pCache->CreateShader(ShaderCI, &pShader));
-        EXPECT_EQ(pShader, nullptr);
+        if (CompileAsync)
+        {
+            EXPECT_NE(pShader, nullptr);
+            while (pShader->GetStatus() == SHADER_STATUS_COMPILING)
+                std::this_thread::yield();
+            EXPECT_EQ(pShader->GetStatus(), SHADER_STATUS_FAILED);
+        }
+        else
+        {
+            EXPECT_EQ(pShader, nullptr);
+        }
 
         if (HotReload)
             EXPECT_EQ(pCache->Reload(), 0u);
     }
+}
+
+
+TEST(RenderStateCacheTest, BrokenShader)
+{
+    TestBrokenShader(false);
+}
+
+TEST(RenderStateCacheTest, BrokenShader_Async)
+{
+    TestBrokenShader(true);
 }
 
 RefCntAutoPtr<IRenderPass> CreateRenderPass(TEXTURE_FORMAT ColorBufferFormat)
@@ -464,13 +502,15 @@ RefCntAutoPtr<IRenderPass> CreateRenderPass(TEXTURE_FORMAT ColorBufferFormat)
     return pRenderPass;
 }
 
-void CreateGraphicsPSO(IRenderStateCache* pCache, bool PresentInCache, IShader* pVS, IShader* pPS, bool UseRenderPass, IPipelineState** ppPSO)
+void CreateGraphicsPSO(IRenderStateCache* pCache, bool PresentInCache, IShader* pVS, IShader* pPS, bool UseRenderPass, bool CompileAsync, IPipelineState** ppPSO)
 {
     auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pSwapChain = pEnv->GetSwapChain();
 
     GraphicsPipelineStateCreateInfo PsoCI;
     PsoCI.PSODesc.Name = "Render State Cache Test";
+
+    PsoCI.Flags = CompileAsync ? PSO_CREATE_FLAG_ASYNCHRONOUS : PSO_CREATE_FLAG_NONE;
 
     PsoCI.pVS = pVS;
     PsoCI.pPS = pPS;
@@ -517,7 +557,7 @@ void CreateGraphicsPSO(IRenderStateCache* pCache, bool PresentInCache, IShader* 
     }
 }
 
-void TestGraphicsPSO(bool UseRenderPass)
+void TestGraphicsPSO(bool UseRenderPass, bool CompileAsync = false)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -529,13 +569,15 @@ void TestGraphicsPSO(bool UseRenderPass)
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
     ASSERT_TRUE(pShaderSourceFactory);
 
+    SHADER_COMPILE_FLAGS CompileFlags = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
+
     RefCntAutoPtr<IShader> pUncachedVS, pUncachedPS;
-    CreateGraphicsShaders(nullptr, pShaderSourceFactory, pUncachedVS, pUncachedPS, false, "VertexShader2.vsh", "PixelShader2.psh");
+    CreateGraphicsShaders(nullptr, pShaderSourceFactory, CompileFlags, pUncachedVS, pUncachedPS, false, "VertexShader2.vsh", "PixelShader2.psh");
     ASSERT_NE(pUncachedVS, nullptr);
     ASSERT_NE(pUncachedPS, nullptr);
 
     RefCntAutoPtr<IPipelineState> pRefPSO;
-    CreateGraphicsPSO(nullptr, false, pUncachedVS, pUncachedPS, UseRenderPass, &pRefPSO);
+    CreateGraphicsPSO(nullptr, false, pUncachedVS, pUncachedPS, UseRenderPass, /*CompileAsync = */ false, &pRefPSO);
     ASSERT_NE(pRefPSO, nullptr);
 
     auto pTexSRV = CreateWhiteTexture();
@@ -558,12 +600,12 @@ void TestGraphicsPSO(bool UseRenderPass)
             ASSERT_TRUE(pCache);
 
             RefCntAutoPtr<IShader> pVS1, pPS1;
-            CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS1, pPS1, pData != nullptr);
+            CreateGraphicsShaders(pCache, pShaderSourceFactory, CompileFlags, pVS1, pPS1, pData != nullptr);
             ASSERT_NE(pVS1, nullptr);
             ASSERT_NE(pPS1, nullptr);
 
             RefCntAutoPtr<IPipelineState> pPSO;
-            CreateGraphicsPSO(pCache, pData != nullptr, pVS1, pPS1, UseRenderPass, &pPSO);
+            CreateGraphicsPSO(pCache, pData != nullptr, pVS1, pPS1, UseRenderPass, CompileAsync, &pPSO);
             ASSERT_NE(pPSO, nullptr);
             EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO));
             EXPECT_TRUE(pPSO->IsCompatibleWith(pRefPSO));
@@ -573,14 +615,14 @@ void TestGraphicsPSO(bool UseRenderPass)
 
             {
                 RefCntAutoPtr<IPipelineState> pPSO2;
-                CreateGraphicsPSO(pCache, true, pVS1, pPS1, UseRenderPass, &pPSO2);
+                CreateGraphicsPSO(pCache, true, pVS1, pPS1, UseRenderPass, CompileAsync, &pPSO2);
                 EXPECT_EQ(pPSO, pPSO2);
             }
 
             if (!HotReload)
             {
                 RefCntAutoPtr<IPipelineState> pPSO2;
-                CreateGraphicsPSO(pCache, pData != nullptr, pUncachedVS, pUncachedPS, UseRenderPass, &pPSO2);
+                CreateGraphicsPSO(pCache, pData != nullptr, pUncachedVS, pUncachedPS, UseRenderPass, CompileAsync, &pPSO2);
                 ASSERT_NE(pPSO2, nullptr);
                 EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO2));
                 EXPECT_TRUE(pPSO2->IsCompatibleWith(pRefPSO));
@@ -681,7 +723,7 @@ void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* p
     }
 }
 
-void TestComputePSO(bool UseSignature)
+void TestComputePSO(bool UseSignature, bool CompileAsync = false)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -696,10 +738,12 @@ void TestComputePSO(bool UseSignature)
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
     ASSERT_TRUE(pShaderSourceFactory);
 
+    const SHADER_COMPILE_FLAGS CompileFlags = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
+
     RefCntAutoPtr<IPipelineState> pRefPSO;
     {
         RefCntAutoPtr<IShader> pUncachedCS;
-        CreateComputeShader(nullptr, pShaderSourceFactory, pUncachedCS, false);
+        CreateComputeShader(nullptr, pShaderSourceFactory, CompileFlags, pUncachedCS, false);
         ASSERT_NE(pUncachedCS, nullptr);
 
         CreateComputePSO(nullptr, false, pUncachedCS, UseSignature, &pRefPSO);
@@ -719,7 +763,7 @@ void TestComputePSO(bool UseSignature)
             ASSERT_TRUE(pCache);
 
             RefCntAutoPtr<IShader> pCS;
-            CreateComputeShader(pCache, pShaderSourceFactory, pCS, pData != nullptr);
+            CreateComputeShader(pCache, pShaderSourceFactory, CompileFlags, pCS, pData != nullptr);
             ASSERT_NE(pCS, nullptr);
 
             RefCntAutoPtr<IPipelineState> pPSO;
@@ -955,8 +999,10 @@ TEST(RenderStateCacheTest, AppendData)
 
     auto pWhiteTexture = CreateWhiteTexture();
 
-    constexpr bool UseSignature  = false;
-    constexpr bool UseRenderPass = false;
+    constexpr bool             UseSignature  = false;
+    constexpr bool             UseRenderPass = false;
+    constexpr bool             CompileAsync  = false;
+    const SHADER_COMPILE_FLAGS CompileFlags  = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
 
     for (Uint32 HotReload = 0; HotReload < 2; ++HotReload)
     {
@@ -965,7 +1011,7 @@ TEST(RenderStateCacheTest, AppendData)
             auto pCache = CreateCache(pDevice, HotReload);
 
             RefCntAutoPtr<IShader> pCS;
-            CreateComputeShader(pCache, pShaderSourceFactory, pCS, false);
+            CreateComputeShader(pCache, pShaderSourceFactory, CompileFlags, pCS, false);
             ASSERT_NE(pCS, nullptr);
 
             RefCntAutoPtr<IPipelineState> pPSO;
@@ -981,12 +1027,12 @@ TEST(RenderStateCacheTest, AppendData)
             auto pCache = CreateCache(pDevice, HotReload, pData);
 
             RefCntAutoPtr<IShader> pVS1, pPS1;
-            CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS1, pPS1, pass > 0);
+            CreateGraphicsShaders(pCache, pShaderSourceFactory, CompileFlags, pVS1, pPS1, pass > 0);
             ASSERT_NE(pVS1, nullptr);
             ASSERT_NE(pPS1, nullptr);
 
             RefCntAutoPtr<IPipelineState> pPSO;
-            CreateGraphicsPSO(pCache, pass > 0, pVS1, pPS1, UseRenderPass, &pPSO);
+            CreateGraphicsPSO(pCache, pass > 0, pVS1, pPS1, UseRenderPass, CompileAsync, &pPSO);
             ASSERT_NE(pPSO, nullptr);
 
             VerifyGraphicsPSO(pPSO, nullptr, pWhiteTexture, UseRenderPass);
@@ -1117,6 +1163,8 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
         pCtx->TransitionResourceStates(_countof(Barriers), Barriers);
     }
 
+    SHADER_COMPILE_FLAGS CompileFlags = SHADER_COMPILE_FLAG_NONE;
+
     RefCntAutoPtr<IDataBlob> pData;
     for (Uint32 pass = 0; pass < 3; ++pass)
     {
@@ -1128,7 +1176,7 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
         ASSERT_TRUE(pCache);
 
         RefCntAutoPtr<IShader> pVS, pPS;
-        CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr, "VertexShaderRld.vsh", "PixelShaderRld.psh");
+        CreateGraphicsShaders(pCache, pShaderSourceFactory, CompileFlags, pVS, pPS, pData != nullptr, "VertexShaderRld.vsh", "PixelShaderRld.psh");
         ASSERT_NE(pVS, nullptr);
         ASSERT_NE(pPS, nullptr);
 
@@ -1371,7 +1419,8 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache/Reload2;shaders/RenderStateCache", &pShaderReloadFactory);
     ASSERT_TRUE(pShaderSourceFactory);
 
-    constexpr auto HotReload = true;
+    constexpr bool       HotReload    = true;
+    SHADER_COMPILE_FLAGS CompileFlags = SHADER_COMPILE_FLAG_NONE;
 
     for (Uint32 use_different_signatures = 0; use_different_signatures < 2; ++use_different_signatures)
     {
@@ -1386,7 +1435,7 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
             ASSERT_TRUE(pCache);
 
             RefCntAutoPtr<IShader> pVS, pPS;
-            CreateGraphicsShaders(pCache, pShaderSourceFactory, pVS, pPS, pData != nullptr, "VertexShader3.vsh", "PixelShader.psh");
+            CreateGraphicsShaders(pCache, pShaderSourceFactory, CompileFlags, pVS, pPS, pData != nullptr, "VertexShader3.vsh", "PixelShader.psh");
             ASSERT_NE(pVS, nullptr);
             ASSERT_NE(pPS, nullptr);
 
