@@ -846,4 +846,54 @@ inline void WriteShaderMatrices(void* pDst, const float4x4* pMat, size_t NumMatr
     }
 }
 
+template <typename CreateInfoType, typename HandlerType>
+typename std::enable_if<std::is_same<typename std::decay<CreateInfoType>::type, GraphicsPipelineStateCreateInfo>::value>::type
+ProcessPipelineStateCreateInfoShaders(CreateInfoType&& CI, HandlerType&& Handler)
+{
+    Handler(CI.pVS);
+    Handler(CI.pPS);
+    Handler(CI.pDS);
+    Handler(CI.pHS);
+    Handler(CI.pGS);
+    Handler(CI.pAS);
+    Handler(CI.pMS);
+}
+
+template <typename CreateInfoType, typename HandlerType>
+typename std::enable_if<std::is_same<typename std::decay<CreateInfoType>::type, ComputePipelineStateCreateInfo>::value>::type
+ProcessPipelineStateCreateInfoShaders(CreateInfoType&& CI, HandlerType&& Handler)
+{
+    Handler(CI.pCS);
+}
+
+template <typename CreateInfoType, typename HandlerType>
+typename std::enable_if<std::is_same<typename std::decay<CreateInfoType>::type, TilePipelineStateCreateInfo>::value>::type
+ProcessPipelineStateCreateInfoShaders(CreateInfoType&& CI, HandlerType&& Handler)
+{
+    Handler(CI.pTS);
+}
+
+template <typename CreateInfoType, typename HandlerType>
+typename std::enable_if<std::is_same<typename std::decay<CreateInfoType>::type, RayTracingPipelineStateCreateInfo>::value>::type
+ProcessPipelineStateCreateInfoShaders(CreateInfoType&& CI, HandlerType&& Handler)
+{
+    for (Uint32 i = 0; i < CI.GeneralShaderCount; ++i)
+    {
+        Handler(CI.pGeneralShaders[i].pShader);
+    }
+
+    for (Uint32 i = 0; i < CI.TriangleHitShaderCount; ++i)
+    {
+        Handler(CI.pTriangleHitShaders[i].pClosestHitShader);
+        Handler(CI.pTriangleHitShaders[i].pAnyHitShader);
+    }
+
+    for (Uint32 i = 0; i < CI.ProceduralHitShaderCount; ++i)
+    {
+        Handler(CI.pProceduralHitShaders[i].pIntersectionShader);
+        Handler(CI.pProceduralHitShaders[i].pClosestHitShader);
+        Handler(CI.pProceduralHitShaders[i].pAnyHitShader);
+    }
+}
+
 } // namespace Diligent

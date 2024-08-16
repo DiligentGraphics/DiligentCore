@@ -1444,4 +1444,87 @@ TEST(GraphicsAccessories_GraphicsAccessories, TextureComponentAttribsToTextureFo
     }
 }
 
+
+TEST(GraphicsAccessories_GraphicsAccessories, ProcessPipelineStateCreateInfoShaders)
+{
+    {
+        GraphicsPipelineStateCreateInfo CI;
+
+        ptrdiff_t Ptr = 0x1000;
+        ProcessPipelineStateCreateInfoShaders(CI, [&Ptr](IShader*& pShader) {
+            pShader = reinterpret_cast<IShader*>(Ptr);
+            Ptr += 0x1000;
+        });
+
+        EXPECT_EQ(CI.pVS, reinterpret_cast<IShader*>(0x1000));
+        EXPECT_EQ(CI.pPS, reinterpret_cast<IShader*>(0x2000));
+        EXPECT_EQ(CI.pDS, reinterpret_cast<IShader*>(0x3000));
+        EXPECT_EQ(CI.pHS, reinterpret_cast<IShader*>(0x4000));
+        EXPECT_EQ(CI.pGS, reinterpret_cast<IShader*>(0x5000));
+        EXPECT_EQ(CI.pAS, reinterpret_cast<IShader*>(0x6000));
+        EXPECT_EQ(CI.pMS, reinterpret_cast<IShader*>(0x7000));
+
+        Ptr = 0x1000;
+        ProcessPipelineStateCreateInfoShaders(static_cast<const GraphicsPipelineStateCreateInfo&>(CI), [&Ptr](IShader* pShader) {
+            EXPECT_EQ(pShader, reinterpret_cast<IShader*>(Ptr));
+            Ptr += 0x1000;
+        });
+    }
+
+    {
+        ComputePipelineStateCreateInfo CI;
+        ProcessPipelineStateCreateInfoShaders(CI, [](IShader*& pShader) {
+            pShader = reinterpret_cast<IShader*>(0x1000);
+        });
+
+        EXPECT_EQ(CI.pCS, reinterpret_cast<IShader*>(0x1000));
+
+        ProcessPipelineStateCreateInfoShaders(static_cast<const ComputePipelineStateCreateInfo&>(CI), [](IShader* pShader) {
+            EXPECT_EQ(pShader, reinterpret_cast<IShader*>(0x1000));
+        });
+    }
+
+    {
+        TilePipelineStateCreateInfo CI;
+        ProcessPipelineStateCreateInfoShaders(CI, [](IShader*& pShader) {
+            pShader = reinterpret_cast<IShader*>(0x1000);
+        });
+
+        EXPECT_EQ(CI.pTS, reinterpret_cast<IShader*>(0x1000));
+
+        ProcessPipelineStateCreateInfoShaders(static_cast<const TilePipelineStateCreateInfo&>(CI), [](IShader* pShader) {
+            EXPECT_EQ(pShader, reinterpret_cast<IShader*>(0x1000));
+        });
+    }
+
+    {
+        RayTracingPipelineStateCreateInfo CI;
+
+        RayTracingGeneralShaderGroup GeneralGroup;
+        GeneralGroup.pShader = reinterpret_cast<IShader*>(0x1000);
+
+        RayTracingTriangleHitShaderGroup TriangleHitGroup;
+        TriangleHitGroup.pClosestHitShader = reinterpret_cast<IShader*>(0x2000);
+        TriangleHitGroup.pAnyHitShader     = reinterpret_cast<IShader*>(0x3000);
+
+        RayTracingProceduralHitShaderGroup ProceduralHitGroup;
+        ProceduralHitGroup.pIntersectionShader = reinterpret_cast<IShader*>(0x4000);
+        ProceduralHitGroup.pClosestHitShader   = reinterpret_cast<IShader*>(0x5000);
+        ProceduralHitGroup.pAnyHitShader       = reinterpret_cast<IShader*>(0x6000);
+
+        CI.pGeneralShaders          = &GeneralGroup;
+        CI.GeneralShaderCount       = 1;
+        CI.pTriangleHitShaders      = &TriangleHitGroup;
+        CI.TriangleHitShaderCount   = 1;
+        CI.pProceduralHitShaders    = &ProceduralHitGroup;
+        CI.ProceduralHitShaderCount = 1;
+
+        ptrdiff_t Ptr = 0x1000;
+        ProcessPipelineStateCreateInfoShaders(static_cast<const RayTracingPipelineStateCreateInfo&>(CI), [&Ptr](IShader* pShader) {
+            EXPECT_EQ(pShader, reinterpret_cast<IShader*>(Ptr));
+            Ptr += 0x1000;
+        });
+    }
+}
+
 } // namespace
