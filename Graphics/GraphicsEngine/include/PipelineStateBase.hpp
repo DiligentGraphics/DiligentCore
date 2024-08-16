@@ -181,7 +181,6 @@ void WaitUntilShaderReadyIfRequested(RefCntAutoPtr<ShaderImplType>& pShader, boo
 {
     if (WaitForCompletion)
     {
-        VERIFY(!pShader->IsCompiling(), "All shader compile tasks must have been completed since we used them as prerequisites for the pipeline initialization task. This appears to be a bug.");
         const SHADER_STATUS ShaderStatus = pShader->GetStatus(/*WaitForCompletion = */ true);
         if (ShaderStatus != SHADER_STATUS_READY)
         {
@@ -864,28 +863,40 @@ protected:
         {
             // Collect all asynchronous shader compile tasks
             typename PipelineStateImplType::TShaderStages ShaderStages;
-            ExtractShaders<ShaderImplType>(CreateInfo, ShaderStages);
+            SHADER_TYPE                                   ActiveShaderStages    = SHADER_TYPE_UNKNOWN;
+            constexpr bool                                WaitUntilShadersReady = false;
+            PipelineStateUtils::ExtractShaders<ShaderImplType>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
-            std::vector<RefCntAutoPtr<IAsyncTask>> ShaderCompileTasks;
+            std::vector<const ShaderImplType*> Shaders;
             for (const auto& Stage : ShaderStages)
             {
-                std::vector<const ShaderImplType*> Shaders = GetStageShaders(Stage);
-                for (const ShaderImplType* pShader : Shaders)
-                {
-                    if (RefCntAutoPtr<IAsyncTask> pCompileTask = pShader->GetCompileTask())
-                        ShaderCompileTasks.emplace_back(std::move(pCompileTask));
-                }
+                std::vector<const ShaderImplType*> StageShaders = GetStageShaders(Stage);
+                Shaders.insert(Shaders.end(), StageShaders.begin(), StageShaders.end());
             }
 
-            std::vector<IAsyncTask*> Prerequisites{ShaderCompileTasks.begin(), ShaderCompileTasks.end()};
+            std::vector<RefCntAutoPtr<IAsyncTask>> ShaderCompileTasks;
+            for (const ShaderImplType* pShader : Shaders)
+            {
+                if (RefCntAutoPtr<IAsyncTask> pCompileTask = pShader->GetCompileTask())
+                    ShaderCompileTasks.emplace_back(std::move(pCompileTask));
+            }
 
             m_AsyncInitializer = AsyncInitializer::Start(
                 this->m_pDevice->GetShaderCompilationThreadPool(),
-                Prerequisites.data(),                      // Make sure that all asynchronous shader compile tasks are
-                static_cast<Uint32>(Prerequisites.size()), // completed before the pipeline initialization task starts
+                ShaderCompileTasks, // Make sure that all asynchronous shader compile tasks are completed first
                 [pThisImpl,
+#ifdef DILIGENT_DEBUG
+                 Shaders,
+#endif
                  CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo}](Uint32 ThreadId) mutable //
                 {
+#ifdef DILIGENT_DEBUG
+                    for (const ShaderImplType* pShader : Shaders)
+                    {
+                        VERIFY(!pShader->IsCompiling(), "All shader compile tasks must have been completed since we used them as "
+                                                        "prerequisites for the pipeline initialization task. This appears to be a bug.");
+                    }
+#endif
                     try
                     {
                         pThisImpl->InitializePipeline(CreateInfo);

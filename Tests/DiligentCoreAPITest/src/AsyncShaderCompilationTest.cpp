@@ -143,7 +143,7 @@ TEST(Shader, ReleaseWhileCompiling)
     pShader.Release();
 }
 
-TEST(Shader, AsyncPipeline)
+void TestAsyncPipeline(SHADER_COMPILE_FLAGS ShaderFlags, PSO_CREATE_FLAGS PSOFlags)
 {
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -158,12 +158,12 @@ TEST(Shader, AsyncPipeline)
     {
         constexpr bool SimplifiedShader = true;
 
-        auto pVS = CreateShader("AsyncShaderCompilationTest.vsh", "Async pipeline test VS", SHADER_TYPE_VERTEX, SHADER_COMPILE_FLAG_ASYNCHRONOUS, SimplifiedShader);
+        auto pVS = CreateShader("AsyncShaderCompilationTest.vsh", "Async pipeline test VS", SHADER_TYPE_VERTEX, ShaderFlags, SimplifiedShader);
         ASSERT_NE(pVS, nullptr);
 
         for (size_t i = 0; i < 16; ++i)
         {
-            auto pPS = CreateShader("AsyncShaderCompilationTest.psh", "Async pipeline test PS", SHADER_TYPE_PIXEL, SHADER_COMPILE_FLAG_ASYNCHRONOUS, SimplifiedShader);
+            auto pPS = CreateShader("AsyncShaderCompilationTest.psh", "Async pipeline test PS", SHADER_TYPE_PIXEL, ShaderFlags, SimplifiedShader);
             ASSERT_NE(pPS, nullptr);
 
             // Allocate pipeline CI on the heap to check that all data is copied correctly
@@ -183,7 +183,7 @@ TEST(Shader, AsyncPipeline)
                 .AddRenderTarget(TEX_FORMAT_RGBA8_UNORM)
                 .SetInputLayout(InputLayout)
                 .SetResourceLayout(ResourceLayout)
-                .SetFlags(PSO_CREATE_FLAG_ASYNCHRONOUS);
+                .SetFlags(PSOFlags);
 
             // Create multiple pipelines that use the same shaders.
             // In particular this reproduces the problem with the non-thread-safe ID3DBlob in D3D12.
@@ -215,6 +215,21 @@ TEST(Shader, AsyncPipeline)
         ++Iter;
     }
     LOG_INFO_MESSAGE(pPSOs.size(), " PSOs were compiled after ", Iter, " iterations (", (T.GetElapsedTime() - StartTime) * 1000, " ms)");
+}
+
+TEST(Shader, AsyncPipeline_SyncShaders)
+{
+    TestAsyncPipeline(SHADER_COMPILE_FLAG_NONE, PSO_CREATE_FLAG_ASYNCHRONOUS);
+}
+
+TEST(Shader, SyncPipeline_AsyncShaders)
+{
+    TestAsyncPipeline(SHADER_COMPILE_FLAG_ASYNCHRONOUS, PSO_CREATE_FLAG_NONE);
+}
+
+TEST(Shader, AsyncPipeline_AsyncShaders)
+{
+    TestAsyncPipeline(SHADER_COMPILE_FLAG_ASYNCHRONOUS, PSO_CREATE_FLAG_ASYNCHRONOUS);
 }
 
 } // namespace

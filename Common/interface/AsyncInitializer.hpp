@@ -28,9 +28,11 @@
 
 #include <atomic>
 #include <memory>
+#include <vector>
 
 #include "SpinLock.hpp"
 #include "ThreadPool.hpp"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
@@ -105,6 +107,15 @@ public:
         return std::unique_ptr<AsyncInitializer>{
             new AsyncInitializer{EnqueueAsyncWork(pThreadPool, ppPrerequisites, NumPrerequisites, std::forward<HanlderType>(Handler))},
         };
+    }
+
+    template <typename HanlderType>
+    static std::unique_ptr<AsyncInitializer> Start(IThreadPool*                                  pThreadPool,
+                                                   const std::vector<RefCntAutoPtr<IAsyncTask>>& Prerequisites,
+                                                   HanlderType&&                                 Handler)
+    {
+        std::vector<IAsyncTask*> PrerequisitePtrs{Prerequisites.begin(), Prerequisites.end()};
+        return Start(pThreadPool, PrerequisitePtrs.data(), static_cast<Uint32>(PrerequisitePtrs.size()), std::forward<HanlderType>(Handler));
     }
 
     template <typename HanlderType>

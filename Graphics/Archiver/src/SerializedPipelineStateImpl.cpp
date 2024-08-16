@@ -382,26 +382,36 @@ SerializedPipelineStateImpl::SerializedPipelineStateImpl(IReferenceCounters*    
         constexpr bool                         WaitUntilShadersReady = false;
         PipelineStateUtils::ExtractShaders<SerializedShaderImpl>(CreateInfo, ShaderStages, WaitUntilShadersReady, ActiveShaderStages);
 
-        std::vector<RefCntAutoPtr<IAsyncTask>> ShaderCompileTasks;
+        std::vector<const SerializedShaderImpl*> Shaders;
         for (const SerializedShaderStageInfo& Stage : ShaderStages)
         {
-            for (const SerializedShaderImpl* pShader : Stage.Shaders)
-            {
-                for (RefCntAutoPtr<IAsyncTask> pCompileTask : pShader->GetCompileTasks())
-                    ShaderCompileTasks.emplace_back(std::move(pCompileTask));
-            }
+            Shaders.insert(Shaders.end(), Stage.Shaders.begin(), Stage.Shaders.end());
         }
 
-        std::vector<IAsyncTask*> Prerequisites{ShaderCompileTasks.begin(), ShaderCompileTasks.end()};
+        std::vector<RefCntAutoPtr<IAsyncTask>> ShaderCompileTasks;
+        for (const SerializedShaderImpl* pShader : Shaders)
+        {
+            for (RefCntAutoPtr<IAsyncTask> pCompileTask : pShader->GetCompileTasks())
+                ShaderCompileTasks.emplace_back(std::move(pCompileTask));
+        }
 
         m_AsyncInitializer = AsyncInitializer::Start(
             pDevice->GetShaderCompilationThreadPool(),
-            Prerequisites.data(),                      // Make sure that all asynchronous shader compile tasks are
-            static_cast<Uint32>(Prerequisites.size()), // completed before the pipeline initialization task starts
+            ShaderCompileTasks, // Make sure that all asynchronous shader compile tasks are completed first
             [this,
+#ifdef DILIGENT_DEBUG
+             Shaders,
+#endif
              CreateInfo = typename PipelineStateCreateInfoXTraits<PSOCreateInfoType>::CreateInfoXType{CreateInfo},
              ArchiveInfo](Uint32 ThreadId) mutable //
             {
+#ifdef DILIGENT_DEBUG
+                for (const SerializedShaderImpl* pShader : Shaders)
+                {
+                    VERIFY(!pShader->IsCompiling(), "All shader compile tasks must have been completed since we used them as "
+                                                    "prerequisites for the pipeline initialization task. This appears to be a bug.");
+                }
+#endif
                 try
                 {
                     Initialize(static_cast<const PSOCreateInfoType&>(CreateInfo), ArchiveInfo);
