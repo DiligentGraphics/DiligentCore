@@ -25,7 +25,6 @@
  */
 
 #include <functional>
-#include <thread>
 
 #include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
@@ -445,9 +444,7 @@ void TestBrokenShader(bool CompileAsync)
         if (CompileAsync)
         {
             EXPECT_NE(pShader, nullptr);
-            while (pShader->GetStatus() == SHADER_STATUS_COMPILING)
-                std::this_thread::yield();
-            EXPECT_EQ(pShader->GetStatus(), SHADER_STATUS_FAILED);
+            EXPECT_EQ(pShader->GetStatus(true), SHADER_STATUS_FAILED);
         }
         else
         {

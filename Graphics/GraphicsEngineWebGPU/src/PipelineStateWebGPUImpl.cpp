@@ -625,34 +625,61 @@ PIPELINE_STATE_STATUS PipelineStateWebGPUImpl::GetStatus(bool WaitForCompletion)
 
     if (m_AsyncBuilder)
     {
-        AsyncPipelineBuilder::CallbackStatus CallbackStatus = m_AsyncBuilder->Status.load();
-        switch (CallbackStatus)
+#if PLATFORM_EMSCRIPTEN
+        if (WaitForCompletion)
         {
-            case AsyncPipelineBuilder::CallbackStatus::NotStarted:
-                m_AsyncBuilder->Status.store(AsyncPipelineBuilder::CallbackStatus::InProgress);
-                if (m_Desc.IsAnyGraphicsPipeline())
-                    InitializeWebGPURenderPipeline(m_AsyncBuilder->ShaderStages, m_AsyncBuilder);
-                else if (m_Desc.IsComputePipeline())
-                    InitializeWebGPUComputePipeline(m_AsyncBuilder->ShaderStages, m_AsyncBuilder);
-                else
-                    UNEXPECTED("Unexpected pipeline type");
-                // Do not change the m_Status
-                return PIPELINE_STATE_STATUS_COMPILING;
+            LOG_ERROR_MESSAGE("Waiting for asynchronous pipeline initialization is not supported on the Web");
+            WaitForCompletion = false;
+        }
+#endif
 
-            case AsyncPipelineBuilder::CallbackStatus::InProgress:
-                // Keep waiting
-                return PIPELINE_STATE_STATUS_COMPILING;
+        do
+        {
+            AsyncPipelineBuilder::CallbackStatus CallbackStatus = m_AsyncBuilder->Status.load();
+            switch (CallbackStatus)
+            {
+                case AsyncPipelineBuilder::CallbackStatus::NotStarted:
+                {
+                    m_AsyncBuilder->Status.store(AsyncPipelineBuilder::CallbackStatus::InProgress);
+                    if (m_Desc.IsAnyGraphicsPipeline())
+                        InitializeWebGPURenderPipeline(m_AsyncBuilder->ShaderStages, m_AsyncBuilder);
+                    else if (m_Desc.IsComputePipeline())
+                        InitializeWebGPUComputePipeline(m_AsyncBuilder->ShaderStages, m_AsyncBuilder);
+                    else
+                        UNEXPECTED("Unexpected pipeline type");
 
-            case AsyncPipelineBuilder::CallbackStatus::Completed:
-                m_wgpuRenderPipeline  = std::move(m_AsyncBuilder->wgpuRenderPipeline);
-                m_wgpuComputePipeline = std::move(m_AsyncBuilder->wgpuComputePipeline);
-                m_AsyncBuilder.Release();
-                m_Status.store(m_wgpuRenderPipeline || m_wgpuComputePipeline ? PIPELINE_STATE_STATUS_READY : PIPELINE_STATE_STATUS_FAILED);
+                    // Do not change m_Status
+                    Status = PIPELINE_STATE_STATUS_COMPILING;
+                }
                 break;
 
-            default:
-                UNEXPECTED("Unexpected status");
-        }
+                case AsyncPipelineBuilder::CallbackStatus::InProgress:
+                {
+                    // Keep waiting
+                    Status = PIPELINE_STATE_STATUS_COMPILING;
+                }
+                break;
+
+                case AsyncPipelineBuilder::CallbackStatus::Completed:
+                {
+                    m_wgpuRenderPipeline  = std::move(m_AsyncBuilder->wgpuRenderPipeline);
+                    m_wgpuComputePipeline = std::move(m_AsyncBuilder->wgpuComputePipeline);
+                    m_AsyncBuilder.Release();
+                    Status = m_wgpuRenderPipeline || m_wgpuComputePipeline ? PIPELINE_STATE_STATUS_READY : PIPELINE_STATE_STATUS_FAILED;
+                    m_Status.store(Status);
+                }
+                break;
+
+                default:
+                    UNEXPECTED("Unexpected status");
+            }
+
+            // Note: DeviceTick() when WaitForCompletion == true is not required here since we use
+            //       WGPUCallbackMode_AllowSpontaneous callback mode.
+
+        } while (WaitForCompletion && m_AsyncBuilder);
+
+        return Status;
     }
 
     return m_Status.load();

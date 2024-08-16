@@ -26,7 +26,6 @@
 
 #include <array>
 #include <unordered_set>
-#include <thread>
 
 #include "GPUTestingEnvironment.hpp"
 #include "TestingSwapChainBase.hpp"
@@ -424,16 +423,7 @@ TEST_P(TestBrokenShader, CompileFailure)
     if (CompileAsync)
     {
         ASSERT_NE(pSerializedShader, nullptr);
-        SHADER_STATUS Status = SHADER_STATUS_UNINITIALIZED;
-        do
-        {
-            Status = pSerializedShader->GetStatus();
-            if (Status == SHADER_STATUS_COMPILING)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds{10});
-            }
-        } while (Status == SHADER_STATUS_COMPILING);
-        EXPECT_EQ(Status, SHADER_STATUS_FAILED);
+        EXPECT_EQ(pSerializedShader->GetStatus(true), SHADER_STATUS_FAILED);
     }
     else
     {
@@ -480,16 +470,7 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     if (CompileAsync)
     {
         ASSERT_NE(pSerializedShader, nullptr);
-        SHADER_STATUS Status = SHADER_STATUS_UNINITIALIZED;
-        do
-        {
-            Status = pSerializedShader->GetStatus();
-            if (Status == SHADER_STATUS_COMPILING)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds{10});
-            }
-        } while (Status == SHADER_STATUS_COMPILING);
-        EXPECT_EQ(Status, SHADER_STATUS_FAILED);
+        EXPECT_EQ(pSerializedShader->GetStatus(true), SHADER_STATUS_FAILED);
     }
     else
     {
@@ -782,22 +763,6 @@ void RenderGraphicsPSOTestImage(IDeviceContext*         pContext,
     pContext->EndRenderPass();
 }
 
-void WaitPSOCompilation(bool CompileAsync, IPipelineState* pPSO)
-{
-    if (CompileAsync)
-    {
-        size_t Iteration = 0;
-        Timer  T;
-        while (pPSO->GetStatus() == PIPELINE_STATE_STATUS_COMPILING)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds{10});
-            ++Iteration;
-        }
-        ASSERT_EQ(pPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
-        LOG_INFO_MESSAGE("Waited for PSO '", pPSO->GetDesc().Name, "' compilation: ", T.GetElapsedTime() * 1000, " ms, ", Iteration, (Iteration > 1 ? " iterations" : " iteration"));
-    }
-}
-
 void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = false)
 {
     auto* pEnv             = GPUTestingEnvironment::GetInstance();
@@ -1077,8 +1042,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
         RefCntAutoPtr<IPipelineState> pUnpackedPSOWithLayout;
         pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSOWithLayout);
         ASSERT_NE(pUnpackedPSOWithLayout, nullptr);
-
-        WaitPSOCompilation(CompileAsync, pUnpackedPSOWithLayout);
+        ASSERT_EQ(pUnpackedPSOWithLayout->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
 
         EXPECT_EQ(pUnpackedPSOWithLayout->GetGraphicsPipelineDesc(), pRefPSOWithLayout->GetGraphicsPipelineDesc());
         EXPECT_EQ(pUnpackedPSOWithLayout->GetResourceSignatureCount(), pRefPSOWithLayout->GetResourceSignatureCount());
@@ -1105,8 +1069,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
         UnpackInfo.Name = PSOWithResLayoutName2;
         pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSOWithLayout2);
         ASSERT_NE(pUnpackedPSOWithLayout2, nullptr);
-
-        WaitPSOCompilation(CompileAsync, pUnpackedPSOWithLayout2);
+        ASSERT_EQ(pUnpackedPSOWithLayout2->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
 
         EXPECT_EQ(pUnpackedPSOWithLayout2->GetResourceSignatureCount(), 1u);
         EXPECT_TRUE(pUnpackedPSOWithLayout2->GetResourceSignature(0)->IsCompatibleWith(pUnpackedPSOWithLayout->GetResourceSignature(0)));
@@ -1123,9 +1086,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
 
         pDearchiver->UnpackPipelineState(UnpackInfo, &pUnpackedPSOWithSign);
         ASSERT_NE(pUnpackedPSOWithSign, nullptr);
-
-        WaitPSOCompilation(CompileAsync, pUnpackedPSOWithSign);
-        WaitPSOCompilation(CompileAsync, pRefPSOWithSign);
+        ASSERT_EQ(pUnpackedPSOWithSign->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+        ASSERT_EQ(pRefPSOWithSign->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
 
         EXPECT_EQ(pUnpackedPSOWithSign->GetGraphicsPipelineDesc(), pRefPSOWithSign->GetGraphicsPipelineDesc());
         EXPECT_EQ(pUnpackedPSOWithSign->GetGraphicsPipelineDesc().pRenderPass, pUnpackedRenderPass);
@@ -1546,7 +1508,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
         pContext->DispatchCompute(DispatchAttribs);
     };
 
-    WaitPSOCompilation(CompileAsync, pRefPSO);
+    ASSERT_EQ(pRefPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
 
     // Dispatch reference
     Dispatch(pRefPSO, pTestingSwapChain->GetCurrentBackBufferUAV());
@@ -1560,7 +1522,7 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
 
     pTestingSwapChain->TakeSnapshot(pTexUAV);
 
-    WaitPSOCompilation(CompileAsync, pUnpackedPSO);
+    ASSERT_EQ(pUnpackedPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
 
     // Dispatch
     Dispatch(pUnpackedPSO, pTestingSwapChain->GetCurrentBackBufferUAV());
@@ -1901,8 +1863,8 @@ void TestRayTracingPipeline(bool CompileAsync = false)
         pContext->UpdateSBT(pSBT);
     };
 
-    WaitPSOCompilation(CompileAsync, pUnpackedPSO);
-    WaitPSOCompilation(CompileAsync, pRefPSO);
+    ASSERT_EQ(pUnpackedPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+    ASSERT_EQ(pRefPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
 
     RefCntAutoPtr<IShaderBindingTable> pRefPSO_SBT;
     CreateSBT(pRefPSO_SBT, pRefPSO);
