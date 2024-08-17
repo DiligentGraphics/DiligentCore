@@ -452,61 +452,6 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
     return false;
 }
 
-template <typename HandlerType>
-void ProcessPsoCreateInfoShaders(GraphicsPipelineStateCreateInfo& CI, HandlerType&& Handler)
-{
-    Handler(CI.pVS);
-    Handler(CI.pPS);
-    Handler(CI.pDS);
-    Handler(CI.pHS);
-    Handler(CI.pGS);
-    Handler(CI.pAS);
-    Handler(CI.pMS);
-}
-
-template <typename HandlerType>
-void ProcessPsoCreateInfoShaders(ComputePipelineStateCreateInfo& CI, HandlerType&& Handler)
-{
-    Handler(CI.pCS);
-}
-
-template <typename HandlerType>
-void ProcessPsoCreateInfoShaders(TilePipelineStateCreateInfo& CI, HandlerType&& Handler)
-{
-    Handler(CI.pTS);
-}
-
-template <typename HandlerType>
-void ProcessPsoCreateInfoShaders(RayTracingPipelineStateCreateInfo& CI, HandlerType&& Handler)
-{
-}
-
-template <typename HandlerType>
-void ProcessRtPsoCreateInfoShaders(
-    std::vector<RayTracingGeneralShaderGroup>&       pGeneralShaders,
-    std::vector<RayTracingTriangleHitShaderGroup>&   pTriangleHitShaders,
-    std::vector<RayTracingProceduralHitShaderGroup>& pProceduralHitShaders,
-    HandlerType&&                                    Handler)
-{
-    for (auto& GeneralShader : pGeneralShaders)
-    {
-        Handler(GeneralShader.pShader);
-    }
-
-    for (auto& TriHitShader : pTriangleHitShaders)
-    {
-        Handler(TriHitShader.pAnyHitShader);
-        Handler(TriHitShader.pClosestHitShader);
-    }
-
-    for (auto& ProcHitShader : pProceduralHitShaders)
-    {
-        Handler(ProcHitShader.pAnyHitShader);
-        Handler(ProcHitShader.pClosestHitShader);
-        Handler(ProcHitShader.pIntersectionShader);
-    }
-}
-
 template <typename CreateInfoType>
 struct RenderStateCacheImpl::SerializedPsoCIWrapperBase
 {
@@ -543,10 +488,7 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapperBase
             SerializedObjects.emplace_back(std::move(pSerializedSign));
         }
 
-        ProcessPsoCreateInfoShaders(CI,
-                                    [&](IShader*& pShader) {
-                                        SerializeShader(pSerializationDevice, DeviceType, pShader);
-                                    });
+        ConvertShadersToSerialized<>(pSerializationDevice, DeviceType);
     }
 
     SerializedPsoCIWrapperBase(const SerializedPsoCIWrapperBase&) = delete;
@@ -563,6 +505,28 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapperBase
     operator const CreateInfoType&()
     {
         return CI;
+    }
+
+
+private:
+    template <typename CIType = CreateInfoType>
+    typename std::enable_if<
+        std::is_same<CIType, GraphicsPipelineStateCreateInfo>::value ||
+        std::is_same<CIType, ComputePipelineStateCreateInfo>::value ||
+        std::is_same<CIType, TilePipelineStateCreateInfo>::value>::type
+    ConvertShadersToSerialized(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType)
+    {
+        ProcessPipelineStateCreateInfoShaders(CI,
+                                              [&](IShader*& pShader) {
+                                                  SerializeShader(pSerializationDevice, DeviceType, pShader);
+                                              });
+    }
+
+    template <typename CIType = CreateInfoType>
+    typename std::enable_if<std::is_same<CIType, RayTracingPipelineStateCreateInfo>::value>::type
+    ConvertShadersToSerialized(ISerializationDevice* pSerializationDevice, RENDER_DEVICE_TYPE DeviceType)
+    {
+        // Handled in SerializedPsoCIWrapper<RayTracingPipelineStateCreateInfo>
     }
 
 protected:
@@ -683,10 +647,23 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapper<RayTracingPipelineStateCreat
         CI.pTriangleHitShaders   = pTriangleHitShaders.data();
         CI.pProceduralHitShaders = pProceduralHitShaders.data();
 
-        ProcessRtPsoCreateInfoShaders(pGeneralShaders, pTriangleHitShaders, pProceduralHitShaders,
-                                      [&](IShader*& pShader) {
-                                          SerializeShader(pSerializationDevice, DeviceType, pShader);
-                                      });
+        for (RayTracingGeneralShaderGroup& GeneralShader : pGeneralShaders)
+        {
+            SerializeShader(pSerializationDevice, DeviceType, GeneralShader.pShader);
+        }
+
+        for (RayTracingTriangleHitShaderGroup& TriHitShader : pTriangleHitShaders)
+        {
+            SerializeShader(pSerializationDevice, DeviceType, TriHitShader.pAnyHitShader);
+            SerializeShader(pSerializationDevice, DeviceType, TriHitShader.pClosestHitShader);
+        }
+
+        for (RayTracingProceduralHitShaderGroup& ProcHitShader : pProceduralHitShaders)
+        {
+            SerializeShader(pSerializationDevice, DeviceType, ProcHitShader.pAnyHitShader);
+            SerializeShader(pSerializationDevice, DeviceType, ProcHitShader.pClosestHitShader);
+            SerializeShader(pSerializationDevice, DeviceType, ProcHitShader.pIntersectionShader);
+        }
     }
 
 private:
