@@ -61,12 +61,17 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override;
+
     static void Create(RenderStateCacheImpl*          pStateCache,
                        IPipelineState*                pPipeline,
                        const PipelineStateCreateInfo& CreateInfo,
                        IPipelineState**               ppReloadablePipeline);
 
     bool Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData);
+
+private:
+    void CopyStaticResources();
 
 private:
     template <typename CreateInfoType>
@@ -80,6 +85,9 @@ private:
     RefCntAutoPtr<RenderStateCacheImpl>    m_pStateCache;
     std::unique_ptr<CreateInfoWrapperBase> m_pCreateInfo;
     const PIPELINE_TYPE                    m_Type;
+
+    // Old pipeline state kept around to copy static resources from
+    RefCntAutoPtr<IPipelineState> m_pOldPipeline;
 };
 
 } // namespace Diligent

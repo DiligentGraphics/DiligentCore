@@ -44,6 +44,10 @@
 using namespace Diligent;
 using namespace Diligent::Testing;
 
+#ifdef __clang__
+#    pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
 namespace
 {
 
@@ -661,7 +665,7 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO_RenderPass_Async)
     TestGraphicsPSO(/*UseRenderPass = */ true, /*CompileAsync = */ true);
 }
 
-void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* pCS, bool UseSignature, IPipelineState** ppPSO)
+void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* pCS, bool UseSignature, bool CompileAsync, IPipelineState** ppPSO)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -669,6 +673,7 @@ void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* p
     ComputePipelineStateCreateInfo PsoCI;
     PsoCI.PSODesc.Name = "Render State Cache Test";
     PsoCI.pCS          = pCS;
+    PsoCI.Flags        = CompileAsync ? PSO_CREATE_FLAG_ASYNCHRONOUS : PSO_CREATE_FLAG_NONE;
 
     constexpr ShaderResourceVariableDesc Variables[] //
         {
@@ -712,7 +717,9 @@ void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* p
 
     if (pCache != nullptr)
     {
-        EXPECT_EQ(pCache->CreateComputePipelineState(PsoCI, ppPSO), PresentInCache);
+        bool PSOFound = pCache->CreateComputePipelineState(PsoCI, ppPSO);
+        if (!CompileAsync)
+            EXPECT_EQ(PSOFound, PresentInCache);
     }
     else
     {
@@ -721,7 +728,7 @@ void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* p
         ASSERT_NE(*ppPSO, nullptr);
     }
 
-    if (*ppPSO != nullptr)
+    if (*ppPSO != nullptr && (*ppPSO)->GetStatus() == PIPELINE_STATE_STATUS_READY)
     {
         const auto& Desc = (*ppPSO)->GetDesc();
         EXPECT_EQ(PsoCI.PSODesc, Desc);
@@ -758,7 +765,7 @@ void TestComputePSO(bool UseSignature, bool CompileAsync = false)
         CreateComputeShader(nullptr, pShaderSourceFactory, CompileFlags, pUncachedCS, false);
         ASSERT_NE(pUncachedCS, nullptr);
 
-        CreateComputePSO(nullptr, false, pUncachedCS, UseSignature, &pRefPSO);
+        CreateComputePSO(nullptr, false, pUncachedCS, UseSignature, /*CompileAsync = */ false, &pRefPSO);
         ASSERT_NE(pRefPSO, nullptr);
     }
 
@@ -779,8 +786,9 @@ void TestComputePSO(bool UseSignature, bool CompileAsync = false)
             ASSERT_NE(pCS, nullptr);
 
             RefCntAutoPtr<IPipelineState> pPSO;
-            CreateComputePSO(pCache, pData != nullptr, pCS, UseSignature, &pPSO);
+            CreateComputePSO(pCache, pData != nullptr, pCS, UseSignature, CompileAsync, &pPSO);
             ASSERT_NE(pPSO, nullptr);
+            ASSERT_EQ(pPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
             EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO));
             EXPECT_TRUE(pPSO->IsCompatibleWith(pRefPSO));
 
@@ -788,8 +796,9 @@ void TestComputePSO(bool UseSignature, bool CompileAsync = false)
 
             {
                 RefCntAutoPtr<IPipelineState> pPSO2;
-                CreateComputePSO(pCache, true, pCS, UseSignature, &pPSO2);
-                EXPECT_EQ(pPSO, pPSO2);
+                CreateComputePSO(pCache, true, pCS, UseSignature, CompileAsync, &pPSO2);
+                if (!CompileAsync)
+                    EXPECT_EQ(pPSO, pPSO2);
             }
 
             pData.Release();
@@ -811,19 +820,31 @@ TEST(RenderStateCacheTest, CreateComputePSO_Sign)
     TestComputePSO(/*UseSignature = */ true);
 }
 
+TEST(RenderStateCacheTest, CreateComputePSO_Async)
+{
+    TestComputePSO(/*UseSignature = */ false, /*CompileAsync = */ true);
+}
+
+TEST(RenderStateCacheTest, CreateComputePSO_Sign_Async)
+{
+    TestComputePSO(/*UseSignature = */ true, /*CompileAsync = */ true);
+}
+
 void CreateRayTracingShaders(IRenderStateCache*               pCache,
                              IShaderSourceInputStreamFactory* pShaderSourceFactory,
                              RefCntAutoPtr<IShader>&          pRayGen,
                              RefCntAutoPtr<IShader>&          pRayMiss,
                              RefCntAutoPtr<IShader>&          pClosestHit,
                              RefCntAutoPtr<IShader>&          pIntersection,
-                             bool                             PresentInCache)
+                             bool                             PresentInCache,
+                             bool                             CompileAsync)
 {
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler = SHADER_COMPILER_DXC;
     ShaderCI.HLSLVersion    = {6, 3};
     ShaderCI.EntryPoint     = "main";
+    ShaderCI.CompileFlags   = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
 
     // Create ray generation shader.
     {
@@ -866,6 +887,7 @@ void CreateRayTracingShaders(IRenderStateCache*               pCache,
 
 void CreateRayTracingPSO(IRenderStateCache* pCache,
                          bool               PresentInCache,
+                         bool               CompileAsync,
                          IShader*           pRayGen,
                          IShader*           pRayMiss,
                          IShader*           pClosestHit,
@@ -879,6 +901,7 @@ void CreateRayTracingPSO(IRenderStateCache* pCache,
 
     PSOCreateInfo.PSODesc.Name         = "Render State Cache - Ray Tracing PSO";
     PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_RAY_TRACING;
+    PSOCreateInfo.Flags                = CompileAsync ? PSO_CREATE_FLAG_ASYNCHRONOUS : PSO_CREATE_FLAG_NONE;
 
     const RayTracingGeneralShaderGroup       GeneralShaders[]       = {{"Main", pRayGen}, {"Miss", pRayMiss}};
     const RayTracingTriangleHitShaderGroup   TriangleHitShaders[]   = {{"TriHitGroup", pClosestHit}};
@@ -898,7 +921,7 @@ void CreateRayTracingPSO(IRenderStateCache* pCache,
     ASSERT_NE(*ppPSO, nullptr);
 }
 
-TEST(RenderStateCacheTest, CreateRayTracingPSO)
+void TestRayTracingPSO(bool CompileAsync)
 {
     auto* pEnv    = GPUTestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -930,15 +953,15 @@ TEST(RenderStateCacheTest, CreateRayTracingPSO)
             RefCntAutoPtr<IShader> pRayMiss;
             RefCntAutoPtr<IShader> pClosestHit;
             RefCntAutoPtr<IShader> pIntersection;
-            CreateRayTracingShaders(pCache, pShaderSourceFactory, pRayGen, pRayMiss, pClosestHit, pIntersection, pData != nullptr);
+            CreateRayTracingShaders(pCache, pShaderSourceFactory, pRayGen, pRayMiss, pClosestHit, pIntersection, pData != nullptr, CompileAsync);
 
             RefCntAutoPtr<IPipelineState> pPSO;
-            CreateRayTracingPSO(pCache, pData != nullptr, pRayGen, pRayMiss, pClosestHit, pIntersection, &pPSO);
+            CreateRayTracingPSO(pCache, pData != nullptr, CompileAsync, pRayGen, pRayMiss, pClosestHit, pIntersection, &pPSO);
             ASSERT_NE(pPSO, nullptr);
 
             {
                 RefCntAutoPtr<IPipelineState> pPSO2;
-                CreateRayTracingPSO(pCache, true, pRayGen, pRayMiss, pClosestHit, pIntersection, &pPSO2);
+                CreateRayTracingPSO(pCache, true, CompileAsync, pRayGen, pRayMiss, pClosestHit, pIntersection, &pPSO2);
                 ASSERT_NE(pPSO2, nullptr);
             }
 
@@ -949,6 +972,16 @@ TEST(RenderStateCacheTest, CreateRayTracingPSO)
                 EXPECT_EQ(pCache->Reload(), 0u);
         }
     }
+}
+
+TEST(RenderStateCacheTest, CreateRayTracingPSO)
+{
+    TestRayTracingPSO(/*CompileAsync = */ false);
+}
+
+TEST(RenderStateCacheTest, CreateRayTracingPSO_Async)
+{
+    TestRayTracingPSO(/*CompileAsync = */ true);
 }
 
 TEST(RenderStateCacheTest, CreateTilePSO)
@@ -1027,7 +1060,7 @@ TEST(RenderStateCacheTest, AppendData)
             ASSERT_NE(pCS, nullptr);
 
             RefCntAutoPtr<IPipelineState> pPSO;
-            CreateComputePSO(pCache, /*PresentInCache = */ false, pCS, UseSignature, &pPSO);
+            CreateComputePSO(pCache, /*PresentInCache = */ false, pCS, UseSignature, /*CompileAsync = */ false, &pPSO);
             ASSERT_NE(pPSO, nullptr);
 
             pCache->WriteToBlob(ContentVersion, &pData);
@@ -1109,8 +1142,23 @@ constexpr float4 TriangleVerts[] =
 };
 // clang-format on
 
-void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, bool UseSignatures = false)
+enum TEST_PIPELINE_RELOAD_FLAGS : Uint32
 {
+    TEST_PIPELINE_RELOAD_FLAG_NONE                     = 0u,
+    TEST_PIPELINE_RELOAD_FLAG_USE_RENDER_PASS          = 1u << 0u,
+    TEST_PIPELINE_RELOAD_FLAG_CREATE_SRB_BEFORE_RELOAD = 1u << 1u,
+    TEST_PIPELINE_RELOAD_FLAG_USE_SIGNATURES           = 1u << 2u,
+    TEST_PIPELINE_RELOAD_FLAG_ASYNC_COMPILE            = 1u << 3u,
+};
+DEFINE_FLAG_ENUM_OPERATORS(TEST_PIPELINE_RELOAD_FLAGS);
+
+void TestPipelineReload(TEST_PIPELINE_RELOAD_FLAGS Flags)
+{
+    const bool UseRenderPass         = Flags & TEST_PIPELINE_RELOAD_FLAG_USE_RENDER_PASS;
+    const bool CreateSrbBeforeReload = Flags & TEST_PIPELINE_RELOAD_FLAG_CREATE_SRB_BEFORE_RELOAD;
+    const bool UseSignatures         = Flags & TEST_PIPELINE_RELOAD_FLAG_USE_SIGNATURES;
+    const bool AsyncCompile          = Flags & TEST_PIPELINE_RELOAD_FLAG_ASYNC_COMPILE;
+
     auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
     auto* pCtx       = pEnv->GetDeviceContext();
@@ -1175,7 +1223,7 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
         pCtx->TransitionResourceStates(_countof(Barriers), Barriers);
     }
 
-    SHADER_COMPILE_FLAGS CompileFlags = SHADER_COMPILE_FLAG_NONE;
+    SHADER_COMPILE_FLAGS CompileFlags = AsyncCompile ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
 
     RefCntAutoPtr<IDataBlob> pData;
     for (Uint32 pass = 0; pass < 3; ++pass)
@@ -1199,6 +1247,7 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
         {
             GraphicsPipelineStateCreateInfo PsoCI;
             PsoCI.PSODesc.Name = PSOName;
+            PsoCI.Flags        = AsyncCompile ? PSO_CREATE_FLAG_ASYNCHRONOUS : PSO_CREATE_FLAG_NONE;
 
             auto& GraphicsPipeline{PsoCI.GraphicsPipeline};
             GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
@@ -1287,9 +1336,12 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
             PsoCI.pVS = pVS;
             PsoCI.pPS = pPS;
 
-            EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, &pPSO), pData != nullptr);
+            bool FoundInCache = pCache->CreateGraphicsPipelineState(PsoCI, &pPSO);
+            if (!AsyncCompile)
+                EXPECT_EQ(FoundInCache, pData != nullptr);
         }
         ASSERT_NE(pPSO, nullptr);
+        ASSERT_EQ(pPSO->GetStatus(AsyncCompile), PIPELINE_STATE_STATUS_READY);
 
         if (UseSignatures)
         {
@@ -1339,7 +1391,10 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
                 GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             });
 
-        EXPECT_EQ(pCache->Reload(ModifyPSO, ModifyPSO), pass == 0 ? 3u : 0u);
+        Uint32 NumStatesReloaded = pCache->Reload(ModifyPSO, ModifyPSO);
+        if (!AsyncCompile)
+            EXPECT_EQ(NumStatesReloaded, pass == 0 ? 3u : 0u);
+        ASSERT_EQ(pPSO->GetStatus(AsyncCompile), PIPELINE_STATE_STATUS_READY);
 
         if (!pSRB0)
         {
@@ -1363,28 +1418,55 @@ void TestPipelineReload(bool UseRenderPass, bool CreateSrbBeforeReload = false, 
 
 TEST(RenderStateCacheTest, Reload)
 {
-    TestPipelineReload(/*UseRenderPass = */ false);
+    TestPipelineReload(TEST_PIPELINE_RELOAD_FLAG_NONE);
 }
 
 TEST(RenderStateCacheTest, Reload_RenderPass)
 {
-    TestPipelineReload(/*UseRenderPass = */ true);
+    TestPipelineReload(TEST_PIPELINE_RELOAD_FLAG_USE_RENDER_PASS);
 }
 
 TEST(RenderStateCacheTest, Reload_SrbBeforeReload)
 {
-    TestPipelineReload(/*UseRenderPass = */ false, /*CreateSrbBeforeReload = */ true);
+    TestPipelineReload(TEST_PIPELINE_RELOAD_FLAG_CREATE_SRB_BEFORE_RELOAD);
 }
 
 TEST(RenderStateCacheTest, Reload_Signatures)
 {
-    TestPipelineReload(/*UseRenderPass = */ false, /*CreateSrbBeforeReload = */ false, /*UseSignatures = */ true);
+    TestPipelineReload(TEST_PIPELINE_RELOAD_FLAG_USE_SIGNATURES);
 }
 
 TEST(RenderStateCacheTest, Reload_Signatures_SrbBeforeReload)
 {
-    TestPipelineReload(/*UseRenderPass = */ false, /*CreateSrbBeforeReload = */ true, /*UseSignatures = */ true);
+    TestPipelineReload(TEST_PIPELINE_RELOAD_FLAG_CREATE_SRB_BEFORE_RELOAD | TEST_PIPELINE_RELOAD_FLAG_USE_SIGNATURES);
 }
+
+
+TEST(RenderStateCacheTest, Reload_Async)
+{
+    TestPipelineReload(TEST_PIPELINE_RELOAD_FLAG_NONE | TEST_PIPELINE_RELOAD_FLAG_ASYNC_COMPILE);
+}
+
+TEST(RenderStateCacheTest, Reload_RenderPass_Async)
+{
+    TestPipelineReload(TEST_PIPELINE_RELOAD_FLAG_USE_RENDER_PASS | TEST_PIPELINE_RELOAD_FLAG_ASYNC_COMPILE);
+}
+
+TEST(RenderStateCacheTest, Reload_SrbBeforeReload_Async)
+{
+    TestPipelineReload(TEST_PIPELINE_RELOAD_FLAG_CREATE_SRB_BEFORE_RELOAD | TEST_PIPELINE_RELOAD_FLAG_ASYNC_COMPILE);
+}
+
+TEST(RenderStateCacheTest, Reload_Signatures_Async)
+{
+    TestPipelineReload(TEST_PIPELINE_RELOAD_FLAG_USE_SIGNATURES | TEST_PIPELINE_RELOAD_FLAG_ASYNC_COMPILE);
+}
+
+TEST(RenderStateCacheTest, Reload_Signatures_SrbBeforeReload_Async)
+{
+    TestPipelineReload(TEST_PIPELINE_RELOAD_FLAG_CREATE_SRB_BEFORE_RELOAD | TEST_PIPELINE_RELOAD_FLAG_USE_SIGNATURES | TEST_PIPELINE_RELOAD_FLAG_ASYNC_COMPILE);
+}
+
 
 TEST(RenderStateCacheTest, Reload_Signatures2)
 {

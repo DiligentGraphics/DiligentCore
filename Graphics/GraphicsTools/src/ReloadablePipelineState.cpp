@@ -168,23 +168,19 @@ bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGr
     {
         if (m_pPipeline != pNewPSO)
         {
-            const auto SrcSignCount = m_pPipeline->GetResourceSignatureCount();
-            const auto DstSignCount = pNewPSO->GetResourceSignatureCount();
-            if (SrcSignCount == DstSignCount)
+            // Do not update old pipeline if it is not null.
+            // If multiple reloads are requested, we need to keep the original pipeline that keeps the original resources.
+            if (!m_pOldPipeline)
             {
-                for (Uint32 s = 0; s < SrcSignCount; ++s)
-                {
-                    auto* pSrcSign = m_pPipeline->GetResourceSignature(s);
-                    auto* pDstSign = pNewPSO->GetResourceSignature(s);
-                    if (pSrcSign != pDstSign)
-                        pSrcSign->CopyStaticResources(pDstSign);
-                }
-            }
-            else
-            {
-                UNEXPECTED("The number of resource signatures in old pipeline (", SrcSignCount, ") does not match the number of signatures in new pipeline (", DstSignCount, ")");
+                m_pOldPipeline = m_pPipeline;
             }
             m_pPipeline = pNewPSO;
+
+            // If any of the pipelines is not ready, we will copy static resources when both are ready in GetStatus()
+            if (m_pPipeline->GetStatus() == PIPELINE_STATE_STATUS_READY && m_pOldPipeline->GetStatus() == PIPELINE_STATE_STATUS_READY)
+            {
+                CopyStaticResources();
+            }
         }
     }
     else
@@ -195,6 +191,58 @@ bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGr
     return !FoundInCache;
 }
 
+void ReloadablePipelineState::CopyStaticResources()
+{
+    const Uint32 SrcSignCount = m_pOldPipeline->GetResourceSignatureCount();
+    const Uint32 DstSignCount = m_pPipeline->GetResourceSignatureCount();
+    if (SrcSignCount == DstSignCount)
+    {
+        for (Uint32 s = 0; s < SrcSignCount; ++s)
+        {
+            IPipelineResourceSignature* pSrcSign = m_pOldPipeline->GetResourceSignature(s);
+            IPipelineResourceSignature* pDstSign = m_pPipeline->GetResourceSignature(s);
+            if (pSrcSign != pDstSign)
+            {
+                pSrcSign->CopyStaticResources(pDstSign);
+            }
+        }
+    }
+    else
+    {
+        UNEXPECTED("The number of resource signatures in old pipeline (", SrcSignCount, ") does not match the number of signatures in new pipeline (", DstSignCount, ")");
+    }
+    m_pOldPipeline.Release();
+}
+
+
+PIPELINE_STATE_STATUS ReloadablePipelineState::GetStatus(bool WaitForCompletion)
+{
+    const PIPELINE_STATE_STATUS Status = m_pPipeline ? m_pPipeline->GetStatus(WaitForCompletion) : PIPELINE_STATE_STATUS_FAILED;
+    if (Status != PIPELINE_STATE_STATUS_READY)
+        return Status;
+
+    if (m_pOldPipeline)
+    {
+        const PIPELINE_STATE_STATUS OldPsoStatus = m_pOldPipeline->GetStatus(WaitForCompletion);
+        if (OldPsoStatus == PIPELINE_STATE_STATUS_READY && Status == PIPELINE_STATE_STATUS_READY)
+        {
+            CopyStaticResources();
+        }
+        else if (OldPsoStatus == PIPELINE_STATE_STATUS_COMPILING)
+        {
+            // Wait until the old pipeline is ready
+            return PIPELINE_STATE_STATUS_COMPILING;
+        }
+        else if (OldPsoStatus == PIPELINE_STATE_STATUS_FAILED)
+        {
+            LOG_ERROR_MESSAGE("Failed to copy static resources from the old pipeline after reloading pipeline state '", m_pPipeline->GetDesc().Name,
+                              "'. Old pipeline is in the failed state.");
+            m_pOldPipeline.Release();
+        }
+    }
+
+    return Status;
+}
 
 bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData)
 {
