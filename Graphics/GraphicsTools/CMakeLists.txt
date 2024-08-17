@@ -46,13 +46,22 @@ set(SOURCE
     src/VertexPool.cpp
 )
 
+set(INCLUDE)
+
 if(ARCHIVER_SUPPORTED)
     list(APPEND INTERFACE
         interface/RenderStateCache.h
         interface/RenderStateCache.hpp
     )
+    list(APPEND INCLUDE
+        include/RenderStateCacheImpl.hpp
+        include/ReloadableShader.hpp
+        include/ReloadablePipelineState.hpp
+    )
     list(APPEND SOURCE
-        src/RenderStateCache.cpp
+        src/RenderStateCacheImpl.cpp
+        src/ReloadableShader.cpp
+        src/ReloadablePipelineState.cpp
     )
     set(RENDER_STATE_CACHE_SUPPORTED TRUE CACHE INTERNAL "Render state cache is supported")
 else()
@@ -102,13 +111,14 @@ if(METAL_SUPPORTED)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineMetalInterface)
 endif()
 
-add_library(Diligent-GraphicsTools STATIC ${SOURCE} ${INTERFACE})
+add_library(Diligent-GraphicsTools STATIC ${SOURCE} ${INCLUDE} ${INTERFACE})
 
 target_include_directories(Diligent-GraphicsTools
 PUBLIC
     interface
 PRIVATE
     ../GraphicsEngineD3DBase/include
+    include
 )
 
 target_link_libraries(Diligent-GraphicsTools
@@ -147,6 +157,7 @@ set_common_target_properties(Diligent-GraphicsTools)
 
 source_group("src" FILES ${SOURCE})
 source_group("interface" FILES ${INTERFACE})
+source_group("include" FILES ${INCLUDE})
 
 set_target_properties(Diligent-GraphicsTools PROPERTIES
     FOLDER DiligentCore/Graphics
