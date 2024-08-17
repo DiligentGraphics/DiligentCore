@@ -169,9 +169,6 @@ private:
     };
 
     template <typename CreateInfoType>
-    struct CreateInfoWrapperBase;
-
-    template <typename CreateInfoType>
     struct CreateInfoWrapper;
 
     RefCntAutoPtr<RenderStateCacheImpl>    m_pStateCache;

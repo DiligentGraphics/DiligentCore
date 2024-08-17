@@ -1756,7 +1756,7 @@ struct RayTracingPipelineStateCreateInfoX : PipelineStateCreateInfoX<RayTracingP
         if (ProceduralHitShaderCount != 0)
             ProceduralHitShaders.assign(pProceduralHitShaders, pProceduralHitShaders + ProceduralHitShaderCount);
 
-        SyncDesc(true);
+        SyncDesc(SYNC_FLAG_ALL);
     }
 
     RayTracingPipelineStateCreateInfoX(const std::initializer_list<RayTracingGeneralShaderGroup>&       _GeneralShaders,
@@ -1766,7 +1766,7 @@ struct RayTracingPipelineStateCreateInfoX : PipelineStateCreateInfoX<RayTracingP
         TriangleHitShaders{_TriangleHitShaders},
         ProceduralHitShaders{_ProceduralHitShaders}
     {
-        SyncDesc(true);
+        SyncDesc(SYNC_FLAG_ALL);
     }
 
     RayTracingPipelineStateCreateInfoX(const RayTracingPipelineStateCreateInfoX& _DescX) :
@@ -1796,7 +1796,7 @@ struct RayTracingPipelineStateCreateInfoX : PipelineStateCreateInfoX<RayTracingP
     {
         GeneralShaders.push_back(GenShader);
         GeneralShaders.back().Name = StringPool.emplace(GenShader.Name).first->c_str();
-        return SyncDesc();
+        return SyncDesc(SYNC_FLAG_UPDATE_SHADERS);
     }
 
     template <typename... ArgsType>
@@ -1810,7 +1810,7 @@ struct RayTracingPipelineStateCreateInfoX : PipelineStateCreateInfoX<RayTracingP
     {
         TriangleHitShaders.push_back(TriHitShader);
         TriangleHitShaders.back().Name = StringPool.emplace(TriHitShader.Name).first->c_str();
-        return SyncDesc();
+        return SyncDesc(SYNC_FLAG_UPDATE_SHADERS);
     }
 
     template <typename... ArgsType>
@@ -1824,7 +1824,7 @@ struct RayTracingPipelineStateCreateInfoX : PipelineStateCreateInfoX<RayTracingP
     {
         ProceduralHitShaders.push_back(ProcHitShader);
         ProceduralHitShaders.back().Name = StringPool.emplace(ProcHitShader.Name).first->c_str();
-        return SyncDesc();
+        return SyncDesc(SYNC_FLAG_UPDATE_SHADERS);
     }
 
     template <typename... ArgsType>
@@ -1860,19 +1860,19 @@ struct RayTracingPipelineStateCreateInfoX : PipelineStateCreateInfoX<RayTracingP
     RayTracingPipelineStateCreateInfoX& ClearGeneralShaders()
     {
         GeneralShaders.clear();
-        return SyncDesc();
+        return SyncDesc(SYNC_FLAG_UPDATE_SHADERS);
     }
 
     RayTracingPipelineStateCreateInfoX& ClearTriangleHitShaders()
     {
         TriangleHitShaders.clear();
-        return SyncDesc();
+        return SyncDesc(SYNC_FLAG_UPDATE_SHADERS);
     }
 
     RayTracingPipelineStateCreateInfoX& ClearProceduralHitShaders()
     {
         ProceduralHitShaders.clear();
-        return SyncDesc();
+        return SyncDesc(SYNC_FLAG_UPDATE_SHADERS);
     }
 
     RayTracingPipelineStateCreateInfoX& Clear()
@@ -1883,7 +1883,14 @@ struct RayTracingPipelineStateCreateInfoX : PipelineStateCreateInfoX<RayTracingP
     }
 
 private:
-    RayTracingPipelineStateCreateInfoX& SyncDesc(bool UpdateStrings = false)
+    enum SYNC_FLAGS : Uint32
+    {
+        SYNC_FLAG_NONE           = 0u,
+        SYNC_FLAG_UPDATE_STRINGS = 1u << 0u,
+        SYNC_FLAG_UPDATE_SHADERS = 1u << 1u,
+        SYNC_FLAG_ALL            = SYNC_FLAG_UPDATE_STRINGS | SYNC_FLAG_UPDATE_SHADERS
+    };
+    RayTracingPipelineStateCreateInfoX& SyncDesc(SYNC_FLAGS UpdateFlags)
     {
         GeneralShaderCount = static_cast<Uint32>(GeneralShaders.size());
         pGeneralShaders    = GeneralShaderCount > 0 ? GeneralShaders.data() : nullptr;
@@ -1894,7 +1901,7 @@ private:
         ProceduralHitShaderCount = static_cast<Uint32>(ProceduralHitShaders.size());
         pProceduralHitShaders    = ProceduralHitShaderCount > 0 ? ProceduralHitShaders.data() : nullptr;
 
-        if (UpdateStrings)
+        if ((UpdateFlags & SYNC_FLAG_UPDATE_STRINGS) != 0)
         {
             for (auto& Shader : GeneralShaders)
                 Shader.Name = StringPool.emplace(Shader.Name).first->c_str();
@@ -1907,6 +1914,37 @@ private:
 
             if (pShaderRecordName != nullptr)
                 pShaderRecordName = StringPool.emplace(pShaderRecordName).first->c_str();
+        }
+
+        if ((UpdateFlags & SYNC_FLAG_UPDATE_SHADERS) != 0)
+        {
+            // Keep current shader objects alive
+            std::vector<RefCntAutoPtr<IShader>> OldShaderObjects = std::move(ShaderObjects);
+
+            ShaderObjects.clear();
+            for (auto& Shader : GeneralShaders)
+            {
+                if (Shader.pShader != nullptr)
+                    ShaderObjects.emplace_back(Shader.pShader);
+            }
+
+            for (auto& Shader : TriangleHitShaders)
+            {
+                if (Shader.pClosestHitShader != nullptr)
+                    ShaderObjects.emplace_back(Shader.pClosestHitShader);
+                if (Shader.pAnyHitShader != nullptr)
+                    ShaderObjects.emplace_back(Shader.pAnyHitShader);
+            }
+
+            for (auto& Shader : ProceduralHitShaders)
+            {
+                if (Shader.pIntersectionShader != nullptr)
+                    ShaderObjects.emplace_back(Shader.pIntersectionShader);
+                if (Shader.pClosestHitShader != nullptr)
+                    ShaderObjects.emplace_back(Shader.pClosestHitShader);
+                if (Shader.pAnyHitShader != nullptr)
+                    ShaderObjects.emplace_back(Shader.pAnyHitShader);
+            }
         }
 
         return *this;
@@ -1923,12 +1961,13 @@ private:
             else
                 ++it;
         }
-        return SyncDesc();
+        return SyncDesc(SYNC_FLAG_UPDATE_SHADERS);
     }
 
     std::vector<RayTracingGeneralShaderGroup>       GeneralShaders;
     std::vector<RayTracingTriangleHitShaderGroup>   TriangleHitShaders;
     std::vector<RayTracingProceduralHitShaderGroup> ProceduralHitShaders;
+    std::vector<RefCntAutoPtr<IShader>>             ShaderObjects;
 };
 
 

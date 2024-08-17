@@ -452,6 +452,61 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
     return false;
 }
 
+template <typename HandlerType>
+void ProcessPsoCreateInfoShaders(GraphicsPipelineStateCreateInfo& CI, HandlerType&& Handler)
+{
+    Handler(CI.pVS);
+    Handler(CI.pPS);
+    Handler(CI.pDS);
+    Handler(CI.pHS);
+    Handler(CI.pGS);
+    Handler(CI.pAS);
+    Handler(CI.pMS);
+}
+
+template <typename HandlerType>
+void ProcessPsoCreateInfoShaders(ComputePipelineStateCreateInfo& CI, HandlerType&& Handler)
+{
+    Handler(CI.pCS);
+}
+
+template <typename HandlerType>
+void ProcessPsoCreateInfoShaders(TilePipelineStateCreateInfo& CI, HandlerType&& Handler)
+{
+    Handler(CI.pTS);
+}
+
+template <typename HandlerType>
+void ProcessPsoCreateInfoShaders(RayTracingPipelineStateCreateInfo& CI, HandlerType&& Handler)
+{
+}
+
+template <typename HandlerType>
+void ProcessRtPsoCreateInfoShaders(
+    std::vector<RayTracingGeneralShaderGroup>&       pGeneralShaders,
+    std::vector<RayTracingTriangleHitShaderGroup>&   pTriangleHitShaders,
+    std::vector<RayTracingProceduralHitShaderGroup>& pProceduralHitShaders,
+    HandlerType&&                                    Handler)
+{
+    for (auto& GeneralShader : pGeneralShaders)
+    {
+        Handler(GeneralShader.pShader);
+    }
+
+    for (auto& TriHitShader : pTriangleHitShaders)
+    {
+        Handler(TriHitShader.pAnyHitShader);
+        Handler(TriHitShader.pClosestHitShader);
+    }
+
+    for (auto& ProcHitShader : pProceduralHitShaders)
+    {
+        Handler(ProcHitShader.pAnyHitShader);
+        Handler(ProcHitShader.pClosestHitShader);
+        Handler(ProcHitShader.pIntersectionShader);
+    }
+}
+
 template <typename CreateInfoType>
 struct RenderStateCacheImpl::SerializedPsoCIWrapperBase
 {

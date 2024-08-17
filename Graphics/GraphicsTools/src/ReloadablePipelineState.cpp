@@ -31,6 +31,7 @@
 
 #include "RenderStateCacheImpl.hpp"
 #include "ReloadableShader.hpp"
+#include "GraphicsTypesX.hpp"
 
 namespace Diligent
 {
@@ -39,42 +40,23 @@ constexpr INTERFACE_ID ReloadablePipelineState::IID_InternalImpl;
 
 
 template <typename CreateInfoType>
-struct ReloadablePipelineState::CreateInfoWrapperBase : DynamicHeapObjectBase
+struct ReloadablePipelineState::CreateInfoWrapper : DynamicHeapObjectBase
 {
-    CreateInfoWrapperBase(const CreateInfoType& CI) :
-        m_CI{CI},
-        m_Variables{CI.PSODesc.ResourceLayout.Variables, CI.PSODesc.ResourceLayout.Variables + CI.PSODesc.ResourceLayout.NumVariables},
-        m_ImtblSamplers{CI.PSODesc.ResourceLayout.ImmutableSamplers, CI.PSODesc.ResourceLayout.ImmutableSamplers + CI.PSODesc.ResourceLayout.NumImmutableSamplers},
-        m_ppSignatures{CI.ppResourceSignatures, CI.ppResourceSignatures + CI.ResourceSignaturesCount}
+    CreateInfoWrapper(const CreateInfoType& CI) :
+        m_CI{CI}
     {
-        if (CI.PSODesc.Name != nullptr)
-            m_CI.PSODesc.Name = m_Strings.emplace(CI.PSODesc.Name).first->c_str();
+        ProcessPipelineStateCreateInfoShaders(static_cast<const CreateInfoType&>(m_CI), [](IShader* pShader) {
+            if (pShader == nullptr)
+                return;
 
-        for (auto& Var : m_Variables)
-            Var.Name = m_Strings.emplace(Var.Name).first->c_str();
-        for (auto& ImtblSam : m_ImtblSamplers)
-            ImtblSam.SamplerOrTextureName = m_Strings.emplace(ImtblSam.SamplerOrTextureName).first->c_str();
-
-        m_CI.PSODesc.ResourceLayout.Variables         = m_Variables.data();
-        m_CI.PSODesc.ResourceLayout.ImmutableSamplers = m_ImtblSamplers.data();
-
-        m_CI.ppResourceSignatures = !m_ppSignatures.empty() ? m_ppSignatures.data() : nullptr;
-        for (auto* pSign : m_ppSignatures)
-            m_Objects.emplace_back(pSign);
-
-        m_Objects.emplace_back(m_CI.pPSOCache);
-
-        // Replace shaders with reloadable shaders
-        ProcessPsoCreateInfoShaders(m_CI,
-                                    [&](IShader*& pShader) {
-                                        AddShader(pShader);
-                                    });
+            if (!RefCntAutoPtr<IShader>{pShader, ReloadableShader::IID_InternalImpl})
+            {
+                const auto* Name = pShader->GetDesc().Name;
+                LOG_WARNING_MESSAGE("Shader '", (Name ? Name : "<unnamed>"),
+                                    "' is not a reloadable shader. To enable hot pipeline state reload, all shaders must be created through the render state cache.");
+            }
+        });
     }
-
-    CreateInfoWrapperBase(const CreateInfoWrapperBase&) = delete;
-    CreateInfoWrapperBase(CreateInfoWrapperBase&&)      = delete;
-    CreateInfoWrapperBase& operator=(const CreateInfoWrapperBase&) = delete;
-    CreateInfoWrapperBase& operator=(CreateInfoWrapperBase&&) = delete;
 
     const CreateInfoType& Get() const
     {
@@ -91,98 +73,8 @@ struct ReloadablePipelineState::CreateInfoWrapperBase : DynamicHeapObjectBase
         return m_CI;
     }
 
-    void AddShader(IShader* pShader)
-    {
-        if (pShader == nullptr)
-            return;
-
-        if (!RefCntAutoPtr<IShader>{pShader, ReloadableShader::IID_InternalImpl})
-        {
-            const auto* Name = pShader->GetDesc().Name;
-            LOG_WARNING_MESSAGE("Shader '", (Name ? Name : "<unnamed>"),
-                                "' is not a reloadable shader. To enable hot pipeline state reload, all shaders must be created through the render state cache.");
-        }
-
-        m_Objects.emplace_back(pShader);
-    }
-
 protected:
-    CreateInfoType m_CI;
-
-    std::unordered_set<std::string>          m_Strings;
-    std::vector<ShaderResourceVariableDesc>  m_Variables;
-    std::vector<ImmutableSamplerDesc>        m_ImtblSamplers;
-    std::vector<IPipelineResourceSignature*> m_ppSignatures;
-    std::vector<RefCntAutoPtr<IObject>>      m_Objects;
-};
-
-
-template <>
-struct ReloadablePipelineState::CreateInfoWrapper<GraphicsPipelineStateCreateInfo> : CreateInfoWrapperBase<GraphicsPipelineStateCreateInfo>
-{
-    CreateInfoWrapper(const GraphicsPipelineStateCreateInfo& CI) :
-        CreateInfoWrapperBase<GraphicsPipelineStateCreateInfo>{CI},
-        m_LayoutElements{CI.GraphicsPipeline.InputLayout.LayoutElements, CI.GraphicsPipeline.InputLayout.LayoutElements + CI.GraphicsPipeline.InputLayout.NumElements}
-    {
-        m_Objects.emplace_back(CI.GraphicsPipeline.pRenderPass);
-
-        for (auto& Elem : m_LayoutElements)
-            Elem.HLSLSemantic = m_Strings.emplace(Elem.HLSLSemantic != nullptr ? Elem.HLSLSemantic : LayoutElement{}.HLSLSemantic).first->c_str();
-
-        m_CI.GraphicsPipeline.InputLayout.LayoutElements = m_LayoutElements.data();
-    }
-
-private:
-    std::vector<LayoutElement> m_LayoutElements;
-};
-
-template <>
-struct ReloadablePipelineState::CreateInfoWrapper<ComputePipelineStateCreateInfo> : CreateInfoWrapperBase<ComputePipelineStateCreateInfo>
-{
-    CreateInfoWrapper(const ComputePipelineStateCreateInfo& CI) :
-        CreateInfoWrapperBase<ComputePipelineStateCreateInfo>{CI}
-    {
-    }
-};
-
-template <>
-struct ReloadablePipelineState::CreateInfoWrapper<TilePipelineStateCreateInfo> : CreateInfoWrapperBase<TilePipelineStateCreateInfo>
-{
-    CreateInfoWrapper(const TilePipelineStateCreateInfo& CI) :
-        CreateInfoWrapperBase<TilePipelineStateCreateInfo>{CI}
-    {
-    }
-};
-
-template <>
-struct ReloadablePipelineState::CreateInfoWrapper<RayTracingPipelineStateCreateInfo> : CreateInfoWrapperBase<RayTracingPipelineStateCreateInfo>
-{
-    CreateInfoWrapper(const RayTracingPipelineStateCreateInfo& CI) :
-        CreateInfoWrapperBase<RayTracingPipelineStateCreateInfo>{CI},
-        // clang-format off
-        m_pGeneralShaders      {CI.pGeneralShaders,       CI.pGeneralShaders       + CI.GeneralShaderCount},
-        m_pTriangleHitShaders  {CI.pTriangleHitShaders,   CI.pTriangleHitShaders   + CI.TriangleHitShaderCount},
-        m_pProceduralHitShaders{CI.pProceduralHitShaders, CI.pProceduralHitShaders + CI.ProceduralHitShaderCount}
-    // clang-format on
-    {
-        m_CI.pGeneralShaders       = m_pGeneralShaders.data();
-        m_CI.pTriangleHitShaders   = m_pTriangleHitShaders.data();
-        m_CI.pProceduralHitShaders = m_pProceduralHitShaders.data();
-
-        if (m_CI.pShaderRecordName != nullptr)
-            m_CI.pShaderRecordName = m_Strings.emplace(m_CI.pShaderRecordName).first->c_str();
-
-        // Replace shaders with reloadable shaders
-        ProcessRtPsoCreateInfoShaders(m_pGeneralShaders, m_pTriangleHitShaders, m_pProceduralHitShaders,
-                                      [&](IShader*& pShader) {
-                                          AddShader(pShader);
-                                      });
-    }
-
-private:
-    std::vector<RayTracingGeneralShaderGroup>       m_pGeneralShaders;
-    std::vector<RayTracingTriangleHitShaderGroup>   m_pTriangleHitShaders;
-    std::vector<RayTracingProceduralHitShaderGroup> m_pProceduralHitShaders;
+    typename PipelineStateCreateInfoXTraits<CreateInfoType>::CreateInfoXType m_CI;
 };
 
 ReloadablePipelineState::ReloadablePipelineState(IReferenceCounters*            pRefCounters,

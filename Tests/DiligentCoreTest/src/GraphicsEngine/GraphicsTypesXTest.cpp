@@ -817,6 +817,37 @@ TEST(GraphicsTypesXTest, BottomLevelASDescX)
 #undef BOX2
 }
 
+struct DumyShader final : IShader
+{
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final {}
+
+    virtual ReferenceCounterValueType DILIGENT_CALL_TYPE AddRef() override final { return 0; }
+    virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final { return 0; }
+    virtual IReferenceCounters* DILIGENT_CALL_TYPE       GetReferenceCounters() const override final { return nullptr; }
+
+    virtual const ShaderDesc& DILIGENT_CALL_TYPE GetDesc() const override final
+    {
+        static const ShaderDesc DummyDesc;
+        return DummyDesc;
+    }
+
+    virtual Int32 DILIGENT_CALL_TYPE GetUniqueID() const override final { return 0; }
+
+    virtual void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override final {}
+
+    virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final { return nullptr; }
+
+    virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final { return 0; }
+
+    virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final {}
+
+    virtual const ShaderCodeBufferDesc* DILIGENT_CALL_TYPE GetConstantBufferDesc(Uint32 Index) const override final { return nullptr; }
+
+    virtual void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode, Uint64& Size) const override final {}
+
+    virtual SHADER_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final { return SHADER_STATUS_UNINITIALIZED; }
+};
+
 TEST(GraphicsTypesXTest, RayTracingPipelineStateCreateInfoX)
 {
     {
@@ -830,16 +861,18 @@ TEST(GraphicsTypesXTest, RayTracingPipelineStateCreateInfoX)
 
     // clang-format off
 
-#define GENERAL_SHADER_1(POOL) POOL("General Shader 1"), reinterpret_cast<IShader*>(uintptr_t{0x01})
-#define GENERAL_SHADER_2(POOL) POOL("General Shader 2"), reinterpret_cast<IShader*>(uintptr_t{0x02})
+    DumyShader Shaders[17];
 
-#define TRI_HIT_SHADER_1(POOL) POOL("Tri Hit Shader 1"), reinterpret_cast<IShader*>(uintptr_t{0x04}), reinterpret_cast<IShader*>(uintptr_t{0x05})
-#define TRI_HIT_SHADER_2(POOL) POOL("Tri Hit Shader 2"), reinterpret_cast<IShader*>(uintptr_t{0x06}), reinterpret_cast<IShader*>(uintptr_t{0x07})
-#define TRI_HIT_SHADER_3(POOL) POOL("Tri Hit Shader 3"), reinterpret_cast<IShader*>(uintptr_t{0x08}), reinterpret_cast<IShader*>(uintptr_t{0x09})
+#define GENERAL_SHADER_1(POOL) POOL("General Shader 1"), &Shaders[0]
+#define GENERAL_SHADER_2(POOL) POOL("General Shader 2"), &Shaders[1]
 
-#define PROC_HIT_SHADER_1(POOL) POOL("Proc Hit Shader 1"), reinterpret_cast<IShader*>(uintptr_t{0x10}), reinterpret_cast<IShader*>(uintptr_t{0x11}), reinterpret_cast<IShader*>(uintptr_t{0x12})
-#define PROC_HIT_SHADER_2(POOL) POOL("Proc Hit Shader 2"), reinterpret_cast<IShader*>(uintptr_t{0x13}), reinterpret_cast<IShader*>(uintptr_t{0x14}), reinterpret_cast<IShader*>(uintptr_t{0x15})
-#define PROC_HIT_SHADER_3(POOL) POOL("Proc Hit Shader 3"), reinterpret_cast<IShader*>(uintptr_t{0x16}), reinterpret_cast<IShader*>(uintptr_t{0x17}), reinterpret_cast<IShader*>(uintptr_t{0x18})
+#define TRI_HIT_SHADER_1(POOL) POOL("Tri Hit Shader 1"), &Shaders[2], &Shaders[3]
+#define TRI_HIT_SHADER_2(POOL) POOL("Tri Hit Shader 2"), &Shaders[4], &Shaders[5]
+#define TRI_HIT_SHADER_3(POOL) POOL("Tri Hit Shader 3"), &Shaders[6], &Shaders[7]
+
+#define PROC_HIT_SHADER_1(POOL) POOL("Proc Hit Shader 1"), &Shaders[8], &Shaders[9], &Shaders[10]
+#define PROC_HIT_SHADER_2(POOL) POOL("Proc Hit Shader 2"), &Shaders[11], &Shaders[12], &Shaders[13]
+#define PROC_HIT_SHADER_3(POOL) POOL("Proc Hit Shader 3"), &Shaders[14], &Shaders[15], &Shaders[16]
 
     // clang-format on
 
