@@ -828,7 +828,7 @@ void PipelineStateVkImpl::InitializePipeline(const GraphicsPipelineStateCreateIn
     InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
     const auto vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
-    CreateGraphicsPipeline(m_pDevice, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, GetRenderPassPtr(), vkSPOCache);
+    CreateGraphicsPipeline(m_pDevice, vkShaderStages, m_PipelineLayout, m_Desc, m_pGraphicsPipelineData->Desc, m_Pipeline, GetRenderPassPtr(), vkSPOCache);
 }
 
 void PipelineStateVkImpl::InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo)
@@ -853,7 +853,7 @@ void PipelineStateVkImpl::InitializePipeline(const RayTracingPipelineStateCreate
     const auto vkShaderGroups = BuildRTShaderGroupDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderStages);
     const auto vkSPOCache     = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
 
-    CreateRayTracingPipeline(m_pDevice, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline, vkSPOCache);
+    CreateRayTracingPipeline(m_pDevice, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, m_pRayTracingPipelineData->Desc, m_Pipeline, vkSPOCache);
 
     VERIFY(m_pRayTracingPipelineData->NameToGroupIndex.size() == vkShaderGroups.size(),
            "The size of NameToGroupIndex map does not match the actual number of groups in the pipeline. This is a bug.");

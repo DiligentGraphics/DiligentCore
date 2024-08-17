@@ -681,7 +681,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
     auto* pd3d12Device = m_pDevice->GetD3D12Device();
     if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
-        const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
+        const GraphicsPipelineDesc& GraphicsPipeline = m_pGraphicsPipelineData->Desc;
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
@@ -720,7 +720,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
 
         std::vector<D3D12_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D12_INPUT_ELEMENT_DESC>> d312InputElements(STD_ALLOCATOR_RAW_MEM(D3D12_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D12_INPUT_ELEMENT_DESC>"));
 
-        const auto& InputLayout = GetGraphicsPipelineDesc().InputLayout;
+        const auto& InputLayout = GraphicsPipeline.InputLayout;
         if (InputLayout.NumElements > 0)
         {
             LayoutElements_To_D3D12_INPUT_ELEMENT_DESCs(InputLayout, d312InputElements);
@@ -782,7 +782,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
 #ifdef D3D12_H_HAS_MESH_SHADER
     else if (m_Desc.PipelineType == PIPELINE_TYPE_MESH)
     {
-        const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
+        const GraphicsPipelineDesc& GraphicsPipeline = m_pGraphicsPipelineData->Desc;
 
         struct MESH_SHADER_PIPELINE_STATE_DESC
         {

@@ -357,10 +357,10 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
 {
     VERIFY(!ShaderStages.empty() && ShaderStages.size() <= 2, "Incorrect shader count for graphics pipeline");
 
-    const GraphicsPipelineDesc& GraphicsPipeline = GetGraphicsPipelineDesc();
+    const GraphicsPipelineDesc& GraphicsPipeline = m_pGraphicsPipelineData->Desc;
 
     WGPURenderPipelineDescriptor wgpuRenderPipelineDesc{};
-    wgpuRenderPipelineDesc.label  = GetDesc().Name;
+    wgpuRenderPipelineDesc.label  = m_Desc.Name;
     wgpuRenderPipelineDesc.layout = m_PipelineLayout.GetWebGPUPipelineLayout();
 
     WGPUFragmentState wgpuFragmentState{};
@@ -581,7 +581,7 @@ void PipelineStateWebGPUImpl::InitializeWebGPUComputePipeline(const TShaderStage
     wgpuShaderModule.Reset(wgpuDeviceCreateShaderModule(m_pDevice->GetWebGPUDevice(), &wgpuShaderModuleDesc));
 
     WGPUComputePipelineDescriptor wgpuComputePipelineDesc{};
-    wgpuComputePipelineDesc.label              = GetDesc().Name;
+    wgpuComputePipelineDesc.label              = m_Desc.Name;
     wgpuComputePipelineDesc.compute.module     = wgpuShaderModule.Get();
     wgpuComputePipelineDesc.compute.entryPoint = pShaderWebGPU->GetEntryPoint();
     wgpuComputePipelineDesc.layout             = m_PipelineLayout.GetWebGPUPipelineLayout();

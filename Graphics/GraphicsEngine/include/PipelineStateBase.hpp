@@ -484,14 +484,22 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineState, TDeviceObjectBase)
 
+    virtual const PipelineStateDesc& DILIGENT_CALL_TYPE GetDesc() const override final
+    {
+        CheckPipelineReady();
+        return this->m_Desc;
+    }
+
     Uint32 GetBufferStride(Uint32 BufferSlot) const
     {
+        CheckPipelineReady();
         VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
         return BufferSlot < m_pGraphicsPipelineData->BufferSlotsUsed ? m_pGraphicsPipelineData->pStrides[BufferSlot] : 0;
     }
 
     Uint32 GetNumBufferSlotsUsed() const
     {
+        CheckPipelineReady();
         VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
         return m_pGraphicsPipelineData->BufferSlotsUsed;
     }
@@ -510,6 +518,7 @@ public:
 
     virtual const GraphicsPipelineDesc& DILIGENT_CALL_TYPE GetGraphicsPipelineDesc() const override final
     {
+        CheckPipelineReady();
         VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
         VERIFY_EXPR(m_pGraphicsPipelineData != nullptr);
         return m_pGraphicsPipelineData->Desc;
@@ -517,6 +526,7 @@ public:
 
     virtual const RayTracingPipelineDesc& DILIGENT_CALL_TYPE GetRayTracingPipelineDesc() const override final
     {
+        CheckPipelineReady();
         VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
         VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
         return m_pRayTracingPipelineData->Desc;
@@ -524,6 +534,7 @@ public:
 
     virtual const TilePipelineDesc& DILIGENT_CALL_TYPE GetTilePipelineDesc() const override final
     {
+        CheckPipelineReady();
         VERIFY_EXPR(this->m_Desc.IsTilePipeline());
         VERIFY_EXPR(m_pTilePipelineData != nullptr);
         return m_pTilePipelineData->Desc;
@@ -557,9 +568,7 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
                                                                 bool                     InitStaticResources) override final
     {
-        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
-                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
-                      ". Use GetStatus() to check the pipeline state status.");
+        CheckPipelineReady();
 
         *ppShaderResourceBinding = nullptr;
 
@@ -576,9 +585,7 @@ public:
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType,
                                                                                 const Char* Name) override final
     {
-        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
-                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
-                      ". Use GetStatus() to check the pipeline state status.");
+        CheckPipelineReady();
 
         if (!m_UsingImplicitSignature)
         {
@@ -600,9 +607,7 @@ public:
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType,
                                                                                  Uint32      Index) override final
     {
-        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
-                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
-                      ". Use GetStatus() to check the pipeline state status.");
+        CheckPipelineReady();
 
         if (!m_UsingImplicitSignature)
         {
@@ -623,9 +628,7 @@ public:
 
     virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
     {
-        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
-                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
-                      ". Use GetStatus() to check the pipeline state status.");
+        CheckPipelineReady();
 
         if (!m_UsingImplicitSignature)
         {
@@ -648,9 +651,7 @@ public:
                                                         IResourceMapping*           pResourceMapping,
                                                         BIND_SHADER_RESOURCES_FLAGS Flags) override final
     {
-        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
-                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
-                      ". Use GetStatus() to check the pipeline state status.");
+        CheckPipelineReady();
 
         if (!m_UsingImplicitSignature)
         {
@@ -664,9 +665,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pSRB) const override final
     {
-        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
-                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
-                      ". Use GetStatus() to check the pipeline state status.");
+        CheckPipelineReady();
 
         if (!m_UsingImplicitSignature)
         {
@@ -680,9 +679,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE CopyStaticResources(IPipelineState* pDstPipeline) const override final
     {
-        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
-                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
-                      ". Use GetStatus() to check the pipeline state status.");
+        CheckPipelineReady();
 
         if (pDstPipeline == nullptr)
         {
@@ -710,20 +707,14 @@ public:
     /// Implementation of IPipelineState::GetResourceSignatureCount().
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final
     {
-        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
-                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
-                      ". Use GetStatus() to check the pipeline state status.");
-
+        CheckPipelineReady();
         return m_SignatureCount;
     }
 
     /// Implementation of IPipelineState::GetResourceSignature().
     virtual PipelineResourceSignatureImplType* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
     {
-        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
-                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
-                      ". Use GetStatus() to check the pipeline state status.");
-
+        CheckPipelineReady();
         VERIFY_EXPR(Index < m_SignatureCount);
         return m_Signatures[Index];
     }
@@ -731,10 +722,7 @@ public:
     /// Implementation of IPipelineState::IsCompatibleWith().
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override // May be overridden
     {
-        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
-                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
-                      ". Use GetStatus() to check the pipeline state status.");
-
+        CheckPipelineReady();
         DEV_CHECK_ERR(pPSO != nullptr, "pPSO must not be null");
 
         if (pPSO == this)
@@ -1148,6 +1136,14 @@ protected:
     }
 
 private:
+    void CheckPipelineReady() const
+    {
+        // It is OK to use m_Desc.Name as it is initialized by DeviceObjectBase
+        DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", this->m_Desc.Name,
+                      "' is expected to be Ready, but its actual status is ", GetPipelineStateStatusString(m_Status.load()),
+                      ". Use GetStatus() to check the pipeline state status.");
+    }
+
     static void ReserveResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, FixedLinearAllocator& MemPool) noexcept
     {
         if (SrcLayout.Variables != nullptr)

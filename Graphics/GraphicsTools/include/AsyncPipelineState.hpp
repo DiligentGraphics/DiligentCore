@@ -27,7 +27,7 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::ReloadablePipelineState class
+/// Definition of the Diligent::AsyncPipelineState class
 
 #include <memory>
 
@@ -36,42 +36,45 @@
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "ProxyPipelineState.hpp"
+#include "UniqueIdentifier.hpp"
 
 namespace Diligent
 {
 
 class RenderStateCacheImpl;
 
-/// Reloadable pipeline state implements the IPipelineState interface and delegates all
-/// calls to the internal pipeline object, which can be replaced at run-time.
-class ReloadablePipelineState final : public ProxyPipelineState<ObjectBase<IPipelineState>>
+/// Async pipeline state waits until all shaders are loaded before initializing the internal pipeline state.
+class AsyncPipelineState final : public ProxyPipelineState<ObjectBase<IPipelineState>>
 {
 public:
     using TBase = ProxyPipelineState<ObjectBase<IPipelineState>>;
 
-    // {1F325E25-496B-41B4-A1F9-242302ABCDD4}
+    // {B6EFB3C0-0716-4997-86F1-E3DE8F7E0179}
     static constexpr INTERFACE_ID IID_InternalImpl =
-        {0x1f325e25, 0x496b, 0x41b4, {0xa1, 0xf9, 0x24, 0x23, 0x2, 0xab, 0xcd, 0xd4}};
+        {0xb6efb3c0, 0x716, 0x4997, {0x86, 0xf1, 0xe3, 0xde, 0x8f, 0x7e, 0x1, 0x79}};
 
-    ReloadablePipelineState(IReferenceCounters*            pRefCounters,
-                            RenderStateCacheImpl*          pStateCache,
-                            IPipelineState*                pPipeline,
-                            const PipelineStateCreateInfo& CreateInfo);
-    ~ReloadablePipelineState();
+    AsyncPipelineState(IReferenceCounters*            pRefCounters,
+                       RenderStateCacheImpl*          pStateCache,
+                       const PipelineStateCreateInfo& CreateInfo);
+    ~AsyncPipelineState();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
+    virtual Int32 DILIGENT_CALL_TYPE GetUniqueID() const override final
+    {
+        return m_UniqueID.GetID() + 0x10000000;
+    }
+
+    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override;
+
     static void Create(RenderStateCacheImpl*          pStateCache,
-                       IPipelineState*                pPipeline,
                        const PipelineStateCreateInfo& CreateInfo,
                        IPipelineState**               ppReloadablePipeline);
 
-    bool Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData);
+private:
+    void InitInternalPipeline();
 
 private:
-    template <typename CreateInfoType>
-    bool Reload(ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline, void* pUserData);
-
     struct CreateInfoWrapperBase;
 
     template <typename CreateInfoType>
@@ -80,6 +83,7 @@ private:
     RefCntAutoPtr<RenderStateCacheImpl>    m_pStateCache;
     std::unique_ptr<CreateInfoWrapperBase> m_pCreateInfo;
     const PIPELINE_TYPE                    m_Type;
+    UniqueIdHelper<AsyncPipelineState>     m_UniqueID;
 };
 
 } // namespace Diligent

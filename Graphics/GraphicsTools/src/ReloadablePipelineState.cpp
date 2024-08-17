@@ -26,9 +26,6 @@
 
 #include "ReloadablePipelineState.hpp"
 
-#include <unordered_set>
-#include <vector>
-
 #include "RenderStateCacheImpl.hpp"
 #include "ReloadableShader.hpp"
 #include "GraphicsTypesX.hpp"
@@ -38,9 +35,13 @@ namespace Diligent
 
 constexpr INTERFACE_ID ReloadablePipelineState::IID_InternalImpl;
 
+struct ReloadablePipelineState::CreateInfoWrapperBase
+{
+    virtual ~CreateInfoWrapperBase() {}
+};
 
 template <typename CreateInfoType>
-struct ReloadablePipelineState::CreateInfoWrapper : DynamicHeapObjectBase
+struct ReloadablePipelineState::CreateInfoWrapper : CreateInfoWrapperBase
 {
     CreateInfoWrapper(const CreateInfoType& CI) :
         m_CI{CI}

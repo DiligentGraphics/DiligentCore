@@ -172,7 +172,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     if (m_Desc.IsAnyGraphicsPipeline())
     {
         // In Direct3D11, UAVs use the same register space as render targets
-        ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd] = GetGraphicsPipelineDesc().NumRenderTargets;
+        ResCounters[D3D11_RESOURCE_RANGE_UAV][PSInd] = m_pGraphicsPipelineData->Desc.NumRenderTargets;
     }
 
     for (Uint32 sign = 0; sign < m_SignatureCount; ++sign)
@@ -303,8 +303,8 @@ void PipelineStateD3D11Impl::InitializePipeline(const GraphicsPipelineStateCreat
     if (GetD3D11VertexShader() == nullptr)
         LOG_ERROR_AND_THROW("Vertex shader is null");
 
-    const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
-    auto* const pDeviceD3D11     = m_pDevice->GetD3D11Device();
+    const GraphicsPipelineDesc& GraphicsPipeline = m_pGraphicsPipelineData->Desc;
+    ID3D11Device* const         pDeviceD3D11     = m_pDevice->GetD3D11Device();
 
     D3D11_BLEND_DESC D3D11BSDesc = {};
     BlendStateDesc_To_D3D11_BLEND_DESC(GraphicsPipeline.BlendDesc, D3D11BSDesc);

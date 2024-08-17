@@ -896,4 +896,38 @@ ProcessPipelineStateCreateInfoShaders(CreateInfoType&& CI, HandlerType&& Handler
     }
 }
 
+template <typename CreateInfoType>
+SHADER_STATUS GetPipelineStateCreateInfoShadersStatus(const CreateInfoType& CI, bool WaitForCompletion = false)
+{
+    SHADER_STATUS OverallStatus = SHADER_STATUS_READY;
+    ProcessPipelineStateCreateInfoShaders(CI, [&OverallStatus, WaitForCompletion](IShader* pShader) {
+        if (pShader == nullptr)
+            return;
+
+        SHADER_STATUS ShaderStatus = pShader->GetStatus(WaitForCompletion);
+        switch (ShaderStatus)
+        {
+            case SHADER_STATUS_UNINITIALIZED:
+                UNEXPECTED("Shader status must not be uninitialized");
+                break;
+
+            case SHADER_STATUS_COMPILING:
+                OverallStatus = (OverallStatus == SHADER_STATUS_READY) ? SHADER_STATUS_COMPILING : OverallStatus;
+                break;
+
+            case SHADER_STATUS_READY:
+                // Do nothing
+                break;
+
+            case SHADER_STATUS_FAILED:
+                OverallStatus = SHADER_STATUS_FAILED;
+                break;
+
+            default:
+                UNEXPECTED("Unexpected shader status");
+        }
+    });
+    return OverallStatus;
+}
+
 } // namespace Diligent

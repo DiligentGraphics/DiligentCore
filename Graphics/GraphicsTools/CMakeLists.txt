@@ -54,11 +54,13 @@ if(ARCHIVER_SUPPORTED)
         interface/RenderStateCache.hpp
     )
     list(APPEND INCLUDE
+        include/AsyncPipelineState.hpp
         include/RenderStateCacheImpl.hpp
         include/ReloadableShader.hpp
         include/ReloadablePipelineState.hpp
     )
     list(APPEND SOURCE
+        src/AsyncPipelineState.cpp
         src/RenderStateCacheImpl.cpp
         src/ReloadableShader.cpp
         src/ReloadablePipelineState.cpp

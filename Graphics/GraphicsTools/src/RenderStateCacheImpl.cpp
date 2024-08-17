@@ -30,6 +30,7 @@
 
 #include "ReloadableShader.hpp"
 #include "ReloadablePipelineState.hpp"
+#include "AsyncPipelineState.hpp"
 
 #include <array>
 #include <mutex>
@@ -744,6 +745,23 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
 {
     VERIFY_EXPR(ppPipelineState != nullptr && *ppPipelineState == nullptr);
 
+    const SHADER_STATUS ShadersStatus = GetPipelineStateCreateInfoShadersStatus<CreateInfoType>(PSOCreateInfo);
+    VERIFY(ShadersStatus != SHADER_STATUS_UNINITIALIZED, "Unexpected shader status");
+    if (ShadersStatus == SHADER_STATUS_FAILED)
+    {
+        LOG_ERROR_MESSAGE("Failed to create pipeline state '", (PSOCreateInfo.PSODesc.Name ? PSOCreateInfo.PSODesc.Name : "<unnamed>"), "': one or more shaders failed to compile.");
+        return false;
+    }
+
+    if (ShadersStatus == SHADER_STATUS_COMPILING)
+    {
+        // Note that async pipeline may be wrapped into ReloadablePipelineState.
+        // This will work totally fine as reloadable pipeline will delegate all calls to the async pipeline
+        // and may create another async pipeline.
+        AsyncPipelineState::Create(this, PSOCreateInfo, ppPipelineState);
+        return false;
+    }
+
     XXH128State Hasher;
     Hasher.Update(PSOCreateInfo, m_DeviceHash);
     const auto Hash = Hasher.Digest();
@@ -788,16 +806,34 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
         m_pDearchiver->UnpackPipelineState(UnpackInfo, &pPSO);
         if (pPSO)
         {
-            if (pPSO->GetDesc() == PSOCreateInfo.PSODesc)
+            const PIPELINE_STATE_STATUS Status = pPSO->GetStatus();
+            if (Status == PIPELINE_STATE_STATUS_READY)
+            {
+                if (pPSO->GetDesc() == PSOCreateInfo.PSODesc)
+                {
+                    *ppPipelineState = pPSO.Detach();
+                    FoundInCache     = true;
+                }
+                else
+                {
+                    LOG_ERROR_MESSAGE("Description of pipeline state '", (PSOCreateInfo.PSODesc.Name != nullptr ? PSOCreateInfo.PSODesc.Name : "<unnamed>"),
+                                      "' does not match the description of the pipeline unpacked from the cache. This may be the result of a "
+                                      "hash conflict, though the probability of this should be virtually zero.");
+                }
+            }
+            else if (Status == PIPELINE_STATE_STATUS_COMPILING)
             {
                 *ppPipelineState = pPSO.Detach();
                 FoundInCache     = true;
             }
+            else if (Status == PIPELINE_STATE_STATUS_FAILED)
+            {
+                LOG_ERROR_MESSAGE("Pipeline state '", (PSOCreateInfo.PSODesc.Name != nullptr ? PSOCreateInfo.PSODesc.Name : "<unnamed>"),
+                                  "' is in failed state.");
+            }
             else
             {
-                LOG_ERROR_MESSAGE("Description of pipeline state '", (PSOCreateInfo.PSODesc.Name != nullptr ? PSOCreateInfo.PSODesc.Name : "<unnamed>"),
-                                  "' does not match the description of the pipeline unpacked from the cache. This may be the result of a "
-                                  "hash conflict, though the probability of this should be virtually zero.");
+                UNEXPECTED("Unexpected pipeline state status ", GetPipelineStateStatusString(Status));
             }
         }
     }

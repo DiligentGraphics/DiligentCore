@@ -140,7 +140,7 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceObject, TBase)
 
-    virtual const ObjectDescType& DILIGENT_CALL_TYPE GetDesc() const override final
+    virtual const ObjectDescType& DILIGENT_CALL_TYPE GetDesc() const override
     {
         return m_Desc;
     }

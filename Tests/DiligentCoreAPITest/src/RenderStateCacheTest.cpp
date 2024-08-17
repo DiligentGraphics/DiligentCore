@@ -531,7 +531,9 @@ void CreateGraphicsPSO(IRenderStateCache* pCache, bool PresentInCache, IShader* 
 
     if (pCache != nullptr)
     {
-        EXPECT_EQ(pCache->CreateGraphicsPipelineState(PsoCI, ppPSO), PresentInCache);
+        bool PSOFound = pCache->CreateGraphicsPipelineState(PsoCI, ppPSO);
+        if (!CompileAsync)
+            EXPECT_EQ(PSOFound, PresentInCache);
     }
     else
     {
@@ -540,7 +542,7 @@ void CreateGraphicsPSO(IRenderStateCache* pCache, bool PresentInCache, IShader* 
         ASSERT_NE(*ppPSO, nullptr);
     }
 
-    if (*ppPSO != nullptr)
+    if (*ppPSO != nullptr && (*ppPSO)->GetStatus() == PIPELINE_STATE_STATUS_READY)
     {
         const auto& Desc = (*ppPSO)->GetDesc();
         EXPECT_EQ(PsoCI.PSODesc, Desc);
@@ -604,6 +606,7 @@ void TestGraphicsPSO(bool UseRenderPass, bool CompileAsync = false)
             RefCntAutoPtr<IPipelineState> pPSO;
             CreateGraphicsPSO(pCache, pData != nullptr, pVS1, pPS1, UseRenderPass, CompileAsync, &pPSO);
             ASSERT_NE(pPSO, nullptr);
+            ASSERT_EQ(pPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
             EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO));
             EXPECT_TRUE(pPSO->IsCompatibleWith(pRefPSO));
 
@@ -613,7 +616,8 @@ void TestGraphicsPSO(bool UseRenderPass, bool CompileAsync = false)
             {
                 RefCntAutoPtr<IPipelineState> pPSO2;
                 CreateGraphicsPSO(pCache, true, pVS1, pPS1, UseRenderPass, CompileAsync, &pPSO2);
-                EXPECT_EQ(pPSO, pPSO2);
+                if (!CompileAsync)
+                    EXPECT_EQ(pPSO, pPSO2);
             }
 
             if (!HotReload)
@@ -621,6 +625,7 @@ void TestGraphicsPSO(bool UseRenderPass, bool CompileAsync = false)
                 RefCntAutoPtr<IPipelineState> pPSO2;
                 CreateGraphicsPSO(pCache, pData != nullptr, pUncachedVS, pUncachedPS, UseRenderPass, CompileAsync, &pPSO2);
                 ASSERT_NE(pPSO2, nullptr);
+                ASSERT_EQ(pPSO2->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
                 EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO2));
                 EXPECT_TRUE(pPSO2->IsCompatibleWith(pRefPSO));
                 VerifyGraphicsPSO(pPSO2, nullptr, pTexSRV, UseRenderPass);
@@ -644,6 +649,16 @@ TEST(RenderStateCacheTest, CreateGraphicsPSO)
 TEST(RenderStateCacheTest, CreateGraphicsPSO_RenderPass)
 {
     TestGraphicsPSO(/*UseRenderPass = */ true);
+}
+
+TEST(RenderStateCacheTest, CreateGraphicsPSO_Async)
+{
+    TestGraphicsPSO(/*UseRenderPass = */ false, /*CompileAsync = */ true);
+}
+
+TEST(RenderStateCacheTest, CreateGraphicsPSO_RenderPass_Async)
+{
+    TestGraphicsPSO(/*UseRenderPass = */ true, /*CompileAsync = */ true);
 }
 
 void CreateComputePSO(IRenderStateCache* pCache, bool PresentInCache, IShader* pCS, bool UseSignature, IPipelineState** ppPSO)
