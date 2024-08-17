@@ -35,6 +35,7 @@
 #include "RenderStateCache.h"
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
+#include "ProxyPipelineState.hpp"
 
 namespace Diligent
 {
@@ -43,10 +44,10 @@ class RenderStateCacheImpl;
 
 /// Reloadable pipeline state implements the IPipelineState interface and delegates all
 /// calls to the internal pipeline object, which can be replaced at run-time.
-class ReloadablePipelineState final : public ObjectBase<IPipelineState>
+class ReloadablePipelineState final : public ProxyPipelineState<ObjectBase<IPipelineState>>
 {
 public:
-    using TBase = ObjectBase<IPipelineState>;
+    using TBase = ProxyPipelineState<ObjectBase<IPipelineState>>;
 
     // {1F325E25-496B-41B4-A1F9-242302ABCDD4}
     static constexpr INTERFACE_ID IID_InternalImpl =
@@ -59,98 +60,6 @@ public:
     ~ReloadablePipelineState();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
-
-    // Delegate all calls to the internal pipeline object
-
-    virtual const PipelineStateDesc& DILIGENT_CALL_TYPE GetDesc() const override final
-    {
-        return m_pPipeline->GetDesc();
-    }
-
-    virtual Int32 DILIGENT_CALL_TYPE GetUniqueID() const override final
-    {
-        return m_pPipeline->GetUniqueID();
-    }
-
-    virtual void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override final
-    {
-        m_pPipeline->SetUserData(pUserData);
-    }
-
-    virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override final
-    {
-        return m_pPipeline->GetUserData();
-    }
-
-    virtual const GraphicsPipelineDesc& DILIGENT_CALL_TYPE GetGraphicsPipelineDesc() const override final
-    {
-        return m_pPipeline->GetGraphicsPipelineDesc();
-    }
-
-    virtual const RayTracingPipelineDesc& DILIGENT_CALL_TYPE GetRayTracingPipelineDesc() const override final
-    {
-        return m_pPipeline->GetRayTracingPipelineDesc();
-    }
-
-    virtual const TilePipelineDesc& DILIGENT_CALL_TYPE GetTilePipelineDesc() const override final
-    {
-        return m_pPipeline->GetTilePipelineDesc();
-    }
-
-    virtual void DILIGENT_CALL_TYPE BindStaticResources(SHADER_TYPE ShaderStages, IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags) override final
-    {
-        m_pPipeline->BindStaticResources(ShaderStages, pResourceMapping, Flags);
-    }
-
-    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
-    {
-        return m_pPipeline->GetStaticVariableCount(ShaderType);
-    }
-
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final
-    {
-        return m_pPipeline->GetStaticVariableByName(ShaderType, Name);
-    }
-
-    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final
-    {
-        return m_pPipeline->GetStaticVariableByIndex(ShaderType, Index);
-    }
-
-    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override final
-    {
-        m_pPipeline->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
-    }
-
-    virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pShaderResourceBinding) const override final
-    {
-        m_pPipeline->InitializeStaticSRBResources(pShaderResourceBinding);
-    }
-
-    virtual void DILIGENT_CALL_TYPE CopyStaticResources(IPipelineState* pPSO) const override final
-    {
-        m_pPipeline->CopyStaticResources(pPSO);
-    }
-
-    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final
-    {
-        return m_pPipeline->IsCompatibleWith(pPSO);
-    }
-
-    virtual Uint32 DILIGENT_CALL_TYPE GetResourceSignatureCount() const override final
-    {
-        return m_pPipeline->GetResourceSignatureCount();
-    }
-
-    virtual IPipelineResourceSignature* DILIGENT_CALL_TYPE GetResourceSignature(Uint32 Index) const override final
-    {
-        return m_pPipeline->GetResourceSignature(Index);
-    }
-
-    virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override final
-    {
-        return m_pPipeline->GetStatus(WaitForCompletion);
-    }
 
     static void Create(RenderStateCacheImpl*          pStateCache,
                        IPipelineState*                pPipeline,
@@ -172,7 +81,6 @@ private:
     struct CreateInfoWrapper;
 
     RefCntAutoPtr<RenderStateCacheImpl>    m_pStateCache;
-    RefCntAutoPtr<IPipelineState>          m_pPipeline;
     std::unique_ptr<DynamicHeapObjectBase> m_pCreateInfo;
     const PIPELINE_TYPE                    m_Type;
 };

@@ -83,9 +83,10 @@ ReloadablePipelineState::ReloadablePipelineState(IReferenceCounters*            
                                                  const PipelineStateCreateInfo& CreateInfo) :
     TBase{pRefCounters},
     m_pStateCache{pStateCache},
-    m_pPipeline{pPipeline},
     m_Type{CreateInfo.PSODesc.PipelineType}
 {
+    m_pPipeline = pPipeline;
+
     static_assert(PIPELINE_TYPE_COUNT == 5, "Did you add a new pipeline type? You may need to handle it here.");
     switch (CreateInfo.PSODesc.PipelineType)
     {

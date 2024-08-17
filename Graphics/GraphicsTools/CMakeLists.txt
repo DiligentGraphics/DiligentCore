@@ -46,7 +46,7 @@ set(SOURCE
     src/VertexPool.cpp
 )
 
-set(INCLUDE)
+set(INCLUDE include/ProxyPipelineState.hpp)
 
 if(ARCHIVER_SUPPORTED)
     list(APPEND INTERFACE
