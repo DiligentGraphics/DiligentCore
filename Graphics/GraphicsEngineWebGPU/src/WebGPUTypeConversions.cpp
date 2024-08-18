@@ -27,10 +27,11 @@
 #include "pch.h"
 
 #include "WebGPUTypeConversions.hpp"
+#include "WebGPUStubs.hpp"
 #include "DebugUtilities.hpp"
 #include "GraphicsAccessories.hpp"
 
-#define WEBGPU_FORMAT_RANGE_SIZE (WGPUTextureFormat_ASTC12x12UnormSrgb - WGPUTextureFormat_Undefined + 1)
+#define WEBGPU_FORMAT_RANGE_SIZE (WGPUTextureFormat_RGBA16Snorm - WGPUTextureFormat_Undefined + 1)
 
 namespace Diligent
 {
@@ -55,9 +56,9 @@ public:
 
         m_FmtToWGPUFmtMap[TEX_FORMAT_RGBA16_TYPELESS] = WGPUTextureFormat_RGBA16Float;
         m_FmtToWGPUFmtMap[TEX_FORMAT_RGBA16_FLOAT]    = WGPUTextureFormat_RGBA16Float;
-        m_FmtToWGPUFmtMap[TEX_FORMAT_RGBA16_UNORM]    = WGPUTextureFormat_Undefined;
+        m_FmtToWGPUFmtMap[TEX_FORMAT_RGBA16_UNORM]    = WGPUTextureFormat_RGBA16Unorm;
         m_FmtToWGPUFmtMap[TEX_FORMAT_RGBA16_UINT]     = WGPUTextureFormat_RGBA16Uint;
-        m_FmtToWGPUFmtMap[TEX_FORMAT_RGBA16_SNORM]    = WGPUTextureFormat_Undefined;
+        m_FmtToWGPUFmtMap[TEX_FORMAT_RGBA16_SNORM]    = WGPUTextureFormat_RGBA16Snorm;
         m_FmtToWGPUFmtMap[TEX_FORMAT_RGBA16_SINT]     = WGPUTextureFormat_RGBA16Sint;
 
         m_FmtToWGPUFmtMap[TEX_FORMAT_RG32_TYPELESS] = WGPUTextureFormat_RG32Float;
@@ -68,7 +69,7 @@ public:
         m_FmtToWGPUFmtMap[TEX_FORMAT_R32G8X24_TYPELESS]        = WGPUTextureFormat_Depth32FloatStencil8;
         m_FmtToWGPUFmtMap[TEX_FORMAT_D32_FLOAT_S8X24_UINT]     = WGPUTextureFormat_Depth32FloatStencil8;
         m_FmtToWGPUFmtMap[TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS] = WGPUTextureFormat_Depth32FloatStencil8;
-        m_FmtToWGPUFmtMap[TEX_FORMAT_X32_TYPELESS_G8X24_UINT]  = WGPUTextureFormat_Undefined;
+        m_FmtToWGPUFmtMap[TEX_FORMAT_X32_TYPELESS_G8X24_UINT]  = WGPUTextureFormat_Depth32FloatStencil8;
 
         m_FmtToWGPUFmtMap[TEX_FORMAT_RGB10A2_TYPELESS] = WGPUTextureFormat_RGB10A2Unorm;
         m_FmtToWGPUFmtMap[TEX_FORMAT_RGB10A2_UNORM]    = WGPUTextureFormat_RGB10A2Unorm;
@@ -84,9 +85,9 @@ public:
 
         m_FmtToWGPUFmtMap[TEX_FORMAT_RG16_TYPELESS] = WGPUTextureFormat_RG16Float;
         m_FmtToWGPUFmtMap[TEX_FORMAT_RG16_FLOAT]    = WGPUTextureFormat_RG16Float;
-        m_FmtToWGPUFmtMap[TEX_FORMAT_RG16_UNORM]    = WGPUTextureFormat_Undefined;
+        m_FmtToWGPUFmtMap[TEX_FORMAT_RG16_UNORM]    = WGPUTextureFormat_RG16Unorm;
         m_FmtToWGPUFmtMap[TEX_FORMAT_RG16_UINT]     = WGPUTextureFormat_RG16Uint;
-        m_FmtToWGPUFmtMap[TEX_FORMAT_RG16_SNORM]    = WGPUTextureFormat_Undefined;
+        m_FmtToWGPUFmtMap[TEX_FORMAT_RG16_SNORM]    = WGPUTextureFormat_RG16Snorm;
         m_FmtToWGPUFmtMap[TEX_FORMAT_RG16_SINT]     = WGPUTextureFormat_RG16Sint;
 
         m_FmtToWGPUFmtMap[TEX_FORMAT_R32_TYPELESS] = WGPUTextureFormat_R32Float;
@@ -98,7 +99,7 @@ public:
         m_FmtToWGPUFmtMap[TEX_FORMAT_R24G8_TYPELESS]        = WGPUTextureFormat_Depth24PlusStencil8;
         m_FmtToWGPUFmtMap[TEX_FORMAT_D24_UNORM_S8_UINT]     = WGPUTextureFormat_Depth24PlusStencil8;
         m_FmtToWGPUFmtMap[TEX_FORMAT_R24_UNORM_X8_TYPELESS] = WGPUTextureFormat_Depth24PlusStencil8;
-        m_FmtToWGPUFmtMap[TEX_FORMAT_X24_TYPELESS_G8_UINT]  = WGPUTextureFormat_Undefined;
+        m_FmtToWGPUFmtMap[TEX_FORMAT_X24_TYPELESS_G8_UINT]  = WGPUTextureFormat_Depth24PlusStencil8;
 
         m_FmtToWGPUFmtMap[TEX_FORMAT_RG8_TYPELESS] = WGPUTextureFormat_RG8Unorm;
         m_FmtToWGPUFmtMap[TEX_FORMAT_RG8_UNORM]    = WGPUTextureFormat_RG8Unorm;
@@ -109,9 +110,9 @@ public:
         m_FmtToWGPUFmtMap[TEX_FORMAT_R16_TYPELESS] = WGPUTextureFormat_R16Float;
         m_FmtToWGPUFmtMap[TEX_FORMAT_R16_FLOAT]    = WGPUTextureFormat_R16Float;
         m_FmtToWGPUFmtMap[TEX_FORMAT_D16_UNORM]    = WGPUTextureFormat_Depth16Unorm;
-        m_FmtToWGPUFmtMap[TEX_FORMAT_R16_UNORM]    = WGPUTextureFormat_Undefined;
+        m_FmtToWGPUFmtMap[TEX_FORMAT_R16_UNORM]    = WGPUTextureFormat_R16Unorm;
         m_FmtToWGPUFmtMap[TEX_FORMAT_R16_UINT]     = WGPUTextureFormat_R16Uint;
-        m_FmtToWGPUFmtMap[TEX_FORMAT_R16_SNORM]    = WGPUTextureFormat_Undefined;
+        m_FmtToWGPUFmtMap[TEX_FORMAT_R16_SNORM]    = WGPUTextureFormat_R16Snorm;
         m_FmtToWGPUFmtMap[TEX_FORMAT_R16_SINT]     = WGPUTextureFormat_R16Sint;
 
         m_FmtToWGPUFmtMap[TEX_FORMAT_R8_TYPELESS] = WGPUTextureFormat_R8Unorm;
@@ -195,6 +196,8 @@ public:
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_R16Uint]  = TEX_FORMAT_R16_UINT;
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_R16Sint]  = TEX_FORMAT_R16_SINT;
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_R16Float] = TEX_FORMAT_R16_FLOAT;
+        m_WGPUFmtToTexFmtMap[WGPUTextureFormat_R16Unorm] = TEX_FORMAT_R16_UNORM; 
+        m_WGPUFmtToTexFmtMap[WGPUTextureFormat_R16Snorm] = TEX_FORMAT_R16_SNORM;
         
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RG8Unorm] = TEX_FORMAT_RG8_UNORM;
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RG8Snorm] = TEX_FORMAT_RG8_SNORM;
@@ -208,6 +211,8 @@ public:
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RG16Uint]  = TEX_FORMAT_RG16_UINT;
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RG16Sint]  = TEX_FORMAT_RG16_SINT;
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RG16Float] = TEX_FORMAT_RG16_FLOAT;
+        m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RG16Unorm] = TEX_FORMAT_RG16_UNORM;
+        m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RG16Snorm] = TEX_FORMAT_RG16_SNORM;
 
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA8Unorm]     = TEX_FORMAT_RGBA8_UNORM;
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA8UnormSrgb] = TEX_FORMAT_RGBA8_UNORM_SRGB;
@@ -227,10 +232,12 @@ public:
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RG32Uint]  = TEX_FORMAT_RG32_UINT;
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RG32Sint]  = TEX_FORMAT_RG32_SINT;
 
-        m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA16Uint] = TEX_FORMAT_RGBA16_UINT;
-        m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA16Sint] = TEX_FORMAT_RGBA16_SINT;
-
+        m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA16Uint]  = TEX_FORMAT_RGBA16_UINT;
+        m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA16Sint]  = TEX_FORMAT_RGBA16_SINT;
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA16Float] = TEX_FORMAT_RGBA16_FLOAT;
+        m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA16Unorm] = TEX_FORMAT_RGBA16_UNORM;
+        m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA16Snorm] = TEX_FORMAT_RGBA16_SNORM;
+
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA32Float] = TEX_FORMAT_RGBA32_FLOAT;
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA32Uint]  = TEX_FORMAT_RGBA32_UINT;
         m_WGPUFmtToTexFmtMap[WGPUTextureFormat_RGBA32Sint]  = TEX_FORMAT_RGBA32_SINT;

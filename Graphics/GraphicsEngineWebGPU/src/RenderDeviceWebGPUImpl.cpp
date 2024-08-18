@@ -42,6 +42,7 @@
 #include "FenceWebGPUImpl.hpp"
 #include "QueryWebGPUImpl.hpp"
 #include "AttachmentCleanerWebGPU.hpp"
+#include "WebGPUStubs.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLangUtils.hpp"
@@ -421,6 +422,8 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
     const bool RG11B10UfloatRenderableSupported = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_RG11B10UfloatRenderable);
     const bool Depth32FloatStencil8Supported    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Depth32FloatStencil8);
     const bool TextureCompressionBCSupported    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureCompressionBC);
+    const bool R16UnormSupported                = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Unorm16TextureFormats);
+    const bool R16SnormSupported                = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Snorm16TextureFormats);
 
     // https://www.w3.org/TR/webgpu/#texture-format-caps
 
@@ -456,7 +459,7 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
     SetTexFormatInfo({TEX_FORMAT_R32_FLOAT}, BIND_SRU, Float32FilterableSupported ? FMT_FLAG_FILTER | FMT_FLAG_MSAA : FMT_FLAG_MSAA);
 
     SetTexFormatInfo({TEX_FORMAT_RG32_UINT, TEX_FORMAT_RG32_SINT, TEX_FORMAT_RG32_TYPELESS}, BIND_SRU, FMT_FLAG_NONE);
-    SetTexFormatInfo({TEX_FORMAT_RG32_FLOAT}, BIND_SR, Float32FilterableSupported ? FMT_FLAG_FILTER : FMT_FLAG_NONE);
+    SetTexFormatInfo({TEX_FORMAT_RG32_FLOAT}, BIND_SRU, Float32FilterableSupported ? FMT_FLAG_FILTER : FMT_FLAG_NONE);
 
     SetTexFormatInfo({TEX_FORMAT_RGBA32_UINT, TEX_FORMAT_RGBA32_SINT, TEX_FORMAT_RGBA32_TYPELESS}, BIND_SRU, FMT_FLAG_NONE);
     SetTexFormatInfo({TEX_FORMAT_RGBA32_FLOAT}, BIND_SRU, Float32FilterableSupported ? FMT_FLAG_FILTER : FMT_FLAG_NONE);
@@ -501,6 +504,20 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
                           TEX_FORMAT_BC7_UNORM,
                           TEX_FORMAT_BC7_UNORM_SRGB},
                          BIND_S, FMT_FLAG_FILTER);
+    }
+
+    if (R16UnormSupported)
+    {
+        SetTexFormatInfo({TEX_FORMAT_R16_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RG16_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RGBA16_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+    }
+
+    if (R16SnormSupported)
+    {
+        SetTexFormatInfo({TEX_FORMAT_R16_SNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RG16_SNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+        SetTexFormatInfo({TEX_FORMAT_RGBA16_SNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
     }
 }
 

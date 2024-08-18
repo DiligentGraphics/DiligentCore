@@ -35,6 +35,7 @@
 #include "ShaderResourceCacheWebGPU.hpp"
 #include "FenceWebGPUImpl.hpp"
 #include "DearchiverWebGPUImpl.hpp"
+#include "WebGPUStubs.hpp"
 
 #include "StringTools.hpp"
 #include "GraphicsAccessories.hpp"
@@ -46,6 +47,7 @@
 #if PLATFORM_EMSCRIPTEN
 #    include <emscripten.h>
 #endif
+
 
 namespace Diligent
 {
@@ -195,9 +197,8 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
         if (EngineCI.Features.TimestampQueries && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TimestampQuery))
             Features.push_back(WGPUFeatureName_TimestampQuery);
 
-        //  WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses = 0x000003EE,
-        if (EngineCI.Features.TimestampQueries && wgpuAdapterHasFeature(wgpuAdapter, static_cast<WGPUFeatureName>(0x000003EE)))
-            Features.push_back(static_cast<WGPUFeatureName>(0x000003EE));
+        if (EngineCI.Features.TimestampQueries && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses))
+            Features.push_back(WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses);
 
         if (EngineCI.Features.TextureCompressionBC && wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureCompressionBC))
             Features.push_back(WGPUFeatureName_TextureCompressionBC);
@@ -219,6 +220,12 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
 
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_BGRA8UnormStorage))
             Features.push_back(WGPUFeatureName_BGRA8UnormStorage);
+
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_Unorm16TextureFormats))
+            Features.push_back(WGPUFeatureName_Unorm16TextureFormats);
+
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_Snorm16TextureFormats))
+            Features.push_back(WGPUFeatureName_Snorm16TextureFormats);
     }
 
     struct CallbackUserData

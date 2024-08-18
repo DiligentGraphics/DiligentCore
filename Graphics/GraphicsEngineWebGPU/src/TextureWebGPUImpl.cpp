@@ -38,8 +38,9 @@ namespace Diligent
 namespace
 {
 
-WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&      Desc,
-                                                         RenderDeviceWebGPUImpl* pRenderDevice) noexcept
+WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&              Desc,
+                                                         RenderDeviceWebGPUImpl*         pRenderDevice,
+                                                         std::vector<WGPUTextureFormat>& TextureViewFormats) noexcept
 {
     WGPUTextureDescriptor wgpuTextureDesc{};
 
@@ -48,7 +49,7 @@ WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&     
     if (Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
         DEV_CHECK_ERR(Desc.ArraySize % 6 == 0, "Cube texture arrays are expected to have a number of array slices that is a multiple of 6");
 
-    const auto& FmtInfo = pRenderDevice->GetTextureFormatInfoExt(SRGBFormatToUnorm(Desc.Format));
+    const TextureFormatInfoExt& FmtInfo = pRenderDevice->GetTextureFormatInfoExt(SRGBFormatToUnorm(Desc.Format));
 
     if (Desc.IsArray())
         wgpuTextureDesc.size.depthOrArrayLayers = Desc.ArraySize;
@@ -86,16 +87,53 @@ WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&     
             LOG_ERROR_AND_THROW("Automatic mipmap generation isn't supported for ", GetTextureFormatAttribs(Desc.Format).Name, " as the format doesn't support linear filtering");
     }
 
-    if (IsSRGBFormat(Desc.Format) && wgpuTextureDesc.usage & WGPUTextureUsage_StorageBinding)
-        wgpuTextureDesc.format = TextureFormatToWGPUFormat(SRGBFormatToUnorm(Desc.Format));
-    else
-        wgpuTextureDesc.format = TextureFormatToWGPUFormat(Desc.Format);
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
 
-    wgpuTextureDesc.mipLevelCount = Desc.MipLevels;
-    wgpuTextureDesc.sampleCount   = Desc.SampleCount;
-    wgpuTextureDesc.size.width    = Desc.GetWidth();
-    wgpuTextureDesc.size.height   = Desc.GetHeight();
-    wgpuTextureDesc.label         = Desc.Name;
+    std::unordered_set<TEXTURE_FORMAT> ViewFormatSet;
+    if (FmtAttribs.IsTypeless)
+    {
+        auto InsertViewFormat = [&](TEXTURE_VIEW_TYPE ViewType) {
+            TEXTURE_FORMAT Format = GetDefaultTextureViewFormat(Desc, ViewType);
+            ViewFormatSet.insert(Format);
+            if (ViewType == TEXTURE_VIEW_RENDER_TARGET || ViewType == TEXTURE_VIEW_SHADER_RESOURCE)
+                ViewFormatSet.insert(UnormFormatToSRGB(Format));
+        };
+
+        if (Desc.BindFlags & BIND_DEPTH_STENCIL)
+            LOG_ERROR_AND_THROW("Depth-stencil textures must have a specific format and cannot be typeless in WebGPU");
+        if (Desc.BindFlags & BIND_UNORDERED_ACCESS)
+            InsertViewFormat(TEXTURE_VIEW_UNORDERED_ACCESS);
+        if (Desc.BindFlags & BIND_RENDER_TARGET)
+            InsertViewFormat(TEXTURE_VIEW_RENDER_TARGET);
+        if (Desc.BindFlags & BIND_SHADER_RESOURCE)
+            InsertViewFormat(TEXTURE_VIEW_SHADER_RESOURCE);
+    }
+
+    const bool IsSRGBWithMipsAndStorageBinding =
+        IsSRGBFormat(Desc.Format) &&
+        (Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) &&
+        (wgpuTextureDesc.usage & WGPUTextureUsage_StorageBinding);
+
+    wgpuTextureDesc.format = IsSRGBWithMipsAndStorageBinding ?
+        TextureFormatToWGPUFormat(SRGBFormatToUnorm(Desc.Format)) :
+        TextureFormatToWGPUFormat(Desc.Format);
+
+    if (IsSRGBWithMipsAndStorageBinding)
+    {
+        ViewFormatSet.insert(Desc.Format);
+        ViewFormatSet.insert(SRGBFormatToUnorm(Desc.Format));
+    }
+
+    for (const auto& TextureViewFmt : ViewFormatSet)
+        TextureViewFormats.push_back(TextureFormatToWGPUFormat(TextureViewFmt));
+
+    wgpuTextureDesc.viewFormats     = TextureViewFormats.data();
+    wgpuTextureDesc.viewFormatCount = TextureViewFormats.size();
+    wgpuTextureDesc.mipLevelCount   = Desc.MipLevels;
+    wgpuTextureDesc.sampleCount     = Desc.SampleCount;
+    wgpuTextureDesc.size.width      = Desc.GetWidth();
+    wgpuTextureDesc.size.height     = Desc.GetHeight();
+    wgpuTextureDesc.label           = Desc.Name;
 
     return wgpuTextureDesc;
 }
@@ -120,6 +158,8 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
     wgpuTextureViewDesc.dimension     = ResourceDimensionToWGPUTextureViewDimension(ViewDesc.TextureDim);
     wgpuTextureViewDesc.baseMipLevel  = ViewDesc.MostDetailedMip;
     wgpuTextureViewDesc.mipLevelCount = ViewDesc.NumMipLevels;
+    if (!(TexDesc.BindFlags & BIND_DEPTH_STENCIL))
+        wgpuTextureViewDesc.format = TextureFormatToWGPUFormat(ViewDesc.Format);
 
     if (IsTextureArray(ViewDesc))
     {
@@ -133,7 +173,6 @@ WGPUTextureViewDescriptor TextureViewDescToWGPUTextureViewDescriptor(const Textu
     }
 
     const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(ViewDesc.Format);
-
     if (ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL || ViewDesc.ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL)
     {
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
@@ -263,7 +302,8 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
-        WGPUTextureDescriptor wgpuTextureDesc = TextureDescToWGPUTextureDescriptor(m_Desc, pDevice);
+        std::vector<WGPUTextureFormat> TextureViewFormats;
+        WGPUTextureDescriptor          wgpuTextureDesc = TextureDescToWGPUTextureDescriptor(m_Desc, pDevice, TextureViewFormats);
         m_wgpuTexture.Reset(wgpuDeviceCreateTexture(pDevice->GetWebGPUDevice(), &wgpuTextureDesc));
         if (!m_wgpuTexture)
             LOG_ERROR_AND_THROW("Failed to create WebGPU texture ", " '", m_Desc.Name ? m_Desc.Name : "", '\'');

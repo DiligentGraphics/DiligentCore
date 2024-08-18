@@ -711,7 +711,7 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUCommandEncoder wgpuCmdEncoder, D
     VERIFY_EXPR(m_DeviceWebGPU.GetNumImmediateContexts() == 1);
 
     InitializeSampler();
-    pDeviceContext->EndCommandEncoders(DeviceContextWebGPUImpl::COMMAND_ENCODER_FLAG_ALL & ~DeviceContextWebGPUImpl::COMMAND_ENCODER_FLAG_RENDER);
+    pDeviceContext->EndCommandEncoders(DeviceContextWebGPUImpl::COMMAND_ENCODER_FLAG_ALL);
 
     const auto& ViewDesc = pTexView->GetDesc();
 

@@ -36,6 +36,7 @@ set(INCLUDE
     include/WebGPUObjectWrappers.hpp
     include/WebGPUTypeConversions.hpp
     include/WebGPUResourceBase.hpp
+    include/WebGPUStubs.hpp
 )
 
 set(INTERFACE 
