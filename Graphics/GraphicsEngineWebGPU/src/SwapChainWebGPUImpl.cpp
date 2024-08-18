@@ -26,19 +26,10 @@
 
 #include "pch.h"
 
-#include "EngineWebGPUImplTraits.hpp"
 #include "SwapChainWebGPUImpl.hpp"
 #include "RenderDeviceWebGPUImpl.hpp"
 #include "DeviceContextWebGPUImpl.hpp"
-#include "RenderPassWebGPUImpl.hpp"
-#include "FramebufferWebGPUImpl.hpp"
-#include "TextureViewWebGPUImpl.hpp"
-#include "PipelineStateWebGPUImpl.hpp"
-#include "PipelineResourceAttribsWebGPU.hpp"
-#include "ShaderResourceCacheWebGPU.hpp"
-#include "BufferWebGPUImpl.hpp"
-#include "BufferViewWebGPUImpl.hpp"
-#include "SamplerWebGPUImpl.hpp"
+#include "TextureViewWebGPU.h"
 #include "WebGPUTypeConversions.hpp"
 
 #ifdef PLATFORM_WIN32
@@ -54,11 +45,11 @@ namespace Diligent
 
 namespace
 {
+
 constexpr char VSSource[] = R"(
 struct VertexOutput 
 {
     @builtin(position) Position: vec4f,
-    @location(0)       Texcoord: vec2f,
 }
 
 @vertex
@@ -66,35 +57,31 @@ fn VSMain(@builtin(vertex_index) VertexId: u32) -> VertexOutput
 {
     let Texcoord: vec2f = vec2f(f32((VertexId << 1u) & 2u), f32(VertexId & 2u));
     let Position: vec4f = vec4f(Texcoord * vec2f(2.0f, -2.0f) + vec2f(-1.0f, 1.0f), 1.0f, 1.0f);
-    return VertexOutput(Position, Texcoord);
+    return VertexOutput(Position);
 }
 )";
 
-constexpr char PSSourceNoneTransform[] = R"(
+constexpr char PSSource[] = R"(
 @group(0) @binding(0) var TextureSrc: texture_2d<f32>;
-@group(0) @binding(1) var SamplerPoint: sampler;
 
 struct VertexOutput 
 {
     @builtin(position) Position: vec4f,
-    @location(0)       Texcoord: vec2f,
 }
 
 @fragment
 fn PSMain(Input: VertexOutput) -> @location(0) vec4f 
 {
-    return textureSample(TextureSrc, SamplerPoint, Input.Texcoord);
+    return textureLoad(TextureSrc, vec2i(Input.Position.xy), 0);
 }
 )";
 
-constexpr char PSSourceTransform[] = R"(
+constexpr char PSSourceGamma[] = R"(
 @group(0) @binding(0) var TextureSrc: texture_2d<f32>;
-@group(0) @binding(1) var SamplerPoint: sampler;
 
 struct VertexOutput 
 {
     @builtin(position) Position: vec4f,
-    @location(0)       Texcoord: vec2f,
 }
 
 fn LinearToSRGB(RGB: vec3<f32>) -> vec3<f32> {
@@ -108,12 +95,13 @@ fn LinearToSRGB(RGB: vec3<f32>) -> vec3<f32> {
 @fragment
 fn PSMain(Input: VertexOutput) -> @location(0) vec4f 
 {
-    var Color: vec4f = textureSample(TextureSrc, SamplerPoint, Input.Texcoord);
+    var Color: vec4f = textureLoad(TextureSrc, vec2i(Input.Position.xy), 0);
     return vec4f(LinearToSRGB(Color.rgb), Color.a);
 }
 )";
 
-auto WGPUConvertUnormToSRGB = [](WGPUTextureFormat Format) {
+WGPUTextureFormat WGPUConvertUnormToSRGB(WGPUTextureFormat Format)
+{
     switch (Format)
     {
         case WGPUTextureFormat_RGBA8Unorm:
@@ -124,7 +112,7 @@ auto WGPUConvertUnormToSRGB = [](WGPUTextureFormat Format) {
             UNEXPECTED("Unexpected texture format");
             return Format;
     }
-};
+}
 
 } // namespace
 
@@ -136,10 +124,12 @@ public:
     {
     }
 
-    void InitializePipelineState(WGPUTextureFormat wgpuFormat, bool Transform)
+    bool InitializePipelineState(WGPUTextureFormat wgpuFormat, bool ConvertToGamma)
     {
-        if (m_IsInitializedResources)
-            return;
+        if (m_wgpuRenderPipeline)
+            return true;
+
+        WGPUDevice wgpuDevice = m_pRenderDevice->GetWebGPUDevice();
 
         WebGPUShaderModuleWrapper wgpuVSShaderModule{};
         {
@@ -149,47 +139,55 @@ public:
 
             WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
             wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-            wgpuVSShaderModule.Reset(wgpuDeviceCreateShaderModule(m_pRenderDevice->GetWebGPUDevice(), &wgpuShaderModuleDesc));
+            wgpuVSShaderModule.Reset(wgpuDeviceCreateShaderModule(wgpuDevice, &wgpuShaderModuleDesc));
             if (!wgpuVSShaderModule)
-                LOG_ERROR_AND_THROW("Failed to create shader module");
+            {
+                LOG_ERROR_MESSAGE("Failed to create shader module for swap chain present command");
+                return false;
+            }
         }
 
         WebGPUShaderModuleWrapper wgpuPSShaderModule{};
         {
             WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
             wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-            wgpuShaderCodeDesc.code        = Transform ? PSSourceTransform : PSSourceNoneTransform;
+            wgpuShaderCodeDesc.code        = ConvertToGamma ? PSSourceGamma : PSSource;
 
             WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
             wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-            wgpuPSShaderModule.Reset(wgpuDeviceCreateShaderModule(m_pRenderDevice->GetWebGPUDevice(), &wgpuShaderModuleDesc));
+            wgpuPSShaderModule.Reset(wgpuDeviceCreateShaderModule(wgpuDevice, &wgpuShaderModuleDesc));
             if (!wgpuPSShaderModule)
-                LOG_ERROR_AND_THROW("Failed to create shader module");
+            {
+                LOG_ERROR_MESSAGE("Failed to create shader module for swap chain present command");
+                return false;
+            }
         }
 
-        WGPUBindGroupLayoutEntry wgpuBindGroupLayoutEntries[2]{};
+        WGPUBindGroupLayoutEntry wgpuBindGroupLayoutEntries[1]{};
         wgpuBindGroupLayoutEntries[0].binding               = 0;
         wgpuBindGroupLayoutEntries[0].visibility            = WGPUShaderStage_Fragment;
         wgpuBindGroupLayoutEntries[0].texture.sampleType    = WGPUTextureSampleType_Float;
         wgpuBindGroupLayoutEntries[0].texture.viewDimension = WGPUTextureViewDimension_2D;
 
-        wgpuBindGroupLayoutEntries[1].binding      = 1;
-        wgpuBindGroupLayoutEntries[1].visibility   = WGPUShaderStage_Fragment;
-        wgpuBindGroupLayoutEntries[1].sampler.type = WGPUSamplerBindingType_NonFiltering;
-
         WGPUBindGroupLayoutDescriptor wgpuBindGroupLayoutDesc{};
         wgpuBindGroupLayoutDesc.entryCount = _countof(wgpuBindGroupLayoutEntries);
         wgpuBindGroupLayoutDesc.entries    = wgpuBindGroupLayoutEntries;
-        m_wgpuBindGroupLayout.Reset(wgpuDeviceCreateBindGroupLayout(m_pRenderDevice->GetWebGPUDevice(), &wgpuBindGroupLayoutDesc));
+        m_wgpuBindGroupLayout.Reset(wgpuDeviceCreateBindGroupLayout(wgpuDevice, &wgpuBindGroupLayoutDesc));
         if (!m_wgpuBindGroupLayout)
-            LOG_ERROR_AND_THROW("Failed to create bind group layout");
+        {
+            LOG_ERROR_MESSAGE("Failed to create bind group layout for swap chain present command");
+            return false;
+        }
 
         WGPUPipelineLayoutDescriptor wgpuPipelineLayoutDesc{};
         wgpuPipelineLayoutDesc.bindGroupLayoutCount = 1;
         wgpuPipelineLayoutDesc.bindGroupLayouts     = &m_wgpuBindGroupLayout.Get();
-        m_wgpuPipelineLayout.Reset(wgpuDeviceCreatePipelineLayout(m_pRenderDevice->GetWebGPUDevice(), &wgpuPipelineLayoutDesc));
+        m_wgpuPipelineLayout.Reset(wgpuDeviceCreatePipelineLayout(wgpuDevice, &wgpuPipelineLayoutDesc));
         if (!m_wgpuPipelineLayout)
-            LOG_ERROR_AND_THROW("Failed to create pipeline layout");
+        {
+            LOG_ERROR_MESSAGE("Failed to create pipeline layout for swap chain present command");
+            return false;
+        }
 
         WGPUColorTargetState wgpuColorTargetState{};
         wgpuColorTargetState.format    = wgpuFormat;
@@ -197,33 +195,29 @@ public:
         wgpuColorTargetState.writeMask = WGPUColorWriteMask_All;
 
         WGPUFragmentState wgpuFragmentState{};
-        wgpuFragmentState.module      = wgpuPSShaderModule.Get();
+        wgpuFragmentState.module      = wgpuPSShaderModule;
         wgpuFragmentState.entryPoint  = "PSMain";
         wgpuFragmentState.targets     = &wgpuColorTargetState;
         wgpuFragmentState.targetCount = 1;
 
         WGPURenderPipelineDescriptor wgpuRenderPipelineDesc{};
         wgpuRenderPipelineDesc.label              = "SwapChainPresentPSO";
-        wgpuRenderPipelineDesc.layout             = m_wgpuPipelineLayout.Get();
+        wgpuRenderPipelineDesc.layout             = m_wgpuPipelineLayout;
         wgpuRenderPipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
         wgpuRenderPipelineDesc.primitive.cullMode = WGPUCullMode_None;
-        wgpuRenderPipelineDesc.vertex.module      = wgpuVSShaderModule.Get();
+        wgpuRenderPipelineDesc.vertex.module      = wgpuVSShaderModule;
         wgpuRenderPipelineDesc.vertex.entryPoint  = "VSMain";
         wgpuRenderPipelineDesc.fragment           = &wgpuFragmentState;
         wgpuRenderPipelineDesc.multisample.count  = 1;
         wgpuRenderPipelineDesc.multisample.mask   = 0xFFFFFFFF;
-        m_wgpuRenderPipeline.Reset(wgpuDeviceCreateRenderPipeline(m_pRenderDevice->GetWebGPUDevice(), &wgpuRenderPipelineDesc));
+        m_wgpuRenderPipeline.Reset(wgpuDeviceCreateRenderPipeline(wgpuDevice, &wgpuRenderPipelineDesc));
         if (!m_wgpuPipelineLayout)
-            LOG_ERROR_AND_THROW("Failed to create render pipeline");
+        {
+            LOG_ERROR_MESSAGE("Failed to create render pipeline for swap chain present command");
+            return false;
+        }
 
-        SamplerDesc Desc{};
-        Desc.Name      = "Sampler SwapChainPresent";
-        Desc.MinFilter = FILTER_TYPE_POINT;
-        Desc.MagFilter = FILTER_TYPE_POINT;
-        Desc.MipFilter = FILTER_TYPE_POINT;
-        m_pRenderDevice->CreateSampler(Desc, &m_pPointSampler);
-
-        m_IsInitializedResources = true;
+        return true;
     }
 
     void Execute(ITextureViewWebGPU* pTexture, ISwapChainWebGPU* pSwapChain, IDeviceContextWebGPU* pDeviceContext)
@@ -249,16 +243,18 @@ public:
                 break;
         }
 
-        auto ViewFormat = wgpuTextureGetFormat(wgpuSurfaceTexture.texture);
+        WGPUTextureFormat ViewFormat = wgpuTextureGetFormat(wgpuSurfaceTexture.texture);
 
         // Simplify this code once the bug for sRGB texture view is fixed in Dawn
+        bool ConvertToGamma = false;
 #if !PLATFORM_EMSCRIPTEN
         if (IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat))
             ViewFormat = WGPUConvertUnormToSRGB(ViewFormat);
-        InitializePipelineState(ViewFormat, false);
 #else
-        InitializePipelineState(ViewFormat, IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat));
+        ConvertToGamma = IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat);
 #endif
+        if (!InitializePipelineState(ViewFormat, ConvertToGamma))
+            return;
 
         WGPUTextureViewDescriptor wgpuTextureViewDesc;
         wgpuTextureViewDesc.nextInChain     = nullptr;
@@ -275,17 +271,14 @@ public:
         if (!wgpuTextureView)
             LOG_ERROR_MESSAGE("Failed to acquire next frame");
 
-        WGPUBindGroupEntry wgpuBindGroupEntries[2]{};
+        WGPUBindGroupEntry wgpuBindGroupEntries[1]{};
         wgpuBindGroupEntries[0].binding     = 0;
         wgpuBindGroupEntries[0].textureView = pTexture->GetWebGPUTextureView();
-
-        wgpuBindGroupEntries[1].binding = 1;
-        wgpuBindGroupEntries[1].sampler = m_pPointSampler.RawPtr<SamplerWebGPUImpl>()->GetWebGPUSampler();
 
         WGPUBindGroupDescriptor wgpuBindGroupDesc{};
         wgpuBindGroupDesc.entries    = wgpuBindGroupEntries;
         wgpuBindGroupDesc.entryCount = _countof(wgpuBindGroupEntries);
-        wgpuBindGroupDesc.layout     = m_wgpuBindGroupLayout.Get();
+        wgpuBindGroupDesc.layout     = m_wgpuBindGroupLayout;
 
         WebGPUBindGroupWrapper wgpuBindGroup{wgpuDeviceCreateBindGroup(m_pRenderDevice->GetWebGPUDevice(), &wgpuBindGroupDesc)};
 
@@ -305,7 +298,7 @@ public:
 
         WebGPURenderPassEncoderWrapper wgpuRenderPassEncoder{wgpuCommandEncoderBeginRenderPass(wgpuCmdEncoder, &wgpuRenderPassDesc)};
         wgpuRenderPassEncoderSetPipeline(wgpuRenderPassEncoder, m_wgpuRenderPipeline);
-        wgpuRenderPassEncoderSetBindGroup(wgpuRenderPassEncoder, 0, wgpuBindGroup.Get(), 0, nullptr);
+        wgpuRenderPassEncoderSetBindGroup(wgpuRenderPassEncoder, 0, wgpuBindGroup, 0, nullptr);
         wgpuRenderPassEncoderDraw(wgpuRenderPassEncoder, 3, 1, 0, 0);
         wgpuRenderPassEncoderEnd(wgpuRenderPassEncoder);
 
@@ -324,11 +317,9 @@ public:
 
 private:
     RefCntAutoPtr<IRenderDeviceWebGPU> m_pRenderDevice;
-    RefCntAutoPtr<ISampler>            m_pPointSampler;
     WebGPUBindGroupLayoutWrapper       m_wgpuBindGroupLayout;
     WebGPUPipelineLayoutWrapper        m_wgpuPipelineLayout;
     WebGPURenderPipelineWrapper        m_wgpuRenderPipeline;
-    bool                               m_IsInitializedResources = false;
 };
 
 SwapChainWebGPUImpl::SwapChainWebGPUImpl(IReferenceCounters*      pRefCounters,
@@ -369,15 +360,15 @@ void SwapChainWebGPUImpl::Present(Uint32 SyncInterval)
     if (SyncInterval != 0 && SyncInterval != 1)
         LOG_WARNING_MESSAGE_ONCE("WebGPU only supports 0 and 1 present intervals");
 
-    auto  pDeviceContext = m_wpDeviceContext.Lock();
-    auto* pRenderDevice  = m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>();
+    RefCntAutoPtr<IDeviceContext> pDeviceContext = m_wpDeviceContext.Lock();
+    RenderDeviceWebGPUImpl*       pRenderDevice  = m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>();
     if (!pDeviceContext)
     {
         LOG_ERROR_MESSAGE("Immediate context has been released");
         return;
     }
 
-    auto* pImmediateCtxWebGPU = pDeviceContext.RawPtr<DeviceContextWebGPUImpl>();
+    DeviceContextWebGPUImpl* pImmediateCtxWebGPU = pDeviceContext.RawPtr<DeviceContextWebGPUImpl>();
 
     pImmediateCtxWebGPU->Flush();
     m_pCmdPresent->Execute(m_pBackBufferSRV, this, pImmediateCtxWebGPU);
@@ -416,7 +407,7 @@ void SwapChainWebGPUImpl::SetWindowedMode()
 
 void SwapChainWebGPUImpl::CreateSurface()
 {
-    const auto* pRenderDeviceWebGPU = m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>();
+    const RenderDeviceWebGPUImpl* pRenderDeviceWebGPU = m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>();
 
 #if PLATFORM_WIN32
     WGPUSurfaceDescriptorFromWindowsHWND wgpuSurfaceNativeDesc{};
@@ -443,12 +434,14 @@ void SwapChainWebGPUImpl::CreateSurface()
 
     m_wgpuSurface.Reset(wgpuInstanceCreateSurface(pRenderDeviceWebGPU->GetWebGPUInstance(), &wgpuSurfaceDesc));
     if (!m_wgpuSurface)
-        LOG_ERROR_AND_THROW("Failed to create OS-specific surface");
+    {
+        LOG_ERROR_MESSAGE("Failed to create OS-specific surface");
+    }
 }
 
 void SwapChainWebGPUImpl::ConfigureSurface()
 {
-    const auto* pRenderDeviceWebGPU = m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>();
+    const RenderDeviceWebGPUImpl* pRenderDeviceWebGPU = m_pRenderDevice.RawPtr<RenderDeviceWebGPUImpl>();
 
     WGPUSurfaceCapabilities wgpuSurfaceCapabilities{};
     wgpuSurfaceGetCapabilities(m_wgpuSurface.Get(), pRenderDeviceWebGPU->GetWebGPUAdapter(), &wgpuSurfaceCapabilities);
@@ -468,10 +461,10 @@ void SwapChainWebGPUImpl::ConfigureSurface()
             PreferredPresentModes.push_back(WGPUPresentMode_Fifo);
         }
 
-        auto FindBegin = wgpuSurfaceCapabilities.presentModes;
-        auto FindEnd   = wgpuSurfaceCapabilities.presentModes + wgpuSurfaceCapabilities.presentModeCount;
+        const WGPUPresentMode* FindBegin = wgpuSurfaceCapabilities.presentModes;
+        const WGPUPresentMode* FindEnd   = wgpuSurfaceCapabilities.presentModes + wgpuSurfaceCapabilities.presentModeCount;
 
-        for (auto PreferredMode : PreferredPresentModes)
+        for (WGPUPresentMode PreferredMode : PreferredPresentModes)
         {
             if (std::find(FindBegin, FindEnd, PreferredMode) != FindEnd)
             {
@@ -515,9 +508,12 @@ void SwapChainWebGPUImpl::ConfigureSurface()
         m_SwapChainDesc.Width = static_cast<Uint32>(CanvasWidth);
         m_SwapChainDesc.Height = static_cast<Uint32>(CanvasHeight);
 #endif
+
+        m_SwapChainDesc.Width  = (std::max)(m_SwapChainDesc.Width, 1u);
+        m_SwapChainDesc.Height = (std::max)(m_SwapChainDesc.Height, 1u);
     }
 
-    const WGPUTextureFormat wgpuPreferredFormat = wgpuSurfaceGetPreferredFormat(m_wgpuSurface.Get(), pRenderDeviceWebGPU->GetWebGPUAdapter());
+    const WGPUTextureFormat wgpuPreferredFormat = wgpuSurfaceGetPreferredFormat(m_wgpuSurface, pRenderDeviceWebGPU->GetWebGPUAdapter());
 
     WGPUTextureFormat wgpuRTVFormats[] = {
         wgpuPreferredFormat,
@@ -530,7 +526,7 @@ void SwapChainWebGPUImpl::ConfigureSurface()
     wgpuSurfaceConfig.usage       = SelectUsage(m_SwapChainDesc.Usage);
     wgpuSurfaceConfig.width       = m_SwapChainDesc.Width;
     wgpuSurfaceConfig.height      = m_SwapChainDesc.Height;
-    wgpuSurfaceConfig.format      = wgpuSurfaceGetPreferredFormat(m_wgpuSurface.Get(), pRenderDeviceWebGPU->GetWebGPUAdapter());
+    wgpuSurfaceConfig.format      = wgpuSurfaceGetPreferredFormat(m_wgpuSurface, pRenderDeviceWebGPU->GetWebGPUAdapter());
     wgpuSurfaceConfig.presentMode = SelectPresentMode(m_VSyncEnabled);
     wgpuSurfaceConfig.alphaMode   = WGPUCompositeAlphaMode_Auto;
 
@@ -542,7 +538,7 @@ void SwapChainWebGPUImpl::ConfigureSurface()
     (void)wgpuRTVFormats;
 #endif
 
-    wgpuSurfaceConfigure(m_wgpuSurface.Get(), &wgpuSurfaceConfig);
+    wgpuSurfaceConfigure(m_wgpuSurface, &wgpuSurfaceConfig);
     wgpuSurfaceCapabilitiesFreeMembers(wgpuSurfaceCapabilities);
 }
 
@@ -560,15 +556,15 @@ void SwapChainWebGPUImpl::CreateBuffersAndViews()
 
     RefCntAutoPtr<ITexture> pBackBufferTex;
     m_pRenderDevice->CreateTexture(BackBufferDesc, nullptr, &pBackBufferTex);
-    m_pBackBufferRTV = RefCntAutoPtr<ITextureViewWebGPU>(pBackBufferTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), IID_TextureViewWebGPU);
-    m_pBackBufferSRV = RefCntAutoPtr<ITextureViewWebGPU>(pBackBufferTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), IID_TextureViewWebGPU);
+    m_pBackBufferRTV = RefCntAutoPtr<ITextureViewWebGPU>{pBackBufferTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), IID_TextureViewWebGPU};
+    m_pBackBufferSRV = RefCntAutoPtr<ITextureViewWebGPU>{pBackBufferTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), IID_TextureViewWebGPU};
 
     if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
     {
         TextureDesc DepthBufferDesc{};
         DepthBufferDesc.Type        = RESOURCE_DIM_TEX_2D;
-        DepthBufferDesc.Width       = m_SwapChainDesc.Width;
-        DepthBufferDesc.Height      = m_SwapChainDesc.Height;
+        DepthBufferDesc.Width       = BackBufferDesc.Width;
+        DepthBufferDesc.Height      = BackBufferDesc.Height;
         DepthBufferDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
         DepthBufferDesc.SampleCount = 1;
         DepthBufferDesc.Usage       = USAGE_DEFAULT;
@@ -580,7 +576,7 @@ void SwapChainWebGPUImpl::CreateBuffersAndViews()
         DepthBufferDesc.Name                            = "Main depth buffer";
         RefCntAutoPtr<ITexture> pDepthBufferTex;
         m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, &pDepthBufferTex);
-        m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewWebGPU>(pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL), IID_TextureViewWebGPU);
+        m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewWebGPU>{pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL), IID_TextureViewWebGPU};
     }
 }
 
