@@ -79,36 +79,37 @@ void WindowsDebug::AssertionFailed(const Char* Message, const char* Function, co
     else
     {
         OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
-        if (GetBreakOnError())
+    }
+
+    if (GetBreakOnError())
+    {
+        int nCode = MessageBoxA(NULL,
+                                AssertionFailedMessage.c_str(),
+                                "Runtime assertion failed",
+                                MB_TASKMODAL | MB_ICONHAND | MB_ABORTRETRYIGNORE | MB_SETFOREGROUND);
+
+        // Abort: abort the program
+        if (nCode == IDABORT)
         {
-            int nCode = MessageBoxA(NULL,
-                                    AssertionFailedMessage.c_str(),
-                                    "Runtime assertion failed",
-                                    MB_TASKMODAL | MB_ICONHAND | MB_ABORTRETRYIGNORE | MB_SETFOREGROUND);
+            // raise abort signal
+            raise(SIGABRT);
 
-            // Abort: abort the program
-            if (nCode == IDABORT)
-            {
-                // raise abort signal
-                raise(SIGABRT);
-
-                // We usually won't get here, but it's possible that
-                //  SIGABRT was ignored.  So exit the program anyway.
-                exit(3);
-            }
-
-            // Retry: call the debugger
-            if (nCode == IDRETRY)
-            {
-                DebugBreak();
-                // return to user code
-                return;
-            }
-
-            // Ignore: continue execution
-            if (nCode == IDIGNORE)
-                return;
+            // We usually won't get here, but it's possible that
+            //  SIGABRT was ignored.  So exit the program anyway.
+            exit(3);
         }
+
+        // Retry: call the debugger
+        if (nCode == IDRETRY)
+        {
+            DebugBreak();
+            // return to user code
+            return;
+        }
+
+        // Ignore: continue execution
+        if (nCode == IDIGNORE)
+            return;
     }
 }
 

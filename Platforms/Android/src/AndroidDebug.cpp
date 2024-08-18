@@ -44,10 +44,11 @@ void AndroidDebug::AssertionFailed(const Char* Message, const char* Function, co
     else
     {
         OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
-        if (GetBreakOnError())
-        {
-            raise(SIGTRAP);
-        }
+    }
+
+    if (GetBreakOnError())
+    {
+        raise(SIGTRAP);
     }
 }
 

@@ -32,6 +32,7 @@
 #include "ArchiverImpl.hpp"
 #include "SerializationDeviceImpl.hpp"
 #include "EngineMemory.h"
+#include "PlatformDebug.hpp"
 
 namespace Diligent
 {
@@ -139,6 +140,8 @@ public:
     virtual Bool DILIGENT_CALL_TYPE PrintArchiveContent(const IDataBlob* pArchive) const override final;
 
     virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final;
+
+    virtual void DILIGENT_CALL_TYPE SetBreakOnError(bool BreakOnError) const override final;
 
 private:
     DummyReferenceCounters<ArchiverFactoryImpl> m_RefCounters;
@@ -339,6 +342,11 @@ Bool ArchiverFactoryImpl::PrintArchiveContent(const IDataBlob* pArchive) const
 void ArchiverFactoryImpl::SetMessageCallback(DebugMessageCallbackType MessageCallback) const
 {
     SetDebugMessageCallback(MessageCallback);
+}
+
+void ArchiverFactoryImpl::SetBreakOnError(bool BreakOnError) const
+{
+    PlatformDebug::SetBreakOnError(BreakOnError);
 }
 
 } // namespace

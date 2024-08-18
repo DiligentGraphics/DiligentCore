@@ -240,6 +240,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 
             auto* pFactoryD3D11 = GetEngineFactoryD3D11();
             pFactoryD3D11->SetMessageCallback(EnvCI.MessageCallback);
+            pFactoryD3D11->SetBreakOnError(false);
 
             EngineD3D11CreateInfo EngineCI;
             EngineCI.GraphicsAPIVersion = Version{11, 0};
@@ -282,6 +283,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #    endif
             auto* pFactoryD3D12 = GetEngineFactoryD3D12();
             pFactoryD3D12->SetMessageCallback(EnvCI.MessageCallback);
+            pFactoryD3D12->SetBreakOnError(false);
 
             if (!pFactoryD3D12->LoadD3D12())
             {
@@ -347,6 +349,8 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #    endif
             auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
             pFactoryOpenGL->SetMessageCallback(EnvCI.MessageCallback);
+            pFactoryOpenGL->SetBreakOnError(false);
+
             EnumerateAdapters(pFactoryOpenGL, Version{},
                               [](const GraphicsAdapterInfo& AdapterInfo, Uint32 AdapterId) {
                                   return std::vector<DisplayModeAttribs>{};
@@ -383,6 +387,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 
             auto* pFactoryVk = GetEngineFactoryVk();
             pFactoryVk->SetMessageCallback(EnvCI.MessageCallback);
+            pFactoryVk->SetBreakOnError(false);
 
             if (EnvCI.EnableDeviceSimulation)
                 pFactoryVk->EnableDeviceSimulation();
@@ -433,6 +438,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
         {
             auto* pFactoryMtl = GetEngineFactoryMtl();
             pFactoryMtl->SetMessageCallback(EnvCI.MessageCallback);
+            pFactoryMtl->SetBreakOnError(false);
 
             EnumerateAdapters(pFactoryMtl, Version{},
                               [](const GraphicsAdapterInfo& AdapterInfo, Uint32 AdapterId) {
@@ -472,6 +478,8 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #    endif
             auto* pFactoryWGPU = GetEngineFactoryWebGPU();
             pFactoryWGPU->SetMessageCallback(MessageCallback);
+            pFactoryWGPU->SetBreakOnError(false);
+
             EngineWebGPUCreateInfo EngineCI{};
             EngineCI.Features = EnvCI.Features;
             ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
@@ -594,6 +602,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
         m_ArchiverFactory = Diligent::GetArchiverFactory();
 #    endif
         m_ArchiverFactory->SetMessageCallback(EnvCI.MessageCallback);
+        m_ArchiverFactory->SetBreakOnError(false);
     }
 #endif
 }

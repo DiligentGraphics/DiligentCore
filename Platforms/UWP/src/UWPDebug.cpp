@@ -46,37 +46,38 @@ void WindowsStoreDebug::AssertionFailed(const Char* Message, const char* Functio
     else
     {
         OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
-        if (GetBreakOnError())
-        {
-            __debugbreak();
-            //int nCode = MessageBoxA(NULL,
-            //                        FullMsg.c_str(),
-            //                        "Runtime assertion failed",
-            //                        MB_TASKMODAL|MB_ICONHAND|MB_ABORTRETRYIGNORE|MB_SETFOREGROUND);
+    }
 
-            //// Abort: abort the program
-            //if (nCode == IDABORT)
-            //{
-            //    // raise abort signal
-            //    raise(SIGABRT);
+    if (GetBreakOnError())
+    {
+        __debugbreak();
+        //int nCode = MessageBoxA(NULL,
+        //                        FullMsg.c_str(),
+        //                        "Runtime assertion failed",
+        //                        MB_TASKMODAL|MB_ICONHAND|MB_ABORTRETRYIGNORE|MB_SETFOREGROUND);
 
-            //    // We usually won't get here, but it's possible that
-            //    //  SIGABRT was ignored.  So exit the program anyway.
-            //    exit(3);
-            //}
+        //// Abort: abort the program
+        //if (nCode == IDABORT)
+        //{
+        //    // raise abort signal
+        //    raise(SIGABRT);
 
-            //// Retry: call the debugger
-            //if (nCode == IDRETRY)
-            //{
-            //    DebugBreak();
-            //    /* return to user code */
-            //    return;
-            //}
+        //    // We usually won't get here, but it's possible that
+        //    //  SIGABRT was ignored.  So exit the program anyway.
+        //    exit(3);
+        //}
 
-            //// Ignore: continue execution
-            //if (nCode == IDIGNORE)
-            //    return;
-        }
+        //// Retry: call the debugger
+        //if (nCode == IDRETRY)
+        //{
+        //    DebugBreak();
+        //    /* return to user code */
+        //    return;
+        //}
+
+        //// Ignore: continue execution
+        //if (nCode == IDIGNORE)
+        //    return;
     }
 }
 

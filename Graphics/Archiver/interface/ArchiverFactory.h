@@ -331,6 +331,12 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// \param [in]     MessageCallback - Debug message callback function to use instead of the default one.
     VIRTUAL void METHOD(SetMessageCallback)(THIS_
                                             DebugMessageCallbackType MessageCallback) CONST PURE;
+
+    /// Sets whether to break program execution on assertion failure.
+
+    /// \param [in]     BreakOnError - Whether to break on assertion failure.
+    VIRTUAL void METHOD(SetBreakOnError)(THIS_
+                                         bool BreakOnError) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -346,6 +352,7 @@ DILIGENT_END_INTERFACE
 #    define IArchiverFactory_MergeArchives(This, ...)                           CALL_IFACE_METHOD(ArchiverFactory, MergeArchives,                          This, __VA_ARGS__)
 #    define IArchiverFactory_PrintArchiveContent(This, ...)                     CALL_IFACE_METHOD(ArchiverFactory, PrintArchiveContent,                    This, __VA_ARGS__)
 #    define IArchiverFactory_SetMessageCallback(This, ...)                      CALL_IFACE_METHOD(ArchiverFactory, SetMessageCallback,                     This, __VA_ARGS__)
+#    define IEngineFactory_SetBreakOnError(This, ...)                           CALL_IFACE_METHOD(EngineFactory,   SetBreakOnError,                        This, __VA_ARGS__)
 
 #endif
 

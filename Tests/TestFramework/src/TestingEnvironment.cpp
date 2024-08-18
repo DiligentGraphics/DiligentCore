@@ -49,6 +49,7 @@ TestingEnvironment::TestingEnvironment()
         GTEST_FLAG_SET(color, "no");
     }
     SetDebugMessageCallback(MessageCallback);
+    PlatformDebug::SetBreakOnError(false);
 }
 
 void TestingEnvironment::MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,

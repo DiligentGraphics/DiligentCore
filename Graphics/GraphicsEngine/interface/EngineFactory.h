@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -132,6 +132,12 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
     VIRTUAL void METHOD(SetMessageCallback)(THIS_
                                             DebugMessageCallbackType MessageCallback) CONST PURE;
 
+    /// Sets whether to break program execution on assertion failure.
+
+    /// \param [in]     BreakOnError - Whether to break on assertion failure.
+    VIRTUAL void METHOD(SetBreakOnError)(THIS_
+                                         bool BreakOnError) CONST PURE;
+
 #if PLATFORM_ANDROID
     /// On Android platform, it is necessary to initialize the file system before
     /// CreateDefaultShaderSourceStreamFactory() method can be called.
@@ -164,7 +170,7 @@ DILIGENT_END_INTERFACE
 #    define IEngineFactory_InitAndroidFileSystem(This, ...)                  CALL_IFACE_METHOD(EngineFactory, InitAndroidFileSystem,                  This, __VA_ARGS__)
 #    define IEngineFactory_CreateDearchiver(This, ...)                       CALL_IFACE_METHOD(EngineFactory, CreateDearchiver,                       This, __VA_ARGS__)
 #    define IEngineFactory_SetMessageCallback(This, ...)                     CALL_IFACE_METHOD(EngineFactory, SetMessageCallback,                     This, __VA_ARGS__)
-
+#    define IEngineFactory_SetBreakOnError(This, ...)                        CALL_IFACE_METHOD(EngineFactory, SetBreakOnError,                        This, __VA_ARGS__)
 // clang-format on
 
 #endif
