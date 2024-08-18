@@ -1369,12 +1369,12 @@ void TestPipelineReload(TEST_PIPELINE_RELOAD_FLAGS Flags)
                 pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static1")->Set(RefTextures.GetView(1));
                 pPSO->CreateShaderResourceBinding(&pSRB0, true);
 
-                IDeviceObject* ppTexSRVs[] = {RefTextures.GetView(1), RefTextures.GetView(2)};
+                IDeviceObject* ppTexSRVs[] = {RefTextures.GetView(2), RefTextures.GetView(2)};
                 pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->SetArray(ppTexSRVs, 0, 2);
                 pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
             }
 
-            IDeviceObject* ppTexSRVs[] = {RefTextures.GetView(1), RefTextures.GetView(2)};
+            IDeviceObject* ppTexSRVs[] = {RefTextures.GetView(2), RefTextures.GetView(2)};
             (UseSignatures ? pSRB1 : pSRB0)->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->SetArray(ppTexSRVs, 0, 2);
             pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
 

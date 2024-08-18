@@ -35,10 +35,10 @@ float4 main(in PSInput PSIn) : SV_Target
     Color *= CheckValue(g_Tex2D_Static0.Sample(g_Tex2D_Static0_sampler, UV.xy), g_Data.RefTexColors[0]);
     Color *= CheckValue(g_Tex2D_Static1.Sample(g_Tex2D_Static1_sampler, UV.xy), g_Data.RefTexColors[1]);
 #ifdef WEBGPU
-    Color *= CheckValue(g_Tex2D_Mut_0.Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[1]);
+    Color *= CheckValue(g_Tex2D_Mut_0.Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[2]);
     Color *= CheckValue(g_Tex2D_Mut_1.Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[2]);
 #else
-    Color *= CheckValue(g_Tex2D_Mut[0].Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[1]);
+    Color *= CheckValue(g_Tex2D_Mut[0].Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[2]);
     Color *= CheckValue(g_Tex2D_Mut[1].Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[2]);
 #endif
     Color *= CheckValue(g_Tex2D_Dyn.Sample(g_Tex2D_Dyn_sampler, UV.xy), g_Data.RefTexColors[3]);
