@@ -36,11 +36,20 @@ namespace Diligent
 
 void AppleDebug::AssertionFailed(const Char *Message, const char *Function, const char *File, int Line)
 {
-    auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
-
-    raise( SIGTRAP );
-};
+    String AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
+    if (DebugMessageCallback)
+    {
+        DebugMessageCallback(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
+    }
+    else
+    {
+        OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
+        if (GetBreakOnError())
+        {
+            raise(SIGTRAP);
+        }
+    }
+}
 
 bool AppleDebug::ColoredTextSupported()
 {
