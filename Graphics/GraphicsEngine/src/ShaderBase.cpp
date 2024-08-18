@@ -40,6 +40,8 @@ ShaderCreateInfoWrapper::ShaderCreateInfoWrapper(const ShaderCreateInfo& ShaderC
     Allocator.AddSpaceForString(ShaderCI.EntryPoint);
     Allocator.AddSpaceForString(ShaderCI.Desc.Name);
     Allocator.AddSpaceForString(ShaderCI.Desc.CombinedSamplerSuffix);
+    Allocator.AddSpaceForString(ShaderCI.GLSLExtensions);
+    Allocator.AddSpaceForString(ShaderCI.WebGPUEmulatedArrayIndexSuffix);
 
     if (ShaderCI.ByteCode && ShaderCI.ByteCodeSize > 0)
     {
@@ -73,9 +75,11 @@ ShaderCreateInfoWrapper::ShaderCreateInfoWrapper(const ShaderCreateInfo& ShaderC
 
     m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
 
-    m_CreateInfo.EntryPoint                 = Allocator.CopyString(ShaderCI.EntryPoint);
-    m_CreateInfo.Desc.Name                  = Allocator.CopyString(ShaderCI.Desc.Name);
-    m_CreateInfo.Desc.CombinedSamplerSuffix = Allocator.CopyString(ShaderCI.Desc.CombinedSamplerSuffix);
+    m_CreateInfo.EntryPoint                     = Allocator.CopyString(ShaderCI.EntryPoint);
+    m_CreateInfo.Desc.Name                      = Allocator.CopyString(ShaderCI.Desc.Name);
+    m_CreateInfo.Desc.CombinedSamplerSuffix     = Allocator.CopyString(ShaderCI.Desc.CombinedSamplerSuffix);
+    m_CreateInfo.GLSLExtensions                 = Allocator.CopyString(ShaderCI.GLSLExtensions);
+    m_CreateInfo.WebGPUEmulatedArrayIndexSuffix = Allocator.CopyString(ShaderCI.WebGPUEmulatedArrayIndexSuffix);
 
     if (m_CreateInfo.Desc.Name == nullptr)
         m_CreateInfo.Desc.Name = "";
