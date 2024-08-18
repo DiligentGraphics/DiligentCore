@@ -7,7 +7,12 @@ cbuffer Colors
 
 Texture2D g_Tex2D_Static0;
 Texture2D g_Tex2D_Static1;
-Texture2D g_Tex2D_Mut;
+#ifdef WEBGPU
+    Texture2D g_Tex2D_Mut_0;
+    Texture2D g_Tex2D_Mut_1;    
+#else
+    Texture2D g_Tex2D_Mut[2];
+#endif
 Texture2D g_Tex2D_Dyn;
 
 SamplerState g_Tex2D_Static0_sampler;
@@ -26,10 +31,17 @@ float4 CheckValue(float4 Val, float4 Expected)
 float4 main(in PSInput PSIn) : SV_Target
 {
     float2 UV = float2(0.5, 0.5);
-    return float4(PSIn.Color.rgb, 1.0) * 
-        CheckValue(g_Tex2D_Static0.Sample(g_Tex2D_Static0_sampler, UV.xy), g_Data.RefTexColors[0]) *
-        CheckValue(g_Tex2D_Static1.Sample(g_Tex2D_Static1_sampler, UV.xy), g_Data.RefTexColors[1]) *
-        CheckValue(g_Tex2D_Mut.Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[2]) *
-        CheckValue(g_Tex2D_Dyn.Sample(g_Tex2D_Dyn_sampler, UV.xy), g_Data.RefTexColors[3]);
+    float4 Color = float4(PSIn.Color.rgb, 1.0);
+    Color *= CheckValue(g_Tex2D_Static0.Sample(g_Tex2D_Static0_sampler, UV.xy), g_Data.RefTexColors[0]);
+    Color *= CheckValue(g_Tex2D_Static1.Sample(g_Tex2D_Static1_sampler, UV.xy), g_Data.RefTexColors[1]);
+#ifdef WEBGPU
+    Color *= CheckValue(g_Tex2D_Mut_0.Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[1]);
+    Color *= CheckValue(g_Tex2D_Mut_1.Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[2]);
+#else
+    Color *= CheckValue(g_Tex2D_Mut[0].Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[1]);
+    Color *= CheckValue(g_Tex2D_Mut[1].Sample(g_Tex2D_Mut_sampler, UV.xy), g_Data.RefTexColors[2]);
+#endif
+    Color *= CheckValue(g_Tex2D_Dyn.Sample(g_Tex2D_Dyn_sampler, UV.xy), g_Data.RefTexColors[3]);
+    return Color;
     // NB: no new line at the end of file!
 }

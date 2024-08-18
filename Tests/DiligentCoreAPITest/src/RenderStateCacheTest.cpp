@@ -119,7 +119,8 @@ void TestDraw(IShader*                pVS,
     {
         pPSO->CreateShaderResourceBinding(&_pSRB);
         VERIFY_EXPR(pTexSRV != nullptr);
-        _pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->Set(pTexSRV);
+        IDeviceObject* ppSRVs[] = {pTexSRV, pTexSRV};
+        _pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->SetArray(ppSRVs, 0, 2);
         pCtx->TransitionShaderResources(_pSRB);
         pSRB = _pSRB;
     }
@@ -300,10 +301,11 @@ void CreateShader(IRenderStateCache*               pCache,
     auto* const pEnv = GPUTestingEnvironment::GetInstance();
 
     ShaderCreateInfo ShaderCI;
-    ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-    ShaderCI.CompileFlags               = CompileFlags;
+    ShaderCI.pShaderSourceStreamFactory     = pShaderSourceFactory;
+    ShaderCI.SourceLanguage                 = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler                 = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+    ShaderCI.CompileFlags                   = CompileFlags;
+    ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
 
     constexpr ShaderMacro Macros[] = {{"EXTERNAL_MACROS", "2"}};
     ShaderCI.Macros                = {Macros, _countof(Macros)};
@@ -587,7 +589,8 @@ void TestGraphicsPSO(bool UseRenderPass, bool CompileAsync = false)
 
     RefCntAutoPtr<IShaderResourceBinding> pRefSRB;
     pRefPSO->CreateShaderResourceBinding(&pRefSRB);
-    pRefSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->Set(pTexSRV);
+    IDeviceObject* ppSRVs[] = {pTexSRV, pTexSRV};
+    pRefSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->SetArray(ppSRVs, 0, 2);
     pCtx->TransitionShaderResources(pRefSRB);
 
     for (Uint32 HotReload = 0; HotReload < 2; ++HotReload)
@@ -1286,7 +1289,7 @@ void TestPipelineReload(TEST_PIPELINE_RELOAD_FLAGS Flags)
                     PipelineResourceSignatureDescX Sign1Desc{
                         {
                             {SHADER_TYPE_PIXEL, "g_Tex2D_Static1", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
-                            {SHADER_TYPE_PIXEL, "g_Tex2D_Mut", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+                            {SHADER_TYPE_PIXEL, "g_Tex2D_Mut", 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
                             {SHADER_TYPE_PIXEL, "g_Tex2D_Mut_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
                             {SHADER_TYPE_PIXEL, "g_Tex2D_Static1_sampler", 1, SHADER_RESOURCE_TYPE_SAMPLER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
                         },
@@ -1366,11 +1369,13 @@ void TestPipelineReload(TEST_PIPELINE_RELOAD_FLAGS Flags)
                 pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Static1")->Set(RefTextures.GetView(1));
                 pPSO->CreateShaderResourceBinding(&pSRB0, true);
 
-                pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->Set(RefTextures.GetView(2));
+                IDeviceObject* ppTexSRVs[] = {RefTextures.GetView(1), RefTextures.GetView(2)};
+                pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->SetArray(ppTexSRVs, 0, 2);
                 pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
             }
 
-            (UseSignatures ? pSRB1 : pSRB0)->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->Set(RefTextures.GetView(2));
+            IDeviceObject* ppTexSRVs[] = {RefTextures.GetView(1), RefTextures.GetView(2)};
+            (UseSignatures ? pSRB1 : pSRB0)->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Mut")->SetArray(ppTexSRVs, 0, 2);
             pSRB0->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D_Dyn")->Set(RefTextures.GetView(3));
 
             pCtx->TransitionShaderResources(pSRB0);
@@ -1545,7 +1550,7 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
             }
             PipelineResourceSignatureDescX SignDesc{
                 {
-                    {SHADER_TYPE_PIXEL, "g_Tex2D", 1, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
+                    {SHADER_TYPE_PIXEL, "g_Tex2D", 2, SHADER_RESOURCE_TYPE_TEXTURE_SRV, VarType},
                     {SHADER_TYPE_VERTEX, "Colors", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, VarType},
                 },
                 {{SHADER_TYPE_PIXEL, "g_Tex2D", SamplerDesc{}}},
@@ -1586,7 +1591,8 @@ TEST(RenderStateCacheTest, Reload_Signatures2)
             {
                 RefCntAutoPtr<IShaderResourceBinding> pSRB;
                 pSign->CreateShaderResourceBinding(&pSRB, true);
-                pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+                IDeviceObject* ppTexSRVs[] = {pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE), pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE)};
+                pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Tex2D")->SetArray(ppTexSRVs, 0, 2);
                 pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Colors")->Set(pConstBuff);
 
                 EXPECT_EQ(pCache->Reload(), pass == 1 ? 2u : (use_different_signatures ? 1 : 0));

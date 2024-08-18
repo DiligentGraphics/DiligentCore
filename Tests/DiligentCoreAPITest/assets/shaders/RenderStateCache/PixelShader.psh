@@ -1,11 +1,24 @@
 #include "GraphicsCommon.h"
 
-Texture2D    g_Tex2D;
+#ifdef WEBGPU
+    Texture2D g_Tex2D_0;
+    Texture2D g_Tex2D_1;
+#else
+    Texture2D g_Tex2D[2];
+#endif
 SamplerState g_Tex2D_sampler;
 
 float4 main(in PSInput PSIn) : SV_Target
 {
     float2 UV = float2(0.5, 0.5);
-    return float4(PSIn.Color.rgb, 1.0) * g_Tex2D.Sample(g_Tex2D_sampler, UV.xy);
+    float4 Color = float4(PSIn.Color.rgb, 1.0);
+#ifdef WEBGPU
+    Color *= g_Tex2D_0.Sample(g_Tex2D_sampler, UV.xy);
+    Color *= g_Tex2D_1.Sample(g_Tex2D_sampler, UV.xy);
+#else
+    Color *= g_Tex2D[0].Sample(g_Tex2D_sampler, UV.xy);
+    Color *= g_Tex2D[1].Sample(g_Tex2D_sampler, UV.xy);
+#endif
+    return Color;
     // NB: no new line at the end of file!
 }

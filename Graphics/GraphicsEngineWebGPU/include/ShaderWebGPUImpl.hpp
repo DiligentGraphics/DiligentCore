@@ -75,8 +75,14 @@ public:
     /// Implementation of IShader::GetBytecode() in WebGPU backend.
     void DILIGENT_CALL_TYPE GetBytecode(const void** ppBytecode, Uint64& Size) const override final;
 
-    /// Implementation of IShaderWebGPU::GetWGSL() in WebGPU backend.
+    /// Implementation of IShaderWebGPU::GetWGSL().
     const std::string& DILIGENT_CALL_TYPE GetWGSL() const override final;
+
+    /// Implementation of IShaderWebGPU::GetEmulatedArrayIndexSuffix().
+    const char* DILIGENT_CALL_TYPE GetEmulatedArrayIndexSuffix() const override final
+    {
+        return m_pShaderResources->GetEmulatedArrayIndexSuffix();
+    }
 
     const char* GetEntryPoint() const;
 
@@ -84,11 +90,6 @@ public:
     {
         DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
         return m_pShaderResources;
-    }
-
-    const char* GetEmulatedArrayIndexSuffix() const
-    {
-        return m_pShaderResources->GetEmulatedArrayIndexSuffix();
     }
 
 private:

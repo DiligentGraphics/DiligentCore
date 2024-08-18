@@ -611,4 +611,9 @@ extern "C"
     {
         return Diligent::GetBufferDefaultUAV(pBuffer);
     }
+
+    const char* Diligent_GetWebGPUEmulatedArrayIndexSuffix(Diligent::IShader* pShader)
+    {
+        return Diligent::GetWebGPUEmulatedArrayIndexSuffix(pShader);
+    }
 }

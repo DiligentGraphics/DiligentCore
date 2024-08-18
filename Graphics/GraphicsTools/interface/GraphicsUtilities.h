@@ -206,6 +206,13 @@ IBufferView* DILIGENT_GLOBAL_FUNCTION(GetBufferDefaultSRV)(IObject* pBuffer);
 /// If the buffer is null, returns null.
 IBufferView* DILIGENT_GLOBAL_FUNCTION(GetBufferDefaultUAV)(IObject* pBuffer);
 
+
+/// For WebGPU shaders, returns the suffix to append to the name of emulated array variables to get
+/// the indexed array element name.
+/// For other shader types, returns null.
+const char* DILIGENT_GLOBAL_FUNCTION(GetWebGPUEmulatedArrayIndexSuffix)(IShader* pShader);
+
+
 #include "../../../Primitives/interface/UndefRefMacro.h"
 
 DILIGENT_END_NAMESPACE // namespace Diligent

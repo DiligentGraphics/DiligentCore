@@ -47,6 +47,7 @@
 #include "SerializedShader.h"
 #include "CallbackWrapper.hpp"
 #include "GraphicsAccessories.hpp"
+#include "GraphicsUtilities.h"
 #include "ShaderSourceFactoryUtils.hpp"
 
 namespace Diligent
@@ -560,9 +561,10 @@ protected:
             }
             else if (DeviceType == RENDER_DEVICE_TYPE_WEBGPU)
             {
-                ShaderCI.Source         = static_cast<const char*>(ShaderCI.ByteCode);
-                ShaderCI.ByteCode       = nullptr;
-                ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+                ShaderCI.Source                         = static_cast<const char*>(ShaderCI.ByteCode);
+                ShaderCI.ByteCode                       = nullptr;
+                ShaderCI.SourceLanguage                 = SHADER_SOURCE_LANGUAGE_WGSL;
+                ShaderCI.WebGPUEmulatedArrayIndexSuffix = GetWebGPUEmulatedArrayIndexSuffix(pShader);
             }
             ShaderArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = RenderDeviceTypeToArchiveDataFlag(DeviceType);

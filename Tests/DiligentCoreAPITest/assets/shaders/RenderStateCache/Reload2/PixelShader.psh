@@ -1,6 +1,11 @@
 #include "GraphicsCommon.h"
 
-Texture2D    g_Tex2D;
+#ifdef WEBGPU
+    Texture2D g_Tex2D_0;
+    Texture2D g_Tex2D_1;
+#else
+    Texture2D g_Tex2D[2];
+#endif
 SamplerState g_Tex2D_sampler;
 
 float4 CheckValue(float4 Val, float4 Expected)
@@ -14,5 +19,13 @@ float4 CheckValue(float4 Val, float4 Expected)
 float4 main(in PSInput PSIn) : SV_Target
 {
     float2 UV = float2(0.25, 0.25);
-    return float4(PSIn.Color.rgb, 1.0) * CheckValue(g_Tex2D.Sample(g_Tex2D_sampler, UV.xy), float4(0.0, 1.0, 0.0, 1.0));
+    float4 Color = float4(PSIn.Color.rgb, 1.0);
+#ifdef WEBGPU
+    Color *= CheckValue(g_Tex2D_0.Sample(g_Tex2D_sampler, UV.xy), float4(0.0, 1.0, 0.0, 1.0));
+    Color *= CheckValue(g_Tex2D_1.Sample(g_Tex2D_sampler, UV.xy), float4(0.0, 1.0, 0.0, 1.0));
+#else
+    Color *= CheckValue(g_Tex2D[0].Sample(g_Tex2D_sampler, UV.xy), float4(0.0, 1.0, 0.0, 1.0));
+    Color *= CheckValue(g_Tex2D[1].Sample(g_Tex2D_sampler, UV.xy), float4(0.0, 1.0, 0.0, 1.0));
+#endif
+    return Color;
 }
