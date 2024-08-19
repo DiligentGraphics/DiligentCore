@@ -34,7 +34,7 @@ namespace Diligent
 
 QueryManagerWebGPU::QueryManagerWebGPU(RenderDeviceWebGPUImpl* pRenderDeviceWebGPU, const Uint32 QueryHeapSizes[])
 {
-    const auto& DevInfo = pRenderDeviceWebGPU->GetDeviceInfo();
+    const RenderDeviceInfo& DevInfo = pRenderDeviceWebGPU->GetDeviceInfo();
 
     // clang-format off
     static_assert(QUERY_TYPE_OCCLUSION           == 1, "Unexpected value of QUERY_TYPE_OCCLUSION. EngineWebGPUCreateInfo::QueryPoolSizes must be updated");

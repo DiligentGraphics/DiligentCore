@@ -41,6 +41,13 @@ namespace Diligent
 namespace
 {
 
+struct ShaderConstants
+{
+    Uint32 NumMipLevels;
+    Uint32 FirstArraySlice;
+    float  TexelSize[2];
+};
+
 constexpr char ShaderSourceVS[] = R"(
 struct VertexOutput 
 {
@@ -357,7 +364,7 @@ void GenerateMipsHelperWebGPU::InitializeConstantBuffer()
         // Rework when push constants will be available https://github.com/gpuweb/gpuweb/pull/4612 in WebGPU
         BufferDesc CBDesc;
         CBDesc.Name           = "GenerateMipsHelperWebGPU::ConstantBuffer";
-        CBDesc.Size           = SizeofUniformBuffer;
+        CBDesc.Size           = sizeof(ShaderConstants);
         CBDesc.Usage          = USAGE_DYNAMIC;
         CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
         CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
@@ -413,66 +420,43 @@ void GenerateMipsHelperWebGPU::InitializePlaceholderTextures()
 
 WebGPUShaderModuleWrapper& GenerateMipsHelperWebGPU::GetShaderModule(const UAVFormats& Formats, SHADER_TYPE ShaderType)
 {
-    auto ReplaceTemplateFormatInsideWGSL = [](std::string& WGSL, const UAVFormats& TexFmts) {
-        for (Uint32 UAVIndex = 0; UAVIndex < TexFmts.size(); UAVIndex++)
-        {
-            WGPUTextureFormat wgpuTexFmt = TextureFormatToWGPUFormat(SRGBFormatToUnorm(TexFmts[UAVIndex]));
-            ReplaceTemplateInString(WGSL, "${UAV_FORMAT_" + std::to_string(UAVIndex) + "}", ConvertWebGPUFormatToString(wgpuTexFmt));
-        }
-    };
-
     auto Iter = m_ShaderModuleCache.find({Formats, ShaderType});
     if (Iter != m_ShaderModuleCache.end())
         return Iter->second;
 
-    WebGPUShaderModuleWrapper wgpuShaderModule{};
+    std::string                    WGSL;
+    WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
+    wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
 
-    if (ShaderType == SHADER_TYPE_COMPUTE)
+    switch (ShaderType)
     {
-        std::string WGSL{ShaderSourceCS};
-        ReplaceTemplateFormatInsideWGSL(WGSL, Formats);
+        case SHADER_TYPE_COMPUTE:
+            WGSL = ShaderSourceCS;
+            // Replace template formats
+            for (Uint32 UAVIndex = 0; UAVIndex < Formats.size(); UAVIndex++)
+            {
+                WGPUTextureFormat wgpuTexFmt = TextureFormatToWGPUFormat(SRGBFormatToUnorm(Formats[UAVIndex]));
+                ReplaceTemplateInString(WGSL, "${UAV_FORMAT_" + std::to_string(UAVIndex) + "}", ConvertWebGPUFormatToString(wgpuTexFmt));
+            }
+            wgpuShaderCodeDesc.code = WGSL.c_str();
+            break;
 
-        WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
-        wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-        wgpuShaderCodeDesc.code        = WGSL.c_str();
+        case SHADER_TYPE_VERTEX:
+            wgpuShaderCodeDesc.code = ShaderSourceVS;
+            break;
 
-        WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
-        wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
+        case SHADER_TYPE_PIXEL:
+            wgpuShaderCodeDesc.code = ShaderSourcePS;
+            break;
 
-        wgpuShaderModule.Reset(wgpuDeviceCreateShaderModule(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuShaderModuleDesc));
-        if (!wgpuShaderModule)
-            LOG_ERROR_AND_THROW("Failed to create mip generation shader module");
+        default:
+            UNEXPECTED("Unexpected shader type");
     }
-    else if (ShaderType == SHADER_TYPE_VERTEX)
-    {
-        WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
-        wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-        wgpuShaderCodeDesc.code        = ShaderSourceVS;
 
-        WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
-        wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-
-        wgpuShaderModule.Reset(wgpuDeviceCreateShaderModule(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuShaderModuleDesc));
-        if (!wgpuShaderModule)
-            LOG_ERROR_AND_THROW("Failed to create mip generation shader module");
-    }
-    else if (ShaderType == SHADER_TYPE_PIXEL)
-    {
-        WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
-        wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-        wgpuShaderCodeDesc.code        = ShaderSourcePS;
-
-        WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
-        wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
-
-        wgpuShaderModule.Reset(wgpuDeviceCreateShaderModule(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuShaderModuleDesc));
-        if (!wgpuShaderModule)
-            LOG_ERROR_AND_THROW("Failed to create mip generation shader module");
-    }
-    else
-    {
-        UNEXPECTED("Unexpected shader type");
-    }
+    WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
+    wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
+    WebGPUShaderModuleWrapper wgpuShaderModule{wgpuDeviceCreateShaderModule(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuShaderModuleDesc)};
+    VERIFY(wgpuShaderModule, "Failed to create mip generation shader module");
 
     auto Condition = m_ShaderModuleCache.emplace(ShaderModuleCacheKey{Formats, ShaderType}, std::move(wgpuShaderModule));
     return Condition.first->second;
@@ -529,15 +513,13 @@ GenerateMipsHelperWebGPU::ComputePipelineGroupLayout& GenerateMipsHelperWebGPU::
     wgpuBindGroupLayoutDesc.entryCount = _countof(wgpuBindGroupLayoutEntries);
     wgpuBindGroupLayoutDesc.entries    = wgpuBindGroupLayoutEntries;
     WebGPUBindGroupLayoutWrapper wgpuBindGroupLayout{wgpuDeviceCreateBindGroupLayout(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuBindGroupLayoutDesc)};
-    if (!wgpuBindGroupLayout)
-        LOG_ERROR_AND_THROW("Failed to create mip generation bind group layout");
+    VERIFY(wgpuBindGroupLayout, "Failed to create mip generation bind group layout");
 
     WGPUPipelineLayoutDescriptor wgpuPipelineLayoutDesc{};
     wgpuPipelineLayoutDesc.bindGroupLayoutCount = 1;
     wgpuPipelineLayoutDesc.bindGroupLayouts     = &wgpuBindGroupLayout.Get();
     WebGPUPipelineLayoutWrapper wgpuPipelineLayout{wgpuDeviceCreatePipelineLayout(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuPipelineLayoutDesc)};
-    if (!wgpuPipelineLayout)
-        LOG_ERROR_AND_THROW("Failed to create mip generation pipeline layout");
+    VERIFY(wgpuPipelineLayout, "Failed to create mip generation pipeline layout");
 
     WGPUConstantEntry wgpuContants[] = {
         WGPUConstantEntry{nullptr, "CONVERT_TO_SRGB", static_cast<double>(IsSRGBFormat(Formats[0]))},
@@ -550,8 +532,7 @@ GenerateMipsHelperWebGPU::ComputePipelineGroupLayout& GenerateMipsHelperWebGPU::
     wgpuComputePipelineDesc.compute.constants     = wgpuContants;
     wgpuComputePipelineDesc.compute.constantCount = _countof(wgpuContants);
     WebGPUComputePipelineWrapper wgpuComputePipeline{wgpuDeviceCreateComputePipeline(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuComputePipelineDesc)};
-    if (!wgpuComputePipeline)
-        LOG_ERROR_AND_THROW("Failed to create mip generation compute pipeline");
+    VERIFY(wgpuComputePipeline, "Failed to create mip generation compute pipeline");
 
     auto Condition = m_ComputePipelineLayoutCache.emplace(ComputePipelineHashKey{Formats, PowerOfTwo}, std::make_pair(std::move(wgpuComputePipeline), std::move(wgpuBindGroupLayout)));
     return Condition.first->second;
@@ -578,15 +559,13 @@ GenerateMipsHelperWebGPU::RenderPipelineGroupLayout& GenerateMipsHelperWebGPU::G
     wgpuBindGroupLayoutDesc.entryCount = _countof(wgpuBindGroupLayoutEntries);
     wgpuBindGroupLayoutDesc.entries    = wgpuBindGroupLayoutEntries;
     WebGPUBindGroupLayoutWrapper wgpuBindGroupLayout{wgpuDeviceCreateBindGroupLayout(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuBindGroupLayoutDesc)};
-    if (!wgpuBindGroupLayout)
-        LOG_ERROR_AND_THROW("Failed to create mip generation bind group layout");
+    VERIFY(wgpuBindGroupLayout, "Failed to create mip generation bind group layout");
 
     WGPUPipelineLayoutDescriptor wgpuPipelineLayoutDesc{};
     wgpuPipelineLayoutDesc.bindGroupLayoutCount = 1;
     wgpuPipelineLayoutDesc.bindGroupLayouts     = &wgpuBindGroupLayout.Get();
     WebGPUPipelineLayoutWrapper wgpuPipelineLayout{wgpuDeviceCreatePipelineLayout(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuPipelineLayoutDesc)};
-    if (!wgpuPipelineLayout)
-        LOG_ERROR_AND_THROW("Failed to create mip generation pipeline layout");
+    VERIFY(wgpuPipelineLayout, "Failed to create mip generation pipeline layout");
 
     WGPUColorTargetState wgpuColorTargets[1]{};
     wgpuColorTargets[0].writeMask = WGPUColorWriteMask_All;
@@ -609,8 +588,7 @@ GenerateMipsHelperWebGPU::RenderPipelineGroupLayout& GenerateMipsHelperWebGPU::G
     wgpuRenderPipelineDesc.multisample.mask   = 0xFFFFFFFF;
 
     WebGPURenderPipelineWrapper wgpuRenderPipeline{wgpuDeviceCreateRenderPipeline(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuRenderPipelineDesc)};
-    if (!wgpuRenderPipeline)
-        LOG_ERROR_AND_THROW("Failed to create mip generation render pipeline");
+    VERIFY(wgpuRenderPipeline, "Failed to create mip generation render pipeline");
 
     auto Condition = m_RenderPipelineLayoutCache.emplace(RenderPipelineHashKey{Format}, std::make_pair(std::move(wgpuRenderPipeline), std::move(wgpuBindGroupLayout)));
     return Condition.first->second;
@@ -624,24 +602,9 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncode
     InitializeSampler();
     InitializePlaceholderTextures();
 
-    auto*       pTextureImpl = pTexView->GetTexture<TextureWebGPUImpl>();
-    const auto& TexDesc      = pTextureImpl->GetDesc();
-    const auto& ViewDesc     = pTexView->GetDesc();
-
-    auto UpdateUniformBuffer = [&](Uint32 TopMip, Uint32 NumMips, Uint32 DstWidth, Uint32 DstHeight) {
-        struct
-        {
-            Uint32 NumMipLevels;
-            Uint32 FirstArraySlice;
-            float  TexelSize[2];
-        } BufferData{TopMip, 0, {1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight)}};
-        static_assert(sizeof(BufferData) == SizeofUniformBuffer);
-
-        void* pMappedData = nullptr;
-        pDeviceContext->MapBuffer(m_pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
-        memcpy(pMappedData, &BufferData, SizeofUniformBuffer);
-        pDeviceContext->UnmapBuffer(m_pBuffer, MAP_WRITE);
-    };
+    TextureWebGPUImpl*     pTextureImpl = pTexView->GetTexture<TextureWebGPUImpl>();
+    const TextureDesc&     TexDesc      = pTextureImpl->GetDesc();
+    const TextureViewDesc& ViewDesc     = pTexView->GetDesc();
 
     Uint32 BottomMip = ViewDesc.NumMipLevels - 1u;
     for (Uint32 TopMip = 0; TopMip < BottomMip;)
@@ -661,10 +624,17 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncode
         if (TopMip + NumMips > BottomMip)
             NumMips = BottomMip - TopMip;
 
-        UpdateUniformBuffer(TopMip, NumMips, DstWidth, DstHeight);
+        {
+            ShaderConstants BufferData{TopMip, 0, {1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight)}};
 
-        const auto* pBufferImpl  = ClassPtrCast<BufferWebGPUImpl>(m_pBuffer.RawPtr());
-        const auto* pSamplerImpl = ClassPtrCast<SamplerWebGPUImpl>(m_pSampler.RawPtr());
+            void* pMappedData = nullptr;
+            pDeviceContext->MapBuffer(m_pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+            memcpy(pMappedData, &BufferData, sizeof(BufferData));
+            pDeviceContext->UnmapBuffer(m_pBuffer, MAP_WRITE);
+        }
+
+        const BufferWebGPUImpl*  pBufferImpl  = ClassPtrCast<BufferWebGPUImpl>(m_pBuffer.RawPtr());
+        const SamplerWebGPUImpl* pSamplerImpl = ClassPtrCast<SamplerWebGPUImpl>(m_pSampler.RawPtr());
 
         WGPUBindGroupEntry wgpuBindGroupEntries[7]{};
         wgpuBindGroupEntries[0].binding = 0;

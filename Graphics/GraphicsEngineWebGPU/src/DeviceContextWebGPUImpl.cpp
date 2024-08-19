@@ -1275,10 +1275,10 @@ void DeviceContextWebGPUImpl::BeginQuery(IQuery* pQuery)
     VERIFY(!(m_wgpuRenderPassEncoder && m_wgpuComputePassEncoder), "Another command encoder is currently active");
     TDeviceContextBase::BeginQuery(pQuery, 0);
 
-    auto* pQueryWebGPUImpl = ClassPtrCast<QueryWebGPUImpl>(pQuery);
-    auto  QueryType        = pQueryWebGPUImpl->GetDesc().Type;
-    auto  wgpuQuerySet     = GetQueryManager().GetQuerySet(QueryType);
-    auto  QuerySetIdx      = pQueryWebGPUImpl->GetIndexInsideQuerySet(0);
+    QueryWebGPUImpl* pQueryWebGPUImpl = ClassPtrCast<QueryWebGPUImpl>(pQuery);
+    QUERY_TYPE       QueryType        = pQueryWebGPUImpl->GetDesc().Type;
+    WGPUQuerySet     wgpuQuerySet     = GetQueryManager().GetQuerySet(QueryType);
+    Uint32           QuerySetIdx      = pQueryWebGPUImpl->GetIndexInsideQuerySet(0);
 
     VERIFY(wgpuQuerySet != nullptr, "Query set is not initialized for query type");
 
@@ -1324,10 +1324,10 @@ void DeviceContextWebGPUImpl::EndQuery(IQuery* pQuery)
     VERIFY(!(m_wgpuRenderPassEncoder && m_wgpuComputePassEncoder), "Another command encoder is currently active");
     TDeviceContextBase::EndQuery(pQuery, 0);
 
-    auto* pQueryWebGPUImpl = ClassPtrCast<QueryWebGPUImpl>(pQuery);
-    auto  QueryType        = pQueryWebGPUImpl->GetDesc().Type;
-    auto  wgpuQuerySet     = GetQueryManager().GetQuerySet(QueryType);
-    auto  QuerySetIdx      = pQueryWebGPUImpl->GetIndexInsideQuerySet(QueryType == QUERY_TYPE_DURATION ? 1 : 0);
+    QueryWebGPUImpl* pQueryWebGPUImpl = ClassPtrCast<QueryWebGPUImpl>(pQuery);
+    QUERY_TYPE       QueryType        = pQueryWebGPUImpl->GetDesc().Type;
+    WGPUQuerySet     wgpuQuerySet     = GetQueryManager().GetQuerySet(QueryType);
+    Uint32           QuerySetIdx      = pQueryWebGPUImpl->GetIndexInsideQuerySet(QueryType == QUERY_TYPE_DURATION ? 1 : 0);
 
     VERIFY(wgpuQuerySet != nullptr, "Query set is not initialized for query type");
 

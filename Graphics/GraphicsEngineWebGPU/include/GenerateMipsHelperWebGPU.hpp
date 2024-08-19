@@ -138,7 +138,6 @@ private:
 
 private:
     static constexpr TEXTURE_FORMAT PlaceholderTextureFormat = TEX_FORMAT_RGBA8_UNORM;
-    static constexpr Uint32         SizeofUniformBuffer      = 16u;
 
     RenderDeviceWebGPUImpl& m_DeviceWebGPU;
 

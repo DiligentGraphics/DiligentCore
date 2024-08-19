@@ -64,7 +64,7 @@ public:
     void ResolveQuerySet(RenderDeviceWebGPUImpl* pDevice, DeviceContextWebGPUImpl* pDeviceContext);
 
 private:
-    class QuerySetObject : public ObjectBase<IDeviceObject>, public WebGPUResourceBase
+    class QuerySetObject final : public ObjectBase<IDeviceObject>, public WebGPUResourceBase
     {
     public:
         QuerySetObject(IReferenceCounters* pRefCounters, RenderDeviceWebGPUImpl* pDevice, Uint32 HeapSize, QUERY_TYPE QueryType);
@@ -87,13 +87,13 @@ private:
 
         void ResolveQueries(RenderDeviceWebGPUImpl* pDevice, DeviceContextWebGPUImpl* pDeviceContext);
 
-        const DeviceObjectAttribs& DILIGENT_CALL_TYPE GetDesc() const override;
+        const DeviceObjectAttribs& DILIGENT_CALL_TYPE GetDesc() const override final;
 
-        Int32 DILIGENT_CALL_TYPE GetUniqueID() const override;
+        Int32 DILIGENT_CALL_TYPE GetUniqueID() const override final;
 
-        void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override;
+        void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override final;
 
-        IObject* DILIGENT_CALL_TYPE GetUserData() const override;
+        IObject* DILIGENT_CALL_TYPE GetUserData() const override final;
 
     private:
         DeviceObjectAttribs   m_Desc;
