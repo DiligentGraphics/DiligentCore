@@ -515,7 +515,7 @@ void EngineFactoryWebGPUImpl::CreateDeviceAndContextsWebGPU(const EngineWebGPUCr
         }
 
         WebGPUDeviceWrapper Device = CreateDeviceForAdapter(EngineCI, wgpuInstance.Get(), SpecificAdapter.Get());
-        AttachToWebGPUDevice(wgpuInstance.Release(), SpecificAdapter.Release(), Device.Release(), EngineCI, ppDevice, ppImmediateContext);
+        AttachToWebGPUDevice(wgpuInstance.Detach(), SpecificAdapter.Detach(), Device.Detach(), EngineCI, ppDevice, ppImmediateContext);
     }
     catch (const std::runtime_error&)
     {

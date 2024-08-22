@@ -36,74 +36,80 @@ template <typename WebGPUObjectType, typename WebGPUObjectDeleter>
 class WebGPUObjectWrapper
 {
 public:
-    WebGPUObjectWrapper() :
-        m_ObjectHandle{}, m_ObjectDeleter{} {}
+    WebGPUObjectWrapper()
+    {}
 
     ~WebGPUObjectWrapper()
     {
-        if (m_ObjectHandle)
-            m_ObjectDeleter(m_ObjectHandle);
+        if (m_Handle)
+            m_Deleter(m_Handle);
     }
 
     explicit WebGPUObjectWrapper(WebGPUObjectType ObjectHandle, WebGPUObjectDeleter ObjectDeleter = WebGPUObjectDeleter{}) :
-        m_ObjectHandle(ObjectHandle), m_ObjectDeleter(ObjectDeleter) {}
+        m_Handle{ObjectHandle},
+        m_Deleter{ObjectDeleter}
+    {}
 
     WebGPUObjectWrapper(const WebGPUObjectWrapper&) = delete;
 
     WebGPUObjectWrapper& operator=(const WebGPUObjectWrapper&) = delete;
 
     WebGPUObjectWrapper(WebGPUObjectWrapper&& RHS) noexcept :
-        m_ObjectHandle(RHS.Release()), m_ObjectDeleter(std::move(RHS.m_ObjectDeleter))
+        m_Handle{RHS.Detach()},
+        m_Deleter{std::move(RHS.m_Deleter)}
     {
     }
 
     WebGPUObjectWrapper& operator=(WebGPUObjectWrapper&& RHS) noexcept
     {
-        Reset(RHS.Release());
-        m_ObjectDeleter = std::move(RHS.m_ObjectDeleter);
+        if (this == &RHS)
+            return *this;
+
+        Reset(RHS.Detach());
+        m_Deleter = std::move(RHS.m_Deleter);
         return *this;
     }
 
     const WebGPUObjectType& Get() const
     {
-        return m_ObjectHandle;
+        return m_Handle;
     }
 
     WebGPUObjectType& Get()
     {
-        return m_ObjectHandle;
+        return m_Handle;
     }
 
     operator WebGPUObjectType() const
     {
-        return m_ObjectHandle;
+        return m_Handle;
     }
 
     void Reset(WebGPUObjectType Handle = nullptr)
     {
-        if (m_ObjectHandle != Handle)
+        if (m_Handle != Handle)
         {
-            if (m_ObjectHandle)
-                m_ObjectDeleter(m_ObjectHandle);
-            m_ObjectHandle = Handle;
+            if (m_Handle)
+                m_Deleter(m_Handle);
+            m_Handle = Handle;
         }
     }
 
-    WebGPUObjectType Release()
+    WebGPUObjectType Detach()
     {
-        WebGPUObjectType ReleaseHandle = m_ObjectHandle;
-        m_ObjectHandle                 = nullptr;
-        return ReleaseHandle;
+        WebGPUObjectType Handle = m_Handle;
+        m_Handle                = nullptr;
+        return Handle;
     }
 
     explicit operator bool() const
     {
-        return m_ObjectHandle != nullptr;
+        return m_Handle != nullptr;
     }
 
 private:
-    WebGPUObjectType    m_ObjectHandle;
-    WebGPUObjectDeleter m_ObjectDeleter;
+    WebGPUObjectType    m_Handle{};
+    WebGPUObjectDeleter m_Deleter{};
 };
 
 
