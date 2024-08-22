@@ -1004,9 +1004,9 @@ void RenderDeviceGLImpl::InitAdapterInfo()
 
         Features.ShaderResourceQueries = Features.SeparablePrograms;
 
-        const bool bRGTC = CheckExtension("GL_ARB_texture_compression_rgtc");
-        const bool bBPTC = CheckExtension("GL_ARB_texture_compression_bptc");
-        const bool bS3TC = CheckExtension("GL_EXT_texture_compression_s3tc");
+        const bool bRGTC = CheckExtension("GL_EXT_texture_compression_rgtc") || CheckExtension("GL_ARB_texture_compression_rgtc");
+        const bool bBPTC = CheckExtension("GL_EXT_texture_compression_bptc") || CheckExtension("GL_ARB_texture_compression_bptc");
+        const bool bS3TC = CheckExtension("GL_EXT_texture_compression_s3tc") || CheckExtension("GL_WEBGL_compressed_texture_s3tc");
         ENABLE_FEATURE(TextureCompressionBC, bRGTC && bBPTC && bS3TC);
 
         // Buffer properties
@@ -1117,9 +1117,9 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     const auto  bDekstopGL     = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL;
     const auto  bGLES30OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 0};
 
-    const bool bRGTC       = CheckExtension("GL_ARB_texture_compression_rgtc") || CheckExtension("GL_EXT_texture_compression_rgtc");
-    const bool bBPTC       = CheckExtension("GL_ARB_texture_compression_bptc") || CheckExtension("GL_EXT_texture_compression_bptc");
-    const bool bS3TC       = CheckExtension("GL_EXT_texture_compression_s3tc");
+    const bool bRGTC       = CheckExtension("GL_EXT_texture_compression_rgtc") || CheckExtension("GL_ARB_texture_compression_rgtc");
+    const bool bBPTC       = CheckExtension("GL_EXT_texture_compression_bptc") || CheckExtension("GL_ARB_texture_compression_bptc");
+    const bool bS3TC       = CheckExtension("GL_EXT_texture_compression_s3tc") || CheckExtension("GL_WEBGL_compressed_texture_s3tc");
     const bool bTexNorm16  = bDekstopGL || CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
     const bool bTexSwizzle = bDekstopGL || bGLES30OrAbove || CheckExtension("GL_ARB_texture_swizzle");
 
