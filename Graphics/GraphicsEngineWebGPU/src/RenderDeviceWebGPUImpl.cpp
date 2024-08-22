@@ -126,7 +126,9 @@ RenderDeviceWebGPUImpl::~RenderDeviceWebGPUImpl()
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::FinalizeGlslang();
 #endif
+#if !PLATFORM_EMSCRIPTEN
     IdleGPU();
+#endif
 }
 
 void RenderDeviceWebGPUImpl::CreateBuffer(const BufferDesc& BuffDesc,
@@ -293,9 +295,13 @@ WGPUDevice RenderDeviceWebGPUImpl::GetWebGPUDevice() const
 
 void RenderDeviceWebGPUImpl::IdleGPU()
 {
+#if PLATFORM_EMSCRIPTEN
+    LOG_ERROR_MESSAGE("IRenderDevice::IdleGPU() is not supported on the Web. Use non-blocking synchronization methods.");
+#else
     VERIFY_EXPR(m_wpImmediateContexts.size() == 1);
     if (auto pImmediateCtx = m_wpImmediateContexts[0].Lock())
         pImmediateCtx->WaitForIdle();
+#endif
 }
 
 void RenderDeviceWebGPUImpl::CreateTextureFromWebGPUTexture(WGPUTexture        wgpuTexture,

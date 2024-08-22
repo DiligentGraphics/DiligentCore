@@ -86,8 +86,12 @@ void FenceWebGPUImpl::Signal(Uint64 Value)
 
 void FenceWebGPUImpl::Wait(Uint64 Value)
 {
+#if PLATFORM_EMSCRIPTEN
+    LOG_ERROR_MESSAGE("IFence::Wait() is not supported on the Web. Use non-blocking synchronization methods.");
+#else
     while (GetCompletedValue() < Value)
         m_pDevice->DeviceTick();
+#endif
 }
 
 void FenceWebGPUImpl::AppendSyncPoints(const std::vector<RefCntAutoPtr<SyncPointWebGPUImpl>>& SyncPoints, Uint64 Value)

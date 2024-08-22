@@ -1267,7 +1267,11 @@ void DeviceContextWebGPUImpl::DeviceWaitForFence(IFence* pFence, Uint64 Value)
 void DeviceContextWebGPUImpl::WaitForIdle()
 {
     Flush();
+#if PLATFORM_EMSCRIPTEN
+    LOG_ERROR_MESSAGE("IDeviceContext::WaitForIdle() is not supported on the Web. Use non-blocking synchronization methods.");
+#else
     m_pFence->Wait(m_FenceValue);
+#endif
 }
 
 void DeviceContextWebGPUImpl::BeginQuery(IQuery* pQuery)
