@@ -328,7 +328,9 @@ struct PipelineStateWebGPUImpl::AsyncPipelineBuilder : public ObjectBase<IObject
 void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo)
 {
     TShaderStages ShaderStages = InitInternalObjects(CreateInfo);
-    if (!m_AsyncInitializer)
+    // NB: it is not safe to check m_AsyncInitializer here as, first, it is set after the async task is started,
+    //     and second, it is not atomic or protected by mutex.
+    if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) == 0)
     {
         InitializeWebGPURenderPipeline(ShaderStages);
     }
@@ -342,7 +344,9 @@ void PipelineStateWebGPUImpl::InitializePipeline(const GraphicsPipelineStateCrea
 void PipelineStateWebGPUImpl::InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo)
 {
     TShaderStages ShaderStages = InitInternalObjects(CreateInfo);
-    if (!m_AsyncInitializer)
+    // NB: it is not safe to check m_AsyncInitializer here as, first, it is set after the async task is started,
+    //     and second, it is not atomic or protected by mutex.
+    if ((CreateInfo.Flags & PSO_CREATE_FLAG_ASYNCHRONOUS) == 0)
     {
         InitializeWebGPUComputePipeline(ShaderStages);
     }
