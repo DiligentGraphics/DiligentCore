@@ -38,8 +38,6 @@
 namespace Diligent
 {
 
-class WebGPUSwapChainPresentCommand;
-
 /// Swap chain implementation in WebGPU backend.
 class SwapChainWebGPUImpl final : public SwapChainBase<ISwapChainWebGPU>
 {
@@ -89,13 +87,15 @@ private:
     void RecreateSwapChain();
 
 private:
-    NativeWindow                                   m_NativeWindow;
-    WebGPUSurfaceWrapper                           m_wgpuSurface;
-    RefCntAutoPtr<ITextureViewWebGPU>              m_pBackBufferRTV;
-    RefCntAutoPtr<ITextureViewWebGPU>              m_pBackBufferSRV;
-    RefCntAutoPtr<ITextureViewWebGPU>              m_pDepthBufferDSV;
-    std::unique_ptr<WebGPUSwapChainPresentCommand> m_pCmdPresent;
-    bool                                           m_VSyncEnabled = true;
+    class PresentCommand;
+
+    NativeWindow                      m_NativeWindow;
+    WebGPUSurfaceWrapper              m_wgpuSurface;
+    RefCntAutoPtr<ITextureViewWebGPU> m_pBackBufferRTV;
+    RefCntAutoPtr<ITextureViewWebGPU> m_pBackBufferSRV;
+    RefCntAutoPtr<ITextureViewWebGPU> m_pDepthBufferDSV;
+    std::unique_ptr<PresentCommand>   m_pCmdPresent;
+    bool                              m_VSyncEnabled = true;
 };
 
 } // namespace Diligent

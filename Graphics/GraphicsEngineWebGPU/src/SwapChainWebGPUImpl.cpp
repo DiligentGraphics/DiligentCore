@@ -31,6 +31,7 @@
 #include "DeviceContextWebGPUImpl.hpp"
 #include "TextureViewWebGPU.h"
 #include "WebGPUTypeConversions.hpp"
+#include "WebGPUStubs.hpp"
 
 #ifdef PLATFORM_WIN32
 #    include <Windows.h>
@@ -116,10 +117,10 @@ WGPUTextureFormat WGPUConvertUnormToSRGB(WGPUTextureFormat Format)
 
 } // namespace
 
-class WebGPUSwapChainPresentCommand
+class SwapChainWebGPUImpl::PresentCommand
 {
 public:
-    WebGPUSwapChainPresentCommand(IRenderDeviceWebGPU* pRenderDevice) :
+    PresentCommand(IRenderDeviceWebGPU* pRenderDevice) :
         m_pRenderDevice{pRenderDevice}
     {
     }
@@ -220,30 +221,43 @@ public:
         return true;
     }
 
-    void Execute(ITextureViewWebGPU* pTexture, ISwapChainWebGPU* pSwapChain, IDeviceContextWebGPU* pDeviceContext)
+    WGPUSurfaceGetCurrentTextureStatus Execute(ITextureViewWebGPU* pTexture, ISwapChainWebGPU* pSwapChain, IDeviceContextWebGPU* pDeviceContext)
     {
         WGPUSurfaceTexture wgpuSurfaceTexture{};
         wgpuSurfaceGetCurrentTexture(pSwapChain->GetWebGPUSurface(), &wgpuSurfaceTexture);
+        WebGPUTextureWrapper wgpuTexture{wgpuSurfaceTexture.texture};
 
         switch (wgpuSurfaceTexture.status)
         {
             case WGPUSurfaceGetCurrentTextureStatus_Success:
+            case WGPUSurfaceGetCurrentTextureStatus_Outdated:
                 break;
 
             case WGPUSurfaceGetCurrentTextureStatus_Timeout:
-            case WGPUSurfaceGetCurrentTextureStatus_Outdated:
-            case WGPUSurfaceGetCurrentTextureStatus_Lost:
                 break;
+
+            case WGPUSurfaceGetCurrentTextureStatus_Lost:
+                LOG_WARNING_MESSAGE("Unable to present: swap chain surface is lost");
+                return wgpuSurfaceTexture.status;
 
             case WGPUSurfaceGetCurrentTextureStatus_OutOfMemory:
+                LOG_ERROR_MESSAGE("Unable to present: out of memory");
+                return wgpuSurfaceTexture.status;
+
             case WGPUSurfaceGetCurrentTextureStatus_DeviceLost:
-                LOG_ERROR_MESSAGE("Failed to acquire next frame");
-                break;
+                LOG_ERROR_MESSAGE("Unable to present: device is lost");
+                return wgpuSurfaceTexture.status;
+
+            case WGPUSurfaceGetCurrentTextureStatus_Error:
+                LOG_ERROR_MESSAGE("Unable to present: unknown error");
+                return wgpuSurfaceTexture.status;
+
             default:
-                break;
+                UNEXPECTED("Unexpected status");
+                return wgpuSurfaceTexture.status;
         }
 
-        WGPUTextureFormat ViewFormat = wgpuTextureGetFormat(wgpuSurfaceTexture.texture);
+        WGPUTextureFormat ViewFormat = wgpuTextureGetFormat(wgpuTexture);
 
         // Simplify this code once the bug for sRGB texture view is fixed in Dawn
         bool ConvertToGamma = false;
@@ -254,7 +268,7 @@ public:
         ConvertToGamma = IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat);
 #endif
         if (!InitializePipelineState(ViewFormat, ConvertToGamma))
-            return;
+            return WGPUSurfaceGetCurrentTextureStatus_Error;
 
         WGPUTextureViewDescriptor wgpuTextureViewDesc;
         wgpuTextureViewDesc.nextInChain     = nullptr;
@@ -267,9 +281,12 @@ public:
         wgpuTextureViewDesc.arrayLayerCount = 1;
         wgpuTextureViewDesc.aspect          = WGPUTextureAspect_All;
 
-        WebGPUTextureViewWrapper wgpuTextureView{wgpuTextureCreateView(wgpuSurfaceTexture.texture, &wgpuTextureViewDesc)};
+        WebGPUTextureViewWrapper wgpuTextureView{wgpuTextureCreateView(wgpuTexture, &wgpuTextureViewDesc)};
         if (!wgpuTextureView)
-            LOG_ERROR_MESSAGE("Failed to acquire next frame");
+        {
+            LOG_ERROR_MESSAGE("Failed to create texture view for WGPU surface texture");
+            return WGPUSurfaceGetCurrentTextureStatus_Error;
+        }
 
         WGPUBindGroupEntry wgpuBindGroupEntries[1]{};
         wgpuBindGroupEntries[0].binding     = 0;
@@ -312,7 +329,8 @@ public:
 #else
         wgpuSurfacePresent(pSwapChain->GetWebGPUSurface());
 #endif
-        wgpuTextureRelease(wgpuSurfaceTexture.texture);
+
+        return wgpuSurfaceTexture.status;
     }
 
 private:
@@ -335,8 +353,8 @@ SwapChainWebGPUImpl::SwapChainWebGPUImpl(IReferenceCounters*      pRefCounters,
         pDeviceContext,
         SCDesc
     },
-    m_NativeWindow(Window),
-    m_pCmdPresent(std::make_unique<WebGPUSwapChainPresentCommand>(pRenderDevice))
+    m_NativeWindow{Window},
+    m_pCmdPresent{std::make_unique<PresentCommand>(pRenderDevice)}
 // clang-format on
 {
     if (m_DesiredPreTransform != SURFACE_TRANSFORM_OPTIMAL && m_DesiredPreTransform != SURFACE_TRANSFORM_IDENTITY)
@@ -371,7 +389,7 @@ void SwapChainWebGPUImpl::Present(Uint32 SyncInterval)
     DeviceContextWebGPUImpl* pImmediateCtxWebGPU = pDeviceContext.RawPtr<DeviceContextWebGPUImpl>();
 
     pImmediateCtxWebGPU->Flush();
-    m_pCmdPresent->Execute(m_pBackBufferSRV, this, pImmediateCtxWebGPU);
+    WGPUSurfaceGetCurrentTextureStatus SurfaceStatus = m_pCmdPresent->Execute(m_pBackBufferSRV, this, pImmediateCtxWebGPU);
 
     if (m_SwapChainDesc.IsPrimary)
     {
@@ -380,7 +398,9 @@ void SwapChainWebGPUImpl::Present(Uint32 SyncInterval)
     }
 
     const bool EnableVSync = SyncInterval != 0;
-    if (m_VSyncEnabled != EnableVSync)
+    if (SurfaceStatus == WGPUSurfaceGetCurrentTextureStatus_Outdated ||
+        SurfaceStatus == WGPUSurfaceGetCurrentTextureStatus_Lost ||
+        m_VSyncEnabled != EnableVSync)
     {
         m_VSyncEnabled = EnableVSync;
         RecreateSwapChain();
