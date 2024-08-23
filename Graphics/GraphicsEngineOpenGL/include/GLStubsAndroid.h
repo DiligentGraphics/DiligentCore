@@ -878,7 +878,7 @@
 
 
 #ifndef GL_DEPTH_CLAMP
-#   define GL_DEPTH_CLAMP 0
+#   define GL_DEPTH_CLAMP 0x864F
 #endif
 
 // Blend functions

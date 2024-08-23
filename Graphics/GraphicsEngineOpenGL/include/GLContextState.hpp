@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -115,6 +115,7 @@ public:
     {
         bool  IsFillModeSelectionSupported = true;
         bool  IsProgramPipelineSupported   = true;
+        bool  IsDepthClampSupported        = true;
         GLint MaxCombinedTexUnits          = 0;
         GLint MaxDrawBuffers               = 0;
         GLint MaxUniformBufferBindings     = 0;

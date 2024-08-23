@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,6 +47,7 @@ GLContextState::GLContextState(RenderDeviceGLImpl* pDeviceGL)
     const auto& AdapterInfo             = pDeviceGL->GetAdapterInfo();
     m_Caps.IsFillModeSelectionSupported = AdapterInfo.Features.WireframeFill;
     m_Caps.IsProgramPipelineSupported   = AdapterInfo.Features.SeparablePrograms;
+    m_Caps.IsDepthClampSupported        = AdapterInfo.Features.DepthClamp;
 
     {
         m_Caps.MaxCombinedTexUnits = 0;
@@ -669,9 +670,7 @@ void GLContextState::SetDepthClamp(bool bEnableDepthClamp)
             // disabling clipping in Direct3D.
             // https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ns-d3d11-d3d11_rasterizer_desc
             // https://www.khronos.org/opengl/wiki/GLAPI/glEnable
-#pragma warning(push)
-#pragma warning(disable : 4127)
-            if (GL_DEPTH_CLAMP)
+            if (m_Caps.IsDepthClampSupported)
             {
                 glEnable(GL_DEPTH_CLAMP);
                 DEV_CHECK_GL_ERROR("Failed to enable depth clamp");
@@ -683,12 +682,11 @@ void GLContextState::SetDepthClamp(bool bEnableDepthClamp)
         }
         else
         {
-            if (GL_DEPTH_CLAMP)
+            if (m_Caps.IsDepthClampSupported)
             {
                 glDisable(GL_DEPTH_CLAMP);
                 DEV_CHECK_GL_ERROR("Failed to disable depth clamp");
             }
-#pragma warning(pop)
         }
         m_RSState.DepthClampEnable = bEnableDepthClamp;
     }
