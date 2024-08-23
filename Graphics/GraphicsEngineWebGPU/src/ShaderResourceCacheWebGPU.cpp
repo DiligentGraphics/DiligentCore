@@ -220,6 +220,37 @@ void ShaderResourceCacheWebGPU::Resource::SetStorageBuffer(RefCntAutoPtr<IDevice
 #endif
 }
 
+template <>
+Uint32 ShaderResourceCacheWebGPU::Resource::GetDynamicBufferOffset<BufferWebGPUImpl>(DeviceContextIndex CtxId) const
+{
+    Uint32 Offset = BufferDynamicOffset;
+    if (const BufferWebGPUImpl* pBufferWGPU = pObject.ConstPtr<BufferWebGPUImpl>())
+    {
+        // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
+        // The allocations of the buffers that are actually used will be verified by
+        // PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource().
+        Offset += StaticCast<Uint32>(pBufferWGPU->GetDynamicOffset(CtxId, nullptr /* Do not verify allocation*/));
+    }
+    return Offset;
+}
+
+template <>
+Uint32 ShaderResourceCacheWebGPU::Resource::GetDynamicBufferOffset<BufferViewWebGPUImpl>(DeviceContextIndex CtxId) const
+{
+    Uint32 Offset = BufferDynamicOffset;
+    if (const BufferViewWebGPUImpl* pBufferWGPUView = pObject.ConstPtr<BufferViewWebGPUImpl>())
+    {
+        if (const BufferWebGPUImpl* pBufferWGPU = pBufferWGPUView->GetBuffer<const BufferWebGPUImpl>())
+        {
+            // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
+            // The allocations of the buffers that are actually used will be verified by
+            // PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource().
+            Offset += StaticCast<Uint32>(pBufferWGPU->GetDynamicOffset(CtxId, nullptr /* Do not verify allocation*/));
+        }
+    }
+    return Offset;
+}
+
 void ShaderResourceCacheWebGPU::InitializeResources(Uint32 GroupIdx, Uint32 Offset, Uint32 ArraySize, BindGroupEntryType Type, bool HasImmutableSampler)
 {
     BindGroup& Group = GetBindGroup(GroupIdx);
@@ -444,9 +475,9 @@ WGPUBindGroup ShaderResourceCacheWebGPU::UpdateBindGroup(WGPUDevice wgpuDevice, 
     return Group.m_wgpuBindGroup;
 }
 
-Uint32 ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(DeviceContextIndex     CtxId,
-                                                          std::vector<uint32_t>& Offsets,
-                                                          Uint32                 GroupIdx) const
+bool ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(DeviceContextIndex     CtxId,
+                                                        std::vector<uint32_t>& Offsets,
+                                                        Uint32                 GroupIdx) const
 {
     // In each bind group, all uniform buffers with dynamic offsets (BindGroupEntryType::UniformBufferDynamic)
     // for every shader stage come first, followed by all storage buffers with dynamic offsets
@@ -456,19 +487,19 @@ Uint32 ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(DeviceContextIndex    
     const BindGroup& Group     = GetBindGroup(GroupIdx);
     const Uint32     GroupSize = Group.GetSize();
 
-    Uint32 res       = 0;
-    Uint32 OffsetInd = 0;
+    Uint32 res            = 0;
+    Uint32 OffsetInd      = 0;
+    bool   OffsetsChanged = false;
     while (res < GroupSize)
     {
         const Resource& Res = Group.GetResource(res);
         if (Res.Type == BindGroupEntryType::UniformBufferDynamic)
         {
-            const BufferWebGPUImpl* pBufferWGPU = Res.pObject.ConstPtr<BufferWebGPUImpl>();
-            // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
-            // The allocations of the buffers that are actually used will be verified by
-            // PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource().
-            const Uint64 Offset  = pBufferWGPU != nullptr ? pBufferWGPU->GetDynamicOffset(CtxId, nullptr /* Do not verify allocation*/) : 0;
-            Offsets[OffsetInd++] = Res.BufferDynamicOffset + StaticCast<Uint32>(Offset);
+            const Uint32 Offset    = Res.GetDynamicBufferOffset<BufferWebGPUImpl>(CtxId);
+            Uint32&      DstOffset = Offsets[OffsetInd++];
+            if (DstOffset != Offset)
+                OffsetsChanged = true;
+            DstOffset = Offset;
             ++res;
         }
         else
@@ -481,13 +512,11 @@ Uint32 ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(DeviceContextIndex    
         if (Res.Type == BindGroupEntryType::StorageBufferDynamic ||
             Res.Type == BindGroupEntryType::StorageBufferDynamic_ReadOnly)
         {
-            const BufferViewWebGPUImpl* pBufferWGPUView = Res.pObject.ConstPtr<BufferViewWebGPUImpl>();
-            const BufferWebGPUImpl*     pBufferWGPU     = pBufferWGPUView != nullptr ? pBufferWGPUView->GetBuffer<const BufferWebGPUImpl>() : nullptr;
-            // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
-            // The allocations of the buffers that are actually used will be verified by
-            // PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource().
-            const Uint64 Offset  = pBufferWGPU != nullptr ? pBufferWGPU->GetDynamicOffset(CtxId, nullptr /* Do not verify allocation*/) : 0;
-            Offsets[OffsetInd++] = Res.BufferDynamicOffset + StaticCast<Uint32>(Offset);
+            const Uint32 Offset    = Res.GetDynamicBufferOffset<BufferViewWebGPUImpl>(CtxId);
+            Uint32&      DstOffset = Offsets[OffsetInd++];
+            if (DstOffset != Offset)
+                OffsetsChanged = true;
+            DstOffset = Offset;
             ++res;
         }
         else
@@ -505,7 +534,11 @@ Uint32 ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(DeviceContextIndex    
     }
 #endif
 
-    return OffsetInd;
+    VERIFY(OffsetInd == Offsets.size(),
+           "The number of dynamic offsets written (", OffsetInd, ") does not match the expected number (", Offsets.size(),
+           "). This likely indicates the mismatch between the SRB and the PSO");
+
+    return OffsetsChanged;
 }
 
 #ifdef DILIGENT_DEBUG

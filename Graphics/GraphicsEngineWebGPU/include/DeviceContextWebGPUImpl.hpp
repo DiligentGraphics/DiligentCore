@@ -440,12 +440,13 @@ private:
         {
             WGPUBindGroup wgpuBindGroup = nullptr;
 
-            // The total number of resources with dynamic offsets, given by pSignature->GetDynamicOffsetCount().
-            // Note that this is not the actual number of dynamic buffers in the resource cache.
-            Uint32 DynamicOffsetCount = 0;
-
             // Bind index to use with wgpuEncoderSetBindGroup
             Uint32 BindIndex = ~0u;
+
+            // Memory to store dynamic buffer offsets for wgpuEncoderSetBindGroup.
+            // The total number of resources with dynamic offsets is given by pSignature->GetDynamicOffsetCount().
+            // Note that this is not the actual number of dynamic buffers in the resource cache.
+            std::vector<Uint32> DynamicBufferOffsets;
 
             bool IsActive() const
             {
@@ -464,9 +465,6 @@ private:
             *this = WebGPUResourceBindInfo{};
         }
     } m_BindInfo;
-
-    // Memory to store dynamic buffer offsets for wgpuEncoderSetBindGroup.
-    std::vector<Uint32> m_DynamicBufferOffsets;
 
     struct PendingClears
     {

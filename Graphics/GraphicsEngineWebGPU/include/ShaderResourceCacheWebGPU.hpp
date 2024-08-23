@@ -89,6 +89,9 @@ public:
         void SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint64 _RangeOffset, Uint64 _RangeSize);
         void SetStorageBuffer(RefCntAutoPtr<IDeviceObject>&& _pBufferView);
 
+        template <typename ResType>
+        Uint32 GetDynamicBufferOffset(DeviceContextIndex CtxId) const;
+
         explicit operator bool() const { return pObject != nullptr; }
     };
 
@@ -173,9 +176,10 @@ public:
 
     WGPUBindGroup UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout);
 
-    Uint32 GetDynamicBufferOffsets(DeviceContextIndex     CtxId,
-                                   std::vector<uint32_t>& Offsets,
-                                   Uint32                 GroupIdx) const;
+    // Returns true if any dynamic offset has changed
+    bool GetDynamicBufferOffsets(DeviceContextIndex     CtxId,
+                                 std::vector<uint32_t>& Offsets,
+                                 Uint32                 GroupIdx) const;
 
 #ifdef DILIGENT_DEBUG
     // For debug purposes only
