@@ -407,7 +407,7 @@ if(MSVC)
     # - Disable RTTI (/GR-)
     # - Enable whole program optimization (/GL)
     # - Enable string pooling (/GF)
-    set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /wd4189 /GR- /GL /GF)
+    set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /wd4189 /GR- /GF)
     #target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/wd4189 /Ot")
     # In RELEASE mode:
     # - Set favor fast code option (/Ot)
