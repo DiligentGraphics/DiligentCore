@@ -405,7 +405,6 @@ if(MSVC)
     # In all release modes also:
     # - disable w4189 - local variable is initialized but not referenced
     # - Disable RTTI (/GR-)
-    # - Enable whole program optimization (/GL)
     # - Enable string pooling (/GF)
     set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /wd4189 /GR- /GF)
     #target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/wd4189 /Ot")
