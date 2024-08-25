@@ -251,6 +251,10 @@ TEST(WGSLUtils, RemapRWStructBuffers)
                               {"g_RWBuff1_atomic", {15, 16}},
                               {"g_RWBuff0Atomic_atomic", {17, 18}},
                               {"g_RWBuff1Atomic_atomic", {19, 20}},
+                              {"g_RWBuff2Atomic", {21, 22}},
+                              {"g_RWBuff3Atomic", {23, 24}},
+                              {"g_RWBuff4Atomic_atomic", {25, 26}},
+                              {"g_RWBuff5Atomic_atomic", {27, 28}},
                           });
 }
 

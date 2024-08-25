@@ -112,26 +112,47 @@ std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
 
 static bool IsAtomic(const tint::core::type::Type* WGSLType)
 {
-    if (WGSLType == nullptr || !WGSLType->Is<tint::core::type::Struct>())
+    if (WGSLType == nullptr)
         return false;
 
-    const tint::core::type::Struct* WGSLStruct = WGSLType->As<tint::core::type::Struct>();
-    if (WGSLStruct == nullptr || WGSLStruct->Members().IsEmpty())
-        return false;
+    if (WGSLType->Is<tint::core::type::Struct>())
+    {
+        const tint::core::type::Struct* WGSLStruct = WGSLType->As<tint::core::type::Struct>();
+        if (WGSLStruct == nullptr || WGSLStruct->Members().IsEmpty())
+            return false;
 
-    const tint::core::type::Type* WGSLMember = WGSLStruct->Members().Front()->Type();
-    if (WGSLMember == nullptr || !WGSLMember->Is<tint::core::type::Array>())
-        return false;
+        for (const tint::core::type::StructMember* WGSLMember : WGSLStruct->Members())
+        {
+            const tint::core::type::Type* WGSLMemberType = WGSLMember->Type();
+            if (WGSLMemberType == nullptr)
+                return false;
 
-    const tint::core::type::Array* WGSLArray = WGSLMember->As<tint::core::type::Array>();
-    if (WGSLArray == nullptr)
-        return false;
+            if (WGSLMemberType->Is<tint::core::type::Array>())
+            {
+                const tint::core::type::Array* WGSLArray = WGSLMemberType->As<tint::core::type::Array>();
+                if (WGSLArray == nullptr)
+                    return false;
 
-    const tint::core::type::Type* WGSLArrayMember = WGSLArray->ElemType();
-    if (WGSLArrayMember == nullptr)
-        return false;
+                const tint::core::type::Type* WGSLArrayElemType = WGSLArray->ElemType();
+                if (WGSLArrayElemType == nullptr)
+                    return false;
 
-    return WGSLArrayMember->Is<tint::core::type::Atomic>();
+                if (IsAtomic(WGSLArrayElemType))
+                    return true;
+            }
+            else
+            {
+                if (IsAtomic(WGSLMemberType))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+    else
+    {
+        return WGSLType->Is<tint::core::type::Atomic>();
+    }
 }
 
 std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const tint::inspector::ResourceBinding& Binding)
