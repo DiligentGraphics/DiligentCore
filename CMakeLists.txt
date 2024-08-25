@@ -387,8 +387,14 @@ endforeach()
 if(MSVC)
     # Treat warnings as errors
     set(DILIGENT_MSVC_COMPILE_OPTIONS "" CACHE STRING "Common MSVC compile options")
+    if (DILIGENT_MSVC_COMPILE_OPTIONS)
+        message("Additional MSVC compile options: " ${DILIGENT_MSVC_COMPILE_OPTIONS})
+    endif()
 
     set(DILIGENT_MSVC_DEBUG_COMPILE_OPTIONS "" CACHE STRING "Additional MSVC compile options for debug configuration")
+    if (DILIGENT_MSVC_DEBUG_COMPILE_OPTIONS)
+        message("Additional MSVC compile options for debug configuration: " ${DILIGENT_MSVC_DEBUG_COMPILE_OPTIONS})
+    endif()
 
     # Enable whole program optimization
     set(DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS /GL)
@@ -397,6 +403,9 @@ if(MSVC)
         set(DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS ${DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS} /arch:AVX2)
     endif()
     set(DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS ${DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS} CACHE STRING "Additional MSVC compile options for release configurations")
+    if (DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS)
+        message("Additional MSVC compile options for release configurations: " ${DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS})
+    endif()
 
     # Enable level 4 warnings, but disable
     # - w4100  - unreferenced formal parameter
@@ -459,14 +468,23 @@ endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Treat warnings as errors
     set(DILIGENT_CLANG_COMPILE_OPTIONS "" CACHE STRING "Common Clang compile options")
+    if (DILIGENT_CLANG_COMPILE_OPTIONS)
+        message("Additional Clang compile options: " ${DILIGENT_CLANG_COMPILE_OPTIONS})
+    endif()
 
     set(DILIGENT_CLANG_DEBUG_COMPILE_OPTIONS "" CACHE STRING "Additional Clang compile options for debug configuration")
+    if (DILIGENT_CLANG_DEBUG_COMPILE_OPTIONS)
+        message("Additional Clang compile options for debug configuration: " ${DILIGENT_CLANG_DEBUG_COMPILE_OPTIONS})
+    endif()
 
     if("${TARGET_CPU}" STREQUAL "x86_64")
         # Enable AVX2
         set(DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS "-mavx2")
     endif()
     set(DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS ${DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS} CACHE STRING "Additional Clang compile options for release configurations")
+    if (DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS)
+        message("Additional Clang compile options for release configurations: " ${DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS})
+    endif()
 
     target_compile_options(Diligent-BuildSettings INTERFACE
         ${DILIGENT_CLANG_COMPILE_OPTIONS}
