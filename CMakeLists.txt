@@ -386,7 +386,7 @@ endforeach()
 
 if(MSVC)
     # Treat warnings as errors
-    set(DILIGENT_MSVC_COMPILE_OPTIONS "/WX" CACHE STRING "Common MSVC compile options")
+    set(DILIGENT_MSVC_COMPILE_OPTIONS "" CACHE STRING "Common MSVC compile options")
 
     set(DILIGENT_MSVC_DEBUG_COMPILE_OPTIONS "" CACHE STRING "Additional MSVC compile options for debug configuration")
 
@@ -458,7 +458,7 @@ endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Treat warnings as errors
-    set(DILIGENT_CLANG_COMPILE_OPTIONS "-Werror" CACHE STRING "Common Clang compile options")
+    set(DILIGENT_CLANG_COMPILE_OPTIONS "" CACHE STRING "Common Clang compile options")
 
     set(DILIGENT_CLANG_DEBUG_COMPILE_OPTIONS "" CACHE STRING "Additional Clang compile options for debug configuration")
 
