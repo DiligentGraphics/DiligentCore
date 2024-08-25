@@ -390,11 +390,13 @@ if(MSVC)
 
     set(DILIGENT_MSVC_DEBUG_COMPILE_OPTIONS "" CACHE STRING "Additional MSVC compile options for debug configuration")
 
+    # Enable whole program optimization
+    set(DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS /GL)
     if("${TARGET_CPU}" STREQUAL "x86_64")
         # Enable AVX2
-        set(DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS "/arch:AVX2")
+        set(DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS ${DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS} /arch:AVX2)
     endif()
-    set(DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS ${DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS} CACHE STRING "Additional MSVC compile options for release configurations")
+    set(DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS ${DEFAULT_DILIGENT_MSVC_RELEASE_COMPILE_OPTIONS} CACHE STRING "Additional MSVC compile options for release configurations")
 
     # Enable level 4 warnings, but disable
     # - w4100  - unreferenced formal parameter
@@ -412,9 +414,8 @@ if(MSVC)
     # In all release modes also:
     # - disable w4189 - local variable is initialized but not referenced
     # - Disable RTTI (/GR-)
-    # - Enable whole program optimization (/GL)
     # - Enable string pooling (/GF)
-    set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /wd4189 /GR- /GL /GF)
+    set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /wd4189 /GR- /GF)
     #target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/wd4189 /Ot")
     # In RELEASE mode:
     # - Set favor fast code option (/Ot)
