@@ -388,11 +388,11 @@ void DeviceContextGLImpl::CommitRenderTargets()
         VERIFY(m_NumBoundRenderTargets != 0 || m_pBoundDepthStencil, "At least one render target or a depth stencil is expected");
 
         Uint32 NumRenderTargets = m_NumBoundRenderTargets;
-        VERIFY(NumRenderTargets < MAX_RENDER_TARGETS, "Too many render targets (", NumRenderTargets, ") are being set");
+        DEV_CHECK_ERR(NumRenderTargets <= MAX_RENDER_TARGETS, "Too many render targets (", NumRenderTargets, ") are being set");
         NumRenderTargets = std::min(NumRenderTargets, MAX_RENDER_TARGETS);
 
         const auto& CtxCaps = m_ContextState.GetContextCaps();
-        VERIFY(NumRenderTargets < static_cast<Uint32>(CtxCaps.MaxDrawBuffers), "This device only supports ", CtxCaps.MaxDrawBuffers, " draw buffers, but ", NumRenderTargets, " are being set");
+        DEV_CHECK_ERR(NumRenderTargets <= static_cast<Uint32>(CtxCaps.MaxDrawBuffers), "This device only supports ", CtxCaps.MaxDrawBuffers, " draw buffers, but ", NumRenderTargets, " are being set");
         NumRenderTargets = std::min(NumRenderTargets, static_cast<Uint32>(CtxCaps.MaxDrawBuffers));
 
         TextureViewGLImpl* pBoundRTVs[MAX_RENDER_TARGETS] = {};
