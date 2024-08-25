@@ -9,7 +9,7 @@ jobs:
 
     steps:
     - name: Clone repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Format validation
       shell: cmd
@@ -71,7 +71,7 @@ jobs:
 
     steps:
     - name: Clone repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
 
@@ -133,7 +133,7 @@ jobs:
         mode: wgpu
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: ${{ success() && matrix.build_type != 'Debug' && matrix.cmake_generator != 'Ninja' }}
       with:
         name: DiligentCore-${{ matrix.name }}-${{ matrix.toolset }}-${{ matrix.build_type }}

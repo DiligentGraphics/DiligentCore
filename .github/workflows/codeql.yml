@@ -35,7 +35,7 @@ jobs:
 
     steps:
     - name: Clone repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
 
@@ -58,7 +58,7 @@ jobs:
         cmake-args: ${{ matrix.cmake_args }}
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: cpp
         queries: security-and-quality
@@ -68,4 +68,4 @@ jobs:
       uses: DiligentGraphics/github-action/build@v1
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
