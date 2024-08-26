@@ -118,11 +118,10 @@ private:
     std::array<D3D12_PRIMITIVE_TOPOLOGY_TYPE, PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES> m_Map;
 };
 
-template <typename TShaderStages>
 void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateInfo,
                                 std::vector<D3D12_STATE_SUBOBJECT>&      Subobjects,
                                 DynamicLinearAllocator&                  TempPool,
-                                TShaderStages&                           ShaderStages) noexcept(false)
+                                PipelineStateD3D12Impl::TShaderStages&   ShaderStages) noexcept(false)
 {
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", (CreateInfo.PSODesc.Name ? CreateInfo.PSODesc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
@@ -130,12 +129,14 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
     std::unordered_map<IShader*, LPCWSTR> UniqueShaders;
 
-    std::array<typename TShaderStages::value_type*, MAX_SHADERS_IN_PIPELINE> StagesPtr     = {};
-    std::array<Uint32, MAX_SHADERS_IN_PIPELINE>                              ShaderIndices = {};
+    using ShaderStageInfo = PipelineStateD3D12Impl::ShaderStageInfo;
 
-    for (auto& Stage : ShaderStages)
+    std::array<ShaderStageInfo*, MAX_SHADERS_IN_PIPELINE> StagesPtr     = {};
+    std::array<Uint32, MAX_SHADERS_IN_PIPELINE>           ShaderIndices = {};
+
+    for (ShaderStageInfo& Stage : ShaderStages)
     {
-        const auto Idx = GetShaderTypePipelineIndex(Stage.Type, PIPELINE_TYPE_RAY_TRACING);
+        const Int32 Idx = GetShaderTypePipelineIndex(Stage.Type, PIPELINE_TYPE_RAY_TRACING);
         VERIFY_EXPR(StagesPtr[Idx] == nullptr);
         StagesPtr[Idx] = &Stage;
     }
@@ -147,18 +148,18 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
         auto it_inserted = UniqueShaders.emplace(pShader, nullptr);
         if (it_inserted.second)
         {
-            const auto  StageIdx    = GetShaderTypePipelineIndex(pShader->GetDesc().ShaderType, PIPELINE_TYPE_RAY_TRACING);
-            const auto& Stage       = *StagesPtr[StageIdx];
-            auto&       ShaderIndex = ShaderIndices[StageIdx];
+            const Int32            StageIdx    = GetShaderTypePipelineIndex(pShader->GetDesc().ShaderType, PIPELINE_TYPE_RAY_TRACING);
+            const ShaderStageInfo& Stage       = *StagesPtr[StageIdx];
+            Uint32&                ShaderIndex = ShaderIndices[StageIdx];
 
             // shaders must be in same order as in ExtractShaders()
             RefCntAutoPtr<ShaderD3D12Impl> pShaderD3D12{pShader, ShaderD3D12Impl::IID_InternalImpl};
             VERIFY(pShaderD3D12, "Unexpected shader object implementation");
             VERIFY_EXPR(Stage.Shaders[ShaderIndex] == pShaderD3D12);
 
-            auto&            LibDesc    = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
-            auto&            ExportDesc = *TempPool.Construct<D3D12_EXPORT_DESC>();
-            const IDataBlob* pByteCode  = Stage.ByteCodes[ShaderIndex];
+            D3D12_DXIL_LIBRARY_DESC& LibDesc    = *TempPool.Construct<D3D12_DXIL_LIBRARY_DESC>();
+            D3D12_EXPORT_DESC&       ExportDesc = *TempPool.Construct<D3D12_EXPORT_DESC>();
+            const IDataBlob*         pByteCode  = Stage.ByteCodes[ShaderIndex];
             ++ShaderIndex;
 
             LibDesc.DXILLibrary.BytecodeLength  = pByteCode->GetSize();
@@ -189,15 +190,15 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
-        const auto& GeneralShader = CreateInfo.pGeneralShaders[i];
+        const RayTracingGeneralShaderGroup& GeneralShader = CreateInfo.pGeneralShaders[i];
         AddDxilLib(GeneralShader.pShader, GeneralShader.Name);
     }
 
     for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
     {
-        const auto& TriHitShader = CreateInfo.pTriangleHitShaders[i];
+        const RayTracingTriangleHitShaderGroup& TriHitShader = CreateInfo.pTriangleHitShaders[i];
 
-        auto& HitGroupDesc                    = *TempPool.Construct<D3D12_HIT_GROUP_DESC>();
+        D3D12_HIT_GROUP_DESC& HitGroupDesc    = *TempPool.Construct<D3D12_HIT_GROUP_DESC>();
         HitGroupDesc.HitGroupExport           = TempPool.CopyWString(TriHitShader.Name);
         HitGroupDesc.Type                     = D3D12_HIT_GROUP_TYPE_TRIANGLES;
         HitGroupDesc.ClosestHitShaderImport   = AddDxilLib(TriHitShader.pClosestHitShader, nullptr);
@@ -209,9 +210,9 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
-        const auto& ProcHitShader = CreateInfo.pProceduralHitShaders[i];
+        const RayTracingProceduralHitShaderGroup& ProcHitShader = CreateInfo.pProceduralHitShaders[i];
 
-        auto& HitGroupDesc                    = *TempPool.Construct<D3D12_HIT_GROUP_DESC>();
+        D3D12_HIT_GROUP_DESC& HitGroupDesc    = *TempPool.Construct<D3D12_HIT_GROUP_DESC>();
         HitGroupDesc.HitGroupExport           = TempPool.CopyWString(ProcHitShader.Name);
         HitGroupDesc.Type                     = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
         HitGroupDesc.ClosestHitShaderImport   = AddDxilLib(ProcHitShader.pClosestHitShader, nullptr);
@@ -223,14 +224,14 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo& CreateI
 
     constexpr Uint32 DefaultPayloadSize = sizeof(float) * 8;
 
-    auto& PipelineConfig = *TempPool.Construct<D3D12_RAYTRACING_PIPELINE_CONFIG>();
+    D3D12_RAYTRACING_PIPELINE_CONFIG& PipelineConfig = *TempPool.Construct<D3D12_RAYTRACING_PIPELINE_CONFIG>();
 
     PipelineConfig.MaxTraceRecursionDepth = CreateInfo.RayTracingPipeline.MaxRecursionDepth;
     Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &PipelineConfig});
 
-    auto& ShaderConfig                   = *TempPool.Construct<D3D12_RAYTRACING_SHADER_CONFIG>();
-    ShaderConfig.MaxAttributeSizeInBytes = CreateInfo.MaxAttributeSize == 0 ? D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES : CreateInfo.MaxAttributeSize;
-    ShaderConfig.MaxPayloadSizeInBytes   = CreateInfo.MaxPayloadSize == 0 ? DefaultPayloadSize : CreateInfo.MaxPayloadSize;
+    D3D12_RAYTRACING_SHADER_CONFIG& ShaderConfig = *TempPool.Construct<D3D12_RAYTRACING_SHADER_CONFIG>();
+    ShaderConfig.MaxAttributeSizeInBytes         = CreateInfo.MaxAttributeSize == 0 ? D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES : CreateInfo.MaxAttributeSize;
+    ShaderConfig.MaxPayloadSizeInBytes           = CreateInfo.MaxPayloadSize == 0 ? DefaultPayloadSize : CreateInfo.MaxPayloadSize;
     Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &ShaderConfig});
 #undef LOG_PSO_ERROR_AND_THROW
 }

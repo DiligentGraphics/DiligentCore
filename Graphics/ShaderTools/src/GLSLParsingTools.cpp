@@ -102,6 +102,7 @@ static TEXTURE_FORMAT ParseStandardGLSLImageFormat(const std::string& Format)
                     case 2: return TEX_FORMAT_RG32_FLOAT;
                     case 3: return TEX_FORMAT_RGB32_FLOAT;
                     case 4: return TEX_FORMAT_RGBA32_FLOAT;
+                    default: return TEX_FORMAT_UNKNOWN;
                 }
 
             default: return TEX_FORMAT_UNKNOWN;

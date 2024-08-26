@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,41 +38,43 @@ namespace
 class LinearToGammaMap
 {
 public:
-    LinearToGammaMap() noexcept
-    {
-        for (Uint32 i = 0; i < m_ToGamma.size(); ++i)
-        {
-            m_ToGamma[i] = LinearToGamma(static_cast<float>(i) / 255.f);
-        }
-    }
-
     float operator[](Uint8 x) const
     {
         return m_ToGamma[x];
     }
 
 private:
-    std::array<float, 256> m_ToGamma;
+    const std::array<float, 256> m_ToGamma{
+        []() {
+            std::array<float, 256> ToGamma;
+            for (Uint32 i = 0; i < ToGamma.size(); ++i)
+            {
+                ToGamma[i] = LinearToGamma(static_cast<float>(i) / 255.f);
+            }
+            return ToGamma;
+        }(),
+    };
 };
 
 class GammaToLinearMap
 {
 public:
-    GammaToLinearMap() noexcept
-    {
-        for (Uint32 i = 0; i < m_ToLinear.size(); ++i)
-        {
-            m_ToLinear[i] = GammaToLinear(static_cast<float>(i) / 255.f);
-        }
-    }
-
     float operator[](Uint8 x) const
     {
         return m_ToLinear[x];
     }
 
 private:
-    std::array<float, 256> m_ToLinear;
+    const std::array<float, 256> m_ToLinear{
+        []() {
+            std::array<float, 256> ToLinear;
+            for (Uint32 i = 0; i < ToLinear.size(); ++i)
+            {
+                ToLinear[i] = GammaToLinear(static_cast<float>(i) / 255.f);
+            }
+            return ToLinear;
+        }(),
+    };
 };
 
 } // namespace

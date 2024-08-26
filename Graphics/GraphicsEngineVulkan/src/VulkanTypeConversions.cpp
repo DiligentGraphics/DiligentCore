@@ -1371,14 +1371,6 @@ static RESOURCE_STATE VkAccessFlagToResourceStates(VkAccessFlagBits AccessFlagBi
 class VkAccessFlagBitPosToResourceState
 {
 public:
-    VkAccessFlagBitPosToResourceState()
-    {
-        for (Uint32 bit = 0; bit < FlagBitPosToResourceState.size(); ++bit)
-        {
-            FlagBitPosToResourceState[bit] = VkAccessFlagToResourceStates(static_cast<VkAccessFlagBits>(1 << bit));
-        }
-    }
-
     RESOURCE_STATE operator()(Uint32 BitPos) const
     {
         VERIFY(BitPos <= MaxFlagBitPos, "Resource state flag bit position (", BitPos, ") exceeds max bit position (", Uint32{MaxFlagBitPos}, ")");
@@ -1386,8 +1378,18 @@ public:
     }
 
 private:
-    static constexpr const Uint32                 MaxFlagBitPos = 20;
-    std::array<RESOURCE_STATE, MaxFlagBitPos + 1> FlagBitPosToResourceState;
+    static constexpr const Uint32 MaxFlagBitPos = 20;
+
+    const std::array<RESOURCE_STATE, MaxFlagBitPos + 1> FlagBitPosToResourceState{
+        []() {
+            std::array<RESOURCE_STATE, MaxFlagBitPos + 1> BitPosToState;
+            for (Uint32 bit = 0; bit < BitPosToState.size(); ++bit)
+            {
+                BitPosToState[bit] = VkAccessFlagToResourceStates(static_cast<VkAccessFlagBits>(1 << bit));
+            }
+            return BitPosToState;
+        }(),
+    };
 };
 
 
