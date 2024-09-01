@@ -4116,19 +4116,27 @@ typedef struct EngineMtlCreateInfo EngineMtlCreateInfo;
 /// Attributes of the WebGPU-based engine implementation
 struct EngineWebGPUCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
-    /// 
-    Uint32 QueueSignalPoolSize DEFAULT_INITIALIZER(32);
-
+    /// Upload heap page size.
     ///
+    /// \remarks    Upload heap is used to update resources with IDeviceContext::UpdateBuffer(),
+    ///  	        IDeviceContext::UpdateTexture(), or to map dynamic textures.
     Uint32 UploadHeapPageSize  DEFAULT_INITIALIZER(8 << 20);
 
+    /// The size of the dynamic heap (the buffer that is used to suballocate memory for dynamic resources).
     ///
+    /// \remarks    The dynamic heap is used to allocate memory for dynamic
+    ///             resources. Each time a dynamic buffer or dynamic texture is mapped,
+    ///             the engine allocates a new chunk of memory from the dynamic heap.
+    ///             At the end of the frame, all dynamic memory allocated for the frame
+    ///             is recycled. Note that unlike Vulkan, the dynamic memory becomes available
+    ///             immediately for use in the next frame.
     Uint32 DynamicHeapSize     DEFAULT_INITIALIZER(8 << 20);
 
-    ///
+    /// Size of the memory chunk suballocated by immediate/deferred context from
+    /// the global dynamic heap to perform lock-free dynamic suballocations.
     Uint32 DynamicHeapPageSize DEFAULT_INITIALIZER(256 << 10);
 
-    ///
+    /// Query pool size for each query type.
     Uint32 QueryPoolSizes[QUERY_TYPE_NUM_TYPES]
 #if DILIGENT_CPP_INTERFACE
     {

@@ -1,5 +1,13 @@
-## Current progress
+## v.2.5.6
 
+* Implemented WebGPU backend
+  * Added `EngineWebGPUCreateInfo`
+  * Added `IEngineFactoryWebGPU` interface
+  * Added `RENDER_DEVICE_TYPE_WEBGPU`, `SHADER_SOURCE_LANGUAGE_WGSL`, `SHADER_VARIABLE_FLAG_UNFILTERABLE_FLOAT_TEXTURE_WEBGPU`,
+   `SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU` enum values
+  * Added `WEB_GPU_BINDING_TYPE` enum, `WebGPUResourceAttribs` struct, and
+    `WebGPUResourceAttribs WebGPUAttribs` member to `PipelineResourceDesc` struct
+  * Added WebGPU-specific interfaces (`IRenderDeviceWebGPU`, `IDeviceContextWebGPU`, etc.) 
 * Enabled asynchronous shdare and pipeline state compilation (API255001)
   * Added `AsyncShaderCompilation` render device feature
   * Added `pAsyncShaderCompilationThreadPool` and `NumAsyncShaderCompilerThreads` members to `EngineCreateInfo` struct
