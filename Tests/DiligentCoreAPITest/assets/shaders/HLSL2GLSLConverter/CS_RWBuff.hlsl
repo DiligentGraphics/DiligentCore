@@ -6,10 +6,18 @@ struct StorageBufferStruct
 {
     float4 Data;
 };
+struct StorageBufferStruct1
+{
+    float4 Data;
+};
+struct StorageBufferStruct2
+{
+    float4 Data;
+};
 
-RWStructuredBuffer<StorageBufferStruct> RWStructBuff0 /*comment*/:/*comment*/ register(u1)/*comment*/;
-RWStructuredBuffer<StorageBufferStruct> RWStructBuff1;
-RWStructuredBuffer<StorageBufferStruct> RWStructBuff2 : register(u2);
+RWStructuredBuffer<StorageBufferStruct>  RWStructBuff0 /*comment*/:/*comment*/ register(u1)/*comment*/;
+RWStructuredBuffer<StorageBufferStruct1> RWStructBuff1;
+RWStructuredBuffer<StorageBufferStruct2> RWStructBuff2 : register(u2);
 
 RWStructuredBuffer</*comment*/ int /*comment*/> RWStructBuff3;
 
@@ -37,9 +45,9 @@ void TestLoad()
         TexBuff_I.Load(Location.x);
         TexBuff_U.Load(Location.x);
     }
-    StorageBufferStruct Data0 = RWStructBuff0[Location.x];
-    StorageBufferStruct Data1 = RWStructBuff1[Location.y];
-    StorageBufferStruct Data3 = RWStructBuff2[Location.w];
+    StorageBufferStruct  Data0 = RWStructBuff0[Location.x];
+    StorageBufferStruct1 Data1 = RWStructBuff1[Location.y];
+    StorageBufferStruct2 Data2 = RWStructBuff2[Location.w];
     
     int Data4 = RWStructBuff3[Location.z];
 }
@@ -54,11 +62,15 @@ void TestStore(uint3 Location)
         TexBuff_I[Location.x] = int2(1,2);
         TexBuff_U[Location.x] = uint4(1,2,3,4);
     }
-    StorageBufferStruct Data0;
+    StorageBufferStruct  Data0;
+    StorageBufferStruct1 Data1;
+    StorageBufferStruct2 Data2;
     Data0.Data = float4(0.0, 1.0, 2.0, 3.0);
+    Data1.Data = float4(0.0, 1.0, 2.0, 3.0);
+    Data2.Data = float4(0.0, 1.0, 2.0, 3.0);
     RWStructBuff0[Location.x] = Data0;
-    RWStructBuff1[Location.z] = Data0;
-    RWStructBuff2[Location.y] = Data0;
+    RWStructBuff1[Location.z] = Data1;
+    RWStructBuff2[Location.y] = Data2;
     RWStructBuff3[Location.x] = 16;
 }
 
