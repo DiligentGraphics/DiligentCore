@@ -81,7 +81,7 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR WEBGPU_SUPPORTED OR (ARCHIVER_SUPPORT
         set_directory_root_folder("glslang" "DiligentCore/ThirdParty/glslang")
 
         if (PLATFORM_EMSCRIPTEN)
-             set_targets_emscripten_properties(MachineIndependent)
+             set_targets_emscripten_properties(glslang MachineIndependent)
         endif()
 
         # glslang "kindly" sets global CMAKE_DEBUG_POSTFIX to "d", which we have to unset now
