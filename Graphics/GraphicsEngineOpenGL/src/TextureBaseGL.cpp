@@ -84,7 +84,11 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*        pRefCounters,
     }
 }
 
-static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& GLTex, TEXTURE_FORMAT TexFmtFromDesc)
+static GLenum GetTextureInternalFormat(const RenderDeviceInfo&               DeviceInfo,
+                                       GLContextState&                       GLState,
+                                       GLenum                                BindTarget,
+                                       const GLObjectWrappers::GLTextureObj& GLTex,
+                                       TEXTURE_FORMAT                        TexFmtFromDesc)
 {
     GLState.BindTexture(-1, BindTarget, GLTex);
 
@@ -94,8 +98,11 @@ static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarge
         QueryBindTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
 
 #if GL_TEXTURE_INTERNAL_FORMAT
-    glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
-    DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_INTERNAL_FORMAT) failed");
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_GL || (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 1}))
+    {
+        glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
+        DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_INTERNAL_FORMAT) failed");
+    }
     if (GlFormat != 0)
     {
         if (GlFormat == GL_RGBA)
@@ -137,7 +144,11 @@ static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarge
     return GlFormat;
 }
 
-static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDesc TexDesc, GLuint GLHandle, GLenum BindTarget)
+static TextureDesc GetTextureDescFromGLHandle(const RenderDeviceInfo& DeviceInfo,
+                                              GLContextState&         GLState,
+                                              TextureDesc             TexDesc,
+                                              GLuint                  GLHandle,
+                                              GLenum                  BindTarget)
 {
     VERIFY(BindTarget != GL_TEXTURE_CUBE_MAP_ARRAY, "Cubemap arrays are not currently supported");
 
@@ -150,8 +161,11 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
 
 #if GL_TEXTURE_WIDTH
     GLint TexWidth = 0;
-    glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_WIDTH, &TexWidth);
-    DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_WIDTH) failed");
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_GL || (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 1}))
+    {
+        glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_WIDTH, &TexWidth);
+        DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_WIDTH) failed");
+    }
     if (TexWidth > 0)
     {
         if (TexDesc.Width != 0 && TexDesc.Width != static_cast<Uint32>(TexWidth))
@@ -183,8 +197,11 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
     {
 #if GL_TEXTURE_HEIGHT
         GLint TexHeight = 0;
-        glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_HEIGHT, &TexHeight);
-        DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_HEIGHT) failed");
+        if (DeviceInfo.Type == RENDER_DEVICE_TYPE_GL || (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 1}))
+        {
+            glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_HEIGHT, &TexHeight);
+            DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_HEIGHT) failed");
+        }
         if (TexHeight > 0)
         {
             if (TexDesc.Height != 0 && TexDesc.Height != static_cast<Uint32>(TexHeight))
@@ -219,8 +236,11 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
     {
 #if GL_TEXTURE_DEPTH
         GLint TexDepth = 0;
-        glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_DEPTH, &TexDepth);
-        DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_DEPTH) failed");
+        if (DeviceInfo.Type == RENDER_DEVICE_TYPE_GL || (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 1}))
+        {
+            glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_DEPTH, &TexDepth);
+            DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_DEPTH) failed");
+        }
         if (TexDepth > 0)
         {
             if (TexDesc.Depth != 0 && TexDesc.Depth != static_cast<Uint32>(TexDepth))
@@ -252,8 +272,11 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
 
 #if GL_TEXTURE_INTERNAL_FORMAT
     GLint GlFormat = 0;
-    glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
-    DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_INTERNAL_FORMAT) failed");
+    if (DeviceInfo.Type == RENDER_DEVICE_TYPE_GL || (DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 1}))
+    {
+        glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
+        DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_INTERNAL_FORMAT) failed");
+    }
     if (GlFormat != 0)
     {
         if (TexDesc.Format != TEX_FORMAT_UNKNOWN && static_cast<GLenum>(GlFormat) != TexFormatToGLInternalTexFormat(TexDesc.Format))
@@ -280,10 +303,13 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
     }
 #endif
 
-    // GL_TEXTURE_IMMUTABLE_LEVELS is only supported in GL4.3+ and GLES3.1+
     GLint MipLevels = 0;
-    glGetTexParameteriv(BindTarget, GL_TEXTURE_IMMUTABLE_LEVELS, &MipLevels);
-    DEV_CHECK_GL_ERROR("glGetTexLevelParameteriv(GL_TEXTURE_IMMUTABLE_LEVELS) failed");
+    // GL_TEXTURE_IMMUTABLE_LEVELS is supported in GL4.3+ and GLES3.0+.
+    if ((DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{4, 3}) || DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES)
+    {
+        glGetTexParameteriv(BindTarget, GL_TEXTURE_IMMUTABLE_LEVELS, &MipLevels);
+        DEV_CHECK_GL_ERROR("glGetTexParameteriv(GL_TEXTURE_IMMUTABLE_LEVELS) failed");
+    }
     if (MipLevels > 0)
     {
         if (TexDesc.MipLevels != 0 && TexDesc.MipLevels != static_cast<Uint32>(MipLevels))
@@ -321,13 +347,13 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*        pRefCounters,
         pRefCounters,
         TexViewObjAllocator,
         pDeviceGL,
-        GetTextureDescFromGLHandle(GLState, TexDesc, GLTextureHandle, BindTarget),
+        GetTextureDescFromGLHandle(pDeviceGL->GetDeviceInfo(), GLState, TexDesc, GLTextureHandle, BindTarget),
         bIsDeviceInternal
     },
     // Create texture object wrapper, but use external texture handle
     m_GlTexture     {true, GLObjectWrappers::GLTextureCreateReleaseHelper(GLTextureHandle)},
     m_BindTarget    {BindTarget},
-    m_GLTexFormat   {GetTextureInternalFormat(GLState, BindTarget, m_GlTexture, TexDesc.Format)}
+    m_GLTexFormat   {GetTextureInternalFormat(pDeviceGL->GetDeviceInfo(), GLState, BindTarget, m_GlTexture, TexDesc.Format)}
 // clang-format on
 {
 }
