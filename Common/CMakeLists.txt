@@ -34,6 +34,7 @@ set(INTERFACE
     interface/SpinLock.hpp
     interface/STDAllocator.hpp
     interface/StringDataBlobImpl.hpp
+    interface/ProxyDataBlob.hpp
     interface/StringTools.h
     interface/StringTools.hpp
     interface/StringPool.hpp

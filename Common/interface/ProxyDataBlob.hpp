@@ -1,6 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
+ *  Copyright 2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,8 +29,6 @@
 /// \file
 /// Implementation for the IDataBlob interface
 
-#include <vector>
-
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/DataBlob.h"
 #include "ObjectBase.hpp"
@@ -40,22 +37,30 @@
 namespace Diligent
 {
 
-/// String data blob implementation.
-class StringDataBlobImpl : public ObjectBase<IDataBlob>
+/// Implementation of the proxy data blob that does not own the data
+class ProxyDataBlob : public ObjectBase<IDataBlob>
 {
 public:
     typedef ObjectBase<IDataBlob> TBase;
 
-    template <typename... ArgsType>
-    StringDataBlobImpl(IReferenceCounters* pRefCounters, ArgsType&&... Args) :
+    ProxyDataBlob(IReferenceCounters* pRefCounters, void* pData, size_t Size) :
         TBase{pRefCounters},
-        m_String{std::forward<ArgsType>(Args)...}
+        m_pData{pData},
+        m_pConstData{pData},
+        m_Size{Size}
+    {}
+
+    ProxyDataBlob(IReferenceCounters* pRefCounters, const void* pData, size_t Size) :
+        TBase{pRefCounters},
+        m_pData{nullptr},
+        m_pConstData{pData},
+        m_Size{Size}
     {}
 
     template <typename... ArgsType>
-    static RefCntAutoPtr<StringDataBlobImpl> Create(ArgsType&&... Args)
+    static RefCntAutoPtr<ProxyDataBlob> Create(ArgsType&&... Args)
     {
-        return RefCntAutoPtr<StringDataBlobImpl>{MakeNewRCObj<StringDataBlobImpl>()(std::forward<ArgsType>(Args)...)};
+        return RefCntAutoPtr<ProxyDataBlob>{MakeNewRCObj<ProxyDataBlob>()(std::forward<ArgsType>(Args)...)};
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DataBlob, TBase)
@@ -63,29 +68,31 @@ public:
     /// Sets the size of the internal data buffer
     virtual void DILIGENT_CALL_TYPE Resize(size_t NewSize) override
     {
-        m_String.resize(NewSize);
+        UNEXPECTED("Resize is not supported by proxy data blob.");
     }
 
     /// Returns the size of the internal data buffer
     virtual size_t DILIGENT_CALL_TYPE GetSize() const override
     {
-        return m_String.length();
+        return m_Size;
     }
 
     /// Returns the pointer to the internal data buffer
     virtual void* DILIGENT_CALL_TYPE GetDataPtr() override
     {
-        return &m_String[0];
+        return m_pData;
     }
 
     /// Returns the pointer to the internal data buffer
     virtual const void* DILIGENT_CALL_TYPE GetConstDataPtr() const override
     {
-        return &m_String[0];
+        return m_pConstData;
     }
 
 private:
-    String m_String;
+    void* const       m_pData;
+    const void* const m_pConstData;
+    const size_t      m_Size;
 };
 
 } // namespace Diligent
