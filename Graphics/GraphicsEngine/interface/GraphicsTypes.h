@@ -3473,6 +3473,9 @@ struct EngineCreateInfo
     ///             function.
     Uint32 NumAsyncShaderCompilationThreads DEFAULT_INITIALIZER(0xFFFFFFFFu);
 
+    // The structure must be 8-byte aligned
+    Uint32 Padding DEFAULT_INITIALIZER(0);
+
 #if DILIGENT_CPP_INTERFACE
     EngineCreateInfo() noexcept
     {
