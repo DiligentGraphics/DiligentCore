@@ -30,6 +30,8 @@
 /// \file
 /// Declaration of BufferSuballocator interface and related data structures
 
+#include <algorithm>
+
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/Buffer.h"
@@ -107,7 +109,7 @@ struct BufferSuballocatorUsageStats
     {
         CommittedSize += rhs.CommittedSize;
         UsedSize += rhs.UsedSize;
-        MaxFreeChunkSize = std::max(MaxFreeChunkSize, rhs.MaxFreeChunkSize);
+        MaxFreeChunkSize = (std::max)(MaxFreeChunkSize, rhs.MaxFreeChunkSize);
         AllocationCount += rhs.AllocationCount;
         return *this;
     }

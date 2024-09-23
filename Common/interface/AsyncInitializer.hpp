@@ -29,6 +29,7 @@
 #include <atomic>
 #include <memory>
 #include <vector>
+#include <algorithm>
 
 #include "SpinLock.hpp"
 #include "ThreadPool.hpp"
@@ -76,7 +77,7 @@ public:
 
             if (NewStatus > CurrStatus)
             {
-                while (!m_Status.compare_exchange_weak(CurrStatus, std::max(CurrStatus, NewStatus)))
+                while (!m_Status.compare_exchange_weak(CurrStatus, (std::max)(CurrStatus, NewStatus)))
                 {
                     // If exchange fails, CurrStatus will hold the actual value of m_Status.
                 }

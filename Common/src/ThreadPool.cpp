@@ -26,6 +26,7 @@
 
 #include "ThreadPool.hpp"
 
+#include <algorithm>
 #include <mutex>
 #include <thread>
 #include <map>
