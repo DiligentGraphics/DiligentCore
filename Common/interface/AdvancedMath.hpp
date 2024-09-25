@@ -1226,7 +1226,7 @@ bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
     }
 }
 
-/// Triangulation result flags returned by the TriangulatePolygon function.
+/// Triangulation result flags returned by the polygon triangulator.
 enum TRIANGULATE_POLYGON_RESULT : Uint32
 {
     /// The polygon was triangulated successfully.
@@ -1240,13 +1240,13 @@ enum TRIANGULATE_POLYGON_RESULT : Uint32
 
     /// Convex vertex is not outside of the polygon.
     ///
-    /// \note   This check may fail due to floating point imprecision
+    /// \note   This flag may be set due to floating point imprecision
     ///         if there are (almost) collinear vertices.
     TRIANGULATE_POLYGON_RESULT_INVALID_CONVEX = 1u << 2u,
 
     /// Ear vertex is not outside of the polygon.
     ///
-    /// \note   This check may fail due to floating point imprecision
+    /// \note   This flag may be set due to floating point imprecision
     ///         if there are (almost) collinear vertices.
     TRIANGULATE_POLYGON_RESULT_INVALID_EAR = 1u << 3u,
 
@@ -1255,94 +1255,244 @@ enum TRIANGULATE_POLYGON_RESULT : Uint32
 };
 DEFINE_FLAG_ENUM_OPERATORS(TRIANGULATE_POLYGON_RESULT);
 
-
-/// Triangulates a simple polygon using the ear-clipping algorithm.
-
-/// \tparam [in] IndexType     - Index type (e.g. Uint32 or Uint16).
-/// \tparam [in] ComponentType - Vertex component type (e.g. float, double or int).
+/// 2D polygon triangulator.
 ///
-/// \param [in]  Polygon   - A list of polygon vertices. The last vertex is
-///                          assumed to be connected to the first one.
+/// The class implements the ear-clipping algorithm to triangulate simple (i.e.
+/// non-self-intersecting) 2D polygons.
 ///
-/// \param [out] Result    - Optional pointer to the variable that will receive
-///                          the triangulation result. May be nullptr.
-///
-/// \return     The triangle list.
-///
-/// \remarks    The winding order of each triangle is the same as the winding
-///             order of the polygon.
-///
-///             The function does not check if the polygon is simple, e.g.
-///             that it does not self-intersect.
-template <typename IndexType, typename ComponentType>
-std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentType>>& Polygon,
-                                          TRIANGULATE_POLYGON_RESULT*                Result = nullptr)
+/// \tparam IndexType - Index type (e.g. Uint32 or Uint16).
+template <typename IndexType>
+class Polygon2DTriangulator
 {
-    if (Result != nullptr)
-        *Result = TRIANGULATE_POLYGON_RESULT_OK;
+public:
+    /// Triangulates a simple polygon using the ear-clipping algorithm.
 
-    const auto VertCount = static_cast<int>(Polygon.size());
-    if (VertCount <= 2)
+    /// \tparam [in] ComponentType - Vertex component type (e.g. float, double or int).
+    ///
+    /// \param [in]  Polygon   - A list of polygon vertices. The last vertex is
+    ///                          assumed to be connected to the first one
+    ///
+    /// \return     The triangle list.
+    ///
+    /// \remarks    The winding order of each triangle is the same as the winding
+    ///             order of the polygon.
+    ///
+    ///             The function does not check if the polygon is simple, e.g.
+    ///             that it does not self-intersect.
+    template <typename ComponentType>
+    const std::vector<IndexType>& Triangulate(const std::vector<Vector2<ComponentType>>& Polygon)
     {
-        if (Result != nullptr)
-            *Result = TRIANGULATE_POLYGON_RESULT_TOO_FEW_VERTS;
-        return {};
+        m_Result = TRIANGULATE_POLYGON_RESULT_OK;
+        m_Triangles.clear();
+
+        const int VertCount = static_cast<int>(Polygon.size());
+        if (VertCount <= 2)
+        {
+            m_Result = TRIANGULATE_POLYGON_RESULT_TOO_FEW_VERTS;
+            return m_Triangles;
+        }
+
+        const int TriangleCount = VertCount - 2;
+        if (TriangleCount == 1)
+        {
+            m_Triangles = {0, 1, 2};
+            return m_Triangles;
+        }
+
+        // Find the leftmost vertex to determine the winding order
+        int LeftmostVertIdx = 0;
+        for (int i = 1; i < VertCount; ++i)
+        {
+            if (Polygon[i].x < Polygon[LeftmostVertIdx].x)
+                LeftmostVertIdx = i;
+        }
+
+        auto WrapIndex = [](int idx, int Count) {
+            return ((idx % Count) + Count) % Count;
+        };
+
+        // Returns the winding order of the triangle formed by the given vertices.
+        //
+        //    V0    V2
+        //      \  /
+        //       \/
+        //       V1
+        auto GetWinding = [](const auto& V0, const auto& V1, const auto& V2) {
+            return (V1.x - V0.x) * (V2.y - V1.y) - (V2.x - V1.x) * (V1.y - V0.y);
+        };
+
+        // Find the winding order of the polygon
+        ComponentType PolygonWinding = 0;
+        // Handle the case when the leftmost vertex is collinear with its neighbors:
+        // *.
+        // | '.
+        // |   '.
+        // *    .*
+        // |  .'
+        // |.'
+        // *
+        for (int i = 0; i < VertCount && PolygonWinding == 0; ++i)
+        {
+            const auto& V0 = Polygon[WrapIndex(LeftmostVertIdx + i - 1, VertCount)];
+            const auto& V1 = Polygon[WrapIndex(LeftmostVertIdx + i + 0, VertCount)];
+            const auto& V2 = Polygon[WrapIndex(LeftmostVertIdx + i + 1, VertCount)];
+            PolygonWinding = GetWinding(V0, V1, V2);
+        }
+        if (PolygonWinding == 0)
+        {
+            m_Result = TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR;
+            return m_Triangles;
+        }
+        PolygonWinding = PolygonWinding > ComponentType{0} ? ComponentType{1} : ComponentType{-1};
+
+        m_RemainingVertIds.resize(VertCount);
+        m_VertTypes.resize(VertCount);
+        for (int i = 0; i < VertCount; ++i)
+        {
+            m_RemainingVertIds[i] = i;
+            m_VertTypes[i]        = VertexType::Convexx;
+        }
+
+        auto CheckConvex = [&](int vert_id) {
+            const int RemainingVertCount = static_cast<int>(m_RemainingVertIds.size());
+
+            const int Idx0 = m_RemainingVertIds[WrapIndex(vert_id - 1, RemainingVertCount)];
+            const int Idx1 = m_RemainingVertIds[WrapIndex(vert_id + 0, RemainingVertCount)];
+            const int Idx2 = m_RemainingVertIds[WrapIndex(vert_id + 1, RemainingVertCount)];
+
+            const auto& V0 = Polygon[Idx0];
+            const auto& V1 = Polygon[Idx1];
+            const auto& V2 = Polygon[Idx2];
+
+            return GetWinding(V0, V1, V2) * PolygonWinding < 0 ?
+                VertexType::Reflex :
+                VertexType::Convexx;
+        };
+
+        auto CheckEar = [&](int vert_id) {
+            const int RemainingVertCount = static_cast<int>(m_RemainingVertIds.size());
+
+            const int Idx0 = m_RemainingVertIds[WrapIndex(vert_id - 1, RemainingVertCount)];
+            const int Idx1 = m_RemainingVertIds[WrapIndex(vert_id + 0, RemainingVertCount)];
+            const int Idx2 = m_RemainingVertIds[WrapIndex(vert_id + 1, RemainingVertCount)];
+
+            VERIFY_EXPR(m_VertTypes[Idx1] == VertexType::Convexx);
+
+            const auto& V0 = Polygon[Idx0];
+            const auto& V1 = Polygon[Idx1];
+            const auto& V2 = Polygon[Idx2];
+
+            for (const int Idx : m_RemainingVertIds)
+            {
+                if (Idx == Idx0 || Idx == Idx1 || Idx == Idx2)
+                    continue;
+
+                if (m_VertTypes[Idx] == VertexType::Convexx || m_VertTypes[Idx] == VertexType::Ear)
+                {
+#ifdef DILIGENT_DEVELOPMENT
+                    // This check may fail due to floating point imprecision if there are collinear vertices.
+                    if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false))
+                    {
+                        // Convex and ear vertices must always be outside the triangle
+                        m_Result |= (m_VertTypes[Idx] == VertexType::Convexx) ?
+                            TRIANGULATE_POLYGON_RESULT_INVALID_CONVEX :
+                            TRIANGULATE_POLYGON_RESULT_INVALID_EAR;
+                    }
+#endif
+                    continue;
+                }
+
+                // Do not treat vertices exactly on the edge as inside the triangle,
+                // so that we can clip out degenerate triangles.
+                if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false))
+                {
+                    // The vertex is inside the triangle
+                    return VertexType::Convexx;
+                }
+            }
+
+            return VertexType::Ear;
+        };
+
+        // First label vertices as reflex or convex
+        for (int vert_id = 0; vert_id < VertCount; ++vert_id)
+        {
+            m_VertTypes[vert_id] = CheckConvex(vert_id);
+        }
+
+        // Next, check convex vertices for ears
+        for (int vert_id = 0; vert_id < VertCount; ++vert_id)
+        {
+            VertexType& VertType = m_VertTypes[vert_id];
+            if (VertType == VertexType::Convexx)
+                VertType = CheckEar(vert_id);
+        }
+
+        m_Triangles.clear();
+        m_Triangles.reserve(TriangleCount * 3);
+
+        // Clip ears one by one until only three vertices are left
+        while (m_RemainingVertIds.size() > 3)
+        {
+            int RemainingVertCount = static_cast<int>(m_RemainingVertIds.size());
+
+            // Find the first ear
+            int ear_vert_id = 0;
+            for (; ear_vert_id < RemainingVertCount; ++ear_vert_id)
+            {
+                const int Idx = m_RemainingVertIds[ear_vert_id];
+                if (m_VertTypes[Idx] == VertexType::Ear)
+                    break;
+            };
+
+            if (ear_vert_id == RemainingVertCount)
+            {
+                // No ears found
+                m_Result |= TRIANGULATE_POLYGON_RESULT_NO_EAR_FOUND;
+                ear_vert_id = 0;
+            }
+
+            const int Idx0 = m_RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
+            const int Idx1 = m_RemainingVertIds[ear_vert_id];
+            const int Idx2 = m_RemainingVertIds[WrapIndex(ear_vert_id + 1, RemainingVertCount)];
+
+            m_Triangles.emplace_back(Idx0);
+            m_Triangles.emplace_back(Idx1);
+            m_Triangles.emplace_back(Idx2);
+            m_RemainingVertIds.erase(m_RemainingVertIds.begin() + ear_vert_id);
+
+            --RemainingVertCount;
+            // Update adjacent vertices
+            if (RemainingVertCount > 3)
+            {
+                const int IdxL = m_RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
+                const int IdxR = m_RemainingVertIds[WrapIndex(ear_vert_id, RemainingVertCount)];
+                // First check for convex vs reflex
+                m_VertTypes[IdxL] = CheckConvex(ear_vert_id - 1);
+                m_VertTypes[IdxR] = CheckConvex(ear_vert_id);
+
+                // Next, check for ears
+                if (m_VertTypes[IdxL] == VertexType::Convexx)
+                    m_VertTypes[IdxL] = CheckEar(ear_vert_id - 1);
+                if (m_VertTypes[IdxR] == VertexType::Convexx)
+                    m_VertTypes[IdxR] = CheckEar(ear_vert_id);
+            }
+        }
+
+        m_Triangles.emplace_back(m_RemainingVertIds[0]);
+        m_Triangles.emplace_back(m_RemainingVertIds[1]);
+        m_Triangles.emplace_back(m_RemainingVertIds[2]);
+
+        return m_Triangles;
     }
 
-    const auto TriangleCount = VertCount - 2;
-    if (TriangleCount == 1)
-        return {0, 1, 2};
+    TRIANGULATE_POLYGON_RESULT GetResult() const { return m_Result; }
 
-    // Find the leftmost vertex to determine the winding order
-    int LeftmostVertIdx = 0;
-    for (int i = 1; i < VertCount; ++i)
-    {
-        if (Polygon[i].x < Polygon[LeftmostVertIdx].x)
-            LeftmostVertIdx = i;
-    }
+protected:
+    TRIANGULATE_POLYGON_RESULT m_Result = TRIANGULATE_POLYGON_RESULT_OK;
+    std::vector<IndexType>     m_Triangles;
 
-    auto WrapIndex = [](int idx, int Count) {
-        return ((idx % Count) + Count) % Count;
-    };
-
-    // Returns the winding order of the triangle formed by the given vertices.
-    //
-    //    V0    V2
-    //      \  /
-    //       \/
-    //       V1
-    auto GetWinding = [](const auto& V0, const auto& V1, const auto& V2) {
-        return (V1.x - V0.x) * (V2.y - V1.y) - (V2.x - V1.x) * (V1.y - V0.y);
-    };
-
-    // Find the winding order of the polygon
-    ComponentType PolygonWinding = 0;
-    // Handle the case when the leftmost vertex is collinear with its neighbors:
-    // *.
-    // | '.
-    // |   '.
-    // *    .*
-    // |  .'
-    // |.'
-    // *
-    for (int i = 0; i < VertCount && PolygonWinding == 0; ++i)
-    {
-        const auto& V0 = Polygon[WrapIndex(LeftmostVertIdx + i - 1, VertCount)];
-        const auto& V1 = Polygon[WrapIndex(LeftmostVertIdx + i + 0, VertCount)];
-        const auto& V2 = Polygon[WrapIndex(LeftmostVertIdx + i + 1, VertCount)];
-        PolygonWinding = GetWinding(V0, V1, V2);
-    }
-    if (PolygonWinding == 0)
-    {
-        if (Result != nullptr)
-            *Result = TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR;
-        return {};
-    }
-
-    std::vector<int> RemainingVertIds(VertCount);
-    for (int i = 0; i < VertCount; ++i)
-        RemainingVertIds[i] = i;
-
+private:
     //        Reflex
     //   Ear.   |   .Ear
     //      \'. V .'/
@@ -1358,216 +1508,95 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
         Reflex,
         Ear
     };
-    std::vector<VertexType> VertTypes(VertCount);
+    std::vector<VertexType> m_VertTypes;
 
-    auto CheckConvex = [&](int vert_id) {
-        const auto RemainingVertCount = static_cast<int>(RemainingVertIds.size());
-
-        const auto Idx0 = RemainingVertIds[WrapIndex(vert_id - 1, RemainingVertCount)];
-        const auto Idx1 = RemainingVertIds[WrapIndex(vert_id + 0, RemainingVertCount)];
-        const auto Idx2 = RemainingVertIds[WrapIndex(vert_id + 1, RemainingVertCount)];
-
-        const auto& V0 = Polygon[Idx0];
-        const auto& V1 = Polygon[Idx1];
-        const auto& V2 = Polygon[Idx2];
-
-        return GetWinding(V0, V1, V2) * PolygonWinding < 0 ?
-            VertexType::Reflex :
-            VertexType::Convexx;
-    };
-
-    auto CheckEar = [&](int vert_id) {
-        const auto RemainingVertCount = static_cast<int>(RemainingVertIds.size());
-
-        const auto Idx0 = RemainingVertIds[WrapIndex(vert_id - 1, RemainingVertCount)];
-        const auto Idx1 = RemainingVertIds[WrapIndex(vert_id + 0, RemainingVertCount)];
-        const auto Idx2 = RemainingVertIds[WrapIndex(vert_id + 1, RemainingVertCount)];
-
-        VERIFY_EXPR(VertTypes[Idx1] == VertexType::Convexx);
-
-        const auto& V0 = Polygon[Idx0];
-        const auto& V1 = Polygon[Idx1];
-        const auto& V2 = Polygon[Idx2];
-
-        for (const auto Idx : RemainingVertIds)
-        {
-            if (Idx == Idx0 || Idx == Idx1 || Idx == Idx2)
-                continue;
-
-            if (VertTypes[Idx] == VertexType::Convexx || VertTypes[Idx] == VertexType::Ear)
-            {
-#ifdef DILIGENT_DEVELOPMENT
-                if (Result != nullptr)
-                {
-                    // This check may fail due to floating point imprecision if there are collinear vertices.
-                    if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false))
-                    {
-                        // Convex and ear vertices must always be outside the triangle
-                        *Result |= (VertTypes[Idx] == VertexType::Convexx) ?
-                            TRIANGULATE_POLYGON_RESULT_INVALID_CONVEX :
-                            TRIANGULATE_POLYGON_RESULT_INVALID_EAR;
-                    }
-                }
-#endif
-                continue;
-            }
-
-            // Do not treat vertices exactly on the edge as inside the triangle,
-            // so that we can clip out degenerate triangles.
-            if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false))
-            {
-                // The vertex is inside the triangle
-                return VertexType::Convexx;
-            }
-        }
-
-        return VertexType::Ear;
-    };
-
-    // First label vertices as reflex or convex
-    for (int vert_id = 0; vert_id < VertCount; ++vert_id)
-    {
-        VertTypes[vert_id] = CheckConvex(vert_id);
-    }
-
-    // Next, check convex vertices for ears
-    for (int vert_id = 0; vert_id < VertCount; ++vert_id)
-    {
-        auto& VertType = VertTypes[vert_id];
-        if (VertType == VertexType::Convexx)
-            VertType = CheckEar(vert_id);
-    }
-
-    std::vector<IndexType> Triangles;
-    Triangles.reserve(TriangleCount * 3);
-
-    // Clip ears one by one until only three vertices are left
-    while (RemainingVertIds.size() > 3)
-    {
-        auto RemainingVertCount = static_cast<int>(RemainingVertIds.size());
-
-        // Find the first ear
-        int ear_vert_id = 0;
-        for (; ear_vert_id < RemainingVertCount; ++ear_vert_id)
-        {
-            const auto Idx = RemainingVertIds[ear_vert_id];
-            if (VertTypes[Idx] == VertexType::Ear)
-                break;
-        };
-
-        if (ear_vert_id == RemainingVertCount)
-        {
-            // No ears found
-            if (Result != nullptr)
-                *Result = TRIANGULATE_POLYGON_RESULT_NO_EAR_FOUND;
-            ear_vert_id = 0;
-        }
-
-        const auto Idx0 = RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
-        const auto Idx1 = RemainingVertIds[ear_vert_id];
-        const auto Idx2 = RemainingVertIds[WrapIndex(ear_vert_id + 1, RemainingVertCount)];
-
-        Triangles.emplace_back(Idx0);
-        Triangles.emplace_back(Idx1);
-        Triangles.emplace_back(Idx2);
-        RemainingVertIds.erase(RemainingVertIds.begin() + ear_vert_id);
-
-        --RemainingVertCount;
-        // Update adjacent vertices
-        if (RemainingVertCount > 3)
-        {
-            const auto IdxL = RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
-            const auto IdxR = RemainingVertIds[WrapIndex(ear_vert_id, RemainingVertCount)];
-            // First check for convex vs reflex
-            VertTypes[IdxL] = CheckConvex(ear_vert_id - 1);
-            VertTypes[IdxR] = CheckConvex(ear_vert_id);
-
-            // Next, check for ears
-            if (VertTypes[IdxL] == VertexType::Convexx)
-                VertTypes[IdxL] = CheckEar(ear_vert_id - 1);
-            if (VertTypes[IdxR] == VertexType::Convexx)
-                VertTypes[IdxR] = CheckEar(ear_vert_id);
-        }
-    }
-
-    Triangles.emplace_back(RemainingVertIds[0]);
-    Triangles.emplace_back(RemainingVertIds[1]);
-    Triangles.emplace_back(RemainingVertIds[2]);
-
-    return Triangles;
-}
+    // Remaining vertices to process
+    std::vector<int> m_RemainingVertIds;
+};
 
 
-/// Triangulates a simple polygon in 3D.
-
-/// \remarks This function first projects the polygon onto the plane and then
-///          triangulates the resulting 2D polygon.
+/// 3D polygon triangulator.
+/// The class extends the Polygon2DTriangulator class to handle simple 3D polygons.
+/// It first projects the polygon onto a plane and then triangulates the resulting 2D polygon.
 ///
-///          If vertices are not coplanar, the result is undefined.
+/// \tparam IndexType     - Index type (e.g. Uint32 or Uint16).
+/// \tparam ComponentType - Vertex component type, must be a floating point type (e.g. float or double).
 template <typename IndexType, typename ComponentType>
-typename std::enable_if<std::is_floating_point<ComponentType>::value, std::vector<IndexType>>::type
-TriangulatePolygon3D(const std::vector<Vector3<ComponentType>>& Polygon,
-                     TRIANGULATE_POLYGON_RESULT*                Result = nullptr)
+class Polygon3DTriangulator : public Polygon2DTriangulator<typename std::enable_if<std::is_floating_point<ComponentType>::value, IndexType>::type>
 {
-    // Find the normal
-    Vector3<ComponentType> MaxNormal;
-    Vector3<ComponentType> MeanNormal;
+public:
+    /// Triangulates a simple polygon in 3D.
 
-    // Use the normal with the largest length.
-    // Note that it does not matter if the vertex is convex or reflex as
-    // the TriangulatePolygon() function handles any orinetation.
-    ComponentType MaxNormalLength = 0;
-    for (size_t i = 0; i < Polygon.size(); ++i)
+    /// \remarks The function first projects the polygon onto a plane and then
+    ///          triangulates the resulting 2D polygon.
+    ///
+    ///          If vertices are not coplanar, the result is undefined.
+    const std::vector<IndexType>& Triangulate(const std::vector<Vector3<ComponentType>>& Polygon)
     {
-        const auto& V0 = Polygon[i];
-        const auto& V1 = Polygon[(i + 1) % Polygon.size()];
-        const auto& V2 = Polygon[(i + 2) % Polygon.size()];
+        this->m_Triangles.clear();
 
-        const auto EdgeCross       = cross(V1 - V0, V2 - V1);
-        const auto EdgeCrossLength = length(EdgeCross);
-        if (EdgeCrossLength > MaxNormalLength)
+        // Find the normal
+        Vector3<ComponentType> MaxNormal;
+        Vector3<ComponentType> MeanNormal;
+
+        // Use the normal with the largest length.
+        // Note that it does not matter if the vertex is convex or reflex as
+        // the TriangulatePolygon() function handles any orinetation.
+        ComponentType MaxNormalLength = 0;
+        for (size_t i = 0; i < Polygon.size(); ++i)
         {
-            MaxNormal       = EdgeCross;
-            MaxNormalLength = EdgeCrossLength;
+            const auto& V0 = Polygon[i];
+            const auto& V1 = Polygon[(i + 1) % Polygon.size()];
+            const auto& V2 = Polygon[(i + 2) % Polygon.size()];
+
+            const auto EdgeCross       = cross(V1 - V0, V2 - V1);
+            const auto EdgeCrossLength = length(EdgeCross);
+            if (EdgeCrossLength > MaxNormalLength)
+            {
+                MaxNormal       = EdgeCross;
+                MaxNormalLength = EdgeCrossLength;
+            }
+            MeanNormal += EdgeCross;
         }
-        MeanNormal += EdgeCross;
+
+        const auto MeanNormalLength = length(MeanNormal);
+        // Prefer mean normal
+        const auto& Normal = MeanNormalLength > (MaxNormalLength / ComponentType{4}) ? MeanNormal : MaxNormal;
+        if (Normal == Vector3<ComponentType>{})
+        {
+            this->m_Result = TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR;
+            return this->m_Triangles;
+        }
+        const auto AbsNormal = abs(Normal);
+
+        Vector3<ComponentType> Tangent;
+        if (AbsNormal.z > (std::max)(AbsNormal.x, AbsNormal.y))
+            Tangent = cross(Vector3<ComponentType>{ComponentType{0}, ComponentType{1}, ComponentType{0}}, Normal);
+        else if (AbsNormal.y > (std::max)(AbsNormal.x, AbsNormal.z))
+            Tangent = cross(Vector3<ComponentType>{ComponentType{1}, ComponentType{0}, ComponentType{0}}, Normal);
+        else
+            Tangent = cross(Vector3<ComponentType>{ComponentType{0}, ComponentType{0}, ComponentType{1}}, Normal);
+        VERIFY_EXPR(length(Tangent) > 0);
+        Tangent = normalize(Tangent);
+
+        auto Bitangent = cross(Normal, Tangent);
+        VERIFY_EXPR(length(Bitangent) > 0);
+        Bitangent = normalize(Bitangent);
+
+        // Project the polygon
+        m_PolygonProj.clear();
+        m_PolygonProj.reserve(Polygon.size());
+        for (const auto& Vert : Polygon)
+        {
+            m_PolygonProj.emplace_back(dot(Tangent, Vert), dot(Bitangent, Vert));
+        }
+
+        return Polygon2DTriangulator<IndexType>::Triangulate(m_PolygonProj);
     }
 
-    const auto MeanNormalLength = length(MeanNormal);
-    // Prefer mean normal
-    const auto& Normal = MeanNormalLength > (MaxNormalLength / ComponentType{4}) ? MeanNormal : MaxNormal;
-    if (Normal == Vector3<ComponentType>{})
-    {
-        if (Result != nullptr)
-            *Result = TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR;
-        return {};
-    }
-    const auto AbsNormal = abs(Normal);
-
-    Vector3<ComponentType> Tangent;
-    if (AbsNormal.z > (std::max)(AbsNormal.x, AbsNormal.y))
-        Tangent = cross(Vector3<ComponentType>{ComponentType{0}, ComponentType{1}, ComponentType{0}}, Normal);
-    else if (AbsNormal.y > (std::max)(AbsNormal.x, AbsNormal.z))
-        Tangent = cross(Vector3<ComponentType>{ComponentType{1}, ComponentType{0}, ComponentType{0}}, Normal);
-    else
-        Tangent = cross(Vector3<ComponentType>{ComponentType{0}, ComponentType{0}, ComponentType{1}}, Normal);
-    VERIFY_EXPR(length(Tangent) > 0);
-    Tangent = normalize(Tangent);
-
-    auto Bitangent = cross(Normal, Tangent);
-    VERIFY_EXPR(length(Bitangent) > 0);
-    Bitangent = normalize(Bitangent);
-
-    // Project the polygon
-    std::vector<Vector2<ComponentType>> PolygonProj;
-    PolygonProj.reserve(Polygon.size());
-    for (const auto& Vert : Polygon)
-    {
-        PolygonProj.emplace_back(dot(Tangent, Vert), dot(Bitangent, Vert));
-    }
-
-    return TriangulatePolygon<IndexType>(PolygonProj, Result);
-}
+private:
+    std::vector<Vector2<ComponentType>> m_PolygonProj;
+};
 
 } // namespace Diligent
 
