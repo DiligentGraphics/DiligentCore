@@ -1535,33 +1535,21 @@ public:
     {
         this->m_Triangles.clear();
 
-        // Find the normal
-        Vector3<ComponentType> MaxNormal;
-        Vector3<ComponentType> MeanNormal;
-
-        // Use the normal with the largest length.
-        // Note that it does not matter if the vertex is convex or reflex as
-        // the TriangulatePolygon() function handles any orinetation.
-        ComponentType MaxNormalLength = 0;
+        // Find the mean normal.
+        Vector3<ComponentType> Normal;
         for (size_t i = 0; i < Polygon.size(); ++i)
         {
             const auto& V0 = Polygon[i];
             const auto& V1 = Polygon[(i + 1) % Polygon.size()];
             const auto& V2 = Polygon[(i + 2) % Polygon.size()];
 
-            const auto EdgeCross       = cross(V1 - V0, V2 - V1);
-            const auto EdgeCrossLength = length(EdgeCross);
-            if (EdgeCrossLength > MaxNormalLength)
-            {
-                MaxNormal       = EdgeCross;
-                MaxNormalLength = EdgeCrossLength;
-            }
-            MeanNormal += EdgeCross;
+            const auto VertexNormal = cross(V1 - V0, V2 - V1);
+
+            // Align current normal with the mean normal to handle both convex and reflex vertices
+            const ComponentType Sign = dot(Normal, VertexNormal) >= 0 ? ComponentType{1} : ComponentType{-1};
+            Normal += Sign * VertexNormal;
         }
 
-        const auto MeanNormalLength = length(MeanNormal);
-        // Prefer mean normal
-        const auto& Normal = MeanNormalLength > (MaxNormalLength / ComponentType{4}) ? MeanNormal : MaxNormal;
         if (Normal == Vector3<ComponentType>{})
         {
             this->m_Result = TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR;

@@ -3326,7 +3326,7 @@ TEST(Common_AdvancedMath, TriangulatePolygon3D)
             {0.104520433, 0.182026073, 0.119771279},
         };
         Polygon3DTriangulator<Uint32, double> Triangulator;
-        const std::vector<Uint32>             RefTris = {7, 0, 1, 7, 1, 2, 7, 2, 3, 7, 3, 4, 7, 4, 5, 5, 6, 7};
+        const std::vector<Uint32>             RefTris = {0, 1, 2, 7, 0, 2, 7, 2, 3, 7, 3, 4, 7, 4, 5, 5, 6, 7};
         const auto                            Tris    = Triangulator.Triangulate(Verts);
         EXPECT_EQ(Triangulator.GetResult(), TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Tris, RefTris);
