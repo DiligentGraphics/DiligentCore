@@ -2945,7 +2945,10 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
             {0, 1}};
         const std::vector<Uint32> RefTris = {0, 1, 2};
 
-        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result, TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Tris, RefTris);
     }
 
@@ -2969,7 +2972,10 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
 
         const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
 
-        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result, TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Tris, RefTris);
     }
 
@@ -2992,7 +2998,10 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
         }
         const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
 
-        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result, TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Tris, RefTris);
     }
 
@@ -3062,7 +3071,10 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
             case 3: RefTris = {3, 0, 1, 1, 2, 3}; break;
         }
 
-        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result, TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Tris, RefTris);
     }
 
@@ -3098,7 +3110,10 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
             case 3: RefTris = {3, 0, 1, 1, 2, 3}; break;
         }
 
-        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result, TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Tris, RefTris);
     }
 
@@ -3125,7 +3140,10 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
 
         const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
 
-        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result, TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Tris, RefTris);
     }
 
@@ -3152,7 +3170,10 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
 
         const std::vector<Uint32> RefTris = {3, 0, 1, 1, 2, 3};
 
-        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result, TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Tris, RefTris);
     }
 
@@ -3235,7 +3256,10 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
             case 5: RefTris = {5, 0, 1, 1, 2, 3, 1, 3, 4, 1, 4, 5}; break;
         }
 
-        const auto Tris = TriangulatePolygon<Uint32>(Verts);
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result, TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Tris, RefTris);
     }
 
@@ -3253,7 +3277,10 @@ TEST(Common_AdvancedMath, TriangulatePolygon2D)
             {170.33697864625216, -214.39292757663975},
             {165.87260207492534, -216.35619205753781},
         };
-        const auto Tris = TriangulatePolygon<Uint32>(Verts, false);
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const auto Tris = TriangulatePolygon<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result & ~TRIANGULATE_POLYGON_RESULT_INVALID_EAR, TRIANGULATE_POLYGON_RESULT_OK);
 
         const std::vector<Uint32> RefTris = {1, 2, 3, 1, 3, 4, 0, 1, 4, 0, 4, 5, 10, 0, 5, 5, 6, 7, 5, 7, 8, 5, 8, 9, 5, 9, 10};
         EXPECT_EQ(Tris, RefTris);
@@ -3296,7 +3323,29 @@ TEST(Common_AdvancedMath, TriangulatePolygon3D)
 
         const std::vector<Uint32> RefTris = {0, 1, 2, 0, 2, 3, 5, 0, 3, 3, 4, 5};
 
-        const auto Tris = TriangulatePolygon3D<Uint32>(Verts);
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const auto Tris = TriangulatePolygon3D<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result, TRIANGULATE_POLYGON_RESULT_OK);
+        EXPECT_EQ(Tris, RefTris);
+    }
+
+    {
+        const std::vector<double3> Verts = {
+            {0.0866542682, 0.191178054, 0.119771279},
+            {0.0846562684, 0.192071155, 0.119771279},
+            {0.0846562684, 0.192071155, 0.120928936},
+            {0.104519472, 0.182026610, 0.120928936},
+            {0.121640369, 0.171060309, 0.120928936},
+            {0.129021034, 0.165564433, 0.120928936},
+            {0.129021034, 0.165564433, 0.119771279},
+            {0.104520433, 0.182026073, 0.119771279},
+        };
+        TRIANGULATE_POLYGON_RESULT Result = TRIANGULATE_POLYGON_RESULT_OK;
+
+        const std::vector<Uint32> RefTris = {7, 0, 1, 7, 1, 2, 7, 2, 3, 7, 3, 4, 7, 4, 5, 5, 6, 7};
+        const auto                Tris    = TriangulatePolygon3D<Uint32>(Verts, &Result);
+        EXPECT_EQ(Result, TRIANGULATE_POLYGON_RESULT_OK);
         EXPECT_EQ(Tris, RefTris);
     }
 }

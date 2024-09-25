@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1226,6 +1226,35 @@ bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
     }
 }
 
+/// Triangulation result flags returned by the TriangulatePolygon function.
+enum TRIANGULATE_POLYGON_RESULT : Uint32
+{
+    /// The polygon was triangulated successfully.
+    TRIANGULATE_POLYGON_RESULT_OK = 0,
+
+    /// The polygon contains less than three vertices.
+    TRIANGULATE_POLYGON_RESULT_TOO_FEW_VERTS = 1u << 0u,
+
+    /// All polygon vertices are collinear.
+    TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR = 1u << 1u,
+
+    /// Convex vertex is not outside of the polygon.
+    ///
+    /// \note   This check may fail due to floating point imprecision
+    ///         if there are (almost) collinear vertices.
+    TRIANGULATE_POLYGON_RESULT_INVALID_CONVEX = 1u << 2u,
+
+    /// Ear vertex is not outside of the polygon.
+    ///
+    /// \note   This check may fail due to floating point imprecision
+    ///         if there are (almost) collinear vertices.
+    TRIANGULATE_POLYGON_RESULT_INVALID_EAR = 1u << 3u,
+
+    /// No ear vertex was found at one of the steps.
+    TRIANGULATE_POLYGON_RESULT_NO_EAR_FOUND = 1u << 4u
+};
+DEFINE_FLAG_ENUM_OPERATORS(TRIANGULATE_POLYGON_RESULT);
+
 
 /// Triangulates a simple polygon using the ear-clipping algorithm.
 
@@ -1235,13 +1264,8 @@ bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
 /// \param [in]  Polygon   - A list of polygon vertices. The last vertex is
 ///                          assumed to be connected to the first one.
 ///
-/// \param [in]  VerifyEarAndConvexVerts - If true, the function will verify that convex
-///                                        and ear vertices lie outside of the polygon.
-///                                        This is a debug-only check, which is disabled
-///                                        in release builds. It may be triggered if
-///                                        the polygon contains collinear vertices due to
-///                                        floating point imprecision. In this case you may
-///                                        disable the check by setting this parameter to false.
+/// \param [out] Result    - Optional pointer to the variable that will receive
+///                          the triangulation result. May be nullptr.
 ///
 /// \return     The triangle list.
 ///
@@ -1251,12 +1275,17 @@ bool CheckLineSectionOverlap(T Min0, T Max0, T Min1, T Max1)
 ///             The function does not check if the polygon is simple, e.g.
 ///             that it does not self-intersect.
 template <typename IndexType, typename ComponentType>
-std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentType>>& Polygon, bool VerifyEarAndConvexVerts = true)
+std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentType>>& Polygon,
+                                          TRIANGULATE_POLYGON_RESULT*                Result = nullptr)
 {
+    if (Result != nullptr)
+        *Result = TRIANGULATE_POLYGON_RESULT_OK;
+
     const auto VertCount = static_cast<int>(Polygon.size());
     if (VertCount <= 2)
     {
-        DEV_ERROR("At least three vertices are required.");
+        if (Result != nullptr)
+            *Result = TRIANGULATE_POLYGON_RESULT_TOO_FEW_VERTS;
         return {};
     }
 
@@ -1305,7 +1334,8 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
     }
     if (PolygonWinding == 0)
     {
-        DEV_ERROR("All vertices are collinear.");
+        if (Result != nullptr)
+            *Result = TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR;
         return {};
     }
 
@@ -1366,12 +1396,19 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
 
             if (VertTypes[Idx] == VertexType::Convexx || VertTypes[Idx] == VertexType::Ear)
             {
-                if (VerifyEarAndConvexVerts)
+#ifdef DILIGENT_DEVELOPMENT
+                if (Result != nullptr)
                 {
                     // This check may fail due to floating point imprecision if there are collinear vertices.
-                    // Fix your polygon or disable the check.
-                    VERIFY(!IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false), "Convex and ear vertices must always be outside the triangle");
+                    if (IsPointInsideTriangle(V0, V1, V2, Polygon[Idx], /*AllowEdges = */ false))
+                    {
+                        // Convex and ear vertices must always be outside the triangle
+                        *Result |= (VertTypes[Idx] == VertexType::Convexx) ?
+                            TRIANGULATE_POLYGON_RESULT_INVALID_CONVEX :
+                            TRIANGULATE_POLYGON_RESULT_INVALID_EAR;
+                    }
                 }
+#endif
                 continue;
             }
 
@@ -1420,8 +1457,10 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
 
         if (ear_vert_id == RemainingVertCount)
         {
-            UNEXPECTED("Failed to find an ear.");
-            return {};
+            // No ears found
+            if (Result != nullptr)
+                *Result = TRIANGULATE_POLYGON_RESULT_NO_EAR_FOUND;
+            ear_vert_id = 0;
         }
 
         const auto Idx0 = RemainingVertIds[WrapIndex(ear_vert_id - 1, RemainingVertCount)];
@@ -1467,15 +1506,17 @@ std::vector<IndexType> TriangulatePolygon(const std::vector<Vector2<ComponentTyp
 ///          If vertices are not coplanar, the result is undefined.
 template <typename IndexType, typename ComponentType>
 typename std::enable_if<std::is_floating_point<ComponentType>::value, std::vector<IndexType>>::type
-TriangulatePolygon3D(const std::vector<Vector3<ComponentType>>& Polygon, bool VerifyEarAndConvexVerts = true)
+TriangulatePolygon3D(const std::vector<Vector3<ComponentType>>& Polygon,
+                     TRIANGULATE_POLYGON_RESULT*                Result = nullptr)
 {
     // Find the normal
-    Vector3<ComponentType> Normal;
+    Vector3<ComponentType> MaxNormal;
+    Vector3<ComponentType> MeanNormal;
 
     // Use the normal with the largest length.
     // Note that it does not matter if the vertex is convex or reflex as
     // the TriangulatePolygon() function handles any orinetation.
-    ComponentType NormalLength = 0;
+    ComponentType MaxNormalLength = 0;
     for (size_t i = 0; i < Polygon.size(); ++i)
     {
         const auto& V0 = Polygon[i];
@@ -1484,16 +1525,21 @@ TriangulatePolygon3D(const std::vector<Vector3<ComponentType>>& Polygon, bool Ve
 
         const auto EdgeCross       = cross(V1 - V0, V2 - V1);
         const auto EdgeCrossLength = length(EdgeCross);
-        if (EdgeCrossLength > NormalLength)
+        if (EdgeCrossLength > MaxNormalLength)
         {
-            Normal       = EdgeCross;
-            NormalLength = EdgeCrossLength;
+            MaxNormal       = EdgeCross;
+            MaxNormalLength = EdgeCrossLength;
         }
+        MeanNormal += EdgeCross;
     }
 
-    if (NormalLength == 0)
+    const auto MeanNormalLength = length(MeanNormal);
+    // Prefer mean normal
+    const auto& Normal = MeanNormalLength > (MaxNormalLength / ComponentType{4}) ? MeanNormal : MaxNormal;
+    if (Normal == Vector3<ComponentType>{})
     {
-        UNEXPECTED("Failed to find a plane for the polygon, which means that all vertices are collinear.");
+        if (Result != nullptr)
+            *Result = TRIANGULATE_POLYGON_RESULT_VERTS_COLLINEAR;
         return {};
     }
     const auto AbsNormal = abs(Normal);
@@ -1520,7 +1566,7 @@ TriangulatePolygon3D(const std::vector<Vector3<ComponentType>>& Polygon, bool Ve
         PolygonProj.emplace_back(dot(Tangent, Vert), dot(Bitangent, Vert));
     }
 
-    return TriangulatePolygon<IndexType>(PolygonProj, VerifyEarAndConvexVerts);
+    return TriangulatePolygon<IndexType>(PolygonProj, Result);
 }
 
 } // namespace Diligent
