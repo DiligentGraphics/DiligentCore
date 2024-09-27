@@ -319,7 +319,8 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
             if (!wgpuUploadBuffer)
                 LOG_ERROR_AND_THROW("Failed to create WebGPU texture upload buffer");
 
-            uint8_t* pUploadData = static_cast<uint8_t*>(wgpuBufferGetMappedRange(wgpuUploadBuffer.Get(), 0, WGPU_WHOLE_MAP_SIZE));
+            // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
+            uint8_t* pUploadData = static_cast<uint8_t*>(wgpuBufferGetMappedRange(wgpuUploadBuffer.Get(), 0, static_cast<size_t>(wgpuBufferDesc.size)));
 
             WGPUCommandEncoderDescriptor wgpuEncoderDesc{};
             WebGPUCommandEncoderWrapper  wgpuCmdEncoder{wgpuDeviceCreateCommandEncoder(pDevice->GetWebGPUDevice(), &wgpuEncoderDesc)};
