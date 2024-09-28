@@ -41,11 +41,8 @@
 namespace Diligent
 {
 
-using QueryManagerWebGPUPtr         = std::unique_ptr<class QueryManagerWebGPU>;
-using AttachmentCleanerWebGPUPtr    = std::unique_ptr<class AttachmentCleanerWebGPU>;
-using UploadMemoryManagerWebGPUPtr  = std::unique_ptr<class UploadMemoryManagerWebGPU>;
-using DynamicMemoryManagerWebGPUPtr = std::unique_ptr<class DynamicMemoryManagerWebGPU>;
-using GenerateMipsHelperWebGPUPtr   = std::unique_ptr<class GenerateMipsHelperWebGPU>;
+class QueryManagerWebGPU;
+class AttachmentCleanerWebGPU;
 
 /// Render device implementation in WebGPU backend.
 class RenderDeviceWebGPUImpl final : public RenderDeviceBase<EngineWebGPUImplTraits>
@@ -227,12 +224,12 @@ private:
     WebGPUDeviceWrapper   m_wgpuDevice;
     WGPULimits            m_wgpuLimits{};
 
-    UploadMemoryManagerWebGPUPtr  m_pUploadMemoryManager;
-    DynamicMemoryManagerWebGPUPtr m_pDynamicMemoryManager;
+    std::unique_ptr<UploadMemoryManagerWebGPU>  m_pUploadMemoryManager;
+    std::unique_ptr<DynamicMemoryManagerWebGPU> m_pDynamicMemoryManager;
 
-    AttachmentCleanerWebGPUPtr  m_pAttachmentCleaner;
-    GenerateMipsHelperWebGPUPtr m_pMipsGenerator;
-    QueryManagerWebGPUPtr       m_pQueryManager;
+    std::unique_ptr<AttachmentCleanerWebGPU>  m_pAttachmentCleaner;
+    std::unique_ptr<GenerateMipsHelperWebGPU> m_pMipsGenerator;
+    std::unique_ptr<QueryManagerWebGPU>       m_pQueryManager;
 };
 
 } // namespace Diligent

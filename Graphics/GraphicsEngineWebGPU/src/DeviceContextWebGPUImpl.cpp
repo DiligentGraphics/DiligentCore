@@ -2137,10 +2137,13 @@ void DeviceContextWebGPUImpl::CommitVertexBuffers(WGPURenderPassEncoder CmdEncod
         auto&      CurrStream = m_VertexStreams[SlotIdx];
         WGPUBuffer wgpuBuffer = nullptr;
         Uint64     Offset     = CurrStream.Offset;
+        Uint64     Size       = 0;
         if (BufferWebGPUImpl* pBufferWebGPU = CurrStream.pBuffer.RawPtr())
         {
+            const BufferDesc& Desc = pBufferWebGPU->GetDesc();
+
             wgpuBuffer = pBufferWebGPU->GetWebGPUBuffer();
-            if (pBufferWebGPU->GetDesc().Usage == USAGE_DYNAMIC)
+            if (Desc.Usage == USAGE_DYNAMIC)
             {
                 m_EncoderState.HasDynamicVertexBuffers = true;
 #ifdef DILIGENT_DEVELOPMENT
@@ -2148,11 +2151,14 @@ void DeviceContextWebGPUImpl::CommitVertexBuffers(WGPURenderPassEncoder CmdEncod
 #endif
                 Offset += pBufferWebGPU->GetDynamicOffset(GetContextId(), this);
             }
+            VERIFY_EXPR(Desc.Size >= CurrStream.Offset);
+            Size = Desc.Size - CurrStream.Offset;
         }
 
         if (m_EncoderState.VertexBufferOffsets[SlotIdx] != Offset || !m_EncoderState.IsUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_VERTEX_BUFFERS))
         {
-            wgpuRenderPassEncoderSetVertexBuffer(CmdEncoder, SlotIdx, wgpuBuffer, Offset, WGPU_WHOLE_SIZE);
+            // Do NOT use WGPU_WHOLE_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
+            wgpuRenderPassEncoderSetVertexBuffer(CmdEncoder, SlotIdx, wgpuBuffer, Offset, Size);
             m_EncoderState.VertexBufferOffsets[SlotIdx] = Offset;
         }
     }
@@ -2165,8 +2171,13 @@ void DeviceContextWebGPUImpl::CommitIndexBuffer(WGPURenderPassEncoder CmdEncoder
     DEV_CHECK_ERR(m_pPipelineState, "No pipeline state to commit!");
     DEV_CHECK_ERR(IndexType == VT_UINT16 || IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
 
-    wgpuRenderPassEncoderSetIndexBuffer(CmdEncoder, m_pIndexBuffer->GetWebGPUBuffer(), IndexTypeToWGPUIndexFormat(IndexType), m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(GetContextId(), this), WGPU_WHOLE_SIZE);
-    if (m_pIndexBuffer->GetDesc().Usage != USAGE_DYNAMIC)
+    const BufferDesc& IndexBuffDesc = m_pIndexBuffer->GetDesc();
+    const Uint64      Offset        = m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(GetContextId(), this);
+    // Do NOT use WGPU_WHOLE_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
+    VERIFY_EXPR(IndexBuffDesc.Size >= m_IndexDataStartOffset);
+    const Uint64 Size = IndexBuffDesc.Size - m_IndexDataStartOffset;
+    wgpuRenderPassEncoderSetIndexBuffer(CmdEncoder, m_pIndexBuffer->GetWebGPUBuffer(), IndexTypeToWGPUIndexFormat(IndexType), Offset, Size);
+    if (IndexBuffDesc.Usage != USAGE_DYNAMIC)
         m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_INDEX_BUFFER);
 }
 
