@@ -27,6 +27,7 @@
 #include "pch.h"
 
 #include "WebGPUResourceBase.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -51,7 +52,7 @@ WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingWriteBuffe
 
         WGPUBufferDescriptor wgpuBufferDesc{};
         wgpuBufferDesc.label            = StagingBufferName.c_str();
-        wgpuBufferDesc.size             = m_MappedData.size();
+        wgpuBufferDesc.size             = AlignUp(m_MappedData.size(), MappedRangeAlignment);
         wgpuBufferDesc.usage            = WGPUBufferUsage_MapWrite | WGPUBufferUsage_CopySrc;
         wgpuBufferDesc.mappedAtCreation = true;
 
@@ -98,7 +99,7 @@ WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingReadBuffer
 
     WGPUBufferDescriptor wgpuBufferDesc{};
     wgpuBufferDesc.label = StagingBufferName.c_str();
-    wgpuBufferDesc.size  = m_MappedData.size();
+    wgpuBufferDesc.size  = AlignUp(m_MappedData.size(), MappedRangeAlignment);
     wgpuBufferDesc.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
 
     WebGPUBufferWrapper wgpuBuffer{wgpuDeviceCreateBuffer(wgpuDevice, &wgpuBufferDesc)};
@@ -166,7 +167,7 @@ void WebGPUResourceBase::FlushPendingWrites(StagingBufferInfo& Buffer)
 
     // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
     const size_t MappedDataSize = m_MappedData.size();
-    if (void* pData = wgpuBufferGetMappedRange(Buffer.wgpuBuffer, 0, MappedDataSize))
+    if (void* pData = wgpuBufferGetMappedRange(Buffer.wgpuBuffer, 0, AlignUp(MappedDataSize, MappedRangeAlignment)))
     {
         memcpy(pData, m_MappedData.data(), MappedDataSize);
     }
@@ -190,7 +191,7 @@ void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
         {
             // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
             const size_t MappedDataSize = BufferInfo.Resource.m_MappedData.size();
-            if (const void* pData = wgpuBufferGetConstMappedRange(BufferInfo.wgpuBuffer, 0, MappedDataSize))
+            if (const void* pData = wgpuBufferGetConstMappedRange(BufferInfo.wgpuBuffer, 0, AlignUp(MappedDataSize, MappedRangeAlignment)))
             {
                 memcpy(BufferInfo.Resource.m_MappedData.data(), pData, MappedDataSize);
             }
@@ -211,7 +212,7 @@ void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
     m_Owner.AddRef();
     // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
     const size_t MappedDataSize = Buffer.Resource.m_MappedData.size();
-    wgpuBufferMapAsync(Buffer.wgpuBuffer, WGPUMapMode_Read, 0, MappedDataSize, MapAsyncCallback, &Buffer);
+    wgpuBufferMapAsync(Buffer.wgpuBuffer, WGPUMapMode_Read, 0, AlignUp(MappedDataSize, MappedRangeAlignment), MapAsyncCallback, &Buffer);
 }
 
 } // namespace Diligent

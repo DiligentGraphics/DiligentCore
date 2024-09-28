@@ -78,6 +78,8 @@ private:
 
     std::vector<StagingBufferInfo> m_StagingBuffers;
 
+    static constexpr size_t MappedRangeAlignment = 4;
+
 protected:
     std::vector<uint8_t> m_MappedData;
 };

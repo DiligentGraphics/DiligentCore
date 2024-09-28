@@ -137,10 +137,9 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
 
             if (wgpuBufferDesc.mappedAtCreation)
             {
-                const size_t DataSize = StaticCast<size_t>(pInitData->DataSize);
                 // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
-                void* pData = wgpuBufferGetMappedRange(m_wgpuBuffer, 0, DataSize);
-                memcpy(pData, pInitData->pData, DataSize);
+                void* pData = wgpuBufferGetMappedRange(m_wgpuBuffer, 0, StaticCast<size_t>(wgpuBufferDesc.size));
+                memcpy(pData, pInitData->pData, StaticCast<size_t>(pInitData->DataSize));
                 wgpuBufferUnmap(m_wgpuBuffer);
             }
         }

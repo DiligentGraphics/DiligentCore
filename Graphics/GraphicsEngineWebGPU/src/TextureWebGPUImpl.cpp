@@ -312,7 +312,7 @@ TextureWebGPUImpl::TextureWebGPUImpl(IReferenceCounters*        pRefCounters,
         {
             WGPUBufferDescriptor wgpuBufferDesc{};
             wgpuBufferDesc.usage            = WGPUBufferUsage_MapWrite | WGPUBufferUsage_CopySrc;
-            wgpuBufferDesc.size             = GetStagingLocationOffset(m_Desc, m_Desc.GetArraySize(), 0);
+            wgpuBufferDesc.size             = AlignUp(GetStagingLocationOffset(m_Desc, m_Desc.GetArraySize(), 0), Uint64{4});
             wgpuBufferDesc.mappedAtCreation = true;
 
             WebGPUBufferWrapper wgpuUploadBuffer{wgpuDeviceCreateBuffer(pDevice->GetWebGPUDevice(), &wgpuBufferDesc)};
