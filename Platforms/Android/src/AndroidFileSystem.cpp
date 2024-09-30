@@ -35,7 +35,7 @@ namespace Diligent
 namespace
 {
 
-std::ios_base::open_mode FileAccessModeToIosOpenMode(EFileAccessMode Mode)
+std::ios_base::openmode FileAccessModeToIosOpenMode(EFileAccessMode Mode)
 {
     switch (Mode)
     {
