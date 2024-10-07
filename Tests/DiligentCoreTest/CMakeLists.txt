@@ -32,7 +32,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 add_executable(DiligentCoreTest ${SOURCE} ${SHADERS})
-set_common_target_properties(DiligentCoreTest)
+set_common_target_properties(DiligentCoreTest 17)
 
 if (PLATFORM_EMSCRIPTEN)  
     set(RESOURCE_PATH "${PROJECT_SOURCE_DIR}/assets/")
@@ -62,8 +62,6 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${SHADERS}})
 
 set_target_properties(DiligentCoreTest
     PROPERTIES
-        CXX_STANDARD 17
-        CXX_STANDARD_REQUIRED ON
         VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
         XCODE_SCHEME_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
 )

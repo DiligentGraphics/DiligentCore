@@ -122,6 +122,11 @@ endif(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
 
 function(set_common_target_properties TARGET)
 
+    # Check if a second argument (MIN_CXX_STANDARD) is provided
+    if(ARGC GREATER 1)
+        set(MIN_CXX_STANDARD ${ARGV1})
+    endif()
+
     if(COMMAND custom_pre_configure_target)
         custom_pre_configure_target(${TARGET})
         if(TARGET_CONFIGURATION_COMPLETE)
@@ -131,10 +136,17 @@ function(set_common_target_properties TARGET)
 
     get_target_property(TARGET_TYPE ${TARGET} TYPE)
 
+    set(CXX_STANDARD 14)
+    if(MIN_CXX_STANDARD)
+        if(MIN_CXX_STANDARD GREATER ${CXX_STANDARD})
+            set(CXX_STANDARD ${MIN_CXX_STANDARD})
+        endif()
+    endif()
+
     set_target_properties(${TARGET} PROPERTIES
         # It is crucial to set CXX_STANDARD flag to only affect c++ files and avoid failures compiling c-files:
         # error: invalid argument '-std=c++14' not allowed with 'C/ObjC'
-        CXX_STANDARD 14
+        CXX_STANDARD ${CXX_STANDARD}
         CXX_STANDARD_REQUIRED ON
     )
 

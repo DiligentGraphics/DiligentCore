@@ -14,12 +14,7 @@ set(INCLUDE
 
 set(ALL_SOURCE ${SOURCE} ${INCLUDE})
 add_library(Diligent-TestFramework STATIC ${ALL_SOURCE})
-set_common_target_properties(Diligent-TestFramework)
-
-set_target_properties(Diligent-TestFramework PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-)
+set_common_target_properties(Diligent-TestFramework 17)
 
 target_link_libraries(Diligent-TestFramework
 PRIVATE
