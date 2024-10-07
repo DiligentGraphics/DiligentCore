@@ -80,7 +80,8 @@ if(PLATFORM_LINUX)
     target_link_libraries(Diligent-Common PRIVATE pthread)
 endif()
 
-set_common_target_properties(Diligent-Common)
+# c++ 17 is needed for aligned_alloc
+set_common_target_properties(Diligent-Common 17)
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})

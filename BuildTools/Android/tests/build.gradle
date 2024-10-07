@@ -9,7 +9,7 @@ android {
     defaultConfig {
         applicationId 		'DE.Android.Tests'
         targetSdkVersion 	32
-        minSdkVersion 		21
+        minSdkVersion 		28
 
         ndk {
             abiFilters = []
