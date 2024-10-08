@@ -242,7 +242,7 @@ public:
     void AppendDeviceData(const DeviceObjectArchive& Src, DeviceType Dev) noexcept(false);
     void Merge(const DeviceObjectArchive& Src) noexcept(false);
 
-    void Deserialize(const CreateInfo& CI) noexcept(false);
+    bool Deserialize(const CreateInfo& CI) noexcept;
     void Serialize(IFileStream* pStream) const;
     void Serialize(IDataBlob** ppDataBlob) const;
 
@@ -299,6 +299,8 @@ public:
     {
         return m_NamedResources;
     }
+
+    void Clear() noexcept;
 
 private:
     // Named resources
