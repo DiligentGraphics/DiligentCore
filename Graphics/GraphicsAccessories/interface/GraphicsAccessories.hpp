@@ -767,9 +767,21 @@ String GetShaderResourcePrintName(const DescType& ResDesc, Uint32 ArrayIndex = 0
     return GetShaderResourcePrintName(ResDesc.Name, ResDesc.ArraySize, ArrayIndex);
 }
 
+/// Converts UNORM format to a corresponding SRGB format, for example:
+///   RGBA8_UNORM -> RGBA8_UNORM_SRGB
+///   BC3_UNORM -> BC3_UNORM_SRGB
 TEXTURE_FORMAT UnormFormatToSRGB(TEXTURE_FORMAT Fmt);
 
+/// Converts SRGB format to a corresponding UNORM format, for example:
+///   RGBA8_UNORM_SRGB -> RGBA8_UNORM
+///   BC3_UNORM_SRGB -> BC3_UNORM
 TEXTURE_FORMAT SRGBFormatToUnorm(TEXTURE_FORMAT Fmt);
+
+/// Converts block-compressed format to a corresponding uncompressed format, for example:
+///   BC1_UNORM -> RGBA8_UNORM
+///   BC4_UNORM -> R8_UNORM
+TEXTURE_FORMAT BCFormatToUncompressed(TEXTURE_FORMAT Fmt);
+
 
 bool IsSRGBFormat(TEXTURE_FORMAT Fmt);
 

@@ -2603,6 +2603,55 @@ TEXTURE_FORMAT SRGBFormatToUnorm(TEXTURE_FORMAT Fmt)
     }
 }
 
+TEXTURE_FORMAT BCFormatToUncompressed(TEXTURE_FORMAT Fmt)
+{
+    switch (Fmt)
+    {
+        // RGB 5:6:5 + 1 bit alpha
+        case TEX_FORMAT_BC1_TYPELESS:
+            return TEX_FORMAT_RGBA8_TYPELESS;
+        case TEX_FORMAT_BC1_UNORM:
+            return TEX_FORMAT_RGBA8_UNORM;
+        case TEX_FORMAT_BC1_UNORM_SRGB:
+            return TEX_FORMAT_RGBA8_UNORM_SRGB;
+
+        // RGB 5:6:5 + 4 bit alpha
+        case TEX_FORMAT_BC2_TYPELESS:
+            return TEX_FORMAT_RGBA8_TYPELESS;
+        case TEX_FORMAT_BC2_UNORM:
+            return TEX_FORMAT_RGBA8_UNORM;
+        case TEX_FORMAT_BC2_UNORM_SRGB:
+            return TEX_FORMAT_RGBA8_UNORM_SRGB;
+
+        // RGB 5:6:5 + 8 bit alpha
+        case TEX_FORMAT_BC3_TYPELESS:
+            return TEX_FORMAT_RGBA8_TYPELESS;
+        case TEX_FORMAT_BC3_UNORM:
+            return TEX_FORMAT_RGBA8_UNORM;
+        case TEX_FORMAT_BC3_UNORM_SRGB:
+            return TEX_FORMAT_RGBA8_UNORM_SRGB;
+
+        // R8
+        case TEX_FORMAT_BC4_TYPELESS:
+            return TEX_FORMAT_R8_TYPELESS;
+        case TEX_FORMAT_BC4_UNORM:
+            return TEX_FORMAT_R8_UNORM;
+        case TEX_FORMAT_BC4_SNORM:
+            return TEX_FORMAT_R8_SNORM;
+
+        // RG 8:8
+        case TEX_FORMAT_BC5_TYPELESS:
+            return TEX_FORMAT_RG8_TYPELESS;
+        case TEX_FORMAT_BC5_UNORM:
+            return TEX_FORMAT_RG8_UNORM;
+        case TEX_FORMAT_BC5_SNORM:
+            return TEX_FORMAT_RG8_SNORM;
+
+        default:
+            return TEX_FORMAT_UNKNOWN;
+    }
+}
+
 bool IsSRGBFormat(TEXTURE_FORMAT Fmt)
 {
     return (Fmt == TEX_FORMAT_RGBA8_UNORM_SRGB ||
