@@ -182,6 +182,8 @@ void Texture2DArray_GL::UpdateData(GLContextState&          ContextState,
     const auto& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, PBOOffsetAlignment);
+    glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+    glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
 
     if (TransferAttribs.IsCompressed)
     {
@@ -199,7 +201,7 @@ void Texture2DArray_GL::UpdateData(GLContextState&          ContextState,
                    "Compressed data stride (", SubresData.Stride, " must match the size of a row of compressed blocks (", BlockBytesInRow, ")");
         }
 #endif
-        //glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Must be 0 on WebGL
         //glPixelStorei(GL_UNPACK_COMPRESSED_BLOCK_WIDTH, 0);
         auto UpdateRegionWidth  = DstBox.Width();
         auto UpdateRegionHeight = DstBox.Height();
@@ -232,8 +234,6 @@ void Texture2DArray_GL::UpdateData(GLContextState&          ContextState,
         const auto PixelSize  = Uint32{TexFmtInfo.NumComponents} * Uint32{TexFmtInfo.ComponentSize};
         VERIFY((SubresData.Stride % PixelSize) == 0, "Data stride is not multiple of pixel size");
         glPixelStorei(GL_UNPACK_ROW_LENGTH, StaticCast<GLint>(SubresData.Stride / PixelSize));
-        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
-        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
 
         glTexSubImage3D(m_BindTarget, MipLevel,
                         DstBox.MinX,
