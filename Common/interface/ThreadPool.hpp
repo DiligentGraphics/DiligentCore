@@ -95,7 +95,8 @@ public:
                     break;
 
                 case ASYNC_TASK_STATUS_NOT_STARTED:
-                    DEV_ERROR("NOT_STARTED is only allowed as initial task status.");
+                    DEV_CHECK_ERR(m_TaskStatus == ASYNC_TASK_STATUS_RUNNING,
+                                  "A task should only be moved to NOT_STARTED state from RUNNING state.");
                     break;
 
                 case ASYNC_TASK_STATUS_RUNNING:
@@ -184,8 +185,8 @@ RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool,
 
         virtual void DILIGENT_CALL_TYPE Run(Uint32 ThreadId) override final
         {
-            m_Handler(ThreadId);
-            SetStatus(ASYNC_TASK_STATUS_COMPLETE);
+            ASYNC_TASK_STATUS TaskStatus = m_Handler(ThreadId);
+            SetStatus(TaskStatus);
         }
 
     private:

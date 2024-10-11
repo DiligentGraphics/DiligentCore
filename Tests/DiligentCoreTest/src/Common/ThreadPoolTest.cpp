@@ -75,6 +75,8 @@ TEST(Common_ThreadPool, EnqueueTask)
                                      f = std::sin(f + 1.f);
                                  Results[i].store(f);
                                  WorkComplete[i].store(true);
+
+                                 return ASYNC_TASK_STATUS_COMPLETE;
                              });
     }
 
@@ -133,6 +135,8 @@ TEST(Common_ThreadPool, ProcessTask)
                                  f = std::sin(f + 1.f);
                              Results[i].store(f);
                              WorkComplete[i].store(true);
+
+                             return ASYNC_TASK_STATUS_COMPLETE;
                          });
     }
 
@@ -326,6 +330,7 @@ TEST(Common_ThreadPool, Priorities)
                                  [&CompletionOrder, i](Uint32 ThreadId) //
                                  {
                                      CompletionOrder.push_back(i);
+                                     return ASYNC_TASK_STATUS_COMPLETE;
                                  });
         }
 
@@ -396,6 +401,8 @@ TEST(Common_ThreadPool, Prerequisites)
                             }
                             if (CorrectOrder)
                                 NumTasksCorrectlyOrdered.fetch_add(1);
+
+                            return ASYNC_TASK_STATUS_COMPLETE;
                         },
                         static_cast<float>(task) // Inverse priority so that the thread pool fixes it
                     );
@@ -405,6 +412,34 @@ TEST(Common_ThreadPool, Prerequisites)
         pThreadPool->WaitForAllTasks();
         EXPECT_EQ(NumTasksCorrectlyOrdered.load(), NumTasks);
     }
+}
+
+
+TEST(Common_ThreadPool, ReRunTasks)
+{
+    auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{4});
+    ASSERT_NE(pThreadPool, nullptr);
+
+    constexpr Uint32              NumTasks = 32;
+    std::vector<std::atomic<int>> ReRunCounters(NumTasks);
+
+    for (int i = 0; i < static_cast<int>(ReRunCounters.size()); ++i)
+        ReRunCounters[i] = 32 + i;
+
+    for (Uint32 task = 0; task < NumTasks; ++task)
+    {
+        EnqueueAsyncWork(
+            pThreadPool,
+            [task, &ReRunCounters](Uint32 ThreadId) //
+            {
+                int ReRunCounter = ReRunCounters[task].fetch_add(-1) - 1;
+                return ReRunCounter > 0 ? ASYNC_TASK_STATUS_NOT_STARTED : ASYNC_TASK_STATUS_COMPLETE;
+            });
+    }
+
+    pThreadPool->WaitForAllTasks();
+    for (size_t i = 0; i < ReRunCounters.size(); ++i)
+        EXPECT_EQ(ReRunCounters[i], 0) << i;
 }
 
 } // namespace

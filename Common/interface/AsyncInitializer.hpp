@@ -106,7 +106,13 @@ public:
     {
         VERIFY_EXPR(pThreadPool != nullptr);
         return std::unique_ptr<AsyncInitializer>{
-            new AsyncInitializer{EnqueueAsyncWork(pThreadPool, ppPrerequisites, NumPrerequisites, std::forward<HanlderType>(Handler))},
+            new AsyncInitializer{
+                EnqueueAsyncWork(pThreadPool, ppPrerequisites, NumPrerequisites,
+                                 [Handler = std::forward<HanlderType>(Handler)](Uint32 ThreadId) mutable {
+                                     Handler(ThreadId);
+                                     return ASYNC_TASK_STATUS_COMPLETE;
+                                 }),
+            },
         };
     }
 
