@@ -2235,6 +2235,11 @@ public:
         return m_pDevice->GetEngineFactory();
     }
 
+    IThreadPool* GetShaderCompilationThreadPool() const noexcept
+    {
+        return m_pDevice->GetShaderCompilationThreadPool();
+    }
+
     IRenderDevice* GetDevice() const noexcept
     {
         return m_pDevice;
