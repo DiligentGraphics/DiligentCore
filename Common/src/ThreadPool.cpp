@@ -125,13 +125,14 @@ public:
                 }
             }
 
+            bool TaskFinished = false;
             if (PrerequisitesMet)
             {
                 TaskInfo.pTask->SetStatus(ASYNC_TASK_STATUS_RUNNING);
                 TaskInfo.pTask->Run(ThreadId);
-                DEV_CHECK_ERR((TaskInfo.pTask->GetStatus() == ASYNC_TASK_STATUS_COMPLETE ||
-                               TaskInfo.pTask->GetStatus() == ASYNC_TASK_STATUS_CANCELLED),
-                              "Finished tasks must be in COMPLETE or CANCELLED state");
+                TaskFinished = TaskInfo.pTask->IsFinished();
+                DEV_CHECK_ERR((TaskFinished || TaskInfo.pTask->GetStatus() == ASYNC_TASK_STATUS_NOT_STARTED),
+                              "Finished tasks must be in COMPLETE, CANCELLED or NOT_STARTED state");
             }
 
             {
@@ -139,7 +140,7 @@ public:
 
                 const auto NumRunningTasks = m_NumRunningTasks.fetch_add(-1) - 1;
 
-                if (PrerequisitesMet)
+                if (TaskFinished)
                 {
                     if (m_TasksQueue.empty() && NumRunningTasks == 0)
                     {
@@ -148,14 +149,15 @@ public:
                 }
                 else
                 {
-                    // If prerequisites are not met, re-enqueue the task with the minimum prerequisite priority
+                    // If prerequisites are not met or the task requested to be re-run,
+                    // re-enqueue the task with the minimum prerequisite priority
                     if (TaskInfo.pTask->GetPriority() > MinPrereqPriority)
                         TaskInfo.pTask->SetPriority(MinPrereqPriority);
                     m_TasksQueue.emplace(TaskInfo.pTask->GetPriority(), std::move(TaskInfo));
                 }
             }
 
-            if (!PrerequisitesMet)
+            if (!TaskFinished)
             {
                 m_NextTaskCond.notify_one();
             }

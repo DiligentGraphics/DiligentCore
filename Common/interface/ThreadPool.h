@@ -78,7 +78,9 @@ DILIGENT_BEGIN_INTERFACE(IAsyncTask, IObject)
     ///
     ///             Before returning from the function, the task implementation must
     ///             set the task status to either ASYNC_TASK_STATUS_CANCELLED or
-    ///             ASYNC_TASK_STATUS_COMPLETE.
+    ///             ASYNC_TASK_STATUS_COMPLETE to indicate that the task is finished,
+    ///             or to ASYNC_TASK_STATUS_NOT_STARTED to request the task to be
+    ///             rescheduled.
     VIRTUAL void METHOD(Run)(THIS_
                              Uint32 ThreadId) PURE;
 
