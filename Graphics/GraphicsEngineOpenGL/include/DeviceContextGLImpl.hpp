@@ -293,7 +293,7 @@ public:
     virtual void DILIGENT_CALL_TYPE BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs) override final;
 
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
-    virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;
+    virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext(bool PurgeCaches) override final;
 
     GLContextState& GetContextState() { return m_ContextState; }
 

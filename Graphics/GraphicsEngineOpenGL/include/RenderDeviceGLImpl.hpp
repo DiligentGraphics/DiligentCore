@@ -197,6 +197,8 @@ public:
     void      OnDestroyPSO(PipelineStateGLImpl& PSO);
     void      OnDestroyBuffer(BufferGLImpl& Buffer);
 
+    void PurgeContextCaches(GLContext::NativeGLContextType Context);
+
     GLProgramCache& GetProgramCache() { return m_ProgramCache; }
 
     size_t GetCommandQueueCount() const { return 1; }

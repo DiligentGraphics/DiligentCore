@@ -408,9 +408,8 @@ void DeviceContextGLImpl::CommitRenderTargets()
                       "Depth buffer of the default framebuffer can only be bound with the default framebuffer's color buffer "
                       "and cannot be combined with any other render target in OpenGL backend.");
 
-        auto        CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
-        auto&       FBOCache               = m_pDevice->GetFBOCache(CurrentNativeGLContext);
-        const auto& FBO                    = FBOCache.GetFBO(NumRenderTargets, pBoundRTVs, m_pBoundDepthStencil, m_ContextState);
+        auto&       FBOCache = m_pDevice->GetFBOCache(m_ContextState.GetCurrentGLContext());
+        const auto& FBO      = FBOCache.GetFBO(NumRenderTargets, pBoundRTVs, m_pBoundDepthStencil, m_ContextState);
         // Even though the write mask only applies to writes to a framebuffer, the mask state is NOT
         // Framebuffer state. So it is NOT part of a Framebuffer Object or the Default Framebuffer.
         // Binding a new framebuffer will NOT affect the mask.
@@ -771,11 +770,10 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
     DvpValidateCommittedShaderResources();
 #endif
 
-    const auto  CurrNativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
-    const auto& PipelineDesc        = m_pPipelineState->GetGraphicsPipelineDesc();
+    const auto& PipelineDesc = m_pPipelineState->GetGraphicsPipelineDesc();
     if (!m_ContextState.IsValidVAOBound())
     {
-        auto& VaoCache     = m_pDevice->GetVAOCache(CurrNativeGLContext);
+        auto& VaoCache     = m_pDevice->GetVAOCache(m_ContextState.GetCurrentGLContext());
         auto* pIndexBuffer = IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
         if (PipelineDesc.InputLayout.NumElements > 0 || pIndexBuffer != nullptr)
         {
@@ -1655,8 +1653,13 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
     }
 }
 
-bool DeviceContextGLImpl::UpdateCurrentGLContext()
+bool DeviceContextGLImpl::UpdateCurrentGLContext(bool PurgeCaches)
 {
+    if (PurgeCaches)
+    {
+        m_pDevice->PurgeContextCaches(m_ContextState.GetCurrentGLContext());
+    }
+
     auto NativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
     if (NativeGLContext == NULL)
         return false;
@@ -1905,8 +1908,7 @@ void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                   
     const auto& SrcTexDesc = pSrcTexGl->GetDesc();
     //const auto& DstTexDesc = pDstTexGl->GetDesc();
 
-    auto  CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
-    auto& FBOCache               = m_pDevice->GetFBOCache(CurrentNativeGLContext);
+    auto& FBOCache = m_pDevice->GetFBOCache(m_ContextState.GetCurrentGLContext());
 
     GLuint SrcFBOHandle = 0;
     {

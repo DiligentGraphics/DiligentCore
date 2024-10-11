@@ -1682,6 +1682,19 @@ void RenderDeviceGLImpl::OnDestroyBuffer(BufferGLImpl& Buffer)
         VAOCacheIt.second.OnDestroyBuffer(Buffer);
 }
 
+
+void RenderDeviceGLImpl::PurgeContextCaches(GLContext::NativeGLContextType Context)
+{
+    {
+        Threading::SpinLockGuard FBOCacheGuard{m_FBOCacheLock};
+        m_FBOCache.erase(Context);
+    }
+    {
+        Threading::SpinLockGuard VAOCacheGuard{m_VAOCacheLock};
+        m_VAOCache.erase(Context);
+    }
+}
+
 void RenderDeviceGLImpl::IdleGPU()
 {
     glFinish();
