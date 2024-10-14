@@ -58,14 +58,15 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContextGL, IDeviceContext)
     /// other command to let the engine update active context every time when control flow
     /// is passed over from the main application.
     ///
-    /// \param[in] PurgeCaches - Whether to purge context caches (e.g. VAO, FBO) before
-    ///                          updating the active context. An application should set this
-    ///                          flag to true if the last active context will not be used anymore
-    ///                          (e.g. it was destroyed) to avoid memory leaks.
-    /// 
     /// \return     false if there is no active GL context, and true otherwise.
-    VIRTUAL bool METHOD(UpdateCurrentGLContext)(THIS_
-                                                bool PurgeCaches DEFAULT_INITIALIZER(false)) PURE;
+    VIRTUAL bool METHOD(UpdateCurrentGLContext)(THIS_) PURE;
+
+    /// Purge current context caches (e.g. VAO, FBO).
+
+    /// If an application uses multiple GL contexts, this method must be called
+    /// before the current context is about to be released,
+    /// to let the engine cleanup internal OpenGL object caches.
+    VIRTUAL void METHOD(PurgeCurrentContextCaches)(THIS_) PURE;
 
     /// Sets the swap in the device context. The swap chain is used by the device context
     /// to obtain the default FBO handle.
