@@ -105,6 +105,15 @@ void VAOCache::OnDestroyPSO(const PipelineStateGLImpl& PSO)
     ClearStaleKeys(StaleKeys);
 }
 
+void VAOCache::Clear()
+{
+    Threading::SpinLockGuard CacheGuard{m_CacheLock};
+
+    m_Cache.clear();
+    m_PSOToKey.clear();
+    m_BuffToKey.clear();
+}
+
 void VAOCache::ClearStaleKeys(const std::vector<VAOHashKey>& StaleKeys)
 {
     // Collect unique PSOs and buffers used in stale keys.
