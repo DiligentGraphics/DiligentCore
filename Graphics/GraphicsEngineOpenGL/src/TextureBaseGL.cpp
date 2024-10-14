@@ -75,7 +75,7 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*        pRefCounters,
         StagingBuffName += '\'';
         StagingBufferDesc.Name = StagingBuffName.c_str();
 
-        StagingBufferDesc.Size           = GetStagingTextureSubresourceOffset(m_Desc, m_Desc.GetArraySize(), 0, PBOOffsetAlignment);
+        StagingBufferDesc.Size           = GetStagingTextureDataSize(m_Desc, PBOOffsetAlignment);
         StagingBufferDesc.Usage          = USAGE_STAGING;
         StagingBufferDesc.CPUAccessFlags = TexDesc.CPUAccessFlags;
 
