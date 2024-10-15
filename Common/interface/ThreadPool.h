@@ -72,17 +72,20 @@ DILIGENT_BEGIN_INTERFACE(IAsyncTask, IObject)
 
     /// \param [in] ThreadId - Id of the thread that is running this task.
     ///
-    /// \remarks    This method is only called once by the thread pool.
-    ///             Before starting the task, the thread pool sets its
+    /// \remarks    Before starting the task, the thread pool sets its
     ///             status to ASYNC_TASK_STATUS_RUNNING.
     ///
-    ///             Before returning from the function, the task implementation must
-    ///             set the task status to either ASYNC_TASK_STATUS_CANCELLED or
-    ///             ASYNC_TASK_STATUS_COMPLETE to indicate that the task is finished,
-    ///             or to ASYNC_TASK_STATUS_NOT_STARTED to request the task to be
-    ///             rescheduled.
-    VIRTUAL void METHOD(Run)(THIS_
-                             Uint32 ThreadId) PURE;
+    ///             The method must return one of the following values:
+    ///               - ASYNC_TASK_STATUS_CANCELLED to indicate that the task was cancelled.
+    ///               - ASYNC_TASK_STATUS_COMPLETE to indicate that the task is finished successfully.
+    ///               - ASYNC_TASK_STATUS_NOT_STARTED to request the task to be rescheduled.
+    ///
+    ///             The thread pool will set the task status to the returned value after
+    ///             the Run() method completes. This way if the GetStatus() method returns
+    ///             any value other than ASYNC_TASK_STATUS_RUNNING, it is guaranteed that the task
+    ///             is not executed by any thread.
+    VIRTUAL ASYNC_TASK_STATUS METHOD(Run)(THIS_
+                                     Uint32 ThreadId) PURE;
 
     /// Cancel the task, if possible.
     ///

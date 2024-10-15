@@ -129,7 +129,11 @@ public:
             if (PrerequisitesMet)
             {
                 TaskInfo.pTask->SetStatus(ASYNC_TASK_STATUS_RUNNING);
-                TaskInfo.pTask->Run(ThreadId);
+                ASYNC_TASK_STATUS ReturnStatus = TaskInfo.pTask->Run(ThreadId);
+                // NB: It is essential to set the task status after the Run() method returns.
+                //     This way if the GetStatus() method returns any value other than ASYNC_TASK_STATUS_RUNNING,
+                //     it is guaranteed that the task is not executed by any thread.
+                TaskInfo.pTask->SetStatus(ReturnStatus);
                 TaskFinished = TaskInfo.pTask->IsFinished();
                 DEV_CHECK_ERR((TaskFinished || TaskInfo.pTask->GetStatus() == ASYNC_TASK_STATUS_NOT_STARTED),
                               "Finished tasks must be in COMPLETE, CANCELLED or NOT_STARTED state");

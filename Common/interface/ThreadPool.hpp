@@ -166,6 +166,9 @@ private:
 };
 
 
+/// Enqueues a function to be executed asynchronously by the thread pool.
+/// For the list of parameters, see Diligent::IThreadPool::EnqueueTask() method.
+/// The handler function must return the task status, see Diligent::IAsyncTask::Run() method.
 template <typename HanlderType>
 RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool,
                                            IAsyncTask** ppPrerequisites,
@@ -183,12 +186,11 @@ RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool,
             m_Handler{std::move(Handler)}
         {}
 
-        virtual void DILIGENT_CALL_TYPE Run(Uint32 ThreadId) override final
+        virtual ASYNC_TASK_STATUS DILIGENT_CALL_TYPE Run(Uint32 ThreadId) override final
         {
-            ASYNC_TASK_STATUS TaskStatus = !m_bSafelyCancel.load() ?
+            return !m_bSafelyCancel.load() ?
                 m_Handler(ThreadId) :
                 ASYNC_TASK_STATUS_CANCELLED;
-            SetStatus(TaskStatus);
         }
 
     private:
