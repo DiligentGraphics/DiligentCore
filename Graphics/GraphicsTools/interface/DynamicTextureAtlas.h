@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -224,10 +224,15 @@ struct DynamicTextureAtlasCreateInfo
     /// The number of extra slices.
 
     /// When non-zero, the array will be expanded by the specified number of slices every time
-    /// there is insufficient space. If zero, the array size will be doubled when
-    /// more space is needed.
+    /// there is insufficient space. If zero, the array size will be expanded by the growth factor.
     Uint32 ExtraSliceCount = 0;
 
+    /// Growth factor.
+
+    /// If ExtraSliceCount is zero, defines the factor by which the array size will be expanded.
+    /// The factor must be in the range (1, 2]. For example, if the factor is 2.0, the array size
+    /// will be doubled every time there is insufficient space.
+    float GrowthFactor = 2.0f;
 
     /// Maximum number of slices in texture array.
     Uint32 MaxSliceCount = 2048;

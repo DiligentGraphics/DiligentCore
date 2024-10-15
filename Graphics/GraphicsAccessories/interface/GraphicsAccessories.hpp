@@ -697,6 +697,12 @@ inline Uint64 GetStagingTextureSubresourceOffset(const TextureDesc& TexDesc,
     return GetStagingTextureLocationOffset(TexDesc, ArraySlice, MipLevel, Alignment, 0, 0, 0);
 }
 
+/// Returns the total memory size required to store the staging texture data.
+inline Uint64 GetStagingTextureDataSize(const TextureDesc& TexDesc,
+                                        Uint32             Alignment = 4)
+{
+    return GetStagingTextureSubresourceOffset(TexDesc, TexDesc.GetArraySize(), 0, Alignment);
+}
 
 /// Information required to perform a copy operation between a buffer and a texture
 struct BufferToTextureCopyInfo

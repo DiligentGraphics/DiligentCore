@@ -185,7 +185,9 @@ RefCntAutoPtr<IAsyncTask> EnqueueAsyncWork(IThreadPool* pThreadPool,
 
         virtual void DILIGENT_CALL_TYPE Run(Uint32 ThreadId) override final
         {
-            ASYNC_TASK_STATUS TaskStatus = m_Handler(ThreadId);
+            ASYNC_TASK_STATUS TaskStatus = !m_bSafelyCancel.load() ?
+                m_Handler(ThreadId) :
+                ASYNC_TASK_STATUS_CANCELLED;
             SetStatus(TaskStatus);
         }
 
