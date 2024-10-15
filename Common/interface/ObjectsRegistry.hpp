@@ -264,6 +264,14 @@ public:
         }
     }
 
+    /// Removes all objects from the cache.
+    void Clear()
+    {
+        std::lock_guard<std::mutex> Guard{m_CacheMtx};
+        m_Cache.clear();
+        m_NumRequestsSinceLastPurge.store(0);
+    }
+
 private:
     class ObjectWrapper
     {
