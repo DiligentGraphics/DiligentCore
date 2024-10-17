@@ -25,6 +25,7 @@
  */
 
 #include "SPIRVUtils.hpp"
+#include "SPIRVShaderResources.hpp" // required for diligent_spirv_cross
 
 #include "spirv_cross.hpp"
 
