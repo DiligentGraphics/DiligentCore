@@ -71,6 +71,9 @@ public:
     void OnDestroyBuffer(const BufferGLImpl& Buffer);
     void OnDestroyPSO(const PipelineStateGLImpl& PSO);
 
+    // Clears all cached objects
+    void Clear();
+
 private:
     // This structure is used as the key to find VAO
     struct VAOHashKey

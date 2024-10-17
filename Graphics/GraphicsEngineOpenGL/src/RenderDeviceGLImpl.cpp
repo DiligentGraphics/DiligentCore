@@ -1687,11 +1687,23 @@ void RenderDeviceGLImpl::PurgeContextCaches(GLContext::NativeGLContextType Conte
 {
     {
         Threading::SpinLockGuard FBOCacheGuard{m_FBOCacheLock};
-        m_FBOCache.erase(Context);
+
+        auto it = m_FBOCache.find(Context);
+        if (it != m_FBOCache.end())
+        {
+            it->second.Clear();
+            m_FBOCache.erase(it);
+        }
     }
     {
         Threading::SpinLockGuard VAOCacheGuard{m_VAOCacheLock};
-        m_VAOCache.erase(Context);
+
+        auto it = m_VAOCache.find(Context);
+        if (it != m_VAOCache.end())
+        {
+            it->second.Clear();
+            m_VAOCache.erase(it);
+        }
     }
 }
 
