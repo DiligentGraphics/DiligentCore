@@ -115,6 +115,14 @@ void FBOCache::OnReleaseTexture(ITexture* pTexture)
     m_TexIdToKey.erase(EqualRange.first, EqualRange.second);
 }
 
+void FBOCache::Clear()
+{
+    Threading::SpinLockGuard CacheGuard{m_CacheLock};
+
+    m_Cache.clear();
+    m_TexIdToKey.clear();
+}
+
 GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    ContextState,
                                                        Uint32             NumRenderTargets,
                                                        TextureViewGLImpl* ppRTVs[],

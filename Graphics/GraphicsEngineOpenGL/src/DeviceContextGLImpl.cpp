@@ -1653,19 +1653,21 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
     }
 }
 
-bool DeviceContextGLImpl::UpdateCurrentGLContext(bool PurgeCaches)
+bool DeviceContextGLImpl::UpdateCurrentGLContext()
 {
-    if (PurgeCaches)
-    {
-        m_pDevice->PurgeContextCaches(m_ContextState.GetCurrentGLContext());
-    }
-
     auto NativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
     if (NativeGLContext == NULL)
         return false;
 
     m_ContextState.SetCurrentGLContext(NativeGLContext);
     return true;
+}
+
+void DeviceContextGLImpl::PurgeCurrentContextCaches()
+{
+    auto NativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
+    if (NativeGLContext != NULL)
+        m_pDevice->PurgeContextCaches(NativeGLContext);
 }
 
 void DeviceContextGLImpl::UpdateBuffer(IBuffer*                       pBuffer,

@@ -72,6 +72,8 @@ public:
 
     void OnReleaseTexture(ITexture* pTexture);
 
+    void Clear();
+
 private:
     // This structure is used as the key to find FBO
     struct FBOCacheKey
