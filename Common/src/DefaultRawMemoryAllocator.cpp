@@ -36,8 +36,41 @@
 #    define USE_CRT_MALLOC_DBG 1
 #endif
 
+#if PLATFORM_ANDROID && __ANDROID_API__ < 28
+#    define USE_ALIGNED_MALLOC_FALLBACK 1
+#endif
+
 namespace Diligent
 {
+
+#ifdef USE_ALIGNED_MALLOC_FALLBACK
+namespace
+{
+void* AllocateAlignedFallback(size_t Size, size_t Alignment)
+{
+    constexpr size_t PointerSize       = sizeof(void*);
+    const size_t     AdjustedAlignment = (std::max)(Alignment, PointerSize);
+
+    void* Pointer        = malloc(Size + AdjustedAlignment + PointerSize);
+    void* AlignedPointer = AlignUp(reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(Pointer) + PointerSize), AdjustedAlignment);
+
+    void** StoredPointer = reinterpret_cast<void**>(AlignedPointer) - 1;
+    VERIFY_EXPR(StoredPointer >= Pointer);
+    *StoredPointer = Pointer;
+
+    return AlignedPointer;
+}
+
+void FreeAlignedFallback(void* Ptr)
+{
+    if (Ptr != nullptr)
+    {
+        void* OriginalPointer = *(reinterpret_cast<void**>(Ptr) - 1);
+        free(OriginalPointer);
+    }
+}
+} // namespace
+#endif
 
 DefaultRawMemoryAllocator::DefaultRawMemoryAllocator()
 {
@@ -71,6 +104,9 @@ void DefaultRawMemoryAllocator::Free(void* Ptr)
 #elif defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__)
 #    define ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) _aligned_malloc(Size, Alignment)
 #    define ALIGNED_FREE(Ptr)                                           _aligned_free(Ptr)
+#elif defined(USE_ALIGNED_MALLOC_FALLBACK)
+#    define ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) AllocateAlignedFallback(Size, Alignment)
+#    define ALIGNED_FREE(Ptr)                                           FreeAlignedFallback(Ptr)
 #else
 #    define ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) aligned_alloc(Alignment, Size)
 #    define ALIGNED_FREE(Ptr)                                           free(Ptr)
