@@ -295,8 +295,8 @@ public:
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;
 
-    /// Implementation of IDeviceContextGL::PurgeCurrentContextCaches().
-    virtual void DILIGENT_CALL_TYPE PurgeCurrentContextCaches() override final;
+    /// Implementation of IDeviceContextGL::PurgeCurrentGLContextCaches().
+    virtual void DILIGENT_CALL_TYPE PurgeCurrentGLContextCaches() override final;
 
     GLContextState& GetContextState() { return m_ContextState; }
 

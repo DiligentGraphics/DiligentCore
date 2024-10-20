@@ -1663,7 +1663,7 @@ bool DeviceContextGLImpl::UpdateCurrentGLContext()
     return true;
 }
 
-void DeviceContextGLImpl::PurgeCurrentContextCaches()
+void DeviceContextGLImpl::PurgeCurrentGLContextCaches()
 {
     auto NativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
     if (NativeGLContext != NULL)

@@ -31,6 +31,6 @@ void TestDeviceContextGL_CInterface(IDeviceContextGL* pCtxGL)
 {
     bool res = IDeviceContextGL_UpdateCurrentGLContext(pCtxGL);
     (void)res;
-    IDeviceContextGL_PurgeCurrentContextCaches(pCtxGL);
+    IDeviceContextGL_PurgeCurrentGLContextCaches(pCtxGL);
     IDeviceContextGL_SetSwapChain(pCtxGL, (struct ISwapChainGL*)NULL);
 }
