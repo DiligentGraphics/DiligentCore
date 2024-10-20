@@ -58,26 +58,34 @@ void DefaultRawMemoryAllocator::Free(void* Ptr)
     free(Ptr);
 }
 
+#ifdef ALIGNED_MALLOC
+#    undef ALIGNED_MALLOC
+#endif
+#ifdef ALIGNED_FREE
+#    undef ALIGNED_FREE
+#endif
+
+#ifdef USE_CRT_MALLOC_DBG
+#    define ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) _aligned_malloc_dbg(Size, Alignment, dbgFileName, dbgLineNumber)
+#    define ALIGNED_FREE(Ptr)                                           _aligned_free(Ptr)
+#elif defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__)
+#    define ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) _aligned_malloc(Size, Alignment)
+#    define ALIGNED_FREE(Ptr)                                           _aligned_free(Ptr)
+#else
+#    define ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) aligned_alloc(Alignment, Size)
+#    define ALIGNED_FREE(Ptr)                                           free(Ptr)
+#endif
+
 void* DefaultRawMemoryAllocator::AllocateAligned(size_t Size, size_t Alignment, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
 {
     VERIFY_EXPR(Size > 0 && Alignment > 0);
     Size = AlignUp(Size, Alignment);
-#ifdef USE_CRT_MALLOC_DBG
-    return _aligned_malloc_dbg(Size, Alignment, dbgFileName, dbgLineNumber);
-#elif defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__)
-    return _aligned_malloc(Size, Alignment);
-#else
-    return aligned_alloc(Alignment, Size);
-#endif
+    return ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber);
 }
 
 void DefaultRawMemoryAllocator::FreeAligned(void* Ptr)
 {
-#if defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__)
-    _aligned_free(Ptr);
-#else
-    free(Ptr);
-#endif
+    ALIGNED_FREE(Ptr);
 }
 
 DefaultRawMemoryAllocator& DefaultRawMemoryAllocator::GetAllocator()
