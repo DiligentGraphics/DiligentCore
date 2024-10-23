@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -414,6 +414,7 @@ DXGI_FORMAT TexFormatToDXGI_Format(TEXTURE_FORMAT TexFormat, Uint32 BindFlags)
     if (TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS)
     {
         auto DXGIFormat = FmtToDXGIFmtMap[TexFormat];
+        VERIFY(TexFormat == TEX_FORMAT_UNKNOWN || TexFormat > TEX_FORMAT_BC7_UNORM_SRGB || DXGIFormat != DXGI_FORMAT_UNKNOWN, "Unsupported texture format");
         if (BindFlags != 0)
             DXGIFormat = CorrectDXGIFormat(DXGIFormat, BindFlags);
         return DXGIFormat;

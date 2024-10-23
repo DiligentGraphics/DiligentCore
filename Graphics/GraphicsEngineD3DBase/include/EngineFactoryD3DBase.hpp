@@ -218,6 +218,7 @@ public:
             Features.DualSourceBlend               = DEVICE_FEATURE_STATE_ENABLED;
             Features.MultiViewport                 = DEVICE_FEATURE_STATE_ENABLED;
             Features.TextureCompressionBC          = DEVICE_FEATURE_STATE_ENABLED;
+            Features.TextureCompressionETC2        = DEVICE_FEATURE_STATE_DISABLED;
             Features.PixelUAVWritesAndAtomics      = DEVICE_FEATURE_STATE_ENABLED;
             Features.TextureUAVExtendedFormats     = DEVICE_FEATURE_STATE_ENABLED;
             Features.ShaderResourceStaticArrays    = DEVICE_FEATURE_STATE_ENABLED;
