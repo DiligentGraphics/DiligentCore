@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -163,6 +163,7 @@ struct WindowsMisc : public BasicPlatformMisc
         return reinterpret_cast<const Type&>(SwappedBytes);
     }
 
+#if PLATFORM_WIN32
     /// Sets the current thread affinity mask and on success returns the previous mask.
     /// On failure, returns 0.
     static Uint64 SetCurrentThreadAffinity(Uint64 Mask);
@@ -172,6 +173,7 @@ struct WindowsMisc : public BasicPlatformMisc
     /// Sets the current thread priority and on success returns the previous priority.
     /// On failure, returns ThreadPriority::Unknown.
     static ThreadPriority SetCurrentThreadPriority(ThreadPriority Priority);
+#endif
 };
 
 } // namespace Diligent

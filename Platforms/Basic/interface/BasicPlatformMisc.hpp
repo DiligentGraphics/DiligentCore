@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -106,6 +106,9 @@ struct BasicPlatformMisc
     /// Sets the current thread priority and on success returns the previous priority.
     /// On failure, returns ThreadPriority::Unknown.
     static ThreadPriority SetCurrentThreadPriority(ThreadPriority Priority);
+
+    /// Sets the current thread affinity mask and on success returns the previous mask.
+    static Uint64 SetCurrentThreadAffinity(Uint64 Mask);
 
 private:
     static void SwapBytes16(Uint16& Val)

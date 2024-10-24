@@ -62,6 +62,18 @@ struct ThreadPoolCreateInfo
 
 RefCntAutoPtr<IThreadPool> CreateThreadPool(const ThreadPoolCreateInfo& ThreadPoolCI);
 
+/// Pins the worker thread to one of the allowed cores.
+///
+/// \param ThreadId         - The thread ID.
+/// \param AllowedCoresMask - The bit mask of allowed cores.
+/// \return                 - Previous thread affinity mask, or 0 if the function failed.
+///
+/// \remarks    The function selects the core by looping through the bits in the AllowedCoresMask.
+///             For example, if cores 1, 3, 6 are allowed by the mask, the threads will be assigned
+///             to cores 1, 3, 6, 1, 3, 6, etc.
+///
+///             This function can be used as the OnThreadStarted callback in the ThreadPoolCreateInfo.
+Uint64 PinWorkerThread(Uint32 ThreadId, Uint64 AllowedCoresMask);
 
 /// Base implementation of the IAsyncTask interface.
 class AsyncTaskBase : public ObjectBase<IAsyncTask>
