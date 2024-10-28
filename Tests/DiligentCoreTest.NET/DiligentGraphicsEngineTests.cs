@@ -628,7 +628,7 @@ public class DiligentGraphicsEngineTests : IDisposable
         Assert.Null(shader);
         Assert.NotNull(compilerError);
 
-        var compilerOutputStr = Marshal.PtrToStringAnsi(compilerError.GetDataPtr(), (int)compilerError.GetSize());
+        var compilerOutputStr = Marshal.PtrToStringAnsi(compilerError.GetDataPtr(0), (int)compilerError.GetSize());
         Assert.Contains("error", compilerOutputStr);
         m_Output.WriteLine(compilerOutputStr);
     }

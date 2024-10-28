@@ -73,15 +73,15 @@ public:
     }
 
     /// Returns the pointer to the internal data buffer
-    virtual void* DILIGENT_CALL_TYPE GetDataPtr() override
+    virtual void* DILIGENT_CALL_TYPE GetDataPtr(size_t Offset = 0) override
     {
-        return &m_String[0];
+        return &m_String[Offset];
     }
 
     /// Returns the pointer to the internal data buffer
-    virtual const void* DILIGENT_CALL_TYPE GetConstDataPtr() const override
+    virtual const void* DILIGENT_CALL_TYPE GetConstDataPtr(size_t Offset = 0) const override
     {
-        return &m_String[0];
+        return &m_String[Offset];
     }
 
 private:

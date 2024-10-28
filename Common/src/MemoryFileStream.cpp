@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,9 +50,9 @@ IMPLEMENT_QUERY_INTERFACE(MemoryFileStream, IID_FileStream, TBase)
 bool MemoryFileStream::Read(void* Data, size_t Size)
 {
     VERIFY_EXPR(m_CurrentOffset <= m_DataBlob->GetSize());
-    auto  BytesLeft   = m_DataBlob->GetSize() - m_CurrentOffset;
-    auto  BytesToRead = std::min(BytesLeft, Size);
-    auto* pSrcData    = reinterpret_cast<const Uint8*>(m_DataBlob->GetDataPtr()) + m_CurrentOffset;
+    size_t      BytesLeft   = m_DataBlob->GetSize() - m_CurrentOffset;
+    size_t      BytesToRead = std::min(BytesLeft, Size);
+    const void* pSrcData    = m_DataBlob->GetConstDataPtr(m_CurrentOffset);
     memcpy(Data, pSrcData, BytesToRead);
     m_CurrentOffset += BytesToRead;
     return Size == BytesToRead;
@@ -60,9 +60,9 @@ bool MemoryFileStream::Read(void* Data, size_t Size)
 
 void MemoryFileStream::ReadBlob(IDataBlob* pData)
 {
-    auto BytesLeft = m_DataBlob->GetSize() - m_CurrentOffset;
+    size_t BytesLeft = m_DataBlob->GetSize() - m_CurrentOffset;
     pData->Resize(BytesLeft);
-    auto res = Read(pData->GetDataPtr(), pData->GetSize());
+    bool res = Read(pData->GetDataPtr(), pData->GetSize());
     VERIFY_EXPR(res);
     (void)res;
 }
@@ -73,7 +73,7 @@ bool MemoryFileStream::Write(const void* Data, size_t Size)
     {
         m_DataBlob->Resize(m_CurrentOffset + Size);
     }
-    auto* DstData = reinterpret_cast<Uint8*>(m_DataBlob->GetDataPtr()) + m_CurrentOffset;
+    void* DstData = m_DataBlob->GetDataPtr(m_CurrentOffset);
     memcpy(DstData, Data, Size);
     m_CurrentOffset += Size;
     return true;

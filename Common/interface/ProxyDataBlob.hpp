@@ -78,15 +78,17 @@ public:
     }
 
     /// Returns the pointer to the internal data buffer
-    virtual void* DILIGENT_CALL_TYPE GetDataPtr() override
+    virtual void* DILIGENT_CALL_TYPE GetDataPtr(size_t Offset = 0) override
     {
-        return m_pData;
+        VERIFY(Offset < m_Size, "Offset (", Offset, ") exceeds the data size (", m_Size, ")");
+        return static_cast<Uint8*>(m_pData) + Offset;
     }
 
     /// Returns the pointer to the internal data buffer
-    virtual const void* DILIGENT_CALL_TYPE GetConstDataPtr() const override
+    virtual const void* DILIGENT_CALL_TYPE GetConstDataPtr(size_t Offset = 0) const override
     {
-        return m_pConstData;
+        VERIFY(Offset < m_Size, "Offset (", Offset, ") exceeds the data size (", m_Size, ")");
+        return static_cast<const Uint8*>(m_pConstData) + Offset;
     }
 
 private:

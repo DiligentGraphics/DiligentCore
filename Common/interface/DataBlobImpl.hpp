@@ -60,21 +60,21 @@ public:
     virtual size_t DILIGENT_CALL_TYPE GetSize() const override;
 
     /// Returns the pointer to the internal data buffer
-    virtual void* DILIGENT_CALL_TYPE GetDataPtr() override;
+    virtual void* DILIGENT_CALL_TYPE GetDataPtr(size_t Offset = 0) override;
 
     /// Returns const pointer to the internal data buffer
-    virtual const void* DILIGENT_CALL_TYPE GetConstDataPtr() const override;
+    virtual const void* DILIGENT_CALL_TYPE GetConstDataPtr(size_t Offset = 0) const override;
 
     template <typename T>
-    T* GetDataPtr()
+    T* GetDataPtr(size_t Offset = 0)
     {
-        return reinterpret_cast<T*>(GetDataPtr());
+        return reinterpret_cast<T*>(GetDataPtr(Offset));
     }
 
     template <typename T>
-    const T* GetConstDataPtr() const
+    const T* GetConstDataPtr(size_t Offset = 0) const
     {
-        return reinterpret_cast<const T*>(GetConstDataPtr());
+        return reinterpret_cast<const T*>(GetConstDataPtr(Offset));
     }
 
 private:
