@@ -639,23 +639,23 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
     auto AccelStructIt   = DescrAccelStructArr.begin();
     auto WriteDescrSetIt = WriteDescrSetArr.begin();
 
-    const auto  DynamicSetIdx  = GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>();
-    const auto& SetResources   = ResourceCache.GetDescriptorSet(DynamicSetIdx);
-    const auto& LogicalDevice  = GetDevice()->GetLogicalDevice();
-    const auto  DynResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
+    const Uint32                                DynamicSetIdx  = GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>();
+    const ShaderResourceCacheVk::DescriptorSet& SetResources   = ResourceCache.GetDescriptorSet(DynamicSetIdx);
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice  = GetDevice()->GetLogicalDevice();
+    const std::pair<Uint32, Uint32>             DynResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
 
-    constexpr auto CacheType = ResourceCacheContentType::SRB;
+    constexpr ResourceCacheContentType CacheType = ResourceCacheContentType::SRB;
 
     for (Uint32 ResIdx = DynResIdxRange.first, ArrElem = 0; ResIdx < DynResIdxRange.second;)
     {
-        const auto& Attr        = GetResourceAttribs(ResIdx);
-        const auto  CacheOffset = Attr.CacheOffset(CacheType);
-        const auto  ArraySize   = Attr.ArraySize;
-        const auto  DescrType   = Attr.GetDescriptorType();
+        const PipelineResourceAttribsType& Attr        = GetResourceAttribs(ResIdx);
+        const Uint32                       CacheOffset = Attr.CacheOffset(CacheType);
+        const Uint32                       ArraySize   = Attr.ArraySize;
+        const DescriptorType               DescrType   = Attr.GetDescriptorType();
 
 #ifdef DILIGENT_DEBUG
         {
-            const auto& Res = GetResourceDesc(ResIdx);
+            const PipelineResourceDesc& Res = GetResourceDesc(ResIdx);
             VERIFY_EXPR(ArraySize == GetResourceDesc(ResIdx).ArraySize);
             VERIFY_EXPR(Res.VarType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
         }
@@ -672,12 +672,17 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
         // The type of the descriptor also controls which array the descriptors are taken from. (13.2.4)
         WriteDescrSetIt->descriptorType  = DescriptorTypeToVkDescriptorType(DescrType);
         WriteDescrSetIt->descriptorCount = 0;
+        // Zero-initialize array pointers as some implementations (e.g. Android Emulator) still check them even
+        // if they are not used.
+        WriteDescrSetIt->pImageInfo       = nullptr;
+        WriteDescrSetIt->pBufferInfo      = nullptr;
+        WriteDescrSetIt->pTexelBufferView = nullptr;
 
         auto WriteArrayElements = [&](auto DescrType, auto& DescrIt, const auto& DescrArr) //
         {
             while (ArrElem < ArraySize && DescrIt != DescrArr.end())
             {
-                if (const auto& CachedRes = SetResources.GetResource(CacheOffset + (ArrElem++)))
+                if (const ShaderResourceCacheVk::Resource& CachedRes = SetResources.GetResource(CacheOffset + (ArrElem++)))
                 {
                     *DescrIt = CachedRes.GetDescriptorWriteInfo<DescrType>();
                     ++DescrIt;
@@ -774,7 +779,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
             AccelStructIt == DescrAccelStructArr.end() ||
             WriteDescrSetIt == WriteDescrSetArr.end())
         {
-            auto DescrWriteCount = static_cast<Uint32>(std::distance(WriteDescrSetArr.begin(), WriteDescrSetIt));
+            Uint32 DescrWriteCount = static_cast<Uint32>(std::distance(WriteDescrSetArr.begin(), WriteDescrSetIt));
             if (DescrWriteCount > 0)
                 LogicalDevice.UpdateDescriptorSets(DescrWriteCount, WriteDescrSetArr.data(), 0, nullptr);
 
@@ -786,7 +791,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
         }
     }
 
-    auto DescrWriteCount = static_cast<Uint32>(std::distance(WriteDescrSetArr.begin(), WriteDescrSetIt));
+    Uint32 DescrWriteCount = static_cast<Uint32>(std::distance(WriteDescrSetArr.begin(), WriteDescrSetIt));
     if (DescrWriteCount > 0)
         LogicalDevice.UpdateDescriptorSets(DescrWriteCount, WriteDescrSetArr.data(), 0, nullptr);
 }
