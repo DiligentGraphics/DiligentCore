@@ -59,7 +59,7 @@ void HandleHLSLCompilerResult(bool               CompilationSucceeded,
         const auto ShaderSourceLen = ShaderSource.length();
         auto       pOutputLogBlob  = DataBlobImpl::Create(ShaderSourceLen + 1 + CompilerMsgLen + 1);
 
-        auto* log = static_cast<char*>(pOutputLogBlob->GetDataPtr());
+        char* log = pOutputLogBlob->GetDataPtr<char>();
 
         if (CompilerMsg != nullptr)
             memcpy(log, CompilerMsg, CompilerMsgLen);

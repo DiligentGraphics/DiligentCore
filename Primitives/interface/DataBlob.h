@@ -65,6 +65,20 @@ DILIGENT_BEGIN_INTERFACE(IDataBlob, IObject)
     /// Returns const pointer to the internal data buffer
     VIRTUAL const void* METHOD(GetConstDataPtr)(THIS_
                                                 size_t Offset DEFAULT_VALUE(0)) CONST PURE;
+
+#if DILIGENT_CPP_INTERFACE
+    template <typename T>
+    T* GetDataPtr(size_t Offset = 0)
+    {
+        return static_cast<T*>(GetDataPtr(Offset));
+    }
+
+    template <typename T>
+    const T* GetConstDataPtr(size_t Offset = 0) const
+    {
+        return static_cast<const T*>(GetConstDataPtr(Offset));
+    }
+#endif
 };
 DILIGENT_END_INTERFACE
 

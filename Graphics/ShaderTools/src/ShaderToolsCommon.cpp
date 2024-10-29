@@ -244,7 +244,7 @@ ShaderSourceFileData ReadShaderSourceFile(const char*                      Sourc
 
                 SourceData.pFileData = DataBlobImpl::Create();
                 pSourceStream->ReadBlob(SourceData.pFileData);
-                SourceData.Source       = reinterpret_cast<char*>(SourceData.pFileData->GetDataPtr());
+                SourceData.Source       = SourceData.pFileData->GetConstDataPtr<char>();
                 SourceData.SourceLength = StaticCast<Uint32>(SourceData.pFileData->GetSize());
             }
             else

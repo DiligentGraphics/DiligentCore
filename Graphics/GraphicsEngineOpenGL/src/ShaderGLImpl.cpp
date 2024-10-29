@@ -321,7 +321,7 @@ bool ShaderGLImpl::GetCompileStatus(IDataBlob** ppCompilerOutput, bool ThrowOnEr
                 // InfoLogLen accounts for null terminator
                 auto pOutputDataBlob = DataBlobImpl::Create(InfoLogLen + m_GLSLSourceString.length() + 1);
 
-                char* DataPtr = static_cast<char*>(pOutputDataBlob->GetDataPtr());
+                char* DataPtr = pOutputDataBlob->GetDataPtr<char>();
                 if (!InfoLog.empty())
                 {
                     // Copy info log including null terminator

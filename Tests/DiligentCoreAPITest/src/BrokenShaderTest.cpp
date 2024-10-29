@@ -126,7 +126,7 @@ void TestBrokenShader(const char*            Source,
         ASSERT_NE(pErrors, nullptr);
     }
     ASSERT_NE(pErrors, nullptr);
-    const char* Msg = reinterpret_cast<const char*>(pErrors->GetDataPtr());
+    const char* Msg = pErrors->GetConstDataPtr<char>();
     LOG_INFO_MESSAGE("Compiler output:\n", Msg);
 }
 

@@ -761,7 +761,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     {
         RefCntAutoPtr<DataBlobImpl> pOutputDataBlob = DataBlobImpl::Create(WGSL.length() + 1 + Diagnostics.length() + 1);
 
-        char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
+        char* DataPtr = pOutputDataBlob->GetDataPtr<char>();
         memcpy(DataPtr, Diagnostics.data(), Diagnostics.length() + 1);
         memcpy(DataPtr + Diagnostics.length() + 1, WGSL.data(), WGSL.length() + 1);
         pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppTintOutput));

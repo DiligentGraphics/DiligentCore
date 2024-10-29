@@ -247,7 +247,7 @@ void LogCompilerError(const char* DebugOutputMessage,
     if (ppCompilerOutput != nullptr)
     {
         auto  pOutputDataBlob = DataBlobImpl::Create(SourceCodeLen + 1 + ErrorLog.length() + 1);
-        char* DataPtr         = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
+        char* DataPtr         = pOutputDataBlob->GetDataPtr<char>();
         memcpy(DataPtr, ErrorLog.data(), ErrorLog.length() + 1);
         memcpy(DataPtr + ErrorLog.length() + 1, ShaderSource, SourceCodeLen + 1);
         pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
@@ -321,7 +321,7 @@ public:
         auto* pNewInclude =
             new IncludeResult{
                 headerName,
-                reinterpret_cast<const char*>(pFileData->GetDataPtr()),
+                pFileData->GetConstDataPtr<char>(),
                 pFileData->GetSize(),
                 nullptr};
 

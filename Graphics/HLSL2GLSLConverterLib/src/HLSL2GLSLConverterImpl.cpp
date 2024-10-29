@@ -798,8 +798,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
                 pIncludeDataStream->ReadBlob(pIncludeData);
 
                 // Get include text
-                auto   IncludeText = reinterpret_cast<const Char*>(pIncludeData->GetDataPtr());
-                size_t NumSymbols  = pIncludeData->GetSize();
+                const Char* IncludeText = pIncludeData->GetConstDataPtr<Char>();
+                size_t      NumSymbols  = pIncludeData->GetSize();
 
                 // Insert the text into source
                 GLSLSource.insert(IncludeStartPos - GLSLSource.begin(), IncludeText, NumSymbols);
