@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "../../Primitives/interface/Errors.hpp"
+#include "../../Primitives/interface/DataBlob.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "../../Platforms/interface/FileSystem.hpp"
 
@@ -89,30 +90,8 @@ public:
 
     explicit operator bool() const { return m_pFile != nullptr; }
 
-    static bool ReadWholeFile(const char* FilePath, std::vector<Uint8>& Data)
-    {
-        VERIFY_EXPR(FilePath != nullptr);
-
-        FileWrapper File{FilePath, EFileAccessMode::Read};
-        if (!File)
-        {
-            LOG_ERROR_MESSAGE("Failed to open file ", FilePath);
-            return false;
-        }
-
-        const auto Size = File->GetSize();
-        Data.resize(Size);
-        if (Size > 0)
-        {
-            if (!File->Read(Data.data(), Size))
-            {
-                LOG_ERROR_MESSAGE("Failed to read file ", FilePath);
-                return false;
-            }
-        }
-
-        return true;
-    }
+    static bool ReadWholeFile(const char* FilePath, std::vector<Uint8>& Data, bool Silent = false);
+    static bool ReadWholeFile(const char* FilePath, IDataBlob** ppData, bool Silent = false);
 
 private:
     FileWrapper(const FileWrapper&);

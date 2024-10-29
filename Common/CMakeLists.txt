@@ -53,6 +53,7 @@ set(SOURCE
     src/BasicFileStream.cpp
     src/DataBlobImpl.cpp
     src/DefaultRawMemoryAllocator.cpp
+    src/FileWrapper.cpp
     src/FixedBlockMemoryAllocator.cpp
     src/MemoryFileStream.cpp
     src/Serializer.cpp

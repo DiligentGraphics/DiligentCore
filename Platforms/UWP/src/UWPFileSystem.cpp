@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -163,14 +163,10 @@ size_t WindowsStoreFile::GetSize()
     return fileInfo.EndOfFile.LowPart;
 }
 
-void WindowsStoreFile::Read(IDataBlob* pData)
+bool WindowsStoreFile::Read(IDataBlob* pData)
 {
     pData->Resize(GetSize());
-
-    if (!Read(pData->GetDataPtr(), pData->GetSize()))
-    {
-        LOG_ERROR_AND_THROW("Failed to read data from file");
-    }
+    return Read(pData->GetDataPtr(), pData->GetSize());
 }
 
 void WindowsStoreFile::Write(IDataBlob* pData)
