@@ -43,18 +43,26 @@ class ProxyDataBlob : public ObjectBase<IDataBlob>
 public:
     typedef ObjectBase<IDataBlob> TBase;
 
-    ProxyDataBlob(IReferenceCounters* pRefCounters, void* pData, size_t Size) :
+    ProxyDataBlob(IReferenceCounters* pRefCounters,
+                  void*               pData,
+                  size_t              Size,
+                  IObject*            pDataContainer = nullptr) :
         TBase{pRefCounters},
         m_pData{pData},
         m_pConstData{pData},
-        m_Size{Size}
+        m_Size{Size},
+        m_pDataContainer{pDataContainer}
     {}
 
-    ProxyDataBlob(IReferenceCounters* pRefCounters, const void* pData, size_t Size) :
+    ProxyDataBlob(IReferenceCounters* pRefCounters,
+                  const void*         pData,
+                  size_t              Size,
+                  IObject*            pDataContainer = nullptr) :
         TBase{pRefCounters},
         m_pData{nullptr},
         m_pConstData{pData},
-        m_Size{Size}
+        m_Size{Size},
+        m_pDataContainer{pDataContainer}
     {}
 
     template <typename... ArgsType>
@@ -92,9 +100,10 @@ public:
     }
 
 private:
-    void* const       m_pData;
-    const void* const m_pConstData;
-    const size_t      m_Size;
+    void* const            m_pData;
+    const void* const      m_pConstData;
+    const size_t           m_Size;
+    RefCntAutoPtr<IObject> m_pDataContainer;
 };
 
 } // namespace Diligent
