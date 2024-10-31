@@ -29,6 +29,7 @@ set(INTERFACE
     interface/ObjectsRegistry.hpp
     interface/ParsingTools.hpp
     interface/RefCntAutoPtr.hpp
+    interface/RefCntContainer.hpp
     interface/RefCountedObjectImpl.hpp
     interface/Serializer.hpp
     interface/SpinLock.hpp
