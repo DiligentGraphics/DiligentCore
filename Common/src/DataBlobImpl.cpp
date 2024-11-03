@@ -27,15 +27,23 @@
 
 #include "pch.h"
 #include "DataBlobImpl.hpp"
+#include "DefaultRawMemoryAllocator.hpp"
 
 #include <cstring>
 
 namespace Diligent
 {
 
+RefCntAutoPtr<DataBlobImpl> DataBlobImpl::Create(IMemoryAllocator* pAllocator, size_t InitialSize, const void* pData)
+{
+    if (pAllocator == nullptr)
+        pAllocator = &DefaultRawMemoryAllocator::GetAllocator();
+    return RefCntAutoPtr<DataBlobImpl>{MakeNewRCObj<DataBlobImpl>()(*pAllocator, InitialSize, pData)};
+}
+
 RefCntAutoPtr<DataBlobImpl> DataBlobImpl::Create(size_t InitialSize, const void* pData)
 {
-    return RefCntAutoPtr<DataBlobImpl>{MakeNewRCObj<DataBlobImpl>()(InitialSize, pData)};
+    return Create(nullptr, InitialSize, pData);
 }
 
 RefCntAutoPtr<DataBlobImpl> DataBlobImpl::MakeCopy(const IDataBlob* pDataBlob)
@@ -46,9 +54,12 @@ RefCntAutoPtr<DataBlobImpl> DataBlobImpl::MakeCopy(const IDataBlob* pDataBlob)
     return Create(pDataBlob->GetSize(), pDataBlob->GetConstDataPtr());
 }
 
-DataBlobImpl::DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize, const void* pData) :
+DataBlobImpl::DataBlobImpl(IReferenceCounters* pRefCounters,
+                           IMemoryAllocator&   Allocator,
+                           size_t              InitialSize,
+                           const void*         pData) :
     TBase{pRefCounters},
-    m_DataBuff(InitialSize)
+    m_DataBuff{InitialSize, Uint8{}, STD_ALLOCATOR_RAW_MEM(Uint8, Allocator, "Allocator for vector<Uint8>")}
 {
     if (!m_DataBuff.empty() && pData != nullptr)
     {
