@@ -99,4 +99,40 @@ bool FileWrapper::ReadWholeFile(const char* FilePath, IDataBlob** ppData, bool S
     return true;
 }
 
+bool FileWrapper::WriteFile(const char* FilePath, const void* Data, size_t Size, bool Silent)
+{
+    if (FilePath == nullptr || FilePath[0] == '\0')
+    {
+        DEV_ERROR("File path must not be null or empty");
+        return false;
+    }
+
+    if (Data == nullptr)
+    {
+        DEV_ERROR("Data pointer must not be null");
+        return false;
+    }
+
+    FileWrapper File{FilePath, EFileAccessMode::Overwrite};
+    if (!File)
+    {
+        if (!Silent)
+        {
+            LOG_ERROR_MESSAGE("Failed to open file '", FilePath, "'.");
+        }
+        return false;
+    }
+
+    if (!File->Write(Data, Size))
+    {
+        if (!Silent)
+        {
+            LOG_ERROR_MESSAGE("Failed to write to file '", FilePath, "'.");
+        }
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace Diligent
