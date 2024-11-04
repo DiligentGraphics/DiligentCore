@@ -77,4 +77,14 @@ size_t BasicFileStream::GetSize()
     return m_FileWrpr->GetSize();
 }
 
+size_t BasicFileStream::GetPos()
+{
+    return m_FileWrpr->GetPos();
+}
+
+bool BasicFileStream::SetPos(size_t Offset, int Origin)
+{
+    return m_FileWrpr->SetPos(Offset, static_cast<FilePosOrigin>(Origin));
+}
+
 } // namespace Diligent

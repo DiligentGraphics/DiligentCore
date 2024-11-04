@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,6 +67,12 @@ DILIGENT_BEGIN_INTERFACE(IFileStream, IObject)
 
     VIRTUAL size_t METHOD(GetSize)(THIS) PURE;
 
+    VIRTUAL size_t METHOD(GetPos)(THIS) PURE;
+
+    VIRTUAL bool METHOD(SetPos)(THIS_
+                                size_t Offset,
+                                int    Origin) PURE;
+
     VIRTUAL bool METHOD(IsValid)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
@@ -81,6 +87,8 @@ DILIGENT_END_INTERFACE
 #    define IFileStream_ReadBlob(This, ...) CALL_IFACE_METHOD(FileStream, ReadBlob, This, __VA_ARGS__)
 #    define IFileStream_Write(This, ...)    CALL_IFACE_METHOD(FileStream, Write,    This, __VA_ARGS__)
 #    define IFileStream_GetSize(This)       CALL_IFACE_METHOD(FileStream, GetSize,  This)
+#    define IFileStream_GetPos(This)        CALL_IFACE_METHOD(FileStream, GetPos,   This)
+#    define IFileStream_SetPos(This, ...)   CALL_IFACE_METHOD(FileStream, SetPos,   This, __VA_ARGS__)
 #    define IFileStream_IsValid(This)       CALL_IFACE_METHOD(FileStream, IsValid,  This)
 
 // clang-format on

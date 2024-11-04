@@ -89,4 +89,29 @@ size_t MemoryFileStream::GetSize()
     return m_DataBlob->GetSize();
 }
 
+size_t MemoryFileStream::GetPos()
+{
+    return m_CurrentOffset;
+}
+
+bool MemoryFileStream::SetPos(size_t Offset, int Origin)
+{
+    switch (static_cast<FilePosOrigin>(Origin))
+    {
+        case FilePosOrigin::Start:
+            m_CurrentOffset = Offset;
+            break;
+
+        case FilePosOrigin::Curr:
+            m_CurrentOffset += Offset;
+            break;
+
+        case FilePosOrigin::End:
+            m_CurrentOffset = m_DataBlob->GetSize() + Offset;
+            break;
+    }
+
+    return true;
+}
+
 } // namespace Diligent

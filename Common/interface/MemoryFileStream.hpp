@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,6 +59,10 @@ public:
     virtual bool DILIGENT_CALL_TYPE Write(const void* Data, size_t Size) override final;
 
     virtual size_t DILIGENT_CALL_TYPE GetSize() override final;
+
+    virtual size_t DILIGENT_CALL_TYPE GetPos() override;
+
+    virtual bool DILIGENT_CALL_TYPE SetPos(size_t Offset, int Origin) override;
 
     virtual bool DILIGENT_CALL_TYPE IsValid() override final;
 

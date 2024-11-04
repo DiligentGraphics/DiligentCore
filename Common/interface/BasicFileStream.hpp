@@ -64,6 +64,10 @@ public:
 
     virtual size_t DILIGENT_CALL_TYPE GetSize() override;
 
+    virtual size_t DILIGENT_CALL_TYPE GetPos() override;
+
+    virtual bool DILIGENT_CALL_TYPE SetPos(size_t Offset, int Origin) override;
+
     virtual bool DILIGENT_CALL_TYPE IsValid() override;
 
 private:
