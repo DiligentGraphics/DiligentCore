@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,7 +83,7 @@ void DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*           
         RefCntAutoPtr<BasicFileStream> pFileStream;
         if (FileSystem::FileExists(Path))
         {
-            pFileStream = MakeNewRCObj<BasicFileStream>()(Path, EFileAccessMode::Read);
+            pFileStream = BasicFileStream::Create(Path, EFileAccessMode::Read);
             if (!pFileStream->IsValid())
                 pFileStream.Release();
         }

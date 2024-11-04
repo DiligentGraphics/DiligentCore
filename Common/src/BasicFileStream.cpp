@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,17 @@
 
 namespace Diligent
 {
+
+RefCntAutoPtr<BasicFileStream> BasicFileStream::Create(const Char* Path, EFileAccessMode Access)
+{
+    if (Path == nullptr || Path[0] == '\0')
+    {
+        DEV_ERROR("Path must not be null or empty");
+        return {};
+    }
+
+    return RefCntAutoPtr<BasicFileStream>{MakeNewRCObj<BasicFileStream>()(Path, Access)};
+}
 
 BasicFileStream::BasicFileStream(IReferenceCounters* pRefCounters,
                                  const Char*         Path,
