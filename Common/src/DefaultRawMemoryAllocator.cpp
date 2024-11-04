@@ -115,6 +115,10 @@ void DefaultRawMemoryAllocator::Free(void* Ptr)
 void* DefaultRawMemoryAllocator::AllocateAligned(size_t Size, size_t Alignment, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
 {
     VERIFY_EXPR(Size > 0 && Alignment > 0);
+    // Alignment must be a power of two and a multiple of sizeof(void*))
+    Alignment = std::max(Alignment, sizeof(void*));
+    // Size must be an integral multiple of alignment,
+    // or aligned_alloc will return null
     Size = AlignUp(Size, Alignment);
     return ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber);
 }
