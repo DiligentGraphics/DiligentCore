@@ -295,6 +295,7 @@ protected:
                 {
                     case 0: VERIFY_EXPR(FeatureLevel == D3D_FEATURE_LEVEL_12_0); break;
                     case 1: VERIFY_EXPR(FeatureLevel == D3D_FEATURE_LEVEL_12_1); break;
+                    case 2: VERIFY_EXPR(FeatureLevel == D3D_FEATURE_LEVEL_12_2); break;
                     default: UNEXPECTED("unknown feature level 12.", Uint32{MinVersion.Minor});
                 }
                 break;
