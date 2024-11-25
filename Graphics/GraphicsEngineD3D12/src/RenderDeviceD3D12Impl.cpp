@@ -69,6 +69,7 @@ D3D_FEATURE_LEVEL GetD3DFeatureLevelFromDevice(ID3D12Device* pd3d12Device)
 {
     D3D_FEATURE_LEVEL FeatureLevels[] =
         {
+            D3D_FEATURE_LEVEL_12_2,
             D3D_FEATURE_LEVEL_12_1,
             D3D_FEATURE_LEVEL_12_0,
             D3D_FEATURE_LEVEL_11_1,
@@ -177,6 +178,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         auto FeatureLevel = GetD3DFeatureLevelFromDevice(m_pd3d12Device);
         switch (FeatureLevel)
         {
+            case D3D_FEATURE_LEVEL_12_2: m_DeviceInfo.APIVersion = {12, 2}; break;
             case D3D_FEATURE_LEVEL_12_1: m_DeviceInfo.APIVersion = {12, 1}; break;
             case D3D_FEATURE_LEVEL_12_0: m_DeviceInfo.APIVersion = {12, 0}; break;
             case D3D_FEATURE_LEVEL_11_1: m_DeviceInfo.APIVersion = {11, 1}; break;
