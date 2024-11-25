@@ -43,14 +43,14 @@ bool VerifySparseBufferCompatibility(IRenderDevice* pDevice)
 {
     VERIFY_EXPR(pDevice != nullptr);
 
-    const auto& DeviceInfo = pDevice->GetDeviceInfo().Features;
-    if (!DeviceInfo.SparseResources)
+    const DeviceFeatures& Features = pDevice->GetDeviceInfo().Features;
+    if (!Features.SparseResources)
     {
         LOG_WARNING_MESSAGE("SparseResources device feature is not enabled.");
         return false;
     }
 
-    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
+    const SparseResourceProperties& SparseRes = pDevice->GetAdapterInfo().SparseResources;
     if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_BUFFER) == 0)
     {
         LOG_WARNING_MESSAGE("This device does not support sparse buffers.");
@@ -67,7 +67,7 @@ DynamicBuffer::DynamicBuffer(IRenderDevice*                 pDevice,
     m_Name{CI.Desc.Name != nullptr ? CI.Desc.Name : "Dynamic buffer"},
     m_Desc{CI.Desc},
     m_VirtualSize{CI.Desc.Usage == USAGE_SPARSE ? CI.VirtualSize : 0},
-    m_MemoryPageSize{CI.MemoryPageSize}
+    m_MemoryPageSize{AlignUp(CI.MemoryPageSize, 65536u)}
 {
     DEV_CHECK_ERR(CI.Desc.Usage != USAGE_SPARSE || CI.VirtualSize > 0, "Virtual size must not be 0 for sparse buffers");
 
@@ -93,16 +93,16 @@ void DynamicBuffer::CreateSparseBuffer(IRenderDevice* pDevice)
         return;
     }
 
-    const auto& SparseResources    = pDevice->GetAdapterInfo().SparseResources;
-    const auto  SparseMemBlockSize = SparseResources.StandardBlockSize;
+    const SparseResourceProperties& SparseResources    = pDevice->GetAdapterInfo().SparseResources;
+    const Uint32                    SparseMemBlockSize = SparseResources.StandardBlockSize;
 
     m_MemoryPageSize = std::max(AlignUpNonPw2(m_MemoryPageSize, SparseMemBlockSize), SparseMemBlockSize);
 
     {
-        auto Desc = m_Desc;
+        BufferDesc Desc = m_Desc;
 
-        Desc.Size    = AlignUpNonPw2(m_VirtualSize, m_MemoryPageSize);
-        auto MaxSize = AlignDownNonPw2(SparseResources.ResourceSpaceSize, m_MemoryPageSize);
+        Desc.Size      = AlignUpNonPw2(m_VirtualSize, m_MemoryPageSize);
+        Uint64 MaxSize = AlignDownNonPw2(SparseResources.ResourceSpaceSize, m_MemoryPageSize);
         if (m_Desc.BindFlags & (BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS))
         {
             VERIFY_EXPR(m_Desc.ElementByteStride != 0);
@@ -163,8 +163,8 @@ void DynamicBuffer::InitBuffer(IRenderDevice* pDevice)
     // NB: m_Desc.Usage may be changed by CreateSparseBuffer()
     if (m_Desc.Usage == USAGE_DEFAULT && m_PendingSize > 0)
     {
-        auto Desc = m_Desc;
-        Desc.Size = m_PendingSize;
+        BufferDesc Desc = m_Desc;
+        Desc.Size       = m_PendingSize;
         pDevice->CreateBuffer(Desc, nullptr, &m_pBuffer);
         if (m_Desc.Size == 0)
         {
@@ -190,12 +190,12 @@ void DynamicBuffer::ResizeSparseBuffer(IDeviceContext* pContext)
     SparseBufferMemoryBindInfo BufferBindInfo;
     BufferBindInfo.pBuffer = m_pBuffer;
 
-    auto StartOffset = m_Desc.Size;
-    auto EndOffset   = m_PendingSize;
+    Uint64 StartOffset = m_Desc.Size;
+    Uint64 EndOffset   = m_PendingSize;
     if (StartOffset > EndOffset)
         std::swap(StartOffset, EndOffset);
     VERIFY_EXPR((EndOffset - StartOffset) % m_MemoryPageSize == 0);
-    const auto NumPages = StaticCast<Uint32>((EndOffset - StartOffset) / m_MemoryPageSize);
+    const Uint32 NumPages = StaticCast<Uint32>((EndOffset - StartOffset) / m_MemoryPageSize);
 
     std::vector<SparseBufferMemoryBindRange> Ranges;
     Ranges.reserve(NumPages);
@@ -254,7 +254,7 @@ void DynamicBuffer::ResizeDefaultBuffer(IDeviceContext* pContext)
         return;
 
     VERIFY_EXPR(m_pBuffer);
-    auto CopySize = std::min(m_pBuffer->GetDesc().Size, m_pStaleBuffer->GetDesc().Size);
+    Uint64 CopySize = std::min(m_pBuffer->GetDesc().Size, m_pStaleBuffer->GetDesc().Size);
     pContext->CopyBuffer(m_pStaleBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
                          m_pBuffer, 0, CopySize, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     m_pStaleBuffer.Release();
