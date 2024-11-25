@@ -44,7 +44,7 @@
 
 #include "WinHPostface.h"
 
-#ifndef NTDDI_WIN10_CO // First defined in Win SDK 10.0.22000.0
+#ifndef NTDDI_WIN10_FE // First defined in Win SDK 10.0.20348.0
 constexpr D3D_FEATURE_LEVEL D3D_FEATURE_LEVEL_12_2 = static_cast<D3D_FEATURE_LEVEL>(0xc200);
 #endif
 
