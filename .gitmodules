@@ -22,3 +22,6 @@
 [submodule "ThirdParty/xxHash"]
 	path = ThirdParty/xxHash
 	url = https://github.com/DiligentGraphics/xxHash
+[submodule "ThirdParty/DirectX-Headers"]
+	path = ThirdParty/DirectX-Headers
+	url = https://github.com/Microsoft/DirectX-Headers
