@@ -25,3 +25,5 @@ ehthumbs.db
 ehthumbs_vista.db
 # Folder config file
 [Dd]esktop.ini
+
+.idea/
