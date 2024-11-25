@@ -33,7 +33,8 @@
 
 #include "WinHPreface.h"
 
-#include <d3d12.h>
+#include "directx/d3d12.h"
+
 #include <atlbase.h>
 
 #if USE_D3D12_LOADER
@@ -44,26 +45,26 @@
 
 #include "WinHPostface.h"
 
-#ifndef NTDDI_WIN10_FE // First defined in Win SDK 10.0.20348.0
-constexpr D3D_FEATURE_LEVEL D3D_FEATURE_LEVEL_12_2 = static_cast<D3D_FEATURE_LEVEL>(0xc200);
-#endif
-
-#ifndef NTDDI_WIN10_VB // First defined in Win SDK 10.0.19041.0
-#    define D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS static_cast<D3D12_INDIRECT_ARGUMENT_TYPE>(D3D12_INDIRECT_ARGUMENT_TYPE_UNORDERED_ACCESS_VIEW + 1)
-#    define D3D12_RAYTRACING_TIER_1_1                  static_cast<D3D12_RAYTRACING_TIER>(11)
-#    define D3D12_HEAP_FLAG_CREATE_NOT_ZEROED          D3D12_HEAP_FLAG_NONE
-#endif
-
-#ifndef NTDDI_WIN10_19H1 // First defined in Win SDK 10.0.18362.0
-enum D3D12_SHADING_RATE
-{
-};
-enum D3D12_SHADING_RATE_COMBINER
-{
-};
-
-constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE = static_cast<D3D12_RESOURCE_STATES>(0x1000000);
-#endif
+// #ifndef NTDDI_WIN10_FE // First defined in Win SDK 10.0.20348.0
+// constexpr D3D_FEATURE_LEVEL D3D_FEATURE_LEVEL_12_2 = static_cast<D3D_FEATURE_LEVEL>(0xc200);
+// #endif
+//
+// #ifndef NTDDI_WIN10_VB // First defined in Win SDK 10.0.19041.0
+// #    define D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS static_cast<D3D12_INDIRECT_ARGUMENT_TYPE>(D3D12_INDIRECT_ARGUMENT_TYPE_UNORDERED_ACCESS_VIEW + 1)
+// #    define D3D12_RAYTRACING_TIER_1_1                  static_cast<D3D12_RAYTRACING_TIER>(11)
+// #    define D3D12_HEAP_FLAG_CREATE_NOT_ZEROED          D3D12_HEAP_FLAG_NONE
+// #endif
+//
+// #ifndef NTDDI_WIN10_19H1 // First defined in Win SDK 10.0.18362.0
+// enum D3D12_SHADING_RATE
+// {
+// };
+// enum D3D12_SHADING_RATE_COMBINER
+// {
+// };
+//
+// constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE = static_cast<D3D12_RESOURCE_STATES>(0x1000000);
+// #endif
 
 #include "PlatformDefinitions.h"
 #include "Errors.hpp"

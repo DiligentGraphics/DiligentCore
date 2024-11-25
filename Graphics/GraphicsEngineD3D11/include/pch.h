@@ -43,6 +43,8 @@
 
 #include "PlatformDefinitions.h"
 
+#include "directx/d3dcommon.h"
+
 #if PLATFORM_WIN32
 #    ifndef D3D11_VERSION
 #        define D3D11_VERSION 2

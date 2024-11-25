@@ -128,7 +128,8 @@ PRIVATE
     Diligent-GraphicsEngineD3DBase
     Diligent-TargetPlatform
     Diligent-Common
-    Diligent-ShaderTools 
+    Diligent-ShaderTools
+    DirectX-Headers
     dxgi.lib
     d3d11.lib
     d3dcompiler.lib

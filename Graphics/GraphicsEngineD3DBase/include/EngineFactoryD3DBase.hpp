@@ -289,7 +289,6 @@ protected:
                     default: UNEXPECTED("unknown feature level 11.", Uint32{MinVersion.Minor});
                 }
                 break;
-#    if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >= _WIN32_WINNT_WIN10)
             case 12:
                 switch (MinVersion.Minor)
                 {
@@ -299,7 +298,6 @@ protected:
                     default: UNEXPECTED("unknown feature level 12.", Uint32{MinVersion.Minor});
                 }
                 break;
-#    endif
             default:
                 UNEXPECTED("Unknown major version of the feature level");
         }

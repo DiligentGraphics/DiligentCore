@@ -18,6 +18,10 @@ if (GL_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS) AND (N
     install(FILES glew/LICENSE.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME GLEW-License.txt)
 endif()
 
+if (D3D11_SUPPORTED OR D3D12_SUPPORTED)
+    add_subdirectory(DirectX-Headers)
+endif ()
+
 if (VULKAN_SUPPORTED)
     if (NOT TARGET Vulkan::Headers)
         # Manually add the Vulkan-Headers target as this is all we need and the

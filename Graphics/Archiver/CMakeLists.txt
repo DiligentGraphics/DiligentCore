@@ -111,12 +111,12 @@ PRIVATE
 )
 
 if(D3D11_SUPPORTED)
-    target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineD3D11-static)
+    target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineD3D11-static DirectX-Headers)
     target_include_directories(Diligent-Archiver-static PRIVATE ../GraphicsEngineD3D11/include)
 endif()
 
 if(D3D12_SUPPORTED)
-    target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineD3D12-static)
+    target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineD3D12-static DirectX-Headers)
     target_include_directories(Diligent-Archiver-static PRIVATE ../GraphicsEngineD3D12/include)
 endif()
 

@@ -194,6 +194,7 @@ PRIVATE
     Diligent-GraphicsEngineNextGenBase
     Diligent-TargetPlatform
     Diligent-ShaderTools
+    DirectX-Headers
     dxgi.lib
     d3dcompiler.lib
 PUBLIC
