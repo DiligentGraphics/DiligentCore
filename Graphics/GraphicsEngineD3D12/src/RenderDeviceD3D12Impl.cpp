@@ -176,7 +176,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
 
         auto FeatureLevel = GetD3DFeatureLevelFromDevice(m_pd3d12Device);
-        switch (FeatureLevel)
+        switch (static_cast<Uint32>(FeatureLevel))
         {
             case D3D_FEATURE_LEVEL_12_2: m_DeviceInfo.APIVersion = {12, 2}; break;
             case D3D_FEATURE_LEVEL_12_1: m_DeviceInfo.APIVersion = {12, 1}; break;
