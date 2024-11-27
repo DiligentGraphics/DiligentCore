@@ -177,6 +177,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
         auto FeatureLevel = GetD3DFeatureLevelFromDevice(m_pd3d12Device);
 #if defined(_MSC_VER) && !defined(NTDDI_WIN10_FE)
+#    pragma warning(push)
 #    pragma warning(disable : 4063)
 #endif
         switch (FeatureLevel)
@@ -191,7 +192,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             default: UNEXPECTED("Unexpected D3D feature level");
         }
 #if defined(_MSC_VER) && !defined(NTDDI_WIN10_FE)
-#    pragma warning(default : 4063)
+#    pragma warning(pop)
 #endif
 
         // Detect maximum  shader model.
