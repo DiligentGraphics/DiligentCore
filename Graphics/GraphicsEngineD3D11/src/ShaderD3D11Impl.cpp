@@ -55,7 +55,7 @@ static const ShaderVersion HLSLValidateShaderVersion(const ShaderVersion& Versio
 static const ShaderVersion GetD3D11ShaderModel(D3D_FEATURE_LEVEL d3dDeviceFeatureLevel, const ShaderVersion& HLSLVersion)
 {
 #if defined(_MSC_VER) && !defined(NTDDI_WIN10_FE)
-#    pragma warning(disable 4063)
+#    pragma warning(disable : 4063)
 #endif
     switch (d3dDeviceFeatureLevel)
     {
@@ -88,7 +88,7 @@ static const ShaderVersion GetD3D11ShaderModel(D3D_FEATURE_LEVEL d3dDeviceFeatur
             return ShaderVersion{4, 0};
     }
 #if defined(_MSC_VER) && !defined(NTDDI_WIN10_FE)
-#    pragma warning(default 4063)
+#    pragma warning(default : 4063)
 #endif
 }
 
