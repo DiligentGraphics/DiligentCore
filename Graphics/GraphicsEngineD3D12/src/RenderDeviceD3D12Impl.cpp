@@ -176,7 +176,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
 
         auto FeatureLevel = GetD3DFeatureLevelFromDevice(m_pd3d12Device);
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(NTDDI_WIN10_FE)
 #    pragma warning(disable 4063)
 #endif
         switch (FeatureLevel)
@@ -190,7 +190,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             case D3D_FEATURE_LEVEL_10_0: m_DeviceInfo.APIVersion = {10, 0}; break;
             default: UNEXPECTED("Unexpected D3D feature level");
         }
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(NTDDI_WIN10_FE)
 #    pragma warning(default 4063)
 #endif
 
