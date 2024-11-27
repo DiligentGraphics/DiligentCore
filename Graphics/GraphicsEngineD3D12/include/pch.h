@@ -44,6 +44,10 @@
 
 #include "WinHPostface.h"
 
+#ifndef NTDDI_WIN10_FE // First defined in Win SDK 10.0.20348.0
+constexpr D3D_FEATURE_LEVEL D3D_FEATURE_LEVEL_12_2 = static_cast<D3D_FEATURE_LEVEL>(0xc200);
+#endif
+
 #ifndef NTDDI_WIN10_VB // First defined in Win SDK 10.0.19041.0
 #    define D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS static_cast<D3D12_INDIRECT_ARGUMENT_TYPE>(D3D12_INDIRECT_ARGUMENT_TYPE_UNORDERED_ACCESS_VIEW + 1)
 #    define D3D12_RAYTRACING_TIER_1_1                  static_cast<D3D12_RAYTRACING_TIER>(11)
