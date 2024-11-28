@@ -1037,6 +1037,11 @@
 #endif
 
 
+#ifndef GL_MAX_LABEL_LENGTH
+#   define GL_MAX_LABEL_LENGTH 0x82E8
+#endif
+
+
 /* ------------------------------ GL_EXT_disjoint_timer_query ----------------------------- */
 #ifndef GL_TIMESTAMP
 #   define GL_TIMESTAMP 0x8E28

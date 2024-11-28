@@ -126,7 +126,29 @@ public:
         VERIFY_EXPR(Name != nullptr);
         if (glObjectLabel && m_uiHandle)
         {
-            glObjectLabel(m_CreateReleaseHelper.Type, m_uiHandle, -1, Name);
+            static GLint MaxLabelLen = 0;
+            if (MaxLabelLen == 0)
+            {
+                glGetIntegerv(GL_MAX_LABEL_LENGTH, &MaxLabelLen);
+#    ifdef DILIGENT_DEVELOPMENT
+                glGetError(); // Ignore GL error
+#    endif
+                if (MaxLabelLen <= 0)
+                {
+                    // Minimum required value by the spec
+                    MaxLabelLen = 256;
+                }
+
+                // The spec requires that the number of characters in <label>,
+                // excluding the null terminator, is less than the value of MAX_LABEL_LENGTH.
+                // In other words, the maximum length of the label is one less than the value of MAX_LABEL_LENGTH.
+                --MaxLabelLen;
+            }
+            GLsizei Length = static_cast<GLsizei>(strlen(Name));
+            if (Length > MaxLabelLen)
+                Length = MaxLabelLen;
+
+            glObjectLabel(m_CreateReleaseHelper.Type, m_uiHandle, Length, Name);
 #    ifdef DILIGENT_DEVELOPMENT
             glGetError(); // Ignore GL error
 #    endif
