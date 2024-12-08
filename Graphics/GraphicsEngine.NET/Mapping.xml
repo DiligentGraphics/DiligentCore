@@ -163,6 +163,7 @@
 		<map struct="PipelineStateCreateInfo" diligent-inheritance="true" />
 
 		<map field="EngineCreateInfo::NumImmediateContexts" relation="length(pImmediateContextInfo)"/>
+		<map field="EngineCreateInfo::pXRAttribs" diligent-optional="true" />
 
 		<map field="EngineVkCreateInfo::InstanceLayerCount" relation="length(ppInstanceLayerNames)"/>
 		<map field="EngineVkCreateInfo::InstanceExtensionCount" relation="length(ppInstanceExtensionNames)"/>

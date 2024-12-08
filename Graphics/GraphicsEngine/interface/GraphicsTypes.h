@@ -3408,6 +3408,21 @@ struct ImmediateContextCreateInfo
 typedef struct ImmediateContextCreateInfo ImmediateContextCreateInfo;
 
 
+/// OpenXR attributes
+struct OpenXRAttribs
+{
+    /// A pointer to the xrGetInstanceProcAddr function.
+    void* GetInstanceProcAddr DEFAULT_INITIALIZER(nullptr);
+
+    /// OpenXR instance handle (XrInstance).
+	Uint64 Instance DEFAULT_INITIALIZER(0);
+
+    /// OpenXR system id (XrSystemId).
+    Uint64 SystemId DEFAULT_INITIALIZER(0);
+};
+typedef struct OpenXRAttribs OpenXRAttribs;
+
+
 /// Engine creation information
 struct EngineCreateInfo
 {
@@ -3503,6 +3518,10 @@ struct EngineCreateInfo
 
     // The structure must be 8-byte aligned
     Uint32 Padding DEFAULT_INITIALIZER(0);
+
+    /// An optional pointer to the OpenXR attributes, must be set if OpenXR is used.
+    /// See Diligent::OpenXRAttribs.
+    const OpenXRAttribs *pXRAttribs DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     EngineCreateInfo() noexcept

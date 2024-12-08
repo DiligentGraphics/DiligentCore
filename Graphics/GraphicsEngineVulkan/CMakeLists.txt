@@ -265,6 +265,9 @@ else()
     find_library(Vulkan_LIBRARY NAMES vulkan)
     list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 endif()
+if(DILIGENT_USE_OPENXR)
+    list(APPEND PRIVATE_DEPENDENCIES OpenXR::headers)
+endif()
 
 set(PUBLIC_DEPENDENCIES
     Diligent-GraphicsEngineVkInterface
@@ -309,6 +312,10 @@ endif()
 
 if (${DILIGENT_NO_GLSLANG})
     message("GLSLang is not being built. Vulkan backend will only be able to consume SPIRV byte code.")
+endif()
+
+if(DILIGENT_USE_OPENXR)
+    list(APPEND PRIVATE_COMPILE_DEFINITIONS DILIGENT_USE_OPENXR=1)
 endif()
 
 target_compile_definitions(Diligent-GraphicsEngineVk-static

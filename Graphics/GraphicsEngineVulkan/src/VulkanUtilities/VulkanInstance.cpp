@@ -45,6 +45,11 @@
 #    include "GLSLangUtils.hpp"
 #endif
 
+#if DILIGENT_USE_OPENXR
+#    define XR_USE_GRAPHICS_API_VULKAN
+#    include <openxr/openxr_platform.h>
+#endif
+
 #include "PlatformDefinitions.h"
 
 namespace VulkanUtilities
@@ -163,6 +168,79 @@ bool VulkanInstance::IsExtensionEnabled(const char* ExtensionName) const
 
     return false;
 }
+
+#if DILIGENT_USE_OPENXR
+static uint32_t GetRequiredOpenXRVulkanVersion(uint32_t                  VulkanVersion,
+                                               XrInstance                xrInstance,
+                                               XrSystemId                xrSystemId,
+                                               PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr) noexcept(false)
+{
+    PFN_xrGetVulkanGraphicsRequirements2KHR xrGetVulkanGraphicsRequirements2KHR = nullptr;
+    if (XR_SUCCEEDED(xrGetInstanceProcAddr(xrInstance, "xrGetVulkanGraphicsRequirements2KHR", reinterpret_cast<PFN_xrVoidFunction*>(&xrGetVulkanGraphicsRequirements2KHR))))
+    {
+        VERIFY_EXPR(xrGetVulkanGraphicsRequirements2KHR != nullptr);
+
+        XrGraphicsRequirementsVulkan2KHR xrVulkan2Req{XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN2_KHR};
+        if (XR_SUCCEEDED(xrGetVulkanGraphicsRequirements2KHR(xrInstance, xrSystemId, &xrVulkan2Req)))
+        {
+            auto XrVersionToVkVersion = [](XrVersion XrVersion) {
+                return VK_MAKE_API_VERSION(0, XR_VERSION_MAJOR(XrVersion), XR_VERSION_MINOR(XrVersion), 0);
+            };
+
+            uint32_t MinVkVersion = XrVersionToVkVersion(xrVulkan2Req.minApiVersionSupported);
+            if (VulkanVersion < MinVkVersion)
+            {
+                LOG_ERROR_AND_THROW("OpenXR requires Vulkan version ", VK_API_VERSION_MAJOR(MinVkVersion), '.', VK_API_VERSION_MINOR(MinVkVersion),
+                                    ", but this device only supports Vulkan ", VK_API_VERSION_MAJOR(VulkanVersion), '.', VK_API_VERSION_MINOR(VulkanVersion));
+            }
+            uint32_t MaxVkVersion = VK_MAKE_API_VERSION(0, XR_VERSION_MAJOR(xrVulkan2Req.maxApiVersionSupported), XR_VERSION_MINOR(xrVulkan2Req.maxApiVersionSupported), 0);
+            if (MaxVkVersion < VulkanVersion)
+            {
+                LOG_INFO_MESSAGE("This device supports Vulkan ", VK_API_VERSION_MAJOR(VulkanVersion), '.', VK_API_VERSION_MINOR(VulkanVersion),
+                                 ", but OpenXR was only tested with Vulkan up to ", VK_API_VERSION_MAJOR(MaxVkVersion), '.', VK_API_VERSION_MINOR(MaxVkVersion),
+                                 ". Proceeding with Vulkan ", VK_API_VERSION_MAJOR(MaxVkVersion), '.', VK_API_VERSION_MINOR(MaxVkVersion), '.');
+                VulkanVersion = MaxVkVersion;
+            }
+        }
+        else
+        {
+            LOG_WARNING_MESSAGE("Failed to get Vulkan requirements from OpenXR. Proceeding without checking Vulkan instance version requirements.");
+        }
+    }
+
+    return VulkanVersion;
+}
+
+static VkResult CreateVkInstanceForOpenXR(XrInstance                   xrInstance,
+                                          XrSystemId                   xrSystemId,
+                                          PFN_xrGetInstanceProcAddr    xrGetInstanceProcAddr,
+                                          const VkInstanceCreateInfo*  pCreateInfo,
+                                          const VkAllocationCallbacks* vkAllocator,
+                                          VkInstance*                  pInstance)
+{
+    PFN_xrCreateVulkanInstanceKHR xrCreateVulkanInstanceKHR = nullptr;
+    if (XR_FAILED(xrGetInstanceProcAddr(xrInstance, "xrCreateVulkanInstanceKHR", reinterpret_cast<PFN_xrVoidFunction*>(&xrCreateVulkanInstanceKHR))))
+    {
+        LOG_ERROR_AND_THROW("Failed to get xrCreateVulkanInstanceKHR function");
+    }
+    VERIFY_EXPR(xrCreateVulkanInstanceKHR != nullptr);
+
+    XrVulkanInstanceCreateInfoKHR xrVkInstanceCreateInfo{XR_TYPE_VULKAN_INSTANCE_CREATE_INFO_KHR};
+    xrVkInstanceCreateInfo.systemId               = xrSystemId;
+    xrVkInstanceCreateInfo.createFlags            = 0;
+    xrVkInstanceCreateInfo.pfnGetInstanceProcAddr = vkGetInstanceProcAddr;
+    xrVkInstanceCreateInfo.vulkanCreateInfo       = pCreateInfo;
+    xrVkInstanceCreateInfo.vulkanAllocator        = vkAllocator;
+
+    VkResult vkRes = VK_ERROR_UNKNOWN;
+    if (XR_FAILED(xrCreateVulkanInstanceKHR(xrInstance, &xrVkInstanceCreateInfo, pInstance, &vkRes)))
+    {
+        LOG_ERROR_AND_THROW("Failed to create Vulkan instance using OpenXR");
+    }
+
+    return vkRes;
+}
+#endif
 
 std::shared_ptr<VulkanInstance> VulkanInstance::Create(const CreateInfo& CI)
 {
@@ -294,7 +372,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
                       ". Please initialize 'ppInstanceExtensionNames' member of EngineVkCreateInfo struct.");
     }
 
-    auto ApiVersion = CI.ApiVersion;
+    uint32_t ApiVersion = CI.ApiVersion;
 #if DILIGENT_USE_VOLK
     if (vkEnumerateInstanceVersion != nullptr && ApiVersion > VK_API_VERSION_1_0)
     {
@@ -310,6 +388,27 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
 #else
     // Without Volk we can only use Vulkan 1.0
     ApiVersion = VK_API_VERSION_1_0;
+#endif
+
+#if DILIGENT_USE_OPENXR
+    XrInstance                xrInstance            = XR_NULL_HANDLE;
+    XrSystemId                xrSystemId            = XR_NULL_SYSTEM_ID;
+    PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr = nullptr;
+    if (CI.XR.Instance != 0)
+    {
+        if (CI.XR.GetInstanceProcAddr == nullptr)
+            LOG_ERROR_AND_THROW("xrGetInstanceProcAddr must not be null");
+
+        static_assert(sizeof(XrInstance) == sizeof(CI.XR.Instance), "XrInstance size mismatch");
+        memcpy(&xrInstance, &CI.XR.Instance, sizeof(XrInstance));
+        static_assert(sizeof(XrSystemId) == sizeof(CI.XR.SystemId), "XrSystemId size mismatch");
+        memcpy(&xrSystemId, &CI.XR.SystemId, sizeof(XrSystemId));
+        xrGetInstanceProcAddr = reinterpret_cast<PFN_xrGetInstanceProcAddr>(CI.XR.GetInstanceProcAddr);
+    }
+    if (xrInstance != 0)
+    {
+        ApiVersion = GetRequiredOpenXRVulkanVersion(ApiVersion, xrInstance, xrSystemId, xrGetInstanceProcAddr);
+    }
 #endif
 
     std::vector<const char*> InstanceLayers;
@@ -430,7 +529,17 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
     InstanceCreateInfo.enabledLayerCount       = static_cast<uint32_t>(InstanceLayers.size());
     InstanceCreateInfo.ppEnabledLayerNames     = InstanceLayers.empty() ? nullptr : InstanceLayers.data();
 
-    auto res = vkCreateInstance(&InstanceCreateInfo, m_pVkAllocator, &m_VkInstance);
+    VkResult res = VK_ERROR_UNKNOWN;
+#if DILIGENT_USE_OPENXR
+    if (xrInstance != XR_NULL_HANDLE)
+    {
+        res = CreateVkInstanceForOpenXR(xrInstance, xrSystemId, xrGetInstanceProcAddr, &InstanceCreateInfo, m_pVkAllocator, &m_VkInstance);
+    }
+    else
+#endif
+    {
+        res = vkCreateInstance(&InstanceCreateInfo, m_pVkAllocator, &m_VkInstance);
+    }
     CHECK_VK_ERROR_AND_THROW(res, "Failed to create Vulkan instance");
 
 #if DILIGENT_USE_VOLK
@@ -497,7 +606,7 @@ VulkanInstance::~VulkanInstance()
 #endif
 }
 
-VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const
+VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const noexcept(false)
 {
     const auto IsGraphicsAndComputeQueueSupported = [](VkPhysicalDevice Device) {
         uint32_t QueueFamilyCount = 0;
@@ -563,10 +672,42 @@ VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const
     }
     else
     {
-        LOG_ERROR_MESSAGE("Failed to find suitable physical device");
+        LOG_ERROR_AND_THROW("Failed to find suitable physical device");
     }
 
     return SelectedPhysicalDevice;
+}
+
+VkPhysicalDevice VulkanInstance::SelectPhysicalDeviceForOpenXR(const CreateInfo::OpenXRInfo& XRInfo) const noexcept(false)
+{
+#if DILIGENT_USE_OPENXR
+    XrInstance xrInstance = XR_NULL_HANDLE;
+    static_assert(sizeof(XrInstance) == sizeof(XRInfo.Instance), "XrInstance size mismatch");
+    memcpy(&xrInstance, &XRInfo.Instance, sizeof(XrInstance));
+
+    XrVulkanGraphicsDeviceGetInfoKHR vkGraphicsDeviceGetInfo{XR_TYPE_VULKAN_GRAPHICS_DEVICE_GET_INFO_KHR};
+    static_assert(sizeof(vkGraphicsDeviceGetInfo.systemId) == sizeof(XRInfo.SystemId), "SystemId Size mismatch");
+    memcpy(&vkGraphicsDeviceGetInfo.systemId, &XRInfo.SystemId, sizeof(vkGraphicsDeviceGetInfo.systemId));
+    vkGraphicsDeviceGetInfo.vulkanInstance = m_VkInstance;
+
+    PFN_xrGetInstanceProcAddr         xrGetInstanceProcAddr         = reinterpret_cast<PFN_xrGetInstanceProcAddr>(XRInfo.GetInstanceProcAddr);
+    PFN_xrGetVulkanGraphicsDevice2KHR xrGetVulkanGraphicsDevice2KHR = nullptr;
+    if (XR_FAILED(xrGetInstanceProcAddr(xrInstance, "xrGetVulkanGraphicsDevice2KHR", reinterpret_cast<PFN_xrVoidFunction*>(&xrGetVulkanGraphicsDevice2KHR))))
+    {
+        LOG_ERROR_AND_THROW("Failed to get xrGetVulkanGraphicsDevice2KHR function");
+    }
+
+    VkPhysicalDevice vkDevice = VK_NULL_HANDLE;
+    if (XR_FAILED(xrGetVulkanGraphicsDevice2KHR(xrInstance, &vkGraphicsDeviceGetInfo, &vkDevice)))
+    {
+        LOG_ERROR_AND_THROW("Failed to get Vulkan physical device for OpenXR");
+    }
+
+    return vkDevice;
+#else
+    LOG_ERROR_AND_THROW("OpenXR is not supported. Use DILIGENT_USE_OPENXR CMake option to enable it.");
+    return VK_NULL_HANDLE;
+#endif
 }
 
 } // namespace VulkanUtilities
