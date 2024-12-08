@@ -25,7 +25,12 @@
  */
 
 #include "OpenXRUtilities.h"
+
 #include "DebugUtilities.hpp"
+#include "DataBlobImpl.hpp"
+
+#define XR_USE_GRAPHICS_API_OPENGL
+#include <openxr/openxr_platform.h>
 
 namespace Diligent
 {
@@ -35,6 +40,20 @@ void GetOpenXRGraphicsBindingGL(IRenderDevice*  pDevice,
                                 IDataBlob**     ppGraphicsBinding)
 {
     UNSUPPORTED("Not yet implemented");
+}
+
+void AllocateOpenXRSwapchainImageDataGL(Uint32      ImageCount,
+                                        IDataBlob** ppSwapchainImageData)
+{
+    RefCntAutoPtr<DataBlobImpl> pDataBlob{DataBlobImpl::Create(sizeof(XrSwapchainImageOpenGLKHR) * ImageCount)};
+    for (Uint32 i = 0; i < ImageCount; ++i)
+    {
+        XrSwapchainImageOpenGLKHR& Image{pDataBlob->GetDataPtr<XrSwapchainImageOpenGLKHR>()[i]};
+        Image.type = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR;
+        Image.next = nullptr;
+    }
+
+    *ppSwapchainImageData = pDataBlob.Detach();
 }
 
 } // namespace Diligent

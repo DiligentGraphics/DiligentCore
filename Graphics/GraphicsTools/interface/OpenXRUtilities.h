@@ -68,6 +68,27 @@ XrDebugUtilsMessengerEXT DILIGENT_GLOBAL_FUNCTION(CreateOpenXRDebugUtilsMessenge
 /// Destroys OpenXR debug utils messenger.
 void DILIGENT_GLOBAL_FUNCTION(DestroyOpenXRDebugUtilsMessenger)(XrDebugUtilsMessengerEXT xrDebugUtilsMessenger);
 
+/// Allocates OpenXR swapchain image data, i.e. an array of appropriate structures for each device
+/// type (XrSwapchainImageVulkanKHR, XrSwapchainImageD3D11KHR, etc.).
+///
+/// \param [in]  DeviceType           - Type of the render device.
+/// \param [out] ImageCount           - Number of images in the swapchain returned by OpenXR.
+/// \param [out] ppSwapchainImageData - Address of the memory location where the pointer to the data blob
+///                                     containing the swapchain image data will be stored.
+///
+/// \remarks    The data blob data pointer should be passed to xrEnumerateSwapchainImages:
+///
+///                 uint32_t SwapchainImageCount = 0;
+///                 xrEnumerateSwapchainImages(xrSwapchain, 0, &SwapchainImageCount, nullptr);
+///                 RefCntAutoPtr<IDataBlob> pSwapchainImageData;
+///                 AllocateOpenXRSwapchainImageData(m_DeviceType, SwapchainImageCount, &pSwapchainImageData);
+///                 xrEnumerateSwapchainImages(xrSwapchain, SwapchainImageCount, &SwapchainImageCount,
+///                                            pSwapchainImageData->GetDataPtr<XrSwapchainImageBaseHeader>());
+///
+void DILIGENT_GLOBAL_FUNCTION(AllocateOpenXRSwapchainImageData)(RENDER_DEVICE_TYPE DeviceType,
+                                                                Uint32             ImageCount,
+                                                                IDataBlob**        ppSwapchainImageData);
+
 #include "../../../Primitives/interface/UndefRefMacro.h"
 
 DILIGENT_END_NAMESPACE // namespace Diligent

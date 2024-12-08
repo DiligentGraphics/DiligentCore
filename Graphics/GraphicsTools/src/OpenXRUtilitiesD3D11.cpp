@@ -59,4 +59,18 @@ void GetOpenXRGraphicsBindingD3D11(IRenderDevice*  pDevice,
     *ppGraphicsBinding = pDataBlob.Detach();
 }
 
+void AllocateOpenXRSwapchainImageDataD3D11(Uint32      ImageCount,
+                                           IDataBlob** ppSwapchainImageData)
+{
+    RefCntAutoPtr<DataBlobImpl> pDataBlob{DataBlobImpl::Create(sizeof(XrSwapchainImageD3D11KHR) * ImageCount)};
+    for (Uint32 i = 0; i < ImageCount; ++i)
+    {
+        XrSwapchainImageD3D11KHR& Image{pDataBlob->GetDataPtr<XrSwapchainImageD3D11KHR>()[i]};
+        Image.type = XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR;
+        Image.next = nullptr;
+    }
+
+    *ppSwapchainImageData = pDataBlob.Detach();
+}
+
 } // namespace Diligent

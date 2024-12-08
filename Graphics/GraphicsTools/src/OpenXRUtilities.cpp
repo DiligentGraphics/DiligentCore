@@ -35,24 +35,36 @@ namespace Diligent
 void GetOpenXRGraphicsBindingD3D11(IRenderDevice*  pDevice,
                                    IDeviceContext* pContext,
                                    IDataBlob**     ppGraphicsBinding);
+
+void AllocateOpenXRSwapchainImageDataD3D11(Uint32      ImageCount,
+                                           IDataBlob** ppSwapchainImageData);
 #endif
 
 #if D3D12_SUPPORTED
 void GetOpenXRGraphicsBindingD3D12(IRenderDevice*  pDevice,
                                    IDeviceContext* pContext,
                                    IDataBlob**     ppGraphicsBinding);
+
+void AllocateOpenXRSwapchainImageDataD3D12(Uint32      ImageCount,
+                                           IDataBlob** ppSwapchainImageData);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
 void GetOpenXRGraphicsBindingGL(IRenderDevice*  pDevice,
                                 IDeviceContext* pContext,
                                 IDataBlob**     ppGraphicsBinding);
+
+void AllocateOpenXRSwapchainImageDataGL(Uint32      ImageCount,
+                                        IDataBlob** ppSwapchainImageData);
 #endif
 
 #if VULKAN_SUPPORTED
 void GetOpenXRGraphicsBindingVk(IRenderDevice*  pDevice,
                                 IDeviceContext* pContext,
                                 IDataBlob**     ppGraphicsBinding);
+
+void AllocateOpenXRSwapchainImageDataVk(Uint32      ImageCount,
+                                        IDataBlob** ppSwapchainImageData);
 #endif
 
 
@@ -103,6 +115,48 @@ void GetOpenXRGraphicsBinding(IRenderDevice*  pDevice,
 #if VULKAN_SUPPORTED
         case RENDER_DEVICE_TYPE_VULKAN:
             GetOpenXRGraphicsBindingVk(pDevice, pContext, ppGraphicsBinding);
+            break;
+#endif
+
+        default:
+            UNSUPPORTED("Unsupported device type");
+    }
+}
+
+void AllocateOpenXRSwapchainImageData(RENDER_DEVICE_TYPE DeviceType,
+                                      Uint32             ImageCount,
+                                      IDataBlob**        ppSwapchainImageData)
+{
+    if (ppSwapchainImageData == nullptr)
+    {
+        UNEXPECTED("ppSwapchainImageData must not be null");
+        return;
+    }
+
+    switch (DeviceType)
+    {
+#if D3D11_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D11:
+            AllocateOpenXRSwapchainImageDataD3D11(ImageCount, ppSwapchainImageData);
+            break;
+#endif
+
+#if D3D12_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D12:
+            AllocateOpenXRSwapchainImageDataD3D12(ImageCount, ppSwapchainImageData);
+            break;
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+            AllocateOpenXRSwapchainImageDataGL(ImageCount, ppSwapchainImageData);
+            break;
+#endif
+
+#if VULKAN_SUPPORTED
+        case RENDER_DEVICE_TYPE_VULKAN:
+            AllocateOpenXRSwapchainImageDataVk(ImageCount, ppSwapchainImageData);
             break;
 #endif
 
@@ -232,5 +286,12 @@ extern "C"
     void Diligent_DestroyOpenXRDebugUtilsMessenger(XrDebugUtilsMessengerEXT debugUtilsMessenger)
     {
         Diligent::DestroyOpenXRDebugUtilsMessenger(debugUtilsMessenger);
+    }
+
+    void Dilgent_AllocateOpenXRSwapchainImageData(Diligent::RENDER_DEVICE_TYPE DeviceType,
+                                                  Diligent::Uint32             ImageCount,
+                                                  Diligent::IDataBlob**        ppSwapchainImageData)
+    {
+        Diligent::AllocateOpenXRSwapchainImageData(DeviceType, ImageCount, ppSwapchainImageData);
     }
 }
