@@ -206,6 +206,11 @@ if(NOT ${USE_D3D12_LOADER})
     target_link_libraries(Diligent-GraphicsEngineD3D12-static PRIVATE d3d12.lib)
 endif()
 
+if(DILIGENT_USE_OPENXR)
+    target_link_libraries(Diligent-GraphicsEngineD3D12-static PRIVATE OpenXR::headers)
+    target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE DILIGENT_USE_OPENXR=1)
+endif()
+
 target_link_libraries(Diligent-GraphicsEngineD3D12-shared
 PRIVATE
     Diligent-BuildSettings

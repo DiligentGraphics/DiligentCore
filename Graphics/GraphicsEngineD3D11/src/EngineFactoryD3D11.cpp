@@ -70,7 +70,7 @@ bool CheckAdapterD3D11Compatibility(IDXGIAdapter1* pDXGIAdapter, D3D_FEATURE_LEV
 }
 
 #if DILIGENT_USE_OPENXR
-void GetOpenXRAdapterRequirements(const OpenXRAttribs& XR, LUID& AdapterLUID, D3D_FEATURE_LEVEL& d3dFeatureLevel) noexcept(false)
+static void GetOpenXRAdapterRequirements(const OpenXRAttribs& XR, LUID& AdapterLUID, D3D_FEATURE_LEVEL& d3dFeatureLevel) noexcept(false)
 {
     if (XR.Instance == 0)
         return;

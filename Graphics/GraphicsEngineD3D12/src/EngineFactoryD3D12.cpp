@@ -51,6 +51,11 @@
 #include <dxgi1_4.h>
 #include "WinHPostface.h"
 
+#if DILIGENT_USE_OPENXR
+#    define XR_USE_GRAPHICS_API_D3D12
+#    include <openxr/openxr_platform.h>
+#endif
+
 namespace Diligent
 {
 
@@ -60,6 +65,41 @@ bool CheckAdapterD3D12Compatibility(IDXGIAdapter1*    pDXGIAdapter,
     auto hr = D3D12CreateDevice(pDXGIAdapter, FeatureLevel, _uuidof(ID3D12Device), nullptr);
     return SUCCEEDED(hr);
 }
+
+#if DILIGENT_USE_OPENXR
+static void GetOpenXRAdapterRequirements(const OpenXRAttribs& XR, LUID& AdapterLUID, D3D_FEATURE_LEVEL& d3dFeatureLevel) noexcept(false)
+{
+    if (XR.Instance == 0)
+        return;
+
+    if (XR.GetInstanceProcAddr == nullptr)
+        LOG_ERROR_AND_THROW("xrGetInstanceProcAddr must not be null");
+
+    XrInstance xrInstance = XR_NULL_HANDLE;
+    static_assert(sizeof(xrInstance) == sizeof(XR.Instance), "XrInstance size mismatch");
+    memcpy(&xrInstance, &XR.Instance, sizeof(xrInstance));
+
+    XrSystemId xrSystemId = XR_NULL_SYSTEM_ID;
+    static_assert(sizeof(xrSystemId) == sizeof(XR.SystemId), "XrSystemId size mismatch");
+    memcpy(&xrSystemId, &XR.SystemId, sizeof(XrSystemId));
+
+    PFN_xrGetInstanceProcAddr             xrGetInstanceProcAddr             = reinterpret_cast<PFN_xrGetInstanceProcAddr>(XR.GetInstanceProcAddr);
+    PFN_xrGetD3D12GraphicsRequirementsKHR xrGetD3D12GraphicsRequirementsKHR = nullptr;
+    if (XR_FAILED(xrGetInstanceProcAddr(xrInstance, "xrGetD3D12GraphicsRequirementsKHR", reinterpret_cast<PFN_xrVoidFunction*>(&xrGetD3D12GraphicsRequirementsKHR))))
+    {
+        LOG_ERROR_AND_THROW("Failed to get xrGetD3D12GraphicsRequirementsKHR. Make sure that XR_KHR_D3D12_enable extension is enabled.");
+    }
+
+    XrGraphicsRequirementsD3D12KHR xrGraphicsRequirementsD3D12KHR{XR_TYPE_GRAPHICS_REQUIREMENTS_D3D12_KHR};
+    if (XR_FAILED(xrGetD3D12GraphicsRequirementsKHR(xrInstance, xrSystemId, &xrGraphicsRequirementsD3D12KHR)))
+    {
+        LOG_ERROR_AND_THROW("Failed to get D3D12 graphics requirements");
+    }
+
+    AdapterLUID     = xrGraphicsRequirementsD3D12KHR.adapterLuid;
+    d3dFeatureLevel = (std::max)(d3dFeatureLevel, xrGraphicsRequirementsD3D12KHR.minFeatureLevel);
+}
+#endif
 
 /// Engine factory for D3D12 implementation
 class EngineFactoryD3D12Impl : public EngineFactoryD3DBase<IEngineFactoryD3D12, RENDER_DEVICE_TYPE_D3D12>
@@ -296,24 +336,38 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&factory)));
         CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
 
+        LUID AdapterLUID{};
         // Direct3D12 does not allow feature levels below 11.0 (D3D12CreateDevice fails to create a device).
-        const auto MinimumFeatureLevel = Version::Max(EngineCI.GraphicsAPIVersion, Version{11, 0});
+        D3D_FEATURE_LEVEL MinFeatureLevel = GetD3DFeatureLevel((std::max)(EngineCI.GraphicsAPIVersion, Version{11, 0}));
+        Uint32            AdapterId       = EngineCI.AdapterId;
+#if DILIGENT_USE_OPENXR
+        if (EngineCI.pXRAttribs != nullptr && EngineCI.pXRAttribs->Instance != 0)
+        {
+            GetOpenXRAdapterRequirements(*EngineCI.pXRAttribs, AdapterLUID, MinFeatureLevel);
+            if (AdapterId != DEFAULT_ADAPTER_ID)
+            {
+                LOG_WARNING_MESSAGE("AdapterId is ignored when OpenXR is used as the suitable adapter is selected by OpenXR runtime");
+            }
+            // There should be only one adapter
+            AdapterId = 0;
+        }
+#endif
 
         CComPtr<IDXGIAdapter1> hardwareAdapter;
-        if (EngineCI.AdapterId == DEFAULT_ADAPTER_ID)
+        if (AdapterId == DEFAULT_ADAPTER_ID)
         {
-            GetHardwareAdapter(factory, &hardwareAdapter, GetD3DFeatureLevel(MinimumFeatureLevel));
+            GetHardwareAdapter(factory, &hardwareAdapter, MinFeatureLevel);
             if (hardwareAdapter == nullptr)
                 LOG_ERROR_AND_THROW("No suitable hardware adapter found");
         }
         else
         {
-            auto Adapters = FindCompatibleAdapters(MinimumFeatureLevel);
-            if (EngineCI.AdapterId < Adapters.size())
-                hardwareAdapter = Adapters[EngineCI.AdapterId];
+            auto Adapters = FindCompatibleAdapters(MinFeatureLevel, AdapterLUID);
+            if (AdapterId < Adapters.size())
+                hardwareAdapter = Adapters[AdapterId];
             else
             {
-                LOG_ERROR_AND_THROW(EngineCI.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
+                LOG_ERROR_AND_THROW(AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
             }
         }
 
