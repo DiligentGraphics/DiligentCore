@@ -38,6 +38,11 @@ void GetOpenXRGraphicsBindingD3D11(IRenderDevice*  pDevice,
 
 void AllocateOpenXRSwapchainImageDataD3D11(Uint32      ImageCount,
                                            IDataBlob** ppSwapchainImageData);
+
+void GetOpenXRSwapchainImageD3D11(IRenderDevice*                    pDevice,
+                                  const XrSwapchainImageBaseHeader* ImageData,
+                                  Uint32                            ImageIndex,
+                                  ITexture**                        ppImage);
 #endif
 
 #if D3D12_SUPPORTED
@@ -47,6 +52,11 @@ void GetOpenXRGraphicsBindingD3D12(IRenderDevice*  pDevice,
 
 void AllocateOpenXRSwapchainImageDataD3D12(Uint32      ImageCount,
                                            IDataBlob** ppSwapchainImageData);
+
+void GetOpenXRSwapchainImageD3D12(IRenderDevice*                    pDevice,
+                                  const XrSwapchainImageBaseHeader* ImageData,
+                                  Uint32                            ImageIndex,
+                                  ITexture**                        ppImage);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
@@ -56,6 +66,11 @@ void GetOpenXRGraphicsBindingGL(IRenderDevice*  pDevice,
 
 void AllocateOpenXRSwapchainImageDataGL(Uint32      ImageCount,
                                         IDataBlob** ppSwapchainImageData);
+
+void GetOpenXRSwapchainImageGL(IRenderDevice*                    pDevice,
+                               const XrSwapchainImageBaseHeader* ImageData,
+                               Uint32                            ImageIndex,
+                               ITexture**                        ppImage);
 #endif
 
 #if VULKAN_SUPPORTED
@@ -65,6 +80,12 @@ void GetOpenXRGraphicsBindingVk(IRenderDevice*  pDevice,
 
 void AllocateOpenXRSwapchainImageDataVk(Uint32      ImageCount,
                                         IDataBlob** ppSwapchainImageData);
+
+void GetOpenXRSwapchainImageVk(IRenderDevice*                    pDevice,
+                               const XrSwapchainImageBaseHeader* ImageData,
+                               Uint32                            ImageIndex,
+                               const TextureDesc&                TexDesc,
+                               ITexture**                        ppImage);
 #endif
 
 
@@ -157,6 +178,63 @@ void AllocateOpenXRSwapchainImageData(RENDER_DEVICE_TYPE DeviceType,
 #if VULKAN_SUPPORTED
         case RENDER_DEVICE_TYPE_VULKAN:
             AllocateOpenXRSwapchainImageDataVk(ImageCount, ppSwapchainImageData);
+            break;
+#endif
+
+        default:
+            UNSUPPORTED("Unsupported device type");
+    }
+}
+
+void GetOpenXRSwapchainImage(IRenderDevice*                    pDevice,
+                             const XrSwapchainImageBaseHeader* ImageData,
+                             Uint32                            ImageIndex,
+                             const TextureDesc&                TexDesc,
+                             ITexture**                        ppImage)
+{
+    if (pDevice == nullptr)
+    {
+        UNEXPECTED("pDevice must not be null");
+        return;
+    }
+
+    if (ImageData == nullptr)
+    {
+        UNEXPECTED("ImageData must not be null");
+        return;
+    }
+
+    if (ppImage == nullptr)
+    {
+        UNEXPECTED("ppImage must not be null");
+        return;
+    }
+
+    RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
+    switch (DeviceType)
+    {
+#if D3D11_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D11:
+            GetOpenXRSwapchainImageD3D11(pDevice, ImageData, ImageIndex, ppImage);
+            break;
+#endif
+
+#if D3D12_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D12:
+            GetOpenXRSwapchainImageD3D12(pDevice, ImageData, ImageIndex, ppImage);
+            break;
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+            GetOpenXRSwapchainImageGL(pDevice, ImageData, ImageIndex, ppImage);
+            break;
+#endif
+
+#if VULKAN_SUPPORTED
+        case RENDER_DEVICE_TYPE_VULKAN:
+            GetOpenXRSwapchainImageVk(pDevice, ImageData, ImageIndex, TexDesc, ppImage);
             break;
 #endif
 
@@ -293,5 +371,14 @@ extern "C"
                                                   Diligent::IDataBlob**        ppSwapchainImageData)
     {
         Diligent::AllocateOpenXRSwapchainImageData(DeviceType, ImageCount, ppSwapchainImageData);
+    }
+
+    void Diligent_GetOpenXRSwapchainImage(Diligent::IRenderDevice*          pDevice,
+                                          const XrSwapchainImageBaseHeader* ImageData,
+                                          Diligent::Uint32                  ImageIndex,
+                                          const Diligent::TextureDesc&      TexDesc,
+                                          Diligent::ITexture**              ppImage)
+    {
+        Diligent::GetOpenXRSwapchainImage(pDevice, ImageData, ImageIndex, TexDesc, ppImage);
     }
 }

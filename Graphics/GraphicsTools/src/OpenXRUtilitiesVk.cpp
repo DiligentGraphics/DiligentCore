@@ -48,8 +48,21 @@ void GetOpenXRGraphicsBindingVk(IRenderDevice*  pDevice,
 
     RefCntAutoPtr<IRenderDeviceVk> pDeviceVk{pDevice, IID_RenderDeviceVk};
     VERIFY_EXPR(pDeviceVk != nullptr);
-    RefCntAutoPtr<ICommandQueueVk> pQueueVk{pContext->LockCommandQueue(), IID_CommandQueueVk};
-    VERIFY_EXPR(pQueueVk != nullptr);
+
+    uint32_t queueFamilyIndex = 0;
+    {
+        ICommandQueue* pQueue = pContext->LockCommandQueue();
+        VERIFY_EXPR(pQueue != nullptr);
+        if (RefCntAutoPtr<ICommandQueueVk> pQueueVk{pQueue, IID_CommandQueueVk})
+        {
+            queueFamilyIndex = pQueueVk->GetQueueFamilyIndex();
+        }
+        else
+        {
+            UNEXPECTED("Command queue is not a Vulkan queue");
+        }
+        pContext->UnlockCommandQueue();
+    }
 
     XrGraphicsBindingVulkanKHR& Binding = *reinterpret_cast<XrGraphicsBindingVulkanKHR*>(pDataBlob->GetDataPtr());
     Binding.type                        = XR_TYPE_GRAPHICS_BINDING_VULKAN_KHR;
@@ -57,7 +70,7 @@ void GetOpenXRGraphicsBindingVk(IRenderDevice*  pDevice,
     Binding.instance                    = pDeviceVk->GetVkInstance();
     Binding.physicalDevice              = pDeviceVk->GetVkPhysicalDevice();
     Binding.device                      = pDeviceVk->GetVkDevice();
-    Binding.queueFamilyIndex            = pQueueVk->GetQueueFamilyIndex();
+    Binding.queueFamilyIndex            = queueFamilyIndex;
     Binding.queueIndex                  = pContext->GetDesc().ContextId;
 
     *ppGraphicsBinding = pDataBlob.Detach();
@@ -75,6 +88,33 @@ void AllocateOpenXRSwapchainImageDataVk(Uint32      ImageCount,
     }
 
     *ppSwapchainImageData = pDataBlob.Detach();
+}
+
+void GetOpenXRSwapchainImageVk(IRenderDevice*                    pDevice,
+                               const XrSwapchainImageBaseHeader* ImageData,
+                               Uint32                            ImageIndex,
+                               const TextureDesc&                TexDesc,
+                               ITexture**                        ppImage)
+{
+    const XrSwapchainImageVulkanKHR* ImageVk = reinterpret_cast<const XrSwapchainImageVulkanKHR*>(ImageData);
+
+    if (ImageData->type != XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR || ImageVk[ImageIndex].type != XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR)
+    {
+        UNEXPECTED("Unexpected swapchain image type");
+        return;
+    }
+
+    VkImage image = ImageVk[ImageIndex].image;
+    if (image == VK_NULL_HANDLE)
+    {
+        UNEXPECTED("Vulkan image is null");
+        return;
+    }
+
+    RefCntAutoPtr<IRenderDeviceVk> pDeviceVk{pDevice, IID_RenderDeviceVk};
+    VERIFY_EXPR(pDeviceVk != nullptr);
+
+    pDeviceVk->CreateTextureFromVulkanImage(image, TexDesc, RESOURCE_STATE_RENDER_TARGET, ppImage);
 }
 
 } // namespace Diligent

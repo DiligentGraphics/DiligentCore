@@ -52,14 +52,27 @@ void GetOpenXRGraphicsBindingD3D12(IRenderDevice*  pDevice,
 
     RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12{pDevice, IID_RenderDeviceD3D12};
     VERIFY_EXPR(pDeviceD3D12 != nullptr);
-    RefCntAutoPtr<ICommandQueueD3D12> pQueueD3D12{pContext->LockCommandQueue(), IID_CommandQueueD3D12};
-    VERIFY_EXPR(pQueueD3D12 != nullptr);
+
+    ID3D12CommandQueue* pd3d12Queue = nullptr;
+    {
+        ICommandQueue* pQueue = pContext->LockCommandQueue();
+        VERIFY_EXPR(pQueue != nullptr);
+        if (RefCntAutoPtr<ICommandQueueD3D12> pQueueD3D12{pQueue, IID_CommandQueueD3D12})
+        {
+            pd3d12Queue = pQueueD3D12->GetD3D12CommandQueue();
+        }
+        else
+        {
+            UNEXPECTED("Command queue is not D3D12 command queue");
+        }
+        pContext->UnlockCommandQueue();
+    }
 
     XrGraphicsBindingD3D12KHR& Binding = *reinterpret_cast<XrGraphicsBindingD3D12KHR*>(pDataBlob->GetDataPtr());
     Binding.type                       = XR_TYPE_GRAPHICS_BINDING_D3D12_KHR;
     Binding.next                       = nullptr;
     Binding.device                     = pDeviceD3D12->GetD3D12Device();
-    Binding.queue                      = pQueueD3D12->GetD3D12CommandQueue();
+    Binding.queue                      = pd3d12Queue;
 
     *ppGraphicsBinding = pDataBlob.Detach();
 }
@@ -77,5 +90,33 @@ void AllocateOpenXRSwapchainImageDataD3D12(Uint32      ImageCount,
 
     *ppSwapchainImageData = pDataBlob.Detach();
 }
+
+
+void GetOpenXRSwapchainImageD3D12(IRenderDevice*                    pDevice,
+                                  const XrSwapchainImageBaseHeader* ImageData,
+                                  Uint32                            ImageIndex,
+                                  ITexture**                        ppImage)
+{
+    const XrSwapchainImageD3D12KHR* ImageD3D12 = reinterpret_cast<const XrSwapchainImageD3D12KHR*>(ImageData);
+
+    if (ImageData->type != XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR || ImageD3D12[ImageIndex].type != XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR)
+    {
+        UNEXPECTED("Unexpected swapchain image type");
+        return;
+    }
+
+    ID3D12Resource* texture = ImageD3D12[ImageIndex].texture;
+    if (texture == nullptr)
+    {
+        UNEXPECTED("D3D12 texture is null");
+        return;
+    }
+
+    RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12{pDevice, IID_RenderDeviceD3D12};
+    VERIFY_EXPR(pDeviceD3D12 != nullptr);
+
+    pDeviceD3D12->CreateTextureFromD3DResource(texture, RESOURCE_STATE_RENDER_TARGET, ppImage);
+}
+
 
 } // namespace Diligent
