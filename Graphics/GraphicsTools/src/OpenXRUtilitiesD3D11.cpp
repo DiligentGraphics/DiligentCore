@@ -96,7 +96,7 @@ void GetOpenXRSwapchainImageD3D11(IRenderDevice*                    pDevice,
     RefCntAutoPtr<IRenderDeviceD3D11> pDeviceD3D11{pDevice, IID_RenderDeviceD3D11};
     VERIFY_EXPR(pDeviceD3D11 != nullptr);
 
-    pDeviceD3D11->CreateTexture2DFromD3DResource(texture, RESOURCE_STATE_RENDER_TARGET, ppImage);
+    pDeviceD3D11->CreateTexture2DFromD3DResource(texture, RESOURCE_STATE_UNDEFINED, ppImage);
 }
 
 } // namespace Diligent

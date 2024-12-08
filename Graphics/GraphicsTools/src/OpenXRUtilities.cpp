@@ -27,6 +27,7 @@
 #include "OpenXRUtilities.h"
 
 #include "DebugUtilities.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -240,6 +241,12 @@ void GetOpenXRSwapchainImage(IRenderDevice*                    pDevice,
 
         default:
             UNSUPPORTED("Unsupported device type");
+    }
+
+    if (*ppImage)
+    {
+        const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs((*ppImage)->GetDesc().Format);
+        (*ppImage)->SetState(FmtAttribs.IsDepthStencil() ? RESOURCE_STATE_DEPTH_WRITE : RESOURCE_STATE_RENDER_TARGET);
     }
 }
 

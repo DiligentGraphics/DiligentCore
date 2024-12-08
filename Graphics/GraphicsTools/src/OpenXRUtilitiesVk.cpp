@@ -114,7 +114,7 @@ void GetOpenXRSwapchainImageVk(IRenderDevice*                    pDevice,
     RefCntAutoPtr<IRenderDeviceVk> pDeviceVk{pDevice, IID_RenderDeviceVk};
     VERIFY_EXPR(pDeviceVk != nullptr);
 
-    pDeviceVk->CreateTextureFromVulkanImage(image, TexDesc, RESOURCE_STATE_RENDER_TARGET, ppImage);
+    pDeviceVk->CreateTextureFromVulkanImage(image, TexDesc, RESOURCE_STATE_UNDEFINED, ppImage);
 }
 
 } // namespace Diligent
