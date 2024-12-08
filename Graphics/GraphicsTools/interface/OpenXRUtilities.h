@@ -33,6 +33,8 @@
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../Primitives/interface/DataBlob.h"
 
+#include <openxr/openxr.h>
+
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 #include "../../../Primitives/interface/DefineRefMacro.h"
@@ -59,6 +61,12 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 void DILIGENT_GLOBAL_FUNCTION(GetOpenXRGraphicsBinding)(IRenderDevice*  pDevice,
                                                         IDeviceContext* pContext,
                                                         IDataBlob**     ppGraphicsBinding);
+
+/// Creates OpenXR debug utils messenger.
+XrDebugUtilsMessengerEXT DILIGENT_GLOBAL_FUNCTION(CreateOpenXRDebugUtilsMessenger)(XrInstance xrInstance);
+
+/// Destroys OpenXR debug utils messenger.
+void DILIGENT_GLOBAL_FUNCTION(DestroyOpenXRDebugUtilsMessenger)(XrDebugUtilsMessengerEXT xrDebugUtilsMessenger);
 
 #include "../../../Primitives/interface/UndefRefMacro.h"
 

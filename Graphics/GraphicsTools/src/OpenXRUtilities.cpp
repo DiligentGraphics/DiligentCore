@@ -31,39 +31,35 @@
 namespace Diligent
 {
 
-#if DILIGENT_USE_OPENXR
-
-#    if D3D11_SUPPORTED
+#if D3D11_SUPPORTED
 void GetOpenXRGraphicsBindingD3D11(IRenderDevice*  pDevice,
                                    IDeviceContext* pContext,
                                    IDataBlob**     ppGraphicsBinding);
-#    endif
+#endif
 
-#    if D3D12_SUPPORTED
+#if D3D12_SUPPORTED
 void GetOpenXRGraphicsBindingD3D12(IRenderDevice*  pDevice,
                                    IDeviceContext* pContext,
                                    IDataBlob**     ppGraphicsBinding);
-#    endif
+#endif
 
-#    if GL_SUPPORTED || GLES_SUPPORTED
+#if GL_SUPPORTED || GLES_SUPPORTED
 void GetOpenXRGraphicsBindingGL(IRenderDevice*  pDevice,
                                 IDeviceContext* pContext,
                                 IDataBlob**     ppGraphicsBinding);
-#    endif
+#endif
 
-#    if VULKAN_SUPPORTED
+#if VULKAN_SUPPORTED
 void GetOpenXRGraphicsBindingVk(IRenderDevice*  pDevice,
                                 IDeviceContext* pContext,
                                 IDataBlob**     ppGraphicsBinding);
-#    endif
-
 #endif
+
 
 void GetOpenXRGraphicsBinding(IRenderDevice*  pDevice,
                               IDeviceContext* pContext,
                               IDataBlob**     ppGraphicsBinding)
 {
-#if DILIGENT_USE_OPENXR
     if (pDevice == nullptr)
     {
         UNEXPECTED("pDevice must not be null");
@@ -85,37 +81,136 @@ void GetOpenXRGraphicsBinding(IRenderDevice*  pDevice,
     RENDER_DEVICE_TYPE DevType = pDevice->GetDeviceInfo().Type;
     switch (DevType)
     {
-#    if D3D11_SUPPORTED
+#if D3D11_SUPPORTED
         case RENDER_DEVICE_TYPE_D3D11:
             GetOpenXRGraphicsBindingD3D11(pDevice, pContext, ppGraphicsBinding);
             break;
-#    endif
+#endif
 
-#    if D3D12_SUPPORTED
+#if D3D12_SUPPORTED
         case RENDER_DEVICE_TYPE_D3D12:
             GetOpenXRGraphicsBindingD3D12(pDevice, pContext, ppGraphicsBinding);
             break;
-#    endif
+#endif
 
-#    if GL_SUPPORTED || GLES_SUPPORTED
+#if GL_SUPPORTED || GLES_SUPPORTED
         case RENDER_DEVICE_TYPE_GL:
         case RENDER_DEVICE_TYPE_GLES:
             GetOpenXRGraphicsBindingGL(pDevice, pContext, ppGraphicsBinding);
             break;
-#    endif
+#endif
 
-#    if VULKAN_SUPPORTED
+#if VULKAN_SUPPORTED
         case RENDER_DEVICE_TYPE_VULKAN:
             GetOpenXRGraphicsBindingVk(pDevice, pContext, ppGraphicsBinding);
             break;
-#    endif
+#endif
 
         default:
             UNSUPPORTED("Unsupported device type");
     }
-#else
-    UNSUPPORTED("OpenXR is not supported");
-#endif
+}
+
+static XrBool32 OpenXRMessageCallbackFunction(XrDebugUtilsMessageSeverityFlagsEXT         xrMessageSeverity,
+                                              XrDebugUtilsMessageTypeFlagsEXT             xrMessageType,
+                                              const XrDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                              void*                                       pUserData)
+{
+    DEBUG_MESSAGE_SEVERITY MessageSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+    if (xrMessageSeverity & XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+    {
+        MessageSeverity = DEBUG_MESSAGE_SEVERITY_ERROR;
+    }
+    else if (xrMessageSeverity & XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+    {
+        MessageSeverity = DEBUG_MESSAGE_SEVERITY_WARNING;
+    }
+
+    std::string MessageTypeStr;
+    if (xrMessageType & XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+    {
+        MessageTypeStr += "GEN";
+    }
+    if (xrMessageType & XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+    {
+        if (!MessageTypeStr.empty())
+        {
+            MessageTypeStr += ",";
+        }
+        MessageTypeStr += "SPEC";
+    }
+    if (xrMessageType & XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+    {
+        if (!MessageTypeStr.empty())
+        {
+            MessageTypeStr += ",";
+        }
+        MessageTypeStr += "PERF";
+    }
+
+    const char* FunctionName = (pCallbackData->functionName) ? pCallbackData->functionName : "";
+    const char* MessageId    = (pCallbackData->messageId) ? pCallbackData->messageId : "";
+    const char* Message      = (pCallbackData->message) ? pCallbackData->message : "";
+
+    LOG_DEBUG_MESSAGE(MessageSeverity, '[', MessageTypeStr, "] ", FunctionName, MessageId, " - ", Message);
+
+    return XrBool32{};
+}
+
+
+PFN_xrDestroyDebugUtilsMessengerEXT xrDestroyDebugUtilsMessengerEXT = nullptr;
+
+XrDebugUtilsMessengerEXT CreateOpenXRDebugUtilsMessenger(XrInstance xrInstance)
+{
+    PFN_xrCreateDebugUtilsMessengerEXT xrCreateDebugUtilsMessengerEXT;
+    if (XR_FAILED(xrGetInstanceProcAddr(xrInstance, "xrCreateDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)&xrCreateDebugUtilsMessengerEXT)))
+    {
+        LOG_ERROR_MESSAGE("Failed to get xrCreateDebugUtilsMessengerEXT function pointer.");
+        return {};
+    }
+    VERIFY_EXPR(xrCreateDebugUtilsMessengerEXT);
+
+    if (XR_FAILED(xrGetInstanceProcAddr(xrInstance, "xrDestroyDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)&xrDestroyDebugUtilsMessengerEXT)))
+    {
+        LOG_ERROR_MESSAGE("Failed to get xrDestroyDebugUtilsMessengerEXT function pointer.");
+        return {};
+    }
+    VERIFY_EXPR(xrDestroyDebugUtilsMessengerEXT);
+
+    // Fill out a XrDebugUtilsMessengerCreateInfoEXT structure specifying all severities and types.
+    // Set the userCallback to OpenXRMessageCallbackFunction().
+    XrDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCI{XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+    debugUtilsMessengerCI.messageSeverities =
+        XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+        XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+        XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+        XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debugUtilsMessengerCI.messageTypes =
+        XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+        XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+        XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+        XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
+
+    debugUtilsMessengerCI.userCallback = (PFN_xrDebugUtilsMessengerCallbackEXT)OpenXRMessageCallbackFunction;
+    debugUtilsMessengerCI.userData     = nullptr;
+
+    XrDebugUtilsMessengerEXT debugUtilsMessenger{};
+    // Finally create and return the XrDebugUtilsMessengerEXT.
+    if (XR_FAILED(xrCreateDebugUtilsMessengerEXT(xrInstance, &debugUtilsMessengerCI, &debugUtilsMessenger)))
+    {
+        LOG_ERROR_MESSAGE("Failed to create OpenXR debug utils messenger.");
+        return {};
+    }
+
+    return debugUtilsMessenger;
+}
+
+void DestroyOpenXRDebugUtilsMessenger(XrDebugUtilsMessengerEXT debugUtilsMessenger)
+{
+    if (xrDestroyDebugUtilsMessengerEXT)
+    {
+        xrDestroyDebugUtilsMessengerEXT(debugUtilsMessenger);
+    }
 }
 
 } // namespace Diligent
@@ -127,5 +222,15 @@ extern "C"
                                            Diligent::IDataBlob**     ppGraphicsBinding)
     {
         Diligent::GetOpenXRGraphicsBinding(pDevice, pContext, ppGraphicsBinding);
+    }
+
+    XrDebugUtilsMessengerEXT Diligent_CreateOpenXRDebugUtilsMessenger(XrInstance xrInstance, XrDebugUtilsMessengerEXT* pDebugUtilsMessenger)
+    {
+        return Diligent::CreateOpenXRDebugUtilsMessenger(xrInstance);
+    }
+
+    void Diligent_DestroyOpenXRDebugUtilsMessenger(XrDebugUtilsMessengerEXT debugUtilsMessenger)
+    {
+        Diligent::DestroyOpenXRDebugUtilsMessenger(debugUtilsMessenger);
     }
 }
