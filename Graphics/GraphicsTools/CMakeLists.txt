@@ -13,6 +13,7 @@ set(INTERFACE
     interface/GraphicsUtilities.h
     interface/MapHelper.hpp
     interface/OffScreenSwapChain.hpp
+    interface/OpenXRUtilities.h
     interface/ResourceRegistry.hpp
     interface/ScopedDebugGroup.hpp
     interface/GPUCompletionAwaitQueue.hpp
@@ -43,6 +44,7 @@ set(SOURCE
     src/GraphicsUtilitiesVk.cpp
     src/GraphicsUtilitiesWebGPU.cpp
     src/OffScreenSwapChain.cpp
+    src/OpenXRUtilities.cpp
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
     src/ShaderSourceFactoryUtils.cpp
@@ -81,14 +83,23 @@ if(D3D11_SUPPORTED)
     list(APPEND SOURCE src/TextureUploaderD3D11.cpp)
     list(APPEND INTERFACE interface/TextureUploaderD3D11.hpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineD3D11Interface)
+    if(DILIGENT_USE_OPENXR)
+        list(APPEND SOURCE src/OpenXRUtilitiesD3D11.cpp)
+    endif()
 endif()
 
 if(D3D12_SUPPORTED)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineD3D12Interface)
+    if(DILIGENT_USE_OPENXR)
+        list(APPEND SOURCE src/OpenXRUtilitiesD3D12.cpp)
+    endif()
 endif()
 
 if(VULKAN_SUPPORTED)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineVkInterface Vulkan::Headers)
+    if(DILIGENT_USE_OPENXR)
+        list(APPEND SOURCE src/OpenXRUtilitiesVk.cpp)
+    endif()
 endif()
 
 if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
@@ -100,6 +111,9 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     list(APPEND SOURCE src/TextureUploaderGL.cpp)
     list(APPEND INTERFACE interface/TextureUploaderGL.hpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineOpenGLInterface)
+    if(DILIGENT_USE_OPENXR)
+        list(APPEND SOURCE src/OpenXRUtilitiesGL.cpp)
+    endif()
 endif()
 
 if(WEBGPU_SUPPORTED)
@@ -149,6 +163,11 @@ endif()
 
 if(RENDER_STATE_CACHE_SUPPORTED)
     target_compile_definitions(Diligent-GraphicsTools PUBLIC DILIGENT_RENDER_STATE_CACHE_SUPPORTED=1)
+endif()
+
+if(DILIGENT_USE_OPENXR)
+    target_link_libraries(Diligent-GraphicsTools PRIVATE OpenXR::headers)
+    target_compile_definitions(Diligent-GraphicsTools PUBLIC DILIGENT_USE_OPENXR=1)
 endif()
 
 if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
