@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,7 +26,21 @@
 
 #include "GraphicsUtilities.h"
 
+typedef unsigned int GLenum;
+
 namespace Diligent
 {
+GLenum         TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags = 0);
+TEXTURE_FORMAT GLInternalTexFormatToTexFormat(GLenum GlFormat);
+
+int64_t GetNativeTextureFormatGL(TEXTURE_FORMAT TexFormat)
+{
+    return static_cast<int64_t>(TexFormatToGLInternalTexFormat(TexFormat));
+}
+
+TEXTURE_FORMAT GetTextureFormatFromNativeGL(int64_t NativeFormat)
+{
+    return GLInternalTexFormatToTexFormat(static_cast<GLenum>(NativeFormat));
+}
 
 } // namespace Diligent

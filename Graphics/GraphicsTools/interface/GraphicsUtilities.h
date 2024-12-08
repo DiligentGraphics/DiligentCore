@@ -212,6 +212,11 @@ IBufferView* DILIGENT_GLOBAL_FUNCTION(GetBufferDefaultUAV)(IObject* pBuffer);
 /// For other shader types, returns null.
 const char* DILIGENT_GLOBAL_FUNCTION(GetWebGPUEmulatedArrayIndexSuffix)(IShader* pShader);
 
+/// Returns the native texture format (e.g. DXGI_FORMAT, VkFormat) for the given texture format and device type.
+int64_t DILIGENT_GLOBAL_FUNCTION(GetNativeTextureFormat)(TEXTURE_FORMAT TexFormat, enum RENDER_DEVICE_TYPE DeviceType);
+
+/// Returns the texture format for the given native format (e.g. DXGI_FORMAT, VkFormat) and device type.
+TEXTURE_FORMAT DILIGENT_GLOBAL_FUNCTION(GetTextureFormatFromNative)(int64_t NativeFormat, enum RENDER_DEVICE_TYPE DeviceType);
 
 #include "../../../Primitives/interface/UndefRefMacro.h"
 
