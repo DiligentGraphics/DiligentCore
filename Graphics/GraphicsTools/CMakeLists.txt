@@ -13,7 +13,6 @@ set(INTERFACE
     interface/GraphicsUtilities.h
     interface/MapHelper.hpp
     interface/OffScreenSwapChain.hpp
-    interface/OpenXRUtilities.h
     interface/ResourceRegistry.hpp
     interface/ScopedDebugGroup.hpp
     interface/GPUCompletionAwaitQueue.hpp
@@ -44,7 +43,6 @@ set(SOURCE
     src/GraphicsUtilitiesVk.cpp
     src/GraphicsUtilitiesWebGPU.cpp
     src/OffScreenSwapChain.cpp
-    src/OpenXRUtilities.cpp
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
     src/ShaderSourceFactoryUtils.cpp
@@ -75,6 +73,11 @@ if(ARCHIVER_SUPPORTED)
     set(RENDER_STATE_CACHE_SUPPORTED TRUE CACHE INTERNAL "Render state cache is supported")
 else()
     set(RENDER_STATE_CACHE_SUPPORTED FALSE CACHE INTERNAL "Render state cache is not supported")
+endif()
+
+if(DILIGENT_USE_OPENXR)
+    list(APPEND SOURCE src/OpenXRUtilities.cpp)
+    list(APPEND INTERFACE interface/OpenXRUtilities.h)
 endif()
 
 set(DEPENDENCIES)
