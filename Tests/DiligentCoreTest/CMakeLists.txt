@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.6)
+cmake_minimum_required (VERSION 3.10)
 
 if (PLATFORM_EMSCRIPTEN)
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
