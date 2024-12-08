@@ -39,6 +39,15 @@ namespace Diligent
 bool CheckAdapterD3D11Compatibility(IDXGIAdapter1* pDXGIAdapter, D3D_FEATURE_LEVEL FeatureLevel);
 bool CheckAdapterD3D12Compatibility(IDXGIAdapter1* pDXGIAdapter, D3D_FEATURE_LEVEL FeatureLevel);
 
+inline bool operator==(const LUID& Lhs, const LUID& Rhs)
+{
+    return Lhs.HighPart == Rhs.HighPart && Lhs.LowPart == Rhs.LowPart;
+}
+inline bool operator!=(const LUID& Lhs, const LUID& Rhs)
+{
+    return !(Lhs == Rhs);
+}
+
 template <typename BaseInterface, RENDER_DEVICE_TYPE DevType>
 class EngineFactoryD3DBase : public EngineFactoryBase<BaseInterface>
 {
@@ -142,7 +151,7 @@ public:
     }
 
 
-    std::vector<CComPtr<IDXGIAdapter1>> FindCompatibleAdapters(Version MinVersion) const
+    std::vector<CComPtr<IDXGIAdapter1>> FindCompatibleAdapters(D3D_FEATURE_LEVEL d3dFeatureLevel, LUID AdapterLUID = {}) const
     {
         std::vector<CComPtr<IDXGIAdapter1>> DXGIAdapters;
 
@@ -154,12 +163,13 @@ public:
         }
 
         CComPtr<IDXGIAdapter1> pDXIAdapter;
-
-        const auto d3dFeatureLevel = GetD3DFeatureLevel(MinVersion);
         for (UINT adapter = 0; pFactory->EnumAdapters1(adapter, &pDXIAdapter) != DXGI_ERROR_NOT_FOUND; ++adapter, pDXIAdapter.Release())
         {
             DXGI_ADAPTER_DESC1 AdapterDesc;
             pDXIAdapter->GetDesc1(&AdapterDesc);
+            if (AdapterLUID != LUID{} && AdapterDesc.AdapterLuid != AdapterLUID)
+                continue;
+
             bool IsCompatibleAdapter = CheckAdapterCompatibility<DevType>(pDXIAdapter, d3dFeatureLevel);
             if (IsCompatibleAdapter)
             {
@@ -170,6 +180,10 @@ public:
         return DXGIAdapters;
     }
 
+    std::vector<CComPtr<IDXGIAdapter1>> FindCompatibleAdapters(Version MinVersion) const
+    {
+        return FindCompatibleAdapters(GetD3DFeatureLevel(MinVersion));
+    }
 
     virtual GraphicsAdapterInfo GetGraphicsAdapterInfo(void*          pd3Device,
                                                        IDXGIAdapter1* pDXIAdapter) const
