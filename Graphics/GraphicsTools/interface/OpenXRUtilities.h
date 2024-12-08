@@ -63,7 +63,9 @@ void DILIGENT_GLOBAL_FUNCTION(GetOpenXRGraphicsBinding)(IRenderDevice*  pDevice,
                                                         IDataBlob**     ppGraphicsBinding);
 
 /// Creates OpenXR debug utils messenger.
-XrDebugUtilsMessengerEXT DILIGENT_GLOBAL_FUNCTION(CreateOpenXRDebugUtilsMessenger)(XrInstance xrInstance);
+XrDebugUtilsMessengerEXT DILIGENT_GLOBAL_FUNCTION(CreateOpenXRDebugUtilsMessenger)(
+    XrInstance                          xrInstance,
+    XrDebugUtilsMessageSeverityFlagsEXT xrMessageSeverities);
 
 /// Destroys OpenXR debug utils messenger.
 void DILIGENT_GLOBAL_FUNCTION(DestroyOpenXRDebugUtilsMessenger)(XrDebugUtilsMessengerEXT xrDebugUtilsMessenger);

@@ -292,7 +292,8 @@ static XrBool32 OpenXRMessageCallbackFunction(XrDebugUtilsMessageSeverityFlagsEX
 
 PFN_xrDestroyDebugUtilsMessengerEXT xrDestroyDebugUtilsMessengerEXT = nullptr;
 
-XrDebugUtilsMessengerEXT CreateOpenXRDebugUtilsMessenger(XrInstance xrInstance)
+XrDebugUtilsMessengerEXT CreateOpenXRDebugUtilsMessenger(XrInstance                          xrInstance,
+                                                         XrDebugUtilsMessageSeverityFlagsEXT xrMessageSeverities)
 {
     PFN_xrCreateDebugUtilsMessengerEXT xrCreateDebugUtilsMessengerEXT;
     if (XR_FAILED(xrGetInstanceProcAddr(xrInstance, "xrCreateDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)&xrCreateDebugUtilsMessengerEXT)))
@@ -312,11 +313,8 @@ XrDebugUtilsMessengerEXT CreateOpenXRDebugUtilsMessenger(XrInstance xrInstance)
     // Fill out a XrDebugUtilsMessengerCreateInfoEXT structure specifying all severities and types.
     // Set the userCallback to OpenXRMessageCallbackFunction().
     XrDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCI{XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
-    debugUtilsMessengerCI.messageSeverities =
-        XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-        XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-        XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-        XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debugUtilsMessengerCI.messageSeverities = xrMessageSeverities;
+
     debugUtilsMessengerCI.messageTypes =
         XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
         XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
@@ -356,9 +354,10 @@ extern "C"
         Diligent::GetOpenXRGraphicsBinding(pDevice, pContext, ppGraphicsBinding);
     }
 
-    XrDebugUtilsMessengerEXT Diligent_CreateOpenXRDebugUtilsMessenger(XrInstance xrInstance, XrDebugUtilsMessengerEXT* pDebugUtilsMessenger)
+    XrDebugUtilsMessengerEXT Diligent_CreateOpenXRDebugUtilsMessenger(XrInstance                          xrInstance,
+                                                                      XrDebugUtilsMessageSeverityFlagsEXT xrMessageSeverities)
     {
-        return Diligent::CreateOpenXRDebugUtilsMessenger(xrInstance);
+        return Diligent::CreateOpenXRDebugUtilsMessenger(xrInstance, xrMessageSeverities);
     }
 
     void Diligent_DestroyOpenXRDebugUtilsMessenger(XrDebugUtilsMessengerEXT debugUtilsMessenger)
