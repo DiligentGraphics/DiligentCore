@@ -89,6 +89,36 @@ void DILIGENT_GLOBAL_FUNCTION(AllocateOpenXRSwapchainImageData)(RENDER_DEVICE_TY
                                                                 Uint32             ImageCount,
                                                                 IDataBlob**        ppSwapchainImageData);
 
+/// Returns the texture object that corresponds to the specified OpenXR swapchain image.
+///
+/// \param [in]  pDevice    - Pointer to the render device.
+/// \param [in]  ImageData  - Pointer to the OpenXR swapchain image data returned by xrEnumerateSwapchainImages.
+/// \param [in]  ImageIndex - Index of the swapchain image.
+/// \param [in]  TexDesc    - Texture description.
+/// \param [out] ppImage    - Address of the memory location where the pointer to the texture object
+///                           will be stored.
+///
+/// \remarks    The function creates a texture object that corresponds to the specified OpenXR
+///             swapchain image.
+///
+///             Typically, ImageData should be allocated by AllocateOpenXRSwapchainImageData and
+///             filled by xrEnumerateSwapchainImages (see AllocateOpenXRSwapchainImageData):
+///
+///                 RefCntAutoPtr<ITexture> pImage;
+///                 GetOpenXRSwapchainImage(pDevice, pSwapchainImageData->GetConstDataPtr<XrSwapchainImageBaseHeader>(),
+///                                         ImageIndex, Desc, &pImage);
+///
+///             TexDesc should be filled with the texture description that corresponds to the swapchain.
+///             On Direct3D, the texture parameters will be derived from the swapchain resource.
+///             On Vulkan, the texture description should be filled manually since Vulkan does not
+///             provide a way to query texture parameters from the image.
+///
+void DILIGENT_GLOBAL_FUNCTION(GetOpenXRSwapchainImage)(IRenderDevice*                    pDevice,
+                                                       const XrSwapchainImageBaseHeader* ImageData,
+                                                       Uint32                            ImageIndex,
+                                                       const Diligent::TextureDesc REF   TexDesc,
+                                                       ITexture**                        ppImage);
+
 #include "../../../Primitives/interface/UndefRefMacro.h"
 
 DILIGENT_END_NAMESPACE // namespace Diligent

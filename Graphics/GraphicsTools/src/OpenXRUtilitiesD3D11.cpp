@@ -73,4 +73,30 @@ void AllocateOpenXRSwapchainImageDataD3D11(Uint32      ImageCount,
     *ppSwapchainImageData = pDataBlob.Detach();
 }
 
+void GetOpenXRSwapchainImageD3D11(IRenderDevice*                    pDevice,
+                                  const XrSwapchainImageBaseHeader* ImageData,
+                                  Uint32                            ImageIndex,
+                                  ITexture**                        ppImage)
+{
+    const XrSwapchainImageD3D11KHR* ImageD3D11 = reinterpret_cast<const XrSwapchainImageD3D11KHR*>(ImageData);
+
+    if (ImageData->type != XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR || ImageD3D11[ImageIndex].type != XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR)
+    {
+        UNEXPECTED("Unexpected swapchain image type");
+        return;
+    }
+
+    ID3D11Texture2D* texture = ImageD3D11[ImageIndex].texture;
+    if (texture == nullptr)
+    {
+        UNEXPECTED("D3D11 texture is null");
+        return;
+    }
+
+    RefCntAutoPtr<IRenderDeviceD3D11> pDeviceD3D11{pDevice, IID_RenderDeviceD3D11};
+    VERIFY_EXPR(pDeviceD3D11 != nullptr);
+
+    pDeviceD3D11->CreateTexture2DFromD3DResource(texture, RESOURCE_STATE_RENDER_TARGET, ppImage);
+}
+
 } // namespace Diligent

@@ -56,4 +56,13 @@ void AllocateOpenXRSwapchainImageDataGL(Uint32      ImageCount,
     *ppSwapchainImageData = pDataBlob.Detach();
 }
 
+
+void GetOpenXRSwapchainImageGL(IRenderDevice*                    pDevice,
+                               const XrSwapchainImageBaseHeader* ImageData,
+                               Uint32                            ImageIndex,
+                               ITexture**                        ppImage)
+{
+    UNSUPPORTED("Not yet implemented");
+}
+
 } // namespace Diligent
