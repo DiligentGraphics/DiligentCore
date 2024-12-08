@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,6 +62,13 @@ public:
         VkAllocationCallbacks* pVkAllocator              = nullptr;
         uint32_t               IgnoreDebugMessageCount   = 0;
         const char* const*     ppIgnoreDebugMessageNames = nullptr;
+
+        struct OpenXRInfo
+        {
+            uint64_t Instance            = 0;
+            uint64_t SystemId            = 0;
+            void*    GetInstanceProcAddr = nullptr;
+        } XR;
     };
     static std::shared_ptr<VulkanInstance> Create(const CreateInfo& CI);
 
@@ -82,7 +89,8 @@ public:
     bool IsExtensionAvailable(const char* ExtensionName)const;
     bool IsExtensionEnabled  (const char* ExtensionName)const;
 
-    VkPhysicalDevice SelectPhysicalDevice(uint32_t AdapterId)const;
+    VkPhysicalDevice SelectPhysicalDevice(uint32_t AdapterId)const noexcept(false);
+    VkPhysicalDevice SelectPhysicalDeviceForOpenXR(const CreateInfo::OpenXRInfo& XRInfo)const noexcept(false);
 
     VkAllocationCallbacks* GetVkAllocator() const {return m_pVkAllocator;}
     VkInstance             GetVkInstance()  const {return m_VkInstance;  }

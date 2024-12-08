@@ -46,6 +46,11 @@
 #    include "FileSystem.hpp"
 #endif
 
+#if DILIGENT_USE_OPENXR
+#    define XR_USE_GRAPHICS_API_VULKAN
+#    include <openxr/openxr_platform.h>
+#endif
+
 namespace Diligent
 {
 namespace
@@ -620,6 +625,43 @@ void EngineFactoryVkImpl::EnumerateAdapters(Version              MinVersion,
     }
 }
 
+#if DILIGENT_USE_OPENXR
+VkResult CreateVulkanDeviceForOpenXR(const OpenXRAttribs&         XRAttribs,
+                                     VkPhysicalDevice             PhysicalDevice,
+                                     const VkDeviceCreateInfo*    pCreateInfo,
+                                     const VkAllocationCallbacks* pAllocator,
+                                     VkDevice*                    pDevice) noexcept(false)
+{
+    XrInstance xrInstance = XR_NULL_HANDLE;
+    static_assert(sizeof(XrInstance) == sizeof(XRAttribs.Instance), "XrInstance size mismatch");
+    memcpy(&xrInstance, &XRAttribs.Instance, sizeof(XrInstance));
+
+    PFN_xrGetInstanceProcAddr   xrGetInstanceProcAddr   = reinterpret_cast<PFN_xrGetInstanceProcAddr>(XRAttribs.GetInstanceProcAddr);
+    PFN_xrCreateVulkanDeviceKHR xrCreateVulkanDeviceKHR = nullptr;
+    if (XR_FAILED(xrGetInstanceProcAddr(xrInstance, "xrCreateVulkanDeviceKHR", reinterpret_cast<PFN_xrVoidFunction*>(&xrCreateVulkanDeviceKHR))))
+    {
+        LOG_ERROR_AND_THROW("Failed to get xrCreateVulkanDeviceKHR function");
+    }
+    VERIFY_EXPR(xrCreateVulkanDeviceKHR != nullptr);
+
+    XrVulkanDeviceCreateInfoKHR VulkanDeviceCI{XR_TYPE_VULKAN_DEVICE_CREATE_INFO_KHR};
+    static_assert(sizeof(VulkanDeviceCI.systemId) == sizeof(XRAttribs.SystemId), "systemId size mismatch");
+    memcpy(&VulkanDeviceCI.systemId, &XRAttribs.SystemId, sizeof(VulkanDeviceCI.systemId));
+    VulkanDeviceCI.createFlags            = 0;
+    VulkanDeviceCI.pfnGetInstanceProcAddr = vkGetInstanceProcAddr;
+    VulkanDeviceCI.vulkanPhysicalDevice   = PhysicalDevice;
+    VulkanDeviceCI.vulkanCreateInfo       = pCreateInfo;
+    VulkanDeviceCI.vulkanAllocator        = pAllocator;
+
+    VkResult vkRes = VK_ERROR_UNKNOWN;
+    if (XR_FAILED(xrCreateVulkanDeviceKHR(xrInstance, &VulkanDeviceCI, pDevice, &vkRes)))
+    {
+        LOG_ERROR_AND_THROW("Failed to create Vulkan device for OpenXR");
+    }
+    return vkRes;
+}
+#endif
+
 void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI,
                                                     IRenderDevice**           ppDevice,
                                                     IDeviceContext**          ppContexts)
@@ -664,10 +706,34 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         InstanceCI.IgnoreDebugMessageCount   = EngineCI.IgnoreDebugMessageCount;
         InstanceCI.ppIgnoreDebugMessageNames = EngineCI.ppIgnoreDebugMessageNames;
 
+#if DILIGENT_USE_OPENXR
+        if (EngineCI.pXRAttribs != nullptr && EngineCI.pXRAttribs->Instance != 0)
+        {
+            InstanceCI.XR.Instance            = EngineCI.pXRAttribs->Instance;
+            InstanceCI.XR.SystemId            = EngineCI.pXRAttribs->SystemId;
+            InstanceCI.XR.GetInstanceProcAddr = EngineCI.pXRAttribs->GetInstanceProcAddr;
+        }
+#endif
+
         auto Instance = VulkanUtilities::VulkanInstance::Create(InstanceCI);
 
-        auto vkDevice       = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
-        auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create({*Instance, vkDevice, /*LogExtensions = */ true});
+        VkPhysicalDevice vkPhysDevice = VK_NULL_HANDLE;
+#if DILIGENT_USE_OPENXR
+        if (InstanceCI.XR.Instance != 0)
+        {
+            if (EngineCI.AdapterId != DEFAULT_ADAPTER_ID)
+            {
+                LOG_WARNING_MESSAGE("AdapterId is ignored when OpenXR is used as the physical device is selected by OpenXR runtime");
+            }
+            vkPhysDevice = Instance->SelectPhysicalDeviceForOpenXR(InstanceCI.XR);
+        }
+        else
+#endif
+        {
+            vkPhysDevice = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
+        }
+
+        auto PhysicalDevice = VulkanUtilities::VulkanPhysicalDevice::Create({*Instance, vkPhysDevice, /*LogExtensions = */ true});
 
         std::vector<const char*> DeviceExtensions;
         if (Instance->IsExtensionEnabled(VK_KHR_SURFACE_EXTENSION_NAME))
@@ -1199,8 +1265,28 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         vkDeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();
         vkDeviceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(DeviceExtensions.size());
 
-        auto vkAllocator   = Instance->GetVkAllocator();
-        auto LogicalDevice = VulkanUtilities::VulkanLogicalDevice::Create(*PhysicalDevice, vkDeviceCreateInfo, EnabledExtFeats, vkAllocator);
+        VkAllocationCallbacks* vkAllocator = Instance->GetVkAllocator();
+        VkDevice               vkDevice    = VK_NULL_HANDLE;
+        VkResult               vkRes       = VK_ERROR_UNKNOWN;
+#if DILIGENT_USE_OPENXR
+        if (InstanceCI.XR.Instance != 0)
+        {
+            vkRes = CreateVulkanDeviceForOpenXR(*EngineCI.pXRAttribs, PhysicalDevice->GetVkDeviceHandle(), &vkDeviceCreateInfo, vkAllocator, &vkDevice);
+        }
+        else
+#endif
+        {
+            vkRes = vkCreateDevice(PhysicalDevice->GetVkDeviceHandle(), &vkDeviceCreateInfo, vkAllocator, &vkDevice);
+        }
+        CHECK_VK_ERROR_AND_THROW(vkRes, "Failed to create logical device");
+
+        auto LogicalDevice = VulkanUtilities::VulkanLogicalDevice::Create({
+            *PhysicalDevice,
+            vkDevice,
+            *vkDeviceCreateInfo.pEnabledFeatures,
+            EnabledExtFeats,
+            vkAllocator,
+        });
 
         auto& RawMemAllocator = GetRawAllocator();
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,12 +34,9 @@
 namespace VulkanUtilities
 {
 
-std::shared_ptr<VulkanLogicalDevice> VulkanLogicalDevice::Create(const VulkanPhysicalDevice&  PhysicalDevice,
-                                                                 const VkDeviceCreateInfo&    DeviceCI,
-                                                                 const ExtensionFeatures&     EnabledExtFeatures,
-                                                                 const VkAllocationCallbacks* vkAllocator)
+std::shared_ptr<VulkanLogicalDevice> VulkanLogicalDevice::Create(const CreateInfo& CI)
 {
-    auto* LogicalDevice = new VulkanLogicalDevice{PhysicalDevice, DeviceCI, EnabledExtFeatures, vkAllocator};
+    auto* LogicalDevice = new VulkanLogicalDevice{CI};
     return std::shared_ptr<VulkanLogicalDevice>{LogicalDevice};
 }
 
@@ -48,17 +45,12 @@ VulkanLogicalDevice::~VulkanLogicalDevice()
     vkDestroyDevice(m_VkDevice, m_VkAllocator);
 }
 
-VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDevice,
-                                         const VkDeviceCreateInfo&    DeviceCI,
-                                         const ExtensionFeatures&     EnabledExtFeatures,
-                                         const VkAllocationCallbacks* vkAllocator) :
-    m_VkAllocator{vkAllocator},
-    m_EnabledFeatures{*DeviceCI.pEnabledFeatures},
-    m_EnabledExtFeatures{EnabledExtFeatures}
+VulkanLogicalDevice::VulkanLogicalDevice(const CreateInfo& CI) :
+    m_VkDevice{CI.vkDevice},
+    m_VkAllocator{CI.vkAllocator},
+    m_EnabledFeatures{CI.EnabledFeatures},
+    m_EnabledExtFeatures{CI.EnabledExtFeatures}
 {
-    auto res = vkCreateDevice(PhysicalDevice.GetVkDeviceHandle(), &DeviceCI, vkAllocator, &m_VkDevice);
-    CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
-
 #if DILIGENT_USE_VOLK
     // Since we only use one device at this time, load device function entries
     // https://github.com/zeux/volk#optimizing-device-calls
@@ -96,9 +88,9 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
         VK_ACCESS_HOST_READ_BIT |
         VK_ACCESS_HOST_WRITE_BIT;
 
-    if (DeviceCI.pEnabledFeatures->geometryShader)
+    if (m_EnabledFeatures.geometryShader)
         GraphicsStages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
-    if (DeviceCI.pEnabledFeatures->tessellationShader)
+    if (m_EnabledFeatures.tessellationShader)
         GraphicsStages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
     if (m_EnabledExtFeatures.MeshShader.meshShader != VK_FALSE && m_EnabledExtFeatures.MeshShader.taskShader != VK_FALSE)
         GraphicsStages |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT | VK_PIPELINE_STAGE_MESH_SHADER_BIT_EXT;
@@ -118,12 +110,12 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
         GraphicsAccessMask |= VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT;
     }
 
-    const auto QueueCount = PhysicalDevice.GetQueueProperties().size();
+    const auto QueueCount = CI.PhysicalDevice.GetQueueProperties().size();
     m_SupportedStagesMask.resize(QueueCount, 0);
     m_SupportedAccessMask.resize(QueueCount, 0);
     for (size_t q = 0; q < QueueCount; ++q)
     {
-        const auto& Queue      = PhysicalDevice.GetQueueProperties()[q];
+        const auto& Queue      = CI.PhysicalDevice.GetQueueProperties()[q];
         auto&       StageMask  = m_SupportedStagesMask[q];
         auto&       AccessMask = m_SupportedAccessMask[q];
 

@@ -171,6 +171,10 @@ if (WEBGPU_SUPPORTED)
     set_directory_root_folder("dawn" "DiligentCore/ThirdParty/dawn")
 endif()
 
+if(DILIGENT_USE_OPENXR)
+    add_subdirectory(OpenXR-SDK EXCLUDE_FROM_ALL)    
+endif()
+
 if ((${DILIGENT_BUILD_GOOGLE_TEST}) AND (NOT TARGET gtest))
     set(INSTALL_GTEST OFF CACHE BOOL "Do not install googletest")
     set(BUILD_GMOCK OFF CACHE BOOL "Do not build gmock")

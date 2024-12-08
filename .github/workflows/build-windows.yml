@@ -28,7 +28,7 @@ jobs:
         toolset:         ["Win32", "x64"]
         build_type:      ["Debug", "Release"]
         cmake_generator: ["Visual Studio 17 2022"]
-        cmake_args:      ["-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_WEBGPU=OFF"]
+        cmake_args:      ["-DDILIGENT_BUILD_TESTS=ON -DDILIGENT_NO_WEBGPU=OFF -DDILIGENT_USE_OPENXR=ON "]
         platform:        ["Win32"]
 
         include:
