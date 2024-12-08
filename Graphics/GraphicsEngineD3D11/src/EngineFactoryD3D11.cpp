@@ -44,6 +44,11 @@
 #include "EngineFactoryD3DBase.hpp"
 #include "DearchiverD3D11Impl.hpp"
 
+#if DILIGENT_USE_OPENXR
+#    define XR_USE_GRAPHICS_API_D3D11
+#    include <openxr/openxr_platform.h>
+#endif
+
 namespace Diligent
 {
 
@@ -63,6 +68,41 @@ bool CheckAdapterD3D11Compatibility(IDXGIAdapter1* pDXGIAdapter, D3D_FEATURE_LEV
     );
     return SUCCEEDED(hr);
 }
+
+#if DILIGENT_USE_OPENXR
+void GetOpenXRAdapterRequirements(const OpenXRAttribs& XR, LUID& AdapterLUID, D3D_FEATURE_LEVEL& d3dFeatureLevel) noexcept(false)
+{
+    if (XR.Instance == 0)
+        return;
+
+    if (XR.GetInstanceProcAddr == nullptr)
+        LOG_ERROR_AND_THROW("xrGetInstanceProcAddr must not be null");
+
+    XrInstance xrInstance = XR_NULL_HANDLE;
+    static_assert(sizeof(xrInstance) == sizeof(XR.Instance), "XrInstance size mismatch");
+    memcpy(&xrInstance, &XR.Instance, sizeof(xrInstance));
+
+    XrSystemId xrSystemId = XR_NULL_SYSTEM_ID;
+    static_assert(sizeof(xrSystemId) == sizeof(XR.SystemId), "XrSystemId size mismatch");
+    memcpy(&xrSystemId, &XR.SystemId, sizeof(XrSystemId));
+
+    PFN_xrGetInstanceProcAddr             xrGetInstanceProcAddr             = reinterpret_cast<PFN_xrGetInstanceProcAddr>(XR.GetInstanceProcAddr);
+    PFN_xrGetD3D11GraphicsRequirementsKHR xrGetD3D11GraphicsRequirementsKHR = nullptr;
+    if (XR_FAILED(xrGetInstanceProcAddr(xrInstance, "xrGetD3D11GraphicsRequirementsKHR", reinterpret_cast<PFN_xrVoidFunction*>(&xrGetD3D11GraphicsRequirementsKHR))))
+    {
+        LOG_ERROR_AND_THROW("Failed to get xrGetD3D11GraphicsRequirementsKHR. Make sure that XR_KHR_D3D11_enable extension is enabled.");
+    }
+
+    XrGraphicsRequirementsD3D11KHR xrGraphicsRequirementsD3D11KHR{XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR};
+    if (XR_FAILED(xrGetD3D11GraphicsRequirementsKHR(xrInstance, xrSystemId, &xrGraphicsRequirementsD3D11KHR)))
+    {
+        LOG_ERROR_AND_THROW("Failed to get D3D11 graphics requirements");
+    }
+
+    AdapterLUID     = xrGraphicsRequirementsD3D11KHR.adapterLuid;
+    d3dFeatureLevel = (std::max)(d3dFeatureLevel, xrGraphicsRequirementsD3D11KHR.minFeatureLevel);
+}
+#endif
 
 /// Engine factory for D3D11 implementation
 class EngineFactoryD3D11Impl : public EngineFactoryD3DBase<IEngineFactoryD3D11, RENDER_DEVICE_TYPE_D3D11>
@@ -208,15 +248,31 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
     }
 #endif
 
-    CComPtr<IDXGIAdapter1> SpecificAdapter;
-    if (EngineCI.AdapterId != DEFAULT_ADAPTER_ID)
+    LUID              AdapterLUID{};
+    D3D_FEATURE_LEVEL d3dFeatureLevel = GetD3DFeatureLevel((std::max)(EngineCI.GraphicsAPIVersion, Version{10, 0}));
+    Uint32            AdapterId       = EngineCI.AdapterId;
+#if DILIGENT_USE_OPENXR
+    if (EngineCI.pXRAttribs != nullptr && EngineCI.pXRAttribs->Instance != 0)
     {
-        auto Adapters = FindCompatibleAdapters(EngineCI.GraphicsAPIVersion);
-        if (EngineCI.AdapterId < Adapters.size())
-            SpecificAdapter = Adapters[EngineCI.AdapterId];
+        GetOpenXRAdapterRequirements(*EngineCI.pXRAttribs, AdapterLUID, d3dFeatureLevel);
+        if (AdapterId != DEFAULT_ADAPTER_ID)
+        {
+            LOG_WARNING_MESSAGE("AdapterId is ignored when OpenXR is used as the suitable adapter is selected by OpenXR runtime");
+        }
+        // There should be only one adapter
+        AdapterId = 0;
+    }
+#endif
+
+    CComPtr<IDXGIAdapter1> SpecificAdapter;
+    if (AdapterId != DEFAULT_ADAPTER_ID)
+    {
+        auto Adapters = FindCompatibleAdapters(d3dFeatureLevel, AdapterLUID);
+        if (AdapterId < Adapters.size())
+            SpecificAdapter = Adapters[AdapterId];
         else
         {
-            LOG_ERROR_AND_THROW(EngineCI.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
+            LOG_ERROR_AND_THROW(AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
         }
     }
 

@@ -135,6 +135,10 @@ PRIVATE
 PUBLIC
     Diligent-GraphicsEngineD3D11Interface
 )
+if(DILIGENT_USE_OPENXR)
+    target_link_libraries(Diligent-GraphicsEngineD3D11-static PRIVATE OpenXR::headers)
+    target_compile_definitions(Diligent-GraphicsEngineD3D11-static PRIVATE DILIGENT_USE_OPENXR=1)
+endif()
 
 target_link_libraries(Diligent-GraphicsEngineD3D11-shared
 PRIVATE

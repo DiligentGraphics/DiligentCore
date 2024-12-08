@@ -176,36 +176,38 @@ static uint32_t GetRequiredOpenXRVulkanVersion(uint32_t                  VulkanV
                                                PFN_xrGetInstanceProcAddr xrGetInstanceProcAddr) noexcept(false)
 {
     PFN_xrGetVulkanGraphicsRequirements2KHR xrGetVulkanGraphicsRequirements2KHR = nullptr;
-    if (XR_SUCCEEDED(xrGetInstanceProcAddr(xrInstance, "xrGetVulkanGraphicsRequirements2KHR", reinterpret_cast<PFN_xrVoidFunction*>(&xrGetVulkanGraphicsRequirements2KHR))))
+    if (XR_FAILED(xrGetInstanceProcAddr(xrInstance, "xrGetVulkanGraphicsRequirements2KHR", reinterpret_cast<PFN_xrVoidFunction*>(&xrGetVulkanGraphicsRequirements2KHR))))
     {
-        VERIFY_EXPR(xrGetVulkanGraphicsRequirements2KHR != nullptr);
+        LOG_ERROR_AND_THROW("Failed to get xrGetVulkanGraphicsRequirements2KHR function. Make sure that XR_KHR_vulkan_enable2 extension is enabled.");
+    }
 
-        XrGraphicsRequirementsVulkan2KHR xrVulkan2Req{XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN2_KHR};
-        if (XR_SUCCEEDED(xrGetVulkanGraphicsRequirements2KHR(xrInstance, xrSystemId, &xrVulkan2Req)))
-        {
-            auto XrVersionToVkVersion = [](XrVersion XrVersion) {
-                return VK_MAKE_API_VERSION(0, XR_VERSION_MAJOR(XrVersion), XR_VERSION_MINOR(XrVersion), 0);
-            };
+    VERIFY_EXPR(xrGetVulkanGraphicsRequirements2KHR != nullptr);
 
-            uint32_t MinVkVersion = XrVersionToVkVersion(xrVulkan2Req.minApiVersionSupported);
-            if (VulkanVersion < MinVkVersion)
-            {
-                LOG_ERROR_AND_THROW("OpenXR requires Vulkan version ", VK_API_VERSION_MAJOR(MinVkVersion), '.', VK_API_VERSION_MINOR(MinVkVersion),
-                                    ", but this device only supports Vulkan ", VK_API_VERSION_MAJOR(VulkanVersion), '.', VK_API_VERSION_MINOR(VulkanVersion));
-            }
-            uint32_t MaxVkVersion = VK_MAKE_API_VERSION(0, XR_VERSION_MAJOR(xrVulkan2Req.maxApiVersionSupported), XR_VERSION_MINOR(xrVulkan2Req.maxApiVersionSupported), 0);
-            if (MaxVkVersion < VulkanVersion)
-            {
-                LOG_INFO_MESSAGE("This device supports Vulkan ", VK_API_VERSION_MAJOR(VulkanVersion), '.', VK_API_VERSION_MINOR(VulkanVersion),
-                                 ", but OpenXR was only tested with Vulkan up to ", VK_API_VERSION_MAJOR(MaxVkVersion), '.', VK_API_VERSION_MINOR(MaxVkVersion),
-                                 ". Proceeding with Vulkan ", VK_API_VERSION_MAJOR(MaxVkVersion), '.', VK_API_VERSION_MINOR(MaxVkVersion), '.');
-                VulkanVersion = MaxVkVersion;
-            }
-        }
-        else
+    XrGraphicsRequirementsVulkan2KHR xrVulkan2Req{XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN2_KHR};
+    if (XR_SUCCEEDED(xrGetVulkanGraphicsRequirements2KHR(xrInstance, xrSystemId, &xrVulkan2Req)))
+    {
+        auto XrVersionToVkVersion = [](XrVersion XrVersion) {
+            return VK_MAKE_API_VERSION(0, XR_VERSION_MAJOR(XrVersion), XR_VERSION_MINOR(XrVersion), 0);
+        };
+
+        uint32_t MinVkVersion = XrVersionToVkVersion(xrVulkan2Req.minApiVersionSupported);
+        if (VulkanVersion < MinVkVersion)
         {
-            LOG_WARNING_MESSAGE("Failed to get Vulkan requirements from OpenXR. Proceeding without checking Vulkan instance version requirements.");
+            LOG_ERROR_AND_THROW("OpenXR requires Vulkan version ", VK_API_VERSION_MAJOR(MinVkVersion), '.', VK_API_VERSION_MINOR(MinVkVersion),
+                                ", but this device only supports Vulkan ", VK_API_VERSION_MAJOR(VulkanVersion), '.', VK_API_VERSION_MINOR(VulkanVersion));
         }
+        uint32_t MaxVkVersion = VK_MAKE_API_VERSION(0, XR_VERSION_MAJOR(xrVulkan2Req.maxApiVersionSupported), XR_VERSION_MINOR(xrVulkan2Req.maxApiVersionSupported), 0);
+        if (MaxVkVersion < VulkanVersion)
+        {
+            LOG_INFO_MESSAGE("This device supports Vulkan ", VK_API_VERSION_MAJOR(VulkanVersion), '.', VK_API_VERSION_MINOR(VulkanVersion),
+                             ", but OpenXR was only tested with Vulkan up to ", VK_API_VERSION_MAJOR(MaxVkVersion), '.', VK_API_VERSION_MINOR(MaxVkVersion),
+                             ". Proceeding with Vulkan ", VK_API_VERSION_MAJOR(MaxVkVersion), '.', VK_API_VERSION_MINOR(MaxVkVersion), '.');
+            VulkanVersion = MaxVkVersion;
+        }
+    }
+    else
+    {
+        LOG_WARNING_MESSAGE("Failed to get Vulkan requirements from OpenXR. Proceeding without checking Vulkan instance version requirements.");
     }
 
     return VulkanVersion;
