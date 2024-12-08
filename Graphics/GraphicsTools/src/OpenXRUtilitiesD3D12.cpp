@@ -115,7 +115,7 @@ void GetOpenXRSwapchainImageD3D12(IRenderDevice*                    pDevice,
     RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12{pDevice, IID_RenderDeviceD3D12};
     VERIFY_EXPR(pDeviceD3D12 != nullptr);
 
-    pDeviceD3D12->CreateTextureFromD3DResource(texture, RESOURCE_STATE_RENDER_TARGET, ppImage);
+    pDeviceD3D12->CreateTextureFromD3DResource(texture, RESOURCE_STATE_UNDEFINED, ppImage);
 }
 
 
