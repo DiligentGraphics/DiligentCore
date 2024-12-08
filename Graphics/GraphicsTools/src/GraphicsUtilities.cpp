@@ -40,6 +40,31 @@
 namespace Diligent
 {
 
+#if D3D11_SUPPORTED
+int64_t        GetNativeTextureFormatD3D11(TEXTURE_FORMAT TexFormat);
+TEXTURE_FORMAT GetTextureFormatFromNativeD3D11(int64_t NativeFormat);
+#endif
+
+#if D3D12_SUPPORTED
+int64_t        GetNativeTextureFormatD3D12(TEXTURE_FORMAT TexFormat);
+TEXTURE_FORMAT GetTextureFormatFromNativeD3D12(int64_t NativeFormat);
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+int64_t        GetNativeTextureFormatGL(TEXTURE_FORMAT TexFormat);
+TEXTURE_FORMAT GetTextureFormatFromNativeGL(int64_t NativeFormat);
+#endif
+
+#if VULKAN_SUPPORTED
+int64_t        GetNativeTextureFormatVk(TEXTURE_FORMAT TexFormat);
+TEXTURE_FORMAT GetTextureFormatFromNativeVk(int64_t NativeFormat);
+#endif
+
+#if WEBGPU_SUPPORTED
+int64_t        GetNativeTextureFormatWebGPU(TEXTURE_FORMAT TexFormat);
+TEXTURE_FORMAT GetTextureFormatFromNativeWebGPU(int64_t NativeFormat);
+#endif
+
 void CreateUniformBuffer(IRenderDevice*   pDevice,
                          Uint64           Size,
                          const Char*      Name,
@@ -540,6 +565,85 @@ IBufferView* GetBufferDefaultUAV(IObject* pBuffer)
     return GetDefaultUAV(static_cast<IBuffer*>(pBuffer));
 }
 
+#if !WEBGPU_SUPPORTED
+const char* GetWebGPUEmulatedArrayIndexSuffix(IShader* pShader)
+{
+    return nullptr;
+}
+#endif
+
+int64_t GetNativeTextureFormat(TEXTURE_FORMAT TexFormat, RENDER_DEVICE_TYPE DeviceType)
+{
+    switch (DeviceType)
+    {
+#if D3D11_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D11:
+            return GetNativeTextureFormatD3D11(TexFormat);
+#endif
+
+#if D3D12_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D12:
+            return GetNativeTextureFormatD3D12(TexFormat);
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+            return GetNativeTextureFormatGL(TexFormat);
+#endif
+
+#if VULKAN_SUPPORTED
+        case RENDER_DEVICE_TYPE_VULKAN:
+            return GetNativeTextureFormatVk(TexFormat);
+#endif
+
+#if WEBGPU_SUPPORTED
+        case RENDER_DEVICE_TYPE_WEBGPU:
+            return GetNativeTextureFormatWebGPU(TexFormat);
+#endif
+
+        default:
+            UNSUPPORTED("Unsupported device type");
+            return 0;
+    }
+}
+
+TEXTURE_FORMAT GetTextureFormatFromNative(int64_t NativeFormat, RENDER_DEVICE_TYPE DeviceType)
+{
+    switch (DeviceType)
+    {
+#if D3D11_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D11:
+            return GetTextureFormatFromNativeD3D11(NativeFormat);
+#endif
+
+#if D3D12_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D12:
+            return GetTextureFormatFromNativeD3D12(NativeFormat);
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+            return GetTextureFormatFromNativeGL(NativeFormat);
+#endif
+
+#if VULKAN_SUPPORTED
+        case RENDER_DEVICE_TYPE_VULKAN:
+            return GetTextureFormatFromNativeVk(NativeFormat);
+#endif
+
+#if WEBGPU_SUPPORTED
+        case RENDER_DEVICE_TYPE_WEBGPU:
+            return GetTextureFormatFromNativeWebGPU(NativeFormat);
+#endif
+
+        default:
+            UNSUPPORTED("Unsupported device type");
+            return TEX_FORMAT_UNKNOWN;
+    }
+}
+
 } // namespace Diligent
 
 
@@ -615,5 +719,15 @@ extern "C"
     const char* Diligent_GetWebGPUEmulatedArrayIndexSuffix(Diligent::IShader* pShader)
     {
         return Diligent::GetWebGPUEmulatedArrayIndexSuffix(pShader);
+    }
+
+    int64_t Diligent_GetNativeTextureFormat(Diligent::TEXTURE_FORMAT TexFormat, Diligent::RENDER_DEVICE_TYPE DeviceType)
+    {
+        return Diligent::GetNativeTextureFormat(TexFormat, DeviceType);
+    }
+
+    Diligent::TEXTURE_FORMAT Diligent_GetTextureFormatFromNative(int64_t NativeFormat, Diligent::RENDER_DEVICE_TYPE DeviceType)
+    {
+        return Diligent::GetTextureFormatFromNative(NativeFormat, DeviceType);
     }
 }

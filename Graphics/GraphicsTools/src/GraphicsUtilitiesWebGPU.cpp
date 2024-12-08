@@ -32,18 +32,31 @@
 
 #include "RefCntAutoPtr.hpp"
 
+enum WGPUTextureFormat : int;
+
 namespace Diligent
 {
 
+WGPUTextureFormat TextureFormatToWGPUFormat(TEXTURE_FORMAT TexFmt);
+TEXTURE_FORMAT    WGPUFormatToTextureFormat(WGPUTextureFormat TexFmt);
+
 const char* GetWebGPUEmulatedArrayIndexSuffix(IShader* pShader)
 {
-#if WEBGPU_SUPPORTED
     if (RefCntAutoPtr<IShaderWebGPU> pShaderWGPU{pShader, IID_ShaderWebGPU})
     {
         return pShaderWGPU->GetEmulatedArrayIndexSuffix();
     }
-#endif
     return nullptr;
+}
+
+int64_t GetNativeTextureFormatWebGPU(TEXTURE_FORMAT TexFormat)
+{
+    return static_cast<int64_t>(TextureFormatToWGPUFormat(TexFormat));
+}
+
+TEXTURE_FORMAT GetTextureFormatFromNativeWebGPU(int64_t NativeFormat)
+{
+    return WGPUFormatToTextureFormat(static_cast<WGPUTextureFormat>(NativeFormat));
 }
 
 } // namespace Diligent
