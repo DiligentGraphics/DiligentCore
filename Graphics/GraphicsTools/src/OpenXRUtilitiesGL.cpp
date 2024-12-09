@@ -29,8 +29,29 @@
 #include "DebugUtilities.hpp"
 #include "DataBlobImpl.hpp"
 
-#define XR_USE_GRAPHICS_API_OPENGL
-#include <openxr/openxr_platform.h>
+#if GL_SUPPORTED
+
+#    define XR_USE_GRAPHICS_API_OPENGL
+#    include <openxr/openxr_platform.h>
+
+using XrSwapchainImageGL                             = XrSwapchainImageOpenGLKHR;
+constexpr XrStructureType XR_TYPE_SWAPCHAIN_IMAGE_GL = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR;
+
+#elif GLES_SUPPORTED
+
+typedef unsigned int EGLenum;
+
+#    define XR_USE_GRAPHICS_API_OPENGL_ES
+#    include <openxr/openxr_platform.h>
+
+using XrSwapchainImageGL                             = XrSwapchainImageOpenGLESKHR;
+constexpr XrStructureType XR_TYPE_SWAPCHAIN_IMAGE_GL = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR;
+
+#else
+#    error Neither GL_SUPPORTED nor GLES_SUPPORTED is defined
+#endif
+
+#include "RenderDeviceGL.h"
 
 namespace Diligent
 {
@@ -45,11 +66,11 @@ void GetOpenXRGraphicsBindingGL(IRenderDevice*  pDevice,
 void AllocateOpenXRSwapchainImageDataGL(Uint32      ImageCount,
                                         IDataBlob** ppSwapchainImageData)
 {
-    RefCntAutoPtr<DataBlobImpl> pDataBlob{DataBlobImpl::Create(sizeof(XrSwapchainImageOpenGLKHR) * ImageCount)};
+    RefCntAutoPtr<DataBlobImpl> pDataBlob{DataBlobImpl::Create(sizeof(XrSwapchainImageGL) * ImageCount)};
     for (Uint32 i = 0; i < ImageCount; ++i)
     {
-        XrSwapchainImageOpenGLKHR& Image{pDataBlob->GetDataPtr<XrSwapchainImageOpenGLKHR>()[i]};
-        Image.type = XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR;
+        XrSwapchainImageGL& Image{pDataBlob->GetDataPtr<XrSwapchainImageGL>()[i]};
+        Image.type = XR_TYPE_SWAPCHAIN_IMAGE_GL;
         Image.next = nullptr;
     }
 
@@ -60,9 +81,28 @@ void AllocateOpenXRSwapchainImageDataGL(Uint32      ImageCount,
 void GetOpenXRSwapchainImageGL(IRenderDevice*                    pDevice,
                                const XrSwapchainImageBaseHeader* ImageData,
                                Uint32                            ImageIndex,
+                               const TextureDesc&                TexDesc,
                                ITexture**                        ppImage)
 {
-    UNSUPPORTED("Not yet implemented");
+    const XrSwapchainImageGL* ImageGL = reinterpret_cast<const XrSwapchainImageGL*>(ImageData);
+
+    if (ImageData->type != XR_TYPE_SWAPCHAIN_IMAGE_GL || ImageGL[ImageIndex].type != XR_TYPE_SWAPCHAIN_IMAGE_GL)
+    {
+        UNEXPECTED("Unexpected swapchain image type");
+        return;
+    }
+
+    uint32_t image = ImageGL[ImageIndex].image;
+    if (image == 0)
+    {
+        UNEXPECTED("OpenGL image is null");
+        return;
+    }
+
+    RefCntAutoPtr<IRenderDeviceGL> pDeviceGL{pDevice, IID_RenderDeviceGL};
+    VERIFY_EXPR(pDeviceGL != nullptr);
+
+    pDeviceGL->CreateTextureFromGLHandle(image, 0, TexDesc, RESOURCE_STATE_UNDEFINED, ppImage);
 }
 
 } // namespace Diligent
