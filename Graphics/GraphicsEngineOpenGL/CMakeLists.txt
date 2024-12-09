@@ -45,6 +45,9 @@ set(INCLUDE
     include/TextureViewGLImpl.hpp
     include/VAOCache.hpp
 )
+if(DILIGENT_USE_OPENXR)
+    list(APPEND INCLUDE include/OpenXR_GLHelpers.hpp)
+endif()
 
 set(INTERFACE
     interface/BaseInterfacesGL.h
@@ -285,6 +288,11 @@ else()
     set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
         OUTPUT_NAME GraphicsEngineOpenGL
     )
+endif()
+
+if(DILIGENT_USE_OPENXR)
+    target_link_libraries(Diligent-GraphicsEngineOpenGL-static PRIVATE OpenXR::headers)
+    target_compile_definitions(Diligent-GraphicsEngineOpenGL-static PRIVATE DILIGENT_USE_OPENXR=1)
 endif()
 
 add_library(Diligent-GLAdapterSelector OBJECT "src/GLAdapterSelector.cpp")

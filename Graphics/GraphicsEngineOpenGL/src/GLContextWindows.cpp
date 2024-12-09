@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,10 @@
 #include "GLTypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 
+#if DILIGENT_USE_OPENXR
+#    include "OpenXR_GLHelpers.hpp"
+#endif
+
 namespace Diligent
 {
 
@@ -42,6 +46,15 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
     m_Context{0},
     m_WindowHandleToDeviceContext{0}
 {
+#if DILIGENT_USE_OPENXR
+    Version OpenXRRequiredGLVersion;
+    if (InitAttribs.Window.hWnd != nullptr)
+    {
+        // Check OpenXR requirements when not attaching to an existing context
+        OpenXRRequiredGLVersion = GetOpenXRRequiredGLVersion(InitAttribs.pXRAttribs);
+    }
+#endif
+
     int MajorVersion = 0, MinorVersion = 0;
     if (InitAttribs.Window.hWnd != nullptr)
     {
@@ -202,6 +215,14 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
     APIVersion = Version{static_cast<Uint32>(MajorVersion), static_cast<Uint32>(MinorVersion)};
     VERIFY(static_cast<int>(APIVersion.Major) == MajorVersion && static_cast<int>(APIVersion.Minor) == MinorVersion,
            "Not enough bits to store version number");
+
+#if DILIGENT_USE_OPENXR
+    if (InitAttribs.Window.hWnd != nullptr && OpenXRRequiredGLVersion > APIVersion)
+    {
+        LOG_ERROR("OpenGL version ", APIVersion.Major, '.', APIVersion.Minor, " does not meet minimum required version for OpenXR: ",
+                  OpenXRRequiredGLVersion.Major, '.', OpenXRRequiredGLVersion.Minor);
+    }
+#endif
 }
 
 GLContext::~GLContext()
