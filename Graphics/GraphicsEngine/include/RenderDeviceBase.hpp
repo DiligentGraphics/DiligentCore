@@ -133,7 +133,7 @@ public:
         m_AdapterInfo         {AdapterInfo},
         m_TextureFormatsInfo  (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>")),
         m_TexFmtInfoInitFlags (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
-        m_wpImmediateContexts (std::max(1u, EngineCI.NumImmediateContexts), RefCntWeakPtr<DeviceContextImplType>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<DeviceContextImplType>, RawMemAllocator, "Allocator for vector<RefCntWeakPtr<DeviceContextImplType>>")),
+        m_wpImmediateContexts ((std::max)(1u, EngineCI.NumImmediateContexts), RefCntWeakPtr<DeviceContextImplType>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<DeviceContextImplType>, RawMemAllocator, "Allocator for vector<RefCntWeakPtr<DeviceContextImplType>>")),
         m_wpDeferredContexts  (EngineCI.NumDeferredContexts, RefCntWeakPtr<DeviceContextImplType>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<DeviceContextImplType>, RawMemAllocator, "Allocator for vector<RefCntWeakPtr<DeviceContextImplType>>")),
         m_RawMemAllocator     {RawMemAllocator},
         m_TexObjAllocator     {RawMemAllocator, sizeof(TextureImplType),                   16},
@@ -357,17 +357,17 @@ protected:
         }
         else if (NumThreads != 0)
         {
-            const Uint32 NumCores = std::max(std::thread::hardware_concurrency(), 1u);
+            const Uint32 NumCores = (std::max)(std::thread::hardware_concurrency(), 1u);
 
             ThreadPoolCreateInfo ThreadPoolCI;
             if (NumThreads == ~0u)
             {
                 // Leave one core for the main thread
-                ThreadPoolCI.NumThreads = std::max(NumCores, 2u) - 1u;
+                ThreadPoolCI.NumThreads = (std::max)(NumCores, 2u) - 1u;
             }
             else
             {
-                ThreadPoolCI.NumThreads = std::min(NumThreads, std::max(NumCores * 4, 128u));
+                ThreadPoolCI.NumThreads = (std::min)(NumThreads, (std::max)(NumCores * 4, 128u));
             }
             m_pShaderCompilationThreadPool = CreateThreadPool(ThreadPoolCI);
         }
