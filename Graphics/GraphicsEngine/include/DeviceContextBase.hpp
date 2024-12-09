@@ -741,7 +741,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
             m_VertexStreams[s] = VertexStreamInfo<BufferImplType>{};
         m_NumVertexStreams = 0;
     }
-    m_NumVertexStreams = std::max(m_NumVertexStreams, StartSlot + NumBuffersSet);
+    m_NumVertexStreams = (std::max)(m_NumVertexStreams, StartSlot + NumBuffersSet);
 
     for (Uint32 Buff = 0; Buff < NumBuffersSet; ++Buff)
     {
@@ -903,7 +903,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetViewports(
     }
 
     DEV_CHECK_ERR(NumViewports < MAX_VIEWPORTS, "Number of viewports (", NumViewports, ") exceeds the limit (", MAX_VIEWPORTS, ")");
-    m_NumViewports = std::min(MAX_VIEWPORTS, NumViewports);
+    m_NumViewports = (std::min)(MAX_VIEWPORTS, NumViewports);
 
     Viewport DefaultVP{RTWidth, RTHeight};
     // If no viewports are specified, use default viewport
@@ -956,7 +956,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetScissorRects(
     }
 
     DEV_CHECK_ERR(NumRects < MAX_VIEWPORTS, "Number of scissor rects (", NumRects, ") exceeds the limit (", MAX_VIEWPORTS, ")");
-    m_NumScissorRects = std::min(MAX_VIEWPORTS, NumRects);
+    m_NumScissorRects = (std::min)(MAX_VIEWPORTS, NumRects);
 
     for (Uint32 sr = 0; sr < m_NumScissorRects; ++sr)
     {
@@ -1011,18 +1011,18 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
             // Use this RTV to set the render target size
             if (m_FramebufferWidth == 0)
             {
-                m_FramebufferWidth   = std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U);
-                m_FramebufferHeight  = std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U);
+                m_FramebufferWidth   = (std::max)(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U);
+                m_FramebufferHeight  = (std::max)(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U);
                 m_FramebufferSlices  = RTVDesc.NumArraySlices;
                 m_FramebufferSamples = TexDesc.SampleCount;
             }
             else
             {
 #ifdef DILIGENT_DEVELOPMENT
-                DEV_CHECK_ERR(m_FramebufferWidth == std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U),
-                              "Render target width (", std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
-                DEV_CHECK_ERR(m_FramebufferHeight == std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U),
-                              "Render target height (", std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
+                DEV_CHECK_ERR(m_FramebufferWidth == (std::max)(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U),
+                              "Render target width (", (std::max)(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
+                DEV_CHECK_ERR(m_FramebufferHeight == (std::max)(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U),
+                              "Render target height (", (std::max)(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
                 DEV_CHECK_ERR(m_FramebufferSlices == RTVDesc.NumArraySlices,
                               "The number of slices (", RTVDesc.NumArraySlices, ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
                 DEV_CHECK_ERR(m_FramebufferSamples == TexDesc.SampleCount,
@@ -1054,18 +1054,18 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
         // Use depth stencil size to set render target size
         if (m_FramebufferWidth == 0)
         {
-            m_FramebufferWidth   = std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U);
-            m_FramebufferHeight  = std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U);
+            m_FramebufferWidth   = (std::max)(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U);
+            m_FramebufferHeight  = (std::max)(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U);
             m_FramebufferSlices  = DSVDesc.NumArraySlices;
             m_FramebufferSamples = TexDesc.SampleCount;
         }
         else
         {
 #ifdef DILIGENT_DEVELOPMENT
-            DEV_CHECK_ERR(m_FramebufferWidth == std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U),
-                          "Depth-stencil target width (", std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
-            DEV_CHECK_ERR(m_FramebufferHeight == std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U),
-                          "Depth-stencil target height (", std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
+            DEV_CHECK_ERR(m_FramebufferWidth == (std::max)(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U),
+                          "Depth-stencil target width (", (std::max)(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
+            DEV_CHECK_ERR(m_FramebufferHeight == (std::max)(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U),
+                          "Depth-stencil target height (", (std::max)(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
             DEV_CHECK_ERR(m_FramebufferSlices == DSVDesc.NumArraySlices,
                           "The number of slices (", DSVDesc.NumArraySlices, ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
             DEV_CHECK_ERR(m_FramebufferSamples == TexDesc.SampleCount,
@@ -1113,8 +1113,8 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
                     DEV_ERROR("IDeviceContext::SetRenderTargets: unexpected shading rate format");
             }
 
-            const auto Width     = std::max(TexDesc.Width >> ViewDesc.MostDetailedMip, 1u);
-            const auto Height    = std::max(TexDesc.Height >> ViewDesc.MostDetailedMip, 1u);
+            const auto Width     = (std::max)(TexDesc.Width >> ViewDesc.MostDetailedMip, 1u);
+            const auto Height    = (std::max)(TexDesc.Height >> ViewDesc.MostDetailedMip, 1u);
             const auto MinWidth  = (m_FramebufferWidth + SRProps.MaxTileSize[0] - 1) / SRProps.MaxTileSize[0];
             const auto MinHeight = (m_FramebufferHeight + SRProps.MaxTileSize[1] - 1) / SRProps.MaxTileSize[1];
             DEV_CHECK_ERR(Width >= MinWidth,
@@ -2202,14 +2202,14 @@ inline Uint32 GetPrimitiveCount(PRIMITIVE_TOPOLOGY Topology, Uint32 Elements)
 
             // clang-format off
             case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:      return Elements / 3;
-            case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:     return std::max(Elements, 2u) - 2;
+            case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:     return (std::max)(Elements, 2u) - 2;
             case PRIMITIVE_TOPOLOGY_POINT_LIST:         return Elements;
             case PRIMITIVE_TOPOLOGY_LINE_LIST:          return Elements / 2;
-            case PRIMITIVE_TOPOLOGY_LINE_STRIP:         return std::max(Elements, 1u) - 1;
+            case PRIMITIVE_TOPOLOGY_LINE_STRIP:         return (std::max)(Elements, 1u) - 1;
             case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ:  return Elements / 6;
-            case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ: return std::max(Elements, 4u) - 4;
+            case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ: return (std::max)(Elements, 4u) - 4;
             case PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ:      return Elements / 4;
-            case PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ:     return std::max(Elements, 3u) - 3;
+            case PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ:     return (std::max)(Elements, 3u) - 3;
             // clang-format on
             default: UNEXPECTED("Unexpected primitive topology"); return 0;
         }
