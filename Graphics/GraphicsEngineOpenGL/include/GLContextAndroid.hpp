@@ -65,13 +65,18 @@ public:
     int32_t GetScreenWidth() const { return screen_width_; }
     int32_t GetScreenHeight() const { return screen_height_; }
 
+    EGLDisplay GetDisplay() const { return display_; }
+    EGLSurface GetSurface() const { return surface_; }
+    EGLContext GetEGLCtx() const { return context_; }
+    EGLConfig  GetConfig() const { return config_; }
+
 private:
     //EGL configurations
     ANativeWindow* window_  = nullptr;
     EGLDisplay     display_ = EGL_NO_DISPLAY;
     EGLSurface     surface_ = EGL_NO_SURFACE;
     EGLContext     context_ = EGL_NO_CONTEXT;
-    EGLConfig      config_;
+    EGLConfig      config_  = nullptr;
 
 #if DILIGENT_USE_OPENXR
     std::unique_ptr<OpenXRAttribs> openxr_attribs_;
