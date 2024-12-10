@@ -176,9 +176,15 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
     endif()
 endif()
 
-if(${CMAKE_GENERATOR} MATCHES "MinGW")
-    message("Building with MinGW")
-    set(MINGW_BUILD TRUE CACHE INTERNAL "Building with MinGW")
+set(MINGW_BUILD FALSE CACHE INTERNAL "MinGW build flag")
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
+    (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND
+            CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"))
+        set(MINGW_BUILD TRUE CACHE INTERNAL "MinGW build flag")
+        message("Detected MinGW-${CMAKE_CXX_COMPILER_ID} toolchain")
+    endif()
 endif()
 
 if(PLATFORM_WIN32)
