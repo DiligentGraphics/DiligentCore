@@ -7,7 +7,6 @@ set(BUILD_TESTS OFF)
 set(BUILD_API_LAYERS ON)
 FetchContent_Declare(
     OpenXR
-    URL_HASH MD5=924a94a2da0b5ef8e82154c623d88644
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     URL https://github.com/KhronosGroup/OpenXR-SDK-Source/archive/refs/tags/release-1.0.34.zip
 )

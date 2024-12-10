@@ -32,6 +32,10 @@
 
 #include "GLContextAndroid.hpp"
 
+#if DILIGENT_USE_OPENXR
+#    include "OpenXR_GLHelpers.hpp"
+#endif
+
 #ifndef EGL_CONTEXT_MINOR_VERSION_KHR
 #    define EGL_CONTEXT_MINOR_VERSION_KHR 0x30FB
 #endif
@@ -150,6 +154,14 @@ bool GLContext::InitEGLSurface()
 
 bool GLContext::InitEGLContext()
 {
+#if DILIGENT_USE_OPENXR
+    Version OpenXRRequiredGLESVersion;
+    if (openxr_attribs_)
+    {
+        OpenXRRequiredGLESVersion = GetOpenXRRequiredGLVersion(openxr_attribs_.get());
+    }
+#endif
+
     std::pair<int, int> es_versions[] = {{3, 2}, {3, 1}, {3, 0}};
     for (size_t i = 0; i < _countof(es_versions) && context_ == EGL_NO_CONTEXT; ++i)
     {
@@ -191,6 +203,14 @@ bool GLContext::InitEGLContext()
     {
         LOG_ERROR_AND_THROW("Failed to create EGLContext");
     }
+
+#if DILIGENT_USE_OPENXR
+    if (openxr_attribs_ && OpenXRRequiredGLESVersion > Version{static_cast<Uint32>(major_version_), static_cast<Uint32>(minor_version_)})
+    {
+        LOG_ERROR("OpenGLES version ", major_version_, '.', minor_version_, " does not meet minimum required version for OpenXR: ",
+                  OpenXRRequiredGLESVersion.Major, '.', OpenXRRequiredGLESVersion.Minor);
+    }
+#endif
 
     if (eglMakeCurrent(display_, surface_, surface_, context_) == EGL_FALSE)
     {
@@ -288,6 +308,13 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
     gles_initialized_(false),
     egl_context_initialized_(false)
 {
+#if DILIGENT_USE_OPENXR
+    if (InitAttribs.pXRAttribs != nullptr && InitAttribs.pXRAttribs->Instance != 0)
+    {
+        openxr_attribs_ = std::make_unique<OpenXRAttribs>(*InitAttribs.pXRAttribs);
+    }
+#endif
+
     auto* NativeWindow = reinterpret_cast<ANativeWindow*>(InitAttribs.Window.pAWindow);
     Init(NativeWindow);
 
