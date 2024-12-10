@@ -27,21 +27,26 @@
 
 #pragma once
 
+#include <memory>
+
 #include <EGL/egl.h>
 #include <android/native_window.h>
 
 namespace Diligent
 {
 
+struct EngineGLCreateInfo;
+struct OpenXRAttribs;
+
 class GLContext
 {
 public:
     using NativeGLContextType = EGLContext;
 
-    GLContext(const struct EngineGLCreateInfo& InitAttribs,
-              RENDER_DEVICE_TYPE&              DevType,
-              struct Version&                  APIVersion,
-              const struct SwapChainDesc*      pSCDesc);
+    GLContext(const EngineGLCreateInfo&   InitAttribs,
+              RENDER_DEVICE_TYPE&         DevType,
+              struct Version&             APIVersion,
+              const struct SwapChainDesc* pSCDesc);
     ~GLContext();
 
     bool Init(ANativeWindow* window);
@@ -67,6 +72,10 @@ private:
     EGLSurface     surface_ = EGL_NO_SURFACE;
     EGLContext     context_ = EGL_NO_CONTEXT;
     EGLConfig      config_;
+
+#if DILIGENT_USE_OPENXR
+    std::unique_ptr<OpenXRAttribs> openxr_attribs_;
+#endif
 
     EGLint egl_major_version_ = 0;
     EGLint egl_minor_version_ = 0;
