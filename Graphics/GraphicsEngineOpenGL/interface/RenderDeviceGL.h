@@ -49,7 +49,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_RenderDeviceGL =
 // clang-format off
 
 #if PLATFORM_WIN32
-/// Native GL context attributes
+/// Win32 native GL context attributes
 struct NativeGLContextAttribsWin32
 {
     /// Device context handle
@@ -60,6 +60,24 @@ struct NativeGLContextAttribsWin32
 };
 typedef struct NativeGLContextAttribsWin32 NativeGLContextAttribsWin32;
 typedef struct NativeGLContextAttribsWin32 NativeGLContextAttribs;
+#elif PLATFORM_ANDROID
+/// Android native GL context attributes
+struct NativeGLContextAttribsAndroid
+{
+    /// EGL display
+    void* Display DEFAULT_INITIALIZER(nullptr);
+
+    // EGL surface
+    void* Surface DEFAULT_INITIALIZER(nullptr);
+
+    /// EGL context
+    void* Context DEFAULT_INITIALIZER(nullptr);
+
+    /// EGL config
+    void* Config DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct NativeGLContextAttribsAndroid NativeGLContextAttribsAndroid;
+typedef struct NativeGLContextAttribsAndroid NativeGLContextAttribs;
 #endif
 
 /// Exposes OpenGL-specific functionality of a render device.
@@ -128,7 +146,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceGL, IRenderDevice)
                                             RESOURCE_STATE        InitialState,
                                             ITexture**            ppTexture) PURE;
 
-#if PLATFORM_WIN32
+#if PLATFORM_WIN32 || PLATFORM_ANDROID
     /// Returns platform-specific GL context attributes
     VIRTUAL NativeGLContextAttribs METHOD(GetNativeGLContextAttribs)(THIS) CONST PURE;
 #endif

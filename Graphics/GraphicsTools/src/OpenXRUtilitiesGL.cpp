@@ -49,6 +49,13 @@ constexpr XrStructureType XR_TYPE_SWAPCHAIN_IMAGE_GL = XR_TYPE_SWAPCHAIN_IMAGE_O
 
 #elif GLES_SUPPORTED
 
+#    if PLATFORM_ANDROID
+#        include <jni.h>
+#        include <EGL/egl.h>
+
+#        define XR_USE_PLATFORM_ANDROID
+#    endif
+
 typedef unsigned int EGLenum;
 
 #    define XR_USE_GRAPHICS_API_OPENGL_ES
@@ -77,11 +84,26 @@ void GetOpenXRGraphicsBindingGL(IRenderDevice*  pDevice,
     VERIFY_EXPR(pDeviceGL != nullptr);
     NativeGLContextAttribsWin32 GLCtxAttribs = pDeviceGL->GetNativeGLContextAttribs();
 
-    XrGraphicsBindingOpenGLWin32KHR& Binding = *reinterpret_cast<XrGraphicsBindingOpenGLWin32KHR*>(pDataBlob->GetDataPtr());
-    Binding.type                             = XR_TYPE_GRAPHICS_BINDING_D3D11_KHR;
-    Binding.next                             = nullptr;
-    Binding.hDC                              = static_cast<HDC>(GLCtxAttribs.hDC);
-    Binding.hGLRC                            = static_cast<HGLRC>(GLCtxAttribs.hGLRC);
+    XrGraphicsBindingOpenGLWin32KHR& Binding{*pDataBlob->GetDataPtr<XrGraphicsBindingOpenGLWin32KHR>()};
+    Binding.type  = XR_TYPE_GRAPHICS_BINDING_D3D11_KHR;
+    Binding.next  = nullptr;
+    Binding.hDC   = static_cast<HDC>(GLCtxAttribs.hDC);
+    Binding.hGLRC = static_cast<HGLRC>(GLCtxAttribs.hGLRC);
+
+    *ppGraphicsBinding = pDataBlob.Detach();
+#elif GLES_SUPPORTED && PLATFORM_ANDROID
+    RefCntAutoPtr<DataBlobImpl> pDataBlob{DataBlobImpl::Create(sizeof(XrGraphicsBindingOpenGLESAndroidKHR))};
+
+    RefCntAutoPtr<IRenderDeviceGL> pDeviceGL{pDevice, IID_RenderDeviceGL};
+    VERIFY_EXPR(pDeviceGL != nullptr);
+    NativeGLContextAttribsAndroid GLCtxAttribs = pDeviceGL->GetNativeGLContextAttribs();
+
+    XrGraphicsBindingOpenGLESAndroidKHR& Binding{*pDataBlob->GetDataPtr<XrGraphicsBindingOpenGLESAndroidKHR>()};
+    Binding.type    = XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR;
+    Binding.next    = nullptr;
+    Binding.display = GLCtxAttribs.Display;
+    Binding.config  = GLCtxAttribs.Config;
+    Binding.context = GLCtxAttribs.Context;
 
     *ppGraphicsBinding = pDataBlob.Detach();
 #else

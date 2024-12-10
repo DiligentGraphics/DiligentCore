@@ -190,7 +190,7 @@ public:
                                                                                   RESOURCE_DIMENSION Dimension,
                                                                                   Uint32             SampleCount) const override final;
 
-#if PLATFORM_WIN32
+#if PLATFORM_WIN32 || PLATFORM_ANDROID
     virtual NativeGLContextAttribs DILIGENT_CALL_TYPE GetNativeGLContextAttribs() const override final;
 #endif
 
