@@ -31,6 +31,16 @@
 
 #if GL_SUPPORTED
 
+#    if PLATFORM_WIN32
+
+#        include "WinHPreface.h"
+#        include <Windows.h>
+#        include <Unknwn.h>
+#        include "WinHPostface.h"
+
+#        define XR_USE_PLATFORM_WIN32
+#    endif
+
 #    define XR_USE_GRAPHICS_API_OPENGL
 #    include <openxr/openxr_platform.h>
 
@@ -60,7 +70,23 @@ void GetOpenXRGraphicsBindingGL(IRenderDevice*  pDevice,
                                 IDeviceContext* pContext,
                                 IDataBlob**     ppGraphicsBinding)
 {
-    UNSUPPORTED("Not yet implemented");
+#if GL_SUPPORTED && PLATFORM_WIN32
+    RefCntAutoPtr<DataBlobImpl> pDataBlob{DataBlobImpl::Create(sizeof(XrGraphicsBindingOpenGLWin32KHR))};
+
+    RefCntAutoPtr<IRenderDeviceGL> pDeviceGL{pDevice, IID_RenderDeviceGL};
+    VERIFY_EXPR(pDeviceGL != nullptr);
+    NativeGLContextAttribsWin32 GLCtxAttribs = pDeviceGL->GetNativeGLContextAttribs();
+
+    XrGraphicsBindingOpenGLWin32KHR& Binding = *reinterpret_cast<XrGraphicsBindingOpenGLWin32KHR*>(pDataBlob->GetDataPtr());
+    Binding.type                             = XR_TYPE_GRAPHICS_BINDING_D3D11_KHR;
+    Binding.next                             = nullptr;
+    Binding.hDC                              = static_cast<HDC>(GLCtxAttribs.hDC);
+    Binding.hGLRC                            = static_cast<HGLRC>(GLCtxAttribs.hGLRC);
+
+    *ppGraphicsBinding = pDataBlob.Detach();
+#else
+    UNEXPECTED("OpenXR GL bindings are not supported on this platform. The application should initialize the bindings manually.");
+#endif
 }
 
 void AllocateOpenXRSwapchainImageDataGL(Uint32      ImageCount,

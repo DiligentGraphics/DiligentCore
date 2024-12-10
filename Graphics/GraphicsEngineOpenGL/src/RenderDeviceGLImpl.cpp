@@ -1732,4 +1732,14 @@ void RenderDeviceGLImpl::IdleGPU()
     glFinish();
 }
 
+#if PLATFORM_WIN32
+NativeGLContextAttribs RenderDeviceGLImpl::GetNativeGLContextAttribs() const
+{
+    NativeGLContextAttribs Attribs;
+    Attribs.hDC   = m_GLContext.GetWindowHandleToDeviceContext();
+    Attribs.hGLRC = m_GLContext.GetHandle();
+    return Attribs;
+}
+#endif
+
 } // namespace Diligent

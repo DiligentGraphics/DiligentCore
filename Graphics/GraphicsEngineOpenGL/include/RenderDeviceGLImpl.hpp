@@ -190,6 +190,10 @@ public:
                                                                                   RESOURCE_DIMENSION Dimension,
                                                                                   Uint32             SampleCount) const override final;
 
+#if PLATFORM_WIN32
+    virtual NativeGLContextAttribs DILIGENT_CALL_TYPE GetNativeGLContextAttribs() const override final;
+#endif
+
     FBOCache& GetFBOCache(GLContext::NativeGLContextType Context);
     void      OnReleaseTexture(ITexture* pTexture);
 
