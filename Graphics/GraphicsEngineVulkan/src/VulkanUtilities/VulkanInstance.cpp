@@ -680,6 +680,11 @@ VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const 
     return SelectedPhysicalDevice;
 }
 
+#ifdef _MSC_VER
+#    pragma warning(push)
+#    pragma warning(disable : 4702) // unreachable code
+#endif
+
 VkPhysicalDevice VulkanInstance::SelectPhysicalDeviceForOpenXR(const CreateInfo::OpenXRInfo& XRInfo) const noexcept(false)
 {
 #if DILIGENT_USE_OPENXR
@@ -708,8 +713,12 @@ VkPhysicalDevice VulkanInstance::SelectPhysicalDeviceForOpenXR(const CreateInfo:
     return vkDevice;
 #else
     LOG_ERROR_AND_THROW("OpenXR is not supported. Use DILIGENT_USE_OPENXR CMake option to enable it.");
-    return VK_NULL_HANDLE;
+    return VK_NULL_HANDLE; // Triggers unreachable code warning on MSVC
 #endif
 }
+
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
 
 } // namespace VulkanUtilities
