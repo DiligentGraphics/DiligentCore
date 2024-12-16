@@ -72,6 +72,7 @@ static APIInfo InitAPIInfo()
     INIT_STRUCTURE_SIZE(DisplayModeAttribs);
     INIT_STRUCTURE_SIZE(SwapChainDesc);
     INIT_STRUCTURE_SIZE(FullScreenModeDesc);
+    INIT_STRUCTURE_SIZE(OpenXRAttribs);
     INIT_STRUCTURE_SIZE(EngineCreateInfo);
     INIT_STRUCTURE_SIZE(EngineGLCreateInfo);
     INIT_STRUCTURE_SIZE(EngineD3D11CreateInfo);

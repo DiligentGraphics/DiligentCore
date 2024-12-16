@@ -30,7 +30,7 @@
 /// \file
 /// Diligent API information
 
-#define DILIGENT_API_VERSION 256001
+#define DILIGENT_API_VERSION 256002
 
 #include "../../../Primitives/interface/BasicTypes.h"
 
@@ -62,6 +62,7 @@ struct APIInfo
     size_t DisplayModeAttribsSize                DEFAULT_INITIALIZER(0);
     size_t SwapChainDescSize                     DEFAULT_INITIALIZER(0);
     size_t FullScreenModeDescSize                DEFAULT_INITIALIZER(0);
+    size_t OpenXRAttribsSize                     DEFAULT_INITIALIZER(0);
     size_t EngineCreateInfoSize                  DEFAULT_INITIALIZER(0);
     size_t EngineGLCreateInfoSize                DEFAULT_INITIALIZER(0);
     size_t EngineD3D11CreateInfoSize             DEFAULT_INITIALIZER(0);
