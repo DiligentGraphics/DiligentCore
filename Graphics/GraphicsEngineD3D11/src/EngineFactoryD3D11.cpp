@@ -76,7 +76,7 @@ static void GetOpenXRAdapterRequirements(const OpenXRAttribs& XR, LUID& AdapterL
         return;
 
     if (XR.GetInstanceProcAddr == nullptr)
-        LOG_ERROR_AND_THROW("xrGetInstanceProcAddr must not be null");
+        LOG_ERROR_AND_THROW("GetInstanceProcAddr must not be null");
 
     XrInstance xrInstance = XR_NULL_HANDLE;
     static_assert(sizeof(xrInstance) == sizeof(XR.Instance), "XrInstance size mismatch");

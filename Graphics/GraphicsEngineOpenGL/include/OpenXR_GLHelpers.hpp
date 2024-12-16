@@ -58,7 +58,7 @@ static Version GetOpenXRRequiredGLVersion(const OpenXRAttribs* pXR) noexcept(fal
         return {};
 
     if (pXR->GetInstanceProcAddr == nullptr)
-        LOG_ERROR_AND_THROW("xrGetInstanceProcAddr must not be null");
+        LOG_ERROR_AND_THROW("GetInstanceProcAddr must not be null");
 
     XrInstance xrInstance = XR_NULL_HANDLE;
     static_assert(sizeof(xrInstance) == sizeof(pXR->Instance), "XrInstance size mismatch");

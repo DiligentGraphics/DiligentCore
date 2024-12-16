@@ -71,6 +71,7 @@ void AllocateOpenXRSwapchainImageDataGL(Uint32      ImageCount,
 void GetOpenXRSwapchainImageGL(IRenderDevice*                    pDevice,
                                const XrSwapchainImageBaseHeader* ImageData,
                                Uint32                            ImageIndex,
+                               const TextureDesc&                TexDesc,
                                ITexture**                        ppImage);
 #endif
 
@@ -229,7 +230,7 @@ void GetOpenXRSwapchainImage(IRenderDevice*                    pDevice,
 #if GL_SUPPORTED || GLES_SUPPORTED
         case RENDER_DEVICE_TYPE_GL:
         case RENDER_DEVICE_TYPE_GLES:
-            GetOpenXRSwapchainImageGL(pDevice, ImageData, ImageIndex, ppImage);
+            GetOpenXRSwapchainImageGL(pDevice, ImageData, ImageIndex, TexDesc, ppImage);
             break;
 #endif
 

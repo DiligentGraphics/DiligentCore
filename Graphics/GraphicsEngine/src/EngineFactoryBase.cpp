@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -83,6 +83,14 @@ void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdap
                 break;
             default:
                 LOG_ERROR_AND_THROW("Unknown queue priority");
+        }
+    }
+
+    if (EngineCI.pXRAttribs != nullptr && EngineCI.pXRAttribs->Instance != 0)
+    {
+        if (EngineCI.pXRAttribs->GetInstanceProcAddr == nullptr)
+        {
+            LOG_ERROR_AND_THROW("pXRAttribs->GetInstanceProcAddr must not be null if pXRAttribs->Instance is not null");
         }
     }
 }
