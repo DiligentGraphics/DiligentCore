@@ -343,12 +343,14 @@ XrDebugUtilsMessengerEXT CreateOpenXRDebugUtilsMessenger(XrInstance             
     return debugUtilsMessenger;
 }
 
-void DestroyOpenXRDebugUtilsMessenger(XrDebugUtilsMessengerEXT debugUtilsMessenger)
+XrResult DestroyOpenXRDebugUtilsMessenger(XrDebugUtilsMessengerEXT debugUtilsMessenger)
 {
+    XrResult Res = XR_ERROR_FUNCTION_UNSUPPORTED;
     if (xrDestroyDebugUtilsMessengerEXT)
     {
-        xrDestroyDebugUtilsMessengerEXT(debugUtilsMessenger);
+        Res = xrDestroyDebugUtilsMessengerEXT(debugUtilsMessenger);
     }
+    return Res;
 }
 
 } // namespace Diligent

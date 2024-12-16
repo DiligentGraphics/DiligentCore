@@ -68,7 +68,7 @@ XrDebugUtilsMessengerEXT DILIGENT_GLOBAL_FUNCTION(CreateOpenXRDebugUtilsMessenge
     XrDebugUtilsMessageSeverityFlagsEXT xrMessageSeverities);
 
 /// Destroys OpenXR debug utils messenger.
-void DILIGENT_GLOBAL_FUNCTION(DestroyOpenXRDebugUtilsMessenger)(XrDebugUtilsMessengerEXT xrDebugUtilsMessenger);
+XrResult DILIGENT_GLOBAL_FUNCTION(DestroyOpenXRDebugUtilsMessenger)(XrDebugUtilsMessengerEXT xrDebugUtilsMessenger);
 
 /// Allocates OpenXR swapchain image data, i.e. an array of appropriate structures for each device
 /// type (XrSwapchainImageVulkanKHR, XrSwapchainImageD3D11KHR, etc.).
