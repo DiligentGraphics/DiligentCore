@@ -171,8 +171,8 @@ if (WEBGPU_SUPPORTED)
     set_directory_root_folder("dawn" "DiligentCore/ThirdParty/dawn")
 endif()
 
-if(DILIGENT_USE_OPENXR)
-    add_subdirectory(OpenXR-SDK EXCLUDE_FROM_ALL)    
+if(DILIGENT_USE_OPENXR AND NOT (TARGET openxr_loader))
+    add_subdirectory(OpenXR-SDK EXCLUDE_FROM_ALL)
 endif()
 
 if ((${DILIGENT_BUILD_GOOGLE_TEST}) AND (NOT TARGET gtest))
