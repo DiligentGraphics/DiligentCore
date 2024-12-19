@@ -154,7 +154,7 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
     // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains#step-4-wait-before-rendering-each-frame
     WaitForFrame();
 
-    auto hr = m_pSwapChain->Present(SyncInterval, 0);
+    auto hr = m_pSwapChain->Present(SyncInterval, SyncInterval == 0 ? DXGI_PRESENT_ALLOW_TEARING : 0);
     VERIFY(SUCCEEDED(hr), "Present failed");
 
     if (m_SwapChainDesc.IsPrimary)
