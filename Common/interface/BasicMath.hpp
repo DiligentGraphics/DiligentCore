@@ -1716,46 +1716,74 @@ template <class T> struct Matrix4x4
     // See https://github.com/DiligentGraphics/DiligentCore/blob/master/doc/CoordinateSystem.md
     void SetNearFarClipPlanes(T zNear, T zFar, bool NegativeOneToOneZ)
     {
-        if (NegativeOneToOneZ)
+        if (_44 == 0)
         {
-            // https://www.opengl.org/sdk/docs/man2/xhtml/gluPerspective.xml
-            // http://www.terathon.com/gdc07_lengyel.pdf
-            // Note that OpenGL uses right-handed coordinate system, where
-            // camera is looking in negative z direction:
-            //   OO
-            //  |__|<--------------------
-            //         -z             +z
-            // Consequently, OpenGL projection matrix given by these two
-            // references inverts z axis.
+            // Perspective projection
+            if (NegativeOneToOneZ)
+            {
+                // https://www.opengl.org/sdk/docs/man2/xhtml/gluPerspective.xml
+                // http://www.terathon.com/gdc07_lengyel.pdf
+                // Note that OpenGL uses right-handed coordinate system, where
+                // camera is looking in negative z direction:
+                //   OO
+                //  |__|<--------------------
+                //         -z             +z
+                // Consequently, OpenGL projection matrix given by these two
+                // references inverts z axis.
 
-            // We do not need to do this, because we use DX coordinate
-            // system for the camera space. Thus we need to invert the
-            // sign of the values in the third column in the matrix
-            // from the references:
+                // We do not need to do this, because we use DX coordinate
+                // system for the camera space. Thus we need to invert the
+                // sign of the values in the third column in the matrix
+                // from the references:
 
-            _33 = -(-(zFar + zNear) / (zFar - zNear));
-            _43 = -2 * zNear * zFar / (zFar - zNear);
-            _34 = -(-1);
+                _33 = -(-(zFar + zNear) / (zFar - zNear));
+                _43 = -2 * zNear * zFar / (zFar - zNear);
+                _34 = -(-1);
+            }
+            else
+            {
+                _33 = zFar / (zFar - zNear);
+                _43 = -zNear * zFar / (zFar - zNear);
+                _34 = 1;
+            }
         }
         else
         {
-            _33 = zFar / (zFar - zNear);
-            _43 = -zNear * zFar / (zFar - zNear);
-            _34 = 1;
+            // Orthographic projection
+            _33 = (NegativeOneToOneZ ? 2 : 1) / (zFar - zNear);
+            _43 = (NegativeOneToOneZ ? zNear + zFar : zNear) / (zNear - zFar);
         }
     }
 
     void GetNearFarClipPlanes(T& zNear, T& zFar, bool NegativeOneToOneZ) const
     {
-        if (NegativeOneToOneZ)
+        if (_44 == 0)
         {
-            zNear = _43 / (-1 - _33);
-            zFar  = _43 / (+1 - _33);
+            // Perspective projection
+            if (NegativeOneToOneZ)
+            {
+                zNear = _43 / (-1 - _33);
+                zFar  = _43 / (+1 - _33);
+            }
+            else
+            {
+                zNear = -_43 / _33;
+                zFar  = _33 / (_33 - 1) * zNear;
+            }
         }
         else
         {
-            zNear = -_43 / _33;
-            zFar  = _33 / (_33 - 1) * zNear;
+            // Orthographic projection
+            if (NegativeOneToOneZ)
+            {
+                zNear = (-1 - _43) / _33;
+                zFar  = (+1 - _43) / _33;
+            }
+            else
+            {
+                zNear = -_43 / _33;
+                zFar  = (1 - _43) / _33;
+            }
         }
     }
 
@@ -1774,17 +1802,17 @@ template <class T> struct Matrix4x4
 
     static Matrix4x4 OrthoOffCenter(T left, T right, T bottom, T top, T zNear, T zFar, bool NegativeOneToOneZ) // Left-handed ortho projection
     {
-        auto _22 = (NegativeOneToOneZ ? 2 : 1) / (zFar - zNear);
-        auto _32 = (NegativeOneToOneZ ? zNear + zFar : zNear) / (zNear - zFar);
         // clang-format off
-        return Matrix4x4
+        Matrix4x4 Proj
             {
-                         2   / (right - left),                                 0,     0,    0,
-                                            0,                2 / (top - bottom),     0,    0,
-                                            0,                                 0,   _22,    0,
-                (left + right)/(left - right),   (top + bottom) / (bottom - top),   _32,    1
+                         2   / (right - left),                                 0,   0,    0,
+                                            0,                2 / (top - bottom),   0,    0,
+                                            0,                                 0,   0,    0,
+                (left + right)/(left - right),   (top + bottom) / (bottom - top),   0,    1
             };
         // clang-format on
+        Proj.SetNearFarClipPlanes(zNear, zFar, NegativeOneToOneZ);
+        return Proj;
     }
 
     static Matrix4x4 Ortho(T width, T height, T zNear, T zFar, bool NegativeOneToOneZ) // Left-handed ortho projection

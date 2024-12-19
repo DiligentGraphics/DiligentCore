@@ -1074,37 +1074,66 @@ TEST(Common_BasicMath, OrthoProjection)
     {
         float4x4 OrthoProj = float4x4::Ortho(2.f, 4.f, -4.f, 12.f, false);
 
-        auto c0 = float3{-1.f, -2.f, -4.f} * OrthoProj;
-        auto c1 = float3{+1.f, +2.f, +12.f} * OrthoProj;
+        float3 c0 = float3{-1.f, -2.f, -4.f} * OrthoProj;
+        float3 c1 = float3{+1.f, +2.f, +12.f} * OrthoProj;
         EXPECT_EQ(c0, float3(-1, -1, 0));
         EXPECT_EQ(c1, float3(+1, +1, +1));
+
+        float Near = 0, Far = 0;
+        OrthoProj.GetNearFarClipPlanes(Near, Far, false);
+        EXPECT_FLOAT_EQ(Near, -4);
+        EXPECT_FLOAT_EQ(Far, 12);
+
+        OrthoProj.SetNearFarClipPlanes(2, 34, false);
+        OrthoProj.GetNearFarClipPlanes(Near, Far, false);
+        EXPECT_FLOAT_EQ(Near, 2);
+        EXPECT_FLOAT_EQ(Far, 34);
     }
 
     {
         float4x4 OrthoProj = float4x4::Ortho(2.f, 4.f, -4.f, 12.f, true);
 
-        auto c0 = float3(-1.f, -2.f, -4.f) * OrthoProj;
-        auto c1 = float3(+1.f, +2.f, +12.f) * OrthoProj;
+        float3 c0 = float3(-1.f, -2.f, -4.f) * OrthoProj;
+        float3 c1 = float3(+1.f, +2.f, +12.f) * OrthoProj;
         EXPECT_EQ(c0, float3(-1, -1, -1));
         EXPECT_EQ(c1, float3(+1, +1, +1));
+
+        float Near = 0, Far = 0;
+        OrthoProj.GetNearFarClipPlanes(Near, Far, true);
+        EXPECT_FLOAT_EQ(Near, -4);
+        EXPECT_FLOAT_EQ(Far, 12);
+
+        OrthoProj.SetNearFarClipPlanes(2, 34, true);
+        OrthoProj.GetNearFarClipPlanes(Near, Far, true);
+        EXPECT_FLOAT_EQ(Near, 2);
+        EXPECT_FLOAT_EQ(Far, 34);
     }
 
     {
         float4x4 OrthoProj = float4x4::OrthoOffCenter(-2.f, 6.f, -4.f, +12.f, -6.f, 10.f, false);
 
-        auto c0 = float3{-2.f, -4.f, -6.f} * OrthoProj;
-        auto c1 = float3{+6.f, +12.f, +10.f} * OrthoProj;
+        float3 c0 = float3{-2.f, -4.f, -6.f} * OrthoProj;
+        float3 c1 = float3{+6.f, +12.f, +10.f} * OrthoProj;
         EXPECT_EQ(c0, float3(-1, -1, 0));
         EXPECT_EQ(c1, float3(+1, +1, +1));
+
+        float Near = 0, Far = 0;
+        OrthoProj.GetNearFarClipPlanes(Near, Far, false);
+        EXPECT_FLOAT_EQ(Near, -6);
+        EXPECT_FLOAT_EQ(Far, 10);
     }
 
     {
         float4x4 OrthoProj = float4x4::OrthoOffCenter(-2.f, 6.f, -4.f, +12.f, -6.f, 10.f, true);
 
-        auto c0 = float3{-2.f, -4.f, -6.f} * OrthoProj;
-        auto c1 = float3{+6.f, +12.f, +10.f} * OrthoProj;
+        float3 c0 = float3{-2.f, -4.f, -6.f} * OrthoProj;
+        float3 c1 = float3{+6.f, +12.f, +10.f} * OrthoProj;
         EXPECT_EQ(c0, float3(-1, -1, -1));
         EXPECT_EQ(c1, float3(+1, +1, +1));
+
+        float Near = 0, Far = 0;
+        OrthoProj.GetNearFarClipPlanes(Near, Far, true);
+        EXPECT_FLOAT_EQ(Near, -6);
     }
 }
 
