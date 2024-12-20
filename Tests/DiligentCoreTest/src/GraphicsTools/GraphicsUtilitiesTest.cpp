@@ -81,6 +81,25 @@ TEST(GraphicsUtilitiesTest, GetNativeTextureFormat_GetTextureFormatFromNative)
         TEX_FORMAT_BGRX8_UNORM_SRGB,
     };
 
+    const std::unordered_set<TEXTURE_FORMAT> SkipFormatsMtl{
+        TEX_FORMAT_RGB32_FLOAT,
+        TEX_FORMAT_RGB32_UINT,
+        TEX_FORMAT_RGB32_SINT,
+        TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,
+        TEX_FORMAT_X32_TYPELESS_G8X24_UINT,
+        TEX_FORMAT_R24_UNORM_X8_TYPELESS,
+        TEX_FORMAT_X24_TYPELESS_G8_UINT,
+        TEX_FORMAT_A8_UNORM,
+        TEX_FORMAT_R1_UNORM,
+        TEX_FORMAT_RG8_B8G8_UNORM,
+        TEX_FORMAT_G8R8_G8B8_UNORM,
+        TEX_FORMAT_B5G6R5_UNORM,
+        TEX_FORMAT_B5G5R5A1_UNORM,
+        TEX_FORMAT_BGRX8_UNORM,
+        TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM,
+        TEX_FORMAT_BGRX8_UNORM_SRGB,
+    };
+
     const std::unordered_set<TEXTURE_FORMAT> SkipFormatsWebGPU{
         TEX_FORMAT_RGB32_FLOAT,
         TEX_FORMAT_RGB32_UINT,
@@ -139,6 +158,13 @@ TEST(GraphicsUtilitiesTest, GetNativeTextureFormat_GetTextureFormatFromNative)
         if (SkipFormatsVk.find(Fmt) == SkipFormatsVk.end())
         {
             Test(RENDER_DEVICE_TYPE_VULKAN);
+        }
+#endif
+
+#if METAL_SUPPORTED
+        if (SkipFormatsMtl.find(Fmt) == SkipFormatsMtl.end())
+        {
+            Test(RENDER_DEVICE_TYPE_METAL);
         }
 #endif
 

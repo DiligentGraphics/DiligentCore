@@ -60,6 +60,11 @@ int64_t        GetNativeTextureFormatVk(TEXTURE_FORMAT TexFormat);
 TEXTURE_FORMAT GetTextureFormatFromNativeVk(int64_t NativeFormat);
 #endif
 
+#if METAL_SUPPORTED
+int64_t        GetNativeTextureFormatMtl(TEXTURE_FORMAT TexFormat);
+TEXTURE_FORMAT GetTextureFormatFromNativeMtl(int64_t NativeFormat);
+#endif
+
 #if WEBGPU_SUPPORTED
 int64_t        GetNativeTextureFormatWebGPU(TEXTURE_FORMAT TexFormat);
 TEXTURE_FORMAT GetTextureFormatFromNativeWebGPU(int64_t NativeFormat);
@@ -597,6 +602,11 @@ int64_t GetNativeTextureFormat(TEXTURE_FORMAT TexFormat, RENDER_DEVICE_TYPE Devi
             return GetNativeTextureFormatVk(TexFormat);
 #endif
 
+#if METAL_SUPPORTED
+        case RENDER_DEVICE_TYPE_METAL:
+            return GetNativeTextureFormatMtl(TexFormat);
+#endif
+
 #if WEBGPU_SUPPORTED
         case RENDER_DEVICE_TYPE_WEBGPU:
             return GetNativeTextureFormatWebGPU(TexFormat);
@@ -626,6 +636,11 @@ TEXTURE_FORMAT GetTextureFormatFromNative(int64_t NativeFormat, RENDER_DEVICE_TY
         case RENDER_DEVICE_TYPE_GL:
         case RENDER_DEVICE_TYPE_GLES:
             return GetTextureFormatFromNativeGL(NativeFormat);
+#endif
+
+#if METAL_SUPPORTED
+        case RENDER_DEVICE_TYPE_METAL:
+            return GetTextureFormatFromNativeMtl(NativeFormat);
 #endif
 
 #if VULKAN_SUPPORTED

@@ -127,7 +127,7 @@ endif()
 
 if(METAL_SUPPORTED)
     list(APPEND SOURCE src/GraphicsUtilitiesMtl.mm)
-    list(APPEND DEPENDENCIES Diligent-GraphicsEngineMetalInterface)
+    list(APPEND DEPENDENCIES Diligent-GraphicsEngineMetal-static)
 endif()
 
 add_library(Diligent-GraphicsTools STATIC ${SOURCE} ${INCLUDE} ${INTERFACE})

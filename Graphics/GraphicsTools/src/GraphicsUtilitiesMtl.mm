@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,6 +34,9 @@
 namespace Diligent
 {
 
+MTLPixelFormat TextureFormatToMTLPixelFormat(TEXTURE_FORMAT TexFormat);
+TEXTURE_FORMAT MTLPixelFormatToTextureFormat(MTLPixelFormat mtlPixelFormat);
+
 void CreateSparseTextureMtl(IRenderDevice*     pDevice,
                             const TextureDesc& TexDesc,
                             IDeviceMemory*     pMemory,
@@ -52,6 +55,16 @@ void CreateSparseTextureMtl(IRenderDevice*     pDevice,
     DEV_CHECK_ERR(TexDesc.Usage == USAGE_SPARSE, "This function should be used to create sparse textures.");
     
     pDeviceMtl->CreateSparseTexture(TexDesc, pMemory, ppTexture);
+}
+
+int64_t GetNativeTextureFormatMtl(TEXTURE_FORMAT TexFormat)
+{
+    return static_cast<int64_t>(TextureFormatToMTLPixelFormat(TexFormat));
+}
+
+TEXTURE_FORMAT GetTextureFormatFromNativeMtl(int64_t NativeFormat)
+{
+    return MTLPixelFormatToTextureFormat(static_cast<MTLPixelFormat>(NativeFormat));
 }
 
 } // namespace Diligent
