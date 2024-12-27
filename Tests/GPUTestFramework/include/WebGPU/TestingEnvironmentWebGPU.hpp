@@ -59,6 +59,38 @@ private:
     WGPUDevice m_wgpuDevice = nullptr;
 };
 
+#if PLATFORM_EMSCRIPTEN
+
+using WGPUShaderSourceWGSL = WGPUShaderModuleWGSLDescriptor;
+using WGPUStringView       = const char*;
+
+constexpr WGPUSType WGPUSType_ShaderSourceWGSL = WGPUSType_ShaderModuleWGSLDescriptor;
+
+inline WGPUStringView GetWGPUStringView(const char* Str)
+{
+    return Str;
+}
+
+inline WGPUStringView GetWGPUStringView(const std::string& Str)
+{
+    return Str.c_str();
+}
+
+#else
+
+template <size_t Size>
+WGPUStringView GetWGPUStringView(const char (&Str)[Size])
+{
+    return {Str, Size - 1};
+}
+
+inline WGPUStringView GetWGPUStringView(const std::string& Str)
+{
+    return {Str.c_str(), Str.length()};
+}
+
+#endif
+
 } // namespace Testing
 
 } // namespace Diligent

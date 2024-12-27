@@ -63,7 +63,7 @@ WGPUStencilOperation StencilOpToWGPUStencilOperation(STENCIL_OP StencilOp);
 
 WGPUQueryType QueryTypeToWGPUQueryType(QUERY_TYPE QueryType);
 
-WGPUColorWriteMaskFlags ColorMaskToWGPUColorWriteMask(COLOR_MASK ColorMask);
+WGPUColorWriteMask ColorMaskToWGPUColorWriteMask(COLOR_MASK ColorMask);
 
 WGPULoadOp AttachmentLoadOpToWGPULoadOp(ATTACHMENT_LOAD_OP Operation);
 
@@ -77,8 +77,13 @@ WGPUPrimitiveTopology PrimitiveTopologyWGPUPrimitiveType(PRIMITIVE_TOPOLOGY Prim
 
 WGPUCullMode CullModeToWGPUCullMode(CULL_MODE CullMode);
 
-WGPUShaderStageFlags ShaderStagesToWGPUShaderStageFlags(SHADER_TYPE Stages);
+WGPUShaderStage ShaderStagesToWGPUShaderStageFlags(SHADER_TYPE Stages);
 
 WGPUVertexStepMode InputElementFrequencyToWGPUVertexStepMode(INPUT_ELEMENT_FREQUENCY StepRate);
+
+inline WGPUOptionalBool BoolToWGPUOptionalBool(bool Value)
+{
+    return Value ? WGPUOptionalBool_True : WGPUOptionalBool_False;
+}
 
 } // namespace Diligent

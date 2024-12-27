@@ -98,7 +98,7 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
         else
         {
             WGPUBufferDescriptor wgpuBufferDesc{};
-            wgpuBufferDesc.label = m_Desc.Name;
+            wgpuBufferDesc.label = GetWGPUStringView(m_Desc.Name);
             wgpuBufferDesc.size  = AlignUp(m_Desc.Size, m_Alignment);
             wgpuBufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc;
 

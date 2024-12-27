@@ -42,6 +42,7 @@
 
 #if !PLATFORM_EMSCRIPTEN
 #    include "dawn/native/DawnNative.h"
+#    include "dawn/dawn_proc.h"
 #endif
 
 #if PLATFORM_EMSCRIPTEN
@@ -111,6 +112,15 @@ WebGPUInstanceWrapper InitializeWebGPUInstance(bool EnableUnsafe)
 #if PLATFORM_EMSCRIPTEN
     WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(nullptr)};
 #else
+    struct SetDawnProcsHelper
+    {
+        SetDawnProcsHelper()
+        {
+            dawnProcSetProcs(&dawn::native::GetProcs());
+        }
+    };
+    static SetDawnProcsHelper SetDawnProcs;
+
     const char* ToggleNames[] = {
         "allow_unsafe_apis"};
 
@@ -121,7 +131,9 @@ WebGPUInstanceWrapper InitializeWebGPUInstance(bool EnableUnsafe)
 
     WGPUInstanceDescriptor wgpuInstanceDesc = {};
     if (EnableUnsafe)
+    {
         wgpuInstanceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuDawnTogglesDesc);
+    }
     WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(&wgpuInstanceDesc)};
 #endif
     if (!wgpuInstance)
@@ -141,15 +153,15 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
         bool                     IsReady       = {};
     };
 
-    auto OnAdapterRequestEnded = [](WGPURequestAdapterStatus Status, WGPUAdapter Adapter, char const* Message, void* pCallbackUserData) {
+    auto OnAdapterRequestEnded = [](WGPURequestAdapterStatus Status, WGPUAdapter Adapter, WGPUStringView Message, void* pCallbackUserData) {
         if (pCallbackUserData != nullptr)
         {
             auto* pUserData          = static_cast<CallbackUserData*>(pCallbackUserData);
             pUserData->Adapter       = Adapter;
             pUserData->RequestStatus = Status;
             pUserData->IsReady       = true;
-            if (Message != nullptr)
-                pUserData->Message = Message;
+            if (WGPUStringViewValid(Message))
+                pUserData->Message = WGPUStringViewToString(Message);
         }
     };
 
@@ -161,7 +173,11 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
     {
         CallbackUserData UserData{};
 
-        WGPURequestAdapterOptions Options{nullptr, nullptr, powerPreference, WGPUBackendType_Undefined, false, false};
+        WGPURequestAdapterOptions Options{};
+        Options.powerPreference      = powerPreference;
+        Options.backendType          = WGPUBackendType_Undefined;
+        Options.forceFallbackAdapter = false;
+        Options.compatibilityMode    = false;
         wgpuInstanceRequestAdapter(wgpuInstance, &Options, OnAdapterRequestEnded, &UserData);
 
         while (!UserData.IsReady)
@@ -183,6 +199,43 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
 
     return wgpuAdapters;
 }
+
+static void DeviceLostCallback(WGPUDeviceLostReason Reason,
+                               WGPUStringView       Message,
+                               void*                userdata)
+{
+    bool Expression = Reason != WGPUDeviceLostReason_Destroyed;
+#if !PLATFORM_EMSCRIPTEN
+    Expression &= (Reason != WGPUDeviceLostReason_InstanceDropped);
+#endif
+    if (Expression && WGPUStringViewValid(Message))
+    {
+        LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", WGPUStringViewToString(Message));
+    }
+}
+
+#if !PLATFORM_EMSCRIPTEN
+static void DeviceLostCallback2(WGPUDevice const*    device,
+                                WGPUDeviceLostReason Reason,
+                                WGPUStringView       Message,
+                                void*                userdata1,
+                                void*                userdata2)
+{
+    DeviceLostCallback(Reason, Message, userdata1);
+}
+
+static void UncapturedErrorCallback2(WGPUDevice const* device,
+                                     WGPUErrorType     MessageType,
+                                     WGPUStringView    Message,
+                                     void*             userdata1,
+                                     void*             userdata2)
+{
+    if (WGPUStringViewValid(Message))
+    {
+        LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", WGPUStringViewToString(Message));
+    }
+}
+#endif
 
 WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineCI, WGPUInstance wgpuInstance, WGPUAdapter wgpuAdapter)
 {
@@ -239,25 +292,16 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
         bool                    IsReady       = {};
     } UserData;
 
-    auto OnDeviceRequestEnded = [](WGPURequestDeviceStatus Status, WGPUDevice Device, char const* Message, void* pCallbackUserData) {
+    auto OnDeviceRequestEnded = [](WGPURequestDeviceStatus Status, WGPUDevice Device, WGPUStringView Message, void* pCallbackUserData) {
         if (pCallbackUserData != nullptr)
         {
             auto* pUserData          = static_cast<CallbackUserData*>(pCallbackUserData);
             pUserData->Device        = Device;
             pUserData->RequestStatus = Status;
             pUserData->IsReady       = true;
-            if (Message != nullptr)
-                pUserData->Message = Message;
+            if (WGPUStringViewValid(Message))
+                pUserData->Message = WGPUStringViewToString(Message);
         }
-    };
-
-    auto DeviceLostCallback = [](WGPUDeviceLostReason Reason, char const* Message, void* pUserdata) {
-        bool Expression = Reason != WGPUDeviceLostReason_Destroyed;
-#if !PLATFORM_EMSCRIPTEN
-        Expression &= Reason != WGPUDeviceLostReason_InstanceDropped;
-#endif
-        if (Expression && Message != nullptr)
-            LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
     };
 
 #if !PLATFORM_EMSCRIPTEN
@@ -278,9 +322,12 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
     DeviceDesc.requiredLimits       = &RequiredLimits;
     DeviceDesc.requiredFeatureCount = Features.size();
     DeviceDesc.requiredFeatures     = Features.data();
-    DeviceDesc.deviceLostCallback   = DeviceLostCallback;
-#if !PLATFORM_EMSCRIPTEN
-    DeviceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuDawnTogglesDesc);
+#if PLATFORM_EMSCRIPTEN
+    DeviceDesc.deviceLostCallback = DeviceLostCallback;
+#else
+    DeviceDesc.deviceLostCallbackInfo2      = {nullptr, WGPUCallbackMode_AllowSpontaneous, DeviceLostCallback2};
+    DeviceDesc.uncapturedErrorCallbackInfo2 = {nullptr, UncapturedErrorCallback2};
+    DeviceDesc.nextInChain                  = reinterpret_cast<WGPUChainedStruct*>(&wgpuDawnTogglesDesc);
 #endif
     wgpuAdapterRequestDevice(wgpuAdapter, &DeviceDesc, OnDeviceRequestEnded, &UserData);
 
@@ -295,9 +342,9 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(EngineWebGPUCreateInfo const& EngineC
 
 GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice wgpuDevice = nullptr /*Hack for Emscripten*/)
 {
-    WGPUAdapterProperties wgpuAdapterDesc{};
+    WGPUAdapterInfo wgpuAdapterInfo{};
     if (wgpuAdapter)
-        wgpuAdapterGetProperties(wgpuAdapter, &wgpuAdapterDesc);
+        wgpuAdapterGetInfo(wgpuAdapter, &wgpuAdapterInfo);
 
     GraphicsAdapterInfo AdapterInfo{};
 
@@ -317,12 +364,16 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
             }
         };
 
-        const auto DescriptorSize = std::min(_countof(AdapterInfo.Description), wgpuAdapterDesc.name != nullptr ? strlen(wgpuAdapterDesc.name) : 0);
-        memcpy(AdapterInfo.Description, wgpuAdapterDesc.name, DescriptorSize);
-        AdapterInfo.Type       = ConvertWPUAdapterType(wgpuAdapterDesc.adapterType);
-        AdapterInfo.Vendor     = VendorIdToAdapterVendor(wgpuAdapterDesc.vendorID);
-        AdapterInfo.VendorId   = wgpuAdapterDesc.vendorID;
-        AdapterInfo.DeviceId   = wgpuAdapterDesc.deviceID;
+        if (WGPUStringViewValid(wgpuAdapterInfo.vendor))
+        {
+            const std::string Description     = WGPUStringViewToString(wgpuAdapterInfo.vendor);
+            const size_t      DescriptionSize = std::min(_countof(AdapterInfo.Description) - 1, Description.length());
+            memcpy(AdapterInfo.Description, Description.c_str(), DescriptionSize);
+        }
+        AdapterInfo.Type       = ConvertWPUAdapterType(wgpuAdapterInfo.adapterType);
+        AdapterInfo.Vendor     = VendorIdToAdapterVendor(wgpuAdapterInfo.vendorID);
+        AdapterInfo.VendorId   = wgpuAdapterInfo.vendorID;
+        AdapterInfo.DeviceId   = wgpuAdapterInfo.deviceID;
         AdapterInfo.NumOutputs = 0;
     }
 
@@ -459,7 +510,7 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         BufferInfo.MaxAnisotropy = 16;
     }
 
-    wgpuAdapterPropertiesFreeMembers(wgpuAdapterDesc);
+    wgpuAdapterInfoFreeMembers(wgpuAdapterInfo);
     return AdapterInfo;
 }
 

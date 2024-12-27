@@ -29,6 +29,9 @@
 /// \file
 /// Declaration of Diligent::QueryManagerWebGPU class
 
+#include <vector>
+#include <array>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "RenderDeviceWebGPUImpl.hpp"
 #include "DeviceContextWebGPUImpl.hpp"

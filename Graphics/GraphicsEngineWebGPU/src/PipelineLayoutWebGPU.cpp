@@ -138,7 +138,7 @@ WGPUPipelineLayout PipelineLayoutWebGPU::GetWebGPUPipelineLayout()
         VERIFY_EXPR(BindGroupLayoutCount == m_BindGroupCount);
 
         WGPUPipelineLayoutDescriptor LayoutDescr{};
-        LayoutDescr.label                = "Diligent::PipelineLayoutWebGPU";
+        LayoutDescr.label                = GetWGPUStringView("Diligent::PipelineLayoutWebGPU");
         LayoutDescr.bindGroupLayoutCount = BindGroupLayoutCount;
         LayoutDescr.bindGroupLayouts     = BindGroupLayoutCount ? BindGroupLayouts.data() : nullptr;
 

@@ -29,6 +29,9 @@
 /// \file
 /// Declaration of Diligent::FenceWebGPUImpl class
 
+#include <deque>
+#include <vector>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "FenceBase.hpp"
 #include "SyncPointWebGPU.hpp"

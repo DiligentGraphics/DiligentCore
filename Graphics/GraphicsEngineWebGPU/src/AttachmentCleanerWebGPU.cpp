@@ -247,9 +247,9 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
     {
         if (!m_wgpuVSModule)
         {
-            WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
-            wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-            wgpuShaderCodeDesc.code        = VSSource;
+            WGPUShaderSourceWGSL wgpuShaderCodeDesc{};
+            wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
+            wgpuShaderCodeDesc.code        = GetWGPUStringView(VSSource);
 
             WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
             wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
@@ -277,9 +277,9 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
                 ReplaceTemplateInString(PSSource, "${RTV_INDEX}", std::to_string(Key.RTIndex));
             }
 
-            WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
-            wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-            wgpuShaderCodeDesc.code        = PSSource.c_str();
+            WGPUShaderSourceWGSL wgpuShaderCodeDesc{};
+            wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
+            wgpuShaderCodeDesc.code        = GetWGPUStringView(PSSource);
 
             WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
             wgpuShaderModuleDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);
@@ -306,16 +306,16 @@ WebGPURenderPipelineWrapper AttachmentCleanerWebGPU::CreatePSO(const ClearPSOHas
 
         WGPUFragmentState wgpuFragmentState{};
         wgpuFragmentState.module      = wgpuPSModule;
-        wgpuFragmentState.entryPoint  = "PSMain";
+        wgpuFragmentState.entryPoint  = GetWGPUStringView("PSMain");
         wgpuFragmentState.targetCount = RPInfo.NumRenderTargets;
         wgpuFragmentState.targets     = wgpuColorTargetState;
 
         WGPURenderPipelineDescriptor wgpuRenderPipelineDesc{};
-        wgpuRenderPipelineDesc.label              = "AttachmentCleanerPSO";
+        wgpuRenderPipelineDesc.label              = GetWGPUStringView("AttachmentCleanerPSO");
         wgpuRenderPipelineDesc.layout             = m_PipelineResourceLayout.wgpuPipelineLayout;
         wgpuRenderPipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
         wgpuRenderPipelineDesc.vertex.module      = m_wgpuVSModule;
-        wgpuRenderPipelineDesc.vertex.entryPoint  = "VSMain";
+        wgpuRenderPipelineDesc.vertex.entryPoint  = GetWGPUStringView("VSMain");
         wgpuRenderPipelineDesc.fragment           = RPInfo.NumRenderTargets > 0 ? &wgpuFragmentState : nullptr;
         wgpuRenderPipelineDesc.depthStencil       = RPInfo.DSVFormat != TEX_FORMAT_UNKNOWN ? &wgpuDepthStencilState : nullptr;
         wgpuRenderPipelineDesc.multisample.count  = RPInfo.SampleCount;
@@ -364,13 +364,13 @@ void AttachmentCleanerWebGPU::ClearAttachment(WGPURenderPassEncoder wgpuCmdEncod
 void AttachmentCleanerWebGPU::InitializePipelineStates()
 {
     m_wgpuDisableDepth.depthCompare      = WGPUCompareFunction_Always;
-    m_wgpuDisableDepth.depthWriteEnabled = false;
+    m_wgpuDisableDepth.depthWriteEnabled = WGPUOptionalBool_False;
 
     m_wgpuWriteDepth.depthCompare      = WGPUCompareFunction_Always;
-    m_wgpuWriteDepth.depthWriteEnabled = true;
+    m_wgpuWriteDepth.depthWriteEnabled = WGPUOptionalBool_True;
 
     m_wgpuWriteStencil.depthCompare             = WGPUCompareFunction_Always;
-    m_wgpuWriteStencil.depthWriteEnabled        = true;
+    m_wgpuWriteStencil.depthWriteEnabled        = WGPUOptionalBool_True;
     m_wgpuWriteStencil.stencilFront.compare     = WGPUCompareFunction_Always;
     m_wgpuWriteStencil.stencilFront.depthFailOp = WGPUStencilOperation_Replace;
     m_wgpuWriteStencil.stencilFront.failOp      = WGPUStencilOperation_Replace;
@@ -383,7 +383,7 @@ void AttachmentCleanerWebGPU::InitializePipelineStates()
     m_wgpuWriteStencil.stencilReadMask          = 0xFFFFFFFF;
 
     m_wgpuWriteDepthStencil.depthCompare      = WGPUCompareFunction_Always;
-    m_wgpuWriteDepthStencil.depthWriteEnabled = true;
+    m_wgpuWriteDepthStencil.depthWriteEnabled = WGPUOptionalBool_True;
     m_wgpuWriteDepthStencil.stencilFront      = m_wgpuWriteStencil.stencilFront;
     m_wgpuWriteDepthStencil.stencilBack       = m_wgpuWriteStencil.stencilBack;
     m_wgpuWriteDepthStencil.stencilWriteMask  = m_wgpuWriteStencil.stencilWriteMask;
@@ -422,7 +422,7 @@ void AttachmentCleanerWebGPU::InitializePipelineResourceLayout()
         LOG_ERROR_AND_THROW("Attachment cleaner: failed to create bind group layout");
 
     WGPUPipelineLayoutDescriptor wgpuPipelineLayoutDesc{};
-    wgpuPipelineLayoutDesc.label                = "AttachmentCleanerLayout";
+    wgpuPipelineLayoutDesc.label                = GetWGPUStringView("AttachmentCleanerLayout");
     wgpuPipelineLayoutDesc.bindGroupLayouts     = &m_PipelineResourceLayout.wgpuBindGroupLayout.Get();
     wgpuPipelineLayoutDesc.bindGroupLayoutCount = 1;
     m_PipelineResourceLayout.wgpuPipelineLayout.Reset(wgpuDeviceCreatePipelineLayout(wgpuDevice, &wgpuPipelineLayoutDesc));

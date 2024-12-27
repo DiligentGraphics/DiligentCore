@@ -67,11 +67,13 @@ class ShaderBindingTableWebGPUImpl
 class DeviceMemoryWebGPUImpl
 {};
 
+#if PLATFORM_EMSCRIPTEN
 static void DebugMessengerCallback(WGPUErrorType MessageType, const char* Message, void* pUserData)
 {
     if (Message != nullptr)
         LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
 }
+#endif
 
 RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRefCounters,
                                                IMemoryAllocator&             RawMemAllocator,
@@ -100,7 +102,9 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
     wgpuDeviceGetLimits(m_wgpuDevice, &wgpuSupportedLimits);
     m_wgpuLimits = wgpuSupportedLimits.limits;
 
+#if PLATFORM_EMSCRIPTEN
     wgpuDeviceSetUncapturedErrorCallback(m_wgpuDevice, DebugMessengerCallback, nullptr);
+#endif
     FindSupportedTextureFormats();
 
     m_DeviceInfo.Type = RENDER_DEVICE_TYPE_WEBGPU;

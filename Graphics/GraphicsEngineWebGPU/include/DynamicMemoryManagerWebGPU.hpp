@@ -30,6 +30,7 @@
 /// Declaration of Diligent::DynamicMemoryManagerWebGPU class
 
 #include <mutex>
+#include <vector>
 
 #include "WebGPUObjectWrappers.hpp"
 #include "BasicTypes.h"

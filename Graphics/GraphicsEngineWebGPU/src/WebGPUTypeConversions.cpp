@@ -782,13 +782,15 @@ WGPUQueryType QueryTypeToWGPUQueryType(QUERY_TYPE QueryType)
     }
 }
 
-WGPUColorWriteMaskFlags ColorMaskToWGPUColorWriteMask(COLOR_MASK ColorMask)
+WGPUColorWriteMask ColorMaskToWGPUColorWriteMask(COLOR_MASK ColorMask)
 {
     // clang-format off
-    return ((ColorMask & COLOR_MASK_RED)   ? WGPUColorWriteMask_Red   : WGPUColorWriteMask_None) |
+    return static_cast<WGPUColorWriteMask>(
+           ((ColorMask & COLOR_MASK_RED)   ? WGPUColorWriteMask_Red   : WGPUColorWriteMask_None) |
            ((ColorMask & COLOR_MASK_GREEN) ? WGPUColorWriteMask_Green : WGPUColorWriteMask_None) |
            ((ColorMask & COLOR_MASK_BLUE)  ? WGPUColorWriteMask_Blue  : WGPUColorWriteMask_None) |
-           ((ColorMask & COLOR_MASK_ALPHA) ? WGPUColorWriteMask_Alpha : WGPUColorWriteMask_None);
+           ((ColorMask & COLOR_MASK_ALPHA) ? WGPUColorWriteMask_Alpha : WGPUColorWriteMask_None)
+    );
     // clang-format on
 }
 
@@ -912,7 +914,7 @@ WGPUCullMode CullModeToWGPUCullMode(CULL_MODE CullMode)
     }
 }
 
-WGPUShaderStageFlags ShaderTypeToToWGPUShaderStageFlag(SHADER_TYPE Type)
+WGPUShaderStage ShaderTypeToToWGPUShaderStageFlag(SHADER_TYPE Type)
 {
     switch (Type)
     {
@@ -926,13 +928,13 @@ WGPUShaderStageFlags ShaderTypeToToWGPUShaderStageFlag(SHADER_TYPE Type)
     }
 }
 
-WGPUShaderStageFlags ShaderStagesToWGPUShaderStageFlags(SHADER_TYPE Stages)
+WGPUShaderStage ShaderStagesToWGPUShaderStageFlags(SHADER_TYPE Stages)
 {
-    WGPUShaderStageFlags Flags = WGPUShaderStage_None;
+    WGPUShaderStage Flags = WGPUShaderStage_None;
     while (Stages != 0)
     {
         SHADER_TYPE ShaderType = ExtractLSB(Stages);
-        Flags |= ShaderTypeToToWGPUShaderStageFlag(ShaderType);
+        Flags                  = static_cast<WGPUShaderStage>(Flags | ShaderTypeToToWGPUShaderStageFlag(ShaderType));
         Stages &= ~ShaderType;
     }
     return Flags;

@@ -29,6 +29,10 @@
 /// \file
 /// Declaration of Diligent::PipelineStateWebGPUImpl class
 
+#include <vector>
+#include <array>
+#include <string>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "PipelineStateBase.hpp"
 #include "PipelineResourceSignatureWebGPUImpl.hpp"

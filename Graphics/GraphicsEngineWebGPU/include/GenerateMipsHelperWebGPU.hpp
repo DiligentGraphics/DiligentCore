@@ -29,6 +29,10 @@
 /// \file
 /// Implementation of mipmap generation routines
 
+#include <array>
+#include <vector>
+#include <unordered_map>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "WebGPUObjectWrappers.hpp"

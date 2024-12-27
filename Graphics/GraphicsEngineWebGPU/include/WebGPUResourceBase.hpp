@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "GraphicsTypes.h"
 #include "DeviceObject.h"
 #include "RefCntAutoPtr.hpp"

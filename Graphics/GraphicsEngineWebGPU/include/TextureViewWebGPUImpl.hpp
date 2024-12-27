@@ -29,6 +29,8 @@
 /// \file
 /// Declaration of Diligent::TextureViewWebGPUImpl class
 
+#include <vector>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "TextureViewBase.hpp"
 #include "WebGPUObjectWrappers.hpp"

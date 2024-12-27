@@ -42,7 +42,7 @@ WGPUSamplerDescriptor SamplerDescToWGPUSamplerDescriptor(const SamplerDesc& Desc
     DEV_CHECK_ERR(IsComparison == IsComparisonFilter(Desc.MagFilter), "Min and mag filters must both be either comparison filters or non-comparison ones");
 
     WGPUSamplerDescriptor wgpuSamplerDesc{};
-    wgpuSamplerDesc.label         = Desc.Name;
+    wgpuSamplerDesc.label         = GetWGPUStringView(Desc.Name);
     wgpuSamplerDesc.addressModeU  = TexAddressModeToWGPUAddressMode(Desc.AddressU);
     wgpuSamplerDesc.addressModeV  = TexAddressModeToWGPUAddressMode(Desc.AddressV);
     wgpuSamplerDesc.addressModeW  = TexAddressModeToWGPUAddressMode(Desc.AddressW);

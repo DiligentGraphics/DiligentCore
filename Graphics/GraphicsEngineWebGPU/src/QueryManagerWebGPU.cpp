@@ -124,7 +124,7 @@ QueryManagerWebGPU::QuerySetObject::QuerySetObject(IReferenceCounters*     pRefC
     WGPUQuerySetDescriptor wgpuQuerySetDesc{};
     wgpuQuerySetDesc.type  = QueryTypeToWGPUQueryType(QueryType);
     wgpuQuerySetDesc.count = HeapSize;
-    wgpuQuerySetDesc.label = QuerySetName.c_str();
+    wgpuQuerySetDesc.label = GetWGPUStringView(QuerySetName);
 
     if (QueryType == QUERY_TYPE_DURATION)
         wgpuQuerySetDesc.count *= 2;
@@ -133,17 +133,17 @@ QueryManagerWebGPU::QuerySetObject::QuerySetObject(IReferenceCounters*     pRefC
     m_QueryCount = wgpuQuerySetDesc.count;
     m_wgpuQuerySet.Reset(wgpuDeviceCreateQuerySet(pDevice->GetWebGPUDevice(), &wgpuQuerySetDesc));
     if (!m_wgpuQuerySet)
-        LOG_ERROR_AND_THROW("Failed to create '", wgpuQuerySetDesc.label, "'");
+        LOG_ERROR_AND_THROW("Failed to create '", QuerySetName, "'");
 
     String QueryResolveBufferName = String{"QueryManagerWebGPU: Query resolve buffer ["} + GetQueryTypeString(QueryType) + "]";
 
     WGPUBufferDescriptor wgpuResolveBufferDesc{};
     wgpuResolveBufferDesc.usage = WGPUBufferUsage_QueryResolve | WGPUBufferUsage_CopySrc;
     wgpuResolveBufferDesc.size  = static_cast<Uint64>(m_QueryCount) * sizeof(Uint64);
-    wgpuResolveBufferDesc.label = QueryResolveBufferName.c_str();
+    wgpuResolveBufferDesc.label = GetWGPUStringView(QueryResolveBufferName);
     m_wgpuResolveBuffer.Reset(wgpuDeviceCreateBuffer(pDevice->GetWebGPUDevice(), &wgpuResolveBufferDesc));
     if (!m_wgpuResolveBuffer)
-        LOG_ERROR_AND_THROW("Failed to create resolve buffer for '", wgpuQuerySetDesc.label, "'");
+        LOG_ERROR_AND_THROW("Failed to create resolve buffer for '", QuerySetName, "'");
 
     m_AvailableQueries.resize(m_QueryCount);
     for (Uint32 QueryIdx = 0; QueryIdx < m_QueryCount; ++QueryIdx)

@@ -135,7 +135,7 @@ else()
 endif()
 
 if (NOT PLATFORM_EMSCRIPTEN)
-    list(APPEND PRIVATE_DEPENDENCIES webgpu_dawn)
+    list(APPEND PRIVATE_DEPENDENCIES dawn_native dawn_proc)
 endif()
 
 target_link_libraries(Diligent-GraphicsEngineWebGPU-static

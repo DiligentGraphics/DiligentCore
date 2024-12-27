@@ -29,6 +29,9 @@
 /// \file
 /// Declaration of Diligent::ShaderWebGPUImpl class
 
+#include <memory>
+#include <string>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "ShaderBase.hpp"
 #include "WGSLShaderResources.hpp"

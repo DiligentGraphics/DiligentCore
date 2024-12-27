@@ -28,6 +28,7 @@
 
 /// \file
 /// Declaration of Diligent::SwapChainWebGPUImpl class
+
 #include <memory>
 
 #include "SwapChainBase.hpp"

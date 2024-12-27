@@ -31,9 +31,74 @@
 
 #pragma once
 
-#include <array>
-#include <vector>
-#include <deque>
-#include <unordered_map>
+#include <string>
 
 #include <webgpu/webgpu.h>
+
+#if PLATFORM_EMSCRIPTEN
+
+using WGPUOptionalBool                               = bool;
+using WGPUShaderSourceWGSL                           = WGPUShaderModuleWGSLDescriptor;
+using WGPUStringView                                 = const char*;
+using WGPUSurfaceSourceCanvasHTMLSelector_Emscripten = WGPUSurfaceDescriptorFromCanvasHTMLSelector;
+
+constexpr bool WGPUOptionalBool_True  = true;
+constexpr bool WGPUOptionalBool_False = false;
+
+constexpr WGPUSType WGPUSType_ShaderSourceWGSL                           = WGPUSType_ShaderModuleWGSLDescriptor;
+constexpr WGPUSType WGPUSType_SurfaceSourceCanvasHTMLSelector_Emscripten = WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector;
+
+constexpr WGPUBufferBindingType    WGPUBufferBindingType_BindingNotUsed    = WGPUBufferBindingType_Undefined;
+constexpr WGPUSamplerBindingType   WGPUSamplerBindingType_BindingNotUsed   = WGPUSamplerBindingType_Undefined;
+constexpr WGPUTextureSampleType    WGPUTextureSampleType_BindingNotUsed    = WGPUTextureSampleType_Undefined;
+constexpr WGPUStorageTextureAccess WGPUStorageTextureAccess_BindingNotUsed = WGPUStorageTextureAccess_Undefined;
+
+inline bool WGPUStringViewValid(WGPUStringView Str)
+{
+    return Str != nullptr && Str[0] != '\0';
+}
+
+inline const char* WGPUStringViewToString(WGPUStringView Str)
+{
+    return Str;
+}
+
+inline WGPUStringView GetWGPUStringView(const std::string& Str)
+{
+    return Str.c_str();
+}
+
+inline WGPUStringView GetWGPUStringView(const char* Str)
+{
+    return Str;
+}
+
+#else
+
+inline bool WGPUStringViewValid(const WGPUStringView& Str)
+{
+    return Str.data != nullptr && Str.length > 0;
+}
+
+inline std::string WGPUStringViewToString(const WGPUStringView& Str)
+{
+    return std::string{Str.data, Str.length};
+}
+
+template <size_t Size>
+WGPUStringView GetWGPUStringView(const char (&Str)[Size])
+{
+    return {Str, Size - 1};
+}
+
+inline WGPUStringView GetWGPUStringView(const std::string& Str)
+{
+    return {Str.c_str(), Str.length()};
+}
+
+inline WGPUStringView GetWGPUStringView(const char* Str)
+{
+    return {Str, Str ? strlen(Str) : 0};
+}
+
+#endif

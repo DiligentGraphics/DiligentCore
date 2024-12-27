@@ -31,6 +31,7 @@
 
 #include <mutex>
 #include <vector>
+#include <atomic>
 
 #include "WebGPUObjectWrappers.hpp"
 #include "BasicTypes.h"

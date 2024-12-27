@@ -29,6 +29,9 @@
 /// \file
 /// Declaration of Diligent::AttachmentCleanerWebGPU class
 
+#include <array>
+#include <unordered_map>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "GraphicsTypes.h"
 #include "DeviceContext.h"

@@ -625,7 +625,7 @@ void LoadShaderCodeVariableDesc(const tint::Program&          Program,
             const tint::core::type::Vector*       MemberType   = StructMember->Type()->As<tint::core::type::Vector>();
 
             TypeDesc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS;
-            TypeDesc.BasicType  = GetBasicType(MemberType->type());
+            TypeDesc.BasicType  = GetBasicType(MemberType->Type());
             TypeDesc.NumColumns = StaticCast<decltype(TypeDesc.NumColumns)>(MemberType->Width());
             TypeDesc.NumRows    = static_cast<decltype(TypeDesc.NumRows)>(GetArraySize(ArrType));
         }
@@ -667,7 +667,7 @@ void LoadShaderCodeVariableDesc(const tint::Program&          Program,
                 const tint::core::type::Vector* VecType = WGSLType->As<tint::core::type::Vector>();
 
                 TypeDesc.Class      = SHADER_CODE_VARIABLE_CLASS_VECTOR;
-                TypeDesc.BasicType  = GetBasicType(VecType->type());
+                TypeDesc.BasicType  = GetBasicType(VecType->Type());
                 TypeDesc.NumRows    = StaticCast<decltype(TypeDesc.NumColumns)>(VecType->Width());
                 TypeDesc.NumColumns = 1;
             }
@@ -676,9 +676,9 @@ void LoadShaderCodeVariableDesc(const tint::Program&          Program,
                 const tint::core::type::Matrix* MatType = WGSLType->As<tint::core::type::Matrix>();
 
                 TypeDesc.Class      = SHADER_CODE_VARIABLE_CLASS_MATRIX_ROWS;
-                TypeDesc.BasicType  = GetBasicType(MatType->type());
-                TypeDesc.NumRows    = StaticCast<decltype(TypeDesc.NumRows)>(MatType->rows());
-                TypeDesc.NumColumns = StaticCast<decltype(TypeDesc.NumColumns)>(MatType->columns());
+                TypeDesc.BasicType  = GetBasicType(MatType->Type());
+                TypeDesc.NumRows    = StaticCast<decltype(TypeDesc.NumRows)>(MatType->Rows());
+                TypeDesc.NumColumns = StaticCast<decltype(TypeDesc.NumColumns)>(MatType->Columns());
             }
             else
             {

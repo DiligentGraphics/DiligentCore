@@ -461,9 +461,9 @@ WGPUBindGroup ShaderResourceCacheWebGPU::UpdateBindGroup(WGPUDevice wgpuDevice, 
     BindGroup& Group = GetBindGroup(GroupIndex);
     if (!Group.m_wgpuBindGroup || Group.m_IsDirty)
     {
-        WGPUBindGroupDescriptor wgpuBindGroupDescriptor;
+        WGPUBindGroupDescriptor wgpuBindGroupDescriptor{};
         wgpuBindGroupDescriptor.nextInChain = nullptr;
-        wgpuBindGroupDescriptor.label       = nullptr;
+        wgpuBindGroupDescriptor.label       = {};
         wgpuBindGroupDescriptor.layout      = wgpuGroupLayout;
         wgpuBindGroupDescriptor.entryCount  = Group.m_NumResources;
         wgpuBindGroupDescriptor.entries     = Group.m_wgpuEntries;

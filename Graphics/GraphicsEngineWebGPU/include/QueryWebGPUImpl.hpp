@@ -29,6 +29,8 @@
 /// \file
 /// Declaration of Diligent::QueryWebGPUImpl class
 
+#include <array>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "QueryBase.hpp"
 #include "QueryManagerWebGPU.hpp"

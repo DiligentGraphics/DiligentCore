@@ -168,7 +168,7 @@ endif()
 if(WEBGPU_SUPPORTED)
     target_link_libraries(Diligent-Archiver-static PRIVATE Diligent-GraphicsEngineWebGPU-static)
     if (NOT PLATFORM_EMSCRIPTEN)
-        target_link_libraries(Diligent-Archiver-static PRIVATE webgpu_dawn)
+        target_link_libraries(Diligent-Archiver-static PRIVATE dawn_native dawn_proc)
     endif()
     target_include_directories(Diligent-Archiver-static
     PRIVATE

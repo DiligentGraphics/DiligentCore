@@ -29,6 +29,8 @@
 /// \file
 /// Declaration of Diligent::RenderDeviceWebGPUImpl class
 
+#include <memory>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "RenderDeviceBase.hpp"
 #include "RenderDeviceWebGPU.h"

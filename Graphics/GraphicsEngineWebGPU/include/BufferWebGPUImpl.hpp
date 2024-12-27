@@ -29,6 +29,8 @@
 /// \file
 /// Declaration of Diligent::BufferWebGPUImpl class
 
+#include <vector>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "BufferBase.hpp"
 #include "BufferViewWebGPUImpl.hpp" // Required by BufferBase

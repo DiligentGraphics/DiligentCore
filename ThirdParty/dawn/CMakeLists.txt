@@ -16,8 +16,8 @@ endif()
 
 FetchContent_DeclareShallowGit(
     dawn
-    GIT_REPOSITORY         https://dawn.googlesource.com/dawn
-    GIT_TAG                dff0ce002ae988d15bca9ea7f77c6352f91692d1
+    GIT_REPOSITORY  https://dawn.googlesource.com/dawn
+    GIT_TAG         db55f595741106be83b823a02ebdc58efbe997f1
 )
 
 set(CMAKE_CXX_STANDARD 17)
@@ -57,6 +57,10 @@ set(DAWN_ENABLE_VULKAN     OFF CACHE BOOL "" FORCE)
 set(DAWN_ENABLE_D3D11      OFF CACHE BOOL "" FORCE)
 set(DAWN_ENABLE_DESKTOP_GL OFF CACHE BOOL "" FORCE)
 set(DAWN_ENABLE_OPENGLES   OFF CACHE BOOL "" FORCE)
+set(DAWN_BUILD_TESTS       OFF CACHE BOOL "" FORCE)
+# Dawn's CMake defines DAWN_EMSCRIPTEN_TOOLCHAIN through the option command, which
+# sets its default value to OFF instead of ""
+set(DAWN_EMSCRIPTEN_TOOLCHAIN "" CACHE STRING "" FORCE)
 if (PLATFORM_EMSCRIPTEN)
     set(DAWN_ENABLE_D3D12 OFF  CACHE BOOL "" FORCE)
 else()
@@ -71,6 +75,8 @@ set(DAWN_ENABLE_SPIRV_VALIDATION OFF CACHE BOOL "" FORCE)
 set(DAWN_SPIRV_TOOLS_DIR    "${spirv-tools_SOURCE_DIR}"    CACHE STRING "Directory in which to find SPIRV-Tools"    FORCE)
 set(DAWN_SPIRV_HEADERS_DIR  "${SPIRV-Headers_SOURCE_DIR}"  CACHE STRING "Directory in which to find SPIRV-Headers"  FORCE)
 set(DAWN_ABSEIL_DIR         "${abseil-cpp_SOURCE_DIR}"     CACHE STRING "Directory in which to find Abseil"         FORCE)
+
+set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_MakeAvailable(dawn)
 

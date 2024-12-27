@@ -29,6 +29,10 @@
 /// \file
 /// Declaration of Diligent::DeviceContextWebGPUImpl class
 
+#include <array>
+#include <vector>
+#include <unordered_map>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "DeviceContextBase.hpp"
 #include "TextureWebGPUImpl.hpp"

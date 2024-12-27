@@ -51,7 +51,7 @@ WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingWriteBuffe
         StagingBufferName += '\'';
 
         WGPUBufferDescriptor wgpuBufferDesc{};
-        wgpuBufferDesc.label            = StagingBufferName.c_str();
+        wgpuBufferDesc.label            = GetWGPUStringView(StagingBufferName);
         wgpuBufferDesc.size             = AlignUp(m_MappedData.size(), MappedRangeAlignment);
         wgpuBufferDesc.usage            = WGPUBufferUsage_MapWrite | WGPUBufferUsage_CopySrc;
         wgpuBufferDesc.mappedAtCreation = true;
@@ -98,7 +98,7 @@ WebGPUResourceBase::StagingBufferInfo* WebGPUResourceBase::FindStagingReadBuffer
     StagingBufferName += '\'';
 
     WGPUBufferDescriptor wgpuBufferDesc{};
-    wgpuBufferDesc.label = StagingBufferName.c_str();
+    wgpuBufferDesc.label = GetWGPUStringView(StagingBufferName);
     wgpuBufferDesc.size  = AlignUp(m_MappedData.size(), MappedRangeAlignment);
     wgpuBufferDesc.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
 

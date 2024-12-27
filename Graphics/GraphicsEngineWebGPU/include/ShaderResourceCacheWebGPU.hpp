@@ -29,6 +29,9 @@
 /// \file
 /// Declaration of Diligent::ShaderResourceCacheWebGPU class
 
+#include <vector>
+#include <memory>
+
 #include "ShaderResourceCacheCommon.hpp"
 #include "PipelineResourceAttribsWebGPU.hpp"
 #include "STDAllocator.hpp"

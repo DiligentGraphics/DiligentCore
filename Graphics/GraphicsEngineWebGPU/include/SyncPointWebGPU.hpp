@@ -29,6 +29,8 @@
 /// \file
 /// Declaration of Diligent::SyncPointWebGPUImpl class
 
+#include <atomic>
+
 #include "ObjectBase.hpp"
 
 namespace Diligent

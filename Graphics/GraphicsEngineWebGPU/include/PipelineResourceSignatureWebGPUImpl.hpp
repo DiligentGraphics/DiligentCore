@@ -29,6 +29,9 @@
 /// \file
 /// Declaration of Diligent::PipelineResourceSignatureWebGPUImpl class
 
+#include <array>
+#include <memory>
+
 #include "EngineWebGPUImplTraits.hpp"
 #include "PipelineResourceSignatureBase.hpp"
 

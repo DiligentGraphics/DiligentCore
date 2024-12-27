@@ -39,7 +39,7 @@ UploadMemoryManagerWebGPU::Page::Page(UploadMemoryManagerWebGPU& Mgr, size_t Siz
     m_Data(Size)
 {
     WGPUBufferDescriptor wgpuBufferDesc{};
-    wgpuBufferDesc.label = "Upload memory page";
+    wgpuBufferDesc.label = GetWGPUStringView("Upload memory page");
     wgpuBufferDesc.size  = Size;
     wgpuBufferDesc.usage =
         WGPUBufferUsage_CopyDst |

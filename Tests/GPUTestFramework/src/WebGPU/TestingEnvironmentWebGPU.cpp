@@ -77,9 +77,9 @@ WGPUCommandEncoder TestingEnvironmentWebGPU::CreateCommandEncoder()
 
 WGPUShaderModule TestingEnvironmentWebGPU::CreateShaderModule(const std::string& ShaderSource)
 {
-    WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
-    wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-    wgpuShaderCodeDesc.code        = ShaderSource.c_str();
+    WGPUShaderSourceWGSL wgpuShaderCodeDesc{};
+    wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
+    wgpuShaderCodeDesc.code        = GetWGPUStringView(ShaderSource);
 
     WGPUShaderModuleDescriptor wgpuShaderModuleDesc{};
     wgpuShaderModuleDesc.nextInChain  = reinterpret_cast<WGPUChainedStruct*>(&wgpuShaderCodeDesc);

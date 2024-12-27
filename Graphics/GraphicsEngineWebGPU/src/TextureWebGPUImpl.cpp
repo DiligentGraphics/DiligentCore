@@ -133,7 +133,7 @@ WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&     
     wgpuTextureDesc.sampleCount     = Desc.SampleCount;
     wgpuTextureDesc.size.width      = Desc.GetWidth();
     wgpuTextureDesc.size.height     = Desc.GetHeight();
-    wgpuTextureDesc.label           = Desc.Name;
+    wgpuTextureDesc.label           = GetWGPUStringView(Desc.Name);
 
     return wgpuTextureDesc;
 }

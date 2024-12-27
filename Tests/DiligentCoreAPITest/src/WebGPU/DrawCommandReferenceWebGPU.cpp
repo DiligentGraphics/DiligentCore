@@ -111,7 +111,7 @@ public:
 
         WGPUFragmentState wgpuFragmentState{};
         wgpuFragmentState.module      = m_wgpuPSModule;
-        wgpuFragmentState.entryPoint  = "main";
+        wgpuFragmentState.entryPoint  = GetWGPUStringView("main");
         wgpuFragmentState.targetCount = _countof(wgpuColorTargetStates);
         wgpuFragmentState.targets     = wgpuColorTargetStates;
 
@@ -121,7 +121,7 @@ public:
         wgpuRenderPipelineDesc.multisample.mask   = UINT32_MAX;
         wgpuRenderPipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
         wgpuRenderPipelineDesc.vertex.module      = m_wgpuVSModule;
-        wgpuRenderPipelineDesc.vertex.entryPoint  = "main";
+        wgpuRenderPipelineDesc.vertex.entryPoint  = GetWGPUStringView("main");
         wgpuRenderPipelineDesc.fragment           = &wgpuFragmentState;
         m_wgpuRenderPipeline                      = wgpuDeviceCreateRenderPipeline(pEnvWebGPU->GetWebGPUDevice(), &wgpuRenderPipelineDesc);
         VERIFY_EXPR(m_wgpuRenderPipeline != nullptr);

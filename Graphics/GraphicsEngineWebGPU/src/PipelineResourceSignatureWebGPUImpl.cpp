@@ -114,7 +114,7 @@ WGPUBufferBindingType GetWGPUBufferBindingType(BindGroupEntryType EntryType)
             return WGPUBufferBindingType_ReadOnlyStorage;
 
         default:
-            return WGPUBufferBindingType_Undefined;
+            return WGPUBufferBindingType_BindingNotUsed;
     }
 }
 
@@ -141,7 +141,7 @@ WGPUSamplerBindingType GetWGPUSamplerBindingType(BindGroupEntryType EntryType, W
     }
     else
     {
-        return WGPUSamplerBindingType_Undefined;
+        return WGPUSamplerBindingType_BindingNotUsed;
     }
 }
 
@@ -198,7 +198,7 @@ WGPUTextureSampleType GetWGPUTextureSampleType(BindGroupEntryType EntryType, WEB
     }
     else
     {
-        return WGPUTextureSampleType_Undefined;
+        return WGPUTextureSampleType_BindingNotUsed;
     }
 }
 
@@ -216,7 +216,7 @@ WGPUStorageTextureAccess GetWGPUStorageTextureAccess(BindGroupEntryType EntryTyp
             return WGPUStorageTextureAccess_ReadWrite;
 
         default:
-            return WGPUStorageTextureAccess_Undefined;
+            return WGPUStorageTextureAccess_BindingNotUsed;
     }
 }
 
@@ -682,7 +682,7 @@ WGPUBindGroupLayout PipelineResourceSignatureWebGPUImpl::GetWGPUBindGroupLayout(
             const std::string Label = std::string{m_Desc.Name} + " - bind group " + std::to_string(i);
 
             WGPUBindGroupLayoutDescriptor BGLayoutDesc{};
-            BGLayoutDesc.label      = Label.c_str();
+            BGLayoutDesc.label      = GetWGPUStringView(Label);
             BGLayoutDesc.entryCount = wgpuEntries.size();
             BGLayoutDesc.entries    = wgpuEntries.data();
 

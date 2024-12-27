@@ -1513,17 +1513,17 @@ void DeviceContextWebGPUImpl::BeginDebugGroup(const Char* Name, const float* pCo
 
     if (m_wgpuRenderPassEncoder)
     {
-        wgpuRenderPassEncoderPushDebugGroup(GetRenderPassCommandEncoder(), Name);
+        wgpuRenderPassEncoderPushDebugGroup(GetRenderPassCommandEncoder(), GetWGPUStringView(Name));
         m_DebugGroupsStack.push_back(DEBUG_GROUP_TYPE_RENDER);
     }
     else if (m_wgpuComputePassEncoder)
     {
-        wgpuComputePassEncoderPushDebugGroup(GetComputePassCommandEncoder(), Name);
+        wgpuComputePassEncoderPushDebugGroup(GetComputePassCommandEncoder(), GetWGPUStringView(Name));
         m_DebugGroupsStack.push_back(DEBUG_GROUP_TYPE_COMPUTE);
     }
     else
     {
-        wgpuCommandEncoderPushDebugGroup(GetCommandEncoder(), Name);
+        wgpuCommandEncoderPushDebugGroup(GetCommandEncoder(), GetWGPUStringView(Name));
         m_DebugGroupsStack.push_back(DEBUG_GROUP_TYPE_OUTER);
     }
 }
@@ -1571,11 +1571,11 @@ void DeviceContextWebGPUImpl::InsertDebugLabel(const Char* Label, const float* p
     TDeviceContextBase::InsertDebugLabel(Label, pColor, 0);
 
     if (m_wgpuRenderPassEncoder)
-        wgpuRenderPassEncoderInsertDebugMarker(GetRenderPassCommandEncoder(), Label);
+        wgpuRenderPassEncoderInsertDebugMarker(GetRenderPassCommandEncoder(), GetWGPUStringView(Label));
     else if (m_wgpuComputePassEncoder)
-        wgpuComputePassEncoderInsertDebugMarker(GetComputePassCommandEncoder(), Label);
+        wgpuComputePassEncoderInsertDebugMarker(GetComputePassCommandEncoder(), GetWGPUStringView(Label));
     else
-        wgpuCommandEncoderInsertDebugMarker(GetCommandEncoder(), Label);
+        wgpuCommandEncoderInsertDebugMarker(GetCommandEncoder(), GetWGPUStringView(Label));
 }
 
 void DeviceContextWebGPUImpl::GenerateMips(ITextureView* pTexView)

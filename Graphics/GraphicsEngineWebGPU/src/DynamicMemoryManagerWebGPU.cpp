@@ -122,7 +122,7 @@ DynamicMemoryManagerWebGPU::DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, si
     m_CurrentOffset{0}
 {
     WGPUBufferDescriptor wgpuBufferDesc{};
-    wgpuBufferDesc.label = "Dynamic buffer";
+    wgpuBufferDesc.label = GetWGPUStringView("Dynamic buffer");
     wgpuBufferDesc.size  = BufferSize;
     wgpuBufferDesc.usage =
         WGPUBufferUsage_CopyDst |

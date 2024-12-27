@@ -424,9 +424,9 @@ WebGPUShaderModuleWrapper& GenerateMipsHelperWebGPU::GetShaderModule(const UAVFo
     if (Iter != m_ShaderModuleCache.end())
         return Iter->second;
 
-    std::string                    WGSL;
-    WGPUShaderModuleWGSLDescriptor wgpuShaderCodeDesc{};
-    wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+    std::string          WGSL;
+    WGPUShaderSourceWGSL wgpuShaderCodeDesc{};
+    wgpuShaderCodeDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
 
     switch (ShaderType)
     {
@@ -438,15 +438,15 @@ WebGPUShaderModuleWrapper& GenerateMipsHelperWebGPU::GetShaderModule(const UAVFo
                 WGPUTextureFormat wgpuTexFmt = TextureFormatToWGPUFormat(SRGBFormatToUnorm(Formats[UAVIndex]));
                 ReplaceTemplateInString(WGSL, "${UAV_FORMAT_" + std::to_string(UAVIndex) + "}", ConvertWebGPUFormatToString(wgpuTexFmt));
             }
-            wgpuShaderCodeDesc.code = WGSL.c_str();
+            wgpuShaderCodeDesc.code = GetWGPUStringView(WGSL);
             break;
 
         case SHADER_TYPE_VERTEX:
-            wgpuShaderCodeDesc.code = ShaderSourceVS;
+            wgpuShaderCodeDesc.code = GetWGPUStringView(ShaderSourceVS);
             break;
 
         case SHADER_TYPE_PIXEL:
-            wgpuShaderCodeDesc.code = ShaderSourcePS;
+            wgpuShaderCodeDesc.code = GetWGPUStringView(ShaderSourcePS);
             break;
 
         default:
@@ -522,13 +522,13 @@ GenerateMipsHelperWebGPU::ComputePipelineGroupLayout& GenerateMipsHelperWebGPU::
     VERIFY(wgpuPipelineLayout, "Failed to create mip generation pipeline layout");
 
     WGPUConstantEntry wgpuContants[] = {
-        WGPUConstantEntry{nullptr, "CONVERT_TO_SRGB", static_cast<double>(IsSRGBFormat(Formats[0]))},
-        WGPUConstantEntry{nullptr, "NON_POWER_OF_TWO", static_cast<double>(PowerOfTwo)}};
+        WGPUConstantEntry{nullptr, GetWGPUStringView("CONVERT_TO_SRGB"), static_cast<double>(IsSRGBFormat(Formats[0]))},
+        WGPUConstantEntry{nullptr, GetWGPUStringView("NON_POWER_OF_TWO"), static_cast<double>(PowerOfTwo)}};
 
     WGPUComputePipelineDescriptor wgpuComputePipelineDesc{};
     wgpuComputePipelineDesc.layout                = wgpuPipelineLayout.Get();
     wgpuComputePipelineDesc.compute.module        = GetShaderModule(Formats, SHADER_TYPE_COMPUTE).Get();
-    wgpuComputePipelineDesc.compute.entryPoint    = "main";
+    wgpuComputePipelineDesc.compute.entryPoint    = GetWGPUStringView("main");
     wgpuComputePipelineDesc.compute.constants     = wgpuContants;
     wgpuComputePipelineDesc.compute.constantCount = _countof(wgpuContants);
     WebGPUComputePipelineWrapper wgpuComputePipeline{wgpuDeviceCreateComputePipeline(m_DeviceWebGPU.GetWebGPUDevice(), &wgpuComputePipelineDesc)};
@@ -573,14 +573,14 @@ GenerateMipsHelperWebGPU::RenderPipelineGroupLayout& GenerateMipsHelperWebGPU::G
 
     WGPUFragmentState wgpuFragmentState{};
     wgpuFragmentState.module      = GetShaderModule({}, SHADER_TYPE_PIXEL).Get();
-    wgpuFragmentState.entryPoint  = "main";
+    wgpuFragmentState.entryPoint  = GetWGPUStringView("main");
     wgpuFragmentState.targetCount = _countof(wgpuColorTargets);
     wgpuFragmentState.targets     = wgpuColorTargets;
 
     WGPURenderPipelineDescriptor wgpuRenderPipelineDesc{};
     wgpuRenderPipelineDesc.layout             = wgpuPipelineLayout.Get();
     wgpuRenderPipelineDesc.vertex.module      = GetShaderModule({}, SHADER_TYPE_VERTEX).Get();
-    wgpuRenderPipelineDesc.vertex.entryPoint  = "main";
+    wgpuRenderPipelineDesc.vertex.entryPoint  = GetWGPUStringView("main");
     wgpuRenderPipelineDesc.fragment           = &wgpuFragmentState;
     wgpuRenderPipelineDesc.primitive.cullMode = WGPUCullMode_None;
     wgpuRenderPipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
