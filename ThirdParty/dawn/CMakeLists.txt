@@ -87,6 +87,7 @@ endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(tint_api PRIVATE -Wno-switch-default)
+    target_compile_options(tint_utils_strconv PRIVATE -Wno-nullability-extension)
 endif()
 
 install(FILES "${Dawn_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME dawn-License.txt)
