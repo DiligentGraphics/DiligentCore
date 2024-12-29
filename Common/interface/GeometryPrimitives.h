@@ -31,6 +31,8 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
+#include "../../Primitives/interface/DefineRefMacro.h"
+
 /// Geometry primitive vertex flags.
 // clang-format off
 DILIGENT_TYPED_ENUM(GEOMETRY_PRIMITIVE_VERTEX_FLAGS, Uint32)
@@ -60,20 +62,93 @@ DILIGENT_TYPED_ENUM(GEOMETRY_PRIMITIVE_VERTEX_FLAGS, Uint32)
                                              GEOMETRY_PRIMITIVE_VERTEX_FLAG_TEXCOORD,
 };
 // clang-format on
-
 DEFINE_FLAG_ENUM_OPERATORS(GEOMETRY_PRIMITIVE_VERTEX_FLAGS)
+
+/// Geometry primitive types.
+// clang-format off
+DILIGENT_TYPED_ENUM(GEOMETRY_PRIMITIVE_TYPE, Uint32)
+{
+    /// Geometry primitive type is undefined.
+    GEOMETRY_PRIMITIVE_TYPE_UNDEFINED = 0u,
+
+    /// Cube geometry primitive type.
+    GEOMETRY_PRIMITIVE_TYPE_CUBE = 1u,
+
+    GEOMETRY_PRIMITIVE_TYPE_LAST = GEOMETRY_PRIMITIVE_TYPE_CUBE
+};
+// clang-format on
+
+/// Geometry primitive attributes.
+struct GeometryPrimitiveAttributes
+{
+    /// The geometry primitive type, see Diligent::GEOMETRY_PRIMITIVE_TYPE.
+    GEOMETRY_PRIMITIVE_TYPE Type DEFAULT_INITIALIZER(GEOMETRY_PRIMITIVE_TYPE_UNDEFINED);
+
+    /// Vertex flags that specify which vertex components to include in the output vertices,
+    /// see Diligent::GEOMETRY_PRIMITIVE_VERTEX_FLAGS.
+    GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlags DEFAULT_INITIALIZER(GEOMETRY_PRIMITIVE_VERTEX_FLAG_ALL);
+
+    /// The number of subdivisions.
+    ///
+    /// \remarks    This parameter defines the fidelity of the geometry primitive.
+    ///             For example, for a cube geometry primitive, the cube faces are subdivided
+    ///             into Subdivision x Subdivision quads, producing (Subdivision + 1)^2 vertices
+    ///             per face.
+    Uint32 NumSubdivisions DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    GeometryPrimitiveAttributes() noexcept = default;
+
+    explicit GeometryPrimitiveAttributes(GEOMETRY_PRIMITIVE_TYPE         _Type,
+                                         GEOMETRY_PRIMITIVE_VERTEX_FLAGS _VertexFlags    = GEOMETRY_PRIMITIVE_VERTEX_FLAG_ALL,
+                                         Uint32                          _NumSubdivision = 1) noexcept :
+        Type{_Type},
+        VertexFlags{_VertexFlags},
+        NumSubdivisions{_NumSubdivision}
+    {}
+#endif
+};
+typedef struct GeometryPrimitiveAttributes GeometryPrimitiveAttributes;
+
+/// Cube geometry primitive attributes.
+// clang-format off
+struct CubeGeometryPrimitiveAttributes DILIGENT_DERIVE(GeometryPrimitiveAttributes)
+
+    /// The size of the cube.
+    /// The cube is centered at (0, 0, 0) and has the size of Size x Size x Size.
+    /// If the cube size is 1, the coordinates of the cube vertices are in the range [-0.5, 0.5].
+    float Size DEFAULT_INITIALIZER(1.f);
+
+#if DILIGENT_CPP_INTERFACE
+	explicit CubeGeometryPrimitiveAttributes(float                           _Size           = 1,
+                                             GEOMETRY_PRIMITIVE_VERTEX_FLAGS _VertexFlags    = GEOMETRY_PRIMITIVE_VERTEX_FLAG_ALL,
+                                             Uint32                          _NumSubdivision = 1) noexcept :
+        GeometryPrimitiveAttributes{GEOMETRY_PRIMITIVE_TYPE_CUBE, _VertexFlags, _NumSubdivision},
+        Size{_Size}
+    {}
+#endif
+};
+// clang-format on
+
+/// Geometry primitive info.
+struct GeometryPrimitiveInfo
+{
+    /// The number of vertices.
+    Uint32 NumVertices DEFAULT_INITIALIZER(0);
+
+    /// The number of indices.
+    Uint32 NumIndices DEFAULT_INITIALIZER(0);
+
+    /// The size of the vertex in bytes.
+    Uint32 VertexSize DEFAULT_INITIALIZER(0);
+};
 
 /// Returns the size of the geometry primitive vertex in bytes.
 Uint32 GetGeometryPrimitiveVertexSize(GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlags);
 
-/// Creates a cube geometry.
+/// Creates a geometry primitive
 ///
-/// \param [in]  Size               The size of the cube.
-///                                 The cube is centered at (0, 0, 0) and has the size of Size x Size x Size.
-///                                 If the cube size is 1, the coordinates of the cube vertices are in the range [-0.5, 0.5].
-/// \param [in]  NumSubdivisions    The number of subdivisions.
-///                                 The cube faces are subdivided into Subdivision x Subdivision quads.
-/// \param [in]  VertexFlags        Flags that specify which vertex components to include in the output vertices.
+/// \param [in]  Attribs            Geometry primitive attributes, see Diligent::GeometryPrimitiveAttributes.
 /// \param [out] ppVertices         Address of the memory location where the pointer to the output vertex data blob will be stored.
 ///                                 The vertex components are stored as interleaved floating-point values.
 ///                                 For example, if VertexFlags = GEOMETRY_PRIMITIVE_VERTEX_FLAG_POS_NORM, the vertex data will
@@ -81,16 +156,11 @@ Uint32 GetGeometryPrimitiveVertexSize(GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlag
 ///                                     P0, N0, P1, N1, ..., Pn, Nn.
 /// \param [out] ppIndices          Address of the memory location where the pointer to the output index data blob will be stored.
 ///                                 Index data is stored as 32-bit unsigned integers representing the triangle list.
-/// \param [out] pNumVertices       Address of the memory location where the number of vertices will be stored.
-///                                 This parameter can be null.
-/// \param [out] pNumIndices        Address of the memory location where the number of indices will be stored.
-///                                 This parameter can be null.
-void DILIGENT_GLOBAL_FUNCTION(CreateCubeGeometry)(float                           Size,
-                                                  Uint32                          NumSubdivisions,
-                                                  GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlags,
-                                                  IDataBlob**                     ppVertices,
-                                                  IDataBlob**                     ppIndices,
-                                                  Uint32* pNumVertices            DEFAULT_VALUE(nullptr),
-                                                  Uint32* pNumIndices             DEFAULT_VALUE(nullptr));
+/// \param [out] pInfo              Address of the memory location where the pointer to the output geometry primitive info will be stored.
+void DILIGENT_GLOBAL_FUNCTION(CreateGeometryPrimitive)(const GeometryPrimitiveAttributes REF Attribs,
+                                                       IDataBlob**                           ppVertices,
+                                                       IDataBlob**                           ppIndices,
+                                                       GeometryPrimitiveInfo* pInfo          DEFAULT_VALUE(nullptr));
+#include "../../Primitives/interface/UndefRefMacro.h"
 
 DILIGENT_END_NAMESPACE // namespace Diligent

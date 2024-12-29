@@ -42,14 +42,15 @@ Uint32 GetGeometryPrimitiveVertexSize(GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlag
             ((VertexFlags & GEOMETRY_PRIMITIVE_VERTEX_FLAG_TEXCOORD) ? sizeof(float2) : 0));
 }
 
-void CreateCubeGeometry(float                           Size,
-                        Uint32                          NumSubdivisions,
-                        GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlags,
-                        IDataBlob**                     ppVertices,
-                        IDataBlob**                     ppIndices,
-                        Uint32*                         pNumVertices,
-                        Uint32*                         pNumIndices)
+void CreateCubeGeometry(const CubeGeometryPrimitiveAttributes& Attribs,
+                        IDataBlob**                            ppVertices,
+                        IDataBlob**                            ppIndices,
+                        GeometryPrimitiveInfo*                 pInfo)
 {
+    const float                           Size            = Attribs.Size;
+    const Uint32                          NumSubdivisions = Attribs.NumSubdivisions;
+    const GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlags     = Attribs.VertexFlags;
+
     if (Size <= 0)
     {
         UNEXPECTED("Size must be positive");
@@ -82,10 +83,12 @@ void CreateCubeGeometry(float                           Size,
     const Uint32 VertexDataSize   = NumFaceVertices * NumFaces * VertexSize;
     const Uint32 IndexDataSize    = NumFaceIndices * NumFaces * sizeof(Uint32);
 
-    if (pNumVertices != nullptr)
-        *pNumVertices = NumFaceVertices * NumFaces;
-    if (pNumIndices != nullptr)
-        *pNumIndices = NumFaceIndices * NumFaces;
+    if (pInfo != nullptr)
+    {
+        pInfo->NumVertices = NumFaceVertices * NumFaces;
+        pInfo->NumIndices  = NumFaceIndices * NumFaces;
+        pInfo->VertexSize  = VertexSize;
+    }
 
     RefCntAutoPtr<DataBlobImpl> pVertexData;
     Uint8*                      pVert = nullptr;
@@ -211,6 +214,26 @@ void CreateCubeGeometry(float                           Size,
     VERIFY_EXPR(pIdx == nullptr || pIdx == pIndexData->GetConstDataPtr<Uint32>() + IndexDataSize / sizeof(Uint32));
 }
 
+void CreateGeometryPrimitive(const GeometryPrimitiveAttributes& Attribs,
+                             IDataBlob**                        ppVertices,
+                             IDataBlob**                        ppIndices,
+                             GeometryPrimitiveInfo*             pInfo)
+{
+    switch (Attribs.Type)
+    {
+        case GEOMETRY_PRIMITIVE_TYPE_UNDEFINED:
+            UNEXPECTED("Undefined geometry primitive type");
+            break;
+
+        case GEOMETRY_PRIMITIVE_TYPE_CUBE:
+            CreateCubeGeometry(static_cast<const CubeGeometryPrimitiveAttributes&>(Attribs), ppVertices, ppIndices, pInfo);
+            break;
+
+        default:
+            UNEXPECTED("Unknown geometry primitive type");
+    }
+}
+
 } // namespace Diligent
 
 extern "C"
@@ -220,14 +243,11 @@ extern "C"
         return Diligent::GetGeometryPrimitiveVertexSize(VertexFlags);
     }
 
-    void Diligent_CreateCubeGeometry(float                                     Size,
-                                     Diligent::Uint32                          SubdivisionLevel,
-                                     Diligent::GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlags,
-                                     Diligent::IDataBlob**                     ppVertices,
-                                     Diligent::IDataBlob**                     ppIndices,
-                                     Diligent::Uint32*                         pNumVertices,
-                                     Diligent::Uint32*                         pNumIndices)
+    void Diligent_CreateGeometryPrimitive(const Diligent::GeometryPrimitiveAttributes& Attribs,
+                                          Diligent::IDataBlob**                        ppVertices,
+                                          Diligent::IDataBlob**                        ppIndices,
+                                          Diligent::GeometryPrimitiveInfo*             pInfo)
     {
-        Diligent::CreateCubeGeometry(Size, SubdivisionLevel, VertexFlags, ppVertices, ppIndices, pNumVertices, pNumIndices);
+        Diligent::CreateGeometryPrimitive(Attribs, ppVertices, ppIndices, pInfo);
     }
 }
