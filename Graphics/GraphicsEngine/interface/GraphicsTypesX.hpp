@@ -1544,6 +1544,14 @@ struct GraphicsPipelineStateCreateInfoX : PipelineStateCreateInfoX<GraphicsPipel
         return *this;
     }
 
+    GraphicsPipelineStateCreateInfoX& ClearRenderTargets() noexcept
+    {
+        GraphicsPipeline.NumRenderTargets = 0;
+        for (size_t i = 0; i < MAX_RENDER_TARGETS; ++i)
+            GraphicsPipeline.RTVFormats[i] = TEX_FORMAT_UNKNOWN;
+        return *this;
+    }
+
     GraphicsPipelineStateCreateInfoX& SetDepthFormat(TEXTURE_FORMAT DSVFormat) noexcept
     {
         GraphicsPipeline.DSVFormat = DSVFormat;
@@ -1727,6 +1735,14 @@ struct TilePipelineStateCreateInfoX : PipelineStateCreateInfoX<TilePipelineState
     {
         VERIFY_EXPR(TilePipeline.NumRenderTargets < MAX_RENDER_TARGETS);
         TilePipeline.RTVFormats[TilePipeline.NumRenderTargets++] = RTVFormat;
+        return *this;
+    }
+
+    TilePipelineStateCreateInfoX& ClearRenderTargets() noexcept
+    {
+        TilePipeline.NumRenderTargets = 0;
+        for (size_t i = 0; i < MAX_RENDER_TARGETS; ++i)
+            TilePipeline.RTVFormats[i] = TEX_FORMAT_UNKNOWN;
         return *this;
     }
 
