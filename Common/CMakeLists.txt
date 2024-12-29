@@ -20,6 +20,7 @@ set(INTERFACE
     interface/FileWrapper.hpp
     interface/FilteringTools.hpp
     interface/FixedBlockMemoryAllocator.hpp
+    interface/GeometryPrimitives.h
     interface/HashUtils.hpp
     interface/LRUCache.hpp
     interface/FixedLinearAllocator.hpp
@@ -56,6 +57,7 @@ set(SOURCE
     src/DefaultRawMemoryAllocator.cpp
     src/FileWrapper.cpp
     src/FixedBlockMemoryAllocator.cpp
+    src/GeometryPrimitives.cpp
     src/MemoryFileStream.cpp
     src/Serializer.cpp
     src/SpinLock.cpp
