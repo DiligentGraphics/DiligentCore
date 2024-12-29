@@ -42,20 +42,14 @@ Uint32 GetGeometryPrimitiveVertexSize(GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlag
             ((VertexFlags & GEOMETRY_PRIMITIVE_VERTEX_FLAG_TEXCOORD) ? sizeof(float2) : 0));
 }
 
-void CreateCubeGeometry(const CubeGeometryPrimitiveAttributes& Attribs,
-                        IDataBlob**                            ppVertices,
-                        IDataBlob**                            ppIndices,
-                        GeometryPrimitiveInfo*                 pInfo)
+template <typename VertexHandlerType>
+void CreateCubeGeometryInternal(Uint32                          NumSubdivisions,
+                                GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlags,
+                                IDataBlob**                     ppVertices,
+                                IDataBlob**                     ppIndices,
+                                GeometryPrimitiveInfo*          pInfo,
+                                VertexHandlerType&&             HandleVertex)
 {
-    const float                           Size            = Attribs.Size;
-    const Uint32                          NumSubdivisions = Attribs.NumSubdivisions;
-    const GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlags     = Attribs.VertexFlags;
-
-    if (Size <= 0)
-    {
-        UNEXPECTED("Size must be positive");
-        return;
-    }
     if (NumSubdivisions == 0)
     {
         UNEXPECTED("NumSubdivisions must be positive");
@@ -123,7 +117,6 @@ void CreateCubeGeometry(const CubeGeometryPrimitiveAttributes& Attribs,
     {
         if (pVert != nullptr)
         {
-            const float3& Normal = FaceNormals[FaceIndex];
             // 6 ______7______ 8
             //  |    .'|    .'|
             //  |  .'  |  .'  |
@@ -158,9 +151,11 @@ void CreateCubeGeometry(const CubeGeometryPrimitiveAttributes& Attribs,
                         case 5: Pos = float3{+XY.x, XY.y, -0.5f}; break;
                     }
 
+                    float3 Normal = FaceNormals[FaceIndex];
+                    HandleVertex(Pos, Normal, UV);
+
                     if (VertexFlags & GEOMETRY_PRIMITIVE_VERTEX_FLAG_POSITION)
                     {
-                        Pos *= Size;
                         memcpy(pVert, &Pos, sizeof(Pos));
                         pVert += sizeof(Pos);
                     }
@@ -214,6 +209,54 @@ void CreateCubeGeometry(const CubeGeometryPrimitiveAttributes& Attribs,
     VERIFY_EXPR(pIdx == nullptr || pIdx == pIndexData->GetConstDataPtr<Uint32>() + IndexDataSize / sizeof(Uint32));
 }
 
+void CreateCubeGeometry(const CubeGeometryPrimitiveAttributes& Attribs,
+                        IDataBlob**                            ppVertices,
+                        IDataBlob**                            ppIndices,
+                        GeometryPrimitiveInfo*                 pInfo)
+{
+    const float Size = Attribs.Size;
+    if (Size <= 0)
+    {
+        UNEXPECTED("Size must be positive");
+        return;
+    }
+
+    CreateCubeGeometryInternal(Attribs.NumSubdivisions,
+                               Attribs.VertexFlags,
+                               ppVertices,
+                               ppIndices,
+                               pInfo,
+                               [&](float3& Pos, float3& Normal, float2& UV) {
+                                   Pos *= Size;
+                               });
+}
+
+void CreateSphereGeometry(const SphereGeometryPrimitiveAttributes& Attribs,
+                          IDataBlob**                              ppVertices,
+                          IDataBlob**                              ppIndices,
+                          GeometryPrimitiveInfo*                   pInfo)
+{
+    const float Radius = Attribs.Radius;
+    if (Radius <= 0)
+    {
+        UNEXPECTED("Radius must be positive");
+        return;
+    }
+
+    CreateCubeGeometryInternal(Attribs.NumSubdivisions,
+                               Attribs.VertexFlags,
+                               ppVertices,
+                               ppIndices,
+                               pInfo,
+                               [&](float3& Pos, float3& Normal, float2& UV) {
+                                   Normal = normalize(Pos);
+                                   Pos    = Normal * Radius;
+
+                                   UV.x = 0.5f + atan2(Normal.z, Normal.x) / (2 * PI_F);
+                                   UV.y = 0.5f - asin(Normal.y) / PI_F;
+                               });
+}
+
 void CreateGeometryPrimitive(const GeometryPrimitiveAttributes& Attribs,
                              IDataBlob**                        ppVertices,
                              IDataBlob**                        ppIndices,
@@ -222,7 +265,7 @@ void CreateGeometryPrimitive(const GeometryPrimitiveAttributes& Attribs,
     DEV_CHECK_ERR(ppVertices == nullptr || *ppVertices == nullptr, "*ppVertices is not null which may cause memory leaks");
     DEV_CHECK_ERR(ppIndices == nullptr || *ppIndices == nullptr, "*ppIndices is not null which may cause memory leaks");
 
-    static_assert(GEOMETRY_PRIMITIVE_TYPE_LAST == 1, "Please update the switch below to handle the new geometry primitive type");
+    static_assert(GEOMETRY_PRIMITIVE_TYPE_COUNT == 3, "Please update the switch below to handle the new geometry primitive type");
     switch (Attribs.Type)
     {
         case GEOMETRY_PRIMITIVE_TYPE_UNDEFINED:
@@ -231,6 +274,10 @@ void CreateGeometryPrimitive(const GeometryPrimitiveAttributes& Attribs,
 
         case GEOMETRY_PRIMITIVE_TYPE_CUBE:
             CreateCubeGeometry(static_cast<const CubeGeometryPrimitiveAttributes&>(Attribs), ppVertices, ppIndices, pInfo);
+            break;
+
+        case GEOMETRY_PRIMITIVE_TYPE_SPHERE:
+            CreateSphereGeometry(static_cast<const SphereGeometryPrimitiveAttributes&>(Attribs), ppVertices, ppIndices, pInfo);
             break;
 
         default:

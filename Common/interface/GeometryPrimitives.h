@@ -72,9 +72,12 @@ DILIGENT_TYPED_ENUM(GEOMETRY_PRIMITIVE_TYPE, Uint32)
     GEOMETRY_PRIMITIVE_TYPE_UNDEFINED = 0u,
 
     /// Cube geometry primitive type.
-    GEOMETRY_PRIMITIVE_TYPE_CUBE = 1u,
+    GEOMETRY_PRIMITIVE_TYPE_CUBE,
 
-    GEOMETRY_PRIMITIVE_TYPE_LAST = GEOMETRY_PRIMITIVE_TYPE_CUBE
+    /// Sphere geometry primitive type.
+    GEOMETRY_PRIMITIVE_TYPE_SPHERE,
+
+    GEOMETRY_PRIMITIVE_TYPE_COUNT
 };
 // clang-format on
 
@@ -130,6 +133,25 @@ struct CubeGeometryPrimitiveAttributes DILIGENT_DERIVE(GeometryPrimitiveAttribut
 };
 // clang-format on
 
+
+/// Sphere geometry primitive attributes.
+// clang-format off
+struct SphereGeometryPrimitiveAttributes DILIGENT_DERIVE(GeometryPrimitiveAttributes)
+
+    /// Sphere radius.
+    float Radius DEFAULT_INITIALIZER(1.f);
+
+#if DILIGENT_CPP_INTERFACE
+	explicit SphereGeometryPrimitiveAttributes(float                           _Radius         = 1,
+                                               GEOMETRY_PRIMITIVE_VERTEX_FLAGS _VertexFlags    = GEOMETRY_PRIMITIVE_VERTEX_FLAG_ALL,
+                                               Uint32                          _NumSubdivision = 1) noexcept :
+        GeometryPrimitiveAttributes{GEOMETRY_PRIMITIVE_TYPE_SPHERE, _VertexFlags, _NumSubdivision},
+        Radius{_Radius}
+    {}
+#endif
+};
+// clang-format on
+
 /// Geometry primitive info.
 struct GeometryPrimitiveInfo
 {
@@ -154,7 +176,7 @@ Uint32 GetGeometryPrimitiveVertexSize(GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlag
 ///                           The vertex components are stored as interleaved floating-point values.
 ///                           For example, if VertexFlags = GEOMETRY_PRIMITIVE_VERTEX_FLAG_POS_NORM, the vertex data will
 ///                           be stored as follows:
-///                            P0, N0, P1, N1, ..., Pn, Nn.
+///                             P0, N0, P1, N1, ..., Pn, Nn.
 /// \param [out] ppIndices  - Address of the memory location where the pointer to the output index data blob will be stored.
 ///                           Index data is stored as 32-bit unsigned integers representing the triangle list.
 /// \param [out] pInfo      - A pointer to the structure that will receive information about the created geometry primitive.

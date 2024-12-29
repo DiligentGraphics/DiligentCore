@@ -667,7 +667,7 @@ void CreateGeometryPrimitiveBuffers(IRenderDevice*                            pD
                                     IBuffer**                                 ppIndices,
                                     GeometryPrimitiveInfo*                    pInfo)
 {
-    static_assert(GEOMETRY_PRIMITIVE_TYPE_LAST == 1, "Please handle the new primitive type");
+    static_assert(GEOMETRY_PRIMITIVE_TYPE_COUNT == 3, "Please handle the new primitive type");
 
     RefCntAutoPtr<IDataBlob> pVertexData;
     RefCntAutoPtr<IDataBlob> pIndexData;
@@ -684,6 +684,7 @@ void CreateGeometryPrimitiveBuffers(IRenderDevice*                            pD
     switch (Attribs.Type)
     {
         case GEOMETRY_PRIMITIVE_TYPE_CUBE: PrimTypeStr = "Cube"; break;
+        case GEOMETRY_PRIMITIVE_TYPE_SPHERE: PrimTypeStr = "Sphere"; break;
         default: UNEXPECTED("Unexpected primitive type");
     }
 
