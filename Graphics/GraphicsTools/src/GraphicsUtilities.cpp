@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <atomic>
 
 #include "GraphicsUtilities.h"
 #include "DebugUtilities.hpp"
@@ -659,6 +660,76 @@ TEXTURE_FORMAT GetTextureFormatFromNative(int64_t NativeFormat, RENDER_DEVICE_TY
     }
 }
 
+void CreateGeometryPrimitiveBuffers(IRenderDevice*                            pDevice,
+                                    const GeometryPrimitiveAttributes&        Attribs,
+                                    const GeometryPrimitiveBuffersCreateInfo* pBufferCI,
+                                    IBuffer**                                 ppVertices,
+                                    IBuffer**                                 ppIndices,
+                                    GeometryPrimitiveInfo*                    pInfo)
+{
+    static_assert(GEOMETRY_PRIMITIVE_TYPE_LAST == 1, "Please handle the new primitive type");
+
+    RefCntAutoPtr<IDataBlob> pVertexData;
+    RefCntAutoPtr<IDataBlob> pIndexData;
+    CreateGeometryPrimitive(Attribs,
+                            ppVertices != nullptr ? pVertexData.RawDblPtr() : nullptr,
+                            ppIndices != nullptr ? pIndexData.RawDblPtr() : nullptr,
+                            pInfo);
+
+    static constexpr GeometryPrimitiveBuffersCreateInfo DefaultCI{};
+    if (pBufferCI == nullptr)
+        pBufferCI = &DefaultCI;
+
+    const char* PrimTypeStr = "";
+    switch (Attribs.Type)
+    {
+        case GEOMETRY_PRIMITIVE_TYPE_CUBE: PrimTypeStr = "Cube"; break;
+        default: UNEXPECTED("Unexpected primitive type");
+    }
+
+    static std::atomic<int> PrimCounter{0};
+    const int               PrimId = PrimCounter.fetch_add(1);
+    if (pVertexData)
+    {
+        const std::string Name = std::string{"Geometry primitive "} + std::to_string(PrimId) + " (" + PrimTypeStr + ")";
+
+        BufferDesc VBDesc;
+        VBDesc.Name           = Name.c_str();
+        VBDesc.Size           = pVertexData->GetSize();
+        VBDesc.BindFlags      = pBufferCI->VertexBufferBindFlags;
+        VBDesc.Usage          = pBufferCI->VertexBufferUsage;
+        VBDesc.CPUAccessFlags = pBufferCI->VertexBufferCPUAccessFlags;
+        VBDesc.Mode           = pBufferCI->VertexBufferMode;
+        if (VBDesc.Mode != BUFFER_MODE_UNDEFINED)
+        {
+            VBDesc.ElementByteStride = GetGeometryPrimitiveVertexSize(Attribs.VertexFlags);
+        }
+
+        BufferData VBData{pVertexData->GetDataPtr(), pVertexData->GetSize()};
+        pDevice->CreateBuffer(VBDesc, &VBData, ppVertices);
+    }
+
+    if (pIndexData)
+    {
+        const std::string Name = std::string{"Geometry primitive "} + std::to_string(PrimId) + " (" + PrimTypeStr + ")";
+
+        BufferDesc IBDesc;
+        IBDesc.Name           = Name.c_str();
+        IBDesc.Size           = pIndexData->GetSize();
+        IBDesc.BindFlags      = pBufferCI->IndexBufferBindFlags;
+        IBDesc.Usage          = pBufferCI->IndexBufferUsage;
+        IBDesc.CPUAccessFlags = pBufferCI->IndexBufferCPUAccessFlags;
+        IBDesc.Mode           = pBufferCI->IndexBufferMode;
+        if (IBDesc.Mode != BUFFER_MODE_UNDEFINED)
+        {
+            IBDesc.ElementByteStride = sizeof(Uint32);
+        }
+
+        BufferData IBData{pIndexData->GetDataPtr(), pIndexData->GetSize()};
+        pDevice->CreateBuffer(IBDesc, &IBData, ppIndices);
+    }
+}
+
 } // namespace Diligent
 
 
@@ -744,5 +815,15 @@ extern "C"
     Diligent::TEXTURE_FORMAT Diligent_GetTextureFormatFromNative(int64_t NativeFormat, Diligent::RENDER_DEVICE_TYPE DeviceType)
     {
         return Diligent::GetTextureFormatFromNative(NativeFormat, DeviceType);
+    }
+
+    void Diligent_CreateGeometryPrimitiveBuffers(Diligent::IRenderDevice*                            pDevice,
+                                                 const Diligent::GeometryPrimitiveAttributes&        Attribs,
+                                                 const Diligent::GeometryPrimitiveBuffersCreateInfo* pBufferCI,
+                                                 Diligent::IBuffer**                                 ppVertices,
+                                                 Diligent::IBuffer**                                 ppIndices,
+                                                 Diligent::GeometryPrimitiveInfo*                    pInfo)
+    {
+        Diligent::CreateGeometryPrimitiveBuffers(pDevice, Attribs, pBufferCI, ppVertices, ppIndices, pInfo);
     }
 }

@@ -142,21 +142,23 @@ struct GeometryPrimitiveInfo
     /// The size of the vertex in bytes.
     Uint32 VertexSize DEFAULT_INITIALIZER(0);
 };
+typedef struct GeometryPrimitiveInfo GeometryPrimitiveInfo;
 
 /// Returns the size of the geometry primitive vertex in bytes.
 Uint32 GetGeometryPrimitiveVertexSize(GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlags);
 
 /// Creates a geometry primitive
 ///
-/// \param [in]  Attribs            Geometry primitive attributes, see Diligent::GeometryPrimitiveAttributes.
-/// \param [out] ppVertices         Address of the memory location where the pointer to the output vertex data blob will be stored.
-///                                 The vertex components are stored as interleaved floating-point values.
-///                                 For example, if VertexFlags = GEOMETRY_PRIMITIVE_VERTEX_FLAG_POS_NORM, the vertex data will
-///                                 be stored as follows:
-///                                     P0, N0, P1, N1, ..., Pn, Nn.
-/// \param [out] ppIndices          Address of the memory location where the pointer to the output index data blob will be stored.
-///                                 Index data is stored as 32-bit unsigned integers representing the triangle list.
-/// \param [out] pInfo              Address of the memory location where the pointer to the output geometry primitive info will be stored.
+/// \param [in]  Attribs    - Geometry primitive attributes, see Diligent::GeometryPrimitiveAttributes.
+/// \param [out] ppVertices - Address of the memory location where the pointer to the output vertex data blob will be stored.
+///                           The vertex components are stored as interleaved floating-point values.
+///                           For example, if VertexFlags = GEOMETRY_PRIMITIVE_VERTEX_FLAG_POS_NORM, the vertex data will
+///                           be stored as follows:
+///                            P0, N0, P1, N1, ..., Pn, Nn.
+/// \param [out] ppIndices  - Address of the memory location where the pointer to the output index data blob will be stored.
+///                           Index data is stored as 32-bit unsigned integers representing the triangle list.
+/// \param [out] pInfo      - A pointer to the structure that will receive information about the created geometry primitive.
+///                           See Diligent::GeometryPrimitiveInfo.
 void DILIGENT_GLOBAL_FUNCTION(CreateGeometryPrimitive)(const GeometryPrimitiveAttributes REF Attribs,
                                                        IDataBlob**                           ppVertices,
                                                        IDataBlob**                           ppIndices,

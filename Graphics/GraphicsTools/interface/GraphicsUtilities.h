@@ -33,6 +33,7 @@
 #include "../../GraphicsEngine/interface/Texture.h"
 #include "../../GraphicsEngine/interface/Buffer.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "../../../Common/interface/GeometryPrimitives.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -217,6 +218,53 @@ int64_t DILIGENT_GLOBAL_FUNCTION(GetNativeTextureFormat)(TEXTURE_FORMAT TexForma
 
 /// Returns the texture format for the given native format (e.g. DXGI_FORMAT, VkFormat) and device type.
 TEXTURE_FORMAT DILIGENT_GLOBAL_FUNCTION(GetTextureFormatFromNative)(int64_t NativeFormat, enum RENDER_DEVICE_TYPE DeviceType);
+
+
+/// Geometry primitive buffers creation info
+struct GeometryPrimitiveBuffersCreateInfo
+{
+    /// Vertex buffer usage.
+    USAGE VertexBufferUsage DEFAULT_INITIALIZER(USAGE_DEFAULT);
+
+    /// Index buffer usage.
+    USAGE IndexBufferUsage DEFAULT_INITIALIZER(USAGE_DEFAULT);
+
+    /// Vertex buffer bind flags.
+    BIND_FLAGS VertexBufferBindFlags DEFAULT_INITIALIZER(BIND_VERTEX_BUFFER);
+
+    /// Index buffer bind flags.
+    BIND_FLAGS IndexBufferBindFlags DEFAULT_INITIALIZER(BIND_INDEX_BUFFER);
+
+    /// Vertex buffer mode.
+    BUFFER_MODE VertexBufferMode DEFAULT_INITIALIZER(BUFFER_MODE_UNDEFINED);
+
+    /// Index buffer mode.
+    BUFFER_MODE IndexBufferMode DEFAULT_INITIALIZER(BUFFER_MODE_UNDEFINED);
+
+    /// Vertex buffer CPU access flags.
+    CPU_ACCESS_FLAGS VertexBufferCPUAccessFlags DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
+
+    /// Index buffer CPU access flags.
+    CPU_ACCESS_FLAGS IndexBufferCPUAccessFlags DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
+};
+typedef struct GeometryPrimitiveBuffersCreateInfo GeometryPrimitiveBuffersCreateInfo;
+
+/// Creates vertex and index buffers for a geometry primitive (see Diligent::CreateGeometryPrimitive)
+///
+/// \param [in]  pDevice   - A pointer to the render device that will be used to create the buffers.
+/// \param [in]  Attribs   - Geometry primitive attributes, see Diligent::GeometryPrimitiveAttributes.
+/// \param [in]  pBufferCI - Optional buffer create info, see Diligent::GeometryPrimitiveBufferCreateInfo.
+///                          If null, default values are used.
+/// \param [out] ppVertices - Address of the memory location where the pointer to the vertex buffer will be stored.
+/// \param [out] ppIndices  - Address of the memory location where the pointer to the index buffer will be stored.
+/// \param [out] pInfo      - A pointer to the structure that will receive information about the created geometry primitive.
+///                           See Diligent::GeometryPrimitiveInfo.
+void DILIGENT_GLOBAL_FUNCTION(CreateGeometryPrimitiveBuffers)(IRenderDevice*                            pDevice,
+                                                              const GeometryPrimitiveAttributes REF     Attribs,
+                                                              const GeometryPrimitiveBuffersCreateInfo* pBufferCI,
+                                                              IBuffer**                                 ppVertices,
+                                                              IBuffer**                                 ppIndices,
+                                                              GeometryPrimitiveInfo* pInfo              DEFAULT_VALUE(nullptr));
 
 #include "../../../Primitives/interface/UndefRefMacro.h"
 

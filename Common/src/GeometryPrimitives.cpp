@@ -219,6 +219,10 @@ void CreateGeometryPrimitive(const GeometryPrimitiveAttributes& Attribs,
                              IDataBlob**                        ppIndices,
                              GeometryPrimitiveInfo*             pInfo)
 {
+    DEV_CHECK_ERR(ppVertices == nullptr || *ppVertices == nullptr, "*ppVertices is not null which may cause memory leaks");
+    DEV_CHECK_ERR(ppIndices == nullptr || *ppIndices == nullptr, "*ppIndices is not null which may cause memory leaks");
+
+    static_assert(GEOMETRY_PRIMITIVE_TYPE_LAST == 1, "Please update the switch below to handle the new geometry primitive type");
     switch (Attribs.Type)
     {
         case GEOMETRY_PRIMITIVE_TYPE_UNDEFINED:
