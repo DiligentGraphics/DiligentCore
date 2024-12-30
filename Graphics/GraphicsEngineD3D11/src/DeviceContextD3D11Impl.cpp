@@ -314,13 +314,41 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
             if (ShaderInd == PSInd && PsUavBindMode != PixelShaderUAVBindMode::Bind)
                 PsUavBindMode = PixelShaderUAVBindMode::Keep;
 
-            auto* d3d11UAVs   = m_CommittedRes.d3d11UAVs[ShaderInd];
-            auto* d3d11UAVRes = m_CommittedRes.d3d11UAVResources[ShaderInd];
+            ID3D11UnorderedAccessView** d3d11UAVs   = m_CommittedRes.d3d11UAVs[ShaderInd];
+            ID3D11Resource**            d3d11UAVRes = m_CommittedRes.d3d11UAVResources[ShaderInd];
             if (auto Slots = ResourceCache.BindResourceViews<D3D11_RESOURCE_RANGE_UAV>(ShaderInd, d3d11UAVs, d3d11UAVRes, BaseBindings))
             {
                 if (ShaderInd == PSInd)
                 {
                     PsUavBindMode = PixelShaderUAVBindMode::Bind;
+
+                    // In Direct3D11, a resource can only be bound as UAV once.
+                    // Check if any resource in the range is currently bound as compute shader UAV and unbind it.
+                    if (Uint8& NumCsUavSlots = m_CommittedRes.NumUAVs[CSInd])
+                    {
+                        ID3D11UnorderedAccessView** d3d11CsUAVs   = m_CommittedRes.d3d11UAVs[CSInd];
+                        ID3D11Resource**            d3d11CsUAVRes = m_CommittedRes.d3d11UAVResources[CSInd];
+                        for (Uint32 ps_slot = Slots.MinSlot; ps_slot <= Slots.MaxSlot; ++ps_slot)
+                        {
+                            if (ID3D11Resource* d3d11Res = d3d11UAVRes[ps_slot])
+                            {
+                                for (Uint32 cs_slot = 0; cs_slot < NumCsUavSlots; ++cs_slot)
+                                {
+                                    if (d3d11CsUAVRes[cs_slot] == d3d11Res)
+                                    {
+                                        d3d11CsUAVs[cs_slot]   = nullptr;
+                                        d3d11CsUAVRes[cs_slot] = nullptr;
+                                        m_pd3d11DeviceContext->CSSetUnorderedAccessViews(cs_slot, 1, &d3d11CsUAVs[cs_slot], nullptr);
+                                    }
+                                }
+                            }
+                        }
+                        while (NumCsUavSlots > 0 && d3d11CsUAVRes[NumCsUavSlots - 1] == nullptr)
+                        {
+                            VERIFY_EXPR(d3d11CsUAVs[NumCsUavSlots - 1] == nullptr);
+                            --NumCsUavSlots;
+                        }
+                    }
                 }
                 else if (ShaderInd == CSInd)
                 {
