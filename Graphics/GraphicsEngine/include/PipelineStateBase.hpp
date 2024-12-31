@@ -568,6 +568,13 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
                                                                 bool                     InitStaticResources) override final
     {
+        if (ppShaderResourceBinding == nullptr)
+        {
+            DEV_ERROR("ppShaderResourceBinding must not be null");
+            return;
+        }
+        DEV_CHECK_ERR(*ppShaderResourceBinding == nullptr, "Overwriting existing shader resource binding pointer may cause a memory leak.");
+
         CheckPipelineReady();
 
         *ppShaderResourceBinding = nullptr;
