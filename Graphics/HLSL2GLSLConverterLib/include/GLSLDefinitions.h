@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2024 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1195,6 +1195,7 @@ out gl_PerVertex
 // SV_Position.w == w, while gl_FragCoord.w == 1/w
 #define _GET_GL_FRAG_COORD(FragCoord)_ResizeVector(FragCoord, vec4(gl_FragCoord.xyz, 1.0/gl_FragCoord.w))
 #define _GET_GL_FRONT_FACING(FrontFacing)_TypeConvertStore(FrontFacing, gl_FrontFacing)
+#define _GET_GL_SAMPLE_MASK_IN(SampleMaskIn)_TypeConvertStore(SampleMaskIn, gl_SampleMaskIn[0])
 #define _SET_GL_FRAG_DEPTH(Depth)_TypeConvertStore(gl_FragDepth, Depth)
 
 #endif

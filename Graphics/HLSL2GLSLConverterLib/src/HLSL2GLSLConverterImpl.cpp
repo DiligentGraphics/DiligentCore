@@ -649,6 +649,7 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
 
     DEFINE_VARIABLE(PSInd, InVar, "sv_position", "_GET_GL_FRAG_COORD");
     DEFINE_VARIABLE(PSInd, InVar, "sv_isfrontface", "_GET_GL_FRONT_FACING");
+    DEFINE_VARIABLE(PSInd, InVar, "sv_coverage", "_GET_GL_SAMPLE_MASK_IN");
     DEFINE_VARIABLE(PSInd, OutVar, "sv_depth", "_SET_GL_FRAG_DEPTH");
 
     DEFINE_VARIABLE(CSInd, InVar, "sv_dispatchthreadid", "_GET_GL_GLOBAL_INVOCATION_ID");
