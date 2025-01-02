@@ -240,6 +240,11 @@ TEST(Common_StringTools, WidenString)
 
     EXPECT_EQ(WidenString(std::string{""}), std::wstring{L""});
     EXPECT_EQ(WidenString(std::string{"abc"}), std::wstring{L"abc"});
+
+    constexpr char locale_name[] = "en_US.UTF-8";
+    std::setlocale(LC_ALL, locale_name);
+    std::locale::global(std::locale(locale_name));
+    EXPECT_STREQ(WidenString("Bézier").c_str(), L"Bézier");
 }
 
 TEST(Common_StringTools, NarrowString)
@@ -250,6 +255,11 @@ TEST(Common_StringTools, NarrowString)
 
     EXPECT_EQ(NarrowString(std::wstring{L""}), std::string{""});
     EXPECT_EQ(NarrowString(std::wstring{L"abc"}), std::string{"abc"});
+
+    constexpr char locale_name[] = "en_US.UTF-8";
+    std::setlocale(LC_ALL, locale_name);
+    std::locale::global(std::locale(locale_name));
+    EXPECT_STREQ(NarrowString(L"Bézier").c_str(), u8"Bézier");
 }
 
 TEST(Common_StringTools, GetPrintWidth)

@@ -38,9 +38,15 @@
 #include "StringTools.h"
 #include "ParsingTools.hpp"
 
+#ifdef _MSC_VER
+#    pragma warning(push)
+#    pragma warning(disable : 4996) // 'This function or variable may be unsafe': mbtowc, wctomb
+#endif
+
 namespace Diligent
 {
 
+// See also: https://en.cppreference.com/w/cpp/string/multibyte/wctomb
 inline std::string NarrowString(const wchar_t* WideStr, size_t Len = 0)
 {
     if (Len == 0)
@@ -48,11 +54,20 @@ inline std::string NarrowString(const wchar_t* WideStr, size_t Len = 0)
     else
         VERIFY_EXPR(Len <= wcslen(WideStr));
 
-    std::string NarrowStr(Len, '\0');
+    std::string NarrowStr;
+    NarrowStr.reserve(Len * 4); /* MB_CUR_MAX = 4 */
 
-    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
+    size_t Offset = 0;
     for (size_t i = 0; i < Len; ++i)
-        NarrowStr[i] = ctfacet.narrow(WideStr[i], 0);
+    {
+        char mb[4];
+        int  n = wctomb(mb, WideStr[i]);
+        if (n > 0)
+        {
+            Offset += n;
+            NarrowStr.append(mb, mb + n);
+        }
+    }
 
     return NarrowStr;
 }
@@ -62,6 +77,7 @@ inline std::string NarrowString(const std::wstring& WideStr)
     return NarrowString(WideStr.c_str(), WideStr.length());
 }
 
+// See also: https://en.cppreference.com/w/cpp/string/multibyte/mbtowc
 inline std::wstring WidenString(const char* Str, size_t Len = 0)
 {
     if (Len == 0)
@@ -69,11 +85,23 @@ inline std::wstring WidenString(const char* Str, size_t Len = 0)
     else
         VERIFY_EXPR(Len <= strlen(Str));
 
-    std::wstring WideStr(Len, L'\0');
+    std::wstring WideStr;
+    WideStr.reserve(Len);
 
-    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
-    for (size_t i = 0; i < Len; ++i)
-        WideStr[i] = ctfacet.widen(Str[i]);
+    for (size_t Offset = 0; Offset < Len;)
+    {
+        wchar_t wc;
+        int     n = mbtowc(&wc, Str + Offset, Len - Offset);
+        if (n > 0)
+        {
+            WideStr += wc;
+            Offset += n;
+        }
+        else
+        {
+            break;
+        }
+    }
 
     return WideStr;
 }
@@ -294,3 +322,7 @@ size_t GetPrintWidth(Type Num, Type Base = 10)
 }
 
 } // namespace Diligent
+
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
