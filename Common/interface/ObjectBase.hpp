@@ -53,11 +53,11 @@ namespace Diligent
     }
 
 #define IMPLEMENT_QUERY_INTERFACE(ClassName, InterfaceID, ParentClassName)         \
-    void ClassName::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) \
+    void ClassName::QueryInterface(const ::Diligent::INTERFACE_ID& IID, IObject** ppInterface) \
         IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
 
 #define IMPLEMENT_QUERY_INTERFACE_IN_PLACE(InterfaceID, ParentClassName)                                    \
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override \
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const ::Diligent::INTERFACE_ID& IID, IObject** ppInterface) override \
         IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
 
 
