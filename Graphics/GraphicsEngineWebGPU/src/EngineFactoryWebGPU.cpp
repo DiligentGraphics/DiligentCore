@@ -379,53 +379,65 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
 
     auto CheckWebGPUFeature = [wgpuAdapter, wgpuDevice](WGPUFeatureName Feature) {
         return ((wgpuAdapter != nullptr && wgpuAdapterHasFeature(wgpuAdapter, Feature)) ||
-                (wgpuDevice != nullptr && wgpuDeviceHasFeature(wgpuDevice, Feature)));
+                (wgpuDevice != nullptr && wgpuDeviceHasFeature(wgpuDevice, Feature))) ?
+            DEVICE_FEATURE_STATE_ENABLED :
+            DEVICE_FEATURE_STATE_DISABLED;
     };
 
     // Enable features
     {
-        //TODO
         DeviceFeatures& Features{AdapterInfo.Features};
-        Features.SeparablePrograms         = DEVICE_FEATURE_STATE_ENABLED;
-        Features.ShaderResourceQueries     = DEVICE_FEATURE_STATE_ENABLED;
-        Features.ComputeShaders            = DEVICE_FEATURE_STATE_ENABLED;
-        Features.OcclusionQueries          = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DepthBiasClamp            = DEVICE_FEATURE_STATE_ENABLED;
-        Features.IndependentBlend          = DEVICE_FEATURE_STATE_ENABLED;
-        Features.DualSourceBlend           = DEVICE_FEATURE_STATE_ENABLED;
-        Features.MultiViewport             = DEVICE_FEATURE_STATE_ENABLED;
-        Features.PixelUAVWritesAndAtomics  = DEVICE_FEATURE_STATE_ENABLED;
-        Features.TextureUAVExtendedFormats = DEVICE_FEATURE_STATE_ENABLED;
-        Features.AsyncShaderCompilation    = DEVICE_FEATURE_STATE_ENABLED;
+        Features.SeparablePrograms                 = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ShaderResourceQueries             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.WireframeFill                     = DEVICE_FEATURE_STATE_DISABLED;
+        Features.MultithreadedResourceCreation     = DEVICE_FEATURE_STATE_DISABLED;
+        Features.ComputeShaders                    = DEVICE_FEATURE_STATE_ENABLED;
+        Features.GeometryShaders                   = DEVICE_FEATURE_STATE_DISABLED;
+        Features.Tessellation                      = DEVICE_FEATURE_STATE_DISABLED;
+        Features.MeshShaders                       = DEVICE_FEATURE_STATE_DISABLED;
+        Features.RayTracing                        = DEVICE_FEATURE_STATE_DISABLED;
+        Features.BindlessResources                 = DEVICE_FEATURE_STATE_DISABLED;
+        Features.OcclusionQueries                  = DEVICE_FEATURE_STATE_ENABLED;
+        Features.BinaryOcclusionQueries            = DEVICE_FEATURE_STATE_DISABLED;
+        Features.PipelineStatisticsQueries         = DEVICE_FEATURE_STATE_DISABLED;
+        Features.DepthBiasClamp                    = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DepthClamp                        = CheckWebGPUFeature(WGPUFeatureName_DepthClipControl);
+        Features.IndependentBlend                  = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DualSourceBlend                   = CheckWebGPUFeature(WGPUFeatureName_DualSourceBlending);
+        Features.MultiViewport                     = DEVICE_FEATURE_STATE_DISABLED;
+        Features.TextureCompressionBC              = CheckWebGPUFeature(WGPUFeatureName_TextureCompressionBC);
+        Features.TextureCompressionETC2            = CheckWebGPUFeature(WGPUFeatureName_TextureCompressionETC2);
+        Features.VertexPipelineUAVWritesAndAtomics = DEVICE_FEATURE_STATE_ENABLED;
+        Features.PixelUAVWritesAndAtomics          = DEVICE_FEATURE_STATE_ENABLED;
+        Features.TextureUAVExtendedFormats         = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ShaderFloat16                     = CheckWebGPUFeature(WGPUFeatureName_ShaderF16);
+        Features.ResourceBuffer16BitAccess         = DEVICE_FEATURE_STATE_DISABLED;
+        Features.UniformBuffer16BitAccess          = DEVICE_FEATURE_STATE_DISABLED;
+        Features.ShaderInputOutput16               = DEVICE_FEATURE_STATE_DISABLED;
+        Features.ShaderInt8                        = DEVICE_FEATURE_STATE_DISABLED;
+        Features.ResourceBuffer8BitAccess          = DEVICE_FEATURE_STATE_DISABLED;
+        Features.UniformBuffer8BitAccess           = DEVICE_FEATURE_STATE_DISABLED;
+        Features.ShaderResourceStaticArrays        = DEVICE_FEATURE_STATE_DISABLED;
+        Features.ShaderResourceRuntimeArrays       = DEVICE_FEATURE_STATE_DISABLED;
+        Features.WaveOp                            = DEVICE_FEATURE_STATE_DISABLED;
+        Features.InstanceDataStepRate              = DEVICE_FEATURE_STATE_DISABLED;
+        Features.NativeFence                       = DEVICE_FEATURE_STATE_DISABLED;
+        Features.TileShaders                       = DEVICE_FEATURE_STATE_DISABLED;
+        Features.TransferQueueTimestampQueries     = DEVICE_FEATURE_STATE_DISABLED;
+        Features.VariableRateShading               = DEVICE_FEATURE_STATE_DISABLED;
+        Features.SparseResources                   = DEVICE_FEATURE_STATE_DISABLED;
+        Features.SubpassFramebufferFetch           = DEVICE_FEATURE_STATE_DISABLED;
+        Features.TextureComponentSwizzle           = DEVICE_FEATURE_STATE_DISABLED;
+        Features.TextureSubresourceViews           = DEVICE_FEATURE_STATE_ENABLED;
+        Features.NativeMultiDraw                   = DEVICE_FEATURE_STATE_DISABLED;
+        Features.AsyncShaderCompilation            = DEVICE_FEATURE_STATE_ENABLED;
+        Features.FormattedBuffers                  = DEVICE_FEATURE_STATE_DISABLED;
 
-        Features.WireframeFill               = DEVICE_FEATURE_STATE_DISABLED;
-        Features.FormattedBuffers            = DEVICE_FEATURE_STATE_DISABLED;
-        Features.ShaderResourceStaticArrays  = DEVICE_FEATURE_STATE_DISABLED;
-        Features.ShaderResourceRuntimeArrays = DEVICE_FEATURE_STATE_DISABLED;
-
-        if (CheckWebGPUFeature(WGPUFeatureName_DepthClipControl))
-            Features.DepthClamp = DEVICE_FEATURE_STATE_ENABLED;
-
-        if (CheckWebGPUFeature(WGPUFeatureName_TimestampQuery))
-            Features.TimestampQueries = DEVICE_FEATURE_STATE_ENABLED;
-
-        if (CheckWebGPUFeature(WGPUFeatureName_TextureCompressionBC))
-            Features.TextureCompressionBC = DEVICE_FEATURE_STATE_ENABLED;
-
-        if (CheckWebGPUFeature(WGPUFeatureName_TextureCompressionETC2))
-            Features.TextureCompressionETC2 = DEVICE_FEATURE_STATE_ENABLED;
-
-        if (CheckWebGPUFeature(WGPUFeatureName_ShaderF16))
-            Features.ShaderFloat16 = DEVICE_FEATURE_STATE_ENABLED;
-
-        //  WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses = 0x000003EE,
-        if (CheckWebGPUFeature(WGPUFeatureName_TimestampQuery) && CheckWebGPUFeature(static_cast<WGPUFeatureName>(0x000003EE)))
-        {
-            Features.TimestampQueries = DEVICE_FEATURE_STATE_ENABLED;
-            Features.DurationQueries  = DEVICE_FEATURE_STATE_ENABLED;
-        }
+        Features.TimestampQueries = CheckWebGPUFeature(WGPUFeatureName_TimestampQuery);
+        Features.DurationQueries  = Features.TimestampQueries ?
+            CheckWebGPUFeature(WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses) :
+            DEVICE_FEATURE_STATE_DISABLED;
     }
-
     ASSERT_SIZEOF(DeviceFeatures, 47, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     WGPUSupportedLimits wgpuSupportedLimits{};

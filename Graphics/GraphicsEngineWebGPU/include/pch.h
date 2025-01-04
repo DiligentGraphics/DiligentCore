@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -52,6 +52,8 @@ constexpr WGPUBufferBindingType    WGPUBufferBindingType_BindingNotUsed    = WGP
 constexpr WGPUSamplerBindingType   WGPUSamplerBindingType_BindingNotUsed   = WGPUSamplerBindingType_Undefined;
 constexpr WGPUTextureSampleType    WGPUTextureSampleType_BindingNotUsed    = WGPUTextureSampleType_Undefined;
 constexpr WGPUStorageTextureAccess WGPUStorageTextureAccess_BindingNotUsed = WGPUStorageTextureAccess_Undefined;
+
+constexpr WGPUFeatureName WGPUFeatureName_DualSourceBlending = static_cast<WGPUFeatureName>(0x00050008);
 
 inline bool WGPUStringViewValid(WGPUStringView Str)
 {
