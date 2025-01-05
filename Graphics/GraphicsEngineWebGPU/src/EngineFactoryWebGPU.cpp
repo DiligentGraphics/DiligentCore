@@ -244,13 +244,13 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
 
     std::vector<WGPUFeatureName> wgpuFeatures{};
     {
-        auto AddWGPUFeature = [wgpuAdapter, &wgpuFeatures](DEVICE_FEATURE_STATE FeatureState, WGPUFeatureName wgpuFeature) {
-            if (FeatureState && wgpuAdapterHasFeature(wgpuAdapter, wgpuFeature))
+        auto AddWGPUFeature = [wgpuAdapter, &wgpuFeatures](bool Required, WGPUFeatureName wgpuFeature) {
+            if (Required && wgpuAdapterHasFeature(wgpuAdapter, wgpuFeature))
                 wgpuFeatures.push_back(wgpuFeature);
         };
 
         AddWGPUFeature(Features.DepthBiasClamp, WGPUFeatureName_DepthClipControl);
-        AddWGPUFeature(Features.TimestampQueries, WGPUFeatureName_TimestampQuery);
+        AddWGPUFeature(Features.TimestampQueries || Features.DurationQueries, WGPUFeatureName_TimestampQuery);
         AddWGPUFeature(Features.DurationQueries, WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses);
         AddWGPUFeature(Features.TextureCompressionBC, WGPUFeatureName_TextureCompressionBC);
         AddWGPUFeature(Features.TextureCompressionETC2, WGPUFeatureName_TextureCompressionETC2);
