@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -629,8 +629,8 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
     const bool IsDefaultBackBuffer = GetGLHandle() == 0;
 #if GL_ARB_copy_image
     // We can't use glCopyImageSubData with the proxy texture of a default framebuffer
-    // because we don't have the texture handle. Resort to quad rendering in this case.
-    if (glCopyImageSubData && !IsDefaultBackBuffer)
+    // because we don't have the texture handle.
+    if (glCopyImageSubData && !IsDefaultBackBuffer && pSrcTextureGL->GetGLHandle() != 0)
     {
         GLint SrcSliceY = (SrcTexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY) ? SrcSlice : 0;
         GLint SrcSliceZ = (SrcTexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY) ? SrcSlice : 0;
