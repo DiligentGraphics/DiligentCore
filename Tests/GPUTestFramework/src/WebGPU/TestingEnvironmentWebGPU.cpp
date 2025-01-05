@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -98,6 +98,8 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
     VERIFY_EXPR(wgpuCmdQueue != nullptr);
 
     wgpuQueueSubmit(wgpuCmdQueue, 1, &wgpuCmdBuffer);
+    wgpuCommandBufferRelease(wgpuCmdBuffer);
+
     if (WaitForIdle)
     {
         bool IsWorkDone       = false;
@@ -108,8 +110,7 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
                 DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
         };
 
-        WGPUQueue wgpuQueue = wgpuDeviceGetQueue(m_wgpuDevice);
-        wgpuQueueOnSubmittedWorkDone(wgpuQueue, WorkDoneCallback, &IsWorkDone);
+        wgpuQueueOnSubmittedWorkDone(wgpuCmdQueue, WorkDoneCallback, &IsWorkDone);
 
         while (!IsWorkDone)
         {
@@ -118,6 +119,8 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
 #endif
         }
     }
+
+    wgpuQueueRelease(wgpuCmdQueue);
 }
 
 GPUTestingEnvironment* CreateTestingEnvironmentWebGPU(const GPUTestingEnvironment::CreateInfo& CI,
