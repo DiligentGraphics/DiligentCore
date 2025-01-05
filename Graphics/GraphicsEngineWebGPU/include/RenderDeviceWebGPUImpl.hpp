@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -52,14 +52,18 @@ class RenderDeviceWebGPUImpl final : public RenderDeviceBase<EngineWebGPUImplTra
 public:
     using TRenderDeviceBase = RenderDeviceBase<EngineWebGPUImplTraits>;
 
-    RenderDeviceWebGPUImpl(IReferenceCounters*           pRefCounters,
-                           IMemoryAllocator&             RawMemAllocator,
-                           IEngineFactory*               pEngineFactory,
-                           const EngineWebGPUCreateInfo& EngineCI,
-                           const GraphicsAdapterInfo&    AdapterInfo,
-                           WGPUInstance                  wgpuInstance,
-                           WGPUAdapter                   wgpuAdapter,
-                           WGPUDevice                    wgpuDevice) noexcept(false);
+    struct CreateInfo
+    {
+        IMemoryAllocator&             RawMemAllocator;
+        IEngineFactory* const         pEngineFactory;
+        const EngineWebGPUCreateInfo& EngineCI;
+        const GraphicsAdapterInfo&    AdapterInfo;
+        const DeviceFeatures&         EnabledFeatures;
+        WGPUInstance                  wgpuInstance = {};
+        WGPUAdapter                   wgpuAdapter  = {};
+        WGPUDevice                    wgpuDevice   = {};
+    };
+    RenderDeviceWebGPUImpl(IReferenceCounters* pRefCounters, const CreateInfo& CI) noexcept(false);
 
     ~RenderDeviceWebGPUImpl() override;
 

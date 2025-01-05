@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -75,27 +75,21 @@ static void DebugMessengerCallback(WGPUErrorType MessageType, const char* Messag
 }
 #endif
 
-RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRefCounters,
-                                               IMemoryAllocator&             RawMemAllocator,
-                                               IEngineFactory*               pEngineFactory,
-                                               const EngineWebGPUCreateInfo& EngineCI,
-                                               const GraphicsAdapterInfo&    AdapterInfo,
-                                               WGPUInstance                  wgpuInstance,
-                                               WGPUAdapter                   wgpuAdapter,
-                                               WGPUDevice                    wgpuDevice) :
+RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters* pRefCounters,
+                                               const CreateInfo&   CI) :
 
     // clang-format off
     TRenderDeviceBase
     {
         pRefCounters,
-        RawMemAllocator,
-        pEngineFactory,
-        EngineCI,
-        AdapterInfo
+        CI.RawMemAllocator,
+        CI.pEngineFactory,
+        CI.EngineCI,
+        CI.AdapterInfo
     },
-    m_wgpuInstance(wgpuInstance),
-    m_wgpuAdapter{wgpuAdapter},
-    m_wgpuDevice{wgpuDevice}
+    m_wgpuInstance(CI.wgpuInstance),
+    m_wgpuAdapter{CI.wgpuAdapter},
+    m_wgpuDevice{CI.wgpuDevice}
 // clang-format on
 {
     WGPUSupportedLimits wgpuSupportedLimits{};
@@ -110,7 +104,9 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters*           pRe
     m_DeviceInfo.Type = RENDER_DEVICE_TYPE_WEBGPU;
     m_DeviceInfo.NDC  = NDCAttribs{0.0f, 1.0f, -0.5f};
 
-    m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
+    const EngineWebGPUCreateInfo& EngineCI{CI.EngineCI};
+
+    m_DeviceInfo.Features = EnableDeviceFeatures(CI.EnabledFeatures, EngineCI.Features);
 
     m_pUploadMemoryManager  = std::make_unique<UploadMemoryManagerWebGPU>(m_wgpuDevice, EngineCI.UploadHeapPageSize);
     m_pDynamicMemoryManager = std::make_unique<DynamicMemoryManagerWebGPU>(m_wgpuDevice, EngineCI.DynamicHeapPageSize, EngineCI.DynamicHeapSize);
