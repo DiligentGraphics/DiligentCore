@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -250,6 +250,11 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
     /// Returns the content version of the cache data.
     /// If no data has been loaded, returns ~0u (aka 0xFFFFFFFF).
     VIRTUAL Uint32 METHOD(GetContentVersion)(THIS) CONST PURE;
+
+
+    /// Returns the reload version of the cache data.
+    /// The reload version is incremented every time the cache is reloaded.
+    VIRTUAL Uint32 METHOD(GetReloadVersion)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -269,6 +274,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderStateCache_Reset(This)                              CALL_IFACE_METHOD(RenderStateCache, Reset,                        This)
 #    define IRenderStateCache_Reload(This, ...)                        CALL_IFACE_METHOD(RenderStateCache, Reload,                       This, __VA_ARGS__)
 #    define IRenderStateCache_GetContentVersion(This)                  CALL_IFACE_METHOD(RenderStateCache, GetContentVersion,            This)
+#    define IRenderStateCache_GetReloadVersion(This)                   CALL_IFACE_METHOD(RenderStateCache, GetReloadVersion,             This)
 // clang-format on
 
 #endif

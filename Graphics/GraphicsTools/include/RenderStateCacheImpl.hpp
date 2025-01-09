@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -105,6 +105,11 @@ public:
         return m_pDearchiver ? m_pDearchiver->GetContentVersion() : ~0u;
     }
 
+    virtual Uint32 DILIGENT_CALL_TYPE GetReloadVersion() const override final
+    {
+        return m_ReloadVersion;
+    }
+
     bool CreateShaderInternal(const ShaderCreateInfo& ShaderCI,
                               IShader**               ppShader);
 
@@ -150,6 +155,8 @@ private:
 
     std::mutex                                                          m_ReloadablePipelinesMtx;
     std::unordered_map<UniqueIdentifier, RefCntWeakPtr<IPipelineState>> m_ReloadablePipelines;
+
+    Uint32 m_ReloadVersion = 0;
 };
 
 } // namespace Diligent
