@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -74,15 +74,10 @@ void DeviceContextWebGPUImpl::Begin(Uint32 ImmediateContextId)
 
 void DeviceContextWebGPUImpl::SetPipelineState(IPipelineState* pPipelineState)
 {
-    RefCntAutoPtr<PipelineStateWebGPUImpl> pPipelineStateWebGPU{pPipelineState, PipelineStateWebGPUImpl::IID_InternalImpl};
-    VERIFY(pPipelineState == nullptr || pPipelineStateWebGPU != nullptr, "Unknown pipeline state object implementation");
-    if (PipelineStateWebGPUImpl::IsSameObject(m_pPipelineState, pPipelineStateWebGPU))
+    if (!TDeviceContextBase::SetPipelineState(pPipelineState, PipelineStateWebGPUImpl::IID_InternalImpl))
         return;
 
-    TDeviceContextBase::SetPipelineState(std::move(pPipelineStateWebGPU), 0 /*Dummy*/);
-
     m_EncoderState.Invalidate(WebGPUEncoderState::CMD_ENCODER_STATE_PIPELINE_STATE);
-
 
     Uint32 DvpCompatibleSRBCount = 0;
     PrepareCommittedResources(m_BindInfo, DvpCompatibleSRBCount);

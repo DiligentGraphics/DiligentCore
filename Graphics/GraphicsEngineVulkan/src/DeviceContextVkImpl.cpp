@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -274,16 +274,13 @@ inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(SoftwareQueueIndex CmdQ
 
 void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 {
-    RefCntAutoPtr<PipelineStateVkImpl> pPipelineStateVk{pPipelineState, PipelineStateVkImpl::IID_InternalImpl};
-    VERIFY(pPipelineState == nullptr || pPipelineStateVk != nullptr, "Unknown pipeline state object implementation");
-    if (PipelineStateVkImpl::IsSameObject(m_pPipelineState, pPipelineStateVk))
+    RefCntAutoPtr<PipelineStateVkImpl> pOldPipeline = m_pPipelineState;
+    if (!TDeviceContextBase::SetPipelineState(pPipelineState, PipelineStateVkImpl::IID_InternalImpl))
         return;
-
-    const auto& PSODesc = pPipelineStateVk->GetDesc();
 
     bool CommitStates  = false;
     bool CommitScissor = false;
-    if (!m_pPipelineState)
+    if (!pOldPipeline)
     {
         // If no pipeline state is bound, we are working with the fresh command
         // list. We have to commit the states set in the context that are not
@@ -292,7 +289,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     }
     else
     {
-        const auto& OldPSODesc = m_pPipelineState->GetDesc();
+        const PipelineStateDesc& OldPSODesc = pOldPipeline->GetDesc();
         // Commit all graphics states when switching from non-graphics pipeline
         // This is necessary because if the command list had been flushed
         // and the first PSO set on the command list was a compute pipeline,
@@ -300,13 +297,14 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         CommitStates = !OldPSODesc.IsAnyGraphicsPipeline();
         // We also need to update scissor rect if ScissorEnable state was disabled in previous pipeline
         if (OldPSODesc.IsAnyGraphicsPipeline())
-            CommitScissor = !m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable;
+            CommitScissor = !pOldPipeline->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable;
+        pOldPipeline.Release();
     }
 
-    TDeviceContextBase::SetPipelineState(std::move(pPipelineStateVk), 0 /*Dummy*/);
     EnsureVkCmdBuffer();
 
-    auto vkPipeline = m_pPipelineState->GetVkPipeline();
+    const VkPipeline         vkPipeline = m_pPipelineState->GetVkPipeline();
+    const PipelineStateDesc& PSODesc    = m_pPipelineState->GetDesc();
 
     static_assert(PIPELINE_TYPE_LAST == 4, "Please update the switch below to handle the new pipeline type");
     switch (PSODesc.PipelineType)
@@ -314,7 +312,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
         {
-            auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
+            const GraphicsPipelineDesc& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
             m_CommandBuffer.BindGraphicsPipeline(vkPipeline);
 
             if (CommitStates)
@@ -355,14 +353,14 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
             UNEXPECTED("unknown pipeline type");
     }
 
-    const auto& Layout    = m_pPipelineState->GetPipelineLayout();
-    const auto  SignCount = m_pPipelineState->GetResourceSignatureCount();
-    auto&       BindInfo  = GetBindInfo(PSODesc.PipelineType);
+    const PipelineLayoutVk& Layout    = m_pPipelineState->GetPipelineLayout();
+    const Uint32            SignCount = m_pPipelineState->GetResourceSignatureCount();
+    ResourceBindInfo&       BindInfo  = GetBindInfo(PSODesc.PipelineType);
 
     Uint32 DvpCompatibleSRBCount = 0;
     PrepareCommittedResources(BindInfo, DvpCompatibleSRBCount);
 #ifdef DILIGENT_DEVELOPMENT
-    for (auto sign = DvpCompatibleSRBCount; sign < SignCount; ++sign)
+    for (Uint32 sign = DvpCompatibleSRBCount; sign < SignCount; ++sign)
     {
         // Do not clear DescriptorSetBaseInd and DynamicOffsetCount!
         BindInfo.SetInfo[sign].vkSets.fill(VK_NULL_HANDLE);
@@ -374,9 +372,9 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     Uint32 TotalDynamicOffsetCount = 0;
     for (Uint32 i = 0; i < SignCount; ++i)
     {
-        auto& SetInfo = BindInfo.SetInfo[i];
+        ResourceBindInfo::DescriptorSetInfo& SetInfo = BindInfo.SetInfo[i];
 
-        auto* pSignature = m_pPipelineState->GetResourceSignature(i);
+        PipelineResourceSignatureVkImpl* pSignature = m_pPipelineState->GetResourceSignature(i);
         if (pSignature == nullptr || pSignature->GetNumDescriptorSets() == 0)
         {
             SetInfo = {};
@@ -2255,7 +2253,7 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             const auto& FmtAttribs = GetTextureFormatAttribs(Format);
             switch (FmtAttribs.ComponentType)
             {
-                // clang-format off
+                    // clang-format off
                 case COMPONENT_TYPE_DEPTH:         return VK_IMAGE_ASPECT_DEPTH_BIT;
                 case COMPONENT_TYPE_DEPTH_STENCIL: return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
                 // clang-format on

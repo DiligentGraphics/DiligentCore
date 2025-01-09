@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -264,16 +264,15 @@ void DeviceContextD3D12Impl::Begin(Uint32 ImmediateContextId)
 
 void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 {
-    RefCntAutoPtr<PipelineStateD3D12Impl> pPipelineStateD3D12{pPipelineState, PipelineStateD3D12Impl::IID_InternalImpl};
-    VERIFY(pPipelineState == nullptr || pPipelineStateD3D12 != nullptr, "Unknown pipeline state object implementation");
-    if (PipelineStateD3D12Impl::IsSameObject(m_pPipelineState, pPipelineStateD3D12))
+    RefCntAutoPtr<PipelineStateD3D12Impl> pOldPipeline = m_pPipelineState;
+    if (!TDeviceContextBase::SetPipelineState(pPipelineState, PipelineStateD3D12Impl::IID_InternalImpl))
         return;
 
-    const auto& PSODesc = pPipelineStateD3D12->GetDesc();
+    const PipelineStateDesc& PSODesc = m_pPipelineState->GetDesc();
 
     bool CommitStates  = false;
     bool CommitScissor = false;
-    if (!m_pPipelineState)
+    if (!pOldPipeline)
     {
         // If no pipeline state is bound, we are working with the fresh command
         // list. We have to commit the states set in the context that are not
@@ -282,7 +281,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
     }
     else
     {
-        const auto& OldPSODesc = m_pPipelineState->GetDesc();
+        const PipelineStateDesc& OldPSODesc = pOldPipeline->GetDesc();
         // Commit all graphics states when switching from compute pipeline
         // This is necessary because if the command list had been flushed
         // and the first PSO set on the command list was a compute pipeline,
@@ -290,14 +289,13 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         CommitStates = !OldPSODesc.IsAnyGraphicsPipeline();
         // We also need to update scissor rect if ScissorEnable state has changed
         if (OldPSODesc.IsAnyGraphicsPipeline() && PSODesc.IsAnyGraphicsPipeline())
-            CommitScissor = m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable != pPipelineStateD3D12->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable;
+            CommitScissor = pOldPipeline->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable != m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable;
+        pOldPipeline.Release();
     }
 
-    TDeviceContextBase::SetPipelineState(std::move(pPipelineStateD3D12), 0 /*Dummy*/);
-
-    auto& CmdCtx        = GetCmdContext();
-    auto& RootInfo      = GetRootTableInfo(PSODesc.PipelineType);
-    auto* pd3d12RootSig = m_pPipelineState->GetD3D12RootSignature();
+    CommandContext&      CmdCtx        = GetCmdContext();
+    RootTableInfo&       RootInfo      = GetRootTableInfo(PSODesc.PipelineType);
+    ID3D12RootSignature* pd3d12RootSig = m_pPipelineState->GetD3D12RootSignature();
 
     if (RootInfo.pd3d12RootSig != pd3d12RootSig)
     {
@@ -316,15 +314,15 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:
         {
-            auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
-            auto& GraphicsCtx      = CmdCtx.AsGraphicsContext();
-            auto* pd3d12PSO        = m_pPipelineState->GetD3D12PipelineState();
+            const GraphicsPipelineDesc& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
+            GraphicsContext&            GraphicsCtx      = CmdCtx.AsGraphicsContext();
+            ID3D12PipelineState*        pd3d12PSO        = m_pPipelineState->GetD3D12PipelineState();
             GraphicsCtx.SetPipelineState(pd3d12PSO);
             GraphicsCtx.SetGraphicsRootSignature(pd3d12RootSig);
 
             if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
             {
-                auto D3D12Topology = TopologyToD3D12Topology(GraphicsPipeline.PrimitiveTopology);
+                D3D12_PRIMITIVE_TOPOLOGY D3D12Topology = TopologyToD3D12Topology(GraphicsPipeline.PrimitiveTopology);
                 GraphicsCtx.SetPrimitiveTopology(D3D12Topology);
             }
 
@@ -347,16 +345,16 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         }
         case PIPELINE_TYPE_COMPUTE:
         {
-            auto* pd3d12PSO = m_pPipelineState->GetD3D12PipelineState();
-            auto& CompCtx   = CmdCtx.AsComputeContext();
+            ID3D12PipelineState* pd3d12PSO = m_pPipelineState->GetD3D12PipelineState();
+            ComputeContext&      CompCtx   = CmdCtx.AsComputeContext();
             CompCtx.SetPipelineState(pd3d12PSO);
             CompCtx.SetComputeRootSignature(pd3d12RootSig);
             break;
         }
         case PIPELINE_TYPE_RAY_TRACING:
         {
-            auto* pd3d12SO = m_pPipelineState->GetD3D12StateObject();
-            auto& RTCtx    = CmdCtx.AsGraphicsContext4();
+            ID3D12StateObject* pd3d12SO = m_pPipelineState->GetD3D12StateObject();
+            GraphicsContext4&  RTCtx    = CmdCtx.AsGraphicsContext4();
             RTCtx.SetRayTracingPipelineState(pd3d12SO);
             RTCtx.SetComputeRootSignature(pd3d12RootSig);
             break;

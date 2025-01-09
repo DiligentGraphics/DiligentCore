@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -465,7 +465,7 @@ protected:
 
     inline bool SetStencilRef(Uint32 StencilRef, int Dummy);
 
-    inline void SetPipelineState(RefCntAutoPtr<PipelineStateImplType> pPipelineState, int /*Dummy*/);
+    inline bool SetPipelineState(IPipelineState* pPipelineState, const INTERFACE_ID& IID_PSOImpl);
 
     /// Clears all cached resources
     inline void ClearStateCache();
@@ -766,17 +766,36 @@ inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
 }
 
 template <typename ImplementationTraits>
-inline void DeviceContextBase<ImplementationTraits>::SetPipelineState(
-    RefCntAutoPtr<PipelineStateImplType> pPipelineState,
-    int /*Dummy*/)
+inline bool DeviceContextBase<ImplementationTraits>::SetPipelineState(
+    IPipelineState*     pPipelineState,
+    const INTERFACE_ID& IID_PSOImpl)
 {
+    if (pPipelineState == nullptr)
+    {
+        DEV_ERROR("Pipeline state must not be null");
+        return false;
+    }
+
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(COMMAND_QUEUE_TYPE_COMPUTE, "SetPipelineState");
+
     DEV_CHECK_ERR((pPipelineState->GetDesc().ImmediateContextMask & (Uint64{1} << GetExecutionCtxId())) != 0,
                   "PSO '", pPipelineState->GetDesc().Name, "' can't be used in device context '", m_Desc.Name, "'.");
-    DEV_CHECK_ERR(pPipelineState->GetStatus() == PIPELINE_STATE_STATUS_READY, "PSO '", pPipelineState->GetDesc().Name, "' is not ready. Use GetStatus() to check the pipeline status.");
 
-    m_pPipelineState = std::move(pPipelineState);
+    // Check that the PSO is ready before querying the implementation.
+    DEV_CHECK_ERR(pPipelineState->GetStatus() == PIPELINE_STATE_STATUS_READY, "PSO '", pPipelineState->GetDesc().Name,
+                  "' is not ready. Use GetStatus() to check the pipeline status.");
+
+    // Note that pPipelineStateImpl may not be the same as pPipelineState (for example, if pPipelineState
+    // is a reloadable pipeline).
+    RefCntAutoPtr<PipelineStateImplType> pPipelineStateImpl{pPipelineState, IID_PSOImpl};
+    VERIFY(pPipelineStateImpl != nullptr, "Unknown pipeline state object implementation");
+    if (PipelineStateImplType::IsSameObject(m_pPipelineState, pPipelineStateImpl))
+        return false;
+
+    m_pPipelineState = std::move(pPipelineStateImpl);
     ++m_Stats.CommandCounters.SetPipelineState;
+
+    return true;
 }
 
 template <typename ImplementationTraits>
@@ -2200,7 +2219,7 @@ inline Uint32 GetPrimitiveCount(PRIMITIVE_TOPOLOGY Topology, Uint32 Elements)
                 UNEXPECTED("Undefined primitive topology");
                 return 0;
 
-            // clang-format off
+                // clang-format off
             case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:      return Elements / 3;
             case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP:     return (std::max)(Elements, 2u) - 2;
             case PRIMITIVE_TOPOLOGY_POINT_LIST:         return Elements;

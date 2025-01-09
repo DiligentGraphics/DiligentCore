@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -87,25 +87,19 @@ void DeviceContextGLImpl::Begin(Uint32 ImmediateContextId)
 
 void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
 {
-    VERIFY_EXPR(pPipelineState != nullptr);
-
-    RefCntAutoPtr<PipelineStateGLImpl> pPipelineStateGLImpl{pPipelineState, PipelineStateGLImpl::IID_InternalImpl};
-    VERIFY(pPipelineState == nullptr || pPipelineStateGLImpl != nullptr, "Unknown pipeline state object implementation");
-    if (PipelineStateGLImpl::IsSameObject(m_pPipelineState, pPipelineStateGLImpl))
+    if (!TDeviceContextBase::SetPipelineState(pPipelineState, PipelineStateGLImpl::IID_InternalImpl))
         return;
 
-    TDeviceContextBase::SetPipelineState(std::move(pPipelineStateGLImpl), 0 /*Dummy*/);
-
-    const auto& Desc = m_pPipelineState->GetDesc();
+    const PipelineStateDesc& Desc = m_pPipelineState->GetDesc();
     if (Desc.PipelineType == PIPELINE_TYPE_COMPUTE)
     {
     }
     else if (Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
-        const auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
+        const GraphicsPipelineDesc& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
         // Set rasterizer state
         {
-            const auto& RasterizerDesc = GraphicsPipeline.RasterizerDesc;
+            const RasterizerStateDesc& RasterizerDesc = GraphicsPipeline.RasterizerDesc;
 
             m_ContextState.SetFillMode(RasterizerDesc.FillMode);
             m_ContextState.SetCullMode(RasterizerDesc.CullMode);
@@ -126,13 +120,13 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
 
         // Set blend state
         {
-            const auto& BSDsc = GraphicsPipeline.BlendDesc;
+            const BlendStateDesc& BSDsc = GraphicsPipeline.BlendDesc;
             m_ContextState.SetBlendState(BSDsc, GraphicsPipeline.SampleMask);
         }
 
         // Set depth-stencil state
         {
-            const auto& DepthStencilDesc = GraphicsPipeline.DepthStencilDesc;
+            const DepthStencilStateDesc& DepthStencilDesc = GraphicsPipeline.DepthStencilDesc;
 
             m_ContextState.EnableDepthTest(DepthStencilDesc.DepthEnable);
             m_ContextState.EnableDepthWrites(DepthStencilDesc.DepthWriteEnable);
@@ -141,13 +135,13 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
             m_ContextState.SetStencilWriteMask(DepthStencilDesc.StencilWriteMask);
 
             {
-                const auto& FrontFace = DepthStencilDesc.FrontFace;
+                const StencilOpDesc& FrontFace = DepthStencilDesc.FrontFace;
                 m_ContextState.SetStencilFunc(GL_FRONT, FrontFace.StencilFunc, m_StencilRef, DepthStencilDesc.StencilReadMask);
                 m_ContextState.SetStencilOp(GL_FRONT, FrontFace.StencilFailOp, FrontFace.StencilDepthFailOp, FrontFace.StencilPassOp);
             }
 
             {
-                const auto& BackFace = DepthStencilDesc.BackFace;
+                const StencilOpDesc& BackFace = DepthStencilDesc.BackFace;
                 m_ContextState.SetStencilFunc(GL_BACK, BackFace.StencilFunc, m_StencilRef, DepthStencilDesc.StencilReadMask);
                 m_ContextState.SetStencilOp(GL_BACK, BackFace.StencilFailOp, BackFace.StencilDepthFailOp, BackFace.StencilPassOp);
             }

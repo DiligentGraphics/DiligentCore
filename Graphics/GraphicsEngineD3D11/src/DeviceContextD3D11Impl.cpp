@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,16 +80,13 @@ void DeviceContextD3D11Impl::Begin(Uint32 ImmediateContextId)
 
 void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
 {
-    RefCntAutoPtr<PipelineStateD3D11Impl> pPipelineStateD3D11{pPipelineState, PipelineStateD3D11Impl::IID_InternalImpl};
-    VERIFY(pPipelineState == nullptr || pPipelineStateD3D11 != nullptr, "Unknown pipeline state object implementation");
-    if (PipelineStateD3D11Impl::IsSameObject(m_pPipelineState, pPipelineStateD3D11))
+    if (!TDeviceContextBase::SetPipelineState(pPipelineState, PipelineStateD3D11Impl::IID_InternalImpl))
         return;
 
-    TDeviceContextBase::SetPipelineState(std::move(pPipelineStateD3D11), 0 /*Dummy*/);
-    const auto& Desc = m_pPipelineState->GetDesc();
+    const PipelineStateDesc& Desc = m_pPipelineState->GetDesc();
     if (Desc.PipelineType == PIPELINE_TYPE_COMPUTE)
     {
-        auto* pd3d11CS = m_pPipelineState->GetD3D11ComputeShader();
+        ID3D11ComputeShader* pd3d11CS = m_pPipelineState->GetD3D11ComputeShader();
         if (pd3d11CS == nullptr)
         {
             LOG_ERROR("Compute shader is not set in the pipeline");
@@ -118,13 +115,13 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
         COMMIT_SHADER(DS, DomainShader);
 #undef COMMIT_SHADER
 
-        const auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
+        const GraphicsPipelineDesc& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
 
         m_pd3d11DeviceContext->OMSetBlendState(m_pPipelineState->GetD3D11BlendState(), m_BlendFactors, GraphicsPipeline.SampleMask);
         m_pd3d11DeviceContext->RSSetState(m_pPipelineState->GetD3D11RasterizerState());
         m_pd3d11DeviceContext->OMSetDepthStencilState(m_pPipelineState->GetD3D11DepthStencilState(), m_StencilRef);
 
-        auto* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();
+        ID3D11InputLayout* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();
         // It is safe to perform raw pointer comparison as the device context
         // keeps bound input layout alive
         if (m_CommittedD3D11InputLayout != pd3d11InputLayout)
@@ -133,7 +130,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
             m_CommittedD3D11InputLayout = pd3d11InputLayout;
         }
 
-        auto PrimTopology = GraphicsPipeline.PrimitiveTopology;
+        PRIMITIVE_TOPOLOGY PrimTopology = GraphicsPipeline.PrimitiveTopology;
         if (m_CommittedPrimitiveTopology != PrimTopology)
         {
             m_CommittedPrimitiveTopology = PrimTopology;
@@ -149,7 +146,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
     Uint32 DvpCompatibleSRBCount = 0;
     PrepareCommittedResources(m_BindInfo, DvpCompatibleSRBCount);
 
-    const auto ActiveStages = m_pPipelineState->GetActiveShaderStages();
+    const SHADER_TYPE ActiveStages = m_pPipelineState->GetActiveShaderStages();
     if (m_BindInfo.ActiveStages != ActiveStages)
     {
         m_BindInfo.ActiveStages = ActiveStages;
