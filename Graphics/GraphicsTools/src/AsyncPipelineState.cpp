@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -73,9 +73,8 @@ protected:
 AsyncPipelineState::AsyncPipelineState(IReferenceCounters*            pRefCounters,
                                        RenderStateCacheImpl*          pStateCache,
                                        const PipelineStateCreateInfo& CreateInfo) :
-    TBase{pRefCounters},
+    TBase{CreateInfo.PSODesc, pRefCounters},
     m_pStateCache{pStateCache},
-    m_Type{CreateInfo.PSODesc.PipelineType},
     m_UniqueID{}
 {
     static_assert(PIPELINE_TYPE_COUNT == 5, "Did you add a new pipeline type? You may need to handle it here.");
@@ -132,7 +131,7 @@ void AsyncPipelineState::QueryInterface(const INTERFACE_ID& IID, IObject** ppInt
 void AsyncPipelineState::InitInternalPipeline()
 {
     static_assert(PIPELINE_TYPE_COUNT == 5, "Did you add a new pipeline type? You may need to handle it here.");
-    switch (m_Type)
+    switch (m_Desc.PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:

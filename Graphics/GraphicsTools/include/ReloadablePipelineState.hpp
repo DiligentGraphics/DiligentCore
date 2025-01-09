@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -84,7 +84,6 @@ private:
 
     RefCntAutoPtr<RenderStateCacheImpl>    m_pStateCache;
     std::unique_ptr<CreateInfoWrapperBase> m_pCreateInfo;
-    const PIPELINE_TYPE                    m_Type;
 
     // Old pipeline state kept around to copy static resources from
     RefCntAutoPtr<IPipelineState> m_pOldPipeline;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -82,9 +82,8 @@ ReloadablePipelineState::ReloadablePipelineState(IReferenceCounters*            
                                                  RenderStateCacheImpl*          pStateCache,
                                                  IPipelineState*                pPipeline,
                                                  const PipelineStateCreateInfo& CreateInfo) :
-    TBase{pRefCounters},
-    m_pStateCache{pStateCache},
-    m_Type{CreateInfo.PSODesc.PipelineType}
+    TBase{CreateInfo.PSODesc, pRefCounters},
+    m_pStateCache{pStateCache}
 {
     m_pPipeline = pPipeline;
 
@@ -249,7 +248,7 @@ bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGr
     static_assert(PIPELINE_TYPE_COUNT == 5, "Did you add a new pipeline type? You may need to handle it here.");
     // Note that all shaders in Create Info are reloadable shaders, so they will automatically redirect all calls
     // to the updated internal shader
-    switch (m_Type)
+    switch (m_Desc.PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
         case PIPELINE_TYPE_MESH:

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@
 
 #include "PipelineState.h"
 #include "RefCntAutoPtr.hpp"
+#include "PipelineStateBase.hpp"
 
 namespace Diligent
 {
@@ -42,15 +43,15 @@ class ProxyPipelineState : public Base
 {
 public:
     template <typename... Args>
-    ProxyPipelineState(Args&&... args) :
-        Base{std::forward<Args>(args)...}
+    ProxyPipelineState(const PipelineStateDesc& PSODesc, Args&&... args) :
+        Base{std::forward<Args>(args)...},
+        m_Name{PSODesc.Name != nullptr ? PSODesc.Name : ""},
+        m_Desc{m_Name.c_str(), PSODesc.PipelineType}
     {}
 
     virtual const PipelineStateDesc& DILIGENT_CALL_TYPE GetDesc() const override
     {
-        DEV_CHECK_ERR(m_pPipeline, "Internal pipeline is null");
-        static constexpr PipelineStateDesc NullDesc;
-        return m_pPipeline ? m_pPipeline->GetDesc() : NullDesc;
+        return m_pPipeline ? m_pPipeline->GetDesc() : m_Desc;
     }
 
     virtual Int32 DILIGENT_CALL_TYPE GetUniqueID() const override
@@ -62,7 +63,10 @@ public:
     virtual void DILIGENT_CALL_TYPE SetUserData(IObject* pUserData) override
     {
         DEV_CHECK_ERR(m_pPipeline, "Internal pipeline is null");
-        m_pPipeline->SetUserData(pUserData);
+        if (m_pPipeline)
+        {
+            m_pPipeline->SetUserData(pUserData);
+        }
     }
 
     virtual IObject* DILIGENT_CALL_TYPE GetUserData() const override
@@ -104,7 +108,7 @@ public:
     virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override
     {
         DEV_CHECK_ERR(m_pPipeline, "Internal pipeline is null");
-        return m_pPipeline->GetStaticVariableCount(ShaderType);
+        return m_pPipeline ? m_pPipeline->GetStaticVariableCount(ShaderType) : 0;
     }
 
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override
@@ -122,7 +126,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override
     {
         DEV_CHECK_ERR(m_pPipeline, "Internal pipeline is null");
-        m_pPipeline->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
+        if (m_pPipeline)
+        {
+            m_pPipeline->CreateShaderResourceBinding(ppShaderResourceBinding, InitStaticResources);
+        }
     }
 
     virtual void DILIGENT_CALL_TYPE InitializeStaticSRBResources(IShaderResourceBinding* pShaderResourceBinding) const override
@@ -168,6 +175,9 @@ public:
     }
 
 protected:
+    const std::string       m_Name;
+    const PipelineStateDesc m_Desc;
+
     RefCntAutoPtr<IPipelineState> m_pPipeline;
 };
 
