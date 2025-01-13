@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,12 +70,24 @@ public:
     ShaderMacroHelper(const ShaderMacroHelper& rhs) :
         m_Macros{rhs.m_Macros}
     {
-        for (auto& Macros : m_Macros)
+        for (ShaderMacro& Macro : m_Macros)
         {
-            if (Macros.Definition != nullptr)
-                Macros.Definition = m_StringPool.insert(Macros.Definition).first->c_str();
-            if (Macros.Name != nullptr)
-                Macros.Name = m_StringPool.insert(Macros.Name).first->c_str();
+            if (Macro.Definition != nullptr)
+                Macro.Definition = m_StringPool.insert(Macro.Definition).first->c_str();
+            if (Macro.Name != nullptr)
+                Macro.Name = m_StringPool.insert(Macro.Name).first->c_str();
+        }
+    }
+
+    ShaderMacroHelper(const std::initializer_list<ShaderMacro>& Macros) :
+        m_Macros{Macros}
+    {
+        for (ShaderMacro& Macro : m_Macros)
+        {
+            if (Macro.Definition != nullptr)
+                Macro.Definition = m_StringPool.insert(Macro.Definition).first->c_str();
+            if (Macro.Name != nullptr)
+                Macro.Name = m_StringPool.insert(Macro.Name).first->c_str();
         }
     }
 
@@ -141,15 +153,15 @@ public:
 
     ShaderMacroHelper& Add(const ShaderMacro& Macro)
     {
-        const auto* PooledDefinition = m_StringPool.insert(Macro.Definition).first->c_str();
-        const auto* PooledName       = m_StringPool.insert(Macro.Name).first->c_str();
+        const char* PooledDefinition = m_StringPool.insert(Macro.Definition).first->c_str();
+        const char* PooledName       = m_StringPool.insert(Macro.Name).first->c_str();
         m_Macros.emplace_back(PooledName, PooledDefinition);
         return *this;
     }
 
     ShaderMacroHelper& operator+=(const ShaderMacroHelper& Macros)
     {
-        for (const auto& Macro : Macros.m_Macros)
+        for (const ShaderMacro& Macro : Macros.m_Macros)
             Add(Macro);
 
         return *this;
@@ -181,7 +193,7 @@ public:
         if (Name == nullptr)
             return nullptr;
 
-        for (const auto& Macro : m_Macros)
+        for (const ShaderMacro& Macro : m_Macros)
         {
             if (strcmp(Macro.Name, Name) == 0)
                 return Macro.Definition != nullptr ? Macro.Definition : "";
