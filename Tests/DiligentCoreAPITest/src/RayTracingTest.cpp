@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1634,6 +1634,7 @@ TEST_P(RT5, InlineRayTracing_RayTracingPSO)
     PSOCreateInfo.pGeneralShaders    = GeneralShaders;
     PSOCreateInfo.GeneralShaderCount = _countof(GeneralShaders);
 
+    // The hardware does not need a recursion stack to jump among separate programs - everything is inlined in the same shader invocation.
     PSOCreateInfo.RayTracingPipeline.MaxRecursionDepth       = 0;
     PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 

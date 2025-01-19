@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -274,7 +274,7 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
         PipelineCI.pStages                      = Helper.Stages.data();
         PipelineCI.groupCount                   = static_cast<Uint32>(Helper.Groups.size());
         PipelineCI.pGroups                      = Helper.Groups.data();
-        PipelineCI.maxPipelineRayRecursionDepth = 0;
+        PipelineCI.maxPipelineRayRecursionDepth = 1;
         PipelineCI.layout                       = Ctx.vkLayout;
 
         res = vkCreateRayTracingPipelinesKHR(Ctx.vkDevice, VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &PipelineCI, nullptr, &Ctx.vkPipeline);

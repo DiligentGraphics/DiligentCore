@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -510,8 +510,11 @@ struct RayTracingPipelineDesc
     /// Shader record size plus shader group size (32 bytes) must not exceed 4096 bytes.
     Uint16  ShaderRecordSize   DEFAULT_INITIALIZER(0);
 
-    /// Number of recursive calls of TraceRay() in HLSL or traceRay() in GLSL.
-    /// Zero means no tracing of rays at all, only ray-gen shader will be executed.
+    /// Number of recursive calls of TraceRay() in HLSL or traceRayEXT() in GLSL.
+    /// Shaders directly invoked from the API always have a recursion depth of 0; each
+    /// shader executed by the trace ray instruction has a recursion depth one higher than
+    /// the recursion depth of the shader which invoked it. Applications must not invoke a
+    /// shader with a recursion depth greater than the value of MaxRecursionDepth.
     /// See DeviceProperties::MaxRayTracingRecursionDepth.
     Uint8   MaxRecursionDepth  DEFAULT_INITIALIZER(0);
 
