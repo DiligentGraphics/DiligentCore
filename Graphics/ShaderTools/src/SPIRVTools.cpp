@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -117,11 +117,17 @@ std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_t
     spvtools::Optimizer SpirvOptimizer(TargetEnv);
     SpirvOptimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
 
+    spvtools::OptimizerOptions Options;
+
     // SPIR-V bytecode generated from HLSL must be legalized to
     // turn it into a valid vulkan SPIR-V shader.
     if (Passes & SPIRV_OPTIMIZATION_FLAG_LEGALIZATION)
     {
         SpirvOptimizer.RegisterLegalizationPasses();
+
+        spvtools::ValidatorOptions ValidatorOptions;
+        ValidatorOptions.SetBeforeHlslLegalization(true);
+        Options.set_validator_options(ValidatorOptions);
     }
 
     if (Passes & SPIRV_OPTIMIZATION_FLAG_PERFORMANCE)
@@ -137,7 +143,7 @@ std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_t
     }
 
     std::vector<uint32_t> OptimizedSPIRV;
-    if (!SpirvOptimizer.Run(SrcSPIRV.data(), SrcSPIRV.size(), &OptimizedSPIRV))
+    if (!SpirvOptimizer.Run(SrcSPIRV.data(), SrcSPIRV.size(), &OptimizedSPIRV, Options))
         OptimizedSPIRV.clear();
 
     return OptimizedSPIRV;
