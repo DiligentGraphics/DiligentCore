@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -740,7 +740,12 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                 //     SPIR-V module not valid: DecorateStringGOOGLE requires one of the following extensions: SPV_GOOGLE_decorate_string
                 // Optimizer also performs validation and may catch problems with the byte code.
                 // NB: SPIRV offsets become INVALID after this operation.
-                auto StrippedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, SPIRV_OPTIMIZATION_FLAG_STRIP_REFLECTION);
+                SPIRV_OPTIMIZATION_FLAGS OptimizationFlags = SPIRV_OPTIMIZATION_FLAG_STRIP_REFLECTION;
+                if (pShaderResources->IsHLSLSource())
+                {
+                    OptimizationFlags |= SPIRV_OPTIMIZATION_FLAG_LEGALIZATION;
+                }
+                auto StrippedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, OptimizationFlags);
                 if (!StrippedSPIRV.empty())
                     SPIRV = std::move(StrippedSPIRV);
                 else
