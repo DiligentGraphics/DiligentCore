@@ -353,3 +353,100 @@ if (device->GetDeviceInfo().IsGLDevice())
 - Look at [GetSurfacePretransformMatrix()](https://github.com/DiligentGraphics/DiligentSamples/blob/9be93225a7fdf135583146c1175c232217f310b2/SampleBase/src/SampleBase.cpp#L140) for an example of handling the view matrix.
 - `SDL_GetDisplayOrientation()` can be used to get the device's orientation. Alternatively, listen for the `SDL_DISPLAYEVENT_ORIENTATION` event.
 - `SDL_GetDisplayMode()` can be used to determine max resolution.
+
+## ImGui
+For all ImGui features to work properly, ```ImGuiImplDiligent``` should be overridden to use the SDL backend for ImGui.
+
+### Example Implementation
+
+#### Header
+```cpp
+// ImGuiImplSDL.hpp
+
+#include "Imgui/interface/ImGuiImplDiligent.hpp"
+
+extern "C" struct SDL_Window;
+extern "C" union SDL_Event;
+
+namespace Diligent
+{
+class ImGuiImplSDL final : public ImGuiImplDiligent
+{
+public:
+    static std::unique_ptr<ImGuiImplSDL>
+    Create(const ImGuiDiligentCreateInfo& CI, SDL_Window* pWindow);
+
+    ImGuiImplSDL(const ImGuiDiligentCreateInfo& CI, SDL_Window* pWindow);
+    ~ImGuiImplSDL();
+
+    ImGuiImplSDL(const ImGuiImplSDL&) = delete;
+    ImGuiImplSDL& operator=(const ImGuiImplSDL&) = delete;
+    ImGuiImplSDL(ImGuiImplSDL&&) = delete;
+    ImGuiImplSDL& operator=(ImGuiImplSDL&&) = delete;
+
+    virtual void NewFrame(Uint32            RenderSurfaceWidth,
+                      Uint32            RenderSurfaceHeight,
+                      SURFACE_TRANSFORM SurfacePreTransform) override final;
+    virtual void Render(IDeviceContext* pCtx) override final;
+    bool HandleSDLEvent(const SDL_Event * ev);
+};
+} // namespace Diligent
+
+#endif // IMGUIIMPLSDL_HPP
+```
+
+#### Source
+```cpp
+// ImGuiImplSDL.cpp
+
+#include "ImGuiImplSDL.hpp"
+#include "backends/imgui_impl_sdl.h"
+
+#include <SDL_video.h>
+#include <memory>
+
+namespace Diligent
+{
+
+std::unique_ptr<ImGuiImplSDL>
+ImGuiImplSDL::Create(const ImGuiDiligentCreateInfo& CI, SDL_Window* pWindow)
+{
+    return std::make_unique<ImGuiImplSDL>(CI, pWindow);
+}
+
+ImGuiImplSDL::ImGuiImplSDL(const ImGuiDiligentCreateInfo& CI,
+                           SDL_Window* pWindow)
+    : ImGuiImplDiligent(CI)
+{
+#if _WIN32
+    ImGui_ImplSDL2_InitForD3D(pWindow);
+#elif __ANDROID__
+    ImGui_ImplSDL2_InitForOpenGL(pWindow);
+#elif __APPLE__
+    ImGui_ImplSDL2_InitForVulkan(pWindow);
+#endif
+}
+
+ImGuiImplSDL::~ImGuiImplSDL() { ImGui_ImplSDL2_Shutdown(); }
+
+void ImGuiImplSDL::NewFrame(Uint32 RenderSurfaceWidth,
+                            Uint32 RenderSurfaceHeight,
+                            SURFACE_TRANSFORM SurfacePreTransform)
+{
+    ImGui_ImplSDL2_NewFrame();
+    ImGuiImplDiligent::NewFrame(RenderSurfaceWidth, RenderSurfaceHeight,
+                                SurfacePreTransform);
+}
+
+void ImGuiImplSDL::Render(IDeviceContext* pCtx)
+{
+    ImGuiImplDiligent::Render(pCtx);
+}
+
+bool ImGuiImplSDL::HandleSDLEvent(const SDL_Event* ev)
+{
+    return ImGui_ImplSDL2_ProcessEvent(ev);
+}
+
+} // namespace Diligent
+```
