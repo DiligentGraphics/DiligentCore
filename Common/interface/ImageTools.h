@@ -57,8 +57,8 @@ struct ImageDiffInfo
 typedef struct ImageDiffInfo ImageDiffInfo;
 
 
-/// Attributes for GetImageDifference function
-struct GetImageDifferenceAttribs
+/// Attributes for ComputeImageDifference function
+struct ComputeImageDifferenceAttribs
 {
     /// Image width
     Uint32 Width DEFAULT_INITIALIZER(0);
@@ -86,52 +86,9 @@ struct GetImageDifferenceAttribs
 
     /// Difference threshold
     Uint32 Threshold DEFAULT_INITIALIZER(0);
-};
-typedef struct GetImageDifferenceAttribs GetImageDifferenceAttribs;
 
-/// Computes the difference between two images
-///
-/// \param [in]  Attribs    Image difference attributes, see Diligent::GetImageDifferenceAttribs.
-///
-/// \return     The image difference information, see Diligent::ImageDiffInfo.
-///
-/// \remarks    The difference between two pixels is calculated as the maximum of the
-///             absolute differences of all channels. The average difference is the
-///             average of all differences, not counting pixels that are equal.
-///             The root mean square difference is calculated as the square root of
-///             the average of the squares of all differences, not counting pixels that
-///             are equal.
-void DILIGENT_GLOBAL_FUNCTION(GetImageDifference)(const GetImageDifferenceAttribs REF Attribs, ImageDiffInfo REF ImageDiff);
-
-
-/// Attributes for ComputeDifferenceImage function
-struct ComputeDifferenceImageAttribs
-{
-    /// Image width
-    Uint32 Width DEFAULT_INITIALIZER(0);
-
-    /// Image height
-    Uint32 Height DEFAULT_INITIALIZER(0);
-
-    /// A pointer to the first image data
-    const void* pImage1 DEFAULT_INITIALIZER(nullptr);
-
-    /// Number of channels in the first image
-    Uint32 NumChannels1 DEFAULT_INITIALIZER(0);
-
-    /// Row stride of the first image data, in bytes
-    Uint32 Stride1 DEFAULT_INITIALIZER(0);
-
-    /// A pointer to the second image data
-    const void* pImage2 DEFAULT_INITIALIZER(nullptr);
-
-    /// Number of channels in the second image
-    Uint32 NumChannels2 DEFAULT_INITIALIZER(0);
-
-    /// Row stride of the second image data, in bytes
-    Uint32 Stride2 DEFAULT_INITIALIZER(0);
-
-    /// A pointer to the difference image data
+    /// A pointer to the difference image data.
+    /// If null, the difference image will not be computed.
     void* pDiffImage DEFAULT_INITIALIZER(nullptr);
 
     /// Row stride of the difference image data, in bytes
@@ -144,12 +101,23 @@ struct ComputeDifferenceImageAttribs
     /// Scale factor for the difference image
     float Scale DEFAULT_INITIALIZER(1.f);
 };
-typedef struct ComputeDifferenceImageAttribs ComputeDifferenceImageAttribs;
+typedef struct ComputeImageDifferenceAttribs ComputeImageDifferenceAttribs;
 
-/// Computes the difference image
+/// Computes the difference between two images
 ///
-/// \param [in]  Attribs    Compute difference image attributes, see Diligent::ComputeDifferenceImageAttribs.
-void DILIGENT_GLOBAL_FUNCTION(ComputeDifferenceImage)(const ComputeDifferenceImageAttribs REF Attribs);
+/// \param [in]  Attribs    Image difference attributes, see Diligent::ComputeImageDifferenceAttribs.
+///
+/// \return     The image difference information, see Diligent::ImageDiffInfo.
+///
+/// \remarks    The difference between two pixels is calculated as the maximum of the
+///             absolute differences of all channels. The average difference is the
+///             average of all differences, not counting pixels that are equal.
+///             The root mean square difference is calculated as the square root of
+///             the average of the squares of all differences, not counting pixels that
+///             are equal.
+void DILIGENT_GLOBAL_FUNCTION(ComputeImageDifference)(const ComputeImageDifferenceAttribs REF Attribs, ImageDiffInfo REF ImageDiff);
+
+
 // clang-format on
 
 #include "../../Primitives/interface/UndefRefMacro.h"

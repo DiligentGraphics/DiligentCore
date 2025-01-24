@@ -34,8 +34,8 @@
 namespace Diligent
 {
 
-void GetImageDifference(const GetImageDifferenceAttribs& Attribs,
-                        ImageDiffInfo&                   Diff)
+void ComputeImageDifference(const ComputeImageDifferenceAttribs& Attribs,
+                            ImageDiffInfo&                       Diff)
 {
     Diff = {};
 
@@ -68,21 +68,45 @@ void GetImageDifference(const GetImageDifferenceAttribs& Attribs,
         return;
     }
 
-    const Uint32 NumChannels = std::min(Attribs.NumChannels1, Attribs.NumChannels2);
+    const Uint32 NumSrcChannels  = std::min(Attribs.NumChannels1, Attribs.NumChannels2);
+    const Uint32 NumDiffChannels = Attribs.NumDiffChannels != 0 ? Attribs.NumDiffChannels : NumSrcChannels;
+    if (Attribs.pDiffImage != nullptr)
+    {
+        if (Attribs.DiffStride < Attribs.Width * NumDiffChannels)
+        {
+            UNEXPECTED("DiffStride is too small. It must be at least ", Attribs.Width * NumDiffChannels, " bytes long.");
+            return;
+        }
+    }
+
     for (Uint32 row = 0; row < Attribs.Height; ++row)
     {
-        const Uint8* pRow1 = reinterpret_cast<const Uint8*>(Attribs.pImage1) + row * Attribs.Stride1;
-        const Uint8* pRow2 = reinterpret_cast<const Uint8*>(Attribs.pImage2) + row * Attribs.Stride2;
+        const Uint8* pRow1    = reinterpret_cast<const Uint8*>(Attribs.pImage1) + row * Attribs.Stride1;
+        const Uint8* pRow2    = reinterpret_cast<const Uint8*>(Attribs.pImage2) + row * Attribs.Stride2;
+        Uint8*       pDiffRow = Attribs.pDiffImage != nullptr ? reinterpret_cast<Uint8*>(Attribs.pDiffImage) + row * Attribs.DiffStride : nullptr;
 
         for (Uint32 col = 0; col < Attribs.Width; ++col)
         {
             Uint32 PixelDiff = 0;
-            for (Uint32 ch = 0; ch < NumChannels; ++ch)
+            for (Uint32 ch = 0; ch < NumSrcChannels; ++ch)
             {
                 const Uint32 ChannelDiff = static_cast<Uint32>(
                     std::abs(static_cast<int>(pRow1[col * Attribs.NumChannels1 + ch]) -
                              static_cast<int>(pRow2[col * Attribs.NumChannels2 + ch])));
                 PixelDiff = std::max(PixelDiff, ChannelDiff);
+
+                if (pDiffRow != nullptr && ch < NumDiffChannels)
+                {
+                    pDiffRow[col * NumDiffChannels + ch] = static_cast<Uint8>(std::min(ChannelDiff * Attribs.Scale, 255.f));
+                }
+            }
+
+            if (pDiffRow != nullptr)
+            {
+                for (Uint32 ch = NumSrcChannels; ch < NumDiffChannels; ++ch)
+                {
+                    pDiffRow[col * NumDiffChannels + ch] = ch == 3 ? 255 : 0;
+                }
             }
 
             if (PixelDiff != 0)
@@ -107,79 +131,13 @@ void GetImageDifference(const GetImageDifferenceAttribs& Attribs,
     }
 }
 
-void ComputeDifferenceImage(const ComputeDifferenceImageAttribs& Attribs)
-{
-    if (Attribs.pImage1 == nullptr || Attribs.pImage2 == nullptr || Attribs.pDiffImage == nullptr)
-    {
-        UNEXPECTED("Image pointers cannot be null");
-        return;
-    }
-
-    if (Attribs.NumChannels1 == 0)
-    {
-        UNEXPECTED("NumChannels1 cannot be zero");
-        return;
-    }
-    if (Attribs.Stride1 < Attribs.Width * Attribs.NumChannels1)
-    {
-        UNEXPECTED("Stride1 is too small. It must be at least ", Attribs.Width * Attribs.NumChannels1, " bytes long.");
-        return;
-    }
-
-    if (Attribs.NumChannels2 == 0)
-    {
-        UNEXPECTED("NumChannels2 cannot be zero");
-        return;
-    }
-    if (Attribs.Stride2 < Attribs.Width * Attribs.NumChannels2)
-    {
-        UNEXPECTED("Stride2 is too small. It must be at least ", Attribs.Width * Attribs.NumChannels2, " bytes long.");
-        return;
-    }
-
-    const Uint32 NumSrcChannels  = std::min(Attribs.NumChannels1, Attribs.NumChannels2);
-    const Uint32 NumDiffChannels = Attribs.NumDiffChannels != 0 ? Attribs.NumDiffChannels : NumSrcChannels;
-    if (Attribs.DiffStride < Attribs.Width * NumDiffChannels)
-    {
-        UNEXPECTED("DiffStride is too small. It must be at least ", Attribs.Width * NumDiffChannels, " bytes long.");
-        return;
-    }
-
-    for (Uint32 row = 0; row < Attribs.Height; ++row)
-    {
-        const Uint8* pRow1    = reinterpret_cast<const Uint8*>(Attribs.pImage1) + row * Attribs.Stride1;
-        const Uint8* pRow2    = reinterpret_cast<const Uint8*>(Attribs.pImage2) + row * Attribs.Stride2;
-        Uint8*       pDiffRow = reinterpret_cast<Uint8*>(Attribs.pDiffImage) + row * Attribs.DiffStride;
-
-        for (Uint32 col = 0; col < Attribs.Width; ++col)
-        {
-            for (Uint32 ch = 0; ch < NumDiffChannels; ++ch)
-            {
-                int ChannelDiff = ch == 3 ? 255 : 0;
-                if (ch < NumSrcChannels)
-                {
-                    ChannelDiff = std::abs(static_cast<int>(pRow1[col * Attribs.NumChannels1 + ch]) -
-                                           static_cast<int>(pRow2[col * Attribs.NumChannels2 + ch]));
-                    ChannelDiff = std::min(255, static_cast<int>(ChannelDiff * Attribs.Scale));
-                }
-                pDiffRow[col * NumDiffChannels + ch] = static_cast<Uint8>(ChannelDiff);
-            }
-        }
-    }
-}
-
 } // namespace Diligent
 
 extern "C"
 {
-    void Diligent_GetImageDifference(const Diligent::GetImageDifferenceAttribs& Attribs,
-                                     Diligent::ImageDiffInfo&                   ImageDiff)
+    void Diligent_ComputeImageDifference(const Diligent::ComputeImageDifferenceAttribs& Attribs,
+                                         Diligent::ImageDiffInfo&                       ImageDiff)
     {
-        Diligent::GetImageDifference(Attribs, ImageDiff);
-    }
-
-    void Diligent_ComputeDifferenceImage(const Diligent::ComputeDifferenceImageAttribs& Attribs)
-    {
-        Diligent::ComputeDifferenceImage(Attribs);
+        Diligent::ComputeImageDifference(Attribs, ImageDiff);
     }
 }
