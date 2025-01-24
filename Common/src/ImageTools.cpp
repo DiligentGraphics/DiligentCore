@@ -45,14 +45,23 @@ void GetImageDifference(const GetImageDifferenceAttribs& Attribs,
         return;
     }
 
-    VERIFY(Attribs.NumChannels1 != 0, "NumChannels1 cannot be zero");
+    if (Attribs.NumChannels1 == 0)
+    {
+        UNEXPECTED("NumChannels1 cannot be zero");
+        return;
+    }
+
     if (Attribs.Stride1 < Attribs.Width * Attribs.NumChannels1)
     {
         UNEXPECTED("Stride1 is too small. It must be at least ", Attribs.Width * Attribs.NumChannels1, " bytes long.");
         return;
     }
 
-    VERIFY(Attribs.NumChannels2 != 0, "NumChannels2 cannot be zero");
+    if (Attribs.NumChannels2 == 0)
+    {
+        UNEXPECTED("NumChannels2 cannot be zero");
+        return;
+    }
     if (Attribs.Stride2 < Attribs.Width * Attribs.NumChannels2)
     {
         UNEXPECTED("Stride2 is too small. It must be at least ", Attribs.Width * Attribs.NumChannels2, " bytes long.");
@@ -98,63 +107,60 @@ void GetImageDifference(const GetImageDifferenceAttribs& Attribs,
     }
 }
 
-void ComputeDifferenceImage(
-    Uint32      Width,
-    Uint32      Height,
-    Uint32      NumChannels,
-    const void* pImage1,
-    Uint32      Stride1,
-    const void* pImage2,
-    Uint32      Stride2,
-    void*       pDiffImage,
-    Uint32      DiffStride,
-    Uint32      NumDiffChannels,
-    float       Scale)
+void ComputeDifferenceImage(const ComputeDifferenceImageAttribs& Attribs)
 {
-    if (pImage1 == nullptr || pImage2 == nullptr || pDiffImage == nullptr)
+    if (Attribs.pImage1 == nullptr || Attribs.pImage2 == nullptr || Attribs.pDiffImage == nullptr)
     {
         UNEXPECTED("Image pointers cannot be null");
         return;
     }
 
-    if (Stride1 < Width * NumChannels)
+    if (Attribs.NumChannels1 == 0)
     {
-        UNEXPECTED("Stride1 is too small. It must be at least ", Width * NumChannels, " bytes long.");
+        UNEXPECTED("NumChannels1 cannot be zero");
+        return;
+    }
+    if (Attribs.Stride1 < Attribs.Width * Attribs.NumChannels1)
+    {
+        UNEXPECTED("Stride1 is too small. It must be at least ", Attribs.Width * Attribs.NumChannels1, " bytes long.");
         return;
     }
 
-    if (Stride2 < Width * NumChannels)
+    if (Attribs.NumChannels2 == 0)
     {
-        UNEXPECTED("Stride2 is too small. It must be at least ", Width * NumChannels, " bytes long.");
+        UNEXPECTED("NumChannels2 cannot be zero");
+        return;
+    }
+    if (Attribs.Stride2 < Attribs.Width * Attribs.NumChannels2)
+    {
+        UNEXPECTED("Stride2 is too small. It must be at least ", Attribs.Width * Attribs.NumChannels2, " bytes long.");
         return;
     }
 
-    if (DiffStride < Width * NumDiffChannels)
+    const Uint32 NumSrcChannels  = std::min(Attribs.NumChannels1, Attribs.NumChannels2);
+    const Uint32 NumDiffChannels = Attribs.NumDiffChannels != 0 ? Attribs.NumDiffChannels : NumSrcChannels;
+    if (Attribs.DiffStride < Attribs.Width * NumDiffChannels)
     {
-        UNEXPECTED("DiffStride is too small. It must be at least ", Width * NumDiffChannels, " bytes long.");
+        UNEXPECTED("DiffStride is too small. It must be at least ", Attribs.Width * NumDiffChannels, " bytes long.");
         return;
     }
 
-    if (NumDiffChannels == 0)
+    for (Uint32 row = 0; row < Attribs.Height; ++row)
     {
-        NumDiffChannels = NumChannels;
-    }
+        const Uint8* pRow1    = reinterpret_cast<const Uint8*>(Attribs.pImage1) + row * Attribs.Stride1;
+        const Uint8* pRow2    = reinterpret_cast<const Uint8*>(Attribs.pImage2) + row * Attribs.Stride2;
+        Uint8*       pDiffRow = reinterpret_cast<Uint8*>(Attribs.pDiffImage) + row * Attribs.DiffStride;
 
-    for (Uint32 row = 0; row < Height; ++row)
-    {
-        const Uint8* pRow1    = reinterpret_cast<const Uint8*>(pImage1) + row * Stride1;
-        const Uint8* pRow2    = reinterpret_cast<const Uint8*>(pImage2) + row * Stride2;
-        Uint8*       pDiffRow = reinterpret_cast<Uint8*>(pDiffImage) + row * DiffStride;
-
-        for (Uint32 col = 0; col < Width; ++col)
+        for (Uint32 col = 0; col < Attribs.Width; ++col)
         {
             for (Uint32 ch = 0; ch < NumDiffChannels; ++ch)
             {
                 int ChannelDiff = ch == 3 ? 255 : 0;
-                if (ch < NumChannels)
+                if (ch < NumSrcChannels)
                 {
-                    ChannelDiff = std::abs(static_cast<int>(pRow1[col * NumChannels + ch]) - static_cast<int>(pRow2[col * NumChannels + ch]));
-                    ChannelDiff = std::min(255, static_cast<int>(ChannelDiff * Scale));
+                    ChannelDiff = std::abs(static_cast<int>(pRow1[col * Attribs.NumChannels1 + ch]) -
+                                           static_cast<int>(pRow2[col * Attribs.NumChannels2 + ch]));
+                    ChannelDiff = std::min(255, static_cast<int>(ChannelDiff * Attribs.Scale));
                 }
                 pDiffRow[col * NumDiffChannels + ch] = static_cast<Uint8>(ChannelDiff);
             }
@@ -172,18 +178,8 @@ extern "C"
         Diligent::GetImageDifference(Attribs, ImageDiff);
     }
 
-    void Diligent_ComputeDifferenceImage(Diligent::Uint32 Width,
-                                         Diligent::Uint32 Height,
-                                         Diligent::Uint32 NumChannels,
-                                         const void*      pImage1,
-                                         Diligent::Uint32 Stride1,
-                                         const void*      pImage2,
-                                         Diligent::Uint32 Stride2,
-                                         void*            pDiffImage,
-                                         Diligent::Uint32 DiffStride,
-                                         Diligent::Uint32 NumDiffChannels,
-                                         float            Scale)
+    void Diligent_ComputeDifferenceImage(const Diligent::ComputeDifferenceImageAttribs& Attribs)
     {
-        Diligent::ComputeDifferenceImage(Width, Height, NumChannels, pImage1, Stride1, pImage2, Stride2, pDiffImage, DiffStride, NumDiffChannels, Scale);
+        Diligent::ComputeDifferenceImage(Attribs);
     }
 }

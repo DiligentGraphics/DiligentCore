@@ -89,7 +89,7 @@ struct GetImageDifferenceAttribs
 };
 typedef struct GetImageDifferenceAttribs GetImageDifferenceAttribs;
 
-/// Compute the difference between two images
+/// Computes the difference between two images
 ///
 /// \param [in]  Attribs    Image difference attributes, see Diligent::GetImageDifferenceAttribs.
 ///
@@ -104,33 +104,52 @@ typedef struct GetImageDifferenceAttribs GetImageDifferenceAttribs;
 void DILIGENT_GLOBAL_FUNCTION(GetImageDifference)(const GetImageDifferenceAttribs REF Attribs, ImageDiffInfo REF ImageDiff);
 
 
-// clang-format off
-/// Compute the difference image
+/// Attributes for ComputeDifferenceImage function
+struct ComputeDifferenceImageAttribs
+{
+    /// Image width
+    Uint32 Width DEFAULT_INITIALIZER(0);
+
+    /// Image height
+    Uint32 Height DEFAULT_INITIALIZER(0);
+
+    /// A pointer to the first image data
+    const void* pImage1 DEFAULT_INITIALIZER(nullptr);
+
+    /// Number of channels in the first image
+    Uint32 NumChannels1 DEFAULT_INITIALIZER(0);
+
+    /// Row stride of the first image data, in bytes
+    Uint32 Stride1 DEFAULT_INITIALIZER(0);
+
+    /// A pointer to the second image data
+    const void* pImage2 DEFAULT_INITIALIZER(nullptr);
+
+    /// Number of channels in the second image
+    Uint32 NumChannels2 DEFAULT_INITIALIZER(0);
+
+    /// Row stride of the second image data, in bytes
+    Uint32 Stride2 DEFAULT_INITIALIZER(0);
+
+    /// A pointer to the difference image data
+    void* pDiffImage DEFAULT_INITIALIZER(nullptr);
+
+    /// Row stride of the difference image data, in bytes
+    Uint32 DiffStride DEFAULT_INITIALIZER(0);
+
+    /// Number of channels in the difference image.
+    /// If 0, the number of channels will be the same as in the input images.
+    Uint32 NumDiffChannels DEFAULT_INITIALIZER(0);
+
+    /// Scale factor for the difference image
+    float Scale DEFAULT_INITIALIZER(1.f);
+};
+typedef struct ComputeDifferenceImageAttribs ComputeDifferenceImageAttribs;
+
+/// Computes the difference image
 ///
-/// \param [in]  Width           Image width
-/// \param [in]  Height          Image height
-/// \param [in]  NumChannels     Number of channels in the image
-/// \param [in]  pImage1         Pointer to the first image data
-/// \param [in]  Stride1         Row stride of the first image data, in bytes
-/// \param [in]  pImage2         Pointer to the second image data
-/// \param [in]  Stride2         Row stride of the second image data, in bytes
-/// \param [out] pDiffImage      Pointer to the difference image data
-/// \param [in]  DiffStride      Row stride of the difference image data, in bytes
-/// \param [in]  NumDiffChannels Number of channels in the difference image.
-///                              If 0, the number of channels will be the same as in the input images.
-/// \param [in]  Scale           Scale factor for the difference image
-void DILIGENT_GLOBAL_FUNCTION(ComputeDifferenceImage)(
-    Uint32      Width,
-    Uint32      Height,
-    Uint32      NumChannels,
-    const void* pImage1,
-    Uint32      Stride1,
-    const void* pImage2,
-    Uint32      Stride2,
-    void*       pDiffImage,
-    Uint32      DiffStride,
-    Uint32      NumDiffChannels DEFAULT_INITIALIZER(0),
-    float       Scale           DEFAULT_INITIALIZER(1.f));
+/// \param [in]  Attribs    Compute difference image attributes, see Diligent::ComputeDifferenceImageAttribs.
+void DILIGENT_GLOBAL_FUNCTION(ComputeDifferenceImage)(const ComputeDifferenceImageAttribs REF Attribs);
 // clang-format on
 
 #include "../../Primitives/interface/UndefRefMacro.h"
