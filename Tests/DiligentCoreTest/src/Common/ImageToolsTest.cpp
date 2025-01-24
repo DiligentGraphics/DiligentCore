@@ -29,6 +29,7 @@
 #include <cmath>
 
 #include "gtest/gtest.h"
+#include <array>
 
 using namespace Diligent;
 
@@ -74,6 +75,79 @@ TEST(Common_ImageTools, GetImageDifference)
         EXPECT_EQ(Diff.MaxDiff, 5);
         EXPECT_FLOAT_EQ(Diff.AvgDiff, 4.f);
         EXPECT_FLOAT_EQ(Diff.RmsDiff, std::sqrt((9.f + 16.f + 25.f) / 3.f));
+    }
+}
+
+TEST(Common_ImageTools, ComputeDifferenceImage)
+{
+    constexpr Uint32 Width   = 3;
+    constexpr Uint32 Height  = 2;
+    constexpr Uint32 Stride1 = 11;
+    constexpr Uint32 Stride2 = 12;
+    // clang-format off
+	constexpr char Image1[Stride1 * Height] = {
+		1, 2, 3,   4, 5, 6,  7, 8, 9,  10, 20,
+		9, 8, 7,   5, 6, 4,  3, 2, 1,  30, 40,
+	};
+	constexpr char Image2[Stride2 * Height] = {
+		1, 2, 3,   5, 8, 8,  7, 8, 9,  10, 20, 30,
+//                 ^  ^  ^
+//                -1 -3 -2
+		6, 4, 2,   5, 6, 4,  7, 6, 1,  40, 50, 60,
+//      ^  ^  ^              ^  ^
+//      3  4  5              4  4
+	};
+    // clang-format on
+
+    {
+        // clang-format off
+        constexpr std::array<Uint8, Width * Height * 3> RefDiffImage = {
+            0, 0, 0,   1, 3, 2,   0, 0, 0,
+            3, 4, 5,   0, 0, 0,   4, 4, 0,
+        };
+        // clang-format on
+        std::array<Uint8, Width * Height * 3> DiffImage{};
+        ComputeDifferenceImage(Width, Height, 3, Image1, Stride1, Image2, Stride2, DiffImage.data(), Width * 3);
+        EXPECT_EQ(DiffImage, RefDiffImage);
+    }
+
+    // 3 channels -> 4 channels
+    {
+        // clang-format off
+        constexpr std::array<Uint8, Width * Height * 4> RefDiffImage = {
+            0, 0, 0, 255,  1, 3, 2, 255,   0, 0, 0,  255,
+            3, 4, 5, 255,  0, 0, 0, 255,   4, 4, 0,  255,
+        };
+        // clang-format on
+        std::array<Uint8, Width * Height * 4> DiffImage{};
+        ComputeDifferenceImage(Width, Height, 3, Image1, Stride1, Image2, Stride2, DiffImage.data(), Width * 4, 4);
+        EXPECT_EQ(DiffImage, RefDiffImage);
+    }
+
+    // 3 channels -> 2 channels
+    {
+        // clang-format off
+        constexpr std::array<Uint8, Width * Height * 2> RefDiffImage = {
+            0, 0,  1, 3,  0, 0,
+            3, 4,  0, 0,  4, 4,
+        };
+        // clang-format on
+        std::array<Uint8, Width * Height * 2> DiffImage{};
+        ComputeDifferenceImage(Width, Height, 3, Image1, Stride1, Image2, Stride2, DiffImage.data(), Width * 2, 2);
+        EXPECT_EQ(DiffImage, RefDiffImage);
+    }
+
+    // 3 channels -> 4 channels + scale
+    {
+        // clang-format off
+        constexpr std::array<Uint8, Width * Height * 4> RefDiffImage = {
+            0, 0,  0, 255,  2, 6, 4, 255,   0, 0, 0, 255,
+            6, 8, 10, 255,  0, 0, 0, 255,   8, 8, 0, 255,
+        };
+        // clang-format on
+        std::array<Uint8, Width * Height * 4> DiffImage{};
+        ComputeDifferenceImage(Width, Height, 3, Image1, Stride1, Image2, Stride2, DiffImage.data(), Width * 4, 4, 2.f);
+        EXPECT_EQ(DiffImage, RefDiffImage);
     }
 }
 

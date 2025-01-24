@@ -85,6 +85,36 @@ void DILIGENT_GLOBAL_FUNCTION(GetImageDifference)(
     Uint32            Threshold,
     ImageDiffInfo REF ImageDiff);
 
+
+// clang-format off
+/// Compute the difference image
+///
+/// \param [in]  Width           Image width
+/// \param [in]  Height          Image height
+/// \param [in]  NumChannels     Number of channels in the image
+/// \param [in]  pImage1         Pointer to the first image data
+/// \param [in]  Stride1         Row stride of the first image data, in bytes
+/// \param [in]  pImage2         Pointer to the second image data
+/// \param [in]  Stride2         Row stride of the second image data, in bytes
+/// \param [out] pDiffImage      Pointer to the difference image data
+/// \param [in]  DiffStride      Row stride of the difference image data, in bytes
+/// \param [in]  NumDiffChannels Number of channels in the difference image.
+///                              If 0, the number of channels will be the same as in the input images.
+/// \param [in]  Scale           Scale factor for the difference image
+void DILIGENT_GLOBAL_FUNCTION(ComputeDifferenceImage)(
+    Uint32      Width,
+    Uint32      Height,
+    Uint32      NumChannels,
+    const void* pImage1,
+    Uint32      Stride1,
+    const void* pImage2,
+    Uint32      Stride2,
+    void*       pDiffImage,
+    Uint32      DiffStride,
+    Uint32      NumDiffChannels DEFAULT_INITIALIZER(0),
+    float       Scale           DEFAULT_INITIALIZER(1.f));
+// clang-format on
+
 #include "../../Primitives/interface/UndefRefMacro.h"
 
 DILIGENT_END_NAMESPACE // namespace Diligent
