@@ -34,49 +34,45 @@
 namespace Diligent
 {
 
-void GetImageDifference(Uint32         Width,
-                        Uint32         Height,
-                        Uint32         NumChannels,
-                        const void*    pImage1,
-                        Uint32         Stride1,
-                        const void*    pImage2,
-                        Uint32         Stride2,
-                        Uint32         Threshold,
-                        ImageDiffInfo& Diff)
+void GetImageDifference(const GetImageDifferenceAttribs& Attribs,
+                        ImageDiffInfo&                   Diff)
 {
     Diff = {};
 
-    if (pImage1 == nullptr || pImage2 == nullptr)
+    if (Attribs.pImage1 == nullptr || Attribs.pImage2 == nullptr)
     {
         UNEXPECTED("Image pointers cannot be null");
         return;
     }
 
-    if (Stride1 < Width * NumChannels)
+    VERIFY(Attribs.NumChannels1 != 0, "NumChannels1 cannot be zero");
+    if (Attribs.Stride1 < Attribs.Width * Attribs.NumChannels1)
     {
-        UNEXPECTED("Stride1 is too small. It must be at least ", Width * NumChannels, " bytes long.");
+        UNEXPECTED("Stride1 is too small. It must be at least ", Attribs.Width * Attribs.NumChannels1, " bytes long.");
         return;
     }
 
-    if (Stride2 < Width * NumChannels)
+    VERIFY(Attribs.NumChannels2 != 0, "NumChannels2 cannot be zero");
+    if (Attribs.Stride2 < Attribs.Width * Attribs.NumChannels2)
     {
-        UNEXPECTED("Stride2 is too small. It must be at least ", Width * NumChannels, " bytes long.");
+        UNEXPECTED("Stride2 is too small. It must be at least ", Attribs.Width * Attribs.NumChannels2, " bytes long.");
         return;
     }
 
-    for (Uint32 row = 0; row < Height; ++row)
+    const Uint32 NumChannels = std::min(Attribs.NumChannels1, Attribs.NumChannels2);
+    for (Uint32 row = 0; row < Attribs.Height; ++row)
     {
-        const Uint8* pRow1 = reinterpret_cast<const Uint8*>(pImage1) + row * Stride1;
-        const Uint8* pRow2 = reinterpret_cast<const Uint8*>(pImage2) + row * Stride2;
+        const Uint8* pRow1 = reinterpret_cast<const Uint8*>(Attribs.pImage1) + row * Attribs.Stride1;
+        const Uint8* pRow2 = reinterpret_cast<const Uint8*>(Attribs.pImage2) + row * Attribs.Stride2;
 
-        for (Uint32 col = 0; col < Width; ++col)
+        for (Uint32 col = 0; col < Attribs.Width; ++col)
         {
             Uint32 PixelDiff = 0;
             for (Uint32 ch = 0; ch < NumChannels; ++ch)
             {
                 const Uint32 ChannelDiff = static_cast<Uint32>(
-                    std::abs(static_cast<int>(pRow1[col * NumChannels + ch]) -
-                             static_cast<int>(pRow2[col * NumChannels + ch])));
+                    std::abs(static_cast<int>(pRow1[col * Attribs.NumChannels1 + ch]) -
+                             static_cast<int>(pRow2[col * Attribs.NumChannels2 + ch])));
                 PixelDiff = std::max(PixelDiff, ChannelDiff);
             }
 
@@ -87,7 +83,7 @@ void GetImageDifference(Uint32         Width,
                 Diff.RmsDiff += static_cast<float>(PixelDiff * PixelDiff);
                 Diff.MaxDiff = std::max(Diff.MaxDiff, PixelDiff);
 
-                if (PixelDiff > Threshold)
+                if (PixelDiff > Attribs.Threshold)
                 {
                     ++Diff.NumDiffPixelsAboveThreshold;
                 }
@@ -170,17 +166,10 @@ void ComputeDifferenceImage(
 
 extern "C"
 {
-    void Diligent_GetImageDifference(Diligent::Uint32         Width,
-                                     Diligent::Uint32         Height,
-                                     Diligent::Uint32         NumChannels,
-                                     const void*              pImage1,
-                                     Diligent::Uint32         Stride1,
-                                     const void*              pImage2,
-                                     Diligent::Uint32         Stride2,
-                                     Diligent::Uint32         Threshold,
-                                     Diligent::ImageDiffInfo& ImageDiff)
+    void Diligent_GetImageDifference(const Diligent::GetImageDifferenceAttribs& Attribs,
+                                     Diligent::ImageDiffInfo&                   ImageDiff)
     {
-        Diligent::GetImageDifference(Width, Height, NumChannels, pImage1, Stride1, pImage2, Stride2, Threshold, ImageDiff);
+        Diligent::GetImageDifference(Attribs, ImageDiff);
     }
 
     void Diligent_ComputeDifferenceImage(Diligent::Uint32 Width,

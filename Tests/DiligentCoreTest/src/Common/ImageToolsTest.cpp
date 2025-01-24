@@ -42,6 +42,8 @@ TEST(Common_ImageTools, GetImageDifference)
     constexpr Uint32 Height  = 2;
     constexpr Uint32 Stride1 = 11;
     constexpr Uint32 Stride2 = 12;
+    constexpr Uint32 Stride3 = 9;
+
     // clang-format off
 	constexpr char Image1[Stride1 * Height] = {
 		1, 2, 3,   4, 5, 6,  7, 8, 9,  10, 20,
@@ -55,11 +57,29 @@ TEST(Common_ImageTools, GetImageDifference)
 //      ^  ^  ^              ^  ^
 //      3  4  5              4  4
 	};
+	constexpr char Image3[Stride3 * Height] = {
+		1, 2,      5, 8,     7, 8,     10, 20, 30,
+//                 ^  ^ 
+//                -1 -3
+		6, 4,      5, 6,     8, 6,     40, 50, 60,
+//      ^  ^                 ^
+//      3  4                 5
+	};
     // clang-format on
 
     {
+        GetImageDifferenceAttribs Attribs;
+        Attribs.Width        = Width;
+        Attribs.Height       = Height;
+        Attribs.pImage1      = Image1;
+        Attribs.NumChannels1 = 3;
+        Attribs.Stride1      = Stride1;
+        Attribs.pImage2      = Image1;
+        Attribs.NumChannels2 = 3;
+        Attribs.Stride2      = Stride1;
+
         ImageDiffInfo Diff;
-        GetImageDifference(Width, Height, 3, Image1, Stride1, Image1, Stride1, 3, Diff);
+        GetImageDifference(Attribs, Diff);
         EXPECT_EQ(Diff.NumDiffPixels, 0);
         EXPECT_EQ(Diff.NumDiffPixelsAboveThreshold, 0);
         EXPECT_EQ(Diff.MaxDiff, 0);
@@ -68,8 +88,40 @@ TEST(Common_ImageTools, GetImageDifference)
     }
 
     {
+        GetImageDifferenceAttribs Attribs;
+        Attribs.Width        = Width;
+        Attribs.Height       = Height;
+        Attribs.pImage1      = Image1;
+        Attribs.NumChannels1 = 3;
+        Attribs.Stride1      = Stride1;
+        Attribs.pImage2      = Image2;
+        Attribs.NumChannels2 = 3;
+        Attribs.Stride2      = Stride2;
+        Attribs.Threshold    = 3;
+
         ImageDiffInfo Diff;
-        GetImageDifference(Width, Height, 3, Image1, Stride1, Image2, Stride2, 3, Diff);
+        GetImageDifference(Attribs, Diff);
+        EXPECT_EQ(Diff.NumDiffPixels, 3);
+        EXPECT_EQ(Diff.NumDiffPixelsAboveThreshold, 2);
+        EXPECT_EQ(Diff.MaxDiff, 5);
+        EXPECT_FLOAT_EQ(Diff.AvgDiff, 4.f);
+        EXPECT_FLOAT_EQ(Diff.RmsDiff, std::sqrt((9.f + 16.f + 25.f) / 3.f));
+    }
+
+    {
+        GetImageDifferenceAttribs Attribs;
+        Attribs.Width        = Width;
+        Attribs.Height       = Height;
+        Attribs.pImage1      = Image1;
+        Attribs.NumChannels1 = 3;
+        Attribs.Stride1      = Stride1;
+        Attribs.pImage2      = Image3;
+        Attribs.NumChannels2 = 2;
+        Attribs.Stride2      = Stride3;
+        Attribs.Threshold    = 3;
+
+        ImageDiffInfo Diff;
+        GetImageDifference(Attribs, Diff);
         EXPECT_EQ(Diff.NumDiffPixels, 3);
         EXPECT_EQ(Diff.NumDiffPixelsAboveThreshold, 2);
         EXPECT_EQ(Diff.MaxDiff, 5);
