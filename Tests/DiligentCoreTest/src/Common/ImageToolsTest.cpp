@@ -80,9 +80,9 @@ TEST(Common_ImageTools, ComputeImageDifference)
 
         ImageDiffInfo Diff;
         ComputeImageDifference(Attribs, Diff);
-        EXPECT_EQ(Diff.NumDiffPixels, 0);
-        EXPECT_EQ(Diff.NumDiffPixelsAboveThreshold, 0);
-        EXPECT_EQ(Diff.MaxDiff, 0);
+        EXPECT_EQ(Diff.NumDiffPixels, 0u);
+        EXPECT_EQ(Diff.NumDiffPixelsAboveThreshold, 0u);
+        EXPECT_EQ(Diff.MaxDiff, 0u);
         EXPECT_EQ(Diff.AvgDiff, 0.f);
         EXPECT_EQ(Diff.RmsDiff, 0.f);
 
@@ -110,9 +110,9 @@ TEST(Common_ImageTools, ComputeImageDifference)
 
         ImageDiffInfo Diff;
         ComputeImageDifference(Attribs, Diff);
-        EXPECT_EQ(Diff.NumDiffPixels, 3);
-        EXPECT_EQ(Diff.NumDiffPixelsAboveThreshold, 2);
-        EXPECT_EQ(Diff.MaxDiff, 5);
+        EXPECT_EQ(Diff.NumDiffPixels, 3u);
+        EXPECT_EQ(Diff.NumDiffPixelsAboveThreshold, 2u);
+        EXPECT_EQ(Diff.MaxDiff, 5u);
         EXPECT_FLOAT_EQ(Diff.AvgDiff, 4.f);
         EXPECT_FLOAT_EQ(Diff.RmsDiff, std::sqrt((9.f + 16.f + 25.f) / 3.f));
 
@@ -146,9 +146,9 @@ TEST(Common_ImageTools, ComputeImageDifference)
 
         ImageDiffInfo Diff;
         ComputeImageDifference(Attribs, Diff);
-        EXPECT_EQ(Diff.NumDiffPixels, 3);
-        EXPECT_EQ(Diff.NumDiffPixelsAboveThreshold, 2);
-        EXPECT_EQ(Diff.MaxDiff, 5);
+        EXPECT_EQ(Diff.NumDiffPixels, 3u);
+        EXPECT_EQ(Diff.NumDiffPixelsAboveThreshold, 2u);
+        EXPECT_EQ(Diff.MaxDiff, 5u);
         EXPECT_FLOAT_EQ(Diff.AvgDiff, 4.f);
         EXPECT_FLOAT_EQ(Diff.RmsDiff, std::sqrt((9.f + 16.f + 25.f) / 3.f));
     }
