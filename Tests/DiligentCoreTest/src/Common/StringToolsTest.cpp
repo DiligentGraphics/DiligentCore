@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +41,7 @@ TEST(Common_StringTools, StreqSuff)
     EXPECT_TRUE(!StreqSuff("ab", "abc", "_def"));
     EXPECT_TRUE(!StreqSuff("abc_de", "abc", "_def"));
     EXPECT_TRUE(!StreqSuff("abc_def", "ab", "_def"));
-    EXPECT_TRUE(!StreqSuff("abc_def", "abd", "_def"));
+    EXPECT_TRUE(!StreqSuff("abc_def", "abx", "_def"));
     EXPECT_TRUE(!StreqSuff("abc_def", "abc", "_de"));
     EXPECT_TRUE(!StreqSuff("abc", "abc", "_def"));
     EXPECT_TRUE(!StreqSuff("abc_def", "", "_def"));

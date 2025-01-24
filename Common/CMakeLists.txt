@@ -22,6 +22,7 @@ set(INTERFACE
     interface/FixedBlockMemoryAllocator.hpp
     interface/GeometryPrimitives.h
     interface/HashUtils.hpp
+    interface/ImageTools.h
     interface/LRUCache.hpp
     interface/FixedLinearAllocator.hpp
     interface/DynamicLinearAllocator.hpp
@@ -58,6 +59,7 @@ set(SOURCE
     src/FileWrapper.cpp
     src/FixedBlockMemoryAllocator.cpp
     src/GeometryPrimitives.cpp
+    src/ImageTools.cpp
     src/MemoryFileStream.cpp
     src/Serializer.cpp
     src/SpinLock.cpp

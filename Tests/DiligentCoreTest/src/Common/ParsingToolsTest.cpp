@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -345,7 +345,7 @@ TEST(Common_ParsingTools, SkipString)
     Test("abc", "ab", true);
     Test("abc", "ad", false);
     Test("abc", "abc", true);
-    Test("abc", "abd", false);
+    Test("abc", "abx", false);
     Test("abc", "abcd", false);
 }
 
