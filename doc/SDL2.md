@@ -3,40 +3,47 @@
 ## General
 
 Create flags and set attributes for SDL2 relevant for your target backend.
+
 ```cpp
     SDL_Init(SDL_INIT_EVERYTHING);
-    SDL_WindowFlags flags = {};
+    SDL_WindowFlags flags{};
 
-    auto window_width = 1280;
+    auto window_width  = 1280;
     auto window_height = 720;
 ```
 
-E.g. set flag for Vulkan
+For example, set the flag for Vulkan:
+
 ```cpp
     flags = flags | SDL_WINDOW_VULKAN
 ```
 
-Or set flag and attributes for OpenGL 4.6
+Or set the flags and attributes for OpenGL 4.6:
+
 ```cpp
     flags = flags | SDL_WINDOW_OPENGL
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 ```
     
-No flag needed for DirectX
+No flags are needed for DirectX.
 
-Create the window
+Create the window:
+
 ```cpp
     auto window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, flags);
 ```
 
-Create GL Context if using OpenGL
+Create GL Context if using OpenGL:
+
 ```cpp
     auto gl_context = SDL_GL_CreateContext(window);
     // Check if succeeded, etc.
 ```
     
-If necessary, get a handle to the platform's native window, then set it in the Diligent NativeWindow struct. Example for Windows:
+If necessary, get a handle to the platform's native window, then set it in the Diligent NativeWindow struct.
+For example, for Windows:
+
 ```cpp
     SDL_SysWMinfo info;
     SDL_VERSION(&info.version);
@@ -45,11 +52,12 @@ If necessary, get a handle to the platform's native window, then set it in the D
     native_window.hWnd = info.info.win.window;
 ```
     
-Finally setup the Diligent swapchain as normal (using the NativeWindow if needed)
+Finally, setup the Diligent swapchain as normal (using the NativeWindow if needed).
 
 ### Handling window events
 
-Depending on your platform, certain window events may require making some sort of call into your graphics engine.
+Depending on your platform, certain window events may require making some calls into your graphics engine.
+
 ```cpp
 SDL_Event event;
 while (true)
@@ -87,14 +95,17 @@ while (true)
 
 ## Mac OSX
 
-Set the Vulkan and HighDPI flags when creating window
+Set the Vulkan and HighDPI flags when creating window:
+
 ```cpp
 auto window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
 ```
 
 
-Copy [SurfaceHelper.mm](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/GLFWDemo/src/SurfaceHelper.mm) file from the GLFW sample into your project.
+Copy [SurfaceHelper.mm](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/GLFWDemo/src/SurfaceHelper.mm)
+file from the GLFW sample into your project.
 Modify the following from:
+
 ```objective-c
 #define GLFW_EXPOSE_NATIVE_COCOA 1
 #include "GLFW/glfw3.h"
@@ -109,7 +120,9 @@ void* GetNSWindowView(GLFWwindow* wnd)
     // ...
 }
 ```
+
 to:
+
 ```objective-c
 #include <SDL.h>
 #include <SDL_syswm.h>
@@ -128,7 +141,7 @@ void* GetNSWindowView(SDL_Window* wnd)
 }
 ```
 
-Use the helper function to get the NSWindowView, setting it in the NativeWindow struct. Then create the Vulkan swapchain as normal.
+Use the helper function to get the `NSWindowView`, setting it in the `NativeWindow` struct. Then create the Vulkan swapchain as normal.
 
 ## Android
 
@@ -137,6 +150,7 @@ Use the helper function to get the NSWindowView, setting it in the NativeWindow 
 Follow the [official documentation for setting up an android project](https://github.com/libsdl-org/SDL/blob/main/docs/README-android.md) for SDL2.
 
 #### Optional: Handle devices with screen notch in your derived SDLActivity class:
+
 ```java
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -157,9 +171,8 @@ Follow the [official documentation for setting up an android project](https://gi
 
 ### Building Diligent Engine separately
 
-The following is a very rough guide of building Diligent separately to then be used in your own project.
-
 Build Diligent Engine using CMake with an official NDK toolchain:
+
 ```bash
 mkdir DiligentEngine_android_build
 cd DiligentEngine_android_build
@@ -179,7 +192,10 @@ cmake -G"Ninja" \
 ninja -j9
 ```
 
-Setup your build system to be able to find the interface headers and built libraries. Here the variables `DILIGENT_PATH` and `DILIGENT_BUILD_PATH` refer to the locations of your root DiligentEngine repo copy and your build folder respectively.
+Setup your build system to be able to find the interface headers and built libraries
+Here the variables `DILIGENT_PATH` and `DILIGENT_BUILD_PATH` refer to the locations of your root 
+DiligentEngine repo copy and your build folder respectively.
+
 ```cmake
 target_include_directories(app
     PRIVATE
@@ -262,11 +278,13 @@ target_link_libraries(app
 ### Vulkan
 
 Set the Vulkan and fullscreen / resizable window flags when creating the window. 
+
 ```cpp
 auto window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN);
 ```
 
 Then create the swapchain as normal. Keep the swapchain description to be used.
+
 ```cpp
 auto *pFactoryVk = GetEngineFactoryVk();
 
@@ -279,7 +297,8 @@ pFactoryVk->CreateSwapChainVk(*device, *immediate_context, SCDesc,
 
 #### Recreate swapchain
 
-When the app goes out of focus, destroy the swapchain
+When the app goes out of focus, destroy the swapchain:
+
 ```cpp
 if (device->GetDeviceInfo().IsVulkanDevice()) {
     swapchain.Release();
@@ -287,7 +306,8 @@ if (device->GetDeviceInfo().IsVulkanDevice()) {
 }
 ```
 
-When the app regains focus, create the swapchain again
+When the app regains focus, create the swapchain again:
+
 ```cpp
 if (device->GetDeviceInfo().IsVulkanDevice())
 {
@@ -303,7 +323,9 @@ if (device->GetDeviceInfo().IsVulkanDevice())
 
 ### OpenGLES
 
-Set the attributes Diligent expects, set the OpenGL and fullscreen / resizable window flags, create the window, create the context, and finally create the swapchain
+Set the attributes Diligent expects, set the OpenGL and fullscreen / resizable window flags, create the window, create the context,
+and finally create the swapchain:
+
 ```cpp
 const auto color_size = 8;
 const auto depth_size = 24;
@@ -332,7 +354,8 @@ auto gl_context = SDL_GL_CreateContext(window);
 // ...
 ```
 
-When focus is lost, call suspend on the swapchain
+When focus is lost, call suspend on the swapchain:
+
 ```cpp
 if (device->GetDeviceInfo().IsGLDevice())
 {
@@ -340,7 +363,8 @@ if (device->GetDeviceInfo().IsGLDevice())
 }
 ```
 
-When focus is resumed, call resume on the swapchain (Native window pointer not required)
+When focus is resumed, call resume on the swapchain (Native window pointer is not required):
+
 ```cpp
 if (device->GetDeviceInfo().IsGLDevice())
 {
@@ -355,12 +379,18 @@ if (device->GetDeviceInfo().IsGLDevice())
 - `SDL_GetDisplayMode()` can be used to determine max resolution.
 
 ## ImGui
+
 ### Compiling and Linking
-Whatever is most convenient for your build system, compile and link [imgui_impl_sdl.cpp](https://github.com/DiligentGraphics/imgui/blob/66ad2ad5398cb61433009553e10fd326d13acb84/backends/imgui_impl_sdl.cpp) into your project
+
+Add [imgui_impl_sdl.cpp](https://github.com/DiligentGraphics/imgui/blob/66ad2ad5398cb61433009553e10fd326d13acb84/backends/imgui_impl_sdl.cpp) to your project
 
 ### Using the ImGuiImplSDL implementation
+
 #### Setup
-Add the [ImGuiImplSDL.hpp](https://github.com/DiligentGraphics/DiligentTools/blob/fbd6c1054744724387e37ae69b1636782f703ca0/Imgui/interface/ImGuiImplSDL.hpp) header included in Diligent. After creating the swapchain, call `ImGuiImplSDL::Create(CI, sdl_window)` and store the result for usage as normal
+
+Include the [ImGuiImplSDL.hpp](https://github.com/DiligentGraphics/DiligentTools/blob/master/Imgui/interface/ImGuiImplSDL.hpp) header.
+After creating the swapchain, call `ImGuiImplSDL::Create(CI, sdl_window)` and store the result to be used as normal:
+
 ```cpp
 #include "Imgui/interface/ImGuiImplSDL.hpp"
 
@@ -375,21 +405,25 @@ imgui_impl = ImGui::ImplSDL::Create(CI, sdl_window);
 ```
 
 #### Rendering
-Before creating an imgui window for the current frame call `ImGuiImplDiligent::NewFrame()`
+
+Before creating an imgui window for the current frame, call `ImGuiImplDiligent::NewFrame()`
+
 ```cpp
 auto SCDesc = swapchain->GetDesc();
 
-// You may want to check here if the render size given by SDL is different then
+// You may want to check here if the render size given by SDL is different than
 // the swapchain's. For example if the window was just resized and the values
 // given by SDL_Vulkan_GetDrawableSize() don't match the swapchain's, you might
-// want to return early for this frame otherwise ImGui may assert.
+// want to return early for this frame, otherwise ImGui may assert.
 
 imgui_impl->NewFrame(SCDesc.Width, SCDesc.Height, SCDesc.PreTransform);
 
 // Begin drawing with ImGui
 ImGui::Begin("Debug Menu");
 ```
-Then finally at the end of your other render passes then call `ImGuiImplDiligent::Render()`
+
+At the end of your frame, call `ImGuiImplDiligent::Render()`:
+
 ```cpp
 imgui_impl->Render(immediate_context);
 // Finish rendering
@@ -397,7 +431,9 @@ swapchain->Present();
 ```
 
 ### Passing input events
-At the start of your main event loop, add a call to `ImGui::ImplSDL::HandleSDLEvent()`. It is not necessary to save the return value
+
+At the start of your main event loop, add a call to `ImGui::ImplSDL::HandleSDLEvent()`. The return value may be ignored.
+
 ```cpp
 SDL_Event event{};
 auto& io = ImGui::GetIO();
@@ -411,7 +447,9 @@ while (true)
     // ...
 }
 ```
-Then afterward in the loop you can filter ImGui events as normal
+
+Filter ImGui events as normal:
+
 ```cpp
 switch(event) 
 {
@@ -421,20 +459,30 @@ switch(event)
             // Do your normal non-imgui logic here
         }
         break;
+
     case SDL_KeyUp:
-        // ditto
+        // ...
+        break;
+
     case SDL_MOUSEMOTION:
         if (!io.WantCaptureMouse) 
         {
             // Do your normal non-imgui logic here
         }
+        break;
+
     case SDL_MOUSEBUTTONDOWN:
-        // ditto
+        // ...
+        break;
+
     case SDL_MOUSEBUTTONUP:
-        // ditto
+        // ...
+        break;
+
     case SDL_MOUSEWHEEL:
-        // ditto
+        // ...
+        break;
 }
 ```
 
-It's possible to use gamepad input as well, but you will have to come up with a way to filter the events
+To use gamepad input, filter the corresponding events.
