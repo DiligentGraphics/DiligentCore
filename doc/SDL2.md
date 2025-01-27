@@ -353,3 +353,88 @@ if (device->GetDeviceInfo().IsGLDevice())
 - Look at [GetSurfacePretransformMatrix()](https://github.com/DiligentGraphics/DiligentSamples/blob/9be93225a7fdf135583146c1175c232217f310b2/SampleBase/src/SampleBase.cpp#L140) for an example of handling the view matrix.
 - `SDL_GetDisplayOrientation()` can be used to get the device's orientation. Alternatively, listen for the `SDL_DISPLAYEVENT_ORIENTATION` event.
 - `SDL_GetDisplayMode()` can be used to determine max resolution.
+
+## ImGui
+### Compiling and Linking
+Whatever is most convenient for your build system, compile and link [imgui_impl_sdl.cpp](https://github.com/DiligentGraphics/imgui/blob/66ad2ad5398cb61433009553e10fd326d13acb84/backends/imgui_impl_sdl.cpp) into your project
+
+### Using the ImGuiImplSDL implementation
+#### Setup
+Add the [ImGuiImplSDL.hpp](https://github.com/DiligentGraphics/DiligentTools/blob/fbd6c1054744724387e37ae69b1636782f703ca0/Imgui/interface/ImGuiImplSDL.hpp) header included in Diligent. After creating the swapchain, call `ImGuiImplSDL::Create(CI, sdl_window)` and store the result for usage as normal
+```cpp
+#include "Imgui/interface/ImGuiImplSDL.hpp"
+
+// Store somewhere
+std::unique_ptr<ImGuiImplDiligent> imgui_impl{};
+
+// Create swapchain...
+
+// Create the ImGui implementation object using the device and swapchain description
+auto CI = ImGuiDiligentCreateInfo{*device, SCDesc};
+imgui_impl = ImGui::ImplSDL::Create(CI, sdl_window);
+```
+
+#### Rendering
+Before creating an imgui window for the current frame call `ImGuiImplDiligent::NewFrame()`
+```cpp
+auto SCDesc = swapchain->GetDesc();
+
+// You may want to check here if the render size given by SDL is different then
+// the swapchain's. For example if the window was just resized and the values
+// given by SDL_Vulkan_GetDrawableSize() don't match the swapchain's, you might
+// want to return early for this frame otherwise ImGui may assert.
+
+imgui_impl->NewFrame(SCDesc.Width, SCDesc.Height, SCDesc.PreTransform);
+
+// Begin drawing with ImGui
+ImGui::Begin("Debug Menu");
+```
+Then finally at the end of your other render passes then call `ImGuiImplDiligent::Render()`
+```cpp
+imgui_impl->Render(immediate_context);
+// Finish rendering
+swapchain->Present();
+```
+
+### Passing input events
+At the start of your main event loop, add a call to `ImGui::ImplSDL::HandleSDLEvent()`. It is not necessary to save the return value
+```cpp
+SDL_Event event{};
+auto& io = ImGui::GetIO();
+// Set flags you want
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+while (true) 
+{
+    dynamic_cast<ImGuiImplSDL*>(imgui_impl.get())->HandleSDLEvent(&event);
+    // ...
+}
+```
+Then afterward in the loop you can filter ImGui events as normal
+```cpp
+switch(event) 
+{
+    case SDL_KeyDown:
+        if (!io.WantCaptureKeyboard) 
+        {
+            // Do your normal non-imgui logic here
+        }
+        break;
+    case SDL_KeyUp:
+        // ditto
+    case SDL_MOUSEMOTION:
+        if (!io.WantCaptureMouse) 
+        {
+            // Do your normal non-imgui logic here
+        }
+    case SDL_MOUSEBUTTONDOWN:
+        // ditto
+    case SDL_MOUSEBUTTONUP:
+        // ditto
+    case SDL_MOUSEWHEEL:
+        // ditto
+}
+```
+
+It's possible to use gamepad input as well, but you will have to come up with a way to filter the events
