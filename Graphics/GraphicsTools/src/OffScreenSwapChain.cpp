@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,11 +24,12 @@
  *  of the possibility of such damages.
  */
 
+#include "OffScreenSwapChain.hpp"
 
-#include "../../../Common/interface/ObjectBase.hpp"
-#include "../../../Graphics/GraphicsEngine/include/SwapChainBase.hpp"
-#include "../../../Graphics/GraphicsEngine/include/RenderDeviceBase.hpp"
-#include "../../../Graphics/GraphicsAccessories/interface/GraphicsAccessories.hpp"
+#include "ObjectBase.hpp"
+#include "SwapChainBase.hpp"
+#include "RenderDeviceBase.hpp"
+#include "GraphicsAccessories.hpp"
 
 #include "OffScreenSwapChain.hpp"
 
@@ -46,7 +47,6 @@ public:
                        const SwapChainDesc& SCDesc) :
         SwapChainBase{pRefCounters, pDevice, pContext, SCDesc}
     {
-
         if (m_DesiredPreTransform != SURFACE_TRANSFORM_OPTIMAL && m_DesiredPreTransform != SURFACE_TRANSFORM_IDENTITY)
         {
             LOG_WARNING_MESSAGE(GetSurfaceTransformString(m_DesiredPreTransform),
@@ -56,6 +56,19 @@ public:
 
         m_DesiredPreTransform        = SURFACE_TRANSFORM_OPTIMAL;
         m_SwapChainDesc.PreTransform = SURFACE_TRANSFORM_IDENTITY;
+
+        const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
+
+        if (m_SwapChainDesc.IsPrimary && m_SwapChainDesc.BufferCount > 0 &&
+            (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12 ||
+             DeviceInfo.Type == RENDER_DEVICE_TYPE_VULKAN ||
+             DeviceInfo.Type == RENDER_DEVICE_TYPE_METAL))
+        {
+            FenceDesc Desc;
+            Desc.Name = "Off-screen swap chain frame complete fence";
+            Desc.Type = FENCE_TYPE_CPU_WAIT_ONLY;
+            pDevice->CreateFence(Desc, &m_FrameCompleteFence);
+        }
 
         Resize(m_SwapChainDesc.Width, m_SwapChainDesc.Height, m_SwapChainDesc.PreTransform);
     }
@@ -75,6 +88,17 @@ public:
         {
             pDeviceContext->FinishFrame();
             m_pRenderDevice->ReleaseStaleResources();
+
+            if (m_FrameCompleteFence)
+            {
+                if (m_FrameNumber > m_SwapChainDesc.BufferCount)
+                {
+                    // Limit the number of frames in flight to the number of back buffers
+                    m_FrameCompleteFence->Wait(m_FrameNumber - m_SwapChainDesc.BufferCount);
+                }
+                pDeviceContext->EnqueueSignal(m_FrameCompleteFence, m_FrameNumber);
+            }
+            ++m_FrameNumber;
         }
     }
 
@@ -157,6 +181,8 @@ protected:
     RefCntAutoPtr<ITexture>     m_pDepthBuffer;
     RefCntAutoPtr<ITextureView> m_pRTV;
     RefCntAutoPtr<ITextureView> m_pDSV;
+    RefCntAutoPtr<IFence>       m_FrameCompleteFence;
+    Uint64                      m_FrameNumber = 1;
 };
 
 
