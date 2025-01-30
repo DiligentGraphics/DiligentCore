@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -122,5 +122,8 @@ void GetAllowedStagesAndAccessMask(BIND_FLAGS Flags, VkPipelineStageFlags& Stage
 
 VkComponentSwizzle TextureComponentSwizzleToVkComponentSwizzle(TEXTURE_COMPONENT_SWIZZLE Swizzle);
 VkComponentMapping TextureComponentMappingToVkComponentMapping(const TextureComponentMapping& Mapping);
+
+VkPipelineRenderingCreateInfoKHR GraphicsPipelineDesc_To_VkPipelineRenderingCreateInfo(const GraphicsPipelineDesc& PipelineDesc,
+                                                                                       std::vector<VkFormat>&      ColorAttachmentFormats);
 
 } // namespace Diligent

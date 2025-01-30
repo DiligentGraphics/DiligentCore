@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -2208,6 +2208,37 @@ VkComponentMapping TextureComponentMappingToVkComponentMapping(const TextureComp
         TextureComponentSwizzleToVkComponentSwizzle(Mapping.B),
         TextureComponentSwizzleToVkComponentSwizzle(Mapping.A) //
     };
+}
+
+VkPipelineRenderingCreateInfoKHR GraphicsPipelineDesc_To_VkPipelineRenderingCreateInfo(const GraphicsPipelineDesc& PipelineDesc,
+                                                                                       std::vector<VkFormat>&      ColorAttachmentFormats)
+{
+    VkPipelineRenderingCreateInfoKHR PipelineRenderingCI{};
+    PipelineRenderingCI.sType    = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+    PipelineRenderingCI.pNext    = nullptr;
+    PipelineRenderingCI.viewMask = (1u << PipelineDesc.NumViewports) - 1u;
+
+    PipelineRenderingCI.colorAttachmentCount = PipelineDesc.NumRenderTargets;
+    ColorAttachmentFormats.resize(PipelineDesc.NumRenderTargets);
+    for (Uint32 rt = 0; rt < PipelineDesc.NumRenderTargets; ++rt)
+    {
+        TEXTURE_FORMAT RTVFormat   = PipelineDesc.RTVFormats[rt];
+        ColorAttachmentFormats[rt] = TexFormatToVkFormat(RTVFormat);
+    }
+    PipelineRenderingCI.pColorAttachmentFormats = ColorAttachmentFormats.data();
+
+    TEXTURE_FORMAT DSVFormat = PipelineDesc.DSVFormat;
+    if (DSVFormat != TEX_FORMAT_UNKNOWN)
+    {
+        PipelineRenderingCI.depthAttachmentFormat = TexFormatToVkFormat(DSVFormat);
+        const TextureFormatAttribs& FmtAttribs    = GetTextureFormatAttribs(DSVFormat);
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        {
+            PipelineRenderingCI.stencilAttachmentFormat = PipelineRenderingCI.depthAttachmentFormat;
+        }
+    }
+
+    return PipelineRenderingCI;
 }
 
 } // namespace Diligent
