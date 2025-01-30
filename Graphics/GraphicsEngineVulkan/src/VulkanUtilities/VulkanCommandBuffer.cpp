@@ -155,12 +155,9 @@ void VulkanCommandBuffer::TransitionImageLayout(VkImage                        I
                                                 VkPipelineStageFlags           SrcStages,
                                                 VkPipelineStageFlags           DstStages)
 {
-    if (m_State.RenderPass != VK_NULL_HANDLE)
-    {
-        // Image layout transitions within a render pass execute
-        // dependencies between attachments
-        EndRenderPass();
-    }
+    // Image layout transitions within a render pass execute
+    // dependencies between attachments
+    EndRenderScope();
 
     VERIFY_EXPR((SrcStages & m_Barrier.SupportedStagesMask) != 0);
     VERIFY_EXPR((DstStages & m_Barrier.SupportedStagesMask) != 0);
@@ -228,10 +225,7 @@ void VulkanCommandBuffer::MemoryBarrier(VkAccessFlags        srcAccessMask,
                                         VkPipelineStageFlags SrcStages,
                                         VkPipelineStageFlags DstStages)
 {
-    if (m_State.RenderPass != VK_NULL_HANDLE)
-    {
-        EndRenderPass();
-    }
+    EndRenderScope();
 
     VERIFY_EXPR((SrcStages & m_Barrier.SupportedStagesMask) != 0);
     VERIFY_EXPR((DstStages & m_Barrier.SupportedStagesMask) != 0);
@@ -248,10 +242,7 @@ void VulkanCommandBuffer::FlushBarriers()
     if (m_Barrier.MemorySrcStages == 0 && m_Barrier.MemoryDstStages == 0 && m_ImageBarriers.empty())
         return;
 
-    if (m_State.RenderPass != VK_NULL_HANDLE)
-    {
-        EndRenderPass();
-    }
+    EndRenderScope();
 
     VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
 

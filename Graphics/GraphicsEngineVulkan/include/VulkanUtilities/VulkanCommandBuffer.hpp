@@ -51,7 +51,7 @@ public:
                                        const VkImageSubresourceRange& Subresource)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass == VK_NULL_HANDLE,
+        VERIFY(!IsInRenderScope(),
                "vkCmdClearColorImage() must be called outside of render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdClearColorImage-renderpass)");
         VERIFY(Subresource.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT,
@@ -73,7 +73,7 @@ public:
                                               const VkImageSubresourceRange&  Subresource)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass == VK_NULL_HANDLE,
+        VERIFY(!IsInRenderScope(),
                "vkCmdClearDepthStencilImage() must be called outside of render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdClearDepthStencilImage-renderpass)");
         // clang-format off
@@ -96,7 +96,7 @@ public:
     __forceinline void ClearAttachment(const VkClearAttachment& Attachment, const VkClearRect& ClearRect)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+        VERIFY(IsInRenderScope(),
                "vkCmdClearAttachments() must be called inside render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdClearAttachments-renderpass)");
 
@@ -113,7 +113,7 @@ public:
     __forceinline void Draw(uint32_t VertexCount, uint32_t InstanceCount, uint32_t FirstVertex, uint32_t FirstInstance)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+        VERIFY(IsInRenderScope(),
                "vkCmdDraw() must be called inside render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDraw-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
@@ -124,7 +124,7 @@ public:
     __forceinline void DrawIndexed(uint32_t IndexCount, uint32_t InstanceCount, uint32_t FirstIndex, int32_t VertexOffset, uint32_t FirstInstance)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+        VERIFY(IsInRenderScope(),
                "vkCmdDrawIndexed() must be called inside render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDrawIndexed-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
@@ -136,7 +136,7 @@ public:
     __forceinline void DrawIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+        VERIFY(IsInRenderScope(),
                "vkCmdDrawIndirect() must be called inside render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDrawIndirect-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
@@ -147,7 +147,7 @@ public:
     __forceinline void DrawIndexedIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+        VERIFY(IsInRenderScope(),
                "vkCmdDrawIndexedIndirect() must be called inside render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDrawIndexedIndirect-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
@@ -160,7 +160,7 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+        VERIFY(IsInRenderScope(),
                "vkCmdDrawIndirectCountKHR() must be called inside render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDrawIndirectCount-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
@@ -175,7 +175,7 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+        VERIFY(IsInRenderScope(),
                "vkCmdDrawIndexedIndirectCountKHR() must be called inside render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDrawIndexedIndirectCount-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
@@ -191,7 +191,7 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksEXT() must be called inside render pass");
+        VERIFY(IsInRenderScope(), "vkCmdDrawMeshTasksEXT() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawMeshTasksEXT(m_VkCmdBuffer, TaskCountX, TaskCountY, TaskCountZ);
@@ -204,7 +204,7 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksIndirectEXT() must be called inside render pass");
+        VERIFY(IsInRenderScope(), "vkCmdDrawMeshTasksIndirectEXT() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawMeshTasksIndirectEXT(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
@@ -217,7 +217,7 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksIndirectCountEXT() must be called inside render pass");
+        VERIFY(IsInRenderScope(), "vkCmdDrawMeshTasksIndirectCountEXT() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawMeshTasksIndirectCountEXT(m_VkCmdBuffer, Buffer, Offset, CountBuffer, CountBufferOffset, MaxDrawCount, Stride);
@@ -233,7 +233,7 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMultiEXT() must be called inside render pass");
+        VERIFY(IsInRenderScope(), "vkCmdDrawMultiEXT() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawMultiEXT(m_VkCmdBuffer, DrawCount, pVertexInfo, InstanceCount, FirstInstance, sizeof(VkMultiDrawInfoEXT));
@@ -249,7 +249,7 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMultiIndexedEXT() must be called inside render pass");
+        VERIFY(IsInRenderScope(), "vkCmdDrawMultiIndexedEXT() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
         VERIFY(m_State.IndexBuffer != VK_NULL_HANDLE, "No index buffer bound");
 
@@ -265,7 +265,7 @@ public:
     __forceinline void Dispatch(uint32_t GroupCountX, uint32_t GroupCountY, uint32_t GroupCountZ)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass == VK_NULL_HANDLE,
+        VERIFY(!IsInRenderScope(),
                "vkCmdDispatch() must be called outside of render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDispatch-renderpass)");
         VERIFY(m_State.ComputePipeline != VK_NULL_HANDLE, "No compute pipeline bound");
@@ -277,7 +277,7 @@ public:
     __forceinline void DispatchIndirect(VkBuffer Buffer, VkDeviceSize Offset)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass == VK_NULL_HANDLE,
+        VERIFY(!IsInRenderScope(),
                "vkCmdDispatchIndirect() must be called outside of render pass "
                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDispatchIndirect-renderpass)");
         VERIFY(m_State.ComputePipeline != VK_NULL_HANDLE, "No compute pipeline bound");
@@ -295,6 +295,7 @@ public:
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "Current pass has not been ended");
+        VERIFY(!m_State.RenderingBegan, "Current dynamic render pass has not been ended");
 
         if (m_State.RenderPass != RenderPass || m_State.Framebuffer != Framebuffer)
         {
@@ -353,10 +354,35 @@ public:
         vkCmdNextSubpass(m_VkCmdBuffer, VK_SUBPASS_CONTENTS_INLINE);
     }
 
+    __forceinline void BeginRendering(const VkRenderingInfoKHR& RenderingInfo)
+    {
+        VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "Another render pass has already been started");
+        VERIFY(!m_State.RenderingBegan, "Rendering has already begun");
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        vkCmdBeginRenderingKHR(m_VkCmdBuffer, &RenderingInfo);
+        m_State.RenderingBegan = true;
+    }
+
+    __forceinline void EndRendering()
+    {
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY(m_State.RenderingBegan, "Rendering has not begun");
+        vkCmdEndRenderingKHR(m_VkCmdBuffer);
+        m_State.RenderingBegan = false;
+    }
+
+    __forceinline void EndRenderScope()
+    {
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+            EndRenderPass();
+        else if (m_State.RenderingBegan)
+            EndRendering();
+    }
+
     __forceinline void EndCommandBuffer()
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "Render pass has not been ended");
+        VERIFY(!IsInRenderScope(), "Render pass has not been ended");
         FlushBarriers();
         vkEndCommandBuffer(m_VkCmdBuffer);
     }
@@ -478,11 +504,8 @@ public:
                                   const VkBufferCopy* pRegions)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Copy buffer operation must be performed outside of render pass.
-            EndRenderPass();
-        }
+        // Copy buffer operation must be performed outside of render pass.
+        EndRenderScope();
         FlushBarriers();
         vkCmdCopyBuffer(m_VkCmdBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
     }
@@ -495,11 +518,8 @@ public:
                                  const VkImageCopy* pRegions)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Copy operations must be performed outside of render pass.
-            EndRenderPass();
-        }
+        // Copy operations must be performed outside of render pass.
+        EndRenderScope();
         FlushBarriers();
         vkCmdCopyImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
     }
@@ -511,11 +531,8 @@ public:
                                          const VkBufferImageCopy* pRegions)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Copy operations must be performed outside of render pass.
-            EndRenderPass();
-        }
+        // Copy operations must be performed outside of render pass.
+        EndRenderScope();
         FlushBarriers();
         vkCmdCopyBufferToImage(m_VkCmdBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
     }
@@ -527,11 +544,8 @@ public:
                                          const VkBufferImageCopy* pRegions)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Copy operations must be performed outside of render pass.
-            EndRenderPass();
-        }
+        // Copy operations must be performed outside of render pass.
+        EndRenderScope();
         FlushBarriers();
         vkCmdCopyImageToBuffer(m_VkCmdBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
     }
@@ -545,11 +559,8 @@ public:
                                  VkFilter           filter)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Blit must be performed outside of render pass.
-            EndRenderPass();
-        }
+        // Blit must be performed outside of render pass.
+        EndRenderScope();
         FlushBarriers();
         vkCmdBlitImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
     }
@@ -562,11 +573,8 @@ public:
                                     const VkImageResolve* pRegions)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Resolve must be performed outside of render pass.
-            EndRenderPass();
-        }
+        // Resolve must be performed outside of render pass.
+        EndRenderScope();
         FlushBarriers();
         vkCmdResolveImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
     }
@@ -593,7 +601,7 @@ public:
 
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         vkCmdBeginQuery(m_VkCmdBuffer, queryPool, query, flags);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
+        if (IsInRenderScope())
             m_State.InsidePassQueries |= queryFlag;
         else
             m_State.OutsidePassQueries |= queryFlag;
@@ -605,7 +613,7 @@ public:
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         vkCmdEndQuery(m_VkCmdBuffer, queryPool, query);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
+        if (IsInRenderScope())
         {
             VERIFY((m_State.InsidePassQueries & queryFlag) != 0, "No active inside-pass queries found.");
             m_State.InsidePassQueries &= ~queryFlag;
@@ -630,11 +638,8 @@ public:
                                       uint32_t    queryCount)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Query pool reset must be performed outside of render pass (17.2).
-            EndRenderPass();
-        }
+        // Query pool reset must be performed outside of render pass (17.2).
+        EndRenderScope();
         FlushBarriers();
         vkCmdResetQueryPool(m_VkCmdBuffer, queryPool, firstQuery, queryCount);
     }
@@ -648,11 +653,8 @@ public:
                                             VkQueryResultFlags flags)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Copy query results must be performed outside of render pass.
-            EndRenderPass();
-        }
+        // Copy query results must be performed outside of render pass.
+        EndRenderScope();
         FlushBarriers();
         vkCmdCopyQueryPoolResults(m_VkCmdBuffer, queryPool, firstQuery, queryCount,
                                   dstBuffer, dstOffset, stride, flags);
@@ -664,11 +666,8 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Build AS operations must be performed outside of render pass.
-            EndRenderPass();
-        }
+        // Build AS operations must be performed outside of render pass.
+        EndRenderScope();
         FlushBarriers();
         vkCmdBuildAccelerationStructuresKHR(m_VkCmdBuffer, infoCount, pInfos, ppBuildRangeInfos);
 #else
@@ -680,11 +679,8 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Copy AS operations must be performed outside of render pass.
-            EndRenderPass();
-        }
+        // Copy AS operations must be performed outside of render pass.
+        EndRenderScope();
         FlushBarriers();
         vkCmdCopyAccelerationStructureKHR(m_VkCmdBuffer, &Info);
 #else
@@ -696,11 +692,8 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            // Write AS properties operations must be performed outside of render pass.
-            EndRenderPass();
-        }
+        // Write AS properties operations must be performed outside of render pass.
+        EndRenderScope();
         FlushBarriers();
         vkCmdWriteAccelerationStructuresPropertiesKHR(m_VkCmdBuffer, 1, &accelerationStructure, queryType, queryPool, firstQuery);
 #else
@@ -719,10 +712,7 @@ public:
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RayTracingPipeline != VK_NULL_HANDLE, "No ray tracing pipeline bound");
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            EndRenderPass();
-        }
+        EndRenderScope();
         FlushBarriers();
         vkCmdTraceRaysKHR(m_VkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, width, height, depth);
 #else
@@ -739,10 +729,7 @@ public:
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RayTracingPipeline != VK_NULL_HANDLE, "No ray tracing pipeline bound");
-        if (m_State.RenderPass != VK_NULL_HANDLE)
-        {
-            EndRenderPass();
-        }
+        EndRenderScope();
         FlushBarriers();
         vkCmdTraceRaysIndirectKHR(m_VkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, indirectDeviceAddress);
 #else
@@ -828,7 +815,10 @@ public:
         uint32_t      FramebufferHeight  = 0;
         uint32_t      InsidePassQueries  = 0;
         uint32_t      OutsidePassQueries = 0;
+        bool          RenderingBegan     = false;
     };
+
+    __forceinline bool IsInRenderScope() const { return m_State.RenderPass != VK_NULL_HANDLE || m_State.RenderingBegan; }
 
     const StateCache& GetState() const { return m_State; }
 
