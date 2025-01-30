@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -148,9 +148,9 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 {
     static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
 
-    const auto vkVersion    = m_PhysicalDevice->GetVkVersion();
-    m_DeviceInfo.Type       = RENDER_DEVICE_TYPE_VULKAN;
-    m_DeviceInfo.APIVersion = Version{VK_API_VERSION_MAJOR(vkVersion), VK_API_VERSION_MINOR(vkVersion)};
+    const uint32_t vkVersion = m_PhysicalDevice->GetVkVersion();
+    m_DeviceInfo.Type        = RENDER_DEVICE_TYPE_VULKAN;
+    m_DeviceInfo.APIVersion  = Version{VK_API_VERSION_MAJOR(vkVersion), VK_API_VERSION_MINOR(vkVersion)};
 
     m_DeviceInfo.Features = VkFeaturesToDeviceFeatures(vkVersion,
                                                        m_LogicalVkDevice->GetEnabledFeatures(),
@@ -173,7 +173,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_QueryMgrs.reserve(CommandQueueCount);
     for (Uint32 q = 0; q < CommandQueueCount; ++q)
     {
-        auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(SoftwareQueueIndex{q}).GetQueueFamilyIndex()};
+        const HardwareQueueIndex QueueFamilyIndex{GetCommandQueue(SoftwareQueueIndex{q}).GetQueueFamilyIndex()};
 
         if (m_TransientCmdPoolMgrs.find(QueueFamilyIndex) == m_TransientCmdPoolMgrs.end())
         {
@@ -239,8 +239,8 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex            
                                                   VulkanUtilities::VulkanCommandBuffer& CmdBuffer,
                                                   const Char*                           DebugPoolName)
 {
-    auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
-    auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
+    HardwareQueueIndex QueueFamilyIndex{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
+    auto               CmdPoolMgrIter = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
     VERIFY(CmdPoolMgrIter != m_TransientCmdPoolMgrs.end(),
            "Con not find transient command pool manager for queue family index (", Uint32{QueueFamilyIndex}, ")");
 
@@ -254,7 +254,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex            
     BuffAllocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     BuffAllocInfo.commandBufferCount = 1;
 
-    auto vkCmdBuff = m_LogicalVkDevice->AllocateVkCommandBuffer(BuffAllocInfo);
+    VkCommandBuffer vkCmdBuff = m_LogicalVkDevice->AllocateVkCommandBuffer(BuffAllocInfo);
     DEV_CHECK_ERR(vkCmdBuff != VK_NULL_HANDLE, "Failed to allocate Vulkan command buffer");
 
 
@@ -266,7 +266,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex            
                                                                           // and recorded again between each submission.
     CmdBuffBeginInfo.pInheritanceInfo = nullptr;                          // Ignored for a primary command buffer
 
-    auto err = vkBeginCommandBuffer(vkCmdBuff, &CmdBuffBeginInfo);
+    VkResult err = vkBeginCommandBuffer(vkCmdBuff, &CmdBuffBeginInfo);
     DEV_CHECK_ERR(err == VK_SUCCESS, "vkBeginCommandBuffer() failed");
     (void)err;
 
@@ -282,7 +282,7 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(SoftwareQueueIndex   
 {
     VERIFY_EXPR(vkCmdBuff != VK_NULL_HANDLE);
 
-    auto err = vkEndCommandBuffer(vkCmdBuff);
+    VkResult err = vkEndCommandBuffer(vkCmdBuff);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to end command buffer");
     (void)err;
 
@@ -370,8 +370,8 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(SoftwareQueueIndex   
         VkCommandBuffer                     vkCmdBuffer = VK_NULL_HANDLE;
     };
 
-    auto QueueFamilyIndex = HardwareQueueIndex{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
-    auto CmdPoolMgrIter   = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
+    HardwareQueueIndex QueueFamilyIndex{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
+    auto               CmdPoolMgrIter = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
     VERIFY(CmdPoolMgrIter != m_TransientCmdPoolMgrs.end(),
            "Unable to find transient command pool manager for queue family index ", Uint32{QueueFamilyIndex}, ".");
 
@@ -398,14 +398,14 @@ void RenderDeviceVkImpl::SubmitCommandBuffer(SoftwareQueueIndex                 
 )
 {
     // Submit the command list to the queue
-    auto CmbBuffInfo       = TRenderDeviceBase::SubmitCommandBuffer(CommandQueueId, true, SubmitInfo);
-    SubmittedFenceValue    = CmbBuffInfo.FenceValue;
-    SubmittedCmdBuffNumber = CmbBuffInfo.CmdBufferNumber;
+    SubmittedCommandBufferInfo CmbBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(CommandQueueId, true, SubmitInfo);
+    SubmittedFenceValue                    = CmbBuffInfo.FenceValue;
+    SubmittedCmdBuffNumber                 = CmbBuffInfo.CmdBufferNumber;
 
     if (pSignalFences != nullptr && !pSignalFences->empty())
     {
-        auto* pQueue     = m_CommandQueues[CommandQueueId].CmdQueue.RawPtr<CommandQueueVkImpl>();
-        auto  pSyncPoint = pQueue->GetLastSyncPoint();
+        CommandQueueVkImpl* pQueue     = m_CommandQueues[CommandQueueId].CmdQueue.RawPtr<CommandQueueVkImpl>();
+        SyncPointVkPtr      pSyncPoint = pQueue->GetLastSyncPoint();
 
         for (auto& val_fence : *pSignalFences)
         {
@@ -457,13 +457,13 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     auto& TexFormatInfo = m_TextureFormatsInfo[TexFormat];
     VERIFY(TexFormatInfo.Supported, "Texture format is not supported");
 
-    auto vkPhysicalDevice = m_PhysicalDevice->GetVkDeviceHandle();
+    VkPhysicalDevice vkPhysicalDevice = m_PhysicalDevice->GetVkDeviceHandle();
 
     auto CheckFormatProperties =
         [vkPhysicalDevice](VkFormat vkFmt, VkImageType vkImgType, VkImageUsageFlags vkUsage, VkImageFormatProperties& ImgFmtProps) //
     {
-        auto err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkFmt, vkImgType, VK_IMAGE_TILING_OPTIMAL,
-                                                            vkUsage, 0, &ImgFmtProps);
+        VkResult err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkFmt, vkImgType, VK_IMAGE_TILING_OPTIMAL,
+                                                                vkUsage, 0, &ImgFmtProps);
         return err == VK_SUCCESS;
     };
 
@@ -472,7 +472,7 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     TexFormatInfo.Dimensions = RESOURCE_DIMENSION_SUPPORT_NONE;
 
     {
-        auto SRVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_SHADER_RESOURCE, BIND_SHADER_RESOURCE);
+        TEXTURE_FORMAT SRVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_SHADER_RESOURCE, BIND_SHADER_RESOURCE);
         if (SRVFormat != TEX_FORMAT_UNKNOWN)
         {
             VkFormat           vkSrvFormat   = TexFormatToVkFormat(SRVFormat);
@@ -495,8 +495,8 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                     TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_3D;
 
                 {
-                    auto err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-                                                                        VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, &ImgFmtProps);
+                    VkResult err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+                                                                            VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, &ImgFmtProps);
                     if (err == VK_SUCCESS)
                         TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE | RESOURCE_DIMENSION_SUPPORT_TEX_CUBE_ARRAY;
                 }
@@ -505,7 +505,7 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     }
 
     {
-        auto RTVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_RENDER_TARGET, BIND_RENDER_TARGET);
+        TEXTURE_FORMAT RTVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_RENDER_TARGET, BIND_RENDER_TARGET);
         if (RTVFormat != TEX_FORMAT_UNKNOWN)
         {
             VkFormat           vkRtvFormat   = TexFormatToVkFormat(RTVFormat);
@@ -525,7 +525,7 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     }
 
     {
-        auto DSVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_DEPTH_STENCIL, BIND_DEPTH_STENCIL);
+        TEXTURE_FORMAT DSVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_DEPTH_STENCIL, BIND_DEPTH_STENCIL);
         if (DSVFormat != TEX_FORMAT_UNKNOWN)
         {
             VkFormat           vkDsvFormat   = TexFormatToVkFormat(DSVFormat);
@@ -546,7 +546,7 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     }
 
     {
-        auto UAVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_UNORDERED_ACCESS, BIND_DEPTH_STENCIL);
+        TEXTURE_FORMAT UAVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_UNORDERED_ACCESS, BIND_DEPTH_STENCIL);
         if (UAVFormat != TEX_FORMAT_UNKNOWN)
         {
             VkFormat           vkUavFormat   = TexFormatToVkFormat(UAVFormat);
@@ -742,11 +742,11 @@ std::vector<uint32_t> RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint
     std::vector<uint32_t> QueueFamilyIndices;
     while (CommandQueueMask != 0)
     {
-        auto CmdQueueInd = PlatformMisc::GetLSB(CommandQueueMask);
+        Uint64 CmdQueueInd = PlatformMisc::GetLSB(CommandQueueMask);
         CommandQueueMask &= ~(Uint64{1} << Uint64{CmdQueueInd});
 
-        auto& CmdQueue    = GetCommandQueue(SoftwareQueueIndex{CmdQueueInd});
-        auto  FamilyIndex = CmdQueue.GetQueueFamilyIndex();
+        const ICommandQueueVk& CmdQueue    = GetCommandQueue(SoftwareQueueIndex{CmdQueueInd});
+        uint32_t               FamilyIndex = CmdQueue.GetQueueFamilyIndex();
         if (!QueueFamilyBits[FamilyIndex])
         {
             QueueFamilyBits[FamilyIndex] = true;
@@ -758,7 +758,7 @@ std::vector<uint32_t> RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint
 
 HardwareQueueIndex RenderDeviceVkImpl::GetQueueFamilyIndex(SoftwareQueueIndex CmdQueueInd) const
 {
-    const auto& CmdQueue = GetCommandQueue(SoftwareQueueIndex{CmdQueueInd});
+    const ICommandQueueVk& CmdQueue = GetCommandQueue(SoftwareQueueIndex{CmdQueueInd});
     return HardwareQueueIndex{CmdQueue.GetQueueFamilyIndex()};
 }
 
@@ -766,15 +766,15 @@ SparseTextureFormatInfo RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_F
                                                                        RESOURCE_DIMENSION Dimension,
                                                                        Uint32             SampleCount) const
 {
-    const auto ComponentType = CheckSparseTextureFormatSupport(TexFormat, Dimension, SampleCount, m_AdapterInfo.SparseResources);
+    const COMPONENT_TYPE ComponentType = CheckSparseTextureFormatSupport(TexFormat, Dimension, SampleCount, m_AdapterInfo.SparseResources);
     if (ComponentType == COMPONENT_TYPE_UNDEFINED)
         return {};
 
-    const auto vkDevice       = m_PhysicalDevice->GetVkDeviceHandle();
-    const auto vkType         = Dimension == RESOURCE_DIM_TEX_3D ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D;
-    const auto vkFormat       = TexFormatToVkFormat(TexFormat);
-    const auto vkDefaultUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    const auto vkSampleCount  = static_cast<VkSampleCountFlagBits>(SampleCount);
+    const VkPhysicalDevice      vkDevice       = m_PhysicalDevice->GetVkDeviceHandle();
+    const VkImageType           vkType         = Dimension == RESOURCE_DIM_TEX_3D ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D;
+    const VkFormat              vkFormat       = TexFormatToVkFormat(TexFormat);
+    const VkImageUsageFlags     vkDefaultUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    const VkSampleCountFlagBits vkSampleCount  = static_cast<VkSampleCountFlagBits>(SampleCount);
 
     // Texture with depth-stencil format may be implemented with two memory blocks per tile.
     VkSparseImageFormatProperties FmtProps[2]   = {};
