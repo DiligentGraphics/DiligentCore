@@ -1057,8 +1057,7 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
     EnsureVkCmdBuffer();
 
     // Dispatch commands must be executed outside of render pass
-    if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
-        m_CommandBuffer.EndRenderPass();
+    m_CommandBuffer.EndRenderScope();
 
     auto& BindInfo = GetBindInfo(PIPELINE_TYPE_COMPUTE);
     if (Uint32 CommitMask = BindInfo.GetCommitMask())
@@ -1192,8 +1191,7 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
     else
     {
         // End render pass to clear the buffer with vkCmdClearDepthStencilImage
-        if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
-            m_CommandBuffer.EndRenderPass();
+        m_CommandBuffer.EndRenderScope();
 
         auto* pTexture   = pVkDSV->GetTexture();
         auto* pTextureVk = ClassPtrCast<TextureVkImpl>(pTexture);
@@ -1312,8 +1310,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
         VERIFY(m_pActiveRenderPass == nullptr, "This branch should never execute inside a render pass.");
 
         // End current render pass and clear the image with vkCmdClearColorImage
-        if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
-            m_CommandBuffer.EndRenderPass();
+        m_CommandBuffer.EndRenderScope();
 
         auto* pTexture   = pVkRTV->GetTexture();
         auto* pTextureVk = ClassPtrCast<TextureVkImpl>(pTexture);
@@ -1442,10 +1439,7 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
 
         if (m_State.NumCommands != 0)
         {
-            if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
-            {
-                m_CommandBuffer.EndRenderPass();
-            }
+            m_CommandBuffer.EndRenderScope();
 
 #ifdef DILIGENT_DEVELOPMENT
             DEV_CHECK_ERR(m_DvpDebugGroupCount == 0, "Not all debug groups have been ended");
@@ -1816,8 +1810,7 @@ void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
     const auto& CmdBufferState = m_CommandBuffer.GetState();
     if (CmdBufferState.Framebuffer != m_vkFramebuffer)
     {
-        if (CmdBufferState.RenderPass != VK_NULL_HANDLE)
-            m_CommandBuffer.EndRenderPass();
+        m_CommandBuffer.EndRenderScope();
 
         if (m_vkFramebuffer != VK_NULL_HANDLE)
         {
@@ -1936,8 +1929,8 @@ void DeviceContextVkImpl::ResetRenderTargets()
     TDeviceContextBase::ResetRenderTargets();
     m_vkRenderPass  = VK_NULL_HANDLE;
     m_vkFramebuffer = VK_NULL_HANDLE;
-    if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE && m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
-        m_CommandBuffer.EndRenderPass();
+    if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE)
+        m_CommandBuffer.EndRenderScope();
     m_State.ShadingRateIsSet = false;
 }
 
@@ -2709,10 +2702,7 @@ void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
     DEV_CHECK_ERR(IsDeferred(), "Only deferred context can record command list");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 
-    if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
-    {
-        m_CommandBuffer.EndRenderPass();
-    }
+    m_CommandBuffer.EndRenderScope();
 
     auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
     auto err       = vkEndCommandBuffer(vkCmdBuff);
@@ -2843,8 +2833,7 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
                "No query flag is set which indicates there was no matching BeginQuery call or there was an error while beginning the query.");
         if (CmdBuffState.OutsidePassQueries & (1 << QueryType))
         {
-            if (m_CommandBuffer.GetState().RenderPass)
-                m_CommandBuffer.EndRenderPass();
+            m_CommandBuffer.EndRenderScope();
         }
         else
         {
