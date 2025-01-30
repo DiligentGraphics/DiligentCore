@@ -262,7 +262,7 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(SoftwareQueueIndex CmdQueue, VkComm
 
 inline void DeviceContextVkImpl::DisposeCurrentCmdBuffer(SoftwareQueueIndex CmdQueue, Uint64 FenceValue)
 {
-    VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Disposing command buffer with unfinished render pass");
+    VERIFY(!m_CommandBuffer.IsInRenderScope(), "Disposing command buffer with unfinished render pass");
     VkCommandBuffer vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
     if (vkCmdBuff != VK_NULL_HANDLE)
     {
@@ -1627,7 +1627,7 @@ void DeviceContextVkImpl::InvalidateState()
     m_vkRenderPass  = VK_NULL_HANDLE;
     m_vkFramebuffer = VK_NULL_HANDLE;
 
-    VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Invalidating context with unfinished render pass");
+    VERIFY(!m_CommandBuffer.IsInRenderScope(), "Invalidating context with unfinished render pass");
     m_CommandBuffer.Reset();
 }
 
