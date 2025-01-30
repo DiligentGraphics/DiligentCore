@@ -79,8 +79,6 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_VulkanInstance         {Instance                 },
     m_PhysicalDevice         {std::move(PhysicalDevice)},
     m_LogicalVkDevice        {std::move(LogicalDevice) },
-    m_FramebufferCache       {*this                    },
-    m_ImplicitRenderPassCache{*this                    },
     m_DescriptorSetAllocator
     {
         *this,
@@ -146,6 +144,12 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, m_PhysicalDevice->GetVkVersion(), EngineCI.pDxCompilerPath)}
 // clang-format on
 {
+    if (!m_LogicalVkDevice->GetEnabledExtFeatures().DynamicRendering.dynamicRendering)
+    {
+        m_FramebufferCache        = std::make_unique<FramebufferCache>(*this);
+        m_ImplicitRenderPassCache = std::make_unique<RenderPassCache>(*this);
+    }
+
     static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
 
     const uint32_t vkVersion = m_PhysicalDevice->GetVkVersion();
@@ -204,7 +208,10 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     m_DynamicMemoryManager.Destroy();
 
     // Explicitly destroy render pass cache
-    m_ImplicitRenderPassCache.Destroy();
+    if (m_ImplicitRenderPassCache)
+    {
+        m_ImplicitRenderPassCache->Destroy();
+    }
 
     // Wait for the GPU to complete all its operations
     IdleGPU();
@@ -454,7 +461,7 @@ void RenderDeviceVkImpl::ReleaseStaleResources(bool ForceRelease)
 
 void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 {
-    auto& TexFormatInfo = m_TextureFormatsInfo[TexFormat];
+    TextureFormatInfoExt& TexFormatInfo = m_TextureFormatsInfo[TexFormat];
     VERIFY(TexFormatInfo.Supported, "Texture format is not supported");
 
     VkPhysicalDevice vkPhysicalDevice = m_PhysicalDevice->GetVkDeviceHandle();

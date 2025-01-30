@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,10 +53,16 @@ RenderPassCache::~RenderPassCache()
 
 void RenderPassCache::Destroy()
 {
-    auto& FBCache = m_DeviceVkImpl.GetFramebufferCache();
-    for (auto it = m_Cache.begin(); it != m_Cache.end(); ++it)
+    if (FramebufferCache* FBCache = m_DeviceVkImpl.GetFramebufferCache())
     {
-        FBCache.OnDestroyRenderPass(it->second->GetVkRenderPass());
+        for (auto it = m_Cache.begin(); it != m_Cache.end(); ++it)
+        {
+            FBCache->OnDestroyRenderPass(it->second->GetVkRenderPass());
+        }
+    }
+    else
+    {
+        UNEXPECTED("Framebuffer cache must not be null");
     }
     m_Cache.clear();
 }
@@ -78,14 +84,14 @@ static RenderPassDesc GetImplicitRenderPassDesc(
 
     RenderPassDesc RPDesc;
 
-    auto& AttachmentInd{RPDesc.AttachmentCount};
+    Uint32& AttachmentInd{RPDesc.AttachmentCount};
 
     AttachmentReference* pDepthAttachmentReference = nullptr;
     if (DSVFormat != TEX_FORMAT_UNKNOWN)
     {
         const RESOURCE_STATE DepthAttachmentState = ReadOnlyDepth ? RESOURCE_STATE_DEPTH_READ : RESOURCE_STATE_DEPTH_WRITE;
 
-        auto& DepthAttachment = Attachments[AttachmentInd];
+        RenderPassAttachmentDesc& DepthAttachment = Attachments[AttachmentInd];
 
         DepthAttachment.Format      = DSVFormat;
         DepthAttachment.SampleCount = SampleCount;
@@ -110,7 +116,7 @@ static RenderPassDesc GetImplicitRenderPassDesc(
     AttachmentReference* pColorAttachmentsReference = NumRenderTargets > 0 ? &AttachmentReferences[AttachmentInd] : nullptr;
     for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
     {
-        auto& ColorAttachmentRef = pColorAttachmentsReference[rt];
+        AttachmentReference& ColorAttachmentRef = pColorAttachmentsReference[rt];
 
         if (RTVFormats[rt] == TEX_FORMAT_UNKNOWN)
         {
@@ -118,7 +124,7 @@ static RenderPassDesc GetImplicitRenderPassDesc(
             continue;
         }
 
-        auto& ColorAttachment = Attachments[AttachmentInd];
+        RenderPassAttachmentDesc& ColorAttachment = Attachments[AttachmentInd];
 
         ColorAttachment.Format      = RTVFormats[rt];
         ColorAttachment.SampleCount = SampleCount;
@@ -141,7 +147,7 @@ static RenderPassDesc GetImplicitRenderPassDesc(
 
     if (ShadingRateTexFormat != TEX_FORMAT_UNKNOWN)
     {
-        auto& SRAttachment = Attachments[AttachmentInd];
+        RenderPassAttachmentDesc& SRAttachment = Attachments[AttachmentInd];
 
         SRAttachment.Format         = ShadingRateTexFormat;
         SRAttachment.SampleCount    = 1;
@@ -197,7 +203,7 @@ RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
         uint2          SRTileSize;
         if (Key.EnableVRS)
         {
-            const auto& SRProps = m_DeviceVkImpl.GetAdapterInfo().ShadingRate;
+            const ShadingRateProperties& SRProps = m_DeviceVkImpl.GetAdapterInfo().ShadingRate;
             switch (SRProps.Format)
             {
                 case SHADING_RATE_FORMAT_PALETTE: SRFormat = TEX_FORMAT_R8_UINT; break;
@@ -211,8 +217,8 @@ RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
         SubpassDesc           Subpass;
         ShadingRateAttachment ShadingRate;
 
-        auto RPDesc = GetImplicitRenderPassDesc(Key.NumRenderTargets, Key.RTVFormats, Key.DSVFormat, Key.ReadOnlyDSV, Key.SampleCount, SRFormat, SRTileSize,
-                                                Attachments, AttachmentReferences, Subpass, ShadingRate);
+        RenderPassDesc RPDesc = GetImplicitRenderPassDesc(Key.NumRenderTargets, Key.RTVFormats, Key.DSVFormat, Key.ReadOnlyDSV, Key.SampleCount,
+                                                          SRFormat, SRTileSize, Attachments, AttachmentReferences, Subpass, ShadingRate);
 
         std::stringstream PassNameSS;
         PassNameSS << "Implicit render pass: RT count: " << Uint32{Key.NumRenderTargets} << "; sample count: " << Uint32{Key.SampleCount}
@@ -228,7 +234,7 @@ RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
         if (Key.EnableVRS)
             PassNameSS << "; VRS";
 
-        const auto PassName{PassNameSS.str()};
+        const std::string PassName{PassNameSS.str()};
         RPDesc.Name = PassName.c_str();
 
         RefCntAutoPtr<RenderPassVkImpl> pRenderPass;

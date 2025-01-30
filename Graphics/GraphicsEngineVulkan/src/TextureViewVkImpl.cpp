@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,12 +55,15 @@ TextureViewVkImpl::TextureViewVkImpl(IReferenceCounters*                 pRefCou
 
 TextureViewVkImpl::~TextureViewVkImpl()
 {
-    if (m_Desc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL ||
-        m_Desc.ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL ||
-        m_Desc.ViewType == TEXTURE_VIEW_RENDER_TARGET ||
-        m_Desc.ViewType == TEXTURE_VIEW_SHADING_RATE)
+    if (FramebufferCache* FBCache = m_pDevice->GetFramebufferCache())
     {
-        m_pDevice->GetFramebufferCache().OnDestroyImageView(m_ImageView);
+        if (m_Desc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL ||
+            m_Desc.ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL ||
+            m_Desc.ViewType == TEXTURE_VIEW_RENDER_TARGET ||
+            m_Desc.ViewType == TEXTURE_VIEW_SHADING_RATE)
+        {
+            FBCache->OnDestroyImageView(m_ImageView);
+        }
     }
     m_pDevice->SafeReleaseDeviceObject(std::move(m_ImageView), m_pTexture->GetDesc().ImmediateContextMask);
 }

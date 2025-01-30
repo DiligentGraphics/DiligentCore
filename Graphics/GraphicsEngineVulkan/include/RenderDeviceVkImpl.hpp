@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -233,8 +233,8 @@ public:
     const VulkanUtilities::VulkanPhysicalDevice& GetPhysicalDevice() const { return *m_PhysicalDevice; }
     const VulkanUtilities::VulkanLogicalDevice&  GetLogicalDevice() const { return *m_LogicalVkDevice; }
 
-    FramebufferCache& GetFramebufferCache() { return m_FramebufferCache; }
-    RenderPassCache&  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache; }
+    FramebufferCache* GetFramebufferCache() { return m_FramebufferCache.get(); }
+    RenderPassCache*  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache.get(); }
 
     VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties, VkMemoryAllocateFlags AllocateFlags = 0)
     {
@@ -295,8 +295,9 @@ private:
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> m_PhysicalDevice;
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  m_LogicalVkDevice;
 
-    FramebufferCache       m_FramebufferCache;
-    RenderPassCache        m_ImplicitRenderPassCache;
+    std::unique_ptr<FramebufferCache> m_FramebufferCache;
+    std::unique_ptr<RenderPassCache>  m_ImplicitRenderPassCache;
+
     DescriptorSetAllocator m_DescriptorSetAllocator;
     DescriptorPoolManager  m_DynamicDescriptorPool;
 

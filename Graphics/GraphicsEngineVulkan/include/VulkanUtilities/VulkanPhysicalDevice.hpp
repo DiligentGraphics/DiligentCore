@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,6 +67,7 @@ public:
         VkPhysicalDeviceMultiviewFeaturesKHR              Multiview              = {}; // Required for RenderPass2
         VkPhysicalDeviceMultiDrawFeaturesEXT              MultiDraw              = {};
         VkPhysicalDeviceShaderDrawParametersFeatures      ShaderDrawParameters   = {};
+        VkPhysicalDeviceDynamicRenderingFeaturesKHR       DynamicRendering       = {};
 
         bool Spirv14              = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
         bool Spirv15              = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5

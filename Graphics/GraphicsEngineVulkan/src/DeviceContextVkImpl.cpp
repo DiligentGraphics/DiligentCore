@@ -1887,21 +1887,28 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
         RenderPassKey.EnableVRS = false;
     }
 
-    auto& FBCache = m_pDevice->GetFramebufferCache();
-    auto& RPCache = m_pDevice->GetImplicitRenderPassCache();
+    FramebufferCache* FBCache = m_pDevice->GetFramebufferCache();
+    RenderPassCache*  RPCache = m_pDevice->GetImplicitRenderPassCache();
 
-    if (auto* pRenderPass = RPCache.GetRenderPass(RenderPassKey))
+    if (FBCache != nullptr && RPCache != nullptr)
     {
-        m_vkRenderPass         = pRenderPass->GetVkRenderPass();
-        FBKey.Pass             = m_vkRenderPass;
-        FBKey.CommandQueueMask = ~Uint64{0};
-        m_vkFramebuffer        = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
+        if (RenderPassVkImpl* pRenderPass = RPCache->GetRenderPass(RenderPassKey))
+        {
+            m_vkRenderPass         = pRenderPass->GetVkRenderPass();
+            FBKey.Pass             = m_vkRenderPass;
+            FBKey.CommandQueueMask = ~Uint64{0};
+            m_vkFramebuffer        = FBCache->GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
+        }
+        else
+        {
+            UNEXPECTED("Unable to get render pass for the currently bound render targets");
+            m_vkRenderPass  = VK_NULL_HANDLE;
+            m_vkFramebuffer = VK_NULL_HANDLE;
+        }
     }
     else
     {
-        UNEXPECTED("Unable to get render pass for the currently bound render targets");
-        m_vkRenderPass  = VK_NULL_HANDLE;
-        m_vkFramebuffer = VK_NULL_HANDLE;
+        UNSUPPORTED("Dynamic rendering is not supported");
     }
 }
 

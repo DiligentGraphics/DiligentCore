@@ -137,20 +137,29 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
 {
     const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice  = pDeviceVk->GetLogicalDevice();
     const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
-    RenderPassCache&                             RPCache        = pDeviceVk->GetImplicitRenderPassCache();
 
+    VkPipelineRenderingCreateInfoKHR PipelineRenderingCI{};
+    std::vector<VkFormat>            ColorAttachmentFormats;
     if (pRenderPass == nullptr)
     {
-        RenderPassCache::RenderPassCacheKey Key{
-            GraphicsPipeline.NumRenderTargets,
-            GraphicsPipeline.SmplDesc.Count,
-            GraphicsPipeline.RTVFormats,
-            GraphicsPipeline.DSVFormat,
-            (GraphicsPipeline.ShadingRateFlags & PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED) != 0,
-            GraphicsPipeline.ReadOnlyDSV};
-        pRenderPass = RPCache.GetRenderPass(Key);
-        if (pRenderPass == nullptr)
-            LOG_ERROR_AND_THROW("Failed to create default render pass.");
+        if (RenderPassCache* RPCache = pDeviceVk->GetImplicitRenderPassCache())
+        {
+            RenderPassCache::RenderPassCacheKey Key{
+                GraphicsPipeline.NumRenderTargets,
+                GraphicsPipeline.SmplDesc.Count,
+                GraphicsPipeline.RTVFormats,
+                GraphicsPipeline.DSVFormat,
+                (GraphicsPipeline.ShadingRateFlags & PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED) != 0,
+                GraphicsPipeline.ReadOnlyDSV};
+            pRenderPass = RPCache->GetRenderPass(Key);
+            if (pRenderPass == nullptr)
+                LOG_ERROR_AND_THROW("Failed to create default render pass.");
+        }
+        else
+        {
+            // VK_KHR_dynamic_rendering
+            PipelineRenderingCI = GraphicsPipelineDesc_To_VkPipelineRenderingCreateInfo(GraphicsPipeline, ColorAttachmentFormats);
+        }
     }
 
     VkGraphicsPipelineCreateInfo PipelineCI{};
@@ -270,9 +279,17 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
         DepthStencilStateDesc_To_VkDepthStencilStateCI(GraphicsPipeline.DepthStencilDesc);
     PipelineCI.pDepthStencilState = &DepthStencilStateCI;
 
-    const RenderPassDesc& RPDesc           = pRenderPass->GetDesc();
-    const Uint32          NumRTAttachments = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex].RenderTargetAttachmentCount;
-    VERIFY_EXPR(GraphicsPipeline.pRenderPass != nullptr || GraphicsPipeline.NumRenderTargets == NumRTAttachments);
+    Uint32 NumRTAttachments = 0;
+    if (pRenderPass != nullptr)
+    {
+        const RenderPassDesc& RPDesc = pRenderPass->GetDesc();
+        NumRTAttachments             = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex].RenderTargetAttachmentCount;
+        VERIFY_EXPR(GraphicsPipeline.pRenderPass != nullptr || GraphicsPipeline.NumRenderTargets == NumRTAttachments);
+    }
+    else
+    {
+        NumRTAttachments = PipelineRenderingCI.colorAttachmentCount;
+    }
     std::vector<VkPipelineColorBlendAttachmentState> ColorBlendAttachmentStates(NumRTAttachments);
 
     VkPipelineColorBlendStateCreateInfo BlendStateCI{};
@@ -324,7 +341,14 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     PipelineCI.pDynamicState         = &DynamicStateCI;
 
 
-    PipelineCI.renderPass         = pRenderPass.RawPtr<IRenderPassVk>()->GetVkRenderPass();
+    if (pRenderPass)
+    {
+        PipelineCI.renderPass = pRenderPass.RawPtr<IRenderPassVk>()->GetVkRenderPass();
+    }
+    else
+    {
+        PipelineCI.pNext = &PipelineRenderingCI;
+    }
     PipelineCI.subpass            = GraphicsPipeline.SubpassIndex;
     PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
     PipelineCI.basePipelineIndex  = -1;             // an index into the pCreateInfos parameter to use as a pipeline to derive from
@@ -571,7 +595,7 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
     std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
     for (const ShaderStageInfo& Stage : ShaderStages)
     {
-        for (auto* pShader : Stage.Shaders)
+        for (const ShaderVkImpl* pShader : Stage.Shaders)
         {
             const SPIRVShaderResources& ShaderResources = *pShader->GetShaderResources();
             ShaderResources.ProcessResources(
@@ -662,7 +686,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
             pShaderResources->ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& SPIRVAttribs, Uint32) //
                 {
-                    const auto ResAttribution = GetResourceAttribution(SPIRVAttribs.Name, ShaderType, pSignatures, SignatureCount);
+                    const ResourceAttribution ResAttribution = GetResourceAttribution(SPIRVAttribs.Name, ShaderType, pSignatures, SignatureCount);
                     if (!ResAttribution)
                     {
                         LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", SPIRVAttribs.Name,
