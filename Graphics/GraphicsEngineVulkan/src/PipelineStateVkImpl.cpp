@@ -62,9 +62,9 @@ void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&       
 {
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        const auto& Shaders    = ShaderStages[s].Shaders;
-        auto&       SPIRVs     = ShaderStages[s].SPIRVs;
-        const auto  ShaderType = ShaderStages[s].Type;
+        const std::vector<const ShaderVkImpl*>& Shaders    = ShaderStages[s].Shaders;
+        std::vector<std::vector<uint32_t>>&     SPIRVs     = ShaderStages[s].SPIRVs;
+        const SHADER_TYPE                       ShaderType = ShaderStages[s].Type;
 
         VERIFY_EXPR(Shaders.size() == SPIRVs.size());
 
@@ -81,8 +81,8 @@ void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&       
 
         for (size_t i = 0; i < Shaders.size(); ++i)
         {
-            auto* pShader = Shaders[i];
-            auto& SPIRV   = SPIRVs[i];
+            const ShaderVkImpl*         pShader = Shaders[i];
+            const std::vector<uint32_t> SPIRV   = SPIRVs[i];
 
             ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
             ShaderModuleCI.pCode    = SPIRV.data();
@@ -108,7 +108,7 @@ void CreateComputePipeline(RenderDeviceVkImpl*                           pDevice
                            VulkanUtilities::PipelineWrapper&             Pipeline,
                            VkPipelineCache                               vkPSOCache)
 {
-    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     VkComputePipelineCreateInfo PipelineCI{};
     PipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -135,9 +135,9 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
                             RefCntAutoPtr<IRenderPass>&                   pRenderPass,
                             VkPipelineCache                               vkPSOCache)
 {
-    const auto& LogicalDevice  = pDeviceVk->GetLogicalDevice();
-    const auto& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
-    auto&       RPCache        = pDeviceVk->GetImplicitRenderPassCache();
+    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice  = pDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
+    RenderPassCache&                             RPCache        = pDeviceVk->GetImplicitRenderPassCache();
 
     if (pRenderPass == nullptr)
     {
@@ -234,7 +234,7 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     }
     else
     {
-        const auto& Props = PhysicalDevice.GetProperties();
+        const VkPhysicalDeviceProperties& Props = PhysicalDevice.GetProperties();
         // There are limitations on the viewport width and height (23.5), but
         // it is not clear if there are limitations on the scissor rect width and
         // height
@@ -270,8 +270,8 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
         DepthStencilStateDesc_To_VkDepthStencilStateCI(GraphicsPipeline.DepthStencilDesc);
     PipelineCI.pDepthStencilState = &DepthStencilStateCI;
 
-    const auto& RPDesc           = pRenderPass->GetDesc();
-    const auto  NumRTAttachments = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex].RenderTargetAttachmentCount;
+    const RenderPassDesc& RPDesc           = pRenderPass->GetDesc();
+    const Uint32          NumRTAttachments = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex].RenderTargetAttachmentCount;
     VERIFY_EXPR(GraphicsPipeline.pRenderPass != nullptr || GraphicsPipeline.NumRenderTargets == NumRTAttachments);
     std::vector<VkPipelineColorBlendAttachmentState> ColorBlendAttachmentStates(NumRTAttachments);
 
@@ -342,7 +342,7 @@ void CreateRayTracingPipeline(RenderDeviceVkImpl*                               
                               VulkanUtilities::PipelineWrapper&                        Pipeline,
                               VkPipelineCache                                          vkPSOCache)
 {
-    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     VkRayTracingPipelineCreateInfoKHR PipelineCI{};
     PipelineCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
@@ -380,10 +380,10 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
         RefCntAutoPtr<ShaderVkImpl> pShaderVk{const_cast<IShader*>(pShader), ShaderVkImpl::IID_InternalImpl};
         VERIFY(pShaderVk, "Unexpected shader object implementation");
 
-        const auto ShaderType = pShaderVk->GetDesc().ShaderType;
+        const SHADER_TYPE ShaderType = pShaderVk->GetDesc().ShaderType;
         // Shader modules are initialized in the same order by InitPipelineShaderStages().
         uint32_t idx = 0;
-        for (const auto& Stage : ShaderStages)
+        for (const PipelineStateVkImpl::ShaderStageInfo& Stage : ShaderStages)
         {
             if (ShaderType == Stage.Type)
             {
@@ -409,7 +409,7 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
-        const auto& GeneralShader = CreateInfo.pGeneralShaders[i];
+        const RayTracingGeneralShaderGroup& GeneralShader = CreateInfo.pGeneralShaders[i];
 
         VkRayTracingShaderGroupCreateInfoKHR Group = {};
 
@@ -439,7 +439,7 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
 
     for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
     {
-        const auto& TriHitShader = CreateInfo.pTriangleHitShaders[i];
+        const RayTracingTriangleHitShaderGroup& TriHitShader = CreateInfo.pTriangleHitShaders[i];
 
         VkRayTracingShaderGroupCreateInfoKHR Group{};
         Group.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
@@ -468,7 +468,7 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
 
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
-        const auto& ProcHitShader = CreateInfo.pProceduralHitShaders[i];
+        const RayTracingProceduralHitShaderGroup& ProcHitShader = CreateInfo.pProceduralHitShaders[i];
 
         VkRayTracingShaderGroupCreateInfoKHR Group{};
         Group.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
@@ -538,7 +538,7 @@ void PipelineStateVkImpl::ShaderStageInfo::Append(const ShaderVkImpl* pShader)
     VERIFY(std::find(Shaders.begin(), Shaders.end(), pShader) == Shaders.end(),
            "Shader '", pShader->GetDesc().Name, "' already exists in the stage. Shaders must be deduplicated.");
 
-    const auto NewShaderType = pShader->GetDesc().ShaderType;
+    const SHADER_TYPE NewShaderType = pShader->GetDesc().ShaderType;
     if (Type == SHADER_TYPE_UNKNOWN)
     {
         VERIFY_EXPR(Shaders.empty() && SPIRVs.empty());
@@ -569,11 +569,11 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
     PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
 
     std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
-    for (auto& Stage : ShaderStages)
+    for (const ShaderStageInfo& Stage : ShaderStages)
     {
         for (auto* pShader : Stage.Shaders)
         {
-            const auto& ShaderResources = *pShader->GetShaderResources();
+            const SPIRVShaderResources& ShaderResources = *pShader->GetShaderResources();
             ShaderResources.ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& Attribs, Uint32) //
                 {
@@ -592,7 +592,7 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
                         ShaderResources.GetCombinedSamplerSuffix() :
                         nullptr;
 
-                    const auto VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
+                    const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
                     // Note that Attribs.Name != VarDesc.Name for combined samplers
                     const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
                     if (it_assigned.second)
@@ -603,8 +603,8 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
                                                 "You must use explicit resource signature to specify the array size.");
                         }
 
-                        const auto ResType = SPIRVShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
-                        const auto Flags   = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+                        const SHADER_RESOURCE_TYPE    ResType = SPIRVShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
+                        const PIPELINE_RESOURCE_FLAGS Flags   = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
                         SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, ResType, VarDesc.Type, Flags);
                     }
                     else
@@ -642,16 +642,16 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
     // remap resource bindings.
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        const auto& Shaders    = ShaderStages[s].Shaders;
-        auto&       SPIRVs     = ShaderStages[s].SPIRVs;
-        const auto  ShaderType = ShaderStages[s].Type;
+        const std::vector<const ShaderVkImpl*>& Shaders    = ShaderStages[s].Shaders;
+        std::vector<std::vector<uint32_t>>&     SPIRVs     = ShaderStages[s].SPIRVs;
+        const SHADER_TYPE                       ShaderType = ShaderStages[s].Type;
 
         VERIFY_EXPR(Shaders.size() == SPIRVs.size());
 
         for (size_t i = 0; i < Shaders.size(); ++i)
         {
-            auto* pShader = Shaders[i];
-            auto& SPIRV   = SPIRVs[i];
+            const ShaderVkImpl*    pShader = Shaders[i];
+            std::vector<uint32_t>& SPIRV   = SPIRVs[i];
 
             const auto& pShaderResources = pShader->GetShaderResources();
             VERIFY_EXPR(pShaderResources);
@@ -670,19 +670,19 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                                             PipelineName, "'.");
                     }
 
-                    const auto& SignDesc = ResAttribution.pSignature->GetDesc();
-                    const auto  ResType  = SPIRVShaderResourceAttribs::GetShaderResourceType(SPIRVAttribs.Type);
-                    const auto  Flags    = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(SPIRVAttribs.Type);
+                    const PipelineResourceSignatureDesc& SignDesc = ResAttribution.pSignature->GetDesc();
+                    const SHADER_RESOURCE_TYPE           ResType  = SPIRVShaderResourceAttribs::GetShaderResourceType(SPIRVAttribs.Type);
+                    const PIPELINE_RESOURCE_FLAGS        Flags    = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(SPIRVAttribs.Type);
 
                     Uint32 ResourceBinding = ~0u;
                     Uint32 DescriptorSet   = ~0u;
                     if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
                     {
-                        const auto& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                        const PipelineResourceDesc& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
                         ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, SPIRVAttribs.ArraySize,
                                                               pShader->GetDesc().Name, SignDesc.Name);
 
-                        const auto& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
+                        const PipelineResourceSignatureVkImpl::ResourceAttribs& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
                         ResourceBinding = ResAttribs.BindingIndex;
                         DescriptorSet   = ResAttribs.DescrSet;
                     }
@@ -695,7 +695,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                                                 "' that is not compatible with immutable sampler defined in pipeline resource signature '",
                                                 SignDesc.Name, "'.");
                         }
-                        const auto& SamAttribs{ResAttribution.pSignature->GetImmutableSamplerAttribs(ResAttribution.ImmutableSamplerIndex)};
+                        const ImmutableSamplerAttribsVk& SamAttribs{ResAttribution.pSignature->GetImmutableSamplerAttribs(ResAttribution.ImmutableSamplerIndex)};
                         ResourceBinding = SamAttribs.BindingIndex;
                         DescriptorSet   = SamAttribs.DescrSet;
                     }
@@ -708,8 +708,8 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                     DescriptorSet += BindIndexToDescSetIndex[SignDesc.BindingIndex];
                     if (bVerifyOnly)
                     {
-                        const auto SpvBinding  = SPIRV[SPIRVAttribs.BindingDecorationOffset];
-                        const auto SpvDescrSet = SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset];
+                        const Uint32 SpvBinding  = SPIRV[SPIRVAttribs.BindingDecorationOffset];
+                        const Uint32 SpvDescrSet = SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset];
                         if (SpvBinding != ResourceBinding)
                         {
                             LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' maps resource '", SPIRVAttribs.Name,
@@ -745,7 +745,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                 {
                     OptimizationFlags |= SPIRV_OPTIMIZATION_FLAG_LEGALIZATION;
                 }
-                auto StrippedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, OptimizationFlags);
+                std::vector<uint32_t> StrippedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, OptimizationFlags);
                 if (!StrippedSPIRV.empty())
                     SPIRV = std::move(StrippedSPIRV);
                 else
@@ -758,10 +758,10 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
 
 void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages) noexcept(false)
 {
-    const auto InternalFlags = GetInternalCreateFlags(CreateInfo);
+    const PSO_CREATE_INTERNAL_FLAGS InternalFlags = GetInternalCreateFlags(CreateInfo);
     if (m_UsingImplicitSignature && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
-        const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
+        const PipelineResourceSignatureDescWrapper SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
         InitDefaultSignature(SignDesc, GetActiveShaderStages(), false /*bIsDeviceInternal*/);
         VERIFY_EXPR(m_Signatures[0]);
     }
@@ -772,8 +772,8 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
 
     m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
 
-    const auto RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
-    const auto VerifyBindings = !RemapResources && ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0);
+    const bool RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
+    const bool VerifyBindings = !RemapResources && ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0);
     if (RemapResources || VerifyBindings)
     {
         VERIFY_EXPR(RemapResources ^ VerifyBindings);
@@ -813,7 +813,7 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
 
     MemPool.Reserve();
 
-    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
 
     InitializePipelineDesc(CreateInfo, MemPool);
 
@@ -832,7 +832,7 @@ void PipelineStateVkImpl::InitializePipeline(const GraphicsPipelineStateCreateIn
 
     InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-    const auto vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
+    const VkPipelineCache vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
     CreateGraphicsPipeline(m_pDevice, vkShaderStages, m_PipelineLayout, m_Desc, m_pGraphicsPipelineData->Desc, m_Pipeline, GetRenderPassPtr(), vkSPOCache);
 }
 
@@ -843,27 +843,27 @@ void PipelineStateVkImpl::InitializePipeline(const ComputePipelineStateCreateInf
 
     InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-    const auto vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
+    const VkPipelineCache vkSPOCache = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
     CreateComputePipeline(m_pDevice, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline, vkSPOCache);
 }
 
 void PipelineStateVkImpl::InitializePipeline(const RayTracingPipelineStateCreateInfo& CreateInfo)
 {
-    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
 
     std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
     std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
 
-    const auto ShaderStages   = InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
-    const auto vkShaderGroups = BuildRTShaderGroupDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderStages);
-    const auto vkSPOCache     = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
+    const PipelineStateVkImpl::TShaderStages                ShaderStages   = InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
+    const std::vector<VkRayTracingShaderGroupCreateInfoKHR> vkShaderGroups = BuildRTShaderGroupDescription(CreateInfo, m_pRayTracingPipelineData->NameToGroupIndex, ShaderStages);
+    const VkPipelineCache                                   vkSPOCache     = CreateInfo.pPSOCache != nullptr ? ClassPtrCast<PipelineStateCacheVkImpl>(CreateInfo.pPSOCache)->GetVkPipelineCache() : VK_NULL_HANDLE;
 
     CreateRayTracingPipeline(m_pDevice, vkShaderStages, vkShaderGroups, m_PipelineLayout, m_Desc, m_pRayTracingPipelineData->Desc, m_Pipeline, vkSPOCache);
 
     VERIFY(m_pRayTracingPipelineData->NameToGroupIndex.size() == vkShaderGroups.size(),
            "The size of NameToGroupIndex map does not match the actual number of groups in the pipeline. This is a bug.");
     // Get shader group handles from the PSO.
-    auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(vkShaderGroups.size()), m_pRayTracingPipelineData->ShaderDataSize, m_pRayTracingPipelineData->ShaderHandles);
+    VkResult err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(vkShaderGroups.size()), m_pRayTracingPipelineData->ShaderDataSize, m_pRayTracingPipelineData->ShaderHandles);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to get shader group handles");
     (void)err;
 }
@@ -936,11 +936,11 @@ void PipelineStateVkImpl::DvpVerifySRBResources(const DeviceContextVkImpl* pCtx,
 
 void PipelineStateVkImpl::DvpValidateResourceLimits() const
 {
-    const auto& Limits       = GetDevice()->GetPhysicalDevice().GetProperties().limits;
-    const auto& ASLimits     = GetDevice()->GetPhysicalDevice().GetExtProperties().AccelStruct;
-    const auto& DescIndFeats = GetDevice()->GetPhysicalDevice().GetExtFeatures().DescriptorIndexing;
-    const auto& DescIndProps = GetDevice()->GetPhysicalDevice().GetExtProperties().DescriptorIndexing;
-    const auto  DescCount    = static_cast<Uint32>(DescriptorType::Count);
+    const VkPhysicalDeviceLimits&                             Limits       = GetDevice()->GetPhysicalDevice().GetProperties().limits;
+    const VkPhysicalDeviceAccelerationStructurePropertiesKHR& ASLimits     = GetDevice()->GetPhysicalDevice().GetExtProperties().AccelStruct;
+    const VkPhysicalDeviceDescriptorIndexingFeaturesEXT&      DescIndFeats = GetDevice()->GetPhysicalDevice().GetExtFeatures().DescriptorIndexing;
+    const VkPhysicalDeviceDescriptorIndexingPropertiesEXT&    DescIndProps = GetDevice()->GetPhysicalDevice().GetExtProperties().DescriptorIndexing;
+    const Uint32                                              DescCount    = static_cast<Uint32>(DescriptorType::Count);
 
     std::array<Uint32, DescCount>                                      DescriptorCount         = {};
     std::array<std::array<Uint32, DescCount>, MAX_SHADERS_IN_PIPELINE> PerStageDescriptorCount = {};
@@ -954,15 +954,15 @@ void PipelineStateVkImpl::DvpValidateResourceLimits() const
 
         for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
         {
-            const auto& ResDesc   = pSignature->GetResourceDesc(r);
-            const auto& ResAttr   = pSignature->GetResourceAttribs(r);
-            const auto  DescIndex = static_cast<Uint32>(ResAttr.DescrType);
+            const PipelineResourceDesc&                             ResDesc   = pSignature->GetResourceDesc(r);
+            const PipelineResourceSignatureVkImpl::ResourceAttribs& ResAttr   = pSignature->GetResourceAttribs(r);
+            const Uint32                                            DescIndex = static_cast<Uint32>(ResAttr.DescrType);
 
             DescriptorCount[DescIndex] += ResAttr.ArraySize;
 
-            for (auto ShaderStages = ResDesc.ShaderStages; ShaderStages != 0;)
+            for (SHADER_TYPE ShaderStages = ResDesc.ShaderStages; ShaderStages != 0;)
             {
-                const auto ShaderInd = GetShaderTypePipelineIndex(ExtractLSB(ShaderStages), m_Desc.PipelineType);
+                const Int32 ShaderInd = GetShaderTypePipelineIndex(ExtractLSB(ShaderStages), m_Desc.PipelineType);
                 PerStageDescriptorCount[ShaderInd][DescIndex] += ResAttr.ArraySize;
                 ShaderStagePresented[ShaderInd] = true;
             }
@@ -1089,9 +1089,9 @@ void PipelineStateVkImpl::DvpValidateResourceLimits() const
         if (!ShaderStagePresented[ShaderInd])
             continue;
 
-        const auto& NumDesc    = PerStageDescriptorCount[ShaderInd];
-        const auto  ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, m_Desc.PipelineType);
-        const char* StageName  = GetShaderTypeLiteralName(ShaderType);
+        const std::array<Uint32, DescCount>& NumDesc    = PerStageDescriptorCount[ShaderInd];
+        const SHADER_TYPE                    ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, m_Desc.PipelineType);
+        const char*                          StageName  = GetShaderTypeLiteralName(ShaderType);
 
         const Uint32 NumSampledImages =
             NumDesc[static_cast<Uint32>(DescriptorType::CombinedImageSampler)] +
