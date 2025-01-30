@@ -961,8 +961,8 @@ void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc&                     
     // attachmentCount must equal the colorAttachmentCount for the subpass in which this pipeline is used.
     for (uint32_t attachment = 0; attachment < ColorBlendStateCI.attachmentCount; ++attachment)
     {
-        const auto& RTBlendState          = BSDesc.IndependentBlendEnable ? BSDesc.RenderTargets[attachment] : BSDesc.RenderTargets[0];
-        ColorBlendAttachments[attachment] = RenderTargetBlendDescToVkColorBlendAttachmentState(RTBlendState);
+        const RenderTargetBlendDesc& RTBlendState = BSDesc.IndependentBlendEnable ? BSDesc.RenderTargets[attachment] : BSDesc.RenderTargets[0];
+        ColorBlendAttachments[attachment]         = RenderTargetBlendDescToVkColorBlendAttachmentState(RTBlendState);
     }
 }
 
@@ -1008,23 +1008,23 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&             
     BufferSlot2BindingDescInd.fill(-1);
     for (Uint32 elem = 0; elem < LayoutDesc.NumElements; ++elem)
     {
-        auto& LayoutElem     = LayoutDesc.LayoutElements[elem];
-        auto& BindingDescInd = BufferSlot2BindingDescInd[LayoutElem.BufferSlot];
+        const LayoutElement& LayoutElem     = LayoutDesc.LayoutElements[elem];
+        Int32&               BindingDescInd = BufferSlot2BindingDescInd[LayoutElem.BufferSlot];
         if (BindingDescInd < 0)
         {
-            BindingDescInd        = VertexInputStateCI.vertexBindingDescriptionCount++;
-            auto& BindingDesc     = BindingDescriptions[BindingDescInd];
+            BindingDescInd = VertexInputStateCI.vertexBindingDescriptionCount++;
+            VkVertexInputBindingDescription& BindingDesc{BindingDescriptions[BindingDescInd]};
             BindingDesc.binding   = LayoutElem.BufferSlot;
             BindingDesc.stride    = LayoutElem.Stride;
             BindingDesc.inputRate = LayoutElemFrequencyToVkInputRate(LayoutElem.Frequency);
         }
 
-        const auto& BindingDesc = BindingDescriptions[BindingDescInd];
+        const VkVertexInputBindingDescription& BindingDesc = BindingDescriptions[BindingDescInd];
         VERIFY(BindingDesc.binding == LayoutElem.BufferSlot, "Inconsistent buffer slot");
         VERIFY(BindingDesc.stride == LayoutElem.Stride, "Inconsistent strides");
         VERIFY(BindingDesc.inputRate == LayoutElemFrequencyToVkInputRate(LayoutElem.Frequency), "Inconsistent layout element frequency");
 
-        auto& AttribDesc    = AttributeDescription[elem];
+        VkVertexInputAttributeDescription& AttribDesc{AttributeDescription[elem]};
         AttribDesc.binding  = BindingDesc.binding;
         AttribDesc.location = LayoutElem.InputIndex;
         AttribDesc.format   = TypeToVkFormat(LayoutElem.ValueType, LayoutElem.NumComponents, LayoutElem.IsNormalized);
@@ -1032,7 +1032,7 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&             
 
         if (LayoutElem.Frequency == INPUT_ELEMENT_FREQUENCY_PER_INSTANCE && LayoutElem.InstanceDataStepRate != 1)
         {
-            auto& AttribDivisor   = VertexBindingDivisors[VertexInputDivisorCI.vertexBindingDivisorCount++];
+            VkVertexInputBindingDivisorDescriptionEXT& AttribDivisor{VertexBindingDivisors[VertexInputDivisorCI.vertexBindingDivisorCount++]};
             AttribDivisor.binding = BindingDesc.binding;
             AttribDivisor.divisor = LayoutElem.InstanceDataStepRate;
         }
@@ -1240,7 +1240,7 @@ VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE Sta
     VkPipelineStageFlags vkPipelineStages = 0;
     while (StateFlags != RESOURCE_STATE_UNKNOWN)
     {
-        auto StateBit = ExtractLSB(StateFlags);
+        RESOURCE_STATE StateBit = ExtractLSB(StateFlags);
         vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit);
     }
     return vkPipelineStages;
@@ -1304,7 +1304,7 @@ VkPipelineStageFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags
     VkAccessFlags AccessFlags = 0;
     while (StateFlags != RESOURCE_STATE_UNKNOWN)
     {
-        auto StateBit = ExtractLSB(StateFlags);
+        RESOURCE_STATE StateBit = ExtractLSB(StateFlags);
         AccessFlags |= ResourceStateFlagToVkAccessFlags(StateBit);
     }
     return AccessFlags;
@@ -1320,7 +1320,7 @@ VkAccessFlags AccelStructStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags)
     Uint32        Bits        = StateFlags;
     while (Bits != 0)
     {
-        auto Bit = ExtractLSB(Bits);
+        Uint32 Bit = ExtractLSB(Bits);
         switch (Bit)
         {
             // clang-format off
@@ -1406,7 +1406,7 @@ RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlags AccessFlags)
     Uint32                                         State = 0;
     while (AccessFlags != 0)
     {
-        auto lsb = PlatformMisc::GetLSB(AccessFlags);
+        Uint32 lsb = PlatformMisc::GetLSB(AccessFlags);
         State |= BitPosToState(lsb);
         AccessFlags &= ~(1 << lsb);
     }
@@ -1671,7 +1671,7 @@ VkShaderStageFlags ShaderTypesToVkShaderStageFlags(SHADER_TYPE ShaderTypes)
     VkShaderStageFlags Result = 0;
     while (ShaderTypes != SHADER_TYPE_UNKNOWN)
     {
-        auto Type = ExtractLSB(ShaderTypes);
+        SHADER_TYPE Type = ExtractLSB(ShaderTypes);
         Result |= ShaderTypeToVkShaderStageFlagBit(Type);
     }
     return Result;
@@ -1692,7 +1692,7 @@ SHADER_TYPE VkShaderStageFlagsToShaderTypes(VkShaderStageFlags StageFlags)
     SHADER_TYPE Result = SHADER_TYPE_UNKNOWN;
     while (StageFlags != 0)
     {
-        auto Type = ExtractLSB(StageFlags);
+        VkShaderStageFlags Type = ExtractLSB(StageFlags);
 
         static_assert(SHADER_TYPE_LAST == 0x4000, "Please update the switch below to handle the new shader type");
         switch (Type)
@@ -1728,7 +1728,7 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
     VkBuildAccelerationStructureFlagsKHR Result = 0;
     while (Flags != RAYTRACING_BUILD_AS_NONE)
     {
-        auto FlagBit = ExtractLSB(Flags);
+        RAYTRACING_BUILD_AS_FLAGS FlagBit = ExtractLSB(Flags);
         switch (FlagBit)
         {
             // clang-format off
@@ -1752,7 +1752,7 @@ VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flag
     VkGeometryFlagsKHR Result = 0;
     while (Flags != RAYTRACING_GEOMETRY_FLAG_NONE)
     {
-        auto FlagBit = ExtractLSB(Flags);
+        RAYTRACING_GEOMETRY_FLAGS FlagBit = ExtractLSB(Flags);
         switch (FlagBit)
         {
             // clang-format off
@@ -1773,7 +1773,7 @@ VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INS
     VkGeometryInstanceFlagsKHR Result = 0;
     while (Flags != RAYTRACING_INSTANCE_NONE)
     {
-        auto FlagBit = ExtractLSB(Flags);
+        RAYTRACING_INSTANCE_FLAGS FlagBit = ExtractLSB(Flags);
         switch (FlagBit)
         {
             // clang-format off
@@ -1810,7 +1810,7 @@ WAVE_FEATURE VkSubgroupFeatureFlagsToWaveFeatures(VkSubgroupFeatureFlags Feature
     WAVE_FEATURE Result = WAVE_FEATURE_UNKNOWN;
     while (FeatureFlags != 0)
     {
-        auto Feature = ExtractLSB(FeatureFlags);
+        VkSubgroupFeatureFlags Feature = ExtractLSB(FeatureFlags);
         static_assert(WAVE_FEATURE_LAST == WAVE_FEATURE_QUAD,
                       "Please update the switch below to handle the new wave feature");
         switch (Feature)
@@ -1899,8 +1899,8 @@ VkExtent2D ShadingRateToVkFragmentSize(SHADING_RATE Rate)
 SHADING_RATE VkFragmentSizeToShadingRate(const VkExtent2D& Size)
 {
     VERIFY_EXPR(IsPowerOfTwo(Size.width) && IsPowerOfTwo(Size.height));
-    auto X = PlatformMisc::GetMSB(Size.width);
-    auto Y = PlatformMisc::GetMSB(Size.height);
+    uint32_t X = PlatformMisc::GetMSB(Size.width);
+    uint32_t Y = PlatformMisc::GetMSB(Size.height);
     VERIFY_EXPR((1u << X) == Size.width);
     VERIFY_EXPR((1u << Y) == Size.height);
     return static_cast<SHADING_RATE>((X << SHADING_RATE_X_SHIFT) | Y);
@@ -1939,7 +1939,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
 
     // Enable features
 #define INIT_FEATURE(FeatureName, Supported) \
-    Features.FeatureName = (Supported) ? OptionalState : DEVICE_FEATURE_STATE_DISABLED;
+    Features.FeatureName = (Supported) ? OptionalState : DEVICE_FEATURE_STATE_DISABLED
 
     // The following features are always enabled
     Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
@@ -1978,33 +1978,33 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     INIT_FEATURE(SparseResources,                   vkFeatures.sparseBinding && (vkFeatures.sparseResidencyBuffer || vkFeatures.sparseResidencyImage2D)); // requires support for resident resources
     // clang-format on
 
-    const auto& MeshShaderFeats = ExtFeatures.MeshShader;
+    const VkPhysicalDeviceMeshShaderFeaturesEXT& MeshShaderFeats = ExtFeatures.MeshShader;
     INIT_FEATURE(MeshShaders, MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE);
 
-    const auto& ShaderFloat16Int8Feats = ExtFeatures.ShaderFloat16Int8;
+    const VkPhysicalDeviceShaderFloat16Int8FeaturesKHR& ShaderFloat16Int8Feats = ExtFeatures.ShaderFloat16Int8;
     // clang-format off
     INIT_FEATURE(ShaderFloat16, ShaderFloat16Int8Feats.shaderFloat16 != VK_FALSE);
     INIT_FEATURE(ShaderInt8,    ShaderFloat16Int8Feats.shaderInt8    != VK_FALSE);
     // clang-format on
 
-    const auto& Storage16BitFeats = ExtFeatures.Storage16Bit;
+    const VkPhysicalDevice16BitStorageFeaturesKHR& Storage16BitFeats = ExtFeatures.Storage16Bit;
     // clang-format off
     INIT_FEATURE(ResourceBuffer16BitAccess, Storage16BitFeats.storageBuffer16BitAccess           != VK_FALSE && vkFeatures.shaderInt16 != VK_FALSE);
     INIT_FEATURE(UniformBuffer16BitAccess,  Storage16BitFeats.uniformAndStorageBuffer16BitAccess != VK_FALSE && vkFeatures.shaderInt16 != VK_FALSE);
     INIT_FEATURE(ShaderInputOutput16,       Storage16BitFeats.storageInputOutput16               != VK_FALSE && vkFeatures.shaderInt16 != VK_FALSE);
     // clang-format on
 
-    const auto& Storage8BitFeats = ExtFeatures.Storage8Bit;
+    const VkPhysicalDevice8BitStorageFeaturesKHR& Storage8BitFeats = ExtFeatures.Storage8Bit;
     // clang-format off
     INIT_FEATURE(ResourceBuffer8BitAccess, Storage8BitFeats.storageBuffer8BitAccess           != VK_FALSE);
     INIT_FEATURE(UniformBuffer8BitAccess,  Storage8BitFeats.uniformAndStorageBuffer8BitAccess != VK_FALSE);
     // clang-format on
 
-    const auto& DescrIndexingFeats = ExtFeatures.DescriptorIndexing;
+    const VkPhysicalDeviceDescriptorIndexingFeaturesEXT& DescrIndexingFeats = ExtFeatures.DescriptorIndexing;
     INIT_FEATURE(ShaderResourceRuntimeArrays, DescrIndexingFeats.runtimeDescriptorArray != VK_FALSE);
-    const auto& AccelStructFeats = ExtFeatures.AccelStruct;
-    const auto& RayTracingFeats  = ExtFeatures.RayTracingPipeline;
-    const auto& RayQueryFeats    = ExtFeatures.RayQuery;
+    const VkPhysicalDeviceAccelerationStructureFeaturesKHR& AccelStructFeats = ExtFeatures.AccelStruct;
+    const VkPhysicalDeviceRayTracingPipelineFeaturesKHR&    RayTracingFeats  = ExtFeatures.RayTracingPipeline;
+    const VkPhysicalDeviceRayQueryFeaturesKHR&              RayQueryFeats    = ExtFeatures.RayQuery;
     // clang-format off
     INIT_FEATURE(RayTracing,
                  vkVersion                              >= VK_API_VERSION_1_1 &&
@@ -2012,9 +2012,9 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
                  (RayTracingFeats.rayTracingPipeline != VK_FALSE || RayQueryFeats.rayQuery != VK_FALSE));
     // clang-format on
 
-    const auto& SubgroupProps          = ExtProps.Subgroup;
-    const auto  RequiredSubgroupFeats  = VK_SUBGROUP_FEATURE_BASIC_BIT;
-    const auto  RequiredSubgroupStages = VK_SHADER_STAGE_COMPUTE_BIT;
+    const VkPhysicalDeviceSubgroupProperties& SubgroupProps          = ExtProps.Subgroup;
+    const VkSubgroupFeatureFlagBits           RequiredSubgroupFeats  = VK_SUBGROUP_FEATURE_BASIC_BIT;
+    const VkShaderStageFlagBits               RequiredSubgroupStages = VK_SHADER_STAGE_COMPUTE_BIT;
     Features.WaveOp =
         (vkVersion >= VK_API_VERSION_1_1 &&
          (SubgroupProps.supportedOperations & RequiredSubgroupFeats) == RequiredSubgroupFeats &&
@@ -2022,12 +2022,12 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
         DEVICE_FEATURE_STATE_ENABLED :
         DEVICE_FEATURE_STATE_DISABLED;
 
-    const auto& VertexAttribDivisorFeats = ExtFeatures.VertexAttributeDivisor;
+    const VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT& VertexAttribDivisorFeats = ExtFeatures.VertexAttributeDivisor;
     INIT_FEATURE(InstanceDataStepRate,
                  (VertexAttribDivisorFeats.vertexAttributeInstanceRateDivisor != VK_FALSE &&
                   VertexAttribDivisorFeats.vertexAttributeInstanceRateZeroDivisor != VK_FALSE));
 
-    const auto& TimelineSemaphoreFeats = ExtFeatures.TimelineSemaphore;
+    const VkPhysicalDeviceTimelineSemaphoreFeaturesKHR& TimelineSemaphoreFeats = ExtFeatures.TimelineSemaphore;
     INIT_FEATURE(NativeFence,
                  TimelineSemaphoreFeats.timelineSemaphore != VK_FALSE);
 
@@ -2064,7 +2064,7 @@ SPARSE_TEXTURE_FLAGS VkSparseImageFormatFlagsToSparseTextureFlags(VkSparseImageF
     SPARSE_TEXTURE_FLAGS Result = SPARSE_TEXTURE_FLAG_NONE;
     while (Flags != 0)
     {
-        auto FlagBit = static_cast<VkSparseImageFormatFlagBits>(ExtractLSB(Flags));
+        VkSparseImageFormatFlagBits FlagBit = static_cast<VkSparseImageFormatFlagBits>(ExtractLSB(Flags));
         static_assert(SPARSE_TEXTURE_FLAG_LAST == (1u << 2), "This function must be updated to handle new sparse texture flag");
         switch (FlagBit)
         {
@@ -2085,7 +2085,7 @@ VkImageUsageFlags BindFlagsToVkImageUsage(BIND_FLAGS Flags, bool IsMemoryless, b
     VkImageUsageFlags Result = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     while (Flags != BIND_NONE)
     {
-        auto FlagBit = ExtractLSB(Flags);
+        BIND_FLAGS FlagBit = ExtractLSB(Flags);
         static_assert(BIND_FLAG_LAST == (1u << 11), "This function must be updated to handle new bind flag");
         switch (FlagBit)
         {
@@ -2127,7 +2127,7 @@ void GetAllowedStagesAndAccessMask(BIND_FLAGS Flags, VkPipelineStageFlags& Stage
     AccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
     while (Flags != BIND_NONE)
     {
-        auto FlagBit = ExtractLSB(Flags);
+        BIND_FLAGS FlagBit = ExtractLSB(Flags);
         static_assert(BIND_FLAG_LAST == (1u << 11), "This function must be updated to handle new bind flag");
         switch (FlagBit)
         {
