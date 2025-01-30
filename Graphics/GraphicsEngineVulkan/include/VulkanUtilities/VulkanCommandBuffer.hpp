@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,8 +51,12 @@ public:
                                        const VkImageSubresourceRange& Subresource)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdClearColorImage() must be called outside of render pass (17.1)");
-        VERIFY(Subresource.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT, "The aspectMask of all image subresource ranges must only include VK_IMAGE_ASPECT_COLOR_BIT (17.1)");
+        VERIFY(m_State.RenderPass == VK_NULL_HANDLE,
+               "vkCmdClearColorImage() must be called outside of render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdClearColorImage-renderpass)");
+        VERIFY(Subresource.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT,
+               "The aspectMask of all image subresource ranges must only include VK_IMAGE_ASPECT_COLOR_BIT "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdClearColorImage-aspectMask-02498)");
 
         FlushBarriers();
         vkCmdClearColorImage(
@@ -69,11 +73,14 @@ public:
                                               const VkImageSubresourceRange&  Subresource)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdClearDepthStencilImage() must be called outside of render pass (17.1)");
+        VERIFY(m_State.RenderPass == VK_NULL_HANDLE,
+               "vkCmdClearDepthStencilImage() must be called outside of render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdClearDepthStencilImage-renderpass)");
         // clang-format off
         VERIFY((Subresource.aspectMask &  (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0 &&
                (Subresource.aspectMask & ~(VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) == 0,
-               "The aspectMask of all image subresource ranges must only include VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT(17.1)");
+               "The aspectMask of all image subresource ranges must only include VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT "
+                "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdClearDepthStencilImage-aspectMask-02824)");
         // clang-format on
 
         FlushBarriers();
@@ -89,7 +96,9 @@ public:
     __forceinline void ClearAttachment(const VkClearAttachment& Attachment, const VkClearRect& ClearRect)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdClearAttachments() must be called inside render pass (17.2)");
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+               "vkCmdClearAttachments() must be called inside render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdClearAttachments-renderpass)");
 
         vkCmdClearAttachments(
             m_VkCmdBuffer,
@@ -104,7 +113,9 @@ public:
     __forceinline void Draw(uint32_t VertexCount, uint32_t InstanceCount, uint32_t FirstVertex, uint32_t FirstInstance)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDraw() must be called inside render pass (19.3)");
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+               "vkCmdDraw() must be called inside render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDraw-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDraw(m_VkCmdBuffer, VertexCount, InstanceCount, FirstVertex, FirstInstance);
@@ -113,7 +124,9 @@ public:
     __forceinline void DrawIndexed(uint32_t IndexCount, uint32_t InstanceCount, uint32_t FirstIndex, int32_t VertexOffset, uint32_t FirstInstance)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndexed() must be called inside render pass (19.3)");
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+               "vkCmdDrawIndexed() must be called inside render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDrawIndexed-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
         VERIFY(m_State.IndexBuffer != VK_NULL_HANDLE, "No index buffer bound");
 
@@ -123,7 +136,9 @@ public:
     __forceinline void DrawIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndirect() must be called inside render pass (19.3)");
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+               "vkCmdDrawIndirect() must be called inside render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDrawIndirect-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawIndirect(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
@@ -132,7 +147,9 @@ public:
     __forceinline void DrawIndexedIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndirect() must be called inside render pass (19.3)");
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+               "vkCmdDrawIndexedIndirect() must be called inside render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDrawIndexedIndirect-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
         VERIFY(m_State.IndexBuffer != VK_NULL_HANDLE, "No index buffer bound");
 
@@ -143,7 +160,9 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndirectCountKHR() must be called inside render pass (19.3)");
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+               "vkCmdDrawIndirectCountKHR() must be called inside render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDrawIndirectCount-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawIndirectCountKHR(m_VkCmdBuffer, Buffer, Offset, CountBuffer, CountBufferOffset, MaxDrawCount, Stride);
@@ -156,7 +175,9 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndirect() must be called inside render pass (19.3)");
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE,
+               "vkCmdDrawIndexedIndirectCountKHR() must be called inside render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDrawIndexedIndirectCount-renderpass)");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
         VERIFY(m_State.IndexBuffer != VK_NULL_HANDLE, "No index buffer bound");
 
@@ -212,7 +233,7 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDraw() must be called inside render pass (19.3)");
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMultiEXT() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawMultiEXT(m_VkCmdBuffer, DrawCount, pVertexInfo, InstanceCount, FirstInstance, sizeof(VkMultiDrawInfoEXT));
@@ -228,7 +249,7 @@ public:
     {
 #if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndexed() must be called inside render pass (19.3)");
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMultiIndexedEXT() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
         VERIFY(m_State.IndexBuffer != VK_NULL_HANDLE, "No index buffer bound");
 
@@ -244,7 +265,9 @@ public:
     __forceinline void Dispatch(uint32_t GroupCountX, uint32_t GroupCountY, uint32_t GroupCountZ)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdDispatch() must be called outside of render pass (27)");
+        VERIFY(m_State.RenderPass == VK_NULL_HANDLE,
+               "vkCmdDispatch() must be called outside of render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDispatch-renderpass)");
         VERIFY(m_State.ComputePipeline != VK_NULL_HANDLE, "No compute pipeline bound");
 
         FlushBarriers();
@@ -254,7 +277,9 @@ public:
     __forceinline void DispatchIndirect(VkBuffer Buffer, VkDeviceSize Offset)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdDispatchIndirect() must be called outside of render pass (27)");
+        VERIFY(m_State.RenderPass == VK_NULL_HANDLE,
+               "vkCmdDispatchIndirect() must be called outside of render pass "
+               "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdDispatchIndirect-renderpass)");
         VERIFY(m_State.ComputePipeline != VK_NULL_HANDLE, "No compute pipeline bound");
 
         FlushBarriers();
@@ -316,7 +341,8 @@ public:
             LOG_ERROR_MESSAGE("Ending render pass while there are outstanding queries that have been started inside the pass, "
                               "but have not been ended. Vulkan requires that a query must either begin and end inside the same "
                               "subpass of a render pass instance, or must both begin and end outside of a render pass "
-                              "instance (i.e. contain entire render pass instances). (17.2)");
+                              "instance (i.e. contain entire render pass instances). "
+                              "(https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdEndRenderPass-None-07004)");
         }
     }
 
@@ -562,7 +588,8 @@ public:
         }
 
         // A query must either begin and end inside the same subpass of a render pass instance, or must both
-        // begin and end outside a render pass instance (i.e. contain entire render pass instances) (17.2).
+        // begin and end outside a render pass instance (i.e. contain entire render pass instances)
+        // (https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VUID-vkCmdEndRenderPass-None-07004).
 
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         vkCmdBeginQuery(m_VkCmdBuffer, queryPool, query, flags);
@@ -623,7 +650,7 @@ public:
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         if (m_State.RenderPass != VK_NULL_HANDLE)
         {
-            // Copy query results must be performed outside of render pass (17.2).
+            // Copy query results must be performed outside of render pass.
             EndRenderPass();
         }
         FlushBarriers();

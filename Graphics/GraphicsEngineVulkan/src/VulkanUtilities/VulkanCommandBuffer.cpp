@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,56 +45,56 @@ static VkAccessFlags AccessMaskFromImageLayout(VkImageLayout Layout,
     {
         // does not support device access. This layout must only be used as the initialLayout member
         // of VkImageCreateInfo or VkAttachmentDescription, or as the oldLayout in an image transition.
-        // When transitioning out of this layout, the contents of the memory are not guaranteed to be preserved (11.4)
+        // When transitioning out of this layout, the contents of the memory are not guaranteed to be preserved
         case VK_IMAGE_LAYOUT_UNDEFINED:
             if (IsDstMask)
             {
                 UNEXPECTED("The new layout used in a transition must not be VK_IMAGE_LAYOUT_UNDEFINED. "
                            "This layout must only be used as the initialLayout member of VkImageCreateInfo "
-                           "or VkAttachmentDescription, or as the oldLayout in an image transition. (11.4)");
+                           "or VkAttachmentDescription, or as the oldLayout in an image transition.");
             }
             break;
 
         // supports all types of device access
         case VK_IMAGE_LAYOUT_GENERAL:
-            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations (13.1.1, 13.2.4)
+            // VK_IMAGE_LAYOUT_GENERAL must be used for image load/store operations
             AccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
             break;
 
-        // must only be used as a color or resolve attachment in a VkFramebuffer (11.4)
+        // must only be used as a color or resolve attachment in a VkFramebuffer
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
             AccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             break;
 
-        // must only be used as a depth/stencil attachment in a VkFramebuffer (11.4)
+        // must only be used as a depth/stencil attachment in a VkFramebuffer
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
             AccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             break;
 
-        // must only be used as a read-only depth/stencil attachment in a VkFramebuffer and/or as a read-only image in a shader (11.4)
+        // must only be used as a read-only depth/stencil attachment in a VkFramebuffer and/or as a read-only image in a shader
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
             AccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
             break;
 
         // must only be used as a read-only image in a shader (which can be read as a sampled image,
-        // combined image/sampler and/or input attachment) (11.4)
+        // combined image/sampler and/or input attachment)
         case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
             AccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
             break;
 
-        //  must only be used as a source image of a transfer command (11.4)
+        //  must only be used as a source image of a transfer command
         case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
             AccessMask = VK_ACCESS_TRANSFER_READ_BIT;
             break;
 
-        // must only be used as a destination image of a transfer command (11.4)
+        // must only be used as a destination image of a transfer command
         case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
             AccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             break;
 
         // does not support device access. This layout must only be used as the initialLayout member
         // of VkImageCreateInfo or VkAttachmentDescription, or as the oldLayout in an image transition.
-        // When transitioning out of this layout, the contents of the memory are preserved. (11.4)
+        // When transitioning out of this layout, the contents of the memory are preserved.
         case VK_IMAGE_LAYOUT_PREINITIALIZED:
             if (!IsDstMask)
             {
@@ -104,7 +104,7 @@ static VkAccessFlags AccessMaskFromImageLayout(VkImageLayout Layout,
             {
                 UNEXPECTED("The new layout used in a transition must not be VK_IMAGE_LAYOUT_PREINITIALIZED. "
                            "This layout must only be used as the initialLayout member of VkImageCreateInfo "
-                           "or VkAttachmentDescription, or as the oldLayout in an image transition. (11.4)");
+                           "or VkAttachmentDescription, or as the oldLayout in an image transition.");
             }
             break;
 
