@@ -306,6 +306,9 @@ else()
 endif()
 option(DILIGENT_NO_ARCHIVER          "Do not build archiver" OFF)
 
+option(DILIGENT_EMSCRIPTEN_STRIP_DEBUG_INFO "Strip debug information from WebAsm binaries" OFF)
+
+
 if(${DILIGENT_NO_DIRECT3D11})
     set(D3D11_SUPPORTED FALSE CACHE INTERNAL "D3D11 backend is forcibly disabled")
 endif()

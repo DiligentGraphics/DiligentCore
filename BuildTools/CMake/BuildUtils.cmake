@@ -210,6 +210,13 @@ function(set_common_target_properties TARGET)
         endif()
     endif() # if(MSVC)
 
+    if (PLATFORM_EMSCRIPTEN)
+        if((${CMAKE_BUILD_TYPE} STREQUAL "Debug") AND (TARGET_TYPE STREQUAL EXECUTABLE) AND DILIGENT_EMSCRIPTEN_STRIP_DEBUG_INFO)
+            # Strip debug info from WebAssembly binary. Without this option, the toolchain crashes on CI.
+            target_link_options(${TARGET} PRIVATE "SHELL: -gseparate-dwarf -g0")
+        endif()
+    endif()
+
     if(COMMAND custom_post_configure_target)
         custom_post_configure_target(${TARGET})
     endif()
