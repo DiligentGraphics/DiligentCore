@@ -384,10 +384,10 @@ protected:
         void Set(Uint32 Index, ShaderResourceBindingImplType* pSRB)
         {
             VERIFY_EXPR(Index < MAX_RESOURCE_SIGNATURES);
-            auto* pResourceCache  = pSRB != nullptr ? &pSRB->GetResourceCache() : nullptr;
-            ResourceCaches[Index] = pResourceCache;
+            ShaderResourceCacheImplType* pResourceCache = pSRB != nullptr ? &pSRB->GetResourceCache() : nullptr;
+            ResourceCaches[Index]                       = pResourceCache;
 
-            const auto SRBBit = static_cast<SRBMaskType>(1u << Index);
+            const SRBMaskType SRBBit = static_cast<SRBMaskType>(1u << Index);
             if (pResourceCache != nullptr)
                 StaleSRBMask |= SRBBit;
             else
@@ -419,7 +419,7 @@ protected:
 #endif
 
             // Stale SRBs always have to be committed
-            auto CommitMask = StaleSRBMask;
+            SRBMaskType CommitMask = StaleSRBMask;
             // If dynamic resources are not intact, SRBs with dynamic resources
             // have to be handled
             if (!DynamicResourcesIntact)
@@ -434,9 +434,9 @@ protected:
         {
             for (Uint32 ActiveSRBs = ActiveSRBMask; ActiveSRBs != 0;)
             {
-                const auto  SRBBit = ExtractLSB(ActiveSRBs);
-                const auto  Idx    = PlatformMisc::GetLSB(SRBBit);
-                const auto* pCache = ResourceCaches[Idx];
+                const Uint32                       SRBBit = ExtractLSB(ActiveSRBs);
+                const Uint32                       Idx    = PlatformMisc::GetLSB(SRBBit);
+                const ShaderResourceCacheImplType* pCache = ResourceCaches[Idx];
                 if (pCache != nullptr)
                 {
                     DEV_CHECK_ERR(CacheRevisions[Idx] == pCache->DvpGetRevision(),
@@ -745,13 +745,13 @@ inline void DeviceContextBase<ImplementationTraits>::SetVertexBuffers(
 
     for (Uint32 Buff = 0; Buff < NumBuffersSet; ++Buff)
     {
-        auto& CurrStream   = m_VertexStreams[StartSlot + Buff];
+        VertexStreamInfo<BufferImplType>& CurrStream{m_VertexStreams[StartSlot + Buff]};
         CurrStream.pBuffer = ppBuffers ? ClassPtrCast<BufferImplType>(ppBuffers[Buff]) : nullptr;
         CurrStream.Offset  = pOffsets ? pOffsets[Buff] : 0;
 #ifdef DILIGENT_DEVELOPMENT
         if (CurrStream.pBuffer)
         {
-            const auto& BuffDesc = CurrStream.pBuffer->GetDesc();
+            const BufferDesc& BuffDesc = CurrStream.pBuffer->GetDesc();
             DEV_CHECK_ERR((BuffDesc.BindFlags & BIND_VERTEX_BUFFER) != 0,
                           "Buffer '", BuffDesc.Name ? BuffDesc.Name : "", "' being bound as vertex buffer to slot ", Buff,
                           " was not created with BIND_VERTEX_BUFFER flag");
@@ -840,7 +840,7 @@ inline void DeviceContextBase<ImplementationTraits>::SetIndexBuffer(
 
     if (m_pIndexBuffer)
     {
-        const auto& BuffDesc = m_pIndexBuffer->GetDesc();
+        const BufferDesc& BuffDesc = m_pIndexBuffer->GetDesc();
         DEV_CHECK_ERR((BuffDesc.BindFlags & BIND_INDEX_BUFFER) != 0,
                       "Buffer '", BuffDesc.Name ? BuffDesc.Name : "", "' being bound as index buffer was not created with BIND_INDEX_BUFFER flag");
     }
@@ -1017,11 +1017,11 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
 
     for (Uint32 rt = 0; rt < Attribs.NumRenderTargets; ++rt)
     {
-        auto* pRTView = Attribs.ppRenderTargets[rt];
+        ITextureView* pRTView = Attribs.ppRenderTargets[rt];
         if (pRTView)
         {
-            const auto& RTVDesc = pRTView->GetDesc();
-            const auto& TexDesc = pRTView->GetTexture()->GetDesc();
+            const TextureViewDesc& RTVDesc = pRTView->GetDesc();
+            const TextureDesc&     TexDesc = pRTView->GetTexture()->GetDesc();
             DEV_CHECK_ERR(RTVDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET,
                           "Texture view object named '", RTVDesc.Name ? RTVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected");
             DEV_CHECK_ERR(m_pBoundFramebuffer || (TexDesc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) == 0,
@@ -1062,8 +1062,8 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
 
     if (Attribs.pDepthStencil != nullptr)
     {
-        const auto& DSVDesc = Attribs.pDepthStencil->GetDesc();
-        const auto& TexDesc = Attribs.pDepthStencil->GetTexture()->GetDesc();
+        const TextureViewDesc& DSVDesc = Attribs.pDepthStencil->GetDesc();
+        const TextureDesc&     TexDesc = Attribs.pDepthStencil->GetTexture()->GetDesc();
         DEV_CHECK_ERR(DSVDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL || DSVDesc.ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL,
                       "Texture view object named '", DSVDesc.Name ? DSVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType),
                       "). Depth-stencil or read-only depth-stencil view is expected");
@@ -1106,14 +1106,14 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
 #ifdef DILIGENT_DEVELOPMENT
         DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetRenderTargets: VariableRateShading feature must be enabled when used pShadingRateMap");
 
-        const auto& SRProps  = m_pDevice->GetAdapterInfo().ShadingRate;
-        const auto& ViewDesc = Attribs.pShadingRateMap->GetDesc();
+        const ShadingRateProperties& SRProps  = m_pDevice->GetAdapterInfo().ShadingRate;
+        const TextureViewDesc&       ViewDesc = Attribs.pShadingRateMap->GetDesc();
         DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE, "IDeviceContext::SetRenderTargets: pShadingRateMap must be created with TEXTURE_VIEW_SHADING_RATE type");
         DEV_CHECK_ERR(SRProps.CapFlags & SHADING_RATE_CAP_FLAG_TEXTURE_BASED, "IDeviceContext::SetRenderTargets: SHADING_RATE_CAP_FLAG_TEXTURE_BASED capability must be supported");
 
         if (!m_pDevice->GetDeviceInfo().IsMetalDevice())
         {
-            const auto& TexDesc = Attribs.pShadingRateMap->GetTexture()->GetDesc();
+            const TextureDesc& TexDesc = Attribs.pShadingRateMap->GetTexture()->GetDesc();
             DEV_CHECK_ERR(TexDesc.BindFlags & BIND_SHADING_RATE, "IDeviceContext::SetRenderTargets: pShadingRateMap must be created with BIND_SHADING_RATE flag");
 
             switch (SRProps.Format)
@@ -1132,10 +1132,10 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
                     DEV_ERROR("IDeviceContext::SetRenderTargets: unexpected shading rate format");
             }
 
-            const auto Width     = (std::max)(TexDesc.Width >> ViewDesc.MostDetailedMip, 1u);
-            const auto Height    = (std::max)(TexDesc.Height >> ViewDesc.MostDetailedMip, 1u);
-            const auto MinWidth  = (m_FramebufferWidth + SRProps.MaxTileSize[0] - 1) / SRProps.MaxTileSize[0];
-            const auto MinHeight = (m_FramebufferHeight + SRProps.MaxTileSize[1] - 1) / SRProps.MaxTileSize[1];
+            const Uint32 Width     = (std::max)(TexDesc.Width >> ViewDesc.MostDetailedMip, 1u);
+            const Uint32 Height    = (std::max)(TexDesc.Height >> ViewDesc.MostDetailedMip, 1u);
+            const Uint32 MinWidth  = (m_FramebufferWidth + SRProps.MaxTileSize[0] - 1) / SRProps.MaxTileSize[0];
+            const Uint32 MinHeight = (m_FramebufferHeight + SRProps.MaxTileSize[1] - 1) / SRProps.MaxTileSize[1];
             DEV_CHECK_ERR(Width >= MinWidth,
                           "IDeviceContext::SetRenderTargets: shading rate texture width (", Width, ") must be at least ",
                           MinWidth, "). Note: minimum width is defined by (framebuffer width) / ShadingRate::MaxTileSize[0].");
@@ -1153,7 +1153,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    const auto& SRProps = m_pDevice->GetAdapterInfo().ShadingRate;
+    const ShadingRateProperties& SRProps = m_pDevice->GetAdapterInfo().ShadingRate;
     if (m_pBoundShadingRateMap &&
         (SRProps.CapFlags & SHADING_RATE_CAP_FLAG_NON_SUBSAMPLED_RENDER_TARGET) == 0 &&
         !m_pDevice->GetDeviceInfo().IsMetalDevice())
@@ -1163,7 +1163,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
 
         for (Uint32 i = 0; i < m_NumBoundRenderTargets; ++i)
         {
-            if (auto& pRTV = m_pBoundRenderTargets[i])
+            if (TextureViewImplType* pRTV = m_pBoundRenderTargets[i])
             {
                 DEV_CHECK_ERR((pRTV->GetTexture()->GetDesc().MiscFlags & MISC_TEXTURE_FLAG_SUBSAMPLED) != 0,
                               "Render target used with shading rate map must be created with MISC_TEXTURE_FLAG_SUBSAMPLED flag when "
@@ -1192,9 +1192,9 @@ inline bool DeviceContextBase<ImplementationTraits>::SetSubpassRenderTargets()
     VERIFY_EXPR(m_pBoundFramebuffer);
     VERIFY_EXPR(m_pActiveRenderPass);
 
-    const auto& RPDesc  = m_pActiveRenderPass->GetDesc();
-    const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
-    const auto& Subpass = m_pActiveRenderPass->GetSubpass(m_SubpassIndex);
+    const RenderPassDesc&  RPDesc  = m_pActiveRenderPass->GetDesc();
+    const FramebufferDesc& FBDesc  = m_pBoundFramebuffer->GetDesc();
+    const SubpassDesc&     Subpass = m_pActiveRenderPass->GetSubpass(m_SubpassIndex);
 
     m_FramebufferSamples = 0;
 
@@ -1203,7 +1203,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetSubpassRenderTargets()
     ITextureView* pSRM                       = nullptr;
     for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
     {
-        const auto& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
+        const AttachmentReference& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
         if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
         {
             VERIFY_EXPR(RTAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
@@ -1220,7 +1220,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetSubpassRenderTargets()
 
     if (Subpass.pDepthStencilAttachment != nullptr)
     {
-        const auto& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
+        const AttachmentReference& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
         if (DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
         {
             VERIFY_EXPR(DSAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
@@ -1239,7 +1239,7 @@ inline bool DeviceContextBase<ImplementationTraits>::SetSubpassRenderTargets()
 
     if (Subpass.pShadingRateAttachment != nullptr)
     {
-        const auto& SRAttachmentRef = *Subpass.pShadingRateAttachment;
+        const ShadingRateAttachment& SRAttachmentRef = *Subpass.pShadingRateAttachment;
         if (SRAttachmentRef.Attachment.AttachmentIndex != ATTACHMENT_UNUSED)
         {
             VERIFY_EXPR(SRAttachmentRef.Attachment.AttachmentIndex < RPDesc.AttachmentCount);
@@ -1272,8 +1272,7 @@ inline void DeviceContextBase<ImplementationTraits>::GetRenderTargets(
         for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
         {
             DEV_CHECK_ERR(ppRTVs[rt] == nullptr, "Non-null pointer found in RTV array element #", rt);
-            auto pBoundRTV = m_pBoundRenderTargets[rt];
-            if (pBoundRTV)
+            if (TextureViewImplType* pBoundRTV = m_pBoundRenderTargets[rt])
                 pBoundRTV->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppRTVs + rt));
             else
                 ppRTVs[rt] = nullptr;
@@ -1368,7 +1367,7 @@ bool DeviceContextBase<ImplementationTraits>::UnbindTextureFromFramebuffer(Textu
     if (pTexture == nullptr)
         return false;
 
-    const auto& TexDesc = pTexture->GetDesc();
+    const TextureDesc& TexDesc = pTexture->GetDesc();
 
     bool bResetRenderTargets = false;
     if (TexDesc.BindFlags & BIND_RENDER_TARGET)
@@ -1450,27 +1449,27 @@ inline void DeviceContextBase<ImplementationTraits>::BeginRenderPass(const Begin
     // Reset current render targets (in Vulkan backend, this may end current render pass).
     ResetRenderTargets();
 
-    auto* pNewRenderPass  = ClassPtrCast<RenderPassImplType>(Attribs.pRenderPass);
-    auto* pNewFramebuffer = ClassPtrCast<FramebufferImplType>(Attribs.pFramebuffer);
+    RenderPassImplType*  pNewRenderPass  = ClassPtrCast<RenderPassImplType>(Attribs.pRenderPass);
+    FramebufferImplType* pNewFramebuffer = ClassPtrCast<FramebufferImplType>(Attribs.pFramebuffer);
     if (Attribs.StateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_NONE)
     {
-        const auto& RPDesc = pNewRenderPass->GetDesc();
-        const auto& FBDesc = pNewFramebuffer->GetDesc();
+        const RenderPassDesc&  RPDesc = pNewRenderPass->GetDesc();
+        const FramebufferDesc& FBDesc = pNewFramebuffer->GetDesc();
         DEV_CHECK_ERR(RPDesc.AttachmentCount <= FBDesc.AttachmentCount,
                       "The number of attachments (", FBDesc.AttachmentCount,
                       ") in currently bound framebuffer is smaller than the number of attachments in the render pass (", RPDesc.AttachmentCount, ")");
         const bool IsMetal = m_pDevice->GetDeviceInfo().IsMetalDevice();
         for (Uint32 i = 0; i < FBDesc.AttachmentCount; ++i)
         {
-            auto* pView = FBDesc.ppAttachments[i];
+            ITextureView* pView = FBDesc.ppAttachments[i];
             if (pView == nullptr)
                 continue;
 
             if (IsMetal && pView->GetDesc().ViewType == TEXTURE_VIEW_SHADING_RATE)
                 continue;
 
-            auto* pTex          = ClassPtrCast<TextureImplType>(pView->GetTexture());
-            auto  RequiredState = RPDesc.pAttachments[i].InitialState;
+            TextureImplType* pTex          = ClassPtrCast<TextureImplType>(pView->GetTexture());
+            RESOURCE_STATE   RequiredState = RPDesc.pAttachments[i].InitialState;
             if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
             {
                 if (pTex->IsInKnownState() && !pTex->CheckState(RequiredState))
@@ -1515,23 +1514,23 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateAttachmentStates(Uint
     DEV_CHECK_ERR(m_pActiveRenderPass != nullptr, "There is no active render pass");
     DEV_CHECK_ERR(m_pBoundFramebuffer != nullptr, "There is no active framebuffer");
 
-    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
-    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+    const RenderPassDesc&  RPDesc = m_pActiveRenderPass->GetDesc();
+    const FramebufferDesc& FBDesc = m_pBoundFramebuffer->GetDesc();
     VERIFY(FBDesc.AttachmentCount == RPDesc.AttachmentCount,
            "Framebuffer attachment count (", FBDesc.AttachmentCount, ") is not consistent with the render pass attachment count (", RPDesc.AttachmentCount, ")");
     VERIFY_EXPR(SubpassIndex <= RPDesc.SubpassCount);
     const bool IsMetal = m_pDevice->GetDeviceInfo().IsMetalDevice();
     for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
     {
-        if (auto* pView = FBDesc.ppAttachments[i])
+        if (ITextureView* pView = FBDesc.ppAttachments[i])
         {
             if (IsMetal && pView->GetDesc().ViewType == TEXTURE_VIEW_SHADING_RATE)
                 continue;
 
-            auto* pTex = ClassPtrCast<TextureImplType>(pView->GetTexture());
+            TextureImplType* pTex = ClassPtrCast<TextureImplType>(pView->GetTexture());
             if (pTex->IsInKnownState())
             {
-                auto CurrState = SubpassIndex < RPDesc.SubpassCount ?
+                RESOURCE_STATE CurrState = SubpassIndex < RPDesc.SubpassCount ?
                     m_pActiveRenderPass->GetAttachmentState(SubpassIndex, i) :
                     RPDesc.pAttachments[i].FinalState;
                 pTex->SetState(CurrState);
@@ -1568,7 +1567,7 @@ inline void DeviceContextBase<ImplementationTraits>::ClearDepthStencil(ITextureV
 
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& ViewDesc = pView->GetDesc();
+        const TextureViewDesc& ViewDesc = pView->GetDesc();
         DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL,
                       "The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of the texture view '", ViewDesc.Name,
                       "' is invalid: ClearDepthStencil command expects depth-stencil view (TEXTURE_VIEW_DEPTH_STENCIL).");
@@ -1608,7 +1607,7 @@ inline void DeviceContextBase<ImplementationTraits>::ClearRenderTarget(ITextureV
 
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& ViewDesc = pView->GetDesc();
+        const TextureViewDesc& ViewDesc = pView->GetDesc();
         DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET,
                       "The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of texture view '", pView->GetDesc().Name,
                       "' is invalid: ClearRenderTarget command expects render target view (TEXTURE_VIEW_RENDER_TARGET).");
@@ -1650,11 +1649,11 @@ inline void DeviceContextBase<ImplementationTraits>::BeginQuery(IQuery* pQuery, 
 {
     DEV_CHECK_ERR(pQuery != nullptr, "IDeviceContext::BeginQuery: pQuery must not be null");
 
-    const auto QueryType = pQuery->GetDesc().Type;
+    const QUERY_TYPE QueryType = pQuery->GetDesc().Type;
     DEV_CHECK_ERR(QueryType != QUERY_TYPE_TIMESTAMP,
                   "BeginQuery() is disabled for timestamp queries. Call EndQuery() to set the timestamp.");
 
-    const auto QueueType = QueryType == QUERY_TYPE_DURATION ? COMMAND_QUEUE_TYPE_TRANSFER : COMMAND_QUEUE_TYPE_GRAPHICS;
+    const COMMAND_QUEUE_TYPE QueueType = QueryType == QUERY_TYPE_DURATION ? COMMAND_QUEUE_TYPE_TRANSFER : COMMAND_QUEUE_TYPE_GRAPHICS;
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "BeginQuery for query type ", GetQueryTypeString(QueryType));
 
     ClassPtrCast<QueryImplType>(pQuery)->OnBeginQuery(static_cast<DeviceContextImplType*>(this));
@@ -1667,8 +1666,8 @@ inline void DeviceContextBase<ImplementationTraits>::EndQuery(IQuery* pQuery, in
 {
     DEV_CHECK_ERR(pQuery != nullptr, "IDeviceContext::EndQuery: pQuery must not be null");
 
-    const auto QueryType = pQuery->GetDesc().Type;
-    const auto QueueType = QueryType == QUERY_TYPE_DURATION || QueryType == QUERY_TYPE_TIMESTAMP ? COMMAND_QUEUE_TYPE_TRANSFER : COMMAND_QUEUE_TYPE_GRAPHICS;
+    const QUERY_TYPE         QueryType = pQuery->GetDesc().Type;
+    const COMMAND_QUEUE_TYPE QueueType = QueryType == QUERY_TYPE_DURATION || QueryType == QUERY_TYPE_TIMESTAMP ? COMMAND_QUEUE_TYPE_TRANSFER : COMMAND_QUEUE_TYPE_GRAPHICS;
     DVP_CHECK_QUEUE_TYPE_COMPATIBILITY(QueueType, "EndQuery for query type ", GetQueryTypeString(QueryType));
 
     ClassPtrCast<QueryImplType>(pQuery)->OnEndQuery(static_cast<DeviceContextImplType*>(this));
@@ -1702,7 +1701,7 @@ inline void DeviceContextBase<ImplementationTraits>::UpdateBuffer(
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "UpdateBuffer command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& BuffDesc = ClassPtrCast<BufferImplType>(pBuffer)->GetDesc();
+        const BufferDesc& BuffDesc = ClassPtrCast<BufferImplType>(pBuffer)->GetDesc();
         DEV_CHECK_ERR(BuffDesc.Usage == USAGE_DEFAULT || BuffDesc.Usage == USAGE_SPARSE, "Unable to update buffer '", BuffDesc.Name, "': only USAGE_DEFAULT or USAGE_SPARSE buffers can be updated with UpdateData()");
         DEV_CHECK_ERR(Offset < BuffDesc.Size, "Unable to update buffer '", BuffDesc.Name, "': offset (", Offset, ") exceeds the buffer size (", BuffDesc.Size, ")");
         DEV_CHECK_ERR(Size + Offset <= BuffDesc.Size, "Unable to update buffer '", BuffDesc.Name, "': Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,", BuffDesc.Size, ")");
@@ -1728,8 +1727,8 @@ inline void DeviceContextBase<ImplementationTraits>::CopyBuffer(
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "CopyBuffer command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& SrcBufferDesc = ClassPtrCast<BufferImplType>(pSrcBuffer)->GetDesc();
-        const auto& DstBufferDesc = ClassPtrCast<BufferImplType>(pDstBuffer)->GetDesc();
+        const BufferDesc& SrcBufferDesc = ClassPtrCast<BufferImplType>(pSrcBuffer)->GetDesc();
+        const BufferDesc& DstBufferDesc = ClassPtrCast<BufferImplType>(pDstBuffer)->GetDesc();
         DEV_CHECK_ERR(DstOffset + Size <= DstBufferDesc.Size, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Destination range [", DstOffset, ",", DstOffset + Size, ") is out of buffer bounds [0,", DstBufferDesc.Size, ")");
         DEV_CHECK_ERR(SrcOffset + Size <= SrcBufferDesc.Size, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,", SrcBufferDesc.Size, ")");
     }
@@ -1747,7 +1746,7 @@ inline void DeviceContextBase<ImplementationTraits>::MapBuffer(
 {
     DEV_CHECK_ERR(pBuffer, "pBuffer must not be null");
 
-    const auto& BuffDesc = pBuffer->GetDesc();
+    const BufferDesc& BuffDesc = pBuffer->GetDesc();
 
 #ifdef DILIGENT_DEBUG
     {
@@ -1877,7 +1876,7 @@ inline void DeviceContextBase<ImplementationTraits>::GenerateMips(ITextureView* 
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "GenerateMips command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& ViewDesc = pTexView->GetDesc();
+        const TextureViewDesc& ViewDesc = pTexView->GetDesc();
         DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Shader resource view '", ViewDesc.Name,
                       "' can't be used to generate mipmaps because its type is ", GetTexViewTypeLiteralName(ViewDesc.ViewType), ". Required view type: TEXTURE_VIEW_SHADER_RESOURCE.");
         DEV_CHECK_ERR((ViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0, "Shader resource view '", ViewDesc.Name,
@@ -1899,8 +1898,8 @@ void DeviceContextBase<ImplementationTraits>::ResolveTextureSubresource(
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "ResolveTextureSubresource command must be used outside of render pass.");
 
     DEV_CHECK_ERR(pSrcTexture != nullptr && pDstTexture != nullptr, "Src and Dst textures must not be null");
-    const auto& SrcTexDesc = pSrcTexture->GetDesc();
-    const auto& DstTexDesc = pDstTexture->GetDesc();
+    const TextureDesc& SrcTexDesc = pSrcTexture->GetDesc();
+    const TextureDesc& DstTexDesc = pDstTexture->GetDesc();
 
     VerifyResolveTextureSubresourceAttribs(ResolveAttribs, SrcTexDesc, DstTexDesc);
 #endif
@@ -1982,7 +1981,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
 
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing,
                   "IDeviceContext::TraceRays: ray tracing is not supported by this device");
-    const auto& RTProps = m_pDevice->GetAdapterInfo().RayTracing;
+    const RayTracingProperties& RTProps = m_pDevice->GetAdapterInfo().RayTracing;
     DEV_CHECK_ERR((RTProps.CapFlags & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) != 0,
                   "IDeviceContext::TraceRays: standalone ray tracing shaders are not supported by this device");
     DEV_CHECK_ERR(m_pPipelineState,
@@ -1998,7 +1997,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRays(const TraceRaysAttribs& 
                   "IDeviceContext::TraceRays command arguments are invalid: currently bound pipeline '", m_pPipelineState->GetDesc().Name,
                   "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
 
-    const auto* pSBTImpl = ClassPtrCast<const ShaderBindingTableImplType>(Attribs.pSBT);
+    const ShaderBindingTableImplType* pSBTImpl = ClassPtrCast<const ShaderBindingTableImplType>(Attribs.pSBT);
     DEV_CHECK_ERR(!pSBTImpl->HasPendingData(), "IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '",
                   pSBTImpl->GetDesc().Name, "' has uncommitted changes, call UpdateSBT() first");
 
@@ -2023,7 +2022,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
 
     DEV_CHECK_ERR(m_pDevice->GetFeatures().RayTracing,
                   "IDeviceContext::TraceRaysIndirect: ray tracing is not supported by this device");
-    const auto& RTProps = m_pDevice->GetAdapterInfo().RayTracing;
+    const RayTracingProperties& RTProps = m_pDevice->GetAdapterInfo().RayTracing;
     DEV_CHECK_ERR((RTProps.CapFlags & RAY_TRACING_CAP_FLAG_INDIRECT_RAY_TRACING) != 0,
                   "IDeviceContext::TraceRays: indirect ray tracing is not supported by this device");
     DEV_CHECK_ERR(m_pPipelineState,
@@ -2041,7 +2040,7 @@ void DeviceContextBase<ImplementationTraits>::TraceRaysIndirect(const TraceRaysI
                   "IDeviceContext::TraceRaysIndirect command arguments are invalid: currently bound pipeline '", m_pPipelineState->GetDesc().Name,
                   "' doesn't match the pipeline '", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, "' that was used in ShaderBindingTable");
 
-    const auto* pSBTImpl = ClassPtrCast<const ShaderBindingTableImplType>(Attribs.pSBT);
+    const ShaderBindingTableImplType* pSBTImpl = ClassPtrCast<const ShaderBindingTableImplType>(Attribs.pSBT);
     DEV_CHECK_ERR(!pSBTImpl->HasPendingData(),
                   "IDeviceContext::TraceRaysIndirect command arguments are invalid: SBT '",
                   pSBTImpl->GetDesc().Name, "' has uncommitted changes, call UpdateSBT() first");
@@ -2109,7 +2108,7 @@ void DeviceContextBase<ImplementationTraits>::SetShadingRate(SHADING_RATE BaseRa
     DEV_CHECK_ERR(IsPowerOfTwo(TextureCombiner), "Only one texture combiner must be specified");
     DEV_CHECK_ERR(m_pDevice->GetDeviceInfo().Features.VariableRateShading, "IDeviceContext::SetShadingRate: VariableRateShading feature must be enabled");
 
-    const auto& SRProps = m_pDevice->GetAdapterInfo().ShadingRate;
+    const ShadingRateProperties& SRProps = m_pDevice->GetAdapterInfo().ShadingRate;
     DEV_CHECK_ERR(SRProps.CapFlags & (SHADING_RATE_CAP_FLAG_PER_DRAW | SHADING_RATE_CAP_FLAG_PER_PRIMITIVE | SHADING_RATE_CAP_FLAG_TEXTURE_BASED),
                   "IDeviceContext::SetShadingRate: requires one of the following capabilities: SHADING_RATE_CAP_FLAG_PER_DRAW, "
                   "SHADING_RATE_CAP_FLAG_PER_PRIMITIVE, or SHADING_RATE_CAP_FLAG_TEXTURE_BASED");
@@ -2148,12 +2147,12 @@ void DeviceContextBase<ImplementationTraits>::BindSparseResourceMemory(const Bin
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::PrepareCommittedResources(CommittedShaderResources& Resources, Uint32& DvpCompatibleSRBCount)
 {
-    const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
+    const Uint32 SignCount = m_pPipelineState->GetResourceSignatureCount();
 
     Resources.ActiveSRBMask = 0;
     for (Uint32 i = 0; i < SignCount; ++i)
     {
-        const auto* pSignature = m_pPipelineState->GetResourceSignature(i);
+        const PipelineResourceSignatureImplType* pSignature = m_pPipelineState->GetResourceSignature(i);
         if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
             continue;
 
@@ -2173,10 +2172,10 @@ inline void DeviceContextBase<ImplementationTraits>::PrepareCommittedResources(C
     // Find the number of SRBs compatible with signatures in the current pipeline
     for (; DvpCompatibleSRBCount < SignCount; ++DvpCompatibleSRBCount)
     {
-        const auto pSRB = Resources.SRBs[DvpCompatibleSRBCount].Lock();
+        RefCntAutoPtr<ShaderResourceBindingImplType> pSRB = Resources.SRBs[DvpCompatibleSRBCount].Lock();
 
-        const auto* pPSOSign = m_pPipelineState->GetResourceSignature(DvpCompatibleSRBCount);
-        const auto* pSRBSign = pSRB ? pSRB->GetSignature() : nullptr;
+        const PipelineResourceSignatureImplType* pPSOSign = m_pPipelineState->GetResourceSignature(DvpCompatibleSRBCount);
+        const PipelineResourceSignatureImplType* pSRBSign = pSRB ? pSRB->GetSignature() : nullptr;
 
         if ((pPSOSign == nullptr || pPSOSign->GetTotalResourceCount() == 0) !=
             (pSRBSign == nullptr || pSRBSign->GetTotalResourceCount() == 0))
@@ -2253,7 +2252,7 @@ inline void DeviceContextBase<ImplementationTraits>::Draw(const DrawAttribs& Att
 #endif
     if (m_pPipelineState)
     {
-        const auto Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
+        const PRIMITIVE_TOPOLOGY Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
         m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.NumVertices);
     }
     ++m_Stats.CommandCounters.Draw;
@@ -2280,7 +2279,7 @@ inline void DeviceContextBase<ImplementationTraits>::DrawIndexed(const DrawIndex
 #endif
     if (m_pPipelineState)
     {
-        const auto Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
+        const PRIMITIVE_TOPOLOGY Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
         m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.NumIndices);
     }
     ++m_Stats.CommandCounters.DrawIndexed;
@@ -2411,7 +2410,7 @@ inline void DeviceContextBase<ImplementationTraits>::MultiDraw(const MultiDrawAt
 #endif
     if (m_pPipelineState)
     {
-        const auto Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
+        const PRIMITIVE_TOPOLOGY Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
         for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
             m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.pDrawItems[i].NumVertices);
     }
@@ -2442,7 +2441,7 @@ inline void DeviceContextBase<ImplementationTraits>::MultiDrawIndexed(const Mult
 #endif
     if (m_pPipelineState)
     {
-        const auto Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
+        const PRIMITIVE_TOPOLOGY Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
         for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
             m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.pDrawItems[i].NumIndices);
     }
@@ -2458,33 +2457,33 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() co
 {
     DEV_CHECK_ERR(m_pPipelineState, "No pipeline state is bound");
 
-    const auto& PSODesc = m_pPipelineState->GetDesc();
+    const PipelineStateDesc& PSODesc = m_pPipelineState->GetDesc();
     DEV_CHECK_ERR(PSODesc.IsAnyGraphicsPipeline() || PSODesc.IsTilePipeline(),
                   "Pipeline state '", PSODesc.Name, "' is not a graphics pipeline");
 
     TEXTURE_FORMAT BoundRTVFormats[MAX_RENDER_TARGETS] = {};
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
     {
-        if (const auto* pRT = m_pBoundRenderTargets[rt].RawPtr())
+        if (const TextureViewImplType* pRT = m_pBoundRenderTargets[rt])
             BoundRTVFormats[rt] = pRT->GetDesc().Format;
         else
             BoundRTVFormats[rt] = TEX_FORMAT_UNKNOWN;
     }
-    const auto BoundDSVFormat = m_pBoundDepthStencil ? m_pBoundDepthStencil->GetDesc().Format : TEX_FORMAT_UNKNOWN;
+    const TEXTURE_FORMAT BoundDSVFormat = m_pBoundDepthStencil ? m_pBoundDepthStencil->GetDesc().Format : TEX_FORMAT_UNKNOWN;
 
     Uint32                NumPipelineRenderTargets = 0;
     const TEXTURE_FORMAT* PipelineRTVFormats       = nullptr;
     TEXTURE_FORMAT        PipelineDSVFormat        = TEX_FORMAT_UNKNOWN;
     if (PSODesc.IsAnyGraphicsPipeline())
     {
-        const auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
-        NumPipelineRenderTargets     = GraphicsPipeline.NumRenderTargets;
-        PipelineRTVFormats           = GraphicsPipeline.RTVFormats;
-        PipelineDSVFormat            = GraphicsPipeline.DSVFormat;
+        const GraphicsPipelineDesc& GraphicsPipeline{m_pPipelineState->GetGraphicsPipelineDesc()};
+        NumPipelineRenderTargets = GraphicsPipeline.NumRenderTargets;
+        PipelineRTVFormats       = GraphicsPipeline.RTVFormats;
+        PipelineDSVFormat        = GraphicsPipeline.DSVFormat;
     }
     else if (PSODesc.IsTilePipeline())
     {
-        const auto& TilePipeline = m_pPipelineState->GetTilePipelineDesc();
+        const TilePipelineDesc& TilePipeline{m_pPipelineState->GetTilePipelineDesc()};
         NumPipelineRenderTargets = TilePipeline.NumRenderTargets;
         PipelineRTVFormats       = TilePipeline.RTVFormats;
         PipelineDSVFormat        = BoundDSVFormat; // to disable warning
@@ -2510,8 +2509,8 @@ inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() co
 
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
     {
-        auto BoundFmt = BoundRTVFormats[rt];
-        auto PSOFmt   = PipelineRTVFormats[rt];
+        TEXTURE_FORMAT BoundFmt = BoundRTVFormats[rt];
+        TEXTURE_FORMAT PSOFmt   = PipelineRTVFormats[rt];
         if (BoundFmt != PSOFmt)
         {
             // NB: Vulkan requires exact match. In particular, if a PSO does not use an RTV, this RTV
@@ -2660,18 +2659,18 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifySRBCompatibility(
 {
     DEV_CHECK_ERR(m_pPipelineState, "No PSO is bound in the context");
 
-    const auto SignCount = m_pPipelineState->GetResourceSignatureCount();
+    const Uint32 SignCount = m_pPipelineState->GetResourceSignatureCount();
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
-        const auto* const pPSOSign = CustomGetSignature ? CustomGetSignature(sign) : m_pPipelineState->GetResourceSignature(sign);
+        const PipelineResourceSignatureImplType* const pPSOSign = CustomGetSignature ? CustomGetSignature(sign) : m_pPipelineState->GetResourceSignature(sign);
         if (pPSOSign == nullptr || pPSOSign->GetTotalResourceCount() == 0)
             continue; // Skip null and empty signatures
 
         VERIFY_EXPR(sign < MAX_RESOURCE_SIGNATURES);
         VERIFY_EXPR(pPSOSign->GetDesc().BindingIndex == sign);
 
-        const auto  pSRB   = Resources.SRBs[sign].Lock();
-        const auto* pCache = Resources.ResourceCaches[sign];
+        RefCntAutoPtr<ShaderResourceBindingImplType> pSRB   = Resources.SRBs[sign].Lock();
+        const ShaderResourceCacheImplType*           pCache = Resources.ResourceCaches[sign];
         if (pCache != nullptr)
         {
             DEV_CHECK_ERR(pSRB, "Shader resource cache pointer at index ", sign,
@@ -2689,7 +2688,7 @@ void DeviceContextBase<ImplementationTraits>::DvpVerifySRBCompatibility(
 
         VERIFY_EXPR(pCache == &pSRB->GetResourceCache());
 
-        const auto* const pSRBSign = pSRB->GetSignature();
+        const PipelineResourceSignatureImplType* const pSRBSign = pSRB->GetSignature();
         DEV_CHECK_ERR(pPSOSign->IsCompatibleWith(pSRBSign), "Shader resource binding at index ", sign, " with signature '",
                       pSRBSign->GetDesc().Name, "' is not compatible with the signature in PSO '",
                       m_pPipelineState->GetDesc().Name, "'.");
