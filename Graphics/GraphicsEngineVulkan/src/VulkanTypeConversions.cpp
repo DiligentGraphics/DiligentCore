@@ -2216,7 +2216,7 @@ VkPipelineRenderingCreateInfoKHR GraphicsPipelineDesc_To_VkPipelineRenderingCrea
     VkPipelineRenderingCreateInfoKHR PipelineRenderingCI{};
     PipelineRenderingCI.sType    = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     PipelineRenderingCI.pNext    = nullptr;
-    PipelineRenderingCI.viewMask = (1u << PipelineDesc.NumViewports) - 1u;
+    PipelineRenderingCI.viewMask = 0;
 
     PipelineRenderingCI.colorAttachmentCount = PipelineDesc.NumRenderTargets;
     ColorAttachmentFormats.resize(PipelineDesc.NumRenderTargets);

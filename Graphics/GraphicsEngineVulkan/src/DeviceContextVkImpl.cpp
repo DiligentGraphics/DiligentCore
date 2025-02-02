@@ -1914,7 +1914,7 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
         FramebufferCache::CreateDyanmicRenderInfoAttribs CreateRIAttribs;
         CreateRIAttribs.Extent   = {m_FramebufferWidth, m_FramebufferHeight};
         CreateRIAttribs.Layers   = m_FramebufferSlices;
-        CreateRIAttribs.ViewMask = (1u << m_NumViewports) - 1u;
+        CreateRIAttribs.ViewMask = 0;
         if (m_pBoundDepthStencil)
         {
             const TEXTURE_FORMAT        DepthStencilFmt = m_pBoundDepthStencil->GetTexture()->GetDesc().Format;
