@@ -753,7 +753,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         const GraphicsAdapterInfo AdapterInfo = GetPhysicalDeviceGraphicsAdapterInfo(*PhysicalDevice);
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
         const DeviceFeatures   EnabledFeatures   = EnableDeviceFeatures(AdapterInfo.Features, EngineCI.Features);
-        const DeviceFeaturesVk AdapterFeaturesVk = PhysicalDeviceFeaturesToDeviceFeaturesVk(PhysicalDevice->GetExtFeatures(), DEVICE_FEATURE_STATE_ENABLED);
+        const DeviceFeaturesVk AdapterFeaturesVk = PhysicalDeviceFeaturesToDeviceFeaturesVk(PhysicalDevice->GetExtFeatures(), DEVICE_FEATURE_STATE_OPTIONAL);
         const DeviceFeaturesVk EnabledFeaturesVk = EnableDeviceFeaturesVk(AdapterFeaturesVk, EngineCI.FeaturesVk);
 
         std::vector<VkDeviceQueueGlobalPriorityCreateInfoEXT> QueueGlobalPriority;

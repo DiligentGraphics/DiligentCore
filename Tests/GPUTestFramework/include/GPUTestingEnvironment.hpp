@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,7 +60,8 @@ public:
         Uint32             NumDeferredContexts    = 4;
         bool               EnableDeviceSimulation = false;
 
-        DeviceFeatures Features{DEVICE_FEATURE_STATE_OPTIONAL};
+        DeviceFeatures   Features{DEVICE_FEATURE_STATE_OPTIONAL};
+        DeviceFeaturesVk FeaturesVk{DEVICE_FEATURE_STATE_OPTIONAL};
 
         DebugMessageCallbackType MessageCallback = TestingEnvironment::MessageCallback;
     };
