@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,30 +151,24 @@ typedef struct DeviceContextDesc DeviceContextDesc;
 DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
 {
     /// No flags.
-    DRAW_FLAG_NONE                            = 0x00,
+    DRAW_FLAG_NONE                            = 0u,
 
     /// Verify the state of index and vertex buffers (if any) used by the draw
     /// command. State validation is only performed in debug and development builds
     /// and the flag has no effect in release build.
-    DRAW_FLAG_VERIFY_STATES                   = 0x01,
+    DRAW_FLAG_VERIFY_STATES                   = 1u << 0u,
 
     /// Verify correctness of parameters passed to the draw command.
     ///
     /// \remarks This flag only has effect in debug and development builds.
     ///          Verification is always disabled in release configuration.
-    DRAW_FLAG_VERIFY_DRAW_ATTRIBS             = 0x02,
-
-    /// Verify that render targets bound to the context are consistent with the pipeline state.
-    ///
-    /// \remarks This flag only has effect in debug and development builds.
-    ///          Verification is always disabled in release configuration.
-    DRAW_FLAG_VERIFY_RENDER_TARGETS           = 0x04,
+    DRAW_FLAG_VERIFY_DRAW_ATTRIBS             = 1u << 1u,
 
     /// Perform all state validation checks
     ///
     /// \remarks This flag only has effect in debug and development builds.
     ///          Verification is always disabled in release configuration.
-    DRAW_FLAG_VERIFY_ALL                      = DRAW_FLAG_VERIFY_STATES | DRAW_FLAG_VERIFY_DRAW_ATTRIBS | DRAW_FLAG_VERIFY_RENDER_TARGETS,
+    DRAW_FLAG_VERIFY_ALL                      = DRAW_FLAG_VERIFY_STATES | DRAW_FLAG_VERIFY_DRAW_ATTRIBS,
 
     /// Indicates that none of the dynamic resource buffers used by the draw command
     /// have been modified by the CPU since the last command.
@@ -218,7 +212,7 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     ///          (see RootSignature::CommitRootViews). When DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT is set, root views are only bound
     ///          by the first draw command that uses the PSO + SRB pair. The flag avoids setting the same GPU virtual addresses when
     ///          they stay unchanged.
-    DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT = 0x08
+    DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT = 1u << 2u
 };
 DEFINE_FLAG_ENUM_OPERATORS(DRAW_FLAGS)
 

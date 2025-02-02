@@ -634,8 +634,7 @@ void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pP
 void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
 {
 #ifdef DILIGENT_DEVELOPMENT
-    if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
-        DvpVerifyRenderTargets();
+    DvpVerifyRenderTargets();
 #endif
 
     auto* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();

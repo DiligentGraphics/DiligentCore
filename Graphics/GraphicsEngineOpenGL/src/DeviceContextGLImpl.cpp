@@ -747,8 +747,7 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
-        DvpVerifyRenderTargets();
+    DvpVerifyRenderTargets();
 #endif
 
     // The program might have changed since the last SetPipelineState call if a shader was

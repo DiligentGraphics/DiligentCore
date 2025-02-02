@@ -693,7 +693,8 @@ protected:
     std::unordered_map<IBuffer*, DbgMappedBufferInfo> m_DbgMappedBuffers;
 #endif
 #ifdef DILIGENT_DEVELOPMENT
-    int m_DvpDebugGroupCount = 0;
+    int    m_DvpDebugGroupCount         = 0;
+    size_t m_DvpRenderTargetFormatsHash = 0;
 #endif
 };
 
@@ -1178,6 +1179,23 @@ inline bool DeviceContextBase<ImplementationTraits>::SetRenderTargets(const SetR
                           "SHADING_RATE_CAP_FLAG_NON_SUBSAMPLED_RENDER_TARGET capability is not present.");
         }
     }
+
+    {
+        std::array<TEXTURE_FORMAT, MAX_RENDER_TARGETS> RTFormats{};
+        for (Uint32 i = 0; i < m_NumBoundRenderTargets; ++i)
+        {
+            if (TextureViewImplType* pRTV = m_pBoundRenderTargets[i])
+            {
+                RTFormats[i] = pRTV->GetDesc().Format;
+            }
+            else
+            {
+                RTFormats[i] = TEX_FORMAT_UNKNOWN;
+            }
+        }
+        TEXTURE_FORMAT DSVFormat     = m_pBoundDepthStencil ? m_pBoundDepthStencil->GetDesc().Format : TEX_FORMAT_UNKNOWN;
+        m_DvpRenderTargetFormatsHash = ComputeRenderTargetFormatsHash(m_NumBoundRenderTargets, RTFormats.data(), DSVFormat);
+    }
 #endif
 
     if (bBindRenderTargets)
@@ -1429,6 +1447,9 @@ void DeviceContextBase<ImplementationTraits>::ResetRenderTargets()
     m_FramebufferHeight     = 0;
     m_FramebufferSlices     = 0;
     m_FramebufferSamples    = 0;
+#ifdef DILIGENT_DEVELOPMENT
+    m_DvpRenderTargetFormatsHash = 0;
+#endif
 
     m_pBoundDepthStencil.Release();
     m_pBoundShadingRateMap.Release();
@@ -2455,7 +2476,16 @@ inline void DeviceContextBase<ImplementationTraits>::MultiDrawIndexed(const Mult
 template <typename ImplementationTraits>
 inline void DeviceContextBase<ImplementationTraits>::DvpVerifyRenderTargets() const
 {
-    DEV_CHECK_ERR(m_pPipelineState, "No pipeline state is bound");
+    if (!m_pPipelineState)
+    {
+        DEV_ERROR("No pipeline state is bound");
+        return;
+    }
+
+    if (m_DvpRenderTargetFormatsHash == m_pPipelineState->DvpGetRenderTargerFormatsHash())
+    {
+        return;
+    }
 
     const PipelineStateDesc& PSODesc = m_pPipelineState->GetDesc();
     DEV_CHECK_ERR(PSODesc.IsAnyGraphicsPipeline() || PSODesc.IsTilePipeline(),

@@ -601,8 +601,7 @@ void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
 void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAGS Flags)
 {
 #ifdef DILIGENT_DEVELOPMENT
-    if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
-        DvpVerifyRenderTargets();
+    DvpVerifyRenderTargets();
 #endif
 
     if (!m_State.bCommittedD3D12VBsUpToDate && m_pPipelineState->GetNumBufferSlotsUsed() > 0)

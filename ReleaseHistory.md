@@ -1,5 +1,8 @@
 ## Current progress
 
+* Removed `DRAW_FLAG_VERIFY_RENDER_TARGETS` flag (API256003)
+  * The validation uses render target formats hash, which allows detecting format mismatches
+    without overhead.
 * Added `OpenXRAttribsSize` member to `APIInfo` struct (API256002)
 * Enabled OpenXR (API256001)
   * Added `OpenXRAttribs` struct and `pXRAttribs` member to `EngineCreateInfo` struct

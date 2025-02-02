@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -53,8 +53,8 @@ namespace
 
 TEST(TileShaderTest, DrawQuad)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.TileShaders)
     {
         GTEST_SKIP() << "Tile shader is not supported by this device";
@@ -62,9 +62,9 @@ TEST(TileShaderTest, DrawQuad)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto*       pSwapChain = pEnv->GetSwapChain();
-    auto*       pContext   = pEnv->GetDeviceContext();
-    const auto& SCDesc     = pSwapChain->GetDesc();
+    ISwapChain*          pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext*      pContext   = pEnv->GetDeviceContext();
+    const SwapChainDesc& SCDesc     = pSwapChain->GetDesc();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
     if (pTestingSwapChain)
@@ -72,7 +72,7 @@ TEST(TileShaderTest, DrawQuad)
         pContext->Flush();
         pContext->InvalidateState();
 
-        auto DeviceType = pDevice->GetDeviceInfo().Type;
+        RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
         switch (DeviceType)
         {
 #if METAL_SUPPORTED
@@ -94,8 +94,8 @@ TEST(TileShaderTest, DrawQuad)
     {
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-        auto& PSODesc          = PSOCreateInfo.PSODesc;
-        auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+        PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+        GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
         PSODesc.Name = "Tile shader test - graphics pipeline";
 
@@ -141,8 +141,8 @@ TEST(TileShaderTest, DrawQuad)
     {
         TilePipelineStateCreateInfo PSOCreateInfo;
 
-        auto& PSODesc      = PSOCreateInfo.PSODesc;
-        auto& TilePipeline = PSOCreateInfo.TilePipeline;
+        PipelineStateDesc& PSODesc      = PSOCreateInfo.PSODesc;
+        TilePipelineDesc&  TilePipeline = PSOCreateInfo.TilePipeline;
 
         PSODesc.Name = "Tile shader test - tile pipeline";
 
@@ -195,7 +195,7 @@ TEST(TileShaderTest, DrawQuad)
         ASSERT_NE(TileSizeX, 0u);
         ASSERT_NE(TileSizeY, 0u);
 
-        pContext->DispatchTile(DispatchTileAttribs{1, 1, DRAW_FLAG_VERIFY_RENDER_TARGETS});
+        pContext->DispatchTile(DispatchTileAttribs{1, 1});
     }
     pSwapChain->Present();
 }

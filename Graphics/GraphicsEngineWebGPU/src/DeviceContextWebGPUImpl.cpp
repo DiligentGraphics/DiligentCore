@@ -1986,8 +1986,7 @@ void DeviceContextWebGPUImpl::ClearAttachment(Int32                     RTIndex,
 WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
 {
 #ifdef DILIGENT_DEVELOPMENT
-    if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
-        DvpVerifyRenderTargets();
+    DvpVerifyRenderTargets();
 #endif
     DEV_CHECK_ERR(m_pPipelineState != nullptr, "No PSO is bound in the context");
 

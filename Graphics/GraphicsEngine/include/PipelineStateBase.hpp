@@ -772,6 +772,13 @@ public:
         return m_ActiveShaderStages;
     }
 
+#ifdef DILIGENT_DEVELOPMENT
+    size_t DvpGetRenderTargerFormatsHash() const
+    {
+        return m_pGraphicsPipelineData ? m_pGraphicsPipelineData->dvpRenderTargetFormatsHash : 0;
+    }
+#endif
+
 protected:
     using TNameToGroupIndexMap = std::unordered_map<HashMapStringKey, Uint32>;
 
@@ -996,6 +1003,11 @@ protected:
             pStrides = MemPool.CopyConstructArray<Uint32>(Strides.data(), BufferSlotsUsed);
         }
         GraphicsPipeline.InputLayout.LayoutElements = pLayoutElements;
+
+#ifdef DILIGENT_DEVELOPMENT
+        this->m_pGraphicsPipelineData->dvpRenderTargetFormatsHash = ComputeRenderTargetFormatsHash(
+            GraphicsPipeline.NumRenderTargets, GraphicsPipeline.RTVFormats, GraphicsPipeline.DSVFormat);
+#endif
     }
 
     void InitializePipelineDesc(const ComputePipelineStateCreateInfo& CreateInfo,
@@ -1313,6 +1325,10 @@ protected:
 
         Uint32* pStrides        = nullptr;
         Uint8   BufferSlotsUsed = 0;
+
+#ifdef DILIGENT_DEVELOPMENT
+        size_t dvpRenderTargetFormatsHash = 0;
+#endif
     };
 
     struct RayTracingPipelineData

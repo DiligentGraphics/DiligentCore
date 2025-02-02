@@ -733,9 +733,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
-        DvpVerifyRenderTargets();
-
+    DvpVerifyRenderTargets();
     VERIFY((m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE) || m_DynamicRenderingInfo, "No render pass is active while executing draw command");
 #endif
 
