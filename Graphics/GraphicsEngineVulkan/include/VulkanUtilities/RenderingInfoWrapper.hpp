@@ -95,12 +95,15 @@ public:
         return m_Attachments[m_StencilAttachmentIndex];
     }
 
+    VkRenderingFragmentShadingRateAttachmentInfoKHR& GetShadingRateAttachment();
+
 private:
     VkRenderingInfoKHR m_RI;
 
     const size_t m_Hash = 0;
 
-    std::unique_ptr<VkRenderingAttachmentInfoKHR[]> m_Attachments;
+    std::unique_ptr<VkRenderingAttachmentInfoKHR[]>                  m_Attachments;
+    std::unique_ptr<VkRenderingFragmentShadingRateAttachmentInfoKHR> m_ShadingRateAttachment;
 
     uint32_t m_DepthAttachmentIndex   = ~0u;
     uint32_t m_StencilAttachmentIndex = ~0u;

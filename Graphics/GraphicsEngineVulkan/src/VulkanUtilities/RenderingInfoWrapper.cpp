@@ -69,4 +69,17 @@ RenderingInfoWrapper::RenderingInfoWrapper(size_t   Hash,
     VERIFY_EXPR(AttachmentInd == TotalAttachmentCount);
 }
 
+VkRenderingFragmentShadingRateAttachmentInfoKHR& RenderingInfoWrapper::GetShadingRateAttachment()
+{
+    if (!m_ShadingRateAttachment)
+    {
+        m_ShadingRateAttachment        = std::make_unique<VkRenderingFragmentShadingRateAttachmentInfoKHR>();
+        m_ShadingRateAttachment->sType = VK_STRUCTURE_TYPE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
+
+        m_RI.pNext = m_ShadingRateAttachment.get();
+    }
+
+    return *m_ShadingRateAttachment;
+}
+
 } // namespace VulkanUtilities

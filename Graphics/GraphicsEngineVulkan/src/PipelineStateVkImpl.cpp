@@ -138,6 +138,13 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
     const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice  = pDeviceVk->GetLogicalDevice();
     const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
 
+    VkGraphicsPipelineCreateInfo PipelineCI{};
+    PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    PipelineCI.pNext = nullptr;
+#ifdef DILIGENT_DEBUG
+    PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+#endif
+
     VkPipelineRenderingCreateInfoKHR PipelineRenderingCI{};
     std::vector<VkFormat>            ColorAttachmentFormats;
     if (pRenderPass == nullptr)
@@ -159,15 +166,12 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
         {
             // VK_KHR_dynamic_rendering
             PipelineRenderingCI = GraphicsPipelineDesc_To_VkPipelineRenderingCreateInfo(GraphicsPipeline, ColorAttachmentFormats);
+            if ((GraphicsPipeline.ShadingRateFlags & PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED) != 0)
+            {
+                PipelineCI.flags |= VK_PIPELINE_CREATE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+            }
         }
     }
-
-    VkGraphicsPipelineCreateInfo PipelineCI{};
-    PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    PipelineCI.pNext = nullptr;
-#ifdef DILIGENT_DEBUG
-    PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-#endif
 
     PipelineCI.stageCount = static_cast<Uint32>(Stages.size());
     PipelineCI.pStages    = Stages.data();

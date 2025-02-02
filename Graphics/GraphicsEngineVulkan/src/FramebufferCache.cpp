@@ -137,22 +137,17 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
     }
 }
 
-std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> FramebufferCache::CreateDyanmicRenderInfo(const FramebufferCacheKey& Key,
-                                                                                                 bool                       UseDepthAttachment,
-                                                                                                 bool                       UseStencilAttachment,
-                                                                                                 uint32_t                   width,
-                                                                                                 uint32_t                   height,
-                                                                                                 uint32_t                   layers,
-                                                                                                 uint32_t                   viewMask)
+std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> FramebufferCache::CreateDyanmicRenderInfo(const FramebufferCacheKey&            Key,
+                                                                                                 const CreateDyanmicRenderInfoAttribs& Attribs)
 {
     std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> RI = std::make_unique<VulkanUtilities::RenderingInfoWrapper>(
-        Key.GetHash(), Key.NumRenderTargets, UseDepthAttachment, UseStencilAttachment);
+        Key.GetHash(), Key.NumRenderTargets, Attribs.UseDepthAttachment, Attribs.UseStencilAttachment);
 
-    RI->SetRenderArea({{0, 0}, {width, height}})
-        .SetLayerCount(layers)
-        .SetViewMask(viewMask);
+    RI->SetRenderArea({{0, 0}, Attribs.Extent})
+        .SetLayerCount(Attribs.Layers)
+        .SetViewMask(Attribs.ViewMask);
 
-    auto InitAttachment = [](VkRenderingAttachmentInfo& Attachment, VkImageView View, VkImageLayout Layout) {
+    auto InitAttachment = [](VkRenderingAttachmentInfoKHR& Attachment, VkImageView View, VkImageLayout Layout) {
         Attachment.imageView          = View;
         Attachment.imageLayout        = Layout;
         Attachment.resolveMode        = VK_RESOLVE_MODE_NONE_KHR;
@@ -165,20 +160,29 @@ std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> FramebufferCache::CreateD
 
     for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
     {
-        VkRenderingAttachmentInfo& RTAttachment = RI->GetColorAttachment(rt);
+        VkRenderingAttachmentInfoKHR& RTAttachment = RI->GetColorAttachment(rt);
         InitAttachment(RTAttachment, Key.RTVs[rt], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     }
 
-    if (UseDepthAttachment)
+    if (Attribs.UseDepthAttachment)
     {
-        VkRenderingAttachmentInfo& DepthAttachment = RI->GetDepthAttachment();
+        VkRenderingAttachmentInfoKHR& DepthAttachment = RI->GetDepthAttachment();
         InitAttachment(DepthAttachment, Key.DSV, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     }
 
-    if (UseStencilAttachment)
+    if (Attribs.UseStencilAttachment)
     {
-        VkRenderingAttachmentInfo& StencilAttachment = RI->GetStencilAttachment();
+        VkRenderingAttachmentInfoKHR& StencilAttachment = RI->GetStencilAttachment();
         InitAttachment(StencilAttachment, Key.DSV, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    }
+
+    if (Key.ShadingRate)
+    {
+        VkRenderingFragmentShadingRateAttachmentInfoKHR& ShadingRateAttachment = RI->GetShadingRateAttachment();
+
+        ShadingRateAttachment.imageView                      = Key.ShadingRate;
+        ShadingRateAttachment.imageLayout                    = VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+        ShadingRateAttachment.shadingRateAttachmentTexelSize = Attribs.ShadingRateTexelSize;
     }
 
     return RI;

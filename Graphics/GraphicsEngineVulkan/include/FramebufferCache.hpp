@@ -79,15 +79,22 @@ public:
     void          OnDestroyImageView(VkImageView ImgView);
     void          OnDestroyRenderPass(VkRenderPass Pass);
 
-    static std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> CreateDyanmicRenderInfo(
-        const FramebufferCacheKey& Key,
-        bool                       UseDepthAttachment,
-        bool                       UseStencilAttachment,
-        uint32_t                   width,
-        uint32_t                   height,
-        uint32_t                   layers,
-        uint32_t                   viewMask);
+    struct CreateDyanmicRenderInfoAttribs
+    {
+        VkExtent2D Extent   = {};
+        uint32_t   Layers   = 0;
+        uint32_t   ViewMask = 0;
 
+        VkExtent2D ShadingRateTexelSize = {};
+
+        bool UseDepthAttachment   = false;
+        bool UseStencilAttachment = false;
+    };
+    static std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> CreateDyanmicRenderInfo(
+        const FramebufferCacheKey&            Key,
+        const CreateDyanmicRenderInfoAttribs& Attribs);
+
+private:
     RenderDeviceVkImpl& m_DeviceVk;
 
     struct FramebufferCacheKeyHash

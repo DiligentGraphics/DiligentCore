@@ -1911,21 +1911,30 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
     }
     else
     {
-        bool UseDepthAttachment   = false;
-        bool UseStencilAttachment = false;
+        FramebufferCache::CreateDyanmicRenderInfoAttribs CreateRIAttribs;
+        CreateRIAttribs.Extent   = {m_FramebufferWidth, m_FramebufferHeight};
+        CreateRIAttribs.Layers   = m_FramebufferSlices;
+        CreateRIAttribs.ViewMask = (1u << m_NumViewports) - 1u;
         if (m_pBoundDepthStencil)
         {
             const TEXTURE_FORMAT        DepthStencilFmt = m_pBoundDepthStencil->GetTexture()->GetDesc().Format;
             const TextureFormatAttribs& FmtAttribs      = GetTextureFormatAttribs(DepthStencilFmt);
 
-            UseDepthAttachment   = true;
-            UseStencilAttachment = FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL;
+            CreateRIAttribs.UseDepthAttachment   = true;
+            CreateRIAttribs.UseStencilAttachment = FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL;
         }
-        uint32_t ViewMask = (1u << m_NumViewports) - 1u;
+        if (m_pBoundShadingRateMap)
+        {
+            const TextureDesc& ShadingRateDesc = m_pBoundShadingRateMap->GetTexture()->GetDesc();
+            // Framebuffer size may not be an integer multiple of the shading rate texel size
+            // Shading rate texel size be a power of two
+            //   https://registry.khronos.org/vulkan/specs/latest/man/html/VkRenderingFragmentShadingRateAttachmentInfoKHR.html#VUID-VkRenderingFragmentShadingRateAttachmentInfoKHR-imageView-06149
+            //   https://registry.khronos.org/vulkan/specs/latest/man/html/VkRenderingFragmentShadingRateAttachmentInfoKHR.html#VUID-VkRenderingFragmentShadingRateAttachmentInfoKHR-imageView-06152
+            CreateRIAttribs.ShadingRateTexelSize.width  = AlignUpToPowerOfTwo(m_FramebufferWidth / ShadingRateDesc.Width);
+            CreateRIAttribs.ShadingRateTexelSize.height = AlignUpToPowerOfTwo(m_FramebufferHeight / ShadingRateDesc.Height);
+        }
 
-        m_DynamicRenderingInfo = FramebufferCache::CreateDyanmicRenderInfo(FBKey, UseDepthAttachment, UseStencilAttachment,
-                                                                           m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices,
-                                                                           ViewMask);
+        m_DynamicRenderingInfo = FramebufferCache::CreateDyanmicRenderInfo(FBKey, CreateRIAttribs);
     }
 }
 
