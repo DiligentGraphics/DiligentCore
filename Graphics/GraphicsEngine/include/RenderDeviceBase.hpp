@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -228,13 +228,13 @@ public:
         DEV_CHECK_ERR(*ppMapping == nullptr, "Overwriting reference to existing object may cause memory leaks");
         DEV_CHECK_ERR(ResMappingCI.pEntries == nullptr || ResMappingCI.NumEntries != 0, "Starting with API253010, the number of entries is defined through the NumEntries member.");
 
-        auto* pResourceMapping{NEW_RC_OBJ(m_ResMappingAllocator, "ResourceMappingImpl instance", ResourceMappingImpl)(GetRawAllocator())};
+        ResourceMappingImpl* pResourceMapping{NEW_RC_OBJ(m_ResMappingAllocator, "ResourceMappingImpl instance", ResourceMappingImpl)(GetRawAllocator())};
         pResourceMapping->QueryInterface(IID_ResourceMapping, reinterpret_cast<IObject**>(ppMapping));
         if (ResMappingCI.pEntries != nullptr)
         {
             for (Uint32 i = 0; i < ResMappingCI.NumEntries; ++i)
             {
-                const auto& Entry = ResMappingCI.pEntries[i];
+                const ResourceMappingEntry& Entry = ResMappingCI.pEntries[i];
                 if (Entry.Name != nullptr && Entry.pObject != nullptr)
                     (*ppMapping)->AddResourceArray(Entry.Name, Entry.ArrayIndex, &Entry.pObject, 1, true);
                 else
@@ -260,7 +260,7 @@ public:
     virtual const TextureFormatInfo& DILIGENT_CALL_TYPE GetTextureFormatInfo(TEXTURE_FORMAT TexFormat) const override final
     {
         VERIFY(TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS, "Texture format out of range");
-        const auto& TexFmtInfo = m_TextureFormatsInfo[TexFormat];
+        const TextureFormatInfoExt& TexFmtInfo = m_TextureFormatsInfo[TexFormat];
         VERIFY(TexFmtInfo.Format == TexFormat, "Sanity check failed");
         return TexFmtInfo;
     }
@@ -269,7 +269,7 @@ public:
     virtual const TextureFormatInfoExt& DILIGENT_CALL_TYPE GetTextureFormatInfoExt(TEXTURE_FORMAT TexFormat) override final
     {
         VERIFY(TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS, "Texture format out of range");
-        const auto& TexFmtInfo = m_TextureFormatsInfo[TexFormat];
+        const TextureFormatInfoExt& TexFmtInfo = m_TextureFormatsInfo[TexFormat];
         VERIFY(TexFmtInfo.Format == TexFormat, "Sanity check failed");
         if (!m_TexFmtInfoInitFlags[TexFormat])
         {
@@ -415,7 +415,7 @@ protected:
                 (*ppObject)->Release();
                 *ppObject = nullptr;
             }
-            const auto ObjectDescString = GetObjectDescString(Desc);
+            const std::string ObjectDescString = GetObjectDescString(Desc);
             if (!ObjectDescString.empty())
             {
                 LOG_ERROR("Failed to create ", ObjectTypeName, " object '", (Desc.Name ? Desc.Name : ""), "'\n", ObjectDescString);
@@ -433,7 +433,7 @@ protected:
         CreateDeviceObject("Pipeline State", PSOCreateInfo.PSODesc, ppPipelineState,
                            [&]() //
                            {
-                               auto* pPipelineStateImpl = NEW_RC_OBJ(m_PSOAllocator, "Pipeline State instance", PipelineStateImplType)(static_cast<RenderDeviceImplType*>(this), PSOCreateInfo, ExtraArgs...);
+                               PipelineStateImplType* pPipelineStateImpl = NEW_RC_OBJ(m_PSOAllocator, "Pipeline State instance", PipelineStateImplType)(static_cast<RenderDeviceImplType*>(this), PSOCreateInfo, ExtraArgs...);
                                pPipelineStateImpl->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
                            });
     }
@@ -444,7 +444,7 @@ protected:
         CreateDeviceObject("Buffer", BuffDesc, ppBuffer,
                            [&]() //
                            {
-                               auto* pBufferImpl = NEW_RC_OBJ(m_BufObjAllocator, "Buffer instance", BufferImplType)(m_BuffViewObjAllocator, static_cast<RenderDeviceImplType*>(this), BuffDesc, ExtraArgs...);
+                               BufferImplType* pBufferImpl = NEW_RC_OBJ(m_BufObjAllocator, "Buffer instance", BufferImplType)(m_BuffViewObjAllocator, static_cast<RenderDeviceImplType*>(this), BuffDesc, ExtraArgs...);
                                pBufferImpl->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
                                pBufferImpl->CreateDefaultViews();
                            });
@@ -456,7 +456,7 @@ protected:
         CreateDeviceObject("Texture", TexDesc, ppTexture,
                            [&]() //
                            {
-                               auto* pTextureImpl = NEW_RC_OBJ(m_TexObjAllocator, "Texture instance", TextureImplType)(m_TexViewObjAllocator, static_cast<RenderDeviceImplType*>(this), TexDesc, ExtraArgs...);
+                               TextureImplType* pTextureImpl = NEW_RC_OBJ(m_TexObjAllocator, "Texture instance", TextureImplType)(m_TexViewObjAllocator, static_cast<RenderDeviceImplType*>(this), TexDesc, ExtraArgs...);
                                pTextureImpl->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
                                pTextureImpl->CreateDefaultViews();
                            });
@@ -468,7 +468,7 @@ protected:
         CreateDeviceObject("Shader", ShaderCI.Desc, ppShader,
                            [&]() //
                            {
-                               auto* pShaderImpl = NEW_RC_OBJ(m_ShaderObjAllocator, "Shader instance", ShaderImplType)(static_cast<RenderDeviceImplType*>(this), ShaderCI, ExtraArgs...);
+                               ShaderImplType* pShaderImpl = NEW_RC_OBJ(m_ShaderObjAllocator, "Shader instance", ShaderImplType)(static_cast<RenderDeviceImplType*>(this), ShaderCI, ExtraArgs...);
                                pShaderImpl->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
                            });
     }
@@ -479,7 +479,7 @@ protected:
         CreateDeviceObject("Sampler", SamplerDesc, ppSampler,
                            [&]() //
                            {
-                               auto pSampler = m_SamplersRegistry.Get(
+                               RefCntAutoPtr<ISampler> pSampler = m_SamplersRegistry.Get(
                                    SamplerDesc,
                                    [&]() {
                                        return RefCntAutoPtr<ISampler>{NEW_RC_OBJ(m_SamplerObjAllocator, "Sampler instance", SamplerImplType)(static_cast<RenderDeviceImplType*>(this), SamplerDesc, ExtraArgs...)};
@@ -495,7 +495,7 @@ protected:
         CreateDeviceObject("Fence", Desc, ppFence,
                            [&]() //
                            {
-                               auto* pFenceImpl = NEW_RC_OBJ(m_FenceAllocator, "Fence instance", FenceImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
+                               FenceImplType* pFenceImpl = NEW_RC_OBJ(m_FenceAllocator, "Fence instance", FenceImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
                                pFenceImpl->QueryInterface(IID_Fence, reinterpret_cast<IObject**>(ppFence));
                            });
     }
@@ -505,7 +505,7 @@ protected:
         CreateDeviceObject("Query", Desc, ppQuery,
                            [&]() //
                            {
-                               auto* pQueryImpl = NEW_RC_OBJ(m_QueryAllocator, "Query instance", QueryImplType)(static_cast<RenderDeviceImplType*>(this), Desc);
+                               QueryImplType* pQueryImpl = NEW_RC_OBJ(m_QueryAllocator, "Query instance", QueryImplType)(static_cast<RenderDeviceImplType*>(this), Desc);
                                pQueryImpl->QueryInterface(IID_Query, reinterpret_cast<IObject**>(ppQuery));
                            });
     }
@@ -516,7 +516,7 @@ protected:
         CreateDeviceObject("RenderPass", Desc, ppRenderPass,
                            [&]() //
                            {
-                               auto* pRenderPassImpl = NEW_RC_OBJ(m_RenderPassAllocator, "Render instance", RenderPassImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
+                               RenderPassImplType* pRenderPassImpl = NEW_RC_OBJ(m_RenderPassAllocator, "Render instance", RenderPassImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
                                pRenderPassImpl->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
                            });
     }
@@ -527,7 +527,7 @@ protected:
         CreateDeviceObject("Framebuffer", Desc, ppFramebuffer,
                            [&]() //
                            {
-                               auto* pFramebufferImpl = NEW_RC_OBJ(m_FramebufferAllocator, "Framebuffer instance", FramebufferImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
+                               FramebufferImplType* pFramebufferImpl = NEW_RC_OBJ(m_FramebufferAllocator, "Framebuffer instance", FramebufferImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
                                pFramebufferImpl->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
                            });
     }
@@ -538,7 +538,7 @@ protected:
         CreateDeviceObject("BottomLevelAS", Desc, ppBLAS,
                            [&]() //
                            {
-                               auto* pBottomLevelASImpl = NEW_RC_OBJ(m_BLASAllocator, "BottomLevelAS instance", BottomLevelASImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
+                               BottomLevelASImplType* pBottomLevelASImpl = NEW_RC_OBJ(m_BLASAllocator, "BottomLevelAS instance", BottomLevelASImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
                                pBottomLevelASImpl->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
                            });
     }
@@ -549,7 +549,7 @@ protected:
         CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
                            [&]() //
                            {
-                               auto* pTopLevelASImpl = NEW_RC_OBJ(m_TLASAllocator, "TopLevelAS instance", TopLevelASImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
+                               TopLevelASImplType* pTopLevelASImpl = NEW_RC_OBJ(m_TLASAllocator, "TopLevelAS instance", TopLevelASImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
                                pTopLevelASImpl->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
                            });
     }
@@ -559,7 +559,7 @@ protected:
         CreateDeviceObject("ShaderBindingTable", Desc, ppSBT,
                            [&]() //
                            {
-                               auto* pSBTImpl = NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTable instance", ShaderBindingTableImplType)(static_cast<RenderDeviceImplType*>(this), Desc);
+                               ShaderBindingTableImplType* pSBTImpl = NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTable instance", ShaderBindingTableImplType)(static_cast<RenderDeviceImplType*>(this), Desc);
                                pSBTImpl->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
                            });
     }
@@ -570,7 +570,7 @@ protected:
         CreateDeviceObject("PipelineResourceSignature", Desc, ppSignature,
                            [&]() //
                            {
-                               auto* pPRSImpl = NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignature instance", PipelineResourceSignatureImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
+                               PipelineResourceSignatureImplType* pPRSImpl = NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignature instance", PipelineResourceSignatureImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
                                pPRSImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
                            });
     }
@@ -581,7 +581,7 @@ protected:
         CreateDeviceObject("DeviceMemory", MemCI.Desc, ppMemory,
                            [&]() //
                            {
-                               auto* pDevMemImpl = NEW_RC_OBJ(m_MemObjAllocator, "DeviceMemory instance", DeviceMemoryImplType)(static_cast<RenderDeviceImplType*>(this), MemCI, ExtraArgs...);
+                               DeviceMemoryImplType* pDevMemImpl = NEW_RC_OBJ(m_MemObjAllocator, "DeviceMemory instance", DeviceMemoryImplType)(static_cast<RenderDeviceImplType*>(this), MemCI, ExtraArgs...);
                                pDevMemImpl->QueryInterface(IID_DeviceMemory, reinterpret_cast<IObject**>(ppMemory));
                            });
     }
@@ -591,7 +591,7 @@ protected:
         CreateDeviceObject("PSOCache", PSOCacheCI.Desc, ppCache,
                            [&]() //
                            {
-                               auto* pPSOCacheImpl = NEW_RC_OBJ(m_PSOCacheAllocator, "PSOCache instance", PipelineStateCacheImplType)(static_cast<RenderDeviceImplType*>(this), PSOCacheCI);
+                               PipelineStateCacheImplType* pPSOCacheImpl = NEW_RC_OBJ(m_PSOCacheAllocator, "PSOCache instance", PipelineStateCacheImplType)(static_cast<RenderDeviceImplType*>(this), PSOCacheCI);
                                pPSOCacheImpl->QueryInterface(IID_PipelineStateCache, reinterpret_cast<IObject**>(ppCache));
                            });
     }
