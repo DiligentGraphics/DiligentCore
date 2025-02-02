@@ -1537,7 +1537,14 @@ TEST(GraphicsAccessories_GraphicsAccessories, ComputeRenderTargetFormatsHash)
 
     auto Test = [&Hashes](Uint32 NumRenderTargets, const TEXTURE_FORMAT RTVFormats[], TEXTURE_FORMAT DepthFormat) {
         size_t Hash = ComputeRenderTargetFormatsHash(NumRenderTargets, RTVFormats, DepthFormat);
-        EXPECT_NE(Hash, size_t{0});
+        if (NumRenderTargets == 0 && DepthFormat == TEX_FORMAT_UNKNOWN)
+        {
+            EXPECT_EQ(Hash, size_t{0});
+        }
+        else
+        {
+            EXPECT_NE(Hash, size_t{0});
+        }
         EXPECT_TRUE(Hashes.insert(Hash).second);
     };
 

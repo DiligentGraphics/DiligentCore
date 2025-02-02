@@ -3004,6 +3004,9 @@ std::vector<Uint32> ResolveInputLayoutAutoOffsetsAndStrides(LayoutElement* pLayo
 
 size_t ComputeRenderTargetFormatsHash(Uint32 NumRenderTargets, const TEXTURE_FORMAT RTVFormats[], TEXTURE_FORMAT DSVFormat)
 {
+    if (NumRenderTargets == 0 && DSVFormat == TEX_FORMAT_UNKNOWN)
+        return 0;
+
     size_t Hash = ComputeHash(NumRenderTargets);
     for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
         HashCombine(Hash, RTVFormats[rt]);
