@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,8 +32,10 @@
 
 #include <unordered_map>
 #include <mutex>
+#include <memory>
 
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "VulkanUtilities/RenderingInfoWrapper.hpp"
 
 namespace Diligent
 {
@@ -77,7 +79,15 @@ public:
     void          OnDestroyImageView(VkImageView ImgView);
     void          OnDestroyRenderPass(VkRenderPass Pass);
 
-private:
+    static std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> CreateDyanmicRenderInfo(
+        const FramebufferCacheKey& Key,
+        bool                       UseDepthAttachment,
+        bool                       UseStencilAttachment,
+        uint32_t                   width,
+        uint32_t                   height,
+        uint32_t                   layers,
+        uint32_t                   viewMask);
+
     RenderDeviceVkImpl& m_DeviceVk;
 
     struct FramebufferCacheKeyHash

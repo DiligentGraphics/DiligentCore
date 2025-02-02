@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,7 +98,7 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
 
         std::array<VkImageView, 2 + MAX_RENDER_TARGETS> Attachments;
 
-        auto& attachment = FramebufferCI.attachmentCount;
+        uint32_t& attachment = FramebufferCI.attachmentCount;
         if (Key.DSV != VK_NULL_HANDLE)
             Attachments[attachment++] = Key.DSV;
 
@@ -115,8 +115,10 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
         FramebufferCI.width        = width;
         FramebufferCI.height       = height;
         FramebufferCI.layers       = layers;
-        auto          Framebuffer  = m_DeviceVk.GetLogicalDevice().CreateFramebuffer(FramebufferCI);
-        VkFramebuffer fb           = Framebuffer;
+
+        VulkanUtilities::FramebufferWrapper Framebuffer = m_DeviceVk.GetLogicalDevice().CreateFramebuffer(FramebufferCI);
+
+        VkFramebuffer fb = Framebuffer;
 
         auto new_it = m_Cache.insert(std::make_pair(Key, std::move(Framebuffer)));
         VERIFY(new_it.second, "New framebuffer must be inserted into the map");
@@ -133,6 +135,53 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
 
         return fb;
     }
+}
+
+std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> FramebufferCache::CreateDyanmicRenderInfo(const FramebufferCacheKey& Key,
+                                                                                                 bool                       UseDepthAttachment,
+                                                                                                 bool                       UseStencilAttachment,
+                                                                                                 uint32_t                   width,
+                                                                                                 uint32_t                   height,
+                                                                                                 uint32_t                   layers,
+                                                                                                 uint32_t                   viewMask)
+{
+    std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> RI = std::make_unique<VulkanUtilities::RenderingInfoWrapper>(
+        Key.GetHash(), Key.NumRenderTargets, UseDepthAttachment, UseStencilAttachment);
+
+    RI->SetRenderArea({{0, 0}, {width, height}})
+        .SetLayerCount(layers)
+        .SetViewMask(viewMask);
+
+    auto InitAttachment = [](VkRenderingAttachmentInfo& Attachment, VkImageView View, VkImageLayout Layout) {
+        Attachment.imageView          = View;
+        Attachment.imageLayout        = Layout;
+        Attachment.resolveMode        = VK_RESOLVE_MODE_NONE_KHR;
+        Attachment.resolveImageView   = VK_NULL_HANDLE;
+        Attachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        Attachment.loadOp             = VK_ATTACHMENT_LOAD_OP_LOAD;
+        Attachment.storeOp            = VK_ATTACHMENT_STORE_OP_STORE;
+        Attachment.clearValue         = VkClearValue{};
+    };
+
+    for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
+    {
+        VkRenderingAttachmentInfo& RTAttachment = RI->GetColorAttachment(rt);
+        InitAttachment(RTAttachment, Key.RTVs[rt], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    }
+
+    if (UseDepthAttachment)
+    {
+        VkRenderingAttachmentInfo& DepthAttachment = RI->GetDepthAttachment();
+        InitAttachment(DepthAttachment, Key.DSV, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    }
+
+    if (UseStencilAttachment)
+    {
+        VkRenderingAttachmentInfo& StencilAttachment = RI->GetStencilAttachment();
+        InitAttachment(StencilAttachment, Key.DSV, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    }
+
+    return RI;
 }
 
 FramebufferCache::~FramebufferCache()

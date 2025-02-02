@@ -725,7 +725,7 @@ void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
 
 void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 {
-    if (m_vkFramebuffer == VK_NULL_HANDLE && m_State.NullRenderTargets)
+    if (m_vkFramebuffer == VK_NULL_HANDLE && !m_DynamicRenderingInfo && m_State.NullRenderTargets)
     {
         DEV_CHECK_ERR(m_FramebufferWidth > 0 && m_FramebufferHeight > 0,
                       "Framebuffer width/height is zero. Call SetViewports to set the framebuffer sizes when no render targets are set.");
@@ -736,8 +736,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();
 
-    VERIFY(m_vkRenderPass != VK_NULL_HANDLE, "No render pass is active while executing draw command");
-    VERIFY(m_vkFramebuffer != VK_NULL_HANDLE, "No framebuffer is bound while executing draw command");
+    VERIFY((m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE) || m_DynamicRenderingInfo, "No render pass is active while executing draw command");
 #endif
 
     EnsureVkCmdBuffer();
@@ -776,7 +775,9 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     if (m_pPipelineState->GetGraphicsPipelineDesc().pRenderPass == nullptr)
     {
 #ifdef DILIGENT_DEVELOPMENT
-        if (m_pPipelineState->GetRenderPass()->GetVkRenderPass() != m_vkRenderPass)
+        IRenderPassVk* pRenderPass  = m_pPipelineState->GetRenderPass();
+        VkRenderPass   vkRenderPass = pRenderPass != nullptr ? pRenderPass->GetVkRenderPass() : VK_NULL_HANDLE;
+        if (vkRenderPass != m_vkRenderPass)
         {
             // Note that different Vulkan render passes may still be compatible,
             // so we should only verify implicit render passes
@@ -1159,7 +1160,7 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
            "checks if the DSV is bound as a framebuffer attachment and triggers an assert otherwise (in development mode).");
     if (ClearAsAttachment)
     {
-        VERIFY_EXPR(m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE);
+        VERIFY_EXPR((m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE) || m_DynamicRenderingInfo);
         if (m_pActiveRenderPass == nullptr)
         {
             // Render pass may not be currently committed
@@ -1276,7 +1277,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
 
     if (attachmentIndex != InvalidAttachmentIndex)
     {
-        VERIFY_EXPR(m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE);
+        VERIFY_EXPR((m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE) || m_DynamicRenderingInfo);
         if (m_pActiveRenderPass == nullptr)
         {
             // Render pass may not be currently committed
@@ -1626,6 +1627,7 @@ void DeviceContextVkImpl::InvalidateState()
     m_BindInfo      = {};
     m_vkRenderPass  = VK_NULL_HANDLE;
     m_vkFramebuffer = VK_NULL_HANDLE;
+    m_DynamicRenderingInfo.reset();
 
     VERIFY(!m_CommandBuffer.IsInRenderScope(), "Invalidating context with unfinished render pass");
     m_CommandBuffer.Reset();
@@ -1704,6 +1706,7 @@ void DeviceContextVkImpl::SetViewports(Uint32 NumViewports, const Viewport* pVie
         {
             // We need to bind another framebuffer since the size has changed
             m_vkFramebuffer = VK_NULL_HANDLE;
+            m_DynamicRenderingInfo.reset();
         }
         m_FramebufferWidth   = VPWidth;
         m_FramebufferHeight  = VPHeight;
@@ -1806,20 +1809,30 @@ void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
 {
     VERIFY(m_pActiveRenderPass == nullptr, "This method must not be called inside an active render pass.");
 
-    if (m_CommandBuffer.GetState().Framebuffer != m_vkFramebuffer)
+    const size_t DynamicRenderingHash = m_DynamicRenderingInfo ? m_DynamicRenderingInfo->GetHash() : 0;
+    if ((m_CommandBuffer.GetState().Framebuffer != m_vkFramebuffer) ||
+        (m_CommandBuffer.GetState().DynamicRenderingHash != DynamicRenderingHash))
     {
         m_CommandBuffer.EndRenderScope();
 
-        if (m_vkFramebuffer != VK_NULL_HANDLE)
+        if ((m_vkFramebuffer != VK_NULL_HANDLE) || (DynamicRenderingHash != 0))
         {
-            VERIFY_EXPR(m_vkRenderPass != VK_NULL_HANDLE);
 #ifdef DILIGENT_DEVELOPMENT
             if (VerifyStates)
             {
                 TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
             }
 #endif
+        }
+
+        if (m_vkFramebuffer != VK_NULL_HANDLE)
+        {
+            VERIFY_EXPR(m_vkRenderPass != VK_NULL_HANDLE);
             m_CommandBuffer.BeginRenderPass(m_vkRenderPass, m_vkFramebuffer, m_FramebufferWidth, m_FramebufferHeight);
+        }
+        else if (DynamicRenderingHash != 0)
+        {
+            m_CommandBuffer.BeginRendering(*m_DynamicRenderingInfo, DynamicRenderingHash);
         }
     }
 }
@@ -1880,7 +1893,6 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
 
     FramebufferCache* FBCache = m_pDevice->GetFramebufferCache();
     RenderPassCache*  RPCache = m_pDevice->GetImplicitRenderPassCache();
-
     if (FBCache != nullptr && RPCache != nullptr)
     {
         if (RenderPassVkImpl* pRenderPass = RPCache->GetRenderPass(RenderPassKey))
@@ -1899,7 +1911,21 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
     }
     else
     {
-        UNSUPPORTED("Dynamic rendering is not supported");
+        bool UseDepthAttachment   = false;
+        bool UseStencilAttachment = false;
+        if (m_pBoundDepthStencil)
+        {
+            const TEXTURE_FORMAT        DepthStencilFmt = m_pBoundDepthStencil->GetTexture()->GetDesc().Format;
+            const TextureFormatAttribs& FmtAttribs      = GetTextureFormatAttribs(DepthStencilFmt);
+
+            UseDepthAttachment   = true;
+            UseStencilAttachment = FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL;
+        }
+        uint32_t ViewMask = (1u << m_NumViewports) - 1u;
+
+        m_DynamicRenderingInfo = FramebufferCache::CreateDyanmicRenderInfo(FBKey, UseDepthAttachment, UseStencilAttachment,
+                                                                           m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices,
+                                                                           ViewMask);
     }
 }
 
@@ -1927,6 +1953,7 @@ void DeviceContextVkImpl::ResetRenderTargets()
     TDeviceContextBase::ResetRenderTargets();
     m_vkRenderPass  = VK_NULL_HANDLE;
     m_vkFramebuffer = VK_NULL_HANDLE;
+    m_DynamicRenderingInfo.reset();
     if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE)
         m_CommandBuffer.EndRenderScope();
     m_State.ShadingRateIsSet = false;
@@ -1940,6 +1967,7 @@ void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
     VERIFY_EXPR(m_pBoundFramebuffer != nullptr);
     VERIFY_EXPR(m_vkRenderPass == VK_NULL_HANDLE);
     VERIFY_EXPR(m_vkFramebuffer == VK_NULL_HANDLE);
+    VERIFY_EXPR(!m_DynamicRenderingInfo);
 
     m_vkRenderPass  = m_pActiveRenderPass->GetVkRenderPass();
     m_vkFramebuffer = m_pBoundFramebuffer->GetVkFramebuffer();

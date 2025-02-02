@@ -295,7 +295,7 @@ public:
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "Current pass has not been ended");
-        VERIFY(!m_State.RenderingBegan, "Current dynamic render pass has not been ended");
+        VERIFY(m_State.DynamicRenderingHash == 0, "Current dynamic render pass has not been ended");
 
         if (m_State.RenderPass != RenderPass || m_State.Framebuffer != Framebuffer)
         {
@@ -354,28 +354,34 @@ public:
         vkCmdNextSubpass(m_VkCmdBuffer, VK_SUBPASS_CONTENTS_INLINE);
     }
 
-    __forceinline void BeginRendering(const VkRenderingInfoKHR& RenderingInfo)
+    __forceinline void BeginRendering(const VkRenderingInfoKHR& RenderingInfo, size_t Hash)
     {
         VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "Another render pass has already been started");
-        VERIFY(!m_State.RenderingBegan, "Rendering has already begun");
+        VERIFY(m_State.DynamicRenderingHash == 0, "Rendering has already begun");
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        vkCmdBeginRenderingKHR(m_VkCmdBuffer, &RenderingInfo);
-        m_State.RenderingBegan = true;
+
+        if (m_State.DynamicRenderingHash != Hash)
+        {
+            FlushBarriers();
+
+            vkCmdBeginRenderingKHR(m_VkCmdBuffer, &RenderingInfo);
+            m_State.DynamicRenderingHash = Hash;
+        }
     }
 
     __forceinline void EndRendering()
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
-        VERIFY(m_State.RenderingBegan, "Rendering has not begun");
+        VERIFY(m_State.DynamicRenderingHash != 0, "Rendering has not begun");
         vkCmdEndRenderingKHR(m_VkCmdBuffer);
-        m_State.RenderingBegan = false;
+        m_State.DynamicRenderingHash = 0;
     }
 
     __forceinline void EndRenderScope()
     {
         if (m_State.RenderPass != VK_NULL_HANDLE)
             EndRenderPass();
-        else if (m_State.RenderingBegan)
+        else if (m_State.DynamicRenderingHash != 0)
             EndRendering();
     }
 
@@ -803,22 +809,22 @@ public:
 
     struct StateCache
     {
-        VkRenderPass  RenderPass         = VK_NULL_HANDLE;
-        VkFramebuffer Framebuffer        = VK_NULL_HANDLE;
-        VkPipeline    GraphicsPipeline   = VK_NULL_HANDLE;
-        VkPipeline    ComputePipeline    = VK_NULL_HANDLE;
-        VkPipeline    RayTracingPipeline = VK_NULL_HANDLE;
-        VkBuffer      IndexBuffer        = VK_NULL_HANDLE;
-        VkDeviceSize  IndexBufferOffset  = 0;
-        VkIndexType   IndexType          = VK_INDEX_TYPE_MAX_ENUM;
-        uint32_t      FramebufferWidth   = 0;
-        uint32_t      FramebufferHeight  = 0;
-        uint32_t      InsidePassQueries  = 0;
-        uint32_t      OutsidePassQueries = 0;
-        bool          RenderingBegan     = false;
+        VkRenderPass  RenderPass           = VK_NULL_HANDLE;
+        VkFramebuffer Framebuffer          = VK_NULL_HANDLE;
+        VkPipeline    GraphicsPipeline     = VK_NULL_HANDLE;
+        VkPipeline    ComputePipeline      = VK_NULL_HANDLE;
+        VkPipeline    RayTracingPipeline   = VK_NULL_HANDLE;
+        VkBuffer      IndexBuffer          = VK_NULL_HANDLE;
+        VkDeviceSize  IndexBufferOffset    = 0;
+        VkIndexType   IndexType            = VK_INDEX_TYPE_MAX_ENUM;
+        uint32_t      FramebufferWidth     = 0;
+        uint32_t      FramebufferHeight    = 0;
+        uint32_t      InsidePassQueries    = 0;
+        uint32_t      OutsidePassQueries   = 0;
+        size_t        DynamicRenderingHash = 0;
     };
 
-    __forceinline bool IsInRenderScope() const { return m_State.RenderPass != VK_NULL_HANDLE || m_State.RenderingBegan; }
+    __forceinline bool IsInRenderScope() const { return m_State.RenderPass != VK_NULL_HANDLE || m_State.DynamicRenderingHash != 0; }
 
     const StateCache& GetState() const { return m_State; }
 

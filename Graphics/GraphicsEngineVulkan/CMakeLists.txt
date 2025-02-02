@@ -48,6 +48,7 @@ set(INCLUDE
 )
 
 set(VULKAN_UTILS_INCLUDE
+    include/VulkanUtilities/RenderingInfoWrapper.hpp
     include/VulkanUtilities/VulkanCommandBuffer.hpp
     include/VulkanUtilities/VulkanCommandBufferPool.hpp
     include/VulkanUtilities/VulkanDebug.hpp
@@ -128,6 +129,7 @@ set(SRC
 )
 
 set(VULKAN_UTILS_SRC
+    src/VulkanUtilities/RenderingInfoWrapper.cpp
     src/VulkanUtilities/VulkanCommandBuffer.cpp
     src/VulkanUtilities/VulkanCommandBufferPool.cpp
     src/VulkanUtilities/VulkanDebug.cpp

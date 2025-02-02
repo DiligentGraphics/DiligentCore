@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,6 +52,7 @@
 #include "VulkanUtilities/VulkanCommandBufferPool.hpp"
 #include "VulkanUtilities/VulkanCommandBuffer.hpp"
 #include "VulkanUtilities/VulkanSyncObjectManager.hpp"
+#include "VulkanUtilities/RenderingInfoWrapper.hpp"
 #include "VulkanUploadHeap.hpp"
 #include "VulkanDynamicHeap.hpp"
 #include "ResourceReleaseQueue.hpp"
@@ -449,7 +450,7 @@ private:
         m_State.NumCommands = m_State.NumCommands != 0 ? m_State.NumCommands : 1;
         if (m_CommandBuffer.GetVkCmdBuffer() == VK_NULL_HANDLE)
         {
-            auto vkCmdBuff = m_CmdPool->GetCommandBuffer();
+            VkCommandBuffer vkCmdBuff = m_CmdPool->GetCommandBuffer();
             m_CommandBuffer.SetVkCmdBuffer(vkCmdBuff, m_CmdPool->GetSupportedStagesMask(), m_CmdPool->GetSupportedAccessMask());
         }
     }
@@ -489,6 +490,7 @@ private:
 
     void ChooseRenderPassAndFramebuffer();
 
+private:
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
     struct ContextState
@@ -558,7 +560,7 @@ private:
     std::vector<Uint32> m_DynamicBufferOffsets;
 
     /// Temporary array used by CommitDescriptorSets
-    std::array<VkDescriptorSet, MAX_RESOURCE_SIGNATURES* MAX_DESCR_SET_PER_SIGNATURE> m_DescriptorSets = {};
+    std::array<VkDescriptorSet, (MAX_RESOURCE_SIGNATURES * MAX_DESCR_SET_PER_SIGNATURE)> m_DescriptorSets = {};
 
     /// Render pass that matches currently bound render targets.
     /// This render pass may or may not be currently set in the command buffer
@@ -567,6 +569,9 @@ private:
     /// Framebuffer that matches currently bound render targets.
     /// This framebuffer may or may not be currently set in the command buffer
     VkFramebuffer m_vkFramebuffer = VK_NULL_HANDLE;
+
+    /// Dynamic rendering info.
+    std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> m_DynamicRenderingInfo;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
