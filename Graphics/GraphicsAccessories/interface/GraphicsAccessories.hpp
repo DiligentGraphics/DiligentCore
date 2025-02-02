@@ -948,4 +948,6 @@ SHADER_STATUS GetPipelineStateCreateInfoShadersStatus(const CreateInfoType& CI, 
     return OverallStatus;
 }
 
+size_t ComputeRenderTargetFormatsHash(Uint32 NumRenderTargets, const TEXTURE_FORMAT RTVFormats[], TEXTURE_FORMAT DSVFormat);
+
 } // namespace Diligent

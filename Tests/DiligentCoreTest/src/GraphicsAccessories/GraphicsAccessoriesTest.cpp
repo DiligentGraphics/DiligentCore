@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +26,8 @@
  */
 
 #include <array>
+#include <unordered_set>
+#include <vector>
 
 #include "GraphicsAccessories.hpp"
 #include "../../../../Graphics/GraphicsEngine/include/PrivateConstants.h"
@@ -1525,6 +1527,38 @@ TEST(GraphicsAccessories_GraphicsAccessories, ProcessPipelineStateCreateInfoShad
             Ptr += 0x1000;
         });
     }
+}
+
+
+
+TEST(GraphicsAccessories_GraphicsAccessories, ComputeRenderTargetFormatsHash)
+{
+    std::unordered_set<size_t> Hashes;
+
+    auto Test = [&Hashes](Uint32 NumRenderTargets, const TEXTURE_FORMAT RTVFormats[], TEXTURE_FORMAT DepthFormat) {
+        size_t Hash = ComputeRenderTargetFormatsHash(NumRenderTargets, RTVFormats, DepthFormat);
+        EXPECT_NE(Hash, size_t{0});
+        EXPECT_TRUE(Hashes.insert(Hash).second);
+    };
+
+    for (TEXTURE_FORMAT DsvFmt : {TEX_FORMAT_UNKNOWN, TEX_FORMAT_D16_UNORM, TEX_FORMAT_D32_FLOAT})
+    {
+        constexpr TEXTURE_FORMAT RTVs[] = {
+            TEX_FORMAT_RGBA8_UNORM_SRGB,
+            TEX_FORMAT_RGBA16_FLOAT,
+            TEX_FORMAT_RG8_UNORM,
+            TEX_FORMAT_RG16_UNORM,
+            TEX_FORMAT_R32_FLOAT,
+            TEX_FORMAT_RG16_FLOAT,
+            TEX_FORMAT_R8_UINT,
+            TEX_FORMAT_RG16_SINT,
+        };
+        for (Uint32 NumRTVs = 0; NumRTVs <= _countof(RTVs); ++NumRTVs)
+        {
+            Test(NumRTVs, RTVs, DsvFmt);
+        }
+    }
+    EXPECT_EQ(Hashes.size(), size_t{3 * 9});
 }
 
 } // namespace
