@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -192,6 +192,59 @@ TEST(Common_Align, AlignUpNonPw2)
     }
 
     EXPECT_EQ(AlignUpNonPw2((Uint64{1} << 63) + 1, Uint64{1024}), (Uint64{1} << 63) + 1024);
+}
+
+template <typename T>
+void TestAlignUpToPowerOfTwo()
+{
+    EXPECT_EQ(AlignUpToPowerOfTwo(T{0}), T{0});
+    EXPECT_EQ(AlignUpToPowerOfTwo(T{1}), T{1});
+    EXPECT_EQ(AlignUpToPowerOfTwo(T{2}), T{2});
+
+    for (T i = 2; i < sizeof(T) * 8 - 1; ++i)
+    {
+        T Pw2   = T{1} << i;
+        T Test1 = Pw2 - T{1};
+        T Test2 = (Pw2 >> T{1}) + T{1};
+        EXPECT_EQ(AlignUpToPowerOfTwo(Pw2), Pw2);
+        EXPECT_EQ(AlignUpToPowerOfTwo(Test1), Pw2);
+        EXPECT_EQ(AlignUpToPowerOfTwo(Test2), Pw2);
+    }
+}
+
+TEST(Common_Align, AlignUpToPowerOfTwo)
+{
+    TestAlignUpToPowerOfTwo<Uint8>();
+    TestAlignUpToPowerOfTwo<Uint16>();
+    TestAlignUpToPowerOfTwo<Uint32>();
+    TestAlignUpToPowerOfTwo<Uint64>();
+}
+
+template <typename T>
+void TestAlignDownToPowerOfTwo()
+{
+    EXPECT_EQ(AlignDownToPowerOfTwo(T{0}), T{0});
+    EXPECT_EQ(AlignDownToPowerOfTwo(T{1}), T{1});
+    EXPECT_EQ(AlignDownToPowerOfTwo(T{2}), T{2});
+
+    for (T i = 2; i < sizeof(T) * 8 - 1; ++i)
+    {
+        T Pw2   = T{1} << i;
+        T Pw2_1 = Pw2 >> T{1};
+        T Test1 = Pw2 - T{1};
+        T Test2 = Pw2_1 + T{1};
+        EXPECT_EQ(AlignDownToPowerOfTwo(Pw2), Pw2);
+        EXPECT_EQ(AlignDownToPowerOfTwo(Test1), Pw2_1);
+        EXPECT_EQ(AlignDownToPowerOfTwo(Test2), Pw2_1);
+    }
+}
+
+TEST(Common_Align, AlignDownToPowerOfTwo)
+{
+    TestAlignDownToPowerOfTwo<Uint8>();
+    TestAlignDownToPowerOfTwo<Uint16>();
+    TestAlignDownToPowerOfTwo<Uint32>();
+    TestAlignDownToPowerOfTwo<Uint64>();
 }
 
 } // namespace

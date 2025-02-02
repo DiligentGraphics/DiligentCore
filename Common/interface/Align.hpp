@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,7 @@
 #include <cstdint>
 
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include "../../Platforms/interface/PlatformMisc.hpp"
 
 namespace Diligent
 {
@@ -98,6 +99,25 @@ inline typename std::conditional<sizeof(T1) >= sizeof(T2), T1, T2>::type AlignUp
     using T = typename std::conditional<sizeof(T1) >= sizeof(T2), T1, T2>::type;
     T tmp   = static_cast<T>(val) + static_cast<T>(alignment - 1);
     return tmp - (tmp % static_cast<T>(alignment));
+}
+
+template <typename T>
+inline typename std::enable_if<std::is_unsigned<T>::value, T>::type AlignUpToPowerOfTwo(T Val)
+{
+    using MSBType = typename std::conditional<std::is_same<T, Uint64>::value, Uint64, Uint32>::type;
+
+    return Val == 0 || IsPowerOfTwo(Val) ?
+        Val :
+        (T{1} << static_cast<T>(PlatformMisc::GetMSB(MSBType{Val}) + 1));
+}
+template <typename T>
+inline typename std::enable_if<std::is_unsigned<T>::value, T>::type AlignDownToPowerOfTwo(T Val)
+{
+    using MSBType = typename std::conditional<std::is_same<T, Uint64>::value, Uint64, Uint32>::type;
+
+    return Val == 0 || IsPowerOfTwo(Val) ?
+        Val :
+        (T{1} << static_cast<T>(PlatformMisc::GetMSB(MSBType{Val})));
 }
 
 } // namespace Diligent
