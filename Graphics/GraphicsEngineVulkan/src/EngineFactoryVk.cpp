@@ -752,7 +752,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         // Enable device features if they are supported and throw an error if not supported, but required by user.
         const GraphicsAdapterInfo AdapterInfo = GetPhysicalDeviceGraphicsAdapterInfo(*PhysicalDevice);
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
-        const DeviceFeatures EnabledFeatures = EnableDeviceFeatures(AdapterInfo.Features, EngineCI.Features);
+        const DeviceFeatures   EnabledFeatures   = EnableDeviceFeatures(AdapterInfo.Features, EngineCI.Features);
+        const DeviceFeaturesVk AdapterFeaturesVk = PhysicalDeviceFeaturesToDeviceFeaturesVk(PhysicalDevice->GetExtFeatures(), DEVICE_FEATURE_STATE_ENABLED);
+        const DeviceFeaturesVk EnabledFeaturesVk = EnableDeviceFeaturesVk(AdapterFeaturesVk, EngineCI.FeaturesVk);
 
         std::vector<VkDeviceQueueGlobalPriorityCreateInfoEXT> QueueGlobalPriority;
         std::vector<VkDeviceQueueCreateInfo>                  QueueInfos;
@@ -1231,6 +1233,17 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
 
                 *NextExt = &EnabledExtFeats.ShaderDrawParameters;
                 NextExt  = &EnabledExtFeats.ShaderDrawParameters.pNext;
+            }
+
+            if (EnabledFeaturesVk.DynamicRendering)
+            {
+                VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME));
+                DeviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+
+                EnabledExtFeats.DynamicRendering = DeviceExtFeatures.DynamicRendering;
+
+                *NextExt = &EnabledExtFeats.DynamicRendering;
+                NextExt  = &EnabledExtFeats.DynamicRendering.pNext;
             }
 
             // Append user-defined features

@@ -2059,6 +2059,25 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     return Features;
 }
 
+DeviceFeaturesVk PhysicalDeviceFeaturesToDeviceFeaturesVk(const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& ExtFeatures,
+                                                          DEVICE_FEATURE_STATE                                            OptionalState)
+{
+    VERIFY_EXPR(OptionalState != DEVICE_FEATURE_STATE_DISABLED);
+
+    DeviceFeaturesVk FeaturesVk;
+
+#define INIT_FEATURE(FeatureName, Supported) \
+    FeaturesVk.FeatureName = (Supported) ? OptionalState : DEVICE_FEATURE_STATE_DISABLED
+
+    INIT_FEATURE(DynamicRendering, ExtFeatures.DynamicRendering.dynamicRendering != VK_FALSE);
+
+#undef INIT_FEATURE
+
+    ASSERT_SIZEOF(DeviceFeaturesVk, 1, "Did you add a new feature to DeviceFeaturesVk? Please handle its status here (if necessary).");
+
+    return FeaturesVk;
+}
+
 SPARSE_TEXTURE_FLAGS VkSparseImageFormatFlagsToSparseTextureFlags(VkSparseImageFormatFlags Flags)
 {
     SPARSE_TEXTURE_FLAGS Result = SPARSE_TEXTURE_FLAG_NONE;

@@ -30,7 +30,7 @@
 /// \file
 /// Diligent API information
 
-#define DILIGENT_API_VERSION 256003
+#define DILIGENT_API_VERSION 256004
 
 #include "../../../Primitives/interface/BasicTypes.h"
 

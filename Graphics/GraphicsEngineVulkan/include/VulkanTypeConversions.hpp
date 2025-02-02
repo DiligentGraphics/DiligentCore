@@ -112,6 +112,9 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
                                           const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps,
                                           DEVICE_FEATURE_STATE                                              OptionalState = DEVICE_FEATURE_STATE_ENABLED);
 
+DeviceFeaturesVk PhysicalDeviceFeaturesToDeviceFeaturesVk(const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& ExtFeatures,
+                                                          DEVICE_FEATURE_STATE                                            OptionalState);
+
 SPARSE_TEXTURE_FLAGS VkSparseImageFormatFlagsToSparseTextureFlags(VkSparseImageFormatFlags Flags);
 
 VkImageUsageFlags BindFlagsToVkImageUsage(BIND_FLAGS Flags, bool IsMemoryless, bool FragDensityMapInsteadOfShadingRate);

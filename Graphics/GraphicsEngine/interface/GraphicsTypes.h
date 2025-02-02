@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -3931,8 +3931,56 @@ struct VulkanDescriptorPoolSize
 typedef struct VulkanDescriptorPoolSize VulkanDescriptorPoolSize;
 
 
+/// Vulkan-specific device features
+struct DeviceFeaturesVk
+{
+    /// Indicates whether the device supports VK_KHR_dynamic_rendering extension.
+    ///
+    /// \remarks    If the extension is not supported, dynamic render targets are implemented
+    ///             using framebuffer and render pass caches.
+    DEVICE_FEATURE_STATE DynamicRendering DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr DeviceFeaturesVk() noexcept {}
+
+#define ENUMERATE_VK_DEVICE_FEATURES(Handler) \
+    Handler(DynamicRendering)
+
+    explicit constexpr DeviceFeaturesVk(DEVICE_FEATURE_STATE State) noexcept
+    {
+        static_assert(sizeof(*this) == 1, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
+    #define INIT_FEATURE(Feature) Feature = State;
+        ENUMERATE_VK_DEVICE_FEATURES(INIT_FEATURE)
+    #undef INIT_FEATURE
+    }
+
+    template <typename FeatType, typename HandlerType>
+    static void Enumerate(FeatType& Features, HandlerType&& Handler)
+    {
+    #define HandleFeature(Feature)                \
+        if (!Handler(#Feature, Features.Feature)) \
+            return;
+
+        ENUMERATE_VK_DEVICE_FEATURES(HandleFeature)
+
+    #undef HandleFeature
+    }
+
+    /// Comparison operator tests if two structures are equivalent
+    bool operator == (const DeviceFeatures& RHS) const
+    {
+        return memcmp(this, &RHS, sizeof(DeviceFeatures)) == 0;
+    }
+#endif
+};
+typedef struct DeviceFeaturesVk DeviceFeaturesVk;
+
 /// Attributes specific to Vulkan engine
 struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
+
+    /// Vulkan-specific device features, see Diligent::DeviceFeaturesVk.
+    DeviceFeaturesVk   FeaturesVk;
 
     /// The number of Vulkan instance layers in ppInstanceLayerNames array.
     Uint32             InstanceLayerCount       DEFAULT_INITIALIZER(0);
@@ -4113,7 +4161,8 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     {}
 
     explicit EngineVkCreateInfo(const EngineCreateInfo &EngineCI) noexcept :
-        EngineCreateInfo{EngineCI}
+        EngineCreateInfo{EngineCI},
+        FeaturesVk{DEVICE_FEATURE_STATE_OPTIONAL}
     {}
 #endif
 };

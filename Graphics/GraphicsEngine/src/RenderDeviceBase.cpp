@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,37 +30,40 @@
 namespace Diligent
 {
 
+static DEVICE_FEATURE_STATE GetFeatureState(DEVICE_FEATURE_STATE RequestedState, DEVICE_FEATURE_STATE SupportedState, const char* FeatureName) noexcept(false)
+{
+    switch (RequestedState)
+    {
+        case DEVICE_FEATURE_STATE_DISABLED:
+            return SupportedState == DEVICE_FEATURE_STATE_ENABLED ?
+                DEVICE_FEATURE_STATE_ENABLED : // the feature is supported by default and can not be disabled
+                DEVICE_FEATURE_STATE_DISABLED;
+
+        case DEVICE_FEATURE_STATE_ENABLED:
+        {
+            if (SupportedState != DEVICE_FEATURE_STATE_DISABLED)
+                return DEVICE_FEATURE_STATE_ENABLED;
+            else
+                LOG_ERROR_AND_THROW(FeatureName, " not supported by this device");
+        }
+
+        case DEVICE_FEATURE_STATE_OPTIONAL:
+            return SupportedState != DEVICE_FEATURE_STATE_DISABLED ?
+                DEVICE_FEATURE_STATE_ENABLED :
+                DEVICE_FEATURE_STATE_DISABLED;
+
+        default:
+            UNEXPECTED("Unexpected feature state");
+            return DEVICE_FEATURE_STATE_DISABLED;
+    }
+};
+
+#define ENABLE_FEATURE(Feature, FeatureName) \
+    EnabledFeatures.Feature = GetFeatureState(RequestedFeatures.Feature, SupportedFeatures.Feature, FeatureName)
+
 DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
                                     const DeviceFeatures& RequestedFeatures) noexcept(false)
 {
-    auto GetFeatureState = [](DEVICE_FEATURE_STATE RequestedState, DEVICE_FEATURE_STATE SupportedState, const char* FeatureName) //
-    {
-        switch (RequestedState)
-        {
-            case DEVICE_FEATURE_STATE_DISABLED:
-                return SupportedState == DEVICE_FEATURE_STATE_ENABLED ?
-                    DEVICE_FEATURE_STATE_ENABLED : // the feature is supported by default and can not be disabled
-                    DEVICE_FEATURE_STATE_DISABLED;
-
-            case DEVICE_FEATURE_STATE_ENABLED:
-            {
-                if (SupportedState != DEVICE_FEATURE_STATE_DISABLED)
-                    return DEVICE_FEATURE_STATE_ENABLED;
-                else
-                    LOG_ERROR_AND_THROW(FeatureName, " not supported by this device");
-            }
-
-            case DEVICE_FEATURE_STATE_OPTIONAL:
-                return SupportedState != DEVICE_FEATURE_STATE_DISABLED ?
-                    DEVICE_FEATURE_STATE_ENABLED :
-                    DEVICE_FEATURE_STATE_DISABLED;
-
-            default:
-                UNEXPECTED("Unexpected feature state");
-                return DEVICE_FEATURE_STATE_DISABLED;
-        }
-    };
-
     if (SupportedFeatures.SeparablePrograms == DEVICE_FEATURE_STATE_ENABLED &&
         RequestedFeatures.SeparablePrograms == DEVICE_FEATURE_STATE_DISABLED)
     {
@@ -68,8 +71,6 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     }
 
     DeviceFeatures EnabledFeatures;
-#define ENABLE_FEATURE(Feature, FeatureName) \
-    EnabledFeatures.Feature = GetFeatureState(RequestedFeatures.Feature, SupportedFeatures.Feature, FeatureName)
 
     // clang-format off
     ENABLE_FEATURE(SeparablePrograms,                 "Separable programs are");
@@ -120,12 +121,25 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(AsyncShaderCompilation,            "Async shader compilation is");
     ENABLE_FEATURE(FormattedBuffers,                  "Formatted buffers are");
     // clang-format on
-#undef ENABLE_FEATURE
 
     ASSERT_SIZEOF(DeviceFeatures, 47, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return EnabledFeatures;
 }
+
+DeviceFeaturesVk EnableDeviceFeaturesVk(const DeviceFeaturesVk& SupportedFeatures,
+                                        const DeviceFeaturesVk& RequestedFeatures) noexcept(false)
+{
+    DeviceFeaturesVk EnabledFeatures;
+
+    ENABLE_FEATURE(DynamicRendering, "VK_KHR_dynamic_rendering is");
+
+    ASSERT_SIZEOF(DeviceFeaturesVk, 1, "Did you add a new feature to DeviceFeaturesVk? Please handle its status here (if necessary).");
+
+    return EnabledFeatures;
+}
+
+#undef ENABLE_FEATURE
 
 COMPONENT_TYPE CheckSparseTextureFormatSupport(TEXTURE_FORMAT                  TexFormat,
                                                RESOURCE_DIMENSION              Dimension,
