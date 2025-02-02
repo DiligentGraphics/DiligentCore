@@ -167,13 +167,13 @@ std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> FramebufferCache::CreateD
     if (Attribs.UseDepthAttachment)
     {
         VkRenderingAttachmentInfoKHR& DepthAttachment = RI->GetDepthAttachment();
-        InitAttachment(DepthAttachment, Key.DSV, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+        InitAttachment(DepthAttachment, Key.DSV, Attribs.ReadOnlyDepthStencil ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     }
 
     if (Attribs.UseStencilAttachment)
     {
         VkRenderingAttachmentInfoKHR& StencilAttachment = RI->GetStencilAttachment();
-        InitAttachment(StencilAttachment, Key.DSV, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+        InitAttachment(StencilAttachment, Key.DSV, Attribs.ReadOnlyDepthStencil ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     }
 
     if (Key.ShadingRate)

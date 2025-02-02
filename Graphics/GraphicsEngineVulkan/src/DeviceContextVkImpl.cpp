@@ -1922,6 +1922,7 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
 
             CreateRIAttribs.UseDepthAttachment   = true;
             CreateRIAttribs.UseStencilAttachment = FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL;
+            CreateRIAttribs.ReadOnlyDepthStencil = (m_pBoundDepthStencil->GetDesc().ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL);
         }
         if (m_pBoundShadingRateMap)
         {

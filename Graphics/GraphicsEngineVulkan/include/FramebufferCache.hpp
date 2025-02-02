@@ -89,6 +89,7 @@ public:
 
         bool UseDepthAttachment   = false;
         bool UseStencilAttachment = false;
+        bool ReadOnlyDepthStencil = false;
     };
     static std::unique_ptr<VulkanUtilities::RenderingInfoWrapper> CreateDyanmicRenderInfo(
         const FramebufferCacheKey&            Key,
