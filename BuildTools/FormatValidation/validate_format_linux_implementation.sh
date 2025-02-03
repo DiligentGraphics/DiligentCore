@@ -14,7 +14,7 @@ function find_validator_bin() {
   if [ $? -ne 0 ]; then
     ## BIN failed to run, try to get a system installed clang-format
     local SYS_BIN=$(which clang-format 2> /dev/null)
-    if [ $? -ne 0 ]; then
+    if [ $? -ne 0 ] || [ -z "$SYS_BIN" ]; then
       errcho "WARNING: skipping format validation as no suitable executable was found"
       BIN=""
     else
