@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,7 +60,8 @@ NativeWindow GPUTestingEnvironment::CreateNativeWindow()
         GLX_DEPTH_SIZE,     24,
 
         //GLX_SAMPLE_BUFFERS, 1,
-        GLX_SAMPLES, 1,
+        //GLX_SAMPLES, 1, // 0 Means no MSAA. 1 Requests any MSAA.
+                          // If MSAA is not supported, glXChooseFBConfig will fail.
         None
     };
     // clang-format on
