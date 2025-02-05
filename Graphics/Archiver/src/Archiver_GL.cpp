@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -420,7 +420,8 @@ private:
         Bool          IsES = false;
         GetGLSLVersion(ShaderCI, TargetGLSLCompiler::driver, DeviceType, GLShaderCI.DeviceInfo.MaxShaderVersion, GLSLVersion, IsES);
 
-        diligent_spirv_cross::CompilerGLSL::Options Options;
+        using CompilerGLSL = SPIRV_CROSS_NAMESPACE::CompilerGLSL;
+        CompilerGLSL::Options Options;
         Options.es      = IsES;
         Options.version = GLSLVersion.Major * 100 + GLSLVersion.Minor * 10;
 
@@ -441,15 +442,15 @@ private:
         // For opcodes where we have to perform explicit additional nan checks, very ugly code is generated.
         Options.relax_nan_checks = true;
 
-        Options.fragment.default_float_precision = diligent_spirv_cross::CompilerGLSL::Options::Precision::DontCare;
-        Options.fragment.default_int_precision   = diligent_spirv_cross::CompilerGLSL::Options::Precision::DontCare;
+        Options.fragment.default_float_precision = CompilerGLSL::Options::Precision::DontCare;
+        Options.fragment.default_int_precision   = CompilerGLSL::Options::Precision::DontCare;
 
 #    if PLATFORM_APPLE
         // Apple does not support GL_ARB_shading_language_420pack extension
         Options.enable_420pack_extension = false;
 #    endif
 
-        diligent_spirv_cross::CompilerGLSL Compiler{std::move(SPIRV)};
+        CompilerGLSL Compiler{std::move(SPIRV)};
         Compiler.set_common_options(Options);
 
         OptimizedGLSL = Compiler.compile();
