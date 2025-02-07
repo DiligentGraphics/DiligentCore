@@ -51,6 +51,8 @@ public:
 
     operator const VkRenderingInfoKHR&() const { return m_RI; }
 
+    const VkRenderingInfoKHR& Get() const { return m_RI; }
+
     size_t GetHash() const { return m_Hash; }
 
     RenderingInfoWrapper& SetFlags(VkRenderingFlagsKHR flags)
@@ -97,6 +99,34 @@ public:
 
     VkRenderingFragmentShadingRateAttachmentInfoKHR& GetShadingRateAttachment();
 
+
+    void SetColorAttachmentClearValue(uint32_t Index, const VkClearColorValue& ClearValue)
+    {
+        VERIFY_EXPR(Index < m_RI.colorAttachmentCount);
+        m_Attachments[Index].clearValue.color = ClearValue;
+        m_Attachments[Index].loadOp           = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        m_AttachmentClearMask |= 1u << Index;
+    }
+
+    void SetDepthAttachmentClearValue(float Depth)
+    {
+        VERIFY_EXPR(m_RI.pDepthAttachment != nullptr && m_DepthAttachmentIndex != ~0u);
+        m_Attachments[m_DepthAttachmentIndex].clearValue.depthStencil.depth = Depth;
+        m_Attachments[m_DepthAttachmentIndex].loadOp                        = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        m_AttachmentClearMask |= 1u << m_DepthAttachmentIndex;
+    }
+
+    void SetStencilAttachmentClearValue(uint32_t Stencil)
+    {
+        VERIFY_EXPR(m_RI.pStencilAttachment != nullptr && m_StencilAttachmentIndex != ~0u);
+        m_Attachments[m_StencilAttachmentIndex].clearValue.depthStencil.stencil = Stencil;
+        m_Attachments[m_StencilAttachmentIndex].loadOp                          = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        m_AttachmentClearMask |= 1u << m_StencilAttachmentIndex;
+    }
+
+    void ResetClears();
+    bool HasClears() const { return m_AttachmentClearMask != 0; }
+
 private:
     VkRenderingInfoKHR m_RI;
 
@@ -107,6 +137,7 @@ private:
 
     uint32_t m_DepthAttachmentIndex   = ~0u;
     uint32_t m_StencilAttachmentIndex = ~0u;
+    uint32_t m_AttachmentClearMask    = 0;
 };
 
 } // namespace VulkanUtilities

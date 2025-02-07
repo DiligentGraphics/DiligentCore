@@ -1056,7 +1056,7 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
     EnsureVkCmdBuffer();
 
     // Dispatch commands must be executed outside of render pass
-    m_CommandBuffer.EndRenderScope();
+    EndRenderScope();
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_COMPUTE);
     if (Uint32 CommitMask = BindInfo.GetCommitMask())
@@ -1158,44 +1158,60 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
            "checks if the DSV is bound as a framebuffer attachment and triggers an assert otherwise (in development mode).");
     if (ClearAsAttachment)
     {
-        VERIFY_EXPR((m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE) || m_DynamicRenderingInfo);
-        if (m_pActiveRenderPass == nullptr)
+        if (m_DynamicRenderingInfo && m_CommandBuffer.GetState().DynamicRenderingHash == 0)
         {
-            // Render pass may not be currently committed
+            // Dynamic render pass has not been started yet
+            if ((ClearFlags & CLEAR_DEPTH_FLAG) != 0 && m_DynamicRenderingInfo->Get().pDepthAttachment != nullptr)
+            {
+                m_DynamicRenderingInfo->SetDepthAttachmentClearValue(fDepth);
+            }
 
-            TransitionRenderTargets(StateTransitionMode);
-            // No need to verify states again
-            CommitRenderPassAndFramebuffer(false);
+            if ((ClearFlags & CLEAR_STENCIL_FLAG) != 0 && m_DynamicRenderingInfo->Get().pStencilAttachment != nullptr)
+            {
+                m_DynamicRenderingInfo->SetStencilAttachmentClearValue(Stencil);
+            }
         }
+        else
+        {
+            VERIFY_EXPR((m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE) || m_DynamicRenderingInfo);
+            if (m_pActiveRenderPass == nullptr)
+            {
+                // Render pass may not be currently committed
 
-        VkClearAttachment ClearAttachment = {};
-        ClearAttachment.aspectMask        = 0;
-        if (ClearFlags & CLEAR_DEPTH_FLAG) ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-        if (ClearFlags & CLEAR_STENCIL_FLAG) ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-        // colorAttachment is only meaningful if VK_IMAGE_ASPECT_COLOR_BIT is set in aspectMask
-        ClearAttachment.colorAttachment                 = VK_ATTACHMENT_UNUSED;
-        ClearAttachment.clearValue.depthStencil.depth   = fDepth;
-        ClearAttachment.clearValue.depthStencil.stencil = Stencil;
-        VkClearRect ClearRect;
-        // m_FramebufferWidth, m_FramebufferHeight are scaled to the proper mip level
-        ClearRect.rect = {{0, 0}, {m_FramebufferWidth, m_FramebufferHeight}};
-        // The layers [baseArrayLayer, baseArrayLayer + layerCount) count from the base layer of
-        // the attachment image view (17.2), so baseArrayLayer is 0, not ViewDesc.FirstArraySlice
-        ClearRect.baseArrayLayer = 0;
-        ClearRect.layerCount     = ViewDesc.NumArraySlices;
-        // No memory barriers are needed between vkCmdClearAttachments and preceding or
-        // subsequent draw or attachment clear commands in the same subpass (17.2)
-        m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
+                TransitionRenderTargets(StateTransitionMode);
+                // No need to verify states again
+                CommitRenderPassAndFramebuffer(false);
+            }
+
+            VkClearAttachment ClearAttachment = {};
+            ClearAttachment.aspectMask        = 0;
+            if (ClearFlags & CLEAR_DEPTH_FLAG) ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+            if (ClearFlags & CLEAR_STENCIL_FLAG) ClearAttachment.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            // colorAttachment is only meaningful if VK_IMAGE_ASPECT_COLOR_BIT is set in aspectMask
+            ClearAttachment.colorAttachment                 = VK_ATTACHMENT_UNUSED;
+            ClearAttachment.clearValue.depthStencil.depth   = fDepth;
+            ClearAttachment.clearValue.depthStencil.stencil = Stencil;
+            VkClearRect ClearRect;
+            // m_FramebufferWidth, m_FramebufferHeight are scaled to the proper mip level
+            ClearRect.rect = {{0, 0}, {m_FramebufferWidth, m_FramebufferHeight}};
+            // The layers [baseArrayLayer, baseArrayLayer + layerCount) count from the base layer of
+            // the attachment image view, so baseArrayLayer is 0, not ViewDesc.FirstArraySlice
+            ClearRect.baseArrayLayer = 0;
+            ClearRect.layerCount     = ViewDesc.NumArraySlices;
+            // No memory barriers are needed between vkCmdClearAttachments and preceding or
+            // subsequent draw or attachment clear commands in the same subpass
+            m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
+        }
     }
     else
     {
         // End render pass to clear the buffer with vkCmdClearDepthStencilImage
-        m_CommandBuffer.EndRenderScope();
+        EndRenderScope();
 
         ITexture*      pTexture   = pVkDSV->GetTexture();
         TextureVkImpl* pTextureVk = ClassPtrCast<TextureVkImpl>(pTexture);
 
-        // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
+        // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
         TransitionOrVerifyTextureState(*pTextureVk, StateTransitionMode, RESOURCE_STATE_COPY_DEST, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                        "Clearing depth-stencil buffer outside of render pass (DeviceContextVkImpl::ClearDepthStencil)");
 
@@ -1218,7 +1234,7 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
     ++m_State.NumCommands;
 }
 
-VkClearColorValue ClearValueToVkClearValue(const void* RGBA, TEXTURE_FORMAT TexFmt)
+static VkClearColorValue ClearValueToVkClearValue(const void* RGBA, TEXTURE_FORMAT TexFmt)
 {
     VkClearColorValue           ClearValue;
     const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexFmt);
@@ -1273,43 +1289,52 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
            "Render target was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearRenderTarget "
            "checks if the RTV is bound as a framebuffer attachment and triggers an assert otherwise (in development mode).");
 
+    const VkClearColorValue vkClearValue = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
     if (attachmentIndex != InvalidAttachmentIndex)
     {
         VERIFY_EXPR((m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE) || m_DynamicRenderingInfo);
-        if (m_pActiveRenderPass == nullptr)
+        if (m_DynamicRenderingInfo && m_CommandBuffer.GetState().DynamicRenderingHash == 0)
         {
-            // Render pass may not be currently committed
-
-            TransitionRenderTargets(StateTransitionMode);
-            // No need to verify states again
-            CommitRenderPassAndFramebuffer(false);
+            // Dynamic render pass has not been started yet
+            m_DynamicRenderingInfo->SetColorAttachmentClearValue(attachmentIndex, vkClearValue);
         }
+        else
+        {
+            if (m_pActiveRenderPass == nullptr)
+            {
+                // Render pass may not be currently committed
 
-        VkClearAttachment ClearAttachment = {};
-        ClearAttachment.aspectMask        = VK_IMAGE_ASPECT_COLOR_BIT;
-        // colorAttachment is only meaningful if VK_IMAGE_ASPECT_COLOR_BIT is set in aspectMask,
-        // in which case it is an index to the pColorAttachments array in the VkSubpassDescription
-        // structure of the current subpass which selects the color attachment to clear (17.2)
-        // It is NOT the render pass attachment index
-        ClearAttachment.colorAttachment  = attachmentIndex;
-        ClearAttachment.clearValue.color = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
-        VkClearRect ClearRect;
-        // m_FramebufferWidth, m_FramebufferHeight are scaled to the proper mip level
-        ClearRect.rect = {{0, 0}, {m_FramebufferWidth, m_FramebufferHeight}};
-        // The layers [baseArrayLayer, baseArrayLayer + layerCount) count from the base layer of
-        // the attachment image view (17.2), so baseArrayLayer is 0, not ViewDesc.FirstArraySlice
-        ClearRect.baseArrayLayer = 0;
-        ClearRect.layerCount     = ViewDesc.NumArraySlices;
-        // No memory barriers are needed between vkCmdClearAttachments and preceding or
-        // subsequent draw or attachment clear commands in the same subpass (17.2)
-        m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
+                TransitionRenderTargets(StateTransitionMode);
+                // No need to verify states again
+                CommitRenderPassAndFramebuffer(false);
+            }
+
+            VkClearAttachment ClearAttachment = {};
+            ClearAttachment.aspectMask        = VK_IMAGE_ASPECT_COLOR_BIT;
+            // colorAttachment is only meaningful if VK_IMAGE_ASPECT_COLOR_BIT is set in aspectMask,
+            // in which case it is an index to the pColorAttachments array in the VkSubpassDescription
+            // structure of the current subpass which selects the color attachment to clear.
+            // It is NOT the render pass attachment index
+            ClearAttachment.colorAttachment  = attachmentIndex;
+            ClearAttachment.clearValue.color = vkClearValue;
+            VkClearRect ClearRect;
+            // m_FramebufferWidth, m_FramebufferHeight are scaled to the proper mip level
+            ClearRect.rect = {{0, 0}, {m_FramebufferWidth, m_FramebufferHeight}};
+            // The layers [baseArrayLayer, baseArrayLayer + layerCount) count from the base layer of
+            // the attachment image view , so baseArrayLayer is 0, not ViewDesc.FirstArraySlice
+            ClearRect.baseArrayLayer = 0;
+            ClearRect.layerCount     = ViewDesc.NumArraySlices;
+            // No memory barriers are needed between vkCmdClearAttachments and preceding or
+            // subsequent draw or attachment clear commands in the same subpass (17.2)
+            m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
+        }
     }
     else
     {
         VERIFY(m_pActiveRenderPass == nullptr, "This branch should never execute inside a render pass.");
 
         // End current render pass and clear the image with vkCmdClearColorImage
-        m_CommandBuffer.EndRenderScope();
+        EndRenderScope();
 
         ITexture*      pTexture   = pVkRTV->GetTexture();
         TextureVkImpl* pTextureVk = ClassPtrCast<TextureVkImpl>(pTexture);
@@ -1317,8 +1342,6 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
         // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
         TransitionOrVerifyTextureState(*pTextureVk, StateTransitionMode, RESOURCE_STATE_COPY_DEST, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                        "Clearing render target outside of render pass (DeviceContextVkImpl::ClearRenderTarget)");
-
-        VkClearColorValue ClearValue = ClearValueToVkClearValue(RGBA, ViewDesc.Format);
 
         VkImageSubresourceRange Subresource;
         Subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1329,7 +1352,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
         Subresource.levelCount     = ViewDesc.NumMipLevels;
         VERIFY(ViewDesc.NumMipLevels, "RTV must contain single mip level");
 
-        m_CommandBuffer.ClearColorImage(pTextureVk->GetVkImage(), ClearValue, Subresource);
+        m_CommandBuffer.ClearColorImage(pTextureVk->GetVkImage(), vkClearValue, Subresource);
     }
 
     ++m_State.NumCommands;
@@ -1438,7 +1461,7 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
 
         if (m_State.NumCommands != 0)
         {
-            m_CommandBuffer.EndRenderScope();
+            EndRenderScope();
 
 #ifdef DILIGENT_DEVELOPMENT
             DEV_CHECK_ERR(m_DvpDebugGroupCount == 0, "Not all debug groups have been ended");
@@ -1831,6 +1854,7 @@ void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
         else if (DynamicRenderingHash != 0)
         {
             m_CommandBuffer.BeginRendering(*m_DynamicRenderingInfo, DynamicRenderingHash);
+            m_DynamicRenderingInfo->ResetClears();
         }
     }
 }
@@ -1937,6 +1961,19 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
     }
 }
 
+void DeviceContextVkImpl::EndRenderScope()
+{
+    if (m_DynamicRenderingInfo && m_DynamicRenderingInfo->HasClears())
+    {
+        VERIFY(m_CommandBuffer.GetState().DynamicRenderingHash == 0, "Command buffer must not be in a dynamic render scope when there are pending clears");
+        EnsureVkCmdBuffer();
+        // Apply clears
+        CommitRenderPassAndFramebuffer(/*VerifyStates = */ false);
+    }
+
+    m_CommandBuffer.EndRenderScope();
+}
+
 void DeviceContextVkImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs)
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
@@ -1959,11 +1996,11 @@ void DeviceContextVkImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Att
 void DeviceContextVkImpl::ResetRenderTargets()
 {
     TDeviceContextBase::ResetRenderTargets();
+    if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE)
+        EndRenderScope();
     m_vkRenderPass  = VK_NULL_HANDLE;
     m_vkFramebuffer = VK_NULL_HANDLE;
     m_DynamicRenderingInfo.reset();
-    if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE)
-        m_CommandBuffer.EndRenderScope();
     m_State.ShadingRateIsSet = false;
 }
 
@@ -2738,7 +2775,7 @@ void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
     DEV_CHECK_ERR(IsDeferred(), "Only deferred context can record command list");
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 
-    m_CommandBuffer.EndRenderScope();
+    EndRenderScope();
 
     VkCommandBuffer vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
     VkResult        err       = vkEndCommandBuffer(vkCmdBuff);
@@ -2826,14 +2863,14 @@ void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
         }
 
         // A query must either begin and end inside the same subpass of a render pass instance, or must
-        // both begin and end outside of a render pass instance (i.e. contain entire render pass instances). (17.2)
+        // both begin and end outside of a render pass instance (i.e. contain entire render pass instances).
 
         ++m_ActiveQueriesCounter;
         m_CommandBuffer.BeginQuery(vkQueryPool,
                                    Idx,
                                    // If flags does not contain VK_QUERY_CONTROL_PRECISE_BIT an implementation
                                    // may generate any non-zero result value for the query if the count of
-                                   // passing samples is non-zero (17.3).
+                                   // passing samples is non-zero.
                                    QueryType == QUERY_TYPE_OCCLUSION ? VK_QUERY_CONTROL_PRECISE_BIT : 0,
                                    1u << QueryType);
     }
@@ -2863,13 +2900,13 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
         VERIFY(m_ActiveQueriesCounter > 0, "Active query counter is 0 which means there was a mismatch between BeginQuery() / EndQuery() calls");
 
         // A query must either begin and end inside the same subpass of a render pass instance, or must
-        // both begin and end outside of a render pass instance (i.e. contain entire render pass instances). (17.2)
+        // both begin and end outside of a render pass instance (i.e. contain entire render pass instances).
         const VulkanUtilities::VulkanCommandBuffer::StateCache& CmdBuffState = m_CommandBuffer.GetState();
         VERIFY((CmdBuffState.InsidePassQueries | CmdBuffState.OutsidePassQueries) & (1u << QueryType),
                "No query flag is set which indicates there was no matching BeginQuery call or there was an error while beginning the query.");
         if (CmdBuffState.OutsidePassQueries & (1 << QueryType))
         {
-            m_CommandBuffer.EndRenderScope();
+            EndRenderScope();
         }
         else
         {
@@ -2877,7 +2914,7 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
                 LOG_ERROR_MESSAGE("The query was started inside render pass, but is being ended outside of render pass. "
                                   "Vulkan requires that a query must either begin and end inside the same "
                                   "subpass of a render pass instance, or must both begin and end outside of a render pass "
-                                  "instance (i.e. contain entire render pass instances). (17.2)");
+                                  "instance (i.e. contain entire render pass instances).");
         }
 
         --m_ActiveQueriesCounter;

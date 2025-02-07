@@ -410,6 +410,7 @@ public:
 private:
     void               TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
     __forceinline void CommitRenderPassAndFramebuffer(bool VerifyStates);
+    __forceinline void EndRenderScope();
     void               CommitVkVertexBuffers();
     void               CommitViewports();
     void               CommitScissorRects();
