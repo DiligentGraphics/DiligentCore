@@ -1957,6 +1957,7 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
             CreateRIAttribs.ShadingRateTexelSize.height = AlignUpToPowerOfTwo(m_FramebufferHeight / ShadingRateDesc.Height);
         }
 
+        VERIFY(!m_DynamicRenderingInfo || !m_DynamicRenderingInfo->HasClears(), "There are pending clears in the dynamic render pass");
         m_DynamicRenderingInfo = FramebufferCache::CreateDyanmicRenderInfo(FBKey, CreateRIAttribs);
     }
 }
@@ -1971,7 +1972,10 @@ void DeviceContextVkImpl::EndRenderScope()
         CommitRenderPassAndFramebuffer(/*VerifyStates = */ false);
     }
 
-    m_CommandBuffer.EndRenderScope();
+    if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE)
+    {
+        m_CommandBuffer.EndRenderScope();
+    }
 }
 
 void DeviceContextVkImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Attribs)
@@ -1980,6 +1984,12 @@ void DeviceContextVkImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Att
 
     if (TDeviceContextBase::SetRenderTargets(Attribs))
     {
+        if (m_DynamicRenderingInfo && m_DynamicRenderingInfo->HasClears())
+        {
+            // If there are pending clears, we must begin and end the render pass to apply the clears
+            CommitRenderPassAndFramebuffer(/*VerifyStates = */ false);
+        }
+
         ChooseRenderPassAndFramebuffer();
 
         // Set the viewport to match the render target size
@@ -1996,8 +2006,7 @@ void DeviceContextVkImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Att
 void DeviceContextVkImpl::ResetRenderTargets()
 {
     TDeviceContextBase::ResetRenderTargets();
-    if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE)
-        EndRenderScope();
+    EndRenderScope();
     m_vkRenderPass  = VK_NULL_HANDLE;
     m_vkFramebuffer = VK_NULL_HANDLE;
     m_DynamicRenderingInfo.reset();
