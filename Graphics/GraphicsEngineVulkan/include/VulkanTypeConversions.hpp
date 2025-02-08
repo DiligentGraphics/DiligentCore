@@ -113,7 +113,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
                                           DEVICE_FEATURE_STATE                                              OptionalState = DEVICE_FEATURE_STATE_ENABLED);
 
 DeviceFeaturesVk PhysicalDeviceFeaturesToDeviceFeaturesVk(const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& ExtFeatures,
-                                                          DEVICE_FEATURE_STATE                                            OptionalState);
+                                                          DEVICE_FEATURE_STATE                                            OptionalState = DEVICE_FEATURE_STATE_ENABLED);
 
 SPARSE_TEXTURE_FLAGS VkSparseImageFormatFlagsToSparseTextureFlags(VkSparseImageFormatFlags Flags);
 

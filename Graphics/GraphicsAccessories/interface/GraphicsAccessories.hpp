@@ -950,4 +950,58 @@ SHADER_STATUS GetPipelineStateCreateInfoShadersStatus(const CreateInfoType& CI, 
 
 size_t ComputeRenderTargetFormatsHash(Uint32 NumRenderTargets, const TEXTURE_FORMAT RTVFormats[], TEXTURE_FORMAT DSVFormat);
 
+
+/// Returns the string containing the device features
+///
+/// \param Features   - device features.
+/// \param NumColumns - the number of columns in the output.
+/// \param Indent     - indentation of the first column.
+/// \param Spacing    - spacing between columns.
+/// \param Flags      - flags to control which features to include in the output.
+/// 				    If (1<<State) & Flags is true, the feature will be included.
+/// \return             string containing the device features.
+template <typename FeaturesType>
+std::string GetDeviceFeaturesString(const FeaturesType& Features,
+                                    size_t              NumColumns,
+                                    int                 Indent  = 4,
+                                    int                 Spacing = 4,
+                                    Uint32              Flags   = ~0u)
+{
+    VERIFY_EXPR(NumColumns > 0);
+
+    std::vector<std::string> FeatureStrings;
+    std::vector<size_t>      ColWidth(NumColumns);
+    FeaturesType::Enumerate(Features,
+                            [&](const char* Name, DEVICE_FEATURE_STATE State) {
+                                if ((Flags & (1u << State)) != 0u)
+                                {
+                                    std::string FeatureStateStr{Name};
+                                    FeatureStateStr += ": ";
+                                    FeatureStateStr += GetDeviceFeatureStateString(State);
+
+                                    size_t col    = FeatureStrings.size() % NumColumns;
+                                    ColWidth[col] = std::max(ColWidth[col], FeatureStateStr.length());
+
+                                    FeatureStrings.emplace_back(std::move(FeatureStateStr));
+                                }
+                                return true;
+                            });
+
+    std::stringstream ss;
+    for (size_t i = 0; i < FeatureStrings.size();)
+    {
+        for (size_t col = 0; col < NumColumns && i < FeatureStrings.size(); ++col, ++i)
+        {
+            if (col == 0 && i > 0)
+                ss << std::endl;
+            ss << std::setw(col == 0 ? Indent : Spacing) << std::left << ' ';
+            if (col + 1 < NumColumns && i + 1 < FeatureStrings.size())
+                ss << std::setw(static_cast<int>(ColWidth[col])) << std::left;
+            ss << FeatureStrings[i];
+        }
+    }
+
+    return ss.str();
+}
+
 } // namespace Diligent
