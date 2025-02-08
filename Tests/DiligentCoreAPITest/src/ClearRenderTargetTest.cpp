@@ -163,6 +163,34 @@ TEST(ClearRenderTargetTest, AsRenderTarget)
 }
 
 
+TEST(ClearRenderTargetTest, AsUnboundRenderTarget)
+{
+    GPUTestingEnvironment*  pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*          pDevice    = pEnv->GetDevice();
+    const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
+    if (!(DeviceInfo.IsD3DDevice() || DeviceInfo.IsVulkanDevice()))
+    {
+        GTEST_SKIP() << "Clearing unbound render target is only supported in Direct3D and Vulkan";
+    }
+
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    constexpr float ClearColor[] = {0.25f, 0.5f, 0.75f, 1.0f};
+    ReferenceClear(ClearColor);
+
+    pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pSwapChain->GetCurrentBackBufferRTV(), ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pSwapChain->Present();
+
+    TestSwapChainCInterface(pSwapChain);
+}
+
+
+
 TEST(ClearRenderTargetTest, ClearAfterClear)
 {
     GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
@@ -179,6 +207,46 @@ TEST(ClearRenderTargetTest, ClearAfterClear)
     pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pContext->ClearRenderTarget(pRTVs[0], ClearColor0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pContext->ClearRenderTarget(pRTVs[0], ClearColor1, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pSwapChain->Present();
+}
+
+
+
+TEST(ClearRenderTargetTest, UnboundClearAfterClear)
+{
+    GPUTestingEnvironment*  pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*          pDevice    = pEnv->GetDevice();
+    const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
+    if (!(DeviceInfo.IsD3DDevice() || DeviceInfo.IsVulkanDevice()))
+    {
+        GTEST_SKIP() << "Clearing unbound render target is only supported in Direct3D and Vulkan";
+    }
+
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    constexpr float ClearColor0[] = {0.125f, 0.5f, 0.75f, 1.0f};
+    constexpr float ClearColor1[] = {0.25f, 0.75f, 0.875f, 1.0f};
+    ReferenceClear(ClearColor0);
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    TextureDesc TexDesc;
+    TexDesc.Name      = "ClearRenderTargetTest.UnboundClearAfterClear";
+    TexDesc.Type      = RESOURCE_DIM_TEX_2D;
+    TexDesc.Width     = 512;
+    TexDesc.Height    = 512;
+    TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+    TexDesc.BindFlags = BIND_RENDER_TARGET;
+    RefCntAutoPtr<ITexture> pTex;
+    pEnv->GetDevice()->CreateTexture(TexDesc, nullptr, &pTex);
+    ASSERT_NE(pTex, nullptr);
+    pContext->ClearRenderTarget(pTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), ClearColor1, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pSwapChain->Present();
 }

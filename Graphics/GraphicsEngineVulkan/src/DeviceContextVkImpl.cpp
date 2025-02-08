@@ -1325,7 +1325,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
             ClearRect.baseArrayLayer = 0;
             ClearRect.layerCount     = ViewDesc.NumArraySlices;
             // No memory barriers are needed between vkCmdClearAttachments and preceding or
-            // subsequent draw or attachment clear commands in the same subpass (17.2)
+            // subsequent draw or attachment clear commands in the same subpass
             m_CommandBuffer.ClearAttachment(ClearAttachment, ClearRect);
         }
     }
@@ -1339,7 +1339,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
         ITexture*      pTexture   = pVkRTV->GetTexture();
         TextureVkImpl* pTextureVk = ClassPtrCast<TextureVkImpl>(pTexture);
 
-        // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (17.1)
+        // Image layout must be VK_IMAGE_LAYOUT_GENERAL or VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
         TransitionOrVerifyTextureState(*pTextureVk, StateTransitionMode, RESOURCE_STATE_COPY_DEST, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                        "Clearing render target outside of render pass (DeviceContextVkImpl::ClearRenderTarget)");
 
