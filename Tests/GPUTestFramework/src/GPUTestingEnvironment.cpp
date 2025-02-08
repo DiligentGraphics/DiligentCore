@@ -594,6 +594,8 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
     AdapterInfoStr += " MB.";
     LOG_INFO_MESSAGE(AdapterInfoStr);
 
+    LOG_INFO_MESSAGE("Device features:\n", GetDeviceFeaturesString(m_pDevice->GetDeviceInfo().Features, 3));
+
 #if ARCHIVER_SUPPORTED
     // Create archiver factory
     {

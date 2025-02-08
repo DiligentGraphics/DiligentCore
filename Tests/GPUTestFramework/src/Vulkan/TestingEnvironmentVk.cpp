@@ -58,6 +58,11 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
     volkInitialize();
 
     RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice, IID_RenderDeviceVk};
+
+    DeviceFeaturesVk FeaturesVk;
+    pRenderDeviceVk->GetDeviceFeaturesVk(FeaturesVk);
+    LOG_INFO_MESSAGE("Vulkan-specific device features:\n", GetDeviceFeaturesString(FeaturesVk, 3));
+
     m_vkDevice         = pRenderDeviceVk->GetVkDevice();
     m_vkPhysicalDevice = pRenderDeviceVk->GetVkPhysicalDevice();
 
