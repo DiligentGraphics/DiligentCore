@@ -210,16 +210,20 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 
     {
         bool FeaturesPrinted = false;
-        DeviceFeatures::Enumerate(EnvCI.Features,
-                                  [&FeaturesPrinted](const char* FeatName, DEVICE_FEATURE_STATE State) //
-                                  {
-                                      if (State != DEVICE_FEATURE_STATE_OPTIONAL)
-                                      {
-                                          std::cout << "Features." << FeatName << " = " << (State == DEVICE_FEATURE_STATE_ENABLED ? "On" : "Off") << '\n';
-                                          FeaturesPrinted = true;
-                                      }
-                                      return true;
-                                  });
+        auto PrintFeature    = [&FeaturesPrinted](const char* FeatName, DEVICE_FEATURE_STATE State) //
+        {
+            if (State != DEVICE_FEATURE_STATE_OPTIONAL)
+            {
+                std::cout << "Features." << FeatName << " = " << (State == DEVICE_FEATURE_STATE_ENABLED ? "On" : "Off") << '\n';
+                FeaturesPrinted = true;
+            }
+            return true;
+        };
+        DeviceFeatures::Enumerate(EnvCI.Features, PrintFeature);
+        if (m_DeviceType == RENDER_DEVICE_TYPE_VULKAN)
+        {
+            DeviceFeaturesVk::Enumerate(EnvCI.FeaturesVk, PrintFeature);
+        }
         if (FeaturesPrinted)
             std::cout << '\n';
     }
@@ -859,42 +863,45 @@ SHADER_COMPILER GPUTestingEnvironment::GetDefaultCompiler(SHADER_SOURCE_LANGUAGE
         return m_ShaderCompiler;
 }
 
-static bool ParseFeatureState(const char* Arg, DeviceFeatures& Features)
+static bool ParseFeatureState(const char* Arg, DeviceFeatures& Features, DeviceFeaturesVk& FeaturesVk)
 {
     static const std::string ArgStart = "--Features.";
     if (ArgStart.compare(0, ArgStart.length(), Arg, ArgStart.length()) != 0)
         return false;
 
     Arg += ArgStart.length();
-    DeviceFeatures::Enumerate(Features,
-                              [Arg](const char* FeatName, DEVICE_FEATURE_STATE& State) //
-                              {
-                                  const size_t NameLen = strlen(FeatName);
-                                  if (strncmp(FeatName, Arg, NameLen) != 0)
-                                      return true;
 
-                                  if (Arg[NameLen] != '=')
-                                      return true; // Continue processing
+    auto ParseFeature = [Arg](const char* FeatName, DEVICE_FEATURE_STATE& State) //
+    {
+        const size_t NameLen = strlen(FeatName);
+        if (strncmp(FeatName, Arg, NameLen) != 0)
+            return true;
 
-                                  const char* Value = Arg + NameLen + 1;
+        if (Arg[NameLen] != '=')
+            return true; // Continue processing
 
-                                  static const std::string Off      = "Off";
-                                  static const std::string On       = "On";
-                                  static const std::string Disabled = "Disabled";
-                                  static const std::string Enabled  = "Enabled";
+        const char* Value = Arg + NameLen + 1;
 
-                                  if (StrCmpNoCase(Value, On.c_str()) == 0 || StrCmpNoCase(Value, Enabled.c_str()) == 0)
-                                      State = DEVICE_FEATURE_STATE_ENABLED;
-                                  else if (StrCmpNoCase(Value, Off.c_str()) == 0 || StrCmpNoCase(Value, Disabled.c_str()) == 0)
-                                      State = DEVICE_FEATURE_STATE_DISABLED;
-                                  else
-                                  {
-                                      LOG_ERROR_MESSAGE('\'', Value, "' is not a valid value for feature '", FeatName, "'. The following values are allowed: '",
-                                                        Off, "', '", Disabled, "', '", On, "', '", Enabled, "'.");
-                                  }
+        static const std::string Off      = "Off";
+        static const std::string On       = "On";
+        static const std::string Disabled = "Disabled";
+        static const std::string Enabled  = "Enabled";
 
-                                  return false;
-                              });
+        if (StrCmpNoCase(Value, On.c_str()) == 0 || StrCmpNoCase(Value, Enabled.c_str()) == 0)
+            State = DEVICE_FEATURE_STATE_ENABLED;
+        else if (StrCmpNoCase(Value, Off.c_str()) == 0 || StrCmpNoCase(Value, Disabled.c_str()) == 0)
+            State = DEVICE_FEATURE_STATE_DISABLED;
+        else
+        {
+            LOG_ERROR_MESSAGE('\'', Value, "' is not a valid value for feature '", FeatName, "'. The following values are allowed: '",
+                              Off, "', '", Disabled, "', '", On, "', '", Enabled, "'.");
+        }
+
+        return false;
+    };
+
+    DeviceFeatures::Enumerate(Features, ParseFeature);
+    DeviceFeaturesVk::Enumerate(FeaturesVk, ParseFeature);
 
     return false;
 }
@@ -972,11 +979,7 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
         {
             TestEnvCI.EnableDeviceSimulation = true;
         }
-        else if (strcmp(arg, "--vk_compatibility") == 0)
-        {
-            TestEnvCI.FeaturesVk = DeviceFeaturesVk{DEVICE_FEATURE_STATE_DISABLED};
-        }
-        else if (ParseFeatureState(arg, TestEnvCI.Features))
+        else if (ParseFeatureState(arg, TestEnvCI.Features, TestEnvCI.FeaturesVk))
         {
             // Feature state has been updated by ParseFeatureState
         }
