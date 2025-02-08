@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added `IRenderDeviceVk::GetDeviceFeaturesVk()` method (API256005)
 * Added `DeviceFeaturesVk` struct and `EngineVkCreateInfo::FeaturesVk` member (API256004)
 * Removed `DRAW_FLAG_VERIFY_RENDER_TARGETS` flag (API256003)
   * The validation uses render target formats hash, which allows detecting format mismatches

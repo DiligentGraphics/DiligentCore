@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -157,6 +157,10 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
                                                        VkSemaphore         vkTimelineSemaphore,
                                                        const FenceDesc REF Desc,
                                                        IFence**            ppFence) PURE;
+
+    /// Returns Vulkan-specific device features, see Diligent::DeviceFeaturesVk.
+    VIRTUAL void METHOD(GetDeviceFeaturesVk)(THIS_
+                                             DeviceFeaturesVk REF FeaturesVk) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -174,6 +178,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderDeviceVk_CreateBLASFromVulkanResource(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateBLASFromVulkanResource,   This, __VA_ARGS__)
 #    define IRenderDeviceVk_CreateTLASFromVulkanResource(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateTLASFromVulkanResource,   This, __VA_ARGS__)
 #    define IRenderDeviceVk_CreateFenceFromVulkanResource(This, ...)  CALL_IFACE_METHOD(RenderDeviceVk, CreateFenceFromVulkanResource,  This, __VA_ARGS__)
+#    define IRenderDeviceVk_GetDeviceFeaturesVk(This, ...)            CALL_IFACE_METHOD(RenderDeviceVk, GetDeviceFeaturesVk,            This, __VA_ARGS__)
 
 // clang-format on
 

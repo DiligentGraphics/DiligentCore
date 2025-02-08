@@ -47,6 +47,7 @@
 #include "PipelineStateCacheVkImpl.hpp"
 #include "CommandQueueVkImpl.hpp"
 #include "PipelineResourceSignatureVkImpl.hpp"
+#include "GraphicsAccessories.hpp"
 
 #include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
@@ -819,6 +820,11 @@ SparseTextureFormatInfo RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_F
         Info.BindFlags |= BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
     return Info;
+}
+
+void RenderDeviceVkImpl::GetDeviceFeaturesVk(DeviceFeaturesVk& FeaturesVk) const
+{
+    FeaturesVk = PhysicalDeviceFeaturesToDeviceFeaturesVk(m_LogicalVkDevice->GetEnabledExtFeatures());
 }
 
 } // namespace Diligent
