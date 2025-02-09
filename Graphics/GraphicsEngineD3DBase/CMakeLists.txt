@@ -32,6 +32,7 @@ set(SOURCE
     src/DXGITypeConversions.cpp
     src/ShaderD3DBase.cpp
     src/ShaderResources.cpp
+    src/SwapChainD3DBase.cpp
 )
 
 add_library(Diligent-GraphicsEngineD3DBase STATIC

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -152,7 +152,7 @@ void SwapChainD3D11Impl::Present(Uint32 SyncInterval)
     // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains#step-4-wait-before-rendering-each-frame
     WaitForFrame();
 
-    m_pSwapChain->Present(SyncInterval, 0);
+    PresentInternal(SyncInterval);
 }
 
 void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)

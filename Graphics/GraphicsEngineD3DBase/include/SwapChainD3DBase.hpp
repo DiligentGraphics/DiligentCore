@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,12 +31,15 @@
 #include "SwapChainBase.hpp"
 #include "DXGITypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
+#include "D3DErrors.hpp"
 
 /// \file
 /// Base implementation of a D3D swap chain
 
 namespace Diligent
 {
+
+bool CheckDXGITearingSupport(IDXGIFactory2* pDXGIFactory2);
 
 /// Base implementation of a D3D swap chain
 template <class BaseInterface, typename DXGISwapChainType>
@@ -101,7 +104,7 @@ protected:
     void CreateDXGISwapChain(IUnknown* pD3D11DeviceOrD3D12CmdQueue)
     {
 #if PLATFORM_WIN32
-        auto hWnd = reinterpret_cast<HWND>(m_Window.hWnd);
+        HWND hWnd = reinterpret_cast<HWND>(m_Window.hWnd);
         if (m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0)
         {
             RECT rc;
@@ -124,7 +127,7 @@ protected:
         m_DesiredPreTransform        = SURFACE_TRANSFORM_OPTIMAL;
         m_SwapChainDesc.PreTransform = SURFACE_TRANSFORM_IDENTITY;
 
-        auto DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
+        DXGI_FORMAT DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
 
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 
@@ -199,18 +202,27 @@ protected:
         // DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT enables querying a waitable object that can be
         // used to synchronize presentation with CPU timeline.
         // The flag is not supported in D3D11 fullscreen mode.
-        if (!(m_FSDesc.Fullscreen && m_pRenderDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11))
+        if (!m_FSDesc.Fullscreen)
         {
-            // We do not need pDXGIFactory3 itself, however DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT flag
-            // is only supported starting with Windows 8.1, and so is IDXGIFactory3 interface. We query this
-            // interface to check Windows 8.1.
-            // Note that we can't use IsWindows8Point1OrGreater because unlike IsWindows8OrGreater, it returns
-            // false if an application is not manifested for Windows 8.1 or Windows 10, even if the current
-            // operating system version is Windows 8.1 or Windows 10.
-            CComPtr<IDXGIFactory3> pDXGIFactory3;
-            if (SUCCEEDED(pDXGIFactory.QueryInterface(&pDXGIFactory3)))
+            if (m_pRenderDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
             {
-                swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+                // We do not need pDXGIFactory3 itself, however DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT flag
+                // is only supported starting with Windows 8.1, and so is IDXGIFactory3 interface. We query this
+                // interface to check Windows 8.1.
+                // Note that we can't use IsWindows8Point1OrGreater because unlike IsWindows8OrGreater, it returns
+                // false if an application is not manifested for Windows 8.1 or Windows 10, even if the current
+                // operating system version is Windows 8.1 or Windows 10.
+                CComPtr<IDXGIFactory3> pDXGIFactory3;
+                if (SUCCEEDED(pDXGIFactory.QueryInterface(&pDXGIFactory3)))
+                {
+                    swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+                }
+            }
+
+            if (CheckDXGITearingSupport(pDXGIFactory))
+            {
+                m_TearingSupported = true;
+                swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
             }
         }
 
@@ -284,9 +296,9 @@ protected:
         // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains#step-4-wait-before-rendering-each-frame
         if (m_FrameLatencyWaitableObject != NULL)
         {
-            auto Res = WaitForSingleObjectEx(m_FrameLatencyWaitableObject,
-                                             500, // 0.5 second timeout (shouldn't ever occur)
-                                             true);
+            DWORD Res = WaitForSingleObjectEx(m_FrameLatencyWaitableObject,
+                                              500, // 0.5 second timeout (shouldn't ever occur)
+                                              true);
             if (Res != WAIT_OBJECT_0)
             {
                 const char* ErrorMsg = Res == WAIT_TIMEOUT ?
@@ -360,8 +372,23 @@ protected:
         }
     }
 
+protected:
     virtual void SetDXGIDeviceMaximumFrameLatency() {}
 
+    HRESULT PresentInternal(Uint32 SyncInterval)
+    {
+        if (!m_pSwapChain)
+            return E_FAIL;
+
+        UINT Flags = 0;
+        // DXGI_PRESENT_ALLOW_TEARING can only be used with sync interval 0
+        if (SyncInterval == 0 && m_TearingSupported)
+            Flags |= DXGI_PRESENT_ALLOW_TEARING;
+
+        return m_pSwapChain->Present(SyncInterval, Flags);
+    }
+
+protected:
     using TBase::m_pRenderDevice;
     using TBase::m_SwapChainDesc;
     using TBase::m_DesiredPreTransform;
@@ -372,7 +399,8 @@ protected:
 
     HANDLE m_FrameLatencyWaitableObject = NULL;
 
-    Uint32 m_MaxFrameLatency = 0;
+    Uint32 m_MaxFrameLatency  = 0;
+    bool   m_TearingSupported = false;
 };
 
 } // namespace Diligent
