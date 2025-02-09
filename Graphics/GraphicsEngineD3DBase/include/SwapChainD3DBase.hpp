@@ -202,30 +202,26 @@ protected:
         // DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT enables querying a waitable object that can be
         // used to synchronize presentation with CPU timeline.
         // The flag is not supported in D3D11 fullscreen mode.
-        if (!m_FSDesc.Fullscreen)
+        if (!(m_FSDesc.Fullscreen && m_pRenderDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11))
         {
-            if (m_pRenderDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+            // We do not need pDXGIFactory3 itself, however DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT flag
+            // is only supported starting with Windows 8.1, and so is IDXGIFactory3 interface. We query this
+            // interface to check Windows 8.1.
+            // Note that we can't use IsWindows8Point1OrGreater because unlike IsWindows8OrGreater, it returns
+            // false if an application is not manifested for Windows 8.1 or Windows 10, even if the current
+            // operating system version is Windows 8.1 or Windows 10.
+            CComPtr<IDXGIFactory3> pDXGIFactory3;
+            if (SUCCEEDED(pDXGIFactory.QueryInterface(&pDXGIFactory3)))
             {
-                // We do not need pDXGIFactory3 itself, however DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT flag
-                // is only supported starting with Windows 8.1, and so is IDXGIFactory3 interface. We query this
-                // interface to check Windows 8.1.
-                // Note that we can't use IsWindows8Point1OrGreater because unlike IsWindows8OrGreater, it returns
-                // false if an application is not manifested for Windows 8.1 or Windows 10, even if the current
-                // operating system version is Windows 8.1 or Windows 10.
-                CComPtr<IDXGIFactory3> pDXGIFactory3;
-                if (SUCCEEDED(pDXGIFactory.QueryInterface(&pDXGIFactory3)))
-                {
-                    swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
-                }
-            }
-
-            if (CheckDXGITearingSupport(pDXGIFactory))
-            {
-                m_TearingSupported = true;
-                swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+                swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
             }
         }
 
+        if (CheckDXGITearingSupport(pDXGIFactory))
+        {
+            m_TearingSupported = true;
+            swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+        }
 
         CComPtr<IDXGISwapChain1> pSwapChain1;
 
@@ -382,7 +378,7 @@ protected:
 
         UINT Flags = 0;
         // DXGI_PRESENT_ALLOW_TEARING can only be used with sync interval 0
-        if (SyncInterval == 0 && m_TearingSupported)
+        if (SyncInterval == 0 && !m_FSDesc.Fullscreen && m_TearingSupported)
             Flags |= DXGI_PRESENT_ALLOW_TEARING;
 
         return m_pSwapChain->Present(SyncInterval, Flags);
