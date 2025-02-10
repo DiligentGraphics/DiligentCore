@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -133,7 +133,7 @@ bool BasicFileSystem::IsPathAbsolute(const Char* strPath)
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
     return ((strPath[1] == ':' && (strPath[2] == '\\' || strPath[2] == '/')) || // c:\Path or c:/Path
             (strPath[0] == '\\' && strPath[1] == '\\'));                        // \\?\Path
-#elif PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_ANDROID || PLATFORM_EMSCRIPTEN
+#elif PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_ANDROID || PLATFORM_WEB
     return strPath[0] == '/';
 #else
 #    error Unknown platform.

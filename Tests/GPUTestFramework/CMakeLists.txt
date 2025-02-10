@@ -14,7 +14,7 @@ elseif(PLATFORM_MACOS)
 elseif(PLATFORM_LINUX)
     file(GLOB SOURCE_LINUX LIST_DIRECTORIES false src/Linux/*)
     list(APPEND SOURCE ${SOURCE_LINUX})
-elseif(PLATFORM_EMSCRIPTEN)
+elseif(PLATFORM_WEB)
     file(GLOB SOURCE_EMSCRIPTEN LIST_DIRECTORIES false src/Emscripten/*)
     list(APPEND SOURCE ${SOURCE_EMSCRIPTEN})
 endif()
@@ -86,7 +86,7 @@ if(D3D12_SUPPORTED)
     target_link_libraries(Diligent-GPUTestFramework PUBLIC d3d12.lib)
 endif()
 
-if(WEBGPU_SUPPORTED AND (NOT PLATFORM_EMSCRIPTEN))
+if(WEBGPU_SUPPORTED AND (NOT PLATFORM_WEB))
     target_link_libraries(Diligent-GPUTestFramework PUBLIC dawn_headers dawn_proc)
 endif()
 
@@ -99,7 +99,7 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     elseif(PLATFORM_MACOS)
         find_package(OpenGL REQUIRED)
         target_link_libraries(Diligent-GPUTestFramework PUBLIC GLEW::glew OpenGL::GL)
-    elseif(PLATFORM_EMSCRIPTEN)
+    elseif(PLATFORM_WEB)
 
     else()
         message(FATAL_ERROR "Unsupported platform")
@@ -129,7 +129,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     APPEND_STRING PROPERTY
         COMPILE_FLAGS -Wno-tautological-pointer-compare
     )
-    if (PLATFORM_EMSCRIPTEN)
+    if (PLATFORM_WEB)
         set_property(SOURCE
             src/GPUTestingEnvironment.cpp
         APPEND_STRING PROPERTY

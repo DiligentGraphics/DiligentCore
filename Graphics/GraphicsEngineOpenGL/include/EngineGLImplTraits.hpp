@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -85,7 +85,7 @@ struct EngineGLImplTraits
 {
 #if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
     static constexpr auto DeviceType = RENDER_DEVICE_TYPE_GL;
-#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_EMSCRIPTEN
+#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_WEB
     static constexpr auto DeviceType = RENDER_DEVICE_TYPE_GL;
 #else
 #    error Unsupported platform

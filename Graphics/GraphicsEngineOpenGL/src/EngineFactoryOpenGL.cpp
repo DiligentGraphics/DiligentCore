@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +54,7 @@
 #    include "FileSystem.hpp"
 #endif
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 #    include "RenderDeviceGLESImpl.hpp"
 #endif
 
@@ -64,7 +64,7 @@ namespace Diligent
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_LINUX || PLATFORM_MACOS
 using TRenderDeviceGLImpl = RenderDeviceGLImpl;
 using TSwapChain          = SwapChainGLImpl;
-#elif PLATFORM_ANDROID || PLATFORM_EMSCRIPTEN
+#elif PLATFORM_ANDROID || PLATFORM_WEB
 using TRenderDeviceGLImpl = RenderDeviceGLESImpl;
 using TSwapChain          = SwapChainGLImpl;
 #elif PLATFORM_IOS

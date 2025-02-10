@@ -40,12 +40,12 @@
 #include "StringTools.hpp"
 #include "GraphicsAccessories.hpp"
 
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
 #    include "dawn/native/DawnNative.h"
 #    include "dawn/dawn_proc.h"
 #endif
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 #    include <emscripten.h>
 #endif
 
@@ -101,7 +101,7 @@ namespace
 
 void InstancePoolEvents(WGPUInstance wgpuInstance)
 {
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
     wgpuInstanceProcessEvents(wgpuInstance);
 #endif
 }
@@ -109,7 +109,7 @@ void InstancePoolEvents(WGPUInstance wgpuInstance)
 WebGPUInstanceWrapper InitializeWebGPUInstance(bool EnableUnsafe)
 {
     // Not implemented in Emscripten https://github.com/emscripten-core/emscripten/blob/217010a223375e6e9251669187d406ef2ddf266e/system/lib/webgpu/webgpu.cpp#L24
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
     WebGPUInstanceWrapper wgpuInstance{wgpuCreateInstance(nullptr)};
 #else
     struct SetDawnProcsHelper
@@ -205,7 +205,7 @@ static void DeviceLostCallback(WGPUDeviceLostReason Reason,
                                void*                userdata)
 {
     bool Expression = Reason != WGPUDeviceLostReason_Destroyed;
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
     Expression &= (Reason != WGPUDeviceLostReason_InstanceDropped);
 #endif
     if (Expression && WGPUStringViewValid(Message))
@@ -214,7 +214,7 @@ static void DeviceLostCallback(WGPUDeviceLostReason Reason,
     }
 }
 
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
 static void DeviceLostCallback2(WGPUDevice const*    device,
                                 WGPUDeviceLostReason Reason,
                                 WGPUStringView       Message,
@@ -298,7 +298,7 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
         }
     };
 
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
     const char* ToggleNames[] = {
         "disable_timestamp_query_conversion",
         "use_dxc",
@@ -316,7 +316,7 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
     DeviceDesc.requiredLimits       = &RequiredLimits;
     DeviceDesc.requiredFeatureCount = wgpuFeatures.size();
     DeviceDesc.requiredFeatures     = wgpuFeatures.data();
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
     DeviceDesc.deviceLostCallback = DeviceLostCallback;
 #else
     DeviceDesc.deviceLostCallbackInfo2      = {nullptr, WGPUCallbackMode_AllowSpontaneous, DeviceLostCallback2};
@@ -725,7 +725,7 @@ void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(void*                        
 
 const void* EngineFactoryWebGPUImpl::GetProcessTable() const
 {
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
     return &dawn::native::GetProcs();
 #else
     return nullptr;

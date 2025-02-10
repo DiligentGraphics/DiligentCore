@@ -34,7 +34,7 @@
 #if PLATFORM_ANDROID
 #    include <android/native_window.h>
 #    include <EGL/egl.h>
-#elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_WEB
 #else
 #    error Unsupported platform
 #endif

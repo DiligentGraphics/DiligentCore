@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.17)
 
-if (PLATFORM_EMSCRIPTEN)
+if (PLATFORM_WEB)
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()
 
@@ -90,7 +90,7 @@ set_common_target_properties(DiligentCoreAPITest)
 
 get_supported_backends(ENGINE_LIBRARIES)
 
-if (PLATFORM_EMSCRIPTEN)  
+if (PLATFORM_WEB)  
     set(RESOURCE_PATH "${PROJECT_SOURCE_DIR}/assets/")
     set(HTML_TEMPLATE_FILE ${PROJECT_SOURCE_DIR}/resources/emscripten_template.html)      
     target_link_options(DiligentCoreAPITest PRIVATE "SHELL: -s SINGLE_FILE -s ALLOW_MEMORY_GROWTH=1 --preload-file '${RESOURCE_PATH}@'")      
@@ -135,7 +135,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     PROPERTIES
         COMPILE_FLAGS -Wno-tautological-pointer-compare
     )
-    if (PLATFORM_EMSCRIPTEN)
+    if (PLATFORM_WEB)
         set_property(SOURCE ${C_INTERFACE_SOURCE} APPEND_STRING PROPERTY COMPILE_FLAGS "-Wno-unknown-warning-option -Wno-unused-but-set-variable")
     endif()
 endif()

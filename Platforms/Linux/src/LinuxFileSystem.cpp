@@ -45,7 +45,7 @@
 namespace Diligent
 {
 
-#if PLATFORM_LINUX || PLATFORM_APPLE || PLATFORM_EMSCRIPTEN
+#if PLATFORM_LINUX || PLATFORM_APPLE || PLATFORM_WEB
 LinuxFile* LinuxFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
     LinuxFile* pFile = nullptr;

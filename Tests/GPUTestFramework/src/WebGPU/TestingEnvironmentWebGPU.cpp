@@ -29,7 +29,7 @@
 #include "DeviceContextWebGPU.h"
 #include "EngineFactoryWebGPU.h"
 
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
 #    include <dawn/dawn_proc.h>
 #else
 #    include <emscripten.h>
@@ -54,7 +54,7 @@ TestingEnvironmentWebGPU::TestingEnvironmentWebGPU(const CreateInfo&    CI,
     RefCntAutoPtr<IDeviceContextWebGPU> pDeviceContextWebGPU{GetDeviceContext(), IID_DeviceContextWebGPU};
     RefCntAutoPtr<IEngineFactoryWebGPU> pEngineFactory{m_pDevice->GetEngineFactory(), IID_EngineFactoryWebGPU};
 
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
     dawnProcSetProcs(static_cast<const DawnProcTable*>(pEngineFactory->GetProcessTable()));
 #endif
     m_wgpuDevice = pRenderDeviceWebGPU->GetWebGPUDevice();
@@ -114,7 +114,7 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
 
         while (!IsWorkDone)
         {
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
             wgpuDeviceTick(m_wgpuDevice);
 #endif
         }

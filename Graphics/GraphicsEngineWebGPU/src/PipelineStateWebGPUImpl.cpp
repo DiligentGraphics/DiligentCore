@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -519,7 +519,7 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
         wgpuRenderPipelineDesc.depthStencil = &wgpuDepthStencilState;
     }
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
     WGPUPrimitiveDepthClipControl wgpuDepthClipControl{};
 #endif
     {
@@ -543,7 +543,7 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
         {
             if (m_pDevice->GetDeviceInfo().Features.DepthClamp)
             {
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
                 wgpuDepthClipControl.chain.sType    = WGPUSType_PrimitiveDepthClipControl;
                 wgpuDepthClipControl.unclippedDepth = true;
                 wgpuPrimitiveState.nextInChain      = reinterpret_cast<WGPUChainedStruct*>(&wgpuDepthClipControl);
@@ -570,7 +570,7 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
     {
         // The reference will be released from the callback.
         AsyncBuilder->AddRef();
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
         wgpuDeviceCreateRenderPipelineAsync(m_pDevice->GetWebGPUDevice(), &wgpuRenderPipelineDesc, AsyncPipelineBuilder::CreateRenderPipelineCallback, AsyncBuilder);
 #else
         wgpuDeviceCreateRenderPipelineAsync2(m_pDevice->GetWebGPUDevice(), &wgpuRenderPipelineDesc,
@@ -618,7 +618,7 @@ void PipelineStateWebGPUImpl::InitializeWebGPUComputePipeline(const TShaderStage
     {
         // The reference will be released from the callback.
         AsyncBuilder->AddRef();
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
         wgpuDeviceCreateComputePipelineAsync(m_pDevice->GetWebGPUDevice(), &wgpuComputePipelineDesc, AsyncPipelineBuilder::CreateComputePipelineCallback, AsyncBuilder);
 #else
         wgpuDeviceCreateComputePipelineAsync2(m_pDevice->GetWebGPUDevice(), &wgpuComputePipelineDesc,
@@ -653,7 +653,7 @@ PIPELINE_STATE_STATUS PipelineStateWebGPUImpl::GetStatus(bool WaitForCompletion)
 
     if (m_AsyncBuilder)
     {
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
         if (WaitForCompletion)
         {
             LOG_ERROR_MESSAGE("Waiting for asynchronous pipeline initialization is not supported on the Web");

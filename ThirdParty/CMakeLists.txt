@@ -73,14 +73,14 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR WEBGPU_SUPPORTED OR (ARCHIVER_SUPPORT
         set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Do not build SPIRV remapper")
         set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip glslang installation")
         set(ENABLE_CTEST OFF CACHE BOOL "Disable testing")
-        if (PLATFORM_EMSCRIPTEN)
+        if (PLATFORM_WEB)
             # Optimization has to be disabled on Web, see build instructions on https://github.com/KhronosGroup/glslang
             set(ENABLE_OPT OFF)
         endif()
         add_subdirectory(glslang)
         set_directory_root_folder("glslang" "DiligentCore/ThirdParty/glslang")
 
-        if (PLATFORM_EMSCRIPTEN)
+        if (PLATFORM_WEB)
              set_targets_emscripten_properties(glslang MachineIndependent)
         endif()
 
@@ -190,7 +190,7 @@ if ((${DILIGENT_BUILD_GOOGLE_TEST}) AND (NOT TARGET gtest))
     get_target_property(GTEST_SOURCE_DIR gtest SOURCE_DIR)
     install(FILES "googletest/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME googletest-License.txt)
 
-    if (PLATFORM_EMSCRIPTEN)
+    if (PLATFORM_WEB)
         find_targets_in_directory(GTEST_TARGETS ${GTEST_SOURCE_DIR})
         set_targets_emscripten_properties(${GTEST_TARGETS})
     endif()

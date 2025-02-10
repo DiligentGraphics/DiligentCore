@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -265,7 +265,7 @@ void BufferGLImpl::Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFla
     MapRange(CtxState, MapType, MapFlags, 0, m_Desc.Size, pMappedData);
 }
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 
 void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint64 Offset, Uint64 Length, PVoid& pMappedData)
 {

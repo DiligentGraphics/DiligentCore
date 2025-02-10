@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"
 
-#if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_EMSCRIPTEN || (PLATFORM_WIN32 && !defined(_MSC_VER))
+#if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_WEB || (PLATFORM_WIN32 && !defined(_MSC_VER))
 // https://gcc.gnu.org/wiki/Visibility
 #    define API_QUALIFIER __attribute__((visibility("default")))
 #elif PLATFORM_WIN32

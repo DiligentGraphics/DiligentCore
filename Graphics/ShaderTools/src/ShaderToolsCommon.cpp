@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -130,8 +130,8 @@ void AppendPlatformDefinition(std::string& Source)
     Source.append("#define PLATFORM_TVOS 1\n");
 #elif PLATFORM_ANDROID
     Source.append("#define PLATFORM_ANDROID 1\n");
-#elif PLATFORM_EMSCRIPTEN
-    Source.append("#define PLATFORM_EMSCRIPTEN 1\n");
+#elif PLATFORM_WEB
+    Source.append("#define PLATFORM_WEB 1\n");
 #else
 #    error Unexpected platform
 #endif

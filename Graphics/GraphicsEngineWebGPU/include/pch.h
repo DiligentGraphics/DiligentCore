@@ -35,7 +35,7 @@
 
 #include <webgpu/webgpu.h>
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 
 using WGPUOptionalBool                               = bool;
 using WGPUShaderSourceWGSL                           = WGPUShaderModuleWGSLDescriptor;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,7 @@
 #    define GLEW_NO_GLU
 #endif
 
-#ifdef PLATFORM_EMSCRIPTEN
+#ifdef PLATFORM_WEB
 #    include <GLES3/gl32.h>
 #    include "../../Graphics/GraphicsEngineOpenGL/include/GLStubsEmscripten.h"
 #else

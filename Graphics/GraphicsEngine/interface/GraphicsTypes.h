@@ -3546,7 +3546,7 @@ struct EngineCreateInfo
 };
 typedef struct EngineCreateInfo EngineCreateInfo;
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 /// WebGL power preference.
 DILIGENT_TYPED_ENUM(WEBGL_POWER_PREFERENCE, Uint8)
 {
@@ -3626,7 +3626,7 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// * On Linux this affects the `DRI_PRIME` environment variable that is used by Mesa drivers that support PRIME.
     ADAPTER_TYPE PreferredAdapterType DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
     /// WebGL context attributes.
     WebGLContextAttribs WebGLAttribs;
 #endif

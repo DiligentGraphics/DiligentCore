@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@
 #include "DeviceContextWebGPU.h"
 #include "TextureWebGPU.h"
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 #    include <emscripten.h>
 #endif
 
@@ -213,7 +213,7 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
         },
         this);
 
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
     wgpuDeviceTick(m_wgpuDevice);
 #endif
 }

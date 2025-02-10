@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,7 +57,7 @@
 
 #    include "../Apple/interface/TVOSNativeWindow.h"
 
-#elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_WEB
 
 #    include "../Emscripten/interface/EmscriptenNativeWindow.h"
 
@@ -95,12 +95,12 @@ typedef struct IOSNativeWindow NativeWindow;
 
 typedef struct TVOSNativeWindow NativeWindow;
 
-#elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_WEB
 
 typedef struct EmscriptenNativeWindow NativeWindow;
 
 #else
-#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
+#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_WEB.
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

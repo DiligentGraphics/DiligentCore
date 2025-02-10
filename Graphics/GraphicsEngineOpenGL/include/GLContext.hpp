@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,7 @@
 #    include "GLContextMacOS.hpp"
 #elif PLATFORM_IOS
 #    include "GLContextIOS.hpp"
-#elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_WEB
 #    include "GLContextEmscripten.hpp"
 #else
 #    error Unsupported platform

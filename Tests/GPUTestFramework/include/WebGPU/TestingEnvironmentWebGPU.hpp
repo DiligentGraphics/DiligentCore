@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ private:
     WGPUDevice m_wgpuDevice = nullptr;
 };
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 
 using WGPUShaderSourceWGSL = WGPUShaderModuleWGSLDescriptor;
 using WGPUStringView       = const char*;

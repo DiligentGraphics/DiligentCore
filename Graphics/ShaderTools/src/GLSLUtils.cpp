@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,7 @@ static bool IsESSL(RENDER_DEVICE_TYPE DeviceType)
     {
 #if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
         return false;
-#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
+#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_WEB
         return true;
 #else
 #    error Unknown platform
@@ -116,7 +116,7 @@ void GetGLSLVersion(const ShaderCreateInfo&              ShaderCI,
             VERIFY_EXPR(TargetCompiler == TargetGLSLCompiler::driver);
             GLSLVer = {4, 1};
         }
-#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
+#elif PLATFORM_ANDROID || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_WEB
         {
             VERIFY_EXPR(IsES);
             if (DeviceType == RENDER_DEVICE_TYPE_VULKAN || DeviceType == RENDER_DEVICE_TYPE_METAL)

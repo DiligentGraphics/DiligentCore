@@ -947,7 +947,7 @@ GPUTestingEnvironment* GPUTestingEnvironment::Initialize(int argc, char** argv)
         }
         else if (strcmp(arg, "--mode=gl") == 0)
         {
-#if PLATFORM_EMSCRIPTEN || PLATFORM_ANDROID
+#if PLATFORM_WEB || PLATFORM_ANDROID
             TestEnvCI.deviceType = RENDER_DEVICE_TYPE_GLES;
 #else
             TestEnvCI.deviceType = RENDER_DEVICE_TYPE_GL;

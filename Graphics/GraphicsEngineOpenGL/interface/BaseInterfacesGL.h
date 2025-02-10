@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,7 @@
 
 // clang-format off
 
-#if PLATFORM_ANDROID || PLATFORM_EMSCRIPTEN
+#if PLATFORM_ANDROID || PLATFORM_WEB
 
 #   include "RenderDeviceGLES.h"
     DILIGENT_BEGIN_NAMESPACE(Diligent)

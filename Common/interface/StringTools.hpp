@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,7 +95,7 @@ inline std::wstring WidenString(const std::string& Str)
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2, size_t NumChars)
 {
-#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
+#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_WEB
 #    define _strnicmp strncasecmp
 #endif
 
@@ -104,7 +104,7 @@ inline int StrCmpNoCase(const char* Str1, const char* Str2, size_t NumChars)
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2)
 {
-#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
+#if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_WEB
 #    define _stricmp strcasecmp
 #endif
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1009,7 +1009,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         const bool bS3TC = CheckExtension("GL_EXT_texture_compression_s3tc") || CheckExtension("GL_WEBGL_compressed_texture_s3tc");
         ENABLE_FEATURE(TextureCompressionBC, bRGTC && bBPTC && bS3TC);
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
         const bool bETC2 = CheckExtension("GL_WEBGL_compressed_texture_etc");
 #else
         const bool bETC2 = m_DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES || CheckExtension("GL_ARB_ES3_compatibility");
@@ -1130,7 +1130,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     const bool bTexNorm16  = bDekstopGL || CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
     const bool bTexSwizzle = bDekstopGL || bGLES30OrAbove || CheckExtension("GL_ARB_texture_swizzle");
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
     const bool bETC2 = CheckExtension("GL_WEBGL_compressed_texture_etc");
 #else
     const bool bETC2 = bGLES30OrAbove || CheckExtension("GL_ARB_ES3_compatibility");

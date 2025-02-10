@@ -48,7 +48,7 @@
 #    include "GLSLangUtils.hpp"
 #endif
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 #    include <emscripten.h>
 #endif
 
@@ -67,7 +67,7 @@ class ShaderBindingTableWebGPUImpl
 class DeviceMemoryWebGPUImpl
 {};
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 static void DebugMessengerCallback(WGPUErrorType MessageType, const char* Message, void* pUserData)
 {
     if (Message != nullptr)
@@ -96,7 +96,7 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters* pRefCounters,
     wgpuDeviceGetLimits(m_wgpuDevice, &wgpuSupportedLimits);
     m_wgpuLimits = wgpuSupportedLimits.limits;
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
     wgpuDeviceSetUncapturedErrorCallback(m_wgpuDevice, DebugMessengerCallback, nullptr);
 #endif
     FindSupportedTextureFormats();
@@ -126,7 +126,7 @@ RenderDeviceWebGPUImpl::~RenderDeviceWebGPUImpl()
 #if !DILIGENT_NO_GLSLANG
     GLSLangUtils::FinalizeGlslang();
 #endif
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
     IdleGPU();
 #endif
 }
@@ -295,7 +295,7 @@ WGPUDevice RenderDeviceWebGPUImpl::GetWebGPUDevice() const
 
 void RenderDeviceWebGPUImpl::IdleGPU()
 {
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
     LOG_ERROR_MESSAGE("IRenderDevice::IdleGPU() is not supported on the Web. Use non-blocking synchronization methods.");
 #else
     VERIFY_EXPR(m_wpImmediateContexts.size() == 1);
@@ -358,7 +358,7 @@ DynamicMemoryManagerWebGPU::Page RenderDeviceWebGPUImpl::GetDynamicMemoryPage(si
 
 void RenderDeviceWebGPUImpl::DeviceTick()
 {
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
     wgpuDeviceTick(m_wgpuDevice);
 #endif
 }

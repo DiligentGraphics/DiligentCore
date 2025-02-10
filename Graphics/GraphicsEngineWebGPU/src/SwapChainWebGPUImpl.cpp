@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@
 #    include <Windows.h>
 #endif
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 #    include <emscripten/html5.h>
 #endif
 
@@ -261,7 +261,7 @@ public:
 
         // Simplify this code once the bug for sRGB texture view is fixed in Dawn
         bool ConvertToGamma = false;
-#if !PLATFORM_EMSCRIPTEN
+#if !PLATFORM_WEB
         if (IsSRGBFormat(pSwapChain->GetDesc().ColorBufferFormat))
             ViewFormat = WGPUConvertUnormToSRGB(ViewFormat);
 #else
@@ -324,7 +324,7 @@ public:
 
         wgpuQueueSubmit(pDeviceContext->GetWebGPUQueue(), 1, &wgpuCmdBuffer.Get());
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
         emscripten_request_animation_frame([](double Time, void* pUserData) -> EM_BOOL { return EM_FALSE; }, nullptr);
 #else
         wgpuSurfacePresent(pSwapChain->GetWebGPUSurface());
@@ -443,7 +443,7 @@ void SwapChainWebGPUImpl::CreateSurface()
     WGPUSurfaceSourceMetalLayer wgpuSurfaceNativeDesc{};
     wgpuSurfaceNativeDesc.chain  = {nullptr, WGPUSType_SurfaceSourceMetalLayer};
     wgpuSurfaceNativeDesc.window = m_NativeWindow.MetalLayer;
-#elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_WEB
     WGPUSurfaceSourceCanvasHTMLSelector_Emscripten wgpuSurfaceNativeDesc{};
     wgpuSurfaceNativeDesc.chain    = {nullptr, WGPUSType_SurfaceSourceCanvasHTMLSelector_Emscripten};
     wgpuSurfaceNativeDesc.selector = m_NativeWindow.pCanvasId;
@@ -520,7 +520,7 @@ void SwapChainWebGPUImpl::ConfigureSurface()
 
         m_SwapChainDesc.Width  = WindowRect.right - WindowRect.left;
         m_SwapChainDesc.Height = WindowRect.bottom - WindowRect.top;
-#elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_WEB
         int32_t CanvasWidth = 0;
         int32_t CanvasHeight = 0;
         emscripten_get_canvas_element_size(m_NativeWindow.pCanvasId, &CanvasWidth, &CanvasHeight);

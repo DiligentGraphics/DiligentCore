@@ -15,7 +15,7 @@ build instructions, etc.
 |<img src="media/macos-logo.png" width=24 valign="middle"> MacOS                 | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml?query=branch%3Amaster) |
 |<img src="media/apple-logo.png" width=24 valign="middle"> iOS                   | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml?query=branch%3Amaster) |
 |<img src="media/tvos-logo.png" width=24 valign="middle"> tvOS                   | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-apple.yml?query=branch%3Amaster) |
-|<img src="media/emscripten-logo.png" width=24 valign="middle"> Emscripten       | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-emscripten.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-emscripten.yml?query=branch%3Amaster) | 
+|<img src="media/emscripten-logo.png" width=24 valign="middle"> Web              | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-emscripten.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-emscripten.yml?query=branch%3Amaster) | 
 
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](License.txt)
@@ -37,7 +37,7 @@ build instructions, etc.
     - [MacOS](#initialization_macos)
     - [Android](#initialization_android)
     - [iOS](#initialization_ios)
-    - [Emscripten](#initialization_emscripten)
+    - [Web](#initialization_web)
     - [Destroying the Engine](#initialization_destroying)
   - [Creating Resources](#creating_resources)
   - [Creating Shaders](#creating_shaders)
@@ -256,10 +256,11 @@ performed by the application, and the engine attaches to the context initialized
 [EAGLView.mm](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/iOS/EAGLView.mm)
 for details.
 
-<a name="initialization_emscripten"></a>
-### Emscripten
+<a name="initialization_web"></a>
+### Web
 
-On Emscripten, you can create OpenGLES device. The following code snippet shows an example:
+On the Web, you can create OpenGLES or WebGPU device. The following code snippet shows an example:
+
 ```cpp
 //You need to pass the id of the canvas to NativeWindow
 auto* pFactoryOpenGL = GetEngineFactoryOpenGL();

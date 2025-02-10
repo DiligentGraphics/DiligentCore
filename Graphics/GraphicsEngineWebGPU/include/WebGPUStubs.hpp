@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 
 #pragma once
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
 
 inline constexpr WGPUFeatureName WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses = static_cast<WGPUFeatureName>(0x000003EE);
 inline constexpr WGPUFeatureName WGPUFeatureName_Unorm16TextureFormats                          = static_cast<WGPUFeatureName>(0x000003FB);

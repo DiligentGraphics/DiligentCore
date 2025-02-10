@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,7 @@ StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs) :
     BasicFile{OpenAttribs},
     m_pFile{nullptr}
 {
-#if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_EMSCRIPTEN
+#if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_WEB
     auto OpenModeStr = GetOpenModeStr();
     m_pFile          = fopen(m_OpenAttribs.strFilePath, OpenModeStr.c_str());
     if (m_pFile == nullptr)

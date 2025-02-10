@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -94,7 +94,7 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
     //Set dummy width and height until resize is called by the app
     m_SwapChainDesc.Width  = 1024;
     m_SwapChainDesc.Height = 768;
-#elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_WEB
     int32_t CanvasWidth  = 0;
     int32_t CanvasHeight = 0;
     emscripten_get_canvas_element_size(InitAttribs.Window.pCanvasId, &CanvasWidth, &CanvasHeight);
@@ -121,7 +121,7 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
     GLContext.SwapBuffers(static_cast<int>(SyncInterval));
 #elif PLATFORM_MACOS
     LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
-#elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_WEB
     LOG_INFO_MESSAGE_ONCE("Swap buffers operation should be performed by the app on the Web");
 #else
 #    error Unsupported platform

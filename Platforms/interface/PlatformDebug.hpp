@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,12 +48,12 @@
 
 #    include "../Apple/interface/AppleDebug.hpp"
 
-#elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_WEB
 
 #    include "../Emscripten/interface/EmscriptenDebug.hpp"
 
 #else
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_WEB.
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -78,12 +78,12 @@ using PlatformDebug = LinuxDebug;
 
 using PlatformDebug = AppleDebug;
 
-#elif PLATFORM_EMSCRIPTEN
+#elif PLATFORM_WEB
 
 using PlatformDebug = EmscriptenDebug;
 
 #else
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_EMSCRIPTEN.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS, PLATFORM_TVOS, PLATFORM_WEB.
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

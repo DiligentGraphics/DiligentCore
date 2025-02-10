@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,7 +95,7 @@ private:
     const Uint32                  m_BindTarget;
     const GLenum                  m_GLUsageHint;
 
-#if PLATFORM_EMSCRIPTEN
+#if PLATFORM_WEB
     struct MappedData
     {
         std::vector<Uint8> Data;
