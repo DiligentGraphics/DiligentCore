@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,7 @@ namespace VulkanUtilities
 
 std::shared_ptr<VulkanLogicalDevice> VulkanLogicalDevice::Create(const CreateInfo& CI)
 {
-    auto* LogicalDevice = new VulkanLogicalDevice{CI};
+    VulkanLogicalDevice* LogicalDevice = new VulkanLogicalDevice{CI};
     return std::shared_ptr<VulkanLogicalDevice>{LogicalDevice};
 }
 
@@ -57,7 +57,7 @@ VulkanLogicalDevice::VulkanLogicalDevice(const CreateInfo& CI) :
     volkLoadDevice(m_VkDevice);
 #endif
 
-    auto GraphicsStages =
+    VkPipelineStageFlags GraphicsStages =
         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
@@ -65,11 +65,11 @@ VulkanLogicalDevice::VulkanLogicalDevice(const CreateInfo& CI) :
         VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
         VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    auto ComputeStages =
+    VkPipelineStageFlags ComputeStages =
         VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 
-    auto GraphicsAccessMask =
+    VkAccessFlags GraphicsAccessMask =
         VK_ACCESS_INDEX_READ_BIT |
         VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
         VK_ACCESS_INPUT_ATTACHMENT_READ_BIT |
@@ -77,12 +77,12 @@ VulkanLogicalDevice::VulkanLogicalDevice(const CreateInfo& CI) :
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    auto ComputeAccessMask =
+    VkAccessFlags ComputeAccessMask =
         VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
         VK_ACCESS_UNIFORM_READ_BIT |
         VK_ACCESS_SHADER_READ_BIT |
         VK_ACCESS_SHADER_WRITE_BIT;
-    auto TransferAccessMask =
+    VkAccessFlags TransferAccessMask =
         VK_ACCESS_TRANSFER_READ_BIT |
         VK_ACCESS_TRANSFER_WRITE_BIT |
         VK_ACCESS_HOST_READ_BIT |
@@ -110,14 +110,14 @@ VulkanLogicalDevice::VulkanLogicalDevice(const CreateInfo& CI) :
         GraphicsAccessMask |= VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT;
     }
 
-    const auto QueueCount = CI.PhysicalDevice.GetQueueProperties().size();
+    const size_t QueueCount = CI.PhysicalDevice.GetQueueProperties().size();
     m_SupportedStagesMask.resize(QueueCount, 0);
     m_SupportedAccessMask.resize(QueueCount, 0);
     for (size_t q = 0; q < QueueCount; ++q)
     {
-        const auto& Queue      = CI.PhysicalDevice.GetQueueProperties()[q];
-        auto&       StageMask  = m_SupportedStagesMask[q];
-        auto&       AccessMask = m_SupportedAccessMask[q];
+        const VkQueueFamilyProperties& Queue      = CI.PhysicalDevice.GetQueueProperties()[q];
+        VkPipelineStageFlags&          StageMask  = m_SupportedStagesMask[q];
+        VkAccessFlags&                 AccessMask = m_SupportedAccessMask[q];
 
         if (Queue.queueFlags & VK_QUEUE_GRAPHICS_BIT)
         {
@@ -150,7 +150,7 @@ VkQueue VulkanLogicalDevice::GetQueue(HardwareQueueIndex queueFamilyIndex, uint3
 
 void VulkanLogicalDevice::WaitIdle() const
 {
-    auto err = vkDeviceWaitIdle(m_VkDevice);
+    VkResult err = vkDeviceWaitIdle(m_VkDevice);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to idle device");
     (void)err;
 }
@@ -169,7 +169,7 @@ VulkanObjectWrapper<VkObjectType, VkTypeId> VulkanLogicalDevice::CreateVulkanObj
 
     VkObjectType VkObject = VK_NULL_HANDLE;
 
-    auto err = VkCreateObject(m_VkDevice, &CreateInfo, m_VkAllocator, &VkObject);
+    VkResult err = VkCreateObject(m_VkDevice, &CreateInfo, m_VkAllocator, &VkObject);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan ", ObjectType, " '", DebugName, '\'');
 
     if (*DebugName != 0)
@@ -253,7 +253,7 @@ DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllo
 
     VkDeviceMemory vkDeviceMem = VK_NULL_HANDLE;
 
-    auto err = vkAllocateMemory(m_VkDevice, &AllocInfo, m_VkAllocator, &vkDeviceMem);
+    VkResult err = vkAllocateMemory(m_VkDevice, &AllocInfo, m_VkAllocator, &vkDeviceMem);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to allocate device memory '", DebugName, '\'');
 
     if (*DebugName != 0)
@@ -273,7 +273,7 @@ PipelineWrapper VulkanLogicalDevice::CreateComputePipeline(const VkComputePipeli
 
     VkPipeline vkPipeline = VK_NULL_HANDLE;
 
-    auto err = vkCreateComputePipelines(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
+    VkResult err = vkCreateComputePipelines(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create compute pipeline '", DebugName, '\'');
 
     if (*DebugName != 0)
@@ -293,7 +293,7 @@ PipelineWrapper VulkanLogicalDevice::CreateGraphicsPipeline(const VkGraphicsPipe
 
     VkPipeline vkPipeline = VK_NULL_HANDLE;
 
-    auto err = vkCreateGraphicsPipelines(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
+    VkResult err = vkCreateGraphicsPipelines(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create graphics pipeline '", DebugName, '\'');
 
     if (*DebugName != 0)
@@ -312,7 +312,7 @@ PipelineWrapper VulkanLogicalDevice::CreateRayTracingPipeline(const VkRayTracing
 
     VkPipeline vkPipeline = VK_NULL_HANDLE;
 
-    auto err = vkCreateRayTracingPipelinesKHR(m_VkDevice, VK_NULL_HANDLE, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
+    VkResult err = vkCreateRayTracingPipelinesKHR(m_VkDevice, VK_NULL_HANDLE, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create ray tracing pipeline '", DebugName, '\'');
 
     if (*DebugName != 0)
@@ -403,7 +403,7 @@ VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBuff
 
     VkCommandBuffer CmdBuff = VK_NULL_HANDLE;
 
-    auto err = vkAllocateCommandBuffers(m_VkDevice, &AllocInfo, &CmdBuff);
+    VkResult err = vkAllocateCommandBuffers(m_VkDevice, &AllocInfo, &CmdBuff);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to allocate command buffer '", DebugName, '\'');
     (void)err;
 
@@ -423,7 +423,7 @@ VkDescriptorSet VulkanLogicalDevice::AllocateVkDescriptorSet(const VkDescriptorS
 
     VkDescriptorSet DescrSet = VK_NULL_HANDLE;
 
-    auto err = vkAllocateDescriptorSets(m_VkDevice, &AllocInfo, &DescrSet);
+    VkResult err = vkAllocateDescriptorSets(m_VkDevice, &AllocInfo, &DescrSet);
     if (err != VK_SUCCESS)
         return VK_NULL_HANDLE;
 
@@ -646,7 +646,7 @@ VkResult VulkanLogicalDevice::GetFenceStatus(VkFence fence) const
 
 VkResult VulkanLogicalDevice::ResetFence(VkFence fence) const
 {
-    auto err = vkResetFences(m_VkDevice, 1, &fence);
+    VkResult err = vkResetFences(m_VkDevice, 1, &fence);
     DEV_CHECK_ERR(err == VK_SUCCESS, "vkResetFences() failed");
     return err;
 }
@@ -702,7 +702,7 @@ void VulkanLogicalDevice::UpdateDescriptorSets(uint32_t                    descr
 VkResult VulkanLogicalDevice::ResetCommandPool(VkCommandPool           vkCmdPool,
                                                VkCommandPoolResetFlags flags) const
 {
-    auto err = vkResetCommandPool(m_VkDevice, vkCmdPool, flags);
+    VkResult err = vkResetCommandPool(m_VkDevice, vkCmdPool, flags);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset command pool");
     return err;
 }
@@ -710,7 +710,7 @@ VkResult VulkanLogicalDevice::ResetCommandPool(VkCommandPool           vkCmdPool
 VkResult VulkanLogicalDevice::ResetDescriptorPool(VkDescriptorPool           vkDescriptorPool,
                                                   VkDescriptorPoolResetFlags flags) const
 {
-    auto err = vkResetDescriptorPool(m_VkDevice, vkDescriptorPool, flags);
+    VkResult err = vkResetDescriptorPool(m_VkDevice, vkDescriptorPool, flags);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset descriptor pool");
     return err;
 }
