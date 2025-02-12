@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,8 +52,8 @@ FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
     if (m_Desc.Type == FENCE_TYPE_GENERAL &&
         pRenderDeviceVkImpl->GetFeatures().NativeFence)
     {
-        const auto& LogicalDevice = pRenderDeviceVkImpl->GetLogicalDevice();
-        m_TimelineSemaphore       = LogicalDevice.CreateTimelineSemaphore(0, m_Desc.Name);
+        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice{pRenderDeviceVkImpl->GetLogicalDevice()};
+        m_TimelineSemaphore = LogicalDevice.CreateTimelineSemaphore(0, m_Desc.Name);
     }
 }
 
@@ -110,9 +110,10 @@ Uint64 FenceVkImpl::GetCompletedValue()
     {
         // GetSemaphoreCounter() is thread safe
 
-        const auto& LogicalDevice    = m_pDevice->GetLogicalDevice();
-        Uint64      SemaphoreCounter = ~Uint64{0};
-        auto        err              = LogicalDevice.GetSemaphoreCounter(m_TimelineSemaphore, &SemaphoreCounter);
+        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+
+        Uint64   SemaphoreCounter = ~Uint64{0};
+        VkResult err              = LogicalDevice.GetSemaphoreCounter(m_TimelineSemaphore, &SemaphoreCounter);
         DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to get timeline semaphore counter");
         return SemaphoreCounter;
     }
@@ -127,12 +128,12 @@ Uint64 FenceVkImpl::InternalGetCompletedValue()
 {
     VERIFY_EXPR(!IsTimelineSemaphore());
 
-    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
     while (!m_SyncPoints.empty())
     {
-        auto& Item = m_SyncPoints.front();
+        SyncPointData& Item = m_SyncPoints.front();
 
-        auto status = LogicalDevice.GetFenceStatus(Item.SyncPoint->GetFence());
+        VkResult status = LogicalDevice.GetFenceStatus(Item.SyncPoint->GetFence());
         if (status == VK_SUCCESS)
         {
             UpdateLastCompletedFenceValue(Item.Value);
@@ -163,8 +164,9 @@ void FenceVkImpl::Signal(Uint64 Value)
         SignalInfo.semaphore = m_TimelineSemaphore;
         SignalInfo.value     = Value;
 
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-        auto        err           = LogicalDevice.SignalSemaphore(SignalInfo);
+        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+
+        VkResult err = LogicalDevice.SignalSemaphore(SignalInfo);
         DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to signal timeline semaphore");
     }
     else
@@ -192,7 +194,7 @@ void FenceVkImpl::Wait(Uint64 Value)
 {
     if (IsTimelineSemaphore())
     {
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
 
         VkSemaphoreWaitInfo WaitInfo{};
         WaitInfo.sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
@@ -202,22 +204,22 @@ void FenceVkImpl::Wait(Uint64 Value)
         WaitInfo.pSemaphores    = &m_TimelineSemaphore;
         WaitInfo.pValues        = &Value;
 
-        auto err = LogicalDevice.WaitSemaphores(WaitInfo, UINT64_MAX);
+        VkResult err = LogicalDevice.WaitSemaphores(WaitInfo, UINT64_MAX);
         DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to wait timeline semaphore");
     }
     else
     {
         std::lock_guard<std::mutex> Lock{m_SyncPointsGuard};
 
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
         while (!m_SyncPoints.empty())
         {
-            auto& Item = m_SyncPoints.front();
+            SyncPointData& Item = m_SyncPoints.front();
             if (Item.Value > Value)
                 break;
 
-            VkFence Fence  = Item.SyncPoint->GetFence();
-            auto    status = LogicalDevice.GetFenceStatus(Fence);
+            VkFence  Fence  = Item.SyncPoint->GetFence();
+            VkResult status = LogicalDevice.GetFenceStatus(Fence);
             if (status == VK_NOT_READY)
             {
                 status = LogicalDevice.WaitForFences(1, &Fence, VK_TRUE, UINT64_MAX);
@@ -247,7 +249,7 @@ VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(Sof
 
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto LastValue = m_SyncPoints.empty() ? m_LastCompletedFenceValue.load() : m_SyncPoints.back().Value;
+        const Uint64 LastValue = m_SyncPoints.empty() ? m_LastCompletedFenceValue.load() : m_SyncPoints.back().Value;
         DEV_CHECK_ERR(Value <= LastValue,
                       "Can not wait for value ", Value, " that is greater than the last known value (", LastValue,
                       "). Binary semaphore for these value is not enqueued for signal operation. ",
@@ -258,7 +260,7 @@ VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(Sof
     // Find the last non-null semaphore
     for (auto Iter = m_SyncPoints.begin(); Iter != m_SyncPoints.end(); ++Iter)
     {
-        auto SemaphoreForContext = Iter->SyncPoint->ExtractSemaphore(CommandQueueId);
+        VulkanUtilities::VulkanRecycledSemaphore SemaphoreForContext = Iter->SyncPoint->ExtractSemaphore(CommandQueueId);
         if (SemaphoreForContext)
             Result = std::move(SemaphoreForContext);
 
@@ -288,7 +290,7 @@ void FenceVkImpl::AddPendingSyncPoint(SoftwareQueueIndex CommandQueueId, Uint64 
 
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto LastValue = m_SyncPoints.empty() ? m_LastCompletedFenceValue.load() : m_SyncPoints.back().Value;
+        const Uint64 LastValue = m_SyncPoints.empty() ? m_LastCompletedFenceValue.load() : m_SyncPoints.back().Value;
         DEV_CHECK_ERR(Value > LastValue,
                       "New value (", Value, ") must be greater than previous value (", LastValue, ")");
     }
