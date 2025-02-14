@@ -2332,14 +2332,7 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 
         auto GetAspectMak = [](TEXTURE_FORMAT Format) -> VkImageAspectFlags {
             const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
-            switch (FmtAttribs.ComponentType)
-            {
-                    // clang-format off
-                case COMPONENT_TYPE_DEPTH:         return VK_IMAGE_ASPECT_DEPTH_BIT;
-                case COMPONENT_TYPE_DEPTH_STENCIL: return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-                // clang-format on
-                default: return VK_IMAGE_ASPECT_COLOR_BIT;
-            }
+            return ComponentTypeToVkAspectMask(FmtAttribs.ComponentType);
         };
         VkImageAspectFlags aspectMask = GetAspectMak(SrcTexDesc.Format);
         DEV_CHECK_ERR(aspectMask == GetAspectMak(DstTexDesc.Format), "Vulkan spec requires that dst and src aspect masks must match");
@@ -2543,7 +2536,7 @@ static VkBufferImageCopy GetBufferImageCopyInfo(Uint64             BufferOffset,
         // that is a (mostly) tightly packed representation of the depth or stencil data.
         // To copy both the depth and stencil aspects of a depth/stencil format, two entries in
         // pRegions can be used, where one specifies the depth aspect in imageSubresource, and the
-        // other specifies the stencil aspect (18.4)
+        // other specifies the stencil aspect.
     }
     else
         CopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -3020,7 +3013,7 @@ void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           Textur
         {
             // If image has a depth / stencil format with both depth and stencil components, then the
             // aspectMask member of subresourceRange must include both VK_IMAGE_ASPECT_DEPTH_BIT and
-            // VK_IMAGE_ASPECT_STENCIL_BIT (6.7.3)
+            // VK_IMAGE_ASPECT_STENCIL_BIT
             pSubresRange->aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
         }
         else
@@ -4083,14 +4076,7 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
         const TextureDesc&                 TexDesc        = pTexVk->GetDesc();
         const SparseTextureProperties&     TexSparseProps = pTexVk->GetSparseProperties();
         const TextureFormatAttribs&        FmtAttribs     = GetTextureFormatAttribs(TexDesc.Format);
-
-        VkImageAspectFlags aspectMask = 0;
-        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-            aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-        else
-            aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        const VkImageAspectFlags           aspectMask     = ComponentTypeToVkAspectMask(FmtAttribs.ComponentType);
 
         Uint32 NumImageBindsInRange = 0;
         for (Uint32 r = 0; r < TexBind.NumRanges; ++r)

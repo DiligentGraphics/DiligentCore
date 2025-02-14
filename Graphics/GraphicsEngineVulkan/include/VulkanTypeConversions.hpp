@@ -129,4 +129,6 @@ VkComponentMapping TextureComponentMappingToVkComponentMapping(const TextureComp
 VkPipelineRenderingCreateInfoKHR GraphicsPipelineDesc_To_VkPipelineRenderingCreateInfo(const GraphicsPipelineDesc& PipelineDesc,
                                                                                        std::vector<VkFormat>&      ColorAttachmentFormats);
 
+VkImageAspectFlags ComponentTypeToVkAspectMask(COMPONENT_TYPE ComponentType);
+
 } // namespace Diligent

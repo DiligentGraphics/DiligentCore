@@ -71,7 +71,7 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
     {
         // If image has a depth / stencil format with both depth and stencil components, then the
         // aspectMask member of subresourceRange must include both VK_IMAGE_ASPECT_DEPTH_BIT and
-        // VK_IMAGE_ASPECT_STENCIL_BIT (6.7.3)
+        // VK_IMAGE_ASPECT_STENCIL_BIT
         SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
     }
     else

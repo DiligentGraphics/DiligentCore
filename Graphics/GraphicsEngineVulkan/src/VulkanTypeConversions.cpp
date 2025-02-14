@@ -2253,4 +2253,19 @@ VkPipelineRenderingCreateInfoKHR GraphicsPipelineDesc_To_VkPipelineRenderingCrea
     return PipelineRenderingCI;
 }
 
+VkImageAspectFlags ComponentTypeToVkAspectMask(COMPONENT_TYPE ComponentType)
+{
+    switch (ComponentType)
+    {
+        case COMPONENT_TYPE_DEPTH:
+            return VK_IMAGE_ASPECT_DEPTH_BIT;
+
+        case COMPONENT_TYPE_DEPTH_STENCIL:
+            return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+
+        default:
+            return VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+}
+
 } // namespace Diligent
