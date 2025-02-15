@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,9 +48,9 @@ namespace Diligent
 
 void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) noexcept(false)
 {
-    const auto& FmtAttribs  = GetTextureFormatAttribs(Desc.Format);
-    const auto& AdapterInfo = pDevice->GetAdapterInfo();
-    const auto& DeviceInfo  = pDevice->GetDeviceInfo();
+    const TextureFormatAttribs& FmtAttribs  = GetTextureFormatAttribs(Desc.Format);
+    const GraphicsAdapterInfo&  AdapterInfo = pDevice->GetAdapterInfo();
+    const RenderDeviceInfo&     DeviceInfo  = pDevice->GetDeviceInfo();
 
     if (Desc.Type == RESOURCE_DIM_UNDEFINED)
     {
@@ -141,7 +141,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
         (Desc.Format == TEX_FORMAT_R8_SNORM || Desc.Format == TEX_FORMAT_RG8_SNORM || Desc.Format == TEX_FORMAT_RGBA8_SNORM ||
          Desc.Format == TEX_FORMAT_R16_SNORM || Desc.Format == TEX_FORMAT_RG16_SNORM || Desc.Format == TEX_FORMAT_RGBA16_SNORM))
     {
-        const auto* FmtName = GetTextureFormatAttribs(Desc.Format).Name;
+        const char* FmtName = GetTextureFormatAttribs(Desc.Format).Name;
         LOG_WARNING_MESSAGE(FmtName, " texture is created with BIND_RENDER_TARGET flag set.\n"
                                      "There might be an issue in OpenGL driver on NVidia hardware: when rendering to SNORM textures, all negative values are clamped to zero.\n"
                                      "Use UNORM format instead.");
@@ -149,7 +149,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 
     if (Desc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS)
     {
-        const auto& MemInfo = AdapterInfo.Memory;
+        const AdapterMemoryInfo& MemInfo = AdapterInfo.Memory;
 
         if (MemInfo.MemorylessTextureBindFlags == BIND_NONE)
             LOG_TEXTURE_ERROR_AND_THROW("Memoryless textures are not supported by device");
@@ -194,7 +194,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
         LOG_TEXTURE_ERROR_AND_THROW("USAGE_DYNAMIC textures may only be used in one immediate device context.");
     }
 
-    const auto& SRProps = pDevice->GetAdapterInfo().ShadingRate;
+    const ShadingRateProperties& SRProps = pDevice->GetAdapterInfo().ShadingRate;
     if (Desc.MiscFlags & MISC_TEXTURE_FLAG_SUBSAMPLED)
     {
         if (!pDevice->GetDeviceInfo().Features.VariableRateShading)
@@ -269,7 +269,7 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
     {
         VERIFY_TEXTURE(DeviceInfo.Features.SparseResources, "sparse texture requires SparseResources feature");
 
-        const auto& SparseRes = AdapterInfo.SparseResources;
+        const SparseResourceProperties& SparseRes = AdapterInfo.SparseResources;
 
         if ((Desc.MiscFlags & MISC_TEXTURE_FLAG_SPARSE_ALIASING) != 0)
             VERIFY_TEXTURE((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_ALIASED) != 0, "MISC_TEXTURE_FLAG_SPARSE_ALIASING flag requires SPARSE_RESOURCE_CAP_FLAG_ALIASED capability");
@@ -290,8 +290,8 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 
                 if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
                 {
-                    const auto  Props = GetStandardSparseTextureProperties(Desc);
-                    const uint2 MipSize{std::max(1u, Desc.Width >> Desc.MipLevels),
+                    const SparseTextureProperties Props = GetStandardSparseTextureProperties(Desc);
+                    const uint2                   MipSize{std::max(1u, Desc.Width >> Desc.MipLevels),
                                         std::max(1u, Desc.Height >> Desc.MipLevels)};
                     VERIFY_TEXTURE(MipSize.x >= Props.TileSize[0] && MipSize.y >= Props.TileSize[1],
                                    "2D array or Cube sparse texture with mip level count ", Desc.MipLevels,
@@ -348,7 +348,7 @@ void ValidateTextureRegion(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 S
         VERIFY_TEX_PARAMS(Slice == 0, "Array slice (", Slice, ") must be 0 for non-array textures.");
     }
 
-    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
     Uint32 MipWidth = std::max(TexDesc.Width >> MipLevel, 1U);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
@@ -401,12 +401,12 @@ void ValidateUpdateTextureParams(const TextureDesc& TexDesc, Uint32 MipLevel, Ui
     VERIFY_TEX_PARAMS((SubresData.Stride & 0x03) == 0, "Texture data stride (", SubresData.Stride, ") must be at least 32-bit aligned.");
     VERIFY_TEX_PARAMS((SubresData.DepthStride & 0x03) == 0, "Texture data depth stride (", SubresData.DepthStride, ") must be at least 32-bit aligned.");
 
-    auto        UpdateRegionWidth  = DstBox.Width();
-    auto        UpdateRegionHeight = DstBox.Height();
-    auto        UpdateRegionDepth  = DstBox.Depth();
-    const auto& FmtAttribs         = GetTextureFormatAttribs(TexDesc.Format);
-    Uint32      RowSize            = 0;
-    Uint32      RowCount           = 0;
+    Uint32                      UpdateRegionWidth  = DstBox.Width();
+    Uint32                      UpdateRegionHeight = DstBox.Height();
+    Uint32                      UpdateRegionDepth  = DstBox.Depth();
+    const TextureFormatAttribs& FmtAttribs         = GetTextureFormatAttribs(TexDesc.Format);
+    Uint32                      RowSize            = 0;
+    Uint32                      RowCount           = 0;
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
         // Align update region size by the block size. This is only necessary when updating
@@ -424,7 +424,7 @@ void ValidateUpdateTextureParams(const TextureDesc& TexDesc, Uint32 MipLevel, Ui
         RowCount = UpdateRegionHeight;
     }
     DEV_CHECK_ERR(SubresData.Stride >= RowSize, "Source data stride (", SubresData.Stride, ") is below the image row size (", RowSize, ").");
-    const auto PlaneSize = SubresData.Stride * RowCount;
+    const Uint64 PlaneSize = SubresData.Stride * RowCount;
     DEV_CHECK_ERR(UpdateRegionDepth == 1 || SubresData.DepthStride >= PlaneSize, "Source data depth stride (", SubresData.DepthStride, ") is below the image plane size (", PlaneSize, ").");
 #endif
 }
@@ -432,17 +432,18 @@ void ValidateUpdateTextureParams(const TextureDesc& TexDesc, Uint32 MipLevel, Ui
 void ValidateCopyTextureParams(const CopyTextureAttribs& CopyAttribs)
 {
     VERIFY_EXPR(CopyAttribs.pSrcTexture != nullptr && CopyAttribs.pDstTexture != nullptr);
-    Box         SrcBox;
-    const auto& SrcTexDesc = CopyAttribs.pSrcTexture->GetDesc();
-    const auto& DstTexDesc = CopyAttribs.pDstTexture->GetDesc();
-    auto        pSrcBox    = CopyAttribs.pSrcBox;
+    Box                SrcBox;
+    const TextureDesc& SrcTexDesc = CopyAttribs.pSrcTexture->GetDesc();
+    const TextureDesc& DstTexDesc = CopyAttribs.pDstTexture->GetDesc();
+    const Box*         pSrcBox    = CopyAttribs.pSrcBox;
     if (pSrcBox == nullptr)
     {
-        auto MipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
-        SrcBox.MaxX          = MipLevelAttribs.LogicalWidth;
-        SrcBox.MaxY          = MipLevelAttribs.LogicalHeight;
-        SrcBox.MaxZ          = MipLevelAttribs.Depth;
-        pSrcBox              = &SrcBox;
+        MipLevelProperties MipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
+
+        SrcBox.MaxX = MipLevelAttribs.LogicalWidth;
+        SrcBox.MaxY = MipLevelAttribs.LogicalHeight;
+        SrcBox.MaxZ = MipLevelAttribs.Depth;
+        pSrcBox     = &SrcBox;
     }
     ValidateTextureRegion(SrcTexDesc, CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, *pSrcBox);
 
@@ -650,7 +651,7 @@ void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewD
 
         case RESOURCE_DIM_TEX_3D:
         {
-            auto MipDepth = std::max(TexDesc.Depth >> ViewDesc.MostDetailedMip, 1u);
+            Uint32 MipDepth = std::max(TexDesc.Depth >> ViewDesc.MostDetailedMip, 1u);
             if (ViewDesc.FirstDepthSlice + ViewDesc.NumDepthSlices > MipDepth)
                 TEX_VIEW_VALIDATION_ERROR("First slice (", ViewDesc.FirstDepthSlice, ") and number of slices in the view (", ViewDesc.NumDepthSlices, ") specify more slices than target 3D texture mip level has (", MipDepth, ").");
             break;
@@ -699,7 +700,7 @@ void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewD
             ViewDesc.NumArraySlices = TexDesc.ArraySize - ViewDesc.FirstArraySlice;
         else if (TexDesc.Is3D())
         {
-            auto MipDepth           = std::max(TexDesc.Depth >> ViewDesc.MostDetailedMip, 1u);
+            Uint32 MipDepth         = std::max(TexDesc.Depth >> ViewDesc.MostDetailedMip, 1u);
             ViewDesc.NumDepthSlices = MipDepth - ViewDesc.FirstDepthSlice;
         }
         else
@@ -710,7 +711,7 @@ void ValidatedAndCorrectTextureViewDesc(const TextureDesc& TexDesc, TextureViewD
         (ViewDesc.Format == TEX_FORMAT_R8_SNORM || ViewDesc.Format == TEX_FORMAT_RG8_SNORM || ViewDesc.Format == TEX_FORMAT_RGBA8_SNORM ||
          ViewDesc.Format == TEX_FORMAT_R16_SNORM || ViewDesc.Format == TEX_FORMAT_RG16_SNORM || ViewDesc.Format == TEX_FORMAT_RGBA16_SNORM))
     {
-        const auto* FmtName = GetTextureFormatAttribs(ViewDesc.Format).Name;
+        const char* FmtName = GetTextureFormatAttribs(ViewDesc.Format).Name;
         LOG_WARNING_MESSAGE(FmtName, " render target view is created.\n"
                                      "There might be an issue in OpenGL driver on NVidia hardware: when rendering to SNORM textures, all negative values are clamped to zero.\n"
                                      "Use UNORM format instead.");

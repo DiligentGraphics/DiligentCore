@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -183,7 +183,7 @@ public:
     {
         VERIFY(m_pDefaultViews == nullptr, "Default views have already been initialized");
 
-        const auto& TexFmtAttribs = GetTextureFormatAttribs(this->m_Desc.Format);
+        const TextureFormatAttribs& TexFmtAttribs = GetTextureFormatAttribs(this->m_Desc.Format);
         if (TexFmtAttribs.ComponentType == COMPONENT_TYPE_UNDEFINED)
         {
             // Cannot create default view for TYPELESS formats
@@ -199,7 +199,7 @@ public:
             m_pDefaultViews = ALLOCATE(GetRawAllocator(), "Default texture view array", TextureViewImplType*, NumDefaultViews);
             memset(m_pDefaultViews, 0, sizeof(TextureViewImplType*) * NumDefaultViews);
         }
-        auto** ppDefaultViews = GetDefaultViewsArrayPtr();
+        TextureViewImplType** ppDefaultViews = GetDefaultViewsArrayPtr();
 
         Uint8 ViewIdx = 0;
 
@@ -245,7 +245,7 @@ public:
             ViewDesc.Name = ViewName.c_str();
 
             VERIFY_EXPR(ViewIdx < NumDefaultViews);
-            auto& pView = ppDefaultViews[ViewIdx];
+            TextureViewImplType*& pView = ppDefaultViews[ViewIdx];
             CreateViewInternal(ViewDesc, reinterpret_cast<ITextureView**>(&pView), true);
             DEV_CHECK_ERR(pView != nullptr, "Failed to create default view for texture '", this->m_Desc.Name, "'.");
             DEV_CHECK_ERR(pView->GetDesc().ViewType == ViewType, "Unexpected view type.");
@@ -312,12 +312,12 @@ public:
     /// Implementation of ITexture::GetDefaultView().
     virtual ITextureView* DILIGENT_CALL_TYPE GetDefaultView(TEXTURE_VIEW_TYPE ViewType) override
     {
-        auto ViewIdx = m_ViewIndices[ViewType];
+        Uint8 ViewIdx = m_ViewIndices[ViewType];
         if (ViewIdx == InvalidViewIndex)
             return nullptr;
 
         VERIFY_EXPR(ViewIdx < GetNumDefaultViews());
-        auto** ppDefaultViews = GetDefaultViewsArrayPtr();
+        TextureViewImplType** ppDefaultViews = GetDefaultViewsArrayPtr();
         return ppDefaultViews[ViewIdx];
     }
 
@@ -336,15 +336,15 @@ protected:
         if (m_pDefaultViews == nullptr)
             return;
 
-        const auto NumViews       = GetNumDefaultViews();
-        auto**     ppDefaultViews = GetDefaultViewsArrayPtr();
+        const Uint32          NumViews       = GetNumDefaultViews();
+        TextureViewImplType** ppDefaultViews = GetDefaultViewsArrayPtr();
 
-        auto& TexViewAllocator = this->GetDevice()->GetTexViewObjAllocator();
+        TexViewObjAllocatorType& TexViewAllocator = this->GetDevice()->GetTexViewObjAllocator();
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
         for (Uint32 i = 0; i < NumViews; ++i)
         {
-            if (auto* pView = ppDefaultViews[i])
+            if (TextureViewImplType* pView = ppDefaultViews[i])
             {
                 pView->~TextureViewImplType();
                 TexViewAllocator.Free(pView);
@@ -364,7 +364,7 @@ protected:
 
     Uint32 GetNumDefaultViews() const
     {
-        constexpr auto BindFlagsWithViews =
+        constexpr BIND_FLAGS BindFlagsWithViews =
             BIND_SHADER_RESOURCE |
             BIND_RENDER_TARGET |
             BIND_DEPTH_STENCIL |
@@ -375,7 +375,7 @@ protected:
 
     TextureViewImplType** GetDefaultViewsArrayPtr()
     {
-        const auto NumDefaultViews = GetNumDefaultViews();
+        const Uint32 NumDefaultViews = GetNumDefaultViews();
         return NumDefaultViews > 1 ?
             reinterpret_cast<TextureViewImplType**>(m_pDefaultViews) :
             reinterpret_cast<TextureViewImplType**>(&m_pDefaultViews);
