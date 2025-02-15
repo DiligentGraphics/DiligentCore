@@ -344,6 +344,20 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const CreateInfo& CI) :
             m_ExtFeatures.DynamicRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
         }
 
+        const bool HostImageCopySupported = IsExtensionSupported(VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME);
+        if (HostImageCopySupported)
+        {
+            *NextFeat = &m_ExtFeatures.HostImageCopy;
+            NextFeat  = &m_ExtFeatures.HostImageCopy.pNext;
+
+            m_ExtFeatures.HostImageCopy.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_IMAGE_COPY_FEATURES_EXT;
+
+            *NextProp = &m_ExtProperties.HostImageCopy;
+            NextProp  = &m_ExtProperties.HostImageCopy.pNext;
+
+            m_ExtProperties.HostImageCopy.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_IMAGE_COPY_PROPERTIES_EXT;
+        }
+
         // make sure that last pNext is null
         *NextFeat = nullptr;
         *NextProp = nullptr;
@@ -353,6 +367,18 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const CreateInfo& CI) :
         vkGetPhysicalDeviceFeatures2KHR(m_VkDevice, &Feats2);
         vkGetPhysicalDeviceProperties2KHR(m_VkDevice, &Props2);
 
+        if (HostImageCopySupported)
+        {
+            m_ExtProperties.HostImageCopy.pNext = nullptr;
+            if (m_ExtProperties.HostImageCopy.copySrcLayoutCount + m_ExtProperties.HostImageCopy.copyDstLayoutCount > 0)
+            {
+                m_ExtProperties.HostImageCopyLayouts          = std::make_unique<VkImageLayout[]>(m_ExtProperties.HostImageCopy.copySrcLayoutCount + m_ExtProperties.HostImageCopy.copyDstLayoutCount);
+                m_ExtProperties.HostImageCopy.pCopySrcLayouts = m_ExtProperties.HostImageCopy.copySrcLayoutCount > 0 ? &m_ExtProperties.HostImageCopyLayouts[0] : nullptr;
+                m_ExtProperties.HostImageCopy.pCopyDstLayouts = m_ExtProperties.HostImageCopy.copyDstLayoutCount > 0 ? &m_ExtProperties.HostImageCopyLayouts[m_ExtProperties.HostImageCopy.copySrcLayoutCount] : nullptr;
+            }
+            Props2.pNext = &m_ExtProperties.HostImageCopy;
+            vkGetPhysicalDeviceProperties2KHR(m_VkDevice, &Props2);
+        }
 
         // Check texture formats
         if (m_ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
@@ -517,11 +543,27 @@ uint32_t VulkanPhysicalDevice::GetMemoryTypeIndex(uint32_t              memoryTy
     return InvalidMemoryTypeIndex;
 }
 
-VkFormatProperties VulkanPhysicalDevice::GetPhysicalDeviceFormatProperties(VkFormat imageFormat) const
+VkFormatProperties VulkanPhysicalDevice::GetPhysicalDeviceFormatProperties(VkFormat imageFormat, VkFormatProperties3* Properties3) const
 {
-    VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(m_VkDevice, imageFormat, &formatProperties);
-    return formatProperties;
+    if (Properties3 != nullptr)
+    {
+        *Properties3       = {};
+        Properties3->sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_3_KHR;
+
+        VkFormatProperties2 VkFormatProps2{};
+        VkFormatProps2.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2;
+        VkFormatProps2.pNext = Properties3;
+
+        vkGetPhysicalDeviceFormatProperties2(m_VkDevice, imageFormat, &VkFormatProps2);
+
+        return VkFormatProps2.formatProperties;
+    }
+    else
+    {
+        VkFormatProperties formatProperties;
+        vkGetPhysicalDeviceFormatProperties(m_VkDevice, imageFormat, &formatProperties);
+        return formatProperties;
+    }
 }
 
 } // namespace VulkanUtilities

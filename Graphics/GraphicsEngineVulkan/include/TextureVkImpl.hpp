@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -101,9 +101,13 @@ public:
 protected:
     void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) override;
 
-    void InitializeTextureContent(const TextureData&          InitData,
-                                  const TextureFormatAttribs& FmtAttribs,
-                                  const VkImageCreateInfo&    ImageCI) noexcept(false);
+    void InitializeContentOnDevice(const TextureData&          InitData,
+                                   const TextureFormatAttribs& FmtAttribs,
+                                   const VkImageCreateInfo&    ImageCI) noexcept(false);
+    bool InitializeContentOnHost(const TextureData&          InitData,
+                                 const TextureFormatAttribs& FmtAttribs,
+                                 const VkImageCreateInfo&    ImageCI) noexcept(false);
+
     void CreateStagingTexture(const TextureData*          pInitData,
                               const TextureFormatAttribs& FmtAttribs);
 
@@ -116,7 +120,5 @@ protected:
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
     VkDeviceSize                            m_StagingDataAlignedOffset = 0;
 };
-
-VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const RenderDeviceVkImpl* pDevice) noexcept;
 
 } // namespace Diligent

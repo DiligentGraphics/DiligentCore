@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,9 @@
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent
+{
+
+namespace
 {
 
 VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const RenderDeviceVkImpl* pRenderDeviceVk) noexcept
@@ -143,6 +146,60 @@ VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const 
     return ImageCI;
 }
 
+VkImageLayout VkImageLayoutFromUsage(VkImageUsageFlags Usage)
+{
+    if ((Usage & (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) != 0)
+        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    if ((Usage & VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT) != 0)
+        return VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT;
+
+    if ((Usage & VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR) != 0)
+        return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
+
+    if ((Usage & VK_IMAGE_USAGE_STORAGE_BIT) != 0)
+        return VK_IMAGE_LAYOUT_GENERAL;
+
+    if ((Usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) != 0)
+        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    if ((Usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0)
+        return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL_KHR;
+
+    VERIFY((Usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) != 0, "TRANSFER_SRC_BIT should always be set");
+    return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+}
+
+bool CheckHostImageCopySupport(const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice,
+                               const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice,
+                               const VkImageCreateInfo&                     ImageCI)
+{
+    if (!LogicalDevice.GetEnabledExtFeatures().HostImageCopy.hostImageCopy)
+        return false;
+
+    VkFormatProperties3 vkFormatProps3{};
+    VkFormatProperties  VkFormatProps = PhysicalDevice.GetPhysicalDeviceFormatProperties(ImageCI.format, &vkFormatProps3);
+    (void)VkFormatProps;
+
+    if ((vkFormatProps3.optimalTilingFeatures & VK_FORMAT_FEATURE_2_HOST_IMAGE_TRANSFER_BIT_EXT) == 0)
+        return false;
+
+    const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps           = PhysicalDevice.GetExtProperties();
+    const VkPhysicalDeviceHostImageCopyPropertiesEXT&                 HostImageCopyProps = ExtProps.HostImageCopy;
+
+    const VkImageLayout DstLayout = VkImageLayoutFromUsage(ImageCI.usage);
+
+    auto LayoutSupported = [](const VkImageLayout* pLayouts, uint32_t LayoutCount, VkImageLayout Layout) {
+        return std::find(pLayouts, pLayouts + LayoutCount, Layout) != pLayouts + LayoutCount;
+    };
+
+    if (!LayoutSupported(HostImageCopyProps.pCopyDstLayouts, HostImageCopyProps.copyDstLayoutCount, DstLayout))
+        return false;
+
+    return true;
+}
+
+} // namespace
 
 TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
                              FixedBlockMemoryAllocator& TexViewObjAllocator,
@@ -178,6 +235,11 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
                "ImmediateContextMask must contain single set bit, this error should've been handled in ValidateTextureDesc()");
 
         VkImageCreateInfo ImageCI = TextureDescToVkImageCreateInfo(m_Desc, pRenderDeviceVk);
+
+        const bool InitContent      = pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0;
+        const bool UseHostImageCopy = InitContent && CheckHostImageCopySupport(LogicalDevice, pRenderDeviceVk->GetPhysicalDevice(), ImageCI);
+        if (UseHostImageCopy)
+            ImageCI.usage |= VK_IMAGE_USAGE_HOST_TRANSFER_BIT;
 
         const std::vector<uint32_t> QueueFamilyIndices = PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1 ?
             GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.ImmediateContextMask) :
@@ -223,10 +285,23 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             VkResult       err    = LogicalDevice.BindImageMemory(m_VulkanImage, Memory, AlignedOffset);
             CHECK_VK_ERROR_AND_THROW(err, "Failed to bind image memory");
 
-            if (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0)
-                InitializeTextureContent(*pInitData, FmtAttribs, ImageCI);
+            if (InitContent)
+            {
+                bool InitializedOnHost = false;
+                if (UseHostImageCopy)
+                {
+                    InitializedOnHost = InitializeContentOnHost(*pInitData, FmtAttribs, ImageCI);
+                }
+
+                if (!InitializedOnHost)
+                {
+                    InitializeContentOnDevice(*pInitData, FmtAttribs, ImageCI);
+                }
+            }
             else
+            {
                 SetState(RESOURCE_STATE_UNDEFINED);
+            }
         }
     }
     else if (m_Desc.Usage == USAGE_STAGING)
@@ -241,9 +316,100 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     VERIFY_EXPR(IsInKnownState());
 }
 
-void TextureVkImpl::InitializeTextureContent(const TextureData&          InitData,
-                                             const TextureFormatAttribs& FmtAttribs,
-                                             const VkImageCreateInfo&    ImageCI) noexcept(false)
+bool TextureVkImpl::InitializeContentOnHost(const TextureData&          InitData,
+                                            const TextureFormatAttribs& FmtAttribs,
+                                            const VkImageCreateInfo&    ImageCI) noexcept(false)
+{
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
+    VERIFY_EXPR(LogicalDevice.GetEnabledExtFeatures().HostImageCopy.hostImageCopy);
+
+    Uint32 ExpectedNumSubresources = ImageCI.mipLevels * ImageCI.arrayLayers;
+    if (InitData.NumSubresources != ExpectedNumSubresources)
+        LOG_ERROR_AND_THROW("Incorrect number of subresources in init data. ", ExpectedNumSubresources, " expected, while ", InitData.NumSubresources, " provided");
+
+    VERIFY(FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL, "Initializing depth-stencil texture is currently not supported.");
+    const VkImageAspectFlags aspectMask = ComponentTypeToVkAspectMask(FmtAttribs.ComponentType);
+
+    std::vector<VkMemoryToImageCopyEXT> vkCopyRegions(InitData.NumSubresources);
+
+    Uint32 subres = 0;
+    for (Uint32 layer = 0; layer < ImageCI.arrayLayers; ++layer)
+    {
+        for (Uint32 mip = 0; mip < ImageCI.mipLevels; ++mip)
+        {
+            const TextureSubResData& SubResData = InitData.pSubResources[subres];
+            VkMemoryToImageCopyEXT&  vkCopyInfo = vkCopyRegions[subres];
+            MipLevelProperties       MipInfo    = GetMipLevelProperties(m_Desc, mip);
+
+            vkCopyInfo.sType        = VK_STRUCTURE_TYPE_MEMORY_TO_IMAGE_COPY_EXT;
+            vkCopyInfo.pNext        = nullptr;
+            vkCopyInfo.pHostPointer = SubResData.pData;
+
+            const Uint32 PixelSize = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
+                Uint32{FmtAttribs.ComponentSize} :
+                Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+            if ((SubResData.Stride % PixelSize) != 0)
+            {
+                LOG_DVP_WARNING_MESSAGE("Unable to initialize texture '", m_Desc.Name, "' on host: subresource ", subres, " has stride ", SubResData.Stride,
+                                        " that is not multiple of pixel size ", PixelSize, ". The content will be initialized on device.");
+                return false;
+            }
+            vkCopyInfo.memoryRowLength = FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED ?
+                static_cast<uint32_t>(SubResData.Stride * FmtAttribs.BlockWidth / FmtAttribs.ComponentSize) :
+                static_cast<uint32_t>(SubResData.Stride / PixelSize);
+
+            if ((SubResData.DepthStride % SubResData.Stride) != 0)
+            {
+                LOG_DVP_WARNING_MESSAGE("Unable to initialize texture '", m_Desc.Name, "' on host: subresource ", subres, " has depth stride ", SubResData.DepthStride,
+                                        " that is not multiple of row stride ", SubResData.Stride, ". The content will be initialized on device.");
+                return false;
+            }
+            vkCopyInfo.memoryImageHeight = static_cast<uint32_t>(SubResData.DepthStride * FmtAttribs.BlockHeight / SubResData.Stride);
+
+            vkCopyInfo.imageSubresource.aspectMask     = aspectMask;
+            vkCopyInfo.imageSubresource.mipLevel       = mip;
+            vkCopyInfo.imageSubresource.baseArrayLayer = layer;
+            vkCopyInfo.imageSubresource.layerCount     = 1;
+
+            vkCopyInfo.imageOffset = {0, 0, 0};
+            vkCopyInfo.imageExtent = {MipInfo.LogicalWidth, MipInfo.LogicalHeight, MipInfo.Depth};
+
+            ++subres;
+        }
+    }
+
+    VkHostImageLayoutTransitionInfoEXT vkLayoutTransitionInfo{};
+    vkLayoutTransitionInfo.sType     = VK_STRUCTURE_TYPE_HOST_IMAGE_LAYOUT_TRANSITION_INFO_EXT;
+    vkLayoutTransitionInfo.image     = m_VulkanImage;
+    vkLayoutTransitionInfo.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    vkLayoutTransitionInfo.newLayout = VkImageLayoutFromUsage(ImageCI.usage);
+
+    vkLayoutTransitionInfo.subresourceRange.aspectMask     = aspectMask;
+    vkLayoutTransitionInfo.subresourceRange.baseArrayLayer = 0;
+    vkLayoutTransitionInfo.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+    vkLayoutTransitionInfo.subresourceRange.baseMipLevel   = 0;
+    vkLayoutTransitionInfo.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
+    LogicalDevice.HostTransitionImageLayout(vkLayoutTransitionInfo);
+
+    VkCopyMemoryToImageInfoEXT vkCopyInfo{};
+    vkCopyInfo.sType          = VK_STRUCTURE_TYPE_COPY_MEMORY_TO_IMAGE_INFO_EXT;
+    vkCopyInfo.pNext          = nullptr;
+    vkCopyInfo.flags          = 0;
+    vkCopyInfo.dstImage       = m_VulkanImage;
+    vkCopyInfo.dstImageLayout = vkLayoutTransitionInfo.newLayout;
+    vkCopyInfo.regionCount    = static_cast<uint32_t>(vkCopyRegions.size());
+    vkCopyInfo.pRegions       = vkCopyRegions.data();
+
+    LogicalDevice.CopyMemoryToImage(vkCopyInfo);
+
+    SetState(VkImageLayoutToResourceState(vkCopyInfo.dstImageLayout));
+
+    return true;
+}
+
+void TextureVkImpl::InitializeContentOnDevice(const TextureData&          InitData,
+                                              const TextureFormatAttribs& FmtAttribs,
+                                              const VkImageCreateInfo&    ImageCI) noexcept(false)
 {
     const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
 
@@ -258,18 +424,8 @@ void TextureVkImpl::InitializeTextureContent(const TextureData&          InitDat
     VulkanUtilities::VulkanCommandBuffer CmdBuffer;
     GetDevice()->AllocateTransientCmdPool(CmdQueueInd, CmdPool, CmdBuffer, "Transient command pool to copy staging data to a device buffer");
 
-    VkImageAspectFlags aspectMask = 0;
-    if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
-        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-    {
-        UNSUPPORTED("Initializing depth-stencil texture is not currently supported");
-        // Only single aspect bit must be specified when copying texture data
-
-        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-    }
-    else
-        aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    VERIFY(FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL, "Initializing depth-stencil texture is currently not supported.");
+    const VkImageAspectFlags aspectMask = ComponentTypeToVkAspectMask(FmtAttribs.ComponentType);
 
     // For either clear or copy command, dst layout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     VkImageSubresourceRange SubresRange;

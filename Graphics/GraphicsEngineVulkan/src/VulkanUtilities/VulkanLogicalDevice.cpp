@@ -726,6 +726,29 @@ void VulkanLogicalDevice::ResetQueryPool(VkQueryPool queryPool,
 #endif
 }
 
+VkResult VulkanLogicalDevice::CopyMemoryToImage(const VkCopyMemoryToImageInfoEXT& CopyInfo) const
+{
+#if DILIGENT_USE_VOLK
+    VkResult err = vkCopyMemoryToImageEXT(m_VkDevice, &CopyInfo);
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to copy memory to image");
+    return err;
+#else
+    UNSUPPORTED("Host image copy is not supported when vulkan library is linked statically");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
+}
+
+VkResult VulkanLogicalDevice::HostTransitionImageLayout(const VkHostImageLayoutTransitionInfoEXT& TransitionInfo) const
+{
+#if DILIGENT_USE_VOLK
+    VkResult err = vkTransitionImageLayoutEXT(m_VkDevice, 1, &TransitionInfo);
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to transition image layout");
+    return err;
+#else
+    UNSUPPORTED("Host image layout transition is not supported when vulkan library is linked statically");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
+}
 
 VkResult VulkanLogicalDevice::GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const
 {

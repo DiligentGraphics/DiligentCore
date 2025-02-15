@@ -133,8 +133,9 @@ DeviceFeaturesVk EnableDeviceFeaturesVk(const DeviceFeaturesVk& SupportedFeature
     DeviceFeaturesVk EnabledFeatures;
 
     ENABLE_FEATURE(DynamicRendering, "VK_KHR_dynamic_rendering is");
+    ENABLE_FEATURE(HostImageCopy, "VK_EXT_host_image_copy is");
 
-    ASSERT_SIZEOF(DeviceFeaturesVk, 1, "Did you add a new feature to DeviceFeaturesVk? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeaturesVk, 2, "Did you add a new feature to DeviceFeaturesVk? Please handle its status here (if necessary).");
 
     return EnabledFeatures;
 }

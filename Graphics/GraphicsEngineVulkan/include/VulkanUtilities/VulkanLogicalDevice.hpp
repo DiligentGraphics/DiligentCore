@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -236,6 +236,9 @@ public:
     void ResetQueryPool(VkQueryPool queryPool,
                         uint32_t    firstQuery,
                         uint32_t    queryCount) const;
+
+    VkResult CopyMemoryToImage(const VkCopyMemoryToImageInfoEXT& CopyInfo) const;
+    VkResult HostTransitionImageLayout(const VkHostImageLayoutTransitionInfoEXT& TransitionInfo) const;
 
     void GetAccelerationStructureBuildSizes(const VkAccelerationStructureBuildGeometryInfoKHR& BuildInfo, const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR& SizeInfo) const;
 

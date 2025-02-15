@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added `HostImageCopy` member to `DeviceFeaturesVk` struct (API256006)
 * Added `IRenderDeviceVk::GetDeviceFeaturesVk()` method (API256005)
 * Added `DeviceFeaturesVk` struct and `EngineVkCreateInfo::FeaturesVk` member (API256004)
 * Removed `DRAW_FLAG_VERIFY_RENDER_TARGETS` flag (API256003)

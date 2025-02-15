@@ -1246,6 +1246,17 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 NextExt  = &EnabledExtFeats.DynamicRendering.pNext;
             }
 
+            if (EnabledFeaturesVk.HostImageCopy)
+            {
+                VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME));
+                DeviceExtensions.push_back(VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME);
+
+                EnabledExtFeats.HostImageCopy = DeviceExtFeatures.HostImageCopy;
+
+                *NextExt = &EnabledExtFeats.HostImageCopy;
+                NextExt  = &EnabledExtFeats.HostImageCopy.pNext;
+            }
+
             // Append user-defined features
             *NextExt = EngineCI.pDeviceExtensionFeatures;
         }

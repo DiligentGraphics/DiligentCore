@@ -2063,10 +2063,11 @@ DeviceFeaturesVk PhysicalDeviceFeaturesToDeviceFeaturesVk(const VulkanUtilities:
     FeaturesVk.FeatureName = (Supported) ? OptionalState : DEVICE_FEATURE_STATE_DISABLED
 
     INIT_FEATURE(DynamicRendering, ExtFeatures.DynamicRendering.dynamicRendering != VK_FALSE);
+    INIT_FEATURE(HostImageCopy, ExtFeatures.HostImageCopy.hostImageCopy != VK_FALSE);
 
 #undef INIT_FEATURE
 
-    ASSERT_SIZEOF(DeviceFeaturesVk, 1, "Did you add a new feature to DeviceFeaturesVk? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeaturesVk, 2, "Did you add a new feature to DeviceFeaturesVk? Please handle its status here (if necessary).");
 
     return FeaturesVk;
 }

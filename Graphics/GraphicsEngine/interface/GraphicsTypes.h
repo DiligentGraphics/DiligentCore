@@ -3940,16 +3940,23 @@ struct DeviceFeaturesVk
     ///             using framebuffer and render pass caches.
     DEVICE_FEATURE_STATE DynamicRendering DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates whether the device supports VK_EXT_host_image_copy extension.
+    ///
+    /// \remarks    This extension is used to initialize the texture on the host.
+    ///             If the extension is not supported, the texture is initialized on the device.
+    DEVICE_FEATURE_STATE HostImageCopy DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeaturesVk() noexcept {}
 
 #define ENUMERATE_VK_DEVICE_FEATURES(Handler) \
-    Handler(DynamicRendering)
+    Handler(DynamicRendering) \
+    Handler(HostImageCopy)
 
     explicit constexpr DeviceFeaturesVk(DEVICE_FEATURE_STATE State) noexcept
     {
-        static_assert(sizeof(*this) == 1, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
+        static_assert(sizeof(*this) == 2, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_VK_DEVICE_FEATURES.");
     #define INIT_FEATURE(Feature) Feature = State;
         ENUMERATE_VK_DEVICE_FEATURES(INIT_FEATURE)
     #undef INIT_FEATURE

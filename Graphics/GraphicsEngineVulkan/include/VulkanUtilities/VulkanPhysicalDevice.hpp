@@ -68,6 +68,8 @@ public:
         VkPhysicalDeviceMultiDrawFeaturesEXT              MultiDraw              = {};
         VkPhysicalDeviceShaderDrawParametersFeatures      ShaderDrawParameters   = {};
         VkPhysicalDeviceDynamicRenderingFeaturesKHR       DynamicRendering       = {};
+        VkPhysicalDeviceHostImageCopyFeaturesEXT          HostImageCopy          = {};
+
 
         bool Spirv14              = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
         bool Spirv15              = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
@@ -93,6 +95,9 @@ public:
         VkPhysicalDeviceMaintenance3Properties              Maintenance3           = {};
         VkPhysicalDeviceFragmentDensityMap2PropertiesEXT    FragmentDensityMap2    = {};
         VkPhysicalDeviceMultiDrawPropertiesEXT              MultiDraw              = {};
+        VkPhysicalDeviceHostImageCopyPropertiesEXT          HostImageCopy          = {};
+
+        std::unique_ptr<VkImageLayout[]> HostImageCopyLayouts;
     };
 
 public:
@@ -121,7 +126,7 @@ public:
     const ExtensionFeatures&                    GetExtFeatures() const { return m_ExtFeatures; }
     const ExtensionProperties&                  GetExtProperties() const { return m_ExtProperties; }
     const VkPhysicalDeviceMemoryProperties&     GetMemoryProperties() const { return m_MemoryProperties; }
-    VkFormatProperties                          GetPhysicalDeviceFormatProperties(VkFormat imageFormat) const;
+    VkFormatProperties                          GetPhysicalDeviceFormatProperties(VkFormat imageFormat, VkFormatProperties3* Properties3 = nullptr) const;
     const std::vector<VkQueueFamilyProperties>& GetQueueProperties() const { return m_QueueFamilyProperties; }
 
 private:
