@@ -1251,6 +1251,13 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 VERIFY_EXPR(PhysicalDevice->IsExtensionSupported(VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME));
                 DeviceExtensions.push_back(VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME);
 
+                const uint32_t vkDeviceVersion = PhysicalDevice->GetVkVersion();
+                if (Version{VK_VERSION_MAJOR(vkDeviceVersion), VK_VERSION_MINOR(vkDeviceVersion)} < Version{1, 3})
+                {
+                    DeviceExtensions.push_back(VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_FORMAT_FEATURE_FLAGS_2_EXTENSION_NAME);
+                }
+
                 EnabledExtFeats.HostImageCopy = DeviceExtFeatures.HostImageCopy;
 
                 *NextExt = &EnabledExtFeats.HostImageCopy;
