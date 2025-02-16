@@ -170,12 +170,19 @@ VkImageLayout VkImageLayoutFromUsage(VkImageUsageFlags Usage)
     return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 }
 
-bool CheckHostImageCopySupport(const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice,
-                               const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice,
-                               const VkImageCreateInfo&                     ImageCI)
+bool CheckHostImageInitialization(const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice,
+                                  const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice,
+                                  const VkImageCreateInfo&                     ImageCI)
 {
     if (!LogicalDevice.GetEnabledExtFeatures().HostImageCopy.hostImageCopy)
         return false;
+
+    if (!PhysicalDevice.IsUMA())
+    {
+        // On discrete GPUs, textures with VK_IMAGE_USAGE_HOST_TRANSFER_BIT usage are allocated in a host-visible
+        // device-local memory that is very scarce.
+        return false;
+    }
 
     VkFormatProperties3 vkFormatProps3{};
     VkFormatProperties  VkFormatProps = PhysicalDevice.GetPhysicalDeviceFormatProperties(ImageCI.format, &vkFormatProps3);
@@ -236,9 +243,9 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
         VkImageCreateInfo ImageCI = TextureDescToVkImageCreateInfo(m_Desc, pRenderDeviceVk);
 
-        const bool InitContent      = pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0;
-        const bool UseHostImageCopy = InitContent && CheckHostImageCopySupport(LogicalDevice, pRenderDeviceVk->GetPhysicalDevice(), ImageCI);
-        if (UseHostImageCopy)
+        const bool InitContent           = pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0;
+        const bool UseHostInitialization = InitContent && CheckHostImageInitialization(LogicalDevice, pRenderDeviceVk->GetPhysicalDevice(), ImageCI);
+        if (UseHostInitialization)
             ImageCI.usage |= VK_IMAGE_USAGE_HOST_TRANSFER_BIT;
 
         const std::vector<uint32_t> QueueFamilyIndices = PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1 ?
@@ -288,7 +295,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             if (InitContent)
             {
                 bool InitializedOnHost = false;
-                if (UseHostImageCopy)
+                if (UseHostInitialization)
                 {
                     InitializedOnHost = InitializeContentOnHost(*pInitData, FmtAttribs, ImageCI);
                 }

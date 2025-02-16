@@ -73,8 +73,7 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
                                     const DeviceFeatures& RequestedFeatures) noexcept(false);
 
 DeviceFeaturesVk EnableDeviceFeaturesVk(const DeviceFeaturesVk& SupportedFeatures,
-                                        const DeviceFeaturesVk& RequestedFeatures,
-                                        bool                    IsUMA) noexcept(false);
+                                        const DeviceFeaturesVk& RequestedFeatures) noexcept(false);
 
 /// Checks sparse texture format support and returns the component type
 COMPONENT_TYPE CheckSparseTextureFormatSupport(TEXTURE_FORMAT                  TexFormat,

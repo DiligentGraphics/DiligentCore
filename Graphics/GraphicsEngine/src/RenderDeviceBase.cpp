@@ -128,23 +128,12 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
 }
 
 DeviceFeaturesVk EnableDeviceFeaturesVk(const DeviceFeaturesVk& SupportedFeatures,
-                                        const DeviceFeaturesVk& RequestedFeatures,
-                                        bool                    IsUMA) noexcept(false)
+                                        const DeviceFeaturesVk& RequestedFeatures) noexcept(false)
 {
     DeviceFeaturesVk EnabledFeatures;
 
     ENABLE_FEATURE(DynamicRendering, "VK_KHR_dynamic_rendering is");
-    if (RequestedFeatures.HostImageCopy == DEVICE_FEATURE_STATE_OPTIONAL && SupportedFeatures.HostImageCopy != DEVICE_FEATURE_STATE_DISABLED)
-    {
-        // Only enable VK_EXT_host_image_copy if the device is UMA.
-        // On discrete GPUs, textures with VK_IMAGE_USAGE_HOST_TRANSFER_BIT usage are allocated in a host-visible
-        // device local memory that is very scarce.
-        EnabledFeatures.HostImageCopy = IsUMA ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
-    }
-    else
-    {
-        ENABLE_FEATURE(HostImageCopy, "VK_EXT_host_image_copy is");
-    }
+    ENABLE_FEATURE(HostImageCopy, "VK_EXT_host_image_copy is");
 
     ASSERT_SIZEOF(DeviceFeaturesVk, 2, "Did you add a new feature to DeviceFeaturesVk? Please handle its status here (if necessary).");
 
