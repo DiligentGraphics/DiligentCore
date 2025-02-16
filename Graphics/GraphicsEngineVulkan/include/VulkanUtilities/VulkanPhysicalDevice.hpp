@@ -129,6 +129,8 @@ public:
     VkFormatProperties                          GetPhysicalDeviceFormatProperties(VkFormat imageFormat, VkFormatProperties3* Properties3 = nullptr) const;
     const std::vector<VkQueueFamilyProperties>& GetQueueProperties() const { return m_QueueFamilyProperties; }
 
+    bool IsUMA() const;
+
 private:
     VulkanPhysicalDevice(const CreateInfo& CI);
 

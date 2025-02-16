@@ -566,4 +566,9 @@ VkFormatProperties VulkanPhysicalDevice::GetPhysicalDeviceFormatProperties(VkFor
     }
 }
 
+bool VulkanPhysicalDevice::IsUMA() const
+{
+    return m_MemoryProperties.memoryHeapCount == 1;
+}
+
 } // namespace VulkanUtilities
