@@ -407,7 +407,7 @@ public:
 
     QueryManagerVk* GetQueryManager() { return m_pQueryMgr; }
 
-    size_t GetDynamicBufferOffset(const BufferVkImpl* pBuffer, bool VerifyAllocation = true);
+    __forceinline size_t GetDynamicBufferOffset(const BufferVkImpl* pBuffer, bool VerifyAllocation = true);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpVerifyDynamicAllocation(const BufferVkImpl* pBuffer) const;
@@ -655,5 +655,27 @@ private:
 
     VulkanUtilities::QueryPoolWrapper m_ASQueryPool;
 };
+
+
+__forceinline size_t DeviceContextVkImpl::GetDynamicBufferOffset(const BufferVkImpl* pBuffer, bool VerifyAllocation)
+{
+    VERIFY_EXPR(pBuffer != nullptr);
+
+    if (pBuffer->m_VulkanBuffer != VK_NULL_HANDLE)
+        return 0;
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (VerifyAllocation)
+    {
+        DvpVerifyDynamicAllocation(pBuffer);
+    }
+#endif
+
+    const Uint32 DynamicBufferId = pBuffer->GetDynamicBufferId();
+    VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", pBuffer->GetDesc().Name, "' does not have dynamic buffer ID");
+    return DynamicBufferId < m_MappedBuffers.size() ?
+        m_MappedBuffers[DynamicBufferId].Allocation.AlignedOffset :
+        0;
+}
 
 } // namespace Diligent

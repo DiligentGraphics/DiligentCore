@@ -2316,32 +2316,6 @@ void DeviceContextVkImpl::DvpVerifyDynamicAllocation(const BufferVkImpl* pBuffer
 }
 #endif
 
-size_t DeviceContextVkImpl::GetDynamicBufferOffset(const BufferVkImpl* pBuffer, bool VerifyAllocation)
-{
-    VERIFY_EXPR(pBuffer != nullptr);
-
-    if (pBuffer->m_VulkanBuffer != VK_NULL_HANDLE)
-        return 0;
-
-#ifdef DILIGENT_DEVELOPMENT
-    if (VerifyAllocation)
-    {
-        DvpVerifyDynamicAllocation(pBuffer);
-    }
-#endif
-
-    const Uint32 DynamicBufferId = pBuffer->GetDynamicBufferId();
-    VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", pBuffer->GetDesc().Name, "' does not have dynamic buffer ID");
-    if (DynamicBufferId < m_MappedBuffers.size())
-    {
-        return m_MappedBuffers[DynamicBufferId].Allocation.AlignedOffset;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
 void DeviceContextVkImpl::UpdateTexture(ITexture*                      pTexture,
                                         Uint32                         MipLevel,
                                         Uint32                         Slice,
