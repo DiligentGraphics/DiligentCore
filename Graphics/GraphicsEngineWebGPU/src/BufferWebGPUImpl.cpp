@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -246,7 +246,7 @@ void BufferWebGPUImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IB
         BufferViewDesc ViewDesc = OrigViewDesc;
         ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, pDeviceWebGPU->GetAdapterInfo().Buffer.StructuredBufferOffsetAlignment);
 
-        auto& BuffViewAllocator = pDeviceWebGPU->GetBuffViewObjAllocator();
+        FixedBlockMemoryAllocator& BuffViewAllocator = pDeviceWebGPU->GetBuffViewObjAllocator();
         VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buffer view allocator does not match allocator provided at buffer initialization");
 
         if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE)
@@ -257,7 +257,7 @@ void BufferWebGPUImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IB
     }
     catch (const std::runtime_error&)
     {
-        const auto* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
+        const char* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
         LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name, "\"");
     }
 }
