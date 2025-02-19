@@ -310,6 +310,13 @@ public:
 
     Uint64 GetCompletedFenceValue();
 
+#ifdef DILIGENT_DEVELOPMENT
+    void DvpVerifyDynamicAllocation(const BufferWebGPUImpl* pBuffer) const;
+#endif
+
+    const DynamicMemoryManagerWebGPU::Allocation& GetDynamicBufferAllocation(const BufferWebGPUImpl* pBuffer) const;
+    Uint64                                        GetDynamicBufferOffset(const BufferWebGPUImpl* pBuffer, bool VerifyAllocation = true) const;
+
 private:
     enum COMMAND_ENCODER_FLAGS : Uint32
     {
@@ -565,12 +572,21 @@ private:
         UploadMemoryManagerWebGPU::Allocation Allocation;
     };
 
+    struct MappedBuffer
+    {
+        DynamicMemoryManagerWebGPU::Allocation Allocation;
+#ifdef DILIGENT_DEVELOPMENT
+        UniqueIdentifier DvpBufferUID = -1;
+#endif
+    };
+
     using PendingFenceList        = std::vector<std::pair<Uint64, RefCntAutoPtr<FenceWebGPUImpl>>>;
     using PendingQueryList        = std::vector<PendingQuery>;
     using AttachmentClearList     = std::vector<OptimizedClearValue>;
     using UploadMemoryPageList    = std::vector<UploadMemoryManagerWebGPU::Page>;
     using DynamicMemoryPageList   = std::vector<DynamicMemoryManagerWebGPU::Page>;
-    using MappedTextureCache      = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
+    using MappedTexturesCache     = std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher>;
+    using MappedBuffersCache      = std::vector<MappedBuffer>;
     using DebugGroupStack         = std::vector<DEBUG_GROUP_TYPE>;
     using OcclusionQueryStack     = std::vector<std::pair<OCCLUSION_QUERY_TYPE, Uint32>>;
     using PendingStagingResources = std::unordered_map<WebGPUResourceBase::StagingBufferInfo*, RefCntAutoPtr<IObject>>;
@@ -585,7 +601,8 @@ private:
     PendingQueryList        m_PendingTimeQueries;
     UploadMemoryPageList    m_UploadMemPages;
     DynamicMemoryPageList   m_DynamicMemPages;
-    MappedTextureCache      m_MappedTextures;
+    MappedTexturesCache     m_MappedTextures;
+    MappedBuffersCache      m_MappedBuffers;
     DebugGroupStack         m_DebugGroupsStack;
     DebugGroupStack         m_PendingDebugGroups;
     OcclusionQueryStack     m_OcclusionQueriesStack;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@
 #include "BufferWebGPUImpl.hpp"
 #include "BufferViewWebGPUImpl.hpp"
 #include "TextureViewWebGPUImpl.hpp"
+#include "DeviceContextWebGPUImpl.hpp"
 
 namespace Diligent
 {
@@ -708,7 +709,7 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
         VERIFY_EXPR(m_BindGroupSizes[i] != ~0U);
 #endif
 
-    auto& CacheMemAllocator = m_SRBMemAllocator.GetResourceCacheDataAllocator(0);
+    IMemoryAllocator& CacheMemAllocator = m_SRBMemAllocator.GetResourceCacheDataAllocator(0);
     ResourceCache.InitializeGroups(CacheMemAllocator, NumGroups, m_BindGroupSizes.data());
 
     const Uint32                   TotalResources = GetTotalResourceCount();
@@ -930,7 +931,7 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const Dev
                 // is bound. It will be null if the type is incorrect.
                 if (const BufferWebGPUImpl* pBufferWebGPU = Res.pObject.RawPtr<BufferWebGPUImpl>())
                 {
-                    pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
+                    pDeviceCtx->DvpVerifyDynamicAllocation(pBufferWebGPU);
 
                     if ((WGSLAttribs.BufferStaticSize != 0) &&
                         (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0 &&
@@ -959,7 +960,7 @@ bool PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource(const Dev
                     const BufferViewDesc&   ViewDesc      = pBufferViewWebGPU->GetDesc();
                     const BufferDesc&       BuffDesc      = pBufferWebGPU->GetDesc();
 
-                    pBufferWebGPU->DvpVerifyDynamicAllocation(pDeviceCtx);
+                    pDeviceCtx->DvpVerifyDynamicAllocation(pBufferWebGPU);
 
                     if (BuffDesc.ElementByteStride == 0)
                     {

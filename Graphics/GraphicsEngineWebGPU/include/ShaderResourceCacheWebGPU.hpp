@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ namespace Diligent
 {
 
 struct IMemoryAllocator;
+class DeviceContextWebGPUImpl;
 
 class ShaderResourceCacheWebGPU : public ShaderResourceCacheBase
 {
@@ -93,7 +94,7 @@ public:
         void SetStorageBuffer(RefCntAutoPtr<IDeviceObject>&& _pBufferView);
 
         template <typename ResType>
-        Uint32 GetDynamicBufferOffset(DeviceContextIndex CtxId) const;
+        Uint32 GetDynamicBufferOffset(const DeviceContextWebGPUImpl* pCtx) const;
 
         explicit operator bool() const { return pObject != nullptr; }
     };
@@ -180,9 +181,9 @@ public:
     WGPUBindGroup UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout);
 
     // Returns true if any dynamic offset has changed
-    bool GetDynamicBufferOffsets(DeviceContextIndex     CtxId,
-                                 std::vector<uint32_t>& Offsets,
-                                 Uint32                 GroupIdx) const;
+    bool GetDynamicBufferOffsets(const DeviceContextWebGPUImpl* pCtx,
+                                 std::vector<uint32_t>&         Offsets,
+                                 Uint32                         GroupIdx) const;
 
 #ifdef DILIGENT_DEBUG
     // For debug purposes only

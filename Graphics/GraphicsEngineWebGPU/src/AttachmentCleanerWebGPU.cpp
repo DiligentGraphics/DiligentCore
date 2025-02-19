@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -354,7 +354,7 @@ void AttachmentCleanerWebGPU::ClearAttachment(WGPURenderPassEncoder wgpuCmdEncod
     pDeviceContext->UnmapBuffer(m_pBuffer, MAP_WRITE);
 
     const BufferWebGPUImpl* pBufferImpl      = m_pBuffer.RawPtr<BufferWebGPUImpl>();
-    const Uint32            DynamicOffsets[] = {static_cast<Uint32>(pBufferImpl->GetDynamicOffset(pDeviceContext->GetContextId(), nullptr))};
+    const Uint32            DynamicOffsets[] = {static_cast<Uint32>(pDeviceContext->GetDynamicBufferOffset(pBufferImpl))};
 
     wgpuRenderPassEncoderSetPipeline(wgpuCmdEncoder, wgpuPipelineState);
     wgpuRenderPassEncoderSetBindGroup(wgpuCmdEncoder, 0, m_PipelineResourceLayout.wgpuBindGroup, _countof(DynamicOffsets), DynamicOffsets);

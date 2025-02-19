@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@
 #include "BufferWebGPUImpl.hpp"
 #include "TextureWebGPUImpl.hpp"
 #include "SamplerWebGPUImpl.hpp"
+#include "DeviceContextWebGPUImpl.hpp"
 
 namespace Diligent
 {
@@ -221,7 +222,7 @@ void ShaderResourceCacheWebGPU::Resource::SetStorageBuffer(RefCntAutoPtr<IDevice
 }
 
 template <>
-Uint32 ShaderResourceCacheWebGPU::Resource::GetDynamicBufferOffset<BufferWebGPUImpl>(DeviceContextIndex CtxId) const
+Uint32 ShaderResourceCacheWebGPU::Resource::GetDynamicBufferOffset<BufferWebGPUImpl>(const DeviceContextWebGPUImpl* pCtx) const
 {
     Uint32 Offset = BufferDynamicOffset;
     if (const BufferWebGPUImpl* pBufferWGPU = pObject.ConstPtr<BufferWebGPUImpl>())
@@ -229,13 +230,13 @@ Uint32 ShaderResourceCacheWebGPU::Resource::GetDynamicBufferOffset<BufferWebGPUI
         // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
         // The allocations of the buffers that are actually used will be verified by
         // PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource().
-        Offset += StaticCast<Uint32>(pBufferWGPU->GetDynamicOffset(CtxId, nullptr /* Do not verify allocation*/));
+        Offset += StaticCast<Uint32>(pCtx->GetDynamicBufferOffset(pBufferWGPU, false /* Do not verify allocation*/));
     }
     return Offset;
 }
 
 template <>
-Uint32 ShaderResourceCacheWebGPU::Resource::GetDynamicBufferOffset<BufferViewWebGPUImpl>(DeviceContextIndex CtxId) const
+Uint32 ShaderResourceCacheWebGPU::Resource::GetDynamicBufferOffset<BufferViewWebGPUImpl>(const DeviceContextWebGPUImpl* pCtx) const
 {
     Uint32 Offset = BufferDynamicOffset;
     if (const BufferViewWebGPUImpl* pBufferWGPUView = pObject.ConstPtr<BufferViewWebGPUImpl>())
@@ -245,7 +246,7 @@ Uint32 ShaderResourceCacheWebGPU::Resource::GetDynamicBufferOffset<BufferViewWeb
             // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
             // The allocations of the buffers that are actually used will be verified by
             // PipelineResourceSignatureWebGPUImpl::DvpValidateCommittedResource().
-            Offset += StaticCast<Uint32>(pBufferWGPU->GetDynamicOffset(CtxId, nullptr /* Do not verify allocation*/));
+            Offset += StaticCast<Uint32>(pCtx->GetDynamicBufferOffset(pBufferWGPU, false /* Do not verify allocation*/));
         }
     }
     return Offset;
@@ -475,9 +476,9 @@ WGPUBindGroup ShaderResourceCacheWebGPU::UpdateBindGroup(WGPUDevice wgpuDevice, 
     return Group.m_wgpuBindGroup;
 }
 
-bool ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(DeviceContextIndex     CtxId,
-                                                        std::vector<uint32_t>& Offsets,
-                                                        Uint32                 GroupIdx) const
+bool ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(const DeviceContextWebGPUImpl* pCtx,
+                                                        std::vector<uint32_t>&         Offsets,
+                                                        Uint32                         GroupIdx) const
 {
     // In each bind group, all uniform buffers with dynamic offsets (BindGroupEntryType::UniformBufferDynamic)
     // for every shader stage come first, followed by all storage buffers with dynamic offsets
@@ -495,7 +496,7 @@ bool ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(DeviceContextIndex     C
         const Resource& Res = Group.GetResource(res);
         if (Res.Type == BindGroupEntryType::UniformBufferDynamic)
         {
-            const Uint32 Offset    = Res.GetDynamicBufferOffset<BufferWebGPUImpl>(CtxId);
+            const Uint32 Offset    = Res.GetDynamicBufferOffset<BufferWebGPUImpl>(pCtx);
             Uint32&      DstOffset = Offsets[OffsetInd++];
             if (DstOffset != Offset)
                 OffsetsChanged = true;
@@ -512,7 +513,7 @@ bool ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(DeviceContextIndex     C
         if (Res.Type == BindGroupEntryType::StorageBufferDynamic ||
             Res.Type == BindGroupEntryType::StorageBufferDynamic_ReadOnly)
         {
-            const Uint32 Offset    = Res.GetDynamicBufferOffset<BufferViewWebGPUImpl>(CtxId);
+            const Uint32 Offset    = Res.GetDynamicBufferOffset<BufferViewWebGPUImpl>(pCtx);
             Uint32&      DstOffset = Offsets[OffsetInd++];
             if (DstOffset != Offset)
                 OffsetsChanged = true;
@@ -544,7 +545,7 @@ bool ShaderResourceCacheWebGPU::GetDynamicBufferOffsets(DeviceContextIndex     C
 #ifdef DILIGENT_DEBUG
 void ShaderResourceCacheWebGPU::DbgVerifyResourceInitialization() const
 {
-    for (const auto& SetFlags : m_DbgInitializedResources)
+    for (const std::vector<bool>& SetFlags : m_DbgInitializedResources)
     {
         for (bool ResInitialized : SetFlags)
             VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");

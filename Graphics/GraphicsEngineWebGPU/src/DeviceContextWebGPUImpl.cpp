@@ -64,6 +64,8 @@ DeviceContextWebGPUImpl::DeviceContextWebGPUImpl(IReferenceCounters*           p
     FenceDesc InternalFenceDesc;
     InternalFenceDesc.Name = "Device context internal fence";
     pDevice->CreateFence(InternalFenceDesc, &m_pFence);
+
+    m_MappedBuffers.reserve(16);
 }
 
 void DeviceContextWebGPUImpl::Begin(Uint32 ImmediateContextId)
@@ -244,7 +246,7 @@ void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder, Uint32
             bool DynamicOffsetsChanged = false;
             if (!BindGroup.DynamicBufferOffsets.empty())
             {
-                DynamicOffsetsChanged = ResourceCache->GetDynamicBufferOffsets(GetContextId(), BindGroup.DynamicBufferOffsets, BindGroupCacheIndex);
+                DynamicOffsetsChanged = ResourceCache->GetDynamicBufferOffsets(this, BindGroup.DynamicBufferOffsets, BindGroupCacheIndex);
             }
             ++BindGroupCacheIndex;
 
@@ -451,7 +453,7 @@ void DeviceContextWebGPUImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources();
     if (Attribs.pAttribsBuffer->GetDesc().Usage == USAGE_DYNAMIC)
-        ClassPtrCast<BufferWebGPUImpl>(Attribs.pAttribsBuffer)->DvpVerifyDynamicAllocation(this);
+        DvpVerifyDynamicAllocation(ClassPtrCast<BufferWebGPUImpl>(Attribs.pAttribsBuffer));
 #endif
 
     WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForDraw(Attribs.Flags);
@@ -472,7 +474,7 @@ void DeviceContextWebGPUImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttri
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources();
     if (Attribs.pAttribsBuffer->GetDesc().Usage == USAGE_DYNAMIC)
-        ClassPtrCast<BufferWebGPUImpl>(Attribs.pAttribsBuffer)->DvpVerifyDynamicAllocation(this);
+        DvpVerifyDynamicAllocation(ClassPtrCast<BufferWebGPUImpl>(Attribs.pAttribsBuffer));
 #endif
 
     WGPURenderPassEncoder wgpuRenderCmdEncoder = PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
@@ -518,7 +520,7 @@ void DeviceContextWebGPUImpl::DispatchComputeIndirect(const DispatchComputeIndir
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources();
     if (Attribs.pAttribsBuffer->GetDesc().Usage == USAGE_DYNAMIC)
-        ClassPtrCast<BufferWebGPUImpl>(Attribs.pAttribsBuffer)->DvpVerifyDynamicAllocation(this);
+        DvpVerifyDynamicAllocation(ClassPtrCast<BufferWebGPUImpl>(Attribs.pAttribsBuffer));
 #endif
 
     WGPUComputePassEncoder wgpuComputeCmdEncoder = PrepareForDispatchCompute();
@@ -644,7 +646,7 @@ void DeviceContextWebGPUImpl::CopyBuffer(IBuffer*                       pSrcBuff
         if (wgpuSrcBuffer == nullptr)
         {
             VERIFY_EXPR(SrcDesc.Usage == USAGE_DYNAMIC);
-            const DynamicMemoryManagerWebGPU::Allocation& DynAlloc = pSrcBufferWebGPU->GetDynamicAllocation(GetContextId());
+            const DynamicMemoryManagerWebGPU::Allocation& DynAlloc = GetDynamicBufferAllocation(pSrcBufferWebGPU);
             wgpuSrcBuffer                                          = DynAlloc.wgpuBuffer;
             SrcOffset += DynAlloc.Offset;
         }
@@ -680,7 +682,7 @@ void DeviceContextWebGPUImpl::CopyBuffer(IBuffer*                       pSrcBuff
         if (wgpuSrcBuffer == nullptr)
         {
             VERIFY_EXPR(SrcDesc.Usage == USAGE_DYNAMIC);
-            const DynamicMemoryManagerWebGPU::Allocation& DynAlloc = pSrcBufferWebGPU->GetDynamicAllocation(GetContextId());
+            const DynamicMemoryManagerWebGPU::Allocation& DynAlloc = GetDynamicBufferAllocation(pSrcBufferWebGPU);
             wgpuSrcBuffer                                          = DynAlloc.wgpuBuffer;
             SrcOffset += DynAlloc.Offset;
         }
@@ -724,17 +726,24 @@ void DeviceContextWebGPUImpl::MapBuffer(IBuffer*  pBuffer,
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
-            const DynamicMemoryManagerWebGPU::Allocation& DynAllocation = pBufferWebGPU->GetDynamicAllocation(GetContextId());
+            const Uint32 DynamicBufferId = pBufferWebGPU->GetDynamicBufferId();
+            VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", BuffDesc.Name, "' does not have dynamic buffer ID");
+            if (m_MappedBuffers.size() <= DynamicBufferId)
+                m_MappedBuffers.resize(DynamicBufferId + 1);
+            DynamicMemoryManagerWebGPU::Allocation& DynAllocation = m_MappedBuffers[DynamicBufferId].Allocation;
+#ifdef DILIGENT_DEVELOPMENT
+            m_MappedBuffers[DynamicBufferId].DvpBufferUID = pBufferWebGPU->GetUniqueID();
+#endif
+
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || !DynAllocation)
             {
-                DynamicMemoryManagerWebGPU::Allocation Allocation = AllocateDynamicMemory(StaticCast<size_t>(BuffDesc.Size), pBufferWebGPU->GetAlignment());
-                if (!Allocation)
+                DynAllocation = AllocateDynamicMemory(StaticCast<size_t>(BuffDesc.Size), pBufferWebGPU->GetAlignment());
+                if (!DynAllocation)
                 {
                     LOG_ERROR("Failed to allocate dynamic memory for buffer mapping. Try increasing the size of the dynamic heap in engine EngineWebGPUCreateInfo");
                     return;
                 }
-                pMappedData = Allocation.pData;
-                pBufferWebGPU->SetDynamicAllocation(GetContextId(), std::move(Allocation));
+                pMappedData = DynAllocation.pData;
             }
             else
             {
@@ -791,7 +800,7 @@ void DeviceContextWebGPUImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
                               "copying the data from shared memory to private storage. This can only be "
                               "done by blit encoder outside of render pass.");
 
-                const DynamicMemoryManagerWebGPU::Allocation& DynAllocation = pBufferWebGPU->GetDynamicAllocation(GetContextId());
+                const DynamicMemoryManagerWebGPU::Allocation& DynAllocation = GetDynamicBufferAllocation(pBufferWebGPU);
 
                 EndCommandEncoders();
                 wgpuCommandEncoderCopyBufferToBuffer(GetCommandEncoder(), DynAllocation.wgpuBuffer, DynAllocation.Offset, wgpuBuffer, 0, BuffDesc.Size);
@@ -803,6 +812,72 @@ void DeviceContextWebGPUImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
         }
     }
 }
+
+#ifdef DILIGENT_DEVELOPMENT
+void DeviceContextWebGPUImpl::DvpVerifyDynamicAllocation(const BufferWebGPUImpl* pBuffer) const
+{
+    VERIFY_EXPR(pBuffer != nullptr);
+
+    if (pBuffer->m_wgpuBuffer != nullptr)
+        return;
+
+    const BufferDesc& BuffDesc = pBuffer->GetDesc();
+    VERIFY_EXPR(BuffDesc.Usage == USAGE_DYNAMIC);
+
+    const Uint32 DynamicBufferId = pBuffer->GetDynamicBufferId();
+    VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", pBuffer->GetDesc().Name, "' does not have dynamic buffer ID");
+
+    if (DynamicBufferId >= m_MappedBuffers.size())
+    {
+        DEV_ERROR("Dynamic buffer '", BuffDesc.Name, "' has not been mapped.");
+        return;
+    }
+
+    const MappedBuffer& MappedBuff = m_MappedBuffers[DynamicBufferId];
+    DEV_CHECK_ERR(MappedBuff.Allocation, "Dynamic buffer '", BuffDesc.Name, "' has not been mapped before its first use. Context Id: ", GetContextId(),
+                  ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
+
+    DEV_CHECK_ERR(MappedBuff.Allocation.dvpFrameNumber == GetFrameNumber(), "Dynamic allocation of dynamic buffer '", BuffDesc.Name, "' in frame ", GetFrameNumber(),
+                  " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
+
+    DEV_CHECK_ERR(MappedBuff.DvpBufferUID == pBuffer->GetUniqueID(), "Dynamic buffer ID mismatch. Buffer '", BuffDesc.Name, "' has ID ", pBuffer->GetUniqueID(), " but the ID of the mapped buffer is ",
+                  MappedBuff.DvpBufferUID, ". This indicates that dynamic space has been reassigned to a different buffer, which has not been mapped.");
+}
+#endif
+
+const DynamicMemoryManagerWebGPU::Allocation& DeviceContextWebGPUImpl::GetDynamicBufferAllocation(const BufferWebGPUImpl* pBuffer) const
+{
+    VERIFY_EXPR(pBuffer->GetDesc().Usage == USAGE_DYNAMIC);
+
+    const Uint32 DynamicBufferId = pBuffer->GetDynamicBufferId();
+    VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", pBuffer->GetDesc().Name, "' does not have dynamic buffer ID");
+    DEV_CHECK_ERR(DynamicBufferId < m_MappedBuffers.size(), "Buffer '", pBuffer->GetDesc().Name, "' has not been mapped in this context");
+
+    static DynamicMemoryManagerWebGPU::Allocation NullAllocation;
+    return DynamicBufferId < m_MappedBuffers.size() ? m_MappedBuffers[DynamicBufferId].Allocation : NullAllocation;
+}
+
+Uint64 DeviceContextWebGPUImpl::GetDynamicBufferOffset(const BufferWebGPUImpl* pBuffer, bool VerifyAllocation) const
+{
+    VERIFY_EXPR(pBuffer != nullptr);
+
+    if (pBuffer->m_wgpuBuffer != nullptr)
+        return 0;
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (VerifyAllocation)
+    {
+        DvpVerifyDynamicAllocation(pBuffer);
+    }
+#endif
+
+    const Uint32 DynamicBufferId = pBuffer->GetDynamicBufferId();
+    VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", pBuffer->GetDesc().Name, "' does not have dynamic buffer ID");
+    return DynamicBufferId < m_MappedBuffers.size() ?
+        m_MappedBuffers[DynamicBufferId].Allocation.Offset :
+        0;
+}
+
 
 void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pTexture,
                                             Uint32                         MipLevel,
@@ -2062,11 +2137,11 @@ WGPUBuffer DeviceContextWebGPUImpl::PrepareForIndirectCommand(IBuffer* pAttribsB
 
     BufferWebGPUImpl* pAttribsBufferWebGPU = ClassPtrCast<BufferWebGPUImpl>(pAttribsBuffer);
 
-    WGPUBuffer wgpuIndirectBuffer = pAttribsBufferWebGPU->m_wgpuBuffer.Get();
+    WGPUBuffer wgpuIndirectBuffer = pAttribsBufferWebGPU->m_wgpuBuffer;
     if (wgpuIndirectBuffer == nullptr)
     {
         VERIFY_EXPR(pAttribsBufferWebGPU->GetDesc().Usage == USAGE_DYNAMIC);
-        const DynamicMemoryManagerWebGPU::Allocation& DynamicAlloc = pAttribsBufferWebGPU->GetDynamicAllocation(GetContextId());
+        const DynamicMemoryManagerWebGPU::Allocation& DynamicAlloc = GetDynamicBufferAllocation(pAttribsBufferWebGPU);
 
         wgpuIndirectBuffer = DynamicAlloc.wgpuBuffer;
         IdirectBufferOffset += DynamicAlloc.Offset;
@@ -2140,10 +2215,7 @@ void DeviceContextWebGPUImpl::CommitVertexBuffers(WGPURenderPassEncoder CmdEncod
             if (Desc.Usage == USAGE_DYNAMIC)
             {
                 m_EncoderState.HasDynamicVertexBuffers = true;
-#ifdef DILIGENT_DEVELOPMENT
-                pBufferWebGPU->DvpVerifyDynamicAllocation(this);
-#endif
-                Offset += pBufferWebGPU->GetDynamicOffset(GetContextId(), this);
+                Offset += GetDynamicBufferOffset(pBufferWebGPU);
             }
             VERIFY_EXPR(Desc.Size >= CurrStream.Offset);
             Size = Desc.Size - CurrStream.Offset;
@@ -2166,7 +2238,7 @@ void DeviceContextWebGPUImpl::CommitIndexBuffer(WGPURenderPassEncoder CmdEncoder
     DEV_CHECK_ERR(IndexType == VT_UINT16 || IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
 
     const BufferDesc& IndexBuffDesc = m_pIndexBuffer->GetDesc();
-    const Uint64      Offset        = m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(GetContextId(), this);
+    const Uint64      Offset        = m_IndexDataStartOffset + GetDynamicBufferOffset(m_pIndexBuffer);
     // Do NOT use WGPU_WHOLE_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
     VERIFY_EXPR(IndexBuffDesc.Size >= m_IndexDataStartOffset);
     const Uint64 Size = IndexBuffDesc.Size - m_IndexDataStartOffset;

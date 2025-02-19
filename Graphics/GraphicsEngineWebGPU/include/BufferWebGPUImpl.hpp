@@ -76,40 +76,11 @@ public:
     /// Implementation of IBufferWebGPU::GetWebGPUBuffer().
     WGPUBuffer DILIGENT_CALL_TYPE GetWebGPUBuffer() const override final;
 
-    Uint64 GetDynamicOffset(DeviceContextIndex CtxId, const DeviceContextWebGPUImpl* pCtx) const
-    {
-        if (m_wgpuBuffer)
-        {
-            return 0;
-        }
-        else
-        {
-            VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
-            VERIFY_EXPR(!m_DynamicAllocations.empty());
-#ifdef DILIGENT_DEVELOPMENT
-            if (pCtx != nullptr)
-            {
-                DvpVerifyDynamicAllocation(pCtx);
-            }
-#endif
-            const DynamicMemoryManagerWebGPU::Allocation& DynAlloc = GetDynamicAllocation(CtxId);
-            return DynAlloc.Offset;
-        }
-    }
-
-#ifdef DILIGENT_DEVELOPMENT
-    void DvpVerifyDynamicAllocation(const DeviceContextWebGPUImpl* pCtx) const;
-#endif
-
     void* Map(MAP_TYPE MapType);
 
     void Unmap();
 
     Uint32 GetAlignment() const;
-
-    const DynamicMemoryManagerWebGPU::Allocation& GetDynamicAllocation(DeviceContextIndex CtxId) const;
-
-    void SetDynamicAllocation(DeviceContextIndex CtxId, DynamicMemoryManagerWebGPU::Allocation&& Allocation);
 
     StagingBufferInfo* GetStagingBuffer();
 
@@ -119,26 +90,10 @@ private:
 private:
     friend class DeviceContextWebGPUImpl;
 
-    // Use 64-byte alignment to avoid cache issues
-    static constexpr size_t CacheLineSize = 64;
-    struct alignas(64) DynamicAllocation : DynamicMemoryManagerWebGPU::Allocation
-    {
-        DynamicAllocation& operator=(const Allocation& Allocation)
-        {
-            *static_cast<DynamicMemoryManagerWebGPU::Allocation*>(this) = Allocation;
-            return *this;
-        }
-        Uint8 Padding[CacheLineSize - sizeof(Allocation)] = {};
-    };
-    static_assert(sizeof(DynamicAllocation) == CacheLineSize, "Unexpected sizeof(DynamicAllocation)");
-
-    using DynamicAllocationList = std::vector<DynamicAllocation, STDAllocatorRawMem<DynamicAllocation>>;
-
     static constexpr Uint32 MaxStagingReadBuffers = 16;
 
-    WebGPUBufferWrapper   m_wgpuBuffer;
-    DynamicAllocationList m_DynamicAllocations;
-    const Uint32          m_Alignment;
+    WebGPUBufferWrapper m_wgpuBuffer;
+    const Uint32        m_Alignment;
 };
 
 } // namespace Diligent

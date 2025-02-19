@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -639,7 +639,7 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncode
         WGPUBindGroupEntry wgpuBindGroupEntries[7]{};
         wgpuBindGroupEntries[0].binding = 0;
         wgpuBindGroupEntries[0].buffer  = pBufferImpl->GetWebGPUBuffer();
-        wgpuBindGroupEntries[0].offset  = pBufferImpl->GetDynamicOffset(pDeviceContext->GetContextId(), nullptr);
+        wgpuBindGroupEntries[0].offset  = pDeviceContext->GetDynamicBufferOffset(pBufferImpl);
         wgpuBindGroupEntries[0].size    = pBufferImpl->GetDesc().Size;
 
         UAVFormats PipelineFormats{};
