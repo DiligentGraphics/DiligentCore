@@ -32,6 +32,8 @@
 
 #include <atomic>
 #include <thread>
+#include <vector>
+#include <unordered_set>
 
 #include "RenderDevice.h"
 #include "DeviceObjectBase.hpp"
@@ -48,6 +50,7 @@
 #include "STDAllocator.hpp"
 #include "IndexWrapper.hpp"
 #include "ThreadPool.hpp"
+#include "SpinLock.hpp"
 
 namespace Diligent
 {
@@ -211,6 +214,9 @@ public:
 
     ~RenderDeviceBase()
     {
+        VERIFY(m_RecycledDynamicBufferIds.size() == m_NextDynamicBufferId, "Not all dynamic buffer IDs have been recycled");
+        VERIFY(m_RecycledDynamicBufferIds.size() == m_DbgRecycledDynamicBufferIds.size(),
+               "Recycled dynamic buffer ID set does not match the actual number of recycled IDs. This may happen if there were duplicate IDs or because of a bug.");
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderDevice, ObjectBase<BaseInterface>)
@@ -344,6 +350,33 @@ public:
     virtual IThreadPool* DILIGENT_CALL_TYPE GetShaderCompilationThreadPool() const override final
     {
         return m_pShaderCompilationThreadPool;
+    }
+
+    Uint32 AllocateDynamicBufferId()
+    {
+        Threading::SpinLockGuard Guard{m_RecycledDynamicBufferIdsLock};
+        if (!m_RecycledDynamicBufferIds.empty())
+        {
+            Uint32 Id = m_RecycledDynamicBufferIds.back();
+            m_RecycledDynamicBufferIds.pop_back();
+#ifdef DILIGENT_DEBUG
+            m_DbgRecycledDynamicBufferIds.erase(Id);
+#endif
+            return Id;
+        }
+        else
+        {
+            return m_NextDynamicBufferId.fetch_add(1);
+        }
+    }
+
+    void RecycleDynamicBufferId(Uint32 Id)
+    {
+        Threading::SpinLockGuard Guard{m_RecycledDynamicBufferIdsLock};
+        m_RecycledDynamicBufferIds.push_back(Id);
+#ifdef DILIGENT_DEBUG
+        VERIFY(m_DbgRecycledDynamicBufferIds.emplace(Id).second, "Dynamic buffer ID ", Id, " has already been recycled. This appears to be a bug.");
+#endif
     }
 
 protected:
@@ -644,6 +677,14 @@ protected:
     RefCntAutoPtr<IThreadPool> m_pShaderCompilationThreadPool;
 
     std::atomic<UniqueIdentifier> m_UniqueId{0};
+
+    // Dynamic buffer Ids are used by device contexts to index dynamic allocations
+    std::atomic<Uint32> m_NextDynamicBufferId{0};
+    Threading::SpinLock m_RecycledDynamicBufferIdsLock;
+    std::vector<Uint32> m_RecycledDynamicBufferIds;
+#ifdef DILIGENT_DEBUG
+    std::unordered_set<Uint32> m_DbgRecycledDynamicBufferIds;
+#endif
 };
 
 } // namespace Diligent

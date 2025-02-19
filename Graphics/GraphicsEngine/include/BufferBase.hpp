@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -94,13 +94,26 @@ public:
         m_pDefaultUAV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)},
         m_pDefaultSRV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)}
     {
-        ValidateBufferDesc(this->m_Desc, this->GetDevice());
+        ValidateBufferDesc(this->m_Desc, this->GetDevice()); // May throw
 
         Uint64 DeviceQueuesMask = this->GetDevice()->GetCommandQueueMask();
         DEV_CHECK_ERR((this->m_Desc.ImmediateContextMask & DeviceQueuesMask) != 0,
                       "No bits in the immediate context mask (0x", std::hex, this->m_Desc.ImmediateContextMask,
                       ") correspond to one of ", this->GetDevice()->GetCommandQueueCount(), " available software command queues");
         this->m_Desc.ImmediateContextMask &= DeviceQueuesMask;
+
+        if (this->m_Desc.Usage == USAGE_DYNAMIC)
+        {
+            m_DynamicBufferId = pDevice->AllocateDynamicBufferId();
+        }
+    }
+
+    ~BufferBase()
+    {
+        if (m_DynamicBufferId != ~0u)
+        {
+            this->m_pDevice->RecycleDynamicBufferId(m_DynamicBufferId);
+        }
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Buffer, TDeviceObjectBase)
@@ -228,6 +241,11 @@ public:
         return (this->m_State & State) == State;
     }
 
+    Uint32 GetDynamicBufferId() const
+    {
+        return m_DynamicBufferId;
+    }
+
 protected:
     /// Pure virtual function that creates buffer view for the specific engine implementation.
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) = 0;
@@ -260,6 +278,9 @@ protected:
     RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
 
     MEMORY_PROPERTIES m_MemoryProperties = MEMORY_PROPERTY_UNKNOWN;
+
+    // Dynamic buffer Id is used by device contexts to index dynamic allocations
+    Uint32 m_DynamicBufferId = ~0u;
 
     /// Default UAV addressing the entire buffer
     std::unique_ptr<BufferViewImplType, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>> m_pDefaultUAV;

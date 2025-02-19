@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,7 +74,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
         m_TotalResources += SetSizes[t];
     }
 
-    const auto MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource);
+    const size_t MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource);
     VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes));
 #ifdef DILIGENT_DEBUG
     m_DbgInitializedResources.resize(m_NumSets);
@@ -102,7 +102,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
 
 void ShaderResourceCacheVk::InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type, bool HasImmutableSampler)
 {
-    auto& DescrSet = GetDescriptorSet(Set);
+    DescriptorSet& DescrSet = GetDescriptorSet(Set);
     for (Uint32 res = 0; res < ArraySize; ++res)
     {
         new (&DescrSet.GetResource(Offset + res)) Resource{Type, HasImmutableSampler};
@@ -167,7 +167,7 @@ static bool IsDynamicBuffer(const ShaderResourceCacheVk::Resource& Res)
 #ifdef DILIGENT_DEBUG
 void ShaderResourceCacheVk::DbgVerifyResourceInitialization() const
 {
-    for (const auto& SetFlags : m_DbgInitializedResources)
+    for (const std::vector<bool>& SetFlags : m_DbgInitializedResources)
     {
         for (bool ResInitialized : SetFlags)
             VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");
@@ -868,6 +868,86 @@ VkWriteDescriptorSetAccelerationStructureKHR ShaderResourceCacheVk::Resource::Ge
     DescrAS.pAccelerationStructures    = pTLASVk->GetVkTLASPtr();
 
     return DescrAS;
+}
+
+
+
+Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl*   pCtx,
+                                                      std::vector<uint32_t>& Offsets,
+                                                      Uint32                 StartInd) const
+{
+    // If any of the sets being bound include dynamic uniform or storage buffers, then
+    // pDynamicOffsets includes one element for each array element in each dynamic descriptor
+    // type binding in each set. Values are taken from pDynamicOffsets in an order such that
+    // all entries for set N come before set N+1; within a set, entries are ordered by the binding
+    // numbers (unclear if this is SPIRV binding or VkDescriptorSetLayoutBinding number) in the
+    // descriptor set layouts; and within a binding array, elements are in order. (13.2.5)
+
+    // In each descriptor set, all uniform buffers with dynamic offsets (DescriptorType::UniformBufferDynamic)
+    // for every shader stage come first, followed by all storage buffers with dynamic offsets
+    // (DescriptorType::StorageBufferDynamic and DescriptorType::StorageBufferDynamic_ReadOnly) for every shader stage,
+    // followed by all other resources.
+    Uint32 OffsetInd = StartInd;
+    for (Uint32 set = 0; set < m_NumSets; ++set)
+    {
+        const DescriptorSet& DescrSet = GetDescriptorSet(set);
+        const Uint32         SetSize  = DescrSet.GetSize();
+
+        Uint32 res = 0;
+        while (res < SetSize)
+        {
+            const Resource& Res = DescrSet.GetResource(res);
+            if (Res.Type == DescriptorType::UniformBufferDynamic)
+            {
+                const BufferVkImpl* pBufferVk = Res.pObject.ConstPtr<BufferVkImpl>();
+                // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
+                // The allocations of the buffers that are actually used will be verified by
+                // PipelineResourceSignatureVkImpl::DvpValidateCommittedResource().
+                const size_t Offset = pBufferVk != nullptr ? pCtx->GetDynamicBufferOffset(pBufferVk, /*VerifyAllocation = */ false) : 0;
+                // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
+                // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
+                // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.
+                Offsets[OffsetInd++] = StaticCast<Uint32>(Res.BufferDynamicOffset + Offset);
+                ++res;
+            }
+            else
+                break;
+        }
+
+        while (res < SetSize)
+        {
+            const Resource& Res = DescrSet.GetResource(res);
+            if (Res.Type == DescriptorType::StorageBufferDynamic ||
+                Res.Type == DescriptorType::StorageBufferDynamic_ReadOnly)
+            {
+                const BufferViewVkImpl* pBufferVkView = Res.pObject.ConstPtr<BufferViewVkImpl>();
+                const BufferVkImpl*     pBufferVk     = pBufferVkView != nullptr ? pBufferVkView->GetBuffer<const BufferVkImpl>() : nullptr;
+                // Do not verify dynamic allocation here as there may be some buffers that are not used by the PSO.
+                // The allocations of the buffers that are actually used will be verified by
+                // PipelineResourceSignatureVkImpl::DvpValidateCommittedResource().
+                const size_t Offset = pBufferVk != nullptr ? pCtx->GetDynamicBufferOffset(pBufferVk, /*VerifyAllocation = */ false) : 0;
+                // The effective offset used for dynamic uniform and storage buffer bindings is the sum of the relative
+                // offset taken from pDynamicOffsets, and the base address of the buffer plus base offset in the descriptor set.
+                // The range of the dynamic uniform and storage buffer bindings is the buffer range as specified in the descriptor set.
+                Offsets[OffsetInd++] = StaticCast<Uint32>(Res.BufferDynamicOffset + Offset);
+                ++res;
+            }
+            else
+                break;
+        }
+
+#ifdef DILIGENT_DEBUG
+        for (; res < SetSize; ++res)
+        {
+            const Resource& Res = DescrSet.GetResource(res);
+            VERIFY((Res.Type != DescriptorType::UniformBufferDynamic &&
+                    Res.Type != DescriptorType::StorageBufferDynamic &&
+                    Res.Type != DescriptorType::StorageBufferDynamic_ReadOnly),
+                   "All dynamic uniform and storage buffers are expected to go first in the beginning of each descriptor set");
+        }
+#endif
+    }
+    return OffsetInd - StartInd;
 }
 
 } // namespace Diligent

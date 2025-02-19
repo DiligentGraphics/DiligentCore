@@ -407,6 +407,12 @@ public:
 
     QueryManagerVk* GetQueryManager() { return m_pQueryMgr; }
 
+    size_t GetDynamicBufferOffset(const BufferVkImpl* pBuffer, bool VerifyAllocation = true);
+
+#ifdef DILIGENT_DEVELOPMENT
+    void DvpVerifyDynamicAllocation(const BufferVkImpl* pBuffer) const;
+#endif
+
 private:
     void               TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
     __forceinline void CommitRenderPassAndFramebuffer(bool VerifyStates);
@@ -593,8 +599,6 @@ private:
     std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>> m_SignalFences;
     std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>> m_WaitFences;
 
-    std::unordered_map<BufferVkImpl*, VulkanUploadAllocation> m_UploadAllocations;
-
     struct MappedTextureKey
     {
         TextureVkImpl* const Texture;
@@ -621,6 +625,16 @@ private:
         VulkanDynamicAllocation Allocation;
     };
     std::unordered_map<MappedTextureKey, MappedTexture, MappedTextureKey::Hasher> m_MappedTextures;
+
+    struct MappedBuffer
+    {
+        VulkanDynamicAllocation Allocation;
+#ifdef DILIGENT_DEVELOPMENT
+        UniqueIdentifier DvpBufferUID = -1;
+#endif
+    };
+    // NB: using absl::flat_hash_map<const BufferVkImpl*, MappedBuffer> is considerably slower.
+    std::vector<MappedBuffer> m_MappedBuffers;
 
     // Command pools for every queue family
     std::unique_ptr<std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool>[]> m_QueueFamilyCmdPools;

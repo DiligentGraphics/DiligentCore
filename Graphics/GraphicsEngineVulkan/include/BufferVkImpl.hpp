@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,31 +64,6 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferVk, TBufferBase)
 
-#ifdef DILIGENT_DEVELOPMENT
-    void DvpVerifyDynamicAllocation(const DeviceContextVkImpl* pCtx) const;
-#endif
-
-    size_t GetDynamicOffset(DeviceContextIndex CtxId, const DeviceContextVkImpl* pCtx) const
-    {
-        if (m_VulkanBuffer != VK_NULL_HANDLE)
-        {
-            return 0;
-        }
-        else
-        {
-            VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
-            VERIFY_EXPR(!m_DynamicData.empty());
-#ifdef DILIGENT_DEVELOPMENT
-            if (pCtx != nullptr)
-            {
-                DvpVerifyDynamicAllocation(pCtx);
-            }
-#endif
-            auto& DynAlloc = m_DynamicData[CtxId];
-            return DynAlloc.AlignedOffset;
-        }
-    }
-
     /// Implementation of IBufferVk::GetVkBuffer().
     virtual VkBuffer DILIGENT_CALL_TYPE GetVkBuffer() const override final;
 
@@ -135,24 +110,6 @@ private:
 
     Uint32       m_DynamicOffsetAlignment    = 0;
     VkDeviceSize m_BufferMemoryAlignedOffset = 0;
-
-    // TODO (assiduous): move dynamic allocations to device context.
-    static constexpr size_t CacheLineSize = 64;
-    struct alignas(CacheLineSize) CtxDynamicData : VulkanDynamicAllocation
-    {
-        CtxDynamicData() noexcept {}
-        CtxDynamicData(CtxDynamicData&&) = default;
-
-        CtxDynamicData& operator=(VulkanDynamicAllocation&& Allocation)
-        {
-            *static_cast<VulkanDynamicAllocation*>(this) = std::move(Allocation);
-            return *this;
-        }
-
-        Uint8 Padding[CacheLineSize - sizeof(VulkanDynamicAllocation)] = {};
-    };
-    static_assert(sizeof(CtxDynamicData) == CacheLineSize, "Unexpected sizeof(CtxDynamicData)");
-    std::vector<CtxDynamicData, STDAllocatorRawMem<CtxDynamicData>> m_DynamicData;
 
     VulkanUtilities::BufferWrapper          m_VulkanBuffer;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;

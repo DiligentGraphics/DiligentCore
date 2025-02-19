@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,24 +45,21 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                            RenderDeviceVkImpl*        pRenderDeviceVk,
                            const BufferDesc&          BuffDesc,
                            const BufferData*          pBuffData /*= nullptr*/) :
-    // clang-format off
-    TBufferBase
-    {
+    TBufferBase{
         pRefCounters,
         BuffViewObjMemAllocator,
         pRenderDeviceVk,
         BuffDesc,
-        false
-    },
-    m_DynamicData(STD_ALLOCATOR_RAW_MEM(CtxDynamicData, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
-// clang-format on
+        false,
+    }
 {
     ValidateBufferInitData(m_Desc, pBuffData);
 
-    const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
-    const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
-    const auto& DeviceLimits   = PhysicalDevice.GetProperties().limits;
-    m_DynamicOffsetAlignment   = std::max(Uint32{4}, static_cast<Uint32>(DeviceLimits.optimalBufferCopyOffsetAlignment));
+    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
+    const VkPhysicalDeviceLimits&                DeviceLimits   = PhysicalDevice.GetProperties().limits;
+
+    m_DynamicOffsetAlignment = std::max(Uint32{4}, static_cast<Uint32>(DeviceLimits.optimalBufferCopyOffsetAlignment));
 
     VkBufferCreateInfo VkBuffCI{};
     VkBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -75,9 +72,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
     static_assert(BIND_FLAG_LAST == 0x800, "Please update this function to handle the new bind flags");
 
-    for (auto BindFlags = m_Desc.BindFlags; BindFlags != 0;)
+    for (BIND_FLAGS BindFlags = m_Desc.BindFlags; BindFlags != 0;)
     {
-        auto BindFlag = ExtractLSB(BindFlags);
+        BIND_FLAGS BindFlag = ExtractLSB(BindFlags);
         switch (BindFlag)
         {
             case BIND_SHADER_RESOURCE:
@@ -156,18 +153,12 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         }
     }
 
-    if (m_Desc.Usage == USAGE_DYNAMIC)
-    {
-        auto CtxCount = pRenderDeviceVk->GetNumImmediateContexts() + pRenderDeviceVk->GetNumDeferredContexts();
-        m_DynamicData.resize(CtxCount);
-    }
-
     VkBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE; // Sharing mode of the buffer when it is accessed by multiple queue families.
     VkBuffCI.queueFamilyIndexCount = 0;                         // The number of entries in the pQueueFamilyIndices array.
     VkBuffCI.pQueueFamilyIndices   = nullptr;                   // The list of queue families that will access this buffer
                                                                 // (ignored if sharingMode is not VK_SHARING_MODE_CONCURRENT).
 
-    const auto QueueFamilyIndices = PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1 ?
+    const std::vector<uint32_t> QueueFamilyIndices = PlatformMisc::CountOneBits(m_Desc.ImmediateContextMask) > 1 ?
         GetDevice()->ConvertCmdQueueIdsToQueueFamilies(m_Desc.ImmediateContextMask) :
         std::vector<uint32_t>{};
     if (QueueFamilyIndices.size() > 1)
@@ -240,7 +231,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
         VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VulkanBuffer);
 
-        static constexpr auto InvalidMemoryTypeIndex = VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex;
+        static constexpr uint32_t InvalidMemoryTypeIndex = VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex;
 
         uint32_t MemoryTypeIndex = InvalidMemoryTypeIndex;
         {
@@ -322,8 +313,8 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 
         m_BufferMemoryAlignedOffset = AlignUp(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, RequiredAlignment);
         VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_BufferMemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
-        auto Memory = m_MemoryAllocation.Page->GetVkMemory();
-        auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_BufferMemoryAlignedOffset);
+        VkDeviceMemory Memory = m_MemoryAllocation.Page->GetVkMemory();
+        VkResult       err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_BufferMemoryAlignedOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
         VERIFY(!AlignToNonCoherentAtomSize || (m_BufferMemoryAlignedOffset + MemReqs.size) % DeviceLimits.nonCoherentAtomSize == 0, "End offset is not properly aligned");
@@ -331,28 +322,28 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 #ifdef DILIGENT_DEBUG
         if ((m_Desc.BindFlags & BIND_RAY_TRACING) != 0)
         {
-            const VkDeviceSize ReadOnlyRTBufferAlign = 16u;
-            const VkDeviceSize ScratchBufferAlign    = PhysicalDevice.GetExtProperties().AccelStruct.minAccelerationStructureScratchOffsetAlignment;
-            const VkDeviceSize MinRTBufferAlign      = std::max(ScratchBufferAlign, ReadOnlyRTBufferAlign);
-            const auto         DeviceAddress         = GetVkDeviceAddress();
+            const VkDeviceSize    ReadOnlyRTBufferAlign = 16u;
+            const VkDeviceSize    ScratchBufferAlign    = PhysicalDevice.GetExtProperties().AccelStruct.minAccelerationStructureScratchOffsetAlignment;
+            const VkDeviceSize    MinRTBufferAlign      = std::max(ScratchBufferAlign, ReadOnlyRTBufferAlign);
+            const VkDeviceAddress DeviceAddress         = GetVkDeviceAddress();
             VERIFY(DeviceAddress % MinRTBufferAlign == 0, "Address is not properly aligned for ray tracing usage");
         }
 #endif
 
-        const auto InitialDataSize = (pBuffData != nullptr && pBuffData->pData != nullptr) ?
+        const Uint64 InitialDataSize = (pBuffData != nullptr && pBuffData->pData != nullptr) ?
             std::min(pBuffData->DataSize, VkBuffCI.size) :
             0;
 
         RESOURCE_STATE InitialState = RESOURCE_STATE_UNDEFINED;
         if (InitialDataSize > 0)
         {
-            const auto& MemoryProps = PhysicalDevice.GetMemoryProperties();
+            const VkPhysicalDeviceMemoryProperties& MemoryProps = PhysicalDevice.GetMemoryProperties();
             VERIFY_EXPR(MemoryTypeIndex < MemoryProps.memoryTypeCount);
-            const auto MemoryPropFlags = MemoryProps.memoryTypes[MemoryTypeIndex].propertyFlags;
+            const VkMemoryPropertyFlags MemoryPropFlags = MemoryProps.memoryTypes[MemoryTypeIndex].propertyFlags;
             if ((MemoryPropFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0)
             {
                 // Memory is directly accessible by CPU
-                auto* pData = reinterpret_cast<uint8_t*>(m_MemoryAllocation.Page->GetCPUMemory());
+                uint8_t* pData = reinterpret_cast<uint8_t*>(m_MemoryAllocation.Page->GetCPUMemory());
                 VERIFY_EXPR(pData != nullptr);
                 memcpy(pData + m_BufferMemoryAlignedOffset, pBuffData->pData, StaticCast<size_t>(InitialDataSize));
 
@@ -378,15 +369,15 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges
                 // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
                 // to the host (10.2)
-                auto StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                VulkanUtilities::VulkanMemoryAllocation StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
                 if (!StagingMemoryAllocation)
                     LOG_ERROR_AND_THROW("Failed to allocate staging memory for buffer '", m_Desc.Name, "'.");
 
-                auto StagingBufferMemory     = StagingMemoryAllocation.Page->GetVkMemory();
-                auto AlignedStagingMemOffset = AlignUp(VkDeviceSize{StagingMemoryAllocation.UnalignedOffset}, StagingBufferMemReqs.alignment);
+                VkDeviceMemory StagingBufferMemory     = StagingMemoryAllocation.Page->GetVkMemory();
+                VkDeviceSize   AlignedStagingMemOffset = AlignUp(VkDeviceSize{StagingMemoryAllocation.UnalignedOffset}, StagingBufferMemReqs.alignment);
                 VERIFY_EXPR(StagingMemoryAllocation.Size >= StagingBufferMemReqs.size + (AlignedStagingMemOffset - StagingMemoryAllocation.UnalignedOffset));
 
-                auto* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
+                uint8_t* StagingData = reinterpret_cast<uint8_t*>(StagingMemoryAllocation.Page->GetCPUMemory());
                 if (StagingData == nullptr)
                     LOG_ERROR_AND_THROW("Failed to allocate staging data for buffer '", m_Desc.Name, '\'');
                 memcpy(StagingData + AlignedStagingMemOffset, pBuffData->pData, StaticCast<size_t>(InitialDataSize));
@@ -394,7 +385,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
                 CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging buffer memory");
 
-                const auto CmdQueueInd = pBuffData->pContext ?
+                const SoftwareQueueIndex CmdQueueInd = pBuffData->pContext ?
                     ClassPtrCast<DeviceContextVkImpl>(pBuffData->pContext)->GetCommandQueueId() :
                     SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
@@ -461,18 +452,14 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                            const BufferDesc&          BuffDesc,
                            RESOURCE_STATE             InitialState,
                            VkBuffer                   vkBuffer) :
-    // clang-format off
-    TBufferBase
-    {
+    TBufferBase{
         pRefCounters,
         BuffViewObjMemAllocator,
         pRenderDeviceVk,
         BuffDesc,
-        false
+        false,
     },
-    m_DynamicData(STD_ALLOCATOR_RAW_MEM(CtxDynamicData, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>")),
     m_VulkanBuffer{vkBuffer}
-// clang-format on
 {
     SetState(InitialState);
 }
@@ -496,14 +483,14 @@ void BufferVkImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
 
     try
     {
-        auto& BuffViewAllocator = m_pDevice->GetBuffViewObjAllocator();
+        FixedBlockMemoryAllocator& BuffViewAllocator = m_pDevice->GetBuffViewObjAllocator();
         VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization");
 
         BufferViewDesc ViewDesc = OrigViewDesc;
         if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE)
         {
-            auto View = CreateView(ViewDesc);
-            *ppView   = NEW_RC_OBJ(BuffViewAllocator, "BufferViewVkImpl instance", BufferViewVkImpl, bIsDefaultView ? this : nullptr)(GetDevice(), ViewDesc, this, std::move(View), bIsDefaultView);
+            VulkanUtilities::BufferViewWrapper View = CreateView(ViewDesc);
+            *ppView                                 = NEW_RC_OBJ(BuffViewAllocator, "BufferViewVkImpl instance", BufferViewVkImpl, bIsDefaultView ? this : nullptr)(GetDevice(), ViewDesc, this, std::move(View), bIsDefaultView);
         }
 
         if (!bIsDefaultView && *ppView)
@@ -511,7 +498,7 @@ void BufferVkImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
     }
     catch (const std::runtime_error&)
     {
-        const auto* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
+        const char* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
         LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name, "\"");
     }
 }
@@ -533,8 +520,8 @@ VulkanUtilities::BufferViewWrapper BufferVkImpl::CreateView(struct BufferViewDes
         ViewCI.offset = ViewDesc.ByteOffset; // offset in bytes from the base address of the buffer
         ViewCI.range  = ViewDesc.ByteWidth;  // size in bytes of the buffer view
 
-        const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
-        BuffView                  = LogicalDevice.CreateBufferView(ViewCI, ViewDesc.Name);
+        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice{GetDevice()->GetLogicalDevice()};
+        BuffView = LogicalDevice.CreateBufferView(ViewCI, ViewDesc.Name);
     }
     else if (m_Desc.Mode == BUFFER_MODE_STRUCTURED ||
              m_Desc.Mode == BUFFER_MODE_RAW)
@@ -568,7 +555,7 @@ VkAccessFlags BufferVkImpl::GetAccessFlags() const
 
 VkDeviceAddress BufferVkImpl::GetVkDeviceAddress() const
 {
-    constexpr auto DeviceAddressFlags = BIND_RAY_TRACING;
+    constexpr BIND_FLAGS DeviceAddressFlags = BIND_RAY_TRACING;
 
     if (m_VulkanBuffer != VK_NULL_HANDLE && (m_Desc.BindFlags & DeviceAddressFlags) != 0)
     {
@@ -596,8 +583,8 @@ void BufferVkImpl::FlushMappedRange(Uint64 StartOffset, Uint64 Size)
 {
     DvpVerifyFlushMappedRangeArguments(StartOffset, Size);
 
-    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
-    const auto& DeviceLimits  = GetDevice()->GetPhysicalDevice().GetProperties().limits;
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
+    const VkPhysicalDeviceLimits&               DeviceLimits  = GetDevice()->GetPhysicalDevice().GetProperties().limits;
 
     VkMappedMemoryRange MappedRange{};
     MappedRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
@@ -611,8 +598,8 @@ void BufferVkImpl::InvalidateMappedRange(Uint64 StartOffset, Uint64 Size)
 {
     DvpVerifyInvalidateMappedRangeArguments(StartOffset, Size);
 
-    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
-    const auto& DeviceLimits  = GetDevice()->GetPhysicalDevice().GetProperties().limits;
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
+    const VkPhysicalDeviceLimits&               DeviceLimits  = GetDevice()->GetPhysicalDevice().GetProperties().limits;
 
     VkMappedMemoryRange MappedRange{};
     MappedRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
@@ -622,29 +609,12 @@ void BufferVkImpl::InvalidateMappedRange(Uint64 StartOffset, Uint64 Size)
     LogicalDevice.InvalidateMappedMemoryRanges(1, &MappedRange);
 }
 
-
-#ifdef DILIGENT_DEVELOPMENT
-void BufferVkImpl::DvpVerifyDynamicAllocation(const DeviceContextVkImpl* pCtx) const
-{
-    if (m_VulkanBuffer == VK_NULL_HANDLE)
-    {
-        VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
-
-        const auto  ContextId    = pCtx->GetContextId();
-        const auto& DynAlloc     = m_DynamicData[ContextId];
-        const auto  CurrentFrame = pCtx->GetFrameNumber();
-        DEV_CHECK_ERR(DynAlloc.pDynamicMemMgr != nullptr, "Dynamic buffer '", m_Desc.Name, "' has not been mapped before its first use. Context Id: ", ContextId, ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
-        DEV_CHECK_ERR(DynAlloc.dvpFrameNumber == CurrentFrame, "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
-    }
-}
-#endif
-
 SparseBufferProperties BufferVkImpl::GetSparseProperties() const
 {
     DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
                   "IBuffer::GetSparseProperties() must be used for sparse buffer");
 
-    auto MemReq = m_pDevice->GetLogicalDevice().GetBufferMemoryRequirements(GetVkBuffer());
+    VkMemoryRequirements MemReq = m_pDevice->GetLogicalDevice().GetBufferMemoryRequirements(GetVkBuffer());
 
     SparseBufferProperties Props{};
     Props.AddressSpaceSize = MemReq.size;

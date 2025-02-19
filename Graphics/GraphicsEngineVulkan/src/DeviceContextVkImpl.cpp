@@ -121,6 +121,7 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
     m_vkClearValues.reserve(16);
 
     m_DynamicBufferOffsets.reserve(64);
+    m_MappedBuffers.reserve(32);
 
     CreateASCompactedSizeQueryPool();
 }
@@ -456,7 +457,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
             VERIFY(m_DynamicBufferOffsets.size() >= size_t{DynamicOffsetCount} + size_t{SetInfo.DynamicOffsetCount},
                    "m_DynamicBufferOffsets must've been resized by SetPipelineState() to have enough space");
 
-            Uint32 NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(GetContextId(), m_DynamicBufferOffsets, DynamicOffsetCount);
+            Uint32 NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(this, m_DynamicBufferOffsets, DynamicOffsetCount);
             VERIFY_EXPR(NumOffsetsWritten == SetInfo.DynamicOffsetCount);
             DynamicOffsetCount += SetInfo.DynamicOffsetCount;
         }
@@ -644,14 +645,14 @@ void DeviceContextVkImpl::CommitVkVertexBuffers()
             {
                 DynamicBufferPresent = true;
 #ifdef DILIGENT_DEVELOPMENT
-                pBufferVk->DvpVerifyDynamicAllocation(this);
+                DvpVerifyDynamicAllocation(pBufferVk);
 #endif
             }
 
             // Device context keeps strong references to all vertex buffers.
 
             vkVertexBuffers[slot] = pBufferVk->GetVkBuffer();
-            Offsets[slot]         = CurrStream.Offset + pBufferVk->GetDynamicOffset(GetContextId(), this);
+            Offsets[slot]         = CurrStream.Offset + GetDynamicBufferOffset(pBufferVk);
         }
         else
         {
@@ -796,7 +797,7 @@ BufferVkImpl* DeviceContextVkImpl::PrepareIndirectAttribsBuffer(IBuffer*        
 
 #ifdef DILIGENT_DEVELOPMENT
     if (pIndirectDrawAttribsVk->GetDesc().Usage == USAGE_DYNAMIC)
-        pIndirectDrawAttribsVk->DvpVerifyDynamicAllocation(this);
+        DvpVerifyDynamicAllocation(pIndirectDrawAttribsVk);
 #endif
 
     // Buffer memory barriers must be executed outside of render pass
@@ -817,7 +818,7 @@ void DeviceContextVkImpl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE Ind
 #endif
     DEV_CHECK_ERR(IndexType == VT_UINT16 || IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
     VkIndexType vkIndexType = TypeToVkIndexType(IndexType);
-    m_CommandBuffer.BindIndexBuffer(m_pIndexBuffer->GetVkBuffer(), m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(GetContextId(), this), vkIndexType);
+    m_CommandBuffer.BindIndexBuffer(m_pIndexBuffer->GetVkBuffer(), m_IndexDataStartOffset + GetDynamicBufferOffset(m_pIndexBuffer), vkIndexType);
 }
 
 void DeviceContextVkImpl::Draw(const DrawAttribs& Attribs)
@@ -950,15 +951,15 @@ void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs)
         if (Attribs.pCounterBuffer == nullptr)
         {
             m_CommandBuffer.DrawIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                         pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                         GetDynamicBufferOffset(pIndirectDrawAttribsVk) + Attribs.DrawArgsOffset,
                                          Attribs.DrawCount, Attribs.DrawCount > 1 ? Attribs.DrawArgsStride : 0);
         }
         else
         {
             m_CommandBuffer.DrawIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                              pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                              GetDynamicBufferOffset(pIndirectDrawAttribsVk) + Attribs.DrawArgsOffset,
                                               pCountBufferVk->GetVkBuffer(),
-                                              pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
+                                              GetDynamicBufferOffset(pCountBufferVk) + Attribs.CounterOffset,
                                               Attribs.DrawCount,
                                               Attribs.DrawArgsStride);
         }
@@ -985,15 +986,15 @@ void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
         if (Attribs.pCounterBuffer == nullptr)
         {
             m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                                pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                                GetDynamicBufferOffset(pIndirectDrawAttribsVk) + Attribs.DrawArgsOffset,
                                                 Attribs.DrawCount, Attribs.DrawCount > 1 ? Attribs.DrawArgsStride : 0);
         }
         else
         {
             m_CommandBuffer.DrawIndexedIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                                     pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                                     GetDynamicBufferOffset(pIndirectDrawAttribsVk) + Attribs.DrawArgsOffset,
                                                      pCountBufferVk->GetVkBuffer(),
-                                                     pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
+                                                     GetDynamicBufferOffset(pCountBufferVk) + Attribs.CounterOffset,
                                                      Attribs.DrawCount,
                                                      Attribs.DrawArgsStride);
         }
@@ -1033,16 +1034,16 @@ void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
         if (Attribs.pCounterBuffer == nullptr)
         {
             m_CommandBuffer.DrawMeshIndirect(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                             pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                             GetDynamicBufferOffset(pIndirectDrawAttribsVk) + Attribs.DrawArgsOffset,
                                              Attribs.CommandCount,
                                              DrawMeshIndirectCommandStride);
         }
         else
         {
             m_CommandBuffer.DrawMeshIndirectCount(pIndirectDrawAttribsVk->GetVkBuffer(),
-                                                  pIndirectDrawAttribsVk->GetDynamicOffset(GetContextId(), this) + Attribs.DrawArgsOffset,
+                                                  GetDynamicBufferOffset(pIndirectDrawAttribsVk) + Attribs.DrawArgsOffset,
                                                   pCountBufferVk->GetVkBuffer(),
-                                                  pCountBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.CounterOffset,
+                                                  GetDynamicBufferOffset(pCountBufferVk) + Attribs.CounterOffset,
                                                   Attribs.CommandCount,
                                                   DrawMeshIndirectCommandStride);
         }
@@ -1109,14 +1110,14 @@ void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
 
 #ifdef DILIGENT_DEVELOPMENT
     if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-        pBufferVk->DvpVerifyDynamicAllocation(this);
+        DvpVerifyDynamicAllocation(pBufferVk);
 #endif
 
     // Buffer memory barriers must be executed outside of render pass
     TransitionOrVerifyBufferState(*pBufferVk, Attribs.AttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
                                   VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect dispatch (DeviceContextVkImpl::DispatchCompute)");
 
-    m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(GetContextId(), this) + Attribs.DispatchArgsByteOffset);
+    m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), GetDynamicBufferOffset(pBufferVk) + Attribs.DispatchArgsByteOffset);
     ++m_State.NumCommands;
 }
 
@@ -1400,7 +1401,9 @@ void DeviceContextVkImpl::FinishFrame()
     }
 
     if (!m_MappedTextures.empty())
+    {
         LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
+    }
 
     const Uint64 QueueMask = GetSubmittedBuffersCmdQueueMask();
     VERIFY_EXPR(IsDeferred() || QueueMask == (Uint64{1} << GetCommandQueueId()));
@@ -2142,11 +2145,11 @@ void DeviceContextVkImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
     TransitionOrVerifyBufferState(*pDstBuffVk, DstBufferTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, "Using buffer as copy destination (DeviceContextVkImpl::CopyBuffer)");
 
     VkBufferCopy CopyRegion;
-    CopyRegion.srcOffset = SrcOffset + pSrcBuffVk->GetDynamicOffset(GetContextId(), this);
+    CopyRegion.srcOffset = SrcOffset + GetDynamicBufferOffset(pSrcBuffVk);
     CopyRegion.dstOffset = DstOffset;
     CopyRegion.size      = Size;
     VERIFY(pDstBuffVk->m_VulkanBuffer != VK_NULL_HANDLE, "Copy destination buffer must not be suballocated");
-    VERIFY_EXPR(pDstBuffVk->GetDynamicOffset(GetContextId(), this) == 0);
+    VERIFY_EXPR(GetDynamicBufferOffset(pDstBuffVk) == 0);
     m_CommandBuffer.CopyBuffer(pSrcBuffVk->GetVkBuffer(), pDstBuffVk->GetVkBuffer(), 1, &CopyRegion);
     ++m_State.NumCommands;
 }
@@ -2182,14 +2185,21 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
             DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0, "Failed to map buffer '",
                           BuffDesc.Name, "': Vulkan buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE flag. Context Id: ", GetContextId());
 
-            BufferVkImpl::CtxDynamicData& DynAllocation = pBufferVk->m_DynamicData[GetContextId()];
+            const Uint32 DynamicBufferId = pBufferVk->GetDynamicBufferId();
+            VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", BuffDesc.Name, "' does not have dynamic buffer ID");
+            if (m_MappedBuffers.size() <= DynamicBufferId)
+                m_MappedBuffers.resize(DynamicBufferId + 1);
+            VulkanDynamicAllocation& DynAllocation = m_MappedBuffers[DynamicBufferId].Allocation;
+#ifdef DILIGENT_DEVELOPMENT
+            m_MappedBuffers[DynamicBufferId].DvpBufferUID = pBufferVk->GetUniqueID();
+#endif
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || !DynAllocation)
             {
                 DynAllocation = AllocateDynamicSpace(BuffDesc.Size, pBufferVk->m_DynamicOffsetAlignment);
             }
             else
             {
-                VERIFY_EXPR(MapFlags & MAP_FLAG_NO_OVERWRITE);
+                DEV_CHECK_ERR(MapFlags & MAP_FLAG_NO_OVERWRITE, "Buffer '", BuffDesc.Name, "' is already mapped. Vulkan buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE flag.");
 
                 if (pBufferVk->m_VulkanBuffer != VK_NULL_HANDLE)
                 {
@@ -2257,11 +2267,78 @@ void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
         {
             if (pBufferVk->m_VulkanBuffer != VK_NULL_HANDLE)
             {
-                BufferVkImpl::CtxDynamicData& DynAlloc  = pBufferVk->m_DynamicData[GetContextId()];
-                VkBuffer                      vkSrcBuff = DynAlloc.pDynamicMemMgr->GetVkBuffer();
-                UpdateBufferRegion(pBufferVk, 0, BuffDesc.Size, vkSrcBuff, DynAlloc.AlignedOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                const Uint32 DynamicBufferId = pBufferVk->GetDynamicBufferId();
+                VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", BuffDesc.Name, "' does not have dynamic buffer ID");
+                if (DynamicBufferId < m_MappedBuffers.size())
+                {
+                    VulkanDynamicAllocation& DynAlloc  = m_MappedBuffers[DynamicBufferId].Allocation;
+                    VkBuffer                 vkSrcBuff = DynAlloc.pDynamicMemMgr->GetVkBuffer();
+                    UpdateBufferRegion(pBufferVk, 0, BuffDesc.Size, vkSrcBuff, DynAlloc.AlignedOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                }
+                else
+                {
+                    DEV_ERROR("Unmapping buffer '", BuffDesc.Name, "' that was not previously mapped.");
+                }
             }
         }
+    }
+}
+
+#ifdef DILIGENT_DEVELOPMENT
+void DeviceContextVkImpl::DvpVerifyDynamicAllocation(const BufferVkImpl* pBuffer) const
+{
+    VERIFY_EXPR(pBuffer != nullptr);
+
+    if (pBuffer->m_VulkanBuffer != VK_NULL_HANDLE)
+        return;
+
+    const BufferDesc& BuffDesc = pBuffer->GetDesc();
+    VERIFY_EXPR(BuffDesc.Usage == USAGE_DYNAMIC);
+
+    const Uint32 DynamicBufferId = pBuffer->GetDynamicBufferId();
+    VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", pBuffer->GetDesc().Name, "' does not have dynamic buffer ID");
+
+    if (DynamicBufferId >= m_MappedBuffers.size())
+    {
+        DEV_ERROR("Dynamic buffer '", BuffDesc.Name, "' has not been mapped.");
+        return;
+    }
+
+    const MappedBuffer& MappedBuff = m_MappedBuffers[DynamicBufferId];
+    DEV_CHECK_ERR(MappedBuff.Allocation.pDynamicMemMgr != nullptr, "Dynamic buffer '", BuffDesc.Name, "' has not been mapped before its first use. Context Id: ", GetContextId(),
+                  ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
+
+    DEV_CHECK_ERR(MappedBuff.Allocation.dvpFrameNumber == GetFrameNumber(), "Dynamic allocation of dynamic buffer '", BuffDesc.Name, "' in frame ", GetFrameNumber(),
+                  " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
+
+    DEV_CHECK_ERR(MappedBuff.DvpBufferUID == pBuffer->GetUniqueID(), "Dynamic buffer ID mismatch. Buffer '", BuffDesc.Name, "' has ID ", pBuffer->GetUniqueID(), " but the ID of the mapped buffer is ",
+                  MappedBuff.DvpBufferUID, ". This indicates that dynamic space has been reassigned to a different buffer, which has not been mapped.");
+}
+#endif
+
+size_t DeviceContextVkImpl::GetDynamicBufferOffset(const BufferVkImpl* pBuffer, bool VerifyAllocation)
+{
+    VERIFY_EXPR(pBuffer != nullptr);
+
+    if (pBuffer->m_VulkanBuffer != VK_NULL_HANDLE)
+        return 0;
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (VerifyAllocation)
+    {
+        DvpVerifyDynamicAllocation(pBuffer);
+    }
+#endif
+
+    const Uint32 DynamicBufferId = pBuffer->GetDynamicBufferId();
+    VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", pBuffer->GetDesc().Name, "' does not have dynamic buffer ID");
+    if (DynamicBufferId < m_MappedBuffers.size())
+    {
+        return m_MappedBuffers[DynamicBufferId].Allocation.AlignedOffset;
+    }
+    else
+    {
+        return 0;
     }
 }
 
@@ -3118,7 +3195,7 @@ void DeviceContextVkImpl::TransitionBufferState(BufferVkImpl& BufferVk, RESOURCE
     if (((OldState & NewState) != NewState) || AfterWrite)
     {
         DEV_CHECK_ERR(BufferVk.m_VulkanBuffer != VK_NULL_HANDLE, "Cannot transition suballocated buffer");
-        VERIFY_EXPR(BufferVk.GetDynamicOffset(GetContextId(), this) == 0);
+        VERIFY_EXPR(GetDynamicBufferOffset(&BufferVk) == 0);
 
         EnsureVkCmdBuffer();
         VkPipelineStageFlags OldAccessFlags = ResourceStateFlagsToVkAccessFlags(OldState);

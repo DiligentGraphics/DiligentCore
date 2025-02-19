@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,7 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "SamplerVkImpl.hpp"
 #include "TextureViewVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
 
 #include "VulkanTypeConversions.hpp"
 #include "DynamicLinearAllocator.hpp"
@@ -863,7 +864,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
                 // is bound. It will be null if the type is incorrect.
                 if (const auto* pBufferVk = Res.pObject.RawPtr<BufferVkImpl>())
                 {
-                    pBufferVk->DvpVerifyDynamicAllocation(pDeviceCtx);
+                    pDeviceCtx->DvpVerifyDynamicAllocation(pBufferVk);
 
                     if ((pBufferVk->GetDesc().Size < SPIRVAttribs.BufferStaticSize) &&
                         (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
@@ -891,7 +892,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
                     const auto& ViewDesc  = pBufferViewVk->GetDesc();
                     const auto& BuffDesc  = pBufferVk->GetDesc();
 
-                    pBufferVk->DvpVerifyDynamicAllocation(pDeviceCtx);
+                    pDeviceCtx->DvpVerifyDynamicAllocation(pBufferVk);
 
                     if (BuffDesc.ElementByteStride == 0)
                     {
