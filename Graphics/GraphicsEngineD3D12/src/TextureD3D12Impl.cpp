@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -115,7 +115,7 @@ D3D12_RESOURCE_DESC TextureD3D12Impl::GetD3D12TextureDesc() const
     if ((m_Desc.BindFlags & (BIND_SHADER_RESOURCE | BIND_INPUT_ATTACHMENT)) == 0 && (m_Desc.BindFlags & BIND_DEPTH_STENCIL) != 0)
         Desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
-    auto Format = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
+    DXGI_FORMAT Format = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
     if (Format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB && (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS))
         Desc.Format = DXGI_FORMAT_R8G8B8A8_TYPELESS;
     else
@@ -152,11 +152,11 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     D3D12_RESOURCE_DESC d3d12TexDesc       = GetD3D12TextureDesc();
     const bool          bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
 
-    const auto CmdQueueInd = pInitData != nullptr && pInitData->pContext != nullptr ?
+    const SoftwareQueueIndex CmdQueueInd = pInitData != nullptr && pInitData->pContext != nullptr ?
         ClassPtrCast<DeviceContextD3D12Impl>(pInitData->pContext)->GetCommandQueueId() :
         SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
-    const auto d3d12StateMask = bInitializeTexture ?
+    const D3D12_RESOURCE_STATES d3d12StateMask = bInitializeTexture ?
         GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
         static_cast<D3D12_RESOURCE_STATES>(~0u);
 
@@ -168,8 +168,8 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             ClearValue.Format = TexFormatToDXGI_Format(m_Desc.ClearValue.Format);
         else
         {
-            auto Format       = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
-            ClearValue.Format = GetClearFormat(Format, d3d12TexDesc.Flags);
+            DXGI_FORMAT Format = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
+            ClearValue.Format  = GetClearFormat(Format, d3d12TexDesc.Flags);
         }
 
         if (d3d12TexDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
@@ -185,7 +185,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         pClearValue = &ClearValue;
     }
 
-    auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
+    ID3D12Device* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
     if (m_Desc.Usage == USAGE_SPARSE)
     {
         d3d12TexDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
@@ -193,17 +193,17 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 #ifdef DILIGENT_ENABLE_D3D_NVAPI
         if (IsUsingNVApi())
         {
-            auto err = NvAPI_D3D12_CreateReservedResource(pd3d12Device, &d3d12TexDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, __uuidof(m_pd3d12Resource),
-                                                          reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)),
-                                                          true, m_pDevice->GetDummyNVApiHeap());
+            NvAPI_Status err = NvAPI_D3D12_CreateReservedResource(pd3d12Device, &d3d12TexDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, __uuidof(m_pd3d12Resource),
+                                                                  reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)),
+                                                                  true, m_pDevice->GetDummyNVApiHeap());
             if (err != NVAPI_OK)
                 LOG_ERROR_AND_THROW("Failed to create D3D12 texture using NVApi");
         }
         else
 #endif
         {
-            auto hr = pd3d12Device->CreateReservedResource(&d3d12TexDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, __uuidof(m_pd3d12Resource),
-                                                           reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+            HRESULT hr = pd3d12Device->CreateReservedResource(&d3d12TexDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, __uuidof(m_pd3d12Resource),
+                                                              reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create D3D12 texture");
         }
@@ -227,19 +227,19 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         HeapProps.CreationNodeMask     = 1;
         HeapProps.VisibleNodeMask      = 1;
 
-        auto InitialState = bInitializeTexture ? RESOURCE_STATE_COPY_DEST : RESOURCE_STATE_UNDEFINED;
+        RESOURCE_STATE InitialState = bInitializeTexture ? RESOURCE_STATE_COPY_DEST : RESOURCE_STATE_UNDEFINED;
         SetState(InitialState);
 
-        const auto d3d12State = ResourceStateFlagsToD3D12ResourceStates(InitialState) & d3d12StateMask;
+        const D3D12_RESOURCE_STATES d3d12State = ResourceStateFlagsToD3D12ResourceStates(InitialState) & d3d12StateMask;
 
         // By default, committed resources and heaps are almost always zeroed upon creation.
         // CREATE_NOT_ZEROED flag allows this to be elided in some scenarios to lower the overhead
         // of creating the heap. No need to zero the resource if we initialize it.
-        const auto d3d12HeapFlags = bInitializeTexture ?
+        const D3D12_HEAP_FLAGS d3d12HeapFlags = bInitializeTexture ?
             D3D12_HEAP_FLAG_CREATE_NOT_ZEROED :
             D3D12_HEAP_FLAG_NONE;
 
-        auto hr = pd3d12Device->CreateCommittedResource(
+        HRESULT hr = pd3d12Device->CreateCommittedResource(
             &HeapProps, d3d12HeapFlags, &d3d12TexDesc, d3d12State, pClearValue, __uuidof(m_pd3d12Resource),
             reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
         if (FAILED(hr))
@@ -287,10 +287,10 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create committed resource in an upload heap");
 
-            const auto UploadBufferName = std::wstring{L"Upload buffer for texture '"} + WidenString(m_Desc.Name) + L'\'';
+            const std::wstring UploadBufferName = std::wstring{L"Upload buffer for texture '"} + WidenString(m_Desc.Name) + L'\'';
             UploadBuffer->SetName(UploadBufferName.c_str());
 
-            auto InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
+            RenderDeviceD3D12Impl::PooledCommandContext InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
             // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default texture
             VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
             std::vector<D3D12_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D12_SUBRESOURCE_DATA>> D3D12SubResData(pInitData->NumSubresources, D3D12_SUBRESOURCE_DATA(), STD_ALLOCATOR_RAW_MEM(D3D12_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D12_SUBRESOURCE_DATA>"));
@@ -300,7 +300,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
                 D3D12SubResData[subres].RowPitch   = static_cast<LONG_PTR>(pInitData->pSubResources[subres].Stride);
                 D3D12SubResData[subres].SlicePitch = static_cast<LONG_PTR>(pInitData->pSubResources[subres].DepthStride);
             }
-            auto UploadedSize = UpdateSubresources(InitContext->GetCommandList(), m_pd3d12Resource, UploadBuffer, 0, 0, pInitData->NumSubresources, D3D12SubResData.data());
+            UINT64 UploadedSize = UpdateSubresources(InitContext->GetCommandList(), m_pd3d12Resource, UploadBuffer, 0, 0, pInitData->NumSubresources, D3D12SubResData.data());
             VERIFY(UploadedSize == uploadBufferSize, "Incorrect uploaded data size (", UploadedSize, "). ", uploadBufferSize, " is expected");
 
             // Command list fence should only be signaled when submitting cmd list
@@ -356,7 +356,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             UNEXPECTED("Unexpected CPU access");
 
         SetState(InitialState);
-        auto d3d12State = ResourceStateFlagsToD3D12ResourceStates(InitialState) & d3d12StateMask;
+        D3D12_RESOURCE_STATES d3d12State = ResourceStateFlagsToD3D12ResourceStates(InitialState) & d3d12StateMask;
 
         StaginHeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         StaginHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
@@ -387,15 +387,15 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         // page caching behavior is write-back. Map() and Unmap() invalidate and flush the last level CPU cache
         // on some ARM systems, to marshal data between the CPU and GPU through memory addresses with write-back behavior.
         // https://docs.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12resource-map
-        auto hr = pd3d12Device->CreateCommittedResource(&StaginHeapProps, D3D12_HEAP_FLAG_NONE, &BufferDesc, d3d12State,
-                                                        nullptr, __uuidof(m_pd3d12Resource),
-                                                        reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+        HRESULT hr = pd3d12Device->CreateCommittedResource(&StaginHeapProps, D3D12_HEAP_FLAG_NONE, &BufferDesc, d3d12State,
+                                                           nullptr, __uuidof(m_pd3d12Resource),
+                                                           reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create staging buffer");
 
         if (bInitializeTexture)
         {
-            const auto FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
+            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
 
             void* pStagingData = nullptr;
             m_pd3d12Resource->Map(0, nullptr, &pStagingData);
@@ -404,11 +404,11 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             {
                 for (Uint32 Subres = 0; Subres < NumSubresources; ++Subres)
                 {
-                    const auto Mip      = Subres % m_Desc.MipLevels;
-                    const auto MipProps = GetMipLevelProperties(m_Desc, Mip);
+                    const Uint32             Mip      = Subres % m_Desc.MipLevels;
+                    const MipLevelProperties MipProps = GetMipLevelProperties(m_Desc, Mip);
 
-                    const auto& SrcSubresData = pInitData->pSubResources[Subres];
-                    const auto& DstFootprint  = GetStagingFootprint(Subres);
+                    const TextureSubResData&                  SrcSubresData = pInitData->pSubResources[Subres];
+                    const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& DstFootprint  = GetStagingFootprint(Subres);
 
                     VERIFY_EXPR(MipProps.StorageWidth == DstFootprint.Footprint.Width);
                     VERIFY_EXPR(MipProps.StorageHeight == DstFootprint.Footprint.Height);
@@ -437,14 +437,14 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 
 static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const TextureDesc& SrcTexDesc)
 {
-    const auto d3d12Desc = pTexture->GetDesc();
+    const D3D12_RESOURCE_DESC d3d12Desc = pTexture->GetDesc();
 
     TextureDesc TexDesc = SrcTexDesc;
     if (TexDesc.Format == TEX_FORMAT_UNKNOWN)
         TexDesc.Format = DXGI_FormatToTexFormat(d3d12Desc.Format);
     else
     {
-        auto RefFormat = DXGI_FormatToTexFormat(d3d12Desc.Format);
+        TEXTURE_FORMAT RefFormat = DXGI_FormatToTexFormat(d3d12Desc.Format);
         DEV_CHECK_ERR(RefFormat == TexDesc.Format, "The format specified by texture description (", GetTextureFormatAttribs(TexDesc.Format).Name,
                       ") does not match the D3D12 resource format (",
                       GetTextureFormatAttribs(RefFormat).Name, ")");
@@ -475,7 +475,7 @@ static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const 
         TexDesc.BindFlags |= BIND_UNORDERED_ACCESS;
     if ((d3d12Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0)
     {
-        const auto& FormatAttribs = GetTextureFormatAttribs(TexDesc.Format);
+        const TextureFormatAttribs& FormatAttribs = GetTextureFormatAttribs(TexDesc.Format);
         if (FormatAttribs.IsTypeless ||
             (FormatAttribs.ComponentType != COMPONENT_TYPE_DEPTH &&
              FormatAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL))
@@ -520,11 +520,11 @@ void TextureD3D12Impl::CreateViewInternal(const TextureViewDesc& ViewDesc, IText
 
     try
     {
-        auto* pDeviceD3D12Impl = GetDevice();
-        auto& TexViewAllocator = pDeviceD3D12Impl->GetTexViewObjAllocator();
+        RenderDeviceD3D12Impl*     pDeviceD3D12Impl = GetDevice();
+        FixedBlockMemoryAllocator& TexViewAllocator = pDeviceD3D12Impl->GetTexViewObjAllocator();
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
-        auto UpdatedViewDesc = ViewDesc;
+        TextureViewDesc UpdatedViewDesc = ViewDesc;
         ValidatedAndCorrectTextureViewDesc(m_Desc, UpdatedViewDesc);
 
         if (m_Desc.IsArray() && (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D || ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D))
@@ -610,7 +610,7 @@ void TextureD3D12Impl::CreateViewInternal(const TextureViewDesc& ViewDesc, IText
                 CreateUAV(UAVDesc, MipUAVDescriptors.GetCpuHandle(MipLevel));
             }
         }
-        auto pViewD3D12 = NEW_RC_OBJ(TexViewAllocator, "TextureViewD3D12Impl instance", TextureViewD3D12Impl, bIsDefaultView ? this : nullptr)(
+        TextureViewD3D12Impl* pViewD3D12 = NEW_RC_OBJ(TexViewAllocator, "TextureViewD3D12Impl instance", TextureViewD3D12Impl, bIsDefaultView ? this : nullptr)(
             GetDevice(), UpdatedViewDesc, this, std::move(ViewDescriptor), std::move(TexArraySRVDescriptor), std::move(MipUAVDescriptors), bIsDefaultView);
         VERIFY(pViewD3D12->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type");
 
@@ -621,7 +621,7 @@ void TextureD3D12Impl::CreateViewInternal(const TextureViewDesc& ViewDesc, IText
     }
     catch (const std::runtime_error&)
     {
-        const auto* ViewTypeName = GetTexViewTypeLiteralName(ViewDesc.ViewType);
+        const char* ViewTypeName = GetTexViewTypeLiteralName(ViewDesc.ViewType);
         LOG_ERROR("Failed to create view \"", ViewDesc.Name ? ViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"");
     }
 }
@@ -644,7 +644,7 @@ void TextureD3D12Impl::CreateSRV(const TextureViewDesc& SRVDesc, D3D12_CPU_DESCR
     D3D12_SHADER_RESOURCE_VIEW_DESC D3D12_SRVDesc;
     TextureViewDesc_to_D3D12_SRV_DESC(SRVDesc, D3D12_SRVDesc, m_Desc.SampleCount);
 
-    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    ID3D12Device* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVHandle);
 }
 
@@ -656,7 +656,7 @@ void TextureD3D12Impl::CreateRTV(const TextureViewDesc& RTVDesc, D3D12_CPU_DESCR
     D3D12_RENDER_TARGET_VIEW_DESC D3D12_RTVDesc;
     TextureViewDesc_to_D3D12_RTV_DESC(RTVDesc, D3D12_RTVDesc, m_Desc.SampleCount);
 
-    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    ID3D12Device* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateRenderTargetView(m_pd3d12Resource, &D3D12_RTVDesc, RTVHandle);
 }
 
@@ -668,7 +668,7 @@ void TextureD3D12Impl::CreateDSV(const TextureViewDesc& DSVDesc, D3D12_CPU_DESCR
     D3D12_DEPTH_STENCIL_VIEW_DESC D3D12_DSVDesc;
     TextureViewDesc_to_D3D12_DSV_DESC(DSVDesc, D3D12_DSVDesc, m_Desc.SampleCount);
 
-    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    ID3D12Device* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateDepthStencilView(m_pd3d12Resource, &D3D12_DSVDesc, DSVHandle);
 }
 
@@ -680,7 +680,7 @@ void TextureD3D12Impl::CreateUAV(const TextureViewDesc& UAVDesc, D3D12_CPU_DESCR
     D3D12_UNORDERED_ACCESS_VIEW_DESC D3D12_UAVDesc;
     TextureViewDesc_to_D3D12_UAV_DESC(UAVDesc, D3D12_UAVDesc);
 
-    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    ID3D12Device* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateUnorderedAccessView(m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVHandle);
 }
 
@@ -707,7 +707,7 @@ void TextureD3D12Impl::InitSparseProperties()
     }
     else
     {
-        auto* pd3d12Device = m_pDevice->GetD3D12Device();
+        ID3D12Device* pd3d12Device = m_pDevice->GetD3D12Device();
 
         UINT                  NumTilesForEntireResource = 0;
         D3D12_PACKED_MIP_INFO PackedMipDesc{};
@@ -721,7 +721,7 @@ void TextureD3D12Impl::InitSparseProperties()
                                         0,
                                         nullptr);
 
-        auto& Props{*m_pSparseProps};
+        SparseTextureProperties& Props{*m_pSparseProps};
         Props.AddressSpaceSize = Uint64{NumTilesForEntireResource} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
         Props.BlockSize        = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
         Props.MipTailOffset    = Uint64{PackedMipDesc.StartTileIndexInOverallResource} * D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;

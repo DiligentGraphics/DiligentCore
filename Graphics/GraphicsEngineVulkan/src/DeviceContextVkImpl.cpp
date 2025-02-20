@@ -2300,7 +2300,7 @@ void DeviceContextVkImpl::DvpVerifyDynamicAllocation(const BufferVkImpl* pBuffer
 
     if (DynamicBufferId >= m_MappedBuffers.size())
     {
-        DEV_ERROR("Dynamic buffer '", BuffDesc.Name, "' has not been mapped.");
+        DEV_ERROR("Dynamic buffer '", BuffDesc.Name, "' has not been mapped. Note: memory for dynamic buffers is allocated when a buffer is mapped.");
         return;
     }
 

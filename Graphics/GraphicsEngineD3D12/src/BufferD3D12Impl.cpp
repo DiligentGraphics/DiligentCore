@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -114,13 +114,13 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         if (!(m_Desc.BindFlags & BIND_SHADER_RESOURCE) && !(m_Desc.BindFlags & BIND_RAY_TRACING))
             d3d12BuffDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
-        auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
+        ID3D12Device* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
         if (m_Desc.Usage == USAGE_SPARSE)
         {
-            auto hr = pd3d12Device->CreateReservedResource(&d3d12BuffDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
-                                                           __uuidof(m_pd3d12Resource),
-                                                           reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+            HRESULT hr = pd3d12Device->CreateReservedResource(&d3d12BuffDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                                              __uuidof(m_pd3d12Resource),
+                                                              reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create D3D12 buffer");
 
@@ -146,7 +146,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             HeapProps.CreationNodeMask     = 1;
             HeapProps.VisibleNodeMask      = 1;
 
-            const auto InitialDataSize = (pBuffData != nullptr && pBuffData->pData != nullptr) ?
+            const Uint64 InitialDataSize = (pBuffData != nullptr && pBuffData->pData != nullptr) ?
                 std::min(pBuffData->DataSize, d3d12BuffDesc.Width) :
                 0;
 
@@ -156,24 +156,24 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
             if (!IsInKnownState())
                 SetState(RESOURCE_STATE_UNDEFINED);
 
-            const auto CmdQueueInd = pBuffData && pBuffData->pContext ?
+            const SoftwareQueueIndex CmdQueueInd = pBuffData && pBuffData->pContext ?
                 ClassPtrCast<DeviceContextD3D12Impl>(pBuffData->pContext)->GetCommandQueueId() :
                 SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
 
-            const auto StateMask = InitialDataSize > 0 ?
+            const D3D12_RESOURCE_STATES StateMask = InitialDataSize > 0 ?
                 GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
                 static_cast<D3D12_RESOURCE_STATES>(~0u);
 
-            const auto d3d12State = ResourceStateFlagsToD3D12ResourceStates(GetState()) & StateMask;
+            const D3D12_RESOURCE_STATES d3d12State = ResourceStateFlagsToD3D12ResourceStates(GetState()) & StateMask;
 
             // By default, committed resources and heaps are almost always zeroed upon creation.
             // CREATE_NOT_ZEROED flag allows this to be elided in some scenarios to lower the overhead
             // of creating the heap. No need to zero the resource if we initialize it.
-            const auto d3d12HeapFlags = InitialDataSize > 0 ?
+            const D3D12_HEAP_FLAGS d3d12HeapFlags = InitialDataSize > 0 ?
                 D3D12_HEAP_FLAG_CREATE_NOT_ZEROED :
                 D3D12_HEAP_FLAG_NONE;
 
-            auto hr = pd3d12Device->CreateCommittedResource(
+            HRESULT hr = pd3d12Device->CreateCommittedResource(
                 &HeapProps, d3d12HeapFlags, &d3d12BuffDesc, d3d12State,
                 nullptr, // pOptimizedClearValue
                 __uuidof(m_pd3d12Resource),
@@ -203,7 +203,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
                 if (FAILED(hr))
                     LOG_ERROR_AND_THROW("Failed to create upload buffer");
 
-                const auto UploadBufferName = std::wstring{L"Upload buffer for buffer '"} + WidenString(m_Desc.Name) + L'\'';
+                const std::wstring UploadBufferName = std::wstring{L"Upload buffer for buffer '"} + WidenString(m_Desc.Name) + L'\'';
                 UploadBuffer->SetName(UploadBufferName.c_str());
 
                 void* DestAddress = nullptr;
@@ -214,7 +214,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
                 memcpy(DestAddress, pBuffData->pData, StaticCast<size_t>(InitialDataSize));
                 UploadBuffer->Unmap(0, nullptr);
 
-                auto InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
+                RenderDeviceD3D12Impl::PooledCommandContext InitContext = pRenderDeviceD3D12->AllocateCommandContext(CmdQueueInd);
                 // copy data to the intermediate upload heap and then schedule a copy from the upload heap to the default buffer
                 VERIFY_EXPR(CheckState(RESOURCE_STATE_COPY_DEST));
                 // We MUST NOT call TransitionResource() from here, because
@@ -263,7 +263,7 @@ static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resourc
 {
     DEV_CHECK_ERR(BuffDesc.Usage != USAGE_DYNAMIC, "Dynamic buffers cannot be attached to native d3d12 resource");
 
-    auto d3d12BuffDesc = pd3d12Buffer->GetDesc();
+    D3D12_RESOURCE_DESC d3d12BuffDesc = pd3d12Buffer->GetDesc();
     DEV_CHECK_ERR(d3d12BuffDesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER, "D3D12 resource is not a buffer");
 
     DEV_CHECK_ERR(BuffDesc.Size == 0 || BuffDesc.Size == d3d12BuffDesc.Width, "Buffer size specified by the BufferDesc (", BuffDesc.Size, ") does not match d3d12 resource size (", d3d12BuffDesc.Width, ")");
@@ -353,20 +353,20 @@ void BufferD3D12Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
 
     try
     {
-        auto* pDeviceD3D12Impl  = GetDevice();
-        auto& BuffViewAllocator = pDeviceD3D12Impl->GetBuffViewObjAllocator();
+        RenderDeviceD3D12Impl*     pDeviceD3D12Impl  = GetDevice();
+        FixedBlockMemoryAllocator& BuffViewAllocator = pDeviceD3D12Impl->GetBuffViewObjAllocator();
         VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization");
 
         BufferViewDesc ViewDesc = OrigViewDesc;
         if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
         {
-            auto UAVHandleAlloc = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            DescriptorHeapAllocation UAVHandleAlloc = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             CreateUAV(ViewDesc, UAVHandleAlloc.GetCpuHandle());
             *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewD3D12Impl instance", BufferViewD3D12Impl, bIsDefaultView ? this : nullptr)(GetDevice(), ViewDesc, this, std::move(UAVHandleAlloc), bIsDefaultView);
         }
         else if (ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE)
         {
-            auto SRVHandleAlloc = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            DescriptorHeapAllocation SRVHandleAlloc = pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             CreateSRV(ViewDesc, SRVHandleAlloc.GetCpuHandle());
             *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewD3D12Impl instance", BufferViewD3D12Impl, bIsDefaultView ? this : nullptr)(GetDevice(), ViewDesc, this, std::move(SRVHandleAlloc), bIsDefaultView);
         }
@@ -376,7 +376,7 @@ void BufferD3D12Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
     }
     catch (const std::runtime_error&)
     {
-        const auto* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
+        const char* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
         LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name, "\"");
     }
 }
@@ -388,7 +388,7 @@ void BufferD3D12Impl::CreateUAV(BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HA
     D3D12_UNORDERED_ACCESS_VIEW_DESC D3D12_UAVDesc;
     BufferViewDesc_to_D3D12_UAV_DESC(m_Desc, UAVDesc, D3D12_UAVDesc);
 
-    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    ID3D12Device* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateUnorderedAccessView(m_pd3d12Resource, nullptr, &D3D12_UAVDesc, UAVDescriptor);
 }
 
@@ -399,7 +399,7 @@ void BufferD3D12Impl::CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRI
     D3D12_SHADER_RESOURCE_VIEW_DESC D3D12_SRVDesc;
     BufferViewDesc_to_D3D12_SRV_DESC(m_Desc, SRVDesc, D3D12_SRVDesc);
 
-    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    ID3D12Device* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateShaderResourceView(m_pd3d12Resource, &D3D12_SRVDesc, SRVDescriptor);
 }
 
@@ -419,13 +419,13 @@ void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor,
     D3D12_CBVDesc.BufferLocation = m_pd3d12Resource->GetGPUVirtualAddress() + Offset;
     D3D12_CBVDesc.SizeInBytes    = StaticCast<UINT>(AlignUp(Size, Uint32{D3D12_TEXTURE_DATA_PITCH_ALIGNMENT}));
 
-    auto* pd3d12Device = GetDevice()->GetD3D12Device();
+    ID3D12Device* pd3d12Device = GetDevice()->GetD3D12Device();
     pd3d12Device->CreateConstantBufferView(&D3D12_CBVDesc, CBVDescriptor);
 }
 
 ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(Uint64& DataStartByteOffset, IDeviceContext* pContext)
 {
-    auto* pd3d12Resource = GetD3D12Resource();
+    ID3D12Resource* pd3d12Resource = GetD3D12Resource();
     if (pd3d12Resource != nullptr)
     {
         VERIFY(m_Desc.Usage != USAGE_DYNAMIC || (m_Desc.BindFlags & (BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS)) != 0, "Expected non-dynamic buffer or a buffer with SRV or UAV bind flags");
@@ -435,12 +435,12 @@ ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(Uint64& DataStartByteOffset, IDe
     else
     {
         VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
-        auto* pCtxD3D12 = ClassPtrCast<DeviceContextD3D12Impl>(pContext);
+        DeviceContextD3D12Impl* pCtxD3D12 = ClassPtrCast<DeviceContextD3D12Impl>(pContext);
 #ifdef DILIGENT_DEVELOPMENT
         DvpVerifyDynamicAllocation(pCtxD3D12);
 #endif
-        auto ContextId      = pCtxD3D12->GetContextId();
-        DataStartByteOffset = m_DynamicData[ContextId].Offset;
+        DeviceContextIndex ContextId = pCtxD3D12->GetContextId();
+        DataStartByteOffset          = m_DynamicData[ContextId].Offset;
         return m_DynamicData[ContextId].pBuffer;
     }
 }
@@ -448,8 +448,8 @@ ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(Uint64& DataStartByteOffset, IDe
 #ifdef DILIGENT_DEVELOPMENT
 void BufferD3D12Impl::DvpVerifyDynamicAllocation(const DeviceContextD3D12Impl* pCtx) const
 {
-    auto ContextId    = pCtx->GetContextId();
-    auto CurrentFrame = pCtx->GetFrameNumber();
+    DeviceContextIndex ContextId    = pCtx->GetContextId();
+    Uint64             CurrentFrame = pCtx->GetFrameNumber();
     DEV_CHECK_ERR(m_DynamicData[ContextId].GPUAddress != 0, "Dynamic buffer '", m_Desc.Name, "' has not been mapped before its first use. Context Id: ", ContextId, ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
     DEV_CHECK_ERR(m_DynamicData[ContextId].DvpCtxFrameNumber == CurrentFrame, "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
     VERIFY(GetState() == RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in RESOURCE_STATE_GENERIC_READ state");
@@ -471,7 +471,7 @@ SparseBufferProperties BufferD3D12Impl::GetSparseProperties() const
     DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
                   "IBuffer::GetSparseProperties() must only be used for sparse buffer");
 
-    auto* pd3d12Device = m_pDevice->GetD3D12Device();
+    ID3D12Device* pd3d12Device = m_pDevice->GetD3D12Device();
 
     UINT             NumTilesForEntireResource = 0;
     D3D12_TILE_SHAPE StandardTileShapeForNonPackedMips{};
