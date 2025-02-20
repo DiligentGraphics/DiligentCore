@@ -157,6 +157,8 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
         pd3d12Device->CreateRenderTargetView(nullptr, &NullRTVDesc, m_NullRTV.GetCpuHandle());
         VERIFY(!m_NullRTV.IsNull(), "Failed to create null RTV");
     }
+
+    m_MappedBuffers.reserve(32);
 }
 
 DeviceContextD3D12Impl::~DeviceContextD3D12Impl()
