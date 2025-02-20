@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,6 +50,7 @@ namespace Diligent
 
 class CommandContext;
 struct D3DShaderResourceAttribs;
+class DeviceContextD3D12Impl;
 
 struct ImmutableSamplerAttribsD3D12
 {
@@ -146,8 +147,8 @@ public:
     struct CommitCacheResourcesAttribs
     {
         ID3D12Device* const             pd3d12Device;
-        CommandContext&                 Ctx;
-        const DeviceContextIndex        DeviceCtxId;
+        CommandContext&                 CmdCtx;
+        const DeviceContextD3D12Impl*   pDeviceCtx;
         const bool                      IsCompute;
         const ShaderResourceCacheD3D12* pResourceCache = nullptr;
         Uint32                          BaseRootIndex  = ~0u;

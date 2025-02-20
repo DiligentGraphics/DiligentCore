@@ -46,22 +46,13 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
                                  RenderDeviceD3D12Impl*     pRenderDeviceD3D12,
                                  const BufferDesc&          BuffDesc,
                                  const BufferData*          pBuffData /*= nullptr*/) :
-    // clang-format off
-    TBufferBase
-    {
+    TBufferBase{
         pRefCounters,
         BuffViewObjMemAllocator,
         pRenderDeviceD3D12,
         BuffDesc,
-        false
-    },
-    m_DynamicData
-    (
-        BuffDesc.Usage == USAGE_DYNAMIC ? (pRenderDeviceD3D12->GetNumImmediateContexts() + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
-        CtxDynamicData{},
-        STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
-    )
-// clang-format on
+        false,
+    }
 {
     ValidateBufferInitData(m_Desc, pBuffData);
 
@@ -88,7 +79,6 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         // Dynamic upload heap buffer is always in D3D12_RESOURCE_STATE_GENERIC_READ state.
 
         SetState(RESOURCE_STATE_GENERIC_READ);
-        VERIFY_EXPR(m_DynamicData.size() == pRenderDeviceD3D12->GetNumImmediateContexts() + pRenderDeviceD3D12->GetNumDeferredContexts());
     }
     else
     {
@@ -308,22 +298,13 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
                                  const BufferDesc&          BuffDesc,
                                  RESOURCE_STATE             InitialState,
                                  ID3D12Resource*            pd3d12Buffer) :
-    // clang-format off
-    TBufferBase
-    {
+    TBufferBase{
         pRefCounters,
         BuffViewObjMemAllocator,
         pRenderDeviceD3D12,
         BufferDescFromD3D12Resource(BuffDesc, pd3d12Buffer),
-        false
-    },
-    m_DynamicData
-    (
-        BuffDesc.Usage == USAGE_DYNAMIC ? (pRenderDeviceD3D12->GetNumImmediateContexts() + pRenderDeviceD3D12->GetNumDeferredContexts()) : 0,
-        CtxDynamicData{},
-        STD_ALLOCATOR_RAW_MEM(D3D12DynamicAllocation, GetRawAllocator(), "Allocator for vector<DynamicAllocation>")
-    )
-// clang-format on
+        false,
+    }
 {
     m_pd3d12Resource = pd3d12Buffer;
     SetState(InitialState);
@@ -436,25 +417,9 @@ ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(Uint64& DataStartByteOffset, IDe
     {
         VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
         DeviceContextD3D12Impl* pCtxD3D12 = ClassPtrCast<DeviceContextD3D12Impl>(pContext);
-#ifdef DILIGENT_DEVELOPMENT
-        DvpVerifyDynamicAllocation(pCtxD3D12);
-#endif
-        DeviceContextIndex ContextId = pCtxD3D12->GetContextId();
-        DataStartByteOffset          = m_DynamicData[ContextId].Offset;
-        return m_DynamicData[ContextId].pBuffer;
+        return pCtxD3D12->GetDynamicBufferD3D12ResourceAndOffset(this, DataStartByteOffset);
     }
 }
-
-#ifdef DILIGENT_DEVELOPMENT
-void BufferD3D12Impl::DvpVerifyDynamicAllocation(const DeviceContextD3D12Impl* pCtx) const
-{
-    DeviceContextIndex ContextId    = pCtx->GetContextId();
-    Uint64             CurrentFrame = pCtx->GetFrameNumber();
-    DEV_CHECK_ERR(m_DynamicData[ContextId].GPUAddress != 0, "Dynamic buffer '", m_Desc.Name, "' has not been mapped before its first use. Context Id: ", ContextId, ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
-    DEV_CHECK_ERR(m_DynamicData[ContextId].DvpCtxFrameNumber == CurrentFrame, "Dynamic allocation of dynamic buffer '", m_Desc.Name, "' in frame ", CurrentFrame, " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
-    VERIFY(GetState() == RESOURCE_STATE_GENERIC_READ, "Dynamic buffers are expected to always be in RESOURCE_STATE_GENERIC_READ state");
-}
-#endif
 
 void BufferD3D12Impl::SetD3D12ResourceState(D3D12_RESOURCE_STATES state)
 {

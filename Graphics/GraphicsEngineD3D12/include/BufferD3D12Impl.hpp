@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,10 +65,6 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferD3D12, TBufferBase)
 
-#ifdef DILIGENT_DEVELOPMENT
-    void DvpVerifyDynamicAllocation(const DeviceContextD3D12Impl* pCtx) const;
-#endif
-
     /// Implementation of IBufferD3D12::GetD3D12Buffer().
     virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12Buffer(Uint64& DataStartByteOffset, IDeviceContext* pContext) override final;
 
@@ -91,24 +87,6 @@ public:
     /// Implementation of IBuffer::GetSparseProperties().
     virtual SparseBufferProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
 
-    __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(DeviceContextIndex ContextId, const DeviceContextD3D12Impl* pCtx) const
-    {
-        if (m_Desc.Usage == USAGE_DYNAMIC)
-        {
-#ifdef DILIGENT_DEVELOPMENT
-            if (pCtx != nullptr)
-            {
-                DvpVerifyDynamicAllocation(pCtx);
-            }
-#endif
-            return m_DynamicData[ContextId].GPUAddress;
-        }
-        else
-        {
-            return GetD3D12Resource()->GetGPUVirtualAddress();
-        }
-    }
-
     __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress()
     {
         VERIFY_EXPR(m_Desc.Usage != USAGE_DYNAMIC);
@@ -126,23 +104,6 @@ private:
     void CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor) const;
 
     DescriptorHeapAllocation m_CBVDescriptorAllocation;
-
-    // Align the struct size to the cache line size to avoid false sharing
-    static constexpr size_t CacheLineSize = 64;
-    struct alignas(CacheLineSize) CtxDynamicData : D3D12DynamicAllocation
-    {
-        CtxDynamicData& operator=(const D3D12DynamicAllocation& Allocation)
-        {
-            *static_cast<D3D12DynamicAllocation*>(this) = Allocation;
-            return *this;
-        }
-        Uint8 Padding[CacheLineSize - sizeof(D3D12DynamicAllocation)] = {};
-    };
-    static_assert(sizeof(CtxDynamicData) == CacheLineSize, "Unexpected sizeof(CtxDynamicData)");
-
-    friend DeviceContextD3D12Impl;
-    // Array of dynamic allocations for every device context.
-    std::vector<CtxDynamicData, STDAllocatorRawMem<CtxDynamicData>> m_DynamicData;
 };
 
 } // namespace Diligent

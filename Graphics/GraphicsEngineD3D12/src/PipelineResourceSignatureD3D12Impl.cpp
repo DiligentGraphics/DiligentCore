@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,6 +38,7 @@
 #include "TextureViewD3D12Impl.hpp"
 #include "SamplerD3D12Impl.hpp"
 #include "ShaderVariableD3D.hpp"
+#include "DeviceContextD3D12Impl.hpp"
 
 #include "D3D12TypeConversions.hpp"
 
@@ -479,7 +480,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(const CommitCacheResour
         }
         VERIFY_EXPR(pBuffer != nullptr);
 
-        auto BufferGPUAddress = pBuffer->GetGPUAddress(CommitAttribs.DeviceCtxId, nullptr /* Do not verify dynamic allocation here*/);
+        auto BufferGPUAddress = CommitAttribs.pDeviceCtx->GetBufferGPUAddress(pBuffer, false /* Do not verify dynamic allocation here*/);
         if (BufferGPUAddress == 0)
         {
             // GPU address may be null if a dynamic buffer that is not used by the PSO has not been mapped yet.
@@ -489,7 +490,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(const CommitCacheResour
 
         BufferGPUAddress += UINT64{Res.BufferBaseOffset} + UINT64{Res.BufferDynamicOffset};
 
-        auto* const pd3d12CmdList = CommitAttribs.Ctx.GetCommandList();
+        auto* const pd3d12CmdList = CommitAttribs.CmdCtx.GetCommandList();
         static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
         switch (Res.Type)
         {
@@ -525,7 +526,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootTables(const CommitCacheResou
     VERIFY_EXPR(CommitAttribs.pResourceCache != nullptr);
     const auto& ResourceCache = *CommitAttribs.pResourceCache;
     const auto& BaseRootIndex = CommitAttribs.BaseRootIndex;
-    auto&       CmdCtx        = CommitAttribs.Ctx;
+    auto&       CmdCtx        = CommitAttribs.CmdCtx;
     auto* const pd3d12Device  = CommitAttribs.pd3d12Device;
 
     // Having an array of actual DescriptorHeapAllocation objects introduces unnecessary overhead when
@@ -793,7 +794,7 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
                         const auto& BuffDesc = pBuffD3D12->GetDesc();
 
                         if (BuffDesc.Usage == USAGE_DYNAMIC)
-                            pBuffD3D12->DvpVerifyDynamicAllocation(pCtx);
+                            pCtx->DvpVerifyDynamicAllocation(pBuffD3D12);
 
                         if (BuffDesc.Usage == USAGE_DYNAMIC || (CachedRes.BufferRangeSize != 0 && CachedRes.BufferRangeSize < BuffDesc.Size))
                             VERIFY_EXPR((ResourceCache.GetDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);
@@ -818,7 +819,7 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
                         const auto& BuffDesc = pBuffD3D12->GetDesc();
 
                         if (BuffDesc.Usage == USAGE_DYNAMIC)
-                            pBuffD3D12->DvpVerifyDynamicAllocation(pCtx);
+                            pCtx->DvpVerifyDynamicAllocation(pBuffD3D12);
 
                         if (BuffDesc.Usage == USAGE_DYNAMIC || (CachedRes.BufferRangeSize != 0 && CachedRes.BufferRangeSize < BuffDesc.Size))
                             VERIFY_EXPR((ResourceCache.GetDynamicRootBuffersMask() & (Uint64{1} << RootIndex)) != 0);

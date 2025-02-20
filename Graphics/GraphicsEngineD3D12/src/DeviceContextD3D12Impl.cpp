@@ -376,8 +376,8 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
         {
             m_pDevice->GetD3D12Device(),
             CmdCtx,
-            GetContextId(),
-            IsCompute //
+            this,
+            IsCompute,
         };
 
     VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
@@ -508,7 +508,7 @@ void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, V
     DEV_CHECK_ERR(m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command");
 
     D3D12_INDEX_BUFFER_VIEW IBView;
-    IBView.BufferLocation = m_pIndexBuffer->GetGPUAddress(GetContextId(), this) + m_IndexDataStartOffset;
+    IBView.BufferLocation = GetBufferGPUAddress(m_pIndexBuffer) + m_IndexDataStartOffset;
     if (IndexType == VT_UINT32)
         IBView.Format = DXGI_FORMAT_R32_UINT;
     else
@@ -529,7 +529,7 @@ void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, V
     bool IsDynamic = m_pIndexBuffer->GetDesc().Usage == USAGE_DYNAMIC;
 #ifdef DILIGENT_DEVELOPMENT
     if (IsDynamic)
-        m_pIndexBuffer->DvpVerifyDynamicAllocation(this);
+        DvpVerifyDynamicAllocation(m_pIndexBuffer);
 #endif
 
     Uint64 BuffDataStartByteOffset;
@@ -570,7 +570,7 @@ void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
             {
                 DynamicBufferPresent = true;
 #ifdef DILIGENT_DEVELOPMENT
-                pBufferD3D12->DvpVerifyDynamicAllocation(this);
+                DvpVerifyDynamicAllocation(pBufferD3D12);
 #endif
             }
 
@@ -579,7 +579,7 @@ void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
             // so there is no need to reference the resource here
             //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
-            VBView.BufferLocation = pBufferD3D12->GetGPUAddress(GetContextId(), this) + CurrStream.Offset;
+            VBView.BufferLocation = GetBufferGPUAddress(pBufferD3D12) + CurrStream.Offset;
             VBView.StrideInBytes  = m_pPipelineState->GetBufferStride(Buff);
             // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
             VBView.SizeInBytes = StaticCast<UINT>(pBufferD3D12->GetDesc().Size - CurrStream.Offset);
@@ -740,7 +740,7 @@ void DeviceContextD3D12Impl::PrepareIndirectAttribsBuffer(CommandContext&       
     auto* pIndirectDrawAttribsD3D12 = ClassPtrCast<BufferD3D12Impl>(pAttribsBuffer);
 #ifdef DILIGENT_DEVELOPMENT
     if (pIndirectDrawAttribsD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-        pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(this);
+        DvpVerifyDynamicAllocation(pIndirectDrawAttribsD3D12);
 #endif
 
     TransitionOrVerifyBufferState(CmdCtx, *pIndirectDrawAttribsD3D12, BufferStateTransitionMode,
@@ -1701,9 +1701,9 @@ void DeviceContextD3D12Impl::CopyBuffer(IBuffer*                       pSrcBuffe
 void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)
 {
     TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
-    auto*       pBufferD3D12   = ClassPtrCast<BufferD3D12Impl>(pBuffer);
-    const auto& BuffDesc       = pBufferD3D12->GetDesc();
-    auto*       pd3d12Resource = pBufferD3D12->m_pd3d12Resource.p;
+    BufferD3D12Impl*  pBufferD3D12   = ClassPtrCast<BufferD3D12Impl>(pBuffer);
+    const BufferDesc& BuffDesc       = pBufferD3D12->GetDesc();
+    ID3D12Resource*   pd3d12Resource = pBufferD3D12->GetD3D12Resource();
 
     if (MapType == MAP_READ)
     {
@@ -1736,7 +1736,15 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
             DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE flag");
-            auto& DynamicData = pBufferD3D12->m_DynamicData[GetContextId()];
+
+            const Uint32 DynamicBufferId = pBufferD3D12->GetDynamicBufferId();
+            VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", BuffDesc.Name, "' does not have dynamic buffer ID");
+            if (m_MappedBuffers.size() <= DynamicBufferId)
+                m_MappedBuffers.resize(DynamicBufferId + 1);
+            D3D12DynamicAllocation& DynamicData = m_MappedBuffers[DynamicBufferId].Allocation;
+#ifdef DILIGENT_DEVELOPMENT
+            m_MappedBuffers[DynamicBufferId].DvpBufferUID = pBufferD3D12->GetUniqueID();
+#endif
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynamicData.CPUAddress == nullptr)
             {
                 Uint32 Alignment = (BuffDesc.BindFlags & BIND_UNIFORM_BUFFER) ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : 16;
@@ -1777,9 +1785,9 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
 void DeviceContextD3D12Impl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
-    auto*       pBufferD3D12   = ClassPtrCast<BufferD3D12Impl>(pBuffer);
-    const auto& BuffDesc       = pBufferD3D12->GetDesc();
-    auto*       pd3d12Resource = pBufferD3D12->m_pd3d12Resource.p;
+    BufferD3D12Impl*  pBufferD3D12   = ClassPtrCast<BufferD3D12Impl>(pBuffer);
+    const BufferDesc& BuffDesc       = pBufferD3D12->GetDesc();
+    ID3D12Resource*   pd3d12Resource = pBufferD3D12->GetD3D12Resource();
     if (MapType == MAP_READ)
     {
         D3D12_RANGE MapRange;
@@ -1800,11 +1808,77 @@ void DeviceContextD3D12Impl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
             // Copy data into the resource
             if (pd3d12Resource)
             {
-                UpdateBufferRegion(pBufferD3D12, pBufferD3D12->m_DynamicData[GetContextId()], 0, BuffDesc.Size, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                const Uint32 DynamicBufferId = pBufferD3D12->GetDynamicBufferId();
+                VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", BuffDesc.Name, "' does not have dynamic buffer ID");
+                if (DynamicBufferId < m_MappedBuffers.size())
+                {
+                    D3D12DynamicAllocation& DynAlloc = m_MappedBuffers[DynamicBufferId].Allocation;
+                    UpdateBufferRegion(pBufferD3D12, DynAlloc, 0, BuffDesc.Size, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                }
+                else
+                {
+                    DEV_ERROR("Unmapping buffer '", BuffDesc.Name, "' that was not previously mapped.");
+                }
             }
         }
     }
 }
+
+ID3D12Resource* DeviceContextD3D12Impl::GetDynamicBufferD3D12ResourceAndOffset(const BufferD3D12Impl* pBuffer, Uint64& DataStartByteOffset)
+{
+    VERIFY_EXPR(pBuffer->GetDesc().Usage == USAGE_DYNAMIC);
+
+#ifdef DILIGENT_DEVELOPMENT
+    DvpVerifyDynamicAllocation(pBuffer);
+#endif
+
+    const Uint32 DynamicBufferId = pBuffer->GetDynamicBufferId();
+    VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", pBuffer->GetDesc().Name, "' does not have dynamic buffer ID");
+    if (DynamicBufferId < m_MappedBuffers.size())
+    {
+        const D3D12DynamicAllocation& Allocation{m_MappedBuffers[DynamicBufferId].Allocation};
+        DataStartByteOffset = Allocation.Offset;
+        return Allocation.pBuffer;
+    }
+    else
+    {
+        DataStartByteOffset = 0;
+        return nullptr;
+    }
+}
+
+#ifdef DILIGENT_DEVELOPMENT
+void DeviceContextD3D12Impl::DvpVerifyDynamicAllocation(const BufferD3D12Impl* pBuffer) const
+{
+    VERIFY_EXPR(pBuffer != nullptr);
+
+    if (pBuffer->GetD3D12Resource() != nullptr)
+        return;
+
+    const BufferDesc& BuffDesc = pBuffer->GetDesc();
+    VERIFY_EXPR(BuffDesc.Usage == USAGE_DYNAMIC);
+
+    const Uint32 DynamicBufferId = pBuffer->GetDynamicBufferId();
+    VERIFY(DynamicBufferId != ~0u, "Dynamic buffer '", pBuffer->GetDesc().Name, "' does not have dynamic buffer ID");
+
+    if (DynamicBufferId >= m_MappedBuffers.size())
+    {
+        DEV_ERROR("Dynamic buffer '", BuffDesc.Name, "' has not been mapped. Note: memory for dynamic buffers is allocated when a buffer is mapped.");
+        return;
+    }
+
+    const MappedBuffer& MappedBuff = m_MappedBuffers[DynamicBufferId];
+    DEV_CHECK_ERR(MappedBuff.Allocation.GPUAddress != 0, "Dynamic buffer '", BuffDesc.Name, "' has not been mapped before its first use. Context Id: ", GetContextId(),
+                  ". Note: memory for dynamic buffers is allocated when a buffer is mapped.");
+
+    DEV_CHECK_ERR(MappedBuff.Allocation.DvpCtxFrameNumber == GetFrameNumber(), "Dynamic allocation of dynamic buffer '", BuffDesc.Name, "' in frame ", GetFrameNumber(),
+                  " is out-of-date. Note: contents of all dynamic resources is discarded at the end of every frame. A buffer must be mapped before its first use in any frame.");
+
+    DEV_CHECK_ERR(MappedBuff.DvpBufferUID == pBuffer->GetUniqueID(), "Dynamic buffer ID mismatch. Buffer '", BuffDesc.Name, "' has ID ", pBuffer->GetUniqueID(), " but the ID of the mapped buffer is ",
+                  MappedBuff.DvpBufferUID, ". This indicates that dynamic space has been reassigned to a different buffer, which has not been mapped.");
+}
+#endif
+
 
 void DeviceContextD3D12Impl::UpdateTexture(ITexture*                      pTexture,
                                            Uint32                         MipLevel,
