@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,7 +62,7 @@ namespace Diligent
 bool CheckAdapterD3D12Compatibility(IDXGIAdapter1*    pDXGIAdapter,
                                     D3D_FEATURE_LEVEL FeatureLevel)
 {
-    auto hr = D3D12CreateDevice(pDXGIAdapter, FeatureLevel, _uuidof(ID3D12Device), nullptr);
+    HRESULT hr = D3D12CreateDevice(pDXGIAdapter, FeatureLevel, _uuidof(ID3D12Device), nullptr);
     return SUCCEEDED(hr);
 }
 
@@ -235,7 +235,7 @@ CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Device)
     HRESULT hr = CreateDXGIFactory1(__uuidof(pDXIFactory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&pDXIFactory)));
     if (SUCCEEDED(hr))
     {
-        auto AdapterLUID = pd3d12Device->GetAdapterLuid();
+        LUID AdapterLUID = pd3d12Device->GetAdapterLuid();
 
         CComPtr<IDXGIAdapter1> pDXGIAdapter1;
         pDXIFactory->EnumAdapterByLuid(AdapterLUID, __uuidof(pDXGIAdapter1), reinterpret_cast<void**>(static_cast<IDXGIAdapter1**>(&pDXGIAdapter1)));
@@ -252,7 +252,7 @@ void ValidateD3D12CreateInfo(const EngineD3D12CreateInfo& EngineCI) noexcept(fal
 {
     for (Uint32 Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
     {
-        auto   CPUHeapAllocSize = EngineCI.CPUDescriptorHeapAllocationSize[Type];
+        Uint32 CPUHeapAllocSize = EngineCI.CPUDescriptorHeapAllocationSize[Type];
         Uint32 MaxSize          = 1 << 20;
         if (CPUHeapAllocSize > 1 << 20)
         {
@@ -273,7 +273,7 @@ RefCntAutoPtr<CommandQueueD3D12Impl> CreateCommandQueueD3D12(ID3D12Device*      
 
     CComPtr<ID3D12Fence> pd3d12Fence;
 
-    auto hr = pd3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&pd3d12Fence)));
+    HRESULT hr = pd3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&pd3d12Fence)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create command queue fence");
     hr = pd3d12Fence->SetName(FenceName);
     VERIFY_EXPR(SUCCEEDED(hr));
@@ -378,9 +378,9 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         }
 
         const Version FeatureLevelList[] = {{12, 1}, {12, 0}, {11, 1}, {11, 0}};
-        for (auto FeatureLevel : FeatureLevelList)
+        for (Version FeatureLevel : FeatureLevelList)
         {
-            auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
+            D3D_FEATURE_LEVEL d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
 
             hr = D3D12CreateDevice(hardwareAdapter, d3dFeatureLevel, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)));
             if (SUCCEEDED(hr))
@@ -397,9 +397,9 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
             hr = factory->EnumWarpAdapter(__uuidof(warpAdapter), reinterpret_cast<void**>(static_cast<IDXGIAdapter**>(&warpAdapter)));
             CHECK_D3D_RESULT_THROW(hr, "Failed to enum warp adapter");
 
-            for (auto FeatureLevel : FeatureLevelList)
+            for (Version FeatureLevel : FeatureLevelList)
             {
-                auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
+                D3D_FEATURE_LEVEL d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
 
                 hr = D3D12CreateDevice(warpAdapter, d3dFeatureLevel, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)));
                 if (SUCCEEDED(hr))
@@ -471,8 +471,8 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 #endif
 
         {
-            auto       pDXGIAdapter1 = DXGIAdapterFromD3D12Device(d3d12Device);
-            const auto AdapterInfo   = GetGraphicsAdapterInfo(d3d12Device, pDXGIAdapter1);
+            CComPtr<IDXGIAdapter1>    pDXGIAdapter1 = DXGIAdapterFromD3D12Device(d3d12Device);
+            const GraphicsAdapterInfo AdapterInfo   = GetGraphicsAdapterInfo(d3d12Device, pDXGIAdapter1);
             VerifyEngineCreateInfo(EngineCI, AdapterInfo);
         }
 
@@ -490,7 +490,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
             hr = pd3d12CmdQueue->SetName(WidenString(ContextCI.Name).c_str());
             VERIFY_EXPR(SUCCEEDED(hr));
 
-            auto pCmdQueueD3D12 = Diligent::CreateCommandQueueD3D12(d3d12Device, pd3d12CmdQueue, (WidenString(ContextCI.Name) + L" Fence").c_str());
+            RefCntAutoPtr<CommandQueueD3D12Impl> pCmdQueueD3D12 = Diligent::CreateCommandQueueD3D12(d3d12Device, pd3d12CmdQueue, (WidenString(ContextCI.Name) + L" Fence").c_str());
             CmdQueueD3D12Refs.push_back(pCmdQueueD3D12);
             CmdQueues.push_back(pCmdQueueD3D12);
         };
@@ -534,11 +534,12 @@ void EngineFactoryD3D12Impl::CreateCommandQueueD3D12(void*                pd3d12
     try
     {
         SetRawAllocator(pRawMemAllocator);
-        auto* d3d12Device   = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
-        auto* d3d12CmdQueue = reinterpret_cast<ID3D12CommandQueue*>(pd3d12NativeCommandQueue);
+        ID3D12Device*       d3d12Device   = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
+        ID3D12CommandQueue* d3d12CmdQueue = reinterpret_cast<ID3D12CommandQueue*>(pd3d12NativeCommandQueue);
 
-        auto pCmdQueueD3D12 = Diligent::CreateCommandQueueD3D12(d3d12Device, d3d12CmdQueue, L"Fence for user-provided command queue");
-        *ppCommandQueue     = pCmdQueueD3D12.Detach();
+        RefCntAutoPtr<CommandQueueD3D12Impl> pCmdQueueD3D12 = Diligent::CreateCommandQueueD3D12(d3d12Device, d3d12CmdQueue, L"Fence for user-provided command queue");
+
+        *ppCommandQueue = pCmdQueueD3D12.Detach();
     }
     catch (const std::runtime_error&)
     {
@@ -569,8 +570,8 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
 
     ImmediateContextCreateInfo DefaultImmediateCtxCI;
 
-    const auto        NumImmediateContexts  = EngineCI.NumImmediateContexts > 0 ? EngineCI.NumImmediateContexts : 1;
-    const auto* const pImmediateContextInfo = EngineCI.NumImmediateContexts > 0 ? EngineCI.pImmediateContextInfo : &DefaultImmediateCtxCI;
+    const Uint32                            NumImmediateContexts  = EngineCI.NumImmediateContexts > 0 ? EngineCI.NumImmediateContexts : 1;
+    const ImmediateContextCreateInfo* const pImmediateContextInfo = EngineCI.NumImmediateContexts > 0 ? EngineCI.pImmediateContextInfo : &DefaultImmediateCtxCI;
 
     VERIFY_EXPR(NumImmediateContexts == CommandQueueCount);
 
@@ -586,8 +587,8 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
         }
         for (Uint32 q = 0; q < CommandQueueCount; ++q)
         {
-            auto Desc        = ppCommandQueues[q]->GetD3D12CommandQueue()->GetDesc();
-            auto CmdListType = QueueIdToD3D12CommandListType(HardwareQueueIndex{pImmediateContextInfo[q].QueueId});
+            D3D12_COMMAND_QUEUE_DESC Desc        = ppCommandQueues[q]->GetD3D12CommandQueue()->GetDesc();
+            D3D12_COMMAND_LIST_TYPE  CmdListType = QueueIdToD3D12CommandListType(HardwareQueueIndex{pImmediateContextInfo[q].QueueId});
 
             if (Desc.Type != CmdListType)
             {
@@ -601,13 +602,13 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
     try
     {
         SetRawAllocator(EngineCI.pRawMemAllocator);
-        auto& RawMemAllocator = GetRawAllocator();
-        auto  d3d12Device     = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
-        auto  pDXGIAdapter1   = DXGIAdapterFromD3D12Device(d3d12Device);
+        IMemoryAllocator&      RawMemAllocator = GetRawAllocator();
+        ID3D12Device*          d3d12Device     = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
+        CComPtr<IDXGIAdapter1> pDXGIAdapter1   = DXGIAdapterFromD3D12Device(d3d12Device);
 
         ValidateD3D12CreateInfo(EngineCI);
 
-        const auto AdapterInfo = GetGraphicsAdapterInfo(pd3d12NativeDevice, pDXGIAdapter1);
+        const GraphicsAdapterInfo AdapterInfo = GetGraphicsAdapterInfo(pd3d12NativeDevice, pDXGIAdapter1);
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         RenderDeviceD3D12Impl* pRenderDeviceD3D12{
@@ -616,8 +617,8 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
 
         for (Uint32 CtxInd = 0; CtxInd < NumImmediateContexts; ++CtxInd)
         {
-            const auto d3d12CmdListType = ppCommandQueues[CtxInd]->GetD3D12CommandQueueDesc().Type;
-            const auto QueueId          = D3D12CommandListTypeToQueueId(d3d12CmdListType);
+            const D3D12_COMMAND_LIST_TYPE d3d12CmdListType = ppCommandQueues[CtxInd]->GetD3D12CommandQueueDesc().Type;
+            const HardwareQueueIndex      QueueId          = D3D12CommandListTypeToQueueId(d3d12CmdListType);
 
             RefCntAutoPtr<DeviceContextD3D12Impl> pImmediateCtxD3D12{
                 NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(
@@ -691,11 +692,11 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12(IRenderDevice*            pDev
 
     try
     {
-        auto* pDeviceD3D12        = ClassPtrCast<RenderDeviceD3D12Impl>(pDevice);
-        auto* pDeviceContextD3D12 = ClassPtrCast<DeviceContextD3D12Impl>(pImmediateContext);
-        auto& RawMemAllocator     = GetRawAllocator();
+        RenderDeviceD3D12Impl*  pDeviceD3D12        = ClassPtrCast<RenderDeviceD3D12Impl>(pDevice);
+        DeviceContextD3D12Impl* pDeviceContextD3D12 = ClassPtrCast<DeviceContextD3D12Impl>(pImmediateContext);
+        IMemoryAllocator&       RawMemAllocator     = GetRawAllocator();
 
-        auto* pSwapChainD3D12 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D12Impl instance", SwapChainD3D12Impl)(SCDesc, FSDesc, pDeviceD3D12, pDeviceContextD3D12, Window);
+        SwapChainD3D12Impl* pSwapChainD3D12 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D12Impl instance", SwapChainD3D12Impl)(SCDesc, FSDesc, pDeviceD3D12, pDeviceContextD3D12, Window);
         pSwapChainD3D12->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
     }
     catch (const std::runtime_error&)
@@ -745,17 +746,17 @@ void EngineFactoryD3D12Impl::EnumerateDisplayModes(Version             MinFeatur
 GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*          pd3dDevice,
                                                                    IDXGIAdapter1* pDXIAdapter) const
 {
-    auto AdapterInfo = TBase::GetGraphicsAdapterInfo(pd3dDevice, pDXIAdapter);
+    GraphicsAdapterInfo AdapterInfo = TBase::GetGraphicsAdapterInfo(pd3dDevice, pDXIAdapter);
 
     CComPtr<ID3D12Device> d3d12Device{reinterpret_cast<ID3D12Device*>(pd3dDevice)};
     if (!d3d12Device)
     {
         const Version FeatureLevelList[] = {{12, 1}, {12, 0}, {11, 1}, {11, 0}};
-        for (auto FeatureLevel : FeatureLevelList)
+        for (Version FeatureLevel : FeatureLevelList)
         {
-            auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
+            D3D_FEATURE_LEVEL d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
 
-            auto hr = D3D12CreateDevice(pDXIAdapter, d3dFeatureLevel, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)));
+            HRESULT hr = D3D12CreateDevice(pDXIAdapter, d3dFeatureLevel, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)));
             if (SUCCEEDED(hr))
             {
                 VERIFY_EXPR(d3d12Device);
@@ -778,7 +779,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         AdapterInfo.NumQueues = 3;
         for (Uint32 q = 0; q < AdapterInfo.NumQueues; ++q)
         {
-            auto& Queue                     = AdapterInfo.Queues[q];
+            CommandQueueInfo& Queue         = AdapterInfo.Queues[q];
             Queue.QueueType                 = D3D12CommandListTypeToCmdQueueType(QueueIdToD3D12CommandListType(HardwareQueueIndex{q}));
             Queue.MaxDeviceContexts         = 0xFF;
             Queue.TextureCopyGranularity[0] = 1;
@@ -789,7 +790,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
 
     // Enable features and set properties
     {
-        auto& Features = AdapterInfo.Features;
+        DeviceFeatures& Features = AdapterInfo.Features;
 
         // Direct3D12 supports shader model 5.1 on all feature levels (even on 11.0),
         // so bindless resources are always available.
@@ -820,7 +821,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
         {
             Features.MeshShaders = DEVICE_FEATURE_STATE_ENABLED;
 
-            auto& MeshProps{AdapterInfo.MeshShader};
+            MeshShaderProperties& MeshProps{AdapterInfo.MeshShader};
             MeshProps.MaxThreadGroupCountX     = 65536; // from specs: https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#dispatchmesh-api
             MeshProps.MaxThreadGroupCountY     = 65536;
             MeshProps.MaxThreadGroupCountZ     = 65536;
@@ -847,7 +848,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
 
                     Features.SparseResources = DEVICE_FEATURE_STATE_ENABLED;
 
-                    auto& SparseRes{AdapterInfo.SparseResources};
+                    SparseResourceProperties& SparseRes{AdapterInfo.SparseResources};
                     SparseRes.StandardBlockSize = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
 
                     D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT d3d12Address = {};
@@ -930,7 +931,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
                 {
                     Features.WaveOp = DEVICE_FEATURE_STATE_ENABLED;
 
-                    auto& WaveOpProps{AdapterInfo.WaveOp};
+                    WaveOpProperties& WaveOpProps{AdapterInfo.WaveOp};
                     WaveOpProps.MinSize         = d3d12Features1.WaveLaneCountMin;
                     WaveOpProps.MaxSize         = d3d12Features1.WaveLaneCountMax;
                     WaveOpProps.SupportedStages = SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE;
@@ -963,7 +964,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
             D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12Features5{};
             if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &d3d12Features5, sizeof(d3d12Features5))))
             {
-                auto& RayTracingProps{AdapterInfo.RayTracing};
+                RayTracingProperties& RayTracingProps{AdapterInfo.RayTracing};
                 if (d3d12Features5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
                 {
                     Features.RayTracing = DEVICE_FEATURE_STATE_ENABLED;
@@ -996,8 +997,9 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
             if (SUCCEEDED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &d3d12Features6, sizeof(d3d12Features6))))
             {
                 // https://microsoft.github.io/DirectX-Specs/d3d/VariableRateShading.html#feature-tiering
-                auto& ShadingRateProps{AdapterInfo.ShadingRate};
-                auto  AddShadingRate = [&ShadingRateProps](SHADING_RATE Rate, SAMPLE_COUNT SampleBits) {
+                ShadingRateProperties& ShadingRateProps{AdapterInfo.ShadingRate};
+
+                auto AddShadingRate = [&ShadingRateProps](SHADING_RATE Rate, SAMPLE_COUNT SampleBits) {
                     VERIFY_EXPR(ShadingRateProps.NumShadingRates < DILIGENT_MAX_SHADING_RATES);
                     ShadingRateProps.ShadingRates[ShadingRateProps.NumShadingRates++] = {Rate, SampleBits};
                 };
@@ -1058,7 +1060,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
 
         // Buffer properties
         {
-            auto& BufferProps{AdapterInfo.Buffer};
+            BufferProperties& BufferProps{AdapterInfo.Buffer};
             BufferProps.ConstantBufferOffsetAlignment   = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
             BufferProps.StructuredBufferOffsetAlignment = D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT;
             ASSERT_SIZEOF(BufferProps, 8, "Did you add a new member to BufferProperites? Please initialize it here.");
@@ -1067,7 +1069,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
 
     // Texture properties
     {
-        auto& TexProps{AdapterInfo.Texture};
+        TextureProperties& TexProps{AdapterInfo.Texture};
         TexProps.MaxTexture1DDimension      = D3D12_REQ_TEXTURE1D_U_DIMENSION;
         TexProps.MaxTexture1DArraySlices    = D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
         TexProps.MaxTexture2DDimension      = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
@@ -1085,7 +1087,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
     // Sampler properties
     {
 
-        auto& SamProps{AdapterInfo.Sampler};
+        SamplerProperties& SamProps{AdapterInfo.Sampler};
         SamProps.BorderSamplingModeSupported = True;
         SamProps.MaxAnisotropy               = D3D12_DEFAULT_MAX_ANISOTROPY;
         SamProps.LODBiasSupported            = True;
@@ -1094,7 +1096,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
 
     // Compute shader properties
     {
-        auto& CompProps{AdapterInfo.ComputeShader};
+        ComputeShaderProperties& CompProps{AdapterInfo.ComputeShader};
         CompProps.SharedMemorySize          = 32u << 10;
         CompProps.MaxThreadGroupInvocations = D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
         CompProps.MaxThreadGroupSizeX       = D3D12_CS_THREAD_GROUP_MAX_X;
@@ -1108,7 +1110,7 @@ GraphicsAdapterInfo EngineFactoryD3D12Impl::GetGraphicsAdapterInfo(void*        
 
     // Draw command properties
     {
-        auto& DrawCommandProps{AdapterInfo.DrawCommand};
+        DrawCommandProperties& DrawCommandProps{AdapterInfo.DrawCommand};
 #if D3D12_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP >= 32
         DrawCommandProps.MaxIndexValue = ~0u;
 #else

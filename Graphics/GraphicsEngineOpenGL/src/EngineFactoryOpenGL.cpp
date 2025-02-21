@@ -236,7 +236,7 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
-        auto& RawMemAllocator = GetRawAllocator();
+        IMemoryAllocator& RawMemAllocator = GetRawAllocator();
 
         SetPreferredAdapter(EngineCI);
         RenderDeviceGLImpl* pRenderDeviceOpenGL{
@@ -335,7 +335,7 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
-        auto& RawMemAllocator = GetRawAllocator();
+        IMemoryAllocator& RawMemAllocator = GetRawAllocator();
 
         SetPreferredAdapter(EngineCI);
         RenderDeviceGLImpl* pRenderDeviceOpenGL{

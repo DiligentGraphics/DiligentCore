@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +54,7 @@ namespace Diligent
 
 bool CheckAdapterD3D11Compatibility(IDXGIAdapter1* pDXGIAdapter, D3D_FEATURE_LEVEL FeatureLevel)
 {
-    auto hr = D3D11CreateDevice(
+    HRESULT hr = D3D11CreateDevice(
         nullptr,
         D3D_DRIVER_TYPE_NULL, // There is no need to create a real hardware device.
         0,
@@ -188,10 +188,10 @@ void EngineFactoryD3D11Impl::CreateD3D11DeviceAndContextForAdapter(
     //     If you provide a D3D_FEATURE_LEVEL array that contains D3D_FEATURE_LEVEL_11_1 on a computer that doesn't have the Direct3D 11.1
     //     runtime installed, D3D11CreateDevice immediately fails with E_INVALIDARG.
     // To avoid failure in this case we will try one feature level at a time
-    for (auto FeatureLevel : {Version{11, 1}, Version{11, 0}, Version{10, 1}, Version{10, 0}})
+    for (Version FeatureLevel : {Version{11, 1}, Version{11, 0}, Version{10, 1}, Version{10, 0}})
     {
-        auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
-        auto hr              = D3D11CreateDevice(
+        D3D_FEATURE_LEVEL d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
+        HRESULT           hr              = D3D11CreateDevice(
             pAdapter,          // Specify nullptr to use the default adapter.
             DriverType,        // If no adapter specified, request hardware graphics driver.
             0,                 // Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
@@ -313,7 +313,7 @@ static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D11Device(ID3D11Device* pd3d11Dev
 {
     CComPtr<IDXGIDevice> pDXGIDevice;
 
-    auto hr = pd3d11Device->QueryInterface(__uuidof(pDXGIDevice), reinterpret_cast<void**>(static_cast<IDXGIDevice**>(&pDXGIDevice)));
+    HRESULT hr = pd3d11Device->QueryInterface(__uuidof(pDXGIDevice), reinterpret_cast<void**>(static_cast<IDXGIDevice**>(&pDXGIDevice)));
     if (SUCCEEDED(hr))
     {
         CComPtr<IDXGIAdapter> pDXGIAdapter;
@@ -354,7 +354,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
     if (!ppDevice || !ppContexts)
         return;
 
-    const auto NumImmediateContexts = std::max(1u, EngineCI.NumImmediateContexts);
+    const Uint32 NumImmediateContexts = std::max(1u, EngineCI.NumImmediateContexts);
 
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (size_t{NumImmediateContexts} + size_t{EngineCI.NumDeferredContexts}));
@@ -367,15 +367,15 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
 
     try
     {
-        auto* pd3d11Device       = reinterpret_cast<ID3D11Device*>(pd3d11NativeDevice);
-        auto* pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext*>(pd3d11ImmediateContext);
-        auto  pDXGIAdapter1      = DXGIAdapterFromD3D11Device(pd3d11Device);
+        ID3D11Device*          pd3d11Device       = reinterpret_cast<ID3D11Device*>(pd3d11NativeDevice);
+        ID3D11DeviceContext*   pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext*>(pd3d11ImmediateContext);
+        CComPtr<IDXGIAdapter1> pDXGIAdapter1      = DXGIAdapterFromD3D11Device(pd3d11Device);
 
-        const auto AdapterInfo = GetGraphicsAdapterInfo(pd3d11NativeDevice, pDXGIAdapter1);
+        const GraphicsAdapterInfo AdapterInfo = GetGraphicsAdapterInfo(pd3d11NativeDevice, pDXGIAdapter1);
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
-        auto& RawAllocator = GetRawAllocator();
+        IMemoryAllocator& RawAllocator = GetRawAllocator();
 
         RenderDeviceD3D11Impl* pRenderDeviceD3D11{
             NEW_RC_OBJ(RawAllocator, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)(
@@ -466,11 +466,11 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
 
     try
     {
-        auto* pDeviceD3D11        = ClassPtrCast<RenderDeviceD3D11Impl>(pDevice);
-        auto* pDeviceContextD3D11 = ClassPtrCast<DeviceContextD3D11Impl>(pImmediateContext);
-        auto& RawMemAllocator     = GetRawAllocator();
+        RenderDeviceD3D11Impl*  pDeviceD3D11        = ClassPtrCast<RenderDeviceD3D11Impl>(pDevice);
+        DeviceContextD3D11Impl* pDeviceContextD3D11 = ClassPtrCast<DeviceContextD3D11Impl>(pImmediateContext);
+        IMemoryAllocator&       RawMemAllocator     = GetRawAllocator();
 
-        auto* pSwapChainD3D11 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D11Impl instance", SwapChainD3D11Impl)(SCDesc, FSDesc, pDeviceD3D11, pDeviceContextD3D11, Window);
+        SwapChainD3D11Impl* pSwapChainD3D11 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D11Impl instance", SwapChainD3D11Impl)(SCDesc, FSDesc, pDeviceD3D11, pDeviceContextD3D11, Window);
         pSwapChainD3D11->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
     }
     catch (const std::runtime_error&)
@@ -489,7 +489,7 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
 GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*          pd3dDevice,
                                                                    IDXGIAdapter1* pDXIAdapter) const
 {
-    auto AdapterInfo = TBase::GetGraphicsAdapterInfo(pd3dDevice, pDXIAdapter);
+    GraphicsAdapterInfo AdapterInfo = TBase::GetGraphicsAdapterInfo(pd3dDevice, pDXIAdapter);
 
     CComPtr<ID3D11Device> pd3d11Device{reinterpret_cast<ID3D11Device*>(pd3dDevice)};
     if (!pd3d11Device)
@@ -498,7 +498,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
         VERIFY_EXPR(pd3d11Device);
     }
 
-    auto& Features = AdapterInfo.Features;
+    DeviceFeatures& Features = AdapterInfo.Features;
     {
         bool ShaderFloat16Supported = false;
 
@@ -516,7 +516,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
 
     // Texture properties
     {
-        auto& TexProps{AdapterInfo.Texture};
+        TextureProperties& TexProps{AdapterInfo.Texture};
         TexProps.MaxTexture1DDimension      = D3D11_REQ_TEXTURE1D_U_DIMENSION;
         TexProps.MaxTexture1DArraySlices    = D3D11_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
         TexProps.MaxTexture2DDimension      = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
@@ -533,7 +533,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
 
     // Sampler properties
     {
-        auto& SamProps{AdapterInfo.Sampler};
+        SamplerProperties& SamProps{AdapterInfo.Sampler};
         SamProps.BorderSamplingModeSupported = True;
         SamProps.MaxAnisotropy               = D3D11_DEFAULT_MAX_ANISOTROPY;
         SamProps.LODBiasSupported            = True;
@@ -542,7 +542,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
 
     // Buffer properties
     {
-        auto& BufferProps = AdapterInfo.Buffer;
+        BufferProperties& BufferProps = AdapterInfo.Buffer;
         // Offsets passed to *SSetConstantBuffers1 are measured in shader constants, which are
         // 16 bytes (4*32-bit components). Each offset must be a multiple of 16 constants,
         // i.e. 256 bytes.
@@ -553,7 +553,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
 
     // Compute shader properties
     {
-        auto& CompProps{AdapterInfo.ComputeShader};
+        ComputeShaderProperties& CompProps{AdapterInfo.ComputeShader};
         CompProps.SharedMemorySize          = 32u << 10; // in specs: 32Kb in D3D11 and 16Kb on downlevel hardware
         CompProps.MaxThreadGroupInvocations = D3D11_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
         CompProps.MaxThreadGroupSizeX       = D3D11_CS_THREAD_GROUP_MAX_X;
@@ -571,7 +571,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
 
     // Draw command properties
     {
-        auto& DrawCommandProps{AdapterInfo.DrawCommand};
+        DrawCommandProperties& DrawCommandProps{AdapterInfo.DrawCommand};
         DrawCommandProps.CapFlags |= DRAW_COMMAND_CAP_FLAG_BASE_VERTEX;
 #if D3D11_REQ_DRAWINDEXED_INDEX_COUNT_2_TO_EXP >= 32
         DrawCommandProps.MaxIndexValue = ~0u;
@@ -596,7 +596,7 @@ GraphicsAdapterInfo EngineFactoryD3D11Impl::GetGraphicsAdapterInfo(void*        
             {
                 Features.SparseResources = DEVICE_FEATURE_STATE_ENABLED;
 
-                auto& SparseRes{AdapterInfo.SparseResources};
+                SparseResourceProperties& SparseRes{AdapterInfo.SparseResources};
                 // https://docs.microsoft.com/en-us/windows/win32/direct3d11/address-space-available-for-tiled-resources
                 SparseRes.AddressSpaceSize  = Uint64{1} << (sizeof(void*) > 4 ? 40 : 32);
                 SparseRes.ResourceSpaceSize = std::numeric_limits<UINT>::max(); // buffer size limits to number of bits in UINT

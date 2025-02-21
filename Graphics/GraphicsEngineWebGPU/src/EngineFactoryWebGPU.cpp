@@ -185,10 +185,10 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
 
         if (UserData.RequestStatus == WGPURequestAdapterStatus_Success)
         {
-            auto IsFound = std::find_if(wgpuAdapters.begin(), wgpuAdapters.end(),
-                                        [&](const auto& wgpuAdapter) { return wgpuAdapter.Get() == UserData.Adapter; });
+            auto adapter_it = std::find_if(wgpuAdapters.begin(), wgpuAdapters.end(),
+                                           [&](const auto& wgpuAdapter) { return wgpuAdapter.Get() == UserData.Adapter; });
 
-            if (IsFound == wgpuAdapters.end())
+            if (adapter_it == wgpuAdapters.end())
                 wgpuAdapters.emplace_back(UserData.Adapter);
         }
         else
