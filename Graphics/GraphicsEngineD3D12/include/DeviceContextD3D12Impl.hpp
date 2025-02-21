@@ -61,10 +61,9 @@ class DeviceContextD3D12Impl final : public DeviceContextNextGenBase<EngineD3D12
 public:
     using TDeviceContextBase = DeviceContextNextGenBase<EngineD3D12ImplTraits>;
 
-    DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters,
-                           RenderDeviceD3D12Impl*       pDevice,
-                           const EngineD3D12CreateInfo& EngineCI,
-                           const DeviceContextDesc&     Desc);
+    DeviceContextD3D12Impl(IReferenceCounters*      pRefCounters,
+                           RenderDeviceD3D12Impl*   pDevice,
+                           const DeviceContextDesc& Desc);
     ~DeviceContextD3D12Impl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextD3D12, TDeviceContextBase)

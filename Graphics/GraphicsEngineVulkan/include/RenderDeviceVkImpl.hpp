@@ -260,13 +260,11 @@ public:
 
     struct Properties
     {
-        const Uint32 ShaderGroupHandleSize;
-        const Uint32 MaxShaderRecordStride;
-        const Uint32 ShaderGroupBaseAlignment;
-        const Uint32 MaxDrawMeshTasksCount;
-        const Uint32 MaxRayTracingRecursionDepth;
-        const Uint32 MaxRayGenThreads;
+        Uint32 UploadHeapPageSize  = 0;
+        Uint32 DynamicHeapPageSize = 0;
     };
+
+    const Properties& GetProperties() const { return m_Properties; }
 
     // TODO: use small_vector
     std::vector<uint32_t> ConvertCmdQueueIdsToQueueFamilies(Uint64 CommandQueueMask) const;
@@ -293,6 +291,9 @@ private:
                              Uint64&                                                     SubmittedCmdBuffNumber,
                              Uint64&                                                     SubmittedFenceValue,
                              std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pFences);
+
+private:
+    const Properties m_Properties;
 
     std::shared_ptr<VulkanUtilities::VulkanInstance>       m_VulkanInstance;
     std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> m_PhysicalDevice;

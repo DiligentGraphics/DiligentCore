@@ -55,10 +55,9 @@ class DeviceContextWebGPUImpl final : public DeviceContextBase<EngineWebGPUImplT
 public:
     using TDeviceContextBase = DeviceContextBase;
 
-    DeviceContextWebGPUImpl(IReferenceCounters*           pRefCounters,
-                            RenderDeviceWebGPUImpl*       pDevice,
-                            const EngineWebGPUCreateInfo& EngineCI,
-                            const DeviceContextDesc&      Desc);
+    DeviceContextWebGPUImpl(IReferenceCounters*      pRefCounters,
+                            RenderDeviceWebGPUImpl*  pDevice,
+                            const DeviceContextDesc& Desc);
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextWebGPU, TDeviceContextBase)
 

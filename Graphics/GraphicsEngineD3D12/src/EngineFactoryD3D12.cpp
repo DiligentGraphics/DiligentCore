@@ -623,7 +623,6 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
             RefCntAutoPtr<DeviceContextD3D12Impl> pImmediateCtxD3D12{
                 NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(
                     pRenderDeviceD3D12,
-                    EngineCI,
                     DeviceContextDesc{
                         pImmediateContextInfo[CtxInd].Name,
                         AdapterInfo.Queues[QueueId].QueueType,
@@ -642,7 +641,6 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
             RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtxD3D12{
                 NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(
                     pRenderDeviceD3D12,
-                    EngineCI,
                     DeviceContextDesc{
                         nullptr,
                         COMMAND_QUEUE_TYPE_UNKNOWN,

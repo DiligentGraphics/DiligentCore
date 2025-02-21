@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,6 +34,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <array>
 
 #include "EngineD3D12ImplTraits.hpp"
 #include "RenderDeviceD3DBase.hpp"
@@ -275,12 +276,24 @@ public:
         return m_pNVApiHeap;
     }
 
+    struct Properties
+    {
+        Uint32 DynamicHeapPageSize = 0;
+
+        std::array<Uint32, _countof(EngineD3D12CreateInfo::DynamicDescriptorAllocationChunkSize)> DynamicDescriptorAllocationChunkSize = {};
+    };
+
+    const Properties& GetProperties() const { return m_Properties; }
+
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     void         FreeCommandContext(PooledCommandContext&& Ctx);
 
     CommandListManager& GetCmdListManager(SoftwareQueueIndex CommandQueueId);
     CommandListManager& GetCmdListManager(D3D12_COMMAND_LIST_TYPE CmdListType);
+
+private:
+    const Properties m_Properties;
 
     CComPtr<ID3D12Device> m_pd3d12Device;
 

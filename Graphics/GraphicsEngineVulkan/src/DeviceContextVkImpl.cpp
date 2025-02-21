@@ -61,10 +61,9 @@ static std::string GetContextObjectName(const char* Object, bool bIsDeferred, Ui
     return ss.str();
 }
 
-DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
-                                         RenderDeviceVkImpl*       pDeviceVkImpl,
-                                         const EngineVkCreateInfo& EngineCI,
-                                         const DeviceContextDesc&  Desc) :
+DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*      pRefCounters,
+                                         RenderDeviceVkImpl*      pDeviceVkImpl,
+                                         const DeviceContextDesc& Desc) :
     // clang-format off
     TDeviceContextBase
     {
@@ -86,13 +85,13 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
     {
         *pDeviceVkImpl,
         GetContextObjectName("Upload heap", Desc.IsDeferred, Desc.ContextId),
-        EngineCI.UploadHeapPageSize
+        pDeviceVkImpl->GetProperties().UploadHeapPageSize
     },
     m_DynamicHeap
     {
         pDeviceVkImpl->GetDynamicMemoryManager(),
         GetContextObjectName("Dynamic heap", Desc.IsDeferred, Desc.ContextId),
-        EngineCI.DynamicHeapPageSize
+        pDeviceVkImpl->GetProperties().DynamicHeapPageSize
     },
     m_DynamicDescrSetAllocator
     {

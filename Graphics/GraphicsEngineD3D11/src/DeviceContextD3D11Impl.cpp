@@ -47,12 +47,11 @@
 namespace Diligent
 {
 
-DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRefCounters,
-                                               IMemoryAllocator&            Allocator,
-                                               RenderDeviceD3D11Impl*       pDevice,
-                                               ID3D11DeviceContext1*        pd3d11DeviceContext,
-                                               const EngineD3D11CreateInfo& EngineCI,
-                                               const DeviceContextDesc&     Desc) :
+DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*      pRefCounters,
+                                               IMemoryAllocator&        Allocator,
+                                               RenderDeviceD3D11Impl*   pDevice,
+                                               ID3D11DeviceContext1*    pd3d11DeviceContext,
+                                               const DeviceContextDesc& Desc) :
     // clang-format off
     TDeviceContextBase
     {
@@ -62,7 +61,7 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*          pRef
     },
     m_pd3d11DeviceContext {pd3d11DeviceContext          },
 #ifdef DILIGENT_DEVELOPMENT
-    m_D3D11ValidationFlags{EngineCI.D3D11ValidationFlags},
+    m_D3D11ValidationFlags{pDevice->GetProperties().D3D11ValidationFlags},
 #endif
     m_CmdListAllocator    {GetRawAllocator(), sizeof(CommandListD3D11Impl), 64}
 // clang-format on

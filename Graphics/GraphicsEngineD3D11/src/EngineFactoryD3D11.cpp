@@ -389,7 +389,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
 
         RefCntAutoPtr<DeviceContextD3D11Impl> pDeviceContextD3D11{
             NEW_RC_OBJ(RawAllocator, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)(
-                RawAllocator, pRenderDeviceD3D11, pd3d11ImmediateCtx1, EngineCI,
+                RawAllocator, pRenderDeviceD3D11, pd3d11ImmediateCtx1,
                 DeviceContextDesc{
                     EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : nullptr,
                     pRenderDeviceD3D11->GetAdapterInfo().Queues[0].QueueType,
@@ -416,7 +416,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
 
             RefCntAutoPtr<DeviceContextD3D11Impl> pDeferredCtxD3D11{
                 NEW_RC_OBJ(RawAllocator, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)(
-                    RawAllocator, pRenderDeviceD3D11, pd3d11DeferredCtx1, EngineCI,
+                    RawAllocator, pRenderDeviceD3D11, pd3d11DeferredCtx1,
                     DeviceContextDesc{
                         nullptr,
                         COMMAND_QUEUE_TYPE_UNKNOWN,

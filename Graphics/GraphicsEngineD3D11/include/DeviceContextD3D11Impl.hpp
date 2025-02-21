@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,12 +54,11 @@ class DeviceContextD3D11Impl final : public DeviceContextBase<EngineD3D11ImplTra
 public:
     using TDeviceContextBase = DeviceContextBase<EngineD3D11ImplTraits>;
 
-    DeviceContextD3D11Impl(IReferenceCounters*          pRefCounters,
-                           IMemoryAllocator&            Allocator,
-                           RenderDeviceD3D11Impl*       pDevice,
-                           ID3D11DeviceContext1*        pd3d11DeviceContext,
-                           const EngineD3D11CreateInfo& EngineCI,
-                           const DeviceContextDesc&     Desc);
+    DeviceContextD3D11Impl(IReferenceCounters*      pRefCounters,
+                           IMemoryAllocator&        Allocator,
+                           RenderDeviceD3D11Impl*   pDevice,
+                           ID3D11DeviceContext1*    pd3d11DeviceContext,
+                           const DeviceContextDesc& Desc);
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IDeviceContext::Begin() in Direct3D11 backend.

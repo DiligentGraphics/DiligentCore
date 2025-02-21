@@ -77,6 +77,11 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         EngineCI,
         AdapterInfo
     },
+    m_Properties
+    {
+        EngineCI.UploadHeapPageSize,
+        EngineCI.DynamicHeapPageSize
+    },
     m_VulkanInstance         {Instance                 },
     m_PhysicalDevice         {std::move(PhysicalDevice)},
     m_LogicalVkDevice        {std::move(LogicalDevice) },

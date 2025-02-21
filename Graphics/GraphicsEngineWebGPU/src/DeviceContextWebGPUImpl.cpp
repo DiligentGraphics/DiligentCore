@@ -47,10 +47,9 @@
 namespace Diligent
 {
 
-DeviceContextWebGPUImpl::DeviceContextWebGPUImpl(IReferenceCounters*           pRefCounters,
-                                                 RenderDeviceWebGPUImpl*       pDevice,
-                                                 const EngineWebGPUCreateInfo& EngineCI,
-                                                 const DeviceContextDesc&      Desc) :
+DeviceContextWebGPUImpl::DeviceContextWebGPUImpl(IReferenceCounters*      pRefCounters,
+                                                 RenderDeviceWebGPUImpl*  pDevice,
+                                                 const DeviceContextDesc& Desc) :
     // clang-format off
     TDeviceContextBase
     {

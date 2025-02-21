@@ -1435,7 +1435,6 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
             RefCntAutoPtr<DeviceContextVkImpl> pImmediateCtxVk{
                 NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(
                     pRenderDeviceVk,
-                    EngineCI,
                     DeviceContextDesc{
                         pImmediateContextInfo[CtxInd].Name,
                         QueueType,
@@ -1454,7 +1453,6 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
             RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk{
                 NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(
                     pRenderDeviceVk,
-                    EngineCI,
                     DeviceContextDesc{
                         nullptr,
                         COMMAND_QUEUE_TYPE_UNKNOWN,

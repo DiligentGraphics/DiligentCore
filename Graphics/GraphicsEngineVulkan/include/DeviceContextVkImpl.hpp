@@ -71,10 +71,9 @@ class DeviceContextVkImpl final : public DeviceContextNextGenBase<EngineVkImplTr
 public:
     using TDeviceContextBase = DeviceContextNextGenBase<EngineVkImplTraits>;
 
-    DeviceContextVkImpl(IReferenceCounters*       pRefCounters,
-                        RenderDeviceVkImpl*       pDevice,
-                        const EngineVkCreateInfo& EngineCI,
-                        const DeviceContextDesc&  Desc);
+    DeviceContextVkImpl(IReferenceCounters*      pRefCounters,
+                        RenderDeviceVkImpl*      pDevice,
+                        const DeviceContextDesc& Desc);
     ~DeviceContextVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextVk, TDeviceContextBase)

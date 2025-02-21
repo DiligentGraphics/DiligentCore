@@ -694,7 +694,7 @@ void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(void*                        
 
         DeviceContextWebGPUImpl* pDeviceContextWebGPU{
             NEW_RC_OBJ(RawMemAllocator, "DeviceContextWebGPUImpl instance", DeviceContextWebGPUImpl)(
-                pRenderDeviceWebGPU, EngineCI,
+                pRenderDeviceWebGPU,
                 DeviceContextDesc{
                     EngineCI.pImmediateContextInfo ? EngineCI.pImmediateContextInfo[0].Name : nullptr,
                     pRenderDeviceWebGPU->GetAdapterInfo().Queues[0].QueueType,

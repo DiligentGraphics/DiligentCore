@@ -65,10 +65,9 @@ static std::string GetContextObjectName(const char* Object, bool bIsDeferred, Ui
     return ss.str();
 }
 
-DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRefCounters,
-                                               RenderDeviceD3D12Impl*       pDeviceD3D12Impl,
-                                               const EngineD3D12CreateInfo& EngineCI,
-                                               const DeviceContextDesc&     Desc) :
+DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*      pRefCounters,
+                                               RenderDeviceD3D12Impl*   pDeviceD3D12Impl,
+                                               const DeviceContextDesc& Desc) :
     // clang-format off
     TDeviceContextBase
     {
@@ -80,20 +79,20 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
     {
         pDeviceD3D12Impl->GetDynamicMemoryManager(),
         GetContextObjectName("Dynamic heap", Desc.IsDeferred, Desc.ContextId),
-        EngineCI.DynamicHeapPageSize
+        pDeviceD3D12Impl->GetProperties().DynamicHeapPageSize
     },
     m_DynamicGPUDescriptorAllocator
     {
         {
             GetRawAllocator(),
             pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
-            EngineCI.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV],
+            pDeviceD3D12Impl->GetProperties().DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV],
             GetContextObjectName("CBV_SRV_UAV dynamic descriptor allocator", Desc.IsDeferred, Desc.ContextId)
         },
         {
             GetRawAllocator(),
             pDeviceD3D12Impl->GetGPUDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
-            EngineCI.DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER],
+            pDeviceD3D12Impl->GetProperties().DynamicDescriptorAllocationChunkSize[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER],
             GetContextObjectName("SAMPLER     dynamic descriptor allocator", Desc.IsDeferred, Desc.ContextId)
         }
     },
@@ -101,18 +100,18 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
     m_NullRTV{pDeviceD3D12Impl->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1)}
 // clang-format on
 {
-    auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
+    ID3D12Device* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
     if (!IsDeferred())
     {
         RequestCommandContext();
         m_QueryMgr = &pDeviceD3D12Impl->GetQueryMgr(GetCommandQueueId());
     }
 
-    auto* pDrawIndirectSignature = GetDrawIndirectSignature(sizeof(UINT) * 4);
+    ID3D12CommandSignature* pDrawIndirectSignature = GetDrawIndirectSignature(sizeof(UINT) * 4);
     if (pDrawIndirectSignature == nullptr)
         LOG_ERROR_AND_THROW("Failed to create indirect draw command signature");
 
-    auto* pDrawIndexedIndirectSignature = GetDrawIndexedIndirectSignature(sizeof(UINT) * 5);
+    ID3D12CommandSignature* pDrawIndexedIndirectSignature = GetDrawIndexedIndirectSignature(sizeof(UINT) * 5);
     if (pDrawIndexedIndirectSignature == nullptr)
         LOG_ERROR_AND_THROW("Failed to create draw indexed indirect command signature");
 
@@ -125,7 +124,7 @@ DeviceContextD3D12Impl::DeviceContextD3D12Impl(IReferenceCounters*          pRef
 
     CmdSignatureDesc.ByteStride = sizeof(UINT) * 3;
     IndirectArg.Type            = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
-    auto hr                     = pd3d12Device->CreateCommandSignature(&CmdSignatureDesc, nullptr, __uuidof(m_pDispatchIndirectSignature), reinterpret_cast<void**>(static_cast<ID3D12CommandSignature**>(&m_pDispatchIndirectSignature)));
+    HRESULT hr                  = pd3d12Device->CreateCommandSignature(&CmdSignatureDesc, nullptr, __uuidof(m_pDispatchIndirectSignature), reinterpret_cast<void**>(static_cast<ID3D12CommandSignature**>(&m_pDispatchIndirectSignature)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create dispatch indirect command signature");
 
 #ifdef D3D12_H_HAS_MESH_SHADER

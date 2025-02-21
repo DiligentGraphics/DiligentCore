@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -190,8 +190,18 @@ public:
 #endif
 #undef GET_D3D11_DEVICE
 
+    struct Properties
+    {
+        D3D11_VALIDATION_FLAGS D3D11ValidationFlags = D3D11_VALIDATION_FLAG_NONE;
+    };
+
+    const Properties& GetProperties() const { return m_Properties; }
+
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
+
+private:
+    const Properties m_Properties;
 
     /// D3D11 device
     CComPtr<ID3D11Device> m_pd3d11Device;

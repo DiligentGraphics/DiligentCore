@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -142,7 +142,18 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         EngineCI,
         AdapterInfo
     },
-    m_pd3d12Device   {pd3d12Device},
+    m_Properties
+    {
+        EngineCI.DynamicHeapPageSize,
+        [](const EngineD3D12CreateInfo& CI)
+        {
+            decltype(Properties::DynamicDescriptorAllocationChunkSize) ChunkSizeArr{};
+            for (size_t i=0; i < ChunkSizeArr.size(); ++i)
+				ChunkSizeArr[i] = CI.DynamicDescriptorAllocationChunkSize[i];
+            return ChunkSizeArr;
+        }(EngineCI),
+    },
+    m_pd3d12Device{pd3d12Device},
     m_CPUDescriptorHeaps
     {
         {RawMemAllocator, *this, EngineCI.CPUDescriptorHeapAllocationSize[0], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE},
