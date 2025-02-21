@@ -160,6 +160,9 @@ public:
     virtual void DILIGENT_CALL_TYPE CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
                                                              IPipelineStateCache**               ppPipelineStateCache) override final;
 
+    /// Implementation of IRenderDevice::CreateDeferredContext() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateDeferredContext(IDeviceContext** ppContext) override final;
+
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
 

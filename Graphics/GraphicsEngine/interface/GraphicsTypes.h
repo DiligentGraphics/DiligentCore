@@ -3462,6 +3462,8 @@ struct EngineCreateInfo
     /// IEngineFactoryD3D12::CreateDeviceAndContextsD3D12, and IEngineFactoryVk::CreateDeviceAndContextsVk)
     /// starting at position max(1, NumImmediateContexts).
     ///
+    /// \remarks  Additional deferred contexts may be created later by calling IRenderDevice::CreateDeferredContext().
+    /// 
     /// \warning  An application must manually call IDeviceContext::FinishFrame for
     ///           deferred contexts to let the engine release stale resources.
     Uint32                   NumDeferredContexts    DEFAULT_INITIALIZER(0);

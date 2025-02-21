@@ -638,20 +638,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
-            RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtxD3D12{
-                NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(
-                    pRenderDeviceD3D12,
-                    DeviceContextDesc{
-                        nullptr,
-                        COMMAND_QUEUE_TYPE_UNKNOWN,
-                        true,                               // IsDeferred
-                        NumImmediateContexts + DeferredCtx, // Context index
-                    }                                       //
-                    )};
-            // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
-            // keep a weak reference to the context
-            pDeferredCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + NumImmediateContexts + DeferredCtx));
-            pRenderDeviceD3D12->SetDeferredContext(DeferredCtx, pDeferredCtxD3D12);
+            pRenderDeviceD3D12->CreateDeferredContext(ppContexts + NumImmediateContexts + DeferredCtx);
         }
     }
     catch (const std::runtime_error&)

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -72,6 +72,7 @@ public:
     UNSUPPORTED_METHOD(void, CreatePipelineResourceSignature, const PipelineResourceSignatureDesc& Desc, IPipelineResourceSignature** ppSignature)
     UNSUPPORTED_METHOD(void, CreateDeviceMemory,       const DeviceMemoryCreateInfo&       CreateInfo, IDeviceMemory**       ppMemory)
     UNSUPPORTED_METHOD(void, CreatePipelineStateCache, const PipelineStateCacheCreateInfo& CreateInfo, IPipelineStateCache** ppPSOCache)
+    UNSUPPORTED_METHOD(void, CreateDeferredContext, IDeviceContext** ppContext)
     UNSUPPORTED_METHOD(void, IdleGPU)
     UNSUPPORTED_METHOD(void, ReleaseStaleResources, bool ForceRelease)
     // clang-format on

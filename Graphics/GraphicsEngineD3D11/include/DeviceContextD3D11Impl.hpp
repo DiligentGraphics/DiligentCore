@@ -55,10 +55,9 @@ public:
     using TDeviceContextBase = DeviceContextBase<EngineD3D11ImplTraits>;
 
     DeviceContextD3D11Impl(IReferenceCounters*      pRefCounters,
-                           IMemoryAllocator&        Allocator,
                            RenderDeviceD3D11Impl*   pDevice,
-                           ID3D11DeviceContext1*    pd3d11DeviceContext,
-                           const DeviceContextDesc& Desc);
+                           const DeviceContextDesc& Desc,
+                           ID3D11DeviceContext1*    pd3d11DeviceContext);
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IDeviceContext::Begin() in Direct3D11 backend.

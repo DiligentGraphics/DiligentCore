@@ -649,6 +649,12 @@ void RenderDeviceGLImpl::CreatePipelineStateCache(const PipelineStateCacheCreate
     *ppPSOCache = nullptr;
 }
 
+void RenderDeviceGLImpl::CreateDeferredContext(IDeviceContext** ppContext)
+{
+    LOG_ERROR_MESSAGE("Deferred contexts are not supported in OpenGL backend.");
+    *ppContext = nullptr;
+}
+
 SparseTextureFormatInfo RenderDeviceGLImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
                                                                        RESOURCE_DIMENSION Dimension,
                                                                        Uint32             SampleCount) const

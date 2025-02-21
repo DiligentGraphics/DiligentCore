@@ -34,6 +34,7 @@
 #include <thread>
 #include <vector>
 #include <unordered_set>
+#include <mutex>
 
 #include "RenderDevice.h"
 #include "DeviceObjectBase.hpp"
@@ -308,13 +309,6 @@ public:
         m_wpImmediateContexts[Ctx] = pImmediateContext;
     }
 
-    /// Set weak reference to the deferred context
-    void SetDeferredContext(size_t Ctx, DeviceContextImplType* pDeferredCtx)
-    {
-        VERIFY(m_wpDeferredContexts[Ctx].Lock() == nullptr, "Deferred context has already been set");
-        m_wpDeferredContexts[Ctx] = pDeferredCtx;
-    }
-
     /// Returns the number of immediate contexts
     size_t GetNumImmediateContexts() const
     {
@@ -324,11 +318,23 @@ public:
     /// Returns number of deferred contexts
     size_t GetNumDeferredContexts() const
     {
+        std::lock_guard<std::mutex> Guard{m_DeferredCtxMtx};
         return m_wpDeferredContexts.size();
     }
 
-    RefCntAutoPtr<DeviceContextImplType> GetImmediateContext(size_t Ctx) { return m_wpImmediateContexts[Ctx].Lock(); }
-    RefCntAutoPtr<DeviceContextImplType> GetDeferredContext(size_t Ctx) { return m_wpDeferredContexts[Ctx].Lock(); }
+    RefCntAutoPtr<DeviceContextImplType> GetImmediateContext(size_t Ctx)
+    {
+        return Ctx < m_wpImmediateContexts.size() ?
+            m_wpImmediateContexts[Ctx].Lock() :
+            RefCntAutoPtr<DeviceContextImplType>{};
+    }
+    RefCntAutoPtr<DeviceContextImplType> GetDeferredContext(size_t Ctx)
+    {
+        std::lock_guard<std::mutex> Guard{m_DeferredCtxMtx};
+        return Ctx < m_wpDeferredContexts.size() ?
+            m_wpDeferredContexts[Ctx].Lock() :
+            RefCntAutoPtr<DeviceContextImplType>{};
+    }
 
     FixedBlockMemoryAllocator& GetTexViewObjAllocator() { return m_TexViewObjAllocator; }
     FixedBlockMemoryAllocator& GetBuffViewObjAllocator() { return m_BuffViewObjAllocator; }
@@ -454,11 +460,11 @@ protected:
             const std::string ObjectDescString = GetObjectDescString(Desc);
             if (!ObjectDescString.empty())
             {
-                LOG_ERROR("Failed to create ", ObjectTypeName, " object '", (Desc.Name ? Desc.Name : ""), "'\n", ObjectDescString);
+                LOG_ERROR("Failed to create ", ObjectTypeName, " '", (Desc.Name ? Desc.Name : ""), "'\n", ObjectDescString);
             }
             else
             {
-                LOG_ERROR("Failed to create ", ObjectTypeName, " object '", (Desc.Name ? Desc.Name : ""), "'");
+                LOG_ERROR("Failed to create ", ObjectTypeName, " '", (Desc.Name ? Desc.Name : ""), "'");
             }
         }
     }
@@ -549,7 +555,7 @@ protected:
     template <typename... ExtraArgsType>
     void CreateRenderPassImpl(IRenderPass** ppRenderPass, const RenderPassDesc& Desc, const ExtraArgsType&... ExtraArgs)
     {
-        CreateDeviceObject("RenderPass", Desc, ppRenderPass,
+        CreateDeviceObject("Render Pass", Desc, ppRenderPass,
                            [&]() //
                            {
                                RenderPassImplType* pRenderPassImpl = NEW_RC_OBJ(m_RenderPassAllocator, "Render instance", RenderPassImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
@@ -571,7 +577,7 @@ protected:
     template <typename... ExtraArgsType>
     void CreateBLASImpl(IBottomLevelAS** ppBLAS, const BottomLevelASDesc& Desc, const ExtraArgsType&... ExtraArgs)
     {
-        CreateDeviceObject("BottomLevelAS", Desc, ppBLAS,
+        CreateDeviceObject("Bottom-level AS", Desc, ppBLAS,
                            [&]() //
                            {
                                BottomLevelASImplType* pBottomLevelASImpl = NEW_RC_OBJ(m_BLASAllocator, "BottomLevelAS instance", BottomLevelASImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
@@ -582,7 +588,7 @@ protected:
     template <typename... ExtraArgsType>
     void CreateTLASImpl(ITopLevelAS** ppTLAS, const TopLevelASDesc& Desc, const ExtraArgsType&... ExtraArgs)
     {
-        CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
+        CreateDeviceObject("Top-level AS", Desc, ppTLAS,
                            [&]() //
                            {
                                TopLevelASImplType* pTopLevelASImpl = NEW_RC_OBJ(m_TLASAllocator, "TopLevelAS instance", TopLevelASImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
@@ -592,7 +598,7 @@ protected:
 
     void CreateSBTImpl(IShaderBindingTable** ppSBT, const ShaderBindingTableDesc& Desc)
     {
-        CreateDeviceObject("ShaderBindingTable", Desc, ppSBT,
+        CreateDeviceObject("Shader Binding Table", Desc, ppSBT,
                            [&]() //
                            {
                                ShaderBindingTableImplType* pSBTImpl = NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTable instance", ShaderBindingTableImplType)(static_cast<RenderDeviceImplType*>(this), Desc);
@@ -603,7 +609,7 @@ protected:
     template <typename... ExtraArgsType>
     void CreatePipelineResourceSignatureImpl(IPipelineResourceSignature** ppSignature, const PipelineResourceSignatureDesc& Desc, const ExtraArgsType&... ExtraArgs)
     {
-        CreateDeviceObject("PipelineResourceSignature", Desc, ppSignature,
+        CreateDeviceObject("Pipeline Resource Signature", Desc, ppSignature,
                            [&]() //
                            {
                                PipelineResourceSignatureImplType* pPRSImpl = NEW_RC_OBJ(m_PipeResSignAllocator, "PipelineResourceSignature instance", PipelineResourceSignatureImplType)(static_cast<RenderDeviceImplType*>(this), Desc, ExtraArgs...);
@@ -614,7 +620,7 @@ protected:
     template <typename... ExtraArgsType>
     void CreateDeviceMemoryImpl(IDeviceMemory** ppMemory, const DeviceMemoryCreateInfo& MemCI, const ExtraArgsType&... ExtraArgs)
     {
-        CreateDeviceObject("DeviceMemory", MemCI.Desc, ppMemory,
+        CreateDeviceObject("Device Memory", MemCI.Desc, ppMemory,
                            [&]() //
                            {
                                DeviceMemoryImplType* pDevMemImpl = NEW_RC_OBJ(m_MemObjAllocator, "DeviceMemory instance", DeviceMemoryImplType)(static_cast<RenderDeviceImplType*>(this), MemCI, ExtraArgs...);
@@ -624,12 +630,52 @@ protected:
 
     void CreatePipelineStateCacheImpl(IPipelineStateCache** ppCache, const PipelineStateCacheCreateInfo& PSOCacheCI)
     {
-        CreateDeviceObject("PSOCache", PSOCacheCI.Desc, ppCache,
+        CreateDeviceObject("PSO Cache", PSOCacheCI.Desc, ppCache,
                            [&]() //
                            {
                                PipelineStateCacheImplType* pPSOCacheImpl = NEW_RC_OBJ(m_PSOCacheAllocator, "PSOCache instance", PipelineStateCacheImplType)(static_cast<RenderDeviceImplType*>(this), PSOCacheCI);
                                pPSOCacheImpl->QueryInterface(IID_PipelineStateCache, reinterpret_cast<IObject**>(ppCache));
                            });
+    }
+
+    template <typename... ExtraArgsType>
+    void CreateDeferredContextImpl(IDeviceContext** ppContext, const ExtraArgsType&... ExtraArgs)
+    {
+        std::lock_guard<std::mutex> Guard{m_DeferredCtxMtx};
+
+        Uint32 CtxIndex = 0;
+        while (CtxIndex < m_wpDeferredContexts.size() && m_wpDeferredContexts[CtxIndex].IsValid())
+            ++CtxIndex;
+
+        const Uint32      ContextId = static_cast<Uint32>(GetNumImmediateContexts()) + CtxIndex;
+        const std::string CtxName   = std::string{"Deferred context "} + std::to_string(CtxIndex) + " (ContextId: " + std::to_string(ContextId) + ")";
+        DeviceContextDesc Desc{
+            CtxName.c_str(),
+            COMMAND_QUEUE_TYPE_UNKNOWN,
+            true, // IsDeferred
+            ContextId,
+        };
+
+        CreateDeviceObject("Device context", Desc, ppContext,
+                           [&]() //
+                           {
+                               DeviceContextImplType* pCtxImpl = NEW_RC_OBJ(GetRawAllocator(), "DeviceContext instance", DeviceContextImplType)(
+                                   static_cast<RenderDeviceImplType*>(this),
+                                   Desc,
+                                   ExtraArgs...);
+                               pCtxImpl->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContext));
+                           });
+
+        if (*ppContext != nullptr)
+        {
+            if (CtxIndex >= m_wpDeferredContexts.size())
+            {
+                VERIFY_EXPR(CtxIndex == m_wpDeferredContexts.size());
+                m_wpDeferredContexts.resize(CtxIndex + 1);
+            }
+
+            m_wpDeferredContexts[CtxIndex] = static_cast<DeviceContextImplType*>(*ppContext);
+        }
     }
 
 protected:
@@ -651,6 +697,7 @@ protected:
     std::vector<RefCntWeakPtr<DeviceContextImplType>, STDAllocatorRawMem<RefCntWeakPtr<DeviceContextImplType>>> m_wpImmediateContexts;
 
     /// Weak references to deferred contexts.
+    mutable std::mutex                                                                                          m_DeferredCtxMtx;
     std::vector<RefCntWeakPtr<DeviceContextImplType>, STDAllocatorRawMem<RefCntWeakPtr<DeviceContextImplType>>> m_wpDeferredContexts;
 
     IMemoryAllocator&         m_RawMemAllocator;      ///< Raw memory allocator

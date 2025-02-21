@@ -170,6 +170,9 @@ public:
     virtual void DILIGENT_CALL_TYPE CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
                                                              IPipelineStateCache**               ppPSOCache) override final;
 
+    /// Implementation of IRenderDevice::CreateDeferredContext() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreateDeferredContext(IDeviceContext** ppContext) override final;
+
     /// Implementation of IRenderDevice::GetSparseTextureFormatInfo() in Direct3D12 backend.
     virtual SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
                                                                                   RESOURCE_DIMENSION Dimension,

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -411,7 +411,7 @@ TEST_P(TestBrokenShader, CompileFailure)
 
     const auto IsD3D = DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D11 || DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D12;
     pEnv->SetErrorAllowance(IsD3D ? 2 : 3, "No worries, errors are expected: testing broken shader\n");
-    pEnv->PushExpectedErrorSubstring("Failed to create Shader object 'Archive test broken shader'");
+    pEnv->PushExpectedErrorSubstring("Failed to create Shader 'Archive test broken shader'");
     if (DataFlag != ARCHIVE_DEVICE_DATA_FLAG_WEBGPU)
         pEnv->PushExpectedErrorSubstring("Failed to compile shader 'Archive test broken shader'", false);
     if (!IsD3D)
@@ -461,7 +461,7 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     ShaderCI.CompileFlags               = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
 
     pEnv->SetErrorAllowance(3, "No worries, errors are expected: testing broken shader\n");
-    pEnv->PushExpectedErrorSubstring("Failed to create Shader object 'Archive test broken shader'");
+    pEnv->PushExpectedErrorSubstring("Failed to create Shader 'Archive test broken shader'");
     pEnv->PushExpectedErrorSubstring("Failed to load shader source file 'non_existing.shader'", false);
     pEnv->PushExpectedErrorSubstring("Failed to create input stream for source file non_existing.shader", false);
 

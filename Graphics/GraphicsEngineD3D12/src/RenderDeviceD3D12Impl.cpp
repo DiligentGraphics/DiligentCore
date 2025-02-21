@@ -733,6 +733,11 @@ void RenderDeviceD3D12Impl::CreatePipelineStateCache(const PipelineStateCacheCre
     }
 }
 
+void RenderDeviceD3D12Impl::CreateDeferredContext(IDeviceContext** ppDeferredContext)
+{
+    CreateDeferredContextImpl(ppDeferredContext);
+}
+
 SparseTextureFormatInfo RenderDeviceD3D12Impl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
                                                                           RESOURCE_DIMENSION Dimension,
                                                                           Uint32             SampleCount) const

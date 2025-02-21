@@ -270,6 +270,12 @@ void RenderDeviceWebGPUImpl::CreatePipelineStateCache(const PipelineStateCacheCr
     *ppPSOCache = nullptr;
 }
 
+void RenderDeviceWebGPUImpl::CreateDeferredContext(IDeviceContext** ppContext)
+{
+    LOG_ERROR_MESSAGE("Deferred contexts are not supported in WebGPU.");
+    *ppContext = nullptr;
+}
+
 SparseTextureFormatInfo RenderDeviceWebGPUImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
                                                                            RESOURCE_DIMENSION Dimension,
                                                                            Uint32             SampleCount) const
@@ -299,7 +305,7 @@ void RenderDeviceWebGPUImpl::IdleGPU()
     LOG_ERROR_MESSAGE("IRenderDevice::IdleGPU() is not supported on the Web. Use non-blocking synchronization methods.");
 #else
     VERIFY_EXPR(m_wpImmediateContexts.size() == 1);
-    if (auto pImmediateCtx = m_wpImmediateContexts[0].Lock())
+    if (RefCntAutoPtr<DeviceContextWebGPUImpl> pImmediateCtx = m_wpImmediateContexts[0].Lock())
         pImmediateCtx->WaitForIdle();
 #endif
 }

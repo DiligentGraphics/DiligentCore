@@ -748,6 +748,11 @@ void RenderDeviceVkImpl::CreatePipelineStateCache(const PipelineStateCacheCreate
     CreatePipelineStateCacheImpl(ppPipelineStateCache, CreateInfo);
 }
 
+void RenderDeviceVkImpl::CreateDeferredContext(IDeviceContext** ppDeferredContext)
+{
+    CreateDeferredContextImpl(ppDeferredContext);
+}
+
 std::vector<uint32_t> RenderDeviceVkImpl::ConvertCmdQueueIdsToQueueFamilies(Uint64 CommandQueueMask) const
 {
     std::bitset<MAX_COMMAND_QUEUES> QueueFamilyBits{};

@@ -140,6 +140,9 @@ public:
     void DILIGENT_CALL_TYPE CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
                                                      IPipelineStateCache**               ppPSOCache) override final;
 
+    /// Implementation of IRenderDevice::CreateDeferredContext() in WebGPU backend.
+    virtual void DILIGENT_CALL_TYPE CreateDeferredContext(IDeviceContext** ppContext) override final;
+
     /// Implementation of IRenderDevice::ReleaseStaleResources() in WebGPU backend.
     void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease = false) override final {}
 

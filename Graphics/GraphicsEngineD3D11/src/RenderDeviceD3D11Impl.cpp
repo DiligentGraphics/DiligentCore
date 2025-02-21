@@ -389,6 +389,27 @@ void RenderDeviceD3D11Impl::CreatePipelineStateCache(const PipelineStateCacheCre
     *ppPSOCache = nullptr;
 }
 
+void RenderDeviceD3D11Impl::CreateDeferredContext(IDeviceContext** ppDeferredContext)
+{
+    CComPtr<ID3D11DeviceContext> pd3d11DeferredCtx;
+
+    HRESULT hr = m_pd3d11Device->CreateDeferredContext(0, &pd3d11DeferredCtx);
+    if (FAILED(hr) || !pd3d11DeferredCtx)
+    {
+        LOG_ERROR_MESSAGE("Failed to create D3D11 deferred context");
+        return;
+    }
+
+    CComQIPtr<ID3D11DeviceContext1> pd3d11DeferredCtx1{pd3d11DeferredCtx};
+    if (!pd3d11DeferredCtx1)
+    {
+        LOG_ERROR_MESSAGE("Failed to get ID3D11DeviceContext1 interface from device context");
+        return;
+    }
+
+    CreateDeferredContextImpl(ppDeferredContext, pd3d11DeferredCtx1);
+}
+
 void RenderDeviceD3D11Impl::IdleGPU()
 {
     VERIFY_EXPR(m_wpImmediateContexts.size() == 1);

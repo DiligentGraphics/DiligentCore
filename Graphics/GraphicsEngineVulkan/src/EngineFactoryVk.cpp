@@ -1424,8 +1424,6 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
         if (m_OnRenderDeviceCreated != nullptr)
             m_OnRenderDeviceCreated(pRenderDeviceVk);
 
-
-
         for (Uint32 CtxInd = 0; CtxInd < NumImmediateContexts; ++CtxInd)
         {
             const uint32_t           QueueId    = ppCommandQueues[CtxInd]->GetQueueFamilyIndex();
@@ -1450,20 +1448,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
         {
-            RefCntAutoPtr<DeviceContextVkImpl> pDeferredCtxVk{
-                NEW_RC_OBJ(RawMemAllocator, "DeviceContextVkImpl instance", DeviceContextVkImpl)(
-                    pRenderDeviceVk,
-                    DeviceContextDesc{
-                        nullptr,
-                        COMMAND_QUEUE_TYPE_UNKNOWN,
-                        true,                              // IsDeferred
-                        NumImmediateContexts + DeferredCtx // Context id
-                    }                                      //
-                    )};
-            // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
-            // keep a weak reference to the context
-            pDeferredCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + NumImmediateContexts + DeferredCtx));
-            pRenderDeviceVk->SetDeferredContext(DeferredCtx, pDeferredCtxVk);
+            pRenderDeviceVk->CreateDeferredContext(ppContexts + NumImmediateContexts + DeferredCtx);
         }
     }
     catch (const std::runtime_error&)

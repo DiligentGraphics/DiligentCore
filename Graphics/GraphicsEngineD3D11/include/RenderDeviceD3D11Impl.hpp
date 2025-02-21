@@ -132,6 +132,9 @@ public:
     virtual void DILIGENT_CALL_TYPE CreatePipelineStateCache(const PipelineStateCacheCreateInfo& CreateInfo,
                                                              IPipelineStateCache**               ppPSOCache) override final;
 
+    /// Implementation of IRenderDevice::CreateDeferredContext() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE CreateDeferredContext(IDeviceContext** ppContext) override final;
+
     /// Implementation of IRenderDeviceD3D11::GetD3D11Device() in Direct3D11 backend.
     ID3D11Device* DILIGENT_CALL_TYPE GetD3D11Device() override final { return m_pd3d11Device; }
 

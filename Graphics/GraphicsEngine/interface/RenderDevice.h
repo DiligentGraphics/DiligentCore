@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,6 +53,7 @@
 #include "ShaderBindingTable.h"
 #include "PipelineResourceSignature.h"
 #include "DeviceMemory.h"
+#include "DeviceContext.h"
 
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
@@ -335,6 +336,15 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                                   IPipelineStateCache**                  ppPSOCache) PURE;
 
 
+    /// Creates a deferred context.
+
+    /// \param [out] ppContext - Address of the memory location where a pointer to the
+    ///                          deferred context interface will be written.
+    /// 
+    /// \remarks    Deferred contexts are not supported in OpenGL and WebGPU backends.
+    VIRTUAL void METHOD(CreateDeferredContext)(THIS_
+                                               IDeviceContext** ppContext) PURE;
+
     /// Returns the device information, see Diligent::RenderDeviceInfo for details.
     VIRTUAL const RenderDeviceInfo REF METHOD(GetDeviceInfo)(THIS) CONST PURE;
 
@@ -452,6 +462,8 @@ DILIGENT_END_INTERFACE
 #    define IRenderDevice_CreateSBT(This, ...)                       CALL_IFACE_METHOD(RenderDevice, CreateSBT,                       This, __VA_ARGS__)
 #    define IRenderDevice_CreatePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(RenderDevice, CreatePipelineResourceSignature, This, __VA_ARGS__)
 #    define IRenderDevice_CreateDeviceMemory(This, ...)              CALL_IFACE_METHOD(RenderDevice, CreateDeviceMemory,              This, __VA_ARGS__)
+#    define IRenderDevice_CreatePipelineStateCache(This, ...)        CALL_IFACE_METHOD(RenderDevice, CreatePipelineStateCache,        This, __VA_ARGS__)
+#    define IRenderDevice_CreateDeferredContext(This, ...)           CALL_IFACE_METHOD(RenderDevice, CreateDeferredContext,           This, __VA_ARGS__)
 #    define IRenderDevice_GetAdapterInfo(This)                       CALL_IFACE_METHOD(RenderDevice, GetAdapterInfo,                  This)
 #    define IRenderDevice_GetDeviceInfo(This)                        CALL_IFACE_METHOD(RenderDevice, GetDeviceInfo,                   This)
 #    define IRenderDevice_GetTextureFormatInfo(This, ...)            CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,            This, __VA_ARGS__)
