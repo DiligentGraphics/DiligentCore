@@ -267,7 +267,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 
             EngineCI.AdapterId           = FindAdapter(Adapters, EnvCI.AdapterType, EnvCI.AdapterId);
             NumDeferredCtx               = EnvCI.NumDeferredContexts;
-            EngineCI.NumDeferredContexts = NumDeferredCtx;
+            EngineCI.NumDeferredContexts = NumDeferredCtx / 2;
             ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &m_pDevice, ppContexts.data());
         }
@@ -331,7 +331,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             EngineCI.DynamicDescriptorAllocationChunkSize[1] = 8;  // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
 
             NumDeferredCtx               = EnvCI.NumDeferredContexts;
-            EngineCI.NumDeferredContexts = NumDeferredCtx;
+            EngineCI.NumDeferredContexts = NumDeferredCtx / 2;
             ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             pFactoryD3D12->CreateDeviceAndContextsD3D12(EngineCI, &m_pDevice, ppContexts.data());
         }
@@ -431,7 +431,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             EngineCI.ppIgnoreDebugMessageNames = IgnoreDebugMessages.data();
 
             NumDeferredCtx               = EnvCI.NumDeferredContexts;
-            EngineCI.NumDeferredContexts = NumDeferredCtx;
+            EngineCI.NumDeferredContexts = NumDeferredCtx / 2;
             ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             pFactoryVk->CreateDeviceAndContextsVk(EngineCI, &m_pDevice, ppContexts.data());
         }
@@ -465,7 +465,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             EngineCI.SetValidationLevel(VALIDATION_LEVEL_1);
 
             NumDeferredCtx               = EnvCI.NumDeferredContexts;
-            EngineCI.NumDeferredContexts = NumDeferredCtx;
+            EngineCI.NumDeferredContexts = NumDeferredCtx / 2;
             ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             pFactoryMtl->CreateDeviceAndContextsMtl(EngineCI, &m_pDevice, ppContexts.data());
         }
@@ -495,6 +495,11 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
         default:
             LOG_ERROR_AND_THROW("Unknown device type");
             break;
+    }
+
+    for (Uint32 ctx = NumDeferredCtx / 2; ctx < NumDeferredCtx; ++ctx)
+    {
+        m_pDevice->CreateDeferredContext(&ppContexts[std::max(ContextCI.size(), size_t{1}) + ctx]);
     }
 
     {
