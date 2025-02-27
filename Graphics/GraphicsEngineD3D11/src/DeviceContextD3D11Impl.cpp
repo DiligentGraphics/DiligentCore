@@ -205,8 +205,8 @@ void DeviceContextD3D11Impl::TransitionShaderResources(IShaderResourceBinding* p
         return;
     }
 
-    auto* pShaderResBindingD3D11 = ClassPtrCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
-    auto& ResourceCache          = pShaderResBindingD3D11->GetResourceCache();
+    ShaderResourceBindingD3D11Impl* pShaderResBindingD3D11 = ClassPtrCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
+    ShaderResourceCacheD3D11&       ResourceCache          = pShaderResBindingD3D11->GetResourceCache();
 
     ResourceCache.TransitionResourceStates<ShaderResourceCacheD3D11::StateTransitionMode::Transition>(*this);
 }
@@ -215,9 +215,9 @@ void DeviceContextD3D11Impl::CommitShaderResources(IShaderResourceBinding* pShad
 {
     DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/);
 
-    auto* const pShaderResBindingD3D11 = ClassPtrCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
-    const auto  SRBIndex               = pShaderResBindingD3D11->GetBindingIndex();
-    auto&       ResourceCache          = pShaderResBindingD3D11->GetResourceCache();
+    ShaderResourceBindingD3D11Impl* const pShaderResBindingD3D11 = ClassPtrCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
+    const Uint32                          SRBIndex               = pShaderResBindingD3D11->GetBindingIndex();
+    ShaderResourceCacheD3D11&             ResourceCache          = pShaderResBindingD3D11->GetResourceCache();
 
     m_BindInfo.Set(SRBIndex, pShaderResBindingD3D11);
 
@@ -244,15 +244,15 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
 {
     for (SHADER_TYPE ActiveStages = m_BindInfo.ActiveStages; ActiveStages != SHADER_TYPE_UNKNOWN;)
     {
-        const auto ShaderInd  = ExtractFirstShaderStageIndex(ActiveStages);
-        const auto ShaderType = GetShaderTypeFromIndex(ShaderInd);
+        const Int32       ShaderInd  = ExtractFirstShaderStageIndex(ActiveStages);
+        const SHADER_TYPE ShaderType = GetShaderTypeFromIndex(ShaderInd);
 
         if (ResourceCache.GetCBCount(ShaderInd) > 0)
         {
-            auto* d3d11CBs       = m_CommittedRes.d3d11CBs[ShaderInd];
-            auto* FirstConstants = m_CommittedRes.CBFirstConstants[ShaderInd];
-            auto* NumConstants   = m_CommittedRes.CBNumConstants[ShaderInd];
-            if (auto Slots = ResourceCache.BindCBs(ShaderInd, d3d11CBs, FirstConstants, NumConstants, BaseBindings))
+            ID3D11Buffer** d3d11CBs       = m_CommittedRes.d3d11CBs[ShaderInd];
+            UINT*          FirstConstants = m_CommittedRes.CBFirstConstants[ShaderInd];
+            UINT*          NumConstants   = m_CommittedRes.CBNumConstants[ShaderInd];
+            if (ShaderResourceCacheD3D11::MinMaxSlot Slots = ResourceCache.BindCBs(ShaderInd, d3d11CBs, FirstConstants, NumConstants, BaseBindings))
             {
                 auto SetCB1Method = SetCB1Methods[ShaderInd];
                 (m_pd3d11DeviceContext->*SetCB1Method)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1,
@@ -271,9 +271,9 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
 
         if (ResourceCache.GetSRVCount(ShaderInd) > 0)
         {
-            auto* d3d11SRVs   = m_CommittedRes.d3d11SRVs[ShaderInd];
-            auto* d3d11SRVRes = m_CommittedRes.d3d11SRVResources[ShaderInd];
-            if (auto Slots = ResourceCache.BindResourceViews<D3D11_RESOURCE_RANGE_SRV>(ShaderInd, d3d11SRVs, d3d11SRVRes, BaseBindings))
+            ID3D11ShaderResourceView** d3d11SRVs   = m_CommittedRes.d3d11SRVs[ShaderInd];
+            ID3D11Resource**           d3d11SRVRes = m_CommittedRes.d3d11SRVResources[ShaderInd];
+            if (ShaderResourceCacheD3D11::MinMaxSlot Slots = ResourceCache.BindResourceViews<D3D11_RESOURCE_RANGE_SRV>(ShaderInd, d3d11SRVs, d3d11SRVRes, BaseBindings))
             {
                 auto SetSRVMethod = SetSRVMethods[ShaderInd];
                 (m_pd3d11DeviceContext->*SetSRVMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11SRVs + Slots.MinSlot);
@@ -289,8 +289,8 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
 
         if (ResourceCache.GetSamplerCount(ShaderInd) > 0)
         {
-            auto* d3d11Samplers = m_CommittedRes.d3d11Samplers[ShaderInd];
-            if (auto Slots = ResourceCache.BindResources<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd, d3d11Samplers, BaseBindings))
+            ID3D11SamplerState** d3d11Samplers = m_CommittedRes.d3d11Samplers[ShaderInd];
+            if (ShaderResourceCacheD3D11::MinMaxSlot Slots = ResourceCache.BindResources<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd, d3d11Samplers, BaseBindings))
             {
                 auto SetSamplerMethod = SetSamplerMethods[ShaderInd];
                 (m_pd3d11DeviceContext->*SetSamplerMethod)(Slots.MinSlot, Slots.MaxSlot - Slots.MinSlot + 1, d3d11Samplers + Slots.MinSlot);
@@ -311,7 +311,7 @@ void DeviceContextD3D11Impl::BindCacheResources(const ShaderResourceCacheD3D11& 
 
             ID3D11UnorderedAccessView** d3d11UAVs   = m_CommittedRes.d3d11UAVs[ShaderInd];
             ID3D11Resource**            d3d11UAVRes = m_CommittedRes.d3d11UAVResources[ShaderInd];
-            if (auto Slots = ResourceCache.BindResourceViews<D3D11_RESOURCE_RANGE_UAV>(ShaderInd, d3d11UAVs, d3d11UAVRes, BaseBindings))
+            if (ShaderResourceCacheD3D11::MinMaxSlot Slots = ResourceCache.BindResourceViews<D3D11_RESOURCE_RANGE_UAV>(ShaderInd, d3d11UAVs, d3d11UAVRes, BaseBindings))
             {
                 if (ShaderInd == PSInd)
                 {
@@ -397,17 +397,17 @@ void DeviceContextD3D11Impl::BindDynamicCBs(const ShaderResourceCacheD3D11&    R
 {
     for (SHADER_TYPE ActiveStages = m_BindInfo.ActiveStages; ActiveStages != SHADER_TYPE_UNKNOWN;)
     {
-        const auto ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
+        const Int32 ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
         if (ResourceCache.GetDynamicCBOffsetsMask(ShaderInd) == 0)
         {
             // Skip stages that don't have any constant buffers with dynamic offsets
             continue;
         }
 
-        auto* d3d11CBs       = m_CommittedRes.d3d11CBs[ShaderInd];
-        auto* FirstConstants = m_CommittedRes.CBFirstConstants[ShaderInd];
-        auto* NumConstants   = m_CommittedRes.CBNumConstants[ShaderInd];
-        auto  SetCB1Method   = SetCB1Methods[ShaderInd];
+        ID3D11Buffer** d3d11CBs       = m_CommittedRes.d3d11CBs[ShaderInd];
+        UINT*          FirstConstants = m_CommittedRes.CBFirstConstants[ShaderInd];
+        UINT*          NumConstants   = m_CommittedRes.CBNumConstants[ShaderInd];
+        auto           SetCB1Method   = SetCB1Methods[ShaderInd];
 
         ResourceCache.BindDynamicCBs(ShaderInd, d3d11CBs, FirstConstants, NumConstants, BaseBindings,
                                      [&](Uint32 Slot) //
@@ -418,7 +418,7 @@ void DeviceContextD3D11Impl::BindDynamicCBs(const ShaderResourceCacheD3D11&    R
 #ifdef DILIGENT_DEVELOPMENT
         if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
         {
-            const auto ShaderType = GetShaderTypeFromIndex(ShaderInd);
+            const SHADER_TYPE ShaderType = GetShaderTypeFromIndex(ShaderInd);
             DvpVerifyCommittedCBs(ShaderType);
         }
 #endif
@@ -436,15 +436,15 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
 
     while (BindSRBMask != 0)
     {
-        auto SignBit = ExtractLSB(BindSRBMask);
-        auto sign    = PlatformMisc::GetLSB(SignBit);
+        Uint32 SignBit = ExtractLSB(BindSRBMask);
+        Uint32 sign    = PlatformMisc::GetLSB(SignBit);
         VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
-        const auto& BaseBindings = m_pPipelineState->GetBaseBindings(sign);
+        const D3D11ShaderResourceCounters& BaseBindings = m_pPipelineState->GetBaseBindings(sign);
 
 #ifdef DILIGENT_DEVELOPMENT
         m_BindInfo.BaseBindings[sign] = BaseBindings;
 #endif
-        const auto* pResourceCache = m_BindInfo.ResourceCaches[sign];
+        const ShaderResourceCacheD3D11* pResourceCache = m_BindInfo.ResourceCaches[sign];
         DEV_CHECK_ERR(pResourceCache != nullptr, "Shader resource cache at index ", sign, " is null.");
         if (m_BindInfo.StaleSRBMask & SignBit)
         {
@@ -473,12 +473,12 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
     {
         // Pixel shader UAVs cannot be set independently; they all need to be set at the same time.
         // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
-        const auto StartUAVSlot = m_NumBoundRenderTargets;
+        const Uint32 StartUAVSlot = m_NumBoundRenderTargets;
 
         const Uint8 NumUAVSlots = m_pPipelineState->GetNumPixelUAVs();
         VERIFY(NumUAVSlots > StartUAVSlot, "Number of UAVs must be greater than the render target count");
-        auto* d3d11UAVs   = m_CommittedRes.d3d11UAVs[PSInd];
-        auto* d3d11UAVRes = m_CommittedRes.d3d11UAVResources[PSInd];
+        ID3D11UnorderedAccessView** d3d11UAVs   = m_CommittedRes.d3d11UAVs[PSInd];
+        ID3D11Resource**            d3d11UAVRes = m_CommittedRes.d3d11UAVResources[PSInd];
         m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(
             D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr,
             StartUAVSlot, NumUAVSlots - StartUAVSlot, d3d11UAVs + StartUAVSlot, nullptr);
@@ -497,9 +497,9 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
         // This is important as UnbindPixelShaderUAV<> function may need to rebind
         // existing UAVs and the UAVs pointed to by CommittedD3D11UAVRes must be alive
         // (we do not keep strong references to d3d11 UAVs)
-        auto* CommittedD3D11UAVs          = m_CommittedRes.d3d11UAVs[PSInd];
-        auto* CommittedD3D11UAVRes        = m_CommittedRes.d3d11UAVResources[PSInd];
-        auto& NumCommittedPixelShaderUAVs = m_CommittedRes.NumUAVs[PSInd];
+        ID3D11UnorderedAccessView** CommittedD3D11UAVs          = m_CommittedRes.d3d11UAVs[PSInd];
+        ID3D11Resource**            CommittedD3D11UAVRes        = m_CommittedRes.d3d11UAVResources[PSInd];
+        Uint8&                      NumCommittedPixelShaderUAVs = m_CommittedRes.NumUAVs[PSInd];
         for (Uint32 uav = 0; uav < NumCommittedPixelShaderUAVs; ++uav)
         {
             CommittedD3D11UAVRes[uav] = nullptr;
@@ -588,11 +588,11 @@ void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pP
 
     for (UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot)
     {
-        auto&         CurrStream     = m_VertexStreams[Slot];
-        auto*         pBuffD3D11Impl = CurrStream.pBuffer.RawPtr();
-        ID3D11Buffer* pd3d11Buffer   = pBuffD3D11Impl ? pBuffD3D11Impl->m_pd3d11Buffer : nullptr;
-        const auto    Stride         = pPipelineStateD3D11->GetBufferStride(Slot);
-        const auto    Offset         = StaticCast<UINT>(CurrStream.Offset);
+        VertexStreamInfo<BufferD3D11Impl>& CurrStream     = m_VertexStreams[Slot];
+        BufferD3D11Impl*                   pBuffD3D11Impl = CurrStream.pBuffer;
+        ID3D11Buffer*                      pd3d11Buffer   = pBuffD3D11Impl ? pBuffD3D11Impl->m_pd3d11Buffer : nullptr;
+        const Uint32                       Stride         = pPipelineStateD3D11->GetBufferStride(Slot);
+        const UINT                         Offset         = StaticCast<UINT>(CurrStream.Offset);
 
         // It is safe to perform raw pointer check because device context keeps
         // all buffers alive.
@@ -635,7 +635,7 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
     DvpVerifyRenderTargets();
 #endif
 
-    auto* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();
+    ID3D11InputLayout* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();
     if (pd3d11InputLayout != nullptr && !m_bCommittedD3D11VBsUpToDate)
     {
         DEV_CHECK_ERR(m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
@@ -655,7 +655,7 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
     {
         for (UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot)
         {
-            if (auto* pBuffD3D11Impl = m_VertexStreams[Slot].pBuffer.RawPtr())
+            if (BufferD3D11Impl* pBuffD3D11Impl = m_VertexStreams[Slot].pBuffer)
             {
                 if (pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                 {
@@ -670,7 +670,7 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
         if ((m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE) != 0)
         {
             // Verify bindings after all resources are set
-            const auto ActiveStages = m_pPipelineState->GetActiveShaderStages();
+            const SHADER_TYPE ActiveStages = m_pPipelineState->GetActiveShaderStages();
             DvpVerifyCommittedSRVs(ActiveStages);
             DvpVerifyCommittedSamplers(ActiveStages);
             DvpVerifyCommittedCBs(ActiveStages);
@@ -731,7 +731,7 @@ void DeviceContextD3D11Impl::MultiDraw(const MultiDrawAttribs& Attribs)
     {
         for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
         {
-            const auto& Item = Attribs.pDrawItems[i];
+            const MultiDrawItem& Item = Attribs.pDrawItems[i];
             if (Item.NumVertices > 0)
             {
                 m_pd3d11DeviceContext->DrawInstanced(Item.NumVertices, Attribs.NumInstances, Item.StartVertexLocation, Attribs.FirstInstanceLocation);
@@ -742,7 +742,7 @@ void DeviceContextD3D11Impl::MultiDraw(const MultiDrawAttribs& Attribs)
     {
         for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
         {
-            const auto& Item = Attribs.pDrawItems[i];
+            const MultiDrawItem& Item = Attribs.pDrawItems[i];
             if (Item.NumVertices > 0)
             {
                 m_pd3d11DeviceContext->Draw(Item.NumVertices, Item.StartVertexLocation);
@@ -776,7 +776,7 @@ void DeviceContextD3D11Impl::MultiDrawIndexed(const MultiDrawIndexedAttribs& Att
     {
         for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
         {
-            const auto& Item = Attribs.pDrawItems[i];
+            const MultiDrawIndexedItem& Item = Attribs.pDrawItems[i];
             m_pd3d11DeviceContext->DrawIndexedInstanced(Item.NumIndices, Attribs.NumInstances, Item.FirstIndexLocation, Item.BaseVertex, Attribs.FirstInstanceLocation);
         }
     }
@@ -784,7 +784,7 @@ void DeviceContextD3D11Impl::MultiDrawIndexed(const MultiDrawIndexedAttribs& Att
     {
         for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
         {
-            const auto& Item = Attribs.pDrawItems[i];
+            const MultiDrawIndexedItem& Item = Attribs.pDrawItems[i];
             m_pd3d11DeviceContext->DrawIndexed(Item.NumIndices, Item.FirstIndexLocation, Item.BaseVertex);
         }
     }
@@ -797,8 +797,8 @@ void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
 
     PrepareForDraw(Attribs.Flags);
 
-    auto*         pIndirectDrawAttribsD3D11 = ClassPtrCast<BufferD3D11Impl>(Attribs.pAttribsBuffer);
-    ID3D11Buffer* pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
+    BufferD3D11Impl* pIndirectDrawAttribsD3D11 = ClassPtrCast<BufferD3D11Impl>(Attribs.pAttribsBuffer);
+    ID3D11Buffer*    pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
 
     bool NativeMultiDrawExecuted = false;
     if (Attribs.DrawCount > 1)
@@ -820,7 +820,7 @@ void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs)
     {
         for (Uint32 draw = 0; draw < Attribs.DrawCount; ++draw)
         {
-            const auto ArgsOffset = Attribs.DrawArgsOffset + Uint64{draw} * Uint64{Attribs.DrawArgsStride};
+            const Uint64 ArgsOffset = Attribs.DrawArgsOffset + Uint64{draw} * Uint64{Attribs.DrawArgsStride};
             m_pd3d11DeviceContext->DrawInstancedIndirect(pd3d11ArgsBuff, StaticCast<UINT>(ArgsOffset));
         }
     }
@@ -834,8 +834,8 @@ void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
 
     PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
-    auto*         pIndirectDrawAttribsD3D11 = ClassPtrCast<BufferD3D11Impl>(Attribs.pAttribsBuffer);
-    ID3D11Buffer* pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
+    BufferD3D11Impl* pIndirectDrawAttribsD3D11 = ClassPtrCast<BufferD3D11Impl>(Attribs.pAttribsBuffer);
+    ID3D11Buffer*    pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
 
     bool NativeMultiDrawExecuted = false;
     if (Attribs.DrawCount >= 1)
@@ -857,7 +857,7 @@ void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
     {
         for (Uint32 draw = 0; draw < Attribs.DrawCount; ++draw)
         {
-            const auto ArgsOffset = Attribs.DrawArgsOffset + Uint64{draw} * Uint64{Attribs.DrawArgsStride};
+            const Uint64 ArgsOffset = Attribs.DrawArgsOffset + Uint64{draw} * Uint64{Attribs.DrawArgsStride};
             m_pd3d11DeviceContext->DrawIndexedInstancedIndirect(pd3d11ArgsBuff, StaticCast<UINT>(ArgsOffset));
         }
     }
@@ -927,7 +927,7 @@ void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndire
     }
 #endif
 
-    auto* pd3d11Buff = ClassPtrCast<BufferD3D11Impl>(Attribs.pAttribsBuffer)->GetD3D11Buffer();
+    ID3D11Buffer* pd3d11Buff = ClassPtrCast<BufferD3D11Impl>(Attribs.pAttribsBuffer)->GetD3D11Buffer();
     m_pd3d11DeviceContext->DispatchIndirect(pd3d11Buff, StaticCast<UINT>(Attribs.DispatchArgsByteOffset));
 }
 
@@ -942,8 +942,8 @@ void DeviceContextD3D11Impl::ClearDepthStencil(ITextureView*                  pV
 
     VERIFY_EXPR(pView != nullptr);
 
-    auto* pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pView);
-    auto* pd3d11DSV  = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
+    TextureViewD3D11Impl*   pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pView);
+    ID3D11DepthStencilView* pd3d11DSV  = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
 
     UINT32 d3d11ClearFlags = 0;
     if (ClearFlags & CLEAR_DEPTH_FLAG) d3d11ClearFlags |= D3D11_CLEAR_DEPTH;
@@ -959,8 +959,8 @@ void DeviceContextD3D11Impl::ClearRenderTarget(ITextureView* pView, const void* 
 
     VERIFY_EXPR(pView != nullptr);
 
-    auto* pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pView);
-    auto* pd3d11RTV  = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
+    TextureViewD3D11Impl*   pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pView);
+    ID3D11RenderTargetView* pd3d11RTV  = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
 
     static constexpr float Zero[4] = {0.f, 0.f, 0.f, 0.f};
     if (RGBA == nullptr)
@@ -997,16 +997,16 @@ void DeviceContextD3D11Impl::UpdateBuffer(IBuffer*                       pBuffer
 {
     TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData, StateTransitionMode);
 
-    auto* pBufferD3D11Impl = ClassPtrCast<BufferD3D11Impl>(pBuffer);
+    BufferD3D11Impl* pBufferD3D11Impl = ClassPtrCast<BufferD3D11Impl>(pBuffer);
 
     D3D11_BOX DstBox;
-    DstBox.left   = StaticCast<UINT>(Offset);
-    DstBox.right  = StaticCast<UINT>(Offset + Size);
-    DstBox.top    = 0;
-    DstBox.bottom = 1;
-    DstBox.front  = 0;
-    DstBox.back   = 1;
-    auto* pDstBox = (Offset == 0 && Size == pBufferD3D11Impl->GetDesc().Size) ? nullptr : &DstBox;
+    DstBox.left        = StaticCast<UINT>(Offset);
+    DstBox.right       = StaticCast<UINT>(Offset + Size);
+    DstBox.top         = 0;
+    DstBox.bottom      = 1;
+    DstBox.front       = 0;
+    DstBox.back        = 1;
+    D3D11_BOX* pDstBox = (Offset == 0 && Size == pBufferD3D11Impl->GetDesc().Size) ? nullptr : &DstBox;
     m_pd3d11DeviceContext->UpdateSubresource(pBufferD3D11Impl->m_pd3d11Buffer, 0, pDstBox, pData, 0, 0);
 }
 
@@ -1020,8 +1020,8 @@ void DeviceContextD3D11Impl::CopyBuffer(IBuffer*                       pSrcBuffe
 {
     TDeviceContextBase::CopyBuffer(pSrcBuffer, SrcOffset, SrcBufferTransitionMode, pDstBuffer, DstOffset, Size, DstBufferTransitionMode);
 
-    auto* pSrcBufferD3D11Impl = ClassPtrCast<BufferD3D11Impl>(pSrcBuffer);
-    auto* pDstBufferD3D11Impl = ClassPtrCast<BufferD3D11Impl>(pDstBuffer);
+    BufferD3D11Impl* pSrcBufferD3D11Impl = ClassPtrCast<BufferD3D11Impl>(pSrcBuffer);
+    BufferD3D11Impl* pDstBufferD3D11Impl = ClassPtrCast<BufferD3D11Impl>(pDstBuffer);
 
     D3D11_BOX SrcBox;
     SrcBox.left   = StaticCast<UINT>(SrcOffset);
@@ -1038,9 +1038,9 @@ void DeviceContextD3D11Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
 {
     TDeviceContextBase::MapBuffer(pBuffer, MapType, MapFlags, pMappedData);
 
-    auto*     pBufferD3D11  = ClassPtrCast<BufferD3D11Impl>(pBuffer);
-    D3D11_MAP d3d11MapType  = static_cast<D3D11_MAP>(0);
-    UINT      d3d11MapFlags = 0;
+    BufferD3D11Impl* pBufferD3D11  = ClassPtrCast<BufferD3D11Impl>(pBuffer);
+    D3D11_MAP        d3d11MapType  = static_cast<D3D11_MAP>(0);
+    UINT             d3d11MapFlags = 0;
     MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
 
     D3D11_MAPPED_SUBRESOURCE MappedBuff;
@@ -1056,7 +1056,7 @@ void DeviceContextD3D11Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
 void DeviceContextD3D11Impl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
-    auto* pBufferD3D11 = ClassPtrCast<BufferD3D11Impl>(pBuffer);
+    BufferD3D11Impl* pBufferD3D11 = ClassPtrCast<BufferD3D11Impl>(pBuffer);
     m_pd3d11DeviceContext->Unmap(pBufferD3D11->m_pd3d11Buffer, 0);
 }
 
@@ -1070,8 +1070,8 @@ void DeviceContextD3D11Impl::UpdateTexture(ITexture*                      pTextu
 {
     TDeviceContextBase::UpdateTexture(pTexture, MipLevel, Slice, DstBox, SubresData, SrcBufferTransitionMode, DstTextureTransitionMode);
 
-    auto*       pTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pTexture);
-    const auto& Desc      = pTexD3D11->GetDesc();
+    TextureBaseD3D11*  pTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pTexture);
+    const TextureDesc& Desc      = pTexD3D11->GetDesc();
 
     // Direct3D11 backend uses UpdateData() to initialize textures, so we can't check the usage in ValidateUpdateTextureParams()
     DEV_CHECK_ERR(Desc.Usage == USAGE_DEFAULT || Desc.Usage == USAGE_SPARSE,
@@ -1084,13 +1084,13 @@ void DeviceContextD3D11Impl::UpdateTexture(ITexture*                      pTextu
     }
 
     D3D11_BOX D3D11Box;
-    D3D11Box.left          = DstBox.MinX;
-    D3D11Box.right         = DstBox.MaxX;
-    D3D11Box.top           = DstBox.MinY;
-    D3D11Box.bottom        = DstBox.MaxY;
-    D3D11Box.front         = DstBox.MinZ;
-    D3D11Box.back          = DstBox.MaxZ;
-    const auto& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
+    D3D11Box.left                          = DstBox.MinX;
+    D3D11Box.right                         = DstBox.MaxX;
+    D3D11Box.top                           = DstBox.MinY;
+    D3D11Box.bottom                        = DstBox.MaxY;
+    D3D11Box.front                         = DstBox.MinZ;
+    D3D11Box.back                          = DstBox.MaxZ;
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
         // Align update region by the compressed block size
@@ -1102,7 +1102,7 @@ void DeviceContextD3D11Impl::UpdateTexture(ITexture*                      pTextu
         VERIFY((FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight - 1)) == 0, "Compressed block height (", Uint32{FmtAttribs.BlockHeight}, ") is expected to be power of 2");
         D3D11Box.bottom = (D3D11Box.bottom + FmtAttribs.BlockHeight - 1) & ~(FmtAttribs.BlockHeight - 1);
     }
-    auto SubresIndex = D3D11CalcSubresource(MipLevel, Slice, Desc.MipLevels);
+    UINT SubresIndex = D3D11CalcSubresource(MipLevel, Slice, Desc.MipLevels);
     m_pd3d11DeviceContext->UpdateSubresource(pTexD3D11->GetD3D11Texture(), SubresIndex, &D3D11Box, SubresData.pData, StaticCast<UINT>(SubresData.Stride), StaticCast<UINT>(SubresData.DepthStride));
 }
 
@@ -1110,11 +1110,11 @@ void DeviceContextD3D11Impl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 {
     TDeviceContextBase::CopyTexture(CopyAttribs);
 
-    auto* pSrcTexD3D11 = ClassPtrCast<TextureBaseD3D11>(CopyAttribs.pSrcTexture);
-    auto* pDstTexD3D11 = ClassPtrCast<TextureBaseD3D11>(CopyAttribs.pDstTexture);
+    TextureBaseD3D11* pSrcTexD3D11 = ClassPtrCast<TextureBaseD3D11>(CopyAttribs.pSrcTexture);
+    TextureBaseD3D11* pDstTexD3D11 = ClassPtrCast<TextureBaseD3D11>(CopyAttribs.pDstTexture);
 
     D3D11_BOX D3D11SrcBox, *pD3D11SrcBox = nullptr;
-    if (const auto* pSrcBox = CopyAttribs.pSrcBox)
+    if (const Box* pSrcBox = CopyAttribs.pSrcBox)
     {
         D3D11SrcBox.left   = pSrcBox->MinX;
         D3D11SrcBox.right  = pSrcBox->MaxX;
@@ -1124,8 +1124,8 @@ void DeviceContextD3D11Impl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         D3D11SrcBox.back   = pSrcBox->MaxZ;
         pD3D11SrcBox       = &D3D11SrcBox;
     }
-    auto SrcSubRes = D3D11CalcSubresource(CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, pSrcTexD3D11->GetDesc().MipLevels);
-    auto DstSubRes = D3D11CalcSubresource(CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, pDstTexD3D11->GetDesc().MipLevels);
+    UINT SrcSubRes = D3D11CalcSubresource(CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, pSrcTexD3D11->GetDesc().MipLevels);
+    UINT DstSubRes = D3D11CalcSubresource(CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, pDstTexD3D11->GetDesc().MipLevels);
     m_pd3d11DeviceContext->CopySubresourceRegion(pDstTexD3D11->GetD3D11Texture(), DstSubRes, CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ,
                                                  pSrcTexD3D11->GetD3D11Texture(), SrcSubRes, pD3D11SrcBox);
 }
@@ -1141,15 +1141,15 @@ void DeviceContextD3D11Impl::MapTextureSubresource(ITexture*                 pTe
 {
     TDeviceContextBase::MapTextureSubresource(pTexture, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
 
-    auto*       pTexD3D11     = ClassPtrCast<TextureBaseD3D11>(pTexture);
-    const auto& TexDesc       = pTexD3D11->GetDesc();
-    D3D11_MAP   d3d11MapType  = static_cast<D3D11_MAP>(0);
-    UINT        d3d11MapFlags = 0;
+    TextureBaseD3D11*  pTexD3D11     = ClassPtrCast<TextureBaseD3D11>(pTexture);
+    const TextureDesc& TexDesc       = pTexD3D11->GetDesc();
+    D3D11_MAP          d3d11MapType  = static_cast<D3D11_MAP>(0);
+    UINT               d3d11MapFlags = 0;
     MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
 
-    auto                     Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, TexDesc.MipLevels);
+    UINT                     Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, TexDesc.MipLevels);
     D3D11_MAPPED_SUBRESOURCE MappedTex;
-    auto                     hr = m_pd3d11DeviceContext->Map(pTexD3D11->GetD3D11Texture(), Subresource, d3d11MapType, d3d11MapFlags, &MappedTex);
+    HRESULT                  hr = m_pd3d11DeviceContext->Map(pTexD3D11->GetD3D11Texture(), Subresource, d3d11MapType, d3d11MapFlags, &MappedTex);
     if (FAILED(hr))
     {
         VERIFY_EXPR(hr == DXGI_ERROR_WAS_STILL_DRAWING);
@@ -1167,17 +1167,17 @@ void DeviceContextD3D11Impl::UnmapTextureSubresource(ITexture* pTexture, Uint32 
 {
     TDeviceContextBase::UnmapTextureSubresource(pTexture, MipLevel, ArraySlice);
 
-    auto*       pTexD3D11   = ClassPtrCast<TextureBaseD3D11>(pTexture);
-    const auto& TexDesc     = pTexD3D11->GetDesc();
-    auto        Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, TexDesc.MipLevels);
+    TextureBaseD3D11*  pTexD3D11   = ClassPtrCast<TextureBaseD3D11>(pTexture);
+    const TextureDesc& TexDesc     = pTexD3D11->GetDesc();
+    UINT               Subresource = D3D11CalcSubresource(MipLevel, ArraySlice, TexDesc.MipLevels);
     m_pd3d11DeviceContext->Unmap(pTexD3D11->GetD3D11Texture(), Subresource);
 }
 
 void DeviceContextD3D11Impl::GenerateMips(ITextureView* pTextureView)
 {
     TDeviceContextBase::GenerateMips(pTextureView);
-    auto& TexViewD3D11 = *ClassPtrCast<TextureViewD3D11Impl>(pTextureView);
-    auto* pd3d11SRV    = static_cast<ID3D11ShaderResourceView*>(TexViewD3D11.GetD3D11View());
+    TextureViewD3D11Impl&     TexViewD3D11 = *ClassPtrCast<TextureViewD3D11Impl>(pTextureView);
+    ID3D11ShaderResourceView* pd3d11SRV    = static_cast<ID3D11ShaderResourceView*>(TexViewD3D11.GetD3D11View());
     m_pd3d11DeviceContext->GenerateMips(pd3d11SRV);
 }
 
@@ -1203,8 +1203,8 @@ void DeviceContextD3D11Impl::SetVertexBuffers(Uint32                         Sta
     TDeviceContextBase::SetVertexBuffers(StartSlot, NumBuffersSet, ppBuffers, pOffsets, StateTransitionMode, Flags);
     for (Uint32 Slot = 0; Slot < m_NumVertexStreams; ++Slot)
     {
-        auto& CurrStream = m_VertexStreams[Slot];
-        if (auto* pBuffD3D11Impl = CurrStream.pBuffer.RawPtr())
+        VertexStreamInfo<BufferD3D11Impl>& CurrStream = m_VertexStreams[Slot];
+        if (BufferD3D11Impl* pBuffD3D11Impl = CurrStream.pBuffer)
         {
             if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
             {
@@ -1313,8 +1313,8 @@ void DeviceContextD3D11Impl::CommitRenderTargets()
 
     for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
     {
-        auto* pViewD3D11 = m_pBoundRenderTargets[rt].RawPtr();
-        pd3d11RTs[rt]    = pViewD3D11 != nullptr ? static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View()) : nullptr;
+        TextureViewD3D11Impl* pViewD3D11 = m_pBoundRenderTargets[rt];
+        pd3d11RTs[rt]                    = pViewD3D11 != nullptr ? static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View()) : nullptr;
     }
 
     if (m_pBoundDepthStencil != nullptr)
@@ -1322,14 +1322,14 @@ void DeviceContextD3D11Impl::CommitRenderTargets()
         pd3d11DSV = static_cast<ID3D11DepthStencilView*>(m_pBoundDepthStencil->GetD3D11View());
     }
 
-    auto& NumCommittedPixelShaderUAVs = m_CommittedRes.NumUAVs[PSInd];
+    Uint8& NumCommittedPixelShaderUAVs = m_CommittedRes.NumUAVs[PSInd];
     if (NumCommittedPixelShaderUAVs > 0)
     {
         m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(NumRenderTargets, NumRenderTargets > 0 ? pd3d11RTs : nullptr, pd3d11DSV,
                                                                          0, D3D11_KEEP_UNORDERED_ACCESS_VIEWS, nullptr, nullptr);
 
-        auto* CommittedD3D11UAVs   = m_CommittedRes.d3d11UAVs[PSInd];
-        auto* CommittedD3D11UAVRes = m_CommittedRes.d3d11UAVResources[PSInd];
+        ID3D11UnorderedAccessView** CommittedD3D11UAVs   = m_CommittedRes.d3d11UAVs[PSInd];
+        ID3D11Resource**            CommittedD3D11UAVRes = m_CommittedRes.d3d11UAVResources[PSInd];
         for (Uint32 slot = 0; slot < NumRenderTargets; ++slot)
         {
             CommittedD3D11UAVs[slot]   = nullptr;
@@ -1379,7 +1379,7 @@ bool UnbindPixelShaderUAV<ID3D11UnorderedAccessView, TSetUnorderedAccessViewsTyp
     if (SetD3D11UAVMethod == reinterpret_cast<TSetUnorderedAccessViewsType>(&ID3D11DeviceContext::OMSetRenderTargetsAndUnorderedAccessViews))
     {
         // Pixel shader UAVs are bound in a special way simultaneously with the render targets
-        auto UAVStartSlot = NumCommittedRenderTargets;
+        Uint32 UAVStartSlot = NumCommittedRenderTargets;
         // UAVs cannot be set independently; they all need to be set at the same time.
         // https://docs.microsoft.com/en-us/windows/desktop/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews#remarks
 
@@ -1418,9 +1418,9 @@ void DeviceContextD3D11Impl::UnbindResourceView(TD3D11ResourceViewType Committed
 {
     for (Int32 ShaderTypeInd = 0; ShaderTypeInd < NumShaderTypes; ++ShaderTypeInd)
     {
-        auto* CommittedD3D11Views     = CommittedD3D11ViewsArr[ShaderTypeInd];
-        auto* CommittedD3D11Resources = CommittedD3D11ResourcesArr[ShaderTypeInd];
-        auto& NumCommittedSlots       = NumCommittedResourcesArr[ShaderTypeInd];
+        auto*  CommittedD3D11Views     = CommittedD3D11ViewsArr[ShaderTypeInd];
+        auto*  CommittedD3D11Resources = CommittedD3D11ResourcesArr[ShaderTypeInd];
+        Uint8& NumCommittedSlots       = NumCommittedResourcesArr[ShaderTypeInd];
 
         for (Uint32 Slot = 0; Slot < NumCommittedSlots; ++Slot)
         {
@@ -1467,7 +1467,7 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl& Buffer, RESO
 
     if (OldState & RESOURCE_STATE_INDEX_BUFFER)
     {
-        auto pd3d11IndBuffer = Buffer.GetD3D11Buffer();
+        ID3D11Buffer* pd3d11IndBuffer = Buffer.GetD3D11Buffer();
         if (pd3d11IndBuffer == m_CommittedD3D11IndexBuffer)
         {
             // Only unbind D3D11 buffer from the context!
@@ -1484,10 +1484,10 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl& Buffer, RESO
 
     if (OldState & RESOURCE_STATE_VERTEX_BUFFER)
     {
-        auto pd3d11VB = Buffer.GetD3D11Buffer();
+        ID3D11Buffer* pd3d11VB = Buffer.GetD3D11Buffer();
         for (Uint32 Slot = 0; Slot < m_NumCommittedD3D11VBs; ++Slot)
         {
-            auto& CommittedD3D11VB = m_CommittedD3D11VertexBuffers[Slot];
+            ID3D11Buffer*& CommittedD3D11VB = m_CommittedD3D11VertexBuffers[Slot];
             if (CommittedD3D11VB == pd3d11VB)
             {
                 // Unbind only D3D11 buffer
@@ -1509,8 +1509,8 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl& Buffer, RESO
     {
         for (Int32 ShaderTypeInd = 0; ShaderTypeInd < NumShaderTypes; ++ShaderTypeInd)
         {
-            auto* CommittedD3D11CBs = m_CommittedRes.d3d11CBs[ShaderTypeInd];
-            auto  NumSlots          = m_CommittedRes.NumCBs[ShaderTypeInd];
+            ID3D11Buffer** CommittedD3D11CBs = m_CommittedRes.d3d11CBs[ShaderTypeInd];
+            const Uint8    NumSlots          = m_CommittedRes.NumCBs[ShaderTypeInd];
             for (Uint32 Slot = 0; Slot < NumSlots; ++Slot)
             {
                 if (CommittedD3D11CBs[Slot] == pd3d11Buffer)
@@ -1537,7 +1537,7 @@ void DeviceContextD3D11Impl::UnbindTextureFromRenderTarget(TextureBaseD3D11& Tex
     bool bCommitRenderTargets = false;
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
     {
-        if (auto* pTexView = m_pBoundRenderTargets[rt].RawPtr())
+        if (TextureViewD3D11Impl* pTexView = m_pBoundRenderTargets[rt])
         {
             if (pTexView->GetTexture() == &Texture)
             {
@@ -1592,7 +1592,7 @@ void DeviceContextD3D11Impl::SetRenderTargetsExt(const SetRenderTargetsAttribs& 
         {
             if (m_pBoundRenderTargets[RT])
             {
-                auto* pTex = m_pBoundRenderTargets[RT]->GetTexture<TextureBaseD3D11>();
+                TextureBaseD3D11* pTex = m_pBoundRenderTargets[RT]->GetTexture<TextureBaseD3D11>();
                 if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
                 {
                     UnbindTextureFromInput(*pTex, pTex->GetD3D11Texture());
@@ -1610,13 +1610,13 @@ void DeviceContextD3D11Impl::SetRenderTargetsExt(const SetRenderTargetsAttribs& 
 
         if (m_pBoundDepthStencil)
         {
-            const auto ViewType = m_pBoundDepthStencil->GetDesc().ViewType;
+            const TEXTURE_VIEW_TYPE ViewType = m_pBoundDepthStencil->GetDesc().ViewType;
             VERIFY_EXPR(ViewType == TEXTURE_VIEW_DEPTH_STENCIL || ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL);
             const RESOURCE_STATE NewState = ViewType == TEXTURE_VIEW_DEPTH_STENCIL ?
                 RESOURCE_STATE_DEPTH_WRITE :
                 RESOURCE_STATE_DEPTH_READ;
 
-            auto* pTex = m_pBoundDepthStencil->GetTexture<TextureBaseD3D11>();
+            TextureBaseD3D11* pTex = m_pBoundDepthStencil->GetTexture<TextureBaseD3D11>();
             if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
             {
                 UnbindTextureFromInput(*pTex, pTex->GetD3D11Texture());
@@ -1641,10 +1641,10 @@ void DeviceContextD3D11Impl::SetRenderTargetsExt(const SetRenderTargetsAttribs& 
 void DeviceContextD3D11Impl::BeginSubpass()
 {
     VERIFY_EXPR(m_pActiveRenderPass);
-    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    const RenderPassDesc& RPDesc = m_pActiveRenderPass->GetDesc();
     VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
-    const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
-    const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
+    const SubpassDesc&     Subpass = RPDesc.pSubpasses[m_SubpassIndex];
+    const FramebufferDesc& FBDesc  = m_pBoundFramebuffer->GetDesc();
 
     // Unbind these attachments that will be used for output by the subpass.
     // There is no need to unbind textures from output as the new subpass attachments
@@ -1655,9 +1655,9 @@ void DeviceContextD3D11Impl::BeginSubpass()
     {
         if (AttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
         {
-            if (auto* pTexView = FBDesc.ppAttachments[AttachmentRef.AttachmentIndex])
+            if (ITextureView* pTexView = FBDesc.ppAttachments[AttachmentRef.AttachmentIndex])
             {
-                auto* pTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pTexView->GetTexture());
+                TextureBaseD3D11* pTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pTexView->GetTexture());
                 UnbindResourceView(m_CommittedRes.d3d11SRVs, m_CommittedRes.d3d11SRVResources, m_CommittedRes.NumSRVs, pTexD3D11->GetD3D11Texture(), SetSRVMethods);
             }
         }
@@ -1681,18 +1681,18 @@ void DeviceContextD3D11Impl::BeginSubpass()
 
     for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
     {
-        const auto& AttachmentRef   = Subpass.pRenderTargetAttachments[rt];
-        const auto  RTAttachmentIdx = AttachmentRef.AttachmentIndex;
+        const AttachmentReference& AttachmentRef   = Subpass.pRenderTargetAttachments[rt];
+        const Uint32               RTAttachmentIdx = AttachmentRef.AttachmentIndex;
         if (RTAttachmentIdx != ATTACHMENT_UNUSED)
         {
             const auto AttachmentFirstUse = m_pActiveRenderPass->GetAttachmentFirstLastUse(RTAttachmentIdx).first;
             if (AttachmentFirstUse == m_SubpassIndex && RPDesc.pAttachments[RTAttachmentIdx].LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
             {
-                if (auto* pTexView = FBDesc.ppAttachments[RTAttachmentIdx])
+                if (ITextureView* pTexView = FBDesc.ppAttachments[RTAttachmentIdx])
                 {
-                    auto* const pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pTexView);
-                    auto* const pd3d11RTV  = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
-                    const auto& ClearValue = m_AttachmentClearValues[RTAttachmentIdx];
+                    TextureViewD3D11Impl* const   pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pTexView);
+                    ID3D11RenderTargetView* const pd3d11RTV  = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
+                    const OptimizedClearValue&    ClearValue = m_AttachmentClearValues[RTAttachmentIdx];
                     m_pd3d11DeviceContext->ClearRenderTargetView(pd3d11RTV, ClearValue.Color);
                 }
             }
@@ -1701,17 +1701,17 @@ void DeviceContextD3D11Impl::BeginSubpass()
 
     if (Subpass.pDepthStencilAttachment)
     {
-        auto DSAttachmentIdx = Subpass.pDepthStencilAttachment->AttachmentIndex;
+        Uint32 DSAttachmentIdx = Subpass.pDepthStencilAttachment->AttachmentIndex;
         if (DSAttachmentIdx != ATTACHMENT_UNUSED)
         {
             const auto AttachmentFirstUse = m_pActiveRenderPass->GetAttachmentFirstLastUse(DSAttachmentIdx).first;
             if (AttachmentFirstUse == m_SubpassIndex && RPDesc.pAttachments[DSAttachmentIdx].LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
             {
-                if (auto* pTexView = FBDesc.ppAttachments[DSAttachmentIdx])
+                if (ITextureView* pTexView = FBDesc.ppAttachments[DSAttachmentIdx])
                 {
-                    auto* const pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pTexView);
-                    auto* const pd3d11DSV  = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
-                    const auto& ClearValue = m_AttachmentClearValues[DSAttachmentIdx];
+                    TextureViewD3D11Impl* const   pViewD3D11 = ClassPtrCast<TextureViewD3D11Impl>(pTexView);
+                    ID3D11DepthStencilView* const pd3d11DSV  = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
+                    const OptimizedClearValue&    ClearValue = m_AttachmentClearValues[DSAttachmentIdx];
                     m_pd3d11DeviceContext->ClearDepthStencilView(pd3d11DSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, ClearValue.DepthStencil.Depth, ClearValue.DepthStencil.Stencil);
                 }
             }
@@ -1722,33 +1722,33 @@ void DeviceContextD3D11Impl::BeginSubpass()
 void DeviceContextD3D11Impl::EndSubpass()
 {
     VERIFY_EXPR(m_pActiveRenderPass);
-    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    const RenderPassDesc& RPDesc = m_pActiveRenderPass->GetDesc();
     VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
-    const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
-    const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
+    const SubpassDesc&     Subpass = RPDesc.pSubpasses[m_SubpassIndex];
+    const FramebufferDesc& FBDesc  = m_pBoundFramebuffer->GetDesc();
 
     if (Subpass.pResolveAttachments != nullptr)
     {
         for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
         {
-            const auto& RslvAttachmentRef = Subpass.pResolveAttachments[rt];
+            const AttachmentReference& RslvAttachmentRef = Subpass.pResolveAttachments[rt];
             if (RslvAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
             {
-                const auto& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
+                const AttachmentReference& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
                 VERIFY_EXPR(RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED);
-                auto* pSrcView     = FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex];
-                auto* pDstView     = FBDesc.ppAttachments[RslvAttachmentRef.AttachmentIndex];
-                auto* pSrcTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pSrcView->GetTexture());
-                auto* pDstTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pDstView->GetTexture());
+                ITextureView*     pSrcView     = FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex];
+                ITextureView*     pDstView     = FBDesc.ppAttachments[RslvAttachmentRef.AttachmentIndex];
+                TextureBaseD3D11* pSrcTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pSrcView->GetTexture());
+                TextureBaseD3D11* pDstTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pDstView->GetTexture());
 
-                const auto& SrcViewDesc = pSrcView->GetDesc();
-                const auto& DstViewDesc = pDstView->GetDesc();
-                const auto& SrcTexDesc  = pSrcTexD3D11->GetDesc();
-                const auto& DstTexDesc  = pDstTexD3D11->GetDesc();
+                const TextureViewDesc& SrcViewDesc = pSrcView->GetDesc();
+                const TextureViewDesc& DstViewDesc = pDstView->GetDesc();
+                const TextureDesc&     SrcTexDesc  = pSrcTexD3D11->GetDesc();
+                const TextureDesc&     DstTexDesc  = pDstTexD3D11->GetDesc();
 
-                auto DXGIFmt        = TexFormatToDXGI_Format(RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex].Format);
-                auto SrcSubresIndex = D3D11CalcSubresource(SrcViewDesc.MostDetailedMip, SrcViewDesc.FirstArraySlice, SrcTexDesc.MipLevels);
-                auto DstSubresIndex = D3D11CalcSubresource(DstViewDesc.MostDetailedMip, DstViewDesc.FirstArraySlice, DstTexDesc.MipLevels);
+                DXGI_FORMAT DXGIFmt        = TexFormatToDXGI_Format(RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex].Format);
+                UINT        SrcSubresIndex = D3D11CalcSubresource(SrcViewDesc.MostDetailedMip, SrcViewDesc.FirstArraySlice, SrcTexDesc.MipLevels);
+                UINT        DstSubresIndex = D3D11CalcSubresource(DstViewDesc.MostDetailedMip, DstViewDesc.FirstArraySlice, DstTexDesc.MipLevels);
                 m_pd3d11DeviceContext->ResolveSubresource(pDstTexD3D11->GetD3D11Texture(), DstSubresIndex, pSrcTexD3D11->GetD3D11Texture(), SrcSubresIndex, DXGIFmt);
             }
         }
@@ -1864,7 +1864,7 @@ void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
 #ifdef DILIGENT_DEVELOPMENT
     if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
-        constexpr auto AllStages = SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE;
+        constexpr SHADER_TYPE AllStages = SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE;
         DvpVerifyCommittedSRVs(AllStages);
         DvpVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
         DvpVerifyCommittedSamplers(AllStages);
@@ -1902,7 +1902,7 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
     if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
-        constexpr auto AllStages = SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE;
+        constexpr SHADER_TYPE AllStages = SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE;
         DvpVerifyCommittedSRVs(AllStages);
         DvpVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
         DvpVerifyCommittedSamplers(AllStages);
@@ -1927,8 +1927,8 @@ void DeviceContextD3D11Impl::ExecuteCommandLists(Uint32               NumCommand
 
     for (Uint32 i = 0; i < NumCommandLists; ++i)
     {
-        auto* pCmdListD3D11 = ClassPtrCast<CommandListD3D11Impl>(ppCommandLists[i]);
-        auto* pd3d11CmdList = pCmdListD3D11->GetD3D11CommandList();
+        CommandListD3D11Impl* pCmdListD3D11 = ClassPtrCast<CommandListD3D11Impl>(ppCommandLists[i]);
+        ID3D11CommandList*    pd3d11CmdList = pCmdListD3D11->GetD3D11CommandList();
         m_pd3d11DeviceContext->ExecuteCommandList(pd3d11CmdList,
                                                   FALSE // A Boolean flag that determines whether the target context state is
                                                         // saved prior to and restored after the execution of a command list.
@@ -1946,7 +1946,7 @@ void DeviceContextD3D11Impl::ExecuteCommandLists(Uint32               NumCommand
     if (m_D3D11ValidationFlags & D3D11_VALIDATION_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
-        constexpr auto AllStages = SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE;
+        constexpr SHADER_TYPE AllStages = SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE;
         DvpVerifyCommittedSRVs(AllStages);
         DvpVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
         DvpVerifyCommittedSamplers(AllStages);
@@ -1969,7 +1969,7 @@ static CComPtr<ID3D11Query> CreateD3D11QueryEvent(ID3D11Device* pd3d11Device)
     QueryDesc.MiscFlags = 0;
 
     CComPtr<ID3D11Query> pd3d11Query;
-    auto                 hr = pd3d11Device->CreateQuery(&QueryDesc, &pd3d11Query);
+    HRESULT              hr = pd3d11Device->CreateQuery(&QueryDesc, &pd3d11Query);
     DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to create D3D11 query");
     VERIFY_EXPR(pd3d11Query);
     return pd3d11Query;
@@ -1979,10 +1979,10 @@ void DeviceContextD3D11Impl::EnqueueSignal(IFence* pFence, Uint64 Value)
 {
     TDeviceContextBase::EnqueueSignal(pFence, Value, 0);
 
-    auto*                pd3d11Device = m_pDevice->GetD3D11Device();
+    ID3D11Device*        pd3d11Device = m_pDevice->GetD3D11Device();
     CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
     m_pd3d11DeviceContext->End(pd3d11Query);
-    auto* pFenceD3D11Impl = ClassPtrCast<FenceD3D11Impl>(pFence);
+    FenceD3D11Impl* pFenceD3D11Impl = ClassPtrCast<FenceD3D11Impl>(pFence);
     pFenceD3D11Impl->AddPendingQuery(m_pd3d11DeviceContext, std::move(pd3d11Query), Value);
 }
 
@@ -1995,7 +1995,7 @@ void DeviceContextD3D11Impl::WaitForIdle()
 {
     DEV_CHECK_ERR(!IsDeferred(), "Only immediate contexts can be idled");
     Flush();
-    auto*                pd3d11Device = m_pDevice->GetD3D11Device();
+    ID3D11Device*        pd3d11Device = m_pDevice->GetD3D11Device();
     CComPtr<ID3D11Query> pd3d11Query  = CreateD3D11QueryEvent(pd3d11Device);
     m_pd3d11DeviceContext->End(pd3d11Query);
     BOOL Data;
@@ -2019,7 +2019,7 @@ void DeviceContextD3D11Impl::BeginQuery(IQuery* pQuery)
 {
     TDeviceContextBase::BeginQuery(pQuery, 0);
 
-    auto* const pQueryD3D11Impl = ClassPtrCast<QueryD3D11Impl>(pQuery);
+    QueryD3D11Impl* const pQueryD3D11Impl = ClassPtrCast<QueryD3D11Impl>(pQuery);
     if (pQueryD3D11Impl->GetDesc().Type == QUERY_TYPE_DURATION)
     {
         pQueryD3D11Impl->SetDisjointQuery(BeginDisjointQuery());
@@ -2035,9 +2035,9 @@ void DeviceContextD3D11Impl::EndQuery(IQuery* pQuery)
 {
     TDeviceContextBase::EndQuery(pQuery, 0);
 
-    auto* const pQueryD3D11Impl = ClassPtrCast<QueryD3D11Impl>(pQuery);
+    QueryD3D11Impl* const pQueryD3D11Impl = ClassPtrCast<QueryD3D11Impl>(pQuery);
 
-    const auto QueryType = pQueryD3D11Impl->GetDesc().Type;
+    const QUERY_TYPE QueryType = pQueryD3D11Impl->GetDesc().Type;
     DEV_CHECK_ERR(QueryType != QUERY_TYPE_DURATION || m_ActiveDisjointQuery,
                   "There is no active disjoint query. Did you forget to call BeginQuery for the duration query?");
     if (QueryType == QUERY_TYPE_TIMESTAMP)
@@ -2135,14 +2135,14 @@ void DeviceContextD3D11Impl::InvalidateState()
 static void AliasingBarrier(ID3D11DeviceContext* pd3d11Ctx, IDeviceObject* pResourceBefore, IDeviceObject* pResourceAfter)
 {
     DEV_CHECK_ERR(CComQIPtr<ID3D11DeviceContext2>{pd3d11Ctx}, "Failed to query ID3D11DeviceContext2");
-    auto* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(pd3d11Ctx);
-    bool  UseNVApi             = false;
+    ID3D11DeviceContext2* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(pd3d11Ctx);
+    bool                  UseNVApi             = false;
 
     auto GetD3D11Resource = [&UseNVApi](IDeviceObject* pResource) -> ID3D11Resource* //
     {
         if (RefCntAutoPtr<ITextureD3D11> pTexture{pResource, IID_TextureD3D11})
         {
-            const auto* pTexD3D11 = pTexture.ConstPtr<TextureBaseD3D11>();
+            const TextureBaseD3D11* pTexD3D11 = pTexture.ConstPtr<TextureBaseD3D11>();
             if (pTexD3D11->IsUsingNVApi())
                 UseNVApi = true;
             return pTexture->GetD3D11Texture();
@@ -2157,8 +2157,8 @@ static void AliasingBarrier(ID3D11DeviceContext* pd3d11Ctx, IDeviceObject* pReso
         }
     };
 
-    auto* pd3d11ResourceBefore = GetD3D11Resource(pResourceBefore);
-    auto* pd3d11ResourceAfter  = GetD3D11Resource(pResourceAfter);
+    ID3D11Resource* pd3d11ResourceBefore = GetD3D11Resource(pResourceBefore);
+    ID3D11Resource* pd3d11ResourceAfter  = GetD3D11Resource(pResourceAfter);
 
 #ifdef DILIGENT_ENABLE_D3D_NVAPI
     if (UseNVApi)
@@ -2179,7 +2179,7 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, const
 
     for (Uint32 i = 0; i < BarrierCount; ++i)
     {
-        const auto& Barrier = pResourceBarriers[i];
+        const StateTransitionDesc& Barrier = pResourceBarriers[i];
 #ifdef DILIGENT_DEVELOPMENT
         DvpVerifyStateTransitionDesc(Barrier);
 #endif
@@ -2316,30 +2316,30 @@ void DeviceContextD3D11Impl::ResolveTextureSubresource(ITexture*                
 {
     TDeviceContextBase::ResolveTextureSubresource(pSrcTexture, pDstTexture, ResolveAttribs);
 
-    auto* const pSrcTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pSrcTexture);
-    auto* const pDstTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pDstTexture);
-    const auto& SrcTexDesc   = pSrcTexD3D11->GetDesc();
-    const auto& DstTexDesc   = pDstTexD3D11->GetDesc();
+    TextureBaseD3D11* const pSrcTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pSrcTexture);
+    TextureBaseD3D11* const pDstTexD3D11 = ClassPtrCast<TextureBaseD3D11>(pDstTexture);
+    const TextureDesc&      SrcTexDesc   = pSrcTexD3D11->GetDesc();
+    const TextureDesc&      DstTexDesc   = pDstTexD3D11->GetDesc();
 
-    auto Format = ResolveAttribs.Format;
+    TEXTURE_FORMAT Format = ResolveAttribs.Format;
     if (Format == TEX_FORMAT_UNKNOWN)
     {
-        const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+        const TextureFormatAttribs& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
         if (!SrcFmtAttribs.IsTypeless)
         {
             Format = SrcTexDesc.Format;
         }
         else
         {
-            const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
+            const TextureFormatAttribs& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
             DEV_CHECK_ERR(!DstFmtAttribs.IsTypeless, "Resolve operation format can't be typeless when both source and destination textures are typeless");
             Format = DstFmtAttribs.Format;
         }
     }
 
-    auto DXGIFmt        = TexFormatToDXGI_Format(Format);
-    auto SrcSubresIndex = D3D11CalcSubresource(ResolveAttribs.SrcMipLevel, ResolveAttribs.SrcSlice, SrcTexDesc.MipLevels);
-    auto DstSubresIndex = D3D11CalcSubresource(ResolveAttribs.DstMipLevel, ResolveAttribs.DstSlice, DstTexDesc.MipLevels);
+    DXGI_FORMAT DXGIFmt        = TexFormatToDXGI_Format(Format);
+    UINT        SrcSubresIndex = D3D11CalcSubresource(ResolveAttribs.SrcMipLevel, ResolveAttribs.SrcSlice, SrcTexDesc.MipLevels);
+    UINT        DstSubresIndex = D3D11CalcSubresource(ResolveAttribs.DstMipLevel, ResolveAttribs.DstSlice, DstTexDesc.MipLevels);
     m_pd3d11DeviceContext->ResolveSubresource(pDstTexD3D11->GetD3D11Texture(), DstSubresIndex, pSrcTexD3D11->GetD3D11Texture(), SrcSubresIndex, DXGIFmt);
 }
 
@@ -2400,17 +2400,17 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
     VERIFY_EXPR(Attribs.NumBufferBinds != 0 || Attribs.NumTextureBinds != 0);
 
     DEV_CHECK_ERR(CComQIPtr<ID3D11DeviceContext2>{m_pd3d11DeviceContext}, "Failed to query ID3D11DeviceContext2");
-    auto* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(m_pd3d11DeviceContext.p);
+    ID3D11DeviceContext2* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(m_pd3d11DeviceContext.p);
 
     D3D11TileMappingHelper TileMapping;
     for (Uint32 i = 0; i < Attribs.NumBufferBinds; ++i)
     {
-        const auto& BuffBind   = Attribs.pBufferBinds[i];
-        auto*       pBuffD3D11 = ClassPtrCast<BufferD3D11Impl>(BuffBind.pBuffer);
+        const SparseBufferMemoryBindInfo& BuffBind   = Attribs.pBufferBinds[i];
+        BufferD3D11Impl*                  pBuffD3D11 = ClassPtrCast<BufferD3D11Impl>(BuffBind.pBuffer);
 
         for (Uint32 r = 0; r < BuffBind.NumRanges; ++r)
         {
-            const auto& BindRange = BuffBind.pRanges[r];
+            const SparseBufferMemoryBindRange& BindRange = BuffBind.pRanges[r];
             DEV_CHECK_ERR((BindRange.MemoryOffset % D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES) == 0,
                           "MemoryOffset must be a multiple of sparse block size");
 
@@ -2422,15 +2422,15 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
 
     for (Uint32 i = 0; i < Attribs.NumTextureBinds; ++i)
     {
-        const auto& TexBind        = Attribs.pTextureBinds[i];
-        auto*       pTexD3D11      = ClassPtrCast<TextureBaseD3D11>(TexBind.pTexture);
-        const auto& TexSparseProps = pTexD3D11->GetSparseProperties();
-        const auto& TexDesc        = pTexD3D11->GetDesc();
-        const auto  UseNVApi       = pTexD3D11->IsUsingNVApi();
+        const SparseTextureMemoryBindInfo& TexBind        = Attribs.pTextureBinds[i];
+        TextureBaseD3D11*                  pTexD3D11      = ClassPtrCast<TextureBaseD3D11>(TexBind.pTexture);
+        const SparseTextureProperties&     TexSparseProps = pTexD3D11->GetSparseProperties();
+        const TextureDesc&                 TexDesc        = pTexD3D11->GetDesc();
+        const bool                         UseNVApi       = pTexD3D11->IsUsingNVApi();
 
         for (Uint32 r = 0; r < TexBind.NumRanges; ++r)
         {
-            const auto& BindRange = TexBind.pRanges[r];
+            const SparseTextureMemoryBindRange& BindRange = TexBind.pRanges[r];
             TileMapping.AddTextureBindRange(BindRange, TexSparseProps, TexDesc, UseNVApi);
         }
 
@@ -2441,7 +2441,7 @@ void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMe
 bool DeviceContextD3D11Impl::ResizeTilePool(ID3D11Buffer* pBuffer, UINT NewSize)
 {
     DEV_CHECK_ERR(CComQIPtr<ID3D11DeviceContext2>{m_pd3d11DeviceContext}, "Failed to query ID3D11DeviceContext2");
-    auto* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(m_pd3d11DeviceContext.p);
+    ID3D11DeviceContext2* pd3d11DeviceContext2 = static_cast<ID3D11DeviceContext2*>(m_pd3d11DeviceContext.p);
 
     return SUCCEEDED(pd3d11DeviceContext2->ResizeTilePool(pBuffer, NewSize));
 }
@@ -2516,10 +2516,10 @@ void DeviceContextD3D11Impl::DvpVerifyCommittedResources(TD3D11ResourceType     
 {
     while (ShaderStages != SHADER_TYPE_UNKNOWN)
     {
-        const auto Stage        = ExtractLSB(ShaderStages);
-        const auto ShaderInd    = GetShaderTypeIndex(Stage);
-        const auto ShaderName   = GetShaderTypeLiteralName(Stage);
-        const auto GetResMethod = GetD3D11ResMethods[ShaderInd];
+        const SHADER_TYPE Stage        = ExtractLSB(ShaderStages);
+        const Int32       ShaderInd    = GetShaderTypeIndex(Stage);
+        const char*       ShaderName   = GetShaderTypeLiteralName(Stage);
+        const auto        GetResMethod = GetD3D11ResMethods[ShaderInd];
 
         TD3D11ResourceType pctxResources[MaxResources] = {};
         if (GetResMethod)
@@ -2555,12 +2555,12 @@ void DeviceContextD3D11Impl::DvpVerifyViewConsistency(TD3D11ViewType  CommittedD
 {
     while (ShaderStages != SHADER_TYPE_UNKNOWN)
     {
-        const auto Stage                 = ExtractLSB(ShaderStages);
-        const auto ShaderInd             = GetShaderTypeIndex(Stage);
-        const auto ShaderName            = GetShaderTypeLiteralName(Stage);
-        auto*      Views                 = CommittedD3D11ViewArr[ShaderInd];
-        auto*      Resources             = CommittedD3D11ResourcesArr[ShaderInd];
-        const auto NumCommittedResources = NumCommittedResourcesArr[ShaderInd];
+        const SHADER_TYPE Stage                 = ExtractLSB(ShaderStages);
+        const Int32       ShaderInd             = GetShaderTypeIndex(Stage);
+        const char*       ShaderName            = GetShaderTypeLiteralName(Stage);
+        auto*             Views                 = CommittedD3D11ViewArr[ShaderInd];
+        auto*             Resources             = CommittedD3D11ResourcesArr[ShaderInd];
+        const Uint8       NumCommittedResources = NumCommittedResourcesArr[ShaderInd];
         for (Uint32 Slot = 0; Slot < NumCommittedResources; ++Slot)
         {
             if (Views[Slot] != nullptr)
@@ -2632,14 +2632,14 @@ void DeviceContextD3D11Impl::DvpVerifyCommittedVertexBuffers()
     UINT          Strides[MaxVBs];
     UINT          Offsets[MaxVBs];
     m_pd3d11DeviceContext->IAGetVertexBuffers(0, MaxVBs, pVBs, Strides, Offsets);
-    auto NumBoundVBs = m_NumCommittedD3D11VBs;
+    UINT NumBoundVBs = m_NumCommittedD3D11VBs;
     for (Uint32 Slot = 0; Slot < MaxVBs; ++Slot)
     {
         if (Slot < NumBoundVBs)
         {
             const auto& BoundD3D11VB  = m_CommittedD3D11VertexBuffers[Slot];
-            auto        BoundVBStride = m_CommittedD3D11VBStrides[Slot];
-            auto        BoundVBOffset = m_CommittedD3D11VBOffsets[Slot];
+            UINT        BoundVBStride = m_CommittedD3D11VBStrides[Slot];
+            UINT        BoundVBOffset = m_CommittedD3D11VBOffsets[Slot];
             if (BoundD3D11VB && !pVBs[Slot])
                 DEV_CHECK_ERR(pVBs[Slot] == nullptr, "Missing D3D11 buffer detected at slot ", Slot);
             if (!BoundD3D11VB && pVBs[Slot])
