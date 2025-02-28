@@ -434,18 +434,24 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
         PixelShaderUAVBindMode::Clear :
         PixelShaderUAVBindMode::Keep;
 
+    Uint32 UpToDateSRBMask = m_BindInfo.ActiveSRBMask & ~BindSRBMask;
     while (BindSRBMask != 0)
     {
         Uint32 SignBit = ExtractLSB(BindSRBMask);
-        Uint32 sign    = PlatformMisc::GetLSB(SignBit);
-        VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
-        const D3D11ShaderResourceCounters& BaseBindings = m_pPipelineState->GetBaseBindings(sign);
+        Uint32 SignIdx = PlatformMisc::GetLSB(SignBit);
+        VERIFY_EXPR(SignIdx < m_pPipelineState->GetResourceSignatureCount());
+        const D3D11ShaderResourceCounters& BaseBindings = m_pPipelineState->GetBaseBindings(SignIdx);
 
 #ifdef DILIGENT_DEVELOPMENT
-        m_BindInfo.BaseBindings[sign] = BaseBindings;
+        m_BindInfo.BaseBindings[SignIdx] = BaseBindings;
 #endif
-        const ShaderResourceCacheD3D11* pResourceCache = m_BindInfo.ResourceCaches[sign];
-        DEV_CHECK_ERR(pResourceCache != nullptr, "Shader resource cache at index ", sign, " is null.");
+        const ShaderResourceCacheD3D11* pResourceCache = m_BindInfo.ResourceCaches[SignIdx];
+        if (pResourceCache == nullptr)
+        {
+            DEV_ERROR("Shader resource cache at index ", SignIdx, " is null.");
+            continue;
+        }
+
         if (m_BindInfo.StaleSRBMask & SignBit)
         {
             // Bind all cache resources
@@ -467,6 +473,30 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
             BindDynamicCBs(*pResourceCache, BaseBindings);
         }
     }
+
+    if (PsUavBindMode == PixelShaderUAVBindMode::Clear)
+    {
+        // Check if SRBs that are not in the BindSRBMask contain UAVs.
+        // In this case we should keep UAVs, not clear them.
+        while (UpToDateSRBMask != 0)
+        {
+            Uint32 SignBit = ExtractLSB(UpToDateSRBMask);
+            Uint32 SignIdx = PlatformMisc::GetLSB(SignBit);
+            VERIFY_EXPR(SignIdx < m_pPipelineState->GetResourceSignatureCount());
+            const ShaderResourceCacheD3D11* pResourceCache = m_BindInfo.ResourceCaches[SignIdx];
+            if (pResourceCache == nullptr)
+            {
+                DEV_ERROR("Shader resource cache at index ", SignIdx, " is null.");
+                continue;
+            }
+            if (pResourceCache->GetUAVCount(PSInd) > 0)
+            {
+                PsUavBindMode = PixelShaderUAVBindMode::Keep;
+                break;
+            }
+        }
+    }
+
     m_BindInfo.StaleSRBMask &= ~m_BindInfo.ActiveSRBMask;
 
     if (PsUavBindMode == PixelShaderUAVBindMode::Bind)

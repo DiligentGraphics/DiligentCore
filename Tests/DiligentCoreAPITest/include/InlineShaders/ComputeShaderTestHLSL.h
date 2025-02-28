@@ -106,6 +106,28 @@ void main(in VSOutput VSOut)
 )"
 };
 
+
+const std::string FillTexturePS2{
+R"(
+struct VSOutput
+{
+    float4 Pos : SV_Position;
+};
+
+cbuffer Constants
+{
+	float4 g_Color;
+};
+
+RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
+
+void main(in VSOutput VSOut)
+{
+	g_tex2DUAV[uint2(VSOut.Pos.xy)] = float4(float2(uint2(VSOut.Pos.xy) % 256u) / 256.0, 0.0, 1.0) * g_Color;
+}
+)"
+};
+
 // clang-format on
 
 } // namespace HLSL

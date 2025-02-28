@@ -747,6 +747,17 @@ RefCntAutoPtr<ITexture> GPUTestingEnvironment::CreateTexture(const char* Name, T
     return pTexture;
 }
 
+RefCntAutoPtr<IBuffer> GPUTestingEnvironment::CreateBuffer(const BufferDesc& Desc, const void* pInitData)
+{
+    RefCntAutoPtr<IBuffer> pBuffer;
+
+    BufferData InitData{pInitData, Desc.Size};
+    m_pDevice->CreateBuffer(Desc, pInitData ? &InitData : nullptr, &pBuffer);
+    VERIFY_EXPR(pBuffer != nullptr);
+
+    return pBuffer;
+}
+
 RefCntAutoPtr<ISampler> GPUTestingEnvironment::CreateSampler(const SamplerDesc& Desc)
 {
     RefCntAutoPtr<ISampler> pSampler;
