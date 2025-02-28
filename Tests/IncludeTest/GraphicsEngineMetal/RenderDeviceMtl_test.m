@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +26,8 @@
  */
 
 #include <Metal/Metal.h>
+
+#define Rect DiligentRect
 #include "DiligentCore/Graphics/GraphicsEngineMetal/interface/RenderDeviceMtl.h"
 
 void TestRenderDeviceMtl_CInterface(IRenderDeviceMtl* pDevice)
