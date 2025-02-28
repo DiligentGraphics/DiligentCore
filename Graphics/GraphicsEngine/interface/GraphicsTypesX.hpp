@@ -277,6 +277,11 @@ struct RenderPassDescX
         RenderPassDescX{static_cast<const RenderPassDesc&>(_DescX)}
     {}
 
+    explicit RenderPassDescX(const char* Name)
+    {
+        SetName(Name);
+    }
+
     RenderPassDescX& operator=(const RenderPassDescX& _DescX)
     {
         RenderPassDescX Copy{_DescX};
@@ -286,6 +291,13 @@ struct RenderPassDescX
 
     RenderPassDescX(RenderPassDescX&&) noexcept = default;
     RenderPassDescX& operator=(RenderPassDescX&&) noexcept = default;
+
+    RenderPassDescX& SetName(const char* Name)
+    {
+        m_Name    = Name != nullptr ? Name : "";
+        Desc.Name = Name != nullptr ? m_Name.c_str() : nullptr;
+        return *this;
+    }
 
     RenderPassDescX& AddAttachment(const RenderPassAttachmentDesc& Attachment)
     {
@@ -375,6 +387,7 @@ private:
     }
 
     RenderPassDesc Desc;
+    std::string    m_Name;
 
     std::vector<RenderPassAttachmentDesc> Attachments;
     std::vector<SubpassDesc>              Subpasses;
