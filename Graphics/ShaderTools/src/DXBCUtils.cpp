@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -874,8 +874,8 @@ void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
 {
     VERIFY_EXPR(RDEFHeader->Magic == RDEFFourCC);
 
-    auto* Ptr        = reinterpret_cast<char*>(RDEFHeader) + sizeof(ChunkHeader);
-    auto* ResBinding = reinterpret_cast<ResourceBindingInfoType*>(Ptr + RDEFHeader->ResBindingOffset);
+    char*                    Ptr        = reinterpret_cast<char*>(RDEFHeader) + sizeof(ChunkHeader);
+    ResourceBindingInfoType* ResBinding = reinterpret_cast<ResourceBindingInfoType*>(Ptr + RDEFHeader->ResBindingOffset);
     if (ResBinding + RDEFHeader->ResBindingCount > EndPtr)
     {
         LOG_ERROR_AND_THROW("Resource binding data is outside of the specified byte code range. The byte code may be corrupted.");
@@ -884,14 +884,14 @@ void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
     String TempName;
     for (Uint32 r = 0; r < RDEFHeader->ResBindingCount; ++r)
     {
-        auto&       Res  = ResBinding[r];
-        const char* Name = Ptr + Res.NameOffset;
+        ResourceBindingInfoType& Res  = ResBinding[r];
+        const char*              Name = Ptr + Res.NameOffset;
         if (Name + 1 > EndPtr)
         {
             LOG_ERROR_AND_THROW("Resource name pointer is outside of the specified byte code range. The byte code may be corrupted.");
         }
 
-        const auto ResType = ToResType(Res.ShaderInputType);
+        const RES_TYPE ResType = ToResType(Res.ShaderInputType);
         if (ResType > BindingsPerType.size())
         {
             LOG_ERROR_AND_THROW("Invalid shader input type.");
@@ -924,8 +924,8 @@ void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
             LOG_ERROR_AND_THROW("Failed to find '", TempName, "' in the resource mapping.");
         }
 
-        auto& Ext     = ExtResMap[&Iter->second];
-        auto& Binding = BindingsPerType[ResType];
+        ResourceExtendedInfo& Ext     = ExtResMap[&Iter->second];
+        auto&                 Binding = BindingsPerType[ResType];
         Binding.emplace_back(&Iter->second);
 
         VERIFY_EXPR(ArrayInd < Iter->second.ArraySize);
@@ -1021,9 +1021,9 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM50(const OperandToken& Operan
     const auto FindResourceBindings = [this](RES_TYPE Type, Uint32& Token) //
     {
         auto& Bindings = BindingsPerType[Type];
-        for (auto& Info : Bindings)
+        for (const DXBCUtils::BindInfo* Info : Bindings)
         {
-            const auto& Ext = ExtResourceMap[Info];
+            const ResourceExtendedInfo& Ext = ExtResourceMap[Info];
             if (Token >= Ext.SrcBindPoint && Token < Ext.SrcBindPoint + Info->ArraySize)
             {
                 Token = Info->BindPoint + (Token - Ext.SrcBindPoint);
@@ -1104,8 +1104,8 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51_2(const OperandToken& Oper
     if (Token[0] >= Bindings.size())
         LOG_ERROR_AND_THROW("Invalid ", ResTypeToString(Type), " index (", Token[0], "), the number of resources is (", Bindings.size(), ").");
 
-    const auto& Info = *Bindings[Token[0]];
-    const auto& Ext  = ExtResourceMap[&Info];
+    const DXBCUtils::BindInfo&  Info = *Bindings[Token[0]];
+    const ResourceExtendedInfo& Ext  = ExtResourceMap[&Info];
     switch (Operand.OperandIndex2D)
     {
         case D3D10_SB_OPERAND_INDEX_IMMEDIATE32:
@@ -1119,7 +1119,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51_2(const OperandToken& Oper
         }
         case D3D10_SB_OPERAND_INDEX_RELATIVE:
         {
-            const auto Operand2 = reinterpret_cast<OperandToken&>(Token[1]);
+            const OperandToken& Operand2 = reinterpret_cast<const OperandToken&>(Token[1]);
             VERIFY_EXPR(Operand2.OperandType == D3D10_SB_OPERAND_TYPE_TEMP);
             VERIFY_EXPR(Operand2.IndexDim == D3D10_SB_OPERAND_INDEX_1D);
             VERIFY_EXPR(Operand2.OperandIndex1D == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
@@ -1202,7 +1202,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51(const OperandToken& Operan
 
 void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode, Uint32* Token, const void* Finish)
 {
-    const auto& Operand = *reinterpret_cast<OperandToken*>(Token);
+    const OperandToken& Operand = *reinterpret_cast<OperandToken*>(Token);
 
     switch (Opcode.OpcodeType)
     {
@@ -1227,8 +1227,8 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid cbuffer index (", Token[1], "), the number of constant buffers is (", Bindings.size(), ").");
 
-            const auto& Info = *Bindings[Token[1]];
-            const auto& Ext  = ExtResourceMap[&Info];
+            const DXBCUtils::BindInfo&  Info = *Bindings[Token[1]];
+            const ResourceExtendedInfo& Ext  = ExtResourceMap[&Info];
             VERIFY_EXPR(Info.BindPoint == Token[2]);
             VERIFY_EXPR(Ext.Type == RES_TYPE_CBV);
 
@@ -1264,8 +1264,8 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid sampler index (", Token[1], "), the number of samplers is (", Bindings.size(), ").");
 
-            const auto& Info = *Bindings[Token[1]];
-            const auto& Ext  = ExtResourceMap[&Info];
+            const DXBCUtils::BindInfo&  Info = *Bindings[Token[1]];
+            const ResourceExtendedInfo& Ext  = ExtResourceMap[&Info];
             VERIFY_EXPR(Info.BindPoint == Token[2]);
             VERIFY_EXPR(Ext.Type == RES_TYPE_SAMPLER);
 
@@ -1304,8 +1304,8 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid texture index (", Token[1], "), the number of textures is (", Bindings.size(), ").");
 
-            const auto& Info = *Bindings[Token[1]];
-            const auto& Ext  = ExtResourceMap[&Info];
+            const DXBCUtils::BindInfo&  Info = *Bindings[Token[1]];
+            const ResourceExtendedInfo& Ext  = ExtResourceMap[&Info];
             VERIFY_EXPR(Info.BindPoint == Token[2]);
             VERIFY_EXPR(Ext.Type == RES_TYPE_SRV);
 
@@ -1340,8 +1340,8 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid texture index (", Token[1], "), the number of textures is (", Bindings.size(), ").");
 
-            const auto& Info = *Bindings[Token[1]];
-            const auto& Ext  = ExtResourceMap[&Info];
+            const DXBCUtils::BindInfo&  Info = *Bindings[Token[1]];
+            const ResourceExtendedInfo& Ext  = ExtResourceMap[&Info];
             VERIFY_EXPR(Info.BindPoint == Token[2]);
             VERIFY_EXPR(Ext.Type == RES_TYPE_SRV);
 
@@ -1380,8 +1380,8 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid UAV index (", Token[1], "), the number of UAVs is (", Bindings.size(), ").");
 
-            const auto& Info = *Bindings[Token[1]];
-            const auto& Ext  = ExtResourceMap[&Info];
+            const DXBCUtils::BindInfo&  Info = *Bindings[Token[1]];
+            const ResourceExtendedInfo& Ext  = ExtResourceMap[&Info];
             VERIFY_EXPR(Info.BindPoint == Token[2]);
             VERIFY_EXPR(Ext.Type == RES_TYPE_UAV);
 
@@ -1416,8 +1416,8 @@ void ShaderBytecodeRemapper::RemapResourceBindingSM51(const OpcodeToken& Opcode,
             if (Token[1] >= Bindings.size())
                 LOG_ERROR_AND_THROW("Invalid UAV index (", Token[1], "), the number of UAVs is (", Bindings.size(), ").");
 
-            const auto& Info = *Bindings[Token[1]];
-            const auto& Ext  = ExtResourceMap[&Info];
+            const DXBCUtils::BindInfo&  Info = *Bindings[Token[1]];
+            const ResourceExtendedInfo& Ext  = ExtResourceMap[&Info];
             VERIFY_EXPR(Info.BindPoint == Token[2]);
             VERIFY_EXPR(Ext.Type == RES_TYPE_UAV);
 
@@ -1476,7 +1476,7 @@ void ShaderBytecodeRemapper::ParseIndex(D3D10_SB_OPERAND_INDEX_REPRESENTATION In
 
 void ShaderBytecodeRemapper::ParseOperand(Uint32*& Token, const void* Finish)
 {
-    const auto& Operand = *reinterpret_cast<OperandToken*>(Token++);
+    const OperandToken& Operand = *reinterpret_cast<OperandToken*>(Token++);
 
     Uint32 NumComponents = 0;
     switch (Operand.NumComponents)
@@ -1590,10 +1590,10 @@ void ShaderBytecodeRemapper::ParseOpcode(Uint32*& Token, const void* Finish)
     // Copyright (c) Microsoft Corporation.
     // MIT License
 
-    Uint32*      StartToken        = Token;
-    const auto   Opcode            = reinterpret_cast<OpcodeToken&>(*Token++);
-    const Uint32 NumOperands       = GetNumOperands(Opcode.OpcodeType);
-    Uint32       InstructionLength = Opcode.OpcodeLength;
+    Uint32*           StartToken        = Token;
+    const OpcodeToken Opcode            = reinterpret_cast<OpcodeToken&>(*Token++);
+    const Uint32      NumOperands       = GetNumOperands(Opcode.OpcodeType);
+    Uint32            InstructionLength = Opcode.OpcodeLength;
 
     VERIFY_EXPR(Opcode.OpcodeType < D3D10_SB_NUM_OPCODES);
 
@@ -1620,8 +1620,8 @@ void ShaderBytecodeRemapper::ParseOpcode(Uint32*& Token, const void* Finish)
     {
         case D3D10_SB_OPCODE_CUSTOMDATA:
         {
-            const auto Type   = static_cast<D3D10_SB_CUSTOMDATA_CLASS>((*(Token - 1) & 0xfffff800) >> 11);
-            InstructionLength = *Token;
+            const D3D10_SB_CUSTOMDATA_CLASS Type = static_cast<D3D10_SB_CUSTOMDATA_CLASS>((*(Token - 1) & 0xfffff800) >> 11);
+            InstructionLength                    = *Token;
             VERIFY_EXPR(InstructionLength >= 2);
 
             ParseCustomData(Token, Finish, Type);
@@ -1669,7 +1669,7 @@ void ShaderBytecodeRemapper::ParseOpcode(Uint32*& Token, const void* Finish)
 
     if (Token < Finish)
     {
-        const auto NextOpcode = reinterpret_cast<OpcodeToken&>(*Token);
+        const OpcodeToken& NextOpcode = reinterpret_cast<const OpcodeToken&>(*Token);
         VERIFY_EXPR(NextOpcode.OpcodeType < D3D10_SB_NUM_OPCODES);
     }
 }
@@ -1710,7 +1710,7 @@ bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
         return false;
     }
 
-    auto* const       Ptr    = static_cast<char*>(pBytecode);
+    char* const       Ptr    = static_cast<char*>(pBytecode);
     const void* const EndPtr = Ptr + Size;
 
     if (Size < sizeof(DXBCHeader))
@@ -1719,7 +1719,7 @@ bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
         return false;
     }
 
-    auto& Header = *reinterpret_cast<DXBCHeader*>(Ptr);
+    DXBCHeader& Header = *reinterpret_cast<DXBCHeader*>(Ptr);
     if (Header.TotalSize != Size)
     {
         LOG_ERROR_MESSAGE("The byte code size (", Header.TotalSize, ") specified in the header does not match the actual size (", Size,
@@ -1756,7 +1756,7 @@ bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
     {
         for (Uint32 i = 0; i < Header.ChunkCount; ++i)
         {
-            auto* pChunk = reinterpret_cast<ChunkHeader*>(Ptr + Chunks[i]);
+            ChunkHeader* pChunk = reinterpret_cast<ChunkHeader*>(Ptr + Chunks[i]);
             if (pChunk + 1 > EndPtr)
             {
                 LOG_ERROR_MESSAGE("Not enough space for the chunk header. The byte code may be corrupted.");
@@ -1770,7 +1770,7 @@ bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
 
             if (pChunk->Magic == RDEFFourCC)
             {
-                auto* RDEFHeader = reinterpret_cast<ResourceDefChunkHeader*>(pChunk);
+                ResourceDefChunkHeader* RDEFHeader = reinterpret_cast<ResourceDefChunkHeader*>(pChunk);
 
                 if (RDEFHeader->MajorVersion == 5 && RDEFHeader->MinorVersion == 1)
                 {
@@ -1790,9 +1790,9 @@ bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
 
             if (pChunk->Magic == SHDRFourCC || pChunk->Magic == SHEXFourCC)
             {
-                Uint32*                Token    = reinterpret_cast<Uint32*>(Ptr + Chunks[i] + sizeof(ShaderChunkHeader));
-                const auto&            SBHeader = *reinterpret_cast<ShaderChunkHeader*>(pChunk);
-                ShaderBytecodeRemapper Remapper{SBHeader, ExtResourceMap, BindingsPerType};
+                Uint32*                  Token    = reinterpret_cast<Uint32*>(Ptr + Chunks[i] + sizeof(ShaderChunkHeader));
+                const ShaderChunkHeader& SBHeader = *reinterpret_cast<ShaderChunkHeader*>(pChunk);
+                ShaderBytecodeRemapper   Remapper{SBHeader, ExtResourceMap, BindingsPerType};
 
                 Remapper.PatchBytecode(Token, EndPtr);
                 RemapBytecode = true;
