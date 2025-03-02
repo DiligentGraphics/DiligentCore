@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,17 +29,27 @@
 
 #include "gtest/gtest.h"
 
+#include "InlineShaders/DrawCommandTestHLSL.h"
+
 using namespace Diligent;
 using namespace Diligent::Testing;
+
+namespace Diligent
+{
+namespace Testing
+{
+void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor);
+}
+} // namespace Diligent
 
 namespace
 {
 
 TEST(ShaderResourceLayout, ResourceArray)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -155,12 +165,12 @@ TEST(ShaderResourceLayout, ResourceArray)
 
     RefCntAutoPtr<ITextureView> pRTV, pDSV;
     {
-        auto pRenderTarget = pEnv->CreateTexture("ShaderResourceLayout: offscreen render target", TEX_FORMAT_RGBA8_UNORM, BIND_RENDER_TARGET, 256, 256);
+        RefCntAutoPtr<ITexture> pRenderTarget = pEnv->CreateTexture("ShaderResourceLayout: offscreen render target", TEX_FORMAT_RGBA8_UNORM, BIND_RENDER_TARGET, 256, 256);
         ASSERT_NE(pRenderTarget, nullptr);
         pRTV = pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
         ASSERT_NE(pRTV, nullptr);
 
-        auto pDepth = pEnv->CreateTexture("ShaderResourceLayout: offscreen depth", TEX_FORMAT_D32_FLOAT, BIND_DEPTH_STENCIL, 256, 256);
+        RefCntAutoPtr<ITexture> pDepth = pEnv->CreateTexture("ShaderResourceLayout: offscreen depth", TEX_FORMAT_D32_FLOAT, BIND_DEPTH_STENCIL, 256, 256);
         ASSERT_NE(pDepth, nullptr);
         pDSV = pDepth->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
         ASSERT_NE(pDSV, nullptr);
@@ -186,7 +196,7 @@ TEST(ShaderResourceLayout, ResourceArray)
         std::vector<TextureSubResData> SubResources(TexDesc.MipLevels);
         for (Uint32 i = 0; i < TexDesc.MipLevels; ++i)
         {
-            auto& SubResData  = SubResources[i];
+            TextureSubResData& SubResData{SubResources[i]};
             SubResData.pData  = Data.data();
             SubResData.Stride = TexDesc.Width * 4;
         }
@@ -260,6 +270,131 @@ TEST(ShaderResourceLayout, ResourceArray)
     // Draw a quad
     DrawAttribs DrawAttrs(4, DRAW_FLAG_VERIFY_ALL);
     pContext->Draw(DrawAttrs);
+}
+
+namespace HLSL
+{
+const std::string DynamicArrayIndexingPS{R"(
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR;
+};
+
+SamplerState      g_Sampler;
+Texture2D<float4> g_Textures[4];
+
+cbuffer cbConstants
+{
+    uint g_TextureIndex;
+}
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    float3 Color = PSIn.Color.rgb;
+    Color *= g_Textures[g_TextureIndex].Sample(g_Sampler, float2(0.5, 0.5)).rgb;
+    return float4(Color.rgb, 1.0);
+}
+)"};
+}
+
+TEST(ShaderResourceArrayTest, DynamicArrayIndexing)
+{
+    GPUTestingEnvironment*  pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*          pDevice    = pEnv->GetDevice();
+    IDeviceContext*         pContext   = pEnv->GetDeviceContext();
+    const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
+
+    if (!(DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D12 || DeviceInfo.Type == RENDER_DEVICE_TYPE_VULKAN))
+    {
+        GTEST_SKIP() << "Dynamic array indexing is not supported on this device";
+    }
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    ISwapChain*          pSwapChain = pEnv->GetSwapChain();
+    const SwapChainDesc& SCDesc     = pSwapChain->GetDesc();
+
+    float ClearColor[] = {0.875, 0.125, 0.75, 0.25};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.HLSLVersion = ShaderVersion{5, 1};
+
+    RefCntAutoPtr<IShader> pVS, pPS;
+    {
+        ShaderCI.Desc           = {"ShaderResourceArrayTest.DynamicArrayIndexing: VS", SHADER_TYPE_VERTEX, false};
+        ShaderCI.EntryPoint     = "main";
+        ShaderCI.Source         = HLSL::DrawTest_ProceduralTriangleVS.c_str();
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    {
+        ShaderCI.Desc           = {"ShaderResourceArrayTest.DynamicArrayIndexing: PS", SHADER_TYPE_PIXEL, false};
+        ShaderCI.Source         = HLSL::DynamicArrayIndexingPS.c_str();
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
+    PSODesc.Name = "ShaderResourceArrayTest.DynamicArrayIndexing";
+
+    PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+    ImmutableSamplerDesc ImtblSampler{SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{}};
+    PSODesc.ResourceLayout.ImmutableSamplers    = &ImtblSampler;
+    PSODesc.ResourceLayout.NumImmutableSamplers = 1;
+
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    GraphicsPipeline.NumRenderTargets             = 1;
+    GraphicsPipeline.RTVFormats[0]                = SCDesc.ColorBufferFormat;
+    PSOCreateInfo.pVS                             = pVS;
+    PSOCreateInfo.pPS                             = pPS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPSO->CreateShaderResourceBinding(&pSRB);
+    ASSERT_NE(pSRB, nullptr);
+
+    std::vector<Uint32>    BufferData{{2, 0, 0, 0}};
+    RefCntAutoPtr<IBuffer> pBuffer = pEnv->CreateBuffer(BufferDesc{"ShaderResourceArrayTest.DynamicArrayIndexing", BufferData.size(), BIND_UNIFORM_BUFFER, USAGE_DEFAULT}, BufferData.data());
+    ASSERT_NE(pBuffer, nullptr);
+    pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "cbConstants")->Set(pBuffer);
+
+    std::vector<Uint32>     BlackTextData(64 * 64, 0);
+    std::vector<Uint32>     WhiteTextData(64 * 64, ~0u);
+    RefCntAutoPtr<ITexture> pBlackTex = pEnv->CreateTexture("Black texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 64, 64, BlackTextData.data());
+    RefCntAutoPtr<ITexture> pWhiteTex = pEnv->CreateTexture("White texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 64, 64, WhiteTextData.data());
+    ASSERT_NE(pBlackTex, nullptr);
+    ASSERT_NE(pWhiteTex, nullptr);
+    ITextureView* pWhiteTexSRV = pWhiteTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+    ITextureView* pBlackTexSRV = pBlackTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+    ASSERT_NE(pWhiteTexSRV, nullptr);
+    ASSERT_NE(pBlackTexSRV, nullptr);
+
+    IDeviceObject* pTextures[] = {pBlackTexSRV, pBlackTexSRV, pWhiteTexSRV, pBlackTexSRV};
+    pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Textures")->SetArray(pTextures, 0, _countof(pTextures));
+
+    ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(ppRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(DrawAttrs);
+
+    pSwapChain->Present();
 }
 
 } // namespace
