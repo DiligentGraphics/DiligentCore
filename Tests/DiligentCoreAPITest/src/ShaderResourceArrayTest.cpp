@@ -31,6 +31,8 @@
 
 #include "InlineShaders/DrawCommandTestHLSL.h"
 
+#include "GraphicsTypesX.hpp"
+
 using namespace Diligent;
 using namespace Diligent::Testing;
 
@@ -282,17 +284,19 @@ struct PSInput
 };
 
 SamplerState      g_Sampler;
-Texture2D<float4> g_Textures[4];
+Texture2D<float4> g_Textures[4];  // register t0
+Texture2D<float4> g_OtherTexture; // register t4
 
 cbuffer cbConstants
 {
-    uint g_TextureIndex;
+    float4 g_TextureIndex;
 }
 
 float4 main(in PSInput PSIn) : SV_Target
 {
     float3 Color = PSIn.Color.rgb;
-    Color *= g_Textures[g_TextureIndex].Sample(g_Sampler, float2(0.5, 0.5)).rgb;
+    Color *= g_Textures[g_TextureIndex.x].Sample(g_Sampler, float2(0.5, 0.5)).rgb;
+    Color *= g_OtherTexture.Sample(g_Sampler, float2(0.5, 0.5)).rgb;
     return float4(Color.rgb, 1.0);
 }
 )"};
@@ -345,10 +349,22 @@ TEST(ShaderResourceArrayTest, DynamicArrayIndexing)
 
     PSODesc.Name = "ShaderResourceArrayTest.DynamicArrayIndexing";
 
-    PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
-    ImmutableSamplerDesc ImtblSampler{SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{}};
-    PSODesc.ResourceLayout.ImmutableSamplers    = &ImtblSampler;
-    PSODesc.ResourceLayout.NumImmutableSamplers = 1;
+    RefCntAutoPtr<IPipelineResourceSignature> pSignature;
+    {
+        PipelineResourceSignatureDescX SignDesc;
+        SignDesc
+            // Define g_OtherTexture first to make it remapped to register t0, and g_Textures remapped to register t1
+            .AddResource(SHADER_TYPE_PIXEL, "g_OtherTexture", 1u, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+            .AddResource(SHADER_TYPE_PIXEL, "g_Textures", 4u, SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+            .AddImmutableSampler(SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{})
+            .AddResource(SHADER_TYPE_PIXEL, "cbConstants", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+        pDevice->CreatePipelineResourceSignature(SignDesc, &pSignature);
+        ASSERT_NE(pSignature, nullptr);
+    }
+
+    IPipelineResourceSignature* ppSignatures[] = {pSignature};
+    PSOCreateInfo.ResourceSignaturesCount      = _countof(ppSignatures);
+    PSOCreateInfo.ppResourceSignatures         = ppSignatures;
 
     GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
     GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
@@ -362,11 +378,11 @@ TEST(ShaderResourceArrayTest, DynamicArrayIndexing)
     ASSERT_NE(pPSO, nullptr);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
-    pPSO->CreateShaderResourceBinding(&pSRB);
+    pSignature->CreateShaderResourceBinding(&pSRB);
     ASSERT_NE(pSRB, nullptr);
 
-    std::vector<Uint32>    BufferData{{2, 0, 0, 0}};
-    RefCntAutoPtr<IBuffer> pBuffer = pEnv->CreateBuffer(BufferDesc{"ShaderResourceArrayTest.DynamicArrayIndexing", BufferData.size(), BIND_UNIFORM_BUFFER, USAGE_DEFAULT}, BufferData.data());
+    float4                 BufferData{2, 0, 0, 0};
+    RefCntAutoPtr<IBuffer> pBuffer = pEnv->CreateBuffer(BufferDesc{"ShaderResourceArrayTest.DynamicArrayIndexing", sizeof(BufferData), BIND_UNIFORM_BUFFER, USAGE_DEFAULT}, BufferData.Data());
     ASSERT_NE(pBuffer, nullptr);
     pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "cbConstants")->Set(pBuffer);
 
@@ -383,6 +399,7 @@ TEST(ShaderResourceArrayTest, DynamicArrayIndexing)
 
     IDeviceObject* pTextures[] = {pBlackTexSRV, pBlackTexSRV, pWhiteTexSRV, pBlackTexSRV};
     pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Textures")->SetArray(pTextures, 0, _countof(pTextures));
+    pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_OtherTexture")->Set(pWhiteTexSRV);
 
     ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
