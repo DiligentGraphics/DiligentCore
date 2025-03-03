@@ -968,20 +968,38 @@ void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
 struct ShaderBytecodeRemapper
 {
 public:
-    ShaderBytecodeRemapper(ShaderChunkHeader&            _Header,
+    ShaderBytecodeRemapper(DataBlobImpl::DataBufferType& _Bytecode,
+                           size_t                        _ChunkOffset,
                            TExtendedResourceMap&         _ExtResMap,
                            ResourceBindingPerType const& _BindingsPerType) :
-        Header{_Header},
+        Bytecode{_Bytecode},
+        ChunkOffset{_ChunkOffset},
         ExtResourceMap{_ExtResMap},
         BindingsPerType{_BindingsPerType}
-    {}
+    {
+        ShaderChunkHeader& Header = reinterpret_cast<ShaderChunkHeader&>(Bytecode[ChunkOffset]);
+
+        VERIFY_EXPR(Header.VersionMajor >= 4);
+        VERIFY_EXPR(Header.ProgramType < PROGRAM_TYPE_COUNT_SM5);
+        VERIFY_EXPR(Header.NumDWords * 4 == Header.Length);
+        VERIFY(ChunkOffset % 4 == 0, "Chunk offset must be a multiple of 4");
+
+        IsSM51 = Header.VersionMajor == 5 && Header.VersionMinor >= 1;
+
+        EndOffset = (ChunkOffset + sizeof(ChunkHeader) + Header.Length) / 4;
+    }
 
     void PatchBytecode(const void* ChunkEnd) noexcept(false);
 
 private:
-    ShaderChunkHeader&            Header;
+    DataBlobImpl::DataBufferType& Bytecode;
+    const size_t                  ChunkOffset;
     TExtendedResourceMap&         ExtResourceMap;
     ResourceBindingPerType const& BindingsPerType;
+
+    size_t EndOffset = 0;
+
+    bool IsSM51 = false;
 
     static constexpr Uint32 RuntimeSizedArraySize = ~0u;
 
@@ -998,13 +1016,11 @@ private:
     void ParseIndex(D3D10_SB_OPERAND_INDEX_REPRESENTATION IndexType, Uint32*& Token, const void* Finish);
     void ParseCustomData(Uint32*& Token, const void* Finish, D3D10_SB_CUSTOMDATA_CLASS Type);
     void ParseOpcode(Uint32*& Token, const void* Finish);
-
-    bool IsSM51() const { return Header.VersionMajor == 5 && Header.VersionMinor >= 1; }
 };
 
 void ShaderBytecodeRemapper::RemapResourceOperand(const OperandToken& Operand, Uint32* Token, const void* Finish)
 {
-    if (IsSM51())
+    if (IsSM51)
     {
         RemapResourceOperandSM51(Operand, Token, Finish);
     }
@@ -1016,7 +1032,7 @@ void ShaderBytecodeRemapper::RemapResourceOperand(const OperandToken& Operand, U
 
 void ShaderBytecodeRemapper::RemapResourceBinding(const OpcodeToken& Opcode, Uint32* Token, const void* Finish)
 {
-    if (IsSM51())
+    if (IsSM51)
     {
         RemapResourceBindingSM51(Opcode, Token, Finish);
     }
@@ -1682,12 +1698,10 @@ void ShaderBytecodeRemapper::ParseOpcode(Uint32*& Token, const void* Finish)
 
 void ShaderBytecodeRemapper::PatchBytecode(const void* ChunkEnd) noexcept(false)
 {
-    VERIFY_EXPR(ChunkEnd == reinterpret_cast<const Uint8*>(&Header) + sizeof(ChunkHeader) + Header.Length);
-    VERIFY_EXPR(Header.VersionMajor >= 4);
-    VERIFY_EXPR(Header.ProgramType < PROGRAM_TYPE_COUNT_SM5);
-    VERIFY_EXPR(Header.NumDWords * 4 == Header.Length);
+    VERIFY_EXPR(ChunkEnd == Bytecode.data() + EndOffset * 4);
 
-    for (Uint32* Token = reinterpret_cast<Uint32*>(&Header + 1); Token < ChunkEnd;)
+    Uint32* Token = reinterpret_cast<Uint32*>(&Bytecode[ChunkOffset + sizeof(ShaderChunkHeader)]);
+    for (; Token < ChunkEnd;)
     {
         ParseOpcode(Token, ChunkEnd);
     }
@@ -1803,8 +1817,7 @@ RefCntAutoPtr<IDataBlob> RemapResourceBindings(const TResourceBindingMap& Resour
 
             if (Chunk.Magic == SHDRFourCC || Chunk.Magic == SHEXFourCC)
             {
-                ShaderChunkHeader&     SBHeader = reinterpret_cast<ShaderChunkHeader&>(Chunk);
-                ShaderBytecodeRemapper Remapper{SBHeader, ExtResourceMap, BindingsPerType};
+                ShaderBytecodeRemapper Remapper{RemappedBytecode, ChunkOffset, ExtResourceMap, BindingsPerType};
                 Remapper.PatchBytecode(ChunkEnd);
                 PatchOK = true;
             }
