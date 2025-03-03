@@ -968,14 +968,18 @@ void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
 struct ShaderBytecodeRemapper
 {
 public:
-    ShaderBytecodeRemapper(ShaderChunkHeader const& _Header, TExtendedResourceMap& _ExtResMap, ResourceBindingPerType const& _BindingsPerType) :
-        Header{_Header}, ExtResourceMap{_ExtResMap}, BindingsPerType{_BindingsPerType}
+    ShaderBytecodeRemapper(ShaderChunkHeader&            _Header,
+                           TExtendedResourceMap&         _ExtResMap,
+                           ResourceBindingPerType const& _BindingsPerType) :
+        Header{_Header},
+        ExtResourceMap{_ExtResMap},
+        BindingsPerType{_BindingsPerType}
     {}
 
-    void PatchBytecode(Uint32* Token, const void* EndPtr) noexcept(false);
+    void PatchBytecode(const void* ChunkEnd) noexcept(false);
 
 private:
-    ShaderChunkHeader const&      Header;
+    ShaderChunkHeader&            Header;
     TExtendedResourceMap&         ExtResourceMap;
     ResourceBindingPerType const& BindingsPerType;
 
@@ -1676,23 +1680,16 @@ void ShaderBytecodeRemapper::ParseOpcode(Uint32*& Token, const void* Finish)
     }
 }
 
-void ShaderBytecodeRemapper::PatchBytecode(Uint32* Token, const void* EndPtr) noexcept(false)
+void ShaderBytecodeRemapper::PatchBytecode(const void* ChunkEnd) noexcept(false)
 {
-    VERIFY_EXPR(Token == static_cast<const void*>(&Header + 1));
-    const void* Finish = reinterpret_cast<const char*>(&Header) + sizeof(ChunkHeader) + Header.Length;
-
+    VERIFY_EXPR(ChunkEnd == reinterpret_cast<const Uint8*>(&Header) + sizeof(ChunkHeader) + Header.Length);
     VERIFY_EXPR(Header.VersionMajor >= 4);
     VERIFY_EXPR(Header.ProgramType < PROGRAM_TYPE_COUNT_SM5);
     VERIFY_EXPR(Header.NumDWords * 4 == Header.Length);
 
-    if (Finish > EndPtr)
+    for (Uint32* Token = reinterpret_cast<Uint32*>(&Header + 1); Token < ChunkEnd;)
     {
-        LOG_ERROR_AND_THROW("Shader code chunk is outside of the specified byte code range. The byte code may be corrupted.");
-    }
-
-    for (; Token < Finish;)
-    {
-        ParseOpcode(Token, Finish);
+        ParseOpcode(Token, ChunkEnd);
     }
 }
 
@@ -1775,11 +1772,14 @@ RefCntAutoPtr<IDataBlob> RemapResourceBindings(const TResourceBindingMap& Resour
             }
 
             ChunkHeader& Chunk = reinterpret_cast<ChunkHeader&>(RemappedBytecode[ChunkOffset]);
-            if (ChunkOffset + Chunk.Length > RemappedBytecode.size())
+            // The DXBC file format defines each chunk as starting with a fixed-size base header (ChunkHeader),
+            // and the Length field specifies the size of the data following that base header.
+            if (ChunkOffset + sizeof(ChunkHeader) + Chunk.Length > RemappedBytecode.size())
             {
                 LOG_ERROR_MESSAGE("Not enough space for the chunk data. The byte code may be corrupted.");
                 return {};
             }
+            const void* const ChunkEnd = reinterpret_cast<const Uint8*>(&Chunk + 1) + Chunk.Length;
 
             if (Chunk.Magic == RDEFFourCC)
             {
@@ -1787,12 +1787,12 @@ RefCntAutoPtr<IDataBlob> RemapResourceBindings(const TResourceBindingMap& Resour
 
                 if (RDEFHeader.MajorVersion == 5 && RDEFHeader.MinorVersion == 1)
                 {
-                    RemapShaderResources<ResourceBindingInfo51>(ResourceMap, RemappedBytecode.data() + RemappedBytecode.size(), RDEFHeader, ExtResourceMap, BindingsPerType);
+                    RemapShaderResources<ResourceBindingInfo51>(ResourceMap, ChunkEnd, RDEFHeader, ExtResourceMap, BindingsPerType);
                     RemapResDef = true;
                 }
                 else if ((RDEFHeader.MajorVersion == 5 && RDEFHeader.MinorVersion == 0) || RDEFHeader.MajorVersion < 5)
                 {
-                    RemapShaderResources<ResourceBindingInfo50>(ResourceMap, RemappedBytecode.data() + RemappedBytecode.size(), RDEFHeader, ExtResourceMap, BindingsPerType);
+                    RemapShaderResources<ResourceBindingInfo50>(ResourceMap, ChunkEnd, RDEFHeader, ExtResourceMap, BindingsPerType);
                     RemapResDef = true;
                 }
                 else
@@ -1803,11 +1803,9 @@ RefCntAutoPtr<IDataBlob> RemapResourceBindings(const TResourceBindingMap& Resour
 
             if (Chunk.Magic == SHDRFourCC || Chunk.Magic == SHEXFourCC)
             {
-                Uint32*                  Token    = reinterpret_cast<Uint32*>(&RemappedBytecode[ChunkOffset + sizeof(ShaderChunkHeader)]);
-                const ShaderChunkHeader& SBHeader = reinterpret_cast<ShaderChunkHeader&>(Chunk);
-                ShaderBytecodeRemapper   Remapper{SBHeader, ExtResourceMap, BindingsPerType};
-
-                Remapper.PatchBytecode(Token, RemappedBytecode.data() + RemappedBytecode.size());
+                ShaderChunkHeader&     SBHeader = reinterpret_cast<ShaderChunkHeader&>(Chunk);
+                ShaderBytecodeRemapper Remapper{SBHeader, ExtResourceMap, BindingsPerType};
+                Remapper.PatchBytecode(ChunkEnd);
                 PatchOK = true;
             }
         }
