@@ -60,6 +60,7 @@ struct ChunkHeader
     Uint32 Magic;  // 0..3 fourCC
     Uint32 Length; // 4..7
 };
+static_assert(sizeof(ChunkHeader) == 8, "The size of chunk header must be 8 bytes");
 
 struct ResourceDefChunkHeader : ChunkHeader
 {
@@ -514,7 +515,7 @@ struct OpcodeToken
     Uint32               OpcodeLength : 7; // bits 24..30
     Uint32               Extended : 1;     // bit 31, 1 if opcode is "extended", otherwise 0
 };
-static_assert(sizeof(OpcodeToken) == 4, "");
+static_assert(sizeof(OpcodeToken) == 4, "The size of opcode token must be 4 bytes");
 
 struct OperandToken
 {
@@ -528,7 +529,7 @@ struct OperandToken
     D3D10_SB_OPERAND_INDEX_REPRESENTATION       OperandIndex3D : 3; // 28..30
     Uint32                                      Extended : 1;       // 31
 };
-static_assert(sizeof(OperandToken) == 4, "");
+static_assert(sizeof(OperandToken) == 4, "The size of operand token must be 4 bytes");
 
 // from d3d11TokenizedProgramFormat.hpp
 enum D3D10_SB_CUSTOMDATA_CLASS
@@ -872,13 +873,13 @@ inline bool PatchSpace(ResourceBindingInfo50&, ResourceExtendedInfo& Ext, const 
 }
 
 template <typename ResourceBindingInfoType>
-void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, const void* EndPtr, ResourceDefChunkHeader& RDEFHeader, TExtendedResourceMap& ExtResMap, ResourceBindingPerType& BindingsPerType)
+void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, const void* ChunkEnd, ResourceDefChunkHeader& RDEFHeader, TExtendedResourceMap& ExtResMap, ResourceBindingPerType& BindingsPerType)
 {
     VERIFY_EXPR(RDEFHeader.Magic == RDEFFourCC);
 
     char*                    Ptr        = reinterpret_cast<char*>(&RDEFHeader) + sizeof(ChunkHeader);
     ResourceBindingInfoType* ResBinding = reinterpret_cast<ResourceBindingInfoType*>(Ptr + RDEFHeader.ResBindingOffset);
-    if (ResBinding + RDEFHeader.ResBindingCount > EndPtr)
+    if (ResBinding + RDEFHeader.ResBindingCount > ChunkEnd)
     {
         LOG_ERROR_AND_THROW("Resource binding data is outside of the specified byte code range. The byte code may be corrupted.");
     }
@@ -888,7 +889,7 @@ void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
     {
         ResourceBindingInfoType& Res  = ResBinding[r];
         const char*              Name = Ptr + Res.NameOffset;
-        if (Name + 1 > EndPtr)
+        if (Name + 1 > ChunkEnd)
         {
             LOG_ERROR_AND_THROW("Resource name pointer is outside of the specified byte code range. The byte code may be corrupted.");
         }
@@ -977,7 +978,7 @@ public:
         ExtResourceMap{_ExtResMap},
         BindingsPerType{_BindingsPerType}
     {
-        ShaderChunkHeader& Header = reinterpret_cast<ShaderChunkHeader&>(Bytecode[ChunkOffset]);
+        const ShaderChunkHeader& Header = GetHeader();
 
         VERIFY_EXPR(Header.VersionMajor >= 4);
         VERIFY_EXPR(Header.ProgramType < PROGRAM_TYPE_COUNT_SM5);
@@ -1014,6 +1015,8 @@ private:
         return reinterpret_cast<const Uint32*>(Bytecode.data() + EndOffset);
     }
 
+    // Inserts a new token at the specified offset (in tokens) and sets its value.
+    // Updates the Token pointer and the chunk header.
     void InsertToken(Uint32*& Token, Uint32 Offset, Uint32 Value)
     {
         const ptrdiff_t TokenIdx = reinterpret_cast<Uint8*>(Token) - Bytecode.data();
@@ -1180,6 +1183,7 @@ void ShaderBytecodeRemapper::RemapResourceOperandSM51_2(OperandToken*& Operand, 
                 const ptrdiff_t OperandOffset = reinterpret_cast<Uint8*>(Operand) - Bytecode.data();
                 VERIFY_EXPR(static_cast<size_t>(OperandOffset) < Bytecode.size());
 
+                // Insert immediate index token
                 InsertToken(Token, 1, Info.BindPoint);
 
                 Operand = reinterpret_cast<OperandToken*>(&Bytecode[OperandOffset]);
@@ -1678,7 +1682,7 @@ void ShaderBytecodeRemapper::ParseOpcode(Uint32*& Token)
         }
     }
 
-    size_t Length = Bytecode.size();
+    const size_t BytecodeSize = Bytecode.size();
     switch (Opcode.OpcodeType)
     {
         case D3D10_SB_OPCODE_CUSTOMDATA:
@@ -1723,9 +1727,10 @@ void ShaderBytecodeRemapper::ParseOpcode(Uint32*& Token)
             break;
     }
 
-    if (Bytecode.size() > Length)
+    if (Bytecode.size() > BytecodeSize)
     {
-        InstructionLength += static_cast<Uint32>(Bytecode.size() - Length) / 4;
+        // New tokens were inserted - update instruction length
+        InstructionLength += static_cast<Uint32>(Bytecode.size() - BytecodeSize) / 4;
         reinterpret_cast<OpcodeToken&>(Bytecode[OpcodeOffset]).OpcodeLength = InstructionLength;
     }
 
@@ -1875,6 +1880,7 @@ RefCntAutoPtr<IDataBlob> RemapResourceBindings(const TResourceBindingMap& Resour
                 const Uint32 ExtraBytes = Remapper.GetHeader().Length - ChunkLength;
                 if (ExtraBytes > 0)
                 {
+                    // Chunk size has changed, update offsets of all subsequent chunks
                     for (Uint32 j = i + 1; j < Header.ChunkCount; ++j)
                     {
                         UpdateChunkOffset(j, ExtraBytes);
