@@ -36,6 +36,7 @@
 
 #include "DXBCUtils.hpp"
 #include "../../../ThirdParty/GPUOpenShaderUtils/DXBCChecksum.h"
+#include "DataBlobImpl.hpp"
 
 namespace Diligent
 {
@@ -1700,37 +1701,34 @@ void ShaderBytecodeRemapper::PatchBytecode(Uint32* Token, const void* EndPtr) no
 namespace DXBCUtils
 {
 
-bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
-                           void*                      pBytecode,
-                           size_t                     Size)
+RefCntAutoPtr<IDataBlob> RemapResourceBindings(const TResourceBindingMap& ResourceMap,
+                                               const void*                pBytecode,
+                                               size_t                     Size)
 {
     if (pBytecode == nullptr)
     {
         LOG_ERROR_MESSAGE("pBytecode must not be null.");
-        return false;
+        return {};
     }
-
-    char* const       Ptr    = static_cast<char*>(pBytecode);
-    const void* const EndPtr = Ptr + Size;
 
     if (Size < sizeof(DXBCHeader))
     {
         LOG_ERROR_MESSAGE("The size of the byte code (", Size, ") is too small to contain the DXBC header. The byte code may be corrupted.");
-        return false;
+        return {};
     }
 
-    DXBCHeader& Header = *reinterpret_cast<DXBCHeader*>(Ptr);
+    const DXBCHeader& Header = *static_cast<const DXBCHeader*>(pBytecode);
     if (Header.TotalSize != Size)
     {
         LOG_ERROR_MESSAGE("The byte code size (", Header.TotalSize, ") specified in the header does not match the actual size (", Size,
                           "). The byte code may be corrupted.");
-        return false;
+        return {};
     }
 
 #ifdef DILIGENT_DEVELOPMENT
     {
         DWORD Checksum[4] = {};
-        CalculateDXBCChecksum(reinterpret_cast<BYTE*>(Ptr), static_cast<DWORD>(Size), Checksum);
+        CalculateDXBCChecksum(static_cast<const BYTE*>(pBytecode), static_cast<DWORD>(Size), Checksum);
 
         DEV_CHECK_ERR((Checksum[0] == Header.Checksum[0] &&
                        Checksum[1] == Header.Checksum[1] &&
@@ -1743,8 +1741,13 @@ bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
     if (Header.Magic != DXBCFourCC)
     {
         LOG_ERROR_MESSAGE("Bytecode header does not contain the 'DXBC' magic number. The byte code may be corrupted.");
-        return false;
+        return {};
     }
+
+    RefCntAutoPtr<IDataBlob> pRemappedBytecode = DataBlobImpl::Create(Size, pBytecode);
+
+    char* const       Ptr    = pRemappedBytecode->GetDataPtr<char>();
+    const void* const EndPtr = Ptr + Size;
 
     const Uint32*          Chunks = reinterpret_cast<Uint32*>(Ptr + sizeof(Header));
     ResourceBindingPerType BindingsPerType;
@@ -1760,12 +1763,12 @@ bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
             if (pChunk + 1 > EndPtr)
             {
                 LOG_ERROR_MESSAGE("Not enough space for the chunk header. The byte code may be corrupted.");
-                return false;
+                return {};
             }
             if ((Ptr + Chunks[i] + pChunk->Length) > EndPtr)
             {
                 LOG_ERROR_MESSAGE("Not enough space for the chunk data. The byte code may be corrupted.");
-                return false;
+                return {};
             }
 
             if (pChunk->Magic == RDEFFourCC)
@@ -1801,19 +1804,19 @@ bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
     }
     catch (...)
     {
-        return false;
+        return {};
     }
 
     if (!RemapResDef)
     {
         LOG_ERROR_MESSAGE("Failed to find 'RDEF' chunk with the resource definition.");
-        return false;
+        return {};
     }
 
     if (!RemapBytecode)
     {
         LOG_ERROR_MESSAGE("Failed to find 'SHDR' or 'SHEX' chunk with the shader bytecode.");
-        return false;
+        return {};
     }
 
     // update checksum
@@ -1821,9 +1824,9 @@ bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
     CalculateDXBCChecksum(reinterpret_cast<BYTE*>(Ptr), static_cast<DWORD>(Size), Checksum);
 
     static_assert(sizeof(Header.Checksum) == sizeof(Checksum), "Unexpected checksum size");
-    memcpy(Header.Checksum, Checksum, sizeof(Header.Checksum));
+    memcpy(pRemappedBytecode->GetDataPtr<DXBCHeader>()->Checksum, Checksum, sizeof(Header.Checksum));
 
-    return true;
+    return pRemappedBytecode;
 }
 
 } // namespace DXBCUtils

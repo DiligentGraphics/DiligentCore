@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,8 @@
 #include "Constants.h"
 #include "Shader.h"
 #include "ResourceBindingMap.hpp"
+#include "DataBlob.h"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
@@ -46,9 +48,9 @@ using TResourceBindingMap = ResourceBinding::TMap;
 /// \param [in]    ResourceMap - Resource binding map. For every resource in the
 ///                              byte code it must define the binding (shader register).
 /// \param [inout] pBytecode   - Byte code that will be patched.
-bool RemapResourceBindings(const TResourceBindingMap& ResourceMap,
-                           void*                      pBytecode,
-                           size_t                     Size);
+RefCntAutoPtr<IDataBlob> RemapResourceBindings(const TResourceBindingMap& ResourceMap,
+                                               const void*                pBytecode,
+                                               size_t                     Size);
 }; // namespace DXBCUtils
 
 } // namespace Diligent

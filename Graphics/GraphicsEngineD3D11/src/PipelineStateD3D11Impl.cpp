@@ -141,8 +141,8 @@ void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&  
 
         if (HandleRemappedBytecodeFn)
         {
-            RefCntAutoPtr<IDataBlob> pPatchedBytecode = DataBlobImpl::MakeCopy(pBytecode);
-            if (!DXBCUtils::RemapResourceBindings(ResourceMap, pPatchedBytecode->GetDataPtr(), pPatchedBytecode->GetSize()))
+            RefCntAutoPtr<IDataBlob> pPatchedBytecode = DXBCUtils::RemapResourceBindings(ResourceMap, pBytecode->GetConstDataPtr(), pBytecode->GetSize());
+            if (!pPatchedBytecode)
                 LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
 
             HandleRemappedBytecodeFn(s, pShader, pPatchedBytecode);

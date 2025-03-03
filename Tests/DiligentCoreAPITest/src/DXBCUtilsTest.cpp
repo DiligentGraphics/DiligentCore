@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,7 @@ void TestDXBCRemapping(const char* Source, const char* Entry, const char* Profil
     CComPtr<ID3DBlob> Blob;
     CComPtr<ID3DBlob> CompilerOutput;
 
-    auto hr = D3DCompile(Source, strlen(Source), nullptr, nullptr, nullptr, Entry, Profile, D3DCOMPILE_ENABLE_STRICTNESS, 0, &Blob, &CompilerOutput);
+    HRESULT hr = D3DCompile(Source, strlen(Source), nullptr, nullptr, nullptr, Entry, Profile, D3DCOMPILE_ENABLE_STRICTNESS, 0, &Blob, &CompilerOutput);
     if (FAILED(hr))
     {
         const char* Msg = CompilerOutput ? static_cast<char*>(CompilerOutput->GetBufferPointer()) : "";
@@ -57,11 +57,12 @@ void TestDXBCRemapping(const char* Source, const char* Entry, const char* Profil
     }
     ASSERT_HRESULT_SUCCEEDED(hr);
 
-    ASSERT_TRUE(DXBCUtils::RemapResourceBindings(ResMap, Blob->GetBufferPointer(), Blob->GetBufferSize()));
+    RefCntAutoPtr<IDataBlob> RemappedByteCode = DXBCUtils::RemapResourceBindings(ResMap, Blob->GetBufferPointer(), Blob->GetBufferSize());
+    ASSERT_TRUE(RemappedByteCode);
 
     CComPtr<ID3D12ShaderReflection> ShaderReflection;
 
-    hr = D3DReflect(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(ShaderReflection), reinterpret_cast<void**>(&ShaderReflection));
+    hr = D3DReflect(RemappedByteCode->GetConstDataPtr(), RemappedByteCode->GetSize(), __uuidof(ShaderReflection), reinterpret_cast<void**>(&ShaderReflection));
     ASSERT_HRESULT_SUCCEEDED(hr);
 
     D3D12_SHADER_DESC ShaderDesc = {};

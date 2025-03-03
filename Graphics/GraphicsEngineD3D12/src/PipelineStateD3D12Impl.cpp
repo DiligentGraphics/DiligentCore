@@ -491,8 +491,8 @@ void PipelineStateD3D12Impl::RemapOrVerifyShaderResources(TShaderStages&        
                 }
                 else
                 {
-                    pBytecode = DataBlobImpl::MakeCopy(pBytecode);
-                    if (!DXBCUtils::RemapResourceBindings(ResourceMap, pBytecode->GetDataPtr(), pBytecode->GetSize()))
+                    pBytecode = DXBCUtils::RemapResourceBindings(ResourceMap, pBytecode->GetDataPtr(), pBytecode->GetSize());
+                    if (!pBytecode)
                         LOG_ERROR_AND_THROW("Failed to remap resource bindings in shader '", pShader->GetDesc().Name, "'.");
                 }
             }
