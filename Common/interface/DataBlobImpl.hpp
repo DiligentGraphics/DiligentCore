@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,6 +49,7 @@ public:
 
     static RefCntAutoPtr<DataBlobImpl> Create(size_t InitialSize = 0, const void* pData = nullptr);
     static RefCntAutoPtr<DataBlobImpl> Create(IMemoryAllocator* pAllocator, size_t InitialSize = 0, const void* pData = nullptr);
+    static RefCntAutoPtr<DataBlobImpl> Create(std::vector<Uint8, STDAllocatorRawMem<Uint8>>&& DataBuff) noexcept;
     static RefCntAutoPtr<DataBlobImpl> MakeCopy(const IDataBlob* pDataBlob);
 
     ~DataBlobImpl() override;
@@ -87,6 +88,9 @@ private:
                  IMemoryAllocator&   Allocator,
                  size_t              InitialSize = 0,
                  const void*         pData       = nullptr);
+
+    DataBlobImpl(IReferenceCounters*                             pRefCounters,
+                 std::vector<Uint8, STDAllocatorRawMem<Uint8>>&& DataBuff) noexcept;
 
 private:
     std::vector<Uint8, STDAllocatorRawMem<Uint8>> m_DataBuff;

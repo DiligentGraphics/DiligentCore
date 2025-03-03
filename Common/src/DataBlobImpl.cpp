@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,6 +46,11 @@ RefCntAutoPtr<DataBlobImpl> DataBlobImpl::Create(size_t InitialSize, const void*
     return Create(nullptr, InitialSize, pData);
 }
 
+RefCntAutoPtr<DataBlobImpl> DataBlobImpl::Create(std::vector<Uint8, STDAllocatorRawMem<Uint8>>&& DataBuff) noexcept
+{
+    return RefCntAutoPtr<DataBlobImpl>{MakeNewRCObj<DataBlobImpl>()(std::move(DataBuff))};
+}
+
 RefCntAutoPtr<DataBlobImpl> DataBlobImpl::MakeCopy(const IDataBlob* pDataBlob)
 {
     if (pDataBlob == nullptr)
@@ -65,6 +70,13 @@ DataBlobImpl::DataBlobImpl(IReferenceCounters* pRefCounters,
     {
         std::memcpy(m_DataBuff.data(), pData, InitialSize);
     }
+}
+
+DataBlobImpl::DataBlobImpl(IReferenceCounters*                             pRefCounters,
+                           std::vector<Uint8, STDAllocatorRawMem<Uint8>>&& DataBuff) noexcept :
+    TBase{pRefCounters},
+    m_DataBuff{std::move(DataBuff)}
+{
 }
 
 DataBlobImpl::~DataBlobImpl()
