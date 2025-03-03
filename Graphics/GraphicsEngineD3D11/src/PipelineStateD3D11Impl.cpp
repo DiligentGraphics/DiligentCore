@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,10 +64,10 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D11Impl::GetDefaultResourceS
     PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
 
     std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
-    for (auto* pShader : Shaders)
+    for (ShaderD3D11Impl* pShader : Shaders)
     {
-        const auto& ShaderResources = *pShader->GetShaderResources();
-        const auto  ShaderType      = ShaderResources.GetShaderType();
+        const ShaderResourcesD3D11& ShaderResources = *pShader->GetShaderResources();
+        const SHADER_TYPE           ShaderType      = ShaderResources.GetShaderType();
         VERIFY_EXPR(ShaderType == pShader->GetDesc().ShaderType);
 
         ShaderResources.ProcessResources(
@@ -78,7 +78,7 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D11Impl::GetDefaultResourceS
                     ShaderResources.GetCombinedSamplerSuffix() :
                     nullptr;
 
-                const auto VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, ShaderType, SamplerSuffix);
+                const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, ShaderType, SamplerSuffix);
                 // Note that Attribs.Name != VarDesc.Name for combined samplers
                 const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
                 if (it_assigned.second)
@@ -89,8 +89,8 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D11Impl::GetDefaultResourceS
                                             "Use explicit resource signature to specify the array size.");
                     }
 
-                    const auto ResType  = Attribs.GetShaderResourceType();
-                    const auto ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+                    const SHADER_RESOURCE_TYPE    ResType  = Attribs.GetShaderResourceType();
+                    const PIPELINE_RESOURCE_FLAGS ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
                     SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.BindCount, ResType, VarDesc.Type, ResFlags);
                 }
                 else
@@ -121,9 +121,9 @@ void PipelineStateD3D11Impl::RemapOrVerifyShaderResources(const TShaderStages&  
     // Verify that pipeline layout is compatible with shader resources and remap resource bindings.
     for (size_t s = 0; s < Shaders.size(); ++s)
     {
-        auto* const      pShader    = Shaders[s];
-        auto const       ShaderType = pShader->GetDesc().ShaderType;
-        const IDataBlob* pBytecode  = Shaders[s]->GetD3DBytecode();
+        ShaderD3D11Impl* const pShader    = Shaders[s];
+        SHADER_TYPE const      ShaderType = pShader->GetDesc().ShaderType;
+        const IDataBlob*       pBytecode  = Shaders[s]->GetD3DBytecode();
 
         ResourceBinding::TMap ResourceMap;
         for (Uint32 sign = 0; sign < SignatureCount; ++sign)
@@ -160,10 +160,11 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
                                                  const std::vector<ShaderD3D11Impl*>& Shaders,
                                                  RefCntAutoPtr<IDataBlob>&            pVSByteCode)
 {
-    const auto InternalFlags = GetInternalCreateFlags(CreateInfo);
+    const PSO_CREATE_INTERNAL_FLAGS InternalFlags = GetInternalCreateFlags(CreateInfo);
     if (m_UsingImplicitSignature && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
-        const auto SignDesc = GetDefaultResourceSignatureDesc(Shaders, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
+        const PipelineResourceSignatureDescWrapper SignDesc =
+            GetDefaultResourceSignatureDesc(Shaders, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
         InitDefaultSignature(SignDesc, GetActiveShaderStages(), false /*IsDeviceInternal*/);
         VERIFY_EXPR(m_Signatures[0]);
     }
@@ -191,7 +192,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
 #ifdef DILIGENT_DEVELOPMENT
     for (Uint32 s = 0; s < D3D11ResourceBindPoints::NumShaderTypes; ++s)
     {
-        const auto ShaderType = GetShaderTypeFromIndex(s);
+        const SHADER_TYPE ShaderType = GetShaderTypeFromIndex(s);
         DEV_CHECK_ERR(ResCounters[D3D11_RESOURCE_RANGE_CBV][s] <= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT,
                       "Constant buffer count ", Uint32{ResCounters[D3D11_RESOURCE_RANGE_CBV][s]},
                       " in ", GetShaderTypeLiteralName(ShaderType), " stage exceeds D3D11 limit ",
@@ -227,7 +228,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     {
         ValidateShaderResourceBindings(m_Desc.Name, *pShader->GetShaderResources(), BindingsMap);
     };
-    const auto ValidateBindingsFn = !HandleRemappedBytecodeFn && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0 ?
+    const TValidateShaderBindingsFn ValidateBindingsFn = !HandleRemappedBytecodeFn && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0 ?
         TValidateShaderBindingsFn{ValidateBindings} :
         TValidateShaderBindingsFn{nullptr};
 
@@ -250,8 +251,8 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
     {
         for (size_t s = 0; s < Shaders.size(); ++s)
         {
-            auto* const pShader = Shaders[s];
-            m_ppd3d11Shaders[s] = pShader->GetD3D11Shader();
+            ShaderD3D11Impl* const pShader = Shaders[s];
+            m_ppd3d11Shaders[s]            = pShader->GetD3D11Shader();
             VERIFY_EXPR(m_ppd3d11Shaders[s]);
 
             if (pShader->GetDesc().ShaderType == SHADER_TYPE_VERTEX)
@@ -272,8 +273,8 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType&  Creat
     m_NumShaders = static_cast<Uint8>(Shaders.size());
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        const auto ShaderType    = Shaders[s]->GetDesc().ShaderType;
-        const auto ShaderTypeIdx = GetShaderTypeIndex(ShaderType);
+        const SHADER_TYPE ShaderType    = Shaders[s]->GetDesc().ShaderType;
+        const Int32       ShaderTypeIdx = GetShaderTypeIndex(ShaderType);
         VERIFY_EXPR(m_ShaderIndices[ShaderTypeIdx] < 0);
         m_ShaderIndices[ShaderTypeIdx] = static_cast<Int8>(s);
     }
@@ -322,7 +323,7 @@ void PipelineStateD3D11Impl::InitializePipeline(const GraphicsPipelineStateCreat
                            "Failed to create D3D11 depth stencil state");
 
     // Create input layout
-    const auto& InputLayout = GraphicsPipeline.InputLayout;
+    const InputLayoutDesc& InputLayout = GraphicsPipeline.InputLayout;
     if (InputLayout.NumElements > 0)
     {
         std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC>> d311InputElements(STD_ALLOCATOR_RAW_MEM(D3D11_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D11_INPUT_ELEMENT_DESC>"));
@@ -405,8 +406,8 @@ bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState* pPSO) const
 
 void PipelineStateD3D11Impl::ValidateShaderResources(const ShaderD3D11Impl* pShader)
 {
-    const auto& pShaderResources = pShader->GetShaderResources();
-    const auto  ShaderType       = pShader->GetDesc().ShaderType;
+    const auto&       pShaderResources = pShader->GetShaderResources();
+    const SHADER_TYPE ShaderType       = pShader->GetDesc().ShaderType;
 
 #ifdef DILIGENT_DEVELOPMENT
     m_ShaderResources.emplace_back(pShaderResources);
@@ -420,12 +421,12 @@ void PipelineStateD3D11Impl::ValidateShaderResources(const ShaderD3D11Impl* pSha
             m_ResourceAttibutions.emplace_back();
 #endif
 
-            const auto IsSampler = Attribs.GetInputType() == D3D_SIT_SAMPLER;
+            const bool IsSampler = Attribs.GetInputType() == D3D_SIT_SAMPLER;
             if (IsSampler && pShaderResources->IsUsingCombinedTextureSamplers())
                 return;
 
 #ifdef DILIGENT_DEVELOPMENT
-            auto& ResAttribution = m_ResourceAttibutions.back();
+            ResourceAttribution& ResAttribution = m_ResourceAttibutions.back();
 #else
             ResourceAttribution ResAttribution;
 #endif
@@ -437,15 +438,15 @@ void PipelineStateD3D11Impl::ValidateShaderResources(const ShaderD3D11Impl* pSha
                                     m_Desc.Name, "'.");
             }
 
-            const auto ResType  = Attribs.GetShaderResourceType();
-            const auto ResFlags = Attribs.GetPipelineResourceFlags();
+            const SHADER_RESOURCE_TYPE    ResType  = Attribs.GetShaderResourceType();
+            const PIPELINE_RESOURCE_FLAGS ResFlags = Attribs.GetPipelineResourceFlags();
 
-            const auto* const pSignature = ResAttribution.pSignature;
+            const PipelineResourceSignatureD3D11Impl* const pSignature = ResAttribution.pSignature;
             VERIFY_EXPR(pSignature != nullptr);
 
             if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
             {
-                auto ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                PipelineResourceDesc ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
                 if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
                     ResDesc.ResourceType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
 
@@ -479,10 +480,10 @@ void PipelineStateD3D11Impl::DvpVerifySRBResources(const ShaderResourceCacheArra
                                                    const BaseBindingsArrayType&        BaseBindings) const
 {
     // Verify base bindings
-    const auto SignCount = GetResourceSignatureCount();
+    const Uint32 SignCount = GetResourceSignatureCount();
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
-        const auto* pSignature = GetResourceSignature(sign);
+        const PipelineResourceSignatureD3D11Impl* pSignature = GetResourceSignature(sign);
         if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
             continue; // Skip null and empty signatures
 
@@ -498,7 +499,7 @@ void PipelineStateD3D11Impl::DvpVerifySRBResources(const ShaderResourceCacheArra
             {
                 if (*attrib_it && !attrib_it->IsImmutableSampler())
                 {
-                    const auto* pResourceCache = ResourceCaches[attrib_it->SignatureIndex];
+                    const ShaderResourceCacheD3D11* pResourceCache = ResourceCaches[attrib_it->SignatureIndex];
                     DEV_CHECK_ERR(pResourceCache != nullptr, "No shader resource cache is set at index ", attrib_it->SignatureIndex);
                     attrib_it->pSignature->DvpValidateCommittedResource(Attribs, attrib_it->ResourceIndex, *pResourceCache,
                                                                         pResources->GetShaderName(), m_Desc.Name);
