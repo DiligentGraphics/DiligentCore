@@ -245,13 +245,13 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
 {
     CComPtr<ID3D12StateObjectProperties> pStateObjectProperties;
 
-    auto hr = pSO->QueryInterface(IID_PPV_ARGS(&pStateObjectProperties));
+    HRESULT hr = pSO->QueryInterface(IID_PPV_ARGS(&pStateObjectProperties));
     if (FAILED(hr))
         LOG_ERROR_AND_THROW("Failed to get state object properties");
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
-        const auto& GeneralShader = CreateInfo.pGeneralShaders[i];
+        const RayTracingGeneralShaderGroup& GeneralShader = CreateInfo.pGeneralShaders[i];
 
         auto iter = NameToGroupIndex.find(GeneralShader.Name);
         VERIFY(iter != NameToGroupIndex.end(),
@@ -259,7 +259,7 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
                "'. This looks to be a bug as NameToGroupIndex is initialized by "
                "CopyRTShaderGroupNames() that processes the same general shaders.");
 
-        const auto* ShaderID = pStateObjectProperties->GetShaderIdentifier(WidenString(GeneralShader.Name).c_str());
+        const void* ShaderID = pStateObjectProperties->GetShaderIdentifier(WidenString(GeneralShader.Name).c_str());
         if (ShaderID == nullptr)
             LOG_ERROR_AND_THROW("Failed to get shader identifier for general shader group '", GeneralShader.Name, "'");
 
@@ -268,7 +268,7 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
 
     for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
     {
-        const auto& TriHitShader = CreateInfo.pTriangleHitShaders[i];
+        const RayTracingTriangleHitShaderGroup& TriHitShader = CreateInfo.pTriangleHitShaders[i];
 
         auto iter = NameToGroupIndex.find(TriHitShader.Name);
         VERIFY(iter != NameToGroupIndex.end(),
@@ -276,7 +276,7 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
                "'. This looks to be a bug as NameToGroupIndex is initialized by "
                "CopyRTShaderGroupNames() that processes the same hit groups.");
 
-        const auto* ShaderID = pStateObjectProperties->GetShaderIdentifier(WidenString(TriHitShader.Name).c_str());
+        const void* ShaderID = pStateObjectProperties->GetShaderIdentifier(WidenString(TriHitShader.Name).c_str());
         if (ShaderID == nullptr)
             LOG_ERROR_AND_THROW("Failed to get shader identifier for triangle hit group '", TriHitShader.Name, "'");
 
@@ -285,7 +285,7 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
 
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
-        const auto& ProcHitShader = CreateInfo.pProceduralHitShaders[i];
+        const RayTracingProceduralHitShaderGroup& ProcHitShader = CreateInfo.pProceduralHitShaders[i];
 
         auto iter = NameToGroupIndex.find(ProcHitShader.Name);
         VERIFY(iter != NameToGroupIndex.end(),
@@ -293,7 +293,7 @@ void GetShaderIdentifiers(ID3D12DeviceChild*                       pSO,
                "'. This looks to be a bug as NameToGroupIndex is initialized by "
                "CopyRTShaderGroupNames() that processes the same hit groups.");
 
-        const auto* ShaderID = pStateObjectProperties->GetShaderIdentifier(WidenString(ProcHitShader.Name).c_str());
+        const void* ShaderID = pStateObjectProperties->GetShaderIdentifier(WidenString(ProcHitShader.Name).c_str());
         if (ShaderID == nullptr)
             LOG_ERROR_AND_THROW("Failed to get shader identifier for procedural hit shader group '", ProcHitShader.Name, "'");
 
@@ -316,7 +316,7 @@ void PipelineStateD3D12Impl::ShaderStageInfo::Append(const ShaderD3D12Impl* pSha
     VERIFY(std::find(Shaders.begin(), Shaders.end(), pShader) == Shaders.end(),
            "Shader '", pShader->GetDesc().Name, "' already exists in the stage. Shaders must be deduplicated.");
 
-    const auto NewShaderType = pShader->GetDesc().ShaderType;
+    const SHADER_TYPE NewShaderType = pShader->GetDesc().ShaderType;
     if (Type == SHADER_TYPE_UNKNOWN)
     {
         VERIFY_EXPR(Shaders.empty());
@@ -352,9 +352,9 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D12Impl::GetDefaultResourceS
     std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
     for (auto& Stage : ShaderStages)
     {
-        for (auto* pShader : Stage.Shaders)
+        for (const ShaderD3D12Impl* pShader : Stage.Shaders)
         {
-            const auto& ShaderResources = *pShader->GetShaderResources();
+            const ShaderResourcesD3D12& ShaderResources = *pShader->GetShaderResources();
 
             ShaderResources.ProcessResources(
                 [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
@@ -367,7 +367,7 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D12Impl::GetDefaultResourceS
                         ShaderResources.GetCombinedSamplerSuffix() :
                         nullptr;
 
-                    const auto VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
+                    const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
                     // Note that Attribs.Name != VarDesc.Name for combined samplers
                     const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
                     if (it_assigned.second)
@@ -378,8 +378,8 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D12Impl::GetDefaultResourceS
                                                 "Use explicit resource signature to specify the array size.");
                         }
 
-                        const auto ResType  = Attribs.GetShaderResourceType();
-                        const auto ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+                        const SHADER_RESOURCE_TYPE    ResType  = Attribs.GetShaderResourceType();
+                        const PIPELINE_RESOURCE_FLAGS ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
                         SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.BindCount, ResType, VarDesc.Type, ResFlags);
                     }
                     else
@@ -411,9 +411,9 @@ void PipelineStateD3D12Impl::RemapOrVerifyShaderResources(TShaderStages&        
 {
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        const auto& Shaders    = ShaderStages[s].Shaders;
-        auto&       ByteCodes  = ShaderStages[s].ByteCodes;
-        const auto  ShaderType = ShaderStages[s].Type;
+        const auto&       Shaders    = ShaderStages[s].Shaders;
+        auto&             ByteCodes  = ShaderStages[s].ByteCodes;
+        const SHADER_TYPE ShaderType = ShaderStages[s].Type;
 
         bool                  HasImtblSamArray = false;
         ResourceBinding::TMap ResourceMap;
@@ -448,7 +448,7 @@ void PipelineStateD3D12Impl::RemapOrVerifyShaderResources(TShaderStages&        
 
         for (size_t i = 0; i < Shaders.size(); ++i)
         {
-            const auto* const pShader = Shaders[i];
+            const ShaderD3D12Impl* const pShader = Shaders[i];
 
             Uint32 VerMajor, VerMinor;
             pShader->GetShaderResources()->GetShaderModel(VerMajor, VerMinor);
@@ -476,7 +476,7 @@ void PipelineStateD3D12Impl::RemapOrVerifyShaderResources(TShaderStages&        
             }
             else
             {
-                auto& pBytecode = ByteCodes[i];
+                RefCntAutoPtr<IDataBlob>& pBytecode = ByteCodes[i];
                 if (IsDXILBytecode(pBytecode->GetConstDataPtr(), pBytecode->GetSize()))
                 {
                     if (!pDxCompiler)
@@ -504,10 +504,11 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
                                                TShaderStages&                 ShaderStages,
                                                LocalRootSignatureD3D12*       pLocalRootSig) noexcept(false)
 {
-    const auto InternalFlags = GetInternalCreateFlags(CreateInfo);
+    const PSO_CREATE_INTERNAL_FLAGS InternalFlags = GetInternalCreateFlags(CreateInfo);
     if (m_UsingImplicitSignature && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
-        const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity, pLocalRootSig);
+        const PipelineResourceSignatureDescWrapper SignDesc =
+            GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity, pLocalRootSig);
 
         // Always initialize default resource signature as internal device object.
         // This is necessary to avoid cyclic references from GenerateMips.
@@ -527,13 +528,13 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
             LOG_ERROR_AND_THROW("Failed to create local root signature for pipeline '", m_Desc.Name, "'.");
     }
 
-    const auto RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
+    const bool RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
 
     const auto ValidateBindings = [this](const ShaderD3D12Impl* pShader, const ResourceBinding::TMap& BindingsMap) //
     {
         ValidateShaderResourceBindings(m_Desc.Name, *pShader->GetShaderResources(), BindingsMap);
     };
-    const auto ValidateBindingsFn = !RemapResources && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0 ?
+    const TValidateShaderBindingsFn ValidateBindingsFn = !RemapResources && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0 ?
         TValidateShaderBindingsFn{ValidateBindings} :
         TValidateShaderBindingsFn{nullptr};
 
@@ -556,8 +557,8 @@ void PipelineStateD3D12Impl::InitRootSignature(const PipelineStateCreateInfo& Cr
 
 void PipelineStateD3D12Impl::ValidateShaderResources(const ShaderD3D12Impl* pShader, const LocalRootSignatureD3D12* pLocalRootSig)
 {
-    const auto& pShaderResources = pShader->GetShaderResources();
-    const auto  ShaderType       = pShader->GetDesc().ShaderType;
+    const auto&       pShaderResources = pShader->GetShaderResources();
+    const SHADER_TYPE ShaderType       = pShader->GetDesc().ShaderType;
 
 #ifdef DILIGENT_DEVELOPMENT
     m_ShaderResources.emplace_back(pShaderResources);
@@ -569,7 +570,7 @@ void PipelineStateD3D12Impl::ValidateShaderResources(const ShaderD3D12Impl* pSha
         {
 #ifdef DILIGENT_DEVELOPMENT
             m_ResourceAttibutions.emplace_back();
-            auto& ResAttribution = m_ResourceAttibutions.back();
+            ResourceAttribution& ResAttribution = m_ResourceAttibutions.back();
 #else
             ResourceAttribution ResAttribution;
 #endif
@@ -577,7 +578,7 @@ void PipelineStateD3D12Impl::ValidateShaderResources(const ShaderD3D12Impl* pSha
             if (pLocalRootSig != nullptr && pLocalRootSig->IsShaderRecord(Attribs))
                 return;
 
-            const auto IsSampler = Attribs.GetInputType() == D3D_SIT_SAMPLER;
+            const bool IsSampler = Attribs.GetInputType() == D3D_SIT_SAMPLER;
             if (IsSampler && pShaderResources->IsUsingCombinedTextureSamplers())
                 return;
 
@@ -589,15 +590,15 @@ void PipelineStateD3D12Impl::ValidateShaderResources(const ShaderD3D12Impl* pSha
                                     m_Desc.Name, "'.");
             }
 
-            const auto ResType  = Attribs.GetShaderResourceType();
-            const auto ResFlags = Attribs.GetPipelineResourceFlags();
+            const SHADER_RESOURCE_TYPE    ResType  = Attribs.GetShaderResourceType();
+            const PIPELINE_RESOURCE_FLAGS ResFlags = Attribs.GetPipelineResourceFlags();
 
-            const auto* const pSignature = ResAttribution.pSignature;
+            const PipelineResourceSignatureD3D12Impl* const pSignature = ResAttribution.pSignature;
             VERIFY_EXPR(pSignature != nullptr);
 
             if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
             {
-                auto ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                PipelineResourceDesc ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
                 if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT)
                     ResDesc.ResourceType = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
                 ValidatePipelineResourceCompatibility(ResDesc, ResType, ResFlags, Attribs.BindCount,
@@ -635,7 +636,7 @@ void PipelineStateD3D12Impl::DvpVerifySRBResources(const DeviceContextD3D12Impl*
                 {
                     VERIFY_EXPR(attrib_it->pSignature != nullptr);
                     VERIFY_EXPR(attrib_it->pSignature->GetDesc().BindingIndex == attrib_it->SignatureIndex);
-                    const auto* pResourceCache = ResourceCaches[attrib_it->SignatureIndex];
+                    const ShaderResourceCacheD3D12* pResourceCache = ResourceCaches[attrib_it->SignatureIndex];
                     DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", attrib_it->SignatureIndex, " is null.");
                     attrib_it->pSignature->DvpValidateCommittedResource(pDeviceCtx, Attribs, attrib_it->ResourceIndex, *pResourceCache,
                                                                         pResources->GetShaderName(), m_Desc.Name);
@@ -674,19 +675,19 @@ void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType& Create
 
 void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreateInfo& CreateInfo)
 {
-    const auto WName = WidenString(m_Desc.Name);
+    const std::wstring WName = WidenString(m_Desc.Name);
 
     TShaderStages ShaderStages;
     InitInternalObjects(CreateInfo, ShaderStages);
 
-    auto* pd3d12Device = m_pDevice->GetD3D12Device();
+    ID3D12Device* pd3d12Device = m_pDevice->GetD3D12Device();
     if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
         const GraphicsPipelineDesc& GraphicsPipeline = m_pGraphicsPipelineData->Desc;
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
-        for (const auto& Stage : ShaderStages)
+        for (const ShaderStageInfo& Stage : ShaderStages)
         {
             VERIFY_EXPR(Stage.Count() == 1);
             const IDataBlob* pByteCode = Stage.ByteCodes[0];
@@ -694,7 +695,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
             D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
             switch (Stage.Type)
             {
-                // clang-format off
+                    // clang-format off
                 case SHADER_TYPE_VERTEX:   pd3d12ShaderBytecode = &d3d12PSODesc.VS; break;
                 case SHADER_TYPE_PIXEL:    pd3d12ShaderBytecode = &d3d12PSODesc.PS; break;
                 case SHADER_TYPE_GEOMETRY: pd3d12ShaderBytecode = &d3d12PSODesc.GS; break;
@@ -721,7 +722,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
 
         std::vector<D3D12_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D12_INPUT_ELEMENT_DESC>> d312InputElements(STD_ALLOCATOR_RAW_MEM(D3D12_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D12_INPUT_ELEMENT_DESC>"));
 
-        const auto& InputLayout = GraphicsPipeline.InputLayout;
+        const InputLayoutDesc& InputLayout = GraphicsPipeline.InputLayout;
         if (InputLayout.NumElements > 0)
         {
             LayoutElements_To_D3D12_INPUT_ELEMENT_DESCs(InputLayout, d312InputElements);
@@ -765,7 +766,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
         d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
         // Try to load from the cache
-        auto* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
+        PipelineStateCacheD3D12Impl* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
         if (pPSOCacheD3D12 != nullptr && !WName.empty())
             m_pd3d12PSO = pPSOCacheD3D12->LoadGraphicsPipeline(WName.c_str(), d3d12PSODesc);
         if (!m_pd3d12PSO)
@@ -804,7 +805,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
         };
         MESH_SHADER_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
-        for (const auto& Stage : ShaderStages)
+        for (const ShaderStageInfo& Stage : ShaderStages)
         {
             VERIFY_EXPR(Stage.Count() == 1);
             const IDataBlob* pByteCode = Stage.ByteCodes[0];
@@ -812,7 +813,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
             D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
             switch (Stage.Type)
             {
-                // clang-format off
+                    // clang-format off
                 case SHADER_TYPE_AMPLIFICATION: pd3d12ShaderBytecode = &d3d12PSODesc.AS; break;
                 case SHADER_TYPE_MESH:          pd3d12ShaderBytecode = &d3d12PSODesc.MS; break;
                 case SHADER_TYPE_PIXEL:         pd3d12ShaderBytecode = &d3d12PSODesc.PS; break;
@@ -857,7 +858,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const GraphicsPipelineStateCreat
         streamDesc.SizeInBytes                   = sizeof(d3d12PSODesc);
         streamDesc.pPipelineStateSubobjectStream = &d3d12PSODesc;
 
-        auto* pd3d12Device2 = m_pDevice->GetD3D12Device2();
+        ID3D12Device2* pd3d12Device2 = m_pDevice->GetD3D12Device2();
         // Note: renderdoc frame capture fails if any interface but IID_ID3D12PipelineState is requested
         HRESULT hr = pd3d12Device2->CreatePipelineState(&streamDesc, __uuidof(ID3D12PipelineState), IID_PPV_ARGS_Helper(&m_pd3d12PSO));
         if (FAILED(hr))
@@ -880,7 +881,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const ComputePipelineStateCreate
     TShaderStages ShaderStages;
     InitInternalObjects(CreateInfo, ShaderStages);
 
-    auto* pd3d12Device = m_pDevice->GetD3D12Device();
+    ID3D12Device* pd3d12Device = m_pDevice->GetD3D12Device();
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
@@ -904,8 +905,8 @@ void PipelineStateD3D12Impl::InitializePipeline(const ComputePipelineStateCreate
     d3d12PSODesc.pRootSignature = m_RootSig->GetD3D12RootSignature();
 
     // Try to load from the cache
-    const auto  WName          = WidenString(m_Desc.Name);
-    auto* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
+    const std::wstring                 WName          = WidenString(m_Desc.Name);
+    PipelineStateCacheD3D12Impl* const pPSOCacheD3D12 = ClassPtrCast<PipelineStateCacheD3D12Impl>(CreateInfo.pPSOCache);
     if (pPSOCacheD3D12 != nullptr && !WName.empty())
         m_pd3d12PSO = pPSOCacheD3D12->LoadComputePipeline(WName.c_str(), d3d12PSODesc);
     if (!m_pd3d12PSO)
@@ -932,7 +933,7 @@ void PipelineStateD3D12Impl::InitializePipeline(const RayTracingPipelineStateCre
     TShaderStages           ShaderStages;
     InitInternalObjects(CreateInfo, ShaderStages, &LocalRootSig);
 
-    auto* pd3d12Device = m_pDevice->GetD3D12Device5();
+    ID3D12Device5* pd3d12Device = m_pDevice->GetD3D12Device5();
 
     DynamicLinearAllocator             TempPool{GetRawAllocator(), 4 << 10};
     std::vector<D3D12_STATE_SUBOBJECT> Subobjects;
