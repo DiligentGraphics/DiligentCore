@@ -45,11 +45,12 @@ namespace Diligent
 class DataBlobImpl final : public Diligent::ObjectBase<IDataBlob>
 {
 public:
-    typedef ObjectBase<IDataBlob> TBase;
+    using TBase          = ObjectBase<IDataBlob>;
+    using DataBufferType = std::vector<Uint8, STDAllocatorRawMem<Uint8>>;
 
     static RefCntAutoPtr<DataBlobImpl> Create(size_t InitialSize = 0, const void* pData = nullptr);
     static RefCntAutoPtr<DataBlobImpl> Create(IMemoryAllocator* pAllocator, size_t InitialSize = 0, const void* pData = nullptr);
-    static RefCntAutoPtr<DataBlobImpl> Create(std::vector<Uint8, STDAllocatorRawMem<Uint8>>&& DataBuff) noexcept;
+    static RefCntAutoPtr<DataBlobImpl> Create(DataBufferType&& DataBuff) noexcept;
     static RefCntAutoPtr<DataBlobImpl> MakeCopy(const IDataBlob* pDataBlob);
 
     ~DataBlobImpl() override;
@@ -89,11 +90,11 @@ private:
                  size_t              InitialSize = 0,
                  const void*         pData       = nullptr);
 
-    DataBlobImpl(IReferenceCounters*                             pRefCounters,
-                 std::vector<Uint8, STDAllocatorRawMem<Uint8>>&& DataBuff) noexcept;
+    DataBlobImpl(IReferenceCounters* pRefCounters,
+                 DataBufferType&&    DataBuff) noexcept;
 
 private:
-    std::vector<Uint8, STDAllocatorRawMem<Uint8>> m_DataBuff;
+    DataBufferType m_DataBuff;
 };
 
 class DataBlobAllocatorAdapter final : public IMemoryAllocator

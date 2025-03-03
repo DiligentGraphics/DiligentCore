@@ -46,7 +46,7 @@ RefCntAutoPtr<DataBlobImpl> DataBlobImpl::Create(size_t InitialSize, const void*
     return Create(nullptr, InitialSize, pData);
 }
 
-RefCntAutoPtr<DataBlobImpl> DataBlobImpl::Create(std::vector<Uint8, STDAllocatorRawMem<Uint8>>&& DataBuff) noexcept
+RefCntAutoPtr<DataBlobImpl> DataBlobImpl::Create(DataBufferType&& DataBuff) noexcept
 {
     return RefCntAutoPtr<DataBlobImpl>{MakeNewRCObj<DataBlobImpl>()(std::move(DataBuff))};
 }
@@ -72,8 +72,8 @@ DataBlobImpl::DataBlobImpl(IReferenceCounters* pRefCounters,
     }
 }
 
-DataBlobImpl::DataBlobImpl(IReferenceCounters*                             pRefCounters,
-                           std::vector<Uint8, STDAllocatorRawMem<Uint8>>&& DataBuff) noexcept :
+DataBlobImpl::DataBlobImpl(IReferenceCounters* pRefCounters,
+                           DataBufferType&&    DataBuff) noexcept :
     TBase{pRefCounters},
     m_DataBuff{std::move(DataBuff)}
 {
