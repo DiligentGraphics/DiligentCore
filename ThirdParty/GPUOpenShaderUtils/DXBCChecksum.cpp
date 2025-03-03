@@ -140,7 +140,7 @@ typedef struct
 static void MD5_Transform(UINT4* buf, UINT4* in);
 
 void MD5Init(MD5_CTX* mdContext, unsigned long pseudoRandomNumber = 0);
-void MD5Update(MD5_CTX* mdContext, unsigned char* inBuf, unsigned int inLen);
+void MD5Update(MD5_CTX* mdContext, const unsigned char* inBuf, unsigned int inLen);
 void MD5Final(MD5_CTX* mdContext);
 
 /* Basic MD5 step. MD5_Transform buf based on in */
@@ -238,7 +238,7 @@ void MD5Init(MD5_CTX* mdContext, unsigned long pseudoRandomNumber)
     mdContext->buf[3] = (UINT4)0x10325476 + (pseudoRandomNumber * 97);
 }
 
-void MD5Update(MD5_CTX* mdContext, unsigned char* inBuf, unsigned int inLen)
+void MD5Update(MD5_CTX* mdContext, const unsigned char* inBuf, unsigned int inLen)
 {
     UINT4 in[16];
     int mdi = 0;
@@ -323,7 +323,7 @@ void MD5Final(MD5_CTX* mdContext)
 
 static const DWORD dwHashOffset = 0x14;
 
-BOOL CalculateDXBCChecksum(BYTE* pData, DWORD dwSize, DWORD dwHash[4])
+BOOL CalculateDXBCChecksum(const BYTE* pData, DWORD dwSize, DWORD dwHash[4])
 {
     MD5_CTX md5Ctx;
     MD5Init(&md5Ctx, 0);
@@ -340,7 +340,7 @@ BOOL CalculateDXBCChecksum(BYTE* pData, DWORD dwSize, DWORD dwHash[4])
 
     DWORD dwLastChunkSize = dwSize - dwFullChunksSize;
     DWORD dwPaddingSize = 64  - dwLastChunkSize;
-    BYTE* pLastChunkData = pData + dwFullChunksSize;
+    const BYTE* pLastChunkData = pData + dwFullChunksSize;
 
     if (dwLastChunkSize >= 56)
     {
