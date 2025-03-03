@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -107,9 +107,9 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
         IsDeviceInternal,
         GetD3D11ShaderModel(D3D11ShaderCI.FeatureLevel, ShaderCI.HLSLVersion),
         [LoadConstantBufferReflection = ShaderCI.LoadConstantBufferReflection](const ShaderDesc& Desc, IDataBlob* pShaderByteCode) {
-            auto& Allocator  = GetRawAllocator();
-            auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
-            auto* pResources = new (pRawMem) ShaderResourcesD3D11 //
+            IMemoryAllocator&     Allocator  = GetRawAllocator();
+            ShaderResourcesD3D11* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D11, 1);
+            ShaderResourcesD3D11* pResources = new (pRawMem) ShaderResourcesD3D11 //
                 {
                     pShaderByteCode,
                     Desc,
@@ -156,9 +156,7 @@ ID3D11DeviceChild* ShaderD3D11Impl::GetD3D11Shader(IDataBlob* pBytecode) noexcep
         return it->second;
     }
 
-    VERIFY(pBytecode->GetSize() == m_pShaderByteCode->GetSize(), "The byte code size does not match the size of the original byte code");
-
-    auto* pd3d11Device = GetDevice()->GetD3D11Device();
+    ID3D11Device* pd3d11Device = GetDevice()->GetD3D11Device();
 
     CComPtr<ID3D11DeviceChild> pd3d11Shader;
     switch (m_Desc.ShaderType)
@@ -193,7 +191,7 @@ ID3D11DeviceChild* ShaderD3D11Impl::GetD3D11Shader(IDataBlob* pBytecode) noexcep
 
     if (*m_Desc.Name != 0)
     {
-        auto hr = pd3d11Shader->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        HRESULT hr = pd3d11Shader->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
         DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set shader name");
     }
 
