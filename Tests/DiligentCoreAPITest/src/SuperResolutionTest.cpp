@@ -329,7 +329,7 @@ TEST(SuperResolutionTest, ExecuteSpatialUpscaler)
 
     ExecuteSuperResolutionAttribs Attribs;
     Attribs.pColorTextureSRV  = pColorTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
-    Attribs.pOutputTextureRTV = pOutputTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+    Attribs.pOutputTextureView = pOutputTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
 
     pContext->ExecuteSuperResolution(Attribs, pUpscaler);
     pContext->Flush();
@@ -452,7 +452,7 @@ TEST(SuperResolutionTest, ExecuteTemporalUpscaler)
     Attribs.pColorTextureSRV   = pColorTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
     Attribs.pDepthTextureSRV   = pDepthTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
     Attribs.pMotionVectorsSRV  = pMotionTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
-    Attribs.pOutputTextureRTV  = pOutputTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+    Attribs.pOutputTextureView  = pOutputTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
     Attribs.JitterX            = 0.5f;
     Attribs.JitterY            = -0.5f;
     Attribs.MotionVectorScaleX = 1.0f;

@@ -3347,10 +3347,28 @@ DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_TEMPORAL_CAP_FLAGS, Uint32)
 DEFINE_FLAG_ENUM_OPERATORS(SUPER_RESOLUTION_TEMPORAL_CAP_FLAGS)
 
 
+/// Super resolution creation flags.
+DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_CREATE_FLAGS, Uint32)
+{
+    SUPER_RESOLUTION_CREATE_FLAG_NONE = 0u,
+
+    /// When set, the upscaler automatically calculates exposure for each frame.
+    /// The exposure texture in ExecuteSuperResolutionAttribs is ignored.
+    SUPER_RESOLUTION_CREATE_FLAG_AUTO_EXPOSURE = 1u << 0,
+
+    /// When set, enables the sharpening pass in the upscaler.
+    /// The Sharpness field in ExecuteSuperResolutionAttribs controls the amount.
+    SUPER_RESOLUTION_CREATE_FLAG_ENABLE_SHARPENING = 1u << 1,
+
+    SUPER_RESOLUTION_CREATE_FLAG_LAST = SUPER_RESOLUTION_CREATE_FLAG_ENABLE_SHARPENING
+};
+DEFINE_FLAG_ENUM_OPERATORS(SUPER_RESOLUTION_CREATE_FLAGS)
+
+
 /// Information about a supported super resolution upscaler variant
 struct SuperResolutionInfo
 {
-    /// Human-readable name of the upscaler variant (e.g. "MetalFX Spatial", "MetalFX Temporal").
+    /// Human-readable name of the upscaler variant (e.g. "DLSS", "FSR", "MetalFX Spatial", "MetalFX Temporal").
     Char Name[128] DEFAULT_INITIALIZER({});
 
     /// Unique identifier for this upscaler variant.

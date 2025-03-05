@@ -89,10 +89,14 @@ struct SuperResolutionDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Unlike the reactive mask which provides proportional control, this is a binary decision.
     TEXTURE_FORMAT IgnoreHistoryMaskFormat DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
-    /// When True, the upscaler automatically calculates exposure for each frame.
-    /// When auto exposure is enabled, the exposure texture in
-    /// ExecuteSuperResolutionAttribs is ignored.
-    Bool AutoExposureEnabled      DEFAULT_INITIALIZER(True);
+    /// Exposure scale texture format.
+    /// Optional. When auto-exposure is disabled, specifies the format of the 1x1 exposure
+    /// texture provided in ExecuteSuperResolutionAttribs::pExposureTextureSRV.
+    TEXTURE_FORMAT ExposureFormat DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+
+    /// Engine creation flags controlling the super resolution upscaler behavior.
+    /// See SUPER_RESOLUTION_CREATE_FLAGS.
+    SUPER_RESOLUTION_CREATE_FLAGS Flags DEFAULT_INITIALIZER(SUPER_RESOLUTION_CREATE_FLAG_NONE);
 };
 typedef struct SuperResolutionDesc SuperResolutionDesc;
 
@@ -111,6 +115,16 @@ struct SuperResolutionSourceSettingsAttribs
 
     /// Target (output) texture height. Must be greater than zero.
     Uint32 OutputHeight    DEFAULT_INITIALIZER(0);
+
+    /// Output texture format.
+    /// Some backends (e.g. DirectSR) may return different optimal input resolutions
+    /// depending on the output format. When set to TEX_FORMAT_UNKNOWN, the backend will use a reasonable default.
+    TEXTURE_FORMAT OutputFormat DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+
+    /// Engine creation flags controlling the super resolution upscaler behavior.
+    /// These flags affect the optimal source resolution returned by the backend.
+    /// Must match the flags that will be used when creating the upscaler.
+    SUPER_RESOLUTION_CREATE_FLAGS Flags DEFAULT_INITIALIZER(SUPER_RESOLUTION_CREATE_FLAG_NONE);
 
     /// Optimization type controlling the quality/performance trade-off.
     SUPER_RESOLUTION_OPTIMIZATION_TYPE OptimizationType DEFAULT_INITIALIZER(SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED);
@@ -150,12 +164,12 @@ struct ExecuteSuperResolutionAttribs
 
     /// Output (upscaled) texture (unordered access view or render target view).
     /// Must match SuperResolutionDesc::OutputWidth x OutputHeight.
-    ITextureView* pOutputTextureRTV     DEFAULT_INITIALIZER(nullptr);
+    ITextureView* pOutputTextureView     DEFAULT_INITIALIZER(nullptr);
 
     /// Exposure texture (shader resource view).
     /// Optional. A 1x1 R16_FLOAT texture containing the exposure value.
     /// The upscaler reads the R channel and uses it to multiply the input color.
-    /// Ignored when SuperResolutionDesc::AutoExposureEnabled is True.
+    /// Ignored when SuperResolutionDesc::Flags includes SUPER_RESOLUTION_CREATE_FLAG_AUTO_EXPOSURE.
     ITextureView* pExposureTextureSRV   DEFAULT_INITIALIZER(nullptr);
 
     /// Reactive mask texture (shader resource view).
