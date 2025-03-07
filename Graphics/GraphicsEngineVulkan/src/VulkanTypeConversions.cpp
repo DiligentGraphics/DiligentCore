@@ -708,14 +708,14 @@ VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationSta
 
     // If depth clamping is enabled, before the incoming fragment's zf is compared to za, zf is clamped to
     // [min(n,f), max(n,f)], where n and f are the minDepth and maxDepth depth range values of the viewport
-    // used by this fragment, respectively (25.10)
+    // used by this fragment, respectively
     // This value is the opposite of clip enable
     RSStateCI.depthClampEnable = RasterizerDesc.DepthClipEnable ? VK_FALSE : VK_TRUE;
 
-    RSStateCI.rasterizerDiscardEnable = VK_FALSE;                                                                                         // Whether primitives are discarded immediately before the rasterization stage.
-    RSStateCI.polygonMode             = FillModeToVkPolygonMode(RasterizerDesc.FillMode);                                                 // 24.7.2
-    RSStateCI.cullMode                = CullModeToVkCullMode(RasterizerDesc.CullMode);                                                    // 24.7.1
-    RSStateCI.frontFace               = RasterizerDesc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE; // 24.7.1
+    RSStateCI.rasterizerDiscardEnable = VK_FALSE; // Whether primitives are discarded immediately before the rasterization stage.
+    RSStateCI.polygonMode             = FillModeToVkPolygonMode(RasterizerDesc.FillMode);
+    RSStateCI.cullMode                = CullModeToVkCullMode(RasterizerDesc.CullMode);
+    RSStateCI.frontFace               = RasterizerDesc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
     // Depth bias (24.7.3)
     RSStateCI.depthBiasEnable = (RasterizerDesc.DepthBias != 0 || RasterizerDesc.SlopeScaledDepthBias != 0.f) ? VK_TRUE : VK_FALSE;
     RSStateCI.depthBiasConstantFactor =
@@ -726,7 +726,7 @@ VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationSta
         RasterizerDesc.SlopeScaledDepthBias; //  a scalar factor applied to a fragment's slope in depth bias calculations.
     RSStateCI.lineWidth = 1.f;               // If the wide lines feature is not enabled, and no element of the pDynamicStates member of
                                              // pDynamicState is VK_DYNAMIC_STATE_LINE_WIDTH, the lineWidth member of
-                                             // pRasterizationState must be 1.0 (9.2)
+                                             // pRasterizationState must be 1.0
 
     return RSStateCI;
 }
@@ -792,12 +792,12 @@ VkStencilOpState StencilOpDescToVkStencilOpState(const StencilOpDesc& desc, Uint
 
     // The s least significant bits of compareMask,  where s is the number of bits in the stencil framebuffer attachment,
     // are bitwise ANDed with both the reference and the stored stencil value, and the resulting masked values are those
-    // that participate in the comparison controlled by compareOp (25.9)
+    // that participate in the comparison controlled by compareOp
     StencilState.compareMask = StencilReadMask;
 
     // The least significant s bits of writeMask, where s is the number of bits in the stencil framebuffer
     // attachment, specify an integer mask. Where a 1 appears in this mask, the corresponding bit in the stencil
-    // value in the depth / stencil attachment is written; where a 0 appears, the bit is not written (25.9)
+    // value in the depth / stencil attachment is written; where a 0 appears, the bit is not written
     StencilState.writeMask = StencilWriteMask;
 
     StencilState.reference = 0; // Set dynamically
@@ -808,7 +808,7 @@ VkStencilOpState StencilOpDescToVkStencilOpState(const StencilOpDesc& desc, Uint
 
 VkPipelineDepthStencilStateCreateInfo DepthStencilStateDesc_To_VkDepthStencilStateCI(const DepthStencilStateDesc& DepthStencilDesc)
 {
-    // Depth-stencil state (25.7)
+    // Depth-stencil state
     VkPipelineDepthStencilStateCreateInfo DSStateCI = {};
 
     DSStateCI.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -821,7 +821,7 @@ VkPipelineDepthStencilStateCreateInfo DepthStencilStateDesc_To_VkDepthStencilSta
     DSStateCI.stencilTestEnable     = DepthStencilDesc.StencilEnable ? VK_TRUE : VK_FALSE;     // 25.9
     DSStateCI.front                 = StencilOpDescToVkStencilOpState(DepthStencilDesc.FrontFace, DepthStencilDesc.StencilReadMask, DepthStencilDesc.StencilWriteMask);
     DSStateCI.back                  = StencilOpDescToVkStencilOpState(DepthStencilDesc.BackFace, DepthStencilDesc.StencilReadMask, DepthStencilDesc.StencilWriteMask);
-    // Depth Bounds Test (25.8)
+    // Depth Bounds Test
     DSStateCI.minDepthBounds = 0; // must be between 0.0 and 1.0, inclusive
     DSStateCI.maxDepthBounds = 1; // must be between 0.0 and 1.0, inclusive
 
@@ -833,7 +833,6 @@ class BlendFactorToVkBlendFactorMapper
 public:
     BlendFactorToVkBlendFactorMapper()
     {
-        // 26.1.1
         m_Map[BLEND_FACTOR_ZERO]             = VK_BLEND_FACTOR_ZERO;
         m_Map[BLEND_FACTOR_ONE]              = VK_BLEND_FACTOR_ONE;
         m_Map[BLEND_FACTOR_SRC_COLOR]        = VK_BLEND_FACTOR_SRC_COLOR;
@@ -869,7 +868,6 @@ class LogicOperationToVkLogicOp
 public:
     LogicOperationToVkLogicOp()
     {
-        // 26.2
         m_Map[LOGIC_OP_CLEAR]         = VK_LOGIC_OP_CLEAR;
         m_Map[LOGIC_OP_SET]           = VK_LOGIC_OP_SET;
         m_Map[LOGIC_OP_COPY]          = VK_LOGIC_OP_COPY;
@@ -903,7 +901,6 @@ class BlendOperationToVkBlendOp
 public:
     BlendOperationToVkBlendOp()
     {
-        // 26.1.3
         m_Map[BLEND_OPERATION_ADD]          = VK_BLEND_OP_ADD;
         m_Map[BLEND_OPERATION_SUBTRACT]     = VK_BLEND_OP_SUBTRACT;
         m_Map[BLEND_OPERATION_REV_SUBTRACT] = VK_BLEND_OP_REVERSE_SUBTRACT;
@@ -921,6 +918,20 @@ private:
     std::array<VkBlendOp, BLEND_OPERATION_NUM_OPERATIONS> m_Map = {};
 };
 
+VkColorComponentFlags ColorMaskToVkColorComponentFlags(COLOR_MASK ColorMask)
+{
+    VkColorComponentFlags Flags = 0;
+    if (ColorMask & COLOR_MASK_RED)
+        Flags |= VK_COLOR_COMPONENT_R_BIT;
+    if (ColorMask & COLOR_MASK_GREEN)
+        Flags |= VK_COLOR_COMPONENT_G_BIT;
+    if (ColorMask & COLOR_MASK_BLUE)
+        Flags |= VK_COLOR_COMPONENT_B_BIT;
+    if (ColorMask & COLOR_MASK_ALPHA)
+        Flags |= VK_COLOR_COMPONENT_A_BIT;
+    return Flags;
+}
+
 VkPipelineColorBlendAttachmentState RenderTargetBlendDescToVkColorBlendAttachmentState(const RenderTargetBlendDesc& RTBlendDesc)
 {
     static const BlendFactorToVkBlendFactorMapper BFtoVKBF;
@@ -934,11 +945,7 @@ VkPipelineColorBlendAttachmentState RenderTargetBlendDescToVkColorBlendAttachmen
     AttachmentBlendState.srcAlphaBlendFactor = BFtoVKBF[RTBlendDesc.SrcBlendAlpha];
     AttachmentBlendState.dstAlphaBlendFactor = BFtoVKBF[RTBlendDesc.DestBlendAlpha];
     AttachmentBlendState.alphaBlendOp        = BOtoVKBO[RTBlendDesc.BlendOpAlpha];
-    AttachmentBlendState.colorWriteMask =
-        ((RTBlendDesc.RenderTargetWriteMask & COLOR_MASK_RED) ? VK_COLOR_COMPONENT_R_BIT : 0) |
-        ((RTBlendDesc.RenderTargetWriteMask & COLOR_MASK_GREEN) ? VK_COLOR_COMPONENT_G_BIT : 0) |
-        ((RTBlendDesc.RenderTargetWriteMask & COLOR_MASK_BLUE) ? VK_COLOR_COMPONENT_B_BIT : 0) |
-        ((RTBlendDesc.RenderTargetWriteMask & COLOR_MASK_ALPHA) ? VK_COLOR_COMPONENT_A_BIT : 0);
+    AttachmentBlendState.colorWriteMask      = ColorMaskToVkColorComponentFlags(RTBlendDesc.RenderTargetWriteMask);
 
     return AttachmentBlendState;
 }
@@ -947,13 +954,15 @@ void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc&                     
                                       VkPipelineColorBlendStateCreateInfo&              ColorBlendStateCI,
                                       std::vector<VkPipelineColorBlendAttachmentState>& ColorBlendAttachments)
 {
-    // Color blend state (26.1)
+    const RenderTargetBlendDesc& RT0BlendState = BSDesc.RenderTargets[0];
+
+    // Color blend state
     static const LogicOperationToVkLogicOp LogicOpToVkLogicOp;
     ColorBlendStateCI.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     ColorBlendStateCI.pNext             = nullptr;
-    ColorBlendStateCI.flags             = 0;                                            // reserved for future use
-    ColorBlendStateCI.logicOpEnable     = BSDesc.RenderTargets[0].LogicOperationEnable; // 26.2
-    ColorBlendStateCI.logicOp           = LogicOpToVkLogicOp[BSDesc.RenderTargets[0].LogicOp];
+    ColorBlendStateCI.flags             = 0; // reserved for future use
+    ColorBlendStateCI.logicOpEnable     = RT0BlendState.LogicOperationEnable;
+    ColorBlendStateCI.logicOp           = LogicOpToVkLogicOp[RT0BlendState.LogicOp];
     ColorBlendStateCI.blendConstants[0] = 0.f; // We use dynamic blend constants
     ColorBlendStateCI.blendConstants[1] = 0.f;
     ColorBlendStateCI.blendConstants[2] = 0.f;
@@ -961,8 +970,13 @@ void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc&                     
     // attachmentCount must equal the colorAttachmentCount for the subpass in which this pipeline is used.
     for (uint32_t attachment = 0; attachment < ColorBlendStateCI.attachmentCount; ++attachment)
     {
-        const RenderTargetBlendDesc& RTBlendState = BSDesc.IndependentBlendEnable ? BSDesc.RenderTargets[attachment] : BSDesc.RenderTargets[0];
-        ColorBlendAttachments[attachment]         = RenderTargetBlendDescToVkColorBlendAttachmentState(RTBlendState);
+        const RenderTargetBlendDesc&         RTBlendState = BSDesc.RenderTargets[attachment];
+        VkPipelineColorBlendAttachmentState& Attachment   = ColorBlendAttachments[attachment];
+
+        Attachment = RenderTargetBlendDescToVkColorBlendAttachmentState(BSDesc.IndependentBlendEnable ? RTBlendState : RT0BlendState);
+
+        // Color write mask should always be set for each attachment even if blend is disabled
+        Attachment.colorWriteMask = ColorMaskToVkColorComponentFlags(RTBlendState.RenderTargetWriteMask);
     }
 }
 
@@ -990,7 +1004,7 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&             
                                              std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS>&         AttributeDescription,
                                              std::array<VkVertexInputBindingDivisorDescriptionEXT, MAX_LAYOUT_ELEMENTS>& VertexBindingDivisors)
 {
-    // Vertex input description (20.2)
+    // Vertex input description
     VertexInputStateCI.sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     VertexInputStateCI.pNext                           = nullptr;
     VertexInputStateCI.flags                           = 0; // reserved for future use.
