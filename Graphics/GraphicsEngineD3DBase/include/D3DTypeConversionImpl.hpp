@@ -303,21 +303,32 @@ void BlendStateDescToD3DBlendDesc(const BlendStateDesc& BSDesc, D3D_BLEND_DESC& 
     // D3D_BLEND_DESC and D3D11_BLEND_DESC structures are identical
     d3d12BlendDesc.AlphaToCoverageEnable  = BSDesc.AlphaToCoverageEnable ? TRUE : FALSE;
     d3d12BlendDesc.IndependentBlendEnable = BSDesc.IndependentBlendEnable ? TRUE : FALSE;
+
+    const RenderTargetBlendDesc& SrcRT0Desc = BSDesc.RenderTargets[0];
+
     VERIFY(MAX_RENDER_TARGETS >= 8, "Number of render targets is expected to be at least 8");
     for (int i = 0; i < 8; ++i)
     {
-        const RenderTargetBlendDesc& SrcRTDesc = BSDesc.RenderTargets[i];
-        auto&                        DstRTDesc = d3d12BlendDesc.RenderTarget[i];
+        const RenderTargetBlendDesc& SrcRTDesc   = BSDesc.RenderTargets[i];
+        const RenderTargetBlendDesc& BlendRTDesc = BSDesc.IndependentBlendEnable ? SrcRTDesc : SrcRT0Desc;
+        auto&                        DstRTDesc   = d3d12BlendDesc.RenderTarget[i];
 
-        DstRTDesc.BlendEnable = SrcRTDesc.BlendEnable ? TRUE : FALSE;
+        DstRTDesc.BlendEnable = BlendRTDesc.BlendEnable ? TRUE : FALSE;
 
-        DstRTDesc.SrcBlend  = BlendFactorToD3DBlend<D3D_BLEND>(SrcRTDesc.SrcBlend);
-        DstRTDesc.DestBlend = BlendFactorToD3DBlend<D3D_BLEND>(SrcRTDesc.DestBlend);
-        DstRTDesc.BlendOp   = BlendOperationToD3DBlendOp<D3D_BLEND_OP>(SrcRTDesc.BlendOp);
+        DstRTDesc.SrcBlend  = BlendFactorToD3DBlend<D3D_BLEND>(BlendRTDesc.SrcBlend);
+        DstRTDesc.DestBlend = BlendFactorToD3DBlend<D3D_BLEND>(BlendRTDesc.DestBlend);
+        DstRTDesc.BlendOp   = BlendOperationToD3DBlendOp<D3D_BLEND_OP>(BlendRTDesc.BlendOp);
 
-        DstRTDesc.SrcBlendAlpha  = BlendFactorToD3DBlend<D3D_BLEND>(SrcRTDesc.SrcBlendAlpha);
-        DstRTDesc.DestBlendAlpha = BlendFactorToD3DBlend<D3D_BLEND>(SrcRTDesc.DestBlendAlpha);
-        DstRTDesc.BlendOpAlpha   = BlendOperationToD3DBlendOp<D3D_BLEND_OP>(SrcRTDesc.BlendOpAlpha);
+        DstRTDesc.SrcBlendAlpha  = BlendFactorToD3DBlend<D3D_BLEND>(BlendRTDesc.SrcBlendAlpha);
+        DstRTDesc.DestBlendAlpha = BlendFactorToD3DBlend<D3D_BLEND>(BlendRTDesc.DestBlendAlpha);
+        DstRTDesc.BlendOpAlpha   = BlendOperationToD3DBlendOp<D3D_BLEND_OP>(BlendRTDesc.BlendOpAlpha);
+
+        if (SrcRTDesc.RenderTargetWriteMask != SrcRT0Desc.RenderTargetWriteMask)
+        {
+            // When independent blend is disabled, Direct3D only uses the render target 0 settings.
+            // We, however, want to control the write mask for each render target even when independent blend is disabled.
+            d3d12BlendDesc.IndependentBlendEnable = TRUE;
+        }
 
         DstRTDesc.RenderTargetWriteMask =
             ((SrcRTDesc.RenderTargetWriteMask & COLOR_MASK_RED) ? D3D_COLOR_WRITE_ENABLE_RED : 0) |
