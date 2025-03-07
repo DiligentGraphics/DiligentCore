@@ -118,7 +118,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
 
     // Verify that pipeline layout is compatible with shader resources and
     // remap resource bindings.
-    for (auto& ShaderStage : ShaderStages)
+    for (ShaderStageInfo& ShaderStage : ShaderStages)
     {
         const ShaderWebGPUImpl* pShader     = ShaderStage.pShader;
         std::string&            PatchedWGSL = ShaderStage.PatchedWGSL;
@@ -159,7 +159,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
                     ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, WGSLAttribs.ArraySize,
                                                           pShader->GetDesc().Name, SignDesc.Name);
 
-                    const auto& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
+                    const PipelineResourceAttribsWebGPU& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
                     ResourceBinding = ResAttribs.BindingIndex;
                     BindGroup       = ResAttribs.BindGroup;
                     ArraySize       = ResAttribs.ArraySize;
@@ -223,7 +223,7 @@ void PipelineStateWebGPUImpl::InitPipelineLayout(const PipelineStateCreateInfo& 
     const PSO_CREATE_INTERNAL_FLAGS InternalFlags = GetInternalCreateFlags(CreateInfo);
     if (m_UsingImplicitSignature && (InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) == 0)
     {
-        const auto SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
+        const PipelineResourceSignatureDescWrapper SignDesc = GetDefaultResourceSignatureDesc(ShaderStages, m_Desc.Name, m_Desc.ResourceLayout, m_Desc.SRBAllocationGranularity);
         InitDefaultSignature(SignDesc, GetActiveShaderStages(), false /*bIsDeviceInternal*/);
         VERIFY_EXPR(m_Signatures[0]);
     }
@@ -279,7 +279,7 @@ struct PipelineStateWebGPUImpl::AsyncPipelineBuilder : public ObjectBase<IObject
         ShaderStages{std::move(_ShaderStages)}
     {
         ShaderRefs.reserve(ShaderStages.size());
-        for (const auto& ShaderStage : ShaderStages)
+        for (const ShaderStageInfo& ShaderStage : ShaderStages)
         {
             ShaderRefs.emplace_back(ShaderStage.pShader);
         }
@@ -457,7 +457,8 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
     std::vector<WGPUColorTargetState> wgpuColorTargetStates(GraphicsPipeline.NumRenderTargets);
     std::vector<WGPUBlendState>       wgpuBlendStates(GraphicsPipeline.NumRenderTargets);
     {
-        const BlendStateDesc& BlendDesc = GraphicsPipeline.BlendDesc;
+        const BlendStateDesc&        BlendDesc = GraphicsPipeline.BlendDesc;
+        const RenderTargetBlendDesc& RT0       = BlendDesc.RenderTargets[0];
         for (Uint32 RTIndex = 0; RTIndex < GraphicsPipeline.NumRenderTargets; ++RTIndex)
         {
             const RenderTargetBlendDesc& RT = BlendDesc.RenderTargets[RTIndex];
@@ -467,10 +468,10 @@ void PipelineStateWebGPUImpl::InitializeWebGPURenderPipeline(const TShaderStages
             wgpuColorTargetState.format    = TextureFormatToWGPUFormat(GraphicsPipeline.RTVFormats[RTIndex]);
             wgpuColorTargetState.writeMask = ColorMaskToWGPUColorWriteMask(RT.RenderTargetWriteMask);
 
-            const bool RTBlendEnable = (BlendDesc.RenderTargets[0].BlendEnable && !BlendDesc.IndependentBlendEnable) || (RT.BlendEnable && BlendDesc.IndependentBlendEnable);
+            const bool RTBlendEnable = (RT0.BlendEnable && !BlendDesc.IndependentBlendEnable) || (RT.BlendEnable && BlendDesc.IndependentBlendEnable);
             if (RTBlendEnable)
             {
-                const RenderTargetBlendDesc& BlendRT = BlendDesc.IndependentBlendEnable ? RT : BlendDesc.RenderTargets[0];
+                const RenderTargetBlendDesc& BlendRT = BlendDesc.IndependentBlendEnable ? RT : RT0;
 
                 WGPUBlendState& wgpuBlendState = wgpuBlendStates[RTIndex];
 
