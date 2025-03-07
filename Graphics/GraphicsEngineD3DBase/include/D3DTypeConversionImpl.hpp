@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -154,7 +154,7 @@ D3D_FILL_MODE FillModeToD3DFillMode(FILL_MODE FillMode)
     }
     if (FILL_MODE_UNDEFINED < FillMode && FillMode < FILL_MODE_NUM_MODES)
     {
-        auto d3dFillMode = d3dFillModes[FillMode];
+        D3D_FILL_MODE d3dFillMode = d3dFillModes[FillMode];
         VERIFY(d3dFillMode != 0, "Incorrect fill mode");
         return d3dFillMode;
     }
@@ -182,7 +182,7 @@ D3D_CULL_MODE CullModeToD3DCullMode(CULL_MODE CullMode)
 
     if (CULL_MODE_UNDEFINED < CullMode && CullMode < CULL_MODE_NUM_MODES)
     {
-        auto d3dCullMode = d3dCullModes[CullMode];
+        D3D_CULL_MODE d3dCullMode = d3dCullModes[CullMode];
         VERIFY(d3dCullMode != 0, "Incorrect cull mode");
         return d3dCullMode;
     }
@@ -253,7 +253,7 @@ D3D_BLEND BlendFactorToD3DBlend(BLEND_FACTOR bf)
     }
     if (bf > BLEND_FACTOR_UNDEFINED && bf < BLEND_FACTOR_NUM_FACTORS)
     {
-        auto d3dbf = D3DBlend[bf];
+        D3D_BLEND d3dbf = D3DBlend[bf];
         VERIFY(d3dbf != 0, "Incorrect blend factor");
         return d3dbf;
     }
@@ -286,7 +286,7 @@ D3D_BLEND_OP BlendOperationToD3DBlendOp(BLEND_OPERATION BlendOp)
 
     if (BlendOp > BLEND_OPERATION_UNDEFINED && BlendOp < BLEND_OPERATION_NUM_OPERATIONS)
     {
-        auto d3dbop = D3DBlendOp[BlendOp];
+        D3D_BLEND_OP d3dbop = D3DBlendOp[BlendOp];
         VERIFY(d3dbop != 0, "Incorrect blend operation");
         return d3dbop;
     }
@@ -306,8 +306,9 @@ void BlendStateDescToD3DBlendDesc(const BlendStateDesc& BSDesc, D3D_BLEND_DESC& 
     VERIFY(MAX_RENDER_TARGETS >= 8, "Number of render targets is expected to be at least 8");
     for (int i = 0; i < 8; ++i)
     {
-        const auto& SrcRTDesc = BSDesc.RenderTargets[i];
-        auto&       DstRTDesc = d3d12BlendDesc.RenderTarget[i];
+        const RenderTargetBlendDesc& SrcRTDesc = BSDesc.RenderTargets[i];
+        auto&                        DstRTDesc = d3d12BlendDesc.RenderTarget[i];
+
         DstRTDesc.BlendEnable = SrcRTDesc.BlendEnable ? TRUE : FALSE;
 
         DstRTDesc.SrcBlend  = BlendFactorToD3DBlend<D3D_BLEND>(SrcRTDesc.SrcBlend);
@@ -353,7 +354,7 @@ D3D_STENCIL_OP StencilOpToD3DStencilOp(STENCIL_OP StencilOp)
 
     if (StencilOp > STENCIL_OP_UNDEFINED && StencilOp < STENCIL_OP_NUM_OPS)
     {
-        auto d3dStencilOp = StOpToD3DStOpMap[StencilOp];
+        D3D_STENCIL_OP d3dStencilOp = StOpToD3DStOpMap[StencilOp];
         VERIFY(d3dStencilOp != 0, "Unexpected stencil op");
         return d3dStencilOp;
     }
@@ -400,15 +401,15 @@ void LayoutElements_To_D3D_INPUT_ELEMENT_DESCs(const InputLayoutDesc&           
     D3DInputElements.resize(InputLayout.NumElements);
     for (Uint32 iElem = 0; iElem < InputLayout.NumElements; ++iElem)
     {
-        const auto& CurrElem         = InputLayout.LayoutElements[iElem];
-        auto&       D3DElem          = D3DInputElements[iElem];
-        D3DElem.SemanticName         = CurrElem.HLSLSemantic;
-        D3DElem.SemanticIndex        = CurrElem.InputIndex;
-        D3DElem.AlignedByteOffset    = CurrElem.RelativeOffset;
-        D3DElem.InputSlot            = CurrElem.BufferSlot;
-        D3DElem.Format               = TypeToDXGI_Format(CurrElem.ValueType, CurrElem.NumComponents, CurrElem.IsNormalized);
-        D3DElem.InputSlotClass       = (CurrElem.Frequency == INPUT_ELEMENT_FREQUENCY_PER_VERTEX) ? D3D_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-        D3DElem.InstanceDataStepRate = (CurrElem.Frequency == INPUT_ELEMENT_FREQUENCY_PER_VERTEX) ? 0 : CurrElem.InstanceDataStepRate;
+        const LayoutElement&    CurrElem = InputLayout.LayoutElements[iElem];
+        D3D_INPUT_ELEMENT_DESC& D3DElem  = D3DInputElements[iElem];
+        D3DElem.SemanticName             = CurrElem.HLSLSemantic;
+        D3DElem.SemanticIndex            = CurrElem.InputIndex;
+        D3DElem.AlignedByteOffset        = CurrElem.RelativeOffset;
+        D3DElem.InputSlot                = CurrElem.BufferSlot;
+        D3DElem.Format                   = TypeToDXGI_Format(CurrElem.ValueType, CurrElem.NumComponents, CurrElem.IsNormalized);
+        D3DElem.InputSlotClass           = (CurrElem.Frequency == INPUT_ELEMENT_FREQUENCY_PER_VERTEX) ? D3D_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+        D3DElem.InstanceDataStepRate     = (CurrElem.Frequency == INPUT_ELEMENT_FREQUENCY_PER_VERTEX) ? 0 : CurrElem.InstanceDataStepRate;
     }
 }
 
