@@ -360,6 +360,8 @@ void ExtractShaders(const TilePipelineStateCreateInfo& CreateInfo,
     VERIFY_EXPR(!ShaderStages.empty());
 }
 
+Uint32 GetRenderTargetMask(const GraphicsPipelineDesc& GraphicsPipeline) noexcept;
+
 } // namespace PipelineStateUtils
 
 /// Template class implementing base functionality of the pipeline state object.
@@ -778,6 +780,11 @@ public:
         return m_pGraphicsPipelineData ? m_pGraphicsPipelineData->dvpRenderTargetFormatsHash : 0;
     }
 #endif
+
+    Uint32 GetRenderTargetMask() const
+    {
+        return m_pGraphicsPipelineData ? PipelineStateUtils::GetRenderTargetMask(m_pGraphicsPipelineData->Desc) : 0;
+    }
 
 protected:
     using TNameToGroupIndexMap = std::unordered_map<HashMapStringKey, Uint32>;

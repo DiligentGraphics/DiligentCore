@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,7 +44,7 @@ namespace
 
 void ValidateRasterizerStateDesc(const PipelineStateDesc& PSODesc, const GraphicsPipelineDesc& GraphicsPipeline, const DeviceFeatures& Features) noexcept(false)
 {
-    const auto& RSDesc = GraphicsPipeline.RasterizerDesc;
+    const RasterizerStateDesc& RSDesc = GraphicsPipeline.RasterizerDesc;
     if (RSDesc.FillMode == FILL_MODE_UNDEFINED)
         LOG_PSO_ERROR_AND_THROW("RasterizerDesc.FillMode must not be FILL_MODE_UNDEFINED.");
     if (RSDesc.CullMode == CULL_MODE_UNDEFINED)
@@ -55,7 +55,7 @@ void ValidateRasterizerStateDesc(const PipelineStateDesc& PSODesc, const Graphic
 
 void ValidateDepthStencilDesc(const PipelineStateDesc& PSODesc, const GraphicsPipelineDesc& GraphicsPipeline) noexcept(false)
 {
-    const auto& DSSDesc = GraphicsPipeline.DepthStencilDesc;
+    const DepthStencilStateDesc& DSSDesc = GraphicsPipeline.DepthStencilDesc;
     if (DSSDesc.DepthEnable && DSSDesc.DepthFunc == COMPARISON_FUNC_UNKNOWN)
         LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.DepthFunc must not be COMPARISON_FUNC_UNKNOWN when depth is enabled.");
 
@@ -100,13 +100,13 @@ void ValidateGraphicsPipelineDesc(const PipelineStateDesc& PSODesc, const Graphi
         }
     }
 
-    const auto& InputLayout = GraphicsPipeline.InputLayout;
+    const InputLayoutDesc& InputLayout = GraphicsPipeline.InputLayout;
     if (InputLayout.NumElements > 0 && GraphicsPipeline.InputLayout.LayoutElements == nullptr)
         LOG_PSO_ERROR_AND_THROW("InputLayout.LayoutElements must not be null when InputLayout.NumElements (", InputLayout.NumElements, ") is not zero.");
 
     for (Uint32 i = 0; i < GraphicsPipeline.InputLayout.NumElements; ++i)
     {
-        const auto& Elem = GraphicsPipeline.InputLayout.LayoutElements[i];
+        const LayoutElement& Elem = GraphicsPipeline.InputLayout.LayoutElements[i];
         if (Elem.BufferSlot >= MAX_BUFFER_SLOTS)
             LOG_PSO_ERROR_AND_THROW("InputLayout.LayoutElements[", i, "].BufferSlot (", Elem.BufferSlot, ") exceeds the limit (", MAX_BUFFER_SLOTS, ").");
     }
@@ -114,7 +114,7 @@ void ValidateGraphicsPipelineDesc(const PipelineStateDesc& PSODesc, const Graphi
 
 void CorrectDepthStencilDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept
 {
-    auto& DSSDesc = GraphicsPipeline.DepthStencilDesc;
+    DepthStencilStateDesc& DSSDesc = GraphicsPipeline.DepthStencilDesc;
     if (!DSSDesc.DepthEnable && DSSDesc.DepthFunc == COMPARISON_FUNC_UNKNOWN)
         DSSDesc.DepthFunc = DepthStencilStateDesc{}.DepthFunc;
 
@@ -138,12 +138,12 @@ void CorrectDepthStencilDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept
 
 void ValidateBlendStateDesc(const PipelineStateDesc& PSODesc, const GraphicsPipelineDesc& GraphicsPipeline) noexcept(false)
 {
-    const auto& BlendDesc = GraphicsPipeline.BlendDesc;
+    const BlendStateDesc& BlendDesc = GraphicsPipeline.BlendDesc;
     for (Uint32 rt = 0; rt < MAX_RENDER_TARGETS; ++rt)
     {
-        auto& RTDesc = BlendDesc.RenderTargets[rt];
+        const RenderTargetBlendDesc& RTDesc = BlendDesc.RenderTargets[rt];
 
-        const auto BlendEnable = RTDesc.BlendEnable && (rt == 0 || (BlendDesc.IndependentBlendEnable && rt > 0));
+        const bool BlendEnable = RTDesc.BlendEnable && (rt == 0 || (BlendDesc.IndependentBlendEnable && rt > 0));
         if (BlendEnable)
         {
             if (RTDesc.SrcBlend == BLEND_FACTOR_UNDEFINED)
@@ -165,13 +165,13 @@ void ValidateBlendStateDesc(const PipelineStateDesc& PSODesc, const GraphicsPipe
 
 void CorrectBlendStateDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept
 {
-    auto& BlendDesc = GraphicsPipeline.BlendDesc;
+    BlendStateDesc& BlendDesc = GraphicsPipeline.BlendDesc;
     for (Uint32 rt = 0; rt < MAX_RENDER_TARGETS; ++rt)
     {
-        auto& RTDesc = BlendDesc.RenderTargets[rt];
+        RenderTargetBlendDesc& RTDesc = BlendDesc.RenderTargets[rt];
         // clang-format off
-        const auto  BlendEnable   = RTDesc.BlendEnable          && (rt == 0 || (BlendDesc.IndependentBlendEnable && rt > 0));
-        const auto  LogicOpEnable = RTDesc.LogicOperationEnable && (rt == 0 || (BlendDesc.IndependentBlendEnable && rt > 0));
+        const bool BlendEnable   = RTDesc.BlendEnable          && (rt == 0 || (BlendDesc.IndependentBlendEnable && rt > 0));
+        const bool LogicOpEnable = RTDesc.LogicOperationEnable && (rt == 0 || (BlendDesc.IndependentBlendEnable && rt > 0));
         // clang-format on
         if (!BlendEnable)
         {
@@ -197,7 +197,7 @@ void CorrectBlendStateDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept
 
 void CorrectRasterizerStateDesc(GraphicsPipelineDesc& GraphicsPipeline, const DeviceFeatures& Features) noexcept
 {
-    auto& RSDesc = GraphicsPipeline.RasterizerDesc;
+    RasterizerStateDesc& RSDesc = GraphicsPipeline.RasterizerDesc;
     if (!RSDesc.DepthClipEnable && Features.DepthClamp == DEVICE_FEATURE_STATE_DISABLED)
     {
         // The error message is printed by ValidateRasterizerStateDesc
@@ -209,13 +209,13 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
                                         const IRenderDevice*           pDevice) noexcept(false)
 {
     VERIFY_EXPR(pDevice != nullptr);
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
-    const auto& Features   = DeviceInfo.Features;
+    const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
+    const DeviceFeatures&   Features   = DeviceInfo.Features;
 
-    const auto& PSODesc = CreateInfo.PSODesc;
+    const PipelineStateDesc& PSODesc = CreateInfo.PSODesc;
 
-    const auto* pInternalCI   = static_cast<const PSOCreateInternalInfo*>(CreateInfo.pInternalData);
-    const auto  InternalFlags = pInternalCI != nullptr ? pInternalCI->Flags : PSO_CREATE_INTERNAL_FLAG_NONE;
+    const PSOCreateInternalInfo*    pInternalCI   = static_cast<const PSOCreateInternalInfo*>(CreateInfo.pInternalData);
+    const PSO_CREATE_INTERNAL_FLAGS InternalFlags = pInternalCI != nullptr ? pInternalCI->Flags : PSO_CREATE_INTERNAL_FLAG_NONE;
 
     if ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0) != 0 && CreateInfo.ResourceSignaturesCount != 1)
         LOG_PSO_ERROR_AND_THROW("When PSO_CREATE_INTERNAL_FLAG_IMPLICIT_SIGNATURE0 flag is set, ResourceSignaturesCount (", CreateInfo.ResourceSignaturesCount, ") must be 1.");
@@ -268,11 +268,11 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
     std::array<const IPipelineResourceSignature*, MAX_RESOURCE_SIGNATURES> ppSignatures = {};
     for (Uint32 i = 0; i < CreateInfo.ResourceSignaturesCount; ++i)
     {
-        const auto* const pSignature = CreateInfo.ppResourceSignatures[i];
+        const IPipelineResourceSignature* const pSignature = CreateInfo.ppResourceSignatures[i];
         if (pSignature == nullptr)
             LOG_PSO_ERROR_AND_THROW("Pipeline resource signature at index ", i, " is null");
 
-        const auto& SignDesc = pSignature->GetDesc();
+        const PipelineResourceSignatureDesc& SignDesc = pSignature->GetDesc();
         VERIFY(SignDesc.BindingIndex < MAX_RESOURCE_SIGNATURES,
                "Resource signature binding index exceeds the limit. This error should've been caught by ValidatePipelineResourceSignatureDesc.");
 
@@ -286,14 +286,14 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
 
         for (Uint32 res = 0; res < SignDesc.NumResources; ++res)
         {
-            const auto& ResDesc = SignDesc.Resources[res];
+            const PipelineResourceDesc& ResDesc = SignDesc.Resources[res];
             VERIFY(ResDesc.Name != nullptr && ResDesc.Name[0] != '\0', "Resource name can't be null or empty. This should've been caught by ValidatePipelineResourceSignatureDesc()");
             VERIFY(ResDesc.ShaderStages != SHADER_TYPE_UNKNOWN, "Shader stages can't be UNKNOWN. This should've been caught by ValidatePipelineResourceSignatureDesc()");
 
             auto range = AllResources.equal_range(ResDesc.Name);
             for (auto it = range.first; it != range.second; ++it)
             {
-                const auto& OtherRes = it->second;
+                const ResourceInfo& OtherRes = it->second;
                 if ((OtherRes.Stages & ResDesc.ShaderStages) != 0)
                 {
                     VERIFY(OtherRes.pSign != pSignature, "Overlapping resources in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
@@ -319,14 +319,14 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
 
         for (Uint32 res = 0; res < SignDesc.NumImmutableSamplers; ++res)
         {
-            const auto& SamDesc = SignDesc.ImmutableSamplers[res];
+            const ImmutableSamplerDesc& SamDesc = SignDesc.ImmutableSamplers[res];
             VERIFY(SamDesc.SamplerOrTextureName != nullptr && SamDesc.SamplerOrTextureName[0] != '\0', "Sampler name can't be null or empty. This should've been caught by ValidatePipelineResourceSignatureDesc()");
             VERIFY(SamDesc.ShaderStages != SHADER_TYPE_UNKNOWN, "Shader stage can't be UNKNOWN. This should've been caught by ValidatePipelineResourceSignatureDesc()");
 
             auto range = AllImtblSamplers.equal_range(SamDesc.SamplerOrTextureName);
             for (auto it = range.first; it != range.second; ++it)
             {
-                const auto& OtherSam = it->second;
+                const ImtblSamInfo& OtherSam = it->second;
                 if ((OtherSam.Stages & SamDesc.ShaderStages) != 0)
                 {
                     VERIFY(OtherSam.pSign != pSignature, "Overlapping immutable samplers in one signature should've been caught by ValidatePipelineResourceSignatureDesc()");
@@ -356,10 +356,10 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
         // Deserialized default signatures are empty in OpenGL.
         !DeviceInfo.IsGLDevice())
     {
-        const auto& ResLayout = CreateInfo.PSODesc.ResourceLayout;
+        const PipelineResourceLayoutDesc& ResLayout = CreateInfo.PSODesc.ResourceLayout;
         for (Uint32 i = 0; i < ResLayout.NumVariables; ++i)
         {
-            const auto& Var = ResLayout.Variables[i];
+            const ShaderResourceVariableDesc& Var = ResLayout.Variables[i];
             if (Var.Name == nullptr)
                 LOG_PSO_ERROR_AND_THROW("ResourceLayout.Variables[", i, "].Name is null");
 
@@ -367,7 +367,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
             auto it    = range.first;
             for (; it != range.second; ++it)
             {
-                const auto& SignRes = it->second;
+                const ResourceInfo& SignRes = it->second;
                 if ((SignRes.Stages & Var.ShaderStages) == 0)
                     continue;
 
@@ -400,15 +400,15 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
         }
         for (const auto& it : AllResources)
         {
-            const auto& ResDesc = it.second.Desc;
+            const PipelineResourceDesc& ResDesc = it.second.Desc;
 
-            auto VarTypeOK = ResDesc.VarType == ResLayout.DefaultVariableType;
+            bool VarTypeOK = ResDesc.VarType == ResLayout.DefaultVariableType;
             if (!VarTypeOK && ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER)
             {
-                const auto& SignDesc = it.second.pSign->GetDesc();
+                const PipelineResourceSignatureDesc& SignDesc = it.second.pSign->GetDesc();
                 if (SignDesc.UseCombinedTextureSamplers)
                 {
-                    const auto RefDesc = FindPipelineResourceLayoutVariable(PSODesc.ResourceLayout, ResDesc.Name, ResDesc.ShaderStages, SignDesc.CombinedSamplerSuffix);
+                    const ShaderResourceVariableDesc RefDesc = FindPipelineResourceLayoutVariable(PSODesc.ResourceLayout, ResDesc.Name, ResDesc.ShaderStages, SignDesc.CombinedSamplerSuffix);
                     // The type of the immutable sampler must match the type of the texture variable it is assigned to
                     VarTypeOK = RefDesc.Type == ResDesc.VarType;
                 }
@@ -423,14 +423,14 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
 
         for (Uint32 i = 0; i < ResLayout.NumImmutableSamplers; ++i)
         {
-            const auto& ImtblSam = ResLayout.ImmutableSamplers[i];
+            const ImmutableSamplerDesc& ImtblSam = ResLayout.ImmutableSamplers[i];
             if (ImtblSam.SamplerOrTextureName == nullptr)
                 LOG_PSO_ERROR_AND_THROW("ResourceLayout.ImmutableSamplers[", i, "].SamplerOrTextureName is null");
             auto range = AllImtblSamplers.equal_range(ImtblSam.SamplerOrTextureName);
             auto it    = range.first;
             for (; it != range.second; ++it)
             {
-                const auto& SignSam = it->second;
+                const ImtblSamInfo& SignSam = it->second;
                 if ((SignSam.Stages & ImtblSam.ShaderStages) == 0)
                     continue;
 
@@ -453,7 +453,7 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
         }
         if (!AllImtblSamplers.empty())
         {
-            const auto& SamDesc = AllImtblSamplers.begin()->second.Desc;
+            const ImmutableSamplerDesc& SamDesc = AllImtblSamplers.begin()->second.Desc;
             LOG_PSO_ERROR_AND_THROW("Implicit resource signature contains immutable sampler '", SamDesc.SamplerOrTextureName, "' that is not present in the resource layout. ",
                                     "This might indicate a bug in the serialization/deserialization logic.");
         }
@@ -462,12 +462,12 @@ void ValidatePipelineResourceSignatures(const PipelineStateCreateInfo& CreateInf
 
 void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc, const DeviceFeatures& Features) noexcept(false)
 {
-    const auto& Layout = PSODesc.ResourceLayout;
+    const PipelineResourceLayoutDesc& Layout = PSODesc.ResourceLayout;
     {
         std::unordered_multimap<HashMapStringKey, SHADER_TYPE> UniqueVariables;
         for (Uint32 i = 0; i < Layout.NumVariables; ++i)
         {
-            const auto& Var = Layout.Variables[i];
+            const ShaderResourceVariableDesc& Var = Layout.Variables[i];
 
             if (Var.Name == nullptr)
                 LOG_PSO_ERROR_AND_THROW("ResourceLayout.Variables[", i, "].Name must not be null.");
@@ -505,7 +505,7 @@ void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc, const 
         std::unordered_multimap<HashMapStringKey, SHADER_TYPE> UniqueSamplers;
         for (Uint32 i = 0; i < Layout.NumImmutableSamplers; ++i)
         {
-            const auto& Sam = Layout.ImmutableSamplers[i];
+            const ImmutableSamplerDesc& Sam = Layout.ImmutableSamplers[i];
 
             if (Sam.SamplerOrTextureName == nullptr)
                 LOG_PSO_ERROR_AND_THROW("ResourceLayout.ImmutableSamplers[", i, "].SamplerOrTextureName must not be null.");
@@ -552,16 +552,16 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
                                         const IRenderDevice*                   pDevice) noexcept(false)
 {
     VERIFY_EXPR(pDevice != nullptr);
-    const auto& Features    = pDevice->GetDeviceInfo().Features;
-    const auto& AdapterInfo = pDevice->GetAdapterInfo();
+    const DeviceFeatures&      Features    = pDevice->GetDeviceInfo().Features;
+    const GraphicsAdapterInfo& AdapterInfo = pDevice->GetAdapterInfo();
 
-    const auto& PSODesc = CreateInfo.PSODesc;
+    const PipelineStateDesc& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_GRAPHICS && PSODesc.PipelineType != PIPELINE_TYPE_MESH)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be GRAPHICS or MESH.");
 
     ValidatePipelineResourceSignatures(CreateInfo, pDevice);
 
-    const auto& GraphicsPipeline = CreateInfo.GraphicsPipeline;
+    const GraphicsPipelineDesc& GraphicsPipeline = CreateInfo.GraphicsPipeline;
 
     ValidateBlendStateDesc(PSODesc, GraphicsPipeline);
     ValidateRasterizerStateDesc(PSODesc, GraphicsPipeline, Features);
@@ -615,7 +615,7 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
                 LOG_PSO_ERROR_AND_THROW("RTVFormats[", rt, "] must be TEX_FORMAT_UNKNOWN when explicit render pass is used.");
         }
 
-        const auto& RPDesc = GraphicsPipeline.pRenderPass->GetDesc();
+        const RenderPassDesc& RPDesc = GraphicsPipeline.pRenderPass->GetDesc();
         if (GraphicsPipeline.SubpassIndex >= RPDesc.SubpassCount)
             LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") exceeds the number of subpasses (", Uint32{RPDesc.SubpassCount}, ") in render pass '", RPDesc.Name, "'.");
     }
@@ -623,11 +623,11 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
     {
         for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)
         {
-            const auto RTVFmt = GraphicsPipeline.RTVFormats[rt];
+            const TEXTURE_FORMAT RTVFmt = GraphicsPipeline.RTVFormats[rt];
             if (RTVFmt == TEX_FORMAT_UNKNOWN)
                 continue;
 
-            const auto& FmtAttribs = GetTextureFormatAttribs(RTVFmt);
+            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(RTVFmt);
             if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
                 FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL ||
                 FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
@@ -639,7 +639,7 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
 
         if (GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN)
         {
-            const auto& FmtAttribs = GetTextureFormatAttribs(GraphicsPipeline.DSVFormat);
+            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(GraphicsPipeline.DSVFormat);
             if (FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH &&
                 FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL)
             {
@@ -652,7 +652,7 @@ void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& C
 
         for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(GraphicsPipeline.RTVFormats); ++rt)
         {
-            auto RTVFmt = GraphicsPipeline.RTVFormats[rt];
+            TEXTURE_FORMAT RTVFmt = GraphicsPipeline.RTVFormats[rt];
             if (RTVFmt != TEX_FORMAT_UNKNOWN)
             {
                 LOG_WARNING_MESSAGE("Render target format (", GetTextureFormatAttribs(RTVFmt).Name, ") of unused slot ", rt,
@@ -675,9 +675,9 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
                                        const IRenderDevice*                  pDevice) noexcept(false)
 {
     VERIFY_EXPR(pDevice != nullptr);
-    const auto& Features = pDevice->GetDeviceInfo().Features;
+    const DeviceFeatures& Features = pDevice->GetDeviceInfo().Features;
 
-    const auto& PSODesc = CreateInfo.PSODesc;
+    const PipelineStateDesc& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_COMPUTE)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be COMPUTE.");
 
@@ -693,9 +693,9 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
 void ValidateRayTracingPipelineCreateInfo(const IRenderDevice*                     pDevice,
                                           const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
-    const auto& RTProps    = pDevice->GetAdapterInfo().RayTracing;
-    const auto& PSODesc    = CreateInfo.PSODesc;
+    const RenderDeviceInfo&     DeviceInfo = pDevice->GetDeviceInfo();
+    const RayTracingProperties& RTProps    = pDevice->GetAdapterInfo().RayTracing;
+    const PipelineStateDesc&    PSODesc    = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_RAY_TRACING)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING.");
 
@@ -735,7 +735,7 @@ void ValidateRayTracingPipelineCreateInfo(const IRenderDevice*                  
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
-        const auto& Group = CreateInfo.pGeneralShaders[i];
+        const RayTracingGeneralShaderGroup& Group = CreateInfo.pGeneralShaders[i];
 
         VerifyShaderGroupName("pGeneralShaders", i, Group.Name);
 
@@ -754,7 +754,7 @@ void ValidateRayTracingPipelineCreateInfo(const IRenderDevice*                  
 
     for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
     {
-        const auto& Group = CreateInfo.pTriangleHitShaders[i];
+        const RayTracingTriangleHitShaderGroup& Group = CreateInfo.pTriangleHitShaders[i];
 
         VerifyShaderGroupName("pTriangleHitShaders", i, Group.Name);
 
@@ -767,7 +767,7 @@ void ValidateRayTracingPipelineCreateInfo(const IRenderDevice*                  
 
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
-        const auto& Group = CreateInfo.pProceduralHitShaders[i];
+        const RayTracingProceduralHitShaderGroup& Group = CreateInfo.pProceduralHitShaders[i];
 
         VerifyShaderGroupName("pProceduralHitShaders", i, Group.Name);
 
@@ -784,9 +784,9 @@ void ValidateTilePipelineCreateInfo(const TilePipelineStateCreateInfo& CreateInf
                                     const IRenderDevice*               pDevice) noexcept(false)
 {
     VERIFY_EXPR(pDevice != nullptr);
-    const auto& Features = pDevice->GetDeviceInfo().Features;
+    const DeviceFeatures& Features = pDevice->GetDeviceInfo().Features;
 
-    const auto& PSODesc = CreateInfo.PSODesc;
+    const PipelineStateDesc& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_TILE)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be TILE.");
 
@@ -809,19 +809,19 @@ void CopyRTShaderGroupNames(std::unordered_map<HashMapStringKey, Uint32>& NameTo
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
-        const auto* Name      = CreateInfo.pGeneralShaders[i].Name;
+        const char* Name      = CreateInfo.pGeneralShaders[i].Name;
         const bool  IsNewName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(Name)}, GroupIndex++).second;
         VERIFY(IsNewName, "All group names must be unique. ValidateRayTracingPipelineCreateInfo() should've caught this error.");
     }
     for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
     {
-        const auto* Name      = CreateInfo.pTriangleHitShaders[i].Name;
+        const char* Name      = CreateInfo.pTriangleHitShaders[i].Name;
         const bool  IsNewName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(Name)}, GroupIndex++).second;
         VERIFY(IsNewName, "All group names must be unique. ValidateRayTracingPipelineCreateInfo() should've caught this error.");
     }
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
-        const auto* Name      = CreateInfo.pProceduralHitShaders[i].Name;
+        const char* Name      = CreateInfo.pProceduralHitShaders[i].Name;
         const bool  IsNewName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(Name)}, GroupIndex++).second;
         VERIFY(IsNewName, "All group names must be unique. ValidateRayTracingPipelineCreateInfo() should've caught this error.");
     }
@@ -912,13 +912,13 @@ ShaderResourceVariableDesc FindPipelineResourceLayoutVariable(
 {
     for (Uint32 i = 0; i < LayoutDesc.NumVariables; ++i)
     {
-        const auto& Var = LayoutDesc.Variables[i];
+        const ShaderResourceVariableDesc& Var = LayoutDesc.Variables[i];
         if ((Var.ShaderStages & ShaderStage) != 0 && StreqSuff(Name, Var.Name, CombinedSamplerSuffix))
         {
 #ifdef DILIGENT_DEBUG
             for (Uint32 j = i + 1; j < LayoutDesc.NumVariables; ++j)
             {
-                const auto& Var2 = LayoutDesc.Variables[j];
+                const ShaderResourceVariableDesc& Var2 = LayoutDesc.Variables[j];
                 VERIFY(!((Var2.ShaderStages & ShaderStage) != 0 && StreqSuff(Name, Var2.Name, CombinedSamplerSuffix)),
                        "There must be no variables with overlapping stages in Desc.ResourceLayout. "
                        "This error should've been caught by ValidatePipelineResourceLayoutDesc().");
@@ -967,5 +967,24 @@ void ValidatePSOCreateInfo<TilePipelineStateCreateInfo>(const IRenderDevice*    
     VERIFY_EXPR(pDevice != nullptr);
     ValidateTilePipelineCreateInfo(CreateInfo, pDevice);
 }
+
+namespace PipelineStateUtils
+{
+
+Uint32 GetRenderTargetMask(const GraphicsPipelineDesc& GraphicsPipeline) noexcept
+{
+    Uint32 RTMask = 0;
+    for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)
+    {
+        if (GraphicsPipeline.RTVFormats[rt] != TEX_FORMAT_UNKNOWN &&
+            GraphicsPipeline.BlendDesc.RenderTargets[rt].RenderTargetWriteMask != COLOR_MASK_NONE)
+        {
+            RTMask |= (1u << rt);
+        }
+    }
+    return RTMask;
+}
+
+} // namespace PipelineStateUtils
 
 } // namespace Diligent
