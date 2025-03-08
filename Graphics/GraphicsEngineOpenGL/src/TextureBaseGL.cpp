@@ -401,11 +401,11 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
 
     try
     {
-        auto ViewDesc = OrigViewDesc;
+        TextureViewDesc ViewDesc = OrigViewDesc;
         ValidatedAndCorrectTextureViewDesc(m_Desc, ViewDesc);
 
-        auto* pDeviceGLImpl    = GetDevice();
-        auto& TexViewAllocator = pDeviceGLImpl->GetTexViewObjAllocator();
+        RenderDeviceGLImpl*        pDeviceGLImpl    = GetDevice();
+        FixedBlockMemoryAllocator& TexViewAllocator = pDeviceGLImpl->GetTexViewObjAllocator();
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
         // http://www.opengl.org/wiki/Texture_Storage#Texture_views
@@ -495,9 +495,9 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
 
                 if (!IsIdentityComponentMapping(ViewDesc.Swizzle))
                 {
-                    auto pDeviceContext = pDeviceGLImpl->GetImmediateContext(0);
+                    RefCntAutoPtr<DeviceContextGLImpl> pDeviceContext = pDeviceGLImpl->GetImmediateContext(0);
                     VERIFY(pDeviceContext, "Immediate device context has been destroyed");
-                    auto& GLState = pDeviceContext->GetContextState();
+                    GLContextState& GLState = pDeviceContext->GetContextState();
 
                     GLState.BindTexture(-1, GLViewTarget, pViewOGL->GetHandle());
                     glTexParameteri(GLViewTarget, GL_TEXTURE_SWIZZLE_R, TextureComponentSwizzleToGLTextureSwizzle(ViewDesc.Swizzle.R, GL_RED));
@@ -555,7 +555,7 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
     }
     catch (const std::runtime_error&)
     {
-        const auto* ViewTypeName = GetTexViewTypeLiteralName(OrigViewDesc.ViewType);
+        const char* ViewTypeName = GetTexViewTypeLiteralName(OrigViewDesc.ViewType);
         LOG_ERROR("Failed to create view '", (OrigViewDesc.Name ? OrigViewDesc.Name : ""), "' (", ViewTypeName, ") for texture '", (m_Desc.Name ? m_Desc.Name : ""), "'");
     }
 }
@@ -584,7 +584,7 @@ void TextureBaseGL::UpdateData(GLContextState& CtxState, Uint32 MipLevel, Uint32
 
 inline GLbitfield GetFramebufferCopyMask(TEXTURE_FORMAT Format)
 {
-    const auto& FmtAttribs = GetTextureFormatAttribs(Format);
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Format);
     switch (FmtAttribs.ComponentType)
     {
         case COMPONENT_TYPE_DEPTH:
@@ -607,7 +607,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                              Uint32               DstY,
                              Uint32               DstZ)
 {
-    const auto& SrcTexDesc = pSrcTextureGL->GetDesc();
+    const TextureDesc& SrcTexDesc = pSrcTextureGL->GetDesc();
 
     Box SrcBox;
     if (pSrcBox == nullptr)
@@ -665,7 +665,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
         bool UseBlitFramebuffer = IsDefaultBackBuffer;
         if (!UseBlitFramebuffer && m_pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_GLES)
         {
-            const auto& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
+            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
             if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
                 FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
             {
@@ -675,10 +675,10 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
         }
 #endif
 
-        auto& GLState = pDeviceCtxGL->GetContextState();
+        GLContextState& GLState = pDeviceCtxGL->GetContextState();
 
         // Copy operations (glCopyTexSubImage* and glBindFramebuffer) are affected by scissor test!
-        auto ScissorEnabled = GLState.GetScissorTestEnabled();
+        bool ScissorEnabled = GLState.GetScissorTestEnabled();
         if (ScissorEnabled)
             GLState.EnableScissorTest(false);
 
@@ -689,12 +689,12 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
             {
                 // Get read framebuffer for the source subimage
 
-                auto& FBOCache = m_pDevice->GetFBOCache(GLState.GetCurrentGLContext());
+                FBOCache& FboCache = m_pDevice->GetFBOCache(GLState.GetCurrentGLContext());
                 VERIFY_EXPR(SrcSlice == 0 || SrcTexDesc.IsArray());
                 VERIFY_EXPR((pSrcBox->MinZ == 0 && DepthSlice == 0) || SrcTexDesc.Is3D());
-                const auto SrcFramebufferSlice = SrcSlice + pSrcBox->MinZ + DepthSlice;
+                const Uint32 SrcFramebufferSlice = SrcSlice + pSrcBox->MinZ + DepthSlice;
                 // NOTE: GetFBO may bind a framebuffer, so we need to invalidate it in the GL context state.
-                const auto& ReadFBO = FBOCache.GetFBO(pSrcTextureGL, SrcFramebufferSlice, SrcMipLevel, TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_READ);
+                const GLObjectWrappers::GLFrameBufferObj& ReadFBO = FboCache.GetFBO(pSrcTextureGL, SrcFramebufferSlice, SrcMipLevel, TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_READ);
 
                 SrcFboHandle = ReadFBO;
             }
@@ -728,12 +728,12 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                 {
                     // Get draw framebuffer for the destination subimage
 
-                    auto& FBOCache = m_pDevice->GetFBOCache(GLState.GetCurrentGLContext());
+                    FBOCache& FboCache = m_pDevice->GetFBOCache(GLState.GetCurrentGLContext());
                     VERIFY_EXPR(DstSlice == 0 || m_Desc.IsArray());
                     VERIFY_EXPR((DstZ == 0 && DepthSlice == 0) || m_Desc.Is3D());
-                    const auto DstFramebufferSlice = DstSlice + DstZ + DepthSlice;
+                    const Uint32 DstFramebufferSlice = DstSlice + DstZ + DepthSlice;
                     // NOTE: GetFBO may bind a framebuffer, so we need to invalidate it in the GL context state.
-                    const auto& DrawFBO = FBOCache.GetFBO(this, DstFramebufferSlice, DstMipLevel, TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_DRAW);
+                    const GLObjectWrappers::GLFrameBufferObj& DrawFBO = FboCache.GetFBO(this, DstFramebufferSlice, DstMipLevel, TextureBaseGL::FRAMEBUFFER_TARGET_FLAG_DRAW);
 
                     DstFboHandle = DrawFBO;
                 }
@@ -743,7 +743,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
                 DEV_CHECK_ERR(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
                               "Draw framebuffer is incomplete: ", GetFramebufferStatusString(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER)));
 
-                const auto CopyMask = GetFramebufferCopyMask(SrcTexDesc.Format);
+                const GLbitfield CopyMask = GetFramebufferCopyMask(SrcTexDesc.Format);
                 DEV_CHECK_ERR(CopyMask == GetFramebufferCopyMask(m_Desc.Format),
                               "Src and dst framebuffer copy masks must be the same");
                 glBlitFramebuffer(pSrcBox->MinX,
