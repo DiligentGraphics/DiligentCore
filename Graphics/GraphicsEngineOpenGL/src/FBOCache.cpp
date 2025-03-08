@@ -189,33 +189,7 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
 
     if (NumRenderTargets > 0)
     {
-        // We now need to set mapping between shader outputs and
-        // color attachments. This largely redundant step is performed
-        // by glDrawBuffers()
-        static constexpr GLenum DrawBuffers[] =
-            {
-                GL_COLOR_ATTACHMENT0,
-                GL_COLOR_ATTACHMENT1,
-                GL_COLOR_ATTACHMENT2,
-                GL_COLOR_ATTACHMENT3,
-                GL_COLOR_ATTACHMENT4,
-                GL_COLOR_ATTACHMENT5,
-                GL_COLOR_ATTACHMENT6,
-                GL_COLOR_ATTACHMENT7,
-                GL_COLOR_ATTACHMENT8,
-                GL_COLOR_ATTACHMENT9,
-                GL_COLOR_ATTACHMENT10,
-                GL_COLOR_ATTACHMENT11,
-                GL_COLOR_ATTACHMENT12,
-                GL_COLOR_ATTACHMENT13,
-                GL_COLOR_ATTACHMENT14,
-                GL_COLOR_ATTACHMENT15,
-            };
-
-        // The state set by glDrawBuffers() is part of the state of the framebuffer.
-        // So it can be set up once and left it set.
-        glDrawBuffers(NumRenderTargets, DrawBuffers);
-        DEV_CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
+        FBO.SetDrawBuffers(NumRenderTargets);
     }
     else if (pDSV == nullptr)
     {
