@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,10 +44,10 @@ namespace Diligent
 
 GLContextState::GLContextState(RenderDeviceGLImpl* pDeviceGL)
 {
-    const auto& AdapterInfo             = pDeviceGL->GetAdapterInfo();
-    m_Caps.IsFillModeSelectionSupported = AdapterInfo.Features.WireframeFill;
-    m_Caps.IsProgramPipelineSupported   = AdapterInfo.Features.SeparablePrograms;
-    m_Caps.IsDepthClampSupported        = AdapterInfo.Features.DepthClamp;
+    const GraphicsAdapterInfo& AdapterInfo = pDeviceGL->GetAdapterInfo();
+    m_Caps.IsFillModeSelectionSupported    = AdapterInfo.Features.WireframeFill;
+    m_Caps.IsProgramPipelineSupported      = AdapterInfo.Features.SeparablePrograms;
+    m_Caps.IsDepthClampSupported           = AdapterInfo.Features.DepthClamp;
 
     {
         m_Caps.MaxCombinedTexUnits = 0;
@@ -328,7 +328,7 @@ void GLContextState::GetBoundImage(Uint32     Index,
 {
     if (Index < m_BoundImages.size())
     {
-        const auto& BoundImg = m_BoundImages[Index];
+        const BoundImageInfo& BoundImg = m_BoundImages[Index];
 
         ImgHandle = BoundImg.GLHandle;
         MipLevel  = BoundImg.MipLevel;
@@ -497,7 +497,7 @@ void GLContextState::SetDepthFunc(COMPARISON_FUNCTION CmpFunc)
 {
     if (m_DSState.m_DepthCmpFunc != CmpFunc)
     {
-        auto GlCmpFunc = CompareFuncToGLCompareFunc(CmpFunc);
+        GLenum GlCmpFunc = CompareFuncToGLCompareFunc(CmpFunc);
         glDepthFunc(GlCmpFunc);
         DEV_CHECK_GL_ERROR("Failed to set GL comparison function");
         m_DSState.m_DepthCmpFunc = CmpFunc;
@@ -533,15 +533,15 @@ void GLContextState::SetStencilWriteMask(Uint8 StencilWriteMask)
 
 void GLContextState::SetStencilRef(GLenum Face, Int32 Ref)
 {
-    auto& FaceStencilOp = m_DSState.m_StencilOpState[Face == GL_FRONT ? 0 : 1];
-    auto  GlStencilFunc = CompareFuncToGLCompareFunc(FaceStencilOp.Func);
+    DepthStencilGLState::StencilOpState& FaceStencilOp = m_DSState.m_StencilOpState[Face == GL_FRONT ? 0 : 1];
+    GLenum                               GlStencilFunc = CompareFuncToGLCompareFunc(FaceStencilOp.Func);
     glStencilFuncSeparate(Face, GlStencilFunc, Ref, FaceStencilOp.Mask);
     DEV_CHECK_GL_ERROR("Failed to set stencil function");
 }
 
 void GLContextState::SetStencilFunc(GLenum Face, COMPARISON_FUNCTION Func, Int32 Ref, Uint32 Mask)
 {
-    auto& FaceStencilOp = m_DSState.m_StencilOpState[Face == GL_FRONT ? 0 : 1];
+    DepthStencilGLState::StencilOpState& FaceStencilOp = m_DSState.m_StencilOpState[Face == GL_FRONT ? 0 : 1];
     if (FaceStencilOp.Func != Func ||
         FaceStencilOp.Ref != Ref ||
         FaceStencilOp.Mask != Mask)
@@ -556,14 +556,14 @@ void GLContextState::SetStencilFunc(GLenum Face, COMPARISON_FUNCTION Func, Int32
 
 void GLContextState::SetStencilOp(GLenum Face, STENCIL_OP StencilFailOp, STENCIL_OP StencilDepthFailOp, STENCIL_OP StencilPassOp)
 {
-    auto& FaceStencilOp = m_DSState.m_StencilOpState[Face == GL_FRONT ? 0 : 1];
+    DepthStencilGLState::StencilOpState& FaceStencilOp = m_DSState.m_StencilOpState[Face == GL_FRONT ? 0 : 1];
     if (FaceStencilOp.StencilFailOp != StencilFailOp ||
         FaceStencilOp.StencilDepthFailOp != StencilDepthFailOp ||
         FaceStencilOp.StencilPassOp != StencilPassOp)
     {
-        auto glsfail = StencilOp2GlStencilOp(StencilFailOp);
-        auto dpfail  = StencilOp2GlStencilOp(StencilDepthFailOp);
-        auto dppass  = StencilOp2GlStencilOp(StencilPassOp);
+        GLenum glsfail = StencilOp2GlStencilOp(StencilFailOp);
+        GLenum dpfail  = StencilOp2GlStencilOp(StencilDepthFailOp);
+        GLenum dppass  = StencilOp2GlStencilOp(StencilPassOp);
 
         glStencilOpSeparate(Face, glsfail, dpfail, dppass);
         DEV_CHECK_GL_ERROR("Failed to set stencil operation");
@@ -582,7 +582,7 @@ void GLContextState::SetFillMode(FILL_MODE FillMode)
         {
             if (glPolygonMode != nullptr)
             {
-                auto PolygonMode = FillMode == FILL_MODE_WIREFRAME ? GL_LINE : GL_FILL;
+                GLenum PolygonMode = FillMode == FILL_MODE_WIREFRAME ? GL_LINE : GL_FILL;
                 glPolygonMode(GL_FRONT_AND_BACK, PolygonMode);
                 DEV_CHECK_GL_ERROR("Failed to set polygon mode");
             }
@@ -616,7 +616,7 @@ void GLContextState::SetCullMode(CULL_MODE CullMode)
             VERIFY(CullMode == CULL_MODE_FRONT || CullMode == CULL_MODE_BACK, "Unexpected cull mode");
             glEnable(GL_CULL_FACE);
             DEV_CHECK_GL_ERROR("Failed to enable face culling");
-            auto CullFace = CullMode == CULL_MODE_BACK ? GL_BACK : GL_FRONT;
+            GLenum CullFace = CullMode == CULL_MODE_BACK ? GL_BACK : GL_FRONT;
             glCullFace(CullFace);
             DEV_CHECK_GL_ERROR("Failed to set cull face");
         }
@@ -629,7 +629,7 @@ void GLContextState::SetFrontFace(bool FrontCounterClockwise)
 {
     if (m_RSState.FrontCounterClockwise != FrontCounterClockwise)
     {
-        auto FrontFace = FrontCounterClockwise ? GL_CCW : GL_CW;
+        GLenum FrontFace = FrontCounterClockwise ? GL_CCW : GL_CW;
         glFrontFace(FrontFace);
         DEV_CHECK_GL_ERROR("Failed to set front face");
         m_RSState.FrontCounterClockwise = FrontCounterClockwise;
@@ -727,7 +727,7 @@ void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMas
     {
         for (int i = 0; i < static_cast<int>(MAX_RENDER_TARGETS); ++i)
         {
-            const auto& RT = BSDsc.RenderTargets[i];
+            const RenderTargetBlendDesc& RT = BSDsc.RenderTargets[i];
             if (RT.BlendEnable)
                 bEnableBlend = true;
 
@@ -743,8 +743,8 @@ void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMas
     }
     else
     {
-        const auto& RT0 = BSDsc.RenderTargets[0];
-        bEnableBlend    = RT0.BlendEnable;
+        const RenderTargetBlendDesc& RT0 = BSDsc.RenderTargets[0];
+        bEnableBlend                     = RT0.BlendEnable;
         SetColorWriteMask(0, RT0.RenderTargetWriteMask, False);
     }
 
@@ -769,7 +769,7 @@ void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMas
         {
             for (int i = 0; i < static_cast<int>(MAX_RENDER_TARGETS); ++i)
             {
-                const auto& RT = BSDsc.RenderTargets[i];
+                const RenderTargetBlendDesc& RT = BSDsc.RenderTargets[i];
 
                 if (i >= m_Caps.MaxDrawBuffers)
                 {
@@ -783,14 +783,14 @@ void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMas
                     glEnablei(GL_BLEND, i);
                     DEV_CHECK_GL_ERROR("Failed to enable alpha blending");
 
-                    auto srcFactorRGB   = BlendFactor2GLBlend(RT.SrcBlend);
-                    auto dstFactorRGB   = BlendFactor2GLBlend(RT.DestBlend);
-                    auto srcFactorAlpha = BlendFactor2GLBlend(RT.SrcBlendAlpha);
-                    auto dstFactorAlpha = BlendFactor2GLBlend(RT.DestBlendAlpha);
+                    GLenum srcFactorRGB   = BlendFactor2GLBlend(RT.SrcBlend);
+                    GLenum dstFactorRGB   = BlendFactor2GLBlend(RT.DestBlend);
+                    GLenum srcFactorAlpha = BlendFactor2GLBlend(RT.SrcBlendAlpha);
+                    GLenum dstFactorAlpha = BlendFactor2GLBlend(RT.DestBlendAlpha);
                     glBlendFuncSeparatei(i, srcFactorRGB, dstFactorRGB, srcFactorAlpha, dstFactorAlpha);
                     DEV_CHECK_GL_ERROR("Failed to set separate blending factors");
-                    auto modeRGB   = BlendOperation2GLBlendOp(RT.BlendOp);
-                    auto modeAlpha = BlendOperation2GLBlendOp(RT.BlendOpAlpha);
+                    GLenum modeRGB   = BlendOperation2GLBlendOp(RT.BlendOp);
+                    GLenum modeAlpha = BlendOperation2GLBlendOp(RT.BlendOpAlpha);
                     glBlendEquationSeparatei(i, modeRGB, modeAlpha);
                     DEV_CHECK_GL_ERROR("Failed to set separate blending equations");
                 }
@@ -803,16 +803,17 @@ void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMas
         }
         else
         {
-            const auto& RT0            = BSDsc.RenderTargets[0];
-            auto        srcFactorRGB   = BlendFactor2GLBlend(RT0.SrcBlend);
-            auto        dstFactorRGB   = BlendFactor2GLBlend(RT0.DestBlend);
-            auto        srcFactorAlpha = BlendFactor2GLBlend(RT0.SrcBlendAlpha);
-            auto        dstFactorAlpha = BlendFactor2GLBlend(RT0.DestBlendAlpha);
+            const RenderTargetBlendDesc& RT0 = BSDsc.RenderTargets[0];
+
+            GLenum srcFactorRGB   = BlendFactor2GLBlend(RT0.SrcBlend);
+            GLenum dstFactorRGB   = BlendFactor2GLBlend(RT0.DestBlend);
+            GLenum srcFactorAlpha = BlendFactor2GLBlend(RT0.SrcBlendAlpha);
+            GLenum dstFactorAlpha = BlendFactor2GLBlend(RT0.DestBlendAlpha);
             glBlendFuncSeparate(srcFactorRGB, dstFactorRGB, srcFactorAlpha, dstFactorAlpha);
             DEV_CHECK_GL_ERROR("Failed to set blending factors");
 
-            auto modeRGB   = BlendOperation2GLBlendOp(RT0.BlendOp);
-            auto modeAlpha = BlendOperation2GLBlendOp(RT0.BlendOpAlpha);
+            GLenum modeRGB   = BlendOperation2GLBlendOp(RT0.BlendOp);
+            GLenum modeAlpha = BlendOperation2GLBlendOp(RT0.BlendOpAlpha);
             glBlendEquationSeparate(modeRGB, modeAlpha);
             DEV_CHECK_GL_ERROR("Failed to set blending equations");
         }
