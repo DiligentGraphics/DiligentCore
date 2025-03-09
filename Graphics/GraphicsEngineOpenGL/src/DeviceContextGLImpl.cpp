@@ -121,7 +121,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
         // Set blend state
         {
             const BlendStateDesc& BSDsc = GraphicsPipeline.BlendDesc;
-            m_ContextState.SetBlendState(BSDsc, GraphicsPipeline.SampleMask);
+            m_ContextState.SetBlendState(BSDsc, m_pPipelineState->GetRenderTargetMask(), GraphicsPipeline.SampleMask);
         }
 
         // Set depth-stencil state
@@ -1466,10 +1466,17 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
     m_ContextState.EnableScissorTest(False);
 
     // Set write mask
-    Uint32 WriteMask         = 0;
-    Bool   bIndependentBlend = False;
-    m_ContextState.GetColorWriteMask(RTIndex, WriteMask, bIndependentBlend);
-    m_ContextState.SetColorWriteMask(RTIndex, COLOR_MASK_ALL, bIndependentBlend);
+    Uint32 WriteMask     = 0;
+    Bool   bIndexedMasks = False;
+    m_ContextState.GetColorWriteMask(RTIndex, WriteMask, bIndexedMasks);
+    if (bIndexedMasks)
+    {
+        m_ContextState.SetColorWriteMaskIndexed(RTIndex, COLOR_MASK_ALL);
+    }
+    else
+    {
+        m_ContextState.SetColorWriteMask(COLOR_MASK_ALL);
+    }
 
     const TEXTURE_FORMAT        RTVFormat  = m_pBoundRenderTargets[RTIndex]->GetDesc().Format;
     const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(RTVFormat);
@@ -1489,7 +1496,15 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
         DEV_CHECK_GL_ERROR("glClearBufferfv() failed");
     }
 
-    m_ContextState.SetColorWriteMask(RTIndex, WriteMask, bIndependentBlend);
+    if (bIndexedMasks)
+    {
+        m_ContextState.SetColorWriteMaskIndexed(RTIndex, WriteMask);
+    }
+    else
+    {
+        m_ContextState.SetColorWriteMask(WriteMask);
+    }
+
     m_ContextState.EnableScissorTest(ScissorTestEnabled);
 }
 

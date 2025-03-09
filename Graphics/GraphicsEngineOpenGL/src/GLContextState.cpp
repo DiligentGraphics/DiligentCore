@@ -115,7 +115,7 @@ void GLContextState::Invalidate()
     for (Uint32 rt = 0; rt < _countof(m_ColorWriteMasks); ++rt)
         m_ColorWriteMasks[rt] = 0xFF;
 
-    m_bIndependentWriteMasks = EnableStateHelper();
+    m_bIndexedWriteMasks = EnableStateHelper();
 
     m_iActiveTexture   = -1;
     m_NumPatchVertices = -1;
@@ -717,35 +717,62 @@ void GLContextState::SetBlendFactors(const float* BlendFactors)
     DEV_CHECK_GL_ERROR("Failed to set blend color");
 }
 
-void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMask)
+void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 RenderTargetMask, Uint32 SampleMask)
 {
     if (SampleMask != 0xFFFFFFFF)
         LOG_ERROR_MESSAGE("Sample mask is not currently implemented in GL backend");
 
-    bool bEnableBlend = false;
-    if (BSDsc.IndependentBlendEnable)
-    {
-        for (int i = 0; i < static_cast<int>(MAX_RENDER_TARGETS); ++i)
-        {
-            const RenderTargetBlendDesc& RT = BSDsc.RenderTargets[i];
-            if (RT.BlendEnable)
-                bEnableBlend = true;
+    bool       bEnableBlend               = BSDsc.RenderTargets[0].BlendEnable;
+    bool       bUseIndexedColorWriteMasks = false;
+    COLOR_MASK NonIndexedColorMask        = COLOR_MASK_NONE;
 
-            if (i < m_Caps.MaxDrawBuffers)
-            {
-                SetColorWriteMask(i, RT.RenderTargetWriteMask, True);
-            }
-            else
-            {
-                VERIFY(RT.RenderTargetWriteMask == RenderTargetBlendDesc().RenderTargetWriteMask, "Render target write mask is specified for buffer ", i, " but this device only supports ", m_Caps.MaxDrawBuffers, " draw buffers");
-            }
+    if (RenderTargetMask & ~((1u << MAX_RENDER_TARGETS) - 1u))
+    {
+        UNEXPECTED("Render target mask (", RenderTargetMask, ") contains bits that correspond to non-existent render targets");
+        RenderTargetMask &= (1u << MAX_RENDER_TARGETS) - 1u;
+    }
+
+    if (RenderTargetMask & ~((1u << m_Caps.MaxDrawBuffers) - 1u))
+    {
+        LOG_ERROR_MESSAGE("Render target mask (", RenderTargetMask, ") contains buffer ", PlatformMisc::GetLSB(RenderTargetMask), " but this device only supports ", m_Caps.MaxDrawBuffers, " draw buffers");
+        RenderTargetMask &= (1u << m_Caps.MaxDrawBuffers) - 1u;
+    }
+
+    for (Uint32 Mask = RenderTargetMask; Mask != 0;)
+    {
+        Uint32 rt = PlatformMisc::GetLSB(Mask);
+        Mask &= ~(1u << rt);
+        VERIFY_EXPR(rt < MAX_RENDER_TARGETS && static_cast<int>(rt) < m_Caps.MaxDrawBuffers);
+
+        const RenderTargetBlendDesc& RT = BSDsc.RenderTargets[rt];
+        VERIFY(RT.RenderTargetWriteMask != COLOR_MASK_NONE, "Render target write mask should not be COLOR_MASK_NONE if corresponding bit is set in RenderTargetMask");
+        if (NonIndexedColorMask == COLOR_MASK_NONE)
+        {
+            NonIndexedColorMask = RT.RenderTargetWriteMask;
+        }
+        else if (NonIndexedColorMask != RT.RenderTargetWriteMask)
+        {
+            bUseIndexedColorWriteMasks = true;
+        }
+
+        if (BSDsc.IndependentBlendEnable && RT.BlendEnable)
+            bEnableBlend = true;
+    }
+
+    if (bUseIndexedColorWriteMasks)
+    {
+        for (Uint32 Mask = RenderTargetMask; Mask != 0;)
+        {
+            Uint32 rt = PlatformMisc::GetLSB(Mask);
+            Mask &= ~(1u << rt);
+            VERIFY_EXPR(rt < MAX_RENDER_TARGETS && static_cast<int>(rt) < m_Caps.MaxDrawBuffers);
+            SetColorWriteMaskIndexed(rt, BSDsc.RenderTargets[rt].RenderTargetWriteMask);
         }
     }
-    else
+    else if (NonIndexedColorMask != COLOR_MASK_NONE)
     {
-        const RenderTargetBlendDesc& RT0 = BSDsc.RenderTargets[0];
-        bEnableBlend                     = RT0.BlendEnable;
-        SetColorWriteMask(0, RT0.RenderTargetWriteMask, False);
+        // If the color write mask is COLOR_MASK_NONE, the draw buffer is disabled with glDrawBuffer.
+        SetColorWriteMask(NonIndexedColorMask);
     }
 
     if (bEnableBlend)
@@ -826,55 +853,57 @@ void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMas
     }
 }
 
-void GLContextState::SetColorWriteMask(Uint32 RTIndex, Uint32 WriteMask, Bool bIsIndependent)
+void GLContextState::SetColorWriteMask(Uint32 WriteMask)
 {
     // Even though the write mask only applies to writes to a framebuffer, the mask state is NOT
     // Framebuffer state. So it is NOT part of a Framebuffer Object or the Default Framebuffer.
     // Binding a new framebuffer will NOT affect the mask.
+    if (!m_bIndexedWriteMasks && m_ColorWriteMasks[0] == WriteMask)
+        return;
 
-    if (!bIsIndependent)
-        RTIndex = 0;
+    // glColorMask() sets the mask for ALL draw buffers
+    glColorMask(
+        (WriteMask & COLOR_MASK_RED) ? GL_TRUE : GL_FALSE,
+        (WriteMask & COLOR_MASK_GREEN) ? GL_TRUE : GL_FALSE,
+        (WriteMask & COLOR_MASK_BLUE) ? GL_TRUE : GL_FALSE,
+        (WriteMask & COLOR_MASK_ALPHA) ? GL_TRUE : GL_FALSE);
+    DEV_CHECK_GL_ERROR("Failed to set GL color mask");
 
-    if (m_ColorWriteMasks[RTIndex] != WriteMask ||
-        m_bIndependentWriteMasks != bIsIndependent)
-    {
-        if (bIsIndependent)
-        {
-            // Note that glColorMaski() does not set color mask for the framebuffer
-            // attachment point RTIndex. Rather it sets the mask for what was set
-            // by the glDrawBuffers() function for the i-th output
-            glColorMaski(RTIndex,
-                         (WriteMask & COLOR_MASK_RED) ? GL_TRUE : GL_FALSE,
-                         (WriteMask & COLOR_MASK_GREEN) ? GL_TRUE : GL_FALSE,
-                         (WriteMask & COLOR_MASK_BLUE) ? GL_TRUE : GL_FALSE,
-                         (WriteMask & COLOR_MASK_ALPHA) ? GL_TRUE : GL_FALSE);
-            DEV_CHECK_GL_ERROR("Failed to set GL color mask");
+    for (size_t rt = 0; rt < _countof(m_ColorWriteMasks); ++rt)
+        m_ColorWriteMasks[rt] = WriteMask;
 
-            m_ColorWriteMasks[RTIndex] = WriteMask;
-        }
-        else
-        {
-            // glColorMask() sets the mask for ALL draw buffers
-            glColorMask(
-                (WriteMask & COLOR_MASK_RED) ? GL_TRUE : GL_FALSE,
-                (WriteMask & COLOR_MASK_GREEN) ? GL_TRUE : GL_FALSE,
-                (WriteMask & COLOR_MASK_BLUE) ? GL_TRUE : GL_FALSE,
-                (WriteMask & COLOR_MASK_ALPHA) ? GL_TRUE : GL_FALSE);
-            DEV_CHECK_GL_ERROR("Failed to set GL color mask");
-
-            for (size_t rt = 0; rt < _countof(m_ColorWriteMasks); ++rt)
-                m_ColorWriteMasks[rt] = WriteMask;
-        }
-        m_bIndependentWriteMasks = bIsIndependent;
-    }
+    m_bIndexedWriteMasks = false;
 }
 
-void GLContextState::GetColorWriteMask(Uint32 RTIndex, Uint32& WriteMask, Bool& bIsIndependent)
+void GLContextState::SetColorWriteMaskIndexed(Uint32 RTIndex, Uint32 WriteMask)
 {
-    if (!m_bIndependentWriteMasks)
-        RTIndex = 0;
-    WriteMask      = m_ColorWriteMasks[RTIndex];
-    bIsIndependent = m_bIndependentWriteMasks;
+    // Even though the write mask only applies to writes to a framebuffer, the mask state is NOT
+    // Framebuffer state. So it is NOT part of a Framebuffer Object or the Default Framebuffer.
+    // Binding a new framebuffer will NOT affect the mask.
+    if (m_ColorWriteMasks[RTIndex] == WriteMask)
+        return;
+
+    // Note that glColorMaski() does not set color mask for the framebuffer
+    // attachment point RTIndex. Rather it sets the mask for what was set
+    // by the glDrawBuffers() function for the i-th output
+    glColorMaski(RTIndex,
+                 (WriteMask & COLOR_MASK_RED) ? GL_TRUE : GL_FALSE,
+                 (WriteMask & COLOR_MASK_GREEN) ? GL_TRUE : GL_FALSE,
+                 (WriteMask & COLOR_MASK_BLUE) ? GL_TRUE : GL_FALSE,
+                 (WriteMask & COLOR_MASK_ALPHA) ? GL_TRUE : GL_FALSE);
+    DEV_CHECK_GL_ERROR("Failed to set GL color mask");
+
+    m_ColorWriteMasks[RTIndex] = WriteMask;
+
+    m_bIndexedWriteMasks = true;
+}
+
+void GLContextState::GetColorWriteMask(Uint32 RTIndex, Uint32& WriteMask, Bool& bIsIndexed)
+{
+    WriteMask = m_ColorWriteMasks[RTIndex];
+    if (WriteMask == 0xFF)
+        WriteMask = 0xF;
+    bIsIndexed = m_bIndexedWriteMasks;
 }
 
 void GLContextState::SetNumPatchVertices(Int32 NumVertices)

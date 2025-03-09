@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -78,12 +78,14 @@ public:
     void EnableScissorTest      (bool bEnableScissorTest);
 
     void SetBlendFactors(const float* BlendFactors);
-    void SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMask);
+    void SetBlendState(const BlendStateDesc& BSDsc, Uint32 RenderTargetMask, Uint32 SampleMask);
 
     Bool GetDepthWritesEnabled(){ return m_DSState.m_DepthWritesEnableState; }
     Bool GetScissorTestEnabled(){ return m_RSState.ScissorTestEnable; }
-    void GetColorWriteMask(Uint32 RTIndex, Uint32& WriteMask, Bool& bIsIndependent);
-    void SetColorWriteMask(Uint32 RTIndex, Uint32 WriteMask, Bool bIsIndependent);
+    void GetColorWriteMask(Uint32 RTIndex, Uint32& WriteMask, Bool& bIsIndexed);
+    void SetColorWriteMask(Uint32 WriteMask);
+    void SetColorWriteMaskIndexed(Uint32 RTIndex, Uint32 WriteMask);
+
     Uint8 GetStencilWriteMask(){ return static_cast<Uint8>(m_DSState.m_StencilWriteMask); }
 
     void GetBoundImage(Uint32 Index, GLuint& GLHandle, GLint& MipLevel, GLboolean& IsLayered, GLint& Layer, GLenum& Access, GLenum& Format) const;
@@ -307,7 +309,7 @@ private:
     ContextCaps m_Caps;
 
     Uint32            m_ColorWriteMasks[MAX_RENDER_TARGETS] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    EnableStateHelper m_bIndependentWriteMasks;
+    EnableStateHelper m_bIndexedWriteMasks;
     Int32             m_iActiveTexture   = -1;
     Int32             m_NumPatchVertices = -1;
 
