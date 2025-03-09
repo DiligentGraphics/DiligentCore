@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -149,6 +149,9 @@ public:
             m_pDSV = m_pDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
             VERIFY_EXPR(m_pDSV != nullptr);
         }
+
+        m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
+        m_ReferenceData.resize(m_ReferenceDataPitch * m_SwapChainDesc.Height);
     }
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override
