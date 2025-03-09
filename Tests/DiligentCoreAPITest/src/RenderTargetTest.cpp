@@ -90,6 +90,36 @@ float4 main(in PSInput PSIn) : SV_Target
 )"
 };
 
+const std::string PS4{
+R"(
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float4 Color : COLOR;
+};
+
+struct PSOutput
+{
+	float4 Color0 : SV_Target0;
+	float4 Color1 : SV_Target1;
+	float4 Color2 : SV_Target2;
+	float4 Color3 : SV_Target3;
+	float4 Color4 : SV_Target4;
+};
+
+PSOutput main(in PSInput PSIn)
+{
+    PSOutput Out;
+    Out.Color0 = PSIn.Color;
+	Out.Color1 = PSIn.Color;
+	Out.Color2 = PSIn.Color;
+	Out.Color3 = PSIn.Color;
+	Out.Color4 = PSIn.Color;
+    return Out;
+}
+)"
+};
+
 // clang-format on
 
 } // namespace HLSL
@@ -265,6 +295,92 @@ TEST_F(RenderTargetTest, RenderTargetWriteMask)
 
             pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
             ASSERT_NE(pPSO, nullptr);
+        }
+
+        IBuffer* pVBs[] = {sm_Resources.pColorsVB};
+        pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+        pContext->SetPipelineState(pPSO);
+        pContext->CommitShaderResources(sm_Resources.pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+
+        pSwapChain->Present();
+    }
+}
+
+TEST_F(RenderTargetTest, MultipleRenderTargetWriteMasks)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+    const SwapChainDesc&   SCDesc     = pSwapChain->GetDesc();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc       = {"Render Target Test PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::PS4.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    const std::array<COLOR_MASK, 5> ColorMasks = {COLOR_MASK_RED, COLOR_MASK_GREEN, COLOR_MASK_BLUE, COLOR_MASK_ALPHA, COLOR_MASK_ALL};
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    {
+        GraphicsPipelineStateCreateInfoX PSOCreateInfo{"RenderTargetTest.RenderTargetWriteMask"};
+
+        InputLayoutDescX InputLayout{{0u, 0u, 4u, VT_FLOAT32}};
+
+        PSOCreateInfo
+            .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .SetInputLayout(InputLayout)
+            .AddShader(sm_Resources.pVS)
+            .AddShader(pPS);
+        PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        for (size_t i = 0; i < ColorMasks.size(); ++i)
+        {
+            PSOCreateInfo.AddRenderTarget(SCDesc.ColorBufferFormat);
+            PSOCreateInfo.GraphicsPipeline.BlendDesc.RenderTargets[i].RenderTargetWriteMask = ColorMasks[i];
+        }
+
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+    }
+
+    std::array<RefCntAutoPtr<ITexture>, ColorMasks.size()> pRTs;
+    for (RefCntAutoPtr<ITexture>& pRT : pRTs)
+    {
+        pRT = pEnv->CreateTexture("Render Target Test - RTV", SCDesc.ColorBufferFormat, BIND_RENDER_TARGET, SCDesc.Width, SCDesc.Height);
+        ASSERT_NE(pRT, nullptr);
+    }
+
+    for (Uint32 rt = 0; rt < ColorMasks.size(); ++rt)
+    {
+        std::array<ITextureView*, ColorMasks.size()> ppRTVs;
+        std::array<float4, ColorMasks.size()>        ClearColors;
+        for (size_t i = 0; i < ColorMasks.size(); ++i)
+        {
+            ppRTVs[i] = (i == rt) ?
+                pSwapChain->GetCurrentBackBufferRTV() :
+                pRTs[i]->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+            ASSERT_NE(ppRTVs[i], nullptr);
+
+            ClearColors[i] = float4{sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+        }
+
+        RenderReference(ColorMasks[rt], ClearColors[rt]);
+
+        pContext->SetRenderTargets(static_cast<Uint32>(ppRTVs.size()), ppRTVs.data(), nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        for (size_t i = 0; i < ColorMasks.size(); ++i)
+        {
+            pContext->ClearRenderTarget(ppRTVs[i], ClearColors[i].Data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
         }
 
         IBuffer* pVBs[] = {sm_Resources.pColorsVB};
