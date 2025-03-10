@@ -359,7 +359,20 @@ public:
     void SetDrawBuffers(uint32_t NumDrawBuffers, uint32_t DrawBuffersMask = ~0u)
     {
         if (!*this)
+        {
+            UNEXPECTED("Setting draw buffers on the default FBO is not allowed");
             return;
+        }
+
+        if (NumDrawBuffers == ~0u)
+        {
+            if (m_NumDrawBuffers == ~0u)
+            {
+                UNEXPECTED("Number of draw buffers is not set. Using ~0u as NumDrawBuffers is not allowed");
+                return;
+            }
+            NumDrawBuffers = m_NumDrawBuffers;
+        }
 
         if (NumDrawBuffers == 0)
             return;
@@ -381,8 +394,19 @@ public:
         DEV_CHECK_ERR(glGetError() == GL_NO_ERROR, "Failed to set draw buffers via glDrawBuffers()");
     }
 
+    uint32_t GetNumDrawBuffers() const
+    {
+        VERIFY(m_NumDrawBuffers != ~0u, "Draw buffers were not set. Call SetDrawBuffers() first");
+        return m_NumDrawBuffers != ~0u ? m_NumDrawBuffers : 0;
+    }
+    uint32_t GetDrawBuffersMask() const
+    {
+        VERIFY(m_NumDrawBuffers != ~0u, "Draw buffers were not set. Call SetDrawBuffers() first");
+        return m_DrawBuffersMask;
+    }
+
 private:
-    uint32_t m_NumDrawBuffers  = 0;
+    uint32_t m_NumDrawBuffers  = ~0u;
     uint32_t m_DrawBuffersMask = 0;
 };
 

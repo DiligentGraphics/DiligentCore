@@ -147,6 +147,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
             }
         }
         m_ContextState.InvalidateVAO();
+        m_DrawBuffersCommitted = false;
     }
     else
     {
@@ -218,7 +219,9 @@ void DeviceContextGLImpl::InvalidateState()
     m_BindInfo.Invalidate();
     m_BoundWritableTextures.clear();
     m_BoundWritableBuffers.clear();
-    m_IsDefaultFBOBound = false;
+    m_IsDefaultFBOBound    = false;
+    m_DrawBuffersCommitted = false;
+    m_DrawFBO              = nullptr;
 }
 
 void DeviceContextGLImpl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint64 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
@@ -378,6 +381,7 @@ void DeviceContextGLImpl::CommitRenderTargets()
             m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper{DefaultFBOHandle}};
         }
         m_ContextState.BindFBO(m_DefaultFBO);
+        m_DrawFBO = nullptr;
     }
     else
     {
@@ -406,11 +410,12 @@ void DeviceContextGLImpl::CommitRenderTargets()
 
         FBOCache& FboCache = m_pDevice->GetFBOCache(m_ContextState.GetCurrentGLContext());
 
-        const GLObjectWrappers::GLFrameBufferObj& FBO = FboCache.GetFBO(NumRenderTargets, pBoundRTVs, m_pBoundDepthStencil, m_ContextState);
+        m_DrawFBO = &FboCache.GetFBO(NumRenderTargets, pBoundRTVs, m_pBoundDepthStencil, m_ContextState);
         // Even though the write mask only applies to writes to a framebuffer, the mask state is NOT
         // Framebuffer state. So it is NOT part of a Framebuffer Object or the Default Framebuffer.
         // Binding a new framebuffer will NOT affect the mask.
-        m_ContextState.BindFBO(FBO);
+        m_ContextState.BindFBO(*m_DrawFBO);
+        m_DrawBuffersCommitted = false;
     }
     // Set the viewport to match the render target size
     SetViewports(1, nullptr, 0, 0);
@@ -446,7 +451,9 @@ void DeviceContextGLImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Att
 void DeviceContextGLImpl::ResetRenderTargets()
 {
     TDeviceContextBase::ResetRenderTargets();
-    m_IsDefaultFBOBound = false;
+    m_IsDefaultFBOBound    = false;
+    m_DrawBuffersCommitted = false;
+    m_DrawFBO              = nullptr;
     m_ContextState.InvalidateFBO();
 }
 
@@ -459,10 +466,12 @@ void DeviceContextGLImpl::BeginSubpass()
     const SubpassDesc&     SubpassDesc = RPDesc.pSubpasses[m_SubpassIndex];
     const FramebufferDesc& FBDesc      = m_pBoundFramebuffer->GetDesc();
 
-    const GLObjectWrappers::GLFrameBufferObj& RenderTargetFBO = m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex).RenderTarget;
+    GLObjectWrappers::GLFrameBufferObj& RenderTargetFBO = m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex).RenderTarget;
     if (RenderTargetFBO != 0)
     {
         m_ContextState.BindFBO(RenderTargetFBO);
+        m_DrawFBO              = &RenderTargetFBO;
+        m_DrawBuffersCommitted = false;
     }
     else
     {
@@ -472,7 +481,9 @@ void DeviceContextGLImpl::BeginSubpass()
             m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper{DefaultFBOHandle}};
         }
         m_ContextState.BindFBO(m_DefaultFBO);
+        m_DrawFBO = nullptr;
     }
+
 
     for (Uint32 rt = 0; rt < SubpassDesc.RenderTargetAttachmentCount; ++rt)
     {
@@ -748,6 +759,22 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
 
         const GLObjectWrappers::GLFrameBufferObj& FBO = FboCache.GetFBO(m_FramebufferWidth, m_FramebufferHeight, m_ContextState);
         m_ContextState.BindFBO(FBO);
+        m_DrawFBO = nullptr;
+    }
+
+    if (!m_DrawBuffersCommitted)
+    {
+        if (!m_IsDefaultFBOBound && m_NumBoundRenderTargets > 0 && m_DrawFBO != nullptr)
+        {
+            if (m_pPipelineState)
+            {
+                VERIFY(m_pPipelineState->GetGraphicsPipelineDesc().NumRenderTargets == m_NumBoundRenderTargets,
+                       "The number of render targets in the pipeline state (", m_pPipelineState->GetGraphicsPipelineDesc().NumRenderTargets,
+                       ") does not match the number of bound render targets (", m_NumBoundRenderTargets, ")");
+                m_DrawFBO->SetDrawBuffers(~0u, m_pPipelineState->GetRenderTargetMask());
+            }
+        }
+        m_DrawBuffersCommitted = true;
     }
 
 #ifdef DILIGENT_DEVELOPMENT

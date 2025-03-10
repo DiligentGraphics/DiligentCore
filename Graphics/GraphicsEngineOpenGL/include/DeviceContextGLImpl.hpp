@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -355,7 +355,10 @@ private:
 
     RefCntAutoPtr<ISwapChainGL> m_pSwapChain;
 
-    bool m_IsDefaultFBOBound = false;
+    bool m_IsDefaultFBOBound    = false;
+    bool m_DrawBuffersCommitted = false;
+
+    GLObjectWrappers::GLFrameBufferObj* m_DrawFBO = nullptr;
 
     GLObjectWrappers::GLFrameBufferObj m_DefaultFBO;
 

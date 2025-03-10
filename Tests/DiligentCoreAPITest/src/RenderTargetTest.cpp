@@ -90,7 +90,37 @@ float4 main(in PSInput PSIn) : SV_Target
 )"
 };
 
-const std::string PS4{
+const std::string Target1PS{
+R"(
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float4 Color : COLOR;
+};
+
+float4 main(in PSInput PSIn) : SV_Target1
+{
+    return PSIn.Color;
+}
+)"
+};
+
+const std::string Target2PS{
+R"(
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float4 Color : COLOR;
+};
+
+float4 main(in PSInput PSIn) : SV_Target2
+{
+    return PSIn.Color;
+}
+)"
+};
+
+const std::string MultiTargetPS{
 R"(
 struct PSInput
 {
@@ -145,25 +175,11 @@ protected:
         ISwapChain*            pSwapChain = pEnv->GetSwapChain();
         const SwapChainDesc&   SCDesc     = pSwapChain->GetDesc();
 
-        ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
-        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        sm_Resources.pVS = CreateShader("Render Target Test VS", HLSL::VS.c_str(), SHADER_TYPE_VERTEX);
+        ASSERT_NE(sm_Resources.pVS, nullptr);
 
-        {
-            ShaderCI.Desc       = {"Render Target Test VS", SHADER_TYPE_VERTEX, true};
-            ShaderCI.EntryPoint = "main";
-            ShaderCI.Source     = HLSL::VS.c_str();
-            pDevice->CreateShader(ShaderCI, &sm_Resources.pVS);
-            ASSERT_NE(sm_Resources.pVS, nullptr);
-        }
-
-        {
-            ShaderCI.Desc       = {"Render Target Test PS", SHADER_TYPE_PIXEL, true};
-            ShaderCI.EntryPoint = "main";
-            ShaderCI.Source     = HLSL::PS.c_str();
-            pDevice->CreateShader(ShaderCI, &sm_Resources.pPS);
-            ASSERT_NE(sm_Resources.pPS, nullptr);
-        }
+        sm_Resources.pPS = CreateShader("Render Target Test PS", HLSL::PS.c_str(), SHADER_TYPE_PIXEL);
+        ASSERT_NE(sm_Resources.pPS, nullptr);
 
         GraphicsPipelineStateCreateInfoX PSOCreateInfo{"Render Target Test Reference"};
 
@@ -243,6 +259,24 @@ protected:
         pContext->InvalidateState();
     }
 
+    static RefCntAutoPtr<IShader> CreateShader(const char* Name, const char* Source, SHADER_TYPE Type)
+    {
+        GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+        IRenderDevice*         pDevice = pEnv->GetDevice();
+
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+        ShaderCI.Desc       = {Name, Type, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = Source;
+
+        RefCntAutoPtr<IShader> pShader;
+        pDevice->CreateShader(ShaderCI, &pShader);
+        return pShader;
+    }
+
     struct Resources
     {
         RefCntAutoPtr<IPipelineState>         pPSO;
@@ -316,18 +350,8 @@ TEST_F(RenderTargetTest, MultipleRenderTargetWriteMasks)
     ISwapChain*            pSwapChain = pEnv->GetSwapChain();
     const SwapChainDesc&   SCDesc     = pSwapChain->GetDesc();
 
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-
-    RefCntAutoPtr<IShader> pPS;
-    {
-        ShaderCI.Desc       = {"Render Target Test PS", SHADER_TYPE_PIXEL, true};
-        ShaderCI.EntryPoint = "main";
-        ShaderCI.Source     = HLSL::PS4.c_str();
-        pDevice->CreateShader(ShaderCI, &pPS);
-        ASSERT_NE(pPS, nullptr);
-    }
+    RefCntAutoPtr<IShader> pPS = CreateShader("RenderTargetTest.MultipleRenderTargetWriteMasks PS", HLSL::MultiTargetPS.c_str(), SHADER_TYPE_PIXEL);
+    ASSERT_NE(pPS, nullptr);
 
     const std::array<COLOR_MASK, 5> ColorMasks = {COLOR_MASK_RED, COLOR_MASK_GREEN, COLOR_MASK_BLUE, COLOR_MASK_ALPHA, COLOR_MASK_ALL};
 
@@ -391,6 +415,123 @@ TEST_F(RenderTargetTest, MultipleRenderTargetWriteMasks)
         pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
 
         pSwapChain->Present();
+    }
+}
+
+TEST_F(RenderTargetTest, InactiveRenderTargets)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+    const SwapChainDesc&   SCDesc     = pSwapChain->GetDesc();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    ASSERT_NE(pTestingSwapChain, nullptr);
+
+    RefCntAutoPtr<IShader> pPS1 = CreateShader("RenderTargetTest.InactiveRenderTargets - PS1", HLSL::Target1PS.c_str(), SHADER_TYPE_PIXEL);
+    ASSERT_NE(pPS1, nullptr);
+    RefCntAutoPtr<IShader> pPS2 = CreateShader("RenderTargetTest.InactiveRenderTargets - PS2", HLSL::Target2PS.c_str(), SHADER_TYPE_PIXEL);
+    ASSERT_NE(pPS1, nullptr);
+
+    static constexpr Uint32                               NumRenderTargets = 3;
+    std::array<RefCntAutoPtr<ITexture>, NumRenderTargets> pRTs;
+    for (RefCntAutoPtr<ITexture>& pRT : pRTs)
+    {
+        pRT = pEnv->CreateTexture("Render Target Test - RTV", SCDesc.ColorBufferFormat, BIND_RENDER_TARGET, SCDesc.Width, SCDesc.Height);
+        ASSERT_NE(pRT, nullptr);
+    }
+
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
+    {
+        RefCntAutoPtr<IPipelineState> pPSO;
+        {
+            GraphicsPipelineStateCreateInfoX PSOCreateInfo{"RenderTargetTest.InactiveRenderTargets"};
+
+            InputLayoutDescX InputLayout{{0u, 0u, 4u, VT_FLOAT32}};
+
+            PSOCreateInfo
+                .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                .SetInputLayout(InputLayout)
+                .AddShader(sm_Resources.pVS);
+            switch (rt)
+            {
+                case 0:
+                    PSOCreateInfo.AddShader(sm_Resources.pPS);
+                    break;
+                case 1:
+                    PSOCreateInfo.AddShader(pPS1);
+                    break;
+                case 2:
+                    PSOCreateInfo.AddShader(pPS2);
+                    break;
+                default:
+                    UNEXPECTED("Unexpected render target index");
+                    break;
+            }
+            PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+            PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+            for (size_t i = 0; i < NumRenderTargets; ++i)
+            {
+                PSOCreateInfo.AddRenderTarget(SCDesc.ColorBufferFormat);
+                PSOCreateInfo.GraphicsPipeline.BlendDesc.RenderTargets[i].RenderTargetWriteMask = i == rt ? COLOR_MASK_ALL : COLOR_MASK_NONE;
+            }
+
+            pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+            ASSERT_NE(pPSO, nullptr);
+        }
+
+        std::array<ITextureView*, NumRenderTargets> ppRTVs;
+        std::array<float4, NumRenderTargets>        ClearColors;
+        for (size_t i = 0; i < NumRenderTargets; ++i)
+        {
+            ppRTVs[i] = (i == rt) ?
+                pSwapChain->GetCurrentBackBufferRTV() :
+                pRTs[i]->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+            ASSERT_NE(ppRTVs[i], nullptr);
+
+            ClearColors[i] = float4{sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+        }
+
+        RenderReference(COLOR_MASK_ALL, ClearColors[rt]);
+
+        pContext->SetRenderTargets(static_cast<Uint32>(ppRTVs.size()), ppRTVs.data(), nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        for (size_t i = 0; i < NumRenderTargets; ++i)
+        {
+            pContext->ClearRenderTarget(ppRTVs[i], ClearColors[i].Data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        }
+
+        IBuffer* pVBs[] = {sm_Resources.pColorsVB};
+        pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+        pContext->SetPipelineState(pPSO);
+
+        pContext->CommitShaderResources(sm_Resources.pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+
+        pSwapChain->Present();
+
+        for (size_t i = 0; i < NumRenderTargets; ++i)
+        {
+            if (i == rt)
+                continue;
+
+            ITextureView* pRTV = sm_Resources.pRT->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+            pContext->SetRenderTargets(1, &pRTV, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pContext->ClearRenderTarget(pRTV, ClearColors[i].Data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+            StateTransitionDesc Barrier{sm_Resources.pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
+            pContext->TransitionResourceStates(1, &Barrier);
+
+            pContext->Flush();
+            pContext->WaitForIdle();
+
+            pTestingSwapChain->TakeSnapshot(sm_Resources.pRT);
+
+            pContext->InvalidateState();
+
+            pTestingSwapChain->CompareWithSnapshot(pRTs[i]);
+        }
     }
 }
 

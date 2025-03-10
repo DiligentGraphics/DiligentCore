@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,10 +60,10 @@ public:
                                                         Uint32             DefaultWidth  = 0,
                                                         Uint32             DefaultHeight = 0);
 
-    const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32             NumRenderTargets,
-                                                     TextureViewGLImpl* ppRTVs[],
-                                                     TextureViewGLImpl* pDSV,
-                                                     GLContextState&    ContextState);
+    GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32             NumRenderTargets,
+                                               TextureViewGLImpl* ppRTVs[],
+                                               TextureViewGLImpl* pDSV,
+                                               GLContextState&    ContextState);
 
     const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32 Width, Uint32 Height, GLContextState& ContextState);
 

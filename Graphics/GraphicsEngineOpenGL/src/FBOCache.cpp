@@ -225,10 +225,10 @@ GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    Contex
     return FBO;
 }
 
-const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             NumRenderTargets,
-                                                           TextureViewGLImpl* ppRTVs[],
-                                                           TextureViewGLImpl* pDSV,
-                                                           GLContextState&    ContextState)
+GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             NumRenderTargets,
+                                                     TextureViewGLImpl* ppRTVs[],
+                                                     TextureViewGLImpl* pDSV,
+                                                     GLContextState&    ContextState)
 {
     // Pop null render targets from the end of the list
     while (NumRenderTargets > 0 && ppRTVs[NumRenderTargets - 1] == nullptr)

@@ -80,13 +80,13 @@ public:
     void SetBlendFactors(const float* BlendFactors);
     void SetBlendState(const BlendStateDesc& BSDsc, Uint32 RenderTargetMask, Uint32 SampleMask);
 
-    Bool GetDepthWritesEnabled(){ return m_DSState.m_DepthWritesEnableState; }
-    Bool GetScissorTestEnabled(){ return m_RSState.ScissorTestEnable; }
+    Bool GetDepthWritesEnabled() const { return m_DSState.m_DepthWritesEnableState; }
+    Bool GetScissorTestEnabled() const { return m_RSState.ScissorTestEnable; }
     void GetColorWriteMask(Uint32 RTIndex, Uint32& WriteMask, Bool& bIsIndexed);
     void SetColorWriteMask(Uint32 WriteMask);
     void SetColorWriteMaskIndexed(Uint32 RTIndex, Uint32 WriteMask);
 
-    Uint8 GetStencilWriteMask(){ return static_cast<Uint8>(m_DSState.m_StencilWriteMask); }
+    Uint8 GetStencilWriteMask() const { return static_cast<Uint8>(m_DSState.m_StencilWriteMask); }
 
     void GetBoundImage(Uint32 Index, GLuint& GLHandle, GLint& MipLevel, GLboolean& IsLayered, GLint& Layer, GLenum& Access, GLenum& Format) const;
 
