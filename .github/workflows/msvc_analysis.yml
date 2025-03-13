@@ -32,14 +32,14 @@ jobs:
 
     - name: Set up build environment
       if: success()
-      uses: DiligentGraphics/github-action/setup-build-env@v3
+      uses: DiligentGraphics/github-action/setup-build-env@v4
       with:
         platform:        ${{ matrix.platform }}
         cmake-generator: ${{ matrix.cmake_generator }}
 
     - name: Configure CMake
       if: success()
-      uses: DiligentGraphics/github-action/configure-cmake@v3
+      uses: DiligentGraphics/github-action/configure-cmake@v4
       with:
         generator:  ${{ matrix.cmake_generator }}
         vs-arch:    ${{ matrix.toolset }}
@@ -48,7 +48,7 @@ jobs:
 
     - name: Build
       if: success()
-      uses: DiligentGraphics/github-action/build@v3
+      uses: DiligentGraphics/github-action/build@v4
 
     - name: Run MSVC Code Analysis
       uses: microsoft/msvc-code-analysis-action@v0.1.1

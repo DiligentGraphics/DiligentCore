@@ -41,14 +41,14 @@ jobs:
 
     - name: Set up build environment
       if: success()
-      uses: DiligentGraphics/github-action/setup-build-env@v3
+      uses: DiligentGraphics/github-action/setup-build-env@v4
       with:
         platform:        ${{ matrix.platform }}
         cmake-generator: ${{ matrix.cmake_generator }}
 
     - name: Configure CMake
       if: success()
-      uses: DiligentGraphics/github-action/configure-cmake@v3
+      uses: DiligentGraphics/github-action/configure-cmake@v4
       with:
         cc:         ${{ matrix.cc }}
         cxx:        ${{ matrix.cxx }}
@@ -65,7 +65,7 @@ jobs:
 
     - name: Build
       if: success()
-      uses: DiligentGraphics/github-action/build@v3
+      uses: DiligentGraphics/github-action/build@v4
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
