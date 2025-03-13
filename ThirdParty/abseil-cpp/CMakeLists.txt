@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.11)
 FetchContent_DeclareShallowGit(
     abseil-cpp
     GIT_REPOSITORY  https://chromium.googlesource.com/chromium/src/third_party/abseil-cpp
-    GIT_TAG         72093794ac42be8105817ae0b0569fb411a6ca9b
+    GIT_TAG         54ea9e3a7fe017384713d773373761de7c4a1154
 )
 
 set(CMAKE_CXX_STANDARD 17)
