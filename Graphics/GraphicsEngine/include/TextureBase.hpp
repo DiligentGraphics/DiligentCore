@@ -183,13 +183,6 @@ public:
     {
         VERIFY(m_pDefaultViews == nullptr, "Default views have already been initialized");
 
-        const TextureFormatAttribs& TexFmtAttribs = GetTextureFormatAttribs(this->m_Desc.Format);
-        if (TexFmtAttribs.ComponentType == COMPONENT_TYPE_UNDEFINED)
-        {
-            // Cannot create default view for TYPELESS formats
-            return;
-        }
-
         const Uint32 NumDefaultViews = GetNumDefaultViews();
         if (NumDefaultViews == 0)
             return;
@@ -201,12 +194,23 @@ public:
         }
         TextureViewImplType** ppDefaultViews = GetDefaultViewsArrayPtr();
 
+        const TextureFormatAttribs& TexFmtAttribs = GetTextureFormatAttribs(this->m_Desc.Format);
+
         Uint8 ViewIdx = 0;
 
         auto CreateDefaultView = [&](TEXTURE_VIEW_TYPE ViewType) //
         {
             TextureViewDesc ViewDesc;
             ViewDesc.ViewType = ViewType;
+
+            if (TexFmtAttribs.IsTypeless)
+            {
+                ViewDesc.Format = GetDefaultTextureViewFormat(this->m_Desc, ViewType);
+                if (ViewDesc.Format == TEX_FORMAT_UNKNOWN)
+                {
+                    return;
+                }
+            }
 
             std::string ViewName;
             switch (ViewType)
