@@ -183,6 +183,12 @@ public:
     {
         VERIFY(m_pDefaultViews == nullptr, "Default views have already been initialized");
 
+        if (this->m_Desc.Format == TEX_FORMAT_UNKNOWN)
+        {
+            // Happens when creating dummy OpenGL textures
+            return;
+        }
+
         const Uint32 NumDefaultViews = GetNumDefaultViews();
         if (NumDefaultViews == 0)
             return;
