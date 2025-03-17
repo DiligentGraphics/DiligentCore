@@ -791,8 +791,14 @@ TEXTURE_FORMAT BCFormatToUncompressed(TEXTURE_FORMAT Fmt);
 /// Converts typeless format to a corresponding UNORM format, for example:
 ///   RGBA8_TYPELESS -> RGBA8_UNORM
 ///   BC1_TYPELESS   -> BC1_UNORM
-/// If the format is not typeless, it is returned as is.
+/// If the format is not typeless, or cannot be converted to UNORM, it is returned as is.
 TEXTURE_FORMAT TypelessFormatToUnorm(TEXTURE_FORMAT Fmt);
+
+/// Converts typeless format to a corresponding SRGB format, for example:
+///   RGBA8_TYPELESS -> RGBA8_UNORM_SRGB
+///   BC1_TYPELESS   -> BC1_UNORM_SRGB
+/// If the format is not typeless, or cannot be converted to SRGB, it is returned as is.
+TEXTURE_FORMAT TypelessFormatToSRGB(TEXTURE_FORMAT Fmt);
 
 
 bool IsSRGBFormat(TEXTURE_FORMAT Fmt);
