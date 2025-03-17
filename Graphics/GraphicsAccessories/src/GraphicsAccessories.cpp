@@ -416,7 +416,7 @@ const TextureFormatAttribs& GetTextureFormatAttribs(TEXTURE_FORMAT Format)
             INIT_TEX_FORMAT_INFO(TEX_FORMAT_ETC2_RGBA8_UNORM_SRGB,   16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
 #undef  INIT_TEX_FORMAT_INFO
             // clang-format on
-            static_assert(TEX_FORMAT_NUM_FORMATS == TEX_FORMAT_ETC2_RGBA8_UNORM_SRGB + 1, "Not all texture formats initialized.");
+            static_assert(TEX_FORMAT_NUM_FORMATS == 106, "Not all texture formats initialized.");
 
 #ifdef DILIGENT_DEBUG
             for (Uint32 Fmt = TEX_FORMAT_UNKNOWN; Fmt < TEX_FORMAT_NUM_FORMATS; ++Fmt)
@@ -2560,6 +2560,7 @@ const Char* GetPipelineStateStatusString(PIPELINE_STATE_STATUS PipelineStatus, b
 
 TEXTURE_FORMAT UnormFormatToSRGB(TEXTURE_FORMAT Fmt)
 {
+    static_assert(TEX_FORMAT_NUM_FORMATS == 106, "Please update the switch below to handle the new texture format, if needed");
     switch (Fmt)
     {
         case TEX_FORMAT_RGBA8_UNORM:
@@ -2599,6 +2600,7 @@ TEXTURE_FORMAT UnormFormatToSRGB(TEXTURE_FORMAT Fmt)
 
 TEXTURE_FORMAT SRGBFormatToUnorm(TEXTURE_FORMAT Fmt)
 {
+    static_assert(TEX_FORMAT_NUM_FORMATS == 106, "Please update the switch below to handle the new texture format, if needed");
     switch (Fmt)
     {
         case TEX_FORMAT_RGBA8_UNORM_SRGB:
@@ -2682,6 +2684,49 @@ TEXTURE_FORMAT BCFormatToUncompressed(TEXTURE_FORMAT Fmt)
 
         default:
             return TEX_FORMAT_UNKNOWN;
+    }
+}
+
+TEXTURE_FORMAT TypelessFormatToUnorm(TEXTURE_FORMAT Fmt)
+{
+    static_assert(TEX_FORMAT_NUM_FORMATS == 106, "Please update the switch below to handle the new texture format, if needed");
+    switch (Fmt)
+    {
+        case TEX_FORMAT_R8_TYPELESS:
+            return TEX_FORMAT_R8_UNORM;
+
+        case TEX_FORMAT_RG8_TYPELESS:
+            return TEX_FORMAT_RG8_UNORM;
+
+        case TEX_FORMAT_RGBA8_TYPELESS:
+            return TEX_FORMAT_RGBA8_UNORM;
+
+        case TEX_FORMAT_R16_TYPELESS:
+            return TEX_FORMAT_R16_UNORM;
+
+        case TEX_FORMAT_RG16_TYPELESS:
+            return TEX_FORMAT_RG16_UNORM;
+
+        case TEX_FORMAT_RGBA16_TYPELESS:
+            return TEX_FORMAT_RGBA16_UNORM;
+
+        case TEX_FORMAT_BC1_TYPELESS:
+            return TEX_FORMAT_BC1_UNORM;
+
+        case TEX_FORMAT_BC2_TYPELESS:
+            return TEX_FORMAT_BC2_UNORM;
+
+        case TEX_FORMAT_BC3_TYPELESS:
+            return TEX_FORMAT_BC3_UNORM;
+
+        case TEX_FORMAT_BC4_TYPELESS:
+            return TEX_FORMAT_BC4_UNORM;
+
+        case TEX_FORMAT_BC5_TYPELESS:
+            return TEX_FORMAT_BC5_UNORM;
+
+        default:
+            return Fmt;
     }
 }
 

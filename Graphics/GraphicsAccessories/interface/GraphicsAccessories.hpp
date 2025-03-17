@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -787,6 +787,12 @@ TEXTURE_FORMAT SRGBFormatToUnorm(TEXTURE_FORMAT Fmt);
 ///   BC1_UNORM -> RGBA8_UNORM
 ///   BC4_UNORM -> R8_UNORM
 TEXTURE_FORMAT BCFormatToUncompressed(TEXTURE_FORMAT Fmt);
+
+/// Converts typeless format to a corresponding UNORM format, for example:
+///   RGBA8_TYPELESS -> RGBA8_UNORM
+///   BC1_TYPELESS   -> BC1_UNORM
+/// If the format is not typeless, it is returned as is.
+TEXTURE_FORMAT TypelessFormatToUnorm(TEXTURE_FORMAT Fmt);
 
 
 bool IsSRGBFormat(TEXTURE_FORMAT Fmt);
