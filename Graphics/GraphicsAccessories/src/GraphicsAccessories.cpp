@@ -2703,6 +2703,12 @@ TEXTURE_FORMAT TypelessFormatToUnorm(TEXTURE_FORMAT Fmt)
         case TEX_FORMAT_RGBA8_TYPELESS:
             return TEX_FORMAT_RGBA8_UNORM;
 
+        case TEX_FORMAT_BGRA8_TYPELESS:
+            return TEX_FORMAT_BGRA8_UNORM;
+
+        case TEX_FORMAT_BGRX8_TYPELESS:
+            return TEX_FORMAT_BGRX8_UNORM;
+
         case TEX_FORMAT_R16_TYPELESS:
             return TEX_FORMAT_R16_UNORM;
 
