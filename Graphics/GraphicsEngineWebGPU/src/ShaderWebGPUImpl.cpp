@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -229,7 +229,7 @@ void ShaderWebGPUImpl::Initialize(const ShaderCreateInfo& ShaderCI,
     // Load shader resources
     if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
     {
-        auto& Allocator = GetRawAllocator();
+        IMemoryAllocator& Allocator = GetRawAllocator();
 
         std::unique_ptr<void, STDDeleterRawMem<void>> pRawMem{
             ALLOCATE(Allocator, "Memory for WGSLShaderResources", WGSLShaderResources, 1),

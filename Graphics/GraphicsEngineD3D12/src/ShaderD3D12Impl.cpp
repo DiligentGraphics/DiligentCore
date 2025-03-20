@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,7 @@ static ShaderVersion GetD3D12ShaderModel(const ShaderCreateInfo& ShaderCI,
                                          IDXCompiler*            pDXCompiler,
                                          const ShaderVersion&    DeviceSM)
 {
-    auto HLSLVersion = ShaderCI.HLSLVersion;
+    ShaderVersion HLSLVersion = ShaderCI.HLSLVersion;
     if (HLSLVersion > DeviceSM)
     {
         LOG_WARNING_MESSAGE("Requested shader model ", Uint32{HLSLVersion.Major}, '_', Uint32{HLSLVersion.Minor},
@@ -53,7 +53,7 @@ static ShaderVersion GetD3D12ShaderModel(const ShaderCreateInfo& ShaderCI,
                             Uint32{DeviceSM.Major}, '_', Uint32{DeviceSM.Minor}, ").");
     }
 
-    auto MaxSupportedSM = DeviceSM;
+    ShaderVersion MaxSupportedSM = DeviceSM;
     if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
     {
         ShaderVersion CompilerSM;
@@ -117,9 +117,9 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
         GetD3D12ShaderModel(ShaderCI, D3D12ShaderCI.pDXCompiler, D3D12ShaderCI.MaxShaderVersion),
         [pDXCompiler      = D3D12ShaderCI.pDXCompiler,
          LoadCBReflection = ShaderCI.LoadConstantBufferReflection](const ShaderDesc& Desc, IDataBlob* pShaderByteCode) {
-            auto& Allocator  = GetRawAllocator();
-            auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
-            auto* pResources = new (pRawMem) ShaderResourcesD3D12 //
+            IMemoryAllocator&     Allocator  = GetRawAllocator();
+            ShaderResourcesD3D12* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
+            ShaderResourcesD3D12* pResources = new (pRawMem) ShaderResourcesD3D12 //
                 {
                     pShaderByteCode,
                     Desc,

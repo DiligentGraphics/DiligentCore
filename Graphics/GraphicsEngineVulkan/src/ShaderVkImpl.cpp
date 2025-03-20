@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,7 +68,7 @@ static constexpr char VulkanDefine[] =
 std::vector<uint32_t> CompileShaderDXC(const ShaderCreateInfo&         ShaderCI,
                                        const ShaderVkImpl::CreateInfo& VkShaderCI)
 {
-    auto* pDXCompiler = VkShaderCI.pDXCompiler;
+    IDXCompiler* pDXCompiler = VkShaderCI.pDXCompiler;
     VERIFY_EXPR(pDXCompiler != nullptr && pDXCompiler->IsLoaded());
     std::vector<uint32_t> SPIRV;
     pDXCompiler->Compile(ShaderCI, ShaderCI.HLSLVersion, VulkanDefine, nullptr, &SPIRV, VkShaderCI.ppCompilerOutput);
@@ -78,7 +78,7 @@ std::vector<uint32_t> CompileShaderDXC(const ShaderCreateInfo&         ShaderCI,
     {
         // SPIR-V bytecode generated from HLSL must be legalized to
         // turn it into a valid vulkan SPIR-V shader.
-        auto LegalizedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, SPIRV_OPTIMIZATION_FLAG_LEGALIZATION);
+        std::vector<uint32_t> LegalizedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, SPIRV_OPTIMIZATION_FLAG_LEGALIZATION);
         if (!LegalizedSPIRV.empty())
             SPIRV = std::move(LegalizedSPIRV);
         else
@@ -168,10 +168,10 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
     {
         DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
 
-        auto ShaderCompiler = ShaderCI.ShaderCompiler;
+        SHADER_COMPILER ShaderCompiler = ShaderCI.ShaderCompiler;
         if (ShaderCompiler == SHADER_COMPILER_DXC)
         {
-            auto* pDXCompiler = VkShaderCI.pDXCompiler;
+            IDXCompiler* pDXCompiler = VkShaderCI.pDXCompiler;
             if (pDXCompiler == nullptr || !pDXCompiler->IsLoaded())
             {
                 LOG_WARNING_MESSAGE("DX Compiler is not loaded. Using default shader compiler");
@@ -219,13 +219,13 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
     {
         if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
         {
-            auto& Allocator = GetRawAllocator();
+            IMemoryAllocator& Allocator = GetRawAllocator();
 
             std::unique_ptr<void, STDDeleterRawMem<void>> pRawMem{
                 ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1),
                 STDDeleterRawMem<void>(Allocator),
             };
-            auto LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
+            const bool LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
             new (pRawMem.get()) SPIRVShaderResources // May throw
                 {
                     Allocator,
@@ -322,12 +322,12 @@ void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDes
 {
     DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
 
-    auto ResCount = GetResourceCount();
+    const Uint32 ResCount = GetResourceCount();
     DEV_CHECK_ERR(Index < ResCount, "Resource index (", Index, ") is out of range");
     if (Index < ResCount)
     {
-        const auto& SPIRVResource = m_pShaderResources->GetResource(Index);
-        ResourceDesc              = SPIRVResource.GetResourceDesc();
+        const SPIRVShaderResourceAttribs& SPIRVResource = m_pShaderResources->GetResource(Index);
+        ResourceDesc                                    = SPIRVResource.GetResourceDesc();
     }
 }
 
@@ -335,7 +335,7 @@ const ShaderCodeBufferDesc* ShaderVkImpl::GetConstantBufferDesc(Uint32 Index) co
 {
     DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
 
-    auto ResCount = GetResourceCount();
+    const Uint32 ResCount = GetResourceCount();
     if (Index >= ResCount)
     {
         UNEXPECTED("Resource index (", Index, ") is out of range");
