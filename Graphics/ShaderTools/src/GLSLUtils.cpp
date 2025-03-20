@@ -257,7 +257,7 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
         return "";
     }
 
-    const auto SourceData = ReadShaderSourceFile(ShaderCI);
+    const ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
     {
         if (ShaderCI.Macros)
@@ -272,7 +272,7 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
     bool          IsES = false;
     GetGLSLVersion(ShaderCI, Attribs.TargetCompiler, Attribs.DeviceType, Attribs.MaxShaderVersion, GLSLVer, IsES);
 
-    const auto ShaderType = ShaderCI.Desc.ShaderType;
+    const SHADER_TYPE ShaderType = ShaderCI.Desc.ShaderType;
 
     String GLSLSource;
     {
@@ -369,7 +369,7 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
             LOG_ERROR_AND_THROW("Combined texture samplers are required to convert HLSL source to GLSL");
         }
         // Convert HLSL to GLSL
-        const auto& Converter = HLSL2GLSLConverterImpl::GetInstance();
+        const HLSL2GLSLConverterImpl& Converter = HLSL2GLSLConverterImpl::GetInstance();
 
         HLSL2GLSLConverterImpl::ConversionAttribs ConvertAttribs;
         ConvertAttribs.pSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
@@ -389,7 +389,7 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
         // (search for "Input Layout Qualifiers" and "Output Layout Qualifiers").
         ConvertAttribs.UseInOutLocationQualifiers = Attribs.Features.SeparablePrograms;
         ConvertAttribs.UseRowMajorMatrices        = (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0;
-        auto ConvertedSource                      = Converter.Convert(ConvertAttribs);
+        String ConvertedSource                    = Converter.Convert(ConvertAttribs);
         if (ConvertedSource.empty())
         {
             LOG_ERROR_AND_THROW("Failed to convert HLSL source to GLSL");
@@ -415,8 +415,8 @@ std::vector<std::pair<std::string, std::string>> GetGLSLExtensions(const char* S
 
     std::vector<std::pair<std::string, std::string>> Extensions;
 
-    const auto*       Pos = Source;
-    const auto* const End = Source + SourceLen;
+    const char*       Pos = Source;
+    const char* const End = Source + SourceLen;
     while (Pos != End)
     {
         const char *NameStart = nullptr, *NameEnd = nullptr;
@@ -432,17 +432,17 @@ std::vector<std::pair<std::string, std::string>> GetGLSLExtensions(const char* S
         // | NameStart
         // Pos
 
-        const auto* LineEnd = Parsing::SkipLine(NameEnd, End, /* GoToNextLine = */ false);
+        const char* LineEnd = Parsing::SkipLine(NameEnd, End, /* GoToNextLine = */ false);
 
         std::string DirectiveIdentifier{NameStart, NameEnd};
         if (DirectiveIdentifier == "extension")
         {
-            const auto* ExtNameStart = Parsing::SkipDelimiters(NameEnd, LineEnd, " \t");
+            const char* ExtNameStart = Parsing::SkipDelimiters(NameEnd, LineEnd, " \t");
             // # extension GL_ARB_shader_draw_parameters : enable
             //             ^
             //             ExtNameStart
 
-            const auto* ExtNameEnd = Parsing::SkipIdentifier(ExtNameStart, LineEnd);
+            const char* ExtNameEnd = Parsing::SkipIdentifier(ExtNameStart, LineEnd);
             // # extension GL_ARB_shader_draw_parameters : enable
             //                                          ^
             //                                     ExtNameStart
@@ -457,12 +457,12 @@ std::vector<std::pair<std::string, std::string>> GetGLSLExtensions(const char* S
                 std::string ExtensionBehavior;
                 if (Pos != LineEnd && *Pos == ':')
                 {
-                    const auto* BehaviorStart = Parsing::SkipDelimiters(Pos + 1, LineEnd, " \t");
+                    const char* BehaviorStart = Parsing::SkipDelimiters(Pos + 1, LineEnd, " \t");
                     // # extension GL_ARB_shader_draw_parameters : enable
                     //                                             ^
                     //                                         BehaviorStart
 
-                    const auto* BehaviorEnd = Parsing::SkipIdentifier(BehaviorStart, LineEnd);
+                    const char* BehaviorEnd = Parsing::SkipIdentifier(BehaviorStart, LineEnd);
                     // # extension GL_ARB_shader_draw_parameters : enable
                     //                                                   ^
                     //                                               BehaviorEnd
