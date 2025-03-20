@@ -98,7 +98,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
 #if DILIGENT_NO_GLSLANG
     LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use DXC or precompiled SPIRV bytecode.");
 #else
-    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL) == 0)
     {
         SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, VulkanDefine, VkShaderCI.ppCompilerOutput);
     }

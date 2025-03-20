@@ -369,7 +369,29 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILE_FLAGS, Uint32)
     ///             they are laid out in memory row-by-row.
     SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR   = 1u << 3u,
 
-    SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR
+    /// Convert HLSL to GLSL when compiling HLSL shaders to SPIRV.
+    ///
+    /// \remarks    HLSL shaders can be compiled to SPIRV directly using either DXC or glslang.
+    ///             While glslang supports most HLSL 5.1 features, some Vulkan-specific functionality
+    ///             is missing. Notably, glslang does not support UAV texture format annotations
+    ///             (see https://github.com/KhronosGroup/glslang/issues/3790), for example:
+    ///
+    ///                 [[vk::image_format("rgba8")]] RWTexture2D<float4> g_rwTexture;
+    ///
+    ///             This flag provides a workaround by converting HLSL to GLSL before compiling it
+    ///             to SPIRV. The converter supports specially formatted comments to specify UAV
+    ///             texture formats:
+    ///
+    ///                 RWTexture2D<float4 /*format = rgba8*/> g_rwTexture;
+    ///
+    ///             Another use case for this flag is to leverage GLSL-specific keywords in HLSL
+    ///             shaders, such as `gl_DrawID` for multi-draw or manually setting `gl_PointSize`.
+    ///
+    /// \note       This flag only takes effect when compiling HLSL to SPIRV with glslang.
+    ///             Since DXC does not support GLSL, this flag is ignored when SHADER_COMPILER_DXC is used.
+    SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL = 1u << 4u,
+
+    SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_COMPILE_FLAGS);
 

@@ -1,5 +1,6 @@
 ## Current progress
 
+* Added `SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL` flag (API256008)
 * Added `IRenderDevice::CreateDeferredContext()` method (API256007)
 * Added `HostImageCopy` member to `DeviceFeaturesVk` struct (API256006)
 * Added `IRenderDeviceVk::GetDeviceFeaturesVk()` method (API256005)

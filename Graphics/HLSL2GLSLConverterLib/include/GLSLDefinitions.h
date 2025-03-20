@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -458,10 +458,12 @@ void DeviceMemoryBarrier()
     // returns with no other effect.
     memoryBarrierImage();
 
+#ifndef VULKAN
     // OpenGL.org: memoryBarrierAtomicCounter() waits on the completion of
     // all accesses resulting from the use of ATOMIC COUNTERS and then returns
     // with no other effect.
     memoryBarrierAtomicCounter();
+#endif
 }
 
 // MSDN: DeviceMemoryBarrierWithGroupSync() blocks execution of
@@ -502,10 +504,12 @@ void AllMemoryBarrier()
     // returns with no other effect.
     memoryBarrierImage();
 
+#ifndef VULKAN
     // OpenGL.org: memoryBarrierAtomicCounter() waits on the completion of
     // all accesses resulting from the use of ATOMIC COUNTERS and then returns
     // with no other effect.
     memoryBarrierAtomicCounter();
+#endif
 
     // groupMemoryBarrier waits on the completion of all memory accesses performed
     // by an invocation of a compute shader relative to the same access performed by

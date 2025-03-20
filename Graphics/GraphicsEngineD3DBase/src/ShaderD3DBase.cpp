@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,7 +73,7 @@ public:
             return E_FAIL;
         }
 
-        auto pFileData = DataBlobImpl::Create();
+        RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
         pSourceStream->ReadBlob(pFileData);
         *ppData = pFileData->GetDataPtr();
         *pBytes = StaticCast<UINT>(pFileData->GetSize());
@@ -115,7 +115,7 @@ HRESULT CompileShader(const char*             Source,
     // dwShaderFlags |= D3D10_SHADER_OPTIMIZATION_LEVEL3;
 #endif
 
-    static_assert(SHADER_COMPILE_FLAG_LAST == 1u << 3u, "Did you add a new shader compile flag? You may need to handle it here.");
+    static_assert(SHADER_COMPILE_FLAG_LAST == 1u << 4u, "Did you add a new shader compile flag? You may need to handle it here.");
     if (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS)
         dwShaderFlags |= D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES;
 
@@ -177,7 +177,7 @@ RefCntAutoPtr<IDataBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
             CComPtr<ID3DBlob> CompilerOutput;
             CComPtr<ID3DBlob> pShaderByteCode;
 
-            auto hr = CompileShader(HLSLSource.c_str(), HLSLSource.length(), ShaderCI, Profile.c_str(), &pShaderByteCode, &CompilerOutput);
+            HRESULT hr = CompileShader(HLSLSource.c_str(), HLSLSource.length(), ShaderCI, Profile.c_str(), &pShaderByteCode, &CompilerOutput);
             HandleHLSLCompilerResult(SUCCEEDED(hr), CompilerOutput.p, HLSLSource, ShaderCI.Desc.Name, ppCompilerOutput);
             return DataBlobImpl::Create(pShaderByteCode->GetBufferSize(), pShaderByteCode->GetBufferPointer());
         }
