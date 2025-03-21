@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -213,7 +213,7 @@ public:
             return E_FAIL;
         }
 
-        auto pFileData = DataBlobImpl::Create();
+        RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
         pSourceStream->ReadBlob(pFileData);
 
         CComPtr<IDxcBlobEncoding> pSourceBlob;
@@ -259,7 +259,7 @@ class DxcBlobWrapper final : public IDxcBlob
 public:
     static void Create(IDataBlob* pDataBlob, IDxcBlob** ppBlob)
     {
-        auto* pBlob = new DxcBlobWrapper{pDataBlob};
+        DxcBlobWrapper* pBlob = new DxcBlobWrapper{pDataBlob};
         pBlob->QueryInterface(__uuidof(IDxcBlob), reinterpret_cast<void**>(ppBlob));
     }
 
@@ -290,7 +290,7 @@ public:
 
     virtual ULONG STDMETHODCALLTYPE Release(void) override final
     {
-        auto RemainingRefs = m_RefCount.fetch_add(-1) - 1;
+        long RemainingRefs = m_RefCount.fetch_add(-1) - 1;
         if (RemainingRefs == 0)
             delete this;
 
@@ -438,8 +438,8 @@ bool DXCompilerImpl::ValidateAndSign(DxcCreateInstanceProc CreateInstance, IDxcL
         pdxcResult->GetErrorBuffer(&pdxcOutput);
         library->GetBlobAsUtf8(pdxcOutput, &pdxcOutputUtf8);
 
-        const auto  ValidationMsgLen = pdxcOutputUtf8 ? pdxcOutputUtf8->GetBufferSize() : 0;
-        const auto* ValidationMsg    = ValidationMsgLen > 0 ? static_cast<const char*>(pdxcOutputUtf8->GetBufferPointer()) : "";
+        const SIZE_T ValidationMsgLen = pdxcOutputUtf8 ? pdxcOutputUtf8->GetBufferSize() : 0;
+        const char*  ValidationMsg    = ValidationMsgLen > 0 ? static_cast<const char*>(pdxcOutputUtf8->GetBufferPointer()) : "";
 
         LOG_ERROR_MESSAGE("Shader validation failed: ", ValidationMsg);
         return false;
@@ -468,7 +468,7 @@ public:
     ULONG STDMETHODCALLTYPE Release() override
     {
         VERIFY(m_RefCount > 0, "Inconsistent call to ReleaseStrongRef()");
-        auto RefCount = m_RefCount.fetch_add(-1) - 1;
+        long RefCount = m_RefCount.fetch_add(-1) - 1;
         if (RefCount == 0)
         {
             delete this;
@@ -657,7 +657,7 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
         UINT32 shaderIdx = 0;
         CHECK_D3D_RESULT(pdxcReflection->FindFirstPartKind(DXC_PART_DXIL, &shaderIdx), "Failed to get the shader reflection");
 
-        auto hr = pdxcReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(ppShaderReflection));
+        HRESULT hr = pdxcReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(ppShaderReflection));
         if (SUCCEEDED(hr))
             return;
 
@@ -673,7 +673,7 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
         }
 #    endif
 
-        if (auto* pFunc = pd3d12LibRefl->GetFunctionByIndex(0))
+        if (ID3D12FunctionReflection* pFunc = pd3d12LibRefl->GetFunctionByIndex(0))
         {
             *ppShaderReflection = new ShaderReflectionViaLibraryReflection{std::move(pd3d12LibRefl), pFunc};
             (*ppShaderReflection)->AddRef();
@@ -719,7 +719,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
         ShaderModel = MaxSM;
     }
 
-    const auto         Profile = GetHLSLProfileString(ShaderCI.Desc.ShaderType, ShaderModel);
+    const String       Profile = GetHLSLProfileString(ShaderCI.Desc.ShaderType, ShaderModel);
     const std::wstring wstrProfile{Profile.begin(), Profile.end()};
     const std::wstring wstrEntryPoint{ShaderCI.EntryPoint, ShaderCI.EntryPoint + strlen(ShaderCI.EntryPoint)};
 
@@ -781,9 +781,9 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 
     IDXCompiler::CompileAttribs CA;
 
-    const auto Source = BuildHLSLSourceString(ShaderCI, ExtraDefinitions);
+    const String Source = BuildHLSLSourceString(ShaderCI, ExtraDefinitions);
 
-    DxcDefine Defines[] = {{L"DXCOMPILER", L""}};
+    DxcDefine Defines[] = {{L"DXCOMPILER", L"1"}};
 
     CA.Source                     = Source.c_str();
     CA.SourceLength               = static_cast<Uint32>(Source.length());
@@ -797,7 +797,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     CA.ppBlobOut                  = &pDXIL;
     CA.ppCompilerOutput           = &pDxcLog;
 
-    auto result = Compile(CA);
+    bool result = Compile(CA);
     HandleHLSLCompilerResult(result, pDxcLog.p, Source, ShaderCI.Desc.Name, ppCompilerOutput);
 
     if (result && pDXIL && pDXIL->GetBufferSize() > 0)
@@ -880,10 +880,10 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
             D3D12_SHADER_INPUT_BIND_DESC ResDesc = {};
             if (pd3d12Reflection->GetResourceBindingDescByName(NameAndBinding.first.GetStr(), &ResDesc) == S_OK)
             {
-                auto& Ext        = ExtResourceMap[&NameAndBinding];
-                Ext.SrcBindPoint = ResDesc.BindPoint;
-                Ext.SrcArraySize = ResDesc.BindCount;
-                Ext.SrcSpace     = ResDesc.Space;
+                ResourceExtendedInfo& Ext = ExtResourceMap[&NameAndBinding];
+                Ext.SrcBindPoint          = ResDesc.BindPoint;
+                Ext.SrcArraySize          = ResDesc.BindCount;
+                Ext.SrcSpace              = ResDesc.Space;
 
 #    ifdef NO_D3D_SIT_ACCELSTRUCT_FEEDBACK_TEX
                 switch (int{ResDesc.Type}) // Prevent "not a valid value for switch of enum '_D3D_SHADER_INPUT_TYPE'" warning
@@ -1208,11 +1208,11 @@ void DXCompilerImpl::PatchResourceDeclarationRT(const TResourceBindingMap& Resou
         //
         // !158 = !{i32 0, %"class.RWTexture2D<vector<float, 4> >"* @"\01?g_ColorBuffer@@3V?$RWTexture2D@V?$vector@M$03@@@@A", !"g_ColorBuffer", i32 -1, i32 -1, i32 1, i32 2, i1 false, i1 false, i1 false, !159}
 
-        const auto* Name      = ResPair.first.GetStr();
-        const auto  Space     = ResPair.second.Space;
-        const auto  BindPoint = ResPair.second.BindPoint;
-        const auto  DxilName  = String{"!\""} + Name + "\"";
-        auto&       Ext       = ExtResMap[&ResPair];
+        const char*           Name      = ResPair.first.GetStr();
+        const Uint32          Space     = ResPair.second.Space;
+        const Uint32          BindPoint = ResPair.second.BindPoint;
+        const String          DxilName  = String{"!\""} + Name + "\"";
+        ResourceExtendedInfo& Ext       = ExtResMap[&ResPair];
 
         size_t pos = DXIL.find(DxilName);
         if (pos == String::npos)
@@ -1314,7 +1314,7 @@ void DXCompilerImpl::PatchResourceDeclaration(const TResourceBindingMap& Resourc
         // , i32 -1
         //       ^
 
-        auto RecordEndPos = DXIL.find_first_not_of(NumberSymbols, pos);
+        size_t RecordEndPos = DXIL.find_first_not_of(NumberSymbols, pos);
         if (pos == String::npos)
             return false;
         // , i32 -1
@@ -2147,9 +2147,9 @@ void DXCompilerImpl::PatchCreateHandleFromBinding(const TResourceBindingMap& Res
 
 bool IsDXILBytecode(const void* pBytecode, size_t Size)
 {
-    const auto* data_begin = reinterpret_cast<const uint8_t*>(pBytecode);
-    const auto* data_end   = data_begin + Size;
-    const auto* ptr        = data_begin;
+    const uint8_t* data_begin = static_cast<const uint8_t*>(pBytecode);
+    const uint8_t* data_end   = data_begin + Size;
+    const uint8_t* ptr        = data_begin;
 
     if (ptr + sizeof(hlsl::DxilContainerHeader) > data_end)
     {
@@ -2159,7 +2159,7 @@ bool IsDXILBytecode(const void* pBytecode, size_t Size)
 
     // A DXIL container is composed of a header, a sequence of part lengths, and a sequence of parts.
     // https://github.com/microsoft/DirectXShaderCompiler/blob/master/docs/DXIL.rst#dxil-container-format
-    const auto& ContainerHeader = *reinterpret_cast<const hlsl::DxilContainerHeader*>(ptr);
+    const hlsl::DxilContainerHeader& ContainerHeader = *reinterpret_cast<const hlsl::DxilContainerHeader*>(ptr);
     if (ContainerHeader.HeaderFourCC != hlsl::DFCC_Container)
     {
         // Incorrect FourCC
@@ -2182,17 +2182,17 @@ bool IsDXILBytecode(const void* pBytecode, size_t Size)
         return false;
     }
 
-    const auto* PartOffsets = reinterpret_cast<const uint32_t*>(ptr);
+    const uint32_t* PartOffsets = reinterpret_cast<const uint32_t*>(ptr);
     for (uint32_t part = 0; part < ContainerHeader.PartCount; ++part)
     {
-        const auto Offset = PartOffsets[part];
+        const uint32_t Offset = PartOffsets[part];
         if (data_begin + Offset + sizeof(hlsl::DxilPartHeader) > data_end)
         {
             // No space for the part header
             return false;
         }
 
-        const auto& PartHeader = *reinterpret_cast<const hlsl::DxilPartHeader*>(data_begin + Offset);
+        const hlsl::DxilPartHeader& PartHeader = *reinterpret_cast<const hlsl::DxilPartHeader*>(data_begin + Offset);
         if (PartHeader.PartFourCC == hlsl::DFCC_DXIL)
         {
             // We found DXIL part
