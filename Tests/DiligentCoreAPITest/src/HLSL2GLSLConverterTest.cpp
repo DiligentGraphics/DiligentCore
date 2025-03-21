@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,8 +40,8 @@ RefCntAutoPtr<IShader> CreateTestShader(const char* FileName,
                                         const char* EntryPoint,
                                         SHADER_TYPE ShaderType)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
 
     ShaderCreateInfo ShaderCI;
 
@@ -64,7 +64,7 @@ RefCntAutoPtr<IShader> CreateTestShader(const char* FileName,
 
 TEST(HLSL2GLSLConverterTest, VS_PS)
 {
-    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
     if (pEnv->GetDevice()->GetDeviceInfo().IsWebGPUDevice())
     {
         GTEST_SKIP() << "WebGPU can't handle shaders in this test";
@@ -72,15 +72,15 @@ TEST(HLSL2GLSLConverterTest, VS_PS)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto pVS = CreateTestShader("VS_PS.hlsl", "TestVS", SHADER_TYPE_VERTEX);
+    RefCntAutoPtr<IShader> pVS = CreateTestShader("VS_PS.hlsl", "TestVS", SHADER_TYPE_VERTEX);
     EXPECT_NE(pVS, nullptr);
-    auto pPS = CreateTestShader("VS_PS.hlsl", "TestPS", SHADER_TYPE_PIXEL);
+    RefCntAutoPtr<IShader> pPS = CreateTestShader("VS_PS.hlsl", "TestPS", SHADER_TYPE_PIXEL);
     EXPECT_NE(pPS, nullptr);
 }
 
 TEST(HLSL2GLSLConverterTest, CS_RWTex1D)
 {
-    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
     if (pEnv->GetDevice()->GetDeviceInfo().IsWebGPUDevice())
     {
         GTEST_SKIP() << "WebGPU can't handle shaders in this test";
@@ -92,13 +92,13 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex1D)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto pCS = CreateTestShader("CS_RWTex1D.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
+    RefCntAutoPtr<IShader> pCS = CreateTestShader("CS_RWTex1D.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
     EXPECT_NE(pCS, nullptr);
 }
 
 TEST(HLSL2GLSLConverterTest, CS_RWTex2D_1)
 {
-    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
     if (pEnv->GetDevice()->GetDeviceInfo().IsWebGPUDevice())
     {
         GTEST_SKIP() << "WebGPU can't handle shaders in this test";
@@ -110,13 +110,13 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex2D_1)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto pCS = CreateTestShader("CS_RWTex2D_1.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
+    RefCntAutoPtr<IShader> pCS = CreateTestShader("CS_RWTex2D_1.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
     EXPECT_NE(pCS, nullptr);
 }
 
 TEST(HLSL2GLSLConverterTest, CS_RWTex2D_2)
 {
-    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
     if (pEnv->GetDevice()->GetDeviceInfo().IsWebGPUDevice())
     {
         GTEST_SKIP() << "WebGPU can't handle shaders in this test";
@@ -128,13 +128,13 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex2D_2)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto pCS = CreateTestShader("CS_RWTex2D_2.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
+    RefCntAutoPtr<IShader> pCS = CreateTestShader("CS_RWTex2D_2.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
     EXPECT_NE(pCS, nullptr);
 }
 
 TEST(HLSL2GLSLConverterTest, CS_RWBuff)
 {
-    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
     if (pEnv->GetDevice()->GetDeviceInfo().IsWebGPUDevice())
     {
         GTEST_SKIP() << "WebGPU can't handle shaders in this test";
@@ -146,13 +146,13 @@ TEST(HLSL2GLSLConverterTest, CS_RWBuff)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto pCS = CreateTestShader("CS_RWBuff.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
+    RefCntAutoPtr<IShader> pCS = CreateTestShader("CS_RWBuff.hlsl", "TestCS", SHADER_TYPE_COMPUTE);
     EXPECT_NE(pCS, nullptr);
 }
 
 TEST(HLSL2GLSLConverterTest, GS)
 {
-    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
     if (!pEnv->GetDevice()->GetDeviceInfo().Features.GeometryShaders)
     {
         GTEST_SKIP() << "This device does not support geometry shaders";
@@ -160,7 +160,7 @@ TEST(HLSL2GLSLConverterTest, GS)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto pGS = CreateTestShader("GS.hlsl", "main", SHADER_TYPE_GEOMETRY);
+    RefCntAutoPtr<IShader> pGS = CreateTestShader("GS.hlsl", "main", SHADER_TYPE_GEOMETRY);
     EXPECT_NE(pGS, nullptr);
 }
 
@@ -170,7 +170,7 @@ TEST(HLSL2GLSLConverterTest, Preprocessor)
 
     for (const char* Entry : {"main1", "main2", "main3"})
     {
-        auto pVS = CreateTestShader("PreprocessorTest.hlsl", Entry, SHADER_TYPE_PIXEL);
+        RefCntAutoPtr<IShader> pVS = CreateTestShader("PreprocessorTest.hlsl", Entry, SHADER_TYPE_PIXEL);
         EXPECT_NE(pVS, nullptr);
     }
 }
