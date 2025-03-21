@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -4641,7 +4641,10 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
                 auto ReturnTypeToken = Token;
                 --ReturnTypeToken;
                 if (ReturnTypeToken == m_Tokens.begin())
-                    break;
+                {
+                    ++Token;
+                    continue;
+                }
                 auto OpenParenToken = Token;
                 ++OpenParenToken;
                 if (OpenParenToken == m_Tokens.end())
