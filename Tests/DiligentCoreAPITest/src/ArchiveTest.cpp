@@ -85,9 +85,9 @@ void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
                 RefCntAutoPtr<IPipelineResourceSignature>& pRefPRS_2,
                 ARCHIVE_DEVICE_DATA_FLAGS                  DeviceBits)
 {
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pDevice          = pEnv->GetDevice();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice          = pEnv->GetDevice();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
@@ -109,7 +109,7 @@ void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
     // PRS 1
     if (PRS1Name != nullptr)
     {
-        constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+        constexpr SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 
         constexpr PipelineResourceDesc Resources[] = //
             {
@@ -152,7 +152,7 @@ void ArchivePRS(RefCntAutoPtr<IDataBlob>&                  pArchive,
     // PRS 2
     if (PRS2Name != nullptr)
     {
-        constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+        constexpr SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
         constexpr PipelineResourceDesc Resources[] = //
             {
@@ -191,9 +191,9 @@ void UnpackPRS(IDataBlob*                  pArchive,
                IPipelineResourceSignature* pRefPRS_1,
                IPipelineResourceSignature* pRefPRS_2)
 {
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pDevice          = pEnv->GetDevice();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice          = pEnv->GetDevice();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
@@ -270,9 +270,9 @@ TEST(ArchiveTest, ResourceSignature)
 
 TEST(ArchiveTest, RemoveDeviceData)
 {
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pDevice          = pEnv->GetDevice();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice          = pEnv->GetDevice();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
@@ -280,8 +280,8 @@ TEST(ArchiveTest, RemoveDeviceData)
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
-    const auto CurrentDeviceFlag = RenderDeviceTypeToArchiveDataFlag(pDevice->GetDeviceInfo().Type);
-    const auto AllDeviceFlags    = GetDeviceBits();
+    const ARCHIVE_DEVICE_DATA_FLAGS CurrentDeviceFlag = RenderDeviceTypeToArchiveDataFlag(pDevice->GetDeviceInfo().Type);
+    const ARCHIVE_DEVICE_DATA_FLAGS AllDeviceFlags    = GetDeviceBits();
 
     if ((AllDeviceFlags & ~CurrentDeviceFlag) == 0)
         GTEST_SKIP() << "Test requires support for at least 2 backends";
@@ -309,9 +309,9 @@ TEST(ArchiveTest, RemoveDeviceData)
 
 TEST(ArchiveTest, AppendDeviceData)
 {
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pDevice          = pEnv->GetDevice();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice          = pEnv->GetDevice();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
@@ -319,8 +319,8 @@ TEST(ArchiveTest, AppendDeviceData)
     if (!pDearchiver || !pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
 
-    const auto CurrentDeviceFlag = RenderDeviceTypeToArchiveDataFlag(pDevice->GetDeviceInfo().Type);
-    auto       AllDeviceFlags    = GetDeviceBits() & ~CurrentDeviceFlag;
+    const ARCHIVE_DEVICE_DATA_FLAGS CurrentDeviceFlag = RenderDeviceTypeToArchiveDataFlag(pDevice->GetDeviceInfo().Type);
+    ARCHIVE_DEVICE_DATA_FLAGS       AllDeviceFlags    = GetDeviceBits() & ~CurrentDeviceFlag;
     // OpenGL and GLES use the same device-specific data.
     // When one is removed, the other is removed too.
     if (CurrentDeviceFlag == ARCHIVE_DEVICE_DATA_FLAG_GLES)
@@ -337,7 +337,7 @@ TEST(ArchiveTest, AppendDeviceData)
     RefCntAutoPtr<IDataBlob> pArchive;
     for (; AllDeviceFlags != 0;)
     {
-        const auto DeviceFlag = ExtractLSB(AllDeviceFlags);
+        const ARCHIVE_DEVICE_DATA_FLAGS DeviceFlag = ExtractLSB(AllDeviceFlags);
 
         RefCntAutoPtr<IDataBlob>                  pArchive2;
         RefCntAutoPtr<IPipelineResourceSignature> pRefPRS_1;
@@ -384,15 +384,15 @@ TEST_P(TestBrokenShader, CompileFailure)
     ARCHIVE_DEVICE_DATA_FLAGS DataFlag     = std::get<ARCHIVE_DEVICE_DATA_FLAGS>(GetParam());
     bool                      CompileAsync = std::get<bool>(GetParam());
 
-    auto AllowedBits = GetDeviceBits();
+    ARCHIVE_DEVICE_DATA_FLAGS AllowedBits = GetDeviceBits();
     if ((DataFlag & AllowedBits) == 0)
         GTEST_SKIP() << GetArchiveDeviceDataFlagString(DataFlag) << " is not supported by archiver";
 
     if ((DataFlag & (ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS)) != 0)
         GTEST_SKIP() << "In Metal shaders are compiled when PSO is created";
 
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     SerializationDeviceCreateInfo       SerializationDeviceCI;
@@ -409,7 +409,7 @@ TEST_P(TestBrokenShader, CompileFailure)
     ShaderCI.Source       = "Not even a shader source";
     ShaderCI.CompileFlags = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
 
-    const auto IsD3D = DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D11 || DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D12;
+    const bool IsD3D = DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D11 || DataFlag == ARCHIVE_DEVICE_DATA_FLAG_D3D12;
     pEnv->SetErrorAllowance(IsD3D ? 2 : 3, "No worries, errors are expected: testing broken shader\n");
     pEnv->PushExpectedErrorSubstring("Failed to create Shader 'Archive test broken shader'");
     if (DataFlag != ARCHIVE_DEVICE_DATA_FLAG_WEBGPU)
@@ -437,12 +437,12 @@ TEST_P(TestBrokenShader, MissingSourceFile)
     ARCHIVE_DEVICE_DATA_FLAGS DataFlag     = std::get<ARCHIVE_DEVICE_DATA_FLAGS>(GetParam());
     bool                      CompileAsync = std::get<bool>(GetParam());
 
-    auto AllowedBits = GetDeviceBits();
+    ARCHIVE_DEVICE_DATA_FLAGS AllowedBits = GetDeviceBits();
     if ((DataFlag & AllowedBits) == 0)
         GTEST_SKIP() << GetArchiveDeviceDataFlagString(DataFlag) << " is not supported by archiver";
 
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<ISerializationDevice> pSerializationDevice;
     SerializationDeviceCreateInfo       SerializationDeviceCI;
@@ -507,9 +507,9 @@ void CreateTestRenderPass1(IRenderDevice*        pDevice,
                            IRenderPass**         ppRenderPass,
                            IRenderPass**         ppSerializedRP)
 {
-    auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
+    ITextureView* pRTV = pSwapChain->GetCurrentBackBufferRTV();
     ASSERT_NE(pRTV, nullptr);
-    const auto& RTVDesc = pRTV->GetTexture()->GetDesc();
+    const TextureDesc& RTVDesc = pRTV->GetTexture()->GetDesc();
 
     RenderPassAttachmentDesc Attachments[1];
     Attachments[0].Format       = RTVDesc.Format;
@@ -552,12 +552,12 @@ void CreateTestRenderPass2(IRenderDevice*        pDevice,
                            IRenderPass**         ppRenderPass,
                            IRenderPass**         ppSerializedRP)
 {
-    auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
-    auto* pDSV = pSwapChain->GetDepthBufferDSV();
+    ITextureView* pRTV = pSwapChain->GetCurrentBackBufferRTV();
+    ITextureView* pDSV = pSwapChain->GetDepthBufferDSV();
     ASSERT_NE(pRTV, nullptr);
     ASSERT_NE(pDSV, nullptr);
-    const auto& RTVDesc = pRTV->GetTexture()->GetDesc();
-    const auto& DSVDesc = pDSV->GetTexture()->GetDesc();
+    const TextureDesc& RTVDesc = pRTV->GetTexture()->GetDesc();
+    const TextureDesc& DSVDesc = pDSV->GetTexture()->GetDesc();
 
     RenderPassAttachmentDesc Attachments[2];
     Attachments[0].Format       = RTVDesc.Format;
@@ -673,7 +673,7 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
                            IShader**             ppPS,
                            IShader**             ppSerializedPS)
 {
-    const auto* pEnv = GPUTestingEnvironment::GetInstance();
+    const GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
 
     ShaderMacroHelper Macros;
     Macros.AddShaderMacro("TEST_MACRO", 1);
@@ -702,8 +702,8 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
 
         RefCntAutoPtr<ISerializedShader> pSerializedVS{*ppSerializedVS, IID_SerializedShader};
         ASSERT_NE(pSerializedVS, nullptr);
-        const auto Bits = GetDeviceBits();
-        for (const auto Type : {RENDER_DEVICE_TYPE_D3D11, RENDER_DEVICE_TYPE_D3D12, RENDER_DEVICE_TYPE_VULKAN})
+        const ARCHIVE_DEVICE_DATA_FLAGS Bits = GetDeviceBits();
+        for (const RENDER_DEVICE_TYPE Type : {RENDER_DEVICE_TYPE_D3D11, RENDER_DEVICE_TYPE_D3D12, RENDER_DEVICE_TYPE_VULKAN})
         {
             if (Bits & RenderDeviceTypeToArchiveDataFlag(Type))
                 EXPECT_NE(pSerializedVS->GetDeviceShader(Type), nullptr);
@@ -728,8 +728,8 @@ void CreateGraphicsShaders(IRenderDevice*        pDevice,
 
         RefCntAutoPtr<ISerializedShader> pSerializedPS{*ppSerializedPS, IID_SerializedShader};
         ASSERT_NE(pSerializedPS, nullptr);
-        const auto Bits = GetDeviceBits();
-        for (const auto Type : {RENDER_DEVICE_TYPE_D3D11, RENDER_DEVICE_TYPE_D3D12, RENDER_DEVICE_TYPE_VULKAN})
+        const ARCHIVE_DEVICE_DATA_FLAGS Bits = GetDeviceBits();
+        for (const RENDER_DEVICE_TYPE Type : {RENDER_DEVICE_TYPE_D3D11, RENDER_DEVICE_TYPE_D3D12, RENDER_DEVICE_TYPE_VULKAN})
         {
             if (Bits & RenderDeviceTypeToArchiveDataFlag(Type))
                 EXPECT_NE(pSerializedPS->GetDeviceShader(Type), nullptr);
@@ -765,10 +765,10 @@ void RenderGraphicsPSOTestImage(IDeviceContext*         pContext,
 
 void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = false)
 {
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pDevice          = pEnv->GetDevice();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
-    auto* pSwapChain       = pEnv->GetSwapChain();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice          = pEnv->GetDevice();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
+    ISwapChain*            pSwapChain       = pEnv->GetSwapChain();
 
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
@@ -817,7 +817,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
         CreateTestRenderPass2(pDevice, pSerializationDevice, pSwapChain, RP2Name, &pRenderPass2, &pSerializedRenderPass2);
     }
 
-    constexpr auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+    constexpr SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 
     RefCntAutoPtr<IPipelineResourceSignature> pRefPRS;
     RefCntAutoPtr<IPipelineResourceSignature> pSerializedPRS;
@@ -872,7 +872,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
         PSOCreateInfo.Flags = CompileAsync ? PSO_CREATE_FLAG_ASYNCHRONOUS : PSO_CREATE_FLAG_NONE;
 
-        auto& GraphicsPipeline{PSOCreateInfo.GraphicsPipeline};
+        GraphicsPipelineDesc& GraphicsPipeline{PSOCreateInfo.GraphicsPipeline};
         GraphicsPipeline.NumRenderTargets             = 1;
         GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
         GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -912,7 +912,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
                     {SHADER_TYPE_PIXEL, "g_GBuffer_Depth", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
                     {SHADER_TYPE_PIXEL, "g_Dummy", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC} //
                 };
-            auto& LayoutDesc{PSOCreateInfo.PSODesc.ResourceLayout};
+            PipelineResourceLayoutDesc& LayoutDesc{PSOCreateInfo.PSODesc.ResourceLayout};
             LayoutDesc.ImmutableSamplers    = ImmutableSamplers;
             LayoutDesc.NumImmutableSamplers = _countof(ImmutableSamplers);
             LayoutDesc.Variables            = Variables;
@@ -936,17 +936,17 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
 
                 if (!CompileAsync)
                 {
-                    for (auto Flags = ArchiveInfo.DeviceFlags; Flags != ARCHIVE_DEVICE_DATA_FLAG_NONE;)
+                    for (ARCHIVE_DEVICE_DATA_FLAGS Flags = ArchiveInfo.DeviceFlags; Flags != ARCHIVE_DEVICE_DATA_FLAG_NONE;)
                     {
-                        const auto Flag        = ExtractLSB(Flags);
-                        const auto ShaderCount = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCount(Flag);
+                        const ARCHIVE_DEVICE_DATA_FLAGS Flag        = ExtractLSB(Flags);
+                        const Uint32                    ShaderCount = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCount(Flag);
                         EXPECT_EQ(ShaderCount, 2u);
                         for (Uint32 ShaderId = 0; ShaderId < ShaderCount; ++ShaderId)
                         {
-                            auto ShaderCI = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCreateInfo(Flag, ShaderId);
+                            ShaderCreateInfo ShaderCI = pSerializedPSO.Cast<ISerializedPipelineState>(IID_SerializedPipelineState)->GetPatchedShaderCreateInfo(Flag, ShaderId);
 
                             EXPECT_TRUE(ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX || ShaderCI.Desc.ShaderType == SHADER_TYPE_PIXEL);
-                            const auto& RefCI = ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX ? VertexShaderCI : PixelShaderCI;
+                            const ShaderCreateInfo& RefCI = ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX ? VertexShaderCI : PixelShaderCI;
                             EXPECT_STREQ(ShaderCI.Desc.Name, RefCI.Desc.Name);
                             EXPECT_EQ(ShaderCI.Desc, RefCI.Desc);
                             EXPECT_STREQ(ShaderCI.EntryPoint, RefCI.EntryPoint);
@@ -1053,8 +1053,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
         {
             for (Uint32 s = 0, SCnt = std::min(pUnpackedPSOWithLayout->GetResourceSignatureCount(), pRefPSOWithLayout->GetResourceSignatureCount()); s < SCnt; ++s)
             {
-                auto* pLhsSign = pUnpackedPSOWithLayout->GetResourceSignature(s);
-                auto* pRhsSign = pRefPSOWithLayout->GetResourceSignature(s);
+                IPipelineResourceSignature* pLhsSign = pUnpackedPSOWithLayout->GetResourceSignature(s);
+                IPipelineResourceSignature* pRhsSign = pRefPSOWithLayout->GetResourceSignature(s);
                 EXPECT_EQ((pLhsSign != nullptr), (pRhsSign != nullptr));
                 if ((pLhsSign != nullptr) != (pRhsSign != nullptr))
                     continue;
@@ -1095,8 +1095,8 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
 
         for (Uint32 s = 0, SCnt = std::min(pUnpackedPSOWithSign->GetResourceSignatureCount(), pRefPSOWithSign->GetResourceSignatureCount()); s < SCnt; ++s)
         {
-            auto* pLhsSign = pUnpackedPSOWithSign->GetResourceSignature(s);
-            auto* pRhsSign = pRefPSOWithSign->GetResourceSignature(s);
+            IPipelineResourceSignature* pLhsSign = pUnpackedPSOWithSign->GetResourceSignature(s);
+            IPipelineResourceSignature* pRhsSign = pRefPSOWithSign->GetResourceSignature(s);
             EXPECT_EQ((pLhsSign != nullptr), (pRhsSign != nullptr));
             if ((pLhsSign != nullptr) != (pRhsSign != nullptr))
                 continue;
@@ -1106,9 +1106,9 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
         }
     }
 
-    auto* pContext = pEnv->GetDeviceContext();
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
 
-    auto pVB = CreateTestVertexBuffer(pDevice, pContext);
+    RefCntAutoPtr<IBuffer> pVB = CreateTestVertexBuffer(pDevice, pContext);
     ASSERT_NE(pVB, nullptr);
 
     auto GBuffer = CreateTestGBuffer(pEnv, pContext);
@@ -1173,7 +1173,7 @@ void TestGraphicsPipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fa
         RenderGraphicsPSOTestImage(pContext, pRefPSOWithSign, pRenderPass, pSRB, pFramebuffer, pVB);
 
         // Transition to CopySrc state to use in TakeSnapshot()
-        auto                pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
+        ITexture*           pRT = pSwapChain->GetCurrentBackBufferRTV()->GetTexture();
         StateTransitionDesc Barrier{pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
         pContext->TransitionResourceStates(1, &Barrier);
 
@@ -1213,9 +1213,9 @@ TEST(ArchiveTest, GraphicsPipeline_Async)
 
 void ArchiveGraphicsShaders(bool CompileAsync)
 {
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pDevice          = pEnv->GetDevice();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice          = pEnv->GetDevice();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
@@ -1325,7 +1325,7 @@ void CreateComputeShader(IRenderDevice*        pDevice,
                          IShader**             ppCS,
                          IShader**             ppSerializedCS)
 {
-    const auto* pEnv = GPUTestingEnvironment::GetInstance();
+    const GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
 
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
@@ -1342,7 +1342,7 @@ void CreateComputeShader(IRenderDevice*        pDevice,
 
     if (ppSerializedCS != nullptr)
     {
-        auto DeviceBits = GetDeviceBits();
+        ARCHIVE_DEVICE_DATA_FLAGS DeviceBits = GetDeviceBits();
 #if PLATFORM_MACOS
         // Compute shaders are not supported in OpenGL on MacOS
         DeviceBits &= ~(ARCHIVE_DEVICE_DATA_FLAG_GL | ARCHIVE_DEVICE_DATA_FLAG_GLES);
@@ -1353,9 +1353,9 @@ void CreateComputeShader(IRenderDevice*        pDevice,
 
 void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = false)
 {
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pDevice          = pEnv->GetDevice();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice          = pEnv->GetDevice();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
@@ -1370,8 +1370,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
 
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
-    auto*       pSwapChain = pEnv->GetSwapChain();
-    const auto& SCDesc     = pSwapChain->GetDesc();
+    ISwapChain*          pSwapChain = pEnv->GetSwapChain();
+    const SwapChainDesc& SCDesc     = pSwapChain->GetDesc();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
     if (!pTestingSwapChain)
@@ -1499,8 +1499,8 @@ void TestComputePipeline(PSO_ARCHIVE_FLAGS ArchiveFlags, bool CompileAsync = fal
     pRefPRS->CreateShaderResourceBinding(&pSRB);
     ASSERT_NE(pSRB, nullptr);
 
-    auto*      pContext = pEnv->GetDeviceContext();
-    const auto Dispatch = [&](IPipelineState* pPSO, ITextureView* pTextureUAV) //
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
+    const auto      Dispatch = [&](IPipelineState* pPSO, ITextureView* pTextureUAV) //
     {
         pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DUAV")->Set(pTextureUAV);
 
@@ -1567,9 +1567,9 @@ TEST(ArchiveTest, ComputePipeline_SplitArchive_Async)
 
 void TestRayTracingPipeline(bool CompileAsync = false)
 {
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pDevice          = pEnv->GetDevice();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice          = pEnv->GetDevice();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     RefCntAutoPtr<IDearchiver> pDearchiver;
     DearchiverCreateInfo       DearchiverCI{};
@@ -1584,7 +1584,7 @@ void TestRayTracingPipeline(bool CompileAsync = false)
 
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
-    auto* pSwapChain = pEnv->GetSwapChain();
+    ISwapChain* pSwapChain = pEnv->GetSwapChain();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
     if (!pTestingSwapChain)
@@ -1605,7 +1605,7 @@ void TestRayTracingPipeline(bool CompileAsync = false)
     pArchiverFactory->CreateSerializationDevice(DeviceCI, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
-    const auto DeviceBits = GetDeviceBits() & (ARCHIVE_DEVICE_DATA_FLAG_D3D12 | ARCHIVE_DEVICE_DATA_FLAG_VULKAN);
+    const ARCHIVE_DEVICE_DATA_FLAGS DeviceBits = GetDeviceBits() & (ARCHIVE_DEVICE_DATA_FLAG_D3D12 | ARCHIVE_DEVICE_DATA_FLAG_VULKAN);
 
     RefCntAutoPtr<IPipelineState> pRefPSO;
     {
@@ -1722,7 +1722,7 @@ void TestRayTracingPipeline(bool CompileAsync = false)
     // Create BLAS & TLAS
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
     RefCntAutoPtr<ITopLevelAS>    pTLAS;
-    auto*                         pContext       = pEnv->GetDeviceContext();
+    IDeviceContext*               pContext       = pEnv->GetDeviceContext();
     const Uint32                  HitGroupStride = 1;
     {
         const auto& Vertices = TestingConstants::TriangleClosestHit::Vertices;
@@ -1879,8 +1879,8 @@ void TestRayTracingPipeline(bool CompileAsync = false)
 
     pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_TLAS")->Set(pTLAS);
 
-    const auto& SCDesc    = pSwapChain->GetDesc();
-    const auto  TraceRays = [&](IPipelineState* pPSO, ITextureView* pTextureUAV, IShaderBindingTable* pSBT) //
+    const SwapChainDesc& SCDesc    = pSwapChain->GetDesc();
+    const auto           TraceRays = [&](IPipelineState* pPSO, ITextureView* pTextureUAV, IShaderBindingTable* pSBT) //
     {
         pRayTracingSRB->GetVariableByName(SHADER_TYPE_RAY_GEN, "g_ColorBuffer")->Set(pTextureUAV);
 
@@ -1924,8 +1924,8 @@ TEST(ArchiveTest, RayTracingPipeline_Async)
 
 TEST(ArchiveTest, ResourceSignatureBindings)
 {
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
 
     if (!pArchiverFactory)
         GTEST_SKIP() << "Archiver library is not loaded";
@@ -1934,19 +1934,19 @@ TEST(ArchiveTest, ResourceSignatureBindings)
     pArchiverFactory->CreateSerializationDevice(SerializationDeviceCreateInfo{}, &pSerializationDevice);
     ASSERT_NE(pSerializationDevice, nullptr);
 
-    for (auto AllDeviceBits = GetDeviceBits() & ~(ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS | ARCHIVE_DEVICE_DATA_FLAG_WEBGPU); AllDeviceBits != 0;)
+    for (ARCHIVE_DEVICE_DATA_FLAGS AllDeviceBits = GetDeviceBits() & ~(ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS | ARCHIVE_DEVICE_DATA_FLAG_WEBGPU); AllDeviceBits != 0;)
     {
         const ARCHIVE_DEVICE_DATA_FLAGS DeviceBit  = ExtractLSB(AllDeviceBits);
         const RENDER_DEVICE_TYPE        DeviceType = ArchiveDataFlagToRenderDeviceType(DeviceBit);
 
-        const auto VS_PS = SHADER_TYPE_PIXEL | SHADER_TYPE_VERTEX;
-        const auto PS    = SHADER_TYPE_PIXEL;
-        const auto VS    = SHADER_TYPE_VERTEX;
+        const SHADER_TYPE VS_PS = SHADER_TYPE_PIXEL | SHADER_TYPE_VERTEX;
+        const SHADER_TYPE PS    = SHADER_TYPE_PIXEL;
+        const SHADER_TYPE VS    = SHADER_TYPE_VERTEX;
 
         // PRS 1
         RefCntAutoPtr<IPipelineResourceSignature> pPRS1;
         {
-            const auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+            const SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
 
             std::vector<PipelineResourceDesc> Resources =
                 {
@@ -1982,7 +1982,7 @@ TEST(ArchiveTest, ResourceSignatureBindings)
         // PRS 2
         RefCntAutoPtr<IPipelineResourceSignature> pPRS2;
         {
-            const auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+            const SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
 
             const PipelineResourceDesc Resources[] = //
                 {
@@ -2064,8 +2064,8 @@ TEST(ArchiveTest, ResourceSignatureBindings)
                 if (Iter == BindingMap.end())
                     continue;
 
-                const auto& Lhs = *Iter->second;
-                const auto& Rhs = RefBindings[i];
+                const PipelineResourceBinding& Lhs = *Iter->second;
+                const PipelineResourceBinding& Rhs = RefBindings[i];
 
                 EXPECT_EQ(Lhs.Register, Rhs.Register);
                 EXPECT_EQ(Lhs.Space, Rhs.Space);
@@ -2195,17 +2195,17 @@ TEST_P(TestSamplers, GraphicsPipeline)
 {
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    auto* const pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice          = pEnv->GetDevice();
-    auto* const pSwapChain       = pEnv->GetSwapChain();
-    const auto& deviceCaps       = pDevice->GetDeviceInfo();
-    auto* const pArchiverFactory = pEnv->GetArchiverFactory();
+    GPUTestingEnvironment* const pEnv             = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice          = pEnv->GetDevice();
+    ISwapChain* const            pSwapChain       = pEnv->GetSwapChain();
+    const RenderDeviceInfo&      deviceCaps       = pDevice->GetDeviceInfo();
+    IArchiverFactory* const      pArchiverFactory = pEnv->GetArchiverFactory();
 
     const auto& Param = GetParam();
 
-    const auto UseImtblSamplers = std::get<0>(Param);
-    const auto ShaderLang       = std::get<1>(Param);
-    const auto UseSignature     = std::get<2>(Param);
+    const bool                   UseImtblSamplers = std::get<0>(Param);
+    const SHADER_SOURCE_LANGUAGE ShaderLang       = std::get<1>(Param);
+    const bool                   UseSignature     = std::get<2>(Param);
 
     if (ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL && (deviceCaps.IsD3DDevice() || deviceCaps.IsWebGPUDevice()))
         GTEST_SKIP() << "GLSL-style combined samplers are not supported in Direct3D and WebGPU backends";
@@ -2353,7 +2353,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
                 UNEXPECTED("Unexpected shader language");
         }
 
-        auto PackFlags = GetDeviceBits();
+        ARCHIVE_DEVICE_DATA_FLAGS PackFlags = GetDeviceBits();
         if (ShaderLang != SHADER_SOURCE_LANGUAGE_HLSL)
             PackFlags &= ~(ARCHIVE_DEVICE_DATA_FLAG_D3D11 | ARCHIVE_DEVICE_DATA_FLAG_D3D12 | ARCHIVE_DEVICE_DATA_FLAG_WEBGPU);
 
@@ -2389,7 +2389,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
             auto Add = [&](SHADER_TYPE Stage) {
                 if (UseSignature)
                 {
-                    auto Flags = PIPELINE_RESOURCE_FLAG_NONE;
+                    PIPELINE_RESOURCE_FLAGS Flags = PIPELINE_RESOURCE_FLAG_NONE;
                     if (ShaderLang == SHADER_SOURCE_LANGUAGE_GLSL && ResType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
                         Flags = PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
                     Resources.emplace_back(Stage, Name, ArraySize, ResType, VarType, Flags);
@@ -2436,8 +2436,8 @@ TEST_P(TestSamplers, GraphicsPipeline)
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-        auto& PSODesc          = PSOCreateInfo.PSODesc;
-        auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+        PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+        GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
         PSODesc.Name = PSOName;
 
@@ -2468,7 +2468,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
         }
         else
         {
-            auto& ResourceLayout{PSODesc.ResourceLayout};
+            PipelineResourceLayoutDesc& ResourceLayout{PSODesc.ResourceLayout};
             ResourceLayout.DefaultVariableType  = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
             ResourceLayout.Variables            = Vars.data();
             ResourceLayout.NumVariables         = static_cast<Uint32>(Vars.size());
@@ -2533,7 +2533,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
     ASSERT_NE(pSRB, nullptr);
 
     auto BindResources = [&](SHADER_TYPE ShaderType) {
-        const auto id = ShaderType == SHADER_TYPE_VERTEX ? VSResArrId : PSResArrId;
+        const Uint32 id = ShaderType == SHADER_TYPE_VERTEX ? VSResArrId : PSResArrId;
 
         if (pSignature)
         {
@@ -2564,7 +2564,7 @@ TEST_P(TestSamplers, GraphicsPipeline)
     else
         pPSO->InitializeStaticSRBResources(pSRB);
 
-    auto* pContext = pEnv->GetDeviceContext();
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
 
     ITextureView* ppRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -2587,9 +2587,9 @@ INSTANTIATE_TEST_SUITE_P(ArchiveTest,
                              testing::Values<bool>(true, false)),
                          [](const testing::TestParamInfo<TestSamplersParamType>& info) //
                          {
-                             const auto UseImtblSamplers = std::get<0>(info.param);
-                             const auto ShaderLang       = std::get<1>(info.param);
-                             const auto UseSignature     = std::get<2>(info.param);
+                             const bool                   UseImtblSamplers = std::get<0>(info.param);
+                             const SHADER_SOURCE_LANGUAGE ShaderLang       = std::get<1>(info.param);
+                             const bool                   UseSignature     = std::get<2>(info.param);
 
                              std::stringstream name_ss;
                              if (ShaderLang == SHADER_SOURCE_LANGUAGE_HLSL)
@@ -2608,10 +2608,10 @@ INSTANTIATE_TEST_SUITE_P(ArchiveTest,
 
 TEST(ArchiveTest, MergeArchives)
 {
-    auto* pEnv             = GPUTestingEnvironment::GetInstance();
-    auto* pDevice          = pEnv->GetDevice();
-    auto* pArchiverFactory = pEnv->GetArchiverFactory();
-    auto* pSwapChain       = pEnv->GetSwapChain();
+    GPUTestingEnvironment* pEnv             = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice          = pEnv->GetDevice();
+    IArchiverFactory*      pArchiverFactory = pEnv->GetArchiverFactory();
+    ISwapChain*            pSwapChain       = pEnv->GetSwapChain();
 
     GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
@@ -2688,7 +2688,7 @@ TEST(ArchiveTest, MergeArchives)
 
         PSOCreateInfo.PSODesc.Name = PSOName;
 
-        auto& GraphicsPipeline{PSOCreateInfo.GraphicsPipeline};
+        GraphicsPipelineDesc& GraphicsPipeline{PSOCreateInfo.GraphicsPipeline};
         GraphicsPipeline.pRenderPass       = pSerializedRenderPass;
         GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         constexpr LayoutElement Elems[] =
