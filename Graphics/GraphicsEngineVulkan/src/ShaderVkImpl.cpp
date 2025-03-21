@@ -236,7 +236,8 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
                     ShaderCI.LoadConstantBufferReflection,
                     m_EntryPoint //
                 };
-            VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint);
+            VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint ||
+                        (m_EntryPoint == "main" && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL) != 0));
             m_pShaderResources.reset(static_cast<SPIRVShaderResources*>(pRawMem.release()), STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
             if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
