@@ -8,6 +8,7 @@ RWTexture2DArray <int2// format = rg8i
 RWTexture2DArray <uint4// format = rgba8ui
                   >  Tex2D_U_A;
 
+VK_IMAGE_FORMAT("rgba32f")
 RWTexture3D< float4/*
 format
 =

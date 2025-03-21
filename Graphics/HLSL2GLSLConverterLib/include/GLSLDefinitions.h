@@ -1361,4 +1361,6 @@ void _GetGLTessLevelInner(out float InnerLevel)
 
 #endif
 
+#define VK_IMAGE_FORMAT(format)
+
 #endif // _GLSL_DEFINITIONS_

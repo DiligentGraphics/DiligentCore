@@ -78,5 +78,11 @@ float2x2 MatrixFromRows(float2 row0, float2 row1)
     return float2x2(row0, row1);
 }
 
+#if defined(VULKAN) && defined(DXCOMPILER)
+#   define VK_IMAGE_FORMAT(format) [[vk::image_format(format)]]
+#else
+#   define VK_IMAGE_FORMAT(format)
+#endif
+
 #endif // _HLSL_DEFINITIONS_
 

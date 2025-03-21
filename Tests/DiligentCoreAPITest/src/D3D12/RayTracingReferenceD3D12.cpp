@@ -36,6 +36,8 @@
 #include "InlineShaders/RayTracingTestHLSL.h"
 #include "RayTracingTestConstants.hpp"
 
+#include "dxc/dxcapi.h"
+
 namespace Diligent
 {
 
@@ -120,8 +122,11 @@ struct RTSubobjectsHelper
 
     void SetDxilLibrary(Uint32 Index, const String& Source, const wchar_t* ExportName)
     {
+        static constexpr DxcDefine Defines[]{
+            {L"VK_IMAGE_FORMAT(x)", L""},
+        };
         TestingEnvironmentD3D12* pEnv = TestingEnvironmentD3D12::GetInstance();
-        HRESULT                  hr   = pEnv->CompileDXILShader(Source, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[Index]);
+        HRESULT                  hr   = pEnv->CompileDXILShader(Source, L"main", Defines, _countof(Defines), L"lib_6_3", &ShadersByteCode[Index]);
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray tracing shader";
 
         D3D12_EXPORT_DESC&       RGExportDesc = ExportDescs[Index];

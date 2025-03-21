@@ -25,9 +25,9 @@ cbuffer cbTest6
 int cbuffer_fake;
 int fakecbuffer;
 
-RWTexture1D<float /* format=r32f */ >Tex1D_F1 /*comment*/:/*comment*/ register(u0)/*comment*/;
-RWTexture1D<int2  /*format=rg32i*/ >Tex1D_I;
-RWTexture1D<uint4 /* format= rgba32ui */ >Tex1D_U;
+VK_IMAGE_FORMAT("r32f") RWTexture1D<float /* format=r32f */ >Tex1D_F1 /*comment*/:/*comment*/ register(u0)/*comment*/;
+VK_IMAGE_FORMAT("r32i") RWTexture1D<int2  /*format=rg32i*/ >Tex1D_I;
+VK_IMAGE_FORMAT("rgba32ui") RWTexture1D<uint4 /* format= rgba32ui */ >Tex1D_U;
 
 RWTexture1DArray </* format = r32f */ float >  Tex1D_F_A : register(u1);
 RWTexture1DArray </* format = rg16i */ int2 >   Tex1D_I_A;

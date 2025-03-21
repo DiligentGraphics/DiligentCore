@@ -29,8 +29,8 @@ RWTexture2D<float4/* format = rgba32f */>Tex2D_F1/*comment*/: /*comment*/registe
 RWTexture2D<float/* format = r32f */>Tex2D_F3: register(u3),/*cmt*/Tex2D_F4,  Tex2D_F5
 /*comment*/:/*comment*/
 register(u4);
-RWTexture2D<int4/* format = rgba16i */>Tex2D_I;
-RWTexture2D<uint/* format = r32ui */>Tex2D_U;
+VK_IMAGE_FORMAT("rgba16i") RWTexture2D<int4/* format = rgba16i */>Tex2D_I;
+VK_IMAGE_FORMAT("r32ui")   RWTexture2D<uint/* format = r32ui */>Tex2D_U;
 
 
 int GlobalIntVar;Texture2D Tex2D_Test1:register(t0);Texture2D Tex2D_Test2;/*Comment* / *//* /** Comment2*/Texture2D Tex2D_Test3 /*Cmnt*/: /*comment*/register(t1)/*comment*/,/*comment*/
