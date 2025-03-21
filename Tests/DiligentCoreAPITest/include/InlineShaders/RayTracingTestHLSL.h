@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,8 +44,12 @@ struct RTPayload
 // clang-format off
 const std::string RayTracingTest1_RG = RayTracingTest_Payload +
 R"hlsl(
-RaytracingAccelerationStructure g_TLAS        : register(t0);
-RWTexture2D<float4>             g_ColorBuffer : register(u0);
+RaytracingAccelerationStructure g_TLAS : register(t0);
+
+#ifdef VULKAN
+[[vk::image_format("rgba8")]]
+#endif
+RWTexture2D<float4> g_ColorBuffer : register(u0);
 
 [shader("raygeneration")]
 void main()
@@ -94,8 +98,12 @@ void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr
 
 const std::string RayTracingTest2_RG = RayTracingTest_Payload +
 R"hlsl(
-RaytracingAccelerationStructure g_TLAS        : register(t0);
-RWTexture2D<float4>             g_ColorBuffer : register(u0);
+RaytracingAccelerationStructure g_TLAS : register(t0);
+
+#ifdef VULKAN
+[[vk::image_format("rgba8")]]
+#endif
+RWTexture2D<float4> g_ColorBuffer : register(u0);
 
 [shader("raygeneration")]
 void main()
@@ -156,8 +164,12 @@ void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr
 
 const std::string RayTracingTest3_RG = RayTracingTest_Payload +
 R"hlsl(
-RaytracingAccelerationStructure g_TLAS        : register(t0);
-RWTexture2D<float4>             g_ColorBuffer : register(u0);
+RaytracingAccelerationStructure g_TLAS : register(t0);
+
+#ifdef VULKAN
+[[vk::image_format("rgba8")]]
+#endif
+RWTexture2D<float4> g_ColorBuffer : register(u0);
 
 [shader("raygeneration")]
 void main()
@@ -239,8 +251,12 @@ void main()
 
 const std::string RayTracingTest4_RG = RayTracingTest_Payload +
 R"hlsl(
-RaytracingAccelerationStructure g_TLAS        : register(t0);
-RWTexture2D<float4>             g_ColorBuffer : register(u0);
+RaytracingAccelerationStructure g_TLAS : register(t0);
+
+#ifdef VULKAN
+[[vk::image_format("rgba8")]]
+#endif
+RWTexture2D<float4> g_ColorBuffer : register(u0);
 
 [shader("raygeneration")]
 void main()
@@ -336,7 +352,11 @@ void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr
 const std::string RayTracingTest5_RG = RayTracingTest_Payload +
 R"hlsl(
 RaytracingAccelerationStructure g_TLAS;
-RWTexture2D<float4>             g_ColorBuffer;
+
+#ifdef VULKAN
+[[vk::image_format("rgba8")]]
+#endif
+RWTexture2D<float4> g_ColorBuffer;
 
 [shader("raygeneration")]
 void main()
@@ -421,7 +441,11 @@ void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr
 
 const std::string RayTracingTest6_RG{R"hlsl(
 RaytracingAccelerationStructure g_TLAS;
-RWTexture2D<float4>             g_ColorBuffer;
+
+#ifdef VULKAN
+[[vk::image_format("rgba8")]]
+#endif
+RWTexture2D<float4> g_ColorBuffer;
 
 float4 HitShader(float2 attrBarycentrics)
 {
@@ -538,7 +562,11 @@ float4 main(in PSInput PSIn) : SV_Target
 
 const std::string RayTracingTest8_CS{R"hlsl(
 RaytracingAccelerationStructure g_TLAS;
-RWTexture2D<float4>             g_ColorBuffer;
+
+#ifdef VULKAN
+[[vk::image_format("rgba8")]]
+#endif
+RWTexture2D<float4> g_ColorBuffer;
 
 float4 HitShader(float2 attrBarycentrics)
 {

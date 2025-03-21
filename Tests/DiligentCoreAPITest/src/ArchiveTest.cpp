@@ -1298,6 +1298,9 @@ namespace HLSL
 // Test shader source as string
 const std::string ComputePSOTest_CS{R"(
 
+#if defined(VULKAN) && defined(DXCOMPILER)
+[[vk::image_format("rgba8")]]
+#endif
 RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
 
 [numthreads(16, 16, 1)]
@@ -1331,6 +1334,8 @@ void CreateComputeShader(IRenderDevice*        pDevice,
     ShaderCI.EntryPoint = "main";
     // Test shader source string
     ShaderCI.Source = HLSL::ComputePSOTest_CS.c_str();
+
+    ShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
 
     if (ppCS != nullptr)
         pDevice->CreateShader(ShaderCI, ppCS);
@@ -1714,10 +1719,6 @@ void TestRayTracingPipeline(bool CompileAsync = false)
         ASSERT_NE(pUnpackedPSO, nullptr);
     }
 
-    RefCntAutoPtr<IShaderResourceBinding> pRayTracingSRB;
-    pRefPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
-    ASSERT_NE(pRayTracingSRB, nullptr);
-
     // Create BLAS & TLAS
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
     RefCntAutoPtr<ITopLevelAS>    pTLAS;
@@ -1865,6 +1866,10 @@ void TestRayTracingPipeline(bool CompileAsync = false)
 
     ASSERT_EQ(pUnpackedPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
     ASSERT_EQ(pRefPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+
+    RefCntAutoPtr<IShaderResourceBinding> pRayTracingSRB;
+    pRefPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
+    ASSERT_NE(pRayTracingSRB, nullptr);
 
     RefCntAutoPtr<IShaderBindingTable> pRefPSO_SBT;
     CreateSBT(pRefPSO_SBT, pRefPSO);
