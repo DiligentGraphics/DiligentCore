@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -952,6 +952,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
             ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
         ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
+        ShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
     };
 
     auto pCS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.RWFormattedBuffers - CS" : "ShaderResourceLayoutTest.RWtructuredBuffers - CS",
@@ -1144,6 +1145,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
             ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
         ShaderCI.WebGPUEmulatedArrayIndexSuffix = "_";
+        ShaderCI.CompileFlags |= SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
     };
 
     auto pCS = CreateShader("ShaderResourceLayoutTest.RWTextures - CS",

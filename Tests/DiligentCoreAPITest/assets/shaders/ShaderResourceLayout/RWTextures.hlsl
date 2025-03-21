@@ -1,10 +1,11 @@
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Static;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Mut;
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Dyn;
 
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Static[STATIC_TEX_ARRAY_SIZE];  // 2
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Mut   [MUTABLE_TEX_ARRAY_SIZE]; // 4 or 2 in D3D11
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Dyn   [DYNAMIC_TEX_ARRAY_SIZE]; // 3 or 1 in D3D11
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Static;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Mut;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2D_Dyn;
+
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Static[STATIC_TEX_ARRAY_SIZE];  // 2
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Mut   [MUTABLE_TEX_ARRAY_SIZE]; // 4 or 2 in D3D11
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTex2DArr_Dyn   [DYNAMIC_TEX_ARRAY_SIZE]; // 3 or 1 in D3D11
 
 float4 CheckValue(float4 Val, float4 Expected)
 {
@@ -69,7 +70,7 @@ float4 VerifyResources()
     return AllCorrect;
 }
 
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV;
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

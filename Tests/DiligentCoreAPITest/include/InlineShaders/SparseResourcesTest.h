@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -73,7 +73,8 @@ float4 main(in PSInput PSIn) : SV_Target
 
 
 const std::string FillTexture3D_CS{R"hlsl(
-RWTexture3D<float4> g_DstTexture;
+
+VK_IMAGE_FORMAT("rgba8") RWTexture3D<float4 /*format=rgba8*/> g_DstTexture;
 
 cbuffer CB
 {
@@ -85,7 +86,7 @@ cbuffer CB
 [numthreads(4, 4, 4)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-    if (all(DTid < Size))
+    if (all(Less(DTid, Size)))
     {
         g_DstTexture[Offset + DTid] = Color;
     }

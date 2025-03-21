@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -342,6 +342,7 @@ void CreateComputeShader(IRenderStateCache*               pCache,
                          RefCntAutoPtr<IShader>&          pCS,
                          bool                             PresentInCache)
 {
+    CompileFlags |= SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
     CreateShader(pCache, pShaderSourceFactory, SHADER_TYPE_COMPUTE, CompileFlags,
                  "RenderStateCache - CS", "ComputeShader.csh",
                  PresentInCache, pCS);

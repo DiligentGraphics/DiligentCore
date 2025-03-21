@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -208,6 +208,7 @@ protected:
             ShaderCI.Desc           = {"Fill texture 3D CS", SHADER_TYPE_COMPUTE, true};
             ShaderCI.EntryPoint     = "main";
             ShaderCI.Source         = HLSL::FillTexture3D_CS.c_str();
+            ShaderCI.CompileFlags   = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
             RefCntAutoPtr<IShader> pCS;
             pDevice->CreateShader(ShaderCI, &pCS);
             ASSERT_NE(pCS, nullptr);

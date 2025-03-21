@@ -72,7 +72,7 @@ struct StructBuffData
 };
 StructuredBuffer<StructBuffData> g_StructuredBuffers[STRUCT_BUFFERS_COUNT];
 
-RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTextures[RWTEXTURES_COUNT] : register(u10, space5);
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<unorm float4 /*format=rgba8*/> g_RWTextures[RWTEXTURES_COUNT] : register(u10, space5);
 
 
 #ifndef VULKAN // RW structured buffers are not supported by DXC
@@ -169,7 +169,7 @@ float4 VerifyResources(uint index, float2 coord)
     return AllCorrect;
 }
 
-RWTexture2D<float4>  g_OutImage;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<float4> g_OutImage;
 
 [numthreads(16, 16, 1)]
 void main(uint3 GlobalInvocationID : SV_DispatchThreadID,

@@ -37,7 +37,8 @@ namespace
 {
 
 const std::string FenceTest_CS{R"(
-RWTexture2D<float4/* format = rgba8 */> g_DstTexture;
+
+VK_IMAGE_FORMAT("rgba8") RWTexture2D<float4/* format = rgba8 */> g_DstTexture;
 
 cbuffer Constants
 {
@@ -75,6 +76,7 @@ protected:
         ShaderCreateInfo ShaderCI;
         ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
         ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+        ShaderCI.CompileFlags   = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
 
         RefCntAutoPtr<IShader> pCS;
         {

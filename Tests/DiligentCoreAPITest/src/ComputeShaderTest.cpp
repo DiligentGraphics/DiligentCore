@@ -160,6 +160,7 @@ TEST(ComputeShaderTest, FillTexture)
     ShaderCI.Desc           = {"Compute shader test - FillTextureCS", SHADER_TYPE_COMPUTE, true};
     ShaderCI.EntryPoint     = "main";
     ShaderCI.Source         = HLSL::FillTextureCS.c_str();
+    ShaderCI.CompileFlags   = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
     RefCntAutoPtr<IShader> pCS;
     pDevice->CreateShader(ShaderCI, &pCS);
     ASSERT_NE(pCS, nullptr);
@@ -225,6 +226,7 @@ TEST(ComputeShaderTest, GenerateMips_CSInterference)
     ShaderCI.Desc           = {"Compute shader test - FillTextureCS2", SHADER_TYPE_COMPUTE, true};
     ShaderCI.EntryPoint     = "main";
     ShaderCI.Source         = HLSL::FillTextureCS2.c_str();
+    ShaderCI.CompileFlags   = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
     RefCntAutoPtr<IShader> pCS;
     pDevice->CreateShader(ShaderCI, &pCS);
     ASSERT_NE(pCS, nullptr);
@@ -243,11 +245,19 @@ TEST(ComputeShaderTest, GenerateMips_CSInterference)
 
     const SwapChainDesc& SCDesc = pSwapChain->GetDesc();
 
-    RefCntAutoPtr<ITexture> pWhiteTex;
+    RefCntAutoPtr<ITextureView> pWhiteTexSRV;
     {
-        std::vector<Uint8> WhiteRGBA(SCDesc.Width * SCDesc.Width * 4, 255);
-        pWhiteTex = pEnv->CreateTexture("White Texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, SCDesc.Width, SCDesc.Width, WhiteRGBA.data());
+        std::vector<Uint8>      WhiteRGBA(SCDesc.Width * SCDesc.Width * 4, 255);
+        RefCntAutoPtr<ITexture> pWhiteTex = pEnv->CreateTexture("White Texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, SCDesc.Width, SCDesc.Width, WhiteRGBA.data());
         ASSERT_NE(pWhiteTex, nullptr);
+        pWhiteTexSRV = pWhiteTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+        ASSERT_NE(pWhiteTexSRV, nullptr);
+
+        SamplerDesc SamDesc;
+        SamDesc.Name = "Dummy sampler";
+        RefCntAutoPtr<ISampler> pSampler;
+        pDevice->CreateSampler(SamDesc, &pSampler);
+        pWhiteTexSRV->SetSampler(pSampler);
     }
 
     RefCntAutoPtr<ITexture> pBlackTex;
@@ -271,7 +281,7 @@ TEST(ComputeShaderTest, GenerateMips_CSInterference)
     pPSO->CreateShaderResourceBinding(&pSRB, true);
     ASSERT_NE(pSRB, nullptr);
 
-    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DWhiteTexture")->Set(pWhiteTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+    pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DWhiteTexture")->Set(pWhiteTexSRV);
     pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2DUAV")->Set(pTestingSwapChain->GetCurrentBackBufferUAV());
 
     pContext->SetPipelineState(pPSO);
@@ -341,9 +351,10 @@ static void TestFillTexturePS(bool UseRenderPass)
     pDevice->CreateShader(ShaderCI, &pVS);
     ASSERT_NE(pVS, nullptr);
 
-    ShaderCI.Desc       = {"Compute shader test - FillTexturePS", SHADER_TYPE_PIXEL, true};
-    ShaderCI.EntryPoint = "main";
-    ShaderCI.Source     = HLSL::FillTexturePS.c_str();
+    ShaderCI.Desc         = {"Compute shader test - FillTexturePS", SHADER_TYPE_PIXEL, true};
+    ShaderCI.EntryPoint   = "main";
+    ShaderCI.Source       = HLSL::FillTexturePS.c_str();
+    ShaderCI.CompileFlags = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
     RefCntAutoPtr<IShader> pPS;
     pDevice->CreateShader(ShaderCI, &pPS);
     ASSERT_NE(pPS, nullptr);
@@ -511,9 +522,10 @@ TEST(ComputeShaderTest, FillTexturePS_Signatures)
     pDevice->CreateShader(ShaderCI, &pVS);
     ASSERT_NE(pVS, nullptr);
 
-    ShaderCI.Desc       = {"Compute shader test - FillTexturePS", SHADER_TYPE_PIXEL, true};
-    ShaderCI.EntryPoint = "main";
-    ShaderCI.Source     = HLSL::FillTexturePS2.c_str();
+    ShaderCI.Desc         = {"Compute shader test - FillTexturePS", SHADER_TYPE_PIXEL, true};
+    ShaderCI.EntryPoint   = "main";
+    ShaderCI.Source       = HLSL::FillTexturePS2.c_str();
+    ShaderCI.CompileFlags = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
     RefCntAutoPtr<IShader> pPS;
     pDevice->CreateShader(ShaderCI, &pPS);
     ASSERT_NE(pPS, nullptr);

@@ -71,8 +71,7 @@ float4 VerifyResources()
     return AllCorrect;
 }
 
-
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV;
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

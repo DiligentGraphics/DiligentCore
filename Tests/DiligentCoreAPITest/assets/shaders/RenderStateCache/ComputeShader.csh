@@ -1,6 +1,6 @@
 #include "Defines.h"
 
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV;
 
 #if INTERNAL_MACROS == 1 && EXTERNAL_MACROS == 2
 [numthreads(16, 16, 1)]

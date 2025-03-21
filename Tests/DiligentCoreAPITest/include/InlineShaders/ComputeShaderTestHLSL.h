@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,12 @@ namespace HLSL
 // clang-format off
 const std::string FillTextureCS{
 R"(
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
+
+#ifndef VK_IMAGE_FORMAT
+#   define VK_IMAGE_FORMAT(x)
+#endif
+
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -54,7 +59,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 const std::string FillTextureCS2{
 R"(
 Texture2D<float4> g_tex2DWhiteTexture;
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
+
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -97,7 +103,7 @@ struct VSOutput
     float4 Pos : SV_Position;
 };
 
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
 
 void main(in VSOutput VSOut)
 {
@@ -119,7 +125,7 @@ cbuffer Constants
 	float4 g_Color;
 };
 
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
 
 void main(in VSOutput VSOut)
 {

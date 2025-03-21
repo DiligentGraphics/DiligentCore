@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,20 +38,20 @@ namespace Testing
 
 void ComputeShaderReferenceD3D11(ISwapChain* pSwapChain)
 {
-    auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
-    auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
-    auto* pTestingSwapChainD3D11 = ClassPtrCast<TestingSwapChainD3D11>(pSwapChain);
+    TestingEnvironmentD3D11* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
+    ID3D11DeviceContext*     pd3d11Context          = pEnvD3D11->GetD3D11Context();
+    TestingSwapChainD3D11*   pTestingSwapChainD3D11 = ClassPtrCast<TestingSwapChainD3D11>(pSwapChain);
 
     pd3d11Context->ClearState();
 
-    auto pCS = pEnvD3D11->CreateComputeShader(HLSL::FillTextureCS);
+    CComPtr<ID3D11ComputeShader> pCS = pEnvD3D11->CreateComputeShader(HLSL::FillTextureCS);
     ASSERT_NE(pCS, nullptr);
 
     pd3d11Context->CSSetShader(pCS, nullptr, 0);
     ID3D11UnorderedAccessView* pUAVs[] = {pTestingSwapChainD3D11->GetD3D11UAV()};
     pd3d11Context->CSSetUnorderedAccessViews(0, 1, pUAVs, nullptr);
 
-    const auto& SCDesc = pSwapChain->GetDesc();
+    const SwapChainDesc& SCDesc = pSwapChain->GetDesc();
     pd3d11Context->Dispatch((SCDesc.Width + 15) / 16, (SCDesc.Height + 15) / 16, 1);
 
     pd3d11Context->ClearState();
