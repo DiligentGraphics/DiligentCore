@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,7 +89,7 @@ struct RTContext
     {
         pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-        auto RTVDescriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
+        D3D12_CPU_DESCRIPTOR_HANDLE RTVDescriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
 
         pCmdList->OMSetRenderTargets(1, &RTVDescriptorHandle, FALSE, nullptr);
 
@@ -120,8 +120,8 @@ struct RTSubobjectsHelper
 
     void SetDxilLibrary(Uint32 Index, const String& Source, const wchar_t* ExportName)
     {
-        auto* pEnv = TestingEnvironmentD3D12::GetInstance();
-        auto  hr   = pEnv->CompileDXILShader(Source, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[Index]);
+        TestingEnvironmentD3D12* pEnv = TestingEnvironmentD3D12::GetInstance();
+        HRESULT                  hr   = pEnv->CompileDXILShader(Source, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[Index]);
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray tracing shader";
 
         D3D12_EXPORT_DESC&       RGExportDesc = ExportDescs[Index];
@@ -162,10 +162,10 @@ struct RTSubobjectsHelper
 template <typename PSOCtorType, typename RootSigCtorType>
 void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, Uint32 ShaderRecordSize, PSOCtorType&& PSOCtor, RootSigCtorType&& RootSigCtor)
 {
-    auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
+    TestingEnvironmentD3D12* pEnv                   = TestingEnvironmentD3D12::GetInstance();
+    TestingSwapChainD3D12*   pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
-    auto hr = pEnv->GetD3D12Device()->QueryInterface(IID_PPV_ARGS(&Ctx.pDevice));
+    HRESULT hr = pEnv->GetD3D12Device()->QueryInterface(IID_PPV_ARGS(&Ctx.pDevice));
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to get ID3D12Device2";
 
     Ctx.pRenderTarget = pTestingSwapChainD3D12->GetD3D12RenderTarget();
@@ -333,9 +333,10 @@ void CreateBLAS(RTContext& Ctx, D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_IN
     ASDesc.Layout              = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     ASDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-    auto hr = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
-                                                   &ASDesc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
-                                                   IID_PPV_ARGS(&Ctx.BLAS.pAS));
+    HRESULT hr = Ctx.pDevice->CreateCommittedResource(
+        &HeapProps, D3D12_HEAP_FLAG_NONE,
+        &ASDesc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
+        IID_PPV_ARGS(&Ctx.BLAS.pAS));
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to create acceleration structure";
 
     Ctx.BLAS.BuildScratchSize  = BottomLevelPrebuildInfo.ScratchDataSizeInBytes;
@@ -373,9 +374,9 @@ void CreateTLAS(RTContext& Ctx, D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_IN
     ASDesc.Layout              = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     ASDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-    auto hr = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
-                                                   &ASDesc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
-                                                   IID_PPV_ARGS(&Ctx.TLAS.pAS));
+    HRESULT hr = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
+                                                      &ASDesc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
+                                                      IID_PPV_ARGS(&Ctx.TLAS.pAS));
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to create acceleration structure";
 
     Ctx.TLAS.BuildScratchSize  = TopLevelPrebuildInfo.ScratchDataSizeInBytes;
@@ -420,9 +421,9 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
     BuffDesc.Width = std::max(BuffDesc.Width, Ctx.TLAS.BuildScratchSize);
     BuffDesc.Width = std::max(BuffDesc.Width, Ctx.TLAS.UpdateScratchSize);
 
-    auto hr = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
-                                                   &BuffDesc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr,
-                                                   IID_PPV_ARGS(&Ctx.pScratchBuffer));
+    HRESULT hr = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
+                                                      &BuffDesc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr,
+                                                      IID_PPV_ARGS(&Ctx.pScratchBuffer));
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to create buffer";
 
     if (VBSize > 0)
@@ -480,9 +481,11 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
     if (UploadSize > 0)
     {
         BuffDesc.Width = UploadSize;
-        hr             = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
-                                                  &BuffDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                                  IID_PPV_ARGS(&Ctx.pUploadBuffer));
+
+        hr = Ctx.pDevice->CreateCommittedResource(
+            &HeapProps, D3D12_HEAP_FLAG_NONE,
+            &BuffDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+            IID_PPV_ARGS(&Ctx.pUploadBuffer));
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to create buffer";
 
         hr = Ctx.pUploadBuffer->Map(0, nullptr, &Ctx.MappedPtr);
@@ -561,10 +564,10 @@ void UAVBarrier(const RTContext& Ctx, ID3D12Resource* pResource)
 
 void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
 {
-    auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
+    TestingEnvironmentD3D12* pEnv                   = TestingEnvironmentD3D12::GetInstance();
+    TestingSwapChainD3D12*   pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
 
-    const auto& SCDesc = pSwapChain->GetDesc();
+    const SwapChainDesc& SCDesc = pSwapChain->GetDesc();
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain, 0,
@@ -695,10 +698,9 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
 
 void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
 {
-    auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
-
-    const auto& SCDesc = pSwapChain->GetDesc();
+    TestingEnvironmentD3D12* pEnv                   = TestingEnvironmentD3D12::GetInstance();
+    TestingSwapChainD3D12*   pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
+    const SwapChainDesc&     SCDesc                 = pSwapChain->GetDesc();
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain, 0,
@@ -831,10 +833,9 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
 
 void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
 {
-    auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
-
-    const auto& SCDesc = pSwapChain->GetDesc();
+    TestingEnvironmentD3D12* pEnv                   = TestingEnvironmentD3D12::GetInstance();
+    TestingSwapChainD3D12*   pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
+    const SwapChainDesc&     SCDesc                 = pSwapChain->GetDesc();
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain, 0,
@@ -966,10 +967,9 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
     static constexpr Uint32 GeometryCount = 3;
     static constexpr Uint32 HitGroupCount = InstanceCount * GeometryCount;
 
-    auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
-    auto* pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
-
-    const auto& SCDesc = pSwapChain->GetDesc();
+    TestingEnvironmentD3D12* pEnv                   = TestingEnvironmentD3D12::GetInstance();
+    TestingSwapChainD3D12*   pTestingSwapChainD3D12 = ClassPtrCast<TestingSwapChainD3D12>(pSwapChain);
+    const SwapChainDesc&     SCDesc                 = pSwapChain->GetDesc();
 
     RTContext Ctx = {};
     InitializeRTContext(
@@ -1146,9 +1146,10 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
         HeapProps.CreationNodeMask     = 1;
         HeapProps.VisibleNodeMask      = 1;
 
-        auto hr = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
-                                                       &BuffDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                       IID_PPV_ARGS(&pPerInstanceBuffer));
+        HRESULT hr = Ctx.pDevice->CreateCommittedResource(
+            &HeapProps, D3D12_HEAP_FLAG_NONE,
+            &BuffDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+            IID_PPV_ARGS(&pPerInstanceBuffer));
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to create per instance buffer";
 
         BuffDesc.Width = sizeof(Primitives);
