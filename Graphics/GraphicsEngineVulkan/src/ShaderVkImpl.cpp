@@ -63,7 +63,7 @@ static constexpr char VulkanDefine[] =
     "#   define METAL 1\n"
     "#endif\n"
 #endif
-    ;
+    "\n";
 
 std::vector<uint32_t> CompileShaderDXC(const ShaderCreateInfo&         ShaderCI,
                                        const ShaderVkImpl::CreateInfo& VkShaderCI)

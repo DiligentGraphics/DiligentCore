@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,16 +43,12 @@ static constexpr char g_HLSLDefinitions[] =
 // clang-format on
 
 
-String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI,
-                             const char*             ExtraDefinitions) noexcept(false)
+String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
     String HLSLSource;
 
     HLSLSource.append(g_HLSLDefinitions);
     AppendShaderTypeDefinitions(HLSLSource, ShaderCI.Desc.ShaderType);
-
-    if (ExtraDefinitions != nullptr)
-        HLSLSource += ExtraDefinitions;
 
     if (ShaderCI.Macros)
     {

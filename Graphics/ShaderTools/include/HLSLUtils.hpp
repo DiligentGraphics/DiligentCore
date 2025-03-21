@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,8 +39,7 @@
 namespace Diligent
 {
 
-String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI,
-                             const char*             ExtraDefinitions = nullptr) noexcept(false);
+String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI) noexcept(false);
 
 String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel);
 
@@ -56,8 +55,8 @@ void HandleHLSLCompilerResult(bool               CompilationSucceeded,
 
     if (ppOutputLog != nullptr)
     {
-        const auto ShaderSourceLen = ShaderSource.length();
-        auto       pOutputLogBlob  = DataBlobImpl::Create(ShaderSourceLen + 1 + CompilerMsgLen + 1);
+        const size_t                ShaderSourceLen = ShaderSource.length();
+        RefCntAutoPtr<DataBlobImpl> pOutputLogBlob  = DataBlobImpl::Create(ShaderSourceLen + 1 + CompilerMsgLen + 1);
 
         char* log = pOutputLogBlob->GetDataPtr<char>();
 

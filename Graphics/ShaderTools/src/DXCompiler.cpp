@@ -105,7 +105,7 @@ public:
 
     virtual void Compile(const ShaderCreateInfo& ShaderCI,
                          ShaderVersion           ShaderModel,
-                         const char*             ExtraDefinitions,
+                         const char*             Preamble,
                          IDxcBlob**              ppByteCodeBlob,
                          std::vector<uint32_t>*  pByteCode,
                          IDataBlob**             ppCompilerOutput) noexcept(false) override final;
@@ -688,7 +688,7 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
 
 void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
                              ShaderVersion           ShaderModel,
-                             const char*             ExtraDefinitions,
+                             const char*             Preamble,
                              IDxcBlob**              ppByteCodeBlob,
                              std::vector<uint32_t>*  pByteCode,
                              IDataBlob**             ppCompilerOutput) noexcept(false)
@@ -781,7 +781,8 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 
     IDXCompiler::CompileAttribs CA;
 
-    const String Source = BuildHLSLSourceString(ShaderCI, ExtraDefinitions);
+    String Source{Preamble != nullptr ? Preamble : ""};
+    Source.append(BuildHLSLSourceString(ShaderCI));
 
     DxcDefine Defines[] = {{L"DXCOMPILER", L"1"}};
 
