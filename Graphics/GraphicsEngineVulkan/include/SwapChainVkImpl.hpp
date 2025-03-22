@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,7 +89,6 @@ private:
     void     InitBuffersAndViews();
     VkResult AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
     void     RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk);
-    void     WaitForImageAcquiredFences();
     void     ReleaseSwapChainResources(DeviceContextVkImpl* pImmediateCtxVk, bool DestroyVkSwapChain);
 
     const NativeWindow m_Window;
@@ -114,19 +113,19 @@ private:
 
     std::vector<RefCntAutoPtr<ManagedSemaphore>> m_ImageAcquiredSemaphores;
     std::vector<RefCntAutoPtr<ManagedSemaphore>> m_DrawCompleteSemaphores;
-    std::vector<VulkanUtilities::FenceWrapper>   m_ImageAcquiredFences;
 
     std::vector<RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>>> m_pBackBufferRTV;
 
     std::vector<bool, STDAllocatorRawMem<bool>> m_SwapChainImagesInitialized;
-    std::vector<bool, STDAllocatorRawMem<bool>> m_ImageAcquiredFenceSubmitted;
 
     RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;
+    RefCntAutoPtr<IFence>         m_FrameCompleteFence;
 
     Uint32   m_SemaphoreIndex  = 0;
     uint32_t m_BackBufferIndex = 0;
     bool     m_IsMinimized     = false;
     bool     m_VSyncEnabled    = true;
+    Uint32   m_FrameIndex      = 1;
 };
 
 } // namespace Diligent

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,8 +48,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
     m_VulkanInstance             {pRenderDeviceVk->GetVulkanInstance()},
     m_DesiredBufferCount         {SCDesc.BufferCount},
     m_pBackBufferRTV             (STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")),
-    m_SwapChainImagesInitialized (STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")),
-    m_ImageAcquiredFenceSubmitted(STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>"))
+    m_SwapChainImagesInitialized (STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>"))
 // clang-format on
 {
     CreateSurface();
@@ -58,6 +57,10 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
     VkResult res = AcquireNextImage(pDeviceContextVk);
     DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the newly created swap chain");
     (void)res;
+
+    FenceDesc FenceCI;
+    FenceCI.Name = "Swap chain frame complete fence";
+    pRenderDeviceVk->CreateFence(FenceCI, &m_FrameCompleteFence);
 }
 
 void SwapChainVkImpl::CreateSurface()
@@ -483,7 +486,6 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
 
     m_ImageAcquiredSemaphores.resize(swapchainImageCount);
     m_DrawCompleteSemaphores.resize(swapchainImageCount);
-    m_ImageAcquiredFences.resize(swapchainImageCount);
     for (uint32_t i = 0; i < swapchainImageCount; ++i)
     {
         VkSemaphoreCreateInfo SemaphoreCI = {};
@@ -507,13 +509,6 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
             VulkanUtilities::SemaphoreWrapper Semaphore = LogicalDevice.CreateSemaphore(SemaphoreCI, Name.c_str());
             ManagedSemaphore::Create(pRenderDeviceVk, std::move(Semaphore), Name.c_str(), &m_DrawCompleteSemaphores[i]);
         }
-
-        VkFenceCreateInfo FenceCI = {};
-
-        FenceCI.sType            = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        FenceCI.pNext            = nullptr;
-        FenceCI.flags            = 0;
-        m_ImageAcquiredFences[i] = LogicalDevice.CreateFence(FenceCI);
     }
 }
 
@@ -549,7 +544,6 @@ void SwapChainVkImpl::InitBuffersAndViews()
 
     m_pBackBufferRTV.resize(m_SwapChainDesc.BufferCount);
     m_SwapChainImagesInitialized.resize(m_pBackBufferRTV.size(), false);
-    m_ImageAcquiredFenceSubmitted.resize(m_pBackBufferRTV.size(), false);
 
     uint32_t             swapchainImageCount = m_SwapChainDesc.BufferCount;
     std::vector<VkImage> swapchainImages(swapchainImageCount);
@@ -615,39 +609,17 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     // applications can use fence to meter their frame generation work to match the
     // presentation rate.
 
-    // Explicitly make sure that there are no more pending frames in the command queue
-    // than the number of the swap chain images.
-    //
-    // Nsc = 3 - number of the swap chain images
-    //
-    //   N-Ns          N-2           N-1            N (Current frame)
-    //    |             |             |             |
-    //                  |
-    //          Wait for this fence
-    //
-    // When acquiring swap chain image for frame N, we need to make sure that
-    // frame N-Nsc has completed. To achieve that, we wait for the image acquire
-    // fence for frame N-Nsc-1. Thus we will have no more than Nsc frames in the queue.
-    Uint32 OldestSubmittedImageFenceInd = (m_SemaphoreIndex + 1u) % static_cast<Uint32>(m_ImageAcquiredFenceSubmitted.size());
-    if (m_ImageAcquiredFenceSubmitted[OldestSubmittedImageFenceInd])
+    // vkAcquireNextImageKHR requires that the semaphore is not in use, so we must wait
+    // for the frame (FrameIndex - BufferCount) to complete.
+    // This also ensures that there are no more than BufferCount frames in flight at any time.
+    if (m_FrameIndex > m_SwapChainDesc.BufferCount)
     {
-        VkFence OldestSubmittedFence = m_ImageAcquiredFences[OldestSubmittedImageFenceInd];
-        if (LogicalDevice.GetFenceStatus(OldestSubmittedFence) == VK_NOT_READY)
-        {
-            VkResult res = LogicalDevice.WaitForFences(1, &OldestSubmittedFence, VK_TRUE, UINT64_MAX);
-            VERIFY_EXPR(res == VK_SUCCESS);
-            (void)res;
-        }
-        LogicalDevice.ResetFence(OldestSubmittedFence);
-        m_ImageAcquiredFenceSubmitted[OldestSubmittedImageFenceInd] = false;
+        m_FrameCompleteFence->Wait(m_FrameIndex - m_SwapChainDesc.BufferCount);
     }
 
-    VkFence     ImageAcquiredFence     = m_ImageAcquiredFences[m_SemaphoreIndex];
     VkSemaphore ImageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex]->Get();
 
-    VkResult res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, ImageAcquiredSemaphore, ImageAcquiredFence, &m_BackBufferIndex);
-
-    m_ImageAcquiredFenceSubmitted[m_SemaphoreIndex] = (res == VK_SUCCESS);
+    VkResult res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, ImageAcquiredSemaphore, VK_NULL_HANDLE, &m_BackBufferIndex);
     if (res == VK_SUCCESS)
     {
         // Next command in the device context must wait for the next image to be acquired.
@@ -696,6 +668,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         // The context can be empty if no render commands were issued by the app
         //VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
         pImmediateCtxVk->AddSignalSemaphore(m_DrawCompleteSemaphores[m_SemaphoreIndex]);
+        pImmediateCtxVk->EnqueueSignal(m_FrameCompleteFence, m_FrameIndex++);
     }
 
     pImmediateCtxVk->Flush();
@@ -772,20 +745,6 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     }
 }
 
-void SwapChainVkImpl::WaitForImageAcquiredFences()
-{
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>()->GetLogicalDevice();
-    for (size_t i = 0; i < m_ImageAcquiredFences.size(); ++i)
-    {
-        if (m_ImageAcquiredFenceSubmitted[i])
-        {
-            VkFence vkFence = m_ImageAcquiredFences[i];
-            if (LogicalDevice.GetFenceStatus(vkFence) == VK_NOT_READY)
-                LogicalDevice.WaitForFences(1, &vkFence, VK_TRUE, UINT64_MAX);
-        }
-    }
-}
-
 void SwapChainVkImpl::ReleaseSwapChainResources(DeviceContextVkImpl* pImmediateCtxVk, bool DestroyVkSwapChain)
 {
     if (m_VkSwapChain == VK_NULL_HANDLE)
@@ -815,15 +774,16 @@ void SwapChainVkImpl::ReleaseSwapChainResources(DeviceContextVkImpl* pImmediateC
     // m_pBackBufferRTV[].
     pDeviceVk->IdleGPU();
 
-    // We need to explicitly wait for all submitted Image Acquired Fences to signal.
     // Just idling the GPU is not enough and results in validation warnings.
     // As a matter of fact, it is only required to check the fence status.
-    WaitForImageAcquiredFences();
+    if (m_FrameIndex > 1)
+    {
+        m_FrameCompleteFence->Wait(m_FrameIndex - 1);
+    }
 
     // All references to the swap chain must be released before it can be destroyed
     m_pBackBufferRTV.clear();
     m_SwapChainImagesInitialized.clear();
-    m_ImageAcquiredFenceSubmitted.clear();
     m_pDepthBufferDSV.Release();
 
     // We must wait until GPU is idled before destroying the fences as they
@@ -831,7 +791,6 @@ void SwapChainVkImpl::ReleaseSwapChainResources(DeviceContextVkImpl* pImmediateC
     // by the device context they are submitted to.
     m_ImageAcquiredSemaphores.clear();
     m_DrawCompleteSemaphores.clear();
-    m_ImageAcquiredFences.clear();
     m_SemaphoreIndex = 0;
 
     if (DestroyVkSwapChain)
