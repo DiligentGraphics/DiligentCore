@@ -260,7 +260,6 @@
 // [V] modf( {float, float2, float3, float4} )
 //   (-) modf( {int, int2, int3, int4, matrix types} )
 // [V] mul - defined as a*b
-// [V] noise( {float, float2, float3, float4} )
 // [V] normalize( {float, float2, float3, float4} )
 // [V] pow( {float, float2, float3, float4} )
 //   (-) pow( {matrix types} )

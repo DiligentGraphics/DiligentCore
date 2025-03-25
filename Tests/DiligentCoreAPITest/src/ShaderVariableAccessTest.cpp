@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1318,6 +1318,8 @@ float4 main() : SV_Target
 
     GraphicsPipeline.NumRenderTargets = 1;
     GraphicsPipeline.RTVFormats[0]    = TEX_FORMAT_RGBA8_UNORM;
+
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     PSOCreateInfo.pVS = pVS;
     PSOCreateInfo.pPS = pPS;

@@ -2697,6 +2697,8 @@ TEST(ArchiveTest, MergeArchives)
         GraphicsPipeline.InputLayout.LayoutElements = Elems;
         GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
 
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
         PipelineStateArchiveInfo ArchiveInfo;
         ArchiveInfo.DeviceFlags = GetDeviceBits();
 

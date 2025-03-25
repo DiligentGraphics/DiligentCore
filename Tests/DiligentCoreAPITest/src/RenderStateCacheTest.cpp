@@ -534,6 +534,8 @@ void CreateGraphicsPSO(IRenderStateCache* pCache, bool PresentInCache, IShader* 
         PsoCI.GraphicsPipeline.RTVFormats[0]    = ColorBufferFormat;
     }
 
+    PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
     PsoCI.PSODesc.ResourceLayout = GetGraphicsPSOLayout();
 
     if (pCache != nullptr)
