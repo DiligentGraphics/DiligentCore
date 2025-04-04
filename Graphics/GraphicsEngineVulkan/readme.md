@@ -1,14 +1,14 @@
 
-# GraphicsEngineVulkan
+# Graphics Engine Vulkan
 
 Implementation of Vulkan backend
 
-# Interoperability with Vulkan
+## Interoperability with Vulkan
 
 Diligent Engine exposes methods to access internal Vulkan objects, is able to create diligent engine buffers
 and textures from existing Vulkan handles.
 
-## Accessing Native Vulkan handles
+### Accessing Native Vulkan handles
 
 Below are some of the methods that provide access to internal Vulkan objects:
 
@@ -44,7 +44,7 @@ Below are some of the methods that provide access to internal Vulkan objects:
 | `IFramebuffer::GetVkFramebuffer`            | returns Vulkan framebuffer object handle                                 |
 
 
-## Synchronization Tools
+### Synchronization Tools
 
 |                              Function          |                              Description         |
 |------------------------------------------------|--------------------------------------------------|
@@ -55,7 +55,7 @@ Below are some of the methods that provide access to internal Vulkan objects:
 | `ICommandQueueVk::EnqueueSignalFence`          | signals the given fence                                          |
 | `ICommandQueueVk::EnqueueSignal`               | signals the given timeline semaphore.                            |
 
-## Creating Diligent Engine Objects from Vk Resources
+### Creating Diligent Engine Objects from Vk Resources
 
 |                              Function              |                              Description                                                    |
 |----------------------------------------------------|---------------------------------------------------------------------------------------------|

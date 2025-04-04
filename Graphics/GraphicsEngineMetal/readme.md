@@ -1,5 +1,5 @@
 
-# GraphicsEngineMetal
+# Graphics Engine Metal
 
 Implementation of Metal backend is available for commercial clients.
 

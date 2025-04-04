@@ -1,6 +1,8 @@
-# Includes
+# Coding Guidelines
 
-## Header files
+## Includes
+
+### Header files
 
 Includes in the source file should go in the following order:
 1. System includes and standard headers
@@ -39,7 +41,7 @@ Example:
 #include "D3D12DynamicHeap.hpp"
 ```
 
-## Source files
+### Source files
 
 Includes in the source file should go in the following order:
 
@@ -90,10 +92,10 @@ Example:
 When there is more than one header in each group, it is recommended to separate the groups with blank lines.
 
 
-# Exceptions
+## Exceptions
 
 
-# Naming conventions
+## Naming conventions
 
 
-# Debug macros
+## Debug macros

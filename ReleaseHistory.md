@@ -1,3 +1,5 @@
+# Release Notes
+
 ## Current progress
 
 * Added `SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL` flag (API256008)

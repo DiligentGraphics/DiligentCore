@@ -1,3 +1,4 @@
+# Debugging WebAssembly
 
 * Read [WASM Debugging with Emscripten and VSCode](https://floooh.github.io/2023/11/11/emscripten-ide.html)
 

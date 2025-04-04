@@ -1,15 +1,15 @@
 
-# GraphicsEngineD3D12
+# Graphics Engine D3D12
 
 Implementation of Direct3D12 backend
 
-# Interoperability with Direct3D12
+## Interoperability with Direct3D12
 
 Diligent Engine exposes methods to access internal Direct3D12 objects, is able to create diligent engine buffers
 and textures from existing Direct3D12 resources, and can be initialized by attaching to existing Direct3D12
 device and provide synchronization tools.
 
-## Accessing Native Direct3D12 Resources
+### Accessing Native Direct3D12 Resources
 
 Below are some of the methods that provide access to internal Direct3D12 objects:
 
@@ -40,7 +40,7 @@ Below are some of the methods that provide access to internal Direct3D12 objects
 | `IShaderBindingTableD3D12::GetD3D12BindingTable`                       | returns the shader binding table structure that can be used with `ID3D12GraphicsCommandList4::DispatchRays` call |
 | `ISwapChainD3D12::GetDXGISwapChain`                                    | returns a pointer to the IDXGISwapChain interface of the internal DXGI object |
 
-## Synchronization Tools
+### Synchronization Tools
 
 |                              Function          |                              Description         |
 |------------------------------------------------|--------------------------------------------------|
@@ -49,7 +49,7 @@ Below are some of the methods that provide access to internal Direct3D12 objects
 | `ICommandQueueD3D12::EnqueueSignal`            | signals the Direct3D12 fence                     |
 | `ICommandQueueD3D12::WaitFence`                | waits for the Direct3D12 fence on the GPU        |
 
-## Creating Diligent Engine Objects from D3D12 Resources
+### Creating Diligent Engine Objects from D3D12 Resources
 
 |                              Function              |                              Description                                                                      |
 |----------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
@@ -59,7 +59,7 @@ Below are some of the methods that provide access to internal Direct3D12 objects
 | `IRenderDeviceD3D12::CreateTLASFromD3DResource`    | creates a Diligent Engine top-level acceleration structure from the native Direct3D12 resource |
 
 
-## Initializing the Engine by Attaching to Existing D3D12 Device
+### Initializing the Engine by Attaching to Existing D3D12 Device
 
 To attach diligent engine to existing D3D12 device, use the following factory function:
 

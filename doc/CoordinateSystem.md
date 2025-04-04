@@ -1,4 +1,3 @@
-
 # Coordinate System Conventions
 
 While there exist multiple ways to express transformations of a 3D scene (row-vectors vs column-vectors, right-handed systems vs left-handed systems, etc.),

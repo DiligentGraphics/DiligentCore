@@ -1,5 +1,6 @@
+# Performance Guide
 
-# Shader Resource Variables
+## Shader Resource Variables
 
 Diligent Engine uses three variable types:
 
@@ -17,7 +18,7 @@ Dynamic variables introduce some overhead every time an SRB is committed (even i
 variables over dynamic ones whenever possible.
 
 
-# Dynamic Buffers
+## Dynamic Buffers
 
 `USAGE_DYNAMIC` buffers introduce some overhead in every draw or dispatch command that uses an SRB with dynamic buffers.
 Note that extra work is performed even if none of the dynamic buffers have been mapped between the commands. If this
@@ -43,7 +44,7 @@ Try to optimize dynamic buffers usage, but don't strive to avoid them as they ar
 to upload frequently changing data to the GPU.
 
 
-# Render pass
+## Render pass
 
 Use `IRenderPass` for better performance on mobile GPUs, including ARM-based laptops and desktops.
 
@@ -56,7 +57,7 @@ Metal backend and Vulkan on top of Metal don't natively support subpasses. To le
 [Raster order groups](https://developer.apple.com/documentation/metal/gpu_features/understanding_gpu_family_4/about_raster_order_groups?language=objc).
 
 
-# Profilers
+## Profilers
 
 * [RenderDoc](https://renderdoc.org/) - Direct3D11/Direct3D12/OpenGL/Vulkan debugging tool
 * [NVidia NSight](https://developer.nvidia.com/nsight-graphics) - Vulkan & Direct3D12 profiling and debugging tool for NVidia GPUs
@@ -68,7 +69,7 @@ Metal backend and Vulkan on top of Metal don't natively support subpasses. To le
 * [Android GPU Inspector](https://gpuinspector.dev/) - debugger & profiler by Google
 
 
-# References
+## References
 
 * [DirectX12 Do's And Don'ts](https://developer.nvidia.com/dx12-dos-and-donts) by NVidia
 * [Vulkan Do's And Don'ts](https://developer.nvidia.com/blog/vulkan-dos-donts/) by NVidia

@@ -1,15 +1,15 @@
 
-# GraphicsEngineD3D11
+# Graphics Engine D3D11
 
 Implementation of Direct3D11 backend
 
-# Interoperability with Direct3D11
+## Interoperability with Direct3D11
 
 Diligent Engine exposes methods to access internal D3D11 objects, is able to create diligent engine buffers
 and textures from existing Direct3D11 buffers and textures, and can be initialized by attaching to existing D3D11
 device and immediate context.
 
-## Accessing Native Direct3D11 objects
+### Accessing Native Direct3D11 objects
 
 Below are some of the methods that provide access to internal D3D11 objects:
 
@@ -38,7 +38,7 @@ Below are some of the methods that provide access to internal D3D11 objects:
 | `ITextureViewD3D11* ISwapChainD3D11::GetDepthBufferDSV`                   | returns a pointer to the native `ITextureViewD3D11` object representing depth-stencil view                      |
 | `IDXGISwapChain* ISwapChainD3D11::GetDXGISwapChain`                       | returns a pointer to the native `IDXGISwapChain` object                                                         |
 
-## Creating Diligent Engine Objects from Direct3D11 Resources
+### Creating Diligent Engine Objects from Direct3D11 Resources
 
 |                              Function                 |                              Description                                        |
 |-------------------------------------------------------|---------------------------------------------------------------------------------|
@@ -48,7 +48,7 @@ Below are some of the methods that provide access to internal D3D11 objects:
 | `IRenderDeviceD3D11::CreateTexture3DFromD3DResource`  | creates a Diligent Engine texture object from the native Direct3D11 3D texture  |
  
 
-## Initializing the Engine by Attaching to Existing Direct3D11 Device and Immediate Context
+### Initializing the Engine by Attaching to Existing Direct3D11 Device and Immediate Context
 
 You can use `IEngineFactoryD3D11::AttachToD3D11Device` to attach the engine to existing Direct3D11 device and immediate context.
 For example, the code snippet below shows how Diligent Engine can be attached to Direct3D11 device returned by Unity:

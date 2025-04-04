@@ -1,5 +1,5 @@
 
-# HLSL2GLSLConverterLib
+# HLSL2GLSL Converter Lib
 
 Implementation of HLSL to GLSL source converter
 
@@ -7,10 +7,10 @@ DirectX and OpenGL use different shading languages, which share a lot in common,
 For cross-platform applications, maintaining two versions of each shader is time-consuming and error-prone. Diligent 
 Engine uses HLSL2GLSL Converter that allows shader authored in HLSL to be converted into GLSL source.
 
-# Details
+## Details
 
 
-## Requirements
+### Requirements
 The converter supports HLSL5.0, all shader types (vertex, geometry, pixel, domain, hull, and compute) as well as most 
 of the language constructs. There are however few special requirements that must be met in order for the HLSL source 
 to be successfully converted to GLSL:
@@ -89,7 +89,7 @@ DSOutput main( HS_CONSTANT_DATA_OUTPUT input,
 * Geometry, Domain and Hull shaders must be defined in separate files
 * GLSL allows samplers to be declared as global variables or function arguments only. It does not allow local variables of sampler type.
 
-## Textures and samplers
+### Textures and samplers
 
 The following rules are used to convert HLSL texture declaration into GLSL sampler:
 
@@ -133,7 +133,7 @@ GLSL image format specification inside the special comment block:
 RWTexture2D<float /* format=r32f */ > Tex2D;
 ```
 
-## Important notes/known issues
+### Important notes/known issues
 
 * GLSL compiler does not handle `float3` (`vec3`) structure members correctly. It is strongly suggested avoid 
 using this type in structure definitions
@@ -195,7 +195,7 @@ all(p < q); // Error
   - `TextureCube.SampleCmpLevelZero()`
   - `TextureCubeArray.SampleCmpLevelZero()`
 
-## Limitations
+### Limitations
 Converter does not perform macros expansion, so usage of preprocessor directives is limited to 
 text block that do not need to be converted. The following are some examples that are not supported.
 
@@ -260,40 +260,11 @@ VSOut VSTes(...)
 }
 ```
 
-# Features
+## Features
 
 Please visit [this page](http://diligentgraphics.com/diligent-engine/shader-converter/supported-features/) 
 for the full list of supported language features.
 
-# References
+## References
 
 [HLSL to GLSL Source Converter](http://diligentgraphics.com/diligent-engine/shader-converter/)
-
-# Release Notes
-
-## 2.1
-
-### New features
-
-* Support for structured buffers
-* HLSL->GLSL conversion is now a two-stage process:
-  - Creating conversion stream
-  - Creating GLSL source from the stream
-* Geometry shader support
-* Tessellation control and tessellation evaluation shader support
-* Support for non-void shader functions
-* Allowing structs as input parameters for shader functions
-
-## 2.0
-
-Reworked the API to follow D3D12 style
-
-## 1.0
-
-Initial release
-
-
-
-**Copyright 2015-2018 Egor Yusov**
-
-[diligentgraphics.com](http://diligentgraphics.com)

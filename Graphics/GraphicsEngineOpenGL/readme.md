@@ -1,15 +1,15 @@
 
-# GraphicsEngineOpenGL
+# Graphics Engine OpenGL
 
 Implementation of OpenGL/GLES backend
 
-# Interoperability with OpenGL/GLES
+## Interoperability with OpenGL/GLES
 
 Diligent Engine exposes methods to access internal OpenGL/GLES objects, is able to create diligent engine buffers
 and textures from existing GL buffer and texture handles, and can be initialized by attaching to existing GL
 context.
 
-## Accessing Native GL objects
+### Accessing Native GL objects
 
 Below are some of the methods that provide access to internal GL object handles:
 
@@ -23,7 +23,7 @@ Below are some of the methods that provide access to internal GL object handles:
 | `ISwapChainGL::GetDefaultFBO`              | returns default framebuffer handle               |
 
 
-## Creating Diligent Engine Objects from OpenGL Handles
+### Creating Diligent Engine Objects from OpenGL Handles
 
 * `void IRenderDeviceGL::CreateTextureFromGLHandle(Uint32 GLHandle, Uint32 GLBindTarget, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)` -
     creates a diligent engine texture from OpenGL handle. The method takes OpenGL handle `GLHandle`, texture bind target `GLBindTarget`
@@ -39,7 +39,7 @@ Below are some of the methods that provide access to internal GL object handles:
     set the buffer size, but the rest of the fields need to be set by the client. Note that diligent engine buffer object does not
     take ownership of the GL resource, and the application must not destroy it while it is in use by the engine.
 
-## Initializing the Engine by Attaching to Existing GL Context
+### Initializing the Engine by Attaching to Existing GL Context
 
 The code snippet below shows how diligent engine can be attached to existing GL context that is active in the current thread.
 
