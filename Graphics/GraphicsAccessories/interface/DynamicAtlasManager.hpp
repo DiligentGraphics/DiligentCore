@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,15 +41,30 @@ namespace Diligent
 {
 
 /// Dynamic 2D atlas manager
+
+/// This class manages a 2D atlas of regions. It allows allocating and freeing
+/// rectangular regions of the atlas. The regions are represented by the
+/// Region structure, which contains the x and y coordinates of the top-left
+/// corner, as well as the width and height of the region.
+///
+/// \warning The class is not thread-safe. All operations on the atlas must be
+///          must be protected by a mutex or other synchronization mechanism.
 class DynamicAtlasManager
 {
 public:
+    /// Structure representing a rectangular region in the atlas.
     struct Region
     {
+        /// x coordinate of the top-left corner of the region
         Uint32 x = 0;
+
+        /// y coordinate of the top-left corner of the region
         Uint32 y = 0;
 
-        Uint32 width  = 0;
+        /// width of the region
+        Uint32 width = 0;
+
+        /// height of the region
         Uint32 height = 0;
 
         Region() = default;
@@ -70,6 +85,7 @@ public:
         // clang-format on
         {}
 
+        /// Checks if the region is empty (width or height is zero).
         bool IsEmpty() const
         {
             return width == 0 || height == 0;
@@ -108,19 +124,43 @@ public:
     DynamicAtlasManager& operator = (      DynamicAtlasManager&&) = delete;
     // clang-format on
 
-    Region Allocate(Uint32 Width, Uint32 Height);
-    void   Free(Region&& R);
 
+    /// Allocates a rectangular region in the atlas.
+
+    /// \param Width  - Width of the region to allocate.
+    /// \param Height - Height of the region to allocate.
+    /// \return         The allocated region.
+    ///
+    /// If the requested region cannot be allocated, an empty region is returned.
+    Region Allocate(Uint32 Width, Uint32 Height);
+
+
+    /// Frees a previously allocated region in the atlas.
+
+    /// \param R - The region to free.
+    void Free(Region&& R);
+
+
+    /// Returns the number of free regions in the atlas.
     Uint32 GetFreeRegionCount() const
     {
         VERIFY_EXPR(m_FreeRegionsByWidth.size() == m_FreeRegionsByHeight.size());
         return static_cast<Uint32>(m_FreeRegionsByWidth.size());
     }
 
+    /// Returns the atlas width.
     Uint32 GetWidth() const { return m_Width; }
+
+    /// Returns the atlas height.
     Uint32 GetHeight() const { return m_Height; }
+
+    /// Returns the total free area of the atlas.
+
+    /// The total free area is the sum of the areas of all free regions in the atlas,
+    /// and thus may be fragmented.
     Uint64 GetTotalFreeArea() const { return m_TotalFreeArea; }
 
+    /// Checks if the atlas is empty, i.e. if there are no allocated regions.
     bool IsEmpty() const
     {
         VERIFY_EXPR(m_AllocatedRegions.empty() && (m_TotalFreeArea == Uint64{m_Width} * Uint64{m_Height}) ||

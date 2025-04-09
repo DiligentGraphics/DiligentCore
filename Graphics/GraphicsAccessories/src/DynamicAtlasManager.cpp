@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,7 +46,7 @@ void DynamicAtlasManager::Node::Validate() const
         Uint32 Area = 0;
         for (Uint32 i = 0; i < NumChildren; ++i)
         {
-            const auto& R0 = Child(i).R;
+            const Region& R0 = Child(i).R;
 
             VERIFY(!R0.IsEmpty(), "Region must not be empty");
             VERIFY(R0.x >= R.x && R0.x + R0.width <= R.x + R.width && R0.y >= R.y && R0.y + R0.height <= R.y + R.height,
@@ -57,7 +57,7 @@ void DynamicAtlasManager::Node::Validate() const
 
             for (Uint32 j = i + 1; j < NumChildren; ++j)
             {
-                const auto& R1 = Child(j).R;
+                const Region& R1 = Child(j).R;
                 if (CheckBox2DBox2DOverlap<false>(uint2{R0.x, R0.y}, uint2{R0.x + R0.width, R0.y + R0.height},
                                                   uint2{R1.x, R1.y}, uint2{R1.x + R1.width, R1.y + R1.height}))
                 {
@@ -79,7 +79,7 @@ void DynamicAtlasManager::Node::Split(const std::initializer_list<Region>& Regio
 
     Children.reset(new Node[Regions.size()]);
     NumChildren = 0;
-    for (const auto& ChildR : Regions)
+    for (const Region& ChildR : Regions)
     {
         Children[NumChildren].Parent = this;
         Children[NumChildren].R      = ChildR;
@@ -194,8 +194,8 @@ DynamicAtlasManager::Region DynamicAtlasManager::Allocate(Uint32 Width, Uint32 H
         ++it_h;
     VERIFY_EXPR(it_h == m_FreeRegionsByHeight.end() || (it_h->first.width >= Width && it_h->first.height >= Height));
 
-    const auto AreaW = it_w != m_FreeRegionsByWidth.end() ? it_w->first.width * it_w->first.height : 0;
-    const auto AreaH = it_h != m_FreeRegionsByHeight.end() ? it_h->first.width * it_h->first.height : 0;
+    const Uint32 AreaW = it_w != m_FreeRegionsByWidth.end() ? it_w->first.width * it_w->first.height : 0;
+    const Uint32 AreaH = it_h != m_FreeRegionsByHeight.end() ? it_h->first.width * it_h->first.height : 0;
     VERIFY_EXPR(AreaW == 0 || AreaW >= Width * Height);
     VERIFY_EXPR(AreaH == 0 || AreaH >= Width * Height);
 
@@ -220,7 +220,7 @@ DynamicAtlasManager::Region DynamicAtlasManager::Allocate(Uint32 Width, Uint32 H
 
     UnregisterNode(*pSrcNode);
 
-    auto R = pSrcNode->R;
+    Region R = pSrcNode->R;
     if (R.width > Width && R.height > Height)
     {
         if (R.width > R.height)
@@ -341,7 +341,7 @@ void DynamicAtlasManager::Free(Region&& R)
     }
 
     VERIFY_EXPR(node_it->first == R && node_it->second->R == R);
-    auto* N = node_it->second;
+    Node* N = node_it->second;
     VERIFY_EXPR(N->IsAllocated && !N->HasChildren());
     UnregisterNode(*N);
     N->IsAllocated = false;
