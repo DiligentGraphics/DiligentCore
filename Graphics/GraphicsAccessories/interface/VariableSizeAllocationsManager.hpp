@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,6 @@
  */
 
 // Helper class that handles free memory block management to accommodate variable-size allocation requests
-// See http://diligentgraphics.com/diligent-engine/architecture/d3d12/variable-size-memory-allocations-manager/
 
 #pragma once
 
@@ -40,6 +39,7 @@
 
 namespace Diligent
 {
+
 // The class handles free memory block management to accommodate variable-size allocation requests.
 // It keeps track of free blocks only and does not record allocation sizes. The class uses two ordered maps
 // to facilitate operations. The first map keeps blocks sorted by their offsets. The second multimap keeps blocks
@@ -211,7 +211,7 @@ public:
         if (m_FreeSize < Size)
             return Allocation::InvalidAllocation();
 
-        auto AlignmentReserve = (Alignment > m_CurrAlignment) ? Alignment - m_CurrAlignment : 0;
+        OffsetType AlignmentReserve = (Alignment > m_CurrAlignment) ? Alignment - m_CurrAlignment : 0;
         // Get the first block that is large enough to encompass Size + AlignmentReserve bytes
         // lower_bound() returns an iterator pointing to the first element that
         // is not less (i.e. >= ) than key
@@ -230,13 +230,13 @@ public:
         //        |                  |
         //      Offset              NewOffset
         //
-        auto Offset = SmallestBlockIt->first;
+        OffsetType Offset = SmallestBlockIt->first;
         VERIFY_EXPR(Offset % m_CurrAlignment == 0);
-        auto AlignedOffset = AlignUp(Offset, Alignment);
-        auto AdjustedSize  = Size + (AlignedOffset - Offset);
+        OffsetType AlignedOffset = AlignUp(Offset, Alignment);
+        OffsetType AdjustedSize  = Size + (AlignedOffset - Offset);
         VERIFY_EXPR(AdjustedSize <= Size + AlignmentReserve);
-        auto NewOffset = Offset + AdjustedSize;
-        auto NewSize   = SmallestBlockIt->second.Size - AdjustedSize;
+        OffsetType NewOffset = Offset + AdjustedSize;
+        OffsetType NewSize   = SmallestBlockIt->second.Size - AdjustedSize;
         VERIFY_EXPR(SmallestBlockItIt == SmallestBlockIt->second.OrderBySizeIt);
         m_FreeBlocksBySize.erase(SmallestBlockItIt);
         m_FreeBlocksByOffset.erase(SmallestBlockIt);
@@ -401,8 +401,8 @@ public:
             auto LastBlockIt = m_FreeBlocksByOffset.end();
             --LastBlockIt;
 
-            const auto LastBlockOffset = LastBlockIt->first;
-            const auto LastBlockSize   = LastBlockIt->second.Size;
+            const OffsetType LastBlockOffset = LastBlockIt->first;
+            const OffsetType LastBlockSize   = LastBlockIt->second.Size;
             if (LastBlockOffset + LastBlockSize == m_MaxSize)
             {
                 // Extend the last block

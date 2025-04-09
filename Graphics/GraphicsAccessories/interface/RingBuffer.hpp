@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -123,7 +123,7 @@ public:
             return InvalidOffset;
         }
 
-        auto AlignedHead = AlignUp(m_Head, Alignment);
+        OffsetType AlignedHead = AlignUp(m_Head, Alignment);
         if (m_Head >= m_Tail)
         {
             //                                         AlignedHead
@@ -134,8 +134,8 @@ public:
             //
             if (AlignedHead + Size <= m_MaxSize)
             {
-                auto Offset       = AlignedHead;
-                auto AdjustedSize = Size + (AlignedHead - m_Head);
+                OffsetType Offset       = AlignedHead;
+                OffsetType AdjustedSize = Size + (AlignedHead - m_Head);
                 m_Head += AdjustedSize;
                 m_UsedSize += AdjustedSize;
                 m_CurrFrameSize += AdjustedSize;
@@ -164,8 +164,8 @@ public:
             //       |  |              |
             //  [xxxx...               xxxxxxxxxxxxxxxxxxxxxxxxxx]
             //
-            auto Offset       = AlignedHead;
-            auto AdjustedSize = Size + (AlignedHead - m_Head);
+            OffsetType Offset       = AlignedHead;
+            OffsetType AdjustedSize = Size + (AlignedHead - m_Head);
             m_Head += AdjustedSize;
             m_UsedSize += AdjustedSize;
             m_CurrFrameSize += AdjustedSize;
@@ -199,7 +199,7 @@ public:
         // We can release all heads whose associated fence value is less than or equal to CompletedFenceValue
         while (!m_CompletedFrameHeads.empty() && m_CompletedFrameHeads.front().FenceValue <= CompletedFenceValue)
         {
-            const auto& OldestFrameHead = m_CompletedFrameHeads.front();
+            const FrameHeadAttribs& OldestFrameHead = m_CompletedFrameHeads.front();
             VERIFY_EXPR(OldestFrameHead.Size <= m_UsedSize);
             m_UsedSize -= OldestFrameHead.Size;
             m_Tail = OldestFrameHead.Offset;
@@ -210,7 +210,7 @@ public:
         {
 #ifdef DILIGENT_DEBUG
             VERIFY(m_CompletedFrameHeads.empty(), "Zero-size heads are not added to the list, and since the buffer is empty, there must be no heads in the list");
-            for (const auto& head : m_CompletedFrameHeads)
+            for (const FrameHeadAttribs& head : m_CompletedFrameHeads)
                 VERIFY(head.Size == 0, "Non zero-size head found");
 #endif
             m_CompletedFrameHeads.clear();

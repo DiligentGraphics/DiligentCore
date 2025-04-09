@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -218,7 +218,7 @@ private:
 /// * When command list is submitted to the command queue, all stale objects associated with this
 ///   and earlier command lists are moved to the release queue, along with the fence value associated with
 ///   the command list
-/// * Resources are removed and actually destroyed from the queue when fence is signaled and the queue is Purged
+/// * Resources are removed and actually destroyed from the queue when fence is signaled and the queue is purged
 ///
 /// \tparam ResourceWrapperType -  Type of the resource wrapper used by the release queue.
 template <typename ResourceWrapperType>
@@ -239,6 +239,7 @@ public:
     }
 
     /// Creates a resource wrapper for the specific resource type
+
     /// \param [in] Resource      - Resource to be released
     /// \param [in] NumReferences - Number of references to the resource
     template <typename ResourceType, typename = typename std::enable_if<std::is_object<ResourceType>::value>::type>
@@ -248,6 +249,7 @@ public:
     }
 
     /// Moves a resource to the stale resources queue
+
     /// \param [in] Resource              - Resource to be released
     /// \param [in] NextCommandListNumber - Number of the command list that will be submitted to the queue next
     template <typename ResourceType, typename = typename std::enable_if<std::is_object<ResourceType>::value>::type>
@@ -257,6 +259,7 @@ public:
     }
 
     /// Moves a resource wrapper to the stale resources queue
+
     /// \param [in] Wrapper               - Resource wrapper containing the resource to be released
     /// \param [in] NextCommandListNumber - Number of the command list that will be submitted to the queue next
     void SafeReleaseResource(ResourceWrapperType&& Wrapper, Uint64 NextCommandListNumber)
@@ -266,6 +269,7 @@ public:
     }
 
     /// Moves a copy of the resource wrapper to the stale resources queue
+
     /// \param [in] Wrapper               - Resource wrapper containing the resource to be released
     /// \param [in] NextCommandListNumber - Number of the command list that will be submitted to the queue next
     void SafeReleaseResource(const ResourceWrapperType& Wrapper, Uint64 NextCommandListNumber)
@@ -275,6 +279,7 @@ public:
     }
 
     /// Adds a resource directly to the release queue
+
     /// \param [in] Resource    - Resource to be released.
     /// \param [in] FenceValue  - Fence value indicating when the resource was used last time.
     template <typename ResourceType, typename = typename std::enable_if<std::is_object<ResourceType>::value>::type>
@@ -284,6 +289,7 @@ public:
     }
 
     /// Adds a resource wrapper directly to the release queue
+
     /// \param [in] Wrapper     - Resource wrapper containing the resource to be released.
     /// \param [in] FenceValue  - Fence value indicating when the resource was used last time.
     void DiscardResource(ResourceWrapperType&& Wrapper, Uint64 FenceValue)
@@ -293,6 +299,7 @@ public:
     }
 
     /// Adds a copy of the resource wrapper directly to the release queue
+
     /// \param [in] Wrapper     - Resource wrapper containing the resource to be released.
     /// \param [in] FenceValue  - Fence value indicating when the resource was used last time.
     void DiscardResource(const ResourceWrapperType& Wrapper, Uint64 FenceValue)
@@ -302,6 +309,7 @@ public:
     }
 
     /// Adds multiple resources directly to the release queue
+
     /// \param [in] FenceValue  - Fence value indicating when the resource was used last time.
     /// \param [in] Iterator    - Iterator that returns resources to be released.
     template <typename ResourceType, typename IteratorType>
@@ -316,6 +324,7 @@ public:
     }
 
     /// Moves stale objects to the release queue
+
     /// \param [in] SubmittedCmdBuffNumber - number of the last submitted command list.
     ///                                      All resources in the stale object list whose command list number is
     ///                                      less than or equal to this value are moved to the release queue.
@@ -344,6 +353,7 @@ public:
 
     /// Removes all objects from the release queue whose fence value is
     /// less than or equal to CompletedFenceValue
+
     /// \param [in] CompletedFenceValue  -  Value of the fence that has been completed by the GPU
     void Purge(Uint64 CompletedFenceValue)
     {

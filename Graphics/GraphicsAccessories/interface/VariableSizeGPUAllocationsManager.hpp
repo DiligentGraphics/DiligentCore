@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,6 @@
 
 
 // An GPU-tailored extension of the basic variable-size allocations manager
-// See http://diligentgraphics.com/diligent-engine/architecture/d3d12/variable-size-memory-allocations-manager/
 
 #pragma once
 
@@ -36,6 +35,7 @@
 
 namespace Diligent
 {
+
 // Class extends basic variable-size memory block allocator by deferring deallocation
 // of freed blocks until the corresponding frame is completed
 class VariableSizeGPUAllocationsManager : public VariableSizeAllocationsManager
@@ -101,7 +101,7 @@ public:
         // Free all allocations from the beginning of the queue that belong to completed command lists
         while (!m_StaleAllocations.empty() && m_StaleAllocations.front().FenceValue <= LastCompletedFenceValue)
         {
-            auto& OldestAllocation = m_StaleAllocations.front();
+            StaleAllocationAttribs& OldestAllocation = m_StaleAllocations.front();
             VariableSizeAllocationsManager::Free(OldestAllocation.Offset, OldestAllocation.Size);
             m_StaleAllocationsSize -= OldestAllocation.Size;
             m_StaleAllocations.pop_front();
