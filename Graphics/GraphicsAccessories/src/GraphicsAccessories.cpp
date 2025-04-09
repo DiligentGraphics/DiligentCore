@@ -1635,7 +1635,7 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
         if (!Str.empty())
             Str += DelimiterString;
 
-        auto Flag = ExtractLSB(Flags);
+        PIPELINE_RESOURCE_FLAGS Flag = ExtractLSB(Flags);
 
         static_assert(PIPELINE_RESOURCE_FLAG_LAST == (1u << 4), "Please update the switch below to handle the new pipeline resource flag.");
         switch (Flag)

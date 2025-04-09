@@ -177,24 +177,30 @@ const Char* GetValueTypeString(VALUE_TYPE Val);
 ///         format attributes.
 const TextureFormatAttribs& GetTextureFormatAttribs(TEXTURE_FORMAT Format);
 
-/// Converts value type to component type, for example:
-///  * VT_UINT8, true,  false -> COMPONENT_TYPE_UNORM
-///  * VT_UINT8, false, false -> COMPONENT_TYPE_UINT
-///  * VT_UINT8, true,  true  -> COMPONENT_TYPE_UNORM_SRGB
+/// Converts value type to component type.
+
+/// For example:
+///  * `VT_UINT8, true,  false -> COMPONENT_TYPE_UNORM`
+///  * `VT_UINT8, false, false -> COMPONENT_TYPE_UINT`
+///  * `VT_UINT8, true,  true  -> COMPONENT_TYPE_UNORM_SRGB`
 ///
 /// \note Use GetValueSize() to get the component size.
 COMPONENT_TYPE ValueTypeToComponentType(VALUE_TYPE ValType, bool IsNormalized, bool IsSRGB);
 
-/// Converts component type and size to value type, for example:
-///  * COMPONENT_TYPE_UNORM, 1 -> VT_UINT8
-///  * COMPONENT_TYPE_FLOAT, 4 -> VT_FLOAT32
+/// Converts component type and size to value type
+
+/// For example:
+///  * `COMPONENT_TYPE_UNORM, 1 -> VT_UINT8`
+///  * `COMPONENT_TYPE_FLOAT, 4 -> VT_FLOAT32`
 VALUE_TYPE ComponentTypeToValueType(COMPONENT_TYPE CompType, Uint32 Size);
 
-/// Returns texture format for the specified component type, size and number of components, for example:
-/// * COMPONENT_TYPE_UNORM, 1, 4 -> TEX_FORMAT_RGBA8_UNORM
-/// * COMPONENT_TYPE_FLOAT, 4, 1 -> TEX_FORMAT_R32_FLOAT
+/// Returns texture format for the specified component type, size and number of components
+
+/// For example:
+///  * `COMPONENT_TYPE_UNORM, 1, 4 -> TEX_FORMAT_RGBA8_UNORM`
+///  * `COMPONENT_TYPE_FLOAT, 4, 1 -> TEX_FORMAT_R32_FLOAT`
 ///
-/// If the format is not found, TEXTURE_FORMAT_UNKNOWN is returned.
+/// If the format is not found, `TEXTURE_FORMAT_UNKNOWN` is returned.
 TEXTURE_FORMAT TextureComponentAttribsToTextureFormat(COMPONENT_TYPE CompType, Uint32 ComponentSize, Uint32 NumComponents);
 
 
@@ -202,15 +208,15 @@ TEXTURE_FORMAT TextureComponentAttribsToTextureFormat(COMPONENT_TYPE CompType, U
 
 /// The default view is defined as follows:
 /// * For a fully qualified texture format, the SRV/RTV/UAV view format is the same as texture format;
-///   DSV format, if available, is adjusted accordingly (R32_FLOAT -> D32_FLOAT)
-/// * For 32-bit typeless formats, default view is XXXX32_FLOAT (where XXXX are the actual format components)\n
-/// * For 16-bit typeless formats, default view is XXXX16_FLOAT (where XXXX are the actual format components)\n
-/// ** R16_TYPELESS is special. If BIND_DEPTH_STENCIL flag is set, it is translated to R16_UNORM/D16_UNORM;
-///    otherwise it is translated to R16_FLOAT.
-/// * For 8-bit typeless formats, default view is XXXX8_UNORM (where XXXX are the actual format components)\n
-/// * sRGB is always chosen if it is available (RGBA8_UNORM_SRGB, TEX_FORMAT_BC1_UNORM_SRGB, etc.)
-/// * For combined depth-stencil formats, SRV format references depth component (R24_UNORM_X8_TYPELESS for D24S8 formats, and
-///   R32_FLOAT_X8X24_TYPELESS for D32S8X24 formats)
+///   DSV format, if available, is adjusted accordingly (`R32_FLOAT -> D32_FLOAT`)
+/// * For 32-bit typeless formats, default view is `XXXX32_FLOAT` (where `XXXX` are the actual format components)\n
+/// * For 16-bit typeless formats, default view is `XXXX16_FLOAT` (where `XXXX` are the actual format components)\n
+/// ** `R16_TYPELESS` is special. If `BIND_DEPTH_STENCIL` flag is set, it is translated to `R16_UNORM`/`D16_UNORM`;
+///    otherwise it is translated to `R16_FLOAT`.
+/// * For 8-bit typeless formats, default view is `XXXX8_UNORM` (where `XXXX` are the actual format components)\n
+/// * sRGB is always chosen if it is available (`RGBA8_UNORM_SRGB`, `TEX_FORMAT_BC1_UNORM_SRGB`, etc.)
+/// * For combined depth-stencil formats, SRV format references depth component (`R24_UNORM_X8_TYPELESS` for `D24S8` formats, and
+///   `R32_FLOAT_X8X24_TYPELESS` for `D32S8X24` formats)
 /// * For compressed formats, only SRV format is defined
 ///
 /// \param [in] Format - texture format, for which the view format is requested
@@ -267,7 +273,7 @@ String GetShaderStagesString(SHADER_TYPE ShaderStages);
 const Char* GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarType, bool bGetFullName = false);
 
 /// Returns the literal name of a shader resource type. For instance,
-/// for SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, if bGetFullName == true, "SHADER_RESOURCE_TYPE_CONSTANT_BUFFER" will be returned;
+/// for `SHADER_RESOURCE_TYPE_CONSTANT_BUFFER`, if `bGetFullName == true`, `"SHADER_RESOURCE_TYPE_CONSTANT_BUFFER"` will be returned;
 /// if bGetFullName == false, "constant buffer" will be returned
 
 /// \param [in] ResourceType - Resource type.
@@ -437,17 +443,41 @@ inline String GetObjectDescString(const BufferDesc& BuffDesc)
     return Str;
 }
 
+/// Returns the string representation of the QUERY_TYPE enum value (e.g. "QUERY_TYPE_OCCLUSION")
 const char* GetQueryTypeString(QUERY_TYPE QueryType);
 
+/// Returns the string representation of the SURFACE_TRANSFORM enum value (e.g. "SURFACE_TRANSFORM_ROTATE_90")
 const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform);
 
+/// Returns the string representation of the PIPELINE_TYPE enum value (e.g. "PIPELINE_TYPE_COMPUTE")
 const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType);
 
+/// Returns the string representation of the SHADER_COMPILER enum value (e.g. "SHADER_COMPILER_GLSLANG")
 const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler);
 
+/// Returns the string representation of the ARCHIVE_DEVICE_DATA_FLAGS enum value
+
+/// \param [in] Flag - Archive device data flag.
+/// \param [in] bGetFullName - Whether to return full name of the enum value
+/// \return Literal name of the archive device data flag.
+///
+/// For example, if bGetFullName == true, "ARCHIVE_DEVICE_DATA_FLAG_D3D11" will be returned;
+/// if bGetFullName == false, "D3D11" will be returned.
+///
+/// \note A single flag must be passed to this function.
 const char* GetArchiveDeviceDataFlagString(ARCHIVE_DEVICE_DATA_FLAGS Flag, bool bGetFullName = false);
 
+
+/// Returns the string representation of the DEVICE_FEATURE_STATE enum value
+
+/// \param [in] State - Device feature state.
+/// \param [in] bGetFullName - Whether to return full name of the enum value
+/// \return Literal name of the device feature state.
+///
+/// For example, if bGetFullName == true, "DEVICE_FEATURE_STATE_ENABLED" will be returned;
+/// if bGetFullName == false, "Enabled" will be returned.
 const char* GetDeviceFeatureStateString(DEVICE_FEATURE_STATE State, bool bGetFullName = false);
+
 
 /// Returns the render device type string (e.g. "RENDER_DEVICE_TYPE_D3D11" when GetEnumString is true,
 /// or "Direct3D11" when GetEnumString is false).
@@ -471,24 +501,34 @@ String GetShaderCodeBufferDescString(const ShaderCodeBufferDesc& Desc, size_t Gl
 /// Returns the string containing the shader code variable description.
 String GetShaderCodeVariableDescString(const ShaderCodeVariableDesc& Desc, size_t GlobalIdent = 0, size_t MemberIdent = 2);
 
+/// Returns the string representation of the input element frequency (e.g. "undefined")
 const char* GetInputElementFrequencyString(INPUT_ELEMENT_FREQUENCY Frequency);
 
 /// Returns the string containing the layout element description.
 String GetLayoutElementString(const LayoutElement& Element);
 
+/// Returns valid pipeline resource flags for the specified shader resource type
 PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE ResourceType);
 
+/// Converts shader variable flags to corresponding pipeline resource flags
 PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIABLE_FLAGS Flags);
 
+/// Returns bind flags for the specified swap chain usage flags
 BIND_FLAGS SwapChainUsageFlagsToBindFlags(SWAP_CHAIN_USAGE_FLAGS SwapChainUsage);
 
 ARCHIVE_DEVICE_DATA_FLAGS RenderDeviceTypeToArchiveDataFlag(RENDER_DEVICE_TYPE DevType);
 RENDER_DEVICE_TYPE        ArchiveDataFlagToRenderDeviceType(ARCHIVE_DEVICE_DATA_FLAGS Flag);
 
+/// Returns the number of mip levels for the specified texture dimensions
 Uint32 ComputeMipLevelsCount(Uint32 Width);
+
+/// Returns the number of mip levels for the specified texture dimensions
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height);
+
+/// Returns the number of mip levels for the specified texture dimensions
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth);
 
+/// Checks if the specified filter type is a point filter
 inline bool IsComparisonFilter(FILTER_TYPE FilterType)
 {
     return FilterType == FILTER_TYPE_COMPARISON_POINT ||
@@ -496,6 +536,7 @@ inline bool IsComparisonFilter(FILTER_TYPE FilterType)
         FilterType == FILTER_TYPE_COMPARISON_ANISOTROPIC;
 }
 
+/// Checks if the specified filter type is an anisotropic filter
 inline bool IsAnisotropicFilter(FILTER_TYPE FilterType)
 {
     return FilterType == FILTER_TYPE_ANISOTROPIC ||
@@ -531,8 +572,9 @@ struct MipLevelProperties
     ///         pixel block size), the storage height will be 12.
     Uint32 StorageHeight = 0;
 
-    /// Mip level depth. Note that logical and storage depths
-    /// are always the same.
+    /// Mip level depth.
+
+    /// \note that logical and storage depths are always the same.
     Uint32 Depth = 1;
 
     /// Row size in bytes.
@@ -548,6 +590,7 @@ struct MipLevelProperties
     Uint64 MipSize = 0;
 };
 
+/// Returns mip level properties for the specified texture description and mip level
 MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel);
 
 ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId);
@@ -582,7 +625,7 @@ inline Int32 ExtractFirstShaderStageIndex(SHADER_TYPE& Stages)
 
     VERIFY(Stages > SHADER_TYPE_UNKNOWN && Stages < SHADER_TYPE_LAST * 2, "Value ", Uint32{Stages}, " is not a valid SHADER_TYPE enum value");
 
-    const auto StageIndex = PlatformMisc::GetLSB(Stages);
+    const Uint32 StageIndex = PlatformMisc::GetLSB(Stages);
     Stages &= ~static_cast<SHADER_TYPE>(1u << StageIndex);
     return StageIndex;
 }
@@ -656,26 +699,27 @@ PIPELINE_TYPE PipelineTypeFromShaderStages(SHADER_TYPE ShaderStages);
 ///
 /// \return     Offset from the beginning of the buffer to the given location.
 ///
-/// \remarks    Alignment is applied to the subresource sizes, such that the beginning of data
-///             of every subresource starts at an offset aligned by 'Alignment'. The alignment
-///             is not applied to the row/depth strides and texels in all subresources are assumed
-///             to be tightly packed.
+/// \remarks
+///     Alignment is applied to the subresource sizes, such that the beginning of data
+///     of every subresource starts at an offset aligned by 'Alignment'. The alignment
+///     is not applied to the row/depth strides and texels in all subresources are assumed
+///     to be tightly packed.
 ///
-///             Subres 0
-///              stride
-///       |<-------------->|
-///       |________________|       Subres 1
-///       |                |        stride
-///       |                |     |<------->|
-///       |                |     |_________|
-///       |    Subres 0    |     |         |
-///       |                |     | Subres 1|
-///       |                |     |         |                     _
-///       |________________|     |_________|         ...        |_|
-///       A                      A                              A
-///       |                      |                              |
-///     Buffer start            Subres 1 offset,               Subres N offset,
-///                          aligned by 'Alignment'         aligned by 'Alignment'
+///                 Subres 0
+///                  stride
+///           |<-------------->|
+///           |________________|       Subres 1
+///           |                |        stride
+///           |                |     |<------->|
+///           |                |     |_________|
+///           |    Subres 0    |     |         |
+///           |                |     | Subres 1|
+///           |                |     |         |                     _
+///           |________________|     |_________|         ...        |_|
+///           A                      A                              A
+///           |                      |                              |
+///         Buffer start            Subres 1 offset,               Subres N offset,
+///                              aligned by 'Alignment'         aligned by 'Alignment'
 ///
 Uint64 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
                                        Uint32             ArraySlice,
@@ -773,46 +817,62 @@ String GetShaderResourcePrintName(const DescType& ResDesc, Uint32 ArrayIndex = 0
     return GetShaderResourcePrintName(ResDesc.Name, ResDesc.ArraySize, ArrayIndex);
 }
 
-/// Converts UNORM format to a corresponding SRGB format, for example:
-///   RGBA8_UNORM -> RGBA8_UNORM_SRGB
-///   BC3_UNORM -> BC3_UNORM_SRGB
+/// Converts UNORM format to a corresponding SRGB format
+
+/// For example:
+///   * `RGBA8_UNORM -> RGBA8_UNORM_SRGB`
+///   * `BC3_UNORM   -> BC3_UNORM_SRGB`
 TEXTURE_FORMAT UnormFormatToSRGB(TEXTURE_FORMAT Fmt);
 
-/// Converts SRGB format to a corresponding UNORM format, for example:
-///   RGBA8_UNORM_SRGB -> RGBA8_UNORM
-///   BC3_UNORM_SRGB -> BC3_UNORM
+/// Converts SRGB format to a corresponding UNORM format
+
+/// For example:
+///   * `RGBA8_UNORM_SRGB -> RGBA8_UNORM`
+///   * `BC3_UNORM_SRGB   -> BC3_UNORM`
 TEXTURE_FORMAT SRGBFormatToUnorm(TEXTURE_FORMAT Fmt);
 
-/// Converts block-compressed format to a corresponding uncompressed format, for example:
-///   BC1_UNORM -> RGBA8_UNORM
-///   BC4_UNORM -> R8_UNORM
+/// Converts block-compressed format to a corresponding uncompressed format
+
+/// For example:
+///   * `BC1_UNORM -> RGBA8_UNORM`
+///   * `BC4_UNORM -> R8_UNORM`
 TEXTURE_FORMAT BCFormatToUncompressed(TEXTURE_FORMAT Fmt);
 
-/// Converts typeless format to a corresponding UNORM format, for example:
-///   RGBA8_TYPELESS -> RGBA8_UNORM
-///   BC1_TYPELESS   -> BC1_UNORM
+/// Converts typeless format to a corresponding UNORM format
+
+/// For example:
+///   * `RGBA8_TYPELESS -> RGBA8_UNORM`
+///   * `BC1_TYPELESS   -> BC1_UNORM`
+///
 /// If the format is not typeless, or cannot be converted to UNORM, it is returned as is.
 TEXTURE_FORMAT TypelessFormatToUnorm(TEXTURE_FORMAT Fmt);
 
-/// Converts typeless format to a corresponding SRGB format, for example:
-///   RGBA8_TYPELESS -> RGBA8_UNORM_SRGB
-///   BC1_TYPELESS   -> BC1_UNORM_SRGB
+/// Converts typeless format to a corresponding SRGB format
+
+/// For example:
+///   * `RGBA8_TYPELESS -> RGBA8_UNORM_SRGB`
+///   * `BC1_TYPELESS   -> BC1_UNORM_SRGB`
+///
 /// If the format is not typeless, or cannot be converted to SRGB, it is returned as is.
 TEXTURE_FORMAT TypelessFormatToSRGB(TEXTURE_FORMAT Fmt);
 
-
+/// Checks if the format is an SRGB format
 bool IsSRGBFormat(TEXTURE_FORMAT Fmt);
 
 String GetPipelineShadingRateFlagsString(PIPELINE_SHADING_RATE_FLAGS Flags);
 
-/// Converts texture component mapping to a string, for example:
-/// {R, G, B, A} -> "rgba"
-/// {R, G, B, 1} -> "rgb1"
+/// Converts texture component mapping to a string
+
+/// For example:
+///  * `{R, G, B, A} -> "rgba"`
+///  * `{R, G, B, 1} -> "rgb1"`
 String GetTextureComponentMappingString(const TextureComponentMapping& Mapping);
 
-/// Converts texture component mapping string to the mapping, for example:
-/// "rgba" -> {R, G, B, A}
-/// "rgb1" -> {R, G, B, 1}
+/// Converts texture component mapping string to the mapping
+
+/// For example:
+///  * `"rgba" -> {R, G, B, A}`
+///  * `"rgb1" -> {R, G, B, 1}`
 bool TextureComponentMappingFromString(const String& MappingStr, TextureComponentMapping& Mapping);
 
 
@@ -836,7 +896,7 @@ inline uint3 GetNumSparseTilesInMipLevel(const TextureDesc& Desc,
                                          Uint32             MipLevel)
 {
     // Texture dimensions may not be multiples of the tile size
-    const auto MipProps = GetMipLevelProperties(Desc, MipLevel);
+    const MipLevelProperties MipProps = GetMipLevelProperties(Desc, MipLevel);
     return GetNumSparseTilesInBox(Box{0, MipProps.StorageWidth, 0, MipProps.StorageHeight, 0, MipProps.Depth}, TileSize);
 }
 
