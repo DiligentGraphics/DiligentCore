@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ struct SerializationDeviceGLInfo
     ///             When OptimizeShaders is set to true, the archiver will optimize the shader
     ///             source code for run-time loading performance.
     ///
-    ///             Technical details: the archiver will compile the shader source code to SPIRV
+    /// \remarks    Technical details: the archiver will compile the shader source code to SPIRV
     ///             with GLSLang and then translate SPIRV back to GLSL using SPIRV-Cross.
     ///             The resulting GLSL code will be much more compact and will be stored in the
     ///             archive instead of the original source code.
@@ -160,7 +160,6 @@ struct SerializationDeviceVkInfo
         return !(*this == RHS);
     }
 #endif
-
 };
 typedef struct SerializationDeviceVkInfo SerializationDeviceVkInfo;
 
@@ -201,13 +200,15 @@ typedef struct SerializationDeviceMtlInfo SerializationDeviceMtlInfo;
 struct SerializationDeviceCreateInfo
 {
     /// Device info, contains enabled device features.
-    /// Can be used to validate shader, render pass, resource signature and pipeline state.
+
+    /// Can be used to validate shaders, render passes, resource signatures and pipeline states.
     ///
     /// \note For OpenGL that does not support separable programs, disable the SeparablePrograms feature.
     RenderDeviceInfo    DeviceInfo;
 
     /// Adapter info, contains device parameters.
-    /// Can be used to validate shader, render pass, resource signature and pipeline state.
+
+    /// Can be used to validate shaders, render passes, resource signatures and pipeline states.
     GraphicsAdapterInfo AdapterInfo;
 
     /// Direct3D11 attributes, see Diligent::SerializationDeviceD3D11Info.
@@ -229,14 +230,14 @@ struct SerializationDeviceCreateInfo
     IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
 
     /// The maximum number of threads that can be used to compile shaders.
-    ///
-    /// \remarks    If pAsyncShaderCompilationThreadPool is null, this value is used to define the number of threads in
-    ///             the default thread pool.
-    ///             If the value is 0xFFFFFFFF, the number of threads will be determined automatically.
-    ///             If the value is 0, the default thread pool will not be created.
+
+    /// If `pAsyncShaderCompilationThreadPool` is `null`, this value is used to define the number of threads in
+    /// the default thread pool.
+    /// If the value is `0xFFFFFFFF`, the number of threads will be determined automatically.
+    /// If the value is `0`, the default thread pool will not be created.
     ///             
-    ///             If pAsyncShaderCompilationThreadPool is not null, the value is ignored as the user-provided
-    ///             thread pool is used instead.
+    /// If `pAsyncShaderCompilationThreadPool` is not `null`, the value is ignored as the user-provided
+    /// thread pool is used instead.
     Uint32 NumAsyncShaderCompilationThreads DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
@@ -289,7 +290,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// \param [in]  pSrcArchive  - Source archive from which device specific-data will be removed.
     /// \param [in]  DeviceFlags  - Combination of device types that will be removed.
     /// \param [out] ppDstArchive - Memory address where a pointer to the new archive will be written.
-    /// \return     true if the device-specific data was successfully removed, and false otherwise.
+    /// \return     `true` if the device-specific data was successfully removed, and `false` otherwise.
     VIRTUAL Bool METHOD(RemoveDeviceData)(THIS_
                                           const IDataBlob*          pSrcArchive,
                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
@@ -302,7 +303,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// \param [in]  DeviceFlags    - Combination of device types that will be copied.
     /// \param [in]  pDeviceArchive - Archive that contains the same common data and additional device-specific data.
     /// \param [out] ppDstArchive   - Memory address where a pointer to the new archive will be written.
-    /// \return     true if the device-specific data was successfully added, and false otherwise.
+    /// \return     `true` if the device-specific data was successfully added, and `false` otherwise.
     VIRTUAL Bool METHOD(AppendDeviceData)(THIS_
                                           const IDataBlob*          pSrcArchive,
                                           ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags,
@@ -313,9 +314,9 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// Merges multiple archives into one.
 
     /// \param [in]  ppSrcArchives   - An array of pointers to the source archives.
-    /// \param [in]  NumSrcArchives  - The number of elements in ppArchives array.
+    /// \param [in]  NumSrcArchives  - The number of elements in `ppArchives` array.
     /// \param [out] ppDstArchive    - Memory address where a pointer to the merged archive will be written.
-    /// \return     true if the archives were successfully merged, and false otherwise.
+    /// \return     `true` if the archives were successfully merged, and `false` otherwise.
     VIRTUAL Bool METHOD(MergeArchives)(THIS_
                                        const IDataBlob* ppSrcArchives[],
                                        Uint32           NumSrcArchives,

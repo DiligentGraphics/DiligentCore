@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_SerializedShader =
 DILIGENT_BEGIN_INTERFACE(ISerializedShader, IShader)
 {
     /// Returns a device-specific shader for the given render device type.
-    ///
+
     /// \note   In order for the returned shader object to be fully initialized
     ///         and suitable for use in rendering commands, a corresponding render
     ///         device must have been initialized in the serialization device through

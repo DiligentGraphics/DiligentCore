@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \param [out] ppBlob         - memory location where a pointer to the data blob will be stored.
 
     /// \note
-    ///     The method is *not* thread-safe and must not be called from multiple threads simultaneously.
+    ///     The method is *not* thread-safe and **must not** be called from multiple threads simultaneously.
     VIRTUAL Bool METHOD(SerializeToBlob)(THIS_
                                          Uint32      ContentVersion,
                                          IDataBlob** ppBlob) PURE;
@@ -105,7 +105,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \param [out] pStream        - a pointer to the stream to write the archive to.
 
     /// \note
-    ///     The method is *not* thread-safe and must not be called from multiple threads simultaneously.
+    ///     The method is *not* thread-safe and **must not** be called from multiple threads simultaneously.
     VIRTUAL Bool METHOD(SerializeToStream)(THIS_
                                            Uint32       ContentVersion,
                                            IFileStream* pStream) PURE;
@@ -114,11 +114,12 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
 
     /// \param [in] pShader - a pointer to the shader to add to the archive.
     ///
-    /// \return     true if the shader was added successfully, and false otherwise.
+    /// \return     `true` if the shader was added successfully, and `false` otherwise.
     ///
     /// \note
     ///     Shader object pointed to by pShader must have been created by the serialization device.
     ///
+    /// \note
     ///     Multiple shaders may be packed into the same archive as long as they use unique names.
     ///
     ///     The method is thread-safe and may be called from multiple threads simultaneously.
@@ -129,11 +130,12 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
 
     /// \param [in] pPSO - a pointer to the pipeline state to add to the archive.
     ///
-    /// \return     true if the pipeline state was added successfully, and false otherwise.
+    /// \return     `true` if the pipeline state was added successfully, and `false` otherwise.
     ///
     /// \note
     ///     Pipeline state object pointed to by pPSO must have been created by the serialization device.
     ///
+    /// \note
     ///     Multiple pipeline states may be packed into the same archive as long as they use unique names.
     ///     All dependent objects (render pass, resource signatures, shaders) will be added to the archive
     ///     and must also use unique names.
@@ -147,11 +149,12 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
 
     /// \param [in] pSignature - a pointer to the resource signature to add to the archive.
     ///
-    /// \return     true if the signature was added successfully, and false otherwise.
+    /// \return     `true` if the signature was added successfully, and `false` otherwise.
     ///
     /// \note
     ///     Pipeline resource signature pointed to by pSignature must have been created by the serialization device.
     ///
+    /// \note
     ///     Multiple PSOs and signatures may be packed into the same archive as long as they use distinct names.
     ///
     ///     The method is thread-safe and may be called from multiple threads simultaneously.
@@ -166,8 +169,8 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \param [in] ShaderName - Name of the shader object to retrieve.
     /// \return     A pointer to the shader object, or null if the object with that name was not added.
     ///
-    /// \ note      The method does *not* increment the reference counter of the returned object,
-    ///             so the application must not call Release() unless it also explicitly calls AddRef().
+    /// \note       The method does *not* increment the reference counter of the returned object,
+    ///             so the application **must not** call Release() unless it also explicitly calls AddRef().
     VIRTUAL IShader* METHOD(GetShader)(THIS_
                                        const char* ShaderName) PURE;
 
@@ -177,8 +180,8 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \param [in] PSOName - Name of the pipeline state to retrieve.
     /// \return     A pointer to the pipeline state object, or null if the object with that name was not added.
     ///
-    /// \ note      The method does *not* increment the reference counter of the returned object,
-    ///             so the application must not call Release() unless it also explicitly calls AddRef().
+    /// \note       The method does *not* increment the reference counter of the returned object,
+    ///             so the application **must not** call Release() unless it also explicitly calls AddRef().
     VIRTUAL IPipelineState* METHOD(GetPipelineState)(THIS_
                                                      PIPELINE_TYPE PSOType,
                                                      const char*   PSOName) PURE;
@@ -188,8 +191,8 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \param [in] PRSName - Name of the pipeline resource signature to retrieve.
     /// \return     A pointer to the the pipeline resource signature object, or null if the object with that name was not added.
     ///
-    /// \ note      The method does *not* increment the reference counter of the returned object,
-    ///             so the application must not call Release() unless it also explicitly calls AddRef().
+    /// \note      The method does *not* increment the reference counter of the returned object,
+    ///             so the application **must not** call Release() unless it also explicitly calls AddRef().
     VIRTUAL IPipelineResourceSignature* METHOD(GetPipelineResourceSignature)(THIS_
                                                                              const char* PRSName) PURE;
 };

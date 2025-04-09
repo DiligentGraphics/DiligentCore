@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_SerializationDevice =
 struct ShaderArchiveInfo
 {
     /// Bitset of Diligent::ARCHIVE_DEVICE_DATA_FLAGS.
+
     /// Specifies for which backends the shader data will be serialized.
     ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
 };
@@ -65,6 +66,7 @@ typedef struct ShaderArchiveInfo ShaderArchiveInfo;
 struct ResourceSignatureArchiveInfo
 {
     /// Bitset of Diligent::ARCHIVE_DEVICE_DATA_FLAGS.
+
     /// Specifies for which backends the resource signature data will be serialized.
     ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
 };
@@ -77,6 +79,7 @@ struct PipelineStateArchiveInfo
     PSO_ARCHIVE_FLAGS PSOFlags DEFAULT_INITIALIZER(PSO_ARCHIVE_FLAG_NONE);
 
     /// Bitset of Diligent::ARCHIVE_DEVICE_DATA_FLAGS.
+
     /// Specifies for which backends the pipeline state data will be serialized.
     ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags DEFAULT_INITIALIZER(ARCHIVE_DEVICE_DATA_FLAG_NONE);
 };
@@ -86,23 +89,27 @@ typedef struct PipelineStateArchiveInfo PipelineStateArchiveInfo;
 /// Contains attributes to calculate pipeline resource bindings
 struct PipelineResourceBindingAttribs
 {
-    /// An array of ResourceSignaturesCount shader resource signatures that
+    /// An array of `ResourceSignaturesCount` shader resource signatures that
     /// define the layout of shader resources in this pipeline state object.
+
     /// See Diligent::IPipelineResourceSignature.
     IPipelineResourceSignature** ppResourceSignatures      DEFAULT_INITIALIZER(nullptr);
 
-    /// The number of elements in ppResourceSignatures array.
+    /// The number of elements in `ppResourceSignatures` array.
     Uint32                       ResourceSignaturesCount   DEFAULT_INITIALIZER(0);
 
     /// The number of render targets, only for graphics pipeline.
+
     /// \note Required for Direct3D11 graphics pipelines that use UAVs.
     Uint32                       NumRenderTargets  DEFAULT_INITIALIZER(0);
 
     /// The number of vertex buffers, only for graphics pipeline.
+
     /// \note Required for Metal.
     Uint32                       NumVertexBuffers  DEFAULT_INITIALIZER(0);
 
     /// Vertex buffer names.
+
     /// \note Required for Metal.
     Char const* const*           VertexBufferNames DEFAULT_INITIALIZER(nullptr);
 
@@ -260,22 +267,22 @@ DILIGENT_BEGIN_INTERFACE(ISerializationDevice, IRenderDevice)
                                          IRenderDevice* pDevice) PURE;
 
 #if DILIGENT_CPP_INTERFACE
-    /// Overloaded alias for CreateGraphicsPipelineState.
+    /// Overloaded alias for ISerializationDevice::CreateGraphicsPipelineState.
     void CreatePipelineState(const GraphicsPipelineStateCreateInfo& CI, const PipelineStateArchiveInfo& ArchiveInfo, IPipelineState** ppPipelineState)
     {
         CreateGraphicsPipelineState(CI, ArchiveInfo, ppPipelineState);
     }
-    /// Overloaded alias for CreateComputePipelineState.
+    /// Overloaded alias for ISerializationDevice::CreateComputePipelineState.
     void CreatePipelineState(const ComputePipelineStateCreateInfo& CI, const PipelineStateArchiveInfo& ArchiveInfo, IPipelineState** ppPipelineState)
     {
         CreateComputePipelineState(CI, ArchiveInfo, ppPipelineState);
     }
-    /// Overloaded alias for CreateRayTracingPipelineState.
+    /// Overloaded alias for ISerializationDevice::CreateRayTracingPipelineState.
     void CreatePipelineState(const RayTracingPipelineStateCreateInfo& CI, const PipelineStateArchiveInfo& ArchiveInfo, IPipelineState** ppPipelineState)
     {
         CreateRayTracingPipelineState(CI, ArchiveInfo, ppPipelineState);
     }
-    /// Overloaded alias for CreateTilePipelineState.
+    /// Overloaded alias for ISerializationDevice::CreateTilePipelineState.
     void CreatePipelineState(const TilePipelineStateCreateInfo& CI, const PipelineStateArchiveInfo& ArchiveInfo, IPipelineState** ppPipelineState)
     {
         CreateTilePipelineState(CI, ArchiveInfo, ppPipelineState);
