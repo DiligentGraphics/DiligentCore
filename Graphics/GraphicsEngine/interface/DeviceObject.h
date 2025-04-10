@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,44 +57,44 @@ DILIGENT_BEGIN_INTERFACE(IDeviceObject, IObject)
 
     /// Returns unique identifier assigned to an object
 
-    /// \remarks Unique identifiers can be used to reliably check if two objects are identical.
-    ///          Note that the engine reuses memory reclaimed after an object has been released.
-    ///          For example, if a texture object is released and then another texture is created,
-    ///          the engine may return the same pointer, so pointer-to-pointer comparisons are not
-    ///          reliable. Unique identifiers, on the other hand, are guaranteed to be, well, unique.
+    /// Unique identifiers can be used to reliably check if two objects are identical.
+    /// Note that the engine reuses memory reclaimed after an object has been released.
+    /// For example, if a texture object is released and then another texture is created,
+    /// the engine may return the same pointer, so pointer-to-pointer comparisons are not
+    /// reliable. Unique identifiers, on the other hand, are guaranteed to be, well, unique.
     ///
-    ///          Unique identifiers are object-specifics, so, for instance, buffer identifiers
-    ///          are not comparable to texture identifiers.
+    /// Unique identifiers are object-specifics, so, for instance, buffer identifiers
+    /// are not comparable to texture identifiers.
     ///
-    ///          Unique identifiers are only meaningful within one session. After an application
-    ///          restarts, all identifiers become invalid.
+    /// Unique identifiers are only meaningful within one session. After an application
+    /// restarts, all identifiers become invalid.
     ///
-    ///          Valid identifiers are always positive values. Zero and negative values can never be
-    ///          assigned to an object and are always guaranteed to be invalid.
+    /// Valid identifiers are always positive values. Zero and negative values can never be
+    /// assigned to an object and are always guaranteed to be invalid.
     VIRTUAL Int32 METHOD(GetUniqueID)(THIS) CONST PURE;
 
 
-    /// Stores a pointer to the user-provided data object, which
-    /// may later be retrieved through GetUserData().
+    /// Stores a pointer to the user-provided data object.
+
+    /// The data may later be retrieved through GetUserData().
     ///
     /// \param [in] pUserData - Pointer to the user data object to store.
     ///
     /// \note   The method is not thread-safe and an application
     ///         must externally synchronize the access.
     ///
-    ///         The method keeps strong reference to the user data object.
-    ///         If an application needs to release the object, it
-    ///         should call SetUserData(nullptr);
+    /// The method keeps strong reference to the user data object.
+    /// If an application needs to release the object, it
+    /// should call SetUserData(nullptr);
     VIRTUAL void METHOD(SetUserData)(THIS_
                                      IObject* pUserData) PURE;
 
 
-    /// Returns a pointer to the user data object previously
-    /// set with SetUserData() method.
-    ///
+    /// Returns a pointer to the user data object previously set with SetUserData() method.
+
     /// \return     The pointer to the user data object.
     ///
-    /// \remarks    The method does *NOT* call AddRef()
+    /// \remarks    The method does **NOT** call AddRef()
     ///             for the object being returned.
     VIRTUAL IObject* METHOD(GetUserData)(THIS) CONST PURE;
 };

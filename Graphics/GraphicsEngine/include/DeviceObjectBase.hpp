@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,15 +74,15 @@ public:
 
         if (ObjDesc.Name != nullptr)
         {
-            auto  size     = strlen(ObjDesc.Name) + 1;
-            auto* NameCopy = ALLOCATE(GetStringAllocator(), "Object name copy", char, size);
+            size_t  size     = strlen(ObjDesc.Name) + 1;
+            char* NameCopy = ALLOCATE(GetStringAllocator(), "Object name copy", char, size);
             memcpy(NameCopy, ObjDesc.Name, size);
             m_Desc.Name = NameCopy;
         }
         else
         {
             size_t size       = 16 + 2 + 1; // 0x12345678
-            auto*  AddressStr = ALLOCATE(GetStringAllocator(), "Object address string", char, size);
+            char*  AddressStr = ALLOCATE(GetStringAllocator(), "Object address string", char, size);
             snprintf(AddressStr, size, "0x%llX", static_cast<unsigned long long>(reinterpret_cast<size_t>(this)));
             m_Desc.Name = AddressStr;
         }
