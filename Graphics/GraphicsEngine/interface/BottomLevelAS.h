@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,29 +54,33 @@ static DILIGENT_CONSTEXPR Uint32 INVALID_INDEX = DILIGENT_INVALID_INDEX;
 struct BLASTriangleDesc
 {
     /// Geometry name.
+
     /// The name is used to map triangle data (BLASBuildTriangleData) to this geometry.
     const Char*               GeometryName          DEFAULT_INITIALIZER(nullptr);
 
     /// The maximum vertex count in this geometry.
+
     /// Current number of vertices is defined in BLASBuildTriangleData::VertexCount.
     Uint32                    MaxVertexCount        DEFAULT_INITIALIZER(0);
 
     /// The type of vertices in this geometry, see Diligent::VALUE_TYPE.
-    ///
+
     /// \remarks Only the following values are allowed: VT_FLOAT32, VT_FLOAT16, VT_INT16.
     ///          VT_INT16 defines 16-bit signed normalized vertex components.
     VALUE_TYPE                VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// The number of components in the vertex.
-    ///
+
     /// \remarks Only 2 or 3 are allowed values. For 2-component formats, the third component is assumed 0.
     Uint8                     VertexComponentCount  DEFAULT_INITIALIZER(0);
 
     /// The maximum primitive count in this geometry.
+
     /// The current number of primitives is defined in BLASBuildTriangleData::PrimitiveCount.
     Uint32                    MaxPrimitiveCount     DEFAULT_INITIALIZER(0);
 
     /// Index type of this geometry, see Diligent::VALUE_TYPE.
+
     /// Must be VT_UINT16, VT_UINT32 or VT_UNDEFINED.
     /// If not defined then vertex array is used instead of indexed vertices.
     VALUE_TYPE                IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED);
@@ -208,8 +212,8 @@ struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// \param [in] RHS - reference to the structure to compare with.
     ///
-    /// \return     true if all members of the two structures *except for the Name* are equal,
-    ///             and false otherwise.
+    /// \return     `true` if all members of the two structures *except for the Name* are equal,
+    ///             and `false` otherwise.
     ///
     /// \note   The operator ignores the Name field as it is used for debug purposes and
     ///         doesn't affect the BLAS properties.

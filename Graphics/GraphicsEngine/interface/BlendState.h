@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -413,12 +413,13 @@ struct BlendStateDesc
 
     /// \param [in] RHS - reference to the structure to perform comparison with
     /// \return
-    /// - True if all members are of the two structures equal.
-    ///   \note The operator performs *bitwise comparison* of the two structures.
-    ///   That is if for instance both structures have IndependentBlendEnable set to False,
-    ///   but differ in render target other than 0, the operator will return False
-    ///   even though the two blend states created from these structures will be identical.
-    /// - False otherwise
+    /// - `True` if all members are of the two structures equal.
+    /// - `False` otherwise.
+    ///
+    ///  \note The operator performs *bitwise comparison* of the two structures.
+    ///        That is if for instance both structures have IndependentBlendEnable set to False,
+    ///        but differ in render target other than 0, the operator will return False
+    ///        even though the two blend states created from these structures will be identical.
     constexpr bool operator==(const BlendStateDesc& RHS) const
     {
         bool bRTsEqual = true;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,8 +45,8 @@ namespace Diligent
 
 void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) noexcept(false)
 {
-    const auto& MemoryInfo = pDevice->GetAdapterInfo().Memory;
-    const auto& Features   = pDevice->GetDeviceInfo().Features;
+    const AdapterMemoryInfo& MemoryInfo = pDevice->GetAdapterInfo().Memory;
+    const DeviceFeatures&    Features   = pDevice->GetDeviceInfo().Features;
 
     static_assert(BIND_FLAG_LAST == 0x800L, "Please update this function to handle the new bind flags");
 
@@ -128,7 +128,7 @@ void ValidateBufferDesc(const BufferDesc& Desc, const IRenderDevice* pDevice) no
 
         case USAGE_SPARSE:
         {
-            const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
+            const SparseResourceProperties& SparseRes = pDevice->GetAdapterInfo().SparseResources;
             VERIFY_BUFFER(Features.SparseResources, "sparse buffer requires SparseResources feature");
             VERIFY_BUFFER(Desc.CPUAccessFlags == CPU_ACCESS_NONE, "sparse buffers can't have any CPU access flags set.");
             VERIFY_BUFFER(Desc.Size <= SparseRes.ResourceSpaceSize, "sparse buffer size (", Desc.Size, ") must not exceed the ResourceSpaceSize (", SparseRes.ResourceSpaceSize, ")");
@@ -196,7 +196,7 @@ void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
 
     if (pBuffData != nullptr && pBuffData->pContext != nullptr)
     {
-        const auto& CtxDesc = pBuffData->pContext->GetDesc();
+        const DeviceContextDesc& CtxDesc = pBuffData->pContext->GetDesc();
         if (CtxDesc.IsDeferred)
             LOG_BUFFER_ERROR_AND_THROW("Deferred contexts can't be used to initialize resources");
         if ((Desc.ImmediateContextMask & (Uint64{1} << CtxDesc.ContextId)) == 0)
@@ -251,7 +251,7 @@ void ValidateAndCorrectBufferViewDesc(const BufferDesc& BuffDesc,
                 LOG_ERROR_AND_THROW("Incorrect number of components (", Uint32{ViewDesc.Format.NumComponents}, "). 1, 2, 3, or 4 are allowed values");
             if (ViewDesc.Format.ValueType == VT_FLOAT32 || ViewDesc.Format.ValueType == VT_FLOAT16)
                 ViewDesc.Format.IsNormalized = false;
-            auto ViewElementStride = GetValueSize(ViewDesc.Format.ValueType) * Uint32{ViewDesc.Format.NumComponents};
+            Uint32 ViewElementStride = GetValueSize(ViewDesc.Format.ValueType) * Uint32{ViewDesc.Format.NumComponents};
             if (BuffDesc.Mode == BUFFER_MODE_RAW && BuffDesc.ElementByteStride == 0)
                 LOG_ERROR_AND_THROW("To enable formatted views of a raw buffer, element byte must be specified during buffer initialization");
             if (ViewElementStride != BuffDesc.ElementByteStride)

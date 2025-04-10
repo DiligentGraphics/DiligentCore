@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +58,7 @@ void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false)
 
         for (Uint32 i = 0; i < Desc.TriangleCount; ++i)
         {
-            const auto& tri = Desc.pTriangles[i];
+            const BLASTriangleDesc& tri = Desc.pTriangles[i];
 
             if (tri.GeometryName == nullptr)
                 LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].GeometryName must not be null.");
@@ -92,7 +92,7 @@ void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc) noexcept(false)
 
         for (Uint32 i = 0; i < Desc.BoxCount; ++i)
         {
-            const auto& box = Desc.pBoxes[i];
+            const BLASBoundingBoxDesc& box = Desc.pBoxes[i];
 
             if (box.GeometryName == nullptr)
                 LOG_BLAS_ERROR_AND_THROW("pBoxes[", i, "].GeometryName must not be null.");
@@ -120,12 +120,12 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
 
         MemPool.Reserve();
 
-        auto* pTriangles = MemPool.CopyArray(SrcDesc.pTriangles, SrcDesc.TriangleCount);
+        BLASTriangleDesc* pTriangles = MemPool.CopyArray(SrcDesc.pTriangles, SrcDesc.TriangleCount);
 
         // Copy strings
         for (Uint32 i = 0; i < SrcDesc.TriangleCount; ++i)
         {
-            const auto* GeoName        = MemPool.CopyString(SrcDesc.pTriangles[i].GeometryName);
+            const char* GeoName        = MemPool.CopyString(SrcDesc.pTriangles[i].GeometryName);
             pTriangles[i].GeometryName = GeoName;
 
             Uint32 ActualIndex = INVALID_INDEX;
@@ -155,12 +155,12 @@ void CopyBLASGeometryDesc(const BottomLevelASDesc& SrcDesc,
 
         MemPool.Reserve();
 
-        auto* pBoxes = MemPool.CopyArray(SrcDesc.pBoxes, SrcDesc.BoxCount);
+        BLASBoundingBoxDesc* pBoxes = MemPool.CopyArray(SrcDesc.pBoxes, SrcDesc.BoxCount);
 
         // Copy strings
         for (Uint32 i = 0; i < SrcDesc.BoxCount; ++i)
         {
-            const auto* GeoName    = MemPool.CopyString(SrcDesc.pBoxes[i].GeometryName);
+            const char* GeoName    = MemPool.CopyString(SrcDesc.pBoxes[i].GeometryName);
             pBoxes[i].GeometryName = GeoName;
 
             Uint32 ActualIndex = INVALID_INDEX;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ bool VerifShaderUnpackInfo(const ShaderUnpackInfo& DeArchiveInfo, IShader** ppSh
 DearchiverBase::DeviceType DearchiverBase::GetArchiveDeviceType(const IRenderDevice* pDevice)
 {
     VERIFY_EXPR(pDevice != nullptr);
-    const auto Type = pDevice->GetDeviceInfo().Type;
+    const RENDER_DEVICE_TYPE Type = pDevice->GetDeviceInfo().Type;
     return RenderDeviceTypeToArchiveDeviceType(Type);
 }
 
@@ -269,13 +269,13 @@ bool DearchiverBase::UnpackPSORenderPass<GraphicsPipelineStateCreateInfo>(PSODat
 template <typename CreateInfoType>
 bool DearchiverBase::UnpackPSOSignatures(PSOData<CreateInfoType>& PSO, IRenderDevice* pRenderDevice)
 {
-    const auto ResourceSignaturesCount = PSO.CreateInfo.ResourceSignaturesCount;
+    const Uint32 ResourceSignaturesCount = PSO.CreateInfo.ResourceSignaturesCount;
     if (ResourceSignaturesCount == 0)
     {
         UNEXPECTED("PSO must have at least one resource signature (including PSOs that use implicit signature)");
         return true;
     }
-    auto* const ppResourceSignatures = PSO.Allocator.template Allocate<IPipelineResourceSignature*>(ResourceSignaturesCount);
+    IPipelineResourceSignature** const ppResourceSignatures = PSO.Allocator.template Allocate<IPipelineResourceSignature*>(ResourceSignaturesCount);
 
     PSO.CreateInfo.ppResourceSignatures = ppResourceSignatures;
     for (Uint32 i = 0; i < ResourceSignaturesCount; ++i)
@@ -313,9 +313,9 @@ inline void AssignShader(IShader*& pDstShader, IShader* pSrcShader, SHADER_TYPE 
 template <>
 void DearchiverBase::PSOData<GraphicsPipelineStateCreateInfo>::AssignShaders()
 {
-    for (auto& Shader : Shaders)
+    for (RefCntAutoPtr<IShader>& Shader : Shaders)
     {
-        const auto ShaderType = Shader->GetDesc().ShaderType;
+        const SHADER_TYPE ShaderType = Shader->GetDesc().ShaderType;
         switch (ShaderType)
         {
             // clang-format off
@@ -353,7 +353,7 @@ void DearchiverBase::PSOData<RayTracingPipelineStateCreateInfo>::AssignShaders()
 {
     auto RemapShader = [this](IShader* const& inoutShader) //
     {
-        auto ShaderIndex = BitCast<size_t>(inoutShader);
+        size_t ShaderIndex = BitCast<size_t>(inoutShader);
         if (ShaderIndex < Shaders.size())
             const_cast<IShader*&>(inoutShader) = Shaders[ShaderIndex];
         else
@@ -411,8 +411,8 @@ bool DearchiverBase::UnpackPSOShaders(ArchiveData&             Archive,
 {
     const auto& pObjArchive = Archive.pObjArchive;
     VERIFY_EXPR(pObjArchive);
-    const auto  DevType       = GetArchiveDeviceType(pDevice);
-    const auto& ShaderIdxData = pObjArchive->GetDeviceSpecificData(PSO.ArchiveResType, PSO.CreateInfo.PSODesc.Name, DevType);
+    const DeviceType      DevType       = GetArchiveDeviceType(pDevice);
+    const SerializedData& ShaderIdxData = pObjArchive->GetDeviceSpecificData(PSO.ArchiveResType, PSO.CreateInfo.PSODesc.Name, DevType);
     if (!ShaderIdxData)
         return false;
 
@@ -429,12 +429,12 @@ bool DearchiverBase::UnpackPSOShaders(ArchiveData&             Archive,
         VERIFY(Ser.IsEnded(), "No other data besides shader indices is expected");
     }
 
-    auto& ShaderCache = Archive.CachedShaders[static_cast<size_t>(DevType)];
+    ShaderCacheData& ShaderCache = Archive.CachedShaders[static_cast<size_t>(DevType)];
 
     PSO.Shaders.resize(ShaderIndices.Count);
     for (Uint32 i = 0; i < ShaderIndices.Count; ++i)
     {
-        auto& pShader{PSO.Shaders[i]};
+        RefCntAutoPtr<IShader>& pShader{PSO.Shaders[i]};
 
         const Uint32 Idx = ShaderIndices.pIndices[i];
 
@@ -449,7 +449,7 @@ bool DearchiverBase::UnpackPSOShaders(ArchiveData&             Archive,
             }
         }
 
-        const auto& SerializedShader = pObjArchive->GetSerializedShader(DevType, Idx);
+        const SerializedData& SerializedShader = pObjArchive->GetSerializedShader(DevType, Idx);
         if (!SerializedShader)
             return false;
 
@@ -494,7 +494,7 @@ DearchiverBase::ArchiveData* DearchiverBase::FindArchive(ResourceType ResType, c
     if (archive_idx_it == m_ResNameToArchiveIdx.end())
         return nullptr;
 
-    auto& Archive = m_Archives[archive_idx_it->second];
+    ArchiveData& Archive = m_Archives[archive_idx_it->second];
     if (!Archive.pObjArchive)
     {
         UNEXPECTED("Null object archives should never be added to the list. This is a bug.");
@@ -511,18 +511,18 @@ static bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateI
     if (UnpackInfo.ModifyPipelineStateCreateInfo == nullptr)
         return true;
 
-    const auto PipelineType = CreateInfo.PSODesc.PipelineType;
+    const PIPELINE_TYPE PipelineType = CreateInfo.PSODesc.PipelineType;
 
-    auto ResourceLayout = CreateInfo.PSODesc.ResourceLayout;
+    PipelineResourceLayoutDesc ResourceLayout = CreateInfo.PSODesc.ResourceLayout;
 
     std::unordered_set<std::string> Strings;
 
     std::vector<ShaderResourceVariableDesc> Variables{ResourceLayout.Variables, ResourceLayout.Variables + ResourceLayout.NumVariables};
-    for (auto& Var : Variables)
+    for (ShaderResourceVariableDesc& Var : Variables)
         Var.Name = Strings.emplace(Var.Name).first->c_str();
 
     std::vector<ImmutableSamplerDesc> ImmutableSamplers{ResourceLayout.ImmutableSamplers, ResourceLayout.ImmutableSamplers + ResourceLayout.NumImmutableSamplers};
-    for (auto& Sam : ImmutableSamplers)
+    for (ImmutableSamplerDesc& Sam : ImmutableSamplers)
         Sam.SamplerOrTextureName = Strings.emplace(Sam.SamplerOrTextureName).first->c_str();
 
     ResourceLayout.Variables         = Variables.data();
@@ -562,8 +562,8 @@ static bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateI
 
     for (size_t sign = 0; sign < CreateInfo.ResourceSignaturesCount; ++sign)
     {
-        const auto* pOrigSign = pSignatures[sign];
-        const auto* pNewSign  = CreateInfo.ppResourceSignatures[sign];
+        const IPipelineResourceSignature* pOrigSign = pSignatures[sign];
+        const IPipelineResourceSignature* pNewSign  = CreateInfo.ppResourceSignatures[sign];
         if (pOrigSign == pNewSign)
             continue;
         if ((pOrigSign == nullptr) != (pNewSign == nullptr))
@@ -577,8 +577,8 @@ static bool ModifyPipelineStateCreateInfo(PSOCreateInfoType&             CreateI
             continue;
         }
 
-        const auto& OrigDesc = pOrigSign->GetDesc();
-        const auto& NewDesc  = pNewSign->GetDesc();
+        const PipelineResourceSignatureDesc& OrigDesc = pOrigSign->GetDesc();
+        const PipelineResourceSignatureDesc& NewDesc  = pNewSign->GetDesc();
         if (!PipelineResourceSignaturesCompatible(OrigDesc, NewDesc, /*IgnoreSamplerDescriptions =*/true))
         {
             LOG_ERROR_MESSAGE("When changing pipeline resource signatures, only immutable sampler descriptions in new signatures are allowed to differ from original");
@@ -607,7 +607,7 @@ void DearchiverBase::UnpackPipelineStateImpl(const PipelineStateUnpackInfo& Unpa
     }
 
     // Find the archive that contains this PSO
-    auto* pArchiveData = FindArchive(ResType, UnpackInfo.Name);
+    ArchiveData* pArchiveData = FindArchive(ResType, UnpackInfo.Name);
     if (pArchiveData == nullptr)
         return;
 
@@ -735,7 +735,7 @@ static bool ModifyShaderDesc(ShaderDesc&             Desc,
     if (UnpackInfo.ModifyShaderDesc == nullptr)
         return true;
 
-    const auto ShaderType = Desc.ShaderType;
+    const SHADER_TYPE ShaderType = Desc.ShaderType;
 
     UnpackInfo.ModifyShaderDesc(Desc, UnpackInfo.pUserData);
 
@@ -756,18 +756,18 @@ void DearchiverBase::UnpackShader(const ShaderUnpackInfo& UnpackInfo,
 
     *ppShader = nullptr;
 
-    constexpr auto ResType = ResourceType::StandaloneShader;
+    constexpr ResourceType ResType = ResourceType::StandaloneShader;
 
     // Find the archive that contains this shader.
-    auto* pArchiveData = FindArchive(ResType, UnpackInfo.Name);
+    ArchiveData* pArchiveData = FindArchive(ResType, UnpackInfo.Name);
     if (pArchiveData == nullptr)
         return;
 
     const auto& pObjArchive = pArchiveData->pObjArchive;
     VERIFY_EXPR(pObjArchive);
 
-    const auto  DevType       = GetArchiveDeviceType(UnpackInfo.pDevice);
-    const auto& ShaderIdxData = pObjArchive->GetDeviceSpecificData(ResType, UnpackInfo.Name, DevType);
+    const DeviceType      DevType       = GetArchiveDeviceType(UnpackInfo.pDevice);
+    const SerializedData& ShaderIdxData = pObjArchive->GetDeviceSpecificData(ResType, UnpackInfo.Name, DevType);
     if (!ShaderIdxData)
         return;
 
@@ -782,7 +782,7 @@ void DearchiverBase::UnpackShader(const ShaderUnpackInfo& UnpackInfo,
         VERIFY_EXPR(Ser.IsEnded());
     }
 
-    const auto& SerializedShader = pObjArchive->GetSerializedShader(DevType, Idx);
+    const SerializedData& SerializedShader = pObjArchive->GetSerializedShader(DevType, Idx);
     if (!SerializedShader)
         return;
 
@@ -800,7 +800,7 @@ void DearchiverBase::UnpackShader(const ShaderUnpackInfo& UnpackInfo,
     if (!ModifyShaderDesc(ShaderCI.Desc, UnpackInfo))
         return;
 
-    auto pShader = UnpackShader(ShaderCI, UnpackInfo.pDevice);
+    RefCntAutoPtr<IShader> pShader = UnpackShader(ShaderCI, UnpackInfo.pDevice);
     if (!pShader)
         return;
 
@@ -815,8 +815,9 @@ void DearchiverBase::UnpackResourceSignature(const ResourceSignatureUnpackInfo& 
 
     *ppSignature = nullptr;
 
-    auto pSignature = UnpackResourceSignature(DeArchiveInfo, false /*IsImplicit*/);
-    *ppSignature    = pSignature.Detach();
+    RefCntAutoPtr<IPipelineResourceSignature> pSignature = UnpackResourceSignature(DeArchiveInfo, false /*IsImplicit*/);
+
+    *ppSignature = pSignature.Detach();
 }
 
 void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IRenderPass** ppRP)
@@ -837,7 +838,7 @@ void DearchiverBase::UnpackRenderPass(const RenderPassUnpackInfo& UnpackInfo, IR
     }
 
     // Find the archive that contains this render pass.
-    auto* pArchiveData = FindArchive(RPData::ArchiveResType, UnpackInfo.Name);
+    ArchiveData* pArchiveData = FindArchive(RPData::ArchiveResType, UnpackInfo.Name);
     if (pArchiveData == nullptr)
         return;
 
@@ -870,7 +871,7 @@ bool DearchiverBase::Store(IDataBlob** ppArchive) const
     try
     {
         DeviceObjectArchive MergedArchive{!m_Archives.empty() ? m_Archives.front().pObjArchive->GetContentVersion() : 0};
-        for (const auto& Archive : m_Archives)
+        for (const ArchiveData& Archive : m_Archives)
         {
             if (Archive.pObjArchive)
                 MergedArchive.Merge(*Archive.pObjArchive);

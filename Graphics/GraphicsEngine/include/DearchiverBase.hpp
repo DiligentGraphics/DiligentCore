@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -255,8 +255,8 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
 
     PRS.Desc.SRBAllocationGranularity = DeArchiveInfo.SRBAllocationGranularity;
 
-    const auto  DevType = GetArchiveDeviceType(DeArchiveInfo.pDevice);
-    const auto& Data    = pObjArchive->GetDeviceSpecificData(PRSData::ArchiveResType, DeArchiveInfo.Name, DevType);
+    const DeviceType      DevType = GetArchiveDeviceType(DeArchiveInfo.pDevice);
+    const SerializedData& Data    = pObjArchive->GetDeviceSpecificData(PRSData::ArchiveResType, DeArchiveInfo.Name, DevType);
     if (!Data)
         return {};
 
@@ -272,7 +272,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
     if (SpecialDesc)
     {
         // The signature uses a special description that differs from the common
-        const auto* Name = PRS.Desc.Name;
+        const Char* Name = PRS.Desc.Name;
         PRS.Desc         = {};
         if (!PRS.Deserialize(Name, Ser))
         {
@@ -289,7 +289,7 @@ RefCntAutoPtr<IPipelineResourceSignature> DearchiverBase::UnpackResourceSignatur
     }
     VERIFY_EXPR(Ser.IsEnded());
 
-    auto* pRenderDevice = ClassPtrCast<RenderDeviceImplType>(DeArchiveInfo.pDevice);
+    RenderDeviceImplType* pRenderDevice = ClassPtrCast<RenderDeviceImplType>(DeArchiveInfo.pDevice);
     pRenderDevice->CreatePipelineResourceSignature(PRS.Desc, InternalData, &pSignature);
 
     if (!IsImplicit)

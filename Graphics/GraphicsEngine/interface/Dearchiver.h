@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -77,6 +77,7 @@ typedef struct ResourceSignatureUnpackInfo ResourceSignatureUnpackInfo;
 /// Pipeline state archive flags
 DILIGENT_TYPED_ENUM(PSO_ARCHIVE_FLAGS, Uint32)
 {
+    /// No flags are set
     PSO_ARCHIVE_FLAG_NONE = 0u,
 
     /// By default, shader reflection information will be preserved
@@ -101,6 +102,7 @@ DEFINE_FLAG_ENUM_OPERATORS(PSO_ARCHIVE_FLAGS)
 /// Pipeline state unpack flags
 DILIGENT_TYPED_ENUM(PSO_UNPACK_FLAGS, Uint32)
 {
+    /// No flags are set
     PSO_UNPACK_FLAG_NONE = 0u,
 
     /// Do not perform validation when unpacking the pipeline state.
@@ -149,26 +151,25 @@ struct PipelineStateUnpackInfo
     /// Optional PSO cache.
     IPipelineStateCache* pCache DEFAULT_INITIALIZER(nullptr);
 
-    /// An optional function to be called by the dearchiver to let the application modify
-    /// the pipeline state create info.
+    /// An optional function to be called by the dearchiver to let the application modify the pipeline state create info.
+    
+    /// An application should check the pipeline type (PipelineCI.Desc.PipelineType) and cast
+    /// the reference to the appropriate PSO create info struct, e.g. for PIPELINE_TYPE_GRAPHICS:
     ///
-    /// \remarks    An application should check the pipeline type (PipelineCI.Desc.PipelineType) and cast
-    ///             the reference to the appropriate PSO create info struct, e.g. for PIPELINE_TYPE_GRAPHICS:
+    ///     auto& GraphicsPipelineCI = static_cast<GraphicsPipelineStateCreateInfo>(PipelineCI);
     ///
-    ///                 auto& GraphicsPipelineCI = static_cast<GraphicsPipelineStateCreateInfo>(PipelineCI);
+    /// Modifying graphics pipeline states (e.g. rasterizer, depth-stencil, blend, render
+    /// target formats, etc.) is the most expected usage of the callback.
     ///
-    ///             Modifying graphics pipeline states (e.g. rasterizer, depth-stencil, blend, render
-    ///             target formats, etc.) is the most expected usage of the callback.
+    /// The following members of the structure must not be modified:
+    /// - `PipelineCI.PSODesc.PipelineType`
+    /// - `PipelineCI.PSODesc.ResourceLayout`
+    /// - `PipelineCI.ppResourceSignatures`
+    /// - `PipelineCI.ResourceSignaturesCount`
     ///
-    ///             The following members of the structure must not be modified:
-    ///             - PipelineCI.PSODesc.PipelineType
-    ///             - PipelineCI.PSODesc.ResourceLayout
-    ///             - PipelineCI.ppResourceSignatures
-    ///             - PipelineCI.ResourceSignaturesCount
-    ///
-    ///             An application may modify shader pointers (e.g. GraphicsPipelineCI.pVS), but it must
-    ///             ensure that the shader layout is compatible with the pipeline state, otherwise hard-to-debug
-    ///             errors will occur.
+    /// An application may modify shader pointers (e.g. GraphicsPipelineCI.pVS), but it must
+    /// ensure that the shader layout is compatible with the pipeline state, otherwise hard-to-debug
+    /// errors will occur.
     void (*ModifyPipelineStateCreateInfo)(PipelineStateCreateInfo REF PipelineCI, void* pUserData) DEFAULT_INITIALIZER(nullptr);
 
     /// A pointer to the user data to pass to the ModifyPipelineStateCreateInfo function.
@@ -266,7 +267,7 @@ DILIGENT_BEGIN_INTERFACE(IDearchiver, IObject)
     ///
     /// \note   Resource signatures used by the PSO will be unpacked from the same archive.
     ///
-    ///         This method is thread-safe.
+    /// \note   This method is thread-safe.
     VIRTUAL void METHOD(UnpackPipelineState)(THIS_
                                              const PipelineStateUnpackInfo REF UnpackInfo,
                                              IPipelineState**                  ppPSO) PURE;

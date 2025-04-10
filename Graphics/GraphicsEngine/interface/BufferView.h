@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,6 +47,7 @@ struct BufferFormat
     VALUE_TYPE ValueType    DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// Number of components. Allowed values: 1, 2, 3, 4.
+
     /// For a formatted buffer, this value cannot be 0
     Uint8 NumComponents     DEFAULT_INITIALIZER(0);
 
@@ -96,10 +97,10 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     struct BufferFormat Format;
 
     /// Offset in bytes from the beginning of the buffer to the start of the
-    /// buffer region referenced by the view
+    /// buffer region referenced by the view.
     Uint64 ByteOffset       DEFAULT_INITIALIZER(0);
 
-    /// Size in bytes of the referenced buffer region
+    /// Size in bytes of the referenced buffer region.
     Uint64 ByteWidth        DEFAULT_INITIALIZER(0);
 
 
@@ -164,7 +165,7 @@ DILIGENT_BEGIN_INTERFACE(IBufferView, IDeviceObject)
     /// Returns pointer to the referenced buffer object.
 
     /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// so Release() **must not** be called.
     VIRTUAL struct IBuffer* METHOD(GetBuffer)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

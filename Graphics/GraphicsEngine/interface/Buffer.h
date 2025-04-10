@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,7 +73,8 @@ DILIGENT_TYPED_ENUM(BUFFER_MODE, Uint8)
 /// Miscellaneous buffer flags.
 DILIGENT_TYPED_ENUM(MISC_BUFFER_FLAGS, Uint8)
 {
-    MISC_BUFFER_FLAG_NONE          = 0,
+    /// No special flags are set.
+    MISC_BUFFER_FLAG_NONE            = 0,
 
     /// For a sparse buffer, allow binding the same memory region in different buffer ranges
     /// or in different sparse buffers.
@@ -99,8 +100,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Buffer usage, see Diligent::USAGE for details
     USAGE Usage                     DEFAULT_INITIALIZER(USAGE_DEFAULT);
 
-    /// CPU access flags or 0 if no CPU access is allowed,
-    /// see Diligent::CPU_ACCESS_FLAGS for details.
+    /// CPU access flags or 0 if no CPU access is allowed, see Diligent::CPU_ACCESS_FLAGS for details.
     CPU_ACCESS_FLAGS CPUAccessFlags DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
 
     /// Buffer mode, see Diligent::BUFFER_MODE
@@ -221,7 +221,7 @@ struct SparseBufferProperties
     Uint64  AddressSpaceSize  DEFAULT_INITIALIZER(0);
 
     /// The size of the sparse memory block.
-    ///
+
     /// \note Offset in the buffer, memory offset and memory size that are used in sparse resource
     ///       binding command, must be multiples of the block size.
     ///       In Direct3D11 and Direct3D12, the block size is always 64Kb.
@@ -320,8 +320,8 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
     ///
     /// \note   This method must never be used for USAGE_DYNAMIC buffers.
     ///
-    ///         When a mapped buffer is unmapped it is automatically flushed by
-    ///         the engine if necessary.
+    /// When a mapped buffer is unmapped it is automatically flushed by
+    /// the engine if necessary.
     VIRTUAL void METHOD(FlushMappedRange)(THIS_
                                           Uint64 StartOffset,
                                           Uint64 Size) PURE;
@@ -341,8 +341,8 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
     ///
     /// \note   This method must never be used for USAGE_DYNAMIC buffers.
     ///
-    ///         When a mapped buffer is unmapped it is automatically invalidated by
-    ///         the engine if necessary.
+    /// When a mapped buffer is unmapped, it is automatically invalidated by
+    /// the engine if necessary.
     VIRTUAL void METHOD(InvalidateMappedRange)(THIS_
                                                Uint64 StartOffset,
                                                Uint64 Size) PURE;
