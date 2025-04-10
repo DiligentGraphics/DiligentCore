@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,7 +74,7 @@ public:
     void DvpSignal(Uint64 NewValue)
     {
 #ifdef DILIGENT_DEVELOPMENT
-        auto EnqueuedValue = m_EnqueuedFenceValue.load();
+        Uint64 EnqueuedValue = m_EnqueuedFenceValue.load();
         DEV_CHECK_ERR(NewValue >= EnqueuedValue,
                       "Fence '", this->m_Desc.Name, "' is being signaled or enqueued for signal with value ", NewValue,
                       ", but the previous value (", EnqueuedValue,

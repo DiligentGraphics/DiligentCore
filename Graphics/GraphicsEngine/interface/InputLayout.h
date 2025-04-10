@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,13 +68,16 @@ DILIGENT_TYPED_ENUM(INPUT_ELEMENT_FREQUENCY, Uint8)
 /// Description of a single element of the input layout
 struct LayoutElement
 {
-    /// HLSL semantic. Default value ("ATTRIB") allows HLSL shaders to be converted
+    /// HLSL semantic.
+
+    /// Default value (`"ATTRIB"`) allows HLSL shaders to be converted
     /// to GLSL and used in OpenGL backend as well as compiled to SPIRV and used
     /// in Vulkan backend.
     /// Any value other than default will only work in Direct3D11 and Direct3D12 backends.
     const Char* HLSLSemantic DEFAULT_INITIALIZER("ATTRIB");
 
     /// Input index of the element that is specified in the vertex shader.
+
     /// In Direct3D11 and Direct3D12 backends this is the semantic index.
     Uint32 InputIndex        DEFAULT_INITIALIZER(0);
 
@@ -87,25 +90,31 @@ struct LayoutElement
     /// Type of the element components, see Diligent::VALUE_TYPE for details.
     VALUE_TYPE ValueType     DEFAULT_INITIALIZER(VT_FLOAT32);
 
+    /// Indicates if the value should be normalized.
+
     /// For signed and unsigned integer value types
-    /// (VT_INT8, VT_INT16, VT_INT32, VT_UINT8, VT_UINT16, VT_UINT32)
+    /// (`VT_INT8`, `VT_INT16`, `VT_INT32`, `VT_UINT8`, `VT_UINT16`, `VT_UINT32`)
     /// indicates if the value should be normalized to [-1,+1] or
-    /// [0, 1] range respectively. For floating point types
-    /// (VT_FLOAT16 and VT_FLOAT32), this member is ignored.
+    /// [0, 1] range respectively.
+    /// 
+    /// For floating point types (`VT_FLOAT16` and `VT_FLOAT32`), this member is ignored.
     Bool IsNormalized        DEFAULT_INITIALIZER(True);
 
     /// Relative offset, in bytes, to the element bits.
-    /// If this value is set to LAYOUT_ELEMENT_AUTO_OFFSET (default value), the offset will
+
+    /// If this value is set to `LAYOUT_ELEMENT_AUTO_OFFSET` (default value), the offset will
     /// be computed automatically by placing the element right after the previous one.
     Uint32 RelativeOffset    DEFAULT_INITIALIZER(LAYOUT_ELEMENT_AUTO_OFFSET);
 
     /// Stride, in bytes, between two elements, for this buffer slot.
-    /// If this value is set to LAYOUT_ELEMENT_AUTO_STRIDE, the stride will be
+
+    /// If this value is set to `LAYOUT_ELEMENT_AUTO_STRIDE`, the stride will be
     /// computed automatically assuming that all elements in the same buffer slot are
     /// packed one after another. If the buffer slot contains multiple layout elements,
     /// they all must specify the same stride or use LAYOUT_ELEMENT_AUTO_STRIDE value.
     Uint32 Stride            DEFAULT_INITIALIZER(LAYOUT_ELEMENT_AUTO_STRIDE);
 
+    /// Frequency of the input data, see Diligent::INPUT_ELEMENT_FREQUENCY for details.
     INPUT_ELEMENT_FREQUENCY Frequency DEFAULT_INITIALIZER(INPUT_ELEMENT_FREQUENCY_PER_VERTEX);
 
     /// The number of instances to draw using the same per-instance data before advancing
@@ -208,9 +217,10 @@ typedef struct LayoutElement LayoutElement;
 /// This structure is used by IRenderDevice::CreateGraphicsPipelineState().
 struct InputLayoutDesc
 {
-    /// Array of layout elements
+    /// Array of layout elements.
     const LayoutElement* LayoutElements  DEFAULT_INITIALIZER(nullptr);
-    /// Number of layout elements
+
+    /// The number of layout elements in `LayoutElements` array.
     Uint32               NumElements     DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE

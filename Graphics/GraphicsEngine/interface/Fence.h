@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -84,8 +84,8 @@ typedef struct FenceDesc FenceDesc;
 
 /// Defines the methods to manipulate a fence object
 ///
-/// \remarks When a fence that was previously signaled by IDeviceContext::EnqueueSignal() is destroyed,
-///          it may block the GPU until all prior commands have completed execution.
+/// When a fence that was previously signaled by IDeviceContext::EnqueueSignal() is destroyed,
+/// it may block the GPU until all prior commands have completed execution.
 ///
 /// \remarks In Direct3D12 and Vulkan backends, fence is thread-safe.
 DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
@@ -108,12 +108,12 @@ DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
     /// \param [in] Value - New value to set the fence to.
     ///                     The value must be greater than the current value of the fence.
     ///
-    /// \note  Fence value will be changed immediately on the CPU.
-    ///        Use IDeviceContext::EnqueueSignal to enqueue a signal command
-    ///        that will change the value on the GPU after all previously submitted commands
-    ///        are complete.
+    /// Fence value will be changed immediately on the CPU.
+    /// Use IDeviceContext::EnqueueSignal to enqueue a signal command
+    /// that will change the value on the GPU after all previously submitted commands
+    /// are complete.
     ///
-    /// \note  The fence must have been created with type FENCE_TYPE_GENERAL.
+    /// \note  The fence must have been created with type Diligent::FENCE_TYPE_GENERAL.
     VIRTUAL void METHOD(Signal)(THIS_
                                 Uint64 Value) PURE;
 
@@ -122,7 +122,7 @@ DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
 
     /// \param [in] Value - The value that the fence is waiting for to reach.
     ///
-    /// \note  The method blocks the execution of the calling thread until the wait is complete.
+    /// The method blocks the execution of the calling thread until the wait is complete.
     VIRTUAL void METHOD(Wait)(THIS_
                               Uint64 Value) PURE;
 };

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_DeviceMemory =
 /// This enumeration is used by DeviceMemoryDesc structure.
 DILIGENT_TYPED_ENUM(DEVICE_MEMORY_TYPE, Uint8)
 {
+    /// Indicates that the memory type is not defined.
     DEVICE_MEMORY_TYPE_UNDEFINED = 0,
 
     /// Indicates that memory will be used for sparse resources.
@@ -56,7 +57,8 @@ struct DeviceMemoryDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Memory type, see Diligent::DEVICE_MEMORY_TYPE.
     DEVICE_MEMORY_TYPE  Type                  DEFAULT_INITIALIZER(DEVICE_MEMORY_TYPE_UNDEFINED);
 
-    /// Size of the memory page.
+    /// Size of the memory page, in bytes.
+
     /// Depending on the implementation, the memory may be allocated as a single chunk or as an array of pages.
     Uint64              PageSize              DEFAULT_INITIALIZER(0);
 
@@ -92,19 +94,21 @@ struct DeviceMemoryCreateInfo
     DeviceMemoryDesc  Desc;
 
     /// Initial size of the memory object.
-    ///
+
     /// Some implementations do not support IDeviceMemory::Resize() and memory can only be allocated during the initialization.
     Uint64            InitialSize           DEFAULT_INITIALIZER(0);
 
-    /// An array of NumResources resources that this memory must be compatible with.
-    /// For sparse memory, only USAGE_SPARSE buffer and texture resources are allowed.
+    /// An array of `NumResources` resources that this memory must be compatible with.
+
+    /// For sparse memory, only Diligent::USAGE_SPARSE buffer and texture resources are allowed.
     /// 
-    /// \note Vulkan backend requires at least one resource to be provided.
+    /// Vulkan backend requires at least one resource to be provided.
     ///
-    ///       In Direct3D12, the list of resources is optional on D3D12_RESOURCE_HEAP_TIER_2-hardware
-    ///       and above, but is required on D3D12_RESOURCE_HEAP_TIER_1-hardware
-    ///       (see SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT).
-    ///       It is recommended to always provide the list.
+    /// In Direct3D12, the list of resources is optional on D3D12_RESOURCE_HEAP_TIER_2-hardware
+    /// and above, but is required on D3D12_RESOURCE_HEAP_TIER_1-hardware
+    /// (see SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT).
+    ///
+    /// It is recommended to always provide the list.
     IDeviceObject**   ppCompatibleResources DEFAULT_INITIALIZER(nullptr);
 
     /// The number of elements in the ppCompatibleResources array.
@@ -137,8 +141,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceMemory, IDeviceObject)
 
     /// \param [in] NewSize - The new size of the memory object; must be a multiple of DeviceMemoryDesc::PageSize.
     ///
-    /// \remarks  Depending on the implementation, the function may resize the existing memory object or
-    ///           create/destroy pages with separate memory objects.
+    /// Depending on the implementation, the function may resize the existing memory object or
+    /// create/destroy pages with separate memory objects.
     ///
     /// \remarks  This method must be externally synchronized with IDeviceMemory::GetCapacity()
     ///           and IDeviceContext::BindSparseResourceMemory().
