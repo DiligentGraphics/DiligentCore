@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,11 +41,11 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                                            const IRenderDevice*                 pDevice,
                                            RENDER_DEVICE_TYPE                   DeviceType) noexcept(false)
 {
-    const auto& DeviceInfo = pDevice != nullptr ?
+    const RenderDeviceInfo& DeviceInfo = pDevice != nullptr ?
         pDevice->GetDeviceInfo() :
         RenderDeviceInfo{DeviceType, Version{}, DeviceFeatures{DEVICE_FEATURE_STATE_ENABLED}};
 
-    const auto& Features = DeviceInfo.Features;
+    const DeviceFeatures& Features = DeviceInfo.Features;
 
     if (Desc.BindingIndex >= MAX_RESOURCE_SIGNATURES)
         LOG_PRS_ERROR_AND_THROW("Desc.BindingIndex (", Uint32{Desc.BindingIndex}, ") exceeds the maximum allowed value (", MAX_RESOURCE_SIGNATURES - 1, ").");
@@ -67,7 +67,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
     std::unordered_multimap<HashMapStringKey, const PipelineResourceDesc&> Resources;
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
-        const auto& Res = Desc.Resources[i];
+        const PipelineResourceDesc& Res = Desc.Resources[i];
 
         if (Res.Name == nullptr)
             LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].Name must not be null.");
@@ -103,7 +103,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             }
         }
 
-        auto AllowedResourceFlags = GetValidPipelineResourceFlags(Res.ResourceType);
+        PIPELINE_RESOURCE_FLAGS AllowedResourceFlags = GetValidPipelineResourceFlags(Res.ResourceType);
         if ((Res.Flags & ~AllowedResourceFlags) != 0)
         {
             LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
@@ -166,7 +166,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
     std::unordered_multimap<HashMapStringKey, const ImmutableSamplerDesc&> ImtblSamplers;
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
     {
-        const auto& SamDesc = Desc.ImmutableSamplers[i];
+        const ImmutableSamplerDesc& SamDesc = Desc.ImmutableSamplers[i];
         if (SamDesc.SamplerOrTextureName == nullptr)
             LOG_PRS_ERROR_AND_THROW("Desc.ImmutableSamplers[", i, "].SamplerOrTextureName must not be null.");
 
@@ -210,7 +210,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         std::unordered_multimap<HashMapStringKey, SHADER_TYPE> AssignedImtblSamplers;
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
-            const auto& Res = Desc.Resources[i];
+            const PipelineResourceDesc& Res = Desc.Resources[i];
             if (Res.ResourceType != SHADER_RESOURCE_TYPE_TEXTURE_SRV)
             {
                 // Only texture SRVs can be combined with samplers
@@ -218,12 +218,12 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             }
 
             {
-                const auto AssignedSamplerName = String{Res.Name} + Desc.CombinedSamplerSuffix;
+                const String AssignedSamplerName = String{Res.Name} + Desc.CombinedSamplerSuffix;
 
                 const auto sam_range = Resources.equal_range(AssignedSamplerName.c_str());
                 for (auto sam_it = sam_range.first; sam_it != sam_range.second; ++sam_it)
                 {
-                    const auto& Sam = sam_it->second;
+                    const PipelineResourceDesc& Sam = sam_it->second;
                     VERIFY_EXPR(AssignedSamplerName == Sam.Name);
 
                     if ((Sam.ShaderStages & Res.ShaderStages) != 0)
@@ -259,7 +259,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                 const auto imtbl_sam_range = ImtblSamplers.equal_range(Res.Name);
                 for (auto sam_it = imtbl_sam_range.first; sam_it != imtbl_sam_range.second; ++sam_it)
                 {
-                    const auto& Sam = sam_it->second;
+                    const ImmutableSamplerDesc& Sam = sam_it->second;
                     VERIFY_EXPR(strcmp(Sam.SamplerOrTextureName, Res.Name) == 0);
 
                     if ((Sam.ShaderStages & Res.ShaderStages) != 0)
@@ -282,7 +282,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
-            const auto& Res = Desc.Resources[i];
+            const PipelineResourceDesc& Res = Desc.Resources[i];
             if (Res.ResourceType != SHADER_RESOURCE_TYPE_SAMPLER)
                 continue;
 
@@ -303,7 +303,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
         for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
         {
-            const auto& SamDesc = Desc.ImmutableSamplers[i];
+            const ImmutableSamplerDesc& SamDesc = Desc.ImmutableSamplers[i];
 
             auto assigned_sam_range = AssignedImtblSamplers.equal_range(SamDesc.SamplerOrTextureName);
 
@@ -334,7 +334,7 @@ Uint32 FindImmutableSampler(const ImmutableSamplerDesc ImtblSamplers[],
     VERIFY_EXPR(ResourceName != nullptr && ResourceName[0] != '\0');
     for (Uint32 s = 0; s < NumImtblSamplers; ++s)
     {
-        const auto& Sam = ImtblSamplers[s];
+        const ImmutableSamplerDesc& Sam = ImtblSamplers[s];
         if (((Sam.ShaderStages & ShaderStages) != 0) && StreqSuff(ResourceName, Sam.SamplerOrTextureName, SamplerSuffix))
         {
             VERIFY((Sam.ShaderStages & ShaderStages) == ShaderStages,
@@ -355,7 +355,7 @@ Uint32 FindResource(const PipelineResourceDesc Resources[],
     VERIFY_EXPR(ResourceName != nullptr && ResourceName[0] != '\0');
     for (Uint32 r = 0; r < NumResources; ++r)
     {
-        const auto& ResDesc{Resources[r]};
+        const PipelineResourceDesc& ResDesc{Resources[r]};
         if ((ResDesc.ShaderStages & ShaderStage) != 0 && strcmp(ResDesc.Name, ResourceName) == 0)
             return r;
     }
@@ -397,8 +397,8 @@ bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& D
 
     for (Uint32 s = 0; s < Desc0.NumImmutableSamplers; ++s)
     {
-        const auto& Samp0 = Desc0.ImmutableSamplers[s];
-        const auto& Samp1 = Desc1.ImmutableSamplers[s];
+        const ImmutableSamplerDesc& Samp0 = Desc0.ImmutableSamplers[s];
+        const ImmutableSamplerDesc& Samp1 = Desc1.ImmutableSamplers[s];
 
         if (Samp0.ShaderStages != Samp1.ShaderStages)
             return false;
@@ -412,11 +412,11 @@ bool PipelineResourceSignaturesCompatible(const PipelineResourceSignatureDesc& D
 
 size_t CalculatePipelineResourceSignatureDescHash(const PipelineResourceSignatureDesc& Desc) noexcept
 {
-    auto Hash = ComputeHash(Desc.NumResources, Desc.NumImmutableSamplers, Desc.BindingIndex);
+    size_t Hash = ComputeHash(Desc.NumResources, Desc.NumImmutableSamplers, Desc.BindingIndex);
 
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
-        const auto& Res = Desc.Resources[i];
+        const PipelineResourceDesc& Res = Desc.Resources[i];
         HashCombine(Hash, Uint32{Res.ShaderStages}, Res.ArraySize, Uint32{Res.ResourceType}, Uint32{Res.VarType}, Uint32{Res.Flags});
     }
 
@@ -435,7 +435,7 @@ void ReserveSpaceForPipelineResourceSignatureDesc(FixedLinearAllocator& Allocato
 
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
-        const auto& Res = Desc.Resources[i];
+        const PipelineResourceDesc& Res = Desc.Resources[i];
 
         VERIFY(Res.Name != nullptr, "Name can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
         VERIFY(Res.Name[0] != '\0', "Name can't be empty. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
@@ -447,7 +447,7 @@ void ReserveSpaceForPipelineResourceSignatureDesc(FixedLinearAllocator& Allocato
 
     for (Uint32 i = 0; i < Desc.NumImmutableSamplers; ++i)
     {
-        const auto* SamOrTexName = Desc.ImmutableSamplers[i].SamplerOrTextureName;
+        const char* SamOrTexName = Desc.ImmutableSamplers[i].SamplerOrTextureName;
         VERIFY(SamOrTexName != nullptr, "SamplerOrTextureName can't be null. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
         VERIFY(SamOrTexName[0] != '\0', "SamplerOrTextureName can't be empty. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
         Allocator.AddSpaceForString(SamOrTexName);
@@ -468,8 +468,8 @@ void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                    
 
     for (Uint32 i = 0; i < SrcDesc.NumResources; ++i)
     {
-        const auto& SrcRes = SrcDesc.Resources[i];
-        auto&       DstRes = pResources[i];
+        const PipelineResourceDesc& SrcRes = SrcDesc.Resources[i];
+        PipelineResourceDesc&       DstRes = pResources[i];
 
         DstRes = SrcRes;
         VERIFY_EXPR(SrcRes.Name != nullptr && SrcRes.Name[0] != '\0');
@@ -495,8 +495,8 @@ void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                    
 
     for (Uint32 i = 0; i < SrcDesc.NumImmutableSamplers; ++i)
     {
-        const auto& SrcSam = SrcDesc.ImmutableSamplers[i];
-        auto&       DstSam = pSamplers[i];
+        const ImmutableSamplerDesc& SrcSam = SrcDesc.ImmutableSamplers[i];
+        ImmutableSamplerDesc&       DstSam = pSamplers[i];
 
         DstSam = SrcSam;
         VERIFY_EXPR(SrcSam.SamplerOrTextureName != nullptr && SrcSam.SamplerOrTextureName[0] != '\0');

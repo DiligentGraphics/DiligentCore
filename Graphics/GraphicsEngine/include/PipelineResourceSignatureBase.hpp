@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -219,7 +219,7 @@ public:
         m_Desc.NumResources = StaticCast<Uint32>(m_Resources.size());
         m_Desc.Resources    = m_Resources.data();
 
-        auto& Res{m_Resources.back()};
+        PipelineResourceDesc& Res{m_Resources.back()};
         Res.Name = m_StringPool.insert(Res.Name).first->c_str();
     }
 
@@ -230,14 +230,14 @@ public:
         m_Desc.NumImmutableSamplers = StaticCast<Uint32>(m_ImmutableSamplers.size());
         m_Desc.ImmutableSamplers    = m_ImmutableSamplers.data();
 
-        auto& ImtblSam{m_ImmutableSamplers.back()};
+        ImmutableSamplerDesc& ImtblSam{m_ImmutableSamplers.back()};
         ImtblSam.SamplerOrTextureName = m_StringPool.insert(ImtblSam.SamplerOrTextureName).first->c_str();
     }
 
     template <class HandlerType>
     void ProcessImmutableSamplers(HandlerType&& Handler)
     {
-        for (auto& ImtblSam : m_ImmutableSamplers)
+        for (ImmutableSamplerDesc& ImtblSam : m_ImmutableSamplers)
         {
             const char* OrigName = ImtblSam.SamplerOrTextureName;
             Handler(ImtblSam);
@@ -249,7 +249,7 @@ public:
     template <class HandlerType>
     void ProcessResources(HandlerType&& Handler)
     {
-        for (auto& Res : m_Resources)
+        for (PipelineResourceDesc& Res : m_Resources)
         {
             const char* OrigName = Res.Name;
             Handler(Res);
@@ -384,7 +384,7 @@ public:
         // shader stages that have static resources.
         for (Uint32 i = 0; i < Desc.NumResources; ++i)
         {
-            const auto& ResDesc = Desc.Resources[i];
+            const PipelineResourceDesc& ResDesc = Desc.Resources[i];
 
             m_ShaderStages |= ResDesc.ShaderStages;
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
@@ -399,10 +399,10 @@ public:
 
         {
             Uint32 StaticVarStageIdx = 0;
-            for (auto StaticResStages = m_StaticResShaderStages; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageIdx)
+            for (SHADER_TYPE StaticResStages = m_StaticResShaderStages; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageIdx)
             {
-                const auto StageBit                  = ExtractLSB(StaticResStages);
-                const auto ShaderTypeInd             = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
+                const SHADER_TYPE StageBit           = ExtractLSB(StaticResStages);
+                const Int32       ShaderTypeInd      = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
                 m_StaticResStageIndex[ShaderTypeInd] = static_cast<Int8>(StaticVarStageIdx);
             }
             VERIFY_EXPR(StaticVarStageIdx == GetNumStaticResStages());
@@ -449,8 +449,8 @@ public:
             return 0;
         }
 
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
+        const Int32 ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
+        const int   VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
         if (VarMngrInd < 0)
             return 0;
 
@@ -469,8 +469,8 @@ public:
             return nullptr;
         }
 
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
+        const Int32 ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
+        const int   VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
         if (VarMngrInd < 0)
             return nullptr;
 
@@ -489,8 +489,8 @@ public:
             return nullptr;
         }
 
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
-        const auto VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
+        const Int32 ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_PipelineType);
+        const int   VarMngrInd    = m_StaticResStageIndex[ShaderTypeInd];
         if (VarMngrInd < 0)
             return nullptr;
 
@@ -503,15 +503,15 @@ public:
                                                         IResourceMapping*           pResourceMapping,
                                                         BIND_SHADER_RESOURCES_FLAGS Flags) override final
     {
-        const auto PipelineType = GetPipelineType();
+        const PIPELINE_TYPE PipelineType = GetPipelineType();
         for (Uint32 ShaderInd = 0; ShaderInd < m_StaticResStageIndex.size(); ++ShaderInd)
         {
-            const auto VarMngrInd = m_StaticResStageIndex[ShaderInd];
+            const int VarMngrInd = m_StaticResStageIndex[ShaderInd];
             if (VarMngrInd >= 0)
             {
                 VERIFY_EXPR(static_cast<Uint32>(VarMngrInd) < GetNumStaticResStages());
                 // ShaderInd is the shader type pipeline index here
-                const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
+                const SHADER_TYPE ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
                 if (ShaderStages & ShaderType)
                 {
                     m_StaticVarsMgrs[VarMngrInd].BindResources(pResourceMapping, Flags);
@@ -531,9 +531,9 @@ public:
         }
         DEV_CHECK_ERR(*ppShaderResourceBinding == nullptr, "Overwriting existing shader resource binding pointer may cause memory leaks.");
 
-        auto* pThisImpl{static_cast<PipelineResourceSignatureImplType*>(this)};
-        auto& SRBAllocator{pThisImpl->GetDevice()->GetSRBAllocator()};
-        auto* pResBindingImpl{NEW_RC_OBJ(SRBAllocator, "ShaderResourceBinding instance", ShaderResourceBindingImplType)(pThisImpl)};
+        PipelineResourceSignatureImplType* pThisImpl{static_cast<PipelineResourceSignatureImplType*>(this)};
+        FixedBlockMemoryAllocator&         SRBAllocator{pThisImpl->GetDevice()->GetSRBAllocator()};
+        ShaderResourceBindingImplType*     pResBindingImpl{NEW_RC_OBJ(SRBAllocator, "ShaderResourceBinding instance", ShaderResourceBindingImplType)(pThisImpl)};
         if (InitStaticResources)
             pThisImpl->InitializeStaticSRBResources(pResBindingImpl);
         pResBindingImpl->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
@@ -544,17 +544,17 @@ public:
     {
         DEV_CHECK_ERR(pSRB != nullptr, "SRB must not be null");
 
-        auto* const pSRBImpl = ClassPtrCast<ShaderResourceBindingImplType>(pSRB);
+        ShaderResourceBindingImplType* const pSRBImpl = ClassPtrCast<ShaderResourceBindingImplType>(pSRB);
         if (pSRBImpl->StaticResourcesInitialized())
         {
             LOG_WARNING_MESSAGE("Static resources have already been initialized in this shader resource binding object.");
             return;
         }
 
-        const auto* const pThisImpl = static_cast<const PipelineResourceSignatureImplType*>(this);
+        const PipelineResourceSignatureImplType* const pThisImpl = static_cast<const PipelineResourceSignatureImplType*>(this);
 #ifdef DILIGENT_DEVELOPMENT
         {
-            const auto* pSRBSignature = pSRBImpl->GetPipelineResourceSignature();
+            const IPipelineResourceSignature* pSRBSignature = pSRBImpl->GetPipelineResourceSignature();
             DEV_CHECK_ERR(pSRBSignature->IsCompatibleWith(pThisImpl), "Shader resource binding is not compatible with resource signature '", pThisImpl->m_Desc.Name, "'.");
         }
 #endif
@@ -580,8 +580,8 @@ public:
             return;
         }
 
-        const auto* const pThisImpl    = static_cast<const PipelineResourceSignatureImplType*>(this);
-        auto* const       pDstSignImpl = static_cast<const PipelineResourceSignatureImplType*>(pDstSignature);
+        const PipelineResourceSignatureImplType* const pThisImpl    = static_cast<const PipelineResourceSignatureImplType*>(this);
+        const PipelineResourceSignatureImplType* const pDstSignImpl = static_cast<const PipelineResourceSignatureImplType*>(pDstSignature);
         if (!pDstSignImpl->IsCompatibleWith(pThisImpl))
         {
             LOG_ERROR_MESSAGE("Can't copy static resources: destination pipeline resource signature '", pDstSignImpl->m_Desc.Name,
@@ -601,8 +601,8 @@ public:
         if (this == pPRS)
             return true;
 
-        const auto& This  = *static_cast<const PipelineResourceSignatureImplType*>(this);
-        const auto& Other = *ClassPtrCast<const PipelineResourceSignatureImplType>(pPRS);
+        const PipelineResourceSignatureImplType& This  = *static_cast<const PipelineResourceSignatureImplType*>(this);
+        const PipelineResourceSignatureImplType& Other = *ClassPtrCast<const PipelineResourceSignatureImplType>(pPRS);
 
         if (This.GetHash() != Other.GetHash())
             return false;
@@ -610,12 +610,12 @@ public:
         if (!PipelineResourceSignaturesCompatible(This.GetDesc(), Other.GetDesc()))
             return false;
 
-        const auto ResCount = This.GetTotalResourceCount();
+        const Uint32 ResCount = This.GetTotalResourceCount();
         VERIFY_EXPR(ResCount == Other.GetTotalResourceCount());
         for (Uint32 r = 0; r < ResCount; ++r)
         {
-            const auto& Res      = This.GetResourceAttribs(r);
-            const auto& OtherRes = Other.GetResourceAttribs(r);
+            const PipelineResourceAttribsType& Res      = This.GetResourceAttribs(r);
+            const PipelineResourceAttribsType& OtherRes = Other.GetResourceAttribs(r);
             if (!Res.IsCompatibleWith(OtherRes))
                 return false;
         }
@@ -665,7 +665,7 @@ public:
         SHADER_TYPE Stages = m_ShaderStages;
         for (Uint32 Index = 0; Stages != SHADER_TYPE_UNKNOWN; ++Index)
         {
-            auto StageBit = ExtractLSB(Stages);
+            SHADER_TYPE StageBit = ExtractLSB(Stages);
 
             if (Index == StageIndex)
                 return StageBit;
@@ -755,7 +755,7 @@ public:
                 std::make_pair<Uint32, Uint32>(0, GetTotalResourceCount());
             for (Uint32 ResIdx = IdxRange.first; ResIdx < IdxRange.second; ++ResIdx)
             {
-                const auto& ResDesc = GetResourceDesc(ResIdx);
+                const PipelineResourceDesc& ResDesc = GetResourceDesc(ResIdx);
                 VERIFY_EXPR(AllowedVarTypes == nullptr || ResDesc.VarType == AllowedVarTypes[TypeIdx]);
 
                 if ((ResDesc.ShaderStages & AllowedStages) != 0)
@@ -806,7 +806,7 @@ protected:
 
         Allocator.AddSpace<PipelineResourceAttribsType>(Desc.NumResources);
 
-        const auto NumStaticResStages = GetNumStaticResStages();
+        const Uint32 NumStaticResStages = GetNumStaticResStages();
         if (NumStaticResStages > 0)
         {
             Allocator.AddSpace<ShaderResourceCacheImplType>(1);
@@ -829,7 +829,7 @@ protected:
         VERIFY_EXPR(m_ResourceOffsets[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES] == this->m_Desc.NumResources);
         for (Uint32 VarType = 0; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++VarType)
         {
-            auto IdxRange = GetResourceIndexRange(static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType));
+            const auto IdxRange = GetResourceIndexRange(static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType));
             for (Uint32 idx = IdxRange.first; idx < IdxRange.second; ++idx)
                 VERIFY(this->m_Desc.Resources[idx].VarType == VarType, "Unexpected resource var type");
         }
@@ -872,7 +872,7 @@ protected:
 
         InitResourceLayout();
 
-        auto* const pThisImpl = static_cast<PipelineResourceSignatureImplType*>(this);
+        PipelineResourceSignatureImplType* const pThisImpl = static_cast<PipelineResourceSignatureImplType*>(this);
 
         if (NumStaticResStages > 0)
         {
@@ -883,7 +883,7 @@ protected:
                 if (Idx >= 0)
                 {
                     VERIFY_EXPR(static_cast<Uint32>(Idx) < NumStaticResStages);
-                    const auto ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
+                    const SHADER_TYPE ShaderType = GetShaderTypeFromPipelineIndex(i, GetPipelineType());
                     m_StaticVarsMgrs[Idx].Initialize(*pThisImpl, RawAllocator, AllowedVarTypes, _countof(AllowedVarTypes), ShaderType);
                 }
             }
@@ -936,7 +936,7 @@ protected:
         bool HasCombinedSamplers = false;
         for (Uint32 r = 0; r < Desc.NumResources; ++r)
         {
-            const auto& Res{Desc.Resources[r]};
+            const PipelineResourceDesc& Res{Desc.Resources[r]};
             if ((Res.Flags & PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER) == 0)
                 continue;
 
@@ -948,7 +948,7 @@ protected:
 
             HasCombinedSamplers = true;
 
-            const auto SamplerName = std::string{Res.Name} + Desc.CombinedSamplerSuffix;
+            const std::string SamplerName = std::string{Res.Name} + Desc.CombinedSamplerSuffix;
             // Check if the sampler is already defined.
             if (Diligent::FindResource(Desc.Resources, Desc.NumResources, Res.ShaderStages, SamplerName.c_str()) == InvalidPipelineResourceIndex)
             {
@@ -979,11 +979,11 @@ protected:
         this->m_Desc.ImmutableSamplers     = nullptr;
         this->m_Desc.CombinedSamplerSuffix = nullptr;
 
-        auto& RawAllocator = GetRawAllocator();
+        IMemoryAllocator& RawAllocator = GetRawAllocator();
 
         if (m_StaticVarsMgrs != nullptr)
         {
-            for (auto Idx : m_StaticResStageIndex)
+            for (int Idx : m_StaticResStageIndex)
             {
                 if (Idx >= 0)
                 {
@@ -1033,7 +1033,7 @@ protected:
 
             for (Uint32 i = IdxRange.first; i < IdxRange.second; ++i)
             {
-                const auto& Res = this->m_Desc.Resources[i];
+                const PipelineResourceDesc& Res = this->m_Desc.Resources[i];
                 VERIFY_EXPR(Tex.VarType == Res.VarType);
 
                 if (Res.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
@@ -1051,12 +1051,12 @@ protected:
 
     void CalculateHash()
     {
-        const auto* const pThisImpl = static_cast<const PipelineResourceSignatureImplType*>(this);
+        const PipelineResourceSignatureImplType* const pThisImpl = static_cast<const PipelineResourceSignatureImplType*>(this);
 
         m_Hash = CalculatePipelineResourceSignatureDescHash(this->m_Desc);
         for (Uint32 i = 0; i < this->m_Desc.NumResources; ++i)
         {
-            const auto& Attr = pThisImpl->GetResourceAttribs(i);
+            const PipelineResourceAttribsType& Attr = pThisImpl->GetResourceAttribs(i);
             HashCombine(m_Hash, Attr.GetHash());
         }
     }

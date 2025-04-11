@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,13 +96,13 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     /// variable. Applies to SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
     /// SHADER_RESOURCE_TYPE_BUFFER_UAV, SHADER_RESOURCE_TYPE_BUFFER_SRV resources.
     ///
-    /// \remarks    In Vulkan and Direct3D12 backends, dynamic buffers require extra work
-    ///             at run time. If an application knows it will never bind a dynamic buffer to
-    ///             the variable, it should use PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag
-    ///             to improve performance. This flag is not required and non-dynamic buffers
-    ///             will still work even if the flag is not used. It is an error to bind a
-    ///             dynamic buffer to resource that uses
-    ///             PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.
+    /// In Vulkan and Direct3D12 backends, dynamic buffers require extra work
+    /// at run time. If an application knows it will never bind a dynamic buffer to
+    /// the variable, it should use PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag
+    /// to improve performance. This flag is not required and non-dynamic buffers
+    /// will still work even if the flag is not used. It is an error to bind a
+    /// dynamic buffer to resource that uses
+    /// PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.
     PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS = 1u << 0,
 
     /// Indicates that a texture SRV will be combined with a sampler.
@@ -113,10 +113,10 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     /// Applies to SHADER_RESOURCE_TYPE_BUFFER_UAV and SHADER_RESOURCE_TYPE_BUFFER_SRV
     /// resources.
     ///
-    /// \remarks    In Vulkan backend formatted buffers require another descriptor type
-    ///             as opposed to structured buffers. If an application will be using
-    ///             formatted buffers with buffer UAVs and SRVs, it must specify the
-    ///             PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER flag.
+    /// In Vulkan backend formatted buffers require another descriptor type
+    /// as opposed to structured buffers. If an application will be using
+    /// formatted buffers with buffer UAVs and SRVs, it must specify the
+    /// PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER flag.
     PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER   = 1u << 2,
 
     /// Indicates that resource is a run-time sized shader array (e.g. an array without a specific size).
@@ -260,11 +260,12 @@ struct PipelineResourceDesc
     /// Resource name in the shader
     const Char*                    Name          DEFAULT_INITIALIZER(nullptr);
 
-    /// Shader stages that this resource applies to. When multiple shader stages are specified,
-    /// all stages will share the same resource.
+    /// Shader stages that this resource applies to.
+
+    /// When multiple shader stages are specified, all stages will share the same resource.
     ///
-    /// \remarks    There may be multiple resources with the same name in different shader stages,
-    ///             but the stages specified for different resources with the same name must not overlap.
+    /// There may be multiple resources with the same name in different shader stages,
+    /// but the stages specified for different resources with the same name must not overlap.
     SHADER_TYPE                    ShaderStages  DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// Resource array size (must be 1 for non-array resources).
@@ -280,10 +281,10 @@ struct PipelineResourceDesc
     PIPELINE_RESOURCE_FLAGS        Flags         DEFAULT_INITIALIZER(PIPELINE_RESOURCE_FLAG_NONE);
 
     /// WebGPU-specific resource attributes.
-    ///
-    /// \remarks    WebGPU requires additional information for certain resources.
-    ///             This member is used to provide that information.
-    ///             The member is ignored by all backends other than WebGPU.
+
+    /// WebGPU requires additional information for certain resources.
+    /// This member is used to provide that information.
+    /// The member is ignored by all backends other than WebGPU.
     WebGPUResourceAttribs 	       WebGPUAttribs DEFAULT_INITIALIZER({});
 
 #if DILIGENT_CPP_INTERFACE
@@ -361,19 +362,23 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// to different slots.
     Uint8  BindingIndex DEFAULT_INITIALIZER(0);
 
+    /// Whether to use combined texture samplers.
+
     /// If set to true, textures will be combined with texture samplers.
-    /// The CombinedSamplerSuffix member defines the suffix added to the texture variable
+    /// The `CombinedSamplerSuffix` member defines the suffix added to the texture variable
     /// name to get corresponding sampler name. When using combined samplers,
     /// the sampler assigned to the shader resource view is automatically set when
     /// the view is bound. Otherwise samplers need to be explicitly set similar to other
     /// shader variables.
     Bool UseCombinedTextureSamplers DEFAULT_INITIALIZER(false);
 
-    /// If UseCombinedTextureSamplers is true, defines the suffix added to the
+    /// Combined sampler suffix.
+
+    /// If `UseCombinedTextureSamplers` is `true`, defines the suffix added to the
     /// texture variable name to get corresponding sampler name.  For example,
     /// for default value "_sampler", a texture named "tex" will be combined
     /// with sampler named "tex_sampler".
-    /// If UseCombinedTextureSamplers is false, this member is ignored.
+    /// If `UseCombinedTextureSamplers` is `false`, this member is ignored.
     const Char* CombinedSamplerSuffix DEFAULT_INITIALIZER("_sampler");
 
     /// Shader resource binding allocation granularity
@@ -482,19 +487,19 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     ///                          Must be one of Diligent::SHADER_TYPE.
     /// \param [in] Name       - Name of the variable.
     ///
-    /// \remarks    If a variable is shared between multiple shader stages,
-    ///             it can be accessed using any of those shader stages. Even
-    ///             though IShaderResourceVariable instances returned by the method
-    ///             may be different for different stages, internally they will
-    ///             reference the same resource.
+    /// If a variable is shared between multiple shader stages,
+    /// it can be accessed using any of those shader stages. Even
+    /// though IShaderResourceVariable instances returned by the method
+    /// may be different for different stages, internally they will
+    /// reference the same resource.
     ///
-    ///             Only static shader resource variables can be accessed using this method.
-    ///             Mutable and dynamic variables are accessed through Shader Resource
-    ///             Binding object.
+    /// Only static shader resource variables can be accessed using this method.
+    /// Mutable and dynamic variables are accessed through Shader Resource
+    /// Binding object.
     ///
-    ///             The method does not increment the reference counter of the
-    ///             returned interface, and the application must *not* call Release()
-    ///             unless it explicitly called AddRef().
+    /// The method does not increment the reference counter of the
+    /// returned interface, and the application must *not* call Release()
+    /// unless it explicitly called AddRef().
     VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByName)(THIS_
                                                                      SHADER_TYPE ShaderType,
                                                                      const Char* Name) PURE;
@@ -509,19 +514,19 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     ///                          GetStaticVariableCount().
     ///
     ///
-    /// \remarks    If a variable is shared between multiple shader stages,
-    ///             it can be accessed using any of those shader stages. Even
-    ///             though IShaderResourceVariable instances returned by the method
-    ///             may be different for different stages, internally they will
-    ///             reference the same resource.
+    /// If a variable is shared between multiple shader stages,
+    /// it can be accessed using any of those shader stages. Even
+    /// though IShaderResourceVariable instances returned by the method
+    /// may be different for different stages, internally they will
+    /// reference the same resource.
     ///
-    ///             Only static shader resource variables can be accessed using this method.
-    ///             Mutable and dynamic variables are accessed through Shader Resource
-    ///             Binding object.
+    /// Only static shader resource variables can be accessed using this method.
+    /// Mutable and dynamic variables are accessed through Shader Resource
+    /// Binding object.
     ///
-    ///             The method does not increment the reference counter of the
-    ///             returned interface, and the application must *not* call Release()
-    ///             unless it explicitly called AddRef().
+    /// The method does not increment the reference counter of the
+    /// returned interface, and the application must *not* call Release()
+    /// unless it explicitly called AddRef().
     VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByIndex)(THIS_
                                                                       SHADER_TYPE ShaderType,
                                                                       Uint32      Index) PURE;
@@ -547,8 +552,8 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
     ///                                      The pipeline resource signature must be compatible
     ///                                      with the shader resource binding object.
     ///
-    /// \note   If static resources have already been initialized in the SRB and the method
-    ///         is called again, it will have no effect and a warning message will be displayed.
+    /// If static resources have already been initialized in the SRB and the method
+    /// is called again, it will have no effect and a warning message will be displayed.
     VIRTUAL void METHOD(InitializeStaticSRBResources)(THIS_
                                                       struct IShaderResourceBinding* pShaderResourceBinding) CONST PURE;
 
@@ -562,8 +567,8 @@ DILIGENT_BEGIN_INTERFACE(IPipelineResourceSignature, IDeviceObject)
 
     /// Returns true if the signature is compatible with another one.
 
-    /// \remarks    Two signatures are compatible if they contain identical resources and immutabke samplers,
-    ///             defined in the same order disregarding their names.
+    /// Two signatures are compatible if they contain identical resources and immutabke samplers,
+    /// defined in the same order disregarding their names.
     VIRTUAL Bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineResourceSignature* pPRS) CONST PURE;
 };
