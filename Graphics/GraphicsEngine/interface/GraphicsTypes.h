@@ -209,13 +209,13 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     /// A resource residing in a unified memory (e.g. memory shared between CPU and GPU),
     /// that can be read and written by GPU and can also be directly accessed by CPU.
     ///
-    /// \remarks An application should check if unified memory is available on the device by querying
-    ///          the adapter info (see Diligent::IRenderDevice::GetAdapterInfo().Memory and Diligent::AdapterMemoryInfo).
-    ///          If there is no unified memory, an application should choose another usage type (typically, USAGE_DEFAULT).
+    /// An application should check if unified memory is available on the device by querying
+    /// the adapter info (see Diligent::IRenderDevice::GetAdapterInfo().Memory and Diligent::AdapterMemoryInfo).
+    /// If there is no unified memory, an application should choose another usage type (typically, USAGE_DEFAULT).
     ///
-    ///          Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
-    ///          An application should check supported unified memory CPU access types by querying the device caps.
-    ///          (see Diligent::AdapterMemoryInfo::UnifiedMemoryCPUAccess).
+    /// Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
+    /// An application should check supported unified memory CPU access types by querying the device caps.
+    /// (see Diligent::AdapterMemoryInfo::UnifiedMemoryCPUAccess).
     USAGE_UNIFIED,
 
     /// A resource that can be partially committed to physical memory.
@@ -271,13 +271,14 @@ DILIGENT_TYPED_ENUM(MAP_TYPE, Uint8)
 /// - ITexture::Map to describe texture mapping flags
 DILIGENT_TYPED_ENUM(MAP_FLAGS, Uint8)
 {
+    /// No special flags
     MAP_FLAG_NONE         = 0x000,
 
     /// Specifies that map operation should not wait until previous command that
     /// using the same resource completes. Map returns null pointer if the resource
     /// is still in use.\n
     /// D3D11 counterpart:  D3D11_MAP_FLAG_DO_NOT_WAIT
-    /// \note: OpenGL does not have corresponding flag, so a buffer will always be mapped
+    /// \note OpenGL does not have corresponding flag, so a buffer will always be mapped
     MAP_FLAG_DO_NOT_WAIT  = 0x001,
 
     /// Previous contents of the resource will be undefined. This flag is only compatible with MAP_WRITE\n
@@ -479,7 +480,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
 
     /// Two-component 64-bit format with 32-bit typeless data and 8-bit G channel. \n
     /// D3D counterpart: DXGI_FORMAT_X32_TYPELESS_G8X24_UINT
-    /// \warning This format is currently not implemented in OpenGL version
+    /// \warning This format is currently not implemented in OpenGL
     TEX_FORMAT_X32_TYPELESS_G8X24_UINT,
 
     /// Four-component 32-bit typeless format with 10 bits for RGB and 2 bits for alpha channel. \n
@@ -584,7 +585,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
 
     /// Two-component 32-bit format with 24 bits of unreferenced data and 8 bits of unsigned-integer data. \n
     /// D3D counterpart: DXGI_FORMAT_X24_TYPELESS_G8_UINT
-    /// \warning This format is currently not implemented in OpenGL version
+    /// \warning This format is currently not implemented in OpenGL
     TEX_FORMAT_X24_TYPELESS_G8_UINT,
 
     /// Two-component 16-bit typeless format with 8-bit channels. \n
@@ -1246,6 +1247,7 @@ struct DepthStencilClearValue
 {
     /// Depth clear value
     Float32 Depth   DEFAULT_INITIALIZER(1.f);
+
     /// Stencil clear value
     Uint8 Stencil   DEFAULT_INITIALIZER(0);
 
@@ -1316,10 +1318,10 @@ struct DeviceObjectAttribs
     /// Object name
     const Char* Name DEFAULT_INITIALIZER(nullptr);
 
+#if DILIGENT_CPP_INTERFACE
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     DeviceObjectAttribs{"Name"}
 
-#if DILIGENT_CPP_INTERFACE
     constexpr DeviceObjectAttribs() noexcept {}
 
     explicit constexpr DeviceObjectAttribs(const Char* _Name) :
@@ -1344,6 +1346,7 @@ DILIGENT_TYPED_ENUM(ADAPTER_TYPE, Uint8)
     /// Discrete hardware adapter
     ADAPTER_TYPE_DISCRETE,
 
+    /// The total number of adapter types in the enumeration
     ADAPTER_TYPE_COUNT
 };
 
@@ -1491,14 +1494,14 @@ struct SwapChainDesc
     /// The transform, relative to the presentation engine's natural orientation,
     /// applied to the image content prior to presentation.
     ///
-    /// \note When default value (SURFACE_TRANSFORM_OPTIMAL) is used, the engine will
-    ///       select the most optimal surface transformation. An application may request
-    ///       specific transform (e.g. SURFACE_TRANSFORM_IDENTITY) and the engine will
-    ///       try to use that. However, if the transform is not available, the engine will
-    ///       select the most optimal transform.
-    ///       After the swap chain has been created, this member will contain the actual
-    ///       transform selected by the engine and can be queried through ISwapChain::GetDesc()
-    ///       method.
+    /// When default value (SURFACE_TRANSFORM_OPTIMAL) is used, the engine will
+    /// select the most optimal surface transformation. An application may request
+    /// specific transform (e.g. SURFACE_TRANSFORM_IDENTITY) and the engine will
+    /// try to use that. However, if the transform is not available, the engine will
+    /// select the most optimal transform.
+    /// After the swap chain has been created, this member will contain the actual
+    /// transform selected by the engine and can be queried through ISwapChain::GetDesc()
+    /// method.
     SURFACE_TRANSFORM PreTransform      DEFAULT_INITIALIZER(SURFACE_TRANSFORM_OPTIMAL);
 
     /// The number of buffers in the swap chain
@@ -1643,25 +1646,25 @@ struct DeviceFeatures
 {
     /// Indicates if device supports separable shader programs.
 
-    /// \remarks    The only case when separable programs are not supported is when the engine is
-    ///             initialized in GLES3.0 mode. In GLES3.1+ and in all other backends, the
-    ///             feature is always enabled.
-    ///             The are two main limitations when separable programs are disabled:
-    ///             - If the same shader variable is present in multiple shader stages,
-    ///               it will always be shared between all stages and different resources
-    ///               can't be bound to different stages.
-    ///             - Shader resource queries will be also disabled.
+    /// The only case when separable programs are not supported is when the engine is
+    /// initialized in GLES3.0 mode. In GLES3.1+ and in all other backends, the
+    /// feature is always enabled.
+    /// The are two main limitations when separable programs are disabled:
+    /// - If the same shader variable is present in multiple shader stages,
+    ///   it will always be shared between all stages and different resources
+    ///   can't be bound to different stages.
+    /// - Shader resource queries will be also disabled.
     DEVICE_FEATURE_STATE SeparablePrograms             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports resource queries from shader objects.
 
-    /// \ note  This feature indicates if IShader::GetResourceCount() and IShader::GetResourceDesc() methods
-    ///         can be used to query the list of resources of individual shader objects.
-    ///         Shader variable queries from pipeline state and shader resource binding objects are always
-    ///         available.
+    /// This feature indicates if IShader::GetResourceCount() and IShader::GetResourceDesc() methods
+    /// can be used to query the list of resources of individual shader objects.
+    /// Shader variable queries from pipeline state and shader resource binding objects are always
+    /// available.
     ///
-    ///         The feature is always enabled in Direct3D11, Direct3D12 and Vulkan. It is enabled in
-    ///         OpenGL when separable programs are available, and it is always disabled in Metal.
+    /// The feature is always enabled in Direct3D11, Direct3D12 and Vulkan. It is enabled in
+    /// OpenGL when separable programs are available, and it is always disabled in Metal.
     DEVICE_FEATURE_STATE ShaderResourceQueries         DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports wireframe fill mode
@@ -1709,11 +1712,11 @@ struct DeviceFeatures
 
     /// Indicates if device supports depth clamping
     ///
-    /// \remarks    By default polygon faces are clipped against the near and far planes of the view
-    ///             frustum. If depth clipping is disabled in the PSO, the depth of the fragments that
-    ///             would be clipped is clamped to the near/far plane instead of discarding them.
-    ///             If this feature is enabled, the DepthClipEnable member of the RasterizerStateDesc
-    ///             struct can be set to False. Otherwise it must always be set to True.
+    /// By default polygon faces are clipped against the near and far planes of the view
+    /// would be clipped is clamped to the near/far plane instead of discarding them.
+    /// frustum. If depth clipping is disabled in the PSO, the depth of the fragments that
+    /// If this feature is enabled, the DepthClipEnable member of the RasterizerStateDesc
+    /// struct can be set to False. Otherwise it must always be set to True.
     DEVICE_FEATURE_STATE DepthClamp                    DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports depth clamping
@@ -1807,48 +1810,47 @@ struct DeviceFeatures
 
     /// Indicates if device supports framebuffer fetch for input attachments.
 
-    /// \remarks    Vulkan: this feature is always supported through
-    ///             input attachments.
+    /// Vulkan: this feature is always supported through input attachments.
     ///
-    ///             Metal: this feature is always supported on iOS; on MacOS it
-    ///             requires Apple GPU and MSL 2.3 (available in MacOS 11.0+).
-    ///             When the feature is disabled, every new subpass
-    ///             of a render pass starts a new render command encoder.
-    ///             With this feature enabled, input attachment loads
-    ///             translate into MSL framebuffer fetch operations that
-    ///             allow implementing subpasses within a single render command
-    ///             encoder.
+    /// Metal: this feature is always supported on iOS; on MacOS it
+    /// requires Apple GPU and MSL 2.3 (available in MacOS 11.0+).
+    /// When the feature is disabled, every new subpass
+    /// of a render pass starts a new render command encoder.
+    /// With this feature enabled, input attachment loads
+    /// translate into MSL framebuffer fetch operations that
+    /// allow implementing subpasses within a single render command
+    /// encoder.
     DEVICE_FEATURE_STATE SubpassFramebufferFetch DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports texture component swizzle.
     DEVICE_FEATURE_STATE TextureComponentSwizzle DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports texture subresource views.
-    ///
+
     /// \remarks    This feature is always enabled in all backends except for GLES, WebGL and older
     ///             OpenGL versions.
     ///
-    ///             When this feature is disabled, only texture views that reference the entire
-    ///             texture can be created.
+    /// When this feature is disabled, only texture views that reference the entire
+    /// texture can be created.
     DEVICE_FEATURE_STATE TextureSubresourceViews DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports native multi-draw commands.
     ///
-    /// \remarks    When this feature is enabled, the GPU supports a dedicated command that
-    ///             can be used to issue multiple draw calls with a single command (e.g. vkCmdDrawMultiEXT,
-    ///             glMultiDrawElements, etc.). In OpenGL and Vulkan, the shader can access the draw
-    ///             command index using the gl_DrawID built-in variable.
+    /// When this feature is enabled, the GPU supports a dedicated command that
+    /// can be used to issue multiple draw calls with a single command (e.g. `vkCmdDrawMultiEXT`,
+    /// `glMultiDrawElements`, etc.). In OpenGL and Vulkan, the shader can access the draw
+    /// command index using the `gl_DrawID` built-in variable.
     ///
-    ///             When this feature is disabled, the engine emulates multi-draw commands by issuing
-    ///             multiple individual draw calls. The draw command index is unavailable.
+    /// When this feature is disabled, the engine emulates multi-draw commands by issuing
+    /// multiple individual draw calls. The draw command index is unavailable.
     DEVICE_FEATURE_STATE NativeMultiDraw DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Whether the device supports asynchronous shader compilation.
-    ///
-    /// \remarks    When this feature is enabled, the engine can create shaders and pipeline states
-    ///             asynchronously in a separate thread without blocking the main thread. An application
-    ///             can query the shader status using the IShader::GetStatus() method and the pipeline
-    ///             state status using the IPipelineState::GetStatus() method.
+
+    /// When this feature is enabled, the engine can create shaders and pipeline states
+    /// asynchronously in a separate thread without blocking the main thread. An application
+    /// can query the shader status using the IShader::GetStatus() method and the pipeline
+    /// state status using the IPipelineState::GetStatus() method.
     DEVICE_FEATURE_STATE AsyncShaderCompilation DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports formatted buffers.
@@ -1972,6 +1974,7 @@ DILIGENT_TYPED_ENUM(ADAPTER_VENDOR, Uint8)
     /// Adapter vendor is Broadcom (Raspberry Pi)
     ADAPTER_VENDOR_BROADCOM,
 
+    /// Special value that indicates the last vendor in the enumeration
     ADAPTER_VENDOR_LAST = ADAPTER_VENDOR_BROADCOM
 };
 
@@ -2039,9 +2042,10 @@ typedef struct Version Version;
 
 
 /// Describes the wave feature types.
+
 /// In Vulkan backend, you should check which features are supported by device.
 /// In Direct3D12 backend, all shader model 6.0 wave functions are supported if WaveOp feature is enabled.
-/// see doc/WaveOp.md
+/// see https://github.com/DiligentGraphics/DiligentCore/blob/master/doc/WaveOp.md
 DILIGENT_TYPED_ENUM(WAVE_FEATURE, Uint32)
 {
     WAVE_FEATURE_UNKNOWN          = 0x00,
@@ -2144,6 +2148,7 @@ struct SamplerProperties
     Bool BorderSamplingModeSupported   DEFAULT_INITIALIZER(False);
 
     /// Maximum anisotropy level supported by the device.
+
     /// If anisotropic filtering is not supported, this value is 1.
     Uint8 MaxAnisotropy DEFAULT_INITIALIZER(1);
 
@@ -2176,6 +2181,7 @@ struct WaveOpProperties
     Uint32       MinSize         DEFAULT_INITIALIZER(0);
 
     /// Maximum supported size of the wave.
+
     /// If variable wave size is not supported then this value is equal to MinSize.
     /// Direct3D12 backend: requires shader model 6.6.
     /// Vulkan backend: requires VK_EXT_subgroup_size_control.
@@ -2211,12 +2217,14 @@ typedef struct WaveOpProperties WaveOpProperties;
 struct BufferProperties
 {
     /// The minimum required alignment, in bytes, for the constant buffer offsets.
+
     /// The Offset parameter passed to IShaderResourceVariable::SetBufferRange() or to
     /// IShaderResourceVariable::SetBufferOffset() method used to set the offset of a
     /// constant buffer, must be an integer multiple of this limit.
     Uint32 ConstantBufferOffsetAlignment DEFAULT_INITIALIZER(0);
 
     /// The minimum required alignment, in bytes, for the structured buffer offsets.
+
     /// The ByteOffset member of the BufferViewDesc used to create a structured buffer view or
     /// the Offset parameter passed to IShaderResourceVariable::SetBufferOffset() method used to
     /// set the offset of a structured buffer, must be an integer multiple of this limit.
@@ -2247,6 +2255,7 @@ DILIGENT_TYPED_ENUM(RAY_TRACING_CAP_FLAGS, Uint8)
     RAY_TRACING_CAP_FLAG_NONE                 = 0x00,
 
     /// The device supports standalone ray tracing shaders (e.g. ray generation, closest hit, any hit, etc.)
+
     /// When this feature is disabled, inline ray tracing may still be supported where rays can be traced
     /// from graphics or compute shaders.
     RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS   = 0x01,
@@ -2266,10 +2275,9 @@ struct RayTracingProperties
     /// Maximum supported value for RayTracingPipelineDesc::MaxRecursionDepth.
     Uint32 MaxRecursionDepth        DEFAULT_INITIALIZER(0);
 
-    /// For internal use
-    Uint32 ShaderGroupHandleSize    DEFAULT_INITIALIZER(0);
-    Uint32 MaxShaderRecordStride    DEFAULT_INITIALIZER(0);
-    Uint32 ShaderGroupBaseAlignment DEFAULT_INITIALIZER(0);
+    Uint32 ShaderGroupHandleSize    DEFAULT_INITIALIZER(0); ///< For internal use
+    Uint32 MaxShaderRecordStride    DEFAULT_INITIALIZER(0); ///< For internal use
+    Uint32 ShaderGroupBaseAlignment DEFAULT_INITIALIZER(0); ///< For internal use
 
     /// The maximum total number of ray generation threads in one dispatch.
     Uint32 MaxRayGenThreads         DEFAULT_INITIALIZER(0);
@@ -2384,14 +2392,11 @@ struct ComputeShaderProperties
     /// The maximum number of threads in group Z dimension.
     Uint32 MaxThreadGroupSizeZ        DEFAULT_INITIALIZER(0);
 
-    /// The maximum number of thread groups that can be dispatched
-    /// in X dimension.
+    /// The maximum number of thread groups that can be dispatched in X dimension.
     Uint32 MaxThreadGroupCountX       DEFAULT_INITIALIZER(0);
-    /// The maximum number of thread groups that can be dispatched
-    /// in Y dimension.
+    /// The maximum number of thread groups that can be dispatched in Y dimension.
     Uint32 MaxThreadGroupCountY       DEFAULT_INITIALIZER(0);
-    /// The maximum number of thread groups that can be dispatched
-    /// in Z dimension.
+    /// The maximum number of thread groups that can be dispatched in Z dimension.
     Uint32 MaxThreadGroupCountZ       DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
@@ -2422,9 +2427,14 @@ typedef struct ComputeShaderProperties ComputeShaderProperties;
 /// Normalized device coordinates attributes
 struct NDCAttribs
 {
-    float MinZ          DEFAULT_INITIALIZER(0.f); // Minimum z value of the normalized device coordinate space
-    float ZtoDepthScale DEFAULT_INITIALIZER(0.f); // NDC z to depth scale
-    float YtoVScale     DEFAULT_INITIALIZER(0.f); // Scale to transform NDC y coordinate to texture V coordinate
+    /// Minimum z value of the normalized device coordinate space
+    float MinZ          DEFAULT_INITIALIZER(0.f);
+
+    /// NDC z to depth scale
+    float ZtoDepthScale DEFAULT_INITIALIZER(0.f);
+
+    /// Scale to transform NDC y coordinate to texture V coordinate
+    float YtoVScale     DEFAULT_INITIALIZER(0.f);
 
 #if DILIGENT_CPP_INTERFACE
     float GetZtoDepthBias() const
@@ -2447,7 +2457,6 @@ struct NDCAttribs
                ZtoDepthScale == RHS.ZtoDepthScale &&
                YtoVScale     == RHS.YtoVScale;
     }
-
 #endif
 };
 typedef struct NDCAttribs NDCAttribs;
@@ -2493,6 +2502,7 @@ struct RenderDeviceInfo
     enum RENDER_DEVICE_TYPE Type DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_UNDEFINED);
 
     /// Major revision of the graphics API supported by the graphics adapter.
+
     /// Note that this value indicates the maximum supported feature level, so,
     /// for example, if the device type is D3D11, this value will be 10 when
     /// the maximum supported Direct3D feature level of the graphics adapter is 10.0.
@@ -2500,11 +2510,11 @@ struct RenderDeviceInfo
 
     /// Enabled device features. See Diligent::DeviceFeatures.
 
-    /// \note For optional features requested during the initialization, the
-    ///       struct will indicate the actual feature state (enabled or disabled).
+    /// For optional features requested during the initialization, the
+    /// struct will indicate the actual feature state (enabled or disabled).
     ///
-    ///       The feature state in the adapter info indicates if the GPU supports the
-    ///       feature, but if it is not enabled, an application must not use it.
+    /// The feature state in the adapter info indicates if the GPU supports the
+    /// feature, but if it is not enabled, an application must not use it.
     DeviceFeatures Features;
 
     /// Normalized device coordinates
@@ -2567,11 +2577,11 @@ DILIGENT_TYPED_ENUM(VALIDATION_FLAGS, Uint32)
     VALIDATION_FLAG_NONE                        = 0x00,
 
     /// Verify that constant or structured buffer size is not smaller than what is expected by the shader.
+
+    /// This flag only has effect in Debug/Development builds.
+    /// This type of validation is never performed in Release builds.
     ///
-    /// \remarks  This flag only has effect in Debug/Development builds.
-    ///           This type of validation is never performed in Release builds.
-    ///
-    /// \note   This option is currently supported by Vulkan backend only.
+    /// This option is currently supported by Vulkan backend only.
     VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE    = 0x01
 };
 DEFINE_FLAG_ENUM_OPERATORS(VALIDATION_FLAGS)
@@ -2595,8 +2605,9 @@ DILIGENT_TYPED_ENUM(COMMAND_QUEUE_TYPE, Uint8)
     /// Mask to extract primary command queue type.
     COMMAND_QUEUE_TYPE_PRIMARY_MASK   = COMMAND_QUEUE_TYPE_TRANSFER | COMMAND_QUEUE_TYPE_COMPUTE | COMMAND_QUEUE_TYPE_GRAPHICS,
 
-    /// Command queue that supports sparse binding commands,
-    /// see IDeviceContext::BindSparseResourceMemory().
+    /// Command queue that supports sparse binding commands.
+
+    /// See IDeviceContext::BindSparseResourceMemory().
     COMMAND_QUEUE_TYPE_SPARSE_BINDING = (1u << 3),
 
     COMMAND_QUEUE_TYPE_MAX_BIT        = COMMAND_QUEUE_TYPE_GRAPHICS
@@ -2607,6 +2618,7 @@ DEFINE_FLAG_ENUM_OPERATORS(COMMAND_QUEUE_TYPE)
 /// Queue priority
 DILIGENT_TYPED_ENUM(QUEUE_PRIORITY, Uint8)
 {
+    /// Queue priority is unknown.
     QUEUE_PRIORITY_UNKNOWN = 0,
 
     /// Vulkan backend:     VK_QUEUE_GLOBAL_PRIORITY_LOW_EXT
@@ -2627,6 +2639,7 @@ DILIGENT_TYPED_ENUM(QUEUE_PRIORITY, Uint8)
     /// Direct3D12 backend: D3D12_COMMAND_QUEUE_PRIORITY_GLOBAL_REALTIME
     QUEUE_PRIORITY_REALTIME,
 
+    /// Special value that indicates the last priority in the enumeration.
     QUEUE_PRIORITY_LAST = QUEUE_PRIORITY_REALTIME
 };
 
@@ -2636,29 +2649,30 @@ struct AdapterMemoryInfo
 {
     /// The amount of local video memory that is inaccessible by CPU, in bytes.
 
-    /// \note Device-local memory is where USAGE_DEFAULT and USAGE_IMMUTABLE resources
-    ///       are typically allocated.
+    /// Device-local memory is where USAGE_DEFAULT and USAGE_IMMUTABLE resources
+    /// are typically allocated.
     ///
-    ///       On some devices it may not be possible to query the memory size,
-    ///       in which case all memory sizes will be zero.
+    /// On some devices it may not be possible to query the memory size,
+    /// in which case all memory sizes will be zero.
     Uint64  LocalMemory         DEFAULT_INITIALIZER(0);
 
 
     /// The amount of host-visible memory that can be accessed by CPU and is visible by GPU, in bytes.
 
-    /// \note Host-visible memory is where USAGE_DYNAMIC and USAGE_STAGING resources
-    ///       are typically allocated.
+    /// Host-visible memory is where USAGE_DYNAMIC and USAGE_STAGING resources
+    /// are typically allocated.
     Uint64  HostVisibleMemory  DEFAULT_INITIALIZER(0);
 
 
     /// The amount of unified memory that can be directly accessed by both CPU and GPU, in bytes.
 
-    /// \note Unified memory is where USAGE_UNIFIED resources are typically allocated, but
-    ///       resources with other usages may be allocated as well if there is no corresponding
-    ///       memory type.
+    /// Unified memory is where USAGE_UNIFIED resources are typically allocated, but
+    /// resources with other usages may be allocated as well if there is no corresponding
+    /// memory type.
     Uint64  UnifiedMemory       DEFAULT_INITIALIZER(0);
 
     /// Maximum size of a continuous memory block.
+
     /// This is the maximum allowed size of non-sparse resources (IBuffer, ITexture, IDeviceMemory, IBottomLevelAS or ITopLevelAS).
     Uint64  MaxMemoryAllocation DEFAULT_INITIALIZER(0);
 
@@ -2666,7 +2680,9 @@ struct AdapterMemoryInfo
     CPU_ACCESS_FLAGS UnifiedMemoryCPUAccess DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
 
     /// Indicates if device supports color and depth attachments in on-chip memory.
-    /// If supported, it will be combination of the following flags: BIND_RENDER_TARGET, BIND_DEPTH_STENCIL, BIND_INPUT_ATTACHMENT.
+
+    /// If supported, it will be combination of the following flags: Diligent::BIND_RENDER_TARGET,
+    /// Diligent::BIND_DEPTH_STENCIL, Diligent::BIND_INPUT_ATTACHMENT.
     BIND_FLAGS MemorylessTextureBindFlags DEFAULT_INITIALIZER(BIND_NONE);
 
 #if DILIGENT_CPP_INTERFACE
@@ -2694,7 +2710,9 @@ typedef struct AdapterMemoryInfo AdapterMemoryInfo;
 /// Defines how shading rates coming from the different sources (base rate,
 /// primitive rate and VRS image rate) are combined.
 /// The combiner may be described by the following function:
+///
 ///     ApplyCombiner(SHADING_RATE_COMBINER Combiner, SHADING_RATE OriginalRate, SHADING_RATE NewRate).
+///
 /// See IDeviceContext::SetShadingRate() for details.
 DILIGENT_TYPED_ENUM(SHADING_RATE_COMBINER, Uint8)
 {
@@ -2770,6 +2788,7 @@ DILIGENT_TYPED_ENUM(AXIS_SHADING_RATE, Uint8)
     /// 4x resolution reduction per axis
     AXIS_SHADING_RATE_4X  = 0x2,
 
+    /// Maximum shading rate
     AXIS_SHADING_RATE_MAX = AXIS_SHADING_RATE_4X
 };
 
@@ -2803,6 +2822,7 @@ DILIGENT_TYPED_ENUM(SHADING_RATE, Uint8)
     /// Specifies 1/4 horizontal and 1/4 vertical shading rate.
     SHADING_RATE_4X4 = ((AXIS_SHADING_RATE_4X << DILIGENT_SHADING_RATE_X_SHIFT) | AXIS_SHADING_RATE_4X),
 
+    /// Maximum shading rate value.
     SHADING_RATE_MAX = SHADING_RATE_4X4
 };
 
@@ -2875,7 +2895,8 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
     SHADING_RATE_CAP_FLAG_SAMPLE_MASK                           = 1u << 3,
 
     /// Allows to get or set SampleMask in the shader with enabled variable rate shading.
-    /// HLSL: SV_Coverage, GLSL: gl_SampleMaskIn, gl_SampleMask.
+    /// * HLSL: `SV_Coverage`
+    /// * GLSL: `gl_SampleMaskIn`, `gl_SampleMask`.
     SHADING_RATE_CAP_FLAG_SHADER_SAMPLE_MASK                    = 1u << 4,
 
     /// Allows to write depth and stencil from the pixel shader.
@@ -2892,7 +2913,8 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
     SHADING_RATE_CAP_FLAG_TEXTURE_ARRAY                         = 1u << 8,
 
     /// Allows to read current shading rate in the pixel shader.
-    /// HLSL: in SV_ShadingRate, GLSL: gl_ShadingRate.
+    /// * HLSL: `in SV_ShadingRate`
+    /// * GLSL: `gl_ShadingRate`.
     SHADING_RATE_CAP_FLAG_SHADING_RATE_SHADER_INPUT             = 1u << 9,
 
     /// Indicates that driver may generate additional fragment shader invocations
@@ -2904,9 +2926,9 @@ DILIGENT_TYPED_ENUM(SHADING_RATE_CAP_FLAGS, Uint16)
     SHADING_RATE_CAP_FLAG_NON_SUBSAMPLED_RENDER_TARGET          = 1u << 11,
 
     /// Indicates that render targets that are used in texture-based VRS rendering
-    /// must be created with MISC_TEXTURE_FLAG_SUBSAMPLED flag.
+    /// must be created with Diligent::MISC_TEXTURE_FLAG_SUBSAMPLED flag.
     /// Intermediate targets must be scaled to the final resolution in a separate pass.
-    /// Intermediate targets can only be sampled with an immutable sampler created with SAMPLER_FLAG_SUBSAMPLED flag.
+    /// Intermediate targets can only be sampled with an immutable sampler created with Diligent::SAMPLER_FLAG_SUBSAMPLED flag.
     /// If supported, rendering to the subsampled render targets may be more optimal.
     ///
     /// \note  Both NON_SUBSAMPLED and SUBSAMPLED modes may be supported by a device.
@@ -2962,10 +2984,12 @@ struct ShadingRateProperties
     BIND_FLAGS             BindFlags      DEFAULT_INITIALIZER(BIND_NONE);
 
     /// Minimal supported tile size.
+
     /// Shading rate texture size must be less than or equal to (framebuffer_size / MinTileSize).
     Uint32                 MinTileSize[2] DEFAULT_INITIALIZER({});
 
     /// Maximum supported tile size.
+
     /// Shading rate texture size must be greater than or equal to (framebuffer_size / MaxTileSize).
     Uint32                 MaxTileSize[2] DEFAULT_INITIALIZER({});
 
@@ -3059,6 +3083,7 @@ typedef struct DrawCommandProperties DrawCommandProperties;
 /// Sparse memory capability flags
 DILIGENT_TYPED_ENUM(SPARSE_RESOURCE_CAP_FLAGS, Uint32)
 {
+    /// No sparse resource capabilities.
     SPARSE_RESOURCE_CAP_FLAG_NONE = 0,
 
     /// Specifies whether texture operations that return resource residency information are supported in shader code.
@@ -3157,20 +3182,20 @@ DILIGENT_TYPED_ENUM(SPARSE_RESOURCE_CAP_FLAGS, Uint32)
 
     /// Indicates that single device memory object can be used to bind memory for different resource types.
 
-    /// \remarks  This capability is always enabled in Vulkan when sparse resources feature is enabled.
+    /// This capability is always enabled in Vulkan when sparse resources feature is enabled.
     ///
-    ///           In Direct3D12, this capability is enabled on D3D12_RESOURCE_HEAP_TIER_2 hardware
-    ///           and above. If this capability is not reported, the device is D3D12_RESOURCE_HEAP_TIER_1 hardware,
-    ///           which requires that one memory object is only used to allocate resources from one of the
-    ///           following categories:
-    ///           - Buffers
-    ///           - Non-render target & non-depth stencil textures
-    ///           - Render target or depth stencil textures
-    ///
-    ///           The engine automatically selects the required category based on the list of compatible resources.
-    ///           Binding a resource from different category will result in an undefined behavior.
-    ///
-    ///           Note that sharing the same memory block between buffers and textures is never allowed.
+    /// In Direct3D12, this capability is enabled on D3D12_RESOURCE_HEAP_TIER_2 hardware
+    /// and above. If this capability is not reported, the device is D3D12_RESOURCE_HEAP_TIER_1 hardware,
+    /// which requires that one memory object is only used to allocate resources from one of the
+    /// following categories:
+    /// - Buffers
+    /// - Non-render target & non-depth stencil textures
+    /// - Render target or depth stencil textures
+    /// 
+    /// The engine automatically selects the required category based on the list of compatible resources.
+    /// Binding a resource from different category will result in an undefined behavior.
+    /// 
+    /// Note that sharing the same memory block between buffers and textures is never allowed.
     SPARSE_RESOURCE_CAP_FLAG_MIXED_RESOURCE_TYPE_SUPPORT = 1u << 17
 };
 DEFINE_FLAG_ENUM_OPERATORS(SPARSE_RESOURCE_CAP_FLAGS)
@@ -3190,11 +3215,11 @@ struct SparseResourceProperties
 
     /// Size of the standard sparse memory block in bytes.
 
-    /// \note   In Direct3D11, Direct3D12 and Vulkan this is 64Kb.
-    ///         In Metal it is implementation-defined.
+    /// In Direct3D11, Direct3D12 and Vulkan this is 64Kb.
+    /// In Metal it is implementation-defined.
     ///
-    /// \note   Query standard block support using IRenderDevice::GetSparseTextureFormatInfo() and
-    ///         check SparseTextureFormatInfo::Flags for SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag.
+    /// Query standard block support using IRenderDevice::GetSparseTextureFormatInfo() and
+    /// check SparseTextureFormatInfo::Flags for SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag.
     ///
     /// \sa SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE, SPARSE_RESOURCE_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE,
     ///     SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE, SPARSE_RESOURCE_CAP_FLAG_BUFFER_STANDARD_BLOCK.
@@ -3235,13 +3260,13 @@ struct CommandQueueInfo
     /// The maximum number of immediate contexts that may be created for this queue.
     Uint32             MaxDeviceContexts   DEFAULT_INITIALIZER(0);
 
-    /// Defines required texture offset and size alignment for copy operations
-    /// in transfer queues.
+    /// Defines required texture offset and size alignment for copy operations in transfer queues.
 
-    /// \remarks An application should check this member before performing copy operations
-    ///          in transfer queues.
-    ///          Graphics and compute queues don't have alignment requirements (e.g
-    ///          TextureCopyGranularity is always {1,1,1}).
+    /// An application should check this member before performing copy operations
+    /// in transfer queues.
+    ///
+    /// Graphics and compute queues don't have alignment requirements (e.g
+    /// `TextureCopyGranularity` is always `{1, 1, 1}`).
     Uint32  TextureCopyGranularity[3] DEFAULT_INITIALIZER({});
 
 #if DILIGENT_CPP_INTERFACE
@@ -3319,10 +3344,10 @@ struct GraphicsAdapterInfo
 
     /// Supported device features, see Diligent::DeviceFeatures.
 
-    /// \note The feature state indicates:
-    ///       - Disabled - the feature is not supported by device.
-    ///       - Enabled  - the feature is always enabled.
-    ///       - Optional - the feature is supported and can be enabled or disabled.
+    /// The feature state indicates:
+    ///   - Disabled - the feature is not supported by device.
+    ///   - Enabled  - the feature is always enabled.
+    ///   - Optional - the feature is supported and can be enabled or disabled.
     DeviceFeatures Features;
 
     /// An array of NumQueues command queues supported by this device. See Diligent::CommandQueueInfo.
@@ -3380,17 +3405,17 @@ struct ImmediateContextCreateInfo
 
     /// Queue index in GraphicsAdapterInfo::Queues.
 
-    /// \remarks An immediate device context creates a software command queue for the
-    ///          hardware queue with id QueueId. The total number of contexts created for
-    ///          this queue must not exceed the value of MaxDeviceContexts member of CommandQueueInfo
-    ///          for this queue.
+    /// An immediate device context creates a software command queue for the
+    /// hardware queue with id QueueId. The total number of contexts created for
+    /// this queue must not exceed the value of MaxDeviceContexts member of CommandQueueInfo
+    /// for this queue.
     Uint8          QueueId      DEFAULT_INITIALIZER(DEFAULT_QUEUE_ID);
 
     /// Priority of the software queue created by the context, see Diligent::QUEUE_PRIORITY.
 
-    /// Direct3D12 backend: each context may use a unique queue priority.
-    /// Vulkan backend:     all contexts with the same QueueId must use the same priority.
-    /// Other backends:     queue priority is ignored.
+    /// * Direct3D12 backend: each context may use a unique queue priority.
+    /// * Vulkan backend:     all contexts with the same QueueId must use the same priority.
+    /// * Other backends:     queue priority is ignored.
     QUEUE_PRIORITY Priority     DEFAULT_INITIALIZER(QUEUE_PRIORITY_MEDIUM);
 
 #if DILIGENT_CPP_INTERFACE
@@ -3456,11 +3481,12 @@ struct EngineCreateInfo
     ///           additional contexts to let the engine release stale resources.
     Uint32                   NumImmediateContexts   DEFAULT_INITIALIZER(0);
 
-    /// The number of deferred contexts to create when initializing the engine. If non-zero number
-    /// is given, pointers to the contexts are written to ppContexts array by the engine factory
+    /// The number of deferred contexts to create when initializing the engine.
+
+    /// If non-zero number is given, pointers to the contexts are written to ppContexts array by the engine factory
     /// functions (IEngineFactoryD3D11::CreateDeviceAndContextsD3D11,
     /// IEngineFactoryD3D12::CreateDeviceAndContextsD3D12, and IEngineFactoryVk::CreateDeviceAndContextsVk)
-    /// starting at position max(1, NumImmediateContexts).
+    /// starting at position `max(1, NumImmediateContexts)`.
     ///
     /// \remarks  Additional deferred contexts may be created later by calling IRenderDevice::CreateDeferredContext().
     /// 
@@ -3470,16 +3496,16 @@ struct EngineCreateInfo
 
     /// Requested device features.
 
-    /// \remarks    If a feature is requested to be enabled, but is not supported
-    ///             by the device/driver/platform, the engine will fail to initialize.
+    /// If a feature is requested to be enabled, but is not supported
+    /// by the device/driver/platform, the engine will fail to initialize.
     ///
-    ///             If a feature is requested to be optional, the engine will attempt to enable the feature.
-    ///             If the feature is not supported by the device/driver/platform,
-    ///             the engine will successfully be initialized, but the feature will be disabled.
-    ///             The actual feature state can be queried from DeviceCaps structure.
+    /// If a feature is requested to be optional, the engine will attempt to enable the feature.
+    /// If the feature is not supported by the device/driver/platform,
+    /// the engine will successfully be initialized, but the feature will be disabled.
+    /// The actual feature state can be queried from DeviceCaps structure.
     ///
-    ///             Applications can query available device features for each graphics adapter with
-    ///             IEngineFactory::EnumerateAdapters().
+    /// Applications can query available device features for each graphics adapter with
+    /// IEngineFactory::EnumerateAdapters().
     DeviceFeatures Features;
 
     /// Enable backend-specific validation (e.g. use Direct3D11 debug device, enable Direct3D12
@@ -3497,25 +3523,25 @@ struct EngineCreateInfo
 
     /// An optional thread pool for asynchronous shader and pipeline state compilation.
     ///
-    /// \remarks    When AsyncShaderCompilation device feature is enabled, the engine will use
-    ///             the provided thread pool to compile shaders and pipeline states asynchronously.
-    ///             If the thread pool is not provided, the engine will create a default thread pool.
+    /// When AsyncShaderCompilation device feature is enabled, the engine will use
+    /// the provided thread pool to compile shaders and pipeline states asynchronously.
+    /// If the thread pool is not provided, the engine will create a default thread pool.
     /// 
-    /// \note       Thread pool is not used in OpenGL backend as asynchronous shader compilation
-    ///             is performed by the driver.
+    /// \note   Thread pool is not used in OpenGL backend as asynchronous shader compilation
+    ///         is performed by the driver.
     IThreadPool* pAsyncShaderCompilationThreadPool DEFAULT_INITIALIZER(nullptr);
 
-    /// When AsyncShaderCompilation is enabled, the maximum number of threads that can be used to compile shaders.
-    ///
-    /// \remarks    If AsyncShaderCompilation device feature is enabled and pAsyncShaderCompilationThreadPool is null,
-    ///             this value is used to define the number of threads in the default thread pool.
-    ///             If the value is 0xFFFFFFFF, the number of threads will be determined automatically.
-    ///             
-    ///             If pAsyncShaderCompilationThreadPool is not null, the value is ignored as the user-provided
-    ///             thread pool is used instead.
-    ///             
-    ///             In OpenGL backend, the thread pool is not used and the value is passed to glMaxShaderCompilerThreadsKHR()
-    ///             function.
+    /// When `AsyncShaderCompilation` is enabled, the maximum number of threads that can be used to compile shaders.
+
+    /// If AsyncShaderCompilation device feature is enabled and pAsyncShaderCompilationThreadPool is null,
+    /// this value is used to define the number of threads in the default thread pool.
+    /// If the value is 0xFFFFFFFF, the number of threads will be determined automatically.
+    /// 
+    /// If pAsyncShaderCompilationThreadPool is not null, the value is ignored as the user-provided
+    /// thread pool is used instead.
+    /// 
+    /// In OpenGL backend, the thread pool is not used and the value is passed to glMaxShaderCompilerThreadsKHR()
+    /// function.
     Uint32 NumAsyncShaderCompilationThreads DEFAULT_INITIALIZER(0xFFFFFFFFu);
 
     // The structure must be 8-byte aligned
@@ -3785,7 +3811,7 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// currently in flight.
     /// Note that in Direct3D12, the size of sampler descriptor heap is limited
     /// by 2048. Since Diligent Engine allocates single heap for all variable types,
-    /// GPUDescriptorHeapSize[1] + GPUDescriptorHeapDynamicSize[1] must not
+    /// `GPUDescriptorHeapSize[1] + GPUDescriptorHeapDynamicSize[1]` must not
     /// exceed 2048.
     Uint32 GPUDescriptorHeapDynamicSize[2]
 #if DILIGENT_CPP_INTERFACE
@@ -3799,11 +3825,11 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// The size of the chunk that dynamic descriptor allocations manager
     /// requests from the main GPU descriptor heap.
     /// The total number of dynamic descriptors available across all frames in flight is
-    /// defined by GPUDescriptorHeapDynamicSize. Every device context allocates dynamic
+    /// defined by `GPUDescriptorHeapDynamicSize`. Every device context allocates dynamic
     /// descriptors in two stages: it first requests a chunk from the global heap, and the
     /// performs linear suballocations from this chunk in a lock-free manner. The size of
-    /// this chunk is defined by DynamicDescriptorAllocationChunkSize, thus there will be total
-    /// GPUDescriptorHeapDynamicSize/DynamicDescriptorAllocationChunkSize chunks in
+    /// this chunk is defined by `DynamicDescriptorAllocationChunkSize`, thus there will be total
+    /// `GPUDescriptorHeapDynamicSize/DynamicDescriptorAllocationChunkSize` chunks in
     /// the heap of each type.
     Uint32 DynamicDescriptorAllocationChunkSize[2]
 #if DILIGENT_CPP_INTERFACE
@@ -3819,7 +3845,7 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// IDeviceContext::UpdateTexture(), or to map dynamic resources.
     /// Device contexts first request a chunk of memory from global dynamic
     /// resource manager and then suballocate from this chunk in a lock-free
-    /// fashion. DynamicHeapPageSize defines the size of this chunk.
+    /// fashion. `DynamicHeapPageSize` defines the size of this chunk.
     Uint32 DynamicHeapPageSize       DEFAULT_INITIALIZER(1 << 20);
 
     /// Number of dynamic heap pages that will be reserved by the
@@ -3827,13 +3853,13 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     Uint32 NumDynamicHeapPagesToReserve DEFAULT_INITIALIZER(1);
 
     /// Query pool size for each query type.
-    ///
-    /// \remarks    In Direct3D12, queries are allocated from the pool, and
-    ///             one pool may contain multiple queries of different types.
-    ///             QueryPoolSizes array specifies the number of queries
-    ///             of each type that will be allocated from a single pool.
-    ///             The engine will create as many pools as necessary to
-    ///             satisfy the requested number of queries.
+
+    /// In Direct3D12, queries are allocated from the pool, and
+    /// QueryPoolSizes array specifies the number of queries
+    /// one pool may contain multiple queries of different types.
+    /// of each type that will be allocated from a single pool.
+    /// The engine will create as many pools as necessary to
+    /// satisfy the requested number of queries.
     Uint32 QueryPoolSizes[QUERY_TYPE_NUM_TYPES]
 #if DILIGENT_CPP_INTERFACE
         {
@@ -3848,6 +3874,7 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     ;
 
     /// Path to DirectX Shader Compiler, which is required to use Shader Model 6.0+ features.
+
     /// By default, the engine will search for "dxcompiler.dll".
     const Char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
 
@@ -3937,15 +3964,15 @@ typedef struct VulkanDescriptorPoolSize VulkanDescriptorPoolSize;
 struct DeviceFeaturesVk
 {
     /// Indicates whether the device supports VK_KHR_dynamic_rendering extension.
-    ///
-    /// \remarks    If the extension is not supported, dynamic render targets are implemented
-    ///             using framebuffer and render pass caches.
+
+    /// If the extension is not supported, dynamic render targets are implemented
+    /// using framebuffer and render pass caches.
     DEVICE_FEATURE_STATE DynamicRendering DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates whether the device supports VK_EXT_host_image_copy extension.
-    ///
-    /// \remarks    This extension is used to initialize the texture on the host.
-    ///             If the extension is not supported, the texture is initialized on the device.
+
+    /// This extension is used to initialize the texture on the host.
+    /// If the extension is not supported, the texture is initialized on the device.
     DEVICE_FEATURE_STATE HostImageCopy DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
 
@@ -4010,6 +4037,7 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     const Char* const* ppDeviceExtensionNames   DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to Vulkan device extension features.
+
     /// Will be added to VkDeviceCreateInfo::pNext.
     void*              pDeviceExtensionFeatures DEFAULT_INITIALIZER(nullptr);
 
@@ -4036,7 +4064,6 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// for dynamic variables. Every device context has its own dynamic descriptor set allocator.
     /// The allocator requests pools from global dynamic descriptor pool manager, and then
     /// performs lock-free suballocations from the pool.
-
     VulkanDescriptorPoolSize DynamicDescriptorPoolSize
 #if DILIGENT_CPP_INTERFACE
         //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt  AccelSt
@@ -4045,24 +4072,26 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     ;
 
     /// Allocation granularity for device-local memory.
+
+    /// Device-local memory is used for USAGE_DEFAULT and USAGE_IMMUTABLE
+    /// GPU resources, such as buffers and textures.
     ///
-    /// \remarks    Device-local memory is used for USAGE_DEFAULT and USAGE_IMMUTABLE
-    ///             GPU resources, such as buffers and textures.
-    ///
-    ///             If there is no available GPU memory, the resource will fail to be created.
+    /// If there is no available GPU memory, the resource will fail to be created.
     Uint32 DeviceLocalMemoryPageSize        DEFAULT_INITIALIZER(16 << 20);
 
     /// Allocation granularity for host-visible memory.
-    ///
-    /// \remarks   Host-visible memory is primarily used to upload data to GPU resources.
+
+    /// Host-visible memory is primarily used to upload data to GPU resources.
     Uint32 HostVisibleMemoryPageSize        DEFAULT_INITIALIZER(16 << 20);
 
     /// Amount of device-local memory reserved by the engine.
+
     /// The engine does not pre-allocate the memory, but rather keeps free
     /// pages when resources are released.
     Uint32 DeviceLocalMemoryReserveSize     DEFAULT_INITIALIZER(256 << 20);
 
     /// Amount of host-visible memory reserved by the engine.
+
     /// The engine does not pre-allocate the memory, but rather keeps free
     /// pages when resources are released.
     Uint32 HostVisibleMemoryReserveSize     DEFAULT_INITIALIZER(256 << 20);
@@ -4073,80 +4102,80 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Upload heap is used to update resources with IDeviceContext::UpdateBuffer()
     /// and IDeviceContext::UpdateTexture().
     ///
-    /// \remarks    Upload pages are allocated in host-visible memory. When a
-    ///             page becomes available, the engiene will keep it alive
-    ///             if the total size of the host-visible memory is less than
-    ///             HostVisibleMemoryReserveSize. Otherwise, the page will
-    ///             be released.
+    /// Upload pages are allocated in host-visible memory. When a
+    /// page becomes available, the engiene will keep it alive
+    /// if the total size of the host-visible memory is less than
+    /// HostVisibleMemoryReserveSize. Otherwise, the page will
+    /// be released.
     ///
-    ///             On exit, the engine prints the number of pages that were
-    ///             allocated by each context to the log, for example:
+    /// On exit, the engine prints the number of pages that were
+    /// allocated by each context to the log, for example:
     ///
-    ///                 Diligent Engine: Info: Upload heap of immediate context peak used/allocated frame size: 80.00 MB / 80.00 MB (80 pages)
+    ///     Diligent Engine: Info: Upload heap of immediate context peak used/allocated frame size: 80.00 MB / 80.00 MB (80 pages)
     ///
     Uint32 UploadHeapPageSize               DEFAULT_INITIALIZER(1 << 20);
 
     /// Size of the dynamic heap (the buffer that is used to suballocate
     /// memory for dynamic resources) shared by all contexts.
-    /// 
-    /// \remarks    The dynamic heap is used to allocate memory for dynamic
-    ///             resources. Each time a dynamic buffer or dynamic texture is mapped,
-    ///             the engine allocates a new chunk of memory from the dynamic heap.
-    ///             At the end of the frame, all dynamic memory allocated for the frame
-    ///             is recycled. However, it may not became available again until
-    ///             all command buffers that reference the memory are executed by the GPU
-    ///             (which typically happens 1-2 frames later). If space in the dynamic
-    ///             heap is exhausted, the engine will wait for up to 60 ms for the
-    ///             space released from previous frames to become available. If the space
-    ///             is still not available, the engine will fail to map the resource
-    ///             and return null pointer.
-    ///             The dynamic heap is shared by all contexts and cannot be resized
-    ///             on the fly. The application should track the amount of dynamic memory
-    ///             it needs and set this variable accordingly. When the application exits,
-    ///             the engine prints dynamic heap statistics to the log, for example:
+
+    /// The dynamic heap is used to allocate memory for dynamic
+    /// resources. Each time a dynamic buffer or dynamic texture is mapped,
+    /// the engine allocates a new chunk of memory from the dynamic heap.
+    /// At the end of the frame, all dynamic memory allocated for the frame
+    /// is recycled. However, it may not became available again until
+    /// all command buffers that reference the memory are executed by the GPU
+    /// (which typically happens 1-2 frames later). If space in the dynamic
+    /// heap is exhausted, the engine will wait for up to 60 ms for the
+    /// space released from previous frames to become available. If the space
+    /// is still not available, the engine will fail to map the resource
+    /// and return null pointer.
+    /// The dynamic heap is shared by all contexts and cannot be resized
+    /// on the fly. The application should track the amount of dynamic memory
+    /// it needs and set this variable accordingly. When the application exits,
+    /// the engine prints dynamic heap statistics to the log, for example:
     ///
-    ///                 Diligent Engine: Info: Dynamic memory manager usage stats:
-    ///                 Total size: 8.00 MB. Peak allocated size: 0.50 MB. Peak utilization: 6.2%
+    ///     Diligent Engine: Info: Dynamic memory manager usage stats:
+    ///     Total size: 8.00 MB. Peak allocated size: 0.50 MB. Peak utilization: 6.2%
     ///
-    ///             The peak allocated size (0.50 MB in the example above) is the value that
-    ///             should be used to guide setting this variable. An application should always
-    ///             allow some extra space in the dynamic heap to avoid running out of dynamic memory.
+    /// The peak allocated size (0.50 MB in the example above) is the value that
+    /// should be used to guide setting this variable. An application should always
+    /// allow some extra space in the dynamic heap to avoid running out of dynamic memory.
     Uint32 DynamicHeapSize                  DEFAULT_INITIALIZER(8 << 20);
 
     /// Size of the memory chunk suballocated by immediate/deferred context from
     /// the global dynamic heap to perform lock-free dynamic suballocations.
     ///
-    /// \remarks    Dynamic memory is not allocated directly from the dynamic heap.
-    ///             Instead, when a context needs to allocate memory for a dynamic
-    ///             resource, it allocates a chunk of memory from the global dynamic
-    ///             heap (which requires synchronization with other contexts), and
-    ///             then performs lock-free suballocations from the chunk.
-    ///             The size of this chunk is set by DynamicHeapPageSize variable.
+    /// Dynamic memory is not allocated directly from the dynamic heap.
+    /// Instead, when a context needs to allocate memory for a dynamic
+    /// resource, it allocates a chunk of memory from the global dynamic
+    /// heap (which requires synchronization with other contexts), and
+    /// then performs lock-free suballocations from the chunk.
+    /// The size of this chunk is set by DynamicHeapPageSize variable.
     ///
-    ///             When the application exits, the engine prints dynamic heap statistics
-    ///             for each context to the log, for example:
+    /// When the application exits, the engine prints dynamic heap statistics
+    /// for each context to the log, for example:
     ///
-    ///                 Diligent Engine: Info: Dynamic heap of immediate context usage stats:
-    ///                                        Peak used/aligned/allocated size: 94.14 KB / 94.56 KB / 256.00 KB (1 page). Peak efficiency (used/aligned): 99.6%. Peak utilization (used/allocated): 36.8%
+    ///     Diligent Engine: Info: Dynamic heap of immediate context usage stats:
+    ///                            Peak used/aligned/allocated size: 94.14 KB / 94.56 KB / 256.00 KB (1 page). Peak efficiency (used/aligned): 99.6%. Peak utilization (used/allocated): 36.8%
     ///
-    ///             * Peak used size is the total amount of memory required for dynamic resources
-    ///               allocated by the context during the frame.
-    ///             * Peak aligned size is the total amount of memory required for dynamic resources
-    ///               allocated by the context during the frame, accounting for necessary alignment. This
-    ///               value is always greater than or equal to the peak used size.   
-    ///             * Peak allocated size is the total amount of memory allocated from the dynamic
-    ///               heap by the context during the frame. This value is always a multiple of
-    ///               DynamicHeapPageSize.
+    /// * Peak used size is the total amount of memory required for dynamic resources
+    ///   allocated by the context during the frame.
+    /// * Peak aligned size is the total amount of memory required for dynamic resources
+    ///   allocated by the context during the frame, accounting for necessary alignment. This
+    ///   value is always greater than or equal to the peak used size.   
+    /// * Peak allocated size is the total amount of memory allocated from the dynamic
+    ///   heap by the context during the frame. This value is always a multiple of
+    ///   DynamicHeapPageSize.
     Uint32 DynamicHeapPageSize              DEFAULT_INITIALIZER(256 << 10);
 
     /// Query pool size for each query type.
     ///
-    /// \remarks    In Vulkan, queries are allocated from the pool, and
-    ///             one pool may contain multiple queries of different types.
-    ///             QueryPoolSizes array specifies the number of queries
-    ///             of each type that will be allocated from a single pool.
-    ///             The engine will create as many pools as necessary to
-    ///             satisfy the requested number of queries.
+    /// In Vulkan, queries are allocated from the pool, and
+    /// one pool may contain multiple queries of different types.
+    /// QueryPoolSizes array specifies the number of queries
+    /// of each type that will be allocated from a single pool.
+    /// The engine will create as many pools as necessary to
+    /// satisfy the requested number of queries.
     Uint32 QueryPoolSizes[QUERY_TYPE_NUM_TYPES]
 #if DILIGENT_CPP_INTERFACE
     {
@@ -4189,13 +4218,13 @@ struct EngineMtlCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     Uint32 DynamicHeapPageSize       DEFAULT_INITIALIZER(4 << 20);
 
     /// Query pool size for each query type.
-    ///
-    /// \remarks    In Metal, queries are allocated from the pool, and
-    ///             one pool may contain multiple queries of different types.
-    ///             QueryPoolSizes array specifies the number of queries
-    ///             of each type that will be allocated from a single pool.
-    ///             The engine will create as many pools as necessary to
-    ///             satisfy the requested number of queries.
+
+    /// In Metal, queries are allocated from the pool, and
+    /// one pool may contain multiple queries of different types.
+    /// QueryPoolSizes array specifies the number of queries
+    /// of each type that will be allocated from a single pool.
+    /// The engine will create as many pools as necessary to
+    /// satisfy the requested number of queries.
     Uint32 QueryPoolSizes[QUERY_TYPE_NUM_TYPES]
     #if DILIGENT_CPP_INTERFACE
     {
@@ -4225,19 +4254,19 @@ typedef struct EngineMtlCreateInfo EngineMtlCreateInfo;
 struct EngineWebGPUCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
     /// Upload heap page size.
-    ///
-    /// \remarks    Upload heap is used to update resources with IDeviceContext::UpdateBuffer(),
-    ///  	        IDeviceContext::UpdateTexture(), or to map dynamic textures.
+
+    /// Upload heap is used to update resources with IDeviceContext::UpdateBuffer(),
+    /// IDeviceContext::UpdateTexture(), or to map dynamic textures.
     Uint32 UploadHeapPageSize  DEFAULT_INITIALIZER(8 << 20);
 
     /// The size of the dynamic heap (the buffer that is used to suballocate memory for dynamic resources).
-    ///
-    /// \remarks    The dynamic heap is used to allocate memory for dynamic
-    ///             resources. Each time a dynamic buffer or dynamic texture is mapped,
-    ///             the engine allocates a new chunk of memory from the dynamic heap.
-    ///             At the end of the frame, all dynamic memory allocated for the frame
-    ///             is recycled. Note that unlike Vulkan, the dynamic memory becomes available
-    ///             immediately for use in the next frame.
+
+    /// The dynamic heap is used to allocate memory for dynamic
+    /// resources. Each time a dynamic buffer or dynamic texture is mapped,
+    /// the engine allocates a new chunk of memory from the dynamic heap.
+    /// At the end of the frame, all dynamic memory allocated for the frame
+    /// is recycled. Note that unlike Vulkan, the dynamic memory becomes available
+    /// immediately for use in the next frame.
     Uint32 DynamicHeapSize     DEFAULT_INITIALIZER(8 << 20);
 
     /// Size of the memory chunk suballocated by immediate/deferred context from
@@ -4357,9 +4386,10 @@ DILIGENT_TYPED_ENUM(COMPONENT_TYPE, Uint8)
     COMPONENT_TYPE_COMPRESSED,
 };
 
-/// Describes invariant texture format attributes. These attributes are
-/// intrinsic to the texture format itself and do not depend on the
-/// format support.
+/// Describes invariant texture format attributes.
+
+/// These attributes are intrinsic to the texture format itself and do
+/// not depend on the format support.
 struct TextureFormatAttribs
 {
     /// Literal texture format name (for instance, for TEX_FORMAT_RGBA8_UNORM format, this
@@ -4501,6 +4531,7 @@ struct TextureFormatInfoExt DILIGENT_DERIVE(TextureFormatInfo)
     RESOURCE_DIMENSION_SUPPORT Dimensions DEFAULT_INITIALIZER(RESOURCE_DIMENSION_SUPPORT_NONE);
 
     /// A bitmask specifying all the supported sample counts for this texture format.
+
     /// If the format supports n samples, then (SampleCounts & n) != 0
     SAMPLE_COUNT SampleCounts DEFAULT_INITIALIZER(SAMPLE_COUNT_NONE);
 
@@ -4513,6 +4544,7 @@ typedef struct TextureFormatInfoExt TextureFormatInfoExt;
 /// Describes the sparse texture packing mode
 DILIGENT_TYPED_ENUM(SPARSE_TEXTURE_FLAGS, Uint8)
 {
+    /// No special packing mode is used.
     SPARSE_TEXTURE_FLAG_NONE                   = 0,
 
     /// Specifies that the texture uses a single mip tail region for all array layers
@@ -4539,12 +4571,11 @@ struct SparseTextureFormatInfo
 
     /// The dimensions of the sparse texture tile.
 
-    /// \remarks
-    ///     When SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag is not set, the tile
-    ///     dimensions match the standard tile dimensions, see
-    ///     SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE,
-    ///     SPARSE_RESOURCE_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE,
-    ///     SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE.
+    /// When SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag is not set, the tile
+    /// dimensions match the standard tile dimensions, see
+    /// SPARSE_RESOURCE_CAP_FLAG_STANDARD_2D_TILE_SHAPE,
+    /// SPARSE_RESOURCE_CAP_FLAG_STANDARD_2DMS_TILE_SHAPE,
+    /// SPARSE_RESOURCE_CAP_FLAG_STANDARD_3D_TILE_SHAPE.
     Uint32     TileSize[3] DEFAULT_INITIALIZER({});
 
     /// Sparse texture flags, see Diligent::SPARSE_TEXTURE_FLAGS.
@@ -4831,6 +4862,7 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
 
     /// The resource state is used for read operations, but access to the resource may be slower compared to the specialized state.
     /// A transition to the COMMON state is always a pipeline stall and can often induce a cache flush and render target decompress operation.
+    ///
     /// \remarks In D3D12 backend, a resource must be in COMMON state for transition between graphics/compute queue and copy queue.
     /// \remarks Supported contexts: graphics, compute, transfer.
     RESOURCE_STATE_COMMON               = 1u << 20,
