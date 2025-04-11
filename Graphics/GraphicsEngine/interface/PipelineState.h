@@ -96,10 +96,10 @@ DILIGENT_TYPED_ENUM(SHADER_VARIABLE_FLAGS, Uint8)
     SHADER_VARIABLE_FLAG_NONE               = 0,
 
     /// Indicates that dynamic buffers will never be bound to the resource
-    /// variable. Applies to SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
-    /// SHADER_RESOURCE_TYPE_BUFFER_UAV, SHADER_RESOURCE_TYPE_BUFFER_SRV resources.
+    /// variable. Applies to Diligent::SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+    /// Diligent::SHADER_RESOURCE_TYPE_BUFFER_UAV, Diligent::SHADER_RESOURCE_TYPE_BUFFER_SRV resources.
     ///
-    /// \remarks    This flag directly translates to the PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS
+    /// \remarks    This flag directly translates to the Diligent::PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS
     ///             flag in the internal pipeline resource signature.
     SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS = 1u << 0,
 
@@ -120,6 +120,7 @@ DILIGENT_TYPED_ENUM(SHADER_VARIABLE_FLAGS, Uint8)
     /// \note This flag is only valid in WebGPU and ignored in other backends.
     SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU = 1u << 3,
 
+    /// Special value that indicates the last flag in the enumeration.
     SHADER_VARIABLE_FLAG_LAST = SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_VARIABLE_FLAGS);
@@ -131,9 +132,10 @@ struct ShaderResourceVariableDesc
     /// Shader variable name
     const Char*                   Name         DEFAULT_INITIALIZER(nullptr);
 
-    /// Shader stages this resources variable applies to. If more than one shader stage is specified,
-    /// the variable will be shared between these stages. Shader stages used by different variables
-    /// with the same name must not overlap.
+    /// Shader stages this resources variable applies to.
+
+    /// If more than one shader stage is specified, the variable will be shared between these stages.
+    /// Shader stages used by different variables with the same name must not overlap.
     SHADER_TYPE                   ShaderStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// Shader variable type. See Diligent::SHADER_RESOURCE_VARIABLE_TYPE for a list of allowed types
@@ -191,6 +193,7 @@ DILIGENT_TYPED_ENUM(PIPELINE_SHADING_RATE_FLAGS, Uint8)
     /// See IDeviceContext::SetShadingRate() and IDeviceContext::SetRenderTargetsExt().
     PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED = 1u << 1u,
 
+    /// Special value that indicates the last flag in the enumeration.
     PIPELINE_SHADING_RATE_FLAG_LAST          = PIPELINE_SHADING_RATE_FLAG_TEXTURE_BASED,
 };
 DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_SHADING_RATE_FLAGS);
@@ -198,18 +201,21 @@ DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_SHADING_RATE_FLAGS);
 /// Pipeline layout description
 struct PipelineResourceLayoutDesc
 {
-    /// Default shader resource variable type. This type will be used if shader
-    /// variable description is not found in the Variables array
-    /// or if Variables == nullptr
+    /// Default shader resource variable type.
+
+    /// This type will be used if shader variable description is not found in the `Variables` array
+    /// or if `Variables == nullptr`
     SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType  DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
+    /// Default shader variable merge stages.
+
     /// By default, all variables not found in the Variables array define separate resources.
-    /// For example, if there is resource "g_Texture" in the vertex and pixel shader stages, there
+    /// For example, if there is resource `"g_Texture"` in the vertex and pixel shader stages, there
     /// will be two separate resources in both stages. This member defines shader stages
     /// in which default variables will be combined.
-    /// For example, if DefaultVariableMergeStages == SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL,
+    /// For example, if `DefaultVariableMergeStages == SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL`,
     /// then both resources in the example above will be combined into a single one.
-    /// If there is another "g_Texture" in geometry shader, it will be separate from combined
+    /// If there is another `"g_Texture"` in geometry shader, it will be separate from combined
     /// vertex-pixel "g_Texture".
     /// This member has no effect on variables defined in Variables array.
     SHADER_TYPE                         DefaultVariableMergeStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
@@ -283,6 +289,8 @@ struct GraphicsPipelineDesc
     /// Blend state description.
     BlendStateDesc BlendDesc;
 
+    /// Sample mask.
+
     /// 32-bit sample mask that determines which samples get updated
     /// in all the active render targets. A sample mask is always applied;
     /// it is independent of whether multisampling is enabled, and does not
@@ -305,27 +313,31 @@ struct GraphicsPipelineDesc
     Uint8 NumViewports           DEFAULT_INITIALIZER(1);
 
     /// The number of render targets in the RTVFormats array.
-    /// Must be 0 when pRenderPass is not null.
+
+    /// Must be 0 when `pRenderPass` is not `null`.
     Uint8 NumRenderTargets       DEFAULT_INITIALIZER(0);
 
-    /// When pRenderPass is not null, the subpass
+    /// When `pRenderPass` is not `null`, the subpass
     /// index within the render pass.
-    /// When pRenderPass is null, this member must be 0.
+    /// When `pRenderPass` is `null`, this member must be 0.
     Uint8 SubpassIndex           DEFAULT_INITIALIZER(0);
 
     /// Shading rate flags that specify which type of the shading rate will be used with this pipeline.
     PIPELINE_SHADING_RATE_FLAGS ShadingRateFlags DEFAULT_INITIALIZER(PIPELINE_SHADING_RATE_FLAG_NONE);
 
     /// Render target formats.
-    /// All formats must be TEX_FORMAT_UNKNOWN when pRenderPass is not null.
+
+    /// All formats must be Diligent::TEX_FORMAT_UNKNOWN when `pRenderPass` is not `null`.
     TEXTURE_FORMAT RTVFormats[DILIGENT_MAX_RENDER_TARGETS] DEFAULT_INITIALIZER({});
 
     /// Depth-stencil format.
-    /// Must be TEX_FORMAT_UNKNOWN when pRenderPass is not null.
+
+    /// Must be Diligent::TEX_FORMAT_UNKNOWN when `pRenderPass` is not `null`.
     TEXTURE_FORMAT DSVFormat     DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Indicates that the pipeline will be used with read-only depth-stencil buffer.
-    /// Must be false when pRenderPass is not null.
+
+    /// Must be `false` when `pRenderPass` is not `null`.
     Bool ReadOnlyDSV             DEFAULT_INITIALIZER(False);
 
     /// Multisampling parameters.
@@ -333,8 +345,8 @@ struct GraphicsPipelineDesc
 
     /// Pointer to the render pass object.
 
-    /// When non-null render pass is specified, NumRenderTargets must be 0,
-    /// and all RTV formats as well as DSV format must be TEX_FORMAT_UNKNOWN.
+    /// When non-null render pass is specified, `NumRenderTargets` must be 0,
+    /// and all RTV formats as well as DSV format must be Diligent::TEX_FORMAT_UNKNOWN.
     IRenderPass* pRenderPass     DEFAULT_INITIALIZER(nullptr);
 
     /// Node mask.
@@ -390,7 +402,10 @@ struct RayTracingGeneralShaderGroup
     /// Unique group name.
     const Char* Name    DEFAULT_INITIALIZER(nullptr);
 
-    /// Shader type must be SHADER_TYPE_RAY_GEN, SHADER_TYPE_RAY_MISS or SHADER_TYPE_CALLABLE.
+    /// Shader object.
+
+    /// Shader type must be Diligent::SHADER_TYPE_RAY_GEN,
+    /// Diligent::SHADER_TYPE_RAY_MISS or Diligent::SHADER_TYPE_CALLABLE.
     IShader*    pShader DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
@@ -422,11 +437,13 @@ struct RayTracingTriangleHitShaderGroup
     const Char* Name              DEFAULT_INITIALIZER(nullptr);
 
     /// Closest hit shader.
-    /// The shader type must be SHADER_TYPE_RAY_CLOSEST_HIT.
+
+    /// The shader type must be Diligent::SHADER_TYPE_RAY_CLOSEST_HIT.
     IShader*    pClosestHitShader DEFAULT_INITIALIZER(nullptr);
 
     /// Any-hit shader. Can be null.
-    /// The shader type must be SHADER_TYPE_RAY_ANY_HIT.
+
+    /// The shader type must be Diligent::SHADER_TYPE_RAY_ANY_HIT.
     IShader*    pAnyHitShader     DEFAULT_INITIALIZER(nullptr); // can be null
 
 #if DILIGENT_CPP_INTERFACE
@@ -462,15 +479,18 @@ struct RayTracingProceduralHitShaderGroup
     const Char* Name                DEFAULT_INITIALIZER(nullptr);
 
     /// Intersection shader.
-    /// The shader type must be SHADER_TYPE_RAY_INTERSECTION.
+
+    /// The shader type must be Diligent::SHADER_TYPE_RAY_INTERSECTION.
     IShader*    pIntersectionShader DEFAULT_INITIALIZER(nullptr);
 
     /// Closest hit shader. Can be null.
-    /// The shader type must be SHADER_TYPE_RAY_CLOSEST_HIT.
+
+    /// The shader type must be Diligent::SHADER_TYPE_RAY_CLOSEST_HIT.
     IShader*    pClosestHitShader   DEFAULT_INITIALIZER(nullptr);
 
     /// Any-hit shader. Can be null.
-    /// The shader type must be SHADER_TYPE_RAY_ANY_HIT.
+
+    /// The shader type must be Diligent::SHADER_TYPE_RAY_ANY_HIT.
     IShader*    pAnyHitShader       DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
@@ -506,15 +526,17 @@ typedef struct RayTracingProceduralHitShaderGroup RayTracingProceduralHitShaderG
 struct RayTracingPipelineDesc
 {
     /// Size of the additional data passed to the shader.
+
     /// Shader record size plus shader group size (32 bytes) must be aligned to 32 bytes.
     /// Shader record size plus shader group size (32 bytes) must not exceed 4096 bytes.
     Uint16  ShaderRecordSize   DEFAULT_INITIALIZER(0);
 
-    /// Number of recursive calls of TraceRay() in HLSL or traceRayEXT() in GLSL.
+    /// Number of recursive calls of `TraceRay()` in HLSL or `traceRayEXT()` in GLSL.
+
     /// Shaders directly invoked from the API always have a recursion depth of 0; each
     /// shader executed by the trace ray instruction has a recursion depth one higher than
     /// the recursion depth of the shader which invoked it. Applications must not invoke a
-    /// shader with a recursion depth greater than the value of MaxRecursionDepth.
+    /// shader with a recursion depth greater than the value of `MaxRecursionDepth`.
     /// See DeviceProperties::MaxRayTracingRecursionDepth.
     Uint8   MaxRecursionDepth  DEFAULT_INITIALIZER(0);
 
@@ -553,10 +575,13 @@ DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
     /// Tile pipeline, which is used by IDeviceContext::DispatchTile().
     PIPELINE_TYPE_TILE,
 
+    /// Special value that indicates the last pipeline type in the enumeration.
     PIPELINE_TYPE_LAST = PIPELINE_TYPE_TILE,
 
+    /// Number of pipeline types in the enumeration.
     PIPELINE_TYPE_COUNT,
 
+    /// Invalid pipeline type.
     PIPELINE_TYPE_INVALID = 0xFF
 };
 
@@ -576,12 +601,12 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Defines which immediate contexts are allowed to execute commands that use this pipeline state.
 
-    /// When ImmediateContextMask contains a bit at position n, the pipeline state may be
+    /// When `ImmediateContextMask` contains a bit at position n, the pipeline state may be
     /// used in the immediate context with index n directly (see DeviceContextDesc::ContextId).
     /// It may also be used in a command list recorded by a deferred context that will be executed
     /// through that immediate context.
     ///
-    /// \remarks    Only specify these bits that will indicate those immediate contexts where the PSO
+    /// \remarks    Only specify those bits that will indicate the immediate contexts where the PSO
     ///             will actually be used. Do not set unnecessary bits as this will result in extra overhead.
     Uint64 ImmediateContextMask     DEFAULT_INITIALIZER(1);
 
@@ -650,18 +675,19 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS = 1u << 1u,
 
     /// Do not remap shader resources when creating the pipeline.
+
     /// Resource bindings in all shaders must match the bindings expected
     /// by the PSO's resource signatures.
     PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES       = 1u << 2u,
 
     /// Create the pipeline state asynchronously.
     
-    /// \remarks	When this flag is set to true and if the devices supports
-    ///             AsyncShaderCompilation feature, the pipeline will be created
-    ///             asynchronously in the background. An application should use
-    ///             the IPipelineState::GetStatus() method to check the pipeline status.
-    ///             If the device does not support asynchronous shader compilation,
-    ///             the flag is ignored and the pipeline is created synchronously.
+    /// When this flag is set to true and if the devices supports
+    /// AsyncShaderCompilation feature, the pipeline will be created
+    /// asynchronously in the background. An application should use
+    /// the IPipelineState::GetStatus() method to check the pipeline status.
+    /// If the device does not support asynchronous shader compilation,
+    /// the flag is ignored and the pipeline is created synchronously.
     PSO_CREATE_FLAG_ASYNCHRONOUS                      = 1u << 3u,
 
     PSO_CREATE_FLAG_LAST = PSO_CREATE_FLAG_ASYNCHRONOUS
@@ -678,28 +704,28 @@ struct PipelineStateCreateInfo
     /// Pipeline state creation flags, see Diligent::PSO_CREATE_FLAGS.
     PSO_CREATE_FLAGS  Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
 
-    /// The number of elements in ppResourceSignatures array.
+    /// The number of elements in `ppResourceSignatures` array.
     Uint32 ResourceSignaturesCount DEFAULT_INITIALIZER(0);
 
-    /// An array of ResourceSignaturesCount shader resource signatures that
+    /// An array of `ResourceSignaturesCount` shader resource signatures that
     /// define the layout of shader resources in this pipeline state object.
     /// See Diligent::IPipelineResourceSignature.
     ///
-    /// \remarks    When this member is null, the pipeline resource layout will be defined
-    ///             by PSODesc.ResourceLayout member. In this case the PSO will implicitly
-    ///             create a resource signature that can be queried through GetResourceSignature()
-    ///             method.
-    ///             When ppResourceSignatures is not null, PSODesc.ResourceLayout is ignored and
-    ///             should be in it default state.
+    /// When this member is null, the pipeline resource layout will be defined
+    /// by `PSODesc.ResourceLayout` member. In this case the PSO will implicitly
+    /// create a resource signature that can be queried through IPipelineState::GetResourceSignature()
+    /// method.
+    /// When `ppResourceSignatures` is not null, `PSODesc.ResourceLayout` is ignored and
+    /// should be in it default state.
     IPipelineResourceSignature** ppResourceSignatures DEFAULT_INITIALIZER(nullptr);
 
     /// Optional pipeline state cache that is used to accelerate
-    /// PSO creation. If PSODesc.Name is found in the cache, the cache
+    /// PSO creation. If `PSODesc.Name` is found in the cache, the cache
     /// data is used to create the PSO. Otherwise, the PSO
     /// is added to the cache.
     IPipelineStateCache* pPSOCache DEFAULT_INITIALIZER(nullptr);
 
-    /// For internal use only. Must always be null.
+    /// For internal use only. Must always be `null`.
     void* pInternalData DEFAULT_INITIALIZER(nullptr);
 
 #ifdef DILIGENT_PLATFORM_32
@@ -853,37 +879,42 @@ struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo
     /// Ray tracing pipeline description.
     RayTracingPipelineDesc                    RayTracingPipeline;
 
-    /// A pointer to an array of GeneralShaderCount RayTracingGeneralShaderGroup structures that contain shader group description.
+    /// A pointer to an array of `GeneralShaderCount` `RayTracingGeneralShaderGroup` structures that contain shader group description.
     const RayTracingGeneralShaderGroup*       pGeneralShaders          DEFAULT_INITIALIZER(nullptr);
 
     /// The number of general shader groups.
     Uint32                                    GeneralShaderCount       DEFAULT_INITIALIZER(0);
 
-    /// A pointer to an array of TriangleHitShaderCount RayTracingTriangleHitShaderGroup structures that contain shader group description.
+    /// A pointer to an array of `TriangleHitShaderCount` `RayTracingTriangleHitShaderGroup` structures that contain shader group description.
     /// Can be null.
     const RayTracingTriangleHitShaderGroup*   pTriangleHitShaders      DEFAULT_INITIALIZER(nullptr);
 
     /// The number of triangle hit shader groups.
     Uint32                                    TriangleHitShaderCount   DEFAULT_INITIALIZER(0);
 
-    /// A pointer to an array of ProceduralHitShaderCount RayTracingProceduralHitShaderGroup structures that contain shader group description.
+    /// A pointer to an array of `ProceduralHitShaderCount` `RayTracingProceduralHitShaderGroup` structures that contain shader group description.
     /// Can be null.
     const RayTracingProceduralHitShaderGroup* pProceduralHitShaders    DEFAULT_INITIALIZER(nullptr);
 
     /// The number of procedural shader groups.
     Uint32                                    ProceduralHitShaderCount DEFAULT_INITIALIZER(0);
 
+    /// Shader record name.
+
     /// Direct3D12 only: the name of the constant buffer that will be used by the local root signature.
-    /// Ignored if RayTracingPipelineDesc::ShaderRecordSize is zero.
-    /// In Vulkan backend in HLSL add [[vk::shader_record_ext]] attribute to the constant buffer, in GLSL add shaderRecord layout to buffer.
+    /// Ignored if `RayTracingPipelineDesc::ShaderRecordSize` is zero.
+    /// * In Vulkan backend in HLSL, add `[[vk::shader_record_ext]]` attribute to the constant buffer
+    /// * In GLSL, add `shaderRecord` layout to buffer.
     const Char*                               pShaderRecordName        DEFAULT_INITIALIZER(nullptr);
 
     /// Direct3D12 only: the maximum hit shader attribute size in bytes.
-    /// If zero then maximum allowed size will be used.
+
+    /// If zero, the maximum allowed size will be used.
     Uint32                                    MaxAttributeSize         DEFAULT_INITIALIZER(0);
 
     /// Direct3D12 only: the maximum payload size in bytes.
-    /// If zero then maximum allowed size will be used.
+
+    /// If zero, the maximum allowed size will be used.
     Uint32                                    MaxPayloadSize           DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
@@ -1052,14 +1083,17 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
 #endif
 
     /// Returns the graphics pipeline description used to create the object.
+
     /// This method must only be called for a graphics or mesh pipeline.
     VIRTUAL const GraphicsPipelineDesc REF METHOD(GetGraphicsPipelineDesc)(THIS) CONST PURE;
 
     /// Returns the ray tracing pipeline description used to create the object.
+
     /// This method must only be called for a ray tracing pipeline.
     VIRTUAL const RayTracingPipelineDesc REF METHOD(GetRayTracingPipelineDesc)(THIS) CONST PURE;
 
     /// Returns the tile pipeline description used to create the object.
+
     /// This method must only be called for a tile pipeline.
     VIRTUAL const TilePipelineDesc REF METHOD(GetTilePipelineDesc)(THIS) CONST PURE;
 
@@ -1070,10 +1104,10 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
     /// \param [in] Flags            - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
     ///
-    /// \remarks    This method is only allowed for pipelines that use implicit resource signature
-    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
-    ///             For pipelines that use explicit resource signatures, use
-    ///             IPipelineResourceSignature::BindStaticResources() method.
+    /// This method is only allowed for pipelines that use implicit resource signature
+    /// (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    /// For pipelines that use explicit resource signatures, use
+    /// IPipelineResourceSignature::BindStaticResources() method.
     VIRTUAL void METHOD(BindStaticResources)(THIS_
                                              SHADER_TYPE                 ShaderStages,
                                              IResourceMapping*           pResourceMapping,
@@ -1084,31 +1118,32 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
 
     /// \param [in] ShaderType - Type of the shader.
     ///
-    /// \remarks    Only static variables (that can be accessed directly through the PSO) are counted.
-    ///             Mutable and dynamic variables are accessed through Shader Resource Binding object.
+    /// Only static variables (that can be accessed directly through the PSO) are counted.
+    /// Mutable and dynamic variables are accessed through Shader Resource Binding object.
     ///
-    ///             This method is only allowed for pipelines that use implicit resource signature
-    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
-    ///             For pipelines that use explicit resource signatures, use
-    ///             IPipelineResourceSignature::GetStaticVariableCount() method.
+    /// This method is only allowed for pipelines that use implicit resource signature
+    /// (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    /// For pipelines that use explicit resource signatures, use
+    /// IPipelineResourceSignature::GetStaticVariableCount() method.
     VIRTUAL Uint32 METHOD(GetStaticVariableCount)(THIS_
                                                   SHADER_TYPE ShaderType) CONST PURE;
 
 
-    /// Returns static shader resource variable. If the variable is not found,
-    /// returns nullptr.
+    /// Returns static shader resource variable.
 
+    /// If the variable is not found, returns nullptr.
+    ///
     /// \param [in] ShaderType - The type of the shader to look up the variable.
     ///                          Must be one of Diligent::SHADER_TYPE.
     /// \param [in] Name       - Name of the variable.
     ///
-    /// \remarks    The method does not increment the reference counter
-    ///             of the returned interface.
+    /// The method does not increment the reference counter
+    /// of the returned interface.
     ///
-    ///             This method is only allowed for pipelines that use implicit resource signature
-    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
-    ///             For pipelines that use explicit resource signatures, use
-    ///             IPipelineResourceSignature::GetStaticVariableByName() method.
+    /// This method is only allowed for pipelines that use implicit resource signature
+    /// (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    /// For pipelines that use explicit resource signatures, use
+    /// IPipelineResourceSignature::GetStaticVariableByName() method.
     VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByName)(THIS_
                                                                      SHADER_TYPE ShaderType,
                                                                      const Char* Name) PURE;
@@ -1122,14 +1157,14 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///                          0 and the total number of variables returned by
     ///                          GetStaticVariableCount().
     ///
-    /// \remarks    Only static shader resource variables can be accessed through this method.
-    ///             Mutable and dynamic variables are accessed through Shader Resource
-    ///             Binding object.
+    /// Only static shader resource variables can be accessed through this method.
+    /// Mutable and dynamic variables are accessed through Shader Resource
+    /// Binding object.
     ///
-    ///             This method is only allowed for pipelines that use implicit resource signature
-    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
-    ///             For pipelines that use explicit resource signatures, use
-    ///             IPipelineResourceSignature::GetStaticVariableByIndex() method.
+    /// This method is only allowed for pipelines that use implicit resource signature
+    /// (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    /// For pipelines that use explicit resource signatures, use
+    /// IPipelineResourceSignature::GetStaticVariableByIndex() method.
     VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByIndex)(THIS_
                                                                       SHADER_TYPE ShaderType,
                                                                       Uint32      Index) PURE;
@@ -1143,10 +1178,10 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///                                        the created object, which has the exact same effect as calling
     ///                                        IPipelineState::InitializeStaticSRBResources().
     ///
-    /// \remarks    This method is only allowed for pipelines that use implicit resource signature
-    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
-    ///             For pipelines that use explicit resource signatures, use
-    ///             IPipelineResourceSignature::CreateShaderResourceBinding() method.
+    /// This method is only allowed for pipelines that use implicit resource signature
+    /// (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    /// For pipelines that use explicit resource signatures, use
+    /// IPipelineResourceSignature::CreateShaderResourceBinding() method.
     VIRTUAL void METHOD(CreateShaderResourceBinding)(THIS_
                                                      IShaderResourceBinding** ppShaderResourceBinding,
                                                      Bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
@@ -1167,10 +1202,10 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// \note   If static resources have already been initialized in the SRB and the method
     ///         is called again, it will have no effect and a warning message will be displayed.
     ///
-    /// \remarks    This method is only allowed for pipelines that use implicit resource signature
-    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
-    ///             For pipelines that use explicit resource signatures, use
-    ///             IPipelineResourceSignature::InitializeStaticSRBResources() method.
+    /// This method is only allowed for pipelines that use implicit resource signature
+    /// (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    /// For pipelines that use explicit resource signatures, use
+    /// IPipelineResourceSignature::InitializeStaticSRBResources() method.
     VIRTUAL void METHOD(InitializeStaticSRBResources)(THIS_
                                                       struct IShaderResourceBinding* pShaderResourceBinding) CONST PURE;
 
@@ -1181,10 +1216,10 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///
     /// \note   Destination pipeline state must be compatible with this pipeline.
     ///
-    /// \remarks    This method is only allowed for pipelines that use implicit resource signature
-    ///             (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
-    ///             For pipelines that use explicit resource signatures, use
-    ///             IPipelineResourceSignature::CopyStaticResources() method.
+    /// This method is only allowed for pipelines that use implicit resource signature
+    /// (e.g. shader resources are defined through ResourceLayout member of the pipeline desc).
+    /// For pipelines that use explicit resource signatures, use
+    /// IPipelineResourceSignature::CopyStaticResources() method.
     VIRTUAL void METHOD(CopyStaticResources)(THIS_
                                              IPipelineState* pDstPipeline) CONST PURE;
 
@@ -1194,40 +1229,42 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// If two pipeline state objects are compatible, they can use shader resource binding
     /// objects interchangeably, i.e. SRBs created by one PSO can be committed
     /// when another PSO is bound.
+    ///
     /// \param [in] pPSO - Pointer to the pipeline state object to check compatibility with.
     /// \return     true if this PSO is compatible with pPSO. false otherwise.
-    /// \remarks    The function only checks that shader resource layouts are compatible, but
-    ///             does not check if resource types match. For instance, if a pixel shader in one PSO
-    ///             uses a texture at slot 0, and a pixel shader in another PSO uses texture array at slot 0,
-    ///             the pipelines will be compatible. However, if you try to use SRB object from the first pipeline
-    ///             to commit resources for the second pipeline, a runtime error will occur.\n
-    ///             The function only checks compatibility of shader resource layouts. It does not take
-    ///             into account vertex shader input layout, number of outputs, etc.
+    /// 
+    /// The function only checks that shader resource layouts are compatible, but
+    /// does not check if resource types match. For instance, if a pixel shader in one PSO
+    /// uses a texture at slot 0, and a pixel shader in another PSO uses texture array at slot 0,
+    /// the pipelines will be compatible. However, if you try to use SRB object from the first pipeline
+    /// to commit resources for the second pipeline, a runtime error will occur.\n
+    /// The function only checks compatibility of shader resource layouts. It does not take
+    /// into account vertex shader input layout, number of outputs, etc.
     ///
-    ///             *Technical details*
+    /// **Technical details**
     ///
-    ///             PSOs may be partially compatible when some, but not all pipeline resource signatures are compatible.
-    ///             In Vulkan backend, switching PSOs that are partially compatible may increase performance
-    ///             as shader resource bindings (that map to descriptor sets) from compatible signatures may be preserved.
-    ///             In Direct3D12 backend, only switching between fully compatible PSOs preserves shader resource bindings,
-    ///             while switching partially compatible PSOs still requires re-binding all resource bindings from all signatures.
-    ///             In other backends the behavior is emulated. Usually, the bindings from the first N compatible resource signatures
-    ///             may be preserved.
+    /// PSOs may be partially compatible when some, but not all pipeline resource signatures are compatible.
+    /// In Vulkan backend, switching PSOs that are partially compatible may increase performance
+    /// as shader resource bindings (that map to descriptor sets) from compatible signatures may be preserved.
+    /// In Direct3D12 backend, only switching between fully compatible PSOs preserves shader resource bindings,
+    /// while switching partially compatible PSOs still requires re-binding all resource bindings from all signatures.
+    /// In other backends the behavior is emulated. Usually, the bindings from the first N compatible resource signatures
+    /// may be preserved.
     VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineState* pPSO) CONST PURE;
 
 
     /// Returns the number of pipeline resource signatures used by this pipeline.
 
-    /// \remarks  After the PSO is created, pipeline resource signatures are arranged by their binding indices.
-    ///           The value returned by this function is given by the maximum signature binding index plus one,
-    ///           and thus may not be equal to PipelineStateCreateInfo::ResourceSignaturesCount.
+    /// After the PSO is created, pipeline resource signatures are arranged by their binding indices.
+    /// The value returned by this function is given by the maximum signature binding index plus one,
+    /// and thus may not be equal to PipelineStateCreateInfo::ResourceSignaturesCount.
     VIRTUAL Uint32 METHOD(GetResourceSignatureCount)(THIS) CONST PURE;
 
     /// Returns pipeline resource signature at the give index.
 
     /// \param [in] Index - Index of the resource signature, same as BindingIndex in PipelineResourceSignatureDesc.
-    /// \return     Pointer to pipeline resource signature interface.
+    /// \return     A pointer to the pipeline resource signature interface.
     VIRTUAL IPipelineResourceSignature* METHOD(GetResourceSignature)(THIS_
                                                                      Uint32 Index) CONST PURE;
 
