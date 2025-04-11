@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,6 +40,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_Query =
     {0x70f2a88a, 0xf8be, 0x4901, {0x8f, 0x5, 0x2f, 0x72, 0xfa, 0x69, 0x5b, 0xa0}};
 
 /// Occlusion query data.
+
 /// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_OCCLUSION query type.
 struct QueryDataOcclusion
 {
@@ -53,6 +54,7 @@ struct QueryDataOcclusion
 typedef struct QueryDataOcclusion QueryDataOcclusion;
 
 /// Binary occlusion query data.
+
 /// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_BINARY_OCCLUSION query type.
 struct QueryDataBinaryOcclusion
 {
@@ -66,6 +68,7 @@ struct QueryDataBinaryOcclusion
 typedef struct QueryDataBinaryOcclusion QueryDataBinaryOcclusion;
 
 /// Timestamp query data.
+
 /// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_TIMESTAMP query type.
 struct QueryDataTimestamp
 {
@@ -82,6 +85,7 @@ struct QueryDataTimestamp
 typedef struct QueryDataTimestamp QueryDataTimestamp;
 
 /// Pipeline statistics query data.
+
 /// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_PIPELINE_STATISTICS query type.
 ///
 /// \warning  In OpenGL backend the only field that will be populated is ClippingInvocations.
@@ -128,6 +132,7 @@ struct QueryDataPipelineStatistics
 typedef struct QueryDataPipelineStatistics QueryDataPipelineStatistics;
 
 /// Duration query data.
+
 /// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_DURATION query type.
 struct QueryDataDuration
 {
@@ -192,15 +197,15 @@ DILIGENT_BEGIN_INTERFACE(IQuery, IDeviceObject)
     /// \param [in] AutoInvalidate - Whether to invalidate the query if the results are available and release associated resources.
     ///                              An application should typically always invalidate completed queries unless
     ///                              it needs to retrieve the same data through GetData() multiple times.
-    ///                              A query will not be invalidated if pData is nullptr.
+    ///                              A query will not be invalidated if `pData` is `nullptr`.
     ///
-    /// \return     true if the query data is available and false otherwise.
+    /// \return     `true` if the query data is available and `false` otherwise.
     ///
-    /// \note       In Direct3D11 backend timestamp queries will only be available after FinishFrame is called
-    ///             for the frame in which they were collected.
+    /// In Direct3D11 backend timestamp queries will only be available after FinishFrame is called
+    /// for the frame in which they were collected.
     ///
-    ///             If AutoInvalidate is set to true, and the data have been retrieved, an application
-    ///             must not call GetData() until it begins and ends the query again.
+    /// If `AutoInvalidate` is set to true, and the data have been retrieved, an application
+    /// must not call GetData() until it begins and ends the query again.
     VIRTUAL Bool METHOD(GetData)(THIS_
                                  void*   pData,
                                  Uint32  DataSize,

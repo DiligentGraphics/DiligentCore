@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -68,10 +68,11 @@ struct PipelineStateCacheDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Cache mode, see Diligent::PSO_CACHE_MODE.
 
-    /// \note Metal backend allows generating the cache on one device
-    ///       and loading PSOs from it on another.
-    ///       Vulkan PSO cache depends on the GPU device, driver version and other parameters,
-    ///       so the cache must be generated and used on the same device.
+    /// Metal backend allows generating the cache on one device
+    /// and loading PSOs from it on another.
+    ///
+    /// Vulkan PSO cache depends on the GPU device, driver version and other parameters,
+    /// so the cache must be generated and used on the same device.
     PSO_CACHE_MODE Mode DEFAULT_INITIALIZER(PSO_CACHE_MODE_LOAD_STORE);
 
     /// PSO cache flags, see Diligent::PSO_CACHE_FLAGS.
@@ -84,6 +85,7 @@ typedef struct PipelineStateCacheDesc PipelineStateCacheDesc;
 /// Pipeline state pbject cache create info
 struct PipelineStateCacheCreateInfo
 {
+    /// Pipeline state cache description
     PipelineStateCacheDesc Desc;
 
     /// All fields can be null to create an empty cache

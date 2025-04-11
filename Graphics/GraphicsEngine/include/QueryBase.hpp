@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,32 +74,32 @@ public:
               bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
-        const auto& deviceFeatures = this->GetDevice()->GetFeatures();
+        const DeviceFeatures& Features = this->GetDevice()->GetFeatures();
         static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
         switch (Desc.Type)
         {
             case QUERY_TYPE_OCCLUSION:
-                if (!deviceFeatures.OcclusionQueries)
+                if (!Features.OcclusionQueries)
                     LOG_ERROR_AND_THROW("Occlusion queries are not supported by this device");
                 break;
 
             case QUERY_TYPE_BINARY_OCCLUSION:
-                if (!deviceFeatures.BinaryOcclusionQueries)
+                if (!Features.BinaryOcclusionQueries)
                     LOG_ERROR_AND_THROW("Binary occlusion queries are not supported by this device");
                 break;
 
             case QUERY_TYPE_TIMESTAMP:
-                if (!deviceFeatures.TimestampQueries)
+                if (!Features.TimestampQueries)
                     LOG_ERROR_AND_THROW("Timestamp queries are not supported by this device");
                 break;
 
             case QUERY_TYPE_PIPELINE_STATISTICS:
-                if (!deviceFeatures.PipelineStatisticsQueries)
+                if (!Features.PipelineStatisticsQueries)
                     LOG_ERROR_AND_THROW("Pipeline statistics queries are not supported by this device");
                 break;
 
             case QUERY_TYPE_DURATION:
-                if (!deviceFeatures.DurationQueries)
+                if (!Features.DurationQueries)
                     LOG_ERROR_AND_THROW("Duration queries are not supported by this device");
                 break;
 
