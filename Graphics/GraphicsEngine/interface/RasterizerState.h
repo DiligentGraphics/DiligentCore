@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,49 +96,60 @@ DILIGENT_TYPED_ENUM(CULL_MODE, Int8)
 struct RasterizerStateDesc
 {
     /// Determines triangle fill mode, see Diligent::FILL_MODE for details.
+
     /// Default value: Diligent::FILL_MODE_SOLID.
     FILL_MODE FillMode              DEFAULT_INITIALIZER(FILL_MODE_SOLID);
 
     /// Determines triangle cull mode, see Diligent::CULL_MODE for details.
+
     /// Default value: Diligent::CULL_MODE_BACK.
     CULL_MODE CullMode              DEFAULT_INITIALIZER(CULL_MODE_BACK);
 
-    /// Determines if a triangle is front- or back-facing. If this parameter is True,
-    /// a triangle will be considered front-facing if its vertices are counter-clockwise
+    /// Determines if a triangle is front- or back-facing.
+
+    /// If this parameter is True, a triangle will be considered front-facing if
+    /// its vertices are counter-clockwise
     /// on the render target and considered back-facing if they are clockwise.
     /// If this parameter is False, the opposite is true.
     /// Default value: False.
     Bool      FrontCounterClockwise DEFAULT_INITIALIZER(False);
 
     /// Enable clipping against near and far clip planes.
+
     /// Default value: True.
     ///
-    /// \remarks    By default polygon faces are clipped against the near and far planes of the view
-    ///             frustum. If depth clipping is disabled, the depth of the fragments that would be
-    ///             clipped is clamped to the near/far plane instead of discarding them.
+    /// By default polygon faces are clipped against the near and far planes of the view
+    /// frustum. If depth clipping is disabled, the depth of the fragments that would be
+    /// clipped is clamped to the near/far plane instead of discarding them.
     ///
-    ///             To check if the device supports depth clamping, use the DepthClamp device feature.
-    ///             If it is not supported, the value of this member must be True.
+    /// To check if the device supports depth clamping, use the DepthClamp device feature.
+    /// If it is not supported, the value of this member must be True.
     Bool      DepthClipEnable       DEFAULT_INITIALIZER(True);
 
     /// Enable scissor-rectangle culling. All pixels outside an active scissor rectangle are culled.
+
     /// Default value: False.
     Bool      ScissorEnable         DEFAULT_INITIALIZER(False);
 
     /// Specifies whether to enable line antialiasing.
+
     /// Default value: False.
     Bool      AntialiasedLineEnable DEFAULT_INITIALIZER(False);
 
     /// Constant value added to the depth of a given pixel.
+
     /// Default value: 0.
     Int32     DepthBias             DEFAULT_INITIALIZER(0);
 
     /// Maximum depth bias of a pixel.
+
     /// \warning Depth bias clamp is not available in OpenGL
+    ///
     /// Default value: 0.
     Float32   DepthBiasClamp        DEFAULT_INITIALIZER(0.f);
 
     /// Scalar that scales the given pixel's slope before adding to the pixel's depth.
+
     /// Default value: 0.
     Float32   SlopeScaledDepthBias  DEFAULT_INITIALIZER(0.f);
 
