@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -41,8 +41,8 @@ namespace Diligent
 
 void ValidateSamplerDesc(const SamplerDesc& Desc, const IRenderDevice* pDevice)
 {
-    const auto& DeviceInfo  = pDevice->GetDeviceInfo();
-    const auto& AdapterInfo = pDevice->GetAdapterInfo();
+    const RenderDeviceInfo&    DeviceInfo  = pDevice->GetDeviceInfo();
+    const GraphicsAdapterInfo& AdapterInfo = pDevice->GetAdapterInfo();
     if (Desc.Flags & (SAMPLER_FLAG_SUBSAMPLED | SAMPLER_FLAG_SUBSAMPLED_COARSE_RECONSTRUCTION))
     {
         VERIFY_SAMPLER(AdapterInfo.ShadingRate.CapFlags & SHADING_RATE_CAP_FLAG_SUBSAMPLED_RENDER_TARGET,

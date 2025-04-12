@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,6 +45,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_Sampler =
 /// Sampler flags
 DILIGENT_TYPED_ENUM(SAMPLER_FLAGS, Uint8)
 {
+    /// No flags are set.
     SAMPLER_FLAG_NONE        = 0,
 
     /// Specifies that the sampler will read from a subsampled texture created with MISC_TEXTURE_FLAG_SUBSAMPLED flag.
@@ -69,22 +70,25 @@ DEFINE_FLAG_ENUM_OPERATORS(SAMPLER_FLAGS)
 /// To create an anisotropic filter, all three filters must either be Diligent::FILTER_TYPE_ANISOTROPIC
 /// or Diligent::FILTER_TYPE_COMPARISON_ANISOTROPIC.
 ///
-/// MipFilter cannot be comparison filter except for Diligent::FILTER_TYPE_ANISOTROPIC if all
+/// `MipFilter` cannot be comparison filter except for Diligent::FILTER_TYPE_ANISOTROPIC if all
 /// three filters have that value.
 ///
-/// Both MinFilter and MagFilter must either be regular filters or comparison filters.
+/// Both `MinFilter` and `MagFilter` must either be regular filters or comparison filters.
 /// Mixing comparison and regular filters is an error.
 struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Texture minification filter, see Diligent::FILTER_TYPE for details.
+
     /// Default value: Diligent::FILTER_TYPE_LINEAR.
     FILTER_TYPE MinFilter           DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
 
     /// Texture magnification filter, see Diligent::FILTER_TYPE for details.
+
     /// Default value: Diligent::FILTER_TYPE_LINEAR.
     FILTER_TYPE MagFilter           DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
 
     /// Mip filter, see Diligent::FILTER_TYPE for details.
+
     /// Only FILTER_TYPE_POINT, FILTER_TYPE_LINEAR, FILTER_TYPE_ANISOTROPIC, and
     /// FILTER_TYPE_COMPARISON_ANISOTROPIC are allowed.
     /// Default value: Diligent::FILTER_TYPE_LINEAR.
@@ -95,10 +99,12 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     TEXTURE_ADDRESS_MODE AddressU   DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
 
     /// Texture address mode for V coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
+
     /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
     TEXTURE_ADDRESS_MODE AddressV   DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
 
     /// Texture address mode for W coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
+
     /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
     TEXTURE_ADDRESS_MODE AddressW   DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
 
@@ -106,38 +112,47 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     SAMPLER_FLAGS        Flags      DEFAULT_INITIALIZER(SAMPLER_FLAG_NONE);
 
     /// Indicates whether to use unnormalized texture coordinates.
+
+    /// When set to `True`, the range of the image coordinates used to lookup
+    /// the texel is in the range of 0 to the image size in each dimension.
+    /// When set to `False`, the range of image coordinates is 0.0 to 1.0.
     ///
-    /// \remarks    When set to True, the range of the image coordinates used to lookup
-    ///             the texel is in the range of 0 to the image size in each dimension.
-    ///             When set to False, the range of image coordinates is 0.0 to 1.0.
-    ///
-    ///             Unnormalized coordinates are only supported in Vulkan and Metal.
+    /// Unnormalized coordinates are only supported in Vulkan and Metal.
     Bool    UnnormalizedCoords          DEFAULT_INITIALIZER(False);
 
-    /// Offset from the calculated mipmap level. For example, if a sampler calculates that a texture
-    /// should be sampled at mipmap level 1.2 and MipLODBias is 2.3, then the texture will be sampled at
-    /// mipmap level 3.5. Default value: 0.
+    /// Offset from the calculated mipmap level.
+
+    /// For example, if a sampler calculates that a texture should be sampled at mipmap
+    /// level 1.2 and MipLODBias is 2.3, then the texture will be sampled at
+    /// mipmap level 3.5.
+    ///
+    /// Default value: 0.
     Float32 MipLODBias                  DEFAULT_INITIALIZER(0);
 
     /// Maximum anisotropy level for the anisotropic filter. Default value: 0.
     Uint32 MaxAnisotropy                DEFAULT_INITIALIZER(0);
 
-    /// A function that compares sampled data against existing sampled data when comparison
-    /// filter is used. Default value: Diligent::COMPARISON_FUNC_NEVER.
+    /// A function that compares sampled data against existing sampled data when comparison filter is used.
+
+    /// Default value: Diligent::COMPARISON_FUNC_NEVER.
     COMPARISON_FUNCTION ComparisonFunc  DEFAULT_INITIALIZER(COMPARISON_FUNC_NEVER);
 
-    /// Border color to use if TEXTURE_ADDRESS_BORDER is specified for AddressU, AddressV, or AddressW.
-    /// Default value: {0,0,0,0}
+    /// Border color to use if TEXTURE_ADDRESS_BORDER is specified for `AddressU`, `AddressV`, or `AddressW`.
+
+    /// Default value: `{0, 0, 0, 0}`
     Float32 BorderColor[4]              DEFAULT_INITIALIZER({});
 
     /// Specifies the minimum value that LOD is clamped to before accessing the texture MIP levels.
-    /// Must be less than or equal to MaxLOD.
+
+    /// Must be less than or equal to `MaxLOD`.
+    ///
     /// Default value: 0.
     float MinLOD                        DEFAULT_INITIALIZER(0);
 
     /// Specifies the maximum value that LOD is clamped to before accessing the texture MIP levels.
-    /// Must be greater than or equal to MinLOD.
-    /// Default value: +FLT_MAX.
+
+    /// Must be greater than or equal to `MinLOD`.
+    /// Default value: `+FLT_MAX`.
     float MaxLOD                        DEFAULT_INITIALIZER(+3.402823466e+38F);
 
     // 

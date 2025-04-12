@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,31 +41,30 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_ResourceMapping =
 /// Describes the resource mapping object entry
 struct ResourceMappingEntry
 {
-    // clang-format off
-
     /// Object name
-    const Char* Name        DEFAULT_INITIALIZER(nullptr);
+    const Char* Name DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to the object's interface
-    IDeviceObject* pObject  DEFAULT_INITIALIZER(nullptr);
+    IDeviceObject* pObject DEFAULT_INITIALIZER(nullptr);
 
-    Uint32 ArrayIndex       DEFAULT_INITIALIZER(0);
+    /// For array resources, index in the array
+    Uint32 ArrayIndex DEFAULT_INITIALIZER(0);
 
 
 #if DILIGENT_CPP_INTERFACE
-    constexpr ResourceMappingEntry() noexcept {}
+    constexpr ResourceMappingEntry() noexcept
+    {}
 
     /// Initializes the structure members
 
     /// \param [in] _Name       - Object name.
     /// \param [in] _pObject    - Pointer to the object.
     /// \param [in] _ArrayIndex - For array resources, index in the array
-    constexpr ResourceMappingEntry (const Char* _Name, IDeviceObject* _pObject, Uint32 _ArrayIndex = 0)noexcept :
-        Name      { _Name     },
-        pObject   { _pObject  },
+    constexpr ResourceMappingEntry(const Char* _Name, IDeviceObject* _pObject, Uint32 _ArrayIndex = 0) noexcept :
+        Name{_Name},
+        pObject{_pObject},
         ArrayIndex{_ArrayIndex}
     {}
-    // clang-format on
 #endif
 };
 typedef struct ResourceMappingEntry ResourceMappingEntry;
@@ -160,8 +159,8 @@ DILIGENT_BEGIN_INTERFACE(IResourceMapping, IObject)
     ///
     /// \return Pointer to the object with the given name and array index.
     ///
-    /// \remarks The method does *NOT* increase the reference counter
-    ///          of the returned object, so Release() must not be called.
+    /// \remarks The method does **NOT** increase the reference counter
+    ///          of the returned object, so Release() **must not** be called.
     ///          The pointer is guaranteed to be valid until the object is removed
     ///          from the resource mapping, or the mapping is destroyed.
     VIRTUAL IDeviceObject* METHOD(GetResource)(THIS_
