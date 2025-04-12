@@ -88,8 +88,8 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     ///                          so that the new buffer will have one reference and must be
     ///                          released by a call to Release().
     ///
-    /// \remarks
-    /// Size of a uniform buffer (BIND_UNIFORM_BUFFER) must be multiple of 16.\n
+    /// Size of a uniform buffer (Diligent::BIND_UNIFORM_BUFFER) must be multiple of 16.
+    ///
     /// Stride of a formatted buffer will be computed automatically from the format if
     /// ElementByteStride member of buffer description is set to default value (0).
     VIRTUAL void METHOD(CreateBuffer)(THIS_
@@ -108,10 +108,10 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     ///                                 the compiler output data blob will be written.
     ///                                 If null, the compiler output will be ignored.
     ///
-    /// \remarks    The buffer returned in ppCompilerOutput contains two null-terminated strings.
-    ///             The first one is the compiler output message. The second one is the full
-    ///             shader source code including definitions added by the engine. The data blob
-    ///             object must be released by the client.
+    /// The buffer returned in ppCompilerOutput contains two null-terminated strings.
+    /// The first one is the compiler output message. The second one is the full
+    /// shader source code including definitions added by the engine. The data blob
+    /// object must be released by the client.
     VIRTUAL void METHOD(CreateShader)(THIS_
                                       const ShaderCreateInfo REF ShaderCI,
                                       IShader**                  ppShader,
@@ -128,17 +128,22 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     ///                          texture interface will be written.
     ///                          The function calls AddRef(), so that the new object will have
     ///                          one reference.
-    /// \remarks
-    /// To create all mip levels, set the TexDesc.MipLevels to zero.\n
-    /// Multisampled resources cannot be initialized with data when they are created. \n
+    ///
+    /// To create all mip levels, set the TexDesc.MipLevels to zero.
+    ///
+    /// Multisampled resources cannot be initialized with data when they are created.
+    ///
     /// If initial data is provided, number of subresources must exactly match the number
     /// of subresources in the texture (which is the number of mip levels times the number of array slices.
     /// For a 3D texture, this is just the number of mip levels).
     /// For example, for a 15 x 6 x 2 2D texture array, the following array of subresources should be
-    /// provided: \n
-    /// 15x6, 7x3, 3x1, 1x1, 15x6, 7x3, 3x1, 1x1.\n
-    /// For a 15 x 6 x 4 3D texture, the following array of subresources should be provided:\n
-    /// 15x6x4, 7x3x2, 3x1x1, 1x1x1
+    /// provided:
+    ///
+    ///     15x6, 7x3, 3x1, 1x1, 15x6, 7x3, 3x1, 1x1.
+    /// 
+    /// For a 15 x 6 x 4 3D texture, the following array of subresources should be provided:
+    ///
+    ///     15x6x4, 7x3x2, 3x1x1, 1x1x1
     VIRTUAL void METHOD(CreateTexture)(THIS_
                                        const TextureDesc REF TexDesc,
                                        const TextureData*    pData,
@@ -151,9 +156,11 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     ///                          sampler interface will be written.
     ///                          The function calls AddRef(), so that the new object will have
     ///                          one reference.
-    /// \remark If an application attempts to create a sampler interface with the same attributes
-    ///         as an existing interface, the same interface will be returned.
-    /// \note   In D3D11, 4096 unique sampler state objects can be created on a device at a time.
+    ///
+    /// If an application attempts to create a sampler interface with the same attributes
+    /// as an existing interface, the same interface will be returned.
+    ///
+    /// In D3D11, 4096 unique sampler state objects can be created on a device at a time.
     VIRTUAL void METHOD(CreateSampler)(THIS_
                                        const SamplerDesc REF SamDesc,
                                        ISampler**            ppSampler) PURE;
@@ -329,8 +336,8 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     ///                           The function calls AddRef(), so that the new object will have
     ///                           one reference.
     ///
-    /// \remarks    On devices that don't support pipeline state caches (e.g. Direct3D11, OpenGL),
-    ///             the method will silently do nothing.
+    /// On devices that don't support pipeline state caches (e.g. Direct3D11, OpenGL),
+    /// the method will silently do nothing.
     VIRTUAL void METHOD(CreatePipelineStateCache)(THIS_
                                                   const PipelineStateCacheCreateInfo REF CreateInfo,
                                                   IPipelineStateCache**                  ppPSOCache) PURE;
@@ -366,12 +373,14 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// Returns the extended texture format information.
 
     /// See Diligent::TextureFormatInfoExt for details on the provided information.
+    ///
     /// \param [in] TexFormat - Texture format for which to provide the information
     /// \return Const reference to the TextureFormatInfoExt structure containing the
     ///         extended texture format description.
-    /// \remark The first time this method is called for a particular format, it may be
-    ///         considerably slower than GetTextureFormatInfo(). If you do not require
-    ///         extended information, call GetTextureFormatInfo() instead.
+    ///
+    /// The first time this method is called for a particular format, it may be
+    /// considerably slower than GetTextureFormatInfo(). If you do not require
+    /// extended information, call GetTextureFormatInfo() instead.
     ///
     /// \remarks This method must be externally synchronized.
     VIRTUAL const TextureFormatInfoExt REF METHOD(GetTextureFormatInfoExt)(THIS_
@@ -397,22 +406,24 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 
     /// \note The method blocks the execution of the calling thread until the GPU is idle.
     ///
-    /// \remarks The method does not flush immediate contexts, so it will only wait for commands that
-    ///          have been previously submitted for execution. An application should explicitly flush
-    ///          the contexts using IDeviceContext::Flush() if it needs to make sure all recorded commands
-    ///          are complete when the method returns.
+    /// The method does not flush immediate contexts, so it will only wait for commands that
+    /// the contexts using IDeviceContext::Flush() if it needs to make sure all recorded commands
+    /// have been previously submitted for execution. An application should explicitly flush
+    /// are complete when the method returns.
     VIRTUAL void METHOD(IdleGPU)(THIS) PURE;
 
 
     /// Returns engine factory this device was created from.
-    /// \remarks This method does not increment the reference counter of the returned interface,
-    ///          so an application should not call Release().
+
+    /// This method does not increment the reference counter of the returned interface,
+    /// so an application must not call Release().
     VIRTUAL IEngineFactory* METHOD(GetEngineFactory)(THIS) CONST PURE;
 
 
     /// Returns a pointer to the shader compilation thread pool.
-    /// \remarks This method does not increment the reference counter of the returned interface,
-    ///          so an application should not call Release().
+
+    /// This method does not increment the reference counter of the returned interface,
+    /// so an application must not call Release().
     VIRTUAL IThreadPool* METHOD(GetShaderCompilationThreadPool)(THIS) CONST PURE;
 
 #if DILIGENT_CPP_INTERFACE
