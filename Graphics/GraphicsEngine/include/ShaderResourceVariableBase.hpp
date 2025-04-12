@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,7 +52,7 @@ SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                 
 {
     for (Uint32 v = 0; v < NumVars; ++v)
     {
-        const auto& CurrVarDesc = Variables[v];
+        const ShaderResourceVariableDesc& CurrVarDesc = Variables[v];
         if (((CurrVarDesc.ShaderStages & ShaderStage) != 0) && NameCompare(CurrVarDesc.Name))
         {
             return CurrVarDesc.Type;
@@ -183,7 +183,7 @@ bool VerifyResourceBinding(const char*                 ExpectedResourceTypeName,
         (BindInfo.Flags & SET_SHADER_RESOURCE_FLAG_ALLOW_OVERWRITE) == 0 &&
         pCachedObject != nullptr && pCachedObject != pResourceImpl)
     {
-        auto VarTypeStr = GetShaderVariableTypeLiteralName(ResDesc.VarType);
+        const char* VarTypeStr = GetShaderVariableTypeLiteralName(ResDesc.VarType);
 
         std::stringstream ss;
         ss << "Non-null " << ExpectedResourceTypeName << " '" << pCachedObject->GetDesc().Name << "' is already bound to " << VarTypeStr
@@ -235,7 +235,7 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
 
     if (pBufferImpl != nullptr)
     {
-        const auto& BuffDesc = pBufferImpl->GetDesc();
+        const BufferDesc& BuffDesc = pBufferImpl->GetDesc();
         if ((BuffDesc.BindFlags & BIND_UNIFORM_BUFFER) == 0)
         {
             std::stringstream ss;
@@ -273,7 +273,7 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
             RangeIsOutOfBounds = true;
         }
 
-        const auto OffsetAlignment = pBufferImpl->GetDevice()->GetAdapterInfo().Buffer.ConstantBufferOffsetAlignment;
+        const Uint32 OffsetAlignment = pBufferImpl->GetDevice()->GetAdapterInfo().Buffer.ConstantBufferOffsetAlignment;
         VERIFY_EXPR(OffsetAlignment != 0);
         if ((BindInfo.BufferBaseOffset % OffsetAlignment) != 0)
         {
@@ -286,7 +286,7 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
         {
             if (CachedRangeSize == 0)
                 CachedRangeSize = BuffDesc.Size - CachedBaseOffset;
-            auto NewBufferRangeSize = BindInfo.BufferRangeSize;
+            Uint64 NewBufferRangeSize = BindInfo.BufferRangeSize;
             if (NewBufferRangeSize == 0)
                 NewBufferRangeSize = BuffDesc.Size - BindInfo.BufferBaseOffset;
 
@@ -367,7 +367,7 @@ bool ValidateResourceViewDimension(const char*                ResName,
 
     if (ExpectedResourceDim != RESOURCE_DIM_UNDEFINED)
     {
-        const auto ResourceDim = GetResourceViewDimension(pViewImpl);
+        const RESOURCE_DIMENSION ResourceDim = GetResourceViewDimension(pViewImpl);
         if (ResourceDim != ExpectedResourceDim)
         {
             RESOURCE_VALIDATION_FAILURE("The dimension of resource view '", pViewImpl->GetDesc().Name,
@@ -378,7 +378,7 @@ bool ValidateResourceViewDimension(const char*                ResName,
 
         if (ResourceDim == RESOURCE_DIM_TEX_2D || ResourceDim == RESOURCE_DIM_TEX_2D_ARRAY)
         {
-            auto SampleCount = GetResourceSampleCount(pViewImpl);
+            Uint32 SampleCount = GetResourceSampleCount(pViewImpl);
             if (IsMultisample && SampleCount == 1)
             {
                 RESOURCE_VALIDATION_FAILURE("Texture view '", pViewImpl->GetDesc().Name, "' bound to variable '",
@@ -415,9 +415,9 @@ bool VerifyResourceViewBinding(const PipelineResourceDesc&             ResDesc,
 
     if (pViewImpl)
     {
-        auto ViewType           = pViewImpl->GetDesc().ViewType;
-        bool IsExpectedViewType = false;
-        for (auto ExpectedViewType : ExpectedViewTypes)
+        ViewTypeEnumType ViewType           = pViewImpl->GetDesc().ViewType;
+        bool             IsExpectedViewType = false;
+        for (ViewTypeEnumType ExpectedViewType : ExpectedViewTypes)
         {
             if (ExpectedViewType == ViewType)
                 IsExpectedViewType = true;
@@ -434,7 +434,7 @@ bool VerifyResourceViewBinding(const PipelineResourceDesc&             ResDesc,
             }
             ss << ". Incorrect view type: ";
             bool IsFirstViewType = true;
-            for (auto ExpectedViewType : ExpectedViewTypes)
+            for (ViewTypeEnumType ExpectedViewType : ExpectedViewTypes)
             {
                 if (!IsFirstViewType)
                 {
@@ -472,7 +472,7 @@ bool ValidateBufferMode(const PipelineResourceDesc& ResDesc,
     bool BindingOK = true;
     if (pBufferView != nullptr)
     {
-        const auto& BuffDesc = pBufferView->GetBuffer()->GetDesc();
+        const BufferDesc& BuffDesc = pBufferView->GetBuffer()->GetDesc();
         if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER)
         {
             if (BuffDesc.Mode != BUFFER_MODE_FORMATTED)
@@ -555,11 +555,11 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
 
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:
-            if (const auto* pBuffView = ClassPtrCast<const BufferViewImplType>(pObject))
+            if (const BufferViewImplType* pBuffView = ClassPtrCast<const BufferViewImplType>(pObject))
             {
                 pBuffer = pObject != nullptr ? pBuffView->template GetBuffer<const BufferImplType>() : nullptr;
 
-                const auto& ViewDesc = pBuffView->GetDesc();
+                const BufferViewDesc& ViewDesc = pBuffView->GetDesc();
                 VERIFY_EXPR(BufferBaseOffset == 0 || BufferBaseOffset == ViewDesc.ByteOffset);
                 VERIFY_EXPR(BufferRangeSize == 0 || BufferRangeSize == ViewDesc.ByteWidth);
                 BufferBaseOffset = ViewDesc.ByteOffset;
@@ -573,7 +573,7 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
 
     if (pBuffer != nullptr)
     {
-        const auto& BuffDesc = pBuffer->GetDesc();
+        const BufferDesc& BuffDesc = pBuffer->GetDesc();
         if (BufferBaseOffset + BufferRangeSize + BufferDynamicOffset > BuffDesc.Size)
         {
             RESOURCE_VALIDATION_FAILURE("Dynamic offset ", BufferDynamicOffset, " specified for variable '", ResDesc.Name,
@@ -583,9 +583,9 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
             BindingOK = false;
         }
 
-        const auto& BufferProps = pBuffer->GetDevice()->GetAdapterInfo().Buffer;
+        const BufferProperties& BufferProps = pBuffer->GetDevice()->GetAdapterInfo().Buffer;
 
-        const auto OffsetAlignment = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER) ?
+        const Uint32 OffsetAlignment = (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER) ?
             BufferProps.ConstantBufferOffsetAlignment :
             BufferProps.StructuredBufferOffsetAlignment;
         VERIFY_EXPR(OffsetAlignment != 0);
@@ -676,7 +676,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
                                              Uint32                    NumElements,
                                              SET_SHADER_RESOURCE_FLAGS Flags) override final
     {
-        const auto& Desc = GetDesc();
+        const PipelineResourceDesc& Desc = GetDesc();
 
         DEV_CHECK_ERR(FirstElement + NumElements <= Desc.ArraySize,
                       "SetArray arguments are invalid for '", Desc.Name, "' variable: specified element range (", FirstElement, " .. ",
@@ -701,7 +701,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
     {
 #ifdef DILIGENT_DEVELOPMENT
         {
-            const auto& Desc = GetDesc();
+            const PipelineResourceDesc& Desc = GetDesc();
             DEV_CHECK_ERR((Desc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0,
                           "SetBufferOffset() is not only allowed for variables created with PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.");
             DEV_CHECK_ERR(Desc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC,
@@ -720,7 +720,8 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
 
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
     {
-        const auto& Desc       = GetDesc();
+        const PipelineResourceDesc& Desc = GetDesc();
+
         ResourceDesc.Name      = Desc.Name;
         ResourceDesc.Type      = Desc.ResourceType;
         ResourceDesc.ArraySize = Desc.ArraySize;
@@ -733,8 +734,8 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
 
     void BindResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags)
     {
-        auto* const pThis   = static_cast<ThisImplType*>(this);
-        const auto& ResDesc = pThis->GetDesc();
+        ThisImplType* const         pThis   = static_cast<ThisImplType*>(this);
+        const PipelineResourceDesc& ResDesc = pThis->GetDesc();
 
         if ((Flags & (1u << ResDesc.VarType)) == 0)
             return;
@@ -744,9 +745,9 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
             if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) != 0 && pThis->Get(ArrInd) != nullptr)
                 continue;
 
-            if (auto* pObj = pResourceMapping->GetResource(ResDesc.Name, ArrInd))
+            if (IDeviceObject* pObj = pResourceMapping->GetResource(ResDesc.Name, ArrInd))
             {
-                const auto SetResFlags = (Flags & BIND_SHADER_RESOURCES_ALLOW_OVERWRITE) != 0 ?
+                const SET_SHADER_RESOURCE_FLAGS SetResFlags = (Flags & BIND_SHADER_RESOURCES_ALLOW_OVERWRITE) != 0 ?
                     SET_SHADER_RESOURCE_FLAG_ALLOW_OVERWRITE :
                     SET_SHADER_RESOURCE_FLAG_NONE;
                 pThis->BindResource(BindResourceInfo{ArrInd, pObj, SetResFlags});
@@ -766,10 +767,10 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
 
     void CheckResources(IResourceMapping* pResourceMapping, BIND_SHADER_RESOURCES_FLAGS Flags, SHADER_RESOURCE_VARIABLE_TYPE_FLAGS& StaleVarTypes) const
     {
-        auto* const pThis   = static_cast<const ThisImplType*>(this);
-        const auto& ResDesc = pThis->GetDesc();
+        const ThisImplType* const   pThis   = static_cast<const ThisImplType*>(this);
+        const PipelineResourceDesc& ResDesc = pThis->GetDesc();
 
-        const auto VarTypeFlag = static_cast<SHADER_RESOURCE_VARIABLE_TYPE_FLAGS>(1u << ResDesc.VarType);
+        const SHADER_RESOURCE_VARIABLE_TYPE_FLAGS VarTypeFlag = static_cast<SHADER_RESOURCE_VARIABLE_TYPE_FLAGS>(1u << ResDesc.VarType);
         if ((Flags & VarTypeFlag) == 0)
             return; // This variable type is not being processed
 
@@ -778,7 +779,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
 
         for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
         {
-            const auto* const pBoundObj = pThis->Get(ArrInd);
+            const IDeviceObject* const pBoundObj = pThis->Get(ArrInd);
             if ((pBoundObj != nullptr) && (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) != 0)
                 continue;
 
@@ -790,7 +791,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
 
             if (pResourceMapping != nullptr)
             {
-                if (auto* pObj = pResourceMapping->GetResource(ResDesc.Name, ArrInd))
+                if (IDeviceObject* pObj = pResourceMapping->GetResource(ResDesc.Name, ArrInd))
                 {
                     if (pObj != pBoundObj)
                     {
@@ -838,7 +839,7 @@ protected:
 
         if (Size > 0)
         {
-            auto* pRawMem = ALLOCATE_RAW(Allocator, "Memory buffer for shader variables", Size);
+            void* pRawMem = ALLOCATE_RAW(Allocator, "Memory buffer for shader variables", Size);
             m_pVariables  = reinterpret_cast<VariableType*>(pRawMem);
         }
 
@@ -880,8 +881,8 @@ protected:
         if ((Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0)
             Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
 
-        const auto* pThis        = static_cast<const ThisImplType*>(this);
-        const auto  AllowedTypes = m_ResourceCache.GetContentType() == ResourceCacheContentType::SRB ?
+        const ThisImplType*                       pThis        = static_cast<const ThisImplType*>(this);
+        const SHADER_RESOURCE_VARIABLE_TYPE_FLAGS AllowedTypes = m_ResourceCache.GetContentType() == ResourceCacheContentType::SRB ?
             SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUT_DYN :
             SHADER_RESOURCE_VARIABLE_TYPE_FLAG_STATIC;
         for (Uint32 v = 0; (v < pThis->m_NumVariables) && (StaleVarTypes & AllowedTypes) != AllowedTypes; ++v)

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -122,6 +122,7 @@ DILIGENT_TYPED_ENUM(BIND_SHADER_RESOURCES_FLAGS, Uint32)
     /// If this flag is specified, all shader bindings are expected
     /// to be resolved after the call. If this is not the case, debug message
     /// will be displayed.
+    ///
     /// \note Only these variables are verified that are being updated by setting
     ///       BIND_SHADER_RESOURCES_UPDATE_STATIC, BIND_SHADER_RESOURCES_UPDATE_MUTABLE, and
     ///       BIND_SHADER_RESOURCES_UPDATE_DYNAMIC flags.
@@ -142,20 +143,19 @@ DILIGENT_TYPED_ENUM(SET_SHADER_RESOURCE_FLAGS, Uint32)
 
     /// Allow overwriting static and mutable variable bindings.
     ///
-    /// \remarks
-    ///         By default, static and mutable variables can't be changed once
-    ///         initialized to a non-null resource. This flag is required
-    ///         to explicitly allow overwriting the binding.
-    ///
-    ///         Overwriting static variables does not require synchronization
-    ///         with GPU and does not have effect on shader resource binding
-    ///         objects already created from the pipeline state or resource signature. 
-    ///
-    ///         When overwriting a mutable variable binding in Direct3D12 and Vulkan,
-    ///         an application must ensure that the GPU is not accessing the SRB.
-    ///         This can be achieved using synchronization tools such as fences.
-    ///         Synchronization with GPU is not required in OpenGL, Direct3D11,
-    ///         and Metal backends.
+    /// By default, static and mutable variables can't be changed once
+    /// initialized to a non-null resource. This flag is required
+    /// to explicitly allow overwriting the binding.
+    /// 
+    /// Overwriting static variables does not require synchronization
+    /// with GPU and does not have effect on shader resource binding
+    /// objects already created from the pipeline state or resource signature. 
+    /// 
+    /// When overwriting a mutable variable binding in Direct3D12 and Vulkan,
+    /// an application must ensure that the GPU is not accessing the SRB.
+    /// This can be achieved using synchronization tools such as fences.
+    /// Synchronization with GPU is not required in OpenGL, Direct3D11,
+    /// and Metal backends.
     SET_SHADER_RESOURCE_FLAG_ALLOW_OVERWRITE = 1u << 0
 };
 DEFINE_FLAG_ENUM_OPERATORS(SET_SHADER_RESOURCE_FLAGS);
@@ -176,9 +176,9 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
 {
     /// Binds resource to the variable
 
-    /// \remark The method performs run-time correctness checks.
-    ///         For instance, shader resource view cannot
-    ///         be assigned to a constant buffer variable.
+    /// The method performs run-time correctness checks.
+    /// For instance, shader resource view cannot
+    /// be assigned to a constant buffer variable.
     VIRTUAL void METHOD(Set)(THIS_
                              IDeviceObject*            pObject,
                              SET_SHADER_RESOURCE_FLAGS Flags DEFAULT_VALUE(SET_SHADER_RESOURCE_FLAG_NONE)) PURE;
@@ -190,9 +190,9 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
     /// \param [in] NumElements  - the number of objects in ppObjects array.
     /// \param [in] Flags        - flags, see Diligent::SET_SHADER_RESOURCE_FLAGS.
     ///
-    /// \remark The method performs run-time correctness checks.
-    ///         For instance, shader resource view cannot
-    ///         be assigned to a constant buffer variable.
+    /// The method performs run-time correctness checks.
+    /// For instance, shader resource view cannot
+    /// be assigned to a constant buffer variable.
     VIRTUAL void METHOD(SetArray)(THIS_
                                   IDeviceObject* const*     ppObjects,
                                   Uint32                    FirstElement,
@@ -207,10 +207,10 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
     /// \param [in] ArrayIndex - for array variables, index of the array element.
     /// \param [in] Flags      - flags, see Diligent::SET_SHADER_RESOURCE_FLAGS.
     ///
-    /// \remarks This method is only allowed for constant buffers. If dynamic offset is further set
-    ///          by SetBufferOffset() method, it is added to the base offset set by this method.
+    /// This method is only allowed for constant buffers. If dynamic offset is further set
+    /// by SetBufferOffset() method, it is added to the base offset set by this method.
     ///
-    ///          The method resets dynamic offset previously set for this variable to zero.
+    /// The method resets dynamic offset previously set for this variable to zero.
     ///
     /// \warning The Offset must be an integer multiple of ConstantBufferOffsetAlignment member
     ///          specified by the device limits (see Diligent::DeviceLimits).
@@ -228,23 +228,23 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
     ///                          Only 32-bit offsets are supported.
     /// \param [in] ArrayIndex - for array variables, index of the array element.
     ///
-    /// \remarks This method is only allowed for constant or structured buffer variables that
-    ///          were not created with SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS or
-    ///          PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flags. The method is also not
-    ///          allowed for static resource variables.
+    /// This method is only allowed for constant or structured buffer variables that
+    /// were not created with Diligent::SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS or
+    /// Diligent::PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flags. The method is also not
+    /// allowed for static resource variables.
     ///
-    /// \warning The Offset must be an integer multiple of ConstantBufferOffsetAlignment member
-    ///          when setting the offset for a constant buffer, or StructuredBufferOffsetAlignment when
-    ///          setting the offset for a structured buffer, as specified by device limits
-    ///          (see Diligent::DeviceLimits).
+    /// \note   The Offset must be an integer multiple of ConstantBufferOffsetAlignment member
+    ///         when setting the offset for a constant buffer, or StructuredBufferOffsetAlignment when
+    ///         setting the offset for a structured buffer, as specified by device limits
+    ///         (see Diligent::DeviceLimits).
     ///
-    ///          For constant buffers, the offset is added to the offset that was previously set
-    ///          by SetBufferRange() method (if any). For structured buffers, the offset is added
-    ///          to the base offset specified by the buffer view.
+    /// For constant buffers, the offset is added to the offset that was previously set
+    /// by SetBufferRange() method (if any). For structured buffers, the offset is added
+    /// to the base offset specified by the buffer view.
     ///
-    ///          Changing the buffer offset does not require committing the SRB.
-    ///          From the engine point of view, buffers with dynamic offsets are treated similar to dynamic
-    ///          buffers, and thus affected by DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT flag.
+    /// Changing the buffer offset does not require committing the SRB.
+    /// From the engine point of view, buffers with dynamic offsets are treated similar to dynamic
+    /// buffers, and thus affected by Diligent::DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT flag.
     VIRTUAL void METHOD(SetBufferOffset)(THIS_
                                          Uint32 Offset,
                                          Uint32 ArrayIndex DEFAULT_VALUE(0)) PURE;
