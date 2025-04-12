@@ -169,7 +169,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \param [in] ShaderName - Name of the shader object to retrieve.
     /// \return     A pointer to the shader object, or null if the object with that name was not added.
     ///
-    /// \note       The method does *not* increment the reference counter of the returned object,
+    /// \note       The method does **NOT** increment the reference counter of the returned object,
     ///             so the application **must not** call Release() unless it also explicitly calls AddRef().
     VIRTUAL IShader* METHOD(GetShader)(THIS_
                                        const char* ShaderName) PURE;
@@ -180,7 +180,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \param [in] PSOName - Name of the pipeline state to retrieve.
     /// \return     A pointer to the pipeline state object, or null if the object with that name was not added.
     ///
-    /// \note       The method does *not* increment the reference counter of the returned object,
+    /// \note       The method does **NOT** increment the reference counter of the returned object,
     ///             so the application **must not** call Release() unless it also explicitly calls AddRef().
     VIRTUAL IPipelineState* METHOD(GetPipelineState)(THIS_
                                                      PIPELINE_TYPE PSOType,
@@ -191,7 +191,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiver, IObject)
     /// \param [in] PRSName - Name of the pipeline resource signature to retrieve.
     /// \return     A pointer to the the pipeline resource signature object, or null if the object with that name was not added.
     ///
-    /// \note      The method does *not* increment the reference counter of the returned object,
+    /// \note      The method does **NOT** increment the reference counter of the returned object,
     ///             so the application **must not** call Release() unless it also explicitly calls AddRef().
     VIRTUAL IPipelineResourceSignature* METHOD(GetPipelineResourceSignature)(THIS_
                                                                              const char* PRSName) PURE;

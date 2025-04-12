@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,10 +50,10 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_FenceD3D12 =
 /// Exposes Direct3D12-specific functionality of a fence object.
 DILIGENT_BEGIN_INTERFACE(IFenceD3D12, IFence)
 {
-    /// Returns a pointer to the ID3D12Fence interface of the internal Direct3D12 object.
+    /// Returns a pointer to the `ID3D12Fence` interface of the internal Direct3D12 object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL ID3D12Fence* METHOD(GetD3D12Fence)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE

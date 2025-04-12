@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -49,13 +49,14 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_DeviceMemoryD3D12 =
 /// This structure is returned by IDeviceMemoryD3D12::GetRange()
 struct DeviceMemoryRangeD3D12
 {
-    /// Pointer to the ID3D12Heap interface.
+    /// Pointer to the `ID3D12Heap` interface.
     ID3D12Heap* pHandle  DEFAULT_INITIALIZER(nullptr);
 
     /// Offset from the beginning of the heap to the start of the range, in bytes.
     Uint64      Offset   DEFAULT_INITIALIZER(0);
 
     /// Memory range size in bytes.
+
     /// When IDeviceMemoryD3D12::GetRange() succeeds, the size is equal to the Size argument
     /// that was given to the function, and zero otherwise.
     Uint64      Size     DEFAULT_INITIALIZER(0);

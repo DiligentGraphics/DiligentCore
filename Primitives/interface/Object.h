@@ -74,7 +74,7 @@ struct IObject
 
 
     /// Returns the pointer to IReferenceCounters interface of the associated
-    /// reference counters object. The method does *NOT* increment
+    /// reference counters object. The method does **NOT** increment
     /// the number of strong references to the returned object.
     virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const = 0;
 };

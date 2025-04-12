@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,8 +50,8 @@ DILIGENT_BEGIN_INTERFACE(ISamplerD3D12, ISampler)
 {
     /// Returns a CPU descriptor handle of the D3D12 sampler object
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL D3D12_CPU_DESCRIPTOR_HANDLE METHOD(GetCPUDescriptorHandle)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE

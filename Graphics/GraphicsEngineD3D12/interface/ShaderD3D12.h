@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,10 +51,10 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_ShaderD3D12 =
 
 /// Exposes Direct3D12-specific functionality of a shader object.
 DILIGENT_BEGIN_INTERFACE(IShaderD3D12, IShaderD3D){
-    /// Returns a pointer to the ID3D12DeviceChild interface of the internal Direct3D12 object.
+    /// Returns a pointer to the `ID3D12DeviceChild` interface of the internal Direct3D12 object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     //virtual ID3D12DeviceChild* GetD3D12Shader() = 0;
 };
 DILIGENT_END_INTERFACE

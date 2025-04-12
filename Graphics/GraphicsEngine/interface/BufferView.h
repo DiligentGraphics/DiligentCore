@@ -164,7 +164,7 @@ DILIGENT_BEGIN_INTERFACE(IBufferView, IDeviceObject)
 
     /// Returns pointer to the referenced buffer object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
+    /// The method does **NOT** increment the reference counter of the returned object,
     /// so Release() **must not** be called.
     VIRTUAL struct IBuffer* METHOD(GetBuffer)(THIS) CONST PURE;
 };

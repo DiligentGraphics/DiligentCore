@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,10 @@ static DILIGENT_CONSTEXPR struct INTERFACE_ID IID_ShaderD3D =
 /// HLSL resource description
 struct HLSLShaderResourceDesc DILIGENT_DERIVE(ShaderResourceDesc)
 
+    /// Shader register
     Uint32 ShaderRegister DEFAULT_INITIALIZER(0);
+
+    /// Register space
     Uint32 RegisterSpace  DEFAULT_INITIALIZER(0);
 };
 typedef struct HLSLShaderResourceDesc HLSLShaderResourceDesc;
@@ -65,6 +68,9 @@ typedef struct HLSLShaderResourceDesc HLSLShaderResourceDesc;
 DILIGENT_BEGIN_INTERFACE(IShaderD3D, IShader)
 {
     /// Returns HLSL shader resource description
+
+    /// \param [in] Index         - Resource index.
+    /// \param [out] ResourceDesc - Resource description, see HLSLShaderResourceDesc.
     VIRTUAL void METHOD(GetHLSLResource)(THIS_
                                          Uint32                     Index,
                                          HLSLShaderResourceDesc REF ResourceDesc) CONST PURE;

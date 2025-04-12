@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,8 +51,8 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_ShaderBindingTableD3D12 =
 /// Exposes Direct3D12-specific functionality of a shader binding table object.
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTableD3D12, IShaderBindingTable)
 {
-    /// Returns the structure that can be used with ID3D12GraphicsCommandList4::DispatchRays() call.
-    ///
+    /// Returns the structure that can be used with `ID3D12GraphicsCommandList4::DispatchRays()` call.
+
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
     ///           to the shader binding table.
     VIRTUAL const D3D12_DISPATCH_RAYS_DESC REF METHOD(GetD3D12BindingTable)(THIS) CONST PURE;

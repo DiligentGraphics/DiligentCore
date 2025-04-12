@@ -60,8 +60,8 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
     /// Returns a pointer to the pipeline resource signature object that
     /// defines the layout of this shader resource binding object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL struct IPipelineResourceSignature* METHOD(GetPipelineResourceSignature)(THIS) CONST PURE;
 
 

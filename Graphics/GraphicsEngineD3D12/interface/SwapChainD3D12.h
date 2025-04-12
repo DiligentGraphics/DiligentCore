@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,10 +51,10 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_SwapChainD3D12 =
 /// Exposes Direct3D12-specific functionality of a swap chain.
 DILIGENT_BEGIN_INTERFACE(ISwapChainD3D12, ISwapChain)
 {
-    /// Returns a pointer to the IDXGISwapChain interface of the internal DXGI object.
+    /// Returns a pointer to the `IDXGISwapChain` interface of the internal DXGI object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL IDXGISwapChain* METHOD(GetDXGISwapChain)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE

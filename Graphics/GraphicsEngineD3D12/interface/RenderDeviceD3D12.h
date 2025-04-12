@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,10 +50,10 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_RenderDeviceD3D12 =
 /// Exposes Direct3D12-specific functionality of a render device.
 DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
 {
-    /// Returns ID3D12Device interface of the internal Direct3D12 device object.
+    /// Returns `ID3D12Device` interface of the internal Direct3D12 device object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL ID3D12Device* METHOD(GetD3D12Device)(THIS) CONST PURE;
 
     /// Creates a texture object from native d3d12 resource
@@ -90,7 +90,8 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
 
     /// \param [in]  pd3d12BLAS   - Pointer to the native d3d12 acceleration structure resource
     /// \param [in]  Desc         - Bottom-level AS description.
-    /// \param [in]  InitialState - Initial BLAS state. Can be RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_BUILD_AS_READ, RESOURCE_STATE_BUILD_AS_WRITE.
+    /// \param [in]  InitialState - Initial BLAS state. Can be Diligent::RESOURCE_STATE_UNKNOWN,
+    ///                             Diligent::RESOURCE_STATE_BUILD_AS_READ, Diligent::RESOURCE_STATE_BUILD_AS_WRITE.
     ///                             See Diligent::RESOURCE_STATE.
     /// \param [out] ppBLAS       - Address of the memory location where the pointer to the
     ///                             bottom-level AS interface will be stored.
@@ -106,8 +107,9 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
 
     /// \param [in]  pd3d12TLAS   - Pointer to the native d3d12 acceleration structure resource
     /// \param [in]  Desc         - Top-level AS description.
-    /// \param [in]  InitialState - Initial TLAS state. Can be RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_BUILD_AS_READ, RESOURCE_STATE_BUILD_AS_WRITE, RESOURCE_STATE_RAY_TRACING.
-    ///                             See Diligent::RESOURCE_STATE.
+    /// \param [in]  InitialState - Initial TLAS state. Can be Diligent::RESOURCE_STATE_UNKNOWN,
+    ///                             Diligent::RESOURCE_STATE_BUILD_AS_READ, Diligent::RESOURCE_STATE_BUILD_AS_WRITE,
+    ///                             Diligent::RESOURCE_STATE_RAY_TRACING. See Diligent::RESOURCE_STATE.
     /// \param [out] ppTLAS       - Address of the memory location where the pointer to the
     ///                             top-level AS interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain

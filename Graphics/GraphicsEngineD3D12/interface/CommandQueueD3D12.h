@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,11 +57,13 @@ struct ResourceTileMappingsD3D12
     UINT                                   NumResourceRegions              DEFAULT_INITIALIZER(0);
 
     /// An array of structures that describe the starting coordinates of the reserved resource regions.
-    /// The NumResourceRegions parameter specifies the number of elements in the array.
+    
+    /// The `NumResourceRegions` parameter specifies the number of elements in the array.
     const D3D12_TILED_RESOURCE_COORDINATE* pResourceRegionStartCoordinates DEFAULT_INITIALIZER(nullptr);
 
     /// An array of structures that describe the sizes of the reserved resource regions. 
-    /// The NumResourceRegions parameter specifies the number of elements in the array.
+
+    /// The `NumResourceRegions` parameter specifies the number of elements in the array.
     const D3D12_TILE_REGION_SIZE*          pResourceRegionSizes            DEFAULT_INITIALIZER(nullptr);
 
     /// A pointer to the resource heap.
@@ -70,7 +72,8 @@ struct ResourceTileMappingsD3D12
     /// The number of tile ranges.
     UINT                                   NumRanges                       DEFAULT_INITIALIZER(0);
 
-    /// A pointer to an array of D3D12_TILE_RANGE_FLAGS values that describes each tile range.
+    /// A pointer to an array of `D3D12_TILE_RANGE_FLAGS` values that describes each tile range.
+
     /// The NumRanges parameter specifies the number of values in the array.
     const D3D12_TILE_RANGE_FLAGS*          pRangeFlags                     DEFAULT_INITIALIZER(nullptr);
 

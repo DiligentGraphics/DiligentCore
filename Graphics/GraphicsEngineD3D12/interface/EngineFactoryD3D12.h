@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,11 +64,11 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
     /// \param [in] DllName - D3D12 dll name.
     /// \return               true if the library and entry points are loaded successfully and false otherwise.
     ///
-    /// \remarks IEngineFactoryD3D12::CreateDeviceAndContextsD3D12() and
-    ///          IEngineFactoryD3D12::AttachToD3D12Device() functions will automatically
-    ///          load the DLL if it has not be loaded already.
+    /// IEngineFactoryD3D12::CreateDeviceAndContextsD3D12() and
+    /// IEngineFactoryD3D12::AttachToD3D12Device() functions will automatically
+    /// load the DLL if it has not be loaded already.
     ///
-    ///          This method has no effect on UWP.
+    /// This method has no effect on UWP.
     VIRTUAL Bool METHOD(LoadD3D12)(THIS_
                                    const char* DllName DEFAULT_VALUE("d3d12.dll")) PURE;
 
@@ -79,7 +79,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
     ///                           the created device will be written.
     /// \param [out] ppContexts - Address of the memory location where pointers to
     ///                           the contexts will be written. Immediate context goes at
-    ///                           position 0. If EngineCI.NumDeferredContexts > 0,
+    ///                           position 0. If `EngineCI.NumDeferredContexts > 0`,
     ///                           pointers to the deferred contexts are written afterwards.
     VIRTUAL void METHOD(CreateDeviceAndContextsD3D12)(THIS_
                                                       const EngineD3D12CreateInfo REF EngineCI,
@@ -110,7 +110,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
     ///                                  the created device will be written
     /// \param [out] ppContexts - Address of the memory location where pointers to
     ///                           the contexts will be written. Immediate context goes at
-    ///                           position 0. If EngineCI.NumDeferredContexts > 0,
+    ///                           position 0. If `EngineCI.NumDeferredContexts > 0`,
     ///                           pointers to the deferred contexts are written afterwards.
     VIRTUAL void METHOD(AttachToD3D12Device)(THIS_
                                              void*                           pd3d12NativeDevice,
@@ -130,9 +130,9 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
     /// \param [in] FSDesc            - Fullscreen mode description.
     /// \param [in] Window            - Platform-specific native window description that
     ///                                 the swap chain will be associated with:
-    ///                                 * On Win32 platform, this is the window handle (HWND)
+    ///                                 * On Win32 platform, this is the window handle (`HWND`)
     ///                                 * On Universal Windows Platform, this is the reference
-    ///                                   to the core window (Windows::UI::Core::CoreWindow)
+    ///                                   to the core window (`Windows::UI::Core::CoreWindow`)
     ///
     /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new
     ///                               swap chain will be written

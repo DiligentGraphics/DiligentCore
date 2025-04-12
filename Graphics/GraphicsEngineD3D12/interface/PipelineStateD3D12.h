@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,22 +48,22 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_PipelineStateD3D12 =
 /// Exposes Direct3D12-specific functionality of a pipeline state object.
 DILIGENT_BEGIN_INTERFACE(IPipelineStateD3D12, IPipelineState)
 {
-    /// Returns ID3D12PipelineState interface of the internal D3D12 pipeline state object object.
+    /// Returns `ID3D12PipelineState` interface of the internal D3D12 pipeline state object object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL ID3D12PipelineState* METHOD(GetD3D12PipelineState)(THIS) CONST PURE;
 
-    /// Returns ID3D12StateObject interface of the internal D3D12 state object for ray tracing.
+    /// Returns `ID3D12StateObject` interface of the internal D3D12 state object for ray tracing.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL ID3D12StateObject* METHOD(GetD3D12StateObject)(THIS) CONST PURE;
 
     /// Returns a pointer to the root signature object associated with this pipeline state.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL ID3D12RootSignature* METHOD(GetD3D12RootSignature)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

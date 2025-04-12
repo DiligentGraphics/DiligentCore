@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,15 +51,16 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_BufferD3D12 =
 /// Exposes Direct3D12-specific functionality of a buffer object.
 DILIGENT_BEGIN_INTERFACE(IBufferD3D12, IBuffer)
 {
-    /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
+    /// Returns a pointer to the `ID3D12Resource` interface of the internal Direct3D12 object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
     /// \param [in] DataStartByteOffset - Offset from the beginning of the buffer
     ///                            to the start of the data. This parameter
     ///                            is required for dynamic buffers, which are
     ///                            suballocated in a dynamic upload heap
     /// \param [in] pContext - Device context within which address of the buffer is requested.
+    ///
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL ID3D12Resource* METHOD(GetD3D12Buffer)(THIS_
                                                    Uint64 REF      DataStartByteOffset,
                                                    IDeviceContext* pContext) PURE;
@@ -71,8 +72,9 @@ DILIGENT_BEGIN_INTERFACE(IBufferD3D12, IBuffer)
                                                D3D12_RESOURCE_STATES state) PURE;
 
     /// Returns current D3D12 buffer state.
+
     /// If the state is unknown to the engine (Diligent::RESOURCE_STATE_UNKNOWN),
-    /// returns D3D12_RESOURCE_STATE_COMMON (0).
+    /// returns `D3D12_RESOURCE_STATE_COMMON` (0).
     VIRTUAL D3D12_RESOURCE_STATES METHOD(GetD3D12ResourceState)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
