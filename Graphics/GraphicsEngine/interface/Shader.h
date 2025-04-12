@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,9 +59,9 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
     /// The source language is GLSL that should be compiled verbatim
 
     /// By default the engine prepends GLSL shader source code with platform-specific
-    /// definitions. For instance it adds appropriate #version directive (e.g. '#version 430 core' or
-    /// '#version 310 es') so that the same source will work on different versions of desktop OpenGL and OpenGLES.
-    /// When SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM is used, the source code will be compiled as is.
+    /// definitions. For instance it adds appropriate #version directive (e.g. `#version 430 core` or
+    /// `#version 310 es`) so that the same source will work on different versions of desktop OpenGL and OpenGLES.
+    /// When `SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM` is used, the source code will be compiled as is.
     /// Note that shader macros are ignored when compiling GLSL verbatim in OpenGL backend, and an application
     /// should add the macro definitions to the source code.
     SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM,
@@ -89,6 +89,7 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
 DILIGENT_TYPED_ENUM(SHADER_COMPILER, Uint32)
 {
     /// Default compiler for specific language and API that is selected as follows:
+    ///
     ///     - Direct3D11:      legacy HLSL compiler (FXC)
     ///     - Direct3D12:      legacy HLSL compiler (FXC)
     ///     - OpenGL(ES) GLSL: native compiler
@@ -131,8 +132,10 @@ struct ShaderDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Shader type. See Diligent::SHADER_TYPE.
     SHADER_TYPE ShaderType DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
-    /// If set to true, textures will be combined with texture samplers.
-    /// The CombinedSamplerSuffix member defines the suffix added to the texture
+    /// Whether to use combined texture samplers.
+
+    /// If set to `true`, textures will be combined with texture samplers.
+    /// The `CombinedSamplerSuffix` member defines the suffix added to the texture
     /// variable name to get corresponding sampler name. When using combined samplers,
     /// the sampler assigned to the shader resource view is automatically set when
     /// the view is bound. Otherwise, samplers need to be explicitly set similar to other
@@ -141,11 +144,13 @@ struct ShaderDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// This member has no effect if the shader is used in the PSO that uses pipeline resource signature(s).
     Bool UseCombinedTextureSamplers DEFAULT_INITIALIZER(false);
 
-    /// If UseCombinedTextureSamplers is true, defines the suffix added to the
+    /// Combined sampler suffix.
+
+    /// If `UseCombinedTextureSamplers` is `true`, defines the suffix added to the
     /// texture variable name to get corresponding sampler name.  For example,
-    /// for default value "_sampler", a texture named "tex" will be combined
-    /// with the sampler named "tex_sampler".
-    /// If UseCombinedTextureSamplers is false, this member is ignored.
+    /// for default value `"_sampler"`, a texture named `"tex"` will be combined
+    /// with the sampler named `"tex_sampler"`.
+    /// If `UseCombinedTextureSamplers` is `false`, this member is ignored.
     ///
     /// This member has no effect if the shader is used in the PSO that uses pipeline resource signature(s).
     const Char* CombinedSamplerSuffix DEFAULT_INITIALIZER("_sampler");
@@ -225,10 +230,22 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_IShaderSourceInputStreamFactory =
 /// Shader source stream factory interface
 DILIGENT_BEGIN_INTERFACE(IShaderSourceInputStreamFactory, IObject)
 {
+    /// Creates a shader source input stream for the specified file name.
+
+    /// The stream is used to load the shader source code.
+    /// \param [in] Name      - The name of the file to load.
+    /// \param [out] ppStream - Pointer to the shader source input stream.
     VIRTUAL void METHOD(CreateInputStream)(THIS_
                                            const Char*   Name,
                                            IFileStream** ppStream) PURE;
 
+    /// Creates a shader source input stream for the specified file name.
+
+    /// The stream is used to load the shader source code.
+    /// \param [in] Name      - The name of the file to load.
+    /// \param [in] Flags     - Flags that control the stream creation,
+    ///                         see Diligent::CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS.
+    /// \param [out] ppStream - Pointer to the shader source input stream.
     VIRTUAL void METHOD(CreateInputStream2)(THIS_
                                             const Char*                             Name,
                                             CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
@@ -342,7 +359,7 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILE_FLAGS, Uint32)
     /// No flags.
     SHADER_COMPILE_FLAG_NONE = 0,
 
-    /// Enable unbounded resource arrays (e.g. Texture2D g_Texture[]).
+    /// Enable unbounded resource arrays (e.g. `Texture2D g_Texture[]`).
     SHADER_COMPILE_FLAG_ENABLE_UNBOUNDED_ARRAYS = 1u << 0u,
 
     /// Don't load shader reflection.
@@ -350,45 +367,45 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILE_FLAGS, Uint32)
 
     /// Compile the shader asynchronously.
     ///
-    /// \remarks	When this flag is set to true and if the devices supports
-    ///             AsyncShaderCompilation feature, the shader will be compiled
-    ///             asynchronously in the background. An application should use
-    ///             the IShader::GetStatus() method to check the shader status.
-    ///             If the device does not support asynchronous shader compilation,
-    ///             the flag is ignored and the shader is compiled synchronously.
+    /// When this flag is set to true and if the devices supports
+    /// AsyncShaderCompilation feature, the shader will be compiled
+    /// asynchronously in the background. An application should use
+    /// the IShader::GetStatus() method to check the shader status.
+    /// If the device does not support asynchronous shader compilation,
+    /// the flag is ignored and the shader is compiled synchronously.
     SHADER_COMPILE_FLAG_ASYNCHRONOUS            = 1u << 2u,
 
     /// Pack matrices in row-major order.
     ///
-    /// \remarks    By default, matrices are laid out in GPU memory in column-major order,
-    ///             which means that the first four values in a 4x4 matrix represent
-    ///             the first column, the next four values represent the second column,
-    ///             and so on.
+    /// By default, matrices are laid out in GPU memory in column-major order,
+    /// which means that the first four values in a 4x4 matrix represent
+    /// the first column, the next four values represent the second column,
+    /// and so on.
     ///
-    ///             If this flag is set, matrices are packed in row-major order, i.e.
-    ///             they are laid out in memory row-by-row.
+    /// If this flag is set, matrices are packed in row-major order, i.e.
+    /// they are laid out in memory row-by-row.
     SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR   = 1u << 3u,
 
     /// Convert HLSL to GLSL when compiling HLSL shaders to SPIRV.
     ///
-    /// \remarks    HLSL shaders can be compiled to SPIRV directly using either DXC or glslang.
-    ///             While glslang supports most HLSL 5.1 features, some Vulkan-specific functionality
-    ///             is missing. Notably, glslang does not support UAV texture format annotations
-    ///             (see https://github.com/KhronosGroup/glslang/issues/3790), for example:
+    /// HLSL shaders can be compiled to SPIRV directly using either DXC or glslang.
+    /// While glslang supports most HLSL 5.1 features, some Vulkan-specific functionality
+    /// is missing. Notably, glslang does not support UAV texture format annotations
+    /// (see https://github.com/KhronosGroup/glslang/issues/3790), for example:
     ///
-    ///                 [[vk::image_format("rgba8")]] RWTexture2D<float4> g_rwTexture;
+    ///     [[vk::image_format("rgba8")]] RWTexture2D<float4> g_rwTexture;
     ///
-    ///             This flag provides a workaround by converting HLSL to GLSL before compiling it
-    ///             to SPIRV. The converter supports specially formatted comments to specify UAV
-    ///             texture formats:
+    /// This flag provides a workaround by converting HLSL to GLSL before compiling it
+    /// to SPIRV. The converter supports specially formatted comments to specify UAV
+    /// texture formats:
     ///
-    ///                 RWTexture2D<float4 /*format = rgba8*/> g_rwTexture;
+    ///     RWTexture2D<float4 /*format = rgba8*/> g_rwTexture;
     ///
-    ///             Another use case for this flag is to leverage GLSL-specific keywords in HLSL
-    ///             shaders, such as `gl_DrawID` for multi-draw or manually setting `gl_PointSize`.
+    /// Another use case for this flag is to leverage GLSL-specific keywords in HLSL
+    /// shaders, such as `gl_DrawID` for multi-draw or manually setting `gl_PointSize`.
     ///
-    /// \note       This flag only takes effect when compiling HLSL to SPIRV with glslang.
-    ///             Since DXC does not support GLSL, this flag is ignored when SHADER_COMPILER_DXC is used.
+    /// This flag only takes effect when compiling HLSL to SPIRV with glslang.
+    /// Since DXC does not support GLSL, this flag is ignored when SHADER_COMPILER_DXC is used.
     SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL = 1u << 4u,
 
     SHADER_COMPILE_FLAG_LAST = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL
@@ -403,7 +420,7 @@ struct ShaderCreateInfo
 {
     /// Source file path
 
-    /// If source file path is provided, Source and ByteCode members must be null
+    /// If source file path is provided, `Source` and `ByteCode` members must be null
     const Char* FilePath DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to the shader source input stream factory.
@@ -420,16 +437,17 @@ struct ShaderCreateInfo
     /// Compiled shader bytecode.
 
     /// If shader byte code is provided, FilePath and Source members must be null
-    /// \note  This option is supported for D3D11, D3D12, Vulkan and Metal backends.
-    ///        For D3D11 and D3D12 backends, DXBC should be provided.
-    ///        Vulkan backend expects SPIRV bytecode.
-    ///        Metal backend supports .metallib bytecode to create MTLLibrary
-    ///        or SPIRV to translate it to MSL and compile (may be slow).
     ///
-    /// \note  If SHADER_COMPILE_FLAG_SKIP_REFLECTION flag is not used, the bytecode
-    ///        must contain reflection information. If shaders were compiled
-    ///        using fxc, make sure that /Qstrip_reflect option is *not* specified.
-    ///        HLSL shaders need to be compiled against 4.0 profile or higher.
+    /// This option is supported for D3D11, D3D12, Vulkan and Metal backends.
+    /// For D3D11 and D3D12 backends, DXBC should be provided.
+    /// Vulkan backend expects SPIRV bytecode.
+    /// Metal backend supports .metallib bytecode to create MTLLibrary
+    /// or SPIRV to translate it to MSL and compile (may be slow).
+    ///
+    /// If SHADER_COMPILE_FLAG_SKIP_REFLECTION flag is not used, the bytecode
+    /// must contain reflection information. If shaders were compiled
+    /// using fxc, make sure that `/Qstrip_reflect` option is **not** specified.
+    /// HLSL shaders need to be compiled against 4.0 profile or higher.
     const void* ByteCode DEFAULT_INITIALIZER(nullptr);
 
 #if defined(DILIGENT_SHARP_GEN)
@@ -437,18 +455,18 @@ struct ShaderCreateInfo
 #else
     union
     {
-        /// Length of the source code, when Source is not null.
+        /// Length of the source code, when `Source` is not null.
 
         /// When Source is not null and is not a null-terminated string, this member
         /// should be used to specify the length of the source code.
-        /// If SourceLength is zero, the source code string is assumed to be
+        /// If `SourceLength` is zero, the source code string is assumed to be
         /// null-terminated.
         size_t SourceLength DEFAULT_INITIALIZER(0);
 
 
-        /// Size of the compiled shader byte code, when ByteCode is not null.
+        /// Size of the compiled shader byte code, when `ByteCode` is not null.
 
-        /// Byte code size (in bytes) must not be zero if ByteCode is not null.
+        /// Byte code size (in bytes) must not be zero if `ByteCode` is not null.
         size_t ByteCodeSize;
     };
 #endif
@@ -470,33 +488,39 @@ struct ShaderCreateInfo
     /// Shader compiler. See Diligent::SHADER_COMPILER.
     SHADER_COMPILER ShaderCompiler DEFAULT_INITIALIZER(SHADER_COMPILER_DEFAULT);
 
-    /// HLSL shader model to use when compiling the shader. When default value
-    /// is given (0, 0), the engine will attempt to use the highest HLSL shader model
+    /// HLSL shader model to use when compiling the shader.
+
+    /// When default value is given (0, 0), the engine will attempt to use the highest HLSL shader model
     /// supported by the device. If the shader is created from the byte code, this value
     /// has no effect.
     ///
     /// \note When HLSL source is converted to GLSL, corresponding GLSL/GLESSL version will be used.
     ShaderVersion HLSLVersion DEFAULT_INITIALIZER({});
 
-    /// GLSL version to use when creating the shader. When default value
-    /// is given (0, 0), the engine will attempt to use the highest GLSL version
+    /// GLSL version to use when creating the shader.
+
+    /// When default value is given (0, 0), the engine will attempt to use the highest GLSL version
     /// supported by the device.
     ShaderVersion GLSLVersion DEFAULT_INITIALIZER({});
 
-    /// GLES shading language version to use when creating the shader. When default value
-    /// is given (0, 0), the engine will attempt to use the highest GLESSL version
+    /// GLES shading language version to use when creating the shader.
+
+    /// When default value is given (0, 0), the engine will attempt to use the highest GLESSL version
     /// supported by the device.
     ShaderVersion GLESSLVersion DEFAULT_INITIALIZER({});
 
-    /// Metal shading language version to use when creating the shader. When default value
-    /// is given (0, 0), the engine will attempt to use the highest MSL version
+    /// Metal shading language version to use when creating the shader.
+
+    /// When default value is given (0, 0), the engine will attempt to use the highest MSL version
     /// supported by the device.
     ShaderVersion MSLVersion DEFAULT_INITIALIZER({});
 
     /// Shader compile flags (see Diligent::SHADER_COMPILE_FLAGS).
     SHADER_COMPILE_FLAGS CompileFlags DEFAULT_INITIALIZER(SHADER_COMPILE_FLAG_NONE);
 
-    /// Whether to load constant buffer reflection information that can be queried through
+    /// Whether to load constant buffer reflection information.
+
+    /// The reflection information can be queried through
     /// IShader::GetConstantBufferDesc() method.
 
     /// \note Loading constant buffer reflection introduces some overhead,
@@ -506,17 +530,19 @@ struct ShaderCreateInfo
     /// An optional list of GLSL extensions to enable when compiling GLSL source code.
     const char* GLSLExtensions DEFAULT_INITIALIZER(nullptr);
 
+    /// Emulated array index suffix for WebGPU backend.
+
     /// An optional suffix to append to the name of emulated array variables to get
     /// the indexed array element name.
     ///
-    /// \remarks    Since WebGPU does not support arrays of resources, Diligent Engine
-    ///             emulates them by appending an index to the resource name.
-    ///             For instance, if the suffix is set to "_", resources named
-    ///             "g_Tex2D_0", "g_Tex2D_1", "g_Tex2D_2" will be grouped into an array
-    ///             of 3 textures named "g_Tex2D" . All resources must be the same type
-    ///             to be grouped into an array.
+    /// Since WebGPU does not support arrays of resources, Diligent Engine
+    /// emulates them by appending an index to the resource name.
+    /// For instance, if the suffix is set to `"_"`, resources named
+    /// `"g_Tex2D_0"`, `"g_Tex2D_1"`, `"g_Tex2D_2"` will be grouped into an array
+    /// of 3 textures named `"g_Tex2D"`. All resources must be the same type
+    /// to be grouped into an array.
     ///
-    ///             When suffix is null or empty, no array emulation is performed.
+    /// When suffix is null or empty, no array emulation is performed.
     ///
     /// \remarks    This member is ignored when compiling shaders for backends other than WebGPU.
     const char* WebGPUEmulatedArrayIndexSuffix DEFAULT_INITIALIZER(nullptr);
@@ -700,16 +726,14 @@ DILIGENT_TYPED_ENUM(SHADER_RESOURCE_TYPE, Uint8)
 /// Shader resource description
 struct ShaderResourceDesc
 {
-    // clang-format off
     /// Shader resource name
-    const Char*          Name      DEFAULT_INITIALIZER(nullptr);
+    const Char* Name DEFAULT_INITIALIZER(nullptr);
 
     /// Shader resource type, see Diligent::SHADER_RESOURCE_TYPE.
-    SHADER_RESOURCE_TYPE Type      DEFAULT_INITIALIZER(SHADER_RESOURCE_TYPE_UNKNOWN);
+    SHADER_RESOURCE_TYPE Type DEFAULT_INITIALIZER(SHADER_RESOURCE_TYPE_UNKNOWN);
 
     /// Array size. For non-array resource this value is 1.
-    Uint32               ArraySize DEFAULT_INITIALIZER(0);
-    // clang-format on
+    Uint32 ArraySize DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     constexpr ShaderResourceDesc() noexcept
@@ -850,12 +874,12 @@ typedef struct ShaderCodeVariableDesc
     SHADER_CODE_BASIC_TYPE BasicType DEFAULT_INITIALIZER(SHADER_CODE_BASIC_TYPE_UNKNOWN);
 
     /// For a matrix type, the number of rows.
-    ///
+
     /// \note   For shaders compiled from GLSL, NumRows and NumColumns are swapped.
     Uint8 NumRows DEFAULT_INITIALIZER(0);
 
     /// For a matrix type, the number of columns. For a vector, the number of components.
-    ///
+
     /// \note   For shaders compiled from GLSL, NumRows and NumColumns are swapped.
     Uint8 NumColumns DEFAULT_INITIALIZER(0);
 
@@ -1046,27 +1070,27 @@ DILIGENT_BEGIN_INTERFACE(IShader, IDeviceObject)
     ///
     /// \return     A pointer to ShaderCodeBufferDesc struct describing the constant buffer.
     ///
-    /// \note       This method requires that the LoadConstantBufferReflection flag was set to true
-    ///             when the shader was created.
+    /// This method requires that the `LoadConstantBufferReflection` flag was set to `true`
+    /// when the shader was created.
     VIRTUAL const ShaderCodeBufferDesc* METHOD(GetConstantBufferDesc)(THIS_
                                                Uint32 Index) CONST PURE;
 
     /// Returns the shader bytecode.
-    ///
+
     /// \param [out] ppBytecode - A pointer to the memory location where
     ///                           a pointer to the byte code will be written.
     /// \param [out] Size       - The size of the byte code.
     ///
-    /// \remarks For OpenGL, this method returns the full GLSL source.
+    /// For OpenGL, this method returns the full GLSL source.
     ///
-    ///          The pointer returned by the method remains valid while the
-    ///          shader object is alive. An application must NOT free the memory.
+    /// The pointer returned by the method remains valid while the
+    /// shader object is alive. An application must NOT free the memory.
     VIRTUAL void METHOD(GetBytecode)(THIS_
                                      const void** ppBytecode,
                                      Uint64 REF   Size) CONST PURE;
 
     /// Returns the shader status, see Diligent::SHADER_STATUS.
-    ///
+
     /// \param [in] WaitForCompletion - If true, the method will wait until the shader is compiled.
     ///                                 If false, the method will return the shader status without waiting.
     /// 							    This parameter is ignored if the shader was compiled synchronously.

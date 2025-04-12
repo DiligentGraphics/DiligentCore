@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -101,7 +101,7 @@ ShaderCreateInfoWrapper::ShaderCreateInfoWrapper(const ShaderCreateInfo& ShaderC
 
     if (ShaderCI.Macros)
     {
-        auto* pMacros                = Allocator.ConstructArray<ShaderMacro>(ShaderCI.Macros.Count);
+        ShaderMacro* pMacros         = Allocator.ConstructArray<ShaderMacro>(ShaderCI.Macros.Count);
         m_CreateInfo.Macros.Elements = pMacros;
         for (size_t i = 0; i < ShaderCI.Macros.Count; ++i)
         {

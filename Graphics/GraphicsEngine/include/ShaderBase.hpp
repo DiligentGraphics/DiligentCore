@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -124,7 +124,7 @@ public:
     {
         this->m_Desc.CombinedSamplerSuffix = m_CombinedSamplerSuffix.c_str();
 
-        const auto& deviceFeatures = DeviceInfo.Features;
+        const DeviceFeatures& deviceFeatures = DeviceInfo.Features;
         if (Desc.ShaderType == SHADER_TYPE_GEOMETRY && !deviceFeatures.GeometryShaders)
             LOG_ERROR_AND_THROW("Geometry shaders are not supported by this device.");
 
@@ -139,7 +139,7 @@ public:
 
         if ((Desc.ShaderType & SHADER_TYPE_ALL_RAY_TRACING) != 0)
         {
-            const auto RTCaps = AdapterInfo.RayTracing.CapFlags;
+            const RAY_TRACING_CAP_FLAGS RTCaps = AdapterInfo.RayTracing.CapFlags;
             if (!deviceFeatures.RayTracing || (RTCaps & RAY_TRACING_CAP_FLAG_STANDALONE_SHADERS) == 0)
                 LOG_ERROR_AND_THROW("Standalone ray tracing shaders are not supported by this device.");
         }
