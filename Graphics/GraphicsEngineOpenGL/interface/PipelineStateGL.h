@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,11 +55,11 @@ DILIGENT_BEGIN_INTERFACE(IPipelineStateGL, IPipelineState)
     /// \param [in] Stage - Shader stage.
     /// \return OpenGL program handle for the specified shader stage.
     ///
-    /// \remarks    If device supports separable programs, the function
-    ///             returns the handle of the program for the specified
-    ///             shader stage. Otherwise, the function returns the handle
-    ///             of the program that contains all shaders, if Stage is
-    ///             one of the active shader stages, or zero otherwise.
+    /// If device supports separable programs, the function
+    /// returns the handle of the program for the specified
+    /// shader stage. Otherwise, the function returns the handle
+    /// of the program that contains all shaders, if Stage is
+    /// one of the active shader stages, or zero otherwise.
     VIRTUAL GLuint METHOD(GetGLProgramHandle)(THIS_
                                               SHADER_TYPE Stage) CONST PURE;
 

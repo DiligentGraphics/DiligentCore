@@ -67,8 +67,19 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_EngineFactoryOpenGL =
 
 // clang-format off
 
+/// Engine factory for OpenGL rendering backend.
 DILIGENT_BEGIN_INTERFACE(IEngineFactoryOpenGL, IEngineFactory)
 {
+    /// Creates a render device and swap chain for OpenGL-based engine implementation.
+
+    /// \param [in]  EngineCI           - Engine creation info, see EngineGLCreateInfo.
+    /// \param [out] ppDevice           - Address of the memory location where pointer to
+    ///                                   the created device will be written.
+    /// \param [out] ppImmediateContext - Address of the memory location where pointer to
+    ///                                   the immediate device context will be written.
+    /// \param [in]  SCDesc             - Swap chain description.
+    /// \param [out] ppSwapChain        - Address of the memory location where pointer to
+    ///                                   the created swap chain will be written.
     VIRTUAL void METHOD(CreateDeviceAndSwapChainGL)(THIS_
                                                     const EngineGLCreateInfo REF EngineCI,
                                                     IRenderDevice**              ppDevice,
@@ -76,9 +87,22 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryOpenGL, IEngineFactory)
                                                     const SwapChainDesc REF      SCDesc,
                                                     ISwapChain**                 ppSwapChain) PURE;
 
+    /// Creates a HLSL2GLSL converter.
+
+    /// \param [out] ppConverter - Address of the memory location where pointer to
+    ///                            the created HLSL2GLSL converter will be written.
     VIRTUAL void METHOD(CreateHLSL2GLSLConverter)(THIS_
                                                   IHLSL2GLSLConverter** ppConverter) PURE;
 
+    /// Attaches to the active GL context in the thread.
+
+    /// \param [in]  EngineCI           - Engine creation info, see EngineGLCreateInfo.
+    /// \param [out] ppDevice           - Address of the memory location where pointer to
+    /// 								  the created device will be written.
+    /// \param [out] ppImmediateContext - Address of the memory location where pointer to
+    /// 								  the immediate device context will be written.
+    /// 
+    /// \note The application is responsible for presenting the main frame buffer.
     VIRTUAL void METHOD(AttachToActiveGLContext)(THIS_
                                                  const EngineGLCreateInfo REF EngineCI,
                                                  IRenderDevice**              ppDevice,

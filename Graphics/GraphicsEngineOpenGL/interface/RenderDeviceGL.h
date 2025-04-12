@@ -88,9 +88,9 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceGL, IRenderDevice)
     /// \param [in] GLHandle      - OpenGL texture handle.
     /// \param [in] GLBindTarget  - OpenGL bind target. If this parameter is null, the engine will
     ///                             automatically select the target based on texture
-    ///                             type (e.g. RESOURCE_DIM_TEX_2D will map to GL_TEXTURE_2D).
+    ///                             type (e.g. Diligent::RESOURCE_DIM_TEX_2D will map to `GL_TEXTURE_2D`).
     ///                             An application should typically use this parameter when the texture
-    ///                             has non-standard bind target such as, GL_TEXTURE_EXTERNAL_OES.
+    ///                             has non-standard bind target such as, `GL_TEXTURE_EXTERNAL_OES`.
     /// \param [in] TexDesc       - Texture description. The engine can automatically
     ///                             set texture width, height, depth, mip levels count, and format.
     ///                             Remaining fields should be set up by the app.
@@ -99,6 +99,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceGL, IRenderDevice)
     ///                             texture interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
+    ///
     /// \note  Diligent engine texture object does not take ownership of the GL resource,
     ///        and the application must not destroy it while it is in use by the engine.
     VIRTUAL void METHOD(CreateTextureFromGLHandle)(THIS_
@@ -119,6 +120,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceGL, IRenderDevice)
     ///                             texture interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
+    ///
     /// \note  Diligent engine buffer object does not take ownership of the GL resource,
     ///        and the application must not destroy it while it is in use by the engine.
     VIRTUAL void METHOD(CreateBufferFromGLHandle)(THIS_
@@ -140,6 +142,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceGL, IRenderDevice)
     ///                             texture interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
+    ///
     /// \note  Only RESOURCE_DIM_TEX_2D dummy textures are supported.
     VIRTUAL void METHOD(CreateDummyTexture)(THIS_
                                             const TextureDesc REF TexDesc,
