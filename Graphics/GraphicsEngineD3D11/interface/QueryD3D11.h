@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,9 +53,9 @@ DILIGENT_BEGIN_INTERFACE(IQueryD3D11, IQuery)
     /// Returns a pointer to the internal ID3D11Query object.
 
     /// \param [in] QueryId - Query Id. For most query types this must be 0. An exception is
-    ///                       QUERY_TYPE_DURATION, in which case allowed values are 0 for the
+    ///                       Diligent::QUERY_TYPE_DURATION, in which case allowed values are 0 for the
     ///                       beginning timestamp query, and 1 for the ending query.
-    /// \return               pointer to the ID3D11Query object.
+    /// \return               A pointer to the `ID3D11Query` object.
     VIRTUAL ID3D11Query* METHOD(GetD3D11Query)(THIS_
                                                Uint32 QueryId) PURE;
 };

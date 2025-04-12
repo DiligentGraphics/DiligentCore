@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -47,10 +47,10 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_DeviceMemoryD3D11 =
 /// Exposes Direct3D11-specific functionality of a device memory object.
 DILIGENT_BEGIN_INTERFACE(IDeviceMemoryD3D11, IDeviceMemory)
 {
-    /// Returns a pointer to the ID3D11Buffer interface of the internal Direct3D11 object.
+    /// Returns a pointer to the `ID3D11Buffer` interface of the internal Direct3D11 object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL ID3D11Buffer* METHOD(GetD3D11TilePool)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

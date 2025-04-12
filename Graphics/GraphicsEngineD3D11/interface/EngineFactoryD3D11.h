@@ -64,7 +64,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
     ///                         the created device will be written.
     /// \param [out] ppContexts - Address of the memory location where pointers to
     ///                           the contexts will be written. Immediate context goes at
-    ///                           position 0. If EngineCI.NumDeferredContexts > 0,
+    ///                           position 0. If `EngineCI.NumDeferredContexts > 0`,
     ///                           pointers to deferred contexts are written afterwards.
     VIRTUAL void METHOD(CreateDeviceAndContextsD3D11)(THIS_
                                                       const EngineD3D11CreateInfo REF EngineCI,
@@ -80,9 +80,9 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
     /// \param [in] FSDesc            - Fullscreen mode description.
     /// \param [in] Window            - Platform-specific native window description that
     ///                                 the swap chain will be associated with:
-    ///                                 * On Win32 platform, this is the window handle (HWND)
+    ///                                 * On Win32 platform, this is the window handle (`HWND`)
     ///                                 * On Universal Windows Platform, this is the reference
-    ///                                   to the core window (Windows::UI::Core::CoreWindow)
+    ///                                   to the core window (`Windows::UI::Core::CoreWindow`)
     ///
     /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new
     ///                               swap chain will be written.
@@ -104,7 +104,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
     ///                                      the created device will be written.
     /// \param [out] ppContexts - Address of the memory location where pointers to
     ///                           the contexts will be written. Immediate context goes at
-    ///                           position 0. If EngineCI.NumDeferredContexts > 0,
+    ///                           position 0. If `EngineCI.NumDeferredContexts > 0`,
     ///                           pointers to the deferred contexts are written afterwards.
     VIRTUAL void METHOD(AttachToD3D11Device)(THIS_
                                              void*                           pd3d11NativeDevice,
@@ -120,11 +120,11 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
     /// \param [in] AdapterId       - Id of the adapter enumerated by EnumerateAdapters().
     /// \param [in] OutputId        - Adapter output id.
     /// \param [in] Format          - Display mode format.
-    /// \param [in, out] NumDisplayModes - Number of display modes. If DisplayModes is null, this
+    /// \param [in, out] NumDisplayModes - Number of display modes. If `DisplayModes` is null, this
     ///                                    value is overwritten with the number of display modes
-    ///                                    available for this output. If DisplayModes is not null,
+    ///                                    available for this output. If `DisplayModes` is not null,
     ///                                    this value should contain the maximum number of elements
-    ///                                    to be written to DisplayModes array. It is overwritten with
+    ///                                    to be written to `DisplayModes` array. It is overwritten with
     ///                                    the actual number of display modes written.
     VIRTUAL void METHOD(EnumerateDisplayModes)(THIS_
                                                Version                MinFeatureLevel,

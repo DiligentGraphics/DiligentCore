@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,10 +50,10 @@ static DILIGENT_CONSTEXPR struct INTERFACE_ID IID_RenderDeviceD3D11 =
 /// Exposes Direct3D11-specific functionality of a render device.
 DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D11, IRenderDevice)
 {
-    /// Returns a pointer to the ID3D11Device interface of the internal Direct3D11 object.
+    /// Returns a pointer to the `ID3D11Device` interface of the internal Direct3D11 object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL ID3D11Device* METHOD(GetD3D11Device)(THIS) PURE;
 
     /// Creates a buffer object from native d3d11 buffer
