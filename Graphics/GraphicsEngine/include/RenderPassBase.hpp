@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -93,7 +93,7 @@ public:
                 ValidateRenderPassDesc(this->m_Desc, pDevice->GetDeviceInfo(), pDevice->GetAdapterInfo());
             }
 
-            auto&                RawAllocator = GetRawAllocator();
+            IMemoryAllocator&    RawAllocator = GetRawAllocator();
             FixedLinearAllocator MemPool{RawAllocator};
             ReserveSpace(this->m_Desc, MemPool);
 
@@ -160,7 +160,7 @@ private:
 
         for (Uint32 subpass = 0; subpass < Desc.SubpassCount; ++subpass)
         {
-            const auto& SrcSubpass = Desc.pSubpasses[subpass];
+            const SubpassDesc& SrcSubpass = Desc.pSubpasses[subpass];
 
             MemPool.AddSpace<AttachmentReference>(SrcSubpass.InputAttachmentCount);        // Subpass.pInputAttachments
             MemPool.AddSpace<AttachmentReference>(SrcSubpass.RenderTargetAttachmentCount); // Subpass.pRenderTargetAttachments
@@ -188,9 +188,9 @@ private:
 
         if (Desc.AttachmentCount != 0)
         {
-            const auto* SrcAttachments = Desc.pAttachments;
-            auto*       DstAttachments = MemPool.Allocate<RenderPassAttachmentDesc>(Desc.AttachmentCount);
-            Desc.pAttachments          = DstAttachments;
+            const RenderPassAttachmentDesc* SrcAttachments = Desc.pAttachments;
+            RenderPassAttachmentDesc*       DstAttachments = MemPool.Allocate<RenderPassAttachmentDesc>(Desc.AttachmentCount);
+            Desc.pAttachments                              = DstAttachments;
             for (Uint32 i = 0; i < Desc.AttachmentCount; ++i)
             {
                 DstAttachments[i] = SrcAttachments[i];
@@ -199,9 +199,9 @@ private:
         }
 
         VERIFY(Desc.SubpassCount != 0, "Render pass must have at least one subpass");
-        const auto* SrcSubpasses = Desc.pSubpasses;
-        auto*       DstSubpasses = MemPool.Allocate<SubpassDesc>(Desc.SubpassCount);
-        Desc.pSubpasses          = DstSubpasses;
+        const SubpassDesc* SrcSubpasses = Desc.pSubpasses;
+        SubpassDesc*       DstSubpasses = MemPool.Allocate<SubpassDesc>(Desc.SubpassCount);
+        Desc.pSubpasses                 = DstSubpasses;
 
         const auto SetAttachmentState = [AttachmentStates, &Desc](Uint32 Subpass, Uint32 Attachment, RESOURCE_STATE State) //
         {
@@ -218,8 +218,8 @@ private:
                 SetAttachmentState(subpass, att, subpass > 0 ? GetAttachmentState(subpass - 1, att) : Desc.pAttachments[att].InitialState);
             }
 
-            const auto& SrcSubpass = SrcSubpasses[subpass];
-            auto&       DstSubpass = DstSubpasses[subpass];
+            const SubpassDesc& SrcSubpass = SrcSubpasses[subpass];
+            SubpassDesc&       DstSubpass = DstSubpasses[subpass];
 
             auto UpdateAttachmentStateAndFirstUseSubpass = [&SetAttachmentState, AttachmentFirstLastUse, subpass](const AttachmentReference& AttRef) //
             {
@@ -236,8 +236,8 @@ private:
             DstSubpass = SrcSubpass;
             if (SrcSubpass.InputAttachmentCount != 0)
             {
-                auto* DstInputAttachments    = MemPool.Allocate<AttachmentReference>(SrcSubpass.InputAttachmentCount);
-                DstSubpass.pInputAttachments = DstInputAttachments;
+                AttachmentReference* DstInputAttachments = MemPool.Allocate<AttachmentReference>(SrcSubpass.InputAttachmentCount);
+                DstSubpass.pInputAttachments             = DstInputAttachments;
                 for (Uint32 i = 0; i < SrcSubpass.InputAttachmentCount; ++i)
                 {
                     DstInputAttachments[i] = SrcSubpass.pInputAttachments[i];
@@ -249,8 +249,8 @@ private:
 
             if (SrcSubpass.RenderTargetAttachmentCount != 0)
             {
-                auto* DstRenderTargetAttachments    = MemPool.Allocate<AttachmentReference>(SrcSubpass.RenderTargetAttachmentCount);
-                DstSubpass.pRenderTargetAttachments = DstRenderTargetAttachments;
+                AttachmentReference* DstRenderTargetAttachments = MemPool.Allocate<AttachmentReference>(SrcSubpass.RenderTargetAttachmentCount);
+                DstSubpass.pRenderTargetAttachments             = DstRenderTargetAttachments;
                 for (Uint32 i = 0; i < SrcSubpass.RenderTargetAttachmentCount; ++i)
                 {
                     DstRenderTargetAttachments[i] = SrcSubpass.pRenderTargetAttachments[i];
@@ -259,8 +259,8 @@ private:
 
                 if (DstSubpass.pResolveAttachments != nullptr)
                 {
-                    auto* DstResolveAttachments    = MemPool.Allocate<AttachmentReference>(SrcSubpass.RenderTargetAttachmentCount);
-                    DstSubpass.pResolveAttachments = DstResolveAttachments;
+                    AttachmentReference* DstResolveAttachments = MemPool.Allocate<AttachmentReference>(SrcSubpass.RenderTargetAttachmentCount);
+                    DstSubpass.pResolveAttachments             = DstResolveAttachments;
                     for (Uint32 i = 0; i < SrcSubpass.RenderTargetAttachmentCount; ++i)
                     {
                         DstResolveAttachments[i] = SrcSubpass.pResolveAttachments[i];

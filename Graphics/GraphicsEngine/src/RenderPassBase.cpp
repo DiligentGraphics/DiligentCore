@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,9 +39,9 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
 {
 #define LOG_RENDER_PASS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of render pass '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
-    const auto& Features = DeviceInfo.Features;
-    const auto& SRProps  = AdapterInfo.ShadingRate;
-    const bool  IsVulkan = DeviceInfo.IsVulkanDevice();
+    const DeviceFeatures&        Features = DeviceInfo.Features;
+    const ShadingRateProperties& SRProps  = AdapterInfo.ShadingRate;
+    const bool                   IsVulkan = DeviceInfo.IsVulkanDevice();
 
     if (Desc.AttachmentCount != 0 && Desc.pAttachments == nullptr)
     {
@@ -74,7 +74,7 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
 
     for (Uint32 i = 0; i < Desc.AttachmentCount; ++i)
     {
-        const auto& Attachment = Desc.pAttachments[i];
+        const RenderPassAttachmentDesc& Attachment = Desc.pAttachments[i];
         if (Attachment.Format == TEX_FORMAT_UNKNOWN)
             LOG_RENDER_PASS_ERROR_AND_THROW("the format of attachment ", i, " is unknown.");
 
@@ -84,7 +84,7 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
         if (!IsPowerOfTwo(Attachment.SampleCount))
             LOG_RENDER_PASS_ERROR_AND_THROW("the sample count (", Uint32{Attachment.SampleCount}, ") of attachment ", i, " is not power of two.");
 
-        const auto& FmtInfo = GetTextureFormatAttribs(Attachment.Format);
+        const TextureFormatAttribs& FmtInfo = GetTextureFormatAttribs(Attachment.Format);
         if (FmtInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
             FmtInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
         {
@@ -155,7 +155,7 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
     const ShadingRateAttachment* pShadingRateAttachment = nullptr;
     for (Uint32 subpass = 0; subpass < Desc.SubpassCount; ++subpass)
     {
-        const auto& Subpass = Desc.pSubpasses[subpass];
+        const SubpassDesc& Subpass = Desc.pSubpasses[subpass];
         if (Subpass.InputAttachmentCount != 0 && Subpass.pInputAttachments == nullptr)
         {
             LOG_RENDER_PASS_ERROR_AND_THROW("the input attachment count (", Subpass.InputAttachmentCount, ") of subpass ", subpass,
@@ -174,7 +174,7 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
 
         for (Uint32 input_attachment = 0; input_attachment < Subpass.InputAttachmentCount; ++input_attachment)
         {
-            const auto& AttchRef = Subpass.pInputAttachments[input_attachment];
+            const AttachmentReference& AttchRef = Subpass.pInputAttachments[input_attachment];
             if (AttchRef.AttachmentIndex == ATTACHMENT_UNUSED)
                 continue;
 
@@ -198,7 +198,7 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
 
         for (Uint32 rt_attachment = 0; rt_attachment < Subpass.RenderTargetAttachmentCount; ++rt_attachment)
         {
-            const auto& AttchRef = Subpass.pRenderTargetAttachments[rt_attachment];
+            const AttachmentReference& AttchRef = Subpass.pRenderTargetAttachments[rt_attachment];
             if (AttchRef.AttachmentIndex == ATTACHMENT_UNUSED)
                 continue;
 
@@ -219,8 +219,8 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
                                                 GetResourceStateString(AttchRef.State));
             }
 
-            const auto  Fmt        = Desc.pAttachments[AttchRef.AttachmentIndex].Format;
-            const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
+            const TEXTURE_FORMAT        Fmt        = Desc.pAttachments[AttchRef.AttachmentIndex].Format;
+            const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Fmt);
             if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
                 FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL ||
                 FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
@@ -234,7 +234,7 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
         {
             for (Uint32 rslv_attachment = 0; rslv_attachment < Subpass.RenderTargetAttachmentCount; ++rslv_attachment)
             {
-                const auto& AttchRef = Subpass.pResolveAttachments[rslv_attachment];
+                const AttachmentReference& AttchRef = Subpass.pResolveAttachments[rslv_attachment];
                 if (AttchRef.AttachmentIndex == ATTACHMENT_UNUSED)
                     continue;
 
@@ -252,7 +252,7 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
 
         if (Subpass.pDepthStencilAttachment != nullptr)
         {
-            const auto& AttchRef = *Subpass.pDepthStencilAttachment;
+            const AttachmentReference& AttchRef = *Subpass.pDepthStencilAttachment;
             if (AttchRef.AttachmentIndex != ATTACHMENT_UNUSED)
             {
                 // If the attachment member of any element of pInputAttachments, pColorAttachments, pResolveAttachments
@@ -272,8 +272,8 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
                                                     " state, but specified state is ", GetResourceStateString(AttchRef.State));
                 }
 
-                const auto  Fmt        = Desc.pAttachments[AttchRef.AttachmentIndex].Format;
-                const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
+                const TEXTURE_FORMAT        Fmt        = Desc.pAttachments[AttchRef.AttachmentIndex].Format;
+                const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Fmt);
                 if (FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH &&
                     FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL)
                 {
@@ -285,7 +285,7 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
 
         for (Uint32 prsv_attachment = 0; prsv_attachment < Subpass.PreserveAttachmentCount; ++prsv_attachment)
         {
-            const auto PrsvAttachment = Subpass.pPreserveAttachments[prsv_attachment];
+            const Uint32 PrsvAttachment = Subpass.pPreserveAttachments[prsv_attachment];
             if (PrsvAttachment == ATTACHMENT_UNUSED)
             {
                 // The attachment member of each element of pPreserveAttachments must not be VK_ATTACHMENT_UNUSED
@@ -305,8 +305,8 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
         {
             for (Uint32 attchmnt = 0; attchmnt < Subpass.RenderTargetAttachmentCount; ++attchmnt)
             {
-                const auto& RTAttachmentRef   = Subpass.pRenderTargetAttachments[attchmnt];
-                const auto& RslvAttachmentRef = Subpass.pResolveAttachments[attchmnt];
+                const AttachmentReference& RTAttachmentRef   = Subpass.pRenderTargetAttachments[attchmnt];
+                const AttachmentReference& RslvAttachmentRef = Subpass.pResolveAttachments[attchmnt];
                 if (RslvAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED && RTAttachmentRef.AttachmentIndex == ATTACHMENT_UNUSED)
                 {
                     // If pResolveAttachments is not NULL, for each resolve attachment that is not VK_ATTACHMENT_UNUSED,
@@ -356,8 +356,8 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
 
         if (Subpass.pShadingRateAttachment != nullptr)
         {
-            pShadingRateAttachment = pShadingRateAttachment != nullptr ? pShadingRateAttachment : Subpass.pShadingRateAttachment;
-            const auto& AttchRef   = Subpass.pShadingRateAttachment->Attachment;
+            pShadingRateAttachment              = pShadingRateAttachment != nullptr ? pShadingRateAttachment : Subpass.pShadingRateAttachment;
+            const AttachmentReference& AttchRef = Subpass.pShadingRateAttachment->Attachment;
             if (AttchRef.AttachmentIndex != ATTACHMENT_UNUSED)
             {
                 if (AttchRef.AttachmentIndex >= Desc.AttachmentCount)
@@ -410,7 +410,7 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
     {
         for (Uint32 subpass = 0; subpass < Desc.SubpassCount; ++subpass)
         {
-            const auto& Subpass = Desc.pSubpasses[subpass];
+            const SubpassDesc& Subpass = Desc.pSubpasses[subpass];
 
             if (Subpass.pShadingRateAttachment == nullptr)
             {
@@ -432,7 +432,7 @@ void ValidateRenderPassDesc(const RenderPassDesc&      Desc,
 
     for (Uint32 i = 0; i < Desc.DependencyCount; ++i)
     {
-        const auto& Dependency = Desc.pDependencies[i];
+        const SubpassDependencyDesc& Dependency = Desc.pDependencies[i];
 
         if (Dependency.SrcStageMask == PIPELINE_STAGE_FLAG_UNDEFINED)
         {

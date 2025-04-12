@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,6 +63,7 @@ DILIGENT_TYPED_ENUM(ATTACHMENT_LOAD_OP, Uint8)
     /// D3D12 counterpart: D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD.
     ATTACHMENT_LOAD_OP_DISCARD,
 
+    /// Special value indicating the number of load operations in the enumeration.
     ATTACHMENT_LOAD_OP_COUNT
 };
 
@@ -83,6 +84,7 @@ DILIGENT_TYPED_ENUM(ATTACHMENT_STORE_OP, Uint8)
     /// D3D12 counterpart: D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD.
     ATTACHMENT_STORE_OP_DISCARD,
 
+    /// Special value indicating the number of store operations in the enumeration.
     ATTACHMENT_STORE_OP_COUNT
 };
 
@@ -97,20 +99,28 @@ struct RenderPassAttachmentDesc
     /// The number of samples in the texture.
     Uint8                   SampleCount     DEFAULT_INITIALIZER(1);
 
-    /// Load operation that specifies how the contents of color and depth components of
+    /// Load operation.
+
+    /// Specifies how the contents of color and depth components of
     /// the attachment are treated at the beginning of the subpass where it is first used.
     ATTACHMENT_LOAD_OP      LoadOp          DEFAULT_INITIALIZER(ATTACHMENT_LOAD_OP_LOAD);
 
-    /// Store operation how the contents of color and depth components of the attachment
+    /// Store operation.
+
+    /// Defines how the contents of color and depth components of the attachment
     /// are treated at the end of the subpass where it is last used.
     ATTACHMENT_STORE_OP     StoreOp         DEFAULT_INITIALIZER(ATTACHMENT_STORE_OP_STORE);
 
-    /// Load operation that specifies how the contents of the stencil component of the
+    /// Stencil load operation.
+
+    /// Specifies how the contents of the stencil component of the
     /// attachment is treated at the beginning of the subpass where it is first used.
     /// This value is ignored when the format does not have stencil component.
     ATTACHMENT_LOAD_OP      StencilLoadOp   DEFAULT_INITIALIZER(ATTACHMENT_LOAD_OP_LOAD);
 
-    /// Store operation how the contents of the stencil component of the attachment
+    /// Stencil store operation.
+
+    /// Defines how the contents of the stencil component of the attachment
     /// is treated at the end of the subpass where it is last used.
     /// This value is ignored when the format does not have stencil component.
     ATTACHMENT_STORE_OP     StencilStoreOp  DEFAULT_INITIALIZER(ATTACHMENT_STORE_OP_STORE);
@@ -152,11 +162,14 @@ typedef struct RenderPassAttachmentDesc RenderPassAttachmentDesc;
 /// Special constant indicating that the render pass attachment is not used.
 #define DILIGENT_ATTACHMENT_UNUSED 0xFFFFFFFFU
 
+/// Special constant indicating that the render pass attachment is not used.
 static DILIGENT_CONSTEXPR Uint32 ATTACHMENT_UNUSED = DILIGENT_ATTACHMENT_UNUSED;
 
 /// Attachment reference description.
 struct AttachmentReference
 {
+    /// Attachment index in the render pass attachment array.
+
     /// Either an integer value identifying an attachment at the corresponding index in RenderPassDesc::pAttachments,
     /// or ATTACHMENT_UNUSED to signify that this attachment is not used.
     Uint32          AttachmentIndex DEFAULT_INITIALIZER(0);
@@ -200,6 +213,8 @@ struct ShadingRateAttachment
 {
     /// Shading rate attachment reference, see Diligent::AttachmentReference.
     AttachmentReference Attachment  DEFAULT_INITIALIZER({});
+
+    /// The size of the shading rate tile in pixels.
 
     /// Each texel in the attachment contains shading rate for the whole tile.
     /// The size must be a power-of-two value between ShadingRateProperties::MinTileSize and ShadingRateProperties::MaxTileSize.
@@ -247,15 +262,15 @@ struct SubpassDesc
 
     /// Pointer to the array of color render target attachments, see Diligent::AttachmentReference.
 
-    /// Each element of the pRenderTargetAttachments array corresponds to an output in the pixel shader,
+    /// Each element of the `pRenderTargetAttachments` array corresponds to an output in the pixel shader,
     /// i.e. if the shader declares an output variable decorated with a render target index X, then it uses
-    /// the attachment provided in pRenderTargetAttachments[X]. If the attachment index is ATTACHMENT_UNUSED,
+    /// the attachment provided in `pRenderTargetAttachments[X]`. If the attachment index is ATTACHMENT_UNUSED,
     /// writes to this render target are ignored.
     const AttachmentReference*  pRenderTargetAttachments    DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to the array of resolve attachments, see Diligent::AttachmentReference.
 
-    /// If pResolveAttachments is not NULL, each of its elements corresponds to a render target attachment
+    /// If `pResolveAttachments` is not `NULL`, each of its elements corresponds to a render target attachment
     /// (the element in pRenderTargetAttachments at the same index), and a multisample resolve operation is
     /// defined for each attachment. At the end of each subpass, multisample resolve operations read the subpass's
     /// color attachments, and resolve the samples for each pixel within the render area to the same pixel location
@@ -358,6 +373,7 @@ typedef struct SubpassDesc SubpassDesc;
 /// Special subpass index value expanding synchronization scope outside a subpass.
 #define DILIGENT_SUBPASS_EXTERNAL 0xFFFFFFFFU
 
+/// Special subpass index value expanding synchronization scope outside a subpass.
 static DILIGENT_CONSTEXPR Uint32 SUBPASS_EXTERNAL = DILIGENT_SUBPASS_EXTERNAL;
 
 /// Subpass dependency description
@@ -488,6 +504,7 @@ typedef struct RenderPassDesc RenderPassDesc;
 class IRenderPass : public IDeviceObject
 {
 public:
+    /// Returns the render pass description.
     virtual const RenderPassDesc& DILIGENT_CALL_TYPE GetDesc() const override = 0;
 };
 
