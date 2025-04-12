@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,7 @@ struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     RAYTRACING_BUILD_AS_FLAGS Flags            DEFAULT_INITIALIZER(RAYTRACING_BUILD_AS_NONE);
 
     /// The size returned by IDeviceContext::WriteTLASCompactedSize(), if this acceleration structure
-    /// is going to be the target of a compacting copy command (IDeviceContext::CopyTLAS() with COPY_AS_MODE_COMPACT).
+    /// is going to be the target of a compacting copy command (IDeviceContext::CopyTLAS() with Diligent::COPY_AS_MODE_COMPACT).
     Uint64                    CompactedSize    DEFAULT_INITIALIZER(0);
 
     /// Defines which immediate contexts are allowed to execute commands that use this TLAS.
@@ -191,18 +191,18 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
 
     /// Returns native acceleration structure handle specific to the underlying graphics API
 
-    /// \return pointer to ID3D12Resource interface, for D3D12 implementation\n
-    ///         VkAccelerationStructure handle, for Vulkan implementation
+    /// \return A pointer to `ID3D12Resource` interface, for D3D12 implementation\n
+    ///         `VkAccelerationStructure` handle, for Vulkan implementation
     VIRTUAL Uint64 METHOD(GetNativeHandle)(THIS) PURE;
 
 
     /// Sets the acceleration structure usage state.
 
-    /// \note This method does not perform state transition, but
-    ///       resets the internal acceleration structure state to the given value.
-    ///       This method should be used after the application finished
-    ///       manually managing the acceleration structure state and wants to hand over
-    ///       state management back to the engine.
+    /// This method does not perform state transition, but
+    /// resets the internal acceleration structure state to the given value.
+    /// This method should be used after the application finished
+    /// manually managing the acceleration structure state and wants to hand over
+    /// state management back to the engine.
     VIRTUAL void METHOD(SetState)(THIS_
                                   RESOURCE_STATE State) PURE;
 

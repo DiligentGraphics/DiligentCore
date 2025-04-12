@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,13 +71,13 @@ DILIGENT_BEGIN_INTERFACE(ISwapChain, IObject)
     /// \note When resizing non-primary swap chains, the engine unbinds the
     ///       swap chain buffers from the output.
     ///
-    ///       New width and height should not account for surface pre-transform. For example,
-    ///       if the window size is 1920 x 1080, but the surface is pre-rotated by 90 degrees,
-    ///       NewWidth should still be 1920, and NewHeight should still be 1080. It is highly
-    ///       recommended to always use SURFACE_TRANSFORM_OPTIMAL to let the engine select
-    ///       the most optimal pre-transform. However SURFACE_TRANSFORM_ROTATE_90 will also work in
-    ///       the scenario above. After the swap chain has been resized, its actual width will be 1080,
-    ///       actual height will be 1920, and PreTransform will be SURFACE_TRANSFORM_ROTATE_90.
+    /// New width and height should not account for surface pre-transform. For example,
+    /// if the window size is 1920 x 1080, but the surface is pre-rotated by 90 degrees,
+    /// NewWidth should still be 1920, and NewHeight should still be 1080. It is highly
+    /// recommended to always use Diligent::SURFACE_TRANSFORM_OPTIMAL to let the engine select
+    /// the most optimal pre-transform. However Diligent::SURFACE_TRANSFORM_ROTATE_90 will also work in
+    /// the scenario above. After the swap chain has been resized, its actual width will be 1080,
+    /// actual height will be 1920, and `PreTransform` will be Diligent::SURFACE_TRANSFORM_ROTATE_90.
     VIRTUAL void METHOD(Resize)(THIS_
                                 Uint32            NewWidth,
                                 Uint32            NewHeight,
@@ -101,20 +101,20 @@ DILIGENT_BEGIN_INTERFACE(ISwapChain, IObject)
 
     /// Returns render target view of the current back buffer in the swap chain
 
-    /// \note For Direct3D12 and Vulkan backends, the function returns
+    /// For Direct3D12 and Vulkan backends, the function returns
     /// different pointer for every offscreen buffer in the swap chain
     /// (flipped by every call to ISwapChain::Present()). For Direct3D11
     /// backend it always returns the same pointer. For OpenGL/GLES backends
     /// the method returns null.
     ///
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL ITextureView* METHOD(GetCurrentBackBufferRTV)(THIS) PURE;
 
     /// Returns depth-stencil view of the depth buffer
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL ITextureView* METHOD(GetDepthBufferDSV)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE

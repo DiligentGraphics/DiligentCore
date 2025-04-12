@@ -278,9 +278,12 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
 
     /// Returns native buffer handle specific to the underlying graphics API
 
-    /// \return pointer to ID3D11Resource interface, for D3D11 implementation\n
-    ///         pointer to ID3D12Resource interface, for D3D12 implementation\n
-    ///         GL buffer handle, for GL implementation
+    /// \return A pointer to `ID3D11Resource` interface, for D3D11 implementation\n
+    ///         A pointer to `ID3D12Resource` interface, for D3D12 implementation\n
+    ///         `VkBuffer` handle, for Vulkan implementation\n
+    ///         GL buffer name, for OpenGL implementation\n
+    ///         `MtlBuffer`, for Metal implementation\n
+    ///         `WGPUBuffer`, for WGPU implementation\n
     VIRTUAL Uint64 METHOD(GetNativeHandle)(THIS) PURE;
 
     /// Sets the buffer usage state.

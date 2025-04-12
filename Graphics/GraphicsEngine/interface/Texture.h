@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,6 +49,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_Texture =
 /// The enumeration is used by TextureDesc to describe misc texture flags
 DILIGENT_TYPED_ENUM(MISC_TEXTURE_FLAGS, Uint8)
 {
+    /// No special flags are set
     MISC_TEXTURE_FLAG_NONE             = 0u,
 
     /// Allow automatic mipmap generation with IDeviceContext::GenerateMips()
@@ -58,9 +59,9 @@ DILIGENT_TYPED_ENUM(MISC_TEXTURE_FLAGS, Uint8)
 
     /// The texture will be used as a transient framebuffer attachment.
 
-    /// \note Memoryless textures may only be used within a render pass in a framebuffer;
-    ///       the corresponding subpass load operation must be CLEAR or DISCARD, and the
-    ///       subpass store operation must be DISCARD.
+    /// Memoryless textures may only be used within a render pass in a framebuffer;
+    /// the corresponding subpass load operation must be CLEAR or DISCARD, and the
+    /// subpass store operation must be DISCARD.
     MISC_TEXTURE_FLAG_MEMORYLESS      = 1u << 1,
 
     /// For sparse textures, allow binding the same memory range in different texture
@@ -101,18 +102,22 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     };
 #endif
     /// Texture format, see Diligent::TEXTURE_FORMAT.
+
     /// Use IRenderDevice::GetTextureFormatInfo() to check if format is supported.
     TEXTURE_FORMAT Format       DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Number of Mip levels in the texture. Multisampled textures can only have 1 Mip level.
+
     /// Specify 0 to create full mipmap chain.
     Uint32          MipLevels   DEFAULT_INITIALIZER(1);
 
-    /// Number of samples.\n
+    /// The number of samples.
+
     /// Only 2D textures or 2D texture arrays can be multisampled.
     Uint32          SampleCount DEFAULT_INITIALIZER(1);
 
-    /// Bind flags, see Diligent::BIND_FLAGS for details. \n
+    /// Bind flags, see Diligent::BIND_FLAGS for details.
+
     /// Use IRenderDevice::GetTextureFormatInfoExt() to check which bind flags are supported.
     BIND_FLAGS      BindFlags   DEFAULT_INITIALIZER(BIND_NONE);
 
@@ -120,6 +125,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     USAGE           Usage       DEFAULT_INITIALIZER(USAGE_DEFAULT);
 
     /// CPU access flags or 0 if no CPU access is allowed,
+
     /// see Diligent::CPU_ACCESS_FLAGS for details.
     CPU_ACCESS_FLAGS CPUAccessFlags     DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
 
@@ -131,7 +137,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Defines which immediate contexts are allowed to execute commands that use this texture.
 
-    /// When ImmediateContextMask contains a bit at position n, the texture may be
+    /// When `ImmediateContextMask` contains a bit at position n, the texture may be
     /// used in the immediate context with index n directly (see DeviceContextDesc::ContextId).
     /// It may also be used in a command list recorded by a deferred context that will be executed
     /// through that immediate context.
@@ -265,11 +271,13 @@ typedef struct TextureDesc TextureDesc;
 struct TextureSubResData
 {
     /// Pointer to the subresource data in CPU memory.
-    /// If provided, pSrcBuffer must be null
+
+    /// If provided, `pSrcBuffer` must be null
     const void* pData           DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to the GPU buffer that contains subresource data.
-    /// If provided, pData must be null
+
+    /// If provided, `pData` must be null
     struct IBuffer* pSrcBuffer   DEFAULT_INITIALIZER(nullptr);
 
     /// When updating data from the buffer (pSrcBuffer is not null),
@@ -279,8 +287,9 @@ struct TextureSubResData
     /// For 2D and 3D textures, row stride in bytes
     Uint64 Stride               DEFAULT_INITIALIZER(0);
 
-    /// For 3D textures, depth slice stride in bytes
-    /// \note On OpenGL, this must be a multiple of Stride
+    /// For 3D textures, depth slice stride in bytes.
+
+    /// On OpenGL, this must be a multiple of `Stride`
     Uint64 DepthStride          DEFAULT_INITIALIZER(0);
 
 
@@ -320,12 +329,13 @@ typedef struct TextureSubResData TextureSubResData;
 /// Describes the initial data to store in the texture
 struct TextureData
 {
-    /// Pointer to the array of the TextureSubResData elements containing
+    /// A pointer to the array of the TextureSubResData elements containing
     /// information about each subresource.
     TextureSubResData* pSubResources    DEFAULT_INITIALIZER(nullptr);
 
-    /// Number of elements in pSubResources array.
-    /// NumSubresources must exactly match the number
+    /// The number of elements in `pSubResources` array.
+
+    /// `NumSubresources` must exactly match the number
     /// of subresources in the texture. Otherwise an error
     /// occurs.
     Uint32             NumSubresources  DEFAULT_INITIALIZER(0);
@@ -353,10 +363,16 @@ struct TextureData
 };
 typedef struct TextureData TextureData;
 
+/// Describes the data for one mapped subresource
 struct MappedTextureSubresource
 {
+    /// Pointer to the mapped subresource data in CPU memory.
     PVoid  pData       DEFAULT_INITIALIZER(nullptr);
+
+    /// Row stride in bytes.
     Uint64 Stride      DEFAULT_INITIALIZER(0);
+
+    /// Depth slice stride in bytes.
     Uint64 DepthStride DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
@@ -388,6 +404,7 @@ struct SparseTextureProperties
     Uint64 MipTailStride    DEFAULT_INITIALIZER(0);
 
     /// Specifies the mip tail size in bytes.
+
     /// \note Single mip tail for a 2D array may exceed the 32-bit limit.
     Uint64 MipTailSize      DEFAULT_INITIALIZER(0);
 
@@ -400,11 +417,11 @@ struct SparseTextureProperties
 
     /// Size of the sparse memory block, in bytes.
 
-    /// \remarks The offset in the packed mip tail, memory offset and memory size that are used in sparse
-    ///          memory binding command must be multiples of the block size.
+    /// The offset in the packed mip tail, memory offset and memory size that are used in sparse
+    /// memory binding command must be multiples of the block size.
     ///
-    ///          If the SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag is not set in the Flags member,
-    ///          the block size is equal to SparseResourceProperties::StandardBlockSize.
+    /// If the Diligent::SPARSE_TEXTURE_FLAG_NONSTANDARD_BLOCK_SIZE flag is not set in the `Flags` member,
+    /// the block size is equal to SparseResourceProperties::StandardBlockSize.
     Uint32 BlockSize DEFAULT_INITIALIZER(0);
 
     /// Flags that describe additional packing modes.
@@ -432,20 +449,26 @@ DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
     /// \param [in] ViewDesc - View description. See Diligent::TextureViewDesc for details.
     /// \param [out] ppView - Address of the memory location where the pointer to the view interface will be written to.
     ///
-    /// \remarks To create a shader resource view addressing the entire texture, set only TextureViewDesc::ViewType
-    ///          member of the ViewDesc parameter to Diligent::TEXTURE_VIEW_SHADER_RESOURCE and leave all other
-    ///          members in their default values. Using the same method, you can create render target or depth stencil
-    ///          view addressing the largest mip level.\n
-    ///          If texture view format is Diligent::TEX_FORMAT_UNKNOWN, the view format will match the texture format.\n
-    ///          If texture view type is Diligent::TEXTURE_VIEW_UNDEFINED, the type will match the texture type.\n
-    ///          If the number of mip levels is 0, and the view type is shader resource, the view will address all mip levels.
-    ///          For other view types it will address one mip level.\n
-    ///          If the number of slices is 0, all slices from FirstArraySlice or FirstDepthSlice will be referenced by the view.
-    ///          For non-array textures, the only allowed values for the number of slices are 0 and 1.\n
-    ///          Texture view will contain strong reference to the texture, so the texture will not be destroyed
-    ///          until all views are released.\n
-    ///          The function calls AddRef() for the created interface, so it must be released by
-    ///          a call to Release() when it is no longer needed.
+    /// To create a shader resource view addressing the entire texture, set only TextureViewDesc::ViewType
+    /// member of the ViewDesc parameter to Diligent::TEXTURE_VIEW_SHADER_RESOURCE and leave all other
+    /// members in their default values. Using the same method, you can create render target or depth stencil
+    /// view addressing the largest mip level.
+    ///
+    /// If texture view format is Diligent::TEX_FORMAT_UNKNOWN, the view format will match the texture format.
+    /// 
+    /// If texture view type is Diligent::TEXTURE_VIEW_UNDEFINED, the type will match the texture type.
+    /// If the number of mip levels is 0, and the view type is shader resource, the view will address all mip levels.
+    ///
+    /// For other view types it will address one mip level.
+    ///
+    /// If the number of slices is 0, all slices from FirstArraySlice or FirstDepthSlice will be referenced by the view.
+    /// For non-array textures, the only allowed values for the number of slices are 0 and 1.
+    ///
+    /// Texture view will contain strong reference to the texture, so the texture will not be destroyed
+    /// until all views are released.
+    ///
+    /// The function calls AddRef() for the created interface, so it must be released by
+    /// a call to Release() when it is no longer needed.
     VIRTUAL void METHOD(CreateView)(THIS_
                                     const TextureViewDesc REF ViewDesc,
                                     ITextureView**            ppView) PURE;
@@ -455,26 +478,29 @@ DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
     /// \param [in] ViewType - Type of the requested view. See Diligent::TEXTURE_VIEW_TYPE.
     /// \return Pointer to the interface
     ///
-    /// \note The function does not increase the reference counter for the returned interface, so
-    ///       Release() must *NOT* be called.
+    /// \note The function does **not** increase the reference counter for the returned interface, so
+    ///       Release() **must not** be called.
     VIRTUAL ITextureView* METHOD(GetDefaultView)(THIS_
                                                  TEXTURE_VIEW_TYPE ViewType) PURE;
 
 
     /// Returns native texture handle specific to the underlying graphics API
 
-    /// \return pointer to ID3D11Resource interface, for D3D11 implementation\n
-    ///         pointer to ID3D12Resource interface, for D3D12 implementation\n
-    ///         GL buffer handle, for GL implementation
+    /// \return A pointer to `ID3D11Resource` interface, for D3D11 implementation\n
+    ///         A pointer to `ID3D12Resource` interface, for D3D12 implementation\n
+    ///         `VkImage` handle, for Vulkan implementation\n
+    ///         GL texture name, for OpenGL implementation\n
+    ///         `MtlTexture`, for Metal implementation\n
+    ///         `WGPUTexture` for WebGPU implementation
     VIRTUAL Uint64 METHOD(GetNativeHandle)(THIS) PURE;
 
     /// Sets the usage state for all texture subresources.
 
-    /// \note This method does not perform state transition, but
-    ///       resets the internal texture state to the given value.
-    ///       This method should be used after the application finished
-    ///       manually managing the texture state and wants to hand over
-    ///       state management back to the engine.
+    /// This method does not perform state transition, but
+    /// resets the internal texture state to the given value.
+    /// This method should be used after the application finished
+    /// manually managing the texture state and wants to hand over
+    /// state management back to the engine.
     VIRTUAL void METHOD(SetState)(THIS_
                                   RESOURCE_STATE State) PURE;
 

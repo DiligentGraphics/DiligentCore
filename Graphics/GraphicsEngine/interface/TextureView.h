@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,7 +83,7 @@ DEFINE_FLAG_ENUM_OPERATORS(TEXTURE_VIEW_FLAGS)
 /// Texture component swizzle
 DILIGENT_TYPED_ENUM(TEXTURE_COMPONENT_SWIZZLE, Uint8)
 {
-    /// Identity swizzle (e.g. R->R, G->G, B->B, A->A).
+    /// Identity swizzle (e.g. `R->R`, `G->G`, `B->B`, `A->A`).
     TEXTURE_COMPONENT_SWIZZLE_IDENTITY = 0,
 
     /// The component is set to zero.
@@ -226,14 +226,17 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Describes the texture view type, see Diligent::TEXTURE_VIEW_TYPE for details.
     TEXTURE_VIEW_TYPE ViewType     DEFAULT_INITIALIZER(TEXTURE_VIEW_UNDEFINED);
 
-    /// View interpretation of the original texture. For instance,
-    /// one slice of a 2D texture array can be viewed as a 2D texture.
+    /// View interpretation of the original texture.
+
+    /// For instance, one slice of a 2D texture array can be viewed as a 2D texture.
     /// See Diligent::RESOURCE_DIMENSION for a list of texture types.
     /// If default value Diligent::RESOURCE_DIM_UNDEFINED is provided,
     /// the view type will match the type of the referenced texture.
     RESOURCE_DIMENSION TextureDim  DEFAULT_INITIALIZER(RESOURCE_DIM_UNDEFINED);
 
-    /// View format. If default value Diligent::TEX_FORMAT_UNKNOWN is provided,
+    /// View format.
+
+    /// If default value Diligent::TEX_FORMAT_UNKNOWN is provided,
     /// the view format will match the referenced texture format.
     TEXTURE_FORMAT Format          DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
@@ -241,6 +244,7 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     Uint32 MostDetailedMip         DEFAULT_INITIALIZER(0);
 
     /// Total number of mip levels for the view of the texture.
+
     /// Render target and depth stencil views can address only one mip level.
     /// If 0 is provided, then for a shader resource view all mip levels will be
     /// referenced, and for a render target or a depth stencil view, one mip level
@@ -266,17 +270,20 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     union
     {
         /// For a texture array, number of array slices to address in the view.
+
         /// Set to 0 to address all array slices.
         Uint32 NumArraySlices DEFAULT_INITIALIZER(0);
 
         /// For a 3D texture, number of depth slices to address in the view
+
         /// Set to 0 to address all depth slices.
         Uint32 NumDepthSlices;
     };
 #endif
 
-    /// For an unordered access view, allowed access flags. See Diligent::UAV_ACCESS_FLAG
-    /// for details.
+    /// For an unordered access view, allowed access flags.
+
+    /// See Diligent::UAV_ACCESS_FLAG for details.
     UAV_ACCESS_FLAG    AccessFlags DEFAULT_INITIALIZER(UAV_ACCESS_UNSPECIFIED);
 
     /// Texture view flags, see Diligent::TEXTURE_VIEW_FLAGS.
@@ -363,7 +370,6 @@ typedef struct TextureViewDesc TextureViewDesc;
 
 /// Texture view interface
 
-/// \remarks
 /// To create a texture view, call ITexture::CreateView().
 /// Texture view holds strong references to the texture. The texture
 /// will not be destroyed until all views are released.
@@ -384,15 +390,15 @@ DILIGENT_BEGIN_INTERFACE(ITextureView, IDeviceObject)
 
     /// Returns the pointer to the sampler object set by the ITextureView::SetSampler().
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL struct ISampler* METHOD(GetSampler)(THIS) PURE;
 
 
-    /// Returns the pointer to the referenced texture object.
+    /// Returns a pointer to the referenced texture object.
 
-    /// The method does *NOT* increment the reference counter of the returned object,
-    /// so Release() must not be called.
+    /// The method does **NOT** increment the reference counter of the returned object,
+    /// so Release() **must not** be called.
     VIRTUAL struct ITexture* METHOD(GetTexture)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
