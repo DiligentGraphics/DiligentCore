@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,7 +81,7 @@ public:
                            bool                          bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
-        const auto& RTProps = this->GetDevice()->GetAdapterInfo().RayTracing;
+        const RayTracingProperties& RTProps = this->GetDevice()->GetAdapterInfo().RayTracing;
         if (!this->GetDevice()->GetFeatures().RayTracing)
             LOG_ERROR_AND_THROW("Ray tracing is not supported by device");
 
@@ -113,7 +113,7 @@ public:
 
         this->m_Desc.pPSO = pPSO;
 
-        const auto& RayTracingProps = this->GetDevice()->GetAdapterInfo().RayTracing;
+        const RayTracingProperties& RayTracingProps = this->GetDevice()->GetAdapterInfo().RayTracing;
         try
         {
             ValidateShaderBindingTableDesc(this->m_Desc, RayTracingProps.ShaderGroupHandleSize, RayTracingProps.MaxShaderRecordStride);
@@ -205,9 +205,9 @@ public:
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
         VERIFY_EXPR(pTLAS != nullptr);
 
-        auto* const pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
-        const auto  Info      = pTLASImpl->GetBuildInfo();
-        const auto  Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
+        TopLevelASImplType* const pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
+        const TLASBuildInfo       Info      = pTLASImpl->GetBuildInfo();
+        const TLASInstanceDesc    Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
 
         VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < Info.HitGroupStride);
@@ -247,9 +247,9 @@ public:
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
         VERIFY_EXPR(pTLAS != nullptr);
 
-        auto* const pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
-        const auto  Info      = pTLASImpl->GetBuildInfo();
-        const auto  Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
+        TopLevelASImplType* const pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
+        const TLASBuildInfo       Info      = pTLASImpl->GetBuildInfo();
+        const TLASInstanceDesc    Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
 
         VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
                     Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE);
@@ -303,8 +303,8 @@ public:
         VERIFY_EXPR((pData == nullptr) || (DataSize == this->m_ShaderRecordSize));
         VERIFY_EXPR(pTLAS != nullptr);
 
-        auto*      pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
-        const auto Info      = pTLASImpl->GetBuildInfo();
+        TopLevelASImplType* pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
+        const TLASBuildInfo Info      = pTLASImpl->GetBuildInfo();
         VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
                     Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE ||
                     Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_TLAS);
@@ -353,9 +353,9 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
         static_assert(EmptyElem != 0, "must not be zero");
 
-        const auto Stride      = this->m_ShaderRecordStride;
-        const auto ShSize      = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
-        const auto FindPattern = [&](const std::vector<Uint8>& Data, const char* GroupName) -> bool //
+        const Uint32 Stride      = this->m_ShaderRecordStride;
+        const Uint32 ShSize      = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupHandleSize;
+        const auto   FindPattern = [&](const std::vector<Uint8>& Data, const char* GroupName) -> bool //
         {
             for (size_t i = 0; i < Data.size(); i += Stride)
             {
@@ -399,8 +399,8 @@ public:
         {
             for (size_t i = 0; i < m_DbgHitGroupBindings.size(); ++i)
             {
-                auto& Binding = m_DbgHitGroupBindings[i];
-                auto  pTLAS   = Binding.pTLAS.Lock();
+                HitGroupBinding&                  Binding = m_DbgHitGroupBindings[i];
+                RefCntAutoPtr<TopLevelASImplType> pTLAS   = Binding.pTLAS.Lock();
                 if (!Binding.IsBound)
                 {
                     LOG_INFO_MESSAGE("Shader binding table '", this->m_Desc.Name, "' is not valid: hit group at index (", i, ") is not bound.");
@@ -449,7 +449,7 @@ protected:
                  BindingTable&    HitShaderBindingTable,
                  BindingTable&    CallableShaderBindingTable)
     {
-        const auto ShaderGroupBaseAlignment = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupBaseAlignment;
+        const Uint32 ShaderGroupBaseAlignment = this->GetDevice()->GetAdapterInfo().RayTracing.ShaderGroupBaseAlignment;
 
         const auto AlignToLarger = [ShaderGroupBaseAlignment](size_t offset) -> Uint32 {
             return AlignUp(static_cast<Uint32>(offset), ShaderGroupBaseAlignment);
@@ -552,7 +552,7 @@ private:
     {
         this->m_DbgHitGroupBindings.resize(std::max(this->m_DbgHitGroupBindings.size(), Index + 1));
 
-        auto& Binding   = this->m_DbgHitGroupBindings[Index];
+        HitGroupBinding& Binding{this->m_DbgHitGroupBindings[Index]};
         Binding.pTLAS   = pTLAS;
         Binding.Version = pTLAS ? pTLAS->GetVersion() : ~0u;
         Binding.IsBound = true;

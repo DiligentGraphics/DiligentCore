@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,8 +45,8 @@ void ValidateShaderBindingTableDesc(const ShaderBindingTableDesc& Desc, Uint32 S
     }
 
 
-    const auto ShaderRecordSize   = Desc.pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
-    const auto ShaderRecordStride = ShaderRecordSize + ShaderGroupHandleSize;
+    const Uint32 ShaderRecordSize   = Desc.pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
+    const Uint32 ShaderRecordStride = ShaderRecordSize + ShaderGroupHandleSize;
 
     if (ShaderRecordStride > MaxShaderRecordStride)
     {
