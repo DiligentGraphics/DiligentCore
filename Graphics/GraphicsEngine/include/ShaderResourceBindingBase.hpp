@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,6 +42,7 @@
 #include "GraphicsAccessories.hpp"
 #include "ShaderResourceCacheCommon.hpp"
 #include "FixedLinearAllocator.hpp"
+#include "SRBMemoryAllocator.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -79,12 +80,12 @@ public:
         {
             m_ActiveShaderStageIndex.fill(-1);
 
-            const auto NumShaders   = GetNumShaders();
-            const auto PipelineType = GetPipelineType();
+            const Uint32        NumShaders   = GetNumShaders();
+            const PIPELINE_TYPE PipelineType = GetPipelineType();
             for (Uint32 s = 0; s < NumShaders; ++s)
             {
-                const auto ShaderType = pPRS->GetActiveShaderStageType(s);
-                const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+                const SHADER_TYPE ShaderType = pPRS->GetActiveShaderStageType(s);
+                const Int32       ShaderInd  = GetShaderTypePipelineIndex(ShaderType, PipelineType);
 
                 m_ActiveShaderStageIndex[ShaderInd] = static_cast<Int8>(s);
             }
@@ -98,7 +99,7 @@ public:
             m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerImplType>(NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
 
             // The memory is now owned by ShaderResourceBindingBase and will be freed by Destruct().
-            auto* Ptr = MemPool.ReleaseOwnership();
+            void* Ptr = MemPool.ReleaseOwnership();
             VERIFY_EXPR(Ptr == m_pShaderVarMgrs);
             (void)Ptr;
 
@@ -107,15 +108,15 @@ public:
 
             pPRS->InitSRBResourceCache(m_ShaderResourceCache);
 
-            auto& SRBMemAllocator = pPRS->GetSRBMemoryAllocator();
+            SRBMemoryAllocator& SRBMemAllocator = pPRS->GetSRBMemoryAllocator();
             for (Uint32 s = 0; s < NumShaders; ++s)
             {
-                const auto ShaderType = pPRS->GetActiveShaderStageType(s);
-                const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
-                const auto MgrInd     = m_ActiveShaderStageIndex[ShaderInd];
+                const SHADER_TYPE ShaderType = pPRS->GetActiveShaderStageType(s);
+                const Int32       ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPRS->GetPipelineType());
+                const int         MgrInd     = m_ActiveShaderStageIndex[ShaderInd];
                 VERIFY_EXPR(MgrInd >= 0 && MgrInd < static_cast<int>(NumShaders));
 
-                auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
+                IMemoryAllocator& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
 
                 // Initialize vars manager to reference mutable and dynamic variables
                 // Note that the cache has space for all variable types
@@ -178,7 +179,7 @@ public:
     /// Implementation of IShaderResourceBinding::GetVariableByName().
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final
     {
-        const auto PipelineType = GetPipelineType();
+        const PIPELINE_TYPE PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
@@ -186,8 +187,8 @@ public:
             return nullptr;
         }
 
-        const auto ShaderInd = GetShaderTypePipelineIndex(ShaderType, PipelineType);
-        const auto MgrInd    = m_ActiveShaderStageIndex[ShaderInd];
+        const Int32 ShaderInd = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+        const int   MgrInd    = m_ActiveShaderStageIndex[ShaderInd];
         if (MgrInd < 0)
             return nullptr;
 
@@ -198,7 +199,7 @@ public:
     /// Implementation of IShaderResourceBinding::GetVariableCount().
     virtual Uint32 DILIGENT_CALL_TYPE GetVariableCount(SHADER_TYPE ShaderType) const override final
     {
-        const auto PipelineType = GetPipelineType();
+        const PIPELINE_TYPE PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
@@ -206,8 +207,8 @@ public:
             return 0;
         }
 
-        const auto ShaderInd = GetShaderTypePipelineIndex(ShaderType, PipelineType);
-        const auto MgrInd    = m_ActiveShaderStageIndex[ShaderInd];
+        const Int32 ShaderInd = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+        const int   MgrInd    = m_ActiveShaderStageIndex[ShaderInd];
         if (MgrInd < 0)
             return 0;
 
@@ -218,7 +219,7 @@ public:
     /// Implementation of IShaderResourceBinding::GetVariableByIndex().
     virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final
     {
-        const auto PipelineType = GetPipelineType();
+        const PIPELINE_TYPE PipelineType = GetPipelineType();
         if (!IsConsistentShaderType(ShaderType, PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
@@ -226,8 +227,8 @@ public:
             return nullptr;
         }
 
-        const auto ShaderInd = GetShaderTypePipelineIndex(ShaderType, PipelineType);
-        const auto MgrInd    = m_ActiveShaderStageIndex[ShaderInd];
+        const Int32 ShaderInd = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+        const int   MgrInd    = m_ActiveShaderStageIndex[ShaderInd];
         if (MgrInd < 0)
             return nullptr;
 
@@ -273,10 +274,10 @@ private:
     {
         if (m_pShaderVarMgrs != nullptr)
         {
-            auto& SRBMemAllocator = GetSignature()->GetSRBMemoryAllocator();
+            SRBMemoryAllocator& SRBMemAllocator = GetSignature()->GetSRBMemoryAllocator();
             for (Uint32 s = 0; s < GetNumShaders(); ++s)
             {
-                auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
+                IMemoryAllocator& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
                 m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
                 m_pShaderVarMgrs[s].~ShaderVariableManagerImplType();
             }
@@ -288,15 +289,15 @@ private:
     void ProcessVariables(SHADER_TYPE   ShaderStages,
                           HandlerType&& Handler) const
     {
-        const auto PipelineType = GetPipelineType();
+        const PIPELINE_TYPE PipelineType = GetPipelineType();
         for (size_t ShaderInd = 0; ShaderInd < m_ActiveShaderStageIndex.size(); ++ShaderInd)
         {
-            const auto VarMngrInd = m_ActiveShaderStageIndex[ShaderInd];
+            const int VarMngrInd = m_ActiveShaderStageIndex[ShaderInd];
             if (VarMngrInd < 0)
                 continue;
 
             // ShaderInd is the shader type pipeline index here
-            const auto ShaderType = GetShaderTypeFromPipelineIndex(static_cast<Int32>(ShaderInd), PipelineType);
+            const SHADER_TYPE ShaderType = GetShaderTypeFromPipelineIndex(static_cast<Int32>(ShaderInd), PipelineType);
             if ((ShaderStages & ShaderType) == 0)
                 continue;
 

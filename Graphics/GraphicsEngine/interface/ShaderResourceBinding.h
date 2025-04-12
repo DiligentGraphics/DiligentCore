@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -87,23 +87,23 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
     ///
     /// \return     Variable type flags that did not pass the checks and thus may need to be updated.
     ///
-    /// \remarks    This method may be used to perform various checks of the currently bound resources:
+    /// This method may be used to perform various checks of the currently bound resources:
     ///
-    ///             - BIND_SHADER_RESOURCES_UPDATE_MUTABLE and BIND_SHADER_RESOURCES_UPDATE_DYNAMIC flags
-    ///               define which variable types to examine. Note that BIND_SHADER_RESOURCES_UPDATE_STATIC
-    ///               has no effect as static resources are accessed through the PSO.
+    /// - Diligent::BIND_SHADER_RESOURCES_UPDATE_MUTABLE and Diligent::BIND_SHADER_RESOURCES_UPDATE_DYNAMIC flags
+    ///   define which variable types to examine. Note that Diligent::BIND_SHADER_RESOURCES_UPDATE_STATIC
+    ///   has no effect as static resources are accessed through the PSO.
     ///
-    ///             - If BIND_SHADER_RESOURCES_KEEP_EXISTING flag is not set and pResMapping is not null,
-    ///               the method will compare currently bound resources with the ones in the resource mapping.
-    ///               If any mismatch is found, the method will return the types of the variables that
-    ///               contain mismatching resources.
-    ///               Note that the situation when non-null object is bound to the variable, but the resource
-    ///               mapping does not contain an object corresponding to the variable name, does not count as
-    ///               mismatch.
+    /// - If Diligent::BIND_SHADER_RESOURCES_KEEP_EXISTING flag is not set and pResMapping is not null,
+    ///   the method will compare currently bound resources with the ones in the resource mapping.
+    ///   If any mismatch is found, the method will return the types of the variables that
+    ///   contain mismatching resources.
+    ///   Note that the situation when non-null object is bound to the variable, but the resource
+    ///   mapping does not contain an object corresponding to the variable name, does not count as
+    ///   mismatch.
     ///
-    ///             - If BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED flag is set, the method will check that
-    ///               all resources of the specified variable types are bound and return the types of the variables
-    ///               that are not bound.
+    /// - If Diligent::BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED flag is set, the method will check that
+    ///   all resources of the specified variable types are bound and return the types of the variables
+    ///   that are not bound.
     VIRTUAL SHADER_RESOURCE_VARIABLE_TYPE_FLAGS METHOD(CheckResources)(
                                         THIS_
                                         SHADER_TYPE                 ShaderStages,
@@ -127,9 +127,11 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
     /// Returns the total variable count for the specific shader stage.
 
     /// \param [in] ShaderType - Type of the shader.
-    /// \remark The method only counts mutable and dynamic variables that can be accessed through
-    ///         the Shader Resource Binding object. Static variables are accessed through the Shader
-    ///         object.
+    /// \return Total number of variables in the shader stage.
+    ///
+    /// The method only counts mutable and dynamic variables that can be accessed through
+    /// the Shader Resource Binding object. Static variables are accessed through the Shader
+    /// object.
     VIRTUAL Uint32 METHOD(GetVariableCount)(THIS_
                                             SHADER_TYPE ShaderType) CONST PURE;
 
@@ -140,8 +142,9 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
     /// \param [in] Index      - Variable index. The index must be between 0 and the total number
     ///                          of variables in this shader stage as returned by
     ///                          IShaderResourceBinding::GetVariableCount().
-    /// \remark Only mutable and dynamic variables can be accessed through this method.
-    ///         Static variables are accessed through the Shader object.
+    ///
+    /// Only mutable and dynamic variables can be accessed through this method.
+    /// Static variables are accessed through the Shader object.
     ///
     /// \note   This operation may potentially be expensive. If the variable will be used often, it is
     ///         recommended to store and reuse the pointer as it never changes.
