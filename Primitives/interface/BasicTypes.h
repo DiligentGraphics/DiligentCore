@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,9 @@
 
 #pragma once
 
+/// \file
+/// Defines basic types used in the engine
+
 #include "CommonDefinitions.h"
 
 #if DILIGENT_C_INTERFACE || defined(DILIGENT_SHARP_GEN)
@@ -51,9 +54,9 @@ typedef uint32_t Uint32; ///< 32-bit unsigned integer
 typedef uint16_t Uint16; ///< 16-bit unsigned integer
 typedef uint8_t  Uint8;  ///< 8-bit unsigned integer
 
-typedef size_t      SizeType;
-typedef void*       PVoid;
-typedef const void* CPVoid;
+typedef size_t      SizeType; ///< Size type
+typedef void*       PVoid;    ///< Pointer to void
+typedef const void* CPVoid;   ///< Pointer to const void
 
 typedef bool Bool; ///< Boolean
 
