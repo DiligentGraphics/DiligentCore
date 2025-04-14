@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -47,10 +47,10 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_PipelineStateWebGPU =
 /// Exposes WebGPU-specific functionality of a pipeline state object.
 DILIGENT_BEGIN_INTERFACE(IPipelineStateWebGPU, IPipelineState)
 {
-    /// Returns a pointer to WebGPU render pipeline (WGPURenderPipeline)
+    /// Returns a pointer to WebGPU render pipeline (`WGPURenderPipeline`)
     VIRTUAL WGPURenderPipeline METHOD(GetWebGPURenderPipeline)(THIS) CONST PURE;
 
-    /// Returns a pointer to WebGPU compute pipeline (WGPUComputePipeline)
+    /// Returns a pointer to WebGPU compute pipeline (`WGPUComputePipeline`)
     VIRTUAL WGPUComputePipeline METHOD(GetWebGPUComputePipeline)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

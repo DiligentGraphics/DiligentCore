@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -49,6 +49,8 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_BufferWebGPU =
 /// Exposes WebGPU-specific functionality of a buffer object.
 DILIGENT_BEGIN_INTERFACE(IBufferWebGPU, IBuffer)
 {
+    /// Returns WebGPU buffer handle.
+
     /// The application must not destroy the returned buffer
     /// Returns a WebGPU handle of the internal buffer object.
     VIRTUAL WGPUBuffer METHOD(GetWebGPUBuffer)(THIS) CONST PURE;

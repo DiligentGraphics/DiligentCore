@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_TextureWebGPU =
 DILIGENT_BEGIN_INTERFACE(ITextureWebGPU, ITexture)
 {
     /// Returns WebGPU texture handle.
+
     /// The application must not destroy the returned texture
     VIRTUAL WGPUTexture METHOD(GetWebGPUTexture)(THIS) CONST PURE;
 

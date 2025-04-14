@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -55,11 +55,13 @@ public:
     /// Returns WGSL source code
     virtual const std::string& DILIGENT_CALL_TYPE GetWGSL() const = 0;
 
-    /// Returns a suffix to append to the name of emulated array variables to get
+    /// Returns emulated array index suffix
+
+    /// Returns a suffix to append to the name of an emulated array variables to get
     /// the indexed array element name.
     ///
-    /// \remarks    This value is defined by ShaderCI.WebGPUEmulatedArrayIndexSuffix,
-    ///             see Diligent::ShaderCreateInfo::WebGPUEmulatedArrayIndexSuffix.
+    /// This value is defined by `ShaderCI.WebGPUEmulatedArrayIndexSuffix`,
+    /// see Diligent::ShaderCreateInfo::WebGPUEmulatedArrayIndexSuffix.
     virtual const char* DILIGENT_CALL_TYPE GetEmulatedArrayIndexSuffix() const = 0;
 };
 

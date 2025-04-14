@@ -67,6 +67,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceWebGPU, IRenderDevice)
     ///                             texture interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
+    ///
     /// \note  Created texture object does not take ownership of the WebGPU texture and will not
     ///        destroy it once released. The application must not destroy the image while it is
     ///        in use by the engine.
@@ -87,6 +88,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceWebGPU, IRenderDevice)
     ///                             buffer interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
+    ///
     /// \note  Created buffer object does not take ownership of the WebGPU buffer and will not
     ///        destroy it once released. The application must not destroy Vulkan buffer while it is
     ///        in use by the engine.
