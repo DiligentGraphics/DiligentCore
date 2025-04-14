@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,12 +26,21 @@
 
 #pragma once
 
+/// \file
+/// Offscreen swap chain utilities.
+
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"
 
 namespace Diligent
 {
 
+/// Creates an off-screen swap chain.
+
+/// \param [in] pDevice      - Pointer to the render device.
+/// \param [in] pContext     - Pointer to the device context.
+/// \param [in] SCDesc       - Swap chain description.
+/// \param [out] ppSwapChain - Address of the pointer to the swap chain object.
 void CreateOffScreenSwapChain(IRenderDevice* pDevice, IDeviceContext* pContext, const SwapChainDesc& SCDesc, ISwapChain** ppSwapChain);
 
 } // namespace Diligent

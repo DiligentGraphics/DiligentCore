@@ -103,10 +103,10 @@ struct ComputeMipLevelAttribs
     MIP_FILTER_TYPE FilterType DEFAULT_INITIALIZER(MIP_FILTER_TYPE_DEFAULT);
 
     /// Alpha cutoff value.
+
+    /// When AlphaCutoff is not 0, alpha channel is remapped as follows:
     ///
-    /// \remarks
-    ///     When AlphaCutoff is not 0, alpha channel is remapped as follows:
-    ///         A_new = max(A_old; 1/3 * A_old + 2/3 * AlphaCutoff)
+    ///     A_new = max(A_old; 1/3 * A_old + 2/3 * AlphaCutoff)
     float AlphaCutoff          DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
@@ -147,9 +147,9 @@ void DILIGENT_GLOBAL_FUNCTION(ComputeMipLevel)(const ComputeMipLevelAttribs REF 
 /// \param [out] ppTexture - Address of the memory location where a pointer to the
 ///                          sparse texture will be written.
 ///
-/// \remarks    If pDevice is a pointer to Metal device (IRenderDeviceMtl), this function
-///             creates a sparse texture using IRenderDeviceMtl::CreateSparseTexture method.
-///             Otherwise, it does nothing.
+/// If `pDevice` is a pointer to Metal device (Diligent::IRenderDeviceMtl), this function
+/// creates a sparse texture using IRenderDeviceMtl::CreateSparseTexture method.
+/// Otherwise, it does nothing.
 void DILIGENT_GLOBAL_FUNCTION(CreateSparseTextureMtl)(IRenderDevice*        pDevice,
                                                       const TextureDesc REF TexDesc,
                                                       IDeviceMemory*        pMemory,
@@ -158,52 +158,64 @@ void DILIGENT_GLOBAL_FUNCTION(CreateSparseTextureMtl)(IRenderDevice*        pDev
 #if DILIGENT_CPP_INTERFACE
 
 /// Returns default shader resource view of a texture.
+
 /// If the texture is null, returns null.
 ITextureView* DILIGENT_GLOBAL_FUNCTION(GetDefaultSRV)(ITexture* pTexture);
 
 /// Returns default render target view of a texture.
+
 /// If the texture is null, returns null.
 ITextureView* DILIGENT_GLOBAL_FUNCTION(GetDefaultRTV)(ITexture* pTexture);
 
 /// Returns default depth-stencil view of a texture.
+
 /// If the texture is null, returns null.
 ITextureView* DILIGENT_GLOBAL_FUNCTION(GetDefaultDSV)(ITexture* pTexture);
 
 /// Returns default unordered access view of a texture.
+
 /// If the texture is null, returns null.
 ITextureView* DILIGENT_GLOBAL_FUNCTION(GetDefaultUAV)(ITexture* pTexture);
 
 /// Returns default shader resource view of a buffer.
+
 /// If the buffer is null, returns null.
 IBufferView* DILIGENT_GLOBAL_FUNCTION(GetDefaultSRV)(IBuffer* pBuffer);
 
 /// Returns default unordered access view of a buffer.
+
 /// If the buffer is null, returns null.
 IBufferView* DILIGENT_GLOBAL_FUNCTION(GetDefaultUAV)(IBuffer* pBuffer);
 
 #endif
 
 /// Returns default shader resource view of a texture.
+
 /// If the texture is null, returns null.
 ITextureView* DILIGENT_GLOBAL_FUNCTION(GetTextureDefaultSRV)(IObject* pTexture);
 
 /// Returns default render target view of a texture.
+
 /// If the texture is null, returns null.
 ITextureView* DILIGENT_GLOBAL_FUNCTION(GetTextureDefaultRTV)(IObject* pTexture);
 
 /// Returns default depth-stencil view of a texture.
+
 /// If the texture is null, returns null.
 ITextureView* DILIGENT_GLOBAL_FUNCTION(GetTextureDefaultDSV)(IObject* pTexture);
 
 /// Returns default unordered access view of a texture.
+
 /// If the texture is null, returns null.
 ITextureView* DILIGENT_GLOBAL_FUNCTION(GetTextureDefaultUAV)(IObject* pTexture);
 
 /// Returns default shader resource view of a buffer.
+
 /// If the buffer is null, returns null.
 IBufferView* DILIGENT_GLOBAL_FUNCTION(GetBufferDefaultSRV)(IObject* pBuffer);
 
 /// Returns default unordered access view of a buffer.
+
 /// If the buffer is null, returns null.
 IBufferView* DILIGENT_GLOBAL_FUNCTION(GetBufferDefaultUAV)(IObject* pBuffer);
 
@@ -250,7 +262,7 @@ struct GeometryPrimitiveBuffersCreateInfo
 typedef struct GeometryPrimitiveBuffersCreateInfo GeometryPrimitiveBuffersCreateInfo;
 
 /// Creates vertex and index buffers for a geometry primitive (see Diligent::CreateGeometryPrimitive)
-///
+
 /// \param [in]  pDevice   - A pointer to the render device that will be used to create the buffers.
 /// \param [in]  Attribs   - Geometry primitive attributes, see Diligent::GeometryPrimitiveAttributes.
 /// \param [in]  pBufferCI - Optional buffer create info, see Diligent::GeometryPrimitiveBufferCreateInfo.

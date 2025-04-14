@@ -206,7 +206,7 @@ struct VertexPoolDesc
 };
 
 /// Vertex pool interface.
-///
+
 /// The vertex pool is a collection of dynamic buffers that can be used to store vertex data.
 struct IVertexPool : public IObject
 {
@@ -220,10 +220,10 @@ struct IVertexPool : public IObject
     ///
     /// \return                A pointer to the internal buffer object.
     ///
-    /// \remarks    If the internal buffer needs to be resized, pDevice and pContext will
-    ///             be used to create a new buffer and copy existing contents to the new buffer.
-    ///             The method is not thread-safe and an application must externally synchronize the
-    ///             access.
+    /// If the internal buffer needs to be resized, `pDevice` and `pContext` will
+    /// be used to create a new buffer and copy existing contents to the new buffer.
+    /// The method is not thread-safe and an application must externally synchronize the
+    /// access.
     virtual IBuffer* Update(Uint32 Index, IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
 
     /// Updates all internal buffers.
@@ -233,9 +233,9 @@ struct IVertexPool : public IObject
 
     /// Returns a pointer to the internal buffer at the given index.
     ///
-    /// \remarks    If the internal buffer has not been initialized yet, the method will return null.
-    ///             If the buffer may need to be updated (resized or initialized), use the Update()
-    ///             method.
+    /// If the internal buffer has not been initialized yet, the method will return null.
+    /// If the buffer may need to be updated (resized or initialized), use the Update()
+    /// method.
     virtual IBuffer* GetBuffer(Uint32 Index) const = 0;
 
 
@@ -276,16 +276,17 @@ struct VertexPoolCreateInfo
     Uint32 ExtraVertexCount = 0;
 
     /// The maximum number of vertices that can be stored in the pool.
+
     /// If zero, the number of vertices is unlimited.
     Uint32 MaxVertexCount = 0;
 
     /// Whether to disable debug validation of the internal pool structure.
 
-    /// \remarks    By default, internal pool structure is validated in debug
-    ///             mode after each allocation and deallocation. This may be expensive
-    ///             when the pool contains many allocations. When this flag is set
-    ///             to true, the validation is disabled.
-    ///             The flag is ignored in release builds as the validation is always disabled.
+    /// By default, internal pool structure is validated in debug
+    /// mode after each allocation and deallocation. This may be expensive
+    /// when the pool contains many allocations. When this flag is set
+    /// to true, the validation is disabled.
+    /// The flag is ignored in release builds as the validation is always disabled.
     bool DisableDebugValidation = false;
 
 

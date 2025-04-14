@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,9 @@
 
 #pragma once
 
+/// \file
+/// Definition of the Diligent::DurationQueryHelper class
+
 #include <vector>
 #include <deque>
 
@@ -39,6 +42,7 @@ namespace Diligent
 {
 
 /// Helper class to manage duration queries.
+
 /// One DurationQueryHelper instance must be used once per frame.
 class DurationQueryHelper
 {
@@ -59,8 +63,8 @@ public:
 
     /// \param [in] pCtx - Context to record begin query command
     ///
-    /// \remarks    There must be exactly one matching Begin() for every End() call, otherwise
-    ///             the behavior is undefined.
+    /// \note   There must be exactly one matching Begin() for every End() call, otherwise
+    ///         the behavior is undefined.
     void Begin(IDeviceContext* pCtx);
 
 
@@ -70,8 +74,8 @@ public:
     /// \param [out] Duration - Variable where duration will be written to.
     /// \return                 true if the data from the oldest query is available, and false otherwise.
     ///
-    /// \remarks    There must be exactly one matching End() for every Begin() call, otherwise
-    ///             the behavior is undefined.
+    /// \note   There must be exactly one matching End() for every Begin() call, otherwise
+    ///         the behavior is undefined.
     bool End(IDeviceContext* pCtx, double& Duration);
 
 private:

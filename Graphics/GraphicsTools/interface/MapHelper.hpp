@@ -47,7 +47,7 @@ namespace Diligent
 /// Usage example:
 ///
 ///     {
-///         MapHelper<float> UniformData( pDeviceContext, pUniformBuff, MAP_WRITE, MAP_FLAG_DISCARD );
+///         MapHelper<float> UniformData{pDeviceContext, pUniformBuff, MAP_WRITE, MAP_FLAG_DISCARD};
 ///         UniformData[0] = UniformData[1] = UniformData[2] = UniformData[3] = 1;
 ///     }
 template <typename DataType, bool KeepStrongReferences = false>

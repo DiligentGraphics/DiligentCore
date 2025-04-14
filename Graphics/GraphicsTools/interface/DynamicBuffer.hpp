@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,17 +50,16 @@ struct DynamicBufferCreateInfo
 
     /// The size of the memory page for the sparse buffer.
 
-    /// \remarks
-    ///     This value is only relevant when Desc.Usage == USAGE_SPARSE and
-    ///     defines the memory page size of the device memory object that is
-    ///     backing the buffer.
+    /// This value is only relevant when `Desc.Usage == USAGE_SPARSE` and
+    /// defines the memory page size of the device memory object that is
+    /// backing the buffer.
     ///
-    ///     Memory page size should be a multiple of SparseResources.StandardBlockSize.
-    ///     If it is not, the engine automatically aligns the value up to the closest
-    ///     multiple of the block size.
+    /// Memory page size should be a multiple of SparseResources.StandardBlockSize.
+    /// If it is not, the engine automatically aligns the value up to the closest
+    /// multiple of the block size.
     Uint32 MemoryPageSize = 64 << 10;
 
-    /// When Desc.Usage == USAGE_SPARSE, the virtual size of the sparse buffer;
+    /// When `Desc.Usage == USAGE_SPARSE`, the virtual size of the sparse buffer;
     /// ignored otherwise.
     Uint64 VirtualSize = Uint64{1} << Uint64{30};
 };
@@ -76,8 +75,8 @@ public:
     ///                         This parameter may be null (see remarks).
     /// \param[in] CreateInfo - Create information, see Diligent::DynamicBufferCreateInfo.
     ///
-    /// \remarks            If pDevice is null, internal buffer creation will be postponed
-    ///                     until Update() or Resize() is called.
+    /// If `pDevice` is null, internal buffer creation will be postponed
+    /// until Update() or Resize() is called.
     DynamicBuffer(IRenderDevice* pDevice, const DynamicBufferCreateInfo& CreateInfo);
 
     // clang-format off
@@ -100,22 +99,22 @@ public:
     ///
     /// \return     Pointer to the new buffer.
     ///
-    /// \remarks    The method operation depends on which of pDevice and pContext parameters
-    ///             are not null:
-    ///             - Both pDevice and pContext are not null: the new internal buffer is created
-    ///               and existing contents is copied (for non-sparse buffer), or memory pages
-    ///               are committed (for sparse buffer). Update() may be called with
-    ///               both pDevice and pContext being null.
-    ///             - pDevice is not null, pContext is null: internal buffer is created,
-    ///               but existing contents is not copied or memory is not committed. An
-    ///               application must provide non-null device context when calling Update().
-    ///             - Both pDevice and pContext are null: internal buffer is not created.
-    ///               An application must provide non-null device and device context when calling
-    ///               Update().
+    /// The method operation depends on which of `pDevice` and `pContext` parameters
+    /// are not null:
+    /// - Both `pDevice` and `pContext` are not null: the new internal buffer is created
+    ///   and existing contents is copied (for non-sparse buffer), or memory pages
+    ///   are committed (for sparse buffer). Update() may be called with
+    ///   both `pDevice` and `pContext` being null.
+    /// - `pDevice` is not null, `pContext` is null: internal buffer is created,
+    ///   but existing contents is not copied or memory is not committed. An
+    ///   application must provide non-null device context when calling Update().
+    /// - Both `pDevice` and `pContext` are null: internal buffer is not created.
+    ///   An application must provide non-null device and device context when calling
+    ///   Update().
     ///
-    ///             Typically pDevice and pContext should be null when the method is called from a worker thread.
+    /// Typically pDevice and pContext should be null when the method is called from a worker thread.
     ///
-    ///             If NewSize is zero, internal buffer will be released.
+    /// If `NewSize` is zero, internal buffer will be released.
     IBuffer* Resize(IRenderDevice*  pDevice,
                     IDeviceContext* pContext,
                     Uint64          NewSize,
@@ -131,20 +130,20 @@ public:
     ///                       (see remarks).
     /// \return               A pointer to the buffer object.
     ///
-    /// \remarks    If the buffer has been resized, but internal buffer object has not been
-    ///             initialized, pDevice and pContext must not be null.
+    /// If the buffer has been resized, but internal buffer object has not been
+    /// initialized, `pDevice` and `pContext` must not be null.
     ///
-    ///             If buffer does not need to be updated (PendingUpdate() returns false),
-    ///             both pDevice and pContext may be null.
+    /// If buffer does not need to be updated (PendingUpdate() returns false),
+    /// both `pDevice` and `pContext` may be null.
     IBuffer* Update(IRenderDevice*  pDevice,
                     IDeviceContext* pContext);
 
 
     /// Returns a pointer to the buffer object.
-    ///
-    /// \remarks    If the buffer has not been initialized, the method returns null.
-    ///             If the buffer may need to be updated (resized or initialized), use the Update()
-    ///             method.
+
+    /// If the buffer has not been initialized, the method returns null.
+    /// If the buffer may need to be updated (resized or initialized), use the Update()
+    /// method.
     IBuffer* GetBuffer() const
     {
         return m_pBuffer;
@@ -167,6 +166,7 @@ public:
 
 
     /// Returns the dynamic buffer version.
+
     /// The version is incremented every time a new internal buffer is created.
     Uint32 GetVersion() const
     {
@@ -175,10 +175,10 @@ public:
 
 
     /// Returns the logical virtual size of the sparse buffer.
-    ///
-    /// \note   The actual size of the sparse buffer may be larger
-    ///         than the logical size due to alignment requirements.
-    ///         Use GetBuffer()->GetDesc().Size to get the actual size.
+
+    /// The actual size of the sparse buffer may be larger
+    /// than the logical size due to alignment requirements.
+    /// Use GetBuffer()->GetDesc().Size to get the actual size.
     Uint64 GetVirtualSize() const
     {
         return m_VirtualSize;

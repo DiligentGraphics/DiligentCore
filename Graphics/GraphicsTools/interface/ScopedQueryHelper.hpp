@@ -39,6 +39,7 @@ namespace Diligent
 {
 
 /// Helper class to manage scoped queries.
+
 /// One scoped query instance must be used once per frame.
 class ScopedQueryHelper
 {

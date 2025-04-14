@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -46,17 +46,15 @@ struct DynamicTextureArrayCreateInfo
 {
     /// Texture array description.
 
-    /// \remarks
-    ///     - Desc.Type must be RESOURCE_DIM_TEX_2D_ARRAY
-    ///     - Desc.Format must not be TEX_FORMAT_UNKNOWN
-    ///     - Desc.Width and Desc.Height must not be zero
+    /// - Desc.Type must be Diligent::RESOURCE_DIM_TEX_2D_ARRAY
+    /// - Desc.Format must not be Diligent::TEX_FORMAT_UNKNOWN
+    /// - `Desc.Width` and `Desc.Height` must not be zero
     TextureDesc Desc;
 
     /// The number of slices in memory page.
 
-    /// \remarks
-    ///     This value is only relevant when Desc.Usage == USAGE_SPARSE and
-    ///     defines the number of texture array slices in one memory page.
+    /// This value is only relevant when Desc.Usage == Diligent::USAGE_SPARSE and
+    /// defines the number of texture array slices in one memory page.
     Uint32 NumSlicesInMemoryPage = 1;
 };
 
@@ -70,8 +68,8 @@ public:
     ///                         This parameter may be null (see remarks).
     /// \param[in] CreateInfo - Texture array create information, see Diligent::DynamicTextureArrayCreateInfo.
     ///
-    /// \remarks            If pDevice is null, internal texture creation will be postponed
-    ///                     until Update() or Resize() is called.
+    /// If `pDevice` is null, internal texture creation will be postponed
+    /// until Update() or Resize() is called.
     DynamicTextureArray(IRenderDevice* pDevice, const DynamicTextureArrayCreateInfo& CreateInfo);
 
     // clang-format off
@@ -95,21 +93,21 @@ public:
     ///
     /// \return     Pointer to the new texture object after resize.
     ///
-    /// \remarks    The method operation depends on which of pDevice and pContext parameters
-    ///             are not null:
-    ///             - Both pDevice and pContext are not null: internal texture is created (if necessary)
-    ///               and existing contents is copied (for non-sparse textures). Update() may be called with
-    ///               both pDevice and pContext being null.
-    ///             - pDevice is not null, pContext is null: internal texture or additional memory pages
-    ///               are created, but existing contents is not copied and memory tiles are not bound.
-    ///               An application must provide non-null device context when calling Update().
-    ///             - Both pDevice and pContext are null: internal texture or memory pages are not created.
-    ///               An application must provide non-null device and device context when calling
-    ///               Update().
+    /// The method operation depends on which of `pDevice` and `pContext` parameters
+    /// are not null:
+    /// - Both `pDevice` and `pContext are` not null: internal texture is created (if necessary)
+    ///   and existing contents is copied (for non-sparse textures). Update() may be called with
+    ///   both pDevice and pContext being null.
+    /// - `pDevice` is not null, `pContext` is null: internal texture or additional memory pages
+    ///   are created, but existing contents is not copied and memory tiles are not bound.
+    ///   An application must provide non-null device context when calling Update().
+    /// - Both `pDevice` and `pContext` are null: internal texture or memory pages are not created.
+    ///   An application must provide non-null device and device context when calling
+    ///   Update().
     ///
-    ///             Typically pContext is null when the method is called from a worker thread.
+    /// Typically `pContext` is null when the method is called from a worker thread.
     ///
-    ///             If NewArraySize is zero, internal buffer will be released.
+    /// If `NewArraySize` is zero, internal buffer will be released.
     ITexture* Resize(IRenderDevice*  pDevice,
                      IDeviceContext* pContext,
                      Uint32          NewArraySize,
@@ -126,20 +124,21 @@ public:
     ///                       (see remarks).
     /// \return               A pointer to the texture object.
     ///
-    /// \remarks    If the texture has been resized, but internal texture object has not been
-    ///             initialized, pDevice and pContext must not be null.
+    /// If the texture has been resized, but internal texture object has not been
+    /// initialized, `pDevice` and `pContext` must not be null.
     ///
-    ///             If the texture does not need to be updated (PendingUpdate() returns false),
-    ///             both pDevice and pContext may be null.
+    /// If the texture does not need to be updated (PendingUpdate() returns false),
+    /// both pDevice and pContext may be null.
     ITexture* Update(IRenderDevice*  pDevice,
                      IDeviceContext* pContext);
 
 
     /// Returns a pointer to the texture object.
 
-    /// \remarks    If the texture has not be initialized, the method returns null.
-    ///             If the texture may need to be updated (initialized or resized),
-    ///             use the Update() method.
+    /// If the texture has not be initialized, the method returns null.
+    ///
+    /// If the texture may need to be updated (initialized or resized),
+    /// use the Update() method.
     ITexture* GetTexture() const
     {
         return m_pTexture;
@@ -160,6 +159,7 @@ public:
     }
 
     /// Returns dynamic texture version.
+
     /// The version is incremented every time a new internal texture is created.
     Uint32 GetVersion() const
     {

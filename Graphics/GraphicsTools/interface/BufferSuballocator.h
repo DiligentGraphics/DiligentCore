@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,8 +73,9 @@ struct IBufferSuballocation : public IObject
     /// \remarks    This method is a shortcut for GetAllocator()->GetBuffer().
     virtual IBuffer* GetBuffer() const = 0;
 
-    /// Stores a pointer to the user-provided data object, which
-    /// may later be retrieved through GetUserData().
+    /// Stores a pointer to the user-provided data object.
+
+    /// The user data may later be retrieved through GetUserData().
     ///
     /// \param [in] pUserData - A pointer to the user data object to store.
     ///
@@ -125,16 +126,17 @@ struct IBufferSuballocator : public IObject
     /// \param[in]  pContext - A pointer to the device context that will be used to
     ///                        copy existing contents to the new buffer, if necessary.
     ///
-    /// \remarks    If the internal buffer needs to be resized, pDevice and pContext will
-    ///             be used to create a new buffer and copy existing contents to the new buffer.
-    ///             The method is not thread-safe and an application must externally synchronize the
-    ///             access.
+    /// If the internal buffer needs to be resized, `pDevice` and `pContext` will
+    /// be used to create a new buffer and copy existing contents to the new buffer.
+    /// The method is not thread-safe and an application must externally synchronize the
+    /// access.
     virtual IBuffer* Update(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
 
     /// Returns a pointer to the internal buffer object.
+
+    /// If the buffer has not been created yet, the method returns null.
     ///
-    /// \remarks    If the buffer has not been created yet, the method returns null.
-    ///             If the buffer may need to be updated, use the Update() method instead.
+    /// If the buffer may need to be updated, use the Update() method instead.
     virtual IBuffer* GetBuffer() const = 0;
 
 
@@ -155,8 +157,9 @@ struct IBufferSuballocator : public IObject
     virtual void GetUsageStats(BufferSuballocatorUsageStats& UsageStats) = 0;
 
 
-    /// Returns the internal buffer version. The version is incremented every time
-    /// the buffer is expanded.
+    /// Returns the internal buffer version.
+
+    /// The version is incremented every time the buffer is expanded.
     virtual Uint32 GetVersion() const = 0;
 };
 
@@ -174,18 +177,19 @@ struct BufferSuballocatorCreateInfo
     Uint32 ExpansionSize = 0;
 
     /// The maximum buffer size, in bytes.
-    /// If Desc.Usage == USAGE_SPARSE, also the buffer virtual size.
+
+    /// If `Desc.Usage == USAGE_SPARSE`, also the buffer virtual size.
     ///
     /// \remarks    If MaxSize is zero, the buffer will not be expanded beyond the initial size.
     Uint64 MaxSize = 0;
 
     /// Whether to disable debug validation of the internal buffer structure.
 
-    /// \remarks    By default, internal buffer structure is validated in debug
-    ///             mode after each allocation and deallocation. This may be expensive
-    ///             when the buffer contains many allocations. When this flag is set
-    ///             to true, the validation is disabled.
-    ///             The flag is ignored in release builds as the validation is always disabled.
+    /// By default, internal buffer structure is validated in debug
+    /// mode after each allocation and deallocation. This may be expensive
+    /// when the buffer contains many allocations. When this flag is set
+    /// to true, the validation is disabled.
+    /// The flag is ignored in release builds as the validation is always disabled.
     bool DisableDebugValidation = false;
 };
 

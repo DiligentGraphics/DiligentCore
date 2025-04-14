@@ -91,17 +91,17 @@ typedef struct CompoundShaderSourceFactoryCreateInfo CompoundShaderSourceFactory
 
 
 /// Creates a compound shader source factory.
-///
+
 /// \param [in]  CreateInfo - Compound shader source factory create info, see Diligent::CompoundShaderSourceFactoryCreateInfo.
 /// \param [out] ppFactory  - Address of the memory location where the pointer to the created factory will be written.
 ///
-/// \remarks    Compound shader source stream factory is a wrapper around multiple shader source stream factories.
-///             It is used to combine multiple shader source stream factories into a single one. When a source file
-///             is requested, the factory will iterate over all factories in the array and return the first one that
-///             returns a non-null stream.
+/// Compound shader source stream factory is a wrapper around multiple shader source stream factories.
+/// It is used to combine multiple shader source stream factories into a single one. When a source file
+/// is requested, the factory will iterate over all factories in the array and return the first one that
+/// returns a non-null stream.
 ///
-///             The factory also allows substituting source file names. This is useful when the same shader source
-///             is used for multiple shaders, but some of them require a modified version of the source.
+/// The factory also allows substituting source file names. This is useful when the same shader source
+/// is used for multiple shaders, but some of them require a modified version of the source.
 void DILIGENT_GLOBAL_FUNCTION(CreateCompoundShaderSourceFactory)(const CompoundShaderSourceFactoryCreateInfo REF CreateInfo,
                                                                  IShaderSourceInputStreamFactory**               ppFactory);
 

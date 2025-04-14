@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -92,17 +92,17 @@ public:
     /// \param [out] ppBuffer   - Memory address where pointer to the created upload buffer
     ///                           object will be written to.
     ///
-    /// \remarks  When the method is called from a worker thread (pContext is null),
-    ///           it may enqueue a render-thread operation and block until the operation is
-    ///           complete. If in this case the method is in fact called from the render thread,
-    ///           it may never return causing a deadlock. Always provide non-null device context
-    ///           when calling the method from the render thread. On the other hand, always
-    ///           pass null when calling the method from a worker thread to avoid
-    ///           synchronization issues, which may result in an undefined behavior.
+    /// When the method is called from a worker thread (pContext is null),
+    /// it may enqueue a render-thread operation and block until the operation is
+    /// complete. If in this case the method is in fact called from the render thread,
+    /// it may never return causing a deadlock. Always provide non-null device context
+    /// when calling the method from the render thread. On the other hand, always
+    /// pass null when calling the method from a worker thread to avoid
+    /// synchronization issues, which may result in an undefined behavior.
     ///
-    ///           The method can be safely called from multiple threads simultaneously.
-    ///           However, if pContext is not null, the application is responsible for synchronizing
-    ///           the access to the context.
+    /// The method can be safely called from multiple threads simultaneously.
+    /// However, if pContext is not null, the application is responsible for synchronizing
+    /// the access to the context.
     virtual void AllocateUploadBuffer(IDeviceContext*         pContext,
                                       const UploadBufferDesc& Desc,
                                       IUploadBuffer**         ppBuffer) = 0;
@@ -120,13 +120,13 @@ public:
     ///                             the starting mip level.
     /// \param [in] pUploadBuffer - Upload buffer to copy data from.
     ///
-    /// \remarks  When the method is called from a worker thread (pContext is null),
-    ///           it may enqueue a render-thread operation and block until the operation is
-    ///           complete. If in this case the method is in fact called from the render thread,
-    ///           it may never return causing a deadlock. Always provide non-null device context
-    ///           when calling the method from the render thread. On the other hand, always
-    ///           pass null when calling the method from a worker thread to avoid
-    ///           synchronization issues, which may result in an undefined behavior.
+    /// When the method is called from a worker thread (pContext is null),
+    /// it may enqueue a render-thread operation and block until the operation is
+    /// complete. If in this case the method is in fact called from the render thread,
+    /// it may never return causing a deadlock. Always provide non-null device context
+    /// when calling the method from the render thread. On the other hand, always
+    /// pass null when calling the method from a worker thread to avoid
+    /// synchronization issues, which may result in an undefined behavior.
     virtual void ScheduleGPUCopy(IDeviceContext* pContext,
                                  ITexture*       pDstTexture,
                                  Uint32          ArraySlice,

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_BytecodeCache = {0xD1F8295F, 0xF9D7, 
 DILIGENT_BEGIN_INTERFACE(IBytecodeCache, IObject)
 {
     /// Loads the cache data from the binary blob
-    ///
+
     /// \param [in] pData - A pointer to the cache data.
     /// \return     true if the data was loaded successfully, and false otherwise.
     VIRTUAL bool METHOD(Load)(THIS_

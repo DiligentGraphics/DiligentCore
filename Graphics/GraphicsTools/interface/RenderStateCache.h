@@ -60,16 +60,16 @@ struct RenderStateCacheCreateInfo
     RENDER_STATE_CACHE_LOG_LEVEL LogLevel DEFAULT_INITIALIZER(RENDER_STATE_CACHE_LOG_LEVEL_NORMAL);
 
     /// Whether to enable hot shader and pipeline state reloading.
-    ///
+
     /// \note   Hot reloading introduces some overhead and should
     ///         generally be disabled in production builds.
     bool EnableHotReload DEFAULT_INITIALIZER(false);
 
     /// Whether to optimize OpenGL shaders.
-    ///
-    /// \remarks    This option directly controls the value of the
-    ///             SerializationDeviceGLInfo::OptimizeShaders member
-    ///             of the internal serialization device.
+
+    /// This option directly controls the value of the
+    /// SerializationDeviceGLInfo::OptimizeShaders member
+    /// of the internal serialization device.
     bool OptimizeGLShaders DEFAULT_INITIALIZER(true);
 
     /// Optional shader source input stream factory to use when reloading
@@ -118,6 +118,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_RenderStateCache =
 
 // clang-format off
 
+/// Render state cache interface.
 DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
 {
     /// Loads the cache contents.
@@ -126,20 +127,20 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
     /// \param [in] ContentVersion - The expected version of the content in the cache.
     ///                              If the version of the content in the cache does not
     ///                              match the expected version, the method will fail.
-    ///                              If default value is used (~0u aka 0xFFFFFFFF), the version
+    ///                              If default value is used (`~0u` aka `0xFFFFFFFF`), the version
     ///                              will not be checked.
     /// \param [in] MakeCopy       - Whether to make a copy of the data blob, or use the
     ///                              the original contents.
     /// \return     true if the data were loaded successfully, and false otherwise.
     ///
-    /// \note       If the data were not copied, the cache will keep a strong reference
-    ///             to the pCacheData data blob. It will be kept alive until the cache object
-    ///             is released or the Reset() method is called.
+    /// If the data were not copied, the cache will keep a strong reference
+    /// to the pCacheData data blob. It will be kept alive until the cache object
+    /// is released or the Reset() method is called.
     ///
     /// \warning    If the data were loaded without making a copy, the application
     ///             must not modify it while it is in use by the cache object.
     /// 
-    /// \warning    This method is not thread-safe and must not be called simultaneously
+    /// \note       This method is not thread-safe and must not be called simultaneously
     ///             with other methods.
     VIRTUAL bool METHOD(Load)(THIS_
                               const IDataBlob* pCacheData,
@@ -209,7 +210,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
     ///
     /// \return     true if the data was written successfully, and false otherwise.
     ///
-    /// \remarks    If ContentVersion is ~0u (aka 0xFFFFFFFF), the version of the
+    /// \remarks    If ContentVersion is `~0u` (aka `0xFFFFFFFF`), the version of the
     ///             previously loaded content will be used, or 0 if none was loaded.
     VIRTUAL Bool METHOD(WriteToBlob)(THIS_
                                      Uint32      ContentVersion, 
@@ -222,7 +223,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
     ///
     /// \return     true if the data was written successfully, and false otherwise.
     ///
-    /// \remarks    If ContentVersion is ~0u (aka 0xFFFFFFFF), the version of the
+    /// \remarks    If ContentVersion is `~0u` (aka `0xFFFFFFFF`), the version of the
     ///             previously loaded content will be used, or 0 if none was loaded.
     VIRTUAL Bool METHOD(WriteToStream)(THIS_
                                        Uint32       ContentVersion, 
@@ -241,18 +242,20 @@ DILIGENT_BEGIN_INTERFACE(IRenderStateCache, IObject)
     ///
     /// \return     The total number of render states (shaders and pipelines) that were reloaded.
     ///
-    /// \remars     Reloading is only enabled if the cache was created with the EnableHotReload member of
-    ///             RenderStateCacheCreateInfo member set to true.
+    /// Reloading is only enabled if the cache was created with the `EnableHotReload` member of
+    /// `Diligent::RenderStateCacheCreateInfo` struct set to true.
     VIRTUAL Uint32 METHOD(Reload)(THIS_
                                   ReloadGraphicsPipelineCallbackType ReloadGraphicsPipeline DEFAULT_VALUE(nullptr), 
                                   void*                              pUserData              DEFAULT_VALUE(nullptr)) PURE;
 
     /// Returns the content version of the cache data.
-    /// If no data has been loaded, returns ~0u (aka 0xFFFFFFFF).
+
+    /// If no data has been loaded, returns `~0u` (aka `0xFFFFFFFF`).
     VIRTUAL Uint32 METHOD(GetContentVersion)(THIS) CONST PURE;
 
 
     /// Returns the reload version of the cache data.
+
     /// The reload version is incremented every time the cache is reloaded.
     VIRTUAL Uint32 METHOD(GetReloadVersion)(THIS) CONST PURE;
 };

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,8 +71,9 @@ struct ITextureAtlasSuballocation : public IObject
     /// Returns the pointer to the parent texture atlas.
     virtual IDynamicTextureAtlas* GetAtlas() = 0;
 
-    /// Stores a pointer to the user-provided data object, which
-    /// may later be retrieved through GetUserData().
+    /// Stores a pointer to the user-provided data object.
+
+    /// The data may later be retrieved through GetUserData().
     ///
     /// \param [in] pUserData - Pointer to the user data object to store.
     ///
@@ -125,19 +126,19 @@ struct IDynamicTextureAtlas : public IObject
     ///                        copy existing contents to the new texture array, if
     ///                        necessary.
     ///
-    /// \remarks    If the internal texture needs to be resized, pDevice and pContext will
-    ///             be used to create a new texture and copy existing contents to it.
+    /// If the internal texture needs to be resized, `pDevice` and `pContext` will
+    /// be used to create a new texture and copy existing contents to it.
     ///
-    ///             The method is not thread safe. An application must externally synchronize
-    ///             the access.
+    /// The method is not thread safe. An application must externally synchronize
+    /// the access.
     virtual ITexture* Update(IRenderDevice* pDevice, IDeviceContext* pContext) = 0;
 
 
     /// Returns a pointer to the internal texture object.
 
-    /// \remarks    If the texture has not been created yet, the method returns null.
-    ///             If the texture may need to be updated (initialized or resized), use
-    ///             the Update() method.
+    /// If the texture has not been created yet, the method returns null.
+    /// If the texture may need to be updated (initialized or resized), use
+    /// the Update() method.
     virtual ITexture* GetTexture() const = 0;
 
 
@@ -148,11 +149,11 @@ struct IDynamicTextureAtlas : public IObject
     /// \param[out] ppSuballocation - Memory location where pointer to the new suballocation will be
     ///                               stored.
     ///
-    /// \remarks    The method is thread-safe and can be called from multiple threads simultaneously.
+    /// The method is thread-safe and can be called from multiple threads simultaneously.
     ///
-    ///             Internal texture array may need to be extended after the allocation happened.
-    ///             An application may call the Update() to ensure that the texture is resized and old
-    ///             contents is copied.
+    /// Internal texture array may need to be extended after the allocation happened.
+    /// An application may call the Update() to ensure that the texture is resized and old
+    /// contents is copied.
     virtual void Allocate(Uint32                       Width,
                           Uint32                       Height,
                           ITextureAtlasSuballocation** ppSuballocation) = 0;
@@ -194,8 +195,8 @@ struct DynamicTextureAtlasCreateInfo
     /// When alignment is zero, the atlas may allocate the region in any suitable location.
     ///
     /// When alignment is non-zero, the region placement is aligned as follows:
-    /// - If min(Width, Height) <= MinAlignment, the region placement is aligned by MinAlignment
-    /// - If min(Width, Height) > MinAlignment, the alignment is doubled until it satisfies
+    /// - If `min(Width, Height) <= MinAlignment`, the region placement is aligned by MinAlignment
+    /// - If `min(Width, Height) > MinAlignment`, the alignment is doubled until it satisfies
     ///   the requirement above.
     ///
     /// Examples (when MinAlignment equals 64):

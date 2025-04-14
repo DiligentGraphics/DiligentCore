@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -40,23 +40,23 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 #include "../../../Primitives/interface/DefineRefMacro.h"
 
 /// Prepares OpenXR graphics binding for the specified device and context.
-///
+
 /// \param [in]  pDevice           - Pointer to the render device.
 /// \param [in]  pContext          - Pointer to the device context.
 /// \param [out] ppGraphicsBinding - Address of the memory location where the pointer to the data blob
 ///                                  containing the graphics binding will be stored.
 ///
-/// \remarks The function returns the data blob that contains the OpenXR graphics binding structure
-///          (XrGraphicsBindingVulkanKHR, XrGraphicsBindingD3D11KHR, etc.).
-///          The data blob should be used to create the OpenXR session, for example:
+/// The function returns the data blob that contains the OpenXR graphics binding structure
+/// (`XrGraphicsBindingVulkanKHR`, `XrGraphicsBindingD3D11KHR`, etc.).
+/// The data blob should be used to create the OpenXR session, for example:
 ///
-///             RefCntAutoPtr<IDataBlob> pGraphicsBinding;
-///             GetOpenXRGraphicsBinding(m_pDevice, m_pImmediateContext, &pGraphicsBinding);
+///     RefCntAutoPtr<IDataBlob> pGraphicsBinding;
+///     GetOpenXRGraphicsBinding(m_pDevice, m_pImmediateContext, &pGraphicsBinding);
 ///
-///             XrSessionCreateInfo sessionCI{XR_TYPE_SESSION_CREATE_INFO};
-///             sessionCI.next     = pGraphicsBinding->GetConstDataPtr();
-///             sessionCI.systemId = m_SystemId;
-///             xrCreateSession(m_xrInstance, &sessionCI, &m_xrSession);
+///     XrSessionCreateInfo sessionCI{XR_TYPE_SESSION_CREATE_INFO};
+///     sessionCI.next     = pGraphicsBinding->GetConstDataPtr();
+///     sessionCI.systemId = m_SystemId;
+///     xrCreateSession(m_xrInstance, &sessionCI, &m_xrSession);
 ///
 void DILIGENT_GLOBAL_FUNCTION(GetOpenXRGraphicsBinding)(IRenderDevice*  pDevice,
                                                         IDeviceContext* pContext,
@@ -71,28 +71,28 @@ XrDebugUtilsMessengerEXT DILIGENT_GLOBAL_FUNCTION(CreateOpenXRDebugUtilsMessenge
 XrResult DILIGENT_GLOBAL_FUNCTION(DestroyOpenXRDebugUtilsMessenger)(XrDebugUtilsMessengerEXT xrDebugUtilsMessenger);
 
 /// Allocates OpenXR swapchain image data, i.e. an array of appropriate structures for each device
-/// type (XrSwapchainImageVulkanKHR, XrSwapchainImageD3D11KHR, etc.).
-///
+/// type (`XrSwapchainImageVulkanKHR`, `XrSwapchainImageD3D11KHR`, etc.).
+
 /// \param [in]  DeviceType           - Type of the render device.
 /// \param [out] ImageCount           - Number of images in the swapchain returned by OpenXR.
 /// \param [out] ppSwapchainImageData - Address of the memory location where the pointer to the data blob
 ///                                     containing the swapchain image data will be stored.
 ///
-/// \remarks    The data blob data pointer should be passed to xrEnumerateSwapchainImages:
+/// The data blob data pointer should be passed to xrEnumerateSwapchainImages:
 ///
-///                 uint32_t SwapchainImageCount = 0;
-///                 xrEnumerateSwapchainImages(xrSwapchain, 0, &SwapchainImageCount, nullptr);
-///                 RefCntAutoPtr<IDataBlob> pSwapchainImageData;
-///                 AllocateOpenXRSwapchainImageData(m_DeviceType, SwapchainImageCount, &pSwapchainImageData);
-///                 xrEnumerateSwapchainImages(xrSwapchain, SwapchainImageCount, &SwapchainImageCount,
-///                                            pSwapchainImageData->GetDataPtr<XrSwapchainImageBaseHeader>());
+///     uint32_t SwapchainImageCount = 0;
+///     xrEnumerateSwapchainImages(xrSwapchain, 0, &SwapchainImageCount, nullptr);
+///     RefCntAutoPtr<IDataBlob> pSwapchainImageData;
+///     AllocateOpenXRSwapchainImageData(m_DeviceType, SwapchainImageCount, &pSwapchainImageData);
+///     xrEnumerateSwapchainImages(xrSwapchain, SwapchainImageCount, &SwapchainImageCount,
+///                                pSwapchainImageData->GetDataPtr<XrSwapchainImageBaseHeader>());
 ///
 void DILIGENT_GLOBAL_FUNCTION(AllocateOpenXRSwapchainImageData)(RENDER_DEVICE_TYPE DeviceType,
                                                                 Uint32             ImageCount,
                                                                 IDataBlob**        ppSwapchainImageData);
 
 /// Returns the texture object that corresponds to the specified OpenXR swapchain image.
-///
+
 /// \param [in]  pDevice    - Pointer to the render device.
 /// \param [in]  ImageData  - Pointer to the OpenXR swapchain image data returned by xrEnumerateSwapchainImages.
 /// \param [in]  ImageIndex - Index of the swapchain image.
@@ -100,20 +100,20 @@ void DILIGENT_GLOBAL_FUNCTION(AllocateOpenXRSwapchainImageData)(RENDER_DEVICE_TY
 /// \param [out] ppImage    - Address of the memory location where the pointer to the texture object
 ///                           will be stored.
 ///
-/// \remarks    The function creates a texture object that corresponds to the specified OpenXR
-///             swapchain image.
+/// The function creates a texture object that corresponds to the specified OpenXR
+/// swapchain image.
 ///
-///             Typically, ImageData should be allocated by AllocateOpenXRSwapchainImageData and
-///             filled by xrEnumerateSwapchainImages (see AllocateOpenXRSwapchainImageData):
+/// Typically, ImageData should be allocated by AllocateOpenXRSwapchainImageData and
+/// filled by `xrEnumerateSwapchainImages` (see Diligent::AllocateOpenXRSwapchainImageData):
 ///
-///                 RefCntAutoPtr<ITexture> pImage;
-///                 GetOpenXRSwapchainImage(pDevice, pSwapchainImageData->GetConstDataPtr<XrSwapchainImageBaseHeader>(),
-///                                         ImageIndex, Desc, &pImage);
+///     RefCntAutoPtr<ITexture> pImage;
+///     GetOpenXRSwapchainImage(pDevice, pSwapchainImageData->GetConstDataPtr<XrSwapchainImageBaseHeader>(),
+///                             ImageIndex, Desc, &pImage);
 ///
-///             TexDesc should be filled with the texture description that corresponds to the swapchain.
-///             On Direct3D, the texture parameters will be derived from the swapchain resource.
-///             On Vulkan, the texture description should be filled manually since Vulkan does not
-///             provide a way to query texture parameters from the image.
+/// `TexDesc` should be filled with the texture description that corresponds to the swapchain.
+/// On Direct3D, the texture parameters will be derived from the swapchain resource.
+/// On Vulkan, the texture description should be filled manually since Vulkan does not
+/// provide a way to query texture parameters from the image.
 ///
 void DILIGENT_GLOBAL_FUNCTION(GetOpenXRSwapchainImage)(IRenderDevice*                    pDevice,
                                                        const XrSwapchainImageBaseHeader* ImageData,
