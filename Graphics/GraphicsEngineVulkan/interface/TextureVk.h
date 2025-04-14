@@ -58,6 +58,7 @@ DILIGENT_BEGIN_INTERFACE(ITextureVk, ITexture)
     /// Sets Vulkan image layout
 
     /// \param [in] Layout - Vulkan image layout to set.
+    ///
     /// \note This function does not perform layout transition, but sets the
     ///       internal texture state to match the given Vulkan layout.
     VIRTUAL void METHOD(SetLayout)(THIS_

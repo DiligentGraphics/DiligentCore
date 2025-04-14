@@ -61,7 +61,7 @@ typedef struct BindingTableVk BindingTableVk;
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTableVk, IShaderBindingTable)
 {
     /// Returns the data that can be used with vkCmdTraceRaysKHR() call.
-    ///
+
     /// \remarks  The method is not thread-safe. An application must externally synchronize the access
     ///           to the shader binding table.
     VIRTUAL const BindingTableVk REF METHOD(GetVkBindingTable)(THIS) CONST PURE;

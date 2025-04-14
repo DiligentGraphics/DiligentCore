@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -57,6 +57,7 @@ struct DeviceMemoryRangeVk
     VkDeviceSize   Offset  DEFAULT_INITIALIZER(0);
 
     /// Memory range size in bytes.
+
     /// When IDeviceMemoryVk::GetRange() succeeds, the size is equal to the Size argument
     /// that was given to the function, and zero otherwise.
     VkDeviceSize   Size    DEFAULT_INITIALIZER(0);

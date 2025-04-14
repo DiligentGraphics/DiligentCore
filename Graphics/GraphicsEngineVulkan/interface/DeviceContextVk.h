@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,16 +73,16 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContextVk, IDeviceContext)
 
     /// \return - handle to the current command buffer
     ///
-    /// \remarks  Any command on the device context may potentially submit the command buffer for
-    ///           execution into the command queue and make it invalid. An application should
-    ///           never cache the handle and should instead request the command buffer every time it
-    ///           needs it.
+    /// Any command on the device context may potentially submit the command buffer for
+    /// execution into the command queue and make it invalid. An application should
+    /// never cache the handle and should instead request the command buffer every time it
+    /// needs it.
     ///
-    ///           Diligent Engine internally keeps track of all resource state changes (vertex and index
-    ///           buffers, pipeline states, render targets, etc.). If an application changes any of these
-    ///           states in the command buffer, it must invalidate the engine's internal state tracking by
-    ///           calling IDeviceContext::InvalidateState() and then manually restore all required states via
-    ///           appropriate Diligent API calls.
+    /// Diligent Engine internally keeps track of all resource state changes (vertex and index
+    /// buffers, pipeline states, render targets, etc.). If an application changes any of these
+    /// states in the command buffer, it must invalidate the engine's internal state tracking by
+    /// calling IDeviceContext::InvalidateState() and then manually restore all required states via
+    /// appropriate Diligent API calls.
     VIRTUAL VkCommandBuffer METHOD(GetVkCommandBuffer)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE

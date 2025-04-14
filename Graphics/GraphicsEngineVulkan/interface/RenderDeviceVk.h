@@ -75,6 +75,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
     ///                             texture interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
+    ///
     /// \note  Created texture object does not take ownership of the Vulkan image and will not
     ///        destroy it once released. The application must not destroy the image while it is
     ///        in use by the engine.
@@ -95,6 +96,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
     ///                             buffer interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
+    ///
     /// \note  Created buffer object does not take ownership of the Vulkan buffer and will not
     ///        destroy it once released. The application must not destroy Vulkan buffer while it is
     ///        in use by the engine.
@@ -114,6 +116,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
     ///                             bottom-level AS interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
+    ///
     /// \note  Created bottom-level AS object does not take ownership of the Vulkan acceleration structure and will not
     ///        destroy it once released. The application must not destroy Vulkan acceleration structure while it is
     ///        in use by the engine.
@@ -133,6 +136,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
     ///                             top-level AS interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
+    ///
     /// \note  Created top-level AS object does not take ownership of the Vulkan acceleration structure and will not
     ///        destroy it once released. The application must not destroy Vulkan acceleration structure while it is
     ///        in use by the engine.
@@ -150,6 +154,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
     ///                                    fence interface will be stored.
     ///                                    The function calls AddRef(), so that the new object will contain
     ///                                    one reference.
+    ///
     /// \note  Created fence object does not take ownership of the Vulkan semaphore and will not
     ///        destroy it once released. The application must not destroy Vulkan semaphore while it is
     ///        in use by the engine.
