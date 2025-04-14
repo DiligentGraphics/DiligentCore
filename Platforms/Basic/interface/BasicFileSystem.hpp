@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -137,6 +137,7 @@ struct FindFileData
     bool   IsDirectory = false;
 };
 
+/// Basic platform-specific file system functions
 struct BasicFileSystem
 {
 public:
@@ -173,9 +174,9 @@ public:
     /// Splits path into individual components optionally simplifying it.
     ///
     /// If Simplify is true:
-    ///     - Removes redundant slashes (a///b -> a/b)
-    ///     - Removes redundant . (a/./b -> a/b)
-    ///     - Collapses .. (a/b/../c -> a/c)
+    ///     - Removes redundant slashes (`a///b -> a/b`)
+    ///     - Removes redundant `.` (`a/./b -> a/b`)
+    ///     - Collapses `..` (`a/b/../c -> a/c`)
     static std::vector<String> SplitPath(const Char* Path, bool Simplify);
 
     /// Builds a path from the given components.
@@ -184,12 +185,12 @@ public:
     /// Simplifies the path.
 
     /// The function performs the following path simplifications:
-    /// - Normalizes slashes using the given slash symbol (a\b/c -> a/b/c)
-    /// - Removes redundant slashes (a///b -> a/b)
-    /// - Removes redundant . (a/./b -> a/b)
-    /// - Collapses .. (a/b/../c -> a/c)
-    /// - Removes trailing slashes (/a/b/c/ -> /a/b/c)
-    /// - When 'Slash' is Windows slash ('\'), removes leading slashes (\a\b\c -> a\b\c)
+    /// - Normalizes slashes using the given slash symbol (`a\b/c -> a/b/c`)
+    /// - Removes redundant slashes (`a///b -> a/b`)
+    /// - Removes redundant `.` (`a/./b `-> `a/b`)
+    /// - Collapses `..` (`a/b/../c -> a/c`)
+    /// - Removes trailing slashes (`/a/b/c/ -> /a/b/c`)
+    /// - When 'Slash' is Windows slash (`\`), removes leading slashes (`\a\b\c -> a\b\c`)
     static std::string SimplifyPath(const Char* Path, Char Slash = 0);
 
 

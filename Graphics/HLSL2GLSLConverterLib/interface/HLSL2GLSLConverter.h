@@ -88,7 +88,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_HLSL2GLSLConverter =
 
 // clang-format off
 
-/// Interface to the buffer object implemented in OpenGL
+/// HLSL to GLSL converter interface.
 DILIGENT_BEGIN_INTERFACE(IHLSL2GLSLConverter, IObject)
 {
     VIRTUAL void METHOD(CreateStream)(THIS_
