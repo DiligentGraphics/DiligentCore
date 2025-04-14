@@ -1,4 +1,4 @@
-/*  Copyright 2019-2023 Diligent Graphics LLC
+/*  Copyright 2019-2025 Diligent Graphics LLC
 
  *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -31,7 +31,7 @@ namespace Diligent
 {
 
 /// A thread-safe and exception-safe LRU cache.
-///
+
 /// Usage example:
 ///
 ///     struct CacheData
@@ -49,11 +49,11 @@ namespace Diligent
 ///                               Size       = pData->GetSize();
 ///                           });
 ///
-/// \note   The Get() method returns the data by value, as the copy kept by the cache
-///         may be released immediately after the method finishes.
+/// The Get() method returns the data by value, as the copy kept by the cache
+/// may be released immediately after the method finishes.
 ///
-///         If the data is not found, it is atomically initialized by the provided initializer function.
-///         If the data is found, the initializer function is not called.
+/// If the data is not found, it is atomically initialized by the provided initializer function.
+/// If the data is found, the initializer function is not called.
 template <typename KeyType, typename DataType, typename KeyHasher = std::hash<KeyType>>
 class LRUCache
 {

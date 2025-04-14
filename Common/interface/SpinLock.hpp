@@ -26,6 +26,9 @@
 
 #pragma once
 
+/// \file
+/// Defines SpinLock class
+
 #include <atomic>
 #include <mutex>
 

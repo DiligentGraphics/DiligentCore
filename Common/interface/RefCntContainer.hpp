@@ -35,7 +35,7 @@
 namespace Diligent
 {
 
-/// Template struct that wraps an object of type Type into a reference-counted container.
+/// Template struct that wraps an object of type `Type` into a reference-counted container.
 template <typename Type>
 struct RefCntContainer : public ObjectBase<IObject>
 {

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,9 @@
 
 #pragma once
 
+/// \file
+/// RefCntAutoPtr and RefCntWeakPtr class definitions
+
 #include "../../Primitives/interface/Object.h"
 #include "Cast.hpp"
 #include "RefCountedObjectImpl.hpp"
@@ -38,36 +41,37 @@ namespace Diligent
 template <typename T>
 class RefCntWeakPtr;
 
-// The main advantage of RefCntAutoPtr over the std::shared_ptr is that you can
-// attach the same raw pointer to different smart pointers.
-//
-// For instance, the following code will crash since p will be released twice:
-//
-// auto *p = new char;
-// std::shared_ptr<char> pTmp1(p);
-// std::shared_ptr<char> pTmp2(p);
-// ...
-
-// This code, in contrast, works perfectly fine:
-//
-// ObjectBase *pRawPtr(new ObjectBase);
-// RefCntAutoPtr<ObjectBase> pSmartPtr1(pRawPtr);
-// RefCntAutoPtr<ObjectBase> pSmartPtr2(pRawPtr);
-// ...
-
-// Other advantage is that weak pointers remain valid until the
-// object is alive, even if all smart pointers were destroyed:
-//
-// RefCntWeakPtr<ObjectBase> pWeakPtr(pSmartPtr1);
-// pSmartPtr1.Release();
-// auto pSmartPtr3 = pWeakPtr.Lock();
-// ..
-
-// Weak pointers can also be attached directly to the object:
-// RefCntWeakPtr<ObjectBase> pWeakPtr(pRawPtr);
-//
-
 /// Template class that implements reference counting
+
+/// The main advantage of RefCntAutoPtr over the std::shared_ptr is that you can
+/// attach the same raw pointer to different smart pointers.
+///
+/// For instance, the following code will crash since p will be released twice:
+///
+///      auto *p = new char;
+///      std::shared_ptr<char> pTmp1(p);
+///      std::shared_ptr<char> pTmp2(p);
+///      ...
+///
+/// This code, in contrast, works perfectly fine:
+///
+///     ObjectBase *pRawPtr(new ObjectBase);
+///     RefCntAutoPtr<ObjectBase> pSmartPtr1(pRawPtr);
+///     RefCntAutoPtr<ObjectBase> pSmartPtr2(pRawPtr);
+///     ...
+///
+/// Other advantage is that weak pointers remain valid until the
+/// object is alive, even if all smart pointers were destroyed:
+///
+///     RefCntWeakPtr<ObjectBase> pWeakPtr(pSmartPtr1);
+///     pSmartPtr1.Release();
+///     auto pSmartPtr3 = pWeakPtr.Lock();
+///     ..
+///
+/// Weak pointers can also be attached directly to the object:
+///
+///     RefCntWeakPtr<ObjectBase> pWeakPtr(pRawPtr);
+///
 template <typename T>
 class RefCntAutoPtr
 {
@@ -300,7 +304,7 @@ private:
     T* m_pObject = nullptr;
 };
 
-/// Implementation of weak pointers
+/// Implementation of weak pointer
 template <typename T>
 class RefCntWeakPtr
 {

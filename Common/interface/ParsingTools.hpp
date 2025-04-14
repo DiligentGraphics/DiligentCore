@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -82,12 +82,12 @@ inline bool IsDigit(Char Symbol) noexcept
 /// \param[in] End          - end of the input string.
 /// \param[in] GoToNextLine - whether to go to the next line.
 ///
-/// \return       If GoToNextLine is true, the position following the
+/// \return       If `GoToNextLine` is `true`, the position following the
 ///               new line character at the end of the string.
-///               If GoToNextLine is false, the position of the new line
+///               If `GoToNextLine` is `false`, the position of the new line
 ///               character at the end of the string.
 ///
-/// \remarks      CRLF ending (\r\n) is treated as a single new line separator.
+/// \remarks      CRLF ending (`\r\n`) is treated as a single new line separator.
 template <typename InteratorType>
 InteratorType SkipLine(const InteratorType& Start, const InteratorType& End, bool GoToNextLine = false) noexcept
 {
@@ -134,10 +134,10 @@ DEFINE_FLAG_ENUM_OPERATORS(SKIP_COMMENT_FLAGS)
 /// \return     if the comment is found, the position immediately following
 ///             the end of the comment; starting position otherwise.
 ///
-/// \remarks    In case of an error while parsing the comment (e.g. /* is not
-///             closed), the function throws an exception of type
-///             std::pair<InteratorType, const char*>, where first is the position
-///             of the error, and second is the error description.
+/// In case of an error while parsing the comment (e.g. `/*` is not
+/// closed), the function throws an exception of type
+/// `std::pair<InteratorType, const char*>`, where first is the position
+/// of the error, and second is the error description.
 template <typename InteratorType>
 InteratorType SkipComment(const InteratorType& Start, const InteratorType& End, SKIP_COMMENT_FLAGS Flags = SKIP_COMMENT_FLAG_ALL) noexcept(false)
 {
@@ -246,10 +246,10 @@ InteratorType SkipDelimiters(const InteratorType& Start, const InteratorType& En
 ///
 /// \return true  position of the first non-comment non-delimiter character.
 ///
-/// \remarks    In case of a parsing error (which means there is an
-///             open multi-line comment /*... ), the function throws an exception
-///             of type std::pair<InteratorType, const char*>, where first is the position
-///             of the error, and second is the error description.
+/// In case of a parsing error (which means there is an
+/// open multi-line comment `/*...`), the function throws an exception
+/// of type `std::pair<InteratorType, const char*>`, where first is the position
+/// of the error, and second is the error description.
 template <typename IteratorType>
 IteratorType SkipDelimitersAndComments(const IteratorType& Start,
                                        const IteratorType& End,
@@ -464,16 +464,16 @@ IteratorType ParseInteger(const IteratorType& Start, const IteratorType& End, Va
 /// \param [in] End     - end of the string to split.
 /// \param [in] Handler - user-provided handler to call for each chunk.
 ///
-/// \remarks    The function starts from the beginning of the strings
-///             and splits it into chunks separated by comments and delimiters.
-///             For each chunk, it calls the user-provided handler and passes
-///             the start of the preceding comments/delimiters part. The handler
-///             must then process the text at the current position and move the pointer.
-///             It should return true to continue processing, and false to stop it.
+/// The function starts from the beginning of the strings
+/// and splits it into chunks separated by comments and delimiters.
+/// For each chunk, it calls the user-provided handler and passes
+/// the start of the preceding comments/delimiters part. The handler
+/// must then process the text at the current position and move the pointer.
+/// It should return true to continue processing, and false to stop it.
 ///
-///             In case of a parsing error, the function throws an exception
-///             of type std::pair<InteratorType, const char*>, where first is the position
-///             of the error, and second is the error description.
+/// In case of a parsing error, the function throws an exception
+/// of type `std::pair<InteratorType, const char*>`, where first is the position
+/// of the error, and second is the error description.
 template <typename IteratorType, typename HandlerType>
 void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType&& Handler) noexcept(false)
 {
@@ -500,14 +500,14 @@ void SplitString(const IteratorType& Start, const IteratorType& End, HandlerType
 ///
 /// \return     string representing the context around the given position.
 ///
-/// \remarks    The context looks like shown below:
+/// The context looks like shown below:
 ///
-///                 Lorem ipsum dolor sit amet, consectetur
-///                 adipiscing elit, sed do eiusmod tempor
-///                 incididunt ut labore et dolore magna aliqua.
-///                                      ^
-///                 Ut enim ad minim veniam, quis nostrud
-///                 exercitation ullamco lab
+///     Lorem ipsum dolor sit amet, consectetur
+///     adipiscing elit, sed do eiusmod tempor
+///     incididunt ut labore et dolore magna aliqua.
+///                          ^
+///     Ut enim ad minim veniam, quis nostrud
+///     exercitation ullamco lab
 ///
 template <typename IteratorType>
 std::string GetContext(const IteratorType& Start, const IteratorType& End, IteratorType Pos, size_t NumLines) noexcept
@@ -1010,14 +1010,14 @@ TokenIterType FindMatchingBracket(const TokenIterType& Start,
 /// \param[in]  NumAdjacentLines - the number of adjacent lines above and
 ///                                below to print.
 ///
-/// \remarks    The context looks like shown below:
+/// The context looks like shown below:
 ///
-///                 Lorem ipsum dolor sit amet, consectetur
-///                 adipiscing elit, sed do eiusmod tempor
-///                 incididunt ut labore et dolore magna aliqua.
-///                                      ^
-///                 Ut enim ad minim veniam, quis nostrud
-///                 exercitation ullamco lab
+///     Lorem ipsum dolor sit amet, consectetur
+///     adipiscing elit, sed do eiusmod tempor
+///     incididunt ut labore et dolore magna aliqua.
+///                          ^
+///     Ut enim ad minim veniam, quis nostrud
+///     exercitation ullamco lab
 ///
 template <typename TokenIterType>
 std::string GetTokenContext(const TokenIterType& Start,
@@ -1268,11 +1268,11 @@ inline int GetArrayIndex(const std::string& Var, std::string& NameWithoutBracket
 
 /// Finds the next preprocessor directive in the given range.
 ///
-/// # define MACRO
-/// ^ ^     ^
-/// | |    NameEnd
-/// | NameStart
-/// Return value
+///     # define MACRO
+///     ^ ^     ^
+///     | |    NameEnd
+///     | NameStart
+///     Return value
 template <typename InteratorType>
 inline InteratorType FindNextPreprocessorDirective(const InteratorType& Start, const InteratorType& End, InteratorType& NameStart, InteratorType& NameEnd)
 {

@@ -27,6 +27,9 @@
 
 #pragma once
 
+/// \file
+/// Filtering utilities
+
 #include "../../Platforms/interface/PlatformDefinitions.h"
 
 #include "BasicMath.hpp"
@@ -37,14 +40,14 @@ namespace Diligent
 {
 
 /// Linear texture filter sample info
-//
-//                              w
-//                       | - - - - - >|
-//  -----X-------|-------X-------|----*--X-------|-------X
-//     i0-1.5          i0+0.5          i1+0.5          i1+1.5
-//
-//      T[*] = lerp(T[i0], T[i1], w)
-//
+///
+///                                 w
+///                          | - - - - - >|
+///     -----X-------|-------X-------|----*--X-------|-------X
+///        i0-1.5          i0+0.5          i1+0.5          i1+1.5
+///
+///         T[*] = lerp(T[i0], T[i1], w)
+///
 struct LinearTexFilterSampleInfo
 {
     union

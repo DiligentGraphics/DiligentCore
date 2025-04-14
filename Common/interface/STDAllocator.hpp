@@ -29,6 +29,7 @@
 
 /// \file
 /// Defines Diligent::DefaultRawMemoryAllocator class
+
 #include <limits>
 
 #include "../../Primitives/interface/BasicTypes.h"

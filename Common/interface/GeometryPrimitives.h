@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,6 +26,9 @@
 
 #pragma once
 
+/// \file
+/// Geometry primitive utilities
+
 #include "../../Primitives/interface/DataBlob.h"
 #include "../../Primitives/interface/FlagEnum.h"
 
@@ -49,15 +52,19 @@ DILIGENT_TYPED_ENUM(GEOMETRY_PRIMITIVE_VERTEX_FLAGS, Uint32)
     /// The geometry primitive vertex contains texture coordinates.
     GEOMETRY_PRIMITIVE_VERTEX_FLAG_TEXCOORD = 1u << 2u,
 
+    /// Special value that indicates the last vertex flag.
     GEOMETRY_PRIMITIVE_VERTEX_FLAG_LAST = GEOMETRY_PRIMITIVE_VERTEX_FLAG_TEXCOORD,
 
+    /// Geometry primitive contains all vertex components.
     GEOMETRY_PRIMITIVE_VERTEX_FLAG_ALL = GEOMETRY_PRIMITIVE_VERTEX_FLAG_POSITION |
                                          GEOMETRY_PRIMITIVE_VERTEX_FLAG_NORMAL |
                                           GEOMETRY_PRIMITIVE_VERTEX_FLAG_TEXCOORD,
 
+    /// Geometry primitive vertex contains position and normal.
     GEOMETRY_PRIMITIVE_VERTEX_FLAG_POS_NORM = GEOMETRY_PRIMITIVE_VERTEX_FLAG_POSITION |
 											  GEOMETRY_PRIMITIVE_VERTEX_FLAG_NORMAL,
 
+    /// Geometry primitive vertex contains position and texture coordinates.
     GEOMETRY_PRIMITIVE_VERTEX_FLAG_POS_TEX = GEOMETRY_PRIMITIVE_VERTEX_FLAG_POSITION |
                                              GEOMETRY_PRIMITIVE_VERTEX_FLAG_TEXCOORD,
 };
@@ -77,6 +84,7 @@ DILIGENT_TYPED_ENUM(GEOMETRY_PRIMITIVE_TYPE, Uint32)
     /// Sphere geometry primitive type.
     GEOMETRY_PRIMITIVE_TYPE_SPHERE,
 
+    /// Geometry primitive type count.
     GEOMETRY_PRIMITIVE_TYPE_COUNT
 };
 // clang-format on
@@ -92,11 +100,11 @@ struct GeometryPrimitiveAttributes
     GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlags DEFAULT_INITIALIZER(GEOMETRY_PRIMITIVE_VERTEX_FLAG_ALL);
 
     /// The number of subdivisions.
-    ///
-    /// \remarks    This parameter defines the fidelity of the geometry primitive.
-    ///             For example, for a cube geometry primitive, the cube faces are subdivided
-    ///             into Subdivision x Subdivision quads, producing (Subdivision + 1)^2 vertices
-    ///             per face.
+
+    /// This parameter defines the fidelity of the geometry primitive.
+    /// For example, for a cube geometry primitive, the cube faces are subdivided
+    /// into `Subdivision x Subdivision` quads, producing `(Subdivision + 1)^2` vertices
+    /// per face.
     Uint32 NumSubdivisions DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
@@ -118,6 +126,7 @@ typedef struct GeometryPrimitiveAttributes GeometryPrimitiveAttributes;
 struct CubeGeometryPrimitiveAttributes DILIGENT_DERIVE(GeometryPrimitiveAttributes)
 
     /// The size of the cube.
+
     /// The cube is centered at (0, 0, 0) and has the size of Size x Size x Size.
     /// If the cube size is 1, the coordinates of the cube vertices are in the range [-0.5, 0.5].
     float Size DEFAULT_INITIALIZER(1.f);
@@ -174,7 +183,7 @@ Uint32 GetGeometryPrimitiveVertexSize(GEOMETRY_PRIMITIVE_VERTEX_FLAGS VertexFlag
 /// \param [in]  Attribs    - Geometry primitive attributes, see Diligent::GeometryPrimitiveAttributes.
 /// \param [out] ppVertices - Address of the memory location where the pointer to the output vertex data blob will be stored.
 ///                           The vertex components are stored as interleaved floating-point values.
-///                           For example, if VertexFlags = GEOMETRY_PRIMITIVE_VERTEX_FLAG_POS_NORM, the vertex data will
+///                           For example, if VertexFlags = Diligent::GEOMETRY_PRIMITIVE_VERTEX_FLAG_POS_NORM, the vertex data will
 ///                           be stored as follows:
 ///                             P0, N0, P1, N1, ..., Pn, Nn.
 /// \param [out] ppIndices  - Address of the memory location where the pointer to the output index data blob will be stored.

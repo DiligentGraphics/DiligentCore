@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,9 @@
 
 #pragma once
 
+/// \file
+/// Additional math functions and structures.
+
 #include <float.h>
 #include <vector>
 #include <type_traits>
@@ -40,6 +43,7 @@ namespace Diligent
 {
 
 /// A plane in 3D space described by the plane equation:
+///
 ///     dot(Normal, Point) + Distance = 0
 struct Plane3D
 {
@@ -50,12 +54,13 @@ struct Plane3D
     float3 Normal;
 
     /// Distance from the plane to the coordinate system origin along the normal direction:
+    ///
     ///     dot(Normal, Point) = -Distance
     ///
     ///
-    ///   O         |   N
-    ///   *<--------|==>
-    ///             |
+    ///     O         |   N
+    ///     *<--------|==>
+    ///               |
     ///
     /// \note   The distance is measured in the same units as the normal vector.
     float Distance = 0;
@@ -110,16 +115,16 @@ struct ViewFrustumExt : public ViewFrustum
     float3 FrustumCorners[8];
 };
 
-// For OpenGL, matrix is still considered row-major. The only difference is that
-// near clip plane is at -1, not 0.
-//
-// Note that returned plane normal vectors are not normalized, which does not make a difference
-// when testing a point against the plane:
-//
-//      IsPointInsidePlane = dot(Plane.Normal, Point) < Plane.Distance
-//
-// However, to use the planes with other distances (e.g. for testing a sphere against the plane),
-// the normal vectors must be normalized and the distances scaled accordingly.
+/// For OpenGL, matrix is still considered row-major. The only difference is that
+/// near clip plane is at -1, not 0.
+///
+/// Note that returned plane normal vectors are not normalized, which does not make a difference
+/// when testing a point against the plane:
+///
+///      IsPointInsidePlane = dot(Plane.Normal, Point) < Plane.Distance
+///
+/// However, to use the planes with other distances (e.g. for testing a sphere against the plane),
+/// the normal vectors must be normalized and the distances scaled accordingly.
 inline void ExtractViewFrustumPlanesFromMatrix(const float4x4& Matrix, ViewFrustum& Frustum, bool bIsOpenGL)
 {
     // For more details, see Gribb G., Hartmann K., "Fast Extraction of Viewing Frustum Planes from the
@@ -294,40 +299,44 @@ struct OrientedBoundingBox
     float  HalfExtents[3]; // Half extents along each axis
 };
 
+/// Bounding box visibility
 enum class BoxVisibility
 {
-    //  Bounding box is guaranteed to be outside the view frustum
-    //                 .
-    //             . ' |
-    //         . '     |
-    //       |         |
-    //         .       |
-    //       ___ ' .   |
-    //      |   |    ' .
-    //      |___|
-    //
+    /// Bounding box is guaranteed to be outside the view frustum
+    ///
+    ///                 .
+    ///             . ' |
+    ///         . '     |
+    ///       |         |
+    ///         .       |
+    ///       ___ ' .   |
+    ///      |   |    ' .
+    ///      |___|
+    ///
     Invisible,
 
-    //  Bounding box intersects the frustum
-    //                 .
-    //             . ' |
-    //         . '     |
-    //       |         |
-    //        _.__     |
-    //       |   '|.   |
-    //       |____|  ' .
-    //
+    /// Bounding box intersects the frustum
+    ///
+    ///                 .
+    ///             . ' |
+    ///         . '     |
+    ///       |         |
+    ///        _.__     |
+    ///       |   '|.   |
+    ///       |____|  ' .
+    ///
     Intersecting,
 
-    //  Bounding box is fully inside the view frustum
-    //                 .
-    //             . ' |
-    //         . '___  |
-    //       |   |   | |
-    //         . |___| |
-    //           ' .   |
-    //               ' .
-    //
+    /// Bounding box is fully inside the view frustum
+    ///
+    ///                 .
+    ///             . ' |
+    ///         . '___  |
+    ///       |   |   | |
+    ///         . |___| |
+    ///           ' .   |
+    ///               ' .
+    ///
     FullyVisible
 };
 
@@ -356,14 +365,14 @@ inline float3 GetBoxFarthestCorner(const float3& Direction, const BoundBox& Box)
 /// Tests if the bounding box is fully visible, intersecting or invisible with
 /// respect to the plane.
 ///
-/// \remarks Plane normal doesn't have to be normalized.
-///          The box is visible when it is in the positive halfspace of the plane.
+/// Plane normal doesn't have to be normalized.
+/// The box is visible when it is in the positive halfspace of the plane.
 ///
-///   Invisible    |        Visible
-///                |   N
-///                |===>
-///                |
-///                |
+///     Invisible    |        Visible
+///                  |   N
+///                  |===>
+///                  |
+///                  |
 inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const BoundBox& Box)
 {
     // Calculate the distance from the box center to the plane:
@@ -378,26 +387,26 @@ inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const Bo
     // Check if the box is completely outside the plane
     if (DistanceToCenter < -ProjHalfLen)
     {
-        ///       .        |
-        ///     .' '.      |   N
-        ///    '.   .'     |===>
-        ///      '.'       |
-        ///       |        |
-        ///       |<-------|
-        ///        Distance
+        //       .        |
+        //     .' '.      |   N
+        //    '.   .'     |===>
+        //      '.'       |
+        //       |        |
+        //       |<-------|
+        //        Distance
         return BoxVisibility::Invisible;
     }
 
     // Check if the box is fully inside the plane
     if (DistanceToCenter > ProjHalfLen)
     {
-        ///     |            .
-        ///     |   N      .' '.
-        ///     |===>     '.   .'
-        ///     |           '.'
-        ///     |            |
-        ///     |----------->|
-        ///        Distance
+        //     |            .
+        //     |   N      .' '.
+        //     |===>     '.   .'
+        //     |           '.'
+        //     |            |
+        //     |----------->|
+        //        Distance
         return BoxVisibility::FullyVisible;
     }
 
@@ -420,26 +429,26 @@ inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const Or
     // Check if the box is completely outside the plane
     if (Distance < -ProjHalfExtents)
     {
-        ///       .        |
-        ///     .' '.      |   N
-        ///    '.   .'     |===>
-        ///      '.'       |
-        ///       |        |
-        ///       |<-------|
-        ///        Distance
+        //       .        |
+        //     .' '.      |   N
+        //    '.   .'     |===>
+        //      '.'       |
+        //       |        |
+        //       |<-------|
+        //        Distance
         return BoxVisibility::Invisible;
     }
 
     // Check if the box is fully inside the plane
     if (Distance > ProjHalfExtents)
     {
-        ///     |            .
-        ///     |   N      .' '.
-        ///     |===>     '.   .'
-        ///     |           '.'
-        ///     |            |
-        ///     |----------->|
-        ///        Distance
+        //     |            .
+        //     |   N      .' '.
+        //     |===>     '.   .'
+        //     |           '.'
+        //     |            |
+        //     |----------->|
+        //        Distance
         return BoxVisibility::FullyVisible;
     }
 
@@ -703,13 +712,13 @@ T HermiteSpline(T f0, // F(0)
     return (2 * x3 - 3 * x2 + 1) * f0 + (x3 - 2 * x2 + x) * t0 + (-2 * x3 + 3 * x2) * f1 + (x3 - x2) * t1;
 }
 
-// Returns the minimum bounding sphere of a view frustum
-inline void GetFrustumMinimumBoundingSphere(float   Proj_00,   // cot(HorzFOV / 2)
-                                            float   Proj_11,   // cot(VertFOV / 2) == proj_00 / AspectRatio
-                                            float   NearPlane, // Near clip plane
-                                            float   FarPlane,  // Far clip plane
-                                            float3& Center,    // Sphere center == (0, 0, c)
-                                            float&  Radius     // Sphere radius
+/// Returns the minimum bounding sphere of a view frustum
+inline void GetFrustumMinimumBoundingSphere(float   Proj_00,   ///< cot(HorzFOV / 2)
+                                            float   Proj_11,   ///< cot(VertFOV / 2) == proj_00 / AspectRatio
+                                            float   NearPlane, ///< Near clip plane
+                                            float   FarPlane,  ///< Far clip plane
+                                            float3& Center,    ///< Sphere center == (0, 0, c)
+                                            float&  Radius     ///< Sphere radius
 )
 {
     // https://lxjk.github.io/2017/04/15/Calculate-Minimal-Bounding-Sphere-of-Frustum.html
@@ -866,25 +875,25 @@ inline float IntersectRayTriangle(const float3& V0,
 ///                     for every cell visited. The function should return true to continue
 ///                     tracing and false to stop it.
 ///
-/// \remarks The algorithm clips the line against the grid boundaries [0 .. i2GridSize.x] x [0 .. i2GridSize.y]
+/// The algorithm clips the line against the grid boundaries [0 .. i2GridSize.x] x [0 .. i2GridSize.y]
 ///
-///          When one of the end points falls exactly on a vertical cell boundary, cell to the right is enumerated.
-///          When one of the end points falls exactly on a horizontal cell boundary, cell above is enumerated.
+/// When one of the end points falls exactly on a vertical cell boundary, cell to the right is enumerated.
+/// When one of the end points falls exactly on a horizontal cell boundary, cell above is enumerated.
 ///
 /// For example, for the line below on a 2x2 grid, the algorithm will trace the following cells: (0,0), (0,1), (1,1)
 ///
-///                End
-///                /
-///   __________ _/________  2
-///  |          |/         |
-///  |          /          |
-///  |         /|          |
-///  |________/_|__________| 1
-///  |       /  |          |
-///  |      /   |          |
-///  |    Start |          |
-///  |__________|__________| 0
-/// 0           1          2
+///                     End
+///                     /
+///        __________ _/________  2
+///       |          |/         |
+///       |          /          |
+///       |         /|          |
+///       |________/_|__________| 1
+///       |       /  |          |
+///       |      /   |          |
+///       |    Start |          |
+///       |__________|__________| 0
+///      0           1          2
 ///
 template <typename TCallback>
 void TraceLineThroughGrid(float2    f2Start,
@@ -1057,14 +1066,14 @@ bool IsPointInsideTriangle(const Vector2<T>& V0,
 /// the following locations will be enumerated:
 /// (1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (1, 3).
 ///
-///  3 *   *.  *   *
-///        | '.
-///  2 *   *   *.  *
-///        |     '.
-///  1 *   *---*---*
+///     3 *   *.  *   *
+///           | '.
+///     2 *   *   *.  *
+///           |     '.
+///     1 *   *---*---*
 ///
-///  0 *   *   *   *
-///    0   1   2   3
+///     0 *   *   *   *
+///       0   1   2   3
 ///
 /// \tparam [in] T    - Vertex component type.
 /// \tparam TCallback - Type of the callback function.
@@ -1274,11 +1283,11 @@ public:
     ///
     /// \return     The triangle list.
     ///
-    /// \remarks    The winding order of each triangle is the same as the winding
-    ///             order of the polygon.
+    /// The winding order of each triangle is the same as the winding
+    /// order of the polygon.
     ///
-    ///             The function does not check if the polygon is simple, e.g.
-    ///             that it does not self-intersect.
+    /// The function does not check if the polygon is simple, e.g.
+    /// that it does not self-intersect.
     template <typename ComponentType>
     const std::vector<IndexType>& Triangulate(const std::vector<Vector2<ComponentType>>& Polygon)
     {
@@ -1516,6 +1525,7 @@ private:
 
 
 /// 3D polygon triangulator.
+
 /// The class extends the Polygon2DTriangulator class to handle simple 3D polygons.
 /// It first projects the polygon onto a plane and then triangulates the resulting 2D polygon.
 ///
@@ -1527,10 +1537,10 @@ class Polygon3DTriangulator : public Polygon2DTriangulator<typename std::enable_
 public:
     /// Triangulates a simple polygon in 3D.
 
-    /// \remarks The function first projects the polygon onto a plane and then
-    ///          triangulates the resulting 2D polygon.
+    /// The function first projects the polygon onto a plane and then
+    /// triangulates the resulting 2D polygon.
     ///
-    ///          If vertices are not coplanar, the result is undefined.
+    /// If vertices are not coplanar, the result is undefined.
     const std::vector<IndexType>& Triangulate(const std::vector<Vector3<ComponentType>>& Polygon)
     {
         this->m_Triangles.clear();

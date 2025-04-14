@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,6 +26,9 @@
 
 #pragma once
 
+/// \file
+/// Thread pool implementation.
+
 #include "ThreadPool.h"
 
 #include <atomic>
@@ -45,9 +48,9 @@ struct ThreadPoolCreateInfo
 {
     /// The number of worker threads to start.
 
-    /// \remarks    An application may create a thread pool with
-    ///             zero threads, in which case it will be responsible
-    ///             for manually calling the IThreadPool::ProcessTask() method.
+    /// An application may create a thread pool with
+    /// zero threads, in which case it will be responsible
+    /// for manually calling the IThreadPool::ProcessTask() method.
     size_t NumThreads = 0;
 
     /// An optional function that will be called by the thread pool from
@@ -68,11 +71,11 @@ RefCntAutoPtr<IThreadPool> CreateThreadPool(const ThreadPoolCreateInfo& ThreadPo
 /// \param AllowedCoresMask - The bit mask of allowed cores.
 /// \return                 - Previous thread affinity mask, or 0 if the function failed.
 ///
-/// \remarks    The function selects the core by looping through the bits in the AllowedCoresMask.
-///             For example, if cores 1, 3, 6 are allowed by the mask, the threads will be assigned
-///             to cores 1, 3, 6, 1, 3, 6, etc.
+/// The function selects the core by looping through the bits in the AllowedCoresMask.
+/// For example, if cores 1, 3, 6 are allowed by the mask, the threads will be assigned
+/// to cores 1, 3, 6, 1, 3, 6, etc.
 ///
-///             This function can be used as the OnThreadStarted callback in the ThreadPoolCreateInfo.
+/// This function can be used as the OnThreadStarted callback in the ThreadPoolCreateInfo.
 Uint64 PinWorkerThread(Uint32 ThreadId, Uint64 AllowedCoresMask);
 
 /// Base implementation of the IAsyncTask interface.

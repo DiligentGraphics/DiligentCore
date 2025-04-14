@@ -1,4 +1,4 @@
-/*  Copyright 2023-2024 Diligent Graphics LLC
+/*  Copyright 2023-2025 Diligent Graphics LLC
 
  *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -89,23 +89,23 @@ auto _IsWeakPtrExpired(std::weak_ptr<T>& pWeakPtr)
 ///
 /// Usage example for shared_ptr:
 ///
-///    struct RegistryData
-///    {
-///        // ...
-///    };
-///    ObjectsRegistry<std::string, std::shared_ptr<RegistryData>> Registry;
+///     struct RegistryData
+///     {
+///         // ...
+///     };
+///     ObjectsRegistry<std::string, std::shared_ptr<RegistryData>> Registry;
 ///
-///    auto pObj = Registry.Get("Key",
-///                             []()
-///                             {
-///                                 return std::make_shared<RegistryData>();
-///                             });
+///     auto pObj = Registry.Get("Key",
+///                              []()
+///                              {
+///                                  return std::make_shared<RegistryData>();
+///                              });
 ///
 ///
-/// \note   If the object is not found in the registry, it is atomically created by the provided initializer function.
-///         If the object is found, the initializer function is not called.
+/// If the object is not found in the registry, it is atomically created by the provided initializer function.
+/// If the object is found, the initializer function is not called.
 ///
-///         It is guaranteed, that the Object will only be initialized once, even if multiple threads call Get() simultaneously.
+/// It is guaranteed, that the Object will only be initialized once, even if multiple threads call Get() simultaneously.
 ///
 template <typename KeyType,
           typename StrongPtrType,
@@ -129,12 +129,12 @@ public:
     /// \return     Strong pointer to the object with the specified key, either retrieved from the registry or initialized
     ///             with the CreateObject function.
     ///
-    /// \remarks    CreateObject function may throw in case of an error.
+    /// CreateObject function may throw in case of an error.
     ///
-    ///             It is guaranteed, that the Object will only be initialized once, even if multiple threads call Get() simultaneously.
-    ///             However, if another thread runs an overloaded Get() without the initializer function with the same key, it may
-    ///             remove the entry from the registry, and the object will be initialized multiple times.
-    ///             This is OK as only one object will be added to the registry.
+    /// It is guaranteed, that the Object will only be initialized once, even if multiple threads call Get() simultaneously.
+    /// However, if another thread runs an overloaded Get() without the initializer function with the same key, it may
+    /// remove the entry from the registry, and the object will be initialized multiple times.
+    /// This is OK as only one object will be added to the registry.
     template <typename CreateObjectType>
     StrongPtrType Get(const KeyType&     Key,
                       CreateObjectType&& CreateObject // May throw
@@ -217,8 +217,8 @@ public:
     ///
     /// \param [in] Key - The object key.
     ///
-    /// \return     Strong pointer to the object with the specified key, if the object is found in the registry,
-    ///             or empty pointer otherwise.
+    /// Strong pointer to the object with the specified key, if the object is found in the registry,
+    /// or empty pointer otherwise.
     StrongPtrType Get(const KeyType& Key)
     {
         std::lock_guard<std::mutex> Guard{m_CacheMtx};

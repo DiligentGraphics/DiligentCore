@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,6 +23,9 @@
  *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
+
+/// \file
+/// Defines CallbackWrapper class that wraps a callback function
 
 #include <utility>
 
@@ -78,16 +81,16 @@ struct FunctionTraits<ReturnType (ClassType::*)(ArgsType...) const>
 ///
 /// Example:
 ///
-///    auto ModifyPipelineCI = MakeCallback([&](PipelineStateCreateInfo* pPipelineCI) {
-///        auto* pGraphicsPipelineCI                              = static_cast<GraphicsPipelineStateCreateInfo*>(pPipelineCI);
-///        pGraphicsPipelineCI->GraphicsPipeline.RTVFormats[0]    = m_pSwapChain->GetDesc().ColorBufferFormat;
-///        pGraphicsPipelineCI->GraphicsPipeline.DSVFormat        = m_pSwapChain->GetDesc().DepthBufferFormat;
-///        pGraphicsPipelineCI->GraphicsPipeline.NumRenderTargets = 1;
-///    });
+///     auto ModifyPipelineCI = MakeCallback([&](PipelineStateCreateInfo* pPipelineCI) {
+///         auto* pGraphicsPipelineCI                              = static_cast<GraphicsPipelineStateCreateInfo*>(pPipelineCI);
+///         pGraphicsPipelineCI->GraphicsPipeline.RTVFormats[0]    = m_pSwapChain->GetDesc().ColorBufferFormat;
+///         pGraphicsPipelineCI->GraphicsPipeline.DSVFormat        = m_pSwapChain->GetDesc().DepthBufferFormat;
+///         pGraphicsPipelineCI->GraphicsPipeline.NumRenderTargets = 1;
+///     });
 ///
-///    LoadPipelineStateInfo PipelineLI{};
-///    PipelineLI.Modify       = ModifyPipelineCI;
-///    PipelineLI.pUserData    = ModifyPipelineCI;
+///     LoadPipelineStateInfo PipelineLI{};
+///     PipelineLI.Modify       = ModifyPipelineCI;
+///     PipelineLI.pUserData    = ModifyPipelineCI;
 template <typename CallbackType>
 auto MakeCallback(CallbackType&& Callback)
 {

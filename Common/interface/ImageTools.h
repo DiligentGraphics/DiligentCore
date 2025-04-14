@@ -109,12 +109,12 @@ typedef struct ComputeImageDifferenceAttribs ComputeImageDifferenceAttribs;
 ///
 /// \return     The image difference information, see Diligent::ImageDiffInfo.
 ///
-/// \remarks    The difference between two pixels is calculated as the maximum of the
-///             absolute differences of all channels. The average difference is the
-///             average of all differences, not counting pixels that are equal.
-///             The root mean square difference is calculated as the square root of
-///             the average of the squares of all differences, not counting pixels that
-///             are equal.
+/// The difference between two pixels is calculated as the maximum of the
+/// absolute differences of all channels. The average difference is the
+/// average of all differences, not counting pixels that are equal.
+/// The root mean square difference is calculated as the square root of
+/// the average of the squares of all differences, not counting pixels that
+/// are equal.
 void DILIGENT_GLOBAL_FUNCTION(ComputeImageDifference)(const ComputeImageDifferenceAttribs REF Attribs, ImageDiffInfo REF ImageDiff);
 
 

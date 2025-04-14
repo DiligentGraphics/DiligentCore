@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,6 +25,9 @@
  */
 
 #pragma once
+
+/// \file
+/// Defines Diligent::IAsyncTask and Diligent::IThreadPool interfaces.
 
 #include "../../Primitives/interface/Object.h"
 #include "../../Primitives/interface/BasicTypes.h"
@@ -72,25 +75,25 @@ DILIGENT_BEGIN_INTERFACE(IAsyncTask, IObject)
 
     /// \param [in] ThreadId - Id of the thread that is running this task.
     ///
-    /// \remarks    Before starting the task, the thread pool sets its
-    ///             status to ASYNC_TASK_STATUS_RUNNING.
+    /// Before starting the task, the thread pool sets its
+    /// status to Diligent::ASYNC_TASK_STATUS_RUNNING.
     ///
-    ///             The method must return one of the following values:
-    ///               - ASYNC_TASK_STATUS_CANCELLED to indicate that the task was cancelled.
-    ///               - ASYNC_TASK_STATUS_COMPLETE to indicate that the task is finished successfully.
-    ///               - ASYNC_TASK_STATUS_NOT_STARTED to request the task to be rescheduled.
+    /// The method must return one of the following values:
+    ///   - Diligent::ASYNC_TASK_STATUS_CANCELLED to indicate that the task was cancelled.
+    ///   - Diligent::ASYNC_TASK_STATUS_COMPLETE to indicate that the task is finished successfully.
+    ///   - Diligent::ASYNC_TASK_STATUS_NOT_STARTED to request the task to be rescheduled.
     ///
-    ///             The thread pool will set the task status to the returned value after
-    ///             the Run() method completes. This way if the GetStatus() method returns
-    ///             any value other than ASYNC_TASK_STATUS_RUNNING, it is guaranteed that the task
-    ///             is not executed by any thread.
+    /// The thread pool will set the task status to the returned value after
+    /// the Run() method completes. This way if the GetStatus() method returns
+    /// any value other than Diligent::ASYNC_TASK_STATUS_RUNNING, it is guaranteed that the task
+    /// is not executed by any thread.
     VIRTUAL ASYNC_TASK_STATUS METHOD(Run)(THIS_
                                      Uint32 ThreadId) PURE;
 
     /// Cancel the task, if possible.
-    ///
-    /// \remarks    If the task is running, the task implementation should
-    ///             abort the task execution, if possible.
+    
+    /// If the task is running, the task implementation should
+    /// abort the task execution, if possible.
     VIRTUAL void METHOD(Cancel)(THIS) PURE;
 
     /// Sets the task status, see Diligent::ASYNC_TASK_STATUS.
@@ -111,18 +114,18 @@ DILIGENT_BEGIN_INTERFACE(IAsyncTask, IObject)
     VIRTUAL bool METHOD(IsFinished)(THIS) CONST PURE;
 
     /// Waits until the task is complete.
-    ///
+    
     /// \note   This method must not be called from the same thread that is
     ///         running the task or a deadlock will occur.
     VIRTUAL void METHOD(WaitForCompletion)(THIS) CONST PURE;
 
     /// Waits until the tasks is running.
-    ///
+
     /// \warning  An application is responsible to make sure that
     ///           tasks currently in the queue will eventually finish
     ///           allowing the task to start.
     ///
-    ///           This method must not be called from the worker thread.
+    /// This method must not be called from the worker thread.
     VIRTUAL void METHOD(WaitUntilRunning)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
@@ -165,8 +168,8 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     ///                               that must be completed before this task can start.
     /// \param[in] NumPrerequisites - Number of prerequisites.
     ///
-    /// \remarks    Thread pool will keep a strong reference to the task,
-    ///             so an application is free to release it after enqueuing.
+    /// Thread pool will keep a strong reference to the task,
+    /// so an application is free to release it after enqueuing.
     /// 
     /// \note       An application must ensure that the task prerequisites are not circular
     ///             to avoid deadlocks.
@@ -183,18 +186,18 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     /// \return     true if the task was found in the queue and was
     ///             successfully reprioritized, and false otherwise.
     ///
-    /// \remarks    When the tasks is enqueued, its priority is used to
-    ///             place it in the priority queue. When an application changes
-    ///             the task priority, it should call this method to update the task
-    ///             position in the queue.
+    /// When the tasks is enqueued, its priority is used to
+    /// place it in the priority queue. When an application changes
+    /// the task priority, it should call this method to update the task
+    /// position in the queue.
     VIRTUAL bool METHOD(ReprioritizeTask)(THIS_
                                           IAsyncTask* pTask) PURE;
 
 
     /// Reprioritizes all tasks in the queue.
 
-    /// \remarks    This method should be called if task priorities have changed
-    ///             to update the positions of all tasks in the queue.
+    /// This method should be called if task priorities have changed
+    /// to update the positions of all tasks in the queue.
     VIRTUAL void METHOD(ReprioritizeAllTasks)(THIS) PURE;
 
 
@@ -210,10 +213,10 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
 
     /// Waits until all tasks in the queue are finished.
 
-    /// \remarks    The method blocks the calling thread until all
-    ///             tasks in the quque are finished and the queue is empty.
-    ///             An application is responsible to make sure that all tasks
-    ///             will finish eventually.
+    /// The method blocks the calling thread until all
+    /// tasks in the quque are finished and the queue is empty.
+    /// An application is responsible to make sure that all tasks
+    /// will finish eventually.
     VIRTUAL void METHOD(WaitForAllTasks)(THIS) PURE;
 
 
@@ -226,9 +229,9 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
 
     /// Stops all worker threads.
 
-    /// \note   This method makes all worker threads to exit.
-    ///         If an application enqueues tasks after calling this methods,
-    ///         this tasks will never run.
+    /// his method makes all worker threads to exit.
+    /// If an application enqueues tasks after calling this methods,
+    /// this tasks will never run.
     VIRTUAL void METHOD(StopThreads)(THIS) PURE;
 
 
@@ -244,43 +247,43 @@ DILIGENT_BEGIN_INTERFACE(IThreadPool, IObject)
     /// \return     Whether there are more tasks to process. The calling thread must keep
     ///             calling the function until it returns false.
     ///
-    /// \remarks    This method allows an application to implement its own threading strategy.
-    ///             A thread pool may be created with zero threads, and the application may call
-    ///             ProcessTask() method from its own threads.
+    /// This method allows an application to implement its own threading strategy.
+    /// A thread pool may be created with zero threads, and the application may call
+    /// ProcessTask() method from its own threads.
     ///
-    ///             An application must keep calling the method until it returns false.
-    ///             If there are unhandled tasks in the queue and the application stops processing
-    ///             them, the thread pool will hang up.
+    /// An application must keep calling the method until it returns false.
+    /// If there are unhandled tasks in the queue and the application stops processing
+    /// them, the thread pool will hang up.
     ///
-    ///             An example of handling the tasks is shown below:
+    /// An example of handling the tasks is shown below:
     ///
-    ///                 // Initialization
-    ///                 auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
+    ///     // Initialization
+    ///     auto pThreadPool = CreateThreadPool(ThreadPoolCreateInfo{0});
     ///
-    ///                 std::vector<std::thread> WorkerThreads(4);
-    ///                 for (Uint32 i PURE; i < WorkerThreads.size(); ++i)
+    ///     std::vector<std::thread> WorkerThreads(4);
+    ///     for (Uint32 i PURE; i < WorkerThreads.size(); ++i)
+    ///     {
+    ///         WorkerThreads[i] = std::thread{
+    ///             [&ThreadPool = *pThreadPool, i] //
+    ///             {
+    ///                 while (ThreadPool.ProcessTask(i, true))
     ///                 {
-    ///                     WorkerThreads[i] = std::thread{
-    ///                         [&ThreadPool = *pThreadPool, i] //
-    ///                         {
-    ///                             while (ThreadPool.ProcessTask(i, true))
-    ///                             {
-    ///                             }
-    ///                         }};
     ///                 }
+    ///             }};
+    ///     }
     ///
-    ///                 // Enqueue async tasks
+    ///     // Enqueue async tasks
     ///
-    ///                 pThreadPool->WaitForAllTasks();
+    ///     pThreadPool->WaitForAllTasks();
     ///
-    ///                 // Stop all threads in the pool
-    ///                 pThreadPool->StopThreads();
+    ///     // Stop all threads in the pool
+    ///     pThreadPool->StopThreads();
     ///
-    ///                 // Cleanup (must be done after all threads are stopped)
-    ///                 for (auto& Thread : WorkerThreads)
-    ///                 {
-    ///                     Thread.join();
-    ///                 }
+    ///     // Cleanup (must be done after all threads are stopped)
+    ///     for (auto& Thread : WorkerThreads)
+    ///     {
+    ///         Thread.join();
+    ///     }
     ///
     VIRTUAL bool METHOD(ProcessTask)(THIS_
                                      Uint32 ThreadId,

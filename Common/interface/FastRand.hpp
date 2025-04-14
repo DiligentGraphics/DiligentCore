@@ -27,6 +27,9 @@
 
 #pragma once
 
+/// \file
+/// Random number generator
+
 #include <chrono>
 
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
