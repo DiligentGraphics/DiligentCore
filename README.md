@@ -19,13 +19,13 @@ For details on supported platforms, features, and build instructions, please ref
 |<img src="media/emscripten-logo.png" width=24 valign="middle"> Web              | [![Build Status](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-emscripten.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/build-emscripten.yml?query=branch%3Amaster) | 
 
 
+[![Documentation](https://img.shields.io/badge/Documentation-online-0072B1?logo=readthedocs&logoColor=white)](https://diligentgraphics.github.io/docs)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](License.txt)
 [![Chat on Discord](https://img.shields.io/discord/730091778081947680?logo=discord)](https://discord.gg/t7HGBK7)
+[![Lines of code](https://sloc.xyz/github/DiligentGraphics/DiligentCore)](https://github.com/DiligentGraphics/DiligentCore)
 [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/DiligentGraphics/DiligentCore?svg=true)](https://ci.appveyor.com/project/DiligentGraphics/diligentcore)
 [![CodeQL Scanning](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/codeql.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/codeql.yml?query=branch%3Amaster)
 [![MSVC Analysis](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/msvc_analysis.yml/badge.svg?branch=master)](https://github.com/DiligentGraphics/DiligentCore/actions/workflows/msvc_analysis.yml?query=branch%3Amaster)
-[![Lines of code](https://sloc.xyz/github/DiligentGraphics/DiligentCore)](https://github.com/DiligentGraphics/DiligentCore)
-[![Documentation](https://img.shields.io/badge/Documentation-blue)](https://diligentgraphics.github.io/docs)
 
 
 # Table of Contents
