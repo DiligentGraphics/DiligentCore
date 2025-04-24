@@ -878,6 +878,8 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         vkEnabledFeatures.samplerAnisotropy                       = vkDeviceFeatures.samplerAnisotropy;
         vkEnabledFeatures.fullDrawIndexUint32                     = vkDeviceFeatures.fullDrawIndexUint32;
         vkEnabledFeatures.drawIndirectFirstInstance               = vkDeviceFeatures.drawIndirectFirstInstance;
+        vkEnabledFeatures.shaderStorageImageMultisample           = vkDeviceFeatures.shaderStorageImageMultisample;
+        vkEnabledFeatures.shaderStorageImageReadWithoutFormat     = vkDeviceFeatures.shaderStorageImageReadWithoutFormat;
         vkEnabledFeatures.shaderStorageImageWriteWithoutFormat    = vkDeviceFeatures.shaderStorageImageWriteWithoutFormat;
         vkEnabledFeatures.shaderUniformBufferArrayDynamicIndexing = vkDeviceFeatures.shaderUniformBufferArrayDynamicIndexing;
         vkEnabledFeatures.shaderSampledImageArrayDynamicIndexing  = vkDeviceFeatures.shaderSampledImageArrayDynamicIndexing;
