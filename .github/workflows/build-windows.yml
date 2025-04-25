@@ -106,19 +106,19 @@ jobs:
     - name: DiligentCoreAPITest D3D11
       # NB: it is essential to include failure() to override the default status check of success()
       #     that is automatically applied to if conditions that don't contain a status check function.
-      if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win8.1') }}
+      if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win10-Ninja') }}
       uses: DiligentGraphics/github-action/run-core-gpu-tests@v5
       with:
         mode: d3d11_sw
 
     - name: DiligentCoreAPITest D3D12
-      if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
+      if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win10-Ninja') }}
       uses: DiligentGraphics/github-action/run-core-gpu-tests@v5
       with:
         mode: d3d12_sw
 
     - name: DiligentCoreAPITest D3D12 DXC
-      if:   ${{ (success() || failure() && steps.build.outcome == 'success') && matrix.name == 'Win10' }}
+      if:   ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Win10' || matrix.name == 'Win10-Ninja') }}
       uses: DiligentGraphics/github-action/run-core-gpu-tests@v5
       with:
         mode:    d3d12_sw
