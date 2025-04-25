@@ -73,27 +73,52 @@ endif()
 
 # Set paths to D3Dcompiler_47.dll, dxcompiler.dll, and dxil.dll
 if(MSVC)
-    if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-        set(ARCH_SUFFIX "x64")
-    else()
-        set(ARCH_SUFFIX "x86")
-    endif()
-
-    # Note that CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION is stated to be defined when targeting Windows 10
-    # and above, however it is also defined when targeting 8.1 and Visual Studio 2019 (but not VS2017)
     if("${WINDOWS_SDK_VERSION}" VERSION_GREATER_EQUAL "10.0" AND WINDOWS_SDK_BIN_DIR)
-        set(VS_D3D_COMPILER_PATH "\"${WINDOWS_SDK_BIN_DIR}\\D3Dcompiler_47.dll\"" CACHE INTERNAL "D3Dcompiler_47.dll path")
+        set(D3D_COMPILER_PATH "${WINDOWS_SDK_BIN_DIR}/D3Dcompiler_47.dll")
 
         # DXC is only present in Windows SDK starting with version 10.0.17763.0
         if("${WINDOWS_SDK_VERSION}" VERSION_GREATER_EQUAL "10.0.17763.0")
-            set(VS_DXC_COMPILER_PATH "\"${WINDOWS_SDK_BIN_DIR}\\dxcompiler.dll\"" CACHE INTERNAL "dxcompiler.dll path")
-            set(VS_DXIL_SIGNER_PATH  "\"${WINDOWS_SDK_BIN_DIR}\\dxil.dll\"" CACHE INTERNAL "dxil.dll path")
+            set(DXC_COMPILER_PATH "${WINDOWS_SDK_BIN_DIR}/dxcompiler.dll")
+            set(DXIL_SIGNER_PATH  "${WINDOWS_SDK_BIN_DIR}/dxil.dll")
         endif()
     elseif("${WINDOWS_SDK_VERSION}" VERSION_EQUAL "8.1")
         # D3Dcompiler_47.dll from Win8.1 SDK is ancient (from 2013) and fails to
         # compile a number of test shaders. Use the compiler from Visual Studio
         # executable path instead
-        set(VS_D3D_COMPILER_PATH "\"$(VC_ExecutablePath_x64_${ARCH_SUFFIX})\\D3Dcompiler_47.dll\"" CACHE INTERNAL "D3Dcompiler_47.dll path")
+        if(CMAKE_AR AND IS_ABSOLUTE "${CMAKE_AR}")
+            get_filename_component(CMAKE_AR_DIR "${CMAKE_AR}" DIRECTORY)
+            set(D3D_COMPILER_PATH "${CMAKE_AR_DIR}/D3Dcompiler_47.dll")
+        endif()
+    endif()
+
+    if(D3D_COMPILER_PATH)
+        if(EXISTS "${D3D_COMPILER_PATH}")
+            message(STATUS "Found D3Dcompiler_47.dll: ${D3D_COMPILER_PATH}")
+            set(D3D_COMPILER_PATH "${D3D_COMPILER_PATH}" CACHE INTERNAL "D3Dcompiler_47.dll path")
+        else()
+            message(WARNING "Cannot find D3Dcompiler_47.dll. File does not exist: ${D3D_COMPILER_PATH}")
+            unset(D3D_COMPILER_PATH CACHE)
+        endif()
+    endif()
+
+    if (DXC_COMPILER_PATH)
+        if (EXISTS "${DXC_COMPILER_PATH}")
+		    message(STATUS "Found dxcompiler.dll: ${DXC_COMPILER_PATH}")
+		    set(DXC_COMPILER_PATH "${DXC_COMPILER_PATH}" CACHE INTERNAL "dxcompiler.dll path")
+	    else()
+		    message(WARNING "Cannot find dxcompiler.dll. File does not exist: ${DXC_COMPILER_PATH}")
+		    unset(DXC_COMPILER_PATH CACHE)
+        endif()
+    endif()
+
+    if (DXIL_SIGNER_PATH)
+		if (EXISTS "${DXIL_SIGNER_PATH}")
+			message(STATUS "Found dxil.dll: ${DXIL_SIGNER_PATH}")
+			set(DXIL_SIGNER_PATH "${DXIL_SIGNER_PATH}" CACHE INTERNAL "dxil.dll path")
+		else()
+			message(WARNING "Cannot find dxil.dll. File does not exist: ${DXIL_SIGNER_PATH}")
+			unset(DXIL_SIGNER_PATH CACHE)
+		endif()
     endif()
 endif()
 

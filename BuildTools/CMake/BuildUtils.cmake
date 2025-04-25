@@ -32,20 +32,16 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
 
         # Copy D3Dcompiler_47.dll, dxcompiler.dll, and dxil.dll
         if(MSVC)
-            if ((D3D11_SUPPORTED OR D3D12_SUPPORTED) AND VS_D3D_COMPILER_PATH)
-                # Note that VS_D3D_COMPILER_PATH can only be used in a Visual Studio command
-                # and is not a valid path during CMake configuration
-                list(APPEND SHADER_COMPILER_DLLS ${VS_D3D_COMPILER_PATH})
+            if ((D3D11_SUPPORTED OR D3D12_SUPPORTED) AND D3D_COMPILER_PATH)
+                list(APPEND SHADER_COMPILER_DLLS "${D3D_COMPILER_PATH}")
             endif()
 
-            if(D3D12_SUPPORTED AND VS_DXC_COMPILER_PATH AND VS_DXIL_SIGNER_PATH)
+            if(D3D12_SUPPORTED AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
                 # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in
                 # the same folder as the dxcompiler.dll at runtime.
 
-                # Note that VS_DXC_COMPILER_PATH and VS_DXIL_SIGNER_PATH can only be used in a Visual Studio command
-                # and are not valid paths during CMake configuration
-                list(APPEND SHADER_COMPILER_DLLS ${VS_DXC_COMPILER_PATH})
-                list(APPEND SHADER_COMPILER_DLLS ${VS_DXIL_SIGNER_PATH})
+                list(APPEND SHADER_COMPILER_DLLS "${DXC_COMPILER_PATH}")
+                list(APPEND SHADER_COMPILER_DLLS "${DXIL_SIGNER_PATH}")
             endif()
 
             foreach(DLL ${SHADER_COMPILER_DLLS})
@@ -77,18 +73,16 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
     endfunction()
 
     function(package_required_dlls TARGET_NAME)
-        if(D3D12_SUPPORTED AND VS_DXC_COMPILER_PATH AND VS_DXIL_SIGNER_PATH)
+        if(D3D12_SUPPORTED AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
             # Copy the dlls to the project's CMake binary dir
 
-            # Note that VS_DXC_COMPILER_PATH and VS_DXIL_SIGNER_PATH can only be used in a Visual Studio command
-            # and are not valid paths during CMake configuration
             add_custom_command(TARGET ${TARGET_NAME} PRE_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${VS_DXC_COMPILER_PATH}
-                    "\"${CMAKE_CURRENT_BINARY_DIR}/dxcompiler.dll\""
+                    "${DXC_COMPILER_PATH}"
+                    "${CMAKE_CURRENT_BINARY_DIR}/dxcompiler.dll"
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${VS_DXIL_SIGNER_PATH}
-                    "\"${CMAKE_CURRENT_BINARY_DIR}/dxil.dll\"")
+                    "${DXIL_SIGNER_PATH}"
+                    "${CMAKE_CURRENT_BINARY_DIR}/dxil.dll")
             set(DLLS "${CMAKE_CURRENT_BINARY_DIR}/dxcompiler.dll" "${CMAKE_CURRENT_BINARY_DIR}/dxil.dll")
 
             # Add the dlls to the target project as source files
