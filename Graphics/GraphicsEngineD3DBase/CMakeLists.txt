@@ -81,19 +81,13 @@ if(MSVC)
 
     # Note that CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION is stated to be defined when targeting Windows 10
     # and above, however it is also defined when targeting 8.1 and Visual Studio 2019 (but not VS2017)
-    if("${WINDOWS_SDK_VERSION}" VERSION_GREATER_EQUAL "10.0")
-        if (DEFINED CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
-            # Note that VS_WINDOWS_SDK_BIN_DIR as well as all derived paths can only be used in Visual Studio
-            # commands and are not valid paths during CMake configuration
-            set(VS_WINDOWS_SDK_BIN_DIR "$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\${ARCH_SUFFIX}")
+    if("${WINDOWS_SDK_VERSION}" VERSION_GREATER_EQUAL "10.0" AND WINDOWS_SDK_BIN_DIR)
+        set(VS_D3D_COMPILER_PATH "\"${WINDOWS_SDK_BIN_DIR}\\D3Dcompiler_47.dll\"" CACHE INTERNAL "D3Dcompiler_47.dll path")
 
-            set(VS_D3D_COMPILER_PATH "\"${VS_WINDOWS_SDK_BIN_DIR}\\D3Dcompiler_47.dll\"" CACHE INTERNAL "D3Dcompiler_47.dll path")
-
-            # DXC is only present in Windows SDK starting with version 10.0.17763.0
-            if(${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} VERSION_GREATER_EQUAL "10.0.17763.0")
-                set(VS_DXC_COMPILER_PATH "\"${VS_WINDOWS_SDK_BIN_DIR}\\dxcompiler.dll\"" CACHE INTERNAL "dxcompiler.dll path")
-                set(VS_DXIL_SIGNER_PATH  "\"${VS_WINDOWS_SDK_BIN_DIR}\\dxil.dll\"" CACHE INTERNAL "dxil.dll path")
-            endif()
+        # DXC is only present in Windows SDK starting with version 10.0.17763.0
+        if("${WINDOWS_SDK_VERSION}" VERSION_GREATER_EQUAL "10.0.17763.0")
+            set(VS_DXC_COMPILER_PATH "\"${WINDOWS_SDK_BIN_DIR}\\dxcompiler.dll\"" CACHE INTERNAL "dxcompiler.dll path")
+            set(VS_DXIL_SIGNER_PATH  "\"${WINDOWS_SDK_BIN_DIR}\\dxil.dll\"" CACHE INTERNAL "dxil.dll path")
         endif()
     elseif("${WINDOWS_SDK_VERSION}" VERSION_EQUAL "8.1")
         # D3Dcompiler_47.dll from Win8.1 SDK is ancient (from 2013) and fails to

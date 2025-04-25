@@ -101,6 +101,7 @@ endif()
 message("CMake generator: " ${CMAKE_GENERATOR})
 
 if(WIN32)
+    # Determine Windows SDK version
     if (CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
         set(WINDOWS_SDK_VERSION ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} CACHE INTERNAL "Windows SDK version")
     elseif(DEFINED ENV{WindowsSDKVersion})
@@ -113,12 +114,55 @@ if(WIN32)
         message(WARNING "Unable to determine Windows SDK version: neither the CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION CMake variable nor the WindowsSDKVersion environment variable is set")
     endif()
 
+    # Get Windows SDK bin directory
+    if ("${WINDOWS_SDK_VERSION}" VERSION_GREATER_EQUAL "10.0")
+        get_filename_component(
+        WINDOWS_KITS_ROOT
+            "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Kits\\Installed Roots;KitsRoot10]"
+            ABSOLUTE
+        )
+        if (NOT WINDOWS_KITS_ROOT)
+            message(WARNING "Unable to read Windows SDK root directory from registry")
+        elseif(NOT EXISTS "${WINDOWS_KITS_ROOT}")
+            message(WARNING "Windows SDK root directory does not exist: " ${WINDOWS_KITS_ROOT})
+            unset(WINDOWS_KITS_ROOT)
+        endif()
+
+        if(WINDOWS_KITS_ROOT)
+            # NOTE: CMAKE_GENERATOR_PLATFORM is not set for single-configuration generators (e.g. Makefile, Ninja)
+            if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+                if ("${TARGET_CPU}" STREQUAL "arm")
+                    set(ARCH_SUFFIX "arm64")
+                else()
+                    set(ARCH_SUFFIX "x64")
+                endif()
+            else()
+                if ("${TARGET_CPU}" STREQUAL "arm")
+                    set(ARCH_SUFFIX "arm")
+                else()
+                    set(ARCH_SUFFIX "x86")
+                endif()
+            endif()
+
+            set(WINDOWS_SDK_BIN_DIR "${WINDOWS_KITS_ROOT}/bin/${WINDOWS_SDK_VERSION}/${ARCH_SUFFIX}")
+            if (EXISTS "${WINDOWS_SDK_BIN_DIR}")
+                set(WINDOWS_SDK_BIN_DIR "${WINDOWS_SDK_BIN_DIR}" CACHE INTERNAL "Windows SDK bin directory")
+            else()
+                message(WARNING "Windows SDK bin directory does not exist: " ${WINDOWS_SDK_BIN_DIR})
+			    unset(WINDOWS_SDK_BIN_DIR)
+            endif()
+        endif()
+    endif()
+
     if(${CMAKE_SYSTEM_NAME} STREQUAL "WindowsStore")
         set(PLATFORM_UNIVERSAL_WINDOWS TRUE CACHE INTERNAL "Target platform: Windows Store")
         message("Target platform: Universal Windows " ${ARCH} ". Windows SDK Version: " ${WINDOWS_SDK_VERSION})
     else()
         set(PLATFORM_WIN32 TRUE CACHE INTERNAL "Target platform: Win32") #WIN32 is a variable, so we cannot use string "WIN32"
         message("Target platform: Win32 " ${ARCH} ". Windows SDK Version: " ${WINDOWS_SDK_VERSION})
+    endif()
+    if(WINDOWS_SDK_BIN_DIR)
+        message("Windows SDK bin directory: " ${WINDOWS_SDK_BIN_DIR})
     endif()
 else()
     if(${CMAKE_SYSTEM_NAME} STREQUAL "Android")
