@@ -72,7 +72,7 @@ if(DILIGENT_INSTALL_CORE)
 endif()
 
 # Set paths to D3Dcompiler_47.dll, dxcompiler.dll, and dxil.dll
-if(MSVC)
+if(WIN32)
     unset(D3D_COMPILER_PATH CACHE)
 	unset(DXC_COMPILER_PATH CACHE)
 	unset(DXIL_SIGNER_PATH CACHE)
