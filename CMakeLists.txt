@@ -115,6 +115,7 @@ if(WIN32)
     endif()
 
     # Get Windows SDK bin directory
+    unset(WINDOWS_SDK_BIN_DIR CACHE)
     if ("${WINDOWS_SDK_VERSION}" VERSION_GREATER_EQUAL "10.0")
         get_filename_component(
         WINDOWS_KITS_ROOT
