@@ -1,6 +1,27 @@
-if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
+if(PLATFORM_WIN32)
 
+    # Copies required dlls to the target's output directory
+    #
+    # The following dlls are copied:
+    #  - Engine dlls (GraphicsEngine*.dll)
+    #  - Archiver dll (Archiver*.dll)
+    #  - D3Dcompiler_47.dll
+    #  - Optional DXC dlls (dxcompiler.dll, dxil.dll, spv_dxcompiler.dll)
+    #
+    # Arguments:
+    #   TARGET_NAME  - name of the target to copy dlls for
+    #   DXC_REQUIRED - Indicates that the target requires DXC compiler dlls
+    #                  (dxcompiler.dll, dxil.dll and spv_dxcompiler.dll)
+    #
+    # Example:
+    #   copy_required_dlls(MyTarget DXC_REQUIRED YES)
+    #
     function(copy_required_dlls TARGET_NAME)
+        set(options)
+        set(oneValueArgs DXC_REQUIRED)
+        set(multiValueArgs)
+        cmake_parse_arguments(PARSE_ARGV 1 arg "${options}" "${oneValueArgs}" "${multiValueArgs}")
+
         if(D3D11_SUPPORTED)
             list(APPEND ENGINE_DLLS Diligent-GraphicsEngineD3D11-shared)
         endif()
@@ -36,7 +57,7 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                 list(APPEND SHADER_COMPILER_DLLS "${D3D_COMPILER_PATH}")
             endif()
 
-            if(D3D12_SUPPORTED AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
+            if(arg_DXC_REQUIRED AND D3D12_SUPPORTED AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
                 # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in
                 # the same folder as the dxcompiler.dll at runtime.
 
@@ -58,7 +79,7 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                         "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
             endif()
 
-            if(VULKAN_SUPPORTED)
+            if(arg_DXC_REQUIRED AND VULKAN_SUPPORTED)
                 if(NOT DEFINED DILIGENT_DXCOMPILER_FOR_SPIRV_PATH)
                     message(FATAL_ERROR "DILIGENT_DXCOMPILER_FOR_SPIRV_PATH is undefined, check order of cmake includes")
                 endif()
@@ -72,8 +93,18 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
         endif()
     endfunction()
 
+elseif(PLATFORM_UNIVERSAL_WINDOWS)
+
+    # Adds commands to package required DLLs into the appx package
+    # Example:
+    #   package_required_dlls(MyTarget DXC_REQUIRED YES)
     function(package_required_dlls TARGET_NAME)
-        if(D3D12_SUPPORTED AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
+        set(options)
+        set(oneValueArgs DXC_REQUIRED)
+        set(multiValueArgs)
+        cmake_parse_arguments(PARSE_ARGV 1 arg "${options}" "${oneValueArgs}" "${multiValueArgs}")
+
+        if(arg_DXC_REQUIRED AND D3D12_SUPPORTED AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
             # Copy the dlls to the project's CMake binary dir
 
             add_custom_command(TARGET ${TARGET_NAME} PRE_BUILD
@@ -96,6 +127,10 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
         endif()
     endfunction()
 
+endif()
+
+if (PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
+
     # Set dll output name by adding _{32|64}{r|d} suffix
     function(set_dll_output_name TARGET_NAME OUTPUT_NAME_WITHOUT_SUFFIX)
         foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
@@ -111,7 +146,7 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
         endforeach()
     endfunction()
 
-endif(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
+endif()
 
 
 function(set_common_target_properties TARGET)

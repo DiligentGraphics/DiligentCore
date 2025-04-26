@@ -159,7 +159,9 @@ PROPERTIES
 )
 
 if(PLATFORM_WIN32)
-    copy_required_dlls(DiligentCoreAPITest)
+    copy_required_dlls(DiligentCoreAPITest
+        DXC_REQUIRED YES
+    )
 endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${ALL_SOURCE})
