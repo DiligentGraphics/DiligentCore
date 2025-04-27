@@ -71,59 +71,6 @@ if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-GraphicsEngineD3DBase)
 endif()
 
-# Set paths to D3Dcompiler_47.dll, dxcompiler.dll, and dxil.dll
-if(WIN32)
-    unset(D3D_COMPILER_PATH CACHE)
-	unset(DXC_COMPILER_PATH CACHE)
-	unset(DXIL_SIGNER_PATH CACHE)
-
-    if("${WINDOWS_SDK_VERSION}" VERSION_GREATER_EQUAL "10.0" AND WINDOWS_SDK_BIN_DIR)
-        set(D3D_COMPILER_PATH "${WINDOWS_SDK_BIN_DIR}/D3Dcompiler_47.dll")
-
-        # DXC is only present in Windows SDK starting with version 10.0.17763.0
-        if("${WINDOWS_SDK_VERSION}" VERSION_GREATER_EQUAL "10.0.17763.0")
-            set(DXC_COMPILER_PATH "${WINDOWS_SDK_BIN_DIR}/dxcompiler.dll")
-            set(DXIL_SIGNER_PATH  "${WINDOWS_SDK_BIN_DIR}/dxil.dll")
-        endif()
-    elseif("${WINDOWS_SDK_VERSION}" VERSION_EQUAL "8.1")
-        # D3Dcompiler_47.dll from Win8.1 SDK is ancient (from 2013) and fails to
-        # compile a number of test shaders. Use the compiler from Visual Studio
-        # executable path instead
-        if(CMAKE_AR AND IS_ABSOLUTE "${CMAKE_AR}")
-            get_filename_component(CMAKE_AR_DIR "${CMAKE_AR}" DIRECTORY)
-            set(D3D_COMPILER_PATH "${CMAKE_AR_DIR}/D3Dcompiler_47.dll")
-        endif()
-    endif()
-
-    if(D3D_COMPILER_PATH)
-        if(EXISTS "${D3D_COMPILER_PATH}")
-            message(STATUS "Found D3Dcompiler_47.dll: ${D3D_COMPILER_PATH}")
-            set(D3D_COMPILER_PATH "${D3D_COMPILER_PATH}" CACHE INTERNAL "D3Dcompiler_47.dll path")
-        else()
-            message(WARNING "Cannot find D3Dcompiler_47.dll. File does not exist: ${D3D_COMPILER_PATH}")
-        endif()
-    endif()
-
-    if (DXC_COMPILER_PATH)
-        if (EXISTS "${DXC_COMPILER_PATH}")
-		    message(STATUS "Found dxcompiler.dll: ${DXC_COMPILER_PATH}")
-		    set(DXC_COMPILER_PATH "${DXC_COMPILER_PATH}" CACHE INTERNAL "dxcompiler.dll path")
-	    else()
-		    message(WARNING "Cannot find dxcompiler.dll. File does not exist: ${DXC_COMPILER_PATH}")
-        endif()
-    endif()
-
-    if (DXIL_SIGNER_PATH)
-		if (EXISTS "${DXIL_SIGNER_PATH}")
-			message(STATUS "Found dxil.dll: ${DXIL_SIGNER_PATH}")
-			set(DXIL_SIGNER_PATH "${DXIL_SIGNER_PATH}" CACHE INTERNAL "dxil.dll path")
-		else()
-			message(WARNING "Cannot find dxil.dll. File does not exist: ${DXIL_SIGNER_PATH}")
-		endif()
-    endif()
-endif()
-
-
 if(EXISTS "${DILIGENT_NVAPI_PATH}/nvapi.h")
     message(STATUS "Using NVApi from ${DILIGENT_NVAPI_PATH}")
     if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)

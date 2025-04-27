@@ -52,44 +52,39 @@ if(PLATFORM_WIN32)
         endforeach(DLL)
 
         # Copy D3Dcompiler_47.dll, dxcompiler.dll, and dxil.dll
-        if(MSVC)
-            if ((D3D11_SUPPORTED OR D3D12_SUPPORTED) AND D3D_COMPILER_PATH)
-                list(APPEND SHADER_COMPILER_DLLS "${D3D_COMPILER_PATH}")
-            endif()
+        if ((D3D11_SUPPORTED OR D3D12_SUPPORTED) AND D3D_COMPILER_PATH)
+            list(APPEND SHADER_COMPILER_DLLS "${D3D_COMPILER_PATH}")
+        endif()
 
-            if(arg_DXC_REQUIRED AND D3D12_SUPPORTED AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
-                # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in
-                # the same folder as the dxcompiler.dll at runtime.
+        # Dawn uses DXC, so we need to copy the DXC dlls even if DXC_REQUIRED is not set
+        # to get consistent shader compilation results
+        if(((arg_DXC_REQUIRED AND D3D12_SUPPORTED) OR WEBGPU_SUPPORTED) AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
+            # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in
+            # the same folder as the dxcompiler.dll at runtime.
 
-                list(APPEND SHADER_COMPILER_DLLS "${DXC_COMPILER_PATH}")
-                list(APPEND SHADER_COMPILER_DLLS "${DXIL_SIGNER_PATH}")
-            endif()
+            list(APPEND SHADER_COMPILER_DLLS "${DXC_COMPILER_PATH}")
+            list(APPEND SHADER_COMPILER_DLLS "${DXIL_SIGNER_PATH}")
+        endif()
 
-            foreach(DLL ${SHADER_COMPILER_DLLS})
-                add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        ${DLL}
-                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
-            endforeach(DLL)
+        foreach(DLL ${SHADER_COMPILER_DLLS})
+            add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    ${DLL}
+                    "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
+        endforeach(DLL)
 
-            if(D3D12_SUPPORTED AND EXISTS ${DILIGENT_PIX_EVENT_RUNTIME_DLL_PATH})
-                add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        ${DILIGENT_PIX_EVENT_RUNTIME_DLL_PATH}
-                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
-            endif()
+        if(D3D12_SUPPORTED AND EXISTS "${DILIGENT_PIX_EVENT_RUNTIME_DLL_PATH}")
+            add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DILIGENT_PIX_EVENT_RUNTIME_DLL_PATH}"
+                    "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
+        endif()
 
-            if(arg_DXC_REQUIRED AND VULKAN_SUPPORTED)
-                if(NOT DEFINED DILIGENT_DXCOMPILER_FOR_SPIRV_PATH)
-                    message(FATAL_ERROR "DILIGENT_DXCOMPILER_FOR_SPIRV_PATH is undefined, check order of cmake includes")
-                endif()
-                if(EXISTS ${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH})
-                    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                            ${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH}
-                            "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/spv_dxcompiler.dll\"")
-                endif()
-            endif()
+        if(arg_DXC_REQUIRED AND VULKAN_SUPPORTED AND EXISTS "${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH}")
+            add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH}"
+                    "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/spv_dxcompiler.dll\"")
         endif()
     endfunction()
 
