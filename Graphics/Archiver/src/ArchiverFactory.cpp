@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -170,8 +170,8 @@ void ArchiverFactoryImpl::CreateArchiver(ISerializationDevice* pDevice, IArchive
     *ppArchiver = nullptr;
     try
     {
-        auto& RawMemAllocator = GetRawAllocator();
-        auto* pArchiverImpl(NEW_RC_OBJ(RawMemAllocator, "Archiver instance", ArchiverImpl)(ClassPtrCast<SerializationDeviceImpl>(pDevice)));
+        IMemoryAllocator& RawMemAllocator = GetRawAllocator();
+        ArchiverImpl*     pArchiverImpl(NEW_RC_OBJ(RawMemAllocator, "Archiver instance", ArchiverImpl)(ClassPtrCast<SerializationDeviceImpl>(pDevice)));
         pArchiverImpl->QueryInterface(IID_Archiver, reinterpret_cast<IObject**>(ppArchiver));
     }
     catch (...)
@@ -189,8 +189,8 @@ void ArchiverFactoryImpl::CreateSerializationDevice(const SerializationDeviceCre
     *ppDevice = nullptr;
     try
     {
-        auto& RawMemAllocator = GetRawAllocator();
-        auto* pDeviceImpl(NEW_RC_OBJ(RawMemAllocator, "Serialization device instance", SerializationDeviceImpl)(CreateInfo));
+        IMemoryAllocator&        RawMemAllocator = GetRawAllocator();
+        SerializationDeviceImpl* pDeviceImpl(NEW_RC_OBJ(RawMemAllocator, "Serialization device instance", SerializationDeviceImpl)(CreateInfo));
         pDeviceImpl->QueryInterface(IID_SerializationDevice, reinterpret_cast<IObject**>(ppDevice));
     }
     catch (...)
@@ -233,8 +233,8 @@ Bool ArchiverFactoryImpl::RemoveDeviceData(const IDataBlob*          pSrcArchive
 
         while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
         {
-            const auto DataTypeFlag      = ExtractLSB(DeviceFlags);
-            const auto ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
+            const ARCHIVE_DEVICE_DATA_FLAGS       DataTypeFlag      = ExtractLSB(DeviceFlags);
+            const DeviceObjectArchive::DeviceType ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
 
             ObjectArchive.RemoveDeviceData(ArchiveDeviceType);
         }
@@ -277,8 +277,8 @@ Bool ArchiverFactoryImpl::AppendDeviceData(const IDataBlob*          pSrcArchive
 
         while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
         {
-            const auto DataTypeFlag      = ExtractLSB(DeviceFlags);
-            const auto ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
+            const ARCHIVE_DEVICE_DATA_FLAGS       DataTypeFlag      = ExtractLSB(DeviceFlags);
+            const DeviceObjectArchive::DeviceType ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
 
             ObjectArchive.AppendDeviceData(DevObjectArchive, ArchiveDeviceType);
         }

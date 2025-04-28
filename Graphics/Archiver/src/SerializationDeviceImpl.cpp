@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
 
     if (m_ValidDeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_VULKAN)
     {
-        const auto& ApiVersion    = CreateInfo.Vulkan.ApiVersion;
+        const Version& ApiVersion = CreateInfo.Vulkan.ApiVersion;
         m_VkProps.VkVersion       = (ApiVersion.Major << 22u) | (ApiVersion.Minor << 12u);
         m_pVkDxCompiler           = CreateDXCompiler(DXCompilerTarget::Vulkan, m_VkProps.VkVersion, CreateInfo.Vulkan.DxCompilerPath);
         m_VkProps.pDxCompiler     = m_pVkDxCompiler.get();
@@ -104,7 +104,7 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
 
     if (m_ValidDeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS)
     {
-        const auto* CompileOptionsMacOS = CreateInfo.Metal.CompileOptionsMacOS;
+        const char* CompileOptionsMacOS = CreateInfo.Metal.CompileOptionsMacOS;
         if (CompileOptionsMacOS != nullptr && CompileOptionsMacOS[0] != '\0')
         {
             m_MtlProps.CompileOptionsMacOS = CompileOptionsMacOS;
@@ -118,7 +118,7 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
 
     if (m_ValidDeviceFlags & ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS)
     {
-        const auto* CompileOptionsiOS = CreateInfo.Metal.CompileOptionsiOS;
+        const char* CompileOptionsiOS = CreateInfo.Metal.CompileOptionsiOS;
         if (CompileOptionsiOS != nullptr && CompileOptionsiOS[0] != '\0')
         {
             m_MtlProps.CompileOptionsIOS = CompileOptionsiOS;
@@ -132,13 +132,13 @@ SerializationDeviceImpl::SerializationDeviceImpl(IReferenceCounters* pRefCounter
 
     if (m_ValidDeviceFlags & (ARCHIVE_DEVICE_DATA_FLAG_METAL_MACOS | ARCHIVE_DEVICE_DATA_FLAG_METAL_IOS))
     {
-        const auto* MslPreprocessorCmd = CreateInfo.Metal.MslPreprocessorCmd;
+        const char* MslPreprocessorCmd = CreateInfo.Metal.MslPreprocessorCmd;
         if (MslPreprocessorCmd != nullptr && MslPreprocessorCmd[0] != '\0')
         {
             m_MtlProps.MslPreprocessorCmd = MslPreprocessorCmd;
         }
 
-        const auto* DumpFolder = CreateInfo.Metal.DumpDirectory;
+        const char* DumpFolder = CreateInfo.Metal.DumpDirectory;
         if (DumpFolder != nullptr && DumpFolder[0] != '\0')
         {
             m_MtlProps.DumpFolder = DumpFolder;
@@ -185,8 +185,8 @@ void SerializationDeviceImpl::CreateSerializedResourceSignature(const PipelineRe
 
 void SerializationDeviceImpl::CreateSerializedResourceSignature(SerializedResourceSignatureImpl** ppSignature, const char* Name)
 {
-    auto& RawMemAllocator = GetRawAllocator();
-    auto* pSignatureImpl  = NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializedResourceSignatureImpl)(Name);
+    IMemoryAllocator&                RawMemAllocator = GetRawAllocator();
+    SerializedResourceSignatureImpl* pSignatureImpl  = NEW_RC_OBJ(RawMemAllocator, "Pipeline resource signature instance", SerializedResourceSignatureImpl)(Name);
     pSignatureImpl->QueryInterface(IID_PipelineResourceSignature, reinterpret_cast<IObject**>(ppSignature));
 }
 
@@ -287,7 +287,7 @@ void SerializationDeviceImpl::AddRenderDevice(IRenderDevice* pDevice)
         return;
     }
 
-    const auto Type = pDevice->GetDeviceInfo().Type;
+    const RENDER_DEVICE_TYPE Type = pDevice->GetDeviceInfo().Type;
     if (m_RenderDevices[Type])
         LOG_WARNING_MESSAGE(GetRenderDeviceTypeString(Type), " device has already been added.");
 

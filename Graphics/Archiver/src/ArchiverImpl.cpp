@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -83,9 +83,9 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
     // Add pipelines and patched shaders
     for (const auto& pso_it : m_Pipelines)
     {
-        const auto* Name    = pso_it.first.GetName();
-        const auto  ResType = pso_it.first.GetType();
-        auto&       SrcPSO  = *pso_it.second;
+        const char*                  Name    = pso_it.first.GetName();
+        const ResourceType           ResType = pso_it.first.GetType();
+        SerializedPipelineStateImpl& SrcPSO  = *pso_it.second;
 
         const PIPELINE_STATE_STATUS PSOStatus = SrcPSO.GetStatus(/*WaitForCompletion = */ true);
         if (PSOStatus != PIPELINE_STATE_STATUS_READY)
@@ -98,8 +98,8 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
 
         if (!SrcPSO.GetData().DoNotPackSignatures)
         {
-            const auto& Signatures = SrcPSO.GetSignatures();
-            for (auto& pSign : Signatures)
+            const SerializedPipelineStateImpl::SignaturesVector& Signatures = SrcPSO.GetSignatures();
+            for (const RefCntAutoPtr<IPipelineResourceSignature>& pSign : Signatures)
             {
                 if (!AddPipelineResourceSignature(pSign))
                 {
@@ -108,11 +108,11 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
             }
         }
 
-        const auto& SrcData = SrcPSO.GetData();
+        const SerializedPipelineStateImpl::Data& SrcData = SrcPSO.GetData();
         VERIFY_EXPR(SafeStrEqual(Name, SrcPSO.GetDesc().Name));
         VERIFY_EXPR(ResType == PipelineTypeToArchiveResourceType(SrcPSO.GetDesc().PipelineType));
 
-        auto& DstData = Archive.GetResourceData(ResType, Name);
+        ResourceData& DstData = Archive.GetResourceData(ResType, Name);
         // Add PSO common data
         // NB: since the Archive object is temporary, we do not need to copy the data
         DstData.Common = SerializedData{SrcData.Common.Ptr(), SrcData.Common.Size()};
@@ -128,7 +128,7 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
 
             std::vector<Uint32> ShaderIndices;
             ShaderIndices.reserve(SrcShaders.size());
-            for (const auto& SrcShader : SrcShaders)
+            for (const SerializedPipelineStateImpl::Data::ShaderInfo& SrcShader : SrcShaders)
             {
                 VERIFY_EXPR(SrcShader.Data);
 
@@ -144,7 +144,7 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
             DeviceObjectArchive::ShaderIndexArray Indices{ShaderIndices.data(), StaticCast<Uint32>(ShaderIndices.size())};
 
             // For pipelines, device-specific data is the shader indices
-            auto& SerializedIndices = DstData.DeviceSpecific[device_type];
+            SerializedData& SerializedIndices = DstData.DeviceSpecific[device_type];
 
             Serializer<SerializerMode::Measure> MeasureSer;
             PSOSerializer<SerializerMode::Measure>::SerializeShaderIndices(MeasureSer, Indices, nullptr);
@@ -159,18 +159,18 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
     // Add resource signatures
     for (const auto& sign_it : m_Signatures)
     {
-        const auto* Name    = sign_it.first.GetStr();
-        const auto& SrcSign = *sign_it.second;
+        const char*                            Name    = sign_it.first.GetStr();
+        const SerializedResourceSignatureImpl& SrcSign = *sign_it.second;
         VERIFY_EXPR(SafeStrEqual(Name, SrcSign.GetDesc().Name));
-        const auto& SrcCommonData = SrcSign.GetCommonData();
+        const SerializedData& SrcCommonData = SrcSign.GetCommonData();
 
-        auto& DstData = Archive.GetResourceData(ResourceType::ResourceSignature, Name);
+        ResourceData& DstData = Archive.GetResourceData(ResourceType::ResourceSignature, Name);
         // NB: since the Archive object is temporary, we do not need to copy the data
         DstData.Common = SerializedData{SrcCommonData.Ptr(), SrcCommonData.Size()};
 
         for (size_t device_type = 0; device_type < static_cast<size_t>(DeviceType::Count); ++device_type)
         {
-            if (const auto* pMem = SrcSign.GetDeviceData(static_cast<DeviceType>(device_type)))
+            if (const SerializedData* pMem = SrcSign.GetDeviceData(static_cast<DeviceType>(device_type)))
                 DstData.DeviceSpecific[device_type] = SerializedData{pMem->Ptr(), pMem->Size()};
         }
     }
@@ -178,20 +178,20 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
     // Add render passes
     for (const auto& rp_it : m_RenderPasses)
     {
-        const auto* Name  = rp_it.first.GetStr();
-        const auto& SrcRP = *rp_it.second;
+        const char*                     Name  = rp_it.first.GetStr();
+        const SerializedRenderPassImpl& SrcRP = *rp_it.second;
         VERIFY_EXPR(SafeStrEqual(Name, SrcRP.GetDesc().Name));
-        const auto& SrcData = SrcRP.GetCommonData();
+        const SerializedData& SrcData = SrcRP.GetCommonData();
 
-        auto& DstData  = Archive.GetResourceData(ResourceType::RenderPass, Name);
-        DstData.Common = SerializedData{SrcData.Ptr(), SrcData.Size()};
+        ResourceData& DstData = Archive.GetResourceData(ResourceType::RenderPass, Name);
+        DstData.Common        = SerializedData{SrcData.Ptr(), SrcData.Size()};
     }
 
     // Add standalone shaders
     for (const auto& shader_it : m_Shaders)
     {
-        const auto* Name      = shader_it.first.GetStr();
-        auto&       SrcShader = *shader_it.second;
+        const char*           Name      = shader_it.first.GetStr();
+        SerializedShaderImpl& SrcShader = *shader_it.second;
         {
             const SHADER_STATUS Status = SrcShader.GetStatus(/*WaitForCompletion = */ true);
             if (Status != SHADER_STATUS_READY)
@@ -204,12 +204,12 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
         }
         VERIFY_EXPR(SafeStrEqual(Name, SrcShader.GetDesc().Name));
 
-        auto& DstData  = Archive.GetResourceData(ResourceType::StandaloneShader, Name);
-        DstData.Common = SrcShader.GetCommonData();
+        ResourceData& DstData = Archive.GetResourceData(ResourceType::StandaloneShader, Name);
+        DstData.Common        = SrcShader.GetCommonData();
 
         for (size_t device_type = 0; device_type < static_cast<size_t>(DeviceType::Count); ++device_type)
         {
-            auto DeviceData = SrcShader.GetDeviceData(static_cast<DeviceType>(device_type));
+            SerializedData DeviceData = SrcShader.GetDeviceData(static_cast<DeviceType>(device_type));
             if (!DeviceData)
                 continue;
 
@@ -223,7 +223,7 @@ Bool ArchiverImpl::SerializeToBlob(Uint32 ContentVersion, IDataBlob** ppBlob)
             const Uint32 Index = it_inserted.first->second;
 
             // For shaders, device-specific data is the serialized shader bytecode index
-            auto& SerializedIndex = DstData.DeviceSpecific[device_type];
+            SerializedData& SerializedIndex = DstData.DeviceSpecific[device_type];
 
             Serializer<SerializerMode::Measure> MeasureSer;
             MeasureSer(Index);
@@ -272,7 +272,7 @@ bool AddObjectToArchive(IfaceType*                                              
         UNEXPECTED(ObjectTypeStr, " '", pObject->GetDesc().Name, "' was not created by a serialization device.");
         return false;
     }
-    const auto* Name = pSerializedObj->GetDesc().Name;
+    const char* Name = pSerializedObj->GetDesc().Name;
 
     std::lock_guard<std::mutex> Guard{Mtx};
 
@@ -325,10 +325,10 @@ Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
         return false;
     }
 
-    const auto& Desc = pSerializedPSO->GetDesc();
-    const auto* Name = Desc.Name;
+    const PipelineStateDesc& Desc = pSerializedPSO->GetDesc();
+    const char*              Name = Desc.Name;
     // Mesh pipelines are serialized as graphics pipelines
-    const auto ArchiveResType = PipelineTypeToArchiveResourceType(Desc.PipelineType);
+    const ResourceType ArchiveResType = PipelineTypeToArchiveResourceType(Desc.PipelineType);
 
     {
         std::lock_guard<std::mutex> Guard{m_PipelinesMtx};
@@ -342,7 +342,7 @@ Bool ArchiverImpl::AddPipelineState(IPipelineState* pPSO)
     }
 
     bool Res = true;
-    if (auto* pRenderPass = pSerializedPSO->GetRenderPass())
+    if (IRenderPass* pRenderPass = pSerializedPSO->GetRenderPass())
     {
         if (!AddRenderPass(pRenderPass))
             Res = false;
@@ -412,7 +412,7 @@ IPipelineState* ArchiverImpl::GetPipelineState(PIPELINE_TYPE PSOType,
 {
     std::lock_guard<std::mutex> Guard{m_PipelinesMtx};
 
-    const auto ResType = PiplineTypeToArchiveResourceType(PSOType);
+    const ResourceType ResType = PiplineTypeToArchiveResourceType(PSOType);
     if (ResType == ResourceType::Undefined)
     {
         UNEXPECTED("Unexpected pipeline type");

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -112,7 +112,7 @@ struct ShaderStageInfoD3D11
 private:
     static ShaderD3D11Impl* GetShaderD3D11(const SerializedShaderImpl* pShader)
     {
-        auto* pCompiledShaderD3D11 = pShader->GetShader<CompiledShaderD3D11>(DeviceObjectArchive::DeviceType::Direct3D11);
+        CompiledShaderD3D11* pCompiledShaderD3D11 = pShader->GetShader<CompiledShaderD3D11>(DeviceObjectArchive::DeviceType::Direct3D11);
         return pCompiledShaderD3D11 != nullptr ? &pCompiledShaderD3D11->ShaderD3D11 : nullptr;
     }
 };
@@ -146,8 +146,8 @@ void SerializedPipelineStateImpl::PatchShadersD3D11(const CreateInfoType& Create
     for (size_t i = 0; i < ShadersD3D11.size(); ++i)
         ShadersD3D11[i] = ShaderStages[i].pShader;
 
-    auto** ppSignatures    = CreateInfo.ppResourceSignatures;
-    auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
+    IPipelineResourceSignature** ppSignatures    = CreateInfo.ppResourceSignatures;
+    Uint32                       SignaturesCount = CreateInfo.ResourceSignaturesCount;
 
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
@@ -231,7 +231,7 @@ void SerializedShaderImpl::CreateShaderD3D11(IReferenceCounters*     pRefCounter
 void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineResourceBindingAttribs& Info,
                                                                std::vector<PipelineResourceBinding>& ResourceBindings)
 {
-    const auto            ShaderStages        = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+    const SHADER_TYPE     ShaderStages        = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
     constexpr SHADER_TYPE SupportedStagesMask = (SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE);
 
     SignatureArray<PipelineResourceSignatureD3D11Impl> Signatures      = {};
@@ -250,39 +250,40 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D11(const PipelineRes
 
         for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
         {
-            const auto& ResDesc = pSignature->GetResourceDesc(r);
-            const auto& ResAttr = pSignature->GetResourceAttribs(r);
-            const auto  Range   = PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(ResDesc.ResourceType);
+            using ResourceAttribsD3D11          = PipelineResourceSignatureD3D11Impl::ResourceAttribs;
+            const PipelineResourceDesc& ResDesc = pSignature->GetResourceDesc(r);
+            const ResourceAttribsD3D11& ResAttr = pSignature->GetResourceAttribs(r);
+            const D3D11_RESOURCE_RANGE  Range   = PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(ResDesc.ResourceType);
 
-            for (auto Stages = (ShaderStages & SupportedStagesMask); Stages != 0;)
+            for (SHADER_TYPE Stages = (ShaderStages & SupportedStagesMask); Stages != 0;)
             {
-                const auto ShaderStage = ExtractLSB(Stages);
-                const auto ShaderInd   = GetShaderTypeIndex(ShaderStage);
+                const SHADER_TYPE ShaderStage = ExtractLSB(Stages);
+                const Int32       ShaderInd   = GetShaderTypeIndex(ShaderStage);
                 if ((ResDesc.ShaderStages & ShaderStage) == 0)
                     continue;
 
                 VERIFY_EXPR(ResAttr.BindPoints.IsStageActive(ShaderInd));
-                const auto Register = Uint32{BaseBindings[Range][ShaderInd]} + Uint32{ResAttr.BindPoints[ShaderInd]};
+                const Uint32 Register = Uint32{BaseBindings[Range][ShaderInd]} + Uint32{ResAttr.BindPoints[ShaderInd]};
                 ResourceBindings.push_back(ResDescToPipelineResBinding(ResDesc, ShaderStage, Register, 0 /*space*/));
             }
         }
 
         for (Uint32 samp = 0; samp < pSignature->GetImmutableSamplerCount(); ++samp)
         {
-            const auto& ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
-            const auto& SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
-            const auto  Range    = D3D11_RESOURCE_RANGE_SAMPLER;
+            const ImmutableSamplerDesc&         ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
+            const ImmutableSamplerAttribsD3D11& SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
+            const D3D11_RESOURCE_RANGE          Range    = D3D11_RESOURCE_RANGE_SAMPLER;
 
-            for (auto Stages = (ShaderStages & SupportedStagesMask); Stages != 0;)
+            for (SHADER_TYPE Stages = (ShaderStages & SupportedStagesMask); Stages != 0;)
             {
-                const auto ShaderStage = ExtractLSB(Stages);
-                const auto ShaderInd   = GetShaderTypeIndex(ShaderStage);
+                const SHADER_TYPE ShaderStage = ExtractLSB(Stages);
+                const Int32       ShaderInd   = GetShaderTypeIndex(ShaderStage);
 
                 if ((ImtblSam.ShaderStages & ShaderStage) == 0)
                     continue;
 
                 VERIFY_EXPR(SampAttr.BindPoints.IsStageActive(ShaderInd));
-                const auto Binding = Uint32{BaseBindings[Range][ShaderInd]} + Uint32{SampAttr.BindPoints[ShaderInd]};
+                const Uint32 Binding = Uint32{BaseBindings[Range][ShaderInd]} + Uint32{SampAttr.BindPoints[ShaderInd]};
 
                 PipelineResourceBinding Dst{};
                 Dst.Name         = ImtblSam.SamplerOrTextureName;

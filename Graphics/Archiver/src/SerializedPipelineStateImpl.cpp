@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ void ValidatePipelineStateArchiveInfo(const PipelineStateCreateInfo&  PSOCreateI
     {
         VERIFY_PSO(PSOCreateInfo.ppResourceSignatures[i] != nullptr, "ppResourceSignatures[", i, "] must not be null");
 
-        const auto& Desc = PSOCreateInfo.ppResourceSignatures[i]->GetDesc();
+        const PipelineResourceSignatureDesc& Desc = PSOCreateInfo.ppResourceSignatures[i]->GetDesc();
         VERIFY_EXPR(Desc.BindingIndex < PRSExists.size());
 
         VERIFY_PSO(!PRSExists[Desc.BindingIndex], "PRS binding index must be unique");
@@ -183,7 +183,7 @@ template <typename PSOCreateInfoType>
 void SerializedPipelineStateImpl::Initialize(const PSOCreateInfoType&        CreateInfo,
                                              const PipelineStateArchiveInfo& ArchiveInfo)
 {
-    auto DeviceBits = ArchiveInfo.DeviceFlags;
+    ARCHIVE_DEVICE_DATA_FLAGS DeviceBits = ArchiveInfo.DeviceFlags;
     if ((DeviceBits & ARCHIVE_DEVICE_DATA_FLAG_GL) != 0 && (DeviceBits & ARCHIVE_DEVICE_DATA_FLAG_GLES) != 0)
     {
         // OpenGL and GLES use the same device data. Clear one flag to avoid shader duplication.
@@ -193,7 +193,7 @@ void SerializedPipelineStateImpl::Initialize(const PSOCreateInfoType&        Cre
     m_Data.Aux.NoShaderReflection = (ArchiveInfo.PSOFlags & PSO_ARCHIVE_FLAG_STRIP_REFLECTION) != 0;
     while (DeviceBits != 0)
     {
-        const auto Flag = ExtractLSB(DeviceBits);
+        const ARCHIVE_DEVICE_DATA_FLAGS Flag = ExtractLSB(DeviceBits);
 
         static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 7, "Please update the switch below to handle the new data type");
         switch (Flag)
@@ -259,8 +259,8 @@ void SerializedPipelineStateImpl::Initialize(const PSOCreateInfoType&        Cre
             m_Data.DoNotPackSignatures = (ArchiveInfo.PSOFlags & PSO_ARCHIVE_FLAG_DO_NOT_PACK_SIGNATURES) != 0;
         }
 
-        auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
-        auto** ppSignatures    = CreateInfo.ppResourceSignatures;
+        Uint32                       SignaturesCount = CreateInfo.ResourceSignaturesCount;
+        IPipelineResourceSignature** ppSignatures    = CreateInfo.ppResourceSignatures;
 
         IPipelineResourceSignature* DefaultSignatures[1] = {};
         if (m_pDefaultSignature)
@@ -274,7 +274,7 @@ void SerializedPipelineStateImpl::Initialize(const PSOCreateInfoType&        Cre
         m_Signatures.resize(SignaturesCount);
         for (Uint32 i = 0; i < SignaturesCount; ++i)
         {
-            auto* pSignature = ppSignatures[i];
+            IPipelineResourceSignature* pSignature = ppSignatures[i];
             VERIFY(pSignature != nullptr, "This error should've been caught by ValidatePipelineResourceSignatures");
             m_Signatures[i] = pSignature;
             PRSNames[i]     = pSignature->GetDesc().Name;
@@ -449,7 +449,7 @@ void SerializedPipelineStateImpl::SerializeShaderCreateInfo(DeviceType          
     ShaderData.Stage = CI.Desc.ShaderType;
     ShaderData.Hash  = ShaderData.Data.GetHash();
 #ifdef DILIGENT_DEBUG
-    for (const auto& Data : m_Data.Shaders[static_cast<size_t>(Type)])
+    for (const SerializedPipelineStateImpl::Data::ShaderInfo& Data : m_Data.Shaders[static_cast<size_t>(Type)])
         VERIFY(Data.Hash != ShaderData.Hash, "Shader with the same hash is already in the list.");
 #endif
     m_Data.Shaders[static_cast<size_t>(Type)].emplace_back(std::move(ShaderData));
@@ -459,8 +459,8 @@ Uint32 DILIGENT_CALL_TYPE SerializedPipelineStateImpl::GetPatchedShaderCount(ARC
 {
     DEV_CHECK_ERR(m_Status.load() == PIPELINE_STATE_STATUS_READY, "Pipeline state '", m_Desc.Name, "' is not ready. Use GetStatus() to check the pipeline state status.");
     DEV_CHECK_ERR(IsPowerOfTwo(DeviceType), "Only single device data flag is expected");
-    const auto  Type    = ArchiveDeviceDataFlagToArchiveDeviceType(DeviceType);
-    const auto& Shaders = m_Data.Shaders[static_cast<size_t>(Type)];
+    const DeviceObjectArchive::DeviceType Type    = ArchiveDeviceDataFlagToArchiveDeviceType(DeviceType);
+    const auto&                           Shaders = m_Data.Shaders[static_cast<size_t>(Type)];
     return StaticCast<Uint32>(Shaders.size());
 }
 
@@ -473,8 +473,8 @@ ShaderCreateInfo DILIGENT_CALL_TYPE SerializedPipelineStateImpl::GetPatchedShade
 
     ShaderCreateInfo ShaderCI;
 
-    const auto  Type    = ArchiveDeviceDataFlagToArchiveDeviceType(DeviceType);
-    const auto& Shaders = m_Data.Shaders[static_cast<size_t>(Type)];
+    const DeviceObjectArchive::DeviceType Type    = ArchiveDeviceDataFlagToArchiveDeviceType(DeviceType);
+    const auto&                           Shaders = m_Data.Shaders[static_cast<size_t>(Type)];
     if (ShaderIndex < Shaders.size())
     {
         {

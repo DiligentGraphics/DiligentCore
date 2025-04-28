@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -125,15 +125,15 @@ void SerializedPipelineStateImpl::PatchShadersD3D12(const CreateInfoType& Create
     PipelineStateD3D12Impl::TShaderStages ShaderStagesD3D12{ShaderStages.size()};
     for (size_t i = 0; i < ShaderStagesD3D12.size(); ++i)
     {
-        auto& Src     = ShaderStages[i];
-        auto& Dst     = ShaderStagesD3D12[i];
+        ShaderStageInfoD3D12&                    Src{ShaderStages[i]};
+        PipelineStateD3D12Impl::ShaderStageInfo& Dst{ShaderStagesD3D12[i]};
         Dst.Type      = Src.Type;
         Dst.Shaders   = std::move(Src.Shaders);
         Dst.ByteCodes = std::move(Src.ByteCodes);
     }
 
-    auto** ppSignatures    = CreateInfo.ppResourceSignatures;
-    auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
+    IPipelineResourceSignature** ppSignatures    = CreateInfo.ppResourceSignatures;
+    Uint32                       SignaturesCount = CreateInfo.ResourceSignaturesCount;
 
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
@@ -162,7 +162,7 @@ void SerializedPipelineStateImpl::PatchShadersD3D12(const CreateInfoType& Create
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Direct3D12)].empty());
     for (size_t j = 0; j < ShaderStagesD3D12.size(); ++j)
     {
-        const auto& Stage = ShaderStagesD3D12[j];
+        const PipelineStateD3D12Impl::ShaderStageInfo& Stage = ShaderStagesD3D12[j];
         for (size_t i = 0; i < Stage.Count(); ++i)
         {
             const IDataBlob* pBytecode = Stage.ByteCodes[i];
@@ -186,10 +186,10 @@ void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters*     pRefCounter
                                              const ShaderCreateInfo& ShaderCI,
                                              IDataBlob**             ppCompilerOutput) noexcept(false)
 {
-    const auto& D3D12Props         = m_pDevice->GetD3D12Properties();
-    const auto& DeviceInfo         = m_pDevice->GetDeviceInfo();
-    const auto& AdapterInfo        = m_pDevice->GetAdapterInfo();
-    auto*       pRenderDeviceD3D12 = m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_D3D12);
+    const SerializationDeviceImpl::D3D12Properties& D3D12Props         = m_pDevice->GetD3D12Properties();
+    const RenderDeviceInfo&                         DeviceInfo         = m_pDevice->GetDeviceInfo();
+    const GraphicsAdapterInfo&                      AdapterInfo        = m_pDevice->GetAdapterInfo();
+    IRenderDevice*                                  pRenderDeviceD3D12 = m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_D3D12);
 
     const ShaderD3D12Impl::CreateInfo D3D12ShaderCI{
         {
@@ -209,7 +209,7 @@ void SerializedShaderImpl::CreateShaderD3D12(IReferenceCounters*     pRefCounter
 void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineResourceBindingAttribs& Info,
                                                                std::vector<PipelineResourceBinding>& ResourceBindings)
 {
-    const auto ShaderStages = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+    const SHADER_TYPE ShaderStages = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
 
     SignatureArray<PipelineResourceSignatureD3D12Impl> Signatures      = {};
     Uint32                                             SignaturesCount = 0;
@@ -218,16 +218,16 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsD3D12(const PipelineRes
     RootSignatureD3D12 RootSig{nullptr, nullptr, Signatures.data(), SignaturesCount, 0};
     for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
     {
-        const auto& pSignature = Signatures[sign];
+        const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>& pSignature = Signatures[sign];
         if (pSignature == nullptr)
             continue;
 
-        const auto BaseRegisterSpace = RootSig.GetBaseRegisterSpace(sign);
+        const Uint32 BaseRegisterSpace = RootSig.GetBaseRegisterSpace(sign);
 
         for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
         {
-            const auto& ResDesc = pSignature->GetResourceDesc(r);
-            const auto& ResAttr = pSignature->GetResourceAttribs(r);
+            const PipelineResourceDesc&                                ResDesc = pSignature->GetResourceDesc(r);
+            const PipelineResourceSignatureD3D12Impl::ResourceAttribs& ResAttr = pSignature->GetResourceAttribs(r);
             if ((ResDesc.ShaderStages & ShaderStages) == 0)
                 continue;
 

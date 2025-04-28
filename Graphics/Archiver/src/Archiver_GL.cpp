@@ -85,14 +85,14 @@ static void PatchSourceForWebGL(std::string& Source, SHADER_TYPE ShaderType)
         // WebGL only supports location qualifiers for VS inputs and FS outputs.
         const std::string InOutQualifier = ShaderType == SHADER_TYPE_VERTEX ? " out " : " in ";
 
-        auto layout_pos = Source.find("layout");
+        size_t layout_pos = Source.find("layout");
         while (layout_pos != std::string::npos)
         {
             // layout(location = 3) flat out int _VSOut_PrimitiveID;
             // ^
             // layout_pos
 
-            const auto declaration_end_pos = Source.find_first_of(";{", layout_pos + 6);
+            const size_t declaration_end_pos = Source.find_first_of(";{", layout_pos + 6);
             if (declaration_end_pos == std::string::npos)
                 break;
             // layout(location = 3) flat out int _VSOut_PrimitiveID;
@@ -108,7 +108,7 @@ static void PatchSourceForWebGL(std::string& Source, SHADER_TYPE ShaderType)
 
             if (Declaration.find(InOutQualifier) != std::string::npos)
             {
-                const auto closing_paren_pos = Source.find(')', layout_pos);
+                const size_t closing_paren_pos = Source.find(')', layout_pos);
                 if (closing_paren_pos == std::string::npos)
                     break;
 
@@ -299,7 +299,7 @@ public:
 
     virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
     {
-        const auto SerializationCI = GetSerializationCI(ShaderCI);
+        const ShaderCreateInfo SerializationCI = GetSerializationCI(ShaderCI);
         return SerializedShaderImpl::SerializeCreateInfo(SerializationCI);
     }
 
@@ -546,10 +546,10 @@ void SerializedPipelineStateImpl::PatchShadersGL(const CreateInfoType& CreateInf
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::OpenGL)].empty());
     for (size_t i = 0; i < ShaderStages.size(); ++i)
     {
-        const auto& Stage             = ShaderStages[i];
-        const auto& CI                = Stage.pShader->GetCreateInfo();
-        const auto* pCompiledShaderGL = Stage.pShader->GetShader<CompiledShaderGL>(DeviceObjectArchive::DeviceType::OpenGL);
-        const auto  SerCI             = pCompiledShaderGL->GetSerializationCI(CI);
+        const ShaderStageInfoGL& Stage             = ShaderStages[i];
+        const ShaderCreateInfo&  CI                = Stage.pShader->GetCreateInfo();
+        const CompiledShaderGL*  pCompiledShaderGL = Stage.pShader->GetShader<CompiledShaderGL>(DeviceObjectArchive::DeviceType::OpenGL);
+        const ShaderCreateInfo   SerCI             = pCompiledShaderGL->GetSerializationCI(CI);
 
         SerializeShaderCreateInfo(DeviceType::OpenGL, SerCI);
     }
@@ -568,7 +568,7 @@ INSTANTIATE_PREPARE_DEF_SIGNATURE_GL(RayTracingPipelineStateCreateInfo);
 void SerializationDeviceImpl::GetPipelineResourceBindingsGL(const PipelineResourceBindingAttribs& Info,
                                                             std::vector<PipelineResourceBinding>& ResourceBindings)
 {
-    const auto            ShaderStages        = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+    const SHADER_TYPE     ShaderStages        = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
     constexpr SHADER_TYPE SupportedStagesMask = (SHADER_TYPE_ALL_GRAPHICS | SHADER_TYPE_COMPUTE);
 
     SignatureArray<PipelineResourceSignatureGLImpl> Signatures      = {};
@@ -578,19 +578,20 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsGL(const PipelineResour
     PipelineResourceSignatureGLImpl::TBindings BaseBindings = {};
     for (Uint32 s = 0; s < SignaturesCount; ++s)
     {
-        const auto& pSignature = Signatures[s];
+        const RefCntAutoPtr<PipelineResourceSignatureGLImpl>& pSignature = Signatures[s];
         if (pSignature == nullptr)
             continue;
 
         for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
         {
-            const auto& ResDesc = pSignature->GetResourceDesc(r);
-            const auto& ResAttr = pSignature->GetResourceAttribs(r);
-            const auto  Range   = PipelineResourceToBindingRange(ResDesc);
+            using ResourceAttribsGL             = PipelineResourceSignatureGLImpl::ResourceAttribs;
+            const PipelineResourceDesc& ResDesc = pSignature->GetResourceDesc(r);
+            const ResourceAttribsGL&    ResAttr = pSignature->GetResourceAttribs(r);
+            const BINDING_RANGE         Range   = PipelineResourceToBindingRange(ResDesc);
 
-            for (auto Stages = ShaderStages & SupportedStagesMask; Stages != 0;)
+            for (SHADER_TYPE Stages = ShaderStages & SupportedStagesMask; Stages != 0;)
             {
-                const auto ShaderStage = ExtractLSB(Stages);
+                const SHADER_TYPE ShaderStage = ExtractLSB(Stages);
                 if ((ResDesc.ShaderStages & ShaderStage) == 0)
                     continue;
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ struct CompiledShaderVk : SerializedShaderImpl::CompiledShader
 
     virtual SerializedData Serialize(ShaderCreateInfo ShaderCI) const override final
     {
-        const auto& SPIRV = ShaderVk.GetSPIRV();
+        const std::vector<Uint32>& SPIRV = ShaderVk.GetSPIRV();
 
         ShaderCI.Source       = nullptr;
         ShaderCI.FilePath     = nullptr;
@@ -81,7 +81,7 @@ struct CompiledShaderVk : SerializedShaderImpl::CompiledShader
 
 inline const ShaderVkImpl* GetShaderVk(const SerializedShaderImpl* pShader)
 {
-    const auto* pCompiledShaderVk = pShader->GetShader<const CompiledShaderVk>(DeviceObjectArchive::DeviceType::Vulkan);
+    const CompiledShaderVk* pCompiledShaderVk = pShader->GetShader<const CompiledShaderVk>(DeviceObjectArchive::DeviceType::Vulkan);
     return pCompiledShaderVk != nullptr ? &pCompiledShaderVk->ShaderVk : nullptr;
 }
 
@@ -126,15 +126,15 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
     PipelineStateVkImpl::TShaderStages ShaderStagesVk{ShaderStages.size()};
     for (size_t i = 0; i < ShaderStagesVk.size(); ++i)
     {
-        auto& Src   = ShaderStages[i];
-        auto& Dst   = ShaderStagesVk[i];
+        ShaderStageInfoVk&                    Src{ShaderStages[i]};
+        PipelineStateVkImpl::ShaderStageInfo& Dst{ShaderStagesVk[i]};
         Dst.Type    = Src.Type;
         Dst.Shaders = std::move(Src.Shaders);
         Dst.SPIRVs  = std::move(Src.SPIRVs);
     }
 
-    auto** ppSignatures    = CreateInfo.ppResourceSignatures;
-    auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
+    IPipelineResourceSignature** ppSignatures    = CreateInfo.ppResourceSignatures;
+    Uint32                       SignaturesCount = CreateInfo.ResourceSignaturesCount;
 
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
@@ -157,14 +157,15 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
         Uint32                                        DescSetLayoutCount      = 0;
         for (Uint32 i = 0; i < SignaturesCount; ++i)
         {
-            const auto& pSignature = Signatures[i];
+            const RefCntAutoPtr<PipelineResourceSignatureVkImpl>& pSignature = Signatures[i];
             if (pSignature == nullptr)
                 continue;
 
             VERIFY_EXPR(pSignature->GetDesc().BindingIndex == i);
             BindIndexToDescSetIndex[i] = StaticCast<PipelineStateVkImpl::TBindIndexToDescSetIndex::value_type>(DescSetLayoutCount);
 
-            for (auto SetId : {PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE, PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC})
+            for (PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID SetId : {PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE,
+                                                                             PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC})
             {
                 if (pSignature->GetDescriptorSetSize(SetId) != ~0u)
                     ++DescSetLayoutCount;
@@ -172,7 +173,7 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
         }
         VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
 
-        const auto bStripReflection = m_Data.Aux.NoShaderReflection;
+        const bool bStripReflection = m_Data.Aux.NoShaderReflection;
         PipelineStateVkImpl::RemapOrVerifyShaderResources(ShaderStagesVk,
                                                           Signatures.data(),
                                                           SignaturesCount,
@@ -185,11 +186,12 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
     VERIFY_EXPR(m_Data.Shaders[static_cast<size_t>(DeviceType::Vulkan)].empty());
     for (size_t j = 0; j < ShaderStagesVk.size(); ++j)
     {
-        const auto& Stage = ShaderStagesVk[j];
+        const PipelineStateVkImpl::ShaderStageInfo& Stage = ShaderStagesVk[j];
         for (size_t i = 0; i < Stage.Count(); ++i)
         {
-            const auto& SPIRV     = Stage.SPIRVs[i];
-            auto        ShaderCI  = ShaderStages[j].Serialized[i]->GetCreateInfo();
+            const std::vector<Uint32>& SPIRV    = Stage.SPIRVs[i];
+            ShaderCreateInfo           ShaderCI = ShaderStages[j].Serialized[i]->GetCreateInfo();
+
             ShaderCI.Source       = nullptr;
             ShaderCI.FilePath     = nullptr;
             ShaderCI.Macros       = {};
@@ -207,10 +209,10 @@ void SerializedShaderImpl::CreateShaderVk(IReferenceCounters*     pRefCounters,
                                           const ShaderCreateInfo& ShaderCI,
                                           IDataBlob**             ppCompilerOutput)
 {
-    const auto& VkProps         = m_pDevice->GetVkProperties();
-    const auto& DeviceInfo      = m_pDevice->GetDeviceInfo();
-    const auto& AdapterInfo     = m_pDevice->GetAdapterInfo();
-    auto*       pRenderDeviceVk = m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_VULKAN);
+    const SerializationDeviceImpl::VkProperties& VkProps         = m_pDevice->GetVkProperties();
+    const RenderDeviceInfo&                      DeviceInfo      = m_pDevice->GetDeviceInfo();
+    const GraphicsAdapterInfo&                   AdapterInfo     = m_pDevice->GetAdapterInfo();
+    IRenderDevice*                               pRenderDeviceVk = m_pDevice->GetRenderDevice(RENDER_DEVICE_TYPE_VULKAN);
 
     const ShaderVkImpl::CreateInfo VkShaderCI{
         VkProps.pDxCompiler,
@@ -229,7 +231,7 @@ void SerializedShaderImpl::CreateShaderVk(IReferenceCounters*     pRefCounters,
 void SerializationDeviceImpl::GetPipelineResourceBindingsVk(const PipelineResourceBindingAttribs& Info,
                                                             std::vector<PipelineResourceBinding>& ResourceBindings)
 {
-    const auto ShaderStages = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+    const SHADER_TYPE ShaderStages = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
 
     SignatureArray<PipelineResourceSignatureVkImpl> Signatures      = {};
     Uint32                                          SignaturesCount = 0;
@@ -238,14 +240,14 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsVk(const PipelineResour
     Uint32 DescSetLayoutCount = 0;
     for (Uint32 sign = 0; sign < SignaturesCount; ++sign)
     {
-        const auto& pSignature = Signatures[sign];
+        const RefCntAutoPtr<PipelineResourceSignatureVkImpl>& pSignature = Signatures[sign];
         if (pSignature == nullptr)
             continue;
 
         for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
         {
-            const auto& ResDesc = pSignature->GetResourceDesc(r);
-            const auto& ResAttr = pSignature->GetResourceAttribs(r);
+            const PipelineResourceDesc&                             ResDesc = pSignature->GetResourceDesc(r);
+            const PipelineResourceSignatureVkImpl::ResourceAttribs& ResAttr = pSignature->GetResourceAttribs(r);
             if ((ResDesc.ShaderStages & ShaderStages) == 0)
                 continue;
 
@@ -253,7 +255,8 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsVk(const PipelineResour
         }
 
         // Same as PipelineLayoutVk::Create()
-        for (auto SetId : {PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE, PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC})
+        for (PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID SetId : {PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE,
+                                                                         PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC})
         {
             if (pSignature->GetDescriptorSetSize(SetId) != ~0u)
                 ++DescSetLayoutCount;

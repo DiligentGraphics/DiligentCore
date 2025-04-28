@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ SerializedResourceSignatureImpl::SerializedResourceSignatureImpl(IReferenceCount
 
     ValidatePipelineResourceSignatureDesc(Desc, pDevice, RENDER_DEVICE_TYPE_UNDEFINED);
 
-    auto DeviceFlags = ArchiveInfo.DeviceFlags;
+    ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags = ArchiveInfo.DeviceFlags;
     if ((DeviceFlags & pDevice->GetSupportedDeviceFlags()) != DeviceFlags)
     {
         LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");
@@ -63,8 +63,8 @@ SerializedResourceSignatureImpl::SerializedResourceSignatureImpl(IReferenceCount
 
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
-        const auto Flag    = ExtractLSB(DeviceFlags);
-        const auto DevType = ArchiveDeviceDataFlagToArchiveDeviceType(Flag);
+        const ARCHIVE_DEVICE_DATA_FLAGS Flag    = ExtractLSB(DeviceFlags);
+        const DeviceType                DevType = ArchiveDeviceDataFlagToArchiveDeviceType(Flag);
 
         static_assert(ARCHIVE_DEVICE_DATA_FLAG_LAST == 1 << 7, "Please update the switch below to handle the new device data type");
         switch (Flag)
@@ -159,11 +159,11 @@ bool SerializedResourceSignatureImpl::IsCompatible(const SerializedResourceSigna
 {
     while (DeviceFlags != ARCHIVE_DEVICE_DATA_FLAG_NONE)
     {
-        const auto DataTypeFlag      = ExtractLSB(DeviceFlags);
-        const auto ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
+        const ARCHIVE_DEVICE_DATA_FLAGS DataTypeFlag      = ExtractLSB(DeviceFlags);
+        const DeviceType                ArchiveDeviceType = ArchiveDeviceDataFlagToArchiveDeviceType(DataTypeFlag);
 
-        const auto* pPRS0 = GetDeviceSignature(ArchiveDeviceType);
-        const auto* pPRS1 = Rhs.GetDeviceSignature(ArchiveDeviceType);
+        const IPipelineResourceSignature* pPRS0 = GetDeviceSignature(ArchiveDeviceType);
+        const IPipelineResourceSignature* pPRS1 = Rhs.GetDeviceSignature(ArchiveDeviceType);
         if ((pPRS0 == nullptr) != (pPRS1 == nullptr))
             return false;
 
@@ -180,9 +180,9 @@ bool SerializedResourceSignatureImpl::operator==(const SerializedResourceSignatu
 
     for (size_t type = 0; type < DeviceCount; ++type)
     {
-        const auto  Type  = static_cast<DeviceType>(type);
-        const auto* pMem0 = GetDeviceData(Type);
-        const auto* pMem1 = Rhs.GetDeviceData(Type);
+        const DeviceType      Type  = static_cast<DeviceType>(type);
+        const SerializedData* pMem0 = GetDeviceData(Type);
+        const SerializedData* pMem1 = Rhs.GetDeviceData(Type);
 
         if ((pMem0 != nullptr) != (pMem1 != nullptr))
             return false;
@@ -196,13 +196,13 @@ bool SerializedResourceSignatureImpl::operator==(const SerializedResourceSignatu
 
 size_t SerializedResourceSignatureImpl::CalcHash() const
 {
-    auto Hash = m_Hash.load();
+    size_t Hash = m_Hash.load();
     if (Hash != 0)
         return Hash;
 
     for (size_t type = 0; type < DeviceCount; ++type)
     {
-        const auto* pMem = GetDeviceData(static_cast<DeviceType>(type));
+        const SerializedData* pMem = GetDeviceData(static_cast<DeviceType>(type));
         if (pMem != nullptr)
             HashCombine(Hash, pMem->GetHash());
     }

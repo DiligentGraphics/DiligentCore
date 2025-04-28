@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ SerializedShaderImpl::SerializedShaderImpl(IReferenceCounters*      pRefCounters
         LOG_ERROR_AND_THROW("Serialized shader name must not be null or empty string");
     }
 
-    auto DeviceFlags = ArchiveInfo.DeviceFlags;
+    ARCHIVE_DEVICE_DATA_FLAGS DeviceFlags = ArchiveInfo.DeviceFlags;
     if ((DeviceFlags & m_pDevice->GetSupportedDeviceFlags()) != DeviceFlags)
     {
         LOG_ERROR_AND_THROW("DeviceFlags contain unsupported device type");
@@ -177,7 +177,7 @@ SerializedData SerializedShaderImpl::GetDeviceData(DeviceType Type) const
 {
     DEV_CHECK_ERR(!IsCompiling(), "Device data is not available until compilation is complete. Use GetStatus() to check the shader status.");
 
-    const auto& pCompiledShader = m_Shaders[static_cast<size_t>(Type)];
+    const std::unique_ptr<CompiledShader>& pCompiledShader = m_Shaders[static_cast<size_t>(Type)];
     return pCompiledShader ?
         pCompiledShader->Serialize(GetCreateInfo()) :
         SerializedData{};
@@ -185,8 +185,8 @@ SerializedData SerializedShaderImpl::GetDeviceData(DeviceType Type) const
 
 IShader* SerializedShaderImpl::GetDeviceShader(RENDER_DEVICE_TYPE Type) const
 {
-    const DeviceType ArchiveDeviceType = RenderDeviceTypeToArchiveDeviceType(Type);
-    const auto&      pCompiledShader   = m_Shaders[static_cast<size_t>(ArchiveDeviceType)];
+    const DeviceType                       ArchiveDeviceType = RenderDeviceTypeToArchiveDeviceType(Type);
+    const std::unique_ptr<CompiledShader>& pCompiledShader   = m_Shaders[static_cast<size_t>(ArchiveDeviceType)];
     return pCompiledShader ?
         pCompiledShader->GetDeviceShader() :
         nullptr;
@@ -197,7 +197,7 @@ SHADER_STATUS SerializedShaderImpl::GetStatus(bool WaitForCompletion)
     SHADER_STATUS OverallStatus = SHADER_STATUS_READY;
     for (size_t type = 0; type < static_cast<size_t>(DeviceType::Count); ++type)
     {
-        const auto& pCompiledShader = m_Shaders[type];
+        const std::unique_ptr<CompiledShader>& pCompiledShader = m_Shaders[type];
         if (!pCompiledShader)
             continue;
 
@@ -230,7 +230,7 @@ SHADER_STATUS SerializedShaderImpl::GetStatus(bool WaitForCompletion)
 
 bool SerializedShaderImpl::IsCompiling() const
 {
-    for (const auto& pCompiledShader : m_Shaders)
+    for (const std::unique_ptr<CompiledShader>& pCompiledShader : m_Shaders)
     {
         if (pCompiledShader && pCompiledShader->IsCompiling())
             return true;
@@ -242,7 +242,7 @@ bool SerializedShaderImpl::IsCompiling() const
 std::vector<RefCntAutoPtr<IAsyncTask>> SerializedShaderImpl::GetCompileTasks() const
 {
     std::vector<RefCntAutoPtr<IAsyncTask>> Tasks;
-    for (const auto& pCompiledShader : m_Shaders)
+    for (const std::unique_ptr<CompiledShader>& pCompiledShader : m_Shaders)
     {
         if (RefCntAutoPtr<IAsyncTask> pTask{pCompiledShader ? pCompiledShader->GetCompileTask() : RefCntAutoPtr<IAsyncTask>{}})
         {

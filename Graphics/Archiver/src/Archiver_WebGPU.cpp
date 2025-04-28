@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ struct ShaderStageInfoWebGPU
 private:
     static ShaderWebGPUImpl* GetShaderWebGPU(const SerializedShaderImpl* pShader)
     {
-        auto* pCompiledShaderWebGPU = pShader->GetShader<CompiledShaderWebGPU>(DeviceObjectArchive::DeviceType::WebGPU);
+        CompiledShaderWebGPU* pCompiledShaderWebGPU = pShader->GetShader<CompiledShaderWebGPU>(DeviceObjectArchive::DeviceType::WebGPU);
         return pCompiledShaderWebGPU != nullptr ? &pCompiledShaderWebGPU->ShaderWebGPU : nullptr;
     }
 };
@@ -145,8 +145,8 @@ void SerializedPipelineStateImpl::PatchShadersWebGPU(const CreateInfoType& Creat
         ShaderStagesWebGPU.emplace_back(Src.pShader);
     }
 
-    auto** ppSignatures    = CreateInfo.ppResourceSignatures;
-    auto   SignaturesCount = CreateInfo.ResourceSignaturesCount;
+    IPipelineResourceSignature** ppSignatures    = CreateInfo.ppResourceSignatures;
+    Uint32                       SignaturesCount = CreateInfo.ResourceSignaturesCount;
 
     IPipelineResourceSignature* DefaultSignatures[1] = {};
     if (CreateInfo.ResourceSignaturesCount == 0)
@@ -170,14 +170,15 @@ void SerializedPipelineStateImpl::PatchShadersWebGPU(const CreateInfoType& Creat
         Uint32 BindGroupLayoutCount = 0;
         for (Uint32 i = 0; i < SignaturesCount; ++i)
         {
-            const auto& pSignature = Signatures[i];
+            const RefCntAutoPtr<PipelineResourceSignatureWebGPUImpl>& pSignature = Signatures[i];
             if (pSignature == nullptr)
                 continue;
 
             VERIFY_EXPR(pSignature->GetDesc().BindingIndex == i);
             BindIndexToBGIndex[i] = StaticCast<PipelineStateWebGPUImpl::TBindIndexToBindGroupIndex::value_type>(BindGroupLayoutCount);
 
-            for (auto GroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE, PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
+            for (PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID GroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE,
+                                                                               PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
             {
                 if (pSignature->HasBindGroup(GroupId))
                     ++BindGroupLayoutCount;
@@ -216,7 +217,7 @@ INSTANTIATE_DEVICE_SIGNATURE_METHODS(PipelineResourceSignatureWebGPUImpl)
 void SerializationDeviceImpl::GetPipelineResourceBindingsWebGPU(const PipelineResourceBindingAttribs& Info,
                                                                 std::vector<PipelineResourceBinding>& ResourceBindings)
 {
-    const auto ShaderStages = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
+    const SHADER_TYPE ShaderStages = (Info.ShaderStages == SHADER_TYPE_UNKNOWN ? static_cast<SHADER_TYPE>(~0u) : Info.ShaderStages);
 
     SignatureArray<PipelineResourceSignatureWebGPUImpl> Signatures      = {};
     Uint32                                              SignaturesCount = 0;
@@ -240,7 +241,8 @@ void SerializationDeviceImpl::GetPipelineResourceBindingsWebGPU(const PipelineRe
         }
 
         // Same as PipelineLayoutWebGPU::Create()
-        for (auto GroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE, PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
+        for (PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID GroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE,
+                                                                           PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
         {
             if (pSignature->HasBindGroup(GroupId))
                 ++BindGroupCount;
