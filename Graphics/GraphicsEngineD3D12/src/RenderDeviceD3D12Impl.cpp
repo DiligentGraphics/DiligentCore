@@ -186,7 +186,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         // Enable requested device features
         m_DeviceInfo.Features = EnableDeviceFeatures(m_AdapterInfo.Features, EngineCI.Features);
 
-        auto FeatureLevel = GetD3DFeatureLevelFromDevice(m_pd3d12Device);
+        D3D_FEATURE_LEVEL FeatureLevel = GetD3DFeatureLevelFromDevice(m_pd3d12Device);
 #if defined(_MSC_VER) && !defined(NTDDI_WIN10_FE)
 #    pragma warning(push)
 #    pragma warning(disable : 4063)
@@ -225,7 +225,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
                     D3D_SHADER_MODEL_6_0 //
                 };
 
-            for (auto Model : Models)
+            for (D3D_SHADER_MODEL Model : Models)
             {
                 D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = {Model};
                 if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(ShaderModel))))
@@ -235,9 +235,9 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
                 }
             }
 
-            auto& MaxHLSLVersion = m_DeviceInfo.MaxShaderVersion.HLSL;
-            MaxHLSLVersion.Major = (MaxShaderModel >> 4) & 0xFu;
-            MaxHLSLVersion.Minor = MaxShaderModel & 0xFu;
+            Version& MaxHLSLVersion = m_DeviceInfo.MaxShaderVersion.HLSL;
+            MaxHLSLVersion.Major    = (MaxShaderModel >> 4) & 0xFu;
+            MaxHLSLVersion.Minor    = MaxShaderModel & 0xFu;
 
             LOG_INFO_MESSAGE("Max device shader model: ", Uint32{MaxHLSLVersion.Major}, '_', Uint32{MaxHLSLVersion.Minor} & 0xF);
         }
@@ -259,8 +259,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         m_QueryMgrs.reserve(CommandQueueCount);
         for (Uint32 q = 0; q < CommandQueueCount; ++q)
         {
-            const auto d3d12CmdListType = ppCmdQueues[q]->GetD3D12CommandQueueDesc().Type;
-            const auto HWQueueId        = D3D12CommandListTypeToQueueId(d3d12CmdListType);
+            const D3D12_COMMAND_LIST_TYPE d3d12CmdListType = ppCmdQueues[q]->GetD3D12CommandQueueDesc().Type;
+            const HardwareQueueIndex      HWQueueId        = D3D12CommandListTypeToQueueId(d3d12CmdListType);
             m_QueryMgrs.emplace_back(std::make_unique<QueryManagerD3D12>(this, EngineCI.QueryPoolSizes, SoftwareQueueIndex{q}, HWQueueId));
         }
 
@@ -316,7 +316,7 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
     DEV_CHECK_ERR(m_DynamicMemoryManager.GetAllocatedPageCounter() == 0, "All allocated dynamic pages must have been returned to the manager at this point.");
     m_DynamicMemoryManager.Destroy();
 
-    for (auto& CmdListMngr : m_CmdListManagers)
+    for (CommandListManager& CmdListMngr : m_CmdListManagers)
         DEV_CHECK_ERR(CmdListMngr.GetAllocatorCounter() == 0, "All allocators must have been returned to the manager at this point.");
     DEV_CHECK_ERR(m_AllocatedCtxCounter == 0, "All contexts must have been released.");
 
@@ -330,14 +330,14 @@ void RenderDeviceD3D12Impl::DisposeCommandContext(PooledCommandContext&& Ctx)
     Ctx->Close(pAllocator);
     // Since allocator has not been used, we cmd list manager can put it directly into the free allocator list
 
-    auto& CmdListMngr = GetCmdListManager(Ctx->GetCommandListType());
+    CommandListManager& CmdListMngr = GetCmdListManager(Ctx->GetCommandListType());
     CmdListMngr.FreeAllocator(std::move(pAllocator));
     FreeCommandContext(std::move(Ctx));
 }
 
 void RenderDeviceD3D12Impl::FreeCommandContext(PooledCommandContext&& Ctx)
 {
-    const auto CmdListType = Ctx->GetCommandListType();
+    const D3D12_COMMAND_LIST_TYPE CmdListType = Ctx->GetCommandListType();
 
     std::lock_guard<std::mutex> Guard{m_ContextPoolMutex};
     m_ContextPool.emplace(CmdListType, std::move(Ctx));
@@ -348,7 +348,7 @@ void RenderDeviceD3D12Impl::FreeCommandContext(PooledCommandContext&& Ctx)
 
 void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(SoftwareQueueIndex CommandQueueId, PooledCommandContext&& Ctx)
 {
-    auto& CmdListMngr = GetCmdListManager(CommandQueueId);
+    CommandListManager& CmdListMngr = GetCmdListManager(CommandQueueId);
     VERIFY_EXPR(CmdListMngr.GetCommandListType() == Ctx->GetCommandListType());
 
     CComPtr<ID3D12CommandAllocator> pAllocator;
@@ -380,10 +380,10 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContexts(SoftwareQueueIndex 
     d3d12CmdLists.reserve(NumContexts);
     CmdAllocators.reserve(NumContexts);
 
-    auto& CmdListMngr = GetCmdListManager(CommandQueueId);
+    CommandListManager& CmdListMngr = GetCmdListManager(CommandQueueId);
     for (Uint32 i = 0; i < NumContexts; ++i)
     {
-        auto& pCtx = pContexts[i];
+        PooledCommandContext& pCtx = pContexts[i];
         VERIFY_EXPR(pCtx);
         VERIFY_EXPR(CmdListMngr.GetCommandListType() == pCtx->GetCommandListType());
         CComPtr<ID3D12CommandAllocator> pAllocator;
@@ -413,8 +413,8 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContexts(SoftwareQueueIndex 
         //                  |     with number N                      |                                   |
         if (pWaitFences != nullptr)
             WaitFences(CommandQueueId, *pWaitFences);
-        auto SubmittedCmdBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(CommandQueueId, true, NumContexts, d3d12CmdLists.data());
-        FenceValue                = SubmittedCmdBuffInfo.FenceValue;
+        SubmittedCommandBufferInfo SubmittedCmdBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(CommandQueueId, true, NumContexts, d3d12CmdLists.data());
+        FenceValue                                      = SubmittedCmdBuffInfo.FenceValue;
         if (pSignalFences != nullptr)
             SignalFences(CommandQueueId, *pSignalFences);
     }
@@ -432,11 +432,11 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContexts(SoftwareQueueIndex 
 
 void RenderDeviceD3D12Impl::SignalFences(SoftwareQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& SignalFences)
 {
-    auto& CmdQueue = m_CommandQueues[CommandQueueId].CmdQueue;
+    RefCntAutoPtr<ICommandQueueD3D12>& CmdQueue = m_CommandQueues[CommandQueueId].CmdQueue;
     for (auto& val_fence : SignalFences)
     {
-        auto* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
-        auto* pd3d12Fence     = pFenceD3D12Impl->GetD3D12Fence();
+        FenceD3D12Impl* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
+        ID3D12Fence*    pd3d12Fence     = pFenceD3D12Impl->GetD3D12Fence();
         CmdQueue->EnqueueSignal(pd3d12Fence, val_fence.first);
         pFenceD3D12Impl->DvpSignal(val_fence.first);
     }
@@ -444,11 +444,11 @@ void RenderDeviceD3D12Impl::SignalFences(SoftwareQueueIndex CommandQueueId, std:
 
 void RenderDeviceD3D12Impl::WaitFences(SoftwareQueueIndex CommandQueueId, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>>& WaitFences)
 {
-    auto& CmdQueue = m_CommandQueues[CommandQueueId].CmdQueue;
+    RefCntAutoPtr<ICommandQueueD3D12>& CmdQueue = m_CommandQueues[CommandQueueId].CmdQueue;
     for (auto& val_fence : WaitFences)
     {
-        auto* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
-        auto* pd3d12Fence     = pFenceD3D12Impl->GetD3D12Fence();
+        FenceD3D12Impl* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
+        ID3D12Fence*    pd3d12Fence     = pFenceD3D12Impl->GetD3D12Fence();
         CmdQueue->WaitFence(pd3d12Fence, val_fence.first);
         pFenceD3D12Impl->DvpDeviceWait(val_fence.first);
     }
@@ -475,7 +475,7 @@ void RenderDeviceD3D12Impl::ReleaseStaleResources(bool ForceRelease)
 
 RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateCommandContext(SoftwareQueueIndex CommandQueueId, const Char* ID)
 {
-    auto& CmdListMngr = GetCmdListManager(CommandQueueId);
+    CommandListManager& CmdListMngr = GetCmdListManager(CommandQueueId);
     {
         std::lock_guard<std::mutex> Guard{m_ContextPoolMutex};
 
@@ -493,9 +493,9 @@ RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateComma
         }
     }
 
-    auto& CmdCtxAllocator = GetRawAllocator();
-    auto* pRawMem         = ALLOCATE(CmdCtxAllocator, "CommandContext instance", CommandContext, 1);
-    auto  pCtx            = new (pRawMem) CommandContext(CmdListMngr);
+    IMemoryAllocator& CmdCtxAllocator = GetRawAllocator();
+    CommandContext*   pRawMem         = ALLOCATE(CmdCtxAllocator, "CommandContext instance", CommandContext, 1);
+    CommandContext*   pCtx            = new (pRawMem) CommandContext(CmdListMngr);
     pCtx->SetID(ID);
 #ifdef DILIGENT_DEVELOPMENT
     m_AllocatedCtxCounter.fetch_add(1);
@@ -505,14 +505,14 @@ RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateComma
 
 void RenderDeviceD3D12Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 {
-    auto& TexFormatInfo = m_TextureFormatsInfo[TexFormat];
+    TextureFormatInfoExt& TexFormatInfo = m_TextureFormatsInfo[TexFormat];
     VERIFY(TexFormatInfo.Supported, "Texture format is not supported");
 
-    auto DXGIFormat = TexFormatToDXGI_Format(TexFormat);
+    DXGI_FORMAT DXGIFormat = TexFormatToDXGI_Format(TexFormat);
 
     D3D12_FEATURE_DATA_FORMAT_SUPPORT FormatSupport = {DXGIFormat, {}, {}};
 
-    auto hr = m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport));
+    HRESULT hr = m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport));
     if (FAILED(hr))
     {
         LOG_ERROR_MESSAGE("CheckFormatSupport() failed for format ", DXGIFormat);

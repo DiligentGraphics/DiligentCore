@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ D3D12SerializeRootSignatureProcType D3D12SerializeRootSignature;
 HMODULE LoadD3D12Dll(const char* DLLPath)
 {
 #if PLATFORM_WIN32
-    auto hModule = LoadLibraryA(DLLPath);
+    HMODULE hModule = LoadLibraryA(DLLPath);
 
     if (hModule == NULL)
     {

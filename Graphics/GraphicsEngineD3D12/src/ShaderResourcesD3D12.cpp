@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,7 +70,7 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(IDataBlob*        pShaderBytecode,
     else
     {
         // Use D3D compiler to get reflection.
-        auto hr = D3DReflect(pShaderBytecode->GetConstDataPtr(), pShaderBytecode->GetSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
+        HRESULT hr = D3DReflect(pShaderBytecode->GetConstDataPtr(), pShaderBytecode->GetSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
         CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
     }
 

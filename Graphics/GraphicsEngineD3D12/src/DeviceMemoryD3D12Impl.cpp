@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -53,12 +53,12 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
 
     // NB: D3D12_RESOURCE_HEAP_TIER_1 hardware requires exactly one of the
     //     flags below left unset when creating a heap.
-    constexpr auto D3D12_HEAP_FLAG_DENY_ALL =
+    constexpr D3D12_HEAP_FLAGS D3D12_HEAP_FLAG_DENY_ALL =
         D3D12_HEAP_FLAG_DENY_BUFFERS |
         D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES |
         D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES;
 
-    auto HeapFlags = D3D12_HEAP_FLAG_DENY_ALL;
+    D3D12_HEAP_FLAGS HeapFlags = D3D12_HEAP_FLAG_DENY_ALL;
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features{};
     if (SUCCEEDED(pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &d3d12Features, sizeof(d3d12Features))))
@@ -88,14 +88,14 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
     static_assert(BIND_FLAG_LAST == 1u << 11u, "Did you add a new bind flag? You may need to update the logic below.");
     for (Uint32 res = 0; res < NumResources; ++res)
     {
-        auto* pResource = ppResources[res];
+        IDeviceObject* pResource = ppResources[res];
         if (pResource == nullptr)
             continue;
 
         if (RefCntAutoPtr<ITextureD3D12> pTexture{pResource, IID_TextureD3D12})
         {
-            const auto* pTexD3D12Impl = pTexture.ConstPtr<TextureD3D12Impl>();
-            const auto& TexDesc       = pTexD3D12Impl->GetDesc();
+            const TextureD3D12Impl* pTexD3D12Impl = pTexture.ConstPtr<TextureD3D12Impl>();
+            const TextureDesc&      TexDesc       = pTexD3D12Impl->GetDesc();
 
             if (TexDesc.Usage != USAGE_SPARSE)
                 LOG_ERROR_AND_THROW("Resource must be created with USAGE_SPARSE");
@@ -119,7 +119,7 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
         }
         else if (RefCntAutoPtr<IBufferD3D12> pBuffer{pResource, IID_BufferD3D12})
         {
-            const auto& BuffDesc = pBuffer.ConstPtr<BufferD3D12Impl>()->GetDesc();
+            const BufferDesc& BuffDesc = pBuffer.ConstPtr<BufferD3D12Impl>()->GetDesc();
 
             if (BuffDesc.Usage != USAGE_SPARSE)
                 LOG_ERROR_AND_THROW("Resource must be created with USAGE_SPARSE");
@@ -136,7 +136,7 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
 
     if (d3d12Features.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_1)
     {
-        const auto NumDenyFlags = PlatformMisc::CountOneBits(static_cast<Uint32>(HeapFlags & D3D12_HEAP_FLAG_DENY_ALL));
+        const Uint32 NumDenyFlags = PlatformMisc::CountOneBits(static_cast<Uint32>(HeapFlags & D3D12_HEAP_FLAG_DENY_ALL));
         if (NumDenyFlags != 2)
         {
             LOG_ERROR_AND_THROW("On D3D12_RESOURCE_HEAP_TIER_1 hadrware, only single resource usage for the heap is allowed: "
@@ -157,7 +157,7 @@ D3D12_HEAP_FLAGS GetD3D12HeapFlags(ID3D12Device*   pd3d12Device,
 
 inline CComPtr<ID3D12Heap> CreateD3D12Heap(RenderDeviceD3D12Impl* pDevice, const D3D12_HEAP_DESC& d3d12HeapDesc, bool UseNVApi)
 {
-    auto* const pd3d12Device = pDevice->GetD3D12Device();
+    ID3D12Device* const pd3d12Device = pDevice->GetD3D12Device();
 
     CComPtr<ID3D12Heap> pd3d12Heap;
 #ifdef DILIGENT_ENABLE_D3D_NVAPI
@@ -217,12 +217,12 @@ Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)
     d3d12HeapDesc.Alignment                       = m_AllowMSAA ? D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
     d3d12HeapDesc.Flags                           = m_d3d12HeapFlags;
 
-    const auto NewPageCount = StaticCast<size_t>(NewSize / m_Desc.PageSize);
+    const size_t NewPageCount = StaticCast<size_t>(NewSize / m_Desc.PageSize);
     m_Pages.reserve(NewPageCount);
 
     while (m_Pages.size() < NewPageCount)
     {
-        if (auto pHeap = CreateD3D12Heap(m_pDevice, d3d12HeapDesc, m_UseNVApi))
+        if (CComPtr<ID3D12Heap> pHeap = CreateD3D12Heap(m_pDevice, d3d12HeapDesc, m_UseNVApi))
         {
             pHeap->SetName(L"Device memory page");
             m_Pages.emplace_back(std::move(pHeap));
@@ -251,9 +251,9 @@ Bool DeviceMemoryD3D12Impl::IsCompatible(IDeviceObject* pResource) const
 {
     try
     {
-        bool AllowMSAA              = false;
-        bool UseNVApi               = false;
-        auto d3d12RequiredHeapFlags = GetD3D12HeapFlags(m_pDevice->GetD3D12Device(), &pResource, 1, AllowMSAA, UseNVApi);
+        bool             AllowMSAA              = false;
+        bool             UseNVApi               = false;
+        D3D12_HEAP_FLAGS d3d12RequiredHeapFlags = GetD3D12HeapFlags(m_pDevice->GetD3D12Device(), &pResource, 1, AllowMSAA, UseNVApi);
         return ((m_d3d12HeapFlags & d3d12RequiredHeapFlags) == d3d12RequiredHeapFlags) && (!AllowMSAA || m_AllowMSAA) && (UseNVApi == m_UseNVApi);
     }
     catch (...)
@@ -264,7 +264,7 @@ Bool DeviceMemoryD3D12Impl::IsCompatible(IDeviceObject* pResource) const
 
 DeviceMemoryRangeD3D12 DeviceMemoryD3D12Impl::GetRange(Uint64 Offset, Uint64 Size) const
 {
-    const auto PageIdx = static_cast<size_t>(Offset / m_Desc.PageSize);
+    const size_t PageIdx = static_cast<size_t>(Offset / m_Desc.PageSize);
 
     DeviceMemoryRangeD3D12 Range{};
     if (PageIdx >= m_Pages.size())
@@ -273,7 +273,7 @@ DeviceMemoryRangeD3D12 DeviceMemoryD3D12Impl::GetRange(Uint64 Offset, Uint64 Siz
         return Range;
     }
 
-    const auto OffsetInPage = Offset % m_Desc.PageSize;
+    const Uint64 OffsetInPage = Offset % m_Desc.PageSize;
     if (OffsetInPage + Size > m_Desc.PageSize)
     {
         DEV_ERROR("DeviceMemoryD3D12Impl::GetRange(): Offset and Size must be inside a single page");

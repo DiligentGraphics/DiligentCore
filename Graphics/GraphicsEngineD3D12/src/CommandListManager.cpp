@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,7 +50,7 @@ CommandListManager::~CommandListManager()
 void CommandListManager::CreateNewCommandList(ID3D12GraphicsCommandList** List, ID3D12CommandAllocator** Allocator, Uint32& IfaceVersion)
 {
     RequestAllocator(Allocator);
-    auto* pd3d12Device = m_DeviceD3D12Impl.GetD3D12Device();
+    ID3D12Device* pd3d12Device = m_DeviceD3D12Impl.GetD3D12Device();
 
     const IID CmdListIIDs[] =
         {
@@ -91,7 +91,7 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
     if (!m_FreeAllocators.empty())
     {
         *ppAllocator = m_FreeAllocators.back().Detach();
-        auto hr      = (*ppAllocator)->Reset();
+        HRESULT hr   = (*ppAllocator)->Reset();
         DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to reset command allocator");
         m_FreeAllocators.pop_back();
     }
@@ -99,8 +99,8 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
     // If no allocators were ready to be reused, create a new one
     if ((*ppAllocator) == nullptr)
     {
-        auto* pd3d12Device = m_DeviceD3D12Impl.GetD3D12Device();
-        auto  hr           = pd3d12Device->CreateCommandAllocator(m_CmdListType, __uuidof(*ppAllocator), reinterpret_cast<void**>(ppAllocator));
+        ID3D12Device* pd3d12Device = m_DeviceD3D12Impl.GetD3D12Device();
+        HRESULT       hr           = pd3d12Device->CreateCommandAllocator(m_CmdListType, __uuidof(*ppAllocator), reinterpret_cast<void**>(ppAllocator));
         VERIFY(SUCCEEDED(hr), "Failed to create command allocator");
         wchar_t AllocatorName[32];
         swprintf(AllocatorName, _countof(AllocatorName), L"Cmd list allocator %ld", m_NumAllocators.fetch_add(1));

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -103,7 +103,7 @@ ID3D12GraphicsCommandList* CommandContext::Close(CComPtr<ID3D12CommandAllocator>
     //  EngineProfiling::EndBlock(this);
 
     VERIFY_EXPR(m_pCurrentAllocator != nullptr);
-    auto hr = m_pCommandList->Close();
+    HRESULT hr = m_pCommandList->Close();
     DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to close the command list");
 
     pAllocator = std::move(m_pCurrentAllocator);
@@ -233,7 +233,7 @@ void StateTransitionHelper::DiscardIfAppropriate(const TextureDesc&    TexDesc,
     if ((m_Barrier.Flags & STATE_TRANSITION_FLAG_DISCARD_CONTENT) == 0)
         return;
 
-    const auto d3d12CmdListType = m_CmdCtx.GetCommandListType();
+    const D3D12_COMMAND_LIST_TYPE d3d12CmdListType = m_CmdCtx.GetCommandListType();
 
     bool DiscardAllowed = false;
 
@@ -303,7 +303,7 @@ void StateTransitionHelper::AddD3D12ResourceBarriers(TextureD3D12Impl& Tex, D3D1
     // D3D12_RESOURCE_STATE_COMMON == D3D12_RESOURCE_STATE_PRESENT
     if (d3d12Barrier.Transition.StateBefore != d3d12Barrier.Transition.StateAfter)
     {
-        const auto& TexDesc = Tex.GetDesc();
+        const TextureDesc& TexDesc = Tex.GetDesc();
         VERIFY(m_Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level is out of range");
         VERIFY(m_Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || m_Barrier.FirstMipLevel + m_Barrier.MipLevelsCount <= TexDesc.MipLevels,
                "Invalid mip level range");
@@ -400,7 +400,7 @@ void StateTransitionHelper::operator()(ResourceType& Resource)
     // Check if required state is already set
     if ((m_OldState & m_Barrier.NewState) != m_Barrier.NewState)
     {
-        auto NewState = m_Barrier.NewState;
+        RESOURCE_STATE NewState = m_Barrier.NewState;
         // If both old state and new state are read-only states, combine the two
         if ((m_OldState & RESOURCE_STATE_GENERIC_READ) == m_OldState &&
             (NewState & RESOURCE_STATE_GENERIC_READ) == NewState)

@@ -79,7 +79,7 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
     {
         CComPtr<ID3D12Resource> pBackBuffer;
 
-        auto hr = m_pSwapChain->GetBuffer(backbuff, __uuidof(pBackBuffer), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&pBackBuffer)));
+        HRESULT hr = m_pSwapChain->GetBuffer(backbuff, __uuidof(pBackBuffer), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&pBackBuffer)));
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to get back buffer ", backbuff, " from the swap chain");
 
@@ -118,8 +118,8 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         DepthBufferDesc.Name                            = "Main depth buffer";
         RefCntAutoPtr<ITexture> pDepthBufferTex;
         m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex));
-        auto* pDSV        = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
-        m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewD3D12>(pDSV, IID_TextureViewD3D12);
+        ITextureView* pDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+        m_pDepthBufferDSV  = RefCntAutoPtr<ITextureViewD3D12>(pDSV, IID_TextureViewD3D12);
     }
 }
 
@@ -129,17 +129,17 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
     SyncInterval = 1; // Interval 0 is not supported on Windows Phone
 #endif
 
-    auto pDeviceContext = m_wpDeviceContext.Lock();
+    RefCntAutoPtr<IDeviceContext> pDeviceContext = m_wpDeviceContext.Lock();
     if (!pDeviceContext)
     {
         LOG_ERROR_MESSAGE("Immediate context has been released");
         return;
     }
 
-    auto* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
+    DeviceContextD3D12Impl* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
 
-    auto& CmdCtx      = pImmediateCtxD3D12->GetCmdContext();
-    auto* pBackBuffer = ClassPtrCast<TextureD3D12Impl>(GetCurrentBackBufferRTV()->GetTexture());
+    CommandContext&   CmdCtx      = pImmediateCtxD3D12->GetCmdContext();
+    TextureD3D12Impl* pBackBuffer = ClassPtrCast<TextureD3D12Impl>(GetCurrentBackBufferRTV()->GetTexture());
 
     // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds
     // backbuffer 0 from all GPU writeable bind points.
@@ -154,13 +154,13 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
     // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains#step-4-wait-before-rendering-each-frame
     WaitForFrame();
 
-    auto hr = PresentInternal(SyncInterval);
+    HRESULT hr = PresentInternal(SyncInterval);
     VERIFY(SUCCEEDED(hr), "Present failed");
 
     if (m_SwapChainDesc.IsPrimary)
     {
         pImmediateCtxD3D12->FinishFrame();
-        auto* pDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(pImmediateCtxD3D12->GetDevice());
+        RenderDeviceD3D12Impl* pDeviceD3D12 = ClassPtrCast<RenderDeviceD3D12Impl>(pImmediateCtxD3D12->GetDevice());
         pDeviceD3D12->ReleaseStaleResources();
     }
 
@@ -175,7 +175,7 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
     if (!m_pSwapChain)
         return;
 
-    auto pDeviceContext = m_wpDeviceContext.Lock();
+    RefCntAutoPtr<IDeviceContext> pDeviceContext = m_wpDeviceContext.Lock();
     VERIFY(pDeviceContext, "Immediate context has been released");
     if (pDeviceContext)
     {
@@ -184,12 +184,12 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
 
         try
         {
-            auto* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
-            bool  RenderTargetsReset = false;
+            DeviceContextD3D12Impl* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
+            bool                    RenderTargetsReset = false;
             for (Uint32 i = 0; i < m_pBackBufferRTV.size() && !RenderTargetsReset; ++i)
             {
-                auto* pCurrentBackBuffer = ClassPtrCast<TextureD3D12Impl>(m_pBackBufferRTV[i]->GetTexture());
-                RenderTargetsReset       = pImmediateCtxD3D12->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
+                TextureD3D12Impl* pCurrentBackBuffer = ClassPtrCast<TextureD3D12Impl>(m_pBackBufferRTV[i]->GetTexture());
+                RenderTargetsReset                   = pImmediateCtxD3D12->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
             }
 
             if (RenderTargetsReset)

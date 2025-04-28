@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,8 +43,8 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
                                          const TopLevelASDesc&  Desc) :
     TTopLevelASBase{pRefCounters, pDeviceD3D12, Desc}
 {
-    auto* const pd3d12Device = pDeviceD3D12->GetD3D12Device5();
-    const auto& RTProps      = pDeviceD3D12->GetAdapterInfo().RayTracing;
+    ID3D12Device5* const        pd3d12Device = pDeviceD3D12->GetD3D12Device5();
+    const RayTracingProperties& RTProps      = pDeviceD3D12->GetAdapterInfo().RayTracing;
 
     UINT64 ResultDataMaxSizeInBytes = 0;
     if (m_Desc.CompactedSize > 0)
@@ -93,10 +93,10 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*    pRefCounters,
     d3d12ASDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     d3d12ASDesc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-    auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
-                                                    &d3d12ASDesc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
-                                                    __uuidof(m_pd3d12Resource),
-                                                    reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+    HRESULT hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
+                                                       &d3d12ASDesc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
+                                                       __uuidof(m_pd3d12Resource),
+                                                       reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
     if (FAILED(hr))
         LOG_ERROR_AND_THROW("Failed to create D3D12 Top-level acceleration structure");
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -113,7 +113,7 @@ D3D12_LOGIC_OP LogicOperationToD3D12LogicOp(LOGIC_OPERATION lo)
     }
     if (lo >= LOGIC_OP_CLEAR && lo < LOGIC_OP_NUM_OPERATIONS)
     {
-        auto d3dlo = D3D12LogicOp[lo];
+        D3D12_LOGIC_OP d3dlo = D3D12LogicOp[lo];
         return d3dlo;
     }
     else
@@ -130,8 +130,8 @@ void BlendStateDesc_To_D3D12_BLEND_DESC(const BlendStateDesc& BSDesc, D3D12_BLEN
 
     for (int i = 0; i < 8; ++i)
     {
-        const auto& SrcRTDesc = BSDesc.RenderTargets[i];
-        auto&       DstRTDesc = d3d12BlendDesc.RenderTarget[i];
+        const RenderTargetBlendDesc&    SrcRTDesc = BSDesc.RenderTargets[i];
+        D3D12_RENDER_TARGET_BLEND_DESC& DstRTDesc = d3d12BlendDesc.RenderTarget[i];
 
         // The following members only present in D3D_RENDER_TARGET_BLEND_DESC
         DstRTDesc.LogicOpEnable = SrcRTDesc.LogicOperationEnable ? TRUE : FALSE;
@@ -432,7 +432,7 @@ D3D12_RESOURCE_STATES ResourceStateFlagsToD3D12ResourceStates(RESOURCE_STATE Sta
     Uint32                                           Bits                = StateFlags;
     while (Bits != 0)
     {
-        auto lsb = PlatformMisc::GetLSB(Bits);
+        Uint32 lsb = PlatformMisc::GetLSB(Bits);
         D3D12ResourceStates |= BitPosToD3D12ResState(lsb);
         Bits &= ~(1 << lsb);
     }
@@ -549,7 +549,7 @@ RESOURCE_STATE D3D12ResourceStatesToResourceStateFlags(D3D12_RESOURCE_STATES Sta
     Uint32 Bits           = StateFlags;
     while (Bits != 0)
     {
-        auto lsb = PlatformMisc::GetLSB(Bits);
+        Uint32 lsb = PlatformMisc::GetLSB(Bits);
         ResourceStates |= BitPosToResState(lsb);
         Bits &= ~(1 << lsb);
     }
@@ -713,7 +713,7 @@ D3D12_RAYTRACING_GEOMETRY_FLAGS GeometryFlagsToD3D12RTGeometryFlags(RAYTRACING_G
     D3D12_RAYTRACING_GEOMETRY_FLAGS Result = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
     while (Flags != RAYTRACING_GEOMETRY_FLAG_NONE)
     {
-        auto FlagBit = static_cast<RAYTRACING_GEOMETRY_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        RAYTRACING_GEOMETRY_FLAGS FlagBit = static_cast<RAYTRACING_GEOMETRY_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
         switch (FlagBit)
         {
             // clang-format off
@@ -735,7 +735,7 @@ D3D12_RAYTRACING_INSTANCE_FLAGS InstanceFlagsToD3D12RTInstanceFlags(RAYTRACING_I
     D3D12_RAYTRACING_INSTANCE_FLAGS Result = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
     while (Flags != RAYTRACING_INSTANCE_NONE)
     {
-        auto FlagBit = static_cast<RAYTRACING_INSTANCE_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        RAYTRACING_INSTANCE_FLAGS FlagBit = static_cast<RAYTRACING_INSTANCE_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
         switch (FlagBit)
         {
             // clang-format off
@@ -759,7 +759,7 @@ D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS BuildASFlagsToD3D12ASBuildFl
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Result = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
     while (Flags != RAYTRACING_BUILD_AS_NONE)
     {
-        auto FlagBit = static_cast<RAYTRACING_BUILD_AS_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        RAYTRACING_BUILD_AS_FLAGS FlagBit = static_cast<RAYTRACING_BUILD_AS_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
         switch (FlagBit)
         {
             // clang-format off

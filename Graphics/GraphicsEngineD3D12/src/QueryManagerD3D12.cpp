@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,7 +73,7 @@ void QueryManagerD3D12::QueryHeapInfo::Init(ID3D12Device*                pd3d12D
     m_Type       = QueryType;
     m_QueryCount = d3d12HeapDesc.Count;
 
-    auto hr = pd3d12Device->CreateQueryHeap(&d3d12HeapDesc, __uuidof(m_pd3d12QueryHeap), reinterpret_cast<void**>(&m_pd3d12QueryHeap));
+    HRESULT hr = pd3d12Device->CreateQueryHeap(&d3d12HeapDesc, __uuidof(m_pd3d12QueryHeap), reinterpret_cast<void**>(&m_pd3d12QueryHeap));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D12 query heap");
 
     // AlignedDestinationBufferOffset must be a multiple of 8 bytes.
@@ -116,7 +116,7 @@ QueryManagerD3D12::QueryHeapInfo::~QueryHeapInfo()
 {
     if (m_AvailableQueries.size() != m_QueryCount)
     {
-        auto OutstandingQueries = m_QueryCount - m_AvailableQueries.size();
+        size_t OutstandingQueries = m_QueryCount - m_AvailableQueries.size();
         if (OutstandingQueries == 1)
         {
             LOG_ERROR_MESSAGE("One query of type ", GetQueryTypeString(m_Type),
@@ -136,13 +136,13 @@ QueryManagerD3D12::QueryManagerD3D12(RenderDeviceD3D12Impl* pDeviceD3D12Impl,
                                      HardwareQueueIndex     HwQueueInd) :
     m_CommandQueueId{CommandQueueId}
 {
-    const auto& DevInfo      = pDeviceD3D12Impl->GetDeviceInfo();
-    auto*       pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
+    const RenderDeviceInfo& DevInfo      = pDeviceD3D12Impl->GetDeviceInfo();
+    ID3D12Device*           pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
 
     Uint32 ResolveBufferOffset = 0;
     for (Uint32 query_type = QUERY_TYPE_UNDEFINED + 1; query_type < QUERY_TYPE_NUM_TYPES; ++query_type)
     {
-        const auto QueryType = static_cast<QUERY_TYPE>(query_type);
+        const QUERY_TYPE QueryType = static_cast<QUERY_TYPE>(query_type);
 
         // clang-format off
         static_assert(QUERY_TYPE_OCCLUSION          == 1, "Unexpected value of QUERY_TYPE_OCCLUSION. EngineD3D12CreateInfo::QueryPoolSizes must be updated");
@@ -169,7 +169,7 @@ QueryManagerD3D12::QueryManagerD3D12(RenderDeviceD3D12Impl* pDeviceD3D12Impl,
         if (QueryType == QUERY_TYPE_DURATION)
             d3d12HeapDesc.Count *= 2;
 
-        auto& HeapInfo = m_Heaps[QueryType];
+        QueryHeapInfo& HeapInfo = m_Heaps[QueryType];
         HeapInfo.Init(pd3d12Device, d3d12HeapDesc, QueryType, ResolveBufferOffset);
         VERIFY_EXPR(!HeapInfo.IsNull() && HeapInfo.GetType() == QueryType && HeapInfo.GetQueryCount() == d3d12HeapDesc.Count);
     }
@@ -201,10 +201,10 @@ QueryManagerD3D12::QueryManagerD3D12(RenderDeviceD3D12Impl* pDeviceD3D12Impl,
         // The destination buffer of a query resolve operation must be in the D3D12_RESOURCE_USAGE_COPY_DEST state.
         // ResolveQueryData works with all heap types (default, upload, readback).
         // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#resolvequerydata
-        auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
-                                                        &D3D12BuffDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                        __uuidof(m_pd3d12ResolveBuffer),
-                                                        reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12ResolveBuffer)));
+        HRESULT hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
+                                                           &D3D12BuffDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                           __uuidof(m_pd3d12ResolveBuffer),
+                                                           reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12ResolveBuffer)));
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create D3D12 resolve buffer");
     }
@@ -217,8 +217,8 @@ QueryManagerD3D12::~QueryManagerD3D12()
 
     for (Uint32 query_type = QUERY_TYPE_UNDEFINED + 1; query_type < QUERY_TYPE_NUM_TYPES; ++query_type)
     {
-        const auto  QueryType = static_cast<QUERY_TYPE>(query_type);
-        const auto& HeapInfo  = m_Heaps[QueryType];
+        const QUERY_TYPE     QueryType = static_cast<QUERY_TYPE>(query_type);
+        const QueryHeapInfo& HeapInfo  = m_Heaps[QueryType];
         if (HeapInfo.IsNull())
             continue;
 
@@ -242,8 +242,8 @@ void QueryManagerD3D12::ReleaseQuery(QUERY_TYPE Type, Uint32 Index)
 
 void QueryManagerD3D12::BeginQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index) const
 {
-    const auto  d3d12QueryType = QueryTypeToD3D12QueryType(Type);
-    const auto& HeapInfo       = m_Heaps[Type];
+    const D3D12_QUERY_TYPE d3d12QueryType = QueryTypeToD3D12QueryType(Type);
+    const QueryHeapInfo&   HeapInfo       = m_Heaps[Type];
     VERIFY_EXPR(HeapInfo.GetType() == Type);
     VERIFY(Index < HeapInfo.GetQueryCount(), "Query index ", Index, " is out of range");
 
@@ -252,8 +252,8 @@ void QueryManagerD3D12::BeginQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 
 
 void QueryManagerD3D12::EndQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index) const
 {
-    const auto  d3d12QueryType = QueryTypeToD3D12QueryType(Type);
-    const auto& HeapInfo       = m_Heaps[Type];
+    const D3D12_QUERY_TYPE d3d12QueryType = QueryTypeToD3D12QueryType(Type);
+    const QueryHeapInfo&   HeapInfo       = m_Heaps[Type];
     VERIFY_EXPR(HeapInfo.GetType() == Type);
 
     VERIFY(Index < HeapInfo.GetQueryCount(), "Query index ", Index, " is out of range");
@@ -265,12 +265,12 @@ void QueryManagerD3D12::EndQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 In
 
 void QueryManagerD3D12::ReadQueryData(QUERY_TYPE Type, Uint32 Index, void* pDataPtr, Uint32 DataSize) const
 {
-    const auto& HeapInfo = m_Heaps[Type];
+    const QueryHeapInfo& HeapInfo = m_Heaps[Type];
     VERIFY_EXPR(HeapInfo.GetType() == Type);
-    const auto QueryDataSize = GetQueryDataSize(Type);
+    const Uint32 QueryDataSize = GetQueryDataSize(Type);
     VERIFY_EXPR(QueryDataSize == DataSize);
-    const auto  Offset = HeapInfo.GetResolveBufferOffset(Index);
-    D3D12_RANGE ReadRange;
+    const Uint32 Offset = HeapInfo.GetResolveBufferOffset(Index);
+    D3D12_RANGE  ReadRange;
     ReadRange.Begin = Offset;
     ReadRange.End   = SIZE_T{Offset} + SIZE_T{QueryDataSize};
 

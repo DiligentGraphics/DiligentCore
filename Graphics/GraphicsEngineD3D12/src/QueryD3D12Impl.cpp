@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,7 +74,7 @@ QueryD3D12Impl::~QueryD3D12Impl()
 
 void QueryD3D12Impl::DiscardQueries()
 {
-    for (auto& HeapIdx : m_QueryHeapIndex)
+    for (Uint32& HeapIdx : m_QueryHeapIndex)
     {
         if (HeapIdx != QueryManagerD3D12::InvalidIndex)
         {
@@ -117,8 +117,8 @@ bool QueryD3D12Impl::OnEndQuery(DeviceContextD3D12Impl* pContext)
     }
 
     VERIFY_EXPR(m_pQueryMgr != nullptr);
-    auto CmdQueueId      = m_pQueryMgr->GetCommandQueueId();
-    m_QueryEndFenceValue = m_pDevice->GetNextFenceValue(CmdQueueId);
+    SoftwareQueueIndex CmdQueueId = m_pQueryMgr->GetCommandQueueId();
+    m_QueryEndFenceValue          = m_pDevice->GetNextFenceValue(CmdQueueId);
 
     return true;
 }
@@ -128,14 +128,14 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
     TQueryBase::CheckQueryDataPtr(pData, DataSize);
 
     VERIFY_EXPR(m_pQueryMgr != nullptr);
-    auto CmdQueueId          = m_pQueryMgr->GetCommandQueueId();
-    auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
+    SoftwareQueueIndex CmdQueueId          = m_pQueryMgr->GetCommandQueueId();
+    Uint64             CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {
         auto GetTimestampFrequency = [this](SoftwareQueueIndex CmdQueueId) //
         {
-            const auto& CmdQueue    = m_pDevice->GetCommandQueue(CmdQueueId);
-            auto*       pd3d12Queue = const_cast<ICommandQueueD3D12&>(CmdQueue).GetD3D12CommandQueue();
+            const ICommandQueueD3D12& CmdQueue    = m_pDevice->GetCommandQueue(CmdQueueId);
+            ID3D12CommandQueue*       pd3d12Queue = const_cast<ICommandQueueD3D12&>(CmdQueue).GetD3D12CommandQueue();
 
             // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#timestamp-frequency
             UINT64 TimestampFrequency = 0;
@@ -151,7 +151,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 m_pQueryMgr->ReadQueryData(m_Desc.Type, m_QueryHeapIndex[0], &NumSamples, sizeof(NumSamples));
                 if (pData != nullptr)
                 {
-                    auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
+                    QueryDataOcclusion& QueryData{*reinterpret_cast<QueryDataOcclusion*>(pData)};
                     QueryData.NumSamples = NumSamples;
                 }
             }
@@ -163,7 +163,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 m_pQueryMgr->ReadQueryData(m_Desc.Type, m_QueryHeapIndex[0], &AnySamplePassed, sizeof(AnySamplePassed));
                 if (pData != nullptr)
                 {
-                    auto& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
+                    QueryDataBinaryOcclusion& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
                     // Binary occlusion queries write 64-bits per query. The least significant bit is either 0 or 1. The rest of the bits are 0.
                     // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#resolvequerydata
                     QueryData.AnySamplePassed = AnySamplePassed != 0;
@@ -177,7 +177,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 m_pQueryMgr->ReadQueryData(m_Desc.Type, m_QueryHeapIndex[0], &Counter, sizeof(Counter));
                 if (pData != nullptr)
                 {
-                    auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                    QueryDataTimestamp& QueryData{*reinterpret_cast<QueryDataTimestamp*>(pData)};
                     QueryData.Counter   = Counter;
                     QueryData.Frequency = GetTimestampFrequency(CmdQueueId);
                 }
@@ -190,8 +190,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 m_pQueryMgr->ReadQueryData(m_Desc.Type, m_QueryHeapIndex[0], &d3d12QueryData, sizeof(d3d12QueryData));
                 if (pData != nullptr)
                 {
-                    auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
-
+                    QueryDataPipelineStatistics& QueryData{*reinterpret_cast<QueryDataPipelineStatistics*>(pData)};
                     QueryData.InputVertices       = d3d12QueryData.IAVertices;
                     QueryData.InputPrimitives     = d3d12QueryData.IAPrimitives;
                     QueryData.GSPrimitives        = d3d12QueryData.GSPrimitives;
@@ -214,7 +213,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 m_pQueryMgr->ReadQueryData(m_Desc.Type, m_QueryHeapIndex[1], &EndCounter, sizeof(EndCounter));
                 if (pData != nullptr)
                 {
-                    auto& QueryData     = *reinterpret_cast<QueryDataDuration*>(pData);
+                    QueryDataDuration& QueryData{*reinterpret_cast<QueryDataDuration*>(pData)};
                     QueryData.Duration  = EndCounter - StartCounter;
                     QueryData.Frequency = GetTimestampFrequency(CmdQueueId);
                 }

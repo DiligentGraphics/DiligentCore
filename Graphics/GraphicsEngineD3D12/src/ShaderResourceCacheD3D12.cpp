@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,16 +43,16 @@ namespace Diligent
 
 ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemoryRequirements(const RootParamsManager& RootParams)
 {
-    const auto NumRootTables = RootParams.GetNumRootTables();
-    const auto NumRootViews  = RootParams.GetNumRootViews();
+    const Uint32 NumRootTables = RootParams.GetNumRootTables();
+    const Uint32 NumRootViews  = RootParams.GetNumRootViews();
 
     MemoryRequirements MemReqs;
 
-    for (auto d3d12HeapType : {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER})
+    for (D3D12_DESCRIPTOR_HEAP_TYPE d3d12HeapType : {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER})
     {
         for (Uint32 group = 0; group < ROOT_PARAMETER_GROUP_COUNT; ++group)
         {
-            const auto ParamGroupSize = RootParams.GetParameterGroupSize(d3d12HeapType, static_cast<ROOT_PARAMETER_GROUP>(group));
+            const Uint32 ParamGroupSize = RootParams.GetParameterGroupSize(d3d12HeapType, static_cast<ROOT_PARAMETER_GROUP>(group));
             if (ParamGroupSize != 0)
             {
                 MemReqs.TotalResources += ParamGroupSize;
@@ -93,7 +93,7 @@ size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator)
 {
     VERIFY(!m_pMemory, "Memory has already been allocated");
 
-    const auto MemorySize =
+    const size_t MemorySize =
         (m_NumTables * sizeof(RootTable) +
          m_TotalResourceCount * sizeof(Resource) +
          m_NumDescriptorAllocations * sizeof(DescriptorHeapAllocation));
@@ -105,9 +105,9 @@ size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator)
             STDDeleter<void, IMemoryAllocator>(MemAllocator) //
         };
 
-        auto* const pTables     = reinterpret_cast<RootTable*>(m_pMemory.get());
-        auto* const pResources  = reinterpret_cast<Resource*>(pTables + m_NumTables);
-        m_DescriptorAllocations = m_NumDescriptorAllocations > 0 ? reinterpret_cast<DescriptorHeapAllocation*>(pResources + m_TotalResourceCount) : nullptr;
+        RootTable* const pTables    = reinterpret_cast<RootTable*>(m_pMemory.get());
+        Resource* const  pResources = reinterpret_cast<Resource*>(pTables + m_NumTables);
+        m_DescriptorAllocations     = m_NumDescriptorAllocations > 0 ? reinterpret_cast<DescriptorHeapAllocation*>(pResources + m_TotalResourceCount) : nullptr;
 
         for (Uint32 res = 0; res < m_TotalResourceCount; ++res)
             new (pResources + res) Resource{};
@@ -156,7 +156,7 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
     VERIFY(GetContentType() == ResourceCacheContentType::SRB,
            "This method should be called to initialize the cache to store resources of an SRB");
 
-    const auto MemReq = GetMemoryRequirements(RootParams);
+    const MemoryRequirements MemReq = GetMemoryRequirements(RootParams);
 
     DEV_CHECK_ERR(MemReq.NumTables <= MaxRootTables, "The number of root tables (", MemReq.NumTables, ") exceeds maximum allowed value (", MaxRootTables, ").");
 
@@ -168,7 +168,7 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
     m_NumDescriptorAllocations = static_cast<decltype(m_NumDescriptorAllocations)>(MemReq.NumDescriptorAllocations);
     VERIFY_EXPR(m_NumDescriptorAllocations == MemReq.NumDescriptorAllocations);
 
-    const auto MemSize = AllocateMemory(MemAllocator);
+    const size_t MemSize = AllocateMemory(MemAllocator);
     VERIFY_EXPR(MemSize == MemReq.TotalSize);
 
 #ifdef DILIGENT_DEBUG
@@ -180,11 +180,11 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
     // Initialize root tables
     for (Uint32 i = 0; i < RootParams.GetNumRootTables(); ++i)
     {
-        const auto& RootTbl = RootParams.GetRootTable(i);
+        const RootParameter& RootTbl = RootParams.GetRootTable(i);
         VERIFY(!RootTableInitFlags[RootTbl.RootIndex], "Root table at index ", RootTbl.RootIndex, " has already been initialized.");
         VERIFY_EXPR(RootTbl.TableOffsetInGroupAllocation != RootParameter::InvalidTableOffsetInGroupAllocation);
 
-        const auto TableSize = RootTbl.GetDescriptorTableSize();
+        const Uint32 TableSize = RootTbl.GetDescriptorTableSize();
         VERIFY(TableSize > 0, "Unexpected empty descriptor table");
 
         new (&GetRootTable(RootTbl.RootIndex)) RootTable{
@@ -202,7 +202,7 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
     // Initialize one-descriptor tables for root views
     for (Uint32 i = 0; i < RootParams.GetNumRootViews(); ++i)
     {
-        const auto& RootView = RootParams.GetRootView(i);
+        const RootParameter& RootView = RootParams.GetRootView(i);
         VERIFY(!RootTableInitFlags[RootView.RootIndex], "Root table at index ", RootView.RootIndex, " has already been initialized.");
         VERIFY_EXPR(RootView.TableOffsetInGroupAllocation == RootParameter::InvalidTableOffsetInGroupAllocation);
         VERIFY_EXPR((RootView.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
@@ -231,19 +231,19 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
 
     // Initialize descriptor heap allocations
     Uint32 AllocationCount = 0;
-    for (auto d3d12HeapType : {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER})
+    for (D3D12_DESCRIPTOR_HEAP_TYPE d3d12HeapType : {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER})
     {
         for (Uint32 group = 0; group < ROOT_PARAMETER_GROUP_COUNT; ++group)
         {
-            auto GroupType = static_cast<ROOT_PARAMETER_GROUP>(group);
+            ROOT_PARAMETER_GROUP GroupType = static_cast<ROOT_PARAMETER_GROUP>(group);
 
-            auto  TotalTableResources = RootParams.GetParameterGroupSize(d3d12HeapType, GroupType);
-            auto& AllocationIndex     = m_AllocationIndex[d3d12HeapType][GroupType];
+            Uint32 TotalTableResources = RootParams.GetParameterGroupSize(d3d12HeapType, GroupType);
+            Int8&  AllocationIndex     = m_AllocationIndex[d3d12HeapType][GroupType];
             if (TotalTableResources != 0)
             {
                 VERIFY_EXPR(AllocationIndex == -1);
-                AllocationIndex  = static_cast<Int8>(AllocationCount++);
-                auto& Allocation = m_DescriptorAllocations[AllocationIndex];
+                AllocationIndex                      = static_cast<Int8>(AllocationCount++);
+                DescriptorHeapAllocation& Allocation = m_DescriptorAllocations[AllocationIndex];
                 VERIFY_EXPR(Allocation.IsNull());
 
                 if (GroupType == ROOT_PARAMETER_GROUP_STATIC_MUTABLE)
@@ -297,7 +297,7 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(
                                                                                 Uint32     OffsetFromTableStart,
                                                                                 Resource&& SrcRes)
 {
-    auto& Tbl = GetRootTable(RootIndex);
+    RootTable& Tbl = GetRootTable(RootIndex);
     if (Tbl.IsRootView())
     {
         const BufferD3D12Impl* pBuffer = nullptr;
@@ -325,9 +325,9 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(
         m_NonDynamicRootBuffersMask &= ~BufferBit;
         if (pBuffer != nullptr)
         {
-            const auto& BuffDesc = pBuffer->GetDesc();
+            const BufferDesc& BuffDesc = pBuffer->GetDesc();
 
-            const auto IsDynamic =
+            const bool IsDynamic =
                 (BuffDesc.Usage == USAGE_DYNAMIC) ||
                 (SrcRes.BufferRangeSize != 0 && SrcRes.BufferRangeSize < BuffDesc.Size);
 
@@ -363,7 +363,7 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::SetResource(
 #endif
     }
 
-    auto& DstRes = Tbl.GetResource(OffsetFromTableStart);
+    Resource& DstRes = Tbl.GetResource(OffsetFromTableStart);
 
     DstRes = std::move(SrcRes);
     // Make sure dynamic offset is reset
@@ -378,9 +378,9 @@ void ShaderResourceCacheD3D12::SetBufferDynamicOffset(Uint32 RootIndex,
                                                       Uint32 OffsetFromTableStart,
                                                       Uint32 BufferDynamicOffset)
 {
-    auto& Tbl = GetRootTable(RootIndex);
+    RootTable& Tbl = GetRootTable(RootIndex);
     VERIFY(Tbl.IsRootView(), "Dynamic offsets may only be set for root views");
-    auto& Res = Tbl.GetResource(OffsetFromTableStart);
+    Resource& Res = Tbl.GetResource(OffsetFromTableStart);
     VERIFY_EXPR(Res.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER ||
                 Res.Type == SHADER_RESOURCE_TYPE_BUFFER_SRV);
     Res.BufferDynamicOffset = BufferDynamicOffset;
@@ -391,16 +391,16 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::CopyResource
                                                                                  Uint32          OffsetFromTableStart,
                                                                                  const Resource& SrcRes)
 {
-    const auto& DstRes = SetResource(RootIndex, OffsetFromTableStart, Resource{SrcRes});
+    const Resource& DstRes = SetResource(RootIndex, OffsetFromTableStart, Resource{SrcRes});
 
     if (m_ContentType == ResourceCacheContentType::SRB)
     {
-        auto& Tbl = GetRootTable(RootIndex);
+        RootTable& Tbl = GetRootTable(RootIndex);
         if (!Tbl.IsRootView())
         {
             const auto HeapType = DstRes.Type == SHADER_RESOURCE_TYPE_SAMPLER ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
-            auto DstDescrHandle = GetDescriptorTableHandle<D3D12_CPU_DESCRIPTOR_HANDLE>(
+            D3D12_CPU_DESCRIPTOR_HANDLE DstDescrHandle = GetDescriptorTableHandle<D3D12_CPU_DESCRIPTOR_HANDLE>(
                 HeapType, ROOT_PARAMETER_GROUP_STATIC_MUTABLE, RootIndex, OffsetFromTableStart);
             if (DstRes.CPUDescriptorHandle.ptr != 0)
             {
@@ -409,7 +409,7 @@ const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::CopyResource
             else
             {
                 VERIFY(DstRes.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Null CPU descriptor is only allowed for constant buffers");
-                const auto* pBuffer = DstRes.pObject.ConstPtr<BufferD3D12Impl>();
+                const BufferD3D12Impl* pBuffer = DstRes.pObject.ConstPtr<BufferD3D12Impl>();
                 VERIFY(DstRes.BufferRangeSize < pBuffer->GetDesc().Size, "Null CPU descriptor is only allowed for partial views of constant buffers");
                 VERIFY(DstRes.BufferRangeSize < D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16, "Constant buffer range must not exceed 64Kb");
                 pBuffer->CreateCBV(DstDescrHandle, DstRes.BufferBaseOffset, DstRes.BufferRangeSize);
@@ -427,12 +427,12 @@ void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
     VERIFY_EXPR((m_DynamicRootBuffersMask & m_NonDynamicRootBuffersMask) == 0);
     for (Uint32 i = 0; i < GetNumRootTables(); ++i)
     {
-        const auto&  Tbl              = GetRootTable(i);
-        const Uint64 DynamicBufferBit = Uint64{1} << Uint64{i};
+        const RootTable& Tbl              = GetRootTable(i);
+        const Uint64     DynamicBufferBit = Uint64{1} << Uint64{i};
         if (Tbl.IsRootView())
         {
             VERIFY_EXPR(Tbl.GetSize() == 1);
-            const auto& Res = Tbl.GetResource(0);
+            const Resource& Res = Tbl.GetResource(0);
 
             const BufferD3D12Impl* pBuffer = nullptr;
             if (Res.pObject)
@@ -456,9 +456,9 @@ void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
 
             if (pBuffer != nullptr)
             {
-                const auto& BuffDesc = pBuffer->GetDesc();
+                const BufferDesc& BuffDesc = pBuffer->GetDesc();
 
-                const auto IsDynamicBuffer =
+                const bool IsDynamicBuffer =
                     (BuffDesc.Usage == USAGE_DYNAMIC) ||
                     (Res.BufferRangeSize != 0 && Res.BufferRangeSize < BuffDesc.Size);
 
@@ -491,7 +491,7 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
         {
             // No need to use QueryInterface() - types are verified when resources are bound
-            auto* pBuffToTransition = pObject.RawPtr<BufferD3D12Impl>();
+            BufferD3D12Impl* pBuffToTransition = pObject.RawPtr<BufferD3D12Impl>();
             if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
                 Ctx.TransitionResource(*pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
         }
@@ -499,8 +499,8 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
 
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:
         {
-            auto* pBuffViewD3D12    = pObject.RawPtr<BufferViewD3D12Impl>();
-            auto* pBuffToTransition = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
+            BufferViewD3D12Impl* pBuffViewD3D12    = pObject.RawPtr<BufferViewD3D12Impl>();
+            BufferD3D12Impl*     pBuffToTransition = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
             if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
                 Ctx.TransitionResource(*pBuffToTransition, RESOURCE_STATE_SHADER_RESOURCE);
         }
@@ -508,8 +508,8 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
 
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:
         {
-            auto* pBuffViewD3D12    = pObject.RawPtr<BufferViewD3D12Impl>();
-            auto* pBuffToTransition = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
+            BufferViewD3D12Impl* pBuffViewD3D12    = pObject.RawPtr<BufferViewD3D12Impl>();
+            BufferD3D12Impl*     pBuffToTransition = pBuffViewD3D12->GetBuffer<BufferD3D12Impl>();
             if (pBuffToTransition->IsInKnownState())
             {
                 // We must always call TransitionResource() even when the state is already
@@ -522,8 +522,8 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
         {
-            auto* pTexViewD3D12    = pObject.RawPtr<TextureViewD3D12Impl>();
-            auto* pTexToTransition = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
+            TextureViewD3D12Impl* pTexViewD3D12    = pObject.RawPtr<TextureViewD3D12Impl>();
+            TextureD3D12Impl*     pTexToTransition = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
             if (pTexToTransition->IsInKnownState() && !pTexToTransition->CheckAnyState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT))
                 Ctx.TransitionResource(*pTexToTransition, RESOURCE_STATE_SHADER_RESOURCE);
         }
@@ -531,8 +531,8 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
 
         case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
         {
-            auto* pTexViewD3D12    = pObject.RawPtr<TextureViewD3D12Impl>();
-            auto* pTexToTransition = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
+            TextureViewD3D12Impl* pTexViewD3D12    = pObject.RawPtr<TextureViewD3D12Impl>();
+            TextureD3D12Impl*     pTexToTransition = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
             if (pTexToTransition->IsInKnownState())
             {
                 // We must always call TransitionResource() even when the state is already
@@ -548,7 +548,7 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
 
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
         {
-            auto* pTlasD3D12 = pObject.RawPtr<TopLevelASD3D12Impl>();
+            TopLevelASD3D12Impl* pTlasD3D12 = pObject.RawPtr<TopLevelASD3D12Impl>();
             if (pTlasD3D12->IsInKnownState())
             {
                 // We must always call TransitionResource() even when the state is already
@@ -575,7 +575,7 @@ void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
         {
             // Not using QueryInterface() for the sake of efficiency
-            const auto* pBufferD3D12 = pObject.ConstPtr<BufferD3D12Impl>();
+            const BufferD3D12Impl* pBufferD3D12 = pObject.ConstPtr<BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
             {
                 LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_CONSTANT_BUFFER state. Actual state: ",
@@ -589,8 +589,8 @@ void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
 
         case SHADER_RESOURCE_TYPE_BUFFER_SRV:
         {
-            const auto* pBuffViewD3D12 = pObject.ConstPtr<BufferViewD3D12Impl>();
-            const auto* pBufferD3D12   = pBuffViewD3D12->GetBuffer<const BufferD3D12Impl>();
+            const BufferViewD3D12Impl* pBuffViewD3D12 = pObject.ConstPtr<BufferViewD3D12Impl>();
+            const BufferD3D12Impl*     pBufferD3D12   = pBuffViewD3D12->GetBuffer<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
             {
                 LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_SHADER_RESOURCE state.  Actual state: ",
@@ -604,8 +604,8 @@ void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
 
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:
         {
-            const auto* pBuffViewD3D12 = pObject.ConstPtr<BufferViewD3D12Impl>();
-            const auto* pBufferD3D12   = pBuffViewD3D12->GetBuffer<const BufferD3D12Impl>();
+            const BufferViewD3D12Impl* pBuffViewD3D12 = pObject.ConstPtr<BufferViewD3D12Impl>();
+            const BufferD3D12Impl*     pBufferD3D12   = pBuffViewD3D12->GetBuffer<const BufferD3D12Impl>();
             if (pBufferD3D12->IsInKnownState() && !pBufferD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
             {
                 LOG_ERROR_MESSAGE("Buffer '", pBufferD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_UNORDERED_ACCESS state. Actual state: ",
@@ -620,12 +620,12 @@ void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
         {
-            const auto* pTexViewD3D12 = pObject.ConstPtr<TextureViewD3D12Impl>();
-            const auto* pTexD3D12     = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
-            const auto& TexDesc       = pTexD3D12->GetDesc();
-            const auto& FmtAttribs    = GetTextureFormatAttribs(TexDesc.Format);
+            const TextureViewD3D12Impl* pTexViewD3D12 = pObject.ConstPtr<TextureViewD3D12Impl>();
+            const TextureD3D12Impl*     pTexD3D12     = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
+            const TextureDesc&          TexDesc       = pTexD3D12->GetDesc();
+            const TextureFormatAttribs& FmtAttribs    = GetTextureFormatAttribs(TexDesc.Format);
 
-            auto RequiredStates = RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT;
+            RESOURCE_STATE RequiredStates = RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT;
             if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH || FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
             {
                 RequiredStates |= RESOURCE_STATE_DEPTH_READ;
@@ -643,8 +643,8 @@ void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
 
         case SHADER_RESOURCE_TYPE_TEXTURE_UAV:
         {
-            const auto* pTexViewD3D12 = pObject.ConstPtr<TextureViewD3D12Impl>();
-            const auto* pTexD3D12     = pTexViewD3D12->GetTexture<const TextureD3D12Impl>();
+            const TextureViewD3D12Impl* pTexViewD3D12 = pObject.ConstPtr<TextureViewD3D12Impl>();
+            const TextureD3D12Impl*     pTexD3D12     = pTexViewD3D12->GetTexture<const TextureD3D12Impl>();
             if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
             {
                 LOG_ERROR_MESSAGE("Texture '", pTexD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_UNORDERED_ACCESS state. Actual state: ",
@@ -662,7 +662,7 @@ void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
 
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
         {
-            const auto* pTLASD3D12 = pObject.ConstPtr<TopLevelASD3D12Impl>();
+            const TopLevelASD3D12Impl* pTLASD3D12 = pObject.ConstPtr<TopLevelASD3D12Impl>();
             if (pTLASD3D12->IsInKnownState() && !pTLASD3D12->CheckState(RESOURCE_STATE_RAY_TRACING))
             {
                 LOG_ERROR_MESSAGE("TLAS '", pTLASD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_RAY_TRACING state.  Actual state: ",
@@ -686,7 +686,7 @@ void ShaderResourceCacheD3D12::TransitionResourceStates(CommandContext& Ctx, Sta
 {
     for (Uint32 r = 0; r < m_TotalResourceCount; ++r)
     {
-        auto& Res = GetResource(r);
+        Resource& Res = GetResource(r);
         switch (Mode)
         {
             case StateTransitionMode::Transition:

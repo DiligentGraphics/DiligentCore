@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +39,7 @@ SamplerD3D12Impl::SamplerD3D12Impl(IReferenceCounters*    pRefCounters,
                                    const SamplerDesc&     SamplerDesc) :
     TSamplerBase{pRefCounters, pRenderDeviceD3D12, SamplerDesc}
 {
-    auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
+    ID3D12Device* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
 
     D3D12_SAMPLER_DESC D3D12SamplerDesc =
         {

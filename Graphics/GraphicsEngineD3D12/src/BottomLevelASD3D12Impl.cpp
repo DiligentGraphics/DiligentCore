@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,9 +43,9 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*      pRefCoun
                                                const BottomLevelASDesc& Desc) :
     TBottomLevelASBase{pRefCounters, pDeviceD3D12, Desc}
 {
-    auto*       pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
-    const auto& RTProps                  = pDeviceD3D12->GetAdapterInfo().RayTracing;
-    UINT64      ResultDataMaxSizeInBytes = 0;
+    ID3D12Device5*              pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
+    const RayTracingProperties& RTProps                  = pDeviceD3D12->GetAdapterInfo().RayTracing;
+    UINT64                      ResultDataMaxSizeInBytes = 0;
 
     if (m_Desc.CompactedSize)
     {
@@ -63,8 +63,8 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*      pRefCoun
             Uint32 MaxPrimitiveCount = 0;
             for (uint32_t i = 0; i < m_Desc.TriangleCount; ++i)
             {
-                auto& src = m_Desc.pTriangles[i];
-                auto& dst = d3d12Geometries[i];
+                const BLASTriangleDesc&         src = m_Desc.pTriangles[i];
+                D3D12_RAYTRACING_GEOMETRY_DESC& dst = d3d12Geometries[i];
 
                 dst.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
                 dst.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
@@ -90,8 +90,8 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*      pRefCoun
             Uint32 MaxBoxCount = 0;
             for (uint32_t i = 0; i < m_Desc.BoxCount; ++i)
             {
-                auto& src = m_Desc.pBoxes[i];
-                auto& dst = d3d12Geometries[i];
+                const BLASBoundingBoxDesc&      src = m_Desc.pBoxes[i];
+                D3D12_RAYTRACING_GEOMETRY_DESC& dst = d3d12Geometries[i];
 
                 dst.Type                      = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
                 dst.Flags                     = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
@@ -149,10 +149,10 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*      pRefCoun
     ASDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     ASDesc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-    auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
-                                                    &ASDesc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
-                                                    __uuidof(m_pd3d12Resource),
-                                                    reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+    HRESULT hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
+                                                       &ASDesc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
+                                                       __uuidof(m_pd3d12Resource),
+                                                       reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
     if (FAILED(hr))
         LOG_ERROR_AND_THROW("Failed to create D3D12 Bottom-level acceleration structure");
 

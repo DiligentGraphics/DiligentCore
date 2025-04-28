@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,26 +69,26 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
     Uint32 TotalDescriptorRanges = 0;
     for (Uint32 s = 0; s < m_SignatureCount; ++s)
     {
-        auto& SignInfo = m_ResourceSignatures[s];
+        ResourceSignatureInfo& SignInfo = m_ResourceSignatures[s];
 
         const PipelineResourceSignatureD3D12Impl* const pSignature = SignInfo.pSignature;
         if (pSignature == nullptr)
             continue;
 
-        const auto& RootParams = pSignature->GetRootParams();
+        const RootParamsManager& RootParams = pSignature->GetRootParams();
 
         SignInfo.BaseRootIndex = TotalParams;
         TotalParams += RootParams.GetNumRootTables() + RootParams.GetNumRootViews();
 
         for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
         {
-            const auto& RootTable = RootParams.GetRootTable(rt);
+            const RootParameter& RootTable = RootParams.GetRootTable(rt);
             TotalDescriptorRanges += RootTable.d3d12RootParam.DescriptorTable.NumDescriptorRanges;
         }
 
         for (Uint32 samp = 0, SampCount = pSignature->GetImmutableSamplerCount(); samp < SampCount; ++samp)
         {
-            const auto& ImtblSam = pSignature->GetImmutableSamplerAttribs(samp);
+            const ImmutableSamplerAttribsD3D12& ImtblSam = pSignature->GetImmutableSamplerAttribs(samp);
             VERIFY_EXPR(ImtblSam.IsValid());
 
             TotalImmutableSamplers += ImtblSam.ArraySize;
@@ -115,7 +115,7 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
     Uint32 BaseRegisterSpace = 0;
     for (Uint32 sig = 0; sig < m_SignatureCount; ++sig)
     {
-        auto& SignInfo = m_ResourceSignatures[sig];
+        ResourceSignatureInfo& SignInfo = m_ResourceSignatures[sig];
 
         SignInfo.BaseRegisterSpace = BaseRegisterSpace;
 
@@ -123,19 +123,19 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
         if (pSignature == nullptr)
             continue;
 
-        const auto& RootParams = pSignature->GetRootParams();
+        const RootParamsManager& RootParams = pSignature->GetRootParams();
 
         Uint32 MaxSpaceUsed = 0;
         for (Uint32 rt = 0; rt < RootParams.GetNumRootTables(); ++rt)
         {
-            const auto& RootTable     = RootParams.GetRootTable(rt);
-            const auto& d3d12SrcParam = RootTable.d3d12RootParam;
-            const auto& d3d12SrcTbl   = d3d12SrcParam.DescriptorTable;
+            const RootParameter&               RootTable     = RootParams.GetRootTable(rt);
+            const D3D12_ROOT_PARAMETER&        d3d12SrcParam = RootTable.d3d12RootParam;
+            const D3D12_ROOT_DESCRIPTOR_TABLE& d3d12SrcTbl   = d3d12SrcParam.DescriptorTable;
             // Offset root parameter index by the base root index of the current resource signature
             const Uint32 RootIndex = SignInfo.BaseRootIndex + RootTable.RootIndex;
             VERIFY(d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && d3d12SrcParam.DescriptorTable.NumDescriptorRanges > 0, "Non-empty descriptor table is expected");
-            auto& d3d12DstParam = d3d12Parameters[RootIndex];
-            auto& d3d12DstTbl   = d3d12DstParam.DescriptorTable;
+            D3D12_ROOT_PARAMETER&        d3d12DstParam = d3d12Parameters[RootIndex];
+            D3D12_ROOT_DESCRIPTOR_TABLE& d3d12DstTbl   = d3d12DstParam.DescriptorTable;
 
             d3d12DstParam = d3d12SrcParam;
             // Copy all ranges from the source descriptor table and offset register space values by
@@ -151,9 +151,9 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
 
         for (Uint32 rv = 0; rv < RootParams.GetNumRootViews(); ++rv)
         {
-            const auto&  RootView      = RootParams.GetRootView(rv);
-            const auto&  d3d12SrcParam = RootView.d3d12RootParam;
-            const Uint32 RootIndex     = SignInfo.BaseRootIndex + RootView.RootIndex;
+            const RootParameter&        RootView      = RootParams.GetRootView(rv);
+            const D3D12_ROOT_PARAMETER& d3d12SrcParam = RootView.d3d12RootParam;
+            const Uint32                RootIndex     = SignInfo.BaseRootIndex + RootView.RootIndex;
             VERIFY((d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
                     d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
                     d3d12SrcParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV),
@@ -168,13 +168,13 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
 
         for (Uint32 samp = 0, SampCount = pSignature->GetImmutableSamplerCount(); samp < SampCount; ++samp)
         {
-            const auto& SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
-            const auto& ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
-            const auto& SamDesc  = ImtblSam.Desc;
+            const ImmutableSamplerAttribsD3D12& SampAttr = pSignature->GetImmutableSamplerAttribs(samp);
+            const ImmutableSamplerDesc&         ImtblSam = pSignature->GetImmutableSamplerDesc(samp);
+            const SamplerDesc&                  SamDesc  = ImtblSam.Desc;
 
             for (UINT ArrInd = 0; ArrInd < SampAttr.ArraySize; ++ArrInd)
             {
-                auto ShaderVisibility = ShaderStagesToD3D12ShaderVisibility(ImtblSam.ShaderStages);
+                D3D12_SHADER_VISIBILITY ShaderVisibility = ShaderStagesToD3D12ShaderVisibility(ImtblSam.ShaderStages);
 
                 d3d12StaticSamplers.emplace_back(
                     D3D12_STATIC_SAMPLER_DESC //
@@ -237,7 +237,7 @@ RootSignatureD3D12::RootSignatureD3D12(IReferenceCounters*                      
 
         m_pCache = &pDeviceD3D12Impl->GetRootSignatureCache();
 
-        auto* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
+        ID3D12Device* pd3d12Device = pDeviceD3D12Impl->GetD3D12Device();
 
         hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>(static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
         CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
@@ -286,7 +286,7 @@ bool LocalRootSignatureD3D12::Create(ID3D12Device* pDevice, Uint32 RegisterSpace
     d3d12RootSignatureDesc.pParameters   = &d3d12Params;
 
     CComPtr<ID3DBlob> signature;
-    auto              hr = D3D12SerializeRootSignature(&d3d12RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
+    HRESULT           hr = D3D12SerializeRootSignature(&d3d12RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
     CHECK_D3D_RESULT_THROW(hr, "Failed to serialize local root signature");
 
     hr = pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_pd3d12RootSignature));
@@ -354,7 +354,7 @@ RefCntAutoPtr<RootSignatureD3D12> RootSignatureCacheD3D12::GetRootSig(const RefC
     auto Range = m_RootSigCache.equal_range(Hash);
     for (auto Iter = Range.first; Iter != Range.second; ++Iter)
     {
-        if (auto Ptr = Iter->second.Lock())
+        if (RefCntAutoPtr<RootSignatureD3D12> Ptr = Iter->second.Lock())
         {
             if (Ptr->IsCompatibleWith(ppSignatures, SignatureCount))
                 return Ptr;

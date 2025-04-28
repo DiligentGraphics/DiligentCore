@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -117,11 +117,11 @@ GenerateMipsHelper::GenerateMipsHelper(ID3D12Device* pd3d12Device)
 
 void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D12Impl* pTexView, CommandContext& Ctx) const
 {
-    auto& ComputeCtx = Ctx.AsComputeContext();
+    ComputeContext& ComputeCtx = Ctx.AsComputeContext();
     ComputeCtx.SetComputeRootSignature(m_pGenerateMipsRS);
-    auto*       pTexD3D12 = pTexView->GetTexture<TextureD3D12Impl>();
-    const auto& TexDesc   = pTexD3D12->GetDesc();
-    const auto& ViewDesc  = pTexView->GetDesc();
+    TextureD3D12Impl*      pTexD3D12 = pTexView->GetTexture<TextureD3D12Impl>();
+    const TextureDesc&     TexDesc   = pTexD3D12->GetDesc();
+    const TextureViewDesc& ViewDesc  = pTexView->GetDesc();
 
     bool IsAllSlices =
         (TexDesc.Type != RESOURCE_DIM_TEX_1D_ARRAY &&
@@ -130,7 +130,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
         TexDesc.ArraySize == ViewDesc.NumArraySlices;
     bool IsAllMips = ViewDesc.NumMipLevels == TexDesc.MipLevels;
 
-    auto SRVDescriptorHandle = pTexView->GetTexArraySRV();
+    D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptorHandle = pTexView->GetTexArraySRV();
 
     if (!pTexD3D12->IsInKnownState())
     {
@@ -145,14 +145,14 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
         Ctx.TransitionResource(*pTexD3D12, RESOURCE_STATE_SHADER_RESOURCE);
     }
 
-    const auto OriginalState = pTexD3D12->GetState();
+    const RESOURCE_STATE OriginalState = pTexD3D12->GetState();
     pTexD3D12->SetState(RESOURCE_STATE_UNKNOWN); // Switch to manual state management
 
     // If we are processing the entire texture, we will leave it in SHADER_RESOURCE layout.
     // Otherwise we will transition affected subresources back to original layout.
-    const auto FinalState = (IsAllSlices && IsAllMips) ? RESOURCE_STATE_SHADER_RESOURCE : OriginalState;
+    const RESOURCE_STATE FinalState = (IsAllSlices && IsAllMips) ? RESOURCE_STATE_SHADER_RESOURCE : OriginalState;
 
-    auto BottomMip = ViewDesc.NumMipLevels - 1;
+    Uint32 BottomMip = ViewDesc.NumMipLevels - 1;
     for (uint32_t TopMip = 0; TopMip < BottomMip;)
     {
         uint32_t SrcWidth  = std::max(TexDesc.Width >> (TopMip + ViewDesc.MostDetailedMip), 1u);
@@ -188,7 +188,7 @@ void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D
             DstHeight = 1;
 
         D3D12_DESCRIPTOR_HEAP_TYPE HeapType        = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        auto                       DescriptorAlloc = Ctx.AllocateDynamicGPUVisibleDescriptor(HeapType, 5);
+        DescriptorHeapAllocation   DescriptorAlloc = Ctx.AllocateDynamicGPUVisibleDescriptor(HeapType, 5);
 
         CommandContext::ShaderDescriptorHeaps Heaps{DescriptorAlloc.GetDescriptorHeap(), nullptr};
         ComputeCtx.SetDescriptorHeaps(Heaps);

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,7 +64,7 @@ Uint64 CommandQueueD3D12Impl::Submit(Uint32                    NumCommandLists,
     std::lock_guard<std::mutex> Lock{m_QueueMtx};
 
     // Increment the value before submitting the list
-    auto FenceValue = m_NextFenceValue.fetch_add(1);
+    Uint64 FenceValue = m_NextFenceValue.fetch_add(1);
 
     // Render device submits null command list to signal the fence and
     // discard all resources.
@@ -104,10 +104,10 @@ Uint64 CommandQueueD3D12Impl::WaitForIdle()
 
 Uint64 CommandQueueD3D12Impl::GetCompletedFenceValue()
 {
-    auto CompletedFenceValue = m_d3d12Fence->GetCompletedValue();
+    Uint64 CompletedFenceValue = m_d3d12Fence->GetCompletedValue();
     VERIFY(CompletedFenceValue != UINT64_MAX, "If the device has been removed, the return value will be UINT64_MAX");
 
-    auto CurrValue = m_LastCompletedFenceValue.load();
+    Uint64 CurrValue = m_LastCompletedFenceValue.load();
     while (!m_LastCompletedFenceValue.compare_exchange_weak(CurrValue, std::max(CurrValue, CompletedFenceValue)))
     {
         // If exchange fails, CurrValue will hold the actual value of m_LastCompletedFenceValue
@@ -140,7 +140,7 @@ void CommandQueueD3D12Impl::UpdateTileMappings(ResourceTileMappingsD3D12* pMappi
 
     for (Uint32 i = 0; i < Count; ++i)
     {
-        const auto& Mapping = pMappings[i];
+        const ResourceTileMappingsD3D12& Mapping = pMappings[i];
         if (Mapping.UseNVApi)
         {
 #ifdef DILIGENT_ENABLE_D3D_NVAPI

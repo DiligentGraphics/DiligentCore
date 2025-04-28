@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,9 +57,9 @@ D3D12DynamicPage::D3D12DynamicPage(ID3D12Device* pd3d12Device, Uint64 Size)
     DefaultUsage                       = D3D12_RESOURCE_STATE_GENERIC_READ;
     ResourceDesc.Width                 = Size;
 
-    auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &ResourceDesc,
-                                                    DefaultUsage, nullptr, __uuidof(m_pd3d12Buffer),
-                                                    reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Buffer)));
+    HRESULT hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &ResourceDesc,
+                                                       DefaultUsage, nullptr, __uuidof(m_pd3d12Buffer),
+                                                       reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Buffer)));
     if (FAILED(hr))
     {
         LOG_D3D_ERROR(hr, "Failed to create dynamic page");
@@ -85,7 +85,7 @@ D3D12DynamicMemoryManager::D3D12DynamicMemoryManager(IMemoryAllocator&      Allo
     for (Uint32 i = 0; i < NumPagesToReserve; ++i)
     {
         D3D12DynamicPage Page(m_DeviceD3D12Impl.GetD3D12Device(), PageSize);
-        auto             Size = Page.GetSize();
+        Uint64           Size = Page.GetSize();
         m_AvailablePages.emplace(Size, std::move(Page));
     }
 }
@@ -144,12 +144,12 @@ void D3D12DynamicMemoryManager::ReleasePages(std::vector<D3D12DynamicPage>& Page
 #ifdef DILIGENT_DEVELOPMENT
                 --Mgr->m_AllocatedPageCounter;
 #endif
-                auto PageSize = Page.GetSize();
+                Uint64 PageSize = Page.GetSize();
                 Mgr->m_AvailablePages.emplace(PageSize, std::move(Page));
             }
         }
     };
-    for (auto& Page : Pages)
+    for (D3D12DynamicPage& Page : Pages)
     {
         m_DeviceD3D12Impl.SafeReleaseDeviceObject(StalePage{std::move(Page), *this}, QueueMask);
     }
@@ -180,7 +180,7 @@ D3D12DynamicHeap::~D3D12DynamicHeap()
 {
     VERIFY(m_AllocatedPages.empty(), "Allocated pages have not been released which indicates FinishFrame() has not been called");
 
-    auto PeakAllocatedPages = m_PeakAllocatedSize / m_PageSize;
+    Uint64 PeakAllocatedPages = m_PeakAllocatedSize / m_PageSize;
     LOG_INFO_MESSAGE(m_HeapName,
                      " usage stats:\n"
                      "                       Peak used/aligned/allocated size: ",
@@ -199,11 +199,11 @@ D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Ali
 
     if (m_CurrOffset == InvalidOffset || SizeInBytes + (AlignUp(m_CurrOffset, Alignment) - m_CurrOffset) > m_AvailableSize)
     {
-        auto NewPageSize = m_PageSize;
+        Uint64 NewPageSize = m_PageSize;
         while (NewPageSize < SizeInBytes)
             NewPageSize *= 2;
 
-        auto NewPage = m_GlobalDynamicMemMgr.AllocatePage(NewPageSize);
+        D3D12DynamicPage NewPage = m_GlobalDynamicMemMgr.AllocatePage(NewPageSize);
         if (NewPage.IsValid())
         {
             m_CurrOffset    = 0;
@@ -218,8 +218,8 @@ D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Ali
 
     if (m_CurrOffset != InvalidOffset && SizeInBytes + (AlignUp(m_CurrOffset, Alignment) - m_CurrOffset) <= m_AvailableSize)
     {
-        auto AlignedOffset = AlignUp(m_CurrOffset, Alignment);
-        auto AdjustedSize  = SizeInBytes + (AlignedOffset - m_CurrOffset);
+        Uint64 AlignedOffset = AlignUp(m_CurrOffset, Alignment);
+        Uint64 AdjustedSize  = SizeInBytes + (AlignedOffset - m_CurrOffset);
         VERIFY_EXPR(AdjustedSize <= m_AvailableSize);
         m_AvailableSize -= AdjustedSize;
         m_CurrOffset += AdjustedSize;
@@ -230,7 +230,7 @@ D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Ali
         m_CurrAlignedSize += AdjustedSize;
         m_PeakAlignedSize = std::max(m_PeakAlignedSize, m_CurrAlignedSize);
 
-        auto& CurrPage = m_AllocatedPages.back();
+        D3D12DynamicPage& CurrPage = m_AllocatedPages.back();
         // clang-format off
         return D3D12DynamicAllocation
         {
