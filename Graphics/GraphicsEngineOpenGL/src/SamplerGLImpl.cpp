@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
     m_GlSampler{true}
 // clang-format on
 {
-    const auto& SamPrpos = pDeviceGL->GetAdapterInfo().Sampler;
+    const SamplerProperties& SamPrpos = pDeviceGL->GetAdapterInfo().Sampler;
 
     Bool   bMinAnisotropic = False, bMagAnisotropic = False, bMipAnisotropic = False;
     Bool   bMinComparison = False, bMagComparison = False, bMipComparison = False;
@@ -81,8 +81,8 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
         };
     for (size_t i = 0; i < _countof(AddressModes); ++i)
     {
-        auto& WrapMode = WrapModes[i];
-        WrapMode       = TexAddressModeToGLAddressMode(AddressModes[i]);
+        GLenum& WrapMode = WrapModes[i];
+        WrapMode         = TexAddressModeToGLAddressMode(AddressModes[i]);
         if (!SamPrpos.BorderSamplingModeSupported && WrapMode == GL_CLAMP_TO_BORDER)
         {
             LOG_ERROR_MESSAGE("GL_CLAMP_TO_BORDER filtering mode is not supported. Defaulting to GL_CLAMP_TO_EDGE.\n");

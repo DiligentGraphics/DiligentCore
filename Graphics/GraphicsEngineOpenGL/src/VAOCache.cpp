@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,7 +69,7 @@ void VAOCache::OnDestroyBuffer(const BufferGLImpl& Buffer)
     const auto it = m_BuffToKey.find(Buffer.GetUniqueID());
     if (it != m_BuffToKey.end())
     {
-        for (const auto& Key : it->second)
+        for (const VAOHashKey& Key : it->second)
         {
             StaleKeys.push_back(Key);
             m_Cache.erase(Key);
@@ -92,7 +92,7 @@ void VAOCache::OnDestroyPSO(const PipelineStateGLImpl& PSO)
     const auto it = m_PSOToKey.find(PSO.GetUniqueID());
     if (it != m_PSOToKey.end())
     {
-        for (const auto& Key : it->second)
+        for (const VAOHashKey& Key : it->second)
         {
             StaleKeys.push_back(Key);
             m_Cache.erase(Key);
@@ -119,17 +119,17 @@ void VAOCache::ClearStaleKeys(const std::vector<VAOHashKey>& StaleKeys)
     // Collect unique PSOs and buffers used in stale keys.
     std::unordered_set<UniqueIdentifier> CandidatePSOs;
     std::unordered_set<UniqueIdentifier> CandidateBuffers;
-    for (const auto& StaleKey : StaleKeys)
+    for (const VAOHashKey& StaleKey : StaleKeys)
     {
         CandidatePSOs.emplace(StaleKey.PsoUId);
 
         if (StaleKey.IndexBufferUId != 0)
             CandidateBuffers.emplace(StaleKey.IndexBufferUId);
 
-        for (auto SlotMask = StaleKey.UsedSlotsMask; SlotMask != 0;)
+        for (Uint32 SlotMask = StaleKey.UsedSlotsMask; SlotMask != 0;)
         {
-            const auto SlotBit = ExtractLSB(SlotMask);
-            const auto Slot    = PlatformMisc::GetLSB(SlotBit);
+            const Uint32 SlotBit = ExtractLSB(SlotMask);
+            const Uint32 Slot    = PlatformMisc::GetLSB(SlotBit);
             VERIFY_EXPR(StaleKey.Streams[Slot].BufferUId >= 0);
             CandidateBuffers.emplace(StaleKey.Streams[Slot].BufferUId);
         }
@@ -146,7 +146,7 @@ void VAOCache::ClearStaleKeys(const std::vector<VAOHashKey>& StaleKeys)
         };
 
         // Delete stale entries that reference dead keys
-        for (const auto Id : CandidateIds)
+        for (const UniqueIdentifier Id : CandidateIds)
         {
             const auto it = IdToKey.find(Id);
             if (it != IdToKey.end())
@@ -178,14 +178,14 @@ VAOCache::VAOHashKey::VAOHashKey(const VAOAttribs& Attribs) :
         Streams[i].BufferUId = -1;
 #endif
 
-    const auto& InputLayout    = Attribs.PSO.GetGraphicsPipelineDesc().InputLayout;
-    const auto* LayoutElements = InputLayout.LayoutElements;
+    const InputLayoutDesc& InputLayout    = Attribs.PSO.GetGraphicsPipelineDesc().InputLayout;
+    const LayoutElement*   LayoutElements = InputLayout.LayoutElements;
 
     Hash = ComputeHash(PsoUId, IndexBufferUId);
     for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
     {
-        const auto& LayoutElem = LayoutElements[i];
-        const auto  BufferSlot = LayoutElem.BufferSlot;
+        const LayoutElement& LayoutElem = LayoutElements[i];
+        const Uint32         BufferSlot = LayoutElem.BufferSlot;
         VERIFY_EXPR(BufferSlot < MAX_BUFFER_SLOTS);
         DEV_CHECK_ERR(BufferSlot < Attribs.NumVertexStreams, "Input layout requires at least ", BufferSlot + 1,
                       " buffer", (BufferSlot > 0 ? "s" : ""), ", but only ", Attribs.NumVertexStreams, ' ',
@@ -194,11 +194,11 @@ VAOCache::VAOHashKey::VAOHashKey(const VAOAttribs& Attribs) :
         const auto& SrcStream = Attribs.VertexStreams[BufferSlot];
         DEV_CHECK_ERR(SrcStream.pBuffer, "VAO requires buffer at slot ", BufferSlot, ", but none is bound in the context.");
 
-        const auto BuffId  = SrcStream.pBuffer ? SrcStream.pBuffer->GetUniqueID() : 0;
-        const auto SlotBit = 1u << BufferSlot;
+        const Int32  BuffId  = SrcStream.pBuffer ? SrcStream.pBuffer->GetUniqueID() : 0;
+        const Uint32 SlotBit = 1u << BufferSlot;
         if ((UsedSlotsMask & SlotBit) == 0)
         {
-            auto& DstStream     = Streams[BufferSlot];
+            VAOHashKey::StreamAttribs& DstStream{Streams[BufferSlot]};
             DstStream.BufferUId = BuffId;
             DstStream.Offset    = SrcStream.Offset;
             UsedSlotsMask |= SlotBit;
@@ -206,7 +206,7 @@ VAOCache::VAOHashKey::VAOHashKey(const VAOAttribs& Attribs) :
         }
         else
         {
-            const auto& DstStream = Streams[BufferSlot];
+            VAOHashKey::StreamAttribs& DstStream{Streams[BufferSlot]};
             // The slot has already been initialized
             VERIFY_EXPR(DstStream.BufferUId == BuffId);
             VERIFY_EXPR(DstStream.Offset == SrcStream.Offset);
@@ -227,10 +227,10 @@ bool VAOCache::VAOHashKey::operator==(const VAOHashKey& Key) const noexcept
         return false;
     // clang-format on
 
-    for (auto SlotMask = Key.UsedSlotsMask; SlotMask != 0;)
+    for (Uint32 SlotMask = Key.UsedSlotsMask; SlotMask != 0;)
     {
-        const auto SlotBit = ExtractLSB(SlotMask);
-        const auto Slot    = PlatformMisc::GetLSB(SlotBit);
+        const Uint32 SlotBit = ExtractLSB(SlotMask);
+        const Uint32 Slot    = PlatformMisc::GetLSB(SlotBit);
         VERIFY_EXPR(Streams[Slot].BufferUId >= 0 && Key.Streams[Slot].BufferUId >= 0);
         if (Streams[Slot] != Key.Streams[Slot])
             return false;
@@ -248,12 +248,12 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(const VAOAttribs& Att
     // Construct the key
     VAOHashKey Key{Attribs};
 
-    for (auto SlotMask = Key.UsedSlotsMask; SlotMask != 0;)
+    for (Uint32 SlotMask = Key.UsedSlotsMask; SlotMask != 0;)
     {
-        const auto SlotBit = ExtractLSB(SlotMask);
-        const auto Slot    = PlatformMisc::GetLSB(SlotBit);
+        const Uint32 SlotBit = ExtractLSB(SlotMask);
+        const Uint32 Slot    = PlatformMisc::GetLSB(SlotBit);
 
-        auto& pBuffer = Attribs.VertexStreams[Slot].pBuffer;
+        RefCntAutoPtr<BufferGLImpl>& pBuffer = Attribs.VertexStreams[Slot].pBuffer;
         VERIFY_EXPR(pBuffer);
         VERIFY_EXPR(Key.Streams[Slot].BufferUId == pBuffer->GetUniqueID());
 
@@ -289,25 +289,25 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(const VAOAttribs& Att
         // Initialize VAO
         GLState.BindVAO(NewVAO);
 
-        const auto& InputLayout = Attribs.PSO.GetGraphicsPipelineDesc().InputLayout;
-        const auto* LayoutElems = InputLayout.LayoutElements;
+        const InputLayoutDesc& InputLayout = Attribs.PSO.GetGraphicsPipelineDesc().InputLayout;
+        const LayoutElement*   LayoutElems = InputLayout.LayoutElements;
         for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
         {
-            const auto& LayoutElem = LayoutElems[i];
-            const auto  BuffSlot   = LayoutElem.BufferSlot;
+            const LayoutElement& LayoutElem = LayoutElems[i];
+            const Uint32         BuffSlot   = LayoutElem.BufferSlot;
             VERIFY_EXPR(BuffSlot < Attribs.NumVertexStreams);
 
             // Get buffer through the strong reference. Note that we are not
             // using pointers stored in the key for safety
             const auto&   CurrStream = Attribs.VertexStreams[BuffSlot];
-            const auto    Stride     = Attribs.PSO.GetBufferStride(BuffSlot);
+            const Uint32  Stride     = Attribs.PSO.GetBufferStride(BuffSlot);
             BufferGLImpl* pBuffer    = Attribs.VertexStreams[BuffSlot].pBuffer;
 
             constexpr bool ResetVAO = false;
             GLState.BindBuffer(GL_ARRAY_BUFFER, pBuffer->m_GlBuffer, ResetVAO);
             GLvoid* DataStartOffset = reinterpret_cast<GLvoid*>(StaticCast<size_t>(CurrStream.Offset) + static_cast<size_t>(LayoutElem.RelativeOffset));
 
-            const auto GlType = TypeToGLType(LayoutElem.ValueType);
+            const GLenum GlType = TypeToGLType(LayoutElem.ValueType);
             if (!LayoutElem.IsNormalized &&
                 (LayoutElem.ValueType == VT_INT8 ||
                  LayoutElem.ValueType == VT_INT16 ||
@@ -346,14 +346,14 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(const VAOAttribs& Att
             m_BuffToKey[Key.IndexBufferUId].push_back(Key);
         }
 
-        for (auto SlotMask = Key.UsedSlotsMask; SlotMask != 0;)
+        for (Uint32 SlotMask = Key.UsedSlotsMask; SlotMask != 0;)
         {
-            const auto SlotBit = ExtractLSB(SlotMask);
-            const auto Slot    = PlatformMisc::GetLSB(SlotBit);
+            const Uint32 SlotBit = ExtractLSB(SlotMask);
+            const Uint32 Slot    = PlatformMisc::GetLSB(SlotBit);
 
 #ifdef DILIGENT_DEBUG
             {
-                const auto& pBuffer = Attribs.VertexStreams[Slot].pBuffer;
+                const RefCntAutoPtr<BufferGLImpl>& pBuffer = Attribs.VertexStreams[Slot].pBuffer;
                 VERIFY_EXPR(pBuffer);
                 VERIFY_EXPR(Key.Streams[Slot].BufferUId == pBuffer->GetUniqueID());
             }

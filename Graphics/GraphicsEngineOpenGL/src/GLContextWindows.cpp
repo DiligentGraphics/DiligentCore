@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,7 +70,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
         pfd.iPixelType = PFD_TYPE_RGBA;
         if (pSCDesc != nullptr)
         {
-            auto ColorFmt = pSCDesc->ColorBufferFormat;
+            TEXTURE_FORMAT ColorFmt = pSCDesc->ColorBufferFormat;
             if (ColorFmt == TEX_FORMAT_RGBA8_UNORM || ColorFmt == TEX_FORMAT_RGBA8_UNORM_SRGB ||
                 ColorFmt == TEX_FORMAT_BGRA8_UNORM || ColorFmt == TEX_FORMAT_BGRA8_UNORM_SRGB)
             {
@@ -83,7 +83,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
                 pfd.cColorBits = 32;
             }
 
-            auto DepthFmt = pSCDesc->DepthBufferFormat;
+            TEXTURE_FORMAT DepthFmt = pSCDesc->DepthBufferFormat;
             switch (DepthFmt)
             {
                 case TEX_FORMAT_UNKNOWN:
@@ -191,7 +191,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
     }
     else
     {
-        auto CurrentCtx = wglGetCurrentContext();
+        HGLRC CurrentCtx = wglGetCurrentContext();
         if (CurrentCtx == 0)
         {
             LOG_ERROR_AND_THROW("No current GL context found! Provide non-null handle to a native Window to create a GL context");

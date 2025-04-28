@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,7 +89,7 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
         {
             case QUERY_TYPE_OCCLUSION:
             {
-                auto& QueryData = *reinterpret_cast<QueryDataOcclusion*>(pData);
+                QueryDataOcclusion& QueryData = *reinterpret_cast<QueryDataOcclusion*>(pData);
 
                 GLuint SamplesPassed = 0;
                 glGetQueryObjectuiv(m_GlQuery, GL_QUERY_RESULT, &SamplesPassed);
@@ -100,7 +100,7 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
             case QUERY_TYPE_BINARY_OCCLUSION:
             {
-                auto& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
+                QueryDataBinaryOcclusion& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
 
                 GLuint AnySamplePassed = 0;
                 glGetQueryObjectuiv(m_GlQuery, GL_QUERY_RESULT, &AnySamplePassed);
@@ -111,7 +111,7 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
             case QUERY_TYPE_PIPELINE_STATISTICS:
             {
-                auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
+                QueryDataPipelineStatistics& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
 
                 GLuint PrimitivesGenerated = 0;
                 glGetQueryObjectuiv(m_GlQuery, GL_QUERY_RESULT, &PrimitivesGenerated);
@@ -130,7 +130,7 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                     DEV_CHECK_GL_ERROR("Failed to get query result");
                     if (m_Desc.Type == QUERY_TYPE_TIMESTAMP)
                     {
-                        auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                        QueryDataTimestamp& QueryData{*reinterpret_cast<QueryDataTimestamp*>(pData)};
                         QueryData.Counter = Counter;
                         // Counter is always measured in nanoseconds (10^-9 seconds)
                         QueryData.Frequency = 1000000000;
@@ -138,7 +138,7 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                     else
                     {
                         VERIFY_EXPR(m_Desc.Type == QUERY_TYPE_DURATION);
-                        auto& QueryData    = *reinterpret_cast<QueryDataDuration*>(pData);
+                        QueryDataDuration& QueryData{*reinterpret_cast<QueryDataDuration*>(pData)};
                         QueryData.Duration = Counter;
                         // Counter is always measured in nanoseconds (10^-9 seconds)
                         QueryData.Frequency = 1000000000;

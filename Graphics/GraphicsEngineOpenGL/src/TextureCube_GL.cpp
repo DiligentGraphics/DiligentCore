@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,7 +86,7 @@ TextureCube_GL::TextureCube_GL(IReferenceCounters*        pRefCounters,
 
     if (pInitData != nullptr && pInitData->pSubResources != nullptr)
     {
-        const auto ExpectedSubresources = m_Desc.MipLevels * 6;
+        const Uint32 ExpectedSubresources = m_Desc.MipLevels * 6;
         if (m_Desc.MipLevels * 6 == pInitData->NumSubresources)
         {
             for (Uint32 Face = 0; Face < 6; ++Face)
@@ -155,14 +155,14 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
     // then takes one of GL_TEXTURE_CUBE_MAP_POSITIVE_X ... GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
     ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
-    auto CubeMapFaceBindTarget = GetCubeMapFaceBindTarget(Slice);
+    GLenum CubeMapFaceBindTarget = GetCubeMapFaceBindTarget(Slice);
 
     // Bind buffer if it is provided; copy from CPU memory otherwise
     GLuint UnpackBuffer = 0;
     if (SubresData.pSrcBuffer != nullptr)
     {
-        auto* pBufferGL = ClassPtrCast<BufferGLImpl>(SubresData.pSrcBuffer);
-        UnpackBuffer    = pBufferGL->GetGLHandle();
+        BufferGLImpl* pBufferGL = ClassPtrCast<BufferGLImpl>(SubresData.pSrcBuffer);
+        UnpackBuffer            = pBufferGL->GetGLHandle();
     }
 
     // Transfers to OpenGL memory are called unpack operations
@@ -170,7 +170,7 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
     // operations will be performed from this buffer.
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, UnpackBuffer);
 
-    const auto& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
+    const NativePixelAttribs& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, PBOOffsetAlignment);
     glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
@@ -178,8 +178,8 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
 
     if (TransferAttribs.IsCompressed)
     {
-        auto MipWidth  = std::max(m_Desc.Width >> MipLevel, 1U);
-        auto MipHeight = std::max(m_Desc.Height >> MipLevel, 1U);
+        Uint32 MipWidth  = std::max(m_Desc.Width >> MipLevel, 1U);
+        Uint32 MipHeight = std::max(m_Desc.Height >> MipLevel, 1U);
         // clang-format off
         VERIFY((DstBox.MinX % 4) == 0 && (DstBox.MinY % 4) == 0 &&
                ((DstBox.MaxX % 4) == 0 || DstBox.MaxX == MipWidth) &&
@@ -188,8 +188,8 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
         // clang-format on
 #ifdef DILIGENT_DEBUG
         {
-            const auto& FmtAttribs      = GetTextureFormatAttribs(m_Desc.Format);
-            auto        BlockBytesInRow = ((DstBox.Width() + 3) / 4) * Uint32{FmtAttribs.ComponentSize};
+            const TextureFormatAttribs& FmtAttribs      = GetTextureFormatAttribs(m_Desc.Format);
+            Uint32                      BlockBytesInRow = ((DstBox.Width() + 3) / 4) * Uint32{FmtAttribs.ComponentSize};
             VERIFY(SubresData.Stride == BlockBytesInRow,
                    "Compressed data stride (", SubresData.Stride, " must match the size of a row of compressed blocks (", BlockBytesInRow, ")");
         }
@@ -200,10 +200,10 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
 
         // Texture must be bound as GL_TEXTURE_CUBE_MAP, but glCompressedTexSubImage2D()
         // takes one of GL_TEXTURE_CUBE_MAP_POSITIVE_X ... GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
-        auto UpdateRegionWidth  = DstBox.Width();
-        auto UpdateRegionHeight = DstBox.Height();
-        UpdateRegionWidth       = std::min(UpdateRegionWidth, MipWidth - DstBox.MinX);
-        UpdateRegionHeight      = std::min(UpdateRegionHeight, MipHeight - DstBox.MinY);
+        Uint32 UpdateRegionWidth  = DstBox.Width();
+        Uint32 UpdateRegionHeight = DstBox.Height();
+        UpdateRegionWidth         = std::min(UpdateRegionWidth, MipWidth - DstBox.MinX);
+        UpdateRegionHeight        = std::min(UpdateRegionHeight, MipHeight - DstBox.MinY);
         glCompressedTexSubImage2D(CubeMapFaceBindTarget, MipLevel,
                                   DstBox.MinX,
                                   DstBox.MinY,
@@ -225,8 +225,8 @@ void TextureCube_GL::UpdateData(GLContextState&          ContextState,
     }
     else
     {
-        const auto& TexFmtInfo = GetTextureFormatAttribs(m_Desc.Format);
-        const auto  PixelSize  = Uint32{TexFmtInfo.NumComponents} * Uint32{TexFmtInfo.ComponentSize};
+        const TextureFormatAttribs& TexFmtInfo = GetTextureFormatAttribs(m_Desc.Format);
+        const Uint32                PixelSize  = Uint32{TexFmtInfo.NumComponents} * Uint32{TexFmtInfo.ComponentSize};
         VERIFY((SubresData.Stride % PixelSize) == 0, "Data stride is not multiple of pixel size");
         glPixelStorei(GL_UNPACK_ROW_LENGTH, StaticCast<GLint>(SubresData.Stride / PixelSize));
 
@@ -272,7 +272,7 @@ void TextureCube_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum
         // Texture name must either be zero or the name of an existing 3D texture, 1D or 2D array texture,
         // cube map array texture, or multisample array texture.
 
-        auto CubeMapFaceBindTarget = GetCubeMapFaceBindTarget(ViewDesc.FirstArraySlice);
+        GLenum CubeMapFaceBindTarget = GetCubeMapFaceBindTarget(ViewDesc.FirstArraySlice);
         // For glFramebufferTexture2D, if texture is not zero, textarget must be one of GL_TEXTURE_2D, GL_TEXTURE_RECTANGLE,
         // GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
         // GL_TEXTURE_CUBE_MAP_NEGATIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,

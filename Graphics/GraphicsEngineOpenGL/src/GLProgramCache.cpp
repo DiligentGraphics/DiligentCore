@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -51,21 +51,21 @@ GLProgramCache::ProgramCacheKey::ProgramCacheKey(const GetProgramAttribs& Attrib
     ShaderUIDs.reserve(Attribs.NumShaders);
     for (Uint32 i = 0; i < Attribs.NumShaders; ++i)
     {
-        auto ShaderUID = Attribs.ppShaders[i]->GetUniqueID();
+        Int32 ShaderUID = Attribs.ppShaders[i]->GetUniqueID();
         HashCombine(Hash, ShaderUID);
         ShaderUIDs.push_back(ShaderUID);
     }
 
     if (Attribs.NumSignatures != 0)
     {
-        SignaturUIDs.reserve(Attribs.NumSignatures);
+        SignatureUIDs.reserve(Attribs.NumSignatures);
         for (Uint32 i = 0; i < Attribs.NumSignatures; ++i)
         {
             if (PipelineResourceSignatureGLImpl* pSignature = ClassPtrCast<PipelineResourceSignatureGLImpl>(Attribs.ppSignatures[i]))
             {
-                auto SignaturUID = pSignature->GetUniqueID();
-                HashCombine(Hash, SignaturUID);
-                SignaturUIDs.push_back(SignaturUID);
+                Int32 SignatureUID = pSignature->GetUniqueID();
+                HashCombine(Hash, SignatureUID);
+                SignatureUIDs.push_back(SignatureUID);
             }
         }
     }
@@ -83,8 +83,8 @@ bool GLProgramCache::ProgramCacheKey::operator==(const ProgramCacheKey& Key) con
     return (Hash               == Key.Hash               &&
             IsSeparableProgram == Key.IsSeparableProgram &&
             ShaderUIDs         == Key.ShaderUIDs         &&
-            SignaturUIDs       == Key.SignaturUIDs       &&
-            (!SignaturUIDs.empty() || ResourceLayout == Key.ResourceLayout));
+            SignatureUIDs       == Key.SignatureUIDs       &&
+            (!SignatureUIDs.empty() || ResourceLayout == Key.ResourceLayout));
     // clang-format on
 }
 
@@ -122,7 +122,7 @@ GLProgramCache::SharedGLProgramObjPtr GLProgramCache::GetProgram(const GetProgra
 
     auto it_inserted = m_Cache.emplace(Key, NewProgram);
     // Check if the proram is valid
-    if (auto Program = it_inserted.first->second.lock())
+    if (SharedGLProgramObjPtr Program = it_inserted.first->second.lock())
     {
         return Program;
     }

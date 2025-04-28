@@ -54,7 +54,7 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
          m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_BGRA8_UNORM_SRGB) &&
         !pRenderDeviceGL->GetGLCaps().FramebufferSRGB)
     {
-        auto ColorFmt = m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_RGBA8_UNORM_SRGB ?
+        TEXTURE_FORMAT ColorFmt = m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_RGBA8_UNORM_SRGB ?
             TEX_FORMAT_RGBA8_UNORM :
             TEX_FORMAT_BGRA8_UNORM;
         LOG_WARNING_MESSAGE("Changing the swap chain color format to ", GetTextureFormatAttribs(ColorFmt).Name, " because sRGB framebuffers are not enabled.");
@@ -116,8 +116,8 @@ IMPLEMENT_QUERY_INTERFACE(SwapChainGLImpl, IID_SwapChainGL, TSwapChainGLBase)
 void SwapChainGLImpl::Present(Uint32 SyncInterval)
 {
 #if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_ANDROID
-    auto* pDeviceGL = m_pRenderDevice.RawPtr<RenderDeviceGLImpl>();
-    auto& GLContext = pDeviceGL->m_GLContext;
+    RenderDeviceGLImpl* pDeviceGL = m_pRenderDevice.RawPtr<RenderDeviceGLImpl>();
+    auto&               GLContext = pDeviceGL->m_GLContext;
     GLContext.SwapBuffers(static_cast<int>(SyncInterval));
 #elif PLATFORM_MACOS
     LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
@@ -128,10 +128,10 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
 #endif
 
     // Unbind back buffer from device context to be consistent with other backends
-    if (auto pDeviceContext = m_wpDeviceContext.Lock())
+    if (RefCntAutoPtr<IDeviceContext> pDeviceContext = m_wpDeviceContext.Lock())
     {
-        auto* pDeviceCtxGl = pDeviceContext.RawPtr<DeviceContextGLImpl>();
-        auto* pBackBuffer  = ClassPtrCast<TextureBaseGL>(m_pRenderTargetView->GetTexture());
+        DeviceContextGLImpl* pDeviceCtxGl = pDeviceContext.RawPtr<DeviceContextGLImpl>();
+        TextureBaseGL*       pBackBuffer  = ClassPtrCast<TextureBaseGL>(m_pRenderTargetView->GetTexture());
         pDeviceCtxGl->UnbindTextureFromFramebuffer(pBackBuffer, false);
     }
 }
@@ -139,11 +139,11 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
 void SwapChainGLImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform)
 {
 #if PLATFORM_ANDROID
-    auto* pDeviceGL = m_pRenderDevice.RawPtr<RenderDeviceGLImpl>();
-    auto& GLContext = pDeviceGL->m_GLContext;
+    RenderDeviceGLImpl* pDeviceGL = m_pRenderDevice.RawPtr<RenderDeviceGLImpl>();
+    auto&               GLContext = pDeviceGL->m_GLContext;
     GLContext.UpdateScreenSize();
-    const auto ScreenWidth  = static_cast<Uint32>(GLContext.GetScreenWidth());
-    const auto ScreenHeight = static_cast<Uint32>(GLContext.GetScreenHeight());
+    const Uint32 ScreenWidth  = static_cast<Uint32>(GLContext.GetScreenWidth());
+    const Uint32 ScreenHeight = static_cast<Uint32>(GLContext.GetScreenHeight());
 
     if (NewWidth == 0)
     {

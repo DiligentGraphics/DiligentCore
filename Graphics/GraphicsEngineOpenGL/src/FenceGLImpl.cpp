@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,7 +64,7 @@ Uint64 FenceGLImpl::GetCompletedValue()
     {
         auto& val_fence = m_PendingFences.front();
 
-        auto res =
+        GLenum res =
             glClientWaitSync(val_fence.second,
                              0, // Can be SYNC_FLUSH_COMMANDS_BIT
                              0  // Timeout in nanoseconds
@@ -91,7 +91,7 @@ void FenceGLImpl::HostWait(Uint64 Value, bool FlushCommands)
         if (val_fence.first > Value)
             break;
 
-        auto res = glClientWaitSync(val_fence.second, FlushCommands ? GL_SYNC_FLUSH_COMMANDS_BIT : 0, std::numeric_limits<GLuint64>::max());
+        GLenum res = glClientWaitSync(val_fence.second, FlushCommands ? GL_SYNC_FLUSH_COMMANDS_BIT : 0, std::numeric_limits<GLuint64>::max());
         VERIFY_EXPR(res == GL_ALREADY_SIGNALED || res == GL_CONDITION_SATISFIED);
         (void)res;
 

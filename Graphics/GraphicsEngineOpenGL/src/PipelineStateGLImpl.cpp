@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,14 +68,14 @@ PIPELINE_RESOURCE_FLAGS PipelineStateGLImpl::GetSamplerResourceFlag(const TShade
 {
     VERIFY_EXPR(!Stages.empty());
 
-    constexpr auto UndefinedFlag = static_cast<PIPELINE_RESOURCE_FLAGS>(0xFF);
+    constexpr PIPELINE_RESOURCE_FLAGS UndefinedFlag = static_cast<PIPELINE_RESOURCE_FLAGS>(0xFF);
 
-    auto SamplerResourceFlag = UndefinedFlag;
-    bool ConflictsFound      = false;
-    for (auto& Stage : Stages)
+    PIPELINE_RESOURCE_FLAGS SamplerResourceFlag = UndefinedFlag;
+    bool                    ConflictsFound      = false;
+    for (ShaderGLImpl* Stage : Stages)
     {
-        auto Lang = Stage->GetSourceLanguage();
-        auto Flag = Lang == SHADER_SOURCE_LANGUAGE_HLSL ?
+        SHADER_SOURCE_LANGUAGE  Lang = Stage->GetSourceLanguage();
+        PIPELINE_RESOURCE_FLAGS Flag = Lang == SHADER_SOURCE_LANGUAGE_HLSL ?
             PIPELINE_RESOURCE_FLAG_NONE :
             PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
 
@@ -108,7 +108,7 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
     const TShaderStages& ShaderStages,
     SHADER_TYPE          ActiveStages)
 {
-    const auto& ResourceLayout = m_Desc.ResourceLayout;
+    const PipelineResourceLayoutDesc& ResourceLayout = m_Desc.ResourceLayout;
 
     PipelineResourceSignatureDescWrapper SignDesc{m_Desc.Name, ResourceLayout, m_Desc.SRBAllocationGranularity};
     SignDesc.SetCombinedSamplerSuffix(PipelineResourceSignatureDesc{}.CombinedSamplerSuffix);
@@ -117,11 +117,11 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
 
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs) //
     {
-        const auto VarDesc     = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Attribs.ShaderStages, nullptr);
-        const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
+        const ShaderResourceVariableDesc VarDesc     = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Attribs.ShaderStages, nullptr);
+        const auto                       it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
         if (it_assigned.second)
         {
-            const auto Flags = Attribs.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+            const PIPELINE_RESOURCE_FLAGS Flags = Attribs.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
             SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, Attribs.ResourceType, VarDesc.Type, Flags);
         }
         else
@@ -140,14 +140,14 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
     }
     else
     {
-        auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
+        RefCntAutoPtr<DeviceContextGLImpl> pImmediateCtx = m_pDevice->GetImmediateContext(0);
         VERIFY_EXPR(pImmediateCtx);
         VERIFY_EXPR(m_GLPrograms[0] != nullptr && m_GLPrograms[0]->GetLinkStatus() == GLProgram::LinkStatus::Succeeded);
 
         if (!m_GLPrograms[0]->GetResources())
         {
             // Load resources first time this program is used
-            const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, true /*SilenceWarning*/);
+            const PIPELINE_RESOURCE_FLAGS SamplerResFlag = GetSamplerResourceFlag(ShaderStages, true /*SilenceWarning*/);
             m_GLPrograms[0]->LoadResources(
                 ActiveStages,
                 SamplerResFlag,
@@ -182,7 +182,7 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
             m_Signatures[0].Release();
         }
 
-        const auto SignDesc = GetDefaultSignatureDesc(ShaderStages, ActiveStages);
+        const PipelineResourceSignatureDescWrapper SignDesc = GetDefaultSignatureDesc(ShaderStages, ActiveStages);
         // Always initialize default resource signature as internal device object.
         // This is necessary to avoid cyclic references from TexRegionRenderer.
         // This may never be a problem as the PSO keeps the reference to the device if necessary.
@@ -193,7 +193,7 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
 
     DeviceContextGLImpl* pImmediateCtx = m_pDevice->GetImmediateContext(0);
     VERIFY_EXPR(pImmediateCtx != nullptr);
-    auto& CtxState = pImmediateCtx->GetContextState();
+    GLContextState& CtxState = pImmediateCtx->GetContextState();
 
     if (m_IsProgramPipelineSupported)
     {
@@ -213,7 +213,7 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
         if (!pResources)
         {
             // If resources are not loaded yet for this program, load them now
-            const auto SamplerResFlag = GetSamplerResourceFlag(ShaderStages, false /*SilenceWarning*/);
+            const PIPELINE_RESOURCE_FLAGS SamplerResFlag = GetSamplerResourceFlag(ShaderStages, false /*SilenceWarning*/);
 
             pResources = m_GLPrograms[0]->LoadResources(
                 ActiveStages,
@@ -227,7 +227,7 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
     PipelineResourceSignatureGLImpl::TBindings Bindings = {};
     for (Uint32 s = 0; s < m_SignatureCount; ++s)
     {
-        const auto& pSignature = m_Signatures[s];
+        const SignatureAutoPtrType& pSignature = m_Signatures[s];
         if (pSignature == nullptr)
             continue;
 
@@ -242,7 +242,7 @@ void PipelineStateGLImpl::InitResourceLayout(PSO_CREATE_INTERNAL_FLAGS InternalF
         pSignature->ShiftBindings(Bindings);
     }
 
-    const auto& Limits = GetDevice()->GetDeviceLimits();
+    const RenderDeviceGLImpl::GLDeviceLimits& Limits = GetDevice()->GetDeviceLimits();
 
     if (Bindings[BINDING_RANGE_UNIFORM_BUFFER] > static_cast<Uint32>(Limits.MaxUniformBlocks))
         LOG_ERROR_AND_THROW("The number of bindings in range '", GetBindingRangeName(BINDING_RANGE_UNIFORM_BUFFER), "' is greater than the maximum allowed (", Limits.MaxUniformBlocks, ").");
@@ -378,7 +378,7 @@ private:
         SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
         for (const ShaderGLImpl* pShaderGL : m_Shaders)
         {
-            const auto ShaderType = pShaderGL->GetDesc().ShaderType;
+            const SHADER_TYPE ShaderType = pShaderGL->GetDesc().ShaderType;
             VERIFY((ActiveStages & ShaderType) == 0, "Shader stage ", GetShaderTypeLiteralName(ShaderType), " is already active");
             ActiveStages |= ShaderType;
         }
@@ -459,7 +459,7 @@ private:
 template <typename PSOCreateInfoType>
 void PipelineStateGLImpl::InitInternalObjects(const PSOCreateInfoType& CreateInfo, const TShaderStages& ShaderStages) noexcept(false)
 {
-    const auto& DeviceInfo = GetDevice()->GetDeviceInfo();
+    const RenderDeviceInfo& DeviceInfo = GetDevice()->GetDeviceInfo();
     VERIFY(DeviceInfo.Type != RENDER_DEVICE_TYPE_UNDEFINED, "Device info is not initialized");
 
     m_IsProgramPipelineSupported = DeviceInfo.Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED;
@@ -613,7 +613,7 @@ void PipelineStateGLImpl::CommitProgram(GLContextState& State)
         // a program pipeline bound, all rendering will use the program that is in use, not the pipeline programs!
         // So make sure that glUseProgram(0) has been called if pipeline is in use
         State.SetProgram(GLObjectWrappers::GLProgramObj::Null());
-        auto& Pipeline = GetGLProgramPipeline(State.GetCurrentGLContext());
+        GLObjectWrappers::GLPipelineObj& Pipeline = GetGLProgramPipeline(State.GetCurrentGLContext());
         VERIFY(Pipeline != 0, "Program pipeline must not be null");
         State.SetPipeline(Pipeline);
     }
@@ -639,7 +639,7 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
     GLuint Pipeline     = ctx_pipeline.second;
     for (Uint32 i = 0; i < GetNumShaderStages(); ++i)
     {
-        auto GLShaderBit = ShaderTypeToGLShaderBit(GetShaderStageType(i));
+        GLenum GLShaderBit = ShaderTypeToGLShaderBit(GetShaderStageType(i));
         // If the program has an active code for each stage mentioned in set flags,
         // then that code will be used by the pipeline. If program is 0, then the given
         // stages are cleared from the pipeline.
@@ -671,7 +671,7 @@ void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderRe
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs,
                                     SHADER_RESOURCE_TYPE                        AltResourceType) //
     {
-        const auto ResAttribution = GetResourceAttribution(Attribs.Name, ShaderStages);
+        const ResourceAttribution ResAttribution = GetResourceAttribution(Attribs.Name, ShaderStages);
 
 #ifdef DILIGENT_DEVELOPMENT
         m_ResourceAttibutions.emplace_back(ResAttribution);
@@ -684,16 +684,16 @@ void PipelineStateGLImpl::ValidateShaderResources(std::shared_ptr<const ShaderRe
                                 m_Desc.Name, "'.");
         }
 
-        const auto* const pSignature = ResAttribution.pSignature;
+        const PipelineResourceSignatureGLImpl* const pSignature = ResAttribution.pSignature;
         VERIFY_EXPR(pSignature != nullptr);
 
         if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
         {
-            const auto& ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+            const PipelineResourceDesc& ResDesc = pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
 
             // Shader reflection does not contain read-only flag, so image and storage buffer can be UAV or SRV.
             // Texture SRV is the same as input attachment.
-            const auto Type = (AltResourceType == ResDesc.ResourceType ? AltResourceType : Attribs.ResourceType);
+            const SHADER_RESOURCE_TYPE Type = (AltResourceType == ResDesc.ResourceType ? AltResourceType : Attribs.ResourceType);
 
             ValidatePipelineResourceCompatibility(ResDesc, Type, Attribs.ResourceFlags, Attribs.ArraySize, ShaderName, pSignature->GetDesc().Name);
         }
@@ -734,10 +734,10 @@ void PipelineStateGLImpl::DvpVerifySRBResources(const ShaderResourceCacheArrayTy
                                                 const BaseBindingsArrayType&        BaseBindings) const
 {
     // Verify base bindings
-    const auto SignCount = GetResourceSignatureCount();
+    const Uint32 SignCount = GetResourceSignatureCount();
     for (Uint32 sign = 0; sign < SignCount; ++sign)
     {
-        const auto* pSignature = GetResourceSignature(sign);
+        const PipelineResourceSignatureGLImpl* pSignature = GetResourceSignature(sign);
         if (pSignature == nullptr || pSignature->GetTotalResourceCount() == 0)
             continue;
 
@@ -767,7 +767,7 @@ void PipelineStateGLImpl::DvpVerifySRBResources(const ShaderResourceCacheArrayTy
         {
             if (*attrib_it && !attrib_it->IsImmutableSampler())
             {
-                const auto* pResourceCache = ResourceCaches[attrib_it->SignatureIndex];
+                const ShaderResourceCacheGL* pResourceCache = ResourceCaches[attrib_it->SignatureIndex];
                 DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", attrib_it->SignatureIndex, " is null.");
                 attrib_it->pSignature->DvpValidateCommittedResource(Attribs, ResDim, IsMS, attrib_it->ResourceIndex, *pResourceCache,
                                                                     PSO.m_ShaderNames[shader_ind].c_str(), PSO.m_Desc.Name);

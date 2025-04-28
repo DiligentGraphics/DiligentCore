@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -149,8 +149,8 @@ void Texture3D_GL::UpdateData(GLContextState&          ContextState,
     GLuint UnpackBuffer = 0;
     if (SubresData.pSrcBuffer != nullptr)
     {
-        auto* pBufferGL = ClassPtrCast<BufferGLImpl>(SubresData.pSrcBuffer);
-        UnpackBuffer    = pBufferGL->GetGLHandle();
+        BufferGLImpl* pBufferGL = ClassPtrCast<BufferGLImpl>(SubresData.pSrcBuffer);
+        UnpackBuffer            = pBufferGL->GetGLHandle();
     }
 
     // Transfers to OpenGL memory are called unpack operations
@@ -158,15 +158,15 @@ void Texture3D_GL::UpdateData(GLContextState&          ContextState,
     // operations will be performed from this buffer.
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, UnpackBuffer);
 
-    const auto& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
+    const NativePixelAttribs& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, PBOOffsetAlignment);
     glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
     glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
     glPixelStorei(GL_UNPACK_SKIP_IMAGES, 0);
 
-    const auto TexFmtInfo = GetTextureFormatAttribs(m_Desc.Format);
-    const auto PixelSize  = Uint32{TexFmtInfo.NumComponents} * Uint32{TexFmtInfo.ComponentSize};
+    const TextureFormatAttribs TexFmtInfo = GetTextureFormatAttribs(m_Desc.Format);
+    const Uint32               PixelSize  = Uint32{TexFmtInfo.NumComponents} * Uint32{TexFmtInfo.ComponentSize};
     VERIFY((SubresData.Stride % PixelSize) == 0, "Data stride is not multiple of pixel size");
     glPixelStorei(GL_UNPACK_ROW_LENGTH, StaticCast<GLint>(SubresData.Stride / PixelSize));
 
@@ -196,7 +196,7 @@ void Texture3D_GL::UpdateData(GLContextState&          ContextState,
 
 void Texture3D_GL::AttachToFramebuffer(const TextureViewDesc& ViewDesc, GLenum AttachmentPoint, FRAMEBUFFER_TARGET_FLAGS Targets)
 {
-    auto NumDepthSlicesInMip = m_Desc.Depth >> ViewDesc.MostDetailedMip;
+    Uint32 NumDepthSlicesInMip = m_Desc.Depth >> ViewDesc.MostDetailedMip;
     if (ViewDesc.NumDepthSlices == 1)
     {
         // For glFramebufferTexture3D(), if texture name is not zero, then texture target must be GL_TEXTURE_3D

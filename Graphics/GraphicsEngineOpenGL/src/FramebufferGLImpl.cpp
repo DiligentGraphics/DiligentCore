@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,47 +86,47 @@ FramebufferGLImpl::FramebufferGLImpl(IReferenceCounters*    pRefCounters,
                                      GLContextState&        CtxState) :
     TFramebufferBase{pRefCounters, pDevice, Desc}
 {
-    const auto& RPDesc = m_Desc.pRenderPass->GetDesc();
+    const RenderPassDesc& RPDesc = m_Desc.pRenderPass->GetDesc();
     m_SubpassFramebuffers.reserve(RPDesc.SubpassCount);
     for (Uint32 subpass = 0; subpass < RPDesc.SubpassCount; ++subpass)
     {
-        const auto& SubpassDesc = RPDesc.pSubpasses[subpass];
+        const SubpassDesc& SPDesc = RPDesc.pSubpasses[subpass];
 
         TextureViewGLImpl* ppRTVs[MAX_RENDER_TARGETS] = {};
         TextureViewGLImpl* pDSV                       = nullptr;
 
-        for (Uint32 rt = 0; rt < SubpassDesc.RenderTargetAttachmentCount; ++rt)
+        for (Uint32 rt = 0; rt < SPDesc.RenderTargetAttachmentCount; ++rt)
         {
-            const auto& RTAttachmentRef = SubpassDesc.pRenderTargetAttachments[rt];
+            const AttachmentReference& RTAttachmentRef = SPDesc.pRenderTargetAttachments[rt];
             if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
             {
                 ppRTVs[rt] = ClassPtrCast<TextureViewGLImpl>(m_Desc.ppAttachments[RTAttachmentRef.AttachmentIndex]);
             }
         }
 
-        if (SubpassDesc.pDepthStencilAttachment != nullptr && SubpassDesc.pDepthStencilAttachment->AttachmentIndex != ATTACHMENT_UNUSED)
+        if (SPDesc.pDepthStencilAttachment != nullptr && SPDesc.pDepthStencilAttachment->AttachmentIndex != ATTACHMENT_UNUSED)
         {
-            pDSV = ClassPtrCast<TextureViewGLImpl>(m_Desc.ppAttachments[SubpassDesc.pDepthStencilAttachment->AttachmentIndex]);
+            pDSV = ClassPtrCast<TextureViewGLImpl>(m_Desc.ppAttachments[SPDesc.pDepthStencilAttachment->AttachmentIndex]);
         }
-        auto RenderTargetFBO = UseDefaultFBO(SubpassDesc.RenderTargetAttachmentCount, ppRTVs, pDSV) ?
+        GLObjectWrappers::GLFrameBufferObj RenderTargetFBO = UseDefaultFBO(SPDesc.RenderTargetAttachmentCount, ppRTVs, pDSV) ?
             GLObjectWrappers::GLFrameBufferObj{false} :
-            FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRTVs, pDSV, Desc.Width, Desc.Height);
+            FBOCache::CreateFBO(CtxState, SPDesc.RenderTargetAttachmentCount, ppRTVs, pDSV, Desc.Width, Desc.Height);
 
         GLObjectWrappers::GLFrameBufferObj ResolveFBO{false};
-        if (SubpassDesc.pResolveAttachments != nullptr)
+        if (SPDesc.pResolveAttachments != nullptr)
         {
             TextureViewGLImpl* ppRsvlViews[MAX_RENDER_TARGETS] = {};
-            for (Uint32 rt = 0; rt < SubpassDesc.RenderTargetAttachmentCount; ++rt)
+            for (Uint32 rt = 0; rt < SPDesc.RenderTargetAttachmentCount; ++rt)
             {
-                const auto& RslvAttachmentRef = SubpassDesc.pResolveAttachments[rt];
+                const AttachmentReference& RslvAttachmentRef = SPDesc.pResolveAttachments[rt];
                 if (RslvAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
                 {
                     ppRsvlViews[rt] = ClassPtrCast<TextureViewGLImpl>(m_Desc.ppAttachments[RslvAttachmentRef.AttachmentIndex]);
                 }
             }
-            ResolveFBO = UseDefaultFBO(SubpassDesc.RenderTargetAttachmentCount, ppRsvlViews, nullptr) ?
+            ResolveFBO = UseDefaultFBO(SPDesc.RenderTargetAttachmentCount, ppRsvlViews, nullptr) ?
                 GLObjectWrappers::GLFrameBufferObj{false} :
-                FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRsvlViews, nullptr, Desc.Width, Desc.Height);
+                FBOCache::CreateFBO(CtxState, SPDesc.RenderTargetAttachmentCount, ppRsvlViews, nullptr, Desc.Width, Desc.Height);
         }
 
         RenderTargetFBO.SetName(m_Desc.Name);

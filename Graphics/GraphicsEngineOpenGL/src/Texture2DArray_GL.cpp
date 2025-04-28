@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -170,8 +170,8 @@ void Texture2DArray_GL::UpdateData(GLContextState&          ContextState,
     GLuint UnpackBuffer = 0;
     if (SubresData.pSrcBuffer != nullptr)
     {
-        auto* pBufferGL = ClassPtrCast<BufferGLImpl>(SubresData.pSrcBuffer);
-        UnpackBuffer    = pBufferGL->GetGLHandle();
+        BufferGLImpl* pBufferGL = ClassPtrCast<BufferGLImpl>(SubresData.pSrcBuffer);
+        UnpackBuffer            = pBufferGL->GetGLHandle();
     }
 
     // Transfers to OpenGL memory are called unpack operations
@@ -179,7 +179,7 @@ void Texture2DArray_GL::UpdateData(GLContextState&          ContextState,
     // operations will be performed from this buffer.
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, UnpackBuffer);
 
-    const auto& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
+    const NativePixelAttribs& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, PBOOffsetAlignment);
     glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
@@ -187,26 +187,26 @@ void Texture2DArray_GL::UpdateData(GLContextState&          ContextState,
 
     if (TransferAttribs.IsCompressed)
     {
-        auto MipWidth  = std::max(m_Desc.Width >> MipLevel, 1U);
-        auto MipHeight = std::max(m_Desc.Height >> MipLevel, 1U);
+        Uint32 MipWidth  = std::max(m_Desc.Width >> MipLevel, 1U);
+        Uint32 MipHeight = std::max(m_Desc.Height >> MipLevel, 1U);
         VERIFY((DstBox.MinX % 4) == 0 && (DstBox.MinY % 4) == 0 &&
                    ((DstBox.MaxX % 4) == 0 || DstBox.MaxX == MipWidth) &&
                    ((DstBox.MaxY % 4) == 0 || DstBox.MaxY == MipHeight),
                "Compressed texture update region must be 4 pixel-aligned");
 #ifdef DILIGENT_DEBUG
         {
-            const auto& FmtAttribs      = GetTextureFormatAttribs(m_Desc.Format);
-            auto        BlockBytesInRow = ((DstBox.Width() + 3) / 4) * Uint32{FmtAttribs.ComponentSize};
+            const TextureFormatAttribs& FmtAttribs      = GetTextureFormatAttribs(m_Desc.Format);
+            Uint32                      BlockBytesInRow = ((DstBox.Width() + 3) / 4) * Uint32{FmtAttribs.ComponentSize};
             VERIFY(SubresData.Stride == BlockBytesInRow,
                    "Compressed data stride (", SubresData.Stride, " must match the size of a row of compressed blocks (", BlockBytesInRow, ")");
         }
 #endif
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Must be 0 on WebGL
         //glPixelStorei(GL_UNPACK_COMPRESSED_BLOCK_WIDTH, 0);
-        auto UpdateRegionWidth  = DstBox.Width();
-        auto UpdateRegionHeight = DstBox.Height();
-        UpdateRegionWidth       = std::min(UpdateRegionWidth, MipWidth - DstBox.MinX);
-        UpdateRegionHeight      = std::min(UpdateRegionHeight, MipHeight - DstBox.MinY);
+        Uint32 UpdateRegionWidth  = DstBox.Width();
+        Uint32 UpdateRegionHeight = DstBox.Height();
+        UpdateRegionWidth         = std::min(UpdateRegionWidth, MipWidth - DstBox.MinX);
+        UpdateRegionHeight        = std::min(UpdateRegionHeight, MipHeight - DstBox.MinY);
         glCompressedTexSubImage3D(m_BindTarget, MipLevel,
                                   DstBox.MinX,
                                   DstBox.MinY,
@@ -230,8 +230,8 @@ void Texture2DArray_GL::UpdateData(GLContextState&          ContextState,
     }
     else
     {
-        const auto TexFmtInfo = GetTextureFormatAttribs(m_Desc.Format);
-        const auto PixelSize  = Uint32{TexFmtInfo.NumComponents} * Uint32{TexFmtInfo.ComponentSize};
+        const TextureFormatAttribs TexFmtInfo = GetTextureFormatAttribs(m_Desc.Format);
+        const Uint32               PixelSize  = Uint32{TexFmtInfo.NumComponents} * Uint32{TexFmtInfo.ComponentSize};
         VERIFY((SubresData.Stride % PixelSize) == 0, "Data stride is not multiple of pixel size");
         glPixelStorei(GL_UNPACK_ROW_LENGTH, StaticCast<GLint>(SubresData.Stride / PixelSize));
 

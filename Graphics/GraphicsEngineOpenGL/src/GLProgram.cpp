@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ GLProgram::GLProgram(ShaderGLImpl* const* ppShaders,
 
     for (Uint32 i = 0; i < NumShaders; ++i)
     {
-        auto* pCurrShader = ppShaders[i];
+        ShaderGLImpl* pCurrShader = ppShaders[i];
         glAttachShader(m_GLProg, pCurrShader->GetGLShaderHandle());
         DEV_CHECK_GL_ERROR("glAttachShader() failed");
     }

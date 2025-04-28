@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,7 @@ BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
     m_GLTexBuffer{false}
 // clang-format on
 {
-    const auto& BuffDesc = pBuffer->GetDesc();
+    const BufferDesc& BuffDesc = pBuffer->GetDesc();
     if ((ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) &&
         (BuffDesc.Mode == BUFFER_MODE_FORMATTED || BuffDesc.Mode == BUFFER_MODE_RAW))
     {
@@ -71,8 +71,8 @@ BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
         m_GLTexBuffer.Create();
         CtxState.BindTexture(-1, GL_TEXTURE_BUFFER, m_GLTexBuffer);
 
-        const auto& BuffFmt  = ViewDesc.Format;
-        GLenum      GLFormat = 0;
+        const BufferFormat& BuffFmt  = ViewDesc.Format;
+        GLenum              GLFormat = 0;
         if (BuffDesc.Mode == BUFFER_MODE_FORMATTED || BuffFmt.ValueType != VT_UNDEFINED)
         {
             GLFormat = TypeToGLTexFormat(BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized);

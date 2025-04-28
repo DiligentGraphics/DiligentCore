@@ -224,7 +224,7 @@ void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint64 Offset, Uint64 Si
         CtxState);
 
     // We must unbind VAO because otherwise we will break the bindings
-    const auto ResetVAO = m_BindTarget == GL_ARRAY_BUFFER || m_BindTarget == GL_ELEMENT_ARRAY_BUFFER;
+    const bool ResetVAO = m_BindTarget == GL_ARRAY_BUFFER || m_BindTarget == GL_ELEMENT_ARRAY_BUFFER;
     CtxState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
     // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same
     // kind of objects. As a result they are all equivalent from a transfer point of view.
@@ -379,7 +379,7 @@ void BufferGLImpl::Unmap(GLContextState& CtxState)
 {
     constexpr bool ResetVAO = true;
     CtxState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
-    auto Result = glUnmapBuffer(m_BindTarget);
+    GLboolean Result = glUnmapBuffer(m_BindTarget);
     // glUnmapBuffer() returns TRUE unless data values in the buffer's data store have
     // become corrupted during the period that the buffer was mapped. Such corruption
     // can be the result of a screen resolution change or other window system - dependent
@@ -404,17 +404,17 @@ void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
 
     try
     {
-        auto* const pDeviceGLImpl = GetDevice();
+        RenderDeviceGLImpl* const pDeviceGLImpl = GetDevice();
 
-        auto ViewDesc = OrigViewDesc;
+        BufferViewDesc ViewDesc = OrigViewDesc;
         ValidateAndCorrectBufferViewDesc(m_Desc, ViewDesc, pDeviceGLImpl->GetAdapterInfo().Buffer.StructuredBufferOffsetAlignment);
 
-        auto& BuffViewAllocator = pDeviceGLImpl->GetBuffViewObjAllocator();
+        FixedBlockMemoryAllocator& BuffViewAllocator = pDeviceGLImpl->GetBuffViewObjAllocator();
         VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization");
 
-        auto pContext = pDeviceGLImpl->GetImmediateContext(0);
+        RefCntAutoPtr<DeviceContextGLImpl> pContext = pDeviceGLImpl->GetImmediateContext(0);
         VERIFY(pContext, "Immediate context has been released");
-        auto& CtxState = pContext->GetContextState();
+        GLContextState& CtxState = pContext->GetContextState();
 
         *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewGLImpl instance", BufferViewGLImpl, bIsDefaultView ? this : nullptr)(pDeviceGLImpl, CtxState, ViewDesc, this, bIsDefaultView);
 
@@ -423,7 +423,7 @@ void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
     }
     catch (const std::runtime_error&)
     {
-        const auto* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
+        const char* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
         LOG_ERROR("Failed to create view '", (OrigViewDesc.Name ? OrigViewDesc.Name : ""), "' (", ViewTypeName, ") for buffer '", (m_Desc.Name ? m_Desc.Name : ""), "'");
     }
 }

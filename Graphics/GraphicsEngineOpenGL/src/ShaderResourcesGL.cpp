@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,7 +71,7 @@ ShaderResourcesGL::ShaderResourcesGL(ShaderResourcesGL&& Program) noexcept :
 
 inline void RemoveArrayBrackets(char* Str)
 {
-    auto* OpenBracketPtr = strchr(Str, '[');
+    char* OpenBracketPtr = strchr(Str, '[');
     if (OpenBracketPtr != nullptr)
         *OpenBracketPtr = 0;
 }
@@ -89,27 +89,27 @@ void ShaderResourcesGL::AllocateResources(std::vector<UniformBufferInfo>& Unifor
     m_NumStorageBlocks  = static_cast<Uint32>(StorageBlocks.size());
 
     size_t StringPoolDataSize = 0;
-    for (const auto& ub : UniformBlocks)
+    for (const UniformBufferInfo& ub : UniformBlocks)
     {
         StringPoolDataSize += strlen(ub.Name) + 1;
     }
 
-    for (const auto& sam : Textures)
+    for (const TextureInfo& sam : Textures)
     {
         StringPoolDataSize += strlen(sam.Name) + 1;
     }
 
-    for (const auto& img : Images)
+    for (const ImageInfo& img : Images)
     {
         StringPoolDataSize += strlen(img.Name) + 1;
     }
 
-    for (const auto& sb : StorageBlocks)
+    for (const StorageBlockInfo& sb : StorageBlocks)
     {
         StringPoolDataSize += strlen(sb.Name) + 1;
     }
 
-    auto AlignedStringPoolDataSize = AlignUp(StringPoolDataSize, sizeof(void*));
+    size_t AlignedStringPoolDataSize = AlignUp(StringPoolDataSize, sizeof(void*));
 
     // clang-format off
     size_t TotalMemorySize =
@@ -136,8 +136,8 @@ void ShaderResourcesGL::AllocateResources(std::vector<UniformBufferInfo>& Unifor
 
     TotalMemorySize += AlignedStringPoolDataSize * sizeof(Char);
 
-    auto& MemAllocator = GetRawAllocator();
-    void* RawMemory    = ALLOCATE_RAW(MemAllocator, "Memory buffer for ShaderResourcesGL", TotalMemorySize);
+    IMemoryAllocator& MemAllocator = GetRawAllocator();
+    void*             RawMemory    = ALLOCATE_RAW(MemAllocator, "Memory buffer for ShaderResourcesGL", TotalMemorySize);
 
     // clang-format off
     m_UniformBuffers = reinterpret_cast<UniformBufferInfo*>(RawMemory);
@@ -154,25 +154,25 @@ void ShaderResourcesGL::AllocateResources(std::vector<UniformBufferInfo>& Unifor
 
     for (Uint32 ub = 0; ub < m_NumUniformBuffers; ++ub)
     {
-        auto& SrcUB = UniformBlocks[ub];
+        UniformBufferInfo& SrcUB = UniformBlocks[ub];
         new (m_UniformBuffers + ub) UniformBufferInfo{SrcUB, TmpStringPool};
     }
 
     for (Uint32 s = 0; s < m_NumTextures; ++s)
     {
-        auto& SrcSam = Textures[s];
+        TextureInfo& SrcSam = Textures[s];
         new (m_Textures + s) TextureInfo{SrcSam, TmpStringPool};
     }
 
     for (Uint32 img = 0; img < m_NumImages; ++img)
     {
-        auto& SrcImg = Images[img];
+        ImageInfo& SrcImg = Images[img];
         new (m_Images + img) ImageInfo{SrcImg, TmpStringPool};
     }
 
     for (Uint32 sb = 0; sb < m_NumStorageBlocks; ++sb)
     {
-        auto& SrcSB = StorageBlocks[sb];
+        StorageBlockInfo& SrcSB = StorageBlocks[sb];
         new (m_StorageBlocks + sb) StorageBlockInfo{SrcSB, TmpStringPool};
     }
 
@@ -205,7 +205,7 @@ ShaderResourcesGL::~ShaderResourcesGL()
     void* RawMemory = m_UniformBuffers;
     if (RawMemory != nullptr)
     {
-        auto& MemAllocator = GetRawAllocator();
+        IMemoryAllocator& MemAllocator = GetRawAllocator();
         MemAllocator.Free(RawMemory);
     }
 }
@@ -228,7 +228,7 @@ static void AddUniformBufferVariable(GLuint                                     
 
     auto& BuffVars = UniformVars[UniformBlockIndex];
     BuffVars.emplace_back(VarDesc);
-    auto& Var = BuffVars.back();
+    ShaderCodeVariableDescX& Var = BuffVars.back();
 
     if (SourceLang == SHADER_SOURCE_LANGUAGE_HLSL)
     {
@@ -298,7 +298,7 @@ static void ProcessUBVariable(ShaderCodeVariableDescX& Var, Uint32 BaseOffset)
 
     for (Uint32 i = 0; i < Var.NumMembers; ++i)
     {
-        auto& Member = Var.GetMember(i);
+        ShaderCodeVariableDescX& Member = Var.GetMember(i);
         ProcessUBVariable(Member, Var.Offset);
     }
     VERIFY_EXPR(Var.Offset >= BaseOffset);
@@ -317,12 +317,12 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
 
     // Proxy variable for global variables in the block
     ShaderCodeVariableDescX GlobalVars;
-    for (auto& Var : Vars)
+    for (ShaderCodeVariableDescX& Var : Vars)
     {
-        auto* pLevel = &GlobalVars;
+        ShaderCodeVariableDescX* pLevel = &GlobalVars;
 
-        const auto* Name = Var.Name;
-        const auto* Dot  = strchr(Name, '.');
+        const char* Name = Var.Name;
+        const char* Dot  = strchr(Name, '.');
         while (Dot != nullptr)
         {
             // s2[1].s1.f4[2]
@@ -330,12 +330,12 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
             //     Dot
             std::string Prefix{Name, Dot}; // "s2[1]"
             std::string NameWithoutBrackets;
-            const auto  ArrayInd = Parsing::GetArrayIndex(Prefix, NameWithoutBrackets);
+            const int   ArrayInd = Parsing::GetArrayIndex(Prefix, NameWithoutBrackets);
             // ArrayInd = 1
             // NameWithoutBrackets = "s2"
 
             // Search for the variable with the same name
-            if (auto* pVar = pLevel->FindMember(NameWithoutBrackets.c_str()))
+            if (ShaderCodeVariableDescX* pVar = pLevel->FindMember(NameWithoutBrackets.c_str()))
             {
                 // Variable already exists - we are processing an element of an existing array or struct:
                 //
@@ -376,7 +376,7 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
                 StructVarDesc.Class  = SHADER_CODE_VARIABLE_CLASS_STRUCT;
                 StructVarDesc.Offset = Var.Offset;
 
-                auto Idx          = pLevel->AddMember(StructVarDesc);
+                size_t Idx        = pLevel->AddMember(StructVarDesc);
                 pLevel            = &pLevel->GetMember(Idx);
                 pLevel->ArraySize = std::max(pLevel->ArraySize, StaticCast<Uint32>(ArrayInd + 1));
             }
@@ -401,10 +401,10 @@ static ShaderCodeBufferDescX PrepareUBReflection(std::vector<ShaderCodeVariableD
         //         Name
 
         std::string NameWithoutBrackets;
-        const auto  ArrayInd = Parsing::GetArrayIndex(Name, NameWithoutBrackets);
+        const int   ArrayInd = Parsing::GetArrayIndex(Name, NameWithoutBrackets);
         // ArrayInd = 2
         // NameWithoutBrackets = "f4"
-        if (auto* pArray = pLevel->FindMember(NameWithoutBrackets.c_str()))
+        if (ShaderCodeVariableDescX* pArray = pLevel->FindMember(NameWithoutBrackets.c_str()))
         {
             // Array already exists
             // s2[0].s1.f4[0]
@@ -503,7 +503,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
     if (activeUniformBlockMaxLength <= 0)
         activeUniformBlockMaxLength = 1024;
 
-    auto MaxNameLength = std::max(activeUniformMaxLength, activeUniformBlockMaxLength);
+    GLint MaxNameLength = std::max(activeUniformMaxLength, activeUniformBlockMaxLength);
 
 #if GL_ARB_program_interface_query
     GLint numActiveShaderStorageBlocks = 0;
@@ -598,14 +598,14 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
             case GL_INT_SAMPLER_BUFFER:
             case GL_UNSIGNED_INT_SAMPLER_BUFFER:
             {
-                const auto IsBuffer =
+                const bool IsBuffer =
                     dataType == GL_SAMPLER_BUFFER ||
                     dataType == GL_INT_SAMPLER_BUFFER ||
                     dataType == GL_UNSIGNED_INT_SAMPLER_BUFFER;
-                const auto ResourceType = IsBuffer ?
+                const SHADER_RESOURCE_TYPE ResourceType = IsBuffer ?
                     SHADER_RESOURCE_TYPE_BUFFER_SRV :
                     SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-                const auto ResourceFlags = IsBuffer ?
+                const PIPELINE_RESOURCE_FLAGS ResourceFlags = IsBuffer ?
                     PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER :
                     Attribs.SamplerResourceFlag // PIPELINE_RESOURCE_FLAG_NONE for HLSL source or
                                                 // PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER for GLSL source
@@ -661,14 +661,14 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
             case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE:
             case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY:
             {
-                const auto IsBuffer =
+                const bool IsBuffer =
                     dataType == GL_IMAGE_BUFFER ||
                     dataType == GL_INT_IMAGE_BUFFER ||
                     dataType == GL_UNSIGNED_INT_IMAGE_BUFFER;
-                const auto ResourceType = IsBuffer ?
+                const SHADER_RESOURCE_TYPE ResourceType = IsBuffer ?
                     SHADER_RESOURCE_TYPE_BUFFER_UAV :
                     SHADER_RESOURCE_TYPE_TEXTURE_UAV;
-                const auto ResourceFlags = IsBuffer ?
+                const PIPELINE_RESOURCE_FLAGS ResourceFlags = IsBuffer ?
                     PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER :
                     PIPELINE_RESOURCE_FLAG_NONE;
 
@@ -692,7 +692,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
                 // Some other uniform type like scalar, matrix etc.
                 if (Attribs.LoadUniformBufferReflection)
                 {
-                    auto VarDesc = GLDataTypeToShaderCodeVariableDesc(dataType);
+                    ShaderCodeVariableDesc VarDesc = GLDataTypeToShaderCodeVariableDesc(dataType);
                     if (VarDesc.BasicType != SHADER_CODE_BASIC_TYPE_UNKNOWN)
                     {
                         // All uniforms are reported as unrolled variables, e.g. s2.s1[1].f4[0]
@@ -716,7 +716,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
         // is equivalent to
         // glGetProgramResourceName(program, GL_UNIFORM_BLOCK, uniformBlockIndex, bufSize, length, uniformBlockName);
 
-        auto UniformBlockIndex = glGetUniformBlockIndex(GLProgram, Name.data());
+        GLuint UniformBlockIndex = glGetUniformBlockIndex(GLProgram, Name.data());
         DEV_CHECK_GL_ERROR("Unable to get active uniform block index\n");
         // glGetUniformBlockIndex( program, uniformBlockName );
         // is equivalent to
@@ -725,16 +725,16 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
         bool IsNewBlock = true;
 
         GLint ArraySize      = 1;
-        auto* OpenBracketPtr = strchr(Name.data(), '[');
+        char* OpenBracketPtr = strchr(Name.data(), '[');
         if (OpenBracketPtr != nullptr)
         {
-            auto Ind        = atoi(OpenBracketPtr + 1);
+            int Ind         = atoi(OpenBracketPtr + 1);
             ArraySize       = std::max(ArraySize, Ind + 1);
             *OpenBracketPtr = 0;
             if (!UniformBlocks.empty())
             {
                 // Look at previous uniform block to check if it is the same array
-                auto& LastBlock = UniformBlocks.back();
+                UniformBufferInfo& LastBlock = UniformBlocks.back();
                 if (strcmp(LastBlock.Name, Name.data()) == 0)
                 {
                     ArraySize = std::max(ArraySize, static_cast<GLint>(LastBlock.ArraySize));
@@ -745,7 +745,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
                 else
                 {
 #ifdef DILIGENT_DEBUG
-                    for (const auto& ub : UniformBlocks)
+                    for (const UniformBufferInfo& ub : UniformBlocks)
                         VERIFY(strcmp(ub.Name, Name.data()) != 0, "Uniform block with the name '", ub.Name, "' has already been enumerated");
 #endif
                 }
@@ -772,21 +772,21 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
         DEV_CHECK_GL_ERROR("Unable to get shader storage block name\n");
         VERIFY(Length < MaxNameLength && static_cast<size_t>(Length) == strlen(Name.data()), "Incorrect shader storage block name");
 
-        auto SBIndex = glGetProgramResourceIndex(GLProgram, GL_SHADER_STORAGE_BLOCK, Name.data());
+        GLuint SBIndex = glGetProgramResourceIndex(GLProgram, GL_SHADER_STORAGE_BLOCK, Name.data());
         DEV_CHECK_GL_ERROR("Unable to get shader storage block index\n");
 
         bool  IsNewBlock     = true;
         Int32 ArraySize      = 1;
-        auto* OpenBracketPtr = strchr(Name.data(), '[');
+        char* OpenBracketPtr = strchr(Name.data(), '[');
         if (OpenBracketPtr != nullptr)
         {
-            auto Ind        = atoi(OpenBracketPtr + 1);
+            int Ind         = atoi(OpenBracketPtr + 1);
             ArraySize       = std::max(ArraySize, Ind + 1);
             *OpenBracketPtr = 0;
             if (!StorageBlocks.empty())
             {
                 // Look at previous storage block to check if it is the same array
-                auto& LastBlock = StorageBlocks.back();
+                StorageBlockInfo& LastBlock = StorageBlocks.back();
                 if (strcmp(LastBlock.Name, Name.data()) == 0)
                 {
                     ArraySize = std::max(ArraySize, static_cast<GLint>(LastBlock.ArraySize));
@@ -797,7 +797,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
                 else
                 {
 #    ifdef DILIGENT_DEBUG
-                    for (const auto& sb : StorageBlocks)
+                    for (const StorageBlockInfo& sb : StorageBlocks)
                         VERIFY(strcmp(sb.Name, Name.data()) != 0, "Storage block with the name \"", sb.Name, "\" has already been enumerated");
 #    endif
                 }
@@ -826,7 +826,7 @@ void ShaderResourcesGL::LoadUniforms(const LoadUniformsAttribs& Attribs)
         VERIFY_EXPR(Attribs.LoadUniformBufferReflection);
 
         std::vector<ShaderCodeBufferDescX> UBReflections;
-        for (const auto& UB : UniformBlocks)
+        for (const UniformBufferInfo& UB : UniformBlocks)
         {
             if (UB.UBIndex < UniformVars.size())
             {

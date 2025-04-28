@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -143,8 +143,8 @@ void Texture1D_GL::UpdateData(GLContextState&          ContextState,
     GLuint UnpackBuffer = 0;
     if (SubresData.pSrcBuffer != nullptr)
     {
-        auto* pBufferGL = ClassPtrCast<BufferGLImpl>(SubresData.pSrcBuffer);
-        UnpackBuffer    = pBufferGL->GetGLHandle();
+        BufferGLImpl* pBufferGL = ClassPtrCast<BufferGLImpl>(SubresData.pSrcBuffer);
+        UnpackBuffer            = pBufferGL->GetGLHandle();
     }
 
     // Transfers to OpenGL memory are called unpack operations
@@ -152,8 +152,7 @@ void Texture1D_GL::UpdateData(GLContextState&          ContextState,
     // operations will be performed from this buffer.
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, UnpackBuffer);
 
-    const auto& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
-    (void)TransferAttribs;
+    const NativePixelAttribs& TransferAttribs = GetNativePixelTransferAttribs(m_Desc.Format);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, PBOOffsetAlignment);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
