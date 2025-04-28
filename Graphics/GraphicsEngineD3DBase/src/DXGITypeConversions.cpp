@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -413,7 +413,7 @@ DXGI_FORMAT TexFormatToDXGI_Format(TEXTURE_FORMAT TexFormat, Uint32 BindFlags)
 
     if (TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS)
     {
-        auto DXGIFormat = FmtToDXGIFmtMap[TexFormat];
+        DXGI_FORMAT DXGIFormat = FmtToDXGIFmtMap[TexFormat];
         VERIFY(TexFormat == TEX_FORMAT_UNKNOWN || TexFormat > TEX_FORMAT_BC7_UNORM_SRGB || DXGIFormat != DXGI_FORMAT_UNKNOWN, "Unsupported texture format");
         if (BindFlags != 0)
             DXGIFormat = CorrectDXGIFormat(DXGIFormat, BindFlags);
@@ -433,7 +433,7 @@ public:
     {
         for (TEXTURE_FORMAT fmt = TEX_FORMAT_UNKNOWN; fmt < TEX_FORMAT_NUM_FORMATS; fmt = static_cast<TEXTURE_FORMAT>(fmt + 1))
         {
-            auto DXGIFmt = TexFormatToDXGI_Format(fmt);
+            DXGI_FORMAT DXGIFmt = TexFormatToDXGI_Format(fmt);
             VERIFY_EXPR(DXGIFmt <= DXGI_FORMAT_B4G4R4A4_UNORM);
             DXGIFmtToFmtMap[DXGIFmt] = fmt;
         }
@@ -448,7 +448,7 @@ TEXTURE_FORMAT DXGI_FormatToTexFormat(DXGI_FORMAT DXGIFormat)
 
     if (DXGIFormat >= DXGI_FORMAT_UNKNOWN && DXGIFormat <= DXGI_FORMAT_BC7_UNORM_SRGB)
     {
-        auto Format = DXGIFmtToFmtMap[DXGIFormat];
+        TEXTURE_FORMAT Format = DXGIFmtToFmtMap[DXGIFormat];
         VERIFY(DXGIFormat == DXGI_FORMAT_UNKNOWN || Format != TEX_FORMAT_UNKNOWN, "Unsupported texture format");
         VERIFY_EXPR(DXGIFormat == TexFormatToDXGI_Format(Format));
         return Format;

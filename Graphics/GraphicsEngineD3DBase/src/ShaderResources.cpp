@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -132,13 +132,13 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
     {
         constexpr Uint32 MaxOffset = std::numeric_limits<OffsetType>::max();
         VERIFY(CurrentOffset <= MaxOffset, "Current offset (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
-        auto Offset = static_cast<OffsetType>(CurrentOffset);
+        OffsetType Offset = static_cast<OffsetType>(CurrentOffset);
         CurrentOffset += NumResources;
         return Offset;
     };
 
     // clang-format off
-    auto CBOffset        = AdvanceOffset(ResCounters.NumCBs);       (void)CBOffset; // To suppress warning
+    OffsetType CBOffset  = AdvanceOffset(ResCounters.NumCBs);       (void)CBOffset; // To suppress warning
     m_TexSRVOffset       = AdvanceOffset(ResCounters.NumTexSRVs);
     m_TexUAVOffset       = AdvanceOffset(ResCounters.NumTexUAVs);
     m_BufSRVOffset       = AdvanceOffset(ResCounters.NumBufSRVs);
@@ -147,8 +147,8 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
     m_AccelStructsOffset = AdvanceOffset(ResCounters.NumAccelStructs);
     m_TotalResources     = AdvanceOffset(0);
 
-    auto AlignedResourceNamesPoolSize = AlignUp(ResourceNamesPoolSize, sizeof(void*));
-    auto MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs) + AlignedResourceNamesPoolSize * sizeof(char);
+    size_t AlignedResourceNamesPoolSize = AlignUp(ResourceNamesPoolSize, sizeof(void*));
+    size_t MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs) + AlignedResourceNamesPoolSize * sizeof(char);
 
     VERIFY_EXPR(GetNumCBs()         == ResCounters.NumCBs);
     VERIFY_EXPR(GetNumTexSRV()      == ResCounters.NumTexSRVs);
@@ -161,7 +161,7 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
 
     if (MemorySize)
     {
-        auto* pRawMem   = ALLOCATE_RAW(Allocator, "Allocator for shader resources", MemorySize);
+        void* pRawMem   = ALLOCATE_RAW(Allocator, "Allocator for shader resources", MemorySize);
         m_MemoryBuffer  = std::unique_ptr<void, STDDeleterRawMem<void>>(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(reinterpret_cast<D3DShaderResourceAttribs*>(pRawMem) + m_TotalResources);
         ResourceNamesPool.AssignMemory(NamesPool, ResourceNamesPoolSize);
@@ -180,11 +180,11 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
         std::string ShadersStr;
         while (ShaderStages != SHADER_TYPE_UNKNOWN)
         {
-            const auto ShaderType = ShaderStages & static_cast<SHADER_TYPE>(~(static_cast<Uint32>(ShaderStages) - 1));
-            String     ShaderName;
+            const SHADER_TYPE ShaderType = ShaderStages & static_cast<SHADER_TYPE>(~(static_cast<Uint32>(ShaderStages) - 1));
+            String            ShaderName;
             for (Uint32 s = 0; s < NumShaders; ++s)
             {
-                const auto& Resources = *pShaderResources[s];
+                const ShaderResources& Resources = *pShaderResources[s];
                 if ((ShaderStages & Resources.GetShaderType()) != 0)
                 {
                     if (ShaderName.size())
@@ -218,7 +218,7 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
     {
         for (Uint32 v = 0; v < ResourceLayout.NumVariables; ++v)
         {
-            const auto& VarDesc = ResourceLayout.Variables[v];
+            const ShaderResourceVariableDesc& VarDesc = ResourceLayout.Variables[v];
             if (VarDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
             {
                 LOG_WARNING_MESSAGE("No allowed shader stages are specified for ", GetShaderVariableTypeLiteralName(VarDesc.Type), " variable '", VarDesc.Name, "'.");
@@ -228,14 +228,14 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
             bool VariableFound = false;
             for (Uint32 s = 0; s < NumShaders && !VariableFound; ++s)
             {
-                const auto& Resources = *pShaderResources[s];
+                const ShaderResources& Resources = *pShaderResources[s];
                 if ((VarDesc.ShaderStages & Resources.GetShaderType()) == 0)
                     continue;
 
-                const auto UseCombinedTextureSamplers = Resources.IsUsingCombinedTextureSamplers();
+                const bool UseCombinedTextureSamplers = Resources.IsUsingCombinedTextureSamplers();
                 for (Uint32 n = 0; n < Resources.m_TotalResources && !VariableFound; ++n)
                 {
-                    const auto& Res = Resources.GetResAttribs(n, Resources.m_TotalResources, 0);
+                    const D3DShaderResourceAttribs& Res = Resources.GetResAttribs(n, Resources.m_TotalResources, 0);
 
                     // Skip samplers if combined texture samplers are used as
                     // in this case they are not treated as independent variables
@@ -259,30 +259,30 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
     {
         for (Uint32 sam = 0; sam < ResourceLayout.NumImmutableSamplers; ++sam)
         {
-            const auto& StSamDesc = ResourceLayout.ImmutableSamplers[sam];
+            const ImmutableSamplerDesc& StSamDesc = ResourceLayout.ImmutableSamplers[sam];
             if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
             {
                 LOG_WARNING_MESSAGE("No allowed shader stages are specified for immutable sampler '", StSamDesc.SamplerOrTextureName, "'.");
                 continue;
             }
 
-            const auto* TexOrSamName = StSamDesc.SamplerOrTextureName;
+            const char* TexOrSamName = StSamDesc.SamplerOrTextureName;
 
             bool ImtblSamplerFound = false;
             for (Uint32 s = 0; s < NumShaders && !ImtblSamplerFound; ++s)
             {
-                const auto& Resources = *pShaderResources[s];
+                const ShaderResources& Resources = *pShaderResources[s];
                 if ((StSamDesc.ShaderStages & Resources.GetShaderType()) == 0)
                     continue;
 
                 // Look for immutable sampler.
                 // In case HLSL-style combined image samplers are used, the condition is  Sampler.Name == "g_Texture" + "_sampler".
                 // Otherwise the condition is  Sampler.Name == "g_Texture_sampler" + "".
-                const auto* CombinedSamplerSuffix = Resources.GetCombinedSamplerSuffix();
+                const char* CombinedSamplerSuffix = Resources.GetCombinedSamplerSuffix();
                 for (Uint32 n = 0; n < Resources.GetNumSamplers() && !ImtblSamplerFound; ++n)
                 {
-                    const auto& Sampler = Resources.GetSampler(n);
-                    ImtblSamplerFound   = StreqSuff(Sampler.Name, TexOrSamName, CombinedSamplerSuffix);
+                    const D3DShaderResourceAttribs& Sampler = Resources.GetSampler(n);
+                    ImtblSamplerFound                       = StreqSuff(Sampler.Name, TexOrSamName, CombinedSamplerSuffix);
                 }
             }
 
@@ -301,10 +301,10 @@ Uint32 ShaderResources::FindAssignedSamplerId(const D3DShaderResourceAttribs& Te
 {
     VERIFY_EXPR(SamplerSuffix != nullptr && *SamplerSuffix != 0);
     VERIFY_EXPR(TexSRV.GetInputType() == D3D_SIT_TEXTURE && TexSRV.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER);
-    auto NumSamplers = GetNumSamplers();
+    Uint32 NumSamplers = GetNumSamplers();
     for (Uint32 s = 0; s < NumSamplers; ++s)
     {
-        const auto& Sampler = GetSampler(s);
+        const D3DShaderResourceAttribs& Sampler = GetSampler(s);
         if (StreqSuff(Sampler.Name, TexSRV.Name, SamplerSuffix))
         {
             DEV_CHECK_ERR(Sampler.BindCount == TexSRV.BindCount || Sampler.BindCount == 1, "Sampler '", Sampler.Name, "' assigned to texture '", TexSRV.Name, "' must be scalar or have the same array dimension (", TexSRV.BindCount, "). Actual sampler array dimension : ", Sampler.BindCount);
@@ -383,7 +383,7 @@ HLSLShaderResourceDesc ShaderResources::GetHLSLShaderResourceDesc(Uint32 Index) 
     HLSLShaderResourceDesc HLSLResourceDesc = {};
     if (Index < m_TotalResources)
     {
-        const auto& Res = GetResAttribs(Index, m_TotalResources, 0);
+        const D3DShaderResourceAttribs& Res = GetResAttribs(Index, m_TotalResources, 0);
         return Res.GetHLSLResourceDesc();
     }
     return HLSLResourceDesc;
@@ -394,7 +394,7 @@ size_t ShaderResources::GetHash() const
     size_t hash = ComputeHash(GetNumCBs(), GetNumTexSRV(), GetNumTexUAV(), GetNumBufSRV(), GetNumBufUAV(), GetNumSamplers());
     for (Uint32 n = 0; n < m_TotalResources; ++n)
     {
-        const auto& Res = GetResAttribs(n, m_TotalResources, 0);
+        const D3DShaderResourceAttribs& Res = GetResAttribs(n, m_TotalResources, 0);
         HashCombine(hash, Res);
     }
 

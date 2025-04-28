@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ void ValidateShaderResourceBindings(const char*                  PSOName,
                                     "' is not present in the resource bindings map.");
             }
 
-            const auto& Bindings = it->second;
+            const ResourceBinding::BindInfo& Bindings = it->second;
             if (Bindings.BindPoint != Attribs.BindPoint)
             {
                 LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", Resources.GetShaderName(), "' of PSO '", PSOName,
