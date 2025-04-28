@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +34,7 @@ SRBMemoryAllocator::~SRBMemoryAllocator()
 {
     if (m_DataAllocators != nullptr)
     {
-        auto TotalAllocatorCount = m_ShaderVariableDataAllocatorCount + m_ResourceCacheDataAllocatorCount;
+        Uint32 TotalAllocatorCount = m_ShaderVariableDataAllocatorCount + m_ResourceCacheDataAllocatorCount;
         for (Uint32 s = 0; s < TotalAllocatorCount; ++s)
         {
             m_DataAllocators[s].~FixedBlockMemoryAllocator();
@@ -54,12 +54,12 @@ void SRBMemoryAllocator::Initialize(Uint32              SRBAllocationGranularity
 
     m_ShaderVariableDataAllocatorCount = ShaderVariableDataAllocatorCount;
     m_ResourceCacheDataAllocatorCount  = ResourceCacheDataAllocatorCount;
-    auto TotalAllocatorCount           = m_ShaderVariableDataAllocatorCount + m_ResourceCacheDataAllocatorCount;
+    Uint32 TotalAllocatorCount         = m_ShaderVariableDataAllocatorCount + m_ResourceCacheDataAllocatorCount;
 
     if (TotalAllocatorCount == 0)
         return;
 
-    auto* pAllocatorsRawMem = m_RawMemAllocator.Allocate(
+    void* pAllocatorsRawMem = m_RawMemAllocator.Allocate(
         sizeof(FixedBlockMemoryAllocator) * TotalAllocatorCount,
         "Raw memory for SRBMemoryAllocator::m_ShaderVariableDataAllocators",
         __FILE__, __LINE__);
@@ -67,7 +67,7 @@ void SRBMemoryAllocator::Initialize(Uint32              SRBAllocationGranularity
 
     for (Uint32 s = 0; s < TotalAllocatorCount; ++s)
     {
-        auto size = s < ShaderVariableDataAllocatorCount ? ShaderVariableDataSizes[s] : ResourceCacheDataSizes[s - ShaderVariableDataAllocatorCount];
+        size_t size = s < ShaderVariableDataAllocatorCount ? ShaderVariableDataSizes[s] : ResourceCacheDataSizes[s - ShaderVariableDataAllocatorCount];
         new (m_DataAllocators + s) FixedBlockMemoryAllocator(GetRawAllocator(), size, SRBAllocationGranularity);
     }
 }
