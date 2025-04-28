@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -97,10 +97,10 @@ void DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*           
     }
     else
     {
-        for (const auto& SearchDir : m_SearchDirectories)
+        for (const std::string& SearchDir : m_SearchDirectories)
         {
-            const auto FullPath = SearchDir + ((Name[0] == '\\' || Name[0] == '/') ? Name + 1 : Name);
-            pFileStream         = CreateFileStream(FullPath.c_str());
+            const std::string FullPath = SearchDir + ((Name[0] == '\\' || Name[0] == '/') ? Name + 1 : Name);
+            pFileStream                = CreateFileStream(FullPath.c_str());
             if (pFileStream)
                 break;
         }
@@ -126,8 +126,8 @@ void CreateDefaultShaderSourceStreamFactory(const Char*                       Se
     DEV_CHECK_ERR(ppShaderSourceStreamFactory != nullptr, "ppShaderSourceStreamFactory must not be null.");
     DEV_CHECK_ERR(*ppShaderSourceStreamFactory == nullptr, "*ppShaderSourceStreamFactory is not null. Make sure the pointer is null to avoid memory leaks.");
 
-    auto& Allocator = GetRawAllocator();
-    auto* pStreamFactory =
+    IMemoryAllocator&                 Allocator = GetRawAllocator();
+    DefaultShaderSourceStreamFactory* pStreamFactory =
         NEW_RC_OBJ(Allocator, "DefaultShaderSourceStreamFactory instance", DefaultShaderSourceStreamFactory)(SearchDirectories);
     pStreamFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, reinterpret_cast<IObject**>(ppShaderSourceStreamFactory));
 }

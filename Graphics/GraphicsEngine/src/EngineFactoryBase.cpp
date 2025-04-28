@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdap
         LOG_ERROR_AND_THROW("If NumImmediateContexts is not zero, pContextInfo must not be null");
     }
 
-    constexpr auto MaxImmediateContexts = 8 * std::min(sizeof(decltype(BufferDesc::ImmediateContextMask)), sizeof(decltype(TextureDesc::ImmediateContextMask)));
+    constexpr size_t MaxImmediateContexts = 8 * std::min(sizeof(decltype(BufferDesc::ImmediateContextMask)), sizeof(decltype(TextureDesc::ImmediateContextMask)));
     static_assert(MAX_COMMAND_QUEUES == MaxImmediateContexts, "Number of bits in MaxImmediateContexts must be equal to MAX_COMMAND_QUEUES");
 
     if (EngineCI.NumImmediateContexts >= MaxImmediateContexts)
@@ -60,7 +60,7 @@ void VerifyEngineCreateInfo(const EngineCreateInfo& EngineCI, const GraphicsAdap
     std::array<Uint32, DILIGENT_MAX_ADAPTER_QUEUES> QueueCount = {};
     for (Uint32 CtxInd = 0; CtxInd < EngineCI.NumImmediateContexts; ++CtxInd)
     {
-        const auto& ContextInfo = EngineCI.pImmediateContextInfo[CtxInd];
+        const ImmediateContextCreateInfo& ContextInfo = EngineCI.pImmediateContextInfo[CtxInd];
 
         if (ContextInfo.QueueId >= AdapterInfo.NumQueues)
         {

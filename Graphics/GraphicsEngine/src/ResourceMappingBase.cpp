@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ void ResourceMappingImpl::AddResourceArray(const Char* Name, Uint32 StartIndex, 
     Threading::SpinLockGuard Guard{m_Lock};
     for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
     {
-        auto* pObject = ppObjects[Elem];
+        IDeviceObject* pObject = ppObjects[Elem];
 
         // Try to construct new element in place
         auto Elems = m_HashTable.emplace(ResMappingHashKey{Name, true /*Make copy*/, StartIndex + Elem}, pObject);

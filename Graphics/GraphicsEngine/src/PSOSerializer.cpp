@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -253,7 +253,7 @@ bool PSOSerializer<Mode>::SerializeCreateInfo(
         return false;
 
     // Serialize RayTracingGeneralShaderGroup
-    auto res =
+    bool res =
         Ser.SerializeArray(Allocator, CreateInfo.pGeneralShaders, CreateInfo.GeneralShaderCount,
                            [&](Serializer<Mode>&                        Ser,
                                ConstQual<RayTracingGeneralShaderGroup>& Group) //
@@ -348,7 +348,7 @@ bool RPSerializer<Mode>::SerializeDesc(
     ConstQual<RenderPassDesc>& RPDesc,
     DynamicLinearAllocator*    Allocator)
 {
-    auto res =
+    bool res =
         Ser.SerializeArray(Allocator, RPDesc.pAttachments, RPDesc.AttachmentCount,
                            [](Serializer<Mode>&                    Ser,
                               ConstQual<RenderPassAttachmentDesc>& Attachment) //

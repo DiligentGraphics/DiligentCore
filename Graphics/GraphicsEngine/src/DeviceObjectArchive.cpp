@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -261,8 +261,8 @@ void DeviceObjectArchive::Serialize(IDataBlob** ppDataBlob) const
 
         for (const auto& res_it : m_NamedResources)
         {
-            const auto* Name    = res_it.first.GetName();
-            const auto  ResType = res_it.first.GetType();
+            const char*        Name    = res_it.first.GetName();
+            const ResourceType ResType = res_it.first.GetType();
 
             res = Ser(ResType, Name);
             VERIFY(res, "Failed to serialize resource type and name");
@@ -271,7 +271,7 @@ void DeviceObjectArchive::Serialize(IDataBlob** ppDataBlob) const
             VERIFY(res, "Failed to serialize resource data");
         }
 
-        for (auto& Shaders : m_DeviceShaders)
+        for (const std::vector<SerializedData>& Shaders : m_DeviceShaders)
         {
             res = ArchiveSer.SerializeShaders(Shaders);
             VERIFY(res, "Failed to serialize shaders");
@@ -281,7 +281,7 @@ void DeviceObjectArchive::Serialize(IDataBlob** ppDataBlob) const
     Serializer<SerializerMode::Measure> Measurer;
     SerializeThis(Measurer);
 
-    auto pDataBlob = DataBlobImpl::Create(Measurer.GetSize());
+    RefCntAutoPtr<DataBlobImpl> pDataBlob = DataBlobImpl::Create(Measurer.GetSize());
 
     Serializer<SerializerMode::Write> Writer{SerializedData{pDataBlob->GetDataPtr(), pDataBlob->GetSize()}};
     SerializeThis(Writer);
@@ -411,7 +411,7 @@ std::string DeviceObjectArchive::ToString() const
             if (Resources.empty())
                 continue;
 
-            const auto ResType = Resources.front().get().first.GetType();
+            const ResourceType ResType = Resources.front().get().first.GetType();
             Output << SeparatorLine
                    << ResourceTypeToString(ResType) << " (" << Resources.size() << ")\n";
             // ------------------
@@ -423,19 +423,19 @@ std::string DeviceObjectArchive::ToString() const
                 Output << Ident1 << it.first.GetName() << '\n';
                 // ..Test PRS
 
-                const auto& Res = it.second;
+                const ResourceData& Res = it.second;
 
-                auto   MaxSize       = Res.Common.Size();
+                size_t MaxSize       = Res.Common.Size();
                 size_t MaxDevNameLen = strlen(CommonDataName);
                 for (Uint32 i = 0; i < Res.DeviceSpecific.size(); ++i)
                 {
-                    const auto DevDataSize = Res.DeviceSpecific[i].Size();
+                    const size_t DevDataSize = Res.DeviceSpecific[i].Size();
 
                     MaxSize = std::max(MaxSize, DevDataSize);
                     if (DevDataSize != 0)
                         MaxDevNameLen = std::max(MaxDevNameLen, strlen(ArchiveDeviceTypeToString(i)));
                 }
-                const auto SizeFieldW = GetNumFieldWidth(MaxSize);
+                const size_t SizeFieldW = GetNumFieldWidth(MaxSize);
 
                 Output << Ident2 << std::setw(static_cast<int>(MaxDevNameLen)) << std::left << CommonDataName << ' '
                        << std::setw(static_cast<int>(SizeFieldW)) << std::right << Res.Common.Size() << " bytes\n";
@@ -443,7 +443,7 @@ std::string DeviceObjectArchive::ToString() const
 
                 for (Uint32 i = 0; i < Res.DeviceSpecific.size(); ++i)
                 {
-                    const auto DevDataSize = Res.DeviceSpecific[i].Size();
+                    const size_t DevDataSize = Res.DeviceSpecific[i].Size();
                     if (DevDataSize > 0)
                     {
                         Output << Ident2 << std::setw(static_cast<int>(MaxDevNameLen)) << std::left << ArchiveDeviceTypeToString(i) << ' '
@@ -467,7 +467,7 @@ std::string DeviceObjectArchive::ToString() const
     //       [1] 'Test PS' 7380 bytes
     {
         bool HasShaders = false;
-        for (const auto& Shaders : m_DeviceShaders)
+        for (const std::vector<SerializedData>& Shaders : m_DeviceShaders)
         {
             if (!Shaders.empty())
                 HasShaders = true;
@@ -482,7 +482,7 @@ std::string DeviceObjectArchive::ToString() const
 
             for (Uint32 dev = 0; dev < m_DeviceShaders.size(); ++dev)
             {
-                const auto& Shaders = m_DeviceShaders[dev];
+                const std::vector<SerializedData>& Shaders = m_DeviceShaders[dev];
                 if (Shaders.empty())
                     continue;
                 Output << Ident1 << ArchiveDeviceTypeToString(dev) << '(' << Shaders.size() << ")\n";
@@ -493,7 +493,7 @@ std::string DeviceObjectArchive::ToString() const
 
                 size_t MaxSize    = 0;
                 size_t MaxNameLen = 0;
-                for (const auto& ShaderData : Shaders)
+                for (const SerializedData& ShaderData : Shaders)
                 {
                     MaxSize = std::max(MaxSize, ShaderData.Size());
 
@@ -506,8 +506,8 @@ std::string DeviceObjectArchive::ToString() const
                     MaxNameLen = std::max(MaxNameLen, ShaderNames.back().size());
                 }
 
-                const auto IdxFieldW  = GetNumFieldWidth(Shaders.size());
-                const auto SizeFieldW = GetNumFieldWidth(MaxSize);
+                const size_t IdxFieldW  = GetNumFieldWidth(Shaders.size());
+                const size_t SizeFieldW = GetNumFieldWidth(MaxSize);
                 for (Uint32 idx = 0; idx < Shaders.size(); ++idx)
                 {
                     Output << Ident2 << '[' << std::setw(static_cast<int>(IdxFieldW)) << std::right << idx << "] "
@@ -533,10 +533,10 @@ void DeviceObjectArchive::RemoveDeviceData(DeviceType Dev) noexcept(false)
 
 void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, DeviceType Dev) noexcept(false)
 {
-    auto& Allocator = GetRawAllocator();
+    IMemoryAllocator& Allocator = GetRawAllocator();
     for (auto& dst_res_it : m_NamedResources)
     {
-        auto& DstData = dst_res_it.second.DeviceSpecific[static_cast<size_t>(Dev)];
+        SerializedData& DstData = dst_res_it.second.DeviceSpecific[static_cast<size_t>(Dev)];
         // Clear dst device data to make sure we don't have invalid shader indices
         DstData = {};
 
@@ -544,7 +544,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
         if (src_res_it == Src.m_NamedResources.end())
             continue;
 
-        const auto& SrcData{src_res_it->second.DeviceSpecific[static_cast<size_t>(Dev)]};
+        const SerializedData& SrcData{src_res_it->second.DeviceSpecific[static_cast<size_t>(Dev)]};
         // Always copy src data even if it is empty
         DstData = SrcData.MakeCopy(Allocator);
     }
@@ -553,7 +553,7 @@ void DeviceObjectArchive::AppendDeviceData(const DeviceObjectArchive& Src, Devic
     const auto& SrcShaders = Src.m_DeviceShaders[static_cast<size_t>(Dev)];
     auto&       DstShaders = m_DeviceShaders[static_cast<size_t>(Dev)];
     DstShaders.clear();
-    for (const auto& SrcShader : SrcShaders)
+    for (const SerializedData& SrcShader : SrcShaders)
         DstShaders.emplace_back(SrcShader.MakeCopy(Allocator));
 }
 
@@ -564,7 +564,7 @@ void DeviceObjectArchive::Merge(const DeviceObjectArchive& Src) noexcept(false)
 
     static_assert(static_cast<size_t>(ResourceType::Count) == 8, "Did you add a new resource type? You may need to handle it here.");
 
-    auto&                  Allocator = GetRawAllocator();
+    IMemoryAllocator&      Allocator = GetRawAllocator();
     DynamicLinearAllocator DynAllocator{Allocator, 512};
 
     // Copy shaders
@@ -577,15 +577,15 @@ void DeviceObjectArchive::Merge(const DeviceObjectArchive& Src) noexcept(false)
         if (SrcShaders.empty())
             continue;
         DstShaders.reserve(DstShaders.size() + SrcShaders.size());
-        for (const auto& SrcShader : SrcShaders)
+        for (const SerializedData& SrcShader : SrcShaders)
             DstShaders.emplace_back(SrcShader.MakeCopy(Allocator));
     }
 
     // Copy named resources
     for (auto& src_res_it : Src.m_NamedResources)
     {
-        const auto  ResType = src_res_it.first.GetType();
-        const auto* ResName = src_res_it.first.GetName();
+        const ResourceType ResType = src_res_it.first.GetType();
+        const char*        ResName = src_res_it.first.GetName();
 
         auto it_inserted = m_NamedResources.emplace(NamedResourceKey{ResType, ResName, /*CopyName = */ true}, src_res_it.second.MakeCopy(Allocator));
         if (!it_inserted.second)
@@ -598,7 +598,7 @@ void DeviceObjectArchive::Merge(const DeviceObjectArchive& Src) noexcept(false)
         }
 
         const auto IsStandaloneShader = (ResType == ResourceType::StandaloneShader);
-        const auto IsPipeline =
+        const bool IsPipeline =
             (ResType == ResourceType::GraphicsPipeline ||
              ResType == ResourceType::ComputePipeline ||
              ResType == ResourceType::RayTracingPipeline ||
@@ -609,9 +609,9 @@ void DeviceObjectArchive::Merge(const DeviceObjectArchive& Src) noexcept(false)
         {
             for (size_t i = 0; i < static_cast<size_t>(DeviceType::Count); ++i)
             {
-                const auto BaseIdx = ShaderBaseIndices[i];
+                const Uint32 BaseIdx = ShaderBaseIndices[i];
 
-                auto& DeviceData = it_inserted.first->second.DeviceSpecific[i];
+                SerializedData& DeviceData = it_inserted.first->second.DeviceSpecific[i];
                 if (!DeviceData)
                     continue;
 
@@ -646,7 +646,7 @@ void DeviceObjectArchive::Merge(const DeviceObjectArchive& Src) noexcept(false)
                     }
 
                     std::vector<Uint32> NewIndices{ShaderIndices.pIndices, ShaderIndices.pIndices + ShaderIndices.Count};
-                    for (auto& Idx : NewIndices)
+                    for (Uint32& Idx : NewIndices)
                         Idx += BaseIdx;
 
                     {
