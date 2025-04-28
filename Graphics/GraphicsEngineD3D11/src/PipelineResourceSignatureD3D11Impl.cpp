@@ -44,8 +44,8 @@ void ValidatePipelineResourceSignatureDescD3D11(const PipelineResourceSignatureD
 {
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
     {
-        const auto& ResDesc = Desc.Resources[i];
-        const auto  Range   = PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(ResDesc.ResourceType);
+        const PipelineResourceDesc& ResDesc = Desc.Resources[i];
+        const D3D11_RESOURCE_RANGE  Range   = PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(ResDesc.ResourceType);
 
         constexpr SHADER_TYPE UAVStages = SHADER_TYPE_PIXEL | SHADER_TYPE_COMPUTE;
         if (Range == D3D11_RESOURCE_RANGE_UAV && (ResDesc.ShaderStages & ~UAVStages) != 0)
@@ -359,7 +359,7 @@ void PipelineResourceSignatureD3D11Impl::InitSRBResourceCache(ShaderResourceCach
     // Copy immutable samplers.
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
-        const auto& ImtblSampAttr = GetImmutableSamplerAttribs(i);
+        const ImmutableSamplerAttribsD3D11& ImtblSampAttr = GetImmutableSamplerAttribs(i);
         VERIFY_EXPR(ImtblSampAttr.IsAllocated());
         VERIFY_EXPR(m_pImmutableSamplers != nullptr && m_pImmutableSamplers[i]);
         VERIFY_EXPR(ImtblSampAttr.ArraySize > 0);
@@ -375,13 +375,13 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
                                                                         const D3D11ShaderResourceCounters& BaseBindings) const
 {
     VERIFY(ShaderStage != SHADER_TYPE_UNKNOWN && IsPowerOfTwo(ShaderStage), "Only single shader stage must be provided.");
-    const auto ShaderInd = GetShaderTypeIndex(ShaderStage);
+    const Int32 ShaderInd = GetShaderTypeIndex(ShaderStage);
 
     for (Uint32 r = 0, ResCount = GetTotalResourceCount(); r < ResCount; ++r)
     {
-        const auto& ResDesc = GetResourceDesc(r);
-        const auto& ResAttr = GetResourceAttribs(r);
-        const auto  Range   = ShaderResourceTypeToRange(ResDesc.ResourceType);
+        const PipelineResourceDesc&         ResDesc = GetResourceDesc(r);
+        const PipelineResourceAttribsD3D11& ResAttr = GetResourceAttribs(r);
+        const D3D11_RESOURCE_RANGE          Range   = ShaderResourceTypeToRange(ResDesc.ResourceType);
 
         if ((ResDesc.ShaderStages & ShaderStage) != 0)
         {
@@ -393,7 +393,7 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
                     ResDesc.ArraySize,
                     ResDesc.ResourceType //
                 };
-            auto IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, BindInfo).second;
+            bool IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, BindInfo).second;
             VERIFY(IsUnique, "Shader resource '", ResDesc.Name,
                    "' already present in the binding map. Every shader resource in PSO must be unambiguously defined by "
                    "only one resource signature. This error should've been caught by ValidatePipelineResourceSignatures().");
@@ -407,9 +407,9 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
     //
     for (Uint32 samp = 0, SampCount = GetImmutableSamplerCount(); samp < SampCount; ++samp)
     {
-        const auto& ImtblSam = GetImmutableSamplerDesc(samp);
-        const auto& SampAttr = GetImmutableSamplerAttribs(samp);
-        const auto  Range    = D3D11_RESOURCE_RANGE_SAMPLER;
+        const ImmutableSamplerDesc&         ImtblSam = GetImmutableSamplerDesc(samp);
+        const ImmutableSamplerAttribsD3D11& SampAttr = GetImmutableSamplerAttribs(samp);
+        const D3D11_RESOURCE_RANGE          Range    = D3D11_RESOURCE_RANGE_SAMPLER;
 
         VERIFY_EXPR(SampAttr.IsAllocated());
         if ((ImtblSam.ShaderStages & ShaderStage) != 0)
@@ -432,7 +432,7 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
 #ifdef DILIGENT_DEBUG
             if (!it_inserted.second)
             {
-                const auto& ExistingBindInfo = it_inserted.first->second;
+                const ResourceBinding::BindInfo& ExistingBindInfo = it_inserted.first->second;
                 VERIFY(ExistingBindInfo.BindPoint == BindInfo.BindPoint,
                        "Bind point defined by the immutable sampler attribs is inconsistent with the bind point defined by the sampler resource. "
                        "This may be a bug in CreateLayout().");
@@ -453,8 +453,8 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
                                                                       const char*                     PSOName) const
 {
     VERIFY_EXPR(ResIndex < m_Desc.NumResources);
-    const auto& ResDesc = m_Desc.Resources[ResIndex];
-    const auto& ResAttr = m_pResourceAttribs[ResIndex];
+    const PipelineResourceDesc&         ResDesc = m_Desc.Resources[ResIndex];
+    const PipelineResourceAttribsD3D11& ResAttr = m_pResourceAttribs[ResIndex];
     VERIFY(strcmp(ResDesc.Name, D3DAttribs.Name) == 0, "Inconsistent resource names");
 
     VERIFY_EXPR(D3DAttribs.BindCount <= ResDesc.ArraySize);
@@ -497,7 +497,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
                     continue;
                 }
 
-                const auto& SRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(ResAttr.BindPoints + ArrInd);
+                const ShaderResourceCacheD3D11::CachedResource& SRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(ResAttr.BindPoints + ArrInd);
                 if (SRV.pTexture)
                 {
                     if (!ValidateResourceViewDimension(D3DAttribs.Name, D3DAttribs.BindCount, ArrInd, SRV.pView.RawPtr<TextureViewD3D11Impl>(),
@@ -523,7 +523,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
                     BindingsOK = false;
                     continue;
                 }
-                const auto& UAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(ResAttr.BindPoints + ArrInd);
+                const ShaderResourceCacheD3D11::CachedResource& UAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(ResAttr.BindPoints + ArrInd);
                 if (UAV.pTexture)
                 {
                     if (!ValidateResourceViewDimension(D3DAttribs.Name, D3DAttribs.BindCount, ArrInd, UAV.pView.RawPtr<TextureViewD3D11Impl>(),

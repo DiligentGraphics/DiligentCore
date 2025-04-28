@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,7 +59,7 @@ SamplerD3D11Impl::SamplerD3D11Impl(IReferenceCounters*    pRefCounters,
             SamplerDesc.MaxLOD // clang-format off
         }; // clang-format on
 
-    auto* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
+    ID3D11Device* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
     CHECK_D3D_RESULT_THROW(pd3d11Device->CreateSamplerState(&D3D11SamplerDesc, &m_pd3dSampler),
                            "Failed to create the Direct3D11 sampler");
 }

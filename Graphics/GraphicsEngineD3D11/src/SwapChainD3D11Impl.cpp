@@ -56,7 +56,7 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(IReferenceCounters*       pRefCounters,
     }
 // clang-format on
 {
-    auto* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
+    ID3D11Device* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
     CreateDXGISwapChain(pd3d11Device);
     CreateRTVandDSV();
 }
@@ -67,7 +67,7 @@ SwapChainD3D11Impl::~SwapChainD3D11Impl()
 
 void SwapChainD3D11Impl::CreateRTVandDSV()
 {
-    auto* pRenderDeviceD3D11Impl = m_pRenderDevice.RawPtr<RenderDeviceD3D11Impl>();
+    RenderDeviceD3D11Impl* pRenderDeviceD3D11Impl = m_pRenderDevice.RawPtr<RenderDeviceD3D11Impl>();
 
     m_pRenderTargetView.Release();
     m_pDepthStencilView.Release();
@@ -77,7 +77,7 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
     CHECK_D3D_RESULT_THROW(m_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(static_cast<ID3D11Texture2D**>(&pd3dBackBuffer))),
                            "Failed to get back buffer from swap chain");
     static const char BackBufferName[] = "Main back buffer";
-    auto              hr               = pd3dBackBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, _countof(BackBufferName) - 1, BackBufferName);
+    HRESULT           hr               = pd3dBackBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, _countof(BackBufferName) - 1, BackBufferName);
     DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set back buffer name");
 
     RefCntAutoPtr<ITexture> pBackBuffer;
@@ -109,7 +109,7 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
 
         RefCntAutoPtr<ITexture> ptex2DDepthBuffer;
         m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, &ptex2DDepthBuffer);
-        auto* pDSV          = ptex2DDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+        ITextureView* pDSV  = ptex2DDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
         m_pDepthStencilView = RefCntAutoPtr<ITextureViewD3D11>{pDSV, IID_TextureViewD3D11};
     }
 }
@@ -122,14 +122,14 @@ void SwapChainD3D11Impl::Present(Uint32 SyncInterval)
     SyncInterval = 1; // Interval 0 is not supported on Windows Phone
 #endif
 
-    auto pDeviceContext = m_wpDeviceContext.Lock();
+    RefCntAutoPtr<IDeviceContext> pDeviceContext = m_wpDeviceContext.Lock();
     if (!pDeviceContext)
     {
         LOG_ERROR_MESSAGE("Immediate context has been released");
         return;
     }
 
-    auto* pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
+    DeviceContextD3D11Impl* pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
 
     // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds
     // backbuffer 0 from all GPU writeable bind points.
@@ -162,13 +162,13 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
     if (!m_pSwapChain)
         return;
 
-    auto pDeviceContext = m_wpDeviceContext.Lock();
+    RefCntAutoPtr<IDeviceContext> pDeviceContext = m_wpDeviceContext.Lock();
     VERIFY(pDeviceContext, "Immediate context has been released");
     if (pDeviceContext)
     {
-        auto* pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
-        auto* pCurrentBackBuffer = ClassPtrCast<TextureBaseD3D11>(m_pRenderTargetView->GetTexture());
-        auto  RenderTargetsReset = pImmediateCtxD3D11->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
+        DeviceContextD3D11Impl* pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
+        TextureBaseD3D11*       pCurrentBackBuffer = ClassPtrCast<TextureBaseD3D11>(m_pRenderTargetView->GetTexture());
+        bool                    RenderTargetsReset = pImmediateCtxD3D11->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
         if (RenderTargetsReset)
         {
             LOG_INFO_MESSAGE_ONCE("Resizing the swap chain requires back and depth-stencil buffers to be unbound from the device context. "
@@ -193,7 +193,7 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/ff476425(v=vs.85).aspx#Defer_Issues_with_Flip
                 pImmediateCtxD3D11->Flush();
 
-                auto* pd3d11Device = m_pRenderDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
+                ID3D11Device* pd3d11Device = m_pRenderDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
                 CreateDXGISwapChain(pd3d11Device);
             }
             else
@@ -231,11 +231,11 @@ void SwapChainD3D11Impl::SetDXGIDeviceMaximumFrameLatency()
 {
     VERIFY(m_FrameLatencyWaitableObject == NULL, "This method should only be used as a workaround for swap chains that are not waitable");
 
-    auto* pd3d11Device = m_pRenderDevice.RawPtr<IRenderDeviceD3D11>()->GetD3D11Device();
+    ID3D11Device* pd3d11Device = m_pRenderDevice.RawPtr<IRenderDeviceD3D11>()->GetD3D11Device();
 
     CComPtr<IDXGIDevice1> pDXGIDevice;
 
-    auto hr = pd3d11Device->QueryInterface(__uuidof(pDXGIDevice), reinterpret_cast<void**>(static_cast<IDXGIDevice1**>(&pDXGIDevice)));
+    HRESULT hr = pd3d11Device->QueryInterface(__uuidof(pDXGIDevice), reinterpret_cast<void**>(static_cast<IDXGIDevice1**>(&pDXGIDevice)));
     if (SUCCEEDED(hr) && pDXGIDevice)
     {
         hr = pDXGIDevice->SetMaximumFrameLatency(m_MaxFrameLatency);

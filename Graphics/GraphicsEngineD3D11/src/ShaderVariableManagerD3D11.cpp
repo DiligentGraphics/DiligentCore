@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,7 +57,7 @@ void ProcessSignatureResources(const PipelineResourceSignatureD3D11Impl& Signatu
     Signature.ProcessResources(AllowedVarTypes, NumAllowedTypes, ShaderStages,
                                [&](const PipelineResourceDesc& ResDesc, Uint32 Index) //
                                {
-                                   const auto& ResAttr = Signature.GetResourceAttribs(Index);
+                                   const PipelineResourceSignatureD3D11Impl::ResourceAttribs& ResAttr = Signature.GetResourceAttribs(Index);
 
                                    // Skip samplers combined with textures and immutable samplers
                                    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER &&
@@ -120,11 +120,11 @@ D3DShaderResourceCounters ShaderVariableManagerD3D11::CountResources(
         Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
         [&](Uint32 Index) //
         {
-            const auto& ResDesc = Signature.GetResourceDesc(Index);
+            const PipelineResourceDesc& ResDesc = Signature.GetResourceDesc(Index);
             static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource range");
             switch (ResDesc.ResourceType)
             {
-                // clang-format off
+                    // clang-format off
                 case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  ++Counters.NumCBs;      break;
                 case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      ++Counters.NumTexSRVs;  break;
                 case SHADER_RESOURCE_TYPE_BUFFER_SRV:       ++Counters.NumBufSRVs;  break;
@@ -145,14 +145,14 @@ size_t ShaderVariableManagerD3D11::GetRequiredMemorySize(const PipelineResourceS
                                                          Uint32                                    NumAllowedTypes,
                                                          SHADER_TYPE                               ShaderType)
 {
-    const auto ResCounters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
+    const D3DShaderResourceCounters ResCounters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
     // clang-format off
-    auto MemSize = ResCounters.NumCBs      * sizeof(ConstBuffBindInfo) +
-                   ResCounters.NumTexSRVs  * sizeof(TexSRVBindInfo)    +
-                   ResCounters.NumTexUAVs  * sizeof(TexUAVBindInfo)    +
-                   ResCounters.NumBufSRVs  * sizeof(BuffSRVBindInfo)   +
-                   ResCounters.NumBufUAVs  * sizeof(BuffUAVBindInfo)   +
-                   ResCounters.NumSamplers * sizeof(SamplerBindInfo);
+    size_t MemSize = ResCounters.NumCBs      * sizeof(ConstBuffBindInfo) +
+                     ResCounters.NumTexSRVs  * sizeof(TexSRVBindInfo)    +
+                     ResCounters.NumTexUAVs  * sizeof(TexUAVBindInfo)    +
+                     ResCounters.NumBufSRVs  * sizeof(BuffSRVBindInfo)   +
+                     ResCounters.NumBufUAVs  * sizeof(BuffUAVBindInfo)   +
+                     ResCounters.NumSamplers * sizeof(SamplerBindInfo);
     // clang-format on
     return MemSize;
 }
@@ -164,7 +164,7 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
                                             Uint32                                    NumAllowedTypes,
                                             SHADER_TYPE                               ShaderType)
 {
-    const auto ResCounters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
+    const D3DShaderResourceCounters ResCounters = CountResources(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType);
 
     m_ShaderTypeIndex = static_cast<Uint8>(GetShaderTypeIndex(ShaderType));
 
@@ -175,19 +175,19 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
     {
         constexpr size_t MaxOffset = std::numeric_limits<OffsetType>::max();
         VERIFY(CurrentOffset <= MaxOffset, "Current offset (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
-        auto Offset = static_cast<OffsetType>(CurrentOffset);
+        OffsetType Offset = static_cast<OffsetType>(CurrentOffset);
         CurrentOffset += NumBytes;
         return Offset;
     };
 
     // clang-format off
-    auto CBOffset    = AdvanceOffset(ResCounters.NumCBs      * sizeof(ConstBuffBindInfo));  (void)CBOffset; // To suppress warning
-    m_TexSRVsOffset  = AdvanceOffset(ResCounters.NumTexSRVs  * sizeof(TexSRVBindInfo)   );
-    m_TexUAVsOffset  = AdvanceOffset(ResCounters.NumTexUAVs  * sizeof(TexUAVBindInfo)   );
-    m_BuffSRVsOffset = AdvanceOffset(ResCounters.NumBufSRVs  * sizeof(BuffSRVBindInfo)  );
-    m_BuffUAVsOffset = AdvanceOffset(ResCounters.NumBufUAVs  * sizeof(BuffUAVBindInfo)  );
-    m_SamplerOffset  = AdvanceOffset(ResCounters.NumSamplers * sizeof(SamplerBindInfo)  );
-    m_MemorySize     = AdvanceOffset(0);
+    OffsetType CBOffset = AdvanceOffset(ResCounters.NumCBs      * sizeof(ConstBuffBindInfo));  (void)CBOffset; // To suppress warning
+    m_TexSRVsOffset     = AdvanceOffset(ResCounters.NumTexSRVs  * sizeof(TexSRVBindInfo)   );
+    m_TexUAVsOffset     = AdvanceOffset(ResCounters.NumTexUAVs  * sizeof(TexUAVBindInfo)   );
+    m_BuffSRVsOffset    = AdvanceOffset(ResCounters.NumBufSRVs  * sizeof(BuffSRVBindInfo)  );
+    m_BuffUAVsOffset    = AdvanceOffset(ResCounters.NumBufUAVs  * sizeof(BuffUAVBindInfo)  );
+    m_SamplerOffset     = AdvanceOffset(ResCounters.NumSamplers * sizeof(SamplerBindInfo)  );
+    m_MemorySize        = AdvanceOffset(0);
     // clang-format on
 
     VERIFY_EXPR(m_MemorySize == GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType));
@@ -214,7 +214,7 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
         Signature, AllowedVarTypes, NumAllowedTypes, ShaderType,
         [&](Uint32 Index) //
         {
-            const auto& ResDesc = Signature.GetResourceDesc(Index);
+            const PipelineResourceDesc& ResDesc = Signature.GetResourceDesc(Index);
             static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource range");
             switch (ResDesc.ResourceType)
             {
@@ -266,18 +266,18 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
 
 void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    const auto& Desc = GetDesc();
-    const auto& Attr = GetAttribs();
+    const PipelineResourceDesc& Desc = GetDesc();
+    const ResourceAttribs&      Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex, ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
+    ShaderResourceCacheD3D11& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{BindInfo.pObject, IID_BufferD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedCB = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + BindInfo.ArrayIndex);
+        const ShaderResourceCacheD3D11::CachedCB& CachedCB = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + BindInfo.ArrayIndex);
         VerifyConstantBufferBinding(Desc, BindInfo, pBuffD3D11Impl.RawPtr(), CachedCB.pBuff.RawPtr(),
                                     CachedCB.BaseOffset, CachedCB.RangeSize,
                                     m_ParentManager.m_pSignature->GetDesc().Name);
@@ -288,12 +288,12 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::BindResource(const BindResou
 
 void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset)
 {
-    const auto& Attr = GetAttribs();
-    const auto& Desc = GetDesc();
+    const PipelineResourceAttribsD3D11& Attr = GetAttribs();
+    const PipelineResourceDesc&         Desc = GetDesc();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedCB = m_ParentManager.m_ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + ArrayIndex);
+        const ShaderResourceCacheD3D11::CachedCB& CachedCB = m_ParentManager.m_ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + ArrayIndex);
         VerifyDynamicBufferOffset<BufferD3D11Impl, BufferViewD3D11Impl>(Desc, CachedCB.pBuff, CachedCB.BaseOffset, CachedCB.RangeSize, Offset);
     }
 #endif
@@ -302,19 +302,19 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetDynamicOffset(Uint32 Arra
 
 void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    const auto& Desc = GetDesc();
-    const auto& Attr = GetAttribs();
+    const PipelineResourceDesc&         Desc = GetDesc();
+    const PipelineResourceAttribsD3D11& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
                 Desc.ResourceType == SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT);
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex, ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
+    ShaderResourceCacheD3D11& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + BindInfo.ArrayIndex);
+        const ShaderResourceCacheD3D11::CachedResource& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + BindInfo.ArrayIndex);
         VerifyResourceViewBinding(Desc, BindInfo, pViewD3D11.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE},
                                   RESOURCE_DIM_UNDEFINED, false, CachedSRV.pView.RawPtr(),
                                   m_ParentManager.m_pSignature->GetDesc().Name);
@@ -323,24 +323,24 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResource
 
     if (Attr.IsSamplerAssigned() && !Attr.IsImmutableSamplerAssigned())
     {
-        const auto& SampAttr = m_ParentManager.GetResourceAttribs(Attr.SamplerInd);
-        const auto& SampDesc = m_ParentManager.GetResourceDesc(Attr.SamplerInd);
+        const PipelineResourceAttribsD3D11& SampAttr = m_ParentManager.GetResourceAttribs(Attr.SamplerInd);
+        const PipelineResourceDesc&         SampDesc = m_ParentManager.GetResourceDesc(Attr.SamplerInd);
         VERIFY_EXPR(SampDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
         VERIFY(!SampAttr.IsImmutableSamplerAssigned(),
                "When an immutable sampler is assigned to a texture, the texture's ImtblSamplerAssigned flag must also be set by "
                "PipelineResourceSignatureD3D11Impl::CreateLayout(). This mismatch is a bug.");
         VERIFY_EXPR((Desc.ShaderStages & SampDesc.ShaderStages) == Desc.ShaderStages);
         VERIFY_EXPR(SampDesc.ArraySize == Desc.ArraySize || SampDesc.ArraySize == 1);
-        const auto SampArrayIndex = (SampDesc.ArraySize != 1 ? BindInfo.ArrayIndex : 0);
+        const Uint32 SampArrayIndex = (SampDesc.ArraySize != 1 ? BindInfo.ArrayIndex : 0);
 
         if (pViewD3D11)
         {
-            auto* const pSamplerD3D11Impl = pViewD3D11->GetSampler<SamplerD3D11Impl>();
+            SamplerD3D11Impl* const pSamplerD3D11Impl = pViewD3D11->GetSampler<SamplerD3D11Impl>();
             if (pSamplerD3D11Impl != nullptr)
             {
 #ifdef DILIGENT_DEVELOPMENT
                 {
-                    const auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(SampAttr.BindPoints + SampArrayIndex);
+                    const ShaderResourceCacheD3D11::CachedSampler& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(SampAttr.BindPoints + SampArrayIndex);
                     VerifySamplerBinding(SampDesc, BindResourceInfo{SampArrayIndex, pSamplerD3D11Impl, BindInfo.Flags}, pSamplerD3D11Impl, CachedSampler.pSampler,
                                          m_ParentManager.m_pSignature->GetDesc().Name);
                 }
@@ -359,20 +359,20 @@ void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResource
 
 void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    const auto& Desc = GetDesc();
-    const auto& Attr = GetAttribs();
+    const PipelineResourceDesc&         Desc = GetDesc();
+    const PipelineResourceAttribsD3D11& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
     VERIFY(!Attr.IsImmutableSamplerAssigned(), "Sampler must not be assigned to an immutable sampler.");
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
            ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
+    ShaderResourceCacheD3D11& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{BindInfo.pObject, IID_SamplerD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + BindInfo.ArrayIndex);
+        const ShaderResourceCacheD3D11::CachedSampler& CachedSampler = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SAMPLER>(Attr.BindPoints + BindInfo.ArrayIndex);
         VerifySamplerBinding(Desc, BindInfo, pSamplerD3D11.RawPtr(), CachedSampler.pSampler, m_ParentManager.m_pSignature->GetDesc().Name);
     }
 #endif
@@ -382,19 +382,19 @@ void ShaderVariableManagerD3D11::SamplerBindInfo::BindResource(const BindResourc
 
 void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    const auto& Desc = GetDesc();
-    const auto& Attr = GetAttribs();
+    const PipelineResourceDesc&         Desc = GetDesc();
+    const PipelineResourceAttribsD3D11& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
            ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
+    ShaderResourceCacheD3D11& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + BindInfo.ArrayIndex);
+        const ShaderResourceCacheD3D11::CachedResource& CachedSRV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_SRV>(Attr.BindPoints + BindInfo.ArrayIndex);
         VerifyResourceViewBinding(Desc, BindInfo, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE},
                                   RESOURCE_DIM_BUFFER, false, CachedSRV.pView.RawPtr(),
                                   m_ParentManager.m_pSignature->GetDesc().Name);
@@ -407,19 +407,19 @@ void ShaderVariableManagerD3D11::BuffSRVBindInfo::BindResource(const BindResourc
 
 void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    const auto& Desc = GetDesc();
-    const auto& Attr = GetAttribs();
+    const PipelineResourceDesc&         Desc = GetDesc();
+    const PipelineResourceAttribsD3D11& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
            ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
+    ShaderResourceCacheD3D11& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex);
+        const ShaderResourceCacheD3D11::CachedResource& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex);
         VerifyResourceViewBinding(Desc, BindInfo, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS},
                                   RESOURCE_DIM_UNDEFINED, false, CachedUAV.pView.RawPtr(),
                                   m_ParentManager.m_pSignature->GetDesc().Name);
@@ -431,19 +431,19 @@ void ShaderVariableManagerD3D11::TexUAVBindInfo::BindResource(const BindResource
 
 void ShaderVariableManagerD3D11::BuffUAVBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
-    const auto& Desc = GetDesc();
-    const auto& Attr = GetAttribs();
+    const PipelineResourceDesc&         Desc = GetDesc();
+    const PipelineResourceAttribsD3D11& Attr = GetAttribs();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
     VERIFY(BindInfo.ArrayIndex < Desc.ArraySize, "Array index (", BindInfo.ArrayIndex,
            ") is out of range. This error should've been caught by ShaderVariableBase::SetArray()");
 
-    auto& ResourceCache = m_ParentManager.m_ResourceCache;
+    ShaderResourceCacheD3D11& ResourceCache = m_ParentManager.m_ResourceCache;
 
     // We cannot use ClassPtrCast<> here as the resource can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{BindInfo.pObject, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex);
+        const ShaderResourceCacheD3D11::CachedResource& CachedUAV = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_UAV>(Attr.BindPoints + BindInfo.ArrayIndex);
         VerifyResourceViewBinding(Desc, BindInfo, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS},
                                   RESOURCE_DIM_BUFFER, false, CachedUAV.pView.RawPtr(),
                                   m_ParentManager.m_pSignature->GetDesc().Name);
@@ -461,7 +461,7 @@ void ShaderVariableManagerD3D11::CheckResources(IResourceMapping*               
     if ((Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0)
         Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
 
-    const auto AllowedTypes = m_ResourceCache.GetContentType() == ResourceCacheContentType::SRB ?
+    const SHADER_RESOURCE_VARIABLE_TYPE_FLAGS AllowedTypes = m_ResourceCache.GetContentType() == ResourceCacheContentType::SRB ?
         SHADER_RESOURCE_VARIABLE_TYPE_FLAG_MUT_DYN :
         SHADER_RESOURCE_VARIABLE_TYPE_FLAG_STATIC;
 
@@ -527,7 +527,7 @@ void ShaderVariableManagerD3D11::BindResources(IResourceMapping* pResourceMappin
 template <typename ResourceType>
 IShaderResourceVariable* ShaderVariableManagerD3D11::GetResourceByName(const Char* Name) const
 {
-    auto NumResources = GetNumResources<ResourceType>();
+    Uint32 NumResources = GetNumResources<ResourceType>();
     for (Uint32 res = 0; res < NumResources; ++res)
     {
         auto& Resource = GetResource<ResourceType>(res);
@@ -540,25 +540,25 @@ IShaderResourceVariable* ShaderVariableManagerD3D11::GetResourceByName(const Cha
 
 IShaderResourceVariable* ShaderVariableManagerD3D11::GetVariable(const Char* Name) const
 {
-    if (auto* pCB = GetResourceByName<ConstBuffBindInfo>(Name))
+    if (IShaderResourceVariable* pCB = GetResourceByName<ConstBuffBindInfo>(Name))
         return pCB;
 
-    if (auto* pTexSRV = GetResourceByName<TexSRVBindInfo>(Name))
+    if (IShaderResourceVariable* pTexSRV = GetResourceByName<TexSRVBindInfo>(Name))
         return pTexSRV;
 
-    if (auto* pTexUAV = GetResourceByName<TexUAVBindInfo>(Name))
+    if (IShaderResourceVariable* pTexUAV = GetResourceByName<TexUAVBindInfo>(Name))
         return pTexUAV;
 
-    if (auto* pBuffSRV = GetResourceByName<BuffSRVBindInfo>(Name))
+    if (IShaderResourceVariable* pBuffSRV = GetResourceByName<BuffSRVBindInfo>(Name))
         return pBuffSRV;
 
-    if (auto* pBuffUAV = GetResourceByName<BuffUAVBindInfo>(Name))
+    if (IShaderResourceVariable* pBuffUAV = GetResourceByName<BuffUAVBindInfo>(Name))
         return pBuffUAV;
 
     if (!m_pSignature->IsUsingCombinedSamplers())
     {
         // Immutable samplers are never initialized as variables
-        if (auto* pSampler = GetResourceByName<SamplerBindInfo>(Name))
+        if (IShaderResourceVariable* pSampler = GetResourceByName<SamplerBindInfo>(Name))
             return pSampler;
     }
 
@@ -587,7 +587,7 @@ public:
 #endif
         if (VarOffset < NextResourceTypeOffset)
         {
-            auto RelativeOffset = VarOffset - Mgr.GetResourceOffset<ResourceType>();
+            size_t RelativeOffset = VarOffset - Mgr.GetResourceOffset<ResourceType>();
             DEV_CHECK_ERR(RelativeOffset % sizeof(ResourceType) == 0, "Offset is not multiple of resource type (", sizeof(ResourceType), ")");
             Index += static_cast<Uint32>(RelativeOffset / sizeof(ResourceType));
             return true;
@@ -664,7 +664,7 @@ public:
             dbgPreviousResourceOffset = Mgr.GetResourceOffset<ResourceType>();
         }
 #endif
-        auto NumResources = Mgr.GetNumResources<ResourceType>();
+        Uint32 NumResources = Mgr.GetNumResources<ResourceType>();
         if (Index < NumResources)
             return &Mgr.GetResource<ResourceType>(Index);
         else
@@ -686,24 +686,24 @@ IShaderResourceVariable* ShaderVariableManagerD3D11::GetVariable(Uint32 Index) c
 {
     ShaderVariableLocator VarLocator(*this, Index);
 
-    if (auto* pCB = VarLocator.TryResource<ConstBuffBindInfo>())
+    if (IShaderResourceVariable* pCB = VarLocator.TryResource<ConstBuffBindInfo>())
         return pCB;
 
-    if (auto* pTexSRV = VarLocator.TryResource<TexSRVBindInfo>())
+    if (IShaderResourceVariable* pTexSRV = VarLocator.TryResource<TexSRVBindInfo>())
         return pTexSRV;
 
-    if (auto* pTexUAV = VarLocator.TryResource<TexUAVBindInfo>())
+    if (IShaderResourceVariable* pTexUAV = VarLocator.TryResource<TexUAVBindInfo>())
         return pTexUAV;
 
-    if (auto* pBuffSRV = VarLocator.TryResource<BuffSRVBindInfo>())
+    if (IShaderResourceVariable* pBuffSRV = VarLocator.TryResource<BuffSRVBindInfo>())
         return pBuffSRV;
 
-    if (auto* pBuffUAV = VarLocator.TryResource<BuffUAVBindInfo>())
+    if (IShaderResourceVariable* pBuffUAV = VarLocator.TryResource<BuffUAVBindInfo>())
         return pBuffUAV;
 
     if (!m_pSignature->IsUsingCombinedSamplers())
     {
-        if (auto* pSampler = VarLocator.TryResource<SamplerBindInfo>())
+        if (IShaderResourceVariable* pSampler = VarLocator.TryResource<SamplerBindInfo>())
             return pSampler;
     }
 

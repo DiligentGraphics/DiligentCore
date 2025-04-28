@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,7 +53,7 @@ BufferViewD3D11Impl::BufferViewD3D11Impl(IReferenceCounters*    pRefCounters,
 {
     if (*m_Desc.Name != 0)
     {
-        auto hr = m_pD3D11View->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        HRESULT hr = m_pD3D11View->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
         DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set buffer view name");
     }
 }

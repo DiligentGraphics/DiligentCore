@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,7 +72,7 @@ void BlendStateDesc_To_D3D11_BLEND_DESC(const BlendStateDesc& BSDesc,
 
     for (int i = 0; i < 8; ++i)
     {
-        const auto& SrcRTDesc = BSDesc.RenderTargets[i];
+        const RenderTargetBlendDesc& SrcRTDesc = BSDesc.RenderTargets[i];
         if (SrcRTDesc.LogicOperationEnable)
         {
             LOG_ERROR("Logical operations on render targets are not supported by D3D11 device");

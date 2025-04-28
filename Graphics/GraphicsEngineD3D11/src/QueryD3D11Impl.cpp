@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,11 +65,11 @@ QueryD3D11Impl::QueryD3D11Impl(IReferenceCounters*    pRefCounters,
         default:
             UNEXPECTED("Unexpected query type");
     }
-    auto* pd3d11Device = pDevice->GetD3D11Device();
+    ID3D11Device* pd3d11Device = pDevice->GetD3D11Device();
 
     for (Uint32 i = 0; i < (Desc.Type == QUERY_TYPE_DURATION ? Uint32{2} : Uint32{1}); ++i)
     {
-        auto hr = pd3d11Device->CreateQuery(&d3d11QueryDesc, &m_pd3d11Query[i]);
+        HRESULT hr = pd3d11Device->CreateQuery(&d3d11QueryDesc, &m_pd3d11Query[i]);
         CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 query object");
         VERIFY_EXPR(m_pd3d11Query[i] != nullptr);
     }
@@ -92,7 +92,7 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
     }
     else
     {
-        auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
+        RefCntAutoPtr<DeviceContextD3D11Impl> pImmediateCtx = m_pDevice->GetImmediateContext(0);
         VERIFY(pImmediateCtx, "Immediate context has been released");
         pd3d11Ctx = pImmediateCtx->GetD3D11DeviceContext();
     }
@@ -106,8 +106,8 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             DataReady = pd3d11Ctx->GetData(m_pd3d11Query[0], &NumSamples, sizeof(NumSamples), 0) == S_OK;
             if (DataReady && pData != nullptr)
             {
-                auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
-                QueryData.NumSamples = NumSamples;
+                QueryDataOcclusion& QueryData = *reinterpret_cast<QueryDataOcclusion*>(pData);
+                QueryData.NumSamples          = NumSamples;
             }
         }
         break;
@@ -118,8 +118,8 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             DataReady = pd3d11Ctx->GetData(m_pd3d11Query[0], &AnySamplePassed, sizeof(AnySamplePassed), 0) == S_OK;
             if (DataReady && pData != nullptr)
             {
-                auto& QueryData           = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
-                QueryData.AnySamplePassed = AnySamplePassed != FALSE;
+                QueryDataBinaryOcclusion& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
+                QueryData.AnySamplePassed           = AnySamplePassed != FALSE;
             }
         }
         break;
@@ -146,8 +146,8 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
                     if (DataReady)
                     {
-                        auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
-                        QueryData.Counter = Counter;
+                        QueryDataTimestamp& QueryData = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                        QueryData.Counter             = Counter;
                         // The timestamp returned by ID3D11DeviceContext::GetData for a timestamp query is only reliable if Disjoint is FALSE.
                         QueryData.Frequency = DisjointQueryData.Disjoint ? 0 : DisjointQueryData.Frequency;
                     }
@@ -162,7 +162,7 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             DataReady = pd3d11Ctx->GetData(m_pd3d11Query[0], &d3d11QueryData, sizeof(d3d11QueryData), 0) == S_OK;
             if (DataReady && pData != nullptr)
             {
-                auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
+                QueryDataPipelineStatistics& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
 
                 QueryData.InputVertices       = d3d11QueryData.IAVertices;
                 QueryData.InputPrimitives     = d3d11QueryData.IAPrimitives;
@@ -206,7 +206,7 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
                         if (DataReady)
                         {
-                            auto& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
+                            QueryDataDuration& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
                             VERIFY_EXPR(EndCounter >= StartCounter);
                             QueryData.Duration = EndCounter - StartCounter;
                             // The timestamp returned by ID3D11DeviceContext::GetData for a timestamp query is only reliable if Disjoint is FALSE.

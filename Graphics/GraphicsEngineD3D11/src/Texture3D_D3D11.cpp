@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,11 +49,11 @@ Texture3D_D3D11::Texture3D_D3D11(IReferenceCounters*        pRefCounters,
     }
 // clang-format on
 {
-    const auto D3D11TexFormat      = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
-    const auto D3D11BindFlags      = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
-    const auto D3D11CPUAccessFlags = CPUAccessFlagsToD3D11CPUAccessFlags(m_Desc.CPUAccessFlags);
-    const auto D3D11Usage          = UsageToD3D11Usage(m_Desc.Usage);
-    auto       MiscFlags           = MiscTextureFlagsToD3D11Flags(m_Desc.MiscFlags);
+    const DXGI_FORMAT D3D11TexFormat      = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
+    const UINT        D3D11BindFlags      = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
+    const UINT        D3D11CPUAccessFlags = CPUAccessFlagsToD3D11CPUAccessFlags(m_Desc.CPUAccessFlags);
+    const D3D11_USAGE D3D11Usage          = UsageToD3D11Usage(m_Desc.Usage);
+    UINT              MiscFlags           = MiscTextureFlagsToD3D11Flags(m_Desc.MiscFlags);
 
     if (m_Desc.Usage == USAGE_SPARSE)
         MiscFlags |= D3D11_RESOURCE_MISC_TILED;
@@ -76,7 +76,7 @@ Texture3D_D3D11::Texture3D_D3D11(IReferenceCounters*        pRefCounters,
     std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>> D3D11InitData(STD_ALLOCATOR_RAW_MEM(D3D11_SUBRESOURCE_DATA, GetRawAllocator(), "Allocator for vector<D3D11_SUBRESOURCE_DATA>"));
     PrepareD3D11InitData(pInitData, Tex3DDesc.MipLevels, D3D11InitData);
 
-    auto* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
+    ID3D11Device* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
 
     CComPtr<ID3D11Texture3D> ptex3D;
     HRESULT                  hr = pd3d11Device->CreateTexture3D(&Tex3DDesc, D3D11InitData.size() ? D3D11InitData.data() : nullptr, &ptex3D);
@@ -182,7 +182,7 @@ void Texture3D_D3D11::CreateSRV(const TextureViewDesc& SRVDesc, ID3D11ShaderReso
     D3D11_SHADER_RESOURCE_VIEW_DESC D3D11_SRVDesc;
     TextureViewDesc_to_D3D11_SRV_DESC(SRVDesc, D3D11_SRVDesc, m_Desc.SampleCount);
 
-    auto* pd3d11Device = GetDevice()->GetD3D11Device();
+    ID3D11Device* pd3d11Device = GetDevice()->GetD3D11Device();
     CHECK_D3D_RESULT_THROW(pd3d11Device->CreateShaderResourceView(m_pd3d11Texture, &D3D11_SRVDesc, ppD3D11SRV),
                            "Failed to create D3D11 shader resource view");
 }
@@ -200,7 +200,7 @@ void Texture3D_D3D11::CreateRTV(const TextureViewDesc& RTVDesc, ID3D11RenderTarg
     D3D11_RENDER_TARGET_VIEW_DESC D3D11_RTVDesc;
     TextureViewDesc_to_D3D11_RTV_DESC(RTVDesc, D3D11_RTVDesc, m_Desc.SampleCount);
 
-    auto* pd3d11Device = GetDevice()->GetD3D11Device();
+    ID3D11Device* pd3d11Device = GetDevice()->GetD3D11Device();
     CHECK_D3D_RESULT_THROW(pd3d11Device->CreateRenderTargetView(m_pd3d11Texture, &D3D11_RTVDesc, ppD3D11RTV),
                            "Failed to create D3D11 render target view");
 }
@@ -223,7 +223,7 @@ void Texture3D_D3D11::CreateUAV(const TextureViewDesc& UAVDesc, ID3D11UnorderedA
     D3D11_UNORDERED_ACCESS_VIEW_DESC D3D11_UAVDesc;
     TextureViewDesc_to_D3D11_UAV_DESC(UAVDesc, D3D11_UAVDesc);
 
-    auto* pd3d11Device = GetDevice()->GetD3D11Device();
+    ID3D11Device* pd3d11Device = GetDevice()->GetD3D11Device();
     CHECK_D3D_RESULT_THROW(pd3d11Device->CreateUnorderedAccessView(m_pd3d11Texture, &D3D11_UAVDesc, ppD3D11UAV),
                            "Failed to create D3D11 unordered access view");
 }

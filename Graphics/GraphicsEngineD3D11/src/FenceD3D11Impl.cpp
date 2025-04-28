@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,9 +55,9 @@ Uint64 FenceD3D11Impl::GetCompletedValue()
 {
     while (!m_PendingQueries.empty())
     {
-        auto& QueryData = m_PendingQueries.front();
-        BOOL  Data;
-        auto  res = QueryData.pd3d11Ctx->GetData(QueryData.pd3d11Query, &Data, sizeof(Data), D3D11_ASYNC_GETDATA_DONOTFLUSH);
+        PendingFenceData& QueryData = m_PendingQueries.front();
+        BOOL              Data      = FALSE;
+        HRESULT           res       = QueryData.pd3d11Ctx->GetData(QueryData.pd3d11Query, &Data, sizeof(Data), D3D11_ASYNC_GETDATA_DONOTFLUSH);
         if (res == S_OK)
         {
             VERIFY_EXPR(Data == TRUE);
@@ -82,7 +82,7 @@ void FenceD3D11Impl::Wait(Uint64 Value, bool FlushCommands)
 {
     while (!m_PendingQueries.empty())
     {
-        auto& QueryData = m_PendingQueries.front();
+        PendingFenceData& QueryData = m_PendingQueries.front();
         if (QueryData.Value > Value)
             break;
 

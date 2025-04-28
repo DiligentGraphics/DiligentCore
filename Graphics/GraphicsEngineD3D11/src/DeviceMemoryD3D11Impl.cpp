@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ DeviceMemoryD3D11Impl::DeviceMemoryD3D11Impl(IReferenceCounters*           pRefC
     D3D11BuffDesc.MiscFlags = D3D11_RESOURCE_MISC_TILE_POOL;
     D3D11BuffDesc.Usage     = D3D11_USAGE_DEFAULT;
 
-    auto* pDeviceD3D11 = m_pDevice->GetD3D11Device();
+    ID3D11Device* pDeviceD3D11 = m_pDevice->GetD3D11Device();
     CHECK_D3D_RESULT_THROW(pDeviceD3D11->CreateBuffer(&D3D11BuffDesc, nullptr, &m_pd3d11Buffer),
                            "Failed to create Direct3D11 tile pool");
 }
@@ -69,7 +69,7 @@ Bool DeviceMemoryD3D11Impl::Resize(Uint64 NewSize)
 
     DvpVerifyResize(NewSize);
 
-    auto pImmediateCtx = m_pDevice->GetImmediateContext(0);
+    RefCntAutoPtr<DeviceContextD3D11Impl> pImmediateCtx = m_pDevice->GetImmediateContext(0);
     VERIFY(pImmediateCtx, "Immediate context has been released");
 
     return pImmediateCtx->ResizeTilePool(m_pd3d11Buffer, StaticCast<UINT>(NewSize));

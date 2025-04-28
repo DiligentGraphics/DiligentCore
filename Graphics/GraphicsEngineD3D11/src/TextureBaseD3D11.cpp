@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,7 +56,7 @@ TextureBaseD3D11::TextureBaseD3D11(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.Usage == USAGE_SPARSE)
     {
-        constexpr auto AllowedBindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET | BIND_DEPTH_STENCIL;
+        constexpr BIND_FLAGS AllowedBindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET | BIND_DEPTH_STENCIL;
         if ((m_Desc.BindFlags & ~AllowedBindFlags) != 0)
             LOG_ERROR_AND_THROW("Texture '", m_Desc.Name, "': the following bind flags are not allowed for sparse textures in Direct3D11: ", GetBindFlagsString(m_Desc.BindFlags & ~AllowedBindFlags, ", "), '.');
     }
@@ -76,7 +76,7 @@ void TextureBaseD3D11::CreateViewInternal(const TextureViewDesc& ViewDesc, IText
 
     try
     {
-        auto UpdatedViewDesc = ViewDesc;
+        TextureViewDesc UpdatedViewDesc = ViewDesc;
         ValidatedAndCorrectTextureViewDesc(m_Desc, UpdatedViewDesc);
 
         if (m_Desc.IsArray() && (ViewDesc.TextureDim == RESOURCE_DIM_TEX_1D || ViewDesc.TextureDim == RESOURCE_DIM_TEX_2D))
@@ -131,11 +131,11 @@ void TextureBaseD3D11::CreateViewInternal(const TextureViewDesc& ViewDesc, IText
             default: UNEXPECTED("Unknown view type"); break;
         }
 
-        auto* pDeviceD3D11Impl = GetDevice();
-        auto& TexViewAllocator = pDeviceD3D11Impl->GetTexViewObjAllocator();
+        RenderDeviceD3D11Impl*     pDeviceD3D11Impl = GetDevice();
+        FixedBlockMemoryAllocator& TexViewAllocator = pDeviceD3D11Impl->GetTexViewObjAllocator();
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
-        auto pViewD3D11 = NEW_RC_OBJ(TexViewAllocator, "TextureViewD3D11Impl instance", TextureViewD3D11Impl, bIsDefaultView ? this : nullptr)(pDeviceD3D11Impl, UpdatedViewDesc, this, pD3D11View, bIsDefaultView);
+        TextureViewD3D11Impl* pViewD3D11 = NEW_RC_OBJ(TexViewAllocator, "TextureViewD3D11Impl instance", TextureViewD3D11Impl, bIsDefaultView ? this : nullptr)(pDeviceD3D11Impl, UpdatedViewDesc, this, pD3D11View, bIsDefaultView);
         VERIFY(pViewD3D11->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type");
 
         if (bIsDefaultView)
@@ -145,7 +145,7 @@ void TextureBaseD3D11::CreateViewInternal(const TextureViewDesc& ViewDesc, IText
     }
     catch (const std::runtime_error&)
     {
-        const auto* ViewTypeName = GetTexViewTypeLiteralName(ViewDesc.ViewType);
+        const char* ViewTypeName = GetTexViewTypeLiteralName(ViewDesc.ViewType);
         LOG_ERROR("Failed to create view \"", ViewDesc.Name ? ViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"");
     }
 }
@@ -161,7 +161,7 @@ void TextureBaseD3D11::PrepareD3D11InitData(const TextureData*                  
             D3D11InitData.resize(NumSubresources);
             for (UINT Subres = 0; Subres < NumSubresources; ++Subres)
             {
-                auto& CurrSubres                       = pInitData->pSubResources[Subres];
+                TextureSubResData& CurrSubres          = pInitData->pSubResources[Subres];
                 D3D11InitData[Subres].pSysMem          = CurrSubres.pData;
                 D3D11InitData[Subres].SysMemPitch      = StaticCast<UINT>(CurrSubres.Stride);
                 D3D11InitData[Subres].SysMemSlicePitch = StaticCast<UINT>(CurrSubres.DepthStride);
@@ -191,7 +191,7 @@ void TextureBaseD3D11::InitSparseProperties()
     }
     else
     {
-        auto* pd3d11Device2 = m_pDevice->GetD3D11Device2();
+        ID3D11Device2* pd3d11Device2 = m_pDevice->GetD3D11Device2();
 
         UINT                  NumTilesForEntireResource = 0;
         D3D11_PACKED_MIP_DESC PackedMipDesc{};
@@ -205,7 +205,7 @@ void TextureBaseD3D11::InitSparseProperties()
                                          0,
                                          nullptr);
 
-        auto& Props{*m_pSparseProps};
+        SparseTextureProperties& Props{*m_pSparseProps};
         Props.AddressSpaceSize = Uint64{NumTilesForEntireResource} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
         Props.BlockSize        = D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
         Props.MipTailOffset    = Uint64{PackedMipDesc.StartTileIndexInOverallResource} * D3D11_2_TILED_RESOURCE_TILE_SIZE_IN_BYTES;

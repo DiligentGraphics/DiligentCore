@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -119,13 +119,13 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
     InitData.SysMemPitch      = 0;
     InitData.SysMemSlicePitch = 0;
 
-    auto* pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
+    ID3D11Device* pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
     CHECK_D3D_RESULT_THROW(pDeviceD3D11->CreateBuffer(&D3D11BuffDesc, InitData.pSysMem ? &InitData : nullptr, &m_pd3d11Buffer),
                            "Failed to create the Direct3D11 buffer");
 
     if (*m_Desc.Name != 0)
     {
-        auto hr = m_pd3d11Buffer->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
+        HRESULT hr = m_pd3d11Buffer->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(strlen(m_Desc.Name)), m_Desc.Name);
         DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set buffer name");
     }
 
@@ -145,7 +145,7 @@ static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer* pd3d11Buffer, BufferDesc
            ") does not match the d3d11 buffer size (", D3D11BuffDesc.ByteWidth, ")");
     BuffDesc.Size = Uint32{D3D11BuffDesc.ByteWidth};
 
-    auto BindFlags = D3D11BindFlagsToBindFlags(D3D11BuffDesc.BindFlags);
+    BIND_FLAGS BindFlags = D3D11BindFlagsToBindFlags(D3D11BuffDesc.BindFlags);
     if (D3D11BuffDesc.MiscFlags & D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS)
         BindFlags |= BIND_INDIRECT_DRAW_ARGS;
     VERIFY(BuffDesc.BindFlags == 0 || BuffDesc.BindFlags == BindFlags,
@@ -153,7 +153,7 @@ static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer* pd3d11Buffer, BufferDesc
            ") do not match the bind flags recovered from d3d11 buffer desc (", GetBindFlagsString(BindFlags), ")");
     BuffDesc.BindFlags = BindFlags;
 
-    auto Usage = D3D11UsageToUsage(D3D11BuffDesc.Usage);
+    USAGE Usage = D3D11UsageToUsage(D3D11BuffDesc.Usage);
     if (D3D11BuffDesc.MiscFlags & D3D11_RESOURCE_MISC_TILED)
     {
         VERIFY_EXPR(Usage == USAGE_DEFAULT);
@@ -167,7 +167,7 @@ static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer* pd3d11Buffer, BufferDesc
            ") does not match the buffer usage recovered from d3d11 buffer desc (", GetUsageString(Usage), ")");
     BuffDesc.Usage = Usage;
 
-    auto CPUAccessFlags = D3D11CPUAccessFlagsToCPUAccessFlags(D3D11BuffDesc.CPUAccessFlags);
+    CPU_ACCESS_FLAGS CPUAccessFlags = D3D11CPUAccessFlagsToCPUAccessFlags(D3D11BuffDesc.CPUAccessFlags);
     VERIFY(BuffDesc.CPUAccessFlags == 0 || BuffDesc.CPUAccessFlags == CPUAccessFlags,
            "CPU access flags specified by the BufferDesc (", GetCPUAccessFlagsString(BuffDesc.CPUAccessFlags),
            ") do not match CPU access flags recovered from d3d11 buffer desc (", GetCPUAccessFlagsString(CPUAccessFlags), ")");
@@ -250,8 +250,8 @@ void BufferD3D11Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
 
     try
     {
-        auto* pDeviceD3D11Impl  = GetDevice();
-        auto& BuffViewAllocator = pDeviceD3D11Impl->GetBuffViewObjAllocator();
+        RenderDeviceD3D11Impl*     pDeviceD3D11Impl  = GetDevice();
+        FixedBlockMemoryAllocator& BuffViewAllocator = pDeviceD3D11Impl->GetBuffViewObjAllocator();
         VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization");
 
         BufferViewDesc ViewDesc = OrigViewDesc;
@@ -273,7 +273,7 @@ void BufferD3D11Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBu
     }
     catch (const std::runtime_error&)
     {
-        const auto* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
+        const char* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
         LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name, "\"");
     }
 }
@@ -285,7 +285,7 @@ void BufferD3D11Impl::CreateUAV(BufferViewDesc& UAVDesc, ID3D11UnorderedAccessVi
     D3D11_UNORDERED_ACCESS_VIEW_DESC D3D11_UAVDesc;
     BufferViewDesc_to_D3D11_UAV_DESC(m_Desc, UAVDesc, D3D11_UAVDesc);
 
-    auto* pd3d11Device = GetDevice()->GetD3D11Device();
+    ID3D11Device* pd3d11Device = GetDevice()->GetD3D11Device();
     CHECK_D3D_RESULT_THROW(pd3d11Device->CreateUnorderedAccessView(m_pd3d11Buffer, &D3D11_UAVDesc, ppD3D11UAV),
                            "Failed to create D3D11 unordered access view");
 }
@@ -297,7 +297,7 @@ void BufferD3D11Impl::CreateSRV(struct BufferViewDesc& SRVDesc, ID3D11ShaderReso
     D3D11_SHADER_RESOURCE_VIEW_DESC D3D11_SRVDesc;
     BufferViewDesc_to_D3D11_SRV_DESC(m_Desc, SRVDesc, D3D11_SRVDesc);
 
-    auto* pd3d11Device = GetDevice()->GetD3D11Device();
+    ID3D11Device* pd3d11Device = GetDevice()->GetD3D11Device();
     CHECK_D3D_RESULT_THROW(pd3d11Device->CreateShaderResourceView(m_pd3d11Buffer, &D3D11_SRVDesc, ppD3D11SRV),
                            "Failed to create D3D11 shader resource view");
 }
@@ -307,7 +307,7 @@ SparseBufferProperties BufferD3D11Impl::GetSparseProperties() const
     DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
                   "IBuffer::GetSparseProperties() should only be used for sparse buffer");
 
-    auto* pd3d11Device2 = m_pDevice->GetD3D11Device2();
+    ID3D11Device2* pd3d11Device2 = m_pDevice->GetD3D11Device2();
 
     UINT             NumTilesForEntireResource = 0;
     D3D11_TILE_SHAPE StandardTileShapeForNonPackedMips{};

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,7 +70,7 @@ void ShaderResourceCacheD3D11::ConstructResources(Uint32 ShaderInd)
 {
     using ResourceType = typename CachedResourceTraits<RangeType>::CachedResourceType;
 
-    const auto ResCount = GetResourceCount<RangeType>(ShaderInd);
+    const Uint32 ResCount = GetResourceCount<RangeType>(ShaderInd);
     if (ResCount > 0)
     {
         const auto Arrays = GetResourceArrays<RangeType>(ShaderInd);
@@ -84,7 +84,7 @@ void ShaderResourceCacheD3D11::DestructResources(Uint32 ShaderInd)
 {
     using ResourceType = typename CachedResourceTraits<RangeType>::CachedResourceType;
 
-    const auto ResCount = GetResourceCount<RangeType>(ShaderInd);
+    const Uint32 ResCount = GetResourceCount<RangeType>(ShaderInd);
     if (ResCount > 0)
     {
         auto Arrays = GetResourceArrays<RangeType>(ShaderInd);
@@ -106,27 +106,27 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
     size_t MemOffset = 0;
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const auto Idx = FirstCBOffsetIdx + ShaderInd;
-        m_Offsets[Idx] = static_cast<OffsetType>(MemOffset);
-        MemOffset      = AlignUp(MemOffset + (sizeof(CachedCB) + sizeof(ID3D11Buffer*)) * ResCount[D3D11_RESOURCE_RANGE_CBV][ShaderInd], MaxAlignment);
+        const size_t Idx = FirstCBOffsetIdx + ShaderInd;
+        m_Offsets[Idx]   = static_cast<OffsetType>(MemOffset);
+        MemOffset        = AlignUp(MemOffset + (sizeof(CachedCB) + sizeof(ID3D11Buffer*)) * ResCount[D3D11_RESOURCE_RANGE_CBV][ShaderInd], MaxAlignment);
     }
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const auto Idx = FirstSRVOffsetIdx + ShaderInd;
-        m_Offsets[Idx] = static_cast<OffsetType>(MemOffset);
-        MemOffset      = AlignUp(MemOffset + (sizeof(CachedResource) + sizeof(ID3D11ShaderResourceView*)) * ResCount[D3D11_RESOURCE_RANGE_SRV][ShaderInd], MaxAlignment);
+        const size_t Idx = FirstSRVOffsetIdx + ShaderInd;
+        m_Offsets[Idx]   = static_cast<OffsetType>(MemOffset);
+        MemOffset        = AlignUp(MemOffset + (sizeof(CachedResource) + sizeof(ID3D11ShaderResourceView*)) * ResCount[D3D11_RESOURCE_RANGE_SRV][ShaderInd], MaxAlignment);
     }
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const auto Idx = FirstSamOffsetIdx + ShaderInd;
-        m_Offsets[Idx] = static_cast<OffsetType>(MemOffset);
-        MemOffset      = AlignUp(MemOffset + (sizeof(CachedSampler) + sizeof(ID3D11SamplerState*)) * ResCount[D3D11_RESOURCE_RANGE_SAMPLER][ShaderInd], MaxAlignment);
+        const size_t Idx = FirstSamOffsetIdx + ShaderInd;
+        m_Offsets[Idx]   = static_cast<OffsetType>(MemOffset);
+        MemOffset        = AlignUp(MemOffset + (sizeof(CachedSampler) + sizeof(ID3D11SamplerState*)) * ResCount[D3D11_RESOURCE_RANGE_SAMPLER][ShaderInd], MaxAlignment);
     }
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const auto Idx = FirstUAVOffsetIdx + ShaderInd;
-        m_Offsets[Idx] = static_cast<OffsetType>(MemOffset);
-        MemOffset      = AlignUp(MemOffset + (sizeof(CachedResource) + sizeof(ID3D11UnorderedAccessView*)) * ResCount[D3D11_RESOURCE_RANGE_UAV][ShaderInd], MaxAlignment);
+        const size_t Idx = FirstUAVOffsetIdx + ShaderInd;
+        m_Offsets[Idx]   = static_cast<OffsetType>(MemOffset);
+        MemOffset        = AlignUp(MemOffset + (sizeof(CachedResource) + sizeof(ID3D11UnorderedAccessView*)) * ResCount[D3D11_RESOURCE_RANGE_UAV][ShaderInd], MaxAlignment);
     }
     m_Offsets[MaxOffsets - 1] = static_cast<OffsetType>(MemOffset);
 
@@ -195,14 +195,14 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
 {
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const auto CBCount = GetCBCount(ShaderInd);
+        const Uint32 CBCount = GetCBCount(ShaderInd);
         if (CBCount == 0)
             continue;
 
         auto CBArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
         for (Uint32 i = 0; i < CBCount; ++i)
         {
-            if (auto* pBuffer = CBArrays.first[i].pBuff.RawPtr<BufferD3D11Impl>())
+            if (BufferD3D11Impl* pBuffer = CBArrays.first[i].pBuff)
             {
                 if (pBuffer->IsInKnownState() && !pBuffer->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
                 {
@@ -227,20 +227,20 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
 {
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const auto SRVCount = GetSRVCount(ShaderInd);
+        const Uint32 SRVCount = GetSRVCount(ShaderInd);
         if (SRVCount == 0)
             continue;
 
         auto SRVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_SRV>(ShaderInd);
         for (Uint32 i = 0; i < SRVCount; ++i)
         {
-            auto& SRVRes = SRVArrays.first[i];
-            if (auto* pTexture = SRVRes.pTexture)
+            CachedResource& SRVRes = SRVArrays.first[i];
+            if (TextureBaseD3D11* pTexture = SRVRes.pTexture)
             {
-                auto RequiredStates = RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT;
+                RESOURCE_STATE RequiredStates = RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT;
 
-                const auto& TexDesc    = pTexture->GetDesc();
-                const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+                const TextureDesc&          TexDesc    = pTexture->GetDesc();
+                const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
                 if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH || FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
                 {
                     RequiredStates |= RESOURCE_STATE_DEPTH_READ;
@@ -260,7 +260,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
                     }
                 }
             }
-            else if (auto* pBuffer = SRVRes.pBuffer)
+            else if (BufferD3D11Impl* pBuffer = SRVRes.pBuffer)
             {
                 if (pBuffer->IsInKnownState() && !pBuffer->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
                 {
@@ -290,15 +290,15 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
 {
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const auto UAVCount = GetUAVCount(ShaderInd);
+        const Uint32 UAVCount = GetUAVCount(ShaderInd);
         if (UAVCount == 0)
             continue;
 
         auto UAVArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
         for (Uint32 i = 0; i < UAVCount; ++i)
         {
-            auto& UAVRes = UAVArrays.first[i];
-            if (auto* pTexture = UAVRes.pTexture)
+            CachedResource& UAVRes = UAVArrays.first[i];
+            if (TextureBaseD3D11* pTexture = UAVRes.pTexture)
             {
                 if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                 {
@@ -314,7 +314,7 @@ void ShaderResourceCacheD3D11::TransitionResources(DeviceContextD3D11Impl& Ctx, 
                     }
                 }
             }
-            else if (auto* pBuffer = UAVRes.pBuffer)
+            else if (BufferD3D11Impl* pBuffer = UAVRes.pBuffer)
             {
                 if (pBuffer->IsInKnownState() && !pBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                 {
@@ -339,17 +339,17 @@ void ShaderResourceCacheD3D11::DbgVerifyDynamicBufferMasks() const
 {
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
     {
-        const auto CBCount = GetCBCount(ShaderInd);
+        const Uint32 CBCount = GetCBCount(ShaderInd);
         if (CBCount == 0)
             continue;
 
         auto CBArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
         for (Uint32 i = 0; i < CBCount; ++i)
         {
-            const auto  BuffBit = 1u << i;
-            const auto& CB      = CBArrays.first[i];
+            const Uint32    BuffBit = 1u << i;
+            const CachedCB& CB      = CBArrays.first[i];
 
-            const auto IsDynamicOffset = CB.AllowsDynamicOffset() && (m_DynamicCBSlotsMask[ShaderInd] & BuffBit) != 0;
+            const bool IsDynamicOffset = CB.AllowsDynamicOffset() && (m_DynamicCBSlotsMask[ShaderInd] & BuffBit) != 0;
             VERIFY(IsDynamicOffset == ((m_DynamicCBOffsetsMask[ShaderInd] & BuffBit) != 0), "Bit ", i, " in m_DynamicCBOffsetsMask is not valid");
         }
     }
