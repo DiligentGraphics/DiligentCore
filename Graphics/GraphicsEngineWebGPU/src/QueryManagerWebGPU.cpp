@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -152,8 +152,8 @@ QueryManagerWebGPU::QuerySetObject::QuerySetObject(IReferenceCounters*     pRefC
 
     String QueryObjectName = String{"QueryManagerWebGPU: QuerySetObject["} + GetQueryTypeString(m_Type) + "]";
 
-    auto  StrSize  = QueryObjectName.size() + 1;
-    auto* NameCopy = ALLOCATE(GetStringAllocator(), "Object name copy", char, StrSize);
+    size_t StrSize  = QueryObjectName.size() + 1;
+    char*  NameCopy = ALLOCATE(GetStringAllocator(), "Object name copy", char, StrSize);
     memcpy(NameCopy, QueryObjectName.c_str(), StrSize);
     m_Desc.Name = NameCopy;
 }
@@ -164,7 +164,7 @@ QueryManagerWebGPU::QuerySetObject::~QuerySetObject()
 
     if (m_AvailableQueries.size() != m_QueryCount)
     {
-        const auto OutstandingQueries = m_QueryCount - m_AvailableQueries.size();
+        const size_t OutstandingQueries = m_QueryCount - m_AvailableQueries.size();
         if (OutstandingQueries == 1)
         {
             LOG_ERROR_MESSAGE("One query of type ", GetQueryTypeString(m_Type),

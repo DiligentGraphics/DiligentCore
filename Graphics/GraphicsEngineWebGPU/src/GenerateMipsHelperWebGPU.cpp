@@ -308,7 +308,7 @@ size_t GenerateMipsHelperWebGPU::ComputePipelineHashKey::GetHash() const
     if (Hash == 0)
     {
         Hash = ComputeHash(PowerOfTwo);
-        for (const auto& Format : Formats)
+        for (const TEXTURE_FORMAT& Format : Formats)
             HashCombine(Hash, Format);
     }
     return Hash;
@@ -328,7 +328,7 @@ size_t GenerateMipsHelperWebGPU::ShaderModuleCacheKey::GetHash() const
 {
     if (Hash == 0)
     {
-        for (const auto& Format : Formats)
+        for (const TEXTURE_FORMAT& Format : Formats)
             HashCombine(Hash, Format);
         HashCombine(Hash, ShaderType);
     }
@@ -341,18 +341,18 @@ GenerateMipsHelperWebGPU::GenerateMipsHelperWebGPU(RenderDeviceWebGPUImpl& Devic
 
 void GenerateMipsHelperWebGPU::GenerateMips(DeviceContextWebGPUImpl* pDeviceContext, TextureViewWebGPUImpl* pTexView)
 {
-    auto*       pTexWGPU = pTexView->GetTexture<TextureWebGPUImpl>();
-    const auto& TexDesc  = pTexWGPU->GetDesc();
-    const auto& FmtInfo  = m_DeviceWebGPU.GetTextureFormatInfoExt(SRGBFormatToUnorm(TexDesc.Format));
+    TextureWebGPUImpl*          pTexWGPU = pTexView->GetTexture<TextureWebGPUImpl>();
+    const TextureDesc&          TexDesc  = pTexWGPU->GetDesc();
+    const TextureFormatInfoExt& FmtInfo  = m_DeviceWebGPU.GetTextureFormatInfoExt(SRGBFormatToUnorm(TexDesc.Format));
 
     if (FmtInfo.BindFlags & BIND_UNORDERED_ACCESS)
     {
-        auto CmdEncoder = pDeviceContext->GetComputePassCommandEncoder();
+        WGPUComputePassEncoder CmdEncoder = pDeviceContext->GetComputePassCommandEncoder();
         GenerateMips(CmdEncoder, pDeviceContext, pTexView);
     }
     else
     {
-        auto CmdEncoder = pDeviceContext->GetCommandEncoder();
+        WGPUCommandEncoder CmdEncoder = pDeviceContext->GetCommandEncoder();
         GenerateMips(CmdEncoder, pDeviceContext, pTexView);
     }
 }
@@ -645,7 +645,7 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUComputePassEncoder wgpuCmdEncode
         UAVFormats PipelineFormats{};
         for (Uint32 UAVIndex = 0; UAVIndex < 4; ++UAVIndex)
         {
-            const auto* pTextureViewImpl                   = ClassPtrCast<TextureViewWebGPUImpl>(m_PlaceholderTextureViews[UAVIndex].RawPtr());
+            const TextureViewWebGPUImpl* pTextureViewImpl  = ClassPtrCast<TextureViewWebGPUImpl>(m_PlaceholderTextureViews[UAVIndex].RawPtr());
             wgpuBindGroupEntries[UAVIndex + 1].binding     = UAVIndex + 1;
             wgpuBindGroupEntries[UAVIndex + 1].textureView = UAVIndex < NumMips ? pTexView->GetMipLevelUAV(TopMip + UAVIndex + 1) : pTextureViewImpl->GetWebGPUTextureView();
             PipelineFormats[UAVIndex]                      = UAVIndex < NumMips ? pTexView->GetDesc().Format : PlaceholderTextureFormat;
@@ -683,7 +683,7 @@ void GenerateMipsHelperWebGPU::GenerateMips(WGPUCommandEncoder wgpuCmdEncoder, D
     InitializeSampler();
     pDeviceContext->EndCommandEncoders(DeviceContextWebGPUImpl::COMMAND_ENCODER_FLAG_ALL);
 
-    const auto& ViewDesc = pTexView->GetDesc();
+    const TextureViewDesc& ViewDesc = pTexView->GetDesc();
 
     for (Uint32 TopSlice = 0; TopSlice < ViewDesc.NumArraySlices; ++TopSlice)
     {

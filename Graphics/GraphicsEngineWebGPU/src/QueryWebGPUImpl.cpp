@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ bool QueryWebGPUImpl::AllocateQueries()
     VERIFY_EXPR(m_pQueryMgr != nullptr);
     for (Uint32 Index = 0; Index < (m_Desc.Type == QUERY_TYPE_DURATION ? Uint32{2} : Uint32{1}); ++Index)
     {
-        auto& QuerySetIdx = m_QuerySetIndices[Index];
+        Uint32& QuerySetIdx = m_QuerySetIndices[Index];
         VERIFY_EXPR(QuerySetIdx == QueryManagerWebGPU::InvalidIndex);
         QuerySetIdx = m_pQueryMgr->AllocateQuery(m_Desc.Type);
 
@@ -77,7 +77,7 @@ bool QueryWebGPUImpl::AllocateQueries()
 
 void QueryWebGPUImpl::DiscardQueries()
 {
-    for (auto& QuerySetIdx : m_QuerySetIndices)
+    for (Uint32& QuerySetIdx : m_QuerySetIndices)
     {
         if (QuerySetIdx != QueryManagerWebGPU::InvalidIndex)
         {
@@ -102,10 +102,10 @@ bool QueryWebGPUImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
         {
             case QUERY_TYPE_TIMESTAMP:
             {
-                const auto Timestamp = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0]);
+                const Uint64 Timestamp = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0]);
                 if (pData != nullptr)
                 {
-                    auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                    QueryDataTimestamp& QueryData{*reinterpret_cast<QueryDataTimestamp*>(pData)};
                     QueryData.Counter   = Timestamp;
                     QueryData.Frequency = 1000000000u; // Nanoseconds to seconds
                 }
@@ -113,11 +113,11 @@ bool QueryWebGPUImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             }
             case QUERY_TYPE_DURATION:
             {
-                const auto T0 = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0]);
-                const auto T1 = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[1]);
+                const Uint64 T0 = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0]);
+                const Uint64 T1 = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[1]);
                 if (pData != nullptr)
                 {
-                    auto& QueryData     = *reinterpret_cast<QueryDataDuration*>(pData);
+                    QueryDataDuration& QueryData{*reinterpret_cast<QueryDataDuration*>(pData)};
                     QueryData.Duration  = T1 - T0;
                     QueryData.Frequency = 1000000000u; // Nanoseconds to seconds
                 }
@@ -125,10 +125,10 @@ bool QueryWebGPUImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             }
             case QUERY_TYPE_OCCLUSION:
             {
-                const auto NumSamples = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0]);
+                const Uint64 NumSamples = m_pQueryMgr->GetQueryResult(m_Desc.Type, m_QuerySetIndices[0]);
                 if (pData != nullptr)
                 {
-                    auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
+                    QueryDataOcclusion& QueryData{*reinterpret_cast<QueryDataOcclusion*>(pData)};
                     QueryData.NumSamples = NumSamples;
                 }
                 break;

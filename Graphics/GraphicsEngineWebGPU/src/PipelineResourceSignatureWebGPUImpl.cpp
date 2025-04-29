@@ -549,7 +549,7 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
         }
         VERIFY_EXPR(BindGroupIndex != ~0u && BindingIndex != ~0u && CacheOffset != ~0u);
 
-        auto* const pAttribs = m_pResourceAttribs + i;
+        ResourceAttribs* const pAttribs = m_pResourceAttribs + i;
         if (!IsSerialized)
         {
             new (pAttribs) ResourceAttribs{

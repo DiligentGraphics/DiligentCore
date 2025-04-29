@@ -124,7 +124,7 @@ WGPUTextureDescriptor TextureDescToWGPUTextureDescriptor(const TextureDesc&     
         ViewFormatSet.insert(SRGBFormatToUnorm(Desc.Format));
     }
 
-    for (const auto& TextureViewFmt : ViewFormatSet)
+    for (const TEXTURE_FORMAT& TextureViewFmt : ViewFormatSet)
         TextureViewFormats.push_back(TextureFormatToWGPUFormat(TextureViewFmt));
 
     wgpuTextureDesc.viewFormats     = TextureViewFormats.data();
@@ -520,7 +520,7 @@ void TextureWebGPUImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITex
 
     try
     {
-        auto& TexViewAllocator = m_pDevice->GetTexViewObjAllocator();
+        FixedBlockMemoryAllocator& TexViewAllocator = m_pDevice->GetTexViewObjAllocator();
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
         TextureViewDesc UpdatedViewDesc = ViewDesc;
@@ -535,7 +535,7 @@ void TextureWebGPUImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITex
         std::vector<WebGPUTextureViewWrapper> wgpuTextureMipUAVs;
         if (UpdatedViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION)
         {
-            const auto& FmtInfo = m_pDevice->GetTextureFormatInfoExt(SRGBFormatToUnorm(UpdatedViewDesc.Format));
+            const TextureFormatInfoExt& FmtInfo = m_pDevice->GetTextureFormatInfoExt(SRGBFormatToUnorm(UpdatedViewDesc.Format));
             VERIFY_EXPR((m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) != 0 && m_Desc.Is2D());
 
             if (FmtInfo.BindFlags & BIND_UNORDERED_ACCESS)

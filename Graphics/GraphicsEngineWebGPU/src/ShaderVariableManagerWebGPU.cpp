@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -145,7 +145,7 @@ Uint32 ShaderVariableManagerWebGPU::GetVariableIndex(const ShaderVariableWebGPUI
         return ~0u;
     }
 
-    const auto Offset = reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<Uint8*>(m_pVariables);
+    const ptrdiff_t Offset = reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<Uint8*>(m_pVariables);
     DEV_CHECK_ERR(Offset % sizeof(ShaderVariableWebGPUImpl) == 0, "Offset is not multiple of ShaderVariableWebGPUImpl class size");
     const Uint32 Index = static_cast<Uint32>(Offset / sizeof(ShaderVariableWebGPUImpl));
     if (Index < m_NumVariables)

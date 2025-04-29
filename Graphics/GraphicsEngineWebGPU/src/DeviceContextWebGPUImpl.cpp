@@ -1828,7 +1828,7 @@ void DeviceContextWebGPUImpl::CommitRenderTargets()
     WGPURenderPassDepthStencilAttachment wgpuRenderPassDepthStencilAttachment{};
     for (Uint32 RTIndex = 0; RTIndex < m_NumBoundRenderTargets; ++RTIndex)
     {
-        if (auto* pRTV = m_pBoundRenderTargets[RTIndex].RawPtr())
+        if (TextureViewWebGPUImpl* pRTV = m_pBoundRenderTargets[RTIndex])
         {
             const auto& ClearColor = m_PendingClears.Colors[RTIndex];
 
