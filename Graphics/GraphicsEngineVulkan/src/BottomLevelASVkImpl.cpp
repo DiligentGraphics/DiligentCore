@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,10 +38,10 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                                          const BottomLevelASDesc& Desc) :
     TBottomLevelASBase{pRefCounters, pRenderDeviceVk, Desc}
 {
-    const auto& LogicalDevice   = pRenderDeviceVk->GetLogicalDevice();
-    const auto& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
-    const auto& RTProps         = pRenderDeviceVk->GetAdapterInfo().RayTracing;
-    auto        AccelStructSize = m_Desc.CompactedSize;
+    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice   = pRenderDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
+    const RayTracingProperties&                  RTProps         = pRenderDeviceVk->GetAdapterInfo().RayTracing;
+    Uint64                                       AccelStructSize = m_Desc.CompactedSize;
 
     if (AccelStructSize == 0)
     {
@@ -59,9 +59,9 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
             Uint32 MaxPrimitiveCount = 0;
             for (uint32_t i = 0; i < m_Desc.TriangleCount; ++i)
             {
-                auto& src = m_Desc.pTriangles[i];
-                auto& dst = vkGeometries[i];
-                auto& tri = dst.geometry.triangles;
+                const BLASTriangleDesc&                          src = m_Desc.pTriangles[i];
+                VkAccelerationStructureGeometryKHR&              dst = vkGeometries[i];
+                VkAccelerationStructureGeometryTrianglesDataKHR& tri = dst.geometry.triangles;
 
                 dst.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
                 dst.pNext        = nullptr;
@@ -106,9 +106,9 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
             Uint32 MaxBoxCount = 0;
             for (uint32_t i = 0; i < m_Desc.BoxCount; ++i)
             {
-                auto& src = m_Desc.pBoxes[i];
-                auto& dst = vkGeometries[i];
-                auto& box = dst.geometry.aabbs;
+                const BLASBoundingBoxDesc&                   src = m_Desc.pBoxes[i];
+                VkAccelerationStructureGeometryKHR&          dst = vkGeometries[i];
+                VkAccelerationStructureGeometryAabbsDataKHR& box = dst.geometry.aabbs;
 
                 dst.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
                 dst.pNext        = nullptr;
@@ -166,8 +166,8 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
 
     m_MemoryAlignedOffset = AlignUp(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
     VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_MemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
-    auto Memory = m_MemoryAllocation.Page->GetVkMemory();
-    auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_MemoryAlignedOffset);
+    VkDeviceMemory Memory = m_MemoryAllocation.Page->GetVkMemory();
+    VkResult       err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_MemoryAlignedOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
     VkAccelerationStructureCreateInfoKHR vkAccelStrCI{};

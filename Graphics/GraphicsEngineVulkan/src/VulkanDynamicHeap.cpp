@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,8 +39,8 @@ namespace Diligent
 
 static VkDeviceSize GetDefaultAlignment(const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice)
 {
-    const auto& Props  = PhysicalDevice.GetProperties();
-    const auto& Limits = Props.limits;
+    const VkPhysicalDeviceProperties& Props  = PhysicalDevice.GetProperties();
+    const VkPhysicalDeviceLimits&     Limits = Props.limits;
     return std::max(std::max(Limits.minUniformBufferOffsetAlignment, Limits.minTexelBufferOffsetAlignment), Limits.minStorageBufferOffsetAlignment);
 }
 
@@ -73,11 +73,11 @@ VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Alloc
     VkBuffCI.queueFamilyIndexCount = 0;
     VkBuffCI.pQueueFamilyIndices   = nullptr;
 
-    const auto& LogicalDevice    = DeviceVk.GetLogicalDevice();
-    m_VkBuffer                   = LogicalDevice.CreateBuffer(VkBuffCI, "Dynamic heap buffer");
-    VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VkBuffer);
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = DeviceVk.GetLogicalDevice();
+    m_VkBuffer                                                = LogicalDevice.CreateBuffer(VkBuffCI, "Dynamic heap buffer");
+    VkMemoryRequirements MemReqs                              = LogicalDevice.GetBufferMemoryRequirements(m_VkBuffer);
 
-    const auto& PhysicalDevice = DeviceVk.GetPhysicalDevice();
+    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = DeviceVk.GetPhysicalDevice();
 
     VkMemoryAllocateInfo MemAlloc{};
     MemAlloc.pNext          = nullptr;
@@ -99,7 +99,7 @@ VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Alloc
 
     void* Data = nullptr;
 
-    auto err = LogicalDevice.MapMemory(
+    VkResult err = LogicalDevice.MapMemory(
         m_BufferMemory,
         0, // offset
         MemAlloc.allocationSize,
@@ -128,7 +128,7 @@ void VulkanDynamicMemoryManager::Destroy()
 VulkanDynamicMemoryManager::~VulkanDynamicMemoryManager()
 {
     VERIFY(m_BufferMemory == VK_NULL_HANDLE && m_VkBuffer == VK_NULL_HANDLE, "Vulkan resources must be explicitly released with Destroy()");
-    auto Size = GetSize();
+    OffsetType Size = GetSize();
     LOG_INFO_MESSAGE("Dynamic memory manager usage stats:\n"
                      "                       Total size: ",
                      FormatMemorySize(Size, 2),
@@ -151,7 +151,7 @@ VulkanDynamicMemoryManager::MasterBlock VulkanDynamicMemoryManager::AllocateMast
         return MasterBlock{};
     }
 
-    auto Block = TBase::AllocateMasterBlock(SizeInBytes, Alignment);
+    MasterBlock Block = TBase::AllocateMasterBlock(SizeInBytes, Alignment);
     if (!Block.IsValid())
     {
         // Allocation failed. Try to wait for GPU to finish pending frames to release some space
@@ -225,32 +225,32 @@ VulkanDynamicAllocation VulkanDynamicHeap::Allocate(Uint32 SizeInBytes, Uint32 A
     VERIFY_EXPR(Alignment > 0);
     VERIFY(IsPowerOfTwo(Alignment), "Alignment (", Alignment, ") must be power of 2");
 
-    auto       AlignedOffset = InvalidOffset;
+    OffsetType AlignedOffset = InvalidOffset;
     OffsetType AlignedSize   = 0;
     if (SizeInBytes > m_MasterBlockSize / 2)
     {
         // Allocate directly from the memory manager
-        auto MasterBlock = m_GlobalDynamicMemMgr.AllocateMasterBlock(SizeInBytes, Alignment);
-        if (MasterBlock.IsValid())
+        MasterBlock Block = m_GlobalDynamicMemMgr.AllocateMasterBlock(SizeInBytes, Alignment);
+        if (Block.IsValid())
         {
-            AlignedOffset = AlignUp(MasterBlock.UnalignedOffset, size_t{Alignment});
-            AlignedSize   = MasterBlock.Size;
-            VERIFY_EXPR(MasterBlock.Size >= SizeInBytes + (AlignedOffset - MasterBlock.UnalignedOffset));
-            m_CurrAllocatedSize += static_cast<Uint32>(MasterBlock.Size);
-            m_MasterBlocks.emplace_back(MasterBlock);
+            AlignedOffset = AlignUp(Block.UnalignedOffset, size_t{Alignment});
+            AlignedSize   = Block.Size;
+            VERIFY_EXPR(Block.Size >= SizeInBytes + (AlignedOffset - Block.UnalignedOffset));
+            m_CurrAllocatedSize += static_cast<Uint32>(Block.Size);
+            m_MasterBlocks.emplace_back(Block);
         }
     }
     else
     {
         if (m_CurrOffset == InvalidOffset || SizeInBytes + (AlignUp(m_CurrOffset, size_t{Alignment}) - m_CurrOffset) > m_AvailableSize)
         {
-            auto MasterBlock = m_GlobalDynamicMemMgr.AllocateMasterBlock(m_MasterBlockSize, 0);
-            if (MasterBlock.IsValid())
+            MasterBlock Block = m_GlobalDynamicMemMgr.AllocateMasterBlock(m_MasterBlockSize, 0);
+            if (Block.IsValid())
             {
-                m_CurrOffset = MasterBlock.UnalignedOffset;
-                m_CurrAllocatedSize += static_cast<Uint32>(MasterBlock.Size);
-                m_AvailableSize = static_cast<Uint32>(MasterBlock.Size);
-                m_MasterBlocks.emplace_back(MasterBlock);
+                m_CurrOffset = Block.UnalignedOffset;
+                m_CurrAllocatedSize += static_cast<Uint32>(Block.Size);
+                m_AvailableSize = static_cast<Uint32>(Block.Size);
+                m_MasterBlocks.emplace_back(Block);
             }
         }
 
@@ -301,7 +301,7 @@ VulkanDynamicHeap::~VulkanDynamicHeap()
 {
     DEV_CHECK_ERR(m_MasterBlocks.empty(), m_MasterBlocks.size(), " master block(s) have not been returned to dynamic memory manager");
 
-    auto PeakAllocatedPages = m_PeakAllocatedSize / m_MasterBlockSize;
+    Uint32 PeakAllocatedPages = m_PeakAllocatedSize / m_MasterBlockSize;
     LOG_INFO_MESSAGE(m_HeapName,
                      " usage stats:\n"
                      "                       Peak used/aligned/allocated size: ",

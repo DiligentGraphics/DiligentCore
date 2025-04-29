@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,7 +72,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<Pipel
     for (Uint32 BindInd = 0; BindInd < SignatureCount; ++BindInd)
     {
         // Signatures are arranged by binding index by PipelineStateBase::CopyResourceSignatures
-        const auto& pSignature = ppSignatures[BindInd];
+        RefCntAutoPtr<PipelineResourceSignatureVkImpl>& pSignature = ppSignatures[BindInd];
         if (pSignature == nullptr)
             continue;
 
@@ -80,7 +80,8 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<Pipel
                "Descriptor set layout count (", DescSetLayoutCount, ") exceeds the maximum representable value");
         m_FirstDescrSetIndex[BindInd] = static_cast<FirstDescrSetIndexArrayType::value_type>(DescSetLayoutCount);
 
-        for (auto SetId : {PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE, PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC})
+        for (PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID SetId : {PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE,
+                                                                         PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_DYNAMIC})
         {
             if (pSignature->HasDescriptorSet(SetId))
                 DescSetLayouts[DescSetLayoutCount++] = pSignature->GetVkDescriptorSetLayout(SetId);
@@ -94,7 +95,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<Pipel
     }
     VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
 
-    const auto& Limits = pDeviceVk->GetPhysicalDevice().GetProperties().limits;
+    const VkPhysicalDeviceLimits& Limits = pDeviceVk->GetPhysicalDevice().GetProperties().limits;
     if (DescSetLayoutCount > Limits.maxBoundDescriptorSets)
     {
         LOG_ERROR_AND_THROW("The total number of descriptor sets (", DescSetLayoutCount,

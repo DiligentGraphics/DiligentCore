@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,7 +46,7 @@ VulkanUploadHeap::VulkanUploadHeap(RenderDeviceVkImpl& RenderDevice,
 VulkanUploadHeap::~VulkanUploadHeap()
 {
     DEV_CHECK_ERR(m_Pages.empty(), "Upload heap '", m_HeapName, "' not all pages are released");
-    auto PeakAllocatedPages = m_PeakAllocatedSize / m_PageSize;
+    VkDeviceSize PeakAllocatedPages = m_PeakAllocatedSize / m_PageSize;
     LOG_INFO_MESSAGE(m_HeapName, " peak used/allocated frame size: ", FormatMemorySize(m_PeakFrameSize, 2, m_PeakAllocatedSize),
                      " / ", FormatMemorySize(m_PeakAllocatedSize, 2),
                      " (", PeakAllocatedPages, (PeakAllocatedPages == 1 ? " page)" : " pages)"));
@@ -64,13 +64,13 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
     StagingBufferCI.queueFamilyIndexCount = 0;
     StagingBufferCI.pQueueFamilyIndices   = nullptr;
 
-    const auto& LogicalDevice   = m_RenderDevice.GetLogicalDevice();
-    const auto& PhysicalDevice  = m_RenderDevice.GetPhysicalDevice();
-    auto&       GlobalMemoryMgr = m_RenderDevice.GetGlobalMemoryManager();
+    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice   = m_RenderDevice.GetLogicalDevice();
+    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice  = m_RenderDevice.GetPhysicalDevice();
+    VulkanUtilities::VulkanMemoryManager&        GlobalMemoryMgr = m_RenderDevice.GetGlobalMemoryManager();
 
-    auto NewBuffer       = LogicalDevice.CreateBuffer(StagingBufferCI, "Upload buffer");
-    auto MemReqs         = LogicalDevice.GetBufferMemoryRequirements(NewBuffer);
-    auto MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    VulkanUtilities::BufferWrapper NewBuffer       = LogicalDevice.CreateBuffer(StagingBufferCI, "Upload buffer");
+    VkMemoryRequirements           MemReqs         = LogicalDevice.GetBufferMemoryRequirements(NewBuffer);
+    uint32_t                       MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     DEV_CHECK_ERR(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
                   "Vulkan spec requires that for a VkBuffer not created with the VK_BUFFER_CREATE_SPARSE_BINDING_BIT "
                   "bit set, or for a VkImage that was created with a VK_IMAGE_TILING_LINEAR value in the tiling member "
@@ -78,13 +78,13 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
                   "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has both the "
                   "VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit AND the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set. (11.6)");
 
-    auto MemAllocation = GlobalMemoryMgr.Allocate(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, true, VkMemoryAllocateFlags{0});
+    VulkanUtilities::VulkanMemoryAllocation MemAllocation = GlobalMemoryMgr.Allocate(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, true, VkMemoryAllocateFlags{0});
 
-    auto AlignedOffset = (MemAllocation.UnalignedOffset + (MemReqs.alignment - 1)) & ~(MemReqs.alignment - 1);
-    auto err           = LogicalDevice.BindBufferMemory(NewBuffer, MemAllocation.Page->GetVkMemory(), AlignedOffset);
+    VkDeviceSize AlignedOffset = (MemAllocation.UnalignedOffset + (MemReqs.alignment - 1)) & ~(MemReqs.alignment - 1);
+    VkResult     err           = LogicalDevice.BindBufferMemory(NewBuffer, MemAllocation.Page->GetVkMemory(), AlignedOffset);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to bind buffer memory");
     (void)err;
-    auto CPUAddress = reinterpret_cast<Uint8*>(MemAllocation.Page->GetCPUMemory()) + AlignedOffset;
+    Uint8* CPUAddress = reinterpret_cast<Uint8*>(MemAllocation.Page->GetCPUMemory()) + AlignedOffset;
 
     return UploadPageInfo{std::move(MemAllocation), std::move(NewBuffer), CPUAddress};
 }
@@ -97,7 +97,7 @@ VulkanUploadAllocation VulkanUploadHeap::Allocate(VkDeviceSize SizeInBytes, VkDe
     if (SizeInBytes >= m_PageSize / 2)
     {
         // Allocate large chunk directly from the memory manager
-        auto NewPage          = CreateNewPage(SizeInBytes);
+        UploadPageInfo NewPage{CreateNewPage(SizeInBytes)};
         Allocation.vkBuffer   = NewPage.Buffer;
         Allocation.CPUAddress = NewPage.CPUAddress;
         Allocation.Size       = SizeInBytes;
@@ -108,11 +108,11 @@ VulkanUploadAllocation VulkanUploadHeap::Allocate(VkDeviceSize SizeInBytes, VkDe
     }
     else
     {
-        auto AlignmentOffset = AlignUp(m_CurrPage.CurrOffset, Alignment) - m_CurrPage.CurrOffset;
+        VkDeviceSize AlignmentOffset = AlignUp(m_CurrPage.CurrOffset, Alignment) - m_CurrPage.CurrOffset;
         if (m_CurrPage.AvailableSize < SizeInBytes + AlignmentOffset)
         {
             // Allocate new page
-            auto NewPage = CreateNewPage(m_PageSize);
+            UploadPageInfo NewPage = CreateNewPage(m_PageSize);
             m_CurrPage.Reset(NewPage, m_PageSize);
             m_CurrAllocatedSize += NewPage.MemAllocation.Size;
             m_Pages.emplace_back(std::move(NewPage));
@@ -140,7 +140,7 @@ void VulkanUploadHeap::ReleaseAllocatedPages(Uint64 CmdQueueMask)
 {
     // The pages will go into the stale resources queue first, however they will move into the release
     // queue immediately when RenderDeviceVkImpl::FlushStaleResources() is called by the DeviceContextVkImpl::FinishFrame()
-    for (auto& Page : m_Pages)
+    for (UploadPageInfo& Page : m_Pages)
     {
         m_RenderDevice.SafeReleaseDeviceObject(std::move(Page.MemAllocation), CmdQueueMask);
         m_RenderDevice.SafeReleaseDeviceObject(std::move(Page.Buffer), CmdQueueMask);

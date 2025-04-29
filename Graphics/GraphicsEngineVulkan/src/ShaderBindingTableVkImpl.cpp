@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,7 +61,7 @@ void ShaderBindingTableVkImpl::GetData(BufferVkImpl*& pSBTBufferVk,
     m_VkBindingTable.HitShader      = {pSBTBufferVk->GetVkDeviceAddress() + HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
     m_VkBindingTable.CallableShader = {pSBTBufferVk->GetVkDeviceAddress() + CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
 
-    const auto ShaderGroupBaseAlignment = m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupBaseAlignment;
+    const Uint32 ShaderGroupBaseAlignment = m_pDevice->GetAdapterInfo().RayTracing.ShaderGroupBaseAlignment;
     VERIFY_EXPR(m_VkBindingTable.RaygenShader.deviceAddress   % ShaderGroupBaseAlignment == 0);
     VERIFY_EXPR(m_VkBindingTable.MissShader.deviceAddress     % ShaderGroupBaseAlignment == 0);
     VERIFY_EXPR(m_VkBindingTable.HitShader.deviceAddress      % ShaderGroupBaseAlignment == 0);

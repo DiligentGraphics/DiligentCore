@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,10 +38,10 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
                                    const TopLevelASDesc& Desc) :
     TTopLevelASBase{pRefCounters, pRenderDeviceVk, Desc}
 {
-    const auto& LogicalDevice   = pRenderDeviceVk->GetLogicalDevice();
-    const auto& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
-    const auto& RTProps         = pRenderDeviceVk->GetAdapterInfo().RayTracing;
-    auto        AccelStructSize = m_Desc.CompactedSize;
+    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice   = pRenderDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
+    const RayTracingProperties&                  RTProps         = pRenderDeviceVk->GetAdapterInfo().RayTracing;
+    Uint64                                       AccelStructSize = m_Desc.CompactedSize;
 
     if (AccelStructSize == 0)
     {
@@ -95,8 +95,8 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
 
     m_MemoryAlignedOffset = AlignUp(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
     VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_MemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
-    auto Memory = m_MemoryAllocation.Page->GetVkMemory();
-    auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_MemoryAlignedOffset);
+    VkDeviceMemory Memory = m_MemoryAllocation.Page->GetVkMemory();
+    VkResult       err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_MemoryAlignedOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
     VkAccelerationStructureCreateInfoKHR vkAccelStrCI{};

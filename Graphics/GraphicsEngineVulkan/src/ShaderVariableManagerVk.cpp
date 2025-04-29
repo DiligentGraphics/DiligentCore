@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -87,7 +87,7 @@ void ShaderVariableManagerVk::Initialize(const PipelineResourceSignatureVkImpl& 
                                          SHADER_TYPE                            ShaderType)
 {
     VERIFY_EXPR(m_NumVariables == 0);
-    const auto MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, &m_NumVariables);
+    const size_t MemSize = GetRequiredMemorySize(Signature, AllowedVarTypes, NumAllowedTypes, ShaderType, &m_NumVariables);
 
     if (m_NumVariables == 0)
         return;
@@ -145,7 +145,7 @@ Uint32 ShaderVariableManagerVk::GetVariableIndex(const ShaderVariableVkImpl& Var
         return ~0u;
     }
 
-    const auto Offset = reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<Uint8*>(m_pVariables);
+    const ptrdiff_t Offset = reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<Uint8*>(m_pVariables);
     DEV_CHECK_ERR(Offset % sizeof(ShaderVariableVkImpl) == 0, "Offset is not multiple of ShaderVariableVkImpl class size");
     const Uint32 Index = static_cast<Uint32>(Offset / sizeof(ShaderVariableVkImpl));
     if (Index < m_NumVariables)
@@ -291,7 +291,7 @@ BindResourceHelper::BindResourceHelper(const PipelineResourceSignatureVkImpl& Si
 
 #ifdef DILIGENT_DEBUG
     {
-        auto vkDescrSet = m_CachedSet.GetVkDescriptorSet();
+        VkDescriptorSet vkDescrSet = m_CachedSet.GetVkDescriptorSet();
         if (m_CacheType == ResourceCacheContentType::SRB)
         {
             if (m_ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ||

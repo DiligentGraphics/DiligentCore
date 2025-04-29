@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ VulkanSyncObjectManager::~VulkanSyncObjectManager()
     {
         std::lock_guard<std::mutex> Lock{m_SemaphorePoolGuard};
 
-        for (auto vkSem : m_SemaphorePool)
+        for (VkSemaphore vkSem : m_SemaphorePool)
         {
             vkDestroySemaphore(m_LogicalDevice.GetVkDevice(), vkSem, nullptr);
         }
@@ -49,7 +49,7 @@ VulkanSyncObjectManager::~VulkanSyncObjectManager()
     {
         std::lock_guard<std::mutex> Lock{m_FencePoolGuard};
 
-        for (auto vkFence : m_FencePool)
+        for (VkFence vkFence : m_FencePool)
         {
             vkDestroyFence(m_LogicalDevice.GetVkDevice(), vkFence, nullptr);
         }
@@ -87,7 +87,7 @@ VulkanRecycledFence VulkanSyncObjectManager::CreateFence()
 
         if (!m_FencePool.empty())
         {
-            auto vkFence = m_FencePool.back();
+            VkFence vkFence = m_FencePool.back();
             m_FencePool.pop_back();
             return {shared_from_this(), vkFence};
         }

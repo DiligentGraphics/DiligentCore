@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,7 +59,7 @@ VulkanCommandBufferPool::~VulkanCommandBufferPool()
                   "buffers in release queues, VulkanCommandBufferPool::RecycleCommandBuffer() will crash when attempting to "
                   "return the buffer to the pool.");
 
-    for (auto CmdBuff : m_CmdBuffers)
+    for (VkCommandBuffer CmdBuff : m_CmdBuffers)
         m_LogicalDevice->FreeCommandBuffer(m_CmdPool, CmdBuff);
     m_CmdPool.Release();
 }
@@ -73,8 +73,8 @@ VkCommandBuffer VulkanCommandBufferPool::GetCommandBuffer(const char* DebugName)
 
         if (!m_CmdBuffers.empty())
         {
-            CmdBuffer = m_CmdBuffers.front();
-            auto err  = vkResetCommandBuffer(
+            CmdBuffer    = m_CmdBuffers.front();
+            VkResult err = vkResetCommandBuffer(
                 CmdBuffer,
                 0 // VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT -  specifies that most or all memory resources currently
                   // owned by the command buffer should be returned to the parent command pool.
@@ -109,7 +109,7 @@ VkCommandBuffer VulkanCommandBufferPool::GetCommandBuffer(const char* DebugName)
                                                                           // and recorded again between each submission.
     CmdBuffBeginInfo.pInheritanceInfo = nullptr;                          // Ignored for a primary command buffer
 
-    auto err = vkBeginCommandBuffer(CmdBuffer, &CmdBuffBeginInfo);
+    VkResult err = vkBeginCommandBuffer(CmdBuffer, &CmdBuffBeginInfo);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to begin command buffer");
     (void)err;
 #ifdef DILIGENT_DEVELOPMENT

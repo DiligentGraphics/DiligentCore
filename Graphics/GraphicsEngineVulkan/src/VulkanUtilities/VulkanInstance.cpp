@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,7 +61,7 @@ std::string PrintExtensionsList(const std::vector<VkExtensionProperties>& Extens
 
     std::vector<std::string> ExtStrings;
     ExtStrings.reserve(Extensions.size());
-    for (const auto& Ext : Extensions)
+    for (const VkExtensionProperties& Ext : Extensions)
     {
         std::stringstream ss;
         ss << Ext.extensionName << ' '
@@ -97,7 +97,7 @@ std::string PrintExtensionsList(const std::vector<VkExtensionProperties>& Extens
 
 bool VulkanInstance::IsLayerAvailable(const char* LayerName, uint32_t& Version) const
 {
-    for (const auto& Layer : m_Layers)
+    for (const VkLayerProperties& Layer : m_Layers)
     {
         if (strcmp(Layer.layerName, LayerName) == 0)
         {
@@ -144,7 +144,7 @@ bool IsExtensionAvailable(const std::vector<VkExtensionProperties>& Extensions, 
 {
     VERIFY_EXPR(ExtensionName != nullptr);
 
-    for (const auto& Extension : Extensions)
+    for (const VkExtensionProperties& Extension : Extensions)
     {
         if (strcmp(Extension.extensionName, ExtensionName) == 0)
             return true;
@@ -162,9 +162,11 @@ bool VulkanInstance::IsExtensionAvailable(const char* ExtensionName) const
 
 bool VulkanInstance::IsExtensionEnabled(const char* ExtensionName) const
 {
-    for (const auto& Extension : m_EnabledExtensions)
+    for (const char* Extension : m_EnabledExtensions)
+    {
         if (strcmp(Extension, ExtensionName) == 0)
             return true;
+    }
 
     return false;
 }
@@ -246,7 +248,7 @@ static VkResult CreateVkInstanceForOpenXR(XrInstance                   xrInstanc
 
 std::shared_ptr<VulkanInstance> VulkanInstance::Create(const CreateInfo& CI)
 {
-    auto Instance = new VulkanInstance{CI};
+    VulkanInstance* Instance = new VulkanInstance{CI};
     return std::shared_ptr<VulkanInstance>{Instance};
 }
 
@@ -264,7 +266,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         // Enumerate available layers
         uint32_t LayerCount = 0;
 
-        auto res = vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
+        VkResult res = vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
         CHECK_VK_ERROR_AND_THROW(res, "Failed to query layer count");
         m_Layers.resize(LayerCount);
         vkEnumerateInstanceLayerProperties(&LayerCount, m_Layers.data());
@@ -277,7 +279,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         if (!m_Layers.empty())
         {
             std::stringstream ss;
-            for (const auto& Layer : m_Layers)
+            for (const VkLayerProperties& Layer : m_Layers)
             {
                 ss << "\n    "
                    << Layer.layerName << ' '
@@ -348,7 +350,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         InstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     }
 
-    for (const auto* ExtName : InstanceExtensions)
+    for (const char* ExtName : InstanceExtensions)
     {
         if (!IsExtensionAvailable(ExtName))
             LOG_ERROR_AND_THROW("Required extension ", ExtName, " is not available");
@@ -358,7 +360,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
     {
         for (uint32_t ext = 0; ext < CI.ExtensionCount; ++ext)
         {
-            const auto* ExtName = CI.ppExtensionNames[ext];
+            const char* ExtName = CI.ppExtensionNames[ext];
             if (ExtName == nullptr)
                 continue;
             if (IsExtensionAvailable(ExtName))
@@ -440,7 +442,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
             m_DebugMode = DebugMode::Report;
         }
 
-        for (const auto* LayerName : ValidationLayerNames)
+        for (const char* LayerName : ValidationLayerNames)
         {
             uint32_t LayerVer = ~0u;
             if (!IsLayerAvailable(LayerName, LayerVer))
@@ -494,7 +496,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
     {
         for (size_t i = 0; i < CI.EnabledLayerCount; ++i)
         {
-            const auto* LayerName = CI.ppEnabledLayerNames[i];
+            const char* LayerName = CI.ppEnabledLayerNames[i];
             if (LayerName == nullptr)
                 return;
             uint32_t LayerVer = 0;
@@ -579,7 +581,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
         // Physical device
         uint32_t PhysicalDeviceCount = 0;
         // Get the number of available physical devices
-        auto err = vkEnumeratePhysicalDevices(m_VkInstance, &PhysicalDeviceCount, nullptr);
+        VkResult err = vkEnumeratePhysicalDevices(m_VkInstance, &PhysicalDeviceCount, nullptr);
         CHECK_VK_ERROR(err, "Failed to get physical device count");
         if (PhysicalDeviceCount == 0)
             LOG_ERROR_AND_THROW("No physical devices found on the system");
@@ -621,7 +623,7 @@ VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const 
         // If an implementation exposes any queue family that supports graphics operations,
         // at least one queue family of at least one physical device exposed by the implementation
         // must support both graphics and compute operations.
-        for (const auto& QueueFamilyProps : QueueFamilyProperties)
+        for (const VkQueueFamilyProperties& QueueFamilyProps : QueueFamilyProperties)
         {
             if ((QueueFamilyProps.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 &&
                 (QueueFamilyProps.queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
@@ -644,7 +646,7 @@ VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const 
     // Prefer discrete GPU.
     if (SelectedPhysicalDevice == VK_NULL_HANDLE)
     {
-        for (auto Device : m_PhysicalDevices)
+        for (VkPhysicalDevice Device : m_PhysicalDevices)
         {
             VkPhysicalDeviceProperties DeviceProps;
             vkGetPhysicalDeviceProperties(Device, &DeviceProps);

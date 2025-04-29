@@ -950,7 +950,7 @@ void PipelineStateVkImpl::DvpVerifySRBResources(const DeviceContextVkImpl* pCtx,
                 {
                     VERIFY_EXPR(res_info->pSignature != nullptr);
                     VERIFY_EXPR(res_info->pSignature->GetDesc().BindingIndex == res_info->SignatureIndex);
-                    const auto* pResourceCache = ResourceCaches[res_info->SignatureIndex];
+                    const ShaderResourceCacheVk* pResourceCache = ResourceCaches[res_info->SignatureIndex];
                     DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", res_info->SignatureIndex, " is null.");
                     res_info->pSignature->DvpValidateCommittedResource(pCtx, ResAttribs, res_info->ResourceIndex, *pResourceCache,
                                                                        pResources->GetShaderName(), m_Desc.Name);

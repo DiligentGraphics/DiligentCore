@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +58,7 @@ QueryVkImpl::~QueryVkImpl()
 
 void QueryVkImpl::DiscardQueries()
 {
-    for (auto& QueryPoolIdx : m_QueryPoolIndex)
+    for (Uint32& QueryPoolIdx : m_QueryPoolIndex)
     {
         if (QueryPoolIdx != QueryManagerVk::InvalidIndex)
         {
@@ -87,7 +87,7 @@ bool QueryVkImpl::AllocateQueries()
     VERIFY_EXPR(m_pQueryMgr != nullptr);
     for (Uint32 i = 0; i < (m_Desc.Type == QUERY_TYPE_DURATION ? Uint32{2} : Uint32{1}); ++i)
     {
-        auto& QueryPoolIdx = m_QueryPoolIndex[i];
+        Uint32& QueryPoolIdx = m_QueryPoolIndex[i];
         VERIFY_EXPR(QueryPoolIdx == QueryManagerVk::InvalidIndex);
 
         QueryPoolIdx = m_pQueryMgr->AllocateQuery(m_Desc.Type);
@@ -127,8 +127,8 @@ bool QueryVkImpl::OnEndQuery(DeviceContextVkImpl* pContext)
     }
 
     VERIFY_EXPR(m_pQueryMgr != nullptr);
-    auto CmdQueueId      = m_pQueryMgr->GetCommandQueueId();
-    m_QueryEndFenceValue = m_pDevice->GetNextFenceValue(CmdQueueId);
+    SoftwareQueueIndex CmdQueueId = m_pQueryMgr->GetCommandQueueId();
+    m_QueryEndFenceValue          = m_pDevice->GetNextFenceValue(CmdQueueId);
 
     return true;
 }
@@ -157,17 +157,17 @@ inline bool GetQueryResults(
     // command executes on a queue. Applications can use fences or events to ensure that a query has
     // already been reset before checking for its results or availability status. Otherwise, a stale
     // value could be returned from a previous use of the query.
-    auto vkRes = LogicalDevice.GetQueryPoolResults(vkQueryPool,
-                                                   QueryIdx,
-                                                   1,                                   // Query Count
-                                                   sizeof(Results[0]) * Results.size(), // Data Size
-                                                   Results.data(),
-                                                   0, // Stride
-                                                   VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+    VkResult vkRes = LogicalDevice.GetQueryPoolResults(vkQueryPool,
+                                                       QueryIdx,
+                                                       1,                                   // Query Count
+                                                       sizeof(Results[0]) * Results.size(), // Data Size
+                                                       Results.data(),
+                                                       0, // Stride
+                                                       VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
 
-    auto DataAvailable = vkRes == VK_SUCCESS;
+    bool DataAvailable = vkRes == VK_SUCCESS;
 
-    constexpr auto IsSingleElementQuery = NumElements == 2;
+    constexpr bool IsSingleElementQuery = NumElements == 2;
     if (IsSingleElementQuery)
     {
         // For single-element queries (timestamp, occlusion, duration, etc.),
@@ -188,10 +188,10 @@ inline bool GetOcclusionQueryData(const VulkanUtilities::VulkanLogicalDevice& Lo
 {
     std::array<uint64_t, 2> Results{};
 
-    const auto DataAvailable = GetQueryResults(LogicalDevice, vkQueryPool, QueryIdx, Results);
+    const bool DataAvailable = GetQueryResults(LogicalDevice, vkQueryPool, QueryIdx, Results);
     if (DataAvailable && pData != nullptr)
     {
-        auto& QueryData = *reinterpret_cast<QueryDataOcclusion*>(pData);
+        QueryDataOcclusion& QueryData = *reinterpret_cast<QueryDataOcclusion*>(pData);
         VERIFY_EXPR(DataSize == sizeof(QueryData));
         QueryData.NumSamples = Results[0];
     }
@@ -207,10 +207,10 @@ inline bool GetBinaryOcclusionQueryData(const VulkanUtilities::VulkanLogicalDevi
 {
     std::array<uint64_t, 2> Results{};
 
-    const auto DataAvailable = GetQueryResults(LogicalDevice, vkQueryPool, QueryIdx, Results);
+    const bool DataAvailable = GetQueryResults(LogicalDevice, vkQueryPool, QueryIdx, Results);
     if (DataAvailable && pData != nullptr)
     {
-        auto& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
+        QueryDataBinaryOcclusion& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
         VERIFY_EXPR(DataSize == sizeof(QueryData));
         QueryData.AnySamplePassed = Results[0] != 0;
     }
@@ -227,10 +227,10 @@ inline bool GetTimestampQueryData(const VulkanUtilities::VulkanLogicalDevice& Lo
 {
     std::array<uint64_t, 2> Results{};
 
-    const auto DataAvailable = GetQueryResults(LogicalDevice, vkQueryPool, QueryIdx, Results);
+    const bool DataAvailable = GetQueryResults(LogicalDevice, vkQueryPool, QueryIdx, Results);
     if (DataAvailable && pData != nullptr)
     {
-        auto& QueryData = *reinterpret_cast<QueryDataTimestamp*>(pData);
+        QueryDataTimestamp& QueryData = *reinterpret_cast<QueryDataTimestamp*>(pData);
         VERIFY_EXPR(DataSize == sizeof(QueryData));
         QueryData.Counter   = Results[0];
         QueryData.Frequency = CounterFrequency;
@@ -249,7 +249,7 @@ inline bool GetDurationQueryData(const VulkanUtilities::VulkanLogicalDevice& Log
     uint64_t StartCounter = 0;
     uint64_t EndCounter   = 0;
 
-    auto DataAvailable = true;
+    bool DataAvailable = true;
     for (Uint32 i = 0; i < 2; ++i)
     {
         std::array<uint64_t, 2> Results{};
@@ -261,7 +261,7 @@ inline bool GetDurationQueryData(const VulkanUtilities::VulkanLogicalDevice& Log
 
     if (DataAvailable && pData != nullptr)
     {
-        auto& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
+        QueryDataDuration& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
         VERIFY_EXPR(DataSize == sizeof(QueryData));
         VERIFY_EXPR(EndCounter >= StartCounter);
         QueryData.Duration  = EndCounter - StartCounter;
@@ -284,12 +284,12 @@ inline bool GetStatisticsQueryData(const VulkanUtilities::VulkanLogicalDevice& L
 
     std::array<Uint64, 12> Results{};
 
-    auto DataAvailable = GetQueryResults(LogicalDevice, vkQueryPool, QueryIdx, Results);
+    bool DataAvailable = GetQueryResults(LogicalDevice, vkQueryPool, QueryIdx, Results);
     if (DataAvailable && pData != nullptr)
     {
-        const auto StageMask = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
+        const VkPipelineStageFlags StageMask = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
 
-        auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
+        QueryDataPipelineStatistics& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
         VERIFY_EXPR(DataSize == sizeof(QueryData));
 
         size_t Idx = 0;
@@ -327,13 +327,13 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
     TQueryBase::CheckQueryDataPtr(pData, DataSize);
 
     DEV_CHECK_ERR(m_pQueryMgr != nullptr, "Requesting data from query that has not been ended or has been invalidated");
-    const auto CmdQueueId          = m_pQueryMgr->GetCommandQueueId();
-    const auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
-    bool       DataAvailable       = false;
+    const SoftwareQueueIndex CmdQueueId          = m_pQueryMgr->GetCommandQueueId();
+    const Uint64             CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
+    bool                     DataAvailable       = false;
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-        auto        vkQueryPool   = m_pQueryMgr->GetQueryPool(m_Desc.Type);
+        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+        VkQueryPool                                 vkQueryPool   = m_pQueryMgr->GetQueryPool(m_Desc.Type);
 
         static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
         switch (m_Desc.Type)

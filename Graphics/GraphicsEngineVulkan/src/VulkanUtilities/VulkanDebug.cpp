@@ -52,7 +52,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
                                                       const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
                                                       void*                                       userData)
 {
-    auto MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+    DEBUG_MESSAGE_SEVERITY MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
     if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
     {
         MsgSeverity = DEBUG_MESSAGE_SEVERITY_ERROR;
@@ -75,7 +75,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
         auto it = g_IgnoreMessages.find(callbackData->pMessageIdName);
         if (it != g_IgnoreMessages.end())
         {
-            const auto PrevMsgCount = it->second.fetch_add(1);
+            const int PrevMsgCount = it->second.fetch_add(1);
             if (MsgSeverity == DEBUG_MESSAGE_SEVERITY_ERROR && PrevMsgCount == 0)
             {
                 LOG_WARNING_MESSAGE("Vulkan Validation error '", callbackData->pMessageIdName, "' is being ignored. This may obfuscate a real issue.");
@@ -114,7 +114,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
     {
         for (uint32_t obj = 0; obj < callbackData->objectCount; ++obj)
         {
-            const auto& Object = callbackData->pObjects[obj];
+            const VkDebugUtilsObjectNameInfoEXT& Object = callbackData->pObjects[obj];
             debugMessage << std::endl
                          << "                 Object[" << obj << "] (" << VkObjectTypeToString(Object.objectType)
                          << "): Handle " << std::hex << "0x" << Object.objectHandle;
@@ -129,7 +129,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
     {
         for (uint32_t l = 0; l < callbackData->cmdBufLabelCount; ++l)
         {
-            const auto& Label = callbackData->pCmdBufLabels[l];
+            const VkDebugUtilsLabelEXT& Label = callbackData->pCmdBufLabels[l];
             debugMessage << std::endl
                          << "                 Label[" << l << "]";
             if (Label.pLabelName != nullptr)
@@ -163,7 +163,7 @@ VkBool32 VKAPI_PTR DebugReportCallback(
     const char*                pMessage,     // a null-terminated string detailing the trigger conditions.
     void*                      pUserData)
 {
-    auto MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+    DEBUG_MESSAGE_SEVERITY MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {
         MsgSeverity = DEBUG_MESSAGE_SEVERITY_ERROR;
@@ -216,7 +216,7 @@ bool SetupDebugUtils(VkInstance                          instance,
     DbgMessenger_CI.pfnUserCallback = DebugMessengerCallback;
     DbgMessenger_CI.pUserData       = pUserData;
 
-    auto err = CreateDebugUtilsMessengerEXT(instance, &DbgMessenger_CI, nullptr, &DbgMessenger);
+    VkResult err = CreateDebugUtilsMessengerEXT(instance, &DbgMessenger_CI, nullptr, &DbgMessenger);
     VERIFY(err == VK_SUCCESS, "Failed to create debug utils messenger");
 
     g_IgnoreMessages.clear();
@@ -260,7 +260,7 @@ bool SetupDebugReport(VkInstance               instance,
     CallbackCI.pfnCallback = DebugReportCallback;
     CallbackCI.pUserData   = pUserData;
 
-    auto err = CreateDebugReportCallbackEXT(instance, &CallbackCI, nullptr, &DbgCallback);
+    VkResult err = CreateDebugReportCallbackEXT(instance, &CallbackCI, nullptr, &DbgCallback);
     VERIFY(err == VK_SUCCESS, "Failed to create debug report callback");
     return err == VK_SUCCESS;
 }
@@ -723,7 +723,7 @@ std::string VkAccessFlagsToString(VkAccessFlags Flags)
     std::string FlagsString;
     while (Flags != 0)
     {
-        auto Bit = Flags & ~(Flags - 1);
+        Uint32 Bit = Flags & ~(Flags - 1);
         if (!FlagsString.empty())
             FlagsString += ", ";
         FlagsString += VkAccessFlagBitToString(static_cast<VkAccessFlagBits>(Bit));

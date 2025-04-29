@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ PipelineStateCacheVkImpl::PipelineStateCacheVkImpl(IReferenceCounters*          
 
     if (CreateInfo.pCacheData != nullptr && CreateInfo.CacheDataSize > sizeof(VkPipelineCacheHeaderVersionOne))
     {
-        const auto& Props = GetDevice()->GetPhysicalDevice().GetProperties();
+        const VkPhysicalDeviceProperties& Props = GetDevice()->GetPhysicalDevice().GetProperties();
 
         VkPipelineCacheHeaderVersionOne HeaderVersion;
         std::memcpy(&HeaderVersion, CreateInfo.pCacheData, sizeof(HeaderVersion));
@@ -85,13 +85,13 @@ void PipelineStateCacheVkImpl::GetData(IDataBlob** ppBlob)
     DEV_CHECK_ERR(ppBlob != nullptr, "ppBlob must not be null");
     *ppBlob = nullptr;
 
-    const auto vkDevice = m_pDevice->GetLogicalDevice().GetVkDevice();
+    const VkDevice vkDevice = m_pDevice->GetLogicalDevice().GetVkDevice();
 
     size_t DataSize = 0;
     if (vkGetPipelineCacheData(vkDevice, m_PipelineStateCache, &DataSize, nullptr) != VK_SUCCESS)
         return;
 
-    auto pDataBlob = DataBlobImpl::Create(DataSize);
+    RefCntAutoPtr<DataBlobImpl> pDataBlob = DataBlobImpl::Create(DataSize);
 
     if (vkGetPipelineCacheData(vkDevice, m_PipelineStateCache, &DataSize, pDataBlob->GetDataPtr()) != VK_SUCCESS)
         return;

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,18 +43,18 @@ namespace GenerateMipsVkHelper
 
 void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
 {
-    auto* pTexVk = TexView.GetTexture<TextureVkImpl>();
+    TextureVkImpl* pTexVk = TexView.GetTexture<TextureVkImpl>();
     if (!pTexVk->IsInKnownState())
     {
         LOG_ERROR_MESSAGE("Unable to generate mips for texture '", pTexVk->GetDesc().Name, "' because the texture state is unknown");
         return;
     }
 
-    const auto  OriginalState  = pTexVk->GetState();
-    const auto  OriginalLayout = pTexVk->GetLayout();
-    const auto  OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OriginalState);
-    const auto& TexDesc        = pTexVk->GetDesc();
-    const auto& ViewDesc       = TexView.GetDesc();
+    const RESOURCE_STATE       OriginalState  = pTexVk->GetState();
+    const VkImageLayout        OriginalLayout = pTexVk->GetLayout();
+    const VkPipelineStageFlags OldStages      = ResourceStateFlagsToVkPipelineStageFlags(OriginalState);
+    const TextureDesc&         TexDesc        = pTexVk->GetDesc();
+    const TextureViewDesc&     ViewDesc       = TexView.GetDesc();
 
     DEV_CHECK_ERR(ViewDesc.NumMipLevels > 1, "Number of mip levels in the view must be greater than 1");
     DEV_CHECK_ERR(OriginalState != RESOURCE_STATE_UNDEFINED,
@@ -62,7 +62,7 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
                   "' which is in RESOURCE_STATE_UNDEFINED state ."
                   "This is not expected in Vulkan backend as textures are transition to a defined state when created.");
 
-    const auto& FmtAttribs = GetTextureFormatAttribs(ViewDesc.Format);
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(ViewDesc.Format);
 
     VkImageSubresourceRange SubresRange{};
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
@@ -94,8 +94,8 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
     SubresRange.baseMipLevel = ViewDesc.MostDetailedMip;
     SubresRange.levelCount   = 1;
 
-    auto&      CmdBuffer = Ctx.GetCommandBuffer();
-    const auto vkImage   = pTexVk->GetVkImage();
+    VulkanUtilities::VulkanCommandBuffer& CmdBuffer = Ctx.GetCommandBuffer();
+    const VkImage                         vkImage   = pTexVk->GetVkImage();
     if (OriginalState != RESOURCE_STATE_COPY_SOURCE)
         CmdBuffer.TransitionImageLayout(vkImage, OriginalLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, SubresRange, OldStages, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
@@ -144,7 +144,7 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
                                         SubresRange, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     }
 
-    const auto AffectedMipLevelLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    const VkImageLayout AffectedMipLevelLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     // All affected mip levels are now in VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL state
     if (AffectedMipLevelLayout != OriginalLayout)
     {

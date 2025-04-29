@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -45,8 +45,8 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
 #define DEVMEM_CHECK_CREATE_INFO(...) \
     LOG_ERROR_AND_THROW("Device memory create info is not valid: ", __VA_ARGS__);
 
-    const auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
-    const auto& LogicalDevice  = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice  = m_pDevice->GetLogicalDevice();
 
     if (MemCI.NumResources == 0)
         DEVMEM_CHECK_CREATE_INFO("Vulkan requires at least one resource to choose memory type");
@@ -57,11 +57,11 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
     uint32_t MemoryTypeBits = ~0u;
     for (Uint32 i = 0; i < MemCI.NumResources; ++i)
     {
-        auto* pResource = MemCI.ppCompatibleResources[i];
+        IDeviceObject* pResource = MemCI.ppCompatibleResources[i];
 
         if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_TextureVk})
         {
-            const auto* pTexVk = pTexture.ConstPtr<TextureVkImpl>();
+            const TextureVkImpl* pTexVk = pTexture.ConstPtr<TextureVkImpl>();
             if (pTexVk->GetDesc().Usage != USAGE_SPARSE)
                 DEVMEM_CHECK_CREATE_INFO("ppCompatibleResources[", i, "] must be created with USAGE_SPARSE");
 
@@ -69,7 +69,7 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
         }
         else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_BufferVk})
         {
-            const auto* pBuffVk = pBuffer.ConstPtr<BufferVkImpl>();
+            const BufferVkImpl* pBuffVk = pBuffer.ConstPtr<BufferVkImpl>();
             if (pBuffVk->GetDesc().Usage != USAGE_SPARSE)
                 DEVMEM_CHECK_CREATE_INFO("ppCompatibleResources[", i, "] must be created with USAGE_SPARSE");
 
@@ -84,7 +84,7 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
     if (MemoryTypeBits == 0)
         DEVMEM_CHECK_CREATE_INFO("ppCompatibleResources contains incompatible resources");
 
-    static constexpr auto InvalidMemoryTypeIndex = VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex;
+    static constexpr uint32_t InvalidMemoryTypeIndex = VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex;
 
     uint32_t MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -99,7 +99,7 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
     MemAlloc.allocationSize  = m_Desc.PageSize;
     MemAlloc.memoryTypeIndex = m_MemoryTypeIndex;
 
-    const auto PageCount = StaticCast<size_t>(MemCI.InitialSize / m_Desc.PageSize);
+    const size_t PageCount = StaticCast<size_t>(MemCI.InitialSize / m_Desc.PageSize);
     m_Pages.reserve(PageCount);
 
     for (size_t i = 0; i < PageCount; ++i)
@@ -117,8 +117,8 @@ Bool DeviceMemoryVkImpl::Resize(Uint64 NewSize)
 {
     DvpVerifyResize(NewSize);
 
-    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-    const auto  NewPageCount  = StaticCast<size_t>(NewSize / m_Desc.PageSize);
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const size_t                                NewPageCount  = StaticCast<size_t>(NewSize / m_Desc.PageSize);
 
     VkMemoryAllocateInfo MemAlloc{};
     MemAlloc.pNext           = nullptr;
@@ -156,18 +156,18 @@ Uint64 DeviceMemoryVkImpl::GetCapacity() const
 
 Bool DeviceMemoryVkImpl::IsCompatible(IDeviceObject* pResource) const
 {
-    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
 
     uint32_t memoryTypeBits = 0;
     if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_TextureVk})
     {
-        const auto* pTexVk = pTexture.ConstPtr<TextureVkImpl>();
-        memoryTypeBits     = LogicalDevice.GetImageMemoryRequirements(pTexVk->GetVkImage()).memoryTypeBits;
+        const TextureVkImpl* pTexVk = pTexture.ConstPtr<TextureVkImpl>();
+        memoryTypeBits              = LogicalDevice.GetImageMemoryRequirements(pTexVk->GetVkImage()).memoryTypeBits;
     }
     else if (RefCntAutoPtr<IBufferVk> pBuffer{pResource, IID_BufferVk})
     {
-        const auto* pBuffVk = pBuffer.ConstPtr<BufferVkImpl>();
-        memoryTypeBits      = LogicalDevice.GetBufferMemoryRequirements(pBuffVk->GetVkBuffer()).memoryTypeBits;
+        const BufferVkImpl* pBuffVk = pBuffer.ConstPtr<BufferVkImpl>();
+        memoryTypeBits              = LogicalDevice.GetBufferMemoryRequirements(pBuffVk->GetVkBuffer()).memoryTypeBits;
     }
     else
     {
@@ -178,7 +178,7 @@ Bool DeviceMemoryVkImpl::IsCompatible(IDeviceObject* pResource) const
 
 DeviceMemoryRangeVk DeviceMemoryVkImpl::GetRange(Uint64 Offset, Uint64 Size) const
 {
-    const auto PageIdx = static_cast<size_t>(Offset / m_Desc.PageSize);
+    const size_t PageIdx = static_cast<size_t>(Offset / m_Desc.PageSize);
 
     DeviceMemoryRangeVk Range{};
     if (PageIdx >= m_Pages.size())
@@ -187,7 +187,7 @@ DeviceMemoryRangeVk DeviceMemoryVkImpl::GetRange(Uint64 Offset, Uint64 Size) con
         return Range;
     }
 
-    const auto OffsetInPage = Offset % m_Desc.PageSize;
+    const Uint64 OffsetInPage = Offset % m_Desc.PageSize;
     if (OffsetInPage + Size > m_Desc.PageSize)
     {
         DEV_ERROR("DeviceMemoryVkImpl::GetRange(): Offset and Size must be inside a single page");

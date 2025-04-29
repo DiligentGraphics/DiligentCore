@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,7 +53,7 @@ void QueryManagerVk::QueryPoolInfo::Init(const VulkanUtilities::VulkanLogicalDev
 
 QueryManagerVk::QueryPoolInfo::~QueryPoolInfo()
 {
-    auto OutstandingQueries = GetQueryCount() - (m_AvailableQueries.size() + m_StaleQueries.size());
+    size_t OutstandingQueries = GetQueryCount() - (m_AvailableQueries.size() + m_StaleQueries.size());
     if (OutstandingQueries == 1)
     {
         LOG_ERROR_MESSAGE("One query of type ", GetQueryTypeString(m_Type),
@@ -101,7 +101,7 @@ Uint32 QueryManagerVk::QueryPoolInfo::ResetStaleQueries(const VulkanUtilities::V
     if (m_StaleQueries.empty())
         return 0;
 
-    const auto& EnabledExtFeatures = LogicalDevice.GetEnabledExtFeatures();
+    const VulkanUtilities::VulkanLogicalDevice::ExtensionFeatures& EnabledExtFeatures = LogicalDevice.GetEnabledExtFeatures();
 
     auto ResetQueries = [&](uint32_t FirstQuery, uint32_t QueryCount) //
     {
@@ -133,7 +133,7 @@ Uint32 QueryManagerVk::QueryPoolInfo::ResetStaleQueries(const VulkanUtilities::V
     }
     else
     {
-        for (auto& StaleQuery : m_StaleQueries)
+        for (Uint32& StaleQuery : m_StaleQueries)
         {
             ResetQueries(StaleQuery, 1);
             m_AvailableQueries.push_back(StaleQuery);
@@ -150,23 +150,23 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
                                SoftwareQueueIndex  CmdQueueInd) :
     m_CommandQueueId{CmdQueueInd}
 {
-    const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
-    const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
+    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
 
-    auto timestampPeriod = PhysicalDevice.GetProperties().limits.timestampPeriod;
-    m_CounterFrequency   = static_cast<Uint64>(1000000000.0 / timestampPeriod);
+    float timestampPeriod = PhysicalDevice.GetProperties().limits.timestampPeriod;
+    m_CounterFrequency    = static_cast<Uint64>(1000000000.0 / timestampPeriod);
 
-    const auto  QueueFamilyIndex       = HardwareQueueIndex{pRenderDeviceVk->GetCommandQueue(CmdQueueInd).GetQueueFamilyIndex()};
-    const auto& EnabledFeatures        = LogicalDevice.GetEnabledFeatures();
-    const auto  StageMask              = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
-    const auto  QueueFlags             = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].queueFlags;
-    const auto& DeviceInfo             = pRenderDeviceVk->GetDeviceInfo();
-    const bool  IsTransferQueue        = (QueueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT)) == 0;
-    const bool  QueueSupportsTimestamp = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].timestampValidBits > 0;
+    const HardwareQueueIndex        QueueFamilyIndex{pRenderDeviceVk->GetCommandQueue(CmdQueueInd).GetQueueFamilyIndex()};
+    const VkPhysicalDeviceFeatures& EnabledFeatures        = LogicalDevice.GetEnabledFeatures();
+    const VkPipelineStageFlags      StageMask              = LogicalDevice.GetSupportedStagesMask(QueueFamilyIndex);
+    const VkQueueFlags              QueueFlags             = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].queueFlags;
+    const RenderDeviceInfo&         DeviceInfo             = pRenderDeviceVk->GetDeviceInfo();
+    const bool                      IsTransferQueue        = (QueueFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT)) == 0;
+    const bool                      QueueSupportsTimestamp = PhysicalDevice.GetQueueProperties()[QueueFamilyIndex].timestampValidBits > 0;
 
     for (Uint32 query_type = QUERY_TYPE_UNDEFINED + 1; query_type < QUERY_TYPE_NUM_TYPES; ++query_type)
     {
-        const auto QueryType = static_cast<QUERY_TYPE>(query_type);
+        const QUERY_TYPE QueryType = static_cast<QUERY_TYPE>(query_type);
         if ((QueryType == QUERY_TYPE_OCCLUSION && !EnabledFeatures.occlusionQueryPrecise) ||
             (QueryType == QUERY_TYPE_PIPELINE_STATISTICS && !EnabledFeatures.pipelineStatisticsQuery))
             continue;
@@ -245,7 +245,7 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
         if (QueryType == QUERY_TYPE_DURATION)
             QueryPoolCI.queryCount *= 2;
 
-        auto& PoolInfo = m_Pools[QueryType];
+        QueryPoolInfo& PoolInfo = m_Pools[QueryType];
         PoolInfo.Init(LogicalDevice, QueryPoolCI, QueryType);
         VERIFY_EXPR(!PoolInfo.IsNull() && PoolInfo.GetQueryCount() == QueryPoolCI.queryCount && PoolInfo.GetType() == QueryType);
     }
@@ -257,7 +257,7 @@ QueryManagerVk::~QueryManagerVk()
     QueryUsageSS << "Vulkan query manager peak usage:";
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
-        auto& PoolInfo = m_Pools[QueryType];
+        QueryPoolInfo& PoolInfo = m_Pools[QueryType];
         if (PoolInfo.IsNull())
             continue;
 
@@ -282,7 +282,7 @@ void QueryManagerVk::DiscardQuery(QUERY_TYPE Type, Uint32 Index)
 Uint32 QueryManagerVk::ResetStaleQueries(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, VulkanUtilities::VulkanCommandBuffer& CmdBuff)
 {
     Uint32 NumQueriesReset = 0;
-    for (auto& PoolInfo : m_Pools)
+    for (QueryPoolInfo& PoolInfo : m_Pools)
     {
         NumQueriesReset += PoolInfo.ResetStaleQueries(LogicalDevice, CmdBuff);
     }

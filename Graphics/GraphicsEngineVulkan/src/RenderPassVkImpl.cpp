@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,14 +42,14 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                                    bool                  IsDeviceInternal) :
     TRenderPassBase{pRefCounters, pDevice, Desc, IsDeviceInternal}
 {
-    const auto& ExtFeats = pDevice->GetLogicalDevice().GetEnabledExtFeatures();
+    const VulkanUtilities::VulkanLogicalDevice::ExtensionFeatures& ExtFeats = pDevice->GetLogicalDevice().GetEnabledExtFeatures();
 
     size_t RenderPassVersion = 1;
     if (ExtFeats.ShadingRate.attachmentFragmentShadingRate)
     {
         for (Uint32 i = 0; i < m_Desc.SubpassCount && RenderPassVersion < 2; ++i)
         {
-            const auto& Subpass{m_Desc.pSubpasses[i]};
+            const SubpassDesc& Subpass{m_Desc.pSubpasses[i]};
             if (Subpass.pShadingRateAttachment != nullptr)
                 RenderPassVersion = 2;
         }
@@ -117,10 +117,10 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
     using AttachmentReferenceType   = std::conditional_t<RPVersion == 2, VkAttachmentReference2, VkAttachmentReference>;
     using SubpassDependencyType     = std::conditional_t<RPVersion == 2, VkSubpassDependency2, VkSubpassDependency>;
 
-    const auto& LogicalDevice         = m_pDevice->GetLogicalDevice();
-    const auto& ExtFeats              = LogicalDevice.GetEnabledExtFeatures();
-    const bool  ShadingRateEnabled    = ExtFeats.ShadingRate.attachmentFragmentShadingRate != VK_FALSE;
-    const bool  FragDensityMapEnabled = ExtFeats.FragmentDensityMap.fragmentDensityMap != VK_FALSE;
+    const VulkanUtilities::VulkanLogicalDevice&                    LogicalDevice         = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::VulkanLogicalDevice::ExtensionFeatures& ExtFeats              = LogicalDevice.GetEnabledExtFeatures();
+    const bool                                                     ShadingRateEnabled    = ExtFeats.ShadingRate.attachmentFragmentShadingRate != VK_FALSE;
+    const bool                                                     FragDensityMapEnabled = ExtFeats.FragmentDensityMap.fragmentDensityMap != VK_FALSE;
 
     RenderPassCIType RenderPassCI{};
     RenderPassCI.sType = RPVersion == 2 ? VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2 : VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -130,8 +130,8 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
     std::vector<AttachmentDescriptionType> vkAttachments(m_Desc.AttachmentCount);
     for (Uint32 i = 0; i < m_Desc.AttachmentCount; ++i)
     {
-        const auto& Attachment   = m_Desc.pAttachments[i];
-        auto&       vkAttachment = vkAttachments[i];
+        const RenderPassAttachmentDesc& Attachment   = m_Desc.pAttachments[i];
+        AttachmentDescriptionType&      vkAttachment = vkAttachments[i];
 
         InitAttachmentDescription(vkAttachment);
         vkAttachment.flags          = 0;
@@ -152,7 +152,7 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
     Uint32 TotalShadingRateAttachmentsCount = 0;
     for (Uint32 i = 0; i < m_Desc.SubpassCount; ++i)
     {
-        const auto& Subpass = m_Desc.pSubpasses[i];
+        const SubpassDesc& Subpass = m_Desc.pSubpasses[i];
         TotalAttachmentReferencesCount += Subpass.InputAttachmentCount;
         TotalAttachmentReferencesCount += Subpass.RenderTargetAttachmentCount;
         if (Subpass.pResolveAttachments != nullptr)
@@ -180,8 +180,8 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
     std::vector<SubpassDescriptionType> vkSubpasses(m_Desc.SubpassCount);
     for (Uint32 i = 0, SRInd = 0; i < m_Desc.SubpassCount; ++i)
     {
-        const auto& SubpassDesc = m_Desc.pSubpasses[i];
-        auto&       vkSubpass   = vkSubpasses[i];
+        const SubpassDesc&      SubpassDesc = m_Desc.pSubpasses[i];
+        SubpassDescriptionType& vkSubpass   = vkSubpasses[i];
 
         InitSubpassDescription(vkSubpass);
         vkSubpass.flags             = 0;
@@ -194,7 +194,7 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
                 return;
             for (Uint32 attachment = 0; attachment < NumAttachments; ++attachment)
             {
-                const auto& SrcAttachmentRef = pSrcAttachments[attachment];
+                const AttachmentReference& SrcAttachmentRef = pSrcAttachments[attachment];
                 if (SrcAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
                     AttachmentStates[SrcAttachmentRef.AttachmentIndex] |= SrcAttachmentRef.State;
             }
@@ -205,16 +205,16 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
 
         auto ConvertAttachmentReferences = [&](Uint32 NumAttachments, const AttachmentReference* pSrcAttachments, VkImageAspectFlags AspectMask) //
         {
-            auto* pCurrVkAttachmentReference = &vkAttachmentReferences[CurrAttachmentReferenceInd];
+            AttachmentReferenceType* pCurrVkAttachmentReference = &vkAttachmentReferences[CurrAttachmentReferenceInd];
             for (Uint32 attachment = 0; attachment < NumAttachments; ++attachment, ++CurrAttachmentReferenceInd)
             {
-                const auto& SrcAttachmentRef = pSrcAttachments[attachment];
-                auto&       DstAttachmentRef = vkAttachmentReferences[CurrAttachmentReferenceInd];
+                const AttachmentReference& SrcAttachmentRef = pSrcAttachments[attachment];
+                AttachmentReferenceType&   DstAttachmentRef = vkAttachmentReferences[CurrAttachmentReferenceInd];
 
                 InitAttachmentReference(DstAttachmentRef, AspectMask);
                 DstAttachmentRef.attachment = SrcAttachmentRef.AttachmentIndex;
 
-                auto State = SrcAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED ?
+                RESOURCE_STATE State = SrcAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED ?
                     AttachmentStates[SrcAttachmentRef.AttachmentIndex] :
                     SrcAttachmentRef.State;
                 if (PlatformMisc::CountOneBits(State) >= 2)
@@ -269,8 +269,8 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
         {
             if (ShadingRateEnabled)
             {
-                const auto& SRAttachment   = *SubpassDesc.pShadingRateAttachment;
-                auto&       vkSRAttachment = vkShadingRate[SRInd++];
+                const ShadingRateAttachment&            SRAttachment   = *SubpassDesc.pShadingRateAttachment;
+                VkFragmentShadingRateAttachmentInfoKHR& vkSRAttachment = vkShadingRate[SRInd++];
 
                 SetSubpassDescriptionNext(vkSubpass, &vkSRAttachment);
                 vkSRAttachment.pNext                          = nullptr;
@@ -290,7 +290,7 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
     {
         for (Uint32 i = 0; i < m_Desc.SubpassCount; ++i)
         {
-            const auto& SubpassDesc = m_Desc.pSubpasses[i];
+            const SubpassDesc& SubpassDesc = m_Desc.pSubpasses[i];
 
             if (SubpassDesc.pShadingRateAttachment == nullptr)
                 LOG_ERROR_AND_THROW("Vk_EXT_fragment_density_map extension requires that shading rate attachment is specified for all subpasses");
@@ -308,8 +308,8 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
     std::vector<SubpassDependencyType> vkDependencies(m_Desc.DependencyCount);
     for (Uint32 i = 0; i < m_Desc.DependencyCount; ++i)
     {
-        const auto& DependencyDesc = m_Desc.pDependencies[i];
-        auto&       vkDependency   = vkDependencies[i];
+        const SubpassDependencyDesc& DependencyDesc = m_Desc.pDependencies[i];
+        SubpassDependencyType&       vkDependency   = vkDependencies[i];
 
         InitSubpassDependency(vkDependency);
         vkDependency.srcSubpass    = DependencyDesc.SrcSubpass;

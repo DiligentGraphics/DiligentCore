@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,15 +51,15 @@ FramebufferVkImpl::FramebufferVkImpl(IReferenceCounters*    pRefCounters,
     FramebufferCI.pNext = nullptr;
     FramebufferCI.flags = 0;
 
-    auto* pRenderPassVkImpl  = ClassPtrCast<RenderPassVkImpl>(m_Desc.pRenderPass);
-    FramebufferCI.renderPass = pRenderPassVkImpl->GetVkRenderPass();
+    RenderPassVkImpl* pRenderPassVkImpl = ClassPtrCast<RenderPassVkImpl>(m_Desc.pRenderPass);
+    FramebufferCI.renderPass            = pRenderPassVkImpl->GetVkRenderPass();
 
     FramebufferCI.attachmentCount = m_Desc.AttachmentCount;
 
     std::vector<VkImageView> vkImgViews(m_Desc.AttachmentCount);
     for (Uint32 i = 0; i < m_Desc.AttachmentCount; ++i)
     {
-        if (auto* pView = m_Desc.ppAttachments[i])
+        if (ITextureView* pView = m_Desc.ppAttachments[i])
         {
             vkImgViews[i] = ClassPtrCast<TextureViewVkImpl>(pView)->GetVulkanImageView();
         }
@@ -70,7 +70,7 @@ FramebufferVkImpl::FramebufferVkImpl(IReferenceCounters*    pRefCounters,
     FramebufferCI.height = m_Desc.Height;
     FramebufferCI.layers = m_Desc.NumArraySlices;
 
-    const auto& LogicalDevice = pDevice->GetLogicalDevice();
+    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = pDevice->GetLogicalDevice();
 
     m_VkFramebuffer = LogicalDevice.CreateFramebuffer(FramebufferCI, m_Desc.Name);
     if (!m_VkFramebuffer)

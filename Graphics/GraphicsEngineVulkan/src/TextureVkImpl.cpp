@@ -46,7 +46,8 @@ VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const 
     const bool                  IsMemoryless         = (Desc.MiscFlags & MISC_TEXTURE_FLAG_MEMORYLESS) != 0;
     const TextureFormatAttribs& FmtAttribs           = GetTextureFormatAttribs(Desc.Format);
     const bool                  ImageView2DSupported = !Desc.Is3D() || pRenderDeviceVk->GetAdapterInfo().Texture.TextureView2DOn3DSupported;
-    const auto&                 ExtFeatures          = pRenderDeviceVk->GetLogicalDevice().GetEnabledExtFeatures();
+
+    const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& ExtFeatures = pRenderDeviceVk->GetLogicalDevice().GetEnabledExtFeatures();
 
     VkImageCreateInfo ImageCI = {};
 

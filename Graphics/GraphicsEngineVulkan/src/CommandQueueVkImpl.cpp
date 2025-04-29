@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -136,9 +136,9 @@ __forceinline void SyncPointVk::GetSemaphores(std::vector<VkSemaphore>& Semaphor
 
 __forceinline SyncPointVkPtr CommandQueueVkImpl::CreateSyncPoint(Uint64 dbgValue)
 {
-    auto* pAllocator = &m_SyncPointAllocator;
-    void* ptr        = pAllocator->Allocate(SyncPointVk::SizeOf(m_NumCommandQueues), "SyncPointVk", __FILE__, __LINE__);
-    auto  Deleter    = [pAllocator](SyncPointVk* ptr) //
+    FixedBlockMemoryAllocator* pAllocator = &m_SyncPointAllocator;
+    void*                      ptr        = pAllocator->Allocate(SyncPointVk::SizeOf(m_NumCommandQueues), "SyncPointVk", __FILE__, __LINE__);
+    auto                       Deleter    = [pAllocator](SyncPointVk* ptr) //
     {
         ptr->~SyncPointVk();
         pAllocator->Free(ptr);
@@ -154,7 +154,7 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
     // Increment the value before submitting the buffer to be overly safe
     const uint64_t FenceValue = m_NextFenceValue.fetch_add(1);
 
-    auto NewSyncPoint = CreateSyncPoint(FenceValue);
+    SyncPointVkPtr NewSyncPoint = CreateSyncPoint(FenceValue);
 
     m_TempSignalSemaphores.clear();
     NewSyncPoint->GetSemaphores(m_TempSignalSemaphores);
@@ -186,7 +186,7 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& InSubmitInfo)
         1 :
         0;
 
-    auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, NewSyncPoint->GetFence());
+    VkResult err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, NewSyncPoint->GetFence());
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
     (void)err;
 
@@ -226,7 +226,7 @@ Uint64 CommandQueueVkImpl::WaitForIdle()
     std::lock_guard<std::mutex> QueueGuard{m_QueueMutex};
 
     // Update last completed fence value to unlock all waiting events.
-    const auto FenceValue = m_NextFenceValue.fetch_add(1);
+    const Uint64 FenceValue = m_NextFenceValue.fetch_add(1);
 
     vkQueueWaitIdle(m_VkQueue);
     // For some reason after idling the queue not all fences are signaled
@@ -247,7 +247,7 @@ void CommandQueueVkImpl::EnqueueSignalFence(VkFence vkFence)
 
     std::lock_guard<std::mutex> QueueGuard{m_QueueMutex};
 
-    auto err = vkQueueSubmit(m_VkQueue, 0, nullptr, vkFence);
+    VkResult err = vkQueueSubmit(m_VkQueue, 0, nullptr, vkFence);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit fence signal command to the command queue");
     (void)err;
 }
@@ -279,7 +279,7 @@ void CommandQueueVkImpl::InternalSignalSemaphore(VkSemaphore vkTimelineSemaphore
     SubmitInfo.signalSemaphoreCount = 1;
     SubmitInfo.pSignalSemaphores    = &vkTimelineSemaphore;
 
-    auto err = vkQueueSubmit(m_VkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
+    VkResult err = vkQueueSubmit(m_VkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit timeline semaphore signal command to the command queue");
     (void)err;
 }
@@ -297,7 +297,7 @@ Uint64 CommandQueueVkImpl::BindSparse(const VkBindSparseInfo& InBindInfo)
     // Increment the value before submitting the buffer to be overly safe
     const uint64_t FenceValue = m_NextFenceValue.fetch_add(1);
 
-    auto NewSyncPoint = CreateSyncPoint(FenceValue);
+    SyncPointVkPtr NewSyncPoint = CreateSyncPoint(FenceValue);
 
     m_TempSignalSemaphores.clear();
     NewSyncPoint->GetSemaphores(m_TempSignalSemaphores);
@@ -322,7 +322,7 @@ Uint64 CommandQueueVkImpl::BindSparse(const VkBindSparseInfo& InBindInfo)
     BindInfo.signalSemaphoreCount = static_cast<Uint32>(m_TempSignalSemaphores.size());
     BindInfo.pSignalSemaphores    = m_TempSignalSemaphores.data();
 
-    auto err = vkQueueBindSparse(m_VkQueue, 1, &BindInfo, NewSyncPoint->GetFence());
+    VkResult err = vkQueueBindSparse(m_VkQueue, 1, &BindInfo, NewSyncPoint->GetFence());
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit sparse bind commands to the command queue");
     (void)err;
 
