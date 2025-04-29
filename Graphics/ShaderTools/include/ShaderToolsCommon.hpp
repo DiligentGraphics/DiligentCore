@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -199,7 +199,7 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
 
     size_t AddMember(const ShaderCodeVariableDesc& Member)
     {
-        const auto idx = Members.size();
+        const size_t idx = Members.size();
         Members.emplace_back(Member);
         NumMembers = static_cast<Uint32>(Members.size());
         pMembers   = Members.data();
@@ -208,7 +208,7 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
 
     size_t AddMember(ShaderCodeVariableDescX&& Member)
     {
-        const auto idx = Members.size();
+        const size_t idx = Members.size();
         Members.emplace_back(std::move(Member));
         NumMembers = static_cast<Uint32>(Members.size());
         pMembers   = Members.data();
@@ -248,7 +248,7 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
     ShaderCodeVariableDescX* FindMember(const char* MemberName)
     {
         VERIFY_EXPR(MemberName != nullptr);
-        for (auto& Member : Members)
+        for (ShaderCodeVariableDescX& Member : Members)
         {
             if (strcmp(Member.Name, MemberName) == 0)
                 return &Member;
@@ -262,13 +262,13 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
             return;
 
         Allocator.AddSpace<ShaderCodeVariableDesc>(Members.size());
-        for (const auto& Member : Members)
+        for (const ShaderCodeVariableDescX& Member : Members)
         {
             Allocator.AddSpaceForString(Member.Name);
             Allocator.AddSpaceForString(Member.TypeName);
         }
 
-        for (const auto& Member : Members)
+        for (const ShaderCodeVariableDescX& Member : Members)
             ReserveSpaceForMembers(Allocator, Member.Members);
     }
 
@@ -277,7 +277,7 @@ struct ShaderCodeVariableDescX : ShaderCodeVariableDesc
         if (Members.empty())
             return nullptr;
 
-        auto* pMembers = Allocator.ConstructArray<ShaderCodeVariableDesc>(Members.size());
+        ShaderCodeVariableDesc* pMembers = Allocator.ConstructArray<ShaderCodeVariableDesc>(Members.size());
         for (size_t i = 0; i < Members.size(); ++i)
         {
             pMembers[i]          = Members[i];
@@ -313,7 +313,7 @@ struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
 
     size_t AddVariable(const ShaderCodeVariableDesc& Var)
     {
-        const auto idx = Variables.size();
+        const size_t idx = Variables.size();
         Variables.emplace_back(Var);
         NumVariables = static_cast<Uint32>(Variables.size());
         pVariables   = Variables.data();
@@ -322,7 +322,7 @@ struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
 
     size_t AddVariable(ShaderCodeVariableDescX&& Var)
     {
-        const auto idx = Variables.size();
+        const size_t idx = Variables.size();
         Variables.emplace_back(std::move(Var));
         NumVariables = static_cast<Uint32>(Variables.size());
         pVariables   = Variables.data();
@@ -366,7 +366,7 @@ struct ShaderCodeBufferDescX : ShaderCodeBufferDesc
         Allocator.Reserve();
         std::unique_ptr<void, STDDeleterRawMem<void>> DataBuffer{Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
 
-        auto* pRefl = Allocator.ConstructArray<ShaderCodeBufferDesc>(Size);
+        ShaderCodeBufferDesc* pRefl = Allocator.ConstructArray<ShaderCodeBufferDesc>(Size);
         VERIFY_EXPR(pRefl == DataBuffer.get());
         for (auto Refl = RangeStart; Refl != RangeEnd; ++Refl)
             *(pRefl++) = Refl->MakeCopy(Allocator);

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -246,8 +246,8 @@ void LogCompilerError(const char* DebugOutputMessage,
 
     if (ppCompilerOutput != nullptr)
     {
-        auto  pOutputDataBlob = DataBlobImpl::Create(SourceCodeLen + 1 + ErrorLog.length() + 1);
-        char* DataPtr         = pOutputDataBlob->GetDataPtr<char>();
+        RefCntAutoPtr<DataBlobImpl> pOutputDataBlob = DataBlobImpl::Create(SourceCodeLen + 1 + ErrorLog.length() + 1);
+        char*                       DataPtr         = pOutputDataBlob->GetDataPtr<char>();
         memcpy(DataPtr, ErrorLog.data(), ErrorLog.length() + 1);
         memcpy(DataPtr + ErrorLog.length() + 1, ShaderSource, SourceCodeLen + 1);
         pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
@@ -267,7 +267,7 @@ std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Sh
     Shader.setAutoMapLocations(true);
     TBuiltInResource Resources = InitResources();
 
-    auto ParseResult = pIncluder != nullptr ?
+    bool ParseResult = pIncluder != nullptr ?
         Shader.parse(&Resources, 100, shProfile, false, false, messages, *pIncluder) :
         Shader.parse(&Resources, 100, shProfile, false, false, messages);
     if (!ParseResult)
@@ -316,9 +316,9 @@ public:
             return nullptr;
         }
 
-        auto pFileData = DataBlobImpl::Create();
+        RefCntAutoPtr<DataBlobImpl> pFileData = DataBlobImpl::Create();
         pSourceStream->ReadBlob(pFileData);
-        auto* pNewInclude =
+        IncludeResult* pNewInclude =
             new IncludeResult{
                 headerName,
                 pFileData->GetConstDataPtr<char>(),
@@ -449,7 +449,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     Shader.setEntryPoint(ShaderCI.EntryPoint);
     Shader.setEnvTargetHlslFunctionality1();
 
-    const auto SourceData = ReadShaderSourceFile(ShaderCI);
+    const ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
 
     std::string Preamble;
     if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0)
@@ -480,14 +480,14 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 
     IncluderImpl Includer{ShaderCI.pShaderSourceStreamFactory};
 
-    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceData.Source, SourceData.SourceLength, true, shProfile, ppCompilerOutput);
+    std::vector<unsigned int> SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceData.Source, SourceData.SourceLength, true, shProfile, ppCompilerOutput);
     if (SPIRV.empty())
         return SPIRV;
 
 #ifdef USE_SPIRV_TOOLS
     // SPIR-V bytecode generated from HLSL must be legalized to
     // turn it into a valid vulkan SPIR-V shader.
-    auto LegalizedSPIRV = OptimizeSPIRV(SPIRV, SpirvVersionToSpvTargetEnv(Version), SPIRV_OPTIMIZATION_FLAG_LEGALIZATION | SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
+    std::vector<uint32_t> LegalizedSPIRV = OptimizeSPIRV(SPIRV, SpirvVersionToSpvTargetEnv(Version), SPIRV_OPTIMIZATION_FLAG_LEGALIZATION | SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
     if (!LegalizedSPIRV.empty())
     {
         return LegalizedSPIRV;
@@ -529,12 +529,12 @@ std::vector<unsigned int> GLSLtoSPIRV(const GLSLtoSPIRVAttribs& Attribs)
 
     IncluderImpl Includer{Attribs.pShaderSourceStreamFactory};
 
-    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, Attribs.ShaderSource, Attribs.SourceCodeLen, Attribs.AssignBindings, shProfile, Attribs.ppCompilerOutput);
+    std::vector<unsigned int> SPIRV = CompileShaderInternal(Shader, messages, &Includer, Attribs.ShaderSource, Attribs.SourceCodeLen, Attribs.AssignBindings, shProfile, Attribs.ppCompilerOutput);
     if (SPIRV.empty())
         return SPIRV;
 
 #ifdef USE_SPIRV_TOOLS
-    auto OptimizedSPIRV = OptimizeSPIRV(SPIRV, SpirvVersionToSpvTargetEnv(Attribs.Version), SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
+    std::vector<uint32_t> OptimizedSPIRV = OptimizeSPIRV(SPIRV, SpirvVersionToSpvTargetEnv(Attribs.Version), SPIRV_OPTIMIZATION_FLAG_PERFORMANCE);
     if (!OptimizedSPIRV.empty())
     {
         return OptimizedSPIRV;

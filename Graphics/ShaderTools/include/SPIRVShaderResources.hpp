@@ -194,7 +194,7 @@ public:
     const SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n) const noexcept
     {
         VERIFY(n < m_NumShaderStageInputs, "Shader stage input index (", n, ") is out of range. Total input count: ", m_NumShaderStageInputs);
-        auto* ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
+        const SPIRVShaderResourceAttribs* ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
         return reinterpret_cast<const SPIRVShaderStageInputAttribs*>(ResourceMemoryEnd)[n];
     }
 
@@ -256,55 +256,55 @@ public:
     {
         for (Uint32 n = 0; n < GetNumUBs(); ++n)
         {
-            const auto& UB = GetUB(n);
+            const SPIRVShaderResourceAttribs& UB = GetUB(n);
             HandleUB(UB, n);
         }
 
         for (Uint32 n = 0; n < GetNumSBs(); ++n)
         {
-            const auto& SB = GetSB(n);
+            const SPIRVShaderResourceAttribs& SB = GetSB(n);
             HandleSB(SB, n);
         }
 
         for (Uint32 n = 0; n < GetNumImgs(); ++n)
         {
-            const auto& Img = GetImg(n);
+            const SPIRVShaderResourceAttribs& Img = GetImg(n);
             HandleImg(Img, n);
         }
 
         for (Uint32 n = 0; n < GetNumSmpldImgs(); ++n)
         {
-            const auto& SmplImg = GetSmpldImg(n);
+            const SPIRVShaderResourceAttribs& SmplImg = GetSmpldImg(n);
             HandleSmplImg(SmplImg, n);
         }
 
         for (Uint32 n = 0; n < GetNumACs(); ++n)
         {
-            const auto& AC = GetAC(n);
+            const SPIRVShaderResourceAttribs& AC = GetAC(n);
             HandleAC(AC, n);
         }
 
         for (Uint32 n = 0; n < GetNumSepSmplrs(); ++n)
         {
-            const auto& SepSmpl = GetSepSmplr(n);
+            const SPIRVShaderResourceAttribs& SepSmpl = GetSepSmplr(n);
             HandleSepSmpl(SepSmpl, n);
         }
 
         for (Uint32 n = 0; n < GetNumSepImgs(); ++n)
         {
-            const auto& SepImg = GetSepImg(n);
+            const SPIRVShaderResourceAttribs& SepImg = GetSepImg(n);
             HandleSepImg(SepImg, n);
         }
 
         for (Uint32 n = 0; n < GetNumInptAtts(); ++n)
         {
-            const auto& InptAtt = GetInptAtt(n);
+            const SPIRVShaderResourceAttribs& InptAtt = GetInptAtt(n);
             HandleInptAtt(InptAtt, n);
         }
 
         for (Uint32 n = 0; n < GetNumAccelStructs(); ++n)
         {
-            const auto& AccelStruct = GetAccelStruct(n);
+            const SPIRVShaderResourceAttribs& AccelStruct = GetAccelStruct(n);
             HandleAccelStruct(AccelStruct, n);
         }
 
@@ -316,7 +316,7 @@ public:
     {
         for (Uint32 n = 0; n < GetTotalResources(); ++n)
         {
-            const auto& Res = GetResource(n);
+            const SPIRVShaderResourceAttribs& Res = GetResource(n);
             Handler(Res, n);
         }
     }

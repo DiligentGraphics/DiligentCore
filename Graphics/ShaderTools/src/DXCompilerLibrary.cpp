@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ float4 main() : SV_Target0
 
             CComPtr<IDxcOperationResult> pdxcResult;
 
-            auto hr = pdxcCompiler->Compile(
+            HRESULT hr = pdxcCompiler->Compile(
                 pSourceBlob,
                 L"",
                 L"main",

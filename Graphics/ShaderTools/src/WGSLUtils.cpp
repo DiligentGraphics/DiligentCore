@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -283,9 +283,9 @@ std::string RamapWGSLResourceBindings(const std::string&         WGSL,
     tint::ast::transform::BindingRemapper::BindingPoints BindingPoints;
 
     tint::inspector::Inspector Inspector{Program};
-    for (auto& EntryPoint : Inspector.GetEntryPoints())
+    for (tint::inspector::EntryPoint& EntryPoint : Inspector.GetEntryPoints())
     {
-        for (auto& Binding : Inspector.GetResourceBindings(EntryPoint.name))
+        for (tint::inspector::ResourceBinding& Binding : Inspector.GetResourceBindings(EntryPoint.name))
         {
             Uint32 ArrayIndex = 0;
 
@@ -297,7 +297,7 @@ std::string RamapWGSLResourceBindings(const std::string&         WGSL,
 
             if (DstBindigIt == ResMapping.end())
             {
-                const auto AltName = GetWGSLResourceAlternativeName(Program, Binding);
+                const std::string AltName = GetWGSLResourceAlternativeName(Program, Binding);
                 if (!AltName.empty())
                 {
                     DstBindigIt = ResMapping.find(AltName);
@@ -310,7 +310,7 @@ std::string RamapWGSLResourceBindings(const std::string&         WGSL,
 
             if (DstBindigIt != ResMapping.end())
             {
-                const auto& DstBindig = DstBindigIt->second;
+                const WGSLResourceBindingInfo& DstBindig = DstBindigIt->second;
                 BindingPoints.emplace(tint::ast::transform::BindingPoint{Binding.bind_group, Binding.binding}, tint::ast::transform::BindingPoint{DstBindig.Group, DstBindig.Index + ArrayIndex});
             }
             else

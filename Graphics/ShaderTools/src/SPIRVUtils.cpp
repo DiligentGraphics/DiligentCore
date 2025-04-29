@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -129,7 +129,7 @@ std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&            
             auto FormatIt = ImageFormats.find(HashMapStringKey{Img.name.c_str()});
             if (FormatIt != ImageFormats.end())
             {
-                auto spvFormat = TextureFormatToSpvImageFormat(FormatIt->second);
+                spv::ImageFormat spvFormat = TextureFormatToSpvImageFormat(FormatIt->second);
                 if (spvFormat != spv::ImageFormatUnknown)
                 {
                     auto FormatOffsetIt = ImageTypeIdToFormat.find(Img.base_type_id);

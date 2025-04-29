@@ -190,7 +190,7 @@ SHADER_SOURCE_LANGUAGE ParseShaderSourceLanguageDefinition(const std::string& So
 
     //  /*$SHADER_SOURCE_LANGUAGE=1*/
     //  ^
-    const auto KeyPos = Source.find(ShaderSourceLanguageKey, it - Source.begin() + 2);
+    const size_t KeyPos = Source.find(ShaderSourceLanguageKey, it - Source.begin() + 2);
     if (KeyPos == std::string::npos)
         return SHADER_SOURCE_LANGUAGE_DEFAULT;
 
@@ -276,15 +276,15 @@ void AppendLine1Marker(std::string& Source, const char* FileName)
 void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderCI) noexcept(false)
 {
     VERIFY_EXPR(ShaderCI.ByteCode == nullptr);
-    const auto SourceData = ReadShaderSourceFile(ShaderCI);
+    const ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
     Source.append(SourceData.Source, SourceData.SourceLength);
 }
 
 static String ParserErrorMessage(const char* Message, const Char* pBuffer, const Char* pBufferEnd, const char* pCurrPos)
 {
     size_t      Line       = 0;
-    const auto* pLineStart = pBuffer;
-    for (const auto* c = pBuffer; c < pCurrPos; ++c)
+    const char* pLineStart = pBuffer;
+    for (const char* c = pBuffer; c < pCurrPos; ++c)
     {
         if (*c == '\n')
         {
@@ -308,8 +308,8 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType&& IncludeH
     if (BufferSize == 0)
         return true;
 
-    const auto*       pCurrPos   = pBuffer;
-    const auto* const pBufferEnd = pBuffer + BufferSize;
+    const char*       pCurrPos   = pBuffer;
+    const char* const pBufferEnd = pBuffer + BufferSize;
 
     using ErrorType = std::pair<const char*, const char*>;
     try
@@ -326,11 +326,11 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType&& IncludeH
                 continue;
             }
 
-            const auto pIncludeStart = pCurrPos;
+            const char* const pIncludeStart = pCurrPos;
             // # /* ... */ include <File.h>
             // ^
 
-            auto pLineEnd = SkipLine(pCurrPos, pBufferEnd);
+            const char* pLineEnd = SkipLine(pCurrPos, pBufferEnd);
 
             pCurrPos = SkipDelimitersAndComments(pIncludeStart + 1, pBufferEnd, " \t", SKIP_COMMENT_FLAG_MULTILINE); // May throw
             if (pCurrPos == pBufferEnd)
@@ -342,8 +342,8 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType&& IncludeH
             // # /* ... */ include <File.h>
             //             ^
 
-            static constexpr auto IncludeStrLen                 = 7;
-            static constexpr char IncludeStr[IncludeStrLen + 1] = "include";
+            static constexpr size_t IncludeStrLen                 = 7;
+            static constexpr char   IncludeStr[IncludeStrLen + 1] = "include";
 
             if (strncmp(pCurrPos, IncludeStr, IncludeStrLen) != 0)
             {
@@ -358,7 +358,7 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType&& IncludeH
 
             // # /* ... */ include <File.h>
             //                    ^
-            auto pOpenQuoteOrAngleBracket = SkipDelimitersAndComments(pCurrPos, pBufferEnd, " \t", SKIP_COMMENT_FLAG_MULTILINE); // May throw
+            const char* pOpenQuoteOrAngleBracket = SkipDelimitersAndComments(pCurrPos, pBufferEnd, " \t", SKIP_COMMENT_FLAG_MULTILINE); // May throw
             if (pOpenQuoteOrAngleBracket == pBufferEnd)
                 throw ErrorType{pCurrPos, "Unexpected end of file."};
 
@@ -372,7 +372,7 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType&& IncludeH
             if (pCurrPos < pBufferEnd && *pCurrPos != '<' && *pCurrPos != '"')
                 throw ErrorType{pCurrPos, "\'<\' or \'\"\' is expected"};
 
-            auto ClosingChar = *pCurrPos == '<' ? '>' : '"';
+            const char ClosingChar = *pCurrPos == '<' ? '>' : '"';
             ++pCurrPos;
             while (pCurrPos < pBufferEnd && *pCurrPos != ClosingChar)
                 ++pCurrPos;
@@ -390,8 +390,8 @@ bool FindIncludes(const char* pBuffer, size_t BufferSize, HandlerType&& IncludeH
     }
     catch (const std::pair<const char*, const char*>& err)
     {
-        const auto* pos = err.first;
-        const auto* msg = err.second;
+        const char* pos = err.first;
+        const char* msg = err.second;
         ErrorHandler(ParserErrorMessage(msg, pBuffer, pBufferEnd, pos));
         return false;
     }
@@ -425,7 +425,7 @@ static void ProcessIncludeErrorHandler(const ShaderCreateInfo& ShaderCI, const s
 template <typename IncludeHandlerType>
 void ProcessShaderIncludesImpl(const ShaderCreateInfo& ShaderCI, std::unordered_set<std::string>& Includes, IncludeHandlerType&& IncludeHandler) noexcept(false)
 {
-    const auto SourceData = ReadShaderSourceFile(ShaderCI);
+    const ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
 
     ShaderIncludePreprocessInfo FileInfo;
     FileInfo.Source       = SourceData.Source;
@@ -439,7 +439,7 @@ void ProcessShaderIncludesImpl(const ShaderCreateInfo& ShaderCI, std::unordered_
             if (!Includes.insert(FilePath).second)
                 return;
 
-            auto IncludeCI{ShaderCI};
+            ShaderCreateInfo IncludeCI{ShaderCI};
             IncludeCI.FilePath     = FilePath.c_str();
             IncludeCI.Source       = nullptr;
             IncludeCI.SourceLength = 0;
@@ -473,7 +473,7 @@ bool ProcessShaderIncludes(const ShaderCreateInfo& ShaderCI, std::function<void(
 
 static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unordered_set<std::string>& AllIncludes) noexcept(false)
 {
-    const auto SourceData = ReadShaderSourceFile(ShaderCI);
+    const ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
 
     ShaderCI.Source       = SourceData.Source;
     ShaderCI.SourceLength = SourceData.SourceLength;
@@ -491,10 +491,10 @@ static std::string UnrollShaderIncludesImpl(ShaderCreateInfo ShaderCI, std::unor
             {
                 // Process the #include directive
                 ShaderCreateInfo IncludeCI{ShaderCI};
-                IncludeCI.Source       = nullptr;
-                IncludeCI.SourceLength = 0;
-                IncludeCI.FilePath     = Path.c_str();
-                auto UnrolledInclude   = UnrollShaderIncludesImpl(IncludeCI, AllIncludes);
+                IncludeCI.Source            = nullptr;
+                IncludeCI.SourceLength      = 0;
+                IncludeCI.FilePath          = Path.c_str();
+                std::string UnrolledInclude = UnrollShaderIncludesImpl(IncludeCI, AllIncludes);
                 Stream << UnrolledInclude;
             }
 
