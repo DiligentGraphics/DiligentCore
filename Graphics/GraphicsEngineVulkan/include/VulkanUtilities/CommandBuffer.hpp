@@ -34,16 +34,16 @@
 namespace VulkanUtilities
 {
 
-class VulkanCommandBuffer
+class CommandBuffer
 {
 public:
-    VulkanCommandBuffer() noexcept;
+    CommandBuffer() noexcept;
 
     // clang-format off
-    VulkanCommandBuffer             (const VulkanCommandBuffer&)  = delete;
-    VulkanCommandBuffer             (      VulkanCommandBuffer&&) = delete;
-    VulkanCommandBuffer& operator = (const VulkanCommandBuffer&)  = delete;
-    VulkanCommandBuffer& operator = (      VulkanCommandBuffer&&) = delete;
+    CommandBuffer             (const CommandBuffer&)  = delete;
+    CommandBuffer             (      CommandBuffer&&) = delete;
+    CommandBuffer& operator = (const CommandBuffer&)  = delete;
+    CommandBuffer& operator = (      CommandBuffer&&) = delete;
     // clang-format on
 
     __forceinline void ClearColorImage(VkImage                        Image,

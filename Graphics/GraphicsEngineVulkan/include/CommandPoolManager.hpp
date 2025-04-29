@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,8 +31,8 @@
 #include <mutex>
 #include <atomic>
 #include "STDAllocator.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
+#include "VulkanUtilities/LogicalDevice.hpp"
 
 namespace Diligent
 {
@@ -42,10 +42,10 @@ class CommandPoolManager
 public:
     struct CreateInfo
     {
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice;
-        std::string                                 Name;
-        const HardwareQueueIndex                    queueFamilyIndex;
-        const VkCommandPoolCreateFlags              flags;
+        const VulkanUtilities::LogicalDevice& LogicalDevice;
+        std::string                           Name;
+        const HardwareQueueIndex              queueFamilyIndex;
+        const VkCommandPoolCreateFlags        flags;
     };
 
     CommandPoolManager(const CreateInfo& CI) noexcept;
@@ -75,7 +75,7 @@ public:
     void RecycleCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
 private:
-    const VulkanUtilities::VulkanLogicalDevice& m_LogicalDevice;
+    const VulkanUtilities::LogicalDevice& m_LogicalDevice;
 
     std::string                    m_Name;
     const HardwareQueueIndex       m_QueueFamilyIndex;

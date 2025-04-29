@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,8 +41,8 @@
 #include "FixedBlockMemoryAllocator.hpp"
 #include "SRBMemoryAllocator.hpp"
 #include "PipelineLayoutVk.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
-#include "VulkanUtilities/VulkanCommandBuffer.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
+#include "VulkanUtilities/CommandBuffer.hpp"
 
 namespace Diligent
 {

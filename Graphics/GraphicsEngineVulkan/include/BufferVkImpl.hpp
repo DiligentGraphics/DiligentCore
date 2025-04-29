@@ -35,8 +35,8 @@
 #include "BufferViewVkImpl.hpp" // Required by BufferBase
 
 #include "VulkanDynamicHeap.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
-#include "VulkanUtilities/VulkanMemoryManager.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
+#include "VulkanUtilities/MemoryManager.hpp"
 #include "STDAllocator.hpp"
 
 namespace Diligent

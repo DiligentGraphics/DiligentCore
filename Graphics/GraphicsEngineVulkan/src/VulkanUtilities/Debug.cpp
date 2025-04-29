@@ -13,8 +13,8 @@
 #include <unordered_map>
 #include <atomic>
 
-#include "VulkanUtilities/VulkanDebug.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
+#include "VulkanUtilities/Debug.hpp"
+#include "VulkanUtilities/LogicalDevice.hpp"
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
 #include "BasicMath.hpp"

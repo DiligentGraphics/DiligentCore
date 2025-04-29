@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,13 +28,13 @@
 #pragma once
 
 #include "DeviceObjectBase.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
+#include "VulkanUtilities/LogicalDevice.hpp"
 #include "RenderDeviceVkImpl.hpp" // Required by by ~ManagedVulkanObject()
 
 namespace Diligent
 {
 
-template <typename VulkanObjectWrapperType>
+template <typename ObjectWrapperType>
 class ManagedVulkanObject : public DeviceObjectBase<IDeviceObject, RenderDeviceVkImpl, DeviceObjectAttribs>
 {
 public:
@@ -43,7 +43,7 @@ public:
     ManagedVulkanObject(IReferenceCounters*        pRefCounters,
                         RenderDeviceVkImpl*        pDevice,
                         const DeviceObjectAttribs& ObjDesc,
-                        VulkanObjectWrapperType&&  ObjectWrapper,
+                        ObjectWrapperType&&        ObjectWrapper,
                         bool                       bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, ObjDesc, bIsDeviceInternal},
         m_VkObject{std::move(ObjectWrapper)}
@@ -55,10 +55,10 @@ public:
         m_pDevice->SafeReleaseDeviceObject(std::move(m_VkObject), ~Uint64{0});
     }
 
-    static void Create(RenderDeviceVkImpl*       pDevice,
-                       VulkanObjectWrapperType&& ObjectWrapper,
-                       const char*               Name,
-                       ManagedVulkanObject**     ppManagedObject)
+    static void Create(RenderDeviceVkImpl*   pDevice,
+                       ObjectWrapperType&&   ObjectWrapper,
+                       const char*           Name,
+                       ManagedVulkanObject** ppManagedObject)
     {
         DeviceObjectAttribs Desc;
         Desc.Name = Name;
@@ -66,13 +66,13 @@ public:
         pObj->QueryInterface(IID_DeviceObject, reinterpret_cast<IObject**>(ppManagedObject));
     }
 
-    typename VulkanObjectWrapperType::VkObjectType Get() const
+    typename ObjectWrapperType::VkObjectType Get() const
     {
         return m_VkObject;
     }
 
 private:
-    VulkanObjectWrapperType m_VkObject;
+    ObjectWrapperType m_VkObject;
 };
 
 using ManagedSemaphore = ManagedVulkanObject<VulkanUtilities::SemaphoreWrapper>;

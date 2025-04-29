@@ -36,8 +36,8 @@
 #include "SwapChainVkImpl.hpp"
 #include "EngineMemory.h"
 #include "CommandQueueVkImpl.hpp"
-#include "VulkanUtilities/VulkanInstance.hpp"
-#include "VulkanUtilities/VulkanPhysicalDevice.hpp"
+#include "VulkanUtilities/Instance.hpp"
+#include "VulkanUtilities/PhysicalDevice.hpp"
 #include "EngineFactoryBase.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "DearchiverVkImpl.hpp"
@@ -78,9 +78,9 @@ public:
 
     /// Attaches to existing Vulkan device
 
-    /// \param [in]  Instance          - shared pointer to a VulkanUtilities::VulkanInstance object.
+    /// \param [in]  Instance          - shared pointer to a VulkanUtilities::Instance object.
     /// \param [in]  PhysicalDevice    - pointer to the object representing physical device.
-    /// \param [in]  LogicalDevice     - shared pointer to a VulkanUtilities::VulkanLogicalDevice object.
+    /// \param [in]  LogicalDevice     - shared pointer to a VulkanUtilities::LogicalDevice object.
     /// \param [in]  CommandQueueCount - the number of command queues.
     /// \param [in]  ppCommandQueues   - pointer to the implementation of command queues.
     /// \param [in]  EngineCI          - Engine creation attributes.
@@ -91,15 +91,15 @@ public:
     ///                                  the contexts will be written. Immediate context goes at
     ///                                  position 0. If EngineCI.NumDeferredContexts > 0,
     ///                                  pointers to the deferred contexts are written afterwards.
-    void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
-                              std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                              std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
-                              Uint32                                                 CommandQueueCount,
-                              ICommandQueueVk**                                      ppCommandQueues,
-                              const EngineVkCreateInfo&                              EngineCI,
-                              const GraphicsAdapterInfo&                             AdapterInfo,
-                              IRenderDevice**                                        ppDevice,
-                              IDeviceContext**                                       ppContexts);
+    void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::Instance>       Instance,
+                              std::unique_ptr<VulkanUtilities::PhysicalDevice> PhysicalDevice,
+                              std::shared_ptr<VulkanUtilities::LogicalDevice>  LogicalDevice,
+                              Uint32                                           CommandQueueCount,
+                              ICommandQueueVk**                                ppCommandQueues,
+                              const EngineVkCreateInfo&                        EngineCI,
+                              const GraphicsAdapterInfo&                       AdapterInfo,
+                              IRenderDevice**                                  ppDevice,
+                              IDeviceContext**                                 ppContexts);
 
     virtual void DILIGENT_CALL_TYPE CreateSwapChainVk(IRenderDevice*       pDevice,
                                                       IDeviceContext*      pImmediateContext,
@@ -138,12 +138,12 @@ private:
 };
 
 
-GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice)
+GraphicsAdapterInfo GetPhysicalDeviceGraphicsAdapterInfo(const VulkanUtilities::PhysicalDevice& PhysicalDevice)
 {
     GraphicsAdapterInfo AdapterInfo;
 
-    using ExtensionProperties = VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties;
-    using ExtensionFeatures   = VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures;
+    using ExtensionProperties = VulkanUtilities::PhysicalDevice::ExtensionProperties;
+    using ExtensionFeatures   = VulkanUtilities::PhysicalDevice::ExtensionFeatures;
 
     const uint32_t                    vkVersion        = PhysicalDevice.GetVkVersion();
     const VkPhysicalDeviceProperties& vkDeviceProps    = PhysicalDevice.GetProperties();
@@ -606,13 +606,13 @@ void EngineFactoryVkImpl::EnumerateAdapters(Version              MinVersion,
         return;
     }
 
-    VulkanUtilities::VulkanInstance::CreateInfo InstanceCI;
+    VulkanUtilities::Instance::CreateInfo InstanceCI;
     // Create instance with the maximum available version.
     // If Volk is not enabled, the version will be 1.0.
     InstanceCI.ApiVersion             = VK_MAKE_VERSION(0xFF, 0xFF, 0);
     InstanceCI.EnableDeviceSimulation = m_EnableDeviceSimulation;
 
-    std::shared_ptr<VulkanUtilities::VulkanInstance> Instance = VulkanUtilities::VulkanInstance::Create(InstanceCI);
+    std::shared_ptr<VulkanUtilities::Instance> Instance = VulkanUtilities::Instance::Create(InstanceCI);
 
     if (Adapters == nullptr)
     {
@@ -623,8 +623,8 @@ void EngineFactoryVkImpl::EnumerateAdapters(Version              MinVersion,
     NumAdapters = std::min(NumAdapters, static_cast<Uint32>(Instance->GetVkPhysicalDevices().size()));
     for (Uint32 i = 0; i < NumAdapters; ++i)
     {
-        std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice =
-            VulkanUtilities::VulkanPhysicalDevice::Create({*Instance, Instance->GetVkPhysicalDevices()[i]});
+        std::unique_ptr<VulkanUtilities::PhysicalDevice> PhysicalDevice =
+            VulkanUtilities::PhysicalDevice::Create({*Instance, Instance->GetVkPhysicalDevices()[i]});
         Adapters[i] = GetPhysicalDeviceGraphicsAdapterInfo(*PhysicalDevice);
     }
 }
@@ -697,7 +697,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             Version{0xFF, 0xFF} : // Instance will use the maximum available version
             EngineCI.GraphicsAPIVersion;
 
-        VulkanUtilities::VulkanInstance::CreateInfo InstanceCI;
+        VulkanUtilities::Instance::CreateInfo InstanceCI;
         InstanceCI.ApiVersion                = VK_MAKE_VERSION(GraphicsAPIVersion.Major, GraphicsAPIVersion.Minor, 0);
         InstanceCI.EnableValidation          = EngineCI.EnableValidation;
         InstanceCI.EnableDeviceSimulation    = m_EnableDeviceSimulation;
@@ -719,7 +719,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         }
 #endif
 
-        std::shared_ptr<VulkanUtilities::VulkanInstance> Instance = VulkanUtilities::VulkanInstance::Create(InstanceCI);
+        std::shared_ptr<VulkanUtilities::Instance> Instance = VulkanUtilities::Instance::Create(InstanceCI);
 
         VkPhysicalDevice vkPhysDevice = VK_NULL_HANDLE;
 #if DILIGENT_USE_OPENXR
@@ -737,8 +737,8 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             vkPhysDevice = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
         }
 
-        std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice =
-            VulkanUtilities::VulkanPhysicalDevice::Create({*Instance, vkPhysDevice, /*LogExtensions = */ true});
+        std::unique_ptr<VulkanUtilities::PhysicalDevice> PhysicalDevice =
+            VulkanUtilities::PhysicalDevice::Create({*Instance, vkPhysDevice, /*LogExtensions = */ true});
 
         std::vector<const char*> DeviceExtensions;
         if (Instance->IsExtensionEnabled(VK_KHR_SURFACE_EXTENSION_NAME))
@@ -901,7 +901,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
             vkEnabledFeatures.shaderResourceResidency  = vkDeviceFeatures.shaderResourceResidency;
         }
 
-        using ExtensionFeatures                    = VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures;
+        using ExtensionFeatures                    = VulkanUtilities::PhysicalDevice::ExtensionFeatures;
         const ExtensionFeatures& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
         ExtensionFeatures        EnabledExtFeats   = {};
 
@@ -922,7 +922,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 const char* MeshShaderExtensionName = VK_EXT_MESH_SHADER_EXTENSION_NAME;
                 VERIFY(PhysicalDevice->IsExtensionSupported(MeshShaderExtensionName),
                        MeshShaderExtensionName,
-                       " extension must be supported as it has already been checked by VulkanPhysicalDevice and "
+                       " extension must be supported as it has already been checked by PhysicalDevice and "
                        "both taskShader and meshShader features are TRUE");
                 DeviceExtensions.push_back(MeshShaderExtensionName);
                 *NextExt = &EnabledExtFeats.MeshShader;
@@ -935,7 +935,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 EnabledExtFeats.ShaderFloat16Int8 = DeviceExtFeatures.ShaderFloat16Int8;
                 VERIFY_EXPR(EnabledExtFeats.ShaderFloat16Int8.shaderFloat16 != VK_FALSE || EnabledExtFeats.ShaderFloat16Int8.shaderInt8 != VK_FALSE);
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME),
-                       "VK_KHR_shader_float16_int8 extension must be supported as it has already been checked by VulkanPhysicalDevice "
+                       "VK_KHR_shader_float16_int8 extension must be supported as it has already been checked by PhysicalDevice "
                        "and at least one of shaderFloat16 or shaderInt8 features is TRUE");
                 DeviceExtensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
 
@@ -964,7 +964,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 // clang-format on
 
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_16BIT_STORAGE_EXTENSION_NAME),
-                       "VK_KHR_16bit_storage must be supported as it has already been checked by VulkanPhysicalDevice and at least one of "
+                       "VK_KHR_16bit_storage must be supported as it has already been checked by PhysicalDevice and at least one of "
                        "storageBuffer16BitAccess, uniformAndStorageBuffer16BitAccess, or storagePushConstant16 features is TRUE");
                 DeviceExtensions.push_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
 
@@ -972,7 +972,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 // All required extensions for each extension in the VkDeviceCreateInfo::ppEnabledExtensionNames
                 // list must also be present in that list.
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME),
-                       "VK_KHR_storage_buffer_storage_class must be supported as it has already been checked by VulkanPhysicalDevice and at least one of "
+                       "VK_KHR_storage_buffer_storage_class must be supported as it has already been checked by PhysicalDevice and at least one of "
                        "storageBuffer16BitAccess, uniformAndStorageBuffer16BitAccess, or storagePushConstant16 features is TRUE");
                 StorageBufferStorageClassExtensionRequired = true;
 
@@ -1000,7 +1000,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 // clang-format on
 
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_8BIT_STORAGE_EXTENSION_NAME),
-                       "VK_KHR_8bit_storage must be supported as it has already been checked by VulkanPhysicalDevice and at least one of "
+                       "VK_KHR_8bit_storage must be supported as it has already been checked by PhysicalDevice and at least one of "
                        "storageBuffer8BitAccess or uniformAndStorageBuffer8BitAccess features is TRUE");
                 DeviceExtensions.push_back(VK_KHR_8BIT_STORAGE_EXTENSION_NAME);
 
@@ -1008,7 +1008,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
                 // All required extensions for each extension in the VkDeviceCreateInfo::ppEnabledExtensionNames
                 // list must also be present in that list.
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME),
-                       "VK_KHR_storage_buffer_storage_class must be supported as it has already been checked by VulkanPhysicalDevice and at least one of "
+                       "VK_KHR_storage_buffer_storage_class must be supported as it has already been checked by PhysicalDevice and at least one of "
                        "storageBuffer8BitAccess or uniformAndStorageBuffer8BitAccess features is TRUE");
                 StorageBufferStorageClassExtensionRequired = true;
 
@@ -1318,7 +1318,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         }
         CHECK_VK_ERROR_AND_THROW(vkRes, "Failed to create logical device");
 
-        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice = VulkanUtilities::VulkanLogicalDevice::Create({
+        std::shared_ptr<VulkanUtilities::LogicalDevice> LogicalDevice = VulkanUtilities::LogicalDevice::Create({
             *PhysicalDevice,
             vkDevice,
             *vkDeviceCreateInfo.pEnabledFeatures,
@@ -1383,15 +1383,15 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
     }
 }
 
-void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
-                                               std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                                               std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
-                                               Uint32                                                 CommandQueueCount,
-                                               ICommandQueueVk**                                      ppCommandQueues,
-                                               const EngineVkCreateInfo&                              EngineCI,
-                                               const GraphicsAdapterInfo&                             AdapterInfo,
-                                               IRenderDevice**                                        ppDevice,
-                                               IDeviceContext**                                       ppContexts)
+void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::Instance>       Instance,
+                                               std::unique_ptr<VulkanUtilities::PhysicalDevice> PhysicalDevice,
+                                               std::shared_ptr<VulkanUtilities::LogicalDevice>  LogicalDevice,
+                                               Uint32                                           CommandQueueCount,
+                                               ICommandQueueVk**                                ppCommandQueues,
+                                               const EngineVkCreateInfo&                        EngineCI,
+                                               const GraphicsAdapterInfo&                       AdapterInfo,
+                                               IRenderDevice**                                  ppDevice,
+                                               IDeviceContext**                                 ppContexts)
 {
     if (EngineCI.EngineAPIVersion != DILIGENT_API_VERSION)
     {

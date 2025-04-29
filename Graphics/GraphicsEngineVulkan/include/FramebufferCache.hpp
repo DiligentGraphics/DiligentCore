@@ -34,7 +34,7 @@
 #include <mutex>
 #include <memory>
 
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
 #include "VulkanUtilities/RenderingInfoWrapper.hpp"
 
 namespace Diligent

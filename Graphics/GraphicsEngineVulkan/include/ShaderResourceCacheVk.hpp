@@ -61,7 +61,7 @@
 #include "BufferVkImpl.hpp"
 #include "ShaderResourceCacheCommon.hpp"
 #include "PipelineResourceAttribsVk.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
+#include "VulkanUtilities/LogicalDevice.hpp"
 
 namespace Diligent
 {
@@ -230,10 +230,10 @@ public:
         }
     };
     // Sets the resource at the given descriptor set index and offset
-    const Resource& SetResource(const VulkanUtilities::VulkanLogicalDevice* pLogicalDevice,
-                                Uint32                                      DescrSetIndex,
-                                Uint32                                      CacheOffset,
-                                SetResourceInfo&&                           SrcRes);
+    const Resource& SetResource(const VulkanUtilities::LogicalDevice* pLogicalDevice,
+                                Uint32                                DescrSetIndex,
+                                Uint32                                CacheOffset,
+                                SetResourceInfo&&                     SrcRes);
 
     const Resource& ResetResource(Uint32 SetIndex,
                                   Uint32 Offset)

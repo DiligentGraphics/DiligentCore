@@ -33,7 +33,7 @@
 #include "EngineVkImplTraits.hpp"
 #include "TopLevelASBase.hpp"
 #include "BottomLevelASVkImpl.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
 
 namespace Diligent
 {

@@ -94,8 +94,8 @@ void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx)
     SubresRange.baseMipLevel = ViewDesc.MostDetailedMip;
     SubresRange.levelCount   = 1;
 
-    VulkanUtilities::VulkanCommandBuffer& CmdBuffer = Ctx.GetCommandBuffer();
-    const VkImage                         vkImage   = pTexVk->GetVkImage();
+    VulkanUtilities::CommandBuffer& CmdBuffer = Ctx.GetCommandBuffer();
+    const VkImage                   vkImage   = pTexVk->GetVkImage();
     if (OriginalState != RESOURCE_STATE_COPY_SOURCE)
         CmdBuffer.TransitionImageLayout(vkImage, OriginalLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, SubresRange, OldStages, VK_PIPELINE_STAGE_TRANSFER_BIT);
 

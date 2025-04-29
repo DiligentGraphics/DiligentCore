@@ -460,7 +460,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
 
     if (HasDevice())
     {
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
+        const VulkanUtilities::LogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
 
         for (size_t i = 0; i < vkSetLayoutBindings.size(); ++i)
         {
@@ -644,7 +644,7 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
 
     const Uint32                                DynamicSetIdx  = GetDescriptorSetIndex<DESCRIPTOR_SET_ID_DYNAMIC>();
     const ShaderResourceCacheVk::DescriptorSet& SetResources   = ResourceCache.GetDescriptorSet(DynamicSetIdx);
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice  = GetDevice()->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice&       LogicalDevice  = GetDevice()->GetLogicalDevice();
     const std::pair<Uint32, Uint32>             DynResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
 
     constexpr ResourceCacheContentType CacheType = ResourceCacheContentType::SRB;

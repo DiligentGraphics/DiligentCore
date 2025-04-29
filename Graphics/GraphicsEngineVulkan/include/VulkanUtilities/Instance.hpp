@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,14 +38,14 @@ namespace VulkanUtilities
 
 std::string PrintExtensionsList(const std::vector<VkExtensionProperties>& Extensions, size_t NumColumns);
 
-class VulkanInstance : public std::enable_shared_from_this<VulkanInstance>
+class Instance : public std::enable_shared_from_this<Instance>
 {
 public:
     // clang-format off
-    VulkanInstance             (const VulkanInstance&)  = delete;
-    VulkanInstance             (      VulkanInstance&&) = delete;
-    VulkanInstance& operator = (const VulkanInstance&)  = delete;
-    VulkanInstance& operator = (      VulkanInstance&&) = delete;
+    Instance             (const Instance&)  = delete;
+    Instance             (      Instance&&) = delete;
+    Instance& operator = (const Instance&)  = delete;
+    Instance& operator = (      Instance&&) = delete;
     // clang-format on
 
     struct CreateInfo
@@ -70,16 +70,16 @@ public:
             void*    GetInstanceProcAddr = nullptr;
         } XR;
     };
-    static std::shared_ptr<VulkanInstance> Create(const CreateInfo& CI);
+    static std::shared_ptr<Instance> Create(const CreateInfo& CI);
 
-    ~VulkanInstance();
+    ~Instance();
 
-    std::shared_ptr<VulkanInstance> GetSharedPtr()
+    std::shared_ptr<Instance> GetSharedPtr()
     {
         return shared_from_this();
     }
 
-    std::shared_ptr<const VulkanInstance> GetSharedPtr() const
+    std::shared_ptr<const Instance> GetSharedPtr() const
     {
         return shared_from_this();
     }
@@ -100,7 +100,7 @@ public:
     const std::vector<VkPhysicalDevice>& GetVkPhysicalDevices() const { return m_PhysicalDevices; }
 
 private:
-    explicit VulkanInstance(const CreateInfo& CI);
+    explicit Instance(const CreateInfo& CI);
 
     enum DebugMode
     {

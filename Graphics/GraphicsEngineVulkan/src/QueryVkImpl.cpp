@@ -139,10 +139,10 @@ namespace
 
 template <size_t NumElements>
 inline bool GetQueryResults(
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-    VkQueryPool                                 vkQueryPool,
-    uint32_t                                    QueryIdx,
-    std::array<uint64_t, NumElements>&          Results)
+    const VulkanUtilities::LogicalDevice& LogicalDevice,
+    VkQueryPool                           vkQueryPool,
+    uint32_t                              QueryIdx,
+    std::array<uint64_t, NumElements>&    Results)
 {
     static_assert(NumElements >= 2, "The number of elements must be at least 2 as the last one is used to get the query status.");
 
@@ -180,11 +180,11 @@ inline bool GetQueryResults(
     return DataAvailable;
 }
 
-inline bool GetOcclusionQueryData(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                  VkQueryPool                                 vkQueryPool,
-                                  uint32_t                                    QueryIdx,
-                                  void*                                       pData,
-                                  Uint32                                      DataSize)
+inline bool GetOcclusionQueryData(const VulkanUtilities::LogicalDevice& LogicalDevice,
+                                  VkQueryPool                           vkQueryPool,
+                                  uint32_t                              QueryIdx,
+                                  void*                                 pData,
+                                  Uint32                                DataSize)
 {
     std::array<uint64_t, 2> Results{};
 
@@ -199,11 +199,11 @@ inline bool GetOcclusionQueryData(const VulkanUtilities::VulkanLogicalDevice& Lo
     return DataAvailable;
 }
 
-inline bool GetBinaryOcclusionQueryData(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                        VkQueryPool                                 vkQueryPool,
-                                        uint32_t                                    QueryIdx,
-                                        void*                                       pData,
-                                        Uint32                                      DataSize)
+inline bool GetBinaryOcclusionQueryData(const VulkanUtilities::LogicalDevice& LogicalDevice,
+                                        VkQueryPool                           vkQueryPool,
+                                        uint32_t                              QueryIdx,
+                                        void*                                 pData,
+                                        Uint32                                DataSize)
 {
     std::array<uint64_t, 2> Results{};
 
@@ -218,12 +218,12 @@ inline bool GetBinaryOcclusionQueryData(const VulkanUtilities::VulkanLogicalDevi
     return DataAvailable;
 }
 
-inline bool GetTimestampQueryData(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                  VkQueryPool                                 vkQueryPool,
-                                  uint32_t                                    QueryIdx,
-                                  Uint64                                      CounterFrequency,
-                                  void*                                       pData,
-                                  Uint32                                      DataSize)
+inline bool GetTimestampQueryData(const VulkanUtilities::LogicalDevice& LogicalDevice,
+                                  VkQueryPool                           vkQueryPool,
+                                  uint32_t                              QueryIdx,
+                                  Uint64                                CounterFrequency,
+                                  void*                                 pData,
+                                  Uint32                                DataSize)
 {
     std::array<uint64_t, 2> Results{};
 
@@ -239,12 +239,12 @@ inline bool GetTimestampQueryData(const VulkanUtilities::VulkanLogicalDevice& Lo
     return DataAvailable;
 }
 
-inline bool GetDurationQueryData(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                 VkQueryPool                                 vkQueryPool,
-                                 const std::array<Uint32, 2>&                QueryIdx,
-                                 Uint64                                      CounterFrequency,
-                                 void*                                       pData,
-                                 Uint32                                      DataSize)
+inline bool GetDurationQueryData(const VulkanUtilities::LogicalDevice& LogicalDevice,
+                                 VkQueryPool                           vkQueryPool,
+                                 const std::array<Uint32, 2>&          QueryIdx,
+                                 Uint64                                CounterFrequency,
+                                 void*                                 pData,
+                                 Uint32                                DataSize)
 {
     uint64_t StartCounter = 0;
     uint64_t EndCounter   = 0;
@@ -271,12 +271,12 @@ inline bool GetDurationQueryData(const VulkanUtilities::VulkanLogicalDevice& Log
     return DataAvailable;
 }
 
-inline bool GetStatisticsQueryData(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                   VkQueryPool                                 vkQueryPool,
-                                   Uint32                                      QueryIdx,
-                                   HardwareQueueIndex                          QueueFamilyIndex,
-                                   void*                                       pData,
-                                   Uint32                                      DataSize)
+inline bool GetStatisticsQueryData(const VulkanUtilities::LogicalDevice& LogicalDevice,
+                                   VkQueryPool                           vkQueryPool,
+                                   Uint32                                QueryIdx,
+                                   HardwareQueueIndex                    QueueFamilyIndex,
+                                   void*                                 pData,
+                                   Uint32                                DataSize)
 {
     // Pipeline statistics queries write one integer value for each bit that is enabled in the
     // pipelineStatistics when the pool is created, and the statistics values are written in bit
@@ -332,8 +332,8 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
     bool                     DataAvailable       = false;
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
-        VkQueryPool                                 vkQueryPool   = m_pQueryMgr->GetQueryPool(m_Desc.Type);
+        const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+        VkQueryPool                           vkQueryPool   = m_pQueryMgr->GetQueryPool(m_Desc.Type);
 
         static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
         switch (m_Desc.Type)

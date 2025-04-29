@@ -38,13 +38,13 @@
 #include "RenderDeviceBase.hpp"
 #include "RenderDeviceNextGenBase.hpp"
 
-#include "VulkanUtilities/VulkanInstance.hpp"
-#include "VulkanUtilities/VulkanPhysicalDevice.hpp"
-#include "VulkanUtilities/VulkanCommandBufferPool.hpp"
-#include "VulkanUtilities/VulkanCommandBuffer.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
-#include "VulkanUtilities/VulkanMemoryManager.hpp"
+#include "VulkanUtilities/Instance.hpp"
+#include "VulkanUtilities/PhysicalDevice.hpp"
+#include "VulkanUtilities/CommandBufferPool.hpp"
+#include "VulkanUtilities/CommandBuffer.hpp"
+#include "VulkanUtilities/LogicalDevice.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
+#include "VulkanUtilities/MemoryManager.hpp"
 
 #include "DescriptorPoolManager.hpp"
 #include "VulkanDynamicHeap.hpp"
@@ -65,16 +65,16 @@ class RenderDeviceVkImpl final : public RenderDeviceNextGenBase<RenderDeviceBase
 public:
     using TRenderDeviceBase = RenderDeviceNextGenBase<RenderDeviceBase<EngineVkImplTraits>, ICommandQueueVk>;
 
-    RenderDeviceVkImpl(IReferenceCounters*                                    pRefCounters,
-                       IMemoryAllocator&                                      RawMemAllocator,
-                       IEngineFactory*                                        pEngineFactory,
-                       const EngineVkCreateInfo&                              EngineCI,
-                       const GraphicsAdapterInfo&                             AdapterInfo,
-                       size_t                                                 CommandQueueCount,
-                       ICommandQueueVk**                                      pCmdQueues,
-                       std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
-                       std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                       std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice) noexcept(false);
+    RenderDeviceVkImpl(IReferenceCounters*                              pRefCounters,
+                       IMemoryAllocator&                                RawMemAllocator,
+                       IEngineFactory*                                  pEngineFactory,
+                       const EngineVkCreateInfo&                        EngineCI,
+                       const GraphicsAdapterInfo&                       AdapterInfo,
+                       size_t                                           CommandQueueCount,
+                       ICommandQueueVk**                                pCmdQueues,
+                       std::shared_ptr<VulkanUtilities::Instance>       Instance,
+                       std::unique_ptr<VulkanUtilities::PhysicalDevice> PhysicalDevice,
+                       std::shared_ptr<VulkanUtilities::LogicalDevice>  LogicalDevice) noexcept(false);
     ~RenderDeviceVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderDeviceVk, TRenderDeviceBase)
@@ -170,7 +170,7 @@ public:
     virtual VkPhysicalDevice DILIGENT_CALL_TYPE GetVkPhysicalDevice() override final { return m_PhysicalDevice->GetVkDeviceHandle(); }
 
     /// Implementation of IRenderDeviceVk::GetVkInstance().
-    virtual VkInstance DILIGENT_CALL_TYPE GetVkInstance() override final { return m_VulkanInstance->GetVkInstance(); }
+    virtual VkInstance DILIGENT_CALL_TYPE GetVkInstance() override final { return m_Instance->GetVkInstance(); }
 
     /// Implementation of IRenderDeviceVk::GetVkVersion().
     virtual Uint32 DILIGENT_CALL_TYPE GetVkVersion() override final { return m_PhysicalDevice->GetVkVersion(); }
@@ -211,10 +211,10 @@ public:
     // The method returns fence value associated with the submitted command buffer
     Uint64 ExecuteCommandBuffer(SoftwareQueueIndex CommandQueueId, const VkSubmitInfo& SubmitInfo, std::vector<std::pair<Uint64, RefCntAutoPtr<FenceVkImpl>>>* pSignalFences);
 
-    void AllocateTransientCmdPool(SoftwareQueueIndex                    CommandQueueId,
-                                  VulkanUtilities::CommandPoolWrapper&  CmdPool,
-                                  VulkanUtilities::VulkanCommandBuffer& CmdBuffer,
-                                  const Char*                           DebugPoolName = nullptr);
+    void AllocateTransientCmdPool(SoftwareQueueIndex                   CommandQueueId,
+                                  VulkanUtilities::CommandPoolWrapper& CmdPool,
+                                  VulkanUtilities::CommandBuffer&      CmdBuffer,
+                                  const Char*                          DebugPoolName = nullptr);
     void ExecuteAndDisposeTransientCmdBuff(SoftwareQueueIndex CommandQueueId, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
     /// Implementation of IRenderDevice::ReleaseStaleResources() in Vulkan backend.
@@ -234,10 +234,10 @@ public:
     }
     DescriptorPoolManager& GetDynamicDescriptorPool() { return m_DynamicDescriptorPool; }
 
-    std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance() const { return m_VulkanInstance; }
+    std::shared_ptr<const VulkanUtilities::Instance> GetInstance() const { return m_Instance; }
 
-    const VulkanUtilities::VulkanPhysicalDevice& GetPhysicalDevice() const { return *m_PhysicalDevice; }
-    const VulkanUtilities::VulkanLogicalDevice&  GetLogicalDevice() const { return *m_LogicalVkDevice; }
+    const VulkanUtilities::PhysicalDevice& GetPhysicalDevice() const { return *m_PhysicalDevice; }
+    const VulkanUtilities::LogicalDevice&  GetLogicalDevice() const { return *m_LogicalVkDevice; }
 
     FramebufferCache* GetFramebufferCache() { return m_FramebufferCache.get(); }
     RenderPassCache*  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache.get(); }
@@ -253,7 +253,7 @@ public:
         const auto MemoryFlags = MemoryProps.memoryTypes[MemoryTypeIndex].propertyFlags;
         return m_MemoryMgr.Allocate(Size, Alignment, MemoryTypeIndex, (MemoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0, AllocateFlags);
     }
-    VulkanUtilities::VulkanMemoryManager& GetGlobalMemoryManager() { return m_MemoryMgr; }
+    VulkanUtilities::MemoryManager& GetGlobalMemoryManager() { return m_MemoryMgr; }
 
     VulkanDynamicMemoryManager& GetDynamicMemoryManager() { return m_DynamicMemoryManager; }
 
@@ -298,9 +298,9 @@ private:
 private:
     const Properties m_Properties;
 
-    std::shared_ptr<VulkanUtilities::VulkanInstance>       m_VulkanInstance;
-    std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> m_PhysicalDevice;
-    std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  m_LogicalVkDevice;
+    std::shared_ptr<VulkanUtilities::Instance>       m_Instance;
+    std::unique_ptr<VulkanUtilities::PhysicalDevice> m_PhysicalDevice;
+    std::shared_ptr<VulkanUtilities::LogicalDevice>  m_LogicalVkDevice;
 
     std::unique_ptr<FramebufferCache> m_FramebufferCache;
     std::unique_ptr<RenderPassCache>  m_ImplicitRenderPassCache;
@@ -316,7 +316,7 @@ private:
     // Each command queue needs its own query manager to avoid race conditions.
     std::vector<std::unique_ptr<QueryManagerVk>> m_QueryMgrs;
 
-    VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
+    VulkanUtilities::MemoryManager m_MemoryMgr;
 
     VulkanDynamicMemoryManager m_DynamicMemoryManager;
 

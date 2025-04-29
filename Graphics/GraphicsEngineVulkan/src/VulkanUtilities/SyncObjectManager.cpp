@@ -24,19 +24,19 @@
  *  of the possibility of such damages.
  */
 
-#include "VulkanUtilities/VulkanSyncObjectManager.hpp"
+#include "VulkanUtilities/SyncObjectManager.hpp"
 
 namespace VulkanUtilities
 {
 
-VulkanSyncObjectManager::VulkanSyncObjectManager(VulkanLogicalDevice& LogicalDevice) :
+SyncObjectManager::SyncObjectManager(LogicalDevice& LogicalDevice) :
     m_LogicalDevice{LogicalDevice}
 {
     m_SemaphorePool.reserve(64);
     m_FencePool.reserve(32);
 }
 
-VulkanSyncObjectManager::~VulkanSyncObjectManager()
+SyncObjectManager::~SyncObjectManager()
 {
     {
         std::lock_guard<std::mutex> Lock{m_SemaphorePoolGuard};
@@ -56,7 +56,7 @@ VulkanSyncObjectManager::~VulkanSyncObjectManager()
     }
 }
 
-void VulkanSyncObjectManager::CreateSemaphores(VulkanRecycledSemaphore* pSemaphores, uint32_t Count)
+void SyncObjectManager::CreateSemaphores(VulkanRecycledSemaphore* pSemaphores, uint32_t Count)
 {
     uint32_t SemIdx = 0;
     {
@@ -80,7 +80,7 @@ void VulkanSyncObjectManager::CreateSemaphores(VulkanRecycledSemaphore* pSemapho
     }
 }
 
-VulkanRecycledFence VulkanSyncObjectManager::CreateFence()
+VulkanRecycledFence SyncObjectManager::CreateFence()
 {
     {
         std::lock_guard<std::mutex> Lock{m_FencePoolGuard};
@@ -102,7 +102,7 @@ VulkanRecycledFence VulkanSyncObjectManager::CreateFence()
     return {shared_from_this(), vkFence};
 }
 
-void VulkanSyncObjectManager::Recycle(VkSemaphoreType vkSem, bool IsUnsignaled)
+void SyncObjectManager::Recycle(VkSemaphoreType vkSem, bool IsUnsignaled)
 {
     // Can not reuse semaphore in signaled state
     if (!IsUnsignaled)
@@ -115,7 +115,7 @@ void VulkanSyncObjectManager::Recycle(VkSemaphoreType vkSem, bool IsUnsignaled)
     m_SemaphorePool.push_back(vkSem.Value);
 }
 
-void VulkanSyncObjectManager::Recycle(VkFenceType vkFence, bool IsUnsignaled)
+void SyncObjectManager::Recycle(VkFenceType vkFence, bool IsUnsignaled)
 {
     if (!IsUnsignaled)
     {

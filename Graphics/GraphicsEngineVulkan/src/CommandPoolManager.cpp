@@ -28,7 +28,7 @@
 #include "pch.h"
 #include "CommandPoolManager.hpp"
 #include "RenderDeviceVkImpl.hpp"
-#include "VulkanUtilities/VulkanDebug.hpp"
+#include "VulkanUtilities/Debug.hpp"
 
 namespace Diligent
 {

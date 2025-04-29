@@ -27,7 +27,7 @@
 
 #include "pch.h"
 #include <sstream>
-#include "VulkanUtilities/VulkanMemoryManager.hpp"
+#include "VulkanUtilities/MemoryManager.hpp"
 
 namespace VulkanUtilities
 {
@@ -40,7 +40,7 @@ VulkanMemoryAllocation::~VulkanMemoryAllocation()
     }
 }
 
-VulkanMemoryPage::VulkanMemoryPage(VulkanMemoryManager&  ParentMemoryMgr,
+VulkanMemoryPage::VulkanMemoryPage(MemoryManager&        ParentMemoryMgr,
                                    VkDeviceSize          PageSize,
                                    uint32_t              MemoryTypeIndex,
                                    bool                  IsHostVisible,
@@ -127,7 +127,7 @@ void VulkanMemoryPage::Free(VulkanMemoryAllocation&& Allocation)
     Allocation = VulkanMemoryAllocation{};
 }
 
-VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps, VkMemoryAllocateFlags AllocateFlags)
+VulkanMemoryAllocation MemoryManager::Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps, VkMemoryAllocateFlags AllocateFlags)
 {
     // memoryTypeBits is a bitmask and contains one bit set for every supported memory type for the resource.
     // Bit i is set if the memory type i in the VkPhysicalDeviceMemoryProperties structure for the
@@ -136,21 +136,21 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
     if (MemoryProps == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     {
         // There must be at least one memory type with the DEVICE_LOCAL_BIT bit set
-        DEV_CHECK_ERR(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
+        DEV_CHECK_ERR(MemoryTypeIndex != PhysicalDevice::InvalidMemoryTypeIndex,
                       "Vulkan spec requires that memoryTypeBits member always contains "
                       "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has the "
                       "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT bit set (11.6)");
     }
     else if (MemoryProps == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
     {
-        DEV_CHECK_ERR(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
+        DEV_CHECK_ERR(MemoryTypeIndex != PhysicalDevice::InvalidMemoryTypeIndex,
                       "Vulkan spec requires that for a VkBuffer not created with the VK_BUFFER_CREATE_SPARSE_BINDING_BIT "
                       "bit set, or for a VkImage that was created with a VK_IMAGE_TILING_LINEAR value in the tiling member "
                       "of the VkImageCreateInfo structure passed to vkCreateImage, the memoryTypeBits member always contains "
                       "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has both the "
                       "VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit AND the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set. (11.6)");
     }
-    else if (MemoryTypeIndex == VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
+    else if (MemoryTypeIndex == PhysicalDevice::InvalidMemoryTypeIndex)
     {
         LOG_ERROR_AND_THROW("Failed to find suitable device memory type for a buffer");
     }
@@ -159,7 +159,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
     return Allocate(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, HostVisible, AllocateFlags);
 }
 
-VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible, VkMemoryAllocateFlags AllocateFlags)
+VulkanMemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible, VkMemoryAllocateFlags AllocateFlags)
 {
     VulkanMemoryAllocation Allocation;
 
@@ -192,7 +192,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
         m_PeakAllocatedSize[stat_ind] = std::max(m_PeakAllocatedSize[stat_ind], m_CurrAllocatedSize[stat_ind]);
 
         auto it = m_Pages.emplace(PageIdx, VulkanMemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible, AllocateFlags});
-        LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"),
+        LOG_INFO_MESSAGE("MemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"),
                          " page. (", Diligent::FormatMemorySize(PageSize, 2), ", type idx: ", MemoryTypeIndex,
                          "). Current allocated size: ", Diligent::FormatMemorySize(m_CurrAllocatedSize[stat_ind], 2));
         OnNewPageCreated(it->second);
@@ -211,7 +211,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
     return Allocation;
 }
 
-void VulkanMemoryManager::ShrinkMemory()
+void MemoryManager::ShrinkMemory()
 {
     std::lock_guard<std::mutex> Lock{m_PagesMtx};
     if (m_CurrAllocatedSize[0] <= m_DeviceLocalReserveSize && m_CurrAllocatedSize[1] <= m_HostVisibleReserveSize)
@@ -229,7 +229,7 @@ void VulkanMemoryManager::ShrinkMemory()
         {
             VkDeviceSize PageSize = Page.GetPageSize();
             m_CurrAllocatedSize[IsHostVisible ? 1 : 0] -= PageSize;
-            LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"),
+            LOG_INFO_MESSAGE("MemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"),
                              " page (", Diligent::FormatMemorySize(PageSize, 2),
                              "). Current allocated size: ",
                              Diligent::FormatMemorySize(m_CurrAllocatedSize[IsHostVisible ? 1 : 0], 2));
@@ -239,17 +239,17 @@ void VulkanMemoryManager::ShrinkMemory()
     }
 }
 
-void VulkanMemoryManager::OnFreeAllocation(VkDeviceSize Size, bool IsHostVisible)
+void MemoryManager::OnFreeAllocation(VkDeviceSize Size, bool IsHostVisible)
 {
     m_CurrUsedSize[IsHostVisible ? 1 : 0].fetch_add(-static_cast<int64_t>(Size));
 }
 
-VulkanMemoryManager::~VulkanMemoryManager()
+MemoryManager::~MemoryManager()
 {
     VkDeviceSize PeakDeviceLocalPages = m_PeakAllocatedSize[0] / m_DeviceLocalPageSize;
     VkDeviceSize PeakHostVisiblePages = m_PeakAllocatedSize[1] / m_HostVisiblePageSize;
-    LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "' stats:\n"
-                                                         "                       Peak used/allocated device-local memory size: ",
+    LOG_INFO_MESSAGE("MemoryManager '", m_MgrName, "' stats:\n"
+                                                   "                       Peak used/allocated device-local memory size: ",
                      Diligent::FormatMemorySize(m_PeakUsedSize[0], 2, m_PeakAllocatedSize[0]), " / ",
                      Diligent::FormatMemorySize(m_PeakAllocatedSize[0], 2, m_PeakAllocatedSize[0]),
                      " (", PeakDeviceLocalPages, (PeakDeviceLocalPages == 1 ? " page)" : " pages)"),

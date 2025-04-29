@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,8 +39,8 @@
 #include "FenceVkImpl.hpp"
 
 #include "VulkanUtilities/VulkanHeaders.h"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
-#include "VulkanUtilities/VulkanSyncObjectManager.hpp"
+#include "VulkanUtilities/LogicalDevice.hpp"
+#include "VulkanUtilities/SyncObjectManager.hpp"
 
 
 namespace Diligent
@@ -50,11 +50,11 @@ class SyncPointVk final : public std::enable_shared_from_this<SyncPointVk>
 {
 private:
     friend class CommandQueueVkImpl;
-    SyncPointVk(SoftwareQueueIndex                        CommandQueueId,
-                Uint32                                    NumContexts,
-                VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr,
-                VkDevice                                  LogicalDevice,
-                Uint64                                    dbgValue);
+    SyncPointVk(SoftwareQueueIndex                  CommandQueueId,
+                Uint32                              NumContexts,
+                VulkanUtilities::SyncObjectManager& SyncObjectMngr,
+                VkDevice                            LogicalDevice,
+                Uint64                              dbgValue);
 
     void GetSemaphores(std::vector<VkSemaphore>& Semaphores);
 
@@ -99,12 +99,12 @@ class CommandQueueVkImpl final : public ObjectBase<ICommandQueueVk>
 public:
     using TBase = ObjectBase<ICommandQueueVk>;
 
-    CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters,
-                       std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                       SoftwareQueueIndex                                    CommandQueueId,
-                       Uint32                                                NumCommandQueues,
-                       Uint32                                                vkQueueIndex,
-                       const ImmediateContextCreateInfo&                     CreateInfo);
+    CommandQueueVkImpl(IReferenceCounters*                             pRefCounters,
+                       std::shared_ptr<VulkanUtilities::LogicalDevice> LogicalDevice,
+                       SoftwareQueueIndex                              CommandQueueId,
+                       Uint32                                          NumCommandQueues,
+                       Uint32                                          vkQueueIndex,
+                       const ImmediateContextCreateInfo&               CreateInfo);
     ~CommandQueueVkImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_CommandQueueVk, TBase)
@@ -160,7 +160,7 @@ private:
 
     void InternalSignalSemaphore(VkSemaphore vkTimelineSemaphore, Uint64 Value);
 
-    std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
+    std::shared_ptr<VulkanUtilities::LogicalDevice> m_LogicalDevice;
 
     const VkQueue            m_VkQueue;
     const HardwareQueueIndex m_QueueFamilyIndex;
@@ -189,8 +189,8 @@ private:
     // Fence and semaphores which were signaled when the last submitted commands have been completed.
     SyncPointVkPtr m_LastSyncPoint;
 
-    std::shared_ptr<VulkanUtilities::VulkanSyncObjectManager> m_SyncObjectManager;
-    FixedBlockMemoryAllocator                                 m_SyncPointAllocator;
+    std::shared_ptr<VulkanUtilities::SyncObjectManager> m_SyncObjectManager;
+    FixedBlockMemoryAllocator                           m_SyncPointAllocator;
 };
 
 } // namespace Diligent

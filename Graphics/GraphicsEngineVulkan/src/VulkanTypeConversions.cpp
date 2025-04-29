@@ -1940,12 +1940,12 @@ VkFragmentShadingRateCombinerOpKHR ShadingRateCombinerToVkFragmentShadingRateCom
     }
 }
 
-DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                                                          vkVersion,
-                                          const VkPhysicalDeviceFeatures&                                   vkFeatures,
-                                          const VkPhysicalDeviceProperties&                                 vkDeviceProps,
-                                          const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures&   ExtFeatures,
-                                          const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps,
-                                          DEVICE_FEATURE_STATE                                              OptionalState)
+DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                                                    vkVersion,
+                                          const VkPhysicalDeviceFeatures&                             vkFeatures,
+                                          const VkPhysicalDeviceProperties&                           vkDeviceProps,
+                                          const VulkanUtilities::PhysicalDevice::ExtensionFeatures&   ExtFeatures,
+                                          const VulkanUtilities::PhysicalDevice::ExtensionProperties& ExtProps,
+                                          DEVICE_FEATURE_STATE                                        OptionalState)
 {
     VERIFY_EXPR(OptionalState != DEVICE_FEATURE_STATE_DISABLED);
 
@@ -2066,8 +2066,8 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     return Features;
 }
 
-DeviceFeaturesVk PhysicalDeviceFeaturesToDeviceFeaturesVk(const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& ExtFeatures,
-                                                          DEVICE_FEATURE_STATE                                            OptionalState)
+DeviceFeaturesVk PhysicalDeviceFeaturesToDeviceFeaturesVk(const VulkanUtilities::PhysicalDevice::ExtensionFeatures& ExtFeatures,
+                                                          DEVICE_FEATURE_STATE                                      OptionalState)
 {
     VERIFY_EXPR(OptionalState != DEVICE_FEATURE_STATE_DISABLED);
 

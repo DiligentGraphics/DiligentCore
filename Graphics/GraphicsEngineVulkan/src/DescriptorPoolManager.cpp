@@ -61,7 +61,7 @@ VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::CreateDescriptorPo
 
 static std::vector<VkDescriptorPoolSize> PrunePoolSizes(RenderDeviceVkImpl& DeviceVkImpl, std::vector<VkDescriptorPoolSize>&& PoolSizes)
 {
-    const VulkanUtilities::VulkanLogicalDevice::ExtensionFeatures& Feats = DeviceVkImpl.GetLogicalDevice().GetEnabledExtFeatures();
+    const VulkanUtilities::LogicalDevice::ExtensionFeatures& Feats = DeviceVkImpl.GetLogicalDevice().GetEnabledExtFeatures();
     for (auto iter = PoolSizes.begin(); iter != PoolSizes.end();)
     {
         switch (iter->type)
@@ -113,8 +113,8 @@ VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::GetPool(const char
         return CreateDescriptorPool(DebugName);
     else
     {
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
-        VulkanUtilities::DescriptorPoolWrapper      Pool          = std::move(m_Pools.front());
+        const VulkanUtilities::LogicalDevice&  LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
+        VulkanUtilities::DescriptorPoolWrapper Pool          = std::move(m_Pools.front());
         VulkanUtilities::SetDescriptorPoolName(LogicalDevice.GetVkDevice(), Pool, DebugName);
         m_Pools.pop_front();
         return Pool;
@@ -172,10 +172,10 @@ void DescriptorPoolManager::FreePool(VulkanUtilities::DescriptorPoolWrapper&& Po
 }
 
 
-static VkDescriptorSet AllocateDescriptorSet(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                             VkDescriptorPool                            Pool,
-                                             VkDescriptorSetLayout                       SetLayout,
-                                             const char*                                 DebugName)
+static VkDescriptorSet AllocateDescriptorSet(const VulkanUtilities::LogicalDevice& LogicalDevice,
+                                             VkDescriptorPool                      Pool,
+                                             VkDescriptorSetLayout                 SetLayout,
+                                             const char*                           DebugName)
 {
     VkDescriptorSetAllocateInfo DescrSetAllocInfo = {};
 
@@ -201,7 +201,7 @@ DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask
     // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
     std::lock_guard<std::mutex> Lock{m_Mutex};
 
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
     // Try all pools starting from the frontmost
     for (auto it = m_Pools.begin(); it != m_Pools.end(); ++it)
     {
@@ -289,8 +289,8 @@ void DescriptorSetAllocator::FreeDescriptorSet(VkDescriptorSet Set, VkDescriptor
 
 VkDescriptorSet DynamicDescriptorSetAllocator::Allocate(VkDescriptorSetLayout SetLayout, const char* DebugName)
 {
-    VkDescriptorSet                             set           = VK_NULL_HANDLE;
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_GlobalPoolMgr.GetDeviceVkImpl().GetLogicalDevice();
+    VkDescriptorSet                       set           = VK_NULL_HANDLE;
+    const VulkanUtilities::LogicalDevice& LogicalDevice = m_GlobalPoolMgr.GetDeviceVkImpl().GetLogicalDevice();
     if (!m_AllocatedPools.empty())
     {
         set = AllocateDescriptorSet(LogicalDevice, m_AllocatedPools.back(), SetLayout, DebugName);

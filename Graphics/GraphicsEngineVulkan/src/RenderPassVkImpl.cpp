@@ -42,7 +42,7 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                                    bool                  IsDeviceInternal) :
     TRenderPassBase{pRefCounters, pDevice, Desc, IsDeviceInternal}
 {
-    const VulkanUtilities::VulkanLogicalDevice::ExtensionFeatures& ExtFeats = pDevice->GetLogicalDevice().GetEnabledExtFeatures();
+    const VulkanUtilities::LogicalDevice::ExtensionFeatures& ExtFeats = pDevice->GetLogicalDevice().GetEnabledExtFeatures();
 
     size_t RenderPassVersion = 1;
     if (ExtFeats.ShadingRate.attachmentFragmentShadingRate)
@@ -117,10 +117,10 @@ void RenderPassVkImpl::CreateRenderPass() noexcept(false)
     using AttachmentReferenceType   = std::conditional_t<RPVersion == 2, VkAttachmentReference2, VkAttachmentReference>;
     using SubpassDependencyType     = std::conditional_t<RPVersion == 2, VkSubpassDependency2, VkSubpassDependency>;
 
-    const VulkanUtilities::VulkanLogicalDevice&                    LogicalDevice         = m_pDevice->GetLogicalDevice();
-    const VulkanUtilities::VulkanLogicalDevice::ExtensionFeatures& ExtFeats              = LogicalDevice.GetEnabledExtFeatures();
-    const bool                                                     ShadingRateEnabled    = ExtFeats.ShadingRate.attachmentFragmentShadingRate != VK_FALSE;
-    const bool                                                     FragDensityMapEnabled = ExtFeats.FragmentDensityMap.fragmentDensityMap != VK_FALSE;
+    const VulkanUtilities::LogicalDevice&                    LogicalDevice         = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice::ExtensionFeatures& ExtFeats              = LogicalDevice.GetEnabledExtFeatures();
+    const bool                                               ShadingRateEnabled    = ExtFeats.ShadingRate.attachmentFragmentShadingRate != VK_FALSE;
+    const bool                                               FragDensityMapEnabled = ExtFeats.FragmentDensityMap.fragmentDensityMap != VK_FALSE;
 
     RenderPassCIType RenderPassCI{};
     RenderPassCI.sType = RPVersion == 2 ? VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2 : VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;

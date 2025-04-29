@@ -28,7 +28,7 @@
 #pragma once
 
 #include <memory>
-#include "VulkanPhysicalDevice.hpp"
+#include "PhysicalDevice.hpp"
 
 namespace VulkanUtilities
 {
@@ -63,9 +63,9 @@ enum class VulkanHandleTypeId : uint32_t
 };
 
 template <typename VulkanObjectType, VulkanHandleTypeId>
-class VulkanObjectWrapper;
+class ObjectWrapper;
 
-#define DEFINE_VULKAN_OBJECT_WRAPPER(Type) VulkanObjectWrapper<Vk##Type, VulkanHandleTypeId::Type>
+#define DEFINE_VULKAN_OBJECT_WRAPPER(Type) ObjectWrapper<Vk##Type, VulkanHandleTypeId::Type>
 using CommandPoolWrapper         = DEFINE_VULKAN_OBJECT_WRAPPER(CommandPool);
 using BufferWrapper              = DEFINE_VULKAN_OBJECT_WRAPPER(Buffer);
 using BufferViewWrapper          = DEFINE_VULKAN_OBJECT_WRAPPER(BufferView);
@@ -87,36 +87,36 @@ using AccelStructWrapper         = DEFINE_VULKAN_OBJECT_WRAPPER(AccelerationStru
 using PipelineCacheWrapper       = DEFINE_VULKAN_OBJECT_WRAPPER(PipelineCache);
 #undef DEFINE_VULKAN_OBJECT_WRAPPER
 
-class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
+class LogicalDevice : public std::enable_shared_from_this<LogicalDevice>
 {
 public:
-    using ExtensionFeatures = VulkanPhysicalDevice::ExtensionFeatures;
+    using ExtensionFeatures = PhysicalDevice::ExtensionFeatures;
 
     struct CreateInfo
     {
-        const VulkanPhysicalDevice&        PhysicalDevice;
+        const PhysicalDevice&              PhysDevice;
         const VkDevice                     vkDevice;
         const VkPhysicalDeviceFeatures&    EnabledFeatures;
         const ExtensionFeatures&           EnabledExtFeatures;
         const VkAllocationCallbacks* const vkAllocator;
     };
-    static std::shared_ptr<VulkanLogicalDevice> Create(const CreateInfo& CI);
+    static std::shared_ptr<LogicalDevice> Create(const CreateInfo& CI);
 
     // clang-format off
-    VulkanLogicalDevice             (const VulkanLogicalDevice&) = delete;
-    VulkanLogicalDevice             (VulkanLogicalDevice&&)      = delete;
-    VulkanLogicalDevice& operator = (const VulkanLogicalDevice&) = delete;
-    VulkanLogicalDevice& operator = (VulkanLogicalDevice&&)      = delete;
+    LogicalDevice             (const LogicalDevice&) = delete;
+    LogicalDevice             (LogicalDevice&&)      = delete;
+    LogicalDevice& operator = (const LogicalDevice&) = delete;
+    LogicalDevice& operator = (LogicalDevice&&)      = delete;
     // clang-format on
 
-    ~VulkanLogicalDevice();
+    ~LogicalDevice();
 
-    std::shared_ptr<VulkanLogicalDevice> GetSharedPtr()
+    std::shared_ptr<LogicalDevice> GetSharedPtr()
     {
         return shared_from_this();
     }
 
-    std::shared_ptr<const VulkanLogicalDevice> GetSharedPtr() const
+    std::shared_ptr<const LogicalDevice> GetSharedPtr() const
     {
         return shared_from_this();
     }
@@ -251,16 +251,16 @@ public:
     const ExtensionFeatures&        GetEnabledExtFeatures() const { return m_EnabledExtFeatures; }
 
 private:
-    VulkanLogicalDevice(const CreateInfo& CI);
+    LogicalDevice(const CreateInfo& CI);
 
     template <typename VkObjectType,
               VulkanHandleTypeId VkTypeId,
               typename VkCreateObjectFuncType,
               typename VkObjectCreateInfoType>
-    VulkanObjectWrapper<VkObjectType, VkTypeId> CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
-                                                                   const VkObjectCreateInfoType& CreateInfo,
-                                                                   const char*                   DebugName,
-                                                                   const char*                   ObjectType) const;
+    ObjectWrapper<VkObjectType, VkTypeId> CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
+                                                             const VkObjectCreateInfoType& CreateInfo,
+                                                             const char*                   DebugName,
+                                                             const char*                   ObjectType) const;
 
     VkDevice                           m_VkDevice = VK_NULL_HANDLE;
     const VkAllocationCallbacks* const m_VkAllocator;

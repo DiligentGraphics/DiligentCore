@@ -33,7 +33,7 @@
 #include "EngineVkImplTraits.hpp"
 #include "TextureBase.hpp"
 #include "TextureViewVkImpl.hpp"
-#include "VulkanUtilities/VulkanMemoryManager.hpp"
+#include "VulkanUtilities/MemoryManager.hpp"
 
 namespace Diligent
 {

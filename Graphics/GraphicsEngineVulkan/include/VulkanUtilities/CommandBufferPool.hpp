@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,27 +32,27 @@
 #include <mutex>
 #include <atomic>
 #include "VulkanHeaders.h"
-#include "VulkanLogicalDevice.hpp"
-#include "VulkanObjectWrappers.hpp"
+#include "LogicalDevice.hpp"
+#include "ObjectWrappers.hpp"
 
 namespace VulkanUtilities
 {
 
-class VulkanCommandBufferPool
+class CommandBufferPool
 {
 public:
-    VulkanCommandBufferPool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice,
-                            HardwareQueueIndex                         queueFamilyIndex,
-                            VkCommandPoolCreateFlags                   flags);
+    CommandBufferPool(std::shared_ptr<const LogicalDevice> Device,
+                      HardwareQueueIndex                   queueFamilyIndex,
+                      VkCommandPoolCreateFlags             flags);
 
     // clang-format off
-    VulkanCommandBufferPool             (const VulkanCommandBufferPool&)  = delete;
-    VulkanCommandBufferPool             (      VulkanCommandBufferPool&&) = delete;
-    VulkanCommandBufferPool& operator = (const VulkanCommandBufferPool&)  = delete;
-    VulkanCommandBufferPool& operator = (      VulkanCommandBufferPool&&) = delete;
+    CommandBufferPool             (const CommandBufferPool&)  = delete;
+    CommandBufferPool             (      CommandBufferPool&&) = delete;
+    CommandBufferPool& operator = (const CommandBufferPool&)  = delete;
+    CommandBufferPool& operator = (      CommandBufferPool&&) = delete;
     // clang-format on
 
-    ~VulkanCommandBufferPool();
+    ~CommandBufferPool();
 
     VkCommandBuffer GetCommandBuffer(const char* DebugName = "");
     // The GPU must have finished with the command buffer being returned to the pool
@@ -63,7 +63,7 @@ public:
 
 private:
     // Shared point to logical device must be defined before the command pool
-    std::shared_ptr<const VulkanLogicalDevice> m_LogicalDevice;
+    std::shared_ptr<const LogicalDevice> m_Device;
 
     CommandPoolWrapper m_CmdPool;
 

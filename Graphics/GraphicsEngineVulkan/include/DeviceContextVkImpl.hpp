@@ -49,9 +49,9 @@
 #include "ShaderResourceBindingVkImpl.hpp"
 
 #include "PipelineLayoutVk.hpp"
-#include "VulkanUtilities/VulkanCommandBufferPool.hpp"
-#include "VulkanUtilities/VulkanCommandBuffer.hpp"
-#include "VulkanUtilities/VulkanSyncObjectManager.hpp"
+#include "VulkanUtilities/CommandBufferPool.hpp"
+#include "VulkanUtilities/CommandBuffer.hpp"
+#include "VulkanUtilities/SyncObjectManager.hpp"
 #include "VulkanUtilities/RenderingInfoWrapper.hpp"
 #include "VulkanUploadHeap.hpp"
 #include "VulkanDynamicHeap.hpp"
@@ -378,7 +378,7 @@ public:
 
     size_t GetNumCommandsInCtx() const { return m_State.NumCommands; }
 
-    __forceinline VulkanUtilities::VulkanCommandBuffer& GetCommandBuffer()
+    __forceinline VulkanUtilities::CommandBuffer& GetCommandBuffer()
     {
         EnsureVkCmdBuffer();
         m_CommandBuffer.FlushBarriers();
@@ -497,7 +497,7 @@ private:
     void ChooseRenderPassAndFramebuffer();
 
 private:
-    VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
+    VulkanUtilities::CommandBuffer m_CommandBuffer;
 
     struct ContextState
     {
@@ -636,9 +636,9 @@ private:
     std::vector<MappedBuffer> m_MappedBuffers;
 
     // Command pools for every queue family
-    std::unique_ptr<std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool>[]> m_QueueFamilyCmdPools;
+    std::unique_ptr<std::unique_ptr<VulkanUtilities::CommandBufferPool>[]> m_QueueFamilyCmdPools;
     // Command pool for the family for which we are recording commands
-    VulkanUtilities::VulkanCommandBufferPool* m_CmdPool = nullptr;
+    VulkanUtilities::CommandBufferPool* m_CmdPool = nullptr;
 
     VulkanUploadHeap              m_UploadHeap;
     VulkanDynamicHeap             m_DynamicHeap;

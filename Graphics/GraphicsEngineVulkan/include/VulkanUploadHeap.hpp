@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,8 +28,8 @@
 #pragma once
 
 #include <unordered_map>
-#include "VulkanUtilities/VulkanMemoryManager.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "VulkanUtilities/MemoryManager.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
 
 namespace Diligent
 {
@@ -53,7 +53,7 @@ namespace Diligent
 //             |                                ______|___________________V____
 //             V                               |                              |
 //   VulkanUploadAllocation                    |    Global Memory Manager     |
-//                                             |    (VulkanMemoryManager)     |
+//                                             |       (MemoryManager)        |
 //                                             |                              |
 //                                             |______________________________|
 //

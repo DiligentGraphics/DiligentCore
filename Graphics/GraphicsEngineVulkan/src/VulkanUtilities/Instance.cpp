@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "VulkanUtilities/VulkanInstance.hpp"
+#include "VulkanUtilities/Instance.hpp"
 #include "APIInfo.h"
 
 #include <vector>
@@ -39,7 +39,7 @@
 #endif
 
 #include "VulkanErrors.hpp"
-#include "VulkanUtilities/VulkanDebug.hpp"
+#include "VulkanUtilities/Debug.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLangUtils.hpp"
@@ -95,7 +95,7 @@ std::string PrintExtensionsList(const std::vector<VkExtensionProperties>& Extens
     return ss.str();
 }
 
-bool VulkanInstance::IsLayerAvailable(const char* LayerName, uint32_t& Version) const
+bool Instance::IsLayerAvailable(const char* LayerName, uint32_t& Version) const
 {
     for (const VkLayerProperties& Layer : m_Layers)
     {
@@ -155,12 +155,12 @@ bool IsExtensionAvailable(const std::vector<VkExtensionProperties>& Extensions, 
 
 } // namespace
 
-bool VulkanInstance::IsExtensionAvailable(const char* ExtensionName) const
+bool Instance::IsExtensionAvailable(const char* ExtensionName) const
 {
     return VulkanUtilities::IsExtensionAvailable(m_Extensions, ExtensionName);
 }
 
-bool VulkanInstance::IsExtensionEnabled(const char* ExtensionName) const
+bool Instance::IsExtensionEnabled(const char* ExtensionName) const
 {
     for (const char* Extension : m_EnabledExtensions)
     {
@@ -246,13 +246,12 @@ static VkResult CreateVkInstanceForOpenXR(XrInstance                   xrInstanc
 }
 #endif
 
-std::shared_ptr<VulkanInstance> VulkanInstance::Create(const CreateInfo& CI)
+std::shared_ptr<Instance> Instance::Create(const CreateInfo& CI)
 {
-    VulkanInstance* Instance = new VulkanInstance{CI};
-    return std::shared_ptr<VulkanInstance>{Instance};
+    return std::shared_ptr<Instance>{new Instance{CI}};
 }
 
-VulkanInstance::VulkanInstance(const CreateInfo& CI) :
+Instance::Instance(const CreateInfo& CI) :
     m_pVkAllocator{CI.pVkAllocator}
 {
 #if DILIGENT_USE_VOLK
@@ -597,7 +596,7 @@ VulkanInstance::VulkanInstance(const CreateInfo& CI) :
 #endif
 }
 
-VulkanInstance::~VulkanInstance()
+Instance::~Instance()
 {
     if (m_DebugMode != DebugMode::Disabled)
     {
@@ -610,7 +609,7 @@ VulkanInstance::~VulkanInstance()
 #endif
 }
 
-VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const noexcept(false)
+VkPhysicalDevice Instance::SelectPhysicalDevice(uint32_t AdapterId) const noexcept(false)
 {
     const auto IsGraphicsAndComputeQueueSupported = [](VkPhysicalDevice Device) {
         uint32_t QueueFamilyCount = 0;
@@ -687,7 +686,7 @@ VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const 
 #    pragma warning(disable : 4702) // unreachable code
 #endif
 
-VkPhysicalDevice VulkanInstance::SelectPhysicalDeviceForOpenXR(const CreateInfo::OpenXRInfo& XRInfo) const noexcept(false)
+VkPhysicalDevice Instance::SelectPhysicalDeviceForOpenXR(const CreateInfo::OpenXRInfo& XRInfo) const noexcept(false)
 {
 #if DILIGENT_USE_OPENXR
     XrInstance xrInstance = XR_NULL_HANDLE;

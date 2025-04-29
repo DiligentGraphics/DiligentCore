@@ -52,7 +52,7 @@ FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
     if (m_Desc.Type == FENCE_TYPE_GENERAL &&
         pRenderDeviceVkImpl->GetFeatures().NativeFence)
     {
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice{pRenderDeviceVkImpl->GetLogicalDevice()};
+        const VulkanUtilities::LogicalDevice& LogicalDevice{pRenderDeviceVkImpl->GetLogicalDevice()};
         m_TimelineSemaphore = LogicalDevice.CreateTimelineSemaphore(0, m_Desc.Name);
     }
 }
@@ -110,7 +110,7 @@ Uint64 FenceVkImpl::GetCompletedValue()
     {
         // GetSemaphoreCounter() is thread safe
 
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+        const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
 
         Uint64   SemaphoreCounter = ~Uint64{0};
         VkResult err              = LogicalDevice.GetSemaphoreCounter(m_TimelineSemaphore, &SemaphoreCounter);
@@ -128,7 +128,7 @@ Uint64 FenceVkImpl::InternalGetCompletedValue()
 {
     VERIFY_EXPR(!IsTimelineSemaphore());
 
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
     while (!m_SyncPoints.empty())
     {
         SyncPointData& Item = m_SyncPoints.front();
@@ -164,7 +164,7 @@ void FenceVkImpl::Signal(Uint64 Value)
         SignalInfo.semaphore = m_TimelineSemaphore;
         SignalInfo.value     = Value;
 
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+        const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
 
         VkResult err = LogicalDevice.SignalSemaphore(SignalInfo);
         DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to signal timeline semaphore");
@@ -194,7 +194,7 @@ void FenceVkImpl::Wait(Uint64 Value)
 {
     if (IsTimelineSemaphore())
     {
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+        const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
 
         VkSemaphoreWaitInfo WaitInfo{};
         WaitInfo.sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
@@ -211,7 +211,7 @@ void FenceVkImpl::Wait(Uint64 Value)
     {
         std::lock_guard<std::mutex> Lock{m_SyncPointsGuard};
 
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+        const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
         while (!m_SyncPoints.empty())
         {
             SyncPointData& Item = m_SyncPoints.front();

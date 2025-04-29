@@ -27,25 +27,24 @@
 
 #include <limits>
 #include "VulkanErrors.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
-#include "VulkanUtilities/VulkanDebug.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "VulkanUtilities/LogicalDevice.hpp"
+#include "VulkanUtilities/Debug.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
 
 namespace VulkanUtilities
 {
 
-std::shared_ptr<VulkanLogicalDevice> VulkanLogicalDevice::Create(const CreateInfo& CI)
+std::shared_ptr<LogicalDevice> LogicalDevice::Create(const CreateInfo& CI)
 {
-    VulkanLogicalDevice* LogicalDevice = new VulkanLogicalDevice{CI};
-    return std::shared_ptr<VulkanLogicalDevice>{LogicalDevice};
+    return std::shared_ptr<LogicalDevice>{new LogicalDevice{CI}};
 }
 
-VulkanLogicalDevice::~VulkanLogicalDevice()
+LogicalDevice::~LogicalDevice()
 {
     vkDestroyDevice(m_VkDevice, m_VkAllocator);
 }
 
-VulkanLogicalDevice::VulkanLogicalDevice(const CreateInfo& CI) :
+LogicalDevice::LogicalDevice(const CreateInfo& CI) :
     m_VkDevice{CI.vkDevice},
     m_VkAllocator{CI.vkAllocator},
     m_EnabledFeatures{CI.EnabledFeatures},
@@ -110,12 +109,12 @@ VulkanLogicalDevice::VulkanLogicalDevice(const CreateInfo& CI) :
         GraphicsAccessMask |= VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT;
     }
 
-    const size_t QueueCount = CI.PhysicalDevice.GetQueueProperties().size();
+    const size_t QueueCount = CI.PhysDevice.GetQueueProperties().size();
     m_SupportedStagesMask.resize(QueueCount, 0);
     m_SupportedAccessMask.resize(QueueCount, 0);
     for (size_t q = 0; q < QueueCount; ++q)
     {
-        const VkQueueFamilyProperties& Queue      = CI.PhysicalDevice.GetQueueProperties()[q];
+        const VkQueueFamilyProperties& Queue      = CI.PhysDevice.GetQueueProperties()[q];
         VkPipelineStageFlags&          StageMask  = m_SupportedStagesMask[q];
         VkAccessFlags&                 AccessMask = m_SupportedAccessMask[q];
 
@@ -137,7 +136,7 @@ VulkanLogicalDevice::VulkanLogicalDevice(const CreateInfo& CI) :
     }
 }
 
-VkQueue VulkanLogicalDevice::GetQueue(HardwareQueueIndex queueFamilyIndex, uint32_t queueIndex)
+VkQueue LogicalDevice::GetQueue(HardwareQueueIndex queueFamilyIndex, uint32_t queueIndex)
 {
     VkQueue vkQueue = VK_NULL_HANDLE;
     vkGetDeviceQueue(m_VkDevice,
@@ -148,7 +147,7 @@ VkQueue VulkanLogicalDevice::GetQueue(HardwareQueueIndex queueFamilyIndex, uint3
     return vkQueue;
 }
 
-void VulkanLogicalDevice::WaitIdle() const
+void LogicalDevice::WaitIdle() const
 {
     VkResult err = vkDeviceWaitIdle(m_VkDevice);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to idle device");
@@ -159,10 +158,10 @@ template <typename VkObjectType,
           VulkanHandleTypeId VkTypeId,
           typename VkCreateObjectFuncType,
           typename VkObjectCreateInfoType>
-VulkanObjectWrapper<VkObjectType, VkTypeId> VulkanLogicalDevice::CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
-                                                                                    const VkObjectCreateInfoType& CreateInfo,
-                                                                                    const char*                   DebugName,
-                                                                                    const char*                   ObjectType) const
+ObjectWrapper<VkObjectType, VkTypeId> LogicalDevice::CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
+                                                                        const VkObjectCreateInfoType& CreateInfo,
+                                                                        const char*                   DebugName,
+                                                                        const char*                   ObjectType) const
 {
     if (DebugName == nullptr)
         DebugName = "";
@@ -175,63 +174,63 @@ VulkanObjectWrapper<VkObjectType, VkTypeId> VulkanLogicalDevice::CreateVulkanObj
     if (*DebugName != 0)
         SetVulkanObjectName<VkObjectType, VkTypeId>(m_VkDevice, VkObject, DebugName);
 
-    return VulkanObjectWrapper<VkObjectType, VkTypeId>{GetSharedPtr(), std::move(VkObject)};
+    return ObjectWrapper<VkObjectType, VkTypeId>{GetSharedPtr(), std::move(VkObject)};
 }
 
-CommandPoolWrapper VulkanLogicalDevice::CreateCommandPool(const VkCommandPoolCreateInfo& CmdPoolCI,
-                                                          const char*                    DebugName) const
+CommandPoolWrapper LogicalDevice::CreateCommandPool(const VkCommandPoolCreateInfo& CmdPoolCI,
+                                                    const char*                    DebugName) const
 {
     VERIFY_EXPR(CmdPoolCI.sType == VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO);
     return CreateVulkanObject<VkCommandPool, VulkanHandleTypeId::CommandPool>(vkCreateCommandPool, CmdPoolCI, DebugName, "command pool");
 }
 
-BufferWrapper VulkanLogicalDevice::CreateBuffer(const VkBufferCreateInfo& BufferCI,
-                                                const char*               DebugName) const
+BufferWrapper LogicalDevice::CreateBuffer(const VkBufferCreateInfo& BufferCI,
+                                          const char*               DebugName) const
 {
     VERIFY_EXPR(BufferCI.sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
     return CreateVulkanObject<VkBuffer, VulkanHandleTypeId::Buffer>(vkCreateBuffer, BufferCI, DebugName, "buffer");
 }
 
-BufferViewWrapper VulkanLogicalDevice::CreateBufferView(const VkBufferViewCreateInfo& BuffViewCI,
-                                                        const char*                   DebugName) const
+BufferViewWrapper LogicalDevice::CreateBufferView(const VkBufferViewCreateInfo& BuffViewCI,
+                                                  const char*                   DebugName) const
 {
     VERIFY_EXPR(BuffViewCI.sType == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
     return CreateVulkanObject<VkBufferView, VulkanHandleTypeId::BufferView>(vkCreateBufferView, BuffViewCI, DebugName, "buffer view");
 }
 
-ImageWrapper VulkanLogicalDevice::CreateImage(const VkImageCreateInfo& ImageCI,
-                                              const char*              DebugName) const
+ImageWrapper LogicalDevice::CreateImage(const VkImageCreateInfo& ImageCI,
+                                        const char*              DebugName) const
 {
     VERIFY_EXPR(ImageCI.sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
     return CreateVulkanObject<VkImage, VulkanHandleTypeId::Image>(vkCreateImage, ImageCI, DebugName, "image");
 }
 
-ImageViewWrapper VulkanLogicalDevice::CreateImageView(const VkImageViewCreateInfo& ImageViewCI,
-                                                      const char*                  DebugName) const
+ImageViewWrapper LogicalDevice::CreateImageView(const VkImageViewCreateInfo& ImageViewCI,
+                                                const char*                  DebugName) const
 {
     VERIFY_EXPR(ImageViewCI.sType == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
     return CreateVulkanObject<VkImageView, VulkanHandleTypeId::ImageView>(vkCreateImageView, ImageViewCI, DebugName, "image view");
 }
 
-SamplerWrapper VulkanLogicalDevice::CreateSampler(const VkSamplerCreateInfo& SamplerCI, const char* DebugName) const
+SamplerWrapper LogicalDevice::CreateSampler(const VkSamplerCreateInfo& SamplerCI, const char* DebugName) const
 {
     VERIFY_EXPR(SamplerCI.sType == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
     return CreateVulkanObject<VkSampler, VulkanHandleTypeId::Sampler>(vkCreateSampler, SamplerCI, DebugName, "sampler");
 }
 
-FenceWrapper VulkanLogicalDevice::CreateFence(const VkFenceCreateInfo& FenceCI, const char* DebugName) const
+FenceWrapper LogicalDevice::CreateFence(const VkFenceCreateInfo& FenceCI, const char* DebugName) const
 {
     VERIFY_EXPR(FenceCI.sType == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
     return CreateVulkanObject<VkFence, VulkanHandleTypeId::Fence>(vkCreateFence, FenceCI, DebugName, "fence");
 }
 
-RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo& RenderPassCI, const char* DebugName) const
+RenderPassWrapper LogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo& RenderPassCI, const char* DebugName) const
 {
     VERIFY_EXPR(RenderPassCI.sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
     return CreateVulkanObject<VkRenderPass, VulkanHandleTypeId::RenderPass>(vkCreateRenderPass, RenderPassCI, DebugName, "render pass");
 }
 
-RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo2& RenderPassCI, const char* DebugName) const
+RenderPassWrapper LogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo2& RenderPassCI, const char* DebugName) const
 {
 #if DILIGENT_USE_VOLK
     VERIFY_EXPR(RenderPassCI.sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2);
@@ -243,8 +242,8 @@ RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreate
 #endif
 }
 
-DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllocateInfo& AllocInfo,
-                                                              const char*                 DebugName) const
+DeviceMemoryWrapper LogicalDevice::AllocateDeviceMemory(const VkMemoryAllocateInfo& AllocInfo,
+                                                        const char*                 DebugName) const
 {
     VERIFY_EXPR(AllocInfo.sType == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO);
 
@@ -262,9 +261,9 @@ DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllo
     return DeviceMemoryWrapper{GetSharedPtr(), std::move(vkDeviceMem)};
 }
 
-PipelineWrapper VulkanLogicalDevice::CreateComputePipeline(const VkComputePipelineCreateInfo& PipelineCI,
-                                                           VkPipelineCache                    cache,
-                                                           const char*                        DebugName) const
+PipelineWrapper LogicalDevice::CreateComputePipeline(const VkComputePipelineCreateInfo& PipelineCI,
+                                                     VkPipelineCache                    cache,
+                                                     const char*                        DebugName) const
 {
     VERIFY_EXPR(PipelineCI.sType == VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO);
 
@@ -282,9 +281,9 @@ PipelineWrapper VulkanLogicalDevice::CreateComputePipeline(const VkComputePipeli
     return PipelineWrapper{GetSharedPtr(), std::move(vkPipeline)};
 }
 
-PipelineWrapper VulkanLogicalDevice::CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo& PipelineCI,
-                                                            VkPipelineCache                     cache,
-                                                            const char*                         DebugName) const
+PipelineWrapper LogicalDevice::CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo& PipelineCI,
+                                                      VkPipelineCache                     cache,
+                                                      const char*                         DebugName) const
 {
     VERIFY_EXPR(PipelineCI.sType == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
 
@@ -302,7 +301,7 @@ PipelineWrapper VulkanLogicalDevice::CreateGraphicsPipeline(const VkGraphicsPipe
     return PipelineWrapper{GetSharedPtr(), std::move(vkPipeline)};
 }
 
-PipelineWrapper VulkanLogicalDevice::CreateRayTracingPipeline(const VkRayTracingPipelineCreateInfoKHR& PipelineCI, VkPipelineCache cache, const char* DebugName) const
+PipelineWrapper LogicalDevice::CreateRayTracingPipeline(const VkRayTracingPipelineCreateInfoKHR& PipelineCI, VkPipelineCache cache, const char* DebugName) const
 {
 #if DILIGENT_USE_VOLK
     VERIFY_EXPR(PipelineCI.sType == VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR);
@@ -325,43 +324,43 @@ PipelineWrapper VulkanLogicalDevice::CreateRayTracingPipeline(const VkRayTracing
 #endif
 }
 
-ShaderModuleWrapper VulkanLogicalDevice::CreateShaderModule(const VkShaderModuleCreateInfo& ShaderModuleCI, const char* DebugName) const
+ShaderModuleWrapper LogicalDevice::CreateShaderModule(const VkShaderModuleCreateInfo& ShaderModuleCI, const char* DebugName) const
 {
     VERIFY_EXPR(ShaderModuleCI.sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO);
     return CreateVulkanObject<VkShaderModule, VulkanHandleTypeId::ShaderModule>(vkCreateShaderModule, ShaderModuleCI, DebugName, "shader module");
 }
 
-PipelineLayoutWrapper VulkanLogicalDevice::CreatePipelineLayout(const VkPipelineLayoutCreateInfo& PipelineLayoutCI, const char* DebugName) const
+PipelineLayoutWrapper LogicalDevice::CreatePipelineLayout(const VkPipelineLayoutCreateInfo& PipelineLayoutCI, const char* DebugName) const
 {
     VERIFY_EXPR(PipelineLayoutCI.sType == VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO);
     return CreateVulkanObject<VkPipelineLayout, VulkanHandleTypeId::PipelineLayout>(vkCreatePipelineLayout, PipelineLayoutCI, DebugName, "pipeline layout");
 }
 
-FramebufferWrapper VulkanLogicalDevice::CreateFramebuffer(const VkFramebufferCreateInfo& FramebufferCI, const char* DebugName) const
+FramebufferWrapper LogicalDevice::CreateFramebuffer(const VkFramebufferCreateInfo& FramebufferCI, const char* DebugName) const
 {
     VERIFY_EXPR(FramebufferCI.sType == VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
     return CreateVulkanObject<VkFramebuffer, VulkanHandleTypeId::Framebuffer>(vkCreateFramebuffer, FramebufferCI, DebugName, "framebuffer");
 }
 
-DescriptorPoolWrapper VulkanLogicalDevice::CreateDescriptorPool(const VkDescriptorPoolCreateInfo& DescrPoolCI, const char* DebugName) const
+DescriptorPoolWrapper LogicalDevice::CreateDescriptorPool(const VkDescriptorPoolCreateInfo& DescrPoolCI, const char* DebugName) const
 {
     VERIFY_EXPR(DescrPoolCI.sType == VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO);
     return CreateVulkanObject<VkDescriptorPool, VulkanHandleTypeId::DescriptorPool>(vkCreateDescriptorPool, DescrPoolCI, DebugName, "descriptor pool");
 }
 
-DescriptorSetLayoutWrapper VulkanLogicalDevice::CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo& LayoutCI, const char* DebugName) const
+DescriptorSetLayoutWrapper LogicalDevice::CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo& LayoutCI, const char* DebugName) const
 {
     VERIFY_EXPR(LayoutCI.sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
     return CreateVulkanObject<VkDescriptorSetLayout, VulkanHandleTypeId::DescriptorSetLayout>(vkCreateDescriptorSetLayout, LayoutCI, DebugName, "descriptor set layout");
 }
 
-SemaphoreWrapper VulkanLogicalDevice::CreateSemaphore(const VkSemaphoreCreateInfo& SemaphoreCI, const char* DebugName) const
+SemaphoreWrapper LogicalDevice::CreateSemaphore(const VkSemaphoreCreateInfo& SemaphoreCI, const char* DebugName) const
 {
     VERIFY_EXPR(SemaphoreCI.sType == VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO);
     return CreateVulkanObject<VkSemaphore, VulkanHandleTypeId::Semaphore>(vkCreateSemaphore, SemaphoreCI, DebugName, "semaphore");
 }
 
-SemaphoreWrapper VulkanLogicalDevice::CreateTimelineSemaphore(uint64_t InitialValue, const char* DebugName) const
+SemaphoreWrapper LogicalDevice::CreateTimelineSemaphore(uint64_t InitialValue, const char* DebugName) const
 {
     VERIFY_EXPR(m_EnabledExtFeatures.TimelineSemaphore.timelineSemaphore == VK_TRUE);
 
@@ -377,13 +376,13 @@ SemaphoreWrapper VulkanLogicalDevice::CreateTimelineSemaphore(uint64_t InitialVa
     return CreateVulkanObject<VkSemaphore, VulkanHandleTypeId::Semaphore>(vkCreateSemaphore, SemaphoreCI, DebugName, "timeline semaphore");
 }
 
-QueryPoolWrapper VulkanLogicalDevice::CreateQueryPool(const VkQueryPoolCreateInfo& QueryPoolCI, const char* DebugName) const
+QueryPoolWrapper LogicalDevice::CreateQueryPool(const VkQueryPoolCreateInfo& QueryPoolCI, const char* DebugName) const
 {
     VERIFY_EXPR(QueryPoolCI.sType == VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
     return CreateVulkanObject<VkQueryPool, VulkanHandleTypeId::QueryPool>(vkCreateQueryPool, QueryPoolCI, DebugName, "query pool");
 }
 
-AccelStructWrapper VulkanLogicalDevice::CreateAccelStruct(const VkAccelerationStructureCreateInfoKHR& CI, const char* DebugName) const
+AccelStructWrapper LogicalDevice::CreateAccelStruct(const VkAccelerationStructureCreateInfoKHR& CI, const char* DebugName) const
 {
 #if DILIGENT_USE_VOLK
     VERIFY_EXPR(CI.sType == VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR);
@@ -394,7 +393,7 @@ AccelStructWrapper VulkanLogicalDevice::CreateAccelStruct(const VkAccelerationSt
 #endif
 }
 
-VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo& AllocInfo, const char* DebugName) const
+VkCommandBuffer LogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo& AllocInfo, const char* DebugName) const
 {
     VERIFY_EXPR(AllocInfo.sType == VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO);
 
@@ -413,7 +412,7 @@ VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBuff
     return CmdBuff;
 }
 
-VkDescriptorSet VulkanLogicalDevice::AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo& AllocInfo, const char* DebugName) const
+VkDescriptorSet LogicalDevice::AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo& AllocInfo, const char* DebugName) const
 {
     VERIFY_EXPR(AllocInfo.sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO);
     VERIFY_EXPR(AllocInfo.descriptorSetCount == 1);
@@ -433,115 +432,115 @@ VkDescriptorSet VulkanLogicalDevice::AllocateVkDescriptorSet(const VkDescriptorS
     return DescrSet;
 }
 
-PipelineCacheWrapper VulkanLogicalDevice::CreatePipelineCache(const VkPipelineCacheCreateInfo& CI, const char* DebugName) const
+PipelineCacheWrapper LogicalDevice::CreatePipelineCache(const VkPipelineCacheCreateInfo& CI, const char* DebugName) const
 {
     VERIFY_EXPR(CI.sType == VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO);
     return CreateVulkanObject<VkPipelineCache, VulkanHandleTypeId::PipelineCache>(vkCreatePipelineCache, CI, DebugName, "pipeline cache");
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(CommandPoolWrapper&& CmdPool) const
+void LogicalDevice::ReleaseVulkanObject(CommandPoolWrapper&& CmdPool) const
 {
     vkDestroyCommandPool(m_VkDevice, CmdPool.m_VkObject, m_VkAllocator);
     CmdPool.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(BufferWrapper&& Buffer) const
+void LogicalDevice::ReleaseVulkanObject(BufferWrapper&& Buffer) const
 {
     vkDestroyBuffer(m_VkDevice, Buffer.m_VkObject, m_VkAllocator);
     Buffer.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(BufferViewWrapper&& BufferView) const
+void LogicalDevice::ReleaseVulkanObject(BufferViewWrapper&& BufferView) const
 {
     vkDestroyBufferView(m_VkDevice, BufferView.m_VkObject, m_VkAllocator);
     BufferView.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(ImageWrapper&& Image) const
+void LogicalDevice::ReleaseVulkanObject(ImageWrapper&& Image) const
 {
     vkDestroyImage(m_VkDevice, Image.m_VkObject, m_VkAllocator);
     Image.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(ImageViewWrapper&& ImageView) const
+void LogicalDevice::ReleaseVulkanObject(ImageViewWrapper&& ImageView) const
 {
     vkDestroyImageView(m_VkDevice, ImageView.m_VkObject, m_VkAllocator);
     ImageView.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(SamplerWrapper&& Sampler) const
+void LogicalDevice::ReleaseVulkanObject(SamplerWrapper&& Sampler) const
 {
     vkDestroySampler(m_VkDevice, Sampler.m_VkObject, m_VkAllocator);
     Sampler.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(FenceWrapper&& Fence) const
+void LogicalDevice::ReleaseVulkanObject(FenceWrapper&& Fence) const
 {
     vkDestroyFence(m_VkDevice, Fence.m_VkObject, m_VkAllocator);
     Fence.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(RenderPassWrapper&& RenderPass) const
+void LogicalDevice::ReleaseVulkanObject(RenderPassWrapper&& RenderPass) const
 {
     vkDestroyRenderPass(m_VkDevice, RenderPass.m_VkObject, m_VkAllocator);
     RenderPass.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(DeviceMemoryWrapper&& Memory) const
+void LogicalDevice::ReleaseVulkanObject(DeviceMemoryWrapper&& Memory) const
 {
     vkFreeMemory(m_VkDevice, Memory.m_VkObject, m_VkAllocator);
     Memory.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(PipelineWrapper&& Pipeline) const
+void LogicalDevice::ReleaseVulkanObject(PipelineWrapper&& Pipeline) const
 {
     vkDestroyPipeline(m_VkDevice, Pipeline.m_VkObject, m_VkAllocator);
     Pipeline.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(ShaderModuleWrapper&& ShaderModule) const
+void LogicalDevice::ReleaseVulkanObject(ShaderModuleWrapper&& ShaderModule) const
 {
     vkDestroyShaderModule(m_VkDevice, ShaderModule.m_VkObject, m_VkAllocator);
     ShaderModule.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(PipelineLayoutWrapper&& PipelineLayout) const
+void LogicalDevice::ReleaseVulkanObject(PipelineLayoutWrapper&& PipelineLayout) const
 {
     vkDestroyPipelineLayout(m_VkDevice, PipelineLayout.m_VkObject, m_VkAllocator);
     PipelineLayout.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(FramebufferWrapper&& Framebuffer) const
+void LogicalDevice::ReleaseVulkanObject(FramebufferWrapper&& Framebuffer) const
 {
     vkDestroyFramebuffer(m_VkDevice, Framebuffer.m_VkObject, m_VkAllocator);
     Framebuffer.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(DescriptorPoolWrapper&& DescriptorPool) const
+void LogicalDevice::ReleaseVulkanObject(DescriptorPoolWrapper&& DescriptorPool) const
 {
     vkDestroyDescriptorPool(m_VkDevice, DescriptorPool.m_VkObject, m_VkAllocator);
     DescriptorPool.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(DescriptorSetLayoutWrapper&& DescriptorSetLayout) const
+void LogicalDevice::ReleaseVulkanObject(DescriptorSetLayoutWrapper&& DescriptorSetLayout) const
 {
     vkDestroyDescriptorSetLayout(m_VkDevice, DescriptorSetLayout.m_VkObject, m_VkAllocator);
     DescriptorSetLayout.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(SemaphoreWrapper&& Semaphore) const
+void LogicalDevice::ReleaseVulkanObject(SemaphoreWrapper&& Semaphore) const
 {
     vkDestroySemaphore(m_VkDevice, Semaphore.m_VkObject, m_VkAllocator);
     Semaphore.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(QueryPoolWrapper&& QueryPool) const
+void LogicalDevice::ReleaseVulkanObject(QueryPoolWrapper&& QueryPool) const
 {
     vkDestroyQueryPool(m_VkDevice, QueryPool.m_VkObject, m_VkAllocator);
     QueryPool.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(AccelStructWrapper&& AccelStruct) const
+void LogicalDevice::ReleaseVulkanObject(AccelStructWrapper&& AccelStruct) const
 {
 #if DILIGENT_USE_VOLK
     vkDestroyAccelerationStructureKHR(m_VkDevice, AccelStruct.m_VkObject, m_VkAllocator);
@@ -551,51 +550,51 @@ void VulkanLogicalDevice::ReleaseVulkanObject(AccelStructWrapper&& AccelStruct) 
 #endif
 }
 
-void VulkanLogicalDevice::ReleaseVulkanObject(PipelineCacheWrapper&& PipeCache) const
+void LogicalDevice::ReleaseVulkanObject(PipelineCacheWrapper&& PipeCache) const
 {
     vkDestroyPipelineCache(m_VkDevice, PipeCache.m_VkObject, m_VkAllocator);
     PipeCache.m_VkObject = VK_NULL_HANDLE;
 }
 
-void VulkanLogicalDevice::FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const
+void LogicalDevice::FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const
 {
     VERIFY_EXPR(Pool != VK_NULL_HANDLE && Set != VK_NULL_HANDLE);
     vkFreeDescriptorSets(m_VkDevice, Pool, 1, &Set);
 }
 
 
-void VulkanLogicalDevice::FreeCommandBuffer(VkCommandPool Pool, VkCommandBuffer CmdBuffer) const
+void LogicalDevice::FreeCommandBuffer(VkCommandPool Pool, VkCommandBuffer CmdBuffer) const
 {
     VERIFY_EXPR(Pool != VK_NULL_HANDLE && CmdBuffer != VK_NULL_HANDLE);
     vkFreeCommandBuffers(m_VkDevice, Pool, 1, &CmdBuffer);
 }
 
 
-VkMemoryRequirements VulkanLogicalDevice::GetBufferMemoryRequirements(VkBuffer vkBuffer) const
+VkMemoryRequirements LogicalDevice::GetBufferMemoryRequirements(VkBuffer vkBuffer) const
 {
     VkMemoryRequirements MemReqs = {};
     vkGetBufferMemoryRequirements(m_VkDevice, vkBuffer, &MemReqs);
     return MemReqs;
 }
 
-VkMemoryRequirements VulkanLogicalDevice::GetImageMemoryRequirements(VkImage vkImage) const
+VkMemoryRequirements LogicalDevice::GetImageMemoryRequirements(VkImage vkImage) const
 {
     VkMemoryRequirements MemReqs = {};
     vkGetImageMemoryRequirements(m_VkDevice, vkImage, &MemReqs);
     return MemReqs;
 }
 
-VkResult VulkanLogicalDevice::BindBufferMemory(VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
+VkResult LogicalDevice::BindBufferMemory(VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
 {
     return vkBindBufferMemory(m_VkDevice, buffer, memory, memoryOffset);
 }
 
-VkResult VulkanLogicalDevice::BindImageMemory(VkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
+VkResult LogicalDevice::BindImageMemory(VkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
 {
     return vkBindImageMemory(m_VkDevice, image, memory, memoryOffset);
 }
 
-VkDeviceAddress VulkanLogicalDevice::GetAccelerationStructureDeviceAddress(VkAccelerationStructureKHR AS) const
+VkDeviceAddress LogicalDevice::GetAccelerationStructureDeviceAddress(VkAccelerationStructureKHR AS) const
 {
 #if DILIGENT_USE_VOLK
     VkAccelerationStructureDeviceAddressInfoKHR Info = {};
@@ -610,7 +609,7 @@ VkDeviceAddress VulkanLogicalDevice::GetAccelerationStructureDeviceAddress(VkAcc
 #endif
 }
 
-void VulkanLogicalDevice::GetAccelerationStructureBuildSizes(const VkAccelerationStructureBuildGeometryInfoKHR& BuildInfo, const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR& SizeInfo) const
+void LogicalDevice::GetAccelerationStructureBuildSizes(const VkAccelerationStructureBuildGeometryInfoKHR& BuildInfo, const uint32_t* pMaxPrimitiveCounts, VkAccelerationStructureBuildSizesInfoKHR& SizeInfo) const
 {
 #if DILIGENT_USE_VOLK
     vkGetAccelerationStructureBuildSizesKHR(m_VkDevice, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &BuildInfo, pMaxPrimitiveCounts, &SizeInfo);
@@ -619,47 +618,47 @@ void VulkanLogicalDevice::GetAccelerationStructureBuildSizes(const VkAcceleratio
 #endif
 }
 
-VkResult VulkanLogicalDevice::MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData) const
+VkResult LogicalDevice::MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData) const
 {
     return vkMapMemory(m_VkDevice, memory, offset, size, flags, ppData);
 }
 
-void VulkanLogicalDevice::UnmapMemory(VkDeviceMemory memory) const
+void LogicalDevice::UnmapMemory(VkDeviceMemory memory) const
 {
     vkUnmapMemory(m_VkDevice, memory);
 }
 
-VkResult VulkanLogicalDevice::InvalidateMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges) const
+VkResult LogicalDevice::InvalidateMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges) const
 {
     return vkInvalidateMappedMemoryRanges(m_VkDevice, memoryRangeCount, pMemoryRanges);
 }
 
-VkResult VulkanLogicalDevice::FlushMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges) const
+VkResult LogicalDevice::FlushMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges) const
 {
     return vkFlushMappedMemoryRanges(m_VkDevice, memoryRangeCount, pMemoryRanges);
 }
 
-VkResult VulkanLogicalDevice::GetFenceStatus(VkFence fence) const
+VkResult LogicalDevice::GetFenceStatus(VkFence fence) const
 {
     return vkGetFenceStatus(m_VkDevice, fence);
 }
 
-VkResult VulkanLogicalDevice::ResetFence(VkFence fence) const
+VkResult LogicalDevice::ResetFence(VkFence fence) const
 {
     VkResult err = vkResetFences(m_VkDevice, 1, &fence);
     DEV_CHECK_ERR(err == VK_SUCCESS, "vkResetFences() failed");
     return err;
 }
 
-VkResult VulkanLogicalDevice::WaitForFences(uint32_t       fenceCount,
-                                            const VkFence* pFences,
-                                            VkBool32       waitAll,
-                                            uint64_t       timeout) const
+VkResult LogicalDevice::WaitForFences(uint32_t       fenceCount,
+                                      const VkFence* pFences,
+                                      VkBool32       waitAll,
+                                      uint64_t       timeout) const
 {
     return vkWaitForFences(m_VkDevice, fenceCount, pFences, waitAll, timeout);
 }
 
-VkResult VulkanLogicalDevice::GetSemaphoreCounter(VkSemaphore TimelineSemaphore, uint64_t* pSemaphoreValue) const
+VkResult LogicalDevice::GetSemaphoreCounter(VkSemaphore TimelineSemaphore, uint64_t* pSemaphoreValue) const
 {
 #if DILIGENT_USE_VOLK
     return vkGetSemaphoreCounterValueKHR(m_VkDevice, TimelineSemaphore, pSemaphoreValue);
@@ -669,7 +668,7 @@ VkResult VulkanLogicalDevice::GetSemaphoreCounter(VkSemaphore TimelineSemaphore,
 #endif
 }
 
-VkResult VulkanLogicalDevice::SignalSemaphore(const VkSemaphoreSignalInfo& SignalInfo) const
+VkResult LogicalDevice::SignalSemaphore(const VkSemaphoreSignalInfo& SignalInfo) const
 {
 #if DILIGENT_USE_VOLK
     VERIFY_EXPR(SignalInfo.sType == VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO);
@@ -680,7 +679,7 @@ VkResult VulkanLogicalDevice::SignalSemaphore(const VkSemaphoreSignalInfo& Signa
 #endif
 }
 
-VkResult VulkanLogicalDevice::WaitSemaphores(const VkSemaphoreWaitInfo& WaitInfo, uint64_t Timeout) const
+VkResult LogicalDevice::WaitSemaphores(const VkSemaphoreWaitInfo& WaitInfo, uint64_t Timeout) const
 {
 #if DILIGENT_USE_VOLK
     VERIFY_EXPR(WaitInfo.sType == VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO);
@@ -691,33 +690,33 @@ VkResult VulkanLogicalDevice::WaitSemaphores(const VkSemaphoreWaitInfo& WaitInfo
 #endif
 }
 
-void VulkanLogicalDevice::UpdateDescriptorSets(uint32_t                    descriptorWriteCount,
-                                               const VkWriteDescriptorSet* pDescriptorWrites,
-                                               uint32_t                    descriptorCopyCount,
-                                               const VkCopyDescriptorSet*  pDescriptorCopies) const
+void LogicalDevice::UpdateDescriptorSets(uint32_t                    descriptorWriteCount,
+                                         const VkWriteDescriptorSet* pDescriptorWrites,
+                                         uint32_t                    descriptorCopyCount,
+                                         const VkCopyDescriptorSet*  pDescriptorCopies) const
 {
     vkUpdateDescriptorSets(m_VkDevice, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
 }
 
-VkResult VulkanLogicalDevice::ResetCommandPool(VkCommandPool           vkCmdPool,
-                                               VkCommandPoolResetFlags flags) const
+VkResult LogicalDevice::ResetCommandPool(VkCommandPool           vkCmdPool,
+                                         VkCommandPoolResetFlags flags) const
 {
     VkResult err = vkResetCommandPool(m_VkDevice, vkCmdPool, flags);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset command pool");
     return err;
 }
 
-VkResult VulkanLogicalDevice::ResetDescriptorPool(VkDescriptorPool           vkDescriptorPool,
-                                                  VkDescriptorPoolResetFlags flags) const
+VkResult LogicalDevice::ResetDescriptorPool(VkDescriptorPool           vkDescriptorPool,
+                                            VkDescriptorPoolResetFlags flags) const
 {
     VkResult err = vkResetDescriptorPool(m_VkDevice, vkDescriptorPool, flags);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset descriptor pool");
     return err;
 }
 
-void VulkanLogicalDevice::ResetQueryPool(VkQueryPool queryPool,
-                                         uint32_t    firstQuery,
-                                         uint32_t    queryCount) const
+void LogicalDevice::ResetQueryPool(VkQueryPool queryPool,
+                                   uint32_t    firstQuery,
+                                   uint32_t    queryCount) const
 {
 #if DILIGENT_USE_VOLK
     vkResetQueryPoolEXT(m_VkDevice, queryPool, firstQuery, queryCount);
@@ -726,7 +725,7 @@ void VulkanLogicalDevice::ResetQueryPool(VkQueryPool queryPool,
 #endif
 }
 
-VkResult VulkanLogicalDevice::CopyMemoryToImage(const VkCopyMemoryToImageInfoEXT& CopyInfo) const
+VkResult LogicalDevice::CopyMemoryToImage(const VkCopyMemoryToImageInfoEXT& CopyInfo) const
 {
 #if DILIGENT_USE_VOLK
     VkResult err = vkCopyMemoryToImageEXT(m_VkDevice, &CopyInfo);
@@ -738,7 +737,7 @@ VkResult VulkanLogicalDevice::CopyMemoryToImage(const VkCopyMemoryToImageInfoEXT
 #endif
 }
 
-VkResult VulkanLogicalDevice::HostTransitionImageLayout(const VkHostImageLayoutTransitionInfoEXT& TransitionInfo) const
+VkResult LogicalDevice::HostTransitionImageLayout(const VkHostImageLayoutTransitionInfoEXT& TransitionInfo) const
 {
 #if DILIGENT_USE_VOLK
     VkResult err = vkTransitionImageLayoutEXT(m_VkDevice, 1, &TransitionInfo);
@@ -750,7 +749,7 @@ VkResult VulkanLogicalDevice::HostTransitionImageLayout(const VkHostImageLayoutT
 #endif
 }
 
-VkResult VulkanLogicalDevice::GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const
+VkResult LogicalDevice::GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const
 {
 #if DILIGENT_USE_VOLK
     return vkGetRayTracingShaderGroupHandlesKHR(m_VkDevice, pipeline, firstGroup, groupCount, dataSize, pData);

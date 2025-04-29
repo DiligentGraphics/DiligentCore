@@ -32,7 +32,7 @@
 #include "BufferVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
-#include "VulkanUtilities/VulkanDebug.hpp"
+#include "VulkanUtilities/Debug.hpp"
 
 namespace Diligent
 {
@@ -45,8 +45,8 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
 #define DEVMEM_CHECK_CREATE_INFO(...) \
     LOG_ERROR_AND_THROW("Device memory create info is not valid: ", __VA_ARGS__);
 
-    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = m_pDevice->GetPhysicalDevice();
-    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice  = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::PhysicalDevice& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+    const VulkanUtilities::LogicalDevice&  LogicalDevice  = m_pDevice->GetLogicalDevice();
 
     if (MemCI.NumResources == 0)
         DEVMEM_CHECK_CREATE_INFO("Vulkan requires at least one resource to choose memory type");
@@ -84,7 +84,7 @@ DeviceMemoryVkImpl::DeviceMemoryVkImpl(IReferenceCounters*           pRefCounter
     if (MemoryTypeBits == 0)
         DEVMEM_CHECK_CREATE_INFO("ppCompatibleResources contains incompatible resources");
 
-    static constexpr uint32_t InvalidMemoryTypeIndex = VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex;
+    static constexpr uint32_t InvalidMemoryTypeIndex = VulkanUtilities::PhysicalDevice::InvalidMemoryTypeIndex;
 
     uint32_t MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -117,8 +117,8 @@ Bool DeviceMemoryVkImpl::Resize(Uint64 NewSize)
 {
     DvpVerifyResize(NewSize);
 
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
-    const size_t                                NewPageCount  = StaticCast<size_t>(NewSize / m_Desc.PageSize);
+    const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const size_t                          NewPageCount  = StaticCast<size_t>(NewSize / m_Desc.PageSize);
 
     VkMemoryAllocateInfo MemAlloc{};
     MemAlloc.pNext           = nullptr;
@@ -156,7 +156,7 @@ Uint64 DeviceMemoryVkImpl::GetCapacity() const
 
 Bool DeviceMemoryVkImpl::IsCompatible(IDeviceObject* pResource) const
 {
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
 
     uint32_t memoryTypeBits = 0;
     if (RefCntAutoPtr<ITextureVk> pTexture{pResource, IID_TextureVk})

@@ -45,8 +45,8 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
     }
 // clang-format on
 {
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
-    const VkPhysicalDeviceLimits&               Limits        = pRenderDeviceVk->GetPhysicalDevice().GetProperties().limits;
+    const VulkanUtilities::LogicalDevice& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    const VkPhysicalDeviceLimits&         Limits        = pRenderDeviceVk->GetPhysicalDevice().GetProperties().limits;
 
     VkSamplerCreateInfo SamplerCI{};
     SamplerCI.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;

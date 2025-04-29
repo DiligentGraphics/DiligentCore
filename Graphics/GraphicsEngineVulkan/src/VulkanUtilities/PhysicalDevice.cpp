@@ -30,18 +30,17 @@
 #include <algorithm>
 
 #include "VulkanErrors.hpp"
-#include "VulkanUtilities/VulkanPhysicalDevice.hpp"
+#include "VulkanUtilities/PhysicalDevice.hpp"
 
 namespace VulkanUtilities
 {
 
-std::unique_ptr<VulkanPhysicalDevice> VulkanPhysicalDevice::Create(const CreateInfo& CI)
+std::unique_ptr<PhysicalDevice> PhysicalDevice::Create(const CreateInfo& CI)
 {
-    VulkanPhysicalDevice* PhysicalDevice = new VulkanPhysicalDevice{CI};
-    return std::unique_ptr<VulkanPhysicalDevice>{PhysicalDevice};
+    return std::unique_ptr<PhysicalDevice>{new PhysicalDevice{CI}};
 }
 
-VulkanPhysicalDevice::VulkanPhysicalDevice(const CreateInfo& CI) :
+PhysicalDevice::PhysicalDevice(const CreateInfo& CI) :
     m_VkDevice{CI.vkDevice}
 {
     VERIFY_EXPR(m_VkDevice != VK_NULL_HANDLE);
@@ -73,13 +72,13 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const CreateInfo& CI) :
         LOG_INFO_MESSAGE("Extensions supported by device '", m_Properties.deviceName, "': ", PrintExtensionsList(m_SupportedExtensions, 3));
     }
 
-    m_VkVersion = std::min(CI.Instance.GetVersion(), m_Properties.apiVersion);
+    m_VkVersion = std::min(CI.Inst.GetVersion(), m_Properties.apiVersion);
 
     // remove patch version
     m_VkVersion &= ~VK_MAKE_VERSION(0, 0, VK_API_VERSION_PATCH(~0u));
 
 #if DILIGENT_USE_VOLK
-    if (CI.Instance.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+    if (CI.Inst.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
         VkPhysicalDeviceFeatures2 Feats2{};
         Feats2.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -412,7 +411,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const CreateInfo& CI) :
 #endif // DILIGENT_USE_VOLK
 }
 
-HardwareQueueIndex VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags) const
+HardwareQueueIndex PhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags) const
 {
     // All commands that are allowed on a queue that supports transfer operations are also allowed on
     // a queue that supports either graphics or compute operations. Thus, if the capabilities of a queue
@@ -480,7 +479,7 @@ HardwareQueueIndex VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags
     return HardwareQueueIndex{FamilyInd};
 }
 
-bool VulkanPhysicalDevice::IsExtensionSupported(const char* ExtensionName) const
+bool PhysicalDevice::IsExtensionSupported(const char* ExtensionName) const
 {
     for (const VkExtensionProperties& Extension : m_SupportedExtensions)
         if (strcmp(Extension.extensionName, ExtensionName) == 0)
@@ -489,7 +488,7 @@ bool VulkanPhysicalDevice::IsExtensionSupported(const char* ExtensionName) const
     return false;
 }
 
-bool VulkanPhysicalDevice::CheckPresentSupport(HardwareQueueIndex queueFamilyIndex, VkSurfaceKHR VkSurface) const
+bool PhysicalDevice::CheckPresentSupport(HardwareQueueIndex queueFamilyIndex, VkSurfaceKHR VkSurface) const
 {
     VkBool32 PresentSupport = VK_FALSE;
     vkGetPhysicalDeviceSurfaceSupportKHR(m_VkDevice, queueFamilyIndex, VkSurface, &PresentSupport);
@@ -504,8 +503,8 @@ bool VulkanPhysicalDevice::CheckPresentSupport(HardwareQueueIndex queueFamilyInd
 //                                 VkPhysicalDeviceMemoryProperties structure for the physical device is
 //                                 supported for the resource.
 // * requiredProperties   -  required memory properties (device local, host visible, etc.)
-uint32_t VulkanPhysicalDevice::GetMemoryTypeIndex(uint32_t              memoryTypeBitsRequirement,
-                                                  VkMemoryPropertyFlags requiredProperties) const
+uint32_t PhysicalDevice::GetMemoryTypeIndex(uint32_t              memoryTypeBitsRequirement,
+                                            VkMemoryPropertyFlags requiredProperties) const
 {
     // Iterate over all memory types available for the device
     // For each pair of elements X and Y returned in memoryTypes, X must be placed at a lower index position than Y if:
@@ -543,7 +542,7 @@ uint32_t VulkanPhysicalDevice::GetMemoryTypeIndex(uint32_t              memoryTy
     return InvalidMemoryTypeIndex;
 }
 
-VkFormatProperties VulkanPhysicalDevice::GetPhysicalDeviceFormatProperties(VkFormat imageFormat, VkFormatProperties3* Properties3) const
+VkFormatProperties PhysicalDevice::GetPhysicalDeviceFormatProperties(VkFormat imageFormat, VkFormatProperties3* Properties3) const
 {
     if (Properties3 != nullptr)
     {
@@ -566,7 +565,7 @@ VkFormatProperties VulkanPhysicalDevice::GetPhysicalDeviceFormatProperties(VkFor
     }
 }
 
-bool VulkanPhysicalDevice::IsUMA() const
+bool PhysicalDevice::IsUMA() const
 {
     return m_MemoryProperties.memoryHeapCount == 1;
 }

@@ -37,7 +37,7 @@
 namespace Diligent
 {
 
-static VkDeviceSize GetDefaultAlignment(const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice)
+static VkDeviceSize GetDefaultAlignment(const VulkanUtilities::PhysicalDevice& PhysicalDevice)
 {
     const VkPhysicalDeviceProperties& Props  = PhysicalDevice.GetProperties();
     const VkPhysicalDeviceLimits&     Limits = Props.limits;
@@ -73,11 +73,11 @@ VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Alloc
     VkBuffCI.queueFamilyIndexCount = 0;
     VkBuffCI.pQueueFamilyIndices   = nullptr;
 
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = DeviceVk.GetLogicalDevice();
-    m_VkBuffer                                                = LogicalDevice.CreateBuffer(VkBuffCI, "Dynamic heap buffer");
-    VkMemoryRequirements MemReqs                              = LogicalDevice.GetBufferMemoryRequirements(m_VkBuffer);
+    const VulkanUtilities::LogicalDevice& LogicalDevice = DeviceVk.GetLogicalDevice();
+    m_VkBuffer                                          = LogicalDevice.CreateBuffer(VkBuffCI, "Dynamic heap buffer");
+    VkMemoryRequirements MemReqs                        = LogicalDevice.GetBufferMemoryRequirements(m_VkBuffer);
 
-    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = DeviceVk.GetPhysicalDevice();
+    const VulkanUtilities::PhysicalDevice& PhysicalDevice = DeviceVk.GetPhysicalDevice();
 
     VkMemoryAllocateInfo MemAlloc{};
     MemAlloc.pNext          = nullptr;
@@ -89,7 +89,7 @@ VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Alloc
     // to the host (10.2)
     MemAlloc.memoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    VERIFY(MemAlloc.memoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
+    VERIFY(MemAlloc.memoryTypeIndex != VulkanUtilities::PhysicalDevice::InvalidMemoryTypeIndex,
            "Vulkan spec requires that for a VkBuffer not created with the "
            "VK_BUFFER_CREATE_SPARSE_BINDING_BIT bit set, the memoryTypeBits member always contains at least one bit set "
            "corresponding to a VkMemoryType with a propertyFlags that has both the VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit "

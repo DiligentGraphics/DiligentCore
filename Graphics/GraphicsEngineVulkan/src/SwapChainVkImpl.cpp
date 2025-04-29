@@ -45,7 +45,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
     // clang-format off
     TSwapChainBase               {pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc},
     m_Window                     {Window},
-    m_VulkanInstance             {pRenderDeviceVk->GetVulkanInstance()},
+    m_Instance             {pRenderDeviceVk->GetInstance()},
     m_DesiredBufferCount         {SCDesc.BufferCount},
     m_pBackBufferRTV             (STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")),
     m_SwapChainImagesInitialized (STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>"))
@@ -67,7 +67,7 @@ void SwapChainVkImpl::CreateSurface()
 {
     if (m_VkSurface != VK_NULL_HANDLE)
     {
-        vkDestroySurfaceKHR(m_VulkanInstance->GetVkInstance(), m_VkSurface, NULL);
+        vkDestroySurfaceKHR(m_Instance->GetVkInstance(), m_VkSurface, NULL);
         m_VkSurface = VK_NULL_HANDLE;
     }
 
@@ -81,7 +81,7 @@ void SwapChainVkImpl::CreateSurface()
         surfaceCreateInfo.hinstance = GetModuleHandle(NULL);
         surfaceCreateInfo.hwnd      = (HWND)m_Window.hWnd;
 
-        err = vkCreateWin32SurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
+        err = vkCreateWin32SurfaceKHR(m_Instance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
     }
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     if (m_Window.pAWindow != nullptr)
@@ -90,7 +90,7 @@ void SwapChainVkImpl::CreateSurface()
         surfaceCreateInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
         surfaceCreateInfo.window = (ANativeWindow*)m_Window.pAWindow;
 
-        err = vkCreateAndroidSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
+        err = vkCreateAndroidSurfaceKHR(m_Instance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
     }
 #elif defined(VK_USE_PLATFORM_METAL_EXT)
     if (void* pLayer = m_Window.GetLayer())
@@ -99,7 +99,7 @@ void SwapChainVkImpl::CreateSurface()
         surfaceCreateInfo.sType  = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
         surfaceCreateInfo.pLayer = pLayer;
 
-        err = vkCreateMetalSurfaceEXT(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
+        err = vkCreateMetalSurfaceEXT(m_Instance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
     }
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     if (m_Window.pDisplay != nullptr)
@@ -109,7 +109,7 @@ void SwapChainVkImpl::CreateSurface()
         surfaceCreateInfo.display = reinterpret_cast<struct wl_display*>(m_Window.pDisplay);
         surfaceCreateInfo.Surface = reinterpret_cast<struct wl_surface*>(nullptr);
 
-        err = vkCreateWaylandSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
+        err = vkCreateWaylandSurfaceKHR(m_Instance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
     }
 #elif defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR)
 
@@ -121,7 +121,7 @@ void SwapChainVkImpl::CreateSurface()
         surfaceCreateInfo.connection = reinterpret_cast<xcb_connection_t*>(m_Window.pXCBConnection);
         surfaceCreateInfo.window     = m_Window.WindowId;
 
-        err = vkCreateXcbSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
+        err = vkCreateXcbSurfaceKHR(m_Instance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
     }
 #    endif
 
@@ -133,7 +133,7 @@ void SwapChainVkImpl::CreateSurface()
         surfaceCreateInfo.dpy    = reinterpret_cast<Display*>(m_Window.pDisplay);
         surfaceCreateInfo.window = m_Window.WindowId;
 
-        err = vkCreateXlibSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
+        err = vkCreateXlibSurfaceKHR(m_Instance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
     }
 #    endif
 
@@ -143,10 +143,10 @@ void SwapChainVkImpl::CreateSurface()
 
     if (RefCntAutoPtr<IDeviceContext> pContext = m_wpDeviceContext.Lock())
     {
-        RenderDeviceVkImpl*                          pRenderDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-        const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
-        const ICommandQueueVk&                       CmdQueueVK      = pRenderDeviceVk->GetCommandQueue(pContext.RawPtr<DeviceContextVkImpl>()->GetCommandQueueId());
-        HardwareQueueIndex                           QueueFamilyIndex{CmdQueueVK.GetQueueFamilyIndex()};
+        RenderDeviceVkImpl*                    pRenderDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+        const VulkanUtilities::PhysicalDevice& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
+        const ICommandQueueVk&                 CmdQueueVK      = pRenderDeviceVk->GetCommandQueue(pContext.RawPtr<DeviceContextVkImpl>()->GetCommandQueueId());
+        HardwareQueueIndex                     QueueFamilyIndex{CmdQueueVK.GetQueueFamilyIndex()};
         if (!PhysicalDevice.CheckPresentSupport(QueueFamilyIndex, m_VkSurface))
         {
             LOG_ERROR_AND_THROW("Selected physical device does not support present capability.\n"
@@ -162,9 +162,9 @@ void SwapChainVkImpl::CreateSurface()
 
 void SwapChainVkImpl::CreateVulkanSwapChain()
 {
-    RenderDeviceVkImpl*                          pRenderDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
-    VkPhysicalDevice                             vkDeviceHandle  = PhysicalDevice.GetVkDeviceHandle();
+    RenderDeviceVkImpl*                    pRenderDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    const VulkanUtilities::PhysicalDevice& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
+    VkPhysicalDevice                       vkDeviceHandle  = PhysicalDevice.GetVkDeviceHandle();
     // Get the list of VkFormats that are supported:
     uint32_t formatCount = 0;
 
@@ -460,8 +460,8 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     //    swapchain_ci.pQueueFamilyIndices = queueFamilyIndices;
     //}
 
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
-    VkDevice                                    vkDevice      = pRenderDeviceVk->GetVkDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    VkDevice                              vkDevice      = pRenderDeviceVk->GetVkDevice();
 
     err = vkCreateSwapchainKHR(vkDevice, &swapchain_ci, NULL, &m_VkSwapChain);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan swapchain");
@@ -524,7 +524,7 @@ SwapChainVkImpl::~SwapChainVkImpl()
 
     if (m_VkSurface != VK_NULL_HANDLE)
     {
-        vkDestroySurfaceKHR(m_VulkanInstance->GetVkInstance(), m_VkSurface, NULL);
+        vkDestroySurfaceKHR(m_Instance->GetVkInstance(), m_VkSurface, NULL);
     }
 }
 
@@ -599,8 +599,8 @@ void SwapChainVkImpl::InitBuffersAndViews()
 
 VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
 {
-    RenderDeviceVkImpl*                         pDeviceVk     = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = pDeviceVk->GetLogicalDevice();
+    RenderDeviceVkImpl*                   pDeviceVk     = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     // Applications should not rely on vkAcquireNextImageKHR blocking in order to
     // meter their rendering speed. The implementation may return from this function
@@ -839,9 +839,9 @@ void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFOR
     if (m_VkSurface != VK_NULL_HANDLE)
     {
         // Check orientation
-        const RenderDeviceVkImpl*                    pRenderDeviceVk = m_pRenderDevice.ConstPtr<RenderDeviceVkImpl>();
-        const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
-        const VkPhysicalDevice                       vkDeviceHandle  = PhysicalDevice.GetVkDeviceHandle();
+        const RenderDeviceVkImpl*              pRenderDeviceVk = m_pRenderDevice.ConstPtr<RenderDeviceVkImpl>();
+        const VulkanUtilities::PhysicalDevice& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
+        const VkPhysicalDevice                 vkDeviceHandle  = PhysicalDevice.GetVkDeviceHandle();
 
         VkSurfaceCapabilitiesKHR surfCapabilities = {};
 

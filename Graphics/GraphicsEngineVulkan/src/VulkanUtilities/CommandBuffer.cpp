@@ -26,7 +26,7 @@
  */
 #include <sstream>
 
-#include "VulkanUtilities/VulkanCommandBuffer.hpp"
+#include "VulkanUtilities/CommandBuffer.hpp"
 #include "AdvancedMath.hpp"
 
 namespace VulkanUtilities
@@ -143,17 +143,17 @@ static VkAccessFlags AccessMaskFromImageLayout(VkImageLayout Layout,
 } // namespace
 
 
-VulkanCommandBuffer::VulkanCommandBuffer() noexcept
+CommandBuffer::CommandBuffer() noexcept
 {
     m_ImageBarriers.reserve(32);
 }
 
-void VulkanCommandBuffer::TransitionImageLayout(VkImage                        Image,
-                                                VkImageLayout                  OldLayout,
-                                                VkImageLayout                  NewLayout,
-                                                const VkImageSubresourceRange& SubresRange,
-                                                VkPipelineStageFlags           SrcStages,
-                                                VkPipelineStageFlags           DstStages)
+void CommandBuffer::TransitionImageLayout(VkImage                        Image,
+                                          VkImageLayout                  OldLayout,
+                                          VkImageLayout                  NewLayout,
+                                          const VkImageSubresourceRange& SubresRange,
+                                          VkPipelineStageFlags           SrcStages,
+                                          VkPipelineStageFlags           DstStages)
 {
     // Image layout transitions within a render pass execute
     // dependencies between attachments
@@ -220,10 +220,10 @@ void VulkanCommandBuffer::TransitionImageLayout(VkImage                        I
     m_ImageBarriers.emplace_back(ImgBarrier);
 }
 
-void VulkanCommandBuffer::MemoryBarrier(VkAccessFlags        srcAccessMask,
-                                        VkAccessFlags        dstAccessMask,
-                                        VkPipelineStageFlags SrcStages,
-                                        VkPipelineStageFlags DstStages)
+void CommandBuffer::MemoryBarrier(VkAccessFlags        srcAccessMask,
+                                  VkAccessFlags        dstAccessMask,
+                                  VkPipelineStageFlags SrcStages,
+                                  VkPipelineStageFlags DstStages)
 {
     EndRenderScope();
 
@@ -237,7 +237,7 @@ void VulkanCommandBuffer::MemoryBarrier(VkAccessFlags        srcAccessMask,
     m_Barrier.MemoryDstAccess |= dstAccessMask;
 }
 
-void VulkanCommandBuffer::FlushBarriers()
+void CommandBuffer::FlushBarriers()
 {
     if (m_Barrier.MemorySrcStages == 0 && m_Barrier.MemoryDstStages == 0 && m_ImageBarriers.empty())
         return;

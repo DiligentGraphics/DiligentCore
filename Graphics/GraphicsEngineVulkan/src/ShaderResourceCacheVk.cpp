@@ -289,10 +289,10 @@ void ShaderResourceCacheVk::Resource::SetStorageBuffer(RefCntAutoPtr<IDeviceObje
 }
 
 const ShaderResourceCacheVk::Resource& ShaderResourceCacheVk::SetResource(
-    const VulkanUtilities::VulkanLogicalDevice* pLogicalDevice,
-    Uint32                                      DescrSetIndex,
-    Uint32                                      CacheOffset,
-    SetResourceInfo&&                           SrcRes)
+    const VulkanUtilities::LogicalDevice* pLogicalDevice,
+    Uint32                                DescrSetIndex,
+    Uint32                                CacheOffset,
+    SetResourceInfo&&                     SrcRes)
 {
     DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
     Resource&      DstRes   = DescrSet.GetResource(CacheOffset);

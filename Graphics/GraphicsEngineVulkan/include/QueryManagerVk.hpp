@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,10 +32,10 @@
 #include <vector>
 
 #include "Query.h"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
-#include "VulkanUtilities/VulkanPhysicalDevice.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
-#include "VulkanUtilities/VulkanCommandBuffer.hpp"
+#include "VulkanUtilities/LogicalDevice.hpp"
+#include "VulkanUtilities/PhysicalDevice.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
+#include "VulkanUtilities/CommandBuffer.hpp"
 
 namespace Diligent
 {
@@ -72,8 +72,8 @@ public:
         return m_CounterFrequency;
     }
 
-    Uint32 ResetStaleQueries(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                             VulkanUtilities::VulkanCommandBuffer&       CmdBuff);
+    Uint32 ResetStaleQueries(const VulkanUtilities::LogicalDevice& LogicalDevice,
+                             VulkanUtilities::CommandBuffer&       CmdBuff);
 
     SoftwareQueueIndex GetCommandQueueId() const
     {
@@ -84,9 +84,9 @@ private:
     class QueryPoolInfo
     {
     public:
-        void Init(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                  const VkQueryPoolCreateInfo&                QueryPoolCI,
-                  QUERY_TYPE                                  Type);
+        void Init(const VulkanUtilities::LogicalDevice& LogicalDevice,
+                  const VkQueryPoolCreateInfo&          QueryPoolCI,
+                  QUERY_TYPE                            Type);
 
         QueryPoolInfo() noexcept {}
         ~QueryPoolInfo();
@@ -100,7 +100,7 @@ private:
 
         Uint32 Allocate();
         void   Discard(Uint32 Index);
-        Uint32 ResetStaleQueries(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, VulkanUtilities::VulkanCommandBuffer& CmdBuff);
+        Uint32 ResetStaleQueries(const VulkanUtilities::LogicalDevice& LogicalDevice, VulkanUtilities::CommandBuffer& CmdBuff);
 
         QUERY_TYPE GetType() const
         {

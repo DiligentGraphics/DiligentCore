@@ -38,10 +38,10 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                                          const BottomLevelASDesc& Desc) :
     TBottomLevelASBase{pRefCounters, pRenderDeviceVk, Desc}
 {
-    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice   = pRenderDeviceVk->GetLogicalDevice();
-    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
-    const RayTracingProperties&                  RTProps         = pRenderDeviceVk->GetAdapterInfo().RayTracing;
-    Uint64                                       AccelStructSize = m_Desc.CompactedSize;
+    const VulkanUtilities::LogicalDevice&  LogicalDevice   = pRenderDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::PhysicalDevice& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
+    const RayTracingProperties&            RTProps         = pRenderDeviceVk->GetAdapterInfo().RayTracing;
+    Uint64                                 AccelStructSize = m_Desc.CompactedSize;
 
     if (AccelStructSize == 0)
     {

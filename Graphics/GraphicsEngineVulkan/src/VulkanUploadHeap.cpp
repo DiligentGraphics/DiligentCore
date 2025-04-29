@@ -64,14 +64,14 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
     StagingBufferCI.queueFamilyIndexCount = 0;
     StagingBufferCI.pQueueFamilyIndices   = nullptr;
 
-    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice   = m_RenderDevice.GetLogicalDevice();
-    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice  = m_RenderDevice.GetPhysicalDevice();
-    VulkanUtilities::VulkanMemoryManager&        GlobalMemoryMgr = m_RenderDevice.GetGlobalMemoryManager();
+    const VulkanUtilities::LogicalDevice&  LogicalDevice   = m_RenderDevice.GetLogicalDevice();
+    const VulkanUtilities::PhysicalDevice& PhysicalDevice  = m_RenderDevice.GetPhysicalDevice();
+    VulkanUtilities::MemoryManager&        GlobalMemoryMgr = m_RenderDevice.GetGlobalMemoryManager();
 
     VulkanUtilities::BufferWrapper NewBuffer       = LogicalDevice.CreateBuffer(StagingBufferCI, "Upload buffer");
     VkMemoryRequirements           MemReqs         = LogicalDevice.GetBufferMemoryRequirements(NewBuffer);
     uint32_t                       MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    DEV_CHECK_ERR(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
+    DEV_CHECK_ERR(MemoryTypeIndex != VulkanUtilities::PhysicalDevice::InvalidMemoryTypeIndex,
                   "Vulkan spec requires that for a VkBuffer not created with the VK_BUFFER_CREATE_SPARSE_BINDING_BIT "
                   "bit set, or for a VkImage that was created with a VK_IMAGE_TILING_LINEAR value in the tiling member "
                   "of the VkImageCreateInfo structure passed to vkCreateImage, the memoryTypeBits member always contains "

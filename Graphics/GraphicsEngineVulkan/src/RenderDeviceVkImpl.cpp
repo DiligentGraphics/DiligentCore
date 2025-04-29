@@ -56,16 +56,16 @@
 namespace Diligent
 {
 
-RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                                    pRefCounters,
-                                       IMemoryAllocator&                                      RawMemAllocator,
-                                       IEngineFactory*                                        pEngineFactory,
-                                       const EngineVkCreateInfo&                              EngineCI,
-                                       const GraphicsAdapterInfo&                             AdapterInfo,
-                                       size_t                                                 CommandQueueCount,
-                                       ICommandQueueVk**                                      CmdQueues,
-                                       std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
-                                       std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                                       std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice) :
+RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                              pRefCounters,
+                                       IMemoryAllocator&                                RawMemAllocator,
+                                       IEngineFactory*                                  pEngineFactory,
+                                       const EngineVkCreateInfo&                        EngineCI,
+                                       const GraphicsAdapterInfo&                       AdapterInfo,
+                                       size_t                                           CommandQueueCount,
+                                       ICommandQueueVk**                                CmdQueues,
+                                       std::shared_ptr<VulkanUtilities::Instance>       Instance,
+                                       std::unique_ptr<VulkanUtilities::PhysicalDevice> PhysicalDevice,
+                                       std::shared_ptr<VulkanUtilities::LogicalDevice>  LogicalDevice) :
     // clang-format off
     TRenderDeviceBase
     {
@@ -82,7 +82,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         EngineCI.UploadHeapPageSize,
         EngineCI.DynamicHeapPageSize
     },
-    m_VulkanInstance         {Instance                 },
+    m_Instance         {Instance                 },
     m_PhysicalDevice         {std::move(PhysicalDevice)},
     m_LogicalVkDevice        {std::move(LogicalDevice) },
     m_DescriptorSetAllocator
@@ -242,15 +242,15 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     //{
     //    // If m_PhysicalDevice is empty, the device does not own vulkan logical device and must not
     //    // destroy it
-    //    vkDestroyDevice(m_VkDevice, m_VulkanInstance->GetVkAllocator());
+    //    vkDestroyDevice(m_VkDevice, m_Instance->GetVkAllocator());
     //}
 }
 
 
-void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex                    CommandQueueId,
-                                                  VulkanUtilities::CommandPoolWrapper&  CmdPool,
-                                                  VulkanUtilities::VulkanCommandBuffer& CmdBuffer,
-                                                  const Char*                           DebugPoolName)
+void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex                   CommandQueueId,
+                                                  VulkanUtilities::CommandPoolWrapper& CmdPool,
+                                                  VulkanUtilities::CommandBuffer&      CmdBuffer,
+                                                  const Char*                          DebugPoolName)
 {
     HardwareQueueIndex QueueFamilyIndex{GetCommandQueue(CommandQueueId).GetQueueFamilyIndex()};
     auto               CmdPoolMgrIter = m_TransientCmdPoolMgrs.find(QueueFamilyIndex);
@@ -335,10 +335,10 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(SoftwareQueueIndex   
     class TransientCmdPoolRecycler
     {
     public:
-        TransientCmdPoolRecycler(const VulkanUtilities::VulkanLogicalDevice& _LogicalDevice,
-                                 CommandPoolManager&                         _CmdPoolMgr,
-                                 VulkanUtilities::CommandPoolWrapper&&       _Pool,
-                                 VkCommandBuffer&&                           _vkCmdBuffer) :
+        TransientCmdPoolRecycler(const VulkanUtilities::LogicalDevice& _LogicalDevice,
+                                 CommandPoolManager&                   _CmdPoolMgr,
+                                 VulkanUtilities::CommandPoolWrapper&& _Pool,
+                                 VkCommandBuffer&&                     _vkCmdBuffer) :
             // clang-format off
             LogicalDevice{_LogicalDevice         },
             CmdPoolMgr   {&_CmdPoolMgr           },
@@ -376,7 +376,7 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(SoftwareQueueIndex   
         }
 
     private:
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice;
+        const VulkanUtilities::LogicalDevice& LogicalDevice;
 
         CommandPoolManager*                 CmdPoolMgr = nullptr;
         VulkanUtilities::CommandPoolWrapper Pool;

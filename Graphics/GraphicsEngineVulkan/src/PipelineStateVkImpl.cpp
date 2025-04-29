@@ -55,7 +55,7 @@ constexpr INTERFACE_ID PipelineStateVkImpl::IID_InternalImpl;
 namespace
 {
 
-void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&        LogicalDevice,
+void InitPipelineShaderStages(const VulkanUtilities::LogicalDevice&              LogicalDevice,
                               PipelineStateVkImpl::TShaderStages&                ShaderStages,
                               std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages)
@@ -108,7 +108,7 @@ void CreateComputePipeline(RenderDeviceVkImpl*                           pDevice
                            VulkanUtilities::PipelineWrapper&             Pipeline,
                            VkPipelineCache                               vkPSOCache)
 {
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = pDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     VkComputePipelineCreateInfo PipelineCI{};
     PipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -135,8 +135,8 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
                             RefCntAutoPtr<IRenderPass>&                   pRenderPass,
                             VkPipelineCache                               vkPSOCache)
 {
-    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice  = pDeviceVk->GetLogicalDevice();
-    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
+    const VulkanUtilities::LogicalDevice&  LogicalDevice  = pDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::PhysicalDevice& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
 
     VkGraphicsPipelineCreateInfo PipelineCI{};
     PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -370,7 +370,7 @@ void CreateRayTracingPipeline(RenderDeviceVkImpl*                               
                               VulkanUtilities::PipelineWrapper&                        Pipeline,
                               VkPipelineCache                                          vkPSOCache)
 {
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = pDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     VkRayTracingPipelineCreateInfoKHR PipelineCI{};
     PipelineCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
@@ -841,7 +841,7 @@ PipelineStateVkImpl::TShaderStages PipelineStateVkImpl::InitInternalObjects(
 
     MemPool.Reserve();
 
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
 
     InitializePipelineDesc(CreateInfo, MemPool);
 
@@ -877,7 +877,7 @@ void PipelineStateVkImpl::InitializePipeline(const ComputePipelineStateCreateInf
 
 void PipelineStateVkImpl::InitializePipeline(const RayTracingPipelineStateCreateInfo& CreateInfo)
 {
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
 
     std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
     std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;

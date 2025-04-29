@@ -26,8 +26,8 @@
  */
 #include <sstream>
 
-#include "VulkanUtilities/VulkanCommandBufferPool.hpp"
-#include "VulkanUtilities/VulkanDebug.hpp"
+#include "VulkanUtilities/CommandBufferPool.hpp"
+#include "VulkanUtilities/Debug.hpp"
 #include "Errors.hpp"
 #include "DebugUtilities.hpp"
 #include "VulkanErrors.hpp"
@@ -35,12 +35,12 @@
 namespace VulkanUtilities
 {
 
-VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice,
-                                                 HardwareQueueIndex                         queueFamilyIndex,
-                                                 VkCommandPoolCreateFlags                   flags) :
-    m_LogicalDevice{std::move(LogicalDevice)},
-    m_SupportedStagesMask{m_LogicalDevice->GetSupportedStagesMask(queueFamilyIndex)},
-    m_SupportedAccessMask{m_LogicalDevice->GetSupportedAccessMask(queueFamilyIndex)}
+CommandBufferPool::CommandBufferPool(std::shared_ptr<const LogicalDevice> Device,
+                                     HardwareQueueIndex                   queueFamilyIndex,
+                                     VkCommandPoolCreateFlags             flags) :
+    m_Device{std::move(Device)},
+    m_SupportedStagesMask{m_Device->GetSupportedStagesMask(queueFamilyIndex)},
+    m_SupportedAccessMask{m_Device->GetSupportedAccessMask(queueFamilyIndex)}
 {
     VkCommandPoolCreateInfo CmdPoolCI{};
     CmdPoolCI.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -48,23 +48,25 @@ VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanLog
     CmdPoolCI.queueFamilyIndex = queueFamilyIndex;
     CmdPoolCI.flags            = flags;
 
-    m_CmdPool = m_LogicalDevice->CreateCommandPool(CmdPoolCI);
+    m_CmdPool = m_Device->CreateCommandPool(CmdPoolCI);
     DEV_CHECK_ERR(m_CmdPool != VK_NULL_HANDLE, "Failed to create vulkan command pool");
 }
 
-VulkanCommandBufferPool::~VulkanCommandBufferPool()
+CommandBufferPool::~CommandBufferPool()
 {
     DEV_CHECK_ERR(m_BuffCounter == 0, m_BuffCounter,
                   " command buffer(s) have not been returned to the pool. If there are outstanding references to these "
-                  "buffers in release queues, VulkanCommandBufferPool::RecycleCommandBuffer() will crash when attempting to "
+                  "buffers in release queues, CommandBufferPool::RecycleCommandBuffer() will crash when attempting to "
                   "return the buffer to the pool.");
 
     for (VkCommandBuffer CmdBuff : m_CmdBuffers)
-        m_LogicalDevice->FreeCommandBuffer(m_CmdPool, CmdBuff);
+    {
+        m_Device->FreeCommandBuffer(m_CmdPool, CmdBuff);
+    }
     m_CmdPool.Release();
 }
 
-VkCommandBuffer VulkanCommandBufferPool::GetCommandBuffer(const char* DebugName)
+VkCommandBuffer CommandBufferPool::GetCommandBuffer(const char* DebugName)
 {
     VkCommandBuffer CmdBuffer = VK_NULL_HANDLE;
 
@@ -96,7 +98,7 @@ VkCommandBuffer VulkanCommandBufferPool::GetCommandBuffer(const char* DebugName)
         BuffAllocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         BuffAllocInfo.commandBufferCount = 1;
 
-        CmdBuffer = m_LogicalDevice->AllocateVkCommandBuffer(BuffAllocInfo);
+        CmdBuffer = m_Device->AllocateVkCommandBuffer(BuffAllocInfo);
         DEV_CHECK_ERR(CmdBuffer != VK_NULL_HANDLE, "Failed to allocate vulkan command buffer");
     }
 
@@ -118,7 +120,7 @@ VkCommandBuffer VulkanCommandBufferPool::GetCommandBuffer(const char* DebugName)
     return CmdBuffer;
 }
 
-void VulkanCommandBufferPool::RecycleCommandBuffer(VkCommandBuffer&& CmdBuffer)
+void CommandBufferPool::RecycleCommandBuffer(VkCommandBuffer&& CmdBuffer)
 {
     std::lock_guard<std::mutex> Lock{m_Mutex};
     m_CmdBuffers.emplace_back(CmdBuffer);

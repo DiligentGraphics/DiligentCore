@@ -49,15 +49,15 @@ set(INCLUDE
 
 set(VULKAN_UTILS_INCLUDE
     include/VulkanUtilities/RenderingInfoWrapper.hpp
-    include/VulkanUtilities/VulkanCommandBuffer.hpp
-    include/VulkanUtilities/VulkanCommandBufferPool.hpp
-    include/VulkanUtilities/VulkanDebug.hpp
-    include/VulkanUtilities/VulkanInstance.hpp
-    include/VulkanUtilities/VulkanLogicalDevice.hpp
-    include/VulkanUtilities/VulkanMemoryManager.hpp
-    include/VulkanUtilities/VulkanObjectWrappers.hpp
-    include/VulkanUtilities/VulkanPhysicalDevice.hpp
-    include/VulkanUtilities/VulkanSyncObjectManager.hpp
+    include/VulkanUtilities/CommandBuffer.hpp
+    include/VulkanUtilities/CommandBufferPool.hpp
+    include/VulkanUtilities/Debug.hpp
+    include/VulkanUtilities/Instance.hpp
+    include/VulkanUtilities/LogicalDevice.hpp
+    include/VulkanUtilities/MemoryManager.hpp
+    include/VulkanUtilities/ObjectWrappers.hpp
+    include/VulkanUtilities/PhysicalDevice.hpp
+    include/VulkanUtilities/SyncObjectManager.hpp
     include/VulkanUtilities/VulkanHeaders.h
 )
 
@@ -130,14 +130,14 @@ set(SRC
 
 set(VULKAN_UTILS_SRC
     src/VulkanUtilities/RenderingInfoWrapper.cpp
-    src/VulkanUtilities/VulkanCommandBuffer.cpp
-    src/VulkanUtilities/VulkanCommandBufferPool.cpp
-    src/VulkanUtilities/VulkanDebug.cpp
-    src/VulkanUtilities/VulkanInstance.cpp
-    src/VulkanUtilities/VulkanLogicalDevice.cpp
-    src/VulkanUtilities/VulkanMemoryManager.cpp
-    src/VulkanUtilities/VulkanPhysicalDevice.cpp
-    src/VulkanUtilities/VulkanSyncObjectManager.cpp
+    src/VulkanUtilities/CommandBuffer.cpp
+    src/VulkanUtilities/CommandBufferPool.cpp
+    src/VulkanUtilities/Debug.cpp
+    src/VulkanUtilities/Instance.cpp
+    src/VulkanUtilities/LogicalDevice.cpp
+    src/VulkanUtilities/MemoryManager.cpp
+    src/VulkanUtilities/PhysicalDevice.cpp
+    src/VulkanUtilities/SyncObjectManager.cpp
 )
 
 set(DLL_SOURCE

@@ -33,7 +33,7 @@
 #include <array>
 #include "GraphicsTypes.h"
 #include "InputLayout.h"
-#include "VulkanUtilities/VulkanPhysicalDevice.hpp"
+#include "VulkanUtilities/PhysicalDevice.hpp"
 
 namespace Diligent
 {
@@ -105,15 +105,15 @@ SHADING_RATE VkFragmentSizeToShadingRate(const VkExtent2D& Size);
 
 VkFragmentShadingRateCombinerOpKHR ShadingRateCombinerToVkFragmentShadingRateCombinerOp(SHADING_RATE_COMBINER Combiner);
 
-DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                                                          vkVersion,
-                                          const VkPhysicalDeviceFeatures&                                   vkFeatures,
-                                          const VkPhysicalDeviceProperties&                                 vkDeviceProps,
-                                          const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures&   ExtFeatures,
-                                          const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps,
-                                          DEVICE_FEATURE_STATE                                              OptionalState = DEVICE_FEATURE_STATE_ENABLED);
+DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                                                    vkVersion,
+                                          const VkPhysicalDeviceFeatures&                             vkFeatures,
+                                          const VkPhysicalDeviceProperties&                           vkDeviceProps,
+                                          const VulkanUtilities::PhysicalDevice::ExtensionFeatures&   ExtFeatures,
+                                          const VulkanUtilities::PhysicalDevice::ExtensionProperties& ExtProps,
+                                          DEVICE_FEATURE_STATE                                        OptionalState = DEVICE_FEATURE_STATE_ENABLED);
 
-DeviceFeaturesVk PhysicalDeviceFeaturesToDeviceFeaturesVk(const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& ExtFeatures,
-                                                          DEVICE_FEATURE_STATE                                            OptionalState = DEVICE_FEATURE_STATE_ENABLED);
+DeviceFeaturesVk PhysicalDeviceFeaturesToDeviceFeaturesVk(const VulkanUtilities::PhysicalDevice::ExtensionFeatures& ExtFeatures,
+                                                          DEVICE_FEATURE_STATE                                      OptionalState = DEVICE_FEATURE_STATE_ENABLED);
 
 SPARSE_TEXTURE_FLAGS VkSparseImageFormatFlagsToSparseTextureFlags(VkSparseImageFormatFlags Flags);
 

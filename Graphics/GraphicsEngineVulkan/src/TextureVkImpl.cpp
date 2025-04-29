@@ -47,7 +47,7 @@ VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const 
     const TextureFormatAttribs& FmtAttribs           = GetTextureFormatAttribs(Desc.Format);
     const bool                  ImageView2DSupported = !Desc.Is3D() || pRenderDeviceVk->GetAdapterInfo().Texture.TextureView2DOn3DSupported;
 
-    const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& ExtFeatures = pRenderDeviceVk->GetLogicalDevice().GetEnabledExtFeatures();
+    const VulkanUtilities::PhysicalDevice::ExtensionFeatures& ExtFeatures = pRenderDeviceVk->GetLogicalDevice().GetEnabledExtFeatures();
 
     VkImageCreateInfo ImageCI = {};
 
@@ -113,8 +113,8 @@ VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const 
         VERIFY_EXPR(!IsMemoryless);
 #ifdef DILIGENT_DEVELOPMENT
         {
-            const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
-            const VkFormatProperties                     FmtProperties  = PhysicalDevice.GetPhysicalDeviceFormatProperties(ImageCI.format);
+            const VulkanUtilities::PhysicalDevice& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
+            const VkFormatProperties               FmtProperties  = PhysicalDevice.GetPhysicalDeviceFormatProperties(ImageCI.format);
             DEV_CHECK_ERR((FmtProperties.optimalTilingFeatures & (VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT)) == (VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT),
                           "Automatic mipmap generation is not supported for ", GetTextureFormatAttribs(InternalTexFmt).Name,
                           " as the format does not support blitting.");
@@ -171,9 +171,9 @@ VkImageLayout VkImageLayoutFromUsage(VkImageUsageFlags Usage)
     return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 }
 
-bool CheckHostImageInitialization(const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice,
-                                  const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice,
-                                  const VkImageCreateInfo&                     ImageCI)
+bool CheckHostImageInitialization(const VulkanUtilities::LogicalDevice&  LogicalDevice,
+                                  const VulkanUtilities::PhysicalDevice& PhysicalDevice,
+                                  const VkImageCreateInfo&               ImageCI)
 {
     if (!LogicalDevice.GetEnabledExtFeatures().HostImageCopy.hostImageCopy)
         return false;
@@ -192,8 +192,8 @@ bool CheckHostImageInitialization(const VulkanUtilities::VulkanLogicalDevice&  L
     if ((vkFormatProps3.optimalTilingFeatures & VK_FORMAT_FEATURE_2_HOST_IMAGE_TRANSFER_BIT_EXT) == 0)
         return false;
 
-    const VulkanUtilities::VulkanPhysicalDevice::ExtensionProperties& ExtProps           = PhysicalDevice.GetExtProperties();
-    const VkPhysicalDeviceHostImageCopyPropertiesEXT&                 HostImageCopyProps = ExtProps.HostImageCopy;
+    const VulkanUtilities::PhysicalDevice::ExtensionProperties& ExtProps           = PhysicalDevice.GetExtProperties();
+    const VkPhysicalDeviceHostImageCopyPropertiesEXT&           HostImageCopyProps = ExtProps.HostImageCopy;
 
     const VkImageLayout DstLayout = VkImageLayoutFromUsage(ImageCI.usage);
 
@@ -234,8 +234,8 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     if (m_Desc.Usage == USAGE_SPARSE && m_Desc.Is3D() && (m_Desc.BindFlags & (BIND_RENDER_TARGET | BIND_DEPTH_STENCIL)) != 0)
         LOG_ERROR_AND_THROW("Sparse 3D texture with BIND_RENDER_TARGET or BIND_DEPTH_STENCIL is not supported in Vulkan");
 
-    const TextureFormatAttribs&                 FmtAttribs    = GetTextureFormatAttribs(m_Desc.Format);
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    const TextureFormatAttribs&           FmtAttribs    = GetTextureFormatAttribs(m_Desc.Format);
+    const VulkanUtilities::LogicalDevice& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
     if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC || m_Desc.Usage == USAGE_SPARSE)
     {
@@ -328,7 +328,7 @@ bool TextureVkImpl::InitializeContentOnHost(const TextureData&          InitData
                                             const TextureFormatAttribs& FmtAttribs,
                                             const VkImageCreateInfo&    ImageCI) noexcept(false)
 {
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
     VERIFY_EXPR(LogicalDevice.GetEnabledExtFeatures().HostImageCopy.hostImageCopy);
 
     Uint32 ExpectedNumSubresources = ImageCI.mipLevels * ImageCI.arrayLayers;
@@ -419,7 +419,7 @@ void TextureVkImpl::InitializeContentOnDevice(const TextureData&          InitDa
                                               const TextureFormatAttribs& FmtAttribs,
                                               const VkImageCreateInfo&    ImageCI) noexcept(false)
 {
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = GetDevice()->GetLogicalDevice();
 
     const SoftwareQueueIndex CmdQueueInd = InitData.pContext ?
         ClassPtrCast<DeviceContextVkImpl>(InitData.pContext)->GetCommandQueueId() :
@@ -428,8 +428,8 @@ void TextureVkImpl::InitializeContentOnDevice(const TextureData&          InitDa
     // Vulkan validation layers do not like uninitialized memory, so if no initial data
     // is provided, we will clear the memory
 
-    VulkanUtilities::CommandPoolWrapper  CmdPool;
-    VulkanUtilities::VulkanCommandBuffer CmdBuffer;
+    VulkanUtilities::CommandPoolWrapper CmdPool;
+    VulkanUtilities::CommandBuffer      CmdBuffer;
     GetDevice()->AllocateTransientCmdPool(CmdQueueInd, CmdPool, CmdBuffer, "Transient command pool to copy staging data to a device buffer");
 
     VERIFY(FmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL, "Initializing depth-stencil texture is currently not supported.");
@@ -583,8 +583,8 @@ void TextureVkImpl::InitializeContentOnDevice(const TextureData&          InitDa
 
 void TextureVkImpl::CreateStagingTexture(const TextureData* pInitData, const TextureFormatAttribs& FmtAttribs)
 {
-    const bool                                  bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice      = GetDevice()->GetLogicalDevice();
+    const bool                            bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
+    const VulkanUtilities::LogicalDevice& LogicalDevice      = GetDevice()->GetLogicalDevice();
 
     VkBufferCreateInfo VkStagingBuffCI = {};
 
@@ -902,7 +902,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
             ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
 
     if (ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE)
     {
@@ -947,8 +947,8 @@ VkImageLayout TextureVkImpl::GetLayout() const
 
 void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Size)
 {
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice    = m_pDevice->GetLogicalDevice();
-    const VkPhysicalDeviceLimits&               PhysDeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
+    const VulkanUtilities::LogicalDevice& LogicalDevice    = m_pDevice->GetLogicalDevice();
+    const VkPhysicalDeviceLimits&         PhysDeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
 
     VkMappedMemoryRange InvalidateRange{};
     InvalidateRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
@@ -975,8 +975,8 @@ void TextureVkImpl::InitSparseProperties() noexcept(false)
 
     m_pSparseProps = std::make_unique<SparseTextureProperties>();
 
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
-    const VkMemoryRequirements                  MemReq        = LogicalDevice.GetImageMemoryRequirements(GetVkImage());
+    const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const VkMemoryRequirements            MemReq        = LogicalDevice.GetImageMemoryRequirements(GetVkImage());
 
     // If the image was not created with VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT, then pSparseMemoryRequirementCount will be set to zero.
     uint32_t SparseReqCount = 0;

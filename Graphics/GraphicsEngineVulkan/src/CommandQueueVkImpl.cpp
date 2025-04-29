@@ -30,17 +30,17 @@
 
 #include "CommandQueueVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
-#include "VulkanUtilities/VulkanDebug.hpp"
+#include "VulkanUtilities/Debug.hpp"
 
 namespace Diligent
 {
 
-CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters,
-                                       std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
-                                       SoftwareQueueIndex                                    CommandQueueId,
-                                       Uint32                                                NumCommandQueues,
-                                       Uint32                                                vkQueueIndex,
-                                       const ImmediateContextCreateInfo&                     CreateInfo) :
+CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                             pRefCounters,
+                                       std::shared_ptr<VulkanUtilities::LogicalDevice> LogicalDevice,
+                                       SoftwareQueueIndex                              CommandQueueId,
+                                       Uint32                                          NumCommandQueues,
+                                       Uint32                                          vkQueueIndex,
+                                       const ImmediateContextCreateInfo&               CreateInfo) :
     // clang-format off
     TBase{pRefCounters},
     m_LogicalDevice             {LogicalDevice},
@@ -50,7 +50,7 @@ CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                      
     m_SupportedTimelineSemaphore{LogicalDevice->GetEnabledExtFeatures().TimelineSemaphore.timelineSemaphore == VK_TRUE},
     m_NumCommandQueues          {static_cast<Uint8>(m_SupportedTimelineSemaphore ? 1u : NumCommandQueues)},
     m_NextFenceValue            {1},
-    m_SyncObjectManager         {std::make_shared<VulkanUtilities::VulkanSyncObjectManager>(*LogicalDevice)},
+    m_SyncObjectManager         {std::make_shared<VulkanUtilities::SyncObjectManager>(*LogicalDevice)},
     m_SyncPointAllocator        {GetRawAllocator(), SyncPointVk::SizeOf(m_NumCommandQueues), 16}
 // clang-format on
 {
@@ -78,11 +78,11 @@ CommandQueueVkImpl::~CommandQueueVkImpl()
     // is called on that device.
 }
 
-SyncPointVk::SyncPointVk(SoftwareQueueIndex                        CommandQueueId,
-                         Uint32                                    NumContexts,
-                         VulkanUtilities::VulkanSyncObjectManager& SyncObjectMngr,
-                         VkDevice                                  LogicalDevice,
-                         Uint64                                    dbgValue) :
+SyncPointVk::SyncPointVk(SoftwareQueueIndex                  CommandQueueId,
+                         Uint32                              NumContexts,
+                         VulkanUtilities::SyncObjectManager& SyncObjectMngr,
+                         VkDevice                            vkDevice,
+                         Uint64                              dbgValue) :
     m_CommandQueueId{CommandQueueId},
     m_NumSemaphores{static_cast<Uint8>(NumContexts)},
     m_Fence{SyncObjectMngr.CreateFence()}
@@ -105,14 +105,14 @@ SyncPointVk::SyncPointVk(SoftwareQueueIndex                        CommandQueueI
 
 #ifdef DILIGENT_DEBUG
     String Name = String{"Queue ("} + std::to_string(CommandQueueId) + ") Value (" + std::to_string(dbgValue) + ")";
-    VulkanUtilities::SetFenceName(LogicalDevice, m_Fence, Name.c_str());
+    VulkanUtilities::SetFenceName(vkDevice, m_Fence, Name.c_str());
 
     for (Uint32 s = 0; s < m_NumSemaphores; ++s)
     {
         if (m_Semaphores[s])
         {
             Name = String{"Queue ("} + std::to_string(CommandQueueId) + ") Value (" + std::to_string(dbgValue) + ") Ctx (" + std::to_string(s) + ")";
-            VulkanUtilities::SetSemaphoreName(LogicalDevice, m_Semaphores[s], Name.c_str());
+            VulkanUtilities::SetSemaphoreName(vkDevice, m_Semaphores[s], Name.c_str());
         }
     }
 #endif

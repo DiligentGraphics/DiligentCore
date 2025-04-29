@@ -33,14 +33,14 @@
 
 #include "RenderDeviceVkImpl.hpp"
 #include "GraphicsAccessories.hpp"
-#include "VulkanUtilities/VulkanCommandBuffer.hpp"
+#include "VulkanUtilities/CommandBuffer.hpp"
 
 namespace Diligent
 {
 
-void QueryManagerVk::QueryPoolInfo::Init(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                         const VkQueryPoolCreateInfo&                QueryPoolCI,
-                                         QUERY_TYPE                                  Type)
+void QueryManagerVk::QueryPoolInfo::Init(const VulkanUtilities::LogicalDevice& LogicalDevice,
+                                         const VkQueryPoolCreateInfo&          QueryPoolCI,
+                                         QUERY_TYPE                            Type)
 {
     m_Type        = Type;
     m_QueryCount  = QueryPoolCI.queryCount;
@@ -95,13 +95,13 @@ void QueryManagerVk::QueryPoolInfo::Discard(Uint32 Index)
     m_StaleQueries.push_back(Index);
 }
 
-Uint32 QueryManagerVk::QueryPoolInfo::ResetStaleQueries(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice,
-                                                        VulkanUtilities::VulkanCommandBuffer&       CmdBuff)
+Uint32 QueryManagerVk::QueryPoolInfo::ResetStaleQueries(const VulkanUtilities::LogicalDevice& LogicalDevice,
+                                                        VulkanUtilities::CommandBuffer&       CmdBuff)
 {
     if (m_StaleQueries.empty())
         return 0;
 
-    const VulkanUtilities::VulkanLogicalDevice::ExtensionFeatures& EnabledExtFeatures = LogicalDevice.GetEnabledExtFeatures();
+    const VulkanUtilities::LogicalDevice::ExtensionFeatures& EnabledExtFeatures = LogicalDevice.GetEnabledExtFeatures();
 
     auto ResetQueries = [&](uint32_t FirstQuery, uint32_t QueryCount) //
     {
@@ -150,8 +150,8 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
                                SoftwareQueueIndex  CmdQueueInd) :
     m_CommandQueueId{CmdQueueInd}
 {
-    const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
-    const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
+    const VulkanUtilities::LogicalDevice&  LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
+    const VulkanUtilities::PhysicalDevice& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
 
     float timestampPeriod = PhysicalDevice.GetProperties().limits.timestampPeriod;
     m_CounterFrequency    = static_cast<Uint64>(1000000000.0 / timestampPeriod);
@@ -279,7 +279,7 @@ void QueryManagerVk::DiscardQuery(QUERY_TYPE Type, Uint32 Index)
     m_Pools[Type].Discard(Index);
 }
 
-Uint32 QueryManagerVk::ResetStaleQueries(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice, VulkanUtilities::VulkanCommandBuffer& CmdBuff)
+Uint32 QueryManagerVk::ResetStaleQueries(const VulkanUtilities::LogicalDevice& LogicalDevice, VulkanUtilities::CommandBuffer& CmdBuff)
 {
     Uint32 NumQueriesReset = 0;
     for (QueryPoolInfo& PoolInfo : m_Pools)

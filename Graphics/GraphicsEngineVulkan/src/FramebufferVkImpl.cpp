@@ -70,7 +70,7 @@ FramebufferVkImpl::FramebufferVkImpl(IReferenceCounters*    pRefCounters,
     FramebufferCI.height = m_Desc.Height;
     FramebufferCI.layers = m_Desc.NumArraySlices;
 
-    const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = pDevice->GetLogicalDevice();
+    const VulkanUtilities::LogicalDevice& LogicalDevice = pDevice->GetLogicalDevice();
 
     m_VkFramebuffer = LogicalDevice.CreateFramebuffer(FramebufferCI, m_Desc.Name);
     if (!m_VkFramebuffer)

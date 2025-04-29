@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@
 #include <vector>
 #include <mutex>
 
-#include "VulkanLogicalDevice.hpp"
+#include "LogicalDevice.hpp"
 #include "DebugUtilities.hpp"
 
 namespace VulkanUtilities
@@ -49,15 +49,15 @@ struct VkFenceType
 };
 
 
-class VulkanSyncObjectManager : public std::enable_shared_from_this<VulkanSyncObjectManager>
+class SyncObjectManager : public std::enable_shared_from_this<SyncObjectManager>
 {
 public:
     template <typename T>
     class RecycledSyncObject;
 
 public:
-    explicit VulkanSyncObjectManager(VulkanLogicalDevice& LogicalDevice);
-    ~VulkanSyncObjectManager();
+    explicit SyncObjectManager(LogicalDevice& LogicalDevice);
+    ~SyncObjectManager();
 
     void CreateSemaphores(RecycledSyncObject<VkSemaphoreType>* pSemaphores, uint32_t Count);
 
@@ -67,7 +67,7 @@ public:
     void Recycle(VkFenceType Fence, bool IsUnsignaled);
 
 private:
-    VulkanLogicalDevice& m_LogicalDevice;
+    LogicalDevice& m_LogicalDevice;
 
     std::mutex               m_SemaphorePoolGuard;
     std::vector<VkSemaphore> m_SemaphorePool;
@@ -76,12 +76,12 @@ private:
     std::vector<VkFence> m_FencePool;
 };
 
-using VulkanRecycledSemaphore = VulkanSyncObjectManager::RecycledSyncObject<VkSemaphoreType>;
-using VulkanRecycledFence     = VulkanSyncObjectManager::RecycledSyncObject<VkFenceType>;
+using VulkanRecycledSemaphore = SyncObjectManager::RecycledSyncObject<VkSemaphoreType>;
+using VulkanRecycledFence     = SyncObjectManager::RecycledSyncObject<VkFenceType>;
 
 
 template <typename VkSyncObjType>
-class VulkanSyncObjectManager::RecycledSyncObject
+class SyncObjectManager::RecycledSyncObject
 {
 public:
     using NativeType = typename VkSyncObjType::Type;
@@ -89,7 +89,7 @@ public:
     RecycledSyncObject()
     {}
 
-    RecycledSyncObject(std::shared_ptr<VulkanSyncObjectManager> pManager, NativeType SyncObj) :
+    RecycledSyncObject(std::shared_ptr<SyncObjectManager> pManager, NativeType SyncObj) :
         m_pManager{pManager},
         m_VkSyncObject{SyncObj}
     {}
@@ -148,9 +148,9 @@ public:
     }
 
 private:
-    std::shared_ptr<VulkanSyncObjectManager> m_pManager;
-    NativeType                               m_VkSyncObject = VK_NULL_HANDLE;
-    bool                                     m_IsUnsignaled = false;
+    std::shared_ptr<SyncObjectManager> m_pManager;
+    NativeType                         m_VkSyncObject = VK_NULL_HANDLE;
+    bool                               m_IsUnsignaled = false;
 };
 
 } // namespace VulkanUtilities

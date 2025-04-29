@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,16 +34,16 @@
 #include <string>
 #include "MemoryAllocator.h"
 #include "VariableSizeAllocationsManager.hpp"
-#include "VulkanUtilities/VulkanPhysicalDevice.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "VulkanUtilities/PhysicalDevice.hpp"
+#include "VulkanUtilities/LogicalDevice.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
 #include "HashUtils.hpp"
 
 namespace VulkanUtilities
 {
 
 class VulkanMemoryPage;
-class VulkanMemoryManager;
+class MemoryManager;
 
 struct VulkanMemoryAllocation
 {
@@ -104,7 +104,7 @@ struct VulkanMemoryAllocation
 class VulkanMemoryPage
 {
 public:
-    VulkanMemoryPage(VulkanMemoryManager&  ParentMemoryMgr,
+    VulkanMemoryPage(MemoryManager&        ParentMemoryMgr,
                      VkDeviceSize          PageSize,
                      uint32_t              MemoryTypeIndex,
                      bool                  IsHostVisible,
@@ -145,28 +145,28 @@ private:
     // Memory is reclaimed immediately. The application is responsible to ensure it is not in use by the GPU
     void Free(VulkanMemoryAllocation&& Allocation);
 
-    VulkanMemoryManager&                     m_ParentMemoryMgr;
+    MemoryManager&                           m_ParentMemoryMgr;
     std::mutex                               m_Mutex;
     Diligent::VariableSizeAllocationsManager m_AllocationMgr;
     VulkanUtilities::DeviceMemoryWrapper     m_VkMemory;
     void*                                    m_CPUMemory = nullptr;
 };
 
-class VulkanMemoryManager
+class MemoryManager
 {
 public:
     // clang-format off
-	VulkanMemoryManager(std::string                  MgrName,
-                        const VulkanLogicalDevice&   LogicalDevice,
-                        const VulkanPhysicalDevice&  PhysicalDevice,
+	MemoryManager(std::string                  MgrName,
+                        const LogicalDevice&   Device,
+                        const PhysicalDevice&  PhysDevice,
                         Diligent::IMemoryAllocator&  Allocator,
                         VkDeviceSize                 DeviceLocalPageSize,
                         VkDeviceSize                 HostVisiblePageSize,
                         VkDeviceSize                 DeviceLocalReserveSize,
                         VkDeviceSize                 HostVisibleReserveSize) :
         m_MgrName               {std::move(MgrName)    },
-        m_LogicalDevice         {LogicalDevice         },
-        m_PhysicalDevice        {PhysicalDevice        },
+        m_LogicalDevice         {Device                },
+        m_PhysicalDevice        {PhysDevice            },
         m_Allocator             {Allocator             },
         m_DeviceLocalPageSize   {DeviceLocalPageSize   },
         m_HostVisiblePageSize   {HostVisiblePageSize   },
@@ -178,7 +178,7 @@ public:
     // We have to write this constructor because on msvc default
     // constructor is not labeled with noexcept, which makes all
     // std containers use copy instead of move
-    VulkanMemoryManager(VulkanMemoryManager&& rhs)noexcept :
+    MemoryManager(MemoryManager&& rhs)noexcept :
         m_MgrName         {std::move(rhs.m_MgrName)},
         m_LogicalDevice   {rhs.m_LogicalDevice     },
         m_PhysicalDevice  {rhs.m_PhysicalDevice    },
@@ -200,12 +200,12 @@ public:
             m_CurrUsedSize[i].store(rhs.m_CurrUsedSize[i].load());
     }
 
-    ~VulkanMemoryManager();
+    ~MemoryManager();
 
     // clang-format off
-    VulkanMemoryManager            (const VulkanMemoryManager&) = delete;
-    VulkanMemoryManager& operator= (const VulkanMemoryManager&) = delete;
-    VulkanMemoryManager& operator= (VulkanMemoryManager&&)      = delete;
+    MemoryManager            (const MemoryManager&) = delete;
+    MemoryManager& operator= (const MemoryManager&) = delete;
+    MemoryManager& operator= (MemoryManager&&)      = delete;
     // clang-format on
 
     VulkanMemoryAllocation Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible, VkMemoryAllocateFlags AllocateFlags);
@@ -220,8 +220,8 @@ protected:
 
     std::string m_MgrName;
 
-    const VulkanLogicalDevice&  m_LogicalDevice;
-    const VulkanPhysicalDevice& m_PhysicalDevice;
+    const LogicalDevice&  m_LogicalDevice;
+    const PhysicalDevice& m_PhysicalDevice;
 
     Diligent::IMemoryAllocator& m_Allocator;
 

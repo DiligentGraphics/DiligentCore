@@ -75,7 +75,7 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*      pRefCounters,
     // Upload heap must always be thread-safe as Finish() may be called from another thread
     m_QueueFamilyCmdPools
     {
-        new std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool>[
+        new std::unique_ptr<VulkanUtilities::CommandBufferPool>[
             // Note that for immediate contexts we will always use one pool,
             // but we still allocate space for all queue families for consistency.
             pDeviceVkImpl->GetPhysicalDevice().GetQueueProperties().size()
@@ -180,12 +180,12 @@ void DeviceContextVkImpl::PrepareCommandPool(SoftwareQueueIndex CommandQueueId)
     const auto&              QueueProps = m_pDevice->GetPhysicalDevice().GetQueueProperties();
     DEV_CHECK_ERR(QueueFamilyIndex < QueueProps.size(), "QueueFamilyIndex is out of range");
 
-    std::unique_ptr<VulkanUtilities::VulkanCommandBufferPool>& Pool = m_QueueFamilyCmdPools[QueueFamilyIndex];
+    std::unique_ptr<VulkanUtilities::CommandBufferPool>& Pool = m_QueueFamilyCmdPools[QueueFamilyIndex];
     if (!Pool)
     {
         // Command pools must be thread-safe because command buffers are returned into pools by release queues
         // potentially running in another thread
-        Pool = std::make_unique<VulkanUtilities::VulkanCommandBufferPool>(
+        Pool = std::make_unique<VulkanUtilities::CommandBufferPool>(
             m_pDevice->GetLogicalDevice().GetSharedPtr(),
             QueueFamilyIndex,
             VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
@@ -220,8 +220,8 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(SoftwareQueueIndex CmdQueue, VkComm
     {
     public:
         // clang-format off
-        CmdBufferRecycler(VkCommandBuffer                           _vkCmdBuff,
-                         VulkanUtilities::VulkanCommandBufferPool& _Pool) noexcept :
+        CmdBufferRecycler(VkCommandBuffer                     _vkCmdBuff,
+                          VulkanUtilities::CommandBufferPool& _Pool) noexcept :
             vkCmdBuff {_vkCmdBuff},
             Pool      {&_Pool    }
         {
@@ -250,8 +250,8 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(SoftwareQueueIndex CmdQueue, VkComm
         }
 
     private:
-        VkCommandBuffer                           vkCmdBuff = VK_NULL_HANDLE;
-        VulkanUtilities::VulkanCommandBufferPool* Pool      = nullptr;
+        VkCommandBuffer                     vkCmdBuff = VK_NULL_HANDLE;
+        VulkanUtilities::CommandBufferPool* Pool      = nullptr;
     };
 
     // Discard command buffer directly to the release queue since we know exactly which queue it was submitted to
@@ -1127,8 +1127,8 @@ void DeviceContextVkImpl::GetTileSize(Uint32& TileSizeX, Uint32& TileSizeY)
 
     if (m_vkRenderPass != VK_NULL_HANDLE)
     {
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
-        VkExtent2D                                  Granularity   = {};
+        const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+        VkExtent2D                            Granularity   = {};
         vkGetRenderAreaGranularity(LogicalDevice.GetVkDevice(), m_vkRenderPass, &Granularity);
 
         TileSizeX = Granularity.width;
@@ -1817,8 +1817,8 @@ void DeviceContextVkImpl::TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE
 
     if (m_pBoundShadingRateMap)
     {
-        const VulkanUtilities::VulkanLogicalDevice::ExtensionFeatures& ExtFeatures       = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
-        TextureVkImpl*                                                 pShadingRateMapVk = ClassPtrCast<TextureVkImpl>(m_pBoundShadingRateMap->GetTexture());
+        const VulkanUtilities::LogicalDevice::ExtensionFeatures& ExtFeatures       = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
+        TextureVkImpl*                                           pShadingRateMapVk = ClassPtrCast<TextureVkImpl>(m_pBoundShadingRateMap->GetTexture());
         VERIFY_EXPR((ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE) ^ (ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE));
         const VkImageLayout vkRequiredLayout = ExtFeatures.ShadingRate.attachmentFragmentShadingRate ?
             VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR :
@@ -2905,7 +2905,7 @@ void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
     }
     else
     {
-        const VulkanUtilities::VulkanCommandBuffer::StateCache& CmdBuffState = m_CommandBuffer.GetState();
+        const VulkanUtilities::CommandBuffer::StateCache& CmdBuffState = m_CommandBuffer.GetState();
         if ((CmdBuffState.InsidePassQueries | CmdBuffState.OutsidePassQueries) & (1u << QueryType))
         {
             LOG_ERROR_MESSAGE("Another query of type ", GetQueryTypeString(QueryType),
@@ -2953,7 +2953,7 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
 
         // A query must either begin and end inside the same subpass of a render pass instance, or must
         // both begin and end outside of a render pass instance (i.e. contain entire render pass instances).
-        const VulkanUtilities::VulkanCommandBuffer::StateCache& CmdBuffState = m_CommandBuffer.GetState();
+        const VulkanUtilities::CommandBuffer::StateCache& CmdBuffState = m_CommandBuffer.GetState();
         VERIFY((CmdBuffState.InsidePassQueries | CmdBuffState.OutsidePassQueries) & (1u << QueryType),
                "No query flag is set which indicates there was no matching BeginQuery call or there was an error while beginning the query.");
         if (CmdBuffState.OutsidePassQueries & (1 << QueryType))
@@ -3884,7 +3884,7 @@ void DeviceContextVkImpl::CreateASCompactedSizeQueryPool()
 {
     if (m_pDevice->GetFeatures().RayTracing == DEVICE_FEATURE_STATE_ENABLED)
     {
-        const VulkanUtilities::VulkanLogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
+        const VulkanUtilities::LogicalDevice& LogicalDevice = m_pDevice->GetLogicalDevice();
 
         VkQueryPoolCreateInfo Info{};
         Info.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;

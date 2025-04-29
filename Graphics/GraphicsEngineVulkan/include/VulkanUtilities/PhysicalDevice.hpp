@@ -29,19 +29,19 @@
 
 #include <memory>
 #include <vector>
-#include "VulkanInstance.hpp"
+#include "Instance.hpp"
 #include "IndexWrapper.hpp"
 
 namespace VulkanUtilities
 {
 using Diligent::HardwareQueueIndex;
 
-class VulkanPhysicalDevice
+class PhysicalDevice
 {
 public:
     struct CreateInfo
     {
-        const VulkanInstance&  Instance;
+        const Instance&        Inst;
         const VkPhysicalDevice vkDevice;
         bool                   LogExtensions = false;
     };
@@ -102,13 +102,13 @@ public:
 
 public:
     // clang-format off
-    VulkanPhysicalDevice             (const VulkanPhysicalDevice&) = delete;
-    VulkanPhysicalDevice             (VulkanPhysicalDevice&&)      = delete;
-    VulkanPhysicalDevice& operator = (const VulkanPhysicalDevice&) = delete;
-    VulkanPhysicalDevice& operator = (VulkanPhysicalDevice&&)      = delete;
+    PhysicalDevice             (const PhysicalDevice&) = delete;
+    PhysicalDevice             (PhysicalDevice&&)      = delete;
+    PhysicalDevice& operator = (const PhysicalDevice&) = delete;
+    PhysicalDevice& operator = (PhysicalDevice&&)      = delete;
     // clang-format on
 
-    static std::unique_ptr<VulkanPhysicalDevice> Create(const CreateInfo& CI);
+    static std::unique_ptr<PhysicalDevice> Create(const CreateInfo& CI);
 
     HardwareQueueIndex FindQueueFamily(VkQueueFlags QueueFlags) const;
 
@@ -132,7 +132,7 @@ public:
     bool IsUMA() const;
 
 private:
-    VulkanPhysicalDevice(const CreateInfo& CI);
+    PhysicalDevice(const CreateInfo& CI);
 
     const VkPhysicalDevice               m_VkDevice;
     uint32_t                             m_VkVersion        = 0;

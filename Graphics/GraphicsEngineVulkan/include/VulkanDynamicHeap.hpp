@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,9 +29,9 @@
 
 #include <mutex>
 #include "VulkanUtilities/VulkanHeaders.h"
-#include "VulkanUtilities/VulkanMemoryManager.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "VulkanUtilities/MemoryManager.hpp"
+#include "VulkanUtilities/LogicalDevice.hpp"
+#include "VulkanUtilities/ObjectWrappers.hpp"
 #include "DynamicHeap.hpp"
 
 namespace Diligent
