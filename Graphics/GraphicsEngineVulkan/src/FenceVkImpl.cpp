@@ -233,7 +233,7 @@ void FenceVkImpl::Wait(Uint64 Value)
     }
 }
 
-VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(SoftwareQueueIndex CommandQueueId, Uint64 Value)
+VulkanUtilities::RecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(SoftwareQueueIndex CommandQueueId, Uint64 Value)
 {
     DEV_CHECK_ERR(m_Desc.Type == FENCE_TYPE_GENERAL, "Fence must be created with FENCE_TYPE_GENERAL");
 
@@ -245,7 +245,7 @@ VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(Sof
 
     std::lock_guard<std::mutex> Lock{m_SyncPointsGuard};
 
-    VulkanUtilities::VulkanRecycledSemaphore Result;
+    VulkanUtilities::RecycledSemaphore Result;
 
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -260,7 +260,7 @@ VulkanUtilities::VulkanRecycledSemaphore FenceVkImpl::ExtractSignalSemaphore(Sof
     // Find the last non-null semaphore
     for (auto Iter = m_SyncPoints.begin(); Iter != m_SyncPoints.end(); ++Iter)
     {
-        VulkanUtilities::VulkanRecycledSemaphore SemaphoreForContext = Iter->SyncPoint->ExtractSemaphore(CommandQueueId);
+        VulkanUtilities::RecycledSemaphore SemaphoreForContext = Iter->SyncPoint->ExtractSemaphore(CommandQueueId);
         if (SemaphoreForContext)
             Result = std::move(SemaphoreForContext);
 

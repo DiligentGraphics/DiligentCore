@@ -76,8 +76,8 @@ private:
     std::vector<VkFence> m_FencePool;
 };
 
-using VulkanRecycledSemaphore = SyncObjectManager::RecycledSyncObject<VkSemaphoreType>;
-using VulkanRecycledFence     = SyncObjectManager::RecycledSyncObject<VkFenceType>;
+using RecycledSemaphore = SyncObjectManager::RecycledSyncObject<VkSemaphoreType>;
+using RecycledFence     = SyncObjectManager::RecycledSyncObject<VkFenceType>;
 
 
 template <typename VkSyncObjType>

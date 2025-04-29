@@ -115,10 +115,10 @@ protected:
 
     void InitSparseProperties() noexcept(false);
 
-    VulkanUtilities::ImageWrapper           m_VulkanImage;
-    VulkanUtilities::BufferWrapper          m_StagingBuffer;
-    VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
-    VkDeviceSize                            m_StagingDataAlignedOffset = 0;
+    VulkanUtilities::ImageWrapper     m_VulkanImage;
+    VulkanUtilities::BufferWrapper    m_StagingBuffer;
+    VulkanUtilities::MemoryAllocation m_MemoryAllocation;
+    VkDeviceSize                      m_StagingDataAlignedOffset = 0;
 };
 
 } // namespace Diligent

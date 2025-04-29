@@ -111,8 +111,8 @@ private:
     Uint32       m_DynamicOffsetAlignment    = 0;
     VkDeviceSize m_BufferMemoryAlignedOffset = 0;
 
-    VulkanUtilities::BufferWrapper          m_VulkanBuffer;
-    VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
+    VulkanUtilities::BufferWrapper    m_VulkanBuffer;
+    VulkanUtilities::MemoryAllocation m_MemoryAllocation;
 };
 
 } // namespace Diligent

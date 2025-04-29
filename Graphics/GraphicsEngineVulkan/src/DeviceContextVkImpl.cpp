@@ -1530,7 +1530,7 @@ void DeviceContextVkImpl::Flush(Uint32               NumCommandLists,
         }
         else
         {
-            if (VulkanUtilities::VulkanRecycledSemaphore WaitSem = pFenceVk->ExtractSignalSemaphore(GetCommandQueueId(), val_fence.first))
+            if (VulkanUtilities::RecycledSemaphore WaitSem = pFenceVk->ExtractSignalSemaphore(GetCommandQueueId(), val_fence.first))
             {
                 // Here we have unique binary semaphore that must be released/recycled using release queue
                 m_VkWaitSemaphores.push_back(WaitSem);
@@ -4249,7 +4249,7 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
         }
         else
         {
-            if (VulkanUtilities::VulkanRecycledSemaphore WaitSem = pFenceVk->ExtractSignalSemaphore(GetCommandQueueId(), WaitValue))
+            if (VulkanUtilities::RecycledSemaphore WaitSem = pFenceVk->ExtractSignalSemaphore(GetCommandQueueId(), WaitValue))
             {
                 // Here we have unique binary semaphore that must be released/recycled using release queue
                 m_VkWaitSemaphores.push_back(WaitSem);

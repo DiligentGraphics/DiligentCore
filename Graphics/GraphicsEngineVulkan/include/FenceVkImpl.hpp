@@ -73,7 +73,7 @@ public:
     /// Implementation of IFenceVk::GetVkSemaphore().
     virtual VkSemaphore DILIGENT_CALL_TYPE GetVkSemaphore() override final { return m_TimelineSemaphore; }
 
-    VulkanUtilities::VulkanRecycledSemaphore ExtractSignalSemaphore(SoftwareQueueIndex CommandQueueId, Uint64 Value);
+    VulkanUtilities::RecycledSemaphore ExtractSignalSemaphore(SoftwareQueueIndex CommandQueueId, Uint64 Value);
 
     void Reset(Uint64 Value);
 

@@ -78,7 +78,7 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
                   "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has both the "
                   "VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT bit AND the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit set. (11.6)");
 
-    VulkanUtilities::VulkanMemoryAllocation MemAllocation = GlobalMemoryMgr.Allocate(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, true, VkMemoryAllocateFlags{0});
+    VulkanUtilities::MemoryAllocation MemAllocation = GlobalMemoryMgr.Allocate(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, true, VkMemoryAllocateFlags{0});
 
     VkDeviceSize AlignedOffset = (MemAllocation.UnalignedOffset + (MemReqs.alignment - 1)) & ~(MemReqs.alignment - 1);
     VkResult     err           = LogicalDevice.BindBufferMemory(NewBuffer, MemAllocation.Page->GetVkMemory(), AlignedOffset);

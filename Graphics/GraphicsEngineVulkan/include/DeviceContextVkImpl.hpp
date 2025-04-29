@@ -582,9 +582,9 @@ private:
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
     // Semaphores are not owned by the command context
-    std::vector<RefCntAutoPtr<ManagedSemaphore>>          m_WaitManagedSemaphores;
-    std::vector<RefCntAutoPtr<ManagedSemaphore>>          m_SignalManagedSemaphores;
-    std::vector<VulkanUtilities::VulkanRecycledSemaphore> m_WaitRecycledSemaphores;
+    std::vector<RefCntAutoPtr<ManagedSemaphore>>    m_WaitManagedSemaphores;
+    std::vector<RefCntAutoPtr<ManagedSemaphore>>    m_SignalManagedSemaphores;
+    std::vector<VulkanUtilities::RecycledSemaphore> m_WaitRecycledSemaphores;
 
     std::vector<VkSemaphore>          m_VkWaitSemaphores;
     std::vector<VkSemaphore>          m_VkSignalSemaphores;

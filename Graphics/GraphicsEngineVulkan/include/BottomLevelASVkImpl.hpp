@@ -65,11 +65,11 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelASVk, TBottomLevelASBase)
 
 private:
-    VkDeviceAddress                         m_DeviceAddress = 0;
-    VulkanUtilities::AccelStructWrapper     m_VulkanBLAS;
-    VulkanUtilities::BufferWrapper          m_VulkanBuffer;
-    VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
-    VkDeviceSize                            m_MemoryAlignedOffset = 0;
+    VkDeviceAddress                     m_DeviceAddress = 0;
+    VulkanUtilities::AccelStructWrapper m_VulkanBLAS;
+    VulkanUtilities::BufferWrapper      m_VulkanBuffer;
+    VulkanUtilities::MemoryAllocation   m_MemoryAllocation;
+    VkDeviceSize                        m_MemoryAlignedOffset = 0;
 };
 
 } // namespace Diligent

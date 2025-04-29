@@ -60,7 +60,7 @@ private:
 
     static constexpr size_t SizeOf(Uint32 NumContexts)
     {
-        return sizeof(SyncPointVk) + sizeof(VulkanUtilities::VulkanRecycledSemaphore) * (NumContexts - _countof(SyncPointVk::m_Semaphores));
+        return sizeof(SyncPointVk) + sizeof(VulkanUtilities::RecycledSemaphore) * (NumContexts - _countof(SyncPointVk::m_Semaphores));
     }
 
 public:
@@ -68,7 +68,7 @@ public:
 
     // Returns semaphore which is in signaled state.
     // Access to semaphore in CommandQueueId index must be thread safe.
-    VulkanUtilities::VulkanRecycledSemaphore ExtractSemaphore(Uint32 CommandQueueId)
+    VulkanUtilities::RecycledSemaphore ExtractSemaphore(Uint32 CommandQueueId)
     {
         return std::move(m_Semaphores[CommandQueueId]);
     }
@@ -86,10 +86,10 @@ public:
     }
 
 private:
-    const SoftwareQueueIndex                 m_CommandQueueId;
-    const Uint8                              m_NumSemaphores; // same as NumContexts
-    VulkanUtilities::VulkanRecycledFence     m_Fence;
-    VulkanUtilities::VulkanRecycledSemaphore m_Semaphores[1]; // [m_NumSemaphores]
+    const SoftwareQueueIndex           m_CommandQueueId;
+    const Uint8                        m_NumSemaphores; // same as NumContexts
+    VulkanUtilities::RecycledFence     m_Fence;
+    VulkanUtilities::RecycledSemaphore m_Semaphores[1]; // [m_NumSemaphores]
 };
 
 

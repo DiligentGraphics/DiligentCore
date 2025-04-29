@@ -67,11 +67,11 @@ public:
     const VkAccelerationStructureKHR* GetVkTLASPtr() const { return &m_VulkanTLAS; }
 
 private:
-    VkDeviceAddress                         m_DeviceAddress = 0;
-    VulkanUtilities::AccelStructWrapper     m_VulkanTLAS;
-    VulkanUtilities::BufferWrapper          m_VulkanBuffer;
-    VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
-    VkDeviceSize                            m_MemoryAlignedOffset = 0;
+    VkDeviceAddress                     m_DeviceAddress = 0;
+    VulkanUtilities::AccelStructWrapper m_VulkanTLAS;
+    VulkanUtilities::BufferWrapper      m_VulkanBuffer;
+    VulkanUtilities::MemoryAllocation   m_MemoryAllocation;
+    VkDeviceSize                        m_MemoryAlignedOffset = 0;
 };
 
 } // namespace Diligent

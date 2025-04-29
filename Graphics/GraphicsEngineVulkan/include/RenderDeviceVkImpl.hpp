@@ -242,11 +242,11 @@ public:
     FramebufferCache* GetFramebufferCache() { return m_FramebufferCache.get(); }
     RenderPassCache*  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache.get(); }
 
-    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties, VkMemoryAllocateFlags AllocateFlags = 0)
+    VulkanUtilities::MemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties, VkMemoryAllocateFlags AllocateFlags = 0)
     {
         return m_MemoryMgr.Allocate(MemReqs, MemoryProperties, AllocateFlags);
     }
-    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, VkMemoryAllocateFlags AllocateFlags = 0)
+    VulkanUtilities::MemoryAllocation AllocateMemory(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, VkMemoryAllocateFlags AllocateFlags = 0)
     {
         const auto& MemoryProps = m_PhysicalDevice->GetMemoryProperties();
         VERIFY_EXPR(MemoryTypeIndex < MemoryProps.memoryTypeCount);

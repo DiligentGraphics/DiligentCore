@@ -32,7 +32,7 @@
 namespace VulkanUtilities
 {
 
-VulkanMemoryAllocation::~VulkanMemoryAllocation()
+MemoryAllocation::~MemoryAllocation()
 {
     if (Page != nullptr)
     {
@@ -40,11 +40,11 @@ VulkanMemoryAllocation::~VulkanMemoryAllocation()
     }
 }
 
-VulkanMemoryPage::VulkanMemoryPage(MemoryManager&        ParentMemoryMgr,
-                                   VkDeviceSize          PageSize,
-                                   uint32_t              MemoryTypeIndex,
-                                   bool                  IsHostVisible,
-                                   VkMemoryAllocateFlags AllocateFlags) :
+MemoryPage::MemoryPage(MemoryManager&        ParentMemoryMgr,
+                       VkDeviceSize          PageSize,
+                       uint32_t              MemoryTypeIndex,
+                       bool                  IsHostVisible,
+                       VkMemoryAllocateFlags AllocateFlags) :
     // clang-format off
     m_ParentMemoryMgr{ParentMemoryMgr},
     m_AllocationMgr  {static_cast<AllocationsMgrOffsetType>(PageSize), ParentMemoryMgr.m_Allocator}
@@ -85,7 +85,7 @@ VulkanMemoryPage::VulkanMemoryPage(MemoryManager&        ParentMemoryMgr,
     }
 }
 
-VulkanMemoryPage::~VulkanMemoryPage()
+MemoryPage::~MemoryPage()
 {
     if (m_CPUMemory != nullptr)
     {
@@ -96,7 +96,7 @@ VulkanMemoryPage::~VulkanMemoryPage()
     VERIFY(IsEmpty(), "Destroying a page with not all allocations released");
 }
 
-VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size, VkDeviceSize alignment)
+MemoryAllocation MemoryPage::Allocate(VkDeviceSize size, VkDeviceSize alignment)
 {
     std::lock_guard<std::mutex> Lock{m_Mutex};
     VERIFY(size <= std::numeric_limits<AllocationsMgrOffsetType>::max(),
@@ -109,25 +109,25 @@ VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size, VkDeviceSiz
         // Offset may not necessarily be aligned, but the allocation is guaranteed to be large enough
         // to accommodate requested alignment
         VERIFY_EXPR(Diligent::AlignUp(VkDeviceSize{Allocation.UnalignedOffset}, alignment) - Allocation.UnalignedOffset + size <= Allocation.Size);
-        return VulkanMemoryAllocation{this, Allocation.UnalignedOffset, Allocation.Size};
+        return MemoryAllocation{this, Allocation.UnalignedOffset, Allocation.Size};
     }
     else
     {
-        return VulkanMemoryAllocation{};
+        return MemoryAllocation{};
     }
 }
 
-void VulkanMemoryPage::Free(VulkanMemoryAllocation&& Allocation)
+void MemoryPage::Free(MemoryAllocation&& Allocation)
 {
     m_ParentMemoryMgr.OnFreeAllocation(Allocation.Size, m_CPUMemory != nullptr);
     std::lock_guard<std::mutex> Lock{m_Mutex};
     VERIFY_EXPR(Allocation.UnalignedOffset <= std::numeric_limits<AllocationsMgrOffsetType>::max());
     VERIFY_EXPR(Allocation.Size <= std::numeric_limits<AllocationsMgrOffsetType>::max());
     m_AllocationMgr.Free(static_cast<AllocationsMgrOffsetType>(Allocation.UnalignedOffset), static_cast<AllocationsMgrOffsetType>(Allocation.Size));
-    Allocation = VulkanMemoryAllocation{};
+    Allocation = MemoryAllocation{};
 }
 
-VulkanMemoryAllocation MemoryManager::Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps, VkMemoryAllocateFlags AllocateFlags)
+MemoryAllocation MemoryManager::Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps, VkMemoryAllocateFlags AllocateFlags)
 {
     // memoryTypeBits is a bitmask and contains one bit set for every supported memory type for the resource.
     // Bit i is set if the memory type i in the VkPhysicalDeviceMemoryProperties structure for the
@@ -159,9 +159,9 @@ VulkanMemoryAllocation MemoryManager::Allocate(const VkMemoryRequirements& MemRe
     return Allocate(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, HostVisible, AllocateFlags);
 }
 
-VulkanMemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible, VkMemoryAllocateFlags AllocateFlags)
+MemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible, VkMemoryAllocateFlags AllocateFlags)
 {
-    VulkanMemoryAllocation Allocation;
+    MemoryAllocation Allocation;
 
     // On integrated GPUs, there is no difference between host-visible and GPU-only
     // memory, so MemoryTypeIndex is the same. As GPU-only pages do not have CPU address,
@@ -191,7 +191,7 @@ VulkanMemoryAllocation MemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize A
         m_CurrAllocatedSize[stat_ind] += PageSize;
         m_PeakAllocatedSize[stat_ind] = std::max(m_PeakAllocatedSize[stat_ind], m_CurrAllocatedSize[stat_ind]);
 
-        auto it = m_Pages.emplace(PageIdx, VulkanMemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible, AllocateFlags});
+        auto it = m_Pages.emplace(PageIdx, MemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible, AllocateFlags});
         LOG_INFO_MESSAGE("MemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"),
                          " page. (", Diligent::FormatMemorySize(PageSize, 2), ", type idx: ", MemoryTypeIndex,
                          "). Current allocated size: ", Diligent::FormatMemorySize(m_CurrAllocatedSize[stat_ind], 2));
@@ -222,9 +222,9 @@ void MemoryManager::ShrinkMemory()
     {
         auto curr_it = it;
         ++it;
-        VulkanMemoryPage& Page          = curr_it->second;
-        bool              IsHostVisible = Page.GetCPUMemory() != nullptr;
-        VkDeviceSize      ReserveSize   = IsHostVisible ? m_HostVisibleReserveSize : m_DeviceLocalReserveSize;
+        MemoryPage&  Page          = curr_it->second;
+        bool         IsHostVisible = Page.GetCPUMemory() != nullptr;
+        VkDeviceSize ReserveSize   = IsHostVisible ? m_HostVisibleReserveSize : m_DeviceLocalReserveSize;
         if (Page.IsEmpty() && m_CurrAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize)
         {
             VkDeviceSize PageSize = Page.GetPageSize();

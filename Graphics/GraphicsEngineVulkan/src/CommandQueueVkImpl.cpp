@@ -92,7 +92,7 @@ SyncPointVk::SyncPointVk(SoftwareQueueIndex                  CommandQueueId,
 
     // Call constructors for semaphores
     for (Uint32 s = _countof(m_Semaphores); s < NumContexts; ++s)
-        new (&m_Semaphores[s]) VulkanUtilities::VulkanRecycledSemaphore{};
+        new (&m_Semaphores[s]) VulkanUtilities::RecycledSemaphore{};
 
     // Semaphores are used to synchronize between queues; they are not used for synchronization within one queue.
     if (NumContexts > 1)

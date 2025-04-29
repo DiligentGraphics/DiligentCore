@@ -120,7 +120,7 @@ private:
     struct UploadPageInfo
     {
         // clang-format off
-        UploadPageInfo(VulkanUtilities::VulkanMemoryAllocation&& _MemAllocation,
+        UploadPageInfo(VulkanUtilities::MemoryAllocation&& _MemAllocation,
                        VulkanUtilities::BufferWrapper&&          _Buffer,
                        Uint8*                                    _CPUAddress) :
             MemAllocation{std::move(_MemAllocation)},
@@ -130,9 +130,9 @@ private:
         }
         // clang-format on
 
-        VulkanUtilities::VulkanMemoryAllocation MemAllocation;
-        VulkanUtilities::BufferWrapper          Buffer;
-        Uint8* const                            CPUAddress = nullptr;
+        VulkanUtilities::MemoryAllocation MemAllocation;
+        VulkanUtilities::BufferWrapper    Buffer;
+        Uint8* const                      CPUAddress = nullptr;
     };
     std::vector<UploadPageInfo> m_Pages;
 

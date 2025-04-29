@@ -369,7 +369,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges
                 // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
                 // to the host (10.2)
-                VulkanUtilities::VulkanMemoryAllocation StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                VulkanUtilities::MemoryAllocation StagingMemoryAllocation = pRenderDeviceVk->AllocateMemory(StagingBufferMemReqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
                 if (!StagingMemoryAllocation)
                     LOG_ERROR_AND_THROW("Failed to allocate staging memory for buffer '", m_Desc.Name, "'.");
 

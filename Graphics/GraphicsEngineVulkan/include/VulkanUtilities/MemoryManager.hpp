@@ -42,24 +42,24 @@
 namespace VulkanUtilities
 {
 
-class VulkanMemoryPage;
+class MemoryPage;
 class MemoryManager;
 
-struct VulkanMemoryAllocation
+struct MemoryAllocation
 {
-    VulkanMemoryAllocation() noexcept {}
+    MemoryAllocation() noexcept {}
 
     // clang-format off
-    VulkanMemoryAllocation            (const VulkanMemoryAllocation&) = delete;
-    VulkanMemoryAllocation& operator= (const VulkanMemoryAllocation&) = delete;
+    MemoryAllocation            (const MemoryAllocation&) = delete;
+    MemoryAllocation& operator= (const MemoryAllocation&) = delete;
 
-	VulkanMemoryAllocation(VulkanMemoryPage* _Page, VkDeviceSize _UnalignedOffset, VkDeviceSize _Size)noexcept :
+	MemoryAllocation(MemoryPage* _Page, VkDeviceSize _UnalignedOffset, VkDeviceSize _Size)noexcept :
         Page           {_Page           },
         UnalignedOffset{_UnalignedOffset},
         Size           {_Size           }
     {}
 
-    VulkanMemoryAllocation(VulkanMemoryAllocation&& rhs)noexcept :
+    MemoryAllocation(MemoryAllocation&& rhs)noexcept :
         Page           {rhs.Page           },
         UnalignedOffset{rhs.UnalignedOffset},
         Size           {rhs.Size           }
@@ -69,7 +69,7 @@ struct VulkanMemoryAllocation
         rhs.Size            = 0;
     }
 
-    VulkanMemoryAllocation& operator= (VulkanMemoryAllocation&& rhs)noexcept
+    MemoryAllocation& operator= (MemoryAllocation&& rhs)noexcept
     {
         Page            = rhs.Page;
         UnalignedOffset = rhs.UnalignedOffset;
@@ -94,25 +94,25 @@ struct VulkanMemoryAllocation
 
     // Destructor immediately returns the allocation to the parent page.
     // The allocation must not be in use by the GPU.
-    ~VulkanMemoryAllocation();
+    ~MemoryAllocation();
 
-    VulkanMemoryPage* Page            = nullptr; // Memory page that contains this allocation
-    VkDeviceSize      UnalignedOffset = 0;       // Unaligned offset from the start of the memory
-    VkDeviceSize      Size            = 0;       // Reserved size of this allocation
+    MemoryPage*  Page            = nullptr; // Memory page that contains this allocation
+    VkDeviceSize UnalignedOffset = 0;       // Unaligned offset from the start of the memory
+    VkDeviceSize Size            = 0;       // Reserved size of this allocation
 };
 
-class VulkanMemoryPage
+class MemoryPage
 {
 public:
-    VulkanMemoryPage(MemoryManager&        ParentMemoryMgr,
-                     VkDeviceSize          PageSize,
-                     uint32_t              MemoryTypeIndex,
-                     bool                  IsHostVisible,
-                     VkMemoryAllocateFlags AllocateFlags);
-    ~VulkanMemoryPage();
+    MemoryPage(MemoryManager&        ParentMemoryMgr,
+               VkDeviceSize          PageSize,
+               uint32_t              MemoryTypeIndex,
+               bool                  IsHostVisible,
+               VkMemoryAllocateFlags AllocateFlags);
+    ~MemoryPage();
 
     // clang-format off
-    VulkanMemoryPage(VulkanMemoryPage&& rhs)noexcept :
+    MemoryPage(MemoryPage&& rhs)noexcept :
         m_ParentMemoryMgr {rhs.m_ParentMemoryMgr         },
         m_AllocationMgr   {std::move(rhs.m_AllocationMgr)},
         m_VkMemory        {std::move(rhs.m_VkMemory)     },
@@ -121,9 +121,9 @@ public:
         rhs.m_CPUMemory = nullptr;
     }
 
-    VulkanMemoryPage            (const VulkanMemoryPage&) = delete;
-    VulkanMemoryPage& operator= (VulkanMemoryPage&)       = delete;
-    VulkanMemoryPage& operator= (VulkanMemoryPage&& rhs)  = delete;
+    MemoryPage            (const MemoryPage&) = delete;
+    MemoryPage& operator= (MemoryPage&)       = delete;
+    MemoryPage& operator= (MemoryPage&& rhs)  = delete;
 
     bool IsEmpty() const { return m_AllocationMgr.IsEmpty(); }
     bool IsFull()  const { return m_AllocationMgr.IsFull();  }
@@ -132,7 +132,7 @@ public:
 
     // clang-format on
 
-    VulkanMemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment);
+    MemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment);
 
     VkDeviceMemory GetVkMemory() const { return m_VkMemory; }
     void*          GetCPUMemory() const { return m_CPUMemory; }
@@ -140,10 +140,10 @@ public:
 private:
     using AllocationsMgrOffsetType = Diligent::VariableSizeAllocationsManager::OffsetType;
 
-    friend struct VulkanMemoryAllocation;
+    friend struct MemoryAllocation;
 
     // Memory is reclaimed immediately. The application is responsible to ensure it is not in use by the GPU
-    void Free(VulkanMemoryAllocation&& Allocation);
+    void Free(MemoryAllocation&& Allocation);
 
     MemoryManager&                           m_ParentMemoryMgr;
     std::mutex                               m_Mutex;
@@ -208,15 +208,15 @@ public:
     MemoryManager& operator= (MemoryManager&&)      = delete;
     // clang-format on
 
-    VulkanMemoryAllocation Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible, VkMemoryAllocateFlags AllocateFlags);
-    VulkanMemoryAllocation Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps, VkMemoryAllocateFlags AllocateFlags);
-    void                   ShrinkMemory();
+    MemoryAllocation Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible, VkMemoryAllocateFlags AllocateFlags);
+    MemoryAllocation Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps, VkMemoryAllocateFlags AllocateFlags);
+    void             ShrinkMemory();
 
 protected:
-    friend class VulkanMemoryPage;
+    friend class MemoryPage;
 
-    virtual void OnNewPageCreated(VulkanMemoryPage& NewPage) {}
-    virtual void OnPageDestroy(VulkanMemoryPage& Page) {}
+    virtual void OnNewPageCreated(MemoryPage& NewPage) {}
+    virtual void OnPageDestroy(MemoryPage& Page) {}
 
     std::string m_MgrName;
 
@@ -257,7 +257,7 @@ protected:
             }
         };
     };
-    std::unordered_multimap<MemoryPageIndex, VulkanMemoryPage, MemoryPageIndex::Hasher> m_Pages;
+    std::unordered_multimap<MemoryPageIndex, MemoryPage, MemoryPageIndex::Hasher> m_Pages;
 
     const VkDeviceSize m_DeviceLocalPageSize;
     const VkDeviceSize m_HostVisiblePageSize;

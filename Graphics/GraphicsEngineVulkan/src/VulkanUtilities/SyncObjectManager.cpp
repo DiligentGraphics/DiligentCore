@@ -56,14 +56,14 @@ SyncObjectManager::~SyncObjectManager()
     }
 }
 
-void SyncObjectManager::CreateSemaphores(VulkanRecycledSemaphore* pSemaphores, uint32_t Count)
+void SyncObjectManager::CreateSemaphores(RecycledSemaphore* pSemaphores, uint32_t Count)
 {
     uint32_t SemIdx = 0;
     {
         std::lock_guard<std::mutex> Lock{m_SemaphorePoolGuard};
         for (; SemIdx < Count && !m_SemaphorePool.empty(); ++SemIdx)
         {
-            pSemaphores[SemIdx] = VulkanRecycledSemaphore{shared_from_this(), m_SemaphorePool.back()};
+            pSemaphores[SemIdx] = RecycledSemaphore{shared_from_this(), m_SemaphorePool.back()};
             m_SemaphorePool.pop_back();
         }
     }
@@ -76,11 +76,11 @@ void SyncObjectManager::CreateSemaphores(VulkanRecycledSemaphore* pSemaphores, u
     {
         VkSemaphore vkSem = VK_NULL_HANDLE;
         vkCreateSemaphore(m_LogicalDevice.GetVkDevice(), &SemCI, nullptr, &vkSem);
-        pSemaphores[SemIdx] = VulkanRecycledSemaphore{shared_from_this(), vkSem};
+        pSemaphores[SemIdx] = RecycledSemaphore{shared_from_this(), vkSem};
     }
 }
 
-VulkanRecycledFence SyncObjectManager::CreateFence()
+RecycledFence SyncObjectManager::CreateFence()
 {
     {
         std::lock_guard<std::mutex> Lock{m_FencePoolGuard};
