@@ -126,7 +126,7 @@ std::string RenderStateCacheImpl::HashToStr(Uint64 Low, Uint64 High)
     static constexpr std::array<char, 16> Symbols = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
     std::string Str;
-    for (auto Part : {High, Low})
+    for (Uint64 Part : {High, Low})
     {
         for (Uint64 i = 0; i < 16; ++i)
             Str += Symbols[(Part >> (Uint64{60} - i * 4)) & 0xFu];
@@ -253,7 +253,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
 
     RefCntAutoPtr<IShader> pShader;
 
-    const auto FoundInCache = CreateShaderInternal(ShaderCI, &pShader);
+    const bool FoundInCache = CreateShaderInternal(ShaderCI, &pShader);
     if (!pShader)
         return false;
 
@@ -266,7 +266,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
             auto it = m_ReloadableShaders.find(pShader->GetUniqueID());
             if (it != m_ReloadableShaders.end())
             {
-                if (auto pReloadableShader = it->second.Lock())
+                if (RefCntAutoPtr<IShader> pReloadableShader = it->second.Lock())
                     *ppShader = pReloadableShader.Detach();
                 else
                     m_ReloadableShaders.erase(it);
@@ -275,7 +275,7 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
 
         if (*ppShader == nullptr)
         {
-            auto _ShaderCI = ShaderCI;
+            ShaderCreateInfo _ShaderCI = ShaderCI;
 
             RefCntAutoPtr<IShaderSourceInputStreamFactory> pCompoundReloadSource;
             if (m_pReloadSource)
@@ -319,7 +319,7 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
     constexpr bool IsDebug = false;
 #endif
     Hasher.Update(ShaderCI, m_DeviceHash, IsDebug);
-    const auto Hash = Hasher.Digest();
+    const XXH128Hash Hash = Hasher.Digest();
 
     // First, try to check if the shader has already been requested
     {
@@ -328,7 +328,7 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
         auto it = m_Shaders.find(Hash);
         if (it != m_Shaders.end())
         {
-            if (auto pShader = it->second.Lock())
+            if (RefCntAutoPtr<IShader> pShader = it->second.Lock())
             {
                 *ppShader = pShader.Detach();
                 RENDER_STATE_CACHE_LOG(RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE, "Reusing existing shader '", (ShaderCI.Desc.Name ? ShaderCI.Desc.Name : ""), "'.");
@@ -367,7 +367,7 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
     };
     AddShaderHelper AutoAddShader{*this, Hash, ppShader};
 
-    const auto HashStr = MakeHashStr(ShaderCI.Desc.Name, Hash);
+    const std::string HashStr = MakeHashStr(ShaderCI.Desc.Name, Hash);
 
     // Try to find the shader in the loaded archive
     {
@@ -402,11 +402,11 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
 
     // Next, try to find the shader in the archiver
     RefCntAutoPtr<IShader> pArchivedShader{m_pArchiver->GetShader(HashStr.c_str())};
-    const auto             FoundInArchive = (pArchivedShader != nullptr);
+    const bool             FoundInArchive = (pArchivedShader != nullptr);
     if (!pArchivedShader)
     {
-        auto ArchiveShaderCI      = ShaderCI;
-        ArchiveShaderCI.Desc.Name = HashStr.c_str();
+        ShaderCreateInfo ArchiveShaderCI = ShaderCI;
+        ArchiveShaderCI.Desc.Name        = HashStr.c_str();
         ShaderArchiveInfo ArchiveInfo;
         ArchiveInfo.DeviceFlags = RenderDeviceTypeToArchiveDataFlag(m_DeviceType);
         m_pSerializationDevice->CreateShader(ArchiveShaderCI, ArchiveInfo, &pArchivedShader);
@@ -466,17 +466,17 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapperBase
         // Replace signatures with serialized signatures
         for (size_t i = 0; i < ppSignatures.size(); ++i)
         {
-            auto& pSign = ppSignatures[i];
+            IPipelineResourceSignature*& pSign = ppSignatures[i];
             if (pSign == nullptr)
                 continue;
 
-            auto SignDesc = pSign->GetDesc();
+            PipelineResourceSignatureDesc SignDesc = pSign->GetDesc();
             // Add hash to the signature name
             XXH128State Hasher;
             Hasher.Update(SignDesc, DeviceType);
-            const auto Hash    = Hasher.Digest();
-            const auto HashStr = MakeHashStr(SignDesc.Name, Hash);
-            SignDesc.Name      = HashStr.c_str();
+            const XXH128Hash  Hash    = Hasher.Digest();
+            const std::string HashStr = MakeHashStr(SignDesc.Name, Hash);
+            SignDesc.Name             = HashStr.c_str();
 
             ResourceSignatureArchiveInfo ArchiveInfo;
             ArchiveInfo.DeviceFlags = RenderDeviceTypeToArchiveDataFlag(DeviceType);
@@ -597,13 +597,13 @@ struct RenderStateCacheImpl::SerializedPsoCIWrapper<GraphicsPipelineStateCreateI
         // Replace render pass with serialized render pass
         if (CI.GraphicsPipeline.pRenderPass != nullptr)
         {
-            auto RPDesc = CI.GraphicsPipeline.pRenderPass->GetDesc();
+            RenderPassDesc RPDesc = CI.GraphicsPipeline.pRenderPass->GetDesc();
             // Add hash to the render pass name
             XXH128State Hasher;
             Hasher.Update(RPDesc, DeviceType);
-            const auto Hash    = Hasher.Digest();
-            const auto HashStr = MakeHashStr(RPDesc.Name, Hash);
-            RPDesc.Name        = HashStr.c_str();
+            const XXH128Hash  Hash    = Hasher.Digest();
+            const std::string HashStr = MakeHashStr(RPDesc.Name, Hash);
+            RPDesc.Name               = HashStr.c_str();
 
             RefCntAutoPtr<IRenderPass> pSerializedRP;
             pSerializationDevice->CreateRenderPass(RPDesc, &pSerializedRP);
@@ -706,7 +706,7 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
 
     RefCntAutoPtr<IPipelineState> pPSO;
 
-    const auto FoundInCache = CreatePipelineStateInternal(PSOCreateInfo, &pPSO);
+    const bool FoundInCache = CreatePipelineStateInternal(PSOCreateInfo, &pPSO);
     if (!pPSO)
         return false;
 
@@ -718,7 +718,7 @@ bool RenderStateCacheImpl::CreatePipelineState(const CreateInfoType& PSOCreateIn
             auto it = m_ReloadablePipelines.find(pPSO->GetUniqueID());
             if (it != m_ReloadablePipelines.end())
             {
-                if (auto pReloadablePSO = it->second.Lock())
+                if (RefCntAutoPtr<IPipelineState> pReloadablePSO = it->second.Lock())
                     *ppPipelineState = pReloadablePSO.Detach();
                 else
                     m_ReloadablePipelines.erase(it);
@@ -775,7 +775,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
         auto it = m_Pipelines.find(Hash);
         if (it != m_Pipelines.end())
         {
-            if (auto pPSO = it->second.Lock())
+            if (RefCntAutoPtr<IPipelineState> pPSO = it->second.Lock())
             {
                 *ppPipelineState = pPSO.Detach();
                 RENDER_STATE_CACHE_LOG(RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE, "Reusing existing pipeline '", (PSOCreateInfo.PSODesc.Name ? PSOCreateInfo.PSODesc.Name : ""), "'.");
@@ -788,7 +788,7 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
         }
     }
 
-    const auto HashStr = MakeHashStr(PSOCreateInfo.PSODesc.Name, Hash);
+    const std::string HashStr = MakeHashStr(PSOCreateInfo.PSODesc.Name, Hash);
 
     bool FoundInCache = false;
     // Try to find PSO in the loaded archive
@@ -902,7 +902,7 @@ Uint32 RenderStateCacheImpl::Reload(ReloadGraphicsPipelineCallbackType ReloadGra
         std::lock_guard<std::mutex> Guard{m_ReloadableShadersMtx};
         for (auto shader_it : m_ReloadableShaders)
         {
-            if (auto pShader = shader_it.second.Lock())
+            if (RefCntAutoPtr<IShader> pShader = shader_it.second.Lock())
             {
                 RefCntAutoPtr<ReloadableShader> pReloadableShader{pShader, ReloadableShader::IID_InternalImpl};
                 if (pReloadableShader)
@@ -925,7 +925,7 @@ Uint32 RenderStateCacheImpl::Reload(ReloadGraphicsPipelineCallbackType ReloadGra
         std::lock_guard<std::mutex> Guard{m_ReloadablePipelinesMtx};
         for (auto pso_it : m_ReloadablePipelines)
         {
-            if (auto pPSO = pso_it.second.Lock())
+            if (RefCntAutoPtr<IPipelineState> pPSO = pso_it.second.Lock())
             {
                 RefCntAutoPtr<ReloadablePipelineState> pReloadablePSO{pPSO, ReloadablePipelineState::IID_InternalImpl};
                 if (pPSO)

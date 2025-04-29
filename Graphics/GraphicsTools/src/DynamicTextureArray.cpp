@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -44,21 +44,21 @@ bool VerifySparseTextureCompatibility(IRenderDevice* pDevice, const TextureDesc&
 {
     VERIFY_EXPR(pDevice != nullptr);
 
-    const auto& DeviceInfo = pDevice->GetDeviceInfo().Features;
+    const DeviceFeatures& DeviceInfo = pDevice->GetDeviceInfo().Features;
     if (!DeviceInfo.SparseResources)
     {
         LOG_WARNING_MESSAGE("SparseResources device feature is not enabled.");
         return false;
     }
 
-    const auto& SparseRes = pDevice->GetAdapterInfo().SparseResources;
+    const SparseResourceProperties& SparseRes = pDevice->GetAdapterInfo().SparseResources;
     if ((SparseRes.CapFlags & SPARSE_RESOURCE_CAP_FLAG_TEXTURE_2D_ARRAY_MIP_TAIL) == 0)
     {
         LOG_WARNING_MESSAGE("This device does not support sparse texture 2D arrays with mip tails.");
         return false;
     }
 
-    const auto& SparseInfo = pDevice->GetSparseTextureFormatInfo(Desc.Format, Desc.Type, Desc.SampleCount);
+    const SparseTextureFormatInfo& SparseInfo = pDevice->GetSparseTextureFormatInfo(Desc.Format, Desc.Type, Desc.SampleCount);
     if ((SparseInfo.BindFlags & Desc.BindFlags) != Desc.BindFlags)
     {
         LOG_WARNING_MESSAGE("The following bind flags requested for the sparse dynamic texture array are not supported by device: ", GetBindFlagsString(Desc.BindFlags & ~SparseInfo.BindFlags, ", "));
@@ -114,16 +114,16 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
         return;
     }
 
-    const auto& AdapterInfo = pDevice->GetAdapterInfo();
-    const auto& DeviceInfo  = pDevice->GetDeviceInfo();
+    const GraphicsAdapterInfo& AdapterInfo = pDevice->GetAdapterInfo();
+    const RenderDeviceInfo&    DeviceInfo  = pDevice->GetDeviceInfo();
 
     {
         // Some implementations may return UINT64_MAX, so limit the maximum memory size per resource.
         // Some implementations will fail to create texture even if size is less than ResourceSpaceSize.
-        const auto MaxMemorySize = std::min(Uint64{1} << 40, AdapterInfo.SparseResources.ResourceSpaceSize) >> 1;
-        const auto MipProps      = GetMipLevelProperties(m_Desc, 0);
+        const Uint64             MaxMemorySize = std::min(Uint64{1} << 40, AdapterInfo.SparseResources.ResourceSpaceSize) >> 1;
+        const MipLevelProperties MipProps      = GetMipLevelProperties(m_Desc, 0);
 
-        auto TmpDesc = m_Desc;
+        TextureDesc TmpDesc = m_Desc;
         // Reserve the maximum available number of slices
         TmpDesc.ArraySize = AdapterInfo.Texture.MaxTexture2DArraySlices;
         // Account for the maximum virtual space size
@@ -157,7 +157,7 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
         m_Desc.ArraySize = 0;
     }
 
-    const auto& TexSparseProps = m_pTexture->GetSparseProperties();
+    const SparseTextureProperties& TexSparseProps = m_pTexture->GetSparseProperties();
     if ((TexSparseProps.Flags & SPARSE_TEXTURE_FLAG_SINGLE_MIPTAIL) != 0)
     {
         LOG_WARNING_MESSAGE("This device requires single mip tail for the sparse texture 2D array, which is not suitable for the dynamic array.");
@@ -166,12 +166,12 @@ void DynamicTextureArray::CreateSparseTexture(IRenderDevice* pDevice)
         return;
     }
 
-    const auto NumNormalMips = std::min(m_Desc.MipLevels, TexSparseProps.FirstMipInTail);
+    const Uint32 NumNormalMips = std::min(m_Desc.MipLevels, TexSparseProps.FirstMipInTail);
     // Compute the total number of blocks in one slice
     Uint64 NumBlocksInSlice = 0;
     for (Uint32 Mip = 0; Mip < NumNormalMips; ++Mip)
     {
-        const auto NumTilesInMip = GetNumSparseTilesInMipLevel(m_Desc, TexSparseProps.TileSize, Mip);
+        const uint3 NumTilesInMip = GetNumSparseTilesInMipLevel(m_Desc, TexSparseProps.TileSize, Mip);
         NumBlocksInSlice += Uint64{NumTilesInMip.x} * Uint64{NumTilesInMip.y} * Uint64{NumTilesInMip.z};
     }
 
@@ -234,8 +234,8 @@ void DynamicTextureArray::CreateResources(IRenderDevice* pDevice)
     // NB: m_Desc.Usage may be changed by CreateSparseTexture()
     if (m_Desc.Usage == USAGE_DEFAULT && m_PendingSize > 0)
     {
-        auto Desc      = m_Desc;
-        Desc.ArraySize = m_PendingSize;
+        TextureDesc Desc = m_Desc;
+        Desc.ArraySize   = m_PendingSize;
         pDevice->CreateTexture(Desc, nullptr, &m_pTexture);
         if (m_Desc.ArraySize == 0)
         {
@@ -256,28 +256,28 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
 
     m_PendingSize = AlignUp(m_PendingSize, m_NumSlicesInPage);
 
-    const auto RequiredMemSize = (m_PendingSize / m_NumSlicesInPage) * m_MemoryPageSize;
+    const Uint64 RequiredMemSize = (m_PendingSize / m_NumSlicesInPage) * m_MemoryPageSize;
     if (RequiredMemSize > m_pMemory->GetCapacity())
         m_pMemory->Resize(RequiredMemSize); // Allocate additional memory
 
-    const auto NumSlicesToBind = m_PendingSize > m_Desc.ArraySize ?
+    const Uint32 NumSlicesToBind = m_PendingSize > m_Desc.ArraySize ?
         m_PendingSize - m_Desc.ArraySize :
         m_Desc.ArraySize - m_PendingSize;
 
-    auto CurrMemOffset = Uint64{(m_PendingSize > m_Desc.ArraySize ? m_Desc.ArraySize : m_PendingSize) / m_NumSlicesInPage} * m_MemoryPageSize;
+    Uint64 CurrMemOffset = Uint64{(m_PendingSize > m_Desc.ArraySize ? m_Desc.ArraySize : m_PendingSize) / m_NumSlicesInPage} * m_MemoryPageSize;
 
-    const auto& TexSparseProps = m_pTexture->GetSparseProperties();
-    const auto  NumNormalMips  = std::min(m_Desc.MipLevels, TexSparseProps.FirstMipInTail);
-    const auto  HasMipTail     = m_Desc.MipLevels > TexSparseProps.FirstMipInTail;
+    const SparseTextureProperties& TexSparseProps = m_pTexture->GetSparseProperties();
+    const Uint32                   NumNormalMips  = std::min(m_Desc.MipLevels, TexSparseProps.FirstMipInTail);
+    const bool                     HasMipTail     = m_Desc.MipLevels > TexSparseProps.FirstMipInTail;
 
     std::vector<SparseTextureMemoryBindInfo> TexBinds;
     TexBinds.reserve(size_t{NumSlicesToBind} * (HasMipTail ? 2 : 1));
     std::vector<SparseTextureMemoryBindRange> MipRanges(size_t{NumSlicesToBind} * (size_t{NumNormalMips} + (HasMipTail ? 1 : 0)));
 
-    auto range_it   = MipRanges.begin();
-    auto StartSlice = std::min(m_Desc.ArraySize, m_PendingSize);
-    auto EndSlice   = std::max(m_Desc.ArraySize, m_PendingSize);
-    for (auto Slice = StartSlice; Slice != EndSlice; ++Slice)
+    auto   range_it   = MipRanges.begin();
+    Uint32 StartSlice = std::min(m_Desc.ArraySize, m_PendingSize);
+    Uint32 EndSlice   = std::max(m_Desc.ArraySize, m_PendingSize);
+    for (Uint32 Slice = StartSlice; Slice != EndSlice; ++Slice)
     {
         // Bind normal mip levels
         {
@@ -287,7 +287,7 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
             NormalMipBindInfo.NumRanges = NumNormalMips;
             for (Uint32 Mip = 0; Mip < NumNormalMips; ++Mip, ++range_it)
             {
-                const auto MipProps = GetMipLevelProperties(m_Desc, Mip);
+                const MipLevelProperties MipProps = GetMipLevelProperties(m_Desc, Mip);
 
                 range_it->ArraySlice = Slice;
                 range_it->MipLevel   = Mip;
@@ -295,10 +295,10 @@ void DynamicTextureArray::ResizeSparseTexture(IDeviceContext* pContext)
 
                 if (Slice >= m_Desc.ArraySize)
                 {
-                    const auto NumTilesInMip = GetNumSparseTilesInBox(range_it->Region, TexSparseProps.TileSize);
-                    range_it->pMemory        = m_pMemory;
-                    range_it->MemoryOffset   = CurrMemOffset;
-                    range_it->MemorySize     = Uint64{NumTilesInMip.x} * NumTilesInMip.y * NumTilesInMip.z * TexSparseProps.BlockSize;
+                    const uint3 NumTilesInMip = GetNumSparseTilesInBox(range_it->Region, TexSparseProps.TileSize);
+                    range_it->pMemory         = m_pMemory;
+                    range_it->MemoryOffset    = CurrMemOffset;
+                    range_it->MemorySize      = Uint64{NumTilesInMip.x} * NumTilesInMip.y * NumTilesInMip.z * TexSparseProps.BlockSize;
 
                     CurrMemOffset += range_it->MemorySize;
                 }
@@ -383,8 +383,8 @@ void DynamicTextureArray::ResizeDefaultTexture(IDeviceContext* pContext)
 {
     VERIFY_EXPR(m_PendingSize != m_Desc.ArraySize);
     VERIFY_EXPR(m_pTexture && m_pStaleTexture);
-    const auto& SrcTexDesc = m_pStaleTexture->GetDesc();
-    const auto& DstTexDesc = m_pTexture->GetDesc();
+    const TextureDesc& SrcTexDesc = m_pStaleTexture->GetDesc();
+    const TextureDesc& DstTexDesc = m_pTexture->GetDesc();
     VERIFY_EXPR(SrcTexDesc.MipLevels == DstTexDesc.MipLevels);
 
     CopyTextureAttribs CopyAttribs;
@@ -393,7 +393,7 @@ void DynamicTextureArray::ResizeDefaultTexture(IDeviceContext* pContext)
     CopyAttribs.SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     CopyAttribs.DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
 
-    const auto NumSlicesToCopy = std::min(SrcTexDesc.ArraySize, DstTexDesc.ArraySize);
+    const Uint32 NumSlicesToCopy = std::min(SrcTexDesc.ArraySize, DstTexDesc.ArraySize);
     for (Uint32 slice = 0; slice < NumSlicesToCopy; ++slice)
     {
         for (Uint32 mip = 0; mip < SrcTexDesc.MipLevels; ++mip)

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -111,7 +111,7 @@ public:
             BytecodeCacheElementHeader ElementHeader;
             ElementHeader.Serialize(Stream);
 
-            auto pBytecode = DataBlobImpl::Create(ElementHeader.DataSize);
+            RefCntAutoPtr<DataBlobImpl> pBytecode = DataBlobImpl::Create(ElementHeader.DataSize);
             Stream.CopyBytes(pBytecode->GetDataPtr(), ElementHeader.DataSize);
             m_HashMap.emplace(ElementHeader.Hash, pBytecode);
         }
@@ -123,19 +123,21 @@ public:
     {
         DEV_CHECK_ERR(ppByteCode != nullptr, "ppByteCode must not be null.");
         DEV_CHECK_ERR(*ppByteCode == nullptr, "*ppByteCode is not null. Make sure you are not overwriting reference to an existing object as this may result in memory leaks.");
-        const auto Hash = ComputeHash(ShaderCI);
+        const XXH128Hash Hash = ComputeHash(ShaderCI);
+
         const auto Iter = m_HashMap.find(Hash);
         if (Iter != m_HashMap.end())
         {
-            auto pObject = Iter->second;
-            *ppByteCode  = pObject.Detach();
+            RefCntAutoPtr<IDataBlob> pObject = Iter->second;
+            *ppByteCode                      = pObject.Detach();
         }
     }
 
     virtual void DILIGENT_CALL_TYPE AddBytecode(const ShaderCreateInfo& ShaderCI, IDataBlob* pByteCode) override final
     {
         DEV_CHECK_ERR(pByteCode != nullptr, "pByteCode must not be null.");
-        const auto Hash = ComputeHash(ShaderCI);
+        const XXH128Hash Hash = ComputeHash(ShaderCI);
+
         const auto Iter = m_HashMap.emplace(Hash, pByteCode);
         if (!Iter.second)
             Iter.first->second = pByteCode;
@@ -143,7 +145,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE RemoveBytecode(const ShaderCreateInfo& ShaderCI) override final
     {
-        const auto Hash = ComputeHash(ShaderCI);
+        const XXH128Hash Hash = ComputeHash(ShaderCI);
         m_HashMap.erase(Hash);
     }
 
@@ -160,7 +162,7 @@ public:
 
             for (auto const& Pair : m_HashMap)
             {
-                const auto& pBytecode = Pair.second;
+                const RefCntAutoPtr<IDataBlob>& pBytecode = Pair.second;
 
                 BytecodeCacheElementHeader ElementHeader;
                 ElementHeader.Hash     = Pair.first;
@@ -174,7 +176,7 @@ public:
         Serializer<SerializerMode::Measure> MeasureStream{};
         WriteData(MeasureStream);
 
-        const auto Memory = MeasureStream.AllocateData(DefaultRawMemoryAllocator::GetAllocator());
+        const SerializedData Memory = MeasureStream.AllocateData(DefaultRawMemoryAllocator::GetAllocator());
 
         Serializer<SerializerMode::Write> WriteStream{Memory};
         WriteData(WriteStream);

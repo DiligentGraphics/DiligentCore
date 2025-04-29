@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,9 +40,9 @@ ScreenCapture::ScreenCapture(IRenderDevice* pDevice) :
 
 void ScreenCapture::Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Uint32 FrameId)
 {
-    auto*       pCurrentRTV        = pSwapChain->GetCurrentBackBufferRTV();
-    auto*       pCurrentBackBuffer = pCurrentRTV->GetTexture();
-    const auto& SCDesc             = pSwapChain->GetDesc();
+    ITextureView*        pCurrentRTV        = pSwapChain->GetCurrentBackBufferRTV();
+    ITexture*            pCurrentBackBuffer = pCurrentRTV->GetTexture();
+    const SwapChainDesc& SCDesc             = pSwapChain->GetDesc();
 
     RefCntAutoPtr<ITexture> pStagingTexture;
 
@@ -52,7 +52,7 @@ void ScreenCapture::Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Ui
         {
             pStagingTexture = std::move(m_AvailableTextures.back());
             m_AvailableTextures.pop_back();
-            const auto& TexDesc = pStagingTexture->GetDesc();
+            const TextureDesc& TexDesc = pStagingTexture->GetDesc();
             if (!(TexDesc.Width == SCDesc.Width &&
                   TexDesc.Height == SCDesc.Height &&
                   TexDesc.Format == SCDesc.ColorBufferFormat))
@@ -95,8 +95,8 @@ ScreenCapture::CaptureInfo ScreenCapture::GetCapture()
     std::lock_guard<std::mutex> Lock{m_PendingTexturesMtx};
     if (!m_PendingTextures.empty())
     {
-        auto& OldestCapture       = m_PendingTextures.front();
-        auto  CompletedFenceValue = m_pFence->GetCompletedValue();
+        PendingTextureInfo& OldestCapture       = m_PendingTextures.front();
+        Uint64              CompletedFenceValue = m_pFence->GetCompletedValue();
         if (OldestCapture.Fence <= CompletedFenceValue)
         {
             Capture.pTexture = std::move(OldestCapture.pTex);
@@ -112,8 +112,8 @@ bool ScreenCapture::HasCapture()
     std::lock_guard<std::mutex> Lock{m_PendingTexturesMtx};
     if (!m_PendingTextures.empty())
     {
-        const auto& OldestCapture       = m_PendingTextures.front();
-        auto        CompletedFenceValue = m_pFence->GetCompletedValue();
+        const PendingTextureInfo& OldestCapture       = m_PendingTextures.front();
+        Uint64                    CompletedFenceValue = m_pFence->GetCompletedValue();
         return OldestCapture.Fence <= CompletedFenceValue;
     }
     else

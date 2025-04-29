@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -168,7 +168,7 @@ public:
         m_Buffers.reserve(m_Desc.NumElements);
         for (Uint32 i = 0; i < m_Desc.NumElements; ++i)
         {
-            const auto& VtxElem = m_Desc.pElements[i];
+            const VertexPoolElementDesc& VtxElem = m_Desc.pElements[i];
 
             std::string Name = m_Desc.Name;
             Name += " - buffer ";
@@ -216,11 +216,11 @@ public:
             UNEXPECTED("Index (", Index, ") is out of range: there are only ", m_Buffers.size(), " buffers.");
             return nullptr;
         }
-        auto& BufferSize = m_BufferSizes[Index];
-        auto& Buffer     = *m_Buffers[Index];
+        std::atomic<Uint64>& BufferSize = m_BufferSizes[Index];
+        DynamicBuffer&       Buffer     = *m_Buffers[Index];
 
         // NB: mutex must not be locked here to avoid stalling render thread
-        const auto MgrSize = m_MgrSize.load() * m_Elements[Index].Size;
+        const VariableSizeAllocationsManager::OffsetType MgrSize = m_MgrSize.load() * m_Elements[Index].Size;
         VERIFY_EXPR(BufferSize.load() == Buffer.GetDesc().Size);
         if (MgrSize > Buffer.GetDesc().Size)
         {
@@ -276,13 +276,13 @@ public:
                 Uint64 ActualCapacity = ~Uint64{0};
                 for (Uint32 i = 0; i < m_Desc.NumElements; ++i)
                 {
-                    const auto BufferCapacity = m_BufferSizes[i].load() / m_Elements[i].Size;
-                    ActualCapacity            = std::min(ActualCapacity, BufferCapacity);
+                    const Uint64 BufferCapacity = m_BufferSizes[i].load() / m_Elements[i].Size;
+                    ActualCapacity              = std::min(ActualCapacity, BufferCapacity);
                 }
 
                 // After the resize, the actual buffer size may be larger due to alignment
                 // requirements (for sparse buffers, the size is aligned by the memory page size).
-                const auto MgrSize = m_Mgr.GetMaxSize();
+                const VariableSizeAllocationsManager::OffsetType MgrSize = m_Mgr.GetMaxSize();
                 if (ActualCapacity > MgrSize)
                 {
                     m_Mgr.Extend(StaticCast<size_t>(ActualCapacity - MgrSize));
@@ -343,7 +343,7 @@ public:
     virtual Uint32 GetVersion() const override final
     {
         Uint32 Version = 0;
-        for (const auto& Buffer : m_Buffers)
+        for (const std::unique_ptr<DynamicBuffer>& Buffer : m_Buffers)
             Version += Buffer->GetVersion();
         return Version;
     }
@@ -378,7 +378,7 @@ private:
     void UpdateCommittedMemorySize()
     {
         Uint64 CommittedMemorySize = 0;
-        for (const auto& BuffSize : m_BufferSizes)
+        for (const std::atomic<Uint64>& BuffSize : m_BufferSizes)
             CommittedMemorySize += BuffSize.load();
         m_CommittedMemorySize.store(CommittedMemorySize);
     }
@@ -435,7 +435,7 @@ void CreateVertexPool(IRenderDevice*              pDevice,
 {
     try
     {
-        auto* pPool = MakeNewRCObj<VertexPoolImpl>()(pDevice, CreateInfo);
+        VertexPoolImpl* pPool = MakeNewRCObj<VertexPoolImpl>()(pDevice, CreateInfo);
         pPool->QueryInterface(IID_VertexPool, reinterpret_cast<IObject**>(ppVertexPool));
     }
     catch (...)

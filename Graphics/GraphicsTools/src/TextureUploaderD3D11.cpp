@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -175,7 +175,7 @@ struct TextureUploaderD3D11::InternalData
         RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11(pContext, IID_DeviceContextD3D11);
         if (pContextD3D11)
         {
-            auto* pd3d11NativeCtx = pContextD3D11->GetD3D11DeviceContext();
+            ID3D11DeviceContext* pd3d11NativeCtx = pContextD3D11->GetD3D11DeviceContext();
             Execute(pd3d11NativeCtx, OperationInfo, true /*ExecuteImmediately*/);
         }
         else
@@ -201,7 +201,7 @@ TextureUploaderD3D11::TextureUploaderD3D11(IReferenceCounters* pRefCounters, IRe
 
 TextureUploaderD3D11::~TextureUploaderD3D11()
 {
-    auto Stats = TextureUploaderD3D11::GetStats();
+    TextureUploaderStats Stats = TextureUploaderD3D11::GetStats();
     if (Stats.NumPendingOperations != 0)
     {
         LOG_WARNING_MESSAGE("TextureUploaderD3D11::~TextureUploaderD3D11(): there ", (Stats.NumPendingOperations > 1 ? "are " : "is "),
@@ -214,8 +214,8 @@ TextureUploaderD3D11::~TextureUploaderD3D11()
     {
         if (BuffQueueIt.second.size())
         {
-            const auto& desc    = BuffQueueIt.first;
-            auto&       FmtInfo = m_pDevice->GetTextureFormatInfo(desc.Format);
+            const UploadBufferDesc&  desc    = BuffQueueIt.first;
+            const TextureFormatInfo& FmtInfo = m_pDevice->GetTextureFormatInfo(desc.Format);
             LOG_INFO_MESSAGE("TextureUploaderD3D11: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name,
                              " staging texture", (BuffQueueIt.second.size() != 1 ? "s" : ""));
         }
@@ -229,9 +229,9 @@ void TextureUploaderD3D11::RenderThreadUpdate(IDeviceContext* pContext)
     {
         RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11(pContext, IID_DeviceContextD3D11);
 
-        auto* pd3d11NativeCtx = pContextD3D11->GetD3D11DeviceContext();
+        ID3D11DeviceContext* pd3d11NativeCtx = pContextD3D11->GetD3D11DeviceContext();
 
-        for (auto& Operation : m_pInternalData->m_InWorkOperations)
+        for (InternalData::PendingBufferOperation& Operation : m_pInternalData->m_InWorkOperations)
         {
             m_pInternalData->Execute(pd3d11NativeCtx, Operation, false /*ExecuteImmediately*/);
         }
@@ -244,8 +244,8 @@ void TextureUploaderD3D11::InternalData::Execute(ID3D11DeviceContext*    pd3d11N
                                                  PendingBufferOperation& OperationInfo,
                                                  bool                    ExecuteImmediately)
 {
-    auto&       pBuffer        = OperationInfo.pUploadBuffer;
-    const auto& UploadBuffDesc = pBuffer->GetDesc();
+    RefCntAutoPtr<UploadBufferD3D11>& pBuffer        = OperationInfo.pUploadBuffer;
+    const UploadBufferDesc&           UploadBuffDesc = pBuffer->GetDesc();
 
     switch (OperationInfo.operation)
     {
@@ -261,9 +261,10 @@ void TextureUploaderD3D11::InternalData::Execute(ID3D11DeviceContext*    pd3d11N
                         D3D11_MAPPED_SUBRESOURCE MappedData;
 
                         UINT Subres = D3D11CalcSubresource(static_cast<UINT>(Mip), static_cast<UINT>(Slice), static_cast<UINT>(UploadBuffDesc.MipLevels));
-                        auto hr     = pd3d11NativeCtx->Map(pBuffer->GetStagingTex(), Subres, D3D11_MAP_WRITE,
-                                                       ExecuteImmediately ? 0 : D3D11_MAP_FLAG_DO_NOT_WAIT,
-                                                       &MappedData);
+
+                        HRESULT hr = pd3d11NativeCtx->Map(pBuffer->GetStagingTex(), Subres, D3D11_MAP_WRITE,
+                                                          ExecuteImmediately ? 0 : D3D11_MAP_FLAG_DO_NOT_WAIT,
+                                                          &MappedData);
                         if (SUCCEEDED(hr))
                         {
                             pBuffer->SetMappedData(Mip, Slice, MappedTextureSubresource{MappedData.pData, MappedData.RowPitch, MappedData.DepthPitch});
@@ -417,10 +418,10 @@ void TextureUploaderD3D11::ScheduleGPUCopy(IDeviceContext* pContext,
                                            Uint32          MipLevel,
                                            IUploadBuffer*  pUploadBuffer)
 {
-    auto*                        pUploadBufferD3D11 = ClassPtrCast<UploadBufferD3D11>(pUploadBuffer);
+    UploadBufferD3D11*           pUploadBufferD3D11 = ClassPtrCast<UploadBufferD3D11>(pUploadBuffer);
     RefCntAutoPtr<ITextureD3D11> pDstTexD3D11(pDstTexture, IID_TextureD3D11);
-    auto*                        pd3d11NativeDstTex = pDstTexD3D11->GetD3D11Texture();
-    const auto&                  DstTexDesc         = pDstTexture->GetDesc();
+    ID3D11Resource*              pd3d11NativeDstTex = pDstTexD3D11->GetD3D11Texture();
+    const TextureDesc&           DstTexDesc         = pDstTexture->GetDesc();
     if (pContext != nullptr)
     {
         // Main thread
@@ -444,7 +445,7 @@ void TextureUploaderD3D11::ScheduleGPUCopy(IDeviceContext* pContext,
 
 void TextureUploaderD3D11::RecycleBuffer(IUploadBuffer* pUploadBuffer)
 {
-    auto* pUploadBufferD3D11 = ClassPtrCast<UploadBufferD3D11>(pUploadBuffer);
+    UploadBufferD3D11* pUploadBufferD3D11 = ClassPtrCast<UploadBufferD3D11>(pUploadBuffer);
     VERIFY(pUploadBufferD3D11->DbgIsCopyScheduled(), "Upload buffer must be recycled only after copy operation has been scheduled on the GPU");
     pUploadBufferD3D11->Reset();
 

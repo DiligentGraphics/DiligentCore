@@ -75,7 +75,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override
     {
-        auto pDeviceContext = m_wpDeviceContext.Lock();
+        RefCntAutoPtr<IDeviceContext> pDeviceContext = m_wpDeviceContext.Lock();
         if (!pDeviceContext)
         {
             LOG_ERROR_MESSAGE("Immediate context has been released");

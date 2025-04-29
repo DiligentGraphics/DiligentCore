@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -111,7 +111,7 @@ private:
 
 void CreateCompoundShaderSourceFactory(const CompoundShaderSourceFactoryCreateInfo& CreateInfo, IShaderSourceInputStreamFactory** ppFactory)
 {
-    auto pFactory = CompoundShaderSourceFactory::Create(CreateInfo);
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pFactory = CompoundShaderSourceFactory::Create(CreateInfo);
     pFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, reinterpret_cast<IObject**>(ppFactory));
 }
 
@@ -137,7 +137,7 @@ public:
             m_Sources.resize(CI.NumSources);
             for (Uint32 i = 0; i < CI.NumSources; ++i)
             {
-                const auto& Source = CI.pSources[i];
+                const MemoryShaderSourceFileInfo& Source = CI.pSources[i];
                 if (Source.Length > 0)
                 {
                     m_Sources[i].assign(Source.pData, Source.Length);
@@ -151,7 +151,7 @@ public:
 
         for (Uint32 i = 0; i < CI.NumSources; ++i)
         {
-            const auto& Source = CI.pSources[i];
+            const MemoryShaderSourceFileInfo& Source = CI.pSources[i];
             DEV_CHECK_ERR(Source.Name != nullptr && Source.Name[0] != '\0', "Source name must not be null or empty");
             DEV_CHECK_ERR(Source.pData != nullptr, "Source data must not be null");
             m_NameToSourceMap.emplace(HashMapStringKey{Source.Name, true}, CI.CopySources ? m_Sources[i].c_str() : Source.pData);
@@ -195,7 +195,7 @@ private:
 
 void CreateMemoryShaderSourceFactory(const MemoryShaderSourceFactoryCreateInfo& CreateInfo, IShaderSourceInputStreamFactory** ppFactory)
 {
-    auto pFactory = MemoryShaderSourceFactory::Create(CreateInfo);
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pFactory = MemoryShaderSourceFactory::Create(CreateInfo);
     pFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, reinterpret_cast<IObject**>(ppFactory));
 }
 

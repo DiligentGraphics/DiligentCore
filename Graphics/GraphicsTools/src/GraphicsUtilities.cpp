@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -102,7 +102,7 @@ void CreateUniformBuffer(IRenderDevice*   pDevice,
 template <class TConverter>
 void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8* pData, Uint64 StrideInBytes, TConverter Converter)
 {
-    const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Fmt);
     for (Uint32 y = 0; y < Height; ++y)
     {
         for (Uint32 x = 0; x < Width; ++x)
@@ -121,7 +121,7 @@ void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FO
 
 void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8* pData, Uint64 StrideInBytes)
 {
-    const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Fmt);
     switch (FmtAttribs.ComponentType)
     {
         case COMPONENT_TYPE_UINT:
@@ -326,32 +326,32 @@ void FilterMipLevel(const ComputeMipLevelAttribs& Attribs,
     VERIFY_EXPR(Attribs.FineMipWidth > 0 && Attribs.FineMipHeight > 0);
     DEV_CHECK_ERR(Attribs.FineMipHeight == 1 || Attribs.FineMipStride >= Attribs.FineMipWidth * sizeof(ChannelType) * NumChannels, "Fine mip level stride is too small");
 
-    const auto CoarseMipWidth  = std::max(Attribs.FineMipWidth / Uint32{2}, Uint32{1});
-    const auto CoarseMipHeight = std::max(Attribs.FineMipHeight / Uint32{2}, Uint32{1});
+    const Uint32 CoarseMipWidth  = std::max(Attribs.FineMipWidth / Uint32{2}, Uint32{1});
+    const Uint32 CoarseMipHeight = std::max(Attribs.FineMipHeight / Uint32{2}, Uint32{1});
 
     VERIFY(CoarseMipHeight == 1 || Attribs.CoarseMipStride >= CoarseMipWidth * sizeof(ChannelType) * NumChannels, "Coarse mip level stride is too small");
 
     for (Uint32 row = 0; row < CoarseMipHeight; ++row)
     {
-        auto src_row0 = row * 2;
-        auto src_row1 = std::min(row * 2 + 1, Attribs.FineMipHeight - 1);
+        Uint32 src_row0 = row * 2;
+        Uint32 src_row1 = std::min(row * 2 + 1, Attribs.FineMipHeight - 1);
 
-        auto pSrcRow0 = reinterpret_cast<const ChannelType*>(reinterpret_cast<const Uint8*>(Attribs.pFineMipData) + src_row0 * Attribs.FineMipStride);
-        auto pSrcRow1 = reinterpret_cast<const ChannelType*>(reinterpret_cast<const Uint8*>(Attribs.pFineMipData) + src_row1 * Attribs.FineMipStride);
+        const ChannelType* pSrcRow0 = reinterpret_cast<const ChannelType*>(reinterpret_cast<const Uint8*>(Attribs.pFineMipData) + src_row0 * Attribs.FineMipStride);
+        const ChannelType* pSrcRow1 = reinterpret_cast<const ChannelType*>(reinterpret_cast<const Uint8*>(Attribs.pFineMipData) + src_row1 * Attribs.FineMipStride);
 
         for (Uint32 col = 0; col < CoarseMipWidth; ++col)
         {
-            auto src_col0 = col * 2;
-            auto src_col1 = std::min(col * 2 + 1, Attribs.FineMipWidth - 1);
+            Uint32 src_col0 = col * 2;
+            Uint32 src_col1 = std::min(col * 2 + 1, Attribs.FineMipWidth - 1);
 
             for (Uint32 c = 0; c < NumChannels; ++c)
             {
-                const auto Chnl00 = pSrcRow0[src_col0 * NumChannels + c];
-                const auto Chnl10 = pSrcRow0[src_col1 * NumChannels + c];
-                const auto Chnl01 = pSrcRow1[src_col0 * NumChannels + c];
-                const auto Chnl11 = pSrcRow1[src_col1 * NumChannels + c];
+                const ChannelType Chnl00 = pSrcRow0[src_col0 * NumChannels + c];
+                const ChannelType Chnl10 = pSrcRow0[src_col1 * NumChannels + c];
+                const ChannelType Chnl01 = pSrcRow1[src_col0 * NumChannels + c];
+                const ChannelType Chnl11 = pSrcRow1[src_col1 * NumChannels + c];
 
-                auto& DstCol = reinterpret_cast<ChannelType*>(reinterpret_cast<Uint8*>(Attribs.pCoarseMipData) + row * Attribs.CoarseMipStride)[col * NumChannels + c];
+                ChannelType& DstCol = reinterpret_cast<ChannelType*>(reinterpret_cast<Uint8*>(Attribs.pCoarseMipData) + row * Attribs.CoarseMipStride)[col * NumChannels + c];
 
                 DstCol = Filter(Chnl00, Chnl10, Chnl01, Chnl11, col, row);
             }
@@ -363,13 +363,13 @@ void RemapAlpha(const ComputeMipLevelAttribs& Attribs,
                 Uint32                        NumChannels,
                 Uint32                        AlphaChannelInd)
 {
-    const auto CoarseMipWidth  = std::max(Attribs.FineMipWidth / Uint32{2}, Uint32{1});
-    const auto CoarseMipHeight = std::max(Attribs.FineMipHeight / Uint32{2}, Uint32{1});
+    const Uint32 CoarseMipWidth  = std::max(Attribs.FineMipWidth / Uint32{2}, Uint32{1});
+    const Uint32 CoarseMipHeight = std::max(Attribs.FineMipHeight / Uint32{2}, Uint32{1});
     for (Uint32 row = 0; row < CoarseMipHeight; ++row)
     {
         for (Uint32 col = 0; col < CoarseMipWidth; ++col)
         {
-            auto& Alpha = (reinterpret_cast<Uint8*>(Attribs.pCoarseMipData) + row * Attribs.CoarseMipStride)[col * NumChannels + AlphaChannelInd];
+            Uint8& Alpha = (reinterpret_cast<Uint8*>(Attribs.pCoarseMipData) + row * Attribs.CoarseMipStride)[col * NumChannels + AlphaChannelInd];
 
             // Remap alpha channel using the following formula to improve mip maps:
             //
@@ -377,7 +377,7 @@ void RemapAlpha(const ComputeMipLevelAttribs& Attribs,
             //
             // https://asawicki.info/articles/alpha_test.php5
 
-            auto AlphaNew = std::min((static_cast<float>(Alpha) + 2.f * (Attribs.AlphaCutoff * 255.f)) / 3.f, 255.f);
+            float AlphaNew = std::min((static_cast<float>(Alpha) + 2.f * (Attribs.AlphaCutoff * 255.f)) / 3.f, 255.f);
 
             Alpha = std::max(Alpha, static_cast<Uint8>(AlphaNew));
         }
@@ -388,7 +388,7 @@ template <typename ChannelType>
 void ComputeMipLevelInternal(const ComputeMipLevelAttribs& Attribs,
                              const TextureFormatAttribs&   FmtAttribs)
 {
-    auto FilterType = Attribs.FilterType;
+    MIP_FILTER_TYPE FilterType = Attribs.FilterType;
     if (FilterType == MIP_FILTER_TYPE_DEFAULT)
     {
         FilterType = FmtAttribs.ComponentType == COMPONENT_TYPE_UINT || FmtAttribs.ComponentType == COMPONENT_TYPE_SINT ?
@@ -410,7 +410,7 @@ void ComputeMipLevel(const ComputeMipLevelAttribs& Attribs)
     DEV_CHECK_ERR(Attribs.pFineMipData != nullptr, "Fine level data must not be null");
     DEV_CHECK_ERR(Attribs.pCoarseMipData != nullptr, "Coarse level data must not be null");
 
-    const auto& FmtAttribs = GetTextureFormatAttribs(Attribs.Format);
+    const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(Attribs.Format);
 
     VERIFY_EXPR(Attribs.AlphaCutoff >= 0 && Attribs.AlphaCutoff <= 1);
     VERIFY(Attribs.AlphaCutoff == 0 || FmtAttribs.NumComponents == 4 && FmtAttribs.ComponentSize == 1,

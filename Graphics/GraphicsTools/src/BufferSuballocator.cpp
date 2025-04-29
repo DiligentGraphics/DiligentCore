@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -176,7 +176,7 @@ public:
     virtual IBuffer* Update(IRenderDevice* pDevice, IDeviceContext* pContext) override final
     {
         // NB: mutex must not be locked here to avoid stalling render thread
-        const auto MgrSize = m_MgrSize.load();
+        const OffsetType MgrSize = m_MgrSize.load();
         VERIFY_EXPR(m_BufferSize.load() == m_Buffer.GetDesc().Size);
         if (MgrSize > m_Buffer.GetDesc().Size)
         {
@@ -224,8 +224,8 @@ public:
             {
                 // After the resize, the actual buffer size may be larger due to alignment
                 // requirements (for sparse buffers, the size is aligned by the memory page size).
-                const auto BufferSize = m_BufferSize.load();
-                const auto MgrSize    = m_Mgr.GetMaxSize();
+                const Uint64     BufferSize = m_BufferSize.load();
+                const OffsetType MgrSize    = m_Mgr.GetMaxSize();
                 if (BufferSize > MgrSize)
                 {
                     m_Mgr.Extend(StaticCast<size_t>(BufferSize - MgrSize));
@@ -309,7 +309,8 @@ private:
     std::mutex                     m_MgrMtx;
     VariableSizeAllocationsManager m_Mgr;
 
-    std::atomic<VariableSizeAllocationsManager::OffsetType> m_MgrSize{0};
+    using OffsetType = VariableSizeAllocationsManager::OffsetType;
+    std::atomic<OffsetType> m_MgrSize{0};
 
     DynamicBuffer       m_Buffer;
     std::atomic<Uint64> m_BufferSize{0};
@@ -349,7 +350,7 @@ void CreateBufferSuballocator(IRenderDevice*                      pDevice,
 {
     try
     {
-        auto* pAllocator = MakeNewRCObj<BufferSuballocatorImpl>()(pDevice, CreateInfo);
+        BufferSuballocatorImpl* pAllocator = MakeNewRCObj<BufferSuballocatorImpl>()(pDevice, CreateInfo);
         pAllocator->QueryInterface(IID_BufferSuballocator, reinterpret_cast<IObject**>(ppBufferSuballocator));
     }
     catch (...)

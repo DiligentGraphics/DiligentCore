@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -72,11 +72,11 @@ public:
             for (Uint32 Mip = 0; Mip < Desc.MipLevels; ++Mip)
             {
                 // Stride must be 256-bytes aligned in WebGPU
-                auto MipProps                = GetMipLevelProperties(TexDesc, Mip);
-                auto RowStride               = AlignUp(StaticCast<Uint32>(MipProps.RowSize), Uint32{256});
+                MipLevelProperties MipProps  = GetMipLevelProperties(TexDesc, Mip);
+                Uint32             RowStride = AlignUp(StaticCast<Uint32>(MipProps.RowSize), Uint32{256});
                 m_SubresourceStrides[SubRes] = RowStride;
 
-                auto MipSize                             = MipProps.StorageHeight * RowStride;
+                Uint32 MipSize                           = MipProps.StorageHeight * RowStride;
                 m_SubresourceOffsets[size_t{SubRes} + 1] = m_SubresourceOffsets[SubRes] + MipSize;
                 ++SubRes;
             }
@@ -214,8 +214,8 @@ struct TextureUploaderWebGPU::InternalData
     void Execute(IDeviceContext*         pContext,
                  PendingBufferOperation& OperationInfo)
     {
-        auto&       pBuffer        = OperationInfo.pUploadBuffer;
-        const auto& UploadBuffDesc = pBuffer->GetDesc();
+        RefCntAutoPtr<UploadBufferWebGPU>& pBuffer        = OperationInfo.pUploadBuffer;
+        const UploadBufferDesc&            UploadBuffDesc = pBuffer->GetDesc();
 
         switch (OperationInfo.operation)
         {
@@ -245,20 +245,20 @@ struct TextureUploaderWebGPU::InternalData
             {
                 VERIFY_EXPR(pBuffer->m_pStagingBuffer != nullptr);
 
-                const auto& TexDesc = OperationInfo.pDstTexture->GetDesc();
+                const TextureDesc& TexDesc = OperationInfo.pDstTexture->GetDesc();
                 pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
 
                 for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
                 {
                     for (Uint32 Mip = 0; Mip < UploadBuffDesc.MipLevels; ++Mip)
                     {
-                        auto SrcOffset = pBuffer->GetOffset(Mip, Slice);
-                        auto SrcStride = pBuffer->GetMappedData(Mip, Slice).Stride;
+                        Uint32 SrcOffset = pBuffer->GetOffset(Mip, Slice);
+                        Uint64 SrcStride = pBuffer->GetMappedData(Mip, Slice).Stride;
 
                         TextureSubResData SubResData(pBuffer->m_pStagingBuffer, SrcOffset, SrcStride);
 
-                        auto MipLevelProps = GetMipLevelProperties(TexDesc, OperationInfo.DstMip + Mip);
-                        Box  DstBox;
+                        MipLevelProperties MipLevelProps = GetMipLevelProperties(TexDesc, OperationInfo.DstMip + Mip);
+                        Box                DstBox;
                         DstBox.MaxX = MipLevelProps.LogicalWidth;
                         DstBox.MaxY = MipLevelProps.LogicalHeight;
                         pContext->UpdateTexture(OperationInfo.pDstTexture, OperationInfo.DstMip + Mip, OperationInfo.DstSlice + Slice, DstBox,
@@ -290,7 +290,7 @@ TextureUploaderWebGPU::TextureUploaderWebGPU(IReferenceCounters* pRefCounters, I
 
 TextureUploaderWebGPU::~TextureUploaderWebGPU()
 {
-    auto Stats = TextureUploaderWebGPU::GetStats();
+    TextureUploaderStats Stats = TextureUploaderWebGPU::GetStats();
     if (Stats.NumPendingOperations != 0)
     {
         LOG_WARNING_MESSAGE("TextureUploaderWebGPU::~TextureUploaderWebGPU(): there ", (Stats.NumPendingOperations > 1 ? "are " : "is "),
@@ -305,7 +305,7 @@ void TextureUploaderWebGPU::RenderThreadUpdate(IDeviceContext* pContext)
     m_pInternalData->SwapMapQueues();
     if (!m_pInternalData->m_InWorkOperations.empty())
     {
-        for (auto& OperationInfo : m_pInternalData->m_InWorkOperations)
+        for (InternalData::PendingBufferOperation& OperationInfo : m_pInternalData->m_InWorkOperations)
             m_pInternalData->Execute(pContext, OperationInfo);
 
         m_pInternalData->m_InWorkOperations.clear();
@@ -366,7 +366,7 @@ void TextureUploaderWebGPU::ScheduleGPUCopy(IDeviceContext* pContext,
                                             Uint32          MipLevel,
                                             IUploadBuffer*  pUploadBuffer)
 {
-    auto* pUploadBufferWebGPU = ClassPtrCast<UploadBufferWebGPU>(pUploadBuffer);
+    UploadBufferWebGPU* pUploadBufferWebGPU = ClassPtrCast<UploadBufferWebGPU>(pUploadBuffer);
     if (pContext != nullptr)
     {
         // Render thread
@@ -389,7 +389,7 @@ void TextureUploaderWebGPU::ScheduleGPUCopy(IDeviceContext* pContext,
 
 void TextureUploaderWebGPU::RecycleBuffer(IUploadBuffer* pUploadBuffer)
 {
-    auto* pUploadBufferWebGPU = ClassPtrCast<UploadBufferWebGPU>(pUploadBuffer);
+    UploadBufferWebGPU* pUploadBufferWebGPU = ClassPtrCast<UploadBufferWebGPU>(pUploadBuffer);
     VERIFY(pUploadBufferWebGPU->DbgIsCopyScheduled(), "Upload buffer must be recycled only after copy operation has been scheduled on the GPU");
     pUploadBufferWebGPU->Reset();
 

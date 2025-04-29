@@ -52,7 +52,7 @@ struct ReloadablePipelineState::CreateInfoWrapper : CreateInfoWrapperBase
 
             if (!RefCntAutoPtr<IShader>{pShader, ReloadableShader::IID_InternalImpl})
             {
-                const auto* Name = pShader->GetDesc().Name;
+                const char* Name = pShader->GetDesc().Name;
                 LOG_WARNING_MESSAGE("Shader '", (Name ? Name : "<unnamed>"),
                                     "' is not a reloadable shader. To enable hot pipeline state reload, all shaders must be created through the render state cache.");
             }
@@ -161,7 +161,7 @@ bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGr
     RefCntAutoPtr<IPipelineState> pNewPSO;
 
     // Note that the create info struct references reloadable shaders, so that the pipeline will use the updated shaders
-    const auto FoundInCache = m_pStateCache->CreatePipelineStateInternal(static_cast<const CreateInfoType&>(CreateInfo), &pNewPSO);
+    const bool FoundInCache = m_pStateCache->CreatePipelineStateInternal(static_cast<const CreateInfoType&>(CreateInfo), &pNewPSO);
 
     if (pNewPSO)
     {
@@ -184,7 +184,7 @@ bool ReloadablePipelineState::Reload(ReloadGraphicsPipelineCallbackType ReloadGr
     }
     else
     {
-        const auto* Name = CreateInfo.Get().PSODesc.Name;
+        const char* Name = CreateInfo.Get().PSODesc.Name;
         LOG_ERROR_MESSAGE("Failed to reload pipeline state '", (Name ? Name : "<unnamed>"), "'.");
     }
     return !FoundInCache;

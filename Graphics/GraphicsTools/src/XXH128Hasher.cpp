@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
     {
         for (size_t i = 0; i < ShaderCI.Macros.Count; ++i)
         {
-            const auto& Macro = ShaderCI.Macros[i];
+            const ShaderMacro& Macro = ShaderCI.Macros[i];
             Update(Macro.Name, Macro.Definition);
         }
     }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -251,14 +251,14 @@ private:
 
     int AddUse()
     {
-        auto Uses = UseCount.fetch_add(1) + 1;
+        int Uses = UseCount.fetch_add(1) + 1;
         VERIFY_EXPR(Uses > 0);
         return Uses;
     }
 
     int ReleaseUse()
     {
-        auto Uses = UseCount.fetch_add(-1) - 1;
+        int Uses = UseCount.fetch_add(-1) - 1;
         VERIFY_EXPR(Uses >= 0);
         return Uses;
     }
@@ -340,12 +340,12 @@ struct SliceBatch
         // after we checked the use count.
         // If the slice is empty, but the use count is not zero, another thread may
         // allocate from this slice after we checked if it is empty.
-        auto SliceMgr = it->second.Lock();
+        ThreadSafeAtlasManager::ManagerGuard SliceMgr = it->second.Lock();
         VERIFY_EXPR(SliceMgr);
         if (!SliceMgr.IsEmpty())
             return false;
 
-        const auto UseCnt = SliceMgr.Release();
+        const int UseCnt = SliceMgr.Release();
         VERIFY(UseCnt == 0, "There must be no other uses of this slice since we checked the use count already.");
         m_Slices.erase(it);
 
@@ -504,11 +504,11 @@ public:
             return;
         }
 
-        const auto Alignment     = GetAllocationAlignment(Width, Height);
-        const auto AlignedWidth  = AlignUp(Width, Alignment);
-        const auto AlignedHeight = AlignUp(Height, Alignment);
+        const Uint32 Alignment     = GetAllocationAlignment(Width, Height);
+        const Uint32 AlignedWidth  = AlignUp(Width, Alignment);
+        const Uint32 AlignedHeight = AlignUp(Height, Alignment);
 
-        auto* pBatch = GetSliceBatch(Alignment, m_Desc.Width / Alignment, m_Desc.Height / Alignment);
+        SliceBatch* pBatch = GetSliceBatch(Alignment, m_Desc.Width / Alignment, m_Desc.Height / Alignment);
         VERIFY_EXPR(pBatch != nullptr);
 
         DynamicAtlasManager::Region Subregion;
@@ -517,10 +517,10 @@ public:
         while (Slice < m_MaxSliceCount)
         {
             // Lock the first available slice with index >= Slice
-            auto SliceMgr = pBatch->LockSliceAfter(Slice);
+            ThreadSafeAtlasManager::ManagerGuard SliceMgr = pBatch->LockSliceAfter(Slice);
             if (!SliceMgr)
             {
-                const auto NewSlice = GetNextAvailableSlice();
+                const Uint32 NewSlice = GetNextAvailableSlice();
                 if (NewSlice != ~Uint32{0})
                 {
                     Slice    = NewSlice;
@@ -578,10 +578,10 @@ public:
 
     void Free(Uint32 Slice, Uint32 Alignment, DynamicAtlasManager::Region&& Subregion, Uint32 Width, Uint32 Height)
     {
-        const auto AllocatedArea = Int64{Width} * Int64{Height};
-        const auto UsedArea      = (Int64{Subregion.width} * Int64{Alignment}) * (Int64{Subregion.height} * Int64{Alignment});
+        const Int64 AllocatedArea = Int64{Width} * Int64{Height};
+        const Int64 UsedArea      = (Int64{Subregion.width} * Int64{Alignment}) * (Int64{Subregion.height} * Int64{Alignment});
 
-        auto* pBatch = GetSliceBatch(Alignment);
+        SliceBatch* pBatch = GetSliceBatch(Alignment);
         if (pBatch == nullptr)
         {
             UNEXPECTED("There are no slices with alignment ", Alignment,
@@ -590,7 +590,7 @@ public:
             return;
         }
 
-        if (auto SliceMgr = pBatch->LockSlice(Slice))
+        if (ThreadSafeAtlasManager::ManagerGuard SliceMgr = pBatch->LockSlice(Slice))
         {
             // NB: do not hold the slice batch mutex while releasing the region.
             //     Different slices in the batch can be processed in parallel.
@@ -657,7 +657,7 @@ public:
         if (m_DynamicTexArray)
         {
             Stats.CommittedSize = m_DynamicTexArray->GetMemoryUsage();
-            const auto& Desc{m_DynamicTexArray->GetDesc()};
+            const TextureDesc& Desc{m_DynamicTexArray->GetDesc()};
             Stats.TotalArea = Uint64{Desc.Width} * Uint64{Desc.Height} * Uint64{Desc.ArraySize};
         }
         else
@@ -681,13 +681,13 @@ private:
         if (m_AvailableSlices.empty())
             return ~Uint32{0};
 
-        auto FirstFreeSlice = *m_AvailableSlices.begin();
+        Uint32 FirstFreeSlice = *m_AvailableSlices.begin();
         VERIFY_EXPR(FirstFreeSlice < m_MaxSliceCount);
         m_AvailableSlices.erase(m_AvailableSlices.begin());
 
         while (m_TexArraySize <= FirstFreeSlice)
         {
-            const auto ExtraSliceCount = m_ExtraSliceCount != 0 ?
+            const Uint32 ExtraSliceCount = m_ExtraSliceCount != 0 ?
                 m_ExtraSliceCount :
                 std::max(static_cast<Uint32>(static_cast<float>(m_TexArraySize.load()) * m_ExtraSliceFactor), 1u);
 
@@ -760,9 +760,9 @@ IDynamicTextureAtlas* TextureAtlasSuballocationImpl::GetAtlas()
 
 float4 TextureAtlasSuballocationImpl::GetUVScaleBias() const
 {
-    const auto  Origin    = GetOrigin().Recast<float>();
-    const auto  Size      = GetSize().Recast<float>();
-    const auto& AtlasDesc = m_pParentAtlas->GetAtlasDesc();
+    const float2       Origin    = GetOrigin().Recast<float>();
+    const float2       Size      = GetSize().Recast<float>();
+    const TextureDesc& AtlasDesc = m_pParentAtlas->GetAtlasDesc();
     return float4 //
         {
             Size.x / static_cast<float>(AtlasDesc.Width),
@@ -793,7 +793,7 @@ void CreateDynamicTextureAtlas(IRenderDevice*                       pDevice,
 {
     try
     {
-        auto* pAllocator = MakeNewRCObj<DynamicTextureAtlasImpl>()(pDevice, CreateInfo);
+        DynamicTextureAtlasImpl* pAllocator = MakeNewRCObj<DynamicTextureAtlasImpl>()(pDevice, CreateInfo);
         pAllocator->QueryInterface(IID_DynamicTextureAtlas, reinterpret_cast<IObject**>(ppAtlas));
     }
     catch (...)

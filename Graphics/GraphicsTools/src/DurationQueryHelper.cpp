@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,11 +63,11 @@ void DurationQueryHelper::Begin(IDeviceContext* pCtx)
         m_AvailableQueries.emplace_back(m_pDevice);
     }
 
-    auto DurationQuery = std::move(m_AvailableQueries.back());
+    DurationQuery Query = std::move(m_AvailableQueries.back());
     m_AvailableQueries.pop_back();
 
-    pCtx->EndQuery(DurationQuery.StartTimestamp);
-    m_PendingQueries.push_front(std::move(DurationQuery));
+    pCtx->EndQuery(Query.StartTimestamp);
+    m_PendingQueries.push_front(std::move(Query));
 }
 
 bool DurationQueryHelper::End(IDeviceContext* pCtx, double& Duration)
@@ -85,12 +85,12 @@ bool DurationQueryHelper::End(IDeviceContext* pCtx, double& Duration)
 
     pCtx->EndQuery(m_PendingQueries.front().EndTimestamp);
 
-    auto& LastQuery = m_PendingQueries.back();
+    DurationQuery& LastQuery = m_PendingQueries.back();
 
     QueryDataTimestamp StartTimestampData;
 
     // Do not invalidate the query until we also get end timestamp
-    auto DataAvailable = LastQuery.StartTimestamp->GetData(&StartTimestampData, sizeof(StartTimestampData), false);
+    bool DataAvailable = LastQuery.StartTimestamp->GetData(&StartTimestampData, sizeof(StartTimestampData), false);
     if (DataAvailable)
     {
         QueryDataTimestamp EndTimestampData;

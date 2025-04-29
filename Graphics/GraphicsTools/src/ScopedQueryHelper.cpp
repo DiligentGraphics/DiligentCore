@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,7 @@ void ScopedQueryHelper::Begin(IDeviceContext* pCtx)
         m_pDevice->CreateQuery(m_QueryDesc, &m_AvailableQueries.front());
     }
 
-    auto pQuery = std::move(m_AvailableQueries.back());
+    RefCntAutoPtr<IQuery> pQuery = std::move(m_AvailableQueries.back());
     m_AvailableQueries.pop_back();
 
     pCtx->BeginQuery(pQuery);
@@ -77,8 +77,8 @@ bool ScopedQueryHelper::End(IDeviceContext* pCtx, void* pData, Uint32 DataSize)
 
     pCtx->EndQuery(m_PendingQueries.front());
 
-    auto& pLastQuery    = m_PendingQueries.back();
-    auto  DataAvailable = pLastQuery->GetData(pData, DataSize);
+    RefCntAutoPtr<IQuery>& pLastQuery    = m_PendingQueries.back();
+    bool                   DataAvailable = pLastQuery->GetData(pData, DataSize);
     if (DataAvailable)
     {
         m_AvailableQueries.emplace_back(std::move(pLastQuery));
