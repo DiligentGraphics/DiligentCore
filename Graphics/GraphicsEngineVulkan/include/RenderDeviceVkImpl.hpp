@@ -164,7 +164,7 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateDeferredContext(IDeviceContext** ppContext) override final;
 
     /// Implementation of IRenderDeviceVk::GetVkDevice().
-    virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
+    virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalDevice->GetVkDevice(); }
 
     /// Implementation of IRenderDeviceVk::GetVkPhysicalDevice().
     virtual VkPhysicalDevice DILIGENT_CALL_TYPE GetVkPhysicalDevice() override final { return m_PhysicalDevice->GetVkDeviceHandle(); }
@@ -237,7 +237,7 @@ public:
     std::shared_ptr<const VulkanUtilities::Instance> GetInstance() const { return m_Instance; }
 
     const VulkanUtilities::PhysicalDevice& GetPhysicalDevice() const { return *m_PhysicalDevice; }
-    const VulkanUtilities::LogicalDevice&  GetLogicalDevice() const { return *m_LogicalVkDevice; }
+    const VulkanUtilities::LogicalDevice&  GetLogicalDevice() const { return *m_LogicalDevice; }
 
     FramebufferCache* GetFramebufferCache() { return m_FramebufferCache.get(); }
     RenderPassCache*  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache.get(); }
@@ -300,7 +300,7 @@ private:
 
     std::shared_ptr<VulkanUtilities::Instance>       m_Instance;
     std::unique_ptr<VulkanUtilities::PhysicalDevice> m_PhysicalDevice;
-    std::shared_ptr<VulkanUtilities::LogicalDevice>  m_LogicalVkDevice;
+    std::shared_ptr<VulkanUtilities::LogicalDevice>  m_LogicalDevice;
 
     std::unique_ptr<FramebufferCache> m_FramebufferCache;
     std::unique_ptr<RenderPassCache>  m_ImplicitRenderPassCache;

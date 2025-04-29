@@ -84,7 +84,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     },
     m_Instance         {Instance                 },
     m_PhysicalDevice         {std::move(PhysicalDevice)},
-    m_LogicalVkDevice        {std::move(LogicalDevice) },
+    m_LogicalDevice        {std::move(LogicalDevice) },
     m_DescriptorSetAllocator
     {
         *this,
@@ -132,7 +132,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_MemoryMgr
     {
         "Global resource memory manager",
-        *m_LogicalVkDevice,
+        *m_LogicalDevice,
         *m_PhysicalDevice,
         GetRawAllocator(),
         EngineCI.DeviceLocalMemoryPageSize,
@@ -150,7 +150,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, m_PhysicalDevice->GetVkVersion(), EngineCI.pDxCompilerPath)}
 // clang-format on
 {
-    if (!m_LogicalVkDevice->GetEnabledExtFeatures().DynamicRendering.dynamicRendering)
+    if (!m_LogicalDevice->GetEnabledExtFeatures().DynamicRendering.dynamicRendering)
     {
         m_FramebufferCache        = std::make_unique<FramebufferCache>(*this);
         m_ImplicitRenderPassCache = std::make_unique<RenderPassCache>(*this);
@@ -163,9 +163,9 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_DeviceInfo.APIVersion  = Version{VK_API_VERSION_MAJOR(vkVersion), VK_API_VERSION_MINOR(vkVersion)};
 
     m_DeviceInfo.Features = VkFeaturesToDeviceFeatures(vkVersion,
-                                                       m_LogicalVkDevice->GetEnabledFeatures(),
+                                                       m_LogicalDevice->GetEnabledFeatures(),
                                                        m_PhysicalDevice->GetProperties(),
-                                                       m_LogicalVkDevice->GetEnabledExtFeatures(),
+                                                       m_LogicalDevice->GetEnabledExtFeatures(),
                                                        m_PhysicalDevice->GetExtProperties());
 
     m_DeviceInfo.MaxShaderVersion.HLSL   = {5, 1};
@@ -267,7 +267,7 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex            
     BuffAllocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     BuffAllocInfo.commandBufferCount = 1;
 
-    VkCommandBuffer vkCmdBuff = m_LogicalVkDevice->AllocateVkCommandBuffer(BuffAllocInfo);
+    VkCommandBuffer vkCmdBuff = m_LogicalDevice->AllocateVkCommandBuffer(BuffAllocInfo);
     DEV_CHECK_ERR(vkCmdBuff != VK_NULL_HANDLE, "Failed to allocate Vulkan command buffer");
 
 
@@ -284,8 +284,8 @@ void RenderDeviceVkImpl::AllocateTransientCmdPool(SoftwareQueueIndex            
     (void)err;
 
     CmdBuffer.SetVkCmdBuffer(vkCmdBuff,
-                             m_LogicalVkDevice->GetSupportedStagesMask(QueueFamilyIndex),
-                             m_LogicalVkDevice->GetSupportedAccessMask(QueueFamilyIndex));
+                             m_LogicalDevice->GetSupportedStagesMask(QueueFamilyIndex),
+                             m_LogicalDevice->GetSupportedAccessMask(QueueFamilyIndex));
 }
 
 
@@ -445,7 +445,7 @@ Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(SoftwareQueueIndex CommandQueueI
 void RenderDeviceVkImpl::IdleGPU()
 {
     IdleAllCommandQueues(true);
-    m_LogicalVkDevice->WaitIdle();
+    m_LogicalDevice->WaitIdle();
     ReleaseStaleResources();
 }
 
@@ -834,7 +834,7 @@ SparseTextureFormatInfo RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_F
 
 void RenderDeviceVkImpl::GetDeviceFeaturesVk(DeviceFeaturesVk& FeaturesVk) const
 {
-    FeaturesVk = PhysicalDeviceFeaturesToDeviceFeaturesVk(m_LogicalVkDevice->GetEnabledExtFeatures());
+    FeaturesVk = PhysicalDeviceFeaturesToDeviceFeaturesVk(m_LogicalDevice->GetEnabledExtFeatures());
 }
 
 } // namespace Diligent

@@ -48,8 +48,8 @@ public:
         m_VkObject{VK_NULL_HANDLE}
     {}
 
-    ObjectWrapper(std::shared_ptr<const LogicalDevice> pLogicalDevice, VulkanObjectType&& vkObject) :
-        m_Device{pLogicalDevice},
+    ObjectWrapper(std::shared_ptr<const LogicalDevice> pDevice, VulkanObjectType&& vkObject) :
+        m_Device{pDevice},
         m_VkObject{vkObject}
     {
         vkObject = VK_NULL_HANDLE;

@@ -29,8 +29,8 @@
 namespace VulkanUtilities
 {
 
-SyncObjectManager::SyncObjectManager(LogicalDevice& LogicalDevice) :
-    m_LogicalDevice{LogicalDevice}
+SyncObjectManager::SyncObjectManager(LogicalDevice& Device) :
+    m_LogicalDevice{Device}
 {
     m_SemaphorePool.reserve(64);
     m_FencePool.reserve(32);

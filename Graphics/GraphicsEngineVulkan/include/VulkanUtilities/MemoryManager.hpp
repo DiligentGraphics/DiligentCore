@@ -157,13 +157,13 @@ class MemoryManager
 public:
     // clang-format off
 	MemoryManager(std::string                  MgrName,
-                        const LogicalDevice&   Device,
-                        const PhysicalDevice&  PhysDevice,
-                        Diligent::IMemoryAllocator&  Allocator,
-                        VkDeviceSize                 DeviceLocalPageSize,
-                        VkDeviceSize                 HostVisiblePageSize,
-                        VkDeviceSize                 DeviceLocalReserveSize,
-                        VkDeviceSize                 HostVisibleReserveSize) :
+                  const LogicalDevice&         Device,
+                  const PhysicalDevice&        PhysDevice,
+                  Diligent::IMemoryAllocator&  Allocator,
+                  VkDeviceSize                 DeviceLocalPageSize,
+                  VkDeviceSize                 HostVisiblePageSize,
+                  VkDeviceSize                 DeviceLocalReserveSize,
+                  VkDeviceSize                 HostVisibleReserveSize) :
         m_MgrName               {std::move(MgrName)    },
         m_LogicalDevice         {Device                },
         m_PhysicalDevice        {PhysDevice            },

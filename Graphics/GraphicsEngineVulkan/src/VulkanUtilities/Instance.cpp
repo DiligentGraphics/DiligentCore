@@ -252,7 +252,7 @@ std::shared_ptr<Instance> Instance::Create(const CreateInfo& CI)
 }
 
 Instance::Instance(const CreateInfo& CI) :
-    m_pVkAllocator{CI.pVkAllocator}
+    m_pvkAllocator{CI.pVkAllocator}
 {
 #if DILIGENT_USE_VOLK
     if (volkInitialize() != VK_SUCCESS)
@@ -536,21 +536,21 @@ Instance::Instance(const CreateInfo& CI) :
 #if DILIGENT_USE_OPENXR
     if (xrInstance != XR_NULL_HANDLE)
     {
-        res = CreateVkInstanceForOpenXR(xrInstance, xrSystemId, xrGetInstanceProcAddr, &InstanceCreateInfo, m_pVkAllocator, &m_VkInstance);
+        res = CreateVkInstanceForOpenXR(xrInstance, xrSystemId, xrGetInstanceProcAddr, &InstanceCreateInfo, m_pvkAllocator, &m_vkInstance);
     }
     else
 #endif
     {
-        res = vkCreateInstance(&InstanceCreateInfo, m_pVkAllocator, &m_VkInstance);
+        res = vkCreateInstance(&InstanceCreateInfo, m_pvkAllocator, &m_vkInstance);
     }
     CHECK_VK_ERROR_AND_THROW(res, "Failed to create Vulkan instance");
 
 #if DILIGENT_USE_VOLK
-    volkLoadInstance(m_VkInstance);
+    volkLoadInstance(m_vkInstance);
 #endif
 
     m_EnabledExtensions = std::move(InstanceExtensions);
-    m_VkVersion         = ApiVersion;
+    m_vkVersion         = ApiVersion;
 
     // If requested, we enable the default validation layers for debugging
     if (m_DebugMode == DebugMode::Utils)
@@ -562,7 +562,7 @@ Instance::Instance(const CreateInfo& CI) :
             VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-        if (!VulkanUtilities::SetupDebugUtils(m_VkInstance, messageSeverity, messageType, CI.IgnoreDebugMessageCount, CI.ppIgnoreDebugMessageNames, nullptr))
+        if (!VulkanUtilities::SetupDebugUtils(m_vkInstance, messageSeverity, messageType, CI.IgnoreDebugMessageCount, CI.ppIgnoreDebugMessageNames, nullptr))
             LOG_ERROR_MESSAGE("Failed to initialize debug utils. Validation layer message logging, performance markers, etc. will be disabled.");
     }
     else if (m_DebugMode == DebugMode::Report)
@@ -571,7 +571,7 @@ Instance::Instance(const CreateInfo& CI) :
             VK_DEBUG_REPORT_WARNING_BIT_EXT |
             VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
             VK_DEBUG_REPORT_ERROR_BIT_EXT);
-        if (!VulkanUtilities::SetupDebugReport(m_VkInstance, flags, nullptr))
+        if (!VulkanUtilities::SetupDebugReport(m_vkInstance, flags, nullptr))
             LOG_ERROR_MESSAGE("Failed to initialize debug report. Validation layer message logging will be disabled.");
     }
 
@@ -580,14 +580,14 @@ Instance::Instance(const CreateInfo& CI) :
         // Physical device
         uint32_t PhysicalDeviceCount = 0;
         // Get the number of available physical devices
-        VkResult err = vkEnumeratePhysicalDevices(m_VkInstance, &PhysicalDeviceCount, nullptr);
+        VkResult err = vkEnumeratePhysicalDevices(m_vkInstance, &PhysicalDeviceCount, nullptr);
         CHECK_VK_ERROR(err, "Failed to get physical device count");
         if (PhysicalDeviceCount == 0)
             LOG_ERROR_AND_THROW("No physical devices found on the system");
 
         // Enumerate devices
         m_PhysicalDevices.resize(PhysicalDeviceCount);
-        err = vkEnumeratePhysicalDevices(m_VkInstance, &PhysicalDeviceCount, m_PhysicalDevices.data());
+        err = vkEnumeratePhysicalDevices(m_vkInstance, &PhysicalDeviceCount, m_PhysicalDevices.data());
         CHECK_VK_ERROR(err, "Failed to enumerate physical devices");
         VERIFY_EXPR(m_PhysicalDevices.size() == PhysicalDeviceCount);
     }
@@ -600,9 +600,9 @@ Instance::~Instance()
 {
     if (m_DebugMode != DebugMode::Disabled)
     {
-        VulkanUtilities::FreeDebug(m_VkInstance);
+        VulkanUtilities::FreeDebug(m_vkInstance);
     }
-    vkDestroyInstance(m_VkInstance, m_pVkAllocator);
+    vkDestroyInstance(m_vkInstance, m_pvkAllocator);
 
 #if !DILIGENT_NO_GLSLANG
     Diligent::GLSLangUtils::FinalizeGlslang();
@@ -696,7 +696,7 @@ VkPhysicalDevice Instance::SelectPhysicalDeviceForOpenXR(const CreateInfo::OpenX
     XrVulkanGraphicsDeviceGetInfoKHR vkGraphicsDeviceGetInfo{XR_TYPE_VULKAN_GRAPHICS_DEVICE_GET_INFO_KHR};
     static_assert(sizeof(vkGraphicsDeviceGetInfo.systemId) == sizeof(XRInfo.SystemId), "SystemId Size mismatch");
     memcpy(&vkGraphicsDeviceGetInfo.systemId, &XRInfo.SystemId, sizeof(vkGraphicsDeviceGetInfo.systemId));
-    vkGraphicsDeviceGetInfo.vulkanInstance = m_VkInstance;
+    vkGraphicsDeviceGetInfo.vulkanInstance = m_vkInstance;
 
     PFN_xrGetInstanceProcAddr         xrGetInstanceProcAddr         = reinterpret_cast<PFN_xrGetInstanceProcAddr>(XRInfo.GetInstanceProcAddr);
     PFN_xrGetVulkanGraphicsDevice2KHR xrGetVulkanGraphicsDevice2KHR = nullptr;

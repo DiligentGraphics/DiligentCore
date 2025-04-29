@@ -92,9 +92,9 @@ public:
     VkPhysicalDevice SelectPhysicalDevice(uint32_t AdapterId)const noexcept(false);
     VkPhysicalDevice SelectPhysicalDeviceForOpenXR(const CreateInfo::OpenXRInfo& XRInfo)const noexcept(false);
 
-    VkAllocationCallbacks* GetVkAllocator() const {return m_pVkAllocator;}
-    VkInstance             GetVkInstance()  const {return m_VkInstance;  }
-    uint32_t               GetVersion()     const {return m_VkVersion;   } // Warning: instance version may be greater than physical device version
+    VkAllocationCallbacks* GetVkAllocator() const {return m_pvkAllocator;}
+    VkInstance             GetVkInstance()  const {return m_vkInstance;  }
+    uint32_t               GetVersion()     const {return m_vkVersion;   } // Warning: instance version may be greater than physical device version
     // clang-format on
 
     const std::vector<VkPhysicalDevice>& GetVkPhysicalDevices() const { return m_PhysicalDevices; }
@@ -110,9 +110,9 @@ private:
     };
     DebugMode m_DebugMode = DebugMode::Disabled;
 
-    VkAllocationCallbacks* const m_pVkAllocator;
-    VkInstance                   m_VkInstance = VK_NULL_HANDLE;
-    uint32_t                     m_VkVersion  = VK_API_VERSION_1_0;
+    VkAllocationCallbacks* const m_pvkAllocator;
+    VkInstance                   m_vkInstance = VK_NULL_HANDLE;
+    uint32_t                     m_vkVersion  = VK_API_VERSION_1_0;
 
     std::vector<VkLayerProperties>     m_Layers;
     std::vector<VkExtensionProperties> m_Extensions;

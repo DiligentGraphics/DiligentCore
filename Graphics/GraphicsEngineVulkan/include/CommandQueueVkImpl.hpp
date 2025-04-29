@@ -53,7 +53,7 @@ private:
     SyncPointVk(SoftwareQueueIndex                  CommandQueueId,
                 Uint32                              NumContexts,
                 VulkanUtilities::SyncObjectManager& SyncObjectMngr,
-                VkDevice                            LogicalDevice,
+                VkDevice                            vkDevice,
                 Uint64                              dbgValue);
 
     void GetSemaphores(std::vector<VkSemaphore>& Semaphores);

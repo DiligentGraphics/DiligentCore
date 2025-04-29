@@ -56,7 +56,7 @@ public:
     class RecycledSyncObject;
 
 public:
-    explicit SyncObjectManager(LogicalDevice& LogicalDevice);
+    explicit SyncObjectManager(LogicalDevice& Device);
     ~SyncObjectManager();
 
     void CreateSemaphores(RecycledSyncObject<VkSemaphoreType>* pSemaphores, uint32_t Count);

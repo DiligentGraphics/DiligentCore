@@ -119,8 +119,8 @@ public:
 
     uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
 
-    VkPhysicalDevice                            GetVkDeviceHandle() const { return m_VkDevice; }
-    uint32_t                                    GetVkVersion() const { return m_VkVersion; }
+    VkPhysicalDevice                            GetVkDeviceHandle() const { return m_vkDevice; }
+    uint32_t                                    GetVkVersion() const { return m_vkVersion; }
     const VkPhysicalDeviceProperties&           GetProperties() const { return m_Properties; }
     const VkPhysicalDeviceFeatures&             GetFeatures() const { return m_Features; }
     const ExtensionFeatures&                    GetExtFeatures() const { return m_ExtFeatures; }
@@ -134,8 +134,8 @@ public:
 private:
     PhysicalDevice(const CreateInfo& CI);
 
-    const VkPhysicalDevice               m_VkDevice;
-    uint32_t                             m_VkVersion        = 0;
+    const VkPhysicalDevice               m_vkDevice;
+    uint32_t                             m_vkVersion        = 0;
     VkPhysicalDeviceProperties           m_Properties       = {};
     VkPhysicalDeviceFeatures             m_Features         = {};
     VkPhysicalDeviceMemoryProperties     m_MemoryProperties = {};

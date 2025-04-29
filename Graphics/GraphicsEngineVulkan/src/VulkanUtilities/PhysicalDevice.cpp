@@ -41,27 +41,27 @@ std::unique_ptr<PhysicalDevice> PhysicalDevice::Create(const CreateInfo& CI)
 }
 
 PhysicalDevice::PhysicalDevice(const CreateInfo& CI) :
-    m_VkDevice{CI.vkDevice}
+    m_vkDevice{CI.vkDevice}
 {
-    VERIFY_EXPR(m_VkDevice != VK_NULL_HANDLE);
+    VERIFY_EXPR(m_vkDevice != VK_NULL_HANDLE);
 
-    vkGetPhysicalDeviceProperties(m_VkDevice, &m_Properties);
-    vkGetPhysicalDeviceFeatures(m_VkDevice, &m_Features);
-    vkGetPhysicalDeviceMemoryProperties(m_VkDevice, &m_MemoryProperties);
+    vkGetPhysicalDeviceProperties(m_vkDevice, &m_Properties);
+    vkGetPhysicalDeviceFeatures(m_vkDevice, &m_Features);
+    vkGetPhysicalDeviceMemoryProperties(m_vkDevice, &m_MemoryProperties);
     uint32_t QueueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(m_VkDevice, &QueueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(m_vkDevice, &QueueFamilyCount, nullptr);
     VERIFY_EXPR(QueueFamilyCount > 0);
     m_QueueFamilyProperties.resize(QueueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(m_VkDevice, &QueueFamilyCount, m_QueueFamilyProperties.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(m_vkDevice, &QueueFamilyCount, m_QueueFamilyProperties.data());
     VERIFY_EXPR(QueueFamilyCount == m_QueueFamilyProperties.size());
 
     // Get list of supported extensions
     uint32_t ExtensionCount = 0;
-    vkEnumerateDeviceExtensionProperties(m_VkDevice, nullptr, &ExtensionCount, nullptr);
+    vkEnumerateDeviceExtensionProperties(m_vkDevice, nullptr, &ExtensionCount, nullptr);
     if (ExtensionCount > 0)
     {
         m_SupportedExtensions.resize(ExtensionCount);
-        VkResult res = vkEnumerateDeviceExtensionProperties(m_VkDevice, nullptr, &ExtensionCount, m_SupportedExtensions.data());
+        VkResult res = vkEnumerateDeviceExtensionProperties(m_vkDevice, nullptr, &ExtensionCount, m_SupportedExtensions.data());
         VERIFY_EXPR(res == VK_SUCCESS);
         (void)res;
         VERIFY_EXPR(ExtensionCount == m_SupportedExtensions.size());
@@ -72,10 +72,10 @@ PhysicalDevice::PhysicalDevice(const CreateInfo& CI) :
         LOG_INFO_MESSAGE("Extensions supported by device '", m_Properties.deviceName, "': ", PrintExtensionsList(m_SupportedExtensions, 3));
     }
 
-    m_VkVersion = std::min(CI.Inst.GetVersion(), m_Properties.apiVersion);
+    m_vkVersion = std::min(CI.Inst.GetVersion(), m_Properties.apiVersion);
 
     // remove patch version
-    m_VkVersion &= ~VK_MAKE_VERSION(0, 0, VK_API_VERSION_PATCH(~0u));
+    m_vkVersion &= ~VK_MAKE_VERSION(0, 0, VK_API_VERSION_PATCH(~0u));
 
 #if DILIGENT_USE_VOLK
     if (CI.Inst.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
@@ -195,7 +195,7 @@ PhysicalDevice::PhysicalDevice(const CreateInfo& CI) :
             m_ExtFeatures.Spirv14 = true;
 
         // Some features require SPIRV 1.4 or 1.5 which was added to the Vulkan 1.2 core.
-        if (m_VkVersion >= VK_API_VERSION_1_2)
+        if (m_vkVersion >= VK_API_VERSION_1_2)
         {
             m_ExtFeatures.Spirv14 = true;
             m_ExtFeatures.Spirv15 = true;
@@ -217,7 +217,7 @@ PhysicalDevice::PhysicalDevice(const CreateInfo& CI) :
         }
 
         // Subgroup feature requires Vulkan 1.1 core.
-        if (m_VkVersion >= VK_API_VERSION_1_1)
+        if (m_vkVersion >= VK_API_VERSION_1_1)
         {
             *NextProp = &m_ExtProperties.Subgroup;
             NextProp  = &m_ExtProperties.Subgroup.pNext;
@@ -363,8 +363,8 @@ PhysicalDevice::PhysicalDevice(const CreateInfo& CI) :
 
         // Initialize device extension features by current physical device features.
         // Some flags may not be supported by hardware.
-        vkGetPhysicalDeviceFeatures2KHR(m_VkDevice, &Feats2);
-        vkGetPhysicalDeviceProperties2KHR(m_VkDevice, &Props2);
+        vkGetPhysicalDeviceFeatures2KHR(m_vkDevice, &Feats2);
+        vkGetPhysicalDeviceProperties2KHR(m_vkDevice, &Props2);
 
         if (HostImageCopySupported)
         {
@@ -376,7 +376,7 @@ PhysicalDevice::PhysicalDevice(const CreateInfo& CI) :
                 m_ExtProperties.HostImageCopy.pCopyDstLayouts = m_ExtProperties.HostImageCopy.copyDstLayoutCount > 0 ? &m_ExtProperties.HostImageCopyLayouts[m_ExtProperties.HostImageCopy.copySrcLayoutCount] : nullptr;
             }
             Props2.pNext = &m_ExtProperties.HostImageCopy;
-            vkGetPhysicalDeviceProperties2KHR(m_VkDevice, &Props2);
+            vkGetPhysicalDeviceProperties2KHR(m_vkDevice, &Props2);
         }
 
         // Check texture formats
@@ -384,7 +384,7 @@ PhysicalDevice::PhysicalDevice(const CreateInfo& CI) :
         {
             // For compatibility with D3D12, shading rate texture must support R8_UINT format
             VkFormatProperties FmtProps{};
-            vkGetPhysicalDeviceFormatProperties(m_VkDevice, VK_FORMAT_R8_UINT, &FmtProps);
+            vkGetPhysicalDeviceFormatProperties(m_vkDevice, VK_FORMAT_R8_UINT, &FmtProps);
 
             // Disable feature if image format is not supported
             if (!(FmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR))
@@ -396,7 +396,7 @@ PhysicalDevice::PhysicalDevice(const CreateInfo& CI) :
         if (m_ExtFeatures.FragmentDensityMap.fragmentDensityMap != VK_FALSE)
         {
             VkFormatProperties FmtProps{};
-            vkGetPhysicalDeviceFormatProperties(m_VkDevice, VK_FORMAT_R8G8_UNORM, &FmtProps);
+            vkGetPhysicalDeviceFormatProperties(m_vkDevice, VK_FORMAT_R8G8_UNORM, &FmtProps);
 
             // Disable feature if image format is not supported
             if (!(FmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_FRAGMENT_DENSITY_MAP_BIT_EXT))
@@ -491,7 +491,7 @@ bool PhysicalDevice::IsExtensionSupported(const char* ExtensionName) const
 bool PhysicalDevice::CheckPresentSupport(HardwareQueueIndex queueFamilyIndex, VkSurfaceKHR VkSurface) const
 {
     VkBool32 PresentSupport = VK_FALSE;
-    vkGetPhysicalDeviceSurfaceSupportKHR(m_VkDevice, queueFamilyIndex, VkSurface, &PresentSupport);
+    vkGetPhysicalDeviceSurfaceSupportKHR(m_vkDevice, queueFamilyIndex, VkSurface, &PresentSupport);
     return PresentSupport == VK_TRUE;
 }
 
@@ -553,14 +553,14 @@ VkFormatProperties PhysicalDevice::GetPhysicalDeviceFormatProperties(VkFormat im
         VkFormatProps2.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2;
         VkFormatProps2.pNext = Properties3;
 
-        vkGetPhysicalDeviceFormatProperties2(m_VkDevice, imageFormat, &VkFormatProps2);
+        vkGetPhysicalDeviceFormatProperties2(m_vkDevice, imageFormat, &VkFormatProps2);
 
         return VkFormatProps2.formatProperties;
     }
     else
     {
         VkFormatProperties formatProperties;
-        vkGetPhysicalDeviceFormatProperties(m_VkDevice, imageFormat, &formatProperties);
+        vkGetPhysicalDeviceFormatProperties(m_vkDevice, imageFormat, &formatProperties);
         return formatProperties;
     }
 }
