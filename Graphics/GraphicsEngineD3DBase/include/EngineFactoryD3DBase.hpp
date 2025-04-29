@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,8 +72,8 @@ public:
             NumAdapters = std::min(NumAdapters, static_cast<Uint32>(DXGIAdapters.size()));
             for (Uint32 adapter = 0; adapter < NumAdapters; ++adapter)
             {
-                IDXGIAdapter1* pDXIAdapter = DXGIAdapters[adapter];
-                auto&          AdapterInfo = Adapters[adapter];
+                IDXGIAdapter1*       pDXIAdapter = DXGIAdapters[adapter];
+                GraphicsAdapterInfo& AdapterInfo = Adapters[adapter];
 
                 AdapterInfo = GetGraphicsAdapterInfo(nullptr, pDXIAdapter);
 
@@ -120,7 +120,7 @@ public:
         UINT numModes = 0;
 
         // Get the number of elements
-        auto hr = pOutput->GetDisplayModeList(DXIGFormat, 0, &numModes, NULL);
+        HRESULT hr = pOutput->GetDisplayModeList(DXIGFormat, 0, &numModes, NULL);
         (void)hr; // Suppress warning
 
         if (DisplayModes != nullptr)
@@ -132,8 +132,8 @@ public:
 
             for (Uint32 m = 0; m < std::min(NumDisplayModes, numModes); ++m)
             {
-                const auto& SrcMode            = DXIDisplayModes[m];
-                auto&       DstMode            = DisplayModes[m];
+                const DXGI_MODE_DESC& SrcMode  = DXIDisplayModes[m];
+                DisplayModeAttribs&   DstMode  = DisplayModes[m];
                 DstMode.Width                  = SrcMode.Width;
                 DstMode.Height                 = SrcMode.Height;
                 DstMode.Format                 = DXGI_FormatToTexFormat(SrcMode.Format);
@@ -213,7 +213,7 @@ public:
 
         // Enable features
         {
-            auto& Features{AdapterInfo.Features};
+            DeviceFeatures& Features{AdapterInfo.Features};
             Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
             Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
             Features.WireframeFill                 = DEVICE_FEATURE_STATE_ENABLED;
@@ -248,7 +248,7 @@ public:
 
         // Set memory properties
         {
-            auto& Mem               = AdapterInfo.Memory;
+            AdapterMemoryInfo& Mem  = AdapterInfo.Memory;
             Mem.LocalMemory         = dxgiAdapterDesc.DedicatedVideoMemory;
             Mem.HostVisibleMemory   = dxgiAdapterDesc.SharedSystemMemory;
             Mem.UnifiedMemory       = 0;
@@ -259,7 +259,7 @@ public:
 
         // Draw command properties
         {
-            auto& DrawCommand{AdapterInfo.DrawCommand};
+            DrawCommandProperties& DrawCommand{AdapterInfo.DrawCommand};
             DrawCommand.MaxDrawIndirectCount = ~0u;
             DrawCommand.CapFlags =
                 DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT |

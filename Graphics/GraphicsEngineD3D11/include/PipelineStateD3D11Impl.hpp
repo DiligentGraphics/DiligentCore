@@ -152,7 +152,7 @@ private:
     template <typename D3D11ShaderType>
     D3D11ShaderType* GetD3D11Shader(Uint32 ShaderInd)
     {
-        auto idx = m_ShaderIndices[ShaderInd];
+        Int8 idx = m_ShaderIndices[ShaderInd];
         return idx >= 0 ? static_cast<D3D11ShaderType*>(m_ppd3d11Shaders[idx].p) : nullptr;
     }
 

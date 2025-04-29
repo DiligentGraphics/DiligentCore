@@ -61,7 +61,7 @@ struct D3D11ResourceBindPoints
     D3D11ResourceBindPoints() noexcept
     {
 #ifdef DILIGENT_DEBUG
-        for (auto BindPoint : Bindings)
+        for (Uint8 BindPoint : Bindings)
             VERIFY_EXPR(BindPoint == InvalidBindPoint);
 #endif
     }
@@ -96,7 +96,7 @@ struct D3D11ResourceBindPoints
     size_t GetHash() const
     {
         size_t Hash = 0;
-        for (auto Binding : Bindings)
+        for (Uint8 Binding : Bindings)
             HashCombine(Hash, Binding);
         return Hash;
     }
@@ -109,9 +109,9 @@ struct D3D11ResourceBindPoints
     D3D11ResourceBindPoints operator+(Uint32 value) const
     {
         D3D11ResourceBindPoints NewBindPoints{*this};
-        for (auto Stages = GetActiveStages(); Stages != SHADER_TYPE_UNKNOWN;)
+        for (SHADER_TYPE Stages = GetActiveStages(); Stages != SHADER_TYPE_UNKNOWN;)
         {
-            auto ShaderInd = ExtractFirstShaderStageIndex(Stages);
+            Int32 ShaderInd = ExtractFirstShaderStageIndex(Stages);
             VERIFY_EXPR(Uint32{Bindings[ShaderInd]} + value < InvalidBindPoint);
             NewBindPoints.Bindings[ShaderInd] = Bindings[ShaderInd] + static_cast<Uint8>(value);
         }

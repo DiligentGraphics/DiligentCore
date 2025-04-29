@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -129,13 +129,13 @@ public:
 
     Uint32 GetImmutableSamplerIdx(const ResourceAttribs& Res) const
     {
-        auto ImtblSamIdx = InvalidImmutableSamplerIndex;
+        Uint32 ImtblSamIdx = InvalidImmutableSamplerIndex;
         if (Res.IsImmutableSamplerAssigned())
             ImtblSamIdx = Res.SamplerInd;
         else if (Res.IsSamplerAssigned())
         {
             VERIFY_EXPR(GetResourceDesc(Res.SamplerInd).ResourceType == SHADER_RESOURCE_TYPE_SAMPLER);
-            const auto& SamAttribs = GetResourceAttribs(Res.SamplerInd);
+            const ResourceAttribs& SamAttribs = GetResourceAttribs(Res.SamplerInd);
             if (SamAttribs.IsImmutableSamplerAssigned())
                 ImtblSamIdx = SamAttribs.SamplerInd;
         }

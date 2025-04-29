@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -112,7 +112,7 @@ struct D3D11TileMappingHelper : D3DTileMappingHelper<D3D11_TILED_RESOURCE_COORDI
 private:
     void Commit(ID3D11DeviceContext2* pd3d11DeviceContext2, ID3D11Resource* pResource)
     {
-        auto* const pd3d11TilePool = pMemory != nullptr ? pMemory->GetD3D11TilePool() : nullptr;
+        ID3D11Buffer* const pd3d11TilePool = pMemory != nullptr ? pMemory->GetD3D11TilePool() : nullptr;
 
 #ifdef DILIGENT_ENABLE_D3D_NVAPI
         if (UseNVApi)
@@ -152,7 +152,7 @@ private:
 
     void SetMemory(IDeviceMemory* pNewMemory)
     {
-        auto pNewMemD3D11 = RefCntAutoPtr<IDeviceMemoryD3D11>{pNewMemory, IID_DeviceMemoryD3D11};
+        RefCntAutoPtr<IDeviceMemoryD3D11> pNewMemD3D11{pNewMemory, IID_DeviceMemoryD3D11};
         DEV_CHECK_ERR(pNewMemory == nullptr || pNewMemD3D11, "Failed to query IID_DeviceMemoryD3D11 interface");
         if (pMemory != nullptr && pNewMemD3D11 != nullptr && pMemory != pNewMemD3D11)
         {

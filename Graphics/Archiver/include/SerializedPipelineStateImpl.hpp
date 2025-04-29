@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use  file except in compliance with the License.
@@ -101,7 +101,7 @@ public:
     using DeviceType           = DeviceObjectArchive::DeviceType;
     using TPRSNames            = DeviceObjectArchive::TPRSNames;
 
-    static constexpr auto DeviceDataCount = static_cast<size_t>(DeviceType::Count);
+    static constexpr size_t DeviceDataCount = static_cast<size_t>(DeviceType::Count);
 
     struct Data
     {
@@ -140,7 +140,7 @@ public:
     static void GetRayTracingShaderMap(const std::vector<ShaderStage>& ShaderStages, RayTracingShaderMapType& ShaderMap)
     {
         Uint32 ShaderIndex = 0;
-        for (const auto& Stage : ShaderStages)
+        for (const ShaderStage& Stage : ShaderStages)
         {
             for (const auto* pShader : Stage.Serialized)
             {

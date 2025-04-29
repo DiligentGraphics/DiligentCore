@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -365,43 +365,43 @@ public:
     {
         for (Uint32 n = 0; n < GetNumCBs(); ++n)
         {
-            const auto& CB = GetCB(n);
+            const D3DShaderResourceAttribs& CB = GetCB(n);
             HandleCB(CB, n);
         }
 
         for (Uint32 n = 0; n < GetNumSamplers(); ++n)
         {
-            const auto& Sampler = GetSampler(n);
+            const D3DShaderResourceAttribs& Sampler = GetSampler(n);
             HandleSampler(Sampler, n);
         }
 
         for (Uint32 n = 0; n < GetNumTexSRV(); ++n)
         {
-            const auto& TexSRV = GetTexSRV(n);
+            const D3DShaderResourceAttribs& TexSRV = GetTexSRV(n);
             HandleTexSRV(TexSRV, n);
         }
 
         for (Uint32 n = 0; n < GetNumTexUAV(); ++n)
         {
-            const auto& TexUAV = GetTexUAV(n);
+            const D3DShaderResourceAttribs& TexUAV = GetTexUAV(n);
             HandleTexUAV(TexUAV, n);
         }
 
         for (Uint32 n = 0; n < GetNumBufSRV(); ++n)
         {
-            const auto& BufSRV = GetBufSRV(n);
+            const D3DShaderResourceAttribs& BufSRV = GetBufSRV(n);
             HandleBufSRV(BufSRV, n);
         }
 
         for (Uint32 n = 0; n < GetNumBufUAV(); ++n)
         {
-            const auto& BufUAV = GetBufUAV(n);
+            const D3DShaderResourceAttribs& BufUAV = GetBufUAV(n);
             HandleBufUAV(BufUAV, n);
         }
 
         for (Uint32 n = 0; n < GetNumAccelStructs(); ++n)
         {
-            const auto& AS = GetAccelStruct(n);
+            const D3DShaderResourceAttribs& AS = GetAccelStruct(n);
             HandleAccelStruct(AS, n);
         }
     }
@@ -542,7 +542,7 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
         [&](const D3DShaderResourceAttribs& CBAttribs, ShaderCodeBufferDescX&& CBReflection) //
         {
             VERIFY_EXPR(CBAttribs.GetInputType() == D3D_SIT_CBUFFER);
-            auto* pNewCB = new (&GetCB(CurrCB++)) D3DShaderResourceAttribs{ResourceNamesPool, CBAttribs};
+            D3DShaderResourceAttribs* pNewCB = new (&GetCB(CurrCB++)) D3DShaderResourceAttribs{ResourceNamesPool, CBAttribs};
             NewResHandler.OnNewCB(*pNewCB);
             if (LoadConstantBufferReflection)
                 CBReflections.emplace_back(std::move(CBReflection));
@@ -551,28 +551,28 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
         [&](const D3DShaderResourceAttribs& TexUAV) //
         {
             VERIFY_EXPR(TexUAV.GetInputType() == D3D_SIT_UAV_RWTYPED && TexUAV.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER);
-            auto* pNewTexUAV = new (&GetTexUAV(CurrTexUAV++)) D3DShaderResourceAttribs{ResourceNamesPool, TexUAV};
+            D3DShaderResourceAttribs* pNewTexUAV = new (&GetTexUAV(CurrTexUAV++)) D3DShaderResourceAttribs{ResourceNamesPool, TexUAV};
             NewResHandler.OnNewTexUAV(*pNewTexUAV);
         },
 
         [&](const D3DShaderResourceAttribs& BuffUAV) //
         {
             VERIFY_EXPR(BuffUAV.GetInputType() == D3D_SIT_UAV_RWTYPED && BuffUAV.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER || BuffUAV.GetInputType() == D3D_SIT_UAV_RWSTRUCTURED || BuffUAV.GetInputType() == D3D_SIT_UAV_RWBYTEADDRESS);
-            auto* pNewBufUAV = new (&GetBufUAV(CurrBufUAV++)) D3DShaderResourceAttribs{ResourceNamesPool, BuffUAV};
+            D3DShaderResourceAttribs* pNewBufUAV = new (&GetBufUAV(CurrBufUAV++)) D3DShaderResourceAttribs{ResourceNamesPool, BuffUAV};
             NewResHandler.OnNewBuffUAV(*pNewBufUAV);
         },
 
         [&](const D3DShaderResourceAttribs& BuffSRV) //
         {
             VERIFY_EXPR(BuffSRV.GetInputType() == D3D_SIT_TEXTURE && BuffSRV.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER || BuffSRV.GetInputType() == D3D_SIT_STRUCTURED || BuffSRV.GetInputType() == D3D_SIT_BYTEADDRESS);
-            auto* pNewBuffSRV = new (&GetBufSRV(CurrBufSRV++)) D3DShaderResourceAttribs{ResourceNamesPool, BuffSRV};
+            D3DShaderResourceAttribs* pNewBuffSRV = new (&GetBufSRV(CurrBufSRV++)) D3DShaderResourceAttribs{ResourceNamesPool, BuffSRV};
             NewResHandler.OnNewBuffSRV(*pNewBuffSRV);
         },
 
         [&](const D3DShaderResourceAttribs& SamplerAttribs) //
         {
             VERIFY_EXPR(SamplerAttribs.GetInputType() == D3D_SIT_SAMPLER);
-            auto* pNewSampler = new (&GetSampler(CurrSampler++)) D3DShaderResourceAttribs{ResourceNamesPool, SamplerAttribs};
+            D3DShaderResourceAttribs* pNewSampler = new (&GetSampler(CurrSampler++)) D3DShaderResourceAttribs{ResourceNamesPool, SamplerAttribs};
             NewResHandler.OnNewSampler(*pNewSampler);
         },
 
@@ -581,8 +581,8 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
             VERIFY_EXPR(TexAttribs.GetInputType() == D3D_SIT_TEXTURE && TexAttribs.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER);
             VERIFY(CurrSampler == GetNumSamplers(), "All samplers must be initialized before texture SRVs");
 
-            auto  SamplerId  = CombinedSamplerSuffix != nullptr ? FindAssignedSamplerId(TexAttribs, CombinedSamplerSuffix) : D3DShaderResourceAttribs::InvalidSamplerId;
-            auto* pNewTexSRV = new (&GetTexSRV(CurrTexSRV)) D3DShaderResourceAttribs{ResourceNamesPool, TexAttribs, SamplerId};
+            Uint32                    SamplerId  = CombinedSamplerSuffix != nullptr ? FindAssignedSamplerId(TexAttribs, CombinedSamplerSuffix) : D3DShaderResourceAttribs::InvalidSamplerId;
+            D3DShaderResourceAttribs* pNewTexSRV = new (&GetTexSRV(CurrTexSRV)) D3DShaderResourceAttribs{ResourceNamesPool, TexAttribs, SamplerId};
             if (SamplerId != D3DShaderResourceAttribs::InvalidSamplerId)
             {
                 GetSampler(SamplerId).SetTexSRVId(CurrTexSRV);
@@ -594,7 +594,7 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
         [&](const D3DShaderResourceAttribs& AccelStructAttribs) //
         {
             VERIFY_EXPR(AccelStructAttribs.GetInputType() == D3D_SIT_RTACCELERATIONSTRUCTURE);
-            auto* pNewAccelStruct = new (&GetAccelStruct(CurrAS++)) D3DShaderResourceAttribs{ResourceNamesPool, AccelStructAttribs};
+            D3DShaderResourceAttribs* pNewAccelStruct = new (&GetAccelStruct(CurrAS++)) D3DShaderResourceAttribs{ResourceNamesPool, AccelStructAttribs};
             NewResHandler.OnNewAccelStruct(*pNewAccelStruct);
         } //
     );
@@ -608,7 +608,7 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
 #ifdef DILIGENT_DEVELOPMENT
         for (Uint32 n = 0; n < GetNumSamplers(); ++n)
         {
-            const auto& Sampler = GetSampler(n);
+            const D3DShaderResourceAttribs& Sampler = GetSampler(n);
             if (!Sampler.IsCombinedWithTexSRV())
                 LOG_ERROR_MESSAGE("Shader '", ShaderName, "' uses combined texture samplers, but sampler '", Sampler.Name, "' is not assigned to any texture");
         }

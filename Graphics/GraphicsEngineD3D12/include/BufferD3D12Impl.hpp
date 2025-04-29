@@ -72,8 +72,8 @@ public:
     virtual Uint64 DILIGENT_CALL_TYPE GetNativeHandle() override final
     {
         VERIFY(GetD3D12Resource() != nullptr, "The buffer is dynamic and has no pointer to D3D12 resource");
-        Uint64 DataStartByteOffset = 0;
-        auto*  pd3d12Buffer        = GetD3D12Buffer(DataStartByteOffset, 0);
+        Uint64          DataStartByteOffset = 0;
+        ID3D12Resource* pd3d12Buffer        = GetD3D12Buffer(DataStartByteOffset, 0);
         VERIFY(DataStartByteOffset == 0, "0 offset expected");
         return BitCast<Uint64>(pd3d12Buffer);
     }

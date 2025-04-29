@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,8 +76,8 @@ protected:
                 {
                     auto* pImmediateCtxGL = pDeviceContext.template RawPtr<DeviceContextGLImpl>();
                     // Unbind the back buffer to be consistent with other backends
-                    auto* pCurrentBackBuffer = ClassPtrCast<TextureBaseGL>(m_pRenderTargetView->GetTexture());
-                    auto  RenderTargetsReset = pImmediateCtxGL->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
+                    TextureBaseGL* pCurrentBackBuffer = ClassPtrCast<TextureBaseGL>(m_pRenderTargetView->GetTexture());
+                    bool           RenderTargetsReset = pImmediateCtxGL->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
                     if (RenderTargetsReset)
                     {
                         LOG_INFO_MESSAGE_ONCE("Resizing the swap chain requires back and depth-stencil buffers to be unbound from the device context. "

@@ -83,7 +83,7 @@ public:
 
     uint8_t* GetStagingDataCPUAddress() const
     {
-        auto* StagingDataCPUAddress = reinterpret_cast<uint8_t*>(m_MemoryAllocation.Page->GetCPUMemory());
+        uint8_t* StagingDataCPUAddress = reinterpret_cast<uint8_t*>(m_MemoryAllocation.Page->GetCPUMemory());
         VERIFY_EXPR(StagingDataCPUAddress != nullptr);
         StagingDataCPUAddress += m_StagingDataAlignedOffset;
         return StagingDataCPUAddress;

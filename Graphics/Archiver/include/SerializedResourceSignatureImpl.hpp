@@ -104,7 +104,7 @@ public:
     template <typename SignatureType>
     SignatureType* GetDeviceSignature(DeviceType Type) const
     {
-        constexpr auto TraitsType = SignatureTraits<SignatureType>::Type;
+        constexpr DeviceType TraitsType = SignatureTraits<SignatureType>::Type;
         VERIFY_EXPR(Type == TraitsType || (Type == DeviceType::Metal_iOS && TraitsType == DeviceType::Metal_MacOS));
 
         return ClassPtrCast<SignatureType>(GetDeviceSignature(Type));

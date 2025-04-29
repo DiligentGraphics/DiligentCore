@@ -110,7 +110,7 @@ void BufferGLImpl::BufferMemoryBarrier(MEMORY_BARRIER RequiredBarriers, GLContex
 #if GL_ARB_shader_image_load_store
 #    ifdef DILIGENT_DEBUG
     {
-        constexpr auto BufferBarriers = MEMORY_BARRIER_ALL_BUFFER_BARRIERS;
+        constexpr MEMORY_BARRIER BufferBarriers = MEMORY_BARRIER_ALL_BUFFER_BARRIERS;
         VERIFY((RequiredBarriers & BufferBarriers) != 0, "At least one buffer memory barrier flag should be set");
         VERIFY((RequiredBarriers & ~BufferBarriers) == 0, "Inappropriate buffer memory barrier flag");
     }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -133,7 +133,7 @@ public:
         {
             if (pBufferView)
             {
-                const auto* pBuff = pBufferView->GetBuffer<const BufferGLImpl>();
+                const BufferGLImpl* pBuff = pBufferView->GetBuffer<const BufferGLImpl>();
                 return pBufferView->GetDesc().ByteWidth < pBuff->GetDesc().Size;
             }
 
@@ -155,7 +155,7 @@ public:
                 RangeSize = pBuff->GetDesc().Size - BaseOffset;
         }
 
-        auto& UB = GetUB(CacheOffset);
+        CachedUB& UB = GetUB(CacheOffset);
 
         UB.pBuffer       = std::move(pBuff);
         UB.BaseOffset    = StaticCast<Uint32>(BaseOffset);
@@ -217,7 +217,7 @@ public:
 
     void SetSSBO(Uint32 CacheOffset, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
     {
-        auto& SSBO = GetSSBO(CacheOffset);
+        CachedSSBO& SSBO = GetSSBO(CacheOffset);
 
         SSBO.pBufferView   = std::move(pBuffView);
         SSBO.DynamicOffset = 0;
@@ -251,7 +251,7 @@ public:
         if (CacheOffset >= GetUBCount())
             return false;
 
-        const auto& UB = GetConstUB(CacheOffset);
+        const CachedUB& UB = GetConstUB(CacheOffset);
         return UB.pBuffer;
     }
 
@@ -260,7 +260,7 @@ public:
         if (CacheOffset >= GetTextureCount())
             return false;
 
-        const auto& Texture = GetConstTexture(CacheOffset);
+        const CachedResourceView& Texture = GetConstTexture(CacheOffset);
         VERIFY_EXPR(dbgIsTextureView || Texture.pTexture == nullptr);
         return Texture.pView;
     }
@@ -270,7 +270,7 @@ public:
         if (CacheOffset >= GetImageCount())
             return false;
 
-        const auto& Image = GetConstImage(CacheOffset);
+        const CachedResourceView& Image = GetConstImage(CacheOffset);
         VERIFY_EXPR(dbgIsTextureView || Image.pTexture == nullptr);
         return Image.pView;
     }
@@ -280,7 +280,7 @@ public:
         if (CacheOffset >= GetSSBOCount())
             return false;
 
-        const auto& SSBO = GetConstSSBO(CacheOffset);
+        const CachedSSBO& SSBO = GetConstSSBO(CacheOffset);
         return SSBO.pBufferView;
     }
 

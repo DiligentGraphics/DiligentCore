@@ -339,7 +339,7 @@ public:
         std::lock_guard<std::mutex> ReleaseQueueLock(m_ReleaseQueueMutex);
         while (!m_StaleResources.empty())
         {
-            auto& FirstStaleObj = m_StaleResources.front();
+            ReleaseQueueElemType& FirstStaleObj = m_StaleResources.front();
             if (FirstStaleObj.first <= SubmittedCmdBuffNumber)
             {
                 m_ReleaseQueue.emplace_back(FenceValue, std::move(FirstStaleObj.second));
@@ -363,7 +363,7 @@ public:
         // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-resource-lifetimes/
         while (!m_ReleaseQueue.empty())
         {
-            auto& FirstObj = m_ReleaseQueue.front();
+            ReleaseQueueElemType& FirstObj = m_ReleaseQueue.front();
             if (FirstObj.first <= CompletedFenceValue)
                 m_ReleaseQueue.pop_front();
             else

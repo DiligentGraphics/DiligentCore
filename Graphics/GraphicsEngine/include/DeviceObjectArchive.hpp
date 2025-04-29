@@ -276,7 +276,7 @@ public:
 
     ResourceData& GetResourceData(ResourceType Type, const char* Name) noexcept
     {
-        constexpr auto MakeCopy = true;
+        constexpr bool MakeCopy = true;
         return m_NamedResources[NamedResourceKey{Type, Name, MakeCopy}];
     }
 
@@ -285,7 +285,7 @@ public:
         return m_DeviceShaders[static_cast<size_t>(Type)];
     }
 
-    const auto& GetSerializedShader(DeviceType Type, size_t Idx) const noexcept
+    const SerializedData& GetSerializedShader(DeviceType Type, size_t Idx) const noexcept
     {
         const auto& DeviceShaders = m_DeviceShaders[static_cast<size_t>(Type)];
         if (Idx < DeviceShaders.size())

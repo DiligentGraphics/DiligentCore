@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,10 +118,10 @@ public:
 
         while (QueueMask != 0)
         {
-            auto QueueInd = PlatformMisc::GetLSB(QueueMask);
+            Uint32 QueueInd = PlatformMisc::GetLSB(QueueMask);
             VERIFY_EXPR(QueueInd < m_CmdQueueCount);
 
-            auto& Queue = m_CommandQueues[QueueInd];
+            CommandQueue& Queue = m_CommandQueues[QueueInd];
             // Do not use std::move on wrapper!!!
             Queue.ReleaseQueue.SafeReleaseResource(Wrapper, Queue.NextCmdBufferNumber.load());
             QueueMask &= ~(Uint64{1} << Uint64{QueueInd});
@@ -151,15 +151,15 @@ public:
     void PurgeReleaseQueue(SoftwareQueueIndex QueueInd, bool ForceRelease = false)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
-        auto& Queue               = m_CommandQueues[QueueInd];
-        auto  CompletedFenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : Queue.CmdQueue->GetCompletedFenceValue();
+        CommandQueue& Queue               = m_CommandQueues[QueueInd];
+        Uint64        CompletedFenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : Queue.CmdQueue->GetCompletedFenceValue();
         Queue.ReleaseQueue.Purge(CompletedFenceValue);
     }
 
     void IdleCommandQueue(SoftwareQueueIndex QueueInd, bool ReleaseResources)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
-        auto& Queue = m_CommandQueues[QueueInd];
+        CommandQueue& Queue = m_CommandQueues[QueueInd];
 
         Uint64 CmdBufferNumber = 0;
         Uint64 FenceValue      = 0;
@@ -201,7 +201,7 @@ public:
     {
         SubmittedCommandBufferInfo CmdBuffInfo;
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
-        auto& Queue = m_CommandQueues[QueueInd];
+        CommandQueue& Queue = m_CommandQueues[QueueInd];
 
         {
             std::lock_guard<std::mutex> Lock{Queue.Mtx};
@@ -261,7 +261,7 @@ public:
     void LockCmdQueueAndRun(SoftwareQueueIndex QueueInd, TAction Action)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
-        auto&                       Queue = m_CommandQueues[QueueInd];
+        CommandQueue&               Queue = m_CommandQueues[QueueInd];
         std::lock_guard<std::mutex> Lock{Queue.Mtx};
         Action(Queue.CmdQueue);
     }
@@ -269,7 +269,7 @@ public:
     CommandQueueType* LockCommandQueue(SoftwareQueueIndex QueueInd)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
-        auto& Queue = m_CommandQueues[QueueInd];
+        CommandQueue& Queue = m_CommandQueues[QueueInd];
         Queue.Mtx.lock();
         return Queue.CmdQueue;
     }
@@ -277,7 +277,7 @@ public:
     void UnlockCommandQueue(SoftwareQueueIndex QueueInd)
     {
         VERIFY_EXPR(QueueInd < m_CmdQueueCount);
-        auto& Queue = m_CommandQueues[QueueInd];
+        CommandQueue& Queue = m_CommandQueues[QueueInd];
         Queue.Mtx.unlock();
     }
 
@@ -288,7 +288,7 @@ protected:
         {
             for (size_t q = 0; q < m_CmdQueueCount; ++q)
             {
-                auto& Queue = m_CommandQueues[q];
+                CommandQueue& Queue = m_CommandQueues[q];
                 DEV_CHECK_ERR(Queue.ReleaseQueue.GetStaleResourceCount() == 0, "All stale resources must be released before destroying a command queue");
                 DEV_CHECK_ERR(Queue.ReleaseQueue.GetPendingReleaseResourceCount() == 0, "All resources must be released before destroying a command queue");
                 Queue.~CommandQueue();

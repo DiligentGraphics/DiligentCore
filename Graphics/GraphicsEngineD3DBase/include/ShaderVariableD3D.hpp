@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,8 +39,8 @@ bool VerifyBufferViewModeD3D(BufferViewImplType* pViewD3D, const D3DShaderResour
     if (pViewD3D == nullptr)
         return true;
 
-    const auto& ViewDesc = pViewD3D->GetDesc();
-    const auto& BuffDesc = pViewD3D->GetBuffer()->GetDesc();
+    const BufferViewDesc& ViewDesc = pViewD3D->GetDesc();
+    const BufferDesc&     BuffDesc = pViewD3D->GetBuffer()->GetDesc();
 
     auto LogBufferBindingError = [&](const char* Msg) //
     {

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ class ComErrorDesc
 public:
     ComErrorDesc(HRESULT hr)
     {
-        auto NumCharsWritten = FormatMessageA(
+        DWORD NumCharsWritten = FormatMessageA(
             FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
             NULL,
             hr,
@@ -58,7 +58,7 @@ public:
         }
         else
         {
-            auto nLen = strlen(m_Msg);
+            size_t nLen = strlen(m_Msg);
             if (nLen > 1 && m_Msg[nLen - 1] == '\n')
             {
                 m_Msg[nLen - 1] = 0;
@@ -108,7 +108,7 @@ private:
         HRESULT _hr_ = Expr;                                             \
         if (FAILED(_hr_))                                                \
         {                                                                \
-            auto         msg = Diligent::FormatString(__VA_ARGS__);      \
+            std::string  msg = Diligent::FormatString(__VA_ARGS__);      \
             ComErrorDesc ErrDesc(_hr_);                                  \
             LOG_ERROR_AND_THROW(msg, "\nHRESULT Desc: ", ErrDesc.Get()); \
         }                                                                \

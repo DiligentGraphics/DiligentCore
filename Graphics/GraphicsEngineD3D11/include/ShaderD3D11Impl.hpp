@@ -106,8 +106,8 @@ private:
             if (Hash != rhs.Hash)
                 return false;
 
-            const auto Size0 = pBlob->GetSize();
-            const auto Size1 = rhs.pBlob->GetSize();
+            const size_t Size0 = pBlob->GetSize();
+            const size_t Size1 = rhs.pBlob->GetSize();
             if (Size0 != Size1)
                 return false;
 

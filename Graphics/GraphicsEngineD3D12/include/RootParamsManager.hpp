@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -93,9 +93,9 @@ public:
 
         // All descriptors in the table are tightly packed, so the table size is given
         // by the end of the last range
-        const auto& d3d12Tbl = d3d12RootParam.DescriptorTable;
+        const D3D12_ROOT_DESCRIPTOR_TABLE& d3d12Tbl = d3d12RootParam.DescriptorTable;
         VERIFY(d3d12Tbl.NumDescriptorRanges > 0, "Descriptor table must contain at least one range");
-        const auto& d3d12LastRange = d3d12Tbl.pDescriptorRanges[d3d12Tbl.NumDescriptorRanges - 1];
+        const D3D12_DESCRIPTOR_RANGE& d3d12LastRange = d3d12Tbl.pDescriptorRanges[d3d12Tbl.NumDescriptorRanges - 1];
         VERIFY(d3d12LastRange.NumDescriptors > 0, "The range must not be empty");
         return d3d12LastRange.OffsetInDescriptorsFromTableStart + d3d12LastRange.NumDescriptors;
     }

@@ -93,7 +93,7 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
         if (!this->GetDevice()->GetFeatures().NativeFence)
         {
-            auto EnqueuedValue = m_EnqueuedFenceValue.load();
+            Uint64 EnqueuedValue = m_EnqueuedFenceValue.load();
             DEV_CHECK_ERR(Value <= EnqueuedValue,
                           "Can not wait for value ", Value, " that is greater than the last enqueued for signal value (", EnqueuedValue,
                           "). This is not supported when NativeFence feature is disabled.");
@@ -104,7 +104,7 @@ public:
 protected:
     void UpdateLastCompletedFenceValue(Uint64 NewValue)
     {
-        auto LastCompletedValue = m_LastCompletedFenceValue.load();
+        Uint64 LastCompletedValue = m_LastCompletedFenceValue.load();
         while (!m_LastCompletedFenceValue.compare_exchange_weak(LastCompletedValue, std::max(LastCompletedValue, NewValue)))
         {
             // If exchange fails, LastCompletedValue will hold the actual value of m_LastCompletedFenceValue.

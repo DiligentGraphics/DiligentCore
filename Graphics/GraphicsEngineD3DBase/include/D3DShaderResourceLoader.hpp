@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -444,7 +444,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
     }
 
     // Process texture SRVs. We need to do this after all samplers are initialized
-    for (auto TexSRVInd : TexSRVInds)
+    for (size_t TexSRVInd : TexSRVInds)
     {
         OnNewTexSRV(Resources[TexSRVInd]);
     }

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -372,35 +372,35 @@ public:
                 return true;
             else
             {
-                auto VarType = GetShaderVariableType(m_ShaderStages, Name, *pResourceLayout);
+                SHADER_RESOURCE_VARIABLE_TYPE VarType = GetShaderVariableType(m_ShaderStages, Name, *pResourceLayout);
                 return IsAllowedType(VarType, AllowedTypeBits);
             }
         };
 
         for (Uint32 ub = 0; ub < m_NumUniformBuffers; ++ub)
         {
-            const auto& UB = GetUniformBuffer(ub);
+            const UniformBufferInfo& UB = GetUniformBuffer(ub);
             if (CheckResourceType(UB.Name))
                 HandleUB(UB);
         }
 
         for (Uint32 s = 0; s < m_NumTextures; ++s)
         {
-            const auto& Sam = GetTexture(s);
+            const TextureInfo& Sam = GetTexture(s);
             if (CheckResourceType(Sam.Name))
                 HandleTexture(Sam);
         }
 
         for (Uint32 img = 0; img < m_NumImages; ++img)
         {
-            const auto& Img = GetImage(img);
+            const ImageInfo& Img = GetImage(img);
             if (CheckResourceType(Img.Name))
                 HandleImg(Img);
         }
 
         for (Uint32 sb = 0; sb < m_NumStorageBlocks; ++sb)
         {
-            const auto& SB = GetStorageBlock(sb);
+            const StorageBlockInfo& SB = GetStorageBlock(sb);
             if (CheckResourceType(SB.Name))
                 HandleSB(SB);
         }

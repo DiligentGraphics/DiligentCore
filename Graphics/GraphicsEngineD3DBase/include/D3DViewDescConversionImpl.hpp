@@ -296,7 +296,7 @@ void BufferViewDesc_to_D3D_SRV_DESC(const BufferDesc& BuffDesc, const BufferView
     VERIFY(SRVDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Incorrect view type: shader resource is expected");
 
     memset(&d3dSRVDesc, 0, sizeof(d3dSRVDesc));
-    const auto& BuffFmt = SRVDesc.Format;
+    const BufferFormat& BuffFmt = SRVDesc.Format;
     if (BuffDesc.Mode == BUFFER_MODE_FORMATTED || (BuffDesc.Mode == BUFFER_MODE_RAW && BuffFmt.ValueType != VT_UNDEFINED))
         d3dSRVDesc.Format = TypeToDXGI_Format(BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized);
 
@@ -322,7 +322,7 @@ void BufferViewDesc_to_D3D_UAV_DESC(const BufferDesc& BuffDesc, const BufferView
     VERIFY(UAVDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Incorrect view type: unordered access is expected");
 
     memset(&d3dUAVDesc, 0, sizeof(d3dUAVDesc));
-    const auto& BuffFmt = UAVDesc.Format;
+    const BufferFormat& BuffFmt = UAVDesc.Format;
     if (BuffDesc.Mode == BUFFER_MODE_FORMATTED || (BuffDesc.Mode == BUFFER_MODE_RAW && BuffFmt.ValueType != VT_UNDEFINED))
         d3dUAVDesc.Format = TypeToDXGI_Format(BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized);
 

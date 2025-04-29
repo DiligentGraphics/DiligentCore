@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,7 +96,7 @@ public:
     // clang-format on
     {
         VERIFY_EXPR(m_pAllocator != nullptr && m_pDescriptorHeap != nullptr);
-        auto DescriptorSize = m_pAllocator->GetDescriptorSize();
+        Uint32 DescriptorSize = m_pAllocator->GetDescriptorSize();
         VERIFY(DescriptorSize < std::numeric_limits<Uint16>::max(), "DescriptorSize exceeds allowed limit");
         m_DescriptorSize = static_cast<Uint16>(DescriptorSize);
     }

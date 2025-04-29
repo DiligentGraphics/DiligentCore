@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -180,7 +180,7 @@ public:
                    "Buffer range may only be specified for constant buffers");
             if (pObject && (Type == SHADER_RESOURCE_TYPE_BUFFER_SRV || Type == SHADER_RESOURCE_TYPE_BUFFER_UAV))
             {
-                const auto& BuffViewDesc{pObject.ConstPtr<BufferViewD3D12Impl>()->GetDesc()};
+                const BufferViewDesc& BuffViewDesc{pObject.ConstPtr<BufferViewD3D12Impl>()->GetDesc()};
                 BufferBaseOffset = BuffViewDesc.ByteOffset;
                 BufferRangeSize  = BuffViewDesc.ByteWidth;
             }
@@ -291,7 +291,7 @@ public:
 
     ID3D12DescriptorHeap* GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE HeapType, ROOT_PARAMETER_GROUP Group) const
     {
-        auto AllocationIdx = m_AllocationIndex[HeapType][Group];
+        Int8 AllocationIdx = m_AllocationIndex[HeapType][Group];
         return AllocationIdx >= 0 ? m_DescriptorAllocations[AllocationIdx].GetDescriptorHeap() : nullptr;
     }
 
@@ -303,11 +303,11 @@ public:
         Uint32                     RootParamInd,
         Uint32                     OffsetFromTableStart = 0) const
     {
-        const auto& RootParam = GetRootTable(RootParamInd);
+        const RootTable& RootParam = GetRootTable(RootParamInd);
         VERIFY(RootParam.GetStartOffset() != InvalidDescriptorOffset, "This root parameter is not assigned a valid descriptor table offset");
         VERIFY(OffsetFromTableStart < RootParam.GetSize(), "Offset is out of range");
 
-        const auto AllocationIdx = m_AllocationIndex[HeapType][Group];
+        const Int8 AllocationIdx = m_AllocationIndex[HeapType][Group];
         VERIFY(AllocationIdx >= 0, "Descriptor space is not assigned to this table");
         VERIFY_EXPR(AllocationIdx < m_NumDescriptorAllocations);
 
@@ -317,7 +317,7 @@ public:
     const DescriptorHeapAllocation& GetDescriptorAllocation(D3D12_DESCRIPTOR_HEAP_TYPE HeapType,
                                                             ROOT_PARAMETER_GROUP       Group) const
     {
-        const auto AllocationIdx = m_AllocationIndex[HeapType][Group];
+        const Int8 AllocationIdx = m_AllocationIndex[HeapType][Group];
         VERIFY(AllocationIdx >= 0, "Descriptor space is not assigned to this combination of heap type and parameter group");
         VERIFY_EXPR(AllocationIdx < m_NumDescriptorAllocations);
         return m_DescriptorAllocations[AllocationIdx];

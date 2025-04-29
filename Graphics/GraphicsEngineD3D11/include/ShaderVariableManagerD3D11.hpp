@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -242,7 +242,7 @@ private:
     ResourceType& GetResource(Uint32 ResIndex) const
     {
         VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") must be less than (", GetNumResources<ResourceType>(), ")");
-        auto Offset = GetResourceOffset<ResourceType>();
+        OffsetType Offset = GetResourceOffset<ResourceType>();
         return reinterpret_cast<ResourceType*>(reinterpret_cast<Uint8*>(m_pVariables) + Offset)[ResIndex];
     }
 
@@ -250,7 +250,7 @@ private:
     const ResourceType& GetConstResource(Uint32 ResIndex) const
     {
         VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") must be less than (", GetNumResources<ResourceType>(), ")");
-        auto Offset = GetResourceOffset<ResourceType>();
+        OffsetType Offset = GetResourceOffset<ResourceType>();
         return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_pVariables) + Offset)[ResIndex];
     }
 

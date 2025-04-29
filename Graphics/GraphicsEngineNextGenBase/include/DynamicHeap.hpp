@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -162,7 +162,7 @@ public:
                 }
             }
         };
-        for (auto& Block : Blocks)
+        for (MasterBlock& Block : Blocks)
         {
             DEV_CHECK_ERR(Block.IsValid(), "Attempting to release invalid master block");
             Device.SafeReleaseDeviceObject(StaleMasterBlock{std::move(Block), this}, CmdQueueMask);
@@ -185,7 +185,7 @@ protected:
     MasterBlock AllocateMasterBlock(OffsetType SizeInBytes, OffsetType Alignment)
     {
         std::lock_guard<std::mutex> Lock{m_AllocationsMgrMtx};
-        auto                        NewBlock = m_AllocationsMgr.Allocate(SizeInBytes, Alignment);
+        MasterBlock                 NewBlock = m_AllocationsMgr.Allocate(SizeInBytes, Alignment);
 #ifdef DILIGENT_DEVELOPMENT
         if (NewBlock.IsValid())
         {

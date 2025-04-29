@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,7 +128,7 @@ public:
         virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            const auto& UB = m_ParentManager.m_ResourceCache.GetConstUB(GetAttribs().CacheOffset + ArrayIndex);
+            const ShaderResourceCacheGL::CachedUB& UB = m_ParentManager.m_ResourceCache.GetConstUB(GetAttribs().CacheOffset + ArrayIndex);
             return UB.pBuffer;
         }
 
@@ -146,9 +146,9 @@ public:
 
         virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
         {
-            const auto& Desc = GetDesc();
+            const PipelineResourceDesc& Desc = GetDesc();
             VERIFY_EXPR(ArrayIndex < Desc.ArraySize);
-            const auto& Tex = m_ParentManager.m_ResourceCache.GetConstTexture(GetAttribs().CacheOffset + ArrayIndex);
+            const ShaderResourceCacheGL::CachedResourceView& Tex = m_ParentManager.m_ResourceCache.GetConstTexture(GetAttribs().CacheOffset + ArrayIndex);
             return Tex.pView;
         }
     };
@@ -164,9 +164,9 @@ public:
 
         virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
         {
-            const auto& Desc = GetDesc();
+            const PipelineResourceDesc& Desc = GetDesc();
             VERIFY_EXPR(ArrayIndex < Desc.ArraySize);
-            const auto& Img = m_ParentManager.m_ResourceCache.GetConstImage(GetAttribs().CacheOffset + ArrayIndex);
+            const ShaderResourceCacheGL::CachedResourceView& Img = m_ParentManager.m_ResourceCache.GetConstImage(GetAttribs().CacheOffset + ArrayIndex);
             return Img.pView;
         }
     };
@@ -183,7 +183,7 @@ public:
         virtual IDeviceObject* DILIGENT_CALL_TYPE Get(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < GetDesc().ArraySize);
-            const auto& SSBO = m_ParentManager.m_ResourceCache.GetConstSSBO(GetAttribs().CacheOffset + ArrayIndex);
+            const ShaderResourceCacheGL::CachedSSBO& SSBO = m_ParentManager.m_ResourceCache.GetConstSSBO(GetAttribs().CacheOffset + ArrayIndex);
             return SSBO.pBufferView;
         }
 
@@ -219,7 +219,7 @@ public:
     const ResourceType& GetConstResource(Uint32 ResIndex) const
     {
         VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>(), ")");
-        auto Offset = GetResourceOffset<ResourceType>();
+        OffsetType Offset = GetResourceOffset<ResourceType>();
         return reinterpret_cast<const ResourceType*>(reinterpret_cast<const Uint8*>(m_pVariables) + Offset)[ResIndex];
     }
 
@@ -247,7 +247,7 @@ private:
     ResourceType& GetResource(Uint32 ResIndex) const
     {
         VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>() - 1, ")");
-        auto Offset = GetResourceOffset<ResourceType>();
+        OffsetType Offset = GetResourceOffset<ResourceType>();
         return reinterpret_cast<ResourceType*>(reinterpret_cast<Uint8*>(m_pVariables) + Offset)[ResIndex];
     }
 

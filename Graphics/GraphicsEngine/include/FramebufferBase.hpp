@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,11 +73,11 @@ public:
         {
             for (Uint32 i = 0; i < this->m_Desc.AttachmentCount; ++i)
             {
-                auto* const pAttachment = Desc.ppAttachments[i];
+                ITextureView* const pAttachment = Desc.ppAttachments[i];
                 if (pAttachment == nullptr)
                     continue;
 
-                const auto& ViewDesc = pAttachment->GetDesc();
+                const TextureViewDesc& ViewDesc = pAttachment->GetDesc();
                 if (ViewDesc.ViewType == TEXTURE_VIEW_SHADING_RATE)
                 {
                     // Dimensions of the shading rate texture are less than the dimensions of other attachments
@@ -85,8 +85,8 @@ public:
                     continue;
                 }
 
-                const auto& TexDesc       = pAttachment->GetTexture()->GetDesc();
-                const auto  MipLevelProps = GetMipLevelProperties(TexDesc, ViewDesc.MostDetailedMip);
+                const TextureDesc&       TexDesc       = pAttachment->GetTexture()->GetDesc();
+                const MipLevelProperties MipLevelProps = GetMipLevelProperties(TexDesc, ViewDesc.MostDetailedMip);
                 if (this->m_Desc.Width == 0)
                     this->m_Desc.Width = MipLevelProps.LogicalWidth;
                 if (this->m_Desc.Height == 0)
@@ -128,12 +128,12 @@ public:
         const RenderPassDesc& RPDesc = this->m_Desc.pRenderPass->GetDesc();
         for (Uint32 subpass = 0; subpass < RPDesc.SubpassCount; ++subpass)
         {
-            const auto& SubpassDesc = RPDesc.pSubpasses[subpass];
-            if (SubpassDesc.pDepthStencilAttachment == nullptr)
+            const SubpassDesc& Subpass = RPDesc.pSubpasses[subpass];
+            if (Subpass.pDepthStencilAttachment == nullptr)
                 continue;
-            if (SubpassDesc.pDepthStencilAttachment->AttachmentIndex == ATTACHMENT_UNUSED)
+            if (Subpass.pDepthStencilAttachment->AttachmentIndex == ATTACHMENT_UNUSED)
                 continue;
-            if (SubpassDesc.pDepthStencilAttachment->State != RESOURCE_STATE_DEPTH_READ)
+            if (Subpass.pDepthStencilAttachment->State != RESOURCE_STATE_DEPTH_READ)
                 continue;
 
             if (m_ppReadOnlyDSVs == nullptr)
@@ -143,10 +143,10 @@ public:
                 memset(m_ppReadOnlyDSVs, 0, sizeof(m_ppReadOnlyDSVs[0]) * RPDesc.SubpassCount);
             }
 
-            auto* pDepthAttachment = m_ppAttachments[SubpassDesc.pDepthStencilAttachment->AttachmentIndex];
+            ITextureView* pDepthAttachment = m_ppAttachments[Subpass.pDepthStencilAttachment->AttachmentIndex];
             VERIFY_EXPR(pDepthAttachment != nullptr);
 
-            auto DSVDesc = pDepthAttachment->GetDesc();
+            TextureViewDesc DSVDesc = pDepthAttachment->GetDesc();
             if (DSVDesc.ViewType == TEXTURE_VIEW_READ_ONLY_DEPTH_STENCIL)
             {
                 m_ppReadOnlyDSVs[subpass] = pDepthAttachment;
@@ -180,7 +180,7 @@ public:
 
         if (m_ppReadOnlyDSVs != nullptr)
         {
-            const auto SubpassCount = this->m_Desc.pRenderPass->GetDesc().SubpassCount;
+            const Uint32 SubpassCount = this->m_Desc.pRenderPass->GetDesc().SubpassCount;
             for (Uint32 i = 0; i < SubpassCount; ++i)
             {
                 if (m_ppReadOnlyDSVs[i] != nullptr)

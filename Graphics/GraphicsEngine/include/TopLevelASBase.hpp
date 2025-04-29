@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -121,9 +121,9 @@ public:
 
             for (Uint32 i = 0; i < InstanceCount; ++i)
             {
-                const auto&  Inst     = pInstances[i];
-                const char*  NameCopy = this->m_StringPool.CopyString(Inst.InstanceName);
-                InstanceDesc Desc     = {};
+                const TLASBuildInstanceData& Inst     = pInstances[i];
+                const char*                  NameCopy = this->m_StringPool.CopyString(Inst.InstanceName);
+                InstanceDesc                 Desc     = {};
 
                 Desc.pBLAS                       = ClassPtrCast<BottomLevelASImplType>(Inst.pBLAS);
                 Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
@@ -177,8 +177,8 @@ public:
 
         for (Uint32 i = 0; i < InstanceCount; ++i)
         {
-            const auto& Inst = pInstances[i];
-            auto        Iter = this->m_Instances.find(Inst.InstanceName);
+            const TLASBuildInstanceData& Inst = pInstances[i];
+            auto                         Iter = this->m_Instances.find(Inst.InstanceName);
 
             if (Iter == this->m_Instances.end())
             {
@@ -186,9 +186,9 @@ public:
                 return false;
             }
 
-            auto&      Desc      = Iter->second;
-            const auto PrevIndex = Desc.ContributionToHitGroupIndex;
-            const auto pPrevBLAS = Desc.pBLAS;
+            InstanceDesc&                        Desc      = Iter->second;
+            const Uint32                         PrevIndex = Desc.ContributionToHitGroupIndex;
+            RefCntAutoPtr<BottomLevelASImplType> pPrevBLAS = Desc.pBLAS;
 
             Desc.pBLAS                       = ClassPtrCast<BottomLevelASImplType>(Inst.pBLAS);
             Desc.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
@@ -250,7 +250,7 @@ public:
         auto Iter = this->m_Instances.find(Name);
         if (Iter != this->m_Instances.end())
         {
-            const auto& Inst                   = Iter->second;
+            const InstanceDesc& Inst           = Iter->second;
             Result.ContributionToHitGroupIndex = Inst.ContributionToHitGroupIndex;
             Result.InstanceIndex               = Inst.InstanceIndex;
             Result.pBLAS                       = Inst.pBLAS;
@@ -364,7 +364,7 @@ private:
             Desc.ContributionToHitGroupIndex = InstanceOffset;
             switch (BindingMode)
             {
-                // clang-format off
+                    // clang-format off
                 case HIT_GROUP_BINDING_MODE_PER_GEOMETRY:     InstanceOffset += Desc.pBLAS->GetActualGeometryCount() * HitGroupStride;                            break;
                 case HIT_GROUP_BINDING_MODE_PER_INSTANCE:     InstanceOffset += HitGroupStride;                                                                   break;
                 case HIT_GROUP_BINDING_MODE_PER_TLAS:         /* InstanceOffset is constant */                                                                  break;

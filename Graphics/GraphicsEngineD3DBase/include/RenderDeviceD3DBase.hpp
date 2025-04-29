@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -188,7 +188,7 @@ protected:
                                                                                   RESOURCE_DIMENSION Dimension,
                                                                                   Uint32             SampleCount) const override
     {
-        const auto ComponentType = CheckSparseTextureFormatSupport(TexFormat, Dimension, SampleCount, this->m_AdapterInfo.SparseResources);
+        const COMPONENT_TYPE ComponentType = CheckSparseTextureFormatSupport(TexFormat, Dimension, SampleCount, this->m_AdapterInfo.SparseResources);
         if (ComponentType == COMPONENT_TYPE_UNDEFINED)
             return {};
 
@@ -198,7 +198,7 @@ protected:
         TexDesc.MipLevels   = 1;
         TexDesc.SampleCount = SampleCount;
 
-        const auto SparseProps = GetStandardSparseTextureProperties(TexDesc);
+        const SparseTextureProperties SparseProps = GetStandardSparseTextureProperties(TexDesc);
 
         SparseTextureFormatInfo Info;
         Info.BindFlags   = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;

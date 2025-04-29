@@ -84,7 +84,7 @@ struct D3DTileMappingHelper
         VERIFY(Coordinates.empty() || UseNVApi == _UseNVApi, "Inconsistent use of NV API among different bind ranges");
         UseNVApi = _UseNVApi;
 
-        const auto& This = *static_cast<const ThisImplType*>(this);
+        const ThisImplType& This = *static_cast<const ThisImplType*>(this);
 
         D3D_TILED_RESOURCE_COORDINATE_TYPE d3dCoord{};
         d3dCoord.Subresource = This.CalcSubresource(BindRange.MipLevel, BindRange.ArraySlice, 0, TexDesc);
@@ -98,7 +98,7 @@ struct D3DTileMappingHelper
             d3dCoord.Y = BindRange.Region.MinY / TexSparseProps.TileSize[1];
             d3dCoord.Z = BindRange.Region.MinZ / TexSparseProps.TileSize[2];
 
-            const auto NumTiles    = GetNumSparseTilesInBox(BindRange.Region, TexSparseProps.TileSize);
+            const uint3 NumTiles   = GetNumSparseTilesInBox(BindRange.Region, TexSparseProps.TileSize);
             d3dRegionSize.NumTiles = NumTiles.x * NumTiles.y * NumTiles.z;
             d3dRegionSize.Width    = NumTiles.x;
             d3dRegionSize.Height   = StaticCast<UINT16>(NumTiles.y);
@@ -152,8 +152,8 @@ private:
         // If pRangeFlags[i] is D3D12_TILE_RANGE_FLAG_NONE, that range defines sequential tiles in the heap,
         // with the number of tiles being pRangeTileCounts[i] and the starting location pHeapRangeStartOffsets[i]
         const auto d3dRangeFlags  = pMemory != nullptr ? D3D_TILE_RANGE_FLAG_NONE : D3D_TILE_RANGE_FLAG_NULL;
-        const auto StartTile      = StaticCast<UINT>(MemOffsetInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
-        const auto RangeTileCount = d3dRegionSize.NumTiles;
+        const UINT StartTile      = StaticCast<UINT>(MemOffsetInBytes / D3D_TILED_RESOURCE_TILE_SIZE_IN_BYTES);
+        const UINT RangeTileCount = d3dRegionSize.NumTiles;
 
         VERIFY(RangeTileCount > 0, "Tile count must not be zero");
 
