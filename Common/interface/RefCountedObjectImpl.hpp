@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,7 +60,7 @@ public:
         VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
 
         // Decrement strong reference counter without acquiring the lock.
-        const auto RefCount = m_NumStrongReferences.fetch_add(-1) - 1;
+        const ReferenceCounterValueType RefCount = m_NumStrongReferences.fetch_add(-1) - 1;
         VERIFY(RefCount >= 0, "Inconsistent call to ReleaseStrongRef()");
         if (RefCount == 0)
         {
@@ -90,7 +90,7 @@ public:
         // while holding the lock. Otherwise reference counters object
         // may be destroyed twice if ReleaseStrongRef() is executed by other
         // thread.
-        const auto NumWeakReferences = m_NumWeakReferences.fetch_add(-1) - 1;
+        const ReferenceCounterValueType NumWeakReferences = m_NumWeakReferences.fetch_add(-1) - 1;
         VERIFY(NumWeakReferences >= 0, "Inconsistent call to ReleaseWeakRef()");
 
         // There are two special case when we must not destroy the ref counters object even
@@ -177,7 +177,7 @@ public:
         //
         Threading::SpinLockGuard Guard{m_Lock};
 
-        const auto StrongRefCnt = m_NumStrongReferences.fetch_add(+1) + 1;
+        const ReferenceCounterValueType StrongRefCnt = m_NumStrongReferences.fetch_add(+1) + 1;
 
         // Checking if m_ObjectState == ObjectState::Alive only is not reliable:
         //
@@ -199,7 +199,7 @@ public:
             // QueryInterface() must not lock the object, or a deadlock happens.
             // The only other two methods that lock the object are ReleaseStrongRef()
             // and ReleaseWeakRef(), which are never called by QueryInterface()
-            auto* pWrapper = reinterpret_cast<ObjectWrapperBase*>(m_ObjectWrapperBuffer);
+            ObjectWrapperBase* pWrapper = reinterpret_cast<ObjectWrapperBase*>(m_ObjectWrapperBuffer);
             pWrapper->QueryInterface(IID_Unknown, ppObject);
         }
         m_NumStrongReferences.fetch_add(-1);
@@ -356,7 +356,7 @@ private:
 
 #ifdef DILIGENT_DEBUG
         {
-            auto NumStrongRefs = m_NumStrongReferences.load();
+            ReferenceCounterValueType NumStrongRefs = m_NumStrongReferences.load();
             VERIFY(NumStrongRefs == 0 || NumStrongRefs == 1, "Num strong references (", NumStrongRefs, ") is expected to be 0 or 1");
         }
 #endif
@@ -393,7 +393,7 @@ private:
             memcpy(ObjectWrapperBufferCopy, m_ObjectWrapperBuffer, sizeof(m_ObjectWrapperBuffer));
             memset(m_ObjectWrapperBuffer, 0, sizeof(m_ObjectWrapperBuffer));
 
-            auto* pWrapper = reinterpret_cast<ObjectWrapperBase*>(ObjectWrapperBufferCopy);
+            ObjectWrapperBase* pWrapper = reinterpret_cast<ObjectWrapperBase*>(ObjectWrapperBufferCopy);
 
             // In a multithreaded environment, reference counters object may
             // be destroyed at any time while m_pObject->~dtor() is running.
@@ -427,7 +427,7 @@ private:
             // 2. Read m_NumWeakReferences == 0    |
             // 3. Destroy the ref counters obj     |   2. Destroy the ref counters obj
             //
-            const auto bDestroyThis = m_NumWeakReferences.load() == 0;
+            const bool bDestroyThis = m_NumWeakReferences.load() == 0;
             // ReleaseWeakRef() decrements m_NumWeakReferences, and checks it for
             // zero only after acquiring the lock. So if m_NumWeakReferences==0, no
             // weak reference-related code may be running

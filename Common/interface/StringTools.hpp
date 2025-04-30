@@ -119,8 +119,8 @@ inline bool StreqSuff(const char* RefStr, const char* Str, const char* Suff, boo
     if (RefStr == nullptr)
         return false;
 
-    const auto* r = RefStr;
-    const auto* s = Str;
+    const char* r = RefStr;
+    const char* s = Str;
     // abc_def     abc
     // ^           ^
     // r           s
@@ -195,8 +195,8 @@ inline size_t CountFloatNumberChars(const char* Str)
     if (Str == nullptr)
         return 0;
 
-    const auto* MemoryEnd = reinterpret_cast<const char*>(~uintptr_t{0});
-    const auto* NumEnd    = Parsing::SkipFloatNumber(Str, MemoryEnd);
+    const char* MemoryEnd = reinterpret_cast<const char*>(~uintptr_t{0});
+    const char* NumEnd    = Parsing::SkipFloatNumber(Str, MemoryEnd);
     return NumEnd - Str;
 }
 

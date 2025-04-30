@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -234,7 +234,7 @@ public:
         if (!m_DbgUsingExternalMemory)
         {
             VERIFY(m_DbgCurrAllocation < m_DbgAllocations.size(), "Allocation number exceed the number of allocations that were originally reserved.");
-            const auto& CurrAllocation = m_DbgAllocations[m_DbgCurrAllocation++];
+            const DbgAllocationInfo& CurrAllocation = m_DbgAllocations[m_DbgCurrAllocation++];
             VERIFY(CurrAllocation.size == size, "Allocation size (", size, ") does not match the initially requested size (", CurrAllocation.size, ")");
             VERIFY(CurrAllocation.alignment == alignment, "Allocation alignment (", alignment, ") does not match the initially requested alignment (", CurrAllocation.alignment, ")");
             dbgReservedSize = CurrAllocation.reserved_size;
@@ -253,7 +253,7 @@ public:
         VERIFY(m_DbgUsingExternalMemory || m_pCurrPtr + size <= m_pDataStart + dbgReservedSize,
                "Allocation size exceeds the initially reserved space. This is likely a bug.");
 
-        auto* ptr = m_pCurrPtr;
+        uint8_t* ptr = m_pCurrPtr;
         m_pCurrPtr += size;
 
         VERIFY(m_pCurrPtr <= m_pDataStart + m_ReservedSize, "Allocation size exceeds the reserved space");
@@ -294,7 +294,7 @@ public:
 
     void* Copy(const void* Src, size_t size, size_t alignment = 1)
     {
-        auto* Dst = Allocate(size, alignment);
+        void* Dst = Allocate(size, alignment);
         std::memcpy(Dst, Src, size);
         return Dst;
     }
@@ -324,7 +324,7 @@ public:
         if (StrLen == 0)
             StrLen = strlen(Str);
 
-        auto* Ptr = reinterpret_cast<Char*>(Allocate(StrLen + 1, 1));
+        Char* Ptr = reinterpret_cast<Char*>(Allocate(StrLen + 1, 1));
         std::memcpy(Ptr, Str, StrLen);
         Ptr[StrLen] = '\0';
 

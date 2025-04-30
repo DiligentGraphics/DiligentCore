@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -144,7 +144,7 @@ public:
             {
                 std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
 
-                const auto NumRunningTasks = m_NumRunningTasks.fetch_add(-1) - 1;
+                const int NumRunningTasks = m_NumRunningTasks.fetch_add(-1) - 1;
 
                 if (TaskFinished)
                 {
@@ -259,7 +259,7 @@ public:
 
     virtual bool DILIGENT_CALL_TYPE ReprioritizeTask(IAsyncTask* pTask) override final
     {
-        const auto Priority = pTask->GetPriority();
+        const float Priority = pTask->GetPriority();
 
         std::unique_lock<std::mutex> lock{m_TasksQueueMtx};
 
@@ -270,7 +270,7 @@ public:
         {
             if (it->first != Priority)
             {
-                auto ExistingTaskInfo = std::move(it->second);
+                QueuedTaskInfo ExistingTaskInfo = std::move(it->second);
                 m_TasksQueue.erase(it);
                 m_TasksQueue.emplace(Priority, std::move(ExistingTaskInfo));
             }
@@ -287,8 +287,8 @@ public:
         m_ReprioritizationList.clear();
         for (auto it = m_TasksQueue.begin(); it != m_TasksQueue.end();)
         {
-            auto& TaskInfo = it->second;
-            auto  Priority = TaskInfo.pTask->GetPriority();
+            QueuedTaskInfo& TaskInfo = it->second;
+            float           Priority = TaskInfo.pTask->GetPriority();
             if (it->first != Priority)
             {
                 m_ReprioritizationList.emplace_back(Priority, std::move(TaskInfo));

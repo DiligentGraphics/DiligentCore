@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,7 +116,7 @@ LinearTexFilterSampleInfo GetLinearTexFilterSampleInfo(Uint32 Width, float u)
 
     auto WrapCoord = [](Int32 i, Uint32 Width) //
     {
-        auto w = static_cast<Int32>(Width);
+        Int32 w = static_cast<Int32>(Width);
 
         // Note that the sign of a%b is implementation-dependent when one of the operands is negative.
         // a/b, to the contrary, is always well-defined.
@@ -128,7 +128,7 @@ LinearTexFilterSampleInfo GetLinearTexFilterSampleInfo(Uint32 Width, float u)
     {
         i = WrapCoord(i, Width * 2);
 
-        auto w = static_cast<Int32>(Width);
+        Int32 w = static_cast<Int32>(Width);
         return i >= w ? (w * 2 - 1) - i : i;
     };
 
@@ -203,8 +203,8 @@ DstType FilterTexture2DBilinear(Uint32         Width,
                                 float          u,
                                 float          v)
 {
-    auto UFilterInfo = GetLinearTexFilterSampleInfo<AddressModeU, IsNormalizedCoord>(Width, u);
-    auto VFilterInfo = GetLinearTexFilterSampleInfo<AddressModeV, IsNormalizedCoord>(Height, v);
+    LinearTexFilterSampleInfo UFilterInfo = GetLinearTexFilterSampleInfo<AddressModeU, IsNormalizedCoord>(Width, u);
+    LinearTexFilterSampleInfo VFilterInfo = GetLinearTexFilterSampleInfo<AddressModeV, IsNormalizedCoord>(Height, v);
 
 #ifdef DILIGENT_DEBUG
     {
@@ -213,10 +213,10 @@ DstType FilterTexture2DBilinear(Uint32         Width,
     }
 #endif
 
-    auto S00 = static_cast<DstType>(pData[UFilterInfo.i0 + VFilterInfo.i0 * Stride]);
-    auto S10 = static_cast<DstType>(pData[UFilterInfo.i1 + VFilterInfo.i0 * Stride]);
-    auto S01 = static_cast<DstType>(pData[UFilterInfo.i0 + VFilterInfo.i1 * Stride]);
-    auto S11 = static_cast<DstType>(pData[UFilterInfo.i1 + VFilterInfo.i1 * Stride]);
+    DstType S00 = static_cast<DstType>(pData[UFilterInfo.i0 + VFilterInfo.i0 * Stride]);
+    DstType S10 = static_cast<DstType>(pData[UFilterInfo.i1 + VFilterInfo.i0 * Stride]);
+    DstType S01 = static_cast<DstType>(pData[UFilterInfo.i0 + VFilterInfo.i1 * Stride]);
+    DstType S11 = static_cast<DstType>(pData[UFilterInfo.i1 + VFilterInfo.i1 * Stride]);
     return lerp(lerp(S00, S10, UFilterInfo.w), lerp(S01, S11, UFilterInfo.w), VFilterInfo.w);
 }
 

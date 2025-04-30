@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -47,9 +47,9 @@ void GetArray2DMinMaxValueGeneric(const float* pData,
 {
     for (size_t row = 0; row < Height; ++row)
     {
-        const auto* pRowStart = pData + row * StrideInFloats;
-        const auto* pRowEnd   = pRowStart + Width;
-        for (const auto* ptr = pRowStart; ptr < pRowEnd; ++ptr)
+        const float* pRowStart = pData + row * StrideInFloats;
+        const float* pRowEnd   = pRowStart + Width;
+        for (const float* ptr = pRowStart; ptr < pRowEnd; ++ptr)
         {
             MinValue = std::min(MinValue, *ptr);
             MaxValue = std::max(MaxValue, *ptr);

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ public:
         while (true)
         {
             // Assume that lock is free on the first try.
-            const auto WasLocked = m_IsLocked.exchange(true, std::memory_order_acquire);
+            const bool WasLocked = m_IsLocked.exchange(true, std::memory_order_acquire);
             if (!WasLocked)
                 return; // The lock was not acquired when this thread performed the exchange
 
@@ -71,7 +71,7 @@ public:
         if (is_locked())
             return false;
 
-        const auto WasLocked = m_IsLocked.exchange(true, std::memory_order_acquire);
+        const bool WasLocked = m_IsLocked.exchange(true, std::memory_order_acquire);
         return !WasLocked;
     }
 

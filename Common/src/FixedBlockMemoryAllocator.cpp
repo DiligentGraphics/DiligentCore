@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,7 @@ FixedBlockMemoryAllocator::MemoryPage::MemoryPage(FixedBlockMemoryAllocator& Own
     m_pOwnerAllocator     {&OwnerAllocator}
 // clang-format on
 {
-    const auto PageSize = OwnerAllocator.m_BlockSize * OwnerAllocator.m_NumBlocksInPage;
+    const size_t PageSize = OwnerAllocator.m_BlockSize * OwnerAllocator.m_NumBlocksInPage;
     VERIFY_EXPR(PageSize > 0);
     m_pPageStart = reinterpret_cast<Uint8*>(
         OwnerAllocator.m_RawMemoryAllocator.Allocate(PageSize, "FixedBlockMemoryAllocator page", __FILE__, __LINE__));
@@ -127,7 +127,7 @@ void* FixedBlockMemoryAllocator::MemoryPage::Allocate()
         //                       0   |           |                    |           |
         //                            -----------                      -----------
         //
-        auto* pUninitializedBlock = GetBlockStartAddress(m_NumInitializedBlocks);
+        void* pUninitializedBlock = GetBlockStartAddress(m_NumInitializedBlocks);
         FillWithDebugPattern(pUninitializedBlock, InitializedBlockMemPattern, m_pOwnerAllocator->m_BlockSize);
         void** ppNextBlock = reinterpret_cast<void**>(pUninitializedBlock);
         ++m_NumInitializedBlocks;
@@ -221,9 +221,9 @@ void* FixedBlockMemoryAllocator::Allocate(size_t Size, const Char* dbgDescriptio
         CreateNewPage();
     }
 
-    auto  PageId = *m_AvailablePages.begin();
-    auto& Page   = m_PagePool[PageId];
-    auto* Ptr    = Page.Allocate();
+    auto        PageId = *m_AvailablePages.begin();
+    MemoryPage& Page   = m_PagePool[PageId];
+    void*       Ptr    = Page.Allocate();
     m_AddrToPageId.insert(std::make_pair(Ptr, PageId));
     if (!Page.HasSpace())
     {
@@ -239,7 +239,7 @@ void FixedBlockMemoryAllocator::Free(void* Ptr)
     auto                        PageIdIt = m_AddrToPageId.find(Ptr);
     if (PageIdIt != m_AddrToPageId.end())
     {
-        auto PageId = PageIdIt->second;
+        size_t PageId = PageIdIt->second;
         VERIFY_EXPR(PageId < m_PagePool.size());
         m_PagePool[PageId].DeAllocate(Ptr);
         m_AvailablePages.insert(PageId);

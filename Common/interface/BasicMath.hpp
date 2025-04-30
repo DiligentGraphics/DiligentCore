@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -926,8 +926,8 @@ template <class T> struct Matrix2x2
 
     constexpr static Matrix2x2 Rotation(T angleInRadians)
     {
-        auto s = std::sin(angleInRadians);
-        auto c = std::cos(angleInRadians);
+        T s = std::sin(angleInRadians);
+        T c = std::cos(angleInRadians);
 
         return Matrix2x2 //
             {
@@ -1205,8 +1205,8 @@ template <class T> struct Matrix3x3
     // (x' y' z') = (x y z) * RotationX
     static Matrix3x3 RotationX(T angleInRadians)
     {
-        auto s = std::sin(angleInRadians);
-        auto c = std::cos(angleInRadians);
+        T s = std::sin(angleInRadians);
+        T c = std::cos(angleInRadians);
 
         return Matrix3x3 // clang-format off
             {
@@ -1221,8 +1221,8 @@ template <class T> struct Matrix3x3
     // (x' y' z' 1) = (x y z 1) * RotationY
     static Matrix3x3 RotationY(T angleInRadians)
     {
-        auto s = std::sin(angleInRadians);
-        auto c = std::cos(angleInRadians);
+        T s = std::sin(angleInRadians);
+        T c = std::cos(angleInRadians);
 
         return Matrix3x3 // clang-format off
             {
@@ -1237,8 +1237,8 @@ template <class T> struct Matrix3x3
     // (x' y' z' 1) = (x y z 1) * RotationZ
     static Matrix3x3 RotationZ(T angleInRadians)
     {
-        auto s = std::sin(angleInRadians);
-        auto c = std::cos(angleInRadians);
+        T s = std::sin(angleInRadians);
+        T c = std::cos(angleInRadians);
 
         return Matrix3x3 // clang-format off
             {
@@ -1316,8 +1316,8 @@ template <class T> struct Matrix3x3
                                _21, _22)
                       .Determinant();
 
-        auto det = _11 * Inv._11 + _12 * Inv._12 + _13 * Inv._13;
-        Inv      = Inv.Transpose();
+        T det = _11 * Inv._11 + _12 * Inv._12 + _13 * Inv._13;
+        Inv   = Inv.Transpose();
         Inv *= static_cast<T>(1) / det;
 
         return Inv;
@@ -1619,8 +1619,8 @@ template <class T> struct Matrix4x4
     // (x' y' z' 1) = (x y z 1) * RotationX
     static Matrix4x4 RotationX(T angleInRadians)
     {
-        auto s = std::sin(angleInRadians);
-        auto c = std::cos(angleInRadians);
+        T s = std::sin(angleInRadians);
+        T c = std::cos(angleInRadians);
 
         return Matrix4x4 // clang-format off
             {
@@ -1636,8 +1636,8 @@ template <class T> struct Matrix4x4
     // (x' y' z' 1) = (x y z 1) * RotationY
     static Matrix4x4 RotationY(T angleInRadians)
     {
-        auto s = std::sin(angleInRadians);
-        auto c = std::cos(angleInRadians);
+        T s = std::sin(angleInRadians);
+        T c = std::cos(angleInRadians);
 
         return Matrix4x4 // clang-format off
             {
@@ -1653,8 +1653,8 @@ template <class T> struct Matrix4x4
     // (x' y' z' 1) = (x y z 1) * RotationZ
     static Matrix4x4 RotationZ(T angleInRadians)
     {
-        auto s = std::sin(angleInRadians);
-        auto c = std::cos(angleInRadians);
+        T s = std::sin(angleInRadians);
+        T c = std::cos(angleInRadians);
 
         return Matrix4x4 // clang-format off
             {
@@ -1670,9 +1670,9 @@ template <class T> struct Matrix4x4
     {
         axis = normalize(axis);
 
-        auto sinAngle         = std::sin(angleInRadians);
-        auto cosAngle         = std::cos(angleInRadians);
-        auto oneMinusCosAngle = 1 - cosAngle;
+        T sinAngle         = std::sin(angleInRadians);
+        T cosAngle         = std::cos(angleInRadians);
+        T oneMinusCosAngle = 1 - cosAngle;
 
         Matrix4x4 mOut;
 
@@ -1790,10 +1790,11 @@ template <class T> struct Matrix4x4
     static Matrix4x4 Projection(T fov, T aspectRatio, T zNear, T zFar, bool NegativeOneToOneZ) // Left-handed projection
     {
         Matrix4x4 mOut;
-        auto      yScale = static_cast<T>(1) / std::tan(fov / static_cast<T>(2));
-        auto      xScale = yScale / aspectRatio;
-        mOut._11         = xScale;
-        mOut._22         = yScale;
+
+        T yScale = static_cast<T>(1) / std::tan(fov / static_cast<T>(2));
+        T xScale = yScale / aspectRatio;
+        mOut._11 = xScale;
+        mOut._22 = yScale;
 
         mOut.SetNearFarClipPlanes(zNear, zFar, NegativeOneToOneZ);
 
@@ -1980,8 +1981,8 @@ template <class T> struct Matrix4x4
                          _31, _32, _33)
                 .Determinant();
 
-        auto det = _11 * inv._11 + _12 * inv._12 + _13 * inv._13 + _14 * inv._14;
-        inv      = inv.Transpose();
+        T det = _11 * inv._11 + _12 * inv._12 + _13 * inv._13 + _14 * inv._14;
+        inv   = inv.Transpose();
         inv *= static_cast<T>(1) / det;
 
         return inv;
@@ -2353,23 +2354,23 @@ struct Quaternion
     static Quaternion RotationFromAxisAngle(const Vector3<T>& axis, T angle)
     {
         Quaternion out{0, 0, 0, 1};
-        const auto norm = length(axis);
+        const T    norm = length(axis);
         if (norm != 0)
         {
-            auto sina2 = std::sin(T{0.5} * angle);
-            out.q[0]   = sina2 * axis[0] / norm;
-            out.q[1]   = sina2 * axis[1] / norm;
-            out.q[2]   = sina2 * axis[2] / norm;
-            out.q[3]   = std::cos(T{0.5} * angle);
+            T sina2  = std::sin(T{0.5} * angle);
+            out.q[0] = sina2 * axis[0] / norm;
+            out.q[1] = sina2 * axis[1] / norm;
+            out.q[2] = sina2 * axis[2] / norm;
+            out.q[3] = std::cos(T{0.5} * angle);
         }
         return out;
     }
 
     void GetAxisAngle(Vector3<T>& outAxis, T& outAngle) const
     {
-        auto sina2 = std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]);
+        T sina2    = std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]);
         outAngle   = T{2} * std::atan2(sina2, q[3]);
-        auto r     = (sina2 > 0) ? (T{1} / sina2) : 0;
+        T r        = (sina2 > 0) ? (T{1} / sina2) : 0;
         outAxis[0] = r * q[0];
         outAxis[1] = r * q[1];
         outAxis[2] = r * q[2];
@@ -2378,27 +2379,29 @@ struct Quaternion
     Matrix4x4<T> ToMatrix() const
     {
         Matrix4x4<T> out;
-        auto         yy2 = 2.0f * q[1] * q[1];
-        auto         xy2 = 2.0f * q[0] * q[1];
-        auto         xz2 = 2.0f * q[0] * q[2];
-        auto         yz2 = 2.0f * q[1] * q[2];
-        auto         zz2 = 2.0f * q[2] * q[2];
-        auto         wz2 = 2.0f * q[3] * q[2];
-        auto         wy2 = 2.0f * q[3] * q[1];
-        auto         wx2 = 2.0f * q[3] * q[0];
-        auto         xx2 = 2.0f * q[0] * q[0];
-        out[0][0]        = -yy2 - zz2 + 1.0f;
-        out[0][1]        = xy2 + wz2;
-        out[0][2]        = xz2 - wy2;
-        out[0][3]        = 0;
-        out[1][0]        = xy2 - wz2;
-        out[1][1]        = -xx2 - zz2 + 1.0f;
-        out[1][2]        = yz2 + wx2;
-        out[1][3]        = 0;
-        out[2][0]        = xz2 + wy2;
-        out[2][1]        = yz2 - wx2;
-        out[2][2]        = -xx2 - yy2 + 1.0f;
-        out[2][3]        = 0;
+
+        T yy2 = 2.0f * q[1] * q[1];
+        T xy2 = 2.0f * q[0] * q[1];
+        T xz2 = 2.0f * q[0] * q[2];
+        T yz2 = 2.0f * q[1] * q[2];
+        T zz2 = 2.0f * q[2] * q[2];
+        T wz2 = 2.0f * q[3] * q[2];
+        T wy2 = 2.0f * q[3] * q[1];
+        T wx2 = 2.0f * q[3] * q[0];
+        T xx2 = 2.0f * q[0] * q[0];
+
+        out[0][0] = -yy2 - zz2 + 1.0f;
+        out[0][1] = xy2 + wz2;
+        out[0][2] = xz2 - wy2;
+        out[0][3] = 0;
+        out[1][0] = xy2 - wz2;
+        out[1][1] = -xx2 - zz2 + 1.0f;
+        out[1][2] = yz2 + wx2;
+        out[1][3] = 0;
+        out[2][0] = xz2 + wy2;
+        out[2][1] = yz2 - wx2;
+        out[2][2] = -xx2 - yy2 + 1.0f;
+        out[2][3] = 0;
         out[3][0] = out[3][1] = out[3][2] = 0;
         out[3][3]                         = 1;
         return out;
@@ -2460,7 +2463,7 @@ inline Quaternion<T> slerp(Quaternion<T> v0, Quaternion<T> v1, T t, bool DoNotNo
     }
 
     // Compute the cosine of the angle between the two vectors.
-    auto dp = dot(v0.q, v1.q);
+    T dp = dot(v0.q, v1.q);
 
     // If the dot product is negative, slerp won't take
     // the shorter path. Note that v1 and -v1 are equivalent when
@@ -2478,21 +2481,21 @@ inline Quaternion<T> slerp(Quaternion<T> v0, Quaternion<T> v1, T t, bool DoNotNo
         // If the inputs are too close for comfort, linearly interpolate
         // and normalize the result.
 
-        auto result = Quaternion<T>{v0.q + t * (v1.q - v0.q)};
-        result.q    = normalize(result.q);
+        Quaternion<T> result{v0.q + t * (v1.q - v0.q)};
+        result.q = normalize(result.q);
         return result;
     }
 
     // Since dot is in range [0, DOT_THRESHOLD], acos is safe
-    auto theta_0     = std::acos(dp);     // theta_0 = angle between input vectors
-    auto theta       = theta_0 * t;       // theta = angle between v0 and result
-    auto sin_theta   = std::sin(theta);   // compute this value only once
-    auto sin_theta_0 = std::sin(theta_0); // compute this value only once
+    T theta_0     = std::acos(dp);     // theta_0 = angle between input vectors
+    T theta       = theta_0 * t;       // theta = angle between v0 and result
+    T sin_theta   = std::sin(theta);   // compute this value only once
+    T sin_theta_0 = std::sin(theta_0); // compute this value only once
 
-    auto s0 = cos(theta) - dp * sin_theta / sin_theta_0; // == sin(theta_0 - theta) / sin(theta_0)
-    auto s1 = sin_theta / sin_theta_0;
+    T s0 = cos(theta) - dp * sin_theta / sin_theta_0; // == sin(theta_0 - theta) / sin(theta_0)
+    T s1 = sin_theta / sin_theta_0;
 
-    auto v = Quaternion<T>{v0.q * s0 + v1.q * s1};
+    Quaternion<T> v{v0.q * s0 + v1.q * s1};
     if (!DoNotNormalize)
     {
         v = normalize(v);
@@ -2510,7 +2513,7 @@ constexpr T lerp(const T& Left, const T& Right, float w)
 template <typename T>
 constexpr T SmoothStep(T Left, T Right, T w)
 {
-    auto t = clamp((w - Left) / (Right - Left), static_cast<T>(0), static_cast<T>(1));
+    T t = clamp((w - Left) / (Right - Left), static_cast<T>(0), static_cast<T>(1));
     return t * t * (static_cast<T>(3) - static_cast<T>(2) * t);
 }
 
@@ -2722,7 +2725,7 @@ T WrapToRange(T Value, T Min, T Range)
 template <typename T>
 bool BasisFromDirection(const Vector3<T>& Dir, bool IsRightHanded, Vector3<T>& X, Vector3<T>& Y, Vector3<T>& Z)
 {
-    auto Len = length(Dir);
+    T Len = length(Dir);
     if (Len < static_cast<T>(1e-5))
         return false;
 
@@ -2733,7 +2736,7 @@ bool BasisFromDirection(const Vector3<T>& Dir, bool IsRightHanded, Vector3<T>& X
         std::abs(Z.y),
         std::abs(Z.z),
     };
-    auto min_cmp = (std::min)((std::min)(AbsZ.x, AbsZ.y), AbsZ.z);
+    T min_cmp = (std::min)((std::min)(AbsZ.x, AbsZ.y), AbsZ.z);
     if (min_cmp == AbsZ.x)
         X = {1, 0, 0};
     else if (min_cmp == AbsZ.y)

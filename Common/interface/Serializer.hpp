@@ -298,8 +298,8 @@ private:
 
     void AlignOffset(size_t Alignment)
     {
-        const auto Size       = GetSize();
-        const auto AlignShift = AlignUp(Size, Alignment) - Size;
+        const size_t Size       = GetSize();
+        const size_t AlignShift = AlignUp(Size, Alignment) - Size;
         VERIFY_EXPR(m_Ptr + AlignShift <= m_End);
         m_Ptr += AlignShift;
     }

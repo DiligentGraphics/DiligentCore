@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,15 +116,15 @@ public:
     Char* Allocate(size_t Length)
     {
         VERIFY(m_pCurrPtr + Length <= m_pBuffer + m_ReservedSize, "Not enough space in the buffer");
-        auto* Ptr = m_pCurrPtr;
+        Char* Ptr = m_pCurrPtr;
         m_pCurrPtr += Length;
         return Ptr;
     }
 
     Char* CopyString(const String& Str)
     {
-        auto  len = Str.length();
-        auto* str = Allocate(len + 1);
+        size_t len = Str.length();
+        Char*  str = Allocate(len + 1);
         if (len != 0)
         {
             memcpy(str, Str.data(), len * sizeof(str[0]));
@@ -138,7 +138,7 @@ public:
         if (Str == nullptr)
             return nullptr;
 
-        auto* Ptr = m_pCurrPtr;
+        Char* Ptr = m_pCurrPtr;
         while (*Str != 0 && m_pCurrPtr < m_pBuffer + m_ReservedSize)
         {
             *(m_pCurrPtr++) = *(Str++);

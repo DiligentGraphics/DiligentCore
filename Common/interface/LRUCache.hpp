@@ -196,7 +196,7 @@ public:
 
                 // Note that transition to InitializedAccounted state is protected by the mutex in <SA>, so
                 // we can't remove a wrapper before it was accounted for.
-                const auto AccountedSize = cache_it->second->GetAccountedSize();
+                const size_t AccountedSize = cache_it->second->GetAccountedSize();
                 DeleteList.emplace_back(std::move(cache_it->second));
                 m_Cache.erase(cache_it); /* <Erase> */
                 m_LRUQueue.erase(m_LRUQueue.begin() + idx);

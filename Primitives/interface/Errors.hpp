@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,10 +54,10 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
 {
     std::string FileName(FullFilePath);
 
-    auto LastSlashPos = FileName.find_last_of("/\\");
+    size_t LastSlashPos = FileName.find_last_of("/\\");
     if (LastSlashPos != std::string::npos)
         FileName.erase(0, LastSlashPos + 1);
-    auto Msg = FormatString(Args...);
+    std::string Msg = FormatString(Args...);
     if (DebugMessageCallback != nullptr)
     {
         DebugMessageCallback(IsFatal ? DEBUG_MESSAGE_SEVERITY_FATAL_ERROR : DEBUG_MESSAGE_SEVERITY_ERROR, Msg.c_str(), Function, FileName.c_str(), Line);
@@ -115,7 +115,7 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
 #define LOG_DEBUG_MESSAGE(Severity, ...)                                                                                            \
     do                                                                                                                              \
     {                                                                                                                               \
-        auto _msg = Diligent::FormatString(__VA_ARGS__);                                                                            \
+        std::string _msg = Diligent::FormatString(__VA_ARGS__);                                                                     \
         if (Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback(Severity, _msg.c_str(), nullptr, nullptr, 0); \
     } while (false)
 

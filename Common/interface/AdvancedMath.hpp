@@ -379,10 +379,10 @@ inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const Bo
     //   Center = (Box.Max + Box.Min) * 0.5
     //   Distance = dot(Center, Plane.Normal) + Plane.Distance
     //            = dot(Box.Max + Box.Min, Plane.Normal) * 0.5 + Plane.Distance
-    const auto DistanceToCenter = dot(Box.Max + Box.Min, Plane.Normal) * 0.5f + Plane.Distance;
+    const float DistanceToCenter = dot(Box.Max + Box.Min, Plane.Normal) * 0.5f + Plane.Distance;
 
     // Calculate the projected half extents of the box onto the plane normal:
-    const auto ProjHalfLen = dot(Box.Max - Box.Min, abs(Plane.Normal)) * 0.5f;
+    const float ProjHalfLen = dot(Box.Max - Box.Min, abs(Plane.Normal)) * 0.5f;
 
     // Check if the box is completely outside the plane
     if (DistanceToCenter < -ProjHalfLen)
@@ -499,7 +499,7 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustum&  ViewFrustum,
 
         const Plane3D& CurrPlane = ViewFrustum.GetPlane(static_cast<ViewFrustum::PLANE_IDX>(plane_idx));
 
-        auto VisibilityAgainstPlane = GetBoxVisibilityAgainstPlane(CurrPlane, Box);
+        BoxVisibility VisibilityAgainstPlane = GetBoxVisibilityAgainstPlane(CurrPlane, Box);
 
         // If bounding box is "behind" one of the planes, it is definitely invisible
         if (VisibilityAgainstPlane == BoxVisibility::Invisible)
@@ -519,7 +519,7 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustumExt& ViewFrustumExt,
                                       const BoundBox&       Box,
                                       FRUSTUM_PLANE_FLAGS   PlaneFlags = FRUSTUM_PLANE_FLAG_FULL_FRUSTUM)
 {
-    auto Visibility = GetBoxVisibility(static_cast<const ViewFrustum&>(ViewFrustumExt), Box, PlaneFlags);
+    BoxVisibility Visibility = GetBoxVisibility(static_cast<const ViewFrustum&>(ViewFrustumExt), Box, PlaneFlags);
     if (Visibility == BoxVisibility::FullyVisible || Visibility == BoxVisibility::Invisible)
         return Visibility;
 
@@ -577,7 +577,7 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustumExt&      ViewFrustumExt,
                                       const OrientedBoundingBox& Box,
                                       FRUSTUM_PLANE_FLAGS        PlaneFlags = FRUSTUM_PLANE_FLAG_FULL_FRUSTUM)
 {
-    auto Visibility = GetBoxVisibility(static_cast<const ViewFrustum&>(ViewFrustumExt), Box, PlaneFlags);
+    BoxVisibility Visibility = GetBoxVisibility(static_cast<const ViewFrustum&>(ViewFrustumExt), Box, PlaneFlags);
     if (Visibility == BoxVisibility::FullyVisible || Visibility == BoxVisibility::Invisible)
         return Visibility;
 
@@ -600,8 +600,8 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustumExt&      ViewFrustumExt,
         // Test all frustum corners against every box plane
         for (int iBoundBoxPlane = 0; iBoundBoxPlane < 6; ++iBoundBoxPlane)
         {
-            const auto AxisIdx = iBoundBoxPlane / 2;
-            const auto Normal  = Box.Axes[AxisIdx] * (iBoundBoxPlane & 0x01 ? -1.f : +1.f);
+            const int    AxisIdx = iBoundBoxPlane / 2;
+            const float3 Normal  = Box.Axes[AxisIdx] * (iBoundBoxPlane & 0x01 ? -1.f : +1.f);
 
             bool bAllCornersOutside = true;
             for (int iCorner = 0; iCorner < 8; iCorner++)
@@ -649,7 +649,8 @@ inline float GetPointToBoxDistance(const BoundBox& BB, const float3& Pos)
 
 inline float GetPointToBoxDistanceSqr(const OrientedBoundingBox& OBB, const float3& Pos)
 {
-    const auto  RelPos = Pos - OBB.Center;
+    const float3 RelPos = Pos - OBB.Center;
+
     const float Projs[3] =
         {
             dot(RelPos, OBB.Axes[0]),
@@ -707,8 +708,8 @@ T HermiteSpline(T f0, // F(0)
                 Y x)
 {
     // https://en.wikipedia.org/wiki/Cubic_Hermite_spline
-    auto x2 = x * x;
-    auto x3 = x2 * x;
+    Y x2 = x * x;
+    Y x3 = x2 * x;
     return (2 * x3 - 3 * x2 + 1) * f0 + (x3 - 2 * x2 + x) * t0 + (-2 * x3 + 3 * x2) * f1 + (x3 - x2) * t1;
 }
 
@@ -723,7 +724,7 @@ inline void GetFrustumMinimumBoundingSphere(float   Proj_00,   ///< cot(HorzFOV 
 {
     // https://lxjk.github.io/2017/04/15/Calculate-Minimal-Bounding-Sphere-of-Frustum.html
     VERIFY_EXPR(FarPlane >= NearPlane);
-    auto k2 = 1.f / (Proj_00 * Proj_00) + 1.f / (Proj_11 * Proj_11);
+    float k2 = 1.f / (Proj_00 * Proj_00) + 1.f / (Proj_11 * Proj_11);
     if (k2 > (FarPlane - NearPlane) / (FarPlane + NearPlane))
     {
         Center = float3(0, 0, FarPlane);
@@ -902,7 +903,7 @@ void TraceLineThroughGrid(float2    f2Start,
                           TCallback Callback)
 {
     VERIFY_EXPR(i2GridSize.x > 0 && i2GridSize.y > 0);
-    const auto f2GridSize = i2GridSize.Recast<float>();
+    const float2 f2GridSize = i2GridSize.Recast<float>();
 
     if (f2Start == f2End)
     {
@@ -1104,8 +1105,8 @@ void RasterizeTriangle(Vector2<T> V0,
 
     if (iStartRow == iEndRow)
     {
-        auto iStartCol = static_cast<int>(FastCeil((min)(V0.x, V1.x, V2.x)));
-        auto iEndCol   = static_cast<int>(FastFloor((max)(V0.x, V1.x, V2.x)));
+        int iStartCol = static_cast<int>(FastCeil((min)(V0.x, V1.x, V2.x)));
+        int iEndCol   = static_cast<int>(FastFloor((max)(V0.x, V1.x, V2.x)));
         for (int iCol = iStartCol; iCol <= iEndCol; ++iCol)
         {
             Callback(int2{iCol, iStartRow});
@@ -1121,7 +1122,7 @@ void RasterizeTriangle(Vector2<T> V0,
 
     for (int iRow = iStartRow; iRow <= iEndRow; ++iRow)
     {
-        auto dStartCol = LerpCol(V0.x, V2.x, V0.y, V2.y, iRow);
+        T dStartCol = LerpCol(V0.x, V2.x, V0.y, V2.y, iRow);
 
         T dEndCol;
         if (static_cast<T>(iRow) < V1.y)
@@ -1624,7 +1625,7 @@ struct hash<Diligent::ViewFrustumExt>
 {
     size_t operator()(const Diligent::ViewFrustumExt& Frustum) const
     {
-        auto Seed = Diligent::ComputeHash(static_cast<const Diligent::ViewFrustum&>(Frustum));
+        size_t Seed = Diligent::ComputeHash(static_cast<const Diligent::ViewFrustum&>(Frustum));
         for (size_t Corner = 0; Corner < _countof(Frustum.FrustumCorners); ++Corner)
             Diligent::HashCombine(Seed, Frustum.FrustumCorners[Corner]);
         return Seed;

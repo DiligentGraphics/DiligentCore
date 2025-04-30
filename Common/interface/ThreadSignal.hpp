@@ -98,9 +98,9 @@ public:
         {
             m_CondVar.wait(Lock, [&] { return m_SignaledValue.load() != 0; });
         }
-        auto SignaledValue = m_SignaledValue.load();
+        int SignaledValue = m_SignaledValue.load();
         // Update the number of threads awaken while holding the mutex
-        const auto NumThreadsAwaken = m_NumThreadsAwaken.fetch_add(1) + 1;
+        const int NumThreadsAwaken = m_NumThreadsAwaken.fetch_add(1) + 1;
         // fetch_add returns the original value immediately preceding the addition.
         if (AutoReset)
         {

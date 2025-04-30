@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -143,9 +143,9 @@ inline std::size_t ComputeHashRaw(const void* pData, size_t Size) noexcept
 {
     size_t Hash = 0;
 
-    const auto* BytePtr  = static_cast<const Uint8*>(pData);
-    const auto* EndPtr   = BytePtr + Size;
-    const auto* DwordPtr = static_cast<const Uint32*>(AlignUp(pData, alignof(Uint32)));
+    const Uint8*  BytePtr  = static_cast<const Uint8*>(pData);
+    const Uint8*  EndPtr   = BytePtr + Size;
+    const Uint32* DwordPtr = static_cast<const Uint32*>(AlignUp(pData, alignof(Uint32)));
 
     // Process initial bytes before we get to the 32-bit aligned pointer
     Uint64 Buffer = 0;
@@ -238,8 +238,8 @@ public:
         Ownership_Hash = CStringHash<Char>{}.operator()(Str) & HashMask;
         if (bMakeCopy)
         {
-            auto  LenWithZeroTerm = strlen(Str) + 1;
-            auto* StrCopy         = new char[LenWithZeroTerm];
+            size_t LenWithZeroTerm = strlen(Str) + 1;
+            char*  StrCopy         = new char[LenWithZeroTerm];
             std::memcpy(StrCopy, Str, LenWithZeroTerm);
             Str = StrCopy;
             Ownership_Hash |= StrOwnershipMask;
@@ -311,8 +311,8 @@ public:
             return false;
         }
 
-        auto Hash    = GetHash();
-        auto RHSHash = RHS.GetHash();
+        size_t Hash    = GetHash();
+        size_t RHSHash = RHS.GetHash();
         if (Hash != RHSHash)
         {
             VERIFY_EXPR(strcmp(Str, RHS.Str) != 0);
@@ -530,7 +530,7 @@ struct HashCombiner<HasherType, BlendStateDesc> : HashCombinerBase<HasherType>
     {
         for (size_t i = 0; i < MAX_RENDER_TARGETS; ++i)
         {
-            const auto& rt = BSDesc.RenderTargets[i];
+            const RenderTargetBlendDesc& rt = BSDesc.RenderTargets[i];
 
             ASSERT_SIZEOF(rt.SrcBlend, 1, "Hash logic below may be incorrect.");
             ASSERT_SIZEOF(rt.DestBlend, 1, "Hash logic below may be incorrect.");
@@ -1144,7 +1144,7 @@ struct HashCombiner<HasherType, PipelineStateCreateInfo> : HashCombinerBase<Hash
         {
             for (size_t i = 0; i < CI.ResourceSignaturesCount; ++i)
             {
-                if (const auto* pSign = CI.ppResourceSignatures[i])
+                if (const IPipelineResourceSignature* pSign = CI.ppResourceSignatures[i])
                 {
                     this->m_Hasher(pSign->GetDesc());
                 }
@@ -1227,14 +1227,14 @@ struct HashCombiner<HasherType, RayTracingPipelineStateCreateInfo> : HashCombine
 
         for (size_t i = 0; i < CI.GeneralShaderCount; ++i)
         {
-            const auto& GeneralShader = CI.pGeneralShaders[i];
+            const RayTracingGeneralShaderGroup& GeneralShader = CI.pGeneralShaders[i];
             this->m_Hasher(GeneralShader.Name);
             HashShaderBytecode(this->m_Hasher, GeneralShader.pShader);
         }
 
         for (size_t i = 0; i < CI.TriangleHitShaderCount; ++i)
         {
-            const auto& TriHitShader = CI.pTriangleHitShaders[i];
+            const RayTracingTriangleHitShaderGroup& TriHitShader = CI.pTriangleHitShaders[i];
             this->m_Hasher(TriHitShader.Name);
             HashShaderBytecode(this->m_Hasher, TriHitShader.pAnyHitShader);
             HashShaderBytecode(this->m_Hasher, TriHitShader.pClosestHitShader);
@@ -1242,7 +1242,7 @@ struct HashCombiner<HasherType, RayTracingPipelineStateCreateInfo> : HashCombine
 
         for (size_t i = 0; i < CI.ProceduralHitShaderCount; ++i)
         {
-            const auto& ProcHitShader = CI.pProceduralHitShaders[i];
+            const RayTracingProceduralHitShaderGroup& ProcHitShader = CI.pProceduralHitShaders[i];
             this->m_Hasher(ProcHitShader.Name);
             HashShaderBytecode(this->m_Hasher, ProcHitShader.pAnyHitShader);
             HashShaderBytecode(this->m_Hasher, ProcHitShader.pClosestHitShader);

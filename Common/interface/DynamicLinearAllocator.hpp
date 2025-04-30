@@ -67,7 +67,7 @@ public:
 
     void Free()
     {
-        for (auto& block : m_Blocks)
+        for (Block& block : m_Blocks)
         {
             m_pAllocator->Free(block.Data);
         }
@@ -78,7 +78,7 @@ public:
 
     void Discard()
     {
-        for (auto& block : m_Blocks)
+        for (Block& block : m_Blocks)
         {
             block.CurrPtr = block.Data;
         }
@@ -89,9 +89,9 @@ public:
         if (size == 0)
             return nullptr;
 
-        for (auto& block : m_Blocks)
+        for (Block& block : m_Blocks)
         {
-            auto* Ptr = AlignUp(block.CurrPtr, align);
+            uint8_t* Ptr = AlignUp(block.CurrPtr, align);
             if (Ptr + size <= block.Data + block.Size)
             {
                 block.CurrPtr = Ptr + size;
@@ -105,8 +105,8 @@ public:
             BlockSize *= 2;
         m_Blocks.emplace_back(m_pAllocator->Allocate(BlockSize, "dynamic linear allocator page", __FILE__, __LINE__), BlockSize);
 
-        auto& block = m_Blocks.back();
-        auto* Ptr   = AlignUp(block.Data, align);
+        Block&   block = m_Blocks.back();
+        uint8_t* Ptr   = AlignUp(block.Data, align);
         VERIFY(Ptr + size <= block.Data + block.Size, "Not enough space in the new block - this is a bug");
         block.CurrPtr = Ptr + size;
         return Ptr;
@@ -174,7 +174,7 @@ public:
         else
             VERIFY_EXPR(len <= strlen(Str));
 
-        auto* Dst = Allocate<wchar_t>(len + 1);
+        wchar_t* Dst = Allocate<wchar_t>(len + 1);
         for (size_t i = 0; i < len; ++i)
         {
             Dst[i] = static_cast<wchar_t>(Str[i]);
@@ -201,8 +201,8 @@ public:
     template <typename HandlerType>
     void ProcessBlocks(HandlerType&& Handler) const
     {
-        for (const auto& Block : m_Blocks)
-            Handler(Block.Data, Block.Size);
+        for (const Block& block : m_Blocks)
+            Handler(block.Data, block.Size);
     }
 
 private:
