@@ -281,7 +281,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         m_DeviceInfo.NDC = NDCAttribs{-1.0f, 0.5f, 0.5f};
     }
 
-    if (m_GLCaps.FramebufferSRGB)
+    if ((pSCDesc->ColorBufferFormat == TEX_FORMAT_RGBA8_UNORM_SRGB ||
+         pSCDesc->ColorBufferFormat == TEX_FORMAT_BGRA8_UNORM_SRGB) &&
+        m_GLCaps.FramebufferSRGB)
     {
         // When GL_FRAMEBUFFER_SRGB is enabled, and if the destination image is in the sRGB colorspace
         // then OpenGL will assume the shader's output is in the linear RGB colorspace. It will therefore
