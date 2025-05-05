@@ -146,23 +146,25 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
             std::pair<int, int> gl_versions[] = {{4, 4}, {4, 3}, {4, 2}};
             for (size_t i = 0; i < _countof(gl_versions) && m_Context == NULL; ++i)
             {
+                // Setup attributes for a new OpenGL rendering context
                 const auto& version = gl_versions[i];
                 MajorVersion        = version.first;
                 MinorVersion        = version.second;
-                // Setup attributes for a new OpenGL rendering context
+
+                int ContextFlags = WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB;
+                if (InitAttribs.EnableValidation)
+                {
+                    ContextFlags |= WGL_CONTEXT_DEBUG_BIT_ARB;
+                }
+
                 int attribs[] =
                     {
                         WGL_CONTEXT_MAJOR_VERSION_ARB, MajorVersion,
                         WGL_CONTEXT_MINOR_VERSION_ARB, MinorVersion,
-                        WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+                        WGL_CONTEXT_FLAGS_ARB, ContextFlags,
                         GL_CONTEXT_PROFILE_MASK, GL_CONTEXT_CORE_PROFILE_BIT,
                         0, 0 //
                     };
-
-                if (InitAttribs.EnableValidation)
-                {
-                    attribs[5] |= WGL_CONTEXT_DEBUG_BIT_ARB;
-                }
 
                 // Create new rendering context
                 // In order to create new OpenGL rendering context we have to call function wglCreateContextAttribsARB(),
