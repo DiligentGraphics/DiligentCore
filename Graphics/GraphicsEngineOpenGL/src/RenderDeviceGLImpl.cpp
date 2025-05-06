@@ -676,12 +676,15 @@ void RenderDeviceGLImpl::InitAdapterInfo()
 
     // Set graphics adapter properties
     {
-        const std::string glstrVendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
-        const std::string Vendor      = StrToLower(glstrVendor);
+        const std::string glstrVendor   = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+        const std::string glstrRenderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+        const std::string Vendor        = StrToLower(glstrVendor);
+        const std::string Renderer      = StrToLower(glstrRenderer);
         LOG_INFO_MESSAGE("GPU Vendor: ", Vendor);
+        LOG_INFO_MESSAGE("GPU Renderer: ", Renderer);
 
-        for (size_t i = 0; i < _countof(m_AdapterInfo.Description) - 1 && i < glstrVendor.length(); ++i)
-            m_AdapterInfo.Description[i] = glstrVendor[i];
+        for (size_t i = 0; i < _countof(m_AdapterInfo.Description) - 1 && i < glstrRenderer.length(); ++i)
+            m_AdapterInfo.Description[i] = glstrRenderer[i];
 
         m_AdapterInfo.Type       = ADAPTER_TYPE_UNKNOWN;
         m_AdapterInfo.VendorId   = 0;
