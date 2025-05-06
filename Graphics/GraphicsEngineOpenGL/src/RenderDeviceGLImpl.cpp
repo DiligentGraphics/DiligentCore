@@ -695,10 +695,18 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         else if (Vendor.find("ati") != std::string::npos ||
                  Vendor.find("amd") != std::string::npos)
             m_AdapterInfo.Vendor = ADAPTER_VENDOR_AMD;
-        else if (Vendor.find("qualcomm"))
+        else if (Vendor.find("qualcomm") != std::string::npos)
             m_AdapterInfo.Vendor = ADAPTER_VENDOR_QUALCOMM;
-        else if (Vendor.find("arm"))
+        else if (Vendor.find("arm") != std::string::npos)
             m_AdapterInfo.Vendor = ADAPTER_VENDOR_ARM;
+        else if (Vendor.find("microsoft") != std::string::npos)
+            m_AdapterInfo.Vendor = ADAPTER_VENDOR_MSFT;
+        else if (Vendor.find("apple") != std::string::npos)
+            m_AdapterInfo.Vendor = ADAPTER_VENDOR_APPLE;
+        else if (Vendor.find("mesa") != std::string::npos)
+            m_AdapterInfo.Vendor = ADAPTER_VENDOR_MESA;
+        else if (Vendor.find("broadcom") != std::string::npos)
+            m_AdapterInfo.Vendor = ADAPTER_VENDOR_BROADCOM;
         else
             m_AdapterInfo.Vendor = ADAPTER_VENDOR_UNKNOWN;
     }
