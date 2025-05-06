@@ -48,6 +48,7 @@ GLContextState::GLContextState(RenderDeviceGLImpl* pDeviceGL)
     m_Caps.IsFillModeSelectionSupported    = AdapterInfo.Features.WireframeFill;
     m_Caps.IsProgramPipelineSupported      = AdapterInfo.Features.SeparablePrograms;
     m_Caps.IsDepthClampSupported           = AdapterInfo.Features.DepthClamp;
+    m_Caps.IsFramebufferSRGBSupported      = pDeviceGL->GetGLCaps().FramebufferSRGB;
 
     {
         m_Caps.MaxCombinedTexUnits = 0;
@@ -109,13 +110,14 @@ void GLContextState::Invalidate()
     m_BoundUniformBuffers.clear();
     m_BoundStorageBlocks.clear();
 
-    m_DSState = DepthStencilGLState();
-    m_RSState = RasterizerGLState();
+    m_DSState = DepthStencilGLState{};
+    m_RSState = RasterizerGLState{};
 
     for (Uint32 rt = 0; rt < _countof(m_ColorWriteMasks); ++rt)
         m_ColorWriteMasks[rt] = 0xFF;
 
-    m_bIndexedWriteMasks = EnableStateHelper();
+    m_bIndexedWriteMasks = EnableStateHelper{};
+    m_bFramebufferSRGB   = EnableStateHelper{};
 
     m_iActiveTexture   = -1;
     m_NumPatchVertices = -1;
@@ -177,7 +179,7 @@ void GLContextState::BindVAO(const GLVertexArrayObj& VAO)
     }
 }
 
-void GLContextState::BindFBO(const GLFrameBufferObj& FBO)
+void GLContextState::BindFBO(const GLFrameBufferObj& FBO, bool DoEnableFramebufferSRGB)
 {
     GLuint FBOHandle = 0;
     if (UpdateBoundObject(m_FBOId, FBO, FBOHandle))
@@ -193,6 +195,8 @@ void GLContextState::BindFBO(const GLFrameBufferObj& FBO)
         DEV_CHECK_GL_ERROR("Failed to bind FBO as draw framebuffer");
         glBindFramebuffer(GL_READ_FRAMEBUFFER, FBOHandle);
         DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
+
+        EnableFramebufferSRGB(DoEnableFramebufferSRGB);
     }
 }
 
@@ -904,6 +908,27 @@ void GLContextState::GetColorWriteMask(Uint32 RTIndex, Uint32& WriteMask, Bool& 
     if (WriteMask == 0xFF)
         WriteMask = 0xF;
     bIsIndexed = m_bIndexedWriteMasks;
+}
+
+void GLContextState::EnableFramebufferSRGB(Bool bEnable)
+{
+    if (!m_Caps.IsFramebufferSRGBSupported)
+        return;
+
+    if (m_bFramebufferSRGB != bEnable)
+    {
+        if (bEnable)
+        {
+            glEnable(GL_FRAMEBUFFER_SRGB);
+            DEV_CHECK_GL_ERROR("Failed to enable framebuffer sRGB");
+        }
+        else
+        {
+            glDisable(GL_FRAMEBUFFER_SRGB);
+            DEV_CHECK_GL_ERROR("Failed to disable framebuffer sRGB");
+        }
+        m_bFramebufferSRGB = bEnable;
+    }
 }
 
 void GLContextState::SetNumPatchVertices(Int32 NumVertices)

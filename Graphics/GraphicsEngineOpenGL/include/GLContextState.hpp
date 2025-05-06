@@ -49,7 +49,7 @@ public:
     void SetProgram        (const GLObjectWrappers::GLProgramObj&     GLProgram);
     void SetPipeline       (const GLObjectWrappers::GLPipelineObj&    GLPipeline);
     void BindVAO           (const GLObjectWrappers::GLVertexArrayObj& VAO);
-    void BindFBO           (const GLObjectWrappers::GLFrameBufferObj& FBO);
+    void BindFBO           (const GLObjectWrappers::GLFrameBufferObj& FBO, bool DoEnableFramebufferSRGB = true);
     void SetActiveTexture  (Int32 Index);
     void BindTexture       (Int32 Index, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& Tex);
     void BindUniformBuffer (Int32 Index,       const GLObjectWrappers::GLBufferObj& Buff, GLintptr Offset, GLsizeiptr Size);
@@ -85,6 +85,7 @@ public:
     void GetColorWriteMask(Uint32 RTIndex, Uint32& WriteMask, Bool& bIsIndexed);
     void SetColorWriteMask(Uint32 WriteMask);
     void SetColorWriteMaskIndexed(Uint32 RTIndex, Uint32 WriteMask);
+    void EnableFramebufferSRGB(Bool bEnable);
 
     Uint8 GetStencilWriteMask() const { return static_cast<Uint8>(m_DSState.m_StencilWriteMask); }
 
@@ -118,6 +119,7 @@ public:
         bool  IsFillModeSelectionSupported = true;
         bool  IsProgramPipelineSupported   = true;
         bool  IsDepthClampSupported        = true;
+        bool  IsFramebufferSRGBSupported   = false;
         GLint MaxCombinedTexUnits          = 0;
         GLint MaxDrawBuffers               = 0;
         GLint MaxUniformBufferBindings     = 0;
@@ -310,6 +312,7 @@ private:
 
     Uint32            m_ColorWriteMasks[MAX_RENDER_TARGETS] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     EnableStateHelper m_bIndexedWriteMasks;
+    EnableStateHelper m_bFramebufferSRGB;
     Int32             m_iActiveTexture   = -1;
     Int32             m_NumPatchVertices = -1;
 

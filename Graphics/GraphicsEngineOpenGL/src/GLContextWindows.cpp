@@ -127,6 +127,9 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs,
         if (nPixelFormat == 0)
             LOG_ERROR_AND_THROW("Invalid Pixel Format");
 
+        // NB: An application can only set the pixel format of a window one time.
+        //     Once a window's pixel format is set, it cannot be changed.
+        //     https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setpixelformat
         BOOL bResult = SetPixelFormat(m_WindowHandleToDeviceContext, nPixelFormat, &pfd);
         if (!bResult)
             LOG_ERROR_AND_THROW("Failed to set Pixel Format");

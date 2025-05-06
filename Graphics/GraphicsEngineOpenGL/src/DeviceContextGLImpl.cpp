@@ -366,6 +366,34 @@ GLuint DeviceContextGLImpl::GetDefaultFBO() const
     return m_pSwapChain ? m_pSwapChain->GetDefaultFBO() : 0;
 }
 
+void DeviceContextGLImpl::CommitDefaultFramebuffer()
+{
+    GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
+    if (m_DefaultFBO != DefaultFBOHandle)
+    {
+        m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper{DefaultFBOHandle}};
+    }
+
+    // In theory, we should not be messing with GL_FRAMEBUFFER_SRGB, but sRGB conversion
+    // control for default framebuffers is totally broken.
+    // https://github.com/DiligentGraphics/DiligentCore/issues/124
+    bool EnableFramebufferSRGB = true;
+    if (m_ContextState.GetContextCaps().IsFramebufferSRGBSupported)
+    {
+        if (DefaultFBOHandle == 0 && m_NumBoundRenderTargets == 1)
+        {
+            if (const TextureViewGLImpl* pRT0 = m_pBoundRenderTargets[0])
+            {
+                const TEXTURE_FORMAT Fmt = pRT0->GetDesc().Format;
+                EnableFramebufferSRGB    = (Fmt == TEX_FORMAT_RGBA8_UNORM_SRGB || Fmt == TEX_FORMAT_BGRA8_UNORM_SRGB);
+            }
+        }
+    }
+
+    m_ContextState.BindFBO(m_DefaultFBO, EnableFramebufferSRGB);
+    m_DrawFBO = nullptr;
+}
+
 void DeviceContextGLImpl::CommitRenderTargets()
 {
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "This method must not be called inside render pass");
@@ -375,13 +403,7 @@ void DeviceContextGLImpl::CommitRenderTargets()
 
     if (m_IsDefaultFBOBound)
     {
-        GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
-        if (m_DefaultFBO != DefaultFBOHandle)
-        {
-            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper{DefaultFBOHandle}};
-        }
-        m_ContextState.BindFBO(m_DefaultFBO);
-        m_DrawFBO = nullptr;
+        CommitDefaultFramebuffer();
     }
     else
     {
@@ -475,13 +497,7 @@ void DeviceContextGLImpl::BeginSubpass()
     }
     else
     {
-        GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
-        if (m_DefaultFBO != DefaultFBOHandle)
-        {
-            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper{DefaultFBOHandle}};
-        }
-        m_ContextState.BindFBO(m_DefaultFBO);
-        m_DrawFBO = nullptr;
+        CommitDefaultFramebuffer();
     }
 
 

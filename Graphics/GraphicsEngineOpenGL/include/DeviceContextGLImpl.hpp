@@ -316,6 +316,8 @@ protected:
     GLContextState m_ContextState;
 
 private:
+    void CommitDefaultFramebuffer();
+
     __forceinline void PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenum& GlTopology);
     __forceinline void PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 FirstIndexLocation, GLenum& GLIndexType, size_t& FirstIndexByteOffset);
     __forceinline void PrepareForIndirectDraw(IBuffer* pAttribsBuffer);
