@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,9 +75,9 @@ TEXTURE_FORMAT TestFormats[] =
 
 TEST(CopyTexture, Texture2D)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -85,7 +85,7 @@ TEST(CopyTexture, Texture2D)
     {
         GPUTestingEnvironment::ScopedReleaseResources AutoReleaseResources;
 
-        auto Format = TestFormats[f];
+        TEXTURE_FORMAT Format = TestFormats[f];
 
         TextureDesc TexDesc;
         TexDesc.Type      = RESOURCE_DIM_TEX_2D;
@@ -98,8 +98,8 @@ TEST(CopyTexture, Texture2D)
 
         Diligent::RefCntAutoPtr<ITexture> pSrcTex, pDstTex;
 
-        auto                 FmtAttribs = pDevice->GetTextureFormatInfo(Format);
-        auto                 TexelSize  = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        TextureFormatInfo    FmtAttribs = pDevice->GetTextureFormatInfo(Format);
+        Uint32               TexelSize  = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         std::vector<uint8_t> DummyData(size_t{TexDesc.Width} * size_t{TexDesc.Height} * size_t{TexelSize});
         TextureData          InitData;
         InitData.NumSubresources = TexDesc.MipLevels;
@@ -139,9 +139,9 @@ TEST(CopyTexture, Texture2D)
 
 TEST(CopyTexture, Texture2DArray)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -149,7 +149,7 @@ TEST(CopyTexture, Texture2DArray)
     {
         GPUTestingEnvironment::ScopedReleaseResources AutoReleaseResources;
 
-        auto Format = TestFormats[f];
+        TEXTURE_FORMAT Format = TestFormats[f];
 
         TextureDesc TexDesc;
         TexDesc.Type      = RESOURCE_DIM_TEX_2D_ARRAY;
@@ -162,8 +162,8 @@ TEST(CopyTexture, Texture2DArray)
         TexDesc.Usage     = USAGE_DEFAULT;
 
         Diligent::RefCntAutoPtr<ITexture> pSrcTex, pDstTex;
-        auto                              FmtAttribs = pDevice->GetTextureFormatInfo(Format);
-        auto                              TexelSize  = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        TextureFormatInfo                 FmtAttribs = pDevice->GetTextureFormatInfo(Format);
+        Uint32                            TexelSize  = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         std::vector<uint8_t>              DummyData(size_t{TexDesc.Width} * size_t{TexDesc.Height} * size_t{TexelSize});
         TextureData                       InitData;
         InitData.NumSubresources = TexDesc.MipLevels * TexDesc.ArraySize;
@@ -212,9 +212,9 @@ TEST(CopyTexture, Texture2DArray)
 
 TEST(CopyTexture, Texture3D)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -222,7 +222,7 @@ TEST(CopyTexture, Texture3D)
     {
         GPUTestingEnvironment::ScopedReleaseResources AutoReleaseResources;
 
-        auto Format = TestFormats[f];
+        TEXTURE_FORMAT Format = TestFormats[f];
 
         TextureDesc TexDesc;
         TexDesc.Type      = RESOURCE_DIM_TEX_3D;
@@ -236,8 +236,8 @@ TEST(CopyTexture, Texture3D)
 
         Diligent::RefCntAutoPtr<ITexture> pSrcTex, pDstTex;
 
-        auto                 FmtAttribs = pDevice->GetTextureFormatInfo(Format);
-        auto                 TexelSize  = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        TextureFormatInfo    FmtAttribs = pDevice->GetTextureFormatInfo(Format);
+        Uint32               TexelSize  = Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
         std::vector<uint8_t> DummyData(size_t{TexDesc.Width} * size_t{TexDesc.Height} * size_t{TexDesc.Depth} * size_t{TexelSize});
         TextureData          InitData;
         InitData.NumSubresources = TexDesc.MipLevels;

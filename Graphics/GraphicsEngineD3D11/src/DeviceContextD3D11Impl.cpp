@@ -1715,7 +1715,7 @@ void DeviceContextD3D11Impl::BeginSubpass()
         const Uint32               RTAttachmentIdx = AttachmentRef.AttachmentIndex;
         if (RTAttachmentIdx != ATTACHMENT_UNUSED)
         {
-            const auto AttachmentFirstUse = m_pActiveRenderPass->GetAttachmentFirstLastUse(RTAttachmentIdx).first;
+            const Uint32 AttachmentFirstUse = m_pActiveRenderPass->GetAttachmentFirstLastUse(RTAttachmentIdx).first;
             if (AttachmentFirstUse == m_SubpassIndex && RPDesc.pAttachments[RTAttachmentIdx].LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
             {
                 if (ITextureView* pTexView = FBDesc.ppAttachments[RTAttachmentIdx])
@@ -1734,7 +1734,7 @@ void DeviceContextD3D11Impl::BeginSubpass()
         Uint32 DSAttachmentIdx = Subpass.pDepthStencilAttachment->AttachmentIndex;
         if (DSAttachmentIdx != ATTACHMENT_UNUSED)
         {
-            const auto AttachmentFirstUse = m_pActiveRenderPass->GetAttachmentFirstLastUse(DSAttachmentIdx).first;
+            const Uint32 AttachmentFirstUse = m_pActiveRenderPass->GetAttachmentFirstLastUse(DSAttachmentIdx).first;
             if (AttachmentFirstUse == m_SubpassIndex && RPDesc.pAttachments[DSAttachmentIdx].LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
             {
                 if (ITextureView* pTexView = FBDesc.ppAttachments[DSAttachmentIdx])
@@ -2557,7 +2557,7 @@ void DeviceContextD3D11Impl::DvpVerifyCommittedResources(TD3D11ResourceType     
             (m_pd3d11DeviceContext->*GetResMethod)(0, _countof(pctxResources), pctxResources);
         }
         const auto* CommittedResources    = CommittedD3D11ResourcesArr[ShaderInd];
-        const auto  NumCommittedResources = NumCommittedResourcesArr[ShaderInd];
+        const Uint8 NumCommittedResources = NumCommittedResourcesArr[ShaderInd];
         for (Uint32 Slot = 0; Slot < _countof(pctxResources); ++Slot)
         {
             if (Slot < NumCommittedResources)

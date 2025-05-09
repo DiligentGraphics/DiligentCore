@@ -4008,7 +4008,7 @@ void DeviceContextVkImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COM
 {
     TDeviceContextBase::SetShadingRate(BaseRate, PrimitiveCombiner, TextureCombiner, 0);
 
-    const auto& ExtFeatures = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
+    const VulkanUtilities::LogicalDevice::ExtensionFeatures& ExtFeatures = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures();
     if (ExtFeatures.ShadingRate.attachmentFragmentShadingRate != VK_FALSE)
     {
         const VkFragmentShadingRateCombinerOpKHR CombinerOps[2] =
@@ -4136,7 +4136,7 @@ void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemor
             DEV_CHECK_ERR((SrcRange.pMemory != nullptr) == (pMemVk != nullptr),
                           "Failed to query IDeviceMemoryVk interface from non-null memory object");
 
-            const auto MemRangeVk = pMemVk ? pMemVk->GetRange(SrcRange.MemoryOffset, SrcRange.MemorySize) : DeviceMemoryRangeVk{};
+            const DeviceMemoryRangeVk MemRangeVk = pMemVk ? pMemVk->GetRange(SrcRange.MemoryOffset, SrcRange.MemorySize) : DeviceMemoryRangeVk{};
             DEV_CHECK_ERR((MemRangeVk.Offset % TexSparseProps.BlockSize) == 0,
                           "MemoryOffset must be a multiple of the SparseTextureProperties::BlockSize");
 

@@ -2565,7 +2565,7 @@ void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, const
 #ifdef DILIGENT_DEVELOPMENT
         DvpVerifyStateTransitionDesc(pResourceBarriers[i]);
 #endif
-        const auto& Barrier = pResourceBarriers[i];
+        const StateTransitionDesc& Barrier = pResourceBarriers[i];
         if (Barrier.Flags & STATE_TRANSITION_FLAG_ALIASING)
         {
             AliasingBarrier(CmdCtx, Barrier.pResourceBefore, Barrier.pResource);
@@ -2703,7 +2703,7 @@ void DeviceContextD3D12Impl::ResolveTextureSubresource(ITexture*                
     TEXTURE_FORMAT Format = ResolveAttribs.Format;
     if (Format == TEX_FORMAT_UNKNOWN)
     {
-        const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+        const TextureFormatAttribs& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
         if (!SrcFmtAttribs.IsTypeless)
         {
             Format = SrcTexDesc.Format;
