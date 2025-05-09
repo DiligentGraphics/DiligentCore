@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -88,6 +88,11 @@ public:
     bool IsUsingNVApi() const
     {
         return m_Desc.Usage == USAGE_SPARSE && m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY && m_pDevice->GetDummyNVApiHeap() != nullptr;
+    }
+
+    Uint8 GetFormatPlaneCount() const
+    {
+        return m_FormatPlaneCount;
     }
 
 protected:

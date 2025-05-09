@@ -469,10 +469,10 @@ void TextureVkImpl::InitializeContentOnDevice(const TextureData&          InitDa
             // bufferRowLength and bufferImageHeight specify the data in buffer memory as a subregion
             // of a larger two- or three-dimensional image, and control the addressing calculations of
             // data in buffer memory. If either of these values is zero, that aspect of the buffer memory
-            // is considered to be tightly packed according to the imageExtent. (18.4)
+            // is considered to be tightly packed according to the imageExtent.
             CopyRegion.bufferRowLength   = 0;
             CopyRegion.bufferImageHeight = 0;
-            // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
+            // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks
             CopyRegion.imageOffset = VkOffset3D{0, 0, 0};
             CopyRegion.imageExtent = VkExtent3D{MipInfo.LogicalWidth, MipInfo.LogicalHeight, MipInfo.Depth};
 
@@ -485,9 +485,9 @@ void TextureVkImpl::InitializeContentOnDevice(const TextureData&          InitDa
             // For compressed-block formats, MipInfo.RowSize is the size of one row of blocks
             VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= (MipInfo.StorageHeight / FmtAttribs.BlockHeight) * MipInfo.RowSize, "Depth stride is too small");
 
-            // bufferOffset must be a multiple of 4 (18.4)
+            // bufferOffset must be a multiple of 4
             // If the calling command's VkImage parameter is a compressed image, bufferOffset
-            // must be a multiple of the compressed texel block size in bytes (18.4). This
+            // must be a multiple of the compressed texel block size in bytes. This
             // is automatically guaranteed as MipWidth and MipHeight are rounded to block size
             uploadBufferSize += (MipInfo.MipSize + 3) & (~3);
             ++subres;
@@ -569,7 +569,7 @@ void TextureVkImpl::InitializeContentOnDevice(const TextureData&          InitDa
     // Copy commands MUST be recorded outside of a render pass instance. This is OK here
     // as copy will be the only command in the cmd buffer
     CmdBuffer.CopyBufferToImage(StagingBuffer, m_VulkanImage,
-                                CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.4)
+                                CurrentLayout, // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL
                                 static_cast<uint32_t>(Regions.size()), Regions.data());
 
     GetDevice()->ExecuteAndDisposeTransientCmdBuff(CmdQueueInd, CmdBuffer.GetVkCmdBuffer(), std::move(CmdPool));

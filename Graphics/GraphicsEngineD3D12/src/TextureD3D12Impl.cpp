@@ -152,6 +152,10 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     D3D12_RESOURCE_DESC d3d12TexDesc       = GetD3D12TextureDesc();
     const bool          bInitializeTexture = (pInitData != nullptr && pInitData->pSubResources != nullptr && pInitData->NumSubresources > 0);
 
+    ID3D12Device* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
+    if (UINT8 FormatPlaneCount = D3D12GetFormatPlaneCount(pd3d12Device, d3d12TexDesc.Format))
+        m_FormatPlaneCount = FormatPlaneCount;
+
     const SoftwareQueueIndex CmdQueueInd = pInitData != nullptr && pInitData->pContext != nullptr ?
         ClassPtrCast<DeviceContextD3D12Impl>(pInitData->pContext)->GetCommandQueueId() :
         SoftwareQueueIndex{PlatformMisc::GetLSB(m_Desc.ImmediateContextMask)};
@@ -185,7 +189,6 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         pClearValue = &ClearValue;
     }
 
-    ID3D12Device* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
     if (m_Desc.Usage == USAGE_SPARSE)
     {
         d3d12TexDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
@@ -505,6 +508,10 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 {
     m_pd3d12Resource = pTexture;
     SetState(InitialState);
+
+    ID3D12Device* pd3d12Device = pDeviceD3D12->GetD3D12Device();
+    if (UINT8 FormatPlaneCount = D3D12GetFormatPlaneCount(pd3d12Device, m_pd3d12Resource->GetDesc().Format))
+        m_FormatPlaneCount = FormatPlaneCount;
 
     if (m_Desc.Usage == USAGE_SPARSE)
         InitSparseProperties();

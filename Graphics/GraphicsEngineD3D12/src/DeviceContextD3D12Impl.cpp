@@ -30,6 +30,7 @@
 #include "DeviceContextD3D12Impl.hpp"
 
 #include <sstream>
+#include <array>
 
 #include "RenderDeviceD3D12Impl.hpp"
 #include "PipelineStateD3D12Impl.hpp"
@@ -1957,19 +1958,29 @@ void DeviceContextD3D12Impl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         pD3D12SrcBox       = &D3D12SrcBox;
     }
 
-    UINT DstSubResIndex = D3D12CalcSubresource(CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, 0, DstTexDesc.MipLevels, DstTexDesc.GetArraySize());
-    UINT SrcSubResIndex = D3D12CalcSubresource(CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, 0, SrcTexDesc.MipLevels, SrcTexDesc.GetArraySize());
-    CopyTextureRegion(pSrcTexD3D12, SrcSubResIndex, pD3D12SrcBox, CopyAttribs.SrcTextureTransitionMode,
-                      pDstTexD3D12, DstSubResIndex, CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ,
+    static constexpr Uint32                            MaxFormatPlaneCount = 2; // Depth and stencil planes
+    std::array<SubresCopyMapping, MaxFormatPlaneCount> Planes;
+
+    Uint32 NumPlanes = std::min(pSrcTexD3D12->GetFormatPlaneCount(), pDstTexD3D12->GetFormatPlaneCount());
+    VERIFY(NumPlanes <= MaxFormatPlaneCount, "Number of planes (", NumPlanes, ") exceeds maximum supported plane count (", MaxFormatPlaneCount, ")");
+    NumPlanes = std::min(NumPlanes, MaxFormatPlaneCount);
+    for (Uint32 i = 0; i < NumPlanes; ++i)
+    {
+        Planes[i].Dst = D3D12CalcSubresource(CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, i, DstTexDesc.MipLevels, DstTexDesc.GetArraySize());
+        Planes[i].Src = D3D12CalcSubresource(CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, i, SrcTexDesc.MipLevels, SrcTexDesc.GetArraySize());
+    }
+    CopyTextureRegion(pSrcTexD3D12, pD3D12SrcBox, CopyAttribs.SrcTextureTransitionMode, pDstTexD3D12,
+                      Planes.data(), NumPlanes,
+                      CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ,
                       CopyAttribs.DstTextureTransitionMode);
 }
 
 void DeviceContextD3D12Impl::CopyTextureRegion(TextureD3D12Impl*              pSrcTexture,
-                                               Uint32                         SrcSubResIndex,
                                                const D3D12_BOX*               pD3D12SrcBox,
                                                RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode,
                                                TextureD3D12Impl*              pDstTexture,
-                                               Uint32                         DstSubResIndex,
+                                               const SubresCopyMapping*       Planes,
+                                               Uint32                         NumPlanes,
                                                Uint32                         DstX,
                                                Uint32                         DstY,
                                                Uint32                         DstZ,
@@ -1997,35 +2008,43 @@ void DeviceContextD3D12Impl::CopyTextureRegion(TextureD3D12Impl*              pS
     }
     TransitionOrVerifyTextureState(CmdCtx, *pDstTexture, DstTextureTransitionMode, RESOURCE_STATE_COPY_DEST, "Using resource as copy destination (DeviceContextD3D12Impl::CopyTextureRegion)");
 
-    D3D12_TEXTURE_COPY_LOCATION DstLocation = {}, SrcLocation = {};
+    D3D12_TEXTURE_COPY_LOCATION DstLocation{};
+    D3D12_TEXTURE_COPY_LOCATION SrcLocation{};
 
     SrcLocation.pResource = pSrcTexture->GetD3D12Resource();
-    if (pSrcTexture->GetDesc().Usage == USAGE_STAGING)
-    {
-        SrcLocation.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-        SrcLocation.PlacedFootprint = pSrcTexture->GetStagingFootprint(SrcSubResIndex);
-    }
-    else
-    {
-        SrcLocation.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        SrcLocation.SubresourceIndex = SrcSubResIndex;
-    }
-
     DstLocation.pResource = pDstTexture->GetD3D12Resource();
-    if (pDstTexture->GetDesc().Usage == USAGE_STAGING)
-    {
-        DstLocation.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-        DstLocation.PlacedFootprint = pDstTexture->GetStagingFootprint(DstSubResIndex);
-    }
-    else
-    {
-        DstLocation.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        DstLocation.SubresourceIndex = DstSubResIndex;
-    }
 
     CmdCtx.FlushResourceBarriers();
-    CmdCtx.GetCommandList()->CopyTextureRegion(&DstLocation, DstX, DstY, DstZ, &SrcLocation, pD3D12SrcBox);
-    ++m_State.NumCommands;
+
+    for (Uint32 plane = 0; plane < NumPlanes; ++plane)
+    {
+        Uint32 SrcSubResIndex = Planes[plane].Src;
+        Uint32 DstSubResIndex = Planes[plane].Dst;
+        if (pSrcTexture->GetDesc().Usage == USAGE_STAGING)
+        {
+            SrcLocation.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            SrcLocation.PlacedFootprint = pSrcTexture->GetStagingFootprint(SrcSubResIndex);
+        }
+        else
+        {
+            SrcLocation.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            SrcLocation.SubresourceIndex = SrcSubResIndex;
+        }
+
+        if (pDstTexture->GetDesc().Usage == USAGE_STAGING)
+        {
+            DstLocation.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            DstLocation.PlacedFootprint = pDstTexture->GetStagingFootprint(DstSubResIndex);
+        }
+        else
+        {
+            DstLocation.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            DstLocation.SubresourceIndex = DstSubResIndex;
+        }
+
+        CmdCtx.GetCommandList()->CopyTextureRegion(&DstLocation, DstX, DstY, DstZ, &SrcLocation, pD3D12SrcBox);
+        ++m_State.NumCommands;
+    }
 }
 
 void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd3d12Buffer,

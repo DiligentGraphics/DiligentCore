@@ -403,6 +403,11 @@ protected:
     static constexpr Uint8                    InvalidViewIndex = 0xFFu;
     std::array<Uint8, TEXTURE_VIEW_NUM_VIEWS> m_ViewIndices{};
 
+    // The number of planes in the format. For majority of formats, this is 1.
+    // Depth-stencil formats may have 2 planes (depth and stencil).
+    // YUV formats may have 3 planes (Y, U, V).
+    Uint8 m_FormatPlaneCount = 1;
+
     RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
 
     std::unique_ptr<SparseTextureProperties> m_pSparseProps;
