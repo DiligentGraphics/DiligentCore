@@ -1962,7 +1962,9 @@ void DeviceContextD3D12Impl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
     std::array<SubresCopyMapping, MaxFormatPlaneCount> Planes;
 
     Uint32 NumPlanes = std::min(pSrcTexD3D12->GetFormatPlaneCount(), pDstTexD3D12->GetFormatPlaneCount());
-    VERIFY(NumPlanes <= MaxFormatPlaneCount, "Number of planes (", NumPlanes, ") exceeds maximum supported plane count (", MaxFormatPlaneCount, ")");
+    VERIFY(NumPlanes > 0, "Number of planes must be greater than 0");
+    NumPlanes = std::max(NumPlanes, 1u);
+    VERIFY(NumPlanes <= MaxFormatPlaneCount, "Number of planes (", NumPlanes, ") exceeds maximum expected plane count (", MaxFormatPlaneCount, ")");
     NumPlanes = std::min(NumPlanes, MaxFormatPlaneCount);
     for (Uint32 i = 0; i < NumPlanes; ++i)
     {
