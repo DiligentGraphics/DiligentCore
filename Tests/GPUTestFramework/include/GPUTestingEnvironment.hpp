@@ -134,6 +134,7 @@ public:
 
     static GPUTestingEnvironment* GetInstance() { return ClassPtrCast<GPUTestingEnvironment>(m_pTheEnvironment); }
 
+    RefCntAutoPtr<ITexture> CreateTexture(const TextureDesc& Desc, const TextureData* pData = nullptr);
     RefCntAutoPtr<ITexture> CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height, const void* pInitData = nullptr);
 
     RefCntAutoPtr<IBuffer> CreateBuffer(const BufferDesc& Desc, const void* pInitData = nullptr);

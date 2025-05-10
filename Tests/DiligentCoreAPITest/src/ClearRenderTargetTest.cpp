@@ -376,9 +376,7 @@ TEST(ClearRenderTargetTest, AsAttachment)
     pSwapChain->Present();
 }
 
-
-
-TEST(ClearRenderTargetTest, LoadOpClear)
+void TestClearWithLoadOp(const float4& ClearColor, Uint32 Subpass)
 {
     GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice    = pEnv->GetDevice();
@@ -387,43 +385,72 @@ TEST(ClearRenderTargetTest, LoadOpClear)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    constexpr float ClearColor[] = {0.875f, 0.3125, 0.4375, 1.0f};
-    ReferenceClear(ClearColor);
+    ReferenceClear(ClearColor.Data());
 
-    RenderPassAttachmentDesc Attachments[1];
-    ITextureView*            pRTV = pSwapChain->GetCurrentBackBufferRTV();
+    ITextureView* pRTV = pSwapChain->GetCurrentBackBufferRTV();
     ASSERT_NE(pRTV, nullptr);
     const TextureDesc& BackBufferDesc = pRTV->GetTexture()->GetDesc();
-    Attachments[0].Format             = BackBufferDesc.Format;
-    Attachments[0].SampleCount        = static_cast<Uint8>(BackBufferDesc.SampleCount);
-    Attachments[0].InitialState       = RESOURCE_STATE_RENDER_TARGET;
-    Attachments[0].FinalState         = RESOURCE_STATE_RENDER_TARGET;
-    Attachments[0].LoadOp             = ATTACHMENT_LOAD_OP_CLEAR;
-    Attachments[0].StoreOp            = ATTACHMENT_STORE_OP_STORE;
 
-    SubpassDesc Subpasses[1] = {};
+    // One attachment per subpass
+    const Uint32 NumAttachments = Subpass + 1;
+    const Uint32 NumSubpasses   = Subpass + 1;
 
-    Subpasses[0].RenderTargetAttachmentCount = 1;
-    AttachmentReference RTAttachmentRef{0, RESOURCE_STATE_RENDER_TARGET};
-    Subpasses[0].pRenderTargetAttachments = &RTAttachmentRef;
+    std::vector<RenderPassAttachmentDesc>    Attachments(NumAttachments);
+    std::vector<RefCntAutoPtr<ITextureView>> pRTVs(NumAttachments);
+    for (Uint32 i = 0; i < NumAttachments; ++i)
+    {
+        if (i == Subpass)
+        {
+            pRTVs[i] = pSwapChain->GetCurrentBackBufferRTV();
+        }
+        else
+        {
+            TextureDesc TexDesc          = BackBufferDesc;
+            TexDesc.Name                 = "Load op clear test texture";
+            RefCntAutoPtr<ITexture> pTex = pEnv->CreateTexture(TexDesc);
+            ASSERT_NE(pTex, nullptr);
+            pRTVs[i] = pTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+        }
+
+        Attachments[i].Format       = BackBufferDesc.Format;
+        Attachments[i].SampleCount  = static_cast<Uint8>(BackBufferDesc.SampleCount);
+        Attachments[i].InitialState = RESOURCE_STATE_RENDER_TARGET;
+        Attachments[i].FinalState   = RESOURCE_STATE_RENDER_TARGET;
+        Attachments[i].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
+        Attachments[i].StoreOp      = ATTACHMENT_STORE_OP_STORE;
+    }
+
+    std::vector<SubpassDesc>         Subpasses(NumSubpasses);
+    std::vector<AttachmentReference> RTAttachmentRefs(NumSubpasses);
+    for (Uint32 i = 0; i < NumSubpasses; ++i)
+    {
+        RTAttachmentRefs[i] = {i, RESOURCE_STATE_RENDER_TARGET};
+
+        Subpasses[i].RenderTargetAttachmentCount = 1;
+        Subpasses[i].pRenderTargetAttachments    = &RTAttachmentRefs[i];
+    }
 
     RenderPassDesc RPDesc;
     RPDesc.Name            = "Load op clear test render pass";
-    RPDesc.AttachmentCount = _countof(Attachments);
-    RPDesc.pAttachments    = Attachments;
-    RPDesc.SubpassCount    = _countof(Subpasses);
-    RPDesc.pSubpasses      = Subpasses;
+    RPDesc.AttachmentCount = NumAttachments;
+    RPDesc.pAttachments    = Attachments.data();
+    RPDesc.SubpassCount    = NumSubpasses;
+    RPDesc.pSubpasses      = Subpasses.data();
 
     RefCntAutoPtr<IRenderPass> pRenderPass;
     pDevice->CreateRenderPass(RPDesc, &pRenderPass);
     ASSERT_NE(pRenderPass, nullptr);
 
     FramebufferDesc FBDesc;
-    FBDesc.Name               = "Load op clear test framebuffer";
-    FBDesc.pRenderPass        = pRenderPass;
-    FBDesc.AttachmentCount    = _countof(Attachments);
-    ITextureView* pTexViews[] = {pRTV};
-    FBDesc.ppAttachments      = pTexViews;
+    FBDesc.Name            = "Load op clear test framebuffer";
+    FBDesc.pRenderPass     = pRenderPass;
+    FBDesc.AttachmentCount = RPDesc.AttachmentCount;
+
+    std::vector<ITextureView*> pTexViews(pRTVs.size());
+    for (Uint32 i = 0; i < pTexViews.size(); ++i)
+        pTexViews[i] = pRTVs[i];
+
+    FBDesc.ppAttachments = pTexViews.data();
     RefCntAutoPtr<IFramebuffer> pFramebuffer;
     pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
     ASSERT_TRUE(pFramebuffer);
@@ -432,20 +459,36 @@ TEST(ClearRenderTargetTest, LoadOpClear)
     BeginRPInfo.pRenderPass         = pRenderPass;
     BeginRPInfo.pFramebuffer        = pFramebuffer;
     BeginRPInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    OptimizedClearValue ClearValue;
-    ClearValue.Color[0] = ClearColor[0];
-    ClearValue.Color[1] = ClearColor[1];
-    ClearValue.Color[2] = ClearColor[2];
-    ClearValue.Color[3] = ClearColor[3];
+    std::vector<OptimizedClearValue> ClearValue(NumAttachments);
+    ClearValue[Subpass].Color[0] = ClearColor[0];
+    ClearValue[Subpass].Color[1] = ClearColor[1];
+    ClearValue[Subpass].Color[2] = ClearColor[2];
+    ClearValue[Subpass].Color[3] = ClearColor[3];
 
-    BeginRPInfo.ClearValueCount = 1;
-    BeginRPInfo.pClearValues    = &ClearValue;
+    BeginRPInfo.ClearValueCount = NumAttachments;
+    BeginRPInfo.pClearValues    = ClearValue.data();
 
     pContext->BeginRenderPass(BeginRPInfo);
+
+    for (Uint32 i = 1; i <= Subpass; ++i)
+    {
+        pContext->NextSubpass();
+    }
 
     pContext->EndRenderPass();
 
     pSwapChain->Present();
+}
+
+
+TEST(ClearRenderTargetTest, LoadOpClear)
+{
+    TestClearWithLoadOp({0.875f, 0.3125, 0.4375, 1.0f}, 0);
+}
+
+TEST(ClearRenderTargetTest, LoadOpClear2)
+{
+    TestClearWithLoadOp({0.375f, 0.75, 0.125, 1.0f}, 2);
 }
 
 } // namespace

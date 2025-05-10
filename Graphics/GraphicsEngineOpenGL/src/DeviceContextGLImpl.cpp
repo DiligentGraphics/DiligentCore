@@ -678,7 +678,6 @@ void DeviceContextGLImpl::NextSubpass()
     EndSubpass();
     TDeviceContextBase::NextSubpass();
     BeginSubpass();
-    m_AttachmentClearValues.clear();
 }
 
 void DeviceContextGLImpl::EndRenderPass()
@@ -686,6 +685,7 @@ void DeviceContextGLImpl::EndRenderPass()
     EndSubpass();
     TDeviceContextBase::EndRenderPass();
     m_ContextState.InvalidateFBO();
+    m_AttachmentClearValues.clear();
 }
 
 #ifdef DILIGENT_DEVELOPMENT
