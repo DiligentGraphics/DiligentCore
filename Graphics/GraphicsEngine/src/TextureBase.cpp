@@ -132,9 +132,6 @@ void ValidateTextureDesc(const TextureDesc& Desc, const IRenderDevice* pDevice) 
 
         if (Desc.MipLevels != 1)
             LOG_TEXTURE_ERROR_AND_THROW("Multisampled textures must have one mip level (", Desc.MipLevels, " levels specified).");
-
-        if (Desc.BindFlags & BIND_UNORDERED_ACCESS)
-            LOG_TEXTURE_ERROR_AND_THROW("UAVs are not allowed for multisampled resources");
     }
 
     if ((Desc.BindFlags & BIND_RENDER_TARGET) &&
