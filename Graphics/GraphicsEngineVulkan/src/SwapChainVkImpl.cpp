@@ -617,15 +617,15 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
         m_FrameCompleteFence->Wait(m_FrameIndex - m_SwapChainDesc.BufferCount);
     }
 
-    VkSemaphore ImageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex]->Get();
+    RefCntAutoPtr<ManagedSemaphore>& ImageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
 
-    VkResult res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, ImageAcquiredSemaphore, VK_NULL_HANDLE, &m_BackBufferIndex);
+    VkResult res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, ImageAcquiredSemaphore->Get(), VK_NULL_HANDLE, &m_BackBufferIndex);
     if (res == VK_SUCCESS)
     {
         // Next command in the device context must wait for the next image to be acquired.
-        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2).
+        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore.
         // Swapchain image may be used as render target or as destination for copy command.
-        pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
+        pDeviceCtxVk->AddWaitSemaphore(ImageAcquiredSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
         if (!m_SwapChainImagesInitialized[m_BackBufferIndex])
         {
             // Vulkan validation layers do not like uninitialized memory.
@@ -661,13 +661,17 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     ITexture* pBackBuffer = GetCurrentBackBufferRTV()->GetTexture();
     pImmediateCtxVk->UnbindTextureFromFramebuffer(ClassPtrCast<TextureVkImpl>(pBackBuffer), false);
 
+    // To properly handle the case where vkAcquireNextImageKHR returns the same index twice in a row, use
+    // a separate semaphore per swapchain image and index these semaphores using the index of the acquired image
+    // https://github.com/DiligentGraphics/DiligentCore/issues/682
+    RefCntAutoPtr<ManagedSemaphore>& DrawCompleteSemaphore = m_DrawCompleteSemaphores[m_BackBufferIndex];
     if (!m_IsMinimized)
     {
         // TransitionImageLayout() never triggers flush
         pImmediateCtxVk->TransitionImageLayout(pBackBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         // The context can be empty if no render commands were issued by the app
         //VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
-        pImmediateCtxVk->AddSignalSemaphore(m_DrawCompleteSemaphores[m_SemaphoreIndex]);
+        pImmediateCtxVk->AddSignalSemaphore(DrawCompleteSemaphore);
         pImmediateCtxVk->EnqueueSignal(m_FrameCompleteFence, m_FrameIndex++);
     }
 
@@ -680,8 +684,8 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         PresentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         PresentInfo.pNext              = nullptr;
         PresentInfo.waitSemaphoreCount = 1;
-        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
-        VkSemaphore WaitSemaphore[] = {m_DrawCompleteSemaphores[m_SemaphoreIndex]->Get()};
+        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore
+        VkSemaphore WaitSemaphore[] = {DrawCompleteSemaphore->Get()};
         PresentInfo.pWaitSemaphores = WaitSemaphore;
         PresentInfo.swapchainCount  = 1;
         PresentInfo.pSwapchains     = &m_VkSwapChain;
