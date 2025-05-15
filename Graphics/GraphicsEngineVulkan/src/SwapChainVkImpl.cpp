@@ -57,6 +57,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
 
     AcquireNextImage(pDeviceContextVk);
     // Note that the image may be immediately out of date.
+    // https://github.com/DiligentGraphics/DiligentCore/issues/632
 
     FenceDesc FenceCI;
     FenceCI.Name = "Swap chain frame complete fence";
@@ -597,6 +598,14 @@ void SwapChainVkImpl::InitBuffersAndViews()
     }
 }
 
+void SwapChainVkImpl::ThrottleFrameSubmission()
+{
+    if (m_FrameIndex > m_SwapChainDesc.BufferCount)
+    {
+        m_FrameCompleteFence->Wait(m_FrameIndex - m_SwapChainDesc.BufferCount);
+    }
+}
+
 VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
 {
     RenderDeviceVkImpl*                   pDeviceVk     = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
@@ -612,10 +621,7 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     // vkAcquireNextImageKHR requires that the semaphore is not in use, so we must wait
     // for the frame (FrameIndex - BufferCount) to complete.
     // This also ensures that there are no more than BufferCount frames in flight at any time.
-    if (m_FrameIndex > m_SwapChainDesc.BufferCount)
-    {
-        m_FrameCompleteFence->Wait(m_FrameIndex - m_SwapChainDesc.BufferCount);
-    }
+    ThrottleFrameSubmission();
 
     RefCntAutoPtr<ManagedSemaphore>& ImageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
 
@@ -673,14 +679,15 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         // The context can be empty if no render commands were issued by the app
         //VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
         pImmediateCtxVk->AddSignalSemaphore(DrawCompleteSemaphore);
-        pImmediateCtxVk->EnqueueSignal(m_FrameCompleteFence, m_FrameIndex++);
     }
 
+    pImmediateCtxVk->EnqueueSignal(m_FrameCompleteFence, m_FrameIndex++);
     pImmediateCtxVk->Flush();
 
     if (!m_IsMinimized)
     {
         VkResult Result = VK_ERROR_OUT_OF_DATE_KHR;
+        // Only present if the image was acquired successfully
         if (m_ImageAcquired)
         {
             VkPresentInfoKHR PresentInfo{};
@@ -749,6 +756,12 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
 #endif
         }
         // The image may still be out of date if the window keeps changing size
+    }
+    else
+    {
+        // Throttle frame submission to make sure that resources are released
+        // https://github.com/DiligentGraphics/DiligentSamples/issues/234
+        ThrottleFrameSubmission();
     }
 }
 

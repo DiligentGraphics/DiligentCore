@@ -90,6 +90,7 @@ private:
     VkResult AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
     void     RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk);
     void     ReleaseSwapChainResources(DeviceContextVkImpl* pImmediateCtxVk, bool DestroyVkSwapChain);
+    void     ThrottleFrameSubmission();
 
     const NativeWindow m_Window;
 
