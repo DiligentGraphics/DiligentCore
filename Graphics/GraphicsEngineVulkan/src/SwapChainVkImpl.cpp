@@ -54,9 +54,9 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
     CreateSurface();
     CreateVulkanSwapChain();
     InitBuffersAndViews();
-    VkResult res = AcquireNextImage(pDeviceContextVk);
-    DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the newly created swap chain");
-    (void)res;
+
+    AcquireNextImage(pDeviceContextVk);
+    // Note that the image may be immediately out of date.
 
     FenceDesc FenceCI;
     FenceCI.Name = "Swap chain frame complete fence";
@@ -619,8 +619,9 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
 
     RefCntAutoPtr<ManagedSemaphore>& ImageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
 
-    VkResult res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, ImageAcquiredSemaphore->Get(), VK_NULL_HANDLE, &m_BackBufferIndex);
-    if (res == VK_SUCCESS)
+    VkResult res    = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, ImageAcquiredSemaphore->Get(), VK_NULL_HANDLE, &m_BackBufferIndex);
+    m_ImageAcquired = (res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR);
+    if (m_ImageAcquired)
     {
         // Next command in the device context must wait for the next image to be acquired.
         // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore.
@@ -665,7 +666,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     // a separate semaphore per swapchain image and index these semaphores using the index of the acquired image
     // https://github.com/DiligentGraphics/DiligentCore/issues/682
     RefCntAutoPtr<ManagedSemaphore>& DrawCompleteSemaphore = m_DrawCompleteSemaphores[m_BackBufferIndex];
-    if (!m_IsMinimized)
+    if (m_ImageAcquired && !m_IsMinimized)
     {
         // TransitionImageLayout() never triggers flush
         pImmediateCtxVk->TransitionImageLayout(pBackBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -679,26 +680,28 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
 
     if (!m_IsMinimized)
     {
-        VkPresentInfoKHR PresentInfo = {};
-
-        PresentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        PresentInfo.pNext              = nullptr;
-        PresentInfo.waitSemaphoreCount = 1;
-        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore
-        VkSemaphore WaitSemaphore[] = {DrawCompleteSemaphore->Get()};
-        PresentInfo.pWaitSemaphores = WaitSemaphore;
-        PresentInfo.swapchainCount  = 1;
-        PresentInfo.pSwapchains     = &m_VkSwapChain;
-        PresentInfo.pImageIndices   = &m_BackBufferIndex;
-        VkResult Result             = VK_SUCCESS;
-        PresentInfo.pResults        = &Result;
-        pDeviceVk->LockCmdQueueAndRun(
-            pImmediateCtxVk->GetCommandQueueId(),
-            [&PresentInfo](ICommandQueueVk* pCmdQueueVk) //
-            {
-                pCmdQueueVk->Present(PresentInfo);
-            } //
-        );
+        VkResult Result = VK_ERROR_OUT_OF_DATE_KHR;
+        if (m_ImageAcquired)
+        {
+            VkPresentInfoKHR PresentInfo{};
+            PresentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+            PresentInfo.pNext              = nullptr;
+            PresentInfo.waitSemaphoreCount = 1;
+            // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore
+            VkSemaphore WaitSemaphore[] = {DrawCompleteSemaphore->Get()};
+            PresentInfo.pWaitSemaphores = WaitSemaphore;
+            PresentInfo.swapchainCount  = 1;
+            PresentInfo.pSwapchains     = &m_VkSwapChain;
+            PresentInfo.pImageIndices   = &m_BackBufferIndex;
+            PresentInfo.pResults        = &Result;
+            pDeviceVk->LockCmdQueueAndRun(
+                pImmediateCtxVk->GetCommandQueueId(),
+                [&PresentInfo](ICommandQueueVk* pCmdQueueVk) //
+                {
+                    pCmdQueueVk->Present(PresentInfo);
+                } //
+            );
+        }
 
         if (Result == VK_SUBOPTIMAL_KHR || Result == VK_ERROR_OUT_OF_DATE_KHR)
         {
@@ -745,7 +748,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
             }
 #endif
         }
-        DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next swap chain image");
+        // The image may still be out of date if the window keeps changing size
     }
 }
 
@@ -919,9 +922,8 @@ void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFOR
                 // RecreateVulkanSwapchain() unbinds default FB
                 RecreateVulkanSwapchain(pImmediateCtxVk);
 
-                VkResult res = AcquireNextImage(pImmediateCtxVk);
-                DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the just resized swap chain");
-                (void)res;
+                AcquireNextImage(pImmediateCtxVk);
+                // The image may be immediately out of date if the window keeps being resized
             }
             catch (const std::runtime_error&)
             {

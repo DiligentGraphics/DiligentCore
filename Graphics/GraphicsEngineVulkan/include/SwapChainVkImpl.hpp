@@ -125,6 +125,7 @@ private:
     uint32_t m_BackBufferIndex = 0;
     bool     m_IsMinimized     = false;
     bool     m_VSyncEnabled    = true;
+    bool     m_ImageAcquired   = false;
     Uint32   m_FrameIndex      = 1;
 };
 
