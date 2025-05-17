@@ -1,2 +1,2 @@
 EXPORTS
-	GetEngineFactoryWebGPU
+	GetEngineFactoryWebGPU=Diligent_GetEngineFactoryWebGPU

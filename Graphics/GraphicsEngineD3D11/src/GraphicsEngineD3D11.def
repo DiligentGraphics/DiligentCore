@@ -1,2 +1,2 @@
 EXPORTS
-	 GetEngineFactoryD3D11
+	 GetEngineFactoryD3D11=Diligent_GetEngineFactoryD3D11

@@ -1,2 +1,2 @@
 EXPORTS
-	 GetArchiverFactory
+	 GetArchiverFactory=Diligent_GetArchiverFactory
