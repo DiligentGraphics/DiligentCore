@@ -71,8 +71,10 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR WEBGPU_SUPPORTED OR (ARCHIVER_SUPPORT
     if (NOT ${DILIGENT_NO_GLSLANG} AND (NOT TARGET glslang))
         set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Do not build glslang binaries")
         set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Do not build SPIRV remapper")
-        set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip glslang installation")
-        set(ENABLE_CTEST OFF CACHE BOOL "Disable testing")
+        if (MSVC)
+            # https://github.com/DiligentGraphics/DiligentCore/issues/684
+            set(ENABLE_EXCEPTIONS ON CACHE BOOL "Enable exceptions")
+        endif()
         if (PLATFORM_WEB)
             # Optimization has to be disabled on Web, see build instructions on https://github.com/KhronosGroup/glslang
             set(ENABLE_OPT OFF)
