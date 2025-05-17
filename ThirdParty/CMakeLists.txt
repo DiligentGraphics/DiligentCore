@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.11)
+cmake_minimum_required (VERSION 3.13)
 
 # cmake_minimum_required(VERSION) resets all policies to their default
 # values for the VERSION, so calling cmake_policy(SET CMP0063 NEW) has
@@ -150,16 +150,22 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR WEBGPU_SUPPORTED OR (ARCHIVER_SUPPORT
         CXX_VISIBILITY_PRESET hidden # -fvisibility=hidden
         C_VISIBILITY_PRESET hidden # -fvisibility=hidden
         VISIBILITY_INLINES_HIDDEN TRUE
-     )
+    )
 else()
     set(DILIGENT_USE_SPIRV_TOOLCHAIN FALSE CACHE INTERNAL "")
 endif()
 
-if (VULKAN_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_ANDROID) AND (NOT TARGET volk::volk_headers))
+if (VULKAN_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_ANDROID) AND (NOT TARGET volk::volk))
+    include(../BuildTools/CMake/VulkanUtils.cmake)
     set(VOLK_PULL_IN_VULKAN OFF)
     set(VOLK_INSTALL OFF)
-    set(VOLK_HEADERS_ONLY ON)
+    set(VOLK_HEADERS_ONLY OFF)
     add_subdirectory(volk)
+    target_link_libraries(volk PRIVATE Vulkan::Headers)
+    get_vulkan_platform_definitions(VULKAN_PLATFORM_DEFINES)
+    target_compile_definitions(volk PRIVATE ${VULKAN_PLATFORM_DEFINES})
+    set_common_target_properties(volk)
+    set_directory_root_folder("volk" "DiligentCore/ThirdParty")
     install(FILES "${volk_SOURCE_DIR}/LICENSE.md" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Volk-License.md)
 endif()
 

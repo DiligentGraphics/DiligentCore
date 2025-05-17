@@ -34,7 +34,6 @@
 #include <array>
 
 #if DILIGENT_USE_VOLK
-#    define VOLK_IMPLEMENTATION
 #    include "volk.h"
 #endif
 

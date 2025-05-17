@@ -111,7 +111,7 @@ if(PLATFORM_LINUX)
 endif()
 
 if(VULKAN_SUPPORTED)
-    target_link_libraries(Diligent-GPUTestFramework PUBLIC Vulkan::Headers volk::volk_headers)
+    target_link_libraries(Diligent-GPUTestFramework PUBLIC Vulkan::Headers volk::volk)
 
     if(PLATFORM_LINUX)
         target_link_libraries(Diligent-GPUTestFramework
