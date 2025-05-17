@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -109,7 +109,7 @@ TestingSwapChainVk::TestingSwapChainVk(IReferenceCounters*   pRefCounters,
     ImageViewCI.subresourceRange.levelCount = 1;
     ImageViewCI.subresourceRange.layerCount = 1;
 
-    auto res = vkCreateImageView(m_vkDevice, &ImageViewCI, nullptr, &m_vkRenderTargetView);
+    VkResult res = vkCreateImageView(m_vkDevice, &ImageViewCI, nullptr, &m_vkRenderTargetView);
     VERIFY_EXPR(res >= 0);
 
     ImageViewCI.image                       = m_vkDepthBufferImage;
@@ -125,7 +125,7 @@ TestingSwapChainVk::TestingSwapChainVk(IReferenceCounters*   pRefCounters,
 
     VkSubpassDescription Subpass;
 
-    auto RenderPassCI =
+    VkRenderPassCreateInfo RenderPassCI =
         TestingEnvironmentVk::GetRenderPassCreateInfo(1, &ColorFormat, DepthFormat, 1,
                                                       VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_LOAD_OP_CLEAR,
                                                       Attachments, AttachmentReferences, Subpass);
@@ -151,7 +151,7 @@ void TestingSwapChainVk::CreateFramebuffer()
     FramebufferCI.height          = m_SwapChainDesc.Height;
     FramebufferCI.layers          = 1;
 
-    auto res = vkCreateFramebuffer(m_vkDevice, &FramebufferCI, nullptr, &m_vkFramebuffer);
+    VkResult res = vkCreateFramebuffer(m_vkDevice, &FramebufferCI, nullptr, &m_vkFramebuffer);
     VERIFY_EXPR(res >= 0);
     (void)res;
 }
@@ -241,7 +241,7 @@ void TestingSwapChainVk::EndRenderPass(VkCommandBuffer vkCmdBuffer)
 
 void TestingSwapChainVk::TakeSnapshot(ITexture* pCopyFrom)
 {
-    auto* pEnv = TestingEnvironmentVk::GetInstance();
+    TestingEnvironmentVk* pEnv = TestingEnvironmentVk::GetInstance();
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 

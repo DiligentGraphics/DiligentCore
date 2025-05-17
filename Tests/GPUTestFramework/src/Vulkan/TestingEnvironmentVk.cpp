@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -221,14 +221,14 @@ void TestingEnvironmentVk::CreateImage2D(uint32_t          Width,
     ImageCI.pQueueFamilyIndices   = nullptr;
     ImageCI.initialLayout         = vkInitialLayout;
 
-    auto res = vkCreateImage(m_vkDevice, &ImageCI, nullptr, &vkImage);
+    VkResult res = vkCreateImage(m_vkDevice, &ImageCI, nullptr, &vkImage);
     ASSERT_GE(res, 0);
 
     VkMemoryRequirements MemReqs = {};
     vkGetImageMemoryRequirements(m_vkDevice, vkImage, &MemReqs);
 
     VkMemoryPropertyFlags ImageMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    auto                  MemoryTypeIndex  = GetMemoryTypeIndex(MemReqs.memoryTypeBits, ImageMemoryFlags);
+    uint32_t              MemoryTypeIndex  = GetMemoryTypeIndex(MemReqs.memoryTypeBits, ImageMemoryFlags);
 
     VkMemoryAllocateInfo AllocInfo = {};
     AllocInfo.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -260,13 +260,13 @@ void TestingEnvironmentVk::CreateBuffer(VkDeviceSize          Size,
     BufferCI.queueFamilyIndexCount = 0;
     BufferCI.pQueueFamilyIndices   = nullptr;
 
-    auto res = vkCreateBuffer(m_vkDevice, &BufferCI, nullptr, &vkBuffer);
+    VkResult res = vkCreateBuffer(m_vkDevice, &BufferCI, nullptr, &vkBuffer);
     ASSERT_GE(res, 0);
 
     VkMemoryRequirements MemReqs = {};
     vkGetBufferMemoryRequirements(m_vkDevice, vkBuffer, &MemReqs);
 
-    auto MemoryTypeIndex = GetMemoryTypeIndex(MemReqs.memoryTypeBits, MemoryFlags);
+    uint32_t MemoryTypeIndex = GetMemoryTypeIndex(MemReqs.memoryTypeBits, MemoryFlags);
 
     VkMemoryAllocateInfo AllocInfo = {};
     AllocInfo.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -308,7 +308,7 @@ VkRenderPassCreateInfo TestingEnvironmentVk::GetRenderPassCreateInfo(
     VkAttachmentReference* pDepthAttachmentReference = nullptr;
     if (DSVFormat != VK_FORMAT_UNDEFINED)
     {
-        auto& DepthAttachment = Attachments[AttachmentInd];
+        VkAttachmentDescription& DepthAttachment = Attachments[AttachmentInd];
 
         DepthAttachment.flags   = 0; // Allowed value VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT
         DepthAttachment.format  = DSVFormat;
@@ -332,7 +332,7 @@ VkRenderPassCreateInfo TestingEnvironmentVk::GetRenderPassCreateInfo(
     VkAttachmentReference* pColorAttachmentsReference = NumRenderTargets > 0 ? &AttachmentReferences[AttachmentInd] : nullptr;
     for (Uint32 rt = 0; rt < NumRenderTargets; ++rt, ++AttachmentInd)
     {
-        auto& ColorAttachment = Attachments[AttachmentInd];
+        VkAttachmentDescription& ColorAttachment = Attachments[AttachmentInd];
 
         ColorAttachment.flags   = 0; // Allowed value VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT
         ColorAttachment.format  = RTVFormats[rt];
@@ -346,7 +346,8 @@ VkRenderPassCreateInfo TestingEnvironmentVk::GetRenderPassCreateInfo(
         ColorAttachment.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         ColorAttachment.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        auto& ColorAttachmentRef      = AttachmentReferences[AttachmentInd];
+        VkAttachmentReference& ColorAttachmentRef = AttachmentReferences[AttachmentInd];
+
         ColorAttachmentRef.attachment = AttachmentInd;
         ColorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
@@ -386,7 +387,7 @@ VkShaderModule TestingEnvironmentVk::CreateShaderModule(const SHADER_TYPE Shader
     Attribs.Version        = (ShaderType >= SHADER_TYPE_AMPLIFICATION ? GLSLangUtils::SpirvVersion::Vk120 : GLSLangUtils::SpirvVersion::Vk100);
     Attribs.AssignBindings = false;
 
-    auto Bytecode = GLSLangUtils::GLSLtoSPIRV(Attribs);
+    std::vector<Uint32> Bytecode = GLSLangUtils::GLSLtoSPIRV(Attribs);
     VERIFY_EXPR(!Bytecode.empty());
     if (Bytecode.empty())
         return VK_NULL_HANDLE;
@@ -424,7 +425,7 @@ VkCommandBuffer TestingEnvironmentVk::AllocateCommandBuffer()
 
     BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     BeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    auto res        = vkBeginCommandBuffer(vkCmdBuff, &BeginInfo);
+    VkResult res    = vkBeginCommandBuffer(vkCmdBuff, &BeginInfo);
     VERIFY(res >= 0, "Failed to begin command buffer");
     (void)res;
 
@@ -435,7 +436,7 @@ void TestingEnvironmentVk::SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool
 {
     RefCntAutoPtr<ICommandQueueVk> pQueueVk{GetDeviceContext()->LockCommandQueue(), IID_CommandQueueVk};
 
-    auto vkQueue = pQueueVk->GetVkQueue();
+    VkQueue vkQueue = pQueueVk->GetVkQueue();
 
     VkSubmitInfo SubmitInfo       = {};
     SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
