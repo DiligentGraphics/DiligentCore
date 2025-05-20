@@ -250,11 +250,27 @@ std::shared_ptr<Instance> Instance::Create(const CreateInfo& CI)
     return std::shared_ptr<Instance>{new Instance{CI}};
 }
 
+#if DILIGENT_USE_VOLK
+static bool LoadVulkan()
+{
+    static bool VulkanLoaded = false;
+    if (VulkanLoaded)
+        return true;
+
+    if (volkInitialize() == VK_SUCCESS)
+    {
+        VulkanLoaded = true;
+    }
+
+    return VulkanLoaded;
+}
+#endif
+
 Instance::Instance(const CreateInfo& CI) :
     m_pvkAllocator{CI.pVkAllocator}
 {
 #if DILIGENT_USE_VOLK
-    if (volkInitialize() != VK_SUCCESS)
+    if (!LoadVulkan())
     {
         LOG_ERROR_AND_THROW("Failed to load Vulkan.");
     }

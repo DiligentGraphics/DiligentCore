@@ -102,6 +102,7 @@ public:
 private:
     explicit Instance(const CreateInfo& CI);
 
+private:
     enum DebugMode
     {
         Disabled,
