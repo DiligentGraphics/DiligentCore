@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,13 +99,19 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryVk, IEngineFactory)
                                            const NativeWindow REF  Window,
                                            ISwapChain**            ppSwapChain) PURE;
 
-    /// Enable device simulation layer (if available).
+    /// Enables device simulation layer (if available).
 
     /// Vulkan instance will be created with the device simulation layer.
     /// Use VK_DEVSIM_FILENAME environment variable to define the path to the .json file.
     ///
     /// \remarks Use this function before calling EnumerateAdapters() and CreateDeviceAndContextsVk().
     VIRTUAL void METHOD(EnableDeviceSimulation)(THIS) PURE;
+
+
+    /// Returns the supported Vulkan version. If Vulkan is not supported, returns 0.
+
+    /// This function can be used to check whether Vulkan is supported on the platform.
+    VIRTUAL Version METHOD(GetVulkanVersion)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -118,6 +124,7 @@ DILIGENT_END_INTERFACE
 #    define IEngineFactoryVk_CreateDeviceAndContextsVk(This, ...) CALL_IFACE_METHOD(EngineFactoryVk, CreateDeviceAndContextsVk, This, __VA_ARGS__)
 #    define IEngineFactoryVk_CreateSwapChainVk(This, ...)         CALL_IFACE_METHOD(EngineFactoryVk, CreateSwapChainVk,         This, __VA_ARGS__)
 #    define IEngineFactoryVk_EnableDeviceSimulation(This)         CALL_IFACE_METHOD(EngineFactoryVk, EnableDeviceSimulation,    This)
+#    define IEngineFactoryVk_GetVulkanVersion(This)               CALL_IFACE_METHOD(EngineFactoryVk, GetVulkanVersion,          This)
 
 // clang-format on
 

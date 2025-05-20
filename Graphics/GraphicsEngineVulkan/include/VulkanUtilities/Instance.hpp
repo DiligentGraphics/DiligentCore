@@ -48,6 +48,8 @@ public:
     Instance& operator = (      Instance&&) = delete;
     // clang-format on
 
+    static uint32_t GetApiVersion();
+
     struct CreateInfo
     {
         uint32_t           ApiVersion             = 0;

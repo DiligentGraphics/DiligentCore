@@ -393,6 +393,9 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             pFactoryVk->SetMessageCallback(EnvCI.MessageCallback);
             pFactoryVk->SetBreakOnError(false);
 
+            Version VulkanVersion = pFactoryVk->GetVulkanVersion();
+            VERIFY(VulkanVersion >= Version(1, 0), "Vulkan is not supported on this platform.");
+
             if (EnvCI.EnableDeviceSimulation)
                 pFactoryVk->EnableDeviceSimulation();
 

@@ -116,6 +116,12 @@ public:
         m_EnableDeviceSimulation = true;
     }
 
+    virtual Version DILIGENT_CALL_TYPE GetVulkanVersion() const override final
+    {
+        uint32_t ApiVersion = VulkanUtilities::Instance::GetApiVersion();
+        return {VK_VERSION_MAJOR(ApiVersion), VK_VERSION_MINOR(ApiVersion)};
+    }
+
     virtual void DILIGENT_CALL_TYPE CreateDearchiver(const DearchiverCreateInfo& CreateInfo,
                                                      IDearchiver**               ppDearchiver) const override final
     {

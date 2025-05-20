@@ -257,14 +257,64 @@ static bool LoadVulkan()
     if (VulkanLoaded)
         return true;
 
-    if (volkInitialize() == VK_SUCCESS)
-    {
-        VulkanLoaded = true;
-    }
-
+    VulkanLoaded = (volkInitialize() == VK_SUCCESS);
     return VulkanLoaded;
 }
 #endif
+
+uint32_t Instance::GetApiVersion()
+{
+#if DILIGENT_USE_VOLK
+    if (!LoadVulkan())
+    {
+        return 0;
+    }
+#endif
+
+    uint32_t ApiVersion = VK_API_VERSION_1_0;
+#if DILIGENT_USE_VOLK
+    if (vkEnumerateInstanceVersion != nullptr)
+    {
+        vkEnumerateInstanceVersion(&ApiVersion);
+    }
+#endif
+
+    VkApplicationInfo AppInfo{};
+    AppInfo.sType      = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    AppInfo.apiVersion = ApiVersion;
+
+    VkInstanceCreateInfo InstCI{};
+    InstCI.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    InstCI.pApplicationInfo = &AppInfo;
+
+    VkInstance vkInstance = VK_NULL_HANDLE;
+    VkResult   Result     = vkCreateInstance(&InstCI, nullptr, &vkInstance);
+    if (Result != VK_SUCCESS)
+    {
+        return 0;
+    }
+
+    uint32_t DeviceCount = 0;
+    if (PFN_vkEnumeratePhysicalDevices EnumeratePhysicalDevices = reinterpret_cast<PFN_vkEnumeratePhysicalDevices>(vkGetInstanceProcAddr(vkInstance, "vkEnumeratePhysicalDevices")))
+    {
+        Result = EnumeratePhysicalDevices(vkInstance, &DeviceCount, nullptr);
+    }
+    else
+    {
+        UNEXPECTED("Unable to load vkEnumeratePhysicalDevices function.");
+    }
+
+    if (PFN_vkDestroyInstance DestroyInstance = reinterpret_cast<PFN_vkDestroyInstance>(vkGetInstanceProcAddr(vkInstance, "vkDestroyInstance")))
+    {
+        DestroyInstance(vkInstance, nullptr);
+    }
+    else
+    {
+        UNEXPECTED("Unable to load vkDestroyInstance function.");
+    }
+
+    return DeviceCount > 0 ? ApiVersion : 0;
+}
 
 Instance::Instance(const CreateInfo& CI) :
     m_pvkAllocator{CI.pVkAllocator}
