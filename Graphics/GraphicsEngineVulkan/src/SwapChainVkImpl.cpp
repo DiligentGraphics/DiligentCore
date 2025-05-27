@@ -627,6 +627,13 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
 
     VkResult res    = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, ImageAcquiredSemaphore->Get(), VK_NULL_HANDLE, &m_BackBufferIndex);
     m_ImageAcquired = (res == VK_SUCCESS || res == VK_SUBOPTIMAL_KHR);
+#if PLATFORM_APPLE
+    if (res == VK_SUBOPTIMAL_KHR)
+    {
+        // https://github.com/KhronosGroup/MoltenVK/issues/2542
+        m_ImageAcquired = false;
+    }
+#endif
     if (m_ImageAcquired)
     {
         // Next command in the device context must wait for the next image to be acquired.
