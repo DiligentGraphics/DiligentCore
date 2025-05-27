@@ -445,22 +445,6 @@ else()
 endif(MSVC)
 
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
-    CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    if(PLATFORM_APPLE)
-        # Looks like force_load is preferable over all_load
-        set(WHOLE_ARCHIVE_FLAG "-Wl,-force_load" CACHE INTERNAL "all_load flag")
-        # Option -noall_load is obsolete and there is no -noforce_load
-        set(NO_WHOLE_ARCHIVE_FLAG "" CACHE INTERNAL "noall_load flag")
-    else()
-        set(WHOLE_ARCHIVE_FLAG "-Wl,--whole-archive" CACHE INTERNAL "whole-archive flag")
-        set(NO_WHOLE_ARCHIVE_FLAG "-Wl,--no-whole-archive" CACHE INTERNAL "no-whole-archive flag")
-    endif()
-else()
-    set(WHOLE_ARCHIVE_FLAG "")
-    set(NO_WHOLE_ARCHIVE_FLAG "")
-endif()
-
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Treat warnings as errors
     set(DILIGENT_CLANG_COMPILE_OPTIONS "" CACHE STRING "Common Clang compile options")

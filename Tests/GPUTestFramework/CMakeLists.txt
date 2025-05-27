@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.17)
 
+include(../../BuildTools/CMake/BuildUtils.cmake)
+
 project(Diligent-GPUTestFramework)
 
 set(SOURCE src/GPUTestingEnvironment.cpp src/TestingSwapChainBase.cpp)
@@ -156,5 +158,6 @@ set_target_properties(Diligent-GPUTestFramework PROPERTIES
 )
 
 if (TARGET Diligent-Archiver-shared)
-    target_link_libraries(Diligent-GPUTestFramework PUBLIC Diligent-Archiver-shared)
+    get_backend_libraries_type(LIB_TYPE)
+    target_link_libraries(Diligent-GPUTestFramework PUBLIC Diligent-Archiver-${LIB_TYPE})
 endif()

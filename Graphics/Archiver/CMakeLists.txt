@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.10)
 
+include(../../BuildTools/CMake/BuildUtils.cmake)
+
 project(Diligent-Archiver CXX)
 
 set(INCLUDE
@@ -181,8 +183,8 @@ PUBLIC
     Diligent-ArchiverInterface
 PRIVATE
     Diligent-BuildSettings
-    ${WHOLE_ARCHIVE_FLAG} Diligent-Archiver-static ${NO_WHOLE_ARCHIVE_FLAG}
 )
+target_link_whole_archive(Diligent-Archiver-shared Diligent-Archiver-static)
 
 if(PLATFORM_WIN32)
     # Do not add 'lib' prefix when building with MinGW

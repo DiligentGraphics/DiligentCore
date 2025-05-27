@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.10)
 
+include(../../BuildTools/CMake/BuildUtils.cmake)
+
 project(Diligent-GraphicsEngineOpenGL CXX)
 
 set(INCLUDE
@@ -262,10 +264,10 @@ PUBLIC
 target_link_libraries(Diligent-GraphicsEngineOpenGL-shared
 PRIVATE
     Diligent-BuildSettings
-    ${WHOLE_ARCHIVE_FLAG} Diligent-GraphicsEngineOpenGL-static ${NO_WHOLE_ARCHIVE_FLAG}
 PUBLIC
     ${PUBLIC_DEPENDENCIES}
 )
+target_link_whole_archive(Diligent-GraphicsEngineOpenGL-shared Diligent-GraphicsEngineOpenGL-static)
 
 target_compile_definitions(Diligent-GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1)
 if(PLATFORM_MACOS)

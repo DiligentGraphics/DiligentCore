@@ -1,5 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 
+include(../../BuildTools/CMake/BuildUtils.cmake)
 include(../../BuildTools/CMake/VulkanUtils.cmake)
 
 project(Diligent-GraphicsEngineVk CXX)
@@ -286,10 +287,11 @@ PUBLIC
 target_link_libraries(Diligent-GraphicsEngineVk-shared
 PRIVATE
     Diligent-BuildSettings
-    ${WHOLE_ARCHIVE_FLAG} Diligent-GraphicsEngineVk-static ${NO_WHOLE_ARCHIVE_FLAG}
 PUBLIC
     ${PUBLIC_DEPENDENCIES}
 )
+target_link_whole_archive(Diligent-GraphicsEngineVk-shared Diligent-GraphicsEngineVk-static)
+
 
 if (MINGW_BUILD)
     # Restrict export to GetEngineFactoryVk

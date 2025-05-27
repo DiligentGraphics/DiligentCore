@@ -499,3 +499,35 @@ function(set_targets_emscripten_properties)
         endforeach()
     endif()
 endfunction()
+
+
+# Links the static library <lib> to the target <tgt> as a whole archive.
+function(target_link_whole_archive tgt lib)
+    if(MSVC)
+        target_link_libraries(${tgt} PRIVATE ${lib})
+    else()
+        if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+            # Use the new $<LINK_LIBRARY:WHOLE_ARCHIVE,lib> generator expression.
+            # This one argument expands to the right flags automatically on
+            # every toolchain (-Wl,--whole-archive/--no-whole-archive on ELF,
+            # -Wl,-force_load on Apple, /WHOLEARCHIVE on MSVC, ...).
+            target_link_libraries(
+                ${tgt} PRIVATE
+                "$<LINK_LIBRARY:WHOLE_ARCHIVE,${lib}>"
+            )
+        else()
+            # Legacy toolchains: add the flags by hand.
+            if(APPLE)
+                target_link_libraries(
+                    ${tgt} PRIVATE
+                    "-Wl,-force_load,$<TARGET_FILE:${lib}>"
+                )
+            else()
+                target_link_libraries(
+                    ${tgt} PRIVATE
+                    "-Wl,--whole-archive" ${lib} "-Wl,--no-whole-archive"
+                )
+            endif()
+        endif()
+    endif()
+endfunction()
