@@ -56,7 +56,7 @@ if(METAL_SUPPORTED)
     set_property(SOURCE ${MTL_SOURCE} APPEND_STRING PROPERTY
         # Disable Metal API deprecation warnings such as
         #   'MTLArgumentType' is deprecated: first deprecated in macOS 13.0
-        COMPILE_FLAGS " -Wno-deprecated-declarations"
+        COMPILE_FLAGS " -Wno-deprecated-declarations -std=c++17"
     )
 endif()
 
