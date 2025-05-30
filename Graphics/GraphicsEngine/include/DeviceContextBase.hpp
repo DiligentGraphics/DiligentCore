@@ -2274,7 +2274,7 @@ inline void DeviceContextBase<ImplementationTraits>::Draw(const DrawAttribs& Att
     if (m_pPipelineState)
     {
         const PRIMITIVE_TOPOLOGY Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
-        m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.NumVertices);
+        m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.NumVertices) * Attribs.NumInstances;
     }
     ++m_Stats.CommandCounters.Draw;
 }
@@ -2301,7 +2301,7 @@ inline void DeviceContextBase<ImplementationTraits>::DrawIndexed(const DrawIndex
     if (m_pPipelineState)
     {
         const PRIMITIVE_TOPOLOGY Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
-        m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.NumIndices);
+        m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.NumIndices) * Attribs.NumInstances;
     }
     ++m_Stats.CommandCounters.DrawIndexed;
 }
@@ -2433,7 +2433,7 @@ inline void DeviceContextBase<ImplementationTraits>::MultiDraw(const MultiDrawAt
     {
         const PRIMITIVE_TOPOLOGY Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
         for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
-            m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.pDrawItems[i].NumVertices);
+            m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.pDrawItems[i].NumVertices) * Attribs.NumInstances;
     }
     if (m_NativeMultiDrawSupported)
         ++m_Stats.CommandCounters.MultiDraw;
@@ -2464,7 +2464,7 @@ inline void DeviceContextBase<ImplementationTraits>::MultiDrawIndexed(const Mult
     {
         const PRIMITIVE_TOPOLOGY Topology = m_pPipelineState->GetGraphicsPipelineDesc().PrimitiveTopology;
         for (Uint32 i = 0; i < Attribs.DrawCount; ++i)
-            m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.pDrawItems[i].NumIndices);
+            m_Stats.PrimitiveCounts[Topology] += GetPrimitiveCount(Topology, Attribs.pDrawItems[i].NumIndices) * Attribs.NumInstances;
     }
     if (m_NativeMultiDrawSupported)
         ++m_Stats.CommandCounters.MultiDrawIndexed;
