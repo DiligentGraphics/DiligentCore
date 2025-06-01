@@ -603,7 +603,7 @@ private:
     MappedTexturesCache     m_MappedTextures;
     MappedBuffersCache      m_MappedBuffers;
     DebugGroupStack         m_DebugGroupsStack;
-    DebugGroupStack         m_PendingDebugGroups;
+    DebugGroupStack         m_EndedDebugGroups;
     OcclusionQueryStack     m_OcclusionQueriesStack;
     PendingStagingResources m_PendingStagingReads;
     PendingStagingResources m_PendingStagingWrites;

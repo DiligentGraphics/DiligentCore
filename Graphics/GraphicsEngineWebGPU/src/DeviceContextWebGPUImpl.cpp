@@ -347,7 +347,7 @@ void DeviceContextWebGPUImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs&
 
     if (TDeviceContextBase::SetRenderTargets(Attribs) || (Attribs.NumRenderTargets == 0 && Attribs.pDepthStencil == nullptr))
     {
-        EndCommandEncoders(COMMAND_ENCODER_FLAG_RENDER);
+        EndCommandEncoders();
         SetViewports(1, nullptr, 0, 0);
     }
 }
@@ -1616,14 +1616,14 @@ void DeviceContextWebGPUImpl::EndDebugGroup()
         if (DebugGroupType == DEBUG_GROUP_TYPE_RENDER)
             wgpuRenderPassEncoderPopDebugGroup(GetRenderPassCommandEncoder());
         else
-            m_PendingDebugGroups.push_back(DebugGroupType);
+            m_EndedDebugGroups.push_back(DebugGroupType);
     }
     else if (m_wgpuComputePassEncoder)
     {
         if (DebugGroupType == DEBUG_GROUP_TYPE_COMPUTE)
             wgpuComputePassEncoderPopDebugGroup(GetComputePassCommandEncoder());
         else
-            m_PendingDebugGroups.push_back(DebugGroupType);
+            m_EndedDebugGroups.push_back(DebugGroupType);
     }
     else
     {
@@ -1811,11 +1811,11 @@ void DeviceContextWebGPUImpl::EndCommandEncoders(Uint32 EncoderFlags)
         }
     }
 
-    while (!m_PendingDebugGroups.empty())
+    while (!m_EndedDebugGroups.empty())
     {
-        if (m_PendingDebugGroups.back() != DEBUG_GROUP_TYPE_NULL)
+        if (m_EndedDebugGroups.back() != DEBUG_GROUP_TYPE_NULL)
             wgpuCommandEncoderPopDebugGroup(m_wgpuCommandEncoder);
-        m_PendingDebugGroups.pop_back();
+        m_EndedDebugGroups.pop_back();
     }
 }
 
