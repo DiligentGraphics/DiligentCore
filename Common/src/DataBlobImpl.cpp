@@ -97,13 +97,13 @@ size_t DataBlobImpl::GetSize() const
 /// Returns the pointer to the internal data buffer
 void* DataBlobImpl::GetDataPtr(size_t Offset)
 {
-    return &m_DataBuff[Offset];
+    return !m_DataBuff.empty() ? &m_DataBuff[Offset] : nullptr;
 }
 
 /// Returns const pointer to the internal data buffer
 const void* DataBlobImpl::GetConstDataPtr(size_t Offset) const
 {
-    return &m_DataBuff[Offset];
+    return !m_DataBuff.empty() ? &m_DataBuff[Offset] : nullptr;
 }
 
 IMPLEMENT_QUERY_INTERFACE(DataBlobImpl, IID_DataBlob, TBase)
