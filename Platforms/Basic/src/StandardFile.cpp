@@ -37,8 +37,8 @@ StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs) :
     m_pFile{nullptr}
 {
 #if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_WEB
-    auto OpenModeStr = GetOpenModeStr();
-    m_pFile          = fopen(m_OpenAttribs.strFilePath, OpenModeStr.c_str());
+    String OpenModeStr = GetOpenModeStr();
+    m_pFile            = fopen(m_OpenAttribs.strFilePath, OpenModeStr.c_str());
     if (m_pFile == nullptr)
     {
         LOG_ERROR_AND_THROW("Failed to open file ", m_OpenAttribs.strFilePath,
@@ -59,7 +59,7 @@ StandardFile::~StandardFile()
 bool StandardFile::Read(IDataBlob* pData)
 {
     VERIFY_EXPR(pData != nullptr);
-    auto FileSize = GetSize();
+    size_t FileSize = GetSize();
     pData->Resize(FileSize);
     return Read(pData->GetDataPtr(), pData->GetSize());
 }
@@ -69,7 +69,7 @@ bool StandardFile::Read(void* Data, size_t Size)
     VERIFY(m_pFile, "File is not opened");
     if (!m_pFile)
         return false;
-    auto BytesRead = fread(Data, 1, Size, m_pFile);
+    size_t BytesRead = fread(Data, 1, Size, m_pFile);
 
     return BytesRead == Size;
 }
@@ -79,7 +79,7 @@ bool StandardFile::Write(const void* Data, size_t Size)
     VERIFY(m_pFile, "File is not opened");
     if (!m_pFile)
         return false;
-    auto BytesWritten = fwrite(Data, 1, Size, m_pFile);
+    size_t BytesWritten = fwrite(Data, 1, Size, m_pFile);
 
     return BytesWritten == Size;
 }
@@ -87,9 +87,9 @@ bool StandardFile::Write(const void* Data, size_t Size)
 size_t StandardFile::GetSize()
 {
     VERIFY(m_pFile, "File is not opened");
-    auto OrigPos = ftell(m_pFile);
+    long OrigPos = ftell(m_pFile);
     fseek(m_pFile, 0, SEEK_END);
-    auto FileSize = ftell(m_pFile);
+    long FileSize = ftell(m_pFile);
 
     fseek(m_pFile, OrigPos, SEEK_SET);
     return FileSize;
