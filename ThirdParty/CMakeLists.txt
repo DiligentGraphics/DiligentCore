@@ -125,14 +125,6 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR WEBGPU_SUPPORTED OR (ARCHIVER_SUPPORT
         install(FILES "${SPIRV-Cross_SOURCE_DIR}/LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Cross-License.txt)
     endif()
 
-    if (DILIGENT_INSTALL_CORE)
-        install(TARGETS ${THIRD_PARTY_LIBS}
-                ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
-                LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
-                RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
-        )
-    endif()
-
     if (MSVC)
         foreach(TARGET ${THIRD_PARTY_LIBS}) 
             if (${DILIGENT_IMPROVE_SPIRV_TOOLS_DEBUG_PERF})
@@ -146,13 +138,6 @@ if (VULKAN_SUPPORTED OR METAL_SUPPORTED OR WEBGPU_SUPPORTED OR (ARCHIVER_SUPPORT
         endforeach()
     endif()
 
-    # Make sure that symbols do not leak out when third-party
-    # libs are linked into shared libraries
-    set_target_properties(${THIRD_PARTY_LIBS} PROPERTIES
-        CXX_VISIBILITY_PRESET hidden # -fvisibility=hidden
-        C_VISIBILITY_PRESET hidden # -fvisibility=hidden
-        VISIBILITY_INLINES_HIDDEN TRUE
-    )
 else()
     set(DILIGENT_USE_SPIRV_TOOLCHAIN FALSE CACHE INTERNAL "")
 endif()
@@ -169,6 +154,7 @@ if (VULKAN_SUPPORTED AND (PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS OR 
     set_common_target_properties(volk)
     set_directory_root_folder("volk" "DiligentCore/ThirdParty")
     install(FILES "${volk_SOURCE_DIR}/LICENSE.md" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Volk-License.md)
+    list(APPEND THIRD_PARTY_LIBS volk)
 endif()
 
 if (WEBGPU_SUPPORTED)
@@ -210,6 +196,23 @@ if (NOT TARGET xxHash::xxhash)
     add_subdirectory(xxHash/build/cmake)
     set_directory_root_folder("xxHash/build/cmake" "DiligentCore/ThirdParty/xxHash")
     install(FILES "${xxHash_SOURCE_DIR}/../../LICENSE" DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME xxHash-License.txt)
+    list(APPEND THIRD_PARTY_LIBS xxhash)
+endif()
+
+# Make sure that symbols do not leak out when third-party
+# libs are linked into shared libraries
+set_target_properties(${THIRD_PARTY_LIBS} PROPERTIES
+    CXX_VISIBILITY_PRESET hidden # -fvisibility=hidden
+    C_VISIBILITY_PRESET hidden # -fvisibility=hidden
+    VISIBILITY_INLINES_HIDDEN TRUE
+)
+
+if (DILIGENT_INSTALL_CORE)
+    install(TARGETS ${THIRD_PARTY_LIBS}
+            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
+            LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
+            RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
+    )
 endif()
 
 install(FILES stb/stb_image_write_license.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}")
