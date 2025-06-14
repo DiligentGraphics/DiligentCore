@@ -2,6 +2,8 @@ cmake_minimum_required (VERSION 3.19)
 
 project(DiligentCore)
 
+set(DILIGENT_CORE_FOUND TRUE CACHE INTERNAL "DiligentCore module is found")
+
 # Define GNU standard installation directories such as CMAKE_INSTALL_INCLUDEDIR, CMAKE_INSTALL_LIBDIR, etc.
 include(GNUInstallDirs)
 
