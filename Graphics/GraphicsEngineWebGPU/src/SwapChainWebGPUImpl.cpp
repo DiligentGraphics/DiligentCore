@@ -288,16 +288,19 @@ public:
             return WGPUSurfaceGetCurrentTextureStatus_Error;
         }
 
-        WGPUBindGroupEntry wgpuBindGroupEntries[1]{};
-        wgpuBindGroupEntries[0].binding     = 0;
-        wgpuBindGroupEntries[0].textureView = pTexture->GetWebGPUTextureView();
+        if (!m_wgpuBindGroup)
+        {
+            WGPUBindGroupEntry wgpuBindGroupEntries[1]{};
+            wgpuBindGroupEntries[0].binding     = 0;
+            wgpuBindGroupEntries[0].textureView = pTexture->GetWebGPUTextureView();
 
-        WGPUBindGroupDescriptor wgpuBindGroupDesc{};
-        wgpuBindGroupDesc.entries    = wgpuBindGroupEntries;
-        wgpuBindGroupDesc.entryCount = _countof(wgpuBindGroupEntries);
-        wgpuBindGroupDesc.layout     = m_wgpuBindGroupLayout;
+            WGPUBindGroupDescriptor wgpuBindGroupDesc{};
+            wgpuBindGroupDesc.entries    = wgpuBindGroupEntries;
+            wgpuBindGroupDesc.entryCount = _countof(wgpuBindGroupEntries);
+            wgpuBindGroupDesc.layout     = m_wgpuBindGroupLayout;
 
-        WebGPUBindGroupWrapper wgpuBindGroup{wgpuDeviceCreateBindGroup(m_pRenderDevice->GetWebGPUDevice(), &wgpuBindGroupDesc)};
+            m_wgpuBindGroup.Reset(wgpuDeviceCreateBindGroup(m_pRenderDevice->GetWebGPUDevice(), &wgpuBindGroupDesc));
+        }
 
         WGPUCommandEncoderDescriptor wgpuCmdEncoderDesc{};
         WebGPUCommandEncoderWrapper  wgpuCmdEncoder{wgpuDeviceCreateCommandEncoder(m_pRenderDevice->GetWebGPUDevice(), &wgpuCmdEncoderDesc)};
@@ -315,7 +318,7 @@ public:
 
         WebGPURenderPassEncoderWrapper wgpuRenderPassEncoder{wgpuCommandEncoderBeginRenderPass(wgpuCmdEncoder, &wgpuRenderPassDesc)};
         wgpuRenderPassEncoderSetPipeline(wgpuRenderPassEncoder, m_wgpuRenderPipeline);
-        wgpuRenderPassEncoderSetBindGroup(wgpuRenderPassEncoder, 0, wgpuBindGroup, 0, nullptr);
+        wgpuRenderPassEncoderSetBindGroup(wgpuRenderPassEncoder, 0, m_wgpuBindGroup, 0, nullptr);
         wgpuRenderPassEncoderDraw(wgpuRenderPassEncoder, 3, 1, 0, 0);
         wgpuRenderPassEncoderEnd(wgpuRenderPassEncoder);
 
@@ -333,9 +336,15 @@ public:
         return wgpuSurfaceTexture.status;
     }
 
+    void ReleaseSwapChainResources()
+    {
+        m_wgpuBindGroup.Reset();
+    }
+
 private:
     RefCntAutoPtr<IRenderDeviceWebGPU> m_pRenderDevice;
     WebGPUBindGroupLayoutWrapper       m_wgpuBindGroupLayout;
+    WebGPUBindGroupWrapper             m_wgpuBindGroup;
     WebGPUPipelineLayoutWrapper        m_wgpuPipelineLayout;
     WebGPURenderPipelineWrapper        m_wgpuRenderPipeline;
 };
@@ -599,6 +608,7 @@ void SwapChainWebGPUImpl::ReleaseSwapChainResources()
     if (!m_wgpuSurface)
         return;
 
+    m_pCmdPresent->ReleaseSwapChainResources();
     m_pBackBufferSRV.Release();
     m_pBackBufferRTV.Release();
     m_pDepthBufferDSV.Release();
