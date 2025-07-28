@@ -490,8 +490,22 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
                     LOG_ERROR_AND_THROW("glTextureView is not supported");
 
                 glTextureView(pViewOGL->GetHandle(), GLViewTarget, m_GlTexture, GLViewFormat, ViewDesc.MostDetailedMip, ViewDesc.NumMipLevels, ViewDesc.FirstArraySlice, NumLayers);
+                
                 DEV_CHECK_GL_ERROR_AND_THROW("Failed to create texture view");
                 pViewOGL->SetBindTarget(GLViewTarget);
+
+                if(GLViewFormat == TEX_FORMAT_X24_TYPELESS_G8_UINT || GLViewFormat == TEX_FORMAT_X32_TYPELESS_G8X24_UINT)
+                {
+                    RefCntAutoPtr<DeviceContextGLImpl> pDeviceContext = pDeviceGLImpl->GetImmediateContext(0);
+                    VERIFY(pDeviceContext, "Immediate device context has been destroyed");
+                    GLContextState& GLState = pDeviceContext->GetContextState();
+
+                    GLState.BindTexture(-1, GLViewTarget, pViewOGL->GetHandle());
+
+                    glTexParameteri(GLViewTarget, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
+
+                    GLState.BindTexture(-1, GLViewTarget, GLObjectWrappers::GLTextureObj::Null());
+                }
 
                 if (!IsIdentityComponentMapping(ViewDesc.Swizzle))
                 {
@@ -508,6 +522,7 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
                     DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_B texture parameter");
                     glTexParameteri(GLViewTarget, GL_TEXTURE_SWIZZLE_A, TextureComponentSwizzleToGLTextureSwizzle(ViewDesc.Swizzle.A, GL_ALPHA));
                     DEV_CHECK_GL_ERROR("Failed to set GL_TEXTURE_SWIZZLE_A texture parameter");
+
                     GLState.BindTexture(-1, GLViewTarget, GLObjectWrappers::GLTextureObj::Null());
                 }
             }

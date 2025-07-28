@@ -1253,7 +1253,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FlagFormat(TEX_FORMAT_R32G8X24_TYPELESS,          true                                      );
     FlagFormat(TEX_FORMAT_D32_FLOAT_S8X24_UINT,       true,         BIND_DEPTH_STENCIL          );
     FlagFormat(TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,   true,         TexBindFlags,     bDekstopGL);
-    FlagFormat(TEX_FORMAT_X32_TYPELESS_G8X24_UINT,    false                                     );
+    FlagFormat(TEX_FORMAT_X32_TYPELESS_G8X24_UINT,    true,         BIND_SHADER_RESOURCE,  false);
     FlagFormat(TEX_FORMAT_RGB10A2_TYPELESS,           true                                      );
     FlagFormat(TEX_FORMAT_RGB10A2_UNORM,              true,         BindSrvRtvUav,          true);
     FlagFormat(TEX_FORMAT_RGB10A2_UINT,               true,         BindSrvRtvUav               );
@@ -1278,7 +1278,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FlagFormat(TEX_FORMAT_R24G8_TYPELESS,             true                                      );
     FlagFormat(TEX_FORMAT_D24_UNORM_S8_UINT,          true,         BIND_DEPTH_STENCIL          );
     FlagFormat(TEX_FORMAT_R24_UNORM_X8_TYPELESS,      true,         TexBindFlags,           true);
-    FlagFormat(TEX_FORMAT_X24_TYPELESS_G8_UINT,       false                                     );
+    FlagFormat(TEX_FORMAT_X24_TYPELESS_G8_UINT,       true,         BIND_SHADER_RESOURCE,  false);
     FlagFormat(TEX_FORMAT_RG8_TYPELESS,               true                                      );
     FlagFormat(TEX_FORMAT_RG8_UNORM,                  true,         U8BindFlags,            true);
     FlagFormat(TEX_FORMAT_RG8_UINT,                   true,         UI8BindFlags                );
