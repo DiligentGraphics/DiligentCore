@@ -494,7 +494,7 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
                 DEV_CHECK_GL_ERROR_AND_THROW("Failed to create texture view");
                 pViewOGL->SetBindTarget(GLViewTarget);
 
-                if(GLViewFormat == TEX_FORMAT_X24_TYPELESS_G8_UINT || GLViewFormat == TEX_FORMAT_X32_TYPELESS_G8X24_UINT)
+                if(ViewDesc.Format == TEX_FORMAT_X24_TYPELESS_G8_UINT || ViewDesc.Format == TEX_FORMAT_X32_TYPELESS_G8X24_UINT)
                 {
                     RefCntAutoPtr<DeviceContextGLImpl> pDeviceContext = pDeviceGLImpl->GetImmediateContext(0);
                     VERIFY(pDeviceContext, "Immediate device context has been destroyed");
