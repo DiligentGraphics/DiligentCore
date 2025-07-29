@@ -1138,13 +1138,16 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 {
     const RenderDeviceInfo& DeviceInfo     = GetDeviceInfo();
     const bool              bDekstopGL     = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL;
+    const bool              bGL430OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{4, 3};
     const bool              bGLES30OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 0};
+    const bool              bGLES31OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 1};
 
     const bool bRGTC       = CheckExtension("GL_EXT_texture_compression_rgtc") || CheckExtension("GL_ARB_texture_compression_rgtc");
     const bool bBPTC       = CheckExtension("GL_EXT_texture_compression_bptc") || CheckExtension("GL_ARB_texture_compression_bptc");
     const bool bS3TC       = CheckExtension("GL_EXT_texture_compression_s3tc") || CheckExtension("GL_WEBGL_compressed_texture_s3tc");
     const bool bTexNorm16  = bDekstopGL || CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
     const bool bTexSwizzle = bDekstopGL || bGLES30OrAbove || CheckExtension("GL_ARB_texture_swizzle");
+    const bool bStencilTex = bGL430OrAbove || bGLES31OrAbove || CheckExtension("GL_ARB_stencil_texturing");
 
 #if PLATFORM_WEB
     const bool bETC2 = CheckExtension("GL_WEBGL_compressed_texture_etc");
@@ -1253,7 +1256,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FlagFormat(TEX_FORMAT_R32G8X24_TYPELESS,          true                                      );
     FlagFormat(TEX_FORMAT_D32_FLOAT_S8X24_UINT,       true,         BIND_DEPTH_STENCIL          );
     FlagFormat(TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,   true,         TexBindFlags,     bDekstopGL);
-    FlagFormat(TEX_FORMAT_X32_TYPELESS_G8X24_UINT,    true,         BIND_SHADER_RESOURCE,  false);
+    FlagFormat(TEX_FORMAT_X32_TYPELESS_G8X24_UINT,    bStencilTex,  BIND_SHADER_RESOURCE,  false);
     FlagFormat(TEX_FORMAT_RGB10A2_TYPELESS,           true                                      );
     FlagFormat(TEX_FORMAT_RGB10A2_UNORM,              true,         BindSrvRtvUav,          true);
     FlagFormat(TEX_FORMAT_RGB10A2_UINT,               true,         BindSrvRtvUav               );
@@ -1278,7 +1281,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FlagFormat(TEX_FORMAT_R24G8_TYPELESS,             true                                      );
     FlagFormat(TEX_FORMAT_D24_UNORM_S8_UINT,          true,         BIND_DEPTH_STENCIL          );
     FlagFormat(TEX_FORMAT_R24_UNORM_X8_TYPELESS,      true,         TexBindFlags,           true);
-    FlagFormat(TEX_FORMAT_X24_TYPELESS_G8_UINT,       true,         BIND_SHADER_RESOURCE,  false);
+    FlagFormat(TEX_FORMAT_X24_TYPELESS_G8_UINT,       bStencilTex,  BIND_SHADER_RESOURCE,  false);
     FlagFormat(TEX_FORMAT_RG8_TYPELESS,               true                                      );
     FlagFormat(TEX_FORMAT_RG8_UNORM,                  true,         U8BindFlags,            true);
     FlagFormat(TEX_FORMAT_RG8_UINT,                   true,         UI8BindFlags                );
