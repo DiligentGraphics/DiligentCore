@@ -504,10 +504,14 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
                         GLContextState& GLState = pDeviceContext->GetContextState();
 
                         GLState.BindTexture(-1, GLViewTarget, pViewOGL->GetHandle());
-
                         glTexParameteri(GLViewTarget, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
-
+                        DEV_CHECK_GL_ERROR("Failed to set GL_DEPTH_STENCIL_TEXTURE_MODE texture parameter");
                         GLState.BindTexture(-1, GLViewTarget, GLObjectWrappers::GLTextureObj::Null());
+                    }
+                    else
+                    {
+                        // Throw an error if the format is not supported
+                        LOG_ERROR_AND_THROW("Format ", GetTextureFormatAttribs(ViewDesc.Format).Name, " is not supported");
                     }
                 }
 
