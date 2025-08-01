@@ -495,9 +495,9 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
 
                 if (ViewDesc.Format == TEX_FORMAT_X24_TYPELESS_G8_UINT || ViewDesc.Format == TEX_FORMAT_X32_TYPELESS_G8X24_UINT)
                 {
-                    const auto& FormatInfo = pDeviceGLImpl->GetTextureFormatInfo(ViewDesc.Format);
+                    const TextureFormatInfo& FmtInfo = pDeviceGLImpl->GetTextureFormatInfo(ViewDesc.Format);
 
-                    if (FormatInfo.Supported)
+                    if (FmtInfo.Supported)
                     {
                         RefCntAutoPtr<DeviceContextGLImpl> pDeviceContext = pDeviceGLImpl->GetImmediateContext(0);
                         VERIFY(pDeviceContext, "Immediate device context has been destroyed");
