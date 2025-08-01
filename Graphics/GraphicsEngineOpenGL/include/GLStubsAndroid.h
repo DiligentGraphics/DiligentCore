@@ -155,6 +155,15 @@
 #   define GL_MIRROR_CLAMP_TO_EDGE 0
 #endif
 
+// Define unsupported texture parameters
+#ifndef GL_DEPTH_STENCIL_TEXTURE_MODE
+#   define GL_DEPTH_STENCIL_TEXTURE_MODE 0x90EA
+#endif
+
+#ifndef GL_STENCIL_INDEX
+#   define GL_STENCIL_INDEX 0x1901
+#endif
+
 // Define unsupported bind points
 #ifndef GL_ARB_draw_indirect
 #   define GL_ARB_draw_indirect 1
