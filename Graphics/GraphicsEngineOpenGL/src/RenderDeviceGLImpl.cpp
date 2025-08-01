@@ -1138,7 +1138,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
 {
     const RenderDeviceInfo& DeviceInfo     = GetDeviceInfo();
     const bool              bDekstopGL     = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL;
-    const bool              bGL430OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{4, 3};
+    const bool              bGL430OrAbove  = DeviceInfo.Type == RENDER_DEVICE_TYPE_GL && DeviceInfo.APIVersion >= Version{4, 3};
     const bool              bGLES30OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 0};
     const bool              bGLES31OrAbove = DeviceInfo.Type == RENDER_DEVICE_TYPE_GLES && DeviceInfo.APIVersion >= Version{3, 1};
 
