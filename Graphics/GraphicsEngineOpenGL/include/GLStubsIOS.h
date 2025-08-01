@@ -170,6 +170,14 @@
 #    define GL_DEPTH_CLAMP 0x864F
 #endif
 
+// Define unsupported texture parameters
+#ifndef GL_DEPTH_STENCIL_TEXTURE_MODE
+#   define GL_DEPTH_STENCIL_TEXTURE_MODE 0x90EA
+#endif
+
+#ifndef GL_STENCIL_INDEX
+#   define GL_STENCIL_INDEX 0x1901
+#endif
 
 // Define unsupported formats for OpenGL ES
 #ifndef GL_RGBA16
