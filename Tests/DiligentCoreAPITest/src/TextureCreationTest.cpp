@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -771,10 +771,10 @@ const TextureTestAttribs TestList[] =
     {TEX_FORMAT_RG32_UINT,         8, BindSRU, true},
     {TEX_FORMAT_RG32_SINT,         8, BindSRU, true},
 
-    {TEX_FORMAT_R32G8X24_TYPELESS,        8, BindD, false},
-    {TEX_FORMAT_D32_FLOAT_S8X24_UINT,     8, BindD, false},
-  //{TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS, 8, BindD, false},
-  //{TEX_FORMAT_X32_TYPELESS_G8X24_UINT,  8, BindD, false},
+    {TEX_FORMAT_R32G8X24_TYPELESS,        8, BindSD, false},
+    {TEX_FORMAT_D32_FLOAT_S8X24_UINT,     8, BindD,  false},
+  //{TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS, 8, BindD,  false},
+  //{TEX_FORMAT_X32_TYPELESS_G8X24_UINT,  8, BindD,  false},
 
     {TEX_FORMAT_RGB10A2_TYPELESS,        4, BindSR,  true},
     {TEX_FORMAT_RGB10A2_UNORM,           4, BindSR,  true},

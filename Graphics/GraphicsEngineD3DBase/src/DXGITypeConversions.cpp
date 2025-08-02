@@ -246,6 +246,12 @@ DXGI_FORMAT CorrectDXGIFormat(DXGI_FORMAT DXGIFormat, Uint32 BindFlags)
                 DXGIFormat = DXGI_FORMAT_D16_UNORM;
                 break;
 
+            case DXGI_FORMAT_R32G8X24_TYPELESS:
+            case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+            case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+                DXGIFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+                break;
+
             default:
                 break;
         }
@@ -268,6 +274,11 @@ DXGI_FORMAT CorrectDXGIFormat(DXGI_FORMAT DXGIFormat, Uint32 BindFlags)
             case DXGI_FORMAT_R16_TYPELESS:
             case DXGI_FORMAT_D16_UNORM:
                 DXGIFormat = DXGI_FORMAT_R16_UNORM;
+                break;
+
+            case DXGI_FORMAT_R32G8X24_TYPELESS:
+            case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+                DXGIFormat = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
                 break;
 
             default:
