@@ -112,7 +112,7 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         DepthBufferDesc.Usage       = USAGE_DEFAULT;
         DepthBufferDesc.BindFlags   = BIND_DEPTH_STENCIL;
 
-        DepthBufferDesc.ClearValue.Format               = DepthBufferDesc.Format;
+        DepthBufferDesc.ClearValue.Format               = TEX_FORMAT_UNKNOWN;
         DepthBufferDesc.ClearValue.DepthStencil.Depth   = m_SwapChainDesc.DefaultDepthValue;
         DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
         DepthBufferDesc.Name                            = "Main depth buffer";
