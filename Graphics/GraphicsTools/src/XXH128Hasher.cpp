@@ -64,7 +64,7 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
 {
     ASSERT_SIZEOF64(ShaderCI, 152, "Did you add new members to ShaderCreateInfo? Please handle them here.");
 
-    Update(ShaderCI.SourceLength, // Aka ByteCodeSize
+    Update(static_cast<Uint32>(ShaderCI.SourceLength), // Aka ByteCodeSize
            ShaderCI.EntryPoint,
            ShaderCI.Desc,
            ShaderCI.SourceLanguage,
