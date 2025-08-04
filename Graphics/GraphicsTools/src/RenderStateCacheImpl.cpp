@@ -150,7 +150,7 @@ static XXH128Hash ComputeDeviceAttribsHash(IRenderDevice* pDevice)
         return {};
 
     const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
-    XXH128State Hasher;
+    XXH128State             Hasher;
     Hasher.Update(DeviceInfo.Type, DeviceInfo.NDC.MinZ, DeviceInfo.Features.SeparablePrograms);
     return Hasher.Digest();
 }
