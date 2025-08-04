@@ -137,7 +137,7 @@ private:
 private:
     RefCntAutoPtr<IRenderDevice>                   m_pDevice;
     const RENDER_DEVICE_TYPE                       m_DeviceType;
-    const size_t                                   m_DeviceHash; // Hash of the device-specific properties
+    const XXH128Hash                               m_DeviceHash; // Hash of the device-specific properties
     const RenderStateCacheCreateInfo               m_CI;
     RefCntAutoPtr<IShaderSourceInputStreamFactory> m_pReloadSource;
     RefCntAutoPtr<ISerializationDevice>            m_pSerializationDevice;

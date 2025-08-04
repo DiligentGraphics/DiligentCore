@@ -144,13 +144,15 @@ std::string RenderStateCacheImpl::MakeHashStr(const char* Name, const XXH128Hash
 }
 
 
-static size_t ComputeDeviceAttribsHash(IRenderDevice* pDevice)
+static XXH128Hash ComputeDeviceAttribsHash(IRenderDevice* pDevice)
 {
     if (pDevice == nullptr)
-        return 0;
+        return {};
 
     const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
-    return ComputeHash(DeviceInfo.Type, DeviceInfo.NDC.MinZ, DeviceInfo.Features.SeparablePrograms);
+    XXH128State Hasher;
+    Hasher.Update(DeviceInfo.Type, DeviceInfo.NDC.MinZ, DeviceInfo.Features.SeparablePrograms);
+    return Hasher.Digest();
 }
 
 RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRefCounters,

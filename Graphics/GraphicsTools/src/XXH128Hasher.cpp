@@ -108,4 +108,9 @@ void XXH128State::Update(const ShaderCreateInfo& ShaderCI) noexcept
     }
 }
 
+void XXH128State::Update(const XXH128Hash& Hash) noexcept
+{
+    Update(Hash.LowPart, Hash.HighPart);
+}
+
 } // namespace Diligent

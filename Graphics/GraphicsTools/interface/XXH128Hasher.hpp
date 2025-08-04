@@ -123,6 +123,8 @@ struct XXH128State final
 
     void Update(const ShaderCreateInfo& ShaderCI) noexcept;
 
+    void Update(const XXH128Hash& Hash) noexcept;
+
     template <typename T>
     typename std::enable_if<(std::is_same<typename std::remove_cv<T>::type, SamplerDesc>::value ||
                              std::is_same<typename std::remove_cv<T>::type, StencilOpDesc>::value ||
