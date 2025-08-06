@@ -144,13 +144,13 @@ std::string RenderStateCacheImpl::MakeHashStr(const char* Name, const XXH128Hash
 }
 
 
-static size_t ComputeDeviceAttribsHash(IRenderDevice* pDevice)
+static void ComputeDeviceAttribsHash(XXH128State& Hasher, IRenderDevice* pDevice)
 {
-    if (pDevice == nullptr)
-        return 0;
-
-    const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
-    return ComputeHash(DeviceInfo.Type, DeviceInfo.NDC.MinZ, DeviceInfo.Features.SeparablePrograms);
+    if (pDevice != nullptr)
+    {
+        const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
+        Hasher.Update(DeviceInfo.Type, DeviceInfo.NDC.MinZ, DeviceInfo.Features.SeparablePrograms);
+    }
 }
 
 RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRefCounters,
@@ -159,7 +159,6 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
     // clang-format off
     m_pDevice      {CreateInfo.pDevice},
     m_DeviceType   {CreateInfo.pDevice != nullptr ? CreateInfo.pDevice->GetDeviceInfo().Type : RENDER_DEVICE_TYPE_UNDEFINED},
-    m_DeviceHash   {ComputeDeviceAttribsHash(CreateInfo.pDevice)},
     m_CI           {CreateInfo},
     m_pReloadSource{CreateInfo.pReloadSource}
 // clang-format on
@@ -318,7 +317,8 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
 #else
     constexpr bool IsDebug = false;
 #endif
-    Hasher.Update(ShaderCI, m_DeviceHash, IsDebug);
+    ComputeDeviceAttribsHash(Hasher, m_pDevice);
+    Hasher.Update(ShaderCI, IsDebug);
     const XXH128Hash Hash = Hasher.Digest();
 
     // First, try to check if the shader has already been requested
@@ -765,7 +765,8 @@ bool RenderStateCacheImpl::CreatePipelineStateInternal(const CreateInfoType& PSO
     }
 
     XXH128State Hasher;
-    Hasher.Update(PSOCreateInfo, m_DeviceHash);
+    ComputeDeviceAttribsHash(Hasher, m_pDevice);
+    Hasher.Update(PSOCreateInfo);
     const auto Hash = Hasher.Digest();
 
     // First, try to check if the PSO has already been requested
