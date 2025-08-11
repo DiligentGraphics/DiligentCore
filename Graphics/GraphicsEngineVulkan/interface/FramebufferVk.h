@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,7 @@ static DILIGENT_CONSTEXPR INTERFACE_ID IID_FramebufferVk =
 DILIGENT_BEGIN_INTERFACE(IFramebufferVk, IFramebuffer)
 {
     /// Returns Vulkan framebuffer object handle
-    VIRTUAL VkFramebuffer METHOD(GetVkFramebuffer)() CONST PURE;
+    VIRTUAL VkFramebuffer METHOD(GetVkFramebuffer)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
