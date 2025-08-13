@@ -191,6 +191,7 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
 
         case RENDER_DEVICE_TYPE_D3D12:
             SerializationDeviceCI.D3D12.ShaderVersion = SerializationDeviceCI.DeviceInfo.MaxShaderVersion.HLSL;
+            SerializationDeviceCI.D3D12.DxCompilerPath = CreateInfo.DxCompilerPath;
             break;
 
         case RENDER_DEVICE_TYPE_GL:
@@ -201,6 +202,7 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
 
         case RENDER_DEVICE_TYPE_VULKAN:
             SerializationDeviceCI.Vulkan.ApiVersion = SerializationDeviceCI.DeviceInfo.APIVersion;
+            SerializationDeviceCI.Vulkan.DxCompilerPath = CreateInfo.DxCompilerPath;
             break;
 
         case RENDER_DEVICE_TYPE_METAL:

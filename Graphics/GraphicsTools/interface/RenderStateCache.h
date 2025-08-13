@@ -76,6 +76,9 @@ struct RenderStateCacheCreateInfo
     /// shaders. If null, original source factory will be used.
     IShaderSourceInputStreamFactory* pReloadSource DEFAULT_INITIALIZER(nullptr);
 
+    /// DX Compiler path
+    const Char* DxCompilerPath DEFAULT_INITIALIZER(nullptr);
+
 #if DILIGENT_CPP_INTERFACE
     constexpr RenderStateCacheCreateInfo() noexcept
     {}
