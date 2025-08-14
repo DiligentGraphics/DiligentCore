@@ -49,6 +49,7 @@
 #include "GraphicsAccessories.hpp"
 #include "GraphicsUtilities.h"
 #include "ShaderSourceFactoryUtils.hpp"
+#include "DXCompiler.hpp"
 
 namespace Diligent
 {
@@ -153,6 +154,18 @@ static void ComputeDeviceAttribsHash(XXH128State& Hasher, IRenderDevice* pDevice
     }
 }
 
+static const char* GetDXCompilerLibName(IRenderDevice* pDevice)
+{
+    if (IDXCompiler* pDXCompiler = GetDeviceDXCompiler(pDevice))
+    {
+        return pDXCompiler->GetLibraryName().c_str();
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
 RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRefCounters,
                                            const RenderStateCacheCreateInfo& CreateInfo) :
     TBase{pRefCounters},
@@ -190,7 +203,8 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
             break;
 
         case RENDER_DEVICE_TYPE_D3D12:
-            SerializationDeviceCI.D3D12.ShaderVersion = SerializationDeviceCI.DeviceInfo.MaxShaderVersion.HLSL;
+            SerializationDeviceCI.D3D12.ShaderVersion  = SerializationDeviceCI.DeviceInfo.MaxShaderVersion.HLSL;
+            SerializationDeviceCI.D3D12.DxCompilerPath = GetDXCompilerLibName(m_pDevice);
             break;
 
         case RENDER_DEVICE_TYPE_GL:
@@ -200,7 +214,8 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
             break;
 
         case RENDER_DEVICE_TYPE_VULKAN:
-            SerializationDeviceCI.Vulkan.ApiVersion = SerializationDeviceCI.DeviceInfo.APIVersion;
+            SerializationDeviceCI.Vulkan.ApiVersion     = SerializationDeviceCI.DeviceInfo.APIVersion;
+            SerializationDeviceCI.Vulkan.DxCompilerPath = GetDXCompilerLibName(m_pDevice);
             break;
 
         case RENDER_DEVICE_TYPE_METAL:
