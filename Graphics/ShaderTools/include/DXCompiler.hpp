@@ -52,9 +52,8 @@ enum class DXCompilerTarget
 };
 
 /// DXC compiler interface.
-class IDXCompiler
+struct IDXCompiler
 {
-public:
     virtual ~IDXCompiler() {}
 
     /// Returns the maximum shader model supported by the compiler.

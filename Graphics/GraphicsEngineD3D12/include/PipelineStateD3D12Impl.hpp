@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -102,7 +102,7 @@ public:
         const RefCntAutoPtr<PipelineResourceSignatureD3D12Impl>* pSignatures,
         Uint32                                                   SignatureCount,
         const RootSignatureD3D12&                                RootSig,
-        class IDXCompiler*                                       pDxCompiler,
+        struct IDXCompiler*                                      pDxCompiler,
         LocalRootSignatureD3D12*                                 pLocalRootSig             = nullptr,
         const TValidateShaderResourcesFn&                        ValidateShaderResourcesFn = {},
         const TValidateShaderBindingsFn&                         VlidateBindingsFn         = {}) noexcept(false);

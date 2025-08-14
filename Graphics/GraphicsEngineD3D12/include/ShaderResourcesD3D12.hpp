@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,11 +40,11 @@ class ShaderResourcesD3D12 final : public ShaderResources
 {
 public:
     // Loads shader resources from the compiled shader bytecode
-    ShaderResourcesD3D12(IDataBlob*         pShaderBytecode,
-                         const ShaderDesc&  ShdrDesc,
-                         const char*        CombinedSamplerSuffix,
-                         class IDXCompiler* pDXCompiler,
-                         bool               LoadConstantBufferReflection);
+    ShaderResourcesD3D12(IDataBlob*          pShaderBytecode,
+                         const ShaderDesc&   ShdrDesc,
+                         const char*         CombinedSamplerSuffix,
+                         struct IDXCompiler* pDXCompiler,
+                         bool                LoadConstantBufferReflection);
 
     // clang-format off
     ShaderResourcesD3D12             (const ShaderResourcesD3D12&)  = delete;
