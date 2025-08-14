@@ -468,14 +468,17 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         message("Additional Clang compile options for release configurations: " ${DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS})
     endif()
 
-    target_compile_options(Diligent-BuildSettings INTERFACE
-        ${DILIGENT_CLANG_COMPILE_OPTIONS}
-        # Some extra warnings
-        -Wall -Wextra -Wuninitialized -Wconditional-uninitialized -Wextra-tokens -Wpointer-arith -Wloop-analysis -Wunused
-        # Disable few warnings
-        -Wno-overloaded-virtual -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unknown-pragmas
-        -Wno-zero-as-null-pointer-constant -Wno-unused-parameter -Wno-invalid-offsetof
-    )
+    target_compile_options(Diligent-BuildSettings INTERFACE ${DILIGENT_CLANG_COMPILE_OPTIONS})
+
+    if(NOT MSVC)
+        target_compile_options(Diligent-BuildSettings INTERFACE
+            # Some extra warnings
+            -Wall -Wextra -Wuninitialized -Wconditional-uninitialized -Wextra-tokens -Wpointer-arith -Wloop-analysis -Wunused
+            # Disable few warnings
+            -Wno-overloaded-virtual -Wno-incompatible-pointer-types-discards-qualifiers -Wno-unknown-pragmas
+            -Wno-zero-as-null-pointer-constant -Wno-unused-parameter -Wno-invalid-offsetof -Wno-c++98-compat -Wunsafe-buffer-usage
+        )
+    endif()
     target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DILIGENT_CLANG_DEBUG_COMPILE_OPTIONS}>")
 
     set(CLANG_RELEASE_OPTIONS -Wno-unused-variable ${DILIGENT_CLANG_RELEASE_COMPILE_OPTIONS})
