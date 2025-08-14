@@ -57,11 +57,17 @@ class IDXCompiler
 public:
     virtual ~IDXCompiler() {}
 
+    /// Returns the maximum shader model supported by the compiler.
     virtual ShaderVersion GetMaxShaderModel() = 0;
 
+    /// Returns true if the compiler is loaded and ready to use.
     virtual bool IsLoaded() = 0;
 
+    /// Returns the compiler version.
     virtual Version GetVersion() = 0;
+
+    /// Returns the name of the DX Compiler library.
+    virtual const std::string& GetLibraryName() const = 0;
 
     struct CompileAttribs
     {

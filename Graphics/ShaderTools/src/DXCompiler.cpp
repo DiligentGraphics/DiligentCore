@@ -101,6 +101,11 @@ public:
         return m_Library.GetVersion();
     }
 
+    virtual const std::string& GetLibraryName() const override final
+    {
+        return m_Library.GetLibName();
+    }
+
     bool Compile(const CompileAttribs& Attribs) override final;
 
     virtual void Compile(const ShaderCreateInfo& ShaderCI,
