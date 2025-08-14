@@ -63,7 +63,7 @@ struct IMemoryAllocatorMethods
 {
     void* (*Allocate)       (struct IMemoryAllocator*, size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber);
     void  (*Free)           (struct IMemoryAllocator*, void* Ptr);
-    void* (*AllocateAligned)(struct IMemoryAllocator*, size_t Size, size_t Alignment, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
+    void* (*AllocateAligned)(struct IMemoryAllocator*, size_t Size, size_t Alignment, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber);
     void  (*FreeAligned)    (struct IMemoryAllocator*, void* Ptr);
 };
 
