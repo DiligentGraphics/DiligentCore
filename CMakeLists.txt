@@ -486,7 +486,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         INTERFACE
             -Wno-microsoft-exception-spec
             -Wno-tautological-constant-out-of-range-compare
-            -Wno-enum-constexpr-conversion
         )
     elseif (PLATFORM_APPLE)
         # Allow unavailable API warnings not being errors as they tend to randomly
