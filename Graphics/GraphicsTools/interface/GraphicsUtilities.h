@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -277,6 +277,15 @@ void DILIGENT_GLOBAL_FUNCTION(CreateGeometryPrimitiveBuffers)(IRenderDevice*    
                                                               IBuffer**                                 ppVertices,
                                                               IBuffer**                                 ppIndices,
                                                               GeometryPrimitiveInfo* pInfo              DEFAULT_VALUE(nullptr));
+
+
+/// Returns the DirectX shader compiler interface associated with the specified render device.
+
+/// \param [in] pDevice - A pointer to the render device.
+/// \return     A pointer to the DirectX shader compiler interface.
+///             If the device does not support DirectX shader compiler,
+///             or if the compiler is not loaded, returns null.
+struct IDXCompiler* DILIGENT_GLOBAL_FUNCTION(GetDeviceDXCompiler)(IRenderDevice* pDevice);
 
 #include "../../../Primitives/interface/UndefRefMacro.h"
 

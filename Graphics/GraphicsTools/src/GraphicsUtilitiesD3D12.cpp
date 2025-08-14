@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,7 +26,15 @@
 
 #include "GraphicsUtilities.h"
 
+#include "WinHPreface.h"
+#include <d3d12.h>
+#include <atlbase.h>
+#include "WinHPostface.h"
+
 #include "../../GraphicsEngineD3DBase/include/DXGITypeConversions.hpp"
+
+#include "RenderDeviceD3D12.h"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
@@ -39,6 +47,18 @@ int64_t GetNativeTextureFormatD3D12(TEXTURE_FORMAT TexFormat)
 TEXTURE_FORMAT GetTextureFormatFromNativeD3D12(int64_t NativeFormat)
 {
     return DXGI_FormatToTexFormat(static_cast<DXGI_FORMAT>(NativeFormat));
+}
+
+IDXCompiler* GetDeviceDXCompilerD3D12(IRenderDevice* pDevice)
+{
+    if (RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12{pDevice, IID_RenderDeviceD3D12})
+    {
+        return pDeviceD3D12->GetDXCompiler();
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
 } // namespace Diligent

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,11 +27,11 @@
 #include "GraphicsUtilities.h"
 #include "DeviceContext.h"
 
-#if VULKAN_SUPPORTED
-#    include "../../GraphicsEngineVulkan/include/VulkanUtilities/VulkanHeaders.h"
-#endif
-
+#include "../../GraphicsEngineVulkan/include/VulkanUtilities/VulkanHeaders.h"
 #include "../../GraphicsEngineVulkan/include/VulkanTypeConversions.hpp"
+
+#include "RenderDeviceVk.h"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
@@ -44,6 +44,18 @@ int64_t GetNativeTextureFormatVk(TEXTURE_FORMAT TexFormat)
 TEXTURE_FORMAT GetTextureFormatFromNativeVk(int64_t NativeFormat)
 {
     return VkFormatToTexFormat(static_cast<VkFormat>(NativeFormat));
+}
+
+IDXCompiler* GetDeviceDXCompilerVk(IRenderDevice* pDevice)
+{
+    if (RefCntAutoPtr<IRenderDeviceVk> pDeviceVk{pDevice, IID_RenderDeviceVk})
+    {
+        return pDeviceVk->GetDXCompiler();
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
 } // namespace Diligent

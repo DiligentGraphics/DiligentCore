@@ -49,6 +49,7 @@ TEXTURE_FORMAT GetTextureFormatFromNativeD3D11(int64_t NativeFormat);
 #if D3D12_SUPPORTED
 int64_t        GetNativeTextureFormatD3D12(TEXTURE_FORMAT TexFormat);
 TEXTURE_FORMAT GetTextureFormatFromNativeD3D12(int64_t NativeFormat);
+IDXCompiler*   GetDeviceDXCompilerD3D12(IRenderDevice* pDevice);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
@@ -59,6 +60,7 @@ TEXTURE_FORMAT GetTextureFormatFromNativeGL(int64_t NativeFormat);
 #if VULKAN_SUPPORTED
 int64_t        GetNativeTextureFormatVk(TEXTURE_FORMAT TexFormat);
 TEXTURE_FORMAT GetTextureFormatFromNativeVk(int64_t NativeFormat);
+IDXCompiler*   GetDeviceDXCompilerVk(IRenderDevice* pDevice);
 #endif
 
 #if METAL_SUPPORTED
@@ -580,6 +582,7 @@ const char* GetWebGPUEmulatedArrayIndexSuffix(IShader* pShader)
 
 int64_t GetNativeTextureFormat(TEXTURE_FORMAT TexFormat, RENDER_DEVICE_TYPE DeviceType)
 {
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 8, "Please handle the new device type below");
     switch (DeviceType)
     {
 #if D3D11_SUPPORTED
@@ -621,6 +624,7 @@ int64_t GetNativeTextureFormat(TEXTURE_FORMAT TexFormat, RENDER_DEVICE_TYPE Devi
 
 TEXTURE_FORMAT GetTextureFormatFromNative(int64_t NativeFormat, RENDER_DEVICE_TYPE DeviceType)
 {
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 8, "Please handle the new device type below");
     switch (DeviceType)
     {
 #if D3D11_SUPPORTED
@@ -731,6 +735,55 @@ void CreateGeometryPrimitiveBuffers(IRenderDevice*                            pD
     }
 }
 
+
+IDXCompiler* GetDeviceDXCompiler(IRenderDevice* pDevice)
+{
+    if (pDevice == nullptr)
+    {
+        return nullptr;
+    }
+
+    const RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
+    static_assert(RENDER_DEVICE_TYPE_COUNT == 8, "Please handle the new device type below");
+    switch (DeviceType)
+    {
+#if D3D11_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D11:
+            return nullptr;
+#endif
+
+#if D3D12_SUPPORTED
+        case RENDER_DEVICE_TYPE_D3D12:
+            return GetDeviceDXCompilerD3D12(pDevice);
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+            return nullptr;
+#endif
+
+#if METAL_SUPPORTED
+        case RENDER_DEVICE_TYPE_METAL:
+            return nullptr;
+#endif
+
+#if VULKAN_SUPPORTED
+        case RENDER_DEVICE_TYPE_VULKAN:
+            return GetDeviceDXCompilerVk(pDevice);
+#endif
+
+#if WEBGPU_SUPPORTED
+        case RENDER_DEVICE_TYPE_WEBGPU:
+            return nullptr;
+#endif
+
+        default:
+            UNSUPPORTED("Unsupported device type");
+            return nullptr;
+    }
+}
+
 } // namespace Diligent
 
 
@@ -826,5 +879,10 @@ extern "C"
                                                  Diligent::GeometryPrimitiveInfo*                    pInfo)
     {
         Diligent::CreateGeometryPrimitiveBuffers(pDevice, Attribs, pBufferCI, ppVertices, ppIndices, pInfo);
+    }
+
+    Diligent::IDXCompiler* Diligent_GetDeviceDXCompiler(Diligent::IRenderDevice* pDevice)
+    {
+        return Diligent::GetDeviceDXCompiler(pDevice);
     }
 }
