@@ -119,6 +119,9 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
                                                    const TopLevelASDesc REF Desc,
                                                    RESOURCE_STATE           InitialState,
                                                    ITopLevelAS**            ppTLAS) PURE;
+
+    /// Returns DX compiler interface, or null if the compiler is not loaded.
+    VIRTUAL struct IDXCompiler* METHOD(GetDXCompiler)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -133,7 +136,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderDeviceD3D12_CreateBufferFromD3DResource(This, ...)  CALL_IFACE_METHOD(RenderDeviceD3D12, CreateBufferFromD3DResource,  This, __VA_ARGS__)
 #    define IRenderDeviceD3D12_CreateBLASFromD3DResource(This, ...)    CALL_IFACE_METHOD(RenderDeviceD3D12, CreateBLASFromD3DResource,    This, __VA_ARGS__)
 #    define IRenderDeviceD3D12_CreateTLASFromD3DResource(This, ...)    CALL_IFACE_METHOD(RenderDeviceD3D12, CreateTLASFromD3DResource,    This, __VA_ARGS__)
-
+#    define IRenderDeviceD3D12_GetDXCompiler(This)                     CALL_IFACE_METHOD(RenderDeviceD3D12, GetDXCompiler,                This)
 // clang-format on
 
 #endif

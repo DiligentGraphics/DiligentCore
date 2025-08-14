@@ -228,6 +228,12 @@ public:
     /// Implementation of IRenderDeviceVk::GetDeviceFeaturesVk().
     virtual void DILIGENT_CALL_TYPE GetDeviceFeaturesVk(DeviceFeaturesVk& FeaturesVk) const override final;
 
+    /// Implementation of IRenderDeviceVk::GetDXCompiler().
+    virtual IDXCompiler* DILIGENT_CALL_TYPE GetDXCompiler() const override final
+    {
+        return m_pDxCompiler.get();
+    }
+
     DescriptorSetAllocation AllocateDescriptorSet(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout, const char* DebugName = "")
     {
         return m_DescriptorSetAllocator.Allocate(CommandQueueMask, SetLayout, DebugName);

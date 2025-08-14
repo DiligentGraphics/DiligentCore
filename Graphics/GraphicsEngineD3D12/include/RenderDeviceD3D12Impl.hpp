@@ -204,6 +204,12 @@ public:
                                                               RESOURCE_STATE        InitialState,
                                                               ITopLevelAS**         ppTLAS) override final;
 
+    /// Implementation of IRenderDeviceD3D12::GetDXCompiler().
+    virtual IDXCompiler* DILIGENT_CALL_TYPE GetDXCompiler() const override final
+    {
+        return m_pDxCompiler.get();
+    }
+
     void CreateRootSignature(const RefCntAutoPtr<class PipelineResourceSignatureD3D12Impl>* ppSignatures, Uint32 SignatureCount, size_t Hash, RootSignatureD3D12** ppRootSig);
 
     RootSignatureCacheD3D12& GetRootSignatureCache() { return m_RootSignatureCache; }

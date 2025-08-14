@@ -166,6 +166,9 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
     /// Returns Vulkan-specific device features, see Diligent::DeviceFeaturesVk.
     VIRTUAL void METHOD(GetDeviceFeaturesVk)(THIS_
                                              DeviceFeaturesVk REF FeaturesVk) CONST PURE;
+
+    /// Returns DX compiler interface, or null if the compiler is not loaded.
+    VIRTUAL struct IDXCompiler* METHOD(GetDXCompiler)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -184,6 +187,7 @@ DILIGENT_END_INTERFACE
 #    define IRenderDeviceVk_CreateTLASFromVulkanResource(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateTLASFromVulkanResource,   This, __VA_ARGS__)
 #    define IRenderDeviceVk_CreateFenceFromVulkanResource(This, ...)  CALL_IFACE_METHOD(RenderDeviceVk, CreateFenceFromVulkanResource,  This, __VA_ARGS__)
 #    define IRenderDeviceVk_GetDeviceFeaturesVk(This, ...)            CALL_IFACE_METHOD(RenderDeviceVk, GetDeviceFeaturesVk,            This, __VA_ARGS__)
+#    define IRenderDeviceVk_GetDXCompiler(This)                       CALL_IFACE_METHOD(RenderDeviceVk, GetDXCompiler,                  This)
 
 // clang-format on
 
