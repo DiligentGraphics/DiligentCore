@@ -213,7 +213,7 @@ void PipelineStateWebGPUImpl::RemapOrVerifyShaderResources(
 
         if (!bVerifyOnly)
         {
-            PatchedWGSL = RamapWGSLResourceBindings(pShader->GetWGSL(), ResMapping, pShader->GetEmulatedArrayIndexSuffix());
+            PatchedWGSL = RemapWGSLResourceBindings(pShader->GetWGSL(), ResMapping, pShader->GetEmulatedArrayIndexSuffix());
         }
     }
 }

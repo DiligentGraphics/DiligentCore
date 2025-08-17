@@ -221,7 +221,7 @@ void ShaderWebGPUImpl::Initialize(const ShaderCreateInfo& ShaderCI,
         AppendShaderSourceLanguageDefinition(m_WGSL, SourceLanguage);
     }
     // Note that once we add the source language definition, it will always be kept in the WGSL source as
-    // RamapWGSLResourceBindings preserves it.
+    // RemapWGSLResourceBindings preserves it.
 
     // We cannot create shader module here because resource bindings are assigned when
     // pipeline state is created. Besides, WebGPU does not support multithreading.

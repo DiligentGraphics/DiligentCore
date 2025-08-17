@@ -138,7 +138,7 @@ void TestResourceRemapping(const char*                FilePath,
     const auto WGSL = HLSLtoWGLS(FilePath);
     ASSERT_FALSE(WGSL.empty());
 
-    const auto RemappedWGSL = RamapWGSLResourceBindings(WGSL, ResRemapping, "_");
+    const auto RemappedWGSL = RemapWGSLResourceBindings(WGSL, ResRemapping, "_");
     ASSERT_FALSE(RemappedWGSL.empty());
 
     tint::Source::File srcFile("", RemappedWGSL);

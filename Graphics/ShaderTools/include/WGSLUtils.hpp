@@ -52,7 +52,7 @@ struct WGSLResourceBindingInfo
 };
 using WGSLResourceMapping = std::unordered_map<std::string, WGSLResourceBindingInfo>;
 
-std::string RamapWGSLResourceBindings(const std::string&         WGSL,
+std::string RemapWGSLResourceBindings(const std::string&         WGSL,
                                       const WGSLResourceMapping& ResMapping,
                                       const char*                EmulatedArrayIndexSuffix);
 

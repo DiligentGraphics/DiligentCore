@@ -267,7 +267,7 @@ static WGSLResourceMapping::const_iterator FindResourceAsArrayElement(const WGSL
     return ResMapping.end();
 }
 
-std::string RamapWGSLResourceBindings(const std::string&         WGSL,
+std::string RemapWGSLResourceBindings(const std::string&         WGSL,
                                       const WGSLResourceMapping& ResMapping,
                                       const char*                EmulatedArrayIndexSuffix)
 {
