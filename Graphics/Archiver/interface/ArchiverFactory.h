@@ -341,7 +341,7 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
 
     
     VIRTUAL void METHOD(CreateRenderStateCache)(THIS_
-                                            const RenderStateCacheCreateInfo& CreateInfo,
+                                            const RenderStateCacheCreateInfo REF CreateInfo,
                                             IRenderStateCache** ppRenderStateCache) PURE;
 
 };
