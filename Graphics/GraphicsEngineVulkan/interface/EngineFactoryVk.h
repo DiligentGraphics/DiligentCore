@@ -44,7 +44,7 @@
 #    error Unsupported platform
 #endif
 
-#if ENGINE_DLL && PLATFORM_WIN32 && defined(_MSC_VER)
+#if DILIGENT_VK_SHARED && PLATFORM_WIN32 && defined(_MSC_VER)
 #    include "../../GraphicsEngine/interface/LoadEngineDll.h"
 #    define EXPLICITLY_LOAD_ENGINE_VK_DLL 1
 #endif

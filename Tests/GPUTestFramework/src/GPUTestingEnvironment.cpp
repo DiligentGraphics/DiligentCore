@@ -233,16 +233,11 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #if D3D11_SUPPORTED
         case RENDER_DEVICE_TYPE_D3D11:
         {
-#    if ENGINE_DLL
-            // Load the dll and import GetEngineFactoryD3D11() function
-            GetEngineFactoryD3D11Type GetEngineFactoryD3D11 = LoadGraphicsEngineD3D11();
-            if (GetEngineFactoryD3D11 == nullptr)
+            IEngineFactoryD3D11* pFactoryD3D11 = LoadAndGetEngineFactoryD3D11();
+            if (pFactoryD3D11 == nullptr)
             {
                 LOG_ERROR_AND_THROW("Failed to load the engine");
             }
-#    endif
-
-            IEngineFactoryD3D11* pFactoryD3D11 = GetEngineFactoryD3D11();
             pFactoryD3D11->SetMessageCallback(EnvCI.MessageCallback);
             pFactoryD3D11->SetBreakOnError(false);
 
@@ -277,15 +272,11 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #if D3D12_SUPPORTED
         case RENDER_DEVICE_TYPE_D3D12:
         {
-#    if ENGINE_DLL
-            // Load the dll and import GetEngineFactoryD3D12() function
-            GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = LoadGraphicsEngineD3D12();
-            if (GetEngineFactoryD3D12 == nullptr)
+            IEngineFactoryD3D12* pFactoryD3D12 = LoadAndGetEngineFactoryD3D12();
+            if (pFactoryD3D12 == nullptr)
             {
                 LOG_ERROR_AND_THROW("Failed to load the engine");
             }
-#    endif
-            IEngineFactoryD3D12* pFactoryD3D12 = GetEngineFactoryD3D12();
             pFactoryD3D12->SetMessageCallback(EnvCI.MessageCallback);
             pFactoryD3D12->SetBreakOnError(false);
 
@@ -342,16 +333,11 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
         case RENDER_DEVICE_TYPE_GL:
         case RENDER_DEVICE_TYPE_GLES:
         {
-#    if EXPLICITLY_LOAD_ENGINE_GL_DLL
-            // Declare function pointer
-            // Load the dll and import GetEngineFactoryOpenGL() function
-            GetEngineFactoryOpenGLType GetEngineFactoryOpenGL = LoadGraphicsEngineOpenGL();
-            if (GetEngineFactoryOpenGL == nullptr)
+            IEngineFactoryOpenGL* pFactoryOpenGL = LoadAndGetEngineFactoryOpenGL();
+            if (pFactoryOpenGL == nullptr)
             {
                 LOG_ERROR_AND_THROW("Failed to load the engine");
             }
-#    endif
-            IEngineFactoryOpenGL* pFactoryOpenGL = GetEngineFactoryOpenGL();
             pFactoryOpenGL->SetMessageCallback(EnvCI.MessageCallback);
             pFactoryOpenGL->SetBreakOnError(false);
 
@@ -380,16 +366,11 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #if VULKAN_SUPPORTED
         case RENDER_DEVICE_TYPE_VULKAN:
         {
-#    if EXPLICITLY_LOAD_ENGINE_VK_DLL
-            // Load the dll and import GetEngineFactoryVk() function
-            GetEngineFactoryVkType GetEngineFactoryVk = LoadGraphicsEngineVk();
-            if (GetEngineFactoryVk == nullptr)
+            IEngineFactoryVk* pFactoryVk = LoadAndGetEngineFactoryVk();
+            if (pFactoryVk == nullptr)
             {
                 LOG_ERROR_AND_THROW("Failed to load the engine");
             }
-#    endif
-
-            IEngineFactoryVk* pFactoryVk = GetEngineFactoryVk();
             pFactoryVk->SetMessageCallback(EnvCI.MessageCallback);
             pFactoryVk->SetBreakOnError(false);
 
@@ -477,14 +458,11 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #if WEBGPU_SUPPORTED
         case RENDER_DEVICE_TYPE_WEBGPU:
         {
-#    if EXPLICITLY_LOAD_ENGINE_WEBGPU_DLL
-            GetEngineFactoryWebGPUType GetEngineFactoryWebGPU = LoadGraphicsEngineWebGPU();
-            if (GetEngineFactoryWebGPU == nullptr)
+            IEngineFactoryWebGPU* pFactoryWGPU = LoadAndGetEngineFactoryWebGPU();
+            if (pFactoryWGPU == nullptr)
             {
                 LOG_ERROR_AND_THROW("Failed to load the engine");
             }
-#    endif
-            IEngineFactoryWebGPU* pFactoryWGPU = GetEngineFactoryWebGPU();
             pFactoryWGPU->SetMessageCallback(MessageCallback);
             pFactoryWGPU->SetBreakOnError(false);
 

@@ -147,7 +147,7 @@ PRIVATE
 PUBLIC
     Diligent-GraphicsEngineD3D11Interface
 )
-target_compile_definitions(Diligent-GraphicsEngineD3D11-shared PUBLIC ENGINE_DLL=1)
+target_compile_definitions(Diligent-GraphicsEngineD3D11-shared PUBLIC DILIGENT_D3D11_SHARED=1)
 
 source_group("src" FILES ${SRC})
 source_group("dll" FILES ${DLL_SRC})

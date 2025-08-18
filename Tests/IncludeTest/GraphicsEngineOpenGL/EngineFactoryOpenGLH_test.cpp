@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#ifndef ENGINE_DLL
-#    define ENGINE_DLL 1
+#ifndef DILIGENT_OPENGL_SHARED
+#    define DILIGENT_OPENGL_SHARED 1
 #endif
 
 #include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/EngineFactoryOpenGL.h"

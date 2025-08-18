@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,8 +31,8 @@
 #include <Windows.h>
 #include <d3d11.h>
 
-#ifndef ENGINE_DLL
-#    define ENGINE_DLL 1
+#ifndef DILIGENT_D3D11_SHARED
+#    define DILIGENT_D3D11_SHARED 1
 #endif
 
 #include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/EngineFactoryD3D11.h"

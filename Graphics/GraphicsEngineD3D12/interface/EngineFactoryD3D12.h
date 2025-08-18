@@ -35,7 +35,7 @@
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"
 
-#if ENGINE_DLL
+#if DILIGENT_D3D12_SHARED
 #    include "../../GraphicsEngine/interface/LoadEngineDll.h"
 #endif
 
@@ -189,7 +189,7 @@ DILIGENT_END_INTERFACE
 
 typedef struct IEngineFactoryD3D12* (*GetEngineFactoryD3D12Type)();
 
-#if ENGINE_DLL
+#if DILIGENT_D3D12_SHARED
 
 inline GetEngineFactoryD3D12Type DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineD3D12)()
 {
@@ -206,7 +206,7 @@ struct IEngineFactoryD3D12* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryD3D12)();
 inline struct IEngineFactoryD3D12* DILIGENT_GLOBAL_FUNCTION(LoadAndGetEngineFactoryD3D12)()
 {
     GetEngineFactoryD3D12Type GetFactoryFunc = NULL;
-#if ENGINE_DLL
+#if DILIGENT_D3D12_SHARED
     GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineD3D12)();
     if (GetFactoryFunc == NULL)
     {

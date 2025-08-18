@@ -98,7 +98,7 @@ if(DEFINED DILIGENT_CORE_COMMIT_HASH)
     target_compile_definitions(Diligent-Archiver-static PRIVATE DILIGENT_CORE_COMMIT_HASH="${DILIGENT_CORE_COMMIT_HASH}")
 endif()
 
-target_compile_definitions(Diligent-Archiver-shared PUBLIC ENGINE_DLL=1)
+target_compile_definitions(Diligent-Archiver-shared PUBLIC DILIGENT_ARCHIVER_SHARED=1)
 
 
 target_link_libraries(Diligent-Archiver-static

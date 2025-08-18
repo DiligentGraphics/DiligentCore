@@ -182,7 +182,7 @@ if (PLATFORM_WEB)
     target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: -s USE_WEBGPU=1 -s USE_PTHREADS=1")
 endif()
 
-target_compile_definitions(Diligent-GraphicsEngineWebGPU-shared PUBLIC ENGINE_DLL=1)
+target_compile_definitions(Diligent-GraphicsEngineWebGPU-shared PUBLIC DILIGENT_WEBGPU_SHARED=1)
 
 if (MSVC)
     target_compile_options(Diligent-GraphicsEngineWebGPU-static PRIVATE /wd4324)

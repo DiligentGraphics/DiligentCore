@@ -269,7 +269,7 @@ PUBLIC
 )
 target_link_whole_archive(Diligent-GraphicsEngineOpenGL-shared Diligent-GraphicsEngineOpenGL-static)
 
-target_compile_definitions(Diligent-GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1)
+target_compile_definitions(Diligent-GraphicsEngineOpenGL-shared PUBLIC DILIGENT_OPENGL_SHARED=1)
 if(PLATFORM_MACOS)
     # Silence OpenGL deprecation warnings
     target_compile_definitions(Diligent-GraphicsEngineOpenGL-static PUBLIC GL_SILENCE_DEPRECATION)

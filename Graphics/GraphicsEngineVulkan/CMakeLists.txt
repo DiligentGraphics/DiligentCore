@@ -331,7 +331,12 @@ PRIVATE
     DILIGENT_NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>
     DILIGENT_NO_HLSL=$<BOOL:${DILIGENT_NO_HLSL}>
 )
-target_compile_definitions(Diligent-GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} ENGINE_DLL=1)
+target_compile_definitions(Diligent-GraphicsEngineVk-shared
+PUBLIC
+    DILIGENT_VK_SHARED=1
+PRIVATE
+    ${PRIVATE_COMPILE_DEFINITIONS}
+)
 
 if(PLATFORM_WIN32)
 

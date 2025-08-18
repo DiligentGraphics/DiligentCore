@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@
  *  of the possibility of such damages.
  */
 
-#ifndef ENGINE_DLL
-#    define ENGINE_DLL 1
+#ifndef DILIGENT_WEBGPU_SHARED
+#    define DILIGENT_WEBGPU_SHARED 1
 #endif
 
 #include "DiligentCore/Graphics/GraphicsEngineWebGPU/interface/EngineFactoryWebGPU.h"
