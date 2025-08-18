@@ -39,7 +39,6 @@
 #include "Archiver.h"
 #include "Dearchiver.h"
 #include "ArchiverFactory.h"
-#include "ArchiverFactoryLoader.h"
 
 #include "PipelineStateBase.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -177,10 +176,14 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
 // clang-format on
 {
     if (CreateInfo.pDevice == nullptr)
+    {
         LOG_ERROR_AND_THROW("CreateInfo.pDevice must not be null");
+    }
 
-    IArchiverFactory* pArchiverFactory = LoadAndGetArchiverFactory();
-    VERIFY_EXPR(pArchiverFactory != nullptr);
+    if (CreateInfo.pArchiverFactory == nullptr)
+    {
+        LOG_ERROR_AND_THROW("CreateInfo.pArchiverFactory must not be null. Use LoadAndGetArchiverFactory() from ArchiverFactoryLoader.h to create the factory.");
+    }
 
     SerializationDeviceCreateInfo SerializationDeviceCI;
     SerializationDeviceCI.DeviceInfo                        = m_pDevice->GetDeviceInfo();
@@ -219,13 +222,13 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
             UNEXPECTED("Unknown device type");
     }
 
-    pArchiverFactory->CreateSerializationDevice(SerializationDeviceCI, &m_pSerializationDevice);
+    CreateInfo.pArchiverFactory->CreateSerializationDevice(SerializationDeviceCI, &m_pSerializationDevice);
     if (!m_pSerializationDevice)
         LOG_ERROR_AND_THROW("Failed to create serialization device");
 
     m_pSerializationDevice->AddRenderDevice(m_pDevice);
 
-    pArchiverFactory->CreateArchiver(m_pSerializationDevice, &m_pArchiver);
+    CreateInfo.pArchiverFactory->CreateArchiver(m_pSerializationDevice, &m_pArchiver);
     if (!m_pArchiver)
         LOG_ERROR_AND_THROW("Failed to create archiver");
 

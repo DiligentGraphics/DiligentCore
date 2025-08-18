@@ -249,7 +249,14 @@ RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pD
                                              IDataBlob*                       pCacheData           = nullptr,
                                              IShaderSourceInputStreamFactory* pShaderReloadFactory = nullptr)
 {
-    RenderStateCacheCreateInfo CacheCI{pDevice, RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE, HotReload, OptimizeGLShaders, pShaderReloadFactory};
+    RenderStateCacheCreateInfo CacheCI{
+        pDevice,
+        GPUTestingEnvironment::GetInstance()->GetArchiverFactory(),
+        RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE,
+        HotReload,
+        OptimizeGLShaders,
+        pShaderReloadFactory,
+    };
 
     RefCntAutoPtr<IRenderStateCache> pCache;
     CreateRenderStateCache(CacheCI, &pCache);

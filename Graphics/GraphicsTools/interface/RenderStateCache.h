@@ -56,6 +56,11 @@ struct RenderStateCacheCreateInfo
     /// A pointer to the render device, must not be null.
     IRenderDevice* pDevice DEFAULT_INITIALIZER(nullptr);
 
+    /// Archiver factory, must not be null.
+
+    /// Use `LoadAndGetArchiverFactory()` from `ArchiverFactoryLoader.h` to create the factory.
+    struct IArchiverFactory* pArchiverFactory DEFAULT_INITIALIZER(nullptr);
+
     /// Logging level, see Diligent::RENDER_STATE_CACHE_LOG_LEVEL.
     RENDER_STATE_CACHE_LOG_LEVEL LogLevel DEFAULT_INITIALIZER(RENDER_STATE_CACHE_LOG_LEVEL_NORMAL);
 
@@ -82,11 +87,13 @@ struct RenderStateCacheCreateInfo
 
     constexpr explicit RenderStateCacheCreateInfo(
         IRenderDevice*                   _pDevice,
+        struct IArchiverFactory*         _pArchiverFactory,
         RENDER_STATE_CACHE_LOG_LEVEL     _LogLevel          = RenderStateCacheCreateInfo{}.LogLevel,
         bool                             _EnableHotReload   = RenderStateCacheCreateInfo{}.EnableHotReload,
         bool                             _OptimizeGLShaders = RenderStateCacheCreateInfo{}.OptimizeGLShaders,
         IShaderSourceInputStreamFactory* _pReloadSource     = RenderStateCacheCreateInfo{}.pReloadSource) noexcept :
         pDevice{_pDevice},
+        pArchiverFactory{_pArchiverFactory},
         LogLevel{_LogLevel},
         EnableHotReload{_EnableHotReload},
         OptimizeGLShaders{_OptimizeGLShaders},

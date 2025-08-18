@@ -157,7 +157,7 @@ PUBLIC
 if(ARCHIVER_SUPPORTED)
     target_link_libraries(Diligent-GraphicsTools
     PRIVATE
-        Diligent-Archiver-static
+        Diligent-ArchiverInterface
     )
 endif()
 
