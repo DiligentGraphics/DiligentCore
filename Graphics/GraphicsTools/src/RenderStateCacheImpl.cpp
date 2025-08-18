@@ -179,16 +179,7 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
     if (CreateInfo.pDevice == nullptr)
         LOG_ERROR_AND_THROW("CreateInfo.pDevice must not be null");
 
-    IArchiverFactory* pArchiverFactory = nullptr;
-#if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
-    auto GetArchiverFactory = LoadArchiverFactory();
-    if (GetArchiverFactory != nullptr)
-    {
-        pArchiverFactory = GetArchiverFactory();
-    }
-#else
-    pArchiverFactory       = GetArchiverFactory();
-#endif
+    IArchiverFactory* pArchiverFactory = LoadAndGetArchiverFactory();
     VERIFY_EXPR(pArchiverFactory != nullptr);
 
     SerializationDeviceCreateInfo SerializationDeviceCI;

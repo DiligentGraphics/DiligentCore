@@ -139,9 +139,9 @@ DILIGENT_END_INTERFACE
 #endif
 
 
-#if EXPLICITLY_LOAD_ENGINE_WEBGPU_DLL
-
 typedef struct IEngineFactoryWebGPU* (*GetEngineFactoryWebGPUType)();
+
+#if EXPLICITLY_LOAD_ENGINE_WEBGPU_DLL
 
 inline GetEngineFactoryWebGPUType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineWebGPU)()
 {
@@ -154,5 +154,21 @@ API_QUALIFIER
 struct IEngineFactoryWebGPU* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryWebGPU)();
 
 #endif
+
+/// Loads the graphics engine WebGPU implementation DLL if necessary and returns the engine factory.
+inline struct IEngineFactoryWebGPU* DILIGENT_GLOBAL_FUNCTION(LoadAndGetEngineFactoryWebGPU)()
+{
+    GetEngineFactoryWebGPUType GetFactoryFunc = NULL;
+#if EXPLICITLY_LOAD_ENGINE_WEBGPU_DLL
+    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineWebGPU)();
+    if (GetFactoryFunc == NULL)
+    {
+        return NULL;
+    }
+#else
+    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryWebGPU);
+#endif
+    return GetFactoryFunc();
+}
 
 DILIGENT_END_NAMESPACE // namespace Diligent

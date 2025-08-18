@@ -130,9 +130,9 @@ DILIGENT_END_INTERFACE
 
 #endif
 
-#if EXPLICITLY_LOAD_ENGINE_VK_DLL
-
 typedef struct IEngineFactoryVk* (*GetEngineFactoryVkType)();
+
+#if EXPLICITLY_LOAD_ENGINE_VK_DLL
 
 inline GetEngineFactoryVkType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineVk)()
 {
@@ -145,5 +145,21 @@ API_QUALIFIER
 struct IEngineFactoryVk* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryVk)();
 
 #endif
+
+/// Loads the graphics engine Vulkan implementation DLL if necessary and returns the engine factory.
+inline struct IEngineFactoryVk* DILIGENT_GLOBAL_FUNCTION(LoadAndGetEngineFactoryVk)()
+{
+    GetEngineFactoryVkType GetFactoryFunc = NULL;
+#if EXPLICITLY_LOAD_ENGINE_VK_DLL
+    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineVk)();
+    if (GetFactoryFunc == NULL)
+    {
+        return NULL;
+    }
+#else
+    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryVk);
+#endif
+    return GetFactoryFunc();
+}
 
 DILIGENT_END_NAMESPACE // namespace Diligent

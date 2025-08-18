@@ -607,15 +607,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 #if ARCHIVER_SUPPORTED
     // Create archiver factory
     {
-#    if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
-        GetArchiverFactoryType GetArchiverFactory = LoadArchiverFactory();
-        if (GetArchiverFactory != nullptr)
-        {
-            m_ArchiverFactory = GetArchiverFactory();
-        }
-#    else
-        m_ArchiverFactory = Diligent::GetArchiverFactory();
-#    endif
+        m_ArchiverFactory = LoadAndGetArchiverFactory();
         m_ArchiverFactory->SetMessageCallback(EnvCI.MessageCallback);
         m_ArchiverFactory->SetBreakOnError(false);
     }

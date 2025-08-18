@@ -44,9 +44,9 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-#if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
-
 typedef struct IArchiverFactory* (*GetArchiverFactoryType)();
+
+#if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
 
 inline GetArchiverFactoryType DILIGENT_GLOBAL_FUNCTION(LoadArchiverFactory)()
 {
@@ -59,5 +59,21 @@ API_QUALIFIER
 struct IArchiverFactory* DILIGENT_GLOBAL_FUNCTION(GetArchiverFactory)();
 
 #endif
+
+/// Loads the archiver implementation DLL if necessary and returns the archiver factory.
+inline struct IArchiverFactory* DILIGENT_GLOBAL_FUNCTION(LoadAndGetArchiverFactory)()
+{
+    GetArchiverFactoryType GetFactoryFunc = NULL;
+#if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
+    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadArchiverFactory)();
+    if (GetFactoryFunc == NULL)
+    {
+        return NULL;
+    }
+#else
+    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(GetArchiverFactory);
+#endif
+    return GetFactoryFunc();
+}
 
 DILIGENT_END_NAMESPACE // namespace Diligent

@@ -187,9 +187,9 @@ DILIGENT_END_INTERFACE
 #endif
 
 
-#if ENGINE_DLL
-
 typedef struct IEngineFactoryD3D12* (*GetEngineFactoryD3D12Type)();
+
+#if ENGINE_DLL
 
 inline GetEngineFactoryD3D12Type DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineD3D12)()
 {
@@ -201,5 +201,22 @@ inline GetEngineFactoryD3D12Type DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineD3D1
 struct IEngineFactoryD3D12* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryD3D12)();
 
 #endif
+
+/// Loads the graphics engine D3D12 implementation DLL if necessary and returns the engine factory.
+inline struct IEngineFactoryD3D12* DILIGENT_GLOBAL_FUNCTION(LoadAndGetEngineFactoryD3D12)()
+{
+    GetEngineFactoryD3D12Type GetFactoryFunc = NULL;
+#if ENGINE_DLL
+    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineD3D12)();
+    if (GetFactoryFunc == NULL)
+    {
+        return NULL;
+    }
+#else
+    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryD3D12);
+#endif
+    return GetFactoryFunc();
+}
+
 
 DILIGENT_END_NAMESPACE // namespace Diligent

@@ -124,10 +124,9 @@ DILIGENT_END_INTERFACE
 
 #endif
 
+typedef struct IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
 #if EXPLICITLY_LOAD_ENGINE_GL_DLL
-
-typedef struct IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
 inline GetEngineFactoryOpenGLType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineOpenGL)()
 {
@@ -141,5 +140,21 @@ API_QUALIFIER
 struct IEngineFactoryOpenGL* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryOpenGL)();
 
 #endif
+
+/// Loads the graphics engine OpenGL implementation DLL if necessary and returns the engine factory.
+inline struct IEngineFactoryOpenGL* DILIGENT_GLOBAL_FUNCTION(LoadAndGetEngineFactoryOpenGL)()
+{
+    GetEngineFactoryOpenGLType GetFactoryFunc = NULL;
+#if EXPLICITLY_LOAD_ENGINE_GL_DLL
+    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineOpenGL)();
+    if (GetFactoryFunc == NULL)
+    {
+        return NULL;
+    }
+#else
+    GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryOpenGL);
+#endif
+    return GetFactoryFunc();
+}
 
 DILIGENT_END_NAMESPACE // namespace Diligent
