@@ -38,8 +38,6 @@
 
 #include "Archiver.h"
 #include "Dearchiver.h"
-#include "ArchiverFactory.h"
-#include "ArchiverFactoryLoader.h"
 
 #include "PipelineStateBase.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -179,16 +177,8 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
     if (CreateInfo.pDevice == nullptr)
         LOG_ERROR_AND_THROW("CreateInfo.pDevice must not be null");
 
-    IArchiverFactory* pArchiverFactory = nullptr;
-#if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
-    auto GetArchiverFactory = LoadArchiverFactory();
-    if (GetArchiverFactory != nullptr)
-    {
-        pArchiverFactory = GetArchiverFactory();
-    }
-#else
-    pArchiverFactory       = GetArchiverFactory();
-#endif
+    IArchiverFactory* pArchiverFactory = CreateInfo.pArchiverFactory;
+
     VERIFY_EXPR(pArchiverFactory != nullptr);
 
     SerializationDeviceCreateInfo SerializationDeviceCI;
@@ -963,6 +953,11 @@ Uint32 RenderStateCacheImpl::Reload(ReloadGraphicsPipelineCallbackType ReloadGra
 }
 
 static constexpr char RenderStateCacheFileExtension[] = ".diligentcache";
+
+//Fix <Windows.h> conflict
+#ifdef CreateDirectory
+#    undef CreateDirectory
+#endif
 
 std::string GetRenderStateCacheFilePath(const char* CacheLocation, const char* AppName, RENDER_DEVICE_TYPE DeviceType)
 {

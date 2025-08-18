@@ -30,6 +30,7 @@
 /// Defines Diligent::IRenderStateCache interface
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
+#include "ArchiverFactory.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -75,6 +76,9 @@ struct RenderStateCacheCreateInfo
     /// Optional shader source input stream factory to use when reloading
     /// shaders. If null, original source factory will be used.
     IShaderSourceInputStreamFactory* pReloadSource DEFAULT_INITIALIZER(nullptr);
+
+    /// Let user decide how to get archiver factory, either Load DLL or static link
+    IArchiverFactory* pArchiverFactory DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     constexpr RenderStateCacheCreateInfo() noexcept
