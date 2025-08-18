@@ -37,6 +37,9 @@
 namespace Diligent
 {
 
+//Use symbol from DiligentTools-static directly thus we don't have to bring RenderStateCacheImpl.cpp in
+void CreateRenderStateCache(const RenderStateCacheCreateInfo& CreateInfo, IRenderStateCache** ppCache);
+
 DeviceObjectArchive::DeviceType ArchiveDeviceDataFlagToArchiveDeviceType(ARCHIVE_DEVICE_DATA_FLAGS DeviceFlag)
 {
     using DeviceType = DeviceObjectArchive::DeviceType;
@@ -142,6 +145,8 @@ public:
     virtual void DILIGENT_CALL_TYPE SetMessageCallback(DebugMessageCallbackType MessageCallback) const override final;
 
     virtual void DILIGENT_CALL_TYPE SetBreakOnError(bool BreakOnError) const override final;
+
+    virtual void DILIGENT_CALL_TYPE CreateRenderStateCache(const RenderStateCacheCreateInfo& CreateInfo, IRenderStateCache** ppRenderStateCache) override final;
 
 private:
     DummyReferenceCounters<ArchiverFactoryImpl> m_RefCounters;
@@ -347,6 +352,11 @@ void ArchiverFactoryImpl::SetMessageCallback(DebugMessageCallbackType MessageCal
 void ArchiverFactoryImpl::SetBreakOnError(bool BreakOnError) const
 {
     PlatformDebug::SetBreakOnError(BreakOnError);
+}
+
+void ArchiverFactoryImpl::CreateRenderStateCache(const RenderStateCacheCreateInfo& CreateInfo, IRenderStateCache** ppRenderStateCache)
+{
+    Diligent::CreateRenderStateCache(CreateInfo, ppRenderStateCache);
 }
 
 } // namespace

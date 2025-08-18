@@ -32,6 +32,7 @@
 #include "../../../Primitives/interface/Object.h"
 #include "../../../Primitives/interface/DebugOutput.h"
 #include "SerializationDevice.h"
+#include "../../GraphicsTools/interface/RenderStateCache.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -252,7 +253,6 @@ struct SerializationDeviceCreateInfo
 };
 typedef struct SerializationDeviceCreateInfo SerializationDeviceCreateInfo;
 
-
 /// Archiver factory interface
 DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
 {
@@ -338,6 +338,12 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// \param [in]     BreakOnError - Whether to break on assertion failure.
     VIRTUAL void METHOD(SetBreakOnError)(THIS_
                                          bool BreakOnError) CONST PURE;
+
+    
+    VIRTUAL void METHOD(CreateRenderStateCache)(THIS_
+                                            const RenderStateCacheCreateInfo& CreateInfo,
+                                            IRenderStateCache** ppRenderStateCache) PURE;
+
 };
 DILIGENT_END_INTERFACE
 
