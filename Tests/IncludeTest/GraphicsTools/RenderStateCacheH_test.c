@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,7 +29,12 @@
 void TestRenderStateCacheCInterface()
 {
     RenderStateCacheCreateInfo CI;
-    CI.pDevice = NULL;
+    CI.pDevice           = NULL;
+    CI.pArchiverFactory  = NULL;
+    CI.LogLevel          = RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE;
+    CI.EnableHotReload   = true;
+    CI.OptimizeGLShaders = true;
+    CI.pReloadSource     = NULL;
 
     IRenderStateCache* pCache = NULL;
     Diligent_CreateRenderStateCache(&CI, &pCache);
