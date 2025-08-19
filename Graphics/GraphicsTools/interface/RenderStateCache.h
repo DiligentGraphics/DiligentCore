@@ -30,7 +30,7 @@
 /// Defines Diligent::IRenderStateCache interface
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
-#include "ArchiverFactory.h"
+#include "../../Archiver/interface/ArchiverFactory.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
