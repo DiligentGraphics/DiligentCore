@@ -35,7 +35,7 @@
 
 void TestEngineFactoryVk_CInterface()
 {
-#if EXPLICITLY_LOAD_ENGINE_VK_DLL
+#if DILIGENT_VK_EXPLICIT_LOAD
     GetEngineFactoryVkType GetEngineFactoryVk = Diligent_LoadGraphicsEngineVk();
     IEngineFactoryVk*      pFactory           = GetEngineFactoryVk();
 #else

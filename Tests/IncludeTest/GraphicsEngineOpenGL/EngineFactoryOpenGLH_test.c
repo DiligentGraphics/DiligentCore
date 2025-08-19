@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +32,7 @@
 
 void TestEngineFactoryGL_CInterface()
 {
-#if EXPLICITLY_LOAD_ENGINE_GL_DLL
+#if DILIGENT_OPENGL_EXPLICIT_LOAD
     GetEngineFactoryOpenGLType GetEngineFactoryGL = Diligent_LoadGraphicsEngineOpenGL();
     IEngineFactoryOpenGL*      pFactory           = GetEngineFactoryGL();
 #else

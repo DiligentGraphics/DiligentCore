@@ -45,7 +45,7 @@
 
 #if DILIGENT_WEBGPU_SHARED && PLATFORM_WIN32 && defined(_MSC_VER)
 #    include "../../GraphicsEngine/interface/LoadEngineDll.h"
-#    define EXPLICITLY_LOAD_ENGINE_WEBGPU_DLL 1
+#    define DILIGENT_WEBGPU_EXPLICIT_LOAD 1
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -141,7 +141,7 @@ DILIGENT_END_INTERFACE
 
 typedef struct IEngineFactoryWebGPU* (*GetEngineFactoryWebGPUType)();
 
-#if EXPLICITLY_LOAD_ENGINE_WEBGPU_DLL
+#if DILIGENT_WEBGPU_EXPLICIT_LOAD
 
 inline GetEngineFactoryWebGPUType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineWebGPU)()
 {
@@ -164,7 +164,7 @@ struct IEngineFactoryWebGPU* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryWebGPU)();
 inline struct IEngineFactoryWebGPU* DILIGENT_GLOBAL_FUNCTION(LoadAndGetEngineFactoryWebGPU)()
 {
     GetEngineFactoryWebGPUType GetFactoryFunc = NULL;
-#if EXPLICITLY_LOAD_ENGINE_WEBGPU_DLL
+#if DILIGENT_WEBGPU_EXPLICIT_LOAD
     GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineWebGPU)();
     if (GetFactoryFunc == NULL)
     {

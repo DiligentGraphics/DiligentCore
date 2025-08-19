@@ -32,7 +32,7 @@
 
 void TestEngineFactoryWebGPU_CInterface(void)
 {
-#if EXPLICITLY_LOAD_ENGINE_WEBGPU_DLL
+#if DILIGENT_WEBGPU_EXPLICIT_LOAD
     GetEngineFactoryWebGPUType GetEngineFactoryWebGPU = Diligent_LoadGraphicsEngineWebGPU();
     IEngineFactoryWebGPU*      pFactory               = GetEngineFactoryWebGPU();
 #else

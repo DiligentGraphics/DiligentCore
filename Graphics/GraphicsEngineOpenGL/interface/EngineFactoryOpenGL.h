@@ -49,7 +49,7 @@
 
 #if DILIGENT_OPENGL_SHARED && PLATFORM_WIN32 && defined(_MSC_VER)
 #    include "../../GraphicsEngine/interface/LoadEngineDll.h"
-#    define EXPLICITLY_LOAD_ENGINE_GL_DLL 1
+#    define DILIGENT_OPENGL_EXPLICIT_LOAD 1
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -126,7 +126,7 @@ DILIGENT_END_INTERFACE
 
 typedef struct IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
-#if EXPLICITLY_LOAD_ENGINE_GL_DLL
+#if DILIGENT_OPENGL_EXPLICIT_LOAD
 
 inline GetEngineFactoryOpenGLType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineOpenGL)()
 {
@@ -150,7 +150,7 @@ struct IEngineFactoryOpenGL* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryOpenGL)();
 inline struct IEngineFactoryOpenGL* DILIGENT_GLOBAL_FUNCTION(LoadAndGetEngineFactoryOpenGL)()
 {
     GetEngineFactoryOpenGLType GetFactoryFunc = NULL;
-#if EXPLICITLY_LOAD_ENGINE_GL_DLL
+#if DILIGENT_OPENGL_EXPLICIT_LOAD
     GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineOpenGL)();
     if (GetFactoryFunc == NULL)
     {

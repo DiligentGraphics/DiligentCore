@@ -46,7 +46,7 @@
 
 #if DILIGENT_VK_SHARED && PLATFORM_WIN32 && defined(_MSC_VER)
 #    include "../../GraphicsEngine/interface/LoadEngineDll.h"
-#    define EXPLICITLY_LOAD_ENGINE_VK_DLL 1
+#    define DILIGENT_VK_EXPLICIT_LOAD 1
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -132,7 +132,7 @@ DILIGENT_END_INTERFACE
 
 typedef struct IEngineFactoryVk* (*GetEngineFactoryVkType)();
 
-#if EXPLICITLY_LOAD_ENGINE_VK_DLL
+#if DILIGENT_VK_EXPLICIT_LOAD
 
 inline GetEngineFactoryVkType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineVk)()
 {
@@ -155,7 +155,7 @@ struct IEngineFactoryVk* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryVk)();
 inline struct IEngineFactoryVk* DILIGENT_GLOBAL_FUNCTION(LoadAndGetEngineFactoryVk)()
 {
     GetEngineFactoryVkType GetFactoryFunc = NULL;
-#if EXPLICITLY_LOAD_ENGINE_VK_DLL
+#if DILIGENT_VK_EXPLICIT_LOAD
     GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineVk)();
     if (GetFactoryFunc == NULL)
     {

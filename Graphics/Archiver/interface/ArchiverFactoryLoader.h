@@ -39,14 +39,14 @@
 
 #if DILIGENT_ARCHIVER_SHARED && PLATFORM_WIN32 && defined(_MSC_VER)
 #    include "../../GraphicsEngine/interface/LoadEngineDll.h"
-#    define EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL 1
+#    define DILIGENT_ARCHIVER_EXPLICIT_LOAD 1
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 typedef struct IArchiverFactory* (*GetArchiverFactoryType)();
 
-#if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
+#if DILIGENT_ARCHIVER_EXPLICIT_LOAD
 
 inline GetArchiverFactoryType DILIGENT_GLOBAL_FUNCTION(LoadArchiverFactory)()
 {
@@ -69,7 +69,7 @@ struct IArchiverFactory* DILIGENT_GLOBAL_FUNCTION(GetArchiverFactory)();
 inline struct IArchiverFactory* DILIGENT_GLOBAL_FUNCTION(LoadAndGetArchiverFactory)()
 {
     GetArchiverFactoryType GetFactoryFunc = NULL;
-#if EXPLICITLY_LOAD_ARCHIVER_FACTORY_DLL
+#if DILIGENT_ARCHIVER_EXPLICIT_LOAD
     GetFactoryFunc = DILIGENT_GLOBAL_FUNCTION(LoadArchiverFactory)();
     if (GetFactoryFunc == NULL)
     {
