@@ -91,11 +91,8 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
         case RENDER_DEVICE_TYPE_D3D11:
         {
             EngineD3D11CreateInfo EngineCI;
-#    if ENGINE_DLL
-            // Load the dll and import GetEngineFactoryD3D11() function
-            auto* GetEngineFactoryD3D11 = LoadGraphicsEngineD3D11();
-#    endif
-            auto* pFactoryD3D11 = GetEngineFactoryD3D11();
+            // Load the dll and get the factory
+            auto* pFactoryD3D11 = LoadAndGetEngineFactoryD3D11();
             pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &m_pDevice, &m_pImmediateContext);
             Win32NativeWindow Window{hWnd};
             pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, m_pImmediateContext, SCDesc,
@@ -105,13 +102,9 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
 
         case RENDER_DEVICE_TYPE_D3D12:
         {
-#    if ENGINE_DLL
-            // Load the dll and import GetEngineFactoryD3D12() function
-            auto GetEngineFactoryD3D12 = LoadGraphicsEngineD3D12();
-#    endif
             EngineD3D12CreateInfo EngineCI;
-
-            auto* pFactoryD3D12 = GetEngineFactoryD3D12();
+            // Load the dll and get the factory
+            auto* pFactoryD3D12 = LoadAndGetEngineFactoryD3D12();
             pFactoryD3D12->CreateDeviceAndContextsD3D12(EngineCI, &m_pDevice, &m_pImmediateContext);
             Win32NativeWindow Window{hWnd};
             pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, m_pImmediateContext, SCDesc,
@@ -121,11 +114,8 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
 
     case RENDER_DEVICE_TYPE_GL:
     {
-#    if EXPLICITLY_LOAD_ENGINE_GL_DLL
-        // Load the dll and import GetEngineFactoryOpenGL() function
-        auto GetEngineFactoryOpenGL = LoadGraphicsEngineOpenGL();
-#    endif
-        auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
+        // Load the dll and get the factory
+        auto* pFactoryOpenGL = LoadAndGetEngineFactoryOpenGL();
 
         EngineGLCreateInfo EngineCI;
         EngineCI.Window.hWnd = hWnd;
@@ -137,13 +127,9 @@ void InitializeDiligentEngine(HWND NativeWindowHandle)
 
     case RENDER_DEVICE_TYPE_VULKAN:
     {
-#    if EXPLICITLY_LOAD_ENGINE_VK_DLL
-        // Load the dll and import GetEngineFactoryVk() function
-        auto GetEngineFactoryVk = LoadGraphicsEngineVk();
-#    endif
         EngineVkCreateInfo EngineCI;
-
-        auto* pFactoryVk = GetEngineFactoryVk();
+        // Load the dll and get the factory
+        auto* pFactoryVk = LoadAndGetEngineFactoryVk();
         pFactoryVk->CreateDeviceAndContextsVk(EngineCI, &m_pDevice, &m_pImmediateContext);
         Win32NativeWindow Window{hWnd};
         pFactoryVk->CreateSwapChainVk(m_pDevice, m_pImmediateContext, SCDesc, Window, &m_pSwapChain);
