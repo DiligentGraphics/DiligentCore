@@ -157,7 +157,12 @@ typedef struct IEngineFactoryD3D11* (*GetEngineFactoryD3D11Type)();
 
 inline GetEngineFactoryD3D11Type DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineD3D11)()
 {
-    return (GetEngineFactoryD3D11Type)LoadEngineDll("GraphicsEngineD3D11", "GetEngineFactoryD3D11");
+    static GetEngineFactoryD3D11Type GetFactoryFunc = NULL;
+    if (GetFactoryFunc == NULL)
+    {
+        GetFactoryFunc = (GetEngineFactoryD3D11Type)LoadEngineDll("GraphicsEngineD3D11", "GetEngineFactoryD3D11");
+    }
+    return GetFactoryFunc;
 }
 
 #else

@@ -145,7 +145,12 @@ typedef struct IEngineFactoryWebGPU* (*GetEngineFactoryWebGPUType)();
 
 inline GetEngineFactoryWebGPUType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineWebGPU)()
 {
-    return (GetEngineFactoryWebGPUType)LoadEngineDll("GraphicsEngineWebGPU", "GetEngineFactoryWebGPU");
+    static GetEngineFactoryWebGPUType GetFactoryFunc = NULL;
+    if (GetFactoryFunc == NULL)
+    {
+        GetFactoryFunc = (GetEngineFactoryWebGPUType)LoadEngineDll("GraphicsEngineWebGPU", "GetEngineFactoryWebGPU");
+    }
+    return GetFactoryFunc;
 }
 
 #else

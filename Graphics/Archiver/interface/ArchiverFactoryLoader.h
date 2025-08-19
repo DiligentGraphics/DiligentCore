@@ -50,7 +50,12 @@ typedef struct IArchiverFactory* (*GetArchiverFactoryType)();
 
 inline GetArchiverFactoryType DILIGENT_GLOBAL_FUNCTION(LoadArchiverFactory)()
 {
-    return (GetArchiverFactoryType)LoadEngineDll("Archiver", "GetArchiverFactory");
+    static GetArchiverFactoryType GetFactoryFunc = NULL;
+    if (GetFactoryFunc == NULL)
+    {
+        GetFactoryFunc = (GetArchiverFactoryType)LoadEngineDll("Archiver", "GetArchiverFactory");
+    }
+    return GetFactoryFunc;
 }
 
 #else

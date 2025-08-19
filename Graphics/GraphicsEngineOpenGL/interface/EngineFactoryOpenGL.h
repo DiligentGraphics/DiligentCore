@@ -130,7 +130,12 @@ typedef struct IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
 inline GetEngineFactoryOpenGLType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineOpenGL)()
 {
-    return (GetEngineFactoryOpenGLType)LoadEngineDll("GraphicsEngineOpenGL", "GetEngineFactoryOpenGL");
+    static GetEngineFactoryOpenGLType GetFactoryFunc = NULL;
+    if (GetFactoryFunc == NULL)
+    {
+        GetFactoryFunc = (GetEngineFactoryOpenGLType)LoadEngineDll("GraphicsEngineOpenGL", "GetEngineFactoryOpenGL");
+    }
+    return GetFactoryFunc;
 }
 
 #else

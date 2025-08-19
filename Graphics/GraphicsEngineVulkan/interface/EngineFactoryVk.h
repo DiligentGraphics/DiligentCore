@@ -136,7 +136,12 @@ typedef struct IEngineFactoryVk* (*GetEngineFactoryVkType)();
 
 inline GetEngineFactoryVkType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineVk)()
 {
-    return (GetEngineFactoryVkType)LoadEngineDll("GraphicsEngineVk", "GetEngineFactoryVk");
+    static GetEngineFactoryVkType GetFactoryFunc = NULL;
+    if (GetFactoryFunc == NULL)
+    {
+        GetFactoryFunc = (GetEngineFactoryVkType)LoadEngineDll("GraphicsEngineVk", "GetEngineFactoryVk");
+    }
+    return GetFactoryFunc;
 }
 
 #else
