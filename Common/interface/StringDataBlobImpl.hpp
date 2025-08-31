@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,8 @@
 #include "../../Primitives/interface/DataBlob.h"
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
+#include "STDAllocator.hpp"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
@@ -49,7 +51,7 @@ public:
     template <typename... ArgsType>
     StringDataBlobImpl(IReferenceCounters* pRefCounters, ArgsType&&... Args) :
         TBase{pRefCounters},
-        m_String{std::forward<ArgsType>(Args)...}
+        m_String{std::forward<ArgsType>(Args)..., STD_ALLOCATOR_RAW_MEM(Char, GetRawAllocator(), "Allocator for String")}
     {}
 
     template <typename... ArgsType>
@@ -85,7 +87,7 @@ public:
     }
 
 private:
-    String m_String;
+    StringAlloc m_String;
 };
 
 } // namespace Diligent

@@ -389,12 +389,12 @@ String BuildGLSLSourceString(const BuildGLSLSourceStringAttribs& Attribs) noexce
         // (search for "Input Layout Qualifiers" and "Output Layout Qualifiers").
         ConvertAttribs.UseInOutLocationQualifiers = Attribs.Features.SeparablePrograms;
         ConvertAttribs.UseRowMajorMatrices        = (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_PACK_MATRIX_ROW_MAJOR) != 0;
-        String ConvertedSource                    = Converter.Convert(ConvertAttribs);
+        StringAlloc ConvertedSource               = Converter.Convert(ConvertAttribs);
         if (ConvertedSource.empty())
         {
             LOG_ERROR_AND_THROW("Failed to convert HLSL source to GLSL");
         }
-        GLSLSource.append(ConvertedSource);
+        GLSLSource.append(ConvertedSource.begin(), ConvertedSource.end());
 #endif
     }
     else

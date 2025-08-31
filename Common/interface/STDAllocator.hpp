@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -171,7 +171,7 @@ bool operator==(const STDAllocator<T, A>& left, const STDAllocator<U, A>& right)
 }
 
 template <class T, class U, class A>
-bool operator!=(const STDAllocator<T, A>& left, const STDAllocator<U, A>& right)
+bool operator!=(const STDAllocator<T, A>& left, const STDAllocator<U, A>& right) noexcept
 {
     return !(left == right);
 }
@@ -215,5 +215,12 @@ private:
     AllocatorType* m_Allocator = nullptr;
 };
 template <class T> using STDDeleterRawMem = STDDeleter<T, IMemoryAllocator>;
+
+/// String using custom STDAllocator with IMemoryAllocator
+using StringAlloc =
+    std::basic_string<
+        Char,
+        std::char_traits<Char>,
+        STDAllocator<Char, IMemoryAllocator>>;
 
 } // namespace Diligent

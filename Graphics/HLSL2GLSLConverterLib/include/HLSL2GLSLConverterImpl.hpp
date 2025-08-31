@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +39,7 @@
 #include "HashUtils.hpp"
 #include "Constants.h"
 #include "HLSLTokenizer.hpp"
+#include "STDAllocator.hpp"
 
 namespace Diligent
 {
@@ -145,7 +146,7 @@ public:
 
     /// \param [in] Attribs - Conversion attributes.
     /// \return     Converted GLSL source code.
-    String Convert(ConversionAttribs& Attribs) const;
+    StringAlloc Convert(ConversionAttribs& Attribs) const;
 
     /// Creates a conversion stream
 
@@ -250,12 +251,12 @@ private:
                          size_t                           NumSymbols,
                          bool                             bPreserveTokens);
 
-        String Convert(const Char* EntryPoint,
-                       SHADER_TYPE ShaderType,
-                       bool        IncludeDefintions,
-                       const char* SamplerSuffix,
-                       bool        UseInOutLocationQualifiers,
-                       bool        UseRowMajorMatrices);
+        StringAlloc Convert(const Char* EntryPoint,
+                            SHADER_TYPE ShaderType,
+                            bool        IncludeDefintions,
+                            const char* SamplerSuffix,
+                            bool        UseInOutLocationQualifiers,
+                            bool        UseRowMajorMatrices);
 
         virtual void DILIGENT_CALL_TYPE Convert(const Char* EntryPoint,
                                                 SHADER_TYPE ShaderType,
@@ -457,7 +458,7 @@ private:
                                           const String&            OutStreamName,
                                           const char*              EntryPoint);
 
-        String BuildGLSLSource();
+        StringAlloc BuildGLSLSource();
 
         // Tokenized source code
         TokenListType m_Tokens;

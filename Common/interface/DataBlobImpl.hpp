@@ -42,7 +42,7 @@ namespace Diligent
 {
 
 /// Base interface for a data blob
-class DataBlobImpl final : public Diligent::ObjectBase<IDataBlob>
+class DataBlobImpl final : public ObjectBase<IDataBlob>
 {
 public:
     using TBase          = ObjectBase<IDataBlob>;
