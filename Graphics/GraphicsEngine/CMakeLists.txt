@@ -15,7 +15,6 @@ set(INCLUDE
     include/DeviceObjectBase.hpp
     include/DeviceObjectArchive.hpp
     include/EngineFactoryBase.hpp
-    include/EngineMemory.h
     include/FenceBase.hpp
     include/FramebufferBase.hpp
     include/IndexWrapper.hpp
@@ -92,7 +91,6 @@ set(SOURCE
     src/DeviceContextBase.cpp
     src/DeviceMemoryBase.cpp
     src/DeviceObjectArchive.cpp
-    src/EngineMemory.cpp
     src/EngineFactoryBase.cpp
     src/FramebufferBase.cpp
     src/GraphicsTypesX.cpp

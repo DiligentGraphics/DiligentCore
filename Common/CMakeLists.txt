@@ -26,6 +26,7 @@ set(INTERFACE
     interface/LRUCache.hpp
     interface/FixedLinearAllocator.hpp
     interface/DynamicLinearAllocator.hpp
+    interface/EngineMemory.h
     interface/MemoryFileStream.hpp
     interface/ObjectBase.hpp
     interface/ObjectsRegistry.hpp
@@ -56,6 +57,7 @@ set(SOURCE
     src/BasicFileStream.cpp
     src/DataBlobImpl.cpp
     src/DefaultRawMemoryAllocator.cpp
+    src/EngineMemory.cpp
     src/FileWrapper.cpp
     src/FixedBlockMemoryAllocator.cpp
     src/GeometryPrimitives.cpp

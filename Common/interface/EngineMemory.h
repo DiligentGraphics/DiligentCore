@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,9 +28,9 @@
 #pragma once
 
 /// \file
-/// Implementation of the Diligent::BufferBase template class
+/// Implementation of the IMemoryAllocator interface and global memory allocation functions
 
-#include "MemoryAllocator.h"
+#include "../../Primitives/interface/MemoryAllocator.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 

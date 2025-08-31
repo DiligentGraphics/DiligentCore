@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@
  */
 
 #include "../../../../Graphics/GraphicsEngine/include/PSOSerializer.hpp"
-#include "../../../../Graphics/GraphicsEngine/include/EngineMemory.h"
 
 #include <algorithm>
 #include <array>
@@ -33,6 +32,7 @@
 
 #include "gtest/gtest.h"
 
+#include "EngineMemory.h"
 #include "PipelineState.h"
 #include "Serializer.hpp"
 

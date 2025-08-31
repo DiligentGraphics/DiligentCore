@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,10 +24,6 @@
  *  all other commercial damages or losses), even if such Contributor has been advised
  *  of the possibility of such damages.
  */
-
-// stdafx.cpp : source file that includes just the standard includes
-// RenderEngine.pch will be the pre-compiled header
-// stdafx.obj will contain the pre-compiled type information
 
 #include "EngineMemory.h"
 #include "DefaultRawMemoryAllocator.hpp"

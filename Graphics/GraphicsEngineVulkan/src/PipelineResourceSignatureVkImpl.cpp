@@ -169,7 +169,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
 {
     // Initialize static resource cache first
-    if (Uint32 NumStaticResStages = GetNumStaticResStages())
+    if (GetNumStaticResStages() > 0)
     {
         Uint32 StaticResourceCount = 0; // The total number of static resources in all stages
                                         // accounting for array sizes.
