@@ -338,6 +338,20 @@ DILIGENT_BEGIN_INTERFACE(IArchiverFactory, IObject)
     /// \param [in]     BreakOnError - Whether to break on assertion failure.
     VIRTUAL void METHOD(SetBreakOnError)(THIS_
                                          bool BreakOnError) CONST PURE;
+
+    /// Sets the memory allocator to be used by the archiver.
+    
+    /// \param [in] pAllocator - Pointer to the memory allocator.
+    ///
+    /// The allocator is a global setting that applies to the entire execution unit
+    /// (executable or shared library that contains the archiver implementation).
+    ///
+    /// The allocator should be set before any other factory method is called and
+    /// should not be changed afterwards.
+    /// The allocator object must remain valid until all objects created by the factory
+    /// are destroyed.
+    VIRTUAL void METHOD(SetMemoryAllocator)(THIS_
+                                            IMemoryAllocator* pAllocator) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -353,7 +367,8 @@ DILIGENT_END_INTERFACE
 #    define IArchiverFactory_MergeArchives(This, ...)                           CALL_IFACE_METHOD(ArchiverFactory, MergeArchives,                          This, __VA_ARGS__)
 #    define IArchiverFactory_PrintArchiveContent(This, ...)                     CALL_IFACE_METHOD(ArchiverFactory, PrintArchiveContent,                    This, __VA_ARGS__)
 #    define IArchiverFactory_SetMessageCallback(This, ...)                      CALL_IFACE_METHOD(ArchiverFactory, SetMessageCallback,                     This, __VA_ARGS__)
-#    define IEngineFactory_SetBreakOnError(This, ...)                           CALL_IFACE_METHOD(EngineFactory,   SetBreakOnError,                        This, __VA_ARGS__)
+#    define IArchiverFactory_SetBreakOnError(This, ...)                         CALL_IFACE_METHOD(ArchiverFactory, SetBreakOnError,                        This, __VA_ARGS__)
+#    define IArchiverFactory_SetMemoryAllocator(This, ...)                      CALL_IFACE_METHOD(ArchiverFactory, SetMemoryAllocator,                     This, __VA_ARGS__)
 
 #endif
 

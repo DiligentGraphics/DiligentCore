@@ -695,8 +695,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& En
         return;
     }
 
-    SetRawAllocator(EngineCI.pRawMemAllocator);
-
     try
     {
         const Version GraphicsAPIVersion = EngineCI.GraphicsAPIVersion == Version{0, 0} ?

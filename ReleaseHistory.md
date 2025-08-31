@@ -2,6 +2,8 @@
 
 ## Current progress
 
+* Replaced `EngineCreateInfo::pRawMemAllocator` with `IEngineFactory::SetMemoryAllocator()`,
+  added `IArchiverFactory::SetMemoryAllocator()` (API256011)
 * Added `IRenderDeviceVk::GetDXCompiler()` and `IRenderDeviceD3D12::GetDXCompiler()` methods (API256010)
 * Added `IEngineFactoryVk::GetVulkanVersion` method (API256009)
 * Added `SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL` flag (API256008)

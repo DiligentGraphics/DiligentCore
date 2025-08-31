@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,7 @@
 #include "../../../Primitives/interface/Object.h"
 #include "../../../Primitives/interface/DebugOutput.h"
 #include "../../../Primitives/interface/DataBlob.h"
+#include "../../../Primitives/interface/MemoryAllocator.h"
 #include "GraphicsTypes.h"
 
 
@@ -128,15 +129,37 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
 
     /// Sets a user-provided debug message callback.
 
-    /// \param [in]     MessageCallback - Debug message callback function to use instead of the default one.
+    /// \param [in] MessageCallback - Debug message callback function to use instead of the default one.
+    ///
+    /// MessageCallback is a global setting that applies to the entire execution unit
+    /// (executable or shared library that contains the engine implementation).
     VIRTUAL void METHOD(SetMessageCallback)(THIS_
                                             DebugMessageCallbackType MessageCallback) CONST PURE;
 
+
     /// Sets whether to break program execution on assertion failure.
 
-    /// \param [in]     BreakOnError - Whether to break on assertion failure.
+    /// \param [in] BreakOnError - Whether to break on assertion failure.
+    ///
+    /// BreakOnError is a global setting that applies to the entire execution unit 
+    /// (executable or shared library that contains the engine implementation).
     VIRTUAL void METHOD(SetBreakOnError)(THIS_
                                          bool BreakOnError) CONST PURE;
+
+
+    /// Sets the memory allocator to be used by the engine.
+    
+    /// \param [in] pAllocator - Pointer to the memory allocator.
+    ///
+    /// The allocator is a global setting that applies to the entire execution unit
+    /// (executable or shared library that contains the engine implementation).
+    ///
+    /// The allocator should be set before any other factory method is called and
+    /// should not be changed afterwards.
+    /// The allocator object must remain valid for the lifetime of the
+    /// engine until all engine objects are destroyed.
+    VIRTUAL void METHOD(SetMemoryAllocator)(THIS_
+                                            IMemoryAllocator* pAllocator) CONST PURE;
 
 #if PLATFORM_ANDROID
     /// On Android platform, it is necessary to initialize the file system before
@@ -171,6 +194,7 @@ DILIGENT_END_INTERFACE
 #    define IEngineFactory_CreateDearchiver(This, ...)                       CALL_IFACE_METHOD(EngineFactory, CreateDearchiver,                       This, __VA_ARGS__)
 #    define IEngineFactory_SetMessageCallback(This, ...)                     CALL_IFACE_METHOD(EngineFactory, SetMessageCallback,                     This, __VA_ARGS__)
 #    define IEngineFactory_SetBreakOnError(This, ...)                        CALL_IFACE_METHOD(EngineFactory, SetBreakOnError,                        This, __VA_ARGS__)
+#    define IEngineFactory_SetMemoryAllocator(This, ...)                     CALL_IFACE_METHOD(EngineFactory, SetMemoryAllocator,                     This, __VA_ARGS__)
 // clang-format on
 
 #endif

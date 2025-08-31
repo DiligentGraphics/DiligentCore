@@ -374,7 +374,6 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
         const GraphicsAdapterInfo AdapterInfo = GetGraphicsAdapterInfo(pd3d11NativeDevice, pDXGIAdapter1);
         VerifyEngineCreateInfo(EngineCI, AdapterInfo);
 
-        SetRawAllocator(EngineCI.pRawMemAllocator);
         IMemoryAllocator& RawAllocator = GetRawAllocator();
 
         RenderDeviceD3D11Impl* pRenderDeviceD3D11{

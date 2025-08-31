@@ -675,7 +675,6 @@ void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(void*                        
 
         const DeviceFeatures EnabledFeatures = GetSupportedFeatures(nullptr, static_cast<WGPUDevice>(wgpuDevice));
 
-        SetRawAllocator(EngineCI.pRawMemAllocator);
         IMemoryAllocator& RawMemAllocator = GetRawAllocator();
 
         RenderDeviceWebGPUImpl* pRenderDeviceWebGPU{

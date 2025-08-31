@@ -122,6 +122,11 @@ public:
         PlatformDebug::SetBreakOnError(BreakOnError);
     }
 
+    virtual void DILIGENT_CALL_TYPE SetMemoryAllocator(IMemoryAllocator* pAllocator) const override final
+    {
+        SetRawAllocator(pAllocator);
+    }
+
 protected:
     template <typename DearchiverImplType>
     void CreateDearchiver(const DearchiverCreateInfo& CreateInfo,

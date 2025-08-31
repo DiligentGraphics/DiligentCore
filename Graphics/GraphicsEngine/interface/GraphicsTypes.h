@@ -3517,10 +3517,6 @@ struct EngineCreateInfo
     /// Validation options, see Diligent::VALIDATION_FLAGS.
     VALIDATION_FLAGS    ValidationFlags             DEFAULT_INITIALIZER(VALIDATION_FLAG_NONE);
 
-    /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
-    /// operations in the engine
-    struct IMemoryAllocator* pRawMemAllocator       DEFAULT_INITIALIZER(nullptr);
-
     /// An optional thread pool for asynchronous shader and pipeline state compilation.
     ///
     /// When AsyncShaderCompilation device feature is enabled, the engine will use

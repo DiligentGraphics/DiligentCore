@@ -309,7 +309,6 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
     try
     {
         ValidateD3D12CreateInfo(EngineCI);
-        SetRawAllocator(EngineCI.pRawMemAllocator);
 
         // Enable the D3D12 debug layer.
         if (EngineCI.EnableValidation)
@@ -601,7 +600,6 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
 
     try
     {
-        SetRawAllocator(EngineCI.pRawMemAllocator);
         IMemoryAllocator&      RawMemAllocator = GetRawAllocator();
         ID3D12Device*          d3d12Device     = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
         CComPtr<IDXGIAdapter1> pDXGIAdapter1   = DXGIAdapterFromD3D12Device(d3d12Device);

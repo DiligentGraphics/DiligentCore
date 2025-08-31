@@ -143,6 +143,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE SetBreakOnError(bool BreakOnError) const override final;
 
+    virtual void DILIGENT_CALL_TYPE SetMemoryAllocator(IMemoryAllocator* pAllocator) const override final;
+
 private:
     DummyReferenceCounters<ArchiverFactoryImpl> m_RefCounters;
 };
@@ -347,6 +349,11 @@ void ArchiverFactoryImpl::SetMessageCallback(DebugMessageCallbackType MessageCal
 void ArchiverFactoryImpl::SetBreakOnError(bool BreakOnError) const
 {
     PlatformDebug::SetBreakOnError(BreakOnError);
+}
+
+void ArchiverFactoryImpl::SetMemoryAllocator(IMemoryAllocator* pAllocator) const
+{
+    SetRawAllocator(pAllocator);
 }
 
 } // namespace
