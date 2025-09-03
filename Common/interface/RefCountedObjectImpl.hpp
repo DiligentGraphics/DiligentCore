@@ -43,7 +43,7 @@ namespace Diligent
 {
 
 // This class controls the lifetime of a refcounted object
-class RefCountersImpl final : public IReferenceCounters
+class RefCountersImpl : public IReferenceCounters
 {
 public:
     inline virtual ReferenceCounterValueType AddStrongRef() override final
@@ -448,12 +448,12 @@ private:
         }
     }
 
-    void SelfDestroy()
+    virtual void SelfDestroy()
     {
         delete this;
     }
 
-    ~RefCountersImpl()
+    virtual ~RefCountersImpl()
     {
         VERIFY(m_NumStrongReferences.load() == 0 && m_NumWeakReferences.load() == 0,
                "There exist outstanding references to the object being destroyed");
