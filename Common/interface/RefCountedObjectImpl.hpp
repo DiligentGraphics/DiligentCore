@@ -43,7 +43,7 @@ namespace Diligent
 {
 
 // This class controls the lifetime of a refcounted object
-class RefCountersImpl final : public IReferenceCounters
+class RefCountersImpl : public IReferenceCounters
 {
 public:
     inline virtual ReferenceCounterValueType AddStrongRef() override final
@@ -215,7 +215,7 @@ public:
         return m_NumWeakReferences.load();
     }
 
-private:
+protected:
     template <typename AllocatorType, typename ObjectType>
     friend class MakeNewRCObj;
 
@@ -223,6 +223,7 @@ private:
     {
     }
 
+private:
     class ObjectWrapperBase
     {
     public:
@@ -448,10 +449,8 @@ private:
         }
     }
 
-    void SelfDestroy()
-    {
-        delete this;
-    }
+protected:
+    virtual void SelfDestroy() = 0;
 
     ~RefCountersImpl()
     {
@@ -459,6 +458,7 @@ private:
                "There exist outstanding references to the object being destroyed");
     }
 
+private:
     // No copies/moves
     // clang-format off
     RefCountersImpl             (const RefCountersImpl&)  = delete;
@@ -492,6 +492,21 @@ private:
     std::atomic<ObjectState> m_ObjectState{ObjectState::NotInitialized};
 };
 
+class RefCountersAllocationImpl : public RefCountersImpl
+{
+private:
+    template <typename AllocatorType, typename ObjectType>
+    friend class MakeNewRCObj;
+
+    RefCountersAllocationImpl() noexcept
+    {
+    }
+
+    void SelfDestroy() override
+    {
+        delete this;
+    }
+};
 
 /// Base class for all reference counting objects
 template <typename Base>
@@ -654,7 +669,7 @@ public:
         {
             // Constructor of RefCountersImpl class is private and only accessible
             // by methods of MakeNewRCObj
-            pNewRefCounters = new RefCountersImpl{};
+            pNewRefCounters = new RefCountersAllocationImpl{};
             pRefCounters    = pNewRefCounters;
         }
         ObjectType* pObj = nullptr;
