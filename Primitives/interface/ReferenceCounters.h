@@ -44,7 +44,7 @@ typedef Int32 ReferenceCounterValueType;
 class IReferenceCounters
 {
 public:
-    virtual ~IReferenceCounters() {};
+    virtual ~IReferenceCounters(){};
 
     /// Increments the number of strong references by 1.
 
