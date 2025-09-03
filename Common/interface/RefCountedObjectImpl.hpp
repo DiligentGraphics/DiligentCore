@@ -43,6 +43,7 @@ namespace Diligent
 {
 
 // This class controls the lifetime of a refcounted object
+// NB: RefCountersImpl can't be final, see https://github.com/DiligentGraphics/DiligentCore/issues/704.
 class RefCountersImpl : public IReferenceCounters
 {
 public:
@@ -448,6 +449,8 @@ private:
         }
     }
 
+    // Make the method virtual to ensure that the object is destroyed in the same module
+    // where it was created, see https://github.com/DiligentGraphics/DiligentCore/issues/704.
     virtual void SelfDestroy()
     {
         delete this;
