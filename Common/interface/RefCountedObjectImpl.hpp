@@ -46,6 +46,8 @@ namespace Diligent
 class RefCountersImpl : public IReferenceCounters
 {
 public:
+    virtual ~RefCountersImpl() {}
+
     inline virtual ReferenceCounterValueType AddStrongRef() override final
     {
         VERIFY(m_ObjectState.load() == ObjectState::Alive, "Attempting to increment strong reference counter for a destroyed or not initialized object!");
