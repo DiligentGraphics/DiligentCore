@@ -215,7 +215,7 @@ public:
         return m_NumWeakReferences.load();
     }
 
-protected:
+private:
     template <typename AllocatorType, typename ObjectType>
     friend class MakeNewRCObj;
 
@@ -223,7 +223,6 @@ protected:
     {
     }
 
-private:
     class ObjectWrapperBase
     {
     public:
@@ -449,8 +448,10 @@ private:
         }
     }
 
-protected:
-    virtual void SelfDestroy() = 0;
+    virtual void SelfDestroy()
+    {
+        delete this;
+    }
 
     ~RefCountersImpl()
     {
@@ -458,7 +459,6 @@ protected:
                "There exist outstanding references to the object being destroyed");
     }
 
-private:
     // No copies/moves
     // clang-format off
     RefCountersImpl             (const RefCountersImpl&)  = delete;
@@ -492,21 +492,6 @@ private:
     std::atomic<ObjectState> m_ObjectState{ObjectState::NotInitialized};
 };
 
-class RefCountersAllocationImpl final : public RefCountersImpl
-{
-private:
-    template <typename AllocatorType, typename ObjectType>
-    friend class MakeNewRCObj;
-
-    RefCountersAllocationImpl() noexcept
-    {
-    }
-
-    void SelfDestroy() override final
-    {
-        delete this;
-    }
-};
 
 /// Base class for all reference counting objects
 template <typename Base>
@@ -669,7 +654,7 @@ public:
         {
             // Constructor of RefCountersImpl class is private and only accessible
             // by methods of MakeNewRCObj
-            pNewRefCounters = new RefCountersAllocationImpl{};
+            pNewRefCounters = new RefCountersImpl{};
             pRefCounters    = pNewRefCounters;
         }
         ObjectType* pObj = nullptr;
