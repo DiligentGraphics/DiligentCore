@@ -492,7 +492,7 @@ private:
     std::atomic<ObjectState> m_ObjectState{ObjectState::NotInitialized};
 };
 
-class RefCountersAllocationImpl : public RefCountersImpl
+class RefCountersAllocationImpl final : public RefCountersImpl
 {
 private:
     template <typename AllocatorType, typename ObjectType>
@@ -502,7 +502,7 @@ private:
     {
     }
 
-    void SelfDestroy() override
+    void SelfDestroy() override final
     {
         delete this;
     }
