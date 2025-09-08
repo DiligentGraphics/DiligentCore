@@ -376,8 +376,8 @@ extern "C"
     }
 
     void Diligent_AllocateOpenXRSwapchainImageData(Diligent::RENDER_DEVICE_TYPE DeviceType,
-                                                  Diligent::Uint32             ImageCount,
-                                                  Diligent::IDataBlob**        ppSwapchainImageData)
+                                                   Diligent::Uint32             ImageCount,
+                                                   Diligent::IDataBlob**        ppSwapchainImageData)
     {
         Diligent::AllocateOpenXRSwapchainImageData(DeviceType, ImageCount, ppSwapchainImageData);
     }
