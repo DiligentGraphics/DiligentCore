@@ -48,6 +48,29 @@ DILIGENT_TYPED_ENUM(RENDER_STATE_CACHE_LOG_LEVEL, Uint8)
     RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE
 };
 
+/// Hash mode used by the render state cache to identify unique files.
+DILIGENT_TYPED_ENUM(RENDER_STATE_CACHE_FILE_HASH_MODE, Uint8)
+{
+    /// Hash files by their content.
+
+    /// This is the most reliable method, but it requires reading
+    /// the entire file contents, as well as all included files,
+    /// which may be time-consuming.
+    RENDER_STATE_CACHE_FILE_HASH_MODE_BY_CONTENT,
+
+    /// Hash files by their names.
+
+    /// This method is very fast, but it it does not detect
+    /// changes in the file contents.
+    /// 
+    /// This mode is not compatible with shader hot reloading.
+    /// 
+    /// \note If the file is modified after it has been cached,
+    ///       the cache will not detect the change and will continue
+    ///       to use the old cached version.
+    RENDER_STATE_CACHE_FILE_HASH_MODE_BY_NAME
+};
+
 // clang-format on
 
 /// Render state cache create information.
@@ -64,8 +87,18 @@ struct RenderStateCacheCreateInfo
     /// Logging level, see Diligent::RENDER_STATE_CACHE_LOG_LEVEL.
     RENDER_STATE_CACHE_LOG_LEVEL LogLevel DEFAULT_INITIALIZER(RENDER_STATE_CACHE_LOG_LEVEL_NORMAL);
 
+    /// Source file hash mode, see Diligent::RENDER_STATE_CACHE_FILE_HASH_MODE.
+    RENDER_STATE_CACHE_FILE_HASH_MODE FileHashMode DEFAULT_INITIALIZER(RENDER_STATE_CACHE_FILE_HASH_MODE_BY_CONTENT);
+
     /// Whether to enable hot shader and pipeline state reloading.
 
+    /// When enabled, the cache will support the `Reload()` method
+    /// that detects changes in the original shader source files
+    /// and reloads the corresponding shaders and pipeline states.
+    ///
+    /// Hot reloading requires that the file hash mode is
+    /// `Diligent::RENDER_STATE_CACHE_FILE_HASH_MODE_BY_CONTENT`.
+    ///
     /// \note   Hot reloading introduces some overhead and should
     ///         generally be disabled in production builds.
     bool EnableHotReload DEFAULT_INITIALIZER(false);
@@ -86,15 +119,17 @@ struct RenderStateCacheCreateInfo
     {}
 
     constexpr explicit RenderStateCacheCreateInfo(
-        IRenderDevice*                   _pDevice,
-        struct IArchiverFactory*         _pArchiverFactory,
-        RENDER_STATE_CACHE_LOG_LEVEL     _LogLevel          = RenderStateCacheCreateInfo{}.LogLevel,
-        bool                             _EnableHotReload   = RenderStateCacheCreateInfo{}.EnableHotReload,
-        bool                             _OptimizeGLShaders = RenderStateCacheCreateInfo{}.OptimizeGLShaders,
-        IShaderSourceInputStreamFactory* _pReloadSource     = RenderStateCacheCreateInfo{}.pReloadSource) noexcept :
+        IRenderDevice*                    _pDevice,
+        struct IArchiverFactory*          _pArchiverFactory,
+        RENDER_STATE_CACHE_LOG_LEVEL      _LogLevel          = RenderStateCacheCreateInfo{}.LogLevel,
+        RENDER_STATE_CACHE_FILE_HASH_MODE _FileHashMode      = RenderStateCacheCreateInfo{}.FileHashMode,
+        bool                              _EnableHotReload   = RenderStateCacheCreateInfo{}.EnableHotReload,
+        bool                              _OptimizeGLShaders = RenderStateCacheCreateInfo{}.OptimizeGLShaders,
+        IShaderSourceInputStreamFactory*  _pReloadSource     = RenderStateCacheCreateInfo{}.pReloadSource) noexcept :
         pDevice{_pDevice},
         pArchiverFactory{_pArchiverFactory},
         LogLevel{_LogLevel},
+        FileHashMode{_FileHashMode},
         EnableHotReload{_EnableHotReload},
         OptimizeGLShaders{_OptimizeGLShaders},
         pReloadSource{_pReloadSource}

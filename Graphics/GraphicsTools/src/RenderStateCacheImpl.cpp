@@ -185,6 +185,11 @@ RenderStateCacheImpl::RenderStateCacheImpl(IReferenceCounters*               pRe
         LOG_ERROR_AND_THROW("CreateInfo.pArchiverFactory must not be null. Use LoadAndGetArchiverFactory() from ArchiverFactoryLoader.h to create the factory.");
     }
 
+    if (CreateInfo.FileHashMode == RENDER_STATE_CACHE_FILE_HASH_MODE_BY_NAME && CreateInfo.EnableHotReload)
+    {
+        LOG_WARNING_MESSAGE("Hot reloading is not compatible with by-name file hashing. Use by-content hashing instead.");
+    }
+
     SerializationDeviceCreateInfo SerializationDeviceCI;
     SerializationDeviceCI.DeviceInfo                        = m_pDevice->GetDeviceInfo();
     SerializationDeviceCI.AdapterInfo                       = m_pDevice->GetAdapterInfo();
@@ -315,6 +320,24 @@ bool RenderStateCacheImpl::CreateShader(const ShaderCreateInfo& ShaderCI,
     return FoundInCache;
 }
 
+static void HashShaderCIByFileName(XXH128State& Hasher, const ShaderCreateInfo& ShaderCI)
+{
+    ShaderCreateInfo HashCI = ShaderCI;
+    HashCI.FilePath         = nullptr;
+    HashCI.Source           = nullptr;
+    Hasher.Update(HashCI);
+    if (ShaderCI.FilePath != nullptr)
+    {
+        // Hash only the file path
+        Hasher.UpdateStr(ShaderCI.FilePath);
+    }
+    else if (ShaderCI.Source != nullptr)
+    {
+        // Hash the source as raw string ignoring any include directives
+        Hasher.UpdateStr(ShaderCI.Source, ShaderCI.SourceLength);
+    }
+}
+
 bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI,
                                                 IShader**               ppShader)
 {
@@ -327,7 +350,19 @@ bool RenderStateCacheImpl::CreateShaderInternal(const ShaderCreateInfo& ShaderCI
     constexpr bool IsDebug = false;
 #endif
     ComputeDeviceAttribsHash(Hasher, m_pDevice);
-    Hasher.Update(ShaderCI, IsDebug);
+    if (m_CI.FileHashMode == RENDER_STATE_CACHE_FILE_HASH_MODE_BY_CONTENT)
+    {
+        Hasher.Update(ShaderCI);
+    }
+    else if (m_CI.FileHashMode == RENDER_STATE_CACHE_FILE_HASH_MODE_BY_NAME)
+    {
+        HashShaderCIByFileName(Hasher, ShaderCI);
+    }
+    else
+    {
+        UNEXPECTED("Unexpected file hash mode");
+    }
+    Hasher.Update(IsDebug);
     const XXH128Hash Hash = Hasher.Digest();
 
     // First, try to check if the shader has already been requested

@@ -253,6 +253,7 @@ RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pD
         pDevice,
         GPUTestingEnvironment::GetInstance()->GetArchiverFactory(),
         RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE,
+        RENDER_STATE_CACHE_FILE_HASH_MODE_BY_CONTENT,
         HotReload,
         OptimizeGLShaders,
         pShaderReloadFactory,
@@ -841,6 +842,58 @@ TEST(RenderStateCacheTest, CreateComputePSO_Async)
 TEST(RenderStateCacheTest, CreateComputePSO_Sign_Async)
 {
     TestComputePSO(/*UseSignature = */ true, /*CompileAsync = */ true);
+}
+
+
+TEST(RenderStateCacheTest, CacheByFileName)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
+    ASSERT_TRUE(pShaderSourceFactory);
+
+    RefCntAutoPtr<ITextureView> pTexSRV = CreateWhiteTexture();
+    ASSERT_TRUE(pTexSRV);
+
+    RenderStateCacheCreateInfo CacheCI{
+        pDevice,
+        GPUTestingEnvironment::GetInstance()->GetArchiverFactory(),
+        RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE,
+        RENDER_STATE_CACHE_FILE_HASH_MODE_BY_NAME,
+    };
+
+    RefCntAutoPtr<IDataBlob> pData;
+    for (Uint32 pass = 0; pass < 2; ++pass)
+    {
+        RefCntAutoPtr<IRenderStateCache> pCache;
+        CreateRenderStateCache(CacheCI, &pCache);
+        ASSERT_TRUE(pCache);
+
+        if (pData != nullptr)
+            pCache->Load(pData, ContentVersion);
+
+        RefCntAutoPtr<IShader> pVS, pPS;
+        CreateGraphicsShaders(pCache, pass == 0 ? pShaderSourceFactory.RawPtr() : nullptr, SHADER_COMPILE_FLAG_NONE, pVS, pPS, /*PresentInCache = */ pData != nullptr);
+        ASSERT_NE(pVS, nullptr);
+        ASSERT_NE(pPS, nullptr);
+
+        VerifyGraphicsShaders(pVS, pPS, pTexSRV);
+
+        RefCntAutoPtr<IShader> pVS2, pPS2;
+        CreateGraphicsShaders(pCache, nullptr, SHADER_COMPILE_FLAG_NONE, pVS2, pPS2, /*PresentInCache = */ true);
+        EXPECT_EQ(pVS, pVS2);
+        EXPECT_EQ(pPS, pPS);
+
+        if (pass == 0)
+        {
+            pCache->WriteToBlob(ContentVersion, &pData);
+            ASSERT_NE(pData, nullptr);
+        }
+    }
 }
 
 void CreateRayTracingShaders(IRenderStateCache*               pCache,
