@@ -375,7 +375,7 @@ extern "C"
         Diligent::DestroyOpenXRDebugUtilsMessenger(debugUtilsMessenger);
     }
 
-    void Dilgent_AllocateOpenXRSwapchainImageData(Diligent::RENDER_DEVICE_TYPE DeviceType,
+    void Diligent_AllocateOpenXRSwapchainImageData(Diligent::RENDER_DEVICE_TYPE DeviceType,
                                                   Diligent::Uint32             ImageCount,
                                                   Diligent::IDataBlob**        ppSwapchainImageData)
     {
