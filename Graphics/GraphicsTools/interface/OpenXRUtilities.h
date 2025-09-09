@@ -118,7 +118,7 @@ void DILIGENT_GLOBAL_FUNCTION(AllocateOpenXRSwapchainImageData)(RENDER_DEVICE_TY
 void DILIGENT_GLOBAL_FUNCTION(GetOpenXRSwapchainImage)(IRenderDevice*                    pDevice,
                                                        const XrSwapchainImageBaseHeader* ImageData,
                                                        Uint32                            ImageIndex,
-                                                       const Diligent::TextureDesc REF   TexDesc,
+                                                       const TextureDesc REF             TexDesc,
                                                        ITexture**                        ppImage);
 
 #include "../../../Primitives/interface/UndefRefMacro.h"
