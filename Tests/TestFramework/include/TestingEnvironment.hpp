@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -59,24 +59,24 @@ public:
     {
         ErrorScope(const std::initializer_list<const char*>& Messages)
         {
-            auto* pEnv = TestingEnvironment::GetInstance();
+            TestingEnvironment* pEnv = TestingEnvironment::GetInstance();
             pEnv->SetErrorAllowance(static_cast<Int32>(Messages.size()));
 
-            for (auto const& Message : Messages)
+            for (const char* Message : Messages)
                 pEnv->PushExpectedErrorSubstring(Message, false);
         }
         ErrorScope(const std::initializer_list<std::string>& Messages)
         {
-            auto* pEnv = TestingEnvironment::GetInstance();
+            TestingEnvironment* pEnv = TestingEnvironment::GetInstance();
             pEnv->SetErrorAllowance(static_cast<Int32>(Messages.size()));
 
-            for (auto const& Message : Messages)
+            for (const std::string& Message : Messages)
                 pEnv->PushExpectedErrorSubstring(Message.c_str(), false);
         }
 
         ~ErrorScope()
         {
-            auto* pTestEnvironment = TestingEnvironment::GetInstance();
+            TestingEnvironment* pTestEnvironment = TestingEnvironment::GetInstance();
             pTestEnvironment->SetErrorAllowance(0);
         }
     };

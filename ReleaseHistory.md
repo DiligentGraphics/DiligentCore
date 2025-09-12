@@ -2,6 +2,7 @@
 
 ## Current progress
 
+* Added `SHADER_SOURCE_LANGUAGE_BYTECODE` enum value (API256012)
 * Replaced `EngineCreateInfo::pRawMemAllocator` with `IEngineFactory::SetMemoryAllocator()`,
   added `IArchiverFactory::SetMemoryAllocator()` (API256011)
 * Added `IRenderDeviceVk::GetDXCompiler()` and `IRenderDeviceD3D12::GetDXCompiler()` methods (API256010)

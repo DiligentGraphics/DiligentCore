@@ -81,6 +81,13 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
     /// The source language is WebGPU shading language (WGSL)
     SHADER_SOURCE_LANGUAGE_WGSL,
 
+    /// The shader source is provided as device-specific bytecode
+    /// (e.g. DXBC or DXIL for Direct3D11/Direct3D12, SPIRV for Vulkan, etc.).
+    /// The bytecode is used verbatim and no compilation is performed.
+    /// 
+    /// This option is similar to providing the byte code via `ShaderCreateInfo::ByteCode`.
+    SHADER_SOURCE_LANGUAGE_BYTECODE,
+
     SHADER_SOURCE_LANGUAGE_COUNT
 };
 

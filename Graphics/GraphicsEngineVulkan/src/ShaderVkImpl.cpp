@@ -164,7 +164,7 @@ std::vector<uint32_t> CompileShaderGLSLang(const ShaderCreateInfo&         Shade
 void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
                               const CreateInfo&       VkShaderCI)
 {
-    if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
+    if (ShaderCI.Source != nullptr || (ShaderCI.FilePath != nullptr && ShaderCI.SourceLanguage != SHADER_SOURCE_LANGUAGE_BYTECODE))
     {
         DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
 
@@ -202,9 +202,25 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
     else if (ShaderCI.ByteCode != nullptr)
     {
         DEV_CHECK_ERR(ShaderCI.ByteCodeSize != 0, "ByteCodeSize must not be 0");
-        DEV_CHECK_ERR(ShaderCI.ByteCodeSize % 4 == 0, "Byte code size (", ShaderCI.ByteCodeSize, ") is not multiple of 4");
+        DEV_CHECK_ERR(ShaderCI.ByteCodeSize % 4 == 0, "Byte code size (", ShaderCI.ByteCodeSize, ") is not a multiple of 4");
         m_SPIRV.resize(ShaderCI.ByteCodeSize / 4);
         memcpy(m_SPIRV.data(), ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
+    }
+    else if (ShaderCI.FilePath != nullptr && ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_BYTECODE)
+    {
+        if (ShaderCI.pShaderSourceStreamFactory == nullptr)
+            LOG_ERROR_AND_THROW("Shader source stream factory must be provided when loading shader bytecode from a file");
+
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        ShaderCI.pShaderSourceStreamFactory->CreateInputStream(ShaderCI.FilePath, &pSourceStream);
+        if (!pSourceStream)
+            LOG_ERROR_AND_THROW("Failed to load shader bytecode from file '", ShaderCI.FilePath, "'. Check that the file exists");
+
+        const size_t ByteCodeSize = pSourceStream->GetSize();
+        DEV_CHECK_ERR(ByteCodeSize % 4 == 0, "Byte code size (", ByteCodeSize, ") is not a multiple of 4");
+
+        m_SPIRV.resize(ByteCodeSize / 4);
+        pSourceStream->Read(m_SPIRV.data(), ByteCodeSize);
     }
     else
     {

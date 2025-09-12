@@ -135,7 +135,7 @@ RefCntAutoPtr<IDataBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
                                             IDXCompiler*            DxCompiler,
                                             IDataBlob**             ppCompilerOutput) noexcept(false)
 {
-    if (ShaderCI.Source || ShaderCI.FilePath)
+    if (ShaderCI.Source != nullptr || (ShaderCI.FilePath != nullptr && ShaderCI.SourceLanguage != SHADER_SOURCE_LANGUAGE_BYTECODE))
     {
         DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
         DEV_CHECK_ERR(ShaderCI.EntryPoint != nullptr, "Entry point must not be null");
@@ -182,10 +182,24 @@ RefCntAutoPtr<IDataBlob> CompileD3DBytecode(const ShaderCreateInfo& ShaderCI,
             return DataBlobImpl::Create(pShaderByteCode->GetBufferSize(), pShaderByteCode->GetBufferPointer());
         }
     }
-    else if (ShaderCI.ByteCode)
+    else if (ShaderCI.ByteCode != nullptr)
     {
         DEV_CHECK_ERR(ShaderCI.ByteCodeSize != 0, "ByteCode size must be greater than 0");
         return DataBlobImpl::Create(ShaderCI.ByteCodeSize, ShaderCI.ByteCode);
+    }
+    else if (ShaderCI.FilePath != nullptr && ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_BYTECODE)
+    {
+        if (ShaderCI.pShaderSourceStreamFactory == nullptr)
+            LOG_ERROR_AND_THROW("Shader source stream factory must be provided when loading shader bytecode from a file");
+
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        ShaderCI.pShaderSourceStreamFactory->CreateInputStream(ShaderCI.FilePath, &pSourceStream);
+        if (!pSourceStream)
+            LOG_ERROR_AND_THROW("Failed to load shader bytecode from file '", ShaderCI.FilePath, "'. Check that the file exists");
+
+        RefCntAutoPtr<DataBlobImpl> pByteCode = DataBlobImpl::Create();
+        pSourceStream->ReadBlob(pByteCode);
+        return pByteCode;
     }
     else
     {
