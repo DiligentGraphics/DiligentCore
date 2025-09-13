@@ -106,7 +106,7 @@ TEST(ShaderCreationTest, FromBytecode)
     IRenderDevice*          pDevice    = pEnv->GetDevice();
     const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (!(DeviceInfo.IsD3DDevice() || DeviceInfo.IsVulkanDevice()))
+    if (!(DeviceInfo.IsD3DDevice() || DeviceInfo.IsVulkanDevice() || DeviceInfo.IsMetalDevice()))
     {
         GTEST_SKIP() << "Creating shader from bytecode is not supported on this device type";
     }
@@ -119,6 +119,10 @@ TEST(ShaderCreationTest, FromBytecode)
         ShaderCI.Desc         = {"ShaderCreationTest.FromBytecode - Src", SHADER_TYPE_PIXEL, true};
         ShaderCI.ByteCode     = Bytecode.data();
         ShaderCI.ByteCodeSize = Bytecode.size();
+        if (DeviceInfo.IsMetalDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_MSL_VERBATIM;
+        }
 
         RefCntAutoPtr<IShader> pShader;
         pDevice->CreateShader(ShaderCI, &pShader);
