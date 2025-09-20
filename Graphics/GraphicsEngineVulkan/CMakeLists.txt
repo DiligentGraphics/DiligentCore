@@ -162,7 +162,7 @@ add_library(Diligent-GraphicsEngineVk-shared SHARED
     readme.md
 )
 
-if(MSVC)
+if((PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS) AND NOT MINGW_BUILD)
     target_sources(Diligent-GraphicsEngineVk-shared PRIVATE ${DLL_SOURCE})
 endif()
 
