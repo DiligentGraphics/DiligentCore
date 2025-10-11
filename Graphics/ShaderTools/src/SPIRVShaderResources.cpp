@@ -262,9 +262,9 @@ const std::string& GetUBName(diligent_spirv_cross::Compiler&               Compi
     return ((IRSource.hlsl || IRSource.lang == spv::SourceLanguageSlang) && !instance_name.empty()) ? instance_name : UB.name;
 }
 
-const std::string& GetSSBName(diligent_spirv_cross::Compiler&              Compiler,
-                             const diligent_spirv_cross::Resource&         SSB,
-                             const diligent_spirv_cross::ParsedIR::Source& IRSource)
+const std::string& GetSSBName(diligent_spirv_cross::Compiler&               Compiler,
+                              const diligent_spirv_cross::Resource&         SSB,
+                              const diligent_spirv_cross::ParsedIR::Source& IRSource)
 {
     //layout(std430, binding = 3) readonly buffer StructuredBuffer_world_material_t_std430_t_0 // <-- type name
     //{
