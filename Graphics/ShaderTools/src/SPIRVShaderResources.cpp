@@ -262,6 +262,21 @@ const std::string& GetUBName(diligent_spirv_cross::Compiler&               Compi
     return ((IRSource.hlsl || IRSource.lang == spv::SourceLanguageSlang) && !instance_name.empty()) ? instance_name : UB.name;
 }
 
+const std::string& GetSSBName(diligent_spirv_cross::Compiler&              Compiler,
+                             const diligent_spirv_cross::Resource&         SSB,
+                             const diligent_spirv_cross::ParsedIR::Source& IRSource)
+{
+    /*
+    layout(std430, binding = 3) readonly buffer StructuredBuffer_world_material_t_std430_t_0 // <-- type name
+    {
+        world_material_t_std430_0 _data[];
+    } WorldMaterialSSBO; // <-- instance name
+    */
+
+    const std::string& instance_name = Compiler.get_name(SSB.id);
+    return ((IRSource.hlsl || IRSource.lang == spv::SourceLanguageSlang) && !instance_name.empty()) ? instance_name : SSB.name;
+}
+
 static SHADER_CODE_BASIC_TYPE SpirvBaseTypeToShaderCodeBasicType(diligent_spirv_cross::SPIRType::BaseType SpvBaseType)
 {
     switch (SpvBaseType)
@@ -421,10 +436,11 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     size_t ResourceNamesPoolSize = 0;
     for (const diligent_spirv_cross::Resource& ub : resources.uniform_buffers)
         ResourceNamesPoolSize += GetUBName(Compiler, ub, ParsedIRSource).length() + 1;
+    for (const diligent_spirv_cross::Resource& sb : resources.storage_buffers)
+        ResourceNamesPoolSize += GetSSBName(Compiler, sb, ParsedIRSource).length() + 1;
     static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 12, "Please account for the new resource type below");
     for (auto* pResType :
          {
-             &resources.storage_buffers,
              &resources.storage_images,
              &resources.sampled_images,
              &resources.atomic_counters,
@@ -538,6 +554,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         Uint32 CurrSB = 0;
         for (const diligent_spirv_cross::Resource& SB : resources.storage_buffers)
         {
+            const std::string&           name        = GetSSBName(Compiler, SB, ParsedIRSource);
             diligent_spirv_cross::Bitset BufferFlags = Compiler.get_buffer_block_flags(SB.id);
             bool                         IsReadOnly  = BufferFlags.get(spv::DecorationNonWritable);
 
@@ -553,7 +570,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
                 {
                     Compiler,
                     SB,
-                    ResourceNamesPool.CopyString(SB.name),
+                    ResourceNamesPool.CopyString(name),
                     ResType,
                     static_cast<Uint32>(Size),
                     static_cast<Uint32>(Stride) //
