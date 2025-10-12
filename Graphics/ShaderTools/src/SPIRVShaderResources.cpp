@@ -225,8 +225,8 @@ spv::ExecutionModel ShaderTypeToSpvExecutionModel(SHADER_TYPE ShaderType)
 }
 
 const std::string& GetUBOrSBName(diligent_spirv_cross::Compiler&               Compiler,
-                             const diligent_spirv_cross::Resource&         UB,
-                             const diligent_spirv_cross::ParsedIR::Source& IRSource)
+                                 const diligent_spirv_cross::Resource&         UB,
+                                 const diligent_spirv_cross::ParsedIR::Source& IRSource)
 {
     // Consider the following HLSL constant buffer:
     //
