@@ -85,14 +85,14 @@ jobs:
 
     - name: Set up build environment
       if:   success()
-      uses: DiligentGraphics/github-action/setup-build-env@v8
+      uses: DiligentGraphics/github-action/setup-build-env@v9
       with:
         platform:        Linux
         cmake-generator: ${{ matrix.cmake_generator }}
 
     - name: Configure CMake
       if:   success()
-      uses: DiligentGraphics/github-action/configure-cmake@v8
+      uses: DiligentGraphics/github-action/configure-cmake@v9
       with:
         cc:         ${{ matrix.cc }}
         cxx:        ${{ matrix.cxx }}
@@ -104,38 +104,38 @@ jobs:
     - name: Build
       id:   build
       if:   success()
-      uses: DiligentGraphics/github-action/build@v8
+      uses: DiligentGraphics/github-action/build@v9
       with:
         target: install
 
     - name: DiligentCoreTest
       if:   success()
-      uses: DiligentGraphics/github-action/run-core-tests@v8
+      uses: DiligentGraphics/github-action/run-core-tests@v9
 
     - name: DiligentCoreAPITest VK
       # NB: it is essential to include failure() to override the default status check of success()
       #     that is automatically applied to if conditions that don't contain a status check function.
       if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v8
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v9
       with:
         mode: vk_sw
 
     - name: DiligentCoreAPITest VK Compatibility
       if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v8
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v9
       with:
         mode: vk_sw
         vk-compatibility: true
 
     - name: DiligentCoreAPITest GL
       if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v8
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v9
       with:
         mode: gl
 
     - name: DiligentCoreAPITest GL with Non-Separable Programs
       if: ${{ (success() || failure() && steps.build.outcome == 'success') && (matrix.name == 'Clang' || matrix.name == 'GCC') }}
-      uses: DiligentGraphics/github-action/run-core-gpu-tests@v8
+      uses: DiligentGraphics/github-action/run-core-gpu-tests@v9
       with:
         mode: gl
         non-separable-progs: true
