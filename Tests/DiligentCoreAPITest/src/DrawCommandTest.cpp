@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -396,6 +396,41 @@ void main(in  VSInput VSIn,
 {
     PSIn.Pos   = VSIn.Pos;
     PSIn.Color = VSIn.Color;
+}
+)"
+};
+
+const std::string PrepareDrawArgsStructCS{
+R"(
+struct DrawArgs
+{
+    uint NumVertices;
+    uint NumInstances;
+    uint StartVertexLocation;
+    uint FirstInstanceLocation;
+};
+RWStructuredBuffer<DrawArgs> g_DrawArgsBuffer;
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    // StartVertexLocation and FirstInstanceLocation are written on the CPU
+    g_DrawArgsBuffer[1].NumVertices  = 3;
+    g_DrawArgsBuffer[1].NumInstances = 2;
+}
+)"
+};
+
+const std::string PrepareDrawArgsFormattedCS{
+R"(
+RWBuffer<uint> g_DrawArgsBuffer;
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    // StartVertexLocation and FirstInstanceLocation are written on the CPU
+    g_DrawArgsBuffer[4] = 3;
+    g_DrawArgsBuffer[5] = 2;
 }
 )"
 };
@@ -810,6 +845,8 @@ protected:
                                                  SHADER_RESOURCE_VARIABLE_TYPE CBType,
                                                  USAGE                         BufferUsage,
                                                  SHADER_VARIABLE_FLAGS         VarFlags);
+
+    void TestDrawInstancedIndirect(bool UseCS);
 
     static RefCntAutoPtr<IPipelineState> sm_pDrawProceduralPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawPSO;
@@ -1874,7 +1911,15 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex
 
 //  Indirect draw calls
 
-TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_InstOffset)
+struct IndirectDrawArgs
+{
+    Uint32 NumVertices           = 0;
+    Uint32 NumInstances          = 0;
+    Uint32 StartVertexLocation   = 0;
+    Uint32 FirstInstanceLocation = 0;
+};
+
+void DrawCommandTest::TestDrawInstancedIndirect(bool UseCS)
 {
     GPUTestingEnvironment* const pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice* const         pDevice  = pEnv->GetDevice();
@@ -1882,6 +1927,89 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
 
     IDeviceContext* pContext = pEnv->GetDeviceContext();
+
+    constexpr Uint32 IndirectDrawData[] =
+        {
+            0, 0, 0, 0, // Offset
+
+            3, // NumVertices
+            2, // NumInstances
+            3, // StartVertexLocation
+            4  // FirstInstanceLocation
+        };
+
+    RefCntAutoPtr<IBuffer> pIndirectArgsBuff;
+    if (UseCS)
+    {
+        BufferDesc ArgsBuffDesc;
+        ArgsBuffDesc.Name      = "Indirect draw args";
+        ArgsBuffDesc.BindFlags = BIND_INDIRECT_DRAW_ARGS | BIND_UNORDERED_ACCESS;
+        ArgsBuffDesc.Size      = sizeof(IndirectDrawData);
+        if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+        {
+            ArgsBuffDesc.Mode              = BUFFER_MODE_FORMATTED;
+            ArgsBuffDesc.ElementByteStride = sizeof(Uint32);
+        }
+        else
+        {
+            ArgsBuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
+            ArgsBuffDesc.ElementByteStride = sizeof(IndirectDrawArgs);
+        }
+
+        pDevice->CreateBuffer(ArgsBuffDesc, nullptr, &pIndirectArgsBuff);
+        ASSERT_TRUE(pIndirectArgsBuff);
+        RefCntAutoPtr<IBufferView> pIndirectArgsBuffUAV;
+        if (ArgsBuffDesc.Mode == BUFFER_MODE_STRUCTURED)
+        {
+            pIndirectArgsBuffUAV = pIndirectArgsBuff->GetDefaultView(BUFFER_VIEW_UNORDERED_ACCESS);
+        }
+        else
+        {
+            BufferViewDesc ViewDesc{"Indirect draw args UAV", BUFFER_VIEW_UNORDERED_ACCESS};
+            ViewDesc.Format = {VT_UINT32, 1};
+            pIndirectArgsBuff->CreateView(ViewDesc, &pIndirectArgsBuffUAV);
+            ASSERT_TRUE(pIndirectArgsBuffUAV);
+        }
+
+        // Write start vertex location and first instance location
+        pContext->UpdateBuffer(pIndirectArgsBuff, sizeof(Uint32) * 6, sizeof(Uint32) * 2, IndirectDrawData + 6, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+        RefCntAutoPtr<IShader> pCS;
+        {
+            ShaderCI.Desc       = {"Indirect draw test CS", SHADER_TYPE_COMPUTE, true};
+            ShaderCI.EntryPoint = "main";
+
+            ShaderCI.Source = (ArgsBuffDesc.Mode == BUFFER_MODE_STRUCTURED) ?
+                HLSL::PrepareDrawArgsStructCS.c_str() :
+                HLSL::PrepareDrawArgsFormattedCS.c_str();
+            pDevice->CreateShader(ShaderCI, &pCS);
+            ASSERT_NE(pCS, nullptr);
+        }
+
+        ComputePipelineStateCreateInfo PSOCreateInfo{"Indirect draw test compute PSO"};
+        PSOCreateInfo.pCS                                        = pCS;
+        PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+        RefCntAutoPtr<IPipelineState> pPSO;
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        pPSO->CreateShaderResourceBinding(&pSRB, true);
+        ASSERT_NE(pSRB, nullptr);
+
+        pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_DrawArgsBuffer")->Set(pIndirectArgsBuffUAV);
+        pContext->SetPipelineState(pPSO);
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        // Write num vertices and num instances with compute shader
+        pContext->DispatchCompute({1, 1, 1});
+    }
+    else
+    {
+        pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
+    }
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1908,24 +2036,24 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
-    Uint32 IndirectDrawData[] =
-        {
-            0, 0, 0, 0, 0, // Offset
-
-            3, // NumVertices
-            2, // NumInstances
-            3, // StartVertexLocation
-            4  // FirstInstanceLocation
-        };
-    RefCntAutoPtr<IBuffer> pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
-
     DrawIndirectAttribs drawAttrs{pIndirectArgsBuff, DRAW_FLAG_VERIFY_ALL};
     drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.DrawArgsOffset                   = 5 * sizeof(Uint32);
+    drawAttrs.DrawArgsOffset                   = 4 * sizeof(Uint32);
     pContext->DrawIndirect(drawAttrs);
 
     Present();
 }
+
+TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_InstOffset)
+{
+    TestDrawInstancedIndirect(/*UseCS = */ false);
+}
+
+TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_InstOffset_CS)
+{
+    TestDrawInstancedIndirect(/*UseCS = */ true);
+}
+
 
 TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset_InstOffset)
 {

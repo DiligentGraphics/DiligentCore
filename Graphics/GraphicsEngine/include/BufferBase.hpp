@@ -185,7 +185,7 @@ public:
             IBufferView* pView = nullptr;
             CreateViewInternal(ViewDesc, &pView, true);
             VERIFY(pView != nullptr, "Failed to create default view for buffer '", this->m_Desc.Name, "'");
-            VERIFY(pView->GetDesc().ViewType == ViewType, "Unexpected view type");
+            VERIFY(pView == nullptr || pView->GetDesc().ViewType == ViewType, "Unexpected view type");
 
             return static_cast<BufferViewImplType*>(pView);
         };
