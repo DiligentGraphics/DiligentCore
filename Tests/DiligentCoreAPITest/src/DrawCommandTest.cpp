@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,9 +70,9 @@ void RenderDrawCommandReferenceWebGPU(ISwapChain* pSwapChain, const float* pClea
 
 void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
     if (pTestingSwapChain)
@@ -400,6 +400,41 @@ void main(in  VSInput VSIn,
 )"
 };
 
+const std::string PrepareDrawArgsStructCS{
+R"(
+struct DrawArgs
+{
+    uint NumVertices;
+    uint NumInstances;
+    uint StartVertexLocation;
+    uint FirstInstanceLocation;
+};
+RWStructuredBuffer<DrawArgs> g_DrawArgsBuffer;
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    // StartVertexLocation and FirstInstanceLocation are written on the CPU
+    g_DrawArgsBuffer[1].NumVertices  = 3;
+    g_DrawArgsBuffer[1].NumInstances = 2;
+}
+)"
+};
+
+const std::string PrepareDrawArgsFormattedCS{
+R"(
+RWBuffer<uint> g_DrawArgsBuffer;
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    // StartVertexLocation and FirstInstanceLocation are written on the CPU
+    g_DrawArgsBuffer[4] = 3;
+    g_DrawArgsBuffer[5] = 2;
+}
+)"
+};
+
 // clang-format on
 
 } // namespace HLSL
@@ -545,16 +580,16 @@ class DrawCommandTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv       = GPUTestingEnvironment::GetInstance();
-        auto* pDevice    = pEnv->GetDevice();
-        auto* pSwapChain = pEnv->GetSwapChain();
+        GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+        IRenderDevice*         pDevice    = pEnv->GetDevice();
+        ISwapChain*            pSwapChain = pEnv->GetSwapChain();
 
         GPUTestingEnvironment::ScopedReleaseResources AutoreleaseResources;
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-        auto& PSODesc          = PSOCreateInfo.PSODesc;
-        auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+        PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+        GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
         PSODesc.Name = "Draw command test - procedural triangles";
 
@@ -690,15 +725,15 @@ protected:
         sm_pDrawInstancedPSO.Release();
         sm_pDrawStripPSO.Release();
 
-        auto* pEnv = GPUTestingEnvironment::GetInstance();
+        GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
         pEnv->Reset();
     }
 
     static void SetRenderTargets(IPipelineState* pPSO)
     {
-        auto* pEnv       = GPUTestingEnvironment::GetInstance();
-        auto* pContext   = pEnv->GetDeviceContext();
-        auto* pSwapChain = pEnv->GetSwapChain();
+        GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+        IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+        ISwapChain*            pSwapChain = pEnv->GetSwapChain();
 
         // Use random clear color for each test
         const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
@@ -714,9 +749,9 @@ protected:
 
     static void Present()
     {
-        auto* pEnv       = GPUTestingEnvironment::GetInstance();
-        auto* pSwapChain = pEnv->GetSwapChain();
-        auto* pContext   = pEnv->GetDeviceContext();
+        GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+        ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+        IDeviceContext*        pContext   = pEnv->GetDeviceContext();
 
         pSwapChain->Present();
 
@@ -735,7 +770,7 @@ protected:
         InitialData.pData    = VertexData;
         InitialData.DataSize = DataSize;
 
-        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
+        IRenderDevice* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         RefCntAutoPtr<IBuffer> pBuffer;
         pDevice->CreateBuffer(BuffDesc, &InitialData, &pBuffer);
@@ -754,7 +789,7 @@ protected:
         InitialData.pData    = Indices;
         InitialData.DataSize = BuffDesc.Size;
 
-        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
+        IRenderDevice* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         RefCntAutoPtr<IBuffer> pBuffer;
         pDevice->CreateBuffer(BuffDesc, &InitialData, &pBuffer);
@@ -773,7 +808,7 @@ protected:
         InitialData.pData    = Data;
         InitialData.DataSize = BuffDesc.Size;
 
-        auto* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
+        IRenderDevice* pDevice = GPUTestingEnvironment::GetInstance()->GetDevice();
 
         RefCntAutoPtr<IBuffer> pBuffer;
         pDevice->CreateBuffer(BuffDesc, &InitialData, &pBuffer);
@@ -811,6 +846,8 @@ protected:
                                                  USAGE                         BufferUsage,
                                                  SHADER_VARIABLE_FLAGS         VarFlags);
 
+    void TestDrawInstancedIndirect(bool UseCS);
+
     static RefCntAutoPtr<IPipelineState> sm_pDrawProceduralPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDrawPSO;
     static RefCntAutoPtr<IPipelineState> sm_pDraw_2xStride_PSO;
@@ -836,8 +873,8 @@ bool DrawCommandTest::sm_UseNullBoundVBWorkaround = false;
 
 TEST_F(DrawCommandTest, DrawProcedural)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawProceduralPSO);
 
@@ -853,8 +890,8 @@ TEST_F(DrawCommandTest, DrawProcedural)
 
 TEST_F(DrawCommandTest, Draw)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -866,8 +903,8 @@ TEST_F(DrawCommandTest, Draw)
     };
     // clang-format on
 
-    auto     pVB    = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer* pVBs[] = {pVB};
+    RefCntAutoPtr<IBuffer> pVB    = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer*               pVBs[] = {pVB};
     pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -878,8 +915,8 @@ TEST_F(DrawCommandTest, Draw)
 
 TEST_F(DrawCommandTest, Draw_StartVertex)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -892,9 +929,9 @@ TEST_F(DrawCommandTest, Draw_StartVertex)
     };
     // clang-format on
 
-    auto         pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer*     pVBs[]    = {pVB};
-    const Uint64 Offsets[] = {0};
+    RefCntAutoPtr<IBuffer> pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer*               pVBs[]    = {pVB};
+    const Uint64           Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -906,8 +943,8 @@ TEST_F(DrawCommandTest, Draw_StartVertex)
 
 TEST_F(DrawCommandTest, Draw_VBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -920,9 +957,9 @@ TEST_F(DrawCommandTest, Draw_VBOffset)
     };
     // clang-format on
 
-    auto         pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer*     pVBs[]    = {pVB};
-    const Uint64 Offsets[] = {3 * sizeof(Vertex)};
+    RefCntAutoPtr<IBuffer> pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer*               pVBs[]    = {pVB};
+    const Uint64           Offsets[] = {3 * sizeof(Vertex)};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -933,8 +970,8 @@ TEST_F(DrawCommandTest, Draw_VBOffset)
 
 TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -948,9 +985,9 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset)
     };
     // clang-format on
 
-    auto         pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer*     pVBs[]    = {pVB};
-    const Uint64 Offsets[] = {3 * sizeof(Vertex)};
+    RefCntAutoPtr<IBuffer> pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer*               pVBs[]    = {pVB};
+    const Uint64           Offsets[] = {3 * sizeof(Vertex)};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -962,8 +999,8 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset)
 
 TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDraw_2xStride_PSO);
 
@@ -977,9 +1014,9 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
     };
     // clang-format on
 
-    auto         pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    IBuffer*     pVBs[]    = {pVB};
-    const Uint64 Offsets[] = {3 * sizeof(Vertex)};
+    RefCntAutoPtr<IBuffer> pVB       = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    IBuffer*               pVBs[]    = {pVB};
+    const Uint64           Offsets[] = {3 * sizeof(Vertex)};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
@@ -991,8 +1028,8 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
 
 TEST_F(DrawCommandTest, Draw_2VBs)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDraw_2VBs_PSO);
 
@@ -1009,8 +1046,8 @@ TEST_F(DrawCommandTest, Draw_2VBs)
     };
     // clang-format on
 
-    auto pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
-    auto pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
+    RefCntAutoPtr<IBuffer> pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
+    RefCntAutoPtr<IBuffer> pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
     if (sm_UseNullBoundVBWorkaround)
     {
         IBuffer* pVBs[] = {pPosVB, pColVB};
@@ -1032,8 +1069,8 @@ TEST_F(DrawCommandTest, Draw_2VBs)
 
 TEST_F(DrawCommandTest, DrawIndexed)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -1047,8 +1084,8 @@ TEST_F(DrawCommandTest, DrawIndexed)
     const Uint32 Indices[] = {2,4,7, 8,12,11};
     // clang-format on
 
-    auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pIB = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB};
     const Uint64 Offsets[] = {0};
@@ -1064,8 +1101,8 @@ TEST_F(DrawCommandTest, DrawIndexed)
 
 TEST_F(DrawCommandTest, DrawIndexed_StripCut)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawStripPSO);
 
@@ -1079,8 +1116,8 @@ TEST_F(DrawCommandTest, DrawIndexed_StripCut)
     const Uint32 Indices[] = {2,4,6, 0xFFFFFFFFu, 7,10,13};
     // clang-format on
 
-    auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pIB = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB};
     const Uint64 Offsets[] = {0};
@@ -1096,8 +1133,8 @@ TEST_F(DrawCommandTest, DrawIndexed_StripCut)
 
 TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -1111,8 +1148,8 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
     const Uint32 Indices[] = {0,0,0,0, 2,4,7, 8,12,11}; // Skip 4 indices using index buffer offset
     // clang-format on
 
-    auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pIB = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB};
     const Uint64 Offsets[] = {0};
@@ -1127,8 +1164,8 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -1143,8 +1180,8 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
     const Uint32 Indices[] = {0,0,0,0, 2-bv,4-bv,7-bv, 8-bv,12-bv,11-bv};
     // clang-format on
 
-    auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pIB = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB};
     const Uint64 Offsets[] = {0};
@@ -1160,8 +1197,8 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
 
 TEST_F(DrawCommandTest, Draw_2VBs_Indexed)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDraw_2VBs_PSO);
 
@@ -1179,8 +1216,8 @@ TEST_F(DrawCommandTest, Draw_2VBs_Indexed)
     const Uint32 Indices[] = {1,3,5, 8,9,12};
     // clang-format on
 
-    auto pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
-    auto pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
+    RefCntAutoPtr<IBuffer> pPosVB = CreateVertexBuffer(Positions, sizeof(Positions));
+    RefCntAutoPtr<IBuffer> pColVB = CreateVertexBuffer(Colors, sizeof(Colors));
     if (sm_UseNullBoundVBWorkaround)
     {
         IBuffer* pVBs[] = {pPosVB, pColVB};
@@ -1191,7 +1228,7 @@ TEST_F(DrawCommandTest, Draw_2VBs_Indexed)
         IBuffer* pVBs[] = {nullptr, pPosVB, nullptr, pColVB};
         pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     }
-    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pIB = CreateIndexBuffer(Indices, _countof(Indices));
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     DrawIndexedAttribs drawAttrs{6, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
@@ -1205,8 +1242,8 @@ TEST_F(DrawCommandTest, Draw_2VBs_Indexed)
 
 TEST_F(DrawCommandTest, DrawInstanced)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1222,8 +1259,8 @@ TEST_F(DrawCommandTest, DrawInstanced)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer* pVBs[] = {pVB, pInstVB};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
@@ -1237,8 +1274,8 @@ TEST_F(DrawCommandTest, DrawInstanced)
 
 TEST_F(DrawCommandTest, DrawInstanced_VBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1256,8 +1293,8 @@ TEST_F(DrawCommandTest, DrawInstanced_VBOffset)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {2 * sizeof(Vertex), 3 * sizeof(float4)};
@@ -1272,8 +1309,8 @@ TEST_F(DrawCommandTest, DrawInstanced_VBOffset)
 
 TEST_F(DrawCommandTest, DrawInstanced_StartVertex)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1290,8 +1327,8 @@ TEST_F(DrawCommandTest, DrawInstanced_StartVertex)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {0, 0};
@@ -1310,8 +1347,8 @@ TEST_F(DrawCommandTest, DrawInstanced_StartVertex)
 
 TEST_F(DrawCommandTest, DrawInstanced_FirstInstance)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1328,8 +1365,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {0, 0};
@@ -1345,8 +1382,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance)
 
 TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_VBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1365,8 +1402,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_VBOffset)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {3 * sizeof(Vertex), 2 * sizeof(float4)};
@@ -1383,8 +1420,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_VBOffset)
 
 TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1404,8 +1441,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffs
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
@@ -1424,8 +1461,8 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffs
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1443,9 +1480,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {0, 0};
@@ -1462,8 +1499,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_IBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1481,9 +1518,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_IBOffset)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {0, 0};
@@ -1500,8 +1537,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_IBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_VBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1521,9 +1558,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_VBOffset)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {2 * sizeof(Vertex), 4 * sizeof(float4)};
@@ -1540,8 +1577,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_VBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstIndex)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1559,9 +1596,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstIndex)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {0, 0};
@@ -1582,8 +1619,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstIndex)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1602,9 +1639,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {0, 0};
@@ -1621,8 +1658,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1641,9 +1678,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {0, 0};
@@ -1660,8 +1697,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_VBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1682,9 +1719,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_VBOffset)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
@@ -1702,8 +1739,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_VBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset_FirstIndex)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1722,9 +1759,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset_FirstIndex)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {0, 0};
@@ -1746,8 +1783,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset_FirstIndex)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_BaseVertex)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1766,9 +1803,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_BaseVertex)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {0, 0};
@@ -1785,8 +1822,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_BaseVertex)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_VBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1808,9 +1845,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_VBOffset)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
@@ -1829,8 +1866,8 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_VBOffset)
 
 TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1852,9 +1889,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
@@ -1874,14 +1911,105 @@ TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex
 
 //  Indirect draw calls
 
-TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_InstOffset)
+struct IndirectDrawArgs
 {
-    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice  = pEnv->GetDevice();
-    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    Uint32 NumVertices           = 0;
+    Uint32 NumInstances          = 0;
+    Uint32 StartVertexLocation   = 0;
+    Uint32 FirstInstanceLocation = 0;
+};
+
+void DrawCommandTest::TestDrawInstancedIndirect(bool UseCS)
+{
+    GPUTestingEnvironment* const pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice  = pEnv->GetDevice();
+    const DRAW_COMMAND_CAP_FLAGS DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
 
-    auto* pContext = pEnv->GetDeviceContext();
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
+
+    constexpr Uint32 IndirectDrawData[] =
+        {
+            0, 0, 0, 0, // Offset
+
+            3, // NumVertices
+            2, // NumInstances
+            3, // StartVertexLocation
+            4  // FirstInstanceLocation
+        };
+
+    RefCntAutoPtr<IBuffer> pIndirectArgsBuff;
+    if (UseCS)
+    {
+        BufferDesc ArgsBuffDesc;
+        ArgsBuffDesc.Name      = "Indirect draw args";
+        ArgsBuffDesc.BindFlags = BIND_INDIRECT_DRAW_ARGS | BIND_UNORDERED_ACCESS;
+        ArgsBuffDesc.Size      = sizeof(IndirectDrawData);
+        if (pDevice->GetDeviceInfo().Type == RENDER_DEVICE_TYPE_D3D11)
+        {
+            ArgsBuffDesc.Mode              = BUFFER_MODE_FORMATTED;
+            ArgsBuffDesc.ElementByteStride = sizeof(Uint32);
+        }
+        else
+        {
+            ArgsBuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
+            ArgsBuffDesc.ElementByteStride = sizeof(IndirectDrawArgs);
+        }
+
+        pDevice->CreateBuffer(ArgsBuffDesc, nullptr, &pIndirectArgsBuff);
+        ASSERT_TRUE(pIndirectArgsBuff);
+        RefCntAutoPtr<IBufferView> pIndirectArgsBuffUAV;
+        if (ArgsBuffDesc.Mode == BUFFER_MODE_STRUCTURED)
+        {
+            pIndirectArgsBuffUAV = pIndirectArgsBuff->GetDefaultView(BUFFER_VIEW_UNORDERED_ACCESS);
+        }
+        else
+        {
+            BufferViewDesc ViewDesc{"Indirect draw args UAV", BUFFER_VIEW_UNORDERED_ACCESS};
+            ViewDesc.Format = {VT_UINT32, 1};
+            pIndirectArgsBuff->CreateView(ViewDesc, &pIndirectArgsBuffUAV);
+            ASSERT_TRUE(pIndirectArgsBuffUAV);
+        }
+
+        // Write start vertex location and first instance location
+        pContext->UpdateBuffer(pIndirectArgsBuff, sizeof(Uint32) * 6, sizeof(Uint32) * 2, IndirectDrawData + 6, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+        RefCntAutoPtr<IShader> pCS;
+        {
+            ShaderCI.Desc       = {"Indirect draw test CS", SHADER_TYPE_COMPUTE, true};
+            ShaderCI.EntryPoint = "main";
+
+            ShaderCI.Source = (ArgsBuffDesc.Mode == BUFFER_MODE_STRUCTURED) ?
+                HLSL::PrepareDrawArgsStructCS.c_str() :
+                HLSL::PrepareDrawArgsFormattedCS.c_str();
+            pDevice->CreateShader(ShaderCI, &pCS);
+            ASSERT_NE(pCS, nullptr);
+        }
+
+        ComputePipelineStateCreateInfo PSOCreateInfo{"Indirect draw test compute PSO"};
+        PSOCreateInfo.pCS                                        = pCS;
+        PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+        RefCntAutoPtr<IPipelineState> pPSO;
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        pPSO->CreateShaderResourceBinding(&pSRB, true);
+        ASSERT_NE(pSRB, nullptr);
+
+        pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_DrawArgsBuffer")->Set(pIndirectArgsBuffUAV);
+        pContext->SetPipelineState(pPSO);
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        // Write num vertices and num instances with compute shader
+        pContext->DispatchCompute({1, 1, 1});
+    }
+    else
+    {
+        pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
+    }
 
     SetRenderTargets(sm_pDrawInstancedPSO);
 
@@ -1901,40 +2029,40 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
-    Uint32 IndirectDrawData[] =
-        {
-            0, 0, 0, 0, 0, // Offset
-
-            3, // NumVertices
-            2, // NumInstances
-            3, // StartVertexLocation
-            4  // FirstInstanceLocation
-        };
-    auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
-
     DrawIndirectAttribs drawAttrs{pIndirectArgsBuff, DRAW_FLAG_VERIFY_ALL};
     drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    drawAttrs.DrawArgsOffset                   = 5 * sizeof(Uint32);
+    drawAttrs.DrawArgsOffset                   = 4 * sizeof(Uint32);
     pContext->DrawIndirect(drawAttrs);
 
     Present();
 }
 
+TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_InstOffset)
+{
+    TestDrawInstancedIndirect(/*UseCS = */ false);
+}
+
+TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_InstOffset_CS)
+{
+    TestDrawInstancedIndirect(/*UseCS = */ true);
+}
+
+
 TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset_InstOffset)
 {
-    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice  = pEnv->GetDevice();
-    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    GPUTestingEnvironment* const pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice  = pEnv->GetDevice();
+    const DRAW_COMMAND_CAP_FLAGS DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
 
-    auto* pContext = pEnv->GetDeviceContext();
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     const bool IsGL = pDevice->GetDeviceInfo().IsGLDevice();
@@ -1957,9 +2085,9 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
@@ -1976,7 +2104,7 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
             3,             // BaseVertex
             5,             // FirstInstanceLocation
         };
-    auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
+    RefCntAutoPtr<IBuffer> pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
     DrawIndexedIndirectAttribs drawAttrs{VT_UINT32, pIndirectArgsBuff, DRAW_FLAG_VERIFY_ALL};
     drawAttrs.AttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
@@ -1989,12 +2117,12 @@ TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_Fi
 
 TEST_F(DrawCommandTest, MultiDrawIndirect)
 {
-    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice  = pEnv->GetDevice();
-    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    GPUTestingEnvironment* const pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice  = pEnv->GetDevice();
+    const DRAW_COMMAND_CAP_FLAGS DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
 
-    auto* pContext = pEnv->GetDeviceContext();
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -2013,8 +2141,8 @@ TEST_F(DrawCommandTest, MultiDrawIndirect)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
@@ -2038,7 +2166,7 @@ TEST_F(DrawCommandTest, MultiDrawIndirect)
             0, // Test padding
             0  // Test padding
         };
-    auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
+    RefCntAutoPtr<IBuffer> pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
     DrawIndirectAttribs drawAttrs;
     drawAttrs.pAttribsBuffer                   = pIndirectArgsBuff;
@@ -2054,12 +2182,12 @@ TEST_F(DrawCommandTest, MultiDrawIndirect)
 
 TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
 {
-    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice  = pEnv->GetDevice();
-    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    GPUTestingEnvironment* const pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice  = pEnv->GetDevice();
+    const DRAW_COMMAND_CAP_FLAGS DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
 
-    auto* pContext = pEnv->GetDeviceContext();
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -2080,9 +2208,9 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
@@ -2109,7 +2237,7 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
             0, // Test padding
             0, // Test padding
         };
-    auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
+    RefCntAutoPtr<IBuffer> pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
     DrawIndexedIndirectAttribs drawAttrs;
     drawAttrs.pAttribsBuffer                   = pIndirectArgsBuff;
@@ -2126,14 +2254,14 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirect)
 
 TEST_F(DrawCommandTest, MultiDrawIndirectCount)
 {
-    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice  = pEnv->GetDevice();
-    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    GPUTestingEnvironment* const pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice  = pEnv->GetDevice();
+    const DRAW_COMMAND_CAP_FLAGS DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
     if ((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) == 0)
         GTEST_SKIP() << "Indirect multi draw with counter buffer is not supported on this device";
 
-    auto* pContext = pEnv->GetDeviceContext();
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -2152,8 +2280,8 @@ TEST_F(DrawCommandTest, MultiDrawIndirectCount)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
@@ -2177,14 +2305,14 @@ TEST_F(DrawCommandTest, MultiDrawIndirectCount)
             0,
             0 //
         };
-    auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
+    RefCntAutoPtr<IBuffer> pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
     const Uint32 DrawCount[] =
         {
             0, 0, // Offset
             2     //
         };
-    auto pCountBuff = CreateIndirectDrawArgsBuffer(DrawCount, sizeof(DrawCount));
+    RefCntAutoPtr<IBuffer> pCountBuff = CreateIndirectDrawArgsBuffer(DrawCount, sizeof(DrawCount));
 
     DrawIndirectAttribs drawAttrs;
     drawAttrs.pAttribsBuffer                   = pIndirectArgsBuff;
@@ -2203,14 +2331,14 @@ TEST_F(DrawCommandTest, MultiDrawIndirectCount)
 
 TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
 {
-    auto* const pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice  = pEnv->GetDevice();
-    const auto  DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
+    GPUTestingEnvironment* const pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice  = pEnv->GetDevice();
+    const DRAW_COMMAND_CAP_FLAGS DrawCaps = pDevice->GetAdapterInfo().DrawCommand.CapFlags;
     ASSERT_TRUE((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT) != 0) << "Indirect rendering must be supported on all desktop platforms";
     if ((DrawCaps & DRAW_COMMAND_CAP_FLAG_DRAW_INDIRECT_COUNTER_BUFFER) == 0)
         GTEST_SKIP() << "Indirect multi draw with counter buffer is not supported on this device";
 
-    auto* pContext = pEnv->GetDeviceContext();
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
     SetRenderTargets(sm_pDrawInstancedPSO);
 
     // clang-format off
@@ -2231,9 +2359,9 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
-    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pIB     = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
@@ -2260,14 +2388,14 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
             0,
             0 //
         };
-    auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
+    RefCntAutoPtr<IBuffer> pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
 
     const Uint32 DrawCount[] =
         {
             0, 0, // Offset
             2     //
         };
-    auto pCountBuff = CreateIndirectDrawArgsBuffer(DrawCount, sizeof(DrawCount));
+    RefCntAutoPtr<IBuffer> pCountBuff = CreateIndirectDrawArgsBuffer(DrawCount, sizeof(DrawCount));
 
     DrawIndexedIndirectAttribs drawAttrs;
     drawAttrs.pAttribsBuffer                   = pIndirectArgsBuff;
@@ -2287,18 +2415,18 @@ TEST_F(DrawCommandTest, MultiDrawIndexedIndirectCount)
 
 TEST_F(DrawCommandTest, Draw_InstanceDataStepRate)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.InstanceDataStepRate)
         GTEST_SKIP() << "InstanceDataStepRate is not supported";
 
-    auto* pContext   = pEnv->GetDeviceContext();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
     GraphicsPipeline.NumRenderTargets             = 1;
@@ -2365,8 +2493,8 @@ TEST_F(DrawCommandTest, Draw_InstanceDataStepRate)
     };
     // clang-format on
 
-    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    RefCntAutoPtr<IBuffer> pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
 
     IBuffer*     pVBs[]    = {pVB, pInstVB};
     const Uint64 Offsets[] = {0, 0};
@@ -2381,22 +2509,22 @@ TEST_F(DrawCommandTest, Draw_InstanceDataStepRate)
 
 TEST_F(DrawCommandTest, DeferredContexts)
 {
-    auto* pEnv = GPUTestingEnvironment::GetInstance();
+    GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
     if (pEnv->GetNumDeferredContexts() == 0)
     {
         GTEST_SKIP() << "Deferred contexts are not supported by this device";
     }
     VERIFY(pEnv->GetNumDeferredContexts() >= 2, "At least two deferred contexts are expected");
 
-    auto* pSwapChain    = pEnv->GetSwapChain();
-    auto* pImmediateCtx = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain    = pEnv->GetSwapChain();
+    IDeviceContext* pImmediateCtx = pEnv->GetDeviceContext();
 
     const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
-    const Uint32 Indices[] = {0, 1, 2, 3, 4, 5};
-    auto         pVB       = CreateVertexBuffer(Vert, sizeof(Vert));
-    auto         pIB       = CreateIndexBuffer(Indices, _countof(Indices));
+    const Uint32           Indices[] = {0, 1, 2, 3, 4, 5};
+    RefCntAutoPtr<IBuffer> pVB       = CreateVertexBuffer(Vert, sizeof(Vert));
+    RefCntAutoPtr<IBuffer> pIB       = CreateIndexBuffer(Indices, _countof(Indices));
 
     StateTransitionDesc Barriers[] = //
         {
@@ -2422,7 +2550,7 @@ TEST_F(DrawCommandTest, DeferredContexts)
         WorkerThreads[i] = std::thread(
             [&](Uint32 thread_id) //
             {
-                auto* pCtx = pEnv->GetDeferredContext(thread_id);
+                IDeviceContext* pCtx = pEnv->GetDeferredContext(thread_id);
 
                 pCtx->Begin(0);
                 pCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
@@ -2442,7 +2570,7 @@ TEST_F(DrawCommandTest, DeferredContexts)
                 CmdListPtrs[thread_id] = CmdLists[thread_id];
 
                 // Atomically increment the number of completed threads
-                const auto NumReadyLists = NumCmdListsReady.fetch_add(1) + 1;
+                const Uint32 NumReadyLists = NumCmdListsReady.fetch_add(1) + 1;
                 if (NumReadyLists == NumThreads)
                     ExecuteCommandListsSignal.Trigger();
 
@@ -2477,15 +2605,15 @@ void DrawCommandTest::TestDynamicBufferUpdates(IShader*                      pVS
                                                SHADER_RESOURCE_VARIABLE_TYPE DynamicCB1Type,
                                                SHADER_RESOURCE_VARIABLE_TYPE ImmutableCBType)
 {
-    auto* pEnv       = GPUTestingEnvironment::GetInstance();
-    auto* pContext   = pEnv->GetDeviceContext();
-    auto* pDevice    = pEnv->GetDevice();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "Draw command test - dynamic buffer update";
 
@@ -2565,8 +2693,8 @@ void DrawCommandTest::TestDynamicBufferUpdates(IShader*                      pVS
 // Test dynamic buffer update between two draw calls without committing and SRB
 TEST_F(DrawCommandTest, DynamicUniformBufferUpdates)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -2628,9 +2756,9 @@ TEST_F(DrawCommandTest, DynamicUniformBufferUpdates)
         {
             for (Uint32 cb2_type = 0; cb2_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++cb2_type)
             {
-                const auto CB0Type = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb0_type);
-                const auto CB1Type = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb1_type);
-                const auto CB2Type = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb2_type);
+                const SHADER_RESOURCE_VARIABLE_TYPE CB0Type = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb0_type);
+                const SHADER_RESOURCE_VARIABLE_TYPE CB1Type = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb1_type);
+                const SHADER_RESOURCE_VARIABLE_TYPE CB2Type = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb2_type);
 
                 TestDynamicBufferUpdates(pVS, pPS, pDynamicCB0, pDynamicCB1, pImmutableCB, CB0Type, CB1Type, CB2Type);
                 std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
@@ -2644,9 +2772,9 @@ TEST_F(DrawCommandTest, DynamicUniformBufferUpdates)
 
 TEST_F(DrawCommandTest, DynamicVertexBufferUpdate)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pDevice  = GPUTestingEnvironment::GetInstance()->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = GPUTestingEnvironment::GetInstance()->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -2688,9 +2816,9 @@ TEST_F(DrawCommandTest, DynamicVertexBufferUpdate)
 
 TEST_F(DrawCommandTest, DynamicIndexBufferUpdate)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pDevice  = GPUTestingEnvironment::GetInstance()->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = GPUTestingEnvironment::GetInstance()->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -2702,7 +2830,7 @@ TEST_F(DrawCommandTest, DynamicIndexBufferUpdate)
     };
     // clang-format on
 
-    auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
 
     RefCntAutoPtr<IBuffer> pIB;
     {
@@ -2756,15 +2884,15 @@ void DrawCommandTest::DrawWithStructuredOrFormattedBuffers(bool                 
     if (UseArray)
         VERIFY(ColBuffType == 0, "Color buffer type is ignored when arrays are used");
 
-    auto* pEnv       = GPUTestingEnvironment::GetInstance();
-    auto* pContext   = pEnv->GetDeviceContext();
-    auto* pDevice    = pEnv->GetDevice();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "Draw command test - structured buffer update";
 
@@ -2839,7 +2967,7 @@ void DrawCommandTest::DrawWithStructuredOrFormattedBuffers(bool                 
 
     auto UpdateBuffer = [pContext](IBufferView* pBuffView, const void* pData, size_t OffsetInFloat4, size_t DataSize) //
     {
-        auto* pBuffer = pBuffView->GetBuffer();
+        IBuffer* pBuffer = pBuffView->GetBuffer();
         if (pBuffer->GetDesc().Usage == USAGE_DYNAMIC)
         {
             MapHelper<float4> pBuffData{pContext, pBuffer, MAP_WRITE, MAP_FLAG_DISCARD};
@@ -2875,9 +3003,9 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
 {
     VERIFY_EXPR(BuffMode == BUFFER_MODE_STRUCTURED || BuffMode == BUFFER_MODE_FORMATTED);
 
-    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice    = pEnv->GetDevice();
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    GPUTestingEnvironment* const pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice    = pEnv->GetDevice();
+    const RenderDeviceInfo&      DeviceInfo = pDevice->GetDeviceInfo();
 
     if (BuffMode == BUFFER_MODE_FORMATTED && !DeviceInfo.Features.FormattedBuffers)
         GTEST_SKIP() << "Formatted buffers are not supported by this device";
@@ -3004,8 +3132,8 @@ void DrawCommandTest::TestStructuredOrFormattedBuffers(BUFFER_MODE BuffMode,
         {
             for (Uint32 col_buff_type = 0; col_buff_type < (UseArray ? 1u : SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES); ++col_buff_type)
             {
-                const auto PosBuffType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_buff_type);
-                const auto ColBuffType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(col_buff_type);
+                const SHADER_RESOURCE_VARIABLE_TYPE PosBuffType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_buff_type);
+                const SHADER_RESOURCE_VARIABLE_TYPE ColBuffType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(col_buff_type);
                 DrawWithStructuredOrFormattedBuffers(UseArray, pVS, pPS, pPosBuffView, pColorBufferView, PosBuffType, ColBuffType, ColorDataStartOffset);
                 std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
                           << (UseDynamicBuffers ? "Dynamic" : "Default")
@@ -3048,14 +3176,14 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
                                                        USAGE                         BufferUsage,
                                                        SHADER_VARIABLE_FLAGS         VarFlags)
 {
-    auto* pEnv       = GPUTestingEnvironment::GetInstance();
-    auto* pContext   = pEnv->GetDeviceContext();
-    auto* pDevice    = pEnv->GetDevice();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
 
-    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+    const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
 
-    const auto UseSetOffset = (VarFlags & SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS) == 0 && (CBType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    const bool UseSetOffset = (VarFlags & SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS) == 0 && (CBType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     if (DeviceInfo.Type == RENDER_DEVICE_TYPE_D3D11 && BuffMode == BUFFER_MODE_STRUCTURED && UseSetOffset)
     {
         // Offsets for structured buffers are not supported in D3D11
@@ -3064,8 +3192,8 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "Draw command test - buffer offsets test";
 
@@ -3116,9 +3244,9 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
         ASSERT_TRUE(pSRB1 != nullptr);
     }
 
-    const auto& BufferProps     = pDevice->GetAdapterInfo().Buffer;
-    const auto  IsStructured    = BuffMode == BUFFER_MODE_STRUCTURED;
-    const auto  OffsetAlignment = IsStructured ? BufferProps.StructuredBufferOffsetAlignment : BufferProps.ConstantBufferOffsetAlignment;
+    const BufferProperties& BufferProps     = pDevice->GetAdapterInfo().Buffer;
+    const bool              IsStructured    = BuffMode == BUFFER_MODE_STRUCTURED;
+    const Uint32            OffsetAlignment = IsStructured ? BufferProps.StructuredBufferOffsetAlignment : BufferProps.ConstantBufferOffsetAlignment;
 
     Uint32 BaseOffset = sizeof(float4) * 4;
     while (BaseOffset < OffsetAlignment)
@@ -3151,9 +3279,9 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
     pDevice->CreateBuffer(PosBuffDesc, nullptr, &pPosDataBuffer);
     ASSERT_TRUE(pPosDataBuffer);
 
-    auto ColBuffDesc = PosBuffDesc;
-    ColBuffDesc.Name = "Buffer offset test color data";
-    ColBuffDesc.Size = static_cast<Uint32>(ColData.size() * sizeof(float4));
+    BufferDesc ColBuffDesc = PosBuffDesc;
+    ColBuffDesc.Name       = "Buffer offset test color data";
+    ColBuffDesc.Size       = static_cast<Uint32>(ColData.size() * sizeof(float4));
     RefCntAutoPtr<IBuffer> pColDataBuffer;
     pDevice->CreateBuffer(ColBuffDesc, nullptr, &pColDataBuffer);
     ASSERT_TRUE(pColDataBuffer);
@@ -3262,8 +3390,8 @@ void DrawCommandTest::DrawWithUniOrStructBufferOffsets(IShader*                 
 
 void DrawCommandTest::TestUniOrStructBufferOffsets(BUFFER_MODE BuffMode)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -3289,14 +3417,14 @@ void DrawCommandTest::TestUniOrStructBufferOffsets(BUFFER_MODE BuffMode)
 
     for (Uint32 cb_type = 0; cb_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++cb_type)
     {
-        const auto CBType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb_type);
+        const SHADER_RESOURCE_VARIABLE_TYPE CBType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(cb_type);
 
         for (Uint32 is_dynamic = 0; is_dynamic < 2; ++is_dynamic)
         {
-            const auto Usage = is_dynamic != 0 ? USAGE_DYNAMIC : USAGE_DEFAULT;
+            const USAGE Usage = is_dynamic != 0 ? USAGE_DYNAMIC : USAGE_DEFAULT;
             for (Uint32 no_dyn_buffers = 0; no_dyn_buffers < 2; ++no_dyn_buffers)
             {
-                const auto ShaderVarFlag = no_dyn_buffers != 0 ? SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS : SHADER_VARIABLE_FLAG_NONE;
+                const SHADER_VARIABLE_FLAGS ShaderVarFlag = no_dyn_buffers != 0 ? SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS : SHADER_VARIABLE_FLAG_NONE;
                 if ((ShaderVarFlag & SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS) && (Usage == USAGE_DYNAMIC))
                     continue;
 
@@ -3327,8 +3455,8 @@ TEST_F(DrawCommandTest, StructBufferOffsets)
 // Test uniform buffer offsets with MSL shaders
 TEST_F(DrawCommandTest, UniformBufferOffsets_MSL)
 {
-    auto* pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().IsMetalDevice())
         GTEST_SKIP() << "This is a Metal-specific test";
 
@@ -3362,15 +3490,15 @@ TEST_F(DrawCommandTest, UniformBufferOffsets_MSL)
 
 TEST_F(DrawCommandTest, VertexAttributes)
 {
-    auto* pEnv       = GPUTestingEnvironment::GetInstance();
-    auto* pDevice    = pEnv->GetDevice();
-    auto* pContext   = pEnv->GetDeviceContext();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
     GraphicsPipeline.NumRenderTargets             = 1;
@@ -3440,9 +3568,9 @@ TEST_F(DrawCommandTest, VertexAttributes)
     const float Zero[_countof(Positions) * sizeof(float) * (4 + 4 + 4)] = {};
     // clang-format on
 
-    auto pPosVB  = CreateVertexBuffer(Positions, sizeof(Positions));
-    auto pColVB  = CreateVertexBuffer(Colors, sizeof(Colors));
-    auto pZeroVB = CreateVertexBuffer(Zero, sizeof(Zero));
+    RefCntAutoPtr<IBuffer> pPosVB  = CreateVertexBuffer(Positions, sizeof(Positions));
+    RefCntAutoPtr<IBuffer> pColVB  = CreateVertexBuffer(Colors, sizeof(Colors));
+    RefCntAutoPtr<IBuffer> pZeroVB = CreateVertexBuffer(Zero, sizeof(Zero));
     if (sm_UseNullBoundVBWorkaround)
     {
         IBuffer* pVBs[] = {pPosVB, pColVB, pZeroVB};
@@ -3461,13 +3589,13 @@ TEST_F(DrawCommandTest, VertexAttributes)
 
 TEST_F(DrawCommandTest, MultiDraw)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
-    auto     pVB    = CreateVertexBuffer(Vert, sizeof(Vert));
-    IBuffer* pVBs[] = {pVB};
+    RefCntAutoPtr<IBuffer> pVB    = CreateVertexBuffer(Vert, sizeof(Vert));
+    IBuffer*               pVBs[] = {pVB};
     pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
     MultiDrawItem DrawItems[] =
@@ -3484,8 +3612,8 @@ TEST_F(DrawCommandTest, MultiDraw)
 
 TEST_F(DrawCommandTest, MultiDrawIndexed)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     SetRenderTargets(sm_pDrawPSO);
 
@@ -3499,8 +3627,8 @@ TEST_F(DrawCommandTest, MultiDrawIndexed)
     const Uint32 Indices[] = {2,4,7, 8,12,11};
     // clang-format on
 
-    auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
-    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    RefCntAutoPtr<IBuffer> pIB = CreateIndexBuffer(Indices, _countof(Indices));
 
     IBuffer* pVBs[] = {pVB};
     pContext->SetVertexBuffers(0, 1, pVBs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
@@ -3520,14 +3648,14 @@ TEST_F(DrawCommandTest, MultiDrawIndexed)
 
 RefCntAutoPtr<IPipelineState> CreateNativeMultiDrawPSO()
 {
-    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice    = pEnv->GetDevice();
-    auto* const pSwapChain = pEnv->GetSwapChain();
+    GPUTestingEnvironment* const pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice    = pEnv->GetDevice();
+    ISwapChain* const            pSwapChain = pEnv->GetSwapChain();
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& PSODesc          = PSOCreateInfo.PSODesc;
-    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+    PipelineStateDesc&    PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
     GraphicsPipeline.NumRenderTargets             = 1;
@@ -3575,14 +3703,14 @@ RefCntAutoPtr<IPipelineState> CreateNativeMultiDrawPSO()
 
 TEST_F(DrawCommandTest, NativeMultiDraw)
 {
-    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* const pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.NativeMultiDraw)
         GTEST_SKIP() << "Native multi draw is not supported by this device";
 
-    auto* pContext = pEnv->GetDeviceContext();
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
 
-    auto pPSO = CreateNativeMultiDrawPSO();
+    RefCntAutoPtr<IPipelineState> pPSO = CreateNativeMultiDrawPSO();
     ASSERT_TRUE(pPSO);
 
     SetRenderTargets(pPSO);
@@ -3601,21 +3729,21 @@ TEST_F(DrawCommandTest, NativeMultiDraw)
 
 TEST_F(DrawCommandTest, NativeMultiDrawIndexed)
 {
-    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* const pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceInfo().Features.NativeMultiDraw)
         GTEST_SKIP() << "Native multi draw is not supported by this device";
 
-    auto* pContext = pEnv->GetDeviceContext();
+    IDeviceContext* pContext = pEnv->GetDeviceContext();
 
-    auto pPSO = CreateNativeMultiDrawPSO();
+    RefCntAutoPtr<IPipelineState> pPSO = CreateNativeMultiDrawPSO();
     ASSERT_TRUE(pPSO);
 
     SetRenderTargets(pPSO);
 
     const Uint32 Indices[] = {0, 1, 2};
 
-    auto pIB = CreateIndexBuffer(Indices, _countof(Indices));
+    RefCntAutoPtr<IBuffer> pIB = CreateIndexBuffer(Indices, _countof(Indices));
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     MultiDrawIndexedItem DrawItems[] =
