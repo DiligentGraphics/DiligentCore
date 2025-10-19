@@ -144,13 +144,14 @@ size_t RootParameter::GetHash() const
 
 RootParamsManager::~RootParamsManager()
 {
-    static_assert(std::is_trivially_destructible<RootParameter>::value, "Destructors for m_pRootTables and m_pRootViews are required");
+    static_assert(std::is_trivially_destructible<RootParameter>::value, "m_pRootTables, m_pRootViews and m_pRootConstants must be manually destroyed");
 }
 
 bool RootParamsManager::operator==(const RootParamsManager& RootParams) const noexcept
 {
     if (m_NumRootTables != RootParams.m_NumRootTables ||
-        m_NumRootViews != RootParams.m_NumRootViews)
+        m_NumRootViews != RootParams.m_NumRootViews ||
+        m_NumRootConstants != RootParams.m_NumRootConstants)
         return false;
 
     for (Uint32 rv = 0; rv < m_NumRootViews; ++rv)
@@ -166,6 +167,14 @@ bool RootParamsManager::operator==(const RootParamsManager& RootParams) const no
         const RootParameter& RT0 = GetRootTable(rv);
         const RootParameter& RT1 = RootParams.GetRootTable(rv);
         if (RT0 != RT1)
+            return false;
+    }
+
+    for (Uint32 rc = 0; rc < m_NumRootConstants; ++rc)
+    {
+        const RootParameter& RC0 = GetRootConstants(rc);
+        const RootParameter& RC1 = RootParams.GetRootConstants(rc);
+        if (RC0 != RC1)
             return false;
     }
 
@@ -230,6 +239,13 @@ void RootParamsManager::Validate() const
         VERIFY(RootView.TableOffsetInGroupAllocation == RootParameter::InvalidTableOffsetInGroupAllocation,
                "Root views must not be assigned to descriptor table allocations.");
     }
+
+    for (Uint32 i = 0; i < GetNumRootConstants(); ++i)
+    {
+        const RootParameter& RootConst = GetRootConstants(i);
+        VERIFY(RootConst.TableOffsetInGroupAllocation == RootParameter::InvalidTableOffsetInGroupAllocation,
+               "Root constants must not be assigned to descriptor table allocations.");
+    }
 }
 #endif
 
@@ -243,6 +259,18 @@ RootParamsBuilder::RootParamsBuilder()
         Map.fill(InvalidRootTableIndex);
 }
 
+#ifdef DILIGENT_DEBUG
+void RootParamsBuilder::DbgCheckRootIndexUniqueness(Uint32 RootIndex) const
+{
+    for (const RootTableData& RootTbl : m_RootTables)
+        VERIFY(RootTbl.RootIndex != RootIndex, "Index ", RootIndex, " is already used by another root table");
+    for (const RootParameter& RootView : m_RootViews)
+        VERIFY(RootView.RootIndex != RootIndex, "Index ", RootIndex, " is already used by another root view");
+    for (const RootParameter& RootConst : m_RootConstants)
+        VERIFY(RootConst.RootIndex != RootIndex, "Index ", RootIndex, " is already used by another root constant");
+}
+#endif
+
 RootParameter& RootParamsBuilder::AddRootView(D3D12_ROOT_PARAMETER_TYPE ParameterType,
                                               Uint32                    RootIndex,
                                               UINT                      Register,
@@ -255,11 +283,7 @@ RootParameter& RootParamsBuilder::AddRootView(D3D12_ROOT_PARAMETER_TYPE Paramete
             ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
             ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV),
            "Unexpected parameter type SBV, SRV or UAV is expected");
-
-    for (const RootTableData& RootTbl : m_RootTables)
-        VERIFY(RootTbl.RootIndex != RootIndex, "Index ", RootIndex, " is already used by another root table");
-    for (const RootParameter& RootView : m_RootViews)
-        VERIFY(RootView.RootIndex != RootIndex, "Index ", RootIndex, " is already used by another root view");
+    DbgCheckRootIndexUniqueness(RootIndex);
 #endif
 
     D3D12_ROOT_PARAMETER d3d12RootParam{ParameterType, {}, Visibility};
@@ -268,6 +292,26 @@ RootParameter& RootParamsBuilder::AddRootView(D3D12_ROOT_PARAMETER_TYPE Paramete
     m_RootViews.emplace_back(RootIndex, Group, d3d12RootParam);
 
     return m_RootViews.back();
+}
+
+RootParameter& RootParamsBuilder::AddRootConstants(Uint32                  RootIndex,
+                                                   UINT                    Register,
+                                                   UINT                    RegisterSpace,
+                                                   UINT                    Num32BitValues,
+                                                   D3D12_SHADER_VISIBILITY Visibility,
+                                                   ROOT_PARAMETER_GROUP    RootType)
+{
+#ifdef DILIGENT_DEBUG
+    DbgCheckRootIndexUniqueness(RootIndex);
+#endif
+
+    D3D12_ROOT_PARAMETER d3d12RootParam{D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS, {}, Visibility};
+    d3d12RootParam.Constants.ShaderRegister = Register;
+    d3d12RootParam.Constants.RegisterSpace  = RegisterSpace;
+    d3d12RootParam.Constants.Num32BitValues = Num32BitValues;
+    m_RootConstants.emplace_back(RootIndex, RootType, d3d12RootParam);
+
+    return m_RootConstants.back();
 }
 
 RootParamsBuilder::RootTableData::RootTableData(Uint32                  _RootIndex,
@@ -305,10 +349,7 @@ RootParamsBuilder::RootTableData& RootParamsBuilder::AddRootTable(Uint32        
                                                                   Uint32                  NumRangesInNewTable)
 {
 #ifdef DILIGENT_DEBUG
-    for (const RootTableData& RootTbl : m_RootTables)
-        VERIFY(RootTbl.RootIndex != RootIndex, "Index ", RootIndex, " is already used by another root table");
-    for (const RootParameter& RootView : m_RootViews)
-        VERIFY(RootView.RootIndex != RootIndex, "Index ", RootIndex, " is already used by another root view");
+    DbgCheckRootIndexUniqueness(RootIndex);
 #endif
 
     m_RootTables.emplace_back(RootIndex, Visibility, Group, NumRangesInNewTable);
@@ -330,8 +371,8 @@ void RootParamsBuilder::AllocateResourceSlot(SHADER_TYPE                   Shade
     const D3D12_SHADER_VISIBILITY ShaderVisibility = ShaderStagesToD3D12ShaderVisibility(ShaderStages);
     const ROOT_PARAMETER_GROUP    ParameterGroup   = VariableTypeToRootParameterGroup(VariableType);
 
-    // Get the next available root index past all allocated tables and root views
-    RootIndex = static_cast<Uint32>(m_RootTables.size() + m_RootViews.size());
+    // Get the next available root index past all allocated tables, root views and root constants
+    RootIndex = static_cast<Uint32>(m_RootTables.size() + m_RootViews.size() + m_RootConstants.size());
 
     if (RootParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
         RootParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
@@ -344,6 +385,13 @@ void RootParamsBuilder::AllocateResourceSlot(SHADER_TYPE                   Shade
 
         // Add new root view to existing root parameters
         AddRootView(RootParameterType, RootIndex, Register, Space, ShaderVisibility, ParameterGroup);
+    }
+    else if (RootParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS)
+    {
+        OffsetFromTableStart = 0;
+
+        // Add new 32-bit constants parameter to existing root parameters
+        AddRootConstants(RootIndex, Register, Space, ArraySize, ShaderVisibility, ParameterGroup);
     }
     else if (RootParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
     {
@@ -406,15 +454,17 @@ void RootParamsBuilder::InitializeMgr(IMemoryAllocator& MemAllocator, RootParams
 {
     VERIFY(!ParamsMgr.m_pMemory, "Params manager has already been initialized!");
 
-    Uint32& NumRootTables = ParamsMgr.m_NumRootTables;
-    Uint32& NumRootViews  = ParamsMgr.m_NumRootViews;
+    Uint32& NumRootTables    = ParamsMgr.m_NumRootTables;
+    Uint32& NumRootViews     = ParamsMgr.m_NumRootViews;
+    Uint32& NumRootConstants = ParamsMgr.m_NumRootConstants;
 
-    NumRootTables = static_cast<Uint32>(m_RootTables.size());
-    NumRootViews  = static_cast<Uint32>(m_RootViews.size());
-    if (NumRootTables == 0 && NumRootViews == 0)
+    NumRootTables    = static_cast<Uint32>(m_RootTables.size());
+    NumRootViews     = static_cast<Uint32>(m_RootViews.size());
+    NumRootConstants = static_cast<Uint32>(m_RootConstants.size());
+    if (NumRootTables == 0 && NumRootViews == 0 && NumRootConstants == 0)
         return;
 
-    const size_t TotalRootParamsCount = m_RootTables.size() + m_RootViews.size();
+    const size_t TotalRootParamsCount = m_RootTables.size() + m_RootViews.size() + m_RootConstants.size();
 
     size_t TotalRangesCount = 0;
     for (RootTableData& Tbl : m_RootTables)
@@ -437,7 +487,8 @@ void RootParamsBuilder::InitializeMgr(IMemoryAllocator& MemAllocator, RootParams
     // Note: this order is more efficient than views->tables->ranges
     RootParameter* const          pRootTables       = reinterpret_cast<RootParameter*>(ParamsMgr.m_pMemory.get());
     RootParameter* const          pRootViews        = pRootTables + NumRootTables;
-    D3D12_DESCRIPTOR_RANGE* const pDescriptorRanges = reinterpret_cast<D3D12_DESCRIPTOR_RANGE*>(pRootViews + NumRootViews);
+    RootParameter* const          pRootConstants    = pRootViews + NumRootViews;
+    D3D12_DESCRIPTOR_RANGE* const pDescriptorRanges = reinterpret_cast<D3D12_DESCRIPTOR_RANGE*>(pRootConstants + NumRootConstants);
 
     // Copy descriptor tables
     D3D12_DESCRIPTOR_RANGE* pCurrDescrRangePtr = pDescriptorRanges;
@@ -484,8 +535,20 @@ void RootParamsBuilder::InitializeMgr(IMemoryAllocator& MemAllocator, RootParams
                "Unexpected parameter type: SBV, SRV or UAV is expected");
         new (pRootViews + rv) RootParameter{SrcView.RootIndex, SrcView.Group, d3d12RootParam};
     }
-    ParamsMgr.m_pRootTables = NumRootTables != 0 ? pRootTables : nullptr;
-    ParamsMgr.m_pRootViews  = NumRootViews != 0 ? pRootViews : nullptr;
+
+    // Copy root constants
+    for (Uint32 rc = 0; rc < NumRootConstants; ++rc)
+    {
+        const RootParameter&        SrcConst       = m_RootConstants[rc];
+        const D3D12_ROOT_PARAMETER& d3d12RootParam = SrcConst.d3d12RootParam;
+        VERIFY(d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS,
+               "Unexpected parameter type: 32-bit constants is expected");
+        new (pRootConstants + rc) RootParameter{SrcConst.RootIndex, SrcConst.Group, d3d12RootParam};
+    }
+
+    ParamsMgr.m_pRootTables    = NumRootTables != 0 ? pRootTables : nullptr;
+    ParamsMgr.m_pRootViews     = NumRootViews != 0 ? pRootViews : nullptr;
+    ParamsMgr.m_pRootConstants = NumRootConstants != 0 ? pRootConstants : nullptr;
 
 #ifdef DILIGENT_DEBUG
     ParamsMgr.Validate();

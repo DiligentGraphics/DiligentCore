@@ -125,7 +125,7 @@ public:
 
     Uint32 GetTotalRootParamsCount() const
     {
-        return m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
+        return m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews() + m_RootParams.GetNumRootConstants();
     }
 
     Uint32 GetNumRootTables() const
@@ -136,6 +136,11 @@ public:
     Uint32 GetNumRootViews() const
     {
         return m_RootParams.GetNumRootViews();
+    }
+
+    Uint32 GetNumRootConstants() const
+    {
+        return m_RootParams.GetNumRootConstants();
     }
 
     void InitSRBResourceCache(ShaderResourceCacheD3D12& ResourceCache);
