@@ -163,6 +163,9 @@ public:
     void CommitRootViews(const CommitCacheResourcesAttribs& CommitAttribs,
                          Uint64                             BuffersMask) const;
 
+    void CommitRootConstants(const CommitCacheResourcesAttribs& CommitAttribs,
+                             Uint64                             ConstantsMask) const;
+
     const RootParamsManager& GetRootParams() const { return m_RootParams; }
 
     // Adds resources and immutable samplers from this signature to the
