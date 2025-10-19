@@ -550,13 +550,11 @@ void PipelineResourceSignatureD3D12Impl::CommitRootConstants(const CommitCacheRe
         ID3D12GraphicsCommandList* const pd3d12CmdList = CommitAttribs.CmdCtx.GetCommandList();
         if (CommitAttribs.IsCompute)
         {
-            for (Uint32 i = 0; i < NumConstants; ++i)
-                pd3d12CmdList->SetComputeRoot32BitConstant(BaseRootIndex + RootInd, pConstants[i], i);
+            pd3d12CmdList->SetComputeRoot32BitConstants(BaseRootIndex + RootInd, NumConstants, pConstants, 0);
         }
         else
         {
-            for (Uint32 i = 0; i < NumConstants; ++i)
-                pd3d12CmdList->SetGraphicsRoot32BitConstant(BaseRootIndex + RootInd, pConstants[i], i);
+            pd3d12CmdList->SetGraphicsRoot32BitConstants(BaseRootIndex + RootInd, NumConstants, pConstants, 0);
         }
     }
 }
