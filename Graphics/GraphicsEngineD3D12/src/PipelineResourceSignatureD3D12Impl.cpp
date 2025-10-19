@@ -773,7 +773,7 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
             }
         }
 
-        static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
+        static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new shader resource type");
         switch (ResDesc.ResourceType)
         {
             case SHADER_RESOURCE_TYPE_TEXTURE_SRV:

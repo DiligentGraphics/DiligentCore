@@ -862,7 +862,7 @@ const Char* GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarTy
 
 const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, bool bGetFullName)
 {
-    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new shader resource type");
     switch (ResourceType)
     {
         // clang-format off
@@ -874,6 +874,7 @@ const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, 
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return bGetFullName ?  "SHADER_RESOURCE_TYPE_BUFFER_UAV"       : "buffer UAV";
         case SHADER_RESOURCE_TYPE_SAMPLER:          return bGetFullName ?  "SHADER_RESOURCE_TYPE_SAMPLER"          : "sampler";
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return bGetFullName ?  "SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT" : "input attachment";
+        case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS: return bGetFullName ?  "SHADER_RESOURCE_TYPE_INLINE_CONSTANTS" : "inline constants";
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:     return bGetFullName ?  "SHADER_RESOURCE_TYPE_ACCEL_STRUCT"     : "acceleration structure";
         // clang-format on
         default:
@@ -1804,7 +1805,7 @@ String GetLayoutElementString(const LayoutElement& Element)
 
 PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE ResourceType)
 {
-    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new shader resource type");
     switch (ResourceType)
     {
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
@@ -1827,6 +1828,9 @@ PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE Resou
 
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:
             return PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT;
+
+        case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS:
+            return PIPELINE_RESOURCE_FLAG_NONE;
 
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
             return PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;

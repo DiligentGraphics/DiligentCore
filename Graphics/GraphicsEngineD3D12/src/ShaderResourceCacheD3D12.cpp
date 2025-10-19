@@ -485,7 +485,7 @@ void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
 
 void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
 {
-    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update this function to handle the new resource type");
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update this function to handle the new resource type");
     switch (Type)
     {
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
@@ -543,6 +543,7 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
         break;
 
         case SHADER_RESOURCE_TYPE_SAMPLER:
+        case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS:
             // Nothing to transition
             break;
 
@@ -569,7 +570,7 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
 #ifdef DILIGENT_DEVELOPMENT
 void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
 {
-    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update this function to handle the new resource type");
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update this function to handle the new resource type");
     switch (Type)
     {
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
@@ -657,6 +658,7 @@ void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
         break;
 
         case SHADER_RESOURCE_TYPE_SAMPLER:
+        case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS:
             // No resource
             break;
 

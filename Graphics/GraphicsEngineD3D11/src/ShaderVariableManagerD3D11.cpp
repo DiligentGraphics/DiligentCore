@@ -121,7 +121,7 @@ D3DShaderResourceCounters ShaderVariableManagerD3D11::CountResources(
         [&](Uint32 Index) //
         {
             const PipelineResourceDesc& ResDesc = Signature.GetResourceDesc(Index);
-            static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource range");
+            static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new shader resource range");
             switch (ResDesc.ResourceType)
             {
                     // clang-format off
@@ -132,6 +132,7 @@ D3DShaderResourceCounters ShaderVariableManagerD3D11::CountResources(
                 case SHADER_RESOURCE_TYPE_BUFFER_UAV:       ++Counters.NumBufUAVs;  break;
                 case SHADER_RESOURCE_TYPE_SAMPLER:          ++Counters.NumSamplers; break;
                 case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: ++Counters.NumTexSRVs;  break;
+                case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS: ++Counters.NumCBs;      break;
                 // clang-format on
                 default:
                     UNEXPECTED("Unsupported resource type.");
@@ -215,7 +216,7 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
         [&](Uint32 Index) //
         {
             const PipelineResourceDesc& ResDesc = Signature.GetResourceDesc(Index);
-            static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource range");
+            static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new shader resource range");
             switch (ResDesc.ResourceType)
             {
                 case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
@@ -247,6 +248,11 @@ void ShaderVariableManagerD3D11::Initialize(const PipelineResourceSignatureD3D11
                 case SHADER_RESOURCE_TYPE_SAMPLER:
                     // Initialize current sampler in place, increment sampler counter
                     new (&GetResource<SamplerBindInfo>(sam++)) SamplerBindInfo{*this, Index};
+                    break;
+
+                case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS:
+                    // Initialize CB for inline constants in place, increment CB counter
+                    new (&GetResource<ConstBuffBindInfo>(cb++)) ConstBuffBindInfo{*this, Index};
                     break;
 
                 default:
