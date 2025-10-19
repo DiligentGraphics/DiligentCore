@@ -55,7 +55,7 @@ const char* GetBindingRangeName(BINDING_RANGE Range)
 
 BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc)
 {
-    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new shader resource type");
     switch (Desc.ResourceType)
     {
         // clang-format off
@@ -65,6 +65,7 @@ BINDING_RANGE PipelineResourceToBindingRange(const PipelineResourceDesc& Desc)
         case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return BINDING_RANGE_IMAGE;
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return (Desc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) ? BINDING_RANGE_IMAGE : BINDING_RANGE_STORAGE_BUFFER;
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return BINDING_RANGE_TEXTURE;
+        case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS: return BINDING_RANGE_UNIFORM_BUFFER;
         // clang-format on
         case SHADER_RESOURCE_TYPE_SAMPLER:
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:

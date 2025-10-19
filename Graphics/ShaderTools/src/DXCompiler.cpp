@@ -926,7 +926,7 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
 
 #    ifdef DILIGENT_DEVELOPMENT
                 {
-                    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
+                    static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new shader resource type");
                     RES_TYPE ExpectedResType = RES_TYPE_COUNT;
                     switch (NameAndBinding.second.ResType)
                     {
@@ -938,6 +938,7 @@ bool DXCompilerImpl::RemapResourceBindings(const TResourceBindingMap& ResourceMa
                         case SHADER_RESOURCE_TYPE_BUFFER_UAV:       ExpectedResType = RES_TYPE_UAV;     break;
                         case SHADER_RESOURCE_TYPE_SAMPLER:          ExpectedResType = RES_TYPE_SAMPLER; break;
                         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: ExpectedResType = RES_TYPE_SRV;     break;
+                        case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS: ExpectedResType = RES_TYPE_CBV;     break;
                         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:     ExpectedResType = RES_TYPE_SRV;     break;
                         // clang-format on
                         default: UNEXPECTED("Unsupported shader resource type.");
