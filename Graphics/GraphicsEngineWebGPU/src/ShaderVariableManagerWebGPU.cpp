@@ -529,6 +529,13 @@ void ShaderVariableManagerWebGPU::SetBufferDynamicOffset(Uint32 ResIndex,
     m_ResourceCache.SetDynamicBufferOffset(Attribs.BindGroup, DstResCacheOffset, BufferDynamicOffset);
 }
 
+void ShaderVariableManagerWebGPU::SetInlineConstants(Uint32      ResIndex,
+                                                     const void* pConstants,
+                                                     Uint32      FirstConstant,
+                                                     Uint32      NumConstants)
+{
+    UNSUPPORTED("Not implemented yet");
+}
 
 IDeviceObject* ShaderVariableManagerWebGPU::Get(Uint32 ArrayIndex, Uint32 ResIndex) const
 {

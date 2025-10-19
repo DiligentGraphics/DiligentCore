@@ -306,6 +306,11 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetDynamicOffset(Uint32 Arra
     m_ParentManager.m_ResourceCache.SetDynamicCBOffset(Attr.BindPoints + ArrayIndex, Offset);
 }
 
+void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetConstants(const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants)
+{
+    UNSUPPORTED("Not yet implemented");
+}
+
 void ShaderVariableManagerD3D11::TexSRVBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
     const PipelineResourceDesc&         Desc = GetDesc();

@@ -132,6 +132,11 @@ public:
         {
             UNSUPPORTED("Dynamic offset may only be set for constant buffers.");
         }
+
+        void SetConstants(const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants)
+        {
+            UNSUPPORTED("Inline constants may only be set for constant buffers.");
+        }
     };
 
     struct ConstBuffBindInfo final : ShaderVariableD3D11Base<ConstBuffBindInfo, D3D11_RESOURCE_RANGE_CBV>
@@ -143,6 +148,8 @@ public:
         void BindResource(const BindResourceInfo& BindInfo);
 
         void SetDynamicOffset(Uint32 ArrayIndex, Uint32 Offset);
+
+        void SetConstants(const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants);
     };
 
     struct TexSRVBindInfo final : ShaderVariableD3D11Base<TexSRVBindInfo, D3D11_RESOURCE_RANGE_SRV>

@@ -713,6 +713,21 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
     }
 
 
+    virtual void DILIGENT_CALL_TYPE SetInlineConstants(const void* pConstants,
+                                                       Uint32      FirstConstant,
+                                                       Uint32      NumConstants) override final
+    {
+#ifdef DILIGENT_DEVELOPMENT
+        {
+            const PipelineResourceDesc& Desc = GetDesc();
+            DEV_CHECK_ERR(Desc.ResourceType == SHADER_RESOURCE_TYPE_INLINE_CONSTANTS,
+                          "SetInlineConstants() is only allowed for inline constant variables.");
+        }
+#endif
+
+        static_cast<ThisImplType*>(this)->SetConstants(pConstants, FirstConstant, NumConstants);
+    }
+
     virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
     {
         return GetDesc().VarType;

@@ -223,6 +223,10 @@ void ShaderVariableManagerGL::UniformBuffBindInfo::SetDynamicOffset(Uint32 Array
     m_ParentManager.m_ResourceCache.SetDynamicUBOffset(Attr.CacheOffset + ArrayIndex, Offset);
 }
 
+void ShaderVariableManagerGL::UniformBuffBindInfo::SetConstants(const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants)
+{
+    UNSUPPORTED("Not yet implemented");
+}
 
 void ShaderVariableManagerGL::TextureBindInfo::BindResource(const BindResourceInfo& BindInfo)
 {
