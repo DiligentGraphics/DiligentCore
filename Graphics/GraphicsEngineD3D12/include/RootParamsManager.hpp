@@ -139,6 +139,7 @@ public:
 
     Uint32 GetNumRootTables() const { return m_NumRootTables; }
     Uint32 GetNumRootViews() const { return m_NumRootViews; }
+    Uint32 GetNumRootConstants() const { return m_NumRootConstants; }
 
     const RootParameter& GetRootTable(Uint32 TableInd) const
     {
@@ -150,6 +151,12 @@ public:
     {
         VERIFY_EXPR(ViewInd < m_NumRootViews);
         return m_pRootViews[ViewInd];
+    }
+
+    const RootParameter& GetRootConstants(Uint32 ConstInd) const
+    {
+        VERIFY_EXPR(ConstInd < m_NumRootConstants);
+        return m_pRootConstants[ConstInd];
     }
 
     // Returns the total number of resources in a given parameter group and descriptor heap type
@@ -169,11 +176,18 @@ private:
 
     std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
 
+    // The number of root tables
     Uint32 m_NumRootTables = 0;
-    Uint32 m_NumRootViews  = 0;
 
-    const RootParameter* m_pRootTables = nullptr;
-    const RootParameter* m_pRootViews  = nullptr;
+    // The number of root views
+    Uint32 m_NumRootViews = 0;
+
+    // The number of root constant parameters (not the number of 32-bit constants)
+    Uint32 m_NumRootConstants = 0;
+
+    const RootParameter* m_pRootTables    = nullptr;
+    const RootParameter* m_pRootViews     = nullptr;
+    const RootParameter* m_pRootConstants = nullptr;
 
     // The total number of resources placed in descriptor tables for each heap type and parameter group type
     std::array<std::array<Uint32, ROOT_PARAMETER_GROUP_COUNT>, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER + 1> m_ParameterGroupSizes{};
@@ -206,6 +220,14 @@ private:
                                D3D12_SHADER_VISIBILITY   Visibility,
                                ROOT_PARAMETER_GROUP      RootType);
 
+    // Adds a new root constants parameter and returns the reference to it.
+    RootParameter& AddRootConstants(Uint32                  RootIndex,
+                                    UINT                    Register,
+                                    UINT                    RegisterSpace,
+                                    UINT                    Num32BitValues,
+                                    D3D12_SHADER_VISIBILITY Visibility,
+                                    ROOT_PARAMETER_GROUP    RootType);
+
     struct RootTableData;
     // Adds a new root table parameter and returns the reference to it.
     RootTableData& AddRootTable(Uint32                  RootIndex,
@@ -213,6 +235,10 @@ private:
                                 ROOT_PARAMETER_GROUP    RootType,
                                 Uint32                  NumRangesInNewTable = 1);
 
+
+#ifdef DILIGENT_DEBUG
+    void DbgCheckRootIndexUniqueness(Uint32 RootIndex) const;
+#endif
 
 private:
     struct RootTableData
@@ -231,6 +257,7 @@ private:
     };
     std::vector<RootTableData> m_RootTables;
     std::vector<RootParameter> m_RootViews;
+    std::vector<RootParameter> m_RootConstants;
 
     static constexpr int InvalidRootTableIndex = -1;
 
