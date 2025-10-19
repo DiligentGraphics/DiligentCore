@@ -104,6 +104,11 @@ public:
                                 Uint32 ArrayIndex,
                                 Uint32 BufferDynamicOffset);
 
+    void SetInlineConstants(Uint32      ResIndex,
+                            const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants);
+
     IDeviceObject* Get(Uint32 ArrayIndex,
                        Uint32 ResIndex) const;
 
@@ -192,6 +197,13 @@ public:
                           Uint32 BufferRangeOffset)
     {
         m_ParentManager.SetBufferDynamicOffset(m_ResIndex, ArrayIndex, BufferRangeOffset);
+    }
+
+    void SetConstants(const void* pConstants,
+                      Uint32      FirstConstant,
+                      Uint32      NumConstants)
+    {
+        m_ParentManager.SetInlineConstants(m_ResIndex, pConstants, FirstConstant, NumConstants);
     }
 
 private:

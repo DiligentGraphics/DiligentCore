@@ -650,6 +650,14 @@ void ShaderVariableManagerVk::SetBufferDynamicOffset(Uint32 ResIndex,
     m_ResourceCache.SetDynamicBufferOffset(Attribs.DescrSet, DstResCacheOffset, BufferDynamicOffset);
 }
 
+void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
+                                                 const void* pConstants,
+                                                 Uint32      FirstConstant,
+                                                 Uint32      NumConstants)
+{
+    UNSUPPORTED("Not yet implemented");
+}
+
 IDeviceObject* ShaderVariableManagerVk::Get(Uint32 ArrayIndex, Uint32 ResIndex) const
 {
     const PipelineResourceDesc&      ResDesc     = GetResourceDesc(ResIndex);

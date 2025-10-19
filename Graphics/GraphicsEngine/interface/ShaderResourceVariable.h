@@ -250,6 +250,17 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
                                          Uint32 ArrayIndex DEFAULT_VALUE(0)) PURE;
 
 
+    /// For inline constant variables, sets the constant values
+
+    /// \param [in] pConstants    - pointer to the array of 32-bit constant values.
+    /// \param [in] FirstConstant - index of the first 32-bit constant to set.
+    /// \param [in] NumConstants  - number of 32-bit constants to set.
+    VIRTUAL void METHOD(SetInlineConstants)(THIS_
+                                            const void* pConstants,
+                                            Uint32      FirstConstant,
+                                            Uint32      NumConstants) PURE;
+
+
     /// Returns the shader resource variable type
     VIRTUAL SHADER_RESOURCE_VARIABLE_TYPE METHOD(GetType)(THIS) CONST PURE;
 
