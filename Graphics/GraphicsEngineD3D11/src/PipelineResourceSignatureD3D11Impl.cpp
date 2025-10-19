@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -90,17 +90,18 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
 
 D3D11_RESOURCE_RANGE PipelineResourceSignatureD3D11Impl::ShaderResourceTypeToRange(SHADER_RESOURCE_TYPE Type)
 {
-    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new shader resource type");
     switch (Type)
     {
         // clang-format off
-        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:  return D3D11_RESOURCE_RANGE_CBV;
-        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:      return D3D11_RESOURCE_RANGE_SRV;
-        case SHADER_RESOURCE_TYPE_BUFFER_SRV:       return D3D11_RESOURCE_RANGE_SRV;
-        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:      return D3D11_RESOURCE_RANGE_UAV;
-        case SHADER_RESOURCE_TYPE_BUFFER_UAV:       return D3D11_RESOURCE_RANGE_UAV;
-        case SHADER_RESOURCE_TYPE_SAMPLER:          return D3D11_RESOURCE_RANGE_SAMPLER;
-        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return D3D11_RESOURCE_RANGE_SRV;
+        case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:   return D3D11_RESOURCE_RANGE_CBV;
+        case SHADER_RESOURCE_TYPE_TEXTURE_SRV:       return D3D11_RESOURCE_RANGE_SRV;
+        case SHADER_RESOURCE_TYPE_BUFFER_SRV:        return D3D11_RESOURCE_RANGE_SRV;
+        case SHADER_RESOURCE_TYPE_TEXTURE_UAV:       return D3D11_RESOURCE_RANGE_UAV;
+        case SHADER_RESOURCE_TYPE_BUFFER_UAV:        return D3D11_RESOURCE_RANGE_UAV;
+        case SHADER_RESOURCE_TYPE_SAMPLER:           return D3D11_RESOURCE_RANGE_SAMPLER;
+        case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS:  return D3D11_RESOURCE_RANGE_CBV;
+        case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT:  return D3D11_RESOURCE_RANGE_SRV;
             // clang-format on
         default:
             UNEXPECTED("Unsupported resource type");
