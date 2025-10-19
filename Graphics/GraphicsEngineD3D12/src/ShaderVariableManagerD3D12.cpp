@@ -673,6 +673,14 @@ void ShaderVariableManagerD3D12::SetBufferDynamicOffset(Uint32 ResIndex,
     m_ResourceCache.SetBufferDynamicOffset(RootIndex, OffsetFromTableStart, BufferDynamicOffset);
 }
 
+void ShaderVariableManagerD3D12::SetInlineConstants(Uint32      ResIndex,
+                                                    const void* pConstants,
+                                                    Uint32      FirstConstant,
+                                                    Uint32      NumConstants)
+{
+    UNSUPPORTED("Not implemented yet");
+}
+
 IDeviceObject* ShaderVariableManagerD3D12::Get(Uint32 ArrayIndex,
                                                Uint32 ResIndex) const
 {

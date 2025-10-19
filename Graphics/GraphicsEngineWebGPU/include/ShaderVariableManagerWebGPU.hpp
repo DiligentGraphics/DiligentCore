@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -64,6 +64,11 @@ public:
     void SetBufferDynamicOffset(Uint32 ResIndex,
                                 Uint32 ArrayIndex,
                                 Uint32 BufferDynamicOffset);
+
+    void SetInlineConstants(Uint32      ResIndex,
+                            const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants);
 
     IDeviceObject* Get(Uint32 ArrayIndex,
                        Uint32 ResIndex) const;
@@ -132,6 +137,13 @@ public:
                           Uint32 BufferDynamicOffset) const
     {
         m_ParentManager.SetBufferDynamicOffset(m_ResIndex, ArrayIndex, BufferDynamicOffset);
+    }
+
+    void SetConstants(const void* pConstants,
+                      Uint32      FirstConstant,
+                      Uint32      NumConstants)
+    {
+        m_ParentManager.SetInlineConstants(m_ResIndex, pConstants, FirstConstant, NumConstants);
     }
 };
 
