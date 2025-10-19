@@ -249,6 +249,11 @@ public:
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
 
+    bool HasInlineConstants() const
+    {
+        return false;
+    }
+
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
 
 #ifdef DILIGENT_DEBUG

@@ -392,6 +392,11 @@ public:
         return false;
     }
 
+    bool HasInlineConstants() const
+    {
+        return false;
+    }
+
 #ifdef DILIGENT_DEBUG
     void DbgVerifyDynamicBufferMasks() const;
 #endif

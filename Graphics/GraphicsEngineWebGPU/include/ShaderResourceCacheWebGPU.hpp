@@ -176,6 +176,11 @@ public:
     Uint32 GetNumBindGroups() const { return m_NumBindGroups; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
 
+    bool HasInlineConstants() const
+    {
+        return false;
+    }
+
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
 
     WGPUBindGroup UpdateBindGroup(WGPUDevice wgpuDevice, Uint32 GroupIndex, WGPUBindGroupLayout wgpuGroupLayout);
