@@ -761,7 +761,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     // First time we must always bind descriptor sets with dynamic offsets as SRBs are stale.
     // If there are no dynamic buffers bound in the resource cache, for all subsequent
     // calls we do not need to bind the sets again.
-    if (Uint32 CommitMask = BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+    if (Uint32 CommitMask = BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT, Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT))
     {
         CommitDescriptorSets(BindInfo, CommitMask);
     }
