@@ -213,7 +213,27 @@ DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
     ///  (see RootSignature::CommitRootViews). When `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT` is set, root views are only bound
     ///  by the first draw command that uses the PSO + SRB pair. The flag avoids setting the same GPU virtual addresses when
     ///  they stay unchanged.
-    DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT = 1u << 2u
+    ///
+    ///  \see DRAW_FLAG_INLINE_CONSTANTS_INTACT, DRAW_FLAG_DYNAMIC_BUFFERS_AND_INLINE_CONSTANTS_INTACT
+    DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT = 1u << 2u,
+
+    /// Indicates that none of the inline constants used by the draw command
+    /// have been modified by the CPU since the last command.
+    ///
+    /// This flag should be used to improve performance when an application issues a
+    /// series of draw commands that use the same pipeline state and shader resources and
+    /// no inline constants are updated between the commands.
+    ///
+    /// \see DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT, DRAW_FLAG_DYNAMIC_BUFFERS_AND_INLINE_CONSTANTS_INTACT
+    DRAW_FLAG_INLINE_CONSTANTS_INTACT = 1u << 3u,
+
+    /// Indicates that neither the dynamic resource buffers nor the inline constants used by
+    /// the draw command have been modified by the CPU since the previous command.
+    ///
+    /// \see DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT, DRAW_FLAG_INLINE_CONSTANTS_INTACT
+    DRAW_FLAG_DYNAMIC_BUFFERS_AND_INLINE_CONSTANTS_INTACT = 
+        DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT | 
+        DRAW_FLAG_INLINE_CONSTANTS_INTACT
 };
 DEFINE_FLAG_ENUM_OPERATORS(DRAW_FLAGS)
 
