@@ -339,9 +339,15 @@ public:
     // Returns the bitmask indicating root views with bound non-dynamic buffers
     Uint64 GetNonDynamicRootBuffersMask() const { return m_NonDynamicRootBuffersMask; }
 
+    // Returns the bitmask indicating constants parameters
+    Uint64 GetRootConstantsMask() const { return m_RootConstantsMask; }
+
     // Returns true if the cache contains at least one dynamic resource, i.e.
     // dynamic buffer or a buffer range.
     bool HasDynamicResources() const { return GetDynamicRootBuffersMask() != 0; }
+
+    // Returns true if the cache contains at least one inline constants parameter.
+    bool HasInlineConstants() const { return GetRootConstantsMask() != 0; }
 
 #ifdef DILIGENT_DEBUG
     void DbgValidateDynamicBuffersMask() const;
@@ -392,6 +398,9 @@ private:
 
     // The bitmask indicating root views with bound non-dynamic buffers
     Uint64 m_NonDynamicRootBuffersMask = Uint64{0};
+
+    // The bitmask indicating root constants parameters
+    Uint64 m_RootConstantsMask = Uint64{0};
 };
 
 } // namespace Diligent

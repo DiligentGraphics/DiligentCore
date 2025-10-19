@@ -345,6 +345,11 @@ public:
         return m_DynamicUBOMask != 0 || m_DynamicSSBOMask != 0;
     }
 
+    bool HasInlineConstants() const
+    {
+        return false;
+    }
+
 #ifdef DILIGENT_DEBUG
     void DbgVerifyDynamicBufferMasks() const;
 #endif

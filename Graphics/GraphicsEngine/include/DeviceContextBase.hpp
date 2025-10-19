@@ -381,6 +381,9 @@ protected:
         // buffers with dynamic offsets in all backends).
         SRBMaskType DynamicSRBMask = 0;
 
+        // Indicates which SRBs contain inline constants
+        SRBMaskType InlineConstantsSRBMask = 0;
+
         void Set(Uint32 Index, ShaderResourceBindingImplType* pSRB)
         {
             VERIFY_EXPR(Index < MAX_RESOURCE_SIGNATURES);
@@ -398,6 +401,11 @@ protected:
             else
                 DynamicSRBMask &= ~SRBBit;
 
+            if (pResourceCache != nullptr && pResourceCache->HasInlineConstants())
+                InlineConstantsSRBMask |= SRBBit;
+            else
+                InlineConstantsSRBMask &= ~SRBBit;
+
 #ifdef DILIGENT_DEVELOPMENT
             SRBs[Index] = pSRB;
             if (pSRB != nullptr)
@@ -412,7 +420,8 @@ protected:
         }
 
         // Returns the mask of SRBs whose resources need to be committed
-        SRBMaskType GetCommitMask(bool DynamicResourcesIntact = false) const
+        SRBMaskType GetCommitMask(bool DynamicResourcesIntact = false,
+                                  bool InlineConstantsIntact  = false) const
         {
 #ifdef DILIGENT_DEVELOPMENT
             DvpVerifyCacheRevisions();
@@ -420,10 +429,17 @@ protected:
 
             // Stale SRBs always have to be committed
             SRBMaskType CommitMask = StaleSRBMask;
+
             // If dynamic resources are not intact, SRBs with dynamic resources
             // have to be handled
             if (!DynamicResourcesIntact)
                 CommitMask |= DynamicSRBMask;
+
+            // If inline constants are not intact, SRBs with inline constants
+            // have to be handled
+            if (!InlineConstantsIntact)
+                CommitMask |= InlineConstantsSRBMask;
+
             // Only process SRBs that are used by current PSO
             CommitMask &= ActiveSRBMask;
             return CommitMask;
