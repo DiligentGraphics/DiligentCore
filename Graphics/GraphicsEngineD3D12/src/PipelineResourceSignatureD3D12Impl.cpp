@@ -522,6 +522,45 @@ void PipelineResourceSignatureD3D12Impl::CommitRootViews(const CommitCacheResour
     }
 }
 
+void PipelineResourceSignatureD3D12Impl::CommitRootConstants(const CommitCacheResourcesAttribs& CommitAttribs,
+                                                             Uint64                             ConstantsMask) const
+{
+    VERIFY_EXPR(CommitAttribs.pResourceCache != nullptr);
+
+    while (ConstantsMask != 0)
+    {
+        // Root constants are stored as raw data in the CPU descriptor handle pointer of
+        // the single-resource root table.
+
+        const Uint64                               RootIndBit    = ExtractLSB(ConstantsMask);
+        const Uint32                               RootInd       = PlatformMisc::GetLSB(RootIndBit);
+        const ShaderResourceCacheD3D12::RootTable& CacheTbl      = CommitAttribs.pResourceCache->GetRootTable(RootInd);
+        const Uint32&                              BaseRootIndex = CommitAttribs.BaseRootIndex;
+
+        VERIFY_EXPR(CacheTbl.GetSize() == 1);
+        const ShaderResourceCacheD3D12::Resource& Res = CacheTbl.GetResource(0);
+        VERIFY_EXPR(Res.Type == SHADER_RESOURCE_TYPE_INLINE_CONSTANTS);
+        VERIFY(Res.IsNull(), "There should be no resource bound for root constants as they contain raw data.");
+
+        const Uint32* pConstants = reinterpret_cast<const Uint32*>(Res.CPUDescriptorHandle.ptr);
+        VERIFY(pConstants != nullptr, "Resources used to store root constants must have valid pointer to the data.");
+        // The number of root constants is stored in BufferRangeSize
+        const Uint32 NumConstants = static_cast<Uint32>(Res.BufferRangeSize);
+
+        ID3D12GraphicsCommandList* const pd3d12CmdList = CommitAttribs.CmdCtx.GetCommandList();
+        if (CommitAttribs.IsCompute)
+        {
+            for (Uint32 i = 0; i < NumConstants; ++i)
+                pd3d12CmdList->SetComputeRoot32BitConstant(BaseRootIndex + RootInd, pConstants[i], i);
+        }
+        else
+        {
+            for (Uint32 i = 0; i < NumConstants; ++i)
+                pd3d12CmdList->SetGraphicsRoot32BitConstant(BaseRootIndex + RootInd, pConstants[i], i);
+        }
+    }
+}
+
 void PipelineResourceSignatureD3D12Impl::CommitRootTables(const CommitCacheResourcesAttribs& CommitAttribs) const
 {
     VERIFY_EXPR(CommitAttribs.pResourceCache != nullptr);
