@@ -669,7 +669,7 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
         CommitD3D11VertexBuffers(m_pPipelineState);
     }
 
-    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT))
+    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT, Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT))
     {
         BindShaderResources(BindSRBMask);
     }
