@@ -386,6 +386,22 @@ void ShaderResourceCacheD3D12::SetBufferDynamicOffset(Uint32 RootIndex,
     Res.BufferDynamicOffset = BufferDynamicOffset;
 }
 
+void ShaderResourceCacheD3D12::SetInlineConstants(Uint32      RootIndex,
+                                                  const void* pConstants,
+                                                  Uint32      FirstConstant,
+                                                  Uint32      NumConstants)
+{
+    RootTable& Tbl = GetRootTable(RootIndex);
+    Resource&  Res = Tbl.GetResource(0);
+    VERIFY_EXPR(Res.Type == SHADER_RESOURCE_TYPE_INLINE_CONSTANTS);
+    VERIFY(Res.IsNull(), "There should be no resource bound for root constants as they contain raw data.");
+    VERIFY(Res.CPUDescriptorHandle.ptr != 0, "Resources used to store root constants must have valid pointer to the data.");
+    VERIFY(FirstConstant + NumConstants <= Res.BufferRangeSize,
+           "Too many constants (", FirstConstant + NumConstants, ") for the allocated space (", Res.BufferRangeSize, ")");
+    Uint32* pDstConstants = reinterpret_cast<Uint32*>(Res.CPUDescriptorHandle.ptr);
+    memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
+}
+
 const ShaderResourceCacheD3D12::Resource& ShaderResourceCacheD3D12::CopyResource(ID3D12Device*   pd3d12Device,
                                                                                  Uint32          RootIndex,
                                                                                  Uint32          OffsetFromTableStart,

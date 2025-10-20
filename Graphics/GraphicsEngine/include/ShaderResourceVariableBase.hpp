@@ -165,6 +165,12 @@ bool VerifyResourceBinding(const char*                 ExpectedResourceTypeName,
                            const IDeviceObject*        pCachedObject, // Object already set in the cache
                            const char*                 SignatureName)
 {
+    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INLINE_CONSTANTS)
+    {
+        RESOURCE_VALIDATION_FAILURE("Cannot bind resources to inline constants variable '", GetShaderResourcePrintName(ResDesc, BindInfo.ArrayIndex), '\'');
+        return false;
+    }
+
     if (BindInfo.pObject != nullptr && pResourceImpl == nullptr)
     {
         std::stringstream ss;
@@ -601,6 +607,34 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
     return BindingOK;
 }
 
+
+inline bool VerifyInlineConstants(const PipelineResourceDesc& ResDesc,
+                                  const void*                 pConstants,
+                                  Uint32                      FirstConstant,
+                                  Uint32                      NumConstants)
+{
+    bool ParamsOK = true;
+    if (ResDesc.ResourceType != SHADER_RESOURCE_TYPE_INLINE_CONSTANTS)
+    {
+        RESOURCE_VALIDATION_FAILURE("SetInlineConstants() is only allowed for inline constant variables.");
+        ParamsOK = false;
+    }
+
+    if (pConstants == nullptr)
+    {
+        RESOURCE_VALIDATION_FAILURE("Pointer to inline constants is null.");
+        ParamsOK = false;
+    }
+
+    if (FirstConstant + NumConstants > ResDesc.ArraySize)
+    {
+        RESOURCE_VALIDATION_FAILURE("Inline constant range (", FirstConstant, " .. ", FirstConstant + NumConstants - 1,
+                                    ") is out of bounds for variable '", ResDesc.Name, "' of size ", ResDesc.ArraySize, " constants.");
+        ParamsOK = false;
+    }
+
+    return ParamsOK;
+}
 
 #undef RESOURCE_VALIDATION_FAILURE
 
