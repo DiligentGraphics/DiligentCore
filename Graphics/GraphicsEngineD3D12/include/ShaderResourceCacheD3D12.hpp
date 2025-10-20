@@ -281,6 +281,11 @@ public:
                                 Uint32 OffsetFromTableStart,
                                 Uint32 BufferDynamicOffset);
 
+    void SetInlineConstants(Uint32      RootIndex,
+                            const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants);
+
     const RootTable& GetRootTable(Uint32 RootIndex) const
     {
         VERIFY_EXPR(RootIndex < m_NumTables);
