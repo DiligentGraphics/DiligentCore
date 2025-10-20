@@ -165,12 +165,6 @@ bool VerifyResourceBinding(const char*                 ExpectedResourceTypeName,
                            const IDeviceObject*        pCachedObject, // Object already set in the cache
                            const char*                 SignatureName)
 {
-    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_INLINE_CONSTANTS)
-    {
-        RESOURCE_VALIDATION_FAILURE("Cannot bind resources to inline constants variable '", GetShaderResourcePrintName(ResDesc, BindInfo.ArrayIndex), '\'');
-        return false;
-    }
-
     if (BindInfo.pObject != nullptr && pResourceImpl == nullptr)
     {
         std::stringstream ss;
@@ -183,6 +177,23 @@ bool VerifyResourceBinding(const char*                 ExpectedResourceTypeName,
         RESOURCE_VALIDATION_FAILURE(ss.str());
 
         return false;
+    }
+
+    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+    {
+        if (pResourceImpl != nullptr)
+        {
+            std::stringstream ss;
+            ss << "Failed to bind " << ExpectedResourceTypeName << " '" << pResourceImpl->GetDesc().Name << "' to variable '"
+               << GetShaderResourcePrintName(ResDesc, BindInfo.ArrayIndex) << '\'';
+            if (SignatureName != nullptr)
+            {
+                ss << " defined by signature '" << SignatureName << '\'';
+            }
+            ss << ". Inline constants must be set using IShaderResourceVariable::SetInlineConstants() method.";
+            RESOURCE_VALIDATION_FAILURE(ss.str());
+            return false;
+        }
     }
 
     if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC &&
@@ -614,9 +625,9 @@ inline bool VerifyInlineConstants(const PipelineResourceDesc& ResDesc,
                                   Uint32                      NumConstants)
 {
     bool ParamsOK = true;
-    if (ResDesc.ResourceType != SHADER_RESOURCE_TYPE_INLINE_CONSTANTS)
+    if (ResDesc.ResourceType != SHADER_RESOURCE_TYPE_CONSTANT_BUFFER)
     {
-        RESOURCE_VALIDATION_FAILURE("SetInlineConstants() is only allowed for inline constant variables.");
+        RESOURCE_VALIDATION_FAILURE("SetInlineConstants() is only allowed for constant buffer resources.");
         ParamsOK = false;
     }
 
@@ -754,8 +765,14 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
 #ifdef DILIGENT_DEVELOPMENT
         {
             const PipelineResourceDesc& Desc = GetDesc();
-            DEV_CHECK_ERR(Desc.ResourceType == SHADER_RESOURCE_TYPE_INLINE_CONSTANTS,
-                          "SetInlineConstants() is only allowed for inline constant variables.");
+            DEV_CHECK_ERR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+                          "SetInlineConstants() is only allowed for constant buffer resources.");
+            DEV_CHECK_ERR(Desc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS,
+                          "SetInlineConstants() is only allowed for inline constant buffers.");
+            DEV_CHECK_ERR(pConstants != nullptr, "Pointer to inline constants is null.");
+            DEV_CHECK_ERR(FirstConstant + NumConstants <= Desc.ArraySize,
+                          "Inline constant range (", FirstConstant, " .. ", FirstConstant + NumConstants - 1,
+                          ") is out of bounds for variable '", Desc.Name, "' of size ", Desc.ArraySize, " constants.");
         }
 #endif
 

@@ -539,7 +539,7 @@ void PipelineResourceSignatureD3D12Impl::CommitRootConstants(const CommitCacheRe
 
         VERIFY_EXPR(CacheTbl.GetSize() == 1);
         const ShaderResourceCacheD3D12::Resource& Res = CacheTbl.GetResource(0);
-        VERIFY_EXPR(Res.Type == SHADER_RESOURCE_TYPE_INLINE_CONSTANTS);
+        VERIFY_EXPR(Res.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
         VERIFY(Res.IsNull(), "There should be no resource bound for root constants as they contain raw data.");
 
         const Uint32* pConstants = reinterpret_cast<const Uint32*>(Res.CPUDescriptorHandle.ptr);
@@ -810,7 +810,7 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
             }
         }
 
-        static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new shader resource type");
+        static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
         switch (ResDesc.ResourceType)
         {
             case SHADER_RESOURCE_TYPE_TEXTURE_SRV:

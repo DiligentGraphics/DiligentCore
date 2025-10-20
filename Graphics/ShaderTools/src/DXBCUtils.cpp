@@ -939,7 +939,7 @@ void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
                     Iter->second.ArraySize >= Res.BindCount);
 
 #ifdef DILIGENT_DEBUG
-        static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new shader resource type");
+        static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new shader resource type");
         switch (Iter->second.ResType)
         {
                 // clang-format off
@@ -950,7 +950,6 @@ void RemapShaderResources(const DXBCUtils::TResourceBindingMap& ResourceMap, con
             case SHADER_RESOURCE_TYPE_BUFFER_UAV:       VERIFY_EXPR(ResType == RES_TYPE_UAV);     break;
             case SHADER_RESOURCE_TYPE_SAMPLER:          VERIFY_EXPR(ResType == RES_TYPE_SAMPLER); break;
             case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: VERIFY_EXPR(ResType == RES_TYPE_SRV);     break;
-            case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS: VERIFY_EXPR(ResType == RES_TYPE_CBV);     break;
             // clang-format on
             default: UNEXPECTED("Unsupported shader resource type.");
         }
