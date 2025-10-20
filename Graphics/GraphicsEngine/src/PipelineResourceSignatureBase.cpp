@@ -111,6 +111,12 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                                     ": ", GetPipelineResourceFlagsString(AllowedResourceFlags, false, ", "), ".");
         }
 
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0 && Res.Flags != PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+        {
+            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                    "). INLINE_CONSTANTS flag cannot be combined with other flags.");
+        }
+
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0 && Features.FormattedBuffers == DEVICE_FEATURE_STATE_DISABLED)
         {
             LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (FORMATTED_BUFFER). The flag can only be used if FormattedBuffers device feature is enabled.");

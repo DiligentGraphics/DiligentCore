@@ -129,7 +129,23 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     /// \note This flag is only valid in Vulkan.
     PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT = 1u << 4,
 
-    PIPELINE_RESOURCE_FLAG_LAST               = PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT
+    /// Indicates that the resource consists of inline constants (also known as push constants in Vulkan or root constants in Direct3D12).
+
+    /// Applies to SHADER_RESOURCE_TYPE_CONSTANT_BUFFER only.
+    ///
+    /// Inline constants are set directly using IShaderResourceVariable::SetInlineConstants.
+    ///
+    /// This flag cannot be combined with any other flags.
+    ///
+    /// In Vulkan and Direct3D12, inline constants are not bound via descriptor sets or root
+    /// signatures, but are set directly in command buffers or command lists. As such, they
+    /// are very cheap to set and are intended for small pieces of frequently changing data.
+    ///
+    /// In legacy APIs (Direct3D11 and OpenGL), inline constants are emulated using regular
+    /// constant buffers and thus have higher overhead.
+    PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS = 1u << 5,
+
+    PIPELINE_RESOURCE_FLAG_LAST = PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS
 };
 DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_RESOURCE_FLAGS);
 

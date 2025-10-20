@@ -723,16 +723,6 @@ DILIGENT_TYPED_ENUM(SHADER_RESOURCE_TYPE, Uint8)
     /// Input attachment in a render pass
     SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT,
 
-    /// Inline constants (aka push constants in Vulkan or root constants in Direct3D12)
-
-    /// In Vulkan/Direct3D12, inline constants are not bound via descriptor sets or root
-    /// signatures but are set directly in command buffers / command lists. As such, they
-    /// are very cheap to set and are intended for small pieces of frequently changing data.
-    /// 
-    /// In legacy APIs (Direct3D11/OpenGL), inline constants are emulated using regular
-    /// constant buffers.
-    SHADER_RESOURCE_TYPE_INLINE_CONSTANTS,
-
     /// Acceleration structure
     SHADER_RESOURCE_TYPE_ACCEL_STRUCT,
 

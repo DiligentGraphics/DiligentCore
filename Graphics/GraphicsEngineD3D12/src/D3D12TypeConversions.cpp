@@ -849,7 +849,7 @@ DXGI_FORMAT TypeToRayTracingVertexFormat(VALUE_TYPE ValueType, Uint32 ComponentC
 
 D3D12_DESCRIPTOR_RANGE_TYPE ResourceTypeToD3D12DescriptorRangeType(SHADER_RESOURCE_TYPE ResType)
 {
-    static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update the switch below to handle the new resource type");
+    static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update the switch below to handle the new resource type");
 
     switch (ResType)
     {
@@ -863,10 +863,6 @@ D3D12_DESCRIPTOR_RANGE_TYPE ResourceTypeToD3D12DescriptorRangeType(SHADER_RESOUR
         case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:     return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         case SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT: return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
             // clang-format on
-
-        case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS:
-            UNEXPECTED("Inline constants do not have a descriptor range type");
-            return static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(-1);
 
         default:
             UNEXPECTED("Unknown resource type");
