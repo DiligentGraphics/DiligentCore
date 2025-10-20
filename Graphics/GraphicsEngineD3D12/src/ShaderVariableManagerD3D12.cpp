@@ -570,7 +570,7 @@ void BindResourceHelper::operator()(const BindResourceInfo& BindInfo) const
     VERIFY_EXPR(m_ArrayIndex == BindInfo.ArrayIndex);
     if (BindInfo.pObject != nullptr)
     {
-        static_assert(SHADER_RESOURCE_TYPE_LAST == 9, "Please update this function to handle the new resource type");
+        static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update this function to handle the new resource type");
         switch (m_ResDesc.ResourceType)
         {
             case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
@@ -596,10 +596,6 @@ void BindResourceHelper::operator()(const BindResourceInfo& BindInfo) const
 
             case SHADER_RESOURCE_TYPE_SAMPLER:
                 CacheSampler(BindInfo);
-                break;
-
-            case SHADER_RESOURCE_TYPE_INLINE_CONSTANTS:
-                UNSUPPORTED("Not yet implemented");
                 break;
 
             case SHADER_RESOURCE_TYPE_ACCEL_STRUCT:
