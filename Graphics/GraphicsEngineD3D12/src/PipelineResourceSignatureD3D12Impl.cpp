@@ -267,7 +267,9 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
                 // Normal resources go into space 0.
                 Space    = 0;
                 Register = NumResources[d3d12DescriptorRangeType];
-                NumResources[d3d12DescriptorRangeType] += ResDesc.ArraySize;
+                NumResources[d3d12DescriptorRangeType] += (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0 ?
+                    1 : // For inline constants, count only one resource as the ArraySize is the number of 4-byte constants.
+                    ResDesc.ArraySize;
             }
 
             const PIPELINE_RESOURCE_FLAGS dbgValidResourceFlags = GetValidPipelineResourceFlags(ResDesc.ResourceType);
@@ -283,7 +285,15 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
             {
                 case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
                     VERIFY(!IsFormattedBuffer, "Constant buffers can't be labeled as formatted. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
-                    d3d12RootParamType = UseDynamicOffset && !IsArray ? D3D12_ROOT_PARAMETER_TYPE_CBV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+                    if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+                    {
+                        VERIFY(UseDynamicOffset, "NO_DYNAMIC_BUFFERS flag is not compatible with INLINE_CONSTANTS. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+                        d3d12RootParamType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+                    }
+                    else
+                    {
+                        d3d12RootParamType = UseDynamicOffset && !IsArray ? D3D12_ROOT_PARAMETER_TYPE_CBV : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+                    }
                     break;
 
                 case SHADER_RESOURCE_TYPE_BUFFER_SRV:
