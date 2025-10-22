@@ -38,7 +38,7 @@
 //  m_pMemory                             |             m_pResources, m_NumResources == m            |
 //  |                                     |                                                          |
 //  V                                     |                                                          V
-//  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |  DescriptorHeapAllocation[0]  |  ...
+//  |  RootTable[0]  |   ....    |  RootTable[Nrt-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |  Descriptor Heap Allocations  | Inline constant values |
 //       |                                                A \
 //       |                                                |  \
 //       |________________________________________________|   \RefCntAutoPtr
@@ -70,6 +70,7 @@
 //                       DESCRIPTOR_HEAP_TYPE_SAMPLER
 //
 //
+// Root constant parameters use CPUDescriptorHandle.ptr to store pointer to the raw data.
 //
 // The allocation is inexed by the offset from the beginning of the root table.
 // Each root table is assigned the space to store exactly m_NumResources resources.
@@ -138,18 +139,29 @@ public:
 
     struct MemoryRequirements
     {
-        Uint32 NumTables                = 0;
-        Uint32 TotalResources           = 0;
-        Uint32 NumDescriptorAllocations = 0;
-        size_t TotalSize                = 0;
+        Uint32 NumTables                 = 0;
+        Uint32 TotalResources            = 0;
+        Uint32 NumDescriptorAllocations  = 0;
+        Uint32 TotalInlineConstantValues = 0;
+        size_t TotalSize                 = 0;
     };
     static MemoryRequirements GetMemoryRequirements(const RootParamsManager& RootParams);
 
+
+    struct InlineConstantParamInfo
+    {
+        Uint32 RootIndex            = 0;
+        Uint32 OffsetFromTableStart = 0;
+        Uint32 NumValues            = 0;
+    };
+    using InlineConstantInfoVectorType = std::vector<InlineConstantParamInfo>;
+
     // Initializes resource cache to hold the given number of root tables, no descriptor space
     // is allocated (this is used to initialize the cache for a pipeline resource signature).
-    void Initialize(IMemoryAllocator& MemAllocator,
-                    Uint32            NumTables,
-                    const Uint32      TableSizes[]);
+    void Initialize(IMemoryAllocator&                   MemAllocator,
+                    Uint32                              NumTables,
+                    const Uint32                        TableSizes[],
+                    const InlineConstantInfoVectorType& InlineConstants);
 
     // Initializes resource cache to hold the resources of a root parameters manager
     // (this is used to initialize the cache for an SRB).
@@ -192,6 +204,7 @@ public:
 
         // CPU descriptor handle of a cached resource in CPU-only descriptor heap.
         // This handle may be null for CBVs that address the buffer range.
+        // For root constant parameters, ptr stores pointer to the raw data.
         D3D12_CPU_DESCRIPTOR_HANDLE  CPUDescriptorHandle = {};
         RefCntAutoPtr<IDeviceObject> pObject;
 
@@ -289,7 +302,7 @@ public:
     const RootTable& GetRootTable(Uint32 RootIndex) const
     {
         VERIFY_EXPR(RootIndex < m_NumTables);
-        return reinterpret_cast<const RootTable*>(m_pMemory.get())[RootIndex];
+        return GetRootTableStorage()[RootIndex];
     }
 
     Uint32 GetNumRootTables() const { return m_NumTables; }
@@ -362,7 +375,7 @@ private:
     RootTable& GetRootTable(Uint32 RootIndex)
     {
         VERIFY_EXPR(RootIndex < m_NumTables);
-        return reinterpret_cast<RootTable*>(m_pMemory.get())[RootIndex];
+        return GetRootTableStorage()[RootIndex];
     }
 
     Resource& GetResource(Uint32 Idx)
@@ -371,7 +384,33 @@ private:
         return reinterpret_cast<Resource*>(reinterpret_cast<RootTable*>(m_pMemory.get()) + m_NumTables)[Idx];
     }
 
-    size_t AllocateMemory(IMemoryAllocator& MemAllocator);
+    size_t AllocateMemory(IMemoryAllocator& MemAllocator,
+                          Uint32            TotalInlineConstantValues);
+
+    // Memory layout:
+    //
+    //  | Root tables | Resources | DescriptorHeapAllocations | Inline constant values |
+    //
+    RootTable* GetRootTableStorage()
+    {
+        return reinterpret_cast<RootTable*>(m_pMemory.get());
+    }
+    const RootTable* GetRootTableStorage() const
+    {
+        return reinterpret_cast<const RootTable*>(m_pMemory.get());
+    }
+    Resource* GetResourceStorage()
+    {
+        return reinterpret_cast<Resource*>(GetRootTableStorage() + m_NumTables);
+    }
+    DescriptorHeapAllocation* GetDescriptorAllocationStorage()
+    {
+        return reinterpret_cast<DescriptorHeapAllocation*>(GetResourceStorage() + m_TotalResourceCount);
+    }
+    Uint32* GetInlineConstantStorage()
+    {
+        return reinterpret_cast<Uint32*>(GetDescriptorAllocationStorage() + m_NumDescriptorAllocations);
+    }
 
 private:
     static constexpr Uint32 MaxRootTables = 64;
