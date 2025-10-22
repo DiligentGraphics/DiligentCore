@@ -459,12 +459,13 @@ void ShaderResourceCacheD3D12::SetBufferDynamicOffset(Uint32 RootIndex,
 }
 
 void ShaderResourceCacheD3D12::SetInlineConstants(Uint32      RootIndex,
+                                                  Uint32      OffsetFromTableStart,
                                                   const void* pConstants,
                                                   Uint32      FirstConstant,
                                                   Uint32      NumConstants)
 {
     RootTable& Tbl = GetRootTable(RootIndex);
-    Resource&  Res = Tbl.GetResource(0);
+    Resource&  Res = Tbl.GetResource(OffsetFromTableStart);
     VERIFY_EXPR(Res.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
     VERIFY(Res.IsNull(), "There should be no resource bound for root constants as they contain raw data.");
     VERIFY(Res.CPUDescriptorHandle.ptr != 0, "Resources used to store root constants must have valid pointer to the data.");

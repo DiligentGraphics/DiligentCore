@@ -295,6 +295,7 @@ public:
                                 Uint32 BufferDynamicOffset);
 
     void SetInlineConstants(Uint32      RootIndex,
+                            Uint32      OffsetFromTableStart,
                             const void* pConstants,
                             Uint32      FirstConstant,
                             Uint32      NumConstants);

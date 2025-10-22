@@ -674,10 +674,10 @@ void ShaderVariableManagerD3D12::SetInlineConstants(Uint32      ResIndex,
                                                     Uint32      FirstConstant,
                                                     Uint32      NumConstants)
 {
-    const ResourceAttribs&         Attribs   = m_pSignature->GetResourceAttribs(ResIndex);
-    const ResourceCacheContentType CacheType = m_ResourceCache.GetContentType();
-    const Uint32                   RootIndex = Attribs.RootIndex(CacheType);
-    VERIFY_EXPR(Attribs.OffsetFromTableStart(CacheType) == 0);
+    const ResourceAttribs&         Attribs              = m_pSignature->GetResourceAttribs(ResIndex);
+    const ResourceCacheContentType CacheType            = m_ResourceCache.GetContentType();
+    const Uint32                   RootIndex            = Attribs.RootIndex(CacheType);
+    const Uint32                   OffsetFromTableStart = Attribs.OffsetFromTableStart(CacheType);
 
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -686,7 +686,7 @@ void ShaderVariableManagerD3D12::SetInlineConstants(Uint32      ResIndex,
     }
 #endif
 
-    m_ResourceCache.SetInlineConstants(RootIndex, pConstants, FirstConstant, NumConstants);
+    m_ResourceCache.SetInlineConstants(RootIndex, OffsetFromTableStart, pConstants, FirstConstant, NumConstants);
 }
 
 IDeviceObject* ShaderVariableManagerD3D12::Get(Uint32 ArrayIndex,
