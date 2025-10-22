@@ -573,6 +573,9 @@ void ShaderResourceCacheD3D12::DbgValidateDynamicBuffersMask() const
 
 void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
 {
+    if (IsNull())
+        return;
+
     static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update this function to handle the new resource type");
     switch (Type)
     {
@@ -657,6 +660,9 @@ void ShaderResourceCacheD3D12::Resource::TransitionResource(CommandContext& Ctx)
 #ifdef DILIGENT_DEVELOPMENT
 void ShaderResourceCacheD3D12::Resource::DvpVerifyResourceState()
 {
+    if (IsNull())
+        return;
+
     static_assert(SHADER_RESOURCE_TYPE_LAST == 8, "Please update this function to handle the new resource type");
     switch (Type)
     {
