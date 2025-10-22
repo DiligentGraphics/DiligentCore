@@ -172,6 +172,11 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&                   Me
     {
         Resource& Res               = GetRootTable(InlineConstInfo.RootIndex).GetResource(InlineConstInfo.OffsetFromTableStart);
         Res.CPUDescriptorHandle.ptr = reinterpret_cast<SIZE_T>(pCurrInlineConstValueStorage);
+        // Note that normally resource type is set when a resource is bound to the cache.
+        // For inline constants, we set it here during tinitialization.
+        Res.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
+        // Store the number of constant values in BufferRangeSize
+        Res.BufferRangeSize = InlineConstInfo.NumValues;
         pCurrInlineConstValueStorage += InlineConstInfo.NumValues;
     }
     VERIFY_EXPR(pCurrInlineConstValueStorage == GetInlineConstantStorage() + TotalInlineConstantValues);
@@ -262,12 +267,19 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
             VERIFY_EXPR(RootConsts.TableOffsetInGroupAllocation == RootParameter::InvalidTableOffsetInGroupAllocation);
             VERIFY_EXPR(RootConsts.d3d12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS);
 
-            GetResource(ResIdx).CPUDescriptorHandle.ptr = reinterpret_cast<SIZE_T>(pCurrInlineConstValueStorage);
+            Resource& Res               = GetResource(ResIdx);
+            Res.CPUDescriptorHandle.ptr = reinterpret_cast<SIZE_T>(pCurrInlineConstValueStorage);
+            // Note that normally resource type is set when a resource is bound to the cache.
+            // For inline constants, we set it here during tinitialization.
+            Res.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
+            // Store the number of constant values in BufferRangeSize
+            Res.BufferRangeSize = RootConsts.d3d12RootParam.Constants.Num32BitValues;
+
             pCurrInlineConstValueStorage += RootConsts.d3d12RootParam.Constants.Num32BitValues;
 
             new (&GetRootTable(RootConsts.RootIndex)) RootTable{
                 1,
-                &GetResource(ResIdx),
+                &Res,
                 false //IsRootView
             };
             ++ResIdx;
