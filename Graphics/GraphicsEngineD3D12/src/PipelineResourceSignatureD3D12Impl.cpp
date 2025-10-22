@@ -193,6 +193,8 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
     // Cache table sizes for static resources
     std::array<Uint32, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER + 1> StaticResCacheTblSizes{};
 
+    ShaderResourceCacheD3D12::InlineConstantInfoVectorType StaticResInlineConstInfo;
+
     // Allocate registers for immutable samplers first
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)
     {
@@ -253,7 +255,22 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
                 // Samplers at root index D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER (3)
                 SigRootIndex            = d3d12DescriptorRangeType;
                 SigOffsetFromTableStart = StaticResCacheTblSizes[SigRootIndex];
-                StaticResCacheTblSizes[SigRootIndex] += ResDesc.ArraySize;
+
+                if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+                {
+                    ShaderResourceCacheD3D12::InlineConstantParamInfo InlineConstInfo;
+                    InlineConstInfo.RootIndex            = SigRootIndex;
+                    InlineConstInfo.OffsetFromTableStart = SigOffsetFromTableStart;
+                    InlineConstInfo.NumValues            = ResDesc.ArraySize;
+                    StaticResInlineConstInfo.push_back(InlineConstInfo);
+
+                    // For inline constants, count only one resource as the ArraySize is the number of 4-byte constants
+                    StaticResCacheTblSizes[SigRootIndex] += 1;
+                }
+                else
+                {
+                    StaticResCacheTblSizes[SigRootIndex] += ResDesc.ArraySize;
+                }
             }
 
             if (IsRTSizedArray)
@@ -337,7 +354,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
                     SigRootIndex,
                     SigOffsetFromTableStart,
                     SrcImmutableSamplerInd != InvalidImmutableSamplerIndex,
-                    d3d12RootParamType //
+                    d3d12RootParamType,
                 };
         }
         else
@@ -366,7 +383,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
 
     if (GetNumStaticResStages() > 0)
     {
-        m_pStaticResCache->Initialize(GetRawAllocator(), static_cast<Uint32>(StaticResCacheTblSizes.size()), StaticResCacheTblSizes.data());
+        m_pStaticResCache->Initialize(GetRawAllocator(), static_cast<Uint32>(StaticResCacheTblSizes.size()), StaticResCacheTblSizes.data(), StaticResInlineConstInfo);
     }
     else
     {
