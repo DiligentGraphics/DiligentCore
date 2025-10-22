@@ -443,27 +443,47 @@ void PipelineResourceSignatureD3D12Impl::CopyStaticResources(ShaderResourceCache
 
         Uint32 SrcCacheOffset = Attr.OffsetFromTableStart(SrcCacheType);
         Uint32 DstCacheOffset = Attr.OffsetFromTableStart(DstCacheType);
-        for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd, ++SrcCacheOffset, ++DstCacheOffset)
+        if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
         {
-            const ShaderResourceCacheD3D12::Resource& SrcRes = SrcRootTable.GetResource(SrcCacheOffset);
-            if (!SrcRes.pObject)
-            {
-                if (DstCacheType == ResourceCacheContentType::SRB)
-                    LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
-                continue;
-            }
+            VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can be marked as INLINE_CONSTANTS.");
 
+            const ShaderResourceCacheD3D12::Resource& SrcRes = SrcRootTable.GetResource(SrcCacheOffset);
             const ShaderResourceCacheD3D12::Resource& DstRes = DstRootTable.GetResource(DstCacheOffset);
-            if (DstRes.pObject != SrcRes.pObject)
+            VERIFY(SrcRes.CPUDescriptorHandle.ptr != 0, "Inline constant resource must have valid CPU descriptor handle.");
+            VERIFY(DstRes.CPUDescriptorHandle.ptr != 0, "Inline constant resource must have valid CPU descriptor handle.");
+
+            // For inline constants, array size is the number of 4-byte constant values
+            const Uint32 NumConstantValues = ResDesc.ArraySize;
+            // Copy the actual constant values.
+            // For inline constants, CPUDescriptorHandle.ptr stores the pointer to the constant values buffer.
+            memcpy(reinterpret_cast<void*>(DstRes.CPUDescriptorHandle.ptr),
+                   reinterpret_cast<const void*>(SrcRes.CPUDescriptorHandle.ptr),
+                   NumConstantValues * sizeof(Uint32));
+        }
+        else
+        {
+            for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd, ++SrcCacheOffset, ++DstCacheOffset)
             {
-                DEV_CHECK_ERR(DstRes.pObject == nullptr, "Static resource has already been initialized, and the new resource does not match previously assigned resource.");
-                DstResourceCache.CopyResource(d3d12Device, DstRootIndex, DstCacheOffset, SrcRes);
-            }
-            else
-            {
-                VERIFY_EXPR(DstRes.pObject == SrcRes.pObject);
-                VERIFY_EXPR(DstRes.Type == SrcRes.Type);
-                VERIFY_EXPR(DstRes.CPUDescriptorHandle.ptr == SrcRes.CPUDescriptorHandle.ptr);
+                const ShaderResourceCacheD3D12::Resource& SrcRes = SrcRootTable.GetResource(SrcCacheOffset);
+                if (!SrcRes.pObject)
+                {
+                    if (DstCacheType == ResourceCacheContentType::SRB)
+                        LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
+                    continue;
+                }
+
+                const ShaderResourceCacheD3D12::Resource& DstRes = DstRootTable.GetResource(DstCacheOffset);
+                if (DstRes.pObject != SrcRes.pObject)
+                {
+                    DEV_CHECK_ERR(DstRes.pObject == nullptr, "Static resource has already been initialized, and the new resource does not match previously assigned resource.");
+                    DstResourceCache.CopyResource(d3d12Device, DstRootIndex, DstCacheOffset, SrcRes);
+                }
+                else
+                {
+                    VERIFY_EXPR(DstRes.pObject == SrcRes.pObject);
+                    VERIFY_EXPR(DstRes.Type == SrcRes.Type);
+                    VERIFY_EXPR(DstRes.CPUDescriptorHandle.ptr == SrcRes.CPUDescriptorHandle.ptr);
+                }
             }
         }
     }
