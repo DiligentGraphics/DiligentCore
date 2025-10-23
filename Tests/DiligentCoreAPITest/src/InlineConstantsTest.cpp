@@ -137,6 +137,8 @@ protected:
         pEnv->Reset();
     }
 
+    static void TestSignatures(Uint32 NumSignatures);
+
     static void Present()
     {
         GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
@@ -163,7 +165,7 @@ InlineConstants::Resources InlineConstants::sm_Res;
 FastRandFloat              InlineConstants::sm_Rnd{0, 0.f, 1.f};
 
 
-TEST_F(InlineConstants, ResourceSignature)
+void InlineConstants::TestSignatures(Uint32 NumSignatures)
 {
     GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice    = pEnv->GetDevice();
@@ -191,6 +193,9 @@ TEST_F(InlineConstants, ResourceSignature)
             SHADER_RESOURCE_VARIABLE_TYPE PosType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_type);
             SHADER_RESOURCE_VARIABLE_TYPE ColType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(col_type);
 
+            RefCntAutoPtr<IPipelineResourceSignature> pPosSign;
+            RefCntAutoPtr<IPipelineResourceSignature> pColSign;
+
             PipelineResourceSignatureDescX SignDesc{"Inline constants test"};
             SignDesc
                 .AddResource(SHADER_TYPE_VERTEX, "cb0_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
@@ -200,9 +205,19 @@ TEST_F(InlineConstants, ResourceSignature)
                 .AddResource(SHADER_TYPE_VERTEX, "tex0_mut", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
                 .AddResource(SHADER_TYPE_VERTEX, "tex0_dyn", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
 
-                .AddResource(SHADER_TYPE_VERTEX, "cbInlinePositions", kNumPosConstants, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, PosType, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+                .AddResource(SHADER_TYPE_VERTEX, "cbInlinePositions", kNumPosConstants, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, PosType, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
 
-                .AddResource(SHADER_TYPE_VERTEX, "cb1_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            if (NumSignatures == 2)
+            {
+                pDevice->CreatePipelineResourceSignature(SignDesc, &pPosSign);
+                ASSERT_TRUE(pPosSign);
+
+                SignDesc.Clear();
+                SignDesc.Name         = "Inline constants test 2";
+                SignDesc.BindingIndex = 1;
+            }
+
+            SignDesc.AddResource(SHADER_TYPE_VERTEX, "cb1_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
                 .AddResource(SHADER_TYPE_VERTEX, "cb1_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
                 .AddResource(SHADER_TYPE_VERTEX, "cb1_dyn", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
                 .AddResource(SHADER_TYPE_VERTEX, "tex1_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
@@ -217,16 +232,29 @@ TEST_F(InlineConstants, ResourceSignature)
                 .AddResource(SHADER_TYPE_VERTEX, "tex2_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
                 .AddResource(SHADER_TYPE_VERTEX, "tex2_mut", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
                 .AddResource(SHADER_TYPE_VERTEX, "tex2_dyn", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
-            RefCntAutoPtr<IPipelineResourceSignature> pSign;
-            pDevice->CreatePipelineResourceSignature(SignDesc, &pSign);
-            ASSERT_TRUE(pSign);
 
-            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb0_stat")->Set(pConstBuffer);
-            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex0_stat")->Set(pTexSRV);
-            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb1_stat")->Set(pConstBuffer);
-            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex1_stat")->Set(pTexSRV);
-            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb2_stat")->Set(pConstBuffer);
-            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex2_stat")->Set(pTexSRV);
+            if (NumSignatures == 1)
+            {
+                pDevice->CreatePipelineResourceSignature(SignDesc, &pPosSign);
+                ASSERT_TRUE(pPosSign);
+                pColSign = pPosSign;
+            }
+            else if (NumSignatures == 2)
+            {
+                pDevice->CreatePipelineResourceSignature(SignDesc, &pColSign);
+                ASSERT_TRUE(pColSign);
+            }
+            else
+            {
+                GTEST_FAIL() << "Invalid number of signatures: " << NumSignatures;
+            }
+
+            pPosSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb0_stat")->Set(pConstBuffer);
+            pPosSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex0_stat")->Set(pTexSRV);
+            pColSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb1_stat")->Set(pConstBuffer);
+            pColSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex1_stat")->Set(pTexSRV);
+            pColSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb2_stat")->Set(pConstBuffer);
+            pColSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex2_stat")->Set(pTexSRV);
 
             GraphicsPipelineStateCreateInfoX PsoCI{"Inline constants test"};
             PsoCI
@@ -234,7 +262,11 @@ TEST_F(InlineConstants, ResourceSignature)
                 .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
                 .AddShader(sm_Res.pVS)
                 .AddShader(sm_Res.pPS)
-                .AddSignature(pSign);
+                .AddSignature(pPosSign);
+            if (NumSignatures == 2)
+            {
+                PsoCI.AddSignature(pColSign);
+            }
             PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
             RefCntAutoPtr<IPipelineState> pPSO;
@@ -243,46 +275,57 @@ TEST_F(InlineConstants, ResourceSignature)
 
             if (PosType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
-                IShaderResourceVariable* pVar = pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                IShaderResourceVariable* pVar = pPosSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
                 ASSERT_TRUE(pVar);
                 pVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
             }
 
             if (ColType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
-                IShaderResourceVariable* pVar = pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                IShaderResourceVariable* pVar = pColSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
                 ASSERT_TRUE(pVar);
                 pVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
             }
 
-            RefCntAutoPtr<IShaderResourceBinding> pSRB;
-            pSign->CreateShaderResourceBinding(&pSRB, true);
-            ASSERT_TRUE(pSRB);
+            RefCntAutoPtr<IShaderResourceBinding> pPosSRB;
+            pPosSign->CreateShaderResourceBinding(&pPosSRB, true);
+            ASSERT_TRUE(pPosSRB);
 
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb0_mut")->Set(pConstBuffer);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex0_mut")->Set(pTexSRV);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb1_mut")->Set(pConstBuffer);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex1_mut")->Set(pTexSRV);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb2_mut")->Set(pConstBuffer);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex2_mut")->Set(pTexSRV);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb0_dyn")->Set(pConstBuffer);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex0_dyn")->Set(pTexSRV);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb1_dyn")->Set(pConstBuffer);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex1_dyn")->Set(pTexSRV);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb2_dyn")->Set(pConstBuffer);
-            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex2_dyn")->Set(pTexSRV);
+            RefCntAutoPtr<IShaderResourceBinding> pColSRB;
+            if (NumSignatures == 1)
+            {
+                pColSRB = pPosSRB;
+            }
+            else if (NumSignatures == 2)
+            {
+                pColSign->CreateShaderResourceBinding(&pColSRB, true);
+                ASSERT_TRUE(pColSRB);
+            }
+
+            pPosSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb0_mut")->Set(pConstBuffer);
+            pPosSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex0_mut")->Set(pTexSRV);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb1_mut")->Set(pConstBuffer);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex1_mut")->Set(pTexSRV);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb2_mut")->Set(pConstBuffer);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex2_mut")->Set(pTexSRV);
+            pPosSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb0_dyn")->Set(pConstBuffer);
+            pPosSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex0_dyn")->Set(pTexSRV);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb1_dyn")->Set(pConstBuffer);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex1_dyn")->Set(pTexSRV);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb2_dyn")->Set(pConstBuffer);
+            pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex2_dyn")->Set(pTexSRV);
 
             IShaderResourceVariable* pPosVar = nullptr;
             if (PosType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
-                pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                pPosVar = pPosSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
                 ASSERT_TRUE(pPosVar);
             }
 
             IShaderResourceVariable* pColVar = nullptr;
             if (ColType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
-                pColVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                pColVar = pColSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
                 ASSERT_TRUE(pColVar);
             }
 
@@ -297,8 +340,13 @@ TEST_F(InlineConstants, ResourceSignature)
                 pColVar->SetInlineConstants(g_Colors, 0, kNumColConstants / 2);
             }
 
-            pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-            pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            pContext->CommitShaderResources(pPosSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+            if (NumSignatures == 2)
+            {
+                pContext->TransitionShaderResources(pColSRB);
+                pContext->CommitShaderResources(pColSRB, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            }
 
             if (pColVar != nullptr)
             {
@@ -331,6 +379,16 @@ TEST_F(InlineConstants, ResourceSignature)
                       << " Col " << GetShaderVariableTypeLiteralName(ColType) << std::endl;
         }
     }
+}
+
+TEST_F(InlineConstants, ResourceSignature)
+{
+    TestSignatures(1);
+}
+
+TEST_F(InlineConstants, TwoResourceSignatures)
+{
+    TestSignatures(2);
 }
 
 } // namespace
