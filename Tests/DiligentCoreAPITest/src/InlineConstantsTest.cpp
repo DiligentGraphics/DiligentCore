@@ -191,7 +191,7 @@ TEST_F(InlineConstants, ResourceSignature)
             SHADER_RESOURCE_VARIABLE_TYPE PosType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_type);
             SHADER_RESOURCE_VARIABLE_TYPE ColType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(col_type);
 
-            PipelineResourceSignatureDescX SignDesc;
+            PipelineResourceSignatureDescX SignDesc{"Inline constants test"};
             SignDesc
                 .AddResource(SHADER_TYPE_VERTEX, "cb0_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
                 .AddResource(SHADER_TYPE_VERTEX, "cb0_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
