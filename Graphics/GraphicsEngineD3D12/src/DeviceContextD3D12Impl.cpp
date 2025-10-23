@@ -418,6 +418,22 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
                           "There are no dynamic root buffers in the cache, but the bit in DynamicSRBMask is set. This may indicate that resources "
                           "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
         }
+
+        if (Uint64 RootConstantsMask = pResourceCache->GetRootConstantsMask())
+        {
+            VERIFY((RootInfo.InlineConstantsSRBMask & SignBit) != 0,
+                   "There are root constants in the cache, but the bit in InlineConstantsSRBMask is not set. "
+                   "This may be a bug because root constants mask in the cache never changes after SRB creation, "
+                   "while RootInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
+            pSignature->CommitRootConstants(CommitAttribs, RootConstantsMask);
+        }
+        else
+        {
+            VERIFY((RootInfo.InlineConstantsSRBMask & SignBit) == 0,
+                   "There are no root constants in the cache, but the bit in InlineConstantsSRBMask is set. "
+                   "This may be a bug because root constants mask in the cache never changes after SRB creation, "
+                   "while RootInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
+        }
     }
 
     VERIFY_EXPR((CommitSRBMask & RootInfo.ActiveSRBMask) == 0);
