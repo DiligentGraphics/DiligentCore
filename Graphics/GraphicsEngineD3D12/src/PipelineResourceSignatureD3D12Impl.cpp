@@ -730,12 +730,18 @@ void PipelineResourceSignatureD3D12Impl::UpdateShaderResourceBindingMap(Resource
 
         if ((ResDesc.ShaderStages & ShaderStage) != 0)
         {
+            VERIFY((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) == 0 || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+                   "Only constant buffers can be marked as INLINE_CONSTANTS. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
+            const Uint32 ArraySize = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) ?
+                1 : // For inline constants, ArraySize is the number of 4-byte constants
+                ResDesc.ArraySize;
+
             ResourceBinding::BindInfo BindInfo //
                 {
                     Attribs.Register,
                     Attribs.Space + BaseRegisterSpace,
-                    ResDesc.ArraySize,
-                    ResDesc.ResourceType //
+                    ArraySize,
+                    ResDesc.ResourceType,
                 };
             bool IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, BindInfo).second;
             VERIFY(IsUnique, "Shader resource '", ResDesc.Name,
