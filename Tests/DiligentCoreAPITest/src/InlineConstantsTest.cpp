@@ -97,6 +97,9 @@ float4 g_Colors[] = {
     float4{0.f, 0.f, 1.f, 1.f},
 };
 
+constexpr Uint32 kNumPosConstants = sizeof(g_Positions) / 4;
+constexpr Uint32 kNumColConstants = sizeof(g_Colors) / 4;
+
 class InlineConstants : public ::testing::Test
 {
 protected:
@@ -171,6 +174,13 @@ TEST_F(InlineConstants, ResourceSignature)
         GTEST_SKIP();
     }
 
+    RefCntAutoPtr<IBuffer> pConstBuffer = pEnv->CreateBuffer({"InlineConstants - dummy const buffer", 256, BIND_UNIFORM_BUFFER});
+    ASSERT_TRUE(pConstBuffer);
+    RefCntAutoPtr<ITexture> pTexture = pEnv->CreateTexture("InlineConstants - dummy texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 64, 64);
+    ASSERT_TRUE(pTexture);
+    ITextureView* pTexSRV = pTexture->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+    ASSERT_TRUE(pTexSRV);
+
     for (Uint32 pos_type = 0; pos_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++pos_type)
     {
         for (Uint32 col_type = 0; col_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++col_type)
@@ -183,11 +193,40 @@ TEST_F(InlineConstants, ResourceSignature)
 
             PipelineResourceSignatureDescX SignDesc;
             SignDesc
-                .AddResource(SHADER_TYPE_VERTEX, "cbInlinePositions", Uint32{sizeof(g_Positions) / 4}, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, PosType, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-                .AddResource(SHADER_TYPE_VERTEX, "cbInlineColors", Uint32{sizeof(g_Colors) / 4}, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, ColType, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
+                .AddResource(SHADER_TYPE_VERTEX, "cb0_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "cb0_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "cb0_dyn", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex0_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex0_mut", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "tex0_dyn", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+
+                .AddResource(SHADER_TYPE_VERTEX, "cbInlinePositions", kNumPosConstants, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, PosType, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+
+                .AddResource(SHADER_TYPE_VERTEX, "cb1_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "cb1_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "cb1_dyn", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex1_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex1_mut", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "tex1_dyn", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+
+                .AddResource(SHADER_TYPE_VERTEX, "cbInlineColors", kNumColConstants, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, ColType, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+
+                .AddResource(SHADER_TYPE_VERTEX, "cb2_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "cb2_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "cb2_dyn", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex2_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "tex2_mut", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
+                .AddResource(SHADER_TYPE_VERTEX, "tex2_dyn", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
             RefCntAutoPtr<IPipelineResourceSignature> pSign;
             pDevice->CreatePipelineResourceSignature(SignDesc, &pSign);
             ASSERT_TRUE(pSign);
+
+            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb0_stat")->Set(pConstBuffer);
+            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex0_stat")->Set(pTexSRV);
+            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb1_stat")->Set(pConstBuffer);
+            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex1_stat")->Set(pTexSRV);
+            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cb2_stat")->Set(pConstBuffer);
+            pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "tex2_stat")->Set(pTexSRV);
 
             GraphicsPipelineStateCreateInfoX PsoCI{"Inline constants test"};
             PsoCI
@@ -206,44 +245,90 @@ TEST_F(InlineConstants, ResourceSignature)
             {
                 IShaderResourceVariable* pVar = pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
                 ASSERT_TRUE(pVar);
-                pVar->SetInlineConstants(g_Positions, 0, sizeof(g_Positions) / 4);
+                pVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
             }
 
             if (ColType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
                 IShaderResourceVariable* pVar = pSign->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
                 ASSERT_TRUE(pVar);
-                pVar->SetInlineConstants(g_Colors, 0, sizeof(g_Colors) / 4);
+                pVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
             }
 
             RefCntAutoPtr<IShaderResourceBinding> pSRB;
             pSign->CreateShaderResourceBinding(&pSRB, true);
             ASSERT_TRUE(pSRB);
 
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb0_mut")->Set(pConstBuffer);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex0_mut")->Set(pTexSRV);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb1_mut")->Set(pConstBuffer);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex1_mut")->Set(pTexSRV);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb2_mut")->Set(pConstBuffer);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex2_mut")->Set(pTexSRV);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb0_dyn")->Set(pConstBuffer);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex0_dyn")->Set(pTexSRV);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb1_dyn")->Set(pConstBuffer);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex1_dyn")->Set(pTexSRV);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cb2_dyn")->Set(pConstBuffer);
+            pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "tex2_dyn")->Set(pTexSRV);
+
+            IShaderResourceVariable* pPosVar = nullptr;
             if (PosType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
-                IShaderResourceVariable* pVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
-                ASSERT_TRUE(pVar);
-                pVar->SetInlineConstants(g_Positions, 0, sizeof(g_Positions) / 4);
+                pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                ASSERT_TRUE(pPosVar);
             }
 
+            IShaderResourceVariable* pColVar = nullptr;
             if (ColType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
-                IShaderResourceVariable* pVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
-                ASSERT_TRUE(pVar);
-                pVar->SetInlineConstants(g_Colors, 0, sizeof(g_Colors) / 4);
+                pColVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                ASSERT_TRUE(pColVar);
             }
 
             ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
             pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
             pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
+
+            if (pColVar != nullptr)
+            {
+                // Set first half of color constants before committing SRB
+                pColVar->SetInlineConstants(g_Colors, 0, kNumColConstants / 2);
+            }
+
             pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
             pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+            if (pColVar != nullptr)
+            {
+                // Set second half of color constants after committing SRB
+                pColVar->SetInlineConstants(g_Colors[0].Data() + kNumColConstants / 2, kNumColConstants / 2, kNumColConstants / 2);
+            }
+
             pContext->SetPipelineState(pPSO);
-            pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+
+            if (pPosVar == nullptr)
+            {
+                // Draw both triangles as positions are static
+                pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+            }
+            else
+            {
+                // Draw first triangle
+                pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+                // Draw second triangle
+                pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+            }
 
             Present();
+
+            std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                      << " Pos " << GetShaderVariableTypeLiteralName(PosType) << ','
+                      << " Col " << GetShaderVariableTypeLiteralName(ColType) << std::endl;
         }
     }
 }
