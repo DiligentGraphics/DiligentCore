@@ -179,23 +179,6 @@ bool VerifyResourceBinding(const char*                 ExpectedResourceTypeName,
         return false;
     }
 
-    if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
-    {
-        if (pResourceImpl != nullptr)
-        {
-            std::stringstream ss;
-            ss << "Failed to bind " << ExpectedResourceTypeName << " '" << pResourceImpl->GetDesc().Name << "' to variable '"
-               << GetShaderResourcePrintName(ResDesc, BindInfo.ArrayIndex) << '\'';
-            if (SignatureName != nullptr)
-            {
-                ss << " defined by signature '" << SignatureName << '\'';
-            }
-            ss << ". Inline constants must be set using IShaderResourceVariable::SetInlineConstants() method.";
-            RESOURCE_VALIDATION_FAILURE(ss.str());
-            return false;
-        }
-    }
-
     if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC &&
         (BindInfo.Flags & SET_SHADER_RESOURCE_FLAG_ALLOW_OVERWRITE) == 0 &&
         pCachedObject != nullptr && pCachedObject != pResourceImpl)
@@ -248,6 +231,20 @@ bool VerifyConstantBufferBinding(const PipelineResourceDesc& ResDesc,
                                  Uint64                      CachedRangeSize,
                                  const char*                 SignatureName)
 {
+    if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+    {
+        std::stringstream ss;
+        ss << "Error binding buffer to variable '" << GetShaderResourcePrintName(ResDesc, BindInfo.ArrayIndex) << '\'';
+        if (SignatureName != nullptr)
+        {
+            ss << " defined by signature '" << SignatureName << '\'';
+        }
+        ss << ". The variable is marked as inline constants and cannot be bound to a buffer. "
+              "Use IShaderResourceVariable::SetInlineConstants() method to set the inline constant values.";
+        RESOURCE_VALIDATION_FAILURE(ss.str());
+        return false;
+    }
+
     bool BindingOK = VerifyResourceBinding("buffer", ResDesc, BindInfo, pBufferImpl, pCachedBuffer, SignatureName);
 
     if (pBufferImpl != nullptr)
@@ -556,6 +553,12 @@ bool VerifyDynamicBufferOffset(const PipelineResourceDesc& ResDesc,
                                Uint64                      BufferDynamicOffset)
 {
     bool BindingOK = true;
+
+    if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+    {
+        RESOURCE_VALIDATION_FAILURE("Error setting dynamic buffer offset for variable '", ResDesc.Name, "': inline constants do not support dynamic offsets.");
+        BindingOK = false;
+    }
 
     if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) != 0)
     {
