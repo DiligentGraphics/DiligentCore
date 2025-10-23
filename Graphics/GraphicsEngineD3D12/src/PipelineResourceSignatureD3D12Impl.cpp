@@ -830,6 +830,14 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
     for (Uint32 ArrIndex = 0; ArrIndex < D3DAttribs.BindCount; ++ArrIndex)
     {
         const ShaderResourceCacheD3D12::Resource& CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrIndex);
+        if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+        {
+            VERIFY(CachedRes.IsNull(), "Inline constants should not have any resource bound to them.");
+            VERIFY(CachedRes.CPUDescriptorHandle.ptr != 0, "Inline constant resource must have valid CPU descriptor handle.");
+            // Inline constants are not actual resources
+            continue;
+        }
+
         if (CachedRes.IsNull())
         {
             LOG_ERROR_MESSAGE("No resource is bound to variable '", GetShaderResourcePrintName(D3DAttribs.Name, D3DAttribs.BindCount, ArrIndex),
