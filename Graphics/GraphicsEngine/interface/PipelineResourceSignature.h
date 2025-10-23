@@ -285,6 +285,9 @@ struct PipelineResourceDesc
     SHADER_TYPE                    ShaderStages  DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// Resource array size (must be 1 for non-array resources).
+    ///
+    /// For inline constants (see PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS),
+    /// this member specifies the number of 4-byte values.
     Uint32                         ArraySize     DEFAULT_INITIALIZER(1);
 
     /// Resource type, see Diligent::SHADER_RESOURCE_TYPE.
