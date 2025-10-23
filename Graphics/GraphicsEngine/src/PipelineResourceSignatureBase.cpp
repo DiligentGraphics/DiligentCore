@@ -111,10 +111,24 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                                     ": ", GetPipelineResourceFlagsString(AllowedResourceFlags, false, ", "), ".");
         }
 
-        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0 && Res.Flags != PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
         {
-            LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
-                                    "). INLINE_CONSTANTS flag cannot be combined with other flags.");
+            if (Res.Flags != PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+            {
+                LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
+                                        "). INLINE_CONSTANTS flag cannot be combined with other flags.");
+            }
+
+            if (Res.ArraySize == 0)
+            {
+                LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize must be greater than 0 for inline constants.");
+            }
+
+            if (Res.ArraySize > 64)
+            {
+                LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize (", Res.ArraySize,
+                                        ") exceeds the maximum allowed value (64) for inline constants.");
+            }
         }
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0 && Features.FormattedBuffers == DEVICE_FEATURE_STATE_DISABLED)
