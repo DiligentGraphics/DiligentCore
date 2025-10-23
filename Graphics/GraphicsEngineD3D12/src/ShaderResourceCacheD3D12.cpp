@@ -178,6 +178,8 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&                   Me
         // Store the number of constant values in BufferRangeSize
         Res.BufferRangeSize = InlineConstInfo.NumValues;
         pCurrInlineConstValueStorage += InlineConstInfo.NumValues;
+
+        m_RootConstantsMask |= (Uint64{1} << Uint64{InlineConstInfo.RootIndex});
     }
     VERIFY_EXPR(pCurrInlineConstValueStorage == GetInlineConstantStorage() + TotalInlineConstantValues);
 }
@@ -283,6 +285,8 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
                 false //IsRootView
             };
             ++ResIdx;
+
+            m_RootConstantsMask |= (Uint64{1} << Uint64{RootConsts.RootIndex});
 
 #ifdef DILIGENT_DEBUG
             RootTableInitFlags[RootConsts.RootIndex] = true;
