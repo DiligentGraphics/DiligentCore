@@ -91,11 +91,11 @@ struct D3DShaderResourceAttribs
     //            4               4                 24
     // bit | 0  1  2  3   |  4  5  6  7  |  8   9  10   ...   31  |
     //     |              |              |                        |
-    //     |  InputType   |   SRV Dim    | SamplerOrTexSRVIdBits  |
-    static constexpr const Uint32 ShaderInputTypeBits    =  4;
-    static constexpr const Uint32 SRVDimBits             =  4;
-    static constexpr const Uint32 SamplerOrTexSRVIdBits  = 24;
-    static_assert(ShaderInputTypeBits + SRVDimBits + SamplerOrTexSRVIdBits == 32, "Attributes are better be packed into 32 bits");
+    //     |  InputType   |   SRV Dim    |     ExtraDataBits      |
+    static constexpr const Uint32 ShaderInputTypeBits =  4;
+    static constexpr const Uint32 SRVDimBits          =  4;
+    static constexpr const Uint32 ExtraDataBits       = 24;
+    static_assert(ShaderInputTypeBits + SRVDimBits + ExtraDataBits == 32, "Attributes are better be packed into 32 bits");
 
     static_assert(D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER < (1 << ShaderInputTypeBits), "Not enough bits to represent D3D_SHADER_INPUT_TYPE");
     static_assert(D3D_SRV_DIMENSION_BUFFEREX            < (1 << SRVDimBits),          "Not enough bits to represent D3D_SRV_DIMENSION");
@@ -105,17 +105,17 @@ private:
          // There originally was a problem when the type of InputType was D3D_SHADER_INPUT_TYPE:
          // the value of D3D_SIT_UAV_RWBYTEADDRESS (8) was interpreted as -8 (as the underlying enum type
          // is signed) causing errors
-/*20.0*/ const Uint32  InputType          : ShaderInputTypeBits;     // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER == 11
-/*20.4*/ const Uint32  SRVDimension       : SRVDimBits;              // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
-/*21.0*/       Uint32  SamplerOrTexSRVId  : SamplerOrTexSRVIdBits;   // Max value: 2^24-1
+/*20.0*/ const Uint32  InputType    : ShaderInputTypeBits;     // Max value: D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER == 11
+/*20.4*/ const Uint32  SRVDimension : SRVDimBits;              // Max value: D3D_SRV_DIMENSION_BUFFEREX == 11
+/*21.0*/       Uint32  ExtraData    : ExtraDataBits;           // Max value: 2^24-1
 /*24  */ // End of structure
 
     // clang-format on
 
 public:
-    static constexpr const Uint32 InvalidSamplerId = (1U << SamplerOrTexSRVIdBits) - 1U;
+    static constexpr const Uint32 InvalidSamplerId = (1U << ExtraDataBits) - 1U;
     static constexpr const Uint32 MaxSamplerId     = InvalidSamplerId - 1;
-    static constexpr const Uint32 InvalidTexSRVId  = (1U << SamplerOrTexSRVIdBits) - 1U;
+    static constexpr const Uint32 InvalidTexSRVId  = (1U << ExtraDataBits) - 1U;
     static constexpr const auto   InvalidBindPoint = std::numeric_limits<decltype(BindPoint)>::max();
 
 
@@ -127,20 +127,20 @@ public:
                              D3D_SRV_DIMENSION     _SRVDimension,
                              Uint32                _SamplerId) noexcept :
         // clang-format off
-        Name               {_Name},
-        BindPoint          {_BindPoint},
-        BindCount          {_BindCount},
-        Space              {_Space},
-        InputType          {static_cast<decltype(InputType)>   (_InputType)   },
-        SRVDimension       {static_cast<decltype(SRVDimension)>(_SRVDimension)},
-        SamplerOrTexSRVId  {_SamplerId}
+        Name        {_Name},
+        BindPoint   {_BindPoint},
+        BindCount   {_BindCount},
+        Space       {_Space},
+        InputType   {static_cast<decltype(InputType)>   (_InputType)   },
+        SRVDimension{static_cast<decltype(SRVDimension)>(_SRVDimension)},
+        ExtraData   {_SamplerId}
     // clang-format on
     {
 #ifdef DILIGENT_DEBUG
         // clang-format off
-        VERIFY(_InputType    < (1 << ShaderInputTypeBits),   "Shader input type is out of expected range");
-        VERIFY(_SRVDimension < (1 << SRVDimBits),            "SRV dimensions is out of expected range");
-        VERIFY(_SamplerId    < (1 << SamplerOrTexSRVIdBits), "SamplerOrTexSRVId is out of representable range");
+        VERIFY(_InputType    < (1 << ShaderInputTypeBits), "Shader input type is out of expected range");
+        VERIFY(_SRVDimension < (1 << SRVDimBits),          "SRV dimensions is out of expected range");
+        VERIFY(_SamplerId    < (1 << ExtraDataBits),       "SamplerId is out of representable range");
         // clang-format on
 
         if (_InputType == D3D_SIT_TEXTURE && _SRVDimension != D3D_SRV_DIMENSION_BUFFER)
@@ -178,7 +178,7 @@ public:
             rhs.Space,
             rhs.GetInputType(),
             rhs.GetSRVDimension(),
-            rhs.SamplerOrTexSRVId
+            rhs.ExtraData
         }
     // clang-format on
     {
@@ -210,7 +210,7 @@ public:
 
     bool IsCombinedWithSampler() const
     {
-        return GetInputType() == D3D_SIT_TEXTURE && SamplerOrTexSRVId != InvalidSamplerId;
+        return GetInputType() == D3D_SIT_TEXTURE && ExtraData != InvalidSamplerId;
     }
 
     bool IsCombinedWithTexSRV() const
@@ -230,12 +230,12 @@ public:
             Space == Attribs.Space &&
             InputType == Attribs.InputType &&
             SRVDimension == Attribs.SRVDimension &&
-            SamplerOrTexSRVId == Attribs.SamplerOrTexSRVId;
+            ExtraData == Attribs.ExtraData;
     }
 
     size_t GetHash() const
     {
-        return ComputeHash(BindPoint, BindCount, Space, InputType, SRVDimension, SamplerOrTexSRVId);
+        return ComputeHash(BindPoint, BindCount, Space, InputType, SRVDimension, ExtraData);
     }
 
     HLSLShaderResourceDesc GetHLSLResourceDesc() const
@@ -253,7 +253,13 @@ public:
     Uint32 GetCombinedSamplerId() const
     {
         VERIFY(GetInputType() == D3D_SIT_TEXTURE && GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER, "Invalid input type: D3D_SIT_TEXTURE is expected");
-        return SamplerOrTexSRVId;
+        return ExtraData;
+    }
+
+    Uint32 GetConstantBufferSize() const
+    {
+        VERIFY(GetInputType() == D3D_SIT_CBUFFER, "Invalid input type: D3D_SIT_CBUFFER is expected");
+        return ExtraData;
     }
 
     SHADER_RESOURCE_TYPE    GetShaderResourceType() const;
@@ -265,14 +271,20 @@ private:
     void SetTexSRVId(Uint32 TexSRVId)
     {
         VERIFY(GetInputType() == D3D_SIT_SAMPLER, "Invalid input type: D3D_SIT_SAMPLER is expected");
-        VERIFY(TexSRVId < (1 << SamplerOrTexSRVIdBits), "TexSRVId (", TexSRVId, ") is out of representable range");
-        SamplerOrTexSRVId = TexSRVId;
+        VERIFY(TexSRVId < (1 << ExtraDataBits), "TexSRVId (", TexSRVId, ") is out of representable range");
+        ExtraData = TexSRVId;
     }
 
     Uint32 GetCombinedTexSRVId() const
     {
         VERIFY(GetInputType() == D3D_SIT_SAMPLER, "Invalid input type: D3D_SIT_SAMPLER is expected");
-        return SamplerOrTexSRVId;
+        return ExtraData;
+    }
+
+    void SetConstantBufferSize(Uint32 Size)
+    {
+        VERIFY(GetInputType() == D3D_SIT_CBUFFER, "Invalid input type: D3D_SIT_CBUFFER is expected");
+        ExtraData = Size;
     }
 };
 static_assert(sizeof(D3DShaderResourceAttribs) == sizeof(void*) + sizeof(Uint32) * 4, "Unexpected sizeof(D3DShaderResourceAttribs)");
@@ -543,6 +555,7 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
         {
             VERIFY_EXPR(CBAttribs.GetInputType() == D3D_SIT_CBUFFER);
             D3DShaderResourceAttribs* pNewCB = new (&GetCB(CurrCB++)) D3DShaderResourceAttribs{ResourceNamesPool, CBAttribs};
+            pNewCB->SetConstantBufferSize(CBReflection.Size);
             NewResHandler.OnNewCB(*pNewCB);
             if (LoadConstantBufferReflection)
                 CBReflections.emplace_back(std::move(CBReflection));
