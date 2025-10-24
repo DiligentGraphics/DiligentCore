@@ -1843,7 +1843,7 @@ PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE Resou
 
 PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIABLE_FLAGS Flags)
 {
-    static_assert(SHADER_VARIABLE_FLAG_LAST == (1 << 3), "Please update the switch below to handle the new shader variable flags");
+    static_assert(SHADER_VARIABLE_FLAG_LAST == (1 << 4), "Please update the switch below to handle the new shader variable flags");
     switch (Flags)
     {
         case SHADER_VARIABLE_FLAG_NONE:
@@ -1858,6 +1858,9 @@ PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIAB
         case SHADER_VARIABLE_FLAG_UNFILTERABLE_FLOAT_TEXTURE_WEBGPU:
         case SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU:
             return PIPELINE_RESOURCE_FLAG_NONE;
+
+        case SHADER_VARIABLE_FLAG_INLINE_CONSTANTS:
+            return PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS;
 
         default:
             UNEXPECTED("Unexpected shader variable flag");
