@@ -103,22 +103,30 @@ DILIGENT_TYPED_ENUM(SHADER_VARIABLE_FLAGS, Uint8)
     ///             flag in the internal pipeline resource signature.
     SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS = 1u << 0,
 
+    /// Indicates that the resource consists of inline constants
+    /// (also known as push constants in Vulkan or root constants in Direct3D12).
+    /// Applies to Diligent::SHADER_RESOURCE_TYPE_CONSTANT_BUFFER only.
+    /// 
+    /// \remarks    This flag directly translates to the Diligent::PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS
+    ///             flag in the internal pipeline resource signature.
+    SHADER_VARIABLE_FLAG_INLINE_CONSTANTS = 1u << 1,
+
     /// Indicates that the resource is an input attachment in general layout, which allows simultaneously
     /// reading from the resource through the input attachment and writing to it via color or depth-stencil
     /// attachment.
     ///
     /// \note This flag is only valid in Vulkan.
-    SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT_VK = 1u << 1,
+    SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT_VK = 1u << 2,
 
     /// Indicates that the resource is an unfilterable-float texture.
     ///
     /// \note This flag is only valid in WebGPU and ignored in other backends.
-    SHADER_VARIABLE_FLAG_UNFILTERABLE_FLOAT_TEXTURE_WEBGPU = 1u << 2,
+    SHADER_VARIABLE_FLAG_UNFILTERABLE_FLOAT_TEXTURE_WEBGPU = 1u << 3,
 
     /// Indicates that the resource is a non-filtering sampler.
     ///
     /// \note This flag is only valid in WebGPU and ignored in other backends.
-    SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU = 1u << 3,
+    SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU = 1u << 4,
 
     /// Special value that indicates the last flag in the enumeration.
     SHADER_VARIABLE_FLAG_LAST = SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU
