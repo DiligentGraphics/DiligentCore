@@ -97,7 +97,7 @@ void LoadShaderCodeVariableDesc(TD3DShaderReflectionType* pd3dReflecionType, Sha
         ShaderCodeVariableDesc MemberDesc;
         MemberDesc.Name = pd3dReflecionType->GetMemberTypeName(m);
 
-        auto idx = TypeDesc.AddMember(MemberDesc);
+        size_t idx = TypeDesc.AddMember(MemberDesc);
         VERIFY_EXPR(idx == m);
         auto* pd3dMemberType = pd3dReflecionType->GetMemberTypeByIndex(m);
         VERIFY_EXPR(pd3dMemberType != nullptr);
@@ -122,7 +122,7 @@ void LoadD3DShaderConstantBufferReflection(TShaderReflection* pBuffReflection, S
             VarDesc.Name   = d3dShaderVarDesc.Name;        // The variable name.
             VarDesc.Offset = d3dShaderVarDesc.StartOffset; // Offset from the start of the parent structure to the beginning of the variable.
 
-            auto idx = BufferDesc.AddVariable(VarDesc);
+            size_t idx = BufferDesc.AddVariable(VarDesc);
             VERIFY_EXPR(idx == var);
 
             auto* pd3dReflecionType = pVaribable->GetType();
@@ -187,7 +187,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
         pShaderReflection->GetResourceBindingDesc(Res, &BindingDesc);
 
         std::string Name;
-        const auto  ArrayIndex = Parsing::GetArrayIndex(BindingDesc.Name, Name);
+        const int   ArrayIndex = Parsing::GetArrayIndex(BindingDesc.Name, Name);
 
         if (BindingDesc.BindPoint == UINT32_MAX)
         {
@@ -232,7 +232,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
             VERIFY(BindCount == 1, "When array elements are enumerated individually, BindCount is expected to always be 1");
 
 #ifdef DILIGENT_DEBUG
-            for (const auto& ExistingRes : Resources)
+            for (const D3DShaderResourceAttribs& ExistingRes : Resources)
             {
                 VERIFY(Name.compare(ExistingRes.Name) != 0, "Resource with the same name has already been enumerated. All array elements are expected to be enumerated one after another");
             }
@@ -243,7 +243,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
                 pShaderReflection->GetResourceBindingDesc(ArrElem, &NextElemBindingDesc);
 
                 std::string NextElemName;
-                const auto  NextElemIndex = Parsing::GetArrayIndex(NextElemBindingDesc.Name, NextElemName);
+                const int   NextElemIndex = Parsing::GetArrayIndex(NextElemBindingDesc.Name, NextElemName);
 
                 // Make sure this case is handled correctly:
                 // "g_tex2DDiffuse[.]" != "g_tex2DDiffuse2[.]"
@@ -271,7 +271,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
 
         switch (BindingDesc.Type)
         {
-            // clang-format off
+                // clang-format off
             case D3D_SIT_CBUFFER:                       ++RC.NumCBs;                                                                           break;
             case D3D_SIT_TBUFFER:                       UNSUPPORTED( "TBuffers are not supported" );                                           break;
             case D3D_SIT_TEXTURE:                       ++(BindingDesc.Dimension == D3D_SRV_DIMENSION_BUFFER ? RC.NumBufSRVs : RC.NumTexSRVs); break;
@@ -315,7 +315,7 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
 
     for (size_t ResInd = 0; ResInd < Resources.size(); ++ResInd)
     {
-        const auto& Res = Resources[ResInd];
+        const D3DShaderResourceAttribs& Res = Resources[ResInd];
         switch (Res.GetInputType())
         {
             case D3D_SIT_CBUFFER:
