@@ -165,6 +165,125 @@ InlineConstants::Resources InlineConstants::sm_Res;
 FastRandFloat              InlineConstants::sm_Rnd{0, 0.f, 1.f};
 
 
+TEST_F(InlineConstants, ResourceLayout)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+    {
+        GTEST_SKIP();
+    }
+
+    for (Uint32 pos_type = 0; pos_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++pos_type)
+    {
+        for (Uint32 col_type = 0; col_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++col_type)
+        {
+            const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+            RenderDrawCommandReference(pSwapChain, ClearColor);
+
+            SHADER_RESOURCE_VARIABLE_TYPE PosType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_type);
+            SHADER_RESOURCE_VARIABLE_TYPE ColType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(col_type);
+
+            GraphicsPipelineStateCreateInfoX PsoCI{"Inline constants test"};
+
+            PipelineResourceLayoutDescX ResLayoutDesc;
+            ResLayoutDesc
+                .AddVariable(SHADER_TYPE_VERTEX, "cbInlinePositions", PosType, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS)
+                .AddVariable(SHADER_TYPE_VERTEX, "cbInlineColors", ColType, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS);
+
+            PsoCI
+                .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+                .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                .AddShader(sm_Res.pVS)
+                .AddShader(sm_Res.pPS)
+                .SetResourceLayout(ResLayoutDesc);
+            PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+            RefCntAutoPtr<IPipelineState> pPSO;
+            pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+            ASSERT_TRUE(pPSO);
+
+            if (PosType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                IShaderResourceVariable* pVar = pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                ASSERT_TRUE(pVar);
+                pVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
+            }
+
+            if (ColType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                IShaderResourceVariable* pVar = pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                ASSERT_TRUE(pVar);
+                pVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
+            }
+
+            RefCntAutoPtr<IShaderResourceBinding> pSRB;
+            pPSO->CreateShaderResourceBinding(&pSRB, true);
+            ASSERT_TRUE(pSRB);
+
+            IShaderResourceVariable* pPosVar = nullptr;
+            if (PosType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                ASSERT_TRUE(pPosVar);
+            }
+
+            IShaderResourceVariable* pColVar = nullptr;
+            if (ColType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                pColVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                ASSERT_TRUE(pColVar);
+            }
+
+            ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+            pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+
+            if (pColVar != nullptr)
+            {
+                // Set first half of color constants before committing SRB
+                pColVar->SetInlineConstants(g_Colors, 0, kNumColConstants / 2);
+            }
+
+            pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+            if (pColVar != nullptr)
+            {
+                // Set second half of color constants after committing SRB
+                pColVar->SetInlineConstants(g_Colors[0].Data() + kNumColConstants / 2, kNumColConstants / 2, kNumColConstants / 2);
+            }
+
+            pContext->SetPipelineState(pPSO);
+
+            if (pPosVar == nullptr)
+            {
+                // Draw both triangles as positions are static
+                pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+            }
+            else
+            {
+                // Draw first triangle
+                pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+                // Draw second triangle
+                pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+            }
+
+            Present();
+
+            std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                      << " Pos " << GetShaderVariableTypeLiteralName(PosType) << ','
+                      << " Col " << GetShaderVariableTypeLiteralName(ColType) << std::endl;
+        }
+    }
+}
+
+
 void InlineConstants::TestSignatures(Uint32 NumSignatures)
 {
     GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
