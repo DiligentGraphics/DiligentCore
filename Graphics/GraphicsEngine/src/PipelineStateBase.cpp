@@ -478,6 +478,9 @@ void ValidatePipelineResourceLayoutDesc(const PipelineStateDesc& PSODesc, const 
             if (Var.ShaderStages == SHADER_TYPE_UNKNOWN)
                 LOG_PSO_ERROR_AND_THROW("ResourceLayout.Variables[", i, "].ShaderStages must not be SHADER_TYPE_UNKNOWN.");
 
+            if ((Var.Flags & SHADER_VARIABLE_FLAG_INLINE_CONSTANTS) != 0 && (Var.Flags != SHADER_VARIABLE_FLAG_INLINE_CONSTANTS))
+                LOG_PSO_ERROR_AND_THROW("ResourceLayout.Variables[", i, "].Flags: INLINE_CONSTANTS flag cannot be combined with other flags.");
+
             auto range = UniqueVariables.equal_range(Var.Name);
             for (auto it = range.first; it != range.second; ++it)
             {
