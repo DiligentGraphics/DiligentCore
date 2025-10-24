@@ -321,22 +321,22 @@ void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
             case D3D_SIT_CBUFFER:
             {
                 ShaderCodeBufferDescX BufferDesc;
-                if (LoadConstantBufferReflection)
+                if (auto* pBuffReflection = pShaderReflection->GetConstantBufferByName(Res.Name))
                 {
-                    if (auto* pBuffReflection = pShaderReflection->GetConstantBufferByName(Res.Name))
-                    {
-                        D3D_SHADER_BUFFER_DESC ShaderBuffDesc = {};
-                        pBuffReflection->GetDesc(&ShaderBuffDesc);
-                        VERIFY_EXPR(SafeStrEqual(Res.Name, ShaderBuffDesc.Name));
-                        VERIFY_EXPR(ShaderBuffDesc.Type == D3D_CT_CBUFFER);
+                    D3D_SHADER_BUFFER_DESC ShaderBuffDesc = {};
+                    pBuffReflection->GetDesc(&ShaderBuffDesc);
+                    VERIFY_EXPR(SafeStrEqual(Res.Name, ShaderBuffDesc.Name));
+                    VERIFY_EXPR(ShaderBuffDesc.Type == D3D_CT_CBUFFER);
 
-                        BufferDesc.Size = ShaderBuffDesc.Size;
+                    BufferDesc.Size = ShaderBuffDesc.Size;
+                    if (LoadConstantBufferReflection)
+                    {
                         LoadD3DShaderConstantBufferReflection<TReflectionTraits>(pBuffReflection, BufferDesc, ShaderBuffDesc.Variables);
                     }
-                    else
-                    {
-                        UNEXPECTED("Failed to get constant buffer reflection information.");
-                    }
+                }
+                else
+                {
+                    UNEXPECTED("Failed to get constant buffer reflection information.");
                 }
 
                 OnNewCB(Res, std::move(BufferDesc));
