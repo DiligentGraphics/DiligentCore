@@ -262,6 +262,26 @@ public:
         return ExtraData;
     }
 
+    Uint32 GetInlineConstantCountOrThrow(const char* ShaderName) const
+    {
+        VERIFY_EXPR(GetShaderResourceType() == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
+        if (BindCount != 1)
+        {
+            LOG_ERROR_AND_THROW("Inline constants resource '", Name, "' in shader '", ShaderName, "' can not be an array.");
+        }
+        const Uint32 NumConstants = GetConstantBufferSize() / sizeof(Uint32);
+
+        constexpr Uint32 kMaxInlineConstants = 64;
+        if (NumConstants > kMaxInlineConstants)
+        {
+            LOG_ERROR_AND_THROW("Inline constants resource '", Name, "' in shader '", ShaderName, "' has ",
+                                NumConstants, " constants. The maximum supported number of inline constants is ",
+                                kMaxInlineConstants, '.');
+        }
+
+        return NumConstants;
+    }
+
     SHADER_RESOURCE_TYPE    GetShaderResourceType() const;
     PIPELINE_RESOURCE_FLAGS GetPipelineResourceFlags() const;
 
