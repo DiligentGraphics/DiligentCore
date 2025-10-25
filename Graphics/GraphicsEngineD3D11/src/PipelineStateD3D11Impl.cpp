@@ -91,7 +91,14 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D11Impl::GetDefaultResourceS
 
                     const SHADER_RESOURCE_TYPE    ResType  = Attribs.GetShaderResourceType();
                     const PIPELINE_RESOURCE_FLAGS ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-                    SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.BindCount, ResType, VarDesc.Type, ResFlags);
+
+                    Uint32 ArraySize = Attribs.BindCount;
+                    if (ResFlags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+                    {
+                        VERIFY(ResFlags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag cannot be combined with other flags.");
+                        ArraySize = Attribs.GetInlineConstantCountOrThrow(pShader->GetDesc().Name);
+                    }
+                    SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, ResFlags);
                 }
                 else
                 {
