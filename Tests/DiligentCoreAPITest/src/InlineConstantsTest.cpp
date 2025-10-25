@@ -28,6 +28,7 @@
 
 #include "gtest/gtest.h"
 
+#include "RenderStateCache.hpp"
 #include "GraphicsTypesX.hpp"
 #include "FastRand.hpp"
 
@@ -150,6 +151,9 @@ protected:
         pContext->Flush();
         pContext->InvalidateState();
     }
+
+    static void VerifyPSOFromCache(IPipelineState*         pPSO,
+                                   IShaderResourceBinding* pSRB);
 
     struct Resources
     {
@@ -508,6 +512,238 @@ TEST_F(InlineConstants, ResourceSignature)
 TEST_F(InlineConstants, TwoResourceSignatures)
 {
     TestSignatures(2);
+}
+
+constexpr Uint32 kCacheContentVersion = 7;
+
+RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pDevice,
+                                             bool                             HotReload,
+                                             bool                             OptimizeGLShaders,
+                                             IDataBlob*                       pCacheData           = nullptr,
+                                             IShaderSourceInputStreamFactory* pShaderReloadFactory = nullptr)
+{
+    RenderStateCacheCreateInfo CacheCI{
+        pDevice,
+        GPUTestingEnvironment::GetInstance()->GetArchiverFactory(),
+        RENDER_STATE_CACHE_LOG_LEVEL_VERBOSE,
+        RENDER_STATE_CACHE_FILE_HASH_MODE_BY_CONTENT,
+        HotReload,
+    };
+
+    RefCntAutoPtr<IRenderStateCache> pCache;
+    CreateRenderStateCache(CacheCI, &pCache);
+
+    if (pCacheData != nullptr)
+        pCache->Load(pCacheData, kCacheContentVersion);
+
+    return pCache;
+}
+
+
+void CreateShadersFromCache(IRenderStateCache* pCache, bool PresentInCache, IShader** ppVS, IShader** ppPS)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    {
+        ShaderCI.Desc       = {"Inline constants test", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::InlineConstantsTest_VS.c_str();
+        if (pCache != nullptr)
+        {
+            EXPECT_EQ(pCache->CreateShader(ShaderCI, ppVS), PresentInCache);
+        }
+        else
+        {
+            pDevice->CreateShader(ShaderCI, ppVS);
+            EXPECT_EQ(PresentInCache, false);
+        }
+    }
+
+    {
+        ShaderCI.Desc       = {"Inline constants test", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::DrawTest_PS.c_str();
+        if (pCache != nullptr)
+        {
+            EXPECT_EQ(pCache->CreateShader(ShaderCI, ppPS), PresentInCache);
+        }
+        else
+        {
+            pDevice->CreateShader(ShaderCI, ppPS);
+            EXPECT_EQ(PresentInCache, false);
+        }
+    }
+}
+
+void CreatePSOFromCache(IRenderStateCache* pCache, bool PresentInCache, IShader* pVS, IShader* pPS, IPipelineState** ppPSO)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    GraphicsPipelineStateCreateInfo PsoCI;
+    PsoCI.PSODesc.Name = "Render State Cache Test";
+
+    PsoCI.pVS = pVS;
+    PsoCI.pPS = pPS;
+
+    PsoCI.GraphicsPipeline.NumRenderTargets = 1;
+    PsoCI.GraphicsPipeline.RTVFormats[0]    = pSwapChain->GetDesc().ColorBufferFormat;
+
+    PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    static ShaderResourceVariableDesc Vars[] =
+        {
+            {SHADER_TYPE_VERTEX, "cbInlinePositions", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS},
+            {SHADER_TYPE_VERTEX, "cbInlineColors", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS},
+        };
+    PsoCI.PSODesc.ResourceLayout.Variables    = Vars;
+    PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Vars);
+
+    if (pCache != nullptr)
+    {
+        bool PSOFound = pCache->CreateGraphicsPipelineState(PsoCI, ppPSO);
+        EXPECT_EQ(PSOFound, PresentInCache);
+    }
+    else
+    {
+        EXPECT_FALSE(PresentInCache);
+        pEnv->GetDevice()->CreateGraphicsPipelineState(PsoCI, ppPSO);
+        ASSERT_NE(*ppPSO, nullptr);
+    }
+
+    if (*ppPSO != nullptr && (*ppPSO)->GetStatus() == PIPELINE_STATE_STATUS_READY)
+    {
+        const PipelineStateDesc& Desc = (*ppPSO)->GetDesc();
+        EXPECT_EQ(PsoCI.PSODesc, Desc);
+    }
+}
+
+void InlineConstants::VerifyPSOFromCache(IPipelineState*         pPSO,
+                                         IShaderResourceBinding* pSRB)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    RefCntAutoPtr<IShaderResourceBinding> _pSRB;
+    if (pSRB == nullptr)
+    {
+        pPSO->CreateShaderResourceBinding(&_pSRB, true);
+        pSRB = _pSRB;
+    }
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    IShaderResourceVariable* pColVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+    ASSERT_TRUE(pColVar);
+    pColVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
+
+    IShaderResourceVariable* pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+    ASSERT_TRUE(pPosVar);
+    pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+    pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+    pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+    pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+    Present();
+}
+
+TEST_F(InlineConstants, RenderStateCache)
+{
+    GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice = pEnv->GetDevice();
+
+    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+    {
+        GTEST_SKIP();
+    }
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
+    pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/RenderStateCache", &pShaderSourceFactory);
+    ASSERT_TRUE(pShaderSourceFactory);
+
+    RefCntAutoPtr<IShader> pUncachedVS, pUncachedPS;
+    CreateShadersFromCache(nullptr, false, &pUncachedVS, &pUncachedPS);
+    ASSERT_NE(pUncachedVS, nullptr);
+    ASSERT_NE(pUncachedPS, nullptr);
+
+    RefCntAutoPtr<IPipelineState> pRefPSO;
+    CreatePSOFromCache(nullptr, false, pUncachedVS, pUncachedPS, &pRefPSO);
+    ASSERT_NE(pRefPSO, nullptr);
+
+    RefCntAutoPtr<IShaderResourceBinding> pRefSRB;
+    pRefPSO->CreateShaderResourceBinding(&pRefSRB);
+
+    RefCntAutoPtr<IDataBlob> pData;
+    for (Uint32 pass = 0; pass < 3; ++pass)
+    {
+        // 0: empty cache
+        // 1: loaded cache
+        // 2: reloaded cache (loaded -> stored -> loaded)
+
+        RefCntAutoPtr<IRenderStateCache> pCache = CreateCache(pDevice, false, false, pData);
+        ASSERT_TRUE(pCache);
+
+        RefCntAutoPtr<IShader> pVS1, pPS1;
+        CreateShadersFromCache(pCache, pData != nullptr, &pVS1, &pPS1);
+        ASSERT_NE(pVS1, nullptr);
+        ASSERT_NE(pPS1, nullptr);
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        CreatePSOFromCache(pCache, pData != nullptr, pVS1, pPS1, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+        ASSERT_EQ(pPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+        EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO));
+        EXPECT_TRUE(pPSO->IsCompatibleWith(pRefPSO));
+
+        VerifyPSOFromCache(pPSO, nullptr);
+        VerifyPSOFromCache(pPSO, pRefSRB);
+
+        {
+            RefCntAutoPtr<IPipelineState> pPSO2;
+            CreatePSOFromCache(pCache, true, pVS1, pPS1, &pPSO2);
+            EXPECT_EQ(pPSO, pPSO2);
+        }
+
+        {
+            RefCntAutoPtr<IPipelineState> pPSO2;
+
+            bool PresentInCache = pData != nullptr;
+#if !DILIGENT_DEBUG
+            if (pDevice->GetDeviceInfo().IsD3DDevice())
+            {
+                // For some reason, hash computation consistency depends on D3DCOMPILE_DEBUG flag and differs between debug and release builds
+                PresentInCache = true;
+            }
+#endif
+            CreatePSOFromCache(pCache, PresentInCache, pUncachedVS, pUncachedPS, &pPSO2);
+            ASSERT_NE(pPSO2, nullptr);
+            ASSERT_EQ(pPSO2->GetStatus(), PIPELINE_STATE_STATUS_READY);
+            EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO2));
+            EXPECT_TRUE(pPSO2->IsCompatibleWith(pRefPSO));
+            VerifyPSOFromCache(pPSO2, nullptr);
+            VerifyPSOFromCache(pPSO2, pRefSRB);
+        }
+
+        pData.Release();
+        pCache->WriteToBlob(pass == 0 ? kCacheContentVersion : ~0u, &pData);
+    }
 }
 
 } // namespace
