@@ -384,20 +384,8 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D12Impl::GetDefaultResourceS
                         Uint32 ArraySize = Attribs.BindCount;
                         if (ResFlags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
                         {
-                            VERIFY_EXPR(ResType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
                             VERIFY(ResFlags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag cannot be combined with other flags.");
-                            if (Attribs.BindCount != 1)
-                            {
-                                LOG_ERROR_AND_THROW("Inline constants resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name,
-                                                    "' can not be an array.");
-                            }
-                            const Uint32 NumConstants = Attribs.GetConstantBufferSize() / sizeof(Uint32);
-                            if (NumConstants > 64)
-                            {
-                                LOG_ERROR_AND_THROW("Inline constants resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name,
-                                                    "' has ", NumConstants, " constants. The maximum supported number of inline constants is 64.");
-                            }
-                            ArraySize = NumConstants;
+                            ArraySize = Attribs.GetInlineConstantCountOrThrow(pShader->GetDesc().Name);
                         }
                         SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, ResFlags);
                     }
