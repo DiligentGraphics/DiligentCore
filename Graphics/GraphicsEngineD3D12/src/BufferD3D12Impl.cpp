@@ -154,8 +154,6 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
                 GetSupportedD3D12ResourceStatesForCommandList(pRenderDeviceD3D12->GetCommandQueueType(CmdQueueInd)) :
                 static_cast<D3D12_RESOURCE_STATES>(~0u);
 
-            const D3D12_RESOURCE_STATES d3d12State = ResourceStateFlagsToD3D12ResourceStates(GetState()) & StateMask;
-
             // By default, committed resources and heaps are almost always zeroed upon creation.
             // CREATE_NOT_ZEROED flag allows this to be elided in some scenarios to lower the overhead
             // of creating the heap. No need to zero the resource if we initialize it.
@@ -164,7 +162,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
                 D3D12_HEAP_FLAG_NONE;
 
             HRESULT hr = pd3d12Device->CreateCommittedResource(
-                &HeapProps, d3d12HeapFlags, &d3d12BuffDesc, d3d12State,
+                &HeapProps, d3d12HeapFlags, &d3d12BuffDesc, D3D12_RESOURCE_STATE_COMMON,
                 nullptr, // pOptimizedClearValue
                 __uuidof(m_pd3d12Resource),
                 reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
