@@ -280,7 +280,9 @@ public:
                                           Uint32                         NumConstants);
 
     template <D3D11_RESOURCE_RANGE ResRange>
-    __forceinline const typename CachedResourceTraits<ResRange>::CachedResourceType& GetResource(const D3D11ResourceBindPoints& BindPoints) const
+    __forceinline const typename CachedResourceTraits<ResRange>::CachedResourceType& GetResource(
+        const D3D11ResourceBindPoints&                               BindPoints,
+        typename CachedResourceTraits<ResRange>::D3D11ResourceType** ppd3d11Resource = nullptr) const
     {
         VERIFY(BindPoints.GetActiveStages() != SHADER_TYPE_UNKNOWN, "No active shader stage");
         const Int32 FirstStageInd     = GetFirstShaderStageIndex(BindPoints.GetActiveStages());
@@ -288,9 +290,9 @@ public:
         VERIFY(FirstStageBinding < GetResourceCount<ResRange>(FirstStageInd), "Resource slot is out of range");
         const auto  FirstStageResArrays = GetConstResourceArrays<ResRange>(FirstStageInd);
         const auto& CachedRes           = FirstStageResArrays.first[FirstStageBinding];
+        auto*       pd3d11Res           = FirstStageResArrays.second[FirstStageBinding];
 #ifdef DILIGENT_DEBUG
         {
-            const auto* pd3d11Res = FirstStageResArrays.second[FirstStageBinding];
             for (SHADER_TYPE ActiveStages = BindPoints.GetActiveStages(); ActiveStages != SHADER_TYPE_UNKNOWN;)
             {
                 const Int32 ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
@@ -300,6 +302,8 @@ public:
             }
         }
 #endif
+        if (ppd3d11Resource != nullptr)
+            *ppd3d11Resource = pd3d11Res;
         return CachedRes;
     }
 

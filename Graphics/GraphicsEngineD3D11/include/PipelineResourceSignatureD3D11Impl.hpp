@@ -113,6 +113,8 @@ public:
     // Make the base class method visible
     using TPipelineResourceSignatureBase::CopyStaticResources;
 
+    void UpdateInlineConstantBuffers(const ShaderResourceCacheD3D11& ResourceCache, ID3D11DeviceContext* pd3d11Ctx) const;
+
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the D3D resource attributes from the PSO.
     bool DvpValidateCommittedResource(const D3DShaderResourceAttribs& D3DAttribs,
