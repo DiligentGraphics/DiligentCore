@@ -370,7 +370,11 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 }
 
 template <bool IsCompute>
-void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, Uint32 CommitSRBMask, CommandContext& CmdCtx) const
+void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo&  RootInfo,
+                                                      Uint32          CommitSRBMask,
+                                                      CommandContext& CmdCtx,
+                                                      bool            DynamicBuffersIntact,
+                                                      bool            InlineConstantsIntact) const
 {
     const RootSignatureD3D12& RootSig = m_pPipelineState->GetRootSignature();
 
@@ -397,7 +401,9 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
 
         CommitAttribs.pResourceCache = pResourceCache;
         CommitAttribs.BaseRootIndex  = RootSig.GetBaseRootIndex(sign);
-        if ((RootInfo.StaleSRBMask & SignBit) != 0)
+
+        const bool SRBStale = (RootInfo.StaleSRBMask & SignBit) != 0;
+        if (SRBStale)
         {
             // Commit root tables for stale SRBs only
             pSignature->CommitRootTables(CommitAttribs);
@@ -410,7 +416,10 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
             DEV_CHECK_ERR((RootInfo.DynamicSRBMask & SignBit) != 0,
                           "There are dynamic root buffers in the cache, but the bit in DynamicSRBMask is not set. This may indicate that resources "
                           "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
-            pSignature->CommitRootViews(CommitAttribs, DynamicRootBuffersMask);
+            if (SRBStale || !DynamicBuffersIntact)
+            {
+                pSignature->CommitRootViews(CommitAttribs, DynamicRootBuffersMask);
+            }
         }
         else
         {
@@ -425,7 +434,10 @@ void DeviceContextD3D12Impl::CommitRootTablesAndViews(RootTableInfo& RootInfo, U
                    "There are root constants in the cache, but the bit in InlineConstantsSRBMask is not set. "
                    "This may be a bug because root constants mask in the cache never changes after SRB creation, "
                    "while RootInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
-            pSignature->CommitRootConstants(CommitAttribs, RootConstantsMask);
+            if (SRBStale || !InlineConstantsIntact)
+            {
+                pSignature->CommitRootConstants(CommitAttribs, RootConstantsMask);
+            }
         }
         else
         {
@@ -645,9 +657,11 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
 #ifdef DILIGENT_DEVELOPMENT
     DvpValidateCommittedShaderResources(RootInfo);
 #endif
-    if (Uint32 CommitSRBMask = RootInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT, Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT))
+    const bool DynamicBuffersIntact  = (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) != 0;
+    const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
+    if (Uint32 CommitSRBMask = RootInfo.GetCommitMask(DynamicBuffersIntact, InlineConstantsIntact))
     {
-        CommitRootTablesAndViews<false>(RootInfo, CommitSRBMask, GraphCtx);
+        CommitRootTablesAndViews<false>(RootInfo, CommitSRBMask, GraphCtx, DynamicBuffersIntact, InlineConstantsIntact);
     }
 
 #ifdef NTDDI_WIN10_19H1

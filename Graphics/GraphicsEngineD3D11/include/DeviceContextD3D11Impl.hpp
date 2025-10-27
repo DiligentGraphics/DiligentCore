@@ -360,7 +360,9 @@ private:
 
     void ClearStateCache();
 
-    void BindShaderResources(Uint32 BindSRBMask);
+    void BindShaderResources(Uint32 BindSRBMask,
+                             bool   DynamicBuffersIntact  = false,
+                             bool   InlineConstantsIntact = false);
 
     static constexpr int NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
     struct TCommittedResources
