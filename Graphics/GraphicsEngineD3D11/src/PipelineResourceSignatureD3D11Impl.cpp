@@ -212,9 +212,8 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
 
             VERIFY((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) == 0 || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
                    "Only constant buffers can have inline constants flag");
-            const Uint32 ArraySize = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0 ?
-                1 : // For inline constants, count only one resource as the ArraySize is the number of 4-byte constants.
-                ResDesc.ArraySize;
+            // For inline constants, ArraySize holds the number of 4-byte constants
+            const Uint32 ArraySize = ResDesc.GetArraySize();
             AllocBindPoints(m_ResourceCounters, BindPoints, ResDesc.ShaderStages, ArraySize, Range);
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
@@ -229,7 +228,8 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
                 }
             }
 
-            if (Range == D3D11_RESOURCE_RANGE_CBV && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
+            if (Range == D3D11_RESOURCE_RANGE_CBV &&
+                (ResDesc.Flags & (PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)) == 0)
             {
                 // Set corresponding bits in m_DynamicCBSlotsMask
                 for (SHADER_TYPE ShaderStages = ResDesc.ShaderStages; ShaderStages != SHADER_TYPE_UNKNOWN;)
@@ -436,9 +436,9 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
             ResourceBinding::BindInfo BindInfo //
                 {
                     Uint32{BaseBindings[Range][ShaderInd]} + Uint32{ResAttr.BindPoints[ShaderInd]},
-                    0u, // register space is not supported
-                    ResDesc.ArraySize,
-                    ResDesc.ResourceType //
+                    0u,                     // register space is not supported
+                    ResDesc.GetArraySize(), // For inline constants, ArraySize holds the number of 4-byte constants
+                    ResDesc.ResourceType,
                 };
             bool IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, BindInfo).second;
             VERIFY(IsUnique, "Shader resource '", ResDesc.Name,
