@@ -492,6 +492,30 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
     }
 }
 
+void PipelineResourceSignatureD3D11Impl::UpdateInlineConstantBuffers(const ShaderResourceCacheD3D11& ResourceCache, ID3D11DeviceContext* pd3d11Ctx) const
+{
+    for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
+    {
+        const InlineConstantBufferAttribsD3D11& InlineCBAttr = m_InlineConstantBuffers[i];
+
+        ID3D11Buffer*                             pd3d11CB = nullptr;
+        const ShaderResourceCacheD3D11::CachedCB& InlineCB = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(InlineCBAttr.BindPoints, &pd3d11CB);
+        VERIFY(InlineCBAttr.NumConstants * sizeof(Uint32) == InlineCB.RangeSize, "Inline constant buffer size mismatch");
+        VERIFY(InlineCB.pInlineConstantData != nullptr, "Inline constant data pointer is null");
+
+        D3D11_MAPPED_SUBRESOURCE MappedData{};
+        if (SUCCEEDED(pd3d11Ctx->Map(pd3d11CB, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedData)))
+        {
+            memcpy(MappedData.pData, InlineCB.pInlineConstantData, InlineCBAttr.NumConstants * sizeof(Uint32));
+            pd3d11Ctx->Unmap(pd3d11CB, 0);
+        }
+        else
+        {
+            DEV_ERROR("Failed to map inline constant buffer");
+        }
+    }
+}
+
 #ifdef DILIGENT_DEVELOPMENT
 bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DShaderResourceAttribs& D3DAttribs,
                                                                       Uint32                          ResIndex,
