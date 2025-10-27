@@ -457,17 +457,50 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
         else
         {
             // Bind constant buffers with dynamic offsets. In Direct3D11 only those buffers are counted as dynamic.
-            VERIFY((m_BindInfo.DynamicSRBMask & SignBit) != 0,
-                   "When bit in StaleSRBMask is not set, the same bit in DynamicSRBMask must be set. Check GetCommitMask().");
-            DEV_CHECK_ERR(pResourceCache->HasDynamicResources(),
-                          "Bit in DynamicSRBMask is set, but the cache does not contain dynamic resources. This may indicate that resources "
-                          "in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
-            if (pResourceCache->GetUAVCount(PSInd) > 0)
+            VERIFY(((m_BindInfo.DynamicSRBMask | m_BindInfo.InlineConstantsSRBMask) & SignBit) != 0,
+                   "When bit in StaleSRBMask is not set, the same bit in either DynamicSRBMask or InlineConstantsSRBMask must be set. Check GetCommitMask().");
+
+            if ((m_BindInfo.DynamicSRBMask & SignBit) != 0)
             {
-                if (PsUavBindMode != PixelShaderUAVBindMode::Bind)
-                    PsUavBindMode = PixelShaderUAVBindMode::Keep;
+                DEV_CHECK_ERR(pResourceCache->HasDynamicResources(),
+                              "Shader resource cache does not contain dynamic resources, but the corresponding bit in DynamicSRBMask is set. "
+                              "This may indicate that resources in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
+                if (pResourceCache->GetUAVCount(PSInd) > 0)
+                {
+                    if (PsUavBindMode != PixelShaderUAVBindMode::Bind)
+                        PsUavBindMode = PixelShaderUAVBindMode::Keep;
+                }
+                BindDynamicCBs(*pResourceCache, BaseBindings);
             }
-            BindDynamicCBs(*pResourceCache, BaseBindings);
+            else
+            {
+                DEV_CHECK_ERR(!pResourceCache->HasDynamicResources(),
+                              "Shader resource cache contains dynamic resources, but the corresponding bit in DynamicSRBMask is not set. "
+                              "This may indicate that resources in the cache have changed, but the SRB has not been committed before the draw/dispatch command.");
+            }
+        }
+
+        if ((m_BindInfo.InlineConstantsSRBMask & SignBit) != 0)
+        {
+            VERIFY(pResourceCache->HasInlineConstants(),
+                   "Shader resource cache does not contain inline constants, but the corresponding bit in InlineConstantsSRBMask is set. "
+                   "This may be a bug because inline constants flag in the cache never changes after SRB creation, "
+                   "while m_BindInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
+            if (PipelineResourceSignatureD3D11Impl* pSign = m_pPipelineState->GetResourceSignature(SignIdx))
+            {
+                pSign->UpdateInlineConstantBuffers(*pResourceCache, m_pd3d11DeviceContext);
+            }
+            else
+            {
+                UNEXPECTED("Pipeline resource signature is null for signature index ", SignIdx);
+            }
+        }
+        else
+        {
+            VERIFY(!pResourceCache->HasInlineConstants(),
+                   "Shader resource cache contains inline constants, but the corresponding bit in InlineConstantsSRBMask is not set. "
+                   "This may be a bug because inline constants flag in the cache never changes after SRB creation, "
+                   "while m_BindInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
         }
     }
 

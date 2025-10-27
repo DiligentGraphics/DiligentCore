@@ -164,9 +164,16 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
         }
     };
 
-    ProcessInlineCBs([&BufferSize](const InlineConstantBufferAttribsD3D11& InlineCBAttr) {
-        BufferSize += InlineCBAttr.NumConstants * sizeof(Uint32);
+    Uint32 TotalInlineConstants = 0;
+    ProcessInlineCBs([&TotalInlineConstants](const InlineConstantBufferAttribsD3D11& InlineCBAttr) {
+        TotalInlineConstants += InlineCBAttr.NumConstants;
     });
+
+    if (TotalInlineConstants > 0)
+    {
+        m_Flags |= FLAG_HAS_INLINE_CONSTANTS;
+        BufferSize += TotalInlineConstants * sizeof(Uint32);
+    }
 
     if (BufferSize > 0)
     {
@@ -186,16 +193,20 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
         ConstructResources<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
     }
 
-    Uint32* pInlineCBData = reinterpret_cast<Uint32*>(m_pResourceData.get() + MemOffset);
-    // Initialize inline constant buffers.
-    ProcessInlineCBs([&pInlineCBData, this](const InlineConstantBufferAttribsD3D11& InlineCBAttr) {
-        VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
-        VERIFY_EXPR(InlineCBAttr.pBuffer != nullptr);
-        InitInlineConstantBuffer(InlineCBAttr.BindPoints, InlineCBAttr.pBuffer, InlineCBAttr.NumConstants, pInlineCBData);
-        pInlineCBData += InlineCBAttr.NumConstants;
-    });
+    if (TotalInlineConstants > 0)
+    {
+        Uint32* pInlineCBData = reinterpret_cast<Uint32*>(m_pResourceData.get() + MemOffset);
+        // Initialize inline constant buffers.
+        ProcessInlineCBs([&pInlineCBData, this](const InlineConstantBufferAttribsD3D11& InlineCBAttr) {
+            VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
+            VERIFY_EXPR(InlineCBAttr.pBuffer != nullptr);
+            InitInlineConstantBuffer(InlineCBAttr.BindPoints, InlineCBAttr.pBuffer, InlineCBAttr.NumConstants, pInlineCBData);
+            pInlineCBData += InlineCBAttr.NumConstants;
+        });
+        VERIFY_EXPR(pInlineCBData == reinterpret_cast<Uint32*>(m_pResourceData.get() + BufferSize));
+    }
 
-    m_IsInitialized = true;
+    m_Flags |= FLAG_IS_INITIALIZED;
 }
 
 ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
@@ -210,8 +221,8 @@ ShaderResourceCacheD3D11::~ShaderResourceCacheD3D11()
             DestructResources<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd);
             DestructResources<D3D11_RESOURCE_RANGE_UAV>(ShaderInd);
         }
-        m_Offsets       = {};
-        m_IsInitialized = false;
+        m_Offsets = {};
+        m_Flags   = FLAG_NONE;
 
         m_pResourceData.reset();
     }
