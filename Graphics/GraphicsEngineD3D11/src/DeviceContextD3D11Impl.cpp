@@ -423,7 +423,9 @@ void DeviceContextD3D11Impl::BindDynamicCBs(const ShaderResourceCacheD3D11&    R
 }
 
 
-void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
+void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask,
+                                                 bool   DynamicBuffersIntact,
+                                                 bool   InlineConstantsIntact)
 {
     VERIFY_EXPR(BindSRBMask != 0);
 
@@ -470,7 +472,10 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
                     if (PsUavBindMode != PixelShaderUAVBindMode::Bind)
                         PsUavBindMode = PixelShaderUAVBindMode::Keep;
                 }
-                BindDynamicCBs(*pResourceCache, BaseBindings);
+                if (!DynamicBuffersIntact)
+                {
+                    BindDynamicCBs(*pResourceCache, BaseBindings);
+                }
             }
             else
             {
@@ -486,13 +491,16 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask)
                    "Shader resource cache does not contain inline constants, but the corresponding bit in InlineConstantsSRBMask is set. "
                    "This may be a bug because inline constants flag in the cache never changes after SRB creation, "
                    "while m_BindInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
-            if (PipelineResourceSignatureD3D11Impl* pSign = m_pPipelineState->GetResourceSignature(SignIdx))
+            if ((m_BindInfo.StaleSRBMask & SignBit) != 0 || !InlineConstantsIntact)
             {
-                pSign->UpdateInlineConstantBuffers(*pResourceCache, m_pd3d11DeviceContext);
-            }
-            else
-            {
-                UNEXPECTED("Pipeline resource signature is null for signature index ", SignIdx);
+                if (PipelineResourceSignatureD3D11Impl* pSign = m_pPipelineState->GetResourceSignature(SignIdx))
+                {
+                    pSign->UpdateInlineConstantBuffers(*pResourceCache, m_pd3d11DeviceContext);
+                }
+                else
+                {
+                    UNEXPECTED("Pipeline resource signature is null for signature index ", SignIdx);
+                }
             }
         }
         else
@@ -702,9 +710,11 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
         CommitD3D11VertexBuffers(m_pPipelineState);
     }
 
+    const bool DynamicBuffersIntact  = (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) != 0;
+    const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
     if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT, Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT))
     {
-        BindShaderResources(BindSRBMask);
+        BindShaderResources(BindSRBMask, DynamicBuffersIntact, InlineConstantsIntact);
     }
 
 #ifdef DILIGENT_DEVELOPMENT
