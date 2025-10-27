@@ -687,7 +687,7 @@ inline ShaderResourceCacheD3D11::MinMaxSlot ShaderResourceCacheD3D11::BindCBs(
         // Offsets in Direct3D11 are measure in float4 constants.
         const UINT FirstCBConstant = StaticCast<UINT>((ResArrays.first[res].BaseOffset + ResArrays.first[res].DynamicOffset) / 16u);
         // The number of constants must be a multiple of 16 constants. It is OK if it is past the end of the buffer.
-        const UINT NumCBConstants = StaticCast<UINT>(AlignUp(ResArrays.first[res].RangeSize / 16u, 16u));
+        const UINT NumCBConstants = StaticCast<UINT>(AlignUp((ResArrays.first[res].RangeSize + 15u) / 16u, 16u));
         // clang-format off
         if (CommittedD3D11Resources[Slot] != pd3d11CB        ||
             FirstConstants[Slot]          != FirstCBConstant ||
@@ -734,7 +734,7 @@ inline void ShaderResourceCacheD3D11::BindDynamicCBs(Uint32                     
         // Offsets in Direct3D11 are measure in float4 constants.
         const UINT FirstCBConstant = StaticCast<UINT>((CB.BaseOffset + CB.DynamicOffset) / 16u);
         // The number of constants must be a multiple of 16 constants. It is OK if it is past the end of the buffer.
-        const UINT NumCBConstants = StaticCast<UINT>(AlignUp(CB.RangeSize / 16u, 16u));
+        const UINT NumCBConstants = StaticCast<UINT>(AlignUp((CB.RangeSize + 15u) / 16u, 16u));
         // clang-format off
         if (CommittedD3D11Resources[Slot] != pd3d11CB        ||
             FirstConstants[Slot]          != FirstCBConstant ||

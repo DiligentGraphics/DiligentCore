@@ -353,6 +353,13 @@ struct PipelineResourceDesc
     {
         return !(*this == Rhs);
     }
+
+    Uint32 GetArraySize() const noexcept
+    {
+        return (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0 ?
+                1 : // For inline constants, ArraySize is the number of 4-byte constants.
+                ArraySize;
+    }
 #endif
 };
 typedef struct PipelineResourceDesc PipelineResourceDesc;

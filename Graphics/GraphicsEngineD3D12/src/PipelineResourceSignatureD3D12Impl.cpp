@@ -284,9 +284,8 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
                 // Normal resources go into space 0.
                 Space    = 0;
                 Register = NumResources[d3d12DescriptorRangeType];
-                NumResources[d3d12DescriptorRangeType] += (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0 ?
-                    1 : // For inline constants, count only one resource as the ArraySize is the number of 4-byte constants.
-                    ResDesc.ArraySize;
+                // For inline constants, ArraySize holds the number of 4-byte constants.
+                NumResources[d3d12DescriptorRangeType] += ResDesc.GetArraySize();
             }
 
             const PIPELINE_RESOURCE_FLAGS dbgValidResourceFlags = GetValidPipelineResourceFlags(ResDesc.ResourceType);
@@ -732,15 +731,12 @@ void PipelineResourceSignatureD3D12Impl::UpdateShaderResourceBindingMap(Resource
         {
             VERIFY((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) == 0 || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
                    "Only constant buffers can be marked as INLINE_CONSTANTS. This error should've been caught by ValidatePipelineResourceSignatureDesc().");
-            const Uint32 ArraySize = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) ?
-                1 : // For inline constants, ArraySize is the number of 4-byte constants
-                ResDesc.ArraySize;
 
             ResourceBinding::BindInfo BindInfo //
                 {
                     Attribs.Register,
                     Attribs.Space + BaseRegisterSpace,
-                    ArraySize,
+                    ResDesc.GetArraySize(), // For inline constants, ArraySize holds the number of 4-byte constants
                     ResDesc.ResourceType,
                 };
             bool IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, BindInfo).second;
