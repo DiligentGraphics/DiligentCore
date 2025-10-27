@@ -129,7 +129,7 @@ protected:
         GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
         IRenderDevice*         pDevice = pEnv->GetDevice();
 
-        if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_D3D12)
+        if (!pDevice->GetDeviceInfo().IsD3DDevice())
         {
             GTEST_SKIP();
         }
