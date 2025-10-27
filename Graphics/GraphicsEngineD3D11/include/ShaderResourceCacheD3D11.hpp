@@ -348,7 +348,7 @@ public:
     template <D3D11_RESOURCE_RANGE>
     __forceinline Uint32 GetResourceCount(Uint32 ShaderInd) const;
 
-    bool IsInitialized() const { return m_IsInitialized; }
+    bool IsInitialized() const { return m_Flags & FLAG_IS_INITIALIZED; }
 
     ResourceCacheContentType GetContentType() const { return m_ContentType; }
 
@@ -422,7 +422,7 @@ public:
 
     bool HasInlineConstants() const
     {
-        return false;
+        return m_Flags & FLAG_HAS_INLINE_CONSTANTS;
     }
 
 #ifdef DILIGENT_DEBUG
@@ -504,7 +504,14 @@ private:
 
     std::array<OffsetType, MaxOffsets> m_Offsets = {};
 
-    bool m_IsInitialized = false;
+    enum FLAGS : Uint8
+    {
+        FLAG_NONE                 = 0,
+        FLAG_IS_INITIALIZED       = 1u << 0u,
+        FLAG_HAS_INLINE_CONSTANTS = 1u << 1u,
+    };
+    DECLARE_FRIEND_FLAG_ENUM_OPERATORS(FLAGS)
+    FLAGS m_Flags = FLAG_NONE;
 
     // Indicates what types of resources are stored in the cache
     const ResourceCacheContentType m_ContentType;
@@ -518,6 +525,7 @@ private:
 
     std::unique_ptr<Uint8, STDDeleter<Uint8, IMemoryAllocator>> m_pResourceData;
 };
+DEFINE_FLAG_ENUM_OPERATORS(ShaderResourceCacheD3D11::FLAGS)
 
 template <>
 struct ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_CBV>
