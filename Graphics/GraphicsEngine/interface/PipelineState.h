@@ -109,6 +109,8 @@ DILIGENT_TYPED_ENUM(SHADER_VARIABLE_FLAGS, Uint8)
     /// 
     /// \remarks    This flag directly translates to the Diligent::PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS
     ///             flag in the internal pipeline resource signature.
+    /// 
+    /// See Diligent::PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS for more details.
     SHADER_VARIABLE_FLAG_INLINE_CONSTANTS = 1u << 1,
 
     /// Indicates that the resource is an input attachment in general layout, which allows simultaneously

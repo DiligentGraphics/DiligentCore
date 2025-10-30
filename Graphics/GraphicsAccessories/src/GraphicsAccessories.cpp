@@ -1644,6 +1644,10 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
                 Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS" : "NO_DYNAMIC_BUFFERS");
                 break;
 
+            case PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS:
+                Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS" : "INLINE_CONSTANTS");
+                break;
+
             case PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER:
                 Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER" : "COMBINED_SAMPLER");
                 break;
@@ -1658,10 +1662,6 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
 
             case PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT:
                 Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT" : "GENERAL_INPUT_ATTACHMENT");
-                break;
-
-            case PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS:
-                Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS" : "INLINE_CONSTANTS");
                 break;
 
             default:
@@ -1852,15 +1852,15 @@ PIPELINE_RESOURCE_FLAGS ShaderVariableFlagsToPipelineResourceFlags(SHADER_VARIAB
         case SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS:
             return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS;
 
+        case SHADER_VARIABLE_FLAG_INLINE_CONSTANTS:
+            return PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS;
+
         case SHADER_VARIABLE_FLAG_GENERAL_INPUT_ATTACHMENT_VK:
             return PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT;
 
         case SHADER_VARIABLE_FLAG_UNFILTERABLE_FLOAT_TEXTURE_WEBGPU:
         case SHADER_VARIABLE_FLAG_NON_FILTERING_SAMPLER_WEBGPU:
             return PIPELINE_RESOURCE_FLAG_NONE;
-
-        case SHADER_VARIABLE_FLAG_INLINE_CONSTANTS:
-            return PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS;
 
         default:
             UNEXPECTED("Unexpected shader variable flag");

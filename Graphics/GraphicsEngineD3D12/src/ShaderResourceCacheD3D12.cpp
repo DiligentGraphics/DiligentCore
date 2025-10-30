@@ -175,8 +175,8 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&                   Me
         // Note that normally resource type is set when a resource is bound to the cache.
         // For inline constants, we set it here during tinitialization.
         Res.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
-        // Store the number of constant values in BufferRangeSize
-        Res.BufferRangeSize = InlineConstInfo.NumValues;
+        // Set the buffer range size to match the number of constant values
+        Res.BufferRangeSize = InlineConstInfo.NumValues * sizeof(Uint32);
         pCurrInlineConstValueStorage += InlineConstInfo.NumValues;
 
         m_RootConstantsMask |= (Uint64{1} << Uint64{InlineConstInfo.RootIndex});
@@ -274,8 +274,8 @@ void ShaderResourceCacheD3D12::Initialize(IMemoryAllocator&        MemAllocator,
             // Note that normally resource type is set when a resource is bound to the cache.
             // For inline constants, we set it here during tinitialization.
             Res.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
-            // Store the number of constant values in BufferRangeSize
-            Res.BufferRangeSize = RootConsts.d3d12RootParam.Constants.Num32BitValues;
+            // Set the buffer range size to match the number of constant values
+            Res.BufferRangeSize = RootConsts.d3d12RootParam.Constants.Num32BitValues * sizeof(Uint32);
 
             pCurrInlineConstValueStorage += RootConsts.d3d12RootParam.Constants.Num32BitValues;
 
@@ -473,8 +473,8 @@ void ShaderResourceCacheD3D12::SetInlineConstants(Uint32      RootIndex,
     VERIFY_EXPR(Res.Type == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
     VERIFY(Res.IsNull(), "There should be no resource bound for root constants as they contain raw data.");
     VERIFY(Res.CPUDescriptorHandle.ptr != 0, "Resources used to store root constants must have valid pointer to the data.");
-    VERIFY(FirstConstant + NumConstants <= Res.BufferRangeSize,
-           "Too many constants (", FirstConstant + NumConstants, ") for the allocated space (", Res.BufferRangeSize, ")");
+    VERIFY(FirstConstant + NumConstants <= Res.BufferRangeSize / sizeof(Uint32),
+           "Too many constants (", FirstConstant + NumConstants, ") for the allocated space (", Res.BufferRangeSize / sizeof(Uint32), ")");
     Uint32* pDstConstants = reinterpret_cast<Uint32*>(Res.CPUDescriptorHandle.ptr);
     memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
 }
