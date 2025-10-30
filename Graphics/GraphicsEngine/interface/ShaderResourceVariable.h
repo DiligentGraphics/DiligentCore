@@ -252,6 +252,9 @@ DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
 
     /// For inline constant variables, sets the constant values
 
+    /// Inline constant variables are defined using Diligent::SHADER_RESOURCE_VARIABLE_FLAG_INLINE_CONSTANTS
+    /// or Diligent::PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS flags.
+    ///
     /// \param [in] pConstants    - pointer to the array of 32-bit constant values.
     /// \param [in] FirstConstant - index of the first 32-bit constant to set.
     /// \param [in] NumConstants  - number of 32-bit constants to set.

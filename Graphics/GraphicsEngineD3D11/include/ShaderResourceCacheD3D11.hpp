@@ -776,6 +776,7 @@ __forceinline void ShaderResourceCacheD3D11::SetInlineConstants(const D3D11Resou
                                                                 Uint32                         FirstConstant,
                                                                 Uint32                         NumConstants)
 {
+    // Since all shader stages share the same inline constant data, we can just set it for one stage
     SHADER_TYPE ActiveStages = BindPoints.GetActiveStages();
     VERIFY_EXPR(ActiveStages != SHADER_TYPE_UNKNOWN);
     const Uint32 ShaderInd0 = ExtractFirstShaderStageIndex(ActiveStages);
@@ -793,9 +794,9 @@ __forceinline void ShaderResourceCacheD3D11::SetInlineConstants(const D3D11Resou
 
         const auto ResArrays = GetResourceArrays<D3D11_RESOURCE_RANGE_CBV>(ShaderInd);
         VERIFY(ResArrays.first[Binding].pInlineConstantData == ResArrays0.first[Binding0].pInlineConstantData,
-               "All active shader stages must share the same inline constant data");
+               "All shader stages must share the same inline constant data (ensured by InitInlineConstantBuffer)");
         VERIFY(ResArrays.first[Binding] == ResArrays0.first[Binding0],
-               "All active shader stages must share the same inline constant data attributes");
+               "All shader stages must share the same inline constant data attributes (ensured by InitInlineConstantBuffer)");
     }
 #endif
 }
@@ -859,6 +860,7 @@ bool ShaderResourceCacheD3D11::CopyResource(const ShaderResourceCacheD3D11& SrcC
 
 inline void ShaderResourceCacheD3D11::CopyInlineConstants(const ShaderResourceCacheD3D11& SrcCache, const D3D11ResourceBindPoints& BindPoints, Uint32 NumConstants)
 {
+    // Since all shader stages share the same inline constant data, we can just copy from one stage
     SHADER_TYPE ActiveStages = BindPoints.GetActiveStages();
     VERIFY_EXPR(ActiveStages != SHADER_TYPE_UNKNOWN);
 
@@ -889,12 +891,14 @@ inline void ShaderResourceCacheD3D11::CopyInlineConstants(const ShaderResourceCa
         const Uint32 Binding = BindPoints[ShaderInd];
         VERIFY(Binding < GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd), "Index is out of range");
         VERIFY(Binding < SrcCache.GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd), "Index is out of range");
-        VERIFY(SrcResArrays0.first[Binding0] == SrcResArrays.first[Binding], "All shader stages must share the same inline constant data attributes");
-        VERIFY(DstResArrays0.first[Binding0] == DstResArrays.first[Binding], "All shader stages must share the same inline constant data attributes");
+        VERIFY(SrcResArrays0.first[Binding0] == SrcResArrays.first[Binding],
+               "All shader stages must share the same inline constant data attributes (ensured by InitInlineConstantBuffer)");
+        VERIFY(DstResArrays0.first[Binding0] == DstResArrays.first[Binding],
+               "All shader stages must share the same inline constant data attributes (ensured by InitInlineConstantBuffer)");
         VERIFY(SrcResArrays0.first[Binding0].pInlineConstantData == SrcResArrays.first[Binding].pInlineConstantData,
-               "All active shader stages must share the same inline constant data");
+               "All shader stages must share the same inline constant data (ensured by InitInlineConstantBuffer)");
         VERIFY(DstResArrays0.first[Binding0].pInlineConstantData == DstResArrays.first[Binding].pInlineConstantData,
-               "All active shader stages must share the same inline constant data");
+               "All shader stages must share the same inline constant data (ensured by InitInlineConstantBuffer)");
     }
 #endif
 }

@@ -451,7 +451,8 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask,
             continue;
         }
 
-        if (m_BindInfo.StaleSRBMask & SignBit)
+        const bool SRBStale = (m_BindInfo.StaleSRBMask & SignBit) != 0;
+        if (SRBStale)
         {
             // Bind all cache resources
             BindCacheResources(*pResourceCache, BaseBindings, PsUavBindMode);
@@ -491,7 +492,8 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask,
                    "Shader resource cache does not contain inline constants, but the corresponding bit in InlineConstantsSRBMask is set. "
                    "This may be a bug because inline constants flag in the cache never changes after SRB creation, "
                    "while m_BindInfo.InlineConstantsSRBMask is initialized when SRB is committed.");
-            if ((m_BindInfo.StaleSRBMask & SignBit) != 0 || !InlineConstantsIntact)
+            // Always update inline constant buffers if the SRB is stale
+            if (SRBStale || !InlineConstantsIntact)
             {
                 if (PipelineResourceSignatureD3D11Impl* pSign = m_pPipelineState->GetResourceSignature(SignIdx))
                 {
@@ -712,7 +714,7 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
 
     const bool DynamicBuffersIntact  = (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) != 0;
     const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
-    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT, Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT))
+    if (Uint32 BindSRBMask = m_BindInfo.GetCommitMask(DynamicBuffersIntact, InlineConstantsIntact))
     {
         BindShaderResources(BindSRBMask, DynamicBuffersIntact, InlineConstantsIntact);
     }
