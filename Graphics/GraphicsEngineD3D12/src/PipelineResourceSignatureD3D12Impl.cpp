@@ -246,6 +246,10 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
         // Do not allocate resource slot for immutable samplers that are also defined as resource
         if (!(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && SrcImmutableSamplerInd != InvalidImmutableSamplerIndex))
         {
+            // For inline constants, ArraySize holds the number of 4-byte constants,
+            // while the resource occupies only one register slot.
+            const Uint32 ArraySize = ResDesc.GetArraySize();
+
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
                 // Use artificial root signature:
@@ -261,16 +265,12 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
                     ShaderResourceCacheD3D12::InlineConstantParamInfo InlineConstInfo;
                     InlineConstInfo.RootIndex            = SigRootIndex;
                     InlineConstInfo.OffsetFromTableStart = SigOffsetFromTableStart;
-                    InlineConstInfo.NumValues            = ResDesc.ArraySize;
+                    // For inline constants, ArraySize holds the number of 4-byte constants.
+                    InlineConstInfo.NumValues = ResDesc.ArraySize;
                     StaticResInlineConstInfo.push_back(InlineConstInfo);
+                }
 
-                    // For inline constants, count only one resource as the ArraySize is the number of 4-byte constants
-                    StaticResCacheTblSizes[SigRootIndex] += 1;
-                }
-                else
-                {
-                    StaticResCacheTblSizes[SigRootIndex] += ResDesc.ArraySize;
-                }
+                StaticResCacheTblSizes[SigRootIndex] += ArraySize;
             }
 
             if (IsRTSizedArray)
@@ -284,8 +284,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
                 // Normal resources go into space 0.
                 Space    = 0;
                 Register = NumResources[d3d12DescriptorRangeType];
-                // For inline constants, ArraySize holds the number of 4-byte constants.
-                NumResources[d3d12DescriptorRangeType] += ResDesc.GetArraySize();
+                NumResources[d3d12DescriptorRangeType] += ArraySize;
             }
 
             const PIPELINE_RESOURCE_FLAGS dbgValidResourceFlags = GetValidPipelineResourceFlags(ResDesc.ResourceType);
@@ -293,7 +292,7 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
 
             const bool UseDynamicOffset  = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0;
             const bool IsFormattedBuffer = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != 0;
-            const bool IsArray           = ResDesc.ArraySize != 1;
+            const bool IsArray           = ArraySize != 1;
 
             d3d12RootParamType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
             static_assert(SHADER_RESOURCE_TYPE_LAST == SHADER_RESOURCE_TYPE_ACCEL_STRUCT, "Please update the switch below to handle the new shader resource type");
@@ -325,8 +324,10 @@ void PipelineResourceSignatureD3D12Impl::AllocateRootParameters(const bool IsSer
                     d3d12RootParamType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
             }
 
-            ParamsBuilder.AllocateResourceSlot(ResDesc.ShaderStages, ResDesc.VarType, d3d12RootParamType,
-                                               d3d12DescriptorRangeType, ResDesc.ArraySize, Register, Space,
+            ParamsBuilder.AllocateResourceSlot(ResDesc.ShaderStages, ResDesc.VarType,
+                                               d3d12RootParamType, d3d12DescriptorRangeType,
+                                               ResDesc.ArraySize, // Array size or the number of inline constants
+                                               Register, Space,
                                                SRBRootIndex, SRBOffsetFromTableStart);
         }
         else
@@ -453,6 +454,13 @@ void PipelineResourceSignatureD3D12Impl::CopyStaticResources(ShaderResourceCache
 
             // For inline constants, array size is the number of 4-byte constant values
             const Uint32 NumConstantValues = ResDesc.ArraySize;
+            VERIFY(SrcRes.BufferRangeSize == NumConstantValues * sizeof(Uint32),
+                   "Source inline constant buffer range size (", SrcRes.BufferRangeSize,
+                   ") does not match the expected size (", NumConstantValues * sizeof(Uint32), ").");
+            VERIFY(DstRes.BufferRangeSize == NumConstantValues * sizeof(Uint32),
+                   "Destination inline constant buffer range size (", DstRes.BufferRangeSize,
+                   ") does not match the expected size (", NumConstantValues * sizeof(Uint32), ").");
+
             // Copy the actual constant values.
             // For inline constants, CPUDescriptorHandle.ptr stores the pointer to the constant values buffer.
             memcpy(reinterpret_cast<void*>(DstRes.CPUDescriptorHandle.ptr),
@@ -590,8 +598,9 @@ void PipelineResourceSignatureD3D12Impl::CommitRootConstants(const CommitCacheRe
 
         const Uint32* pConstants = reinterpret_cast<const Uint32*>(Res.CPUDescriptorHandle.ptr);
         VERIFY(pConstants != nullptr, "Resources used to store root constants must have valid pointer to the data.");
-        // The number of root constants is stored in BufferRangeSize
-        const Uint32 NumConstants = static_cast<Uint32>(Res.BufferRangeSize);
+        // Get the number of 4-byte constants from the buffer range size
+        const Uint32 NumConstants = static_cast<Uint32>(Res.BufferRangeSize / sizeof(Uint32));
+        VERIFY_EXPR(NumConstants > 0);
 
         ID3D12GraphicsCommandList* const pd3d12CmdList = CommitAttribs.CmdCtx.GetCommandList();
         if (CommitAttribs.IsCompute)
@@ -736,7 +745,8 @@ void PipelineResourceSignatureD3D12Impl::UpdateShaderResourceBindingMap(Resource
                 {
                     Attribs.Register,
                     Attribs.Space + BaseRegisterSpace,
-                    ResDesc.GetArraySize(), // For inline constants, ArraySize holds the number of 4-byte constants
+                    ResDesc.GetArraySize(), // For inline constants, ArraySize holds the number of 4-byte constants,
+                                            // while the resource occupies only one register.
                     ResDesc.ResourceType,
                 };
             bool IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, BindInfo).second;
@@ -811,7 +821,7 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
     const PipelineResourceDesc&         ResDesc    = GetResourceDesc(ResIndex);
     const PipelineResourceAttribsD3D12& ResAttribs = GetResourceAttribs(ResIndex);
     VERIFY_EXPR(strcmp(ResDesc.Name, D3DAttribs.Name) == 0);
-    VERIFY_EXPR(D3DAttribs.BindCount <= ResDesc.ArraySize);
+    VERIFY_EXPR(D3DAttribs.BindCount <= ResDesc.GetArraySize());
 
     if ((ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER) && ResAttribs.IsImmutableSamplerAssigned())
         return true;
@@ -828,6 +838,7 @@ bool PipelineResourceSignatureD3D12Impl::DvpValidateCommittedResource(const Devi
         const ShaderResourceCacheD3D12::Resource& CachedRes = RootTable.GetResource(OffsetFromTableStart + ArrIndex);
         if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
         {
+            VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can be marked as INLINE_CONSTANTS.");
             VERIFY(CachedRes.IsNull(), "Inline constants should not have any resource bound to them.");
             VERIFY(CachedRes.CPUDescriptorHandle.ptr != 0, "Inline constant resource must have valid CPU descriptor handle.");
             // Inline constants are not actual resources

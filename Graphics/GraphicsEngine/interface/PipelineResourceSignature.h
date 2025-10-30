@@ -105,9 +105,28 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     /// PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS flag.
     PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS = 1u << 0,
 
+    /// Indicates that the resource consists of inline constants (also
+    /// known as push constants in Vulkan or root constants in Direct3D12).
+    ///
+    /// Applies to SHADER_RESOURCE_TYPE_CONSTANT_BUFFER only.
+    ///
+    /// Use this flag if you have a buffer of frequently changing constants
+    /// - that are small in size (typically up to 128 bytes) and
+    /// - change often (e.g. per-draw or per-dispatch).
+    ///
+    /// Inline constants are set directly using IShaderResourceVariable::SetInlineConstants.
+    ///
+    /// This flag cannot be combined with any other flags.
+    ///
+    /// In Vulkan and Direct3D12, inline constants are not bound via descriptor sets or root
+    /// signatures, but are set directly in command buffers or command lists and are very cheap.
+    /// In legacy APIs (Direct3D11 and OpenGL), inline constants are emulated using regular
+    /// constant buffers and thus have higher overhead.
+    PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS = 1u << 1,
+
     /// Indicates that a texture SRV will be combined with a sampler.
     /// Applies to SHADER_RESOURCE_TYPE_TEXTURE_SRV resources.
-    PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER   = 1u << 1,
+    PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER   = 1u << 2,
 
     /// Indicates that this variable will be used to bind formatted buffers.
     /// Applies to SHADER_RESOURCE_TYPE_BUFFER_UAV and SHADER_RESOURCE_TYPE_BUFFER_SRV
@@ -117,35 +136,19 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     /// as opposed to structured buffers. If an application will be using
     /// formatted buffers with buffer UAVs and SRVs, it must specify the
     /// PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER flag.
-    PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER   = 1u << 2,
+    PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER   = 1u << 3,
 
     /// Indicates that resource is a run-time sized shader array (e.g. an array without a specific size).
-    PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY      = 1u << 3,
+    PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY      = 1u << 4,
 
     /// Indicates that the resource is an input attachment in general layout, which allows simultaneously
     /// reading from the resource through the input attachment and writing to it via color or depth-stencil
     /// attachment.
     ///
     /// \note This flag is only valid in Vulkan.
-    PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT = 1u << 4,
+    PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT = 1u << 5,
 
-    /// Indicates that the resource consists of inline constants (also known as push constants in Vulkan or root constants in Direct3D12).
-
-    /// Applies to SHADER_RESOURCE_TYPE_CONSTANT_BUFFER only.
-    ///
-    /// Inline constants are set directly using IShaderResourceVariable::SetInlineConstants.
-    ///
-    /// This flag cannot be combined with any other flags.
-    ///
-    /// In Vulkan and Direct3D12, inline constants are not bound via descriptor sets or root
-    /// signatures, but are set directly in command buffers or command lists. As such, they
-    /// are very cheap to set and are intended for small pieces of frequently changing data.
-    ///
-    /// In legacy APIs (Direct3D11 and OpenGL), inline constants are emulated using regular
-    /// constant buffers and thus have higher overhead.
-    PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS = 1u << 5,
-
-    PIPELINE_RESOURCE_FLAG_LAST = PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS
+    PIPELINE_RESOURCE_FLAG_LAST = PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT
 };
 DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_RESOURCE_FLAGS);
 
