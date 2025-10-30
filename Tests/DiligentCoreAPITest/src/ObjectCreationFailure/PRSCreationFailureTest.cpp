@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,8 +40,8 @@ namespace
 
 static void TestCreatePRSFailure(PipelineResourceSignatureDesc CI, const char* ExpectedErrorSubstring)
 {
-    auto* const pEnv    = GPUTestingEnvironment::GetInstance();
-    auto* const pDevice = pEnv->GetDevice();
+    GPUTestingEnvironment* const pEnv    = GPUTestingEnvironment::GetInstance();
+    IRenderDevice* const         pDevice = pEnv->GetDevice();
 
     RefCntAutoPtr<IPipelineResourceSignature> pSignature;
     pEnv->SetErrorAllowance(2, "Errors below are expected: testing PRS creation failure\n");
@@ -166,7 +166,7 @@ TEST(PRSCreationFailureTest, InvalidResourceFlag)
         {SHADER_TYPE_VERTEX, "g_Buffer", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER | PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER}};
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
-    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].Flags (COMBINED_SAMPLER|FORMATTED_BUFFER). Only the following flags are valid for a constant buffer: NO_DYNAMIC_BUFFERS, RUNTIME_ARRAY");
+    TestCreatePRSFailure(PRSDesc, "Incorrect Desc.Resources[1].Flags (COMBINED_SAMPLER|FORMATTED_BUFFER). Only the following flags are valid for a constant buffer: NO_DYNAMIC_BUFFERS, INLINE_CONSTANTS, RUNTIME_ARRAY");
 }
 
 TEST(PRSCreationFailureTest, InvalidTexSRVFlag)
@@ -255,7 +255,7 @@ TEST(PRSCreationFailureTest, InvalidAccelStructFlag)
 
 TEST(PRSCreationFailureTest, InvalidCombinedSamplerFlag)
 {
-    const auto& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
+    const RenderDeviceInfo& DeviceInfo = GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo();
     if (!(DeviceInfo.IsD3DDevice() || DeviceInfo.IsMetalDevice()))
     {
         GTEST_SKIP() << "Direct3D11, Direct3D12 and Metal only";

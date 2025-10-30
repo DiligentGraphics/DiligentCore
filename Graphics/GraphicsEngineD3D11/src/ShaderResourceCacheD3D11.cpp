@@ -145,7 +145,9 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
             SHADER_TYPE  ActiveStages = InlineCBAttr.BindPoints.GetActiveStages();
             const Uint32 ShaderInd0   = ExtractFirstShaderStageIndex(ActiveStages);
             const Uint32 Binding0     = InlineCBAttr.BindPoints[ShaderInd0];
-            const bool   IsInRange    = Binding0 < GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd0);
+            // Static resource cache may not contain all inline constant buffers.
+            // Skip those that are out of range.
+            const bool IsInRange = Binding0 < GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd0);
 
 #ifdef DILIGENT_DEBUG
             while (ActiveStages != SHADER_TYPE_UNKNOWN)
@@ -200,6 +202,7 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
         ProcessInlineCBs([&pInlineCBData, this](const InlineConstantBufferAttribsD3D11& InlineCBAttr) {
             VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
             VERIFY_EXPR(InlineCBAttr.pBuffer != nullptr);
+            // Use the same buffer and data pointer for all active shader stages.
             InitInlineConstantBuffer(InlineCBAttr.BindPoints, InlineCBAttr.pBuffer, InlineCBAttr.NumConstants, pInlineCBData);
             pInlineCBData += InlineCBAttr.NumConstants;
         });
@@ -233,6 +236,7 @@ void ShaderResourceCacheD3D11::InitInlineConstantBuffer(const D3D11ResourceBindP
                                                         Uint32                         NumConstants,
                                                         void*                          pInlineConstantData)
 {
+    // Use the same buffer and data pointer for all shader stages.
     VERIFY_EXPR(pBuffer);
     VERIFY_EXPR(pInlineConstantData);
     ID3D11Buffer* pd3d11Buffer = pBuffer->GetD3D11Buffer();

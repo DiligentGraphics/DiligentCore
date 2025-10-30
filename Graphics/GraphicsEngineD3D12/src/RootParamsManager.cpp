@@ -390,7 +390,8 @@ void RootParamsBuilder::AllocateResourceSlot(SHADER_TYPE                   Shade
     {
         OffsetFromTableStart = 0;
 
-        // Add new 32-bit constants parameter to existing root parameters
+        // Add new 32-bit constants parameter to existing root parameters.
+        // ArraySize parameter specifies the number of 32-bit values in this case.
         AddRootConstants(RootIndex, Register, Space, ArraySize, ShaderVisibility, ParameterGroup);
     }
     else if (RootParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)

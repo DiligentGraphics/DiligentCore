@@ -212,7 +212,8 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
 
             VERIFY((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) == 0 || ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
                    "Only constant buffers can have inline constants flag");
-            // For inline constants, ArraySize holds the number of 4-byte constants
+            // For inline constants, ArraySize holds the number of 4-byte constants, while
+            // the resource occupies a single constant buffer slot.
             const Uint32 ArraySize = ResDesc.GetArraySize();
             AllocBindPoints(m_ResourceCounters, BindPoints, ResDesc.ShaderStages, ArraySize, Range);
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
@@ -246,10 +247,20 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
 
             if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
             {
+                // Inline constant buffers are handled mostly like regular constant buffers. The only
+                // difference is that the buffer is created internally here and is not expected to be bound.
+                // It is updated by UpdateInlineConstantBuffers() method.
+
                 VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can have INLINE_CONSTANTS flag");
                 InlineConstantBufferAttribsD3D11& InlineCBAttribs{m_InlineConstantBuffers[InlineConstantBufferIdx++]};
                 InlineCBAttribs.BindPoints   = BindPoints;
                 InlineCBAttribs.NumConstants = ResDesc.ArraySize;
+
+                // All SRBs created from this signature will share the same inline constant buffer.
+                // An alternative design is to have a separate inline constant buffer for each SRB,
+                // which will allow skipping buffer update if the inline constants are not changed.
+                // However, this will increase memory consumption as each SRB will have its own copy of the inline CB.
+                // Besides, inline constants are expected to change frequently, so skipping updates is unlikely.
                 if (m_pDevice)
                 {
                     std::string Name = m_Desc.Name;
@@ -437,7 +448,8 @@ void PipelineResourceSignatureD3D11Impl::UpdateShaderResourceBindingMap(Resource
                 {
                     Uint32{BaseBindings[Range][ShaderInd]} + Uint32{ResAttr.BindPoints[ShaderInd]},
                     0u,                     // register space is not supported
-                    ResDesc.GetArraySize(), // For inline constants, ArraySize holds the number of 4-byte constants
+                    ResDesc.GetArraySize(), // For inline constants, ArraySize holds the number of 4-byte constants,
+                                            // while the resource occupies a single constant buffer slot.
                     ResDesc.ResourceType,
                 };
             bool IsUnique = ResourceMap.emplace(HashMapStringKey{ResDesc.Name}, BindInfo).second;
@@ -528,7 +540,7 @@ bool PipelineResourceSignatureD3D11Impl::DvpValidateCommittedResource(const D3DS
     const PipelineResourceAttribsD3D11& ResAttr = m_pResourceAttribs[ResIndex];
     VERIFY(strcmp(ResDesc.Name, D3DAttribs.Name) == 0, "Inconsistent resource names");
 
-    VERIFY_EXPR(D3DAttribs.BindCount <= ResDesc.ArraySize);
+    VERIFY_EXPR(D3DAttribs.BindCount <= ResDesc.GetArraySize());
 
     bool BindingsOK = true;
     switch (ShaderResourceTypeToRange(ResDesc.ResourceType))
