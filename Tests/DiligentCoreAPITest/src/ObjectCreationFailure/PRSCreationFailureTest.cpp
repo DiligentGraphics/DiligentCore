@@ -271,6 +271,30 @@ TEST(PRSCreationFailureTest, InvalidCombinedSamplerFlag)
     TestCreatePRSFailure(PRSDesc, "Desc.Resources[0].Flags contain COMBINED_SAMPLER flag, but Desc.UseCombinedTextureSamplers is false");
 }
 
+TEST(PRSCreationFailureTest, InvalidInlineConstantsFlag)
+{
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name                       = "Invalid inline constants Flag";
+    PRSDesc.UseCombinedTextureSamplers = false;
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_InlineConstants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "INLINE_CONSTANTS flag cannot be combined with other flags");
+}
+
+TEST(PRSCreationFailureTest, InvalidInlineConstantCount)
+{
+    PipelineResourceSignatureDesc PRSDesc;
+    PRSDesc.Name                       = "Invalid inline constant count";
+    PRSDesc.UseCombinedTextureSamplers = false;
+    PipelineResourceDesc Resources[]{
+        {SHADER_TYPE_PIXEL, "g_InlineConstants", 65, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS}};
+    PRSDesc.Resources    = Resources;
+    PRSDesc.NumResources = _countof(Resources);
+    TestCreatePRSFailure(PRSDesc, "Desc.Resources[0].ArraySize (65) exceeds the maximum allowed value (64) for inline constants.");
+}
+
 TEST(PRSCreationFailureTest, InvalidAssignedSamplerResourceType)
 {
     PipelineResourceSignatureDesc PRSDesc;
