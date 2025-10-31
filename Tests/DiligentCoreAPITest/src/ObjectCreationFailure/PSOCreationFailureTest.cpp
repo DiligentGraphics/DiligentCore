@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -887,6 +887,20 @@ TEST_F(PSOCreationFailureTest, OverlappingImmutableSamplerStages)
     TestCreatePSOFailure(PsoCI, "'g_Texture_sampler' is defined in overlapping shader stages (SHADER_TYPE_VERTEX, SHADER_TYPE_GEOMETRY and SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL)");
 }
 
+TEST_F(PSOCreationFailureTest, InvalidInlineConstantsFlag)
+{
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - Invalid Inline Constants Flag")};
+
+    ShaderResourceVariableDesc Variables[] //
+        {
+            ShaderResourceVariableDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Texture", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+            ShaderResourceVariableDesc{SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_InlineConstants", SHADER_RESOURCE_VARIABLE_TYPE_STATIC, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS | SHADER_VARIABLE_FLAG_NO_DYNAMIC_BUFFERS} //
+        };
+    PsoCI.PSODesc.ResourceLayout.Variables    = Variables;
+    PsoCI.PSODesc.ResourceLayout.NumVariables = _countof(Variables);
+    TestCreatePSOFailure(PsoCI, "ResourceLayout.Variables[1].Flags: INLINE_CONSTANTS flag cannot be combined with other flags.");
+}
+
 TEST_F(PSOCreationFailureTest, RenderPassWithNonZeroNumRenderTargets)
 {
     auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - Render Pass With non-zero NumRenderTargets", true)};
@@ -1167,7 +1181,7 @@ TEST_F(PSOCreationFailureTest, NullProcHitShader)
     TestCreatePSOFailure(PsoCI, "pProceduralHitShaders[0].pIntersectionShader must not be null");
 }
 
-TEST_F(PSOCreationFailureTest, InvalidShaderinGeneralGroup)
+TEST_F(PSOCreationFailureTest, InvalidShaderInGeneralGroup)
 {
     if (!HasRayTracing())
         GTEST_SKIP();
@@ -1180,7 +1194,7 @@ TEST_F(PSOCreationFailureTest, InvalidShaderinGeneralGroup)
     TestCreatePSOFailure(PsoCI, "SHADER_TYPE_RAY_CLOSEST_HIT is not a valid type for ray tracing general shader");
 }
 
-TEST_F(PSOCreationFailureTest, InvalidShaderinTriangleHitGroup1)
+TEST_F(PSOCreationFailureTest, InvalidShaderInTriangleHitGroup1)
 {
     if (!HasRayTracing())
         GTEST_SKIP();
@@ -1197,7 +1211,7 @@ TEST_F(PSOCreationFailureTest, InvalidShaderinTriangleHitGroup1)
     TestCreatePSOFailure(PsoCI, "SHADER_TYPE_RAY_MISS is not a valid type for ray tracing triangle closest hit");
 }
 
-TEST_F(PSOCreationFailureTest, InvalidShaderinTriangleHitGroup2)
+TEST_F(PSOCreationFailureTest, InvalidShaderInTriangleHitGroup2)
 {
     if (!HasRayTracing())
         GTEST_SKIP();
@@ -1214,7 +1228,7 @@ TEST_F(PSOCreationFailureTest, InvalidShaderinTriangleHitGroup2)
     TestCreatePSOFailure(PsoCI, "SHADER_TYPE_RAY_INTERSECTION is not a valid type for ray tracing triangle any hit");
 }
 
-TEST_F(PSOCreationFailureTest, InvalidShaderinProceduralHitGroup1)
+TEST_F(PSOCreationFailureTest, InvalidShaderInProceduralHitGroup1)
 {
     if (!HasRayTracing())
         GTEST_SKIP();
@@ -1232,7 +1246,7 @@ TEST_F(PSOCreationFailureTest, InvalidShaderinProceduralHitGroup1)
     TestCreatePSOFailure(PsoCI, "SHADER_TYPE_CALLABLE is not a valid type for ray tracing procedural intersection");
 }
 
-TEST_F(PSOCreationFailureTest, InvalidShaderinProceduralHitGroup2)
+TEST_F(PSOCreationFailureTest, InvalidShaderInProceduralHitGroup2)
 {
     if (!HasRayTracing())
         GTEST_SKIP();
@@ -1250,7 +1264,7 @@ TEST_F(PSOCreationFailureTest, InvalidShaderinProceduralHitGroup2)
     TestCreatePSOFailure(PsoCI, "SHADER_TYPE_RAY_GEN is not a valid type for ray tracing procedural closest hit");
 }
 
-TEST_F(PSOCreationFailureTest, InvalidShaderinProceduralHitGroup3)
+TEST_F(PSOCreationFailureTest, InvalidShaderInProceduralHitGroup3)
 {
     if (!HasRayTracing())
         GTEST_SKIP();
