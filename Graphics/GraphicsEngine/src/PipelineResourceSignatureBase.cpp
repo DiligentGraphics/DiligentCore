@@ -119,11 +119,6 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                                         "). INLINE_CONSTANTS flag cannot be combined with other flags.");
             }
 
-            if (Res.ArraySize == 0)
-            {
-                LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize must be greater than 0 for inline constants.");
-            }
-
             if (Res.ArraySize > 64)
             {
                 LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize (", Res.ArraySize,

@@ -291,7 +291,6 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetDynamicOffset(Uint32 Arra
     const PipelineResourceAttribsD3D11& Attr = GetAttribs();
     const PipelineResourceDesc&         Desc = GetDesc();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
-    VERIFY_EXPR((Desc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) == 0);
 #ifdef DILIGENT_DEVELOPMENT
     {
         const ShaderResourceCacheD3D11::CachedCB& CachedCB = m_ParentManager.m_ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(Attr.BindPoints + ArrayIndex);
@@ -306,7 +305,6 @@ void ShaderVariableManagerD3D11::ConstBuffBindInfo::SetConstants(const void* pCo
     const PipelineResourceAttribsD3D11& Attr = GetAttribs();
     const PipelineResourceDesc&         Desc = GetDesc();
     VERIFY_EXPR(Desc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
-    VERIFY_EXPR(Desc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
 #ifdef DILIGENT_DEVELOPMENT
     {
         VerifyInlineConstants(Desc, pConstants, FirstConstant, NumConstants);
