@@ -266,6 +266,9 @@ std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Sh
     Shader.setAutoMapBindings(true);
     Shader.setAutoMapLocations(true);
     TBuiltInResource Resources = InitResources();
+#ifdef DILIGENT_DEBUG
+    messages = static_cast<EShMessages>(static_cast<unsigned>(messages) | static_cast<unsigned>(EShMessages::EShMsgDebugInfo));
+#endif
 
     bool ParseResult = pIncluder != nullptr ?
         Shader.parse(&Resources, 100, shProfile, false, false, messages, *pIncluder) :
@@ -288,8 +291,17 @@ std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Sh
     if (AssignBindings)
         Program.mapIO();
 
+    ::glslang::SpvOptions spvOptions;
+#ifdef DILIGENT_DEBUG
+    spvOptions.generateDebugInfo = true;
+#if DILIGENT_NO_HLSL
+    // will be stripped anyway with HLSL support anyway
+    spvOptions.emitNonSemanticShaderDebugInfo = true;
+    spvOptions.emitNonSemanticShaderDebugSource = true;
+#endif
+#endif
     std::vector<unsigned int> spirv;
-    ::glslang::GlslangToSpv(*Program.getIntermediate(Shader.getStage()), spirv);
+    ::glslang::GlslangToSpv(*Program.getIntermediate(Shader.getStage()), spirv, &spvOptions);
 
     return spirv;
 }
