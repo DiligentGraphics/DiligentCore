@@ -50,6 +50,7 @@ set(INTERFACE
     interface/Cast.hpp
     interface/CompilerDefinitions.h
     interface/CallbackWrapper.hpp
+    interface/WeakValueHashMap.hpp
 )
 
 set(SOURCE
