@@ -289,10 +289,15 @@ std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
 std::string BasicFileSystem::GetRelativePath(const Char* PathFrom,
                                              bool        IsFromDirectory,
                                              const Char* PathTo,
-                                             bool /*IsToDirectory*/)
+                                             bool /*IsToDirectory*/,
+                                             Char Slash)
 {
     DEV_CHECK_ERR(PathFrom != nullptr, "Source path must not be null");
     DEV_CHECK_ERR(PathTo != nullptr, "Destination path must not be null");
+    if (Slash != 0)
+        DEV_CHECK_ERR(IsSlash(Slash), "Incorrect slash symbol");
+    else
+        Slash = SlashSymbol;
 
     const auto FromPathComps = SplitPath(PathFrom, true);
     const auto ToPathComps   = SplitPath(PathTo, true);
@@ -321,7 +326,7 @@ std::string BasicFileSystem::GetRelativePath(const Char* PathFrom,
         }
 
         if (!RelPath.empty())
-            RelPath.push_back(SlashSymbol);
+            RelPath.push_back(Slash);
         RelPath.append("..");
     }
 
@@ -329,7 +334,7 @@ std::string BasicFileSystem::GetRelativePath(const Char* PathFrom,
     {
         // IsToDirectory is in fact irrelevant
         if (!RelPath.empty())
-            RelPath.push_back(SlashSymbol);
+            RelPath.push_back(Slash);
         RelPath.append(*to_it);
     }
 

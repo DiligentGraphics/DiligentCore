@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -372,30 +372,33 @@ TEST(Platforms_FileSystem, GetRelativePath)
         return Path;
     };
 
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from", true, "a/b/c", true).c_str(), BuildPath({".."}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir", true, "a/b/c", true).c_str(), BuildPath({"..", ".."}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c", true).c_str(), BuildPath({".."}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir/file", false, "a/b/c", true).c_str(), BuildPath({"..", ".."}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from", true, "a/b/c", true), BuildPath({".."}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir", true, "a/b/c", true), BuildPath({"..", ".."}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c", true), BuildPath({".."}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir/file", false, "a/b/c", true), BuildPath({"..", ".."}));
 
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from", true, "a/b/c/file", false).c_str(), BuildPath({"..", "file"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir", true, "a/b/c/file", false).c_str(), BuildPath({"..", "..", "file"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c/file", false).c_str(), BuildPath({"..", "file"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir/file", false, "a/b/c/file", false).c_str(), BuildPath({"..", "..", "file"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from", true, "a/b/c/file", false), BuildPath({"..", "file"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir", true, "a/b/c/file", false), BuildPath({"..", "..", "file"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c/file", false), BuildPath({"..", "file"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir/file", false, "a/b/c/file", false), BuildPath({"..", "..", "file"}));
 
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c", true, "a/b/c/to", true).c_str(), BuildPath({"to"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c", true, "a/b/c/to/dir", true).c_str(), BuildPath({"to", "dir"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/file", false, "a/b/c/to", true).c_str(), BuildPath({"to"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/file", false, "a/b/c/to/dir", true).c_str(), BuildPath({"to", "dir"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c", true, "a/b/c/to", true), BuildPath({"to"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c", true, "a/b/c/to/dir", true), BuildPath({"to", "dir"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/file", false, "a/b/c/to", true), BuildPath({"to"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/file", false, "a/b/c/to/dir", true), BuildPath({"to", "dir"}));
 
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c", true, "a/b/c/file", false).c_str(), BuildPath({"file"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c", true, "a/b/c/to/file", false).c_str(), BuildPath({"to", "file"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/file", false, "a/b/c/file2", false).c_str(), BuildPath({"file2"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/file", false, "a/b/c/to/file", false).c_str(), BuildPath({"to", "file"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c", true, "a/b/c/file", false), BuildPath({"file"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c", true, "a/b/c/to/file", false), BuildPath({"to", "file"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/file", false, "a/b/c/file2", false), BuildPath({"file2"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/file", false, "a/b/c/to/file", false), BuildPath({"to", "file"}));
 
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir", true, "a/b/c/to/dir", true).c_str(), BuildPath({"..", "..", "to", "dir"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c/to/dir", true).c_str(), BuildPath({"..", "to", "dir"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir", true, "a/b/c/to/file", false).c_str(), BuildPath({"..", "..", "to", "file"}));
-    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c/to/file", false).c_str(), BuildPath({"..", "to", "file"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir", true, "a/b/c/to/dir", true), BuildPath({"..", "..", "to", "dir"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c/to/dir", true), BuildPath({"..", "to", "dir"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/dir", true, "a/b/c/to/file", false), BuildPath({"..", "..", "to", "file"}));
+    EXPECT_EQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c/to/file", false), BuildPath({"..", "to", "file"}));
+
+    EXPECT_STREQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c/to/file", false, '/').c_str(), "../to/file");
+    EXPECT_STREQ(FileSystem::GetRelativePath("a/b/c/from/file", false, "a/b/c/to/file", false, '\\').c_str(), "..\\to\\file");
 }
 
 

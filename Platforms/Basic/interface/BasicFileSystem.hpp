@@ -229,13 +229,16 @@ public:
     /// \param [in]  PathTo          - Path that defines the endpoint of the relative path.
     ///                                Must not be null.
     /// \param [in]  IsToDirectory   - Indicates if PathTo is a directory.
+    /// \param [in]  Slash           - Slash symbol to use in the returned path.
+    ///                                If 0, platform-specific slash is used.
     ///
     /// \return                        Relative path from PathFrom to PathTo.
     ///                                If no relative path exists, PathFrom is returned.
     static std::string GetRelativePath(const Char* PathFrom,
                                        bool        IsFromDirectory,
                                        const Char* PathTo,
-                                       bool        IsToDirectory);
+                                       bool        IsToDirectory,
+                                       Char        Slash = 0);
 
     static std::string FileDialog(const FileDialogAttribs& DialogAttribs);
     static std::string OpenFolderDialog(const char* Title);
