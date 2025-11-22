@@ -141,10 +141,13 @@ struct FindFileData
 struct BasicFileSystem
 {
 public:
+    static constexpr Char UnixSlash = '/';
+    static constexpr Char WinSlash  = '\\';
+
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-    static constexpr Char SlashSymbol = '\\';
+    static constexpr Char SlashSymbol = WinSlash;
 #else
-    static constexpr Char SlashSymbol = '/';
+    static constexpr Char SlashSymbol = UnixSlash;
 #endif
 
     using SearchFilesResult = std::vector<FindFileData>;
@@ -160,7 +163,7 @@ public:
 
     static bool IsSlash(Char c)
     {
-        return c == '/' || c == '\\';
+        return c == UnixSlash || c == WinSlash;
     }
 
     static void CorrectSlashes(String& Path, Char Slash = 0);

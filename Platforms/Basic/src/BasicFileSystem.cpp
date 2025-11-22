@@ -227,60 +227,114 @@ std::string BasicFileSystem::BuildPathFromComponents(const std::vector<String>& 
 
 std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
 {
-    if (Path == nullptr)
+    if (Path == nullptr || Path[0] == '\0')
         return "";
 
-    if (Slash != 0)
-        DEV_CHECK_ERR(IsSlash(Slash), "Incorrect slash symbol");
-    else
-        Slash = SlashSymbol;
-
-    struct MiniStringView
-    {
-        MiniStringView(const char* _Start,
-                       const char* _End) :
-            Start{_Start},
-            End{_End}
-        {}
-
-        bool operator==(const char* Str) const noexcept
-        {
-            const auto Len = End - Start;
-            return strncmp(Str, Start, Len) == 0 && Str[Len] == '\0';
-        }
-
-        bool operator!=(const char* str) const noexcept
-        {
-            return !(*this == str);
-        }
-
-        const char* const Start;
-        const char* const End;
-    };
-
-    const auto PathComponents  = Diligent::SplitPath<MiniStringView>(Path, true);
-    const auto NumComponents   = PathComponents.size();
-    const auto UseLeadingSlash = Slash == '/' && IsSlash(Path[0]);
-
-    size_t Len = UseLeadingSlash ? 1 : 0;
-    for (const auto& Cmp : PathComponents)
-        Len += Cmp.End - Cmp.Start;
-    if (NumComponents > 0)
-        Len += NumComponents - 1;
+    DEV_CHECK_ERR(Slash == 0 || IsSlash(Slash), "Incorrect slash symbol");
+    Slash = IsSlash(Slash) ? Slash : SlashSymbol;
 
     std::string SimplifiedPath;
-    SimplifiedPath.reserve(Len);
-    if (UseLeadingSlash)
-        SimplifiedPath.push_back(Slash);
+    const char* c = Path;
 
-    for (size_t i = 0; i < NumComponents; ++i)
+    if (Slash == WinSlash)
     {
-        if (i > 0)
-            SimplifiedPath.push_back(Slash);
-        const auto& Cmp = PathComponents[i];
-        SimplifiedPath.append(Cmp.Start, Cmp.End);
+        // Windows path
+        if (c[1] == ':')
+        {
+            // Windows drive letter (e.g., C:)
+            SimplifiedPath.push_back(*(c++)); // Drive letter
+            SimplifiedPath.push_back(*(c++)); // ':'
+        }
+        else if (IsSlash(c[0]) && IsSlash(c[1]))
+        {
+            // Windows UNC path (e.g., \\Server\Share)
+            SimplifiedPath.push_back(Slash); // First '\'
+            SimplifiedPath.push_back(Slash); // Second '\'
+            c += 2;
+            // Copy server name
+            while (*c != '\0' && !IsSlash(*c))
+                SimplifiedPath.push_back(*(c++));
+        }
     }
-    VERIFY_EXPR(SimplifiedPath.length() == Len);
+    else
+    {
+        // Unix path
+        VERIFY_EXPR(Slash == UnixSlash);
+        if (IsSlash(*c))
+        {
+            // Unix absolute path (e.g., /home/user)
+            SimplifiedPath.push_back(Slash);
+            ++c;
+        }
+    }
+
+    const size_t RootLen = SimplifiedPath.length();
+
+    Uint32 NumLeadingDirUps = 0;
+    while (*c != '\0')
+    {
+        // Skip leading slashes
+        while (IsSlash(*c))
+            ++c;
+
+        // Handle . and ..
+        if (*c == '.')
+        {
+            if ((IsSlash(c[1]) || c[1] == '\0'))
+            {
+                // Skip /.
+                c += (c[1] != '\0') ? 2 : 1;
+                continue;
+            }
+
+            if (c[1] == '.' && (IsSlash(c[2]) || c[2] == '\0'))
+            {
+                // Handle /..
+                c += (c[2] != '\0') ? 3 : 2;
+                // Pop previous subdirectory unless it is a root
+                if (SimplifiedPath.size() > RootLen)
+                {
+                    while (SimplifiedPath.size() > RootLen)
+                    {
+                        bool WasSlash = IsSlash(SimplifiedPath.back());
+                        SimplifiedPath.pop_back();
+                        if (WasSlash)
+                            break;
+                    }
+                }
+                else if (RootLen == 0)
+                {
+                    // Relative path - count leading ../
+                    ++NumLeadingDirUps;
+                }
+                continue;
+            }
+        }
+
+        if (*c == '\0')
+            break;
+
+        if (!SimplifiedPath.empty() && !IsSlash(SimplifiedPath.back()))
+        {
+            SimplifiedPath.push_back(Slash);
+        }
+
+        // Copy regular path component
+        while (*c != '\0' && !IsSlash(*c))
+        {
+            SimplifiedPath.push_back(*(c++));
+        }
+    }
+
+    if (NumLeadingDirUps > 0)
+    {
+        const bool IsPathEmpty = SimplifiedPath.empty();
+        SimplifiedPath.insert(0, NumLeadingDirUps * 3 - (IsPathEmpty ? 1 : 0), '.');
+        for (Uint32 i = 0; i < NumLeadingDirUps - (IsPathEmpty ? 1 : 0); ++i)
+        {
+            SimplifiedPath[i * 3 + 2] = Slash;
+        }
+    }
 
     return SimplifiedPath;
 }
