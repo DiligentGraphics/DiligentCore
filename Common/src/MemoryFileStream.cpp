@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,12 @@ IMPLEMENT_QUERY_INTERFACE(MemoryFileStream, IID_FileStream, TBase)
 
 bool MemoryFileStream::Read(void* Data, size_t Size)
 {
-    VERIFY_EXPR(m_CurrentOffset <= m_DataBlob->GetSize());
+    if (Size == 0)
+        return true;
+
+    if (m_CurrentOffset + Size > m_DataBlob->GetSize())
+        return false;
+
     size_t      BytesLeft   = m_DataBlob->GetSize() - m_CurrentOffset;
     size_t      BytesToRead = std::min(BytesLeft, Size);
     const void* pSrcData    = m_DataBlob->GetConstDataPtr(m_CurrentOffset);
@@ -69,6 +74,9 @@ void MemoryFileStream::ReadBlob(IDataBlob* pData)
 
 bool MemoryFileStream::Write(const void* Data, size_t Size)
 {
+    if (Size == 0)
+        return true;
+
     if (m_CurrentOffset + Size > m_DataBlob->GetSize())
     {
         m_DataBlob->Resize(m_CurrentOffset + Size);
