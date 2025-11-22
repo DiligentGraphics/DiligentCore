@@ -234,6 +234,7 @@ std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
     Slash = IsSlash(Slash) ? Slash : SlashSymbol;
 
     std::string SimplifiedPath;
+    SimplifiedPath.reserve(std::strlen(Path));
     const char* c = Path;
 
     if (Slash == WinSlash)
@@ -292,15 +293,12 @@ std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
                 // Handle /..
                 c += (c[2] != '\0') ? 3 : 2;
                 // Pop previous subdirectory unless it is a root
-                if (SimplifiedPath.size() > RootLen)
+                if (SimplifiedPath.length() > RootLen)
                 {
-                    while (SimplifiedPath.size() > RootLen)
-                    {
-                        bool WasSlash = IsSlash(SimplifiedPath.back());
-                        SimplifiedPath.pop_back();
-                        if (WasSlash)
-                            break;
-                    }
+                    size_t PrevSlashPos = SimplifiedPath.length() - 1;
+                    while (PrevSlashPos > RootLen && !IsSlash(SimplifiedPath[PrevSlashPos]))
+                        --PrevSlashPos;
+                    SimplifiedPath.resize(PrevSlashPos);
                 }
                 else if (RootLen == 0)
                 {
@@ -320,10 +318,12 @@ std::string BasicFileSystem::SimplifyPath(const Char* Path, Char Slash)
         }
 
         // Copy regular path component
-        while (*c != '\0' && !IsSlash(*c))
-        {
-            SimplifiedPath.push_back(*(c++));
-        }
+        const char* CmpEnd = c;
+        while (*CmpEnd != '\0' && !IsSlash(*CmpEnd))
+            ++CmpEnd;
+
+        SimplifiedPath.append(c, CmpEnd);
+        c = CmpEnd;
     }
 
     if (NumLeadingDirUps > 0)

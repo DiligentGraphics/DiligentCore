@@ -331,6 +331,9 @@ TEST(Platforms_FileSystem, SimplifyPath)
     EXPECT_STREQ(FileSystem::SimplifyPath("//server/../..", '\\').c_str(), "\\\\server");
     EXPECT_STREQ(FileSystem::SimplifyPath("\\\\server\\..\\..", '\\').c_str(), "\\\\server");
 
+    EXPECT_STREQ(FileSystem::SimplifyPath("a/b/./..", '/').c_str(), "a");
+    EXPECT_STREQ(FileSystem::SimplifyPath("a\\b\\.\\..", '\\').c_str(), "a");
+
     EXPECT_STREQ(FileSystem::SimplifyPath("/a/..", '/').c_str(), "/");
     EXPECT_STREQ(FileSystem::SimplifyPath("\\a\\..", '/').c_str(), "/");
     EXPECT_STREQ(FileSystem::SimplifyPath("/a/..", '\\').c_str(), "");
