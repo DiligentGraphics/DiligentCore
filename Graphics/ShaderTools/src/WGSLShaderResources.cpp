@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -764,7 +764,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
         char* DataPtr = pOutputDataBlob->GetDataPtr<char>();
         memcpy(DataPtr, Diagnostics.data(), Diagnostics.length() + 1);
         memcpy(DataPtr + Diagnostics.length() + 1, WGSL.data(), WGSL.length() + 1);
-        pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppTintOutput));
+        pOutputDataBlob->QueryInterface(IID_DataBlob, ppTintOutput);
     }
 
     if (!Program.IsValid())

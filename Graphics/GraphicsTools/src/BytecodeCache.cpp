@@ -211,7 +211,7 @@ void CreateBytecodeCache(const BytecodeCacheCreateInfo& CreateInfo,
     {
         RefCntAutoPtr<IBytecodeCache> pCache{MakeNewRCObj<BytecodeCacheImpl>()(CreateInfo)};
         if (pCache)
-            pCache->QueryInterface(IID_BytecodeCache, reinterpret_cast<IObject**>(ppCache));
+            pCache->QueryInterface(IID_BytecodeCache, ppCache);
     }
     catch (...)
     {

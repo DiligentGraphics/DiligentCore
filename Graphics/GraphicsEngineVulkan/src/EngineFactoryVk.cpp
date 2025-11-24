@@ -1425,7 +1425,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
             NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(
                 RawMemAllocator, this, EngineCI, AdapterInfo, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice) //
         };
-        pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
+        pRenderDeviceVk->QueryInterface(IID_RenderDevice, ppDevice);
 
         if (m_OnRenderDeviceCreated != nullptr)
             m_OnRenderDeviceCreated(pRenderDeviceVk);
@@ -1448,7 +1448,7 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
                     )};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceVk will
             // keep a weak reference to the context
-            pImmediateCtxVk->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CtxInd));
+            pImmediateCtxVk->QueryInterface(IID_DeviceContext, ppContexts + CtxInd);
             pRenderDeviceVk->SetImmediateContext(CtxInd, pImmediateCtxVk);
         }
 
@@ -1497,7 +1497,7 @@ void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
         IMemoryAllocator&    RawMemAllocator  = GetRawAllocator();
 
         SwapChainVkImpl* pSwapChainVk = NEW_RC_OBJ(RawMemAllocator, "SwapChainVkImpl instance", SwapChainVkImpl)(SCDesc, pDeviceVk, pDeviceContextVk, Window);
-        pSwapChainVk->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+        pSwapChainVk->QueryInterface(IID_SwapChain, ppSwapChain);
     }
     catch (const std::runtime_error&)
     {

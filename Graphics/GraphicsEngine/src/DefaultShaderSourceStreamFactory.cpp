@@ -108,7 +108,7 @@ void DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*           
 
     if (pFileStream)
     {
-        pFileStream->QueryInterface(IID_FileStream, reinterpret_cast<IObject**>(ppStream));
+        pFileStream->QueryInterface(IID_FileStream, ppStream);
     }
     else
     {
@@ -129,7 +129,7 @@ void CreateDefaultShaderSourceStreamFactory(const Char*                       Se
     IMemoryAllocator&                 Allocator = GetRawAllocator();
     DefaultShaderSourceStreamFactory* pStreamFactory =
         NEW_RC_OBJ(Allocator, "DefaultShaderSourceStreamFactory instance", DefaultShaderSourceStreamFactory)(SearchDirectories);
-    pStreamFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, reinterpret_cast<IObject**>(ppShaderSourceStreamFactory));
+    pStreamFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, ppShaderSourceStreamFactory);
 }
 
 } // namespace Diligent

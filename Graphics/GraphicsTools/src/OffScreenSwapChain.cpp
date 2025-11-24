@@ -192,7 +192,7 @@ void CreateOffScreenSwapChain(IRenderDevice* pDevice, IDeviceContext* pContext, 
     {
         RefCntAutoPtr<ISwapChain> pSwapChain{MakeNewRCObj<OffScreenSwapChain>()(pDevice, pContext, SCDesc)};
         if (pSwapChain)
-            pSwapChain->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+            pSwapChain->QueryInterface(IID_SwapChain, ppSwapChain);
     }
     catch (...)
     {

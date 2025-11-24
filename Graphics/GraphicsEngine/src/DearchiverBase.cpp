@@ -804,7 +804,7 @@ void DearchiverBase::UnpackShader(const ShaderUnpackInfo& UnpackInfo,
     if (!pShader)
         return;
 
-    pShader->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
+    pShader->QueryInterface(IID_Shader, ppShader);
 }
 
 void DearchiverBase::UnpackResourceSignature(const ResourceSignatureUnpackInfo& DeArchiveInfo,

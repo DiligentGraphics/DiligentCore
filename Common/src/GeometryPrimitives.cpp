@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ void CreateCubeGeometryInternal(Uint32                          NumSubdivisions,
     {
         pVertexData = DataBlobImpl::Create(VertexDataSize);
         DEV_CHECK_ERR(*ppVertices == nullptr, "*ppVertices is not null, which may cause memory leak");
-        pVertexData->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppVertices));
+        pVertexData->QueryInterface(IID_DataBlob, ppVertices);
         pVert = pVertexData->GetDataPtr<Uint8>();
     }
 
@@ -100,7 +100,7 @@ void CreateCubeGeometryInternal(Uint32                          NumSubdivisions,
     {
         pIndexData = DataBlobImpl::Create(IndexDataSize);
         DEV_CHECK_ERR(*ppIndices == nullptr, "*ppIndices is not null, which may cause memory leak");
-        pIndexData->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppIndices));
+        pIndexData->QueryInterface(IID_DataBlob, ppIndices);
         pIdx = pIndexData->GetDataPtr<Uint32>();
     }
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,10 +56,12 @@ namespace Diligent
     void ClassName::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) \
         IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
 
+// clang-format off
 #define IMPLEMENT_QUERY_INTERFACE_IN_PLACE(InterfaceID, ParentClassName)                                    \
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override \
-        IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
-
+        IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)                                        \
+        using IObject::QueryInterface;
+// clang-format on
 
 #define IMPLEMENT_QUERY_INTERFACE2_BODY(InterfaceID1, InterfaceID2, ParentClassName) \
     {                                                                                \
@@ -80,9 +82,12 @@ namespace Diligent
     void ClassName::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)         \
         IMPLEMENT_QUERY_INTERFACE2_BODY(InterfaceID1, InterfaceID2, ParentClassName)
 
+// clang-format off
 #define IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(InterfaceID1, InterfaceID2, ParentClassName)                    \
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override \
-        IMPLEMENT_QUERY_INTERFACE2_BODY(InterfaceID1, InterfaceID2, ParentClassName)
+        IMPLEMENT_QUERY_INTERFACE2_BODY(InterfaceID1, InterfaceID2, ParentClassName)                        \
+        using IObject::QueryInterface;
+// clang-format on
 
 /// Template class implementing base functionality for an object
 template <typename BaseInterface>

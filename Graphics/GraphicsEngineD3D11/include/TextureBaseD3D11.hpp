@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,7 @@ public:
                      const TextureData*           pInitData = nullptr);
     ~TextureBaseD3D11();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureD3D11, TTextureBase)
 
     /// Implementation of ITextureD3D11::GetD3D11Texture().
     virtual ID3D11Resource* DILIGENT_CALL_TYPE GetD3D11Texture() const override final { return m_pd3d11Texture; }

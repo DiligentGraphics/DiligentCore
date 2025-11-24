@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,8 +49,6 @@ BasicFileStream::BasicFileStream(IReferenceCounters* pRefCounters,
     m_FileWrpr{Path, Access}
 {
 }
-
-IMPLEMENT_QUERY_INTERFACE(BasicFileStream, IID_FileStream, TBase)
 
 bool BasicFileStream::Read(void* Data, size_t Size)
 {

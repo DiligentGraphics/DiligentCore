@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,7 +51,7 @@ public:
                          ID3D11View*            pD3D11View,
                          bool                   bIsDefaultView);
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureViewD3D11, TTextureViewBase)
 
     /// Implementation of ITextureViewD3D11::GetD3D11View().
     virtual ID3D11View* DILIGENT_CALL_TYPE GetD3D11View() override final

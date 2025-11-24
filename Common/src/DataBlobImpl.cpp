@@ -106,9 +106,6 @@ const void* DataBlobImpl::GetConstDataPtr(size_t Offset) const
     return !m_DataBuff.empty() ? &m_DataBuff[Offset] : nullptr;
 }
 
-IMPLEMENT_QUERY_INTERFACE(DataBlobImpl, IID_DataBlob, TBase)
-
-
 void* DataBlobAllocatorAdapter::Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
 {
     VERIFY(!m_pDataBlob, "The data blob has already been created. The allocator does not support more than one blob.");

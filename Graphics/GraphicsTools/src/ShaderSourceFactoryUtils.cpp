@@ -112,7 +112,7 @@ private:
 void CreateCompoundShaderSourceFactory(const CompoundShaderSourceFactoryCreateInfo& CreateInfo, IShaderSourceInputStreamFactory** ppFactory)
 {
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pFactory = CompoundShaderSourceFactory::Create(CreateInfo);
-    pFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, reinterpret_cast<IObject**>(ppFactory));
+    pFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, ppFactory);
 }
 
 
@@ -173,7 +173,7 @@ public:
             RefCntAutoPtr<StringDataBlobImpl> pDataBlob{MakeNewRCObj<StringDataBlobImpl>()(SourceIt->second)};
             RefCntAutoPtr<MemoryFileStream>   pMemStream{MakeNewRCObj<MemoryFileStream>()(pDataBlob)};
 
-            pMemStream->QueryInterface(IID_FileStream, reinterpret_cast<IObject**>(ppStream));
+            pMemStream->QueryInterface(IID_FileStream, ppStream);
         }
         else
         {
@@ -196,7 +196,7 @@ private:
 void CreateMemoryShaderSourceFactory(const MemoryShaderSourceFactoryCreateInfo& CreateInfo, IShaderSourceInputStreamFactory** ppFactory)
 {
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pFactory = MemoryShaderSourceFactory::Create(CreateInfo);
-    pFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, reinterpret_cast<IObject**>(ppFactory));
+    pFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, ppFactory);
 }
 
 

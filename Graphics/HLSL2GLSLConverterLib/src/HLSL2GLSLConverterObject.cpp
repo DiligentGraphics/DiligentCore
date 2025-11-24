@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +48,7 @@ void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppConverter)
     try
     {
         RefCntAutoPtr<HLSL2GLSLConverterObject> pConverter{MakeNewRCObj<HLSL2GLSLConverterObject>()()};
-        pConverter->QueryInterface(IID_HLSL2GLSLConverter, reinterpret_cast<IObject**>(ppConverter));
+        pConverter->QueryInterface(IID_HLSL2GLSLConverter, ppConverter);
     }
     catch (...)
     {

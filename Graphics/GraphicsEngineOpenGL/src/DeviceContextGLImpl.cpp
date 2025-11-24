@@ -76,9 +76,6 @@ DeviceContextGLImpl::DeviceContextGLImpl(IReferenceCounters*      pRefCounters,
     m_BoundWritableBuffers.reserve(16);
 }
 
-IMPLEMENT_QUERY_INTERFACE(DeviceContextGLImpl, IID_DeviceContextGL, TDeviceContextBase)
-
-
 void DeviceContextGLImpl::Begin(Uint32 ImmediateContextId)
 {
     UNEXPECTED("OpenGL does not support deferred contexts");

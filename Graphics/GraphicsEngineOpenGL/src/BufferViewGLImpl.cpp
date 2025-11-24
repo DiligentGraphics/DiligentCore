@@ -103,8 +103,6 @@ BufferViewGLImpl::BufferViewGLImpl(IReferenceCounters*   pRefCounters,
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(BufferViewGLImpl, IID_BufferViewGL, TBuffViewBase)
-
 BufferViewGLImpl::~BufferViewGLImpl()
 {
 }

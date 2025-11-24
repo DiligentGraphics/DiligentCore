@@ -111,8 +111,6 @@ DeviceMemoryVkImpl::~DeviceMemoryVkImpl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pages), m_Desc.ImmediateContextMask);
 }
 
-IMPLEMENT_QUERY_INTERFACE(DeviceMemoryVkImpl, IID_DeviceMemoryVk, TDeviceMemoryBase)
-
 Bool DeviceMemoryVkImpl::Resize(Uint64 NewSize)
 {
     DvpVerifyResize(NewSize);

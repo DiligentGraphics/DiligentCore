@@ -584,8 +584,6 @@ void PipelineStateGLImpl::Destruct()
     TPipelineStateBase::Destruct();
 }
 
-IMPLEMENT_QUERY_INTERFACE2(PipelineStateGLImpl, IID_PipelineStateGL, IID_InternalImpl, TPipelineStateBase)
-
 PIPELINE_STATE_STATUS PipelineStateGLImpl::GetStatus(bool WaitForCompletion)
 {
     if (m_Builder)

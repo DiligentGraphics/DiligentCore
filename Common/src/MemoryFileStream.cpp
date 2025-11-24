@@ -45,8 +45,6 @@ MemoryFileStream::MemoryFileStream(IReferenceCounters* pRefCounters,
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(MemoryFileStream, IID_FileStream, TBase)
-
 bool MemoryFileStream::Read(void* Data, size_t Size)
 {
     if (Size == 0)

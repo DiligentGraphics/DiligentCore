@@ -573,7 +573,7 @@ public:
         };
         // clang-format on
 
-        pSuballocation->QueryInterface(IID_TextureAtlasSuballocation, reinterpret_cast<IObject**>(ppSuballocation));
+        pSuballocation->QueryInterface(IID_TextureAtlasSuballocation, ppSuballocation);
     }
 
     void Free(Uint32 Slice, Uint32 Alignment, DynamicAtlasManager::Region&& Subregion, Uint32 Width, Uint32 Height)
@@ -794,7 +794,7 @@ void CreateDynamicTextureAtlas(IRenderDevice*                       pDevice,
     try
     {
         DynamicTextureAtlasImpl* pAllocator = MakeNewRCObj<DynamicTextureAtlasImpl>()(pDevice, CreateInfo);
-        pAllocator->QueryInterface(IID_DynamicTextureAtlas, reinterpret_cast<IObject**>(ppAtlas));
+        pAllocator->QueryInterface(IID_DynamicTextureAtlas, ppAtlas);
     }
     catch (...)
     {

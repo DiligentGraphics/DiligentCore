@@ -2835,7 +2835,7 @@ void DeviceContextVkImpl::FinishCommandList(ICommandList** ppCommandList)
     (void)err;
 
     CommandListVkImpl* pCmdListVk{NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)(m_pDevice, this, vkCmdBuff)};
-    pCmdListVk->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
+    pCmdListVk->QueryInterface(IID_CommandList, ppCommandList);
 
     m_CommandBuffer.Reset();
     m_State          = ContextState{};

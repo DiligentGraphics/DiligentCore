@@ -327,7 +327,7 @@ public:
             };
             // clang-format on
 
-            pSuballocation->QueryInterface(IID_VertexPoolAllocation, reinterpret_cast<IObject**>(ppAllocation));
+            pSuballocation->QueryInterface(IID_VertexPoolAllocation, ppAllocation);
             m_AllocationCount.fetch_add(1);
         }
     }
@@ -436,7 +436,7 @@ void CreateVertexPool(IRenderDevice*              pDevice,
     try
     {
         VertexPoolImpl* pPool = MakeNewRCObj<VertexPoolImpl>()(pDevice, CreateInfo);
-        pPool->QueryInterface(IID_VertexPool, reinterpret_cast<IObject**>(ppVertexPool));
+        pPool->QueryInterface(IID_VertexPool, ppVertexPool);
     }
     catch (...)
     {

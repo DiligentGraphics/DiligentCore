@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,7 +62,7 @@ public:
 
     ~BufferD3D11Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferD3D11, TBufferBase)
 
     /// Implementation of IBufferD3D11::GetD3D11Buffer().
     virtual ID3D11Buffer* DILIGENT_CALL_TYPE GetD3D11Buffer() const override final { return m_pd3d11Buffer; }

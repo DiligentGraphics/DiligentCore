@@ -268,7 +268,7 @@ public:
             };
             // clang-format on
 
-            pSuballocation->QueryInterface(IID_BufferSuballocation, reinterpret_cast<IObject**>(ppSuballocation));
+            pSuballocation->QueryInterface(IID_BufferSuballocation, ppSuballocation);
             m_AllocationCount.fetch_add(1);
         }
     }
@@ -351,7 +351,7 @@ void CreateBufferSuballocator(IRenderDevice*                      pDevice,
     try
     {
         BufferSuballocatorImpl* pAllocator = MakeNewRCObj<BufferSuballocatorImpl>()(pDevice, CreateInfo);
-        pAllocator->QueryInterface(IID_BufferSuballocator, reinterpret_cast<IObject**>(ppBufferSuballocator));
+        pAllocator->QueryInterface(IID_BufferSuballocator, ppBufferSuballocator);
     }
     catch (...)
     {

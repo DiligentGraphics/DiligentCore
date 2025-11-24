@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,6 +48,19 @@ struct IObject
     /// \remark The method increments the number of strong references by 1. The interface must be
     ///         released by a call to Release() method when it is no longer needed.
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) = 0;
+
+
+#    ifndef DILIGENT_SHARP_GEN
+    /// Template version of QueryInterface that avoids the need to manually
+    /// cast the returned interface pointer.
+    template <typename DerivedType, typename = typename std::enable_if<std::is_base_of<IObject, DerivedType>::value>::type>
+    void QueryInterface(const INTERFACE_ID& IID, DerivedType** ppInterface)
+    {
+        if (ppInterface == nullptr)
+            return;
+        QueryInterface(IID, reinterpret_cast<IObject**>(ppInterface));
+    }
+#    endif
 
 
     /// Increments the number of strong references by 1.

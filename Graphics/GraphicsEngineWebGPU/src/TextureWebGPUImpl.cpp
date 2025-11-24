@@ -617,7 +617,7 @@ void TextureWebGPUImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITex
         if (bIsDefaultView)
             *ppView = pViewWebGPU;
         else
-            pViewWebGPU->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppView));
+            pViewWebGPU->QueryInterface(IID_TextureView, ppView);
     }
     catch (const std::runtime_error&)
     {

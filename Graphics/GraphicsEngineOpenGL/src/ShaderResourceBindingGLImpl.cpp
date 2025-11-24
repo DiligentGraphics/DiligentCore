@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,7 +44,5 @@ ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters*    
 ShaderResourceBindingGLImpl::~ShaderResourceBindingGLImpl()
 {
 }
-
-IMPLEMENT_QUERY_INTERFACE(ShaderResourceBindingGLImpl, IID_ShaderResourceBindingGL, TBase)
 
 } // namespace Diligent

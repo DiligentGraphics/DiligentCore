@@ -624,7 +624,7 @@ void TextureD3D12Impl::CreateViewInternal(const TextureViewDesc& ViewDesc, IText
         if (bIsDefaultView)
             *ppView = pViewD3D12;
         else
-            pViewD3D12->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppView));
+            pViewD3D12->QueryInterface(IID_TextureView, ppView);
     }
     catch (const std::runtime_error&)
     {

@@ -50,7 +50,7 @@ public:
                           ID3D11Device*                pd3d11Device) noexcept(false);
     ~RenderDeviceD3D11Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderDeviceD3D11, TRenderDeviceBase)
 
     /// Implementation of IRenderDevice::CreateBuffer() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,

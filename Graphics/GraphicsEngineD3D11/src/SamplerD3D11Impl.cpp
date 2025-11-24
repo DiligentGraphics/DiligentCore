@@ -68,6 +68,4 @@ SamplerD3D11Impl::~SamplerD3D11Impl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(SamplerD3D11Impl, IID_SamplerD3D11, TSamplerBase)
-
 } // namespace Diligent

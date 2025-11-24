@@ -111,8 +111,6 @@ SwapChainGLImpl::~SwapChainGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(SwapChainGLImpl, IID_SwapChainGL, TSwapChainGLBase)
-
 void SwapChainGLImpl::Present(Uint32 SyncInterval)
 {
 #if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_ANDROID

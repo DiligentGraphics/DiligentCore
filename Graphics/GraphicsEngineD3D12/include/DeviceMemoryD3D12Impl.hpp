@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ public:
 
     ~DeviceMemoryD3D12Impl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceMemoryD3D12, TDeviceMemoryBase)
 
     /// Implementation of IDeviceMemory::Resize().
     virtual Bool DILIGENT_CALL_TYPE Resize(Uint64 NewSize) override final;

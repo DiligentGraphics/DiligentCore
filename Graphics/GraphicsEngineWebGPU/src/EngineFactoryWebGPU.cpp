@@ -622,7 +622,7 @@ void EngineFactoryWebGPUImpl::CreateSwapChainWebGPU(IRenderDevice*       pDevice
         IMemoryAllocator&        RawMemAllocator      = GetRawAllocator();
 
         SwapChainWebGPUImpl* pSwapChainWebGPU = NEW_RC_OBJ(RawMemAllocator, "SwapChainWebGPUImpl instance", SwapChainWebGPUImpl)(SCDesc, pDeviceWebGPU, pDeviceContextWebGPU, Window);
-        pSwapChainWebGPU->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+        pSwapChainWebGPU->QueryInterface(IID_SwapChain, ppSwapChain);
     }
     catch (const std::runtime_error&)
     {
@@ -689,7 +689,7 @@ void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(void*                        
                     static_cast<WGPUAdapter>(wgpuAdapter),
                     static_cast<WGPUDevice>(wgpuDevice),
                 })};
-        pRenderDeviceWebGPU->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
+        pRenderDeviceWebGPU->QueryInterface(IID_RenderDevice, ppDevice);
 
         DeviceContextWebGPUImpl* pDeviceContextWebGPU{
             NEW_RC_OBJ(RawMemAllocator, "DeviceContextWebGPUImpl instance", DeviceContextWebGPUImpl)(
@@ -701,7 +701,7 @@ void EngineFactoryWebGPUImpl::AttachToWebGPUDevice(void*                        
                     0,     // Context id
                     0      // Queue id
                 })};
-        pDeviceContextWebGPU->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext));
+        pDeviceContextWebGPU->QueryInterface(IID_DeviceContext, ppImmediateContext);
         pRenderDeviceWebGPU->SetImmediateContext(0, pDeviceContextWebGPU);
     }
     catch (const std::runtime_error&)

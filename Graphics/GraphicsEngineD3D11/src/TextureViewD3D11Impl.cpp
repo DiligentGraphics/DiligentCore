@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,7 +56,5 @@ TextureViewD3D11Impl::TextureViewD3D11Impl(IReferenceCounters*    pRefCounters,
         DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set texture view name");
     }
 }
-
-IMPLEMENT_QUERY_INTERFACE(TextureViewD3D11Impl, IID_TextureViewD3D11, TTextureViewBase)
 
 } // namespace Diligent

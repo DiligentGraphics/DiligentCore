@@ -114,6 +114,8 @@ public:
             }
         }
 
+        using IObject::QueryInterface;
+
         virtual void DILIGENT_CALL_TYPE GetHLSLResourceDesc(HLSLShaderResourceDesc& HLSLResDesc) const override final
         {
             this->GetResourceDesc(HLSLResDesc);

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,7 +71,7 @@ public:
 
     ~TextureBaseGL();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureGL, TTextureBase)
 
     const GLObjectWrappers::GLTextureObj& GetGLHandle() const { return m_GlTexture; }
 

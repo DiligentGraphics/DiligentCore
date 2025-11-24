@@ -67,9 +67,6 @@ DeviceContextD3D11Impl::DeviceContextD3D11Impl(IReferenceCounters*      pRefCoun
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(DeviceContextD3D11Impl, IID_DeviceContextD3D11, TDeviceContextBase)
-
-
 void DeviceContextD3D11Impl::Begin(Uint32 ImmediateContextId)
 {
     DEV_CHECK_ERR(ImmediateContextId == 0, "Direct3D11 supports only one immediate context");
@@ -1923,7 +1920,7 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
         &pd3d11CmdList);
 
     CommandListD3D11Impl* pCmdListD3D11(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D11Impl instance", CommandListD3D11Impl)(m_pDevice, this, pd3d11CmdList));
-    pCmdListD3D11->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
+    pCmdListD3D11->QueryInterface(IID_CommandList, ppCommandList);
 
     // Device context is now in default state
     InvalidateState();

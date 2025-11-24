@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ public:
     SamplerGLImpl(IReferenceCounters* pRefCounters, RenderDeviceGLImpl* pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal = false);
     ~SamplerGLImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SamplerGL, TSamplerBase)
 
     const GLObjectWrappers::GLSamplerObj& GetHandle() { return m_GlSampler; }
 

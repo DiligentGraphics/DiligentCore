@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2021 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,8 +61,6 @@ SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters*          pRefCounters,
     InitRenderBuffers(true, m_SwapChainDesc.Width, m_SwapChainDesc.Height);
     CreateDummyBuffers(m_pRenderDevice.RawPtr<RenderDeviceGLImpl>());
 }
-
-IMPLEMENT_QUERY_INTERFACE( SwapChainGLIOS, IID_SwapChainGL, TSwapChainBase )
 
 void SwapChainGLIOS::Present(Uint32 SyncInterval)
 {

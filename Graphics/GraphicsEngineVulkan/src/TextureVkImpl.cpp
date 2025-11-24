@@ -716,7 +716,7 @@ void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITexture
         if (bIsDefaultView)
             *ppView = pViewVk;
         else
-            pViewVk->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppView));
+            pViewVk->QueryInterface(IID_TextureView, ppView);
     }
     catch (const std::runtime_error&)
     {

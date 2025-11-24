@@ -389,8 +389,6 @@ TextureBaseGL::~TextureBaseGL()
     GetDevice()->OnReleaseTexture(this);
 }
 
-IMPLEMENT_QUERY_INTERFACE(TextureBaseGL, IID_TextureGL, TTextureBase)
-
 void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITextureView** ppView, bool bIsDefaultView)
 {
     VERIFY(ppView != nullptr, "Null pointer provided");
@@ -571,7 +569,7 @@ void TextureBaseGL::CreateViewInternal(const TextureViewDesc& OrigViewDesc, ITex
         {
             if (pViewOGL)
             {
-                pViewOGL->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppView));
+                pViewOGL->QueryInterface(IID_TextureView, ppView);
             }
         }
     }

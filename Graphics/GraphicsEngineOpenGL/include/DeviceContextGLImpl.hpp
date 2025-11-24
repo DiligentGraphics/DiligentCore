@@ -58,7 +58,7 @@ public:
                         const DeviceContextDesc& Desc);
 
     /// Queries the specific interface, see IObject::QueryInterface() for details.
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceContextGL, TDeviceContextBase)
 
     /// Implementation of IDeviceContext::Begin() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE Begin(Uint32 ImmediateContextId) override final;

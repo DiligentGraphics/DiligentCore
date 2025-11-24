@@ -57,8 +57,6 @@ DeviceMemoryD3D11Impl::~DeviceMemoryD3D11Impl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(DeviceMemoryD3D11Impl, IID_DeviceMemoryD3D11, TDeviceMemoryBase)
-
 Bool DeviceMemoryD3D11Impl::Resize(Uint64 NewSize)
 {
     D3D11_BUFFER_DESC d3d11Desc{};

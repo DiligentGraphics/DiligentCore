@@ -2454,7 +2454,7 @@ void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
     DEV_CHECK_ERR(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
 
     CommandListD3D12Impl* pCmdListD3D12(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)(m_pDevice, this, std::move(m_CurrCmdCtx)));
-    pCmdListD3D12->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
+    pCmdListD3D12->QueryInterface(IID_CommandList, ppCommandList);
 
     // We can't request new cmd context because we don't know the command queue type
     constexpr bool RequestNewCmdCtx = false;

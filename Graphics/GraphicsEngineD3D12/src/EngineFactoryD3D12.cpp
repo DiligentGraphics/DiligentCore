@@ -611,7 +611,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
 
         RenderDeviceD3D12Impl* pRenderDeviceD3D12{
             NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, this, EngineCI, AdapterInfo, d3d12Device, CommandQueueCount, ppCommandQueues)};
-        pRenderDeviceD3D12->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
+        pRenderDeviceD3D12->QueryInterface(IID_RenderDevice, ppDevice);
 
         for (Uint32 CtxInd = 0; CtxInd < NumImmediateContexts; ++CtxInd)
         {
@@ -630,7 +630,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
                     )};
             // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D12 will
             // keep a weak reference to the context
-            pImmediateCtxD3D12->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts + CtxInd));
+            pImmediateCtxD3D12->QueryInterface(IID_DeviceContext, ppContexts + CtxInd);
             pRenderDeviceD3D12->SetImmediateContext(CtxInd, pImmediateCtxD3D12);
         }
 
@@ -680,7 +680,7 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12(IRenderDevice*            pDev
         IMemoryAllocator&       RawMemAllocator     = GetRawAllocator();
 
         SwapChainD3D12Impl* pSwapChainD3D12 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D12Impl instance", SwapChainD3D12Impl)(SCDesc, FSDesc, pDeviceD3D12, pDeviceContextD3D12, Window);
-        pSwapChainD3D12->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+        pSwapChainD3D12->QueryInterface(IID_SwapChain, ppSwapChain);
     }
     catch (const std::runtime_error&)
     {

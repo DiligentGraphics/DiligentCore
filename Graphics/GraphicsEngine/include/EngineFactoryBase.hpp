@@ -80,6 +80,8 @@ public:
         }
     }
 
+    using IObject::QueryInterface;
+
     virtual ReferenceCounterValueType DILIGENT_CALL_TYPE AddRef() override final
     {
         return m_RefCounters.AddStrongRef();
@@ -103,7 +105,7 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateDataBlob(size_t InitialSize, const void* pData, IDataBlob** ppDataBlob) const override final
     {
         if (RefCntAutoPtr<DataBlobImpl> pDataBlob = DataBlobImpl::Create(InitialSize, pData))
-            pDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppDataBlob));
+            pDataBlob->QueryInterface(IID_DataBlob, ppDataBlob);
     }
 
     virtual void DILIGENT_CALL_TYPE CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories,

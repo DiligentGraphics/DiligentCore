@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,7 +47,7 @@ public:
                     class DeviceContextGLImpl* pImmediateContextGL);
     ~SwapChainGLImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SwapChainGL, TSwapChainGLBase)
 
     /// Implementation of ISwapChain::Present() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override final;

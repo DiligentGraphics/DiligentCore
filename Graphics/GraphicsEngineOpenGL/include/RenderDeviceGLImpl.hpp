@@ -54,7 +54,7 @@ public:
                        const SwapChainDesc*      pSCDesc = nullptr) noexcept(false);
     ~RenderDeviceGLImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderDeviceGL, TRenderDeviceBase)
 
     void CreateBuffer(const BufferDesc& BuffDesc,
                       const BufferData* pBuffData,

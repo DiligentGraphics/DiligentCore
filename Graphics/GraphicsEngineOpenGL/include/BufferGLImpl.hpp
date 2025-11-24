@@ -64,7 +64,7 @@ public:
     ~BufferGLImpl();
 
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferGL, TBufferBase)
 
     void UpdateData(GLContextState& CtxState, Uint64 Offset, Uint64 Size, const void* pData);
     void CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint64 SrcOffset, Uint64 DstOffset, Uint64 Size);

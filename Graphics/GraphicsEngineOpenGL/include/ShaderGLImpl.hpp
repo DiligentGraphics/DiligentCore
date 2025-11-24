@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +58,7 @@ public:
                  bool                    bIsDeviceInternal = false) noexcept(false);
     ~ShaderGLImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_ShaderGL, IID_InternalImpl, TShaderBase)
 
     /// Implementation of IShader::GetResourceCount() in OpenGL backend.
     virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final;

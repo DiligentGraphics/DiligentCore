@@ -68,7 +68,7 @@ void HandleHLSLCompilerResult(bool               CompilationSucceeded,
         memcpy(log, ShaderSource.data(), ShaderSourceLen);
         log[ShaderSourceLen] = 0;
 
-        pOutputLogBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppOutputLog));
+        pOutputLogBlob->QueryInterface(IID_DataBlob, ppOutputLog);
     }
 
     if (!CompilationSucceeded || CompilerMsgLen != 0)

@@ -354,8 +354,6 @@ RenderDeviceGLImpl::~RenderDeviceGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(RenderDeviceGLImpl, IID_RenderDeviceGL, TRenderDeviceBase)
-
 void RenderDeviceGLImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer, bool bIsDeviceInternal)
 {
     RefCntAutoPtr<DeviceContextGLImpl> pDeviceContext = GetImmediateContext(0);
@@ -447,7 +445,7 @@ void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const Texture
                 default: LOG_ERROR_AND_THROW("Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)");
             }
 
-            pTextureOGL->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
+            pTextureOGL->QueryInterface(IID_Texture, ppTexture);
             pTextureOGL->CreateDefaultViews();
         } //
     );
@@ -507,7 +505,7 @@ void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32             GLHandle,
                 default: LOG_ERROR_AND_THROW("Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)");
             }
 
-            pTextureOGL->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
+            pTextureOGL->QueryInterface(IID_Texture, ppTexture);
             pTextureOGL->CreateDefaultViews();
         } //
     );
@@ -529,7 +527,7 @@ void RenderDeviceGLImpl::CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE
                 default: LOG_ERROR_AND_THROW("Unsupported texture type.");
             }
 
-            pTextureOGL->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
+            pTextureOGL->QueryInterface(IID_Texture, ppTexture);
             pTextureOGL->CreateDefaultViews();
         } //
     );

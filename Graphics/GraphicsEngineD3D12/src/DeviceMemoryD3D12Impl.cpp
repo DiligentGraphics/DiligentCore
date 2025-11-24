@@ -200,9 +200,6 @@ DeviceMemoryD3D12Impl::~DeviceMemoryD3D12Impl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pages), m_Desc.ImmediateContextMask);
 }
 
-IMPLEMENT_QUERY_INTERFACE(DeviceMemoryD3D12Impl, IID_DeviceMemoryD3D12, TDeviceMemoryBase)
-
-
 Bool DeviceMemoryD3D12Impl::Resize(Uint64 NewSize)
 {
     DvpVerifyResize(NewSize);

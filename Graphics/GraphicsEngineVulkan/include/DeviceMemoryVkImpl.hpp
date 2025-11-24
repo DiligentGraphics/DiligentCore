@@ -49,7 +49,7 @@ public:
 
     ~DeviceMemoryVkImpl();
 
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceMemoryVk, TDeviceMemoryBase)
 
     /// Implementation of IDeviceMemory::Resize().
     virtual Bool DILIGENT_CALL_TYPE Resize(Uint64 NewSize) override final;

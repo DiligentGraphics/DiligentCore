@@ -62,7 +62,7 @@ public:
     ~PipelineStateGLImpl();
 
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_PipelineStateGL, IID_InternalImpl, TPipelineStateBase)
 
     /// Implementation of IPipelineState::GetStatus().
     virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion = false) override final;

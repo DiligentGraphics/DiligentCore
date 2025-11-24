@@ -380,7 +380,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
             NEW_RC_OBJ(RawAllocator, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)(
                 RawAllocator, this, EngineCI, AdapterInfo, pd3d11Device) //
         };
-        pRenderDeviceD3D11->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
+        pRenderDeviceD3D11->QueryInterface(IID_RenderDevice, ppDevice);
 
         CComQIPtr<ID3D11DeviceContext1> pd3d11ImmediateCtx1{pd3d11ImmediateCtx};
         if (!pd3d11ImmediateCtx1)
@@ -400,7 +400,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
                 )};
         // We must call AddRef() (implicitly through QueryInterface()) because pRenderDeviceD3D11 will
         // keep a weak reference to the context
-        pDeviceContextD3D11->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppContexts));
+        pDeviceContextD3D11->QueryInterface(IID_DeviceContext, ppContexts);
         pRenderDeviceD3D11->SetImmediateContext(0, pDeviceContextD3D11);
 
         for (Uint32 DeferredCtx = 0; DeferredCtx < EngineCI.NumDeferredContexts; ++DeferredCtx)
@@ -449,7 +449,7 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
         IMemoryAllocator&       RawMemAllocator     = GetRawAllocator();
 
         SwapChainD3D11Impl* pSwapChainD3D11 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D11Impl instance", SwapChainD3D11Impl)(SCDesc, FSDesc, pDeviceD3D11, pDeviceContextD3D11, Window);
-        pSwapChainD3D11->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+        pSwapChainD3D11->QueryInterface(IID_SwapChain, ppSwapChain);
     }
     catch (const std::runtime_error&)
     {

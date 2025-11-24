@@ -263,8 +263,6 @@ ShaderGLImpl::~ShaderGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE2(ShaderGLImpl, IID_ShaderGL, IID_InternalImpl, TShaderBase)
-
 void ShaderGLImpl::CompileShader() noexcept
 {
     // Note: there is a simpler way to create the program:
@@ -330,7 +328,7 @@ bool ShaderGLImpl::GetCompileStatus(IDataBlob** ppCompilerOutput, bool ThrowOnEr
                 // Copy source code including null terminator
                 memcpy(DataPtr + InfoLogLen, m_GLSLSourceString.data(), m_GLSLSourceString.length() + 1);
 
-                pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
+                pOutputDataBlob->QueryInterface(IID_DataBlob, ppCompilerOutput);
             }
         }
     }

@@ -186,8 +186,6 @@ void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(RenderDeviceD3D11Impl, IID_RenderDeviceD3D11, TRenderDeviceBase)
-
 void RenderDeviceD3D11Impl::CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
     CreateBufferImpl(ppBuffer, BuffDesc, InitialState, pd3d11Buffer);
@@ -226,7 +224,7 @@ void RenderDeviceD3D11Impl::CreateTexture1DFromD3DResource(ID3D11Texture1D* pd3d
                        [&]() //
                        {
                            TextureBaseD3D11* pTextureD3D11{NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_D3D11 instance", Texture1D_D3D11)(m_TexViewObjAllocator, this, InitialState, pd3d11Texture)};
-                           pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
+                           pTextureD3D11->QueryInterface(IID_Texture, ppTexture);
                            pTextureD3D11->CreateDefaultViews();
                        });
 }
@@ -242,7 +240,7 @@ void RenderDeviceD3D11Impl::CreateTexture2DFromD3DResource(ID3D11Texture2D* pd3d
                        [&]() //
                        {
                            TextureBaseD3D11* pTextureD3D11{NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_D3D11 instance", Texture2D_D3D11)(m_TexViewObjAllocator, this, InitialState, pd3d11Texture)};
-                           pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
+                           pTextureD3D11->QueryInterface(IID_Texture, ppTexture);
                            pTextureD3D11->CreateDefaultViews();
                        });
 }
@@ -258,7 +256,7 @@ void RenderDeviceD3D11Impl::CreateTexture3DFromD3DResource(ID3D11Texture3D* pd3d
                        [&]() //
                        {
                            TextureBaseD3D11* pTextureD3D11{NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_D3D11 instance", Texture3D_D3D11)(m_TexViewObjAllocator, this, InitialState, pd3d11Texture)};
-                           pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
+                           pTextureD3D11->QueryInterface(IID_Texture, ppTexture);
                            pTextureD3D11->CreateDefaultViews();
                        });
 }
@@ -290,7 +288,7 @@ void RenderDeviceD3D11Impl::CreateTexture(const TextureDesc& TexDesc, const Text
 
                                default: LOG_ERROR_AND_THROW("Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)");
                            }
-                           pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
+                           pTextureD3D11->QueryInterface(IID_Texture, ppTexture);
                            pTextureD3D11->CreateDefaultViews();
                        });
 }

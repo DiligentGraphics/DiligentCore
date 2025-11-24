@@ -60,6 +60,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
+    using IObject::QueryInterface;
+
     virtual Int32 DILIGENT_CALL_TYPE GetUniqueID() const override final
     {
         return m_UniqueID.GetID() + 0x10000000;

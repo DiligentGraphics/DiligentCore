@@ -61,6 +61,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
+    using IObject::QueryInterface;
+
     virtual PIPELINE_STATE_STATUS DILIGENT_CALL_TYPE GetStatus(bool WaitForCompletion) override;
 
     static void Create(RenderStateCacheImpl*          pStateCache,

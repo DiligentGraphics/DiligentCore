@@ -727,7 +727,7 @@ void CreateRenderStateCache(const RenderStateCacheCreateInfo& CreateInfo,
     {
         RefCntAutoPtr<IRenderStateCache> pCache{MakeNewRCObj<RenderStateCacheImpl>()(CreateInfo)};
         if (pCache)
-            pCache->QueryInterface(IID_RenderStateCache, reinterpret_cast<IObject**>(ppCache));
+            pCache->QueryInterface(IID_RenderStateCache, ppCache);
     }
     catch (...)
     {

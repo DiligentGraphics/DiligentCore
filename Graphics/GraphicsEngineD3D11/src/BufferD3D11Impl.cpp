@@ -237,9 +237,6 @@ BufferD3D11Impl::~BufferD3D11Impl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE(BufferD3D11Impl, IID_BufferD3D11, TBufferBase)
-
-
 void BufferD3D11Impl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView)
 {
     VERIFY(ppView != nullptr, "Null pointer provided");

@@ -114,8 +114,6 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE(SwapChainD3D11Impl, IID_SwapChainD3D11, TSwapChainBase)
-
 void SwapChainD3D11Impl::Present(Uint32 SyncInterval)
 {
 #if PLATFORM_UNIVERSAL_WINDOWS
