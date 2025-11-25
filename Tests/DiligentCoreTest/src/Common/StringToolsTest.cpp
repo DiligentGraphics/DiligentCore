@@ -29,6 +29,8 @@
 
 #include "gtest/gtest.h"
 
+#include <limits.h>
+
 using namespace Diligent;
 
 namespace
@@ -274,6 +276,142 @@ TEST(Common_StringTools, GetPrintWidth)
     EXPECT_EQ(GetPrintWidth(-99), size_t{3});
     EXPECT_EQ(GetPrintWidth(-100), size_t{4});
     EXPECT_EQ(GetPrintWidth(-999), size_t{4});
+}
+
+template <typename T>
+void TestAppendInt(T Value, T Base, const char* RefStr)
+{
+    std::string Str;
+    AppendInt(Str, Value, Base);
+    EXPECT_STREQ(Str.c_str(), RefStr);
+}
+
+template <typename T>
+void TestAppendInt(T Value, const char* RefStr)
+{
+    TestAppendInt(Value, static_cast<T>(10), RefStr);
+}
+
+TEST(Common_StringTools, AppendInt)
+{
+    // Decimal
+    TestAppendInt<int>(0, "0");
+    TestAppendInt<int>(1, "1");
+    TestAppendInt<int>(9, "9");
+    TestAppendInt<int>(10, "10");
+    TestAppendInt<int>(98, "98");
+    TestAppendInt<int>(123, "123");
+    TestAppendInt<int>(-1, "-1");
+    TestAppendInt<int>(-9, "-9");
+    TestAppendInt<int>(-12, "-12");
+    TestAppendInt<int>(-98, "-98");
+    TestAppendInt<int>(-123, "-123");
+    TestAppendInt<int>(INT_MAX, "2147483647");
+    TestAppendInt<int>(INT_MIN, "-2147483648");
+
+    TestAppendInt<Uint8>(0, "0");
+    TestAppendInt<Uint8>(1, "1");
+    TestAppendInt<Uint8>(9, "9");
+    TestAppendInt<Uint8>(128, "128");
+    TestAppendInt<Uint8>(255, "255");
+
+    TestAppendInt<Int8>(0, "0");
+    TestAppendInt<Int8>(1, "1");
+    TestAppendInt<Int8>(-1, "-1");
+    TestAppendInt<Int8>(127, "127");
+    TestAppendInt<Int8>(-128, "-128");
+
+    TestAppendInt<Uint16>(0, "0");
+    TestAppendInt<Uint16>(1, "1");
+    TestAppendInt<Uint16>(9, "9");
+    TestAppendInt<Uint16>(32768, "32768");
+    TestAppendInt<Uint16>(65535, "65535");
+
+    TestAppendInt<Int16>(0, "0");
+    TestAppendInt<Int16>(1, "1");
+    TestAppendInt<Int16>(9, "9");
+    TestAppendInt<Int16>(-1, "-1");
+    TestAppendInt<Int16>(-32768, "-32768");
+    TestAppendInt<Int16>(32767, "32767");
+
+    TestAppendInt<Int64>(0, "0");
+    TestAppendInt<Int64>(1, "1");
+    TestAppendInt<Int64>(9, "9");
+    TestAppendInt<Int64>(10, "10");
+    TestAppendInt<Int64>(-1, "-1");
+    TestAppendInt<Int64>(-9, "-9");
+    TestAppendInt<Int64>(-10, "-10");
+    TestAppendInt<Int64>(LLONG_MAX, "9223372036854775807");
+    TestAppendInt<Int64>(LLONG_MIN, "-9223372036854775808");
+    TestAppendInt<Uint64>(18446744073709551615ull, "18446744073709551615");
+
+    // Octal
+    TestAppendInt<int>(0, 8, "0");
+    TestAppendInt<int>(7, 8, "7");
+    TestAppendInt<int>(8, 8, "10");
+    TestAppendInt<int>(63, 8, "77");
+    TestAppendInt<int>(64, 8, "100");
+    TestAppendInt<int>(-7, 8, "-7");
+    TestAppendInt<int>(-8, 8, "-10");
+    TestAppendInt<int>(-63, 8, "-77");
+    TestAppendInt<int>(-64, 8, "-100");
+    TestAppendInt<int>(INT_MIN, 8, "-20000000000");
+    TestAppendInt<int>(INT_MAX, 8, "17777777777");
+    TestAppendInt<Uint8>(255u, 8, "377");
+    TestAppendInt<Uint16>(65535u, 8, "177777");
+
+    // Hexadecimal
+    TestAppendInt<int>(0, 16, "0");
+    TestAppendInt<int>(15, 16, "F");
+    TestAppendInt<int>(16, 16, "10");
+    TestAppendInt<int>(255, 16, "FF");
+    TestAppendInt<int>(256, 16, "100");
+    TestAppendInt<int>(-15, 16, "-F");
+    TestAppendInt<int>(-16, 16, "-10");
+    TestAppendInt<int>(-255, 16, "-FF");
+    TestAppendInt<int>(-256, 16, "-100");
+    TestAppendInt<int>(INT_MIN, 16, "-80000000");
+    TestAppendInt<int>(INT_MAX, 16, "7FFFFFFF");
+    TestAppendInt<Uint8>(255u, 16, "FF");
+    TestAppendInt<Uint16>(65535u, 16, "FFFF");
+    TestAppendInt<Uint64>(18446744073709551615ull, 16, "FFFFFFFFFFFFFFFF");
+
+    TestAppendInt<Uint32>(UINT_MAX, 10, "4294967295");
+    TestAppendInt<Uint32>(UINT_MAX, 8, "37777777777");
+    TestAppendInt<Uint32>(UINT_MAX, 16, "FFFFFFFF");
+
+    // Base 2
+    TestAppendInt<int>(0, 2, "0");
+    TestAppendInt<int>(1, 2, "1");
+    TestAppendInt<int>(2, 2, "10");
+    TestAppendInt<int>(-1, 2, "-1");
+    TestAppendInt<int>(-2, 2, "-10");
+    TestAppendInt<int>(INT_MAX, 2, "1111111111111111111111111111111");
+    TestAppendInt<int>(INT_MIN, 2, "-10000000000000000000000000000000");
+
+    // Base 36
+    TestAppendInt<int>(0, 36, "0");
+    TestAppendInt<int>(9, 36, "9");
+    TestAppendInt<int>(10, 36, "A");
+    TestAppendInt<int>(35, 36, "Z");
+    TestAppendInt<int>(36, 36, "10");
+    TestAppendInt<int>(-35, 36, "-Z");
+    TestAppendInt<int>(-36, 36, "-10");
+
+    {
+        std::string s = "X:";
+        AppendInt<int>(s, 42);
+        EXPECT_EQ(s, "X:42");
+
+        AppendInt<int>(s, -7);
+        EXPECT_EQ(s, "X:42-7");
+    }
+
+    {
+        std::string s;
+        AppendInt(AppendInt(s, 12), 34);
+        EXPECT_EQ(s, "1234");
+    }
 }
 
 } // namespace

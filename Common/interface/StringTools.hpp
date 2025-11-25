@@ -277,7 +277,7 @@ std::vector<std::string> SplitString(IterType Start, IterType End, const char* D
 
 
 /// Returns the print width of a number Num
-template <typename Type>
+template <typename Type, typename = std::enable_if_t<std::is_integral<Type>::value>>
 size_t GetPrintWidth(Type Num, Type Base = 10)
 {
     if (Num == 0)
@@ -291,6 +291,66 @@ size_t GetPrintWidth(Type Num, Type Base = 10)
     }
 
     return W;
+}
+
+template <typename Type>
+inline std::make_unsigned_t<Type> GetAbsUnsigned(Type Num, bool& IsNegative, std::true_type /*is_signed*/)
+{
+    using Unsigned = std::make_unsigned_t<Type>;
+
+    if (Num < 0)
+    {
+        IsNegative = true;
+        // Avoid overflow on minimum value:
+        // -(Num + 1) is safe, then add 1 back in unsigned.
+        return static_cast<Unsigned>(-(Num + Type{1})) + Unsigned{1};
+    }
+    else
+    {
+        IsNegative = false;
+        return static_cast<Unsigned>(Num);
+    }
+}
+
+template <typename Type>
+inline std::make_unsigned_t<Type> GetAbsUnsigned(Type Num, bool& IsNegative, std::false_type /*is_signed*/)
+{
+    using Unsigned = std::make_unsigned_t<Type>;
+    IsNegative     = false;
+    return static_cast<Unsigned>(Num);
+}
+
+/// Appends the integer number Num in the specified Base to the string Str
+template <typename Type, typename = std::enable_if_t<std::is_integral<Type>::value>>
+std::string& AppendInt(std::string& Str, Type Num, Type Base = 10)
+{
+    VERIFY(Base >= 2 && Base <= 36, "Base must be in the range [2, 36]");
+
+    const size_t PrintWidth = GetPrintWidth(Num, Base);
+    const size_t StartPos   = Str.length();
+    Str.resize(StartPos + PrintWidth);
+
+    bool IsNegative = false;
+    using Unsigned  = std::make_unsigned_t<Type>;
+    Unsigned AbsNum = GetAbsUnsigned(
+        Num,
+        IsNegative,
+        std::is_signed<Type>{});
+
+    if (IsNegative)
+    {
+        Str[StartPos] = '-';
+    }
+
+    size_t DigitPos = StartPos + PrintWidth - 1;
+    for (size_t i = 0; i < PrintWidth - (IsNegative ? 1u : 0u); ++i)
+    {
+        const Unsigned Digit = AbsNum % static_cast<Unsigned>(Base);
+        Str[DigitPos--]      = static_cast<char>(Digit < 10u ? '0' + Digit : 'A' + (Digit - 10u));
+        AbsNum /= Base;
+    }
+
+    return Str;
 }
 
 } // namespace Diligent
