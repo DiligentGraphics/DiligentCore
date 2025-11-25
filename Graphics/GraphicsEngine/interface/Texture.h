@@ -94,7 +94,10 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 #else
     union
     {
-        /// For a 1D array or 2D array, number of array slices
+        /// For a 1D array or 2D array, number of array slices.
+        /// 
+        /// For cube maps and cube map arrays, this value must be a multiple of 6.
+        /// The number of cube maps in the texture is ArraySize / 6.
         Uint32 ArraySize    DEFAULT_INITIALIZER(1);
 
         /// For a 3D texture, number of depth slices
