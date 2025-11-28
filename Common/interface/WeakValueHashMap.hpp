@@ -42,6 +42,8 @@ namespace Diligent
 
 /// \tparam KeyType   - Type of the keys in the map. Must be hashable and comparable.
 /// \tparam ValueType - Type of the values in the map.
+/// \tparam Hasher    - Hash function for the keys. Default is std::hash<KeyType>.
+/// \tparam Keyeq     - Equality comparison function for the keys. Default is std::equal_to<KeyType>.
 ///
 /// When a value is requested via GetOrInsert(), a strong pointer (shared_ptr) to the value is returned
 /// wrapped in a ValueHandle object. The ValueHandle object is responsible for removing the entry from the map
@@ -58,7 +60,10 @@ namespace Diligent
 ///     auto Handle = Map.GetOrInsert(1, "Value");
 ///     std::cout << *Handle << std::endl; // Outputs "Value"
 ///
-template <typename KeyType, typename ValueType>
+template <typename KeyType,
+          typename ValueType,
+          typename Hasher = std::hash<KeyType>,
+          typename Keyeq  = std::equal_to<KeyType>>
 class WeakValueHashMap
 {
 private:
@@ -118,7 +123,7 @@ public:
         explicit operator bool() const { return m_pMap && m_pValue; }
 
     private:
-        friend class WeakValueHashMap<KeyType, ValueType>;
+        friend class WeakValueHashMap<KeyType, ValueType, Hasher, Keyeq>;
 
         void Release()
         {
@@ -248,8 +253,8 @@ private:
         }
 
     private:
-        std::mutex                                            m_Mtx;
-        std::unordered_map<KeyType, std::weak_ptr<ValueType>> m_Map;
+        std::mutex                                                           m_Mtx;
+        std::unordered_map<KeyType, std::weak_ptr<ValueType>, Hasher, Keyeq> m_Map;
     };
     std::shared_ptr<Impl> m_pImpl = std::make_shared<Impl>();
 };
