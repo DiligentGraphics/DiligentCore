@@ -35,7 +35,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-static constexpr char g_TestHLSL[] = R"(
+static constexpr char g_TestHLSL_Formats[] = R"(
 RWTexture1D<unorm float4 /*format=rgba8*/> g_rgba8;
 RWTexture2D<unorm  /*format=rg8*/ float4>  g_rg8;
 RWTexture3D</*format=r8*/ unorm float4>    g_r8;
@@ -103,7 +103,7 @@ void Function(RWTexture2D</*format=rg8*/ unorm float4> FunctionArg1,
 
 TEST(HLSLParsingTools, ExtractGLSLImageFormatsFromHLSL)
 {
-    std::unordered_map<HashMapStringKey, TEXTURE_FORMAT> RefFormats;
+    std::unordered_map<HashMapStringKey, ImageFormatAndAccess> RefFormats;
     RefFormats.emplace("g_rgba8", TEX_FORMAT_RGBA8_UNORM);
     RefFormats.emplace("g_rg8", TEX_FORMAT_RG8_UNORM);
     RefFormats.emplace("g_r8", TEX_FORMAT_R8_UNORM);
@@ -156,7 +156,7 @@ TEST(HLSLParsingTools, ExtractGLSLImageFormatsFromHLSL)
     RefFormats.emplace("g_rgb10_a2", TEX_FORMAT_RGB10A2_UNORM);
     RefFormats.emplace("g_rgb10_a2ui", TEX_FORMAT_RGB10A2_UINT);
 
-    std::unordered_map<HashMapStringKey, TEXTURE_FORMAT> Formats = Parsing::ExtractGLSLImageFormatsFromHLSL(g_TestHLSL);
+    std::unordered_map<HashMapStringKey, ImageFormatAndAccess> Formats = Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL(g_TestHLSL_Formats);
     EXPECT_EQ(Formats.size(), RefFormats.size());
     for (const auto& RefFmtIt : RefFormats)
     {
@@ -169,14 +169,75 @@ TEST(HLSLParsingTools, ExtractGLSLImageFormatsFromHLSL)
         }
     }
 
-    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("").empty());
-    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D").empty());
-    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D<").empty());
-    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D<>").empty());
-    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D</*format=*/>").empty());
-    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D</*format=xyz*/>").empty());
-    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D</*format=rgba8*/>").empty());
-    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsFromHLSL("RWTexture2D</*format=rgba8*/> 123").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL("").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL("RWTexture2D").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL("RWTexture2D<").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL("RWTexture2D<>").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL("RWTexture2D</*format=*/>").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL("RWTexture2D</*format=xyz*/>").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL("RWTexture2D</*format=rgba8*/>").empty());
+    EXPECT_TRUE(Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL("RWTexture2D</*format=rgba8*/> 123").empty());
+}
+
+
+static constexpr char g_TestHLSL_AccessMode[] = R"(
+RWTexture1D<unorm float4 /*access=read*/>       g_ReadOnly;
+RWTexture1D</*access=write*/ unorm float4>      g_WriteOnly;
+RWTexture1D<unorm /*access=read_write*/ float4> g_ReadWrite;
+
+RWTexture1D</*access=read_write*/ float4> g_ReadWrite_1;
+RWTexture1D<float4 /*access=read_write*/> g_ReadWrite_2;
+
+RWTexture1D<unorm float4 /*access=read_write*/ /*format=rgba32f*/>     g_ReadWriteFmt_01;
+RWTexture1D<unorm float4 /*format=rgba32f*/     /*access=read_write*/> g_ReadWriteFmt_02;
+RWTexture1D<unorm /*access=read_write*/ /*format=rgba32f*/     float4> g_ReadWriteFmt_03;
+RWTexture1D<unorm /*format=rgba32f*/     /*access=read_write*/ float4> g_ReadWriteFmt_04;
+RWTexture1D<unorm /*format=rgba32f*/ float4 /*access=read_write*/>       g_ReadWriteFmt_05;
+RWTexture1D<unorm /*access=read_write*/ float4 /*format=rgba32f*/>  g_ReadWriteFmt_06;
+
+RWTexture2D g_ReadWriteNoneVisible;
+
+void Function(RWTexture2D</*format=rg8*/ unorm /*access=write*/ float4> FunctionArg1,
+              RWTexture2D<unorm /*format=rg8*/ float4> FunctionArg2,
+              RWTexture2D<unorm float4 /*format=rg8*/> FunctionArg3)
+{
+    RWTexture2D</*format=rg8*/ unorm float4> LocalRWTex0;
+    RWTexture2D<unorm /*format=rg8*/ float4> LocalRWTex1;
+    RWTexture2D<unorm float4 /*format=rg8*/> LocalRWTex2;
+}
+
+)";
+
+TEST(HLSLParsingTools, ExtractGLSLAccessModeFromHLSL)
+{
+    std::unordered_map<HashMapStringKey, ImageFormatAndAccess> RefFormats;
+    RefFormats.emplace("g_ReadOnly", ImageFormatAndAccess{TEX_FORMAT_UNKNOWN, IMAGE_ACCESS_MODE_READ});
+    RefFormats.emplace("g_WriteOnly", ImageFormatAndAccess{TEX_FORMAT_UNKNOWN, IMAGE_ACCESS_MODE_WRITE});
+    RefFormats.emplace("g_ReadWrite", ImageFormatAndAccess{TEX_FORMAT_UNKNOWN, IMAGE_ACCESS_MODE_READ_WRITE});
+
+    RefFormats.emplace("g_ReadWrite_1", ImageFormatAndAccess{TEX_FORMAT_UNKNOWN, IMAGE_ACCESS_MODE_READ_WRITE});
+    RefFormats.emplace("g_ReadWrite_2", ImageFormatAndAccess{TEX_FORMAT_UNKNOWN, IMAGE_ACCESS_MODE_READ_WRITE});
+
+    RefFormats.emplace("g_ReadWriteFmt_01", ImageFormatAndAccess{TEX_FORMAT_RGBA32_FLOAT, IMAGE_ACCESS_MODE_READ_WRITE});
+    RefFormats.emplace("g_ReadWriteFmt_02", ImageFormatAndAccess{TEX_FORMAT_RGBA32_FLOAT, IMAGE_ACCESS_MODE_READ_WRITE});
+    RefFormats.emplace("g_ReadWriteFmt_03", ImageFormatAndAccess{TEX_FORMAT_RGBA32_FLOAT, IMAGE_ACCESS_MODE_READ_WRITE});
+    RefFormats.emplace("g_ReadWriteFmt_04", ImageFormatAndAccess{TEX_FORMAT_RGBA32_FLOAT, IMAGE_ACCESS_MODE_READ_WRITE});
+    RefFormats.emplace("g_ReadWriteFmt_05", ImageFormatAndAccess{TEX_FORMAT_RGBA32_FLOAT, IMAGE_ACCESS_MODE_READ_WRITE});
+    RefFormats.emplace("g_ReadWriteFmt_06", ImageFormatAndAccess{TEX_FORMAT_RGBA32_FLOAT, IMAGE_ACCESS_MODE_READ_WRITE});
+
+
+    std::unordered_map<HashMapStringKey, ImageFormatAndAccess> Formats = Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL(g_TestHLSL_AccessMode);
+    EXPECT_EQ(Formats.size(), RefFormats.size());
+    for (const auto& RefFmtIt : RefFormats)
+    {
+        const auto& FmtIt = Formats.find(RefFmtIt.first);
+        if (FmtIt == Formats.end())
+            ADD_FAILURE() << "Unable to find image format for resource " << RefFmtIt.first.GetStr();
+        if (FmtIt != Formats.end())
+        {
+            EXPECT_EQ(FmtIt->second, RefFmtIt.second) << "Incorrect format for resource " << RefFmtIt.first.GetStr();
+        }
+    }
 }
 
 } // namespace

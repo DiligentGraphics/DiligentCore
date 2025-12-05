@@ -165,23 +165,23 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
     WGPUCommandEncoderDescriptor wgpuCmdEncoderDesc{};
     WGPUCommandEncoder           wgpuCmdEncoder = wgpuDeviceCreateCommandEncoder(m_wgpuDevice, &wgpuCmdEncoderDesc);
 
-    WGPUImageCopyTexture wgpuImageCopySrc{};
-    wgpuImageCopySrc.mipLevel = 0;
-    wgpuImageCopySrc.texture  = wgpuSrcTexture;
-    wgpuImageCopySrc.origin   = {0, 0, 0};
+    WGPUTexelCopyTextureInfo wgpuTexelCopySrc{};
+    wgpuTexelCopySrc.mipLevel = 0;
+    wgpuTexelCopySrc.texture  = wgpuSrcTexture;
+    wgpuTexelCopySrc.origin   = {0, 0, 0};
 
-    WGPUImageCopyBuffer wgpuImageCopyDst{};
-    wgpuImageCopyDst.layout.offset       = 0;
-    wgpuImageCopyDst.layout.bytesPerRow  = 4 * m_SwapChainDesc.Width;
-    wgpuImageCopyDst.layout.rowsPerImage = m_SwapChainDesc.Height;
-    wgpuImageCopyDst.buffer              = m_wgpuStagingBuffer;
+    WGPUTexelCopyBufferInfo wgpuTexelCopyDst{};
+    wgpuTexelCopyDst.layout.offset       = 0;
+    wgpuTexelCopyDst.layout.bytesPerRow  = 4 * m_SwapChainDesc.Width;
+    wgpuTexelCopyDst.layout.rowsPerImage = m_SwapChainDesc.Height;
+    wgpuTexelCopyDst.buffer              = m_wgpuStagingBuffer;
 
     WGPUExtent3D wgpuCopySize{};
     wgpuCopySize.width              = m_SwapChainDesc.Width;
     wgpuCopySize.height             = m_SwapChainDesc.Height;
     wgpuCopySize.depthOrArrayLayers = 1;
 
-    wgpuCommandEncoderCopyTextureToBuffer(wgpuCmdEncoder, &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+    wgpuCommandEncoderCopyTextureToBuffer(wgpuCmdEncoder, &wgpuTexelCopySrc, &wgpuTexelCopyDst, &wgpuCopySize);
 
     WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
     WGPUCommandBuffer           wgpuCmdBuffer = wgpuCommandEncoderFinish(wgpuCmdEncoder, &wgpuCmdBufferDesc);
@@ -191,27 +191,31 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
     wgpuCommandBufferRelease(wgpuCmdBuffer);
 
     const size_t DataSize = 4 * m_SwapChainDesc.Width * m_SwapChainDesc.Height;
+
+    WGPUBufferMapCallbackInfo wgpuMapCallbackInfo{};
+    wgpuMapCallbackInfo.userdata1 = this;
+    wgpuMapCallbackInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
+    wgpuMapCallbackInfo.callback  = [](WGPUMapAsyncStatus wgpuMapStatus, WGPUStringView Message, void* pUserData1, void* pUserData2) {
+        if (wgpuMapStatus == WGPUMapAsyncStatus_Success)
+        {
+            const auto pThis = static_cast<TestingSwapChainWebGPU*>(pUserData1);
+
+            pThis->m_ReferenceDataPitch = pThis->m_SwapChainDesc.Width * 4;
+            pThis->m_ReferenceData.resize(pThis->m_ReferenceDataPitch * pThis->m_SwapChainDesc.Height);
+
+            const auto* pMappedData = static_cast<const Uint8*>(wgpuBufferGetConstMappedRange(pThis->m_wgpuStagingBuffer, 0, pThis->m_ReferenceData.size()));
+            VERIFY_EXPR(pMappedData != nullptr);
+
+            memcpy(pThis->m_ReferenceData.data(), pMappedData, pThis->m_ReferenceData.size());
+            wgpuBufferUnmap(pThis->m_wgpuStagingBuffer);
+        }
+        else
+        {
+            ADD_FAILURE() << "Failing to map staging buffer";
+        }
+    };
     wgpuBufferMapAsync(
-        m_wgpuStagingBuffer, WGPUMapMode_Read, 0, DataSize, [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
-            if (MapStatus == WGPUBufferMapAsyncStatus_Success)
-            {
-                const auto pThis = static_cast<TestingSwapChainWebGPU*>(pUserData);
-
-                pThis->m_ReferenceDataPitch = pThis->m_SwapChainDesc.Width * 4;
-                pThis->m_ReferenceData.resize(pThis->m_ReferenceDataPitch * pThis->m_SwapChainDesc.Height);
-
-                const auto* pMappedData = static_cast<const Uint8*>(wgpuBufferGetConstMappedRange(pThis->m_wgpuStagingBuffer, 0, pThis->m_ReferenceData.size()));
-                VERIFY_EXPR(pMappedData != nullptr);
-
-                memcpy(pThis->m_ReferenceData.data(), pMappedData, pThis->m_ReferenceData.size());
-                wgpuBufferUnmap(pThis->m_wgpuStagingBuffer);
-            }
-            else
-            {
-                ADD_FAILURE() << "Failing to map staging buffer";
-            }
-        },
-        this);
+        m_wgpuStagingBuffer, WGPUMapMode_Read, 0, DataSize, wgpuMapCallbackInfo);
 
 #if !PLATFORM_WEB
     wgpuDeviceTick(m_wgpuDevice);

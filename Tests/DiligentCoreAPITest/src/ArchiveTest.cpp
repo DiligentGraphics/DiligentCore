@@ -1296,7 +1296,7 @@ namespace HLSL
 // Test shader source as string
 const std::string ComputePSOTest_CS{R"(
 
-VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ /*access=write*/float4> g_tex2DUAV : register(u0);
 
 cbuffer cbConstants
 {

@@ -229,23 +229,14 @@ public:
 
         switch (wgpuSurfaceTexture.status)
         {
-            case WGPUSurfaceGetCurrentTextureStatus_Success:
+            case WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
+            case WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
             case WGPUSurfaceGetCurrentTextureStatus_Outdated:
-                break;
-
             case WGPUSurfaceGetCurrentTextureStatus_Timeout:
                 break;
 
             case WGPUSurfaceGetCurrentTextureStatus_Lost:
                 LOG_WARNING_MESSAGE("Unable to present: swap chain surface is lost");
-                return wgpuSurfaceTexture.status;
-
-            case WGPUSurfaceGetCurrentTextureStatus_OutOfMemory:
-                LOG_ERROR_MESSAGE("Unable to present: out of memory");
-                return wgpuSurfaceTexture.status;
-
-            case WGPUSurfaceGetCurrentTextureStatus_DeviceLost:
-                LOG_ERROR_MESSAGE("Unable to present: device is lost");
                 return wgpuSurfaceTexture.status;
 
             case WGPUSurfaceGetCurrentTextureStatus_Error:
@@ -455,7 +446,7 @@ void SwapChainWebGPUImpl::CreateSurface()
 #elif PLATFORM_WEB
     WGPUSurfaceSourceCanvasHTMLSelector_Emscripten wgpuSurfaceNativeDesc{};
     wgpuSurfaceNativeDesc.chain    = {nullptr, WGPUSType_SurfaceSourceCanvasHTMLSelector_Emscripten};
-    wgpuSurfaceNativeDesc.selector = m_NativeWindow.pCanvasId;
+    wgpuSurfaceNativeDesc.selector = GetWGPUStringView(m_NativeWindow.pCanvasId);
 #endif
 
     WGPUSurfaceDescriptor wgpuSurfaceDesc{};
