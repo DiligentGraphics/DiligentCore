@@ -1,6 +1,6 @@
 #include "Defines.h"
 
-VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV;
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ /*access=write*/ float4> g_tex2DUAV;
 
 cbuffer cbConstants
 {
