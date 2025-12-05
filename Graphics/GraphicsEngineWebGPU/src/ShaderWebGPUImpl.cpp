@@ -92,12 +92,12 @@ std::vector<uint32_t> CompileShaderToSPIRV(const ShaderCreateInfo&             S
             const std::string HLSLSource = BuildHLSLSourceString(ShaderCI);
             if (!HLSLSource.empty())
             {
-                // Extract image formats from special comments in HLSL code:
-                //    Texture2D<float4 /*format=rgba32f*/> g_RWTexture;
-                const auto ImageFormats = Parsing::ExtractGLSLImageFormatsFromHLSL(HLSLSource);
+                // Extract image formats and access modes from special comments in HLSL code:
+                //    Texture2D<float4 /*format=rgba32f*/ /*access=read*/> g_RWTexture;
+                const auto ImageFormats = Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL(HLSLSource);
                 if (!ImageFormats.empty())
                 {
-                    SPIRV = PatchImageFormats(SPIRV, ImageFormats);
+                    SPIRV = PatchImageFormatsAndAccessModes(SPIRV, ImageFormats);
                 }
             }
         }
@@ -203,6 +203,7 @@ void ShaderWebGPUImpl::Initialize(const ShaderCreateInfo& ShaderCI,
             LOG_ERROR_AND_THROW("Shader source must be provided through one of the 'Source', 'FilePath' or 'ByteCode' members");
         }
 
+        StripGoogleHlslFunctionality(SPIRV);
         m_WGSL = ConvertSPIRVtoWGSL(SPIRV);
         if (m_WGSL.empty())
         {

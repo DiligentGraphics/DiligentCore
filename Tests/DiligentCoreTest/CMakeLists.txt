@@ -32,7 +32,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 add_executable(DiligentCoreTest ${SOURCE} ${SHADERS})
-set_common_target_properties(DiligentCoreTest 17)
+
+if (WEBGPU_SUPPORTED)
+    set_common_target_properties(DiligentCoreTest 20)
+else()
+    set_common_target_properties(DiligentCoreTest 17)
+endif()
+
 
 if (PLATFORM_WEB)  
     set(RESOURCE_PATH "${PROJECT_SOURCE_DIR}/assets/")

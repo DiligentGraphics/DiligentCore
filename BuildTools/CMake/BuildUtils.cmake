@@ -245,6 +245,21 @@ function(set_common_target_properties TARGET)
         custom_post_configure_target(${TARGET})
     endif()
 
+    # Mark generated files as such to avoid "file not found" warnings in some IDEs in configuration stage
+    if (WEBGPU_SUPPORTED AND (NOT PLATFORM_WEB))
+        set(DAWN_GENERATED_HEADERS
+            ${DAWN_BUILD_GEN_DIR}/include/dawn/webgpu.h
+            ${DAWN_BUILD_GEN_DIR}/include/dawn/webgpu_cpp.h
+            ${DAWN_BUILD_GEN_DIR}/include/dawn/webgpu_cpp_print.h
+            ${DAWN_BUILD_GEN_DIR}/include/dawn/wire/client/webgpu.h
+            ${DAWN_BUILD_GEN_DIR}/include/dawn/wire/client/webgpu_cpp.h
+            ${DAWN_BUILD_GEN_DIR}/include/dawn/wire/client/webgpu_cpp_print.h
+            ${DAWN_BUILD_GEN_DIR}/include/dawn/dawn_proc_table.h
+            ${DAWN_BUILD_GEN_DIR}/include/webgpu/webgpu_cpp_chained_struct.h
+        )
+        set_source_files_properties(${DAWN_GENERATED_HEADERS} PROPERTIES GENERATED TRUE)
+    endif()
+
 endfunction()
 
 function(find_targets_in_directory _RESULT _DIR)
@@ -466,24 +481,29 @@ function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
 
 endfunction()
 
-# FetchContent's GIT_SHALLOW option is buggy and does not actually do a shallow
-# clone. This macro takes care of it.
-macro(FetchContent_DeclareShallowGit Name GIT_REPOSITORY GitRepository GIT_TAG GitTag)
+# The GIT_SHALLOW option in FetchContent is buggy and does not actually perform
+# a shallow clone. This macro fixes that. Also, we do not want to clone all
+# submodules to reduce download time, therefore we add an option GIT_SUBMODULES
+# to specify which submodules should be cloned (if any).
+macro(FetchContent_DeclareShallowGit Name GIT_REPOSITORY GitRepository GIT_TAG GitTag GIT_SUBMODULES GitSubmodules)
     include(FetchContent)
+
+    # This is what it'd look like if GIT_SHALLOW was indeed working:
+    #GIT_REPOSITORY "${GitRepository}"
+    #GIT_TAG        "${GitTag}"
+    #GIT_SHALLOW     ON
+    #GIT_SUBMODULES "${GitSubmodules}"
+
+    # Manual download mode instead:
     FetchContent_Declare(
-        "${Name}"
-
-        # This is what it'd look like if GIT_SHALLOW was indeed working:
-        #GIT_REPOSITORY "${GitRepository}"
-        #GIT_TAG        "${GitTag}"
-        #GIT_SHALLOW    ON
-
-        # Manual download mode instead:
+        ${Name}
         DOWNLOAD_COMMAND
             cd "${FETCHCONTENT_BASE_DIR}/${Name}-src" &&
             git init &&
-            git fetch --depth=1 "${GitRepository}" "${GitTag}" &&
-            git reset --hard FETCH_HEAD
+            git remote add origin "${GitRepository}" &&
+            git fetch --depth=1 origin "${GitTag}" &&
+            git checkout FETCH_HEAD &&
+            git submodule update --init --recursive --depth=1 ${GitSubmodules}
     )
 endmacro()
 

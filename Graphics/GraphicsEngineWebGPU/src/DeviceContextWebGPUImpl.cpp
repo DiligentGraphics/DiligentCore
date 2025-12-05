@@ -896,13 +896,13 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
         BufferWebGPUImpl* const  pSrcBufferWebGPU  = ClassPtrCast<BufferWebGPUImpl>(SubresData.pSrcBuffer);
         const BufferDesc&        SrcBuffDesc       = pSrcBufferWebGPU->GetDesc();
 
-        WGPUImageCopyTexture wgpuImageCopyDst{};
-        wgpuImageCopyDst.texture  = pDstTextureWebGPU->GetWebGPUTexture();
-        wgpuImageCopyDst.aspect   = WGPUTextureAspect_All;
-        wgpuImageCopyDst.origin.x = DstBox.MinX;
-        wgpuImageCopyDst.origin.y = DstBox.MinY;
-        wgpuImageCopyDst.origin.z = Slice != 0 ? Slice : DstBox.MinZ;
-        wgpuImageCopyDst.mipLevel = MipLevel;
+        WGPUTexelCopyTextureInfo wgpuTexelCopyDst{};
+        wgpuTexelCopyDst.texture  = pDstTextureWebGPU->GetWebGPUTexture();
+        wgpuTexelCopyDst.aspect   = WGPUTextureAspect_All;
+        wgpuTexelCopyDst.origin.x = DstBox.MinX;
+        wgpuTexelCopyDst.origin.y = DstBox.MinY;
+        wgpuTexelCopyDst.origin.z = Slice != 0 ? Slice : DstBox.MinZ;
+        wgpuTexelCopyDst.mipLevel = MipLevel;
 
         const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(pDstTextureWebGPU->GetDesc().Format);
 
@@ -928,13 +928,13 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
             }
         }
 
-        WGPUImageCopyBuffer wgpuImageCopySrc{};
-        wgpuImageCopySrc.buffer              = pSrcStagingBuffer != nullptr ? pSrcStagingBuffer->wgpuBuffer : pSrcBufferWebGPU->GetWebGPUBuffer();
-        wgpuImageCopySrc.layout.offset       = SubresData.SrcOffset;
-        wgpuImageCopySrc.layout.bytesPerRow  = static_cast<Uint32>(SubresData.Stride);
-        wgpuImageCopySrc.layout.rowsPerImage = wgpuCopySize.height;
+        WGPUTexelCopyBufferInfo wgpuTexelCopySrc{};
+        wgpuTexelCopySrc.buffer              = pSrcStagingBuffer != nullptr ? pSrcStagingBuffer->wgpuBuffer : pSrcBufferWebGPU->GetWebGPUBuffer();
+        wgpuTexelCopySrc.layout.offset       = SubresData.SrcOffset;
+        wgpuTexelCopySrc.layout.bytesPerRow  = static_cast<Uint32>(SubresData.Stride);
+        wgpuTexelCopySrc.layout.rowsPerImage = wgpuCopySize.height;
 
-        wgpuCommandEncoderCopyBufferToTexture(GetCommandEncoder(), &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+        wgpuCommandEncoderCopyBufferToTexture(GetCommandEncoder(), &wgpuTexelCopySrc, &wgpuTexelCopyDst, &wgpuCopySize);
 
         if (pSrcStagingBuffer != nullptr)
         {
@@ -965,19 +965,19 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
             }
         }
 
-        WGPUImageCopyBuffer wgpuImageCopySrc{};
-        wgpuImageCopySrc.buffer              = UploadAlloc.wgpuBuffer;
-        wgpuImageCopySrc.layout.offset       = UploadAlloc.Offset;
-        wgpuImageCopySrc.layout.bytesPerRow  = static_cast<Uint32>(CopyInfo.RowStride);
-        wgpuImageCopySrc.layout.rowsPerImage = static_cast<Uint32>(CopyInfo.DepthStride / CopyInfo.RowStride);
+        WGPUTexelCopyBufferInfo wgpuTexelCopySrc{};
+        wgpuTexelCopySrc.buffer              = UploadAlloc.wgpuBuffer;
+        wgpuTexelCopySrc.layout.offset       = UploadAlloc.Offset;
+        wgpuTexelCopySrc.layout.bytesPerRow  = static_cast<Uint32>(CopyInfo.RowStride);
+        wgpuTexelCopySrc.layout.rowsPerImage = static_cast<Uint32>(CopyInfo.DepthStride / CopyInfo.RowStride);
 
-        WGPUImageCopyTexture wgpuImageCopyDst{};
-        wgpuImageCopyDst.texture  = pTextureWebGPU->GetWebGPUTexture();
-        wgpuImageCopyDst.aspect   = WGPUTextureAspect_All;
-        wgpuImageCopyDst.origin.x = DstBox.MinX;
-        wgpuImageCopyDst.origin.y = DstBox.MinY;
-        wgpuImageCopyDst.origin.z = Slice != 0 ? Slice : DstBox.MinZ;
-        wgpuImageCopyDst.mipLevel = MipLevel;
+        WGPUTexelCopyTextureInfo wgpuTexelCopyDst{};
+        wgpuTexelCopyDst.texture  = pTextureWebGPU->GetWebGPUTexture();
+        wgpuTexelCopyDst.aspect   = WGPUTextureAspect_All;
+        wgpuTexelCopyDst.origin.x = DstBox.MinX;
+        wgpuTexelCopyDst.origin.y = DstBox.MinY;
+        wgpuTexelCopyDst.origin.z = Slice != 0 ? Slice : DstBox.MinZ;
+        wgpuTexelCopyDst.mipLevel = MipLevel;
 
         const TextureFormatAttribs& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
@@ -992,7 +992,7 @@ void DeviceContextWebGPUImpl::UpdateTexture(ITexture*                      pText
             wgpuCopySize.height = AlignUp(wgpuCopySize.height, FmtAttribs.BlockHeight);
         }
 
-        wgpuCommandEncoderCopyBufferToTexture(GetCommandEncoder(), &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+        wgpuCommandEncoderCopyBufferToTexture(GetCommandEncoder(), &wgpuTexelCopySrc, &wgpuTexelCopyDst, &wgpuCopySize);
     }
 }
 
@@ -1033,21 +1033,21 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         else
             wgpuAspectMask = WGPUTextureAspect_All;
 
-        WGPUImageCopyTexture wgpuImageCopySrc{};
-        wgpuImageCopySrc.texture  = pSrcTexWebGPU->GetWebGPUTexture();
-        wgpuImageCopySrc.aspect   = wgpuAspectMask;
-        wgpuImageCopySrc.origin.x = pSrcBox->MinX;
-        wgpuImageCopySrc.origin.y = pSrcBox->MinY;
-        wgpuImageCopySrc.origin.z = CopyAttribs.SrcSlice != 0 ? CopyAttribs.SrcSlice : pSrcBox->MinZ;
-        wgpuImageCopySrc.mipLevel = CopyAttribs.SrcMipLevel;
+        WGPUTexelCopyTextureInfo wgpuTexelCopySrc{};
+        wgpuTexelCopySrc.texture  = pSrcTexWebGPU->GetWebGPUTexture();
+        wgpuTexelCopySrc.aspect   = wgpuAspectMask;
+        wgpuTexelCopySrc.origin.x = pSrcBox->MinX;
+        wgpuTexelCopySrc.origin.y = pSrcBox->MinY;
+        wgpuTexelCopySrc.origin.z = CopyAttribs.SrcSlice != 0 ? CopyAttribs.SrcSlice : pSrcBox->MinZ;
+        wgpuTexelCopySrc.mipLevel = CopyAttribs.SrcMipLevel;
 
-        WGPUImageCopyTexture wgpuImageCopyDst{};
-        wgpuImageCopyDst.texture  = pDstTexWebGPU->GetWebGPUTexture();
-        wgpuImageCopyDst.aspect   = wgpuAspectMask;
-        wgpuImageCopyDst.origin.x = CopyAttribs.DstX;
-        wgpuImageCopyDst.origin.y = CopyAttribs.DstY;
-        wgpuImageCopyDst.origin.z = CopyAttribs.DstSlice != 0 ? CopyAttribs.DstSlice : CopyAttribs.DstZ;
-        wgpuImageCopyDst.mipLevel = CopyAttribs.DstMipLevel;
+        WGPUTexelCopyTextureInfo wgpuTexelCopyDst{};
+        wgpuTexelCopyDst.texture  = pDstTexWebGPU->GetWebGPUTexture();
+        wgpuTexelCopyDst.aspect   = wgpuAspectMask;
+        wgpuTexelCopyDst.origin.x = CopyAttribs.DstX;
+        wgpuTexelCopyDst.origin.y = CopyAttribs.DstY;
+        wgpuTexelCopyDst.origin.z = CopyAttribs.DstSlice != 0 ? CopyAttribs.DstSlice : CopyAttribs.DstZ;
+        wgpuTexelCopyDst.mipLevel = CopyAttribs.DstMipLevel;
 
         WGPUExtent3D wgpuCopySize{};
         wgpuCopySize.width              = std::max(pSrcBox->Width(), 1u);
@@ -1060,7 +1060,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             wgpuCopySize.height = AlignUp(wgpuCopySize.height, DstFmtAttribs.BlockHeight);
         }
 
-        wgpuCommandEncoderCopyTextureToTexture(wgpuCmdEncoder, &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+        wgpuCommandEncoderCopyTextureToTexture(wgpuCmdEncoder, &wgpuTexelCopySrc, &wgpuTexelCopyDst, &wgpuCopySize);
     }
     else if (SrcTexDesc.Usage == USAGE_STAGING && DstTexDesc.Usage != USAGE_STAGING)
     {
@@ -1083,19 +1083,19 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             return;
         }
 
-        WGPUImageCopyBuffer wgpuImageCopySrc{};
-        wgpuImageCopySrc.buffer              = pSrcStagingBuffer->wgpuBuffer;
-        wgpuImageCopySrc.layout.offset       = SrcBufferOffset;
-        wgpuImageCopySrc.layout.bytesPerRow  = static_cast<Uint32>(AlignUp(SrcMipLevelAttribs.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment));
-        wgpuImageCopySrc.layout.rowsPerImage = SrcMipLevelAttribs.StorageHeight / DstFmtAttribs.BlockHeight;
+        WGPUTexelCopyBufferInfo wgpuTexelCopySrc{};
+        wgpuTexelCopySrc.buffer              = pSrcStagingBuffer->wgpuBuffer;
+        wgpuTexelCopySrc.layout.offset       = SrcBufferOffset;
+        wgpuTexelCopySrc.layout.bytesPerRow  = static_cast<Uint32>(AlignUp(SrcMipLevelAttribs.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment));
+        wgpuTexelCopySrc.layout.rowsPerImage = SrcMipLevelAttribs.StorageHeight / DstFmtAttribs.BlockHeight;
 
-        WGPUImageCopyTexture wgpuImageCopyDst{};
-        wgpuImageCopyDst.texture  = pDstTexWebGPU->GetWebGPUTexture();
-        wgpuImageCopyDst.aspect   = wgpuAspectMask;
-        wgpuImageCopyDst.origin.x = CopyAttribs.DstX;
-        wgpuImageCopyDst.origin.y = CopyAttribs.DstY;
-        wgpuImageCopyDst.origin.z = CopyAttribs.DstSlice != 0 ? CopyAttribs.DstSlice : CopyAttribs.DstZ;
-        wgpuImageCopyDst.mipLevel = CopyAttribs.DstMipLevel;
+        WGPUTexelCopyTextureInfo wgpuTexelCopyDst{};
+        wgpuTexelCopyDst.texture  = pDstTexWebGPU->GetWebGPUTexture();
+        wgpuTexelCopyDst.aspect   = wgpuAspectMask;
+        wgpuTexelCopyDst.origin.x = CopyAttribs.DstX;
+        wgpuTexelCopyDst.origin.y = CopyAttribs.DstY;
+        wgpuTexelCopyDst.origin.z = CopyAttribs.DstSlice != 0 ? CopyAttribs.DstSlice : CopyAttribs.DstZ;
+        wgpuTexelCopyDst.mipLevel = CopyAttribs.DstMipLevel;
 
         WGPUExtent3D wgpuCopySize{};
         wgpuCopySize.width              = std::max(pSrcBox->Width(), 1u);
@@ -1108,7 +1108,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             wgpuCopySize.height = AlignUp(wgpuCopySize.height, DstFmtAttribs.BlockHeight);
         }
 
-        wgpuCommandEncoderCopyBufferToTexture(wgpuCmdEncoder, &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+        wgpuCommandEncoderCopyBufferToTexture(wgpuCmdEncoder, &wgpuTexelCopySrc, &wgpuTexelCopyDst, &wgpuCopySize);
 
         m_PendingStagingWrites.emplace(pSrcStagingBuffer, RefCntAutoPtr<IObject>{pSrcTexWebGPU});
     }
@@ -1133,19 +1133,19 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             return;
         }
 
-        WGPUImageCopyTexture wgpuImageCopySrc{};
-        wgpuImageCopySrc.texture  = pSrcTexWebGPU->GetWebGPUTexture();
-        wgpuImageCopySrc.aspect   = wgpuAspectMask;
-        wgpuImageCopySrc.origin.x = pSrcBox->MinX;
-        wgpuImageCopySrc.origin.y = pSrcBox->MinY;
-        wgpuImageCopySrc.origin.z = CopyAttribs.SrcSlice != 0 ? CopyAttribs.SrcSlice : pSrcBox->MinZ;
-        wgpuImageCopySrc.mipLevel = CopyAttribs.SrcMipLevel;
+        WGPUTexelCopyTextureInfo wgpuTexelCopySrc{};
+        wgpuTexelCopySrc.texture  = pSrcTexWebGPU->GetWebGPUTexture();
+        wgpuTexelCopySrc.aspect   = wgpuAspectMask;
+        wgpuTexelCopySrc.origin.x = pSrcBox->MinX;
+        wgpuTexelCopySrc.origin.y = pSrcBox->MinY;
+        wgpuTexelCopySrc.origin.z = CopyAttribs.SrcSlice != 0 ? CopyAttribs.SrcSlice : pSrcBox->MinZ;
+        wgpuTexelCopySrc.mipLevel = CopyAttribs.SrcMipLevel;
 
-        WGPUImageCopyBuffer wgpuImageCopyDst{};
-        wgpuImageCopyDst.buffer              = pDstStagingBuffer->wgpuBuffer;
-        wgpuImageCopyDst.layout.offset       = DstBufferOffset;
-        wgpuImageCopyDst.layout.bytesPerRow  = static_cast<Uint32>(AlignUp(DstMipLevelAttribs.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment));
-        wgpuImageCopyDst.layout.rowsPerImage = DstMipLevelAttribs.StorageHeight / SrcFmtAttribs.BlockHeight;
+        WGPUTexelCopyBufferInfo wgpuTexelCopyDst{};
+        wgpuTexelCopyDst.buffer              = pDstStagingBuffer->wgpuBuffer;
+        wgpuTexelCopyDst.layout.offset       = DstBufferOffset;
+        wgpuTexelCopyDst.layout.bytesPerRow  = static_cast<Uint32>(AlignUp(DstMipLevelAttribs.RowSize, TextureWebGPUImpl::ImageCopyBufferRowAlignment));
+        wgpuTexelCopyDst.layout.rowsPerImage = DstMipLevelAttribs.StorageHeight / SrcFmtAttribs.BlockHeight;
 
         WGPUExtent3D wgpuCopySize{};
         wgpuCopySize.width              = std::max(pSrcBox->Width(), 1u);
@@ -1158,7 +1158,7 @@ void DeviceContextWebGPUImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             wgpuCopySize.height = AlignUp(wgpuCopySize.height, SrcFmtAttribs.BlockHeight);
         }
 
-        wgpuCommandEncoderCopyTextureToBuffer(wgpuCmdEncoder, &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+        wgpuCommandEncoderCopyTextureToBuffer(wgpuCmdEncoder, &wgpuTexelCopySrc, &wgpuTexelCopyDst, &wgpuCopySize);
 
         m_PendingStagingReads.emplace(pDstStagingBuffer, RefCntAutoPtr<IObject>{pDstTexWebGPU});
     }
@@ -1277,19 +1277,19 @@ void DeviceContextWebGPUImpl::UnmapTextureSubresource(ITexture* pTexture, Uint32
             const UploadMemoryManagerWebGPU::Allocation& Allocation = UploadSpaceIt->second.Allocation;
             const BufferToTextureCopyInfo&               CopyInfo   = UploadSpaceIt->second.CopyInfo;
 
-            WGPUImageCopyBuffer wgpuImageCopySrc{};
-            wgpuImageCopySrc.buffer              = Allocation.wgpuBuffer;
-            wgpuImageCopySrc.layout.offset       = Allocation.Offset;
-            wgpuImageCopySrc.layout.bytesPerRow  = static_cast<Uint32>(CopyInfo.RowStride);
-            wgpuImageCopySrc.layout.rowsPerImage = static_cast<Uint32>(CopyInfo.DepthStride / CopyInfo.RowStride);
+            WGPUTexelCopyBufferInfo wgpuTexelCopySrc{};
+            wgpuTexelCopySrc.buffer              = Allocation.wgpuBuffer;
+            wgpuTexelCopySrc.layout.offset       = Allocation.Offset;
+            wgpuTexelCopySrc.layout.bytesPerRow  = static_cast<Uint32>(CopyInfo.RowStride);
+            wgpuTexelCopySrc.layout.rowsPerImage = static_cast<Uint32>(CopyInfo.DepthStride / CopyInfo.RowStride);
 
-            WGPUImageCopyTexture wgpuImageCopyDst{};
-            wgpuImageCopyDst.texture  = pTextureWebGPU->GetWebGPUTexture();
-            wgpuImageCopyDst.aspect   = WGPUTextureAspect_All;
-            wgpuImageCopyDst.origin.x = CopyInfo.Region.MinX;
-            wgpuImageCopyDst.origin.y = CopyInfo.Region.MinY;
-            wgpuImageCopyDst.origin.z = CopyInfo.Region.MinZ;
-            wgpuImageCopyDst.mipLevel = UploadSpaceIt->first.MipLevel;
+            WGPUTexelCopyTextureInfo wgpuTexelCopyDst{};
+            wgpuTexelCopyDst.texture  = pTextureWebGPU->GetWebGPUTexture();
+            wgpuTexelCopyDst.aspect   = WGPUTextureAspect_All;
+            wgpuTexelCopyDst.origin.x = CopyInfo.Region.MinX;
+            wgpuTexelCopyDst.origin.y = CopyInfo.Region.MinY;
+            wgpuTexelCopyDst.origin.z = CopyInfo.Region.MinZ;
+            wgpuTexelCopyDst.mipLevel = UploadSpaceIt->first.MipLevel;
 
             WGPUExtent3D wgpuCopySize{};
             wgpuCopySize.width              = CopyInfo.Region.Width();
@@ -1302,7 +1302,7 @@ void DeviceContextWebGPUImpl::UnmapTextureSubresource(ITexture* pTexture, Uint32
                 wgpuCopySize.height = AlignUp(wgpuCopySize.height, FmtAttribs.BlockHeight);
             }
 
-            wgpuCommandEncoderCopyBufferToTexture(GetCommandEncoder(), &wgpuImageCopySrc, &wgpuImageCopyDst, &wgpuCopySize);
+            wgpuCommandEncoderCopyBufferToTexture(GetCommandEncoder(), &wgpuTexelCopySrc, &wgpuTexelCopyDst, &wgpuCopySize);
             m_MappedTextures.erase(UploadSpaceIt);
         }
         else
@@ -1476,9 +1476,9 @@ void DeviceContextWebGPUImpl::Flush()
 
     if (m_wgpuCommandEncoder || !m_SignaledFences.empty())
     {
-        auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
-            VERIFY_EXPR(pUserData != nullptr);
-            SyncPointWebGPUImpl* pSyncPoint = static_cast<SyncPointWebGPUImpl*>(pUserData);
+        auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus wgpuStatus, WGPUStringView Message, void* pUserData1, void* pUserData2) {
+            VERIFY_EXPR(pUserData1 != nullptr);
+            SyncPointWebGPUImpl* pSyncPoint = static_cast<SyncPointWebGPUImpl*>(pUserData1);
             pSyncPoint->Trigger();
             pSyncPoint->Release();
         };
@@ -1501,9 +1501,13 @@ void DeviceContextWebGPUImpl::Flush()
         WGPUCommandBufferDescriptor wgpuCmdBufferDesc{};
         WebGPUCommandBufferWrapper  wgpuCmdBuffer{wgpuCommandEncoderFinish(GetCommandEncoder(), &wgpuCmdBufferDesc)};
         DEV_CHECK_ERR(wgpuCmdBuffer != nullptr, "Failed to finish command encoder");
-
         wgpuQueueSubmit(m_wgpuQueue, 1, &wgpuCmdBuffer.Get());
-        wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, WorkDoneCallback, pWorkDoneSyncPoint.Detach());
+
+        WGPUQueueWorkDoneCallbackInfo wgpuWorkDoneCallbackInfo{};
+        wgpuWorkDoneCallbackInfo.callback  = WorkDoneCallback;
+        wgpuWorkDoneCallbackInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
+        wgpuWorkDoneCallbackInfo.userdata1 = pWorkDoneSyncPoint.Detach();
+        wgpuQueueOnSubmittedWorkDone(m_wgpuQueue, wgpuWorkDoneCallbackInfo);
         m_wgpuCommandEncoder.Reset(nullptr);
 
         for (auto& PendingReadIt : m_PendingStagingReads)
