@@ -183,11 +183,11 @@ void WebGPUResourceBase::FlushPendingWrites(StagingBufferInfo& Buffer)
 
 void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
 {
-    auto MapAsyncCallback = [](WGPUBufferMapAsyncStatus MapStatus, void* pUserData) {
-        VERIFY_EXPR(pUserData != nullptr);
-        StagingBufferInfo& BufferInfo = *static_cast<StagingBufferInfo*>(pUserData);
+    auto MapAsyncCallback = [](WGPUMapAsyncStatus wgpuMapStatus, WGPUStringView Message, void* pUserData1, void* pUserData2) {
+        VERIFY_EXPR(pUserData1 != nullptr);
+        StagingBufferInfo& BufferInfo = *static_cast<StagingBufferInfo*>(pUserData1);
 
-        if (MapStatus == WGPUBufferMapAsyncStatus_Success)
+        if (wgpuMapStatus == WGPUMapAsyncStatus_Success)
         {
             // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
             const size_t MappedDataSize = BufferInfo.Resource.m_MappedData.size();
@@ -201,6 +201,10 @@ void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
             }
             wgpuBufferUnmap(BufferInfo.wgpuBuffer.Get());
         }
+        else
+        {
+            LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", WGPUStringViewToString(Message));
+        }
 
         BufferInfo.pSyncPoint->Trigger();
 
@@ -211,8 +215,12 @@ void WebGPUResourceBase::ProcessAsyncReadback(StagingBufferInfo& Buffer)
     // Keep the resource alive until the callback is called
     m_Owner.AddRef();
     // Do NOT use WGPU_WHOLE_MAP_SIZE due to https://github.com/emscripten-core/emscripten/issues/20538
-    const size_t MappedDataSize = Buffer.Resource.m_MappedData.size();
-    wgpuBufferMapAsync(Buffer.wgpuBuffer, WGPUMapMode_Read, 0, AlignUp(MappedDataSize, MappedRangeAlignment), MapAsyncCallback, &Buffer);
+    const size_t              MappedDataSize = Buffer.Resource.m_MappedData.size();
+    WGPUBufferMapCallbackInfo wgpuBufferMapCallbackInfo{};
+    wgpuBufferMapCallbackInfo.callback  = MapAsyncCallback;
+    wgpuBufferMapCallbackInfo.userdata1 = &Buffer;
+    wgpuBufferMapCallbackInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
+    wgpuBufferMapAsync(Buffer.wgpuBuffer, WGPUMapMode_Read, 0, AlignUp(MappedDataSize, MappedRangeAlignment), wgpuBufferMapCallbackInfo);
 }
 
 } // namespace Diligent

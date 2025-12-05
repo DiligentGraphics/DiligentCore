@@ -28,6 +28,7 @@
 
 #include "ParsingTools.hpp"
 #include "GraphicsTypes.h"
+#include "SPIRVUtils.hpp"
 
 namespace Diligent
 {
@@ -110,6 +111,69 @@ std::string ExtractGLSLImageFormatFromComment(const InteratorType& Start, const 
 /// \param[in]  Format - GLSL image format string
 /// \return     Texture format, or TEXTURE_FORMAT_UNKNOWN if the format is not recognized.
 TEXTURE_FORMAT ParseGLSLImageFormat(const std::string& Format);
+
+
+/// Extracts GLSL access mode from the comment, e.g.:
+///   /* access = read_write */
+///  ^					       ^
+/// Start			           End
+/// The function returns "read_write"
+/// If the comment does not contain access mode specifier, the function returns an empty string.
+/// /// \param[in] Start - iterator to the beginning of the comment
+/// /// \param[in] End   - iterator to the end of the comment
+/// /// \return GLSL access mode
+template <typename IteratorType>
+std::string ExtractGLSLAccessModeFromComment(const IteratorType& Start, const IteratorType& End)
+{
+    //    /* access = read_write */
+    // ^
+    auto Pos = SkipDelimiters(Start, End);
+    if (Pos == End)
+        return {};
+    //    /* access = read_write */
+    //    ^
+    if (*Pos != '/')
+        return {};
+    ++Pos;
+    //    /* access = read_write */
+    //     ^
+    //    // access = read_write
+    //     ^
+    if (Pos == End || (*Pos != '/' && *Pos != '*'))
+        return {};
+    ++Pos;
+    //    /* access = read_write */
+    //      ^
+    Pos = SkipDelimiters(Pos, End);
+    if (Pos == End)
+        return {};
+    //    /* access = read_write */
+    //       ^
+    if (!SkipString(Pos, End, "access", Pos))
+        return {};
+    //    /* access = read_write */
+    //              ^
+    Pos = SkipDelimiters(Pos, End);
+    if (Pos == End)
+        return {};
+    //    /* access = read_write */
+    //               ^
+    if (*Pos != '=')
+        return {};
+    ++Pos;
+    //    /* access = read_write */
+    //                ^
+    Pos = SkipDelimiters(Pos, End);
+    if (Pos == End)
+        return {};
+    //    /* access = read_write */
+    //                 ^
+    auto AccessModeEndPos = SkipIdentifier(Pos, End);
+    return {Pos, AccessModeEndPos};
+}
+
+
+IMAGE_ACCESS_MODE ParseGLSLImageAccessMode(const std::string& AccessModeStr);
 
 } // namespace Parsing
 

@@ -37,45 +37,11 @@
 
 #if PLATFORM_WEB
 
-using WGPUOptionalBool                               = bool;
-using WGPUShaderSourceWGSL                           = WGPUShaderModuleWGSLDescriptor;
-using WGPUStringView                                 = const char*;
-using WGPUSurfaceSourceCanvasHTMLSelector_Emscripten = WGPUSurfaceDescriptorFromCanvasHTMLSelector;
+using WGPUSurfaceSourceCanvasHTMLSelector_Emscripten = WGPUEmscriptenSurfaceSourceCanvasHTMLSelector;
 
-constexpr bool WGPUOptionalBool_True  = true;
-constexpr bool WGPUOptionalBool_False = false;
+constexpr WGPUSType WGPUSType_SurfaceSourceCanvasHTMLSelector_Emscripten = WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector;
 
-constexpr WGPUSType WGPUSType_ShaderSourceWGSL                           = WGPUSType_ShaderModuleWGSLDescriptor;
-constexpr WGPUSType WGPUSType_SurfaceSourceCanvasHTMLSelector_Emscripten = WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector;
-
-constexpr WGPUBufferBindingType    WGPUBufferBindingType_BindingNotUsed    = WGPUBufferBindingType_Undefined;
-constexpr WGPUSamplerBindingType   WGPUSamplerBindingType_BindingNotUsed   = WGPUSamplerBindingType_Undefined;
-constexpr WGPUTextureSampleType    WGPUTextureSampleType_BindingNotUsed    = WGPUTextureSampleType_Undefined;
-constexpr WGPUStorageTextureAccess WGPUStorageTextureAccess_BindingNotUsed = WGPUStorageTextureAccess_Undefined;
-
-constexpr WGPUFeatureName WGPUFeatureName_DualSourceBlending = static_cast<WGPUFeatureName>(0x00050008);
-
-inline bool WGPUStringViewValid(WGPUStringView Str)
-{
-    return Str != nullptr && Str[0] != '\0';
-}
-
-inline const char* WGPUStringViewToString(WGPUStringView Str)
-{
-    return Str;
-}
-
-inline WGPUStringView GetWGPUStringView(const std::string& Str)
-{
-    return Str.c_str();
-}
-
-inline WGPUStringView GetWGPUStringView(const char* Str)
-{
-    return Str;
-}
-
-#else
+#endif
 
 inline bool WGPUStringViewValid(const WGPUStringView& Str)
 {
@@ -102,5 +68,3 @@ inline WGPUStringView GetWGPUStringView(const char* Str)
 {
     return {Str, Str ? strlen(Str) : 0};
 }
-
-#endif

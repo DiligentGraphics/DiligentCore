@@ -120,6 +120,7 @@ std::string HLSLtoWGLS(const char* FilePath)
 
     GLSLangUtils::InitializeGlslang();
     auto SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
+    StripGoogleHlslFunctionality(SPIRV);
     GLSLangUtils::FinalizeGlslang();
 
     if (SPIRV.empty())

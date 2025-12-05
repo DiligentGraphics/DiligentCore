@@ -179,7 +179,12 @@ PRIVATE
 )
 
 if (PLATFORM_WEB)
-    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: -s USE_WEBGPU=1 -s USE_PTHREADS=1")
+    target_link_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "SHELL: --use-port=emdawnwebgpu -s USE_PTHREADS=1")
+    target_compile_options(Diligent-GraphicsEngineWebGPU-static PUBLIC "--use-port=emdawnwebgpu")
+    # This is required only for IntelliSense to detect webgpu.h.
+    target_include_directories(Diligent-GraphicsEngineWebGPU-static PUBLIC 
+        ${EMSCRIPTEN_ROOT_PATH}/cache/ports/emdawnwebgpu/emdawnwebgpu_pkg/webgpu/include
+    )
 endif()
 
 target_compile_definitions(Diligent-GraphicsEngineWebGPU-shared PUBLIC DILIGENT_WEBGPU_SHARED=1)
