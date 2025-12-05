@@ -147,19 +147,19 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
 
     struct CallbackUserData
     {
-        WGPUAdapter              Adapter       = nullptr;
-        WGPURequestAdapterStatus RequestStatus = {};
-        String                   Message       = {};
-        bool                     IsReady       = {};
+        WGPUAdapter              wgpuAdapter       = nullptr;
+        WGPURequestAdapterStatus wgpuRequestStatus = {};
+        String                   Message           = {};
+        bool                     IsReady           = {};
     };
 
-    auto OnAdapterRequestEnded = [](WGPURequestAdapterStatus Status, WGPUAdapter Adapter, WGPUStringView Message, void* pCallbackUserData) {
-        if (pCallbackUserData != nullptr)
+    auto OnAdapterRequestEnded = [](WGPURequestAdapterStatus wgpuStatus, WGPUAdapter wgpuAdapter, WGPUStringView Message, void* pUserData1, void* pUserData2) {
+        if (pUserData1 != nullptr)
         {
-            CallbackUserData* pUserData = static_cast<CallbackUserData*>(pCallbackUserData);
-            pUserData->Adapter          = Adapter;
-            pUserData->RequestStatus    = Status;
-            pUserData->IsReady          = true;
+            CallbackUserData* pUserData  = static_cast<CallbackUserData*>(pUserData1);
+            pUserData->wgpuAdapter       = wgpuAdapter;
+            pUserData->wgpuRequestStatus = wgpuStatus;
+            pUserData->IsReady           = true;
             if (WGPUStringViewValid(Message))
                 pUserData->Message = WGPUStringViewToString(Message);
         }
@@ -169,27 +169,31 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
         WGPUPowerPreference_HighPerformance,
         WGPUPowerPreference_LowPower};
 
-    for (const WGPUPowerPreference& powerPreference : PowerPreferences)
+    for (const WGPUPowerPreference& PowerPreference : PowerPreferences)
     {
         CallbackUserData UserData{};
 
-        WGPURequestAdapterOptions Options{};
-        Options.powerPreference      = powerPreference;
-        Options.backendType          = WGPUBackendType_Undefined;
-        Options.forceFallbackAdapter = false;
-        Options.compatibilityMode    = false;
-        wgpuInstanceRequestAdapter(wgpuInstance, &Options, OnAdapterRequestEnded, &UserData);
+        WGPURequestAdapterOptions wgpuAdapterRequestOptions{};
+        wgpuAdapterRequestOptions.powerPreference      = PowerPreference;
+        wgpuAdapterRequestOptions.backendType          = WGPUBackendType_Undefined;
+        wgpuAdapterRequestOptions.forceFallbackAdapter = false;
+
+        WGPURequestAdapterCallbackInfo wgpuAdapterRequestCallbackInfo{};
+        wgpuAdapterRequestCallbackInfo.callback  = OnAdapterRequestEnded;
+        wgpuAdapterRequestCallbackInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
+        wgpuAdapterRequestCallbackInfo.userdata1 = &UserData;
+        wgpuInstanceRequestAdapter(wgpuInstance, &wgpuAdapterRequestOptions, wgpuAdapterRequestCallbackInfo);
 
         while (!UserData.IsReady)
             InstancePoolEvents(wgpuInstance);
 
-        if (UserData.RequestStatus == WGPURequestAdapterStatus_Success)
+        if (UserData.wgpuRequestStatus == WGPURequestAdapterStatus_Success)
         {
-            auto adapter_it = std::find_if(wgpuAdapters.begin(), wgpuAdapters.end(),
-                                           [&](const auto& wgpuAdapter) { return wgpuAdapter.Get() == UserData.Adapter; });
+            auto AdapterIter = std::find_if(wgpuAdapters.begin(), wgpuAdapters.end(),
+                                            [&](const auto& wgpuAdapter) { return wgpuAdapter.Get() == UserData.wgpuAdapter; });
 
-            if (adapter_it == wgpuAdapters.end())
-                wgpuAdapters.emplace_back(UserData.Adapter);
+            if (AdapterIter == wgpuAdapters.end())
+                wgpuAdapters.emplace_back(UserData.wgpuAdapter);
         }
         else
         {
@@ -200,47 +204,25 @@ std::vector<WebGPUAdapterWrapper> FindCompatibleAdapters(WGPUInstance wgpuInstan
     return wgpuAdapters;
 }
 
-static void DeviceLostCallback(WGPUDeviceLostReason Reason,
+static void DeviceLostCallback(WGPUDevice const*    wgpuDevice,
+                               WGPUDeviceLostReason wgpuReason,
                                WGPUStringView       Message,
-                               void*                userdata)
+                               void*                userdata,
+                               void*                userdata2)
 {
-    bool Expression = Reason != WGPUDeviceLostReason_Destroyed;
-#if !PLATFORM_WEB
-    Expression &= (Reason != WGPUDeviceLostReason_InstanceDropped);
-#endif
+    bool Expression = wgpuReason != WGPUDeviceLostReason_Destroyed;
+    Expression &= (wgpuReason != WGPUDeviceLostReason_CallbackCancelled);
+
     if (Expression && WGPUStringViewValid(Message))
     {
         LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", WGPUStringViewToString(Message));
     }
 }
 
-#if !PLATFORM_WEB
-static void DeviceLostCallback2(WGPUDevice const*    device,
-                                WGPUDeviceLostReason Reason,
-                                WGPUStringView       Message,
-                                void*                userdata1,
-                                void*                userdata2)
-{
-    DeviceLostCallback(Reason, Message, userdata1);
-}
-
-static void UncapturedErrorCallback2(WGPUDevice const* device,
-                                     WGPUErrorType     MessageType,
-                                     WGPUStringView    Message,
-                                     void*             userdata1,
-                                     void*             userdata2)
-{
-    if (WGPUStringViewValid(Message))
-    {
-        LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", WGPUStringViewToString(Message));
-    }
-}
-#endif
-
 WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUInstance wgpuInstance, WGPUAdapter wgpuAdapter)
 {
-    WGPUSupportedLimits SupportedLimits{};
-    wgpuAdapterGetLimits(wgpuAdapter, &SupportedLimits);
+    WGPULimits wgpuSupportedLimits{};
+    wgpuAdapterGetLimits(wgpuAdapter, &wgpuSupportedLimits);
 
     std::vector<WGPUFeatureName> wgpuFeatures{};
     {
@@ -271,33 +253,45 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_BGRA8UnormStorage))
             wgpuFeatures.push_back(WGPUFeatureName_BGRA8UnormStorage);
 
-        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_Unorm16TextureFormats))
-            wgpuFeatures.push_back(WGPUFeatureName_Unorm16TextureFormats);
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureFormatsTier1))
+            wgpuFeatures.push_back(WGPUFeatureName_TextureFormatsTier1);
 
-        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_Snorm16TextureFormats))
-            wgpuFeatures.push_back(WGPUFeatureName_Snorm16TextureFormats);
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_TextureFormatsTier2))
+            wgpuFeatures.push_back(WGPUFeatureName_TextureFormatsTier2);
     }
 
     struct CallbackUserData
     {
-        WGPUDevice              Device        = nullptr;
-        WGPURequestDeviceStatus RequestStatus = {};
-        String                  Message       = {};
-        bool                    IsReady       = {};
+        WGPUDevice              wgpuDevice        = nullptr;
+        WGPURequestDeviceStatus wgpuRequestStatus = {};
+        String                  Message           = {};
+        bool                    IsReady           = {};
     } UserData;
 
-    auto OnDeviceRequestEnded = [](WGPURequestDeviceStatus Status, WGPUDevice Device, WGPUStringView Message, void* pCallbackUserData) {
-        if (pCallbackUserData != nullptr)
+    auto OnDeviceRequestEnded = [](WGPURequestDeviceStatus wgpuStatus, WGPUDevice wgpuDevice, WGPUStringView Message, void* pUserData1, void* pUserData2) {
+        if (pUserData1 != nullptr)
         {
-            CallbackUserData* pUserData = static_cast<CallbackUserData*>(pCallbackUserData);
-            pUserData->Device           = Device;
-            pUserData->RequestStatus    = Status;
-            pUserData->IsReady          = true;
+            CallbackUserData* pUserData  = static_cast<CallbackUserData*>(pUserData1);
+            pUserData->wgpuDevice        = wgpuDevice;
+            pUserData->wgpuRequestStatus = wgpuStatus;
+            pUserData->IsReady           = true;
             if (WGPUStringViewValid(Message))
                 pUserData->Message = WGPUStringViewToString(Message);
         }
     };
 
+    auto UncapturedErrorCallback = [](WGPUDevice const* wgpuDevice, WGPUErrorType wgpuTypeError, WGPUStringView Message, void* pUserdata1, void* pUserdata2) {
+        LOG_ERROR_MESSAGE("Uncaptured WebGPU error (type ", wgpuTypeError, "): ", WGPUStringViewToString(Message));
+    };
+
+    WGPUDeviceDescriptor wgpuDeviceDesc{};
+    wgpuDeviceDesc.requiredLimits       = &wgpuSupportedLimits;
+    wgpuDeviceDesc.requiredFeatureCount = wgpuFeatures.size();
+    wgpuDeviceDesc.requiredFeatures     = wgpuFeatures.data();
+
+    wgpuDeviceDesc.uncapturedErrorCallbackInfo.callback = UncapturedErrorCallback;
+    wgpuDeviceDesc.deviceLostCallbackInfo.callback      = DeviceLostCallback;
+    wgpuDeviceDesc.deviceLostCallbackInfo.mode          = WGPUCallbackMode_AllowSpontaneous;
 #if !PLATFORM_WEB
     const char* ToggleNames[] = {
         "disable_timestamp_query_conversion",
@@ -308,30 +302,24 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
     wgpuDawnTogglesDesc.chain.sType               = WGPUSType_DawnTogglesDescriptor;
     wgpuDawnTogglesDesc.enabledToggleCount        = _countof(ToggleNames);
     wgpuDawnTogglesDesc.enabledToggles            = ToggleNames;
+
+    wgpuDeviceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgpuDawnTogglesDesc);
 #endif
 
-    WGPURequiredLimits RequiredLimits{nullptr, SupportedLimits.limits};
-
-    WGPUDeviceDescriptor DeviceDesc{};
-    DeviceDesc.requiredLimits       = &RequiredLimits;
-    DeviceDesc.requiredFeatureCount = wgpuFeatures.size();
-    DeviceDesc.requiredFeatures     = wgpuFeatures.data();
-#if PLATFORM_WEB
-    DeviceDesc.deviceLostCallback = DeviceLostCallback;
-#else
-    DeviceDesc.deviceLostCallbackInfo2      = {nullptr, WGPUCallbackMode_AllowSpontaneous, DeviceLostCallback2};
-    DeviceDesc.uncapturedErrorCallbackInfo2 = {nullptr, UncapturedErrorCallback2};
-    DeviceDesc.nextInChain                  = reinterpret_cast<WGPUChainedStruct*>(&wgpuDawnTogglesDesc);
-#endif
-    wgpuAdapterRequestDevice(wgpuAdapter, &DeviceDesc, OnDeviceRequestEnded, &UserData);
+    WGPURequestDeviceCallbackInfo wgpuDeviceRequestCallbackInfo{};
+    wgpuDeviceRequestCallbackInfo.nextInChain = nullptr;
+    wgpuDeviceRequestCallbackInfo.mode        = WGPUCallbackMode_AllowSpontaneous;
+    wgpuDeviceRequestCallbackInfo.callback    = OnDeviceRequestEnded;
+    wgpuDeviceRequestCallbackInfo.userdata1   = &UserData;
+    wgpuAdapterRequestDevice(wgpuAdapter, &wgpuDeviceDesc, wgpuDeviceRequestCallbackInfo);
 
     while (!UserData.IsReady)
         InstancePoolEvents(wgpuInstance);
 
-    if (UserData.RequestStatus != WGPURequestDeviceStatus_Success)
+    if (UserData.wgpuRequestStatus != WGPURequestDeviceStatus_Success)
         LOG_ERROR_AND_THROW(UserData.Message);
 
-    return WebGPUDeviceWrapper{UserData.Device};
+    return WebGPUDeviceWrapper{UserData.wgpuDevice};
 }
 
 bool FeatureSupported(WGPUAdapter wgpuAdapter, WGPUDevice wgpuDevice, WGPUFeatureName Feature)
@@ -454,7 +442,7 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
 
     AdapterInfo.Features = GetSupportedFeatures(wgpuAdapter, wgpuDevice);
 
-    WGPUSupportedLimits wgpuSupportedLimits{};
+    WGPULimits wgpuSupportedLimits{};
     if (wgpuAdapter)
         wgpuAdapterGetLimits(wgpuAdapter, &wgpuSupportedLimits);
     else
@@ -491,16 +479,16 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
     {
         ComputeShaderProperties& ComputeShaderInfo{AdapterInfo.ComputeShader};
 
-        ComputeShaderInfo.MaxThreadGroupSizeX = wgpuSupportedLimits.limits.maxComputeWorkgroupSizeX;
-        ComputeShaderInfo.MaxThreadGroupSizeY = wgpuSupportedLimits.limits.maxComputeWorkgroupSizeY;
-        ComputeShaderInfo.MaxThreadGroupSizeZ = wgpuSupportedLimits.limits.maxComputeWorkgroupSizeZ;
+        ComputeShaderInfo.MaxThreadGroupSizeX = wgpuSupportedLimits.maxComputeWorkgroupSizeX;
+        ComputeShaderInfo.MaxThreadGroupSizeY = wgpuSupportedLimits.maxComputeWorkgroupSizeY;
+        ComputeShaderInfo.MaxThreadGroupSizeZ = wgpuSupportedLimits.maxComputeWorkgroupSizeZ;
 
-        ComputeShaderInfo.MaxThreadGroupCountX = wgpuSupportedLimits.limits.maxComputeWorkgroupsPerDimension;
-        ComputeShaderInfo.MaxThreadGroupCountY = wgpuSupportedLimits.limits.maxComputeWorkgroupsPerDimension;
-        ComputeShaderInfo.MaxThreadGroupCountZ = wgpuSupportedLimits.limits.maxComputeWorkgroupsPerDimension;
+        ComputeShaderInfo.MaxThreadGroupCountX = wgpuSupportedLimits.maxComputeWorkgroupsPerDimension;
+        ComputeShaderInfo.MaxThreadGroupCountY = wgpuSupportedLimits.maxComputeWorkgroupsPerDimension;
+        ComputeShaderInfo.MaxThreadGroupCountZ = wgpuSupportedLimits.maxComputeWorkgroupsPerDimension;
 
-        ComputeShaderInfo.SharedMemorySize          = wgpuSupportedLimits.limits.maxComputeWorkgroupStorageSize;
-        ComputeShaderInfo.MaxThreadGroupInvocations = wgpuSupportedLimits.limits.maxComputeInvocationsPerWorkgroup;
+        ComputeShaderInfo.SharedMemorySize          = wgpuSupportedLimits.maxComputeWorkgroupStorageSize;
+        ComputeShaderInfo.MaxThreadGroupInvocations = wgpuSupportedLimits.maxComputeInvocationsPerWorkgroup;
     }
 
     // Set texture info
@@ -508,11 +496,11 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
         TextureProperties& TextureInfo{AdapterInfo.Texture};
 
         TextureInfo.MaxTexture1DArraySlices = 0; // Not supported in WebGPU
-        TextureInfo.MaxTexture2DArraySlices = wgpuSupportedLimits.limits.maxTextureArrayLayers;
+        TextureInfo.MaxTexture2DArraySlices = wgpuSupportedLimits.maxTextureArrayLayers;
 
-        TextureInfo.MaxTexture1DDimension = wgpuSupportedLimits.limits.maxTextureDimension1D;
-        TextureInfo.MaxTexture2DDimension = wgpuSupportedLimits.limits.maxTextureDimension2D;
-        TextureInfo.MaxTexture3DDimension = wgpuSupportedLimits.limits.maxTextureDimension3D;
+        TextureInfo.MaxTexture1DDimension = wgpuSupportedLimits.maxTextureDimension1D;
+        TextureInfo.MaxTexture2DDimension = wgpuSupportedLimits.maxTextureDimension2D;
+        TextureInfo.MaxTexture3DDimension = wgpuSupportedLimits.maxTextureDimension3D;
 
         TextureInfo.Texture2DMSSupported       = True;
         TextureInfo.Texture2DMSArraySupported  = False;
@@ -524,8 +512,8 @@ GraphicsAdapterInfo GetGraphicsAdapterInfo(WGPUAdapter wgpuAdapter, WGPUDevice w
     // Set buffer info
     {
         BufferProperties& BufferInfo{AdapterInfo.Buffer};
-        BufferInfo.ConstantBufferOffsetAlignment   = wgpuSupportedLimits.limits.minUniformBufferOffsetAlignment;
-        BufferInfo.StructuredBufferOffsetAlignment = wgpuSupportedLimits.limits.minStorageBufferOffsetAlignment;
+        BufferInfo.ConstantBufferOffsetAlignment   = wgpuSupportedLimits.minUniformBufferOffsetAlignment;
+        BufferInfo.StructuredBufferOffsetAlignment = wgpuSupportedLimits.minStorageBufferOffsetAlignment;
     }
 
     // Set sampler info

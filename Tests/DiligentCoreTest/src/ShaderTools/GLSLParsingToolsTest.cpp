@@ -73,6 +73,42 @@ TEST(GLSLParsingToolsTest, ExtractGLSLImageFormatFromComment)
     Test(" // format = rg16u\n", "rg16u");
 }
 
+TEST(GLSLParsingToolsTest, ExtractGLSLAccessModeFromComment)
+{
+    auto Test = [](const std::string& Str, const std::string& RefAccessMode) {
+        std::string AccessMode = Parsing::ExtractGLSLAccessModeFromComment(Str.begin(), Str.end());
+        EXPECT_STREQ(AccessMode.c_str(), RefAccessMode.c_str()) << Str;
+    };
+    Test("", "");
+    Test(" ", "");
+    Test(" access", "");
+    Test(" /access", "");
+    Test(" // ", "");
+    Test(" /* ", "");
+    Test(" // acce", "");
+    Test(" /* acc", "");
+    Test(" // acce ", "");
+    Test(" /* acc ", "");
+    Test(" // access", "");
+    Test(" /* access", "");
+    Test(" // access-", "");
+    Test(" /* access:", "");
+    Test(" // access=12", "");
+    Test(" /* access=34", "");
+    Test(" // access=read", "read");
+    Test(" /* access=write", "write");
+    Test(" // access=read_write ", "read_write");
+    Test(" /* access=read */", "read");
+    Test(" /* access= write*/", "write");
+    Test(" /* access= read_write */", "read_write");
+    Test(" /* access =write */", "write");
+    Test(" // access = read\n", "read");
+    Test(" /* access= write*/", "write");
+    Test(" // access= read_write \n", "read_write");
+    Test(" /* access = read*/", "read");
+    Test(" // access = write\n", "write");
+    Test(" /* access = read_write */", "read_write");
+}
 
 TEST(GLSLParsingToolsTest, ParseGLSLImageFormat)
 {

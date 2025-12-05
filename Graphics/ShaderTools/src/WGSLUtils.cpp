@@ -44,11 +44,15 @@
 #include "src/tint/lang/core/type/atomic.h"
 #include "src/tint/lang/core/type/array.h"
 #include "src/tint/lang/core/type/struct.h"
-
+#include "src/tint/lang/core/ir/transform/binding_remapper.h"
+#include "src/tint/lang/wgsl/inspector/inspector.h"
+#include "src/tint/lang/wgsl/writer/ir_to_program/ir_to_program.h"
+#include "src/tint/lang/wgsl/reader/program_to_ir/program_to_ir.h"
 
 #ifdef _MSC_VER
 #    pragma warning(pop)
 #endif
+#include <SPIRVTools.hpp>
 
 namespace Diligent
 {
@@ -89,25 +93,88 @@ WGSLEmulatedResourceArrayElement GetWGSLEmulatedArrayElement(const std::string& 
     return {Name, -1};
 }
 
+std::string DecodeSpirvLiteralString(const std::vector<uint32_t>& SPIRV,
+                                     size_t                       StartWord,
+                                     uint16_t                     WordCount)
+{
+    std::string Result;
+    Result.reserve(static_cast<size_t>(WordCount) * 4);
+
+    const size_t EndWord = StartWord + WordCount;
+    for (size_t Idx = StartWord; Idx < EndWord; ++Idx)
+    {
+        uint32_t Word = SPIRV[Idx];
+
+        for (int32_t ByteIndex = 0; ByteIndex < 4; ++ByteIndex)
+        {
+            char c = static_cast<char>((Word >> (8 * ByteIndex)) & 0xFF);
+            if (c == '\0')
+                return Result;
+            Result.push_back(c);
+        }
+    }
+
+    return Result;
+}
+
+void StripGoogleHlslFunctionality(std::vector<uint32_t>& SPIRV)
+{
+    if (SPIRV.size() <= 5)
+        return;
+
+    constexpr uint16_t OpExtension                  = 10;
+    constexpr uint16_t OpDecorateStringGOOGLE       = 5632;
+    constexpr uint16_t OpMemberDecorateStringGOOGLE = 5633;
+
+    size_t InstructionPointer = 5; // Skip SPIR-V header
+    while (InstructionPointer < SPIRV.size())
+    {
+        uint32_t Instruction = SPIRV[InstructionPointer];
+        uint16_t WordCount   = Instruction >> 16;
+        uint16_t OpCode      = Instruction & 0xFFFF;
+
+        if (WordCount == 0 || InstructionPointer + WordCount > SPIRV.size())
+            break;
+
+        auto EraseCurrent = [&](size_t count) {
+            SPIRV.erase(SPIRV.begin() + InstructionPointer,
+                        SPIRV.begin() + InstructionPointer + count);
+        };
+
+        if (OpCode == OpExtension)
+        {
+            std::string Extension = DecodeSpirvLiteralString(SPIRV, InstructionPointer + 1, static_cast<uint16_t>(WordCount - 1));
+
+            if (Extension == "SPV_GOOGLE_hlsl_functionality1")
+            {
+                EraseCurrent(WordCount);
+                continue;
+            }
+        }
+        else if (OpCode == OpDecorateStringGOOGLE || OpCode == OpMemberDecorateStringGOOGLE)
+        {
+            EraseCurrent(WordCount);
+            continue;
+        }
+        InstructionPointer += WordCount;
+    }
+}
+
 std::string ConvertSPIRVtoWGSL(const std::vector<uint32_t>& SPIRV)
 {
-    tint::spirv::reader::Options SPIRVReaderOptions{true, {tint::wgsl::AllowedFeatures::Everything()}};
-    tint::Program                Program = Read(SPIRV, SPIRVReaderOptions);
+    tint::wgsl::writer::Options WGSLWriterOptions{};
+    WGSLWriterOptions.allow_non_uniform_derivatives = true;
+    WGSLWriterOptions.allowed_features              = tint::wgsl::AllowedFeatures::Everything();
+    WGSLWriterOptions.minify                        = false;
 
-    if (!Program.IsValid())
+    auto Result = tint::SpirvToWgsl(SPIRV, WGSLWriterOptions);
+    if (Result != tint::Success)
     {
-        LOG_ERROR_MESSAGE("Tint SPIR-V reader failure:\nParser: " + Program.Diagnostics().Str() + "\n");
+        LOG_ERROR_MESSAGE("Tint SPIR-V -> WGSL failed:\n" + Result.Failure().reason + "\n");
         return {};
     }
 
-    auto GenerationResult = tint::wgsl::writer::Generate(Program, {});
-    if (GenerationResult != tint::Success)
-    {
-        LOG_ERROR_MESSAGE("Tint WGSL writer failure:\nGeneate: " + GenerationResult.Failure().reason.Str() + "\n");
-        return {};
-    }
-
-    return GenerationResult->wgsl;
+    return Result.Get();
 }
 
 static bool IsAtomic(const tint::core::type::Type* WGSLType)
@@ -155,6 +222,24 @@ static bool IsAtomic(const tint::core::type::Type* WGSLType)
     }
 }
 
+static std::string StripNumericSuffix(std::string Name)
+{
+    const auto UnderscorePos = Name.find_last_of('_');
+    if (UnderscorePos == std::string::npos || UnderscorePos + 1 >= Name.length())
+        return Name;
+
+    const bool AllDigits =
+        std::all_of(Name.begin() + static_cast<std::string::difference_type>(UnderscorePos + 1),
+                    Name.end(),
+                    [](char c) { return c >= '0' && c <= '9'; });
+
+    if (!AllDigits)
+        return Name;
+
+    Name.erase(UnderscorePos);
+    return Name;
+}
+
 std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const tint::inspector::ResourceBinding& Binding)
 {
     if (Binding.resource_type != tint::inspector::ResourceBinding::ResourceType::kUniformBuffer &&
@@ -196,7 +281,7 @@ std::string GetWGSLResourceAlternativeName(const tint::Program& Program, const t
         //        g_Data0 : vec4f,
         //      }
         //      @group(0) @binding(0) var<uniform> x_13 : CB0;
-        return TypeName;
+        return StripNumericSuffix(std::move(TypeName));
     }
     else
     {
@@ -253,14 +338,14 @@ static WGSLResourceMapping::const_iterator FindResourceAsArrayElement(const WGSL
 
     if (WGSLEmulatedResourceArrayElement ArrayElem = GetWGSLEmulatedArrayElement(Name, EmulatedArrayIndexSuffix))
     {
-        auto BindigIt = ResMapping.find(ArrayElem.Name);
-        if (BindigIt == ResMapping.end())
+        auto BindingIt = ResMapping.find(ArrayElem.Name);
+        if (BindingIt == ResMapping.end())
             return ResMapping.end();
 
-        if (ArrayElem.Index < static_cast<int>(BindigIt->second.ArraySize))
+        if (ArrayElem.Index < static_cast<int>(BindingIt->second.ArraySize))
         {
             ArrayIndex = static_cast<Uint32>(ArrayElem.Index);
-            return BindigIt;
+            return BindingIt;
         }
     }
 
@@ -271,47 +356,50 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
                                       const WGSLResourceMapping& ResMapping,
                                       const char*                EmulatedArrayIndexSuffix)
 {
-    tint::Source::File srcFile("", WGSL);
-    tint::Program      Program = tint::wgsl::reader::Parse(&srcFile, {tint::wgsl::AllowedFeatures::Everything()});
+    tint::Source::File SrcFile("", WGSL);
+
+    tint::wgsl::reader::Options WGSLReaderOptions{};
+    WGSLReaderOptions.allowed_features = tint::wgsl::AllowedFeatures::Everything();
+
+    tint::Program Program = tint::wgsl::reader::Parse(&SrcFile, WGSLReaderOptions);
 
     if (!Program.IsValid())
     {
-        LOG_ERROR_MESSAGE("Tint WGSL reader failure:\nParser: ", Program.Diagnostics().Str(), "\n");
+        LOG_ERROR_MESSAGE("Tint WGSL parse failed:\n", Program.Diagnostics().Str(), "\n");
         return {};
     }
 
-    tint::ast::transform::BindingRemapper::BindingPoints BindingPoints;
-
-    tint::inspector::Inspector Inspector{Program};
+    std::unordered_map<tint::BindingPoint, tint::BindingPoint> BindingPoints;
+    tint::inspector::Inspector                                 Inspector{Program};
     for (tint::inspector::EntryPoint& EntryPoint : Inspector.GetEntryPoints())
     {
         for (tint::inspector::ResourceBinding& Binding : Inspector.GetResourceBindings(EntryPoint.name))
         {
             Uint32 ArrayIndex = 0;
 
-            auto DstBindigIt = ResMapping.find(Binding.variable_name);
-            if (EmulatedArrayIndexSuffix != nullptr && DstBindigIt == ResMapping.end())
+            auto DstBindingIt = ResMapping.find(Binding.variable_name);
+            if (EmulatedArrayIndexSuffix != nullptr && DstBindingIt == ResMapping.end())
             {
-                DstBindigIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, Binding.variable_name, ArrayIndex);
+                DstBindingIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, Binding.variable_name, ArrayIndex);
             }
 
-            if (DstBindigIt == ResMapping.end())
+            if (DstBindingIt == ResMapping.end())
             {
                 const std::string AltName = GetWGSLResourceAlternativeName(Program, Binding);
                 if (!AltName.empty())
                 {
-                    DstBindigIt = ResMapping.find(AltName);
-                    if (EmulatedArrayIndexSuffix != nullptr && DstBindigIt == ResMapping.end())
+                    DstBindingIt = ResMapping.find(AltName);
+                    if (EmulatedArrayIndexSuffix != nullptr && DstBindingIt == ResMapping.end())
                     {
-                        DstBindigIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, AltName, ArrayIndex);
+                        DstBindingIt = FindResourceAsArrayElement(ResMapping, EmulatedArrayIndexSuffix, AltName, ArrayIndex);
                     }
                 }
             }
 
-            if (DstBindigIt != ResMapping.end())
+            if (DstBindingIt != ResMapping.end())
             {
-                const WGSLResourceBindingInfo& DstBindig = DstBindigIt->second;
-                BindingPoints.emplace(tint::ast::transform::BindingPoint{Binding.bind_group, Binding.binding}, tint::ast::transform::BindingPoint{DstBindig.Group, DstBindig.Index + ArrayIndex});
+                const WGSLResourceBindingInfo& DstBinding = DstBindingIt->second;
+                BindingPoints.emplace(tint::BindingPoint{Binding.bind_group, Binding.binding}, tint::BindingPoint{DstBinding.Group, DstBinding.Index + ArrayIndex});
             }
             else
             {
@@ -320,23 +408,32 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
         }
     }
 
-    tint::ast::transform::Manager Manager;
-    tint::ast::transform::DataMap Inputs;
-    tint::ast::transform::DataMap Outputs;
-
-    Inputs.Add<tint::ast::transform::BindingRemapper::Remappings>(BindingPoints, tint::ast::transform::BindingRemapper::AccessControls{}, false);
-    Manager.Add<tint::ast::transform::BindingRemapper>();
-    tint::ast::transform::Output TransformResult = Manager.Run(Program, Inputs, Outputs);
-
-    auto GenerationResult = tint::wgsl::writer::Generate(TransformResult.program, {});
-
-    if (GenerationResult != tint::Success)
+    auto Module = tint::wgsl::reader::ProgramToIR(Program);
+    if (Module != tint::Success)
     {
-        LOG_ERROR_MESSAGE("Tint WGSL writer failure:\nGeneate: ", GenerationResult.Failure().reason.Str(), "\n");
+        LOG_ERROR_MESSAGE("Tint WGSL → IR failed:\n", Module.Failure().reason, "\n");
         return {};
     }
 
-    std::string PatchedWGSL = std::move(GenerationResult->wgsl);
+    if (auto Result = tint::core::ir::transform::BindingRemapper(Module.Get(), BindingPoints); Result != tint::Success)
+    {
+        LOG_ERROR_MESSAGE("Tint binding remap failed:\n", Result.Failure().reason, "\n");
+        return {};
+    }
+
+    tint::wgsl::writer::Options WGSLWriterOptions{};
+    WGSLWriterOptions.allow_non_uniform_derivatives = true;
+    WGSLWriterOptions.allowed_features              = WGSLReaderOptions.allowed_features;
+    WGSLWriterOptions.minify                        = false;
+
+    auto Result = tint::wgsl::writer::WgslFromIR(Module.Get(), WGSLWriterOptions);
+    if (Result != tint::Success)
+    {
+        LOG_ERROR_MESSAGE("Tint IR -> WGSL failed:\n", Result.Failure().reason, "\n");
+        return {};
+    }
+
+    std::string PatchedWGSL = std::move(Result->wgsl);
 
     // If original WGSL contains shader source language definition, append it to the patched WGSL
     SHADER_SOURCE_LANGUAGE SrcLang = ParseShaderSourceLanguageDefinition(WGSL);
