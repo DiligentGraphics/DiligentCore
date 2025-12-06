@@ -50,6 +50,7 @@ namespace Diligent
 
 struct SPIRVShaderResourceAttribs;
 class DeviceContextVkImpl;
+class BufferVkImpl;
 
 struct ImmutableSamplerAttribsVk
 {
@@ -57,6 +58,17 @@ struct ImmutableSamplerAttribsVk
     Uint32 BindingIndex = ~0u;
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization and must be tightly packed");
+
+/// Inline constant buffer attributes for Vulkan backend.
+/// Since Vulkan only supports one push constant block per pipeline, inline constants
+/// are emulated using dynamic uniform buffers (similar to D3D11 backend).
+struct InlineConstantBufferAttribsVk
+{
+    Uint32                      DescrSet     = 0;  // Descriptor set index
+    Uint32                      BindingIndex = 0;  // Binding index within the descriptor set
+    Uint32                      NumConstants = 0;  // Number of 32-bit constants
+    RefCntAutoPtr<BufferVkImpl> pBuffer;           // Internal dynamic uniform buffer
+};
 
 struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData<PipelineResourceAttribsVk, ImmutableSamplerAttribsVk>
 {
@@ -134,6 +146,16 @@ public:
     void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
                                 VkDescriptorSet              vkDynamicDescriptorSet) const;
 
+    // Updates inline constant buffers by mapping the internal buffers and copying data from the resource cache
+    void UpdateInlineConstantBuffers(const ShaderResourceCacheVk& ResourceCache,
+                                     DeviceContextVkImpl&         Ctx) const;
+
+    // Returns the number of inline constant buffers
+    Uint32 GetNumInlineConstantBuffers() const { return m_NumInlineConstantBuffers; }
+
+    // Returns the inline constant buffer attributes
+    const InlineConstantBufferAttribsVk* GetInlineConstantBuffers() const { return m_InlineConstantBuffers.get(); }
+
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the SPIRV resource attributes from the PSO.
     bool DvpValidateCommittedResource(const DeviceContextVkImpl*        pDeviceCtx,
@@ -193,6 +215,15 @@ private:
     // The total number storage buffers with dynamic offsets in both descriptor sets,
     // accounting for array size.
     Uint16 m_DynamicStorageBufferCount = 0;
+
+    // Number of inline constant buffers
+    Uint32 m_NumInlineConstantBuffers = 0;
+    // Inline constant buffer attributes
+    std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBuffers;
+
+    // Pointer to CPU-side staging buffer for static inline constants
+    // This memory is allocated in CreateSetLayouts and must be freed in Destruct
+    void* m_pStaticInlineConstantData = nullptr;
 };
 
 template <> Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;

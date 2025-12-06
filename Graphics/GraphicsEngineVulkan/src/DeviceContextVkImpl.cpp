@@ -415,6 +415,24 @@ DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE
     return m_BindInfo[Indices[Uint32{Type}]];
 }
 
+void DeviceContextVkImpl::UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo)
+{
+    const Uint32 SignCount = m_pPipelineState->GetResourceSignatureCount();
+    for (Uint32 i = 0; i < SignCount; ++i)
+    {
+        const PipelineResourceSignatureVkImpl* pSign = m_pPipelineState->GetResourceSignature(i);
+        if (pSign == nullptr || pSign->GetNumInlineConstantBuffers() == 0)
+            continue;
+
+        const ShaderResourceCacheVk* pResourceCache = BindInfo.ResourceCaches[i];
+        if (pResourceCache == nullptr || !pResourceCache->HasInlineConstants())
+            continue;
+
+        // Update inline constant buffers
+        pSign->UpdateInlineConstantBuffers(*pResourceCache, *this);
+    }
+}
+
 void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask)
 {
     VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
@@ -758,6 +776,14 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #endif
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_GRAPHICS);
+
+    // Update inline constant buffers before binding descriptor sets
+    const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
+    if (!InlineConstantsIntact)
+    {
+        UpdateInlineConstantBuffers(BindInfo);
+    }
+
     // First time we must always bind descriptor sets with dynamic offsets as SRBs are stale.
     // If there are no dynamic buffers bound in the resource cache, for all subsequent
     // calls we do not need to bind the sets again.
@@ -1059,6 +1085,10 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
     EndRenderScope();
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_COMPUTE);
+
+    // Update inline constant buffers before binding descriptor sets
+    UpdateInlineConstantBuffers(BindInfo);
+
     if (Uint32 CommitMask = BindInfo.GetCommitMask())
     {
         CommitDescriptorSets(BindInfo, CommitMask);
@@ -1075,6 +1105,10 @@ void DeviceContextVkImpl::PrepareForRayTracing()
     EnsureVkCmdBuffer();
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_RAY_TRACING);
+
+    // Update inline constant buffers before binding descriptor sets
+    UpdateInlineConstantBuffers(BindInfo);
+
     if (Uint32 CommitMask = BindInfo.GetCommitMask())
     {
         CommitDescriptorSets(BindInfo, CommitMask);

@@ -950,4 +950,62 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl*   pCt
     return OffsetInd - StartInd;
 }
 
+
+void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
+                                               Uint32      CacheOffset,
+                                               const void* pConstants,
+                                               Uint32      FirstConstant,
+                                               Uint32      NumConstants)
+{
+    VERIFY(pConstants != nullptr, "Source constant data pointer is null");
+    VERIFY(NumConstants > 0, "Number of constants must be greater than zero");
+
+    DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
+    Resource&      DstRes   = DescrSet.GetResource(CacheOffset);
+
+    VERIFY(DstRes.pInlineConstantData != nullptr, "Inline constant data pointer is null. "
+           "Make sure InitializeInlineConstantBuffer was called for this resource.");
+
+    // Copy to CPU-side staging buffer
+    Uint32* pDstConstants = reinterpret_cast<Uint32*>(DstRes.pInlineConstantData);
+    memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
+
+    UpdateRevision();
+}
+
+const void* ShaderResourceCacheVk::GetInlineConstantData(Uint32 DescrSetIndex, Uint32 BindingIndex) const
+{
+    const DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
+
+    // Find the resource with the matching binding index
+    for (Uint32 i = 0; i < DescrSet.GetSize(); ++i)
+    {
+        const Resource& Res = DescrSet.GetResource(i);
+        if (Res.pInlineConstantData != nullptr)
+        {
+            // For now, we assume binding index matches the resource index for inline constants
+            // This may need adjustment based on actual binding layout
+            return Res.pInlineConstantData;
+        }
+    }
+
+    return nullptr;
+}
+
+void ShaderResourceCacheVk::InitializeInlineConstantBuffer(Uint32 DescrSetIndex,
+                                                           Uint32 CacheOffset,
+                                                           Uint32 NumConstants,
+                                                           void*  pInlineConstantData)
+{
+    VERIFY(pInlineConstantData != nullptr, "Inline constant data pointer is null");
+
+    DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
+    Resource&      DstRes   = DescrSet.GetResource(CacheOffset);
+
+    DstRes.pInlineConstantData = pInlineConstantData;
+
+    // Mark that this cache has inline constants
+    m_HasInlineConstants = 1;
+}
+
 } // namespace Diligent
