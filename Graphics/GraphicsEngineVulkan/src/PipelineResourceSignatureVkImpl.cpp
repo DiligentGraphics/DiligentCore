@@ -540,8 +540,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
     // This must be done after the resources are initialized above
     if (m_pStaticResCache != nullptr && m_NumInlineConstantBuffers > 0)
     {
-        const Uint32                       TotalResources  = GetTotalResourceCount();
-        constexpr ResourceCacheContentType StaticCacheType = ResourceCacheContentType::Signature;
+        const Uint32 TotalResources = GetTotalResourceCount();
 
         // First pass: calculate total memory size needed for all static inline constants
         Uint32 TotalStaticInlineConstantSize = 0;
