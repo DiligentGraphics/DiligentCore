@@ -633,7 +633,28 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
 
                         const SHADER_RESOURCE_TYPE    ResType = SPIRVShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
                         const PIPELINE_RESOURCE_FLAGS Flags   = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-                        SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, ResType, VarDesc.Type, Flags);
+
+                        // For inline constants, ArraySize specifies the number of 32-bit constants,
+                        // not the array dimension. We need to calculate it from the buffer size.
+                        Uint32 ArraySize = Attribs.ArraySize;
+                        if ((Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+                        {
+                            // For inline constants specified via ShaderResourceVariableDesc,
+                            // the SPIRV ArraySize is 1 (buffer is not an array), but we need
+                            // the number of 32-bit constants which is BufferStaticSize / sizeof(Uint32)
+                            if (Attribs.BufferStaticSize > 0)
+                            {
+                                ArraySize = Attribs.BufferStaticSize / sizeof(Uint32);
+                            }
+                            else
+                            {
+                                LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name,
+                                                    "' is marked as inline constants, but has zero buffer size. "
+                                                    "Make sure the buffer type is defined in the shader.");
+                            }
+                        }
+
+                        SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, Flags);
                     }
                     else
                     {

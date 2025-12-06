@@ -74,7 +74,8 @@ class ShaderResourceCacheVk : public ShaderResourceCacheBase
 public:
     explicit ShaderResourceCacheVk(ResourceCacheContentType ContentType) noexcept :
         m_TotalResources{0},
-        m_ContentType{static_cast<Uint32>(ContentType)}
+        m_ContentType{static_cast<Uint32>(ContentType)},
+        m_HasInlineConstants{0}
     {
         VERIFY_EXPR(GetContentType() == ContentType);
     }
@@ -93,7 +94,7 @@ public:
     void InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, const Uint32* SetSizes);
     void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type, bool HasImmutableSampler);
 
-    // sizeof(Resource) == 32 (x64, msvc, Release)
+    // sizeof(Resource) == 40 (x64, msvc, Release)
     struct Resource
     {
         explicit Resource(DescriptorType _Type, bool _HasImmutableSampler) noexcept :
@@ -119,6 +120,10 @@ public:
         // For uniform and storage buffers only
 /*16 */ Uint64                       BufferBaseOffset = 0;
 /*24 */ Uint64                       BufferRangeSize  = 0;
+
+        // For inline constants only - pointer to CPU-side staging buffer
+/*32 */ void*                        pInlineConstantData = nullptr;
+/*40 */ // End of structure
 
         VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo()                     const;
         VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo()                     const;
@@ -245,13 +250,36 @@ public:
                                 Uint32 CacheOffset,
                                 Uint32 DynamicBufferOffset);
 
+    // Sets inline constant data in the resource cache
+    void SetInlineConstants(Uint32      DescrSetIndex,
+                            Uint32      CacheOffset,
+                            const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants);
+
+    // Gets the inline constant data pointer from the resource cache
+    const void* GetInlineConstantData(Uint32 DescrSetIndex, Uint32 BindingIndex) const;
+
+    // Initialize inline constant buffer in the resource cache
+    void InitializeInlineConstantBuffer(Uint32 DescrSetIndex,
+                                        Uint32 CacheOffset,
+                                        Uint32 NumConstants,
+                                        void*  pInlineConstantData);
+
+    // Sets the inline constant memory block (takes ownership, will be freed in destructor)
+    void SetInlineConstantMemory(IMemoryAllocator& Allocator, void* pMemory)
+    {
+        m_pInlineConstantMemory = decltype(m_pInlineConstantMemory){
+            pMemory,
+            STDDeleter<void, IMemoryAllocator>(Allocator)};
+    }
 
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
 
     bool HasInlineConstants() const
     {
-        return false;
+        return m_HasInlineConstants;
     }
 
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
@@ -287,15 +315,21 @@ private:
 
     std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
 
+    // Memory for inline constant data (allocated separately, freed in destructor)
+    std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pInlineConstantMemory;
+
     Uint16 m_NumSets = 0;
 
     // Total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache
     // regardless of the variable type. Note this variable is not equal to dynamic offsets count, which is constant.
     Uint16 m_NumDynamicBuffers = 0;
-    Uint32 m_TotalResources : 31;
+    Uint32 m_TotalResources : 30;
 
     // Indicates what types of resources are stored in the cache
     const Uint32 m_ContentType : 1;
+
+    // Indicates whether the cache contains inline constants
+    Uint32 m_HasInlineConstants : 1;
 
 #ifdef DILIGENT_DEBUG
     // Debug array that stores flags indicating if resources in the cache have been initialized
