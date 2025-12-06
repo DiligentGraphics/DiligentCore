@@ -990,7 +990,7 @@ pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")
 - Root constants are stored directly in the root signature, no indirection
 - Each `SetGraphicsRoot32BitConstants` call updates constants immediately
 - Optimal for small, frequently-updated data (< 64 constants / 256 bytes)
-- Performanc: Fastest
+- Performance: Fastest
 
 ### D3D11
 
