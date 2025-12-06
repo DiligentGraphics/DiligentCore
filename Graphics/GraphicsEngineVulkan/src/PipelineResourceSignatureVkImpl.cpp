@@ -739,7 +739,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
                             Attr.BindingIndex,
                             0, // ArrayIndex
                             RefCntAutoPtr<IDeviceObject>{InlineCBAttr.pBuffer},
-                            0, // BufferBaseOffset
+                            0,                                         // BufferBaseOffset
                             InlineCBAttr.NumConstants * sizeof(Uint32) // BufferRangeSize
                         });
                 }
