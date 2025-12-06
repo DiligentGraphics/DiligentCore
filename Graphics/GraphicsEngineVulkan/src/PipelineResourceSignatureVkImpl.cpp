@@ -352,7 +352,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         CacheGroupOffsets[CacheGroup] += ResDesc.GetArraySize();
 
         VkDescriptorSetLayoutBinding vkSetLayoutBinding{};
-        vkSetLayoutBinding.binding            = pAttribs->BindingIndex;
+        vkSetLayoutBinding.binding = pAttribs->BindingIndex;
         // For inline constants, descriptor count is 1 (single uniform buffer)
         vkSetLayoutBinding.descriptorCount    = ResDesc.GetArraySize();
         vkSetLayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(ResDesc.ShaderStages);
@@ -376,9 +376,9 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
                    "Only constant buffers can have INLINE_CONSTANTS flag");
 
             InlineConstantBufferAttribsVk& InlineCBAttribs = m_InlineConstantBuffers[InlineConstantBufferIdx++];
-            InlineCBAttribs.DescrSet     = pAttribs->DescrSet;
-            InlineCBAttribs.BindingIndex = pAttribs->BindingIndex;
-            InlineCBAttribs.NumConstants = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
+            InlineCBAttribs.DescrSet                       = pAttribs->DescrSet;
+            InlineCBAttribs.BindingIndex                   = pAttribs->BindingIndex;
+            InlineCBAttribs.NumConstants                   = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
 
             // Create a USAGE_DYNAMIC uniform buffer for emulating inline constants
             // All SRBs created from this signature will share the same inline constant buffer.
@@ -755,7 +755,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
                             Attr.BindingIndex,
                             0, // ArrayIndex
                             RefCntAutoPtr<IDeviceObject>{InlineCBAttr.pBuffer},
-                            0, // BufferBaseOffset
+                            0,                                         // BufferBaseOffset
                             InlineCBAttr.NumConstants * sizeof(Uint32) // BufferRangeSize
                         });
                 }
@@ -910,8 +910,8 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
         const Uint32                       CacheOffset = Attr.CacheOffset(CacheType);
         // For inline constants, GetArraySize() returns 1 (actual array size for cache),
         // while ArraySize contains the number of 32-bit constants
-        const Uint32                       ArraySize   = ResDesc.GetArraySize();
-        const DescriptorType               DescrType   = Attr.GetDescriptorType();
+        const Uint32         ArraySize = ResDesc.GetArraySize();
+        const DescriptorType DescrType = Attr.GetDescriptorType();
 
 #ifdef DILIGENT_DEBUG
         {

@@ -64,10 +64,10 @@ ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization
 /// are emulated using dynamic uniform buffers (similar to D3D11 backend).
 struct InlineConstantBufferAttribsVk
 {
-    Uint32                      DescrSet     = 0;  // Descriptor set index
-    Uint32                      BindingIndex = 0;  // Binding index within the descriptor set
-    Uint32                      NumConstants = 0;  // Number of 32-bit constants
-    RefCntAutoPtr<BufferVkImpl> pBuffer;           // Internal dynamic uniform buffer
+    Uint32                      DescrSet     = 0; // Descriptor set index
+    Uint32                      BindingIndex = 0; // Binding index within the descriptor set
+    Uint32                      NumConstants = 0; // Number of 32-bit constants
+    RefCntAutoPtr<BufferVkImpl> pBuffer;          // Internal dynamic uniform buffer
 };
 
 struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData<PipelineResourceAttribsVk, ImmutableSamplerAttribsVk>

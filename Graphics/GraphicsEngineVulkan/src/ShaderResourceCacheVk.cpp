@@ -964,7 +964,7 @@ void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
     Resource&      DstRes   = DescrSet.GetResource(CacheOffset);
 
     VERIFY(DstRes.pInlineConstantData != nullptr, "Inline constant data pointer is null. "
-           "Make sure InitializeInlineConstantBuffer was called for this resource.");
+                                                  "Make sure InitializeInlineConstantBuffer was called for this resource.");
 
     // Copy to CPU-side staging buffer
     Uint32* pDstConstants = reinterpret_cast<Uint32*>(DstRes.pInlineConstantData);

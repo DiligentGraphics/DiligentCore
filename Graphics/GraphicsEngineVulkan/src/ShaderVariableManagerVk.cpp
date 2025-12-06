@@ -656,8 +656,8 @@ void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
                                                  Uint32      FirstConstant,
                                                  Uint32      NumConstants)
 {
-    const PipelineResourceAttribsVk& Attribs   = m_pSignature->GetResourceAttribs(ResIndex);
-    const ResourceCacheContentType   CacheType = m_ResourceCache.GetContentType();
+    const PipelineResourceAttribsVk& Attribs     = m_pSignature->GetResourceAttribs(ResIndex);
+    const ResourceCacheContentType   CacheType   = m_ResourceCache.GetContentType();
     const Uint32                     CacheOffset = Attribs.CacheOffset(CacheType);
 
 #ifdef DILIGENT_DEVELOPMENT
