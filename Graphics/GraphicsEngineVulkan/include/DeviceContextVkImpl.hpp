@@ -530,7 +530,7 @@ private:
 
     // Push constants data storage
     std::array<Uint8, DILIGENT_MAX_PUSH_CONSTANTS_SIZE> m_PushConstantsData     = {};
-    Uint32                                               m_PushConstantsDataSize = 0; // Actual size of valid push constants data
+    Uint32                                              m_PushConstantsDataSize = 0; // Actual size of valid push constants data
 
     // Graphics/mesh, compute, ray tracing
     static constexpr Uint32 NUM_PIPELINE_BIND_POINTS = 3;
