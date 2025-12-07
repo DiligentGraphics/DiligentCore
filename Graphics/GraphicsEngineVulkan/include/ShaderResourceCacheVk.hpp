@@ -303,6 +303,14 @@ public:
         }
     }
 
+    // Explicitly marks that this cache contains inline constants.
+    // This is useful when inline constant memory is initialized externally
+    // (e.g., during SRB cache setup) before any data is written.
+    void MarkHasInlineConstants()
+    {
+        m_HasInlineConstants = 1;
+    }
+
     Uint32 GetNumPushConstantBuffers() const { return m_NumPushConstantBuffers; }
 
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }

@@ -684,6 +684,10 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
     // For emulated inline constants, data is stored in the descriptor set resources
     if (m_NumInlineConstantBuffers > 0)
     {
+        // Ensure the cache reports inline constants so DeviceContextVkImpl
+        // updates emulated buffers even if no data has been written yet.
+        ResourceCache.MarkHasInlineConstants();
+
         // Count push constant buffers and calculate total memory size
         Uint32 NumPushConstantBuffers  = 0;
         Uint32 TotalInlineConstantSize = 0;
