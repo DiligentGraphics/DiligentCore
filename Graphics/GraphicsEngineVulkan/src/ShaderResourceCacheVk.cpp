@@ -969,8 +969,6 @@ void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
     // Copy to CPU-side staging buffer
     Uint32* pDstConstants = reinterpret_cast<Uint32*>(DstRes.pInlineConstantData);
     memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
-
-    UpdateRevision();
 }
 
 const void* ShaderResourceCacheVk::GetInlineConstantData(Uint32 DescrSetIndex, Uint32 BindingIndex) const
