@@ -280,7 +280,7 @@ TEST(PRSCreationFailureTest, InvalidInlineConstantsFlag)
         {SHADER_TYPE_PIXEL, "g_InlineConstants", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS | PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS}};
     PRSDesc.Resources    = Resources;
     PRSDesc.NumResources = _countof(Resources);
-    TestCreatePRSFailure(PRSDesc, "INLINE_CONSTANTS flag cannot be combined with other flags");
+    TestCreatePRSFailure(PRSDesc, "INLINE_CONSTANTS flag cannot be combined with flags other than VULKAN_PUSH_CONSTANT");
 }
 
 TEST(PRSCreationFailureTest, InvalidInlineConstantCount)
