@@ -454,8 +454,8 @@ void DeviceContextVkImpl::UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo
 void DeviceContextVkImpl::SetPushConstants(const void* pData, Uint32 Offset, Uint32 Size)
 {
     DEV_CHECK_ERR(pData != nullptr || Size == 0, "pData must not be null when Size is non-zero");
-    DEV_CHECK_ERR(Offset + Size <= MAX_PUSH_CONSTANTS_SIZE,
-                  "Push constant data range [", Offset, ", ", Offset + Size, ") exceeds the maximum supported size (", MAX_PUSH_CONSTANTS_SIZE, ")");
+    DEV_CHECK_ERR(Offset + Size <= DILIGENT_MAX_PUSH_CONSTANTS_SIZE,
+                  "Push constant data range [", Offset, ", ", Offset + Size, ") exceeds the maximum supported size (", DILIGENT_MAX_PUSH_CONSTANTS_SIZE, ")");
 
     // Note: This function may be called from UpdateInlineConstantBuffers during draw preparation,
     // at which point the pipeline state is guaranteed to be bound. When called from user code,

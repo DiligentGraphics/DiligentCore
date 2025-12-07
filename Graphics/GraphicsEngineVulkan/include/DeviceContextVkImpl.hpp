@@ -60,6 +60,9 @@
 #include "HashUtils.hpp"
 #include "ManagedVulkanObject.hpp"
 
+// Push constants data storage (max size is typically 128-256 bytes, use 256 for safety)
+#define DILIGENT_MAX_PUSH_CONSTANTS_SIZE 256
+
 namespace Diligent
 {
 
@@ -525,10 +528,9 @@ private:
         VkPipelineBindPoint vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
     } m_State;
 
-    // Push constants data storage (max size is typically 128-256 bytes, use 256 for safety)
-    static constexpr Uint32                    MAX_PUSH_CONSTANTS_SIZE = 256;
-    std::array<Uint8, MAX_PUSH_CONSTANTS_SIZE> m_PushConstantsData     = {};
-    Uint32                                     m_PushConstantsDataSize = 0; // Actual size of valid push constants data
+    // Push constants data storage
+    std::array<Uint8, DILIGENT_MAX_PUSH_CONSTANTS_SIZE> m_PushConstantsData     = {};
+    Uint32                                               m_PushConstantsDataSize = 0; // Actual size of valid push constants data
 
     // Graphics/mesh, compute, ray tracing
     static constexpr Uint32 NUM_PIPELINE_BIND_POINTS = 3;
