@@ -417,18 +417,17 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
 
             if (!IsPushConstant && m_pDevice)
             {
-                // Create a USAGE_STAGING uniform buffer for emulating inline constants.
-                // Using USAGE_STAGING ensures the buffer has a backing VkBuffer resource with
-                // persistently mapped host-visible memory, avoiding Dynamic Buffer ID reuse issues
-                // that can occur with USAGE_DYNAMIC buffers (which suballocate from dynamic heap).
+                // Create a USAGE_DYNAMIC uniform buffer for emulating inline constants.
                 // All SRBs created from this signature will share the same inline constant buffer.
+                // Note: DvpValidateCommittedResource skips dynamic allocation verification for
+                // inline constant buffers to avoid Dynamic Buffer ID reuse validation issues.
                 std::string Name = m_Desc.Name;
                 Name += " - ";
                 Name += ResDesc.Name;
                 BufferDesc CBDesc;
                 CBDesc.Name           = Name.c_str();
                 CBDesc.Size           = ResDesc.ArraySize * sizeof(Uint32);
-                CBDesc.Usage          = USAGE_STAGING;
+                CBDesc.Usage          = USAGE_DYNAMIC;
                 CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
                 CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 
@@ -689,7 +688,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
     {
         // Ensure the cache reports inline constants so DeviceContextVkImpl
         // updates emulated buffers even if no data has been written yet.
-        //ResourceCache.MarkHasInlineConstants();
+        ResourceCache.MarkHasInlineConstants();
 
         // Count push constant buffers and calculate total memory size
         Uint32 NumPushConstantBuffers  = 0;
@@ -1198,7 +1197,16 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
                 // is bound. It will be null if the type is incorrect.
                 if (const BufferVkImpl* pBufferVk = Res.pObject.RawPtr<BufferVkImpl>())
                 {
-                    pDeviceCtx->DvpVerifyDynamicAllocation(pBufferVk);
+                    // Skip dynamic allocation verification for inline constant buffers.
+                    // These are internal buffers managed by the signature and are updated
+                    // via UpdateInlineConstantBuffers() before each draw/dispatch.
+                    // The Dynamic Buffer ID may be reused after PSO recreation (e.g., from cache),
+                    // which would cause false validation failures.
+                    const bool IsInlineConstantBuffer = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0;
+                    if (!IsInlineConstantBuffer)
+                    {
+                        pDeviceCtx->DvpVerifyDynamicAllocation(pBufferVk);
+                    }
 
                     if ((pBufferVk->GetDesc().Size < SPIRVAttribs.BufferStaticSize) &&
                         (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
@@ -1343,12 +1351,11 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
             const void* pInlineConstantData = ResourceCache.GetInlineConstantData(InlineCBAttr.DescrSet, InlineCBAttr.BindingIndex);
             VERIFY_EXPR(pInlineConstantData != nullptr);
 
-            // Copy data directly to the buffer's CPU address.
-            // USAGE_STAGING buffer has a backing VkBuffer resource with persistently mapped
-            // host-visible memory, so we can write directly without Map/Unmap.
-            void* pDstData = InlineCBAttr.pBuffer->GetCPUAddress();
-            VERIFY_EXPR(pDstData != nullptr);
-            memcpy(pDstData, pInlineConstantData, DataSize);
+            // Map the buffer and copy the data
+            void* pMappedData = nullptr;
+            Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+            memcpy(pMappedData, pInlineConstantData, DataSize);
+            Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
             continue;
         }
     }
