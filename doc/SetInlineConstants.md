@@ -605,347 +605,156 @@ This creates two separate dynamic constant buffers.
 
 ### Architecture Overview
 
-The Vulkan backend implements inline constants using **dynamic uniform buffers** for emulation, similar to the D3D11 backend. While Vulkan natively supports push constants, the current implementation uses uniform buffer emulation to support multiple inline constant resources and broader compatibility.
+The Vulkan backend now supports **two** inline constant paths:
 
-**Design Decision**: 
-- True Vulkan push constants are reserved for SPIRV blocks explicitly marked with `layout(push_constant)` (future implementation)
-- All inline constant resources currently use dynamic uniform buffer emulation
-- This approach allows multiple inline constant resources (Vulkan only supports one push constant block per pipeline)
+- `PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS` + `PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT` → true push constants backed by `vkCmdPushConstants`.
+- `PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS` without the push-constant flag → emulated via internal `USAGE_DYNAMIC` uniform buffers (same behavior as D3D11).
+
+This split lets us mix SPIR-V `layout(push_constant)` blocks with regular inline constant buffers in a single signature while still supporting multiple inline constant resources per pipeline.
 
 ### Implementation Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        User Application                                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  pVariable->SetInlineConstants(pData, FirstConstant, NumConstants)          │
-└──────────────────────────────────────────────────────────────────────────────┘
-                                   │
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      ShaderVariableManagerVk                                 │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │ SetInlineConstants():                                                  │  │
-│  │   1. Get resource offset in merged push constant block                │  │
-│  │   2. Copy data to push constant storage                               │  │
-│  │   3. Mark push constants as dirty                                     │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-       1                            │
-                                   ▼ (During CommitShaderResources)
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         DeviceContextVkImpl                                  │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │ CommitPushConstants():                                                 │  │
-│  │   vkCmdPushConstants(cmdBuffer, pipelineLayout,                       │  │
-│  │                      stageFlags, offset, size, pData);                │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│                    ShaderVariableManagerVk                                 │
+│  SetInlineConstants():                                                     │
+│    if resource has PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT             │
+│        ├─ STATIC var  -> copy into InlineCBAttr.pPushConstantData          │
+│        └─ SRB cache   -> write to ShaderResourceCacheVk push constant slot │
+│    else                                                                    │
+│        └─ ShaderResourceCacheVk::SetInlineConstants(...) (CPU staging)     │
+└────────────────────────────────────────────────────────────────────────────┘
+                │                                               │
+                │                          ┌────────────────────┘
+                ▼ (Bind SRB)               ▼ (Bind SRB with emulation)
+┌────────────────────────────────────────────────────────────────────────────┐
+│            DeviceContextVkImpl::UpdateInlineConstantBuffers                │
+│    for each InlineConstantBufferAttribsVk                                  │
+│        if IsPushConstant                                                   │
+│            -> ctx.SetPushConstants(pData, 0, Size)                         │
+│        else                                                                │
+│            -> Map internal uniform buffer, memcpy, Unmap                   │
+└────────────────────────────────────────────────────────────────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│            DeviceContextVkImpl::CommitPushConstants                        │
+│    vkCmdPushConstants(vkPipelineLayout, StageFlags, 0, Size, pCpuData)     │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Step 1: Resource Signature Creation
 
-When creating a `PipelineResourceSignature` with `PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS`:
+**SPIR-V reflection → default signature**  
+`PipelineStateVkImpl::GetDefaultResourceSignatureDesc()` converts SPIR-V resources into `PipelineResourceDesc`. When an attribute reports inline constants, the code derives the **number of 32-bit values** from `BufferStaticSize` instead of the logical array size, and SPIR-V `push_constant` resources propagate `PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT` (see `Graphics/GraphicsEngineVulkan/src/PipelineStateVkImpl.cpp:592-666`).
 
-**File**: `PipelineResourceSignatureVkImpl.cpp` - `CreateSetLayouts()`
+**Push constant metadata for the pipeline layout**  
+`PipelineStateVkImpl::InitPushConstantInfo()` walks every shader and records the max push constant size and the union of stage flags. `PipelineLayoutVk::Create()` stores that information so that `vkCmdPushConstants` can be issued later (`Graphics/GraphicsEngineVulkan/src/PipelineLayoutVk.cpp:62-164`).
 
-```cpp
-if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-{
-    VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
-           "Only constant buffers can have INLINE_CONSTANTS flag");
-    
-    // Create internal dynamic uniform buffer for emulation
-    InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[InlineCBIdx++];
-    InlineCBAttr.DescrSet     = DescrSetId;
-    InlineCBAttr.BindingIndex = vkBinding;
-    InlineCBAttr.NumConstants = ResDesc.ArraySize;  // Number of 32-bit values
-    
-    // Create a USAGE_DYNAMIC uniform buffer
-    BufferDesc BuffDesc;
-    BuffDesc.Name           = std::string(m_Desc.Name) + " - " + ResDesc.Name;
-    BuffDesc.Size           = ResDesc.ArraySize * sizeof(Uint32);
-    BuffDesc.Usage          = USAGE_DYNAMIC;
-    BuffDesc.BindFlags      = BIND_UNIFORM_BUFFER;
-    BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-    
-    RefCntAutoPtr<IBuffer> pBuffer;
-    GetDevice()->CreateBuffer(BuffDesc, nullptr, &pBuffer);
-    InlineCBAttr.pBuffer = RefCntAutoPtr<BufferVkImpl>(pBuffer, IID_BufferVk);
-}
-```
+**InlineConstantBufferAttribsVk initialization**  
+Inside `PipelineResourceSignatureVkImpl::CreateSetLayouts()` every inline constant resource gets an `InlineConstantBufferAttribsVk` entry (`Graphics/GraphicsEngineVulkan/src/PipelineResourceSignatureVkImpl.cpp:200-441`):
 
-**Key Points**:
-- Each inline constant resource creates a `USAGE_DYNAMIC` uniform buffer
-- Buffer is stored in `InlineConstantBufferAttribsVk` structure
-- Buffer is shared across all SRBs created from this signature
+- `IsPushConstant` mirrors `PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT`.
+- Push constants skip descriptor-set bookkeeping altogether; emulated inline constants allocate a `USAGE_DYNAMIC` uniform buffer that is shared by all SRBs originating from the signature.
+- Static push constants allocate CPU-side storage (`pPushConstantData`) inside `m_pStaticInlineConstantData`.
 
 ### Step 2: Resource Cache Initialization
 
-#### For Static Inline Constants
+`PipelineResourceSignatureVkImpl::InitSRBResourceCache()` now sets up both flavors (`Graphics/GraphicsEngineVulkan/src/PipelineResourceSignatureVkImpl.cpp:653-739`):
 
-**File**: `PipelineResourceSignatureVkImpl.cpp` - `CreateSetLayouts()`
+- A single block of CPU memory is allocated for all inline constants and the pointer is owned by `ShaderResourceCacheVk::m_pInlineConstantMemory`.
+- Push-constant resources register their per-SRB staging pointers via `ShaderResourceCacheVk::InitializePushConstantDataPtrs()` / `SetPushConstantDataPtr()` so that each SRB maintains its own copy.
+- Emulated inline constants call `InitializeInlineConstantBuffer()` to hook the CPU staging memory into the descriptor-set resource slots and bind the internal dynamic buffer through `SetResource()`.
 
-Static inline constants require CPU-side staging buffers that are allocated once during signature creation and freed in the destructor.
+Static inline constants follow the same pattern during `CreateSetLayouts()` (lines `576-626`), so signatures keep zeroed data for static variables and copy it into SRBs later.
 
-```cpp
-// Calculate total memory size for all static inline constants
-Uint32 TotalStaticInlineConstantSize = 0;
-for (each static inline constant)
-{
-    TotalStaticInlineConstantSize += NumConstants * sizeof(Uint32);
-}
+### Step 3: ShaderVariableManagerVk::SetInlineConstants
 
-// Allocate single memory block for all static inline constants
-m_pStaticInlineConstantData = GetRawAllocator().Allocate(
-    TotalStaticInlineConstantSize, "Static inline constant data", __FILE__, __LINE__);
-memset(m_pStaticInlineConstantData, 0, TotalStaticInlineConstantSize);
+`ShaderVariableManagerVk::SetInlineConstants()` branches on the new flag (`Graphics/GraphicsEngineVulkan/src/ShaderVariableManagerVk.cpp:654-725`):
 
-// Assign memory to each static inline constant
-Uint8* pCurrentDataPtr = static_cast<Uint8*>(m_pStaticInlineConstantData);
-for (each static inline constant)
-{
-    m_pStaticResCache->InitializeInlineConstantBuffer(
-        0, CacheOffset, NumConstants, pCurrentDataPtr);
-    pCurrentDataPtr += DataSize;
-}
 ```
-
-#### For Mutable/Dynamic Inline Constants (SRB)
-
-**File**: `PipelineResourceSignatureVkImpl.cpp` - `InitSRBResourceCache()`
-
-```cpp
-void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk& ResourceCache)
+if (IsPushConstant)
 {
-    // Initialize inline constant buffers
-    if (m_NumInlineConstantBuffers > 0)
+    if (CacheType == ResourceCacheContentType::Signature)
     {
-        // Calculate total memory size
-        Uint32 TotalInlineConstantSize = 0;
-        for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
-        {
-            TotalInlineConstantSize += m_InlineConstantBuffers[i].NumConstants * sizeof(Uint32);
-        }
-        
-        // Allocate single memory block
-        void* pInlineConstantMemory = CacheMemAllocator.Allocate(
-            TotalInlineConstantSize, "Inline constant data", __FILE__, __LINE__);
-        memset(pInlineConstantMemory, 0, TotalInlineConstantSize);
-        
-        // Pass ownership to resource cache for proper cleanup
-        ResourceCache.SetInlineConstantMemory(CacheMemAllocator, pInlineConstantMemory);
-        
-        // Assign memory to each inline constant buffer
-        Uint8* pCurrentDataPtr = static_cast<Uint8*>(pInlineConstantMemory);
-        for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
-        {
-            ResourceCache.InitializeInlineConstantBuffer(
-                DescrSet, CacheOffset, NumConstants, pCurrentDataPtr);
-            pCurrentDataPtr += InlineCBAttr.NumConstants * sizeof(Uint32);
-        }
-    }
-    
-    // Bind internal uniform buffers to the resource cache
-    for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
-    {
-        ResourceCache.SetResource(
-            pLogicalDevice,  // nullptr for dynamic variables
-            DescrSet, CacheOffset,
-            {
-                BindingIndex, 0, // ArrayIndex
-                RefCntAutoPtr<IDeviceObject>{InlineCBAttr.pBuffer},
-                0, // BufferBaseOffset
-                InlineCBAttr.NumConstants * sizeof(Uint32) // BufferRangeSize
-            });
-    }
-}
-```
-
-**Memory Management**:
-- Static inline constants: Memory allocated via `GetRawAllocator()`, freed in `Destruct()`
-- SRB inline constants: Memory allocated via `CacheMemAllocator`, owned by `ShaderResourceCacheVk` (freed in destructor via `m_pInlineConstantMemory`)
-
-### Step 3: SetInlineConstants Implementation
-
-**File**: `ShaderVariableManagerVk.cpp`
-
-```cpp
-void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
-                                                 const void* pConstants,
-                                                 Uint32      FirstConstant,
-                                                 Uint32      NumConstants)
-{
-    const PipelineResourceAttribsVk& Attribs = m_pSignature->GetResourceAttribs(ResIndex);
-    const ResourceCacheContentType   CacheType = m_ResourceCache.GetContentType();
-    
-#ifdef DILIGENT_DEVELOPMENT
-    const PipelineResourceDesc& ResDesc = m_pSignature->GetResourceDesc(ResIndex);
-    VerifyInlineConstants(ResDesc, pConstants, FirstConstant, NumConstants);
-#endif
-    
-    m_ResourceCache.SetInlineConstants(
-        Attribs.DescrSet,
-        Attribs.CacheOffset(CacheType),
-        pConstants,
-        FirstConstant,
-        NumConstants);
-}
-```
-
-**File**: `ShaderResourceCacheVk.cpp`
-
-```cpp
-void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
-                                               Uint32      CacheOffset,
-                                               const void* pConstants,
-                                               Uint32      FirstConstant,
-                                               Uint32      NumConstants)
-{
-    DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
-    Resource&      DstRes   = DescrSet.GetResource(CacheOffset);
-    
-    VERIFY(DstRes.pInlineConstantData != nullptr,
-           "Inline constant data pointer is null.");
-    
-    // Copy to CPU-side staging buffer
-    Uint32* pDstConstants = reinterpret_cast<Uint32*>(DstRes.pInlineConstantData);
-    memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
-    
-    UpdateRevision();  // Mark cache as dirty
-}
-```
-
-### Step 4: Updating GPU Buffer
-
-During draw/dispatch commands, inline constant buffers are updated:
-
-**File**: `DeviceContextVkImpl.cpp`
-
-```cpp
-void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
-{
-    // Update inline constant buffers before committing descriptor sets
-    UpdateInlineConstantBuffers(BindInfo);
-    
-    // Commit descriptor sets
-    CommitDescriptorSets(BindInfo, /* ... */);
-}
-
-void DeviceContextVkImpl::UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo)
-{
-    for (Uint32 SignIdx = 0; SignIdx < BindInfo.ActiveSRBCount; ++SignIdx)
-    {
-        const auto& SignInfo = BindInfo.pSignatures[SignIdx];
-        if (SignInfo.pSignature->GetNumInlineConstantBuffers() > 0)
-        {
-            SignInfo.pSignature->UpdateInlineConstantBuffers(
-                *SignInfo.pResourceCache, *this);
-        }
-    }
-}
-```
-
-**File**: `PipelineResourceSignatureVkImpl.cpp`
-
-```cpp
-void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(
-    const ShaderResourceCacheVk& ResourceCache,
-    DeviceContextVkImpl&         Ctx) const
-{
-    for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
-    {
-        const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
-        
-        // Get the inline constant data from the resource cache
-        const void* pInlineConstantData = ResourceCache.GetInlineConstantData(
-            InlineCBAttr.DescrSet, InlineCBAttr.BindingIndex);
-        
-        if (pInlineConstantData == nullptr)
-            continue;
-        
-        // Map the buffer and copy the data
-        void* pMappedData = nullptr;
-        Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
-        if (pMappedData != nullptr)
-        {
-            memcpy(pMappedData, pInlineConstantData,
-                   InlineCBAttr.NumConstants * sizeof(Uint32));
-            Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
-        }
-    }
-}
-```
-
-### Step 5: Handling ArraySize for ShaderResourceVariableDesc
-
-When inline constants are specified via `ShaderResourceVariableDesc` (not `PipelineResourceDesc`), the `ArraySize` must be determined from SPIR-V:
-
-**File**: `PipelineStateVkImpl.cpp` - `GetDefaultResourceSignatureDesc()`
-
-```cpp
-// For inline constants, ArraySize specifies the number of 32-bit constants,
-// not the array dimension. Calculate it from the buffer size.
-Uint32 ArraySize = Attribs.ArraySize;
-if ((Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
-{
-    // For inline constants specified via ShaderResourceVariableDesc,
-    // the SPIRV ArraySize is 1 (buffer is not an array), but we need
-    // the number of 32-bit constants which is BufferStaticSize / sizeof(Uint32)
-    if (Attribs.BufferStaticSize > 0)
-    {
-        ArraySize = Attribs.BufferStaticSize / sizeof(Uint32);
+        // Static push constants live inside InlineCBAttr.pPushConstantData.
     }
     else
     {
-        LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' is marked as inline constants, "
-                            "but has zero buffer size.");
+        // SRB cache owns per-instance push constant storage.
+        void* pDst = m_ResourceCache.GetPushConstantDataPtr(PushConstantBufferIdx);
     }
+    memcpy(...); // copy 32-bit values
+    return;
+}
+
+const Uint32 CacheOffset = Attribs.CacheOffset(CacheType);
+m_ResourceCache.SetInlineConstants(Attribs.DescrSet, CacheOffset, pConstants,
+                                   FirstConstant, NumConstants);
+```
+
+Emulated inline constants therefore keep using `ShaderResourceCacheVk::SetInlineConstants`, while push constants never touch descriptor sets.
+
+### Step 4: Updating GPU State
+
+`PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers()` now understands both data paths (`Graphics/GraphicsEngineVulkan/src/PipelineResourceSignatureVkImpl.cpp:1309-1345`):
+
+```
+if (InlineCBAttr.IsPushConstant)
+{
+    const void* pData = ResourceCache.GetPushConstantDataPtr(PushConstantBufferIdx++);
+    Ctx.SetPushConstants(pData, 0, DataSize);
+}
+else if (InlineCBAttr.pBuffer)
+{
+    void* pMappedData = nullptr;
+    Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+    memcpy(pMappedData, pInlineConstantData, DataSize);
+    Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
 }
 ```
 
-### Multiple Inline Constants Support
+- `DeviceContextVkImpl::SetPushConstants()` copies the data into an internal `std::array<Uint8, DILIGENT_MAX_PUSH_CONSTANTS_SIZE>` buffer and marks it dirty (`Graphics/GraphicsEngineVulkan/src/DeviceContextVkImpl.cpp:454-480`).
+- After descriptor sets are committed, `CommitPushConstants()` checks whether the current pipeline layout exposes push constants and issues `vkCmdPushConstants` with the stored stage flags (`Graphics/GraphicsEngineVulkan/src/DeviceContextVkImpl.cpp:482-501`). Draw, dispatch, and trace entry points call `CommitPushConstants()` right after `CommitDescriptorSets`.
+- SRBs that only contain push constants no longer trigger descriptor-set binding (`CommitDescriptorSets()` filters them out at lines `503-521`).
 
-Vulkan backend fully supports multiple inline constant buffers:
+### Step 5: Example Usage
 
-- Each inline constant resource creates its own `USAGE_DYNAMIC` uniform buffer
-- Each has separate CPU-side staging buffer (`pInlineConstantData`)
-- All inline constant buffers are updated together during `PrepareForDraw`/`PrepareForDispatch`
-
-**Example**:
-
-```cpp
+```
 PipelineResourceDesc Resources[] = {
-    {"TransformCB", SHADER_TYPE_VERTEX, 16, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
-     SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS},
-    {"MaterialCB", SHADER_TYPE_PIXEL, 8, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
-     SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS},
+    // True push constant block declared with layout(push_constant)
+    {"PerFramePC", SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, 32,
+     SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC,
+     PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS | PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT},
+
+    // Emulated inline constant buffer bound through a uniform buffer
+    {"PerDrawInlineCB", SHADER_TYPE_VERTEX, 16,
+     SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC,
+     PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS},
 };
 ```
 
-This creates two separate dynamic uniform buffers.
+`PerFramePC` is copied directly with `vkCmdPushConstants`, while `PerDrawInlineCB` maps the internal dynamic uniform buffer each time `UpdateInlineConstantBuffers()` runs.
 
-### Memory Leak Prevention
+### Memory Management
 
-The implementation carefully manages memory to prevent leaks:
+1. **Static inline constants / push constants**  
+   - Single allocation in `CreateSetLayouts()` stored inside `m_pStaticInlineConstantData`.  
+   - Freed by `PipelineResourceSignatureVkImpl::Destruct()`.  
+   - Push constants also stash the pointer inside `InlineConstantBufferAttribsVk::pPushConstantData`.
 
-1. **Static inline constants**: 
-   - Single allocation in `CreateSetLayouts()` stored in `m_pStaticInlineConstantData`
-   - Freed in `PipelineResourceSignatureVkImpl::Destruct()`
-
-2. **SRB inline constants**:
-   - Single allocation in `InitSRBResourceCache()` 
-   - Ownership transferred to `ShaderResourceCacheVk::m_pInlineConstantMemory`
-   - Automatically freed by `std::unique_ptr` in `~ShaderResourceCacheVk()`
+2. **SRB inline constants**  
+   - Single block per SRB, allocated in `InitSRBResourceCache()` and owned by `ShaderResourceCacheVk::m_pInlineConstantMemory`.  
+   - Push constants additionally keep an array of pointers (`m_pPushConstantDataPtrs`) managed by `InitializePushConstantDataPtrs()` / `SetPushConstantDataPtr()`.
 
 ### Performance Considerations
 
-**Vulkan Inline Constants Performance**:
+- Push constants avoid the `Map`/`Unmap` cost entirely—`DeviceContextVkImpl` simply memcpy's into a small CPU buffer before issuing `vkCmdPushConstants`.
+- Emulated inline constants still incur a map/discard write, so they are best suited for larger constant blocks or when more than one inline constant buffer is needed.
+- SRBs sharing the internal uniform buffers keeps memory usage small even when every SRB uses emulation.
 
-1. **Overhead**: Similar to D3D11 due to `Map`/`Unmap` operations
-2. **Update frequency**: Best for per-draw updates
-3. **Buffer sharing**: All SRBs share the same buffer, reducing memory
-4. **Future optimization**: True push constants for `layout(push_constant)` blocks (planned)
+---
+
 
 ---
 
@@ -1002,29 +811,28 @@ pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")
 
 ### Vulkan
 
-- Currently emulated using `USAGE_DYNAMIC` uniform buffers
-- Requires `MapBuffer` + `memcpy` + `UnmapBuffer` for each update
-- Buffer shared across all SRBs (reduces memory, increases update frequency)
-- Performance: Similar to D3D11, moderate overhead due to Map/Unmap
-- Future: True push constants for `layout(push_constant)` blocks (planned)
+- Resources flagged with `PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT` use `vkCmdPushConstants` (no descriptor binding, no mapping).
+- All other inline constants are emulated through internal `USAGE_DYNAMIC` uniform buffers that are shared by every SRB.
+- Map/Unmap is only required for the emulated path; push constants merely copy into a small CPU buffer right before `vkCmdPushConstants`.
+- Performance: push-constant path is comparable to D3D12 root constants, emulated path matches the D3D11 behavior.
 
 ### Performance Comparison
 
-| Backend | Implementation      | Update Cost | Best Use Case                    |
-|---------|---------------------|-------------|----------------------------------|
-| D3D12   | Root constants      | Very Low    | Per-draw, high-frequency updates |
-| D3D11   | Dynamic CB + Map    | Moderate    | Per-draw, moderate frequency     |
-| Vulkan  | Dynamic UB + Map    | Moderate    | Per-draw, moderate frequency     |
+| Backend | Implementation                      | Update Cost    | Best Use Case                              |
+|---------|-------------------------------------|----------------|--------------------------------------------|
+| D3D12   | Root constants                      | Very Low       | Per-draw, high-frequency updates           |
+| D3D11   | Dynamic CB + Map                   | Moderate       | Per-draw, moderate frequency               |
+| Vulkan  | Push constants / Dynamic UB + Map  | Low / Moderate | Push constants <=256 B, UB for larger data  |
 
 ### General Guidelines
 
-1. **Size**: Keep inline constants small (typically ≤ 128 bytes)
+1. **Size**: Keep inline constants small (typically <= 128 bytes)
 2. **Frequency**: Use for per-draw or per-dispatch data
 3. **Fallback**: For larger data, use dynamic uniform buffers
 4. **Multiple resources**: 
    - D3D12: Full support for multiple inline constants
    - D3D11: Full support for multiple inline constants (each as separate dynamic buffer)
-   - Vulkan: Full support for multiple inline constants (each as separate dynamic uniform buffer)
+   - Vulkan: One push constant block per pipeline + unlimited emulated inline buffers via dynamic uniform buffers
 5. **D3D11 specific**: Use `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT` when constants unchanged between draws
 
 ---
