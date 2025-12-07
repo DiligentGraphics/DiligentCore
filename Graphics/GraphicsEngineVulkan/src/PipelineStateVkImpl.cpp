@@ -731,23 +731,14 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                     const SHADER_RESOURCE_TYPE           ResType  = SPIRVShaderResourceAttribs::GetShaderResourceType(SPIRVAttribs.Type);
                     const PIPELINE_RESOURCE_FLAGS        Flags    = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(SPIRVAttribs.Type);
 
-                    // For push constants, skip descriptor set operations but validate the resource exists
+                    // For push constants, skip descriptor set operations but validate the resource exists.
+                    // Note: PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT flag must be added
                     if (IsPushConstant)
                     {
                         if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
                         {
                             const PipelineResourceDesc& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
-                            
-                            // Automatically add PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT flag if the resource
-                            // has PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS but is missing the Vulkan push constant flag.
-                            // This ensures that true push constants use vkCmdPushConstants instead of dynamic uniform buffers.
-                            // We got an unused uniform buffer and an unused descriptor set after this, it's okay though.
-                            PipelineResourceSignatureVkImpl* pSignatureVk = const_cast<PipelineResourceSignatureVkImpl*>(ResAttribution.pSignature);
-                            pSignatureVk->UpdatePushConstantFlags(ResAttribution.ResourceIndex);
-                            
-                            // Get the updated resource description after adding the flag
-                            const PipelineResourceDesc& UpdatedResDesc = pSignatureVk->GetResourceDesc(ResAttribution.ResourceIndex);
-                            ValidatePipelineResourceCompatibility(UpdatedResDesc, ResType, Flags, SPIRVAttribs.ArraySize,
+                            ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, SPIRVAttribs.ArraySize,
                                                                   pShader->GetDesc().Name, SignDesc.Name);
                         }
                         if (pDvpResourceAttibutions)
@@ -1084,7 +1075,15 @@ void PipelineStateVkImpl::DvpValidateResourceLimits() const
         {
             const PipelineResourceDesc&                             ResDesc   = pSignature->GetResourceDesc(r);
             const PipelineResourceSignatureVkImpl::ResourceAttribs& ResAttr   = pSignature->GetResourceAttribs(r);
-            const Uint32                                            DescIndex = static_cast<Uint32>(ResAttr.DescrType);
+
+            // Skip push constants - they don't use descriptors
+            if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0)
+                continue;
+
+            if (ResAttr.IsPushConstantBuffer())
+                continue;
+            
+            const Uint32 DescIndex = static_cast<Uint32>(ResAttr.DescrType);
 
             DescriptorCount[DescIndex] += ResAttr.ArraySize;
 

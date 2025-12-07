@@ -274,6 +274,37 @@ public:
             STDDeleter<void, IMemoryAllocator>(Allocator)};
     }
 
+    // Sets the push constant data pointer for the given index
+    // This is used to store per-SRB push constant data for STATIC push constants
+    void SetPushConstantDataPtr(Uint32 Index, void* pData)
+    {
+        VERIFY_EXPR(Index < m_NumPushConstantBuffers);
+        m_pPushConstantDataPtrs[Index] = pData;
+    }
+
+    // Gets the push constant data pointer for the given index
+    void* GetPushConstantDataPtr(Uint32 Index) const
+    {
+        VERIFY_EXPR(Index < m_NumPushConstantBuffers);
+        return m_pPushConstantDataPtrs[Index];
+    }
+
+    // Initializes push constant data pointers array
+    void InitializePushConstantDataPtrs(Uint32 NumPushConstants)
+    {
+        m_NumPushConstantBuffers = static_cast<Uint16>(NumPushConstants);
+        if (NumPushConstants > 0)
+        {
+            m_pPushConstantDataPtrs = std::make_unique<void*[]>(NumPushConstants);
+            for (Uint32 i = 0; i < NumPushConstants; ++i)
+                m_pPushConstantDataPtrs[i] = nullptr;
+            // Mark that this cache has inline constants (push constants are a type of inline constants)
+            m_HasInlineConstants = 1;
+        }
+    }
+
+    Uint32 GetNumPushConstantBuffers() const { return m_NumPushConstantBuffers; }
+
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
 
@@ -318,7 +349,12 @@ private:
     // Memory for inline constant data (allocated separately, freed in destructor)
     std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pInlineConstantMemory;
 
-    Uint16 m_NumSets = 0;
+    // Array of push constant data pointers (one per push constant buffer)
+    // Each pointer points to memory within m_pInlineConstantMemory
+    std::unique_ptr<void*[]> m_pPushConstantDataPtrs;
+
+    Uint16 m_NumSets               = 0;
+    Uint16 m_NumPushConstantBuffers = 0;
 
     // Total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache
     // regardless of the variable type. Note this variable is not equal to dynamic offsets count, which is constant.

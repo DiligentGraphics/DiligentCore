@@ -656,16 +656,73 @@ void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
                                                  Uint32      FirstConstant,
                                                  Uint32      NumConstants)
 {
-    const PipelineResourceAttribsVk& Attribs     = m_pSignature->GetResourceAttribs(ResIndex);
-    const ResourceCacheContentType   CacheType   = m_ResourceCache.GetContentType();
-    const Uint32                     CacheOffset = Attribs.CacheOffset(CacheType);
+    const PipelineResourceAttribsVk& Attribs = m_pSignature->GetResourceAttribs(ResIndex);
+    const PipelineResourceDesc&      ResDesc = m_pSignature->GetResourceDesc(ResIndex);
 
 #ifdef DILIGENT_DEVELOPMENT
-    const PipelineResourceDesc& ResDesc = m_pSignature->GetResourceDesc(ResIndex);
     VerifyInlineConstants(ResDesc, pConstants, FirstConstant, NumConstants);
 #endif
 
-    m_ResourceCache.SetInlineConstants(Attribs.DescrSet, CacheOffset, pConstants, FirstConstant, NumConstants);
+    // Check if this is a push constant (doesn't use descriptor sets)
+    const bool IsPushConstant = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0;
+    if (IsPushConstant)
+    {
+        const InlineConstantBufferAttribsVk* pInlineCBs = m_pSignature->GetInlineConstantBuffers();
+        const Uint32 NumInlineCBs = m_pSignature->GetNumInlineConstantBuffers();
+        const ResourceCacheContentType CacheType = m_ResourceCache.GetContentType();
+
+        if (CacheType == ResourceCacheContentType::Signature)
+        {
+            // For Signature's static variables, write to InlineCBAttr.pPushConstantData
+            // which points to m_pStaticInlineConstantData
+            for (Uint32 i = 0; i < NumInlineCBs; ++i)
+            {
+                const InlineConstantBufferAttribsVk& InlineCBAttr = pInlineCBs[i];
+                if (InlineCBAttr.ResIndex == ResIndex && InlineCBAttr.IsPushConstant)
+                {
+                    if (InlineCBAttr.pPushConstantData != nullptr)
+                    {
+                        Uint32* pDstConstants = reinterpret_cast<Uint32*>(InlineCBAttr.pPushConstantData);
+                        memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
+                    }
+                    return;
+                }
+            }
+        }
+        else
+        {
+            // For SRB, write to the SRB's resource cache
+            // Each SRB has its own copy of push constant data
+            Uint32 PushConstantBufferIdx = 0;
+            for (Uint32 i = 0; i < NumInlineCBs; ++i)
+            {
+                const InlineConstantBufferAttribsVk& InlineCBAttr = pInlineCBs[i];
+                if (!InlineCBAttr.IsPushConstant)
+                    continue;
+
+                if (InlineCBAttr.ResIndex == ResIndex)
+                {
+                    // Get the data pointer from the resource cache
+                    void* pPushConstantData = m_ResourceCache.GetPushConstantDataPtr(PushConstantBufferIdx);
+                    if (pPushConstantData != nullptr)
+                    {
+                        Uint32* pDstConstants = reinterpret_cast<Uint32*>(pPushConstantData);
+                        memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
+                    }
+                    return;
+                }
+                ++PushConstantBufferIdx;
+            }
+        }
+        UNEXPECTED("Push constant buffer not found");
+    }
+    else
+    {
+        // For emulated inline constants, use the resource cache
+        const ResourceCacheContentType CacheType   = m_ResourceCache.GetContentType();
+        const Uint32                   CacheOffset = Attribs.CacheOffset(CacheType);
+        m_ResourceCache.SetInlineConstants(Attribs.DescrSet, CacheOffset, pConstants, FirstConstant, NumConstants);
+    }
 }
 
 IDeviceObject* ShaderVariableManagerVk::Get(Uint32 ArrayIndex, Uint32 ResIndex) const
