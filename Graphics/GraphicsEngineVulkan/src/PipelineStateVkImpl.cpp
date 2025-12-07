@@ -1077,15 +1077,12 @@ void PipelineStateVkImpl::DvpValidateResourceLimits() const
             const PipelineResourceSignatureVkImpl::ResourceAttribs& ResAttr = pSignature->GetResourceAttribs(r);
 
             // Skip push constants - they don't use descriptors
-            if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0)
-                continue;
-
             if (ResAttr.IsPushConstantBuffer())
                 continue;
 
             const Uint32 DescIndex = static_cast<Uint32>(ResAttr.DescrType);
 
-            DescriptorCount[DescIndex] += ResAttr.ArraySize;
+            DescriptorCount[DescIndex] += ResDesc.GetArraySize();
 
             for (SHADER_TYPE ShaderStages = ResDesc.ShaderStages; ShaderStages != 0;)
             {
