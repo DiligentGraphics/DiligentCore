@@ -818,11 +818,11 @@ pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")
 
 ### Performance Comparison
 
-| Backend | Implementation                      | Update Cost    | Best Use Case                              |
-|---------|-------------------------------------|----------------|--------------------------------------------|
-| D3D12   | Root constants                      | Very Low       | Per-draw, high-frequency updates           |
-| D3D11   | Dynamic CB + Map                   | Moderate       | Per-draw, moderate frequency               |
-| Vulkan  | Push constants / Dynamic UB + Map  | Low / Moderate | Push constants <=256 B, UB for larger data  |
+| Backend | Implementation                      | Update Cost    |
+|---------|-------------------------------------|----------------|
+| D3D12   | Root constants                      | Very Low       |
+| D3D11   | Dynamic CB + Map                   | Moderate       |
+| Vulkan  | Push constants / Dynamic UB + Map  | Low / Moderate |
 
 ### General Guidelines
 
@@ -831,9 +831,8 @@ pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "Constants")
 3. **Fallback**: For larger data, use dynamic uniform buffers
 4. **Multiple resources**: 
    - D3D12: Full support for multiple inline constants
-   - D3D11: Full support for multiple inline constants (each as separate dynamic buffer)
+   - D3D11: Full support for multiple inline constants (emulated with separate dynamic buffer)
    - Vulkan: One push constant block per pipeline + unlimited emulated inline buffers via dynamic uniform buffers
-5. **D3D11 specific**: Use `DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT` when constants unchanged between draws
 
 ---
 
