@@ -667,9 +667,9 @@ void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
     const bool IsPushConstant = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0;
     if (IsPushConstant)
     {
-        const InlineConstantBufferAttribsVk* pInlineCBs = m_pSignature->GetInlineConstantBuffers();
-        const Uint32 NumInlineCBs = m_pSignature->GetNumInlineConstantBuffers();
-        const ResourceCacheContentType CacheType = m_ResourceCache.GetContentType();
+        const InlineConstantBufferAttribsVk* pInlineCBs   = m_pSignature->GetInlineConstantBuffers();
+        const Uint32                         NumInlineCBs = m_pSignature->GetNumInlineConstantBuffers();
+        const ResourceCacheContentType       CacheType    = m_ResourceCache.GetContentType();
 
         if (CacheType == ResourceCacheContentType::Signature)
         {

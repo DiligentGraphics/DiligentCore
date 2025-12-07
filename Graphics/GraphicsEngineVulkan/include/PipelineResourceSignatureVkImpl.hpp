@@ -65,12 +65,12 @@ ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization
 /// 2. Emulated inline constants - use dynamic uniform buffers (similar to D3D11 backend)
 struct InlineConstantBufferAttribsVk
 {
-    Uint32                      ResIndex         = 0;     // Resource index in the signature (used for matching)
-    Uint32                      DescrSet         = 0;     // Descriptor set index (0 for push constants as placeholder)
-    Uint32                      BindingIndex     = 0;     // Binding index within the descriptor set
-    Uint32                      NumConstants     = 0;     // Number of 32-bit constants
-    bool                        IsPushConstant   = false; // True if this is a Vulkan push constant (not emulated)
-    RefCntAutoPtr<BufferVkImpl> pBuffer;                  // Internal dynamic uniform buffer (null for true push constants)
+    Uint32                      ResIndex       = 0;          // Resource index in the signature (used for matching)
+    Uint32                      DescrSet       = 0;          // Descriptor set index (0 for push constants as placeholder)
+    Uint32                      BindingIndex   = 0;          // Binding index within the descriptor set
+    Uint32                      NumConstants   = 0;          // Number of 32-bit constants
+    bool                        IsPushConstant = false;      // True if this is a Vulkan push constant (not emulated)
+    RefCntAutoPtr<BufferVkImpl> pBuffer;                     // Internal dynamic uniform buffer (null for true push constants)
     void*                       pPushConstantData = nullptr; // CPU-side staging buffer for push constants (only used when IsPushConstant is true)
 };
 

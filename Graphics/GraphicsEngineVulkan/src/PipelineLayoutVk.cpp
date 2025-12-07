@@ -59,10 +59,10 @@ void PipelineLayoutVk::Release(RenderDeviceVkImpl* pDeviceVk, Uint64 CommandQueu
     }
 }
 
-void PipelineLayoutVk::Create(RenderDeviceVkImpl*                             pDeviceVk,
-                              RefCntAutoPtr<PipelineResourceSignatureVkImpl>  ppSignatures[],
-                              Uint32                                          SignatureCount,
-                              const PushConstantInfoVk&                       PushConstant) noexcept(false)
+void PipelineLayoutVk::Create(RenderDeviceVkImpl*                            pDeviceVk,
+                              RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[],
+                              Uint32                                         SignatureCount,
+                              const PushConstantInfoVk&                      PushConstant) noexcept(false)
 {
     VERIFY(m_DescrSetCount == 0 && !m_VkPipelineLayout, "This pipeline layout is already initialized");
 

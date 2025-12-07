@@ -526,9 +526,9 @@ private:
     } m_State;
 
     // Push constants data storage (max size is typically 128-256 bytes, use 256 for safety)
-    static constexpr Uint32 MAX_PUSH_CONSTANTS_SIZE = 256;
-    std::array<Uint8, MAX_PUSH_CONSTANTS_SIZE> m_PushConstantsData = {};
-    Uint32 m_PushConstantsDataSize = 0; // Actual size of valid push constants data
+    static constexpr Uint32                    MAX_PUSH_CONSTANTS_SIZE = 256;
+    std::array<Uint8, MAX_PUSH_CONSTANTS_SIZE> m_PushConstantsData     = {};
+    Uint32                                     m_PushConstantsDataSize = 0; // Actual size of valid push constants data
 
     // Graphics/mesh, compute, ray tracing
     static constexpr Uint32 NUM_PIPELINE_BIND_POINTS = 3;

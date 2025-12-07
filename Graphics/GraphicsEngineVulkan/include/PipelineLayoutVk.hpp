@@ -54,10 +54,10 @@ public:
     PipelineLayoutVk();
     ~PipelineLayoutVk();
 
-    void Create(RenderDeviceVkImpl*                             pDeviceVk,
-                RefCntAutoPtr<PipelineResourceSignatureVkImpl>  ppSignatures[],
-                Uint32                                          SignatureCount,
-                const PushConstantInfoVk&                       PushConstant = {}) noexcept(false);
+    void Create(RenderDeviceVkImpl*                            pDeviceVk,
+                RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[],
+                Uint32                                         SignatureCount,
+                const PushConstantInfoVk&                      PushConstant = {}) noexcept(false);
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_VkPipelineLayout; }

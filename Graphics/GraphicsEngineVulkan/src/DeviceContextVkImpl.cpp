@@ -439,7 +439,7 @@ void DeviceContextVkImpl::UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo
         {
             // Each signature with inline constants must have a bound SRB with a valid resource cache
             DEV_CHECK_ERR(false, "Signature '", pSign->GetDesc().Name, "' has inline constants but no SRB is bound. "
-                                 "Did you call CommitShaderResources()?");
+                                                                       "Did you call CommitShaderResources()?");
             continue;
         }
 
@@ -506,7 +506,7 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
 
     // Filter out SRBs that only have push constants (no descriptor sets)
     // These SRBs are included in CommitSRBMask due to InlineConstantsSRBMask, but they don't need descriptor set binding
-    Uint32 FilteredCommitMask = CommitSRBMask;
+    Uint32 FilteredCommitMask      = CommitSRBMask;
     Uint32 ResourceSignaturesCount = m_pPipelineState->GetResourceSignatureCount();
     for (Uint32 sign = 0; sign < ResourceSignaturesCount; ++sign)
     {

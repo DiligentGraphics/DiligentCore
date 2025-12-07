@@ -353,7 +353,7 @@ private:
     // Each pointer points to memory within m_pInlineConstantMemory
     std::unique_ptr<void*[]> m_pPushConstantDataPtrs;
 
-    Uint16 m_NumSets               = 0;
+    Uint16 m_NumSets                = 0;
     Uint16 m_NumPushConstantBuffers = 0;
 
     // Total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache

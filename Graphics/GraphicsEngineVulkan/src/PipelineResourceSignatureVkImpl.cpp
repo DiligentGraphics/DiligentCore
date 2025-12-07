@@ -764,8 +764,8 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
             continue;
 
         // Use ResIndex to directly access the resource attributes
-        const PipelineResourceDesc& ResDesc = GetResourceDesc(InlineCBAttr.ResIndex);
-        const ResourceAttribs&      Attr    = GetResourceAttribs(InlineCBAttr.ResIndex);
+        const PipelineResourceDesc& ResDesc     = GetResourceDesc(InlineCBAttr.ResIndex);
+        const ResourceAttribs&      Attr        = GetResourceAttribs(InlineCBAttr.ResIndex);
         const Uint32                CacheOffset = Attr.CacheOffset(CacheType);
 
         // For static/mutable variables, bind to the allocated descriptor set
@@ -809,7 +809,7 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
 {
     // Handle STATIC push constants first - copy data from Signature's static cache to SRB's cache
     // Each SRB has its own copy of push constant data
-    const auto ResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    const auto ResIdxRange           = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     Uint32     PushConstantBufferIdx = 0;
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
@@ -1313,7 +1313,7 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
         const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
-        const Uint32 DataSize = InlineCBAttr.NumConstants * sizeof(Uint32);
+        const Uint32                         DataSize     = InlineCBAttr.NumConstants * sizeof(Uint32);
 
         if (InlineCBAttr.IsPushConstant)
         {
@@ -1349,17 +1349,17 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
 void PipelineResourceSignatureVkImpl::UpdatePushConstantFlags(Uint32 ResIndex)
 {
     VERIFY_EXPR(ResIndex < this->m_Desc.NumResources);
-    
+
     // Access the mutable resource description
     PipelineResourceDesc& ResDesc = const_cast<PipelineResourceDesc&>(this->m_Desc.Resources[ResIndex]);
-    
+
     // Check if the resource has INLINE_CONSTANTS flag but is missing VULKAN_PUSH_CONSTANT flag
     if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0 &&
         (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) == 0)
     {
         // Add the Vulkan push constant flag
         ResDesc.Flags |= PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT;
-        
+
         // Update the corresponding InlineConstantBufferAttribsVk to mark it as a push constant
         // Use ResIndex for matching
         for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
