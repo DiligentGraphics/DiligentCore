@@ -351,14 +351,20 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         // For inline constants, GetArraySize() returns 1 (actual array size for cache)
         CacheGroupOffsets[CacheGroup] += ResDesc.GetArraySize();
 
-        VkDescriptorSetLayoutBinding vkSetLayoutBinding{};
-        vkSetLayoutBinding.binding = pAttribs->BindingIndex;
-        // For inline constants, descriptor count is 1 (single uniform buffer)
-        vkSetLayoutBinding.descriptorCount    = ResDesc.GetArraySize();
-        vkSetLayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(ResDesc.ShaderStages);
-        vkSetLayoutBinding.pImmutableSamplers = pVkImmutableSamplers;
-        vkSetLayoutBinding.descriptorType     = DescriptorTypeToVkDescriptorType(pAttribs->GetDescriptorType());
-        vkSetLayoutBindings[SetId].push_back(vkSetLayoutBinding);
+        // Vulkan push constants don't use descriptor sets - they use vkCmdPushConstants
+        // So we skip creating descriptor set layout bindings for them
+        const bool IsPushConstant = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0;
+        if (!IsPushConstant)
+        {
+            VkDescriptorSetLayoutBinding vkSetLayoutBinding{};
+            vkSetLayoutBinding.binding = pAttribs->BindingIndex;
+            // For inline constants, descriptor count is 1 (single uniform buffer)
+            vkSetLayoutBinding.descriptorCount    = ResDesc.GetArraySize();
+            vkSetLayoutBinding.stageFlags         = ShaderTypesToVkShaderStageFlags(ResDesc.ShaderStages);
+            vkSetLayoutBinding.pImmutableSamplers = pVkImmutableSamplers;
+            vkSetLayoutBinding.descriptorType     = DescriptorTypeToVkDescriptorType(pAttribs->GetDescriptorType());
+            vkSetLayoutBindings[SetId].push_back(vkSetLayoutBinding);
+        }
 
         if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
@@ -369,7 +375,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             StaticCacheOffset += ResDesc.GetArraySize();
         }
 
-        // Handle inline constant buffers - create internal dynamic uniform buffers
+        // Handle inline constant buffers
         if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
         {
             VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
@@ -380,10 +386,15 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             InlineCBAttribs.BindingIndex                   = pAttribs->BindingIndex;
             InlineCBAttribs.NumConstants                   = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
 
-            // Create a USAGE_DYNAMIC uniform buffer for emulating inline constants
-            // All SRBs created from this signature will share the same inline constant buffer.
-            if (m_pDevice)
+            // Check if this is a true Vulkan push constant (uses vkCmdPushConstants)
+            // or an emulated inline constant (uses dynamic uniform buffer)
+            const bool IsPushConstant = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0;
+            InlineCBAttribs.IsPushConstant = IsPushConstant;
+
+            if (!IsPushConstant && m_pDevice)
             {
+                // Create a USAGE_DYNAMIC uniform buffer for emulating inline constants
+                // All SRBs created from this signature will share the same inline constant buffer.
                 std::string Name = m_Desc.Name;
                 Name += " - ";
                 Name += ResDesc.Name;
@@ -399,6 +410,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
                 VERIFY_EXPR(pBuffer);
                 InlineCBAttribs.pBuffer = RefCntAutoPtr<BufferVkImpl>{pBuffer, IID_BufferVk};
             }
+            // For true push constants, pBuffer remains null - data is submitted via vkCmdPushConstants
         }
     }
     VERIFY_EXPR(InlineConstantBufferIdx == m_NumInlineConstantBuffers);
@@ -1242,21 +1254,61 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
     {
         const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
 
-        if (!InlineCBAttr.pBuffer)
-            continue;
-
         // Get the inline constant data from the resource cache
         const void* pInlineConstantData = ResourceCache.GetInlineConstantData(InlineCBAttr.DescrSet, InlineCBAttr.BindingIndex);
         if (pInlineConstantData == nullptr)
             continue;
 
-        // Map the buffer and copy the data
-        void* pMappedData = nullptr;
-        Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
-        if (pMappedData != nullptr)
+        const Uint32 DataSize = InlineCBAttr.NumConstants * sizeof(Uint32);
+
+        if (InlineCBAttr.IsPushConstant)
         {
-            memcpy(pMappedData, pInlineConstantData, InlineCBAttr.NumConstants * sizeof(Uint32));
-            Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
+            // For true push constants, copy data to the device context's push constants buffer
+            // This will be submitted via vkCmdPushConstants before draw/dispatch
+            Ctx.SetPushConstants(pInlineConstantData, 0, DataSize);
+        }
+        else if (InlineCBAttr.pBuffer)
+        {
+            // For emulated inline constants, map the buffer and copy the data
+            void* pMappedData = nullptr;
+            Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+            if (pMappedData != nullptr)
+            {
+                memcpy(pMappedData, pInlineConstantData, DataSize);
+                Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
+            }
+        }
+    }
+}
+
+void PipelineResourceSignatureVkImpl::UpdatePushConstantFlags(Uint32 ResIndex)
+{
+    VERIFY_EXPR(ResIndex < this->m_Desc.NumResources);
+    
+    // Access the mutable resource description
+    PipelineResourceDesc& ResDesc = const_cast<PipelineResourceDesc&>(this->m_Desc.Resources[ResIndex]);
+    
+    // Check if the resource has INLINE_CONSTANTS flag but is missing VULKAN_PUSH_CONSTANT flag
+    if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0 &&
+        (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) == 0)
+    {
+        // Add the Vulkan push constant flag
+        ResDesc.Flags |= PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT;
+        
+        // Update the corresponding InlineConstantBufferAttribsVk to mark it as a push constant
+        // We need to find the inline constant buffer attribute that corresponds to this resource
+        const ResourceAttribs& Attr = GetResourceAttribs(ResIndex);
+        for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
+        {
+            InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
+            if (InlineCBAttr.DescrSet == Attr.DescrSet && InlineCBAttr.BindingIndex == Attr.BindingIndex)
+            {
+                // Mark this as a true push constant
+                InlineCBAttr.IsPushConstant = true;
+                // Note: pBuffer may have been created during CreateSetLayouts, but that's OK -
+                // UpdateInlineConstantBuffers will check IsPushConstant first and use vkCmdPushConstants
+                break;
+            }
         }
     }
 }

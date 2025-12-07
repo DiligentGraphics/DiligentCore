@@ -113,10 +113,10 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
 
         if ((Res.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
         {
-            if (Res.Flags != PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+            if ((Res.Flags & (PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS | PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT)) != Res.Flags)
             {
                 LOG_PRS_ERROR_AND_THROW("Incorrect Desc.Resources[", i, "].Flags (", GetPipelineResourceFlagsString(Res.Flags),
-                                        "). INLINE_CONSTANTS flag cannot be combined with other flags.");
+                                        "). INLINE_CONSTANTS and VULKAN_PUSH_CONSTANT flags cannot be combined with other flags.");
             }
 
             if (Res.ArraySize > 64)

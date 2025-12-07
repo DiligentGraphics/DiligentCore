@@ -40,6 +40,13 @@ namespace Diligent
 class RenderDeviceVkImpl;
 class PipelineResourceSignatureVkImpl;
 
+/// Push constant information extracted from shaders
+struct PushConstantInfoVk
+{
+    VkShaderStageFlags StageFlags = 0;
+    Uint32             Size       = 0;
+};
+
 /// Implementation of the Diligent::PipelineLayoutVk class
 class PipelineLayoutVk
 {
@@ -47,7 +54,10 @@ public:
     PipelineLayoutVk();
     ~PipelineLayoutVk();
 
-    void Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[], Uint32 SignatureCount) noexcept(false);
+    void Create(RenderDeviceVkImpl*                             pDeviceVk,
+                RefCntAutoPtr<PipelineResourceSignatureVkImpl>  ppSignatures[],
+                Uint32                                          SignatureCount,
+                const PushConstantInfoVk&                       PushConstant = {}) noexcept(false);
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_VkPipelineLayout; }
@@ -59,6 +69,15 @@ public:
         return m_FirstDescrSetIndex[Index];
     }
 
+    // Returns true if this pipeline layout has push constants
+    bool HasPushConstants() const { return m_PushConstantSize > 0; }
+
+    // Returns the size of push constants in bytes
+    Uint32 GetPushConstantSize() const { return m_PushConstantSize; }
+
+    // Returns the shader stage flags for push constants
+    VkShaderStageFlags GetPushConstantStageFlags() const { return m_PushConstantStageFlags; }
+
 private:
     VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
 
@@ -69,6 +88,12 @@ private:
     // The total number of descriptor sets used by this pipeline layout
     // (Maximum is MAX_RESOURCE_SIGNATURES * 2)
     Uint8 m_DescrSetCount = 0;
+
+    // Push constant size in bytes
+    Uint32 m_PushConstantSize = 0;
+
+    // Shader stages that use push constants
+    VkShaderStageFlags m_PushConstantStageFlags = 0;
 
 #ifdef DILIGENT_DEBUG
     Uint32 m_DbgMaxBindIndex = 0;

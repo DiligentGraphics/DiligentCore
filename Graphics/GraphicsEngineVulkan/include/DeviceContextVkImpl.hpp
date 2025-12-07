@@ -321,6 +321,9 @@ public:
     /// Implementation of IDeviceContextVk::GetVkCommandBuffer().
     virtual VkCommandBuffer DILIGENT_CALL_TYPE GetVkCommandBuffer() override final;
 
+    /// Implementation of IDeviceContextVk::SetPushConstants().
+    virtual void DILIGENT_CALL_TYPE SetPushConstants(const void* pData, Uint32 Offset, Uint32 Size) override final;
+
     // Transitions BLAS state from OldState to NewState, and optionally updates internal state.
     // If OldState == RESOURCE_STATE_UNKNOWN, internal BLAS state is used as old state.
     void TransitionBLASState(BottomLevelASVkImpl& BLAS,
@@ -514,10 +517,18 @@ private:
         /// Current graphics PSO uses no depth/render targets.
         bool NullRenderTargets = false;
 
+        /// Flag indicating if push constants have been updated since last draw/dispatch
+        bool PushConstantsDirty = false;
+
         Uint32 NumCommands = 0;
 
         VkPipelineBindPoint vkPipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
     } m_State;
+
+    // Push constants data storage (max size is typically 128-256 bytes, use 256 for safety)
+    static constexpr Uint32 MAX_PUSH_CONSTANTS_SIZE = 256;
+    std::array<Uint8, MAX_PUSH_CONSTANTS_SIZE> m_PushConstantsData = {};
+    Uint32 m_PushConstantsDataSize = 0; // Actual size of valid push constants data
 
     // Graphics/mesh, compute, ray tracing
     static constexpr Uint32 NUM_PIPELINE_BIND_POINTS = 3;
@@ -557,6 +568,9 @@ private:
     __forceinline void CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask);
 
     void UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo);
+
+    // Commits push constants to the command buffer if they are dirty
+    void CommitPushConstants();
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources(ResourceBindInfo& BindInfo);

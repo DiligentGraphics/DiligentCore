@@ -59,7 +59,10 @@ void PipelineLayoutVk::Release(RenderDeviceVkImpl* pDeviceVk, Uint64 CommandQueu
     }
 }
 
-void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[], Uint32 SignatureCount) noexcept(false)
+void PipelineLayoutVk::Create(RenderDeviceVkImpl*                             pDeviceVk,
+                              RefCntAutoPtr<PipelineResourceSignatureVkImpl>  ppSignatures[],
+                              Uint32                                          SignatureCount,
+                              const PushConstantInfoVk&                       PushConstant) noexcept(false)
 {
     VERIFY(m_DescrSetCount == 0 && !m_VkPipelineLayout, "This pipeline layout is already initialized");
 
@@ -114,19 +117,48 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<Pipel
                             ") used by the pipeline layout exceeds device limit (", Limits.maxDescriptorSetStorageBuffersDynamic, ")");
     }
 
+    // Validate push constant size against device limits
+    if (PushConstant.Size > 0)
+    {
+        if (PushConstant.Size > Limits.maxPushConstantsSize)
+        {
+            LOG_ERROR_AND_THROW("Push constant size (", PushConstant.Size,
+                                " bytes) exceeds device limit (", Limits.maxPushConstantsSize, " bytes)");
+        }
+    }
+
     VERIFY(m_DescrSetCount <= std::numeric_limits<decltype(m_DescrSetCount)>::max(),
            "Descriptor set count (", DescSetLayoutCount, ") exceeds the maximum representable value");
 
     VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
 
-    PipelineLayoutCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    PipelineLayoutCI.pNext                  = nullptr;
-    PipelineLayoutCI.flags                  = 0; // reserved for future use
-    PipelineLayoutCI.setLayoutCount         = DescSetLayoutCount;
-    PipelineLayoutCI.pSetLayouts            = DescSetLayoutCount ? DescSetLayouts.data() : nullptr;
-    PipelineLayoutCI.pushConstantRangeCount = 0;
-    PipelineLayoutCI.pPushConstantRanges    = nullptr;
-    m_VkPipelineLayout                      = pDeviceVk->GetLogicalDevice().CreatePipelineLayout(PipelineLayoutCI);
+    PipelineLayoutCI.sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    PipelineLayoutCI.pNext          = nullptr;
+    PipelineLayoutCI.flags          = 0; // reserved for future use
+    PipelineLayoutCI.setLayoutCount = DescSetLayoutCount;
+    PipelineLayoutCI.pSetLayouts    = DescSetLayoutCount ? DescSetLayouts.data() : nullptr;
+
+    // Set up push constant range if present
+    VkPushConstantRange PushConstantRange = {};
+    if (PushConstant.Size > 0 && PushConstant.StageFlags != 0)
+    {
+        PushConstantRange.stageFlags = PushConstant.StageFlags;
+        PushConstantRange.offset     = 0;
+        PushConstantRange.size       = PushConstant.Size;
+
+        PipelineLayoutCI.pushConstantRangeCount = 1;
+        PipelineLayoutCI.pPushConstantRanges    = &PushConstantRange;
+
+        m_PushConstantSize       = PushConstant.Size;
+        m_PushConstantStageFlags = PushConstant.StageFlags;
+    }
+    else
+    {
+        PipelineLayoutCI.pushConstantRangeCount = 0;
+        PipelineLayoutCI.pPushConstantRanges    = nullptr;
+    }
+
+    m_VkPipelineLayout = pDeviceVk->GetLogicalDevice().CreatePipelineLayout(PipelineLayoutCI);
 
     m_DescrSetCount = static_cast<Uint8>(DescSetLayoutCount);
 }

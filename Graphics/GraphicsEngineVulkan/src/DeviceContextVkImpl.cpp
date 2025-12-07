@@ -390,6 +390,16 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
     // Reserve space to store all dynamic buffer offsets
     m_DynamicBufferOffsets.resize(TotalDynamicOffsetCount);
+
+    // Mark push constants as dirty when PSO changes, since the new PSO might have
+    // a different pipeline layout. If the new PSO has push constants, they need to
+    // be re-committed even if the data hasn't changed.
+    if (Layout.HasPushConstants())
+    {
+        m_State.PushConstantsDirty = true;
+        // Ensure we have initialized push constants data for the new PSO
+        // (user should call SetPushConstants before draw/dispatch)
+    }
 }
 
 DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE_TYPE Type)
@@ -431,6 +441,54 @@ void DeviceContextVkImpl::UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo
         // Update inline constant buffers
         pSign->UpdateInlineConstantBuffers(*pResourceCache, *this);
     }
+}
+
+void DeviceContextVkImpl::SetPushConstants(const void* pData, Uint32 Offset, Uint32 Size)
+{
+    DEV_CHECK_ERR(pData != nullptr || Size == 0, "pData must not be null when Size is non-zero");
+    DEV_CHECK_ERR(Offset + Size <= MAX_PUSH_CONSTANTS_SIZE,
+                  "Push constant data range [", Offset, ", ", Offset + Size, ") exceeds the maximum supported size (", MAX_PUSH_CONSTANTS_SIZE, ")");
+
+    // Note: This function may be called from UpdateInlineConstantBuffers during draw preparation,
+    // at which point the pipeline state is guaranteed to be bound. When called from user code,
+    // we validate that the pipeline has push constants.
+    if (m_pPipelineState != nullptr)
+    {
+        const PipelineLayoutVk& Layout = m_pPipelineState->GetPipelineLayout();
+        if (Layout.HasPushConstants())
+        {
+            DEV_CHECK_ERR(Offset + Size <= Layout.GetPushConstantSize(),
+                          "Push constant data range [", Offset, ", ", Offset + Size, ") exceeds the push constant block size (", Layout.GetPushConstantSize(), ")");
+        }
+    }
+
+    if (Size > 0)
+    {
+        memcpy(m_PushConstantsData.data() + Offset, pData, Size);
+        m_PushConstantsDataSize = std::max(m_PushConstantsDataSize, Offset + Size);
+        m_State.PushConstantsDirty = true;
+    }
+}
+
+void DeviceContextVkImpl::CommitPushConstants()
+{
+    if (!m_State.PushConstantsDirty)
+        return;
+
+    VERIFY_EXPR(m_pPipelineState != nullptr);
+    const PipelineLayoutVk& Layout = m_pPipelineState->GetPipelineLayout();
+
+    if (!Layout.HasPushConstants())
+        return;
+
+    const Uint32             Size       = Layout.GetPushConstantSize();
+    const VkShaderStageFlags StageFlags = Layout.GetPushConstantStageFlags();
+    const VkPipelineLayout   vkLayout   = Layout.GetVkPipelineLayout();
+
+    VERIFY_EXPR(Size <= m_PushConstantsData.size());
+
+    m_CommandBuffer.PushConstants(vkLayout, StageFlags, 0, Size, m_PushConstantsData.data());
+    m_State.PushConstantsDirty = false;
 }
 
 void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask)
@@ -791,6 +849,10 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     {
         CommitDescriptorSets(BindInfo, CommitMask);
     }
+
+    // Commit push constants if dirty
+    CommitPushConstants();
+
 #ifdef DILIGENT_DEVELOPMENT
     // Must be called after CommitDescriptorSets as it needs SetInfo.BaseInd
     DvpValidateCommittedShaderResources(BindInfo);
@@ -1094,6 +1156,9 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
         CommitDescriptorSets(BindInfo, CommitMask);
     }
 
+    // Commit push constants if dirty
+    CommitPushConstants();
+
 #ifdef DILIGENT_DEVELOPMENT
     // Must be called after CommitDescriptorSets as it needs SetInfo.BaseInd
     DvpValidateCommittedShaderResources(BindInfo);
@@ -1113,6 +1178,9 @@ void DeviceContextVkImpl::PrepareForRayTracing()
     {
         CommitDescriptorSets(BindInfo, CommitMask);
     }
+
+    // Commit push constants if dirty
+    CommitPushConstants();
 
 #ifdef DILIGENT_DEVELOPMENT
     // Must be called after CommitDescriptorSets as it needs SetInfo.BaseInd

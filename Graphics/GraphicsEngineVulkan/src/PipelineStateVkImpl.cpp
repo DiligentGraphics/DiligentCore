@@ -605,6 +605,10 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
             ShaderResources.ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& Attribs, Uint32) //
                 {
+                    // Note: Push constants are now included in the signature with
+                    // PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT flag set.
+                    // They will be handled via vkCmdPushConstants at runtime.
+
                     // We can't skip immutable samplers because immutable sampler arrays have to be defined
                     // as both resource and sampler.
                     //if (Res.Type == SPIRVShaderResourceAttribs::SeparateSampler &&
@@ -711,6 +715,10 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
             pShaderResources->ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& SPIRVAttribs, Uint32) //
                 {
+                    // Push constants don't use descriptor sets and don't need binding/set remapping.
+                    // They are handled via vkCmdPushConstants. We still verify they exist in the signature.
+                    const bool IsPushConstant = (SPIRVAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::PushConstant);
+
                     const ResourceAttribution ResAttribution = GetResourceAttribution(SPIRVAttribs.Name, ShaderType, pSignatures, SignatureCount);
                     if (!ResAttribution)
                     {
@@ -722,6 +730,32 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                     const PipelineResourceSignatureDesc& SignDesc = ResAttribution.pSignature->GetDesc();
                     const SHADER_RESOURCE_TYPE           ResType  = SPIRVShaderResourceAttribs::GetShaderResourceType(SPIRVAttribs.Type);
                     const PIPELINE_RESOURCE_FLAGS        Flags    = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(SPIRVAttribs.Type);
+
+                    // For push constants, skip descriptor set operations but validate the resource exists
+                    if (IsPushConstant)
+                    {
+                        if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
+                        {
+                            const PipelineResourceDesc& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                            
+                            // Automatically add PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT flag if the resource
+                            // has PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS but is missing the Vulkan push constant flag.
+                            // This ensures that true push constants use vkCmdPushConstants instead of dynamic uniform buffers.
+                            // We got an unused uniform buffer and an unused descriptor set after this, it's okay though.
+                            PipelineResourceSignatureVkImpl* pSignatureVk = const_cast<PipelineResourceSignatureVkImpl*>(ResAttribution.pSignature);
+                            pSignatureVk->UpdatePushConstantFlags(ResAttribution.ResourceIndex);
+                            
+                            // Get the updated resource description after adding the flag
+                            const PipelineResourceDesc& UpdatedResDesc = pSignatureVk->GetResourceDesc(ResAttribution.ResourceIndex);
+                            ValidatePipelineResourceCompatibility(UpdatedResDesc, ResType, Flags, SPIRVAttribs.ArraySize,
+                                                                  pShader->GetDesc().Name, SignDesc.Name);
+                        }
+                        if (pDvpResourceAttibutions)
+                            pDvpResourceAttibutions->emplace_back(ResAttribution);
+
+                        // Skip descriptor set remapping for push constants
+                        return;
+                    }
 
                     Uint32 ResourceBinding = ~0u;
                     Uint32 DescriptorSet   = ~0u;
@@ -805,6 +839,38 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
     }
 }
 
+void PipelineStateVkImpl::InitPushConstantInfo(const TShaderStages& ShaderStages, PushConstantInfoVk& PushConstant) noexcept(false)
+{
+    for (const ShaderStageInfo& Stage : ShaderStages)
+    {
+        for (const ShaderVkImpl* pShader : Stage.Shaders)
+        {
+            const auto& pShaderResources = pShader->GetShaderResources();
+            if (pShaderResources && pShaderResources->GetNumPushConstants() > 0)
+            {
+                // There should be at most one push constant block per shader
+                const SPIRVShaderResourceAttribs& PCAttribs = pShaderResources->GetPushConstant(0);
+                const Uint32                      PCSize    = PCAttribs.BufferStaticSize;
+
+                if (PushConstant.Size == 0)
+                {
+                    // First shader with push constants - record the size
+                    PushConstant.Size = PCSize;
+                }
+                else if (PushConstant.Size != PCSize)
+                {
+                    // Multiple shaders with different push constant sizes
+                    // This is allowed in Vulkan - take the maximum size
+                    PushConstant.Size = std::max(PushConstant.Size, PCSize);
+                }
+
+                // Add this shader stage to the stage flags
+                PushConstant.StageFlags |= ShaderTypeToVkShaderStageFlagBit(Stage.Type);
+            }
+        }
+    }
+}
+
 void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages) noexcept(false)
 {
     const PSO_CREATE_INTERNAL_FLAGS InternalFlags = GetInternalCreateFlags(CreateInfo);
@@ -819,7 +885,12 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
     DvpValidateResourceLimits();
 #endif
 
-    m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount);
+    // Extract push constant information from shaders
+    // Vulkan allows only one push constant block per pipeline, but it can be accessed from multiple shader stages
+    PushConstantInfoVk PushConstant;
+    InitPushConstantInfo(ShaderStages, PushConstant);
+
+    m_PipelineLayout.Create(GetDevice(), m_Signatures, m_SignatureCount, PushConstant);
 
     const bool RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
     const bool VerifyBindings = !RemapResources && ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0);
@@ -967,14 +1038,22 @@ void PipelineStateVkImpl::DvpVerifySRBResources(const DeviceContextVkImpl* pCtx,
         pResources->ProcessResources(
             [&](const SPIRVShaderResourceAttribs& ResAttribs, Uint32) //
             {
+                // Push constants are validated but don't use descriptor sets
+                const bool IsPushConstant = (ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::PushConstant);
+
                 if (!res_info->IsImmutableSampler()) // There are also immutable samplers in the list
                 {
                     VERIFY_EXPR(res_info->pSignature != nullptr);
                     VERIFY_EXPR(res_info->pSignature->GetDesc().BindingIndex == res_info->SignatureIndex);
-                    const ShaderResourceCacheVk* pResourceCache = ResourceCaches[res_info->SignatureIndex];
-                    DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", res_info->SignatureIndex, " is null.");
-                    res_info->pSignature->DvpValidateCommittedResource(pCtx, ResAttribs, res_info->ResourceIndex, *pResourceCache,
-                                                                       pResources->GetShaderName(), m_Desc.Name);
+
+                    // Skip descriptor set validation for push constants (they don't use descriptor sets)
+                    if (!IsPushConstant)
+                    {
+                        const ShaderResourceCacheVk* pResourceCache = ResourceCaches[res_info->SignatureIndex];
+                        DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", res_info->SignatureIndex, " is null.");
+                        res_info->pSignature->DvpValidateCommittedResource(pCtx, ResAttribs, res_info->ResourceIndex, *pResourceCache,
+                                                                           pResources->GetShaderName(), m_Desc.Name);
+                    }
                 }
                 ++res_info;
             } //

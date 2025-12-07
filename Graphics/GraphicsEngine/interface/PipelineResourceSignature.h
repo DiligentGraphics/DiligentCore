@@ -148,7 +148,19 @@ DILIGENT_TYPED_ENUM(PIPELINE_RESOURCE_FLAGS, Uint8)
     /// \note This flag is only valid in Vulkan.
     PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT = 1u << 5,
 
-    PIPELINE_RESOURCE_FLAG_LAST = PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT
+    /// Internal flag indicating that this inline constant is a Vulkan push constant
+    /// (declared with push_constant storage class in SPIR-V).
+    /// This flag is automatically set by the engine during shader reflection and should not
+    /// be set manually by the application.
+    ///
+    /// When this flag is set along with PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, the engine
+    /// will use vkCmdPushConstants instead of a dynamic uniform buffer to update the constants.
+    ///
+    /// \note This flag is only valid in Vulkan and is always combined with
+    ///       PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS.
+    PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT = 1u << 6,
+
+    PIPELINE_RESOURCE_FLAG_LAST = PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT
 };
 DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_RESOURCE_FLAGS);
 

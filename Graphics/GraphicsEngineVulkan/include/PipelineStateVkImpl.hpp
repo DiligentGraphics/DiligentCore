@@ -133,6 +133,8 @@ private:
     void InitializePipeline(const ComputePipelineStateCreateInfo& CreateInfo);
     void InitializePipeline(const RayTracingPipelineStateCreateInfo& CreateInfo);
 
+    void InitPushConstantInfo(const TShaderStages& ShaderStages, PushConstantInfoVk& PushConstant) noexcept(false);
+
     // TPipelineStateBase::Construct needs access to InitializePipeline
     friend TPipelineStateBase;
 

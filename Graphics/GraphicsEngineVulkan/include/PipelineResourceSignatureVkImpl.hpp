@@ -60,14 +60,16 @@ struct ImmutableSamplerAttribsVk
 ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization and must be tightly packed");
 
 /// Inline constant buffer attributes for Vulkan backend.
-/// Since Vulkan only supports one push constant block per pipeline, inline constants
-/// are emulated using dynamic uniform buffers (similar to D3D11 backend).
+/// Inline constants can be either:
+/// 1. True push constants (from SPIR-V push_constant storage class) - use vkCmdPushConstants
+/// 2. Emulated inline constants - use dynamic uniform buffers (similar to D3D11 backend)
 struct InlineConstantBufferAttribsVk
 {
-    Uint32                      DescrSet     = 0; // Descriptor set index
-    Uint32                      BindingIndex = 0; // Binding index within the descriptor set
-    Uint32                      NumConstants = 0; // Number of 32-bit constants
-    RefCntAutoPtr<BufferVkImpl> pBuffer;          // Internal dynamic uniform buffer
+    Uint32                      DescrSet         = 0;     // Descriptor set index
+    Uint32                      BindingIndex     = 0;     // Binding index within the descriptor set
+    Uint32                      NumConstants     = 0;     // Number of 32-bit constants
+    bool                        IsPushConstant = false; // True if this is a Vulkan push constant (not emulated)
+    RefCntAutoPtr<BufferVkImpl> pBuffer;                  // Internal dynamic uniform buffer (null for true push constants)
 };
 
 struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData<PipelineResourceAttribsVk, ImmutableSamplerAttribsVk>
@@ -155,6 +157,11 @@ public:
 
     // Returns the inline constant buffer attributes
     const InlineConstantBufferAttribsVk* GetInlineConstantBuffers() const { return m_InlineConstantBuffers.get(); }
+
+    // Adds PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT flag to a resource if it has
+    // PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS but is missing the Vulkan push constant flag.
+    // This is called during pipeline state creation when shader reflection detects a push constant.
+    void UpdatePushConstantFlags(Uint32 ResIndex);
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the SPIRV resource attributes from the PSO.
