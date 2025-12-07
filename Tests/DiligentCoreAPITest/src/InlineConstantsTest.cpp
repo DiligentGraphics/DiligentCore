@@ -129,7 +129,7 @@ protected:
         GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
         IRenderDevice*         pDevice = pEnv->GetDevice();
 
-        if (!pDevice->GetDeviceInfo().IsD3DDevice())
+        if (!pDevice->GetDeviceInfo().IsD3DDevice() && !pDevice->GetDeviceInfo().IsVulkanDevice())
         {
             GTEST_SKIP();
         }
@@ -744,7 +744,7 @@ TEST_F(InlineConstants, RenderStateCache)
 
             bool PresentInCache = pData != nullptr;
 #if !DILIGENT_DEBUG
-            if (pDevice->GetDeviceInfo().IsD3DDevice())
+            if (pDevice->GetDeviceInfo().IsD3DDevice() || pDevice->GetDeviceInfo().IsVulkanDevice())
             {
                 // For some reason, hash computation consistency depends on D3DCOMPILE_DEBUG flag and differs between debug and release builds
                 PresentInCache = true;
