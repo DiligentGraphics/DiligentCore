@@ -206,7 +206,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
 
         // Vulkan push constants don't use descriptor sets - they use vkCmdPushConstants directly.
         // So we don't count them as bindings for descriptor set layout creation.
-        // They also don't need cache space since their data is stored in InlineCBAttr.pPushConstantData.
+        // They also don't need descriptor set cache space since their data is stored in
+        // the resource cache via SetPushConstantDataPtr().
         const bool IsPushConstant = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0;
         if (!IsPushConstant)
         {
@@ -412,31 +413,9 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             InlineCBAttribs.DescrSet                       = pAttribs->DescrSet;
             InlineCBAttribs.BindingIndex                   = pAttribs->BindingIndex;
             InlineCBAttribs.NumConstants                   = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
-
-            InlineCBAttribs.IsPushConstant = IsPushConstant;
-
-            if (!IsPushConstant && m_pDevice)
-            {
-                // Create a USAGE_DYNAMIC uniform buffer for emulating inline constants.
-                // All SRBs created from this signature will share the same inline constant buffer.
-                // Note: DvpValidateCommittedResource skips dynamic allocation verification for
-                // inline constant buffers to avoid Dynamic Buffer ID reuse validation issues.
-                std::string Name = m_Desc.Name;
-                Name += " - ";
-                Name += ResDesc.Name;
-                BufferDesc CBDesc;
-                CBDesc.Name           = Name.c_str();
-                CBDesc.Size           = ResDesc.ArraySize * sizeof(Uint32);
-                CBDesc.Usage          = USAGE_DYNAMIC;
-                CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
-                CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-                RefCntAutoPtr<IBuffer> pBuffer;
-                m_pDevice->CreateBuffer(CBDesc, nullptr, &pBuffer);
-                VERIFY_EXPR(pBuffer);
-                InlineCBAttribs.pBuffer = RefCntAutoPtr<BufferVkImpl>{pBuffer, IID_BufferVk};
-            }
-            // For true push constants, pBuffer remains null - data is submitted via vkCmdPushConstants
+            InlineCBAttribs.IsPushConstant                 = IsPushConstant;
+            // Note: Per-SRB buffers are created in InitSRBResourceCache() to avoid conflicts
+            // between multiple PipelineStates sharing the same PipelineResourceSignature
         }
     }
     VERIFY_EXPR(InlineConstantBufferIdx == m_NumInlineConstantBuffers);
@@ -577,10 +556,12 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
 
     // Initialize inline constant buffers in the static resource cache
     // This must be done after the resources are initialized above
-    if (m_NumInlineConstantBuffers > 0)
+    if (m_NumInlineConstantBuffers > 0 && m_pStaticResCache != nullptr)
     {
         // First pass: calculate total memory size needed for all static inline constants
+        // and count static push constant buffers
         Uint32 TotalStaticInlineConstantSize = 0;
+        Uint32 NumStaticPushConstantBuffers  = 0;
         for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
         {
             const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
@@ -589,20 +570,33 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
                 TotalStaticInlineConstantSize += InlineCBAttr.NumConstants * sizeof(Uint32);
+                if (InlineCBAttr.IsPushConstant)
+                    ++NumStaticPushConstantBuffers;
             }
         }
 
-        // Allocate single memory block for all static inline constants
+        // Initialize push constant data pointers array in the static resource cache
+        if (NumStaticPushConstantBuffers > 0)
+        {
+            m_pStaticResCache->InitializePushConstantDataPtrs(NumStaticPushConstantBuffers);
+        }
+
+        // Allocate memory for all static inline constants in the static resource cache
         if (TotalStaticInlineConstantSize > 0)
         {
-            m_pStaticInlineConstantData = GetRawAllocator().Allocate(TotalStaticInlineConstantSize, "Static inline constant data", __FILE__, __LINE__);
-            memset(m_pStaticInlineConstantData, 0, TotalStaticInlineConstantSize);
+            IMemoryAllocator& Allocator          = GetRawAllocator();
+            void*             pInlineConstMemory = Allocator.Allocate(TotalStaticInlineConstantSize, "Static inline constant data", __FILE__, __LINE__);
+            memset(pInlineConstMemory, 0, TotalStaticInlineConstantSize);
+
+            // Pass ownership of the memory to the static resource cache for proper cleanup
+            m_pStaticResCache->SetInlineConstantMemory(Allocator, pInlineConstMemory);
 
             // Second pass: assign memory to each static inline constant
-            Uint8* pCurrentDataPtr = static_cast<Uint8*>(m_pStaticInlineConstantData);
+            Uint8* pCurrentDataPtr       = static_cast<Uint8*>(pInlineConstMemory);
+            Uint32 StaticPushConstantIdx = 0;
             for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
             {
-                InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
+                const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
 
                 const PipelineResourceDesc& ResDesc = GetResourceDesc(InlineCBAttr.ResIndex);
                 const ResourceAttribs&      Attr    = GetResourceAttribs(InlineCBAttr.ResIndex);
@@ -613,10 +607,10 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
 
                     if (InlineCBAttr.IsPushConstant)
                     {
-                        // For push constants, store the data pointer directly
-                        InlineCBAttr.pPushConstantData = pCurrentDataPtr;
+                        // For push constants, store the data pointer in the static resource cache
+                        m_pStaticResCache->SetPushConstantDataPtr(StaticPushConstantIdx++, pCurrentDataPtr);
                     }
-                    else if (m_pStaticResCache != nullptr)
+                    else
                     {
                         // For emulated inline constants, initialize in the static resource cache
                         const Uint32 CacheOffset = Attr.StaticCacheOffset;
@@ -642,12 +636,8 @@ void PipelineResourceSignatureVkImpl::Destruct()
             GetDevice()->SafeReleaseDeviceObject(std::move(Layout), ~0ull);
     }
 
-    // Free static inline constant data allocated in CreateSetLayouts
-    if (m_pStaticInlineConstantData != nullptr)
-    {
-        GetRawAllocator().Free(m_pStaticInlineConstantData);
-        m_pStaticInlineConstantData = nullptr;
-    }
+    // Note: Static inline constant data is now managed by m_pStaticResCache
+    // and will be freed when the cache is destroyed
 
     TPipelineResourceSignatureBase::Destruct();
 }
@@ -683,28 +673,38 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
 
     // Initialize inline constant buffers - allocate staging memory and set up data pointers
     // For push constants, each SRB gets its own copy of the data (stored in ShaderResourceCacheVk)
-    // For emulated inline constants, data is stored in the descriptor set resources
+    // For emulated inline constants, each SRB gets its own buffer to avoid conflicts between
+    // multiple PipelineStates sharing the same PipelineResourceSignature
     if (m_NumInlineConstantBuffers > 0)
     {
         // Ensure the cache reports inline constants so DeviceContextVkImpl
         // updates emulated buffers even if no data has been written yet.
         ResourceCache.MarkHasInlineConstants();
 
-        // Count push constant buffers and calculate total memory size
-        Uint32 NumPushConstantBuffers  = 0;
-        Uint32 TotalInlineConstantSize = 0;
+        // Count push constant buffers, emulated inline constant buffers, and calculate total memory size
+        Uint32 NumPushConstantBuffers       = 0;
+        Uint32 NumEmulatedInlineConstantCBs = 0;
+        Uint32 TotalInlineConstantSize      = 0;
         for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
         {
             const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
             TotalInlineConstantSize += InlineCBAttr.NumConstants * sizeof(Uint32);
             if (InlineCBAttr.IsPushConstant)
                 ++NumPushConstantBuffers;
+            else
+                ++NumEmulatedInlineConstantCBs;
         }
 
         // Initialize push constant data pointers array in the resource cache
         if (NumPushConstantBuffers > 0)
         {
             ResourceCache.InitializePushConstantDataPtrs(NumPushConstantBuffers);
+        }
+
+        // Initialize inline constant buffers array in the resource cache
+        if (NumEmulatedInlineConstantCBs > 0)
+        {
+            ResourceCache.InitializeInlineConstantBuffers(NumEmulatedInlineConstantCBs);
         }
 
         // Allocate memory for all inline constants
@@ -718,9 +718,10 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
             ResourceCache.SetInlineConstantMemory(CacheMemAllocator, pInlineConstantMemory);
         }
 
-        // Assign memory to each inline constant buffer
-        Uint8* pCurrentDataPtr       = static_cast<Uint8*>(pInlineConstantMemory);
-        Uint32 PushConstantBufferIdx = 0;
+        // Assign memory to each inline constant buffer and create per-SRB buffers
+        Uint8* pCurrentDataPtr           = static_cast<Uint8*>(pInlineConstantMemory);
+        Uint32 PushConstantBufferIdx     = 0;
+        Uint32 EmulatedInlineConstantIdx = 0;
         for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
         {
             const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
@@ -735,10 +736,35 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
             }
             else
             {
-                // For emulated inline constants, use the descriptor set resources
-                const ResourceAttribs& Attr = GetResourceAttribs(InlineCBAttr.ResIndex);
+                // For emulated inline constants, create a per-SRB buffer
+                const PipelineResourceDesc& ResDesc = GetResourceDesc(InlineCBAttr.ResIndex);
+                const ResourceAttribs&      Attr    = GetResourceAttribs(InlineCBAttr.ResIndex);
+
+                // Initialize the inline constant data in the resource cache
                 ResourceCache.InitializeInlineConstantBuffer(Attr.DescrSet, Attr.CacheOffset(CacheType),
                                                              InlineCBAttr.NumConstants, pCurrentDataPtr);
+
+                // Create a per-SRB USAGE_DYNAMIC uniform buffer
+                if (m_pDevice)
+                {
+                    std::string Name = m_Desc.Name;
+                    Name += " - ";
+                    Name += ResDesc.Name;
+                    Name += " (SRB)";
+                    BufferDesc CBDesc;
+                    CBDesc.Name           = Name.c_str();
+                    CBDesc.Size           = DataSize;
+                    CBDesc.Usage          = USAGE_DYNAMIC;
+                    CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
+                    CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+                    RefCntAutoPtr<IBuffer> pBuffer;
+                    m_pDevice->CreateBuffer(CBDesc, nullptr, &pBuffer);
+                    VERIFY_EXPR(pBuffer);
+                    ResourceCache.SetInlineConstantBuffer(EmulatedInlineConstantIdx, RefCntAutoPtr<BufferVkImpl>{pBuffer, IID_BufferVk});
+                }
+
+                ++EmulatedInlineConstantIdx;
                 pCurrentDataPtr += DataSize;
             }
         }
@@ -762,11 +788,20 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
 
     // Bind internal inline constant buffers to the resource cache
     // This must be done after descriptor set allocation so that descriptor writes work correctly
+    Uint32 EmulatedInlineConstantIdx = 0;
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
         const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
 
-        if (!InlineCBAttr.pBuffer)
+        // Skip push constants - they don't use descriptor sets
+        if (InlineCBAttr.IsPushConstant)
+            continue;
+
+        // Get the per-SRB buffer from the resource cache
+        BufferVkImpl* pBuffer = ResourceCache.GetInlineConstantBuffer(EmulatedInlineConstantIdx);
+        ++EmulatedInlineConstantIdx;
+
+        if (!pBuffer)
             continue;
 
         // Use ResIndex to directly access the resource attributes
@@ -787,7 +822,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
                 {
                     Attr.BindingIndex,
                     0, // ArrayIndex
-                    RefCntAutoPtr<IDeviceObject>{InlineCBAttr.pBuffer},
+                    RefCntAutoPtr<IDeviceObject>{pBuffer},
                     0,                                         // BufferBaseOffset
                     InlineCBAttr.NumConstants * sizeof(Uint32) // BufferRangeSize
                 });
@@ -803,7 +838,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
                 {
                     Attr.BindingIndex,
                     0, // ArrayIndex
-                    RefCntAutoPtr<IDeviceObject>{InlineCBAttr.pBuffer},
+                    RefCntAutoPtr<IDeviceObject>{pBuffer},
                     0,                                         // BufferBaseOffset
                     InlineCBAttr.NumConstants * sizeof(Uint32) // BufferRangeSize
                 });
@@ -815,8 +850,9 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
 {
     // Handle STATIC push constants first - copy data from Signature's static cache to SRB's cache
     // Each SRB has its own copy of push constant data
-    const auto ResIdxRange           = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-    Uint32     PushConstantBufferIdx = 0;
+    const auto ResIdxRange               = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    Uint32     DstPushConstantBufferIdx  = 0;
+    Uint32     SrcPushConstantBufferIdx  = 0;
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
         const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
@@ -826,10 +862,12 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
         const PipelineResourceDesc& ResDesc = GetResourceDesc(InlineCBAttr.ResIndex);
         if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
         {
-            // Get source data from Signature's static inline constant data
-            const void* pSrcData = InlineCBAttr.pPushConstantData;
+            // Get source data from Signature's static resource cache
+            const void* pSrcData = m_pStaticResCache ? m_pStaticResCache->GetPushConstantDataPtr(SrcPushConstantBufferIdx) : nullptr;
+            ++SrcPushConstantBufferIdx;
+
             // Get destination data pointer from SRB's resource cache
-            void* pDstData = DstResourceCache.GetPushConstantDataPtr(PushConstantBufferIdx);
+            void* pDstData = DstResourceCache.GetPushConstantDataPtr(DstPushConstantBufferIdx);
 
             if (pSrcData != nullptr && pDstData != nullptr)
             {
@@ -837,7 +875,7 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
                 memcpy(pDstData, pSrcData, DataSize);
             }
         }
-        ++PushConstantBufferIdx;
+        ++DstPushConstantBufferIdx;
     }
 
     if (!HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) || m_pStaticResCache == nullptr)
@@ -1328,7 +1366,8 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
     // SRB caches use SRBCacheOffset, static caches use StaticCacheOffset
     const ResourceCacheContentType CacheType = ResourceCache.GetContentType();
 
-    Uint32 PushConstantBufferIdx = 0;
+    Uint32 PushConstantBufferIdx     = 0;
+    Uint32 EmulatedInlineConstantIdx = 0;
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
         const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
@@ -1349,9 +1388,13 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
             continue;
         }
 
-        if (InlineCBAttr.pBuffer)
+        // For emulated inline constants, get the per-SRB buffer from the resource cache
+        BufferVkImpl* pBuffer = ResourceCache.GetInlineConstantBuffer(EmulatedInlineConstantIdx);
+        ++EmulatedInlineConstantIdx;
+
+        if (pBuffer)
         {
-            // For emulated inline constants, get data from the resource cache using the correct CacheOffset
+            // Get data from the resource cache using the correct CacheOffset
             // Similar to D3D11 backend which uses BindPoints to locate the resource
             const ResourceAttribs& Attr                = GetResourceAttribs(InlineCBAttr.ResIndex);
             const Uint32           CacheOffset         = Attr.CacheOffset(CacheType);
@@ -1360,9 +1403,9 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
 
             // Map the buffer and copy the data
             void* pMappedData = nullptr;
-            Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+            Ctx.MapBuffer(pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
             memcpy(pMappedData, pInlineConstantData, DataSize);
-            Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
+            Ctx.UnmapBuffer(pBuffer, MAP_WRITE);
             continue;
         }
     }
@@ -1390,9 +1433,9 @@ void PipelineResourceSignatureVkImpl::UpdatePushConstantFlags(Uint32 ResIndex)
             if (InlineCBAttr.ResIndex == ResIndex)
             {
                 // Mark this as a true push constant
+                // Note: Per-SRB buffers are created in InitSRBResourceCache(), which will check
+                // IsPushConstant and skip buffer creation for true push constants
                 InlineCBAttr.IsPushConstant = true;
-                // Note: pBuffer may have been created during CreateSetLayouts, but that's OK -
-                // UpdateInlineConstantBuffers will check IsPushConstant first and use vkCmdPushConstants
                 break;
             }
         }

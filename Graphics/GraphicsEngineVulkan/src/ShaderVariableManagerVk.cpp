@@ -669,50 +669,28 @@ void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
     {
         const InlineConstantBufferAttribsVk* pInlineCBs   = m_pSignature->GetInlineConstantBuffers();
         const Uint32                         NumInlineCBs = m_pSignature->GetNumInlineConstantBuffers();
-        const ResourceCacheContentType       CacheType    = m_ResourceCache.GetContentType();
 
-        if (CacheType == ResourceCacheContentType::Signature)
+        // For both Signature's static cache and SRB cache, push constant data is stored
+        // in the resource cache via GetPushConstantDataPtr()
+        Uint32 PushConstantBufferIdx = 0;
+        for (Uint32 i = 0; i < NumInlineCBs; ++i)
         {
-            // For Signature's static variables, write to InlineCBAttr.pPushConstantData
-            // which points to m_pStaticInlineConstantData
-            for (Uint32 i = 0; i < NumInlineCBs; ++i)
-            {
-                const InlineConstantBufferAttribsVk& InlineCBAttr = pInlineCBs[i];
-                if (InlineCBAttr.ResIndex == ResIndex && InlineCBAttr.IsPushConstant)
-                {
-                    if (InlineCBAttr.pPushConstantData != nullptr)
-                    {
-                        Uint32* pDstConstants = reinterpret_cast<Uint32*>(InlineCBAttr.pPushConstantData);
-                        memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
-                    }
-                    return;
-                }
-            }
-        }
-        else
-        {
-            // For SRB, write to the SRB's resource cache
-            // Each SRB has its own copy of push constant data
-            Uint32 PushConstantBufferIdx = 0;
-            for (Uint32 i = 0; i < NumInlineCBs; ++i)
-            {
-                const InlineConstantBufferAttribsVk& InlineCBAttr = pInlineCBs[i];
-                if (!InlineCBAttr.IsPushConstant)
-                    continue;
+            const InlineConstantBufferAttribsVk& InlineCBAttr = pInlineCBs[i];
+            if (!InlineCBAttr.IsPushConstant)
+                continue;
 
-                if (InlineCBAttr.ResIndex == ResIndex)
+            if (InlineCBAttr.ResIndex == ResIndex)
+            {
+                // Get the data pointer from the resource cache
+                void* pPushConstantData = m_ResourceCache.GetPushConstantDataPtr(PushConstantBufferIdx);
+                if (pPushConstantData != nullptr)
                 {
-                    // Get the data pointer from the resource cache
-                    void* pPushConstantData = m_ResourceCache.GetPushConstantDataPtr(PushConstantBufferIdx);
-                    if (pPushConstantData != nullptr)
-                    {
-                        Uint32* pDstConstants = reinterpret_cast<Uint32*>(pPushConstantData);
-                        memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
-                    }
-                    return;
+                    Uint32* pDstConstants = reinterpret_cast<Uint32*>(pPushConstantData);
+                    memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
                 }
-                ++PushConstantBufferIdx;
+                return;
             }
+            ++PushConstantBufferIdx;
         }
         UNEXPECTED("Push constant buffer not found");
     }

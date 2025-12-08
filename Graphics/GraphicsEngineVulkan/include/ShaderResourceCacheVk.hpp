@@ -313,6 +313,32 @@ public:
 
     Uint32 GetNumPushConstantBuffers() const { return m_NumPushConstantBuffers; }
 
+    // Initializes inline constant buffers array
+    void InitializeInlineConstantBuffers(Uint32 NumBuffers)
+    {
+        m_NumInlineConstantBuffers = static_cast<Uint16>(NumBuffers);
+        if (NumBuffers > 0)
+        {
+            m_pInlineConstantBuffers = std::make_unique<RefCntAutoPtr<BufferVkImpl>[]>(NumBuffers);
+        }
+    }
+
+    // Sets the inline constant buffer at the given index
+    void SetInlineConstantBuffer(Uint32 Index, RefCntAutoPtr<BufferVkImpl>&& pBuffer)
+    {
+        VERIFY_EXPR(Index < m_NumInlineConstantBuffers);
+        m_pInlineConstantBuffers[Index] = std::move(pBuffer);
+    }
+
+    // Gets the inline constant buffer at the given index
+    BufferVkImpl* GetInlineConstantBuffer(Uint32 Index) const
+    {
+        VERIFY_EXPR(Index < m_NumInlineConstantBuffers);
+        return m_pInlineConstantBuffers[Index].RawPtr();
+    }
+
+    Uint32 GetNumInlineConstantBuffers() const { return m_NumInlineConstantBuffers; }
+
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
 
@@ -360,6 +386,12 @@ private:
     // Array of push constant data pointers (one per push constant buffer)
     // Each pointer points to memory within m_pInlineConstantMemory
     std::unique_ptr<void*[]> m_pPushConstantDataPtrs;
+
+    // Array of inline constant buffers (one per emulated inline constant buffer)
+    // Each SRB has its own copy of these buffers to avoid conflicts between
+    // multiple PipelineStates sharing the same PipelineResourceSignature
+    std::unique_ptr<RefCntAutoPtr<BufferVkImpl>[]> m_pInlineConstantBuffers;
+    Uint16                                         m_NumInlineConstantBuffers = 0;
 
     Uint16 m_NumSets                = 0;
     Uint16 m_NumPushConstantBuffers = 0;

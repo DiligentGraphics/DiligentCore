@@ -63,15 +63,19 @@ ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization
 /// Inline constants can be either:
 /// 1. True push constants (from SPIR-V push_constant storage class) - use vkCmdPushConstants
 /// 2. Emulated inline constants - use dynamic uniform buffers (similar to D3D11 backend)
+///
+/// Note: This structure only stores attributes/metadata. The actual storage (pBuffer for emulated
+/// inline constants, push constant data for true push constants) is managed per-SRB in
+/// ShaderResourceCacheVk to avoid conflicts between multiple PipelineStates sharing the same
+/// PipelineResourceSignature.
 struct InlineConstantBufferAttribsVk
 {
-    Uint32                      ResIndex       = 0;          // Resource index in the signature (used for matching)
-    Uint32                      DescrSet       = 0;          // Descriptor set index (0 for push constants as placeholder)
-    Uint32                      BindingIndex   = 0;          // Binding index within the descriptor set
-    Uint32                      NumConstants   = 0;          // Number of 32-bit constants
-    bool                        IsPushConstant = false;      // True if this is a Vulkan push constant (not emulated)
-    RefCntAutoPtr<BufferVkImpl> pBuffer;                     // Internal dynamic uniform buffer (null for true push constants)
-    void*                       pPushConstantData = nullptr; // CPU-side staging buffer for push constants (only used when IsPushConstant is true)
+    Uint32 ResIndex       = 0;     // Resource index in the signature (used for matching)
+    Uint32 DescrSet       = 0;     // Descriptor set index (0 for push constants as placeholder)
+    Uint32 BindingIndex   = 0;     // Binding index within the descriptor set
+    Uint32 NumConstants   = 0;     // Number of 32-bit constants
+    bool   IsPushConstant = false; // True if this is a Vulkan push constant (not emulated)
+    // Note: pBuffer and pPushConstantData are now stored per-SRB in ShaderResourceCacheVk
 };
 
 struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData<PipelineResourceAttribsVk, ImmutableSamplerAttribsVk>
@@ -231,9 +235,10 @@ private:
     // Inline constant buffer attributes
     std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBuffers;
 
-    // Pointer to CPU-side staging buffer for static inline constants
-    // This memory is allocated in CreateSetLayouts and must be freed in Destruct
-    void* m_pStaticInlineConstantData = nullptr;
+    // Note: Static inline constant data (including push constants) is stored in m_pStaticResCache.
+    // For push constants, we use InitializePushConstantDataPtrs() and SetPushConstantDataPtr() 
+    // in the static resource cache, similar to how SRB caches store push constant data.
+    // This ensures each SRB gets its own copy when CopyStaticResources() is called.
 };
 
 template <> Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;
