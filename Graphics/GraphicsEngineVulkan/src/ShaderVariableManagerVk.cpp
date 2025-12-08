@@ -672,7 +672,6 @@ void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
 
         // For both Signature's static cache and SRB cache, push constant data is stored
         // in the resource cache via GetPushConstantDataPtr()
-        Uint32 PushConstantBufferIdx = 0;
         for (Uint32 i = 0; i < NumInlineCBs; ++i)
         {
             const InlineConstantBufferAttribsVk& InlineCBAttr = pInlineCBs[i];
@@ -682,7 +681,7 @@ void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
             if (InlineCBAttr.ResIndex == ResIndex)
             {
                 // Get the data pointer from the resource cache
-                void* pPushConstantData = m_ResourceCache.GetPushConstantDataPtr(PushConstantBufferIdx);
+                void* pPushConstantData = m_ResourceCache.GetPushConstantDataPtr(InlineCBAttr.ResIndex);
                 if (pPushConstantData != nullptr)
                 {
                     Uint32* pDstConstants = reinterpret_cast<Uint32*>(pPushConstantData);
@@ -690,7 +689,6 @@ void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
                 }
                 return;
             }
-            ++PushConstantBufferIdx;
         }
         UNEXPECTED("Push constant buffer not found");
     }

@@ -274,19 +274,19 @@ public:
             STDDeleter<void, IMemoryAllocator>(Allocator)};
     }
 
-    // Sets the push constant data pointer for the given index
+    // Sets the push constant data pointer for the given ResIndex
     // This is used to store per-SRB push constant data for STATIC push constants
-    void SetPushConstantDataPtr(Uint32 Index, void* pData)
+    void SetPushConstantDataPtr(Uint32 ResIndex, void* pData)
     {
-        VERIFY_EXPR(Index < m_NumPushConstantBuffers);
-        m_pPushConstantDataPtrs[Index] = pData;
+        VERIFY_EXPR(ResIndex < m_NumPushConstantBuffers);
+        m_pPushConstantDataPtrs[ResIndex] = pData;
     }
 
-    // Gets the push constant data pointer for the given index
-    void* GetPushConstantDataPtr(Uint32 Index) const
+    // Gets the push constant data pointer for the given ResIndex
+    void* GetPushConstantDataPtr(Uint32 ResIndex) const
     {
-        VERIFY_EXPR(Index < m_NumPushConstantBuffers);
-        return m_pPushConstantDataPtrs[Index];
+        VERIFY_EXPR(ResIndex < m_NumPushConstantBuffers);
+        return m_pPushConstantDataPtrs[ResIndex];
     }
 
     // Initializes push constant data pointers array
@@ -323,18 +323,18 @@ public:
         }
     }
 
-    // Sets the inline constant buffer at the given index
-    void SetInlineConstantBuffer(Uint32 Index, RefCntAutoPtr<BufferVkImpl>&& pBuffer)
+    // Sets the inline constant buffer at the given ResIndex
+    void SetInlineConstantBuffer(Uint32 ResIndex, RefCntAutoPtr<BufferVkImpl>&& pBuffer)
     {
-        VERIFY_EXPR(Index < m_NumInlineConstantBuffers);
-        m_pInlineConstantBuffers[Index] = std::move(pBuffer);
+        VERIFY_EXPR(ResIndex < m_NumInlineConstantBuffers);
+        m_pInlineConstantBuffers[ResIndex] = std::move(pBuffer);
     }
 
-    // Gets the inline constant buffer at the given index
-    BufferVkImpl* GetInlineConstantBuffer(Uint32 Index) const
+    // Gets the inline constant buffer at the given ResIndex
+    BufferVkImpl* GetInlineConstantBuffer(Uint32 ResIndex) const
     {
-        VERIFY_EXPR(Index < m_NumInlineConstantBuffers);
-        return m_pInlineConstantBuffers[Index].RawPtr();
+        VERIFY_EXPR(ResIndex < m_NumInlineConstantBuffers);
+        return m_pInlineConstantBuffers[ResIndex].RawPtr();
     }
 
     Uint32 GetNumInlineConstantBuffers() const { return m_NumInlineConstantBuffers; }
