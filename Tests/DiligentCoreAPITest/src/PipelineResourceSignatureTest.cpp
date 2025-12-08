@@ -771,14 +771,6 @@ TEST_F(PipelineResourceSignatureTest, ImmutableSamplers2)
         PipelineResourceSignatureDesc Desc;
         Desc.Name         = "ImmutableSamplers2 - PRS3";
         Desc.BindingIndex = 3;
-
-        //Note that PipelineTypeFromShaderStages() will return PIPELINE_TYPE_INVALID if we leave Desc.Resources empty,
-        //which will lead to PIPELINE_TYPE_INVALID from CmmoitShaderResources() -> pResBindingVkImpl->GetPipelineType()
-        //and causing assert or crash essentially.
-        const PipelineResourceDesc PlaceholderResource[] = {
-            {SHADER_TYPE_VERTEX, "Placeholder", 1, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC}};
-        Desc.Resources    = PlaceholderResource;
-        Desc.NumResources = _countof(PlaceholderResource);
         pDevice->CreatePipelineResourceSignature(Desc, &pSignature3);
         ASSERT_NE(pSignature3, nullptr);
     }
