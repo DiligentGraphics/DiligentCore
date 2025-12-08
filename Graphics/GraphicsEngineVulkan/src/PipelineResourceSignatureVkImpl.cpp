@@ -1353,9 +1353,9 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
         {
             // For emulated inline constants, get data from the resource cache using the correct CacheOffset
             // Similar to D3D11 backend which uses BindPoints to locate the resource
-            const ResourceAttribs& Attr        = GetResourceAttribs(InlineCBAttr.ResIndex);
-            const Uint32           CacheOffset = Attr.CacheOffset(CacheType);
-            const void* pInlineConstantData = ResourceCache.GetInlineConstantData(Attr.DescrSet, CacheOffset);
+            const ResourceAttribs& Attr                = GetResourceAttribs(InlineCBAttr.ResIndex);
+            const Uint32           CacheOffset         = Attr.CacheOffset(CacheType);
+            const void*            pInlineConstantData = ResourceCache.GetInlineConstantData(Attr.DescrSet, CacheOffset);
             VERIFY_EXPR(pInlineConstantData != nullptr);
 
             // Map the buffer and copy the data
