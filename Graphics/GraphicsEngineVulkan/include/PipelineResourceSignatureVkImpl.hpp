@@ -236,7 +236,7 @@ private:
     std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBuffers;
 
     // Note: Static inline constant data (including push constants) is stored in m_pStaticResCache.
-    // For push constants, we use InitializePushConstantDataPtrs() and SetPushConstantDataPtr() 
+    // For push constants, we use InitializePushConstantDataPtrs() and SetPushConstantDataPtr()
     // in the static resource cache, similar to how SRB caches store push constant data.
     // This ensures each SRB gets its own copy when CopyStaticResources() is called.
 };

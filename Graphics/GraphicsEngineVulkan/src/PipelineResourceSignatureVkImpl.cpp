@@ -850,9 +850,9 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
 {
     // Handle STATIC push constants first - copy data from Signature's static cache to SRB's cache
     // Each SRB has its own copy of push constant data
-    const auto ResIdxRange               = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-    Uint32     DstPushConstantBufferIdx  = 0;
-    Uint32     SrcPushConstantBufferIdx  = 0;
+    const auto ResIdxRange              = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    Uint32     DstPushConstantBufferIdx = 0;
+    Uint32     SrcPushConstantBufferIdx = 0;
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
         const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
