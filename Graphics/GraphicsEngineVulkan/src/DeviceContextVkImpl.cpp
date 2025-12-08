@@ -648,15 +648,12 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     const Uint32                           SRBIndex   = pResBindingVkImpl->GetBindingIndex();
     const PipelineResourceSignatureVkImpl* pSignature = pResBindingVkImpl->GetSignature();
 
-    // Use PSO's pipeline type as fallback when PRS has no resources and thus PIPELINE_TYPE_INVALID
-    PIPELINE_TYPE SrbPipelineType = pResBindingVkImpl->GetPipelineType();
-    if (SrbPipelineType == PIPELINE_TYPE_INVALID)
-    {
-        VERIFY_EXPR(m_pPipelineState != nullptr);
-        SrbPipelineType = m_pPipelineState->GetDesc().PipelineType;
-    }
+    // PRS has no resources and thus PIPELINE_TYPE_INVALID ?
+    PIPELINE_TYPE SRBPipelineType = pResBindingVkImpl->GetPipelineType();
+    if (SRBPipelineType == PIPELINE_TYPE_INVALID)
+        return;
 
-    ResourceBindInfo&                    BindInfo = GetBindInfo(SrbPipelineType);
+    ResourceBindInfo&                    BindInfo = GetBindInfo(SRBPipelineType);
     ResourceBindInfo::DescriptorSetInfo& SetInfo  = BindInfo.SetInfo[SRBIndex];
 
     // Always bind the SRB, even if it has no descriptor sets (e.g., only push constants)
