@@ -656,8 +656,8 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
         SrbPipelineType = m_pPipelineState->GetDesc().PipelineType;
     }
 
-    ResourceBindInfo&                      BindInfo   = GetBindInfo(SrbPipelineType);
-    ResourceBindInfo::DescriptorSetInfo&   SetInfo    = BindInfo.SetInfo[SRBIndex];
+    ResourceBindInfo&                    BindInfo = GetBindInfo(SrbPipelineType);
+    ResourceBindInfo::DescriptorSetInfo& SetInfo  = BindInfo.SetInfo[SRBIndex];
 
     // Always bind the SRB, even if it has no descriptor sets (e.g., only push constants)
     // The resource cache is needed to store push constant data
