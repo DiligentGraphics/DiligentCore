@@ -955,7 +955,6 @@ TokenIterType FindMatchingBracket(const TokenIterType& Start,
             ClosingBracketType = TokenType::OpenSquareBracket;
             SearchForward      = false;
             break;
-
         case TokenType::ClosingAngleBracket:
             ClosingBracketType = TokenType::OpenAngleBracket;
             SearchForward      = false;

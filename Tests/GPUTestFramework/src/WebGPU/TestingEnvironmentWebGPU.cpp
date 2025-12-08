@@ -103,14 +103,18 @@ void TestingEnvironmentWebGPU::SubmitCommandEncoder(WGPUCommandEncoder wgpuCmdEn
     if (WaitForIdle)
     {
         bool IsWorkDone       = false;
-        auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus Status, void* pUserData) {
-            if (bool* pIsWorkDone = static_cast<bool*>(pUserData))
-                *pIsWorkDone = Status == WGPUQueueWorkDoneStatus_Success;
-            if (Status != WGPUQueueWorkDoneStatus_Success)
-                DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", Status);
+        auto WorkDoneCallback = [](WGPUQueueWorkDoneStatus wgpuStatus, WGPUStringView Message, void* pUserData1, void* pUserData2) {
+            if (bool* pIsWorkDone = static_cast<bool*>(pUserData1))
+                *pIsWorkDone = wgpuStatus == WGPUQueueWorkDoneStatus_Success;
+            if (wgpuStatus != WGPUQueueWorkDoneStatus_Success)
+                DEV_ERROR("Failed wgpuQueueOnSubmittedWorkDone: ", wgpuStatus);
         };
 
-        wgpuQueueOnSubmittedWorkDone(wgpuCmdQueue, WorkDoneCallback, &IsWorkDone);
+        WGPUQueueWorkDoneCallbackInfo wgpuQueueWorkDoneCallbackInfo{};
+        wgpuQueueWorkDoneCallbackInfo.mode      = WGPUCallbackMode_AllowSpontaneous;
+        wgpuQueueWorkDoneCallbackInfo.callback  = WorkDoneCallback;
+        wgpuQueueWorkDoneCallbackInfo.userdata1 = &IsWorkDone;
+        wgpuQueueOnSubmittedWorkDone(wgpuCmdQueue, wgpuQueueWorkDoneCallbackInfo);
 
         while (!IsWorkDone)
         {
