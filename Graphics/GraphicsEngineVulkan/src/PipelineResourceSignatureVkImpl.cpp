@@ -682,7 +682,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
         ResourceCache.MarkHasInlineConstants();
 
         // Count push constant buffers, emulated inline constant buffers, and calculate total memory size
-        Uint32 TotalInlineConstantSize      = 0;
+        Uint32 TotalInlineConstantSize = 0;
         for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
         {
             const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
@@ -707,7 +707,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
         }
 
         // Assign memory to each inline constant buffer and create per-SRB buffers
-        Uint8* pCurrentDataPtr           = static_cast<Uint8*>(pInlineConstantMemory);
+        Uint8* pCurrentDataPtr = static_cast<Uint8*>(pInlineConstantMemory);
         for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
         {
             const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
@@ -832,7 +832,7 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
 {
     // Handle STATIC push constants first - copy data from Signature's static cache to SRB's cache
     // Each SRB has its own copy of push constant data
-    const auto ResIdxRange              = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    const auto ResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
