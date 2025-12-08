@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -91,9 +91,9 @@ Uint32 WriteOrVerifyRGBAData(MappedTextureSubresource& MappedData,
 
 void TextureUploaderTest(bool IsRenderThread)
 {
-    auto* pEnv     = GPUTestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
-    auto* pContext = pEnv->GetDeviceContext();
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
     if (pDevice->GetDeviceInfo().IsMetalDevice())
     {
@@ -142,8 +142,7 @@ void TextureUploaderTest(bool IsRenderThread)
     {
         auto ref_cnt = cnt;
 
-        std::atomic_bool BufferPopulated;
-        BufferPopulated.store(false);
+        std::atomic_bool BufferPopulated{false};
 
         auto PopulateBuffer = [&](IDeviceContext* pCtx) //
         {
@@ -154,7 +153,7 @@ void TextureUploaderTest(bool IsRenderThread)
             {
                 for (Uint32 mip = 0; mip < UploadBuffDesc.MipLevels; ++mip)
                 {
-                    auto MappedData = pUploadBuffer->GetMappedData(mip, slice);
+                    MappedTextureSubresource MappedData = pUploadBuffer->GetMappedData(mip, slice);
                     WriteOrVerifyRGBAData(MappedData, UploadBuffDesc, mip, slice, cnt, false);
                 }
             }
@@ -218,6 +217,91 @@ TEST(TextureUploaderTest, RenderThread)
 TEST(TextureUploaderTest, WorkerThread)
 {
     TextureUploaderTest(false);
+}
+
+void TestAutoRecycle(bool IsRenderThread)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    if (pDevice->GetDeviceInfo().IsMetalDevice())
+    {
+        GTEST_SKIP() << "Texture uploader is not currently implemented in Metal";
+    }
+
+    GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    TextureUploaderDesc             UploaderDesc;
+    RefCntAutoPtr<ITextureUploader> pTexUploader;
+    CreateTextureUploader(pDevice, UploaderDesc, &pTexUploader);
+    ASSERT_TRUE(pTexUploader);
+
+    RefCntAutoPtr<ITexture> pDstTexture = pEnv->CreateTexture(
+        "Texture uploading dst texture",
+        TEX_FORMAT_RGBA8_UNORM,
+        BIND_SHADER_RESOURCE,
+        256,
+        128);
+    ASSERT_TRUE(pDstTexture);
+
+
+    UploadBufferDesc UploadBuffDesc;
+    UploadBuffDesc.Width  = 256;
+    UploadBuffDesc.Height = 128;
+    UploadBuffDesc.Format = TEX_FORMAT_RGBA8_UNORM;
+
+    RefCntAutoPtr<IUploadBuffer> pUploadBuffer;
+
+    std::atomic_bool CopyScheduled{false};
+
+    auto WriteData = [&](IDeviceContext* pCtx) {
+        pTexUploader->AllocateUploadBuffer(pCtx, UploadBuffDesc, &pUploadBuffer);
+        ASSERT_TRUE(pUploadBuffer);
+
+        MappedTextureSubresource MappedData = pUploadBuffer->GetMappedData(0, 0);
+        Uint32                   cnt        = 0;
+        WriteOrVerifyRGBAData(MappedData, UploadBuffDesc, 0, 0, cnt, false);
+
+        pTexUploader->ScheduleGPUCopy(pCtx, pDstTexture, 0, 0, pUploadBuffer, true);
+        CopyScheduled.store(true);
+    };
+
+    if (IsRenderThread)
+    {
+        WriteData(pContext);
+    }
+    else
+    {
+        std::thread WorkerThread{WriteData, nullptr};
+        while (!CopyScheduled)
+            pTexUploader->RenderThreadUpdate(pContext);
+        WorkerThread.join();
+    }
+
+    pContext->WaitForIdle();
+    pTexUploader->RenderThreadUpdate(pContext);
+
+    RefCntAutoPtr<IUploadBuffer> pUploadBuffer2;
+    pTexUploader->AllocateUploadBuffer(pContext, UploadBuffDesc, &pUploadBuffer2);
+    EXPECT_EQ(pUploadBuffer, pUploadBuffer2);
+
+    MappedTextureSubresource MappedData = pUploadBuffer->GetMappedData(0, 0);
+    Uint32                   cnt        = 0;
+    WriteOrVerifyRGBAData(MappedData, UploadBuffDesc, 0, 0, cnt, false);
+
+    pTexUploader->ScheduleGPUCopy(pContext, pDstTexture, 0, 0, pUploadBuffer, true);
+    pTexUploader->RenderThreadUpdate(pContext);
+}
+
+TEST(TextureUploaderTest, AutoRecycle_RenderThread)
+{
+    TestAutoRecycle(true);
+}
+
+TEST(TextureUploaderTest, AutoRecycle_WorkerThread)
+{
+    TestAutoRecycle(false);
 }
 
 } // namespace

@@ -157,34 +157,7 @@ private:
 
 struct TextureUploaderWebGPU::InternalData
 {
-    struct PendingBufferOperation
-    {
-        enum Operation
-        {
-            Map,
-            Copy
-        } operation;
-
-        RefCntAutoPtr<UploadBufferWebGPU> pUploadBuffer;
-        RefCntAutoPtr<ITexture>           pDstTexture;
-        Uint32                            DstSlice = 0;
-        Uint32                            DstMip   = 0;
-
-        // clang-format off
-        PendingBufferOperation(Operation op, UploadBufferWebGPU* pBuff) :
-            operation    {op   },
-            pUploadBuffer{pBuff}
-        {}
-        PendingBufferOperation(Operation op, UploadBufferWebGPU* pBuff, ITexture* pDstTex, Uint32 Slice, Uint32 Mip) :
-            operation             {op          },
-            pUploadBuffer         {pBuff       },
-            pDstTexture           {pDstTex     },
-            DstSlice              {Slice       },
-            DstMip                {Mip         }
-          
-        {}
-        // clang-format on
-    };
+    using PendingBufferOperation = TextureUploaderBase::PendingOperation<UploadBufferWebGPU>;
 
     InternalData(IRenderDevice* pDevice)
     {
@@ -199,27 +172,27 @@ struct TextureUploaderWebGPU::InternalData
         m_PendingOperations.swap(m_InWorkOperations);
     }
 
-    void EnqueueCopy(UploadBufferWebGPU* pUploadBuffer, ITexture* pDstTexture, Uint32 Slice, Uint32 MipLevel)
+    void EnqueueCopy(UploadBufferWebGPU* pUploadBuffer, ITexture* pDstTexture, Uint32 Slice, Uint32 MipLevel, bool AutoRecycle)
     {
         std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.emplace_back(PendingBufferOperation::Operation::Copy, pUploadBuffer, pDstTexture, Slice, MipLevel);
+        m_PendingOperations.emplace_back(PendingBufferOperation::Type::Copy, pUploadBuffer, pDstTexture, Slice, MipLevel, AutoRecycle);
     }
 
     void EnqueueMap(UploadBufferWebGPU* pUploadBuffer)
     {
         std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
-        m_PendingOperations.emplace_back(PendingBufferOperation::Operation::Map, pUploadBuffer);
+        m_PendingOperations.emplace_back(PendingBufferOperation::Type::Map, pUploadBuffer);
     }
 
     void Execute(IDeviceContext*         pContext,
-                 PendingBufferOperation& OperationInfo)
+                 PendingBufferOperation& Operation)
     {
-        RefCntAutoPtr<UploadBufferWebGPU>& pBuffer        = OperationInfo.pUploadBuffer;
+        RefCntAutoPtr<UploadBufferWebGPU>& pBuffer        = Operation.pUploadBuffer;
         const UploadBufferDesc&            UploadBuffDesc = pBuffer->GetDesc();
 
-        switch (OperationInfo.operation)
+        switch (Operation.OpType)
         {
-            case PendingBufferOperation::Map:
+            case PendingBufferOperation::Type::Map:
             {
                 if (pBuffer->m_pStagingBuffer == nullptr)
                 {
@@ -241,11 +214,11 @@ struct TextureUploaderWebGPU::InternalData
             }
             break;
 
-            case PendingBufferOperation::Copy:
+            case PendingBufferOperation::Type::Copy:
             {
                 VERIFY_EXPR(pBuffer->m_pStagingBuffer != nullptr);
 
-                const TextureDesc& TexDesc = OperationInfo.pDstTexture->GetDesc();
+                const TextureDesc& TexDesc = Operation.pDstTexture->GetDesc();
                 pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
 
                 for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
@@ -257,19 +230,38 @@ struct TextureUploaderWebGPU::InternalData
 
                         TextureSubResData SubResData(pBuffer->m_pStagingBuffer, SrcOffset, SrcStride);
 
-                        MipLevelProperties MipLevelProps = GetMipLevelProperties(TexDesc, OperationInfo.DstMip + Mip);
+                        MipLevelProperties MipLevelProps = GetMipLevelProperties(TexDesc, Operation.DstMip + Mip);
                         Box                DstBox;
                         DstBox.MaxX = MipLevelProps.LogicalWidth;
                         DstBox.MaxY = MipLevelProps.LogicalHeight;
-                        pContext->UpdateTexture(OperationInfo.pDstTexture, OperationInfo.DstMip + Mip, OperationInfo.DstSlice + Slice, DstBox,
+                        pContext->UpdateTexture(Operation.pDstTexture, Operation.DstMip + Mip, Operation.DstSlice + Slice, DstBox,
                                                 SubResData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
                     }
                 }
                 pBuffer->SignalCopyScheduled();
+                if (Operation.AutoRecycle)
+                {
+                    RecycleUploadBuffer(pBuffer);
+                }
             }
             break;
         }
     }
+
+    void RecycleUploadBuffer(UploadBufferWebGPU* pUploadBufferWebGPU)
+    {
+        VERIFY(pUploadBufferWebGPU->DbgIsCopyScheduled(), "Upload buffer must be recycled only after copy operation has been scheduled on the GPU");
+
+        const UploadBufferDesc&     Desc = pUploadBufferWebGPU->GetDesc();
+        std::lock_guard<std::mutex> CacheLock{m_UploadBuffCacheMtx};
+
+        auto& Deque = m_UploadBufferCache[Desc];
+#ifdef DILIGENT_DEBUG
+        VERIFY(std::find(Deque.begin(), Deque.end(), pUploadBufferWebGPU) == Deque.end(), "Upload buffer is already in the cache");
+#endif
+        Deque.emplace_back(pUploadBufferWebGPU);
+    }
+
     std::mutex                          m_PendingOperationsMtx;
     std::vector<PendingBufferOperation> m_PendingOperations;
     std::vector<PendingBufferOperation> m_InWorkOperations;
@@ -305,8 +297,8 @@ void TextureUploaderWebGPU::RenderThreadUpdate(IDeviceContext* pContext)
     m_pInternalData->SwapMapQueues();
     if (!m_pInternalData->m_InWorkOperations.empty())
     {
-        for (InternalData::PendingBufferOperation& OperationInfo : m_pInternalData->m_InWorkOperations)
-            m_pInternalData->Execute(pContext, OperationInfo);
+        for (InternalData::PendingBufferOperation& Operation : m_pInternalData->m_InWorkOperations)
+            m_pInternalData->Execute(pContext, Operation);
 
         m_pInternalData->m_InWorkOperations.clear();
     }
@@ -332,6 +324,7 @@ void TextureUploaderWebGPU::AllocateUploadBuffer(IDeviceContext*         pContex
                 {
                     pUploadBuffer.Attach(Deque.front().Detach());
                     Deque.pop_front();
+                    pUploadBuffer->Reset();
                 }
             }
         }
@@ -348,7 +341,7 @@ void TextureUploaderWebGPU::AllocateUploadBuffer(IDeviceContext*         pContex
     if (pContext != nullptr)
     {
         // Render thread
-        InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Operation::Map, pUploadBuffer};
+        InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Type::Map, pUploadBuffer};
         m_pInternalData->Execute(pContext, MapOp);
     }
     else
@@ -364,40 +357,34 @@ void TextureUploaderWebGPU::ScheduleGPUCopy(IDeviceContext* pContext,
                                             ITexture*       pDstTexture,
                                             Uint32          ArraySlice,
                                             Uint32          MipLevel,
-                                            IUploadBuffer*  pUploadBuffer)
+                                            IUploadBuffer*  pUploadBuffer,
+                                            bool            AutoRecycle)
 {
     UploadBufferWebGPU* pUploadBufferWebGPU = ClassPtrCast<UploadBufferWebGPU>(pUploadBuffer);
     if (pContext != nullptr)
     {
         // Render thread
-        InternalData::PendingBufferOperation CopyOp //
-            {
-                InternalData::PendingBufferOperation::Operation::Copy,
-                pUploadBufferWebGPU,
-                pDstTexture,
-                ArraySlice,
-                MipLevel //
-            };
+        InternalData::PendingBufferOperation CopyOp{
+            InternalData::PendingBufferOperation::Type::Copy,
+            pUploadBufferWebGPU,
+            pDstTexture,
+            ArraySlice,
+            MipLevel,
+            AutoRecycle,
+        };
         m_pInternalData->Execute(pContext, CopyOp);
     }
     else
     {
         // Worker thread
-        m_pInternalData->EnqueueCopy(pUploadBufferWebGPU, pDstTexture, ArraySlice, MipLevel);
+        m_pInternalData->EnqueueCopy(pUploadBufferWebGPU, pDstTexture, ArraySlice, MipLevel, AutoRecycle);
     }
 }
 
 void TextureUploaderWebGPU::RecycleBuffer(IUploadBuffer* pUploadBuffer)
 {
     UploadBufferWebGPU* pUploadBufferWebGPU = ClassPtrCast<UploadBufferWebGPU>(pUploadBuffer);
-    VERIFY(pUploadBufferWebGPU->DbgIsCopyScheduled(), "Upload buffer must be recycled only after copy operation has been scheduled on the GPU");
-    pUploadBufferWebGPU->Reset();
-
-    std::lock_guard<std::mutex> CacheLock(m_pInternalData->m_UploadBuffCacheMtx);
-
-    auto& Cache = m_pInternalData->m_UploadBufferCache;
-    auto& Deque = Cache[pUploadBufferWebGPU->GetDesc()];
-    Deque.emplace_back(pUploadBufferWebGPU);
+    m_pInternalData->RecycleUploadBuffer(pUploadBufferWebGPU);
 }
 
 TextureUploaderStats TextureUploaderWebGPU::GetStats()

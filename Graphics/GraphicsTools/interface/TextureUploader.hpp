@@ -33,27 +33,27 @@
 namespace Diligent
 {
 
-// clang-format off
 
 /// Upload buffer description
 struct UploadBufferDesc
 {
-    Uint32         Width       = 0;
-    Uint32         Height      = 0;
-    Uint32         Depth       = 1;
-    Uint32         MipLevels   = 1;
-    Uint32         ArraySize   = 1;
-    TEXTURE_FORMAT Format      = TEX_FORMAT_UNKNOWN;
+    Uint32         Width     = 0;
+    Uint32         Height    = 0;
+    Uint32         Depth     = 1;
+    Uint32         MipLevels = 1;
+    Uint32         ArraySize = 1;
+    TEXTURE_FORMAT Format    = TEX_FORMAT_UNKNOWN;
 
-    bool operator == (const UploadBufferDesc &rhs) const
+    bool operator==(const UploadBufferDesc& rhs) const
     {
-        return Width  == rhs.Width  &&
+        return (Width == rhs.Width &&
                 Height == rhs.Height &&
-                Depth  == rhs.Depth  &&
-                Format == rhs.Format;
+                Depth == rhs.Depth &&
+                MipLevels == rhs.MipLevels &&
+                ArraySize == rhs.ArraySize &&
+                Format == rhs.Format);
     }
 };
-// clang-format on
 
 class IUploadBuffer : public IObject
 {
@@ -108,6 +108,8 @@ public:
                                       IUploadBuffer**         ppBuffer) = 0;
 
 
+    // clang-format off
+
     /// Schedules a GPU copy or executes the copy immediately.
 
     /// \param [in] pContext      - Pointer to the device context when the method is executed by
@@ -119,6 +121,8 @@ public:
     /// \param [in] MipLevel      - Destination mip level. When multiple mip levels are copied,
     ///                             the starting mip level.
     /// \param [in] pUploadBuffer - Upload buffer to copy data from.
+    /// \param [in] AutoRecycle   - Whether to recycle the upload buffer
+    ///                             after the copy operation is complete.
     ///
     /// When the method is called from a worker thread (pContext is null),
     /// it may enqueue a render-thread operation and block until the operation is
@@ -131,8 +135,9 @@ public:
                                  ITexture*       pDstTexture,
                                  Uint32          ArraySlice,
                                  Uint32          MipLevel,
-                                 IUploadBuffer*  pUploadBuffer) = 0;
-
+                                 IUploadBuffer*  pUploadBuffer,
+                                 bool            AutoRecycle DEFAULT_VALUE(false)) = 0;
+    // clang-format on
 
     /// Recycles upload buffer to make it available for future operations.
 

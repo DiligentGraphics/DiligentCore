@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +42,7 @@ struct hash<Diligent::UploadBufferDesc>
 {
     size_t operator()(const Diligent::UploadBufferDesc& Desc) const
     {
-        return Diligent::ComputeHash(Desc.Width, Desc.Height, Desc.Depth, static_cast<Diligent::Int32>(Desc.Format));
+        return Diligent::ComputeHash(Desc.Width, Desc.Height, Desc.Depth, Desc.MipLevels, Desc.ArraySize, static_cast<Diligent::Int32>(Desc.Format));
     }
 };
 
@@ -99,6 +99,47 @@ public:
         ObjectBase<ITextureUploader>{pRefCounters},
         m_pDevice{pDevice}
     {}
+
+    template <typename UploadBufferType>
+    struct PendingOperation
+    {
+        enum class Type
+        {
+            Map,
+            Copy
+        } OpType;
+
+        bool AutoRecycle = false;
+
+        RefCntAutoPtr<UploadBufferType> pUploadBuffer;
+        RefCntAutoPtr<ITexture>         pDstTexture;
+
+        Uint32 DstSlice = 0;
+        Uint32 DstMip   = 0;
+
+        PendingOperation(Type Op, UploadBufferType* pBuff) :
+            OpType{Op},
+            pUploadBuffer{pBuff}
+        {
+            VERIFY_EXPR(OpType == Type::Map);
+        }
+
+        PendingOperation(Type              Op,
+                         UploadBufferType* pBuff,
+                         ITexture*         pDstTex,
+                         Uint32            dstSlice,
+                         Uint32            dstMip,
+                         bool              Recycle) :
+            OpType{Op},
+            AutoRecycle{Recycle},
+            pUploadBuffer{pBuff},
+            pDstTexture{pDstTex},
+            DstSlice{dstSlice},
+            DstMip{dstMip}
+        {
+            VERIFY_EXPR(OpType == Type::Copy);
+        }
+    };
 
 protected:
     RefCntAutoPtr<IRenderDevice> m_pDevice;
