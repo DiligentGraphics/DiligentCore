@@ -258,7 +258,7 @@ public:
                             Uint32      NumConstants);
 
     // Gets the inline constant data pointer from the resource cache
-    const void* GetInlineConstantData(Uint32 DescrSetIndex, Uint32 BindingIndex) const;
+    const void* GetInlineConstantData(Uint32 DescrSetIndex, Uint32 CacheOffset) const;
 
     // Initialize inline constant buffer in the resource cache
     void InitializeInlineConstantBuffer(Uint32 DescrSetIndex,

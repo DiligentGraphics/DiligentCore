@@ -971,17 +971,15 @@ void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
     memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
 }
 
-const void* ShaderResourceCacheVk::GetInlineConstantData(Uint32 DescrSetIndex, Uint32 BindingIndex) const
+const void* ShaderResourceCacheVk::GetInlineConstantData(Uint32 DescrSetIndex, Uint32 CacheOffset) const
 {
     const DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
 
-    VERIFY(BindingIndex < DescrSet.GetSize(), "BindingIndex out of bounds");
+    VERIFY(CacheOffset < DescrSet.GetSize(), "CacheOffset out of bounds");
 
-    const Resource& Res = DescrSet.GetResource(BindingIndex);
+    const Resource& Res = DescrSet.GetResource(CacheOffset);
     if (Res.pInlineConstantData != nullptr)
     {
-        // For now, we assume binding index matches the resource index for inline constants
-        // This may need adjustment based on actual binding layout
         return Res.pInlineConstantData;
     }
 

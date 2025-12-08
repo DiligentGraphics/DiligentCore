@@ -1324,6 +1324,10 @@ PipelineResourceSignatureInternalDataVk PipelineResourceSignatureVkImpl::GetInte
 void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderResourceCacheVk& ResourceCache,
                                                                   DeviceContextVkImpl&         Ctx) const
 {
+    // Determine the cache type based on the resource cache content
+    // SRB caches use SRBCacheOffset, static caches use StaticCacheOffset
+    const ResourceCacheContentType CacheType = ResourceCache.GetContentType();
+
     Uint32 PushConstantBufferIdx = 0;
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
@@ -1347,8 +1351,11 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
 
         if (InlineCBAttr.pBuffer)
         {
-            // For emulated inline constants, get data from the resource cache
-            const void* pInlineConstantData = ResourceCache.GetInlineConstantData(InlineCBAttr.DescrSet, InlineCBAttr.BindingIndex);
+            // For emulated inline constants, get data from the resource cache using the correct CacheOffset
+            // Similar to D3D11 backend which uses BindPoints to locate the resource
+            const ResourceAttribs& Attr        = GetResourceAttribs(InlineCBAttr.ResIndex);
+            const Uint32           CacheOffset = Attr.CacheOffset(CacheType);
+            const void* pInlineConstantData = ResourceCache.GetInlineConstantData(Attr.DescrSet, CacheOffset);
             VERIFY_EXPR(pInlineConstantData != nullptr);
 
             // Map the buffer and copy the data
