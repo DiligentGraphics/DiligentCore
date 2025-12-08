@@ -975,16 +975,14 @@ const void* ShaderResourceCacheVk::GetInlineConstantData(Uint32 DescrSetIndex, U
 {
     const DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
 
-    // Find the resource with the matching binding index
-    for (Uint32 i = 0; i < DescrSet.GetSize(); ++i)
+    VERIFY(BindingIndex < DescrSet.GetSize(), "BindingIndex out of bounds");
+
+     const Resource& Res = DescrSet.GetResource(BindingIndex);
+    if (Res.pInlineConstantData != nullptr)
     {
-        const Resource& Res = DescrSet.GetResource(i);
-        if (Res.pInlineConstantData != nullptr)
-        {
-            // For now, we assume binding index matches the resource index for inline constants
-            // This may need adjustment based on actual binding layout
-            return Res.pInlineConstantData;
-        }
+        // For now, we assume binding index matches the resource index for inline constants
+        // This may need adjustment based on actual binding layout
+        return Res.pInlineConstantData;
     }
 
     return nullptr;
