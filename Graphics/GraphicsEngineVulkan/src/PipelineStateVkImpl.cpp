@@ -605,10 +605,6 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
             ShaderResources.ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& Attribs, Uint32) //
                 {
-                    // Note: Push constants are now included in the signature with
-                    // PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT flag set.
-                    // They will be handled via vkCmdPushConstants at runtime.
-
                     // We can't skip immutable samplers because immutable sampler arrays have to be defined
                     // as both resource and sampler.
                     //if (Res.Type == SPIRVShaderResourceAttribs::SeparateSampler &&
@@ -670,6 +666,34 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
             if (ShaderResources.IsUsingCombinedSamplers() && ShaderResources.GetNumSepSmplrs() > 0)
             {
                 SignDesc.SetCombinedSamplerSuffix(ShaderResources.GetCombinedSamplerSuffix());
+            }
+        }
+    }
+
+    // If no resource has PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT explicitly set,
+    // find the first inline constant and mark it as a Vulkan push constant
+    bool HasExplicitPushConstant = false;
+    
+    for (Uint32 i = 0; i < SignDesc.Get().NumResources; ++i)
+    {
+        const PipelineResourceDesc& Res = SignDesc.Get().Resources[i];
+        if ((Res.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0)
+        {
+            HasExplicitPushConstant = true;
+            break;
+        }
+    }
+
+    if (!HasExplicitPushConstant)
+    {
+        // Find the first inline constant and add PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT flag
+        for (Uint32 i = 0; i < SignDesc.Get().NumResources; ++i)
+        {
+            PipelineResourceDesc& Res = const_cast<PipelineResourceDesc&>(SignDesc.Get().Resources[i]);
+            if ((Res.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+            {
+                Res.Flags |= PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT;
+                break;
             }
         }
     }

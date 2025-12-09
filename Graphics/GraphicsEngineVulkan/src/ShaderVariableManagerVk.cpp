@@ -667,14 +667,14 @@ void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
     const bool IsPushConstant = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0;
     if (IsPushConstant)
     {
-        const InlineConstantBufferAttribsVk* pInlineCBs   = m_pSignature->GetInlineConstantBuffers();
-        const Uint32                         NumInlineCBs = m_pSignature->GetNumInlineConstantBuffers();
+        const InlineConstantBufferAttribsVk* pInlineCBAttribs   = m_pSignature->GetInlineConstantBufferAttribs();
+        const Uint32                         NumInlineCBAttribs = m_pSignature->GetNumInlineConstantBufferAttribs();
 
         // For both Signature's static cache and SRB cache, push constant data is stored
         // in the resource cache via GetPushConstantDataPtr()
-        for (Uint32 i = 0; i < NumInlineCBs; ++i)
+        for (Uint32 i = 0; i < NumInlineCBAttribs; ++i)
         {
-            const InlineConstantBufferAttribsVk& InlineCBAttr = pInlineCBs[i];
+            const InlineConstantBufferAttribsVk& InlineCBAttr = pInlineCBAttribs[i];
             if (!InlineCBAttr.IsPushConstant)
                 continue;
 

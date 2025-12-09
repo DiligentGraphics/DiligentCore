@@ -160,15 +160,10 @@ public:
                                      DeviceContextVkImpl&         Ctx) const;
 
     // Returns the number of inline constant buffers
-    Uint32 GetNumInlineConstantBuffers() const { return m_NumInlineConstantBuffers; }
+    Uint32 GetNumInlineConstantBufferAttribs() const { return m_NumInlineConstantBufferAttribs; }
 
     // Returns the inline constant buffer attributes
-    const InlineConstantBufferAttribsVk* GetInlineConstantBuffers() const { return m_InlineConstantBuffers.get(); }
-
-    // Adds PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT flag to a resource if it has
-    // PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS but is missing the Vulkan push constant flag.
-    // This is called during pipeline state creation when shader reflection detects a push constant.
-    void UpdatePushConstantFlags(Uint32 ResIndex);
+    const InlineConstantBufferAttribsVk* GetInlineConstantBufferAttribs() const { return m_InlineConstantBufferAttribs.get(); }
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the SPIRV resource attributes from the PSO.
@@ -231,9 +226,9 @@ private:
     Uint16 m_DynamicStorageBufferCount = 0;
 
     // Number of inline constant buffers
-    Uint32 m_NumInlineConstantBuffers = 0;
+    Uint32 m_NumInlineConstantBufferAttribs = 0;
     // Inline constant buffer attributes
-    std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBuffers;
+    std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBufferAttribs;
 
     // Note: Static inline constant data (including push constants) is stored in m_pStaticResCache.
     // For push constants, we use InitializePushConstantDataPtrs() and SetPushConstantDataPtr()
