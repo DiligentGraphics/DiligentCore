@@ -274,35 +274,6 @@ public:
             STDDeleter<void, IMemoryAllocator>(Allocator)};
     }
 
-    // Sets the push constant data pointer for the given ResIndex
-    // This is used to store per-SRB push constant data for STATIC push constants
-    void SetPushConstantDataPtr(Uint32 ResIndex, void* pData)
-    {
-        VERIFY_EXPR(ResIndex < m_NumPushConstantBuffers);
-        m_pPushConstantDataPtrs[ResIndex] = pData;
-    }
-
-    // Gets the push constant data pointer for the given ResIndex
-    void* GetPushConstantDataPtr(Uint32 ResIndex) const
-    {
-        VERIFY_EXPR(ResIndex < m_NumPushConstantBuffers);
-        return m_pPushConstantDataPtrs[ResIndex];
-    }
-
-    // Initializes push constant data pointers array
-    void InitializePushConstantDataPtrs(Uint32 NumPushConstants)
-    {
-        m_NumPushConstantBuffers = static_cast<Uint16>(NumPushConstants);
-        if (NumPushConstants > 0)
-        {
-            m_pPushConstantDataPtrs = std::make_unique<void*[]>(NumPushConstants);
-            for (Uint32 i = 0; i < NumPushConstants; ++i)
-                m_pPushConstantDataPtrs[i] = nullptr;
-            // Mark that this cache has inline constants (push constants are a type of inline constants)
-            m_HasInlineConstants = 1;
-        }
-    }
-
     // Explicitly marks that this cache contains inline constants.
     // This is useful when inline constant memory is initialized externally
     // (e.g., during SRB cache setup) before any data is written.
@@ -310,8 +281,6 @@ public:
     {
         m_HasInlineConstants = 1;
     }
-
-    Uint32 GetNumPushConstantBuffers() const { return m_NumPushConstantBuffers; }
 
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
@@ -355,18 +324,16 @@ private:
     std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
 
     // Memory for inline constant data (allocated separately, freed in destructor)
+    // All inline constants use this memory for CPU-side staging.
+    // Push constant selection is done at PSO level, not cache level.
     std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pInlineConstantMemory;
 
-    // Array of push constant data pointers (one per push constant buffer)
-    // Each pointer points to memory within m_pInlineConstantMemory
-    std::unique_ptr<void*[]> m_pPushConstantDataPtrs;
-
-    // Note: Inline constant buffers (for emulated inline constants) are now stored in
+    // Note: Inline constant buffers (for emulated inline constants) are stored in
     // InlineConstantBufferAttribsVk::pBuffer in the PipelineResourceSignature, similar to D3D11.
     // All SRBs share the same buffer to reduce memory usage.
+    // Push constant selection is deferred to PSO creation time.
 
-    Uint16 m_NumSets                = 0;
-    Uint16 m_NumPushConstantBuffers = 0;
+    Uint16 m_NumSets = 0;
 
     // Total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache
     // regardless of the variable type. Note this variable is not equal to dynamic offsets count, which is constant.

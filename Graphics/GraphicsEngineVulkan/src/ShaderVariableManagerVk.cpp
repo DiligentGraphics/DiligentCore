@@ -663,29 +663,13 @@ void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
     VerifyInlineConstants(ResDesc, pConstants, FirstConstant, NumConstants);
 #endif
 
-    // Check if this is a push constant (doesn't use descriptor sets)
-    const bool IsPushConstant = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0;
-    if (IsPushConstant)
-    {
-        // Get the data pointer from the resource cache
-        void* pPushConstantData = m_ResourceCache.GetPushConstantDataPtr(ResIndex);
-        if (pPushConstantData != nullptr)
-        {
-            Uint32* pDstConstants = reinterpret_cast<Uint32*>(pPushConstantData);
-            memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
-        }
-        else
-        {
-            UNEXPECTED("Push constant buffer not found");
-        }
-    }
-    else
-    {
-        // For emulated inline constants, use the resource cache
-        const ResourceCacheContentType CacheType   = m_ResourceCache.GetContentType();
-        const Uint32                   CacheOffset = Attribs.CacheOffset(CacheType);
-        m_ResourceCache.SetInlineConstants(Attribs.DescrSet, CacheOffset, pConstants, FirstConstant, NumConstants);
-    }
+    // All inline constants use the same path at PRS level - store data in the resource cache.
+    // Push constant selection is done at PSO creation time, not here.
+    // The data will be used either for push constants (vkCmdPushConstants) or emulated buffers
+    // depending on the PSO's selection during UpdateInlineConstantBuffers().
+    const ResourceCacheContentType CacheType   = m_ResourceCache.GetContentType();
+    const Uint32                   CacheOffset = Attribs.CacheOffset(CacheType);
+    m_ResourceCache.SetInlineConstants(Attribs.DescrSet, CacheOffset, pConstants, FirstConstant, NumConstants);
 }
 
 IDeviceObject* ShaderVariableManagerVk::Get(Uint32 ArrayIndex, Uint32 ResIndex) const

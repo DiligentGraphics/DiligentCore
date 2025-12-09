@@ -83,6 +83,8 @@ void SpvOptimizerMessageConsumer(
         LOG_DEBUG_MESSAGE(MsgSeverity, "Spirv optimizer ", LevelText, ": ", message);
 }
 
+#define SPV_SPIRV_VERSION_WORD(MAJOR, MINOR) ((uint32_t(uint8_t(MAJOR)) << 16) | (uint32_t(uint8_t(MINOR)) << 8))
+
 spv_target_env SpvTargetEnvFromSPIRV(const std::vector<uint32_t>& SPIRV)
 {
     if (SPIRV.size() < 2)
@@ -91,7 +93,6 @@ spv_target_env SpvTargetEnvFromSPIRV(const std::vector<uint32_t>& SPIRV)
         return SPV_ENV_VULKAN_1_0;
     }
 
-#define SPV_SPIRV_VERSION_WORD(MAJOR, MINOR) ((uint32_t(uint8_t(MAJOR)) << 16) | (uint32_t(uint8_t(MINOR)) << 8))
     switch (SPIRV[1])
     {
         case SPV_SPIRV_VERSION_WORD(1, 0): return SPV_ENV_VULKAN_1_0;
@@ -104,6 +105,8 @@ spv_target_env SpvTargetEnvFromSPIRV(const std::vector<uint32_t>& SPIRV)
         default: return SPV_ENV_VULKAN_1_3;
     }
 }
+
+#undef SPV_SPIRV_VERSION_WORD
 
 } // namespace
 
@@ -151,6 +154,37 @@ std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_t
         OptimizedSPIRV.clear();
 
     return OptimizedSPIRV;
+}
+
+std::vector<uint32_t> PatchSPIRVConvertUniformBufferToPushConstant(
+    const std::vector<uint32_t>& SPIRV,
+    spv_target_env               TargetEnv,
+    const std::string&           BlockName)
+{
+    if (TargetEnv == SPV_ENV_MAX)
+        TargetEnv = SpvTargetEnvFromSPIRV(SPIRV);
+
+    spvtools::Optimizer optimizer(TargetEnv);
+
+    optimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
+
+    // Register the pass to convert UBO to push constant
+    optimizer.RegisterPass(spvtools::CreateConvertUBOToPushConstantPass(BlockName));
+
+    spvtools::OptimizerOptions options;
+#ifndef DILIGENT_DEVELOPMENT
+    options.set_run_validator(false);
+#endif
+
+    std::vector<uint32_t> result;
+    if (!optimizer.Run(SPIRV.data(), SPIRV.size(), &result, options))
+    {
+        return {};
+    }
+    auto fp = fopen("d:\\testubo.spv", "wb");
+    fwrite(result.data(), result.size() * 4, 1, fp);
+    fclose(fp);
+    return result;
 }
 
 } // namespace Diligent

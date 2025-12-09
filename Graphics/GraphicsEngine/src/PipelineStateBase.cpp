@@ -849,15 +849,6 @@ void ValidatePipelineResourceCompatibility(const PipelineResourceDesc& ResDesc,
                             GetShaderResourceTypeLiteralName(ResDesc.ResourceType), "' specified in pipeline resource signature '", SignatureName, "'.");
     }
 
-    if ((ResourceFlags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT))
-    {
-        LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
-                            "' that is", ((ResourceFlags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) ? "" : " not"),
-                            " labeled as vulkan's push constant, while the same resource specified by the pipeline resource signature '",
-                            SignatureName, "' is", ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) ? "" : " not"),
-                            " labeled as such.");
-    }
-
     if ((ResourceFlags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER) != (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_FORMATTED_BUFFER))
     {
         LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,

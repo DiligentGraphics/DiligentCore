@@ -215,7 +215,7 @@ PIPELINE_RESOURCE_FLAGS SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Res
         case SPIRVShaderResourceAttribs::ResourceType::PushConstant:
             // Push constants are special inline constants that use vkCmdPushConstants
             // Mark them with both INLINE_CONSTANTS and VULKAN_PUSH_CONSTANT flags
-            return PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS | PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT;
+            return PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS;
 
         default:
             return PIPELINE_RESOURCE_FLAG_NONE;

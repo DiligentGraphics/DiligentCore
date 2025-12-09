@@ -427,7 +427,11 @@ DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE
 
 void DeviceContextVkImpl::UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo)
 {
-    const Uint32 SignCount = m_pPipelineState->GetResourceSignatureCount();
+    const PipelineLayoutVk& Layout               = m_pPipelineState->GetPipelineLayout();
+    const Uint32            PushConstSignIdx     = Layout.GetPushConstantSignatureIndex();
+    const Uint32            PushConstResIdx      = Layout.GetPushConstantResourceIndex();
+    const Uint32            SignCount            = m_pPipelineState->GetResourceSignatureCount();
+
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         const PipelineResourceSignatureVkImpl* pSign = m_pPipelineState->GetResourceSignature(i);
@@ -446,8 +450,13 @@ void DeviceContextVkImpl::UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo
         if (!pResourceCache->HasInlineConstants())
             continue;
 
+        // Determine which resource (if any) in this signature should use push constant path
+        // If this signature contains the selected push constant, pass its resource index
+        // Otherwise pass INVALID_PUSH_CONSTANT_INDEX to use emulated buffer path for all
+        const Uint32 PushConstantResIndex = (i == PushConstSignIdx) ? PushConstResIdx : INVALID_PUSH_CONSTANT_INDEX;
+
         // Update inline constant buffers
-        pSign->UpdateInlineConstantBuffers(*pResourceCache, *this);
+        pSign->UpdateInlineConstantBuffers(*pResourceCache, *this, PushConstantResIndex);
     }
 }
 

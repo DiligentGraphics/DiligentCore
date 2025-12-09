@@ -1637,7 +1637,7 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
 
         PIPELINE_RESOURCE_FLAGS Flag = ExtractLSB(Flags);
 
-        static_assert(PIPELINE_RESOURCE_FLAG_LAST == (1u << 6), "Please update the switch below to handle the new pipeline resource flag.");
+        static_assert(PIPELINE_RESOURCE_FLAG_LAST == (1u << 5), "Please update the switch below to handle the new pipeline resource flag.");
         switch (Flag)
         {
             case PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS:
@@ -1662,10 +1662,6 @@ String GetPipelineResourceFlagsString(PIPELINE_RESOURCE_FLAGS Flags, bool GetFul
 
             case PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT:
                 Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_GENERAL_INPUT_ATTACHMENT" : "GENERAL_INPUT_ATTACHMENT");
-                break;
-
-            case PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT:
-                Str.append(GetFullName ? "PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT" : "VULKAN_PUSH_CONSTANT");
                 break;
 
             default:
@@ -1816,7 +1812,7 @@ PIPELINE_RESOURCE_FLAGS GetValidPipelineResourceFlags(SHADER_RESOURCE_TYPE Resou
     switch (ResourceType)
     {
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER:
-            return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY | PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS | PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT;
+            return PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY | PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS;
 
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:
             return PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER | PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY;

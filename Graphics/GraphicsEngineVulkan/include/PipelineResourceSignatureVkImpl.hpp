@@ -60,28 +60,24 @@ struct ImmutableSamplerAttribsVk
 ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization and must be tightly packed");
 
 /// Inline constant buffer attributes for Vulkan backend.
-/// Inline constants can be either:
-/// 1. True push constants (from SPIR-V push_constant storage class) - use vkCmdPushConstants
-/// 2. Emulated inline constants - use dynamic uniform buffers (similar to D3D11 backend)
+/// All inline constants are treated uniformly at PRS level - they all get:
+/// - DescriptorSet binding and cache allocation
+/// - Shared emulated buffer (created in the Signature, shared by all SRBs)
 ///
-/// For emulated inline constants (not push constants), the Buffer is created in the Signature
-/// and shared by all SRBs (similar to D3D11). Each SRB has its own CPU staging memory.
-/// For push constants, pPushConstantData points to the static cache's staging memory.
+/// Push constant selection is deferred to PSO creation time. At PSO creation,
+/// one inline constant may be selected to use vkCmdPushConstants based on:
+/// 1. SPIR-V reflection (ResourceType::PushConstant in shader)
+/// 2. First inline constant as fallback (converted via PatchShader)
 struct InlineConstantBufferAttribsVk
 {
-    Uint32 ResIndex       = 0;     // Resource index in the signature (used for matching)
-    Uint32 DescrSet       = 0;     // Descriptor set index (0 for push constants as placeholder)
-    Uint32 BindingIndex   = 0;     // Binding index within the descriptor set
-    Uint32 NumConstants   = 0;     // Number of 32-bit constants
-    bool   IsPushConstant = false; // True if this is a Vulkan push constant (not emulated)
+    Uint32 ResIndex     = 0; // Resource index in the signature (used for matching)
+    Uint32 DescrSet     = 0; // Descriptor set index
+    Uint32 BindingIndex = 0; // Binding index within the descriptor set
+    Uint32 NumConstants = 0; // Number of 32-bit constants
 
-    // For emulated inline constants: shared buffer created in the Signature (similar to D3D11)
+    // Shared buffer created in the Signature (similar to D3D11)
     // All SRBs reference this same buffer to reduce memory usage.
     RefCntAutoPtr<BufferVkImpl> pBuffer;
-
-    // For static push constants: pointer to data in the static resource cache
-    // This allows CopyStaticResources to copy the data to SRB caches.
-    void* pPushConstantData = nullptr;
 };
 
 struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData<PipelineResourceAttribsVk, ImmutableSamplerAttribsVk>
@@ -161,9 +157,12 @@ public:
                                 VkDescriptorSet              vkDynamicDescriptorSet) const;
 
     // Updates inline constant buffers by mapping the internal buffers and copying data from the resource cache
-    // ResourceCache must be valid - each SRB has its own copy of push constant data stored in the cache
+    // ResourceCache must be valid - each SRB has its own copy of inline constant data stored in the cache
+    // PushConstantResIndex: Resource index of the inline constant selected as push constant by PSO
+    //                       Pass ~0u if no push constant is selected from this signature
     void UpdateInlineConstantBuffers(const ShaderResourceCacheVk& ResourceCache,
-                                     DeviceContextVkImpl&         Ctx) const;
+                                     DeviceContextVkImpl&         Ctx,
+                                     Uint32                       PushConstantResIndex) const;
 
     // Returns the number of inline constant buffers
     Uint32 GetNumInlineConstantBufferAttribs() const { return m_NumInlineConstantBufferAttribs; }
@@ -236,10 +235,9 @@ private:
     // Inline constant buffer attributes
     std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBufferAttribs;
 
-    // Note: Static inline constant data (including push constants) is stored in m_pStaticResCache.
-    // For push constants, we use InitializePushConstantDataPtrs() and SetPushConstantDataPtr()
-    // in the static resource cache, similar to how SRB caches store push constant data.
-    // This ensures each SRB gets its own copy when CopyStaticResources() is called.
+    // Note: Static inline constant data is stored in m_pStaticResCache.
+    // Push constant selection is deferred to PSO creation time - the PRS treats
+    // all inline constants uniformly with emulated buffers.
 };
 
 template <> Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;
