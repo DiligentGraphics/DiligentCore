@@ -6,7 +6,7 @@
 	url = https://github.com/DiligentGraphics/SPIRV-Cross
 [submodule "ThirdParty/SPIRV-Tools"]
 	path = ThirdParty/SPIRV-Tools
-	url = https://github.com/hzqst/SPIRV-Tools-DG
+	url = https://github.com/hzqst/SPIRV-Tools
 [submodule "ThirdParty/SPIRV-Headers"]
 	path = ThirdParty/SPIRV-Headers
 	url = https://github.com/DiligentGraphics/SPIRV-Headers
