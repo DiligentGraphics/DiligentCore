@@ -110,6 +110,10 @@ public:
         Size        = m_SPIRV.size() * sizeof(m_SPIRV[0]);
     }
 
+    void SetSPIRV(const std::vector<uint32_t>& SPIRV) noexcept(false);
+
+    void CreateSPIRVShaderResources() noexcept(false);
+
 private:
     void Initialize(const ShaderCreateInfo& ShaderCI,
                     const CreateInfo&       VkShaderCI) noexcept(false);
@@ -119,6 +123,8 @@ private:
 
     std::string           m_EntryPoint;
     std::vector<uint32_t> m_SPIRV;
+
+    bool m_LoadConstantBufferReflection = false;
 };
 
 } // namespace Diligent

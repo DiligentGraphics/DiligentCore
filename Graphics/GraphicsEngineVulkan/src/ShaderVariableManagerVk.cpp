@@ -667,30 +667,17 @@ void ShaderVariableManagerVk::SetInlineConstants(Uint32      ResIndex,
     const bool IsPushConstant = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT) != 0;
     if (IsPushConstant)
     {
-        const InlineConstantBufferAttribsVk* pInlineCBAttribs   = m_pSignature->GetInlineConstantBufferAttribs();
-        const Uint32                         NumInlineCBAttribs = m_pSignature->GetNumInlineConstantBufferAttribs();
-
-        // For both Signature's static cache and SRB cache, push constant data is stored
-        // in the resource cache via GetPushConstantDataPtr()
-        for (Uint32 i = 0; i < NumInlineCBAttribs; ++i)
+        // Get the data pointer from the resource cache
+        void* pPushConstantData = m_ResourceCache.GetPushConstantDataPtr(ResIndex);
+        if (pPushConstantData != nullptr)
         {
-            const InlineConstantBufferAttribsVk& InlineCBAttr = pInlineCBAttribs[i];
-            if (!InlineCBAttr.IsPushConstant)
-                continue;
-
-            if (InlineCBAttr.ResIndex == ResIndex)
-            {
-                // Get the data pointer from the resource cache
-                void* pPushConstantData = m_ResourceCache.GetPushConstantDataPtr(InlineCBAttr.ResIndex);
-                if (pPushConstantData != nullptr)
-                {
-                    Uint32* pDstConstants = reinterpret_cast<Uint32*>(pPushConstantData);
-                    memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
-                }
-                return;
-            }
+            Uint32* pDstConstants = reinterpret_cast<Uint32*>(pPushConstantData);
+            memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
         }
-        UNEXPECTED("Push constant buffer not found");
+        else
+        {
+            UNEXPECTED("Push constant buffer not found");
+        }
     }
     else
     {
