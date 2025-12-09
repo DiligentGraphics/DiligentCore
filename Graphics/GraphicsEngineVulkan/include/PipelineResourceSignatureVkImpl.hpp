@@ -64,10 +64,9 @@ ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization
 /// 1. True push constants (from SPIR-V push_constant storage class) - use vkCmdPushConstants
 /// 2. Emulated inline constants - use dynamic uniform buffers (similar to D3D11 backend)
 ///
-/// Note: This structure only stores attributes/metadata. The actual storage (pBuffer for emulated
-/// inline constants, push constant data for true push constants) is managed per-SRB in
-/// ShaderResourceCacheVk to avoid conflicts between multiple PipelineStates sharing the same
-/// PipelineResourceSignature.
+/// For emulated inline constants (not push constants), the Buffer is created in the Signature
+/// and shared by all SRBs (similar to D3D11). Each SRB has its own CPU staging memory.
+/// For push constants, pPushConstantData points to the static cache's staging memory.
 struct InlineConstantBufferAttribsVk
 {
     Uint32 ResIndex       = 0;     // Resource index in the signature (used for matching)
@@ -75,7 +74,14 @@ struct InlineConstantBufferAttribsVk
     Uint32 BindingIndex   = 0;     // Binding index within the descriptor set
     Uint32 NumConstants   = 0;     // Number of 32-bit constants
     bool   IsPushConstant = false; // True if this is a Vulkan push constant (not emulated)
-    // Note: pBuffer and pPushConstantData are now stored per-SRB in ShaderResourceCacheVk
+
+    // For emulated inline constants: shared buffer created in the Signature (similar to D3D11)
+    // All SRBs reference this same buffer to reduce memory usage.
+    RefCntAutoPtr<BufferVkImpl> pBuffer;
+
+    // For static push constants: pointer to data in the static resource cache
+    // This allows CopyStaticResources to copy the data to SRB caches.
+    void* pPushConstantData = nullptr;
 };
 
 struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData<PipelineResourceAttribsVk, ImmutableSamplerAttribsVk>
