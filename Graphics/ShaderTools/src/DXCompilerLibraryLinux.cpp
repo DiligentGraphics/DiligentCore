@@ -33,26 +33,34 @@ namespace Diligent
 
 void DXCompilerLibrary::Load()
 {
+#if defined(DILIGENT_USE_STATIC_DXC)
+    m_Library = reinterpret_cast<void*>(0x1);
+    m_DxcCreateInstance = &DxcCreateInstance;
+#else
     if (!m_LibName.empty())
         m_Library = dlopen(m_LibName.c_str(), RTLD_LOCAL | RTLD_LAZY);
 
     if (m_Library == nullptr)
         m_Library = dlopen("libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
 
-    // try to load from default path
     if (m_Library == nullptr)
         m_Library = dlopen("/usr/lib/dxc/libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
 
-    m_DxcCreateInstance = m_Library != nullptr ? reinterpret_cast<DxcCreateInstanceProc>(dlsym(m_Library, "DxcCreateInstance")) : nullptr;
+    m_DxcCreateInstance = m_Library != nullptr
+        ? reinterpret_cast<DxcCreateInstanceProc>(dlsym(m_Library, "DxcCreateInstance"))
+        : nullptr;
+#endif
 }
 
 void DXCompilerLibrary::Unload()
 {
+#if !defined(DILIGENT_USE_STATIC_DXC)
     if (m_Library != nullptr)
     {
         dlclose(m_Library);
         m_Library = nullptr;
     }
+#endif
 }
 
 } // namespace Diligent
