@@ -979,7 +979,7 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(TShaderS
         return;
 
     const PipelineResourceDesc& ResDesc          = pSignature->GetResourceDesc(PushConstantInfo.ResourceIndex);
-    const std::string PushConstantName = ResDesc.Name;
+    const std::string           PushConstantName = ResDesc.Name;
 
     // For each shader stage, check if the uniform buffer needs to be patched
     for (ShaderStageInfo& Stage : ShaderStages)
@@ -1023,7 +1023,7 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(TShaderS
 
             if (ShouldPatchUniformBuffer)
             {
-                const std::vector<uint32_t>& SPIRV   = Stage.SPIRVs[i];
+                const std::vector<uint32_t>& SPIRV        = Stage.SPIRVs[i];
                 std::vector<uint32_t>        PatchedSPIRV = PatchSPIRVConvertUniformBufferToPushConstant(
                     SPIRV,
                     SPV_ENV_MAX, // Auto-detect target environment

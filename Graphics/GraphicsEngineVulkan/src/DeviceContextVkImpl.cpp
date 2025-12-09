@@ -427,10 +427,10 @@ DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE
 
 void DeviceContextVkImpl::UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo)
 {
-    const PipelineLayoutVk& Layout               = m_pPipelineState->GetPipelineLayout();
-    const Uint32            PushConstSignIdx     = Layout.GetPushConstantSignatureIndex();
-    const Uint32            PushConstResIdx      = Layout.GetPushConstantResourceIndex();
-    const Uint32            SignCount            = m_pPipelineState->GetResourceSignatureCount();
+    const PipelineLayoutVk& Layout           = m_pPipelineState->GetPipelineLayout();
+    const Uint32            PushConstSignIdx = Layout.GetPushConstantSignatureIndex();
+    const Uint32            PushConstResIdx  = Layout.GetPushConstantResourceIndex();
+    const Uint32            SignCount        = m_pPipelineState->GetResourceSignatureCount();
 
     for (Uint32 i = 0; i < SignCount; ++i)
     {

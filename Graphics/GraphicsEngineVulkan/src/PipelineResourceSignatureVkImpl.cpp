@@ -332,8 +332,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
                     DescrType,
                     DSMapping[SetId],
                     pVkImmutableSamplers != nullptr,
-                    CacheGroupOffsets[CacheGroup],                                                     // SRBCacheOffset
-                    ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u  // StaticCacheOffset
+                    CacheGroupOffsets[CacheGroup],                                                    // SRBCacheOffset
+                    ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u // StaticCacheOffset
                 };
         }
         else
@@ -1264,10 +1264,10 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
 
     for (Uint32 i = 0; i < m_NumInlineConstantBufferAttribs; ++i)
     {
-        const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBufferAttribs[i];
-        const Uint32                         DataSize     = InlineCBAttr.NumConstants * sizeof(Uint32);
-        const ResourceAttribs&               Attr         = GetResourceAttribs(InlineCBAttr.ResIndex);
-        const Uint32                         CacheOffset  = Attr.CacheOffset(CacheType);
+        const InlineConstantBufferAttribsVk& InlineCBAttr        = m_InlineConstantBufferAttribs[i];
+        const Uint32                         DataSize            = InlineCBAttr.NumConstants * sizeof(Uint32);
+        const ResourceAttribs&               Attr                = GetResourceAttribs(InlineCBAttr.ResIndex);
+        const Uint32                         CacheOffset         = Attr.CacheOffset(CacheType);
         const void*                          pInlineConstantData = ResourceCache.GetInlineConstantData(Attr.DescrSet, CacheOffset);
         VERIFY_EXPR(pInlineConstantData != nullptr);
 

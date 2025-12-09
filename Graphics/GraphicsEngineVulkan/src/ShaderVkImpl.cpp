@@ -239,7 +239,6 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
 
             VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint ||
                         (m_EntryPoint == "main" && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL) != 0));
-
         }
         else
         {

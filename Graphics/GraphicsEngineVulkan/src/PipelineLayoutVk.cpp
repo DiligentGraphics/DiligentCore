@@ -149,10 +149,10 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl*                            pDe
         PipelineLayoutCI.pushConstantRangeCount = 1;
         PipelineLayoutCI.pPushConstantRanges    = &PushConstantRange;
 
-        m_PushConstantSize            = PushConstant.Size;
-        m_PushConstantStageFlags      = PushConstant.StageFlags;
-        m_PushConstantSignatureIndex  = PushConstant.SignatureIndex;
-        m_PushConstantResourceIndex   = PushConstant.ResourceIndex;
+        m_PushConstantSize           = PushConstant.Size;
+        m_PushConstantStageFlags     = PushConstant.StageFlags;
+        m_PushConstantSignatureIndex = PushConstant.SignatureIndex;
+        m_PushConstantResourceIndex  = PushConstant.ResourceIndex;
     }
     else
     {
