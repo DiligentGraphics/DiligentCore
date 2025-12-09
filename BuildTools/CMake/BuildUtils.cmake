@@ -160,7 +160,7 @@ function(set_common_target_properties TARGET)
 
     get_target_property(TARGET_TYPE ${TARGET} TYPE)
 
-    set(CXX_STANDARD 14)
+    set(CXX_STANDARD 17)
     if(MIN_CXX_STANDARD)
         if(MIN_CXX_STANDARD GREATER ${CXX_STANDARD})
             set(CXX_STANDARD ${MIN_CXX_STANDARD})
@@ -169,7 +169,7 @@ function(set_common_target_properties TARGET)
 
     set_target_properties(${TARGET} PROPERTIES
         # It is crucial to set CXX_STANDARD flag to only affect c++ files and avoid failures compiling c-files:
-        # error: invalid argument '-std=c++14' not allowed with 'C/ObjC'
+        # error: invalid argument '-std=c++17' not allowed with 'C/ObjC'
         CXX_STANDARD ${CXX_STANDARD}
         CXX_STANDARD_REQUIRED ON
     )
