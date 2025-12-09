@@ -181,9 +181,6 @@ std::vector<uint32_t> PatchSPIRVConvertUniformBufferToPushConstant(
     {
         return {};
     }
-    auto fp = fopen("d:\\testubo.spv", "wb");
-    fwrite(result.data(), result.size() * 4, 1, fp);
-    fclose(fp);
     return result;
 }
 
