@@ -350,7 +350,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
                     DescrSetValue,
                     pVkImmutableSamplers != nullptr,
                     IsPushConstant,
-                    CacheGroupOffsets[CacheGroup],
+                    IsPushConstant ? ~0u : CacheGroupOffsets[CacheGroup],  // SRBCacheOffset - push constants don't use it
                     ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u //
                 };
         }
@@ -367,8 +367,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
                           "Deserialized descriptor set (", pAttribs->DescrSet, ") is invalid: ", DSMapping[SetId], " is expected.");
             DEV_CHECK_ERR(pAttribs->IsImmutableSamplerAssigned() == (pVkImmutableSamplers != nullptr), "Immutable sampler flag is invalid");
             DEV_CHECK_ERR(pAttribs->IsPushConstantBuffer() == IsPushConstant, "Push constant flag is invalid");
-            DEV_CHECK_ERR(pAttribs->SRBCacheOffset == CacheGroupOffsets[CacheGroup],
-                          "SRB cache offset (", pAttribs->SRBCacheOffset, ") is invalid: ", CacheGroupOffsets[CacheGroup], " is expected.");
+            DEV_CHECK_ERR(pAttribs->SRBCacheOffset == (IsPushConstant ? ~0u : CacheGroupOffsets[CacheGroup]),
+                          "SRB cache offset (", pAttribs->SRBCacheOffset, ") is invalid: ", (IsPushConstant ? ~0u : CacheGroupOffsets[CacheGroup]), " is expected.");
             DEV_CHECK_ERR(pAttribs->StaticCacheOffset == (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u),
                           "Static cache offset is invalid.");
         }
@@ -868,6 +868,11 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
     if (!HasDescriptorSet(DESCRIPTOR_SET_ID_STATIC_MUTABLE) || m_pStaticResCache == nullptr)
         return;
 
+    // If static cache has no descriptor sets (e.g., only push constants),
+    // there's nothing to copy from the descriptor set.
+    if (m_pStaticResCache->GetNumDescriptorSets() == 0)
+        return;
+
     // SrcResourceCache contains only static resources.
     // In case of SRB, DstResourceCache contains static, mutable and dynamic resources.
     // In case of Signature, DstResourceCache contains only static resources.
@@ -1008,6 +1013,14 @@ void PipelineResourceSignatureVkImpl::CommitDynamicResources(const ShaderResourc
     {
         const PipelineResourceAttribsType& Attr        = GetResourceAttribs(ResIdx);
         const PipelineResourceDesc&        ResDesc     = GetResourceDesc(ResIdx);
+        
+        // Push constants don't use descriptor sets, skip them
+        if (Attr.IsPushConstantBuffer())
+        {
+            ++ResIdx;
+            continue;
+        }
+        
         const Uint32                       CacheOffset = Attr.CacheOffset(CacheType);
         // For inline constants, GetArraySize() returns 1 (actual array size for cache),
         // while ArraySize contains the number of 32-bit constants

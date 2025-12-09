@@ -690,8 +690,7 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
             PipelineResourceDesc& Res = const_cast<PipelineResourceDesc&>(SignDesc.Get().Resources[i]);
             if ((Res.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
             {
-                //TODO: making first inline constant a push constant will lead to assert on CreateSetLayouts
-                //Res.Flags |= PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT;
+                Res.Flags |= PIPELINE_RESOURCE_FLAG_VULKAN_PUSH_CONSTANT;
                 break;
             }
         }
