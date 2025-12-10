@@ -509,7 +509,6 @@ std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_t
 
 std::vector<uint32_t> PatchSPIRVConvertUniformBufferToPushConstant(
     const std::vector<uint32_t>& SPIRV,
-    spv_target_env               TargetEnv,
     const std::string&           BlockName)
 {
     spv_target_env TargetEnv = SpvTargetEnvFromSPIRV(SPIRV);
