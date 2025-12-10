@@ -967,7 +967,6 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
 void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(const PushConstantInfoVk& PushConstantInfo,
                                                                         TShaderStages&            ShaderStages) const noexcept(false)
 {
-#if !DILIGENT_NO_HLSL
     // If no push constant was selected, no patching needed
     if (PushConstantInfo.SignatureIndex == INVALID_PUSH_CONSTANT_INDEX ||
         PushConstantInfo.ResourceIndex == INVALID_PUSH_CONSTANT_INDEX)
@@ -1029,6 +1028,7 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(const Pu
 
             if (ShouldPatchUniformBuffer)
             {
+#if !DILIGENT_NO_HLSL
                 const std::vector<uint32_t>& SPIRV = Stage.SPIRVs[i];
 
                 std::vector<uint32_t> PatchedSPIRV = PatchSPIRVConvertUniformBufferToPushConstant(
@@ -1045,12 +1045,13 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(const Pu
                     LOG_ERROR_MESSAGE("Failed to convert uniform buffer '", PushConstantName,
                                       "' to push constant in shader '", pShader->GetDesc().Name, "'");
                 }
+#else
+                LOG_ERROR_AND_THROW("Cannot patch shader, SPIRV-Tools is not available when DILIGENT_NO_HLSL defined.");
+#endif
             }
         }
     }
-#else
-    //Warning: SPIRV-Tools is not available due to DILIGENT_NO_HLSL defined.
-#endif
+
 }
 
 template <typename PSOCreateInfoType>

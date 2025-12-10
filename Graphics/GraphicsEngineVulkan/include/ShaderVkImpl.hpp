@@ -92,8 +92,6 @@ public:
 
     const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources() const
     {
-        //DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
-
         static const std::shared_ptr<const SPIRVShaderResources> NullShaderResource;
         // NOTE: while shader is compiled asynchronously, is not available
         if (IsCompiling())
