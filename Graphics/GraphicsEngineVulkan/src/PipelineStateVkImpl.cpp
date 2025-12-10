@@ -1032,7 +1032,6 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(const Pu
 
                 std::vector<uint32_t> PatchedSPIRV = PatchSPIRVConvertUniformBufferToPushConstant(
                     SPIRV,
-                    SPV_ENV_MAX, // Auto-detect target environment
                     PushConstantName);
 
                 if (!PatchedSPIRV.empty())

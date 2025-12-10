@@ -55,11 +55,9 @@ std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV,
 /// and removes Binding and DescriptorSet decorations.
 ///
 /// \param [in] SPIRV      - Source SPIR-V bytecode
-/// \param [in] TargetEnv  - Target SPIR-V environment (use SPV_ENV_MAX to auto-detect)
 /// \param [in] BlockName  - Name of the uniform buffer block to convert
 /// \return Modified SPIR-V bytecode, or empty vector on failure
 std::vector<uint32_t> PatchSPIRVConvertUniformBufferToPushConstant(const std::vector<uint32_t>& SPIRV,
-                                                                   spv_target_env               TargetEnv,
                                                                    const std::string&           BlockName);
 
 } // namespace Diligent

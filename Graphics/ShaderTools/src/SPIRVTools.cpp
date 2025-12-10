@@ -512,8 +512,7 @@ std::vector<uint32_t> PatchSPIRVConvertUniformBufferToPushConstant(
     spv_target_env               TargetEnv,
     const std::string&           BlockName)
 {
-    if (TargetEnv == SPV_ENV_MAX)
-        TargetEnv = SpvTargetEnvFromSPIRV(SPIRV);
+    spv_target_env TargetEnv = SpvTargetEnvFromSPIRV(SPIRV);
 
     spvtools::Optimizer optimizer(TargetEnv);
 
