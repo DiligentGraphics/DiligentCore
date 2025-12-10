@@ -513,27 +513,6 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
 {
     VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
 
-    // Filter out SRBs that only have push constants (no descriptor sets)
-    // These SRBs are included in CommitSRBMask due to InlineConstantsSRBMask, but they don't need descriptor set binding
-    Uint32 FilteredCommitMask      = CommitSRBMask;
-    Uint32 ResourceSignaturesCount = m_pPipelineState->GetResourceSignatureCount();
-    for (Uint32 sign = 0; sign < ResourceSignaturesCount; ++sign)
-    {
-        if ((CommitSRBMask & (1u << sign)) != 0)
-        {
-            const ShaderResourceCacheVk* pResourceCache = BindInfo.ResourceCaches[sign];
-            if (pResourceCache != nullptr && pResourceCache->GetNumDescriptorSets() == 0)
-            {
-                // This SRB only has push constants, no descriptor sets to commit
-                FilteredCommitMask &= ~(1u << sign);
-            }
-        }
-    }
-
-    // If all SRBs were filtered out (only push constants), nothing to commit
-    if (FilteredCommitMask == 0)
-        return;
-
     const Uint32 FirstSign = PlatformMisc::GetLSB(CommitSRBMask);
     const Uint32 LastSign  = PlatformMisc::GetMSB(CommitSRBMask);
     VERIFY_EXPR(LastSign < m_pPipelineState->GetResourceSignatureCount());
