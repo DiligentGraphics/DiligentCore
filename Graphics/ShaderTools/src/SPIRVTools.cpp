@@ -27,6 +27,13 @@
 #include "SPIRVTools.hpp"
 #include "DebugUtilities.hpp"
 
+// Temporarily disable warning C4127: conditional expression is constant
+// This warning is triggered by SPIRV-Tools headers in ThirdParty
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4127)
+#endif
+
 #include "spirv-tools/optimizer.hpp"
 
 // SPIRV-Tools internal headers for custom pass implementation
@@ -34,6 +41,11 @@
 #include "source/opt/ir_context.h"
 #include "source/opt/type_manager.h"
 #include "source/opt/decoration_manager.h"
+
+// Restore warning settings
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
 
 namespace Diligent
 {
