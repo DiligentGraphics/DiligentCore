@@ -84,6 +84,25 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContextVk, IDeviceContext)
     /// calling IDeviceContext::InvalidateState() and then manually restore all required states via
     /// appropriate Diligent API calls.
     VIRTUAL VkCommandBuffer METHOD(GetVkCommandBuffer)(THIS) PURE;
+
+    /// Sets push constant data for the currently bound pipeline.
+
+    /// \param [in] pData  - Pointer to the push constant data.
+    /// \param [in] Offset - Offset in bytes from the start of the push constant block.
+    /// \param [in] Size   - Size of the data to set in bytes.
+    ///
+    /// \remarks This method sets push constant data that will be used in subsequent draw or dispatch calls.
+    ///          The pipeline state must be set before calling this method.
+    ///          Push constants are a Vulkan feature that allows small amounts of data to be passed to
+    ///          shaders efficiently without using descriptor sets. In shaders, push constants are declared
+    ///          using the layout(push_constant) qualifier in GLSL or [[vk::push_constant]] attribute in HLSL.
+    ///
+    /// \note    The total size of push constants is limited by the device (typically 128-256 bytes).
+    ///          Check VkPhysicalDeviceLimits::maxPushConstantsSize for the exact limit.
+    VIRTUAL void METHOD(SetPushConstants)(THIS_
+                                          const void* pData,
+                                          Uint32      Offset,
+                                          Uint32      Size) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -95,6 +114,7 @@ DILIGENT_END_INTERFACE
 
 #    define IDeviceContextVk_TransitionImageLayout(This, ...) CALL_IFACE_METHOD(DeviceContextVk, TransitionImageLayout, This, __VA_ARGS__)
 #    define IDeviceContextVk_BufferMemoryBarrier(This, ...)   CALL_IFACE_METHOD(DeviceContextVk, BufferMemoryBarrier,   This, __VA_ARGS__)
+#    define IDeviceContextVk_SetPushConstants(This, ...)      CALL_IFACE_METHOD(DeviceContextVk, SetPushConstants,      This, __VA_ARGS__)
 
 // clang-format on
 

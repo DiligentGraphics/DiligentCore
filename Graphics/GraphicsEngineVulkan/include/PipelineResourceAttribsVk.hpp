@@ -63,17 +63,20 @@ enum class DescriptorType : Uint8
 
 
 // sizeof(PipelineResourceAttribsVk) == 16, x64
+// Note: Push constant selection is deferred to PSO creation time.
+// At PRS level, all inline constants are treated uniformly with descriptor sets.
 struct PipelineResourceAttribsVk
 {
 private:
     static constexpr Uint32 _BindingIndexBits    = 16;
     static constexpr Uint32 _SamplerIndBits      = 16;
-    static constexpr Uint32 _ArraySizeBits       = 25;
+    static constexpr Uint32 _ArraySizeBits       = 24;
     static constexpr Uint32 _DescrTypeBits       = 5;
     static constexpr Uint32 _DescrSetBits        = 1;
     static constexpr Uint32 _SamplerAssignedBits = 1;
+    static constexpr Uint32 _ReservedBits        = 1; // Reserved for future use
 
-    static_assert((_BindingIndexBits + _ArraySizeBits + _SamplerIndBits + _DescrTypeBits + _DescrSetBits + _SamplerAssignedBits) % 32 == 0, "Bits are not optimally packed");
+    static_assert((_BindingIndexBits + _ArraySizeBits + _SamplerIndBits + _DescrTypeBits + _DescrSetBits + _SamplerAssignedBits + _ReservedBits) % 32 == 0, "Bits are not optimally packed");
 
     // clang-format off
     static_assert((1u << _DescrTypeBits)    >  static_cast<Uint32>(DescriptorType::Count), "Not enough bits to store DescriptorType values");
@@ -88,10 +91,11 @@ public:
     // clang-format off
     const Uint32  BindingIndex         : _BindingIndexBits;    // Binding in the descriptor set
     const Uint32  SamplerInd           : _SamplerIndBits;      // Index of the assigned sampler in m_Desc.Resources and m_pPipelineResourceAttribsVk
-    const Uint32  ArraySize            : _ArraySizeBits;       // Array size
+    const Uint32  ArraySize            : _ArraySizeBits;       // Array size (for inline constants, this is the number of 32-bit constants)
     const Uint32  DescrType            : _DescrTypeBits;       // Descriptor type (DescriptorType)
     const Uint32  DescrSet             : _DescrSetBits;        // Descriptor set (0 or 1)
     const Uint32  ImtblSamplerAssigned : _SamplerAssignedBits; // Immutable sampler flag
+    const Uint32  Reserved             : _ReservedBits;        // Reserved for future use
 
     const Uint32  SRBCacheOffset;                              // Offset in the SRB resource cache
     const Uint32  StaticCacheOffset;                           // Offset in the static resource cache
@@ -112,6 +116,7 @@ public:
         DescrType            {static_cast<Uint32>(_DescrType)},
         DescrSet             {_DescrSet                      },
         ImtblSamplerAssigned {_ImtblSamplerAssigned ? 1u : 0u},
+        Reserved             {0                              },
         SRBCacheOffset       {_SRBCacheOffset                },
         StaticCacheOffset    {_StaticCacheOffset             }
     // clang-format on

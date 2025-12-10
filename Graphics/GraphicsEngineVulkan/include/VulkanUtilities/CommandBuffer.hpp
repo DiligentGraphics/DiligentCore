@@ -504,6 +504,18 @@ public:
         vkCmdBindDescriptorSets(m_VkCmdBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
     }
 
+    __forceinline void PushConstants(VkPipelineLayout   layout,
+                                     VkShaderStageFlags stageFlags,
+                                     uint32_t           offset,
+                                     uint32_t           size,
+                                     const void*        pValues)
+    {
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY_EXPR(pValues != nullptr);
+        VERIFY_EXPR(size > 0);
+        vkCmdPushConstants(m_VkCmdBuffer, layout, stageFlags, offset, size, pValues);
+    }
+
     __forceinline void CopyBuffer(VkBuffer            srcBuffer,
                                   VkBuffer            dstBuffer,
                                   uint32_t            regionCount,
