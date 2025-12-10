@@ -43,16 +43,11 @@
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 
-#if !DILIGENT_NO_HLSL
-#    include "SPIRVTools.hpp"
-#endif
+//We always need this to patch uniform buffer block, no matter DILIGENT_NO_HLSL defined or not.
+#include "SPIRVTools.hpp"
 
 namespace Diligent
 {
-
-//when DILIGENT_NO_HLSL not defined
-std::vector<uint32_t> PatchSPIRVConvertUniformBufferToPushConstant(const std::vector<uint32_t>& SPIRV,
-                                                                   const std::string&           BlockName);
 
 constexpr INTERFACE_ID PipelineStateVkImpl::IID_InternalImpl;
 

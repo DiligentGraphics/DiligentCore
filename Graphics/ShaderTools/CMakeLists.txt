@@ -106,7 +106,7 @@ if(DILIGENT_USE_SPIRV_TOOLCHAIN)
             set(USE_SPIRV_TOOLS TRUE)
         endif()
     endif()
-    if (NOT ${DILIGENT_NO_HLSL} AND TARGET SPIRV-Tools-opt)
+    if (TARGET SPIRV-Tools-opt) # NOT ${DILIGENT_NO_HLSL} AND -- we always need SPIRV-Tools.
         set(USE_SPIRV_TOOLS TRUE)
     endif()
 endif()
