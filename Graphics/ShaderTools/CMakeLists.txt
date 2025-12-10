@@ -95,7 +95,7 @@ endif()
 
 set(ENABLE_SPIRV FALSE)
 set(USE_GLSLANG FALSE)
-set(USE_SPIRV_TOOLS FALSE)
+set(USE_SPIRV_TOOLS TRUE) # -- we always need SPIRV-Tools for SPIRV bytecode patching on vulkan backend.
 if(DILIGENT_USE_SPIRV_TOOLCHAIN)
     set(ENABLE_SPIRV TRUE)
     # NB: do not use if(TARGET glsang) check here as glsang may be present
@@ -106,7 +106,7 @@ if(DILIGENT_USE_SPIRV_TOOLCHAIN)
             set(USE_SPIRV_TOOLS TRUE)
         endif()
     endif()
-    if (TARGET SPIRV-Tools-opt) # NOT ${DILIGENT_NO_HLSL} AND -- we always need SPIRV-Tools.
+    if (NOT ${DILIGENT_NO_HLSL} AND TARGET SPIRV-Tools-opt)
         set(USE_SPIRV_TOOLS TRUE)
     endif()
 endif()
