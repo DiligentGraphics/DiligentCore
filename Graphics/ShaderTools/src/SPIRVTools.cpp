@@ -153,7 +153,7 @@ public:
         }
 
         // Check if the named_id is a variable or a type
-        spvtools::opt::Instruction* target_var  = nullptr;
+        spvtools::opt::Instruction* target_var = nullptr;
         spvtools::opt::Instruction* named_inst = get_def_use_mgr()->GetDef(named_id);
 
         if (named_inst == nullptr)
@@ -234,7 +234,7 @@ public:
 
         // Create or find a pointer type with PushConstant storage class
         spvtools::opt::analysis::TypeManager* type_mgr = context()->get_type_mgr();
-        uint32_t new_ptr_type_id =
+        uint32_t                              new_ptr_type_id =
             type_mgr->FindPointerToType(pointee_type_id, spv::StorageClass::PushConstant);
 
         if (new_ptr_type_id == 0)
@@ -397,7 +397,7 @@ private:
     // Changes the result type of an instruction to use the new storage class.
     void ChangeResultStorageClass(spvtools::opt::Instruction* inst)
     {
-        spvtools::opt::analysis::TypeManager* type_mgr          = context()->get_type_mgr();
+        spvtools::opt::analysis::TypeManager* type_mgr         = context()->get_type_mgr();
         spvtools::opt::Instruction*           result_type_inst = get_def_use_mgr()->GetDef(inst->type_id());
 
         if (result_type_inst->opcode() != spv::Op::OpTypePointer)
