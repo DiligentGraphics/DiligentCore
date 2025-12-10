@@ -30,8 +30,8 @@
 // Temporarily disable warning C4127: conditional expression is constant
 // This warning is triggered by SPIRV-Tools headers in ThirdParty
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4127)
+#    pragma warning(push)
+#    pragma warning(disable : 4127)
 #endif
 
 #include "spirv-tools/optimizer.hpp"
