@@ -43,7 +43,9 @@
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 
-#include "SPIRVTools.hpp"
+#if !DILIGENT_NO_HLSL
+#    include "SPIRVTools.hpp"
+#endif
 
 namespace Diligent
 {
