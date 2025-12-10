@@ -50,6 +50,10 @@
 namespace Diligent
 {
 
+//when DILIGENT_NO_HLSL not defined
+std::vector<uint32_t>  PatchSPIRVConvertUniformBufferToPushConstant(const std::vector<uint32_t>& SPIRV,
+                                                                    const std::string&           BlockName);
+
 constexpr INTERFACE_ID PipelineStateVkImpl::IID_InternalImpl;
 
 namespace
