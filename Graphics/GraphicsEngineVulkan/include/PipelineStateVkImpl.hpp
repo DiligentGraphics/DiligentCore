@@ -86,6 +86,7 @@ public:
 
         std::vector<const ShaderVkImpl*>   Shaders;
         std::vector<std::vector<uint32_t>> SPIRVs;
+        std::vector<std::shared_ptr<const SPIRVShaderResources>> ShaderResources;//This can be also updated due to push constant
 
         friend SHADER_TYPE GetShaderStageType(const ShaderStageInfo& Stage) { return Stage.Type; }
     };
@@ -136,8 +137,8 @@ private:
     bool InitPushConstantInfoFromSignatures(PushConstantInfoVk& PushConstant,
                                             TShaderStages&      ShaderStages) const noexcept(false);
 
-    void PatchShaderConvertUniformBufferToPushConstant(TShaderStages&            ShaderStages,
-                                                       const PushConstantInfoVk& PushConstant) const noexcept(false);
+    void PatchShaderConvertUniformBufferToPushConstant(const PushConstantInfoVk&                    PushConstant,
+                                                       TShaderStages&                               ShaderStages) const noexcept(false);
 
     // TPipelineStateBase::Construct needs access to InitializePipeline
     friend TPipelineStateBase;

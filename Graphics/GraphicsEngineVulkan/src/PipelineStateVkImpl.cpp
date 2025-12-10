@@ -555,7 +555,8 @@ void VerifyResourceMerge(const char*                       PSOName,
 PipelineStateVkImpl::ShaderStageInfo::ShaderStageInfo(const ShaderVkImpl* pShader) :
     Type{pShader->GetDesc().ShaderType},
     Shaders{pShader},
-    SPIRVs{pShader->GetSPIRV()}
+    SPIRVs{pShader->GetSPIRV()},
+    ShaderResources{pShader->GetShaderResources()}
 {}
 
 void PipelineStateVkImpl::ShaderStageInfo::Append(const ShaderVkImpl* pShader)
@@ -578,6 +579,7 @@ void PipelineStateVkImpl::ShaderStageInfo::Append(const ShaderVkImpl* pShader)
     }
     Shaders.push_back(pShader);
     SPIRVs.push_back(pShader->GetSPIRV());
+    ShaderResources.push_back(pShader->GetShaderResources());
 }
 
 size_t PipelineStateVkImpl::ShaderStageInfo::Count() const
@@ -691,16 +693,19 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
     {
         const std::vector<const ShaderVkImpl*>& Shaders    = ShaderStages[s].Shaders;
         std::vector<std::vector<uint32_t>>&     SPIRVs     = ShaderStages[s].SPIRVs;
-        const SHADER_TYPE                       ShaderType = ShaderStages[s].Type;
+        const SHADER_TYPE                                         ShaderType      = ShaderStages[s].Type;
+        std::vector<std::shared_ptr<const SPIRVShaderResources>>& ShaderResources = ShaderStages[s].ShaderResources;
 
         VERIFY_EXPR(Shaders.size() == SPIRVs.size());
+        VERIFY_EXPR(Shaders.size() == ShaderResources.size());
 
         for (size_t i = 0; i < Shaders.size(); ++i)
         {
             const ShaderVkImpl*    pShader = Shaders[i];
             std::vector<uint32_t>& SPIRV   = SPIRVs[i];
+            const std::shared_ptr<const SPIRVShaderResources>& pShaderResources = ShaderResources[i];
 
-            const auto& pShaderResources = pShader->GetShaderResources();
+            //const auto& pShaderResources = pShader->GetShaderResources();
             VERIFY_EXPR(pShaderResources);
 
             if (pDvpShaderResources)
@@ -867,7 +872,7 @@ bool PipelineStateVkImpl::InitPushConstantInfoFromSignatures(PushConstantInfoVk&
                                 PushConstant.StageFlags |= ShaderTypeToVkShaderStageFlagBit(ShaderType);
                             }
 
-                            // Found push constant from SPIR-V, we're done
+                            // Found push constant from SPIR-V
                             return true;
                         }
                     }
@@ -904,7 +909,7 @@ bool PipelineStateVkImpl::InitPushConstantInfoFromSignatures(PushConstantInfoVk&
                     PushConstant.StageFlags |= ShaderTypeToVkShaderStageFlagBit(ShaderType);
                 }
 
-                // Found first inline constant, we're done
+                // Found first inline constant
                 return true;
             }
         }
@@ -937,7 +942,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
 
     // If we promoted an inline constant as push constant (not an existing SPIR-V push constant),
     // convert the uniform buffer to push constant in SPIRV bytecode.
-    PatchShaderConvertUniformBufferToPushConstant(ShaderStages, PushConstant);
+    PatchShaderConvertUniformBufferToPushConstant(PushConstant, ShaderStages);
 
     const bool RemapResources = (CreateInfo.Flags & PSO_CREATE_FLAG_DONT_REMAP_SHADER_RESOURCES) == 0;
     const bool VerifyBindings = !RemapResources && ((InternalFlags & PSO_CREATE_INTERNAL_FLAG_NO_SHADER_REFLECTION) == 0);
@@ -965,8 +970,8 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
     }
 }
 
-void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(TShaderStages&            ShaderStages,
-                                                                        const PushConstantInfoVk& PushConstantInfo) const noexcept(false)
+void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(const PushConstantInfoVk& PushConstantInfo, 
+                                                                        TShaderStages& ShaderStages) const noexcept(false)
 {
     // If no push constant was selected, no patching needed
     if (PushConstantInfo.SignatureIndex == INVALID_PUSH_CONSTANT_INDEX ||
@@ -987,20 +992,39 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(TShaderS
         for (size_t i = 0; i < Stage.Shaders.size(); ++i)
         {
             ShaderVkImpl*               pShader = const_cast<ShaderVkImpl*>(Stage.Shaders[i]);
-            const SPIRVShaderResources* pRes    = pShader->GetShaderResources().get();
-
-            if (pRes == nullptr)
-                continue;
 
             // First check if the shader already has this as push constant
             bool AlreadyPushConstant = false;
-            for (Uint32 pc = 0; pc < pRes->GetNumPushConstants(); ++pc)
+
+            // Check if this shader has a uniform buffer with the push constant name
+            bool ShouldPatchUniformBuffer = false;
             {
-                const SPIRVShaderResourceAttribs& PCAttribs = pRes->GetPushConstant(pc);
-                if (PCAttribs.Name == PushConstantName)
+                const SPIRVShaderResources* pShaderRes = pShader->GetShaderResources().get();
+
+                if (pShaderRes == nullptr)
+                    continue;
+
+                for (Uint32 pc = 0; pc < pShaderRes->GetNumPushConstants(); ++pc)
                 {
-                    AlreadyPushConstant = true;
-                    break;
+                    const SPIRVShaderResourceAttribs& PCAttribs = pShaderRes->GetPushConstant(pc);
+                    if (PCAttribs.Name == PushConstantName)
+                    {
+                        AlreadyPushConstant = true;
+                        break;
+                    }
+                }
+
+                if (!AlreadyPushConstant)
+                {
+                    for (Uint32 ub = 0; ub < pShaderRes->GetNumUBs(); ++ub)
+                    {
+                        const SPIRVShaderResourceAttribs& UBAttribs = pShaderRes->GetUB(ub);
+                        if (UBAttribs.Name == PushConstantName)
+                        {
+                            ShouldPatchUniformBuffer = true;
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -1008,22 +1032,10 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(TShaderS
             if (AlreadyPushConstant)
                 continue;
 
-            // Check if this shader has a uniform buffer with the push constant name
-            bool ShouldPatchUniformBuffer = false;
-
-            for (Uint32 ub = 0; ub < pRes->GetNumUBs(); ++ub)
-            {
-                const SPIRVShaderResourceAttribs& UBAttribs = pRes->GetUB(ub);
-                if (UBAttribs.Name == PushConstantName)
-                {
-                    ShouldPatchUniformBuffer = true;
-                    break;
-                }
-            }
-
             if (ShouldPatchUniformBuffer)
             {
                 const std::vector<uint32_t>& SPIRV        = Stage.SPIRVs[i];
+
                 std::vector<uint32_t>        PatchedSPIRV = PatchSPIRVConvertUniformBufferToPushConstant(
                     SPIRV,
                     SPV_ENV_MAX, // Auto-detect target environment
@@ -1032,11 +1044,7 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(TShaderS
                 if (!PatchedSPIRV.empty())
                 {
                     Stage.SPIRVs[i] = PatchedSPIRV;
-
-                    pShader->SetSPIRV(PatchedSPIRV);
-
-                    // Reconstruct shader resources from SPIRV
-                    pShader->CreateSPIRVShaderResources();
+                    Stage.ShaderResources[i] = pShader->CreateSPIRVShaderResources(PatchedSPIRV);
                 }
                 else
                 {

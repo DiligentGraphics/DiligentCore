@@ -110,9 +110,7 @@ public:
         Size        = m_SPIRV.size() * sizeof(m_SPIRV[0]);
     }
 
-    void SetSPIRV(const std::vector<uint32_t>& SPIRV) noexcept(false);
-
-    void CreateSPIRVShaderResources() noexcept(false);
+    std::shared_ptr<const SPIRVShaderResources> CreateSPIRVShaderResources(const std::vector<uint32_t>& SPIRV) noexcept(false);
 
 private:
     void Initialize(const ShaderCreateInfo& ShaderCI,

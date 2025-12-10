@@ -170,10 +170,16 @@ std::vector<uint32_t> PatchSPIRVConvertUniformBufferToPushConstant(
 
     // Register the pass to convert UBO to push constant
     optimizer.RegisterPass(spvtools::CreateConvertUBOToPushConstantPass(BlockName));
+    //optimizer.RegisterPass(spvtools::CreateDeadVariableEliminationPass());
+    //optimizer.RegisterPerformancePasses();
 
     spvtools::OptimizerOptions options;
 #ifndef DILIGENT_DEVELOPMENT
+    // Do not run validator in release build
     options.set_run_validator(false);
+#else
+    // Run validator in debug build
+    options.set_run_validator(true);
 #endif
 
     std::vector<uint32_t> result;
