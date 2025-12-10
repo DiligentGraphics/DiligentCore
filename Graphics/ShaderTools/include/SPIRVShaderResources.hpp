@@ -131,6 +131,39 @@ struct SPIRVShaderResourceAttribs
     {
         return IsMS != 0;
     }
+
+    Uint32 GetConstantBufferSize() const
+    {
+        VERIFY((Type == PushConstant || Type == UniformBuffer), "Invalid resource type: PushConstant or UniformBuffer expected");
+        return BufferStaticSize;
+    }
+
+    Uint32 GetInlineConstantCountOrThrow(const char* ShaderName) const
+    {
+        VERIFY_EXPR(Type == PushConstant || Type == UniformBuffer);
+
+        if (ArraySize != 1)
+        {
+            LOG_ERROR_AND_THROW("Inline constants resource '", Name, "' in shader '", ShaderName, "' can not be an array.");
+        }
+        const Uint32 NumConstants = GetConstantBufferSize() / sizeof(Uint32);
+
+        constexpr Uint32 kMaxInlineConstants = 64;
+        if (NumConstants > kMaxInlineConstants)
+        {
+            LOG_ERROR_AND_THROW("Inline constants resource '", Name, "' in shader '", ShaderName, "' has ",
+                                NumConstants, " constants. The maximum supported number of inline constants is ",
+                                kMaxInlineConstants, '.');
+        }
+
+        if (NumConstants == 0)
+        {
+            LOG_ERROR_AND_THROW("Resource '", Name, "' in shader '", ShaderName,
+                                "' is marked as inline constants, but has zero buffer size. ");
+        }
+
+        return NumConstants;
+    }
 };
 static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)");
 

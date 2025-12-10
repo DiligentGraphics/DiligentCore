@@ -636,22 +636,14 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
 
                         // For inline constants, ArraySize specifies the number of 32-bit constants,
                         // not the array dimension. We need to calculate it from the buffer size.
+                        // the SPIRV ArraySize is 1 (buffer is not an array), but we need
+                        // the number of 32-bit constants which is BufferStaticSize / sizeof(Uint32)
                         Uint32 ArraySize = Attribs.ArraySize;
-                        if ((Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+                        if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
                         {
-                            // For inline constants specified via ShaderResourceVariableDesc,
-                            // the SPIRV ArraySize is 1 (buffer is not an array), but we need
-                            // the number of 32-bit constants which is BufferStaticSize / sizeof(Uint32)
-                            if (Attribs.BufferStaticSize > 0)
-                            {
-                                ArraySize = Attribs.BufferStaticSize / sizeof(Uint32);
-                            }
-                            else
-                            {
-                                LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name,
-                                                    "' is marked as inline constants, but has zero buffer size. "
-                                                    "Make sure the buffer type is defined in the shader.");
-                            }
+                            VERIFY(Flags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag cannot be combined with other flags.");
+
+                            ArraySize = Attribs.GetInlineConstantCountOrThrow(pShader->GetDesc().Name);
                         }
 
                         SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, Flags);
