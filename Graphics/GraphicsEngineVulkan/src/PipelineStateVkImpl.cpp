@@ -971,7 +971,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
 }
 
 void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(const PushConstantInfoVk& PushConstantInfo,
-                                                                         TShaderStages&            ShaderStages) const noexcept(false)
+                                                                        TShaderStages&            ShaderStages) const noexcept(false)
 {
     // If no push constant was selected, no patching needed
     if (PushConstantInfo.SignatureIndex == INVALID_PUSH_CONSTANT_INDEX ||
