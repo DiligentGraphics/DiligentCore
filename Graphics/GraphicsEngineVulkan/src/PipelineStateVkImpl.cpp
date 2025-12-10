@@ -1051,7 +1051,6 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(const Pu
             }
         }
     }
-
 }
 
 template <typename PSOCreateInfoType>
