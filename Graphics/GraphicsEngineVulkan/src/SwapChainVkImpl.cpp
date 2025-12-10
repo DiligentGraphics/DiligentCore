@@ -102,17 +102,17 @@ void SwapChainVkImpl::CreateSurface()
 
         err = vkCreateMetalSurfaceEXT(m_Instance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
     }
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    if (m_Window.pDisplay != nullptr)
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR) || defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR)
+#    if defined(VK_USE_PLATFORM_WAYLAND_KHR)
+    if (m_Window.pDisplay != nullptr && m_Window.pWaylandSurface != nullptr)
     {
         VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo{};
         surfaceCreateInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-        surfaceCreateInfo.display = reinterpret_cast<struct wl_display*>(m_Window.pDisplay);
-        surfaceCreateInfo.Surface = reinterpret_cast<struct wl_surface*>(nullptr);
-
+        surfaceCreateInfo.display = static_cast<wl_display*>(m_Window.pDisplay);
+        surfaceCreateInfo.surface = static_cast<wl_surface*>(m_Window.pWaylandSurface);
         err = vkCreateWaylandSurfaceKHR(m_Instance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
     }
-#elif defined(VK_USE_PLATFORM_XCB_KHR) || defined(VK_USE_PLATFORM_XLIB_KHR)
+#    endif
 
 #    if defined(VK_USE_PLATFORM_XCB_KHR)
     if (m_Window.pXCBConnection != nullptr && m_Window.WindowId != 0)
