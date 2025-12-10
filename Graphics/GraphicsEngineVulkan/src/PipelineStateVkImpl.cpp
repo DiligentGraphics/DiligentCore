@@ -43,8 +43,9 @@
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 
-//We always need this to patch uniform buffer block, no matter DILIGENT_NO_HLSL defined or not.
-#include "SPIRVTools.hpp"
+#if !DILIGENT_NO_HLSL
+#    include "SPIRVTools.hpp"
+#endif
 
 namespace Diligent
 {
@@ -966,6 +967,7 @@ void PipelineStateVkImpl::InitPipelineLayout(const PipelineStateCreateInfo& Crea
 void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(const PushConstantInfoVk& PushConstantInfo,
                                                                         TShaderStages&            ShaderStages) const noexcept(false)
 {
+#if !DILIGENT_NO_HLSL
     // If no push constant was selected, no patching needed
     if (PushConstantInfo.SignatureIndex == INVALID_PUSH_CONSTANT_INDEX ||
         PushConstantInfo.ResourceIndex == INVALID_PUSH_CONSTANT_INDEX)
@@ -1046,6 +1048,9 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(const Pu
             }
         }
     }
+#else
+    //Warning: SPIRV-Tools is not available due to DILIGENT_NO_HLSL defined.
+#endif
 }
 
 template <typename PSOCreateInfoType>
