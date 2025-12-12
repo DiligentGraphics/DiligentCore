@@ -141,8 +141,8 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
 {
     std::vector<unsigned int> SPIRV;
 
-#if DILIGENT_NO_GLSL
-    // When DILIGENT_NO_GLSL is defined, use {FilePath}.spv as raw SPIRV shader source.
+#if DILIGENT_NO_GLSLANG
+    // When DILIGENT_NO_GLSLANG is defined, use {FilePath}.spv as raw SPIRV shader source.
     // i.e. FilePath="AtomicCounters.glsl", then we load RAW SPIRV from "AtomicCounters.glsl.spv"
     std::string SPIRVFilePath = std::string(FilePath) + ".spv";
 
