@@ -88,7 +88,7 @@ struct SPIRVShaderResourceRefAttribs
 
 static_assert(sizeof(SPIRVShaderResourceRefAttribs) == sizeof(SPIRVShaderResourceAttribs), "Size of SPIRVShaderResourceRefAttribs struct must be equal to SPIRVShaderResourceAttribs");
 
-std::vector<unsigned int> HLSLtoSPIRV(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
+std::vector<unsigned int> LoadSPIRVFromHLSL(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
 {
     std::vector<unsigned int> SPIRV;
 
@@ -137,7 +137,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const char* FilePath, SHADER_TYPE ShaderTy
     return SPIRV;
 }
 
-std::vector<unsigned int> GLSLtoSPIRV(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
+std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
 {
     std::vector<unsigned int> SPIRV;
 
@@ -216,7 +216,7 @@ void TestSPIRVResources(const char*                                       FilePa
                         const char*                                       CombinedSamplerSuffix = nullptr,
                         bool                                              IsGLSL                = false)
 {
-    const auto SPIRV = IsGLSL ? GLSLtoSPIRV(FilePath, ShaderType) : HLSLtoSPIRV(FilePath, ShaderType);
+    const auto SPIRV = IsGLSL ? LoadSPIRVFromGLSL(FilePath, ShaderType) : LoadSPIRVFromHLSL(FilePath, ShaderType);
     ASSERT_FALSE(SPIRV.empty()) << "Failed to compile HLSL to SPIRV: " << FilePath;
 
     ShaderDesc ShaderDesc;
