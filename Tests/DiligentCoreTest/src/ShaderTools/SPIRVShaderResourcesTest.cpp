@@ -32,6 +32,7 @@
 #include "BasicFileSystem.hpp"
 
 #include <unordered_map>
+#include <string>
 
 #include "TestingEnvironment.hpp"
 #include "gtest/gtest.h"
@@ -42,8 +43,79 @@ using namespace Diligent::Testing;
 namespace
 {
 
-std::vector<uint32_t> HLSLtoSPIRV(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
+struct SPIRVShaderResourceRefAttribs
 {
+    // clang-format off
+
+/*  0  */const char* const                                  Name;
+/*  8  */const Uint16                                       ArraySize;
+/* 10  */const SPIRVShaderResourceAttribs::ResourceType     Type;
+/* 11.0*/const Uint8                                        ResourceDim  : 7; // RESOURCE_DIMENSION
+/* 11.7*/const Uint8                                        IsMS         : 1;
+
+      // Offset in SPIRV words (uint32_t) of binding & descriptor set decorations in SPIRV binary
+/* 12 */const uint32_t                                      BindingDecorationOffset;
+/* 16 */const uint32_t                                      DescriptorSetDecorationOffset;
+
+/* 20 */const Uint32                                        BufferStaticSize;
+/* 24 */const Uint32                                        BufferStride;
+/* 28 */
+/* 32 */ // End of structure
+
+    // clang-format on
+    //
+    // Test-only constructor for creating reference resources
+    SPIRVShaderResourceRefAttribs(const char*                              _Name,
+                                  SPIRVShaderResourceAttribs::ResourceType _Type,
+                                  Uint16                                   _ArraySize,
+                                  RESOURCE_DIMENSION                       _ResourceDim,
+                                  Uint8                                    _IsMS,
+                                  Uint32                                   _BufferStaticSize,
+                                  Uint32                                   _BufferStride) noexcept :
+        // clang-format off
+    Name                          {_Name},
+    ArraySize                     {_ArraySize},
+    Type                          {_Type},
+    ResourceDim                   {static_cast<Uint8>(_ResourceDim)},
+    IsMS                          {_IsMS},
+    BindingDecorationOffset       {0}, // Not used in tests
+    DescriptorSetDecorationOffset {0}, // Not used in tests
+    BufferStaticSize              {_BufferStaticSize},
+    BufferStride                  {_BufferStride}
+    // clang-format on
+    {}
+};
+
+static_assert(sizeof(SPIRVShaderResourceRefAttribs) == sizeof(SPIRVShaderResourceAttribs), "Size of SPIRVShaderResourceRefAttribs struct must be equal to SPIRVShaderResourceAttribs");
+
+std::vector<unsigned int> HLSLtoSPIRV(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
+{
+    std::vector<unsigned int> SPIRV;
+
+#if DILIGENT_NO_HLSL
+    // When DILIGENT_NO_HLSL is defined, use {FilePath}.spv as raw SPIRV shader source.
+    // i.e. FilePath="Textures.psh", then we load RAW SPIRV from "Textures.psh.spv"
+    std::string SPIRVFilePath = std::string(FilePath) + ".spv";
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceStreamFactory;
+    CreateDefaultShaderSourceStreamFactory("shaders/SPIRV", &pShaderSourceStreamFactory);
+    if (!pShaderSourceStreamFactory)
+        return {};
+
+    RefCntAutoPtr<IFileStream> pSPIRVStream;
+    pShaderSourceStreamFactory->CreateInputStream(SPIRVFilePath.c_str(), &pSPIRVStream);
+    if (!pSPIRVStream)
+        return {};
+
+    const size_t ByteCodeSize = pSPIRVStream->GetSize();
+    if (ByteCodeSize == 0 || ByteCodeSize % 4 != 0)
+        return {};
+
+    SPIRV.resize(ByteCodeSize / 4);
+    pSPIRVStream->Read(SPIRV.data(), ByteCodeSize);
+
+#else
+
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.FilePath       = FilePath;
@@ -58,14 +130,41 @@ std::vector<uint32_t> HLSLtoSPIRV(const char* FilePath, SHADER_TYPE ShaderType =
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceStreamFactory;
 
     GLSLangUtils::InitializeGlslang();
-    auto SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
+    SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
     GLSLangUtils::FinalizeGlslang();
+#endif
 
     return SPIRV;
 }
 
-std::vector<uint32_t> GLSLtoSPIRV(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
+std::vector<unsigned int> GLSLtoSPIRV(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
 {
+    std::vector<unsigned int> SPIRV;
+
+#if DILIGENT_NO_GLSL
+    // When DILIGENT_NO_GLSL is defined, use {FilePath}.spv as raw SPIRV shader source.
+    // i.e. FilePath="AtomicCounters.glsl", then we load RAW SPIRV from "AtomicCounters.glsl.spv"
+    std::string SPIRVFilePath = std::string(FilePath) + ".spv";
+
+    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceStreamFactory;
+    CreateDefaultShaderSourceStreamFactory("shaders/SPIRV", &pShaderSourceStreamFactory);
+    if (!pShaderSourceStreamFactory)
+        return {};
+
+    RefCntAutoPtr<IFileStream> pSPIRVStream;
+    pShaderSourceStreamFactory->CreateInputStream(SPIRVFilePath.c_str(), &pSPIRVStream);
+    if (!pSPIRVStream)
+        return {};
+
+    const size_t ByteCodeSize = pSPIRVStream->GetSize();
+    if (ByteCodeSize == 0 || ByteCodeSize % 4 != 0)
+        return {};
+
+    SPIRV.resize(ByteCodeSize / 4);
+    pSPIRVStream->Read(SPIRV.data(), ByteCodeSize);
+
+#else
+
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceStreamFactory;
     CreateDefaultShaderSourceStreamFactory("shaders/SPIRV", &pShaderSourceStreamFactory);
     if (!pShaderSourceStreamFactory)
@@ -104,17 +203,18 @@ std::vector<uint32_t> GLSLtoSPIRV(const char* FilePath, SHADER_TYPE ShaderType =
     Attribs.AssignBindings             = true;
 
     GLSLangUtils::InitializeGlslang();
-    auto SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
+    SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
     GLSLangUtils::FinalizeGlslang();
 
+#endif
     return SPIRV;
 }
 
-void TestSPIRVResources(const char*                                    FilePath,
-                        const std::vector<SPIRVShaderResourceAttribs>& RefResources,
-                        SHADER_TYPE                                    ShaderType            = SHADER_TYPE_PIXEL,
-                        const char*                                    CombinedSamplerSuffix = nullptr,
-                        bool                                           IsGLSL                = false)
+void TestSPIRVResources(const char*                                       FilePath,
+                        const std::vector<SPIRVShaderResourceRefAttribs>& RefResources,
+                        SHADER_TYPE                                       ShaderType            = SHADER_TYPE_PIXEL,
+                        const char*                                       CombinedSamplerSuffix = nullptr,
+                        bool                                              IsGLSL                = false)
 {
     const auto SPIRV = IsGLSL ? GLSLtoSPIRV(FilePath, ShaderType) : HLSLtoSPIRV(FilePath, ShaderType);
     ASSERT_FALSE(SPIRV.empty()) << "Failed to compile HLSL to SPIRV: " << FilePath;
@@ -142,7 +242,7 @@ void TestSPIRVResources(const char*                                    FilePath,
 
     EXPECT_EQ(size_t{Resources.GetTotalResources()}, RefResources.size());
 
-    std::unordered_map<std::string, const SPIRVShaderResourceAttribs*> RefResourcesMap;
+    std::unordered_map<std::string, const SPIRVShaderResourceRefAttribs*> RefResourcesMap;
     for (const auto& RefRes : RefResources)
     {
         RefResourcesMap[RefRes.Name] = &RefRes;
@@ -171,8 +271,8 @@ TEST(SPIRVShaderResources, UniformBuffers)
     TestSPIRVResources("UniformBuffers.psh",
                        {
                            // CB0 is optimized away as it's not used in the shader
-                           SPIRVShaderResourceAttribs{"CB1", SPIRVResourceType::UniformBuffer, 1, RESOURCE_DIM_BUFFER, 0, 48, 0},
-                           SPIRVShaderResourceAttribs{"CB2", SPIRVResourceType::UniformBuffer, 1, RESOURCE_DIM_BUFFER, 0, 16, 0},
+                           SPIRVShaderResourceRefAttribs{"CB1", SPIRVResourceType::UniformBuffer, 1, RESOURCE_DIM_BUFFER, 0, 48, 0},
+                           SPIRVShaderResourceRefAttribs{"CB2", SPIRVResourceType::UniformBuffer, 1, RESOURCE_DIM_BUFFER, 0, 16, 0},
                        });
 }
 
@@ -181,11 +281,11 @@ TEST(SPIRVShaderResources, StorageBuffers)
     TestSPIRVResources("StorageBuffers.psh",
                        {
                            // StructuredBuffers have BufferStaticSize=0 (runtime array) and BufferStride is the element size
-                           SPIRVShaderResourceAttribs{"g_ROBuffer", SPIRVResourceType::ROStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 32},
-                           SPIRVShaderResourceAttribs{"g_RWBuffer", SPIRVResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 64},
+                           SPIRVShaderResourceRefAttribs{"g_ROBuffer", SPIRVResourceType::ROStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 32},
+                           SPIRVShaderResourceRefAttribs{"g_RWBuffer", SPIRVResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 64},
                            // ByteAddressBuffers also have BufferStaticSize=0 and BufferStride=4 (uint size)
-                           SPIRVShaderResourceAttribs{"g_ROAtomicBuffer", SPIRVResourceType::ROStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 4},
-                           SPIRVShaderResourceAttribs{"g_RWAtomicBuffer", SPIRVResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 4},
+                           SPIRVShaderResourceRefAttribs{"g_ROAtomicBuffer", SPIRVResourceType::ROStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 4},
+                           SPIRVShaderResourceRefAttribs{"g_RWAtomicBuffer", SPIRVResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 4},
                        });
 }
 
@@ -193,8 +293,8 @@ TEST(SPIRVShaderResources, TexelBuffers)
 {
     TestSPIRVResources("TexelBuffers.psh",
                        {
-                           SPIRVShaderResourceAttribs{"g_UniformTexelBuffer", SPIRVResourceType::UniformTexelBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 0},
-                           SPIRVShaderResourceAttribs{"g_StorageTexelBuffer", SPIRVResourceType::StorageTexelBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_UniformTexelBuffer", SPIRVResourceType::UniformTexelBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_StorageTexelBuffer", SPIRVResourceType::StorageTexelBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 0},
                        });
 }
 
@@ -204,17 +304,17 @@ TEST(SPIRVShaderResources, Textures)
                        {
                            // When textures and samplers are declared separately in HLSL, they are compiled as separate_images
                            // instead of sampled_images. This is the correct behavior for separate sampler/texture declarations.
-                           SPIRVShaderResourceAttribs{"g_SampledImage", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
-                           SPIRVShaderResourceAttribs{"g_SampledImageMS", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_2D, 1, 0, 0},
-                           SPIRVShaderResourceAttribs{"g_SampledImage3D", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_3D, 0, 0, 0},
-                           SPIRVShaderResourceAttribs{"g_SampledImageCube", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_CUBE, 0, 0, 0},
-                           SPIRVShaderResourceAttribs{"g_Sampler", SPIRVResourceType::SeparateSampler, 1, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
-                           SPIRVShaderResourceAttribs{"g_SeparateImage", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_SampledImage", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_SampledImageMS", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_2D, 1, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_SampledImage3D", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_3D, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_SampledImageCube", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_CUBE, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_Sampler", SPIRVResourceType::SeparateSampler, 1, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_SeparateImage", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
                            // Combined sampler: g_Texture and g_Texture_sampler
                            // Note: Even with CombinedSamplerSuffix, SPIRV may still classify them as separate_images
                            // if they are declared separately. The CombinedSamplerSuffix is mainly used for naming convention.
-                           SPIRVShaderResourceAttribs{"g_Texture", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
-                           SPIRVShaderResourceAttribs{"g_Texture_sampler", SPIRVResourceType::SeparateSampler, 1, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_Texture", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_Texture_sampler", SPIRVResourceType::SeparateSampler, 1, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
                        });
 }
 
@@ -223,9 +323,9 @@ TEST(SPIRVShaderResources, StorageImages)
     TestSPIRVResources("StorageImages.psh",
                        {
                            // Note: HLSL does not support RWTextureCube, so we only test 2D, 2DArray, and 3D storage images
-                           SPIRVShaderResourceAttribs{"g_RWImage2D", SPIRVResourceType::StorageImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
-                           SPIRVShaderResourceAttribs{"g_RWImage2DArray", SPIRVResourceType::StorageImage, 1, RESOURCE_DIM_TEX_2D_ARRAY, 0, 0, 0},
-                           SPIRVShaderResourceAttribs{"g_RWImage3D", SPIRVResourceType::StorageImage, 1, RESOURCE_DIM_TEX_3D, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_RWImage2D", SPIRVResourceType::StorageImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_RWImage2DArray", SPIRVResourceType::StorageImage, 1, RESOURCE_DIM_TEX_2D_ARRAY, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_RWImage3D", SPIRVResourceType::StorageImage, 1, RESOURCE_DIM_TEX_3D, 0, 0, 0},
                        });
 }
 
@@ -237,7 +337,7 @@ TEST(SPIRVShaderResources, AtomicCounters)
     // The resource name is the buffer block name (AtomicCounterBuffer), not the instance name (g_AtomicCounter).
     TestSPIRVResources("AtomicCounters.glsl",
                        {
-                           SPIRVShaderResourceAttribs{"AtomicCounterBuffer", SPIRVResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 4, 0},
+                           SPIRVShaderResourceRefAttribs{"AtomicCounterBuffer", SPIRVResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 4, 0},
                        },
                        SHADER_TYPE_PIXEL,
                        nullptr,
@@ -248,7 +348,7 @@ TEST(SPIRVShaderResources, InputAttachments)
 {
     TestSPIRVResources("InputAttachments.psh",
                        {
-                           SPIRVShaderResourceAttribs{"g_InputAttachment", SPIRVResourceType::InputAttachment, 1, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_InputAttachment", SPIRVResourceType::InputAttachment, 1, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
                        });
 }
 
@@ -259,7 +359,7 @@ TEST(SPIRVShaderResources, AccelerationStructures)
     // The ray gen shader uses traceRayEXT with g_AccelStruct to ensure it's not optimized away
     TestSPIRVResources("AccelerationStructures.glsl",
                        {
-                           SPIRVShaderResourceAttribs{"g_AccelStruct", SPIRVResourceType::AccelerationStructure, 1, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"g_AccelStruct", SPIRVResourceType::AccelerationStructure, 1, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
                        },
                        SHADER_TYPE_RAY_GEN,
                        nullptr,
@@ -273,7 +373,7 @@ TEST(SPIRVShaderResources, PushConstants)
     // Total: 16 + 4 + 2 + 1 + 1 = 24 floats/uints = 24 * 4 bytes = 96 bytes = 24 words
     TestSPIRVResources("PushConstants.psh",
                        {
-                           SPIRVShaderResourceAttribs{"PushConstants", SPIRVResourceType::PushConstant, 24, RESOURCE_DIM_BUFFER, 0, 96, 0},
+                           SPIRVShaderResourceRefAttribs{"PushConstants", SPIRVResourceType::PushConstant, 24, RESOURCE_DIM_BUFFER, 0, 96, 0},
                        });
 }
 
@@ -282,18 +382,18 @@ TEST(SPIRVShaderResources, MixedResources)
     TestSPIRVResources("MixedResources.psh",
                        {
                            // UniformBuff: float4x4 (64 bytes) + float4 (16 bytes) = 80 bytes
-                           SPIRVShaderResourceAttribs{"UniformBuff", SPIRVResourceType::UniformBuffer, 1, RESOURCE_DIM_BUFFER, 0, 80, 0},
+                           SPIRVShaderResourceRefAttribs{"UniformBuff", SPIRVResourceType::UniformBuffer, 1, RESOURCE_DIM_BUFFER, 0, 80, 0},
                            // ROStorageBuff: StructuredBuffer<BufferData> where BufferData = float4[4] = 64 bytes
                            // StructuredBuffers have BufferStaticSize=0 (runtime array) and BufferStride is the element size
-                           SPIRVShaderResourceAttribs{"ROStorageBuff", SPIRVResourceType::ROStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 64},
+                           SPIRVShaderResourceRefAttribs{"ROStorageBuff", SPIRVResourceType::ROStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 64},
                            // RWStorageBuff: same as ROStorageBuff
-                           SPIRVShaderResourceAttribs{"RWStorageBuff", SPIRVResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 64},
+                           SPIRVShaderResourceRefAttribs{"RWStorageBuff", SPIRVResourceType::RWStorageBuffer, 1, RESOURCE_DIM_BUFFER, 0, 0, 64},
                            // SampledTex: When Texture2D and SamplerState are declared separately, they are compiled as SeparateImage
-                           SPIRVShaderResourceAttribs{"SampledTex", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
-                           SPIRVShaderResourceAttribs{"StorageTex", SPIRVResourceType::StorageImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
-                           SPIRVShaderResourceAttribs{"Sampler", SPIRVResourceType::SeparateSampler, 1, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"SampledTex", SPIRVResourceType::SeparateImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"StorageTex", SPIRVResourceType::StorageImage, 1, RESOURCE_DIM_TEX_2D, 0, 0, 0},
+                           SPIRVShaderResourceRefAttribs{"Sampler", SPIRVResourceType::SeparateSampler, 1, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
                            // PushConstants: float2 (2 floats) + float (1 float) + uint (1 uint) = 4 words = 16 bytes
-                           SPIRVShaderResourceAttribs{"PushConstants", SPIRVResourceType::PushConstant, 4, RESOURCE_DIM_BUFFER, 0, 16, 0},
+                           SPIRVShaderResourceRefAttribs{"PushConstants", SPIRVResourceType::PushConstant, 4, RESOURCE_DIM_BUFFER, 0, 16, 0},
                        });
 }
 
