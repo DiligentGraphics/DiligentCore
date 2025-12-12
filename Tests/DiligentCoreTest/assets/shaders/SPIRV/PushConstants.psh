@@ -1,0 +1,26 @@
+// Test for push constants
+struct PushConstants_t
+{
+    float4x4 g_MVPMatrix;
+    float4   g_Color;
+    float2   g_Offset;
+    float    g_Scale;
+    uint     g_Padding;
+};
+
+[[vk::push_constant]]
+cbuffer PushConstants
+{
+    PushConstants_t g_PushConstants;
+};
+
+float4 main() : SV_Target
+{
+    // Use push constant data through the structure instance
+    float4 result = g_PushConstants.g_Color * g_PushConstants.g_Scale;
+
+    // Apply offset to result (simplified example)
+    result.xy += g_PushConstants.g_Offset;
+
+    return result;
+}

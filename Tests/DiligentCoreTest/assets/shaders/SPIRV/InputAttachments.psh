@@ -1,0 +1,14 @@
+// Test for input attachments (subpass inputs)
+// In HLSL, subpass inputs are declared using SubpassInput type with vk::input_attachment_index attribute
+[[vk::input_attachment_index(0)]]
+[[vk::binding(0)]]
+SubpassInput<float4> g_InputAttachment;
+
+float4 main() : SV_Target
+{
+    // Read from input attachment (subpass input)
+    float4 color = g_InputAttachment.SubpassLoad();
+
+    // Process the input color
+    return color * 2.0;
+}
