@@ -73,9 +73,7 @@ std::vector<unsigned int> LoadSPIRVFromHLSL(const char* FilePath, SHADER_TYPE Sh
 
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceStreamFactory;
 
-    GLSLangUtils::InitializeGlslang();
     SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
-    GLSLangUtils::FinalizeGlslang();
 
 #endif
 
@@ -125,9 +123,7 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
     Attribs.Version                    = Version;
     Attribs.AssignBindings             = true;
 
-    GLSLangUtils::InitializeGlslang();
     SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
-    GLSLangUtils::FinalizeGlslang();
 
 #endif
     return SPIRV;
