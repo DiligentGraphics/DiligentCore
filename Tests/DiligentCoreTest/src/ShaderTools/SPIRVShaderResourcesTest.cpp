@@ -181,7 +181,6 @@ void TestSPIRVResources(const char*                                       FilePa
         const auto* pRefRes = RefResourcesMap[Res.Name];
         ASSERT_NE(pRefRes, nullptr) << "Resource '" << Res.Name << "' is not found in the reference list";
 
-        EXPECT_EQ(Res.ArraySize, pRefRes->ArraySize) << Res.Name;
         EXPECT_STREQ(SPIRVShaderResourceAttribs::ResourceTypeToString(Res.Type), SPIRVShaderResourceAttribs::ResourceTypeToString(pRefRes->Type)) << Res.Name;
         EXPECT_EQ(Res.ArraySize, pRefRes->ArraySize) << Res.Name;
         EXPECT_EQ(Res.ResourceDim, pRefRes->ResourceDim) << Res.Name;
