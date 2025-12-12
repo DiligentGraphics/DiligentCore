@@ -85,6 +85,7 @@ struct SPIRVShaderResourceAttribs
 
     static SHADER_RESOURCE_TYPE    GetShaderResourceType(ResourceType Type);
     static PIPELINE_RESOURCE_FLAGS GetPipelineResourceFlags(ResourceType Type);
+    static const char*             ResourceTypeToString(ResourceType Type);
 
     // clang-format off
 

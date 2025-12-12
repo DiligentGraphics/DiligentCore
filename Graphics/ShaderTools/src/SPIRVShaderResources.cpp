@@ -248,6 +248,41 @@ PIPELINE_RESOURCE_FLAGS SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Res
     }
 }
 
+const char* SPIRVShaderResourceAttribs::ResourceTypeToString(SPIRVShaderResourceAttribs::ResourceType Type)
+{
+    switch (Type)
+    {
+        case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
+            return "UniformBuffer";
+        case SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer:
+            return "ROStorageBuffer";
+        case SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer:
+            return "RWStorageBuffer";
+        case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
+            return "UniformTexelBuffer";
+        case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
+            return "StorageTexelBuffer";
+        case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
+            return "StorageImage";
+        case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
+            return "SampledImage";
+        case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
+            return "AtomicCounter";
+        case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
+            return "SeparateImage";
+        case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
+            return "SeparateSampler";
+        case SPIRVShaderResourceAttribs::ResourceType::InputAttachment:
+            return "InputAttachment";
+        case SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure:
+            return "AccelerationStructure";
+        case SPIRVShaderResourceAttribs::ResourceType::PushConstant:
+            return "PushConstant";
+        default:
+            return "Unknown";
+    }
+}
+
 spv::ExecutionModel ShaderTypeToSpvExecutionModel(SHADER_TYPE ShaderType)
 {
     static_assert(SHADER_TYPE_LAST == 0x4000, "Please handle the new shader type in the switch below");

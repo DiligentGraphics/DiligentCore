@@ -42,41 +42,6 @@ using namespace Diligent::Testing;
 namespace
 {
 
-const char* SPIRVShaderResourceTypeToString(SPIRVShaderResourceAttribs::ResourceType Type)
-{
-    switch (Type)
-    {
-        case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
-            return "UniformBuffer";
-        case SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer:
-            return "ROStorageBuffer";
-        case SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer:
-            return "RWStorageBuffer";
-        case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
-            return "UniformTexelBuffer";
-        case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
-            return "StorageTexelBuffer";
-        case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
-            return "StorageImage";
-        case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
-            return "SampledImage";
-        case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
-            return "AtomicCounter";
-        case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
-            return "SeparateImage";
-        case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
-            return "SeparateSampler";
-        case SPIRVShaderResourceAttribs::ResourceType::InputAttachment:
-            return "InputAttachment";
-        case SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure:
-            return "AccelerationStructure";
-        case SPIRVShaderResourceAttribs::ResourceType::PushConstant:
-            return "PushConstant";
-        default:
-            return "Unknown";
-    }
-}
-
 std::vector<uint32_t> HLSLtoSPIRV(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
 {
     ShaderCreateInfo ShaderCI;
@@ -190,7 +155,7 @@ void TestSPIRVResources(const char*                                    FilePath,
         ASSERT_NE(pRefRes, nullptr) << "Resource '" << Res.Name << "' is not found in the reference list";
 
         EXPECT_EQ(Res.ArraySize, pRefRes->ArraySize) << Res.Name;
-        EXPECT_STREQ(SPIRVShaderResourceTypeToString(Res.Type), SPIRVShaderResourceTypeToString(pRefRes->Type)) << Res.Name;
+        EXPECT_STREQ(SPIRVShaderResourceAttribs::ResourceTypeToString(Res.Type), SPIRVShaderResourceAttribs::ResourceTypeToString(pRefRes->Type)) << Res.Name;
         EXPECT_EQ(Res.ArraySize, pRefRes->ArraySize) << Res.Name;
         EXPECT_EQ(Res.ResourceDim, pRefRes->ResourceDim) << Res.Name;
         EXPECT_EQ(Res.IsMS, pRefRes->IsMS) << Res.Name;
