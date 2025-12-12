@@ -74,6 +74,11 @@ static RESOURCE_DIMENSION GetResourceDimension(const diligent_spirv_cross::Compi
             default: return RESOURCE_DIM_UNDEFINED;
         }
     }
+    else if (type.basetype == diligent_spirv_cross::SPIRType::BaseType::Struct)
+    {
+        // Uniform buffers and storage buffers are Struct types
+        return RESOURCE_DIM_BUFFER;
+    }
     else
     {
         return RESOURCE_DIM_UNDEFINED;
@@ -142,6 +147,27 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const char*  _Name,
     DescriptorSetDecorationOffset {0}, // Push constants have no descriptor set decoration
     BufferStaticSize              {_BufferStaticSize},
     BufferStride                  {0}
+// clang-format on
+{}
+
+// Test-only constructor for creating reference resources
+SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const char*        _Name,
+                                                       ResourceType       _Type,
+                                                       Uint16             _ArraySize,
+                                                       RESOURCE_DIMENSION _ResourceDim,
+                                                       Uint8              _IsMS,
+                                                       Uint32             _BufferStaticSize,
+                                                       Uint32             _BufferStride) noexcept :
+    // clang-format off
+    Name                          {_Name},
+    ArraySize                     {_ArraySize},
+    Type                          {_Type},
+    ResourceDim                   {static_cast<Uint8>(_ResourceDim)},
+    IsMS                          {_IsMS},
+    BindingDecorationOffset       {0}, // Not used in tests
+    DescriptorSetDecorationOffset {0}, // Not used in tests
+    BufferStaticSize              {_BufferStaticSize},
+    BufferStride                  {_BufferStride}
 // clang-format on
 {}
 
@@ -1039,9 +1065,19 @@ std::string SPIRVShaderResources::DumpResources() const
         },
         [&](const SPIRVShaderResourceAttribs& SepImg, Uint32) //
         {
-            VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage, "Unexpected resource type");
-            ss << std::endl
-               << std::setw(3) << ResNum << " Separate Img     ";
+            VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage ||
+                       SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer,
+                   "Unexpected resource type");
+            if (SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer)
+            {
+                ss << std::endl
+                   << std::setw(3) << ResNum << " Uniform Txl Buff ";
+            }
+            else
+            {
+                ss << std::endl
+                   << std::setw(3) << ResNum << " Separate Img     ";
+            }
             DumpResource(SepImg);
         },
         [&](const SPIRVShaderResourceAttribs& InptAtt, Uint32) //
