@@ -137,9 +137,9 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const char*  _Name,
                                                        Uint32       _BufferStaticSize) noexcept :
     // clang-format off
     Name                          {_Name},
-    // For push constants, ArraySize represents the number of 32-bit constants (BufferStaticSize / 4)
+    // For push constants, ArraySize always be 1
     // This is consistent with how inline constants work in the pipeline resource signature
-    ArraySize                     {static_cast<Uint16>(_BufferStaticSize / sizeof(Uint32))},
+    ArraySize                     {1},
     Type                          {_Type},
     ResourceDim                   {RESOURCE_DIM_BUFFER},
     IsMS                          {0},
