@@ -301,7 +301,7 @@ TEST(SPIRVShaderResources, PushConstants)
     // Total: 16 + 4 + 2 + 1 + 1 = 24 floats/uints = 24 * 4 bytes = 96 bytes = 24 words
     TestSPIRVResources("PushConstants.psh",
                        {
-                           SPIRVShaderResourceRefAttribs{"PushConstants", 24, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 96, 0},
+                           SPIRVShaderResourceRefAttribs{"PushConstants", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 96, 0},
                        });
 }
 
@@ -321,7 +321,7 @@ TEST(SPIRVShaderResources, MixedResources)
                            SPIRVShaderResourceRefAttribs{"StorageTex", 1, SPIRVResourceType::StorageImage, RESOURCE_DIM_TEX_2D, 0, 0, 0},
                            SPIRVShaderResourceRefAttribs{"Sampler", 1, SPIRVResourceType::SeparateSampler, RESOURCE_DIM_UNDEFINED, 0, 0, 0},
                            // PushConstants: float2 (2 floats) + float (1 float) + uint (1 uint) = 4 words = 16 bytes
-                           SPIRVShaderResourceRefAttribs{"PushConstants", 4, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 16, 0},
+                           SPIRVShaderResourceRefAttribs{"PushConstants", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 16, 0},
                        });
 }
 
