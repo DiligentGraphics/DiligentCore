@@ -63,29 +63,7 @@ std::vector<unsigned int> LoadSPIRVFromHLSL(const char* FilePath, SHADER_TYPE Sh
 {
     std::vector<unsigned int> SPIRV;
 
-#if DILIGENT_NO_HLSL
-    // When DILIGENT_NO_HLSL is defined, use {FilePath}.spv as raw SPIRV shader source.
-    // i.e. FilePath="Textures.psh", then we load RAW SPIRV from "Textures.psh.spv"
-    std::string SPIRVFilePath = std::string(FilePath) + ".spv";
-
-    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceStreamFactory;
-    CreateDefaultShaderSourceStreamFactory("shaders/SPIRV", &pShaderSourceStreamFactory);
-    if (!pShaderSourceStreamFactory)
-        return {};
-
-    RefCntAutoPtr<IFileStream> pSPIRVStream;
-    pShaderSourceStreamFactory->CreateInputStream(SPIRVFilePath.c_str(), &pSPIRVStream);
-    if (!pSPIRVStream)
-        return {};
-
-    const size_t ByteCodeSize = pSPIRVStream->GetSize();
-    if (ByteCodeSize == 0 || ByteCodeSize % 4 != 0)
-        return {};
-
-    SPIRV.resize(ByteCodeSize / 4);
-    pSPIRVStream->Read(SPIRV.data(), ByteCodeSize);
-
-#else
+#if !DILIGENT_NO_HLSL
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -103,6 +81,7 @@ std::vector<unsigned int> LoadSPIRVFromHLSL(const char* FilePath, SHADER_TYPE Sh
     GLSLangUtils::InitializeGlslang();
     SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
     GLSLangUtils::FinalizeGlslang();
+
 #endif
 
     return SPIRV;
@@ -112,30 +91,8 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
 {
     std::vector<unsigned int> SPIRV;
 
-#if DILIGENT_NO_GLSLANG
-    // When DILIGENT_NO_GLSLANG is defined, use {FilePath}.spv as raw SPIRV shader source.
-    // i.e. FilePath="AtomicCounters.glsl", then we load RAW SPIRV from "AtomicCounters.glsl.spv"
-    std::string SPIRVFilePath = std::string(FilePath) + ".spv";
-
-    RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceStreamFactory;
-    CreateDefaultShaderSourceStreamFactory("shaders/SPIRV", &pShaderSourceStreamFactory);
-    if (!pShaderSourceStreamFactory)
-        return {};
-
-    RefCntAutoPtr<IFileStream> pSPIRVStream;
-    pShaderSourceStreamFactory->CreateInputStream(SPIRVFilePath.c_str(), &pSPIRVStream);
-    if (!pSPIRVStream)
-        return {};
-
-    const size_t ByteCodeSize = pSPIRVStream->GetSize();
-    if (ByteCodeSize == 0 || ByteCodeSize % 4 != 0)
-        return {};
-
-    SPIRV.resize(ByteCodeSize / 4);
-    pSPIRVStream->Read(SPIRV.data(), ByteCodeSize);
-
-#else
-
+#if !DILIGENT_NO_GLSLANG
+    
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceStreamFactory;
     CreateDefaultShaderSourceStreamFactory("shaders/SPIRV", &pShaderSourceStreamFactory);
     if (!pShaderSourceStreamFactory)
@@ -187,6 +144,10 @@ void TestSPIRVResources(const char*                                       FilePa
                         const char*                                       CombinedSamplerSuffix = nullptr,
                         bool                                              IsGLSL                = false)
 {
+#if DILIGENT_NO_GLSLANG || DILIGENT_NO_HLSL
+        GTEST_SKIP();
+#endif
+
     const auto SPIRV = IsGLSL ? LoadSPIRVFromGLSL(FilePath, ShaderType) : LoadSPIRVFromHLSL(FilePath, ShaderType);
     ASSERT_FALSE(SPIRV.empty()) << "Failed to compile HLSL to SPIRV: " << FilePath;
 
