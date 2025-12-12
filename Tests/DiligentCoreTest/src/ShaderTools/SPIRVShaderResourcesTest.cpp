@@ -45,18 +45,18 @@ namespace
 
 struct SPIRVShaderResourceRefAttribs
 {
-    const char* const                                  Name;
-    const Uint16                                       ArraySize;
-    const SPIRVShaderResourceAttribs::ResourceType     Type;
-    const Uint8                                        ResourceDim; // RESOURCE_DIMENSION
-    const Uint8                                        IsMS;
+    const char* const                              Name;
+    const Uint16                                   ArraySize;
+    const SPIRVShaderResourceAttribs::ResourceType Type;
+    const Uint8                                    ResourceDim; // RESOURCE_DIMENSION
+    const Uint8                                    IsMS;
 
     // Offset in SPIRV words (uint32_t) of binding & descriptor set decorations in SPIRV binary
-    const uint32_t                                      BindingDecorationOffset;
-    const uint32_t                                      DescriptorSetDecorationOffset;
+    const uint32_t BindingDecorationOffset;
+    const uint32_t DescriptorSetDecorationOffset;
 
-    const Uint32                                        BufferStaticSize;
-    const Uint32                                        BufferStride;
+    const Uint32 BufferStaticSize;
+    const Uint32 BufferStride;
 };
 
 std::vector<unsigned int> LoadSPIRVFromHLSL(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
