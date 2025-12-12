@@ -150,28 +150,6 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const char*  _Name,
 // clang-format on
 {}
 
-// Test-only constructor for creating reference resources
-SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const char*        _Name,
-                                                       ResourceType       _Type,
-                                                       Uint16             _ArraySize,
-                                                       RESOURCE_DIMENSION _ResourceDim,
-                                                       Uint8              _IsMS,
-                                                       Uint32             _BufferStaticSize,
-                                                       Uint32             _BufferStride) noexcept :
-    // clang-format off
-    Name                          {_Name},
-    ArraySize                     {_ArraySize},
-    Type                          {_Type},
-    ResourceDim                   {static_cast<Uint8>(_ResourceDim)},
-    IsMS                          {_IsMS},
-    BindingDecorationOffset       {0}, // Not used in tests
-    DescriptorSetDecorationOffset {0}, // Not used in tests
-    BufferStaticSize              {_BufferStaticSize},
-    BufferStride                  {_BufferStride}
-// clang-format on
-{}
-
-
 SHADER_RESOURCE_TYPE SPIRVShaderResourceAttribs::GetShaderResourceType(ResourceType Type)
 {
     static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 13, "Please handle the new resource type below");

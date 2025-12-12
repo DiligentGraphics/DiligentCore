@@ -118,15 +118,6 @@ struct SPIRVShaderResourceAttribs
                                ResourceType _Type,
                                Uint32       _BufferStaticSize) noexcept;
 
-    // Test-only constructor for creating reference resources
-    SPIRVShaderResourceAttribs(const char*        _Name,
-                               ResourceType       _Type,
-                               Uint16             _ArraySize,
-                               RESOURCE_DIMENSION _ResourceDim,
-                               Uint8              _IsMS,
-                               Uint32             _BufferStaticSize,
-                               Uint32             _BufferStride) noexcept;
-
     ShaderResourceDesc GetResourceDesc() const
     {
         return ShaderResourceDesc{Name, GetShaderResourceType(Type), ArraySize};
