@@ -191,7 +191,7 @@ void TestSPIRVResources(const char*                                       FilePa
         if (Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer ||
             Res.Type == SPIRVShaderResourceAttribs::ResourceType::PushConstant)
         {
-            EXPECT_EQ(Res.GetInlineConstantCountOrThrow(FilePath), pRefRes->BufferStride / 4) << Res.Name;
+            EXPECT_EQ(Res.GetInlineConstantCountOrThrow(FilePath), pRefRes->BufferStaticSize / 4) << Res.Name;
         }
     }
 }
