@@ -50,13 +50,8 @@ struct SPIRVShaderResourceRefAttribs
     const SPIRVShaderResourceAttribs::ResourceType Type;
     const Uint8                                    ResourceDim; // RESOURCE_DIMENSION
     const Uint8                                    IsMS;
-
-    // Offset in SPIRV words (uint32_t) of binding & descriptor set decorations in SPIRV binary
-    const uint32_t BindingDecorationOffset;
-    const uint32_t DescriptorSetDecorationOffset;
-
-    const Uint32 BufferStaticSize;
-    const Uint32 BufferStride;
+    const Uint32                                   BufferStaticSize;
+    const Uint32                                   BufferStride;
 };
 
 std::vector<unsigned int> LoadSPIRVFromHLSL(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
@@ -92,7 +87,7 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
     std::vector<unsigned int> SPIRV;
 
 #if !DILIGENT_NO_GLSLANG
-    
+
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceStreamFactory;
     CreateDefaultShaderSourceStreamFactory("shaders/SPIRV", &pShaderSourceStreamFactory);
     if (!pShaderSourceStreamFactory)
@@ -145,7 +140,7 @@ void TestSPIRVResources(const char*                                       FilePa
                         bool                                              IsGLSL                = false)
 {
 #if DILIGENT_NO_GLSLANG || DILIGENT_NO_HLSL
-        GTEST_SKIP();
+    GTEST_SKIP();
 #endif
 
     const auto SPIRV = IsGLSL ? LoadSPIRVFromGLSL(FilePath, ShaderType) : LoadSPIRVFromHLSL(FilePath, ShaderType);

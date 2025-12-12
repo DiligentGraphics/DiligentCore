@@ -20,7 +20,7 @@ if(NOT WEBGPU_SUPPORTED)
     )
 endif()
 
-if(NOT VULKAN_SUPPORTED)
+if(NOT VULKAN_SUPPORTED OR NOT TARGET glslang)
     list(REMOVE_ITEM SOURCE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/SPIRVShaderResourcesTest.cpp
     )
