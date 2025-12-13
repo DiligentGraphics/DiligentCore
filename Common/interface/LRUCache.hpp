@@ -18,7 +18,7 @@
 #pragma once
 
 #include <unordered_map>
-#include <deque>
+#include <list>
 #include <mutex>
 #include <memory>
 #include <algorithm>
@@ -54,6 +54,9 @@ namespace Diligent
 ///
 /// If the data is not found, it is atomically initialized by the provided initializer function.
 /// If the data is found, the initializer function is not called.
+///
+/// \note The initialization function must not call Get() on the same cache instance
+///       to avoid potential deadlocks.
 template <typename KeyType, typename DataType, typename KeyHasher = std::hash<KeyType>>
 class LRUCache
 {
@@ -98,7 +101,7 @@ public:
         bool IsNewObject = false;
         // InitData may throw, which will leave the wrapper in the cache in the 'InitFailure' state.
         // It will be removed from the cache later when the LRU queue is processed.
-        auto Data = pDataWrpr->GetData(std::forward<InitDataType>(InitData), IsNewObject);
+        DataType Data = pDataWrpr->GetData(std::forward<InitDataType>(InitData), IsNewObject);
 
         // Process the release queue
         std::vector<std::shared_ptr<DataWrapper>> DeleteList;
@@ -115,7 +118,7 @@ public:
                 if (it != m_Cache.end())
                 {
                     // Check that the object wrapper is the same.
-                    if (it->second == pDataWrpr)
+                    if (it->second.Wrpr == pDataWrpr)
                     {
                         // The wrapper is in the cache - label it as accounted and update the cache size.
 
@@ -145,12 +148,9 @@ public:
                 }
             }
 
-            for (int idx = static_cast<int>(m_LRUQueue.size()) - 1; idx >= 0; --idx)
+            for (auto lru_it = m_LRU.begin(); lru_it != m_LRU.end() && m_CurrSize > m_MaxSize;)
             {
-                if (m_CurrSize <= m_MaxSize)
-                    break;
-
-                VERIFY_EXPR(!m_LRUQueue.empty());
+                const KeyType& EvictKey = *lru_it;
 
                 // State stransition table:
                 //                                                     Protected by m_Mtx   Accounted Size
@@ -160,12 +160,22 @@ public:
                 //   InitializedUnaccounted -> InitializedAccounted          Yes                !0          <U2A>
                 //   InitializedAccounted                                 Final State
                 //
-                const auto& cache_it = m_LRUQueue[idx];
-                const auto  State    = cache_it->second->GetState(); /* <ReadState> */
+                const auto cache_it = m_Cache.find(EvictKey);
+                if (cache_it == m_Cache.end())
+                {
+                    UNEXPECTED("Unavailable key in LRU list. This should never happen.");
+                    lru_it = m_LRU.erase(lru_it);
+                    continue;
+                }
+                VERIFY_EXPR(cache_it->second.LRUIt == lru_it);
+
+                std::shared_ptr<DataWrapper>&         pWrpr = cache_it->second.Wrpr;
+                const typename DataWrapper::DataState State = pWrpr->GetState(); /* <ReadState> */
                 if (State == DataWrapper::DataState::Default)
                 {
                     // The object is being initialized in another thread in DataWrapper::Get().
                     // Possible actual states here are Default, InitializedUnaccounted or InitFailure.
+                    ++lru_it;
                     continue;
                 }
                 if (State == DataWrapper::DataState::InitializedUnaccounted)
@@ -174,6 +184,7 @@ public:
                     // in the cache yet as this thread acquired the mutex first.
                     // The only possible actual state here is InitializedUnaccounted as transition to
                     // InitializedAccounted in <SA> requires mutex.
+                    ++lru_it;
                     continue;
                 }
 
@@ -191,19 +202,20 @@ public:
 
                 // NB: if the state was not InitializedAccounted when we read it in <ReadState>, it can't be
                 //     InitializedAccounted now since the transition <U2A> is protected by mutex in <SA>.
-                VERIFY_EXPR((State == DataWrapper::DataState::InitializedAccounted && cache_it->second->GetState() == DataWrapper::DataState::InitializedAccounted) ||
-                            (State != DataWrapper::DataState::InitializedAccounted && cache_it->second->GetState() != DataWrapper::DataState::InitializedAccounted));
+                VERIFY_EXPR((State == DataWrapper::DataState::InitializedAccounted && pWrpr->GetState() == DataWrapper::DataState::InitializedAccounted) ||
+                            (State != DataWrapper::DataState::InitializedAccounted && pWrpr->GetState() != DataWrapper::DataState::InitializedAccounted));
 
                 // Note that transition to InitializedAccounted state is protected by the mutex in <SA>, so
                 // we can't remove a wrapper before it was accounted for.
-                const size_t AccountedSize = cache_it->second->GetAccountedSize();
-                DeleteList.emplace_back(std::move(cache_it->second));
+                const size_t AccountedSize = pWrpr->GetAccountedSize();
+                DeleteList.emplace_back(std::move(pWrpr));
                 m_Cache.erase(cache_it); /* <Erase> */
-                m_LRUQueue.erase(m_LRUQueue.begin() + idx);
+                lru_it = m_LRU.erase(lru_it);
                 VERIFY_EXPR(m_CurrSize >= AccountedSize);
                 m_CurrSize -= AccountedSize;
             }
-            VERIFY_EXPR(m_Cache.size() == m_LRUQueue.size());
+
+            VERIFY_EXPR(m_Cache.size() == m_LRU.size());
         }
 
         // Delete objects after releasing the cache mutex
@@ -228,15 +240,19 @@ public:
     {
 #ifdef DILIGENT_DEBUG
         size_t DbgSize = 0;
-        VERIFY_EXPR(m_Cache.size() == m_LRUQueue.size());
-        while (!m_LRUQueue.empty())
+        VERIFY_EXPR(m_Cache.size() == m_LRU.size());
+        for (const KeyType& Key : m_LRU)
         {
-            auto last_it = m_LRUQueue.back();
-            m_LRUQueue.pop_back();
-            DbgSize += last_it->second->GetAccountedSize();
-            m_Cache.erase(last_it);
+            auto it = m_Cache.find(Key);
+            if (it != m_Cache.end())
+            {
+                DbgSize += it->second.Wrpr->GetAccountedSize();
+            }
+            else
+            {
+                UNEXPECTED("Unexpected key in LRU list");
+            }
         }
-        VERIFY_EXPR(m_Cache.empty());
         VERIFY_EXPR(DbgSize == m_CurrSize);
 #endif
     }
@@ -256,6 +272,16 @@ private:
         template <typename InitDataType>
         const DataType& GetData(InitDataType&& InitData, bool& IsNewObject) noexcept(false)
         {
+            // Fast path
+            {
+                const DataState CurrentState = m_State.load();
+                if (CurrentState == DataState::InitializedAccounted ||
+                    CurrentState == DataState::InitializedUnaccounted)
+                {
+                    return m_Data;
+                }
+            }
+
             std::lock_guard<std::mutex> Lock{m_InitDataMtx};
             if (m_DataSize == 0)
             {
@@ -320,28 +346,44 @@ private:
         auto it = m_Cache.find(Key);
         if (it == m_Cache.end())
         {
-            it = m_Cache.emplace(Key, std::make_shared<DataWrapper>()).first;
+            // Do the potentially-throwing allocations before modifying any cache state
+            std::shared_ptr<DataWrapper> pWrpr = std::make_shared<DataWrapper>(); // May throw
+
+            m_LRU.push_back(Key);
+            try
+            {
+                it = m_Cache.emplace(Key, Entry{std::move(pWrpr), std::prev(m_LRU.end())}).first;
+            }
+            catch (...)
+            {
+                m_LRU.pop_back();
+                throw;
+            }
         }
         else
         {
-            // Pop the wrapper iterator from the queue
-            auto queue_it = std::find(m_LRUQueue.begin(), m_LRUQueue.end(), it);
-            VERIFY_EXPR(queue_it != m_LRUQueue.end());
-            m_LRUQueue.erase(queue_it);
+            // Move to MRU (back of the list)
+            m_LRU.splice(m_LRU.end(), m_LRU, it->second.LRUIt);
         }
 
-        // Move iterator to the front of the queue
-        m_LRUQueue.push_front(it);
-        VERIFY_EXPR(m_Cache.size() == m_LRUQueue.size());
+        VERIFY_EXPR(m_Cache.size() == m_LRU.size());
 
-        return it->second;
+        return it->second.Wrpr;
     }
 
 
-    using CacheType = std::unordered_map<KeyType, std::shared_ptr<DataWrapper>, KeyHasher>;
-    CacheType m_Cache;
+    using LRUList = std::list<KeyType>; // LRU at front, MRU at back
 
-    std::deque<typename CacheType::iterator> m_LRUQueue;
+    struct Entry
+    {
+        std::shared_ptr<DataWrapper> Wrpr;
+        typename LRUList::iterator   LRUIt; // Stable iterator into list
+    };
+
+    using CacheType = std::unordered_map<KeyType, Entry, KeyHasher>;
+
+    CacheType m_Cache;
+    LRUList   m_LRU;
 
     std::mutex m_Mtx;
 
