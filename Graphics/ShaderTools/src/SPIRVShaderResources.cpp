@@ -137,7 +137,7 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const char*  _Name,
                                                        Uint32       _BufferStaticSize) noexcept :
     // clang-format off
     Name                          {_Name},
-    // For push constants, ArraySize always be 1
+    // For push constants, ArraySize is always 1
     // This is consistent with how inline constants work in the pipeline resource signature
     ArraySize                     {1},
     Type                          {_Type},
@@ -217,8 +217,7 @@ PIPELINE_RESOURCE_FLAGS SPIRVShaderResourceAttribs::GetPipelineResourceFlags(Res
             return PIPELINE_RESOURCE_FLAG_COMBINED_SAMPLER;
 
         case SPIRVShaderResourceAttribs::ResourceType::PushConstant:
-            // Push constants are special inline constants that use vkCmdPushConstants
-            // Mark them with both INLINE_CONSTANTS and VULKAN_PUSH_CONSTANT flags
+            // Push constants map to constant buffer with the inline constants flag
             return PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS;
 
         default:
@@ -1078,8 +1077,8 @@ std::string SPIRVShaderResources::DumpResources() const
         },
         [&](const SPIRVShaderResourceAttribs& SepImg, Uint32) //
         {
-            VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage ||
-                       SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer,
+            VERIFY((SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage ||
+                    SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer),
                    "Unexpected resource type");
             if (SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer)
             {

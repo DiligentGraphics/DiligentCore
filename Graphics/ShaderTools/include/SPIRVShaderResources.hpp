@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,9 +32,19 @@
 
 // SPIRVShaderResources class uses continuous chunk of memory to store all resources, as follows:
 //
-//   m_MemoryBuffer                                                                                                                                                                  m_TotalResources
-//    |                                                                                                                                                                                 |                                       |
-//    | Uniform Buffers | Storage Buffers | Storage Images | Sampled Images | Atomic Counters | Separate Samplers | Separate Images | Input Attachments | Accel Structs | Push Constants |   Stage Inputs   |   Resource Names   |
+//                          _ _ _ m_MemoryBuffer
+//    | Uniform Buffers   |
+//    | Storage Buffers   |   |
+//    | Storage Images    |   V
+//    | Sampled Images    |
+//    | Atomic Counters   |
+//    | Separate Samplers |
+//    | Separate Images   |
+//    | Input Attachments |
+//    | Accel Structs     |
+//    | Push Constants    | _ _ _ m_TotalResources
+//    | Stage Inputs      |
+//    | Resource Names    |
 
 #include <memory>
 #include <vector>
@@ -79,7 +89,7 @@ struct SPIRVShaderResourceAttribs
         SeparateSampler,
         InputAttachment,
         AccelerationStructure,
-        PushConstant, // Vulkan push constant buffer - special inline constant that uses vkCmdPushConstants
+        PushConstant,
         NumResourceTypes
     };
 

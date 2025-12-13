@@ -20,7 +20,7 @@ if(NOT WEBGPU_SUPPORTED)
     )
 endif()
 
-if(NOT VULKAN_SUPPORTED OR NOT TARGET glslang)
+if(NOT ${DILIGENT_USE_SPIRV_TOOLCHAIN} OR ${DILIGENT_NO_GLSLANG})
     list(REMOVE_ITEM SOURCE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/SPIRVShaderResourcesTest.cpp
     )

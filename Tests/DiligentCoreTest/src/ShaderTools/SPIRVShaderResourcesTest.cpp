@@ -33,6 +33,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <vector>
 
 #include "TestingEnvironment.hpp"
 #include "gtest/gtest.h"
@@ -43,12 +44,27 @@ using namespace Diligent::Testing;
 namespace
 {
 
+class SPIRVShaderResourcesTest : public ::testing::Test
+{
+protected:
+    static void SetUpTestSuite()
+    {
+        GLSLangUtils::InitializeGlslang();
+    }
+
+    static void TearDownTestSuite()
+    {
+        GLSLangUtils::FinalizeGlslang();
+    }
+};
+
+
 struct SPIRVShaderResourceRefAttribs
 {
     const char* const                              Name;
     const Uint16                                   ArraySize;
     const SPIRVShaderResourceAttribs::ResourceType Type;
-    const Uint8                                    ResourceDim; // RESOURCE_DIMENSION
+    const RESOURCE_DIMENSION                       ResourceDim;
     const Uint8                                    IsMS;
     const Uint32                                   BufferStaticSize;
     const Uint32                                   BufferStride;
@@ -56,10 +72,6 @@ struct SPIRVShaderResourceRefAttribs
 
 std::vector<unsigned int> LoadSPIRVFromHLSL(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
 {
-    std::vector<unsigned int> SPIRV;
-
-#if !DILIGENT_NO_HLSL
-
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.FilePath       = FilePath;
@@ -73,19 +85,11 @@ std::vector<unsigned int> LoadSPIRVFromHLSL(const char* FilePath, SHADER_TYPE Sh
 
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceStreamFactory;
 
-    SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
-
-#endif
-
-    return SPIRV;
+    return GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
 }
 
 std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
 {
-    std::vector<unsigned int> SPIRV;
-
-#if !DILIGENT_NO_GLSLANG
-
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceStreamFactory;
     CreateDefaultShaderSourceStreamFactory("shaders/SPIRV", &pShaderSourceStreamFactory);
     if (!pShaderSourceStreamFactory)
@@ -96,7 +100,7 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
     if (!pShaderSourceStream)
         return {};
 
-    auto ShaderSourceSize = pShaderSourceStream->GetSize();
+    size_t ShaderSourceSize = pShaderSourceStream->GetSize();
     if (ShaderSourceSize == 0)
         return {};
 
@@ -123,10 +127,7 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
     Attribs.Version                    = Version;
     Attribs.AssignBindings             = true;
 
-    SPIRV = GLSLangUtils::GLSLtoSPIRV(Attribs);
-
-#endif
-    return SPIRV;
+    return GLSLangUtils::GLSLtoSPIRV(Attribs);
 }
 
 void TestSPIRVResources(const char*                                       FilePath,
@@ -135,10 +136,6 @@ void TestSPIRVResources(const char*                                       FilePa
                         const char*                                       CombinedSamplerSuffix = nullptr,
                         bool                                              IsGLSL                = false)
 {
-#if DILIGENT_NO_GLSLANG || DILIGENT_NO_HLSL
-    GTEST_SKIP();
-#endif
-
     const auto SPIRV = IsGLSL ? LoadSPIRVFromGLSL(FilePath, ShaderType) : LoadSPIRVFromHLSL(FilePath, ShaderType);
     ASSERT_FALSE(SPIRV.empty()) << "Failed to compile HLSL to SPIRV: " << FilePath;
 
@@ -156,17 +153,12 @@ void TestSPIRVResources(const char*                                       FilePa
         false, // LoadUniformBufferReflection
         EntryPoint};
 
-    LOG_INFO_MESSAGE("Testing shader:", FilePath);
-    if (CombinedSamplerSuffix != nullptr)
-    {
-        LOG_INFO_MESSAGE("Using CombinedSamplerSuffix:", CombinedSamplerSuffix);
-    }
     LOG_INFO_MESSAGE("SPIRV Resources:\n", Resources.DumpResources());
 
     EXPECT_EQ(size_t{Resources.GetTotalResources()}, RefResources.size());
 
     std::unordered_map<std::string, const SPIRVShaderResourceRefAttribs*> RefResourcesMap;
-    for (const auto& RefRes : RefResources)
+    for (const SPIRVShaderResourceRefAttribs& RefRes : RefResources)
     {
         RefResourcesMap[RefRes.Name] = &RefRes;
     }
@@ -194,7 +186,7 @@ void TestSPIRVResources(const char*                                       FilePa
 
 using SPIRVResourceType = SPIRVShaderResourceAttribs::ResourceType;
 
-TEST(SPIRVShaderResources, UniformBuffers)
+TEST_F(SPIRVShaderResourcesTest, UniformBuffers)
 {
     TestSPIRVResources("UniformBuffers.psh",
                        {
@@ -204,7 +196,7 @@ TEST(SPIRVShaderResources, UniformBuffers)
                        });
 }
 
-TEST(SPIRVShaderResources, StorageBuffers)
+TEST_F(SPIRVShaderResourcesTest, StorageBuffers)
 {
     TestSPIRVResources("StorageBuffers.psh",
                        {
@@ -217,7 +209,7 @@ TEST(SPIRVShaderResources, StorageBuffers)
                        });
 }
 
-TEST(SPIRVShaderResources, TexelBuffers)
+TEST_F(SPIRVShaderResourcesTest, TexelBuffers)
 {
     TestSPIRVResources("TexelBuffers.psh",
                        {
@@ -226,7 +218,7 @@ TEST(SPIRVShaderResources, TexelBuffers)
                        });
 }
 
-TEST(SPIRVShaderResources, Textures)
+TEST_F(SPIRVShaderResourcesTest, Textures)
 {
     TestSPIRVResources("Textures.psh",
                        {
@@ -246,7 +238,7 @@ TEST(SPIRVShaderResources, Textures)
                        });
 }
 
-TEST(SPIRVShaderResources, StorageImages)
+TEST_F(SPIRVShaderResourcesTest, StorageImages)
 {
     TestSPIRVResources("StorageImages.psh",
                        {
@@ -257,7 +249,7 @@ TEST(SPIRVShaderResources, StorageImages)
                        });
 }
 
-TEST(SPIRVShaderResources, AtomicCounters)
+TEST_F(SPIRVShaderResourcesTest, AtomicCounters)
 {
     // Use GLSL for atomic counters. Note: Vulkan does not support atomic_uint (AtomicCounter storage class).
     // We use a storage buffer with atomic operations to simulate atomic counters.
@@ -272,7 +264,7 @@ TEST(SPIRVShaderResources, AtomicCounters)
                        true); // IsGLSL = true
 }
 
-TEST(SPIRVShaderResources, InputAttachments)
+TEST_F(SPIRVShaderResourcesTest, InputAttachments)
 {
     TestSPIRVResources("InputAttachments.psh",
                        {
@@ -280,7 +272,7 @@ TEST(SPIRVShaderResources, InputAttachments)
                        });
 }
 
-TEST(SPIRVShaderResources, AccelerationStructures)
+TEST_F(SPIRVShaderResourcesTest, AccelerationStructures)
 {
     // Use GLSL for acceleration structures since HLSLtoSPIRV doesn't support raytracing shaders
     // Acceleration structures are used in raytracing shaders, so we use SHADER_TYPE_RAY_GEN
@@ -294,7 +286,7 @@ TEST(SPIRVShaderResources, AccelerationStructures)
                        true); // IsGLSL = true
 }
 
-TEST(SPIRVShaderResources, PushConstants)
+TEST_F(SPIRVShaderResourcesTest, PushConstants)
 {
     // Push constant ArraySize represents the number of 32-bit words, not array elements
     // PushConstants struct: float4x4 (16 floats) + float4 (4 floats) + float2 (2 floats) + float (1 float) + uint (1 uint)
@@ -305,7 +297,7 @@ TEST(SPIRVShaderResources, PushConstants)
                        });
 }
 
-TEST(SPIRVShaderResources, MixedResources)
+TEST_F(SPIRVShaderResourcesTest, MixedResources)
 {
     TestSPIRVResources("MixedResources.psh",
                        {
