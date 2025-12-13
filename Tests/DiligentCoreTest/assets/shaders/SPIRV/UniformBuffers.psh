@@ -1,0 +1,24 @@
+// Test for uniform buffers (constant buffers)
+cbuffer CB0 : register(b0)
+{
+    float4x4 g_WorldViewProj;
+};
+
+cbuffer CB1 : register(b1)
+{
+    float4 g_Color;
+    float3 g_LightDir;
+    float  g_LightIntensity;
+    float2 g_TexScale;
+    uint2  g_Padding;
+};
+
+cbuffer CB2 : register(b2)
+{
+    float4 g_MaterialParams;
+};
+
+float4 main() : SV_Target
+{
+    return g_Color * g_MaterialParams;
+}

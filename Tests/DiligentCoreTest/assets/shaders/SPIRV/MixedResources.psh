@@ -1,0 +1,66 @@
+// Test for mixed resources to verify all resource types work together
+
+struct BufferData
+{
+    float4 data[4];
+};
+
+// Uniform buffer
+cbuffer UniformBuff : register(b0)
+{
+    float4x4 g_WorldViewProj;
+    float4   g_MaterialParams;
+};
+
+// Read-only structured buffer
+StructuredBuffer<BufferData> ROStorageBuff : register(t0);
+
+// Read-write structured buffer
+RWStructuredBuffer<BufferData> RWStorageBuff : register(u0);
+
+// Sampled texture
+Texture2D<float4> SampledTex : register(t1);
+
+// Storage texture
+RWTexture2D<float4> StorageTex : register(u1);
+
+// Sampler
+SamplerState Sampler : register(s0);
+
+// Test for push constants
+struct PushConstants_t
+{
+    float2 Offset;
+    float Time;
+    uint FrameCount;
+};
+
+[[vk::push_constant]]
+cbuffer PushConstants
+{
+    PushConstants_t g_PushConstants;
+};
+
+float4 main() : SV_Target
+{
+    // Use uniform buffer data
+    float4 color = g_MaterialParams;
+
+    // Read from RO structured buffer
+    color += ROStorageBuff[0].data[0];
+
+    // Write to RW structured buffer
+    RWStorageBuff[1].data[1] = color * 2.0;
+
+    // Sample texture
+    color += SampledTex.Sample(Sampler, float2(0.5, 0.5));
+
+    // Write to storage texture
+    StorageTex[uint2(0, 0)] = color;
+
+    // Use push constant data
+    color.xy += g_PushConstants.Offset;
+    color.rgb *= sin(g_PushConstants.Time) * 0.5 + 0.5;
+
+    return color;
+}

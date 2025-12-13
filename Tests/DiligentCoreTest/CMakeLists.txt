@@ -20,6 +20,12 @@ if(NOT WEBGPU_SUPPORTED)
     )
 endif()
 
+if(NOT ${DILIGENT_USE_SPIRV_TOOLCHAIN} OR ${DILIGENT_NO_GLSLANG})
+    list(REMOVE_ITEM SOURCE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderTools/SPIRVShaderResourcesTest.cpp
+    )
+endif()
+
 set_source_files_properties(${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
