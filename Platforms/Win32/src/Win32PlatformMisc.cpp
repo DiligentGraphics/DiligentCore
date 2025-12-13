@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,12 +30,16 @@
 #include <Windows.h>
 #include "WinHPostface.h"
 
+#include <string>
+#include <sstream>
+#include <locale>
+
 namespace Diligent
 {
 
 Uint64 WindowsMisc::SetCurrentThreadAffinity(Uint64 Mask)
 {
-    const auto hCurrThread = GetCurrentThread();
+    const HANDLE hCurrThread = GetCurrentThread();
     return SetThreadAffinityMask(hCurrThread, static_cast<DWORD_PTR>(Mask));
 }
 
@@ -72,20 +76,36 @@ static int ThreadPiorityToWndPriority(ThreadPriority Priority)
 
 ThreadPriority WindowsMisc::GetCurrentThreadPriority()
 {
-    const auto hCurrThread = GetCurrentThread();
-    const auto WndPriority = GetThreadPriority(hCurrThread);
+    const HANDLE hCurrThread = GetCurrentThread();
+    const int    WndPriority = GetThreadPriority(hCurrThread);
     return WndPriorityToThreadPiority(WndPriority);
 }
 
 ThreadPriority WindowsMisc::SetCurrentThreadPriority(ThreadPriority Priority)
 {
-    const auto hCurrThread     = GetCurrentThread();
-    const auto OrigWndPriority = GetThreadPriority(hCurrThread);
-    const auto NewWndPriority  = ThreadPiorityToWndPriority(Priority);
+    const HANDLE hCurrThread     = GetCurrentThread();
+    const int    OrigWndPriority = GetThreadPriority(hCurrThread);
+    const int    NewWndPriority  = ThreadPiorityToWndPriority(Priority);
     if (SetThreadPriority(hCurrThread, NewWndPriority))
         return WndPriorityToThreadPiority(OrigWndPriority);
     else
         return ThreadPriority::Unknown;
+}
+
+void WindowsMisc::SetCurrentThreadName(const char* Name)
+{
+    if (Name == nullptr || Name[0] == '\0')
+        return;
+
+    const size_t Len = strlen(Name);
+    std::wstring wName(Len, L'\0');
+
+    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
+    for (size_t i = 0; i < Len; ++i)
+        wName[i] = ctfacet.widen(Name[i]);
+
+    const HANDLE hCurrThread = GetCurrentThread();
+    SetThreadDescription(hCurrThread, wName.c_str());
 }
 
 } // namespace Diligent

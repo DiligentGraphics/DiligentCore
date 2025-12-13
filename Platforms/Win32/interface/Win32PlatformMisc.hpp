@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -173,6 +173,9 @@ struct WindowsMisc : public BasicPlatformMisc
     /// Sets the current thread priority and on success returns the previous priority.
     /// On failure, returns ThreadPriority::Unknown.
     static ThreadPriority SetCurrentThreadPriority(ThreadPriority Priority);
+
+    /// Sets the name of the current thread.
+    static void SetCurrentThreadName(const char* Name);
 #endif
 };
 

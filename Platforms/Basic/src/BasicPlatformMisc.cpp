@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -46,6 +46,11 @@ Uint64 BasicPlatformMisc::SetCurrentThreadAffinity(Uint64 Mask)
 {
     LOG_WARNING_MESSAGE_ONCE("SetCurrentThreadAffinity is not implemented on this platform.");
     return 0;
+}
+
+void BasicPlatformMisc::SetCurrentThreadName(const char* Name)
+{
+    LOG_WARNING_MESSAGE_ONCE("SetCurrentThreadName is not implemented on this platform.");
 }
 
 } // namespace Diligent

@@ -55,6 +55,9 @@ public:
         m_WorkerThreads.reserve(PoolCI.NumThreads);
         for (Uint32 i = 0; i < PoolCI.NumThreads; ++i)
         {
+            std::string ThreadName = "Diligent::ThreadPool Worker " + std::to_string(i);
+            PlatformMisc::SetCurrentThreadName(ThreadName.c_str());
+
             m_WorkerThreads.emplace_back(
                 [this, PoolCI, i] //
                 {

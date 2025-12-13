@@ -111,6 +111,9 @@ struct BasicPlatformMisc
     /// Sets the current thread affinity mask and on success returns the previous mask.
     static Uint64 SetCurrentThreadAffinity(Uint64 Mask);
 
+    /// Sets the name of the current thread.
+    static void SetCurrentThreadName(const char* Name);
+
 private:
     static void SwapBytes16(Uint16& Val)
     {
