@@ -1,0 +1,15 @@
+// Test for texel buffers (buffer textures)
+Buffer<float4> g_UniformTexelBuffer : register(t0);  // Uniform texel buffer (read-only)
+RWBuffer<float4> g_StorageTexelBuffer : register(u0); // Storage texel buffer (read-write)
+
+float4 main() : SV_Target
+{
+    // Read from uniform texel buffer
+    float4 value = g_UniformTexelBuffer[0];
+
+    // Write to storage texel buffer
+    g_StorageTexelBuffer[0] = value * 2.0;
+
+    // Read back from storage texel buffer
+    return g_StorageTexelBuffer[0];
+}
