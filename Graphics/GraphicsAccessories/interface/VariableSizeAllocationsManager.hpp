@@ -158,6 +158,8 @@ public:
 #endif
     {
         // clang-format on
+        rhs.m_FreeBlocksByOffset.clear();
+        rhs.m_FreeBlocksBySize.clear();
         rhs.m_MaxSize       = 0;
         rhs.m_FreeSize      = 0;
         rhs.m_CurrAlignment = 0;
