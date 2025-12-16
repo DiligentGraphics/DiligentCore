@@ -1,8 +1,4 @@
 // Test for uniform buffers (constant buffers)
-cbuffer CB0 : register(b0)
-{
-    float4x4 g_WorldViewProj;
-};
 
 cbuffer CB1 : register(b1)
 {
