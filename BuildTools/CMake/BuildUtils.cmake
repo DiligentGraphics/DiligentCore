@@ -1,27 +1,8 @@
 if(PLATFORM_WIN32)
 
-    # Copies required dlls to the target's output directory
-    #
-    # The following dlls are copied:
-    #  - Engine dlls (GraphicsEngine*.dll)
-    #  - Archiver dll (Archiver*.dll)
-    #  - D3Dcompiler_47.dll
-    #  - Optional DXC dlls (dxcompiler.dll, dxil.dll, spv_dxcompiler.dll)
-    #
-    # Arguments:
-    #   TARGET_NAME  - name of the target to copy dlls for
-    #   DXC_REQUIRED - Indicates that the target requires DXC compiler dlls
-    #                  (dxcompiler.dll, dxil.dll and spv_dxcompiler.dll)
-    #
-    # Example:
-    #   copy_required_dlls(MyTarget DXC_REQUIRED YES)
-    #
-    function(copy_required_dlls TARGET_NAME)
-        set(options)
-        set(oneValueArgs DXC_REQUIRED)
-        set(multiValueArgs)
-        cmake_parse_arguments(PARSE_ARGV 1 arg "${options}" "${oneValueArgs}" "${multiValueArgs}")
-
+    # Copies engine dlls to the target's output directory
+    function(copy_engine_dlls TARGET_NAME)
+        set(ENGINE_DLLS)
         if(D3D11_SUPPORTED)
             list(APPEND ENGINE_DLLS Diligent-GraphicsEngineD3D11-shared)
         endif()
@@ -47,18 +28,36 @@ if(PLATFORM_WIN32)
         foreach(DLL ${ENGINE_DLLS})
             add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "\"$<TARGET_FILE:${DLL}>\""
-                    "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
+                    "$<TARGET_FILE:${DLL}>"
+                    "$<TARGET_FILE_DIR:${TARGET_NAME}>")
         endforeach(DLL)
+    endfunction()
 
-        # Copy D3Dcompiler_47.dll, dxcompiler.dll, and dxil.dll
-        if ((D3D11_SUPPORTED OR D3D12_SUPPORTED) AND D3D_COMPILER_PATH)
+    # Copies shader compiler dlls to the target's output directory
+    #
+    # Arguments:
+    #   TARGET_NAME          - Name of the target to copy dlls for
+    #   D3D_COMPILER         - Indicates that D3Dcompiler_47.dll is required
+    #   DXCOMPILER           - Indicates that dxcompiler.dll and dxil.dll are required
+    #   DXCOMPILER_FOR_SPIRV - Indicates that spv_dxcompiler.dll is required
+    #
+    # Example:
+    #   copy_shader_compiler_dlls(MyTarget D3D_COMPILER YES DXCOMPILER YES)
+    function(copy_shader_compiler_dlls TARGET_NAME)
+        set(options)
+        set(oneValueArgs D3D_COMPILER DXCOMPILER DXCOMPILER_FOR_SPIRV)
+        set(multiValueArgs)
+        cmake_parse_arguments(PARSE_ARGV 1 arg "${options}" "${oneValueArgs}" "${multiValueArgs}")
+
+        set(SHADER_COMPILER_DLLS)
+
+        # D3Dcompiler_47.dll
+        if (arg_D3D_COMPILER AND D3D_COMPILER_PATH)
             list(APPEND SHADER_COMPILER_DLLS "${D3D_COMPILER_PATH}")
         endif()
 
-        # Dawn uses DXC, so we need to copy the DXC dlls even if DXC_REQUIRED is not set
-        # to get consistent shader compilation results
-        if(((arg_DXC_REQUIRED AND D3D12_SUPPORTED) OR WEBGPU_SUPPORTED) AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
+        # dxcompiler.dll and dxil.dll
+        if(arg_DXCOMPILER AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
             # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in
             # the same folder as the dxcompiler.dll at runtime.
 
@@ -69,22 +68,73 @@ if(PLATFORM_WIN32)
         foreach(DLL ${SHADER_COMPILER_DLLS})
             add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${DLL}
-                    "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
+                    "${DLL}"
+                    "$<TARGET_FILE_DIR:${TARGET_NAME}>")
         endforeach(DLL)
+
+        # spv_dxcompiler.dll
+        if(arg_DXCOMPILER_FOR_SPIRV AND EXISTS "${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH}")
+            add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH}"
+                    "$<TARGET_FILE_DIR:${TARGET_NAME}>/spv_dxcompiler.dll")
+        endif()
+    endfunction()
+
+    # Copies required dlls to the target's output directory
+    #
+    # The following dlls are copied:
+    #  - Engine dlls (GraphicsEngine*.dll)
+    #  - Archiver dll (Archiver*.dll)
+    #  - D3Dcompiler_47.dll
+    #  - Optional DXC dlls (dxcompiler.dll, dxil.dll, spv_dxcompiler.dll)
+    #
+    # Arguments:
+    #   TARGET_NAME  - Name of the target to copy dlls for
+    #   DXC_REQUIRED - Indicates that the target requires DXC compiler dlls
+    #                  (dxcompiler.dll, dxil.dll and spv_dxcompiler.dll)
+    #
+    # Example:
+    #   copy_required_dlls(MyTarget DXC_REQUIRED YES)
+    #
+    function(copy_required_dlls TARGET_NAME)
+        set(options)
+        set(oneValueArgs DXC_REQUIRED)
+        set(multiValueArgs)
+        cmake_parse_arguments(PARSE_ARGV 1 arg "${options}" "${oneValueArgs}" "${multiValueArgs}")
+
+        copy_engine_dlls(${TARGET_NAME})
+
+        # Copy D3Dcompiler_47.dll, dxcompiler.dll, and dxil.dll
+        set(D3D_COMPILER_REQUIRED NO)
+        set(DXCOMPILER_REQUIRED NO)
+        set(DXCOMPILER_FOR_SPIRV_REQUIRED NO)
+        
+        if (D3D11_SUPPORTED OR D3D12_SUPPORTED)
+            set(D3D_COMPILER_REQUIRED YES)
+        endif()
+
+        # Dawn uses DXC, so we need to copy the DXC dlls even if DXC_REQUIRED is not set
+        # to get consistent shader compilation results
+        if((arg_DXC_REQUIRED AND D3D12_SUPPORTED) OR WEBGPU_SUPPORTED)
+            set(DXCOMPILER_REQUIRED YES)
+        endif()
+
+        if(arg_DXC_REQUIRED AND VULKAN_SUPPORTED)
+            set(DXCOMPILER_FOR_SPIRV_REQUIRED YES)
+        endif()
+
+        copy_shader_compiler_dlls(${TARGET_NAME}
+            D3D_COMPILER ${D3D_COMPILER_REQUIRED}
+            DXCOMPILER ${DXCOMPILER_REQUIRED}
+            DXCOMPILER_FOR_SPIRV ${DXCOMPILER_FOR_SPIRV_REQUIRED}
+        )
 
         if(D3D12_SUPPORTED AND EXISTS "${DILIGENT_PIX_EVENT_RUNTIME_DLL_PATH}")
             add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     "${DILIGENT_PIX_EVENT_RUNTIME_DLL_PATH}"
-                    "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
-        endif()
-
-        if(arg_DXC_REQUIRED AND VULKAN_SUPPORTED AND EXISTS "${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH}")
-            add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH}"
-                    "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/spv_dxcompiler.dll\"")
+                    "$<TARGET_FILE_DIR:${TARGET_NAME}>")
         endif()
     endfunction()
 
