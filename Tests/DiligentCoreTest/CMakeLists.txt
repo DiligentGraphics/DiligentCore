@@ -64,6 +64,10 @@ if(WEBGPU_SUPPORTED)
     target_link_libraries(DiligentCoreTest PRIVATE libtint)
 endif()
 
+if (PLATFORM_WIN32)
+    copy_shader_compiler_dlls(DiligentCoreTest DXCOMPILER_FOR_SPIRV YES)
+endif()
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${SHADERS}})
 
 set_target_properties(DiligentCoreTest
