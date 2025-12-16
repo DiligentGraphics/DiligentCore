@@ -27,6 +27,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 
 #include "FlagEnum.h"
 
@@ -48,5 +49,15 @@ DEFINE_FLAG_ENUM_OPERATORS(SPIRV_OPTIMIZATION_FLAGS);
 std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV,
                                     spv_target_env               TargetEnv,
                                     SPIRV_OPTIMIZATION_FLAGS     Passes);
+
+/// Converts a uniform buffer variable to a push constant in SPIR-V bytecode.
+/// This function modifies the storage class of the specified variable from Uniform to PushConstant,
+/// and removes Binding and DescriptorSet decorations.
+///
+/// \param [in] SPIRV      - Source SPIR-V bytecode
+/// \param [in] BlockName  - Name of the uniform buffer block to convert
+/// \return Modified SPIR-V bytecode, or empty vector on failure
+std::vector<uint32_t> PatchSPIRVConvertUniformBufferToPushConstant(const std::vector<uint32_t>& SPIRV,
+                                                                   const std::string&           BlockName);
 
 } // namespace Diligent
