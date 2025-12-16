@@ -47,7 +47,7 @@ public:
                   const UploadBufferDesc& Desc,
                   ITexture*               pStagingTexture) :
         // clang-format off
-        UploadBufferBase {pRefCounters, Desc},
+        UploadBufferBase {pRefCounters, Desc, /*AllocateStagingData = */pStagingTexture == nullptr},
         m_pStagingTexture{pStagingTexture}
     // clang-format on
     {
@@ -55,18 +55,24 @@ public:
 
     ~UploadTexture()
     {
-        for (Uint32 Slice = 0; Slice < m_Desc.ArraySize; ++Slice)
+        if (m_pStagingTexture)
         {
-            for (Uint32 Mip = 0; Mip < m_Desc.MipLevels; ++Mip)
+            for (Uint32 Slice = 0; Slice < m_Desc.ArraySize; ++Slice)
             {
-                DEV_CHECK_ERR(!IsMapped(Mip, Slice), "Releasing mapped staging texture");
+                for (Uint32 Mip = 0; Mip < m_Desc.MipLevels; ++Mip)
+                {
+                    DEV_CHECK_ERR(!IsMapped(Mip, Slice), "Releasing mapped staging texture");
+                }
             }
         }
     }
 
     void WaitForMap()
     {
-        m_TextureMappedSignal.Wait();
+        if (!HasStagingData())
+        {
+            m_TextureMappedSignal.Wait();
+        }
     }
 
     void SignalMapped()
@@ -201,7 +207,7 @@ struct TextureUploaderD3D12_Vk::InternalData
     RefCntAutoPtr<UploadTexture> FindCachedUploadTexture(const UploadBufferDesc& Desc)
     {
         RefCntAutoPtr<UploadTexture> pUploadTexture;
-        std::lock_guard<std::mutex>  CacheLock(m_UploadTexturesCacheMtx);
+        std::lock_guard<std::mutex>  CacheLock{m_UploadTexturesCacheMtx};
         auto                         DequeIt = m_UploadTexturesCache.find(Desc);
         if (DequeIt != m_UploadTexturesCache.end())
         {
@@ -209,7 +215,7 @@ struct TextureUploaderD3D12_Vk::InternalData
             if (!Deque.empty())
             {
                 RefCntAutoPtr<UploadTexture>& FrontBuff = Deque.front();
-                if (FrontBuff->GetCopyScheduledFenceValue() <= m_CompletedFenceValue)
+                if (FrontBuff->GetCopyScheduledFenceValue() <= m_CompletedFenceValue || FrontBuff->HasStagingData())
                 {
                     pUploadTexture = std::move(FrontBuff);
                     Deque.pop_front();
@@ -336,25 +342,43 @@ void TextureUploaderD3D12_Vk::InternalData::Execute(IDeviceContext*         pCon
 
         case InternalData::PendingBufferOperation::Type::Copy:
         {
+            ITexture*          pStagingTex = pUploadTex->GetStagingTexture();
+            const TextureDesc& TexDesc     = Operation.pDstTexture->GetDesc();
+
             VERIFY(pUploadTex->DbgIsMapped(), "Upload texture must be copied only after it has been mapped");
             for (Uint32 Slice = 0; Slice < StagingTexDesc.ArraySize; ++Slice)
             {
                 for (Uint32 Mip = 0; Mip < StagingTexDesc.MipLevels; ++Mip)
                 {
-                    pUploadTex->Unmap(pContext, Mip, Slice);
+                    if (pStagingTex != nullptr)
+                    {
+                        pUploadTex->Unmap(pContext, Mip, Slice);
 
-                    CopyTextureAttribs CopyInfo //
-                        {
-                            pUploadTex->GetStagingTexture(),
-                            RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                            Operation.pDstTexture,
-                            RESOURCE_STATE_TRANSITION_MODE_TRANSITION //
-                        };
-                    CopyInfo.SrcMipLevel = Mip;
-                    CopyInfo.SrcSlice    = Slice;
-                    CopyInfo.DstMipLevel = Operation.DstMip + Mip;
-                    CopyInfo.DstSlice    = Operation.DstSlice + Slice;
-                    pContext->CopyTexture(CopyInfo);
+                        CopyTextureAttribs CopyInfo //
+                            {
+                                pUploadTex->GetStagingTexture(),
+                                RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                                Operation.pDstTexture,
+                                RESOURCE_STATE_TRANSITION_MODE_TRANSITION //
+                            };
+                        CopyInfo.SrcMipLevel = Mip;
+                        CopyInfo.SrcSlice    = Slice;
+                        CopyInfo.DstMipLevel = Operation.DstMip + Mip;
+                        CopyInfo.DstSlice    = Operation.DstSlice + Slice;
+                        pContext->CopyTexture(CopyInfo);
+                    }
+                    else
+                    {
+                        MipLevelProperties MipLevelProps = GetMipLevelProperties(TexDesc, Operation.DstMip + Mip);
+                        Box                DstBox;
+                        DstBox.MaxX = MipLevelProps.LogicalWidth;
+                        DstBox.MaxY = MipLevelProps.LogicalHeight;
+
+                        const MappedTextureSubresource SrcMappedData = pUploadTex->GetMappedData(Mip, Slice);
+                        const TextureSubResData        SubResData{SrcMappedData.pData, SrcMappedData.Stride, SrcMappedData.DepthStride};
+                        pContext->UpdateTexture(Operation.pDstTexture, Operation.DstMip + Mip, Operation.DstSlice + Slice, DstBox,
+                                                SubResData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                    }
                 }
             }
         }
@@ -371,38 +395,50 @@ void TextureUploaderD3D12_Vk::AllocateUploadBuffer(IDeviceContext*         pCont
     // No available buffer found in the cache
     if (!pUploadTexture)
     {
-        TextureDesc StagingTexDesc;
-        StagingTexDesc.Type           = Desc.ArraySize == 1 ? RESOURCE_DIM_TEX_2D : RESOURCE_DIM_TEX_2D_ARRAY;
-        StagingTexDesc.Width          = Desc.Width;
-        StagingTexDesc.Height         = Desc.Height;
-        StagingTexDesc.Format         = Desc.Format;
-        StagingTexDesc.MipLevels      = Desc.MipLevels;
-        StagingTexDesc.ArraySize      = Desc.ArraySize;
-        StagingTexDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-        StagingTexDesc.Usage          = USAGE_STAGING;
-
         RefCntAutoPtr<ITexture> pStagingTexture;
-        m_pDevice->CreateTexture(StagingTexDesc, nullptr, &pStagingTexture);
+
+        if (m_Desc.Mode == TEXTURE_UPLOADER_MODE_STAGING_RESOURCE)
+        {
+            TextureDesc StagingTexDesc;
+            StagingTexDesc.Type           = Desc.ArraySize == 1 ? RESOURCE_DIM_TEX_2D : RESOURCE_DIM_TEX_2D_ARRAY;
+            StagingTexDesc.Width          = Desc.Width;
+            StagingTexDesc.Height         = Desc.Height;
+            StagingTexDesc.Format         = Desc.Format;
+            StagingTexDesc.MipLevels      = Desc.MipLevels;
+            StagingTexDesc.ArraySize      = Desc.ArraySize;
+            StagingTexDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+            StagingTexDesc.Usage          = USAGE_STAGING;
+
+            m_pDevice->CreateTexture(StagingTexDesc, nullptr, &pStagingTexture);
+        }
 
         LOG_INFO_MESSAGE("Created ", Desc.Width, "x", Desc.Height, 'x', Desc.Depth, ' ', Desc.MipLevels, "-mip ",
                          Desc.ArraySize, "-slice ",
-                         GetTextureFormatAttribs(Desc.Format).Name, " staging texture");
+                         GetTextureFormatAttribs(Desc.Format).Name, pStagingTexture ? " staging texture" : " CPU upload buffer");
 
         pUploadTexture = MakeNewRCObj<UploadTexture>()(Desc, pStagingTexture);
     }
 
-    if (pContext != nullptr)
+    if (m_Desc.Mode == TEXTURE_UPLOADER_MODE_STAGING_RESOURCE)
     {
-        // Render thread
-        InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Type::Map, pUploadTexture};
-        m_pInternalData->Execute(pContext, MapOp);
+        if (pContext != nullptr)
+        {
+            // Render thread
+            InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Type::Map, pUploadTexture};
+            m_pInternalData->Execute(pContext, MapOp);
+        }
+        else
+        {
+            // Worker thread
+            m_pInternalData->EnqueueMap(pUploadTexture);
+            pUploadTexture->WaitForMap();
+        }
     }
     else
     {
-        // Worker thread
-        m_pInternalData->EnqueueMap(pUploadTexture);
-        pUploadTexture->WaitForMap();
+        pUploadTexture->SignalMapped();
     }
+
     *ppBuffer = pUploadTexture.Detach();
 }
 

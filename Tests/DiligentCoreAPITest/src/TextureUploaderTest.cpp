@@ -89,7 +89,7 @@ Uint32 WriteOrVerifyRGBAData(MappedTextureSubresource& MappedData,
     return NumInvalidPixels;
 }
 
-void TextureUploaderTest(bool IsRenderThread)
+void TextureUploaderTest(bool IsRenderThread, TEXTURE_UPLOADER_MODE Mode)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -102,7 +102,8 @@ void TextureUploaderTest(bool IsRenderThread)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    TextureUploaderDesc             UploaderDesc;
+    TextureUploaderDesc UploaderDesc;
+    UploaderDesc.Mode = Mode;
     RefCntAutoPtr<ITextureUploader> pTexUploader;
     CreateTextureUploader(pDevice, UploaderDesc, &pTexUploader);
     ASSERT_TRUE(pTexUploader);
@@ -209,17 +210,27 @@ void TextureUploaderTest(bool IsRenderThread)
     }
 }
 
-TEST(TextureUploaderTest, RenderThread)
+TEST(TextureUploaderTest, RenderThread_StagingRes)
 {
-    TextureUploaderTest(true);
+    TextureUploaderTest(/*IsRenderThread = */ true, TEXTURE_UPLOADER_MODE_STAGING_RESOURCE);
 }
 
-TEST(TextureUploaderTest, WorkerThread)
+TEST(TextureUploaderTest, RenderThread_CPUMem)
 {
-    TextureUploaderTest(false);
+    TextureUploaderTest(/*IsRenderThread = */ true, TEXTURE_UPLOADER_MODE_CPU_MEMORY);
 }
 
-void TestAutoRecycle(bool IsRenderThread)
+TEST(TextureUploaderTest, WorkerThread_StagingRes)
+{
+    TextureUploaderTest(/*IsRenderThread = */ false, TEXTURE_UPLOADER_MODE_STAGING_RESOURCE);
+}
+
+TEST(TextureUploaderTest, WorkerThread_CPUMem)
+{
+    TextureUploaderTest(/*IsRenderThread = */ false, TEXTURE_UPLOADER_MODE_CPU_MEMORY);
+}
+
+void TestAutoRecycle(bool IsRenderThread, TEXTURE_UPLOADER_MODE Mode)
 {
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
@@ -232,7 +243,8 @@ void TestAutoRecycle(bool IsRenderThread)
 
     GPUTestingEnvironment::ScopedReset EnvironmentAutoReset;
 
-    TextureUploaderDesc             UploaderDesc;
+    TextureUploaderDesc UploaderDesc;
+    UploaderDesc.Mode = Mode;
     RefCntAutoPtr<ITextureUploader> pTexUploader;
     CreateTextureUploader(pDevice, UploaderDesc, &pTexUploader);
     ASSERT_TRUE(pTexUploader);
@@ -294,14 +306,24 @@ void TestAutoRecycle(bool IsRenderThread)
     pTexUploader->RenderThreadUpdate(pContext);
 }
 
-TEST(TextureUploaderTest, AutoRecycle_RenderThread)
+TEST(TextureUploaderTest, AutoRecycle_RenderThread_StagingRes)
 {
-    TestAutoRecycle(true);
+    TestAutoRecycle(/*IsRenderThread = */ true, TEXTURE_UPLOADER_MODE_STAGING_RESOURCE);
 }
 
-TEST(TextureUploaderTest, AutoRecycle_WorkerThread)
+TEST(TextureUploaderTest, AutoRecycle_RenderThread_CPUMem)
 {
-    TestAutoRecycle(false);
+    TestAutoRecycle(/*IsRenderThread = */ true, TEXTURE_UPLOADER_MODE_CPU_MEMORY);
+}
+
+TEST(TextureUploaderTest, AutoRecycle_WorkerThread_StagingRes)
+{
+    TestAutoRecycle(/*IsRenderThread = */ false, TEXTURE_UPLOADER_MODE_STAGING_RESOURCE);
+}
+
+TEST(TextureUploaderTest, AutoRecycle_WorkerThread_CPUMem)
+{
+    TestAutoRecycle(/*IsRenderThread = */ false, TEXTURE_UPLOADER_MODE_CPU_MEMORY);
 }
 
 } // namespace

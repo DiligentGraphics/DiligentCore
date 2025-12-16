@@ -46,33 +46,37 @@ namespace
 class UploadBufferGL : public UploadBufferBase
 {
 public:
-    UploadBufferGL(IReferenceCounters* pRefCounters, const UploadBufferDesc& Desc) :
-        // clang-format off
-        UploadBufferBase{pRefCounters, Desc},
-        m_SubresourceOffsets(size_t{Desc.MipLevels} * size_t{Desc.ArraySize} + 1),
-        m_SubresourceStrides(size_t{Desc.MipLevels} * size_t{Desc.ArraySize}    )
-    // clang-format on
+    UploadBufferGL(IReferenceCounters*     pRefCounters,
+                   const UploadBufferDesc& Desc,
+                   bool                    AllocateStagingData) :
+        UploadBufferBase{pRefCounters, Desc, AllocateStagingData}
     {
-        TextureDesc TexDesc;
-        TexDesc.Format = Desc.Format;
-        TexDesc.Width  = Desc.Width;
-        TexDesc.Height = Desc.Height;
-        TexDesc.Depth  = Desc.Depth;
-        TexDesc.Type   = Desc.ArraySize == 1 ? RESOURCE_DIM_TEX_2D : RESOURCE_DIM_TEX_2D_ARRAY;
-
-        Uint32 SubRes = 0;
-        for (Uint32 Slice = 0; Slice < Desc.ArraySize; ++Slice)
+        if (!AllocateStagingData)
         {
-            for (Uint32 Mip = 0; Mip < Desc.MipLevels; ++Mip)
-            {
-                MipLevelProperties MipProps = GetMipLevelProperties(TexDesc, Mip);
-                // Stride must be 32-bit aligned in OpenGL
-                Uint32 RowStride             = AlignUp(StaticCast<Uint32>(MipProps.RowSize), Uint32{4});
-                m_SubresourceStrides[SubRes] = RowStride;
+            m_SubresourceOffsets.resize(size_t{Desc.MipLevels} * size_t{Desc.ArraySize} + 1);
+            m_SubresourceStrides.resize(size_t{Desc.MipLevels} * size_t{Desc.ArraySize});
 
-                Uint32 MipSize                           = MipProps.StorageHeight * RowStride;
-                m_SubresourceOffsets[size_t{SubRes} + 1] = m_SubresourceOffsets[SubRes] + MipSize;
-                ++SubRes;
+            TextureDesc TexDesc;
+            TexDesc.Format = Desc.Format;
+            TexDesc.Width  = Desc.Width;
+            TexDesc.Height = Desc.Height;
+            TexDesc.Depth  = Desc.Depth;
+            TexDesc.Type   = Desc.ArraySize == 1 ? RESOURCE_DIM_TEX_2D : RESOURCE_DIM_TEX_2D_ARRAY;
+
+            Uint32 SubRes = 0;
+            for (Uint32 Slice = 0; Slice < Desc.ArraySize; ++Slice)
+            {
+                for (Uint32 Mip = 0; Mip < Desc.MipLevels; ++Mip)
+                {
+                    MipLevelProperties MipProps = GetMipLevelProperties(TexDesc, Mip);
+                    // Stride must be 32-bit aligned in OpenGL
+                    Uint32 RowStride             = AlignUp(StaticCast<Uint32>(MipProps.RowSize), Uint32{4});
+                    m_SubresourceStrides[SubRes] = RowStride;
+
+                    Uint32 MipSize                           = MipProps.StorageHeight * RowStride;
+                    m_SubresourceOffsets[size_t{SubRes} + 1] = m_SubresourceOffsets[SubRes] + MipSize;
+                    ++SubRes;
+                }
             }
         }
     }
@@ -80,7 +84,10 @@ public:
     // http://en.cppreference.com/w/cpp/thread/condition_variable
     void WaitForMap()
     {
-        m_BufferMappedSignal.Wait();
+        if (!HasStagingData())
+        {
+            m_BufferMappedSignal.Wait();
+        }
     }
 
     void SignalMapped()
@@ -271,15 +278,28 @@ void TextureUploaderGL::InternalData::Execute(IRenderDevice*          pDevice,
         case InternalData::PendingBufferOperation::Type::Copy:
         {
             const TextureDesc& TexDesc = Operation.pDstTexture->GetDesc();
-            pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
+            if (pBuffer->m_pStagingBuffer)
+            {
+                pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
+            }
             for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
             {
                 for (Uint32 Mip = 0; Mip < UploadBuffDesc.MipLevels; ++Mip)
                 {
-                    Uint32 SrcOffset = pBuffer->GetOffset(Mip, Slice);
-                    Uint64 SrcStride = pBuffer->GetMappedData(Mip, Slice).Stride;
+                    TextureSubResData SubResData;
+                    if (pBuffer->m_pStagingBuffer)
+                    {
+                        Uint32 SrcOffset = pBuffer->GetOffset(Mip, Slice);
+                        Uint64 SrcStride = pBuffer->GetMappedData(Mip, Slice).Stride;
 
-                    TextureSubResData SubResData(pBuffer->m_pStagingBuffer, SrcOffset, SrcStride);
+                        SubResData = {pBuffer->m_pStagingBuffer, SrcOffset, SrcStride};
+                    }
+                    else
+                    {
+                        const MappedTextureSubresource SrcMappedData = pBuffer->GetMappedData(Mip, Slice);
+
+                        SubResData = {SrcMappedData.pData, SrcMappedData.Stride, SrcMappedData.DepthStride};
+                    }
 
                     MipLevelProperties MipLevelProps = GetMipLevelProperties(TexDesc, Operation.DstMip + Mip);
                     Box                DstBox;
@@ -307,7 +327,7 @@ void TextureUploaderGL::AllocateUploadBuffer(IDeviceContext*         pContext,
     RefCntAutoPtr<UploadBufferGL> pUploadBuffer;
 
     {
-        std::lock_guard<std::mutex> CacheLock(m_pInternalData->m_UploadBuffCacheMtx);
+        std::lock_guard<std::mutex> CacheLock{m_pInternalData->m_UploadBuffCacheMtx};
         auto&                       Cache = m_pInternalData->m_UploadBufferCache;
         if (!Cache.empty())
         {
@@ -327,24 +347,32 @@ void TextureUploaderGL::AllocateUploadBuffer(IDeviceContext*         pContext,
 
     if (!pUploadBuffer)
     {
-        pUploadBuffer = MakeNewRCObj<UploadBufferGL>()(Desc);
+        pUploadBuffer = MakeNewRCObj<UploadBufferGL>()(Desc, m_Desc.Mode == TEXTURE_UPLOADER_MODE_CPU_MEMORY);
         LOG_INFO_MESSAGE("TextureUploaderGL: created upload buffer for ", Desc.Width, 'x', Desc.Height, 'x',
                          Desc.Depth, ' ', Desc.MipLevels, "-mip ", Desc.ArraySize, "-slice ",
                          m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " texture");
     }
 
-    if (pContext != nullptr)
+    if (m_Desc.Mode == TEXTURE_UPLOADER_MODE_STAGING_RESOURCE)
     {
-        // Render thread
-        InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Type::Map, pUploadBuffer};
-        m_pInternalData->Execute(m_pDevice, pContext, MapOp);
+        if (pContext != nullptr)
+        {
+            // Render thread
+            InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Type::Map, pUploadBuffer};
+            m_pInternalData->Execute(m_pDevice, pContext, MapOp);
+        }
+        else
+        {
+            // Worker thread
+            m_pInternalData->EnqueueMap(pUploadBuffer);
+            pUploadBuffer->WaitForMap();
+        }
     }
     else
     {
-        // Worker thread
-        m_pInternalData->EnqueueMap(pUploadBuffer);
-        pUploadBuffer->WaitForMap();
+        pUploadBuffer->SignalMapped();
     }
+
     *ppBuffer = pUploadBuffer.Detach();
 }
 

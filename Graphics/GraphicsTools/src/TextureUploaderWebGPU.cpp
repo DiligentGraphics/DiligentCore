@@ -53,32 +53,38 @@ struct WebGPUProcessTable
 class UploadBufferWebGPU : public UploadBufferBase
 {
 public:
-    UploadBufferWebGPU(IReferenceCounters* pRefCounters, const UploadBufferDesc& Desc) :
-        UploadBufferBase{pRefCounters, Desc},
-        m_pStagingBuffer{nullptr},
-        m_SubresourceOffsets(size_t{Desc.MipLevels} * size_t{Desc.ArraySize} + 1),
-        m_SubresourceStrides(size_t{Desc.MipLevels} * size_t{Desc.ArraySize})
+    UploadBufferWebGPU(IReferenceCounters*     pRefCounters,
+                       const UploadBufferDesc& Desc,
+                       bool                    AllocateStagingData) :
+        UploadBufferBase{pRefCounters, Desc, AllocateStagingData},
+        m_pStagingBuffer{nullptr}
     {
-        TextureDesc TexDesc;
-        TexDesc.Format = Desc.Format;
-        TexDesc.Width  = Desc.Width;
-        TexDesc.Height = Desc.Height;
-        TexDesc.Depth  = Desc.Depth;
-        TexDesc.Type   = Desc.ArraySize == 1 ? RESOURCE_DIM_TEX_2D : RESOURCE_DIM_TEX_2D_ARRAY;
-
-        Uint32 SubRes = 0;
-        for (Uint32 Slice = 0; Slice < Desc.ArraySize; ++Slice)
+        if (!AllocateStagingData)
         {
-            for (Uint32 Mip = 0; Mip < Desc.MipLevels; ++Mip)
-            {
-                // Stride must be 256-bytes aligned in WebGPU
-                MipLevelProperties MipProps  = GetMipLevelProperties(TexDesc, Mip);
-                Uint32             RowStride = AlignUp(StaticCast<Uint32>(MipProps.RowSize), Uint32{256});
-                m_SubresourceStrides[SubRes] = RowStride;
+            m_SubresourceOffsets.resize(size_t{Desc.MipLevels} * size_t{Desc.ArraySize} + 1);
+            m_SubresourceStrides.resize(size_t{Desc.MipLevels} * size_t{Desc.ArraySize});
 
-                Uint32 MipSize                           = MipProps.StorageHeight * RowStride;
-                m_SubresourceOffsets[size_t{SubRes} + 1] = m_SubresourceOffsets[SubRes] + MipSize;
-                ++SubRes;
+            TextureDesc TexDesc;
+            TexDesc.Format = Desc.Format;
+            TexDesc.Width  = Desc.Width;
+            TexDesc.Height = Desc.Height;
+            TexDesc.Depth  = Desc.Depth;
+            TexDesc.Type   = Desc.ArraySize == 1 ? RESOURCE_DIM_TEX_2D : RESOURCE_DIM_TEX_2D_ARRAY;
+
+            Uint32 SubRes = 0;
+            for (Uint32 Slice = 0; Slice < Desc.ArraySize; ++Slice)
+            {
+                for (Uint32 Mip = 0; Mip < Desc.MipLevels; ++Mip)
+                {
+                    // Stride must be 256-bytes aligned in WebGPU
+                    MipLevelProperties MipProps  = GetMipLevelProperties(TexDesc, Mip);
+                    Uint32             RowStride = AlignUp(StaticCast<Uint32>(MipProps.RowSize), Uint32{256});
+                    m_SubresourceStrides[SubRes] = RowStride;
+
+                    Uint32 MipSize                           = MipProps.StorageHeight * RowStride;
+                    m_SubresourceOffsets[size_t{SubRes} + 1] = m_SubresourceOffsets[SubRes] + MipSize;
+                    ++SubRes;
+                }
             }
         }
     }
@@ -86,7 +92,10 @@ public:
     // http://en.cppreference.com/w/cpp/thread/condition_variable
     void WaitForMap()
     {
-        m_BufferMappedSignal.Wait();
+        if (!HasStagingData())
+        {
+            m_BufferMappedSignal.Wait();
+        }
     }
 
     void SignalMapped()
@@ -216,19 +225,30 @@ struct TextureUploaderWebGPU::InternalData
 
             case PendingBufferOperation::Type::Copy:
             {
-                VERIFY_EXPR(pBuffer->m_pStagingBuffer != nullptr);
-
                 const TextureDesc& TexDesc = Operation.pDstTexture->GetDesc();
-                pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
+                if (pBuffer->m_pStagingBuffer)
+                {
+                    pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
+                }
 
                 for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
                 {
                     for (Uint32 Mip = 0; Mip < UploadBuffDesc.MipLevels; ++Mip)
                     {
-                        Uint32 SrcOffset = pBuffer->GetOffset(Mip, Slice);
-                        Uint64 SrcStride = pBuffer->GetMappedData(Mip, Slice).Stride;
+                        TextureSubResData SubResData;
+                        if (pBuffer->m_pStagingBuffer)
+                        {
+                            Uint32 SrcOffset = pBuffer->GetOffset(Mip, Slice);
+                            Uint64 SrcStride = pBuffer->GetMappedData(Mip, Slice).Stride;
 
-                        TextureSubResData SubResData(pBuffer->m_pStagingBuffer, SrcOffset, SrcStride);
+                            SubResData = {pBuffer->m_pStagingBuffer, SrcOffset, SrcStride};
+                        }
+                        else
+                        {
+                            const MappedTextureSubresource SrcMappedData = pBuffer->GetMappedData(Mip, Slice);
+
+                            SubResData = {SrcMappedData.pData, SrcMappedData.Stride, SrcMappedData.DepthStride};
+                        }
 
                         MipLevelProperties MipLevelProps = GetMipLevelProperties(TexDesc, Operation.DstMip + Mip);
                         Box                DstBox;
@@ -332,24 +352,32 @@ void TextureUploaderWebGPU::AllocateUploadBuffer(IDeviceContext*         pContex
 
     if (!pUploadBuffer)
     {
-        pUploadBuffer = MakeNewRCObj<UploadBufferWebGPU>()(Desc);
+        pUploadBuffer = MakeNewRCObj<UploadBufferWebGPU>()(Desc, m_Desc.Mode == TEXTURE_UPLOADER_MODE_CPU_MEMORY);
         LOG_INFO_MESSAGE("TextureUploaderWebGPU: created upload buffer for ", Desc.Width, 'x', Desc.Height, 'x',
                          Desc.Depth, ' ', Desc.MipLevels, "-mip ", Desc.ArraySize, "-slice ",
                          m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " texture");
     }
 
-    if (pContext != nullptr)
+    if (m_Desc.Mode == TEXTURE_UPLOADER_MODE_STAGING_RESOURCE)
     {
-        // Render thread
-        InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Type::Map, pUploadBuffer};
-        m_pInternalData->Execute(pContext, MapOp);
+        if (pContext != nullptr)
+        {
+            // Render thread
+            InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Type::Map, pUploadBuffer};
+            m_pInternalData->Execute(pContext, MapOp);
+        }
+        else
+        {
+            // Worker thread
+            m_pInternalData->EnqueueMap(pUploadBuffer);
+            pUploadBuffer->WaitForMap();
+        }
     }
     else
     {
-        // Worker thread
-        m_pInternalData->EnqueueMap(pUploadBuffer);
-        pUploadBuffer->WaitForMap();
+        pUploadBuffer->SignalMapped();
     }
+
     *ppBuffer = pUploadBuffer.Detach();
 }
 

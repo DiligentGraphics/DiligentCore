@@ -33,7 +33,6 @@
 namespace Diligent
 {
 
-
 /// Upload buffer description
 struct UploadBufferDesc
 {
@@ -63,9 +62,38 @@ public:
     virtual const UploadBufferDesc&  GetDesc() const                         = 0;
 };
 
+
+// clang-format off
+
+/// Texture uploader mode
+DILIGENT_TYPED_ENUM(TEXTURE_UPLOADER_MODE, Uint8)
+{
+    /// Use staging buffers for texture uploads.
+
+    /// In this mode, the uploader creates a staging resource in GPU memory,
+    /// maps it for CPU access, and returns the mapped pointer to the application
+    /// through the IUploadBuffer::GetMappedData() method. When the application
+    /// schedules a GPU copy, the uploader unmaps the staging resource and
+    /// issues a GPU copy command from the staging resource to the destination texture.
+    TEXTURE_UPLOADER_MODE_STAGING_RESOURCE = 0,
+
+
+    /// Use CPU memory for texture uploads.
+
+    /// In this mode, the uploader allocates CPU memory for texture data and returns
+    /// the pointer to the application through the IUploadBuffer::GetMappedData() method.
+    /// When the application schedules a GPU copy, the uploader uses the appropriate
+    /// update method (e.g. IDeviceContext::UpdateTexture) to copy data from CPU memory.
+    TEXTURE_UPLOADER_MODE_CPU_MEMORY = 1
+};
+
+// clang-format on
+
 /// Texture uploader description.
 struct TextureUploaderDesc
 {
+    /// Texture uploader mode, see Diligent::TEXTURE_UPLOADER_MODE.
+    TEXTURE_UPLOADER_MODE Mode = TEXTURE_UPLOADER_MODE_STAGING_RESOURCE;
 };
 
 
