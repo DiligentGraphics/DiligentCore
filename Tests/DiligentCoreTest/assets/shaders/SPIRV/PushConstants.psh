@@ -1,4 +1,4 @@
-// Test for push constants
+// Test struct for push constants
 struct PushConstants_t
 {
     float4x4 g_MVPMatrix;
@@ -8,19 +8,16 @@ struct PushConstants_t
     uint     g_Padding;
 };
 
-[[vk::push_constant]]
-cbuffer PushConstants
-{
-    PushConstants_t g_PushConstants;
-};
+//note that cbuffer PushConstants is not allowed in DXC, but ConstantBuffer<PushConstants_t> is allowed
+[[vk::push_constant]] ConstantBuffer<PushConstants_t> PushConstants;
 
 float4 main() : SV_Target
 {
     // Use push constant data through the structure instance
-    float4 result = g_PushConstants.g_Color * g_PushConstants.g_Scale;
+    float4 result = PushConstants.g_Color * PushConstants.g_Scale;
 
     // Apply offset to result (simplified example)
-    result.xy += g_PushConstants.g_Offset;
+    result.xy += PushConstants.g_Offset;
 
     return result;
 }
