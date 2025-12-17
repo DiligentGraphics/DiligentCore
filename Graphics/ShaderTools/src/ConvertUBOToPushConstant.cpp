@@ -386,7 +386,7 @@ private:
     std::string m_BlockName;
 };
 
-} // namespace
+} // namespace SPIRVToolsUtil
 
 std::vector<uint32_t> ConvertUBOToPushConstants(
     const std::vector<uint32_t>& SPIRV,
