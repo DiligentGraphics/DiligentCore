@@ -180,7 +180,7 @@ void TestSPIRVResources(const char*                                             
                         SHADER_COMPILER                                              Compiler,
                         SHADER_TYPE                                                  ShaderType         = SHADER_TYPE_PIXEL,
                         SHADER_SOURCE_LANGUAGE                                       SourceLanguage     = SHADER_SOURCE_LANGUAGE_HLSL,
-                        const std::function<void(std::vector<unsigned int> &SPIRV)> &PatchSPIRVCallback = nullptr)
+                        const std::function<void(std::vector<unsigned int>& SPIRV)>& PatchSPIRVCallback = nullptr)
 {
     if (Compiler == SHADER_COMPILER_DXC)
     {
@@ -279,9 +279,9 @@ void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
                        Compiler,
                        SHADER_TYPE_PIXEL,
                        SHADER_SOURCE_LANGUAGE_HLSL,
-                       [](std::vector<unsigned int> &SPIRV) {
+                       [](std::vector<unsigned int>& SPIRV) {
                            SPIRV = ConvertUBOToPushConstants(SPIRV, "CB1");
-        });
+                       });
 }
 
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant)
