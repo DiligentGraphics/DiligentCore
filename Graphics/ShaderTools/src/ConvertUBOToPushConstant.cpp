@@ -400,7 +400,7 @@ std::vector<uint32_t> ConvertUBOToPushConstants(
 
     // Register the pass to convert UBO to push constant using custom out-of-tree pass
     optimizer.RegisterPass(spvtools::Optimizer::PassToken(
-        std::make_unique<ConvertUBOToPushConstantPass>(BlockName)));
+        std::make_unique<SPIRVToolsUtil::ConvertUBOToPushConstantPass>(BlockName)));
 
     spvtools::OptimizerOptions options;
 #ifdef DILIGENT_DEVELOPMENT
