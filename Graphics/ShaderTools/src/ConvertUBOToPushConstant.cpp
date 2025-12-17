@@ -40,14 +40,18 @@
 namespace Diligent
 {
 
-namespace
+namespace SPIRVToolsUtil
 {
 
+//Forward declaration
 void SpvOptimizerMessageConsumer(
     spv_message_level_t level,
     const char* /* source */,
     const spv_position_t& /* position */,
     const char* message);
+
+//Forward declaration
+spv_target_env SpvTargetEnvFromSPIRV(const std::vector<uint32_t>& SPIRV);
 
 // A pass that converts a uniform buffer variable to a push constant.
 // This pass:
@@ -388,11 +392,11 @@ std::vector<uint32_t> ConvertUBOToPushConstants(
     const std::vector<uint32_t>& SPIRV,
     const std::string&           BlockName)
 {
-    spv_target_env TargetEnv = SpvTargetEnvFromSPIRV(SPIRV);
+    spv_target_env TargetEnv = SPIRVToolsUtil::SpvTargetEnvFromSPIRV(SPIRV);
 
     spvtools::Optimizer optimizer(TargetEnv);
 
-    optimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
+    optimizer.SetMessageConsumer(SPIRVToolsUtil::SpvOptimizerMessageConsumer);
 
     // Register the pass to convert UBO to push constant using custom out-of-tree pass
     optimizer.RegisterPass(spvtools::Optimizer::PassToken(

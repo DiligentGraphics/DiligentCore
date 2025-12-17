@@ -32,7 +32,7 @@
 namespace Diligent
 {
 
-namespace
+namespace SPIRVToolsUtil
 {
 
 void SpvOptimizerMessageConsumer(
@@ -106,16 +106,18 @@ spv_target_env SpvTargetEnvFromSPIRV(const std::vector<uint32_t>& SPIRV)
     }
 }
 
+} // namespace SPIRVToolsUtil
+
 #undef SPV_SPIRV_VERSION_WORD
 std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_target_env TargetEnv, SPIRV_OPTIMIZATION_FLAGS Passes)
 {
     VERIFY_EXPR(Passes != SPIRV_OPTIMIZATION_FLAG_NONE);
 
     if (TargetEnv == SPV_ENV_MAX)
-        TargetEnv = SpvTargetEnvFromSPIRV(SrcSPIRV);
+        TargetEnv = SPIRVToolsUtil::SpvTargetEnvFromSPIRV(SrcSPIRV);
 
     spvtools::Optimizer SpirvOptimizer(TargetEnv);
-    SpirvOptimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
+    SpirvOptimizer.SetMessageConsumer(SPIRVToolsUtil::SpvOptimizerMessageConsumer);
 
     spvtools::OptimizerOptions Options;
 #ifndef DILIGENT_DEVELOPMENT
@@ -152,7 +154,5 @@ std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_t
 
     return OptimizedSPIRV;
 }
-
-} // namespace
 
 } // namespace Diligent

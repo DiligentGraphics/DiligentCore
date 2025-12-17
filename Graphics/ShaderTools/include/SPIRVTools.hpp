@@ -60,9 +60,4 @@ std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV,
 std::vector<uint32_t> ConvertUBOToPushConstants(const std::vector<uint32_t>& SPIRV,
                                                 const std::string&           BlockName);
 
-/// @brief Get target environments from given SPIR-V
-/// @param [in] SPIRV       - Source SPIR-V bytecode
-/// @return spv_target_env
-spv_target_env SpvTargetEnvFromSPIRV(const std::vector<uint32_t>& SPIRV);
-
 } // namespace Diligent
