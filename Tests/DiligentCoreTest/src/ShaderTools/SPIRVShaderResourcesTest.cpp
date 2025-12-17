@@ -26,6 +26,7 @@
 
 #include "SPIRVShaderResources.hpp"
 #include "GLSLangUtils.hpp"
+#include "SPIRVTools.hpp"
 #include "DXCompiler.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "RefCntAutoPtr.hpp"
@@ -252,6 +253,52 @@ TEST_F(SPIRVShaderResourcesTest, UniformBuffers_GLSLang)
 TEST_F(SPIRVShaderResourcesTest, UniformBuffers_DXC)
 {
     TestUniformBuffers(SHADER_COMPILER_DXC);
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant)
+{
+    const auto& SPIRV = LoadSPIRVFromHLSL("UniformBuffers.psh", SHADER_TYPE_PIXEL, false);
+    ASSERT_FALSE(SPIRV.empty()) << "Failed to compile HLSL to SPIRV with glslang";
+
+    // Convert CB1 from UniformBuffer to PushConstant
+    const auto& ConvertedSPIRV = ConvertUBOToPushConstants(SPIRV, "CB1");
+    ASSERT_FALSE(ConvertedSPIRV.empty()) << "Failed to convert UBO to push constant";
+
+    TestSPIRVResourcesInternal("UniformBuffers.psh",
+                               {
+                                   // CB1 should now be a PushConstant (48 bytes = 12 floats)
+                                   SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 48, 0},
+                                   // CB2 remains as UniformBuffer
+                                   SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
+                               },
+                               ConvertedSPIRV,
+                               SHADER_TYPE_PIXEL);
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_DXC)
+{
+    if (!DXCompiler || !DXCompiler->IsLoaded())
+    {
+        LOG_INFO_MESSAGE("HLSL->SPIRV with DXC skipped because DXCompiler is not available\n");
+        return;
+    }
+
+    const auto& SPIRV = LoadSPIRVFromHLSL("UniformBuffers.psh", SHADER_TYPE_PIXEL, true);
+    ASSERT_FALSE(SPIRV.empty()) << "Failed to compile HLSL to SPIRV with DXC";
+
+    // Convert CB1 from UniformBuffer to PushConstant
+    const auto& ConvertedSPIRV = ConvertUBOToPushConstants(SPIRV, "CB1");
+    ASSERT_FALSE(ConvertedSPIRV.empty()) << "Failed to convert UBO to push constant";
+
+    TestSPIRVResourcesInternal("UniformBuffers.psh",
+                               {
+                                   // CB1 should now be a PushConstant (48 bytes = 12 floats)
+                                   SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 48, 0},
+                                   // CB2 remains as UniformBuffer
+                                   SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
+                               },
+                               ConvertedSPIRV,
+                               SHADER_TYPE_PIXEL);
 }
 
 void TestStorageBuffers(SHADER_COMPILER Compiler)
