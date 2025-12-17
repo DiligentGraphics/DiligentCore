@@ -308,7 +308,6 @@ void TestStorageBuffers(SHADER_COMPILER Compiler)
                        Compiler);
 }
 
-
 TEST_F(SPIRVShaderResourcesTest, StorageBuffers_GLSLang)
 {
     TestStorageBuffers(SHADER_COMPILER_GLSLANG);
