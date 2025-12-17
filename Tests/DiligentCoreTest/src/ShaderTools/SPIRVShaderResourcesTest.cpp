@@ -175,14 +175,30 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
     return GLSLangUtils::GLSLtoSPIRV(Attribs);
 }
 
-void TestSPIRVResourcesWithSPIRV(
-    const std::vector<unsigned int>&                  SPIRV,
-    const char*                                       FilePath,
-    const std::vector<SPIRVShaderResourceRefAttribs>& RefResources,
-    SHADER_COMPILER                                   Compiler,
-    SHADER_TYPE                                       ShaderType     = SHADER_TYPE_PIXEL,
-    SHADER_SOURCE_LANGUAGE                            SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL)
+void TestSPIRVResources(const char*                                                  FilePath,
+                        const std::vector<SPIRVShaderResourceRefAttribs>&            RefResources,
+                        SHADER_COMPILER                                              Compiler,
+                        SHADER_TYPE                                                  ShaderType         = SHADER_TYPE_PIXEL,
+                        SHADER_SOURCE_LANGUAGE                                       SourceLanguage     = SHADER_SOURCE_LANGUAGE_HLSL,
+                        const std::function<void(std::vector<unsigned int> &SPIRV)> &PatchSPIRVCallback = nullptr)
 {
+    if (Compiler == SHADER_COMPILER_DXC)
+    {
+        VERIFY(SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL, "DXC only supports HLSL");
+        if (!SPIRVShaderResourcesTest::DXCompiler || !SPIRVShaderResourcesTest::DXCompiler->IsLoaded())
+        {
+            GTEST_SKIP() << "DXC compiler is not available";
+        }
+    }
+
+    std::vector<unsigned int> SPIRV = (SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL) ?
+        LoadSPIRVFromGLSL(FilePath, ShaderType) :
+        LoadSPIRVFromHLSL(FilePath, ShaderType, Compiler);
+    ASSERT_TRUE(!SPIRV.empty()) << "Failed to compile shader: " << FilePath;
+
+    if (PatchSPIRVCallback)
+        PatchSPIRVCallback(SPIRV);
+
     ShaderDesc ShaderDesc;
     ShaderDesc.Name       = "SPIRVResources test";
     ShaderDesc.ShaderType = ShaderType;
@@ -229,29 +245,6 @@ void TestSPIRVResourcesWithSPIRV(
     }
 }
 
-void TestSPIRVResources(const char*                                       FilePath,
-                        const std::vector<SPIRVShaderResourceRefAttribs>& RefResources,
-                        SHADER_COMPILER                                   Compiler,
-                        SHADER_TYPE                                       ShaderType     = SHADER_TYPE_PIXEL,
-                        SHADER_SOURCE_LANGUAGE                            SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL)
-{
-    if (Compiler == SHADER_COMPILER_DXC)
-    {
-        VERIFY(SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL, "DXC only supports HLSL");
-        if (!SPIRVShaderResourcesTest::DXCompiler || !SPIRVShaderResourcesTest::DXCompiler->IsLoaded())
-        {
-            GTEST_SKIP() << "DXC compiler is not available";
-        }
-    }
-
-    const std::vector<unsigned int> SPIRV = (SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL) ?
-        LoadSPIRVFromGLSL(FilePath, ShaderType) :
-        LoadSPIRVFromHLSL(FilePath, ShaderType, Compiler);
-    ASSERT_TRUE(!SPIRV.empty()) << "Failed to compile shader: " << FilePath;
-
-    TestSPIRVResourcesWithSPIRV(SPIRV, FilePath, RefResources, Compiler, ShaderType, SourceLanguage);
-}
-
 using SPIRVResourceType = SPIRVShaderResourceAttribs::ResourceType;
 
 void TestUniformBuffers(SHADER_COMPILER Compiler)
@@ -274,54 +267,31 @@ TEST_F(SPIRVShaderResourcesTest, UniformBuffers_DXC)
     TestUniformBuffers(SHADER_COMPILER_DXC);
 }
 
+void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
+{
+    TestSPIRVResources("UniformBuffers.psh",
+                       {
+                           // CB1 should now be a PushConstant (48 bytes = 12 floats)
+                           SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 48, 0},
+                           // CB2 remains as UniformBuffer
+                           SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
+                       },
+                       Compiler,
+                       SHADER_TYPE_PIXEL,
+                       SHADER_SOURCE_LANGUAGE_HLSL,
+                       [](std::vector<unsigned int> &SPIRV) {
+                           SPIRV = ConvertUBOToPushConstants(SPIRV, "CB1");
+        });
+}
+
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant)
 {
-    const auto& SPIRV = LoadSPIRVFromHLSL("UniformBuffers.psh", SHADER_TYPE_PIXEL, SHADER_COMPILER_GLSLANG);
-    ASSERT_FALSE(SPIRV.empty()) << "Failed to compile HLSL to SPIRV with glslang";
-
-    // Convert CB1 from UniformBuffer to PushConstant
-    const auto& ConvertedSPIRV = ConvertUBOToPushConstants(SPIRV, "CB1");
-    ASSERT_FALSE(ConvertedSPIRV.empty()) << "Failed to convert UBO to push constant";
-
-    TestSPIRVResourcesWithSPIRV(
-        ConvertedSPIRV,
-        "UniformBuffers.psh",
-        {
-            // CB1 should now be a PushConstant (48 bytes = 12 floats)
-            SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 48, 0},
-            // CB2 remains as UniformBuffer
-            SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
-        },
-        SHADER_COMPILER_GLSLANG,
-        SHADER_TYPE_PIXEL);
+    TestConvertUBOToPushConstant(SHADER_COMPILER_GLSLANG);
 }
 
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_DXC)
 {
-    if (!DXCompiler || !DXCompiler->IsLoaded())
-    {
-        LOG_INFO_MESSAGE("HLSL->SPIRV with DXC skipped because DXCompiler is not available\n");
-        return;
-    }
-
-    const auto& SPIRV = LoadSPIRVFromHLSL("UniformBuffers.psh", SHADER_TYPE_PIXEL, SHADER_COMPILER_DXC);
-    ASSERT_FALSE(SPIRV.empty()) << "Failed to compile HLSL to SPIRV with DXC";
-
-    // Convert CB1 from UniformBuffer to PushConstant
-    const auto& ConvertedSPIRV = ConvertUBOToPushConstants(SPIRV, "CB1");
-    ASSERT_FALSE(ConvertedSPIRV.empty()) << "Failed to convert UBO to push constant";
-
-    TestSPIRVResourcesWithSPIRV(
-        ConvertedSPIRV,
-        "UniformBuffers.psh",
-        {
-            // CB1 should now be a PushConstant (48 bytes = 12 floats)
-            SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 48, 0},
-            // CB2 remains as UniformBuffer
-            SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
-        },
-        SHADER_COMPILER_DXC,
-        SHADER_TYPE_PIXEL);
+    TestConvertUBOToPushConstant(SHADER_COMPILER_DXC);
 }
 
 void TestStorageBuffers(SHADER_COMPILER Compiler)
