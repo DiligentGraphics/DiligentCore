@@ -25,7 +25,7 @@
 #include <atomic>
 #include <vector>
 
-#include "../../../DiligentCore/Platforms/Basic/interface/DebugUtilities.hpp"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
 {
