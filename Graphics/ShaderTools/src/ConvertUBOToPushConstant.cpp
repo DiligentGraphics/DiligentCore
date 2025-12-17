@@ -43,6 +43,12 @@ namespace Diligent
 namespace
 {
 
+void SpvOptimizerMessageConsumer(
+    spv_message_level_t level,
+    const char* /* source */,
+    const spv_position_t& /* position */,
+    const char* message);
+
 // A pass that converts a uniform buffer variable to a push constant.
 // This pass:
 // 1. Finds the variable with the specified block name
