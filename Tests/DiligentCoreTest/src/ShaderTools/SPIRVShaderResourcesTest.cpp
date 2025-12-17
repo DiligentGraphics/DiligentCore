@@ -176,12 +176,12 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
 }
 
 void TestSPIRVResourcesWithSPIRV(
-                        const std::vector<unsigned int>&                  SPIRV,
-                        const char*                                       FilePath,
-                        const std::vector<SPIRVShaderResourceRefAttribs>& RefResources,
-                        SHADER_COMPILER                                   Compiler,
-                        SHADER_TYPE                                       ShaderType     = SHADER_TYPE_PIXEL,
-                        SHADER_SOURCE_LANGUAGE                            SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL)
+    const std::vector<unsigned int>&                  SPIRV,
+    const char*                                       FilePath,
+    const std::vector<SPIRVShaderResourceRefAttribs>& RefResources,
+    SHADER_COMPILER                                   Compiler,
+    SHADER_TYPE                                       ShaderType     = SHADER_TYPE_PIXEL,
+    SHADER_SOURCE_LANGUAGE                            SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL)
 {
     ShaderDesc ShaderDesc;
     ShaderDesc.Name       = "SPIRVResources test";
@@ -284,16 +284,16 @@ TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant)
     ASSERT_FALSE(ConvertedSPIRV.empty()) << "Failed to convert UBO to push constant";
 
     TestSPIRVResourcesWithSPIRV(
-                                ConvertedSPIRV,
-                                "UniformBuffers.psh",
-                               {
-                                   // CB1 should now be a PushConstant (48 bytes = 12 floats)
-                                   SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 48, 0},
-                                   // CB2 remains as UniformBuffer
-                                   SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
-                               },
-                               SHADER_COMPILER_GLSLANG,
-                               SHADER_TYPE_PIXEL);
+        ConvertedSPIRV,
+        "UniformBuffers.psh",
+        {
+            // CB1 should now be a PushConstant (48 bytes = 12 floats)
+            SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 48, 0},
+            // CB2 remains as UniformBuffer
+            SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
+        },
+        SHADER_COMPILER_GLSLANG,
+        SHADER_TYPE_PIXEL);
 }
 
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_DXC)
@@ -312,16 +312,16 @@ TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_DXC)
     ASSERT_FALSE(ConvertedSPIRV.empty()) << "Failed to convert UBO to push constant";
 
     TestSPIRVResourcesWithSPIRV(
-                                ConvertedSPIRV,
-                                "UniformBuffers.psh",
-                               {
-                                   // CB1 should now be a PushConstant (48 bytes = 12 floats)
-                                   SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 48, 0},
-                                   // CB2 remains as UniformBuffer
-                                   SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
-                               },
-                               SHADER_COMPILER_DXC,
-                               SHADER_TYPE_PIXEL);
+        ConvertedSPIRV,
+        "UniformBuffers.psh",
+        {
+            // CB1 should now be a PushConstant (48 bytes = 12 floats)
+            SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 48, 0},
+            // CB2 remains as UniformBuffer
+            SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
+        },
+        SHADER_COMPILER_DXC,
+        SHADER_TYPE_PIXEL);
 }
 
 void TestStorageBuffers(SHADER_COMPILER Compiler)
