@@ -153,4 +153,4 @@ std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_t
     return OptimizedSPIRV;
 }
 
-} // namespace Diligent
+} // namespace

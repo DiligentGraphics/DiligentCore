@@ -58,7 +58,7 @@ std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV,
 /// \param [in] BlockName  - Name of the uniform buffer block to convert
 /// \return Modified SPIR-V bytecode, or empty vector on failure
 std::vector<uint32_t> ConvertUBOToPushConstants(const std::vector<uint32_t>& SPIRV,
-                                                                   const std::string&           BlockName);
+                                                const std::string&           BlockName);
 
 /// @brief Get target environments from given SPIR-V
 /// @param [in] SPIRV       - Source SPIR-V bytecode
