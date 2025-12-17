@@ -117,7 +117,7 @@ if(ENABLE_SPIRV)
 
     if (${USE_SPIRV_TOOLS})
         list(APPEND SOURCE src/SPIRVTools.cpp)
-        list(APPEND SOURCE src/SPIRVToolsConvertUBOToPushConstants.cpp)
+        list(APPEND SOURCE src/ConvertUBOToPushConstant.cpp)
         list(APPEND INCLUDE include/SPIRVTools.hpp)
     endif()
 
