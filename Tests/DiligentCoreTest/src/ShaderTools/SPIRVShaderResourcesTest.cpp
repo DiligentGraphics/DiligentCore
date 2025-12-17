@@ -26,7 +26,6 @@
 
 #include "SPIRVShaderResources.hpp"
 #include "GLSLangUtils.hpp"
-#include "SPIRVTools.hpp"
 #include "DXCompiler.hpp"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "RefCntAutoPtr.hpp"
@@ -38,6 +37,15 @@
 #include <vector>
 
 #include "TestingEnvironment.hpp"
+
+// Forward declaration for ConvertUBOToPushConstants from SPIRVTools.hpp
+// We cannot include SPIRVTools.hpp directly because it depends on spirv-tools headers
+namespace Diligent
+{
+std::vector<uint32_t> ConvertUBOToPushConstants(const std::vector<uint32_t>& SPIRV,
+                                                const std::string&           BlockName);
+}
+
 #include "gtest/gtest.h"
 
 using namespace Diligent;
