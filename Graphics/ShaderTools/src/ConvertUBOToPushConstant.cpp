@@ -406,7 +406,7 @@ std::vector<uint32_t> ConvertUBOToPushConstants(
     const std::string&           BlockName)
 {
     using namespace SPIRVToolsInternal;
-    
+
     spv_target_env TargetEnv = SpvTargetEnvFromSPIRV(SPIRV);
 
     spvtools::Optimizer optimizer(TargetEnv);
