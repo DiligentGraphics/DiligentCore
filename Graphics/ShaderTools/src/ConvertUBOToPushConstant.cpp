@@ -77,73 +77,109 @@ public:
     {
         bool modified = false;
 
-        // Find the ID that matches the block name by searching OpName instructions
-        // This could be either a variable ID or a type ID (struct type)
-        uint32_t named_id = 0;
+        // Collect all IDs that match the block name by searching OpName instructions.
+        // Multiple OpName instructions may have the same name, so we need to check all of them
+        // to find the one that refers to a UniformBuffer (Uniform storage class + Block decoration).
+        std::vector<uint32_t> candidate_ids;
         for (auto& debug_inst : context()->module()->debugs2())
         {
             if (debug_inst.opcode() == spv::Op::OpName &&
                 debug_inst.GetOperand(1).AsString() == m_BlockName)
             {
-                named_id = debug_inst.GetOperand(0).AsId();
-                break;
+                candidate_ids.push_back(debug_inst.GetOperand(0).AsId());
             }
         }
 
-        if (named_id == 0)
+        if (candidate_ids.empty())
         {
             // Block name not found
             return Status::SuccessWithoutChange;
         }
 
-        // Check if the named_id is a variable or a type
+        // Try each candidate ID to find a UniformBuffer
         spvtools::opt::Instruction* target_var = nullptr;
-        spvtools::opt::Instruction* named_inst = get_def_use_mgr()->GetDef(named_id);
-
-        if (named_inst == nullptr)
+        for (uint32_t named_id : candidate_ids)
         {
-            return Status::SuccessWithoutChange;
-        }
-
-        if (named_inst->opcode() == spv::Op::OpVariable)
-        {
-            // The name refers directly to a variable
-            target_var = named_inst;
-        }
-        else if (named_inst->opcode() == spv::Op::OpTypeStruct)
-        {
-            // The name refers to a struct type, we need to find the variable
-            // that uses a pointer to this struct type with Uniform storage class
-            uint32_t struct_type_id = named_id;
-
-            // Search for a variable that points to this struct type with Uniform storage class
-            for (auto& inst : context()->types_values())
+            spvtools::opt::Instruction* named_inst = get_def_use_mgr()->GetDef(named_id);
+            if (named_inst == nullptr)
             {
-                if (inst.opcode() != spv::Op::OpVariable)
+                continue;
+            }
+
+            if (named_inst->opcode() == spv::Op::OpVariable)
+            {
+                // The name refers directly to a variable - check if it's a UniformBuffer
+                spvtools::opt::Instruction* var_inst = named_inst;
+
+                // Get the pointer type of the variable
+                spvtools::opt::Instruction* ptr_type_inst = get_def_use_mgr()->GetDef(var_inst->type_id());
+                if (ptr_type_inst == nullptr || ptr_type_inst->opcode() != spv::Op::OpTypePointer)
                 {
                     continue;
                 }
 
-                // Get the pointer type of this variable
-                spvtools::opt::Instruction* ptr_type = get_def_use_mgr()->GetDef(inst.type_id());
-                if (ptr_type == nullptr || ptr_type->opcode() != spv::Op::OpTypePointer)
+                // Check if the storage class is Uniform
+                spv::StorageClass storage_class =
+                    static_cast<spv::StorageClass>(ptr_type_inst->GetSingleWordInOperand(0));
+                if (storage_class != spv::StorageClass::Uniform)
                 {
                     continue;
                 }
 
-                // Check storage class is Uniform
-                spv::StorageClass sc = static_cast<spv::StorageClass>(
-                    ptr_type->GetSingleWordInOperand(0));
-                if (sc != spv::StorageClass::Uniform)
+                // Get the pointee type ID and verify it has Block decoration
+                uint32_t pointee_type_id = ptr_type_inst->GetSingleWordInOperand(1);
+                if (HasBlockDecoration(pointee_type_id))
                 {
-                    continue;
+                    // Found a UniformBuffer!
+                    target_var = var_inst;
+                    break;
+                }
+            }
+            else if (named_inst->opcode() == spv::Op::OpTypeStruct)
+            {
+                // The name refers to a struct type, we need to find the variable
+                // that uses a pointer to this struct type with Uniform storage class
+                uint32_t struct_type_id = named_id;
+
+                // Search for a variable that points to this struct type with Uniform storage class
+                for (auto& inst : context()->types_values())
+                {
+                    if (inst.opcode() != spv::Op::OpVariable)
+                    {
+                        continue;
+                    }
+
+                    // Get the pointer type of this variable
+                    spvtools::opt::Instruction* ptr_type = get_def_use_mgr()->GetDef(inst.type_id());
+                    if (ptr_type == nullptr || ptr_type->opcode() != spv::Op::OpTypePointer)
+                    {
+                        continue;
+                    }
+
+                    // Check storage class is Uniform
+                    spv::StorageClass sc = static_cast<spv::StorageClass>(
+                        ptr_type->GetSingleWordInOperand(0));
+                    if (sc != spv::StorageClass::Uniform)
+                    {
+                        continue;
+                    }
+
+                    // Check if the pointee type is our struct type
+                    uint32_t pointee_type_id = ptr_type->GetSingleWordInOperand(1);
+                    if (pointee_type_id == struct_type_id)
+                    {
+                        // Verify it has Block decoration
+                        if (HasBlockDecoration(pointee_type_id))
+                        {
+                            // Found a UniformBuffer!
+                            target_var = &inst;
+                            break;
+                        }
+                    }
                 }
 
-                // Check if the pointee type is our struct type
-                uint32_t pointee_type_id = ptr_type->GetSingleWordInOperand(1);
-                if (pointee_type_id == struct_type_id)
+                if (target_var != nullptr)
                 {
-                    target_var = &inst;
                     break;
                 }
             }
@@ -151,38 +187,21 @@ public:
 
         if (target_var == nullptr)
         {
-            // Variable not found
+            // No UniformBuffer found with the given block name
             return Status::SuccessWithoutChange;
         }
 
         uint32_t target_var_id = target_var->result_id();
 
-        // Get the pointer type of the variable
+        // Get the pointer type of the variable (we already verified it above, but get it again for consistency)
         spvtools::opt::Instruction* ptr_type_inst = get_def_use_mgr()->GetDef(target_var->type_id());
         if (ptr_type_inst == nullptr || ptr_type_inst->opcode() != spv::Op::OpTypePointer)
         {
             return Status::SuccessWithoutChange;
         }
 
-        // Check if the storage class is Uniform
-        spv::StorageClass storage_class =
-            static_cast<spv::StorageClass>(ptr_type_inst->GetSingleWordInOperand(0));
-        if (storage_class != spv::StorageClass::Uniform)
-        {
-            // Not a uniform buffer, nothing to do
-            return Status::SuccessWithoutChange;
-        }
-
         // Get the pointee type ID
         uint32_t pointee_type_id = ptr_type_inst->GetSingleWordInOperand(1);
-
-        // Verify that the pointee type has the Block decoration, which is required for UBOs.
-        // This ensures we don't accidentally convert a non-UBO uniform variable.
-        if (!HasBlockDecoration(pointee_type_id))
-        {
-            // The struct type doesn't have Block decoration, not a valid UBO
-            return Status::SuccessWithoutChange;
-        }
 
         // Create or find a pointer type with PushConstant storage class
         spvtools::opt::analysis::TypeManager* type_mgr = context()->get_type_mgr();
