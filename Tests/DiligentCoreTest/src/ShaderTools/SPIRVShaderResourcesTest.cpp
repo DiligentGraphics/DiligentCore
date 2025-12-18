@@ -281,7 +281,7 @@ void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
     //Try to patch uniform buffer block to push constants one for each
     for (size_t i = 0; i < BaseRefAttribs.size(); ++i)
     {
-        const char*                                PatchedAttribName = BaseRefAttribs[i].Name;
+        const char* PatchedAttribName = BaseRefAttribs[i].Name;
 
         std::vector<SPIRVShaderResourceRefAttribs> PatchedRefAttribs;
 
@@ -292,28 +292,26 @@ void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
             // Build a new attrib with Type changed to PushConstant, other members remain the same
             if (j == i)
             {
-                PatchedRefAttribs.push_back({
-                    BaseRefAttribs[j].Name,
-                    BaseRefAttribs[j].ArraySize,
-                    SPIRVResourceType::PushConstant,
-                    BaseRefAttribs[j].ResourceDim,
-                    BaseRefAttribs[j].IsMS,
-                    BaseRefAttribs[j].BufferStaticSize,
-                    BaseRefAttribs[j].BufferStride});
+                PatchedRefAttribs.push_back({BaseRefAttribs[j].Name,
+                                             BaseRefAttribs[j].ArraySize,
+                                             SPIRVResourceType::PushConstant,
+                                             BaseRefAttribs[j].ResourceDim,
+                                             BaseRefAttribs[j].IsMS,
+                                             BaseRefAttribs[j].BufferStaticSize,
+                                             BaseRefAttribs[j].BufferStride});
             }
             else
             {
-                PatchedRefAttribs.push_back({
-                    BaseRefAttribs[j].Name,
-                    BaseRefAttribs[j].ArraySize,
-                    BaseRefAttribs[j].Type,
-                    BaseRefAttribs[j].ResourceDim,
-                    BaseRefAttribs[j].IsMS,
-                    BaseRefAttribs[j].BufferStaticSize,
-                    BaseRefAttribs[j].BufferStride});
+                PatchedRefAttribs.push_back({BaseRefAttribs[j].Name,
+                                             BaseRefAttribs[j].ArraySize,
+                                             BaseRefAttribs[j].Type,
+                                             BaseRefAttribs[j].ResourceDim,
+                                             BaseRefAttribs[j].IsMS,
+                                             BaseRefAttribs[j].BufferStaticSize,
+                                             BaseRefAttribs[j].BufferStride});
             }
         }
-        
+
         TestSPIRVResources("UniformBuffers.psh",
                            PatchedRefAttribs,
                            Compiler,
