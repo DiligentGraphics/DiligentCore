@@ -284,7 +284,7 @@ void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
                        });
 }
 
-TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant)
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_GLSLang)
 {
     TestConvertUBOToPushConstant(SHADER_COMPILER_GLSLANG);
 }
