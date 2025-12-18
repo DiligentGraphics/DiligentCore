@@ -40,6 +40,21 @@
 namespace Diligent
 {
 
+namespace SPIRVToolsInternal
+{
+
+//Forward declarations
+
+void SpvOptimizerMessageConsumer(
+    spv_message_level_t level,
+    const char* /* source */,
+    const spv_position_t& /* position */,
+    const char* message);
+
+spv_target_env SpvTargetEnvFromSPIRV(const std::vector<uint32_t>& SPIRV);
+
+} // namespace SPIRVToolsInternal
+
 namespace
 {
 
@@ -161,6 +176,14 @@ public:
         // Get the pointee type ID
         uint32_t pointee_type_id = ptr_type_inst->GetSingleWordInOperand(1);
 
+        // Verify that the pointee type has the Block decoration, which is required for UBOs.
+        // This ensures we don't accidentally convert a non-UBO uniform variable.
+        if (!HasBlockDecoration(pointee_type_id))
+        {
+            // The struct type doesn't have Block decoration, not a valid UBO
+            return Status::SuccessWithoutChange;
+        }
+
         // Create or find a pointer type with PushConstant storage class
         spvtools::opt::analysis::TypeManager* type_mgr = context()->get_type_mgr();
         uint32_t                              new_ptr_type_id =
@@ -172,39 +195,11 @@ public:
             return Status::Failure;
         }
 
-        // Ensure the new pointer type is defined before the variable
-        // FindPointerToType may have created it at the end, we need to move it
-        spvtools::opt::Instruction* new_ptr_type_inst = get_def_use_mgr()->GetDef(new_ptr_type_id);
-        if (new_ptr_type_inst != nullptr)
-        {
-            // Find the pointee type instruction to insert after it
-            spvtools::opt::Instruction* pointee_type_inst = get_def_use_mgr()->GetDef(pointee_type_id);
-
-            // Check if new_ptr_type_inst is after target_var in the types_values list
-            bool needs_move = false;
-            for (auto& inst : context()->types_values())
-            {
-                if (&inst == target_var)
-                {
-                    // Found target_var first, so new_ptr_type_inst is after it
-                    needs_move = true;
-                    break;
-                }
-                if (&inst == new_ptr_type_inst)
-                {
-                    // Found new_ptr_type_inst first, it's in the right position
-                    needs_move = false;
-                    break;
-                }
-            }
-
-            if (needs_move && pointee_type_inst != nullptr)
-            {
-                // Move the new pointer type to right after the pointee type
-                // InsertAfter will automatically remove it from its current position
-                new_ptr_type_inst->InsertAfter(pointee_type_inst);
-            }
-        }
+        // Note: We don't need to manually reorder the pointer type instruction.
+        // SPIR-V does not require types to appear in any specific relative order,
+        // as long as they are valid type declarations. FindPointerToType handles
+        // type creation correctly, and the SPIRV-Tools framework manages instruction
+        // ordering appropriately.
 
         // Update the variable's type to the new pointer type
         target_var->SetResultType(new_ptr_type_id);
@@ -289,6 +284,8 @@ private:
         }
 
         // Handle instructions that produce pointer results
+        // This switch covers the common pointer-producing opcodes.
+        // Reference: SPIRV-Tools fix_storage_class.cpp
         switch (inst->opcode())
         {
             case spv::Op::OpAccessChain:
@@ -311,14 +308,28 @@ private:
                 }
                 return true;
 
+            case spv::Op::OpFunctionCall:
+                // We cannot be sure of the actual connection between the storage class
+                // of the parameter and the storage class of the result, so we should not
+                // do anything. If the result type needs to be fixed, the function call
+                // should be inlined first.
+                return false;
+
             case spv::Op::OpLoad:
             case spv::Op::OpStore:
             case spv::Op::OpCopyMemory:
             case spv::Op::OpCopyMemorySized:
-                // These don't produce pointer results that need updating
+            case spv::Op::OpImageTexelPointer:
+            case spv::Op::OpBitcast:
+            case spv::Op::OpVariable:
+                // These don't produce pointer results that need updating,
+                // or the result type is independent of the operand's storage class.
                 return false;
 
             default:
+                // Unexpected pointer-producing instruction. This may indicate
+                // a new SPIR-V extension or pattern not yet handled.
+                UNEXPECTED("Unexpected instruction with pointer result type: opcode ", static_cast<uint32_t>(inst->opcode()));
                 return false;
         }
     }
@@ -373,6 +384,18 @@ private:
         return pointer_storage_class == storage_class;
     }
 
+    // Checks if a type has the Block decoration, which identifies it as a UBO struct type.
+    bool HasBlockDecoration(uint32_t type_id)
+    {
+        bool has_block = false;
+        get_decoration_mgr()->ForEachDecoration(
+            type_id, static_cast<uint32_t>(spv::Decoration::Block),
+            [&has_block](const spvtools::opt::Instruction&) {
+                has_block = true;
+            });
+        return has_block;
+    }
+
     std::string m_BlockName;
 };
 
@@ -382,6 +405,8 @@ std::vector<uint32_t> ConvertUBOToPushConstants(
     const std::vector<uint32_t>& SPIRV,
     const std::string&           BlockName)
 {
+    using namespace SPIRVToolsInternal;
+    
     spv_target_env TargetEnv = SpvTargetEnvFromSPIRV(SPIRV);
 
     spvtools::Optimizer optimizer(TargetEnv);

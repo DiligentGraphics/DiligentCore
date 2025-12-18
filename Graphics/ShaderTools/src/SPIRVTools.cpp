@@ -32,8 +32,86 @@
 namespace Diligent
 {
 
+namespace SPIRVToolsInternal
+{
+    
+    void SpvOptimizerMessageConsumer(
+        spv_message_level_t level,
+        const char* /* source */,
+        const spv_position_t& /* position */,
+        const char* message)
+    {
+        const char*            LevelText   = "message";
+        DEBUG_MESSAGE_SEVERITY MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+        switch (level)
+        {
+            case SPV_MSG_FATAL:
+                // Unrecoverable error due to environment (e.g. out of memory)
+                LevelText   = "fatal error";
+                MsgSeverity = DEBUG_MESSAGE_SEVERITY_FATAL_ERROR;
+                break;
+    
+            case SPV_MSG_INTERNAL_ERROR:
+                // Unrecoverable error due to SPIRV-Tools internals (e.g. unimplemented feature)
+                LevelText   = "internal error";
+                MsgSeverity = DEBUG_MESSAGE_SEVERITY_ERROR;
+                break;
+    
+            case SPV_MSG_ERROR:
+                // Normal error due to user input.
+                LevelText   = "error";
+                MsgSeverity = DEBUG_MESSAGE_SEVERITY_ERROR;
+                break;
+    
+            case SPV_MSG_WARNING:
+                LevelText   = "warning";
+                MsgSeverity = DEBUG_MESSAGE_SEVERITY_WARNING;
+                break;
+    
+            case SPV_MSG_INFO:
+                LevelText   = "info";
+                MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+                break;
+    
+            case SPV_MSG_DEBUG:
+                LevelText   = "debug";
+                MsgSeverity = DEBUG_MESSAGE_SEVERITY_INFO;
+                break;
+        }
+    
+        if (level == SPV_MSG_FATAL || level == SPV_MSG_INTERNAL_ERROR || level == SPV_MSG_ERROR || level == SPV_MSG_WARNING)
+            LOG_DEBUG_MESSAGE(MsgSeverity, "Spirv optimizer ", LevelText, ": ", message);
+    }
+    
+    spv_target_env SpvTargetEnvFromSPIRV(const std::vector<uint32_t>& SPIRV)
+    {
+        if (SPIRV.size() < 2)
+        {
+            // Invalid SPIRV
+            return SPV_ENV_VULKAN_1_0;
+        }
+    
+    #define SPV_SPIRV_VERSION_WORD(MAJOR, MINOR) ((uint32_t(uint8_t(MAJOR)) << 16) | (uint32_t(uint8_t(MINOR)) << 8))
+        switch (SPIRV[1])
+        {
+            case SPV_SPIRV_VERSION_WORD(1, 0): return SPV_ENV_VULKAN_1_0;
+            case SPV_SPIRV_VERSION_WORD(1, 1): return SPV_ENV_VULKAN_1_0;
+            case SPV_SPIRV_VERSION_WORD(1, 2): return SPV_ENV_VULKAN_1_0;
+            case SPV_SPIRV_VERSION_WORD(1, 3): return SPV_ENV_VULKAN_1_1;
+            case SPV_SPIRV_VERSION_WORD(1, 4): return SPV_ENV_VULKAN_1_1_SPIRV_1_4;
+            case SPV_SPIRV_VERSION_WORD(1, 5): return SPV_ENV_VULKAN_1_2;
+            case SPV_SPIRV_VERSION_WORD(1, 6): return SPV_ENV_VULKAN_1_3;
+            default: return SPV_ENV_VULKAN_1_3;
+        }
+    #undef SPV_SPIRV_VERSION_WORD
+    }
+    
+} // namespace SPIRVToolsInternal
+
 std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_target_env TargetEnv, SPIRV_OPTIMIZATION_FLAGS Passes)
 {
+    using namespace SPIRVToolsInternal;
+    
     VERIFY_EXPR(Passes != SPIRV_OPTIMIZATION_FLAG_NONE);
 
     if (TargetEnv == SPV_ENV_MAX)
