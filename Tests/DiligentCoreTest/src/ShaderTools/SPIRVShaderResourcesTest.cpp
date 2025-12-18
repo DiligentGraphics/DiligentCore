@@ -253,6 +253,8 @@ void TestUniformBuffers(SHADER_COMPILER Compiler)
                        {
                            SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 48, 0},
                            SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
+                           SPIRVShaderResourceRefAttribs{"CB3", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
+                           SPIRVShaderResourceRefAttribs{"CB4", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
                        },
                        Compiler);
 }
@@ -269,19 +271,58 @@ TEST_F(SPIRVShaderResourcesTest, UniformBuffers_DXC)
 
 void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
 {
-    TestSPIRVResources("UniformBuffers.psh",
-                       {
-                           // CB1 should now be a PushConstant (48 bytes = 12 floats)
-                           SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::PushConstant, RESOURCE_DIM_BUFFER, 0, 48, 0},
-                           // CB2 remains as UniformBuffer
-                           SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
-                       },
-                       Compiler,
-                       SHADER_TYPE_PIXEL,
-                       SHADER_SOURCE_LANGUAGE_HLSL,
-                       [](std::vector<unsigned int>& SPIRV) {
-                           SPIRV = ConvertUBOToPushConstants(SPIRV, "CB1");
-                       });
+    std::vector<SPIRVShaderResourceRefAttribs> BaseRefAttribs = {
+        SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 48, 0},
+        SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
+        SPIRVShaderResourceRefAttribs{"CB3", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
+        SPIRVShaderResourceRefAttribs{"CB4", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
+    };
+
+    //Try to patch uniform buffer block to push constants one for each
+    for (size_t i = 0; i < BaseRefAttribs.size(); ++i)
+    {
+        const char*                                PatchedAttribName = BaseRefAttribs[i].Name;
+
+        std::vector<SPIRVShaderResourceRefAttribs> PatchedRefAttribs;
+
+        PatchedRefAttribs.reserve(BaseRefAttribs.size());
+
+        for (size_t j = 0; j < BaseRefAttribs.size(); ++j)
+        {
+            // Build a new attrib with Type changed to PushConstant, other members remain the same
+            if (j == i)
+            {
+                PatchedRefAttribs.push_back({
+                    BaseRefAttribs[j].Name,
+                    BaseRefAttribs[j].ArraySize,
+                    SPIRVResourceType::PushConstant,
+                    BaseRefAttribs[j].ResourceDim,
+                    BaseRefAttribs[j].IsMS,
+                    BaseRefAttribs[j].BufferStaticSize,
+                    BaseRefAttribs[j].BufferStride});
+            }
+            else
+            {
+                PatchedRefAttribs.push_back({
+                    BaseRefAttribs[j].Name,
+                    BaseRefAttribs[j].ArraySize,
+                    BaseRefAttribs[j].Type,
+                    BaseRefAttribs[j].ResourceDim,
+                    BaseRefAttribs[j].IsMS,
+                    BaseRefAttribs[j].BufferStaticSize,
+                    BaseRefAttribs[j].BufferStride});
+            }
+        }
+        
+        TestSPIRVResources("UniformBuffers.psh",
+                           PatchedRefAttribs,
+                           Compiler,
+                           SHADER_TYPE_PIXEL,
+                           SHADER_SOURCE_LANGUAGE_HLSL,
+                           [PatchedAttribName](std::vector<unsigned int>& SPIRV) {
+                               SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+                           });
+    }
 }
 
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_GLSLang)

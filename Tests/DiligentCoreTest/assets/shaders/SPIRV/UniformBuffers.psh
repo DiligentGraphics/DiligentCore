@@ -14,7 +14,41 @@ cbuffer CB2 : register(b2)
     float4 g_MaterialParams;
 };
 
+// Test for nested constant buffers
+
+struct InnerConstant_t
+{
+    float4 g_Color;
+};
+
+struct InnerConstant2_t
+{
+    float4 g_MaterialParams;
+};
+
+struct MergedConstant_t
+{
+    InnerConstant_t InnerConstant;
+    InnerConstant2_t InnerConstant2;
+};
+
+cbuffer CB3
+{
+    MergedConstant_t g_MergedConstant;
+};
+
+cbuffer CB4
+{
+    InnerConstant_t g_InnerConstant;
+    InnerConstant2_t g_InnerConstant2;
+};
+
 float4 main() : SV_Target
 {
-    return g_Color * g_MaterialParams;
+    return g_Color * 
+    g_MaterialParams * 
+    g_MergedConstant.InnerConstant.g_Color * 
+    g_MergedConstant.InnerConstant2.g_MaterialParams *
+    g_InnerConstant.g_Color *
+    g_InnerConstant2.g_MaterialParams;
 }
