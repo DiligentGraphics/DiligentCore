@@ -194,10 +194,20 @@ void TestSPIRVResources(const char*                                             
     std::vector<unsigned int> SPIRV = (SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL) ?
         LoadSPIRVFromGLSL(FilePath, ShaderType) :
         LoadSPIRVFromHLSL(FilePath, ShaderType, Compiler);
-    ASSERT_TRUE(!SPIRV.empty()) << "Failed to compile shader: " << FilePath;
+    VERIFY(!SPIRV.empty(), "Failed to compile shader: ", FilePath);
+
+    if (SPIRV.empty())
+        return;
 
     if (PatchSPIRVCallback)
+    {
         PatchSPIRVCallback(SPIRV);
+
+        VERIFY(!SPIRV.empty(), "Failed to patch shader: ", FilePath);
+    }
+
+    if (SPIRV.empty())
+        return;
 
     ShaderDesc ShaderDesc;
     ShaderDesc.Name       = "SPIRVResources test";
@@ -319,6 +329,10 @@ void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
                            SHADER_SOURCE_LANGUAGE_HLSL,
                            [PatchedAttribName](std::vector<unsigned int>& SPIRV) {
                                SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+                               if (SPIRV.empty())
+                               {
+                                   LOG_ERROR("ConvertUBOToPushConstants: Could not find uniform buffer block: ", PatchedAttribName);
+                               }
                            });
     }
 }
@@ -331,6 +345,92 @@ TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_GLSLang)
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_DXC)
 {
     TestConvertUBOToPushConstant(SHADER_COMPILER_DXC);
+}
+
+void TestConvertUBOToPushConstant_InvalidBlockName(SHADER_COMPILER Compiler)
+{
+    TestingEnvironment* const pEnv = TestingEnvironment::GetInstance();
+
+    pEnv->SetErrorAllowance(2, "Errors below are expected: testing ConvertUBOToPushConstants invalid block name failure\n");
+    pEnv->PushExpectedErrorSubstring("Failed to patch shader:", false);
+    pEnv->PushExpectedErrorSubstring("ConvertUBOToPushConstants: Could not find uniform buffer block", false);
+
+    //"CB5" is not available in given HLSL thus cannot be patched with ConvertUBOToPushConstants.
+    std::string PatchedAttribName = "CB5";
+
+    TestSPIRVResources("UniformBuffers.psh",
+                       {
+                           SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 48, 0},
+                           SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
+                           SPIRVShaderResourceRefAttribs{"CB3", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
+                           SPIRVShaderResourceRefAttribs{"CB4", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
+                       },
+                       Compiler,
+                       SHADER_TYPE_PIXEL,
+                       SHADER_SOURCE_LANGUAGE_HLSL,
+                       [PatchedAttribName](std::vector<unsigned int>& SPIRV) {
+                           SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+                           if (SPIRV.empty())
+                           {
+                               LOG_ERROR("ConvertUBOToPushConstants: Could not find uniform buffer block: ", PatchedAttribName);
+                           }
+                       });
+
+    pEnv->SetErrorAllowance(0);
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidBlockName_GLSLang)
+{
+    TestConvertUBOToPushConstant_InvalidBlockName(SHADER_COMPILER_GLSLANG);
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidBlockName_DXC)
+{
+    TestConvertUBOToPushConstant_InvalidBlockName(SHADER_COMPILER_DXC);
+}
+
+void TestConvertUBOToPushConstant_InvalidResourceType(SHADER_COMPILER Compiler)
+{
+    TestingEnvironment* const pEnv = TestingEnvironment::GetInstance();
+
+    pEnv->SetErrorAllowance(2, "Errors below are expected: testing ConvertUBOToPushConstants invalid resource type failure\n");
+    pEnv->PushExpectedErrorSubstring("Failed to patch shader:", false);
+    pEnv->PushExpectedErrorSubstring("ConvertUBOToPushConstants: Could not find uniform buffer block", false);
+
+    //"g_ROBuffer" is a ROStorageBuffer and cannot be patched with ConvertUBOToPushConstants.
+    std::string PatchedAttribName = "g_ROBuffer";
+
+    TestSPIRVResources("StorageBuffers.psh",
+                       {
+                           // StructuredBuffers have BufferStaticSize=0 (runtime array) and BufferStride is the element size
+                           SPIRVShaderResourceRefAttribs{"g_ROBuffer", 1, SPIRVResourceType::ROStorageBuffer, RESOURCE_DIM_BUFFER, 0, 0, 32},
+                           SPIRVShaderResourceRefAttribs{"g_RWBuffer", 1, SPIRVResourceType::RWStorageBuffer, RESOURCE_DIM_BUFFER, 0, 0, 64},
+                           // ByteAddressBuffers also have BufferStaticSize=0 and BufferStride=4 (uint size)
+                           SPIRVShaderResourceRefAttribs{"g_ROAtomicBuffer", 1, SPIRVResourceType::ROStorageBuffer, RESOURCE_DIM_BUFFER, 0, 0, 4},
+                           SPIRVShaderResourceRefAttribs{"g_RWAtomicBuffer", 1, SPIRVResourceType::RWStorageBuffer, RESOURCE_DIM_BUFFER, 0, 0, 4},
+                       },
+                       Compiler,
+                       SHADER_TYPE_PIXEL,
+                       SHADER_SOURCE_LANGUAGE_HLSL,
+                       [PatchedAttribName](std::vector<unsigned int>& SPIRV) {
+                           SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+                           if (SPIRV.empty())
+                           {
+                               LOG_ERROR("ConvertUBOToPushConstants: Could not find uniform buffer block: ", PatchedAttribName);
+                           }
+                       });
+
+    pEnv->SetErrorAllowance(0);
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidResourceType_GLSLang)
+{
+    TestConvertUBOToPushConstant_InvalidResourceType(SHADER_COMPILER_GLSLANG);
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidResourceType_DXC)
+{
+    TestConvertUBOToPushConstant_InvalidResourceType(SHADER_COMPILER_DXC);
 }
 
 void TestStorageBuffers(SHADER_COMPILER Compiler)
