@@ -244,6 +244,9 @@ WebGPUDeviceWrapper CreateDeviceForAdapter(const DeviceFeatures& Features, WGPUI
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_Float32Filterable))
             wgpuFeatures.push_back(WGPUFeatureName_Float32Filterable);
 
+        if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_Float32Blendable))
+            wgpuFeatures.push_back(WGPUFeatureName_Float32Blendable);
+
         if (wgpuAdapterHasFeature(wgpuAdapter, WGPUFeatureName_IndirectFirstInstance))
             wgpuFeatures.push_back(WGPUFeatureName_IndirectFirstInstance);
 
