@@ -175,12 +175,11 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
     return GLSLangUtils::GLSLtoSPIRV(Attribs);
 }
 
-void TestSPIRVResources(const char*                                                  FilePath,
-                        const std::vector<SPIRVShaderResourceRefAttribs>&            RefResources,
-                        SHADER_COMPILER                                              Compiler,
-                        SHADER_TYPE                                                  ShaderType         = SHADER_TYPE_PIXEL,
-                        SHADER_SOURCE_LANGUAGE                                       SourceLanguage     = SHADER_SOURCE_LANGUAGE_HLSL,
-                        const std::function<void(std::vector<unsigned int>& SPIRV)>& PatchSPIRVCallback = nullptr)
+void CompileSPIRV(const char*                FilePath,
+                  SHADER_COMPILER            Compiler,
+                  SHADER_TYPE                ShaderType,
+                  SHADER_SOURCE_LANGUAGE     SourceLanguage,
+                  std::vector<unsigned int>& SPIRV)
 {
     if (Compiler == SHADER_COMPILER_DXC)
     {
@@ -191,23 +190,30 @@ void TestSPIRVResources(const char*                                             
         }
     }
 
-    std::vector<unsigned int> SPIRV = (SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL) ?
+    SPIRV = (SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL) ?
         LoadSPIRVFromGLSL(FilePath, ShaderType) :
         LoadSPIRVFromHLSL(FilePath, ShaderType, Compiler);
-    VERIFY(!SPIRV.empty(), "Failed to compile shader: ", FilePath);
+    ASSERT_FALSE(SPIRV.empty()) << "Failed to compile shader: " << FilePath;
+}
 
-    if (SPIRV.empty())
+void TestSPIRVResources(const char*                                                  FilePath,
+                        const std::vector<SPIRVShaderResourceRefAttribs>&            RefResources,
+                        SHADER_COMPILER                                              Compiler,
+                        SHADER_TYPE                                                  ShaderType         = SHADER_TYPE_PIXEL,
+                        SHADER_SOURCE_LANGUAGE                                       SourceLanguage     = SHADER_SOURCE_LANGUAGE_HLSL,
+                        const std::function<void(std::vector<unsigned int>& SPIRV)>& PatchSPIRVCallback = nullptr)
+{
+    std::vector<unsigned int> SPIRV;
+    ASSERT_NO_FATAL_FAILURE(CompileSPIRV(FilePath, Compiler, ShaderType, SourceLanguage, SPIRV));
+
+    if (::testing::Test::IsSkipped())
         return;
 
     if (PatchSPIRVCallback)
     {
         PatchSPIRVCallback(SPIRV);
-
-        VERIFY(!SPIRV.empty(), "Failed to patch shader: ", FilePath);
+        ASSERT_FALSE(SPIRV.empty()) << "Failed to patch shader: " << FilePath;
     }
-
-    if (SPIRV.empty())
-        return;
 
     ShaderDesc ShaderDesc;
     ShaderDesc.Name       = "SPIRVResources test";
@@ -281,7 +287,7 @@ TEST_F(SPIRVShaderResourcesTest, UniformBuffers_DXC)
 
 void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
 {
-    std::vector<SPIRVShaderResourceRefAttribs> BaseRefAttribs = {
+    const std::vector<SPIRVShaderResourceRefAttribs> BaseRefAttribs = {
         SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 48, 0},
         SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
         SPIRVShaderResourceRefAttribs{"CB3", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
@@ -294,32 +300,18 @@ void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
         const char* PatchedAttribName = BaseRefAttribs[i].Name;
 
         std::vector<SPIRVShaderResourceRefAttribs> PatchedRefAttribs;
-
         PatchedRefAttribs.reserve(BaseRefAttribs.size());
-
         for (size_t j = 0; j < BaseRefAttribs.size(); ++j)
         {
+            const SPIRVShaderResourceRefAttribs& RefAttrib = BaseRefAttribs[j];
             // Build a new attrib with Type changed to PushConstant, other members remain the same
-            if (j == i)
-            {
-                PatchedRefAttribs.push_back({BaseRefAttribs[j].Name,
-                                             BaseRefAttribs[j].ArraySize,
-                                             SPIRVResourceType::PushConstant,
-                                             BaseRefAttribs[j].ResourceDim,
-                                             BaseRefAttribs[j].IsMS,
-                                             BaseRefAttribs[j].BufferStaticSize,
-                                             BaseRefAttribs[j].BufferStride});
-            }
-            else
-            {
-                PatchedRefAttribs.push_back({BaseRefAttribs[j].Name,
-                                             BaseRefAttribs[j].ArraySize,
-                                             BaseRefAttribs[j].Type,
-                                             BaseRefAttribs[j].ResourceDim,
-                                             BaseRefAttribs[j].IsMS,
-                                             BaseRefAttribs[j].BufferStaticSize,
-                                             BaseRefAttribs[j].BufferStride});
-            }
+            PatchedRefAttribs.push_back({RefAttrib.Name,
+                                         RefAttrib.ArraySize,
+                                         i == j ? SPIRVResourceType::PushConstant : RefAttrib.Type,
+                                         RefAttrib.ResourceDim,
+                                         RefAttrib.IsMS,
+                                         RefAttrib.BufferStaticSize,
+                                         RefAttrib.BufferStride});
         }
 
         TestSPIRVResources("UniformBuffers.psh",
@@ -329,10 +321,6 @@ void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
                            SHADER_SOURCE_LANGUAGE_HLSL,
                            [PatchedAttribName](std::vector<unsigned int>& SPIRV) {
                                SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
-                               if (SPIRV.empty())
-                               {
-                                   LOG_ERROR("ConvertUBOToPushConstants: Could not find uniform buffer block: ", PatchedAttribName);
-                               }
                            });
     }
 }
@@ -349,34 +337,16 @@ TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_DXC)
 
 void TestConvertUBOToPushConstant_InvalidBlockName(SHADER_COMPILER Compiler)
 {
-    TestingEnvironment* const pEnv = TestingEnvironment::GetInstance();
-
-    pEnv->SetErrorAllowance(2, "Errors below are expected: testing ConvertUBOToPushConstants invalid block name failure\n");
-    pEnv->PushExpectedErrorSubstring("Failed to patch shader:", false);
-    pEnv->PushExpectedErrorSubstring("ConvertUBOToPushConstants: Could not find uniform buffer block", false);
-
     //"CB5" is not available in given HLSL thus cannot be patched with ConvertUBOToPushConstants.
     std::string PatchedAttribName = "CB5";
 
-    TestSPIRVResources("UniformBuffers.psh",
-                       {
-                           SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 48, 0},
-                           SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
-                           SPIRVShaderResourceRefAttribs{"CB3", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
-                           SPIRVShaderResourceRefAttribs{"CB4", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
-                       },
-                       Compiler,
-                       SHADER_TYPE_PIXEL,
-                       SHADER_SOURCE_LANGUAGE_HLSL,
-                       [PatchedAttribName](std::vector<unsigned int>& SPIRV) {
-                           SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
-                           if (SPIRV.empty())
-                           {
-                               LOG_ERROR("ConvertUBOToPushConstants: Could not find uniform buffer block: ", PatchedAttribName);
-                           }
-                       });
+    std::vector<unsigned int> SPIRV;
+    ASSERT_NO_FATAL_FAILURE(CompileSPIRV("UniformBuffers.psh", Compiler, SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, SPIRV));
+    if (::testing::Test::IsSkipped())
+        return;
 
-    pEnv->SetErrorAllowance(0);
+    SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+    EXPECT_TRUE(SPIRV.empty());
 }
 
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidBlockName_GLSLang)
@@ -391,36 +361,16 @@ TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidBlockName_DXC)
 
 void TestConvertUBOToPushConstant_InvalidResourceType(SHADER_COMPILER Compiler)
 {
-    TestingEnvironment* const pEnv = TestingEnvironment::GetInstance();
-
-    pEnv->SetErrorAllowance(2, "Errors below are expected: testing ConvertUBOToPushConstants invalid resource type failure\n");
-    pEnv->PushExpectedErrorSubstring("Failed to patch shader:", false);
-    pEnv->PushExpectedErrorSubstring("ConvertUBOToPushConstants: Could not find uniform buffer block", false);
-
     //"g_ROBuffer" is a ROStorageBuffer and cannot be patched with ConvertUBOToPushConstants.
     std::string PatchedAttribName = "g_ROBuffer";
 
-    TestSPIRVResources("StorageBuffers.psh",
-                       {
-                           // StructuredBuffers have BufferStaticSize=0 (runtime array) and BufferStride is the element size
-                           SPIRVShaderResourceRefAttribs{"g_ROBuffer", 1, SPIRVResourceType::ROStorageBuffer, RESOURCE_DIM_BUFFER, 0, 0, 32},
-                           SPIRVShaderResourceRefAttribs{"g_RWBuffer", 1, SPIRVResourceType::RWStorageBuffer, RESOURCE_DIM_BUFFER, 0, 0, 64},
-                           // ByteAddressBuffers also have BufferStaticSize=0 and BufferStride=4 (uint size)
-                           SPIRVShaderResourceRefAttribs{"g_ROAtomicBuffer", 1, SPIRVResourceType::ROStorageBuffer, RESOURCE_DIM_BUFFER, 0, 0, 4},
-                           SPIRVShaderResourceRefAttribs{"g_RWAtomicBuffer", 1, SPIRVResourceType::RWStorageBuffer, RESOURCE_DIM_BUFFER, 0, 0, 4},
-                       },
-                       Compiler,
-                       SHADER_TYPE_PIXEL,
-                       SHADER_SOURCE_LANGUAGE_HLSL,
-                       [PatchedAttribName](std::vector<unsigned int>& SPIRV) {
-                           SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
-                           if (SPIRV.empty())
-                           {
-                               LOG_ERROR("ConvertUBOToPushConstants: Could not find uniform buffer block: ", PatchedAttribName);
-                           }
-                       });
+    std::vector<unsigned int> SPIRV;
+    ASSERT_NO_FATAL_FAILURE(CompileSPIRV("StorageBuffers.psh", Compiler, SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, SPIRV));
+    if (::testing::Test::IsSkipped())
+        return;
 
-    pEnv->SetErrorAllowance(0);
+    SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+    EXPECT_TRUE(SPIRV.empty());
 }
 
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidResourceType_GLSLang)
