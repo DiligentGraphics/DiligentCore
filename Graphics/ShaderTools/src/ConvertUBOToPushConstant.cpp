@@ -37,6 +37,9 @@
 #    pragma warning(pop)
 #endif
 
+#include <vector>
+#include <unordered_set>
+
 namespace Diligent
 {
 
@@ -231,15 +234,15 @@ public:
         modified = true;
 
         // Propagate storage class change to all users of this variable
-        std::set<uint32_t>                       seen;
         std::vector<spvtools::opt::Instruction*> users;
         get_def_use_mgr()->ForEachUser(target_var, [&users](spvtools::opt::Instruction* user) {
             users.push_back(user);
         });
 
+        std::unordered_set<uint32_t> seen;
         for (spvtools::opt::Instruction* user : users)
         {
-            modified |= PropagateStorageClass(user, &seen);
+            modified |= PropagateStorageClass(*user, seen);
         }
 
         // Remove Binding and DescriptorSet decorations from the variable
@@ -267,7 +270,7 @@ public:
 private:
     // Recursively updates the storage class of pointer types used by instructions
     // that reference the target variable.
-    bool PropagateStorageClass(spvtools::opt::Instruction* inst, std::set<uint32_t>* seen)
+    bool PropagateStorageClass(spvtools::opt::Instruction& inst, std::unordered_set<uint32_t>& seen) const
     {
         if (!IsPointerResultType(inst))
         {
@@ -277,9 +280,9 @@ private:
         // Already has the correct storage class
         if (IsPointerToStorageClass(inst, spv::StorageClass::PushConstant))
         {
-            if (inst->opcode() == spv::Op::OpPhi)
+            if (inst.opcode() == spv::Op::OpPhi)
             {
-                if (!seen->insert(inst->result_id()).second)
+                if (!seen.insert(inst.result_id()).second)
                 {
                     return false;
                 }
@@ -287,17 +290,18 @@ private:
 
             bool                                     modified = false;
             std::vector<spvtools::opt::Instruction*> users;
-            get_def_use_mgr()->ForEachUser(inst, [&users](spvtools::opt::Instruction* user) {
+            get_def_use_mgr()->ForEachUser(&inst, [&users](spvtools::opt::Instruction* user) {
                 users.push_back(user);
             });
             for (spvtools::opt::Instruction* user : users)
             {
-                modified |= PropagateStorageClass(user, seen);
+                if (PropagateStorageClass(*user, seen))
+                    modified = true;
             }
 
-            if (inst->opcode() == spv::Op::OpPhi)
+            if (inst.opcode() == spv::Op::OpPhi)
             {
-                seen->erase(inst->result_id());
+                seen.erase(inst.result_id());
             }
             return modified;
         }
@@ -305,7 +309,7 @@ private:
         // Handle instructions that produce pointer results
         // This switch covers the common pointer-producing opcodes.
         // Reference: SPIRV-Tools fix_storage_class.cpp
-        switch (inst->opcode())
+        switch (inst.opcode())
         {
             case spv::Op::OpAccessChain:
             case spv::Op::OpPtrAccessChain:
@@ -317,12 +321,12 @@ private:
                 ChangeResultStorageClass(inst);
                 {
                     std::vector<spvtools::opt::Instruction*> users;
-                    get_def_use_mgr()->ForEachUser(inst, [&users](spvtools::opt::Instruction* user) {
+                    get_def_use_mgr()->ForEachUser(&inst, [&users](spvtools::opt::Instruction* user) {
                         users.push_back(user);
                     });
                     for (spvtools::opt::Instruction* user : users)
                     {
-                        PropagateStorageClass(user, seen);
+                        PropagateStorageClass(*user, seen);
                     }
                 }
                 return true;
@@ -348,16 +352,16 @@ private:
             default:
                 // Unexpected pointer-producing instruction. This may indicate
                 // a new SPIR-V extension or pattern not yet handled.
-                UNEXPECTED("Unexpected instruction with pointer result type: opcode ", static_cast<uint32_t>(inst->opcode()));
+                UNEXPECTED("Unexpected instruction with pointer result type: opcode ", static_cast<uint32_t>(inst.opcode()));
                 return false;
         }
     }
 
     // Changes the result type of an instruction to use the new storage class.
-    void ChangeResultStorageClass(spvtools::opt::Instruction* inst)
+    void ChangeResultStorageClass(spvtools::opt::Instruction& inst) const
     {
         spvtools::opt::analysis::TypeManager* type_mgr         = context()->get_type_mgr();
-        spvtools::opt::Instruction*           result_type_inst = get_def_use_mgr()->GetDef(inst->type_id());
+        spvtools::opt::Instruction*           result_type_inst = get_def_use_mgr()->GetDef(inst.type_id());
 
         if (result_type_inst->opcode() != spv::Op::OpTypePointer)
         {
@@ -368,31 +372,31 @@ private:
         uint32_t new_result_type_id =
             type_mgr->FindPointerToType(pointee_type_id, spv::StorageClass::PushConstant);
 
-        inst->SetResultType(new_result_type_id);
-        context()->UpdateDefUse(inst);
+        inst.SetResultType(new_result_type_id);
+        context()->UpdateDefUse(&inst);
     }
 
     // Checks if the instruction result type is a pointer.
-    bool IsPointerResultType(spvtools::opt::Instruction* inst)
+    bool IsPointerResultType(const spvtools::opt::Instruction& inst) const
     {
-        if (inst->type_id() == 0)
+        if (inst.type_id() == 0)
         {
             return false;
         }
 
-        spvtools::opt::Instruction* type_def = get_def_use_mgr()->GetDef(inst->type_id());
+        spvtools::opt::Instruction* type_def = get_def_use_mgr()->GetDef(inst.type_id());
         return type_def != nullptr && type_def->opcode() == spv::Op::OpTypePointer;
     }
 
     // Checks if the instruction result type is a pointer to the specified storage class.
-    bool IsPointerToStorageClass(spvtools::opt::Instruction* inst, spv::StorageClass storage_class)
+    bool IsPointerToStorageClass(const spvtools::opt::Instruction& inst, spv::StorageClass storage_class) const
     {
-        if (inst->type_id() == 0)
+        if (inst.type_id() == 0)
         {
             return false;
         }
 
-        spvtools::opt::Instruction* type_def = get_def_use_mgr()->GetDef(inst->type_id());
+        spvtools::opt::Instruction* type_def = get_def_use_mgr()->GetDef(inst.type_id());
         if (type_def == nullptr || type_def->opcode() != spv::Op::OpTypePointer)
         {
             return false;
@@ -404,7 +408,7 @@ private:
     }
 
     // Checks if a type has the Block decoration, which identifies it as a UBO struct type.
-    bool HasBlockDecoration(uint32_t type_id)
+    bool HasBlockDecoration(uint32_t type_id) const
     {
         bool has_block = false;
         get_decoration_mgr()->ForEachDecoration(
@@ -426,7 +430,7 @@ std::vector<uint32_t> ConvertUBOToPushConstants(
 {
     spv_target_env TargetEnv = SPIRVToolsInternal::SpvTargetEnvFromSPIRV(SPIRV);
 
-    spvtools::Optimizer optimizer(TargetEnv);
+    spvtools::Optimizer optimizer{TargetEnv};
 
     optimizer.SetMessageConsumer(SPIRVToolsInternal::SpvOptimizerMessageConsumer);
 
