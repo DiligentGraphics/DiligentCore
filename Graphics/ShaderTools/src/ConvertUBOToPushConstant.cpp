@@ -96,7 +96,7 @@ public:
         if (candidate_ids.empty())
         {
             // Block name not found
-            return Status::Failure;
+            return Status::SuccessWithoutChange;
         }
 
         // Try each candidate ID to find a UniformBuffer
@@ -191,7 +191,7 @@ public:
         if (target_var == nullptr)
         {
             // No UniformBuffer found with the given block name
-            return Status::Failure;
+            return Status::SuccessWithoutChange;
         }
 
         uint32_t target_var_id = target_var->result_id();
