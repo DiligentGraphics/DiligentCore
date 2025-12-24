@@ -200,6 +200,7 @@ public:
         spvtools::opt::Instruction* ptr_type_inst = get_def_use_mgr()->GetDef(target_var->type_id());
         if (ptr_type_inst == nullptr || ptr_type_inst->opcode() != spv::Op::OpTypePointer)
         {
+            LOG_ERROR_MESSAGE("Failed to convert UBO block '", m_BlockName, "': target variable has unexpected type.");
             return Status::Failure;
         }
 
@@ -214,6 +215,7 @@ public:
         if (new_ptr_type_id == 0)
         {
             // Failed to create new pointer type
+            LOG_ERROR_MESSAGE("Failed to convert UBO block '", m_BlockName, "': could not create PushConstant pointer type.");
             return Status::Failure;
         }
 
