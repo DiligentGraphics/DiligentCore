@@ -424,13 +424,11 @@ std::vector<uint32_t> ConvertUBOToPushConstants(
     const std::vector<uint32_t>& SPIRV,
     const std::string&           BlockName)
 {
-    using namespace SPIRVToolsInternal;
-
-    spv_target_env TargetEnv = SpvTargetEnvFromSPIRV(SPIRV);
+    spv_target_env TargetEnv = SPIRVToolsInternal::SpvTargetEnvFromSPIRV(SPIRV);
 
     spvtools::Optimizer optimizer(TargetEnv);
 
-    optimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
+    optimizer.SetMessageConsumer(SPIRVToolsInternal::SpvOptimizerMessageConsumer);
 
     // Register the pass to convert UBO to push constant using custom out-of-tree pass
     optimizer.RegisterPass(spvtools::Optimizer::PassToken(

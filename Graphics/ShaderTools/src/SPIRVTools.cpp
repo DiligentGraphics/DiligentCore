@@ -110,15 +110,13 @@ spv_target_env SpvTargetEnvFromSPIRV(const std::vector<uint32_t>& SPIRV)
 
 std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_target_env TargetEnv, SPIRV_OPTIMIZATION_FLAGS Passes)
 {
-    using namespace SPIRVToolsInternal;
-
     VERIFY_EXPR(Passes != SPIRV_OPTIMIZATION_FLAG_NONE);
 
     if (TargetEnv == SPV_ENV_MAX)
-        TargetEnv = SpvTargetEnvFromSPIRV(SrcSPIRV);
+        TargetEnv = SPIRVToolsInternal::SpvTargetEnvFromSPIRV(SrcSPIRV);
 
     spvtools::Optimizer SpirvOptimizer(TargetEnv);
-    SpirvOptimizer.SetMessageConsumer(SpvOptimizerMessageConsumer);
+    SpirvOptimizer.SetMessageConsumer(SPIRVToolsInternal::SpvOptimizerMessageConsumer);
 
     spvtools::OptimizerOptions Options;
 #ifndef DILIGENT_DEVELOPMENT
