@@ -291,6 +291,53 @@ void TestingSwapChainVk::TakeSnapshot(ITexture* pCopyFrom)
     vkUnmapMemory(m_vkDevice, m_vkStagingBufferMemory);
 }
 
+void TestingSwapChainVk::NativeDrawCompareWithSnapshot(ITexture* pTexture)
+{
+    TestingEnvironmentVk* pEnv = TestingEnvironmentVk::GetInstance();
+
+    VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
+
+    VkImage vSrcImage = VK_NULL_HANDLE;
+    if (pTexture == nullptr)
+    {
+        TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_ActiveGraphicsShaderStages);
+        vSrcImage = m_vkRenderTargetImage;
+    }
+    else
+    {
+        RefCntAutoPtr<ITextureVk> pSrcTexVk{pTexture, IID_TextureVk};
+        VERIFY_EXPR(pSrcTexVk);
+        VERIFY_EXPR(pSrcTexVk->GetLayout() == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        VERIFY_EXPR(GetDesc().Width == pSrcTexVk->GetDesc().Width);
+        VERIFY_EXPR(GetDesc().Height == pSrcTexVk->GetDesc().Height);
+        VERIFY_EXPR(GetDesc().ColorBufferFormat == pSrcTexVk->GetDesc().Format);
+        vSrcImage = pSrcTexVk->GetVkImage();
+    }
+
+    VkBufferImageCopy BuffImgCopy{};
+    BuffImgCopy.imageExtent                 = VkExtent3D{m_SwapChainDesc.Width, m_SwapChainDesc.Height, 1};
+    BuffImgCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    BuffImgCopy.imageSubresource.layerCount = 1;
+    VERIFY(m_SwapChainDesc.ColorBufferFormat == TEX_FORMAT_RGBA8_UNORM, "Unexpected color buffer format");
+    BuffImgCopy.bufferRowLength = m_SwapChainDesc.Width; // In texels
+
+    vkCmdCopyImageToBuffer(vkCmdBuffer, vSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                           m_vkStagingBuffer, 1, &BuffImgCopy);
+    vkEndCommandBuffer(vkCmdBuffer);
+
+    pEnv->SubmitCommandBuffer(vkCmdBuffer);
+
+    VERIFY_EXPR(m_StagingBufferSize == m_SwapChainDesc.Width * m_SwapChainDesc.Height * 4);
+
+    void* pStagingDataPtr = nullptr;
+    vkMapMemory(m_vkDevice, m_vkStagingBufferMemory, 0, m_StagingBufferSize, 0, &pStagingDataPtr);
+
+    CompareTestImages(m_ReferenceData.data(), m_ReferenceDataPitch, static_cast<const Uint8*>(pStagingDataPtr), m_SwapChainDesc.Width * 4,
+                      m_SwapChainDesc.Width, m_SwapChainDesc.Height, m_SwapChainDesc.ColorBufferFormat, m_FailureCounters);
+
+    vkUnmapMemory(m_vkDevice, m_vkStagingBufferMemory);
+}
+
 void CreateTestingSwapChainVk(TestingEnvironmentVk* pEnv,
                               const SwapChainDesc&  SCDesc,
                               ISwapChain**          ppSwapChain)

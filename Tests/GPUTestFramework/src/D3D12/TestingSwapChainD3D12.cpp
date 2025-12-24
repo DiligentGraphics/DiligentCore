@@ -257,6 +257,11 @@ void TestingSwapChainD3D12::TakeSnapshot(ITexture* pCopyFrom)
     m_pd3d12StagingBuffer->Unmap(0, nullptr);
 }
 
+void TestingSwapChainD3D12::NativeDrawCompareWithSnapshot(ITexture* pTexture)
+{
+   //NOT IMPL YET
+}
+
 void CreateTestingSwapChainD3D12(IRenderDevice*       pDevice,
                                  IDeviceContext*      pContext,
                                  const SwapChainDesc& SCDesc,

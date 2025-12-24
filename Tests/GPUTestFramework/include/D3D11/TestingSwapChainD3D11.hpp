@@ -49,6 +49,8 @@ public:
 
     virtual void TakeSnapshot(ITexture* pCopyFrom) override final;
 
+    virtual void NativeDrawCompareWithSnapshot(ITexture* pTexture) override final;
+
     ID3D11Texture2D* GetD3D11RenderTarget()
     {
         return m_pd3d11RenderTarget;
