@@ -259,7 +259,7 @@ void TestingSwapChainD3D12::TakeSnapshot(ITexture* pCopyFrom)
 
 void TestingSwapChainD3D12::NativeDrawCompareWithSnapshot(ITexture* pTexture)
 {
-   //NOT IMPL YET
+    //NOT IMPL YET
 }
 
 void CreateTestingSwapChainD3D12(IRenderDevice*       pDevice,

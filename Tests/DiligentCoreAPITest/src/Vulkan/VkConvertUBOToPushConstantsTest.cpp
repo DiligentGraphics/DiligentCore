@@ -294,11 +294,11 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const std::string& ShaderSource, SHA
     }
 
     GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
-    Attribs.ShaderType                 = ShaderType;
-    Attribs.ShaderSource               = ShaderSource.data();
-    Attribs.SourceCodeLen              = static_cast<int>(ShaderSource.size());
-    Attribs.Version                    = Version;
-    Attribs.AssignBindings             = true;
+    Attribs.ShaderType     = ShaderType;
+    Attribs.ShaderSource   = ShaderSource.data();
+    Attribs.SourceCodeLen  = static_cast<int>(ShaderSource.size());
+    Attribs.Version        = Version;
+    Attribs.AssignBindings = true;
 
     return GLSLangUtils::GLSLtoSPIRV(Attribs);
 }
