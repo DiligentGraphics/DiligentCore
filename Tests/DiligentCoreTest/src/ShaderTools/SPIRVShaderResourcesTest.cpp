@@ -345,8 +345,8 @@ void TestConvertUBOToPushConstant_InvalidBlockName(SHADER_COMPILER Compiler)
     if (::testing::Test::IsSkipped())
         return;
 
-    SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
-    EXPECT_TRUE(SPIRV.empty());
+    std::vector<unsigned int> PatchedSPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+    EXPECT_EQ(SPIRV, PatchedSPIRV);
 }
 
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidBlockName_GLSLang)
@@ -369,8 +369,8 @@ void TestConvertUBOToPushConstant_InvalidResourceType(SHADER_COMPILER Compiler)
     if (::testing::Test::IsSkipped())
         return;
 
-    SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
-    EXPECT_TRUE(SPIRV.empty());
+    std::vector<unsigned int> PatchedSPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+    EXPECT_EQ(SPIRV, PatchedSPIRV);
 }
 
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidResourceType_GLSLang)
