@@ -37,6 +37,15 @@
 #include <vector>
 
 #include "TestingEnvironment.hpp"
+
+// Forward declaration for ConvertUBOToPushConstants from SPIRVTools.hpp
+// We cannot include SPIRVTools.hpp directly because it depends on spirv-tools headers
+namespace Diligent
+{
+std::vector<uint32_t> ConvertUBOToPushConstants(const std::vector<uint32_t>& SPIRV,
+                                                const std::string&           BlockName);
+}
+
 #include "gtest/gtest.h"
 
 using namespace Diligent;
@@ -166,11 +175,11 @@ std::vector<unsigned int> LoadSPIRVFromGLSL(const char* FilePath, SHADER_TYPE Sh
     return GLSLangUtils::GLSLtoSPIRV(Attribs);
 }
 
-void TestSPIRVResources(const char*                                       FilePath,
-                        const std::vector<SPIRVShaderResourceRefAttribs>& RefResources,
-                        SHADER_COMPILER                                   Compiler,
-                        SHADER_TYPE                                       ShaderType     = SHADER_TYPE_PIXEL,
-                        SHADER_SOURCE_LANGUAGE                            SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL)
+void CompileSPIRV(const char*                FilePath,
+                  SHADER_COMPILER            Compiler,
+                  SHADER_TYPE                ShaderType,
+                  SHADER_SOURCE_LANGUAGE     SourceLanguage,
+                  std::vector<unsigned int>& SPIRV)
 {
     if (Compiler == SHADER_COMPILER_DXC)
     {
@@ -181,10 +190,30 @@ void TestSPIRVResources(const char*                                       FilePa
         }
     }
 
-    const std::vector<unsigned int> SPIRV = (SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL) ?
+    SPIRV = (SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL) ?
         LoadSPIRVFromGLSL(FilePath, ShaderType) :
         LoadSPIRVFromHLSL(FilePath, ShaderType, Compiler);
-    ASSERT_TRUE(!SPIRV.empty()) << "Failed to compile shader: " << FilePath;
+    ASSERT_FALSE(SPIRV.empty()) << "Failed to compile shader: " << FilePath;
+}
+
+void TestSPIRVResources(const char*                                                  FilePath,
+                        const std::vector<SPIRVShaderResourceRefAttribs>&            RefResources,
+                        SHADER_COMPILER                                              Compiler,
+                        SHADER_TYPE                                                  ShaderType         = SHADER_TYPE_PIXEL,
+                        SHADER_SOURCE_LANGUAGE                                       SourceLanguage     = SHADER_SOURCE_LANGUAGE_HLSL,
+                        const std::function<void(std::vector<unsigned int>& SPIRV)>& PatchSPIRVCallback = nullptr)
+{
+    std::vector<unsigned int> SPIRV;
+    ASSERT_NO_FATAL_FAILURE(CompileSPIRV(FilePath, Compiler, ShaderType, SourceLanguage, SPIRV));
+
+    if (::testing::Test::IsSkipped())
+        return;
+
+    if (PatchSPIRVCallback)
+    {
+        PatchSPIRVCallback(SPIRV);
+        ASSERT_FALSE(SPIRV.empty()) << "Failed to patch shader: " << FilePath;
+    }
 
     ShaderDesc ShaderDesc;
     ShaderDesc.Name       = "SPIRVResources test";
@@ -240,6 +269,8 @@ void TestUniformBuffers(SHADER_COMPILER Compiler)
                        {
                            SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 48, 0},
                            SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
+                           SPIRVShaderResourceRefAttribs{"CB3", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
+                           SPIRVShaderResourceRefAttribs{"CB4", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
                        },
                        Compiler);
 }
@@ -252,6 +283,104 @@ TEST_F(SPIRVShaderResourcesTest, UniformBuffers_GLSLang)
 TEST_F(SPIRVShaderResourcesTest, UniformBuffers_DXC)
 {
     TestUniformBuffers(SHADER_COMPILER_DXC);
+}
+
+void TestConvertUBOToPushConstant(SHADER_COMPILER Compiler)
+{
+    const std::vector<SPIRVShaderResourceRefAttribs> BaseRefAttribs = {
+        SPIRVShaderResourceRefAttribs{"CB1", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 48, 0},
+        SPIRVShaderResourceRefAttribs{"CB2", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 16, 0},
+        SPIRVShaderResourceRefAttribs{"CB3", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
+        SPIRVShaderResourceRefAttribs{"CB4", 1, SPIRVResourceType::UniformBuffer, RESOURCE_DIM_BUFFER, 0, 32, 0},
+    };
+
+    //Try to patch uniform buffer block to push constants one for each
+    for (size_t i = 0; i < BaseRefAttribs.size(); ++i)
+    {
+        const char* PatchedAttribName = BaseRefAttribs[i].Name;
+
+        std::vector<SPIRVShaderResourceRefAttribs> PatchedRefAttribs;
+        PatchedRefAttribs.reserve(BaseRefAttribs.size());
+        for (size_t j = 0; j < BaseRefAttribs.size(); ++j)
+        {
+            const SPIRVShaderResourceRefAttribs& RefAttrib = BaseRefAttribs[j];
+            // Build a new attrib with Type changed to PushConstant, other members remain the same
+            PatchedRefAttribs.push_back({RefAttrib.Name,
+                                         RefAttrib.ArraySize,
+                                         i == j ? SPIRVResourceType::PushConstant : RefAttrib.Type,
+                                         RefAttrib.ResourceDim,
+                                         RefAttrib.IsMS,
+                                         RefAttrib.BufferStaticSize,
+                                         RefAttrib.BufferStride});
+        }
+
+        TestSPIRVResources("UniformBuffers.psh",
+                           PatchedRefAttribs,
+                           Compiler,
+                           SHADER_TYPE_PIXEL,
+                           SHADER_SOURCE_LANGUAGE_HLSL,
+                           [PatchedAttribName](std::vector<unsigned int>& SPIRV) {
+                               SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+                           });
+    }
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_GLSLang)
+{
+    TestConvertUBOToPushConstant(SHADER_COMPILER_GLSLANG);
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_DXC)
+{
+    TestConvertUBOToPushConstant(SHADER_COMPILER_DXC);
+}
+
+void TestConvertUBOToPushConstant_InvalidBlockName(SHADER_COMPILER Compiler)
+{
+    //"CB5" is not available in given HLSL thus cannot be patched with ConvertUBOToPushConstants.
+    std::string PatchedAttribName = "CB5";
+
+    std::vector<unsigned int> SPIRV;
+    ASSERT_NO_FATAL_FAILURE(CompileSPIRV("UniformBuffers.psh", Compiler, SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, SPIRV));
+    if (::testing::Test::IsSkipped())
+        return;
+
+    SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+    EXPECT_TRUE(SPIRV.empty());
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidBlockName_GLSLang)
+{
+    TestConvertUBOToPushConstant_InvalidBlockName(SHADER_COMPILER_GLSLANG);
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidBlockName_DXC)
+{
+    TestConvertUBOToPushConstant_InvalidBlockName(SHADER_COMPILER_DXC);
+}
+
+void TestConvertUBOToPushConstant_InvalidResourceType(SHADER_COMPILER Compiler)
+{
+    //"g_ROBuffer" is a ROStorageBuffer and cannot be patched with ConvertUBOToPushConstants.
+    std::string PatchedAttribName = "g_ROBuffer";
+
+    std::vector<unsigned int> SPIRV;
+    ASSERT_NO_FATAL_FAILURE(CompileSPIRV("StorageBuffers.psh", Compiler, SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, SPIRV));
+    if (::testing::Test::IsSkipped())
+        return;
+
+    SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+    EXPECT_TRUE(SPIRV.empty());
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidResourceType_GLSLang)
+{
+    TestConvertUBOToPushConstant_InvalidResourceType(SHADER_COMPILER_GLSLANG);
+}
+
+TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidResourceType_DXC)
+{
+    TestConvertUBOToPushConstant_InvalidResourceType(SHADER_COMPILER_DXC);
 }
 
 void TestStorageBuffers(SHADER_COMPILER Compiler)
