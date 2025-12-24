@@ -74,7 +74,9 @@ public:
 
     virtual void DumpBackBuffer(const char* FileName) = 0;
 
-    virtual void CompareWithSnapshot(ITexture* pTexture) = 0;
+    virtual void CompareWithSnapshot(ITexture* pTexture)     = 0;
+
+    virtual void NativeDrawCompareWithSnapshot(ITexture* pTexture) = 0;
 };
 
 template <typename SwapChainInterface>

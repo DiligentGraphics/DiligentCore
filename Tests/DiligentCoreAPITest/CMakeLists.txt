@@ -151,6 +151,21 @@ if(EXISTS "${DILIGENT_NVAPI_PATH}/nvapi.h")
     target_compile_definitions(DiligentCoreAPITest PUBLIC DILIGENT_ENABLE_D3D_NVAPI)
 endif()
 
+# Add SPIRV-Tools include directories if needed for SPIRVTools.hpp
+# Test files that include SPIRVTools.hpp need access to spirv-tools headers
+# SPIRVTools.hpp includes "spirv-tools/libspirv.h", so we need the include directory
+if (TARGET SPIRV-Tools-opt)
+    get_target_property(SPIRV_TOOLS_SOURCE_DIR SPIRV-Tools-opt SOURCE_DIR)
+    get_target_property(SPIRV_TOOLS_BINARY_DIR SPIRV-Tools-opt BINARY_DIR)
+    get_filename_component(SPIRV_TOOLS_ROOT_DIR "${SPIRV_TOOLS_SOURCE_DIR}/../.." ABSOLUTE)
+    get_filename_component(SPIRV_TOOLS_ROOT_BINARY_DIR "${SPIRV_TOOLS_BINARY_DIR}/../.." ABSOLUTE)
+    # Add include subdirectory for public headers like spirv-tools/libspirv.h
+    target_include_directories(DiligentCoreAPITest PRIVATE 
+        ${SPIRV_TOOLS_ROOT_DIR}/include
+        ${SPIRV_TOOLS_ROOT_DIR}
+        ${SPIRV_TOOLS_ROOT_BINARY_DIR}
+    )
+endif()
 
 set_target_properties(DiligentCoreAPITest
 PROPERTIES

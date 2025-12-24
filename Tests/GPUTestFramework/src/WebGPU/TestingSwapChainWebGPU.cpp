@@ -218,6 +218,11 @@ void TestingSwapChainWebGPU::TakeSnapshot(ITexture* pCopyFrom)
 #endif
 }
 
+void TestingSwapChainWebGPU::NativeDrawCompareWithSnapshot(ITexture* pTexture)
+{
+    //NOT IMPL YET
+}
+
 void CreateTestingSwapChainWebGPU(TestingEnvironmentWebGPU* pEnv,
                                   const SwapChainDesc&      SCDesc,
                                   ISwapChain**              ppSwapChain)

@@ -214,11 +214,23 @@ public:
             return Status::Failure;
         }
 
-        // Note: We don't need to manually reorder the pointer type instruction.
-        // SPIR-V does not require types to appear in any specific relative order,
-        // as long as they are valid type declarations. FindPointerToType handles
-        // type creation correctly, and the SPIRV-Tools framework manages instruction
-        // ordering appropriately.
+        // IMPORTANT: FindPointerToType() may create a new type instruction at the end of
+        // the types_values section. However, SPIR-V requires all IDs to be defined before
+        // use (SSA form). If the new pointer type was just created, it will appear AFTER
+        // the OpVariable that uses it, which violates SPIR-V validation rules.
+        //
+        // We need to move the newly created pointer type instruction to appear BEFORE
+        // the OpVariable instruction that will reference it.
+        spvtools::opt::Instruction* new_ptr_type_inst = get_def_use_mgr()->GetDef(new_ptr_type_id);
+        if (new_ptr_type_inst != nullptr && new_ptr_type_inst != ptr_type_inst)
+        {
+            // The new pointer type was created (not reused). Move it before the variable.
+            // In SPIR-V, types appear in the types_values section before variables.
+            // We insert the new type right after the original pointer type to maintain
+            // proper ordering within the types section.
+            new_ptr_type_inst->RemoveFromList();
+            new_ptr_type_inst->InsertAfter(ptr_type_inst);
+        }
 
         // Update the variable's type to the new pointer type
         target_var->SetResultType(new_ptr_type_id);
@@ -367,6 +379,17 @@ private:
         uint32_t pointee_type_id = result_type_inst->GetSingleWordInOperand(1);
         uint32_t new_result_type_id =
             type_mgr->FindPointerToType(pointee_type_id, spv::StorageClass::PushConstant);
+
+        // If a new type was created, ensure it's properly positioned in the types section.
+        // FindPointerToType may append new types at the end, but they need to appear
+        // before any instructions that use them (SPIR-V SSA requirement).
+        spvtools::opt::Instruction* new_type_inst = get_def_use_mgr()->GetDef(new_result_type_id);
+        if (new_type_inst != nullptr && new_type_inst != result_type_inst)
+        {
+            // Move the new type to appear after the original type in the types section
+            new_type_inst->RemoveFromList();
+            new_type_inst->InsertAfter(result_type_inst);
+        }
 
         inst->SetResultType(new_result_type_id);
         context()->UpdateDefUse(inst);
