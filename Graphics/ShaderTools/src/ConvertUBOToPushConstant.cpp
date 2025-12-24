@@ -131,7 +131,7 @@ public:
 
                 // Get the pointee type ID and verify it has Block decoration
                 uint32_t pointee_type_id = ptr_type_inst->GetSingleWordInOperand(1);
-                if (HasBlockDecoration(pointee_type_id))
+                if (IsUBOBlockType(pointee_type_id))
                 {
                     // Found a UniformBuffer!
                     target_var = var_inst;
@@ -172,7 +172,7 @@ public:
                     if (pointee_type_id == struct_type_id)
                     {
                         // Verify it has Block decoration
-                        if (HasBlockDecoration(pointee_type_id))
+                        if (IsUBOBlockType(pointee_type_id))
                         {
                             // Found a UniformBuffer!
                             target_var = &inst;
@@ -239,10 +239,10 @@ public:
             users.push_back(user);
         });
 
-        std::unordered_set<uint32_t> seen;
+        std::unordered_set<uint32_t> visited;
         for (spvtools::opt::Instruction* user : users)
         {
-            modified |= PropagateStorageClass(*user, seen);
+            modified |= PropagateStorageClass(*user, visited);
         }
 
         // Remove Binding and DescriptorSet decorations from the variable
@@ -270,39 +270,36 @@ public:
 private:
     // Recursively updates the storage class of pointer types used by instructions
     // that reference the target variable.
-    bool PropagateStorageClass(spvtools::opt::Instruction& inst, std::unordered_set<uint32_t>& seen) const
+    bool PropagateStorageClass(spvtools::opt::Instruction& inst, std::unordered_set<uint32_t>& visited)
     {
         if (!IsPointerResultType(inst))
         {
             return false;
         }
 
+        // Use a "visited" set keyed by result_id for ANY pointer-producing instruction.
+        // This avoids infinite recursion in pointer SSA loops.
+        if (inst.result_id() != 0)
+        {
+            if (!visited.insert(inst.result_id()).second)
+                return false;
+        }
+
         // Already has the correct storage class
         if (IsPointerToStorageClass(inst, spv::StorageClass::PushConstant))
         {
-            if (inst.opcode() == spv::Op::OpPhi)
-            {
-                if (!seen.insert(inst.result_id()).second)
-                {
-                    return false;
-                }
-            }
-
-            bool                                     modified = false;
             std::vector<spvtools::opt::Instruction*> users;
             get_def_use_mgr()->ForEachUser(&inst, [&users](spvtools::opt::Instruction* user) {
                 users.push_back(user);
             });
+
+            bool modified = false;
             for (spvtools::opt::Instruction* user : users)
             {
-                if (PropagateStorageClass(*user, seen))
+                if (PropagateStorageClass(*user, visited))
                     modified = true;
             }
 
-            if (inst.opcode() == spv::Op::OpPhi)
-            {
-                seen.erase(inst.result_id());
-            }
             return modified;
         }
 
@@ -318,6 +315,9 @@ private:
             case spv::Op::OpCopyObject:
             case spv::Op::OpPhi:
             case spv::Op::OpSelect:
+            case spv::Op::OpBitcast:
+            case spv::Op::OpUndef:
+            case spv::Op::OpConstantNull:
                 ChangeResultStorageClass(inst);
                 {
                     std::vector<spvtools::opt::Instruction*> users;
@@ -326,7 +326,7 @@ private:
                     });
                     for (spvtools::opt::Instruction* user : users)
                     {
-                        PropagateStorageClass(*user, seen);
+                        PropagateStorageClass(*user, visited);
                     }
                 }
                 return true;
@@ -343,7 +343,6 @@ private:
             case spv::Op::OpCopyMemory:
             case spv::Op::OpCopyMemorySized:
             case spv::Op::OpImageTexelPointer:
-            case spv::Op::OpBitcast:
             case spv::Op::OpVariable:
                 // These don't produce pointer results that need updating,
                 // or the result type is independent of the operand's storage class.
@@ -358,19 +357,20 @@ private:
     }
 
     // Changes the result type of an instruction to use the new storage class.
-    void ChangeResultStorageClass(spvtools::opt::Instruction& inst) const
+    void ChangeResultStorageClass(spvtools::opt::Instruction& inst)
     {
         spvtools::opt::analysis::TypeManager* type_mgr         = context()->get_type_mgr();
         spvtools::opt::Instruction*           result_type_inst = get_def_use_mgr()->GetDef(inst.type_id());
 
-        if (result_type_inst->opcode() != spv::Op::OpTypePointer)
-        {
+        if (result_type_inst == nullptr || result_type_inst->opcode() != spv::Op::OpTypePointer)
             return;
-        }
 
         uint32_t pointee_type_id = result_type_inst->GetSingleWordInOperand(1);
         uint32_t new_result_type_id =
             type_mgr->FindPointerToType(pointee_type_id, spv::StorageClass::PushConstant);
+
+        if (new_result_type_id == 0)
+            return;
 
         inst.SetResultType(new_result_type_id);
         context()->UpdateDefUse(&inst);
@@ -407,16 +407,23 @@ private:
         return pointer_storage_class == storage_class;
     }
 
-    // Checks if a type has the Block decoration, which identifies it as a UBO struct type.
-    bool HasBlockDecoration(uint32_t type_id) const
+    bool HasDecoration(uint32_t id, spv::Decoration deco) const
     {
-        bool has_block = false;
+        bool found = false;
         get_decoration_mgr()->ForEachDecoration(
-            type_id, static_cast<uint32_t>(spv::Decoration::Block),
-            [&has_block](const spvtools::opt::Instruction&) {
-                has_block = true;
+            id, static_cast<uint32_t>(deco),
+            [&found](const spvtools::opt::Instruction&) {
+                found = true;
             });
-        return has_block;
+        return found;
+    }
+
+    // Checks if a type has the Block decoration (but not the BufferBlock),
+    // which identifies it as a UBO struct type.
+    bool IsUBOBlockType(uint32_t type_id) const
+    {
+        return HasDecoration(type_id, spv::Decoration::Block) &&
+            !HasDecoration(type_id, spv::Decoration::BufferBlock);
     }
 
     std::string m_BlockName;
