@@ -39,9 +39,9 @@
 #    include "../../../Common/interface/StringTools.hpp"
 #endif
 
-#include "../../../Platforms/Win32/interface/WinHPreface.h"
+// NB: do not use WinHPreface/WinHPostface as this is a public header
+//     and messing with Windows macros may break client code.
 #include <Windows.h>
-#include "../../../Platforms/Win32/interface/WinHPostface.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 

@@ -263,7 +263,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             EngineCI.AdapterId           = FindAdapter(Adapters, EnvCI.AdapterType, EnvCI.AdapterId);
             NumDeferredCtx               = EnvCI.NumDeferredContexts;
             EngineCI.NumDeferredContexts = NumDeferredCtx / 2;
-            ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
+            ppContexts.resize((std::max)(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &m_pDevice, ppContexts.data());
         }
         break;
@@ -323,7 +323,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 
             NumDeferredCtx               = EnvCI.NumDeferredContexts;
             EngineCI.NumDeferredContexts = NumDeferredCtx / 2;
-            ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
+            ppContexts.resize((std::max)(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             pFactoryD3D12->CreateDeviceAndContextsD3D12(EngineCI, &m_pDevice, ppContexts.data());
         }
         break;
@@ -355,7 +355,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             EngineCI.Window   = Window;
             EngineCI.Features = EnvCI.Features;
             NumDeferredCtx    = 0;
-            ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
+            ppContexts.resize((std::max)(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             RefCntAutoPtr<ISwapChain> pSwapChain; // We will use testing swap chain instead
             pFactoryOpenGL->CreateDeviceAndSwapChainGL(
                 EngineCI, &m_pDevice, ppContexts.data(), SCDesc, &pSwapChain);
@@ -416,7 +416,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 
             NumDeferredCtx               = EnvCI.NumDeferredContexts;
             EngineCI.NumDeferredContexts = NumDeferredCtx / 2;
-            ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
+            ppContexts.resize((std::max)(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             pFactoryVk->CreateDeviceAndContextsVk(EngineCI, &m_pDevice, ppContexts.data());
         }
         break;
@@ -468,7 +468,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 
             EngineWebGPUCreateInfo EngineCI{};
             EngineCI.Features = EnvCI.Features;
-            ppContexts.resize(std::max(size_t{1}, ContextCI.size()) + NumDeferredCtx);
+            ppContexts.resize((std::max)(size_t{1}, ContextCI.size()) + NumDeferredCtx);
             pFactoryWGPU->CreateDeviceAndContextsWebGPU(EngineCI, &m_pDevice, ppContexts.data());
         }
 #endif
@@ -480,7 +480,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
 
     for (Uint32 ctx = NumDeferredCtx / 2; ctx < NumDeferredCtx; ++ctx)
     {
-        m_pDevice->CreateDeferredContext(&ppContexts[std::max(ContextCI.size(), size_t{1}) + ctx]);
+        m_pDevice->CreateDeferredContext(&ppContexts[(std::max)(ContextCI.size(), size_t{1}) + ctx]);
     }
 
     {
@@ -499,7 +499,7 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
     }
 
     constexpr Uint8 InvalidQueueId = 64; // MAX_COMMAND_QUEUES
-    m_NumImmediateContexts         = std::max(1u, static_cast<Uint32>(ContextCI.size()));
+    m_NumImmediateContexts         = (std::max)(1u, static_cast<Uint32>(ContextCI.size()));
     m_pDeviceContexts.resize(ppContexts.size());
     for (size_t i = 0; i < ppContexts.size(); ++i)
     {
