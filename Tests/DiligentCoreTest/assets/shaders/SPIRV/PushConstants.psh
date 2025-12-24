@@ -11,10 +11,15 @@ struct PushConstants_t
 //note that cbuffer PushConstants is not allowed in DXC, but ConstantBuffer<PushConstants_t> is allowed
 [[vk::push_constant]] ConstantBuffer<PushConstants_t> PushConstants;
 
+float GetScale(ConstantBuffer<PushConstants_t> PC)
+{
+    return PC.g_Scale;
+}
+
 float4 main() : SV_Target
 {
     // Use push constant data through the structure instance
-    float4 result = PushConstants.g_Color * PushConstants.g_Scale;
+    float4 result = PushConstants.g_Color * GetScale(PushConstants);
 
     // Apply offset to result (simplified example)
     result.xy += PushConstants.g_Offset;
