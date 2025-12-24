@@ -276,12 +276,7 @@ std::vector<unsigned int> LoadSPIRVFromHLSL(const std::string& ShaderSource,
         SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
     }
 
-    // SPIR-V bytecode generated from HLSL must be legalized to
-    // turn it into a valid vulkan SPIR-V shader.
-    SPIRV_OPTIMIZATION_FLAGS OptimizationFlags = SPIRV_OPTIMIZATION_FLAG_LEGALIZATION;
-    std::vector<uint32_t> LegalizedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, OptimizationFlags);
-
-    return LegalizedSPIRV;
+    return SPIRV;
 }
 
 std::vector<unsigned int> LoadSPIRVFromGLSL(const std::string& ShaderSource, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
@@ -564,6 +559,15 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LA
     // Step 3: Patch fragment shader to use push constants
     std::vector<uint32_t> FS_SPIRV_Patched = ConvertUBOToPushConstants(FS_SPIRV, BlockName);
     ASSERT_FALSE(FS_SPIRV_Patched.empty()) << "Failed to patch UBO to push constants with BlockName: " << BlockName;
+
+    if (SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+    {
+        // SPIR-V bytecode generated from HLSL must be legalized to
+        // turn it into a valid vulkan SPIR-V shader.
+        SPIRV_OPTIMIZATION_FLAGS OptimizationFlags = SPIRV_OPTIMIZATION_FLAG_LEGALIZATION | SPIRV_OPTIMIZATION_FLAG_STRIP_REFLECTION;
+        VS_SPIRV                                   = OptimizeSPIRV(VS_SPIRV, SPV_ENV_MAX, OptimizationFlags);
+        FS_SPIRV_Patched                           = OptimizeSPIRV(FS_SPIRV_Patched, SPV_ENV_MAX, OptimizationFlags);
+    }
 
     // Step 4: Create renderer with patched shaders
     PatchedPushConstantsRenderer Renderer{
