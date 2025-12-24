@@ -49,6 +49,8 @@ public:
 
     void TakeSnapshot(ITexture* pCopyFrom) override;
 
+    void NativeDrawCompareWithSnapshot(ITexture* pTexture) override;
+
     WGPUTexture GetWebGPUColorTexture()
     {
         return m_wgpuColorTexture;

@@ -158,6 +158,11 @@ void TestingSwapChainGL::TakeSnapshot(ITexture* pCopyFrom)
     }
 }
 
+void TestingSwapChainGL::NativeDrawCompareWithSnapshot(ITexture* pTexture)
+{
+    //NOT IMPL YET
+}
+
 void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
                               IDeviceContext*      pContext,
                               const SwapChainDesc& SCDesc,

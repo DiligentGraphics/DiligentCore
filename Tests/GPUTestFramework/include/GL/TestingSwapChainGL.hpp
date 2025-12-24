@@ -45,6 +45,8 @@ public:
 
     virtual void TakeSnapshot(ITexture* pCopyFrom) override final;
 
+    virtual void NativeDrawCompareWithSnapshot(ITexture* pTexture) override final;
+
     GLuint GetRenderTargetGLHandle()
     {
         return m_RenderTarget;

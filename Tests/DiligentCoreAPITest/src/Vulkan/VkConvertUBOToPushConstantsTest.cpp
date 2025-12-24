@@ -32,17 +32,11 @@
 
 #include "GLSLangUtils.hpp"
 #include "DXCompiler.hpp"
+#include "SPIRVTools.hpp"
 
 #include "volk.h"
 
 #include "gtest/gtest.h"
-
-// Forward declarations - avoid including SPIRVTools.hpp directly
-namespace Diligent
-{
-std::vector<uint32_t> ConvertUBOToPushConstants(const std::vector<uint32_t>& SPIRV,
-                                                const std::string&           BlockName);
-}
 
 namespace Diligent
 {
@@ -282,7 +276,12 @@ std::vector<unsigned int> LoadSPIRVFromHLSL(const std::string& ShaderSource,
         SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
     }
 
-    return SPIRV;
+    // SPIR-V bytecode generated from HLSL must be legalized to
+    // turn it into a valid vulkan SPIR-V shader.
+    SPIRV_OPTIMIZATION_FLAGS OptimizationFlags = SPIRV_OPTIMIZATION_FLAG_LEGALIZATION;
+    std::vector<uint32_t> LegalizedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, OptimizationFlags);
+
+    return LegalizedSPIRV;
 }
 
 std::vector<unsigned int> LoadSPIRVFromGLSL(const std::string& ShaderSource, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
@@ -335,15 +334,15 @@ void CompileSPIRV(const std::string&         ShaderSource,
 class PatchedPushConstantsRenderer
 {
 public:
-    PatchedPushConstantsRenderer(ISwapChain*                    pSwapChain,
-                                 VkRenderPass                   vkRenderPass,
-                                 const std::vector<uint32_t>&   VS_SPIRV,
-                                 const std::vector<uint32_t>&   FS_SPIRV,
-                                 uint32_t                       PushConstantSize,
-                                 VkShaderStageFlags             PushConstantStages = VK_SHADER_STAGE_FRAGMENT_BIT)
+    PatchedPushConstantsRenderer(ISwapChain*                  pSwapChain,
+                                 VkRenderPass                 vkRenderPass,
+                                 const std::vector<uint32_t>& VS_SPIRV,
+                                 const std::vector<uint32_t>& FS_SPIRV,
+                                 uint32_t                     PushConstantSize,
+                                 VkShaderStageFlags           PushConstantStages = VK_SHADER_STAGE_FRAGMENT_BIT)
     {
-        auto* pEnv     = TestingEnvironmentVk::GetInstance();
-        m_vkDevice     = pEnv->GetVkDevice();
+        auto* pEnv = TestingEnvironmentVk::GetInstance();
+        m_vkDevice = pEnv->GetVkDevice();
 
         const auto& SCDesc = pSwapChain->GetDesc();
 
@@ -376,10 +375,10 @@ public:
         PipelineCI.sType                        = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 
         VkPipelineShaderStageCreateInfo ShaderStages[2] = {};
-        ShaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        ShaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
-        ShaderStages[0].module = m_vkVSModule;
-        ShaderStages[0].pName  = "main";
+        ShaderStages[0].sType                           = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        ShaderStages[0].stage                           = VK_SHADER_STAGE_VERTEX_BIT;
+        ShaderStages[0].module                          = m_vkVSModule;
+        ShaderStages[0].pName                           = "main";
 
         ShaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         ShaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -387,32 +386,32 @@ public:
         ShaderStages[1].pName  = "main";
 
         PipelineCI.pStages    = ShaderStages;
-        PipelineCI.stageCount = 2;
+        PipelineCI.stageCount = _countof(ShaderStages);
         PipelineCI.layout     = m_vkLayout;
 
         VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
-        VertexInputStateCI.sType     = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        PipelineCI.pVertexInputState = &VertexInputStateCI;
+        VertexInputStateCI.sType                                = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        PipelineCI.pVertexInputState                            = &VertexInputStateCI;
 
         VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
-        InputAssemblyCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        InputAssemblyCI.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        InputAssemblyCI.primitiveRestartEnable = VK_FALSE;
-        PipelineCI.pInputAssemblyState         = &InputAssemblyCI;
+        InputAssemblyCI.sType                                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        InputAssemblyCI.topology                               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        InputAssemblyCI.primitiveRestartEnable                 = VK_FALSE;
+        PipelineCI.pInputAssemblyState                         = &InputAssemblyCI;
 
         VkPipelineTessellationStateCreateInfo TessStateCI = {};
-        TessStateCI.sType             = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-        PipelineCI.pTessellationState = &TessStateCI;
+        TessStateCI.sType                                 = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        PipelineCI.pTessellationState                     = &TessStateCI;
 
         VkPipelineViewportStateCreateInfo ViewPortStateCI = {};
-        ViewPortStateCI.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-        ViewPortStateCI.viewportCount = 1;
+        ViewPortStateCI.sType                             = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        ViewPortStateCI.viewportCount                     = 1;
 
-        VkViewport Viewport = {};
-        Viewport.y          = static_cast<float>(SCDesc.Height);
-        Viewport.width      = static_cast<float>(SCDesc.Width);
-        Viewport.height     = -static_cast<float>(SCDesc.Height);
-        Viewport.maxDepth   = 1;
+        VkViewport Viewport        = {};
+        Viewport.y                 = static_cast<float>(SCDesc.Height);
+        Viewport.width             = static_cast<float>(SCDesc.Width);
+        Viewport.height            = -static_cast<float>(SCDesc.Height);
+        Viewport.maxDepth          = 1;
         ViewPortStateCI.pViewports = &Viewport;
 
         ViewPortStateCI.scissorCount = 1;
@@ -423,26 +422,38 @@ public:
         PipelineCI.pViewportState    = &ViewPortStateCI;
 
         VkPipelineRasterizationStateCreateInfo RasterizerStateCI = {};
-        RasterizerStateCI.sType       = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-        RasterizerStateCI.polygonMode = VK_POLYGON_MODE_FILL;
-        RasterizerStateCI.cullMode    = VK_CULL_MODE_NONE;
-        RasterizerStateCI.lineWidth   = 1;
-        PipelineCI.pRasterizationState = &RasterizerStateCI;
+        RasterizerStateCI.sType                                  = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        RasterizerStateCI.polygonMode                            = VK_POLYGON_MODE_FILL;
+        RasterizerStateCI.cullMode                               = VK_CULL_MODE_NONE;
+        RasterizerStateCI.lineWidth                              = 1;
+        PipelineCI.pRasterizationState                           = &RasterizerStateCI;
 
+        // Multisample state (24)
         VkPipelineMultisampleStateCreateInfo MSStateCI = {};
-        MSStateCI.sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+
+        MSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        MSStateCI.pNext = nullptr;
+        MSStateCI.flags = 0; // reserved for future use
+        // If subpass uses color and/or depth/stencil attachments, then the rasterizationSamples member of
+        // pMultisampleState must be the same as the sample count for those subpass attachments
         MSStateCI.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-        uint32_t SampleMask[]          = {0xFFFFFFFF, 0};
-        MSStateCI.pSampleMask          = SampleMask;
-        PipelineCI.pMultisampleState   = &MSStateCI;
+        MSStateCI.sampleShadingEnable  = VK_FALSE;
+        MSStateCI.minSampleShading     = 0;               // a minimum fraction of sample shading if sampleShadingEnable is set to VK_TRUE.
+        uint32_t SampleMask[]          = {0xFFFFFFFF, 0}; // Vulkan spec allows up to 64 samples
+        MSStateCI.pSampleMask          = SampleMask;      // an array of static coverage information that is ANDed with
+                                                          // the coverage information generated during rasterization (25.3)
+        MSStateCI.alphaToCoverageEnable = VK_FALSE;       // whether a temporary coverage value is generated based on
+                                                          // the alpha component of the fragment's first color output
+        MSStateCI.alphaToOneEnable   = VK_FALSE;          // whether the alpha component of the fragment's first color output is replaced with one
+        PipelineCI.pMultisampleState = &MSStateCI;
 
         VkPipelineDepthStencilStateCreateInfo DepthStencilStateCI = {};
-        DepthStencilStateCI.sType     = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        PipelineCI.pDepthStencilState = &DepthStencilStateCI;
+        DepthStencilStateCI.sType                                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        PipelineCI.pDepthStencilState                             = &DepthStencilStateCI;
 
         VkPipelineColorBlendStateCreateInfo BlendStateCI = {};
         VkPipelineColorBlendAttachmentState Attachment   = {};
-        Attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+        Attachment.colorWriteMask                        = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
             VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         BlendStateCI.sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         BlendStateCI.pAttachments    = &Attachment;
@@ -450,8 +461,8 @@ public:
         PipelineCI.pColorBlendState  = &BlendStateCI;
 
         VkPipelineDynamicStateCreateInfo DynamicStateCI = {};
-        DynamicStateCI.sType     = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        PipelineCI.pDynamicState = &DynamicStateCI;
+        DynamicStateCI.sType                            = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        PipelineCI.pDynamicState                        = &DynamicStateCI;
 
         PipelineCI.renderPass         = vkRenderPass;
         PipelineCI.subpass            = 0;
@@ -490,7 +501,7 @@ private:
 };
 
 // Test helper that runs the full test flow
-void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, const std::string& BlockName)
+void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE SourceLanguage, const std::string& BlockName)
 {
     auto* pEnv = TestingEnvironmentVk::GetInstance();
     if (!pEnv)
@@ -508,7 +519,7 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, const std::strin
 
     if (Compiler == SHADER_COMPILER_DXC)
     {
-        if (!VkConvertUBOToPushConstantsTest::DXCompiler || 
+        if (!VkConvertUBOToPushConstantsTest::DXCompiler ||
             !VkConvertUBOToPushConstantsTest::DXCompiler->IsLoaded())
         {
             GTEST_SKIP() << "Skipped because DXCompiler not available";
@@ -516,16 +527,10 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, const std::strin
         }
     }
 
-
     auto* pContext   = pEnv->GetDeviceContext();
     auto* pSwapChain = pEnv->GetSwapChain();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
-    if (!pTestingSwapChain)
-    {
-        GTEST_SKIP() << "Testing swap chain not available";
-        return;
-    }
 
     auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
@@ -536,33 +541,29 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, const std::strin
     const float ClearColor[] = {0.0f, 0.0f, 0.0f, 0.0f};
     RenderDrawCommandReferenceVk(pSwapChain, ClearColor);
 
-    // Take snapshot of reference
+    // Take snapshot of reference image
     pTestingSwapChain->TakeSnapshot();
 
     // Step 2: Compile shaders to SPIR-V
-    std::vector<uint32_t> VS_SPIRV;
-    CompileSPIRV(GLSL_ProceduralTriangleVS, "GLSL_ProceduralTriangleVS", Compiler, SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_GLSL, VS_SPIRV);
-    ASSERT_FALSE(VS_SPIRV.empty()) << "Failed to compile vertex shader";
+    std::vector<uint32_t> VS_SPIRV, FS_SPIRV;
 
-    std::vector<uint32_t> FS_SPIRV;
-    CompileSPIRV(GLSL_FragmentShaderWithUBO, "GLSL_FragmentShaderWithUBO", Compiler, SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_GLSL, FS_SPIRV);
-    ASSERT_FALSE(FS_SPIRV.empty()) << "Failed to compile fragment shader";
-
+    if (SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
-        auto fp = fopen("d:/unpatched.spv", "wb");
-        fwrite(FS_SPIRV.data(), FS_SPIRV.size() * 4, 1, fp);
-        fclose(fp);
+        CompileSPIRV(HLSL_ProceduralTriangleVS, "HLSL_ProceduralTriangleVS", Compiler, SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, VS_SPIRV);
+        CompileSPIRV(HLSL_FragmentShaderWithCB, "HLSL_FragmentShaderWithCB", Compiler, SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, FS_SPIRV);
     }
+    else
+    {
+        CompileSPIRV(GLSL_ProceduralTriangleVS, "GLSL_ProceduralTriangleVS", Compiler, SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_GLSL, VS_SPIRV);
+        CompileSPIRV(GLSL_FragmentShaderWithUBO, "GLSL_FragmentShaderWithUBO", Compiler, SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_GLSL, FS_SPIRV);
+    }
+
+    ASSERT_FALSE(VS_SPIRV.empty()) << "Failed to compile vertex shader";
+    ASSERT_FALSE(FS_SPIRV.empty()) << "Failed to compile fragment shader";
 
     // Step 3: Patch fragment shader to use push constants
     std::vector<uint32_t> FS_SPIRV_Patched = ConvertUBOToPushConstants(FS_SPIRV, BlockName);
     ASSERT_FALSE(FS_SPIRV_Patched.empty()) << "Failed to patch UBO to push constants with BlockName: " << BlockName;
-
-    {
-        auto fp = fopen("d:/patched.spv", "wb");
-        fwrite(FS_SPIRV_Patched.data(), FS_SPIRV_Patched.size() * 4, 1, fp);
-        fclose(fp);
-    }
 
     // Step 4: Create renderer with patched shaders
     PatchedPushConstantsRenderer Renderer{
@@ -593,34 +594,39 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, const std::strin
     vkEndCommandBuffer(vkCmdBuffer);
     pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
 
-    // Step 6: Present triggers comparison with snapshot
-    pSwapChain->Present();
+    // Step 6: Comparison native draw image with ref snapshot
+    pTestingSwapChainVk->NativeDrawCompareWithSnapshot(nullptr);
 }
 
 } // namespace
 
 // Test patching UBO using struct type name "CB1"
-TEST(VkConvertUBOToPushConstantsTest, PatchByStructTypeName_GLSLang)
+TEST_F(VkConvertUBOToPushConstantsTest, PatchByStructTypeName_GLSLang_GLSL)
 {
-    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_GLSLANG, "CB1");
+    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_GLSLANG, SHADER_SOURCE_LANGUAGE_GLSL, "CB1");
 }
 
 // Test patching UBO using variable instance name "cb"
-TEST(VkConvertUBOToPushConstantsTest, PatchByVariableName_GLSLang)
+TEST_F(VkConvertUBOToPushConstantsTest, PatchByVariableName_GLSLang_GLSL)
 {
-    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_GLSLANG, "cb");
+    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_GLSLANG, SHADER_SOURCE_LANGUAGE_GLSL, "cb");
 }
 
 // Test patching CB using cbuffer block name "CB1" with DXC compiler
 // Note: In HLSL, cbuffer name and struct name may be the same or different.
 // DXC typically generates both OpName for the struct type and the variable.
-TEST(VkConvertUBOToPushConstantsTest, PatchByStructTypeName_DXC)
+
+TEST_F(VkConvertUBOToPushConstantsTest, PatchByStructTypeName_GLSLang_HLSL)
 {
-    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_DXC, "CB1");
+    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_GLSLANG, SHADER_SOURCE_LANGUAGE_HLSL, "CB1");
+}
+
+TEST_F(VkConvertUBOToPushConstantsTest, PatchByStructTypeName_DXC_HLSL)
+{
+    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_DXC, SHADER_SOURCE_LANGUAGE_HLSL, "CB1");
 }
 
 
 } // namespace Testing
 
 } // namespace Diligent
-
