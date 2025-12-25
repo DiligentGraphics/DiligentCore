@@ -345,8 +345,12 @@ void TestConvertUBOToPushConstant_InvalidBlockName(SHADER_COMPILER Compiler)
     if (::testing::Test::IsSkipped())
         return;
 
-    std::vector<unsigned int> PatchedSPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
-    EXPECT_EQ(SPIRV, PatchedSPIRV);
+    TestingEnvironment* pEnv = TestingEnvironment::GetInstance();
+    pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing invalid input\n");
+    pEnv->PushExpectedErrorSubstring("Failed to convert UBO block 'CB5': no OpName found.");
+
+    SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+    EXPECT_TRUE(SPIRV.empty());
 }
 
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidBlockName_GLSLang)
@@ -369,8 +373,12 @@ void TestConvertUBOToPushConstant_InvalidResourceType(SHADER_COMPILER Compiler)
     if (::testing::Test::IsSkipped())
         return;
 
-    std::vector<unsigned int> PatchedSPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
-    EXPECT_EQ(SPIRV, PatchedSPIRV);
+    TestingEnvironment* pEnv = TestingEnvironment::GetInstance();
+    pEnv->SetErrorAllowance(1, "No worries, errors are expected: testing invalid input\n");
+    pEnv->PushExpectedErrorSubstring("Failed to convert UBO block 'g_ROBuffer': no matching UniformBuffer found.");
+
+    SPIRV = ConvertUBOToPushConstants(SPIRV, PatchedAttribName);
+    EXPECT_TRUE(SPIRV.empty());
 }
 
 TEST_F(SPIRVShaderResourcesTest, ConvertUBOToPushConstant_InvalidResourceType_GLSLang)
