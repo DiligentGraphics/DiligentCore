@@ -724,7 +724,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
         ShaderModel = MaxSM;
     }
 
-    const String       Profile = GetHLSLProfileString(ShaderCI.Desc.ShaderType, ShaderModel);
+    const String       Profile = GetHLSLProfileString(ShaderCI.Desc.ShaderType, ShaderModel, ShaderCI.HLSLProfileArguments);
     const std::wstring wstrProfile{Profile.begin(), Profile.end()};
     const std::wstring wstrEntryPoint{ShaderCI.EntryPoint, ShaderCI.EntryPoint + strlen(ShaderCI.EntryPoint)};
 
