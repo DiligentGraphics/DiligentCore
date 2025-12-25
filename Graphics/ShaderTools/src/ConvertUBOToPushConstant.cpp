@@ -74,6 +74,12 @@ public:
         m_BlockName{block_name}
     {}
 
+    static spvtools::Optimizer::PassToken Create(std::string BlockName)
+    {
+        return spvtools::Optimizer::PassToken{
+            std::make_unique<ConvertUBOToPushConstantPass>(BlockName)};
+    }
+
     const char* name() const override { return "convert-ubo-to-push-constant"; }
 
     Status Process() override
@@ -95,8 +101,8 @@ public:
 
         if (candidate_ids.empty())
         {
-            // Block name not found
-            return Status::SuccessWithoutChange;
+            LOG_ERROR_MESSAGE("Failed to convert UBO block '", m_BlockName, "': no OpName found.");
+            return Status::Failure;
         }
 
         // Try each candidate ID to find a UniformBuffer
@@ -190,8 +196,8 @@ public:
 
         if (target_var == nullptr)
         {
-            // No UniformBuffer found with the given block name
-            return Status::SuccessWithoutChange;
+            LOG_ERROR_MESSAGE("Failed to convert UBO block '", m_BlockName, "': no matching UniformBuffer found.");
+            return Status::Failure;
         }
 
         uint32_t target_var_id = target_var->result_id();
@@ -444,8 +450,7 @@ std::vector<uint32_t> ConvertUBOToPushConstants(
     optimizer.SetMessageConsumer(SPIRVToolsInternal::SpvOptimizerMessageConsumer);
 
     // Register the pass to convert UBO to push constant using custom out-of-tree pass
-    optimizer.RegisterPass(spvtools::Optimizer::PassToken(
-        std::make_unique<ConvertUBOToPushConstantPass>(BlockName)));
+    optimizer.RegisterPass(ConvertUBOToPushConstantPass::Create(BlockName));
 
     spvtools::OptimizerOptions options;
 #ifdef DILIGENT_DEVELOPMENT
