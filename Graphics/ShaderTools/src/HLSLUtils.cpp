@@ -62,7 +62,7 @@ String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI) noexcept(false)
     return HLSLSource;
 }
 
-String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel)
+String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel, const char* ShaderProfileArguments)
 {
     String strShaderProfile;
 
@@ -95,6 +95,12 @@ String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel)
     strShaderProfile += std::to_string(ShaderModel.Major);
     strShaderProfile += "_";
     strShaderProfile += std::to_string(ShaderModel.Minor);
+
+    if (ShaderProfileArguments)
+    {
+        strShaderProfile += " ";
+        strShaderProfile += std::to_string(ShaderProfileArguments);
+    }
 
     return strShaderProfile;
 }

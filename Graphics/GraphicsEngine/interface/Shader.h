@@ -554,8 +554,8 @@ struct ShaderCreateInfo
     /// Shader compile flags (see Diligent::SHADER_COMPILE_FLAGS).
     SHADER_COMPILE_FLAGS CompileFlags DEFAULT_INITIALIZER(SHADER_COMPILE_FLAG_NONE);
 
-    /// Shader optimization level. See Diligent::SHADER_OPTIMIZATION_LEVEL.
-    SHADER_OPTIMIZATION_LEVEL ShaderOptimizationLevel DEFAULT_INITIALIZER(SHADER_OPTIMIZATION_LEVEL_DEFAULT);
+    /// HLSL Shader profile flags
+    const char* HLSLProfileArguments DEFAULT_INITIALIZER(nullptr);
 
     /// Whether to load constant buffer reflection information.
 
