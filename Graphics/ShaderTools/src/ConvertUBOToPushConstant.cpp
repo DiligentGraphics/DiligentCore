@@ -220,22 +220,15 @@ public:
         }
 
         // IMPORTANT: FindPointerToType() may create a new type instruction at the end of
-        // the types_values section. However, SPIR-V requires all IDs to be defined before
-        // use (SSA form). If the new pointer type was just created, it will appear AFTER
-        // the OpVariable that uses it, which violates SPIR-V validation rules.
+        // the types_values section, or it may return an existing type. In either case,
+        // SPIR-V requires all IDs to be defined before use (SSA form).
         //
-        // We need to move the newly created pointer type instruction to appear BEFORE
-        // the OpVariable instruction that will reference it.
+        // We must ensure the pointer type instruction appears BEFORE the OpVariable
+        // that will reference it. However, we must NOT move an existing type that is
+        // already correctly positioned, as that could break other instructions that
+        // depend on it being defined before their use.
         spvtools::opt::Instruction* new_ptr_type_inst = get_def_use_mgr()->GetDef(new_ptr_type_id);
-        if (new_ptr_type_inst != nullptr && new_ptr_type_inst != ptr_type_inst)
-        {
-            // The new pointer type was created (not reused). Move it before the variable.
-            // In SPIR-V, types appear in the types_values section before variables.
-            // We insert the new type right after the original pointer type to maintain
-            // proper ordering within the types section.
-            new_ptr_type_inst->RemoveFromList();
-            new_ptr_type_inst->InsertAfter(ptr_type_inst);
-        }
+        EnsureTypeBeforeUseInTypesValues(new_ptr_type_inst, target_var);
 
         // Update the variable's type to the new pointer type
         target_var->SetResultType(new_ptr_type_id);
@@ -282,6 +275,74 @@ public:
     }
 
 private:
+    // Returns true if instruction 'a' appears before instruction 'b' in module->types_values().
+    // This is used to check if a type definition comes before its use in the SPIR-V module.
+    bool ComesBeforeInTypesValues(const spvtools::opt::Instruction* a,
+                                  const spvtools::opt::Instruction* b) const
+    {
+        if (a == nullptr || b == nullptr || a == b)
+            return false;
+
+        bool seen_a = false;
+        for (auto& inst : context()->module()->types_values())
+        {
+            if (&inst == a)
+            {
+                seen_a = true;
+            }
+            else if (&inst == b)
+            {
+                return seen_a;
+            }
+        }
+        // If either is not in types_values(), be conservative and return false.
+        return false;
+    }
+
+    // Ensures 'type_inst' is placed before 'use_inst' in the types_values section.
+    // Only moves the instruction when type_inst currently appears after use_inst.
+    // This is necessary because SPIR-V requires all IDs to be defined before use (SSA form).
+    //
+    // IMPORTANT: This function only moves type_inst forward (earlier in the list), never backward.
+    // If type_inst is already before use_inst, no action is taken to avoid breaking existing uses.
+    //
+    // If use_inst is not in types_values (e.g., it's in a function body), no action is taken
+    // because the entire types_values section appears before any function in the module.
+    void EnsureTypeBeforeUseInTypesValues(spvtools::opt::Instruction* type_inst,
+                                          spvtools::opt::Instruction* use_inst)
+    {
+        if (type_inst == nullptr || use_inst == nullptr)
+            return;
+
+        // Check if use_inst is in types_values section.
+        // If it's not (e.g., it's in a function body like OpAccessChain),
+        // we don't need to move type_inst because the entire types_values section
+        // appears before any function in the module.
+        bool use_in_types_values = false;
+        for (auto& inst : context()->module()->types_values())
+        {
+            if (&inst == use_inst)
+            {
+                use_in_types_values = true;
+                break;
+            }
+        }
+
+        if (!use_in_types_values)
+            return;
+
+        // If type_inst already comes before use_inst, do nothing.
+        // This is critical: moving an existing type that's already correctly positioned
+        // could break other instructions that depend on it.
+        if (ComesBeforeInTypesValues(type_inst, use_inst))
+            return;
+
+        // type_inst appears after use_inst (or not found), so we need to move it.
+        // Insert it immediately before the use_inst to satisfy the SSA requirement.
+        type_inst->RemoveFromList();
+        type_inst->InsertBefore(use_inst);
+    }
+
     // Recursively updates the storage class of pointer types used by instructions
     // that reference the target variable.
     bool PropagateStorageClass(spvtools::opt::Instruction& inst, std::unordered_set<uint32_t>& visited)
@@ -386,16 +447,13 @@ private:
         if (new_result_type_id == 0)
             return;
 
-        // If a new type was created, ensure it's properly positioned in the types section.
-        // FindPointerToType may append new types at the end, but they need to appear
-        // before any instructions that use them (SPIR-V SSA requirement).
+        // Ensure the pointer type is properly positioned in the types section.
+        // FindPointerToType may return an existing type or create a new one at the end.
+        // If inst is in types_values (e.g., OpConstantNull), we need to ensure the type
+        // is defined before inst. If inst is in a function body (e.g., OpAccessChain),
+        // no reordering is needed since types_values always precedes functions.
         spvtools::opt::Instruction* new_type_inst = get_def_use_mgr()->GetDef(new_result_type_id);
-        if (new_type_inst != nullptr && new_type_inst != result_type_inst)
-        {
-            // Move the new type to appear after the original type in the types section
-            new_type_inst->RemoveFromList();
-            new_type_inst->InsertAfter(result_type_inst);
-        }
+        EnsureTypeBeforeUseInTypesValues(new_type_inst, &inst);
 
         inst.SetResultType(new_result_type_id);
         context()->UpdateDefUse(&inst);
