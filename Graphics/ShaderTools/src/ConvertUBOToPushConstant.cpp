@@ -280,8 +280,10 @@ private:
     bool ComesBeforeInTypesValues(const spvtools::opt::Instruction* a,
                                   const spvtools::opt::Instruction* b) const
     {
-        if (a == nullptr || b == nullptr || a == b)
+        if (a == nullptr || b == nullptr)
             return false;
+        if (a == b)
+            return true; // Same instruction, no reordering needed
 
         bool seen_a = false;
         for (auto& inst : context()->module()->types_values())
