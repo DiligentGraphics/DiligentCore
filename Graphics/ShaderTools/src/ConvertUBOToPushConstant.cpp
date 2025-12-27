@@ -543,6 +543,13 @@ std::vector<uint32_t> ConvertUBOToPushConstants(
 
     optimizer.SetMessageConsumer(SPIRVToolsInternal::SpvOptimizerMessageConsumer);
 
+    // Inline all function calls to eliminate OpFunctionCall instructions
+    optimizer.RegisterPass(spvtools::CreateInlineExhaustivePass());
+
+    // Inlining tends to leave junk behind. You can clean it up
+    optimizer.RegisterPass(spvtools::CreateAggressiveDCEPass());
+    optimizer.RegisterPass(spvtools::CreateEliminateDeadFunctionsPass());
+
     // Register the pass to convert UBO to push constant using custom out-of-tree pass
     optimizer.RegisterPass(ConvertUBOToPushConstantPass::Create(BlockName));
 
