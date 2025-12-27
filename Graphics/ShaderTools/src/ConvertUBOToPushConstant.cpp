@@ -246,6 +246,12 @@ public:
         context()->UpdateDefUse(target_var);
         modified = true;
 
+        // IMPORTANT: We changed pointer types + storage class; TypeManager and other analyses may be stale.
+        // Invalidate analyses that can cache type information and def-use.
+        context()->InvalidateAnalyses(spvtools::opt::IRContext::kAnalysisTypes |
+                                      spvtools::opt::IRContext::kAnalysisDefUse |
+                                      spvtools::opt::IRContext::kAnalysisDecorations);
+
         // Propagate storage class change to all users of this variable
         std::vector<spvtools::opt::Instruction*> users;
         get_def_use_mgr()->ForEachUser(target_var, [&users](spvtools::opt::Instruction* user) {
@@ -270,6 +276,9 @@ public:
             return decoration == spv::Decoration::Binding ||
                 decoration == spv::Decoration::DescriptorSet;
         });
+
+        // Invalidate decoration analysis since we modified decorations
+        context()->InvalidateAnalyses(spvtools::opt::IRContext::kAnalysisDecorations);
 
         return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
     }
