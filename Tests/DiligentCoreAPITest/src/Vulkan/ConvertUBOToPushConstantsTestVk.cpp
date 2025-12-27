@@ -559,6 +559,7 @@ public:
 
             VkResult res = vkCreateImageView(m_vkDevice, &ImageViewCI, nullptr, &m_vkRenderTargetView);
             VERIFY_EXPR(res >= 0);
+            (void)res;
 
             ImageViewCI.image                       = m_vkDepthBufferImage;
             ImageViewCI.format                      = DepthFormat;
@@ -566,6 +567,7 @@ public:
 
             res = vkCreateImageView(m_vkDevice, &ImageViewCI, nullptr, &m_vkDepthBufferView);
             VERIFY_EXPR(res >= 0);
+            (void)res;
         }
 
         {
