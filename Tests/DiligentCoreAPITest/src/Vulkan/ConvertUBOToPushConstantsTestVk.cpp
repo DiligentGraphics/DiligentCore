@@ -201,7 +201,7 @@ void main()
 // Use a struct to represent vec4 as 4 contiguous floats.
 struct PushConstantData
 {
-    float4 Factor; // vec4 Factor in Level1Data.Nested.Inner (16 bytes)
+    float4 Factor;    // vec4 Factor in Level1Data.Nested.Inner (16 bytes)
     float4 Colors[6]; // vec4 Colors[6] (16 bytes * 6)
 };
 
