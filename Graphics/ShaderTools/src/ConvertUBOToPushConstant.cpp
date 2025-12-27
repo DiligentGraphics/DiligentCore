@@ -443,7 +443,12 @@ private:
             default:
                 // Unexpected pointer-producing instruction. This may indicate
                 // a new SPIR-V extension or pattern not yet handled.
-                UNEXPECTED("Unexpected instruction with pointer result type: opcode ", static_cast<uint32_t>(inst.opcode()));
+                // Stop propagation on this path and log a warning.
+                LOG_WARNING_MESSAGE("ConvertUBOToPushConstantPass: unhandled pointer-producing opcode ",
+                                    static_cast<uint32_t>(inst.opcode()),
+                                    " (", spvOpcodeString(inst.opcode()),
+                                    "). Storage-class propagation stopped for this chain. "
+                                    "If this causes issues, please report it to the developers.");
                 return false;
         }
     }
