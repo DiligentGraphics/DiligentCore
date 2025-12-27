@@ -773,7 +773,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                 {
                     OptimizationFlags |= SPIRV_OPTIMIZATION_FLAG_LEGALIZATION;
                 }
-                std::vector<uint32_t> StrippedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, OptimizationFlags);
+                std::vector<uint32_t> StrippedSPIRV = OptimizeSPIRV(SPIRV, OptimizationFlags);
                 if (!StrippedSPIRV.empty())
                     SPIRV = std::move(StrippedSPIRV);
                 else

@@ -31,8 +31,6 @@
 
 #include "FlagEnum.h"
 
-#include "spirv-tools/libspirv.h"
-
 namespace Diligent
 {
 
@@ -47,7 +45,10 @@ DEFINE_FLAG_ENUM_OPERATORS(SPIRV_OPTIMIZATION_FLAGS);
 
 
 std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV,
-                                    spv_target_env               TargetEnv,
+                                    int                          TargetEnv, // spv_target_env
+                                    SPIRV_OPTIMIZATION_FLAGS     Passes);
+
+std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV,
                                     SPIRV_OPTIMIZATION_FLAGS     Passes);
 
 /// Converts a uniform buffer variable to a push constant in SPIR-V bytecode.

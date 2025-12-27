@@ -108,14 +108,14 @@ spv_target_env SpvTargetEnvFromSPIRV(const std::vector<uint32_t>& SPIRV)
 
 } // namespace SPIRVToolsInternal
 
-std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_target_env TargetEnv, SPIRV_OPTIMIZATION_FLAGS Passes)
+std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, int TargetEnv, SPIRV_OPTIMIZATION_FLAGS Passes)
 {
     VERIFY_EXPR(Passes != SPIRV_OPTIMIZATION_FLAG_NONE);
 
     if (TargetEnv == SPV_ENV_MAX)
         TargetEnv = SPIRVToolsInternal::SpvTargetEnvFromSPIRV(SrcSPIRV);
 
-    spvtools::Optimizer SpirvOptimizer(TargetEnv);
+    spvtools::Optimizer SpirvOptimizer(static_cast<spv_target_env>(TargetEnv));
     SpirvOptimizer.SetMessageConsumer(SPIRVToolsInternal::SpvOptimizerMessageConsumer);
 
     spvtools::OptimizerOptions Options;
@@ -152,6 +152,12 @@ std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV, spv_t
         OptimizedSPIRV.clear();
 
     return OptimizedSPIRV;
+}
+
+std::vector<uint32_t> OptimizeSPIRV(const std::vector<uint32_t>& SrcSPIRV,
+                                    SPIRV_OPTIMIZATION_FLAGS     Passes)
+{
+    return OptimizeSPIRV(SrcSPIRV, SPV_ENV_MAX, Passes);
 }
 
 } // namespace Diligent
