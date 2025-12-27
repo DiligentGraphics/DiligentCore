@@ -78,7 +78,7 @@ std::vector<uint32_t> CompileShaderDXC(const ShaderCreateInfo&         ShaderCI,
     {
         // SPIR-V bytecode generated from HLSL must be legalized to
         // turn it into a valid vulkan SPIR-V shader.
-        std::vector<uint32_t> LegalizedSPIRV = OptimizeSPIRV(SPIRV, SPV_ENV_MAX, SPIRV_OPTIMIZATION_FLAG_LEGALIZATION);
+        std::vector<uint32_t> LegalizedSPIRV = OptimizeSPIRV(SPIRV, SPIRV_OPTIMIZATION_FLAG_LEGALIZATION);
         if (!LegalizedSPIRV.empty())
             SPIRV = std::move(LegalizedSPIRV);
         else

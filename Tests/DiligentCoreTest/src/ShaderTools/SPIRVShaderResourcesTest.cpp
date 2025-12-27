@@ -31,20 +31,13 @@
 #include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"
 #include "BasicFileSystem.hpp"
+#include "SPIRVTools.hpp"
 
 #include <unordered_map>
 #include <string>
 #include <vector>
 
 #include "TestingEnvironment.hpp"
-
-// Forward declaration for ConvertUBOToPushConstants from SPIRVTools.hpp
-// We cannot include SPIRVTools.hpp directly because it depends on spirv-tools headers
-namespace Diligent
-{
-std::vector<uint32_t> ConvertUBOToPushConstants(const std::vector<uint32_t>& SPIRV,
-                                                const std::string&           BlockName);
-}
 
 #include "gtest/gtest.h"
 
