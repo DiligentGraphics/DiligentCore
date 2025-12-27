@@ -35,6 +35,12 @@ if(NOT ARCHIVER_SUPPORTED)
     list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/RenderStateCacheTest.cpp)
 endif()
 
+if(NOT ${DILIGENT_USE_SPIRV_TOOLCHAIN} OR ${DILIGENT_NO_GLSLANG})
+    list(REMOVE_ITEM SOURCE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Vulkan/ConvertUBOToPushConstantsTestVk.cpp
+    )
+endif()
+
 if(D3D11_SUPPORTED)
     file(GLOB D3D11_SOURCE LIST_DIRECTORIES false src/D3D11/*)
     file(GLOB D3D11_INCLUDE LIST_DIRECTORIES false include/D3D11/*)
