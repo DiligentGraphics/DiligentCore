@@ -77,11 +77,46 @@ protected:
 
 std::unique_ptr<IDXCompiler> VkConvertUBOToPushConstantsTest::DXCompiler;
 
-// GLSL Vertex Shader - procedural two triangles, outputs vertex index for color lookup
+// GLSL Vertex Shader - procedural two triangles, reads colors from UBO and outputs for interpolation
 const std::string GLSL_ProceduralTriangleVS = R"(
 #version 450 core
 
-layout(location = 0) out flat int out_VertexIndex;
+// Vertex colors stored in UBO - will be patched to push constants
+// Matching the same UBO structure as fragment shader
+struct Level3Data
+{
+    vec4 Factor;
+};
+
+struct Level2Data
+{
+    Level3Data Inner;
+};
+
+struct Level1Data
+{
+    Level2Data Nested;
+};
+
+struct ColorData
+{
+    vec4 Colors[6];
+};
+
+layout(set = 0, binding = 0) uniform CB1
+{
+    Level1Data Data;
+    ColorData  VertexColors;
+} cb;
+
+layout(location = 0) out vec3 out_Color;
+
+// Helper function to access colors from the UBO
+// This tests OpFunctionCall handling in vertex shader
+vec3 GetVertexColor(ColorData colors, int index)
+{
+    return colors.Colors[index].rgb;
+}
 
 void main()
 {
@@ -95,15 +130,15 @@ void main()
     Pos[5] = vec4(+1.0, -0.5, 0.0, 1.0);
 
     gl_Position = Pos[gl_VertexIndex];
-    out_VertexIndex = gl_VertexIndex;
+    // Output color from UBO via helper function - will be interpolated across triangle
+    out_Color = GetVertexColor(cb.VertexColors, gl_VertexIndex);
 }
 )";
 
 // GLSL Fragment Shader with UBO - will be patched to push constants
 // Tests:
 // 1. Nested structs for multiple access chains and storage class propagation
-// 2. Reading colors from push constants instead of VS input
-// 3. Passing struct to function (tests function inlining before conversion)
+// 2. Passing struct to function (tests function inlining before conversion)
 const std::string GLSL_FragmentShaderWithUBO = R"(
 #version 450 core
 
@@ -123,10 +158,9 @@ struct Level1Data
     Level2Data Nested;
 };
 
-// Colors stored in push constants - tests reading colors from push constants
 struct ColorData
 {
-    vec3 Colors[6];
+    vec4 Colors[6];
 };
 
 // UBO named "CB1" with instance name "cb" - allows testing both name matching paths
@@ -136,7 +170,7 @@ layout(set = 0, binding = 0) uniform CB1
     ColorData  VertexColors;
 } cb;
 
-layout(location = 0) in flat int in_VertexIndex;
+layout(location = 0) in vec3 in_Color;
 layout(location = 0) out vec4 out_Color;
 
 // Helper function that takes UBO struct as parameter
@@ -146,22 +180,14 @@ vec4 GetNestedFactor(Level1Data data)
     return data.Nested.Inner.Factor;
 }
 
-// Another helper that accesses colors from the UBO
-vec3 GetVertexColor(ColorData colors, int index)
-{
-    return colors.Colors[index];
-}
-
 void main()
 {
     // Access deeply nested member through function call
     // This generates OpFunctionCall which requires inlining before storage class propagation
     vec4 factor = GetNestedFactor(cb.Data);
 
-    // Get color from push constants using vertex index
-    vec3 color = GetVertexColor(cb.VertexColors, in_VertexIndex);
-
-    out_Color = vec4(color, 1.0) * factor;
+    // Use interpolated color from vertex shader
+    out_Color = vec4(in_Color, 1.0) * factor;
 }
 )";
 
@@ -169,19 +195,57 @@ void main()
 // Must match the layout of CB1 in the shader:
 // - Level1Data Data (containing nested Factor vec4)
 // - ColorData VertexColors (containing Colors[6] vec3 array)
+//
+// IMPORTANT: Do NOT use float Factor[4] - in std140, arrays have each element
+// aligned to 16 bytes, so float[4] would be 64 bytes instead of 16!
+// Use a struct to represent vec4 as 4 contiguous floats.
 struct PushConstantData
 {
-    float Factor[4];    // vec4 Factor in Level1Data.Nested.Inner
-    float Colors[6][4]; // vec3 Colors[6] with padding (std140 layout: vec3 padded to vec4)
+    float4 Factor; // vec4 Factor in Level1Data.Nested.Inner (16 bytes)
+    float4 Colors[6]; // vec4 Colors[6] (16 bytes * 6)
 };
 
-// HLSL Vertex Shader - procedural two triangles, outputs vertex index for color lookup
+// HLSL Vertex Shader - procedural two triangles, reads colors from CB and outputs for interpolation
 const std::string HLSL_ProceduralTriangleVS = R"(
+// Matching the same CB structure as fragment shader
+struct Level3Data
+{
+    float4 Factor;
+};
+
+struct Level2Data
+{
+    Level3Data Inner;
+};
+
+struct Level1Data
+{
+    Level2Data Nested;
+};
+
+struct ColorData
+{
+    float4 Colors[6];
+};
+
+cbuffer CB1 : register(b0)
+{
+    Level1Data Data;
+    ColorData  VertexColors;
+};
+
 struct PSInput
 {
-    float4 Pos         : SV_POSITION;
-    uint   VertexIndex : TEXCOORD0;
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR0;
 };
+
+// Helper function to access colors from the CB
+// This tests OpFunctionCall handling in vertex shader
+float3 GetVertexColor(ColorData colors, uint index)
+{
+    return colors.Colors[index].rgb;
+}
 
 PSInput main(uint VertexId : SV_VertexID)
 {
@@ -195,8 +259,9 @@ PSInput main(uint VertexId : SV_VertexID)
     Pos[5] = float4(+1.0, -0.5, 0.0, 1.0);
 
     PSInput Out;
-    Out.Pos         = Pos[VertexId];
-    Out.VertexIndex = VertexId;
+    Out.Pos   = Pos[VertexId];
+    // Output color from CB via helper function - will be interpolated across triangle
+    Out.Color = GetVertexColor(VertexColors, VertexId);
     return Out;
 }
 )";
@@ -204,8 +269,7 @@ PSInput main(uint VertexId : SV_VertexID)
 // HLSL Fragment Shader with constant buffer - will be patched to push constants
 // Tests:
 // 1. Deeply nested structs for multiple access chains
-// 2. Reading colors from constant buffer instead of VS input
-// 3. Passing struct to function (tests function inlining before conversion)
+// 2. Passing struct to function (tests function inlining before conversion)
 const std::string HLSL_FragmentShaderWithCB = R"(
 // Deeply nested structs to test multiple access chains
 struct Level3Data
@@ -223,10 +287,9 @@ struct Level1Data
     Level2Data Nested;
 };
 
-// Colors stored in constant buffer - tests reading colors from push constants
 struct ColorData
 {
-    float3 Colors[6];
+    float4 Colors[6];
 };
 
 // Constant buffer named "CB1"
@@ -238,8 +301,8 @@ cbuffer CB1 : register(b0)
 
 struct PSInput
 {
-    float4 Pos         : SV_POSITION;
-    uint   VertexIndex : TEXCOORD0;
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR0;
 };
 
 // Helper function that takes CB struct as parameter
@@ -249,22 +312,14 @@ float4 GetNestedFactor(Level1Data data)
     return data.Nested.Inner.Factor;
 }
 
-// Another helper that accesses colors from the CB
-float3 GetVertexColor(ColorData colors, uint index)
-{
-    return colors.Colors[index];
-}
-
 float4 main(PSInput In) : SV_Target
 {
     // Access deeply nested member through function call
     // This generates OpFunctionCall which requires inlining before storage class propagation
     float4 factor = GetNestedFactor(Data);
 
-    // Get color from constant buffer using vertex index
-    float3 color = GetVertexColor(VertexColors, In.VertexIndex);
-
-    return float4(color, 1.0) * factor;
+    // Use interpolated color from vertex shader
+    return float4(In.Color, 1.0) * factor;
 }
 )";
 
@@ -757,16 +812,19 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LA
     ASSERT_FALSE(VS_SPIRV.empty()) << "Failed to compile vertex shader";
     ASSERT_FALSE(FS_SPIRV.empty()) << "Failed to compile fragment shader";
 
-    // Step 3: Patch fragment shader to use push constants
+    // Step 3: Patch both vertex and fragment shaders to use push constants
+    // Both shaders reference the same UBO (CB1), so both need to be patched
+    std::vector<uint32_t> VS_SPIRV_Patched = ConvertUBOToPushConstants(VS_SPIRV, BlockName);
     std::vector<uint32_t> FS_SPIRV_Patched = ConvertUBOToPushConstants(FS_SPIRV, BlockName);
-    ASSERT_FALSE(FS_SPIRV_Patched.empty()) << "Failed to patch UBO to push constants with BlockName: " << BlockName;
+    ASSERT_FALSE(VS_SPIRV_Patched.empty()) << "Failed to patch VS UBO to push constants with BlockName: " << BlockName;
+    ASSERT_FALSE(FS_SPIRV_Patched.empty()) << "Failed to patch FS UBO to push constants with BlockName: " << BlockName;
 
     if (SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
         // SPIR-V bytecode generated from HLSL must be legalized to
         // turn it into a valid vulkan SPIR-V shader.
         SPIRV_OPTIMIZATION_FLAGS OptimizationFlags = SPIRV_OPTIMIZATION_FLAG_LEGALIZATION | SPIRV_OPTIMIZATION_FLAG_STRIP_REFLECTION;
-        VS_SPIRV                                   = OptimizeSPIRV(VS_SPIRV, OptimizationFlags);
+        VS_SPIRV_Patched                           = OptimizeSPIRV(VS_SPIRV_Patched, OptimizationFlags);
         FS_SPIRV_Patched                           = OptimizeSPIRV(FS_SPIRV_Patched, OptimizationFlags);
     }
 
@@ -774,10 +832,10 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LA
     {
         PatchedPushConstantsRenderer Renderer{
             pTestingSwapChainVk,
-            VS_SPIRV,
+            VS_SPIRV_Patched,
             FS_SPIRV_Patched,
             sizeof(PushConstantData),
-            VK_SHADER_STAGE_FRAGMENT_BIT};
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT};
 
         VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 
@@ -787,32 +845,32 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LA
         // Factor = (1,1,1,1) to make output identical to reference
         // Colors match the reference triangle colors (RGB for each vertex)
         PushConstantData PushData = {};
-        PushData.Factor[0]        = 1.0f;
-        PushData.Factor[1]        = 1.0f;
-        PushData.Factor[2]        = 1.0f;
-        PushData.Factor[3]        = 1.0f;
+        PushData.Factor.x         = 1.0f;
+        PushData.Factor.y         = 1.0f;
+        PushData.Factor.z         = 1.0f;
+        PushData.Factor.w         = 1.0f;
 
         // Vertex colors matching the reference (std140 layout: vec3 padded to 16 bytes)
         // Triangle 1: Red, Green, Blue
-        PushData.Colors[0][0] = 1.0f;
-        PushData.Colors[0][1] = 0.0f;
-        PushData.Colors[0][2] = 0.0f; // Red
-        PushData.Colors[1][0] = 0.0f;
-        PushData.Colors[1][1] = 1.0f;
-        PushData.Colors[1][2] = 0.0f; // Green
-        PushData.Colors[2][0] = 0.0f;
-        PushData.Colors[2][1] = 0.0f;
-        PushData.Colors[2][2] = 1.0f; // Blue
+        PushData.Colors[0].x = 1.0f;
+        PushData.Colors[0].y = 0.0f;
+        PushData.Colors[0].z = 0.0f; // Red
+        PushData.Colors[1].x = 0.0f;
+        PushData.Colors[1].y = 1.0f;
+        PushData.Colors[1].z = 0.0f; // Green
+        PushData.Colors[2].x = 0.0f;
+        PushData.Colors[2].y = 0.0f;
+        PushData.Colors[2].z = 1.0f; // Blue
         // Triangle 2: Red, Green, Blue
-        PushData.Colors[3][0] = 1.0f;
-        PushData.Colors[3][1] = 0.0f;
-        PushData.Colors[3][2] = 0.0f; // Red
-        PushData.Colors[4][0] = 0.0f;
-        PushData.Colors[4][1] = 1.0f;
-        PushData.Colors[4][2] = 0.0f; // Green
-        PushData.Colors[5][0] = 0.0f;
-        PushData.Colors[5][1] = 0.0f;
-        PushData.Colors[5][2] = 1.0f; // Blue
+        PushData.Colors[3].x = 1.0f;
+        PushData.Colors[3].y = 0.0f;
+        PushData.Colors[3].z = 0.0f; // Red
+        PushData.Colors[4].x = 0.0f;
+        PushData.Colors[4].y = 1.0f;
+        PushData.Colors[4].z = 0.0f; // Green
+        PushData.Colors[5].x = 0.0f;
+        PushData.Colors[5].y = 0.0f;
+        PushData.Colors[5].z = 1.0f; // Blue
 
         Renderer.Draw(vkCmdBuffer, &PushData, sizeof(PushData));
 
