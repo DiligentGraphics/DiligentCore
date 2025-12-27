@@ -214,9 +214,8 @@ public:
         uint32_t pointee_type_id = ptr_type_inst->GetSingleWordInOperand(1);
 
         // Create or find a pointer type with PushConstant storage class
-        spvtools::opt::analysis::TypeManager* type_mgr = context()->get_type_mgr();
-        uint32_t                              new_ptr_type_id =
-            type_mgr->FindPointerToType(pointee_type_id, spv::StorageClass::PushConstant);
+        uint32_t new_ptr_type_id =
+            context()->get_type_mgr()->FindPointerToType(pointee_type_id, spv::StorageClass::PushConstant);
 
         if (new_ptr_type_id == 0)
         {
@@ -456,15 +455,13 @@ private:
     // Changes the result type of an instruction to use the new storage class.
     void ChangeResultStorageClass(spvtools::opt::Instruction& inst)
     {
-        spvtools::opt::analysis::TypeManager* type_mgr         = context()->get_type_mgr();
-        spvtools::opt::Instruction*           result_type_inst = get_def_use_mgr()->GetDef(inst.type_id());
-
+        spvtools::opt::Instruction* result_type_inst = get_def_use_mgr()->GetDef(inst.type_id());
         if (result_type_inst == nullptr || result_type_inst->opcode() != spv::Op::OpTypePointer)
             return;
 
         uint32_t pointee_type_id = result_type_inst->GetSingleWordInOperand(1);
         uint32_t new_result_type_id =
-            type_mgr->FindPointerToType(pointee_type_id, spv::StorageClass::PushConstant);
+            context()->get_type_mgr()->FindPointerToType(pointee_type_id, spv::StorageClass::PushConstant);
 
         if (new_result_type_id == 0)
             return;
