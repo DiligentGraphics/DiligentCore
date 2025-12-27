@@ -54,12 +54,12 @@ if(VULKAN_SUPPORTED)
     file(GLOB VK_INCLUDE LIST_DIRECTORIES false include/Vulkan/*)
     list(APPEND INCLUDE ${VK_INCLUDE})
     list(APPEND SOURCE ${VK_SOURCE})
+endif()
 
-    if(NOT ${DILIGENT_USE_SPIRV_TOOLCHAIN} OR ${DILIGENT_NO_GLSLANG})
-        list(REMOVE_ITEM SOURCE
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/Vulkan/ConvertUBOToPushConstantsTestVk.cpp
-        )
-    endif()
+if(NOT VULKAN_SUPPORTED OR NOT ${DILIGENT_USE_SPIRV_TOOLCHAIN} OR ${DILIGENT_NO_GLSLANG})
+    list(REMOVE_ITEM SOURCE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Vulkan/ConvertUBOToPushConstantsTestVk.cpp
+    )
 endif()
 
 if(METAL_SUPPORTED)

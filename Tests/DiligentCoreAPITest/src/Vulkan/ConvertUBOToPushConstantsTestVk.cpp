@@ -754,19 +754,15 @@ private:
 // Test helper that runs the full test flow
 void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE SourceLanguage, const std::string& BlockName)
 {
-    auto* pEnv = TestingEnvironmentVk::GetInstance();
-    if (!pEnv)
+    // First check device type using base class to avoid ClassPtrCast assertion failure
+    auto* pBaseEnv = GPUTestingEnvironment::GetInstance();
+    if (!pBaseEnv || pBaseEnv->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
     {
         GTEST_SKIP() << "Vulkan environment not available";
         return;
     }
 
-    auto* pDevice = pEnv->GetDevice();
-    if (pDevice->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
-    {
-        GTEST_SKIP() << "This test requires Vulkan device";
-        return;
-    }
+    auto* pEnv = TestingEnvironmentVk::GetInstance();
 
     if (Compiler == SHADER_COMPILER_DXC)
     {
