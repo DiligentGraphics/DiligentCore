@@ -171,8 +171,8 @@ void main()
 // - ColorData VertexColors (containing Colors[6] vec3 array)
 struct PushConstantData
 {
-    float Factor[4];      // vec4 Factor in Level1Data.Nested.Inner
-    float Colors[6][4];   // vec3 Colors[6] with padding (std140 layout: vec3 padded to vec4)
+    float Factor[4];    // vec4 Factor in Level1Data.Nested.Inner
+    float Colors[6][4]; // vec3 Colors[6] with padding (std140 layout: vec3 padded to vec4)
 };
 
 // HLSL Vertex Shader - procedural two triangles, outputs vertex index for color lookup
@@ -792,13 +792,25 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LA
 
         // Vertex colors matching the reference (std140 layout: vec3 padded to 16 bytes)
         // Triangle 1: Red, Green, Blue
-        PushData.Colors[0][0] = 1.0f; PushData.Colors[0][1] = 0.0f; PushData.Colors[0][2] = 0.0f; // Red
-        PushData.Colors[1][0] = 0.0f; PushData.Colors[1][1] = 1.0f; PushData.Colors[1][2] = 0.0f; // Green
-        PushData.Colors[2][0] = 0.0f; PushData.Colors[2][1] = 0.0f; PushData.Colors[2][2] = 1.0f; // Blue
+        PushData.Colors[0][0] = 1.0f;
+        PushData.Colors[0][1] = 0.0f;
+        PushData.Colors[0][2] = 0.0f; // Red
+        PushData.Colors[1][0] = 0.0f;
+        PushData.Colors[1][1] = 1.0f;
+        PushData.Colors[1][2] = 0.0f; // Green
+        PushData.Colors[2][0] = 0.0f;
+        PushData.Colors[2][1] = 0.0f;
+        PushData.Colors[2][2] = 1.0f; // Blue
         // Triangle 2: Red, Green, Blue
-        PushData.Colors[3][0] = 1.0f; PushData.Colors[3][1] = 0.0f; PushData.Colors[3][2] = 0.0f; // Red
-        PushData.Colors[4][0] = 0.0f; PushData.Colors[4][1] = 1.0f; PushData.Colors[4][2] = 0.0f; // Green
-        PushData.Colors[5][0] = 0.0f; PushData.Colors[5][1] = 0.0f; PushData.Colors[5][2] = 1.0f; // Blue
+        PushData.Colors[3][0] = 1.0f;
+        PushData.Colors[3][1] = 0.0f;
+        PushData.Colors[3][2] = 0.0f; // Red
+        PushData.Colors[4][0] = 0.0f;
+        PushData.Colors[4][1] = 1.0f;
+        PushData.Colors[4][2] = 0.0f; // Green
+        PushData.Colors[5][0] = 0.0f;
+        PushData.Colors[5][1] = 0.0f;
+        PushData.Colors[5][2] = 1.0f; // Blue
 
         Renderer.Draw(vkCmdBuffer, &PushData, sizeof(PushData));
 
