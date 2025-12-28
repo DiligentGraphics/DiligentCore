@@ -1,0 +1,873 @@
+/*
+ *  Copyright 2025 Diligent Graphics LLC
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
+ *  of the possibility of such damages.
+ */
+
+#include "Vulkan/TestingEnvironmentVk.hpp"
+#include "Vulkan/TestingSwapChainVk.hpp"
+
+#include "DeviceContextVk.h"
+#include "RenderDeviceVk.h"
+#include "TextureVk.h"
+#include "TextureViewVk.h"
+
+#include "GLSLangUtils.hpp"
+#include "DXCompiler.hpp"
+#include "SPIRVTools.hpp"
+#include "FastRand.hpp"
+
+#include "volk.h"
+
+#include "gtest/gtest.h"
+
+namespace Diligent
+{
+
+VkFormat TexFormatToVkFormat(TEXTURE_FORMAT TexFmt);
+
+namespace Testing
+{
+
+// Forward declaration of reference renderer
+void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
+
+namespace
+{
+
+class VkConvertUBOToPushConstantsTest : public ::testing::Test
+{
+public:
+    static IDXCompiler* GetDXCompiler()
+    {
+        return DXCompiler.get();
+    }
+
+protected:
+    static void SetUpTestSuite()
+    {
+        GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
+        if (pEnv->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
+        {
+            // Skip all tests in this suite
+            GTEST_SKIP() << "This test is only for Vulkan device";
+        }
+
+        GLSLangUtils::InitializeGlslang();
+
+        DXCompiler = CreateDXCompiler(DXCompilerTarget::Vulkan, 0, nullptr);
+    }
+
+    static void TearDownTestSuite()
+    {
+        if (IsSkipped())
+        {
+            return;
+        }
+
+        GLSLangUtils::FinalizeGlslang();
+
+        DXCompiler.reset();
+    }
+
+    void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE SourceLanguage, const std::string& BlockName);
+
+private:
+    static std::unique_ptr<IDXCompiler> DXCompiler;
+    static FastRandFloat                Rnd;
+};
+
+std::unique_ptr<IDXCompiler> VkConvertUBOToPushConstantsTest::DXCompiler;
+FastRandFloat                VkConvertUBOToPushConstantsTest::Rnd{0, 0.f, 1.f};
+
+// GLSL Vertex Shader - procedural two triangles, reads colors from UBO and outputs for interpolation
+const std::string GLSL_ProceduralTriangleVS = R"(
+#version 450 core
+
+// Vertex colors stored in UBO - will be patched to push constants
+// Matching the same UBO structure as fragment shader
+struct Level3Data
+{
+    vec4 Factor;
+};
+
+struct Level2Data
+{
+    Level3Data Inner;
+};
+
+struct Level1Data
+{
+    Level2Data Nested;
+};
+
+struct ColorData
+{
+    vec4 Colors[6];
+};
+
+layout(set = 0, binding = 0) uniform CB1
+{
+    Level1Data Data;
+    ColorData  VertexColors;
+} cb;
+
+layout(location = 0) out vec3 out_Color;
+
+// Helper function to access colors from the UBO
+vec3 GetVertexColor(ColorData colors, int index)
+{
+    return colors.Colors[index].rgb;
+}
+
+void main()
+{
+    vec4 Pos[6];
+    Pos[0] = vec4(-1.0, -0.5, 0.0, 1.0);
+    Pos[1] = vec4(-0.5, +0.5, 0.0, 1.0);
+    Pos[2] = vec4( 0.0, -0.5, 0.0, 1.0);
+
+    Pos[3] = vec4(+0.0, -0.5, 0.0, 1.0);
+    Pos[4] = vec4(+0.5, +0.5, 0.0, 1.0);
+    Pos[5] = vec4(+1.0, -0.5, 0.0, 1.0);
+
+    gl_Position = Pos[gl_VertexIndex];
+    // Output color from UBO via helper function - will be interpolated across triangle
+    out_Color = GetVertexColor(cb.VertexColors, gl_VertexIndex);
+}
+)";
+
+// GLSL Fragment Shader with UBO - will be patched to push constants
+// Tests:
+// 1. Nested structs for multiple access chains and storage class propagation
+// 2. Passing struct to function (tests function inlining before conversion)
+const std::string GLSL_FragmentShaderWithUBO = R"(
+#version 450 core
+
+// Deeply nested structs to test multiple access chains and storage class propagation
+struct Level3Data
+{
+    vec4 Factor;
+};
+
+struct Level2Data
+{
+    Level3Data Inner;
+};
+
+struct Level1Data
+{
+    Level2Data Nested;
+};
+
+struct ColorData
+{
+    vec4 Colors[6];
+};
+
+// UBO named "CB1" with instance name "cb" - allows testing both name matching paths
+layout(set = 0, binding = 0) uniform CB1
+{
+    Level1Data Data;
+    ColorData  VertexColors;
+} cb;
+
+layout(location = 0) in vec3 in_Color;
+layout(location = 0) out vec4 out_Color;
+
+// Helper function that takes UBO struct as parameter
+// This tests OpFunctionCall handling - requires function inlining before conversion
+vec4 GetNestedFactor(Level1Data data)
+{
+    return data.Nested.Inner.Factor;
+}
+
+void main()
+{
+    // Access deeply nested member through function call
+    // This generates OpFunctionCall which requires inlining before storage class propagation
+    vec4 factor = GetNestedFactor(cb.Data);
+
+    // Use interpolated color from vertex shader
+    out_Color = vec4(in_Color, 1.0) * factor;
+}
+)";
+
+// Push constant data structure matching the UBO layout
+// Must match the layout of CB1 in the shader:
+// - Level1Data Data (containing nested Factor vec4)
+// - ColorData VertexColors (containing Colors[6] vec3 array)
+//
+// IMPORTANT: Do NOT use float Factor[4] - in std140, arrays have each element
+// aligned to 16 bytes, so float[4] would be 64 bytes instead of 16!
+// Use a struct to represent vec4 as 4 contiguous floats.
+struct PushConstantData
+{
+    float4 Factor;    // vec4 Factor in Level1Data.Nested.Inner (16 bytes)
+    float4 Colors[6]; // vec4 Colors[6] (16 bytes * 6)
+};
+
+// HLSL Vertex Shader - procedural two triangles, reads colors from CB and outputs for interpolation
+const std::string HLSL_ProceduralTriangleVS = R"(
+// Matching the same CB structure as fragment shader
+struct Level3Data
+{
+    float4 Factor;
+};
+
+struct Level2Data
+{
+    Level3Data Inner;
+};
+
+struct Level1Data
+{
+    Level2Data Nested;
+};
+
+struct ColorData
+{
+    float4 Colors[6];
+};
+
+cbuffer CB1 : register(b0)
+{
+    Level1Data Data;
+    ColorData  VertexColors;
+};
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR0;
+};
+
+// Helper function to access colors from the CB
+// This tests OpFunctionCall handling in vertex shader
+float3 GetVertexColor(ColorData colors, uint index)
+{
+    return colors.Colors[index].rgb;
+}
+
+PSInput main(uint VertexId : SV_VertexID)
+{
+    float4 Pos[6];
+    Pos[0] = float4(-1.0, -0.5, 0.0, 1.0);
+    Pos[1] = float4(-0.5, +0.5, 0.0, 1.0);
+    Pos[2] = float4( 0.0, -0.5, 0.0, 1.0);
+
+    Pos[3] = float4(+0.0, -0.5, 0.0, 1.0);
+    Pos[4] = float4(+0.5, +0.5, 0.0, 1.0);
+    Pos[5] = float4(+1.0, -0.5, 0.0, 1.0);
+
+    PSInput Out;
+    Out.Pos   = Pos[VertexId];
+    // Output color from CB via helper function - will be interpolated across triangle
+    Out.Color = GetVertexColor(VertexColors, VertexId);
+    return Out;
+}
+)";
+
+// HLSL Fragment Shader with constant buffer - will be patched to push constants
+// Tests:
+// 1. Deeply nested structs for multiple access chains
+// 2. Passing struct to function (tests function inlining before conversion)
+const std::string HLSL_FragmentShaderWithCB = R"(
+// Deeply nested structs to test multiple access chains
+struct Level3Data
+{
+    float4 Factor;
+};
+
+struct Level2Data
+{
+    Level3Data Inner;
+};
+
+struct Level1Data
+{
+    Level2Data Nested;
+};
+
+struct ColorData
+{
+    float4 Colors[6];
+};
+
+// Constant buffer named "CB1"
+cbuffer CB1 : register(b0)
+{
+    Level1Data Data;
+    ColorData  VertexColors;
+};
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float3 Color : COLOR0;
+};
+
+// Helper function that takes CB struct as parameter
+// This tests OpFunctionCall handling - requires function inlining before conversion
+float4 GetNestedFactor(Level1Data data)
+{
+    return data.Nested.Inner.Factor;
+}
+
+float4 main(PSInput In) : SV_Target
+{
+    // Access deeply nested member through function call
+    // This generates OpFunctionCall which requires inlining before storage class propagation
+    float4 factor = GetNestedFactor(Data);
+
+    // Use interpolated color from vertex shader
+    return float4(In.Color, 1.0) * factor;
+}
+)";
+
+// Helper to create VkShaderModule from SPIR-V bytecode
+VkShaderModule CreateVkShaderModuleFromSPIRV(VkDevice vkDevice, const std::vector<uint32_t>& SPIRV)
+{
+    VkShaderModuleCreateInfo ShaderModuleCI{};
+    ShaderModuleCI.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    ShaderModuleCI.pNext    = nullptr;
+    ShaderModuleCI.flags    = 0;
+    ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
+    ShaderModuleCI.pCode    = SPIRV.data();
+
+    VkShaderModule vkShaderModule = VK_NULL_HANDLE;
+    VkResult       res            = vkCreateShaderModule(vkDevice, &ShaderModuleCI, nullptr, &vkShaderModule);
+    VERIFY_EXPR(res == VK_SUCCESS);
+    (void)res;
+
+    return vkShaderModule;
+}
+
+std::vector<unsigned int> LoadSPIRVFromHLSL(const std::string& ShaderSource,
+                                            SHADER_TYPE        ShaderType,
+                                            SHADER_COMPILER    Compiler = SHADER_COMPILER_DEFAULT)
+{
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.Source         = ShaderSource.data();
+    ShaderCI.SourceLength   = ShaderSource.size();
+    ShaderCI.Desc           = {"SPIRV test shader", ShaderType};
+    ShaderCI.EntryPoint     = "main";
+
+    std::vector<unsigned int> SPIRV;
+
+    if (Compiler == SHADER_COMPILER_DXC)
+    {
+        IDXCompiler* DXCompiler = VkConvertUBOToPushConstantsTest::GetDXCompiler();
+        if (!DXCompiler || !DXCompiler->IsLoaded())
+        {
+            UNEXPECTED("Test should be skipped if DXCompiler is not available");
+            return {};
+        }
+
+        RefCntAutoPtr<IDataBlob> pCompilerOutput;
+        DXCompiler->Compile(ShaderCI, ShaderVersion{6, 0}, nullptr, nullptr, &SPIRV, &pCompilerOutput);
+
+        if (pCompilerOutput && pCompilerOutput->GetSize() > 0)
+        {
+            const char* CompilerOutput = static_cast<const char*>(pCompilerOutput->GetConstDataPtr());
+            if (*CompilerOutput != 0)
+                LOG_INFO_MESSAGE("DXC compiler output:\n", CompilerOutput);
+        }
+    }
+    else
+    {
+        SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
+    }
+
+    return SPIRV;
+}
+
+std::vector<unsigned int> LoadSPIRVFromGLSL(const std::string& ShaderSource, SHADER_TYPE ShaderType = SHADER_TYPE_PIXEL)
+{
+    GLSLangUtils::GLSLtoSPIRVAttribs Attribs;
+    Attribs.ShaderType     = ShaderType;
+    Attribs.ShaderSource   = ShaderSource.data();
+    Attribs.SourceCodeLen  = static_cast<int>(ShaderSource.size());
+    Attribs.Version        = GLSLangUtils::SpirvVersion::Vk100;
+    Attribs.AssignBindings = true;
+
+    return GLSLangUtils::GLSLtoSPIRV(Attribs);
+}
+
+void CompileSPIRV(const std::string&         ShaderSource,
+                  const std::string&         ShaderIdentifier,
+                  SHADER_COMPILER            Compiler,
+                  SHADER_TYPE                ShaderType,
+                  SHADER_SOURCE_LANGUAGE     SourceLanguage,
+                  std::vector<unsigned int>& SPIRV)
+{
+    SPIRV = (SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL) ?
+        LoadSPIRVFromGLSL(ShaderSource, ShaderType) :
+        LoadSPIRVFromHLSL(ShaderSource, ShaderType, Compiler);
+    ASSERT_FALSE(SPIRV.empty()) << "Failed to compile shader " << ShaderIdentifier;
+}
+
+// Renderer that uses patched push constants shader
+class PatchedPushConstantsRenderer
+{
+public:
+    PatchedPushConstantsRenderer(TestingSwapChainVk*          pSwapChain,
+                                 const std::vector<uint32_t>& VS_SPIRV,
+                                 const std::vector<uint32_t>& FS_SPIRV,
+                                 uint32_t                     PushConstantSize,
+                                 VkShaderStageFlags           PushConstantStages = VK_SHADER_STAGE_FRAGMENT_BIT) :
+        m_pSwapChain{pSwapChain},
+        m_vkDevice{TestingEnvironmentVk::GetInstance()->GetVkDevice()}
+
+    {
+        const SwapChainDesc& SCDesc = pSwapChain->GetDesc();
+
+        CreateRenderPass();
+
+        // Create shader modules from SPIR-V
+        m_vkVSModule = CreateVkShaderModuleFromSPIRV(m_vkDevice, VS_SPIRV);
+        VERIFY_EXPR(m_vkVSModule != VK_NULL_HANDLE);
+
+        m_vkFSModule = CreateVkShaderModuleFromSPIRV(m_vkDevice, FS_SPIRV);
+        VERIFY_EXPR(m_vkFSModule != VK_NULL_HANDLE);
+
+        // Pipeline layout with push constants (no descriptor sets)
+        VkPushConstantRange PushConstantRange{};
+        PushConstantRange.stageFlags = PushConstantStages;
+        PushConstantRange.offset     = 0;
+        PushConstantRange.size       = PushConstantSize;
+
+        VkPipelineLayoutCreateInfo PipelineLayoutCI{};
+        PipelineLayoutCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        PipelineLayoutCI.setLayoutCount         = 0;
+        PipelineLayoutCI.pSetLayouts            = nullptr;
+        PipelineLayoutCI.pushConstantRangeCount = 1;
+        PipelineLayoutCI.pPushConstantRanges    = &PushConstantRange;
+
+        VkResult res = vkCreatePipelineLayout(m_vkDevice, &PipelineLayoutCI, nullptr, &m_vkLayout);
+        VERIFY_EXPR(res == VK_SUCCESS);
+        (void)res;
+
+        // Create graphics pipeline
+        VkGraphicsPipelineCreateInfo PipelineCI{};
+        PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+
+        VkPipelineShaderStageCreateInfo ShaderStages[2]{};
+        ShaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        ShaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
+        ShaderStages[0].module = m_vkVSModule;
+        ShaderStages[0].pName  = "main";
+
+        ShaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        ShaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+        ShaderStages[1].module = m_vkFSModule;
+        ShaderStages[1].pName  = "main";
+
+        PipelineCI.pStages    = ShaderStages;
+        PipelineCI.stageCount = _countof(ShaderStages);
+        PipelineCI.layout     = m_vkLayout;
+
+        VkPipelineVertexInputStateCreateInfo VertexInputStateCI{};
+        VertexInputStateCI.sType     = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        PipelineCI.pVertexInputState = &VertexInputStateCI;
+
+        VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI{};
+        InputAssemblyCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        InputAssemblyCI.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        InputAssemblyCI.primitiveRestartEnable = VK_FALSE;
+        PipelineCI.pInputAssemblyState         = &InputAssemblyCI;
+
+        VkPipelineTessellationStateCreateInfo TessStateCI{};
+        TessStateCI.sType             = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        PipelineCI.pTessellationState = &TessStateCI;
+
+        VkPipelineViewportStateCreateInfo ViewPortStateCI{};
+        ViewPortStateCI.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        ViewPortStateCI.viewportCount = 1;
+
+        VkViewport Viewport{};
+        Viewport.y                 = static_cast<float>(SCDesc.Height);
+        Viewport.width             = static_cast<float>(SCDesc.Width);
+        Viewport.height            = -static_cast<float>(SCDesc.Height);
+        Viewport.maxDepth          = 1;
+        ViewPortStateCI.pViewports = &Viewport;
+
+        ViewPortStateCI.scissorCount = 1;
+        VkRect2D ScissorRect{};
+        ScissorRect.extent.width  = SCDesc.Width;
+        ScissorRect.extent.height = SCDesc.Height;
+        ViewPortStateCI.pScissors = &ScissorRect;
+        PipelineCI.pViewportState = &ViewPortStateCI;
+
+        VkPipelineRasterizationStateCreateInfo RasterizerStateCI{};
+        RasterizerStateCI.sType        = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        RasterizerStateCI.polygonMode  = VK_POLYGON_MODE_FILL;
+        RasterizerStateCI.cullMode     = VK_CULL_MODE_NONE;
+        RasterizerStateCI.lineWidth    = 1;
+        PipelineCI.pRasterizationState = &RasterizerStateCI;
+
+        // Multisample state
+        VkPipelineMultisampleStateCreateInfo MSStateCI{};
+
+        MSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        MSStateCI.pNext = nullptr;
+        MSStateCI.flags = 0; // reserved for future use
+        // If subpass uses color and/or depth/stencil attachments, then the rasterizationSamples member of
+        // pMultisampleState must be the same as the sample count for those subpass attachments
+        MSStateCI.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        MSStateCI.sampleShadingEnable  = VK_FALSE;
+        MSStateCI.minSampleShading     = 0;               // a minimum fraction of sample shading if sampleShadingEnable is set to VK_TRUE.
+        uint32_t SampleMask[]          = {0xFFFFFFFF, 0}; // Vulkan spec allows up to 64 samples
+        MSStateCI.pSampleMask          = SampleMask;      // an array of static coverage information that is ANDed with
+                                                          // the coverage information generated during rasterization
+        MSStateCI.alphaToCoverageEnable = VK_FALSE;       // whether a temporary coverage value is generated based on
+                                                          // the alpha component of the fragment's first color output
+        MSStateCI.alphaToOneEnable   = VK_FALSE;          // whether the alpha component of the fragment's first color output is replaced with one
+        PipelineCI.pMultisampleState = &MSStateCI;
+
+        VkPipelineDepthStencilStateCreateInfo DepthStencilStateCI{};
+        DepthStencilStateCI.sType     = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        PipelineCI.pDepthStencilState = &DepthStencilStateCI;
+
+        VkPipelineColorBlendStateCreateInfo BlendStateCI{};
+        VkPipelineColorBlendAttachmentState Attachment{};
+        Attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+            VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        BlendStateCI.sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        BlendStateCI.pAttachments    = &Attachment;
+        BlendStateCI.attachmentCount = 1;
+        PipelineCI.pColorBlendState  = &BlendStateCI;
+
+        VkPipelineDynamicStateCreateInfo DynamicStateCI{};
+        DynamicStateCI.sType     = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        PipelineCI.pDynamicState = &DynamicStateCI;
+
+        PipelineCI.renderPass         = m_vkRenderPass;
+        PipelineCI.subpass            = 0;
+        PipelineCI.basePipelineHandle = VK_NULL_HANDLE;
+        PipelineCI.basePipelineIndex  = 0;
+
+        res = vkCreateGraphicsPipelines(m_vkDevice, VK_NULL_HANDLE, 1, &PipelineCI, nullptr, &m_vkPipeline);
+        VERIFY_EXPR(res == VK_SUCCESS);
+        VERIFY_EXPR(m_vkPipeline != VK_NULL_HANDLE);
+
+        m_PushConstantStages = PushConstantStages;
+
+        CreateFramebuffer();
+    }
+
+    void CreateRenderPass()
+    {
+        VkFormat ColorFormat = TexFormatToVkFormat(m_pSwapChain->GetCurrentBackBufferRTV()->GetDesc().Format);
+        VkFormat DepthFormat = TexFormatToVkFormat(m_pSwapChain->GetDepthBufferDSV()->GetDesc().Format);
+
+        std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1> Attachments{};
+        std::array<VkAttachmentReference, MAX_RENDER_TARGETS + 1>   AttachmentReferences{};
+
+        VkSubpassDescription Subpass;
+
+        VkRenderPassCreateInfo RenderPassCI =
+            TestingEnvironmentVk::GetRenderPassCreateInfo(1, &ColorFormat, DepthFormat, 1,
+                                                          VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_LOAD_OP_CLEAR,
+                                                          Attachments, AttachmentReferences, Subpass);
+        VkResult res = vkCreateRenderPass(m_vkDevice, &RenderPassCI, nullptr, &m_vkRenderPass);
+        VERIFY_EXPR(res >= 0);
+        (void)res;
+    }
+
+    void CreateFramebuffer()
+    {
+        // Use Diligent Engine managed images (different from TestingSwapChainVk's internal images).
+        // The test compares rendering to Diligent Engine images against TestingSwapChainVk's internal images.
+        RefCntAutoPtr<ITextureViewVk> pRTV{m_pSwapChain->GetCurrentBackBufferRTV(), IID_TextureViewVk};
+        VERIFY_EXPR(pRTV);
+        RefCntAutoPtr<ITextureViewVk> pDSV{m_pSwapChain->GetDepthBufferDSV(), IID_TextureViewVk};
+        VERIFY_EXPR(pDSV);
+
+        VkFramebufferCreateInfo FramebufferCI{};
+        FramebufferCI.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        FramebufferCI.pNext           = nullptr;
+        FramebufferCI.flags           = 0; // reserved for future use
+        FramebufferCI.renderPass      = m_vkRenderPass;
+        FramebufferCI.attachmentCount = 2;
+        VkImageView Attachments[2]    = {pDSV->GetVulkanImageView(), pRTV->GetVulkanImageView()};
+        FramebufferCI.pAttachments    = Attachments;
+        FramebufferCI.width           = m_pSwapChain->GetDesc().Width;
+        FramebufferCI.height          = m_pSwapChain->GetDesc().Height;
+        FramebufferCI.layers          = 1;
+
+        VkResult res = vkCreateFramebuffer(m_vkDevice, &FramebufferCI, nullptr, &m_vkFramebuffer);
+        VERIFY_EXPR(res >= 0);
+        (void)res;
+    }
+
+    void BeginRenderPass(VkCommandBuffer vkCmdBuffer, const float* ClearColor)
+    {
+        RefCntAutoPtr<ITextureVk> pBackBuffer{m_pSwapChain->GetCurrentBackBufferRTV()->GetTexture(), IID_TextureVk};
+        VERIFY_EXPR(pBackBuffer);
+        RefCntAutoPtr<ITextureVk> pDepthBuffer{m_pSwapChain->GetDepthBufferDSV()->GetTexture(), IID_TextureVk};
+        VERIFY_EXPR(pDepthBuffer);
+
+        // Manually transition Diligent Engine managed images to the required layouts.
+        // We cannot use TestingSwapChainVk::TransitionRenderTarget/TransitionDepthBuffer
+        // because they operate on TestingSwapChainVk's internal images, not the Diligent Engine images.
+        VkImageMemoryBarrier ImageBarriers[2]{};
+
+        // Render target barrier: UNDEFINED -> COLOR_ATTACHMENT_OPTIMAL
+        ImageBarriers[0].sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        ImageBarriers[0].srcAccessMask                   = 0;
+        ImageBarriers[0].dstAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        ImageBarriers[0].oldLayout                       = VK_IMAGE_LAYOUT_UNDEFINED;
+        ImageBarriers[0].newLayout                       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        ImageBarriers[0].srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        ImageBarriers[0].dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        ImageBarriers[0].image                           = pBackBuffer->GetVkImage();
+        ImageBarriers[0].subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        ImageBarriers[0].subresourceRange.baseMipLevel   = 0;
+        ImageBarriers[0].subresourceRange.levelCount     = 1;
+        ImageBarriers[0].subresourceRange.baseArrayLayer = 0;
+        ImageBarriers[0].subresourceRange.layerCount     = 1;
+
+        // Depth buffer barrier: UNDEFINED -> DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        ImageBarriers[1].sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        ImageBarriers[1].srcAccessMask                   = 0;
+        ImageBarriers[1].dstAccessMask                   = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        ImageBarriers[1].oldLayout                       = VK_IMAGE_LAYOUT_UNDEFINED;
+        ImageBarriers[1].newLayout                       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        ImageBarriers[1].srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        ImageBarriers[1].dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        ImageBarriers[1].image                           = pDepthBuffer->GetVkImage();
+        ImageBarriers[1].subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
+        ImageBarriers[1].subresourceRange.baseMipLevel   = 0;
+        ImageBarriers[1].subresourceRange.levelCount     = 1;
+        ImageBarriers[1].subresourceRange.baseArrayLayer = 0;
+        ImageBarriers[1].subresourceRange.layerCount     = 1;
+
+        vkCmdPipelineBarrier(vkCmdBuffer,
+                             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                             0,
+                             0, nullptr,
+                             0, nullptr,
+                             2, ImageBarriers);
+
+        VkRenderPassBeginInfo BeginInfo{};
+        BeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        BeginInfo.renderPass        = m_vkRenderPass;
+        BeginInfo.framebuffer       = m_vkFramebuffer;
+        BeginInfo.renderArea.extent = VkExtent2D{m_pSwapChain->GetDesc().Width, m_pSwapChain->GetDesc().Height};
+
+        VkClearValue ClearValues[2]{};
+        ClearValues[0].depthStencil.depth = 1;
+        ClearValues[1].color.float32[0]   = ClearColor[0];
+        ClearValues[1].color.float32[1]   = ClearColor[1];
+        ClearValues[1].color.float32[2]   = ClearColor[2];
+        ClearValues[1].color.float32[3]   = ClearColor[3];
+
+        BeginInfo.clearValueCount = 2;
+        BeginInfo.pClearValues    = ClearValues;
+
+        vkCmdBeginRenderPass(vkCmdBuffer, &BeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
+    void Draw(VkCommandBuffer vkCmdBuffer, const void* pPushConstantData, uint32_t PushConstantSize)
+    {
+        vkCmdBindPipeline(vkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vkPipeline);
+        vkCmdPushConstants(vkCmdBuffer, m_vkLayout, m_PushConstantStages, 0, PushConstantSize, pPushConstantData);
+        vkCmdDraw(vkCmdBuffer, 6, 1, 0, 0);
+    }
+
+    void EndRenderPass(VkCommandBuffer vkCmdBuffer)
+    {
+        vkCmdEndRenderPass(vkCmdBuffer);
+    }
+
+    ~PatchedPushConstantsRenderer()
+    {
+        vkDestroyPipeline(m_vkDevice, m_vkPipeline, nullptr);
+        vkDestroyPipelineLayout(m_vkDevice, m_vkLayout, nullptr);
+        vkDestroyShaderModule(m_vkDevice, m_vkVSModule, nullptr);
+        vkDestroyShaderModule(m_vkDevice, m_vkFSModule, nullptr);
+        vkDestroyRenderPass(m_vkDevice, m_vkRenderPass, nullptr);
+        vkDestroyFramebuffer(m_vkDevice, m_vkFramebuffer, nullptr);
+    }
+
+private:
+    TestingSwapChainVk* m_pSwapChain         = nullptr;
+    VkDevice            m_vkDevice           = VK_NULL_HANDLE;
+    VkShaderModule      m_vkVSModule         = VK_NULL_HANDLE;
+    VkShaderModule      m_vkFSModule         = VK_NULL_HANDLE;
+    VkPipeline          m_vkPipeline         = VK_NULL_HANDLE;
+    VkPipelineLayout    m_vkLayout           = VK_NULL_HANDLE;
+    VkRenderPass        m_vkRenderPass       = VK_NULL_HANDLE;
+    VkFramebuffer       m_vkFramebuffer      = VK_NULL_HANDLE;
+    VkShaderStageFlags  m_PushConstantStages = 0;
+};
+
+// Test helper that runs the full test flow
+void VkConvertUBOToPushConstantsTest::RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE SourceLanguage, const std::string& BlockName)
+{
+    TestingEnvironmentVk* pEnv = TestingEnvironmentVk::GetInstance();
+
+    if (Compiler == SHADER_COMPILER_DXC)
+    {
+        if (!DXCompiler || !DXCompiler->IsLoaded())
+        {
+            GTEST_SKIP() << "DXCompiler is not available";
+        }
+    }
+
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+
+    TestingSwapChainVk* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
+
+    // Step 1: Render reference using existing ReferenceTriangleRenderer
+    pContext->Flush();
+    pContext->InvalidateState();
+
+    const float ClearColor[] = {Rnd(), Rnd(), Rnd(), Rnd()};
+    RenderDrawCommandReferenceVk(pSwapChain, ClearColor);
+
+    // Take snapshot of reference image
+    pTestingSwapChain->TakeSnapshot();
+
+    // Step 2: Compile shaders to SPIR-V
+    std::vector<uint32_t> VS_SPIRV, FS_SPIRV;
+
+    if (SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+    {
+        CompileSPIRV(HLSL_ProceduralTriangleVS, "HLSL_ProceduralTriangleVS", Compiler, SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, VS_SPIRV);
+        CompileSPIRV(HLSL_FragmentShaderWithCB, "HLSL_FragmentShaderWithCB", Compiler, SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, FS_SPIRV);
+    }
+    else
+    {
+        CompileSPIRV(GLSL_ProceduralTriangleVS, "GLSL_ProceduralTriangleVS", Compiler, SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_GLSL, VS_SPIRV);
+        CompileSPIRV(GLSL_FragmentShaderWithUBO, "GLSL_FragmentShaderWithUBO", Compiler, SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_GLSL, FS_SPIRV);
+    }
+
+    ASSERT_FALSE(VS_SPIRV.empty()) << "Failed to compile vertex shader";
+    ASSERT_FALSE(FS_SPIRV.empty()) << "Failed to compile fragment shader";
+
+    // Step 3: Patch both vertex and fragment shaders to use push constants
+    // Both shaders reference the same UBO (CB1), so both need to be patched
+    std::vector<uint32_t> VS_SPIRV_Patched = ConvertUBOToPushConstants(VS_SPIRV, BlockName);
+    std::vector<uint32_t> FS_SPIRV_Patched = ConvertUBOToPushConstants(FS_SPIRV, BlockName);
+    ASSERT_FALSE(VS_SPIRV_Patched.empty()) << "Failed to patch VS UBO to push constants with BlockName: " << BlockName;
+    ASSERT_FALSE(FS_SPIRV_Patched.empty()) << "Failed to patch FS UBO to push constants with BlockName: " << BlockName;
+
+    if (SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+    {
+        // SPIR-V bytecode generated from HLSL must be legalized to
+        // turn it into a valid vulkan SPIR-V shader.
+        SPIRV_OPTIMIZATION_FLAGS OptimizationFlags = SPIRV_OPTIMIZATION_FLAG_LEGALIZATION | SPIRV_OPTIMIZATION_FLAG_STRIP_REFLECTION;
+        VS_SPIRV_Patched                           = OptimizeSPIRV(VS_SPIRV_Patched, OptimizationFlags);
+        FS_SPIRV_Patched                           = OptimizeSPIRV(FS_SPIRV_Patched, OptimizationFlags);
+    }
+
+    // Step 4: Render with push constants
+    {
+        PatchedPushConstantsRenderer Renderer{
+            pTestingSwapChainVk,
+            VS_SPIRV_Patched,
+            FS_SPIRV_Patched,
+            sizeof(PushConstantData),
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT};
+
+        VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
+
+        Renderer.BeginRenderPass(vkCmdBuffer, ClearColor);
+
+        // Set push constant data
+        // Factor = (1,1,1,1) to make output identical to reference
+        // Colors match the reference triangle colors (RGB for each vertex)
+        PushConstantData PushData{};
+        PushData.Factor = {1, 1, 1, 1};
+
+        // Vertex colors matching the reference (std140 layout: vec3 padded to 16 bytes)
+        // Triangle 1
+        PushData.Colors[0] = {1, 0, 0, 0};
+        PushData.Colors[1] = {0, 1, 0, 0};
+        PushData.Colors[2] = {0, 0, 1, 0};
+        // Triangle 2
+        PushData.Colors[3] = {1, 0, 0, 0};
+        PushData.Colors[4] = {0, 1, 0, 0};
+        PushData.Colors[5] = {0, 0, 1, 0};
+
+        Renderer.Draw(vkCmdBuffer, &PushData, sizeof(PushData));
+
+        Renderer.EndRenderPass(vkCmdBuffer);
+
+        vkEndCommandBuffer(vkCmdBuffer);
+
+        pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
+    }
+
+    // Sync Diligent Engine's internal layout tracking with the actual image layouts.
+    // After our native Vulkan rendering, the images are in COLOR_ATTACHMENT_OPTIMAL
+    // and DEPTH_STENCIL_ATTACHMENT_OPTIMAL layouts, but Diligent Engine doesn't know this.
+    // We need to update the tracked layouts so that CompareWithSnapshot() can correctly
+    // transition the images for the copy operation.
+    if (RefCntAutoPtr<ITextureVk> pRenderTargetVk{pTestingSwapChainVk->GetCurrentBackBufferRTV()->GetTexture(), IID_TextureVk})
+        pRenderTargetVk->SetLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    if (RefCntAutoPtr<ITextureVk> pDepthBufferVk{pTestingSwapChainVk->GetDepthBufferDSV()->GetTexture(), IID_TextureVk})
+        pDepthBufferVk->SetLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+    // Step 5: Comparison native draw image with ref snapshot
+    pTestingSwapChainVk->Present();
+}
+
+} // namespace
+
+// Test patching UBO using struct type name "CB1"
+TEST_F(VkConvertUBOToPushConstantsTest, PatchByStructTypeName_GLSLang_GLSL)
+{
+    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_GLSLANG, SHADER_SOURCE_LANGUAGE_GLSL, "CB1");
+}
+
+// Test patching UBO using variable instance name "cb"
+TEST_F(VkConvertUBOToPushConstantsTest, PatchByVariableName_GLSLang_GLSL)
+{
+    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_GLSLANG, SHADER_SOURCE_LANGUAGE_GLSL, "cb");
+}
+
+// Test patching CB using cbuffer block name "CB1" with DXC compiler
+// Note: In HLSL, cbuffer name and struct name may be the same or different.
+// DXC typically generates both OpName for the struct type and the variable.
+
+TEST_F(VkConvertUBOToPushConstantsTest, PatchByStructTypeName_GLSLang_HLSL)
+{
+    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_GLSLANG, SHADER_SOURCE_LANGUAGE_HLSL, "CB1");
+}
+
+TEST_F(VkConvertUBOToPushConstantsTest, PatchByStructTypeName_DXC_HLSL)
+{
+    RunConvertUBOToPushConstantsTest(SHADER_COMPILER_DXC, SHADER_SOURCE_LANGUAGE_HLSL, "CB1");
+}
+
+} // namespace Testing
+
+} // namespace Diligent
