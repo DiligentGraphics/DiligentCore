@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2025 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,11 +30,12 @@
 #include "DeviceContextVk.h"
 #include "RenderDeviceVk.h"
 #include "TextureVk.h"
-
+#include "TextureViewVk.h"
 
 #include "GLSLangUtils.hpp"
 #include "DXCompiler.hpp"
 #include "SPIRVTools.hpp"
+#include "FastRand.hpp"
 
 #include "volk.h"
 
@@ -57,11 +58,21 @@ namespace
 class VkConvertUBOToPushConstantsTest : public ::testing::Test
 {
 public:
-    static std::unique_ptr<IDXCompiler> DXCompiler;
+    static IDXCompiler* GetDXCompiler()
+    {
+        return DXCompiler.get();
+    }
 
 protected:
     static void SetUpTestSuite()
     {
+        GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
+        if (pEnv->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
+        {
+            // Skip all tests in this suite
+            GTEST_SKIP() << "This test is only for Vulkan device";
+        }
+
         GLSLangUtils::InitializeGlslang();
 
         DXCompiler = CreateDXCompiler(DXCompilerTarget::Vulkan, 0, nullptr);
@@ -69,13 +80,25 @@ protected:
 
     static void TearDownTestSuite()
     {
+        if (IsSkipped())
+        {
+            return;
+        }
+
         GLSLangUtils::FinalizeGlslang();
 
         DXCompiler.reset();
     }
+
+    void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE SourceLanguage, const std::string& BlockName);
+
+private:
+    static std::unique_ptr<IDXCompiler> DXCompiler;
+    static FastRandFloat                Rnd;
 };
 
 std::unique_ptr<IDXCompiler> VkConvertUBOToPushConstantsTest::DXCompiler;
+FastRandFloat                VkConvertUBOToPushConstantsTest::Rnd{0, 0.f, 1.f};
 
 // GLSL Vertex Shader - procedural two triangles, reads colors from UBO and outputs for interpolation
 const std::string GLSL_ProceduralTriangleVS = R"(
@@ -112,7 +135,6 @@ layout(set = 0, binding = 0) uniform CB1
 layout(location = 0) out vec3 out_Color;
 
 // Helper function to access colors from the UBO
-// This tests OpFunctionCall handling in vertex shader
 vec3 GetVertexColor(ColorData colors, int index)
 {
     return colors.Colors[index].rgb;
@@ -326,12 +348,12 @@ float4 main(PSInput In) : SV_Target
 // Helper to create VkShaderModule from SPIR-V bytecode
 VkShaderModule CreateVkShaderModuleFromSPIRV(VkDevice vkDevice, const std::vector<uint32_t>& SPIRV)
 {
-    VkShaderModuleCreateInfo ShaderModuleCI = {};
-    ShaderModuleCI.sType                    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    ShaderModuleCI.pNext                    = nullptr;
-    ShaderModuleCI.flags                    = 0;
-    ShaderModuleCI.codeSize                 = SPIRV.size() * sizeof(uint32_t);
-    ShaderModuleCI.pCode                    = SPIRV.data();
+    VkShaderModuleCreateInfo ShaderModuleCI{};
+    ShaderModuleCI.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    ShaderModuleCI.pNext    = nullptr;
+    ShaderModuleCI.flags    = 0;
+    ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
+    ShaderModuleCI.pCode    = SPIRV.data();
 
     VkShaderModule vkShaderModule = VK_NULL_HANDLE;
     VkResult       res            = vkCreateShaderModule(vkDevice, &ShaderModuleCI, nullptr, &vkShaderModule);
@@ -356,14 +378,15 @@ std::vector<unsigned int> LoadSPIRVFromHLSL(const std::string& ShaderSource,
 
     if (Compiler == SHADER_COMPILER_DXC)
     {
-        if (!VkConvertUBOToPushConstantsTest::DXCompiler || !VkConvertUBOToPushConstantsTest::DXCompiler->IsLoaded())
+        IDXCompiler* DXCompiler = VkConvertUBOToPushConstantsTest::GetDXCompiler();
+        if (!DXCompiler || !DXCompiler->IsLoaded())
         {
             UNEXPECTED("Test should be skipped if DXCompiler is not available");
             return {};
         }
 
         RefCntAutoPtr<IDataBlob> pCompilerOutput;
-        VkConvertUBOToPushConstantsTest::DXCompiler->Compile(ShaderCI, ShaderVersion{6, 0}, nullptr, nullptr, &SPIRV, &pCompilerOutput);
+        DXCompiler->Compile(ShaderCI, ShaderVersion{6, 0}, nullptr, nullptr, &SPIRV, &pCompilerOutput);
 
         if (pCompilerOutput && pCompilerOutput->GetSize() > 0)
         {
@@ -399,15 +422,6 @@ void CompileSPIRV(const std::string&         ShaderSource,
                   SHADER_SOURCE_LANGUAGE     SourceLanguage,
                   std::vector<unsigned int>& SPIRV)
 {
-    if (Compiler == SHADER_COMPILER_DXC)
-    {
-        VERIFY(SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL, "DXC only supports HLSL");
-        if (!VkConvertUBOToPushConstantsTest::DXCompiler || !VkConvertUBOToPushConstantsTest::DXCompiler->IsLoaded())
-        {
-            GTEST_SKIP() << "DXC compiler is not available";
-        }
-    }
-
     SPIRV = (SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL) ?
         LoadSPIRVFromGLSL(ShaderSource, ShaderType) :
         LoadSPIRVFromHLSL(ShaderSource, ShaderType, Compiler);
@@ -422,14 +436,12 @@ public:
                                  const std::vector<uint32_t>& VS_SPIRV,
                                  const std::vector<uint32_t>& FS_SPIRV,
                                  uint32_t                     PushConstantSize,
-                                 VkShaderStageFlags           PushConstantStages = VK_SHADER_STAGE_FRAGMENT_BIT)
+                                 VkShaderStageFlags           PushConstantStages = VK_SHADER_STAGE_FRAGMENT_BIT) :
+        m_pSwapChain{pSwapChain},
+        m_vkDevice{TestingEnvironmentVk::GetInstance()->GetVkDevice()}
+
     {
-        m_pSwapChain = pSwapChain;
-
-        auto* pEnv = TestingEnvironmentVk::GetInstance();
-        m_vkDevice = pEnv->GetVkDevice();
-
-        const auto& SCDesc = pSwapChain->GetDesc();
+        const SwapChainDesc& SCDesc = pSwapChain->GetDesc();
 
         CreateRenderPass();
 
@@ -441,31 +453,31 @@ public:
         VERIFY_EXPR(m_vkFSModule != VK_NULL_HANDLE);
 
         // Pipeline layout with push constants (no descriptor sets)
-        VkPushConstantRange PushConstantRange = {};
-        PushConstantRange.stageFlags          = PushConstantStages;
-        PushConstantRange.offset              = 0;
-        PushConstantRange.size                = PushConstantSize;
+        VkPushConstantRange PushConstantRange{};
+        PushConstantRange.stageFlags = PushConstantStages;
+        PushConstantRange.offset     = 0;
+        PushConstantRange.size       = PushConstantSize;
 
-        VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
-        PipelineLayoutCI.sType                      = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        PipelineLayoutCI.setLayoutCount             = 0;
-        PipelineLayoutCI.pSetLayouts                = nullptr;
-        PipelineLayoutCI.pushConstantRangeCount     = 1;
-        PipelineLayoutCI.pPushConstantRanges        = &PushConstantRange;
+        VkPipelineLayoutCreateInfo PipelineLayoutCI{};
+        PipelineLayoutCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        PipelineLayoutCI.setLayoutCount         = 0;
+        PipelineLayoutCI.pSetLayouts            = nullptr;
+        PipelineLayoutCI.pushConstantRangeCount = 1;
+        PipelineLayoutCI.pPushConstantRanges    = &PushConstantRange;
 
         VkResult res = vkCreatePipelineLayout(m_vkDevice, &PipelineLayoutCI, nullptr, &m_vkLayout);
         VERIFY_EXPR(res == VK_SUCCESS);
         (void)res;
 
         // Create graphics pipeline
-        VkGraphicsPipelineCreateInfo PipelineCI = {};
-        PipelineCI.sType                        = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        VkGraphicsPipelineCreateInfo PipelineCI{};
+        PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 
-        VkPipelineShaderStageCreateInfo ShaderStages[2] = {};
-        ShaderStages[0].sType                           = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        ShaderStages[0].stage                           = VK_SHADER_STAGE_VERTEX_BIT;
-        ShaderStages[0].module                          = m_vkVSModule;
-        ShaderStages[0].pName                           = "main";
+        VkPipelineShaderStageCreateInfo ShaderStages[2]{};
+        ShaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        ShaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
+        ShaderStages[0].module = m_vkVSModule;
+        ShaderStages[0].pName  = "main";
 
         ShaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         ShaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -476,25 +488,25 @@ public:
         PipelineCI.stageCount = _countof(ShaderStages);
         PipelineCI.layout     = m_vkLayout;
 
-        VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
-        VertexInputStateCI.sType                                = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        PipelineCI.pVertexInputState                            = &VertexInputStateCI;
+        VkPipelineVertexInputStateCreateInfo VertexInputStateCI{};
+        VertexInputStateCI.sType     = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        PipelineCI.pVertexInputState = &VertexInputStateCI;
 
-        VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
-        InputAssemblyCI.sType                                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        InputAssemblyCI.topology                               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        InputAssemblyCI.primitiveRestartEnable                 = VK_FALSE;
-        PipelineCI.pInputAssemblyState                         = &InputAssemblyCI;
+        VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI{};
+        InputAssemblyCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        InputAssemblyCI.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        InputAssemblyCI.primitiveRestartEnable = VK_FALSE;
+        PipelineCI.pInputAssemblyState         = &InputAssemblyCI;
 
-        VkPipelineTessellationStateCreateInfo TessStateCI = {};
-        TessStateCI.sType                                 = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-        PipelineCI.pTessellationState                     = &TessStateCI;
+        VkPipelineTessellationStateCreateInfo TessStateCI{};
+        TessStateCI.sType             = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        PipelineCI.pTessellationState = &TessStateCI;
 
-        VkPipelineViewportStateCreateInfo ViewPortStateCI = {};
-        ViewPortStateCI.sType                             = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-        ViewPortStateCI.viewportCount                     = 1;
+        VkPipelineViewportStateCreateInfo ViewPortStateCI{};
+        ViewPortStateCI.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        ViewPortStateCI.viewportCount = 1;
 
-        VkViewport Viewport        = {};
+        VkViewport Viewport{};
         Viewport.y                 = static_cast<float>(SCDesc.Height);
         Viewport.width             = static_cast<float>(SCDesc.Width);
         Viewport.height            = -static_cast<float>(SCDesc.Height);
@@ -502,21 +514,21 @@ public:
         ViewPortStateCI.pViewports = &Viewport;
 
         ViewPortStateCI.scissorCount = 1;
-        VkRect2D ScissorRect         = {};
-        ScissorRect.extent.width     = SCDesc.Width;
-        ScissorRect.extent.height    = SCDesc.Height;
-        ViewPortStateCI.pScissors    = &ScissorRect;
-        PipelineCI.pViewportState    = &ViewPortStateCI;
+        VkRect2D ScissorRect{};
+        ScissorRect.extent.width  = SCDesc.Width;
+        ScissorRect.extent.height = SCDesc.Height;
+        ViewPortStateCI.pScissors = &ScissorRect;
+        PipelineCI.pViewportState = &ViewPortStateCI;
 
-        VkPipelineRasterizationStateCreateInfo RasterizerStateCI = {};
-        RasterizerStateCI.sType                                  = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-        RasterizerStateCI.polygonMode                            = VK_POLYGON_MODE_FILL;
-        RasterizerStateCI.cullMode                               = VK_CULL_MODE_NONE;
-        RasterizerStateCI.lineWidth                              = 1;
-        PipelineCI.pRasterizationState                           = &RasterizerStateCI;
+        VkPipelineRasterizationStateCreateInfo RasterizerStateCI{};
+        RasterizerStateCI.sType        = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        RasterizerStateCI.polygonMode  = VK_POLYGON_MODE_FILL;
+        RasterizerStateCI.cullMode     = VK_CULL_MODE_NONE;
+        RasterizerStateCI.lineWidth    = 1;
+        PipelineCI.pRasterizationState = &RasterizerStateCI;
 
-        // Multisample state (24)
-        VkPipelineMultisampleStateCreateInfo MSStateCI = {};
+        // Multisample state
+        VkPipelineMultisampleStateCreateInfo MSStateCI{};
 
         MSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         MSStateCI.pNext = nullptr;
@@ -528,28 +540,28 @@ public:
         MSStateCI.minSampleShading     = 0;               // a minimum fraction of sample shading if sampleShadingEnable is set to VK_TRUE.
         uint32_t SampleMask[]          = {0xFFFFFFFF, 0}; // Vulkan spec allows up to 64 samples
         MSStateCI.pSampleMask          = SampleMask;      // an array of static coverage information that is ANDed with
-                                                          // the coverage information generated during rasterization (25.3)
+                                                          // the coverage information generated during rasterization
         MSStateCI.alphaToCoverageEnable = VK_FALSE;       // whether a temporary coverage value is generated based on
                                                           // the alpha component of the fragment's first color output
         MSStateCI.alphaToOneEnable   = VK_FALSE;          // whether the alpha component of the fragment's first color output is replaced with one
         PipelineCI.pMultisampleState = &MSStateCI;
 
-        VkPipelineDepthStencilStateCreateInfo DepthStencilStateCI = {};
-        DepthStencilStateCI.sType                                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        PipelineCI.pDepthStencilState                             = &DepthStencilStateCI;
+        VkPipelineDepthStencilStateCreateInfo DepthStencilStateCI{};
+        DepthStencilStateCI.sType     = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        PipelineCI.pDepthStencilState = &DepthStencilStateCI;
 
-        VkPipelineColorBlendStateCreateInfo BlendStateCI = {};
-        VkPipelineColorBlendAttachmentState Attachment   = {};
-        Attachment.colorWriteMask                        = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+        VkPipelineColorBlendStateCreateInfo BlendStateCI{};
+        VkPipelineColorBlendAttachmentState Attachment{};
+        Attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
             VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         BlendStateCI.sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         BlendStateCI.pAttachments    = &Attachment;
         BlendStateCI.attachmentCount = 1;
         PipelineCI.pColorBlendState  = &BlendStateCI;
 
-        VkPipelineDynamicStateCreateInfo DynamicStateCI = {};
-        DynamicStateCI.sType                            = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        PipelineCI.pDynamicState                        = &DynamicStateCI;
+        VkPipelineDynamicStateCreateInfo DynamicStateCI{};
+        DynamicStateCI.sType     = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        PipelineCI.pDynamicState = &DynamicStateCI;
 
         PipelineCI.renderPass         = m_vkRenderPass;
         PipelineCI.subpass            = 0;
@@ -570,8 +582,8 @@ public:
         VkFormat ColorFormat = TexFormatToVkFormat(m_pSwapChain->GetCurrentBackBufferRTV()->GetDesc().Format);
         VkFormat DepthFormat = TexFormatToVkFormat(m_pSwapChain->GetDepthBufferDSV()->GetDesc().Format);
 
-        std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1> Attachments;
-        std::array<VkAttachmentReference, MAX_RENDER_TARGETS + 1>   AttachmentReferences;
+        std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1> Attachments{};
+        std::array<VkAttachmentReference, MAX_RENDER_TARGETS + 1>   AttachmentReferences{};
 
         VkSubpassDescription Subpass;
 
@@ -588,69 +600,39 @@ public:
     {
         // Use Diligent Engine managed images (different from TestingSwapChainVk's internal images).
         // The test compares rendering to Diligent Engine images against TestingSwapChainVk's internal images.
-        m_vkRenderTargetImage = (VkImage)m_pSwapChain->GetCurrentBackBufferRTV()->GetTexture()->GetNativeHandle();
-        m_vkDepthBufferImage  = (VkImage)m_pSwapChain->GetDepthBufferDSV()->GetTexture()->GetNativeHandle();
+        RefCntAutoPtr<ITextureViewVk> pRTV{m_pSwapChain->GetCurrentBackBufferRTV(), IID_TextureViewVk};
+        VERIFY_EXPR(pRTV);
+        RefCntAutoPtr<ITextureViewVk> pDSV{m_pSwapChain->GetDepthBufferDSV(), IID_TextureViewVk};
+        VERIFY_EXPR(pDSV);
 
-        VkFormat ColorFormat = TexFormatToVkFormat(m_pSwapChain->GetCurrentBackBufferRTV()->GetDesc().Format);
-        VkFormat DepthFormat = TexFormatToVkFormat(m_pSwapChain->GetDepthBufferDSV()->GetDesc().Format);
+        VkFramebufferCreateInfo FramebufferCI{};
+        FramebufferCI.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        FramebufferCI.pNext           = nullptr;
+        FramebufferCI.flags           = 0; // reserved for future use
+        FramebufferCI.renderPass      = m_vkRenderPass;
+        FramebufferCI.attachmentCount = 2;
+        VkImageView Attachments[2]    = {pDSV->GetVulkanImageView(), pRTV->GetVulkanImageView()};
+        FramebufferCI.pAttachments    = Attachments;
+        FramebufferCI.width           = m_pSwapChain->GetDesc().Width;
+        FramebufferCI.height          = m_pSwapChain->GetDesc().Height;
+        FramebufferCI.layers          = 1;
 
-        {
-            VkImageViewCreateInfo ImageViewCI = {};
-
-            ImageViewCI.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            ImageViewCI.pNext        = nullptr;
-            ImageViewCI.flags        = 0; // reserved for future use.
-            ImageViewCI.image        = m_vkRenderTargetImage;
-            ImageViewCI.format       = ColorFormat;
-            ImageViewCI.viewType     = VK_IMAGE_VIEW_TYPE_2D;
-            ImageViewCI.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            ImageViewCI.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            ImageViewCI.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            ImageViewCI.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-            ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            ImageViewCI.subresourceRange.levelCount = 1;
-            ImageViewCI.subresourceRange.layerCount = 1;
-
-            VkResult res = vkCreateImageView(m_vkDevice, &ImageViewCI, nullptr, &m_vkRenderTargetView);
-            VERIFY_EXPR(res >= 0);
-            (void)res;
-
-            ImageViewCI.image                       = m_vkDepthBufferImage;
-            ImageViewCI.format                      = DepthFormat;
-            ImageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-            res = vkCreateImageView(m_vkDevice, &ImageViewCI, nullptr, &m_vkDepthBufferView);
-            VERIFY_EXPR(res >= 0);
-            (void)res;
-        }
-
-        {
-            VkFramebufferCreateInfo FramebufferCI = {};
-
-            FramebufferCI.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            FramebufferCI.pNext           = nullptr;
-            FramebufferCI.flags           = 0; // reserved for future use
-            FramebufferCI.renderPass      = m_vkRenderPass;
-            FramebufferCI.attachmentCount = 2;
-            VkImageView Attachments[2]    = {m_vkDepthBufferView, m_vkRenderTargetView};
-            FramebufferCI.pAttachments    = Attachments;
-            FramebufferCI.width           = m_pSwapChain->GetDesc().Width;
-            FramebufferCI.height          = m_pSwapChain->GetDesc().Height;
-            FramebufferCI.layers          = 1;
-
-            VkResult res = vkCreateFramebuffer(m_vkDevice, &FramebufferCI, nullptr, &m_vkFramebuffer);
-            VERIFY_EXPR(res >= 0);
-            (void)res;
-        }
+        VkResult res = vkCreateFramebuffer(m_vkDevice, &FramebufferCI, nullptr, &m_vkFramebuffer);
+        VERIFY_EXPR(res >= 0);
+        (void)res;
     }
 
-    void BeginRenderPass(VkCommandBuffer vkCmdBuffer)
+    void BeginRenderPass(VkCommandBuffer vkCmdBuffer, const float* ClearColor)
     {
+        RefCntAutoPtr<ITextureVk> pBackBuffer{m_pSwapChain->GetCurrentBackBufferRTV()->GetTexture(), IID_TextureVk};
+        VERIFY_EXPR(pBackBuffer);
+        RefCntAutoPtr<ITextureVk> pDepthBuffer{m_pSwapChain->GetDepthBufferDSV()->GetTexture(), IID_TextureVk};
+        VERIFY_EXPR(pDepthBuffer);
+
         // Manually transition Diligent Engine managed images to the required layouts.
         // We cannot use TestingSwapChainVk::TransitionRenderTarget/TransitionDepthBuffer
         // because they operate on TestingSwapChainVk's internal images, not the Diligent Engine images.
-        VkImageMemoryBarrier ImageBarriers[2] = {};
+        VkImageMemoryBarrier ImageBarriers[2]{};
 
         // Render target barrier: UNDEFINED -> COLOR_ATTACHMENT_OPTIMAL
         ImageBarriers[0].sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -660,7 +642,7 @@ public:
         ImageBarriers[0].newLayout                       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         ImageBarriers[0].srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
         ImageBarriers[0].dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        ImageBarriers[0].image                           = m_vkRenderTargetImage;
+        ImageBarriers[0].image                           = pBackBuffer->GetVkImage();
         ImageBarriers[0].subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
         ImageBarriers[0].subresourceRange.baseMipLevel   = 0;
         ImageBarriers[0].subresourceRange.levelCount     = 1;
@@ -675,7 +657,7 @@ public:
         ImageBarriers[1].newLayout                       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         ImageBarriers[1].srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
         ImageBarriers[1].dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-        ImageBarriers[1].image                           = m_vkDepthBufferImage;
+        ImageBarriers[1].image                           = pDepthBuffer->GetVkImage();
         ImageBarriers[1].subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
         ImageBarriers[1].subresourceRange.baseMipLevel   = 0;
         ImageBarriers[1].subresourceRange.levelCount     = 1;
@@ -690,20 +672,18 @@ public:
                              0, nullptr,
                              2, ImageBarriers);
 
-        VkRenderPassBeginInfo BeginInfo = {};
-
+        VkRenderPassBeginInfo BeginInfo{};
         BeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         BeginInfo.renderPass        = m_vkRenderPass;
         BeginInfo.framebuffer       = m_vkFramebuffer;
         BeginInfo.renderArea.extent = VkExtent2D{m_pSwapChain->GetDesc().Width, m_pSwapChain->GetDesc().Height};
 
-        VkClearValue ClearValues[2] = {};
-
+        VkClearValue ClearValues[2]{};
         ClearValues[0].depthStencil.depth = 1;
-        ClearValues[1].color.float32[0]   = 0;
-        ClearValues[1].color.float32[1]   = 0;
-        ClearValues[1].color.float32[2]   = 0;
-        ClearValues[1].color.float32[3]   = 0;
+        ClearValues[1].color.float32[0]   = ClearColor[0];
+        ClearValues[1].color.float32[1]   = ClearColor[1];
+        ClearValues[1].color.float32[2]   = ClearColor[2];
+        ClearValues[1].color.float32[3]   = ClearColor[3];
 
         BeginInfo.clearValueCount = 2;
         BeginInfo.pClearValues    = ClearValues;
@@ -731,61 +711,45 @@ public:
         vkDestroyShaderModule(m_vkDevice, m_vkFSModule, nullptr);
         vkDestroyRenderPass(m_vkDevice, m_vkRenderPass, nullptr);
         vkDestroyFramebuffer(m_vkDevice, m_vkFramebuffer, nullptr);
-        vkDestroyImageView(m_vkDevice, m_vkDepthBufferView, nullptr);
-        vkDestroyImageView(m_vkDevice, m_vkRenderTargetView, nullptr);
     }
 
 private:
-    TestingSwapChainVk* m_pSwapChain          = nullptr;
-    VkDevice            m_vkDevice            = VK_NULL_HANDLE;
-    VkShaderModule      m_vkVSModule          = VK_NULL_HANDLE;
-    VkShaderModule      m_vkFSModule          = VK_NULL_HANDLE;
-    VkPipeline          m_vkPipeline          = VK_NULL_HANDLE;
-    VkPipelineLayout    m_vkLayout            = VK_NULL_HANDLE;
-    VkRenderPass        m_vkRenderPass        = VK_NULL_HANDLE;
-    VkFramebuffer       m_vkFramebuffer       = VK_NULL_HANDLE;
-    VkImage             m_vkRenderTargetImage = VK_NULL_HANDLE; // Diligent Engine managed render target
-    VkImage             m_vkDepthBufferImage  = VK_NULL_HANDLE; // Diligent Engine managed depth buffer
-    VkImageView         m_vkRenderTargetView  = VK_NULL_HANDLE;
-    VkImageView         m_vkDepthBufferView   = VK_NULL_HANDLE;
-    VkShaderStageFlags  m_PushConstantStages  = 0;
+    TestingSwapChainVk* m_pSwapChain         = nullptr;
+    VkDevice            m_vkDevice           = VK_NULL_HANDLE;
+    VkShaderModule      m_vkVSModule         = VK_NULL_HANDLE;
+    VkShaderModule      m_vkFSModule         = VK_NULL_HANDLE;
+    VkPipeline          m_vkPipeline         = VK_NULL_HANDLE;
+    VkPipelineLayout    m_vkLayout           = VK_NULL_HANDLE;
+    VkRenderPass        m_vkRenderPass       = VK_NULL_HANDLE;
+    VkFramebuffer       m_vkFramebuffer      = VK_NULL_HANDLE;
+    VkShaderStageFlags  m_PushConstantStages = 0;
 };
 
 // Test helper that runs the full test flow
-void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE SourceLanguage, const std::string& BlockName)
+void VkConvertUBOToPushConstantsTest::RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LANGUAGE SourceLanguage, const std::string& BlockName)
 {
-    // First check device type using base class to avoid ClassPtrCast assertion failure
-    auto* pBaseEnv = GPUTestingEnvironment::GetInstance();
-    if (!pBaseEnv || pBaseEnv->GetDevice()->GetDeviceInfo().Type != RENDER_DEVICE_TYPE_VULKAN)
-    {
-        GTEST_SKIP() << "Vulkan environment not available";
-        return;
-    }
-
-    auto* pEnv = TestingEnvironmentVk::GetInstance();
+    TestingEnvironmentVk* pEnv = TestingEnvironmentVk::GetInstance();
 
     if (Compiler == SHADER_COMPILER_DXC)
     {
-        if (!VkConvertUBOToPushConstantsTest::DXCompiler ||
-            !VkConvertUBOToPushConstantsTest::DXCompiler->IsLoaded())
+        if (!DXCompiler || !DXCompiler->IsLoaded())
         {
-            GTEST_SKIP() << "Skipped because DXCompiler not available";
-            return;
+            GTEST_SKIP() << "DXCompiler is not available";
         }
     }
 
-    auto* pContext   = pEnv->GetDeviceContext();
-    auto* pSwapChain = pEnv->GetSwapChain();
+    IDeviceContext* pContext   = pEnv->GetDeviceContext();
+    ISwapChain*     pSwapChain = pEnv->GetSwapChain();
 
     RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
 
-    auto* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
+    TestingSwapChainVk* pTestingSwapChainVk = ClassPtrCast<TestingSwapChainVk>(pSwapChain);
 
     // Step 1: Render reference using existing ReferenceTriangleRenderer
     pContext->Flush();
     pContext->InvalidateState();
 
-    const float ClearColor[] = {0.0f, 0.0f, 0.0f, 0.0f};
+    const float ClearColor[] = {Rnd(), Rnd(), Rnd(), Rnd()};
     RenderDrawCommandReferenceVk(pSwapChain, ClearColor);
 
     // Take snapshot of reference image
@@ -835,38 +799,23 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LA
 
         VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 
-        Renderer.BeginRenderPass(vkCmdBuffer);
+        Renderer.BeginRenderPass(vkCmdBuffer, ClearColor);
 
         // Set push constant data
         // Factor = (1,1,1,1) to make output identical to reference
         // Colors match the reference triangle colors (RGB for each vertex)
-        PushConstantData PushData = {};
-        PushData.Factor.x         = 1.0f;
-        PushData.Factor.y         = 1.0f;
-        PushData.Factor.z         = 1.0f;
-        PushData.Factor.w         = 1.0f;
+        PushConstantData PushData{};
+        PushData.Factor = {1, 1, 1, 1};
 
         // Vertex colors matching the reference (std140 layout: vec3 padded to 16 bytes)
-        // Triangle 1: Red, Green, Blue
-        PushData.Colors[0].x = 1.0f;
-        PushData.Colors[0].y = 0.0f;
-        PushData.Colors[0].z = 0.0f; // Red
-        PushData.Colors[1].x = 0.0f;
-        PushData.Colors[1].y = 1.0f;
-        PushData.Colors[1].z = 0.0f; // Green
-        PushData.Colors[2].x = 0.0f;
-        PushData.Colors[2].y = 0.0f;
-        PushData.Colors[2].z = 1.0f; // Blue
-        // Triangle 2: Red, Green, Blue
-        PushData.Colors[3].x = 1.0f;
-        PushData.Colors[3].y = 0.0f;
-        PushData.Colors[3].z = 0.0f; // Red
-        PushData.Colors[4].x = 0.0f;
-        PushData.Colors[4].y = 1.0f;
-        PushData.Colors[4].z = 0.0f; // Green
-        PushData.Colors[5].x = 0.0f;
-        PushData.Colors[5].y = 0.0f;
-        PushData.Colors[5].z = 1.0f; // Blue
+        // Triangle 1
+        PushData.Colors[0] = {1, 0, 0, 0};
+        PushData.Colors[1] = {0, 1, 0, 0};
+        PushData.Colors[2] = {0, 0, 1, 0};
+        // Triangle 2
+        PushData.Colors[3] = {1, 0, 0, 0};
+        PushData.Colors[4] = {0, 1, 0, 0};
+        PushData.Colors[5] = {0, 0, 1, 0};
 
         Renderer.Draw(vkCmdBuffer, &PushData, sizeof(PushData));
 
@@ -882,14 +831,10 @@ void RunConvertUBOToPushConstantsTest(SHADER_COMPILER Compiler, SHADER_SOURCE_LA
     // and DEPTH_STENCIL_ATTACHMENT_OPTIMAL layouts, but Diligent Engine doesn't know this.
     // We need to update the tracked layouts so that CompareWithSnapshot() can correctly
     // transition the images for the copy operation.
-    {
-        RefCntAutoPtr<ITextureVk> pRenderTargetVk{pTestingSwapChainVk->GetCurrentBackBufferRTV()->GetTexture(), IID_TextureVk};
-        RefCntAutoPtr<ITextureVk> pDepthBufferVk{pTestingSwapChainVk->GetDepthBufferDSV()->GetTexture(), IID_TextureVk};
-        if (pRenderTargetVk)
-            pRenderTargetVk->SetLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-        if (pDepthBufferVk)
-            pDepthBufferVk->SetLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-    }
+    if (RefCntAutoPtr<ITextureVk> pRenderTargetVk{pTestingSwapChainVk->GetCurrentBackBufferRTV()->GetTexture(), IID_TextureVk})
+        pRenderTargetVk->SetLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    if (RefCntAutoPtr<ITextureVk> pDepthBufferVk{pTestingSwapChainVk->GetDepthBufferDSV()->GetTexture(), IID_TextureVk})
+        pDepthBufferVk->SetLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     // Step 5: Comparison native draw image with ref snapshot
     pTestingSwapChainVk->Present();
@@ -922,7 +867,6 @@ TEST_F(VkConvertUBOToPushConstantsTest, PatchByStructTypeName_DXC_HLSL)
 {
     RunConvertUBOToPushConstantsTest(SHADER_COMPILER_DXC, SHADER_SOURCE_LANGUAGE_HLSL, "CB1");
 }
-
 
 } // namespace Testing
 
