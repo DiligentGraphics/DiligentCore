@@ -128,9 +128,10 @@ void SerializedPipelineStateImpl::PatchShadersVk(const CreateInfoType& CreateInf
     {
         ShaderStageInfoVk&                    Src{ShaderStages[i]};
         PipelineStateVkImpl::ShaderStageInfo& Dst{ShaderStagesVk[i]};
-        Dst.Type    = Src.Type;
-        Dst.Shaders = std::move(Src.Shaders);
-        Dst.SPIRVs  = std::move(Src.SPIRVs);
+        Dst.Type            = Src.Type;
+        Dst.Shaders         = std::move(Src.Shaders);
+        Dst.SPIRVs          = std::move(Src.SPIRVs);
+        Dst.ShaderResources = std::move(Src.ShaderResources);
     }
 
     IPipelineResourceSignature** ppSignatures    = CreateInfo.ppResourceSignatures;
