@@ -92,7 +92,11 @@ public:
 
     const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources() const
     {
-        DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
+        static const std::shared_ptr<const SPIRVShaderResources> NullShaderResource;
+        // NOTE: while shader is compiled asynchronously, is not available
+        if (IsCompiling())
+            return NullShaderResource;
+
         return m_pShaderResources;
     }
 
@@ -110,6 +114,8 @@ public:
         Size        = m_SPIRV.size() * sizeof(m_SPIRV[0]);
     }
 
+    std::shared_ptr<const SPIRVShaderResources> CreateSPIRVShaderResources(const std::vector<uint32_t>& SPIRV) noexcept(false);
+
 private:
     void Initialize(const ShaderCreateInfo& ShaderCI,
                     const CreateInfo&       VkShaderCI) noexcept(false);
@@ -117,8 +123,11 @@ private:
 private:
     std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;
 
+    std::string           m_CIEntryPoint;
     std::string           m_EntryPoint;
     std::vector<uint32_t> m_SPIRV;
+
+    bool m_CILoadConstantBufferReflection = false;
 };
 
 } // namespace Diligent

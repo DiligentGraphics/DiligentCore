@@ -229,47 +229,64 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
 
     // We cannot create shader module here because resource bindings are assigned when
     // pipeline state is created
+    m_CILoadConstantBufferReflection = ShaderCI.LoadConstantBufferReflection;
+    
+    m_CIEntryPoint = ShaderCI.EntryPoint;
 
     // Load shader resources
     if (!m_SPIRV.empty())
     {
         if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
         {
-            IMemoryAllocator& Allocator = GetRawAllocator();
+            std::shared_ptr<const SPIRVShaderResources> pShaderResources = CreateSPIRVShaderResources(m_SPIRV);
 
-            std::unique_ptr<void, STDDeleterRawMem<void>> pRawMem{
-                ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1),
-                STDDeleterRawMem<void>(Allocator),
-            };
-            const bool LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
-            new (pRawMem.get()) SPIRVShaderResources // May throw
-                {
-                    Allocator,
-                    m_SPIRV,
-                    m_Desc,
-                    m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
-                    LoadShaderInputs,
-                    ShaderCI.LoadConstantBufferReflection,
-                    m_EntryPoint //
-                };
             VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint ||
                         (m_EntryPoint == "main" && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL) != 0));
-            m_pShaderResources.reset(static_cast<SPIRVShaderResources*>(pRawMem.release()), STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
-            if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
+            m_pShaderResources = pShaderResources;
+
+            if (m_Desc.ShaderType == SHADER_TYPE_VERTEX && m_pShaderResources->IsHLSLSource())
             {
                 m_pShaderResources->MapHLSLVertexShaderInputs(m_SPIRV);
             }
         }
         else
         {
-            m_EntryPoint = ShaderCI.EntryPoint;
+            m_EntryPoint = m_CIEntryPoint;
         }
 
         m_Status.store(SHADER_STATUS_READY);
     }
 }
 
+std::shared_ptr<const SPIRVShaderResources> ShaderVkImpl::CreateSPIRVShaderResources(const std::vector<uint32_t>& SPIRV) noexcept(false)
+{
+    //This ensures m_EntryPoint always initialized from ShaderCI.EntryPoint when reconstructing shader resources with CreateSPIRVShaderResources
+    m_EntryPoint = m_CIEntryPoint;
+
+    IMemoryAllocator& Allocator = GetRawAllocator();
+
+    std::unique_ptr<void, STDDeleterRawMem<void>> pRawMem{
+        ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1),
+        STDDeleterRawMem<void>(Allocator),
+    };
+    new (pRawMem.get()) SPIRVShaderResources // May throw
+        {
+            Allocator,
+            SPIRV,
+            m_Desc,
+            m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
+            m_Desc.ShaderType == SHADER_TYPE_VERTEX ? true : false,
+            m_CILoadConstantBufferReflection,
+            m_EntryPoint
+        };
+
+    std::shared_ptr<const SPIRVShaderResources> pShaderResources;
+
+    pShaderResources.reset(static_cast<SPIRVShaderResources*>(pRawMem.release()), STDDeleterRawMem<SPIRVShaderResources>(Allocator));
+
+    return pShaderResources;
+}
 
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceVkImpl*     pRenderDeviceVk,
