@@ -230,7 +230,7 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
     // We cannot create shader module here because resource bindings are assigned when
     // pipeline state is created
     m_CILoadConstantBufferReflection = ShaderCI.LoadConstantBufferReflection;
-    
+
     m_CIEntryPoint = ShaderCI.EntryPoint;
 
     // Load shader resources
@@ -278,8 +278,7 @@ std::shared_ptr<const SPIRVShaderResources> ShaderVkImpl::CreateSPIRVShaderResou
             m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
             m_Desc.ShaderType == SHADER_TYPE_VERTEX ? true : false,
             m_CILoadConstantBufferReflection,
-            m_EntryPoint
-        };
+            m_EntryPoint};
 
     std::shared_ptr<const SPIRVShaderResources> pShaderResources;
 
