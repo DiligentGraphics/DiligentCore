@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2023 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,8 +62,8 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 /// Bit shift for the the shading X-axis rate.
 #define DILIGENT_SHADING_RATE_X_SHIFT 2
 
-/// Ineline constants data storage (max size is typically 128-256 bytes, use 256 for safety)
-#define DILIGENT_MAX_INLINE_CONSTANTS_SIZE 256
+/// The maximum number of 4-byte inline constants in a pipeline state.
+#define DILIGENT_MAX_INLINE_CONSTANTS 64
 
 static DILIGENT_CONSTEXPR Uint32 MAX_BUFFER_SLOTS        = DILIGENT_MAX_BUFFER_SLOTS;
 static DILIGENT_CONSTEXPR Uint32 MAX_RENDER_TARGETS      = DILIGENT_MAX_RENDER_TARGETS;
@@ -74,5 +74,6 @@ static DILIGENT_CONSTEXPR Uint32 DEFAULT_ADAPTER_ID      = DILIGENT_DEFAULT_ADAP
 static DILIGENT_CONSTEXPR Uint8  DEFAULT_QUEUE_ID        = DILIGENT_DEFAULT_QUEUE_ID;
 static DILIGENT_CONSTEXPR Uint32 MAX_SHADING_RATES       = DILIGENT_MAX_SHADING_RATES;
 static DILIGENT_CONSTEXPR Uint32 SHADING_RATE_X_SHIFT    = DILIGENT_SHADING_RATE_X_SHIFT;
+static DILIGENT_CONSTEXPR Uint32 MAX_INLINE_CONSTANTS    = DILIGENT_MAX_INLINE_CONSTANTS;
 
 DILIGENT_END_NAMESPACE // namespace Diligent

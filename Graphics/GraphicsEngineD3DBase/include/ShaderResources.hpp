@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -271,12 +271,11 @@ public:
         }
         const Uint32 NumConstants = GetConstantBufferSize() / sizeof(Uint32);
 
-        constexpr Uint32 kMaxInlineConstants = 64;
-        if (NumConstants > kMaxInlineConstants)
+        if (NumConstants > MAX_INLINE_CONSTANTS)
         {
             LOG_ERROR_AND_THROW("Inline constants resource '", Name, "' in shader '", ShaderName, "' has ",
                                 NumConstants, " constants. The maximum supported number of inline constants is ",
-                                kMaxInlineConstants, '.');
+                                MAX_INLINE_CONSTANTS, '.');
         }
 
         return NumConstants;
