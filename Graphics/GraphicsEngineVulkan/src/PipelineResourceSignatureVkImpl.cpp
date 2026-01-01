@@ -778,7 +778,6 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
     if (m_pStaticResCache->GetNumDescriptorSets() == 0)
         return;
 
-    
 
     // SrcResourceCache contains only static resources.
     // In case of SRB, DstResourceCache contains static, mutable and dynamic resources.
@@ -787,7 +786,7 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
     const Uint32                                StaticSetIdx     = GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>();
     const ShaderResourceCacheVk::DescriptorSet& SrcDescrSet      = SrcResourceCache.GetDescriptorSet(StaticSetIdx);
     const ShaderResourceCacheVk::DescriptorSet& DstDescrSet      = const_cast<const ShaderResourceCacheVk&>(DstResourceCache).GetDescriptorSet(StaticSetIdx);
-    const auto ResIdxRange = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    const auto                                  ResIdxRange      = GetResourceIndexRange(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     const ResourceCacheContentType              SrcCacheType     = SrcResourceCache.GetContentType();
     const ResourceCacheContentType              DstCacheType     = DstResourceCache.GetContentType();
 
