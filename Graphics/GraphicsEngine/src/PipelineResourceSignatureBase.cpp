@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -119,10 +119,10 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
                                         "). INLINE_CONSTANTS flag cannot be combined with other flags.");
             }
 
-            if (Res.ArraySize > 64)
+            if (Res.ArraySize > MAX_INLINE_CONSTANTS)
             {
                 LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize (", Res.ArraySize,
-                                        ") exceeds the maximum allowed value (64) for inline constants.");
+                                        ") exceeds the maximum allowed value (", MAX_INLINE_CONSTANTS, ") for inline constants.");
             }
         }
 
