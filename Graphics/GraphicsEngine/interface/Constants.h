@@ -62,6 +62,9 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 /// Bit shift for the the shading X-axis rate.
 #define DILIGENT_SHADING_RATE_X_SHIFT 2
 
+/// Ineline constants data storage (max size is typically 128-256 bytes, use 256 for safety)
+#define DILIGENT_MAX_INLINE_CONSTANTS_SIZE 256
+
 static DILIGENT_CONSTEXPR Uint32 MAX_BUFFER_SLOTS        = DILIGENT_MAX_BUFFER_SLOTS;
 static DILIGENT_CONSTEXPR Uint32 MAX_RENDER_TARGETS      = DILIGENT_MAX_RENDER_TARGETS;
 static DILIGENT_CONSTEXPR Uint32 MAX_VIEWPORTS           = DILIGENT_MAX_VIEWPORTS;
