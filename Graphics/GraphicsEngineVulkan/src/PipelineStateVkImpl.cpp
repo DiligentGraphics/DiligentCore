@@ -827,11 +827,11 @@ bool PipelineStateVkImpl::InitPushConstantInfoFromSignatures(PushConstantInfoVk&
     // Vulkan allows only one push constant range per pipeline layout.
     // DiligentCore allows multiple inline constant resources, so we promote only the first inline constant
     // from resource signatures to push constants. Other inline constants remain uniform buffers.
-    const PipelineResourceDesc* pResDesc             = nullptr;
-    const char*                 PushConstantName     = nullptr;
-    Uint32                      PushConstantSize     = 0;
-    Uint32                      PushConstantSignIdx  = INVALID_PUSH_CONSTANT_INDEX;
-    Uint32                      PushConstantResIdx   = INVALID_PUSH_CONSTANT_INDEX;
+    const PipelineResourceDesc* pResDesc            = nullptr;
+    const char*                 PushConstantName    = nullptr;
+    Uint32                      PushConstantSize    = 0;
+    Uint32                      PushConstantSignIdx = INVALID_PUSH_CONSTANT_INDEX;
+    Uint32                      PushConstantResIdx  = INVALID_PUSH_CONSTANT_INDEX;
 
     for (Uint32 s = 0; s < m_SignatureCount; ++s)
     {
