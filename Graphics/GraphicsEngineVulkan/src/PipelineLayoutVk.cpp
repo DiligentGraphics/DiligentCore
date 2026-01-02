@@ -59,7 +59,9 @@ void PipelineLayoutVk::Release(RenderDeviceVkImpl* pDeviceVk, Uint64 CommandQueu
     }
 }
 
-void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[], Uint32 SignatureCount) noexcept(false)
+void PipelineLayoutVk::Create(RenderDeviceVkImpl*                            pDeviceVk,
+                              RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[],
+                              Uint32                                         SignatureCount) noexcept(false)
 {
     VERIFY(m_DescrSetCount == 0 && !m_VkPipelineLayout, "This pipeline layout is already initialized");
 
@@ -68,6 +70,12 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<Pipel
     Uint32 DescSetLayoutCount        = 0;
     Uint32 DynamicUniformBufferCount = 0;
     Uint32 DynamicStorageBufferCount = 0;
+
+    // Extract push constant info from signatures.
+    // Vulkan allows only one push constant range per pipeline layout.
+    // DiligentCore allows multiple inline constant resources, so we promote only the first inline constant
+    // from resource signatures to push constants. Other inline constants remain uniform buffers.
+    const PipelineResourceDesc* pPushConstantResDesc = nullptr;
 
     for (Uint32 BindInd = 0; BindInd < SignatureCount; ++BindInd)
     {
@@ -92,6 +100,29 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<Pipel
 #ifdef DILIGENT_DEBUG
         m_DbgMaxBindIndex = std::max(m_DbgMaxBindIndex, Uint32{pSignature->GetDesc().BindingIndex});
 #endif
+
+        // Find the first inline constant resource (only if not already found)
+        if (pPushConstantResDesc == nullptr)
+        {
+            for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
+            {
+                const PipelineResourceDesc& ResDesc = pSignature->GetResourceDesc(r);
+                if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+                {
+                    pPushConstantResDesc         = &ResDesc;
+                    m_PushConstantSignatureIndex = BindInd;
+                    m_PushConstantResourceIndex  = r;
+                    // For inline constants, ArraySize contains the number of 32-bit constants.
+                    m_PushConstantSize = ResDesc.ArraySize * sizeof(Uint32);
+                    for (SHADER_TYPE ShaderTypes = ResDesc.ShaderStages; ShaderTypes != SHADER_TYPE_UNKNOWN;)
+                    {
+                        const SHADER_TYPE ShaderType = ExtractLSB(ShaderTypes);
+                        m_PushConstantStageFlags |= ShaderTypeToVkShaderStageFlagBit(ShaderType);
+                    }
+                    break;
+                }
+            }
+        }
     }
     VERIFY_EXPR(DescSetLayoutCount <= MAX_RESOURCE_SIGNATURES * 2);
 
@@ -114,19 +145,45 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<Pipel
                             ") used by the pipeline layout exceeds device limit (", Limits.maxDescriptorSetStorageBuffersDynamic, ")");
     }
 
+    // Validate push constant size against device limits
+    if (m_PushConstantSize > 0)
+    {
+        if (m_PushConstantSize > Limits.maxPushConstantsSize)
+        {
+            LOG_ERROR_AND_THROW("Push constant size (", m_PushConstantSize,
+                                " bytes) exceeds device limit (", Limits.maxPushConstantsSize, " bytes)");
+        }
+    }
+
     VERIFY(m_DescrSetCount <= std::numeric_limits<decltype(m_DescrSetCount)>::max(),
            "Descriptor set count (", DescSetLayoutCount, ") exceeds the maximum representable value");
 
     VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
 
-    PipelineLayoutCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    PipelineLayoutCI.pNext                  = nullptr;
-    PipelineLayoutCI.flags                  = 0; // reserved for future use
-    PipelineLayoutCI.setLayoutCount         = DescSetLayoutCount;
-    PipelineLayoutCI.pSetLayouts            = DescSetLayoutCount ? DescSetLayouts.data() : nullptr;
-    PipelineLayoutCI.pushConstantRangeCount = 0;
-    PipelineLayoutCI.pPushConstantRanges    = nullptr;
-    m_VkPipelineLayout                      = pDeviceVk->GetLogicalDevice().CreatePipelineLayout(PipelineLayoutCI);
+    PipelineLayoutCI.sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    PipelineLayoutCI.pNext          = nullptr;
+    PipelineLayoutCI.flags          = 0; // reserved for future use
+    PipelineLayoutCI.setLayoutCount = DescSetLayoutCount;
+    PipelineLayoutCI.pSetLayouts    = DescSetLayoutCount ? DescSetLayouts.data() : nullptr;
+
+    // Set up push constant range if present
+    VkPushConstantRange PushConstantRange = {};
+    if (m_PushConstantSize > 0 && m_PushConstantStageFlags != 0)
+    {
+        PushConstantRange.stageFlags = m_PushConstantStageFlags;
+        PushConstantRange.offset     = 0;
+        PushConstantRange.size       = m_PushConstantSize;
+
+        PipelineLayoutCI.pushConstantRangeCount = 1;
+        PipelineLayoutCI.pPushConstantRanges    = &PushConstantRange;
+    }
+    else
+    {
+        PipelineLayoutCI.pushConstantRangeCount = 0;
+        PipelineLayoutCI.pPushConstantRanges    = nullptr;
+    }
+
+    m_VkPipelineLayout = pDeviceVk->GetLogicalDevice().CreatePipelineLayout(PipelineLayoutCI);
 
     m_DescrSetCount = static_cast<Uint8>(DescSetLayoutCount);
 }

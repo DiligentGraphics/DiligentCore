@@ -37,7 +37,7 @@
 //  m_pMemory                                |   |              m_pResources, m_NumResources == m            |
 //  |               m_DescriptorSetAllocation|   |                                                           |
 //  V                                        |   |                                                           V
-//  |  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  |
+//  |  DescriptorSet[0]  |   ....    |  DescriptorSet[Ns-1]  |  Res[0]  |  ... |  Res[n-1]  |    ....     | Res[0]  |  ... |  Res[m-1]  | Inline constant values |
 //         |    |                                                A \
 //         |    |                                                |  \
 //         |    |________________________________________________|   \RefCntAutoPtr
@@ -74,7 +74,8 @@ class ShaderResourceCacheVk : public ShaderResourceCacheBase
 public:
     explicit ShaderResourceCacheVk(ResourceCacheContentType ContentType) noexcept :
         m_TotalResources{0},
-        m_ContentType{static_cast<Uint32>(ContentType)}
+        m_ContentType{static_cast<Uint32>(ContentType)},
+        m_HasInlineConstants{0}
     {
         VERIFY_EXPR(GetContentType() == ContentType);
     }
@@ -88,12 +89,12 @@ public:
 
     ~ShaderResourceCacheVk();
 
-    static size_t GetRequiredMemorySize(Uint32 NumSets, const Uint32* SetSizes);
+    static size_t GetRequiredMemorySize(Uint32 NumSets, const Uint32* SetSizes, Uint32 TotalInlineConstantBytes = 0);
 
-    void InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, const Uint32* SetSizes);
+    void InitializeSets(IMemoryAllocator& MemAllocator, Uint32 NumSets, const Uint32* SetSizes, Uint32 TotalInlineConstantBytes = 0);
     void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type, bool HasImmutableSampler);
 
-    // sizeof(Resource) == 32 (x64, msvc, Release)
+    // sizeof(Resource) == 40 (x64, msvc, Release)
     struct Resource
     {
         explicit Resource(DescriptorType _Type, bool _HasImmutableSampler) noexcept :
@@ -119,6 +120,10 @@ public:
         // For uniform and storage buffers only
 /*16 */ Uint64                       BufferBaseOffset = 0;
 /*24 */ Uint64                       BufferRangeSize  = 0;
+
+        // For inline constants only - pointer to CPU-side staging buffer
+/*32 */ void*                        pInlineConstantData = nullptr;
+/*40 */ // End of structure
 
         VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo()                     const;
         VkDescriptorBufferInfo GetStorageBufferDescriptorWriteInfo()                     const;
@@ -245,13 +250,46 @@ public:
                                 Uint32 CacheOffset,
                                 Uint32 DynamicBufferOffset);
 
+    // Sets inline constant data in the resource cache
+    void SetInlineConstants(Uint32      DescrSetIndex,
+                            Uint32      CacheOffset,
+                            const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants);
+
+    // Gets the inline constant data pointer from the resource cache
+    const void* GetInlineConstantData(Uint32 DescrSetIndex, Uint32 CacheOffset) const;
+
+    // Initialize inline constant buffer in the resource cache
+    void InitializeInlineConstantBuffer(Uint32 DescrSetIndex,
+                                        Uint32 CacheOffset,
+                                        Uint32 NumConstants,
+                                        Uint32 InlineConstantOffset);
+
+    // Returns pointer to inline constant storage at the given byte offset
+    void* GetInlineConstantStorage(Uint32 ByteOffset = 0)
+    {
+        return reinterpret_cast<Uint8*>(GetFirstResourcePtr() + m_TotalResources) + ByteOffset;
+    }
+    const void* GetInlineConstantStorage(Uint32 ByteOffset = 0) const
+    {
+        return reinterpret_cast<const Uint8*>(GetFirstResourcePtr() + m_TotalResources) + ByteOffset;
+    }
+
+    // Explicitly marks that this cache contains inline constants.
+    // This is useful when inline constant memory is initialized externally
+    // (e.g., during SRB cache setup) before any data is written.
+    void MarkHasInlineConstants()
+    {
+        m_HasInlineConstants = 1;
+    }
 
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
 
     bool HasInlineConstants() const
     {
-        return false;
+        return m_HasInlineConstants;
     }
 
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
@@ -292,10 +330,13 @@ private:
     // Total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache
     // regardless of the variable type. Note this variable is not equal to dynamic offsets count, which is constant.
     Uint16 m_NumDynamicBuffers = 0;
-    Uint32 m_TotalResources : 31;
+    Uint32 m_TotalResources : 30;
 
     // Indicates what types of resources are stored in the cache
     const Uint32 m_ContentType : 1;
+
+    // Indicates whether the cache contains inline constants
+    Uint32 m_HasInlineConstants : 1;
 
 #ifdef DILIGENT_DEBUG
     // Debug array that stores flags indicating if resources in the cache have been initialized

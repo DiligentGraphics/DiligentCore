@@ -40,6 +40,8 @@ namespace Diligent
 class RenderDeviceVkImpl;
 class PipelineResourceSignatureVkImpl;
 
+static constexpr Uint32 INVALID_PUSH_CONSTANT_INDEX = ~0u;
+
 /// Implementation of the Diligent::PipelineLayoutVk class
 class PipelineLayoutVk
 {
@@ -47,7 +49,9 @@ public:
     PipelineLayoutVk();
     ~PipelineLayoutVk();
 
-    void Create(RenderDeviceVkImpl* pDeviceVk, RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[], Uint32 SignatureCount) noexcept(false);
+    void Create(RenderDeviceVkImpl*                            pDeviceVk,
+                RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[],
+                Uint32                                         SignatureCount) noexcept(false);
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_VkPipelineLayout; }
@@ -59,6 +63,23 @@ public:
         return m_FirstDescrSetIndex[Index];
     }
 
+    // Returns true if this pipeline layout has push constants
+    bool HasPushConstants() const { return m_PushConstantSize > 0; }
+
+    // Returns the size of push constants in bytes
+    Uint32 GetPushConstantSize() const { return m_PushConstantSize; }
+
+    // Returns the shader stage flags for push constants
+    VkShaderStageFlags GetPushConstantStageFlags() const { return m_PushConstantStageFlags; }
+
+    // Returns the signature index containing the push constant resource
+    // Returns INVALID_PUSH_CONSTANT_INDEX if no push constant is selected
+    Uint32 GetPushConstantSignatureIndex() const { return m_PushConstantSignatureIndex; }
+
+    // Returns the resource index within the signature for push constant
+    // Returns INVALID_PUSH_CONSTANT_INDEX if no push constant is selected
+    Uint32 GetPushConstantResourceIndex() const { return m_PushConstantResourceIndex; }
+
 private:
     VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
 
@@ -69,6 +90,18 @@ private:
     // The total number of descriptor sets used by this pipeline layout
     // (Maximum is MAX_RESOURCE_SIGNATURES * 2)
     Uint8 m_DescrSetCount = 0;
+
+    // Push constant size in bytes
+    Uint32 m_PushConstantSize = 0;
+
+    // Shader stages that use push constants
+    VkShaderStageFlags m_PushConstantStageFlags = 0;
+
+    // Index of the signature containing the push constant resource
+    Uint32 m_PushConstantSignatureIndex = INVALID_PUSH_CONSTANT_INDEX;
+
+    // Resource index within the signature for push constant
+    Uint32 m_PushConstantResourceIndex = INVALID_PUSH_CONSTANT_INDEX;
 
 #ifdef DILIGENT_DEBUG
     Uint32 m_DbgMaxBindIndex = 0;

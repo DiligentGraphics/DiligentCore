@@ -32,11 +32,13 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "SamplerVkImpl.hpp"
 #include "TextureViewVkImpl.hpp"
+#include "BufferVkImpl.hpp"
 #include "DeviceContextVkImpl.hpp"
 
 #include "VulkanTypeConversions.hpp"
 #include "DynamicLinearAllocator.hpp"
 #include "SPIRVShaderResources.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -168,33 +170,54 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
 
 void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
 {
-    // Initialize static resource cache first
-    if (GetNumStaticResStages() > 0)
-    {
-        Uint32 StaticResourceCount = 0; // The total number of static resources in all stages
-                                        // accounting for array sizes.
-        for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
-        {
-            const PipelineResourceDesc& ResDesc = m_Desc.Resources[i];
-            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-            {
-                // For inline constants, ArraySize holds the number of 4-byte constants
-                StaticResourceCount += ResDesc.GetArraySize();
-            }
-        }
-        m_pStaticResCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount);
-    }
-
     CacheOffsetsType CacheGroupSizes = {}; // Required cache size for each cache group
     BindingCountType BindingCount    = {}; // Binding count in each cache group
+
+    // First pass: count resources and inline constants
+    Uint32 StaticResourceCount            = 0; // The total number of static resources in all stages
+    Uint32 TotalStaticInlineConstantBytes = 0; // Total bytes for static inline constants
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
         const PipelineResourceDesc& ResDesc    = m_Desc.Resources[i];
         const CACHE_GROUP           CacheGroup = GetResourceCacheGroup(ResDesc);
 
+        // All resources (including inline constants) use descriptor sets.
+        // Push constant selection is deferred to PSO creation time.
         BindingCount[CacheGroup] += 1;
         // Note that we may reserve space for separate immutable samplers, which will never be used, but this is OK.
-        CacheGroupSizes[CacheGroup] += ResDesc.GetArraySize(); // For inline constants, ArraySize holds the number of 4-byte constants
+        // For inline constants, GetArraySize() returns 1 (actual array size for cache),
+        // while ArraySize contains the number of 32-bit constants.
+        CacheGroupSizes[CacheGroup] += ResDesc.GetArraySize();
+
+        if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            StaticResourceCount += ResDesc.GetArraySize();
+        }
+
+        // Count inline constant buffers
+        if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+        {
+            VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+                   "Only constant buffers can have INLINE_CONSTANTS flag");
+            ++m_NumInlineConstantBufferAttribs;
+
+            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                TotalStaticInlineConstantBytes += ResDesc.ArraySize * sizeof(Uint32);
+            }
+        }
+    }
+
+    // Initialize static resource cache (now that we know the inline constant size)
+    if (GetNumStaticResStages() > 0 && StaticResourceCount > 0)
+    {
+        m_pStaticResCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount, TotalStaticInlineConstantBytes);
+    }
+
+    // Allocate inline constant buffer attributes array
+    if (m_NumInlineConstantBufferAttribs > 0)
+    {
+        m_InlineConstantBufferAttribs = std::make_unique<InlineConstantBufferAttribsVk[]>(m_NumInlineConstantBufferAttribs);
     }
 
     // Descriptor set mapping (static/mutable (0) or dynamic (1) -> set index)
@@ -248,6 +271,9 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
     // Current offset in the static resource cache
     Uint32 StaticCacheOffset = 0;
 
+    // Current inline constant buffer index
+    Uint32 InlineConstantBufferIdx = 0;
+
     std::array<std::vector<VkDescriptorSetLayoutBinding>, DESCRIPTOR_SET_ID_NUM_SETS> vkSetLayoutBindings;
 
     DynamicLinearAllocator TempAllocator{GetRawAllocator(), 256};
@@ -295,6 +321,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         ResourceAttribs* const pAttribs = m_pResourceAttribs + i;
         if (!IsSerialized)
         {
+            // All resources use descriptor sets - push constant selection is deferred to PSO creation
             new (pAttribs) ResourceAttribs //
                 {
                     BindingIndices[CacheGroup],
@@ -303,8 +330,8 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
                     DescrType,
                     DSMapping[SetId],
                     pVkImmutableSamplers != nullptr,
-                    CacheGroupOffsets[CacheGroup],
-                    ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u //
+                    CacheGroupOffsets[CacheGroup],                                                    // SRBCacheOffset
+                    ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC ? StaticCacheOffset : ~0u // StaticCacheOffset
                 };
         }
         else
@@ -329,7 +356,10 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         const Uint32 DescriptorCount = ResDesc.GetArraySize();
 
         BindingIndices[CacheGroup] += 1;
-        CacheGroupOffsets[CacheGroup] += DescriptorCount;
+
+        // All resources use descriptor sets - push constant selection is deferred to PSO creation
+        // For inline constants, GetArraySize() returns 1 (actual array size for cache)
+        CacheGroupOffsets[CacheGroup] += ResDesc.GetArraySize();
 
         VkDescriptorSetLayoutBinding vkSetLayoutBinding{};
         vkSetLayoutBinding.binding            = pAttribs->BindingIndex;
@@ -346,7 +376,44 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
                                                    pAttribs->GetDescriptorType(), pAttribs->IsImmutableSamplerAssigned());
             StaticCacheOffset += DescriptorCount;
         }
+
+        // Handle inline constant buffers
+        // All inline constants get descriptor set bindings and emulated buffers.
+        // Push constant selection is deferred to PSO creation time.
+        if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+        {
+            VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
+                   "Only constant buffers can have INLINE_CONSTANTS flag");
+
+            InlineConstantBufferAttribsVk& InlineCBAttribs = m_InlineConstantBufferAttribs[InlineConstantBufferIdx++];
+            InlineCBAttribs.ResIndex                       = i; // Resource index for unique identification
+            InlineCBAttribs.DescrSet                       = pAttribs->DescrSet;
+            InlineCBAttribs.BindingIndex                   = pAttribs->BindingIndex;
+            InlineCBAttribs.NumConstants                   = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
+
+            // Create a shared buffer in the Signature for all inline constants
+            // All SRBs will reference this same buffer (similar to D3D11 backend)
+            // Push constant selection is handled at PSO creation time
+            if (m_pDevice)
+            {
+                std::string Name = m_Desc.Name;
+                Name += " - ";
+                Name += ResDesc.Name;
+                BufferDesc CBDesc;
+                CBDesc.Name           = Name.c_str();
+                CBDesc.Size           = ResDesc.ArraySize * sizeof(Uint32);
+                CBDesc.Usage          = USAGE_DYNAMIC;
+                CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
+                CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+                RefCntAutoPtr<IBuffer> pBuffer;
+                m_pDevice->CreateBuffer(CBDesc, nullptr, &pBuffer);
+                VERIFY_EXPR(pBuffer);
+                InlineCBAttribs.pBuffer = RefCntAutoPtr<BufferVkImpl>{pBuffer, IID_BufferVk};
+            }
+        }
     }
+    VERIFY_EXPR(InlineConstantBufferIdx == m_NumInlineConstantBufferAttribs);
 
 #ifdef DILIGENT_DEBUG
     if (m_pStaticResCache != nullptr)
@@ -480,6 +547,28 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         }
         VERIFY_EXPR(NumSets == GetNumDescriptorSets());
     }
+
+    // Initialize inline constant buffers in the static resource cache
+    // Memory was already allocated in InitializeSets above
+    if (m_NumInlineConstantBufferAttribs > 0 && m_pStaticResCache != nullptr)
+    {
+        Uint32 InlineConstantOffset = 0;
+        for (Uint32 i = 0; i < m_NumInlineConstantBufferAttribs; ++i)
+        {
+            const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBufferAttribs[i];
+
+            const PipelineResourceDesc& ResDesc = GetResourceDesc(InlineCBAttr.ResIndex);
+            const ResourceAttribs&      Attr    = GetResourceAttribs(InlineCBAttr.ResIndex);
+
+            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                const Uint32 DataSize    = InlineCBAttr.NumConstants * sizeof(Uint32);
+                const Uint32 CacheOffset = Attr.StaticCacheOffset;
+                m_pStaticResCache->InitializeInlineConstantBuffer(0, CacheOffset, InlineCBAttr.NumConstants, InlineConstantOffset);
+                InlineConstantOffset += DataSize;
+            }
+        }
+    }
 }
 
 PipelineResourceSignatureVkImpl::~PipelineResourceSignatureVkImpl()
@@ -495,6 +584,18 @@ void PipelineResourceSignatureVkImpl::Destruct()
             GetDevice()->SafeReleaseDeviceObject(std::move(Layout), ~0ull);
     }
 
+    // Release shared inline constant buffers before base class Destruct
+    // Each InlineConstantBufferAttribsVk::pBuffer holds a RefCntAutoPtr to the shared buffer
+    if (m_InlineConstantBufferAttribs)
+    {
+        for (Uint32 i = 0; i < m_NumInlineConstantBufferAttribs; ++i)
+        {
+            m_InlineConstantBufferAttribs[i].pBuffer.Release();
+        }
+        m_InlineConstantBufferAttribs.reset();
+    }
+    m_NumInlineConstantBufferAttribs = 0;
+
     TPipelineResourceSignatureBase::Destruct();
 }
 
@@ -506,8 +607,16 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
         VERIFY_EXPR(m_DescriptorSetSizes[i] != ~0U);
 #endif
 
+    // Calculate total memory size for CPU staging data
+    Uint32 TotalInlineConstantBytes = 0;
+    for (Uint32 i = 0; i < m_NumInlineConstantBufferAttribs; ++i)
+    {
+        const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBufferAttribs[i];
+        TotalInlineConstantBytes += InlineCBAttr.NumConstants * sizeof(Uint32);
+    }
+
     IMemoryAllocator& CacheMemAllocator = m_SRBMemAllocator.GetResourceCacheDataAllocator(0);
-    ResourceCache.InitializeSets(CacheMemAllocator, NumSets, m_DescriptorSetSizes.data());
+    ResourceCache.InitializeSets(CacheMemAllocator, NumSets, m_DescriptorSetSizes.data(), TotalInlineConstantBytes);
 
     const Uint32                   TotalResources = GetTotalResourceCount();
     const ResourceCacheContentType CacheType      = ResourceCache.GetContentType();
@@ -515,8 +624,37 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
     {
         const PipelineResourceDesc& ResDesc = GetResourceDesc(r);
         const ResourceAttribs&      Attr    = GetResourceAttribs(r);
+
+        // For inline constants, GetArraySize() returns 1 (actual array size),
+        // while ArraySize contains the number of 32-bit constants
         ResourceCache.InitializeResources(Attr.DescrSet, Attr.CacheOffset(CacheType), ResDesc.GetArraySize(),
                                           Attr.GetDescriptorType(), Attr.IsImmutableSamplerAssigned());
+    }
+
+    // Initialize inline constant buffers - set up data pointers to the unified memory block
+    // All inline constants use the emulated buffer path at PRS level.
+    // Push constant selection is deferred to PSO creation time.
+    // All SRBs share the same GPU buffer (stored in InlineConstantBufferAttribsVk::pBuffer),
+    // but each has its own CPU staging data.
+    if (m_NumInlineConstantBufferAttribs > 0)
+    {
+        // Ensure the cache reports inline constants so DeviceContextVkImpl
+        // updates emulated buffers even if no data has been written yet.
+        ResourceCache.MarkHasInlineConstants();
+
+        Uint32 InlineConstantOffset = 0;
+        for (Uint32 i = 0; i < m_NumInlineConstantBufferAttribs; ++i)
+        {
+            const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBufferAttribs[i];
+            const Uint32                         DataSize     = InlineCBAttr.NumConstants * sizeof(Uint32);
+            const ResourceAttribs&               Attr         = GetResourceAttribs(InlineCBAttr.ResIndex);
+
+            // Initialize staging memory in the resource cache
+            // The GPU buffer is shared from InlineCBAttr.pBuffer (created in CreateSetLayouts)
+            ResourceCache.InitializeInlineConstantBuffer(Attr.DescrSet, Attr.CacheOffset(CacheType),
+                                                         InlineCBAttr.NumConstants, InlineConstantOffset);
+            InlineConstantOffset += DataSize;
+        }
     }
 
 #ifdef DILIGENT_DEBUG
@@ -533,6 +671,60 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
 #endif
         DescriptorSetAllocation SetAllocation = GetDevice()->AllocateDescriptorSet(~Uint64{0}, vkLayout, DescrSetName);
         ResourceCache.AssignDescriptorSetAllocation(GetDescriptorSetIndex<DESCRIPTOR_SET_ID_STATIC_MUTABLE>(), std::move(SetAllocation));
+    }
+
+    // Bind shared inline constant buffers to the resource cache
+    // This must be done after descriptor set allocation so that descriptor writes work correctly
+    // The buffers are created in CreateSetLayouts() and shared by all SRBs (similar to D3D11)
+    // Push constant selection is deferred to PSO creation - all inline constants get buffers bound here
+    for (Uint32 i = 0; i < m_NumInlineConstantBufferAttribs; ++i)
+    {
+        const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBufferAttribs[i];
+
+        // Get the shared buffer from the Signature (created in CreateSetLayouts)
+        BufferVkImpl* pBuffer = InlineCBAttr.pBuffer.RawPtr();
+        if (!pBuffer)
+            continue;
+
+        // Use ResIndex to directly access the resource attributes
+        const PipelineResourceDesc& ResDesc     = GetResourceDesc(InlineCBAttr.ResIndex);
+        const ResourceAttribs&      Attr        = GetResourceAttribs(InlineCBAttr.ResIndex);
+        const Uint32                CacheOffset = Attr.CacheOffset(CacheType);
+
+        // For static/mutable variables, bind to the allocated descriptor set
+        // For dynamic variables, the buffer will be bound during CommitDynamicResources
+        // Note: Dynamic descriptor sets are allocated per-draw call, so we can't write to them here
+        if (ResDesc.VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            // Bind the shared uniform buffer to the resource cache
+            ResourceCache.SetResource(
+                &GetDevice()->GetLogicalDevice(),
+                Attr.DescrSet,
+                CacheOffset,
+                {
+                    Attr.BindingIndex,
+                    0, // ArrayIndex
+                    RefCntAutoPtr<IDeviceObject>{pBuffer},
+                    0,                                         // BufferBaseOffset
+                    InlineCBAttr.NumConstants * sizeof(Uint32) // BufferRangeSize
+                });
+        }
+        else
+        {
+            // For dynamic variables, we still need to set the buffer in the cache
+            // but we pass nullptr for LogicalDevice since the descriptor set is not allocated yet
+            ResourceCache.SetResource(
+                nullptr, // Don't write to descriptor set
+                Attr.DescrSet,
+                CacheOffset,
+                {
+                    Attr.BindingIndex,
+                    0, // ArrayIndex
+                    RefCntAutoPtr<IDeviceObject>{pBuffer},
+                    0,                                         // BufferBaseOffset
+                    InlineCBAttr.NumConstants * sizeof(Uint32) // BufferRangeSize
+                });
+        }
     }
 }
 
@@ -560,6 +752,25 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
 
         if (ResDesc.ResourceType == SHADER_RESOURCE_TYPE_SAMPLER && Attr.IsImmutableSamplerAssigned())
             continue; // Skip immutable separate samplers
+
+        // Handle inline constants separately - copy staging data
+        if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+        {
+            const Uint32                           SrcCacheOffset = Attr.CacheOffset(SrcCacheType);
+            const ShaderResourceCacheVk::Resource& SrcCachedRes   = SrcDescrSet.GetResource(SrcCacheOffset);
+            const Uint32                           DstCacheOffset = Attr.CacheOffset(DstCacheType);
+            const ShaderResourceCacheVk::Resource& DstCachedRes   = DstDescrSet.GetResource(DstCacheOffset);
+
+            // Copy inline constant data from static cache to SRB cache
+            if (SrcCachedRes.pInlineConstantData != nullptr && DstCachedRes.pInlineConstantData != nullptr)
+            {
+                // ArraySize contains the number of 32-bit constants for inline constants
+                memcpy(DstCachedRes.pInlineConstantData, SrcCachedRes.pInlineConstantData, ResDesc.ArraySize * sizeof(Uint32));
+            }
+            continue;
+        }
+
+        // For regular resources (not inline constants), iterate through array elements
 
         for (Uint32 ArrInd = 0; ArrInd < ResDesc.GetArraySize(); ++ArrInd)
         {
@@ -872,7 +1083,16 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
                 // is bound. It will be null if the type is incorrect.
                 if (const BufferVkImpl* pBufferVk = Res.pObject.RawPtr<BufferVkImpl>())
                 {
-                    pDeviceCtx->DvpVerifyDynamicAllocation(pBufferVk);
+                    // Skip dynamic allocation verification for inline constant buffers.
+                    // These are internal buffers managed by the signature and are updated
+                    // via UpdateInlineConstantBuffers() before each draw/dispatch.
+                    // The Dynamic Buffer ID may be reused after PSO recreation (e.g., from cache),
+                    // which would cause false validation failures.
+                    const bool IsInlineConstantBuffer = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0;
+                    if (!IsInlineConstantBuffer)
+                    {
+                        pDeviceCtx->DvpVerifyDynamicAllocation(pBufferVk);
+                    }
 
                     if ((pBufferVk->GetDesc().Size < SPIRVAttribs.BufferStaticSize) &&
                         (GetDevice()->GetValidationFlags() & VALIDATION_FLAG_CHECK_SHADER_BUFFER_SIZE) != 0)
@@ -985,6 +1205,59 @@ PipelineResourceSignatureInternalDataVk PipelineResourceSignatureVkImpl::GetInte
     InternalData.DynamicUniformBufferCount = m_DynamicUniformBufferCount;
 
     return InternalData;
+}
+
+void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderResourceCacheVk& ResourceCache,
+                                                                  DeviceContextVkImpl&         Ctx,
+                                                                  Uint32                       PushConstantResIndex) const
+{
+    // Determine the cache type based on the resource cache content
+    // SRB caches use SRBCacheOffset, static caches use StaticCacheOffset
+    const ResourceCacheContentType CacheType = ResourceCache.GetContentType();
+
+    for (Uint32 i = 0; i < m_NumInlineConstantBufferAttribs; ++i)
+    {
+        const InlineConstantBufferAttribsVk& InlineCBAttr        = m_InlineConstantBufferAttribs[i];
+        const Uint32                         DataSize            = InlineCBAttr.NumConstants * sizeof(Uint32);
+        const ResourceAttribs&               Attr                = GetResourceAttribs(InlineCBAttr.ResIndex);
+        const Uint32                         CacheOffset         = Attr.CacheOffset(CacheType);
+        const void*                          pInlineConstantData = ResourceCache.GetInlineConstantData(Attr.DescrSet, CacheOffset);
+        VERIFY_EXPR(pInlineConstantData != nullptr);
+
+        // Skip push constants - they are handled directly by CommitPushConstants
+        if (InlineCBAttr.ResIndex == PushConstantResIndex)
+            continue;
+
+        // For emulated inline constants, get the shared buffer from the Signature
+        // All SRBs share this buffer (similar to D3D11 backend)
+        BufferVkImpl* pBuffer = InlineCBAttr.pBuffer.RawPtr();
+
+        if (pBuffer)
+        {
+            // Map the shared buffer and copy the data
+            void* pMappedData = nullptr;
+            Ctx.MapBuffer(pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+            memcpy(pMappedData, pInlineConstantData, DataSize);
+            Ctx.UnmapBuffer(pBuffer, MAP_WRITE);
+        }
+    }
+}
+
+const void* PipelineResourceSignatureVkImpl::GetPushConstantData(const ShaderResourceCacheVk& ResourceCache, Uint32 ResIndex) const
+{
+    // Find the inline constant buffer with the specified resource index
+    for (Uint32 i = 0; i < m_NumInlineConstantBufferAttribs; ++i)
+    {
+        const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBufferAttribs[i];
+        if (InlineCBAttr.ResIndex == ResIndex)
+        {
+            const ResourceCacheContentType CacheType   = ResourceCache.GetContentType();
+            const ResourceAttribs&         Attr        = GetResourceAttribs(InlineCBAttr.ResIndex);
+            const Uint32                   CacheOffset = Attr.CacheOffset(CacheType);
+            return ResourceCache.GetInlineConstantData(Attr.DescrSet, CacheOffset);
+        }
+    }
+    return nullptr;
 }
 
 } // namespace Diligent
