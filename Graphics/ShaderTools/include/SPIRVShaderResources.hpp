@@ -207,7 +207,13 @@ public:
     SPIRVShaderResources(IMemoryAllocator&     Allocator,
                          std::vector<uint32_t> spirv_binary,
                          const CreateInfo&     CI,
-                         std::string&          EntryPoint) noexcept(false);
+                         std::string*          pEntryPoint = nullptr) noexcept(false);
+
+    static std::shared_ptr<const SPIRVShaderResources> Create(
+        IMemoryAllocator&     Allocator,
+        std::vector<uint32_t> spirv_binary,
+        const CreateInfo&     CI,
+        std::string*          pEntryPoint = nullptr) noexcept(false);
 
     // clang-format off
     SPIRVShaderResources             (const SPIRVShaderResources&)  = delete;
@@ -390,9 +396,10 @@ public:
 
     // clang-format off
 
-    const char* GetCombinedSamplerSuffix() const { return m_CombinedSamplerSuffix; }
-    const char* GetShaderName()            const { return m_ShaderName; }
-    bool        IsUsingCombinedSamplers()  const { return m_CombinedSamplerSuffix != nullptr; }
+    const char* GetCombinedSamplerSuffix()   const { return m_CombinedSamplerSuffix; }
+    const char* GetShaderName()              const { return m_ShaderName; }
+    bool        IsUsingCombinedSamplers()    const { return m_CombinedSamplerSuffix != nullptr; }
+    bool        HasUniformBufferReflection() const { return m_UBReflectionBuffer != nullptr; }
 
     // clang-format on
 

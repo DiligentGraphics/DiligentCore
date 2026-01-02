@@ -472,7 +472,7 @@ ShaderCodeBufferDescX LoadUBReflection(const diligent_spirv_cross::Compiler& Com
 SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
                                            std::vector<uint32_t> spirv_binary,
                                            const CreateInfo&     CI,
-                                           std::string&          EntryPoint) noexcept(false) :
+                                           std::string*          pEntryPoint) noexcept(false) :
     m_ShaderType{CI.ShaderType}
 {
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
@@ -482,6 +482,9 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
 
     m_IsHLSLSource = ParsedIRSource.hlsl;
     diligent_spirv_cross::Compiler Compiler{std::move(parser.get_parsed_ir())};
+
+    std::string  EntryPointLocal;
+    std::string& EntryPoint = pEntryPoint != nullptr ? *pEntryPoint : EntryPointLocal;
 
     spv::ExecutionModel ExecutionModel = ShaderTypeToSpvExecutionModel(m_ShaderType);
     auto                EntryPoints    = Compiler.get_entry_points_and_stages();
@@ -1115,6 +1118,32 @@ std::string SPIRVShaderResources::DumpResources() const
     VERIFY_EXPR(ResNum == GetTotalResources());
 
     return ss.str();
+}
+
+
+std::shared_ptr<const SPIRVShaderResources> SPIRVShaderResources::Create(
+    IMemoryAllocator&     Allocator,
+    std::vector<uint32_t> spirv_binary,
+    const CreateInfo&     CI,
+    std::string*          pEntryPoint) noexcept(false)
+{
+    std::unique_ptr<void, STDDeleterRawMem<void>> pRawMem{
+        ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1),
+        STDDeleterRawMem<void>(Allocator),
+    };
+
+    new (pRawMem.get()) SPIRVShaderResources // May throw
+        {
+            Allocator,
+            std::move(spirv_binary),
+            CI,
+            pEntryPoint,
+        };
+
+    return {
+        static_cast<SPIRVShaderResources*>(pRawMem.release()),
+        STDDeleterRawMem<SPIRVShaderResources>(Allocator),
+    };
 }
 
 } // namespace Diligent

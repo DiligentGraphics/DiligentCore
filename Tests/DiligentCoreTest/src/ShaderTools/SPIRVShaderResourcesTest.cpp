@@ -211,13 +211,10 @@ void TestSPIRVResources(const char*                                             
     SPIRVShaderResources::CreateInfo ResCI;
     ResCI.ShaderType = ShaderType;
     ResCI.Name       = "SPIRVResources test";
-
-    std::string          EntryPoint;
     SPIRVShaderResources Resources{
         GetRawAllocator(),
         SPIRV,
         ResCI,
-        EntryPoint,
     };
 
     LOG_INFO_MESSAGE("SPIRV Resources:\n", Resources.DumpResources());

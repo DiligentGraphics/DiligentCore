@@ -69,8 +69,6 @@ std::vector<uint32_t> CompileShaderToSPIRV(const ShaderCreateInfo&             S
     {
         SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, WebGPUDefine, WebGPUShaderCI.ppCompilerOutput);
 
-        std::string EntryPoint;
-
         SPIRVShaderResources::CreateInfo ResCI;
         ResCI.ShaderType                  = ShaderCI.Desc.ShaderType;
         ResCI.Name                        = ShaderCI.Desc.Name;
@@ -82,7 +80,6 @@ std::vector<uint32_t> CompileShaderToSPIRV(const ShaderCreateInfo&             S
             GetRawAllocator(),
             SPIRV,
             ResCI,
-            EntryPoint,
         };
 
         if (ShaderCI.Desc.ShaderType == SHADER_TYPE_VERTEX)

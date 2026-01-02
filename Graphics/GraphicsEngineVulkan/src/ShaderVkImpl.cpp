@@ -235,29 +235,17 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
     {
         if ((ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_SKIP_REFLECTION) == 0)
         {
-            IMemoryAllocator& Allocator = GetRawAllocator();
-
-            std::unique_ptr<void, STDDeleterRawMem<void>> pRawMem{
-                ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1),
-                STDDeleterRawMem<void>(Allocator),
-            };
-
             SPIRVShaderResources::CreateInfo ResCI;
             ResCI.ShaderType                  = m_Desc.ShaderType;
             ResCI.Name                        = m_Desc.Name;
             ResCI.CombinedSamplerSuffix       = m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr;
             ResCI.LoadShaderStageInputs       = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
             ResCI.LoadUniformBufferReflection = ShaderCI.LoadConstantBufferReflection;
-            new (pRawMem.get()) SPIRVShaderResources // May throw
-                {
-                    Allocator,
-                    m_SPIRV,
-                    ResCI,
-                    m_EntryPoint,
-                };
+
+            m_pShaderResources = SPIRVShaderResources::Create(GetRawAllocator(), m_SPIRV, ResCI, &m_EntryPoint);
+
             VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint ||
                         (m_EntryPoint == "main" && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL) != 0));
-            m_pShaderResources.reset(static_cast<SPIRVShaderResources*>(pRawMem.release()), STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
             if (ResCI.LoadShaderStageInputs && m_pShaderResources->IsHLSLSource())
             {
