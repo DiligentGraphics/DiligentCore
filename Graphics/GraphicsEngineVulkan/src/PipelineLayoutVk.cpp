@@ -98,7 +98,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl*                            pDe
         // Vulkan allows only one push constant range per pipeline layout.
         // Diligent API allows multiple inline constant resources, so we promote only the first inline constant
         // from resource signatures to push constants. Other inline constants remain uniform buffers.
-        if (!m_PushConstantInfo)
+        if (!m_PushConstantInfo && pSignature->HasInlineConstants())
         {
             for (Uint32 r = 0; r < pSignature->GetTotalResourceCount(); ++r)
             {
