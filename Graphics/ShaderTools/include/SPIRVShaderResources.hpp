@@ -196,12 +196,17 @@ static_assert(sizeof(SPIRVShaderStageInputAttribs) % sizeof(void*) == 0, "Size o
 class SPIRVShaderResources
 {
 public:
+    struct CreateInfo
+    {
+        SHADER_TYPE ShaderType                  = SHADER_TYPE_UNKNOWN;
+        const char* Name                        = nullptr;
+        const char* CombinedSamplerSuffix       = nullptr;
+        bool        LoadShaderStageInputs       = false;
+        bool        LoadUniformBufferReflection = false;
+    };
     SPIRVShaderResources(IMemoryAllocator&     Allocator,
                          std::vector<uint32_t> spirv_binary,
-                         const ShaderDesc&     shaderDesc,
-                         const char*           CombinedSamplerSuffix,
-                         bool                  LoadShaderStageInputs,
-                         bool                  LoadUniformBufferReflection,
+                         const CreateInfo&     CI,
                          std::string&          EntryPoint) noexcept(false);
 
     // clang-format off
