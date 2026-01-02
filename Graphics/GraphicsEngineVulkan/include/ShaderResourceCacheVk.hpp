@@ -246,6 +246,13 @@ public:
                                 Uint32 DynamicBufferOffset);
 
 
+    // Sets inline constant data in the resource cache
+    void SetInlineConstants(Uint32      DescrSetIndex,
+                            Uint32      CacheOffset,
+                            const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants);
+
     Uint32 GetNumDescriptorSets() const { return m_NumSets; }
     bool   HasDynamicResources() const { return m_NumDynamicBuffers > 0; }
 

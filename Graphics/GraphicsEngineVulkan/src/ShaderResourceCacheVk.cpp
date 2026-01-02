@@ -958,4 +958,13 @@ ShaderResourceCacheVk::WriteDynamicBufferOffsetsResult ShaderResourceCacheVk::Wr
     return Result;
 }
 
+void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
+                                               Uint32      CacheOffset,
+                                               const void* pConstants,
+                                               Uint32      FirstConstant,
+                                               Uint32      NumConstants)
+{
+    UNSUPPORTED("Not implemented yet");
+}
+
 } // namespace Diligent
