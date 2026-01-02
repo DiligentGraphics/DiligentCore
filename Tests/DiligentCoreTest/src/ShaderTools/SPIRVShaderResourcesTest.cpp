@@ -1,5 +1,5 @@
 /*
- *  Copyright 2025 Diligent Graphics LLC
+ *  Copyright 2025-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -208,18 +208,15 @@ void TestSPIRVResources(const char*                                             
         ASSERT_FALSE(SPIRV.empty()) << "Failed to patch shader: " << FilePath;
     }
 
-    ShaderDesc ShaderDesc;
-    ShaderDesc.Name       = "SPIRVResources test";
-    ShaderDesc.ShaderType = ShaderType;
+    SPIRVShaderResources::CreateInfo ResCI;
+    ResCI.ShaderType = ShaderType;
+    ResCI.Name       = "SPIRVResources test";
 
     std::string          EntryPoint;
     SPIRVShaderResources Resources{
         GetRawAllocator(),
         SPIRV,
-        ShaderDesc,
-        nullptr,
-        false, // LoadShaderStageInputs
-        false, // LoadUniformBufferReflection
+        ResCI,
         EntryPoint,
     };
 

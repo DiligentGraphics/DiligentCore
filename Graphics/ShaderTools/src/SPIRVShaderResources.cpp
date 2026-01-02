@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -471,12 +471,9 @@ ShaderCodeBufferDescX LoadUBReflection(const diligent_spirv_cross::Compiler& Com
 
 SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
                                            std::vector<uint32_t> spirv_binary,
-                                           const ShaderDesc&     shaderDesc,
-                                           const char*           CombinedSamplerSuffix,
-                                           bool                  LoadShaderStageInputs,
-                                           bool                  LoadUniformBufferReflection,
+                                           const CreateInfo&     CI,
                                            std::string&          EntryPoint) noexcept(false) :
-    m_ShaderType{shaderDesc.ShaderType}
+    m_ShaderType{CI.ShaderType}
 {
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
     diligent_spirv_cross::Parser parser{std::move(spirv_binary)};
@@ -486,7 +483,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     m_IsHLSLSource = ParsedIRSource.hlsl;
     diligent_spirv_cross::Compiler Compiler{std::move(parser.get_parsed_ir())};
 
-    spv::ExecutionModel ExecutionModel = ShaderTypeToSpvExecutionModel(shaderDesc.ShaderType);
+    spv::ExecutionModel ExecutionModel = ShaderTypeToSpvExecutionModel(m_ShaderType);
     auto                EntryPoints    = Compiler.get_entry_points_and_stages();
     for (const diligent_spirv_cross::EntryPoint& CurrEntryPoint : EntryPoints)
     {
@@ -494,7 +491,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         {
             if (!EntryPoint.empty())
             {
-                LOG_WARNING_MESSAGE("More than one entry point of type ", GetShaderTypeLiteralName(shaderDesc.ShaderType), " found in SPIRV binary for shader '", shaderDesc.Name, "'. The first one ('", EntryPoint, "') will be used.");
+                LOG_WARNING_MESSAGE("More than one entry point of type ", GetShaderTypeLiteralName(m_ShaderType), " found in SPIRV binary for shader '", CI.Name, "'. The first one ('", EntryPoint, "') will be used.");
             }
             else
             {
@@ -504,7 +501,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     }
     if (EntryPoint.empty())
     {
-        LOG_ERROR_AND_THROW("Unable to find entry point of type ", GetShaderTypeLiteralName(shaderDesc.ShaderType), " in SPIRV binary for shader '", shaderDesc.Name, "'");
+        LOG_ERROR_AND_THROW("Unable to find entry point of type ", GetShaderTypeLiteralName(m_ShaderType), " in SPIRV binary for shader '", CI.Name, "'");
     }
     Compiler.set_entry_point(EntryPoint, ExecutionModel);
 
@@ -521,7 +518,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     // Process push constant buffers - Vulkan spec allows only one push_constant buffer per pipeline
     if (resources.push_constant_buffers.size() > 1)
     {
-        LOG_ERROR_AND_THROW("Shader '", shaderDesc.Name, "' contains ", resources.push_constant_buffers.size(),
+        LOG_ERROR_AND_THROW("Shader '", CI.Name, "' contains ", resources.push_constant_buffers.size(),
                             " push constant buffers, but Vulkan spec allows only one push_constant buffer per pipeline.");
     }
     // For push constants, use GetPushConstantName which also tries to get the name from the base type
@@ -543,16 +540,17 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
             ResourceNamesPoolSize += res.name.length() + 1;
     }
 
-    if (CombinedSamplerSuffix != nullptr)
+    if (CI.CombinedSamplerSuffix != nullptr)
     {
-        ResourceNamesPoolSize += strlen(CombinedSamplerSuffix) + 1;
+        ResourceNamesPoolSize += strlen(CI.CombinedSamplerSuffix) + 1;
     }
 
-    VERIFY_EXPR(shaderDesc.Name != nullptr);
-    ResourceNamesPoolSize += strlen(shaderDesc.Name) + 1;
+    VERIFY_EXPR(CI.Name != nullptr);
+    ResourceNamesPoolSize += strlen(CI.Name) + 1;
 
     Uint32 NumShaderStageInputs = 0;
 
+    bool LoadShaderStageInputs = CI.LoadShaderStageInputs;
     if (!m_IsHLSLSource || resources.stage_inputs.empty())
         LoadShaderStageInputs = false;
     if (LoadShaderStageInputs)
@@ -587,7 +585,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
             LoadShaderStageInputs = false;
             if (m_IsHLSLSource)
             {
-                LOG_WARNING_MESSAGE("SPIRV byte code of shader '", shaderDesc.Name,
+                LOG_WARNING_MESSAGE("SPIRV byte code of shader '", CI.Name,
                                     "' does not use SPV_GOOGLE_hlsl_functionality1 extension. "
                                     "As a result, it is not possible to get semantics of shader inputs and map them to proper locations. "
                                     "The shader will still work correctly if all attributes are declared in ascending order without any gaps. "
@@ -632,7 +630,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
                     static_cast<Uint32>(Size) //
                 };
 
-            if (LoadUniformBufferReflection)
+            if (CI.LoadUniformBufferReflection)
             {
                 UBReflections.emplace_back(LoadUBReflection(Compiler, UB, m_IsHLSLSource));
             }
@@ -813,12 +811,12 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
 
     static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 13, "Please initialize SPIRVShaderResourceAttribs for the new resource type here");
 
-    if (CombinedSamplerSuffix != nullptr)
+    if (CI.CombinedSamplerSuffix != nullptr)
     {
-        m_CombinedSamplerSuffix = ResourceNamesPool.CopyString(CombinedSamplerSuffix);
+        m_CombinedSamplerSuffix = ResourceNamesPool.CopyString(CI.CombinedSamplerSuffix);
     }
 
-    m_ShaderName = ResourceNamesPool.CopyString(shaderDesc.Name);
+    m_ShaderName = ResourceNamesPool.CopyString(CI.Name);
 
     if (LoadShaderStageInputs)
     {
@@ -840,7 +838,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
 
     VERIFY(ResourceNamesPool.GetRemainingSize() == 0, "Names pool must be empty");
 
-    if (shaderDesc.ShaderType == SHADER_TYPE_COMPUTE)
+    if (m_ShaderType == SHADER_TYPE_COMPUTE)
     {
         for (uint32_t i = 0; i < m_ComputeGroupSize.size(); ++i)
             m_ComputeGroupSize[i] = Compiler.get_execution_mode_argument(spv::ExecutionModeLocalSize, i);
@@ -848,7 +846,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
 
     if (!UBReflections.empty())
     {
-        VERIFY_EXPR(LoadUniformBufferReflection);
+        VERIFY_EXPR(CI.LoadUniformBufferReflection);
         VERIFY_EXPR(UBReflections.size() == GetNumUBs());
         m_UBReflectionBuffer = ShaderCodeBufferDescX::PackArray(UBReflections.cbegin(), UBReflections.cend(), GetRawAllocator());
     }

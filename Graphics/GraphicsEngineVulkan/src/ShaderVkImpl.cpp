@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -241,22 +241,25 @@ void ShaderVkImpl::Initialize(const ShaderCreateInfo& ShaderCI,
                 ALLOCATE(Allocator, "Memory for SPIRVShaderResources", SPIRVShaderResources, 1),
                 STDDeleterRawMem<void>(Allocator),
             };
-            const bool LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
+
+            SPIRVShaderResources::CreateInfo ResCI;
+            ResCI.ShaderType                  = m_Desc.ShaderType;
+            ResCI.Name                        = m_Desc.Name;
+            ResCI.CombinedSamplerSuffix       = m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr;
+            ResCI.LoadShaderStageInputs       = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
+            ResCI.LoadUniformBufferReflection = ShaderCI.LoadConstantBufferReflection;
             new (pRawMem.get()) SPIRVShaderResources // May throw
                 {
                     Allocator,
                     m_SPIRV,
-                    m_Desc,
-                    m_Desc.UseCombinedTextureSamplers ? m_Desc.CombinedSamplerSuffix : nullptr,
-                    LoadShaderInputs,
-                    ShaderCI.LoadConstantBufferReflection,
-                    m_EntryPoint //
+                    ResCI,
+                    m_EntryPoint,
                 };
             VERIFY_EXPR(ShaderCI.ByteCode != nullptr || m_EntryPoint == ShaderCI.EntryPoint ||
                         (m_EntryPoint == "main" && (ShaderCI.CompileFlags & SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL) != 0));
             m_pShaderResources.reset(static_cast<SPIRVShaderResources*>(pRawMem.release()), STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
-            if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
+            if (ResCI.LoadShaderStageInputs && m_pShaderResources->IsHLSLSource())
             {
                 m_pShaderResources->MapHLSLVertexShaderInputs(m_SPIRV);
             }
