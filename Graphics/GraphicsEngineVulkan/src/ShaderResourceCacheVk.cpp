@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -948,6 +948,15 @@ Uint32 ShaderResourceCacheVk::GetDynamicBufferOffsets(DeviceContextVkImpl*   pCt
 #endif
     }
     return OffsetInd - StartInd;
+}
+
+void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
+                                               Uint32      CacheOffset,
+                                               const void* pConstants,
+                                               Uint32      FirstConstant,
+                                               Uint32      NumConstants)
+{
+    UNSUPPORTED("Not implemented yet");
 }
 
 } // namespace Diligent
