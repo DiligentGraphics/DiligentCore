@@ -997,7 +997,7 @@ void PipelineStateVkImpl::PatchShaderConvertUniformBufferToPushConstant(TShaderS
 
                 if (!PatchedSPIRV.empty())
                 {
-                    Stage.SPIRVs[i]          = PatchedSPIRV;
+                    Stage.SPIRVs[i] = PatchedSPIRV;
 
                     SPIRVShaderResources::CreateInfo ResCI;
                     ResCI.ShaderType                  = pShader->GetDesc().ShaderType;
