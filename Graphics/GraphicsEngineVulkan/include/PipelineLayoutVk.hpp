@@ -47,9 +47,9 @@ public:
     PipelineLayoutVk();
     ~PipelineLayoutVk();
 
-    void Create(RenderDeviceVkImpl*                            pDeviceVk,
-                RefCntAutoPtr<PipelineResourceSignatureVkImpl> ppSignatures[],
-                Uint32                                         SignatureCount) noexcept(false);
+    void Create(RenderDeviceVkImpl*                             pDeviceVk,
+                RefCntAutoPtr<PipelineResourceSignatureVkImpl>* ppSignatures,
+                Uint32                                          SignatureCount) noexcept(false);
     void Release(RenderDeviceVkImpl* pDeviceVkImpl, Uint64 CommandQueueMask);
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_VkPipelineLayout; }
@@ -70,6 +70,9 @@ public:
 
         constexpr explicit operator bool() const { return Size != 0; }
     };
+    static PushConstantInfo GetPushConstantInfo(const RefCntAutoPtr<PipelineResourceSignatureVkImpl>* ppSignatures,
+                                                Uint32                                                SignatureCount);
+
     const PushConstantInfo& GetPushConstantInfo() const { return m_PushConstantInfo; }
 
 private:
