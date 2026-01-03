@@ -56,33 +56,27 @@ namespace
 {
 
 void InitPipelineShaderStages(const VulkanUtilities::LogicalDevice&              LogicalDevice,
-                              PipelineStateVkImpl::TShaderStages&                ShaderStages,
+                              const PipelineStateVkImpl::TShaderStages&          ShaderStages,
                               std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages)
 {
-    for (size_t s = 0; s < ShaderStages.size(); ++s)
+    for (const PipelineStateVkImpl::ShaderStageInfo& Stage : ShaderStages)
     {
-        const std::vector<const ShaderVkImpl*>& Shaders    = ShaderStages[s].Shaders;
-        std::vector<std::vector<uint32_t>>&     SPIRVs     = ShaderStages[s].SPIRVs;
-        const SHADER_TYPE                       ShaderType = ShaderStages[s].Type;
-
-        VERIFY_EXPR(Shaders.size() == SPIRVs.size());
-
         VkPipelineShaderStageCreateInfo StageCI{};
         StageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         StageCI.pNext = nullptr;
         StageCI.flags = 0; //  reserved for future use
-        StageCI.stage = ShaderTypeToVkShaderStageFlagBit(ShaderType);
+        StageCI.stage = ShaderTypeToVkShaderStageFlagBit(Stage.Type);
 
         VkShaderModuleCreateInfo ShaderModuleCI{};
         ShaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         ShaderModuleCI.pNext = nullptr;
         ShaderModuleCI.flags = 0;
 
-        for (size_t i = 0; i < Shaders.size(); ++i)
+        for (const PipelineStateVkImpl::ShaderStageInfo::Item& StageItem : Stage.Items)
         {
-            const ShaderVkImpl*         pShader = Shaders[i];
-            const std::vector<uint32_t> SPIRV   = SPIRVs[i];
+            const ShaderVkImpl*          pShader = StageItem.pShader;
+            const std::vector<uint32_t>& SPIRV   = StageItem.SPIRV;
 
             ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
             ShaderModuleCI.pCode    = SPIRV.data();
@@ -415,9 +409,9 @@ std::vector<VkRayTracingShaderGroupCreateInfoKHR> BuildRTShaderGroupDescription(
         {
             if (ShaderType == Stage.Type)
             {
-                for (Uint32 i = 0; i < Stage.Shaders.size(); ++i, ++idx)
+                for (Uint32 i = 0; i < Stage.Items.size(); ++i, ++idx)
                 {
-                    if (Stage.Shaders[i] == pShaderVk)
+                    if (Stage.Items[i].pShader == pShaderVk)
                         return idx;
                 }
                 UNEXPECTED("Unable to find shader '", pShaderVk->GetDesc().Name, "' in the shader stage. This should never happen and is a bug.");
@@ -554,22 +548,27 @@ void VerifyResourceMerge(const char*                       PSOName,
 } // namespace
 
 
+PipelineStateVkImpl::ShaderStageInfo::Item::Item(const ShaderVkImpl* _pShader) :
+    pShader{_pShader},
+    SPIRV{_pShader->GetSPIRV()}
+{
+}
+
 PipelineStateVkImpl::ShaderStageInfo::ShaderStageInfo(const ShaderVkImpl* pShader) :
     Type{pShader->GetDesc().ShaderType},
-    Shaders{pShader},
-    SPIRVs{pShader->GetSPIRV()}
+    Items{Item{pShader}}
 {}
 
 void PipelineStateVkImpl::ShaderStageInfo::Append(const ShaderVkImpl* pShader)
 {
     VERIFY_EXPR(pShader != nullptr);
-    VERIFY(std::find(Shaders.begin(), Shaders.end(), pShader) == Shaders.end(),
+    VERIFY(std::find_if(Items.begin(), Items.end(), [pShader](const Item& I) { return I.pShader == pShader; }) == Items.end(),
            "Shader '", pShader->GetDesc().Name, "' already exists in the stage. Shaders must be deduplicated.");
 
     const SHADER_TYPE NewShaderType = pShader->GetDesc().ShaderType;
     if (Type == SHADER_TYPE_UNKNOWN)
     {
-        VERIFY_EXPR(Shaders.empty() && SPIRVs.empty());
+        VERIFY_EXPR(Items.empty());
         Type = NewShaderType;
     }
     else
@@ -578,14 +577,12 @@ void PipelineStateVkImpl::ShaderStageInfo::Append(const ShaderVkImpl* pShader)
                ") of shader '", pShader->GetDesc().Name, "' being added to the stage is inconsistent with the stage type (",
                GetShaderTypeLiteralName(Type), ").");
     }
-    Shaders.push_back(pShader);
-    SPIRVs.push_back(pShader->GetSPIRV());
+    Items.emplace_back(pShader);
 }
 
 size_t PipelineStateVkImpl::ShaderStageInfo::Count() const
 {
-    VERIFY_EXPR(Shaders.size() == SPIRVs.size());
-    return Shaders.size();
+    return Items.size();
 }
 
 PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSignatureDesc(
@@ -599,9 +596,9 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
     std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
     for (const ShaderStageInfo& Stage : ShaderStages)
     {
-        for (const ShaderVkImpl* pShader : Stage.Shaders)
+        for (const ShaderStageInfo::Item& StageItem : Stage.Items)
         {
-            const SPIRVShaderResources& ShaderResources = *pShader->GetShaderResources();
+            const SPIRVShaderResources& ShaderResources = *StageItem.pShader->GetShaderResources();
             ShaderResources.ProcessResources(
                 [&](const SPIRVShaderResourceAttribs& Attribs, Uint32) //
                 {
@@ -627,7 +624,7 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
                     {
                         if (Attribs.ArraySize == 0)
                         {
-                            LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
+                            LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", ShaderResources.GetShaderName(), "' is a runtime-sized array. ",
                                                 "You must use explicit resource signature to specify the array size.");
                         }
 
@@ -668,21 +665,21 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
 
     // Verify that pipeline layout is compatible with shader resources and
     // remap resource bindings.
-    for (size_t s = 0; s < ShaderStages.size(); ++s)
+    for (ShaderStageInfo& Stage : ShaderStages)
     {
-        const std::vector<const ShaderVkImpl*>& Shaders    = ShaderStages[s].Shaders;
-        std::vector<std::vector<uint32_t>>&     SPIRVs     = ShaderStages[s].SPIRVs;
-        const SHADER_TYPE                       ShaderType = ShaderStages[s].Type;
+        const SHADER_TYPE ShaderType = Stage.Type;
 
-        VERIFY_EXPR(Shaders.size() == SPIRVs.size());
-
-        for (size_t i = 0; i < Shaders.size(); ++i)
+        for (ShaderStageInfo::Item& StageItem : Stage.Items)
         {
-            const ShaderVkImpl*    pShader = Shaders[i];
-            std::vector<uint32_t>& SPIRV   = SPIRVs[i];
+            const char* const               ShaderName       = StageItem.pShader->GetDesc().Name;
+            const ShaderResourcesSharedPtr& pShaderResources = StageItem.pShader->GetShaderResources();
+            std::vector<uint32_t>&          SPIRV            = StageItem.SPIRV;
 
-            const auto& pShaderResources = pShader->GetShaderResources();
-            VERIFY_EXPR(pShaderResources);
+            if (!pShaderResources)
+            {
+                UNEXPECTED("Shader resources are not initialized for shader '", ShaderName, "'. This is a bug.");
+                continue;
+            }
 
             if (pDvpShaderResources)
                 pDvpShaderResources->emplace_back(pShaderResources);
@@ -693,7 +690,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                     const ResourceAttribution ResAttribution = GetResourceAttribution(SPIRVAttribs.Name, ShaderType, pSignatures, SignatureCount);
                     if (!ResAttribution)
                     {
-                        LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource '", SPIRVAttribs.Name,
+                        LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", SPIRVAttribs.Name,
                                             "' that is not present in any pipeline resource signature used to create pipeline state '",
                                             PipelineName, "'.");
                     }
@@ -708,7 +705,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                     {
                         const PipelineResourceDesc& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
                         ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, SPIRVAttribs.ArraySize,
-                                                              pShader->GetDesc().Name, SignDesc.Name);
+                                                              ShaderName, SignDesc.Name);
 
                         const PipelineResourceSignatureVkImpl::ResourceAttribs& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
                         ResourceBinding = ResAttribs.BindingIndex;
@@ -718,7 +715,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                     {
                         if (ResType != SHADER_RESOURCE_TYPE_SAMPLER)
                         {
-                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' contains resource with name '", SPIRVAttribs.Name,
+                            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource with name '", SPIRVAttribs.Name,
                                                 "' and type '", GetShaderResourceTypeLiteralName(ResType),
                                                 "' that is not compatible with immutable sampler defined in pipeline resource signature '",
                                                 SignDesc.Name, "'.");
@@ -740,13 +737,13 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                         const Uint32 SpvDescrSet = SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset];
                         if (SpvBinding != ResourceBinding)
                         {
-                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' maps resource '", SPIRVAttribs.Name,
+                            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' maps resource '", SPIRVAttribs.Name,
                                                 "' to binding ", SpvBinding, ", but the same resource in pipeline resource signature '",
                                                 SignDesc.Name, "' is mapped to binding ", ResourceBinding, '.');
                         }
                         if (SpvDescrSet != DescriptorSet)
                         {
-                            LOG_ERROR_AND_THROW("Shader '", pShader->GetDesc().Name, "' maps resource '", SPIRVAttribs.Name,
+                            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' maps resource '", SPIRVAttribs.Name,
                                                 "' to descriptor set ", SpvDescrSet, ", but the same resource in pipeline resource signature '",
                                                 SignDesc.Name, "' is mapped to set ", DescriptorSet, '.');
                         }
@@ -777,7 +774,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                 if (!StrippedSPIRV.empty())
                     SPIRV = std::move(StrippedSPIRV);
                 else
-                    LOG_ERROR("Failed to strip reflection information from shader '", pShader->GetDesc().Name, "'. This may indicate a problem with the byte code.");
+                    LOG_ERROR("Failed to strip reflection information from shader '", ShaderName, "'. This may indicate a problem with the byte code.");
 #endif
             }
         }
@@ -899,7 +896,13 @@ void PipelineStateVkImpl::InitializePipeline(const RayTracingPipelineStateCreate
 // Used by TPipelineStateBase::Construct()
 inline std::vector<const ShaderVkImpl*> GetStageShaders(const PipelineStateVkImpl::ShaderStageInfo& Stage)
 {
-    return Stage.Shaders;
+    std::vector<const ShaderVkImpl*> StageShaders;
+    StageShaders.reserve(Stage.Count());
+    for (const PipelineStateVkImpl::ShaderStageInfo::Item& StageItem : Stage.Items)
+    {
+        StageShaders.push_back(StageItem.pShader);
+    }
+    return StageShaders;
 }
 
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const GraphicsPipelineStateCreateInfo& CreateInfo) :
