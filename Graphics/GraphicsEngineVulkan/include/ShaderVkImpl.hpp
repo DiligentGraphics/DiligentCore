@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -90,7 +90,8 @@ public:
         return !IsCompiling() ? m_SPIRV : NullSPIRV;
     }
 
-    const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources() const
+    using ShaderResourcesSharedPtr = std::shared_ptr<const SPIRVShaderResources>;
+    const ShaderResourcesSharedPtr& GetShaderResources() const
     {
         DEV_CHECK_ERR(!IsCompiling(), "Shader resources are not available until the shader is compiled. Use GetStatus() to check the shader status.");
         return m_pShaderResources;
@@ -115,7 +116,7 @@ private:
                     const CreateInfo&       VkShaderCI) noexcept(false);
 
 private:
-    std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;
+    ShaderResourcesSharedPtr m_pShaderResources;
 
     std::string           m_EntryPoint;
     std::vector<uint32_t> m_SPIRV;
