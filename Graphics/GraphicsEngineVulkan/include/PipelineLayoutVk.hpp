@@ -66,6 +66,8 @@ public:
     {
         VkPushConstantRange vkRange = {};
 
+        std::string Name;
+
         Uint32 SignatureIndex = ~0u;
         Uint32 ResourceIndex  = ~0u;
 
