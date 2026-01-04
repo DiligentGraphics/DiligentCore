@@ -83,10 +83,13 @@ PipelineLayoutVk::PushConstantInfo PipelineLayoutVk::GetPushConstantInfo(
                 {
                     VERIFY_EXPR(ResDesc.ArraySize > 0);
                     // For inline constants, ArraySize contains the number of 32-bit constants.
-                    PCInfo.Size           = ResDesc.ArraySize * sizeof(Uint32);
-                    PCInfo.StageFlags     = ShaderTypesToVkShaderStageFlags(ResDesc.ShaderStages);
+                    PCInfo.vkRange.size       = ResDesc.ArraySize * sizeof(Uint32);
+                    PCInfo.vkRange.offset     = 0;
+                    PCInfo.vkRange.stageFlags = ShaderTypesToVkShaderStageFlags(ResDesc.ShaderStages);
+
                     PCInfo.SignatureIndex = BindInd;
                     PCInfo.ResourceIndex  = r;
+
                     break;
                 }
             }
@@ -156,22 +159,15 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl*                             pD
                             ") used by the pipeline layout exceeds device limit (", Limits.maxDescriptorSetStorageBuffersDynamic, ")");
     }
 
-    m_PushConstantInfo = GetPushConstantInfo(ppSignatures, SignatureCount);
-
-    // Set up push constant range if present
-    VkPushConstantRange PushConstantRange{};
-    if (m_PushConstantInfo)
+    if (PushConstantInfo PCInfo = GetPushConstantInfo(ppSignatures, SignatureCount))
     {
         // Validate push constant size against device limits
-        if (m_PushConstantInfo.Size > Limits.maxPushConstantsSize)
+        if (PCInfo.vkRange.size > Limits.maxPushConstantsSize)
         {
-            LOG_ERROR_AND_THROW("Push constant size (", m_PushConstantInfo.Size,
+            LOG_ERROR_AND_THROW("Push constant size (", PCInfo.vkRange.size,
                                 " bytes) exceeds device limit (", Limits.maxPushConstantsSize, " bytes)");
         }
-
-        PushConstantRange.stageFlags = m_PushConstantInfo.StageFlags;
-        PushConstantRange.offset     = 0;
-        PushConstantRange.size       = m_PushConstantInfo.Size;
+        m_PushConstantInfo = std::make_unique<PushConstantInfo>(std::move(PCInfo));
     }
 
     VkPipelineLayoutCreateInfo PipelineLayoutCI{};
@@ -181,7 +177,7 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl*                             pD
     PipelineLayoutCI.setLayoutCount         = DescSetLayoutCount;
     PipelineLayoutCI.pSetLayouts            = DescSetLayoutCount ? DescSetLayouts.data() : nullptr;
     PipelineLayoutCI.pushConstantRangeCount = m_PushConstantInfo ? 1 : 0;
-    PipelineLayoutCI.pPushConstantRanges    = m_PushConstantInfo ? &PushConstantRange : nullptr;
+    PipelineLayoutCI.pPushConstantRanges    = m_PushConstantInfo ? &m_PushConstantInfo->vkRange : nullptr;
 
     m_VkPipelineLayout = pDeviceVk->GetLogicalDevice().CreatePipelineLayout(PipelineLayoutCI);
 

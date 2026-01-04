@@ -31,6 +31,7 @@
 /// Declaration of Diligent::PipelineLayoutVk class
 
 #include <array>
+#include <memory>
 
 #include "VulkanUtilities/ObjectWrappers.hpp"
 
@@ -63,17 +64,21 @@ public:
 
     struct PushConstantInfo
     {
-        Uint32             Size           = 0;
-        VkShaderStageFlags StageFlags     = 0;
-        Uint32             SignatureIndex = ~0u;
-        Uint32             ResourceIndex  = ~0u;
+        VkPushConstantRange vkRange = {};
 
-        constexpr explicit operator bool() const { return Size != 0; }
+        Uint32 SignatureIndex = ~0u;
+        Uint32 ResourceIndex  = ~0u;
+
+        constexpr explicit operator bool() const { return vkRange.size != 0; }
     };
     static PushConstantInfo GetPushConstantInfo(const RefCntAutoPtr<PipelineResourceSignatureVkImpl>* ppSignatures,
                                                 Uint32                                                SignatureCount);
 
-    const PushConstantInfo& GetPushConstantInfo() const { return m_PushConstantInfo; }
+    const PushConstantInfo& GetPushConstantInfo() const
+    {
+        static const PushConstantInfo NullPCInfo;
+        return m_PushConstantInfo ? *m_PushConstantInfo : NullPCInfo;
+    }
 
 private:
     VulkanUtilities::PipelineLayoutWrapper m_VkPipelineLayout;
@@ -86,7 +91,7 @@ private:
     // (Maximum is MAX_RESOURCE_SIGNATURES * 2)
     Uint8 m_DescrSetCount = 0;
 
-    PushConstantInfo m_PushConstantInfo;
+    std::unique_ptr<PushConstantInfo> m_PushConstantInfo;
 
 #ifdef DILIGENT_DEBUG
     Uint32 m_DbgMaxBindIndex = 0;
