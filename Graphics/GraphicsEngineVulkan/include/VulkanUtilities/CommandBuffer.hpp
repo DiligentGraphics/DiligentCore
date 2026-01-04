@@ -516,6 +516,13 @@ public:
         vkCmdPushConstants(m_VkCmdBuffer, layout, stageFlags, offset, size, pValues);
     }
 
+    __forceinline void PushConstants(VkPipelineLayout           layout,
+                                     const VkPushConstantRange& range,
+                                     const void*                pValues)
+    {
+        PushConstants(layout, range.stageFlags, range.offset, range.size, pValues);
+    }
+
     __forceinline void CopyBuffer(VkBuffer            srcBuffer,
                                   VkBuffer            dstBuffer,
                                   uint32_t            regionCount,
