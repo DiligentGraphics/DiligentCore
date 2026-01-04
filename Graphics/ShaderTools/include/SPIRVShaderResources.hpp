@@ -224,39 +224,73 @@ public:
 
     ~SPIRVShaderResources();
 
+    enum class ResourceClass : Uint8
+    {
+        UniformBuffer,
+        StorageBuffer,
+        StorageImage,
+        SampledImage,
+        AtomicCounter,
+        SeparateSampler,
+        SeparateImage,
+        InputAttachment,
+        AccelStruct,
+        PushConstant,
+        NumClasses
+    };
+
+    Uint32 GetNumResources(ResourceClass ResClass) const noexcept
+    {
+        VERIFY(static_cast<size_t>(ResClass) < static_cast<size_t>(ResourceClass::NumClasses), "Invalid resource class");
+        return m_Offsets[static_cast<size_t>(ResClass) + 1] - m_Offsets[static_cast<size_t>(ResClass)];
+    }
+
+    const SPIRVShaderResourceAttribs& GetResAttribs(ResourceClass ResClass, Uint32 n) const noexcept
+    {
+        VERIFY(n < GetNumResources(ResClass), "Resource index (", n, ") is out of range. Resource count: ", GetNumResources(ResClass));
+        OffsetType Offset = m_Offsets[static_cast<size_t>(ResClass)];
+        return GetResource(Offset + n);
+    }
+
+    const SPIRVShaderResourceAttribs& GetResource(Uint32 n) const noexcept
+    {
+        VERIFY(n < GetTotalResources(), "Resource index (", n, ") is out of range. Total resource count: ", GetTotalResources());
+        return reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[n];
+    }
+
     // clang-format off
 
-    Uint32 GetNumUBs          ()const noexcept{ return (m_StorageBufferOffset   - 0);                       }
-    Uint32 GetNumSBs          ()const noexcept{ return (m_StorageImageOffset    - m_StorageBufferOffset);   }
-    Uint32 GetNumImgs         ()const noexcept{ return (m_SampledImageOffset    - m_StorageImageOffset);    }
-    Uint32 GetNumSmpldImgs    ()const noexcept{ return (m_AtomicCounterOffset   - m_SampledImageOffset);    }
-    Uint32 GetNumACs          ()const noexcept{ return (m_SeparateSamplerOffset - m_AtomicCounterOffset);   }
-    Uint32 GetNumSepSmplrs    ()const noexcept{ return (m_SeparateImageOffset   - m_SeparateSamplerOffset); }
-    Uint32 GetNumSepImgs      ()const noexcept{ return (m_InputAttachmentOffset - m_SeparateImageOffset);   }
-    Uint32 GetNumInptAtts     ()const noexcept{ return (m_AccelStructOffset     - m_InputAttachmentOffset); }
-    Uint32 GetNumAccelStructs ()const noexcept{ return (m_PushConstantOffset    - m_AccelStructOffset);     }
-    Uint32 GetNumPushConstants()const noexcept{ return (m_TotalResources        - m_PushConstantOffset);    }
-    Uint32 GetTotalResources ()    const noexcept { return m_TotalResources; }
+    Uint32 GetNumUBs          ()const noexcept{ return GetNumResources(ResourceClass::UniformBuffer);   }
+    Uint32 GetNumSBs          ()const noexcept{ return GetNumResources(ResourceClass::StorageBuffer);   }
+    Uint32 GetNumImgs         ()const noexcept{ return GetNumResources(ResourceClass::StorageImage);    }
+    Uint32 GetNumSmpldImgs    ()const noexcept{ return GetNumResources(ResourceClass::SampledImage);    }
+    Uint32 GetNumACs          ()const noexcept{ return GetNumResources(ResourceClass::AtomicCounter);   }
+    Uint32 GetNumSepSmplrs    ()const noexcept{ return GetNumResources(ResourceClass::SeparateSampler); }
+    Uint32 GetNumSepImgs      ()const noexcept{ return GetNumResources(ResourceClass::SeparateImage);   }
+    Uint32 GetNumInptAtts     ()const noexcept{ return GetNumResources(ResourceClass::InputAttachment); }
+    Uint32 GetNumAccelStructs ()const noexcept{ return GetNumResources(ResourceClass::AccelStruct);     }
+    Uint32 GetNumPushConstants()const noexcept{ return GetNumResources(ResourceClass::PushConstant);    }
+
+    Uint32 GetTotalResources()      const noexcept { return m_Offsets[static_cast<size_t>(ResourceClass::NumClasses)]; }
     Uint32 GetNumShaderStageInputs()const noexcept { return m_NumShaderStageInputs; }
 
-    const SPIRVShaderResourceAttribs& GetUB          (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumUBs(),           0                       ); }
-    const SPIRVShaderResourceAttribs& GetSB          (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSBs(),           m_StorageBufferOffset   ); }
-    const SPIRVShaderResourceAttribs& GetImg         (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumImgs(),          m_StorageImageOffset    ); }
-    const SPIRVShaderResourceAttribs& GetSmpldImg    (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSmpldImgs(),     m_SampledImageOffset    ); }
-    const SPIRVShaderResourceAttribs& GetAC          (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumACs(),           m_AtomicCounterOffset   ); }
-    const SPIRVShaderResourceAttribs& GetSepSmplr    (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSepSmplrs(),     m_SeparateSamplerOffset ); }
-    const SPIRVShaderResourceAttribs& GetSepImg      (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSepImgs(),       m_SeparateImageOffset   ); }
-    const SPIRVShaderResourceAttribs& GetInptAtt     (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumInptAtts(),      m_InputAttachmentOffset ); }
-    const SPIRVShaderResourceAttribs& GetAccelStruct (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumAccelStructs(),  m_AccelStructOffset     ); }
-    const SPIRVShaderResourceAttribs& GetPushConstant(Uint32 n)const noexcept{ return GetResAttribs(n, GetNumPushConstants(), m_PushConstantOffset    ); }
-    const SPIRVShaderResourceAttribs& GetResource    (Uint32 n)const noexcept{ return GetResAttribs(n, GetTotalResources(),   0                       ); }
+    const SPIRVShaderResourceAttribs& GetUB          (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::UniformBuffer,   n); }
+    const SPIRVShaderResourceAttribs& GetSB          (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::StorageBuffer,   n); }
+    const SPIRVShaderResourceAttribs& GetImg         (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::StorageImage,    n); }
+    const SPIRVShaderResourceAttribs& GetSmpldImg    (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::SampledImage,    n); }
+    const SPIRVShaderResourceAttribs& GetAC          (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::AtomicCounter,   n); }
+    const SPIRVShaderResourceAttribs& GetSepSmplr    (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::SeparateSampler, n); }
+    const SPIRVShaderResourceAttribs& GetSepImg      (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::SeparateImage,   n); }
+    const SPIRVShaderResourceAttribs& GetInptAtt     (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::InputAttachment, n); }
+    const SPIRVShaderResourceAttribs& GetAccelStruct (Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::AccelStruct,     n); }
+    const SPIRVShaderResourceAttribs& GetPushConstant(Uint32 n)const noexcept{ return GetResAttribs(ResourceClass::PushConstant,    n); }
 
     // clang-format on
 
     const SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n) const noexcept
     {
         VERIFY(n < m_NumShaderStageInputs, "Shader stage input index (", n, ") is out of range. Total input count: ", m_NumShaderStageInputs);
-        const SPIRVShaderResourceAttribs* ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
+        const SPIRVShaderResourceAttribs* ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + GetTotalResources();
         return reinterpret_cast<const SPIRVShaderStageInputAttribs*>(ResourceMemoryEnd)[n];
     }
 
@@ -415,34 +449,30 @@ private:
                     size_t                  ResourceNamesPoolSize,
                     StringPool&             ResourceNamesPool);
 
-    SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset) noexcept
+    SPIRVShaderResourceAttribs& GetResAttribs(ResourceClass ResClass, Uint32 n) noexcept
     {
-        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Total resource count: ", NumResources);
-        VERIFY_EXPR(Offset + n < m_TotalResources);
-        return reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
+        VERIFY(n < GetNumResources(ResClass), "Resource index (", n, ") is out of range. Resource count: ", GetNumResources(ResClass));
+        OffsetType Offset = m_Offsets[static_cast<size_t>(ResClass)];
+        return GetResource(Offset + n);
     }
 
-    const SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset) const noexcept
+    SPIRVShaderResourceAttribs& GetResource(Uint32 n) noexcept
     {
-        VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Total resource count: ", NumResources);
-        VERIFY_EXPR(Offset + n < m_TotalResources);
-        return reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
+        VERIFY(n < GetTotalResources(), "Resource index (", n, ") is out of range. Total resource count: ", GetTotalResources());
+        return reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[n];
     }
 
     // clang-format off
-
-    SPIRVShaderResourceAttribs& GetUB          (Uint32 n)noexcept{ return GetResAttribs(n, GetNumUBs(),           0                       ); }
-    SPIRVShaderResourceAttribs& GetSB          (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSBs(),           m_StorageBufferOffset   ); }
-    SPIRVShaderResourceAttribs& GetImg         (Uint32 n)noexcept{ return GetResAttribs(n, GetNumImgs(),          m_StorageImageOffset    ); }
-    SPIRVShaderResourceAttribs& GetSmpldImg    (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSmpldImgs(),     m_SampledImageOffset    ); }
-    SPIRVShaderResourceAttribs& GetAC          (Uint32 n)noexcept{ return GetResAttribs(n, GetNumACs(),           m_AtomicCounterOffset   ); }
-    SPIRVShaderResourceAttribs& GetSepSmplr    (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSepSmplrs(),     m_SeparateSamplerOffset ); }
-    SPIRVShaderResourceAttribs& GetSepImg      (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSepImgs(),       m_SeparateImageOffset   ); }
-    SPIRVShaderResourceAttribs& GetInptAtt     (Uint32 n)noexcept{ return GetResAttribs(n, GetNumInptAtts(),      m_InputAttachmentOffset ); }
-    SPIRVShaderResourceAttribs& GetAccelStruct (Uint32 n)noexcept{ return GetResAttribs(n, GetNumAccelStructs(),  m_AccelStructOffset     ); }
-    SPIRVShaderResourceAttribs& GetPushConstant(Uint32 n)noexcept{ return GetResAttribs(n, GetNumPushConstants(), m_PushConstantOffset    ); }
-    SPIRVShaderResourceAttribs& GetResource    (Uint32 n)noexcept{ return GetResAttribs(n, GetTotalResources(),   0                       ); }
-
+    SPIRVShaderResourceAttribs& GetUB          (Uint32 n)noexcept{ return GetResAttribs(ResourceClass::UniformBuffer,   n); }
+    SPIRVShaderResourceAttribs& GetSB          (Uint32 n)noexcept{ return GetResAttribs(ResourceClass::StorageBuffer,   n); }
+    SPIRVShaderResourceAttribs& GetImg         (Uint32 n)noexcept{ return GetResAttribs(ResourceClass::StorageImage,    n); }
+    SPIRVShaderResourceAttribs& GetSmpldImg    (Uint32 n)noexcept{ return GetResAttribs(ResourceClass::SampledImage,    n); }
+    SPIRVShaderResourceAttribs& GetAC          (Uint32 n)noexcept{ return GetResAttribs(ResourceClass::AtomicCounter,   n); }
+    SPIRVShaderResourceAttribs& GetSepSmplr    (Uint32 n)noexcept{ return GetResAttribs(ResourceClass::SeparateSampler, n); }
+    SPIRVShaderResourceAttribs& GetSepImg      (Uint32 n)noexcept{ return GetResAttribs(ResourceClass::SeparateImage,   n); }
+    SPIRVShaderResourceAttribs& GetInptAtt     (Uint32 n)noexcept{ return GetResAttribs(ResourceClass::InputAttachment, n); }
+    SPIRVShaderResourceAttribs& GetAccelStruct (Uint32 n)noexcept{ return GetResAttribs(ResourceClass::AccelStruct,     n); }
+    SPIRVShaderResourceAttribs& GetPushConstant(Uint32 n)noexcept{ return GetResAttribs(ResourceClass::PushConstant,    n); }
     // clang-format on
 
     SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n) noexcept
@@ -458,18 +488,10 @@ private:
     const char* m_CombinedSamplerSuffix = nullptr;
     const char* m_ShaderName            = nullptr;
 
-    using OffsetType                   = Uint16;
-    OffsetType m_StorageBufferOffset   = 0;
-    OffsetType m_StorageImageOffset    = 0;
-    OffsetType m_SampledImageOffset    = 0;
-    OffsetType m_AtomicCounterOffset   = 0;
-    OffsetType m_SeparateSamplerOffset = 0;
-    OffsetType m_SeparateImageOffset   = 0;
-    OffsetType m_InputAttachmentOffset = 0;
-    OffsetType m_AccelStructOffset     = 0;
-    OffsetType m_PushConstantOffset    = 0;
-    OffsetType m_TotalResources        = 0;
-    OffsetType m_NumShaderStageInputs  = 0;
+    using OffsetType = Uint16;
+    std::array<OffsetType, static_cast<size_t>(ResourceClass::NumClasses) + 1> m_Offsets;
+
+    OffsetType m_NumShaderStageInputs = 0;
 
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
 
