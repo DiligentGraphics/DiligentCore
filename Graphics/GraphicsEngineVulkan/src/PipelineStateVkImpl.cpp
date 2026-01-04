@@ -673,7 +673,7 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
     if (PipelineName == nullptr)
         PipelineName = "<null>";
 
-    const PipelineLayoutVk::PushConstantInfo PushConstant = PipelineLayoutVk::GetPushConstantInfo(pSignatures, SignatureCount);
+    const PipelineLayoutVk::PushConstantInfo& PushConstant = PipelineLayoutVk::GetPushConstantInfo(pSignatures, SignatureCount);
     VERIFY_EXPR(!PushConstant || PushConstant.Name == pSignatures[PushConstant.SignatureIndex]->GetResourceDesc(PushConstant.ResourceIndex).Name);
 
     // Verify that pipeline layout is compatible with shader resources and
@@ -703,25 +703,22 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                 {
 #if !DILIGENT_NO_HLSL
                     std::vector<uint32_t> PatchedSPIRV = ConvertUBOToPushConstants(SPIRV, PushConstant.Name);
-                    if (!PatchedSPIRV.empty())
-                    {
-                        SPIRV = std::move(PatchedSPIRV);
-
-                        // Recreate shader resources from the patched SPIRV
-                        SPIRVShaderResources::CreateInfo ResCI;
-                        ResCI.ShaderType                  = ShaderType;
-                        ResCI.Name                        = ShaderName;
-                        ResCI.CombinedSamplerSuffix       = pShaderResources->GetCombinedSamplerSuffix();
-                        ResCI.LoadShaderStageInputs       = false; // Inputs have already been remapped
-                        ResCI.LoadUniformBufferReflection = pShaderResources->HasUniformBufferReflection();
-
-                        pShaderResources = SPIRVShaderResources::Create(GetRawAllocator(), SPIRV, ResCI);
-                    }
-                    else
+                    if (PatchedSPIRV.empty())
                     {
                         LOG_ERROR_AND_THROW("Failed to convert uniform buffer '", PushConstant.Name,
                                             "' to push constant in shader '", ShaderName, "'");
                     }
+
+                    SPIRV = std::move(PatchedSPIRV);
+                    // Recreate shader resources from the patched SPIRV
+                    SPIRVShaderResources::CreateInfo ResCI;
+                    ResCI.ShaderType                  = ShaderType;
+                    ResCI.Name                        = ShaderName;
+                    ResCI.CombinedSamplerSuffix       = pShaderResources->GetCombinedSamplerSuffix();
+                    ResCI.LoadShaderStageInputs       = false; // Inputs have already been remapped
+                    ResCI.LoadUniformBufferReflection = pShaderResources->HasUniformBufferReflection();
+
+                    pShaderResources = SPIRVShaderResources::Create(GetRawAllocator(), SPIRV, ResCI);
 #else
                     LOG_ERROR_AND_THROW("Cannot patch shader, SPIRV-Tools is not available when DILIGENT_NO_HLSL defined.");
 #endif
@@ -742,86 +739,81 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                                             PipelineName, "'.");
                     }
 
-                    // Determine if this resource is the selected push constant by comparing with pPushConstantInfo.
-                    // We cannot rely on SPIRVAttribs.Type == PushConstant because the SPIRV may have been patched
-                    // but pShaderResources was not updated (when pDvpShaderResources is null).
-                    const bool IsNativePushConstant = (PushConstant &&
-                                                       ResAttribution.ResourceIndex == PushConstant.ResourceIndex &&
-                                                       ResAttribution.SignatureIndex == PushConstant.SignatureIndex);
-
                     const PipelineResourceSignatureDesc& SignDesc = ResAttribution.pSignature->GetDesc();
                     const SHADER_RESOURCE_TYPE           ResType  = SPIRVShaderResourceAttribs::GetShaderResourceType(SPIRVAttribs.Type);
                     const PIPELINE_RESOURCE_FLAGS        Flags    = SPIRVShaderResourceAttribs::GetPipelineResourceFlags(SPIRVAttribs.Type);
 
-                    // For push constants, skip descriptor set operations but validate the resource exists.
-                    if (IsNativePushConstant)
+                    if (PushConstant && PushConstant.Name == SPIRVAttribs.Name)
                     {
+                        // For push constants, skip descriptor set remapping, but validate the resource.
+                        if (SPIRVAttribs.Type != SPIRVShaderResourceAttribs::ResourceType::PushConstant)
+                        {
+                            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource with name '", SPIRVAttribs.Name,
+                                                "' that is expected to be a push constant in pipeline '", PipelineName,
+                                                "', but its type is '", SPIRVShaderResourceAttribs::ResourceTypeToString(SPIRVAttribs.Type), "'.");
+                        }
+
+                        VERIFY_EXPR(ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex);
+                        const PipelineResourceDesc& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
+                        ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, SPIRVAttribs.ArraySize,
+                                                              ShaderName, SignDesc.Name);
+                    }
+                    else
+                    {
+                        Uint32 ResourceBinding = ~0u;
+                        Uint32 DescriptorSet   = ~0u;
                         if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
                         {
                             const PipelineResourceDesc& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
                             ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, SPIRVAttribs.ArraySize,
                                                                   ShaderName, SignDesc.Name);
+
+                            const PipelineResourceSignatureVkImpl::ResourceAttribs& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
+                            ResourceBinding = ResAttribs.BindingIndex;
+                            DescriptorSet   = ResAttribs.DescrSet;
                         }
-                        if (pDvpResourceAttibutions)
-                            pDvpResourceAttibutions->emplace_back(ResAttribution);
-
-                        // Skip descriptor set remapping for push constants
-                        return;
-                    }
-
-                    Uint32 ResourceBinding = ~0u;
-                    Uint32 DescriptorSet   = ~0u;
-                    if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
-                    {
-                        const PipelineResourceDesc& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
-                        ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, SPIRVAttribs.ArraySize,
-                                                              ShaderName, SignDesc.Name);
-
-                        const PipelineResourceSignatureVkImpl::ResourceAttribs& ResAttribs{ResAttribution.pSignature->GetResourceAttribs(ResAttribution.ResourceIndex)};
-                        ResourceBinding = ResAttribs.BindingIndex;
-                        DescriptorSet   = ResAttribs.DescrSet;
-                    }
-                    else if (ResAttribution.ImmutableSamplerIndex != ResourceAttribution::InvalidResourceIndex)
-                    {
-                        if (ResType != SHADER_RESOURCE_TYPE_SAMPLER)
+                        else if (ResAttribution.ImmutableSamplerIndex != ResourceAttribution::InvalidResourceIndex)
                         {
-                            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource with name '", SPIRVAttribs.Name,
-                                                "' and type '", GetShaderResourceTypeLiteralName(ResType),
-                                                "' that is not compatible with immutable sampler defined in pipeline resource signature '",
-                                                SignDesc.Name, "'.");
+                            if (ResType != SHADER_RESOURCE_TYPE_SAMPLER)
+                            {
+                                LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource with name '", SPIRVAttribs.Name,
+                                                    "' and type '", GetShaderResourceTypeLiteralName(ResType),
+                                                    "' that is not compatible with immutable sampler defined in pipeline resource signature '",
+                                                    SignDesc.Name, "'.");
+                            }
+                            const ImmutableSamplerAttribsVk& SamAttribs{ResAttribution.pSignature->GetImmutableSamplerAttribs(ResAttribution.ImmutableSamplerIndex)};
+                            ResourceBinding = SamAttribs.BindingIndex;
+                            DescriptorSet   = SamAttribs.DescrSet;
                         }
-                        const ImmutableSamplerAttribsVk& SamAttribs{ResAttribution.pSignature->GetImmutableSamplerAttribs(ResAttribution.ImmutableSamplerIndex)};
-                        ResourceBinding = SamAttribs.BindingIndex;
-                        DescriptorSet   = SamAttribs.DescrSet;
-                    }
-                    else
-                    {
-                        UNEXPECTED("Either immutable sampler or resource index should be valid");
-                    }
+                        else
+                        {
+                            UNEXPECTED("Either immutable sampler or resource index should be valid");
+                        }
 
-                    VERIFY_EXPR(ResourceBinding != ~0u && DescriptorSet != ~0u);
-                    DescriptorSet += BindIndexToDescSetIndex[SignDesc.BindingIndex];
-                    if (bVerifyOnly)
-                    {
-                        const Uint32 SpvBinding  = SPIRV[SPIRVAttribs.BindingDecorationOffset];
-                        const Uint32 SpvDescrSet = SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset];
-                        if (SpvBinding != ResourceBinding)
+                        VERIFY_EXPR(ResourceBinding != ~0u && DescriptorSet != ~0u);
+                        DescriptorSet += BindIndexToDescSetIndex[SignDesc.BindingIndex];
+                        if (bVerifyOnly)
                         {
-                            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' maps resource '", SPIRVAttribs.Name,
-                                                "' to binding ", SpvBinding, ", but the same resource in pipeline resource signature '",
-                                                SignDesc.Name, "' is mapped to binding ", ResourceBinding, '.');
+                            const Uint32 SpvBinding  = SPIRV[SPIRVAttribs.BindingDecorationOffset];
+                            const Uint32 SpvDescrSet = SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset];
+                            if (SpvBinding != ResourceBinding)
+                            {
+                                LOG_ERROR_AND_THROW("Shader '", ShaderName, "' maps resource '", SPIRVAttribs.Name,
+                                                    "' to binding ", SpvBinding, ", but the same resource in pipeline resource signature '",
+                                                    SignDesc.Name, "' is mapped to binding ", ResourceBinding, '.');
+                            }
+                            if (SpvDescrSet != DescriptorSet)
+                            {
+                                LOG_ERROR_AND_THROW("Shader '", ShaderName, "' maps resource '", SPIRVAttribs.Name,
+                                                    "' to descriptor set ", SpvDescrSet, ", but the same resource in pipeline resource signature '",
+                                                    SignDesc.Name, "' is mapped to set ", DescriptorSet, '.');
+                            }
                         }
-                        if (SpvDescrSet != DescriptorSet)
+                        else
                         {
-                            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' maps resource '", SPIRVAttribs.Name,
-                                                "' to descriptor set ", SpvDescrSet, ", but the same resource in pipeline resource signature '",
-                                                SignDesc.Name, "' is mapped to set ", DescriptorSet, '.');
+                            SPIRV[SPIRVAttribs.BindingDecorationOffset]       = ResourceBinding;
+                            SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset] = DescriptorSet;
                         }
-                    }
-                    else
-                    {
-                        SPIRV[SPIRVAttribs.BindingDecorationOffset]       = ResourceBinding;
-                        SPIRV[SPIRVAttribs.DescriptorSetDecorationOffset] = DescriptorSet;
                     }
 
                     if (pDvpResourceAttibutions)
@@ -1020,22 +1012,15 @@ void PipelineStateVkImpl::DvpVerifySRBResources(const DeviceContextVkImpl* pCtx,
         pResources->ProcessResources(
             [&](const SPIRVShaderResourceAttribs& ResAttribs, Uint32) //
             {
-                // Push constants are validated but don't use descriptor sets
-                const bool IsPushConstant = (ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::PushConstant);
-
                 if (!res_info->IsImmutableSampler()) // There are also immutable samplers in the list
                 {
                     VERIFY_EXPR(res_info->pSignature != nullptr);
                     VERIFY_EXPR(res_info->pSignature->GetDesc().BindingIndex == res_info->SignatureIndex);
 
-                    // Skip descriptor set validation for push constants (they don't use descriptor sets)
-                    if (!IsPushConstant)
-                    {
-                        const ShaderResourceCacheVk* pResourceCache = ResourceCaches[res_info->SignatureIndex];
-                        DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", res_info->SignatureIndex, " is null.");
-                        res_info->pSignature->DvpValidateCommittedResource(pCtx, ResAttribs, res_info->ResourceIndex, *pResourceCache,
-                                                                           pResources->GetShaderName(), m_Desc.Name);
-                    }
+                    const ShaderResourceCacheVk* pResourceCache = ResourceCaches[res_info->SignatureIndex];
+                    DEV_CHECK_ERR(pResourceCache != nullptr, "Resource cache at index ", res_info->SignatureIndex, " is null.");
+                    res_info->pSignature->DvpValidateCommittedResource(pCtx, ResAttribs, res_info->ResourceIndex, *pResourceCache,
+                                                                       pResources->GetShaderName(), m_Desc.Name);
                 }
                 ++res_info;
             } //
