@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -868,32 +868,65 @@ void ValidatePipelineResourceCompatibility(const PipelineResourceDesc& ResDesc,
 
     VERIFY(ResDesc.ArraySize > 0, "ResDesc.ArraySize can't be zero. This error should've be caught by ValidatePipelineResourceSignatureDesc().");
 
-    if (ArraySize == 0)
+    if ((ResourceFlags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
     {
-        // ArraySize == 0 means that the resource is a runtime-sized array and ResDesc.ArraySize from the
-        // resource signature may have any non-zero value.
-        if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0)
+        if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) == 0)
         {
             LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
-                                "' that is a runtime-sized array, but in the resource signature '", SignatureName,
-                                "' the resource is defined without the PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY flag.");
+                                "' that is defined as inline constants, but in the pipeline resource signature '", SignatureName,
+                                "' the resource is not labeled as inline constants.");
+        }
+
+        if (ArraySize != 1)
+        {
+            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                                "' that is defined as inline constants, but has array size ", ArraySize,
+                                " in the pipeline resource signature '", SignatureName,
+                                "'. Inline constant resources must have array size of 1.");
+        }
+    }
+    else if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+    {
+        // In most APIs, inline constants are just regular constant buffers and don't have
+        // the special status. Only in Vulkan push constants are treated specially, but
+        // emulated inline constants are still just regular constant buffers.
+        if (ArraySize != 1)
+        {
+            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                                "' that is defined in the pipeline resource signature '", SignatureName,
+                                "' as inline constants, but has array size ", ArraySize,
+                                ". Inline constant resources must have array size of 1.");
         }
     }
     else
     {
-        if (ResDesc.ArraySize < ArraySize)
+        if (ArraySize == 0)
         {
-            LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
-                                "' whose array size (", ArraySize, ") is greater than the array size (",
-                                ResDesc.ArraySize, ") specified by the pipeline resource signature '", SignatureName, "'.");
+            // ArraySize == 0 means that the resource is a runtime-sized array and ResDesc.ArraySize from the
+            // resource signature may have any non-zero value.
+            if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY) == 0)
+            {
+                LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                                    "' that is a runtime-sized array, but in the resource signature '", SignatureName,
+                                    "' the resource is defined without the PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY flag.");
+            }
         }
+        else
+        {
+            if (ResDesc.ArraySize < ArraySize)
+            {
+                LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains resource '", ResDesc.Name,
+                                    "' whose array size (", ArraySize, ") is greater than the array size (",
+                                    ResDesc.ArraySize, ") specified by the pipeline resource signature '", SignatureName, "'.");
+            }
 
-        //if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY)
-        //{
-        //    LOG_WARNING_MESSAGE("Shader '", ShaderName, "' contains resource with name '", ResDesc.Name,
-        //                        "' that is defined in resource signature '", SignatureName,
-        //                        "' with flag PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY, but the resource is not a runtime-sized array.");
-        //}
+            //if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY)
+            //{
+            //    LOG_WARNING_MESSAGE("Shader '", ShaderName, "' contains resource with name '", ResDesc.Name,
+            //                        "' that is defined in resource signature '", SignatureName,
+            //                        "' with flag PIPELINE_RESOURCE_FLAG_RUNTIME_ARRAY, but the resource is not a runtime-sized array.");
+            //}
+        }
     }
 }
 
