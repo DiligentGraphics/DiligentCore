@@ -25,8 +25,11 @@
  *  of the possibility of such damages.
  */
 
-#include <iomanip>
 #include "SPIRVShaderResources.hpp"
+
+#include <iomanip>
+#include <cstring>
+
 #include "spirv_parser.hpp"
 #include "spirv_cross.hpp"
 #include "ShaderBase.hpp"
@@ -989,6 +992,79 @@ void SPIRVShaderResources::MapHLSLVertexShaderInputs(std::vector<uint32_t>& SPIR
         }
         SPIRV[Input.LocationDecorationOffset] = Location;
     }
+}
+
+SPIRVShaderResources::ResourceClass SPIRVShaderResources::ResourceTypeToClass(SPIRVShaderResourceAttribs::ResourceType ResType)
+{
+    static_assert(static_cast<size_t>(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes) == 13, "Did you add a new resource type? Please update the switch statement below.");
+    static_assert(static_cast<size_t>(ResourceClass::NumClasses) == 10, "Did you add a new resource class? Please update the switch statement below.");
+    switch (ResType)
+    {
+        // clang-format off
+        case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:        return ResourceClass::UniformBuffer;
+        case SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer:      return ResourceClass::StorageBuffer;
+        case SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer:      return ResourceClass::StorageBuffer;
+        case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:   return ResourceClass::SeparateImage;
+        case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:   return ResourceClass::StorageImage;
+        case SPIRVShaderResourceAttribs::ResourceType::StorageImage:         return ResourceClass::StorageImage;
+        case SPIRVShaderResourceAttribs::ResourceType::SampledImage:         return ResourceClass::SampledImage;
+        case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:        return ResourceClass::AtomicCounter;
+        case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:        return ResourceClass::SeparateImage;
+        case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:      return ResourceClass::SeparateSampler;
+        case SPIRVShaderResourceAttribs::ResourceType::InputAttachment:      return ResourceClass::InputAttachment;
+        case SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure:return ResourceClass::AccelStruct;
+        case SPIRVShaderResourceAttribs::ResourceType::PushConstant:         return ResourceClass::PushConstant;
+        // clang-format on
+        default:
+            UNEXPECTED("Unknown resource type");
+            return ResourceClass::NumClasses;
+    }
+}
+
+const SPIRVShaderResourceAttribs* SPIRVShaderResources::GetResourceByName(ResourceClass ResClass, const char* Name) const noexcept
+{
+    if (Name == nullptr)
+    {
+        UNEXPECTED("Name must not be null");
+        return nullptr;
+    }
+
+    Uint32 NumResources = GetNumResources(ResClass);
+    for (Uint32 i = 0; i < NumResources; ++i)
+    {
+        const SPIRVShaderResourceAttribs& ResAttribs = GetResAttribs(ResClass, i);
+        if (std::strcmp(ResAttribs.Name, Name) == 0)
+            return &ResAttribs;
+    }
+    return nullptr;
+}
+
+const SPIRVShaderResourceAttribs* SPIRVShaderResources::GetResourceByName(SPIRVShaderResourceAttribs::ResourceType ResType, const char* Name) const noexcept
+{
+    ResourceClass ResClass = ResourceTypeToClass(ResType);
+    if (const SPIRVShaderResourceAttribs* pRes = GetResourceByName(ResClass, Name))
+    {
+        if (pRes->Type == ResType)
+            return pRes;
+    }
+    return nullptr;
+}
+
+const SPIRVShaderResourceAttribs* SPIRVShaderResources::GetResourceByName(const char* Name) const noexcept
+{
+    if (Name == nullptr)
+    {
+        UNEXPECTED("Name must not be null");
+        return nullptr;
+    }
+
+    for (Uint32 i = 0; i < GetTotalResources(); ++i)
+    {
+        const SPIRVShaderResourceAttribs& ResAttribs = GetResource(i);
+        if (std::strcmp(ResAttribs.Name, Name) == 0)
+            return &ResAttribs;
+    }
+    return nullptr;
 }
 
 std::string SPIRVShaderResources::DumpResources() const

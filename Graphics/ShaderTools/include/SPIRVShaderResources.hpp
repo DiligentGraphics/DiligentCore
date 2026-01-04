@@ -442,6 +442,12 @@ public:
     // Sets the input location decorations using the HLSL semantic names.
     void MapHLSLVertexShaderInputs(std::vector<uint32_t>& SPIRV) const;
 
+    static ResourceClass ResourceTypeToClass(SPIRVShaderResourceAttribs::ResourceType ResType);
+
+    const SPIRVShaderResourceAttribs* GetResourceByName(ResourceClass ResClass, const char* Name) const noexcept;
+    const SPIRVShaderResourceAttribs* GetResourceByName(SPIRVShaderResourceAttribs::ResourceType ResType, const char* Name) const noexcept;
+    const SPIRVShaderResourceAttribs* GetResourceByName(const char* Name) const noexcept;
+
 private:
     void Initialize(IMemoryAllocator&       Allocator,
                     const ResourceCounters& Counters,

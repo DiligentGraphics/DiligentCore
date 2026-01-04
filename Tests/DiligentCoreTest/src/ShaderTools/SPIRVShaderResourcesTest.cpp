@@ -245,7 +245,20 @@ void TestSPIRVResources(const char*                                             
         {
             EXPECT_EQ(Res.GetInlineConstantCountOrThrow(FilePath), pRefRes->BufferStaticSize / 4) << Res.Name;
         }
+
+        EXPECT_EQ(&Res, Resources.GetResourceByName(Res.Type, Res.Name)) << Res.Name;
+        EXPECT_EQ(&Res, Resources.GetResourceByName(Res.Name)) << Res.Name;
+
+        for (Uint8 AltType = 0; AltType < static_cast<Uint8>(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes); ++AltType)
+        {
+            if (AltType != static_cast<Uint8>(Res.Type))
+            {
+                EXPECT_EQ(nullptr, Resources.GetResourceByName(static_cast<SPIRVShaderResourceAttribs::ResourceType>(AltType), Res.Name)) << Res.Name;
+            }
+        }
     }
+
+    EXPECT_EQ(nullptr, Resources.GetResourceByName("NullResource"));
 }
 
 using SPIRVResourceType = SPIRVShaderResourceAttribs::ResourceType;
