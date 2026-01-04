@@ -81,8 +81,10 @@ PipelineLayoutVk::PushConstantInfo PipelineLayoutVk::GetPushConstantInfo(
                 const PipelineResourceDesc& ResDesc = pSignature->GetResourceDesc(r);
                 if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
                 {
-                    VERIFY_EXPR(ResDesc.ArraySize > 0);
+                    PCInfo.Name = ResDesc.Name;
+
                     // For inline constants, ArraySize contains the number of 32-bit constants.
+                    VERIFY_EXPR(ResDesc.ArraySize > 0);
                     PCInfo.vkRange.size       = ResDesc.ArraySize * sizeof(Uint32);
                     PCInfo.vkRange.offset     = 0;
                     PCInfo.vkRange.stageFlags = ShaderTypesToVkShaderStageFlags(ResDesc.ShaderStages);
