@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -837,6 +837,12 @@ struct PipelineResourceSignatureDescX : DeviceObjectAttribsX<PipelineResourceSig
         CombinedSamplerSuffix = Suffix != nullptr ?
             StringPool.emplace(Suffix).first->c_str() :
             PipelineResourceSignatureDesc{}.CombinedSamplerSuffix;
+        return *this;
+    }
+
+    PipelineResourceSignatureDescX& SetSRBAllocationGranularity(Uint32 _SRBAllocationGranularity) noexcept
+    {
+        SRBAllocationGranularity = _SRBAllocationGranularity;
         return *this;
     }
 
