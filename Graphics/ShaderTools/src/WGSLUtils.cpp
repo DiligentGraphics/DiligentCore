@@ -117,14 +117,16 @@ std::string DecodeSpirvLiteralString(const std::vector<uint32_t>& SPIRV,
     return Result;
 }
 
-void StripGoogleHlslFunctionality(std::vector<uint32_t>& SPIRV)
+void AddStorageImageExtendedFormats(std::vector<uint32_t>& SPIRV)
 {
     if (SPIRV.size() <= 5)
         return;
 
-    constexpr uint16_t OpExtension                  = 10;
-    constexpr uint16_t OpDecorateStringGOOGLE       = 5632;
-    constexpr uint16_t OpMemberDecorateStringGOOGLE = 5633;
+    constexpr uint16_t OpCapability                = 17;
+    constexpr uint32_t StorageImageExtendedFormats = 49;
+
+    bool   HasCapability         = false;
+    size_t InsertAfterCapability = 5;
 
     size_t InstructionPointer = 5; // Skip SPIR-V header
     while (InstructionPointer < SPIRV.size())
@@ -136,10 +138,55 @@ void StripGoogleHlslFunctionality(std::vector<uint32_t>& SPIRV)
         if (WordCount == 0 || InstructionPointer + WordCount > SPIRV.size())
             break;
 
-        auto EraseCurrent = [&](size_t count) {
-            SPIRV.erase(SPIRV.begin() + InstructionPointer,
-                        SPIRV.begin() + InstructionPointer + count);
-        };
+        if (OpCode == OpCapability)
+        {
+            InsertAfterCapability = InstructionPointer + WordCount;
+
+            if (WordCount >= 2 && SPIRV[InstructionPointer + 1] == StorageImageExtendedFormats)
+            {
+                HasCapability = true;
+                break;
+            }
+
+            InstructionPointer += WordCount;
+            continue;
+        }
+        break;
+    }
+
+    if (HasCapability)
+        return;
+
+
+    const uint32_t FirstWord = (2u << 16) | uint32_t(OpCapability);
+    SPIRV.insert(SPIRV.begin() + InsertAfterCapability, {FirstWord, StorageImageExtendedFormats});
+}
+
+void StripGoogleHlslFunctionality(std::vector<uint32_t>& SPIRV)
+{
+    if (SPIRV.size() <= 5)
+        return;
+
+    constexpr uint16_t OpExtension                  = 10;
+    constexpr uint16_t OpDecorateStringGOOGLE       = 5632;
+    constexpr uint16_t OpMemberDecorateStringGOOGLE = 5633;
+
+    size_t InstructionPointer = 5; // Skip SPIR-V header
+
+    auto EraseCurrent = [&](size_t Count) {
+        SPIRV.erase(SPIRV.begin() + InstructionPointer,
+                    SPIRV.begin() + InstructionPointer + Count);
+    };
+
+    while (InstructionPointer < SPIRV.size())
+    {
+        uint32_t Instruction = SPIRV[InstructionPointer];
+        uint16_t WordCount   = Instruction >> 16;
+        uint16_t OpCode      = Instruction & 0xFFFF;
+
+        if (WordCount == 0 || InstructionPointer + WordCount > SPIRV.size())
+            break;
+
 
         if (OpCode == OpExtension)
         {
