@@ -59,6 +59,8 @@ std::string RemapWGSLResourceBindings(const std::string&         WGSL,
 /// New version of Tint can't translate SPIR-V to WGSL with certain HLSL-specific functionality,
 void StripGoogleHlslFunctionality(std::vector<uint32_t>& SPIRV);
 
+/// Ensures the module declares `OpCapability StorageImageExtendedFormats`, which is required when using extended storage image formats
+void AddStorageImageExtendedFormats(std::vector<uint32_t>& SPIRV);
 
 /// When WGSL is generated from SPIR-V, the names of resources may be mangled
 ///
