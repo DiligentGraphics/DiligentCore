@@ -106,7 +106,8 @@ public:
                              Uint32         ArraySize,
                              DescriptorType Type,
                              bool           HasImmutableSampler,
-                             Uint32         InlineConstantOffset = ~0u);
+                             Uint32         InlineConstantOffset  = ~0u,
+                             Uint32         DbgNumInlineConstants = 0);
 
     // sizeof(Resource) == 40 (x64, msvc, Release)
     struct Resource
@@ -346,6 +347,7 @@ private:
 #ifdef DILIGENT_DEBUG
     // Debug array that stores flags indicating if resources in the cache have been initialized
     std::vector<std::vector<bool>> m_DbgInitializedResources;
+    std::vector<bool>              m_DbgAssignedInlineConstants;
 #endif
 };
 
