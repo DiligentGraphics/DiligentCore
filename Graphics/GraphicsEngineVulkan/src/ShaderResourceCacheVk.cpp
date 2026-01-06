@@ -45,22 +45,22 @@ size_t ShaderResourceCacheVk::GetRequiredMemorySize(Uint32                      
                                                     const Uint32*                       SetSizes,
                                                     const InlineConstantInfoVectorType& InlineConstants)
 {
-    Uint32 TotalInlineConstantBytes = 0;
+    Uint32 TotalInlineConstants = 0;
     for (const auto& Info : InlineConstants)
-        TotalInlineConstantBytes += Info.NumConstants * sizeof(Uint32);
+        TotalInlineConstants += Info.NumConstants;
 
-    return GetRequiredMemorySize(NumSets, SetSizes, TotalInlineConstantBytes);
+    return GetRequiredMemorySize(NumSets, SetSizes, TotalInlineConstants);
 }
 
 size_t ShaderResourceCacheVk::GetRequiredMemorySize(Uint32        NumSets,
                                                     const Uint32* SetSizes,
-                                                    Uint32        TotalInlineConstantBytes)
+                                                    Uint32        TotalInlineConstants)
 {
     Uint32 TotalResources = 0;
     for (Uint32 t = 0; t < NumSets; ++t)
         TotalResources += SetSizes[t];
 
-    size_t MemorySize = NumSets * sizeof(DescriptorSet) + TotalResources * sizeof(Resource) + TotalInlineConstantBytes;
+    size_t MemorySize = NumSets * sizeof(DescriptorSet) + TotalResources * sizeof(Resource) + TotalInlineConstants * sizeof(Uint32);
     return MemorySize;
 }
 
@@ -70,22 +70,22 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator&                   M
                                            const InlineConstantInfoVectorType& InlineConstants)
 {
     // Calculate total inline constant bytes from the vector
-    Uint32 TotalInlineConstantBytes = 0;
+    Uint32 TotalInlineConstants = 0;
     for (const auto& Info : InlineConstants)
-        TotalInlineConstantBytes += Info.NumConstants * sizeof(Uint32);
+        TotalInlineConstants += Info.NumConstants;
 
     // Allocate memory only - do NOT call InitializeInlineConstantDataPointers here!
     // The caller must first call InitializeResources() to construct Resource objects,
     // then call InitializeInlineConstantDataPointers() to set up the inline constant data pointers.
     // If we set the pointers here, they will be overwritten when InitializeResources()
     // uses placement new to construct Resource objects (which initializes pInlineConstantData = nullptr).
-    InitializeSets(MemAllocator, NumSets, SetSizes, TotalInlineConstantBytes);
+    InitializeSets(MemAllocator, NumSets, SetSizes, TotalInlineConstants);
 }
 
 void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator,
                                            Uint32            NumSets,
                                            const Uint32*     SetSizes,
-                                           Uint32            TotalInlineConstantBytes)
+                                           Uint32            TotalInlineConstants)
 {
     VERIFY(!m_pMemory, "Memory has already been allocated");
 
@@ -109,8 +109,8 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator,
         m_TotalResources += SetSizes[t];
     }
 
-    const size_t MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource) + TotalInlineConstantBytes;
-    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes, TotalInlineConstantBytes));
+    const size_t MemorySize = NumSets * sizeof(DescriptorSet) + m_TotalResources * sizeof(Resource) + TotalInlineConstants * sizeof(Uint32);
+    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes, TotalInlineConstants));
 #ifdef DILIGENT_DEBUG
     m_DbgInitializedResources.resize(m_NumSets);
 #endif
@@ -132,7 +132,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator,
             m_DbgInitializedResources[t].resize(SetSizes[t]);
 #endif
         }
-        VERIFY_EXPR(reinterpret_cast<Uint8*>(pCurrResPtr) + TotalInlineConstantBytes == reinterpret_cast<Uint8*>(m_pMemory.get()) + MemorySize);
+        VERIFY_EXPR(reinterpret_cast<Uint8*>(pCurrResPtr) + TotalInlineConstants * sizeof(Uint32) == reinterpret_cast<Uint8*>(m_pMemory.get()) + MemorySize);
     }
 }
 
