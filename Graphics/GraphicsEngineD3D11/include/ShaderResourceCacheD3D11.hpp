@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -255,7 +255,9 @@ public:
 
     static constexpr int NumShaderTypes = D3D11ResourceBindPoints::NumShaderTypes;
 
-    static size_t GetRequiredMemorySize(const D3D11ShaderResourceCounters& ResCount);
+    static size_t GetRequiredMemorySize(const D3D11ShaderResourceCounters&      ResCount,
+                                        const InlineConstantBufferAttribsD3D11* pInlineCBs,
+                                        Uint32                                  NumInlineCBs);
 
     // pDynamicCBSlotsMask is the optional pointer to the array of dynamic constant buffer
     // slot masks for each shader stage. Dynamic constant buffer in D3D11 is a buffer that
