@@ -102,7 +102,7 @@ public:
                                         const InlineConstantInfoVectorType& InlineConstants = {});
     static size_t GetRequiredMemorySize(Uint32        NumSets,
                                         const Uint32* SetSizes,
-                                        Uint32        TotalInlineConstantBytes);
+                                        Uint32        TotalInlineConstants);
 
     // Allocates memory for descriptor sets and resources, including space for inline constants.
     // IMPORTANT: This function only allocates memory. After calling InitializeSets(), you must:
