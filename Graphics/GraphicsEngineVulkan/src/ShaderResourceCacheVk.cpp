@@ -84,6 +84,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator,
     VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumSets, SetSizes, TotalInlineConstants));
 #ifdef DILIGENT_DEBUG
     m_DbgInitializedResources.resize(m_NumSets);
+    m_DbgAssignedInlineConstants.resize(TotalInlineConstants);
 #endif
     if (MemorySize > 0)
     {
@@ -114,7 +115,8 @@ void ShaderResourceCacheVk::InitializeResources(Uint32         Set,
                                                 Uint32         ArraySize,
                                                 DescriptorType Type,
                                                 bool           HasImmutableSampler,
-                                                Uint32         InlineConstantOffset)
+                                                Uint32         InlineConstantOffset,
+                                                Uint32         DbgNumInlineConstants)
 {
     DescriptorSet& DescrSet = GetDescriptorSet(Set);
     for (Uint32 res = 0; res < ArraySize; ++res)
@@ -126,6 +128,16 @@ void ShaderResourceCacheVk::InitializeResources(Uint32         Set,
         };
 #ifdef DILIGENT_DEBUG
         m_DbgInitializedResources[Set][size_t{Offset} + res] = true;
+
+        if (InlineConstantOffset != ~0u)
+        {
+            VERIFY(InlineConstantOffset + DbgNumInlineConstants <= m_DbgAssignedInlineConstants.size(), "Inline constant storage overflow");
+            for (Uint32 i = 0; i < DbgNumInlineConstants; ++i)
+            {
+                VERIFY(!m_DbgAssignedInlineConstants[InlineConstantOffset + i], "Inline constant storage at offset ", InlineConstantOffset + i, " has already been assigned");
+                m_DbgAssignedInlineConstants[InlineConstantOffset + i] = true;
+            }
+        }
 #endif
     }
 }
@@ -189,6 +201,10 @@ void ShaderResourceCacheVk::DbgVerifyResourceInitialization() const
     {
         for (bool ResInitialized : SetFlags)
             VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");
+    }
+    for (bool InlineConstAssigned : m_DbgAssignedInlineConstants)
+    {
+        VERIFY(InlineConstAssigned, "Not all inline constant storage has been assigned. This is a bug.");
     }
 }
 
