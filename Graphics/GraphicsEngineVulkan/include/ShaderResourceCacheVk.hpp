@@ -89,45 +89,32 @@ public:
 
     ~ShaderResourceCacheVk();
 
-    struct InlineConstantParamInfo
-    {
-        Uint32 DescrSetIndex = 0; // Descriptor set index
-        Uint32 CacheOffset   = 0; // Offset within the descriptor set
-        Uint32 NumConstants  = 0; // Number of 32-bit constants
-    };
-    using InlineConstantInfoVectorType = std::vector<InlineConstantParamInfo>;
-
-    static size_t GetRequiredMemorySize(Uint32                              NumSets,
-                                        const Uint32*                       SetSizes,
-                                        const InlineConstantInfoVectorType& InlineConstants = {});
     static size_t GetRequiredMemorySize(Uint32        NumSets,
                                         const Uint32* SetSizes,
                                         Uint32        TotalInlineConstants);
 
     // Allocates memory for descriptor sets and resources, including space for inline constants.
-    // IMPORTANT: This function only allocates memory. After calling InitializeSets(), you must:
-    //   1. Call InitializeResources() to construct Resource objects
-    //   2. Call InitializeInlineConstantDataPointers() to set up inline constant data pointers
-    // This order is required because InitializeResources() uses placement new, which would
-    // overwrite any pointers set before Resource construction.
-    void InitializeSets(IMemoryAllocator&                   MemAllocator,
-                        Uint32                              NumSets,
-                        const Uint32*                       SetSizes,
-                        const InlineConstantInfoVectorType& InlineConstants = {});
-    // Overload for cases where inline constant byte size is known but offsets are not yet available.
-    // Use InitializeInlineConstantDataPointers() later to set up the pointers.
+    // IMPORTANT: This function only allocates memory. After calling InitializeSets(), you must
+    //            call InitializeResources() to construct Resource objects.
     void InitializeSets(IMemoryAllocator& MemAllocator,
                         Uint32            NumSets,
                         const Uint32*     SetSizes,
-                        Uint32            TotalInlineConstantBytes);
-    void InitializeResources(Uint32 Set, Uint32 Offset, Uint32 ArraySize, DescriptorType Type, bool HasImmutableSampler);
+                        Uint32            TotalInlineConstants = 0);
+
+    void InitializeResources(Uint32         Set,
+                             Uint32         Offset,
+                             Uint32         ArraySize,
+                             DescriptorType Type,
+                             bool           HasImmutableSampler,
+                             Uint32         InlineConstantOffset = ~0u);
 
     // sizeof(Resource) == 40 (x64, msvc, Release)
     struct Resource
     {
-        explicit Resource(DescriptorType _Type, bool _HasImmutableSampler) noexcept :
+        explicit Resource(DescriptorType _Type, bool _HasImmutableSampler, void* _pInlineConstantData) noexcept :
             Type{_Type},
-            HasImmutableSampler{_HasImmutableSampler}
+            HasImmutableSampler{_HasImmutableSampler},
+            pInlineConstantData{_pInlineConstantData}
         {
             VERIFY(Type == DescriptorType::CombinedImageSampler || Type == DescriptorType::Sampler || !HasImmutableSampler,
                    "Immutable sampler can only be assigned to a combined image sampler or a separate sampler");
@@ -150,7 +137,7 @@ public:
 /*24 */ Uint64                       BufferRangeSize  = 0;
 
         // For inline constants only - pointer to CPU-side staging buffer
-/*32 */ void*                        pInlineConstantData = nullptr;
+/*32 */ void* const                  pInlineConstantData = nullptr;
 /*40 */ // End of structure
 
         VkDescriptorBufferInfo GetUniformBufferDescriptorWriteInfo()                     const;
@@ -280,11 +267,6 @@ public:
 
     // Gets the inline constant data pointer from the resource cache
     const void* GetInlineConstantData(Uint32 DescrSetIndex, Uint32 CacheOffset) const;
-
-    // Sets up inline constant data pointers for resources.
-    // This is used for static resource cache where InitializeSets is called
-    // before the resource attributes are fully known.
-    void InitializeInlineConstantDataPointers(const InlineConstantInfoVectorType& InlineConstants);
 
     // Returns pointer to inline constant storage at the given byte offset
     void* GetInlineConstantStorage(Uint32 ByteOffset = 0)
