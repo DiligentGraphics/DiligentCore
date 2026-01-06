@@ -901,11 +901,11 @@ TEST_F(InlineConstants, VulkanPushConstantsBlock)
     EXPECT_EQ(pVSPushConst->Flags, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
 
     // Verify ArraySize matches
-    EXPECT_EQ(pVSPushConst->ArraySize, (sizeof(PushConstants_Positions) + sizeof(PushConstants_Colors)) / sizeof(Uint32))
+    EXPECT_EQ(pVSPushConst->ArraySize, (sizeof(PushConstants_Positions) + sizeof(PushConstants_Colors)) / (sizeof(Uint32)))
         << "VS push constants should have 24 + 12 = 36 constants (6 float4 for PushConstants.g_Positions, 4 float4 for PushConstants.g_Colors)";
 
     // Now test runtime usage
-    const float ClearColor[] = {0.1f, 0.1f, 0.1f, 1.0f};
+    const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
     RenderDrawCommandReference(pSwapChain, ClearColor);
 
     ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
@@ -915,9 +915,9 @@ TEST_F(InlineConstants, VulkanPushConstantsBlock)
     IShaderResourceVariable* pVar = pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "PushConstants");
     ASSERT_TRUE(pVar);
 
-    pVar->SetInlineConstants(PushConstants_Positions, 0, sizeof(PushConstants_Positions) / sizeof(Uint32));
+    pVar->SetInlineConstants(PushConstants_Positions, 0, sizeof(PushConstants_Positions) / (sizeof(Uint32)));
 
-    pVar->SetInlineConstants(PushConstants_Colors, sizeof(PushConstants_Positions) / sizeof(Uint32), sizeof(PushConstants_Colors) / sizeof(Uint32));
+    pVar->SetInlineConstants(PushConstants_Colors, sizeof(PushConstants_Positions) / (sizeof(Uint32)), sizeof(PushConstants_Colors) / (sizeof(Uint32)));
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     pPSO->CreateShaderResourceBinding(&pSRB, true);
