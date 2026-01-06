@@ -266,7 +266,14 @@ public:
                                 Uint32 DynamicBufferOffset);
 
     // Gets the inline constant data pointer from the resource cache
-    const void* GetInlineConstantData(Uint32 DescrSetIndex, Uint32 CacheOffset) const;
+    const void* GetInlineConstantData(Uint32 DescrSetIndex, Uint32 CacheOffset) const
+    {
+        const DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
+        VERIFY(CacheOffset < DescrSet.GetSize(), "CacheOffset out of bounds");
+
+        const Resource& Res = DescrSet.GetResource(CacheOffset);
+        return Res.pInlineConstantData;
+    }
 
     // Sets inline constant data in the resource cache
     void SetInlineConstants(Uint32      DescrSetIndex,

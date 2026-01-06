@@ -981,27 +981,12 @@ void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
     DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
     Resource&      DstRes   = DescrSet.GetResource(CacheOffset);
 
-    VERIFY(DstRes.pInlineConstantData != nullptr, "Inline constant data pointer is null. "
-                                                  "Make sure InitializeSets was called with InlineConstants info for this resource.");
+    VERIFY(DstRes.pInlineConstantData != nullptr,
+           "Inline constant data pointer is null. Make sure InitializeResources was called with proper InlineConstantOffset for this resource.");
 
     // Copy to CPU-side staging buffer
     Uint32* pDstConstants = reinterpret_cast<Uint32*>(DstRes.pInlineConstantData);
     memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
-}
-
-const void* ShaderResourceCacheVk::GetInlineConstantData(Uint32 DescrSetIndex, Uint32 CacheOffset) const
-{
-    const DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
-
-    VERIFY(CacheOffset < DescrSet.GetSize(), "CacheOffset out of bounds");
-
-    const Resource& Res = DescrSet.GetResource(CacheOffset);
-    if (Res.pInlineConstantData != nullptr)
-    {
-        return Res.pInlineConstantData;
-    }
-
-    return nullptr;
 }
 
 } // namespace Diligent
