@@ -268,16 +268,6 @@ public:
     // Gets the inline constant data pointer from the resource cache
     const void* GetInlineConstantData(Uint32 DescrSetIndex, Uint32 CacheOffset) const;
 
-    // Returns pointer to inline constant storage at the given byte offset
-    void* GetInlineConstantStorage(Uint32 ByteOffset = 0)
-    {
-        return reinterpret_cast<Uint8*>(GetFirstResourcePtr() + m_TotalResources) + ByteOffset;
-    }
-    const void* GetInlineConstantStorage(Uint32 ByteOffset = 0) const
-    {
-        return reinterpret_cast<const Uint8*>(GetFirstResourcePtr() + m_TotalResources) + ByteOffset;
-    }
-
     // Sets inline constant data in the resource cache
     void SetInlineConstants(Uint32      DescrSetIndex,
                             Uint32      CacheOffset,
@@ -330,6 +320,13 @@ private:
         return reinterpret_cast<DescriptorSet*>(m_pMemory.get())[Index];
     }
 
+    // Returns pointer to inline constant storage at the given offset
+    void* GetInlineConstantStorage(Uint32 FirstConstant = 0)
+    {
+        return reinterpret_cast<Uint8*>(GetFirstResourcePtr() + m_TotalResources) + FirstConstant * sizeof(Uint32);
+    }
+
+private:
     std::unique_ptr<void, STDDeleter<void, IMemoryAllocator>> m_pMemory;
 
     Uint16 m_NumSets = 0;
