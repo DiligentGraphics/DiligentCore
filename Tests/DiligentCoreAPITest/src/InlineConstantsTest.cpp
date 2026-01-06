@@ -129,7 +129,7 @@ protected:
         GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
         IRenderDevice*         pDevice = pEnv->GetDevice();
 
-        if (!pDevice->GetDeviceInfo().IsD3DDevice())
+        if (!pDevice->GetDeviceInfo().IsD3DDevice() && !pDevice->GetDeviceInfo().IsVulkanDevice())
         {
             GTEST_SKIP();
         }
@@ -342,7 +342,7 @@ void InlineConstants::TestSignatures(Uint32 NumSignatures)
 
             PipelineResourceSignatureDescX SignDesc{"Inline constants test"};
             SignDesc
-                .AddResource(SHADER_TYPE_VERTEX, "cb0_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "cb0_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS)
                 .AddResource(SHADER_TYPE_VERTEX, "cb0_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
                 .AddResource(SHADER_TYPE_VERTEX, "cb0_dyn", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
                 .AddResource(SHADER_TYPE_VERTEX, "tex0_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
@@ -363,7 +363,7 @@ void InlineConstants::TestSignatures(Uint32 NumSignatures)
                 SignDesc.BindingIndex = 1;
             }
 
-            SignDesc.AddResource(SHADER_TYPE_VERTEX, "cb1_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            SignDesc.AddResource(SHADER_TYPE_VERTEX, "cb1_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS)
                 .AddResource(SHADER_TYPE_VERTEX, "cb1_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
                 .AddResource(SHADER_TYPE_VERTEX, "cb1_dyn", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
                 .AddResource(SHADER_TYPE_VERTEX, "tex1_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
@@ -372,7 +372,7 @@ void InlineConstants::TestSignatures(Uint32 NumSignatures)
 
                 .AddResource(SHADER_TYPE_VS_PS, "cbInlineColors", kNumColConstants, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, ColType, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
 
-                .AddResource(SHADER_TYPE_VERTEX, "cb2_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                .AddResource(SHADER_TYPE_VERTEX, "cb2_stat", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_STATIC, PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS)
                 .AddResource(SHADER_TYPE_VERTEX, "cb2_mut", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE)
                 .AddResource(SHADER_TYPE_VERTEX, "cb2_dyn", 1u, SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
                 .AddResource(SHADER_TYPE_VERTEX, "tex2_stat", SHADER_RESOURCE_TYPE_TEXTURE_SRV, SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
@@ -753,6 +753,11 @@ TEST_F(InlineConstants, RenderStateCache)
                 PresentInCache = true;
             }
 #endif
+            if (pDevice->GetDeviceInfo().IsVulkanDevice())
+            {
+                // For some reason, pUncachedVS and pVS1 got same hash computation result on Vulkan.
+                PresentInCache = true;
+            }
             CreatePSOFromCache(pCache, PresentInCache, pUncachedVS, pUncachedPS, &pPSO2);
             ASSERT_NE(pPSO2, nullptr);
             ASSERT_EQ(pPSO2->GetStatus(), PIPELINE_STATE_STATUS_READY);

@@ -50,6 +50,7 @@ namespace Diligent
 
 struct SPIRVShaderResourceAttribs;
 class DeviceContextVkImpl;
+class BufferVkImpl;
 
 struct ImmutableSamplerAttribsVk
 {
@@ -57,6 +58,27 @@ struct ImmutableSamplerAttribsVk
     Uint32 BindingIndex = ~0u;
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization and must be tightly packed");
+
+/// Inline constant buffer attributes for Vulkan backend.
+/// All inline constants are treated uniformly at PRS level - they all get:
+/// - DescriptorSet binding and cache allocation
+/// - Shared emulated buffer (created in the Signature, shared by all SRBs)
+///
+/// Push constant selection is deferred to PSO creation time. At PSO creation,
+/// one inline constant may be selected to use vkCmdPushConstants based on:
+/// 1. SPIR-V reflection (ResourceType::PushConstant in shader)
+/// 2. First inline constant as fallback (converted via PatchShader)
+struct InlineConstantBufferAttribsVk
+{
+    Uint32 ResIndex     = 0; // Resource index in the signature (used for matching)
+    Uint32 DescrSet     = 0; // Descriptor set index
+    Uint32 BindingIndex = 0; // Binding index within the descriptor set
+    Uint32 NumConstants = 0; // Number of 32-bit constants
+
+    // Shared buffer created in the Signature (similar to D3D11)
+    // All SRBs reference this same buffer to reduce memory usage.
+    RefCntAutoPtr<BufferVkImpl> pBuffer;
+};
 
 struct PipelineResourceSignatureInternalDataVk : PipelineResourceSignatureInternalData<PipelineResourceAttribsVk, ImmutableSamplerAttribsVk>
 {
@@ -134,6 +156,23 @@ public:
     void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
                                 VkDescriptorSet              vkDynamicDescriptorSet) const;
 
+    // Updates inline constant buffers by mapping the internal buffers and copying data from the resource cache
+    // ResourceCache must be valid - each SRB has its own copy of inline constant data stored in the cache
+    // PushConstantResIndex: Resource index of the inline constant selected as push constant by PSO
+    //                       Pass ~0u if no push constant is selected from this signature
+    void UpdateInlineConstantBuffers(const ShaderResourceCacheVk& ResourceCache,
+                                     DeviceContextVkImpl&         Ctx,
+                                     Uint32                       PushConstantResIndex) const;
+
+    // Returns the number of inline constant buffers
+    Uint32 GetNumInlineConstantBufferAttribs() const { return m_NumInlineConstantBufferAttribs; }
+
+    // Returns the inline constant buffer attributes
+    const InlineConstantBufferAttribsVk* GetInlineConstantBufferAttribs() const { return m_InlineConstantBufferAttribs.get(); }
+
+    // Returns push constant data from the resource cache for the specified resource index
+    const void* GetPushConstantData(const ShaderResourceCacheVk& ResourceCache, Uint32 ResIndex) const;
+
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the SPIRV resource attributes from the PSO.
     bool DvpValidateCommittedResource(const DeviceContextVkImpl*        pDeviceCtx,
@@ -152,8 +191,7 @@ public:
 
     bool HasInlineConstants() const
     {
-        // TODO
-        return false;
+        return m_NumInlineConstantBufferAttribs != 0;
     }
 
 private:
@@ -199,6 +237,11 @@ private:
     // The total number storage buffers with dynamic offsets in both descriptor sets,
     // accounting for array size.
     Uint16 m_DynamicStorageBufferCount = 0;
+
+    // Number of inline constant buffers
+    Uint32 m_NumInlineConstantBufferAttribs = 0;
+    // Inline constant buffer attributes
+    std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBufferAttribs;
 };
 
 template <> Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;
