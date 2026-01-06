@@ -701,6 +701,13 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                 if (pShaderResources->GetResourceByName(SPIRVShaderResourceAttribs::ResourceType::PushConstant, PushConstant.Name.c_str()) == nullptr &&
                     pShaderResources->GetResourceByName(SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, PushConstant.Name.c_str()) != nullptr)
                 {
+                    if (pShaderResources->GetNumPushConstants() != 0)
+                    {
+                        LOG_ERROR_AND_THROW("Shader '", ShaderName, "' already contains push constant '", pShaderResources->GetPushConstant(0).Name,
+                                            "', while pipeline '", PipelineName, "' requires converting uniform buffer '", PushConstant.Name,
+                                            "' to push constant. Converting push constants to uniform buffers is not supported.");
+                    }
+
 #if !DILIGENT_NO_HLSL
                     std::vector<uint32_t> PatchedSPIRV = ConvertUBOToPushConstants(SPIRV, PushConstant.Name);
                     if (PatchedSPIRV.empty())
@@ -764,6 +771,13 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                         Uint32 DescriptorSet   = ~0u;
                         if (ResAttribution.ResourceIndex != ResourceAttribution::InvalidResourceIndex)
                         {
+                            if (SPIRVAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::PushConstant)
+                            {
+                                LOG_ERROR_AND_THROW("Shader '", ShaderName, "' contains unexpected push constant resource '", SPIRVAttribs.Name,
+                                                    "' that is not mapped to push constant in pipeline resource signature '",
+                                                    SignDesc.Name, "'.");
+                            }
+
                             const PipelineResourceDesc& ResDesc = ResAttribution.pSignature->GetResourceDesc(ResAttribution.ResourceIndex);
                             ValidatePipelineResourceCompatibility(ResDesc, ResType, Flags, SPIRVAttribs.ArraySize,
                                                                   ShaderName, SignDesc.Name);
