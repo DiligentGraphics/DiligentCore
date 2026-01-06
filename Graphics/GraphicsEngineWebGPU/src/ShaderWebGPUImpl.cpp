@@ -206,6 +206,7 @@ void ShaderWebGPUImpl::Initialize(const ShaderCreateInfo& ShaderCI,
         }
 
         StripGoogleHlslFunctionality(SPIRV);
+        AddStorageImageExtendedFormats(SPIRV);
         m_WGSL = ConvertSPIRVtoWGSL(SPIRV);
         if (m_WGSL.empty())
         {
