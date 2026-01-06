@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,7 +44,60 @@ const char* ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_
 const char* ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_SRV>::Name     = "Shader resource view";
 const char* ShaderResourceCacheD3D11::CachedResourceTraits<D3D11_RESOURCE_RANGE_UAV>::Name     = "Unordered access view";
 
-size_t ShaderResourceCacheD3D11::GetRequiredMemorySize(const D3D11ShaderResourceCounters& ResCount)
+namespace
+{
+
+template <typename HandlerType>
+void ProcessInlineCBs(const D3D11ShaderResourceCounters&      ResCount,
+                      const InlineConstantBufferAttribsD3D11* pInlineCBs,
+                      Uint32                                  NumInlineCBs,
+                      HandlerType&&                           Handler)
+{
+    for (Uint32 i = 0; i < NumInlineCBs; ++i)
+    {
+        const InlineConstantBufferAttribsD3D11& InlineCBAttr = pInlineCBs[i];
+
+        SHADER_TYPE  ActiveStages = InlineCBAttr.BindPoints.GetActiveStages();
+        const Uint32 ShaderInd0   = ExtractFirstShaderStageIndex(ActiveStages);
+        const Uint32 Binding0     = InlineCBAttr.BindPoints[ShaderInd0];
+        // Static resource cache may not contain all inline constant buffers.
+        // Skip those that are out of range.
+        const bool IsInRange = Binding0 < ResCount[D3D11_RESOURCE_RANGE_CBV][ShaderInd0];
+
+#ifdef DILIGENT_DEBUG
+        while (ActiveStages != SHADER_TYPE_UNKNOWN)
+        {
+            const Uint32 ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
+            const Uint32 Binding   = InlineCBAttr.BindPoints[ShaderInd];
+            VERIFY(IsInRange == (Binding < ResCount[D3D11_RESOURCE_RANGE_CBV][ShaderInd]),
+                   "All binding points for inline constant buffer must be in range or out of range simultaneously.");
+        }
+#endif
+
+        if (IsInRange)
+        {
+            Handler(InlineCBAttr);
+        }
+    }
+};
+
+Uint32 GetTotalInlineConstants(const D3D11ShaderResourceCounters&      ResCount,
+                               const InlineConstantBufferAttribsD3D11* pInlineCBs,
+                               Uint32                                  NumInlineCBs)
+{
+    Uint32 TotalInlineConstants = 0;
+    ProcessInlineCBs(ResCount, pInlineCBs, NumInlineCBs,
+                     [&TotalInlineConstants](const InlineConstantBufferAttribsD3D11& InlineCBAttr) {
+                         TotalInlineConstants += InlineCBAttr.NumConstants;
+                     });
+    return TotalInlineConstants;
+}
+
+} // namespace
+
+size_t ShaderResourceCacheD3D11::GetRequiredMemorySize(const D3D11ShaderResourceCounters&      ResCount,
+                                                       const InlineConstantBufferAttribsD3D11* pInlineCBs,
+                                                       Uint32                                  NumInlineCBs)
 {
     size_t MemSize = 0;
     // clang-format off
@@ -60,6 +113,10 @@ size_t ShaderResourceCacheD3D11::GetRequiredMemorySize(const D3D11ShaderResource
     for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
         MemSize = AlignUp(MemSize + (sizeof(CachedResource) + sizeof(ID3D11UnorderedAccessView*)) * ResCount[D3D11_RESOURCE_RANGE_UAV][ShaderInd],     MaxAlignment);
     // clang-format on
+
+
+    const Uint32 TotalInlineConstants = GetTotalInlineConstants(ResCount, pInlineCBs, NumInlineCBs);
+    MemSize += TotalInlineConstants * sizeof(Uint32);
 
     VERIFY(MemSize < std::numeric_limits<OffsetType>::max(), "Memory size exceed the maximum allowed size.");
     return MemSize;
@@ -135,47 +192,25 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
     size_t BufferSize = MemOffset;
 
     VERIFY_EXPR(m_pResourceData == nullptr);
-    VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount));
-
-    auto ProcessInlineCBs = [pInlineCBs, NumInlineCBs, this](auto Handler) {
-        for (Uint32 i = 0; i < NumInlineCBs; ++i)
-        {
-            const InlineConstantBufferAttribsD3D11& InlineCBAttr = pInlineCBs[i];
-
-            SHADER_TYPE  ActiveStages = InlineCBAttr.BindPoints.GetActiveStages();
-            const Uint32 ShaderInd0   = ExtractFirstShaderStageIndex(ActiveStages);
-            const Uint32 Binding0     = InlineCBAttr.BindPoints[ShaderInd0];
-            // Static resource cache may not contain all inline constant buffers.
-            // Skip those that are out of range.
-            const bool IsInRange = Binding0 < GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd0);
 
 #ifdef DILIGENT_DEBUG
-            while (ActiveStages != SHADER_TYPE_UNKNOWN)
-            {
-                const Uint32 ShaderInd = ExtractFirstShaderStageIndex(ActiveStages);
-                const Uint32 Binding   = InlineCBAttr.BindPoints[ShaderInd];
-                VERIFY(IsInRange == (Binding < GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd)),
-                       "All binding points for inline constant buffer must be in range or out of range simultaneously.");
-            }
+    for (Uint32 ShaderInd = 0; ShaderInd < NumShaderTypes; ++ShaderInd)
+    {
+        VERIFY_EXPR(GetResourceCount<D3D11_RESOURCE_RANGE_CBV>(ShaderInd) == ResCount[D3D11_RESOURCE_RANGE_CBV][ShaderInd]);
+        VERIFY_EXPR(GetResourceCount<D3D11_RESOURCE_RANGE_SRV>(ShaderInd) == ResCount[D3D11_RESOURCE_RANGE_SRV][ShaderInd]);
+        VERIFY_EXPR(GetResourceCount<D3D11_RESOURCE_RANGE_SAMPLER>(ShaderInd) == ResCount[D3D11_RESOURCE_RANGE_SAMPLER][ShaderInd]);
+        VERIFY_EXPR(GetResourceCount<D3D11_RESOURCE_RANGE_UAV>(ShaderInd) == ResCount[D3D11_RESOURCE_RANGE_UAV][ShaderInd]);
+    }
 #endif
 
-            if (IsInRange)
-            {
-                Handler(InlineCBAttr);
-            }
-        }
-    };
-
-    Uint32 TotalInlineConstants = 0;
-    ProcessInlineCBs([&TotalInlineConstants](const InlineConstantBufferAttribsD3D11& InlineCBAttr) {
-        TotalInlineConstants += InlineCBAttr.NumConstants;
-    });
-
+    const Uint32 TotalInlineConstants = GetTotalInlineConstants(ResCount, pInlineCBs, NumInlineCBs);
     if (TotalInlineConstants > 0)
     {
         m_Flags |= FLAG_HAS_INLINE_CONSTANTS;
         BufferSize += TotalInlineConstants * sizeof(Uint32);
     }
+
+    VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount, pInlineCBs, NumInlineCBs));
 
     if (BufferSize > 0)
     {
@@ -199,13 +234,14 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
     {
         Uint32* pInlineCBData = reinterpret_cast<Uint32*>(m_pResourceData.get() + MemOffset);
         // Initialize inline constant buffers.
-        ProcessInlineCBs([&pInlineCBData, this](const InlineConstantBufferAttribsD3D11& InlineCBAttr) {
-            VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
-            VERIFY_EXPR(InlineCBAttr.pBuffer != nullptr);
-            // Use the same buffer and data pointer for all active shader stages.
-            InitInlineConstantBuffer(InlineCBAttr.BindPoints, InlineCBAttr.pBuffer, InlineCBAttr.NumConstants, pInlineCBData);
-            pInlineCBData += InlineCBAttr.NumConstants;
-        });
+        ProcessInlineCBs(ResCount, pInlineCBs, NumInlineCBs,
+                         [&pInlineCBData, this](const InlineConstantBufferAttribsD3D11& InlineCBAttr) {
+                             VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
+                             VERIFY_EXPR(InlineCBAttr.pBuffer != nullptr);
+                             // Use the same buffer and data pointer for all active shader stages.
+                             InitInlineConstantBuffer(InlineCBAttr.BindPoints, InlineCBAttr.pBuffer, InlineCBAttr.NumConstants, pInlineCBData);
+                             pInlineCBData += InlineCBAttr.NumConstants;
+                         });
         VERIFY_EXPR(pInlineCBData == reinterpret_cast<Uint32*>(m_pResourceData.get() + BufferSize));
     }
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -78,7 +78,7 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
             },
             [this]() //
             {
-                return ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters);
+                return ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters, m_InlineConstantBuffers.get(), m_NumInlineConstantBuffers);
             });
     }
     catch (...)
@@ -649,7 +649,7 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
             },
             [this]() //
             {
-                return ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters);
+                return ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters, m_InlineConstantBuffers.get(), m_NumInlineConstantBuffers);
             });
     }
     catch (...)
