@@ -160,6 +160,17 @@ public:
     // Returns the inline constant buffer attributes
     const InlineConstantBufferAttribsVk* GetInlineConstantBuffers() const { return m_InlineConstantBuffers.get(); }
 
+    // Updates inline constant buffers by mapping the internal buffers and copying data from the resource cache
+    // ResourceCache must be valid - each SRB has its own copy of inline constant data stored in the cache
+    // PushConstantResIndex: Resource index of the inline constant selected as push constant by PSO
+    //                       Pass ~0u if no push constant is selected from this signature
+    void UpdateInlineConstantBuffers(const ShaderResourceCacheVk& ResourceCache,
+                                     DeviceContextVkImpl&         Ctx,
+                                     Uint32                       PushConstantResIndex) const;
+
+    // Returns push constant data from the resource cache for the specified resource index
+    const void* GetPushConstantData(const ShaderResourceCacheVk& ResourceCache, Uint32 ResIndex) const;
+
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the SPIRV resource attributes from the PSO.
     bool DvpValidateCommittedResource(const DeviceContextVkImpl*        pDeviceCtx,

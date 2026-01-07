@@ -415,6 +415,71 @@ DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE
     return m_BindInfo[Indices[Uint32{Type}]];
 }
 
+void DeviceContextVkImpl::UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo)
+{
+    const PipelineLayoutVk& Layout           = m_pPipelineState->GetPipelineLayout();
+    const auto&             PushConstantInfo = Layout.GetPushConstantInfo();
+    const Uint32            SignCount        = m_pPipelineState->GetResourceSignatureCount();
+
+    for (Uint32 i = 0; i < SignCount; ++i)
+    {
+        const PipelineResourceSignatureVkImpl* pSign = m_pPipelineState->GetResourceSignature(i);
+        if (pSign == nullptr || pSign->GetNumInlineConstantBuffers() == 0)
+            continue;
+
+        const ShaderResourceCacheVk* pResourceCache = BindInfo.ResourceCaches[i];
+        if (pResourceCache == nullptr)
+        {
+            // Each signature with inline constants must have a bound SRB with a valid resource cache
+            DEV_CHECK_ERR(false, "Signature '", pSign->GetDesc().Name, "' has inline constants but no SRB is bound. "
+                                                                       "Did you call CommitShaderResources()?");
+            continue;
+        }
+
+        if (!pResourceCache->HasInlineConstants())
+            continue;
+
+        // Determine which resource (if any) in this signature should use push constant path
+        // If this signature contains the selected push constant, pass its resource index
+        // Otherwise pass ~0u to use emulated buffer path for all
+        const Uint32 PushConstantResIndex = (i == PushConstantInfo.SignatureIndex) ? PushConstantInfo.ResourceIndex : ~0u;
+
+        // Update inline constant buffers
+        pSign->UpdateInlineConstantBuffers(*pResourceCache, *this, PushConstantResIndex);
+    }
+}
+
+void DeviceContextVkImpl::CommitPushConstants(ResourceBindInfo& BindInfo)
+{
+    VERIFY_EXPR(m_pPipelineState != nullptr);
+    const PipelineLayoutVk& Layout           = m_pPipelineState->GetPipelineLayout();
+    const auto&             PushConstantInfo = Layout.GetPushConstantInfo();
+
+    if (!PushConstantInfo)
+        return;
+
+    const PipelineResourceSignatureVkImpl* pSign = m_pPipelineState->GetResourceSignature(PushConstantInfo.SignatureIndex);
+    VERIFY_EXPR(pSign != nullptr);
+
+    const ShaderResourceCacheVk* pResourceCache = BindInfo.ResourceCaches[PushConstantInfo.SignatureIndex];
+    if (pResourceCache == nullptr)
+    {
+        DEV_CHECK_ERR(false, "Signature '", pSign->GetDesc().Name, "' has push constants but no SRB is bound. "
+                                                                   "Did you call CommitShaderResources()?");
+        return;
+    }
+
+    // Get inline constant data directly from the resource cache
+    const void* pPushConstantData = pSign->GetPushConstantData(*pResourceCache, PushConstantInfo.ResourceIndex);
+    if (pPushConstantData == nullptr)
+    {
+        DEV_CHECK_ERR(false, "Push constant data is null in signature '", pSign->GetDesc().Name, "'");
+        return;
+    }
+
+    m_CommandBuffer.PushConstants(Layout.GetVkPipelineLayout(), PushConstantInfo.vkRange, pPushConstantData);
+}
+
 void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask)
 {
     VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
@@ -758,13 +823,28 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #endif
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_GRAPHICS);
+
+    // Update inline constant buffers (emulated path) before binding descriptor sets
+    const bool DynamicBuffersIntact  = (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) != 0;
+    const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
+    if (!InlineConstantsIntact)
+    {
+        UpdateInlineConstantBuffers(BindInfo);
+    }
+
     // First time we must always bind descriptor sets with dynamic offsets as SRBs are stale.
     // If there are no dynamic buffers bound in the resource cache, for all subsequent
     // calls we do not need to bind the sets again.
-    if (Uint32 CommitMask = BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT, Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT))
+    if (Uint32 CommitMask = BindInfo.GetCommitMask(DynamicBuffersIntact, InlineConstantsIntact))
     {
         CommitDescriptorSets(BindInfo, CommitMask);
     }
+
+    // Commit push constants directly from SRB cache.
+    // Push constants are always submitted before draw (similar to D3D11/D3D12) because
+    // inline constants are designed to change every draw call.
+    CommitPushConstants(BindInfo);
+
 #ifdef DILIGENT_DEVELOPMENT
     // Must be called after CommitDescriptorSets as it needs SetInfo.BaseInd
     DvpValidateCommittedShaderResources(BindInfo);
@@ -1059,10 +1139,17 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
     EndRenderScope();
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_COMPUTE);
+
+    // Update inline constant buffers before binding descriptor sets
+    UpdateInlineConstantBuffers(BindInfo);
+
     if (Uint32 CommitMask = BindInfo.GetCommitMask())
     {
         CommitDescriptorSets(BindInfo, CommitMask);
     }
+
+    // Commit push constants directly from SRB cache
+    CommitPushConstants(BindInfo);
 
 #ifdef DILIGENT_DEVELOPMENT
     // Must be called after CommitDescriptorSets as it needs SetInfo.BaseInd
@@ -1075,10 +1162,17 @@ void DeviceContextVkImpl::PrepareForRayTracing()
     EnsureVkCmdBuffer();
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_RAY_TRACING);
+
+    // Update inline constant buffers before binding descriptor sets
+    UpdateInlineConstantBuffers(BindInfo);
+
     if (Uint32 CommitMask = BindInfo.GetCommitMask())
     {
         CommitDescriptorSets(BindInfo, CommitMask);
     }
+
+    // Commit push constants directly from SRB cache
+    CommitPushConstants(BindInfo);
 
 #ifdef DILIGENT_DEVELOPMENT
     // Must be called after CommitDescriptorSets as it needs SetInfo.BaseInd
