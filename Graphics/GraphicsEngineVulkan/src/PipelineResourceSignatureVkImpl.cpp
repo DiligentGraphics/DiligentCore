@@ -158,8 +158,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
             },
             [this]() //
             {
-                // TODO: need to properly compute TotalInlineConstants!
-                return ShaderResourceCacheVk::GetRequiredMemorySize(GetNumDescriptorSets(), m_DescriptorSetSizes.data(), 0);
+                return ShaderResourceCacheVk::GetRequiredMemorySize(GetNumDescriptorSets(), m_DescriptorSetSizes.data(), m_TotalInlineConstants);
             });
     }
     catch (...)
@@ -201,6 +200,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
                    "Only constant buffers can have INLINE_CONSTANTS flag");
             ++m_NumInlineConstantBufferAttribs;
+            m_TotalInlineConstants += static_cast<Uint16>(ResDesc.ArraySize);
 
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
@@ -600,19 +600,12 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
 
     const ResourceCacheContentType CacheType = ResourceCache.GetContentType();
 
-    Uint32 TotalInlineConstants = 0;
-    for (Uint32 i = 0; i < m_NumInlineConstantBufferAttribs; ++i)
-    {
-        const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBufferAttribs[i];
-        TotalInlineConstants += InlineCBAttr.NumConstants;
-    }
-
     IMemoryAllocator& CacheMemAllocator = m_SRBMemAllocator.GetResourceCacheDataAllocator(0);
     // InitializeSets allocates memory but does NOT set up inline constant pointers.
     // We must call InitializeInlineConstantDataPointers AFTER InitializeResources because
     // InitializeResources uses placement new to construct Resource objects,
     // which would overwrite the pInlineConstantData pointers.
-    ResourceCache.InitializeSets(CacheMemAllocator, NumSets, m_DescriptorSetSizes.data(), TotalInlineConstants);
+    ResourceCache.InitializeSets(CacheMemAllocator, NumSets, m_DescriptorSetSizes.data(), m_TotalInlineConstants);
 
     Uint32 InlineConstantOffset = 0;
 
@@ -631,7 +624,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
         if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
             InlineConstantOffset += ResDesc.ArraySize;
     }
-    VERIFY_EXPR(InlineConstantOffset == TotalInlineConstants);
+    VERIFY_EXPR(InlineConstantOffset == m_TotalInlineConstants);
 
 #ifdef DILIGENT_DEBUG
     ResourceCache.DbgVerifyResourceInitialization();
@@ -1154,8 +1147,7 @@ PipelineResourceSignatureVkImpl::PipelineResourceSignatureVkImpl(IReferenceCount
             },
             [this]() //
             {
-                // TODO: need to properly compute TotalInlineConstants!
-                return ShaderResourceCacheVk::GetRequiredMemorySize(GetNumDescriptorSets(), m_DescriptorSetSizes.data(), 0);
+                return ShaderResourceCacheVk::GetRequiredMemorySize(GetNumDescriptorSets(), m_DescriptorSetSizes.data(), m_TotalInlineConstants);
             });
     }
     catch (...)
