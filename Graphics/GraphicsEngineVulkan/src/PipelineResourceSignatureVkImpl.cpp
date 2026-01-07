@@ -1005,10 +1005,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
                     // Skip dynamic allocation verification for inline constant buffers.
                     // These are internal buffers managed by the signature and are updated
                     // via UpdateInlineConstantBuffers() before each draw/dispatch.
-                    // The Dynamic Buffer ID may be reused after PSO recreation (e.g., from cache),
-                    // which would cause false validation failures.
-                    const bool IsInlineConstantBuffer = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0;
-                    if (!IsInlineConstantBuffer)
+                    if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) == 0)
                     {
                         pDeviceCtx->DvpVerifyDynamicAllocation(pBufferVk);
                     }
@@ -1130,35 +1127,28 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
                                                                   DeviceContextVkImpl&         Ctx,
                                                                   Uint32                       PushConstantResIndex) const
 {
-    // Determine the cache type based on the resource cache content
-    // SRB caches use SRBCacheOffset, static caches use StaticCacheOffset
-    const ResourceCacheContentType CacheType = ResourceCache.GetContentType();
-
+    VERIFY(ResourceCache.GetContentType() == ResourceCacheContentType::SRB,
+           "Inline constant buffers can be updated only in SRB resource caches");
+    constexpr ResourceCacheContentType CacheType = ResourceCacheContentType::SRB;
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
-        const InlineConstantBufferAttribsVk& InlineCBAttr        = m_InlineConstantBuffers[i];
-        const Uint32                         DataSize            = InlineCBAttr.NumConstants * sizeof(Uint32);
-        const ResourceAttribs&               Attr                = GetResourceAttribs(InlineCBAttr.ResIndex);
-        const Uint32                         CacheOffset         = Attr.CacheOffset(CacheType);
-        const void*                          pInlineConstantData = ResourceCache.GetInlineConstantData(Attr.DescrSet, CacheOffset);
-        VERIFY_EXPR(pInlineConstantData != nullptr);
-
-        // Skip push constants - they are handled directly by CommitPushConstants
+        const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
+        // Skip native push constants - they are handled directly by CommitPushConstants
         if (InlineCBAttr.ResIndex == PushConstantResIndex)
             continue;
 
-        // For emulated inline constants, get the shared buffer from the Signature
-        // All SRBs share this buffer (similar to D3D11 backend)
-        BufferVkImpl* pBuffer = InlineCBAttr.pBuffer.RawPtr();
+        const Uint32           DataSize            = InlineCBAttr.NumConstants * sizeof(Uint32);
+        const ResourceAttribs& Attr                = GetResourceAttribs(InlineCBAttr.ResIndex);
+        const Uint32           CacheOffset         = Attr.CacheOffset(CacheType);
+        const void*            pInlineConstantData = ResourceCache.GetInlineConstantData(Attr.DescrSet, CacheOffset);
+        VERIFY_EXPR(pInlineConstantData != nullptr);
+        VERIFY_EXPR(InlineCBAttr.pBuffer);
 
-        if (pBuffer)
-        {
-            // Map the shared buffer and copy the data
-            void* pMappedData = nullptr;
-            Ctx.MapBuffer(pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
-            memcpy(pMappedData, pInlineConstantData, DataSize);
-            Ctx.UnmapBuffer(pBuffer, MAP_WRITE);
-        }
+        // Map the shared buffer and copy the data
+        void* pMappedData = nullptr;
+        Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+        memcpy(pMappedData, pInlineConstantData, DataSize);
+        Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
     }
 }
 
