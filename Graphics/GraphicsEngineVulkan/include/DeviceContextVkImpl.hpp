@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -559,10 +559,7 @@ private:
 
     __forceinline void CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask);
 
-    void UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo);
-
-    // Commits push constants to the command buffer directly from SRB cache
-    void CommitPushConstants(ResourceBindInfo& BindInfo);
+    void CommitInlineConstants(ResourceBindInfo& BindInfo);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources(ResourceBindInfo& BindInfo);
