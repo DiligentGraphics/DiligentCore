@@ -68,10 +68,11 @@ ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization
 /// one inline constant is selected to be the native push constant block.
 struct InlineConstantBufferAttribsVk
 {
-    Uint32 ResIndex     = 0; // Resource index in the signature
-    Uint32 DescrSet     = 0; // Descriptor set index
-    Uint32 BindingIndex = 0; // Binding index within the descriptor set
-    Uint32 NumConstants = 0; // Number of 32-bit constants
+    Uint32 ResIndex       = 0; // Resource index in the signature
+    Uint32 DescrSet       = 0; // Descriptor set index
+    Uint32 BindingIndex   = 0; // Binding index within the descriptor set
+    Uint32 NumConstants   = 0; // Number of 32-bit constants
+    Uint32 SRBCacheOffset = 0; // Offset in the SRB resource cache
 
     // Shared buffer created in the Signature.
     // All SRBs reference this same buffer to reduce memory usage.

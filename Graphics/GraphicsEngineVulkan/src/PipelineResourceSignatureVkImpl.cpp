@@ -406,6 +406,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             InlineCBAttribs.DescrSet                       = pAttribs->DescrSet;
             InlineCBAttribs.BindingIndex                   = pAttribs->BindingIndex;
             InlineCBAttribs.NumConstants                   = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
+            InlineCBAttribs.SRBCacheOffset                 = pAttribs->SRBCacheOffset;
 
             // Create a shared buffer in the Signature for all inline constants.
             // All SRBs will reference this same buffer.
@@ -956,8 +957,6 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
 
     VERIFY_EXPR(SPIRVAttribs.ArraySize <= ResAttribs.ArraySize);
 
-    // TODO: verify how this works for push constants
-
     bool BindingsOK = true;
     for (Uint32 ArrIndex = 0; ArrIndex < SPIRVAttribs.ArraySize; ++ArrIndex)
     {
@@ -1129,7 +1128,6 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
 {
     VERIFY(ResourceCache.GetContentType() == ResourceCacheContentType::SRB,
            "Inline constant buffers can be updated only in SRB resource caches");
-    constexpr ResourceCacheContentType CacheType = ResourceCacheContentType::SRB;
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
         const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
@@ -1137,10 +1135,8 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
         if (InlineCBAttr.ResIndex == PushConstantResIndex)
             continue;
 
-        const Uint32           DataSize            = InlineCBAttr.NumConstants * sizeof(Uint32);
-        const ResourceAttribs& Attr                = GetResourceAttribs(InlineCBAttr.ResIndex);
-        const Uint32           CacheOffset         = Attr.CacheOffset(CacheType);
-        const void*            pInlineConstantData = ResourceCache.GetInlineConstantData(Attr.DescrSet, CacheOffset);
+        const Uint32 DataSize            = InlineCBAttr.NumConstants * sizeof(Uint32);
+        const void*  pInlineConstantData = ResourceCache.GetInlineConstantData(InlineCBAttr.DescrSet, InlineCBAttr.SRBCacheOffset);
         VERIFY_EXPR(pInlineConstantData != nullptr);
         VERIFY_EXPR(InlineCBAttr.pBuffer);
 
@@ -1154,16 +1150,15 @@ void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderRe
 
 const void* PipelineResourceSignatureVkImpl::GetPushConstantData(const ShaderResourceCacheVk& ResourceCache, Uint32 ResIndex) const
 {
+    VERIFY(ResourceCache.GetContentType() == ResourceCacheContentType::SRB,
+           "Push constant data can be retrieved only from SRB resource caches");
     // Find the inline constant buffer with the specified resource index
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
         const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
         if (InlineCBAttr.ResIndex == ResIndex)
         {
-            const ResourceCacheContentType CacheType   = ResourceCache.GetContentType();
-            const ResourceAttribs&         Attr        = GetResourceAttribs(InlineCBAttr.ResIndex);
-            const Uint32                   CacheOffset = Attr.CacheOffset(CacheType);
-            return ResourceCache.GetInlineConstantData(Attr.DescrSet, CacheOffset);
+            return ResourceCache.GetInlineConstantData(InlineCBAttr.DescrSet, InlineCBAttr.SRBCacheOffset);
         }
     }
     return nullptr;
