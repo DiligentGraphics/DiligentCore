@@ -415,24 +415,28 @@ DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE
     return m_BindInfo[Indices[Uint32{Type}]];
 }
 
-void DeviceContextVkImpl::CommitInlineConstants(ResourceBindInfo& BindInfo)
+void DeviceContextVkImpl::CommitInlineConstants(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask)
 {
-    const PipelineLayoutVk&                   Layout    = m_pPipelineState->GetPipelineLayout();
-    const PipelineLayoutVk::PushConstantInfo& PCInfo    = Layout.GetPushConstantInfo();
-    const Uint32                              SignCount = m_pPipelineState->GetResourceSignatureCount();
+    const PipelineLayoutVk&                   Layout = m_pPipelineState->GetPipelineLayout();
+    const PipelineLayoutVk::PushConstantInfo& PCInfo = Layout.GetPushConstantInfo();
 
     PipelineResourceSignatureVkImpl::CommitInlineConstantsAttribs CommitAttribs{
         *this,
         Layout.GetVkPipelineLayout(),
         PCInfo.vkRange,
     };
-    for (Uint32 i = 0; i < SignCount; ++i)
-    {
-        const PipelineResourceSignatureVkImpl* pSign = m_pPipelineState->GetResourceSignature(i);
-        if (pSign == nullptr || !pSign->HasInlineConstants())
-            continue;
 
-        CommitAttribs.pResourceCache = BindInfo.ResourceCaches[i];
+    VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
+    while (CommitSRBMask != 0)
+    {
+        const Uint32 SignBit = ExtractLSB(CommitSRBMask);
+        const Uint32 sign    = PlatformMisc::GetLSB(SignBit);
+        VERIFY_EXPR(sign < m_pPipelineState->GetResourceSignatureCount());
+
+        const PipelineResourceSignatureVkImpl* pSign = m_pPipelineState->GetResourceSignature(sign);
+        VERIFY_EXPR(pSign != nullptr && pSign->HasInlineConstants());
+
+        CommitAttribs.pResourceCache = BindInfo.ResourceCaches[sign];
         if (CommitAttribs.pResourceCache == nullptr)
         {
             // Each signature with inline constants must have a bound SRB with a valid resource cache
@@ -447,7 +451,7 @@ void DeviceContextVkImpl::CommitInlineConstants(ResourceBindInfo& BindInfo)
         // Determine which resource (if any) in this signature should use push constant path.
         // If this signature contains the selected push constant, pass its resource index
         // Otherwise pass ~0u to use emulated buffer path for all.
-        CommitAttribs.PushConstantResIndex = (i == PCInfo.SignatureIndex) ? PCInfo.ResourceIndex : ~0u;
+        CommitAttribs.PushConstantResIndex = (sign == PCInfo.SignatureIndex) ? PCInfo.ResourceIndex : ~0u;
 
         // Update inline constant buffers
         pSign->CommitInlineConstants(CommitAttribs);
@@ -798,18 +802,24 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_GRAPHICS);
 
-    // Commit inline constant buffers
     const bool DynamicBuffersIntact  = (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) != 0;
     const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
-    if (!InlineConstantsIntact)
+
+    // Commit inline constants first, because emulated inline constant buffers
+    // need to be committed in CommitDescriptorSets.
+    const Uint32 InlineConstantSRBCommitMask = BindInfo.GetInlineConstantSRBCommitMask(InlineConstantsIntact);
+    if (InlineConstantSRBCommitMask != 0)
     {
-        CommitInlineConstants(BindInfo);
+        CommitInlineConstants(BindInfo, InlineConstantSRBCommitMask);
     }
 
     // First time we must always bind descriptor sets with dynamic offsets as SRBs are stale.
     // If there are no dynamic buffers bound in the resource cache, for all subsequent
     // calls we do not need to bind the sets again.
-    if (Uint32 CommitMask = BindInfo.GetCommitMask(DynamicBuffersIntact, InlineConstantsIntact))
+    const Uint32 CommitMask = BindInfo.GetCommitMask(DynamicBuffersIntact, InlineConstantsIntact);
+    VERIFY((CommitMask & InlineConstantSRBCommitMask) == InlineConstantSRBCommitMask,
+           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask");
+    if (CommitMask != 0)
     {
         CommitDescriptorSets(BindInfo, CommitMask);
     }
@@ -1109,9 +1119,18 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_COMPUTE);
 
-    CommitInlineConstants(BindInfo);
+    // Commit inline constants first, because emulated inline constant buffers
+    // need to be committed in CommitDescriptorSets.
+    const Uint32 InlineConstantSRBCommitMask = BindInfo.GetInlineConstantSRBCommitMask();
+    if (InlineConstantSRBCommitMask != 0)
+    {
+        CommitInlineConstants(BindInfo, InlineConstantSRBCommitMask);
+    }
 
-    if (Uint32 CommitMask = BindInfo.GetCommitMask())
+    const Uint32 CommitMask = BindInfo.GetCommitMask();
+    VERIFY((CommitMask & InlineConstantSRBCommitMask) == InlineConstantSRBCommitMask,
+           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask");
+    if (CommitMask != 0)
     {
         CommitDescriptorSets(BindInfo, CommitMask);
     }
@@ -1128,9 +1147,18 @@ void DeviceContextVkImpl::PrepareForRayTracing()
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_RAY_TRACING);
 
-    CommitInlineConstants(BindInfo);
+    // Commit inline constants first, because emulated inline constant buffers
+    // need to be committed in CommitDescriptorSets.
+    const Uint32 InlineConstantSRBCommitMask = BindInfo.GetInlineConstantSRBCommitMask();
+    if (InlineConstantSRBCommitMask != 0)
+    {
+        CommitInlineConstants(BindInfo, InlineConstantSRBCommitMask);
+    }
 
-    if (Uint32 CommitMask = BindInfo.GetCommitMask())
+    const Uint32 CommitMask = BindInfo.GetCommitMask();
+    VERIFY((CommitMask & InlineConstantSRBCommitMask) == InlineConstantSRBCommitMask,
+           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask");
+    if (CommitMask != 0)
     {
         CommitDescriptorSets(BindInfo, CommitMask);
     }

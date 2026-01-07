@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -443,6 +443,17 @@ protected:
             // Only process SRBs that are used by current PSO
             CommitMask &= ActiveSRBMask;
             return CommitMask;
+        }
+
+        SRBMaskType GetInlineConstantSRBCommitMask(bool InlineConstantsIntact = false) const
+        {
+            // Stale SRBs always have to be committed
+            SRBMaskType CommitMask = StaleSRBMask & InlineConstantsSRBMask;
+
+            if (!InlineConstantsIntact)
+                CommitMask |= InlineConstantsSRBMask;
+
+            return CommitMask & ActiveSRBMask;
         }
 
 #ifdef DILIGENT_DEVELOPMENT
