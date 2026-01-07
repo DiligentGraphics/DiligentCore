@@ -438,17 +438,17 @@ void DeviceContextVkImpl::CommitInlineConstants(ResourceBindInfo& BindInfo)
         if (CommitAttribs.pResourceCache == nullptr)
         {
             // Each signature with inline constants must have a bound SRB with a valid resource cache
-            DEV_CHECK_ERR(false, "Signature '", pSign->GetDesc().Name, "' has inline constants but no SRB is bound. "
-                                                                       "Did you call CommitShaderResources()?");
+            DEV_CHECK_ERR(false, "Signature '", pSign->GetDesc().Name,
+                          "' has inline constants but no SRB is bound. Did you call CommitShaderResources()?");
             continue;
         }
+        DEV_CHECK_ERR(CommitAttribs.pResourceCache->HasInlineConstants(),
+                      "Resource cache for signature '", pSign->GetDesc().Name,
+                      "' has no inline constants, but the signature declares them.");
 
-        if (!CommitAttribs.pResourceCache->HasInlineConstants())
-            continue;
-
-        // Determine which resource (if any) in this signature should use push constant path
+        // Determine which resource (if any) in this signature should use push constant path.
         // If this signature contains the selected push constant, pass its resource index
-        // Otherwise pass ~0u to use emulated buffer path for all
+        // Otherwise pass ~0u to use emulated buffer path for all.
         CommitAttribs.PushConstantResIndex = (i == PCInfo.SignatureIndex) ? PCInfo.ResourceIndex : ~0u;
 
         // Update inline constant buffers
@@ -814,7 +814,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_GRAPHICS);
 
-    // Update inline constant buffers (emulated path) before binding descriptor sets
+    // Commit inline constant buffers
     const bool DynamicBuffersIntact  = (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) != 0;
     const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
     if (!InlineConstantsIntact)
@@ -1125,7 +1125,6 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_COMPUTE);
 
-    // Update inline constant buffers before binding descriptor sets
     CommitInlineConstants(BindInfo);
 
     if (Uint32 CommitMask = BindInfo.GetCommitMask())
@@ -1145,7 +1144,6 @@ void DeviceContextVkImpl::PrepareForRayTracing()
 
     ResourceBindInfo& BindInfo = GetBindInfo(PIPELINE_TYPE_RAY_TRACING);
 
-    // Update inline constant buffers before binding descriptor sets
     CommitInlineConstants(BindInfo);
 
     if (Uint32 CommitMask = BindInfo.GetCommitMask())
