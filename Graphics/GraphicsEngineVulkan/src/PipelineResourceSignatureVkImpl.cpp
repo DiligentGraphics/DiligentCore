@@ -1126,7 +1126,7 @@ void PipelineResourceSignatureVkImpl::CommitInlineConstants(const CommitInlineCo
 {
     const ShaderResourceCacheVk& ResourceCache = *Attribs.pResourceCache;
     VERIFY(ResourceCache.GetContentType() == ResourceCacheContentType::SRB,
-           "Inline constant buffers can be updated only in SRB resource caches");
+           "Inline constants can only be committed from SRB resource cache");
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
         const InlineConstantBufferAttribsVk& InlineCBAttr        = m_InlineConstantBuffers[i];
