@@ -1122,46 +1122,37 @@ PipelineResourceSignatureInternalDataVk PipelineResourceSignatureVkImpl::GetInte
     return InternalData;
 }
 
-void PipelineResourceSignatureVkImpl::UpdateInlineConstantBuffers(const ShaderResourceCacheVk& ResourceCache,
-                                                                  DeviceContextVkImpl&         Ctx,
-                                                                  Uint32                       PushConstantResIndex) const
+void PipelineResourceSignatureVkImpl::CommitInlineConstants(const CommitInlineConstantsAttribs& Attribs) const
 {
+    const ShaderResourceCacheVk& ResourceCache = *Attribs.pResourceCache;
     VERIFY(ResourceCache.GetContentType() == ResourceCacheContentType::SRB,
            "Inline constant buffers can be updated only in SRB resource caches");
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
-        const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
-        // Skip native push constants - they are handled directly by CommitPushConstants
-        if (InlineCBAttr.ResIndex == PushConstantResIndex)
-            continue;
-
-        const Uint32 DataSize            = InlineCBAttr.NumConstants * sizeof(Uint32);
-        const void*  pInlineConstantData = ResourceCache.GetInlineConstantData(InlineCBAttr.DescrSet, InlineCBAttr.SRBCacheOffset);
+        const InlineConstantBufferAttribsVk& InlineCBAttr        = m_InlineConstantBuffers[i];
+        const Uint32                         DataSize            = InlineCBAttr.NumConstants * sizeof(Uint32);
+        const void*                          pInlineConstantData = ResourceCache.GetInlineConstantData(InlineCBAttr.DescrSet, InlineCBAttr.SRBCacheOffset);
         VERIFY_EXPR(pInlineConstantData != nullptr);
-        VERIFY_EXPR(InlineCBAttr.pBuffer);
 
-        // Map the shared buffer and copy the data
-        void* pMappedData = nullptr;
-        Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
-        memcpy(pMappedData, pInlineConstantData, DataSize);
-        Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
-    }
-}
-
-const void* PipelineResourceSignatureVkImpl::GetPushConstantData(const ShaderResourceCacheVk& ResourceCache, Uint32 ResIndex) const
-{
-    VERIFY(ResourceCache.GetContentType() == ResourceCacheContentType::SRB,
-           "Push constant data can be retrieved only from SRB resource caches");
-    // Find the inline constant buffer with the specified resource index
-    for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
-    {
-        const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
-        if (InlineCBAttr.ResIndex == ResIndex)
+        if (InlineCBAttr.ResIndex == Attribs.PushConstantResIndex)
         {
-            return ResourceCache.GetInlineConstantData(InlineCBAttr.DescrSet, InlineCBAttr.SRBCacheOffset);
+            VulkanUtilities::CommandBuffer& CmdBuffer = Attribs.Ctx.GetCommandBuffer();
+            VERIFY(Attribs.vkPushConstRange.size == DataSize,
+                   "Push constant range size (", Attribs.vkPushConstRange.size,
+                   ") does not match the inline constant buffer data size (", DataSize, ")");
+            CmdBuffer.PushConstants(Attribs.vkPipelineLayout, Attribs.vkPushConstRange, pInlineConstantData);
+        }
+        else
+        {
+            VERIFY_EXPR(InlineCBAttr.pBuffer);
+
+            // Map the shared buffer and copy the data
+            void* pMappedData = nullptr;
+            Attribs.Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+            memcpy(pMappedData, pInlineConstantData, DataSize);
+            Attribs.Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
         }
     }
-    return nullptr;
 }
 
 } // namespace Diligent
