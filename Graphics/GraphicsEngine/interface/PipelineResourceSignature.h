@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -433,13 +433,12 @@ struct PipelineResourceSignatureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
         if (NumResources               != Rhs.NumResources         ||
             NumImmutableSamplers       != Rhs.NumImmutableSamplers ||
             BindingIndex               != Rhs.BindingIndex         ||
-            UseCombinedTextureSamplers != Rhs.UseCombinedTextureSamplers)
+            UseCombinedTextureSamplers != Rhs.UseCombinedTextureSamplers ||
+            SRBAllocationGranularity   != Rhs.SRBAllocationGranularity)
             return false;
 
         if (UseCombinedTextureSamplers && !SafeStrEqual(CombinedSamplerSuffix, Rhs.CombinedSamplerSuffix))
             return false;
-
-        // ignore SRBAllocationGranularity
 
         for (Uint32 r = 0; r < NumResources; ++r)
         {

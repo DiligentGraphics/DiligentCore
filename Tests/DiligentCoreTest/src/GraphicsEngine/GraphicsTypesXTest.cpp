@@ -503,7 +503,6 @@ TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
             .SetUseCombinedTextureSamplers(true);
         Pool.Clear();
         EXPECT_EQ(DescX, Ref);
-        EXPECT_EQ(DescX.SRBAllocationGranularity, Ref.SRBAllocationGranularity);
     }
 
 
@@ -522,6 +521,7 @@ TEST(GraphicsTypesXTest, PipelineResourceSignatureDescX)
         Pool.Clear();
         DescX.BindingIndex               = 4;
         DescX.UseCombinedTextureSamplers = true;
+        DescX.SRBAllocationGranularity   = 8;
         DescX
             .AddResource({RES1(Pool)})
             .AddResource(RES2(Pool))
