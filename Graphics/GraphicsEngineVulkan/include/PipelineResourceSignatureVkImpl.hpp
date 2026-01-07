@@ -154,12 +154,6 @@ public:
     void CommitDynamicResources(const ShaderResourceCacheVk& ResourceCache,
                                 VkDescriptorSet              vkDynamicDescriptorSet) const;
 
-    // Returns the number of inline constant buffers
-    Uint32 GetNumInlineConstantBuffers() const { return m_NumInlineConstantBuffers; }
-
-    // Returns the inline constant buffer attributes
-    const InlineConstantBufferAttribsVk* GetInlineConstantBuffers() const { return m_InlineConstantBuffers.get(); }
-
     // Updates inline constant buffers by mapping the internal buffers and copying data from the resource cache
     // ResourceCache must be valid - each SRB has its own copy of inline constant data stored in the cache
     // PushConstantResIndex: Resource index of the inline constant selected as push constant by PSO
