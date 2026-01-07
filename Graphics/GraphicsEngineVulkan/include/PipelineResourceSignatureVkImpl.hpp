@@ -64,18 +64,16 @@ ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization
 /// - DescriptorSet binding and cache allocation
 /// - Shared emulated buffer (created in the Signature, shared by all SRBs)
 ///
-/// Push constant selection is deferred to PSO creation time. At PSO creation,
-/// one inline constant may be selected to use vkCmdPushConstants based on:
-/// 1. SPIR-V reflection (ResourceType::PushConstant in shader)
-/// 2. First inline constant as fallback (converted via PatchShader)
+/// Push constant selection is deferred to PSO creation time, when
+/// one inline constant is selected to be the native push constant block.
 struct InlineConstantBufferAttribsVk
 {
-    Uint32 ResIndex     = 0; // Resource index in the signature (used for matching)
+    Uint32 ResIndex     = 0; // Resource index in the signature
     Uint32 DescrSet     = 0; // Descriptor set index
     Uint32 BindingIndex = 0; // Binding index within the descriptor set
     Uint32 NumConstants = 0; // Number of 32-bit constants
 
-    // Shared buffer created in the Signature (similar to D3D11)
+    // Shared buffer created in the Signature.
     // All SRBs reference this same buffer to reduce memory usage.
     RefCntAutoPtr<BufferVkImpl> pBuffer;
 };
@@ -157,10 +155,10 @@ public:
                                 VkDescriptorSet              vkDynamicDescriptorSet) const;
 
     // Returns the number of inline constant buffers
-    Uint32 GetNumInlineConstantBufferAttribs() const { return m_NumInlineConstantBufferAttribs; }
+    Uint32 GetNumInlineConstantBuffers() const { return m_NumInlineConstantBuffers; }
 
     // Returns the inline constant buffer attributes
-    const InlineConstantBufferAttribsVk* GetInlineConstantBufferAttribs() const { return m_InlineConstantBufferAttribs.get(); }
+    const InlineConstantBufferAttribsVk* GetInlineConstantBuffers() const { return m_InlineConstantBuffers.get(); }
 
 #ifdef DILIGENT_DEVELOPMENT
     /// Verifies committed resource using the SPIRV resource attributes from the PSO.
@@ -180,7 +178,7 @@ public:
 
     bool HasInlineConstants() const
     {
-        return m_NumInlineConstantBufferAttribs != 0;
+        return m_NumInlineConstantBuffers != 0;
     }
 
 private:
@@ -228,13 +226,13 @@ private:
     Uint16 m_DynamicStorageBufferCount = 0;
 
     // Number of inline constant buffers
-    Uint16 m_NumInlineConstantBufferAttribs = 0;
+    Uint16 m_NumInlineConstantBuffers = 0;
 
     // The total number of inline constants (32-bit values) in all inline constant buffers
     Uint16 m_TotalInlineConstants = 0;
 
     // Inline constant buffer attributes
-    std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBufferAttribs;
+    std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBuffers;
 };
 
 template <> Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;
