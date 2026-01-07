@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -342,6 +342,9 @@ public:
 
     // Sampler implementation type (SamplerD3D12Impl, SamplerVkImpl, etc.)
     using SamplerImplType = typename EngineImplTraits::SamplerImplType;
+
+    // Buffer implementation type (BufferD3D12Impl, BufferVkImpl, etc.)
+    using BufferImplType = typename EngineImplTraits::BufferImplType;
 
     // Pipeline resource signature implementation type (PipelineResourceSignatureD3D12Impl, PipelineResourceSignatureVkImpl, etc.)
     using PipelineResourceSignatureImplType = typename EngineImplTraits::PipelineResourceSignatureImplType;
@@ -1059,6 +1062,22 @@ protected:
             const PipelineResourceAttribsType& Attr = pThisImpl->GetResourceAttribs(i);
             HashCombine(m_Hash, Attr.GetHash());
         }
+    }
+
+    RefCntAutoPtr<BufferImplType> CreateInlineConstantBuffer(const char* ResName, Uint32 NumConstants) const
+    {
+        RefCntAutoPtr<IBuffer> pBuffer;
+        if (this->m_pDevice)
+        {
+            std::string Name = this->m_Desc.Name;
+            Name += " - ";
+            Name += ResName;
+            BufferDesc CBDesc{Name.c_str(), NumConstants * sizeof(Uint32), BIND_UNIFORM_BUFFER, USAGE_DYNAMIC, CPU_ACCESS_WRITE};
+
+            this->m_pDevice->CreateBuffer(CBDesc, nullptr, &pBuffer);
+            VERIFY_EXPR(pBuffer);
+        }
+        return RefCntAutoPtr<BufferImplType>{pBuffer.RawPtr<BufferImplType>()};
     }
 
 protected:

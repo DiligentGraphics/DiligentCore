@@ -210,8 +210,9 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
     }
 
     // Initialize static resource cache (now that we know the inline constant size)
-    if (GetNumStaticResStages() > 0 && StaticResourceCount > 0)
+    if (StaticResourceCount > 0)
     {
+        VERIFY_EXPR(GetNumStaticResStages() > 0);
         m_pStaticResCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount, TotalStaticInlineConstants);
     }
 
@@ -403,26 +404,10 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             InlineCBAttribs.BindingIndex                   = pAttribs->BindingIndex;
             InlineCBAttribs.NumConstants                   = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
 
-            // Create a shared buffer in the Signature for all inline constants
+            // Create a shared buffer in the Signature for all inline constants.
             // All SRBs will reference this same buffer (similar to D3D11 backend)
-            // Push constant selection is handled at PSO creation time
-            if (m_pDevice)
-            {
-                std::string Name = m_Desc.Name;
-                Name += " - ";
-                Name += ResDesc.Name;
-                BufferDesc CBDesc;
-                CBDesc.Name           = Name.c_str();
-                CBDesc.Size           = ResDesc.ArraySize * sizeof(Uint32);
-                CBDesc.Usage          = USAGE_DYNAMIC;
-                CBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
-                CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-                RefCntAutoPtr<IBuffer> pBuffer;
-                m_pDevice->CreateBuffer(CBDesc, nullptr, &pBuffer);
-                VERIFY_EXPR(pBuffer);
-                InlineCBAttribs.pBuffer = RefCntAutoPtr<BufferVkImpl>{pBuffer, IID_BufferVk};
-            }
+            // Push constant selection is handled at PSO creation time.
+            InlineCBAttribs.pBuffer = CreateInlineConstantBuffer(ResDesc.Name, ResDesc.ArraySize);
         }
     }
     VERIFY_EXPR(InlineConstantBufferIdx == m_NumInlineConstantBufferAttribs);
@@ -577,14 +562,7 @@ void PipelineResourceSignatureVkImpl::Destruct()
 
     // Release shared inline constant buffers before base class Destruct
     // Each InlineConstantBufferAttribsVk::pBuffer holds a RefCntAutoPtr to the shared buffer
-    if (m_InlineConstantBufferAttribs)
-    {
-        for (Uint32 i = 0; i < m_NumInlineConstantBufferAttribs; ++i)
-        {
-            m_InlineConstantBufferAttribs[i].pBuffer.Release();
-        }
-        m_InlineConstantBufferAttribs.reset();
-    }
+    m_InlineConstantBufferAttribs.reset();
     m_NumInlineConstantBufferAttribs = 0;
 
     TPipelineResourceSignatureBase::Destruct();

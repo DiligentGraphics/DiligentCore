@@ -261,18 +261,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
                 // which will allow skipping buffer update if the inline constants are not changed.
                 // However, this will increase memory consumption as each SRB will have its own copy of the inline CB.
                 // Besides, inline constants are expected to change frequently, so skipping updates is unlikely.
-                if (m_pDevice)
-                {
-                    std::string Name = m_Desc.Name;
-                    Name += " - ";
-                    Name += ResDesc.Name;
-                    BufferDesc CBDesc{Name.c_str(), ResDesc.ArraySize * sizeof(Uint32), BIND_UNIFORM_BUFFER, USAGE_DYNAMIC, CPU_ACCESS_WRITE};
-
-                    RefCntAutoPtr<IBuffer> pBuffer;
-                    m_pDevice->CreateBuffer(CBDesc, nullptr, &pBuffer);
-                    VERIFY_EXPR(pBuffer);
-                    InlineCBAttribs.pBuffer = pBuffer.RawPtr<BufferD3D11Impl>();
-                }
+                InlineCBAttribs.pBuffer = CreateInlineConstantBuffer(ResDesc.Name, ResDesc.ArraySize);
             }
         }
         else
