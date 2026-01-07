@@ -424,7 +424,7 @@ void DeviceContextVkImpl::UpdateInlineConstantBuffers(ResourceBindInfo& BindInfo
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         const PipelineResourceSignatureVkImpl* pSign = m_pPipelineState->GetResourceSignature(i);
-        if (pSign == nullptr || pSign->GetNumInlineConstantBuffers() == 0)
+        if (pSign == nullptr || !pSign->HasInlineConstants())
             continue;
 
         const ShaderResourceCacheVk* pResourceCache = BindInfo.ResourceCaches[i];
