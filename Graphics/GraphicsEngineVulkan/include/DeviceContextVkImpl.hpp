@@ -559,7 +559,7 @@ private:
 
     __forceinline void CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask);
 
-    void CommitInlineConstants(ResourceBindInfo& BindInfo);
+    void CommitInlineConstants(ResourceBindInfo& BindInfo, Uint32 CommitSRBMask);
 
 #ifdef DILIGENT_DEVELOPMENT
     void DvpValidateCommittedShaderResources(ResourceBindInfo& BindInfo);
