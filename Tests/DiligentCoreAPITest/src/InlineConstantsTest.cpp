@@ -100,6 +100,53 @@ float4 main(in PSInput PSIn) : SV_Target
 }
 )"};
 
+const std::string VulkanPushConstants_VS{
+    R"(
+struct PushConstants_t
+{
+    float4 g_Positions[6];
+    float4 g_Colors[4];
+};
+
+[[vk::push_constant]] ConstantBuffer<PushConstants_t> PushConstants;
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float4 Color : COLOR;
+};
+
+void main(uint VertexId : SV_VertexId, out PSInput PSIn)
+{
+    PSIn.Pos = PushConstants.g_Positions[VertexId];
+    PSIn.Color = PushConstants.g_Colors[VertexId % 3];
+}
+)"};
+
+const std::string VulkanPushConstants_PS{
+    R"(
+struct PushConstants_t
+{
+    float4 g_Positions[6];
+    float4 g_Colors[4];
+};
+
+[[vk::push_constant]] ConstantBuffer<PushConstants_t> PushConstants;
+
+struct PSInput
+{
+    float4 Pos   : SV_POSITION;
+    float4 Color : COLOR;
+};
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    // Use push constants from PS to apply alpha modulation
+    // This ensures both VS and PS access the same PushConstants
+    return PSIn.Color * PushConstants.g_Colors[3];
+}
+)"};
+
 } // namespace HLSL
 
 float4 g_Positions[] = {
@@ -770,6 +817,133 @@ TEST_F(InlineConstants, RenderStateCache)
         pData.Release();
         pCache->WriteToBlob(pass == 0 ? kCacheContentVersion : ~0u, &pData);
     }
+}
+
+TEST_F(InlineConstants, VulkanPushConstantsBlock)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    // This test is Vulkan-specific
+    if (!pDevice->GetDeviceInfo().IsVulkanDevice())
+    {
+        GTEST_SKIP();
+    }
+
+    // Create shaders with native Vulkan push constants -> [[vk::push_constant]]
+    RefCntAutoPtr<IShader> pVS, pPS;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
+
+    {
+        ShaderCI.Desc       = {"Vulkan Push Constants VS", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::VulkanPushConstants_VS.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    {
+        ShaderCI.Desc       = {"Vulkan Push Constants PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        ShaderCI.Source     = HLSL::VulkanPushConstants_PS.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    // Create pipeline without explicit resource layout
+    // Let the system automatically extract push constants from shaders
+    GraphicsPipelineStateCreateInfoX PsoCI{"Vulkan Push Constants Test"};
+    PsoCI
+        .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+        .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+        .AddShader(pVS)
+        .AddShader(pPS);
+    PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+    ASSERT_TRUE(pPSO);
+
+    // Verify that resource signature was created with correct ArraySize
+    ASSERT_EQ(pPSO->GetResourceSignatureCount(), 1u);
+    IPipelineResourceSignature* pSign = pPSO->GetResourceSignature(0);
+    ASSERT_TRUE(pSign);
+
+    const PipelineResourceSignatureDesc& SignDesc = pSign->GetDesc();
+
+    // Find VS and PS push constants in the resource signature
+    const PipelineResourceDesc* PushConstantsDesc = nullptr;
+
+    for (Uint32 i = 0; i < SignDesc.NumResources; ++i)
+    {
+        const auto& Res = SignDesc.Resources[i];
+        if (Res.ShaderStages == SHADER_TYPE_VS_PS &&
+            strcmp(Res.Name, "PushConstants") == 0)
+        {
+            PushConstantsDesc = &Res;
+        }
+    }
+
+    float4 PushConstants_Positions[] = {
+        float4{-1.0f, -0.5f, 0.f, 1.f},
+        float4{-0.5f, +0.5f, 0.f, 1.f},
+        float4{0.0f, -0.5f, 0.f, 1.f},
+        float4{+0.0f, -0.5f, 0.f, 1.f},
+        float4{+0.5f, +0.5f, 0.f, 1.f},
+        float4{+1.0f, -0.5f, 0.f, 1.f},
+    };
+
+    float4 PushConstants_Colors[] = {
+        float4{1.f, 0.f, 0.f, 1.f},
+        float4{0.f, 1.f, 0.f, 1.f},
+        float4{0.f, 0.f, 1.f, 1.f},
+        float4{1.f, 1.f, 1.f, 1.f},
+    };
+
+    ASSERT_TRUE(PushConstantsDesc != nullptr) << "PushConstants not found in resource signature";
+
+    // Verify inline constants flag
+    EXPECT_EQ(PushConstantsDesc->Flags, PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
+
+    // Verify ArraySize matches
+    EXPECT_EQ(PushConstantsDesc->ArraySize, (sizeof(PushConstants_Positions) + sizeof(PushConstants_Colors)) / (sizeof(Uint32)))
+        << "VS push constants should have 24 + 12 = 36 constants (6 float4 for PushConstants.g_Positions, 4 float4 for PushConstants.g_Colors)";
+
+    // Now test runtime usage
+    const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    //They should all goes with resource[0] ("PushConstants") under the hood:
+
+    IShaderResourceVariable* pVSVar = pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "PushConstants");
+    ASSERT_TRUE(pVSVar);
+
+    pVSVar->SetInlineConstants(PushConstants_Positions, 0, sizeof(PushConstants_Positions) / (sizeof(Uint32)));
+
+    IShaderResourceVariable* pPSVar = pPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "PushConstants");
+    ASSERT_TRUE(pPSVar);
+
+    pPSVar->SetInlineConstants(PushConstants_Colors, sizeof(PushConstants_Positions) / (sizeof(Uint32)), sizeof(PushConstants_Colors) / (sizeof(Uint32)));
+
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pPSO->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_TRUE(pSRB);
+
+    // Render
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+
+    Present();
 }
 
 } // namespace
