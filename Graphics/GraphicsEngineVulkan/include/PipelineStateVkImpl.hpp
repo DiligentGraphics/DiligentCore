@@ -101,7 +101,7 @@ public:
     struct SPIRVPushConstantInfo
     {
         SHADER_TYPE ShaderStages = SHADER_TYPE_UNKNOWN;
-        Uint32 Size = 0;
+        Uint32      Size         = 0;
         std::string Name;
 
         constexpr explicit operator bool() const { return Size != 0; }
