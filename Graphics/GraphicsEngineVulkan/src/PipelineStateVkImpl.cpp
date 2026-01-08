@@ -545,6 +545,51 @@ void VerifyResourceMerge(const char*                       PSOName,
 #undef LOG_RESOURCE_MERGE_ERROR_AND_THROW
 }
 
+struct MergedPushConstantInfo
+{
+    SHADER_TYPE Stages = SHADER_TYPE_UNKNOWN;
+    Uint32      Size   = 0;
+};
+
+using MergedPushConstantMapType = std::unordered_map<std::string_view, MergedPushConstantInfo>;
+MergedPushConstantMapType MergePushConstants(const PipelineStateVkImpl::TShaderStages& ShaderStages,
+                                             const char*                               PSOName) noexcept(false)
+{
+    MergedPushConstantMapType MergedPushConstants;
+    for (const PipelineStateVkImpl::ShaderStageInfo& Stage : ShaderStages)
+    {
+        for (const PipelineStateVkImpl::ShaderStageInfo::Item& StageItem : Stage.Items)
+        {
+            const SPIRVShaderResources& ShaderResources = *StageItem.pShader->GetShaderResources();
+            for (Uint32 i = 0; i < ShaderResources.GetNumPushConstants(); ++i)
+            {
+                const SPIRVShaderResourceAttribs& PCAttribs  = ShaderResources.GetPushConstant(i);
+                MergedPushConstantInfo&           MergedPC   = MergedPushConstants[PCAttribs.Name];
+                const Uint32                      BufferSize = PCAttribs.GetConstantBufferSize();
+                if (MergedPC.Stages == SHADER_TYPE_UNKNOWN)
+                {
+                    MergedPC.Stages = Stage.Type;
+                    MergedPC.Size   = BufferSize;
+                }
+                else if (MergedPC.Size == BufferSize)
+                {
+                    MergedPC.Stages |= Stage.Type;
+                }
+                else
+                {
+                    LOG_ERROR_AND_THROW("Push constant '", PCAttribs.Name,
+                                        "' is shared between multiple shaders in pipeline '", (PSOName ? PSOName : ""),
+                                        "', but its size varies (",
+                                        MergedPC.Size, " vs ", BufferSize,
+                                        "). A push constant shared between multiple shaders must have the same size in all shaders.");
+                }
+            }
+        }
+    }
+
+    return MergedPushConstants;
+}
+
 } // namespace
 
 
@@ -593,6 +638,8 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
 {
     PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
 
+    MergedPushConstantMapType MergedPushConstants;
+
     std::unordered_map<ShaderResourceHashKey, const SPIRVShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
     for (const ShaderStageInfo& Stage : ShaderStages)
     {
@@ -617,7 +664,27 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
                         ShaderResources.GetCombinedSamplerSuffix() :
                         nullptr;
 
-                    const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
+                    ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
+                    if (Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::PushConstant)
+                    {
+                        if (MergedPushConstants.empty())
+                        {
+                            // First time we found a push constant - build the merged map
+                            MergedPushConstants = MergePushConstants(ShaderStages, PSOName);
+                        }
+
+                        auto it = MergedPushConstants.find(VarDesc.Name);
+                        if (it != MergedPushConstants.end())
+                        {
+                            VERIFY_EXPR(Attribs.GetConstantBufferSize() == it->second.Size);
+                            VarDesc.ShaderStages = it->second.Stages;
+                        }
+                        else
+                        {
+                            UNEXPECTED("Push constant '", VarDesc.Name, "' not found in merged push constant stages map. This is a bug.");
+                        }
+                    }
+
                     // Note that Attribs.Name != VarDesc.Name for combined samplers
                     const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
                     if (it_assigned.second)
