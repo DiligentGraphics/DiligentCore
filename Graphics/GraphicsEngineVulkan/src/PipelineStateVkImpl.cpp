@@ -668,7 +668,7 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
 
                     ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
 
-                    if (PCInfo.Name == Attribs.Name)
+                    if (PCInfo && PCInfo.Name == Attribs.Name)
                     {
                         //Use merged ShaderStages for PushConstants
                         VarDesc.ShaderStages = PCInfo.ShaderStages;
