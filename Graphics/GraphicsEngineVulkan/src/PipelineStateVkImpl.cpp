@@ -630,53 +630,6 @@ size_t PipelineStateVkImpl::ShaderStageInfo::Count() const
     return Items.size();
 }
 
-PipelineStateVkImpl::SPIRVPushConstantInfo PipelineStateVkImpl::GetSPIRVPushConstantInfo(const TShaderStages& ShaderStages)
-{
-    PipelineStateVkImpl::SPIRVPushConstantInfo PCInfo;
-
-    //Merge ShaderStages when we have multiple shader stages accessing the same PushConstants.
-    for (const ShaderStageInfo& Stage : ShaderStages)
-    {
-        for (const ShaderStageInfo::Item& StageItem : Stage.Items)
-        {
-            const SPIRVShaderResources& ShaderResources = *StageItem.pShader->GetShaderResources();
-            ShaderResources.ProcessResources(
-                [&](const SPIRVShaderResourceAttribs& Attribs, Uint32) //
-                {
-                    if (Attribs.Type == SPIRVShaderResourceAttribs::ResourceType::PushConstant)
-                    {
-                        if (PCInfo.Name.empty())
-                        {
-                            PCInfo.Name         = Attribs.Name;
-                            PCInfo.Size         = Attribs.BufferStaticSize;
-                            PCInfo.ShaderStages = Stage.Type;
-                        }
-                        else if (PCInfo.Name == Attribs.Name)
-                        {
-                            // Same push constant found in another shader stage - verify size and merge stage flags
-                            if (PCInfo.Size != Attribs.BufferStaticSize)
-                            {
-                                LOG_ERROR_AND_THROW("Push constant '", Attribs.Name,
-                                                    "' has different sizes in different shader stages: ",
-                                                    PCInfo.Size, " vs ", Attribs.BufferStaticSize,
-                                                    ". Push constants must have the same size across all shader stages.");
-                            }
-                            PCInfo.ShaderStages |= Stage.Type;
-                        }
-                        else
-                        {
-                            LOG_ERROR_AND_THROW("Multiple push constants with different names are not supported. ",
-                                                "Found '", PCInfo.Name, "' and '", Attribs.Name, "'. ",
-                                                "Vulkan only allows one push constant block per pipeline layout.");
-                        }
-                    }
-                });
-        }
-    }
-
-    return PCInfo;
-}
-
 PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSignatureDesc(
     const TShaderStages&              ShaderStages,
     const char*                       PSOName,
