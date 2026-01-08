@@ -158,7 +158,11 @@ cbuffer cbInlineData
     float4 g_Data[4];
 }
 
-RWTexture2D<float4> g_Output;
+#ifndef VK_IMAGE_FORMAT
+#   define VK_IMAGE_FORMAT(x)
+#endif
+
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_Output;
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -415,6 +419,7 @@ TEST_F(InlineConstants, ComputeResourceLayout)
         ShaderCI.Desc           = {"Inline constants compute test", SHADER_TYPE_COMPUTE, true};
         ShaderCI.EntryPoint     = "main";
         ShaderCI.Source         = HLSL::InlineConstantsTest_CS.c_str();
+        ShaderCI.CompileFlags   = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
         pDevice->CreateShader(ShaderCI, &pCS);
         ASSERT_NE(pCS, nullptr);
     }
