@@ -25,6 +25,7 @@
  */
 
 #include "GPUTestingEnvironment.hpp"
+#include "TestingSwapChainBase.hpp"
 
 #include "gtest/gtest.h"
 
@@ -33,12 +34,14 @@
 #include "FastRand.hpp"
 
 
+
 namespace Diligent
 {
 namespace Testing
 {
 void RenderDrawCommandReference(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
-}
+void ComputeShaderReference(ISwapChain* pSwapChain);
+} // namespace Testing
 } // namespace Diligent
 
 
@@ -167,10 +170,9 @@ VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_Output;
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-    // Use inline constants to write to output texture
-    // Index into g_Data based on position to verify all constants are correctly set
-    uint idx = (DTid.x / 64 + DTid.y / 64 * 2) % 4;
-    g_Output[DTid.xy] = g_Data[idx];
+    float4 Color = float4(float2(DTid.xy % 256u) / 256.0, 0.0, 1.0);
+    Color *= (g_Data[0] + g_Data[1] + g_Data[2]) * g_Data[3];
+    g_Output[DTid.xy] = Color;
 }
 )"};
 
@@ -193,10 +195,10 @@ float4 g_Colors[] = {
 };
 
 float4 g_ComputeData[] = {
-    float4{1.f, 0.f, 0.f, 1.f}, // Red
-    float4{0.f, 1.f, 0.f, 1.f}, // Green
-    float4{0.f, 0.f, 1.f, 1.f}, // Blue
-    float4{1.f, 1.f, 0.f, 1.f}, // Yellow
+    float4{1.f, 0.f, 0.f, 0.f},
+    float4{0.f, 1.f, 0.f, 0.f},
+    float4{0.f, 0.f, 1.f, 1.f},
+    float4{1.f, 1.f, 1.f, 1.f},
 };
 
 constexpr Uint32 kNumPosConstants     = sizeof(g_Positions) / 4;
@@ -408,6 +410,12 @@ TEST_F(InlineConstants, ComputeResourceLayout)
         GTEST_SKIP() << "Compute shaders are not supported by this device";
     }
 
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain{pSwapChain, IID_TestingSwapChain};
+    if (!pTestingSwapChain)
+    {
+        GTEST_SKIP() << "Compute shader test requires testing swap chain";
+    }
+
     const SwapChainDesc& SCDesc = pSwapChain->GetDesc();
 
     // Create compute shader
@@ -424,24 +432,13 @@ TEST_F(InlineConstants, ComputeResourceLayout)
         ASSERT_NE(pCS, nullptr);
     }
 
-    // Create output UAV texture
-    RefCntAutoPtr<ITexture> pOutputTex;
-    {
-        TextureDesc TexDesc;
-        TexDesc.Name      = "Inline constants compute output";
-        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-        TexDesc.Width     = SCDesc.Width;
-        TexDesc.Height    = SCDesc.Height;
-        TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-        TexDesc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-        pDevice->CreateTexture(TexDesc, nullptr, &pOutputTex);
-        ASSERT_NE(pOutputTex, nullptr);
-    }
-    ITextureView* pOutputUAV = pOutputTex->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS);
+    ITextureView* pOutputUAV = pTestingSwapChain->GetCurrentBackBufferUAV();
     ASSERT_NE(pOutputUAV, nullptr);
 
     for (Uint32 resType = 0; resType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++resType)
     {
+        ComputeShaderReference(pSwapChain);
+
         SHADER_RESOURCE_VARIABLE_TYPE ResType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(resType);
 
         // Create PSO with inline constants
@@ -520,8 +517,7 @@ TEST_F(InlineConstants, ComputeResourceLayout)
         DispatchAttribs.ThreadGroupCountY = (SCDesc.Height + 15) / 16;
         pContext->DispatchCompute(DispatchAttribs);
 
-        pContext->Flush();
-        pContext->InvalidateState();
+        Present();
 
         std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
                   << " ResType " << GetShaderVariableTypeLiteralName(ResType) << std::endl;
