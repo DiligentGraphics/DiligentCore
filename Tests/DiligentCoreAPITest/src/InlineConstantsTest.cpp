@@ -188,8 +188,6 @@ float4 g_Colors[] = {
     float4{0.f, 0.f, 1.f, 1.f},
 };
 
-float4 g_ColorPSFactor = float4{1.f, 1.f, 1.f, 1.f};
-
 float4 g_ComputeData[] = {
     float4{1.f, 0.f, 0.f, 1.f}, // Red
     float4{0.f, 1.f, 0.f, 1.f}, // Green
