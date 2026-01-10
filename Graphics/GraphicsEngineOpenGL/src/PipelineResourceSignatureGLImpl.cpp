@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,8 @@
 #include <functional>
 
 #include "RenderDeviceGLImpl.hpp"
+#include "BufferGLImpl.hpp"
+#include "GLContextState.hpp"
 
 namespace Diligent
 {
@@ -92,7 +94,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
             },
             [this]() //
             {
-                return ShaderResourceCacheGL::GetRequiredMemorySize(m_BindingCount);
+                return ShaderResourceCacheGL::GetRequiredMemorySize(m_BindingCount, m_TotalInlineConstants);
             });
     }
     catch (...)
@@ -104,8 +106,25 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
 
 void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
 {
-    TBindings StaticResCounter = {};
+    // Count inline constant buffers
+    for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
+    {
+        const PipelineResourceDesc& ResDesc = m_Desc.Resources[i];
+        if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+        {
+            VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can have INLINE_CONSTANTS flag");
+            ++m_NumInlineConstantBuffers;
+        }
+    }
 
+    if (m_NumInlineConstantBuffers > 0)
+    {
+        m_InlineConstantBuffers = std::make_unique<InlineConstantBufferAttribsGL[]>(m_NumInlineConstantBuffers);
+    }
+
+    TBindings StaticResCounter         = {};
+    Uint16    NumStaticInlineConstants = 0;
+    Uint32    InlineConstantBufferIdx  = 0;
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
         const PipelineResourceDesc& ResDesc = m_Desc.Resources[i];
@@ -170,21 +189,52 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
                               "Deserialized immutable sampler flag is invalid.");
             }
 
-            if (Range == BINDING_RANGE_UNIFORM_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
+            // For inline constants, ArraySize holds the number of 4-byte constants, while
+            // the resource occupies a single constant buffer slot.
+            const Uint32 ArraySize = ResDesc.GetArraySize();
+
+            if (Range == BINDING_RANGE_UNIFORM_BUFFER &&
+                (ResDesc.Flags & (PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS | PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)) == 0)
             {
-                DEV_CHECK_ERR(size_t{CacheOffset} + ResDesc.ArraySize < sizeof(m_DynamicUBOMask) * 8, "Dynamic UBO index exceeds maximum representable bit position in the mask");
-                for (Uint64 elem = 0; elem < ResDesc.ArraySize; ++elem)
+                DEV_CHECK_ERR(size_t{CacheOffset} + ArraySize < sizeof(m_DynamicUBOMask) * 8, "Dynamic UBO index exceeds maximum representable bit position in the mask");
+                for (Uint64 elem = 0; elem < ArraySize; ++elem)
                     m_DynamicUBOMask |= Uint64{1} << (Uint64{CacheOffset} + elem);
             }
             else if (Range == BINDING_RANGE_STORAGE_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
             {
-                DEV_CHECK_ERR(size_t{CacheOffset} + ResDesc.ArraySize < sizeof(m_DynamicSSBOMask) * 8, "Dynamic SSBO index exceeds maximum representable bit position in the mask");
-                for (Uint64 elem = 0; elem < ResDesc.ArraySize; ++elem)
+                DEV_CHECK_ERR(size_t{CacheOffset} + ArraySize < sizeof(m_DynamicSSBOMask) * 8, "Dynamic SSBO index exceeds maximum representable bit position in the mask");
+                for (Uint64 elem = 0; elem < ArraySize; ++elem)
                     m_DynamicSSBOMask |= Uint64{1} << (Uint64{CacheOffset} + elem);
             }
 
-            VERIFY(CacheOffset + ResDesc.ArraySize <= std::numeric_limits<TBindings::value_type>::max(), "Cache offset exceeds representable range");
-            CacheOffset += static_cast<TBindings::value_type>(ResDesc.ArraySize);
+            if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+            {
+                // Inline constant buffers are handled mostly like regular constant buffers. The only
+                // difference is that the buffer is created internally here and is not expected to be bound.
+                // It is updated by UpdateInlineConstantBuffers() method.
+
+                VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can have INLINE_CONSTANTS flag");
+                InlineConstantBufferAttribsGL& InlineCBAttribs{m_InlineConstantBuffers[InlineConstantBufferIdx++]};
+                InlineCBAttribs.CacheOffset  = CacheOffset;
+                InlineCBAttribs.NumConstants = ResDesc.ArraySize;
+
+                // All SRBs created from this signature will share the same inline constant buffer.
+                // An alternative design is to have a separate inline constant buffer for each SRB,
+                // which will allow skipping buffer update if the inline constants are not changed.
+                // However, this will increase memory consumption as each SRB will have its own copy of the inline CB.
+                // Besides, inline constants are expected to change frequently, so skipping updates is unlikely.
+                InlineCBAttribs.pBuffer = CreateInlineConstantBuffer(ResDesc.Name, ResDesc.ArraySize);
+
+                m_TotalInlineConstants += static_cast<Uint16>(ResDesc.ArraySize);
+
+                if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                {
+                    NumStaticInlineConstants += static_cast<Uint16>(ResDesc.ArraySize);
+                }
+            }
+
+            VERIFY(CacheOffset + ArraySize <= std::numeric_limits<TBindings::value_type>::max(), "Cache offset exceeds representable range");
+            CacheOffset += static_cast<TBindings::value_type>(ArraySize);
 
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
@@ -194,10 +244,41 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
             }
         }
     }
+    VERIFY_EXPR(InlineConstantBufferIdx == m_NumInlineConstantBuffers);
 
     if (m_pStaticResCache)
     {
-        m_pStaticResCache->Initialize(StaticResCounter, GetRawAllocator(), 0x0, 0x0);
+        m_pStaticResCache->Initialize(StaticResCounter, GetRawAllocator(), 0x0, 0x0, NumStaticInlineConstants);
+
+        // Initialize inline constant buffers in the static cache.
+        // This allows static inline constants to be set on the signature and later copied to SRBs.
+        if (m_NumInlineConstantBuffers > 0)
+        {
+            Uint32 InlineConstantOffset = 0;
+            for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
+            {
+                const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBuffer(i);
+                VERIFY_EXPR(InlineCBAttr.pBuffer);
+                VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
+
+                // Only initialize inline constant buffers that are within the static cache range.
+                // Mutable and dynamic inline constant buffers are not stored in the static cache.
+                if (InlineCBAttr.CacheOffset < StaticResCounter[BINDING_RANGE_UNIFORM_BUFFER])
+                {
+                    m_pStaticResCache->InitInlineConstantBuffer(
+                        InlineCBAttr.CacheOffset,
+                        InlineCBAttr.pBuffer,
+                        InlineCBAttr.NumConstants,
+                        InlineConstantOffset);
+
+                    InlineConstantOffset += InlineCBAttr.NumConstants;
+                }
+            }
+            VERIFY_EXPR(InlineConstantOffset == NumStaticInlineConstants);
+        }
+#ifdef DILIGENT_DEBUG
+        m_pStaticResCache->DbgVerifyResourceInitialization();
+#endif
     }
 }
 
@@ -403,19 +484,29 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
         switch (PipelineResourceToBindingRange(ResDesc))
         {
             case BINDING_RANGE_UNIFORM_BUFFER:
-                for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
+                if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
                 {
-                    const ShaderResourceCacheGL::CachedUB& SrcCachedRes = SrcResourceCache.GetConstUB(ResAttr.CacheOffset + ArrInd);
-                    if (!SrcCachedRes.pBuffer)
+                    VERIFY(ResDesc.Flags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag is not compatible with other flags");
+                    // For inline constants, ResDesc.ArraySize is the number of 32-bit constants, not the array size.
+                    // Copy the staging data from signature cache to SRB cache.
+                    DstResourceCache.CopyInlineConstants(SrcResourceCache, ResAttr.CacheOffset, ResDesc.ArraySize);
+                }
+                else
+                {
+                    for (Uint32 ArrInd = 0; ArrInd < ResDesc.ArraySize; ++ArrInd)
                     {
-                        if (DstCacheType == ResourceCacheContentType::SRB)
-                            LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
-                        continue;
-                    }
+                        const ShaderResourceCacheGL::CachedUB& SrcCachedRes = SrcResourceCache.GetConstUB(ResAttr.CacheOffset + ArrInd);
+                        if (!SrcCachedRes.pBuffer)
+                        {
+                            if (DstCacheType == ResourceCacheContentType::SRB)
+                                LOG_ERROR_MESSAGE("No resource is assigned to static shader variable '", GetShaderResourcePrintName(ResDesc, ArrInd), "' in pipeline resource signature '", m_Desc.Name, "'.");
+                            continue;
+                        }
 
-                    DstResourceCache.SetUniformBuffer(ResAttr.CacheOffset + ArrInd,
-                                                      RefCntAutoPtr<BufferGLImpl>{SrcCachedRes.pBuffer},
-                                                      SrcCachedRes.BaseOffset, SrcCachedRes.RangeSize);
+                        DstResourceCache.SetUniformBuffer(ResAttr.CacheOffset + ArrInd,
+                                                          RefCntAutoPtr<BufferGLImpl>{SrcCachedRes.pBuffer},
+                                                          SrcCachedRes.BaseOffset, SrcCachedRes.RangeSize);
+                    }
                 }
                 break;
             case BINDING_RANGE_STORAGE_BUFFER:
@@ -508,9 +599,65 @@ void PipelineResourceSignatureGLImpl::CopyStaticResources(ShaderResourceCacheGL&
 #endif
 }
 
+void PipelineResourceSignatureGLImpl::UpdateInlineConstantBuffers(const ShaderResourceCacheGL& ResourceCache,
+                                                                  GLContextState&              CtxState) const
+{
+    for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
+    {
+        const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBuffer(i);
+
+        const ShaderResourceCacheGL::CachedUB& InlineCB = ResourceCache.GetConstUB(InlineCBAttr.CacheOffset);
+        VERIFY(InlineCBAttr.NumConstants * sizeof(Uint32) == InlineCB.RangeSize, "Inline constant buffer size mismatch");
+        VERIFY(InlineCB.pInlineConstantData != nullptr, "Inline constant data pointer is null");
+        VERIFY(InlineCB.pBuffer, "Inline constant buffer is null in cache");
+
+        const Uint32 BufferSize = InlineCBAttr.NumConstants * sizeof(Uint32);
+
+        // Get the buffer from the SRB cache (not from the signature's InlineCBAttr.pBuffer).
+        // This ensures we update the same buffer that was bound by BindResources().
+        // When an SRB created from a compatible but different signature is used,
+        // the SRB's cache contains buffer pointers to the original signature's shared buffers.
+        // By updating the buffer from cache, we maintain consistency with D3D11's design.
+        BufferGLImpl* pBuffer = InlineCB.pBuffer;
+
+        // Map the buffer and copy the staging data
+        PVoid pMappedData = nullptr;
+        pBuffer->Map(CtxState, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+        memcpy(pMappedData, InlineCB.pInlineConstantData, BufferSize);
+        pBuffer->Unmap(CtxState);
+    }
+}
+
 void PipelineResourceSignatureGLImpl::InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache)
 {
-    ResourceCache.Initialize(m_BindingCount, m_SRBMemAllocator.GetResourceCacheDataAllocator(0), m_DynamicUBOMask, m_DynamicSSBOMask);
+    ResourceCache.Initialize(m_BindingCount, m_SRBMemAllocator.GetResourceCacheDataAllocator(0), m_DynamicUBOMask, m_DynamicSSBOMask, m_TotalInlineConstants);
+
+    // Initialize inline constant buffers.
+    // Each inline constant buffer shares a single dynamic UBO created in CreateLayout().
+    // The staging data is stored contiguously at the tail of the resource cache memory.
+    if (m_NumInlineConstantBuffers > 0)
+    {
+        // Inline constant data starts at m_MemoryEndOffset in the cache
+        Uint32 InlineConstantOffset = 0;
+        for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
+        {
+            const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBuffer(i);
+            VERIFY_EXPR(InlineCBAttr.pBuffer);
+            VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
+
+            ResourceCache.InitInlineConstantBuffer(
+                InlineCBAttr.CacheOffset,
+                InlineCBAttr.pBuffer,
+                InlineCBAttr.NumConstants,
+                InlineConstantOffset);
+
+            InlineConstantOffset += InlineCBAttr.NumConstants;
+        }
+        VERIFY_EXPR(InlineConstantOffset == m_TotalInlineConstants);
+    }
+#ifdef DILIGENT_DEBUG
+    ResourceCache.DbgVerifyResourceInitialization();
+#endif
 
     // Initialize immutable samplers
     for (Uint32 r = 0; r < m_Desc.NumResources; ++r)
@@ -653,7 +800,7 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
             },
             [this]() //
             {
-                return ShaderResourceCacheGL::GetRequiredMemorySize(m_BindingCount);
+                return ShaderResourceCacheGL::GetRequiredMemorySize(m_BindingCount, m_TotalInlineConstants);
             });
     }
     catch (...)

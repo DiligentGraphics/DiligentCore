@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -130,12 +130,44 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
         }
     };
 
+    // Specialized handler for uniform buffers to handle inline constants correctly
+    const auto HandleUniformBuffer = [&](const ShaderResourcesGL::UniformBufferInfo& UB) //
+    {
+        const ShaderResourceVariableDesc VarDesc     = FindPipelineResourceLayoutVariable(ResourceLayout, UB.Name, UB.ShaderStages, nullptr);
+        const auto                       it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, UB.Name}, UB);
+        if (it_assigned.second)
+        {
+            const PIPELINE_RESOURCE_FLAGS Flags = UB.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+
+            Uint32 ArraySize = UB.ArraySize;
+            if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+            {
+                VERIFY(Flags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag cannot be combined with other flags.");
+                // For inline constants, use the constant count instead of the UBO array size
+                ArraySize = UB.BufferSize / sizeof(Uint32);
+
+                if (ArraySize > MAX_INLINE_CONSTANTS)
+                {
+                    LOG_ERROR_AND_THROW("Inline constants resource '", UB.Name, "' has ",
+                                        ArraySize, " constants. The maximum supported number of inline constants is ",
+                                        MAX_INLINE_CONSTANTS, '.');
+                }
+            }
+
+            SignDesc.AddResource(VarDesc.ShaderStages, UB.Name, ArraySize, UB.ResourceType, VarDesc.Type, Flags);
+        }
+        else
+        {
+            VerifyResourceMerge(m_Desc, it_assigned.first->second, UB);
+        }
+    };
+
     if (m_IsProgramPipelineSupported)
     {
         for (size_t i = 0; i < ShaderStages.size(); ++i)
         {
             ShaderGLImpl* pShaderGL = ShaderStages[i];
-            pShaderGL->GetShaderResources()->ProcessConstResources(HandleResource, HandleResource, HandleResource, HandleResource);
+            pShaderGL->GetShaderResources()->ProcessConstResources(HandleUniformBuffer, HandleResource, HandleResource, HandleResource);
         }
     }
     else
@@ -153,7 +185,7 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
                 SamplerResFlag,
                 pImmediateCtx->GetContextState());
         }
-        m_GLPrograms[0]->GetResources()->ProcessConstResources(HandleResource, HandleResource, HandleResource, HandleResource);
+        m_GLPrograms[0]->GetResources()->ProcessConstResources(HandleUniformBuffer, HandleResource, HandleResource, HandleResource);
 
         if (ResourceLayout.NumImmutableSamplers > 0)
         {

@@ -213,7 +213,7 @@ protected:
         GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
         IRenderDevice*         pDevice = pEnv->GetDevice();
 
-        if (!pDevice->GetDeviceInfo().IsD3DDevice() && !pDevice->GetDeviceInfo().IsVulkanDevice())
+        if (!pDevice->GetDeviceInfo().IsD3DDevice() && !pDevice->GetDeviceInfo().IsVulkanDevice() && !pDevice->GetDeviceInfo().IsGLDevice())
         {
             GTEST_SKIP();
         }
