@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -147,19 +147,23 @@ public:
                           SHADER_TYPE           _ShaderStages,
                           SHADER_RESOURCE_TYPE  _ResourceType,
                           Uint32                _ArraySize,
-                          GLuint                _UBIndex)noexcept :
+                          GLuint                _UBIndex,
+                          Uint32                _BufferSize)noexcept :
             GLResourceAttribs{_Name, _ShaderStages, _ResourceType, PIPELINE_RESOURCE_FLAG_NONE, _ArraySize},
-            UBIndex          {_UBIndex}
+            UBIndex          {_UBIndex},
+            BufferSize       {_BufferSize}
         {}
 
         UniformBufferInfo(const UniformBufferInfo& UB,
                           StringPool&              NamesPool)noexcept :
             GLResourceAttribs{UB, NamesPool},
-            UBIndex          {UB.UBIndex   }
+            UBIndex          {UB.UBIndex   },
+            BufferSize       {UB.BufferSize}
         {}
         // clang-format on
 
         const GLuint UBIndex;
+        const Uint32 BufferSize; // Buffer size in bytes
     };
     static_assert((sizeof(UniformBufferInfo) % sizeof(void*)) == 0, "sizeof(UniformBufferInfo) must be multiple of sizeof(void*)");
 
