@@ -389,6 +389,7 @@ public:
 
 #ifdef DILIGENT_DEBUG
     void DbgVerifyDynamicBufferMasks() const;
+    void DbgVerifyResourceInitialization() const;
 #endif
 
 private:
@@ -438,7 +439,8 @@ private:
     bool m_HasInlineConstants = false;
 
 #ifdef DILIGENT_DEVELOPMENT
-    bool m_bStaticResourcesInitialized = false;
+    bool              m_bStaticResourcesInitialized = false;
+    std::vector<bool> m_DbgAssignedInlineConstants;
 #endif
 };
 
