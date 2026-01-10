@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,7 @@
 namespace Diligent
 {
 
-size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCount)
+size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCount, Uint32 TotalInlineConstants)
 {
     static_assert(std::is_same<TResourceCount, PipelineResourceSignatureGLImpl::TBindings>::value,
                   "ShaderResourceCacheGL::TResourceCount must be the same type as PipelineResourceSignatureGLImpl::TBindings");
@@ -46,14 +46,19 @@ size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCou
                 sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]          +
                 sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER];
     // clang-format on
+
+    // Add space for inline constant data at the tail
+    MemSize += TotalInlineConstants * sizeof(Uint32);
+
     VERIFY(MemSize < InvalidResourceOffset, "Memory size exceed the maximum allowed size.");
     return MemSize;
 }
 
-void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAllocator& MemAllocator, Uint64 DynamicUBOSlotMask, Uint64 DynamicSSBOSlotMask)
+void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAllocator& MemAllocator, Uint64 DynamicUBOSlotMask, Uint64 DynamicSSBOSlotMask, Uint32 TotalInlineConstants)
 {
     m_DynamicUBOSlotMask  = DynamicUBOSlotMask;
     m_DynamicSSBOSlotMask = DynamicSSBOSlotMask;
+    m_HasInlineConstants  = (TotalInlineConstants > 0);
 
     VERIFY(!m_pResourceData, "Cache has already been initialized");
 
@@ -69,9 +74,10 @@ void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAl
     VERIFY_EXPR(GetSSBOCount()    == static_cast<Uint32>(ResCount[BINDING_RANGE_STORAGE_BUFFER]));
     // clang-format on
 
-    size_t BufferSize = m_MemoryEndOffset;
+    // Inline constant data tail is after m_MemoryEndOffset
+    size_t BufferSize = m_MemoryEndOffset + TotalInlineConstants * sizeof(Uint32);
 
-    VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount));
+    VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount, TotalInlineConstants));
 
     if (BufferSize > 0)
     {
@@ -334,6 +340,43 @@ void ShaderResourceCacheGL::BindDynamicBuffers(GLContextState&              GLSt
                                  StaticCast<GLintptr>(ViewDesc.ByteOffset + SSBO.DynamicOffset),
                                  StaticCast<GLsizeiptr>(ViewDesc.ByteWidth));
     }
+}
+
+void ShaderResourceCacheGL::InitInlineConstantBuffer(Uint32                      CacheOffset,
+                                                     RefCntAutoPtr<BufferGLImpl> pBuffer,
+                                                     Uint32                      NumConstants,
+                                                     Uint32                      InlineConstantOffset)
+{
+    VERIFY_EXPR(pBuffer);
+    VERIFY_EXPR(m_HasInlineConstants);
+    VERIFY_EXPR(m_pResourceData);
+
+    CachedUB& UB           = GetUB(CacheOffset);
+    UB.pBuffer             = std::move(pBuffer);
+    UB.BaseOffset          = 0;
+    UB.RangeSize           = NumConstants * sizeof(Uint32);
+    UB.DynamicOffset       = 0;
+    UB.pInlineConstantData = reinterpret_cast<Uint32*>(m_pResourceData.get() + m_MemoryEndOffset) + InlineConstantOffset;
+}
+
+void ShaderResourceCacheGL::CopyInlineConstants(const ShaderResourceCacheGL& SrcCache,
+                                                Uint32                       CacheOffset,
+                                                Uint32                       NumConstants)
+{
+    VERIFY(CacheOffset < GetUBCount(), "Destination index is out of range");
+    VERIFY(CacheOffset < SrcCache.GetUBCount(), "Source index is out of range");
+
+    const CachedUB& SrcUB = SrcCache.GetConstUB(CacheOffset);
+    CachedUB&       DstUB = GetUB(CacheOffset);
+
+    VERIFY(SrcUB.pInlineConstantData != nullptr, "Source inline constant data is null");
+    VERIFY(DstUB.pInlineConstantData != nullptr, "Destination inline constant data is null");
+    VERIFY(SrcUB.RangeSize == NumConstants * sizeof(Uint32), "Source inline constant buffer size mismatch");
+    VERIFY(DstUB.RangeSize == NumConstants * sizeof(Uint32), "Destination inline constant buffer size mismatch");
+
+    memcpy(DstUB.pInlineConstantData,
+           SrcUB.pInlineConstantData,
+           NumConstants * sizeof(Uint32));
 }
 
 #ifdef DILIGENT_DEBUG
