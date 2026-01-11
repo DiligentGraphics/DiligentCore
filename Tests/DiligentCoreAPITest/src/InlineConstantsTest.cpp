@@ -278,7 +278,106 @@ InlineConstants::Resources InlineConstants::sm_Res;
 FastRandFloat              InlineConstants::sm_Rnd{0, 0.f, 1.f};
 
 
-TEST_F(InlineConstants, ResourceLayout)
+TEST_F(InlineConstants, ResourceLayout1)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    RefCntAutoPtr<IBuffer> pColBuffer = pEnv->CreateBuffer(
+        BufferDesc{
+            "Color buffer",
+            sizeof(g_Colors),
+            BIND_UNIFORM_BUFFER,
+            USAGE_DEFAULT,
+        },
+        g_Colors);
+    ASSERT_TRUE(pColBuffer);
+
+    for (Uint32 pos_type = 0; pos_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++pos_type)
+    {
+        const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+        RenderDrawCommandReference(pSwapChain, ClearColor);
+
+        SHADER_RESOURCE_VARIABLE_TYPE PosType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_type);
+
+        GraphicsPipelineStateCreateInfoX PsoCI{"Inline constants test"};
+
+        PipelineResourceLayoutDescX ResLayoutDesc;
+        ResLayoutDesc
+            .AddVariable(SHADER_TYPE_VERTEX, "cbInlinePositions", PosType, SHADER_VARIABLE_FLAG_INLINE_CONSTANTS)
+            .AddVariable(SHADER_TYPE_VS_PS, "cbInlineColors", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE);
+
+        PsoCI
+            .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+            .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .AddShader(sm_Res.pVS)
+            .AddShader(sm_Res.pPS)
+            .SetResourceLayout(ResLayoutDesc)
+            .SetSRBAllocationGranularity(4);
+        PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+        ASSERT_TRUE(pPSO);
+
+        if (PosType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            IShaderResourceVariable* pVar = pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+            ASSERT_TRUE(pVar);
+            pVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
+        }
+
+        RefCntAutoPtr<IShaderResourceBinding> pSRB;
+        pPSO->CreateShaderResourceBinding(&pSRB, true);
+        ASSERT_TRUE(pSRB);
+
+        IShaderResourceVariable* pPosVar = nullptr;
+        if (PosType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+        {
+            pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+            ASSERT_TRUE(pPosVar);
+        }
+
+        {
+            IShaderResourceVariable* pColVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+            ASSERT_TRUE(pColVar);
+            pColVar->Set(pColBuffer);
+        }
+
+        ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+        pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        pContext->SetPipelineState(pPSO);
+
+        if (pPosVar == nullptr)
+        {
+            // Draw both triangles as positions are static
+            pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+        }
+        else
+        {
+            // Draw first triangle
+            pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+            pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+            // Draw second triangle
+            pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+            pContext->Draw({3, DRAW_FLAG_VERIFY_ALL | DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT});
+        }
+
+        Present();
+
+        std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                  << " Pos " << GetShaderVariableTypeLiteralName(PosType) << std::endl;
+    }
+}
+
+
+TEST_F(InlineConstants, ResourceLayout2)
 {
     GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice    = pEnv->GetDevice();
@@ -384,7 +483,7 @@ TEST_F(InlineConstants, ResourceLayout)
 
                 // Draw second triangle
                 pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
-                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL | DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT});
             }
 
             Present();
