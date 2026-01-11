@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -369,7 +369,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
     BindInfo.vkPipelineLayout = Layout.GetVkPipelineLayout();
 
-    Uint32 TotalDynamicOffsetCount = 0;
+    Uint16 TotalDynamicOffsetCount = 0;
     for (Uint32 i = 0; i < SignCount; ++i)
     {
         ResourceBindInfo::DescriptorSetInfo& SetInfo = BindInfo.SetInfo[i];
@@ -384,12 +384,14 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         VERIFY_EXPR(BindInfo.ActiveSRBMask & (1u << i));
 
         SetInfo.BaseInd            = Layout.GetFirstDescrSetIndex(pSignature->GetDesc().BindingIndex);
-        SetInfo.DynamicOffsetCount = pSignature->GetDynamicOffsetCount();
+        SetInfo.DynamicOffsetCount = static_cast<Uint16>(pSignature->GetDynamicOffsetCount());
+        SetInfo.FirstDynamicOffset = TotalDynamicOffsetCount;
         TotalDynamicOffsetCount += SetInfo.DynamicOffsetCount;
     }
 
     // Reserve space to store all dynamic buffer offsets
     m_DynamicBufferOffsets.resize(TotalDynamicOffsetCount);
+    std::fill(m_DynamicBufferOffsets.begin(), m_DynamicBufferOffsets.end(), 0);
 }
 
 DeviceContextVkImpl::ResourceBindInfo& DeviceContextVkImpl::GetBindInfo(PIPELINE_TYPE Type)
@@ -427,6 +429,14 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
     uint32_t     DynamicOffsetCount = 0;
     uint32_t     TotalSetCount      = 0;
     const Uint32 FirstSetToBind     = BindInfo.SetInfo[FirstSign].BaseInd;
+    const Uint16 FirstDynamicOffset = BindInfo.SetInfo[FirstSign].FirstDynamicOffset;
+
+    // Note that in current implementation, if any of the dynamic offsets change,
+    // all descriptor sets are rebound. This may be further optimized to only rebind
+    // the sets that have changed dynamic offsets. This will complicate the code though,
+    // and may not be worth the effort as the main goal of skipping descriptor set binding
+    // if no dynamic offsets have changed is already achieved.
+    bool DynamicOffsetsChanged = false;
     for (Uint32 sign = FirstSign; sign <= LastSign; ++sign)
     {
         ResourceBindInfo::DescriptorSetInfo& SetInfo = BindInfo.SetInfo[sign];
@@ -453,12 +463,15 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
 
         if (SetInfo.DynamicOffsetCount > 0)
         {
-            VERIFY(m_DynamicBufferOffsets.size() >= size_t{DynamicOffsetCount} + size_t{SetInfo.DynamicOffsetCount},
+            VERIFY(m_DynamicBufferOffsets.size() >= size_t{FirstDynamicOffset} + size_t{DynamicOffsetCount} + size_t{SetInfo.DynamicOffsetCount},
                    "m_DynamicBufferOffsets must've been resized by SetPipelineState() to have enough space");
 
-            Uint32 NumOffsetsWritten = pResourceCache->GetDynamicBufferOffsets(this, m_DynamicBufferOffsets, DynamicOffsetCount);
-            VERIFY_EXPR(NumOffsetsWritten == SetInfo.DynamicOffsetCount);
+            auto WriteResult = pResourceCache->WriteDynamicBufferOffsets(this, m_DynamicBufferOffsets, FirstDynamicOffset + DynamicOffsetCount);
+            VERIFY_EXPR(WriteResult.NumOffsetsWritten == SetInfo.DynamicOffsetCount);
             DynamicOffsetCount += SetInfo.DynamicOffsetCount;
+
+            if (WriteResult.NumOffsetsChanged > 0)
+                DynamicOffsetsChanged = true;
         }
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -466,17 +479,20 @@ void DeviceContextVkImpl::CommitDescriptorSets(ResourceBindInfo& BindInfo, Uint3
 #endif
     }
 
-    // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
-    // and this buffer is not resizable, so the buffer handle can never change.
+    if ((BindInfo.StaleSRBMask & BindInfo.ActiveSRBMask) != 0 || DynamicOffsetsChanged)
+    {
+        // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
+        // and this buffer is not resizable, so the buffer handle can never change.
 
-    // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the
-    // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands
-    // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously
-    // applied via these sets are no longer valid.
-    // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/vkCmdBindDescriptorSets.html
-    VERIFY_EXPR(m_State.vkPipelineBindPoint != VK_PIPELINE_BIND_POINT_MAX_ENUM);
-    m_CommandBuffer.BindDescriptorSets(m_State.vkPipelineBindPoint, BindInfo.vkPipelineLayout, FirstSetToBind, TotalSetCount,
-                                       m_DescriptorSets.data(), DynamicOffsetCount, m_DynamicBufferOffsets.data());
+        // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the
+        // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands
+        // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously
+        // applied via these sets are no longer valid.
+        // https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/vkCmdBindDescriptorSets.html
+        VERIFY_EXPR(m_State.vkPipelineBindPoint != VK_PIPELINE_BIND_POINT_MAX_ENUM);
+        m_CommandBuffer.BindDescriptorSets(m_State.vkPipelineBindPoint, BindInfo.vkPipelineLayout, FirstSetToBind, TotalSetCount,
+                                           m_DescriptorSets.data(), DynamicOffsetCount, DynamicOffsetCount > 0 ? &m_DynamicBufferOffsets[FirstDynamicOffset] : nullptr);
+    }
 
     BindInfo.StaleSRBMask &= ~BindInfo.ActiveSRBMask;
 }
