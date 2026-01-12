@@ -827,6 +827,10 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     if (InlineConstantSRBCommitMask != 0)
     {
         CommitInlineConstants(BindInfo, InlineConstantSRBCommitMask);
+        // CommitDescriptorSets is always called for SRBs that have inline constants.
+        // First time (when StaleSRBMask != 0), it always binds the descriptor sets, but after that
+        // it checks if any dynamic offsets have changed to decide whether to rebind the sets.
+        // If no inline constant buffers have been updated, CommitDescriptorSets will skip binding.
     }
 
     // First time we must always bind descriptor sets with dynamic offsets as SRBs are stale.

@@ -634,7 +634,9 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
         const ResourceAttribs& Attr        = GetResourceAttribs(InlineCBAttr.ResIndex);
         const Uint32           CacheOffset = Attr.CacheOffset(CacheType);
 
-        // Bind the shared uniform buffer to the resource cache
+        // Bind the shared uniform buffer to the resource cache.
+        // Note that since we use SetResource, the buffer will count towards the number of
+        // dynamic buffers in the cache.
         ResourceCache.SetResource(
             &GetDevice()->GetLogicalDevice(),
             Attr.DescrSet,

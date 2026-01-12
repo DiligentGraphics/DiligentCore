@@ -163,6 +163,10 @@ void PipelineLayoutVk::Create(RenderDeviceVkImpl*                             pD
 
     if (PushConstantInfo PCInfo = GetPushConstantInfo(ppSignatures, SignatureCount))
     {
+        // Note that the inline constant buffer that is promoted to push constant still
+        // has the corresponding descriptor in the descriptor set layout, but it will not
+        // be used by the pipeline.
+
         // Validate push constant size against device limits
         if (PCInfo.vkRange.size > Limits.maxPushConstantsSize)
         {

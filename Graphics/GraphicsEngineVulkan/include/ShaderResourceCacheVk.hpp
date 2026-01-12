@@ -340,7 +340,8 @@ private:
     Uint16 m_NumSets = 0;
 
     // Total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache
-    // regardless of the variable type. Note this variable is not equal to dynamic offsets count, which is constant.
+    // regardless of the variable type (including inline constant buffers).
+    // Note this variable is not equal to dynamic offsets count, which is constant.
     Uint16 m_NumDynamicBuffers = 0;
     Uint32 m_TotalResources : 30;
 

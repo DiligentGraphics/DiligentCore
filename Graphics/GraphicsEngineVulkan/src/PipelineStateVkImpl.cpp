@@ -763,6 +763,10 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
 
             if (PushConstant && !bVerifyOnly)
             {
+                // Note that the inline constant buffer that is promoted to push constant still
+                // has the corresponding descriptor in the descriptor set layout, but it will not
+                // be used by the pipeline.
+
                 // Convert the selected uniform buffer to push constant if it is present in the shader
                 // and is not already a push constant.
                 if (pShaderResources->GetResourceByName(SPIRVShaderResourceAttribs::ResourceType::PushConstant, PushConstant.Name.c_str()) == nullptr &&
