@@ -839,6 +839,180 @@ TEST_F(InlineConstants, TwoResourceSignatures)
     TestSignatures(2);
 }
 
+// Test for "Inline Constants Cross-Signature Commit Inconsistency" fix.
+//
+// This test verifies that inline constants work correctly when an SRB created
+// from one signature is used with a PSO created from a different but compatible
+// signature instance.
+//
+// Bug scenario:
+// 1. PSO is created with Signature A
+// 2. SRB is created from Signature B (compatible but different instance)
+// 3. Inline constants are set through SRB
+// 4. BindResources() binds buffers from SRB cache (pointing to Signature B's buffers)
+// 5. BUG (fixed): UpdateInlineConstantBuffers() was updating Signature A's buffers
+//    instead of the buffers from SRB cache
+//
+// The fix ensures that UpdateInlineConstantBuffers() updates the buffer from
+// SRB cache - the same buffer that was bound during BindResources().
+//
+// In Vulkan, only the first inline constant uses push constants (always works).
+// The second inline constant uses buffer-emulated path where this bug manifested.
+// Therefore, this test uses TWO inline constant buffers to ensure we test both paths.
+TEST_F(InlineConstants, CrossSignatureSRB)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    // Test all variable types to ensure complete coverage
+    for (Uint32 pos_type = 0; pos_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++pos_type)
+    {
+        for (Uint32 col_type = 0; col_type < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; ++col_type)
+        {
+            const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+            RenderDrawCommandReference(pSwapChain, ClearColor);
+
+            SHADER_RESOURCE_VARIABLE_TYPE PosType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(pos_type);
+            SHADER_RESOURCE_VARIABLE_TYPE ColType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(col_type);
+
+            // Create TWO IDENTICAL but SEPARATE signature instances
+            // This is the key to reproducing the cross-signature issue:
+            // - pSign1 and pSign2 are compatible (same resources)
+            // - But they are different instances with separate internal buffers
+            RefCntAutoPtr<IPipelineResourceSignature> pSign1, pSign2;
+
+            PipelineResourceSignatureDescX SignDesc{"Cross-Signature Test"};
+            SignDesc
+                // First inline constant (Vulkan: push constants path)
+                .AddResource(SHADER_TYPE_VERTEX, "cbInlinePositions", kNumPosConstants,
+                             SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, PosType,
+                             PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+                // Second inline constant (Vulkan: buffer-emulated path - where the bug was)
+                .AddResource(SHADER_TYPE_VS_PS, "cbInlineColors", kNumColConstants,
+                             SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, ColType,
+                             PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
+            SignDesc.SetSRBAllocationGranularity(4);
+
+            // Create first signature instance
+            pDevice->CreatePipelineResourceSignature(SignDesc, &pSign1);
+            ASSERT_TRUE(pSign1);
+
+            // Create second signature instance with identical descriptor
+            // This creates a separate instance with its own internal buffers
+            pDevice->CreatePipelineResourceSignature(SignDesc, &pSign2);
+            ASSERT_TRUE(pSign2);
+
+            // IMPORTANT: pSign1 and pSign2 are compatible but have separate buffer allocations
+            // Using an SRB from pSign2 with a PSO from pSign1 tests the cross-signature path
+
+            // Create PSO using signature 1
+            GraphicsPipelineStateCreateInfoX PsoCI{"Cross-Signature Test"};
+            PsoCI
+                .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+                .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                .AddShader(sm_Res.pVS)
+                .AddShader(sm_Res.pPS)
+                .AddSignature(pSign1); // PSO uses signature 1
+            PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+            RefCntAutoPtr<IPipelineState> pPSO;
+            pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+            ASSERT_TRUE(pPSO);
+
+            // For STATIC variables, set on signature 2 (which will be used for SRB)
+            if (PosType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                IShaderResourceVariable* pVar = pSign2->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                ASSERT_TRUE(pVar);
+                pVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
+            }
+
+            if (ColType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                IShaderResourceVariable* pVar = pSign2->GetStaticVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                ASSERT_TRUE(pVar);
+                pVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
+            }
+
+            // Create SRB from signature 2 (DIFFERENT from PSO's signature!)
+            // This is the critical part: SRB is from pSign2, PSO is from pSign1
+            RefCntAutoPtr<IShaderResourceBinding> pSRB;
+            pSign2->CreateShaderResourceBinding(&pSRB, true);
+            ASSERT_TRUE(pSRB);
+
+            // Verify the SRB is compatible with PSO (they should be, since signatures are identical)
+            // Note: IsCompatibleWith checks signature compatibility
+            EXPECT_TRUE(pPSO->IsCompatibleWith(pSign2));
+
+            IShaderResourceVariable* pPosVar   = nullptr;
+            IShaderResourceVariable* pColVarVS = nullptr;
+            IShaderResourceVariable* pColVarPS = nullptr;
+
+            if (PosType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+                ASSERT_TRUE(pPosVar);
+            }
+
+            if (ColType != SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+            {
+                pColVarVS = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+                ASSERT_TRUE(pColVarVS);
+                pColVarPS = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "cbInlineColors");
+                ASSERT_TRUE(pColVarPS);
+            }
+
+            ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+            pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+            // Set first half of color constants BEFORE CommitShaderResources
+            if (pColVarVS != nullptr)
+            {
+                pColVarVS->SetInlineConstants(g_Colors, 0, kNumColConstants / 2);
+            }
+
+            pContext->SetPipelineState(pPSO);
+            pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+            // Set second half of color constants AFTER CommitShaderResources but BEFORE Draw
+            // This is the specific timing that triggered the original bug:
+            // - CommitShaderResources binds buffers from SRB cache
+            // - SetInlineConstants writes to CPU staging
+            // - Draw triggers UpdateInlineConstantBuffers which must update the CORRECT buffer
+            if (pColVarPS != nullptr)
+            {
+                pColVarPS->SetInlineConstants(g_Colors[0].Data() + kNumColConstants / 2,
+                                              kNumColConstants / 2, kNumColConstants / 2);
+            }
+
+            if (pPosVar == nullptr)
+            {
+                // Draw both triangles as positions are static
+                pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+            }
+            else
+            {
+                // Draw first triangle
+                pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+                // Draw second triangle - also tests update after CommitShaderResources
+                pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+                pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+            }
+
+            Present();
+
+            std::cout << TestingEnvironment::GetCurrentTestStatusString() << ' '
+                      << " Pos " << GetShaderVariableTypeLiteralName(PosType) << ','
+                      << " Col " << GetShaderVariableTypeLiteralName(ColType) << std::endl;
+        }
+    }
+}
+
 constexpr Uint32 kCacheContentVersion = 7;
 
 RefCntAutoPtr<IRenderStateCache> CreateCache(IRenderDevice*                   pDevice,
