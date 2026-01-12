@@ -32,7 +32,7 @@
 #include "RenderStateCache.hpp"
 #include "GraphicsTypesX.hpp"
 #include "FastRand.hpp"
-
+#include "MapHelper.hpp"
 
 
 namespace Diligent
@@ -875,14 +875,14 @@ TEST_F(InlineConstants, CrossSignatureSRB)
     // - But they are different instances with separate internal buffers
     RefCntAutoPtr<IPipelineResourceSignature> pSign1, pSign2;
 
-    PipelineResourceSignatureDescX SignDesc{"Cross-Signature Test"};
+    PipelineResourceSignatureDescX SignDesc{"Cross-Signature Test 1"};
     SignDesc
         // First inline constant (Vulkan: push constants path)
-        .AddResource(SHADER_TYPE_VERTEX, "cbInlinePositions", kNumPosConstants,
+        .AddResource(SHADER_TYPE_VS_PS, "cbInlineColors", kNumColConstants,
                      SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
                      PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
         // Second inline constant (Vulkan: buffer-emulated path - where the bug was)
-        .AddResource(SHADER_TYPE_VS_PS, "cbInlineColors", kNumColConstants,
+        .AddResource(SHADER_TYPE_VERTEX, "cbInlinePositions", kNumPosConstants,
                      SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
                      PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
 
@@ -892,8 +892,10 @@ TEST_F(InlineConstants, CrossSignatureSRB)
 
     // Create second signature instance with identical descriptor.
     // This creates a separate instance with its own internal buffers.
+    SignDesc.SetName("Cross-Signature Test 2");
     pDevice->CreatePipelineResourceSignature(SignDesc, &pSign2);
     ASSERT_TRUE(pSign2);
+    EXPECT_NE(pSign1, pSign2);
 
     // IMPORTANT: pSign1 and pSign2 are compatible but have separate buffer allocations.
     // Using an SRB from pSign2 with a PSO from pSign1 tests the cross-signature path.
@@ -925,18 +927,28 @@ TEST_F(InlineConstants, CrossSignatureSRB)
     IShaderResourceVariable* pColVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
     ASSERT_TRUE(pColVar);
 
+    // Create a dummy dynamic buffer and map it to allocate dynamic space and make sure
+    // that dynamic offset is non-zero in Vulkan backend.
+    RefCntAutoPtr<IBuffer> pDummyCB = pEnv->CreateBuffer({"InlineConstants - dummy const buffer", 256, BIND_UNIFORM_BUFFER, USAGE_DYNAMIC, CPU_ACCESS_WRITE});
+    {
+        MapHelper<Uint8> pData{pContext, pDummyCB, MAP_WRITE, MAP_FLAG_DISCARD};
+    }
+
     ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
     pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     // Set inline constants and draw
-    pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants);
     pColVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
 
-    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-    pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
+    pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+    pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+    pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+    pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
 
     Present();
 }
