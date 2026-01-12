@@ -32,7 +32,7 @@
 #include "RenderStateCache.hpp"
 #include "GraphicsTypesX.hpp"
 #include "FastRand.hpp"
-
+#include "MapHelper.hpp"
 
 
 namespace Diligent
@@ -837,6 +837,120 @@ TEST_F(InlineConstants, ResourceSignature)
 TEST_F(InlineConstants, TwoResourceSignatures)
 {
     TestSignatures(2);
+}
+
+// Test for "Inline Constants Cross-Signature Commit Inconsistency" fix.
+//
+// This test verifies that inline constants work correctly when an SRB created
+// from one signature is used with a PSO created from a different but compatible
+// signature instance.
+//
+// Bug scenario:
+// 1. PSO is created with Signature A
+// 2. SRB is created from Signature B (compatible but different instance)
+// 3. Inline constants are set through SRB
+// 4. BindResources() binds buffers from SRB cache (pointing to Signature B's buffers)
+// 5. BUG (fixed): UpdateInlineConstantBuffers() was updating Signature A's buffers
+//    instead of the buffers from SRB cache
+//
+// The fix ensures that UpdateInlineConstantBuffers() updates the buffer from
+// SRB cache - the same buffer that was bound during BindResources().
+//
+// In Vulkan, only the first inline constant uses push constants (always works).
+// The second inline constant uses buffer-emulated path where this bug manifested.
+// Therefore, this test uses TWO inline constant buffers to ensure we test both paths.
+TEST_F(InlineConstants, CrossSignatureSRB)
+{
+    GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice    = pEnv->GetDevice();
+    IDeviceContext*        pContext   = pEnv->GetDeviceContext();
+    ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+
+    const float ClearColor[] = {sm_Rnd(), sm_Rnd(), sm_Rnd(), sm_Rnd()};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    // Create TWO IDENTICAL but SEPARATE signature instances.
+    // This is the key to reproducing the cross-signature issue:
+    // - pSign1 and pSign2 are compatible (same resources)
+    // - But they are different instances with separate internal buffers
+    RefCntAutoPtr<IPipelineResourceSignature> pSign1, pSign2;
+
+    PipelineResourceSignatureDescX SignDesc{"Cross-Signature Test 1"};
+    SignDesc
+        // First inline constant (Vulkan: push constants path)
+        .AddResource(SHADER_TYPE_VS_PS, "cbInlineColors", kNumColConstants,
+                     SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
+                     PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+        // Second inline constant (Vulkan: buffer-emulated path - where the bug was)
+        .AddResource(SHADER_TYPE_VERTEX, "cbInlinePositions", kNumPosConstants,
+                     SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
+                     PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
+
+    // Create first signature instance
+    pDevice->CreatePipelineResourceSignature(SignDesc, &pSign1);
+    ASSERT_TRUE(pSign1);
+
+    // Create second signature instance with identical descriptor.
+    // This creates a separate instance with its own internal buffers.
+    SignDesc.SetName("Cross-Signature Test 2");
+    pDevice->CreatePipelineResourceSignature(SignDesc, &pSign2);
+    ASSERT_TRUE(pSign2);
+    EXPECT_NE(pSign1, pSign2);
+
+    // IMPORTANT: pSign1 and pSign2 are compatible but have separate buffer allocations.
+    // Using an SRB from pSign2 with a PSO from pSign1 tests the cross-signature path.
+    EXPECT_TRUE(pSign1->IsCompatibleWith(pSign2));
+
+    // Create PSO using signature 1
+    GraphicsPipelineStateCreateInfoX PsoCI{"Cross-Signature Test"};
+    PsoCI
+        .AddRenderTarget(pSwapChain->GetDesc().ColorBufferFormat)
+        .SetPrimitiveTopology(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+        .AddShader(sm_Res.pVS)
+        .AddShader(sm_Res.pPS)
+        .AddSignature(pSign1); // PSO uses signature 1
+    PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+    ASSERT_TRUE(pPSO);
+
+    // Create SRB from signature 2 (DIFFERENT from PSO's signature!).
+    // This is the critical part: SRB is from pSign2, PSO is from pSign1.
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    pSign2->CreateShaderResourceBinding(&pSRB, true);
+    ASSERT_TRUE(pSRB);
+
+    IShaderResourceVariable* pPosVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlinePositions");
+    ASSERT_TRUE(pPosVar);
+
+    IShaderResourceVariable* pColVar = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "cbInlineColors");
+    ASSERT_TRUE(pColVar);
+
+    // Create a dummy dynamic buffer and map it to allocate dynamic space and make sure
+    // that dynamic offset is non-zero in Vulkan backend.
+    RefCntAutoPtr<IBuffer> pDummyCB = pEnv->CreateBuffer({"InlineConstants - dummy const buffer", 256, BIND_UNIFORM_BUFFER, USAGE_DYNAMIC, CPU_ACCESS_WRITE});
+    {
+        MapHelper<Uint8> pData{pContext, pDummyCB, MAP_WRITE, MAP_FLAG_DISCARD};
+    }
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    // Set inline constants and draw
+    pColVar->SetInlineConstants(g_Colors, 0, kNumColConstants);
+
+    pPosVar->SetInlineConstants(g_Positions, 0, kNumPosConstants / 2);
+    pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+    pPosVar->SetInlineConstants(g_Positions[0].Data() + kNumPosConstants / 2, 0, kNumPosConstants / 2);
+    pContext->Draw({3, DRAW_FLAG_VERIFY_ALL});
+
+    Present();
 }
 
 constexpr Uint32 kCacheContentVersion = 7;
