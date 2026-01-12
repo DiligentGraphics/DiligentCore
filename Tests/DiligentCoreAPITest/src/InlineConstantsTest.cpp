@@ -942,9 +942,8 @@ TEST_F(InlineConstants, CrossSignatureSRB)
             pSign2->CreateShaderResourceBinding(&pSRB, true);
             ASSERT_TRUE(pSRB);
 
-            // Verify the SRB is compatible with PSO (they should be, since signatures are identical)
-            // Note: IsCompatibleWith checks signature compatibility
-            EXPECT_TRUE(pPSO->IsCompatibleWith(pSign2));
+            // Verify the signatures are compatible (they should be, since descriptors are identical)
+            EXPECT_TRUE(pSign1->IsCompatibleWith(pSign2));
 
             IShaderResourceVariable* pPosVar   = nullptr;
             IShaderResourceVariable* pColVarVS = nullptr;
