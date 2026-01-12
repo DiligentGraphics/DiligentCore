@@ -1146,13 +1146,21 @@ void PipelineResourceSignatureVkImpl::CommitInlineConstants(const CommitInlineCo
         }
         else
         {
-            VERIFY_EXPR(InlineCBAttr.pBuffer);
+            // Get the buffer from the SRB cache (not from the signature's InlineCBAttr.pBuffer).
+            // This ensures we update the same buffer that was bound to the descriptor set during SRB initialization.
+            // When an SRB created from a compatible but different signature is used (e.g., via PSO serialization),
+            // the SRB's cache contains buffer pointers from the original signature's shared buffers.
+            // By updating the buffer from cache, we maintain consistency with D3D11's design.
+            const ShaderResourceCacheVk::DescriptorSet& DescrSet  = ResourceCache.GetDescriptorSet(InlineCBAttr.DescrSet);
+            const ShaderResourceCacheVk::Resource&      CachedRes = DescrSet.GetResource(InlineCBAttr.SRBCacheOffset);
+            BufferVkImpl*                               pBuffer   = CachedRes.pObject.RawPtr<BufferVkImpl>();
+            VERIFY(pBuffer != nullptr, "Inline constant buffer is null in SRB cache");
 
-            // Map the shared buffer and copy the data
+            // Map the buffer from SRB cache and copy the data
             void* pMappedData = nullptr;
-            Attribs.Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+            Attribs.Ctx.MapBuffer(pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
             memcpy(pMappedData, pInlineConstantData, DataSize);
-            Attribs.Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
+            Attribs.Ctx.UnmapBuffer(pBuffer, MAP_WRITE);
         }
     }
 }
