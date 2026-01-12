@@ -1146,13 +1146,18 @@ void PipelineResourceSignatureVkImpl::CommitInlineConstants(const CommitInlineCo
         }
         else
         {
-            VERIFY_EXPR(InlineCBAttr.pBuffer);
+            // Get the buffer from the SRB cache (not from the signature's InlineCBAttr.pBuffer).
 
-            // Map the shared buffer and copy the data
+            const ShaderResourceCacheVk::DescriptorSet& DescrSet  = ResourceCache.GetDescriptorSet(InlineCBAttr.DescrSet);
+            const ShaderResourceCacheVk::Resource&      CachedRes = DescrSet.GetResource(InlineCBAttr.SRBCacheOffset);
+            BufferVkImpl*                               pBuffer   = CachedRes.pObject.RawPtr<BufferVkImpl>();
+            VERIFY(pBuffer != nullptr, "Inline constant buffer is null in SRB cache");
+
+            // Map the buffer from SRB cache and copy the data
             void* pMappedData = nullptr;
-            Attribs.Ctx.MapBuffer(InlineCBAttr.pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+            Attribs.Ctx.MapBuffer(pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
             memcpy(pMappedData, pInlineConstantData, DataSize);
-            Attribs.Ctx.UnmapBuffer(InlineCBAttr.pBuffer, MAP_WRITE);
+            Attribs.Ctx.UnmapBuffer(pBuffer, MAP_WRITE);
         }
     }
 }
