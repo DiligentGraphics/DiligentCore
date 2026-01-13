@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -260,9 +260,15 @@ public:
     template <bool VerifyOnly>
     void TransitionResources(DeviceContextVkImpl* pCtxVkImpl);
 
-    Uint32 GetDynamicBufferOffsets(DeviceContextVkImpl*   pCtx,
-                                   std::vector<uint32_t>& Offsets,
-                                   Uint32                 StartInd) const;
+    struct WriteDynamicBufferOffsetsResult
+    {
+        Uint32 NumOffsetsWritten = 0;
+        Uint32 NumOffsetsChanged = 0;
+    };
+    WriteDynamicBufferOffsetsResult WriteDynamicBufferOffsets(
+        DeviceContextVkImpl*   pCtx,
+        std::vector<uint32_t>& Offsets,
+        Uint32                 StartInd) const;
 
 private:
     Resource* GetFirstResourcePtr()

@@ -58,6 +58,9 @@ public:
             m_WorkerThreads.emplace_back(
                 [this, PoolCI, i] //
                 {
+                    const std::string ThreadName = "DG:TPW " + std::to_string(i);
+                    PlatformMisc::SetCurrentThreadName(ThreadName.c_str());
+
                     if (PoolCI.OnThreadStarted)
                         PoolCI.OnThreadStarted(i);
 

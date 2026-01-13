@@ -227,7 +227,7 @@ add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
                    VERBATIM
 )
 
-set_common_target_properties(Diligent-ShaderTools 17)
+set_common_target_properties(Diligent-ShaderTools)
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})

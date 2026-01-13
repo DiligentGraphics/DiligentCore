@@ -1052,7 +1052,7 @@ std::string GetDeviceFeaturesString(const FeaturesType& Features,
                                     FeatureStateStr += GetDeviceFeatureStateString(State);
 
                                     size_t col    = FeatureStrings.size() % NumColumns;
-                                    ColWidth[col] = std::max(ColWidth[col], FeatureStateStr.length());
+                                    ColWidth[col] = (std::max)(ColWidth[col], FeatureStateStr.length());
 
                                     FeatureStrings.emplace_back(std::move(FeatureStateStr));
                                 }

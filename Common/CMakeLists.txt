@@ -90,7 +90,7 @@ if(PLATFORM_LINUX)
 endif()
 
 # c++ 17 is needed for aligned_alloc
-set_common_target_properties(Diligent-Common 17)
+set_common_target_properties(Diligent-Common)
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})

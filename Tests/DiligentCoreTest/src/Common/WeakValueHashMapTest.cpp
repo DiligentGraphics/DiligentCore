@@ -125,6 +125,70 @@ TEST(Common_WeakValueHashMap, GetOrInsert)
 }
 
 
+TEST(Common_WeakValueHashMap, CustomHashKeyeq)
+{
+    struct Key
+    {
+        int Val = 0;
+
+        Key() = default;
+
+        explicit Key(int v) :
+            Val{v}
+        {}
+
+        struct Hasher
+        {
+            size_t operator()(const Key& k) const
+            {
+                return std::hash<int>()(k.Val);
+            }
+        };
+
+        bool operator==(const Key& rhs) const
+        {
+            return Val == rhs.Val;
+        }
+
+        struct KeyEq
+        {
+            bool operator()(const Key& lhs, const Key& rhs) const
+            {
+                return lhs.Val == rhs.Val;
+            }
+        };
+    };
+
+    {
+        WeakValueHashMap<Key, std::string, Key::Hasher> Map;
+
+        auto Handle1 = Map.GetOrInsert(Key{1}, "Value1");
+        auto Handle2 = Map.GetOrInsert(Key{2}, "Value2");
+        auto Handle3 = Map.Get(Key{2});
+        EXPECT_TRUE(Handle1);
+        EXPECT_TRUE(Handle2);
+        EXPECT_TRUE(Handle3);
+        EXPECT_STREQ(Handle1->c_str(), "Value1");
+        EXPECT_STREQ(Handle2->c_str(), "Value2");
+        EXPECT_EQ(*Handle2, *Handle3);
+    }
+
+    {
+        WeakValueHashMap<Key, std::string, Key::Hasher, Key::KeyEq> Map;
+
+        auto Handle1 = Map.GetOrInsert(Key{1}, "Value1");
+        auto Handle2 = Map.GetOrInsert(Key{2}, "Value2");
+        auto Handle3 = Map.Get(Key{2});
+        EXPECT_TRUE(Handle1);
+        EXPECT_TRUE(Handle2);
+        EXPECT_TRUE(Handle3);
+        EXPECT_STREQ(Handle1->c_str(), "Value1");
+        EXPECT_STREQ(Handle2->c_str(), "Value2");
+        EXPECT_EQ(*Handle2, *Handle3);
+    }
+}
+
+
 static constexpr size_t kNumThreads = 8;
 #ifdef DILIGENT_DEBUG
 static constexpr int kNumParallelKeys = 1024;

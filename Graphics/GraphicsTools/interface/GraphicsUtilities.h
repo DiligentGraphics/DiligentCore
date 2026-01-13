@@ -39,14 +39,16 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 #include "../../../Primitives/interface/DefineRefMacro.h"
 
+// clang-format off
 void DILIGENT_GLOBAL_FUNCTION(CreateUniformBuffer)(IRenderDevice*                  pDevice,
                                                    Uint64                          Size,
                                                    const Char*                     Name,
                                                    IBuffer**                       ppBuffer,
-                                                   USAGE Usage                     DEFAULT_VALUE(USAGE_DYNAMIC),
-                                                   BIND_FLAGS BindFlags            DEFAULT_VALUE(BIND_UNIFORM_BUFFER),
-                                                   CPU_ACCESS_FLAGS CPUAccessFlags DEFAULT_VALUE(CPU_ACCESS_WRITE),
-                                                   void* pInitialData              DEFAULT_VALUE(nullptr));
+                                                   USAGE                           Usage          DEFAULT_VALUE(USAGE_DYNAMIC),
+                                                   BIND_FLAGS                      BindFlags      DEFAULT_VALUE(BIND_UNIFORM_BUFFER),
+                                                   CPU_ACCESS_FLAGS                CPUAccessFlags DEFAULT_VALUE(CPU_ACCESS_WRITE),
+                                                   void*                           pInitialData   DEFAULT_VALUE(nullptr));
+// clang-format on
 
 void DILIGENT_GLOBAL_FUNCTION(GenerateCheckerBoardPattern)(Uint32         Width,
                                                            Uint32         Height,
@@ -261,6 +263,8 @@ struct GeometryPrimitiveBuffersCreateInfo
 };
 typedef struct GeometryPrimitiveBuffersCreateInfo GeometryPrimitiveBuffersCreateInfo;
 
+// clang-format off
+
 /// Creates vertex and index buffers for a geometry primitive (see Diligent::CreateGeometryPrimitive)
 
 /// \param [in]  pDevice   - A pointer to the render device that will be used to create the buffers.
@@ -276,8 +280,8 @@ void DILIGENT_GLOBAL_FUNCTION(CreateGeometryPrimitiveBuffers)(IRenderDevice*    
                                                               const GeometryPrimitiveBuffersCreateInfo* pBufferCI,
                                                               IBuffer**                                 ppVertices,
                                                               IBuffer**                                 ppIndices,
-                                                              GeometryPrimitiveInfo* pInfo              DEFAULT_VALUE(nullptr));
-
+                                                              GeometryPrimitiveInfo*                    pInfo DEFAULT_VALUE(nullptr));
+// clang-format on
 
 /// Returns the DirectX shader compiler interface associated with the specified render device.
 

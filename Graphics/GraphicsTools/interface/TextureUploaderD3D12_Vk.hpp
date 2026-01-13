@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2025 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,7 +50,8 @@ public:
                                  ITexture*       pDstTexture,
                                  Uint32          ArraySlice,
                                  Uint32          MipLevel,
-                                 IUploadBuffer*  pUploadBuffer) override final;
+                                 IUploadBuffer*  pUploadBuffer,
+                                 bool            AutoRecycle) override final;
 
     virtual void RecycleBuffer(IUploadBuffer* pUploadBuffer) override final;
 

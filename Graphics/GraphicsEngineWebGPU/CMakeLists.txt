@@ -165,8 +165,8 @@ else()
     )
 endif()
 
-set_common_target_properties(Diligent-GraphicsEngineWebGPU-shared 17)
-set_common_target_properties(Diligent-GraphicsEngineWebGPU-static 17)
+set_common_target_properties(Diligent-GraphicsEngineWebGPU-shared)
+set_common_target_properties(Diligent-GraphicsEngineWebGPU-static)
 
 if (${DILIGENT_NO_GLSLANG})
     message("GLSLang is not being built. WebGPU backend will only be able to consume SPIRV byte code.")

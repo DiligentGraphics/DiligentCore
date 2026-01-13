@@ -536,7 +536,10 @@ private:
 
             // The total number of descriptors with dynamic offset, given by pSignature->GetDynamicOffsetCount().
             // Note that this is not the actual number of dynamic buffers in the resource cache.
-            Uint32 DynamicOffsetCount = 0;
+            Uint16 DynamicOffsetCount = 0;
+
+            // Index of the first dynamic offset in m_DynamicBufferOffsets
+            Uint16 FirstDynamicOffset = 0;
 
 #ifdef DILIGENT_DEVELOPMENT
             // The descriptor set base index that was used in the last BindDescriptorSets() call
