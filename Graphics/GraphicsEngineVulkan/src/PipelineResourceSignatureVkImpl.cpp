@@ -1118,7 +1118,9 @@ void PipelineResourceSignatureVkImpl::CommitInlineConstants(const CommitInlineCo
         else
         {
             // Get the buffer from the SRB cache (not from the signature's InlineCBAttr.pBuffer).
-
+            // This ensures we update the same buffer that was committed by DeviceContextVkImpl::CommitDescriptorSets.
+            // When an SRB created from a compatible but different signature is used (e.g., via PSO serialization),
+            // the SRB's cache contains inline constant buffers from another signature, not from this one.
             const ShaderResourceCacheVk::DescriptorSet& DescrSet  = ResourceCache.GetDescriptorSet(InlineCBAttr.DescrSet);
             const ShaderResourceCacheVk::Resource&      CachedRes = DescrSet.GetResource(InlineCBAttr.SRBCacheOffset);
             BufferVkImpl*                               pBuffer   = CachedRes.pObject.RawPtr<BufferVkImpl>();
