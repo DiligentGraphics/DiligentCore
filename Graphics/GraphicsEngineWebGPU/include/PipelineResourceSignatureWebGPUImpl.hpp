@@ -50,6 +50,7 @@ namespace Diligent
 
 struct WGSLShaderResourceAttribs;
 class DeviceContextWebGPUImpl;
+class BufferWebGPUImpl;
 
 struct ImmutableSamplerAttribsWebGPU
 {
@@ -65,9 +66,17 @@ public:
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsWebGPU, 16, "The struct is used in serialization and must be tightly packed");
 
+/// Inline constant buffer attributes for WebGPU backend.
+/// Similar to Vulkan's InlineConstantBufferAttribsVk.
 struct InlineConstantBufferAttribsWebGPU
 {
-    Uint8 Dummy = 0;
+    Uint32 BindGroup    = 0; // Bind group index (similar to Vulkan's DescrSet)
+    Uint32 CacheOffset  = 0; // Offset within bind group (similar to Vulkan's SRBCacheOffset)
+    Uint32 NumConstants = 0; // Number of 32-bit constants (= ResDesc.ArraySize)
+
+    // Shared dynamic UBO created in the Signature.
+    // All SRBs reference this same buffer to reduce memory usage.
+    RefCntAutoPtr<BufferWebGPUImpl> pBuffer;
 };
 
 struct PipelineResourceSignatureInternalDataWebGPU : PipelineResourceSignatureInternalData<PipelineResourceAttribsWebGPU, ImmutableSamplerAttribsWebGPU>
@@ -136,6 +145,11 @@ public:
     void CopyStaticResources(ShaderResourceCacheWebGPU& ResourceCache) const;
     // Make the base class method visible
     using TPipelineResourceSignatureBase::CopyStaticResources;
+
+    // Updates inline constant buffers before draw/dispatch.
+    // Must be called when SRB is stale or DRAW_FLAG_INLINE_CONSTANTS_INTACT is not set.
+    void UpdateInlineConstantBuffers(const ShaderResourceCacheWebGPU& ResourceCache,
+                                     DeviceContextWebGPUImpl*         pCtx) const;
 
     // Returns the bind group index in the resource cache
     template <BIND_GROUP_ID GroupId>

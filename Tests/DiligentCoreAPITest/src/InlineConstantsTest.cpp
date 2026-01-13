@@ -213,7 +213,10 @@ protected:
         GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
         IRenderDevice*         pDevice = pEnv->GetDevice();
 
-        if (!pDevice->GetDeviceInfo().IsD3DDevice() && !pDevice->GetDeviceInfo().IsVulkanDevice() && !pDevice->GetDeviceInfo().IsGLDevice())
+        if (!pDevice->GetDeviceInfo().IsD3DDevice() &&
+            !pDevice->GetDeviceInfo().IsVulkanDevice() &&
+            !pDevice->GetDeviceInfo().IsGLDevice() &&
+            !pDevice->GetDeviceInfo().IsWebGPUDevice())
         {
             GTEST_SKIP();
         }
@@ -1166,9 +1169,10 @@ TEST_F(InlineConstants, RenderStateCache)
                 PresentInCache = true;
             }
 #endif
-            if (pDevice->GetDeviceInfo().IsVulkanDevice())
+            if (pDevice->GetDeviceInfo().IsVulkanDevice() ||
+                pDevice->GetDeviceInfo().IsWebGPUDevice())
             {
-                // For some reason, pUncachedVS and pVS1 got same hash computation result on Vulkan.
+                // For some reason, pUncachedVS and pVS1 got same hash computation result on Vulkan and WebGPU.
                 PresentInCache = true;
             }
             CreatePSOFromCache(pCache, PresentInCache, pUncachedVS, pUncachedPS, &pPSO2);

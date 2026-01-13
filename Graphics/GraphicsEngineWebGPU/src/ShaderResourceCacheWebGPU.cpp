@@ -37,7 +37,7 @@
 namespace Diligent
 {
 
-static size_t GetMemorySize(Uint32 NumGroups, Uint32 TotalResources)
+static size_t GetMemorySize(Uint32 NumGroups, Uint32 TotalResources, Uint32 TotalInlineConstants)
 {
     size_t MemorySize = NumGroups * sizeof(ShaderResourceCacheWebGPU::BindGroup);
 
@@ -47,17 +47,20 @@ static size_t GetMemorySize(Uint32 NumGroups, Uint32 TotalResources)
     MemorySize = AlignUp(MemorySize, alignof(WGPUBindGroupEntry));
     MemorySize += TotalResources * sizeof(WGPUBindGroupEntry);
 
+    MemorySize = AlignUp(MemorySize, alignof(Uint32));
+    MemorySize += TotalInlineConstants * sizeof(Uint32);
+
     return MemorySize;
 }
 
-size_t ShaderResourceCacheWebGPU::GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes)
+size_t ShaderResourceCacheWebGPU::GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes, Uint32 TotalInlineConstants)
 {
     Uint32 TotalResources = 0;
     for (Uint32 t = 0; t < NumGroups; ++t)
     {
         TotalResources += GroupSizes[t];
     }
-    return GetMemorySize(NumGroups, TotalResources);
+    return GetMemorySize(NumGroups, TotalResources, TotalInlineConstants);
 }
 
 ShaderResourceCacheWebGPU::ShaderResourceCacheWebGPU(ResourceCacheContentType ContentType) noexcept :
@@ -77,7 +80,7 @@ ShaderResourceCacheWebGPU::~ShaderResourceCacheWebGPU()
     }
 }
 
-void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator, Uint32 NumGroups, const Uint32* GroupSizes)
+void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator, Uint32 NumGroups, const Uint32* GroupSizes, Uint32 TotalInlineConstants)
 {
     VERIFY(!m_pMemory, "Memory has already been allocated");
 
@@ -86,7 +89,7 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
     //  m_pMemory
     //  |
     //  V
-    // ||  BindGroup[0]  |   ....    |  BindGroup[Ng-1]  |  Res[0]  |  ... |  Res[n-1]  |   ....   | Res[0]  |  ... |  Res[m-1]  | wgpuEntry[0] | ... | wgpuEntry[n-1] |   ....   | wgpuEntry[0] | ... | wgpuEntry[m-1] | DynOffset[0] | ... | DynOffset[k-1] ||
+    // ||  BindGroup[0]  |   ....    |  BindGroup[Ng-1]  |  Res[0]  |  ... |  Res[n-1]  |   ....   | Res[0]  |  ... |  Res[m-1]  | wgpuEntry[0] | ... | wgpuEntry[n-1] |   ....   | wgpuEntry[0] | ... | wgpuEntry[m-1] | InlineConstantData[0] | ... | InlineConstantData[k-1] ||
     //
     //
     //  Ng = m_NumBindGroups
@@ -101,11 +104,15 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
         m_TotalResources += GroupSizes[t];
     }
 
-    const size_t MemorySize = GetMemorySize(NumGroups, m_TotalResources);
-    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumGroups, GroupSizes));
+    const size_t MemorySize = GetMemorySize(NumGroups, m_TotalResources, TotalInlineConstants);
+    VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumGroups, GroupSizes, TotalInlineConstants));
 #ifdef DILIGENT_DEBUG
     m_DbgInitializedResources.resize(m_NumBindGroups);
+    m_DbgAssignedInlineConstants.resize(TotalInlineConstants);
 #endif
+
+    // Set flag indicating whether this cache has inline constants
+    m_HasInlineConstants = (TotalInlineConstants > 0);
 
     if (MemorySize > 0)
     {
@@ -142,6 +149,12 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
 #ifdef DILIGENT_DEBUG
             m_DbgInitializedResources[t].resize(GroupSize);
 #endif
+        }
+
+        // Set pointer to inline constant staging data at the tail of the memory block
+        if (TotalInlineConstants > 0)
+        {
+            m_pInlineConstantData = reinterpret_cast<Uint32*>(pCurrWGPUEntryPtr);
         }
     }
 }
@@ -261,16 +274,37 @@ Uint32 ShaderResourceCacheWebGPU::Resource::GetDynamicBufferOffset<BufferViewWeb
     return Offset;
 }
 
-void ShaderResourceCacheWebGPU::InitializeResources(Uint32 GroupIdx, Uint32 Offset, Uint32 ArraySize, BindGroupEntryType Type, bool HasImmutableSampler)
+void ShaderResourceCacheWebGPU::InitializeResources(Uint32             GroupIdx,
+                                                    Uint32             Offset,
+                                                    Uint32             ArraySize,
+                                                    BindGroupEntryType Type,
+                                                    bool               HasImmutableSampler,
+                                                    Uint32             InlineConstantOffset,
+                                                    Uint32             DbgNumInlineConstants)
 {
     BindGroup& Group = GetBindGroup(GroupIdx);
     for (Uint32 res = 0; res < ArraySize; ++res)
     {
-        new (&Group.GetResource(Offset + res)) Resource{Type, HasImmutableSampler};
+        new (&Group.GetResource(Offset + res)) Resource{
+            Type,
+            HasImmutableSampler,
+            InlineConstantOffset != ~0u ? m_pInlineConstantData + InlineConstantOffset : nullptr,
+        };
 #ifdef DILIGENT_DEBUG
         m_DbgInitializedResources[GroupIdx][size_t{Offset} + res] = true;
+
+        if (InlineConstantOffset != ~0u)
+        {
+            VERIFY(InlineConstantOffset + DbgNumInlineConstants <= m_DbgAssignedInlineConstants.size(), "Inline constant storage overflow");
+            for (Uint32 i = 0; i < DbgNumInlineConstants; ++i)
+            {
+                VERIFY(!m_DbgAssignedInlineConstants[InlineConstantOffset + i], "Inline constant storage at offset ", InlineConstantOffset + i, " has already been assigned");
+                m_DbgAssignedInlineConstants[InlineConstantOffset + i] = true;
+            }
+        }
 #endif
     }
+    (void)DbgNumInlineConstants;
 }
 
 
@@ -559,6 +593,10 @@ void ShaderResourceCacheWebGPU::DbgVerifyResourceInitialization() const
         for (bool ResInitialized : SetFlags)
             VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");
     }
+    for (bool InlineConstAssigned : m_DbgAssignedInlineConstants)
+    {
+        VERIFY(InlineConstAssigned, "Not all inline constant storage has been assigned. This is a bug.");
+    }
 }
 
 void ShaderResourceCacheWebGPU::DbgVerifyDynamicBuffersCounter() const
@@ -573,5 +611,66 @@ void ShaderResourceCacheWebGPU::DbgVerifyDynamicBuffersCounter() const
     VERIFY(NumDynamicBuffers == m_NumDynamicBuffers, "The number of dynamic buffers (", m_NumDynamicBuffers, ") does not match the actual number (", NumDynamicBuffers, ")");
 }
 #endif
+
+void ShaderResourceCacheWebGPU::InitInlineConstantBuffer(Uint32         BindGroupIdx,
+                                                         Uint32         CacheOffset,
+                                                         IDeviceObject* pBuffer,
+                                                         Uint32         NumConstants,
+                                                         Uint32         InlineConstantOffset)
+{
+    VERIFY_EXPR(m_HasInlineConstants);
+    VERIFY_EXPR(m_pInlineConstantData != nullptr);
+    VERIFY_EXPR(pBuffer != nullptr);
+
+    BindGroup& Group = GetBindGroup(BindGroupIdx);
+    Resource&  Res   = Group.GetResource(CacheOffset);
+
+    VERIFY_EXPR(Res.Type == BindGroupEntryType::UniformBuffer ||
+                Res.Type == BindGroupEntryType::UniformBufferDynamic);
+
+    // Inline constant staging pointer must be initialized in InitializeResources().
+    VERIFY_EXPR(Res.pInlineConstantData == static_cast<void*>(m_pInlineConstantData + InlineConstantOffset));
+
+    // Bind the emulation buffer as a uniform buffer
+    // Use full buffer size (NumConstants * sizeof(Uint32))
+    RefCntAutoPtr<IDeviceObject> pBufferRef{pBuffer};
+    SetResource(BindGroupIdx, CacheOffset, std::move(pBufferRef), 0, NumConstants * sizeof(Uint32));
+}
+
+void ShaderResourceCacheWebGPU::SetInlineConstants(Uint32      BindGroupIdx,
+                                                   Uint32      CacheOffset,
+                                                   const void* pConstants,
+                                                   Uint32      FirstConstant,
+                                                   Uint32      NumConstants)
+{
+    BindGroup& Group = GetBindGroup(BindGroupIdx);
+    Resource&  Res   = Group.GetResource(CacheOffset);
+
+    VERIFY_EXPR(Res.pInlineConstantData != nullptr);
+    VERIFY_EXPR(pConstants != nullptr);
+
+    // Copy constants to the staging buffer
+    // IMPORTANT: Do NOT call UpdateRevision() - inline constants can change after SRB commit
+    Res.SetInlineConstants(pConstants, FirstConstant, NumConstants);
+}
+
+void ShaderResourceCacheWebGPU::CopyInlineConstants(const ShaderResourceCacheWebGPU& SrcCache,
+                                                    Uint32                           BindGroupIdx,
+                                                    Uint32                           SrcCacheOffset,
+                                                    Uint32                           DstCacheOffset,
+                                                    Uint32                           NumConstants)
+{
+    const BindGroup& SrcGroup = SrcCache.GetBindGroup(BindGroupIdx);
+    const Resource&  SrcRes   = SrcGroup.GetResource(SrcCacheOffset);
+
+    const BindGroup& DstGroup = GetBindGroup(BindGroupIdx);
+    const Resource&  DstRes   = DstGroup.GetResource(DstCacheOffset);
+
+    VERIFY_EXPR(SrcRes.pInlineConstantData != nullptr);
+    VERIFY_EXPR(DstRes.pInlineConstantData != nullptr);
+
+    // Copy inline constant staging data from source cache to destination cache
+    memcpy(DstRes.pInlineConstantData, SrcRes.pInlineConstantData, NumConstants * sizeof(Uint32));
+}
 
 } // namespace Diligent

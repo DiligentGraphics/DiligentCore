@@ -58,16 +58,23 @@ public:
 
     ~ShaderResourceCacheWebGPU();
 
-    static size_t GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes);
+    static size_t GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes, Uint32 TotalInlineConstants = 0);
 
-    void InitializeGroups(IMemoryAllocator& MemAllocator, Uint32 NumGroups, const Uint32* GroupSizes);
-    void InitializeResources(Uint32 GroupIdx, Uint32 Offset, Uint32 ArraySize, BindGroupEntryType Type, bool HasImmutableSampler);
+    void InitializeGroups(IMemoryAllocator& MemAllocator, Uint32 NumGroups, const Uint32* GroupSizes, Uint32 TotalInlineConstants = 0);
+    void InitializeResources(Uint32             GroupIdx,
+                             Uint32             Offset,
+                             Uint32             ArraySize,
+                             BindGroupEntryType Type,
+                             bool               HasImmutableSampler,
+                             Uint32             InlineConstantOffset  = ~0u,
+                             Uint32             DbgNumInlineConstants = 0);
 
     struct Resource
     {
-        explicit Resource(BindGroupEntryType _Type, bool _HasImmutableSampler) noexcept :
+        explicit Resource(BindGroupEntryType _Type, bool _HasImmutableSampler, void* _pInlineConstantData = nullptr) noexcept :
             Type{_Type},
-            HasImmutableSampler{_HasImmutableSampler}
+            HasImmutableSampler{_HasImmutableSampler},
+            pInlineConstantData{_pInlineConstantData}
         {
             VERIFY(Type == BindGroupEntryType::Texture || Type == BindGroupEntryType::Sampler || !HasImmutableSampler,
                    "Immutable sampler can only be assigned to a textre or a sampler");
@@ -88,10 +95,21 @@ public:
         // For uniform and storage buffers only
 /*16 */ Uint64                       BufferBaseOffset = 0;
 /*24 */ Uint64                       BufferRangeSize  = 0;
+        // For inline constant buffers only - points to staging data in cache tail
+/*32 */ void* const                  pInlineConstantData = nullptr;
         // clang-format on
 
         void SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint64 _RangeOffset, Uint64 _RangeSize);
         void SetStorageBuffer(RefCntAutoPtr<IDeviceObject>&& _pBufferView);
+
+        // Writes inline constant data to the staging buffer.
+        // IMPORTANT: Does NOT call UpdateRevision() - inline constants can change after SRB commit.
+        void SetInlineConstants(const void* pData, Uint32 FirstConstant, Uint32 NumConstants)
+        {
+            VERIFY(pInlineConstantData != nullptr, "Inline constant data pointer is not initialized");
+            VERIFY(pData != nullptr, "Source data is null");
+            memcpy(static_cast<Uint32*>(pInlineConstantData) + FirstConstant, pData, NumConstants * sizeof(Uint32));
+        }
 
         template <typename ResType>
         Uint32 GetDynamicBufferOffset(const DeviceContextWebGPUImpl* pCtx) const;
@@ -178,7 +196,7 @@ public:
 
     bool HasInlineConstants() const
     {
-        return false;
+        return m_HasInlineConstants;
     }
 
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
@@ -240,9 +258,31 @@ private:
     // Indicates what types of resources are stored in the cache
     const Uint32 m_ContentType : 1;
 
+    // Indicates if this cache has inline constants
+    bool m_HasInlineConstants = false;
+
+    // Pointer to the start of inline constant staging data in the memory tail
+    Uint32* m_pInlineConstantData = nullptr;
+
+public:
+    // Initializes an inline constant buffer resource in the cache
+    void InitInlineConstantBuffer(Uint32 BindGroupIdx, Uint32 CacheOffset, IDeviceObject* pBuffer, Uint32 NumConstants, Uint32 InlineConstantOffset);
+
+    // Writes inline constant data to the staging buffer
+    void SetInlineConstants(Uint32 BindGroupIdx, Uint32 CacheOffset, const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants);
+
+    // Copies inline constant data from source cache to this cache
+    void CopyInlineConstants(const ShaderResourceCacheWebGPU& SrcCache,
+                             Uint32                           BindGroupIdx,
+                             Uint32                           SrcCacheOffset,
+                             Uint32                           DstCacheOffset,
+                             Uint32                           NumConstants);
+
+private:
 #ifdef DILIGENT_DEBUG
     // Debug array that stores flags indicating if resources in the cache have been initialized
     std::vector<std::vector<bool>> m_DbgInitializedResources;
+    std::vector<bool>              m_DbgAssignedInlineConstants;
     Uint8*                         m_DbgMemoryEnd = nullptr;
 #endif
 };

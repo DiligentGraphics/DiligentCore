@@ -218,7 +218,7 @@ void SetBindGroup(WGPUComputePassEncoder Encoder, uint32_t GroupIndex, WGPUBindG
 }
 
 template <typename CmdEncoderType>
-void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder, Uint32 CommitSRBMask)
+void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder, Uint32 CommitSRBMask, bool InlineConstantsIntact)
 {
     VERIFY(CommitSRBMask != 0, "This method should not be called when there is nothing to commit");
 
@@ -232,6 +232,25 @@ void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder, Uint32
         if ((CommitSRBMask & SRBBit) == 0)
             continue;
 
+        const ShaderResourceCacheWebGPU* ResourceCache = m_BindInfo.ResourceCaches[sign];
+        VERIFY_EXPR(ResourceCache != nullptr);
+
+        // Update inline constant buffers if needed
+        const bool SRBStale = (m_BindInfo.StaleSRBMask & SRBBit) != 0;
+        if ((m_BindInfo.InlineConstantsSRBMask & SRBBit) != 0)
+        {
+            VERIFY(ResourceCache->HasInlineConstants(),
+                   "Shader resource cache does not contain inline constants, but the corresponding bit in InlineConstantsSRBMask is set.");
+            // Update inline constant buffers if the SRB is stale or inline constants have changed
+            if (SRBStale || !InlineConstantsIntact)
+            {
+                if (PipelineResourceSignatureWebGPUImpl* pSign = m_pPipelineState->GetResourceSignature(sign))
+                {
+                    pSign->UpdateInlineConstantBuffers(*ResourceCache, this);
+                }
+            }
+        }
+
         Uint32 BindGroupCacheIndex = 0;
         for (PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID BindGroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE,
                                                                                PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_DYNAMIC})
@@ -240,8 +259,6 @@ void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder, Uint32
             if (!BindGroup.IsActive())
                 continue;
 
-            const ShaderResourceCacheWebGPU* ResourceCache = m_BindInfo.ResourceCaches[sign];
-            VERIFY_EXPR(ResourceCache != nullptr);
             bool DynamicOffsetsChanged = false;
             if (!BindGroup.DynamicBufferOffsets.empty())
             {
@@ -249,7 +266,7 @@ void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder, Uint32
             }
             ++BindGroupCacheIndex;
 
-            if ((m_BindInfo.StaleSRBMask & SRBBit) == 0 && !DynamicOffsetsChanged)
+            if (!SRBStale && !DynamicOffsetsChanged)
             {
                 continue;
             }

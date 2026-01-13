@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -778,7 +778,29 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
                     const SHADER_RESOURCE_TYPE    ResType       = WGSLShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
                     const PIPELINE_RESOURCE_FLAGS Flags         = WGSLShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
                     const WebGPUResourceAttribs   WebGPUAttribs = Attribs.GetWebGPUAttribs(VarDesc.Flags);
-                    SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, ResType, VarDesc.Type, Flags, WebGPUAttribs);
+
+                    Uint32 ArraySize = Attribs.ArraySize;
+                    if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+                    {
+                        VERIFY(Flags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag cannot be combined with other flags.");
+                        // For inline constants, ArraySize must be the number of 32-bit constants
+                        if (Attribs.BufferStaticSize == 0)
+                        {
+                            LOG_ERROR_AND_THROW("Unable to determine inline constant count for uniform buffer '",
+                                                Attribs.Name, "'. Please enable ShaderCreateInfo.LoadConstantBufferReflection.");
+                        }
+                        VERIFY(Attribs.BufferStaticSize % sizeof(Uint32) == 0, "Buffer size must be a multiple of 4 bytes");
+                        ArraySize = Attribs.BufferStaticSize / sizeof(Uint32);
+
+                        if (ArraySize > MAX_INLINE_CONSTANTS)
+                        {
+                            LOG_ERROR_AND_THROW("Inline constants resource '", Attribs.Name, "' has ",
+                                                ArraySize, " constants. The maximum supported number of inline constants is ",
+                                                MAX_INLINE_CONSTANTS, '.');
+                        }
+                    }
+
+                    SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, Flags, WebGPUAttribs);
                 }
                 else
                 {

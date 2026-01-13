@@ -534,7 +534,17 @@ void ShaderVariableManagerWebGPU::SetInlineConstants(Uint32      ResIndex,
                                                      Uint32      FirstConstant,
                                                      Uint32      NumConstants)
 {
-    UNSUPPORTED("Not implemented yet");
+    const PipelineResourceDesc&          ResDesc = GetResourceDesc(ResIndex);
+    const PipelineResourceAttribsWebGPU& Attribs = GetResourceAttribs(ResIndex);
+
+    VERIFY_EXPR(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
+
+#ifdef DILIGENT_DEVELOPMENT
+    VerifyInlineConstants(ResDesc, pConstants, FirstConstant, NumConstants);
+#endif
+
+    m_ResourceCache.SetInlineConstants(Attribs.BindGroup, Attribs.CacheOffset(m_ResourceCache.GetContentType()),
+                                       pConstants, FirstConstant, NumConstants);
 }
 
 IDeviceObject* ShaderVariableManagerWebGPU::Get(Uint32 ArrayIndex, Uint32 ResIndex) const
