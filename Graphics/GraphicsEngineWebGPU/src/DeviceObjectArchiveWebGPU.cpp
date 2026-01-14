@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ bool PRSSerializerWebGPU<Mode>::SerializeInternalData(
     ConstQual<PipelineResourceSignatureInternalDataWebGPU>& InternalData,
     DynamicLinearAllocator*                                 Allocator)
 {
-    ASSERT_SIZEOF64(InternalData, 40, "Did you add a new member to PipelineResourceSignatureInternalDataWebGPU? Please add serialization here.");
+    ASSERT_SIZEOF64(InternalData, 32, "Did you add a new member to PipelineResourceSignatureInternalDataWebGPU? Please add serialization here.");
 
     return PRSSerializer<Mode>::template SerializeInternalData<PipelineResourceSignatureInternalDataWebGPU>(Ser, InternalData, Allocator);
 }

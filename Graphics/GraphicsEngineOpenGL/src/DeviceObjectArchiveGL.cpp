@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2024 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ bool PRSSerializerGL<Mode>::SerializeInternalData(
     ConstQual<PipelineResourceSignatureInternalDataGL>& InternalData,
     DynamicLinearAllocator*                             Allocator)
 {
-    ASSERT_SIZEOF64(InternalData, 40, "Did you add a new member to PipelineResourceSignatureInternalDataGL? Please add serialization here.");
+    ASSERT_SIZEOF64(InternalData, 32, "Did you add a new member to PipelineResourceSignatureInternalDataGL? Please add serialization here.");
     return PRSSerializer<Mode>::template SerializeInternalData<PipelineResourceSignatureInternalDataGL>(Ser, InternalData, Allocator);
 }
 

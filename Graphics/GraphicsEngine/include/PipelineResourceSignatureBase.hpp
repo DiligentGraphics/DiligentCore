@@ -104,13 +104,10 @@ void CopyPipelineResourceSignatureDesc(FixedLinearAllocator&                    
 template <typename PipelineResourceAttribsType, typename ImmutableSamplerAttribsType>
 struct PipelineResourceSignatureInternalData
 {
-    SHADER_TYPE                               ShaderStages          = SHADER_TYPE_UNKNOWN;
-    SHADER_TYPE                               StaticResShaderStages = SHADER_TYPE_UNKNOWN;
-    PIPELINE_TYPE                             PipelineType          = PIPELINE_TYPE_INVALID;
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> StaticResStageIndex   = {};
+    SHADER_TYPE ShaderStages = SHADER_TYPE_UNKNOWN;
 
     // The struct is used in serialization and must be tightly packed
-    Uint8 _Padding = 0;
+    Uint32 _Padding = 0;
 
     Uint32 NumResources         = 0;
     Uint32 NumImmutableSamplers = 0;
@@ -121,12 +118,9 @@ struct PipelineResourceSignatureInternalData
     constexpr bool operator==(const PipelineResourceSignatureInternalData& Rhs) const
     {
         // clang-format off
-        if (ShaderStages          != Rhs.ShaderStages ||
-            StaticResShaderStages != Rhs.StaticResShaderStages ||
-            PipelineType          != Rhs.PipelineType ||
-            StaticResStageIndex   != Rhs.StaticResStageIndex ||
-            NumResources          != Rhs.NumResources ||
-            NumImmutableSamplers  != Rhs.NumImmutableSamplers)
+        if (ShaderStages         != Rhs.ShaderStages ||
+            NumResources         != Rhs.NumResources ||
+            NumImmutableSamplers != Rhs.NumImmutableSamplers)
         // clang-format on
         {
             return false;
@@ -383,33 +377,7 @@ public:
 
         ValidatePipelineResourceSignatureDesc(Desc, pDevice, EngineImplTraits::DeviceType);
 
-        // Determine shader stages that have any resources as well as
-        // shader stages that have static resources.
-        for (Uint32 i = 0; i < Desc.NumResources; ++i)
-        {
-            const PipelineResourceDesc& ResDesc = Desc.Resources[i];
-
-            m_ShaderStages |= ResDesc.ShaderStages;
-            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-                m_StaticResShaderStages |= ResDesc.ShaderStages;
-        }
-
-        if (m_ShaderStages != SHADER_TYPE_UNKNOWN)
-        {
-            m_PipelineType = PipelineTypeFromShaderStages(m_ShaderStages);
-            DEV_CHECK_ERR(m_PipelineType != PIPELINE_TYPE_INVALID, "Failed to deduce pipeline type from shader stages");
-        }
-
-        {
-            Uint32 StaticVarStageIdx = 0;
-            for (SHADER_TYPE StaticResStages = m_StaticResShaderStages; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageIdx)
-            {
-                const SHADER_TYPE StageBit           = ExtractLSB(StaticResStages);
-                const Int32       ShaderTypeInd      = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
-                m_StaticResStageIndex[ShaderTypeInd] = static_cast<Int8>(StaticVarStageIdx);
-            }
-            VERIFY_EXPR(StaticVarStageIdx == GetNumStaticResStages());
-        }
+        InitAttribs(Desc);
     }
 
     PipelineResourceSignatureBase(IReferenceCounters*                              pRefCounters,
@@ -417,12 +385,8 @@ public:
                                   const PipelineResourceSignatureDesc&             Desc,
                                   const PipelineResourceSignatureInternalDataType& InternalData) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, false /*bIsDeviceInternal*/},
-        // clang-format off
-        m_ShaderStages         {InternalData.ShaderStages},
-        m_StaticResShaderStages{InternalData.StaticResShaderStages},
-        m_PipelineType         {InternalData.PipelineType},
-        m_StaticResStageIndex  {InternalData.StaticResStageIndex},
-        m_SRBMemAllocator      {GetRawAllocator()}
+        m_ShaderStages{InternalData.ShaderStages},
+        m_SRBMemAllocator{GetRawAllocator()}
     // clang-format on
     {
         // Don't read from m_Desc until it was allocated and copied in CopyPipelineResourceSignatureDesc()
@@ -433,6 +397,8 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
         ValidatePipelineResourceSignatureDesc(Desc, pDevice, EngineImplTraits::DeviceType);
 #endif
+
+        InitAttribs(Desc);
     }
 
     ~PipelineResourceSignatureBase()
@@ -778,10 +744,7 @@ public:
     {
         PipelineResourceSignatureInternalDataType InternalData;
 
-        InternalData.ShaderStages          = m_ShaderStages;
-        InternalData.StaticResShaderStages = m_StaticResShaderStages;
-        InternalData.PipelineType          = m_PipelineType;
-        InternalData.StaticResStageIndex   = m_StaticResStageIndex;
+        InternalData.ShaderStages = m_ShaderStages;
 
         InternalData.pResourceAttribs     = m_pResourceAttribs;
         InternalData.NumResources         = this->m_Desc.NumResources;
@@ -789,6 +752,38 @@ public:
         InternalData.NumImmutableSamplers = this->m_Desc.NumImmutableSamplers;
 
         return InternalData;
+    }
+
+private:
+    void InitAttribs(const PipelineResourceSignatureDesc& Desc)
+    {
+        // Determine shader stages that have any resources as well as
+        // shader stages that have static resources.
+        for (Uint32 i = 0; i < Desc.NumResources; ++i)
+        {
+            const PipelineResourceDesc& ResDesc = Desc.Resources[i];
+
+            m_ShaderStages |= ResDesc.ShaderStages;
+            if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                m_StaticResShaderStages |= ResDesc.ShaderStages;
+        }
+
+        if (m_ShaderStages != SHADER_TYPE_UNKNOWN)
+        {
+            m_PipelineType = PipelineTypeFromShaderStages(m_ShaderStages);
+            DEV_CHECK_ERR(m_PipelineType != PIPELINE_TYPE_INVALID, "Failed to deduce pipeline type from shader stages");
+        }
+
+        {
+            Uint32 StaticVarStageIdx = 0;
+            for (SHADER_TYPE StaticResStages = m_StaticResShaderStages; StaticResStages != SHADER_TYPE_UNKNOWN; ++StaticVarStageIdx)
+            {
+                const SHADER_TYPE StageBit           = ExtractLSB(StaticResStages);
+                const Int32       ShaderTypeInd      = GetShaderTypePipelineIndex(StageBit, m_PipelineType);
+                m_StaticResStageIndex[ShaderTypeInd] = static_cast<Int8>(StaticVarStageIdx);
+            }
+            VERIFY_EXPR(StaticVarStageIdx == GetNumStaticResStages());
+        }
     }
 
 protected:

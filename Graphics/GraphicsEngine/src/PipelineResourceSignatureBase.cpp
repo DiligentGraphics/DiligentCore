@@ -35,6 +35,14 @@
 namespace Diligent
 {
 
+namespace
+{
+
+using TestPipelineResourceSignatureInternalData = PipelineResourceSignatureInternalData<Uint32, Uint32>;
+ASSERT_SIZEOF64(TestPipelineResourceSignatureInternalData, 32, "Did you add new members to PipelineResourceSignatureInternalData? You need to implement serialization for them in PRSSerializer.");
+
+} // namespace
+
 #define LOG_PRS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of a pipeline resource signature '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
 void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& Desc,

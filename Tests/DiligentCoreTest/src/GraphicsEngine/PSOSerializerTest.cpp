@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -132,6 +132,7 @@ private:
 };
 
 using TestPRSInternalData = PipelineResourceSignatureInternalData<TestResourceAttribs, TestImmutableSamplerAttribs>;
+ASSERT_SIZEOF64(TestPRSInternalData, 32, "Did you add new members to PipelineResourceSignatureInternalData? You need to implement serialization for them in PRSSerializer.");
 
 TEST(PSOSerializerTest, SerializePRSDesc)
 {
@@ -214,12 +215,7 @@ TEST(PSOSerializerTest, SerializePRSDesc)
         SrcInternalData.NumImmutableSamplers = _countof(ImmSamAttribs);
         SrcInternalData.pImmutableSamplers   = ImmSamAttribs;
 
-        SrcInternalData.ShaderStages          = Val(SHADER_TYPE_GEOMETRY, (SHADER_TYPE_LAST << 1) - 1);
-        SrcInternalData.StaticResShaderStages = Val(SHADER_TYPE_HULL, (SHADER_TYPE_LAST << 1) - 1);
-        SrcInternalData.PipelineType          = Val(PIPELINE_TYPE_GRAPHICS, PIPELINE_TYPE_LAST);
-
-        for (size_t i = 0; i < SrcInternalData.StaticResStageIndex.size(); ++i)
-            SrcInternalData.StaticResStageIndex[i] = Val(static_cast<Int8>(i), Int8{127});
+        SrcInternalData.ShaderStages = Val(SHADER_TYPE_GEOMETRY, (SHADER_TYPE_LAST << 1) - 1);
 
         DynamicLinearAllocator Allocator{GetRawAllocator()};
         SerializedData         Data;
