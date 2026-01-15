@@ -54,22 +54,32 @@ size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCou
     return MemSize;
 }
 
-void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAllocator& MemAllocator, Uint64 DynamicUBOSlotMask, Uint64 DynamicSSBOSlotMask, Uint32 TotalInlineConstants)
+void ShaderResourceCacheGL::Initialize(const InitAttribs& Attribs)
 {
-    m_DynamicUBOSlotMask  = DynamicUBOSlotMask;
-    m_DynamicSSBOSlotMask = DynamicSSBOSlotMask;
-    m_HasInlineConstants  = (TotalInlineConstants > 0);
-#ifdef DILIGENT_DEBUG
-    m_DbgAssignedInlineConstants.resize(TotalInlineConstants);
-#endif
-
     VERIFY(!m_pResourceData, "Cache has already been initialized");
+
+    m_DynamicUBOSlotMask  = Attribs.DynamicUBOSlotMask;
+    m_DynamicSSBOSlotMask = Attribs.DynamicSSBOSlotMask;
+
+    const TResourceCount& ResCount = Attribs.ResCount;
+
+    // Count the total number of inline constants in range
+    Uint32 TotalInlineConstants = 0;
+    for (Uint32 i = 0; i < Attribs.NumInlineConstantBuffers; ++i)
+    {
+        const InlineConstantBufferAttribsGL& InlineCBAttribs = Attribs.pInlineConstantBuffers[i];
+        if (InlineCBAttribs.CacheOffset < ResCount[BINDING_RANGE_UNIFORM_BUFFER])
+            TotalInlineConstants += InlineCBAttribs.NumConstants;
+    }
+    VERIFY_EXPR(TotalInlineConstants == Attribs.DbgTotalInlineConstants);
+
+    m_HasInlineConstants = (TotalInlineConstants > 0);
 
     // clang-format off
     m_TexturesOffset  = static_cast<Uint16>(m_UBsOffset      + sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER]);
     m_ImagesOffset    = static_cast<Uint16>(m_TexturesOffset + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE]);
     m_SSBOsOffset     = static_cast<Uint16>(m_ImagesOffset   + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]);
-    m_MemoryEndOffset = static_cast<Uint16>(m_SSBOsOffset    + sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER]);
+    m_ResourceEndOffset = static_cast<Uint16>(m_SSBOsOffset    + sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER]);
 
     VERIFY_EXPR(GetUBCount()      == static_cast<Uint32>(ResCount[BINDING_RANGE_UNIFORM_BUFFER]));
     VERIFY_EXPR(GetTextureCount() == static_cast<Uint32>(ResCount[BINDING_RANGE_TEXTURE]));
@@ -77,16 +87,16 @@ void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAl
     VERIFY_EXPR(GetSSBOCount()    == static_cast<Uint32>(ResCount[BINDING_RANGE_STORAGE_BUFFER]));
     // clang-format on
 
-    // Inline constant data tail is after m_MemoryEndOffset
-    size_t BufferSize = m_MemoryEndOffset + TotalInlineConstants * sizeof(Uint32);
+    // Inline constant data tail is after m_ResourceEndOffset
+    size_t BufferSize = m_ResourceEndOffset + TotalInlineConstants * sizeof(Uint32);
 
     VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount, TotalInlineConstants));
 
     if (BufferSize > 0)
     {
         m_pResourceData = decltype(m_pResourceData){
-            ALLOCATE(MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize),
-            STDDeleter<Uint8, IMemoryAllocator>(MemAllocator) //
+            ALLOCATE(Attribs.MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize),
+            STDDeleter<Uint8, IMemoryAllocator>(Attribs.MemAllocator) //
         };
         memset(m_pResourceData.get(), 0, BufferSize);
     }
@@ -103,6 +113,26 @@ void ShaderResourceCacheGL::Initialize(const TResourceCount& ResCount, IMemoryAl
 
     for (Uint32 s = 0; s < GetSSBOCount(); ++s)
         new (&GetSSBO(s)) CachedSSBO;
+
+    // Initialize inline constant buffers
+    Uint32 InlineConstantOffset = 0;
+    for (Uint32 i = 0; i < Attribs.NumInlineConstantBuffers; ++i)
+    {
+        const InlineConstantBufferAttribsGL& InlineCBAttribs = Attribs.pInlineConstantBuffers[i];
+        if (InlineCBAttribs.CacheOffset < ResCount[BINDING_RANGE_UNIFORM_BUFFER])
+        {
+            CachedUB& UB           = GetUB(InlineCBAttribs.CacheOffset);
+            UB.pBuffer             = InlineCBAttribs.pBuffer;
+            UB.BaseOffset          = 0;
+            UB.RangeSize           = InlineCBAttribs.NumConstants * sizeof(Uint32);
+            UB.DynamicOffset       = 0;
+            UB.pInlineConstantData = reinterpret_cast<Uint32*>(m_pResourceData.get() + m_ResourceEndOffset) + InlineConstantOffset;
+
+            InlineConstantOffset += InlineCBAttribs.NumConstants;
+        }
+    }
+
+    VERIFY_EXPR(InlineConstantOffset == TotalInlineConstants);
 }
 
 ShaderResourceCacheGL::~ShaderResourceCacheGL()
@@ -121,10 +151,10 @@ ShaderResourceCacheGL::~ShaderResourceCacheGL()
         for (Uint32 s = 0; s < GetSSBOCount(); ++s)
             GetSSBO(s).~CachedSSBO();
 
-        m_TexturesOffset  = InvalidResourceOffset;
-        m_ImagesOffset    = InvalidResourceOffset;
-        m_SSBOsOffset     = InvalidResourceOffset;
-        m_MemoryEndOffset = InvalidResourceOffset;
+        m_TexturesOffset    = InvalidResourceOffset;
+        m_ImagesOffset      = InvalidResourceOffset;
+        m_SSBOsOffset       = InvalidResourceOffset;
+        m_ResourceEndOffset = InvalidResourceOffset;
     }
     m_pResourceData.reset();
 }
@@ -345,35 +375,6 @@ void ShaderResourceCacheGL::BindDynamicBuffers(GLContextState&              GLSt
     }
 }
 
-void ShaderResourceCacheGL::InitInlineConstantBuffer(Uint32                      CacheOffset,
-                                                     RefCntAutoPtr<BufferGLImpl> pBuffer,
-                                                     Uint32                      NumConstants,
-                                                     Uint32                      InlineConstantOffset)
-{
-    VERIFY_EXPR(pBuffer);
-    VERIFY_EXPR(m_HasInlineConstants);
-    VERIFY_EXPR(m_pResourceData);
-
-#ifdef DILIGENT_DEBUG
-    if (InlineConstantOffset != ~0u)
-    {
-        VERIFY(InlineConstantOffset + NumConstants <= m_DbgAssignedInlineConstants.size(), "Inline constant storage overflow");
-        for (Uint32 i = 0; i < NumConstants; ++i)
-        {
-            VERIFY(!m_DbgAssignedInlineConstants[InlineConstantOffset + i], "Inline constant storage at offset ", InlineConstantOffset + i, " has already been assigned");
-            m_DbgAssignedInlineConstants[InlineConstantOffset + i] = true;
-        }
-    }
-#endif
-
-    CachedUB& UB           = GetUB(CacheOffset);
-    UB.pBuffer             = std::move(pBuffer);
-    UB.BaseOffset          = 0;
-    UB.RangeSize           = NumConstants * sizeof(Uint32);
-    UB.DynamicOffset       = 0;
-    UB.pInlineConstantData = reinterpret_cast<Uint32*>(m_pResourceData.get() + m_MemoryEndOffset) + InlineConstantOffset;
-}
-
 void ShaderResourceCacheGL::CopyInlineConstants(const ShaderResourceCacheGL& SrcCache,
                                                 Uint32                       CacheOffset,
                                                 Uint32                       NumConstants)
@@ -409,14 +410,6 @@ void ShaderResourceCacheGL::DbgVerifyDynamicBufferMasks() const
         const CachedSSBO& SSBO    = GetConstSSBO(ssbo);
         const Uint64      SSBOBit = Uint64{1} << Uint64{ssbo};
         VERIFY(((m_DynamicSSBOMask & SSBOBit) != 0) == (SSBO.IsDynamic() && (m_DynamicSSBOSlotMask & SSBOBit) != 0), "Bit ", ssbo, " in m_DynamicSSBOMask is invalid");
-    }
-}
-
-void ShaderResourceCacheGL::DbgVerifyResourceInitialization() const
-{
-    for (bool InlineConstAssigned : m_DbgAssignedInlineConstants)
-    {
-        VERIFY(InlineConstAssigned, "Not all inline constant storage has been assigned. This is a bug.");
     }
 }
 #endif

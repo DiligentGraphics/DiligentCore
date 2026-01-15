@@ -158,7 +158,20 @@ public:
     using TResourceCount = std::array<Uint16, 4>; // same as PipelineResourceSignatureGLImpl::TBindings.
     static size_t GetRequiredMemorySize(const TResourceCount& ResCount, Uint32 TotalInlineConstants = 0);
 
-    void Initialize(const TResourceCount& Count, IMemoryAllocator& MemAllocator, Uint64 DynamicUBOSlotMask, Uint64 DynamicSSBOSlotMask, Uint32 TotalInlineConstants = 0);
+    struct InitAttribs
+    {
+        const TResourceCount&          ResCount;
+        IMemoryAllocator&              MemAllocator;
+        InlineConstantBufferAttribsGL* pInlineConstantBuffers   = nullptr;
+        Uint32                         NumInlineConstantBuffers = 0;
+        Uint64                         DynamicUBOSlotMask       = 0;
+        Uint64                         DynamicSSBOSlotMask      = 0;
+
+#ifdef DILIGENT_DEBUG
+        Uint32 DbgTotalInlineConstants = 0;
+#endif
+    };
+    void Initialize(const InitAttribs& Attribs);
 
     void SetUniformBuffer(Uint32 CacheOffset, RefCntAutoPtr<BufferGLImpl>&& pBuff, Uint64 BaseOffset, Uint64 RangeSize)
     {
@@ -299,10 +312,10 @@ public:
     }
 
     // clang-format off
-    Uint32 GetUBCount()      const { return (m_TexturesOffset  - m_UBsOffset)      / sizeof(CachedUB);            }
-    Uint32 GetTextureCount() const { return (m_ImagesOffset    - m_TexturesOffset) / sizeof(CachedResourceView);  }
-    Uint32 GetImageCount()   const { return (m_SSBOsOffset     - m_ImagesOffset)   / sizeof(CachedResourceView);  }
-    Uint32 GetSSBOCount()    const { return (m_MemoryEndOffset - m_SSBOsOffset)    / sizeof(CachedSSBO);          }
+    Uint32 GetUBCount()      const { return (m_TexturesOffset    - m_UBsOffset)      / sizeof(CachedUB);            }
+    Uint32 GetTextureCount() const { return (m_ImagesOffset      - m_TexturesOffset) / sizeof(CachedResourceView);  }
+    Uint32 GetImageCount()   const { return (m_SSBOsOffset       - m_ImagesOffset)   / sizeof(CachedResourceView);  }
+    Uint32 GetSSBOCount()    const { return (m_ResourceEndOffset - m_SSBOsOffset)    / sizeof(CachedSSBO);          }
     // clang-format on
 
     const CachedUB& GetConstUB(Uint32 CacheOffset) const
@@ -331,7 +344,7 @@ public:
 
     bool IsInitialized() const
     {
-        return m_MemoryEndOffset != InvalidResourceOffset;
+        return m_ResourceEndOffset != InvalidResourceOffset;
     }
 
     ResourceCacheContentType GetContentType() const { return m_ContentType; }
@@ -364,11 +377,6 @@ public:
         return m_HasInlineConstants;
     }
 
-    void InitInlineConstantBuffer(Uint32                      CacheOffset,
-                                  RefCntAutoPtr<BufferGLImpl> pBuffer,
-                                  Uint32                      NumConstants,
-                                  Uint32                      InlineConstantOffset);
-
     void SetInlineConstants(Uint32      CacheOffset,
                             const void* pConstants,
                             Uint32      FirstConstant,
@@ -389,7 +397,6 @@ public:
 
 #ifdef DILIGENT_DEBUG
     void DbgVerifyDynamicBufferMasks() const;
-    void DbgVerifyResourceInitialization() const;
 #endif
 
 private:
@@ -417,10 +424,10 @@ private:
     static constexpr const Uint16 InvalidResourceOffset = 0xFFFF;
     static constexpr const Uint16 m_UBsOffset           = 0;
 
-    Uint16 m_TexturesOffset  = InvalidResourceOffset;
-    Uint16 m_ImagesOffset    = InvalidResourceOffset;
-    Uint16 m_SSBOsOffset     = InvalidResourceOffset;
-    Uint16 m_MemoryEndOffset = InvalidResourceOffset;
+    Uint16 m_TexturesOffset    = InvalidResourceOffset;
+    Uint16 m_ImagesOffset      = InvalidResourceOffset;
+    Uint16 m_SSBOsOffset       = InvalidResourceOffset;
+    Uint16 m_ResourceEndOffset = InvalidResourceOffset;
 
     std::unique_ptr<Uint8, STDDeleter<Uint8, IMemoryAllocator>> m_pResourceData;
 
@@ -439,8 +446,7 @@ private:
     bool m_HasInlineConstants = false;
 
 #ifdef DILIGENT_DEVELOPMENT
-    bool              m_bStaticResourcesInitialized = false;
-    std::vector<bool> m_DbgAssignedInlineConstants;
+    bool m_bStaticResourcesInitialized = false;
 #endif
 };
 

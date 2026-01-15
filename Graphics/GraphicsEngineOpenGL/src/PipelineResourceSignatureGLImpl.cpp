@@ -224,37 +224,11 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
 
     if (m_pStaticResCache)
     {
-        m_pStaticResCache->Initialize(StaticResCounter, GetRawAllocator(), 0x0, 0x0, m_TotalStaticInlineConstants);
-
-        // Initialize inline constant buffers in the static cache.
-        // This allows static inline constants to be set on the signature and later copied to SRBs.
-        if (m_NumInlineConstantBuffers > 0)
-        {
-            Uint32 InlineConstantOffset = 0;
-            for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
-            {
-                const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBufferAttribs(i);
-                VERIFY_EXPR(InlineCBAttr.pBuffer);
-                VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
-
-                // Only initialize inline constant buffers that are within the static cache range.
-                // Mutable and dynamic inline constant buffers are not stored in the static cache.
-                if (InlineCBAttr.CacheOffset < StaticResCounter[BINDING_RANGE_UNIFORM_BUFFER])
-                {
-                    m_pStaticResCache->InitInlineConstantBuffer(
-                        InlineCBAttr.CacheOffset,
-                        InlineCBAttr.pBuffer,
-                        InlineCBAttr.NumConstants,
-                        InlineConstantOffset);
-
-                    InlineConstantOffset += InlineCBAttr.NumConstants;
-                }
-            }
-            VERIFY_EXPR(InlineConstantOffset == m_TotalStaticInlineConstants);
-        }
+        ShaderResourceCacheGL::InitAttribs CacheInitAttribs{StaticResCounter, GetRawAllocator(), m_pInlineConstantBuffers, m_NumInlineConstantBuffers};
 #ifdef DILIGENT_DEBUG
-        m_pStaticResCache->DbgVerifyResourceInitialization();
+        CacheInitAttribs.DbgTotalInlineConstants = m_TotalStaticInlineConstants;
 #endif
+        m_pStaticResCache->Initialize(CacheInitAttribs);
     }
 }
 
@@ -606,34 +580,18 @@ void PipelineResourceSignatureGLImpl::UpdateInlineConstantBuffers(const ShaderRe
 
 void PipelineResourceSignatureGLImpl::InitSRBResourceCache(ShaderResourceCacheGL& ResourceCache)
 {
-    ResourceCache.Initialize(m_BindingCount, m_SRBMemAllocator.GetResourceCacheDataAllocator(0), m_DynamicUBOMask, m_DynamicSSBOMask, m_TotalInlineConstants);
-
-    // Initialize inline constant buffers.
-    // Each inline constant buffer shares a single dynamic UBO created in CreateLayout().
-    // The staging data is stored contiguously at the tail of the resource cache memory.
-    if (m_NumInlineConstantBuffers > 0)
-    {
-        // Inline constant data starts at m_MemoryEndOffset in the cache
-        Uint32 InlineConstantOffset = 0;
-        for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
-        {
-            const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBufferAttribs(i);
-            VERIFY_EXPR(InlineCBAttr.pBuffer);
-            VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
-
-            ResourceCache.InitInlineConstantBuffer(
-                InlineCBAttr.CacheOffset,
-                InlineCBAttr.pBuffer,
-                InlineCBAttr.NumConstants,
-                InlineConstantOffset);
-
-            InlineConstantOffset += InlineCBAttr.NumConstants;
-        }
-        VERIFY_EXPR(InlineConstantOffset == m_TotalInlineConstants);
-    }
+    ShaderResourceCacheGL::InitAttribs CacheInitAttribs{
+        m_BindingCount,
+        m_SRBMemAllocator.GetResourceCacheDataAllocator(0),
+        m_pInlineConstantBuffers,
+        m_NumInlineConstantBuffers,
+    };
+    CacheInitAttribs.DynamicUBOSlotMask  = m_DynamicUBOMask;
+    CacheInitAttribs.DynamicSSBOSlotMask = m_DynamicSSBOMask;
 #ifdef DILIGENT_DEBUG
-    ResourceCache.DbgVerifyResourceInitialization();
+    CacheInitAttribs.DbgTotalInlineConstants = m_TotalInlineConstants;
 #endif
+    ResourceCache.Initialize(CacheInitAttribs);
 
     // Initialize immutable samplers
     for (Uint32 r = 0; r < m_Desc.NumResources; ++r)
