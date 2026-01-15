@@ -196,7 +196,7 @@ public:
 
     bool HasInlineConstants() const
     {
-        return m_HasInlineConstants;
+        return m_pInlineConstantData != nullptr;
     }
 
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
@@ -257,9 +257,6 @@ private:
 
     // Indicates what types of resources are stored in the cache
     const Uint32 m_ContentType : 1;
-
-    // Indicates if this cache has inline constants
-    bool m_HasInlineConstants = false;
 
     // Pointer to the start of inline constant staging data in the memory tail
     Uint32* m_pInlineConstantData = nullptr;

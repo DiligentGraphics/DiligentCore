@@ -111,9 +111,6 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
     m_DbgAssignedInlineConstants.resize(TotalInlineConstants);
 #endif
 
-    // Set flag indicating whether this cache has inline constants
-    m_HasInlineConstants = (TotalInlineConstants > 0);
-
     if (MemorySize > 0)
     {
         m_pMemory = decltype(m_pMemory){
@@ -618,7 +615,6 @@ void ShaderResourceCacheWebGPU::InitInlineConstantBuffer(Uint32         BindGrou
                                                          Uint32         NumConstants,
                                                          Uint32         InlineConstantOffset)
 {
-    VERIFY_EXPR(m_HasInlineConstants);
     VERIFY_EXPR(m_pInlineConstantData != nullptr);
     VERIFY_EXPR(pBuffer != nullptr);
 
