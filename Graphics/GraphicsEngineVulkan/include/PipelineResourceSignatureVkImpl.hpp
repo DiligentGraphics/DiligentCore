@@ -183,11 +183,6 @@ public:
 
     PipelineResourceSignatureInternalDataVk GetInternalData() const;
 
-    bool HasInlineConstants() const
-    {
-        return m_NumInlineConstantBuffers != 0;
-    }
-
 private:
     // Resource cache group identifier
     enum CACHE_GROUP : size_t

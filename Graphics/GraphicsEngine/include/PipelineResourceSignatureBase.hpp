@@ -692,6 +692,11 @@ public:
         return m_pInlineConstantBuffers[Index];
     }
 
+    bool HasInlineConstants() const
+    {
+        return m_NumInlineConstantBuffers > 0;
+    }
+
     static bool SignaturesCompatible(const PipelineResourceSignatureImplType* pSign0,
                                      const PipelineResourceSignatureImplType* pSign1)
     {
