@@ -138,7 +138,6 @@ private:
     std::array<Uint16, NumShaderTypes> m_DynamicCBSlotsMask{};
     static_assert(sizeof(m_DynamicCBSlotsMask[0]) * 8 >= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, "Not enough bits for all dynamic buffer slots");
 
-    Uint32                                              m_NumInlineConstantBuffers = 0;
     std::unique_ptr<InlineConstantBufferAttribsD3D11[]> m_InlineConstantBuffers;
 };
 

@@ -766,6 +766,36 @@ private:
             m_ShaderStages |= ResDesc.ShaderStages;
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
                 m_StaticResShaderStages |= ResDesc.ShaderStages;
+
+            // Count the number of inline constant buffers and inline constants.
+            if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+            {
+                VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can have INLINE_CONSTANTS flag");
+
+                static constexpr Uint32 MaxInlineConstantBuffers = std::numeric_limits<decltype(m_NumInlineConstantBuffers)>::max();
+                VERIFY(m_NumInlineConstantBuffers < MaxInlineConstantBuffers,
+                       "Number of inline constant buffers (", Uint32{m_NumInlineConstantBuffers} + 1,
+                       ") exceeds the maximum storable value (", MaxInlineConstantBuffers,
+                       "). Do you really need ", Uint32{m_NumInlineConstantBuffers} + 1, " inline constant buffers?");
+                ++m_NumInlineConstantBuffers;
+
+                static constexpr Uint32 MaxStorableInlineConstants = std::numeric_limits<decltype(m_TotalInlineConstants)>::max();
+                static_assert(MaxStorableInlineConstants >= MAX_INLINE_CONSTANTS, "MaxStorableInlineConstants is less than MAX_INLINE_CONSTANTS");
+
+                VERIFY(Uint32{m_TotalInlineConstants} + ResDesc.ArraySize <= MAX_INLINE_CONSTANTS,
+                       "Total number of inline constants exceeds the maximum (", MAX_INLINE_CONSTANTS,
+                       "). This error should have been caught in ValidatePipelineResourceSignatureDesc().");
+                VERIFY(Uint32{m_TotalInlineConstants} + ResDesc.ArraySize <= MaxStorableInlineConstants,
+                       "Total number of inline constants (", Uint32{m_TotalInlineConstants} + ResDesc.ArraySize,
+                       ") exceeds the maximum storable value (", MaxStorableInlineConstants, ").");
+                m_TotalInlineConstants += static_cast<decltype(m_TotalInlineConstants)>(ResDesc.ArraySize);
+
+                if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
+                {
+                    ++m_NumStaticInlineConstantBuffers;
+                    m_TotalStaticInlineConstants += static_cast<decltype(m_TotalStaticInlineConstants)>(ResDesc.ArraySize);
+                }
+            }
         }
 
         if (m_ShaderStages != SHADER_TYPE_UNKNOWN)
@@ -1097,6 +1127,18 @@ protected:
 
     // Resource offsets (e.g. index of the first resource), for each variable type.
     std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_ResourceOffsets = {};
+
+    // The number of inline constant buffers (constant buffers with PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS flag)
+    Uint16 m_NumInlineConstantBuffers = 0;
+
+    // The number of static inline constant buffers
+    Uint16 m_NumStaticInlineConstantBuffers = 0;
+
+    // The total number of inline constants (32-bit values) in all inline constant buffers
+    Uint16 m_TotalInlineConstants = 0;
+
+    // The total number of inline constants (32-bit values) in static inline constant buffers
+    Uint16 m_TotalStaticInlineConstants = 0;
 
     // Shader stages that have resources.
     SHADER_TYPE m_ShaderStages = SHADER_TYPE_UNKNOWN;

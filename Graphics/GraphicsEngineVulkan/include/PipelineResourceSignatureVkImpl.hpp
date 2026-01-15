@@ -232,12 +232,6 @@ private:
     // accounting for array size.
     Uint16 m_DynamicStorageBufferCount = 0;
 
-    // Number of inline constant buffers
-    Uint16 m_NumInlineConstantBuffers = 0;
-
-    // The total number of inline constants (32-bit values) in all inline constant buffers
-    Uint16 m_TotalInlineConstants = 0;
-
     // Inline constant buffer attributes
     std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBuffers;
 };

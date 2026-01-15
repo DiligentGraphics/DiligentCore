@@ -71,6 +71,7 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
         LOG_PRS_ERROR_AND_THROW("Desc.UseCombinedTextureSamplers is true, but Desc.CombinedSamplerSuffix is null or empty");
 
 
+    Uint32 TotalInlineConstantValues = 0;
     // Hash map of all resources by name
     std::unordered_multimap<HashMapStringKey, const PipelineResourceDesc&> Resources;
     for (Uint32 i = 0; i < Desc.NumResources; ++i)
@@ -131,6 +132,13 @@ void ValidatePipelineResourceSignatureDesc(const PipelineResourceSignatureDesc& 
             {
                 LOG_PRS_ERROR_AND_THROW("Desc.Resources[", i, "].ArraySize (", Res.ArraySize,
                                         ") exceeds the maximum allowed value (", MAX_INLINE_CONSTANTS, ") for inline constants.");
+            }
+
+            TotalInlineConstantValues += Res.ArraySize;
+            if (TotalInlineConstantValues > MAX_INLINE_CONSTANTS)
+            {
+                LOG_PRS_ERROR_AND_THROW("Total number of inline constant values in the resource signature (", TotalInlineConstantValues,
+                                        ") exceeds the maximum allowed value (", MAX_INLINE_CONSTANTS, ").");
             }
         }
 

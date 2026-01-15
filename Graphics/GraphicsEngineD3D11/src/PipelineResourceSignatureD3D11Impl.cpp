@@ -153,12 +153,6 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
                 DstImtblSampAttribs.ArraySize = std::max(DstImtblSampAttribs.ArraySize, ResDesc.ArraySize);
             }
         }
-
-        if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-        {
-            VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can have INLINE_CONSTANTS flag");
-            ++m_NumInlineConstantBuffers;
-        }
     }
 
     if (m_NumInlineConstantBuffers > 0)

@@ -106,25 +106,13 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
 
 void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
 {
-    // Count inline constant buffers
-    for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
-    {
-        const PipelineResourceDesc& ResDesc = m_Desc.Resources[i];
-        if (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-        {
-            VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can have INLINE_CONSTANTS flag");
-            ++m_NumInlineConstantBuffers;
-        }
-    }
-
     if (m_NumInlineConstantBuffers > 0)
     {
         m_InlineConstantBuffers = std::make_unique<InlineConstantBufferAttribsGL[]>(m_NumInlineConstantBuffers);
     }
 
-    TBindings StaticResCounter         = {};
-    Uint16    NumStaticInlineConstants = 0;
-    Uint32    InlineConstantBufferIdx  = 0;
+    TBindings StaticResCounter        = {};
+    Uint32    InlineConstantBufferIdx = 0;
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
     {
         const PipelineResourceDesc& ResDesc = m_Desc.Resources[i];
@@ -224,13 +212,6 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
                 // However, this will increase memory consumption as each SRB will have its own copy of the inline CB.
                 // Besides, inline constants are expected to change frequently, so skipping updates is unlikely.
                 InlineCBAttribs.pBuffer = CreateInlineConstantBuffer(ResDesc.Name, ResDesc.ArraySize);
-
-                m_TotalInlineConstants += static_cast<Uint16>(ResDesc.ArraySize);
-
-                if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
-                {
-                    NumStaticInlineConstants += static_cast<Uint16>(ResDesc.ArraySize);
-                }
             }
 
             VERIFY(CacheOffset + ArraySize <= std::numeric_limits<TBindings::value_type>::max(), "Cache offset exceeds representable range");
@@ -248,7 +229,7 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
 
     if (m_pStaticResCache)
     {
-        m_pStaticResCache->Initialize(StaticResCounter, GetRawAllocator(), 0x0, 0x0, NumStaticInlineConstants);
+        m_pStaticResCache->Initialize(StaticResCounter, GetRawAllocator(), 0x0, 0x0, m_TotalStaticInlineConstants);
 
         // Initialize inline constant buffers in the static cache.
         // This allows static inline constants to be set on the signature and later copied to SRBs.
@@ -274,7 +255,7 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
                     InlineConstantOffset += InlineCBAttr.NumConstants;
                 }
             }
-            VERIFY_EXPR(InlineConstantOffset == NumStaticInlineConstants);
+            VERIFY_EXPR(InlineConstantOffset == m_TotalStaticInlineConstants);
         }
 #ifdef DILIGENT_DEBUG
         m_pStaticResCache->DbgVerifyResourceInitialization();

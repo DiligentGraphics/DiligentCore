@@ -179,12 +179,6 @@ private:
     // Indicates which SSBO slots allow binding buffers with dynamic offsets
     Uint64 m_DynamicSSBOMask = 0;
 
-    // Number of inline constant buffers
-    Uint16 m_NumInlineConstantBuffers = 0;
-
-    // The total number of inline constants (32-bit values) in all inline constant buffers
-    Uint16 m_TotalInlineConstants = 0;
-
     // Inline constant buffer attributes
     std::unique_ptr<InlineConstantBufferAttribsGL[]> m_InlineConstantBuffers;
 };
