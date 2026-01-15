@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -91,6 +91,10 @@ public:
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsD3D12, 8, "The struct is used in serialization and must be tightly packed");
 
+struct InlineConstantBufferAttribsD3D12
+{
+    Uint8 Dummy = 0;
+};
 
 struct PipelineResourceSignatureInternalDataD3D12 : PipelineResourceSignatureInternalData<PipelineResourceAttribsD3D12, ImmutableSamplerAttribsD3D12>
 {

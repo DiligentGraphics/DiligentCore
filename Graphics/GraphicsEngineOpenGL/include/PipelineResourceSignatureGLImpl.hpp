@@ -165,12 +165,6 @@ public:
 private:
     void CreateLayout(bool IsSerialized);
 
-    const InlineConstantBufferAttribsGL& GetInlineConstantBuffer(Uint32 Index) const
-    {
-        VERIFY_EXPR(Index < m_NumInlineConstantBuffers);
-        return m_InlineConstantBuffers[Index];
-    }
-
 private:
     TBindings m_BindingCount = {};
 
@@ -178,9 +172,6 @@ private:
     Uint64 m_DynamicUBOMask = 0;
     // Indicates which SSBO slots allow binding buffers with dynamic offsets
     Uint64 m_DynamicSSBOMask = 0;
-
-    // Inline constant buffer attributes
-    std::unique_ptr<InlineConstantBufferAttribsGL[]> m_InlineConstantBuffers;
 };
 
 } // namespace Diligent

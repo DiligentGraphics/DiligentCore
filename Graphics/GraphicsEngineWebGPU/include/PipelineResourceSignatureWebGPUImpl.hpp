@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2024 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -64,6 +64,11 @@ public:
     bool IsAllocated() const { return BindingIndex != ~0u; }
 };
 ASSERT_SIZEOF(ImmutableSamplerAttribsWebGPU, 16, "The struct is used in serialization and must be tightly packed");
+
+struct InlineConstantBufferAttribsWebGPU
+{
+    Uint8 Dummy = 0;
+};
 
 struct PipelineResourceSignatureInternalDataWebGPU : PipelineResourceSignatureInternalData<PipelineResourceAttribsWebGPU, ImmutableSamplerAttribsWebGPU>
 {

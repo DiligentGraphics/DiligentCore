@@ -106,11 +106,6 @@ PipelineResourceSignatureGLImpl::PipelineResourceSignatureGLImpl(IReferenceCount
 
 void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
 {
-    if (m_NumInlineConstantBuffers > 0)
-    {
-        m_InlineConstantBuffers = std::make_unique<InlineConstantBufferAttribsGL[]>(m_NumInlineConstantBuffers);
-    }
-
     TBindings StaticResCounter        = {};
     Uint32    InlineConstantBufferIdx = 0;
     for (Uint32 i = 0; i < m_Desc.NumResources; ++i)
@@ -202,7 +197,7 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
                 // It is updated by UpdateInlineConstantBuffers() method.
 
                 VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can have INLINE_CONSTANTS flag");
-                InlineConstantBufferAttribsGL& InlineCBAttribs{m_InlineConstantBuffers[InlineConstantBufferIdx++]};
+                InlineConstantBufferAttribsGL& InlineCBAttribs{m_pInlineConstantBuffers[InlineConstantBufferIdx++]};
                 InlineCBAttribs.CacheOffset  = CacheOffset;
                 InlineCBAttribs.NumConstants = ResDesc.ArraySize;
 
@@ -238,7 +233,7 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
             Uint32 InlineConstantOffset = 0;
             for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
             {
-                const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBuffer(i);
+                const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBufferAttribs(i);
                 VERIFY_EXPR(InlineCBAttr.pBuffer);
                 VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
 
@@ -585,7 +580,7 @@ void PipelineResourceSignatureGLImpl::UpdateInlineConstantBuffers(const ShaderRe
 {
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
-        const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBuffer(i);
+        const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBufferAttribs(i);
 
         const ShaderResourceCacheGL::CachedUB& InlineCB = ResourceCache.GetConstUB(InlineCBAttr.CacheOffset);
         VERIFY(InlineCBAttr.NumConstants * sizeof(Uint32) == InlineCB.RangeSize, "Inline constant buffer size mismatch");
@@ -622,7 +617,7 @@ void PipelineResourceSignatureGLImpl::InitSRBResourceCache(ShaderResourceCacheGL
         Uint32 InlineConstantOffset = 0;
         for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
         {
-            const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBuffer(i);
+            const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBufferAttribs(i);
             VERIFY_EXPR(InlineCBAttr.pBuffer);
             VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
 

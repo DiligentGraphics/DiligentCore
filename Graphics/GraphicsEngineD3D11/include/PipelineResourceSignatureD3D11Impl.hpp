@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -137,8 +137,6 @@ private:
     // Indicates which constant buffer slots are allowed to contain buffers with dynamic offsets.
     std::array<Uint16, NumShaderTypes> m_DynamicCBSlotsMask{};
     static_assert(sizeof(m_DynamicCBSlotsMask[0]) * 8 >= D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT, "Not enough bits for all dynamic buffer slots");
-
-    std::unique_ptr<InlineConstantBufferAttribsD3D11[]> m_InlineConstantBuffers;
 };
 
 } // namespace Diligent

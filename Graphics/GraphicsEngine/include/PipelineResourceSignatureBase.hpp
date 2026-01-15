@@ -349,6 +349,9 @@ public:
     // Immutable sampler attribs type (ImmutableSamplerAttribsD3D12, ImmutableSamplerAttribsVk, etc.)
     using ImmutableSamplerAttribsType = typename EngineImplTraits::ImmutableSamplerAttribsType;
 
+    // Inline constant buffer attribs type (InlineConstantBufferAttribsD3D12, InlineConstantBufferAttribsVk, etc.)
+    using InlineConstantBufferAttribsType = typename EngineImplTraits::InlineConstantBufferAttribsType;
+
     // Pipeline resource signature internal data type (PipelineResourceSignatureInternalDataD3D12, PipelineResourceSignatureInternalDataVk, etc.)
     using PipelineResourceSignatureInternalDataType = typename EngineImplTraits::PipelineResourceSignatureInternalDataType;
 
@@ -683,6 +686,12 @@ public:
         return m_pImmutableSamplerAttribs[SampIndex];
     }
 
+    const InlineConstantBufferAttribsType& GetInlineConstantBufferAttribs(Uint32 Index) const
+    {
+        VERIFY_EXPR(Index < this->m_NumInlineConstantBuffers);
+        return m_pInlineConstantBuffers[Index];
+    }
+
     static bool SignaturesCompatible(const PipelineResourceSignatureImplType* pSign0,
                                      const PipelineResourceSignatureImplType* pSign1)
     {
@@ -847,6 +856,11 @@ protected:
             Allocator.AddSpace<RefCntAutoPtr<SamplerImplType>>(Desc.NumImmutableSamplers);
         }
 
+        if (m_NumInlineConstantBuffers > 0)
+        {
+            Allocator.AddSpace<InlineConstantBufferAttribsType>(m_NumInlineConstantBuffers);
+        }
+
         Allocator.Reserve();
         // The memory is now owned by PipelineResourceSignatureBase and will be freed by Destruct().
         m_pRawMemory = decltype(m_pRawMemory){Allocator.ReleaseOwnership(), STDDeleterRawMem<void>{RawAllocator}};
@@ -896,6 +910,11 @@ protected:
                     VERIFY_EXPR(pSampler);
                 }
             }
+        }
+
+        if (m_NumInlineConstantBuffers > 0)
+        {
+            m_pInlineConstantBuffers = Allocator.ConstructArray<InlineConstantBufferAttribsType>(m_NumInlineConstantBuffers);
         }
 
         InitResourceLayout();
@@ -1039,6 +1058,14 @@ protected:
         {
             for (size_t i = 0; i < this->m_Desc.NumImmutableSamplers; ++i)
                 m_pImmutableSamplers[i].~RefCntAutoPtr<SamplerImplType>();
+            m_pImmutableSamplers = nullptr;
+        }
+
+        if (m_pInlineConstantBuffers != nullptr)
+        {
+            for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
+                m_pInlineConstantBuffers[i].~InlineConstantBufferAttribsType();
+            m_pInlineConstantBuffers = nullptr;
         }
 
         m_pRawMemory.reset();
@@ -1116,6 +1143,9 @@ protected:
 
     // Immutable samplers
     RefCntAutoPtr<SamplerImplType>* m_pImmutableSamplers = nullptr; // [m_Desc.NumImmutableSamplers]
+
+    // Inline constant buffer attributes
+    InlineConstantBufferAttribsType* m_pInlineConstantBuffers = nullptr; // [m_NumInlineConstantBuffers]
 
     // Static resource cache for all static resources
     ShaderResourceCacheImplType* m_pStaticResCache = nullptr;

@@ -231,9 +231,6 @@ private:
     // The total number storage buffers with dynamic offsets in both descriptor sets,
     // accounting for array size.
     Uint16 m_DynamicStorageBufferCount = 0;
-
-    // Inline constant buffer attributes
-    std::unique_ptr<InlineConstantBufferAttribsVk[]> m_InlineConstantBuffers;
 };
 
 template <> Uint32 PipelineResourceSignatureVkImpl::GetDescriptorSetIndex<PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE>() const;

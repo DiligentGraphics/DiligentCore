@@ -78,7 +78,7 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
             },
             [this]() //
             {
-                return ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters, m_InlineConstantBuffers.get(), m_NumInlineConstantBuffers);
+                return ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters, m_pInlineConstantBuffers, m_NumInlineConstantBuffers);
             });
     }
     catch (...)
@@ -153,11 +153,6 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
                 DstImtblSampAttribs.ArraySize = std::max(DstImtblSampAttribs.ArraySize, ResDesc.ArraySize);
             }
         }
-    }
-
-    if (m_NumInlineConstantBuffers > 0)
-    {
-        m_InlineConstantBuffers = std::make_unique<InlineConstantBufferAttribsD3D11[]>(m_NumInlineConstantBuffers);
     }
 
     // Allocate registers for immutable samplers first
@@ -246,7 +241,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
                 // It is updated by UpdateInlineConstantBuffers() method.
 
                 VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER, "Only constant buffers can have INLINE_CONSTANTS flag");
-                InlineConstantBufferAttribsD3D11& InlineCBAttribs{m_InlineConstantBuffers[InlineConstantBufferIdx++]};
+                InlineConstantBufferAttribsD3D11& InlineCBAttribs{m_pInlineConstantBuffers[InlineConstantBufferIdx++]};
                 InlineCBAttribs.BindPoints   = BindPoints;
                 InlineCBAttribs.NumConstants = ResDesc.ArraySize;
 
@@ -288,7 +283,7 @@ void PipelineResourceSignatureD3D11Impl::CreateLayout(const bool IsSerialized)
 
     if (m_pStaticResCache)
     {
-        m_pStaticResCache->Initialize(StaticResCounters, GetRawAllocator(), nullptr, m_InlineConstantBuffers.get(), m_NumInlineConstantBuffers);
+        m_pStaticResCache->Initialize(StaticResCounters, GetRawAllocator(), nullptr, m_pInlineConstantBuffers, m_NumInlineConstantBuffers);
         VERIFY_EXPR(m_pStaticResCache->IsInitialized());
     }
 }
@@ -394,7 +389,7 @@ void PipelineResourceSignatureD3D11Impl::CopyStaticResources(ShaderResourceCache
 void PipelineResourceSignatureD3D11Impl::InitSRBResourceCache(ShaderResourceCacheD3D11& ResourceCache)
 {
     ResourceCache.Initialize(m_ResourceCounters, m_SRBMemAllocator.GetResourceCacheDataAllocator(0), &m_DynamicCBSlotsMask,
-                             m_InlineConstantBuffers.get(), m_NumInlineConstantBuffers);
+                             m_pInlineConstantBuffers, m_NumInlineConstantBuffers);
     VERIFY_EXPR(ResourceCache.IsInitialized());
 
     // Copy immutable samplers.
@@ -491,7 +486,7 @@ void PipelineResourceSignatureD3D11Impl::UpdateInlineConstantBuffers(const Shade
 {
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
-        const InlineConstantBufferAttribsD3D11& InlineCBAttr = m_InlineConstantBuffers[i];
+        const InlineConstantBufferAttribsD3D11& InlineCBAttr = GetInlineConstantBufferAttribs(i);
 
         ID3D11Buffer*                             pd3d11CB = nullptr;
         const ShaderResourceCacheD3D11::CachedCB& InlineCB = ResourceCache.GetResource<D3D11_RESOURCE_RANGE_CBV>(InlineCBAttr.BindPoints, &pd3d11CB);
@@ -632,7 +627,7 @@ PipelineResourceSignatureD3D11Impl::PipelineResourceSignatureD3D11Impl(IReferenc
             },
             [this]() //
             {
-                return ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters, m_InlineConstantBuffers.get(), m_NumInlineConstantBuffers);
+                return ShaderResourceCacheD3D11::GetRequiredMemorySize(m_ResourceCounters, m_pInlineConstantBuffers, m_NumInlineConstantBuffers);
             });
     }
     catch (...)

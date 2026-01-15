@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -85,6 +85,7 @@ class ShaderVariableManagerD3D12;
 
 struct PipelineResourceAttribsD3D12;
 struct ImmutableSamplerAttribsD3D12;
+struct InlineConstantBufferAttribsD3D12;
 struct PipelineResourceSignatureInternalDataD3D12;
 
 struct EngineD3D12ImplTraits
@@ -144,6 +145,7 @@ struct EngineD3D12ImplTraits
 
     using PipelineResourceAttribsType               = PipelineResourceAttribsD3D12;
     using ImmutableSamplerAttribsType               = ImmutableSamplerAttribsD3D12;
+    using InlineConstantBufferAttribsType           = InlineConstantBufferAttribsD3D12;
     using PipelineResourceSignatureInternalDataType = PipelineResourceSignatureInternalDataD3D12;
 };
 

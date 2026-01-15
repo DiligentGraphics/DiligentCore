@@ -203,12 +203,6 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         m_pStaticResCache->InitializeSets(GetRawAllocator(), 1, &StaticResourceCount, m_TotalStaticInlineConstants);
     }
 
-    // Allocate inline constant buffer attributes array
-    if (m_NumInlineConstantBuffers > 0)
-    {
-        m_InlineConstantBuffers = std::make_unique<InlineConstantBufferAttribsVk[]>(m_NumInlineConstantBuffers);
-    }
-
     // Descriptor set mapping (static/mutable (0) or dynamic (1) -> set index)
     std::array<Uint32, DESCRIPTOR_SET_ID_NUM_SETS> DSMapping = {};
     {
@@ -383,7 +377,7 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             VERIFY(ResDesc.ResourceType == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
                    "Only constant buffers can have INLINE_CONSTANTS flag");
 
-            InlineConstantBufferAttribsVk& InlineCBAttribs = m_InlineConstantBuffers[InlineConstantBufferIdx++];
+            InlineConstantBufferAttribsVk& InlineCBAttribs = m_pInlineConstantBuffers[InlineConstantBufferIdx++];
             InlineCBAttribs.ResIndex                       = i; // Resource index for unique identification
             InlineCBAttribs.DescrSet                       = pAttribs->DescrSet;
             InlineCBAttribs.BindingIndex                   = pAttribs->BindingIndex;
@@ -545,11 +539,6 @@ void PipelineResourceSignatureVkImpl::Destruct()
             GetDevice()->SafeReleaseDeviceObject(std::move(Layout), ~0ull);
     }
 
-    // Release shared inline constant buffers before base class Destruct.
-    // Each InlineConstantBufferAttribsVk::pBuffer holds a RefCntAutoPtr to the shared buffer.
-    m_InlineConstantBuffers.reset();
-    m_NumInlineConstantBuffers = 0;
-
     TPipelineResourceSignatureBase::Destruct();
 }
 
@@ -609,7 +598,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
     // Push constant selection is deferred to PSO creation - all inline constants get buffers bound here.
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
-        const InlineConstantBufferAttribsVk& InlineCBAttr = m_InlineConstantBuffers[i];
+        const InlineConstantBufferAttribsVk& InlineCBAttr = GetInlineConstantBufferAttribs(i);
         VERIFY_EXPR(InlineCBAttr.pBuffer);
 
         // Use ResIndex to access the resource attributes
@@ -1113,7 +1102,7 @@ void PipelineResourceSignatureVkImpl::CommitInlineConstants(const CommitInlineCo
            "Inline constants can only be committed from SRB resource cache");
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
-        const InlineConstantBufferAttribsVk& InlineCBAttr        = m_InlineConstantBuffers[i];
+        const InlineConstantBufferAttribsVk& InlineCBAttr        = GetInlineConstantBufferAttribs(i);
         const Uint32                         DataSize            = InlineCBAttr.NumConstants * sizeof(Uint32);
         const void*                          pInlineConstantData = ResourceCache.GetInlineConstantData(InlineCBAttr.DescrSet, InlineCBAttr.SRBCacheOffset);
         VERIFY_EXPR(pInlineConstantData != nullptr);

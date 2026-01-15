@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,6 +79,7 @@ class ShaderVariableManagerGL;
 
 struct PipelineResourceAttribsGL;
 struct ImmutableSamplerAttribsGL;
+struct InlineConstantBufferAttribsGL;
 struct PipelineResourceSignatureInternalDataGL;
 
 struct EngineGLImplTraits
@@ -136,6 +137,7 @@ struct EngineGLImplTraits
 
     using PipelineResourceAttribsType               = PipelineResourceAttribsGL;
     using ImmutableSamplerAttribsType               = ImmutableSamplerAttribsGL;
+    using InlineConstantBufferAttribsType           = InlineConstantBufferAttribsGL;
     using PipelineResourceSignatureInternalDataType = PipelineResourceSignatureInternalDataGL;
 };
 

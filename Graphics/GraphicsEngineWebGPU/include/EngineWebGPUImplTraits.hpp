@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -81,6 +81,7 @@ class ShaderVariableManagerWebGPU;
 
 struct PipelineResourceAttribsWebGPU;
 struct ImmutableSamplerAttribsWebGPU;
+struct InlineConstantBufferAttribsWebGPU;
 struct PipelineResourceSignatureInternalDataWebGPU;
 
 struct EngineWebGPUImplTraits
@@ -135,6 +136,7 @@ struct EngineWebGPUImplTraits
 
     using PipelineResourceAttribsType               = PipelineResourceAttribsWebGPU;
     using ImmutableSamplerAttribsType               = ImmutableSamplerAttribsWebGPU;
+    using InlineConstantBufferAttribsType           = InlineConstantBufferAttribsWebGPU;
     using PipelineResourceSignatureInternalDataType = PipelineResourceSignatureInternalDataWebGPU;
 };
 
