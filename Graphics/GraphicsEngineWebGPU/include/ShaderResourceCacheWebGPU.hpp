@@ -262,9 +262,6 @@ private:
     Uint32* m_pInlineConstantData = nullptr;
 
 public:
-    // Initializes an inline constant buffer resource in the cache
-    void InitInlineConstantBuffer(Uint32 BindGroupIdx, Uint32 CacheOffset, IDeviceObject* pBuffer, Uint32 NumConstants, Uint32 InlineConstantOffset);
-
     // Writes inline constant data to the staging buffer
     void SetInlineConstants(Uint32 BindGroupIdx, Uint32 CacheOffset, const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants);
 

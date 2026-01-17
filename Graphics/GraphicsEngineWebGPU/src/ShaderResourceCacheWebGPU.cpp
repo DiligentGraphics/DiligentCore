@@ -609,30 +609,6 @@ void ShaderResourceCacheWebGPU::DbgVerifyDynamicBuffersCounter() const
 }
 #endif
 
-void ShaderResourceCacheWebGPU::InitInlineConstantBuffer(Uint32         BindGroupIdx,
-                                                         Uint32         CacheOffset,
-                                                         IDeviceObject* pBuffer,
-                                                         Uint32         NumConstants,
-                                                         Uint32         InlineConstantOffset)
-{
-    VERIFY_EXPR(m_pInlineConstantData != nullptr);
-    VERIFY_EXPR(pBuffer != nullptr);
-
-    BindGroup& Group = GetBindGroup(BindGroupIdx);
-    Resource&  Res   = Group.GetResource(CacheOffset);
-
-    VERIFY_EXPR(Res.Type == BindGroupEntryType::UniformBuffer ||
-                Res.Type == BindGroupEntryType::UniformBufferDynamic);
-
-    // Inline constant staging pointer must be initialized in InitializeResources().
-    VERIFY_EXPR(Res.pInlineConstantData == static_cast<void*>(m_pInlineConstantData + InlineConstantOffset));
-
-    // Bind the emulation buffer as a uniform buffer
-    // Use full buffer size (NumConstants * sizeof(Uint32))
-    RefCntAutoPtr<IDeviceObject> pBufferRef{pBuffer};
-    SetResource(BindGroupIdx, CacheOffset, std::move(pBufferRef), 0, NumConstants * sizeof(Uint32));
-}
-
 void ShaderResourceCacheWebGPU::SetInlineConstants(Uint32      BindGroupIdx,
                                                    Uint32      CacheOffset,
                                                    const void* pConstants,

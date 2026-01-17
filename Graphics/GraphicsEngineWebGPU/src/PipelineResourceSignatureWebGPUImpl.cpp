@@ -770,27 +770,19 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
     VERIFY_EXPR(InlineConstantOffset == m_TotalInlineConstants);
 
     // Initialize inline constant buffers.
-    // Each inline constant buffer shares a single dynamic UBO created in CreateBindGroupLayouts().
-    // The staging data is stored contiguously at the tail of the resource cache memory.
-    if (m_NumInlineConstantBuffers > 0)
+    for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
-        InlineConstantOffset = 0;
-        for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
-        {
-            const InlineConstantBufferAttribsWebGPU& InlineCBAttr = GetInlineConstantBufferAttribs(i);
-            VERIFY_EXPR(InlineCBAttr.pBuffer);
-            VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
-
-            ResourceCache.InitInlineConstantBuffer(
-                InlineCBAttr.BindGroup,
-                InlineCBAttr.CacheOffset,
-                InlineCBAttr.pBuffer,
-                InlineCBAttr.NumConstants,
-                InlineConstantOffset);
-
-            InlineConstantOffset += InlineCBAttr.NumConstants;
-        }
-        VERIFY_EXPR(InlineConstantOffset == m_TotalInlineConstants);
+        const InlineConstantBufferAttribsWebGPU& InlineCBAttr = GetInlineConstantBufferAttribs(i);
+        VERIFY_EXPR(InlineCBAttr.pBuffer);
+        VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
+        // Note that since we use SetResource, the buffer will count towards the number of
+        // dynamic buffers in the cache.
+        ResourceCache.SetResource(
+            InlineCBAttr.BindGroup,
+            InlineCBAttr.CacheOffset,
+            InlineCBAttr.pBuffer,
+            0,
+            InlineCBAttr.NumConstants * sizeof(Uint32));
     }
 
     // Initialize immutable samplers
