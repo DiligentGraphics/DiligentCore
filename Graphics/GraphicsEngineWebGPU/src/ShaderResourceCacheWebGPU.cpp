@@ -148,11 +148,7 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
 #endif
         }
 
-        // Set pointer to inline constant staging data at the tail of the memory block
-        if (TotalInlineConstants > 0)
-        {
-            m_pInlineConstantData = reinterpret_cast<Uint32*>(pCurrWGPUEntryPtr);
-        }
+        m_HasInlineConstants = (TotalInlineConstants > 0) ? 1u : 0u;
     }
 }
 
@@ -282,10 +278,11 @@ void ShaderResourceCacheWebGPU::InitializeResources(Uint32             GroupIdx,
     BindGroup& Group = GetBindGroup(GroupIdx);
     for (Uint32 res = 0; res < ArraySize; ++res)
     {
+        VERIFY(InlineConstantOffset == ~0u || ArraySize == 1, "InlineConstantOffset can only be specified for single resources, but ArraySize is ", ArraySize);
         new (&Group.GetResource(Offset + res)) Resource{
             Type,
             HasImmutableSampler,
-            InlineConstantOffset != ~0u ? m_pInlineConstantData + InlineConstantOffset : nullptr,
+            InlineConstantOffset != ~0u ? GetInlineConstantDataPtr(InlineConstantOffset) : nullptr,
         };
 #ifdef DILIGENT_DEBUG
         m_DbgInitializedResources[GroupIdx][size_t{Offset} + res] = true;

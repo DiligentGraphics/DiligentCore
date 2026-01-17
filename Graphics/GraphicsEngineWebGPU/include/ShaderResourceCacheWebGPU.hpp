@@ -95,7 +95,7 @@ public:
         // For uniform and storage buffers only
 /*16 */ Uint64                       BufferBaseOffset = 0;
 /*24 */ Uint64                       BufferRangeSize  = 0;
-        // For inline constant buffers only - points to staging data in cache tail
+        // For inline constant buffers only - pointer to the staging data
 /*32 */ void* const                  pInlineConstantData = nullptr;
         // clang-format on
 
@@ -196,7 +196,7 @@ public:
 
     bool HasInlineConstants() const
     {
-        return m_pInlineConstantData != nullptr;
+        return m_HasInlineConstants != 0;
     }
 
     ResourceCacheContentType GetContentType() const { return static_cast<ResourceCacheContentType>(m_ContentType); }
@@ -207,6 +207,16 @@ public:
     bool GetDynamicBufferOffsets(const DeviceContextWebGPUImpl* pCtx,
                                  std::vector<uint32_t>&         Offsets,
                                  Uint32                         GroupIdx) const;
+
+    // Writes inline constant data to the staging buffer
+    void SetInlineConstants(Uint32 BindGroupIdx, Uint32 CacheOffset, const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants);
+
+    // Copies inline constant data from source cache to this cache
+    void CopyInlineConstants(const ShaderResourceCacheWebGPU& SrcCache,
+                             Uint32                           BindGroupIdx,
+                             Uint32                           SrcCacheOffset,
+                             Uint32                           DstCacheOffset,
+                             Uint32                           NumConstants);
 
 #ifdef DILIGENT_DEBUG
     // For debug purposes only
@@ -239,6 +249,13 @@ private:
                "WGPUBindGroupEntry storage exceeds allocated memory. This indicates a bug in memory calculation logic");
         return pFirstWGPUEntry;
     }
+    Uint32* GetInlineConstantDataPtr(Uint32 Offset = 0)
+    {
+        Uint32* pFirstInlineConstantData = AlignUpPtr(reinterpret_cast<Uint32*>(GetFirstWGPUEntryPtr() + m_TotalResources));
+        VERIFY(reinterpret_cast<Uint8*>(pFirstInlineConstantData + Offset) <= m_DbgMemoryEnd,
+               "Inline constant storage exceeds allocated memory. This indicates a bug in memory calculation logic");
+        return pFirstInlineConstantData + Offset;
+    }
     BindGroup& GetBindGroup(Uint32 Index)
     {
         VERIFY_EXPR(Index < m_NumBindGroups);
@@ -253,26 +270,14 @@ private:
     // The total actual number of dynamic buffers (that were created with USAGE_DYNAMIC) bound in the resource cache
     // regardless of the variable type.
     Uint16 m_NumDynamicBuffers = 0;
-    Uint32 m_TotalResources : 31;
+    Uint32 m_TotalResources : 30;
 
     // Indicates what types of resources are stored in the cache
     const Uint32 m_ContentType : 1;
 
-    // Pointer to the start of inline constant staging data in the memory tail
-    Uint32* m_pInlineConstantData = nullptr;
+    // Indicates whether the cache has inline constants
+    Uint32 m_HasInlineConstants : 1;
 
-public:
-    // Writes inline constant data to the staging buffer
-    void SetInlineConstants(Uint32 BindGroupIdx, Uint32 CacheOffset, const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants);
-
-    // Copies inline constant data from source cache to this cache
-    void CopyInlineConstants(const ShaderResourceCacheWebGPU& SrcCache,
-                             Uint32                           BindGroupIdx,
-                             Uint32                           SrcCacheOffset,
-                             Uint32                           DstCacheOffset,
-                             Uint32                           NumConstants);
-
-private:
 #ifdef DILIGENT_DEBUG
     // Debug array that stores flags indicating if resources in the cache have been initialized
     std::vector<std::vector<bool>> m_DbgInitializedResources;
