@@ -447,7 +447,7 @@ private:
     {
         using CachedResourceType = typename CachedResourceTraits<ResRange>::CachedResourceType;
         using D3D11ResourceType  = typename CachedResourceTraits<ResRange>::D3D11ResourceType;
-        static_assert(alignof(CachedResourceType) == alignof(D3D11ResourceType*), "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
+        static_assert((sizeof(CachedResourceType) % alignof(D3D11ResourceType*)) == 0, "Alignment mismatch, pointer to D3D11 resource may not be properly aligned");
 
         const Uint32              DataOffset      = GetResourceDataOffset<ResRange>(ShaderInd);
         const Uint32              ResCount        = GetResourceCount<ResRange>(ShaderInd);
