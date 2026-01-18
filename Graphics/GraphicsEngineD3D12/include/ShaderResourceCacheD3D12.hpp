@@ -402,24 +402,21 @@ private:
     }
     Resource* GetResourceStorage()
     {
-        Resource* pResourceStorage = AlignUp(reinterpret_cast<Resource*>(GetRootTableStorage() + m_NumTables),
-                                             alignof(Resource));
+        Resource* pResourceStorage = AlignUpPtr(reinterpret_cast<Resource*>(GetRootTableStorage() + m_NumTables));
         VERIFY(reinterpret_cast<Uint8*>(pResourceStorage + m_TotalResourceCount) <= m_DbgMemoryEnd,
                "Resource storage exceeds allocated memory. This indicates a bug in memory calculation logic");
         return pResourceStorage;
     }
     DescriptorHeapAllocation* GetDescriptorAllocationStorage()
     {
-        DescriptorHeapAllocation* pDescrAllocStorage = AlignUp(reinterpret_cast<DescriptorHeapAllocation*>(GetResourceStorage() + m_TotalResourceCount),
-                                                               alignof(DescriptorHeapAllocation));
+        DescriptorHeapAllocation* pDescrAllocStorage = AlignUpPtr(reinterpret_cast<DescriptorHeapAllocation*>(GetResourceStorage() + m_TotalResourceCount));
         VERIFY(reinterpret_cast<Uint8*>(pDescrAllocStorage + m_NumDescriptorAllocations) <= m_DbgMemoryEnd,
                "Descriptor heap allocation storage exceeds allocated memory. This indicates a bug in memory calculation logic");
         return pDescrAllocStorage;
     }
     Uint32* GetInlineConstantStorage()
     {
-        Uint32* pInlineConstStorage = AlignUp(reinterpret_cast<Uint32*>(GetDescriptorAllocationStorage() + m_NumDescriptorAllocations),
-                                              alignof(Uint32));
+        Uint32* pInlineConstStorage = AlignUpPtr(reinterpret_cast<Uint32*>(GetDescriptorAllocationStorage() + m_NumDescriptorAllocations));
         VERIFY(reinterpret_cast<Uint8*>(pInlineConstStorage + m_DbgTotalInlineConstants) <= m_DbgMemoryEnd,
                "Inline constant storage exceeds allocated memory. This indicates a bug in memory calculation logic");
         return pInlineConstStorage;

@@ -200,7 +200,7 @@ private:
 #ifdef DILIGENT_DEBUG
     const Resource* GetFirstResourcePtr() const
     {
-        return AlignUp(reinterpret_cast<const Resource*>(static_cast<const BindGroup*>(m_pMemory.get()) + m_NumBindGroups), alignof(Resource));
+        return AlignUpPtr(reinterpret_cast<const Resource*>(static_cast<const BindGroup*>(m_pMemory.get()) + m_NumBindGroups));
     }
 #endif
     BindGroup* GetFirstBindGroupPtr()
@@ -209,16 +209,14 @@ private:
     }
     Resource* GetFirstResourcePtr()
     {
-        Resource* pFirstResource = AlignUp(reinterpret_cast<Resource*>(GetFirstBindGroupPtr() + m_NumBindGroups),
-                                           alignof(Resource));
+        Resource* pFirstResource = AlignUpPtr(reinterpret_cast<Resource*>(GetFirstBindGroupPtr() + m_NumBindGroups));
         VERIFY(reinterpret_cast<Uint8*>(pFirstResource + m_TotalResources) <= m_DbgMemoryEnd,
                "Resource storage exceeds allocated memory. This indicates a bug in memory calculation logic");
         return pFirstResource;
     }
     WGPUBindGroupEntry* GetFirstWGPUEntryPtr()
     {
-        WGPUBindGroupEntry* pFirstWGPUEntry = AlignUp(reinterpret_cast<WGPUBindGroupEntry*>(GetFirstResourcePtr() + m_TotalResources),
-                                                      alignof(WGPUBindGroupEntry));
+        WGPUBindGroupEntry* pFirstWGPUEntry = AlignUpPtr(reinterpret_cast<WGPUBindGroupEntry*>(GetFirstResourcePtr() + m_TotalResources));
         VERIFY(reinterpret_cast<Uint8*>(pFirstWGPUEntry + m_TotalResources) <= m_DbgMemoryEnd,
                "WGPUBindGroupEntry storage exceeds allocated memory. This indicates a bug in memory calculation logic");
         return pFirstWGPUEntry;
