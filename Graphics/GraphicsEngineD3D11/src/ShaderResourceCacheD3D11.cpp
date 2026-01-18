@@ -218,6 +218,7 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
             ALLOCATE(MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize),
             STDDeleter<Uint8, IMemoryAllocator>(MemAllocator) //
         };
+        VERIFY((reinterpret_cast<size_t>(m_pResourceData.get()) % MaxAlignment) == 0, "Resource cache buffer is not properly aligned");
         memset(m_pResourceData.get(), 0, BufferSize);
     }
 

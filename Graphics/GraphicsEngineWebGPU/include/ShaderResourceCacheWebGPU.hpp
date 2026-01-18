@@ -200,7 +200,7 @@ private:
 #ifdef DILIGENT_DEBUG
     const Resource* GetFirstResourcePtr() const
     {
-        return reinterpret_cast<const Resource*>(reinterpret_cast<const BindGroup*>(m_pMemory.get()) + m_NumBindGroups);
+        return AlignUp(reinterpret_cast<const Resource*>(static_cast<const BindGroup*>(m_pMemory.get()) + m_NumBindGroups), alignof(Resource));
     }
 #endif
     BindGroup* GetFirstBindGroupPtr()

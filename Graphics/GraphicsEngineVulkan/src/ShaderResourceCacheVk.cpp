@@ -92,6 +92,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator,
             ALLOCATE_RAW(MemAllocator, "Memory for shader resource cache data", MemorySize),
             STDDeleter<void, IMemoryAllocator>(MemAllocator) //
         };
+        VERIFY((reinterpret_cast<size_t>(m_pMemory.get()) % std::max(alignof(DescriptorSet), alignof(Resource))) == 0, "Resource cache buffer is not properly aligned");
         memset(m_pMemory.get(), 0, MemorySize);
 
         Resource* pCurrResPtr = GetFirstResourcePtr();

@@ -85,9 +85,6 @@ ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemory
     MemReqs.TotalResources += NumRootViews;
     MemReqs.TotalResources += NumRootConsts;
 
-    static_assert(sizeof(RootTable) % sizeof(void*) == 0, "sizeof(RootTable) is not aligned by the sizeof(void*)");
-    static_assert(sizeof(Resource) % sizeof(void*) == 0, "sizeof(Resource) is not aligned by the sizeof(void*)");
-
     MemReqs.NumTables = NumRootTables + NumRootViews + NumRootConsts;
 
     MemReqs.TotalInlineConstantValues = 0;
@@ -134,6 +131,8 @@ size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator,
             ALLOCATE_RAW(MemAllocator, "Memory for shader resource cache data", MemorySize),
             STDDeleter<void, IMemoryAllocator>(MemAllocator) //
         };
+        VERIFY((reinterpret_cast<size_t>(m_pMemory.get()) % std::max(alignof(RootTable), std::max(alignof(Resource), alignof(DescriptorHeapAllocation)))) == 0,
+               "Resource cache buffer is not properly aligned");
 
 #ifdef DILIGENT_DEBUG
         m_DbgMemoryEnd = static_cast<Uint8*>(m_pMemory.get()) + MemorySize;

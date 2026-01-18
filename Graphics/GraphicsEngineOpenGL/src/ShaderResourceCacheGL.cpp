@@ -39,14 +39,15 @@ size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCou
 {
     static_assert(std::is_same<TResourceCount, PipelineResourceSignatureGLImpl::TBindings>::value,
                   "ShaderResourceCacheGL::TResourceCount must be the same type as PipelineResourceSignatureGLImpl::TBindings");
+
+    size_t MemSize = 0;
     // clang-format off
-    size_t MemSize =
-                AlignUp(sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER], alignof(CachedResourceView)) +
-                AlignUp(sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE],        alignof(CachedResourceView)) +
-                AlignUp(sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE],          alignof(CachedSSBO))         +
-                AlignUp(sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER], alignof(Uint32))             +
-                TotalInlineConstants * sizeof(Uint32);
+    MemSize = AlignUp(MemSize + sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER], alignof(CachedResourceView));
+    MemSize = AlignUp(MemSize + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE],        alignof(CachedResourceView));
+    MemSize = AlignUp(MemSize + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE],          alignof(CachedSSBO));
+    MemSize = AlignUp(MemSize + sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER], alignof(Uint32));
     // clang-format on
+    MemSize += TotalInlineConstants * sizeof(Uint32);
 
     VERIFY(MemSize < InvalidResourceOffset, "Memory size exceed the maximum allowed size.");
     return MemSize;
@@ -96,6 +97,7 @@ void ShaderResourceCacheGL::Initialize(const InitAttribs& Attribs)
             ALLOCATE(Attribs.MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize),
             STDDeleter<Uint8, IMemoryAllocator>(Attribs.MemAllocator) //
         };
+        VERIFY((reinterpret_cast<size_t>(m_pResourceData.get()) % std::max(alignof(CachedUB), std::max(alignof(CachedResourceView), alignof(CachedSSBO)))) == 0, "Resource cache buffer is not properly aligned");
         memset(m_pResourceData.get(), 0, BufferSize);
     }
 
@@ -315,7 +317,7 @@ void ShaderResourceCacheGL::BindResources(GLContextState&              GLState,
     {
         const CachedSSBO& SSBO = GetConstSSBO(ssbo);
         if (!SSBO.pBufferView)
-            return;
+            continue;
 
         const BufferViewGLImpl* pBufferViewGL = SSBO.pBufferView.ConstPtr();
         const BufferViewDesc&   ViewDesc      = pBufferViewGL->GetDesc();
