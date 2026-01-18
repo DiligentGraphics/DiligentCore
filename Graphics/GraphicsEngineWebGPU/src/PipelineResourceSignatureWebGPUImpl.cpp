@@ -609,17 +609,25 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
 
             if (ResDesc.VarType == SHADER_RESOURCE_VARIABLE_TYPE_STATIC)
             {
-                const bool IsInlineConst = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0;
-
                 VERIFY(pAttribs->BindGroup == 0, "Static resources must always be allocated in bind group 0");
-                m_pStaticResCache->InitializeResources(pAttribs->BindGroup, StaticCacheOffset, ArraySize,
-                                                       pAttribs->GetBindGroupEntryType(), pAttribs->IsImmutableSamplerAssigned(),
-                                                       IsInlineConst ? StaticInlineConstantOffset : ~0u,
-                                                       IsInlineConst ? ResDesc.ArraySize : 0);
-                StaticCacheOffset += ArraySize;
+                if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+                {
+                    VERIFY(pAttribs->GetBindGroupEntryType() == BindGroupEntryType::UniformBufferDynamic,
+                           "Only dynamic uniform buffers can be inline constant buffers");
+                    VERIFY(!pAttribs->IsImmutableSamplerAssigned(),
+                           "Inline constant buffers cannot have immutable samplers assigned");
+                    m_pStaticResCache->InitializeInlineConstantBuffer(pAttribs->BindGroup, StaticCacheOffset,
+                                                                      StaticInlineConstantOffset, ResDesc.ArraySize);
 
-                if (IsInlineConst)
                     StaticInlineConstantOffset += ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
+                }
+                else
+                {
+                    m_pStaticResCache->InitializeResources(pAttribs->BindGroup, StaticCacheOffset, ArraySize,
+                                                           pAttribs->GetBindGroupEntryType(),
+                                                           pAttribs->IsImmutableSamplerAssigned());
+                }
+                StaticCacheOffset += ArraySize;
             }
         }
     }
@@ -743,7 +751,8 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
     const Uint32                   TotalResources = GetTotalResourceCount();
     const ResourceCacheContentType CacheType      = ResourceCache.GetContentType();
 
-    Uint32 InlineConstantOffset = 0;
+    Uint32 InlineConstantBufferIdx = 0;
+    Uint32 InlineConstantOffset    = 0;
     for (Uint32 r = 0; r < TotalResources; ++r)
     {
         const PipelineResourceDesc& ResDesc = GetResourceDesc(r);
@@ -757,33 +766,30 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
 
         // For inline constants, GetArraySize() returns 1 (actual array size),
         // while ArraySize contains the number of 32-bit constants
-        const Uint32 ResArraySize  = ResDesc.GetArraySize();
-        const bool   IsInlineConst = (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0;
+        const Uint32 ResArraySize = ResDesc.GetArraySize();
+        if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
+        {
+            const InlineConstantBufferAttribsWebGPU& InlineCBAttr = GetInlineConstantBufferAttribs(InlineConstantBufferIdx++);
+            VERIFY_EXPR(InlineCBAttr.BindGroup == Attr.BindGroup);
+            VERIFY_EXPR(InlineCBAttr.CacheOffset == Attr.CacheOffset(CacheType));
+            VERIFY_EXPR(InlineCBAttr.pBuffer);
+            VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
 
-        ResourceCache.InitializeResources(Attr.BindGroup, Attr.CacheOffset(CacheType), ResArraySize,
-                                          Attr.GetBindGroupEntryType(), Attr.IsImmutableSamplerAssigned(),
-                                          IsInlineConst ? InlineConstantOffset : ~0u,
-                                          IsInlineConst ? ResDesc.ArraySize : 0);
-        if (IsInlineConst)
+            VERIFY(Attr.GetBindGroupEntryType() == BindGroupEntryType::UniformBufferDynamic, "Only dynamic uniform buffers can be inline constant buffers");
+            VERIFY(!Attr.IsImmutableSamplerAssigned(), "Inline constant buffers cannot have immutable samplers assigned");
+            ResourceCache.InitializeInlineConstantBuffer(Attr.BindGroup, Attr.CacheOffset(CacheType),
+                                                         InlineConstantOffset, ResDesc.ArraySize, InlineCBAttr.pBuffer);
+
             InlineConstantOffset += ResDesc.ArraySize;
+        }
+        else
+        {
+            ResourceCache.InitializeResources(Attr.BindGroup, Attr.CacheOffset(CacheType), ResArraySize,
+                                              Attr.GetBindGroupEntryType(), Attr.IsImmutableSamplerAssigned());
+        }
     }
     VERIFY_EXPR(InlineConstantOffset == m_TotalInlineConstants);
-
-    // Initialize inline constant buffers.
-    for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
-    {
-        const InlineConstantBufferAttribsWebGPU& InlineCBAttr = GetInlineConstantBufferAttribs(i);
-        VERIFY_EXPR(InlineCBAttr.pBuffer);
-        VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
-        // Note that since we use SetResource, the buffer will count towards the number of
-        // dynamic buffers in the cache.
-        ResourceCache.SetResource(
-            InlineCBAttr.BindGroup,
-            InlineCBAttr.CacheOffset,
-            InlineCBAttr.pBuffer,
-            0,
-            InlineCBAttr.NumConstants * sizeof(Uint32));
-    }
+    VERIFY_EXPR(InlineConstantBufferIdx == m_NumInlineConstantBuffers);
 
     // Initialize immutable samplers
     for (Uint32 i = 0; i < m_Desc.NumImmutableSamplers; ++i)

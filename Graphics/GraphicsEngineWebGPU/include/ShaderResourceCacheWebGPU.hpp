@@ -65,19 +65,29 @@ public:
                              Uint32             Offset,
                              Uint32             ArraySize,
                              BindGroupEntryType Type,
-                             bool               HasImmutableSampler,
-                             Uint32             InlineConstantOffset  = ~0u,
-                             Uint32             DbgNumInlineConstants = 0);
+                             bool               HasImmutableSampler);
+    void InitializeInlineConstantBuffer(Uint32                       GroupIdx,
+                                        Uint32                       Offset,
+                                        Uint32                       InlineConstantOffset,
+                                        Uint32                       NumInlineConstants,
+                                        RefCntAutoPtr<IDeviceObject> pObject = {});
 
     struct Resource
     {
-        explicit Resource(BindGroupEntryType _Type, bool _HasImmutableSampler, void* _pInlineConstantData = nullptr) noexcept :
+        explicit Resource(BindGroupEntryType _Type, bool _HasImmutableSampler) noexcept :
             Type{_Type},
-            HasImmutableSampler{_HasImmutableSampler},
-            pInlineConstantData{_pInlineConstantData}
+            HasImmutableSampler{_HasImmutableSampler}
         {
             VERIFY(Type == BindGroupEntryType::Texture || Type == BindGroupEntryType::Sampler || !HasImmutableSampler,
                    "Immutable sampler can only be assigned to a textre or a sampler");
+        }
+
+        explicit Resource(BindGroupEntryType _Type, void* _pInlineConstantData = nullptr) noexcept :
+            Type{_Type},
+            HasImmutableSampler{false},
+            pInlineConstantData{_pInlineConstantData}
+        {
+            VERIFY(Type == BindGroupEntryType::UniformBufferDynamic, "Inline constant buffer must be of type UniformBufferDynamic");
         }
 
         // clang-format off
@@ -108,6 +118,8 @@ public:
         {
             VERIFY(pInlineConstantData != nullptr, "Inline constant data pointer is not initialized");
             VERIFY(pData != nullptr, "Source data is null");
+            VERIFY(FirstConstant + NumConstants <= BufferRangeSize / sizeof(Uint32),
+                   "Too many constants (", FirstConstant + NumConstants, ") for the allocated space (", BufferRangeSize / sizeof(Uint32), ")");
             memcpy(static_cast<Uint32*>(pInlineConstantData) + FirstConstant, pData, NumConstants * sizeof(Uint32));
         }
 

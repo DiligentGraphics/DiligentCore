@@ -271,34 +271,56 @@ void ShaderResourceCacheWebGPU::InitializeResources(Uint32             GroupIdx,
                                                     Uint32             Offset,
                                                     Uint32             ArraySize,
                                                     BindGroupEntryType Type,
-                                                    bool               HasImmutableSampler,
-                                                    Uint32             InlineConstantOffset,
-                                                    Uint32             DbgNumInlineConstants)
+                                                    bool               HasImmutableSampler)
 {
     BindGroup& Group = GetBindGroup(GroupIdx);
     for (Uint32 res = 0; res < ArraySize; ++res)
     {
-        VERIFY(InlineConstantOffset == ~0u || ArraySize == 1, "InlineConstantOffset can only be specified for single resources, but ArraySize is ", ArraySize);
         new (&Group.GetResource(Offset + res)) Resource{
             Type,
             HasImmutableSampler,
-            InlineConstantOffset != ~0u ? GetInlineConstantDataPtr(InlineConstantOffset) : nullptr,
         };
 #ifdef DILIGENT_DEBUG
         m_DbgInitializedResources[GroupIdx][size_t{Offset} + res] = true;
-
-        if (InlineConstantOffset != ~0u)
-        {
-            VERIFY(InlineConstantOffset + DbgNumInlineConstants <= m_DbgAssignedInlineConstants.size(), "Inline constant storage overflow");
-            for (Uint32 i = 0; i < DbgNumInlineConstants; ++i)
-            {
-                VERIFY(!m_DbgAssignedInlineConstants[InlineConstantOffset + i], "Inline constant storage at offset ", InlineConstantOffset + i, " has already been assigned");
-                m_DbgAssignedInlineConstants[InlineConstantOffset + i] = true;
-            }
-        }
 #endif
     }
-    (void)DbgNumInlineConstants;
+}
+
+void ShaderResourceCacheWebGPU::InitializeInlineConstantBuffer(Uint32                       GroupIdx,
+                                                               Uint32                       Offset,
+                                                               Uint32                       InlineConstantOffset,
+                                                               Uint32                       NumInlineConstants,
+                                                               RefCntAutoPtr<IDeviceObject> pObject)
+{
+    VERIFY_EXPR(InlineConstantOffset != ~0u);
+    BindGroup& Group = GetBindGroup(GroupIdx);
+
+    Resource* pRes = new (&Group.GetResource(Offset)) Resource{
+        BindGroupEntryType::UniformBufferDynamic,
+        GetInlineConstantDataPtr(InlineConstantOffset),
+    };
+#ifdef DILIGENT_DEBUG
+    m_DbgInitializedResources[GroupIdx][size_t{Offset}] = true;
+
+    if (InlineConstantOffset != ~0u)
+    {
+        VERIFY(InlineConstantOffset + NumInlineConstants <= m_DbgAssignedInlineConstants.size(), "Inline constant storage overflow");
+        for (Uint32 i = 0; i < NumInlineConstants; ++i)
+        {
+            VERIFY(!m_DbgAssignedInlineConstants[InlineConstantOffset + i], "Inline constant storage at offset ", InlineConstantOffset + i, " has already been assigned");
+            m_DbgAssignedInlineConstants[InlineConstantOffset + i] = true;
+        }
+    }
+#endif
+
+    pRes->BufferRangeSize = NumInlineConstants * sizeof(Uint32);
+
+    if (pObject)
+    {
+        // Note that since we use SetResource, the buffer will count towards the number of
+        // dynamic buffers in the cache.
+        SetResource(GroupIdx, Offset, std::move(pObject), 0, NumInlineConstants * sizeof(Uint32));
+    }
 }
 
 
@@ -637,6 +659,8 @@ void ShaderResourceCacheWebGPU::CopyInlineConstants(const ShaderResourceCacheWeb
 
     VERIFY_EXPR(SrcRes.pInlineConstantData != nullptr);
     VERIFY_EXPR(DstRes.pInlineConstantData != nullptr);
+    VERIFY(SrcRes.BufferRangeSize == NumConstants * sizeof(Uint32), "Source inline constant buffer size mismatch");
+    VERIFY(DstRes.BufferRangeSize == NumConstants * sizeof(Uint32), "Destination inline constant buffer size mismatch");
 
     // Copy inline constant staging data from source cache to destination cache
     memcpy(DstRes.pInlineConstantData, SrcRes.pInlineConstantData, NumConstants * sizeof(Uint32));
