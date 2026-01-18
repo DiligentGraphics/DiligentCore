@@ -744,7 +744,8 @@ void DeviceContextGLImpl::BindProgramResources(Uint32 BindSRBMask, bool DynamicB
             }
         }
 
-        // Update inline constant buffers if needed
+        // Update inline constant buffers if needed.
+        // Note that inline constant buffers in the cache don't count as dynamic.
         if ((m_BindInfo.InlineConstantsSRBMask & SignBit) != 0)
         {
             VERIFY(pResourceCache->HasInlineConstants(),

@@ -186,6 +186,7 @@ void PipelineResourceSignatureGLImpl::CreateLayout(const bool IsSerialized)
             else if (Range == BINDING_RANGE_STORAGE_BUFFER && (ResDesc.Flags & PIPELINE_RESOURCE_FLAG_NO_DYNAMIC_BUFFERS) == 0)
             {
                 DEV_CHECK_ERR(size_t{CacheOffset} + ArraySize < sizeof(m_DynamicSSBOMask) * 8, "Dynamic SSBO index exceeds maximum representable bit position in the mask");
+                VERIFY((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) == 0, "Inline constants are not applicable to storage buffers");
                 for (Uint64 elem = 0; elem < ArraySize; ++elem)
                     m_DynamicSSBOMask |= Uint64{1} << (Uint64{CacheOffset} + elem);
             }
@@ -562,6 +563,10 @@ void PipelineResourceSignatureGLImpl::UpdateInlineConstantBuffers(const ShaderRe
         VERIFY(InlineCB.pBuffer, "Inline constant buffer is null in cache");
 
         const Uint32 BufferSize = InlineCBAttr.NumConstants * sizeof(Uint32);
+        DEV_CHECK_ERR(BufferSize == InlineCB.RangeSize,
+                      "Inline constant buffer size (", InlineCB.RangeSize,
+                      ") does not match expected size (", BufferSize,
+                      "). This may indicate that the SRB is not compatible with the signature used to commit inline constants.");
 
         // Get the buffer from the SRB cache (not from the signature's InlineCBAttr.pBuffer).
         // This ensures we update the same buffer that was bound by BindResources().

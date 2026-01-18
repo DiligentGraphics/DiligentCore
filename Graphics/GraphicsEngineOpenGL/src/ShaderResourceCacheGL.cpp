@@ -86,7 +86,7 @@ void ShaderResourceCacheGL::Initialize(const InitAttribs& Attribs)
     VERIFY_EXPR(GetSSBOCount()    == static_cast<Uint32>(ResCount[BINDING_RANGE_STORAGE_BUFFER]));
     // clang-format on
 
-    // Inline constant data tail is after m_ResourceEndOffset
+    // Inline constant data tail is after resources.
     size_t BufferSize = m_InlineConstantOffset + TotalInlineConstants * sizeof(Uint32);
 
     VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount, TotalInlineConstants));
@@ -121,6 +121,7 @@ void ShaderResourceCacheGL::Initialize(const InitAttribs& Attribs)
         const InlineConstantBufferAttribsGL& InlineCBAttribs = Attribs.pInlineConstantBuffers[i];
         if (InlineCBAttribs.CacheOffset < ResCount[BINDING_RANGE_UNIFORM_BUFFER])
         {
+            // Note that the buffer does not count as dynamic.
             CachedUB& UB           = GetUB(InlineCBAttribs.CacheOffset);
             UB.pBuffer             = InlineCBAttribs.pBuffer;
             UB.BaseOffset          = 0;
@@ -403,6 +404,7 @@ void ShaderResourceCacheGL::DbgVerifyDynamicBufferMasks() const
         const CachedUB& UB    = GetConstUB(ub);
         const Uint64    UBBit = Uint64{1} << Uint64{ub};
         VERIFY(((m_DynamicUBOMask & UBBit) != 0) == (UB.IsDynamic() && (m_DynamicUBOSlotMask & UBBit) != 0), "Bit ", ub, " in m_DynamicUBOMask is invalid");
+        VERIFY(UB.pInlineConstantData == nullptr || (m_DynamicUBOSlotMask & UBBit) == 0, "Inline constant buffer cannot be dynamic");
     }
 
     for (Uint32 ssbo = 0; ssbo < GetSSBOCount(); ++ssbo)
