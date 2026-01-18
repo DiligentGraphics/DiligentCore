@@ -926,7 +926,7 @@ void PipelineResourceSignatureWebGPUImpl::UpdateInlineConstantBuffers(const Shad
         const ShaderResourceCacheWebGPU::BindGroup& Group     = ResourceCache.GetBindGroup(InlineAttrib.BindGroup);
         const ShaderResourceCacheWebGPU::Resource&  CachedRes = Group.GetResource(InlineAttrib.CacheOffset);
 
-        // Get buffer from SRB cache (same buffer that was bound by InitInlineConstantBuffer)
+        // Get buffer from SRB cache (same buffer that was bound by InitSRBResourceCache)
         BufferWebGPUImpl* pBuffer = CachedRes.pObject.RawPtr<BufferWebGPUImpl>();
         VERIFY(pBuffer != nullptr, "Inline constant buffer is null in SRB cache");
 

@@ -783,13 +783,9 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
                     if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
                     {
                         VERIFY(Flags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag cannot be combined with other flags.");
-                        // For inline constants, ArraySize must be the number of 32-bit constants
-                        if (Attribs.BufferStaticSize == 0)
-                        {
-                            LOG_ERROR_AND_THROW("Unable to determine inline constant count for uniform buffer '",
-                                                Attribs.Name, "'. Please enable ShaderCreateInfo.LoadConstantBufferReflection.");
-                        }
+                        VERIFY(Attribs.BufferStaticSize != 0, "BufferStaticSize must be non-zero for inline constants");
                         VERIFY(Attribs.BufferStaticSize % sizeof(Uint32) == 0, "Buffer size must be a multiple of 4 bytes");
+                        // For inline constants, ArraySize must be the number of 32-bit constants
                         ArraySize = Attribs.BufferStaticSize / sizeof(Uint32);
 
                         if (ArraySize > MAX_INLINE_CONSTANTS)

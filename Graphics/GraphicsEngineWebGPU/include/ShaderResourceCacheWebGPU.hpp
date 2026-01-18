@@ -264,7 +264,8 @@ private:
     Uint32* GetInlineConstantDataPtr(Uint32 Offset = 0)
     {
         Uint32* pFirstInlineConstantData = AlignUpPtr(reinterpret_cast<Uint32*>(GetFirstWGPUEntryPtr() + m_TotalResources));
-        VERIFY(reinterpret_cast<Uint8*>(pFirstInlineConstantData + Offset) <= m_DbgMemoryEnd,
+        VERIFY(Offset < m_DbgAssignedInlineConstants.size(), "Offset exceeds allocated inline constant storage");
+        VERIFY(reinterpret_cast<Uint8*>(pFirstInlineConstantData + m_DbgAssignedInlineConstants.size()) <= m_DbgMemoryEnd,
                "Inline constant storage exceeds allocated memory. This indicates a bug in memory calculation logic");
         return pFirstInlineConstantData + Offset;
     }
