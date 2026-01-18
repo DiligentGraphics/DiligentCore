@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,7 @@
 /// Alignment utilities
 
 #include <cstdint>
+#include <type_traits>
 
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "../../Platforms/interface/PlatformMisc.hpp"
@@ -61,6 +62,12 @@ inline PtrType* AlignUp(PtrType* val, AlignType alignment)
     return reinterpret_cast<PtrType*>(AlignUp(reinterpret_cast<uintptr_t>(val), static_cast<uintptr_t>(alignment)));
 }
 
+template <typename PtrType>
+inline PtrType* AlignUpPtr(PtrType* val)
+{
+    return reinterpret_cast<PtrType*>(AlignUp(reinterpret_cast<uintptr_t>(val), static_cast<uintptr_t>(alignof(PtrType))));
+}
+
 template <typename T1, typename T2>
 inline typename std::conditional<sizeof(T1) >= sizeof(T2), T1, T2>::type AlignDown(T1 val, T2 alignment)
 {
@@ -76,6 +83,12 @@ template <typename PtrType, typename AlignType>
 inline PtrType* AlignDown(PtrType* val, AlignType alignment)
 {
     return reinterpret_cast<PtrType*>(AlignDown(reinterpret_cast<uintptr_t>(val), static_cast<uintptr_t>(alignment)));
+}
+
+template <typename PtrType>
+inline PtrType* AlignDownPtr(PtrType* val)
+{
+    return reinterpret_cast<PtrType*>(AlignDown(reinterpret_cast<uintptr_t>(val), static_cast<uintptr_t>(alignof(PtrType))));
 }
 
 template <typename T1, typename T2>
