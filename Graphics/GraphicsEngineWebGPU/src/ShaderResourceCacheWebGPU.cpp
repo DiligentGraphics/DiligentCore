@@ -281,6 +281,7 @@ void ShaderResourceCacheWebGPU::InitializeResources(Uint32             GroupIdx,
             HasImmutableSampler,
         };
 #ifdef DILIGENT_DEBUG
+        VERIFY(!m_DbgInitializedResources[GroupIdx][size_t{Offset} + res], "Resource at group ", GroupIdx, " offset ", Offset + res, " has already been initialized");
         m_DbgInitializedResources[GroupIdx][size_t{Offset} + res] = true;
 #endif
     }
@@ -300,6 +301,7 @@ void ShaderResourceCacheWebGPU::InitializeInlineConstantBuffer(Uint32           
         GetInlineConstantDataPtr(InlineConstantOffset),
     };
 #ifdef DILIGENT_DEBUG
+    VERIFY(!m_DbgInitializedResources[GroupIdx][size_t{Offset}], "Resource at group ", GroupIdx, " offset ", Offset, " has already been initialized");
     m_DbgInitializedResources[GroupIdx][size_t{Offset}] = true;
 
     for (Uint32 i = 0; i < NumInlineConstants; ++i)
@@ -623,23 +625,6 @@ void ShaderResourceCacheWebGPU::DbgVerifyDynamicBuffersCounter() const
     VERIFY(NumDynamicBuffers == m_NumDynamicBuffers, "The number of dynamic buffers (", m_NumDynamicBuffers, ") does not match the actual number (", NumDynamicBuffers, ")");
 }
 #endif
-
-void ShaderResourceCacheWebGPU::SetInlineConstants(Uint32      BindGroupIdx,
-                                                   Uint32      CacheOffset,
-                                                   const void* pConstants,
-                                                   Uint32      FirstConstant,
-                                                   Uint32      NumConstants)
-{
-    BindGroup& Group = GetBindGroup(BindGroupIdx);
-    Resource&  Res   = Group.GetResource(CacheOffset);
-
-    VERIFY_EXPR(Res.pInlineConstantData != nullptr);
-    VERIFY_EXPR(pConstants != nullptr);
-
-    // Copy constants to the staging buffer
-    // IMPORTANT: Do NOT call UpdateRevision() - inline constants can change after SRB commit
-    Res.SetInlineConstants(pConstants, FirstConstant, NumConstants);
-}
 
 void ShaderResourceCacheWebGPU::CopyInlineConstants(const ShaderResourceCacheWebGPU& SrcCache,
                                                     Uint32                           BindGroupIdx,

@@ -618,7 +618,9 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
                            "Only dynamic uniform buffers can be inline constant buffers");
                     VERIFY(!pAttribs->IsImmutableSamplerAssigned(),
                            "Inline constant buffers cannot have immutable samplers assigned");
-                    const Uint32 NumConstants = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
+                    // For inline constants, ArraySize is the number of 32-bit constants
+                    const Uint32 NumConstants = ResDesc.ArraySize;
+                    // Do not set buffer in the static resource cache - it will be set in the SRB by InitSRBResourceCache
                     m_pStaticResCache->InitializeInlineConstantBuffer(pAttribs->BindGroup, StaticCacheOffset,
                                                                       StaticInlineConstantOffset, NumConstants);
                     StaticInlineConstantOffset += NumConstants;
@@ -856,6 +858,8 @@ void PipelineResourceSignatureWebGPUImpl::CopyStaticResources(ShaderResourceCach
             // We only need to copy the staging data.
             if (DstCacheType == ResourceCacheContentType::SRB)
             {
+                VERIFY(DstBindGroup.GetResource(Attr.CacheOffset(DstCacheType)).pObject,
+                       "Inline constant buffer must have been initialized in SRB resource cache by InitSRBResourceCache.");
                 DstResourceCache.CopyInlineConstants(
                     SrcResourceCache,
                     StaticGroupIdx,
@@ -919,17 +923,21 @@ void PipelineResourceSignatureWebGPUImpl::UpdateInlineConstantBuffers(const Shad
 {
     for (Uint32 i = 0; i < m_NumInlineConstantBuffers; ++i)
     {
-        const InlineConstantBufferAttribsWebGPU& InlineAttrib = GetInlineConstantBufferAttribs(i);
+        const InlineConstantBufferAttribsWebGPU& InlineCBAttr = GetInlineConstantBufferAttribs(i);
 
         // Get resource from SRB cache using BindGroup + CacheOffset
-        const ShaderResourceCacheWebGPU::BindGroup& Group     = ResourceCache.GetBindGroup(InlineAttrib.BindGroup);
-        const ShaderResourceCacheWebGPU::Resource&  CachedRes = Group.GetResource(InlineAttrib.CacheOffset);
+        const ShaderResourceCacheWebGPU::BindGroup& Group     = ResourceCache.GetBindGroup(InlineCBAttr.BindGroup);
+        const ShaderResourceCacheWebGPU::Resource&  CachedRes = Group.GetResource(InlineCBAttr.CacheOffset);
+        const Uint32                                DataSize  = InlineCBAttr.NumConstants * sizeof(Uint32);
+
+        DEV_CHECK_ERR(CachedRes.BufferRangeSize == DataSize,
+                      "Inline constant buffer size (", CachedRes.BufferRangeSize,
+                      ") does not match expected size (", DataSize,
+                      "). This may indicate that the SRB is not compatible with the signature used to commit inline constants.");
 
         // Get buffer from SRB cache (same buffer that was bound by InitSRBResourceCache)
         BufferWebGPUImpl* pBuffer = CachedRes.pObject.RawPtr<BufferWebGPUImpl>();
         VERIFY(pBuffer != nullptr, "Inline constant buffer is null in SRB cache");
-
-        const Uint32 DataSize = InlineAttrib.NumConstants * sizeof(Uint32);
 
         // Update the buffer from SRB cache staging data
         PVoid pMappedData = nullptr;

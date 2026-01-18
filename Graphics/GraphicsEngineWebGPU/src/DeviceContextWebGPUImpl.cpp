@@ -182,6 +182,9 @@ void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*     
 
 #ifdef DILIGENT_DEBUG
     ResourceCache.DbgVerifyDynamicBuffersCounter();
+    VERIFY(!ResourceCache.HasInlineConstants() || ResourceCache.HasDynamicResources(),
+           "Inline constant buffers count towards the number of dynamic resources, "
+           "so a resource cache with inline constants must also have dynamic resources.");
 #endif
 
     const WGPUDevice wgpuDevice = m_pDevice->GetWebGPUDevice();
@@ -189,6 +192,8 @@ void DeviceContextWebGPUImpl::CommitShaderResources(IShaderResourceBinding*     
     const Uint32                         SRBIndex   = pResBindingWebGPU->GetBindingIndex();
     PipelineResourceSignatureWebGPUImpl* pSignature = pResBindingWebGPU->GetSignature();
     m_BindInfo.Set(SRBIndex, pResBindingWebGPU);
+    VERIFY((m_BindInfo.DynamicSRBMask & m_BindInfo.InlineConstantsSRBMask) == m_BindInfo.InlineConstantsSRBMask,
+           "SRBs with inline constants must also be marked as dynamic.");
 
     Uint32 BGIndex = 0;
     for (PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID BindGroupId : {PipelineResourceSignatureWebGPUImpl::BIND_GROUP_ID_STATIC_MUTABLE,
@@ -235,8 +240,9 @@ void DeviceContextWebGPUImpl::CommitBindGroups(CmdEncoderType CmdEncoder, Uint32
         const ShaderResourceCacheWebGPU* ResourceCache = m_BindInfo.ResourceCaches[sign];
         VERIFY_EXPR(ResourceCache != nullptr);
 
-        // Update inline constant buffers if needed
         const bool SRBStale = (m_BindInfo.StaleSRBMask & SRBBit) != 0;
+
+        // Update inline constant buffers if needed
         if ((m_BindInfo.InlineConstantsSRBMask & SRBBit) != 0)
         {
             VERIFY(ResourceCache->HasInlineConstants(),
@@ -2114,8 +2120,10 @@ WGPURenderPassEncoder DeviceContextWebGPUImpl::PrepareForDraw(DRAW_FLAGS Flags)
         m_EncoderState.SetUpToDate(WebGPUEncoderState::CMD_ENCODER_STATE_STENCIL_REF);
     }
 
-    if (CommittedShaderResources::SRBMaskType CommitSRBMask = m_BindInfo.GetCommitMask(Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT, Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT))
-        CommitBindGroups(wgpuRenderCmdEncoder, CommitSRBMask);
+    const bool DynamicBuffersIntact  = (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) != 0;
+    const bool InlineConstantsIntact = (Flags & DRAW_FLAG_INLINE_CONSTANTS_INTACT) != 0;
+    if (CommittedShaderResources::SRBMaskType CommitSRBMask = m_BindInfo.GetCommitMask(DynamicBuffersIntact, InlineConstantsIntact))
+        CommitBindGroups(wgpuRenderCmdEncoder, CommitSRBMask, InlineConstantsIntact);
 
     return wgpuRenderCmdEncoder;
 }

@@ -981,7 +981,7 @@ bool PipelineResourceSignatureVkImpl::DvpValidateCommittedResource(const DeviceC
                 {
                     // Skip dynamic allocation verification for inline constant buffers.
                     // These are internal buffers managed by the signature and are updated
-                    // via UpdateInlineConstantBuffers() before each draw/dispatch.
+                    // via CommitInlineConstants() before each draw/dispatch.
                     if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) == 0)
                     {
                         pDeviceCtx->DvpVerifyDynamicAllocation(pBufferVk);
@@ -1128,7 +1128,11 @@ void PipelineResourceSignatureVkImpl::CommitInlineConstants(const CommitInlineCo
             // the SRB's cache contains inline constant buffers from another signature, not from this one.
             const ShaderResourceCacheVk::DescriptorSet& DescrSet  = ResourceCache.GetDescriptorSet(InlineCBAttr.DescrSet);
             const ShaderResourceCacheVk::Resource&      CachedRes = DescrSet.GetResource(InlineCBAttr.SRBCacheOffset);
-            BufferVkImpl*                               pBuffer   = CachedRes.pObject.RawPtr<BufferVkImpl>();
+            DEV_CHECK_ERR(CachedRes.BufferRangeSize == DataSize,
+                          "Inline constant buffer size (", CachedRes.BufferRangeSize,
+                          ") does not match expected size (", DataSize,
+                          "). This may indicate that the SRB is not compatible with the signature used to commit inline constants.");
+            BufferVkImpl* pBuffer = CachedRes.pObject.RawPtr<BufferVkImpl>();
             VERIFY(pBuffer != nullptr, "Inline constant buffer is null in SRB cache");
 
             // Map the buffer from SRB cache and copy the data

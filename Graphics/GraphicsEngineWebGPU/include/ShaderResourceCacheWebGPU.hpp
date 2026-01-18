@@ -221,7 +221,18 @@ public:
                                  Uint32                         GroupIdx) const;
 
     // Writes inline constant data to the staging buffer
-    void SetInlineConstants(Uint32 BindGroupIdx, Uint32 CacheOffset, const void* pConstants, Uint32 FirstConstant, Uint32 NumConstants);
+    void SetInlineConstants(Uint32      BindGroupIdx,
+                            Uint32      CacheOffset,
+                            const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants)
+    {
+        BindGroup& Group = GetBindGroup(BindGroupIdx);
+        Resource&  Res   = Group.GetResource(CacheOffset);
+        // Copy constants to the staging buffer
+        // IMPORTANT: Do NOT call UpdateRevision() - inline constants can change after SRB commit
+        Res.SetInlineConstants(pConstants, FirstConstant, NumConstants);
+    }
 
     // Copies inline constant data from source cache to this cache
     void CopyInlineConstants(const ShaderResourceCacheWebGPU& SrcCache,
