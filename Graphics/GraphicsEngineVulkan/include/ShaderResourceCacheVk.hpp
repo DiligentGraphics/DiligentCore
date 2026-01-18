@@ -95,7 +95,7 @@ public:
 
     // Allocates memory for descriptor sets and resources, including space for inline constants.
     // IMPORTANT: This function only allocates memory. After calling InitializeSets(), you must
-    //            call InitializeResources() to construct Resource objects.
+    //            call InitializeResources/InitializeInlineConstantBuffer to construct Resource objects.
     void InitializeSets(IMemoryAllocator& MemAllocator,
                         Uint32            NumSets,
                         const Uint32*     SetSizes,
@@ -132,6 +132,7 @@ public:
             pInlineConstantData{_pInlineConstantData}
         {
             VERIFY(Type == DescriptorType::UniformBufferDynamic, "Inline constant buffer must be of type UniformBufferDynamic");
+            VERIFY(pInlineConstantData != nullptr, "Inline constant data pointer must not be null");
         }
 
         // clang-format off
@@ -150,7 +151,7 @@ public:
 /*16 */ Uint64                       BufferBaseOffset = 0;
 /*24 */ Uint64                       BufferRangeSize  = 0;
 
-        // For inline constants only - pointer to CPU-side staging buffer
+        // For inline constants only - pointer to the CPU-side staging buffer
 /*32 */ void* const                  pInlineConstantData = nullptr;
 /*40 */ // End of structure
 
@@ -283,7 +284,7 @@ public:
     const void* GetInlineConstantData(Uint32 DescrSetIndex, Uint32 CacheOffset) const
     {
         const DescriptorSet& DescrSet = GetDescriptorSet(DescrSetIndex);
-        VERIFY(CacheOffset < DescrSet.GetSize(), "CacheOffset out of bounds");
+        VERIFY(CacheOffset < DescrSet.GetSize(), "CacheOffset is out of bounds");
 
         const Resource& Res = DescrSet.GetResource(CacheOffset);
         return Res.pInlineConstantData;
@@ -328,15 +329,15 @@ public:
 private:
     Resource* GetFirstResourcePtr()
     {
-        static_assert(alignof(DescriptorSet) >= alignof(Resource),
-                      "DescriptorSet alignment is less than Resource alignment. "
+        static_assert((sizeof(DescriptorSet) % alignof(Resource)) == 0,
+                      "DescriptorSet size is not a multiple of Resource alignment. "
                       "This may lead to misaligned Resource pointers.");
         return reinterpret_cast<Resource*>(static_cast<DescriptorSet*>(m_pMemory.get()) + m_NumSets);
     }
     const Resource* GetFirstResourcePtr() const
     {
-        static_assert(alignof(DescriptorSet) >= alignof(Resource),
-                      "DescriptorSet alignment is less than Resource alignment. "
+        static_assert((sizeof(DescriptorSet) % alignof(Resource)) == 0,
+                      "DescriptorSet size is not a multiple of Resource alignment. "
                       "This may lead to misaligned Resource pointers.");
         return reinterpret_cast<const Resource*>(static_cast<const DescriptorSet*>(m_pMemory.get()) + m_NumSets);
     }

@@ -60,7 +60,8 @@ struct ImmutableSamplerAttribsVk
 ASSERT_SIZEOF(ImmutableSamplerAttribsVk, 8, "The struct is used in serialization and must be tightly packed");
 
 /// Inline constant buffer attributes for Vulkan backend.
-/// All inline constants are treated uniformly at PRS level - they all get:
+/// All inline constants are treated as uniform buffers by the signature,
+/// and similar to other uniform buffers, they get:
 /// - DescriptorSet binding and cache allocation
 /// - Shared emulated buffer (created in the Signature, shared by all SRBs)
 ///

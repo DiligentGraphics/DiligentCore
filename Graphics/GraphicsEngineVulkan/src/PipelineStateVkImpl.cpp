@@ -776,7 +776,9 @@ void PipelineStateVkImpl::RemapOrVerifyShaderResources(
                     {
                         LOG_ERROR_AND_THROW("Shader '", ShaderName, "' already contains push constant '", pShaderResources->GetPushConstant(0).Name,
                                             "', while pipeline '", PipelineName, "' requires converting uniform buffer '", PushConstant.Name,
-                                            "' to push constant. Converting push constants to uniform buffers is not supported.");
+                                            "' to push constant. Converting push constants to uniform buffers is not supported. "
+                                            "To fix this issue, don't use push constants in the shader - Diligent Engine will convert "
+                                            "the required uniform buffer to push constant automatically.");
                     }
 
 #if !DILIGENT_NO_HLSL

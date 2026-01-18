@@ -184,8 +184,10 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
         // while ResDesc.ArraySize contains the number of 32-bit constants.
         const Uint32 DescriptorCount = ResDesc.GetArraySize();
 
-        // All resources (including inline constant buffers) use descriptor sets.
-        // Push constant selection is deferred to PSO creation time.
+        // All resources (including all inline constant buffers) get descriptors in the set.
+        // One inline constant will be promoted to push constant by PSO, and its
+        // descriptor will not be used, which is totally fine.
+
         BindingCount[CacheGroup] += 1;
         // Note that we may reserve space for separate immutable samplers, which will never be used, but this is OK.
         CacheGroupSizes[CacheGroup] += DescriptorCount;
@@ -364,8 +366,10 @@ void PipelineResourceSignatureVkImpl::CreateSetLayouts(const bool IsSerialized)
             {
                 VERIFY(pAttribs->GetDescriptorType() == DescriptorType::UniformBufferDynamic,
                        "Inline constants must be represented as dynamic uniform buffers");
-                VERIFY(!pAttribs->IsImmutableSamplerAssigned(), "Inline constant buffers cannot have immutable samplers");
+                VERIFY(!pAttribs->IsImmutableSamplerAssigned(),
+                       "Inline constant buffers cannot have immutable samplers");
                 const Uint32 NumInlineConstants = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
+                // Do not set buffer in the static resource cache - it will be set in the SRB by InitSRBResourceCache
                 m_pStaticResCache->InitializeInlineConstantBuffer(pAttribs->DescrSet, StaticCacheOffset, StaticInlineConstantOffset, NumInlineConstants);
                 StaticInlineConstantOffset += NumInlineConstants; // For inline constants, ArraySize is the number of 32-bit constants
             }
@@ -593,6 +597,7 @@ void PipelineResourceSignatureVkImpl::InitSRBResourceCache(ShaderResourceCacheVk
             const Uint32 NumConstants = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
             VERIFY_EXPR(InlineCBAttr.NumConstants == NumConstants);
 
+            // The buffer will count towards the number of dynamic uniform buffers in the cache.
             ResourceCache.InitializeInlineConstantBuffer(Attr.DescrSet, Attr.CacheOffset(CacheType), InlineConstantOffset,
                                                          NumConstants, &GetDevice()->GetLogicalDevice(),
                                                          Attr.BindingIndex, InlineCBAttr.pBuffer);
@@ -654,6 +659,8 @@ void PipelineResourceSignatureVkImpl::CopyStaticResources(ShaderResourceCacheVk&
             VERIFY(DstCachedRes.BufferRangeSize == NumConstants * sizeof(Uint32),
                    "Dst inline constant buffer size (", DstCachedRes.BufferRangeSize,
                    ") does not match expected size (", NumConstants * sizeof(Uint32), ").");
+            VERIFY(DstCachedRes.pObject || DstCacheType != ResourceCacheContentType::SRB,
+                   "Inline constant buffer must have been initialized in SRB resource cache by InitSRBResourceCache.");
 
             memcpy(DstCachedRes.pInlineConstantData, SrcCachedRes.pInlineConstantData, NumConstants * sizeof(Uint32));
         }

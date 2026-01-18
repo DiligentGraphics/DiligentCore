@@ -442,8 +442,8 @@ void DeviceContextVkImpl::CommitInlineConstants(ResourceBindInfo& BindInfo, Uint
         if (CommitAttribs.pResourceCache == nullptr)
         {
             // Each signature with inline constants must have a bound SRB with a valid resource cache
-            DEV_CHECK_ERR(false, "Signature '", pSign->GetDesc().Name,
-                          "' has inline constants but no SRB is bound. Did you call CommitShaderResources()?");
+            DEV_ERROR("Signature '", pSign->GetDesc().Name,
+                      "' has inline constants but no SRB is bound. Did you call CommitShaderResources()?");
             continue;
         }
         DEV_CHECK_ERR(CommitAttribs.pResourceCache->HasInlineConstants(),
@@ -603,6 +603,9 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
 
 #ifdef DILIGENT_DEBUG
     ResourceCache.DbgVerifyDynamicBuffersCounter();
+    VERIFY(!ResourceCache.HasInlineConstants() || ResourceCache.HasDynamicResources(),
+           "Inline constant buffers count towards the number of dynamic resources, "
+           "so a resource cache with inline constants must also have dynamic resources.");
 #endif
 
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
@@ -625,6 +628,8 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
     // We must not clear entire ResInfo as DescriptorSetBaseInd and DynamicOffsetCount
     // are set by SetPipelineState().
     SetInfo.vkSets = {};
+    VERIFY((BindInfo.DynamicSRBMask & BindInfo.InlineConstantsSRBMask) == BindInfo.InlineConstantsSRBMask,
+           "SRBs with inline constants must also be marked as dynamic.");
 
     Uint32 DSIndex = 0;
     if (pSignature->HasDescriptorSet(PipelineResourceSignatureVkImpl::DESCRIPTOR_SET_ID_STATIC_MUTABLE))
@@ -838,9 +843,12 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     // calls we do not need to bind the sets again.
     const Uint32 CommitMask = BindInfo.GetCommitMask(DynamicBuffersIntact, InlineConstantsIntact);
     VERIFY((CommitMask & InlineConstantSRBCommitMask) == InlineConstantSRBCommitMask,
-           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask");
+           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask because "
+           "inline constant buffers count towards dynamic resources.");
     if (CommitMask != 0)
     {
+        // CommitDescriptorSets is always called for SRBs that have inline constants,
+        // but if dynamic offsets have not changed, it will skip binding.
         CommitDescriptorSets(BindInfo, CommitMask);
     }
 
@@ -1149,9 +1157,12 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
 
     const Uint32 CommitMask = BindInfo.GetCommitMask();
     VERIFY((CommitMask & InlineConstantSRBCommitMask) == InlineConstantSRBCommitMask,
-           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask");
+           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask because "
+           "inline constant buffers count towards dynamic resources.");
     if (CommitMask != 0)
     {
+        // CommitDescriptorSets is always called for SRBs that have inline constants,
+        // but if dynamic offsets have not changed, it will skip binding.
         CommitDescriptorSets(BindInfo, CommitMask);
     }
 
@@ -1177,9 +1188,12 @@ void DeviceContextVkImpl::PrepareForRayTracing()
 
     const Uint32 CommitMask = BindInfo.GetCommitMask();
     VERIFY((CommitMask & InlineConstantSRBCommitMask) == InlineConstantSRBCommitMask,
-           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask");
+           "All bits in InlineConstantSRBCommitMask must be also set in CommitMask because "
+           "inline constant buffers count towards dynamic resources.");
     if (CommitMask != 0)
     {
+        // CommitDescriptorSets is always called for SRBs that have inline constants,
+        // but if dynamic offsets have not changed, it will skip binding.
         CommitDescriptorSets(BindInfo, CommitMask);
     }
 

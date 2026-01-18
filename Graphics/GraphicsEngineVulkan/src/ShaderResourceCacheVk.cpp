@@ -124,6 +124,7 @@ void ShaderResourceCacheVk::InitializeResources(Uint32         Set,
             HasImmutableSampler,
         };
 #ifdef DILIGENT_DEBUG
+        VERIFY(!m_DbgInitializedResources[Set][size_t{Offset} + res], "Resource at set ", Set, " offset ", Offset + res, " has already been initialized");
         m_DbgInitializedResources[Set][size_t{Offset} + res] = true;
 #endif
     }
@@ -141,12 +142,13 @@ void ShaderResourceCacheVk::InitializeInlineConstantBuffer(Uint32               
     DescriptorSet& DescrSet  = GetDescriptorSet(Set);
     Resource*      pInlineCB = new (&DescrSet.GetResource(Offset)) Resource{
         DescriptorType::UniformBufferDynamic,
-        InlineConstantOffset != ~0u ? GetInlineConstantStorage(InlineConstantOffset) : nullptr,
+        GetInlineConstantStorage(InlineConstantOffset),
     };
 
     pInlineCB->BufferRangeSize = NumInlineConstants * sizeof(Uint32);
 
 #ifdef DILIGENT_DEBUG
+    VERIFY(!m_DbgInitializedResources[Set][size_t{Offset}], "Resource at set ", Set, " offset ", Offset, " has already been initialized");
     m_DbgInitializedResources[Set][size_t{Offset}] = true;
 
     for (Uint32 i = 0; i < NumInlineConstants; ++i)
@@ -158,6 +160,8 @@ void ShaderResourceCacheVk::InitializeInlineConstantBuffer(Uint32               
 
     if (pLogicalDevice != nullptr)
     {
+        // Since we use SetResource, the buffer will count towards the number of
+        // dynamic buffers in the cache.
         SetResource(
             pLogicalDevice,
             Set,
@@ -1037,7 +1041,7 @@ void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
     Resource&      DstRes   = DescrSet.GetResource(CacheOffset);
 
     VERIFY(DstRes.pInlineConstantData != nullptr,
-           "Inline constant data pointer is null. Make sure InitializeResources was called with proper InlineConstantOffset for this resource.");
+           "Inline constant data pointer is null. Make sure InitializeInlineConstantBuffer was called for this resource.");
     VERIFY(FirstConstant + NumConstants <= DstRes.BufferRangeSize / sizeof(Uint32),
            "Too many constants (", FirstConstant + NumConstants, ") for the allocated space (", DstRes.BufferRangeSize / sizeof(Uint32), ")");
 
