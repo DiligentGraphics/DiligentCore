@@ -210,7 +210,7 @@ public:
     const DescriptorSet& GetDescriptorSet(Uint32 Index) const
     {
         VERIFY_EXPR(Index < m_NumSets);
-        return reinterpret_cast<const DescriptorSet*>(m_pMemory.get())[Index];
+        return static_cast<const DescriptorSet*>(m_pMemory.get())[Index];
     }
 
     void AssignDescriptorSetAllocation(Uint32 SetIndex, DescriptorSetAllocation&& Allocation)
@@ -315,17 +315,23 @@ public:
 private:
     Resource* GetFirstResourcePtr()
     {
-        return reinterpret_cast<Resource*>(reinterpret_cast<DescriptorSet*>(m_pMemory.get()) + m_NumSets);
+        static_assert(alignof(DescriptorSet) >= alignof(Resource),
+                      "DescriptorSet alignment is less than Resource alignment. "
+                      "This may lead to misaligned Resource pointers.");
+        return reinterpret_cast<Resource*>(static_cast<DescriptorSet*>(m_pMemory.get()) + m_NumSets);
     }
     const Resource* GetFirstResourcePtr() const
     {
-        return reinterpret_cast<const Resource*>(reinterpret_cast<const DescriptorSet*>(m_pMemory.get()) + m_NumSets);
+        static_assert(alignof(DescriptorSet) >= alignof(Resource),
+                      "DescriptorSet alignment is less than Resource alignment. "
+                      "This may lead to misaligned Resource pointers.");
+        return reinterpret_cast<const Resource*>(static_cast<const DescriptorSet*>(m_pMemory.get()) + m_NumSets);
     }
 
     DescriptorSet& GetDescriptorSet(Uint32 Index)
     {
         VERIFY_EXPR(Index < m_NumSets);
-        return reinterpret_cast<DescriptorSet*>(m_pMemory.get())[Index];
+        return static_cast<DescriptorSet*>(m_pMemory.get())[Index];
     }
 
     // Returns pointer to inline constant storage at the given offset

@@ -94,8 +94,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator,
         };
         memset(m_pMemory.get(), 0, MemorySize);
 
-        DescriptorSet* pSets       = reinterpret_cast<DescriptorSet*>(m_pMemory.get());
-        Resource*      pCurrResPtr = reinterpret_cast<Resource*>(pSets + m_NumSets);
+        Resource* pCurrResPtr = GetFirstResourcePtr();
         for (Uint32 t = 0; t < NumSets; ++t)
         {
             new (&GetDescriptorSet(t)) DescriptorSet{SetSizes[t], SetSizes[t] > 0 ? pCurrResPtr : nullptr};
@@ -1009,8 +1008,8 @@ void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
            "Inline constant data pointer is null. Make sure InitializeResources was called with proper InlineConstantOffset for this resource.");
 
     // Copy to CPU-side staging buffer
-    Uint32* pDstConstants = reinterpret_cast<Uint32*>(DstRes.pInlineConstantData);
-    memcpy(pDstConstants + FirstConstant, pConstants, NumConstants * sizeof(Uint32));
+    Uint8* pDstConstants = static_cast<Uint8*>(DstRes.pInlineConstantData);
+    memcpy(pDstConstants + FirstConstant * sizeof(Uint32), pConstants, NumConstants * sizeof(Uint32));
 }
 
 } // namespace Diligent
