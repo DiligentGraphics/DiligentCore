@@ -41,14 +41,12 @@ size_t ShaderResourceCacheGL::GetRequiredMemorySize(const TResourceCount& ResCou
                   "ShaderResourceCacheGL::TResourceCount must be the same type as PipelineResourceSignatureGLImpl::TBindings");
     // clang-format off
     size_t MemSize =
-                sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER] +
-                sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE]        +
-                sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]          +
-                sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER];
+                AlignUp(sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER], alignof(CachedResourceView)) +
+                AlignUp(sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE],        alignof(CachedResourceView)) +
+                AlignUp(sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE],          alignof(CachedSSBO))         +
+                AlignUp(sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER], alignof(Uint32))             +
+                TotalInlineConstants * sizeof(Uint32);
     // clang-format on
-
-    // Add space for inline constant data at the tail
-    MemSize += TotalInlineConstants * sizeof(Uint32);
 
     VERIFY(MemSize < InvalidResourceOffset, "Memory size exceed the maximum allowed size.");
     return MemSize;
@@ -76,10 +74,10 @@ void ShaderResourceCacheGL::Initialize(const InitAttribs& Attribs)
     m_HasInlineConstants = (TotalInlineConstants > 0);
 
     // clang-format off
-    m_TexturesOffset  = static_cast<Uint16>(m_UBsOffset      + sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER]);
-    m_ImagesOffset    = static_cast<Uint16>(m_TexturesOffset + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE]);
-    m_SSBOsOffset     = static_cast<Uint16>(m_ImagesOffset   + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]);
-    m_ResourceEndOffset = static_cast<Uint16>(m_SSBOsOffset    + sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER]);
+    m_TexturesOffset       = AlignUp(static_cast<Uint16>(m_UBsOffset      + sizeof(CachedUB)           * ResCount[BINDING_RANGE_UNIFORM_BUFFER]), Uint16{alignof(CachedResourceView)});
+    m_ImagesOffset         = AlignUp(static_cast<Uint16>(m_TexturesOffset + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_TEXTURE]),        Uint16{alignof(CachedResourceView)});
+    m_SSBOsOffset          = AlignUp(static_cast<Uint16>(m_ImagesOffset   + sizeof(CachedResourceView) * ResCount[BINDING_RANGE_IMAGE]),          Uint16{alignof(CachedSSBO)});
+    m_InlineConstantOffset = AlignUp(static_cast<Uint16>(m_SSBOsOffset    + sizeof(CachedSSBO)         * ResCount[BINDING_RANGE_STORAGE_BUFFER]), Uint16{alignof(Uint32)});
 
     VERIFY_EXPR(GetUBCount()      == static_cast<Uint32>(ResCount[BINDING_RANGE_UNIFORM_BUFFER]));
     VERIFY_EXPR(GetTextureCount() == static_cast<Uint32>(ResCount[BINDING_RANGE_TEXTURE]));
@@ -88,7 +86,7 @@ void ShaderResourceCacheGL::Initialize(const InitAttribs& Attribs)
     // clang-format on
 
     // Inline constant data tail is after m_ResourceEndOffset
-    size_t BufferSize = m_ResourceEndOffset + TotalInlineConstants * sizeof(Uint32);
+    size_t BufferSize = m_InlineConstantOffset + TotalInlineConstants * sizeof(Uint32);
 
     VERIFY_EXPR(BufferSize == GetRequiredMemorySize(ResCount, TotalInlineConstants));
 
@@ -126,7 +124,7 @@ void ShaderResourceCacheGL::Initialize(const InitAttribs& Attribs)
             UB.BaseOffset          = 0;
             UB.RangeSize           = InlineCBAttribs.NumConstants * sizeof(Uint32);
             UB.DynamicOffset       = 0;
-            UB.pInlineConstantData = reinterpret_cast<Uint32*>(m_pResourceData.get() + m_ResourceEndOffset) + InlineConstantOffset;
+            UB.pInlineConstantData = reinterpret_cast<Uint32*>(m_pResourceData.get() + m_InlineConstantOffset) + InlineConstantOffset;
 
             InlineConstantOffset += InlineCBAttribs.NumConstants;
         }
@@ -151,10 +149,10 @@ ShaderResourceCacheGL::~ShaderResourceCacheGL()
         for (Uint32 s = 0; s < GetSSBOCount(); ++s)
             GetSSBO(s).~CachedSSBO();
 
-        m_TexturesOffset    = InvalidResourceOffset;
-        m_ImagesOffset      = InvalidResourceOffset;
-        m_SSBOsOffset       = InvalidResourceOffset;
-        m_ResourceEndOffset = InvalidResourceOffset;
+        m_TexturesOffset       = InvalidResourceOffset;
+        m_ImagesOffset         = InvalidResourceOffset;
+        m_SSBOsOffset          = InvalidResourceOffset;
+        m_InlineConstantOffset = InvalidResourceOffset;
     }
     m_pResourceData.reset();
 }

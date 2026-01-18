@@ -312,10 +312,10 @@ public:
     }
 
     // clang-format off
-    Uint32 GetUBCount()      const { return (m_TexturesOffset    - m_UBsOffset)      / sizeof(CachedUB);            }
-    Uint32 GetTextureCount() const { return (m_ImagesOffset      - m_TexturesOffset) / sizeof(CachedResourceView);  }
-    Uint32 GetImageCount()   const { return (m_SSBOsOffset       - m_ImagesOffset)   / sizeof(CachedResourceView);  }
-    Uint32 GetSSBOCount()    const { return (m_ResourceEndOffset - m_SSBOsOffset)    / sizeof(CachedSSBO);          }
+    Uint32 GetUBCount()      const { return (m_TexturesOffset       - m_UBsOffset)      / sizeof(CachedUB);            }
+    Uint32 GetTextureCount() const { return (m_ImagesOffset         - m_TexturesOffset) / sizeof(CachedResourceView);  }
+    Uint32 GetImageCount()   const { return (m_SSBOsOffset          - m_ImagesOffset)   / sizeof(CachedResourceView);  }
+    Uint32 GetSSBOCount()    const { return (m_InlineConstantOffset - m_SSBOsOffset)    / sizeof(CachedSSBO);          }
     // clang-format on
 
     const CachedUB& GetConstUB(Uint32 CacheOffset) const
@@ -344,7 +344,7 @@ public:
 
     bool IsInitialized() const
     {
-        return m_ResourceEndOffset != InvalidResourceOffset;
+        return m_TexturesOffset != InvalidResourceOffset;
     }
 
     ResourceCacheContentType GetContentType() const { return m_ContentType; }
@@ -424,10 +424,10 @@ private:
     static constexpr const Uint16 InvalidResourceOffset = 0xFFFF;
     static constexpr const Uint16 m_UBsOffset           = 0;
 
-    Uint16 m_TexturesOffset    = InvalidResourceOffset;
-    Uint16 m_ImagesOffset      = InvalidResourceOffset;
-    Uint16 m_SSBOsOffset       = InvalidResourceOffset;
-    Uint16 m_ResourceEndOffset = InvalidResourceOffset;
+    Uint16 m_TexturesOffset       = InvalidResourceOffset;
+    Uint16 m_ImagesOffset         = InvalidResourceOffset;
+    Uint16 m_SSBOsOffset          = InvalidResourceOffset;
+    Uint16 m_InlineConstantOffset = InvalidResourceOffset;
 
     std::unique_ptr<Uint8, STDDeleter<Uint8, IMemoryAllocator>> m_pResourceData;
 
