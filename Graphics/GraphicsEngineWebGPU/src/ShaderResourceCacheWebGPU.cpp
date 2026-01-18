@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,6 +37,19 @@
 namespace Diligent
 {
 
+static size_t GetMemorySize(Uint32 NumGroups, Uint32 TotalResources)
+{
+    size_t MemorySize = NumGroups * sizeof(ShaderResourceCacheWebGPU::BindGroup);
+
+    MemorySize = AlignUp(MemorySize, alignof(ShaderResourceCacheWebGPU::Resource));
+    MemorySize += TotalResources * sizeof(ShaderResourceCacheWebGPU::Resource);
+
+    MemorySize = AlignUp(MemorySize, alignof(WGPUBindGroupEntry));
+    MemorySize += TotalResources * sizeof(WGPUBindGroupEntry);
+
+    return MemorySize;
+}
+
 size_t ShaderResourceCacheWebGPU::GetRequiredMemorySize(Uint32 NumGroups, const Uint32* GroupSizes)
 {
     Uint32 TotalResources = 0;
@@ -44,11 +57,7 @@ size_t ShaderResourceCacheWebGPU::GetRequiredMemorySize(Uint32 NumGroups, const 
     {
         TotalResources += GroupSizes[t];
     }
-    size_t MemorySize =
-        NumGroups * sizeof(BindGroup) +
-        TotalResources * sizeof(Resource) +
-        TotalResources * sizeof(WGPUBindGroupEntry);
-    return MemorySize;
+    return GetMemorySize(NumGroups, TotalResources);
 }
 
 ShaderResourceCacheWebGPU::ShaderResourceCacheWebGPU(ResourceCacheContentType ContentType) noexcept :
@@ -92,10 +101,7 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
         m_TotalResources += GroupSizes[t];
     }
 
-    const size_t MemorySize =
-        NumGroups * sizeof(BindGroup) +
-        m_TotalResources * sizeof(Resource) +
-        m_TotalResources * sizeof(WGPUBindGroupEntry);
+    const size_t MemorySize = GetMemorySize(NumGroups, m_TotalResources);
     VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumGroups, GroupSizes));
 #ifdef DILIGENT_DEBUG
     m_DbgInitializedResources.resize(m_NumBindGroups);
@@ -109,9 +115,12 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
         };
         memset(m_pMemory.get(), 0, MemorySize);
 
-        BindGroup*          pGroups           = reinterpret_cast<BindGroup*>(m_pMemory.get());
-        Resource*           pCurrResPtr       = reinterpret_cast<Resource*>(pGroups + m_NumBindGroups);
-        WGPUBindGroupEntry* pCurrWGPUEntryPtr = reinterpret_cast<WGPUBindGroupEntry*>(pCurrResPtr + m_TotalResources);
+#ifdef DILIGENT_DEBUG
+        m_DbgMemoryEnd = reinterpret_cast<Uint8*>(m_pMemory.get()) + MemorySize;
+#endif
+
+        Resource*           pCurrResPtr       = GetFirstResourcePtr();
+        WGPUBindGroupEntry* pCurrWGPUEntryPtr = GetFirstWGPUEntryPtr();
         for (Uint32 t = 0; t < NumGroups; ++t)
         {
             const Uint32 GroupSize = GroupSizes[t];

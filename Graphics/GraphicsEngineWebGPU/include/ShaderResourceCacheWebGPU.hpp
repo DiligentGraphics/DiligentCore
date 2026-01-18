@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -203,15 +203,30 @@ private:
         return reinterpret_cast<const Resource*>(reinterpret_cast<const BindGroup*>(m_pMemory.get()) + m_NumBindGroups);
     }
 #endif
+    BindGroup* GetFirstBindGroupPtr()
+    {
+        return reinterpret_cast<BindGroup*>(m_pMemory.get());
+    }
     Resource* GetFirstResourcePtr()
     {
-        return reinterpret_cast<Resource*>(reinterpret_cast<BindGroup*>(m_pMemory.get()) + m_NumBindGroups);
+        Resource* pFirstResource = AlignUp(reinterpret_cast<Resource*>(GetFirstBindGroupPtr() + m_NumBindGroups),
+                                           alignof(Resource));
+        VERIFY(reinterpret_cast<Uint8*>(pFirstResource + m_TotalResources) <= m_DbgMemoryEnd,
+               "Resource storage exceeds allocated memory. This indicates a bug in memory calculation logic");
+        return pFirstResource;
     }
-
+    WGPUBindGroupEntry* GetFirstWGPUEntryPtr()
+    {
+        WGPUBindGroupEntry* pFirstWGPUEntry = AlignUp(reinterpret_cast<WGPUBindGroupEntry*>(GetFirstResourcePtr() + m_TotalResources),
+                                                      alignof(WGPUBindGroupEntry));
+        VERIFY(reinterpret_cast<Uint8*>(pFirstWGPUEntry + m_TotalResources) <= m_DbgMemoryEnd,
+               "WGPUBindGroupEntry storage exceeds allocated memory. This indicates a bug in memory calculation logic");
+        return pFirstWGPUEntry;
+    }
     BindGroup& GetBindGroup(Uint32 Index)
     {
         VERIFY_EXPR(Index < m_NumBindGroups);
-        return reinterpret_cast<BindGroup*>(m_pMemory.get())[Index];
+        return GetFirstBindGroupPtr()[Index];
     }
 
 private:
@@ -230,6 +245,7 @@ private:
 #ifdef DILIGENT_DEBUG
     // Debug array that stores flags indicating if resources in the cache have been initialized
     std::vector<std::vector<bool>> m_DbgInitializedResources;
+    Uint8*                         m_DbgMemoryEnd = nullptr;
 #endif
 };
 
