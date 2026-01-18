@@ -105,20 +105,33 @@ public:
                              Uint32         Offset,
                              Uint32         ArraySize,
                              DescriptorType Type,
-                             bool           HasImmutableSampler,
-                             Uint32         InlineConstantOffset  = ~0u,
-                             Uint32         DbgNumInlineConstants = 0);
+                             bool           HasImmutableSampler);
+
+    void InitializeInlineConstantBuffer(Uint32                                Set,
+                                        Uint32                                Offset,
+                                        Uint32                                InlineConstantOffset,
+                                        Uint32                                NumInlineConstants,
+                                        const VulkanUtilities::LogicalDevice* pLogicalDevice = nullptr,
+                                        Uint32                                BindingIndex   = 0,
+                                        RefCntAutoPtr<IDeviceObject>          pBuffer        = {});
 
     // sizeof(Resource) == 40 (x64, msvc, Release)
     struct Resource
     {
-        explicit Resource(DescriptorType _Type, bool _HasImmutableSampler, void* _pInlineConstantData) noexcept :
+        explicit Resource(DescriptorType _Type, bool _HasImmutableSampler) noexcept :
             Type{_Type},
-            HasImmutableSampler{_HasImmutableSampler},
-            pInlineConstantData{_pInlineConstantData}
+            HasImmutableSampler{_HasImmutableSampler}
         {
             VERIFY(Type == DescriptorType::CombinedImageSampler || Type == DescriptorType::Sampler || !HasImmutableSampler,
                    "Immutable sampler can only be assigned to a combined image sampler or a separate sampler");
+        }
+
+        explicit Resource(DescriptorType _Type, void* _pInlineConstantData) noexcept :
+            Type{_Type},
+            HasImmutableSampler{false},
+            pInlineConstantData{_pInlineConstantData}
+        {
+            VERIFY(Type == DescriptorType::UniformBufferDynamic, "Inline constant buffer must be of type UniformBufferDynamic");
         }
 
         // clang-format off

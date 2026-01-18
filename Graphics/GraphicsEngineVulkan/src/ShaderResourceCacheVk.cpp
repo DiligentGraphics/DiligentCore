@@ -114,9 +114,7 @@ void ShaderResourceCacheVk::InitializeResources(Uint32         Set,
                                                 Uint32         Offset,
                                                 Uint32         ArraySize,
                                                 DescriptorType Type,
-                                                bool           HasImmutableSampler,
-                                                Uint32         InlineConstantOffset,
-                                                Uint32         DbgNumInlineConstants)
+                                                bool           HasImmutableSampler)
 {
     DescriptorSet& DescrSet = GetDescriptorSet(Set);
     for (Uint32 res = 0; res < ArraySize; ++res)
@@ -124,23 +122,56 @@ void ShaderResourceCacheVk::InitializeResources(Uint32         Set,
         new (&DescrSet.GetResource(Offset + res)) Resource{
             Type,
             HasImmutableSampler,
-            InlineConstantOffset != ~0u ? GetInlineConstantStorage(InlineConstantOffset) : nullptr,
         };
 #ifdef DILIGENT_DEBUG
         m_DbgInitializedResources[Set][size_t{Offset} + res] = true;
-
-        if (InlineConstantOffset != ~0u)
-        {
-            VERIFY(InlineConstantOffset + DbgNumInlineConstants <= m_DbgAssignedInlineConstants.size(), "Inline constant storage overflow");
-            for (Uint32 i = 0; i < DbgNumInlineConstants; ++i)
-            {
-                VERIFY(!m_DbgAssignedInlineConstants[InlineConstantOffset + i], "Inline constant storage at offset ", InlineConstantOffset + i, " has already been assigned");
-                m_DbgAssignedInlineConstants[InlineConstantOffset + i] = true;
-            }
-        }
 #endif
     }
 }
+
+void ShaderResourceCacheVk::InitializeInlineConstantBuffer(Uint32                                Set,
+                                                           Uint32                                Offset,
+                                                           Uint32                                InlineConstantOffset,
+                                                           Uint32                                NumInlineConstants,
+                                                           const VulkanUtilities::LogicalDevice* pLogicalDevice,
+                                                           Uint32                                BindingIndex,
+                                                           RefCntAutoPtr<IDeviceObject>          pBuffer)
+{
+    VERIFY(InlineConstantOffset + NumInlineConstants <= m_DbgAssignedInlineConstants.size(), "Inline constant storage overflow");
+    DescriptorSet& DescrSet  = GetDescriptorSet(Set);
+    Resource*      pInlineCB = new (&DescrSet.GetResource(Offset)) Resource{
+        DescriptorType::UniformBufferDynamic,
+        InlineConstantOffset != ~0u ? GetInlineConstantStorage(InlineConstantOffset) : nullptr,
+    };
+
+    pInlineCB->BufferRangeSize = NumInlineConstants * sizeof(Uint32);
+
+#ifdef DILIGENT_DEBUG
+    m_DbgInitializedResources[Set][size_t{Offset}] = true;
+
+    for (Uint32 i = 0; i < NumInlineConstants; ++i)
+    {
+        VERIFY(!m_DbgAssignedInlineConstants[InlineConstantOffset + i], "Inline constant storage at offset ", InlineConstantOffset + i, " has already been assigned");
+        m_DbgAssignedInlineConstants[InlineConstantOffset + i] = true;
+    }
+#endif
+
+    if (pLogicalDevice != nullptr)
+    {
+        SetResource(
+            pLogicalDevice,
+            Set,
+            Offset,
+            {
+                BindingIndex,
+                0, // ArrayIndex
+                std::move(pBuffer),
+                0,                          // BufferBaseOffset
+                pInlineCB->BufferRangeSize, // BufferRangeSize
+            });
+    }
+}
+
 
 inline bool IsDynamicDescriptorType(DescriptorType DescrType)
 {
@@ -1007,6 +1038,8 @@ void ShaderResourceCacheVk::SetInlineConstants(Uint32      DescrSetIndex,
 
     VERIFY(DstRes.pInlineConstantData != nullptr,
            "Inline constant data pointer is null. Make sure InitializeResources was called with proper InlineConstantOffset for this resource.");
+    VERIFY(FirstConstant + NumConstants <= DstRes.BufferRangeSize / sizeof(Uint32),
+           "Too many constants (", FirstConstant + NumConstants, ") for the allocated space (", DstRes.BufferRangeSize / sizeof(Uint32), ")");
 
     // Copy to CPU-side staging buffer
     Uint8* pDstConstants = static_cast<Uint8*>(DstRes.pInlineConstantData);

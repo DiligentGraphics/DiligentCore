@@ -589,6 +589,8 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
 
         if (!IsImmutableSampler)
         {
+            // For inline constants, GetArraySize() returns 1 (actual array size),
+            // while ArraySize contains the number of 32-bit constants
             const Uint32 ArraySize = ResDesc.GetArraySize();
             for (Uint32 elem = 0; elem < ArraySize; ++elem)
             {
@@ -616,10 +618,10 @@ void PipelineResourceSignatureWebGPUImpl::CreateBindGroupLayouts(const bool IsSe
                            "Only dynamic uniform buffers can be inline constant buffers");
                     VERIFY(!pAttribs->IsImmutableSamplerAssigned(),
                            "Inline constant buffers cannot have immutable samplers assigned");
+                    const Uint32 NumConstants = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
                     m_pStaticResCache->InitializeInlineConstantBuffer(pAttribs->BindGroup, StaticCacheOffset,
-                                                                      StaticInlineConstantOffset, ResDesc.ArraySize);
-
-                    StaticInlineConstantOffset += ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
+                                                                      StaticInlineConstantOffset, NumConstants);
+                    StaticInlineConstantOffset += NumConstants;
                 }
                 else
                 {
@@ -764,27 +766,24 @@ void PipelineResourceSignatureWebGPUImpl::InitSRBResourceCache(ShaderResourceCac
             continue;
         }
 
-        // For inline constants, GetArraySize() returns 1 (actual array size),
-        // while ArraySize contains the number of 32-bit constants
-        const Uint32 ResArraySize = ResDesc.GetArraySize();
         if ((ResDesc.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) != 0)
         {
             const InlineConstantBufferAttribsWebGPU& InlineCBAttr = GetInlineConstantBufferAttribs(InlineConstantBufferIdx++);
             VERIFY_EXPR(InlineCBAttr.BindGroup == Attr.BindGroup);
             VERIFY_EXPR(InlineCBAttr.CacheOffset == Attr.CacheOffset(CacheType));
             VERIFY_EXPR(InlineCBAttr.pBuffer);
-            VERIFY_EXPR(InlineCBAttr.NumConstants > 0);
+            const Uint32 NumConstants = ResDesc.ArraySize; // For inline constants, ArraySize is the number of 32-bit constants
+            VERIFY_EXPR(InlineCBAttr.NumConstants == NumConstants);
 
             VERIFY(Attr.GetBindGroupEntryType() == BindGroupEntryType::UniformBufferDynamic, "Only dynamic uniform buffers can be inline constant buffers");
             VERIFY(!Attr.IsImmutableSamplerAssigned(), "Inline constant buffers cannot have immutable samplers assigned");
             ResourceCache.InitializeInlineConstantBuffer(Attr.BindGroup, Attr.CacheOffset(CacheType),
-                                                         InlineConstantOffset, ResDesc.ArraySize, InlineCBAttr.pBuffer);
-
-            InlineConstantOffset += ResDesc.ArraySize;
+                                                         InlineConstantOffset, NumConstants, InlineCBAttr.pBuffer);
+            InlineConstantOffset += NumConstants;
         }
         else
         {
-            ResourceCache.InitializeResources(Attr.BindGroup, Attr.CacheOffset(CacheType), ResArraySize,
+            ResourceCache.InitializeResources(Attr.BindGroup, Attr.CacheOffset(CacheType), ResDesc.GetArraySize(),
                                               Attr.GetBindGroupEntryType(), Attr.IsImmutableSamplerAssigned());
         }
     }

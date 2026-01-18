@@ -292,7 +292,7 @@ void ShaderResourceCacheWebGPU::InitializeInlineConstantBuffer(Uint32           
                                                                Uint32                       NumInlineConstants,
                                                                RefCntAutoPtr<IDeviceObject> pObject)
 {
-    VERIFY_EXPR(InlineConstantOffset != ~0u);
+    VERIFY(InlineConstantOffset + NumInlineConstants <= m_DbgAssignedInlineConstants.size(), "Inline constant storage overflow");
     BindGroup& Group = GetBindGroup(GroupIdx);
 
     Resource* pRes = new (&Group.GetResource(Offset)) Resource{
@@ -302,14 +302,10 @@ void ShaderResourceCacheWebGPU::InitializeInlineConstantBuffer(Uint32           
 #ifdef DILIGENT_DEBUG
     m_DbgInitializedResources[GroupIdx][size_t{Offset}] = true;
 
-    if (InlineConstantOffset != ~0u)
+    for (Uint32 i = 0; i < NumInlineConstants; ++i)
     {
-        VERIFY(InlineConstantOffset + NumInlineConstants <= m_DbgAssignedInlineConstants.size(), "Inline constant storage overflow");
-        for (Uint32 i = 0; i < NumInlineConstants; ++i)
-        {
-            VERIFY(!m_DbgAssignedInlineConstants[InlineConstantOffset + i], "Inline constant storage at offset ", InlineConstantOffset + i, " has already been assigned");
-            m_DbgAssignedInlineConstants[InlineConstantOffset + i] = true;
-        }
+        VERIFY(!m_DbgAssignedInlineConstants[InlineConstantOffset + i], "Inline constant storage at offset ", InlineConstantOffset + i, " has already been assigned");
+        m_DbgAssignedInlineConstants[InlineConstantOffset + i] = true;
     }
 #endif
 
@@ -319,7 +315,7 @@ void ShaderResourceCacheWebGPU::InitializeInlineConstantBuffer(Uint32           
     {
         // Note that since we use SetResource, the buffer will count towards the number of
         // dynamic buffers in the cache.
-        SetResource(GroupIdx, Offset, std::move(pObject), 0, NumInlineConstants * sizeof(Uint32));
+        SetResource(GroupIdx, Offset, std::move(pObject), 0, pRes->BufferRangeSize);
     }
 }
 
