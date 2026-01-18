@@ -232,7 +232,7 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
 
     if (TotalInlineConstants > 0)
     {
-        Uint32* pInlineCBData = reinterpret_cast<Uint32*>(m_pResourceData.get() + MemOffset);
+        Uint8* pInlineCBData = reinterpret_cast<Uint8*>(m_pResourceData.get() + MemOffset);
         // Initialize inline constant buffers.
         ProcessInlineCBs(ResCount, pInlineCBs, NumInlineCBs,
                          [&pInlineCBData, this](const InlineConstantBufferAttribsD3D11& InlineCBAttr) {
@@ -240,9 +240,9 @@ void ShaderResourceCacheD3D11::Initialize(const D3D11ShaderResourceCounters&    
                              VERIFY_EXPR(InlineCBAttr.pBuffer != nullptr);
                              // Use the same buffer and data pointer for all active shader stages.
                              InitInlineConstantBuffer(InlineCBAttr.BindPoints, InlineCBAttr.pBuffer, InlineCBAttr.NumConstants, pInlineCBData);
-                             pInlineCBData += InlineCBAttr.NumConstants;
+                             pInlineCBData += InlineCBAttr.NumConstants * sizeof(Uint32);
                          });
-        VERIFY_EXPR(pInlineCBData == reinterpret_cast<Uint32*>(m_pResourceData.get() + BufferSize));
+        VERIFY_EXPR(pInlineCBData == reinterpret_cast<Uint8*>(m_pResourceData.get() + BufferSize));
     }
 
     m_Flags |= FLAG_IS_INITIALIZED;

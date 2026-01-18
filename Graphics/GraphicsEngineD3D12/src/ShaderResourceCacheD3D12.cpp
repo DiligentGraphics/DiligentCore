@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,6 +41,25 @@
 namespace Diligent
 {
 
+static size_t GetRequiredMemorySize(Uint32 NumTables,
+                                    Uint32 TotalResources,
+                                    Uint32 NumDescriptorAllocations,
+                                    Uint32 TotalInlineConstantValues)
+{
+    size_t MemorySize = NumTables * sizeof(ShaderResourceCacheD3D12::RootTable);
+
+    MemorySize = AlignUp(MemorySize, alignof(ShaderResourceCacheD3D12::Resource));
+    MemorySize += TotalResources * sizeof(ShaderResourceCacheD3D12::Resource);
+
+    MemorySize = AlignUp(MemorySize, alignof(DescriptorHeapAllocation));
+    MemorySize += NumDescriptorAllocations * sizeof(DescriptorHeapAllocation);
+
+    MemorySize = AlignUp(MemorySize, alignof(Uint32));
+    MemorySize += TotalInlineConstantValues * sizeof(Uint32);
+
+    return MemorySize;
+}
+
 ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemoryRequirements(const RootParamsManager& RootParams)
 {
     const Uint32 NumRootTables = RootParams.GetNumRootTables();
@@ -78,10 +97,10 @@ ShaderResourceCacheD3D12::MemoryRequirements ShaderResourceCacheD3D12::GetMemory
         MemReqs.TotalInlineConstantValues += RootConsts.d3d12RootParam.Constants.Num32BitValues;
     }
 
-    MemReqs.TotalSize = (MemReqs.NumTables * sizeof(RootTable) +
-                         MemReqs.TotalResources * sizeof(Resource) +
-                         MemReqs.NumDescriptorAllocations * sizeof(DescriptorHeapAllocation) +
-                         MemReqs.TotalInlineConstantValues * sizeof(Uint32));
+    MemReqs.TotalSize = GetRequiredMemorySize(MemReqs.NumTables,
+                                              MemReqs.TotalResources,
+                                              MemReqs.NumDescriptorAllocations,
+                                              MemReqs.TotalInlineConstantValues);
 
     return MemReqs;
 }
@@ -104,11 +123,10 @@ size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator,
 {
     VERIFY(!m_pMemory, "Memory has already been allocated");
 
-    const size_t MemorySize =
-        (m_NumTables * sizeof(RootTable) +
-         m_TotalResourceCount * sizeof(Resource) +
-         m_NumDescriptorAllocations * sizeof(DescriptorHeapAllocation) +
-         TotalInlineConstantValues * sizeof(Uint32));
+    const size_t MemorySize = GetRequiredMemorySize(m_NumTables,
+                                                    m_TotalResourceCount,
+                                                    m_NumDescriptorAllocations,
+                                                    TotalInlineConstantValues);
 
     if (MemorySize > 0)
     {
@@ -116,6 +134,10 @@ size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator,
             ALLOCATE_RAW(MemAllocator, "Memory for shader resource cache data", MemorySize),
             STDDeleter<void, IMemoryAllocator>(MemAllocator) //
         };
+
+#ifdef DILIGENT_DEBUG
+        m_DbgMemoryEnd = static_cast<Uint8*>(m_pMemory.get()) + MemorySize;
+#endif
 
         Resource* const pResources = GetResourceStorage();
         m_DescriptorAllocations    = m_NumDescriptorAllocations > 0 ? GetDescriptorAllocationStorage() : nullptr;
@@ -128,6 +150,10 @@ size_t ShaderResourceCacheD3D12::AllocateMemory(IMemoryAllocator& MemAllocator,
         for (Uint32 i = 0; i < m_NumDescriptorAllocations; ++i)
             new (m_DescriptorAllocations + i) DescriptorHeapAllocation{};
     }
+
+#ifdef DILIGENT_DEBUG
+    m_DbgTotalInlineConstants = TotalInlineConstantValues;
+#endif
 
     return MemorySize;
 }

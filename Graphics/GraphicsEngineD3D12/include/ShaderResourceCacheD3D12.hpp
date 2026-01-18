@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -382,7 +382,7 @@ private:
     Resource& GetResource(Uint32 Idx)
     {
         VERIFY_EXPR(Idx < m_TotalResourceCount);
-        return reinterpret_cast<Resource*>(reinterpret_cast<RootTable*>(m_pMemory.get()) + m_NumTables)[Idx];
+        return GetResourceStorage()[Idx];
     }
 
     size_t AllocateMemory(IMemoryAllocator& MemAllocator,
@@ -394,23 +394,35 @@ private:
     //
     RootTable* GetRootTableStorage()
     {
-        return reinterpret_cast<RootTable*>(m_pMemory.get());
+        return static_cast<RootTable*>(m_pMemory.get());
     }
     const RootTable* GetRootTableStorage() const
     {
-        return reinterpret_cast<const RootTable*>(m_pMemory.get());
+        return static_cast<const RootTable*>(m_pMemory.get());
     }
     Resource* GetResourceStorage()
     {
-        return reinterpret_cast<Resource*>(GetRootTableStorage() + m_NumTables);
+        Resource* pResourceStorage = AlignUp(reinterpret_cast<Resource*>(GetRootTableStorage() + m_NumTables),
+                                             alignof(Resource));
+        VERIFY(reinterpret_cast<Uint8*>(pResourceStorage + m_TotalResourceCount) <= m_DbgMemoryEnd,
+               "Resource storage exceeds allocated memory. This indicates a bug in memory calculation logic");
+        return pResourceStorage;
     }
     DescriptorHeapAllocation* GetDescriptorAllocationStorage()
     {
-        return reinterpret_cast<DescriptorHeapAllocation*>(GetResourceStorage() + m_TotalResourceCount);
+        DescriptorHeapAllocation* pDescrAllocStorage = AlignUp(reinterpret_cast<DescriptorHeapAllocation*>(GetResourceStorage() + m_TotalResourceCount),
+                                                               alignof(DescriptorHeapAllocation));
+        VERIFY(reinterpret_cast<Uint8*>(pDescrAllocStorage + m_NumDescriptorAllocations) <= m_DbgMemoryEnd,
+               "Descriptor heap allocation storage exceeds allocated memory. This indicates a bug in memory calculation logic");
+        return pDescrAllocStorage;
     }
     Uint32* GetInlineConstantStorage()
     {
-        return reinterpret_cast<Uint32*>(GetDescriptorAllocationStorage() + m_NumDescriptorAllocations);
+        Uint32* pInlineConstStorage = AlignUp(reinterpret_cast<Uint32*>(GetDescriptorAllocationStorage() + m_NumDescriptorAllocations),
+                                              alignof(Uint32));
+        VERIFY(reinterpret_cast<Uint8*>(pInlineConstStorage + m_DbgTotalInlineConstants) <= m_DbgMemoryEnd,
+               "Inline constant storage exceeds allocated memory. This indicates a bug in memory calculation logic");
+        return pInlineConstStorage;
     }
 
 private:
@@ -446,6 +458,11 @@ private:
 
     // The bitmask indicating root constants parameters
     Uint64 m_RootConstantsMask = Uint64{0};
+
+#ifdef DILIGENT_DEBUG
+    Uint8* m_DbgMemoryEnd            = nullptr;
+    Uint32 m_DbgTotalInlineConstants = 0;
+#endif
 };
 
 } // namespace Diligent
