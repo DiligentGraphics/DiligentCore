@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -486,6 +486,7 @@ void DeviceContextD3D11Impl::BindShaderResources(Uint32 BindSRBMask,
             }
         }
 
+        // Inline constant buffers do not count as dynamic resources in Direct3D11
         if ((m_BindInfo.InlineConstantsSRBMask & SignBit) != 0)
         {
             VERIFY(pResourceCache->HasInlineConstants(),

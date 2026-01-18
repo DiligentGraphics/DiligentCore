@@ -471,6 +471,8 @@ void ShaderResourceCacheD3D11::DbgVerifyDynamicBufferMasks() const
 
             const bool IsDynamicOffset = CB.AllowsDynamicOffset() && (m_DynamicCBSlotsMask[ShaderInd] & BuffBit) != 0;
             VERIFY(IsDynamicOffset == ((m_DynamicCBOffsetsMask[ShaderInd] & BuffBit) != 0), "Bit ", i, " in m_DynamicCBOffsetsMask is not valid");
+            VERIFY(CB.pInlineConstantData == nullptr || (m_DynamicCBSlotsMask[ShaderInd] & BuffBit) == 0, "Inline constant should not be marked as dynamic");
+            VERIFY(CB.pInlineConstantData == nullptr || !IsDynamicOffset, "Inline constant buffers cannot have dynamic offsets");
         }
     }
 }
