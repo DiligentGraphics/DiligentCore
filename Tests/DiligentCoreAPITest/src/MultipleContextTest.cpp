@@ -110,7 +110,11 @@ float4 main(in PSInput PSIn) : SV_Target
 )";
 
 const std::string MultipleContextTest_ProceduralCS = R"(
-RWTexture2D<float4> g_DstTexture;
+#ifndef VK_IMAGE_FORMAT
+#   define VK_IMAGE_FORMAT(x)
+#endif
+
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_DstTexture;
 )"
 + MultipleContextTest_ProceduralSrc +
 R"(
@@ -233,6 +237,7 @@ protected:
                 ShaderCI.EntryPoint      = "main";
                 ShaderCI.Desc.Name       = "Multiple context test - procedural CS";
                 ShaderCI.Source          = MultipleContextTest_ProceduralCS.c_str();
+                ShaderCI.CompileFlags    = SHADER_COMPILE_FLAG_HLSL_TO_SPIRV_VIA_GLSL;
                 pDevice->CreateShader(ShaderCI, &pCS);
                 ASSERT_NE(pCS, nullptr);
             }
