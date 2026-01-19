@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,9 +34,10 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 struct LinuxNativeWindow
 {
-    Uint32 WindowId      DEFAULT_INITIALIZER(0);
-    void* pDisplay       DEFAULT_INITIALIZER(nullptr);
-    void* pXCBConnection DEFAULT_INITIALIZER(nullptr);
+    Uint32 WindowId       DEFAULT_INITIALIZER(0);
+    void* pDisplay        DEFAULT_INITIALIZER(nullptr);
+    void* pXCBConnection  DEFAULT_INITIALIZER(nullptr);
+    void* pWaylandSurface DEFAULT_INITIALIZER(nullptr);
 };
 
 DILIGENT_END_NAMESPACE // namespace Diligent

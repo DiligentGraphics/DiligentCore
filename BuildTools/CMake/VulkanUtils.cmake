@@ -8,6 +8,7 @@ function(get_vulkan_platform_definitions OutVarName)
         set(Defs
             VK_USE_PLATFORM_XCB_KHR=1
             VK_USE_PLATFORM_XLIB_KHR=1
+            VK_USE_PLATFORM_WAYLAND_KHR=1
         )
     elseif(PLATFORM_APPLE)
         set(Defs
