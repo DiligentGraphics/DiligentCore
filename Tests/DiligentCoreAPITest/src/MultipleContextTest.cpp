@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -133,9 +133,9 @@ class MultipleContextTest : public ::testing::Test
 protected:
     static void SetUpTestSuite()
     {
-        auto* pEnv       = GPUTestingEnvironment::GetInstance();
-        auto* pDevice    = pEnv->GetDevice();
-        auto* pSwapChain = pEnv->GetSwapChain();
+        GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+        IRenderDevice*         pDevice    = pEnv->GetDevice();
+        ISwapChain*            pSwapChain = pEnv->GetSwapChain();
 
         if (pEnv->GetNumImmediateContexts() <= 1)
             return;
@@ -149,8 +149,8 @@ protected:
         // Graphics PSO
         {
             GraphicsPipelineStateCreateInfo PSOCreateInfo;
-            auto&                           PSODesc          = PSOCreateInfo.PSODesc;
-            auto&                           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+            PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
+            GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
             PSODesc.Name                 = "Multiple context test - procedural graphics PSO";
             PSODesc.PipelineType         = PIPELINE_TYPE_GRAPHICS;
@@ -254,8 +254,8 @@ protected:
         sm_pCompProceduralPSO->CreateShaderResourceBinding(&sm_pCompProceduralSRB, true);
         ASSERT_NE(sm_pCompProceduralSRB, nullptr);
 
-        const auto& SCDesc = pSwapChain->GetDesc();
-        sm_DispatchSize    = uint2{(SCDesc.Width + 3) / 4, (SCDesc.Height + 3) / 4}; // must be same as numthreads(...)
+        const SwapChainDesc& SCDesc = pSwapChain->GetDesc();
+        sm_DispatchSize             = uint2{(SCDesc.Width + 3) / 4, (SCDesc.Height + 3) / 4}; // must be same as numthreads(...)
     }
 
     static void TearDownTestSuite()
@@ -268,16 +268,16 @@ protected:
         sm_pDrawProceduralSRB.Release();
         sm_pCompProceduralSRB.Release();
 
-        auto* pEnv = GPUTestingEnvironment::GetInstance();
+        GPUTestingEnvironment* pEnv = GPUTestingEnvironment::GetInstance();
         pEnv->Reset();
     }
 
     static RefCntAutoPtr<ITexture> CreateTexture(BIND_FLAGS Flags, Uint64 QueueMask, const char* Name, IDeviceContext* pInitialCtx)
     {
-        auto*       pEnv       = GPUTestingEnvironment::GetInstance();
-        auto*       pDevice    = pEnv->GetDevice();
-        auto*       pSwapChain = pEnv->GetSwapChain();
-        const auto& SCDesc     = pSwapChain->GetDesc();
+        GPUTestingEnvironment* pEnv       = GPUTestingEnvironment::GetInstance();
+        IRenderDevice*         pDevice    = pEnv->GetDevice();
+        ISwapChain*            pSwapChain = pEnv->GetSwapChain();
+        const SwapChainDesc&   SCDesc     = pSwapChain->GetDesc();
 
         TextureDesc Desc;
         Desc.Name                 = Name;
@@ -318,19 +318,19 @@ uint2 MultipleContextTest::sm_DispatchSize;
 
 TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 {
-    auto*           pEnv         = GPUTestingEnvironment::GetInstance();
-    auto*           pDevice      = pEnv->GetDevice();
-    auto*           pSwapChain   = pEnv->GetSwapChain();
-    IDeviceContext* pGraphicsCtx = nullptr;
-    IDeviceContext* pComputeCtx  = nullptr;
+    GPUTestingEnvironment* pEnv         = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice      = pEnv->GetDevice();
+    ISwapChain*            pSwapChain   = pEnv->GetSwapChain();
+    IDeviceContext*        pGraphicsCtx = nullptr;
+    IDeviceContext*        pComputeCtx  = nullptr;
     {
-        constexpr auto  QueueTypeMask = COMMAND_QUEUE_TYPE_GRAPHICS | COMMAND_QUEUE_TYPE_COMPUTE;
-        IDeviceContext* pGraphicsCtx2 = nullptr;
+        constexpr COMMAND_QUEUE_TYPE QueueTypeMask = COMMAND_QUEUE_TYPE_GRAPHICS | COMMAND_QUEUE_TYPE_COMPUTE;
+        IDeviceContext*              pGraphicsCtx2 = nullptr;
 
         for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
         {
-            auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
-            const auto& Desc = Ctx->GetDesc();
+            IDeviceContext*          Ctx  = pEnv->GetDeviceContext(CtxInd);
+            const DeviceContextDesc& Desc = Ctx->GetDesc();
 
             if (!pGraphicsCtx && (Desc.QueueType & QueueTypeMask) == COMMAND_QUEUE_TYPE_GRAPHICS)
                 pGraphicsCtx = Ctx;
@@ -376,9 +376,9 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
     {
         RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
 
-        auto* pRTV        = pSwapChain->GetCurrentBackBufferRTV();
-        auto  pTextureRT  = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, 0, "TextureRT", pGraphicsCtx);
-        auto  pTextureUAV = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, 0, "TextureUAV", pGraphicsCtx);
+        ITextureView*           pRTV        = pSwapChain->GetCurrentBackBufferRTV();
+        RefCntAutoPtr<ITexture> pTextureRT  = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, 0, "TextureRT", pGraphicsCtx);
+        RefCntAutoPtr<ITexture> pTextureUAV = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, 0, "TextureUAV", pGraphicsCtx);
         ASSERT_NE(pTextureRT, nullptr);
         ASSERT_NE(pTextureUAV, nullptr);
 
@@ -446,14 +446,14 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
         ASSERT_NE(pComputeFence, nullptr);
     }
 
-    auto pTextureRT  = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, QueueMask, "TextureRT", pGraphicsCtx);
-    auto pTextureUAV = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, QueueMask, "TextureUAV", pComputeCtx);
+    RefCntAutoPtr<ITexture> pTextureRT  = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, QueueMask, "TextureRT", pGraphicsCtx);
+    RefCntAutoPtr<ITexture> pTextureUAV = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, QueueMask, "TextureUAV", pComputeCtx);
     ASSERT_NE(pTextureRT, nullptr);
     ASSERT_NE(pTextureUAV, nullptr);
 
-    const Uint64 GraphicsFenceValue    = 11;
-    const Uint64 ComputeFenceValue     = 22;
-    const auto   DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    const Uint64                         GraphicsFenceValue    = 11;
+    const Uint64                         ComputeFenceValue     = 22;
+    const RESOURCE_STATE_TRANSITION_MODE DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
     // graphics pass
     {
@@ -507,7 +507,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
         pGraphicsCtx->DeviceWaitForFence(pGraphicsFence, GraphicsFenceValue);
         pGraphicsCtx->DeviceWaitForFence(pComputeFence, ComputeFenceValue);
 
-        auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
+        ITextureView* pRTV = pSwapChain->GetCurrentBackBufferRTV();
 
         const StateTransitionDesc Barriers[] = {
             {pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, STATE_TRANSITION_FLAG_UPDATE_STATE}, // prev_state -> render_target
@@ -537,20 +537,20 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
 TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 {
-    auto*           pEnv         = GPUTestingEnvironment::GetInstance();
-    auto*           pDevice      = pEnv->GetDevice();
-    auto*           pSwapChain   = pEnv->GetSwapChain();
-    const auto&     SCDesc       = pSwapChain->GetDesc();
-    IDeviceContext* pGraphicsCtx = nullptr;
-    IDeviceContext* pTransferCtx = nullptr;
+    GPUTestingEnvironment* pEnv         = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice      = pEnv->GetDevice();
+    ISwapChain*            pSwapChain   = pEnv->GetSwapChain();
+    const SwapChainDesc&   SCDesc       = pSwapChain->GetDesc();
+    IDeviceContext*        pGraphicsCtx = nullptr;
+    IDeviceContext*        pTransferCtx = nullptr;
     {
-        constexpr auto  QueueTypeMask = COMMAND_QUEUE_TYPE_GRAPHICS | COMMAND_QUEUE_TYPE_COMPUTE | COMMAND_QUEUE_TYPE_TRANSFER;
-        IDeviceContext* pGraphicsCtx2 = nullptr;
+        constexpr COMMAND_QUEUE_TYPE QueueTypeMask = COMMAND_QUEUE_TYPE_GRAPHICS | COMMAND_QUEUE_TYPE_COMPUTE | COMMAND_QUEUE_TYPE_TRANSFER;
+        IDeviceContext*              pGraphicsCtx2 = nullptr;
 
         for (Uint32 CtxInd = 0; CtxInd < pEnv->GetNumImmediateContexts(); ++CtxInd)
         {
-            auto*       Ctx  = pEnv->GetDeviceContext(CtxInd);
-            const auto& Desc = Ctx->GetDesc();
+            IDeviceContext*          Ctx  = pEnv->GetDeviceContext(CtxInd);
+            const DeviceContextDesc& Desc = Ctx->GetDesc();
 
             if (!pGraphicsCtx && (Desc.QueueType & QueueTypeMask) == COMMAND_QUEUE_TYPE_GRAPHICS)
                 pGraphicsCtx = Ctx;
@@ -614,13 +614,13 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
     {
         RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
 
-        auto* pRTV           = pSwapChain->GetCurrentBackBufferRTV();
-        auto  pTextureRT     = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, 0, "TextureRT", pGraphicsCtx);
-        auto  pUploadTexture = CreateTexture(BIND_SHADER_RESOURCE, 0, "Upload Texture", pGraphicsCtx);
+        ITextureView*           pRTV           = pSwapChain->GetCurrentBackBufferRTV();
+        RefCntAutoPtr<ITexture> pTextureRT     = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, 0, "TextureRT", pGraphicsCtx);
+        RefCntAutoPtr<ITexture> pUploadTexture = CreateTexture(BIND_SHADER_RESOURCE, 0, "Upload Texture", pGraphicsCtx);
         ASSERT_NE(pTextureRT, nullptr);
         ASSERT_NE(pUploadTexture, nullptr);
 
-        const auto DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        const RESOURCE_STATE_TRANSITION_MODE DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
 
         // graphics pass
         {
@@ -688,14 +688,14 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
     const uint2 Granularity = {pTransferCtx->GetDesc().TextureCopyGranularity[0],
                                pTransferCtx->GetDesc().TextureCopyGranularity[1]};
 
-    auto pTextureRT     = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, QueueMask, "TextureRT", pGraphicsCtx);
-    auto pUploadTexture = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, QueueMask, "Upload Texture", pTransferCtx);
+    RefCntAutoPtr<ITexture> pTextureRT     = CreateTexture(BIND_SHADER_RESOURCE | BIND_RENDER_TARGET, QueueMask, "TextureRT", pGraphicsCtx);
+    RefCntAutoPtr<ITexture> pUploadTexture = CreateTexture(BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS, QueueMask, "Upload Texture", pTransferCtx);
     ASSERT_NE(pTextureRT, nullptr);
     ASSERT_NE(pUploadTexture, nullptr);
 
-    const Uint64 GraphicsFenceValue    = 11;
-    const Uint64 TransferFenceValue    = 22;
-    const auto   DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    const Uint64                         GraphicsFenceValue    = 11;
+    const Uint64                         TransferFenceValue    = 22;
+    const RESOURCE_STATE_TRANSITION_MODE DefaultTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
     // graphics queue
     {
@@ -770,7 +770,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
         pGraphicsCtx->DeviceWaitForFence(pGraphicsFence, GraphicsFenceValue);
         pGraphicsCtx->DeviceWaitForFence(pTransferFence, TransferFenceValue);
 
-        auto* pRTV = pSwapChain->GetCurrentBackBufferRTV();
+        ITextureView* pRTV = pSwapChain->GetCurrentBackBufferRTV();
 
         const StateTransitionDesc Barriers[] = {
             {pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, STATE_TRANSITION_FLAG_UPDATE_STATE}, // prev_state -> render_target
