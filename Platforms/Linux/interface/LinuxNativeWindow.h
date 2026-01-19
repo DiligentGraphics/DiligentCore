@@ -27,17 +27,35 @@
 
 #pragma once
 
+/// \file Defines LinuxNativeWindow structure that contains platform-native window handles
+
 #include "../../../Primitives/interface/CommonDefinitions.h"
 #include "../../../Primitives/interface/BasicTypes.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
+/// Platform-native handles for creating a Vulkan surface on Linux (XCB, Xlib, Wayland).
+///
+/// Surface creation selection (in order):
+/// - **XCB** (`VK_USE_PLATFORM_XCB_KHR`): use `pXCBConnection` + `WindowId` (both valid) -> `vkCreateXcbSurfaceKHR`.
+/// - **Xlib** (`VK_USE_PLATFORM_XLIB_KHR`): use `pDisplay` + `WindowId` (both valid) and no surface yet -> `vkCreateXlibSurfaceKHR`.
+/// - **Wayland** (`VK_USE_PLATFORM_WAYLAND_KHR`): use `pDisplay` + `pWaylandSurface` (both valid) and no surface yet -> `vkCreateWaylandSurfaceKHR`.
+///
+/// Notes:
+/// - Populate only the members for the active backend; leave others null/zero.
+/// - pDisplay is backend-dependent: `Display*` (Xlib) or `wl_display*` (Wayland).
 struct LinuxNativeWindow
 {
-    Uint32 WindowId       DEFAULT_INITIALIZER(0);
-    void* pDisplay        DEFAULT_INITIALIZER(nullptr);
-    void* pXCBConnection  DEFAULT_INITIALIZER(nullptr);
+    /// Native window ID for X11 backends (XCB/Xlib). Must be non-zero to create an X11 surface.
+    Uint32 WindowId DEFAULT_INITIALIZER(0);
+
+    /// Display handle: `Display*` (Xlib) or `wl_display*` (Wayland).
+    void* pDisplay DEFAULT_INITIALIZER(nullptr);
+
+    /// XCB connection handle: `xcb_connection_t*` (XCB only).
+    void* pXCBConnection DEFAULT_INITIALIZER(nullptr);
+
+    /// Wayland surface handle: `wl_surface*` (Wayland only).
     void* pWaylandSurface DEFAULT_INITIALIZER(nullptr);
 };
-
 DILIGENT_END_NAMESPACE // namespace Diligent
