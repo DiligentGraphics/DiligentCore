@@ -2081,7 +2081,7 @@ void DeviceContextVkImpl::ChooseRenderPassAndFramebuffer()
     }
 }
 
-void DeviceContextVkImpl::EndRenderScope()
+void DeviceContextVkImpl::CommitDynamicRenderPassIfClearsPending()
 {
     if (m_DynamicRenderingInfo && m_DynamicRenderingInfo->HasClears())
     {
@@ -2090,6 +2090,11 @@ void DeviceContextVkImpl::EndRenderScope()
         // Apply clears
         CommitRenderPassAndFramebuffer(/*VerifyStates = */ false);
     }
+}
+
+void DeviceContextVkImpl::EndRenderScope()
+{
+    CommitDynamicRenderPassIfClearsPending();
 
     if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE)
     {
@@ -2103,12 +2108,7 @@ void DeviceContextVkImpl::SetRenderTargetsExt(const SetRenderTargetsAttribs& Att
 
     if (TDeviceContextBase::SetRenderTargets(Attribs))
     {
-        if (m_DynamicRenderingInfo && m_DynamicRenderingInfo->HasClears())
-        {
-            // If there are pending clears, we must begin and end the render pass to apply the clears
-            CommitRenderPassAndFramebuffer(/*VerifyStates = */ false);
-        }
-
+        CommitDynamicRenderPassIfClearsPending();
         ChooseRenderPassAndFramebuffer();
 
         // Set the viewport to match the render target size
@@ -3482,6 +3482,11 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, const St
         return;
 
     EnsureVkCmdBuffer();
+
+    // If there are any pending clears in the dynamic render pass, we need to commit it
+    // before transitioning resource states. Otherwise, the render pass will be
+    // committed after the state transitions, which may lead to incorrect behavior.
+    CommitDynamicRenderPassIfClearsPending();
 
     for (Uint32 i = 0; i < BarrierCount; ++i)
     {

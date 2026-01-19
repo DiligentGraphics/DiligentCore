@@ -496,6 +496,8 @@ private:
 
     void ChooseRenderPassAndFramebuffer();
 
+    __forceinline void CommitDynamicRenderPassIfClearsPending();
+
 private:
     VulkanUtilities::CommandBuffer m_CommandBuffer;
 
