@@ -558,7 +558,6 @@ void PipelineResourceSignatureGLImpl::UpdateInlineConstantBuffers(const ShaderRe
         const InlineConstantBufferAttribsGL& InlineCBAttr = GetInlineConstantBufferAttribs(i);
 
         const ShaderResourceCacheGL::CachedUB& InlineCB = ResourceCache.GetConstUB(InlineCBAttr.CacheOffset);
-        VERIFY(InlineCBAttr.NumConstants * sizeof(Uint32) == InlineCB.RangeSize, "Inline constant buffer size mismatch");
         VERIFY(InlineCB.pInlineConstantData != nullptr, "Inline constant data pointer is null");
         VERIFY(InlineCB.pBuffer, "Inline constant buffer is null in cache");
 

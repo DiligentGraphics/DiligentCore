@@ -344,7 +344,11 @@ public:
 
     bool IsInitialized() const
     {
-        return m_TexturesOffset != InvalidResourceOffset;
+        const bool Initialized = (m_TexturesOffset != InvalidResourceOffset);
+        VERIFY_EXPR(Initialized == (m_ImagesOffset != InvalidResourceOffset) &&
+                    Initialized == (m_SSBOsOffset != InvalidResourceOffset) &&
+                    Initialized == (m_InlineConstantOffset != InvalidResourceOffset));
+        return Initialized;
     }
 
     ResourceCacheContentType GetContentType() const { return m_ContentType; }

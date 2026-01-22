@@ -64,7 +64,9 @@ size_t ShaderResourceCacheWebGPU::GetRequiredMemorySize(Uint32 NumGroups, const 
 }
 
 ShaderResourceCacheWebGPU::ShaderResourceCacheWebGPU(ResourceCacheContentType ContentType) noexcept :
-    m_ContentType{static_cast<Uint32>(ContentType)}
+    m_TotalResources{0},
+    m_ContentType{static_cast<Uint32>(ContentType)},
+    m_HasInlineConstants{0}
 {
 }
 
@@ -147,9 +149,8 @@ void ShaderResourceCacheWebGPU::InitializeGroups(IMemoryAllocator& MemAllocator,
             m_DbgInitializedResources[t].resize(GroupSize);
 #endif
         }
-
-        m_HasInlineConstants = (TotalInlineConstants > 0) ? 1u : 0u;
     }
+    m_HasInlineConstants = (TotalInlineConstants > 0) ? 1u : 0u;
 }
 
 void ShaderResourceCacheWebGPU::Resource::SetUniformBuffer(RefCntAutoPtr<IDeviceObject>&& _pBuffer, Uint64 _BaseOffset, Uint64 _RangeSize)
@@ -318,6 +319,7 @@ void ShaderResourceCacheWebGPU::InitializeInlineConstantBuffer(Uint32           
         // Note that since we use SetResource, the buffer will count towards the number of
         // dynamic buffers in the cache.
         SetResource(GroupIdx, Offset, std::move(pObject), 0, pRes->BufferRangeSize);
+        VERIFY(HasDynamicResources(), "Inline constant buffer must be counted as dynamic resource");
     }
 }
 

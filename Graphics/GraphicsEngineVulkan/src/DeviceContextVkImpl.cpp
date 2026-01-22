@@ -421,6 +421,8 @@ void DeviceContextVkImpl::CommitInlineConstants(ResourceBindInfo& BindInfo, Uint
 {
     const PipelineLayoutVk&                   Layout = m_pPipelineState->GetPipelineLayout();
     const PipelineLayoutVk::PushConstantInfo& PCInfo = Layout.GetPushConstantInfo();
+    VERIFY(PCInfo, "There are no push constants defined in the currently bound pipeline layout. "
+                   "This method should not be called in this case as InlineConstantsSRBMask should be zero.");
 
     PipelineResourceSignatureVkImpl::CommitInlineConstantsAttribs CommitAttribs{
         *this,

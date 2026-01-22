@@ -173,6 +173,7 @@ void ShaderResourceCacheVk::InitializeInlineConstantBuffer(Uint32               
                 0,                          // BufferBaseOffset
                 pInlineCB->BufferRangeSize, // BufferRangeSize
             });
+        VERIFY(HasDynamicResources(), "Inline constant buffer must be counted as dynamic resource");
     }
 }
 
