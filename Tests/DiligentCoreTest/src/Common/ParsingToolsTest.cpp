@@ -1679,6 +1679,7 @@ struct ReferenceTypeDesc
         std::string              Type;
         std::string              Name;
         std::vector<std::string> ArrayDimensions = {};
+        std::string              Semantics       = "";
     };
     std::vector<Member> Members = {};
 
@@ -1710,6 +1711,8 @@ struct ReferenceTypeDesc
                 if (RefMember.ArrayDimensions[j] != OtherMember.ArrayDimensions[j]->Literal)
                     return false;
             }
+            if ((OtherMember.Semantics ? (*OtherMember.Semantics)->Literal : "") != RefMember.Semantics)
+                return false;
         }
         return true;
     }
@@ -1858,6 +1861,13 @@ TEST(Common_ParsingTools, ParseType)
 
     Test(R"(struct TestStruct
             {
+                int x;
+                float4 position :
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
                 unsigned int x;
                 const int y[5];
                 flat float4 z[16][128];
@@ -1879,11 +1889,26 @@ TEST(Common_ParsingTools, ParseType)
 
     Test(R"(struct TestStruct
             {
+                float4 pos : POSITION;
+                float4 color0 : COLOR0, color1[2] : COLOR1;
+            })",
+         {
+             "TestStruct",
+             {
+                 {"float4", "pos", {}, "POSITION"},
+                 {"float4", "color0", {}, "COLOR0"},
+                 {"float4", "color1", {"2"}, "COLOR1"},
+             },
+         });
+
+    Test(R"(struct TestStruct
+            {
                 int x, y, z;
                 float a[10], b[20][30], c[40][50][60];
                 unsigned int m, n[5], o[6][7];
                 atomic<int> p, q[8], r[9][10];
                 texture2D<float, access::read> tex1, tex2[4], tex3[5][6];
+                texture3D<float, access::read> tex4 : TEX4, tex5[4] : TEX5, tex6[5][6] : TEX6;
             })",
          {
              "TestStruct",
@@ -1903,6 +1928,9 @@ TEST(Common_ParsingTools, ParseType)
                  {"texture2D < float , access :: read >", "tex1"},
                  {"texture2D < float , access :: read >", "tex2", {"4"}},
                  {"texture2D < float , access :: read >", "tex3", {"5", "6"}},
+                 {"texture3D < float , access :: read >", "tex4", {}, "TEX4"},
+                 {"texture3D < float , access :: read >", "tex5", {"4"}, "TEX5"},
+                 {"texture3D < float , access :: read >", "tex6", {"5", "6"}, "TEX6"},
              },
          });
 }

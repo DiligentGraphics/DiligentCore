@@ -1371,6 +1371,9 @@ struct TypeDesc
         /// Member name.
         TokenIterType Name = {};
 
+        /// Semantics (if any).
+        std::optional<TokenIterType> Semantics = {};
+
         /// Array dimensions (if the member is an array).
         std::vector<TokenIterType> ArrayDimensions = {};
     };
@@ -1417,6 +1420,7 @@ TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterTyp
         const TokenIterType MemberTypeStartToken = Token;
 
         while (Token != ClosingBrace &&
+               Token->GetType() != TokenType::Colon &&
                Token->GetType() != TokenType::Semicolon &&
                Token->GetType() != TokenType::Comma &&
                Token->GetType() != TokenType::OpenSquareBracket)
@@ -1517,6 +1521,21 @@ TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterTyp
                 ++Token;
                 //    int i[10];
                 //             ^
+            }
+
+            if (Token->GetType() == TokenType::Colon)
+            {
+                // float4 position : POSITION;
+                //                 ^
+                ++Token;
+                if (Token == ClosingBrace)
+                {
+                    //      float4 position :
+                    //  }
+                    return {};
+                }
+                Type.Members.back().Semantics = Token;
+                ++Token;
             }
 
             if (Token->GetType() == TokenType::Comma)
