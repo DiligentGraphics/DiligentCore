@@ -1424,6 +1424,31 @@ TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterTyp
         {
             // unsigned long int i;
             ++Token;
+
+            if (Token->CompareLiteral("<"))
+            {
+                // texture2D<float, access::read>
+                // 			^
+                int NumOpenAngleBrackets = 1;
+                ++Token;
+                for (; Token != ClosingBrace && NumOpenAngleBrackets > 0; ++Token)
+                {
+                    if (Token->CompareLiteral("<"))
+                    {
+                        ++NumOpenAngleBrackets;
+                    }
+                    else if (Token->CompareLiteral(">"))
+                    {
+                        --NumOpenAngleBrackets;
+                    }
+                }
+                if (Token == ClosingBrace)
+                {
+                    //      texture2D<float
+                    // }
+                    return {};
+                }
+            }
         }
         if (Token == ClosingBrace)
         {

@@ -1844,9 +1844,26 @@ TEST(Common_ParsingTools, ParseType)
 
     Test(R"(struct TestStruct
             {
+                int x;
+                atomic<int 
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                atomic<int y;
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
                 unsigned int x;
                 const int y[5];
                 flat float4 z[16][128];
+                atomic<int> a;
+                texture2D<float, access::read> tex;
+                texture2D<vector<float, 3>, access::read> tex2;
             })",
          {
              "TestStruct",
@@ -1854,6 +1871,9 @@ TEST(Common_ParsingTools, ParseType)
                  {"unsigned int", "x"},
                  {"const int", "y", {"5"}},
                  {"flat float4", "z", {"16", "128"}},
+                 {"atomic < int >", "a"},
+                 {"texture2D < float , access :: read >", "tex"},
+                 {"texture2D < vector < float , 3 > , access :: read >", "tex2"},
              },
          });
 
@@ -1862,6 +1882,8 @@ TEST(Common_ParsingTools, ParseType)
                 int x, y, z;
                 float a[10], b[20][30], c[40][50][60];
                 unsigned int m, n[5], o[6][7];
+                atomic<int> p, q[8], r[9][10];
+                texture2D<float, access::read> tex1, tex2[4], tex3[5][6];
             })",
          {
              "TestStruct",
@@ -1875,6 +1897,12 @@ TEST(Common_ParsingTools, ParseType)
                  {"unsigned int", "m"},
                  {"unsigned int", "n", {"5"}},
                  {"unsigned int", "o", {"6", "7"}},
+                 {"atomic < int >", "p"},
+                 {"atomic < int >", "q", {"8"}},
+                 {"atomic < int >", "r", {"9", "10"}},
+                 {"texture2D < float , access :: read >", "tex1"},
+                 {"texture2D < float , access :: read >", "tex2", {"4"}},
+                 {"texture2D < float , access :: read >", "tex3", {"5", "6"}},
              },
          });
 }
