@@ -1672,7 +1672,7 @@ struct ReferenceTypeDesc
     using TokenVectorType = std::vector<TestToken>;
     using TokenVectorIter = TokenVectorType::const_iterator;
 
-    std::string Type;
+    std::string Name;
 
     struct Member
     {
@@ -1684,7 +1684,7 @@ struct ReferenceTypeDesc
 
     bool operator==(const Parsing::TypeDesc<TokenVectorIter>& Other) const
     {
-        if (Type != (Other ? (*Other.Type)->Literal : ""))
+        if (Name != (Other ? (*Other.Name)->Literal : ""))
             return false;
         if (Members.size() != Other.Members.size())
             return false;
@@ -1694,7 +1694,14 @@ struct ReferenceTypeDesc
             const auto&   OtherMember = Other.Members[i];
             if (RefMember.Name != OtherMember.Name->Literal)
                 return false;
-            if (RefMember.Type != OtherMember.Type->Literal)
+            std::string OtherMemberType;
+            for (auto it = OtherMember.TypeStart; it != OtherMember.TypeEnd; ++it)
+            {
+                if (!OtherMemberType.empty())
+                    OtherMemberType += " ";
+                OtherMemberType += it->Literal;
+            }
+            if (RefMember.Type != OtherMemberType)
                 return false;
             if (RefMember.ArrayDimensions.size() != OtherMember.ArrayDimensions.size())
                 return false;
@@ -1830,9 +1837,18 @@ TEST(Common_ParsingTools, ParseType)
 
     Test(R"(struct TestStruct
             {
-                int x y;
+                unsigned int x;
+                const int y[5];
+                flat float4 z[16][128];
             })",
-         {});
+         {
+             "TestStruct",
+             {
+                 {"unsigned int", "x"},
+                 {"const int", "y", {"5"}},
+                 {"flat float4", "z", {"16", "128"}},
+             },
+         });
 }
 
 } // namespace

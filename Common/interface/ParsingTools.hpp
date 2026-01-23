@@ -1356,14 +1356,17 @@ inline void StripPreprocessorDirectives(std::string& Source, const std::vector<s
 template <typename TokenIterType>
 struct TypeDesc
 {
-    /// Type token.
-    std::optional<TokenIterType> Type = {};
+    /// Type name.
+    std::optional<TokenIterType> Name = {};
 
     /// Members of the type.
     struct Member
     {
-        /// Member type.
-        TokenIterType Type = {};
+        /// Member type start.
+        TokenIterType TypeStart = {};
+
+        /// Member type end.
+        TokenIterType TypeEnd = {};
 
         /// Member name.
         TokenIterType Name = {};
@@ -1376,7 +1379,7 @@ struct TypeDesc
 
     operator bool() const
     {
-        return Type.has_value();
+        return Name.has_value();
     }
 };
 
@@ -1386,7 +1389,7 @@ TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterTyp
     TokenIterType Token = NameToken;
 
     TypeDesc<TokenIterType> Type;
-    Type.Type = Token;
+    Type.Name = Token;
 
     using TokenType = typename TokenClass::TokenType;
 
@@ -1411,23 +1414,37 @@ TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterTyp
     //    ^
     while (Token != ClosingBrace)
     {
-        const TokenIterType MemberTypeToken = Token;
+        const TokenIterType MemberTypeStartToken = Token;
 
-        ++Token;
-        if (Token == ClosingBrace || Token->GetType() != TokenType::Identifier)
+        while (Token != ClosingBrace &&
+               Token->GetType() != TokenType::Semicolon &&
+               Token->GetType() != TokenType::Comma &&
+               Token->GetType() != TokenType::OpenSquareBracket)
+
+        {
+            // unsigned long int i;
+            ++Token;
+        }
+        if (Token == ClosingBrace)
+            return {};
+
+        // unsigned long int i;
+        //                    ^
+        TokenIterType MemberNameToken = Token;
+        --MemberNameToken;
+
+        if (MemberNameToken == MemberTypeStartToken)
         {
             // int ;
             //     ^
             return {};
         }
 
+        const TokenIterType MemberTypeEndToken = MemberNameToken;
+        Type.Members.push_back({MemberTypeStartToken, MemberTypeEndToken, MemberNameToken});
+
         //    int i;
-        //        ^
-
-        const TokenIterType MemberNameToken = Token;
-        Type.Members.push_back({MemberTypeToken, MemberNameToken});
-
-        ++Token;
+        //         ^
         while (Token != ClosingBrace && Token->GetType() != TokenType::Semicolon)
         {
             if (Token->GetType() == TokenType::OpenSquareBracket)
@@ -1459,8 +1476,6 @@ TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterTyp
             }
             else
             {
-                // int x y;
-                //       ^
                 return {};
             }
             ++Token;
