@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1348,6 +1348,130 @@ inline void StripPreprocessorDirectives(std::string& Source, const std::vector<s
 
         Pos = SkipLine(Pos, Source.end(), /* GoToNextLine = */ true);
     }
+}
+
+
+/// Describes a type parsed from the source code
+template <typename TokenClass>
+struct TypeDesc
+{
+    /// Type token.
+    TokenClass* TypeToken = nullptr;
+
+    /// Members of the type.
+    struct Member
+    {
+        /// Member type.
+        TokenClass* TypeToken = nullptr;
+
+        /// Member name.
+        TokenClass* NameToken = nullptr;
+
+        /// Array dimensions (if the member is an array).
+        std::vector<TokenClass*> ArrayDimensions = {};
+    };
+    /// Members of the type.
+    std::vector<Member> Members = {};
+};
+
+template <typename TokenClass, typename TokenIterType>
+TypeDesc<TokenClass> ParseType(const TokenIterType& Start, const TokenIterType& End, const TokenIterType& NameToken)
+{
+    TokenIterType Token = NameToken;
+
+    TypeDesc<TokenClass> Type;
+    Type.TypeToken = &(*Token);
+
+    using TokenType = typename TokenClass::TokenType;
+
+    // struct TestStruct
+    //        ^
+    ++Token;
+    if (Token == End || Token->GetType() != TokenType::OpenBrace)
+        return {};
+
+    // struct TestStruct
+    // {
+    // ^
+
+    TokenIterType ClosingBrace = FindMatchingBracket(Start, End, Token);
+    if (ClosingBrace == End)
+        return {};
+
+    ++Token;
+    // struct TestStruct
+    // {
+    //    int i;
+    //    ^
+    while (Token != ClosingBrace)
+    {
+        TokenClass& MemberTypeToken = *Token;
+
+        ++Token;
+        if (Token == ClosingBrace || Token->GetType() != TokenType::Identifier)
+        {
+            // int ;
+            //     ^
+            return {};
+        }
+
+        //    int i;
+        //        ^
+
+        TokenClass& MemberNameToken = *Token;
+        Type.Members.push_back({&MemberTypeToken, &MemberNameToken});
+
+        ++Token;
+        while (Token != ClosingBrace && Token->GetType() != TokenType::Semicolon)
+        {
+            if (Token->GetType() == TokenType::OpenSquareBracket)
+            {
+                //    int i[10];
+                //         ^
+                TokenIterType ClosingSquareBracket = FindMatchingBracket(Start, ClosingBrace, Token);
+                if (ClosingSquareBracket == ClosingBrace)
+                {
+                    // int i[10
+                    //      ^
+                    return {};
+                }
+                ++Token;
+
+                if (Token == ClosingSquareBracket)
+                {
+                    // int i[]
+                    //       ^
+                    return {};
+                }
+
+                //    int i[10];
+                //          ^
+                Type.Members.back().ArrayDimensions.push_back(&(*Token));
+                Token = ClosingSquareBracket;
+                //    int i[10];
+                //            ^
+            }
+            else
+            {
+                // int x y;
+                //       ^
+                return {};
+            }
+            ++Token;
+        }
+
+        if (Token == ClosingBrace || Token->GetType() != TokenType::Semicolon)
+        {
+            //     int i
+            // }
+            // ^
+            return {};
+        }
+
+        ++Token;
+    }
+
+    return Type;
 }
 
 } // namespace Parsing

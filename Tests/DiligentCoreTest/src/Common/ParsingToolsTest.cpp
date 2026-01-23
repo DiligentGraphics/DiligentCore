@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -665,7 +665,8 @@ enum class TestTokenType
     Keyword1,
     Keyword2,
     Keyword3,
-    kw_void
+    kw_void,
+    Struct
 };
 
 struct TestToken
@@ -725,6 +726,9 @@ struct TestToken
 
         if (strncmp(IdentifierStart, "void", IdentifierEnd - IdentifierStart) == 0)
             return TokenType::kw_void;
+
+        if (strncmp(IdentifierStart, "struct", IdentifierEnd - IdentifierStart) == 0)
+            return TokenType::Struct;
 
         return TokenType::Identifier;
     }
@@ -1660,6 +1664,172 @@ void main()
 {
 })",
          {{"version"}, {"extension"}, {"error"}});
+}
+
+
+struct ReferenceTypeDesc
+{
+    std::string Type;
+
+    struct Member
+    {
+        std::string              Type;
+        std::string              Name;
+        std::vector<std::string> ArrayDimensions = {};
+    };
+    std::vector<Member> Members = {};
+
+    bool operator==(const Parsing::TypeDesc<const TestToken>& Other) const
+    {
+        if (Type != (Other.TypeToken ? Other.TypeToken->Literal : ""))
+            return false;
+        if (Members.size() != Other.Members.size())
+            return false;
+        for (size_t i = 0; i < Members.size(); ++i)
+        {
+            const Member& RefMember   = Members[i];
+            const auto&   OtherMember = Other.Members[i];
+            if (RefMember.Name != OtherMember.NameToken->Literal)
+                return false;
+            if (RefMember.Type != OtherMember.TypeToken->Literal)
+                return false;
+            if (RefMember.ArrayDimensions.size() != OtherMember.ArrayDimensions.size())
+                return false;
+            for (size_t j = 0; j < RefMember.ArrayDimensions.size(); ++j)
+            {
+                if (RefMember.ArrayDimensions[j] != OtherMember.ArrayDimensions[j]->Literal)
+                    return false;
+            }
+        }
+        return true;
+    }
+};
+
+TEST(Common_ParsingTools, ParseType)
+{
+    auto Test = [](std::string Source, const ReferenceTypeDesc& RefType) {
+        const auto Tokens = Tokenize<TestToken, std::vector<TestToken>>(Source.c_str(), Source.c_str() + Source.length(), TestToken::Create, TestToken::FindType);
+
+        auto it = std::find_if(Tokens.begin(), Tokens.end(), [](const TestToken& Tok) { return Tok.GetType() == TestTokenType::Struct; });
+        if (it == Tokens.end())
+        {
+            ADD_FAILURE() << "Struct keyword not found in the test source";
+            return;
+        }
+        ++it;
+
+        Parsing::TypeDesc<const TestToken> Type = Parsing::ParseType<const TestToken>(Tokens.begin(), Tokens.end(), it);
+        EXPECT_EQ(RefType, Type);
+    };
+
+    Test(R"(struct TestStruct
+            {
+            })",
+         {"TestStruct"});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+            })",
+         {
+             "TestStruct",
+             {
+                 {"int", "x"},
+             },
+         });
+
+    Test(R"(struct TestStruct
+            {
+                int         i;
+                float       f[10];
+                double      d[5][20];
+                InnerStruct inner;
+                InnerStruct inner2[10];
+            })",
+         {
+             "TestStruct",
+             {
+                 {"int", "i"},
+                 {"float", "f", {"10"}},
+                 {"double", "d", {"5", "20"}},
+                 {"InnerStruct", "inner"},
+                 {"InnerStruct", "inner2", {"10"}},
+             },
+         });
+
+    Test(R"(struct TestStruct)",
+         {});
+
+    Test(R"(struct TestStruct int)",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i;)",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int;
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i[;
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i[10;
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i[];
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i[10][;
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i[10][]
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x y;
+            })",
+         {});
 }
 
 } // namespace
