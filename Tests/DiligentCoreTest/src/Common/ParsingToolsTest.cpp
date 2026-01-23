@@ -1729,7 +1729,7 @@ TEST(Common_ParsingTools, ParseType)
         ++it;
 
         auto Type = Parsing::ParseType<TestToken>(Tokens.begin(), Tokens.end(), it);
-        EXPECT_EQ(RefType, Type);
+        EXPECT_EQ(RefType, Type) << Source;
     };
 
     Test(R"(struct TestStruct
@@ -1783,6 +1783,13 @@ TEST(Common_ParsingTools, ParseType)
             {
                 int x;
                 int i
+            })",
+         {});
+
+    Test(R"(struct TestStruct
+            {
+                int x;
+                int i, j
             })",
          {});
 
@@ -1847,6 +1854,27 @@ TEST(Common_ParsingTools, ParseType)
                  {"unsigned int", "x"},
                  {"const int", "y", {"5"}},
                  {"flat float4", "z", {"16", "128"}},
+             },
+         });
+
+    Test(R"(struct TestStruct
+            {
+                int x, y, z;
+                float a[10], b[20][30], c[40][50][60];
+                unsigned int m, n[5], o[6][7];
+            })",
+         {
+             "TestStruct",
+             {
+                 {"int", "x"},
+                 {"int", "y"},
+                 {"int", "z"},
+                 {"float", "a", {"10"}},
+                 {"float", "b", {"20", "30"}},
+                 {"float", "c", {"40", "50", "60"}},
+                 {"unsigned int", "m"},
+                 {"unsigned int", "n", {"5"}},
+                 {"unsigned int", "o", {"6", "7"}},
              },
          });
 }

@@ -1426,28 +1426,43 @@ TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterTyp
             ++Token;
         }
         if (Token == ClosingBrace)
-            return {};
-
-        // unsigned long int i;
-        //                    ^
-        TokenIterType MemberNameToken = Token;
-        --MemberNameToken;
-
-        if (MemberNameToken == MemberTypeStartToken)
         {
-            // int ;
-            //     ^
+            //     int i
+            // }
+            // ^
             return {};
         }
 
-        const TokenIterType MemberTypeEndToken = MemberNameToken;
-        Type.Members.push_back({MemberTypeStartToken, MemberTypeEndToken, MemberNameToken});
-
-        //    int i;
-        //         ^
-        while (Token != ClosingBrace && Token->GetType() != TokenType::Semicolon)
+        // unsigned long int i;
+        //                    ^
+        --Token;
+        // unsigned long int i;
+        //                   ^
+        const TokenIterType MemberTypeEndToken = Token;
+        if (MemberTypeEndToken == MemberTypeStartToken)
         {
-            if (Token->GetType() == TokenType::OpenSquareBracket)
+            // int ;
+            //   ^
+            return {};
+        }
+
+        while (Token != ClosingBrace)
+        {
+            //    int i;
+            //        ^
+            const TokenIterType MemberNameToken = Token;
+            Type.Members.push_back({MemberTypeStartToken, MemberTypeEndToken, MemberNameToken});
+            ++Token;
+
+            if (Token == ClosingBrace)
+            {
+                //     int i, j
+                // }
+                // ^
+                return {};
+            }
+
+            while (Token->GetType() == TokenType::OpenSquareBracket)
             {
                 //    int i[10];
                 //         ^
@@ -1473,12 +1488,22 @@ TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterTyp
                 Token = ClosingSquareBracket;
                 //    int i[10];
                 //            ^
+
+                ++Token;
+                //    int i[10];
+                //             ^
+            }
+
+            if (Token->GetType() == TokenType::Comma)
+            {
+                //    int i, j;
+                //         ^
+                ++Token;
             }
             else
             {
-                return {};
+                break;
             }
-            ++Token;
         }
 
         if (Token == ClosingBrace || Token->GetType() != TokenType::Semicolon)
