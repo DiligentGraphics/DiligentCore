@@ -1669,6 +1669,9 @@ void main()
 
 struct ReferenceTypeDesc
 {
+    using TokenVectorType = std::vector<TestToken>;
+    using TokenVectorIter = TokenVectorType::const_iterator;
+
     std::string Type;
 
     struct Member
@@ -1679,9 +1682,9 @@ struct ReferenceTypeDesc
     };
     std::vector<Member> Members = {};
 
-    bool operator==(const Parsing::TypeDesc<const TestToken>& Other) const
+    bool operator==(const Parsing::TypeDesc<TokenVectorIter>& Other) const
     {
-        if (Type != (Other.TypeToken ? Other.TypeToken->Literal : ""))
+        if (Type != (Other ? (*Other.Type)->Literal : ""))
             return false;
         if (Members.size() != Other.Members.size())
             return false;
@@ -1689,9 +1692,9 @@ struct ReferenceTypeDesc
         {
             const Member& RefMember   = Members[i];
             const auto&   OtherMember = Other.Members[i];
-            if (RefMember.Name != OtherMember.NameToken->Literal)
+            if (RefMember.Name != OtherMember.Name->Literal)
                 return false;
-            if (RefMember.Type != OtherMember.TypeToken->Literal)
+            if (RefMember.Type != OtherMember.Type->Literal)
                 return false;
             if (RefMember.ArrayDimensions.size() != OtherMember.ArrayDimensions.size())
                 return false;
@@ -1718,7 +1721,7 @@ TEST(Common_ParsingTools, ParseType)
         }
         ++it;
 
-        Parsing::TypeDesc<const TestToken> Type = Parsing::ParseType<const TestToken>(Tokens.begin(), Tokens.end(), it);
+        auto Type = Parsing::ParseType<TestToken>(Tokens.begin(), Tokens.end(), it);
         EXPECT_EQ(RefType, Type);
     };
 

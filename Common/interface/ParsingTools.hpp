@@ -34,6 +34,7 @@
 #include <limits>
 #include <vector>
 #include <algorithm>
+#include <optional>
 
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/FlagEnum.h"
@@ -1352,35 +1353,40 @@ inline void StripPreprocessorDirectives(std::string& Source, const std::vector<s
 
 
 /// Describes a type parsed from the source code
-template <typename TokenClass>
+template <typename TokenIterType>
 struct TypeDesc
 {
     /// Type token.
-    TokenClass* TypeToken = nullptr;
+    std::optional<TokenIterType> Type = {};
 
     /// Members of the type.
     struct Member
     {
         /// Member type.
-        TokenClass* TypeToken = nullptr;
+        TokenIterType Type = {};
 
         /// Member name.
-        TokenClass* NameToken = nullptr;
+        TokenIterType Name = {};
 
         /// Array dimensions (if the member is an array).
-        std::vector<TokenClass*> ArrayDimensions = {};
+        std::vector<TokenIterType> ArrayDimensions = {};
     };
     /// Members of the type.
     std::vector<Member> Members = {};
+
+    operator bool() const
+    {
+        return Type.has_value();
+    }
 };
 
 template <typename TokenClass, typename TokenIterType>
-TypeDesc<TokenClass> ParseType(const TokenIterType& Start, const TokenIterType& End, const TokenIterType& NameToken)
+TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterType& End, const TokenIterType& NameToken)
 {
     TokenIterType Token = NameToken;
 
-    TypeDesc<TokenClass> Type;
-    Type.TypeToken = &(*Token);
+    TypeDesc<TokenIterType> Type;
+    Type.Type = Token;
 
     using TokenType = typename TokenClass::TokenType;
 
@@ -1405,7 +1411,7 @@ TypeDesc<TokenClass> ParseType(const TokenIterType& Start, const TokenIterType& 
     //    ^
     while (Token != ClosingBrace)
     {
-        TokenClass& MemberTypeToken = *Token;
+        const TokenIterType MemberTypeToken = Token;
 
         ++Token;
         if (Token == ClosingBrace || Token->GetType() != TokenType::Identifier)
@@ -1418,8 +1424,8 @@ TypeDesc<TokenClass> ParseType(const TokenIterType& Start, const TokenIterType& 
         //    int i;
         //        ^
 
-        TokenClass& MemberNameToken = *Token;
-        Type.Members.push_back({&MemberTypeToken, &MemberNameToken});
+        const TokenIterType MemberNameToken = Token;
+        Type.Members.push_back({MemberTypeToken, MemberNameToken});
 
         ++Token;
         while (Token != ClosingBrace && Token->GetType() != TokenType::Semicolon)
@@ -1446,7 +1452,7 @@ TypeDesc<TokenClass> ParseType(const TokenIterType& Start, const TokenIterType& 
 
                 //    int i[10];
                 //          ^
-                Type.Members.back().ArrayDimensions.push_back(&(*Token));
+                Type.Members.back().ArrayDimensions.push_back(Token);
                 Token = ClosingSquareBracket;
                 //    int i[10];
                 //            ^
