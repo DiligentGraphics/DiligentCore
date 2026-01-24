@@ -1371,7 +1371,7 @@ struct TypeDesc
         /// Member name.
         TokenIterType Name = {};
 
-        /// Semantics (if any).
+        /// Semantics (e.g. `float4 position : POSITION;`), if any.
         std::optional<TokenIterType> Semantics = {};
 
         /// Array dimensions (if the member is an array).
@@ -1511,9 +1511,17 @@ TypeDesc<TokenIterType> ParseType(const TokenIterType& Start, const TokenIterTyp
                     return {};
                 }
 
-                //    int i[10];
-                //          ^
-                Type.Members.back().ArrayDimensions.push_back(Token);
+                if (Token->GetType() == TokenType::OpenSquareBracket)
+                {
+                    // float4 position [[position]];
+                    //                  ^
+                }
+                else
+                {
+                    //    int i[10];
+                    //          ^
+                    Type.Members.back().ArrayDimensions.push_back(Token);
+                }
                 Token = ClosingSquareBracket;
                 //    int i[10];
                 //            ^

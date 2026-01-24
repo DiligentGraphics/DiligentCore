@@ -1933,6 +1933,19 @@ TEST(Common_ParsingTools, ParseType)
                  {"texture3D < float , access :: read >", "tex6", {"5", "6"}, "TEX6"},
              },
          });
+
+    Test(R"(struct TestStruct
+            {
+                float4 position[[position]];
+                float2 uv[[id(0)]];
+            })",
+         {
+             "TestStruct",
+             {
+                 {"float4", "position"},
+                 {"float2", "uv"},
+             },
+         });
 }
 
 } // namespace
