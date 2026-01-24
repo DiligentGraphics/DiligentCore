@@ -1376,6 +1376,20 @@ struct TypeDesc
 
         /// Array dimensions (if the member is an array).
         std::vector<TokenIterType> ArrayDimensions = {};
+
+        /// Returns the full type string (e.g. "unsigned long int").
+        std::string GetFullTypeString() const
+        {
+            std::string TypeStr;
+            for (auto it = TypeStart; it != TypeEnd; ++it)
+            {
+                if (!TypeStr.empty())
+                    TypeStr.push_back(' ');
+                const auto LiteralRange = it->GetLiteral();
+                TypeStr.append(LiteralRange.first, LiteralRange.second);
+            }
+            return TypeStr;
+        }
     };
     /// Members of the type.
     std::vector<Member> Members = {};

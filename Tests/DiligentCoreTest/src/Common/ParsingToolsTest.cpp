@@ -1695,14 +1695,7 @@ struct ReferenceTypeDesc
             const auto&   OtherMember = Other.Members[i];
             if (RefMember.Name != OtherMember.Name->Literal)
                 return false;
-            std::string OtherMemberType;
-            for (auto it = OtherMember.TypeStart; it != OtherMember.TypeEnd; ++it)
-            {
-                if (!OtherMemberType.empty())
-                    OtherMemberType += " ";
-                OtherMemberType += it->Literal;
-            }
-            if (RefMember.Type != OtherMemberType)
+            if (RefMember.Type != OtherMember.GetFullTypeString())
                 return false;
             if (RefMember.ArrayDimensions.size() != OtherMember.ArrayDimensions.size())
                 return false;
