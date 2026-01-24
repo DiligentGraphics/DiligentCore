@@ -2406,6 +2406,16 @@ public:
         return false;
     }
 
+    void SetInlineConstants(const void* pConstants,
+                            Uint32      FirstConstant,
+                            Uint32      NumConstants)
+    {
+        if (m_pVar)
+        {
+            m_pVar->SetInlineConstants(pConstants, FirstConstant, NumConstants);
+        }
+    }
+
     IDeviceObject* Get(Uint32 ArrayIndex = 0) const
     {
         return m_pVar ? m_pVar->Get(ArrayIndex) : nullptr;
