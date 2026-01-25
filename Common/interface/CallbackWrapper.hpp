@@ -27,6 +27,8 @@
 /// \file
 /// Defines CallbackWrapper class that wraps a callback function
 
+#pragma once
+
 #include <utility>
 
 namespace Diligent
