@@ -637,7 +637,7 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
     Uint32                            SRBAllocationGranularity) noexcept(false)
 {
     PipelineResourceSignatureDescWrapper                    SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
-    DefaultSignatureDescBuilder<SPIRVShaderResourceAttribs> Builder{PSOName, ResourceLayout, SignDesc};
+    DefaultSignatureDescBuilder<SPIRVShaderResourceAttribs> Builder{PSOName, ResourceLayout, VerifyResourceMerge, SignDesc};
 
     MergedPushConstantMapType MergedPushConstants;
 
@@ -703,11 +703,7 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
                            "INLINE_CONSTANTS flag cannot be combined with other flags.");
 
                     // Note that Attribs.Name != VarDesc.Name for combined samplers
-                    auto [it, assigned] = Builder.AddResource(Attribs.Name, Attribs, VarDesc, ArraySize, ResType, Flags);
-                    if (!assigned)
-                    {
-                        VerifyResourceMerge(PSOName, it->second.Attribs, Attribs);
-                    }
+                    Builder.AddResource(Attribs.Name, Attribs, VarDesc, ArraySize, ResType, Flags);
                 });
 
             // Merge combined sampler suffixes

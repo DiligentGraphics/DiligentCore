@@ -1163,8 +1163,13 @@ protected:
     template <typename AttribsType>
     struct DefaultSignatureDescBuilder
     {
-        const char* const                     PSOName;
-        const PipelineResourceLayoutDesc&     ResourceLayout;
+
+        const char* const                 PSOName;
+        const PipelineResourceLayoutDesc& ResourceLayout;
+
+        using VerifyMergeFn = void (*)(const char*, const AttribsType&, const AttribsType&);
+        VerifyMergeFn const VerifyMerge;
+
         PipelineResourceSignatureDescWrapper& SignDesc;
 
         struct UniqueResourceInfo
@@ -1172,18 +1177,20 @@ protected:
             const AttribsType& Attribs;
             const Uint32       ResIdx; // Index in SignDesc
         };
-        std::unordered_map<ShaderResourceHashKey, UniqueResourceInfo, ShaderResourceHashKey::Hasher> UniqueResources;
+        std::unordered_map<ShaderResourceHashKey, UniqueResourceInfo, ShaderResourceHashKey::Hasher> UniqueResources = {};
 
         DefaultSignatureDescBuilder(const char*                           _PSOName,
                                     const PipelineResourceLayoutDesc&     _ResourceLayout,
+                                    VerifyMergeFn                         _VerifyMerge,
                                     PipelineResourceSignatureDescWrapper& _SignDesc) :
             PSOName{_PSOName},
             ResourceLayout{_ResourceLayout},
+            VerifyMerge{_VerifyMerge},
             SignDesc{_SignDesc}
         {
         }
 
-        auto AddResource(const char*                       Name,
+        void AddResource(const char*                       Name,
                          const AttribsType&                Attribs,
                          const ShaderResourceVariableDesc& VarDesc,
                          Uint32                            ArraySize,
@@ -1192,9 +1199,9 @@ protected:
                          WebGPUResourceAttribs             WebGPUAttribs = {})
         {
             // Note that Attribs.Name != VarDesc.Name for combined samplers
-            auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Name},
-                                                       UniqueResourceInfo{Attribs, SignDesc.GetNumResources()});
-            if (it_assigned.second)
+            auto [it, assigned] = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Name},
+                                                          UniqueResourceInfo{Attribs, SignDesc.GetNumResources()});
+            if (assigned)
             {
                 SignDesc.AddResource(VarDesc.ShaderStages, Name, ArraySize, ResType, VarDesc.Type, ResFlags, WebGPUAttribs);
             }
@@ -1202,15 +1209,14 @@ protected:
             {
                 if (ResFlags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
                 {
-                    PipelineResourceDesc& InlineCB = SignDesc.GetResource(it_assigned.first->second.ResIdx);
+                    PipelineResourceDesc& InlineCB = SignDesc.GetResource(it->second.ResIdx);
                     VERIFY_EXPR(InlineCB.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
                     //VERIFY_EXPR(InlineCB.ShaderStages & ShaderType);
                     // Use the maximum number of constants across all shaders
                     InlineCB.ArraySize = (std::max)(InlineCB.ArraySize, ArraySize);
                 }
+                VerifyMerge(PSOName, it->second.Attribs, Attribs);
             }
-
-            return it_assigned;
         }
     };
 

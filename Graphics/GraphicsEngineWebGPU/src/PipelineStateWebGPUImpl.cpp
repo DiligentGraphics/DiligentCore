@@ -749,7 +749,7 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
                                                                                               Uint32                            SRBAllocationGranularity)
 {
     PipelineResourceSignatureDescWrapper                   SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
-    DefaultSignatureDescBuilder<WGSLShaderResourceAttribs> Builder{PSOName, ResourceLayout, SignDesc};
+    DefaultSignatureDescBuilder<WGSLShaderResourceAttribs> Builder{PSOName, ResourceLayout, VerifyResourceMerge, SignDesc};
 
     for (const ShaderStageInfo& Stage : ShaderStages)
     {
@@ -780,11 +780,7 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
                     Attribs.ArraySize;
 
                 // Note that Attribs.Name != VarDesc.Name for combined samplers
-                auto [it, assigned] = Builder.AddResource(Attribs.Name, Attribs, VarDesc, ArraySize, ResType, Flags, WebGPUAttribs);
-                if (!assigned)
-                {
-                    VerifyResourceMerge(PSOName, it->second.Attribs, Attribs);
-                }
+                Builder.AddResource(Attribs.Name, Attribs, VarDesc, ArraySize, ResType, Flags, WebGPUAttribs);
             });
 
         // Merge combined sampler suffixes

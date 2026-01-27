@@ -69,7 +69,7 @@ protected:
                                        const PipelineResourceLayoutDesc&     _ResourceLayout,
                                        const LocalRootSignatureType*         _pLocalRootSig,
                                        PipelineResourceSignatureDescWrapper& _SignDesc) :
-            TBaseBuilder{_PSOName, _ResourceLayout, _SignDesc},
+            TBaseBuilder{_PSOName, _ResourceLayout, VerifyD3DResourceMerge, _SignDesc},
             pLocalRootSig{_pLocalRootSig}
         {}
 
@@ -109,11 +109,7 @@ protected:
                            "INLINE_CONSTANTS flag cannot be combined with other flags.");
 
                     // Note that Attribs.Name != VarDesc.Name for combined samplers
-                    auto [it, assigned] = this->AddResource(Attribs.Name, Attribs, VarDesc, ArraySize, ResType, ResFlags);
-                    if (!assigned)
-                    {
-                        VerifyD3DResourceMerge(this->PSOName, it->second.Attribs, Attribs);
-                    }
+                    this->AddResource(Attribs.Name, Attribs, VarDesc, ArraySize, ResType, ResFlags);
                 } //
             );
 
