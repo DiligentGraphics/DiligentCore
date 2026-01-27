@@ -1372,7 +1372,11 @@ TEST_F(InlineConstants, DifferentSizesAcrossStages)
     IRenderDevice*         pDevice = pEnv->GetDevice();
 
     if (!pDevice->GetDeviceInfo().IsD3DDevice() &&
-        !pDevice->GetDeviceInfo().IsVulkanDevice())
+        !pDevice->GetDeviceInfo().IsVulkanDevice() &&
+        !pDevice->GetDeviceInfo().IsGLDevice())
+        GTEST_SKIP();
+
+    if (!pDevice->GetDeviceInfo().Features.SeparablePrograms)
         GTEST_SKIP();
 
     IDeviceContext* pContext   = pEnv->GetDeviceContext();

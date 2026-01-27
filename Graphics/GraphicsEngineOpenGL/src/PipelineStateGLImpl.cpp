@@ -113,12 +113,19 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
     PipelineResourceSignatureDescWrapper SignDesc{m_Desc.Name, ResourceLayout, m_Desc.SRBAllocationGranularity};
     SignDesc.SetCombinedSamplerSuffix(PipelineResourceSignatureDesc{}.CombinedSamplerSuffix);
 
-    std::unordered_map<ShaderResourceHashKey, const ShaderResourcesGL::GLResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
+    struct UniqueResourceInfo
+    {
+        const ShaderResourcesGL::GLResourceAttribs& Attribs;
+        const Uint32                                ResIdx; // Index in SignDesc
+    };
+    std::unordered_map<ShaderResourceHashKey, UniqueResourceInfo, ShaderResourceHashKey::Hasher> UniqueResources;
 
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs) //
     {
-        const ShaderResourceVariableDesc VarDesc     = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Attribs.ShaderStages, nullptr);
-        const auto                       it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
+        const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Attribs.ShaderStages, nullptr);
+
+        const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name},
+                                                         UniqueResourceInfo{Attribs, SignDesc.GetNumResources()});
         if (it_assigned.second)
         {
             const PIPELINE_RESOURCE_FLAGS Flags = Attribs.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
@@ -126,39 +133,36 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
         }
         else
         {
-            VerifyResourceMerge(m_Desc, it_assigned.first->second, Attribs);
+            VerifyResourceMerge(m_Desc, it_assigned.first->second.Attribs, Attribs);
         }
     };
 
     // Specialized handler for uniform buffers to handle inline constants correctly
     const auto HandleUniformBuffer = [&](const ShaderResourcesGL::UniformBufferInfo& UB) //
     {
-        const ShaderResourceVariableDesc VarDesc     = FindPipelineResourceLayoutVariable(ResourceLayout, UB.Name, UB.ShaderStages, nullptr);
-        const auto                       it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, UB.Name}, UB);
+        const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, UB.Name, UB.ShaderStages, nullptr);
+        const PIPELINE_RESOURCE_FLAGS    Flags   = UB.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+
+        const Uint32 ArraySize = (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) ?
+            UB.GetInlineConstantCountOrThrow() :
+            UB.ArraySize;
+
+        auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, UB.Name},
+                                                   UniqueResourceInfo{UB, SignDesc.GetNumResources()});
         if (it_assigned.second)
         {
-            const PIPELINE_RESOURCE_FLAGS Flags = UB.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-
-            Uint32 ArraySize = UB.ArraySize;
-            if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-            {
-                VERIFY(Flags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag cannot be combined with other flags.");
-                // For inline constants, use the constant count instead of the UBO array size
-                ArraySize = UB.BufferSize / sizeof(Uint32);
-
-                if (ArraySize > MAX_INLINE_CONSTANTS)
-                {
-                    LOG_ERROR_AND_THROW("Inline constants resource '", UB.Name, "' has ",
-                                        ArraySize, " constants. The maximum supported number of inline constants is ",
-                                        MAX_INLINE_CONSTANTS, '.');
-                }
-            }
-
             SignDesc.AddResource(VarDesc.ShaderStages, UB.Name, ArraySize, UB.ResourceType, VarDesc.Type, Flags);
         }
         else
         {
-            VerifyResourceMerge(m_Desc, it_assigned.first->second, UB);
+            if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+            {
+                PipelineResourceDesc& InlineCB = SignDesc.GetResource(it_assigned.first->second.ResIdx);
+                VERIFY_EXPR(InlineCB.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
+                // Use the maximum number of constants across all shaders
+                InlineCB.ArraySize = std::max(InlineCB.ArraySize, ArraySize);
+            }
+            VerifyResourceMerge(m_Desc, it_assigned.first->second.Attribs, UB);
         }
     };
 

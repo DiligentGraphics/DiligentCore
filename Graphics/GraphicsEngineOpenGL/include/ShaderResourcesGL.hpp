@@ -162,6 +162,18 @@ public:
         {}
         // clang-format on
 
+        Uint32 GetInlineConstantCountOrThrow() const
+        {
+            const Uint32 NumConstants = BufferSize / sizeof(Uint32);
+            if (NumConstants > MAX_INLINE_CONSTANTS)
+            {
+                LOG_ERROR_AND_THROW("Inline constants resource '", Name, "' has ",
+                                    NumConstants, " constants. The maximum supported number of inline constants is ",
+                                    MAX_INLINE_CONSTANTS, '.');
+            }
+            return NumConstants;
+        }
+
         const GLuint UBIndex;
         const Uint32 BufferSize; // Buffer size in bytes
     };
