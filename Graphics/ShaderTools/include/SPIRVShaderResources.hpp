@@ -149,7 +149,7 @@ struct SPIRVShaderResourceAttribs
         return BufferStaticSize;
     }
 
-    Uint32 GetInlineConstantCountOrThrow(const char* ShaderName) const
+    Uint32 GetInlineConstantCountOrThrow(const char* ShaderName) const noexcept(false)
     {
         VERIFY_EXPR(Type == PushConstant || Type == UniformBuffer);
 

@@ -262,7 +262,7 @@ public:
         return ExtraData;
     }
 
-    Uint32 GetInlineConstantCountOrThrow(const char* ShaderName) const
+    Uint32 GetInlineConstantCountOrThrow(const char* ShaderName) const noexcept(false)
     {
         VERIFY_EXPR(GetShaderResourceType() == SHADER_RESOURCE_TYPE_CONSTANT_BUFFER);
         if (BindCount != 1)

@@ -1371,11 +1371,6 @@ TEST_F(InlineConstants, DifferentSizesAcrossStages)
     GPUTestingEnvironment* pEnv    = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice = pEnv->GetDevice();
 
-    if (!pDevice->GetDeviceInfo().IsD3DDevice() &&
-        !pDevice->GetDeviceInfo().IsVulkanDevice() &&
-        !pDevice->GetDeviceInfo().IsGLDevice())
-        GTEST_SKIP();
-
     if (!pDevice->GetDeviceInfo().Features.SeparablePrograms)
         GTEST_SKIP();
 

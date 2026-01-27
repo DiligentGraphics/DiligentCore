@@ -138,6 +138,23 @@ struct WGSLShaderResourceAttribs
     {
         return Type == TextureMS || Type == DepthTextureMS;
     }
+
+    Uint32 GetInlineConstantCountOrThrow() const noexcept(false)
+    {
+        VERIFY_EXPR(ResourceDim == RESOURCE_DIM_BUFFER);
+        VERIFY(BufferStaticSize != 0, "BufferStaticSize must be non-zero for inline constants");
+        VERIFY(BufferStaticSize % sizeof(Uint32) == 0, "Buffer size must be a multiple of 4 bytes");
+        const Uint32 NumConstants = BufferStaticSize / sizeof(Uint32);
+
+        if (NumConstants > MAX_INLINE_CONSTANTS)
+        {
+            LOG_ERROR_AND_THROW("Inline constants resource '", Name, "' has ",
+                                NumConstants, " constants. The maximum supported number of inline constants is ",
+                                MAX_INLINE_CONSTANTS, '.');
+        }
+
+        return NumConstants;
+    }
 };
 static_assert(sizeof(WGSLShaderResourceAttribs) % sizeof(void*) == 0, "Size of WGSLShaderResourceAttribs struct must be a multiple of sizeof(void*)");
 

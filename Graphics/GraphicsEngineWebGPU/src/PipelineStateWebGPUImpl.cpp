@@ -750,7 +750,12 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
 {
     PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
 
-    std::unordered_map<ShaderResourceHashKey, const WGSLShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
+    struct UniqueResourceInfo
+    {
+        const WGSLShaderResourceAttribs& Attribs;
+        const Uint32                     ResIdx; // Index in SignDesc
+    };
+    std::unordered_map<ShaderResourceHashKey, UniqueResourceInfo, ShaderResourceHashKey::Hasher> UniqueResources;
     for (const ShaderStageInfo& Stage : ShaderStages)
     {
         const ShaderWebGPUImpl*    pShader         = Stage.pShader;
@@ -759,48 +764,44 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
         ShaderResources.ProcessResources(
             [&](const WGSLShaderResourceAttribs& Attribs, Uint32) //
             {
+                if (Attribs.ArraySize == 0)
+                {
+                    LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
+                                        "You must use explicit resource signature to specify the array size.");
+                }
+
                 const char* const SamplerSuffix =
                     (ShaderResources.IsUsingCombinedSamplers() && (Attribs.Type == WGSLShaderResourceAttribs::ResourceType::Sampler || Attribs.Type == WGSLShaderResourceAttribs::ResourceType::ComparisonSampler)) ?
                     ShaderResources.GetCombinedSamplerSuffix() :
                     nullptr;
 
                 const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
+                const PIPELINE_RESOURCE_FLAGS    Flags   = WGSLShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+
+                const Uint32 ArraySize = (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) ?
+                    Attribs.GetInlineConstantCountOrThrow() :
+                    Attribs.ArraySize;
+
                 // Note that Attribs.Name != VarDesc.Name for combined samplers
-                const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
+                const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name},
+                                                                 UniqueResourceInfo{Attribs, SignDesc.GetNumResources()});
                 if (it_assigned.second)
                 {
-                    if (Attribs.ArraySize == 0)
-                    {
-                        LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
-                                            "You must use explicit resource signature to specify the array size.");
-                    }
-
-                    const SHADER_RESOURCE_TYPE    ResType       = WGSLShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
-                    const PIPELINE_RESOURCE_FLAGS Flags         = WGSLShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-                    const WebGPUResourceAttribs   WebGPUAttribs = Attribs.GetWebGPUAttribs(VarDesc.Flags);
-
-                    Uint32 ArraySize = Attribs.ArraySize;
-                    if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-                    {
-                        VERIFY(Flags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag cannot be combined with other flags.");
-                        VERIFY(Attribs.BufferStaticSize != 0, "BufferStaticSize must be non-zero for inline constants");
-                        VERIFY(Attribs.BufferStaticSize % sizeof(Uint32) == 0, "Buffer size must be a multiple of 4 bytes");
-                        // For inline constants, ArraySize must be the number of 32-bit constants
-                        ArraySize = Attribs.BufferStaticSize / sizeof(Uint32);
-
-                        if (ArraySize > MAX_INLINE_CONSTANTS)
-                        {
-                            LOG_ERROR_AND_THROW("Inline constants resource '", Attribs.Name, "' has ",
-                                                ArraySize, " constants. The maximum supported number of inline constants is ",
-                                                MAX_INLINE_CONSTANTS, '.');
-                        }
-                    }
+                    const SHADER_RESOURCE_TYPE  ResType       = WGSLShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
+                    const WebGPUResourceAttribs WebGPUAttribs = Attribs.GetWebGPUAttribs(VarDesc.Flags);
 
                     SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, Flags, WebGPUAttribs);
                 }
                 else
                 {
-                    VerifyResourceMerge(PSOName, it_assigned.first->second, Attribs);
+                    if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
+                    {
+                        PipelineResourceDesc& InlineCB = SignDesc.GetResource(it_assigned.first->second.ResIdx);
+                        VERIFY_EXPR(InlineCB.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
+                        // Use the maximum number of constants across all shaders
+                        InlineCB.ArraySize = std::max(InlineCB.ArraySize, ArraySize);
+                    }
+                    VerifyResourceMerge(PSOName, it_assigned.first->second.Attribs, Attribs);
                 }
             });
 

@@ -162,7 +162,7 @@ public:
         {}
         // clang-format on
 
-        Uint32 GetInlineConstantCountOrThrow() const
+        Uint32 GetInlineConstantCountOrThrow() const noexcept(false)
         {
             const Uint32 NumConstants = BufferSize / sizeof(Uint32);
             if (NumConstants > MAX_INLINE_CONSTANTS)
