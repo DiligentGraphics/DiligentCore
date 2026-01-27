@@ -139,6 +139,8 @@ struct EngineD3D11ImplTraits
     using ImmutableSamplerAttribsType               = ImmutableSamplerAttribsD3D11;
     using InlineConstantBufferAttribsType           = InlineConstantBufferAttribsD3D11;
     using PipelineResourceSignatureInternalDataType = PipelineResourceSignatureInternalDataD3D11;
+
+    using LocalRootSignatureType = void;
 };
 
 } // namespace Diligent

@@ -14,6 +14,7 @@ set(INCLUDE
     include/D3DViewDescConversionImpl.hpp
     include/DXGITypeConversions.hpp
     include/EngineFactoryD3DBase.hpp
+    include/PipelineStateD3DBase.hpp
     include/RenderDeviceD3DBase.hpp
     include/ShaderD3DBase.hpp
     include/ShaderResources.hpp

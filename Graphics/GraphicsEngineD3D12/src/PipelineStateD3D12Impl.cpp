@@ -348,59 +348,13 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D12Impl::GetDefaultResourceS
     const LocalRootSignatureD3D12*    pLocalRootSig) noexcept(false)
 {
     PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
-
-    std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
-    for (auto& Stage : ShaderStages)
+    DefaultSignatureDescBuilder          Builder{PSOName, ResourceLayout, pLocalRootSig, SignDesc};
+    for (const ShaderStageInfo& Stage : ShaderStages)
     {
         for (const ShaderD3D12Impl* pShader : Stage.Shaders)
         {
-            const ShaderResourcesD3D12& ShaderResources = *pShader->GetShaderResources();
-
-            ShaderResources.ProcessResources(
-                [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
-                {
-                    if (pLocalRootSig != nullptr && pLocalRootSig->IsShaderRecord(Attribs))
-                        return;
-
-                    const char* const SamplerSuffix =
-                        (ShaderResources.IsUsingCombinedTextureSamplers() && Attribs.GetInputType() == D3D_SIT_SAMPLER) ?
-                        ShaderResources.GetCombinedSamplerSuffix() :
-                        nullptr;
-
-                    const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
-                    // Note that Attribs.Name != VarDesc.Name for combined samplers
-                    const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
-                    if (it_assigned.second)
-                    {
-                        if (Attribs.BindCount == 0)
-                        {
-                            LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
-                                                "Use explicit resource signature to specify the array size.");
-                        }
-
-                        const SHADER_RESOURCE_TYPE    ResType  = Attribs.GetShaderResourceType();
-                        const PIPELINE_RESOURCE_FLAGS ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-
-                        Uint32 ArraySize = Attribs.BindCount;
-                        if (ResFlags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-                        {
-                            VERIFY(ResFlags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag cannot be combined with other flags.");
-                            ArraySize = Attribs.GetInlineConstantCountOrThrow(pShader->GetDesc().Name);
-                        }
-                        SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, ResFlags);
-                    }
-                    else
-                    {
-                        VerifyD3DResourceMerge(PSOName, it_assigned.first->second, Attribs);
-                    }
-                } //
-            );
-
-            // merge combined sampler suffixes
-            if (ShaderResources.IsUsingCombinedTextureSamplers() && ShaderResources.GetNumSamplers() > 0)
-            {
-                SignDesc.SetCombinedSamplerSuffix(ShaderResources.GetCombinedSamplerSuffix());
-            }
+            const ShaderResourcesD3D12& Resources = *pShader->GetShaderResources();
+            Builder.ProcessShaderResources(Resources);
         }
     }
 
@@ -981,7 +935,7 @@ inline std::vector<const ShaderD3D12Impl*> GetStageShaders(const PipelineStateD3
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                    pRefCounters,
                                                RenderDeviceD3D12Impl*                 pDeviceD3D12,
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
+    TPipelineStateD3DBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
     Construct<ShaderD3D12Impl>(CreateInfo);
 }
@@ -989,7 +943,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                   pRefCounters,
                                                RenderDeviceD3D12Impl*                pDeviceD3D12,
                                                const ComputePipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
+    TPipelineStateD3DBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
     Construct<ShaderD3D12Impl>(CreateInfo);
 }
@@ -997,7 +951,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                      pRefCounters,
                                                RenderDeviceD3D12Impl*                   pDeviceD3D12,
                                                const RayTracingPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo}
+    TPipelineStateD3DBase{pRefCounters, pDeviceD3D12, CreateInfo}
 {
     Construct<ShaderD3D12Impl>(CreateInfo);
 }

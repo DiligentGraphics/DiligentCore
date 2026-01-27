@@ -277,6 +277,18 @@ public:
         m_Desc.Name = m_Name.c_str();
     }
 
+    Uint32 GetNumResources() const
+    {
+        VERIFY_EXPR(m_Desc.NumResources == m_Resources.size());
+        return m_Desc.NumResources;
+    }
+
+    PipelineResourceDesc& GetResource(Uint32 Index)
+    {
+        VERIFY(Index < m_Desc.NumResources, "Resource index (", Index, ") is out of range (0 - ", m_Desc.NumResources - 1, ")");
+        return m_Resources[Index];
+    }
+
     const PipelineResourceSignatureDesc& Get() const
     {
         return m_Desc;

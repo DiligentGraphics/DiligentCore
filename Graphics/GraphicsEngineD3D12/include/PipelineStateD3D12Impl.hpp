@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +33,7 @@
 #include <vector>
 
 #include "EngineD3D12ImplTraits.hpp"
-#include "PipelineStateBase.hpp"
+#include "PipelineStateD3DBase.hpp"
 #include "PipelineResourceSignatureD3D12Impl.hpp" // Required by PipelineStateBase
 #include "RootSignature.hpp"
 
@@ -43,10 +43,11 @@ namespace Diligent
 class ShaderResourcesD3D12;
 
 /// Pipeline state object implementation in Direct3D12 backend.
-class PipelineStateD3D12Impl final : public PipelineStateBase<EngineD3D12ImplTraits>
+class PipelineStateD3D12Impl final : public PipelineStateD3DBase<EngineD3D12ImplTraits>
 {
 public:
-    using TPipelineStateBase = PipelineStateBase<EngineD3D12ImplTraits>;
+    using TPipelineStateD3DBase = PipelineStateD3DBase<EngineD3D12ImplTraits>;
+    using TPipelineStateBase    = typename TPipelineStateD3DBase::TBase;
 
     static constexpr INTERFACE_ID IID_InternalImpl =
         {0x9007f2a7, 0x3852, 0x4718, {0x84, 0xce, 0xfd, 0xc, 0xe1, 0xe9, 0xd3, 0x65}};
@@ -56,7 +57,7 @@ public:
     PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const RayTracingPipelineStateCreateInfo& CreateInfo);
     ~PipelineStateD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_PipelineStateD3D12, IID_InternalImpl, TPipelineStateBase)
+    IMPLEMENT_QUERY_INTERFACE2_IN_PLACE(IID_PipelineStateD3D12, IID_InternalImpl, TPipelineStateD3DBase)
 
     /// Implementation of IPipelineState::IsCompatibleWith() in Direct3D12 backend.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;

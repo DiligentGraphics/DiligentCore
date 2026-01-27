@@ -88,6 +88,8 @@ struct ImmutableSamplerAttribsD3D12;
 struct InlineConstantBufferAttribsD3D12;
 struct PipelineResourceSignatureInternalDataD3D12;
 
+class LocalRootSignatureD3D12;
+
 struct EngineD3D12ImplTraits
 {
     static constexpr RENDER_DEVICE_TYPE DeviceType = RENDER_DEVICE_TYPE_D3D12;
@@ -147,6 +149,8 @@ struct EngineD3D12ImplTraits
     using ImmutableSamplerAttribsType               = ImmutableSamplerAttribsD3D12;
     using InlineConstantBufferAttribsType           = InlineConstantBufferAttribsD3D12;
     using PipelineResourceSignatureInternalDataType = PipelineResourceSignatureInternalDataD3D12;
+
+    using LocalRootSignatureType = LocalRootSignatureD3D12;
 };
 
 } // namespace Diligent

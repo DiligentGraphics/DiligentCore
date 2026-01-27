@@ -62,56 +62,11 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D11Impl::GetDefaultResourceS
     Uint32                            SRBAllocationGranularity) noexcept(false)
 {
     PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
-
-    std::unordered_map<ShaderResourceHashKey, const D3DShaderResourceAttribs&, ShaderResourceHashKey::Hasher> UniqueResources;
+    DefaultSignatureDescBuilder          Builder{PSOName, ResourceLayout, nullptr, SignDesc};
     for (ShaderD3D11Impl* pShader : Shaders)
     {
-        const ShaderResourcesD3D11& ShaderResources = *pShader->GetShaderResources();
-        const SHADER_TYPE           ShaderType      = ShaderResources.GetShaderType();
-        VERIFY_EXPR(ShaderType == pShader->GetDesc().ShaderType);
-
-        ShaderResources.ProcessResources(
-            [&](const D3DShaderResourceAttribs& Attribs, Uint32) //
-            {
-                const char* const SamplerSuffix =
-                    (ShaderResources.IsUsingCombinedTextureSamplers() && Attribs.GetInputType() == D3D_SIT_SAMPLER) ?
-                    ShaderResources.GetCombinedSamplerSuffix() :
-                    nullptr;
-
-                const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, ShaderType, SamplerSuffix);
-                // Note that Attribs.Name != VarDesc.Name for combined samplers
-                const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name}, Attribs);
-                if (it_assigned.second)
-                {
-                    if (Attribs.BindCount == 0)
-                    {
-                        LOG_ERROR_AND_THROW("Resource '", Attribs.Name, "' in shader '", pShader->GetDesc().Name, "' is a runtime-sized array. ",
-                                            "Use explicit resource signature to specify the array size.");
-                    }
-
-                    const SHADER_RESOURCE_TYPE    ResType  = Attribs.GetShaderResourceType();
-                    const PIPELINE_RESOURCE_FLAGS ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-
-                    Uint32 ArraySize = Attribs.BindCount;
-                    if (ResFlags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-                    {
-                        VERIFY(ResFlags == PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS, "INLINE_CONSTANTS flag cannot be combined with other flags.");
-                        ArraySize = Attribs.GetInlineConstantCountOrThrow(pShader->GetDesc().Name);
-                    }
-                    SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, ResFlags);
-                }
-                else
-                {
-                    VerifyD3DResourceMerge(PSOName, it_assigned.first->second, Attribs);
-                }
-            } //
-        );
-
-        // Merge combined sampler suffixes
-        if (ShaderResources.IsUsingCombinedTextureSamplers() && ShaderResources.GetNumSamplers() > 0)
-        {
-            SignDesc.SetCombinedSamplerSuffix(ShaderResources.GetCombinedSamplerSuffix());
-        }
+        const ShaderResourcesD3D11& Resources = *pShader->GetShaderResources();
+        Builder.ProcessShaderResources(Resources);
     }
 
     return SignDesc;
@@ -357,7 +312,7 @@ inline std::vector<const ShaderD3D11Impl*> GetStageShaders(const ShaderD3D11Impl
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*                    pRefCounters,
                                                RenderDeviceD3D11Impl*                 pRenderDeviceD3D11,
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pRenderDeviceD3D11, CreateInfo}
+    TPipelineStateD3DBase{pRefCounters, pRenderDeviceD3D11, CreateInfo}
 {
     Construct<ShaderD3D11Impl>(CreateInfo);
 }
@@ -365,7 +320,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*                   pRefCounters,
                                                RenderDeviceD3D11Impl*                pRenderDeviceD3D11,
                                                const ComputePipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pRenderDeviceD3D11, CreateInfo}
+    TPipelineStateD3DBase{pRefCounters, pRenderDeviceD3D11, CreateInfo}
 {
     Construct<ShaderD3D11Impl>(CreateInfo);
 }
