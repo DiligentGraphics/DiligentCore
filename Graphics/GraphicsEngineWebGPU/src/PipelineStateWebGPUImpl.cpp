@@ -748,14 +748,9 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
                                                                                               const PipelineResourceLayoutDesc& ResourceLayout,
                                                                                               Uint32                            SRBAllocationGranularity)
 {
-    PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
+    PipelineResourceSignatureDescWrapper                   SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
+    DefaultSignatureDescBuilder<WGSLShaderResourceAttribs> Builder{PSOName, ResourceLayout, SignDesc};
 
-    struct UniqueResourceInfo
-    {
-        const WGSLShaderResourceAttribs& Attribs;
-        const Uint32                     ResIdx; // Index in SignDesc
-    };
-    std::unordered_map<ShaderResourceHashKey, UniqueResourceInfo, ShaderResourceHashKey::Hasher> UniqueResources;
     for (const ShaderStageInfo& Stage : ShaderStages)
     {
         const ShaderWebGPUImpl*    pShader         = Stage.pShader;
@@ -775,33 +770,20 @@ PipelineResourceSignatureDescWrapper PipelineStateWebGPUImpl::GetDefaultResource
                     ShaderResources.GetCombinedSamplerSuffix() :
                     nullptr;
 
-                const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
-                const PIPELINE_RESOURCE_FLAGS    Flags   = WGSLShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+                const ShaderResourceVariableDesc VarDesc       = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Stage.Type, SamplerSuffix);
+                const PIPELINE_RESOURCE_FLAGS    Flags         = WGSLShaderResourceAttribs::GetPipelineResourceFlags(Attribs.Type) | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
+                const SHADER_RESOURCE_TYPE       ResType       = WGSLShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
+                const WebGPUResourceAttribs      WebGPUAttribs = Attribs.GetWebGPUAttribs(VarDesc.Flags);
 
                 const Uint32 ArraySize = (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS) ?
                     Attribs.GetInlineConstantCountOrThrow() :
                     Attribs.ArraySize;
 
                 // Note that Attribs.Name != VarDesc.Name for combined samplers
-                const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name},
-                                                                 UniqueResourceInfo{Attribs, SignDesc.GetNumResources()});
-                if (it_assigned.second)
+                auto [it, assigned] = Builder.AddResource(Attribs.Name, Attribs, VarDesc, ArraySize, ResType, Flags, WebGPUAttribs);
+                if (!assigned)
                 {
-                    const SHADER_RESOURCE_TYPE  ResType       = WGSLShaderResourceAttribs::GetShaderResourceType(Attribs.Type);
-                    const WebGPUResourceAttribs WebGPUAttribs = Attribs.GetWebGPUAttribs(VarDesc.Flags);
-
-                    SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, Flags, WebGPUAttribs);
-                }
-                else
-                {
-                    if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-                    {
-                        PipelineResourceDesc& InlineCB = SignDesc.GetResource(it_assigned.first->second.ResIdx);
-                        VERIFY_EXPR(InlineCB.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
-                        // Use the maximum number of constants across all shaders
-                        InlineCB.ArraySize = std::max(InlineCB.ArraySize, ArraySize);
-                    }
-                    VerifyResourceMerge(PSOName, it_assigned.first->second.Attribs, Attribs);
+                    VerifyResourceMerge(PSOName, it->second.Attribs, Attribs);
                 }
             });
 

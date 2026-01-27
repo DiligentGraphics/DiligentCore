@@ -59,20 +59,19 @@ public:
     }
 
 protected:
-    struct DefaultSignatureDescBuilder
+    using TBaseBuilder = typename TBase::template DefaultSignatureDescBuilder<D3DShaderResourceAttribs>;
+
+    struct DefaultSignatureDescBuilderD3D : TBaseBuilder
     {
-        const char* const                   PSOName;
-        const PipelineResourceLayoutDesc&   ResourceLayout;
         const LocalRootSignatureType* const pLocalRootSig;
 
-        PipelineResourceSignatureDescWrapper& SignDesc;
-
-        struct UniqueResourceInfo
-        {
-            const D3DShaderResourceAttribs& Attribs;
-            const Uint32                    ResIdx; // Index in SignDesc
-        };
-        std::unordered_map<ShaderResourceHashKey, UniqueResourceInfo, ShaderResourceHashKey::Hasher> UniqueResources;
+        DefaultSignatureDescBuilderD3D(const char*                           _PSOName,
+                                       const PipelineResourceLayoutDesc&     _ResourceLayout,
+                                       const LocalRootSignatureType*         _pLocalRootSig,
+                                       PipelineResourceSignatureDescWrapper& _SignDesc) :
+            TBaseBuilder{_PSOName, _ResourceLayout, _SignDesc},
+            pLocalRootSig{_pLocalRootSig}
+        {}
 
         void ProcessShaderResources(const ShaderResources& Resources) noexcept(false)
         {
@@ -98,7 +97,7 @@ protected:
                         Resources.GetCombinedSamplerSuffix() :
                         nullptr;
 
-                    const ShaderResourceVariableDesc VarDesc  = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, ShaderType, SamplerSuffix);
+                    const ShaderResourceVariableDesc VarDesc  = FindPipelineResourceLayoutVariable(this->ResourceLayout, Attribs.Name, ShaderType, SamplerSuffix);
                     const SHADER_RESOURCE_TYPE       ResType  = Attribs.GetShaderResourceType();
                     const PIPELINE_RESOURCE_FLAGS    ResFlags = Attribs.GetPipelineResourceFlags() | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
 
@@ -110,23 +109,10 @@ protected:
                            "INLINE_CONSTANTS flag cannot be combined with other flags.");
 
                     // Note that Attribs.Name != VarDesc.Name for combined samplers
-                    auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name},
-                                                               UniqueResourceInfo{Attribs, SignDesc.GetNumResources()});
-                    if (it_assigned.second)
+                    auto [it, assigned] = this->AddResource(Attribs.Name, Attribs, VarDesc, ArraySize, ResType, ResFlags);
+                    if (!assigned)
                     {
-                        SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, ResFlags);
-                    }
-                    else
-                    {
-                        if (ResFlags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-                        {
-                            PipelineResourceDesc& InlineCB = SignDesc.GetResource(it_assigned.first->second.ResIdx);
-                            VERIFY_EXPR(InlineCB.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
-                            VERIFY_EXPR(InlineCB.ShaderStages & ShaderType);
-                            // Use the maximum number of constants across all shaders
-                            InlineCB.ArraySize = (std::max)(InlineCB.ArraySize, ArraySize);
-                        }
-                        VerifyD3DResourceMerge(PSOName, it_assigned.first->second.Attribs, Attribs);
+                        VerifyD3DResourceMerge(this->PSOName, it->second.Attribs, Attribs);
                     }
                 } //
             );
@@ -134,7 +120,7 @@ protected:
             // Merge combined sampler suffixes
             if (Resources.IsUsingCombinedTextureSamplers() && Resources.GetNumSamplers() > 0)
             {
-                SignDesc.SetCombinedSamplerSuffix(Resources.GetCombinedSamplerSuffix());
+                this->SignDesc.SetCombinedSamplerSuffix(Resources.GetCombinedSamplerSuffix());
             }
         }
     };

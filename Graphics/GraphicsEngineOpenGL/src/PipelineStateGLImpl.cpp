@@ -112,28 +112,17 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
 
     PipelineResourceSignatureDescWrapper SignDesc{m_Desc.Name, ResourceLayout, m_Desc.SRBAllocationGranularity};
     SignDesc.SetCombinedSamplerSuffix(PipelineResourceSignatureDesc{}.CombinedSamplerSuffix);
-
-    struct UniqueResourceInfo
-    {
-        const ShaderResourcesGL::GLResourceAttribs& Attribs;
-        const Uint32                                ResIdx; // Index in SignDesc
-    };
-    std::unordered_map<ShaderResourceHashKey, UniqueResourceInfo, ShaderResourceHashKey::Hasher> UniqueResources;
+    DefaultSignatureDescBuilder<ShaderResourcesGL::GLResourceAttribs> Builder{m_Desc.Name, ResourceLayout, SignDesc};
 
     const auto HandleResource = [&](const ShaderResourcesGL::GLResourceAttribs& Attribs) //
     {
         const ShaderResourceVariableDesc VarDesc = FindPipelineResourceLayoutVariable(ResourceLayout, Attribs.Name, Attribs.ShaderStages, nullptr);
+        const PIPELINE_RESOURCE_FLAGS    Flags   = Attribs.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
 
-        const auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name},
-                                                         UniqueResourceInfo{Attribs, SignDesc.GetNumResources()});
-        if (it_assigned.second)
+        auto [it, assigned] = Builder.AddResource(Attribs.Name, Attribs, VarDesc, Attribs.ArraySize, Attribs.ResourceType, Flags);
+        if (!assigned)
         {
-            const PIPELINE_RESOURCE_FLAGS Flags = Attribs.ResourceFlags | ShaderVariableFlagsToPipelineResourceFlags(VarDesc.Flags);
-            SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, Attribs.ArraySize, Attribs.ResourceType, VarDesc.Type, Flags);
-        }
-        else
-        {
-            VerifyResourceMerge(m_Desc, it_assigned.first->second.Attribs, Attribs);
+            VerifyResourceMerge(m_Desc, it->second.Attribs, Attribs);
         }
     };
 
@@ -147,22 +136,10 @@ PipelineResourceSignatureDescWrapper PipelineStateGLImpl::GetDefaultSignatureDes
             UB.GetInlineConstantCountOrThrow() :
             UB.ArraySize;
 
-        auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, UB.Name},
-                                                   UniqueResourceInfo{UB, SignDesc.GetNumResources()});
-        if (it_assigned.second)
+        auto [it, assigned] = Builder.AddResource(UB.Name, UB, VarDesc, ArraySize, UB.ResourceType, Flags);
+        if (!assigned)
         {
-            SignDesc.AddResource(VarDesc.ShaderStages, UB.Name, ArraySize, UB.ResourceType, VarDesc.Type, Flags);
-        }
-        else
-        {
-            if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-            {
-                PipelineResourceDesc& InlineCB = SignDesc.GetResource(it_assigned.first->second.ResIdx);
-                VERIFY_EXPR(InlineCB.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
-                // Use the maximum number of constants across all shaders
-                InlineCB.ArraySize = std::max(InlineCB.ArraySize, ArraySize);
-            }
-            VerifyResourceMerge(m_Desc, it_assigned.first->second.Attribs, UB);
+            VerifyResourceMerge(m_Desc, it->second.Attribs, UB);
         }
     };
 

@@ -636,16 +636,11 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
     const PipelineResourceLayoutDesc& ResourceLayout,
     Uint32                            SRBAllocationGranularity) noexcept(false)
 {
-    PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
+    PipelineResourceSignatureDescWrapper                    SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
+    DefaultSignatureDescBuilder<SPIRVShaderResourceAttribs> Builder{PSOName, ResourceLayout, SignDesc};
 
     MergedPushConstantMapType MergedPushConstants;
 
-    struct UniqueResourceInfo
-    {
-        const SPIRVShaderResourceAttribs& Attribs;
-        const Uint32                      ResIdx; // Index in SignDesc
-    };
-    std::unordered_map<ShaderResourceHashKey, UniqueResourceInfo, ShaderResourceHashKey::Hasher> UniqueResources;
     for (const ShaderStageInfo& Stage : ShaderStages)
     {
         for (const ShaderStageInfo::Item& StageItem : Stage.Items)
@@ -708,23 +703,10 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
                            "INLINE_CONSTANTS flag cannot be combined with other flags.");
 
                     // Note that Attribs.Name != VarDesc.Name for combined samplers
-                    auto it_assigned = UniqueResources.emplace(ShaderResourceHashKey{VarDesc.ShaderStages, Attribs.Name},
-                                                               UniqueResourceInfo{Attribs, SignDesc.GetNumResources()});
-                    if (it_assigned.second)
+                    auto [it, assigned] = Builder.AddResource(Attribs.Name, Attribs, VarDesc, ArraySize, ResType, Flags);
+                    if (!assigned)
                     {
-                        SignDesc.AddResource(VarDesc.ShaderStages, Attribs.Name, ArraySize, ResType, VarDesc.Type, Flags);
-                    }
-                    else
-                    {
-                        if (Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS)
-                        {
-                            PipelineResourceDesc& InlineCB = SignDesc.GetResource(it_assigned.first->second.ResIdx);
-                            VERIFY_EXPR(InlineCB.Flags & PIPELINE_RESOURCE_FLAG_INLINE_CONSTANTS);
-                            VERIFY_EXPR(InlineCB.ShaderStages & Stage.Type);
-                            // Use the maximum number of constants across all shaders
-                            InlineCB.ArraySize = std::max(InlineCB.ArraySize, ArraySize);
-                        }
-                        VerifyResourceMerge(PSOName, it_assigned.first->second.Attribs, Attribs);
+                        VerifyResourceMerge(PSOName, it->second.Attribs, Attribs);
                     }
                 });
 

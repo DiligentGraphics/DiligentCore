@@ -348,7 +348,7 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D12Impl::GetDefaultResourceS
     const LocalRootSignatureD3D12*    pLocalRootSig) noexcept(false)
 {
     PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
-    DefaultSignatureDescBuilder          Builder{PSOName, ResourceLayout, pLocalRootSig, SignDesc};
+    DefaultSignatureDescBuilderD3D       Builder{PSOName, ResourceLayout, pLocalRootSig, SignDesc};
     for (const ShaderStageInfo& Stage : ShaderStages)
     {
         for (const ShaderD3D12Impl* pShader : Stage.Shaders)

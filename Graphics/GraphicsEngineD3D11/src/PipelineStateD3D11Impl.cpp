@@ -62,7 +62,7 @@ PipelineResourceSignatureDescWrapper PipelineStateD3D11Impl::GetDefaultResourceS
     Uint32                            SRBAllocationGranularity) noexcept(false)
 {
     PipelineResourceSignatureDescWrapper SignDesc{PSOName, ResourceLayout, SRBAllocationGranularity};
-    DefaultSignatureDescBuilder          Builder{PSOName, ResourceLayout, nullptr, SignDesc};
+    DefaultSignatureDescBuilderD3D       Builder{PSOName, ResourceLayout, nullptr, SignDesc};
     for (ShaderD3D11Impl* pShader : Shaders)
     {
         const ShaderResourcesD3D11& Resources = *pShader->GetShaderResources();
