@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2026 Diligent Graphics LLC
+ *  Copyright 2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,17 +24,18 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "EmscriptenPlatformMisc.hpp"
 
-#include "../../Linux/interface/LinuxPlatformMisc.hpp"
-#include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include <emscripten/threading.h>
+#include <pthread.h>
 
 namespace Diligent
 {
 
-struct EmscriptenMisc : public LinuxMisc
+void EmscriptenMisc::SetCurrentThreadName(const char* Name)
 {
-    static void SetCurrentThreadName(const char* Name);
-};
+    if (Name != nullptr && Name[0] != '\0')
+        emscripten_set_thread_name(pthread_self(), Name);
+}
 
 } // namespace Diligent

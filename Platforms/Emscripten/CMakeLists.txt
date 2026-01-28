@@ -14,6 +14,7 @@ set(INTERFACE
 set(SOURCE
     src/EmscriptenDebug.cpp
     src/EmscriptenFileSystem.cpp
+    src/EmscriptenPlatformMisc.cpp
     ../Linux/src/LinuxFileSystem.cpp
 )
 
