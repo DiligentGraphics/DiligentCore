@@ -108,7 +108,7 @@ const std::string VulkanPushConstants_VS{
 struct PushConstants_t
 {
     float4 g_Positions[6];
-    float4 g_Colors[3];
+    // Make VS push constant size smaller than PS
 };
 
 [[vk::push_constant]] ConstantBuffer<PushConstants_t> PushConstants;
@@ -121,8 +121,12 @@ struct PSInput
 
 void main(uint VertexId : SV_VertexId, out PSInput PSIn)
 {
+    float4 Colors[3];
+    Colors[0] = float4(1.0, 0.0, 0.0, 1.0);
+    Colors[1] = float4(0.0, 1.0, 0.0, 1.0);
+    Colors[2] = float4(0.0, 0.0, 1.0, 1.0);
     PSIn.Pos = PushConstants.g_Positions[VertexId];
-    PSIn.Color = PushConstants.g_Colors[VertexId % 3];
+    PSIn.Color = Colors[VertexId % 3];
 }
 )"};
 
@@ -131,7 +135,7 @@ const std::string VulkanPushConstants_PS{
 struct PushConstants_t
 {
     float4 g_Positions[6];
-    float4 g_Colors[3];
+    float4 g_Colors[3]; // Make PS push constant size larger than VS
 };
 
 [[vk::push_constant]] ConstantBuffer<PushConstants_t> PushConstants;
@@ -144,8 +148,6 @@ struct PSInput
 
 float4 main(in PSInput PSIn) : SV_Target
 {
-    // Use push constants from PS to apply color modulation
-    // This ensures both VS and PS access the same PushConstants
     return float4(
         PSIn.Color.r * PushConstants.g_Colors[0].r,
         PSIn.Color.g * PushConstants.g_Colors[1].g,

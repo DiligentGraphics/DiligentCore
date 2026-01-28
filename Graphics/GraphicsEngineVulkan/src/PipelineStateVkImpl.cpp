@@ -566,23 +566,10 @@ MergedPushConstantMapType MergePushConstants(const PipelineStateVkImpl::TShaderS
                 const SPIRVShaderResourceAttribs& PCAttribs  = ShaderResources.GetPushConstant(i);
                 MergedPushConstantInfo&           MergedPC   = MergedPushConstants[PCAttribs.Name];
                 const Uint32                      BufferSize = PCAttribs.GetConstantBufferSize();
-                if (MergedPC.Stages == SHADER_TYPE_UNKNOWN)
-                {
-                    MergedPC.Stages = Stage.Type;
-                    MergedPC.Size   = BufferSize;
-                }
-                else if (MergedPC.Size == BufferSize)
-                {
-                    MergedPC.Stages |= Stage.Type;
-                }
-                else
-                {
-                    LOG_ERROR_AND_THROW("Push constant '", PCAttribs.Name,
-                                        "' is shared between multiple shaders in pipeline '", (PSOName ? PSOName : ""),
-                                        "', but its size varies (",
-                                        MergedPC.Size, " vs ", BufferSize,
-                                        "). A push constant shared between multiple shaders must have the same size in all shaders.");
-                }
+
+                // Combine push constants from all stages
+                MergedPC.Stages |= Stage.Type;
+                MergedPC.Size = std::max(MergedPC.Size, BufferSize);
             }
         }
     }
@@ -682,7 +669,7 @@ PipelineResourceSignatureDescWrapper PipelineStateVkImpl::GetDefaultResourceSign
                         auto it = MergedPushConstants.find(VarDesc.Name);
                         if (it != MergedPushConstants.end())
                         {
-                            VERIFY_EXPR(Attribs.GetConstantBufferSize() == it->second.Size);
+                            VERIFY_EXPR(Attribs.GetConstantBufferSize() <= it->second.Size);
                             VarDesc.ShaderStages = it->second.Stages;
                         }
                         else
