@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -233,6 +233,9 @@ public:
     HashMapStringKey(const Char* _Str, bool bMakeCopy = false) :
         Str{_Str}
     {
+#ifdef DILIGENT_DEBUG
+        m_DbgStr = _Str != nullptr ? _Str : "";
+#endif
         VERIFY(Str, "String pointer must not be null");
 
         Ownership_Hash = CStringHash<Char>{}.operator()(Str) & HashMask;
@@ -250,6 +253,9 @@ public:
     explicit HashMapStringKey(const String& Str, bool bMakeCopy = true) :
         HashMapStringKey{Str.c_str(), bMakeCopy}
     {
+#ifdef DILIGENT_DEBUG
+        m_DbgStr = Str;
+#endif
     }
 
     HashMapStringKey(HashMapStringKey&& Key) noexcept :
@@ -260,6 +266,10 @@ public:
     {
         Key.Str            = nullptr;
         Key.Ownership_Hash = 0;
+#ifdef DILIGENT_DEBUG
+        m_DbgStr = std::move(Key.m_DbgStr);
+        Key.m_DbgStr.clear();
+#endif
     }
 
     HashMapStringKey& operator=(HashMapStringKey&& rhs) noexcept
@@ -274,6 +284,11 @@ public:
 
         rhs.Str            = nullptr;
         rhs.Ownership_Hash = 0;
+
+#ifdef DILIGENT_DEBUG
+        m_DbgStr = std::move(rhs.m_DbgStr);
+        rhs.m_DbgStr.clear();
+#endif
 
         return *this;
     }
@@ -292,22 +307,20 @@ public:
 
     HashMapStringKey Clone() const
     {
+        DbgVerifyString();
         return HashMapStringKey{GetStr(), (Ownership_Hash & StrOwnershipMask) != 0};
     }
 
     bool operator==(const HashMapStringKey& RHS) const noexcept
     {
+        DbgVerifyString();
+        RHS.DbgVerifyString();
+
         if (Str == RHS.Str)
             return true;
 
-        if (Str == nullptr)
+        if (Str == nullptr || RHS.Str == nullptr)
         {
-            VERIFY_EXPR(RHS.Str != nullptr);
-            return false;
-        }
-        else if (RHS.Str == nullptr)
-        {
-            VERIFY_EXPR(Str != nullptr);
             return false;
         }
 
@@ -324,8 +337,9 @@ public:
 #if LOG_HASH_CONFLICTS
         if (!IsEqual && Hash == RHSHash)
         {
-            LOG_WARNING_MESSAGE("Unequal strings \"", Str, "\" and \"", RHS.Str,
-                                "\" have the same hash. You may want to use a better hash function. "
+            LOG_WARNING_MESSAGE("Different strings \"", Str, "\" and \"", RHS.Str,
+                                "\" have the same hash. This can happen occasionally; if frequent, "
+                                "consider a stronger hash or a different key strategy. "
                                 "You may disable this warning by defining LOG_HASH_CONFLICTS to 0");
         }
 #endif
@@ -344,11 +358,13 @@ public:
 
     size_t GetHash() const noexcept
     {
+        DbgVerifyString();
         return Ownership_Hash & HashMask;
     }
 
     const Char* GetStr() const noexcept
     {
+        DbgVerifyString();
         return Str;
     }
 
@@ -367,6 +383,22 @@ public:
 
         Str            = nullptr;
         Ownership_Hash = 0;
+
+#ifdef DILIGENT_DEBUG
+        m_DbgStr.clear();
+#endif
+    }
+
+private:
+    void DbgVerifyString() const
+    {
+        VERIFY(m_DbgStr == (Str != nullptr ? Str : ""),
+               "Debug copy does not match the current key string. "
+               "Expected=\"",
+               m_DbgStr,
+               "\" Actual=\"", (Str != nullptr ? Str : "<null>"),
+               "\". This usually means the key was constructed without copying/owning the string and now points to "
+               "temporary, freed, or mutated storage.");
     }
 
 protected:
@@ -377,6 +409,11 @@ protected:
     const Char* Str = nullptr;
     // We will use top bit of the hash to indicate if we own the pointer
     size_t Ownership_Hash = 0;
+
+private:
+#ifdef DILIGENT_DEBUG
+    std::string m_DbgStr;
+#endif
 };
 
 
