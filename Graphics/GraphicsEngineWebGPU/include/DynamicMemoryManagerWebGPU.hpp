@@ -30,6 +30,7 @@
 /// Declaration of Diligent::DynamicMemoryManagerWebGPU class
 
 #include <mutex>
+#include <memory>
 #include <vector>
 
 #include "WebGPUObjectWrappers.hpp"
@@ -111,9 +112,9 @@ private:
     size_t              m_CurrentOffset = 0;
     WebGPUBufferWrapper m_wgpuBuffer;
 
-    std::mutex         m_AvailablePagesMtx;
-    std::vector<Page>  m_AvailablePages;
-    std::vector<Uint8> m_MappedData;
+    std::mutex               m_AvailablePagesMtx;
+    std::vector<Page>        m_AvailablePages;
+    std::unique_ptr<Uint8[]> m_MappedData;
 };
 
 } // namespace Diligent
