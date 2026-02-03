@@ -164,10 +164,10 @@ void SwapChainWebGPUImpl::CreateSurface()
     wgpuSurfaceNativeDesc.chain      = {nullptr, WGPUSType_SurfaceSourceXCBWindow};
     wgpuSurfaceNativeDesc.connection = m_NativeWindow.pXCBConnection;
     wgpuSurfaceNativeDesc.window     = m_NativeWindow.WindowId;
-#elif PLATFROM_MACOS
+#elif PLATFORM_MACOS
     WGPUSurfaceSourceMetalLayer wgpuSurfaceNativeDesc{};
-    wgpuSurfaceNativeDesc.chain  = {nullptr, WGPUSType_SurfaceSourceMetalLayer};
-    wgpuSurfaceNativeDesc.window = m_NativeWindow.MetalLayer;
+    wgpuSurfaceNativeDesc.chain = {nullptr, WGPUSType_SurfaceSourceMetalLayer};
+    wgpuSurfaceNativeDesc.layer = m_NativeWindow.GetLayer();
 #elif PLATFORM_WEB
     WGPUSurfaceSourceCanvasHTMLSelector_Emscripten wgpuSurfaceNativeDesc{};
     wgpuSurfaceNativeDesc.chain    = {nullptr, WGPUSType_SurfaceSourceCanvasHTMLSelector_Emscripten};
