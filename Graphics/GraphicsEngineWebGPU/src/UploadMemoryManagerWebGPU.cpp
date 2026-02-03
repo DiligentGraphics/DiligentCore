@@ -36,7 +36,8 @@ namespace Diligent
 
 UploadMemoryManagerWebGPU::Page::Page(UploadMemoryManagerWebGPU& Mgr, size_t Size) :
     m_pMgr{&Mgr},
-    m_Data(Size)
+    m_Data{new Uint8[Size]},
+    m_DataSize{Size}
 {
     WGPUBufferDescriptor wgpuBufferDesc{};
     wgpuBufferDesc.label = GetWGPUStringView("Upload memory page");
@@ -58,10 +59,13 @@ UploadMemoryManagerWebGPU::Page::Page(Page&& RHS) noexcept :
     m_pMgr{RHS.m_pMgr},
     m_wgpuBuffer{std::move(RHS.m_wgpuBuffer)},
     m_Data{std::move(RHS.m_Data)},
+    m_DataSize{RHS.m_DataSize},
     m_CurrOffset{RHS.m_CurrOffset}
 // clang-format on
 {
-    RHS = Page{};
+    RHS.m_pMgr       = nullptr;
+    RHS.m_DataSize   = 0;
+    RHS.m_CurrOffset = 0;
 }
 
 UploadMemoryManagerWebGPU::Page& UploadMemoryManagerWebGPU::Page::operator=(Page&& RHS) noexcept
@@ -72,9 +76,11 @@ UploadMemoryManagerWebGPU::Page& UploadMemoryManagerWebGPU::Page::operator=(Page
     m_pMgr       = RHS.m_pMgr;
     m_wgpuBuffer = std::move(RHS.m_wgpuBuffer);
     m_Data       = std::move(RHS.m_Data);
+    m_DataSize   = RHS.m_DataSize;
     m_CurrOffset = RHS.m_CurrOffset;
 
     RHS.m_pMgr       = nullptr;
+    RHS.m_DataSize   = 0;
     RHS.m_CurrOffset = 0;
 
     return *this;
@@ -91,7 +97,7 @@ UploadMemoryManagerWebGPU::Allocation UploadMemoryManagerWebGPU::Page::Allocate(
     Allocation Alloc;
     Alloc.Offset = AlignUp(m_CurrOffset, Alignment);
     Alloc.Size   = AlignUp(Size, Alignment);
-    if (Alloc.Offset + Alloc.Size <= m_Data.size())
+    if (Alloc.Offset + Alloc.Size <= m_DataSize)
     {
         Alloc.wgpuBuffer = m_wgpuBuffer;
         Alloc.pData      = &m_Data[Alloc.Offset];
@@ -105,7 +111,7 @@ void UploadMemoryManagerWebGPU::Page::FlushWrites(WGPUQueue wgpuQueue)
 {
     if (m_CurrOffset > 0)
     {
-        wgpuQueueWriteBuffer(wgpuQueue, m_wgpuBuffer, 0, m_Data.data(), m_CurrOffset);
+        wgpuQueueWriteBuffer(wgpuQueue, m_wgpuBuffer, 0, m_Data.get(), m_CurrOffset);
     }
 }
 
