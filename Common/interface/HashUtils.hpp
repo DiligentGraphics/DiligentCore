@@ -1395,6 +1395,15 @@ struct hash<Diligent::RefCntAutoPtr<T>>
     }
 };
 
+template <typename T>
+struct hash<Diligent::RefCntWeakPtr<T>>
+{
+    size_t operator()(const Diligent::RefCntWeakPtr<T>& Key) const noexcept
+    {
+        return std::hash<const T*>{}(Key.UnsafeRawPtr());
+    }
+};
+
 
 template <>
 struct hash<Diligent::HashMapStringKey>
