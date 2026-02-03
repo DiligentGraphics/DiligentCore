@@ -133,7 +133,7 @@ DynamicMemoryManagerWebGPU::DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, si
         WGPUBufferUsage_Index |
         WGPUBufferUsage_Indirect;
     m_wgpuBuffer.Reset(wgpuDeviceCreateBuffer(wgpuDevice, &wgpuBufferDesc));
-    m_MappedData.resize(BufferSize);
+    m_MappedData.reset(new Uint8[BufferSize]);
 
     LOG_INFO_MESSAGE("Created dynamic buffer: ", BufferSize >> 10, " KB");
 }
