@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -3462,6 +3462,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                                   Uint32                     BarrierCount,
                                                   const StateTransitionDesc* pResourceBarriers) PURE;
 
+
+#if DILIGENT_CPP_INTERFACE
+    /// Helper method to transition a single resource state.
+    void TransitionResourceState(const StateTransitionDesc& Barrier)
+    {
+        TransitionResourceStates(1, &Barrier);
+    }
+#endif
 
     /// Resolves a multi-sampled texture subresource into a non-multi-sampled texture subresource.
 

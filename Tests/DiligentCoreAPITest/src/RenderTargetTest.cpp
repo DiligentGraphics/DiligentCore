@@ -1,5 +1,5 @@
 /*
- *  Copyright 2025 Diligent Graphics LLC
+ *  Copyright 2025-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -249,7 +249,7 @@ protected:
         pContext->Draw({6, DRAW_FLAG_VERIFY_ALL});
 
         StateTransitionDesc Barrier{sm_Resources.pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
 
         pContext->Flush();
         pContext->WaitForIdle();
@@ -521,7 +521,7 @@ TEST_F(RenderTargetTest, InactiveRenderTargets)
             pContext->ClearRenderTarget(pRTV, ClearColors[i].Data(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
             StateTransitionDesc Barrier{sm_Resources.pRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-            pContext->TransitionResourceStates(1, &Barrier);
+            pContext->TransitionResourceState(Barrier);
 
             pContext->Flush();
             pContext->WaitForIdle();

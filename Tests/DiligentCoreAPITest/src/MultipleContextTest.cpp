@@ -426,7 +426,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
             // Transition to CopySrc state to use in TakeSnapshot()
             StateTransitionDesc Barrier{pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-            pGraphicsCtx->TransitionResourceStates(1, &Barrier);
+            pGraphicsCtx->TransitionResourceState(Barrier);
         }
 
         pGraphicsCtx->WaitForIdle();
@@ -466,7 +466,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
         // initial -> render_target
         const StateTransitionDesc Barrier1 = {pTextureRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET};
-        pGraphicsCtx->TransitionResourceStates(1, &Barrier1);
+        pGraphicsCtx->TransitionResourceState(Barrier1);
         pTextureRT->SetState(RESOURCE_STATE_UNKNOWN); // disable implicit state transitions
 
         ITextureView* pRTVs[] = {pTextureRT->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
@@ -480,7 +480,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
         // render_target -> shader_resource
         const StateTransitionDesc Barrier2 = {pTextureRT, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE};
-        pGraphicsCtx->TransitionResourceStates(1, &Barrier2);
+        pGraphicsCtx->TransitionResourceState(Barrier2);
 
         pGraphicsCtx->EnqueueSignal(pGraphicsFence, GraphicsFenceValue);
         pGraphicsCtx->Flush();
@@ -493,7 +493,7 @@ TEST_F(MultipleContextTest, GraphicsAndComputeQueue)
 
         // initial -> UAV
         const StateTransitionDesc Barrier1 = {pTextureUAV, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_UNORDERED_ACCESS};
-        pComputeCtx->TransitionResourceStates(1, &Barrier1);
+        pComputeCtx->TransitionResourceState(Barrier1);
         pTextureUAV->SetState(RESOURCE_STATE_UNKNOWN); // disable implicit state transitions
 
         pComputeCtx->SetPipelineState(sm_pCompProceduralPSO);
@@ -665,7 +665,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 
             // Transition to CopySrc state to use in TakeSnapshot()
             StateTransitionDesc Barrier{pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-            pGraphicsCtx->TransitionResourceStates(1, &Barrier);
+            pGraphicsCtx->TransitionResourceState(Barrier);
         }
 
         pGraphicsCtx->WaitForIdle();
@@ -708,7 +708,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 
         // initial -> render_target
         const StateTransitionDesc Barrier1 = {pTextureRT, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET};
-        pGraphicsCtx->TransitionResourceStates(1, &Barrier1);
+        pGraphicsCtx->TransitionResourceState(Barrier1);
         pTextureRT->SetState(RESOURCE_STATE_UNKNOWN); // disable implicit state transitions
 
         ITextureView* pRTVs[] = {pTextureRT->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET)};
@@ -722,7 +722,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 
         // render_target -> shader_resource
         const StateTransitionDesc Barrier2 = {pTextureRT, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE};
-        pGraphicsCtx->TransitionResourceStates(1, &Barrier2);
+        pGraphicsCtx->TransitionResourceState(Barrier2);
 
         pGraphicsCtx->EnqueueSignal(pGraphicsFence, GraphicsFenceValue);
         pGraphicsCtx->Flush();
@@ -739,7 +739,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 
         // initial -> copy_dst
         const StateTransitionDesc Barrier1 = {pUploadTexture, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_DEST};
-        pTransferCtx->TransitionResourceStates(1, &Barrier1);
+        pTransferCtx->TransitionResourceState(Barrier1);
         pUploadTexture->SetState(RESOURCE_STATE_UNKNOWN); // disable implicit state transitions
 
         TextureSubResData SubRes;
@@ -761,7 +761,7 @@ TEST_F(MultipleContextTest, GraphicsAndTransferQueue)
 
         // copy_dst -> common
         const StateTransitionDesc Barrier2 = {pUploadTexture, RESOURCE_STATE_COPY_DEST, RESOURCE_STATE_COMMON};
-        pTransferCtx->TransitionResourceStates(1, &Barrier2);
+        pTransferCtx->TransitionResourceState(Barrier2);
 
         pTransferCtx->EnqueueSignal(pTransferFence, TransferFenceValue);
         pTransferCtx->Flush();

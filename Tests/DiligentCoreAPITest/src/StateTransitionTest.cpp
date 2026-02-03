@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ TEST(ResourceStateTest, DiscardResource)
 
     {
         const StateTransitionDesc Barrier{pTexture, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_RENDER_TARGET, STATE_TRANSITION_FLAG_UPDATE_STATE | STATE_TRANSITION_FLAG_DISCARD_CONTENT};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
     }
 
     ITextureView* pRTV = pTexture->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
@@ -70,7 +70,7 @@ TEST(ResourceStateTest, DiscardResource)
 
     {
         const StateTransitionDesc Barrier{pTexture, RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_UNORDERED_ACCESS, STATE_TRANSITION_FLAG_UPDATE_STATE | STATE_TRANSITION_FLAG_DISCARD_CONTENT};
-        pContext->TransitionResourceStates(1, &Barrier);
+        pContext->TransitionResourceState(Barrier);
     }
 
     pContext->Flush();
@@ -116,7 +116,7 @@ TEST(ResourceStateTest, DiscardSubresource)
     Barrier.ArraySliceCount = 4;
     Barrier.FirstMipLevel   = 1;
     Barrier.MipLevelsCount  = 3;
-    pContext->TransitionResourceStates(1, &Barrier);
+    pContext->TransitionResourceState(Barrier);
 
     ITextureView* ppRTVs[] = {pRTV};
     pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
@@ -129,7 +129,7 @@ TEST(ResourceStateTest, DiscardSubresource)
     pTexture->SetState(RESOURCE_STATE_UNKNOWN);
     Barrier.OldState = RESOURCE_STATE_RENDER_TARGET;
     Barrier.NewState = RESOURCE_STATE_UNORDERED_ACCESS;
-    pContext->TransitionResourceStates(1, &Barrier);
+    pContext->TransitionResourceState(Barrier);
 
     pContext->Flush();
 }

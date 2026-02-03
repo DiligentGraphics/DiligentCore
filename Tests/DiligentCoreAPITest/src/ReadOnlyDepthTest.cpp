@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -139,7 +139,7 @@ protected:
 
             // Transition to CopySrc state to use in TakeSnapshot()
             StateTransitionDesc Barrier{pRTV->GetTexture(), RESOURCE_STATE_UNKNOWN, RESOURCE_STATE_COPY_SOURCE, STATE_TRANSITION_FLAG_UPDATE_STATE};
-            pContext->TransitionResourceStates(1, &Barrier);
+            pContext->TransitionResourceState(Barrier);
 
             pContext->WaitForIdle();
             pTestingSwapChain->TakeSnapshot(pRTV->GetTexture());
