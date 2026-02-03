@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024-2025 Diligent Graphics LLC
+ *  Copyright 2024-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -119,7 +119,8 @@ void DynamicMemoryManagerWebGPU::Page::Recycle()
 DynamicMemoryManagerWebGPU::DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, size_t PageSize, size_t BufferSize) :
     m_PageSize{PageSize},
     m_BufferSize{BufferSize},
-    m_CurrentOffset{0}
+    m_CurrentOffset{0},
+    m_MappedData{std::make_unique_for_overwrite<Uint8[]>(BufferSize)}
 {
     WGPUBufferDescriptor wgpuBufferDesc{};
     wgpuBufferDesc.label = GetWGPUStringView("Dynamic buffer");
@@ -133,7 +134,6 @@ DynamicMemoryManagerWebGPU::DynamicMemoryManagerWebGPU(WGPUDevice wgpuDevice, si
         WGPUBufferUsage_Index |
         WGPUBufferUsage_Indirect;
     m_wgpuBuffer.Reset(wgpuDeviceCreateBuffer(wgpuDevice, &wgpuBufferDesc));
-    m_MappedData.resize(BufferSize);
 
     LOG_INFO_MESSAGE("Created dynamic buffer: ", BufferSize >> 10, " KB");
 }
