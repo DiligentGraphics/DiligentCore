@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -262,6 +262,8 @@ void SwapChainWebGPUImpl::ConfigureSurface()
 
         m_SwapChainDesc.Width  = WindowRect.right - WindowRect.left;
         m_SwapChainDesc.Height = WindowRect.bottom - WindowRect.top;
+#elif PLATFORM_MACOS
+        m_NativeWindow.GetBackingSize(m_SwapChainDesc.Width, m_SwapChainDesc.Height);
 #elif PLATFORM_WEB
         int32_t CanvasWidth  = 0;
         int32_t CanvasHeight = 0;
