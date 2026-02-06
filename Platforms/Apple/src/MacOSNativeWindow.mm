@@ -23,6 +23,7 @@
  */
 
 #include "MacOSNativeWindow.h"
+#include "BasicTypes.h"
 
 #import <AppKit/AppKit.h>
 
@@ -32,6 +33,22 @@ namespace Diligent
 void* MacOSNativeWindow::GetLayer() const
 {
     return pNSView ? (__bridge void*)((__bridge NSView*)pNSView).layer : nullptr;
+}
+
+void MacOSNativeWindow::GetBackingSize(Uint32& Width, Uint32& Height) const
+{
+    if (pNSView)
+    {
+        NSView* nsView = (__bridge NSView*)pNSView;
+        NSRect  viewRectPixels = [nsView convertRectToBacking:[nsView bounds]];
+        Width  = static_cast<Uint32>(viewRectPixels.size.width);
+        Height = static_cast<Uint32>(viewRectPixels.size.height);
+    }
+    else
+    {
+        Width  = 0;
+        Height = 0;
+    }
 }
 
 } // namespace Diligent
