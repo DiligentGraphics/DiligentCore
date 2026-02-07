@@ -117,6 +117,12 @@ public:
         return true;
     }
 
+    /// Checks if the queue is empty.
+    bool IsEmpty() const
+    {
+        return m_Head->pNext.load(std::memory_order_acquire) == nullptr;
+    }
+
 private:
     struct Node
     {

@@ -45,6 +45,7 @@ TEST(Common_MPSCQueue, EnqueueDequeue)
     Queue.Enqueue(42);
     Queue.Enqueue(84);
     Queue.Enqueue(126);
+    EXPECT_FALSE(Queue.IsEmpty());
 
     int Value = 0;
     EXPECT_TRUE(Queue.Dequeue(Value));
@@ -54,6 +55,7 @@ TEST(Common_MPSCQueue, EnqueueDequeue)
     EXPECT_TRUE(Queue.Dequeue(Value));
     EXPECT_EQ(Value, 126);
 
+    EXPECT_TRUE(Queue.IsEmpty());
     EXPECT_FALSE(Queue.Dequeue(Value));
 
     Queue.Enqueue(168);
@@ -63,6 +65,7 @@ TEST(Common_MPSCQueue, EnqueueDequeue)
     EXPECT_TRUE(Queue.Dequeue(Value));
     EXPECT_EQ(Value, 210);
 
+    EXPECT_TRUE(Queue.IsEmpty());
     EXPECT_FALSE(Queue.Dequeue(Value));
 
     Queue.Enqueue(252);
@@ -152,6 +155,8 @@ TEST(Common_MPSCQueue, EnqueueDequeueParallel)
         Producer.join();
     }
     Consumer.join();
+
+    EXPECT_TRUE(Queue.IsEmpty());
 
     EXPECT_EQ(ProducedData.size(), NumProducers * NumItemsPerProducer);
     std::vector<Uint32> CurrProducedValue(NumProducers, 0);
