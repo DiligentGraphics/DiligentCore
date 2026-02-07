@@ -67,14 +67,6 @@ class ShaderBindingTableWebGPUImpl
 class DeviceMemoryWebGPUImpl
 {};
 
-#if PLATFORM_WEB
-static void DebugMessengerCallback(WGPUErrorType MessageType, const char* Message, void* pUserData)
-{
-    if (Message != nullptr)
-        LOG_DEBUG_MESSAGE(DEBUG_MESSAGE_SEVERITY_ERROR, "WebGPU: ", Message);
-}
-#endif
-
 RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters* pRefCounters,
                                                const CreateInfo&   CI) :
 
@@ -92,13 +84,8 @@ RenderDeviceWebGPUImpl::RenderDeviceWebGPUImpl(IReferenceCounters* pRefCounters,
     m_wgpuDevice{CI.wgpuDevice}
 // clang-format on
 {
-    WGPUSupportedLimits wgpuSupportedLimits{};
-    wgpuDeviceGetLimits(m_wgpuDevice, &wgpuSupportedLimits);
-    m_wgpuLimits = wgpuSupportedLimits.limits;
 
-#if PLATFORM_WEB
-    wgpuDeviceSetUncapturedErrorCallback(m_wgpuDevice, DebugMessengerCallback, nullptr);
-#endif
+    wgpuDeviceGetLimits(m_wgpuDevice, &m_wgpuLimits);
     FindSupportedTextureFormats();
 
     m_DeviceInfo.Type = RENDER_DEVICE_TYPE_WEBGPU;
@@ -384,9 +371,12 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
 
     constexpr BIND_FLAGS BIND_SRU = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
     constexpr BIND_FLAGS BIND_SR  = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
-    constexpr BIND_FLAGS BIND_S   = BIND_SHADER_RESOURCE;
     constexpr BIND_FLAGS BIND_SU  = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+    constexpr BIND_FLAGS BIND_S   = BIND_SHADER_RESOURCE;
+    constexpr BIND_FLAGS BIND_R   = BIND_RENDER_TARGET;
     constexpr BIND_FLAGS BIND_D   = BIND_DEPTH_STENCIL;
+    constexpr BIND_FLAGS BIND_U   = BIND_UNORDERED_ACCESS;
+
 
     SAMPLE_COUNT SupportedSampleCounts = SAMPLE_COUNT_1 | SAMPLE_COUNT_4; // We can't query supported sample counts in WebGPU
 
@@ -429,14 +419,24 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
         }
     };
 
+    auto UpdateTexFormatInfo = [&](std::initializer_list<TEXTURE_FORMAT> Formats, BIND_FLAGS BindFlags, Uint32 FmtFlags) {
+        for (TEXTURE_FORMAT Fmt : Formats)
+        {
+            TextureFormatInfoExt& FmtInfo = m_TextureFormatsInfo[Fmt];
+            VERIFY(FmtInfo.Supported, "The format hasn't been initialized");
+            FmtInfo.BindFlags |= BindFlags;
+            FmtInfo.SampleCounts |= (FmtFlags & FMT_FLAG_MSAA) != 0 ? SupportedSampleCounts : SAMPLE_COUNT_1;
+            FmtInfo.Filterable |= (FmtFlags & FMT_FLAG_FILTER) != 0;
+        }
+    };
+
     const bool BGRA8UnormStorageSupported       = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_BGRA8UnormStorage);
     const bool Float32FilterableSupported       = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Float32Filterable);
     const bool RG11B10UfloatRenderableSupported = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_RG11B10UfloatRenderable);
     const bool Depth32FloatStencil8Supported    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Depth32FloatStencil8);
     const bool TextureCompressionBCSupported    = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureCompressionBC);
     const bool TextureCompressionETC2Supported  = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureCompressionETC2);
-    const bool R16UnormSupported                = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Unorm16TextureFormats);
-    const bool R16SnormSupported                = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_Snorm16TextureFormats);
+    const bool TextureTier1Supported            = wgpuDeviceHasFeature(m_wgpuDevice, WGPUFeatureName_TextureFormatsTier1);
 
     // https://www.w3.org/TR/webgpu/#texture-format-caps
 
@@ -519,18 +519,40 @@ void RenderDeviceWebGPUImpl::FindSupportedTextureFormats()
                          BIND_S, FMT_FLAG_FILTER);
     }
 
-    if (R16UnormSupported)
+    if (TextureTier1Supported)
     {
-        SetTexFormatInfo({TEX_FORMAT_R16_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RG16_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RGBA16_UNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-    }
+        // https://www.w3.org/TR/webgpu/#texture-formats-tier1
+        SetTexFormatInfo({TEX_FORMAT_R16_UNORM,
+                          TEX_FORMAT_R16_SNORM,
+                          TEX_FORMAT_RG16_UNORM,
+                          TEX_FORMAT_RG16_SNORM,
+                          TEX_FORMAT_RGBA16_UNORM,
+                          TEX_FORMAT_RGBA16_SNORM},
+                         BIND_SRU, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
 
-    if (R16SnormSupported)
-    {
-        SetTexFormatInfo({TEX_FORMAT_R16_SNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RG16_SNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
-        SetTexFormatInfo({TEX_FORMAT_RGBA16_SNORM}, BIND_SR, FMT_FLAG_FILTER | FMT_FLAG_MSAA);
+        UpdateTexFormatInfo({TEX_FORMAT_R8_SNORM,
+                             TEX_FORMAT_RG8_SNORM,
+                             TEX_FORMAT_RGBA8_SNORM},
+                            BIND_R, FMT_FLAG_MSAA);
+
+        UpdateTexFormatInfo({TEX_FORMAT_R8_UNORM,
+                             TEX_FORMAT_R8_SNORM,
+                             TEX_FORMAT_R8_UINT,
+                             TEX_FORMAT_R8_SINT,
+                             TEX_FORMAT_RG8_UNORM,
+                             TEX_FORMAT_RG8_SNORM,
+                             TEX_FORMAT_RG8_UINT,
+                             TEX_FORMAT_RG8_SINT,
+                             TEX_FORMAT_R16_UINT,
+                             TEX_FORMAT_R16_SINT,
+                             TEX_FORMAT_R16_FLOAT,
+                             TEX_FORMAT_RG16_UINT,
+                             TEX_FORMAT_RG16_SINT,
+                             TEX_FORMAT_RG16_FLOAT,
+                             TEX_FORMAT_RGB10A2_UNORM,
+                             TEX_FORMAT_RGB10A2_UINT,
+                             TEX_FORMAT_R11G11B10_FLOAT},
+                            BIND_U, 0);
     }
 
     if (TextureCompressionETC2Supported)
