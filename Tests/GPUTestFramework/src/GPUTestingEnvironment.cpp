@@ -59,6 +59,9 @@
 
 #if WEBGPU_SUPPORTED
 #    include "EngineFactoryWebGPU.h"
+#    if PLATFORM_WEB
+#        include <webgpu/webgpu.h>
+#    endif
 #endif
 
 #if ARCHIVER_SUPPORTED
@@ -469,7 +472,13 @@ GPUTestingEnvironment::GPUTestingEnvironment(const CreateInfo& EnvCI, const Swap
             EngineWebGPUCreateInfo EngineCI{};
             EngineCI.Features = EnvCI.Features;
             ppContexts.resize((std::max)(size_t{1}, ContextCI.size()) + NumDeferredCtx);
+#    if PLATFORM_WEB
+            WGPUDevice   wgpuDevice   = emscripten_webgpu_get_device();
+            WGPUInstance wgpuInstance = wgpuCreateInstance(nullptr);
+            pFactoryWGPU->AttachToWebGPUDevice(wgpuInstance, nullptr, wgpuDevice, EngineCI, &m_pDevice, ppContexts.data());
+#    else
             pFactoryWGPU->CreateDeviceAndContextsWebGPU(EngineCI, &m_pDevice, ppContexts.data());
+#    endif
         }
 #endif
         break;
