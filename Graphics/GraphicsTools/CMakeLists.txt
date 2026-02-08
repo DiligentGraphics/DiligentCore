@@ -24,6 +24,7 @@ set(INTERFACE
     interface/ShaderSourceFactoryUtils.hpp
     interface/TextureUploader.hpp
     interface/TextureUploaderBase.hpp
+    interface/GPUUploadManager.h
     interface/XXH128Hasher.hpp
     interface/VertexPool.h
     interface/VertexPoolX.hpp
@@ -42,11 +43,15 @@ set(SOURCE
     src/ScreenCapture.cpp
     src/ShaderSourceFactoryUtils.cpp
     src/TextureUploader.cpp
+    src/GPUUploadManagerImpl.cpp
     src/XXH128Hasher.cpp
     src/VertexPool.cpp
 )
 
-set(INCLUDE include/ProxyPipelineState.hpp)
+set(INCLUDE
+    include/ProxyPipelineState.hpp
+    include/GPUUploadManagerImpl.hpp
+)
 
 if(ARCHIVER_SUPPORTED)
     list(APPEND INTERFACE

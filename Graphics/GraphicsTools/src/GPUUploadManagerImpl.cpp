@@ -1,0 +1,284 @@
+/*
+ *  Copyright 2026 Diligent Graphics LLC
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence),
+ *  contract, or otherwise, unless required by applicable law (such as deliberate
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental,
+ *  or consequential damages of any character arising as a result of this License or
+ *  out of the use or inability to use the software (including but not limited to damages
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and
+ *  all other commercial damages or losses), even if such Contributor has been advised
+ *  of the possibility of such damages.
+ */
+
+#include "GPUUploadManagerImpl.hpp"
+#include "DebugUtilities.hpp"
+#include "Align.hpp"
+#include "Atomics.hpp"
+
+#include <vector>
+#include <cstring>
+#include <thread>
+
+namespace Diligent
+{
+
+GPUUploadManagerImpl::Page::Page(Uint32 Size) :
+    m_Size{Size}
+{}
+
+GPUUploadManagerImpl::Page::Page(IRenderDevice*  pDevice,
+                                 IDeviceContext* pContext,
+                                 Uint32          Size) :
+    Page{Size}
+{
+    static std::atomic<int> PageCounter{0};
+    const std::string       Name = "GPUUploadManagerImpl page " + std::to_string(PageCounter.fetch_add(1));
+
+    BufferDesc Desc;
+    Desc.Name           = Name.c_str();
+    Desc.Size           = Size;
+    Desc.Usage          = USAGE_STAGING;
+    Desc.CPUAccessFlags = CPU_ACCESS_WRITE;
+    pDevice->CreateBuffer(Desc, nullptr, &m_pStagingBuffer);
+    VERIFY_EXPR(m_pStagingBuffer != nullptr);
+
+    pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_NONE, m_pData);
+    VERIFY_EXPR(m_pData != nullptr);
+}
+
+bool GPUUploadManagerImpl::Page::TryBeginWriting()
+{
+    Uint32 State = m_State.load(std::memory_order_acquire);
+    for (;;)
+    {
+        if (State & SEALED_BIT)
+        {
+            // The page is sealed for new writes.
+            return false;
+        }
+
+        if ((State & WRITER_MASK) == WRITER_MASK)
+        {
+            // Too many writers.
+            // This should never happen in practice, but we handle this case for robustness.
+            return false;
+        }
+
+        if (m_State.compare_exchange_weak(
+                State, // On failure, updated state is written back to State variable.
+                State + 1,
+                std::memory_order_acq_rel))
+            return true;
+    }
+}
+
+GPUUploadManagerImpl::Page::WritingStatus GPUUploadManagerImpl::Page::EndWriting()
+{
+    const uint32_t PrevState   = m_State.fetch_sub(1, std::memory_order_acq_rel);
+    const uint32_t PrevWriters = (PrevState & WRITER_MASK);
+    VERIFY_EXPR(PrevWriters > 0);
+    if (PrevState & SEALED_BIT)
+    {
+        return PrevWriters == 1 ? WritingStatus::LastWriterSealed : WritingStatus::NotLastWriter;
+    }
+    else
+    {
+        return WritingStatus::NotSealed;
+    }
+}
+
+// Seals the page for new writes.
+GPUUploadManagerImpl::Page::SealStatus GPUUploadManagerImpl::Page::TrySeal()
+{
+    uint32_t State = m_State.load(std::memory_order_acquire);
+    for (;;)
+    {
+        if (State & SEALED_BIT)
+        {
+            return SealStatus::AlreadySealed;
+        }
+
+        if (m_State.compare_exchange_weak(
+                State, State | SEALED_BIT,
+                std::memory_order_acq_rel))
+        {
+            // If there are now writers at the instant we sealed the page, it's now stable:
+            // no new writers can start.
+            return (State & WRITER_MASK) == 0 ?
+                SealStatus::Ready :
+                SealStatus::NotReady;
+        }
+    }
+}
+
+bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(IBuffer*                      pDstBuffer,
+                                                      Uint32                        DstOffset,
+                                                      Uint32                        NumBytes,
+                                                      const void*                   pSrcData,
+                                                      GPUUploadExecutedCallbackType Callback,
+                                                      void*                         pCallbackData)
+{
+    VERIFY_EXPR(GetWriterCount() > 0);
+
+    // Note that the page may be sealed for new writes at this point,
+    // but we can still schedule the update since we have an active writer.
+
+    constexpr Uint32 Alignment = 16;
+    const Uint32     Offset    = m_Offset.fetch_add(AlignUp(NumBytes, Alignment));
+    VERIFY_EXPR(Offset % Alignment == 0);
+
+    if (Offset + NumBytes > m_Size)
+    {
+        return false;
+    }
+
+    m_NumPendingOps.fetch_add(1, std::memory_order_relaxed);
+
+    if (m_pData != nullptr)
+    {
+        VERIFY_EXPR(pSrcData != nullptr);
+        std::memcpy(static_cast<Uint8*>(m_pData) + Offset, pSrcData, NumBytes);
+    }
+
+    PendingOp Op;
+    Op.pDstBuffer    = pDstBuffer;
+    Op.Callback      = Callback;
+    Op.pCallbackData = pCallbackData;
+    Op.SrcOffset     = Offset;
+    Op.DstOffset     = DstOffset;
+    Op.NumBytes      = NumBytes;
+    m_PendingOps.Enqueue(std::move(Op));
+
+    return true;
+}
+
+void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uint64 FenceValue)
+{
+    VERIFY(IsSealed(), "Page must be sealed before executing pending operations");
+    VERIFY(GetWriterCount() == 0, "All writers must finish before executing pending operations");
+
+    if (pContext != nullptr)
+    {
+        pContext->UnmapBuffer(m_pStagingBuffer, MAP_WRITE);
+        m_pData = nullptr;
+    }
+
+    for (PendingOp Op; m_PendingOps.Dequeue(Op);)
+    {
+        if (pContext != nullptr)
+        {
+            pContext->CopyBuffer(m_pStagingBuffer, Op.SrcOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                                 Op.pDstBuffer, Op.DstOffset, Op.NumBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        }
+
+        if (Op.Callback != nullptr)
+        {
+            Op.Callback(Op.pCallbackData);
+        }
+    }
+    m_NumPendingOps.store(0);
+    m_FenceValue = FenceValue;
+}
+
+void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
+{
+    m_Offset.store(0);
+    m_State.store(0);
+    m_NumPendingOps.store(0);
+    m_Enqueued.store(false);
+
+    if (pContext != nullptr)
+    {
+        pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_NONE, m_pData);
+        VERIFY_EXPR(m_pData != nullptr);
+    }
+}
+
+bool GPUUploadManagerImpl::Page::TryEnqueue()
+{
+    VERIFY(IsSealed(), "Page must be sealed before it can be enqueued for execution");
+    VERIFY(GetWriterCount() == 0, "All writers must finish before the page can be enqueued");
+
+    bool Expected = false;
+    return m_Enqueued.compare_exchange_strong(Expected, true, std::memory_order_acq_rel);
+}
+
+
+GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, const GPUUploadManagerCreateInfo& CI) :
+    TBase{pRefCounters},
+    m_PageSize{AlignUpToPowerOfTwo(CI.PageSize)},
+    m_pDevice{CI.pDevice}
+{
+    FenceDesc Desc;
+    Desc.Name = "GPU upload manager fence";
+    Desc.Type = FENCE_TYPE_CPU_WAIT_ONLY;
+    m_pDevice->CreateFence(Desc, &m_pFence);
+    VERIFY_EXPR(m_pFence != nullptr);
+
+    m_pCurrentPage.store(CreatePage(CI.pContext), std::memory_order_release);
+}
+
+GPUUploadManagerImpl::~GPUUploadManagerImpl()
+{
+}
+
+void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
+{
+    (void)m_NextFenceValue;
+}
+
+void GPUUploadManagerImpl::ScheduleBufferUpdate(IBuffer*                      pDstBuffer,
+                                                Uint32                        DstOffset,
+                                                Uint32                        NumBytes,
+                                                const void*                   pSrcData,
+                                                GPUUploadExecutedCallbackType Callback,
+                                                void*                         pCallbackData)
+{
+}
+
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pContext, Uint32 MinSize)
+{
+    Uint32 PageSize = m_PageSize;
+    while (PageSize < MinSize)
+        PageSize *= 2;
+
+    std::unique_ptr<Page> NewPage = std::make_unique<Page>(m_pDevice, pContext, PageSize);
+
+    Page* P = NewPage.get();
+    m_Pages.emplace_back(std::move(NewPage));
+
+    return P;
+}
+
+
+void CreateGPUUploadManager(const GPUUploadManagerCreateInfo& CreateInfo,
+                            IGPUUploadManager**               ppManager)
+{
+    if (ppManager == nullptr)
+    {
+        DEV_ERROR("ppManager must not be null");
+        return;
+    }
+
+    *ppManager = MakeNewRCObj<GPUUploadManagerImpl>()(CreateInfo);
+    if (*ppManager != nullptr)
+    {
+        (*ppManager)->AddRef();
+    }
+}
+
+} // namespace Diligent
