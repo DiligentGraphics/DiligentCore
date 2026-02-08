@@ -2,13 +2,14 @@ cmake_minimum_required (VERSION 3.10)
 
 project(Diligent-BasicPlatform CXX)
 
-set(SOURCE 
+set(SOURCE
     src/BasicFileSystem.cpp
     src/BasicPlatformDebug.cpp
     src/BasicPlatformMisc.cpp
 )
 
-set(INTERFACE 
+set(INTERFACE
+    interface/Atomics.hpp
     interface/BasicFileSystem.hpp
     interface/BasicPlatformDebug.hpp
     interface/BasicPlatformMisc.hpp
