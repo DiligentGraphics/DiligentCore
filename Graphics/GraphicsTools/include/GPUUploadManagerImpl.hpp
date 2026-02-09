@@ -200,6 +200,10 @@ public:
     };
 
 private:
+    void  ReclaimCompletedPages(IDeviceContext* pContext);
+    bool  SealAndSwapCurrentPage(IDeviceContext* pContext);
+    bool  TryEnqueuePage(Page* P);
+    Page* AcquireFreePage(IDeviceContext* pContext);
     Page* CreatePage(IDeviceContext* pContext, Uint32 MinSize = 0);
 
 private:
@@ -212,13 +216,13 @@ private:
     MPSCQueue<Page*> m_PendingPages;
 
     // Pages that are ready to be used for writing. They are already mapped.
-    //std::mutex         m_FreePagesMtx;
-    //std::vector<Page*> m_FreePages;
-    //std::vector<Page*> m_NewFreePages;
+    std::mutex         m_FreePagesMtx;
+    std::vector<Page*> m_FreePages;
+    std::vector<Page*> m_NewFreePages;
 
     // Pages that have been submitted for execution and are being processed by the GPU.
-    //std::vector<Page*> m_InFlightPages;
-    //std::vector<Page*> m_TmpInFlightPages;
+    std::vector<Page*> m_InFlightPages;
+    std::vector<Page*> m_TmpInFlightPages;
 
     RefCntAutoPtr<IFence> m_pFence;
     Uint64                m_NextFenceValue = 1;

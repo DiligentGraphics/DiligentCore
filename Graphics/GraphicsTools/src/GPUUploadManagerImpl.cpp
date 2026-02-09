@@ -323,7 +323,12 @@ GPUUploadManagerImpl::~GPUUploadManagerImpl()
 void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
 {
     DEV_CHECK_ERR(pContext == m_pContext, "The context passed to RenderThreadUpdate must be the same as the one used to create the GPUUploadManagerImpl");
-    (void)m_NextFenceValue;
+
+    SealAndSwapCurrentPage(pContext);
+
+    ReclaimCompletedPages(pContext);
+
+    m_pFence->Signal(m_NextFenceValue++);
 }
 
 void GPUUploadManagerImpl::ScheduleBufferUpdate(IBuffer*                      pDstBuffer,
@@ -349,6 +354,97 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pCo
     return P;
 }
 
+bool GPUUploadManagerImpl::SealAndSwapCurrentPage(IDeviceContext* pContext)
+{
+    VERIFY_EXPR(pContext != nullptr);
+
+    // Get a fresh page (from free-list or allocate)
+    Page* pFreshPage = AcquireFreePage(pContext);
+    VERIFY_EXPR(pFreshPage != nullptr);
+
+    // Swap it in
+    Page* pOld = m_pCurrentPage.exchange(pFreshPage, std::memory_order_acq_rel);
+
+    // Seal old page and enqueue if no writers; otherwise last writer will enqueue it
+    if (pOld->TrySeal() == Page::SealStatus::Ready)
+    {
+        TryEnqueuePage(pOld);
+    }
+
+    return true;
+}
+
+bool GPUUploadManagerImpl::TryEnqueuePage(Page* P)
+{
+    if (P->TryEnqueue())
+    {
+        m_PendingPages.Enqueue(P);
+        return true;
+    }
+    return false;
+}
+
+void GPUUploadManagerImpl::ReclaimCompletedPages(IDeviceContext* pContext)
+{
+    VERIFY_EXPR(pContext != nullptr);
+
+    Uint64 CompletedFenceValue = m_pFence->GetCompletedValue();
+
+    m_TmpInFlightPages.clear();
+    m_NewFreePages.clear();
+    for (Page* P : m_InFlightPages)
+    {
+        if (P->GetFenceValue() <= CompletedFenceValue)
+        {
+            P->Reset(pContext);
+            m_NewFreePages.push_back(P);
+        }
+        else
+        {
+            m_TmpInFlightPages.push_back(P);
+        }
+    }
+    m_InFlightPages.swap(m_TmpInFlightPages);
+    m_TmpInFlightPages.clear();
+
+    {
+        std::lock_guard<std::mutex> Guard{m_FreePagesMtx};
+        m_FreePages.insert(m_FreePages.end(), m_NewFreePages.begin(), m_NewFreePages.end());
+    }
+    m_NewFreePages.clear();
+}
+
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext* pContext)
+{
+    Uint32 MaxPendingUpdateSize = m_MaxPendingUpdateSize.load(std::memory_order_relaxed);
+
+    Page* P = nullptr;
+    {
+        std::lock_guard<std::mutex> Guard{m_FreePagesMtx};
+        for (auto it = m_FreePages.begin(); it != m_FreePages.end(); ++it)
+        {
+            if ((*it)->GetSize() >= MaxPendingUpdateSize)
+            {
+                P = *it;
+                m_FreePages.erase(it);
+                break;
+            }
+        }
+    }
+
+    if (P == nullptr && pContext != nullptr)
+    {
+        P = CreatePage(pContext, MaxPendingUpdateSize);
+    }
+
+    if (P != nullptr)
+    {
+        // Clear only if no one increased it since we read it
+        m_MaxPendingUpdateSize.compare_exchange_strong(MaxPendingUpdateSize, 0u, std::memory_order_relaxed);
+    }
+
+    return P;
+}
 
 void CreateGPUUploadManager(const GPUUploadManagerCreateInfo& CreateInfo,
                             IGPUUploadManager**               ppManager)
