@@ -36,7 +36,7 @@
 namespace Diligent
 {
 
-GPUUploadManagerImpl::Page::Page(Uint32 Size) :
+GPUUploadManagerImpl::Page::Page(Uint32 Size) noexcept :
     m_Size{Size}
 {}
 
@@ -113,11 +113,12 @@ GPUUploadManagerImpl::Page::SealStatus GPUUploadManagerImpl::Page::TrySeal()
         }
 
         if (m_State.compare_exchange_weak(
-                State, State | SEALED_BIT,
+                State, // On failure, updated state is written back to State variable.
+                State | SEALED_BIT,
                 std::memory_order_acq_rel))
         {
-            // If there are now writers at the instant we sealed the page, it's now stable:
-            // no new writers can start.
+            // If there were no writers at the instant we sealed the page,
+            // it's now ready for execution because no new writers can start
             return (State & WRITER_MASK) == 0 ?
                 SealStatus::Ready :
                 SealStatus::NotReady;
@@ -135,15 +136,20 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(IBuffer*                  
     VERIFY_EXPR(GetWriterCount() > 0);
 
     // Note that the page may be sealed for new writes at this point,
-    // but we can still schedule the update since we have an active writer.
+    // but we can still schedule the update since we have an active writer
+    // that prevents the page from being submitted for execution.
 
-    constexpr Uint32 Alignment = 16;
-    const Uint32     Offset    = m_Offset.fetch_add(AlignUp(NumBytes, Alignment));
-    VERIFY_EXPR(Offset % Alignment == 0);
+    constexpr Uint32 Alignment   = 16;
+    const Uint32     AlignedSize = AlignUp(NumBytes, Alignment);
 
-    if (Offset + NumBytes > m_Size)
+    Uint32 Offset = m_Offset.load(std::memory_order_relaxed);
+    for (;;)
     {
-        return false;
+        if (Offset + AlignedSize > m_Size)
+            return false; // Fail without incrementing offset
+
+        if (m_Offset.compare_exchange_weak(Offset, Offset + AlignedSize, std::memory_order_relaxed))
+            break; // Success
     }
 
     m_NumPendingOps.fetch_add(1, std::memory_order_relaxed);

@@ -63,7 +63,7 @@ public:
     class Page
     {
     public:
-        explicit Page(Uint32 Size);
+        explicit Page(Uint32 Size) noexcept;
 
         Page(IRenderDevice*  pDevice,
              IDeviceContext* pContext,
@@ -110,7 +110,8 @@ public:
         void ExecutePendingOps(IDeviceContext* pContext, Uint64 FenceValue);
         void Reset(IDeviceContext* pContext);
 
-        /// Tries to set the page as enqueued for execution. Returns true if the page was not previously enqueued, false otherwise.
+        // Tries to set the page as enqueued for execution.
+        // Returns true if the page was not previously enqueued, false otherwise.
         bool TryEnqueue();
 
         Uint64 GetFenceValue() const { return m_FenceValue; }
