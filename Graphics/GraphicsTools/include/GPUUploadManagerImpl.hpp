@@ -141,13 +141,13 @@ public:
         Uint32 GetSize() const { return m_Size; }
 
         // Returns the number of pending operations. This is used for testing and debugging purposes.
-        size_t GetNumPendingOps() const { return m_NumPendingOps.load(std::memory_order_relaxed); }
+        size_t DbgGetNumPendingOps() const { return m_NumPendingOps.load(std::memory_order_relaxed); }
 
         // Returns the number of active writers. This is used for testing and debugging purposes.
-        Uint32 GetWriterCount() const { return m_State.load(std::memory_order_acquire) & WRITER_MASK; }
+        Uint32 DbgGetWriterCount() const { return m_State.load(std::memory_order_relaxed) & WRITER_MASK; }
 
         // Returns true if the page is sealed for new writes. This is used for testing and debugging purposes.
-        bool IsSealed() const { return (m_State.load(std::memory_order_acquire) & SEALED_BIT) != 0; }
+        bool DbgIsSealed() const { return (m_State.load(std::memory_order_relaxed) & SEALED_BIT) != 0; }
 
     private:
         // Schedules a buffer update operation on the page.

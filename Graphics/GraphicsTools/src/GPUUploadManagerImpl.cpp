@@ -46,6 +46,8 @@ GPUUploadManagerImpl::Page::Writer& GPUUploadManagerImpl::Page::Writer::operator
 {
     if (this != &Other)
     {
+        VERIFY(m_pPage == nullptr, "Assigning to a non-empty writer. End writing before assignment or use move assignment operator only for empty writers.");
+
         m_pPage       = Other.m_pPage;
         Other.m_pPage = nullptr;
     }
@@ -187,7 +189,7 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(IBuffer*                  
                                                       GPUUploadEnqueuedCallbackType Callback,
                                                       void*                         pCallbackData)
 {
-    VERIFY_EXPR(GetWriterCount() > 0);
+    VERIFY_EXPR(DbgGetWriterCount() > 0);
 
     // Note that the page may be sealed for new writes at this point,
     // but we can still schedule the update since we have an active writer
@@ -228,18 +230,19 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(IBuffer*                  
 
 void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uint64 FenceValue)
 {
-    VERIFY(IsSealed(), "Page must be sealed before executing pending operations");
-    VERIFY(GetWriterCount() == 0, "All writers must finish before executing pending operations");
+    VERIFY(DbgIsSealed(), "Page must be sealed before executing pending operations");
+    VERIFY(DbgGetWriterCount() == 0, "All writers must finish before executing pending operations");
 
-    if (pContext != nullptr)
+    if (m_pData != nullptr)
     {
+        VERIFY_EXPR(pContext != nullptr);
         pContext->UnmapBuffer(m_pStagingBuffer, MAP_WRITE);
         m_pData = nullptr;
     }
 
     for (PendingOp Op; m_PendingOps.Dequeue(Op);)
     {
-        if (pContext != nullptr)
+        if (pContext != nullptr && Op.NumBytes > 0)
         {
             pContext->CopyBuffer(m_pStagingBuffer, Op.SrcOffset, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
                                  Op.pDstBuffer, Op.DstOffset, Op.NumBytes, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
@@ -256,13 +259,14 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
 
 void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
 {
-    VERIFY(GetWriterCount() == 0, "All writers must finish before resetting the page");
+    VERIFY(DbgGetWriterCount() == 0, "All writers must finish before resetting the page");
     VERIFY(m_PendingOps.IsEmpty(), "All pending operations must be executed before resetting the page");
 
     m_Offset.store(0);
     m_State.store(0);
     m_NumPendingOps.store(0);
     m_Enqueued.store(false);
+    m_FenceValue = 0;
 
     if (pContext != nullptr)
     {
@@ -273,8 +277,8 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
 
 bool GPUUploadManagerImpl::Page::TryEnqueue()
 {
-    VERIFY(IsSealed(), "Page must be sealed before it can be enqueued for execution");
-    VERIFY(GetWriterCount() == 0, "All writers must finish before the page can be enqueued");
+    VERIFY(DbgIsSealed(), "Page must be sealed before it can be enqueued for execution");
+    VERIFY(DbgGetWriterCount() == 0, "All writers must finish before the page can be enqueued");
 
     bool Expected = false;
     return m_Enqueued.compare_exchange_strong(Expected, true, std::memory_order_acq_rel);
