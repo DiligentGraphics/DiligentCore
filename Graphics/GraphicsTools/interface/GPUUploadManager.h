@@ -45,8 +45,10 @@ struct GPUUploadManagerCreateInfo
 };
 typedef struct GPUUploadManagerCreateInfo GPUUploadManagerCreateInfo;
 
-/// Callback function type for GPU upload completion notification.
-typedef void (*GPUUploadExecutedCallbackType)(void*);
+/// Callback function type for GPU upload enqueued callback.
+/// This callback is called when the GPU copy operation is scheduled for execution
+/// in the render thread.
+typedef void (*GPUUploadEnqueuedCallbackType)(void*);
 
 // clang-format off
 
@@ -77,7 +79,7 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
                                               Uint32                        DstOffset,
                                               Uint32                        NumBytes,
                                               const void*                   pSrcData,
-                                              GPUUploadExecutedCallbackType Callback      DEFAULT_VALUE(nullptr),
+                                              GPUUploadEnqueuedCallbackType Callback      DEFAULT_VALUE(nullptr),
                                               void*                         pCallbackData DEFAULT_VALUE(nullptr)) PURE;
 };
 DILIGENT_END_INTERFACE

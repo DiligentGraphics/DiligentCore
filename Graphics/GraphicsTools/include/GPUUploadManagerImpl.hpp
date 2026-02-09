@@ -57,7 +57,7 @@ public:
                                                          Uint32                        DstOffset,
                                                          Uint32                        NumBytes,
                                                          const void*                   pSrcData,
-                                                         GPUUploadExecutedCallbackType Callback,
+                                                         GPUUploadEnqueuedCallbackType Callback,
                                                          void*                         pCallbackData) override final;
 
     class Page
@@ -92,7 +92,7 @@ public:
                                       Uint32                        DstOffset,
                                       Uint32                        NumBytes,
                                       const void*                   pSrcData,
-                                      GPUUploadExecutedCallbackType Callback,
+                                      GPUUploadEnqueuedCallbackType Callback,
                                       void*                         pCallbackData);
 
             WritingStatus EndWriting();
@@ -156,7 +156,7 @@ public:
                                   Uint32                        DstOffset,
                                   Uint32                        NumBytes,
                                   const void*                   pSrcData,
-                                  GPUUploadExecutedCallbackType Callback,
+                                  GPUUploadEnqueuedCallbackType Callback,
                                   void*                         pCallbackData);
 
         WritingStatus EndWriting();
@@ -183,7 +183,7 @@ public:
         {
             RefCntAutoPtr<IBuffer> pDstBuffer;
 
-            GPUUploadExecutedCallbackType Callback      = nullptr;
+            GPUUploadEnqueuedCallbackType Callback      = nullptr;
             void*                         pCallbackData = nullptr;
 
             Uint32 SrcOffset = 0;

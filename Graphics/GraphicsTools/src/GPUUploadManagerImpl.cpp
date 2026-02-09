@@ -56,7 +56,7 @@ bool GPUUploadManagerImpl::Page::Writer::ScheduleBufferUpdate(IBuffer*          
                                                               Uint32                        DstOffset,
                                                               Uint32                        NumBytes,
                                                               const void*                   pSrcData,
-                                                              GPUUploadExecutedCallbackType Callback,
+                                                              GPUUploadEnqueuedCallbackType Callback,
                                                               void*                         pCallbackData)
 {
     if (m_pPage == nullptr)
@@ -184,7 +184,7 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(IBuffer*                  
                                                       Uint32                        DstOffset,
                                                       Uint32                        NumBytes,
                                                       const void*                   pSrcData,
-                                                      GPUUploadExecutedCallbackType Callback,
+                                                      GPUUploadEnqueuedCallbackType Callback,
                                                       void*                         pCallbackData)
 {
     VERIFY_EXPR(GetWriterCount() > 0);
@@ -256,6 +256,9 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
 
 void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
 {
+    VERIFY(GetWriterCount() == 0, "All writers must finish before resetting the page");
+    VERIFY(m_PendingOps.IsEmpty(), "All pending operations must be executed before resetting the page");
+
     m_Offset.store(0);
     m_State.store(0);
     m_NumPendingOps.store(0);
@@ -305,7 +308,7 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IBuffer*                      pD
                                                 Uint32                        DstOffset,
                                                 Uint32                        NumBytes,
                                                 const void*                   pSrcData,
-                                                GPUUploadExecutedCallbackType Callback,
+                                                GPUUploadEnqueuedCallbackType Callback,
                                                 void*                         pCallbackData)
 {
 }
