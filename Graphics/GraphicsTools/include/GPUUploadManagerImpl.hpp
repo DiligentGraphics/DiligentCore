@@ -85,7 +85,7 @@ public:
             Writer           (const Writer&) = delete;
             Writer& operator=(const Writer&) = delete;
             Writer           (Writer&& Other) noexcept;
-            Writer& operator=(Writer&& Other) noexcept;
+            Writer& operator=(Writer&& Other) = delete;
             // clang-format on
 
             bool ScheduleBufferUpdate(IBuffer*                      pDstBuffer,

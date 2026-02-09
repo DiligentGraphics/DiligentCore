@@ -42,18 +42,6 @@ GPUUploadManagerImpl::Page::Writer::Writer(Writer&& Other) noexcept :
     Other.m_pPage = nullptr;
 }
 
-GPUUploadManagerImpl::Page::Writer& GPUUploadManagerImpl::Page::Writer::operator=(Writer&& Other) noexcept
-{
-    if (this != &Other)
-    {
-        VERIFY(m_pPage == nullptr, "Assigning to a non-empty writer. End writing before assignment or use move assignment operator only for empty writers.");
-
-        m_pPage       = Other.m_pPage;
-        Other.m_pPage = nullptr;
-    }
-    return *this;
-}
-
 bool GPUUploadManagerImpl::Page::Writer::ScheduleBufferUpdate(IBuffer*                      pDstBuffer,
                                                               Uint32                        DstOffset,
                                                               Uint32                        NumBytes,
