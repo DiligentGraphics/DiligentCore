@@ -36,6 +36,60 @@
 namespace Diligent
 {
 
+GPUUploadManagerImpl::Page::Writer::Writer(Writer&& Other) noexcept :
+    m_pPage{Other.m_pPage}
+{
+    Other.m_pPage = nullptr;
+}
+
+GPUUploadManagerImpl::Page::Writer& GPUUploadManagerImpl::Page::Writer::operator=(Writer&& Other) noexcept
+{
+    if (this != &Other)
+    {
+        m_pPage       = Other.m_pPage;
+        Other.m_pPage = nullptr;
+    }
+    return *this;
+}
+
+bool GPUUploadManagerImpl::Page::Writer::ScheduleBufferUpdate(IBuffer*                      pDstBuffer,
+                                                              Uint32                        DstOffset,
+                                                              Uint32                        NumBytes,
+                                                              const void*                   pSrcData,
+                                                              GPUUploadExecutedCallbackType Callback,
+                                                              void*                         pCallbackData)
+{
+    if (m_pPage == nullptr)
+    {
+        UNEXPECTED("Attempting to schedule a buffer update with an invalid writer.");
+        return false;
+    }
+
+    return m_pPage->ScheduleBufferUpdate(pDstBuffer, DstOffset, NumBytes, pSrcData, Callback, pCallbackData);
+}
+
+GPUUploadManagerImpl::Page::WritingStatus GPUUploadManagerImpl::Page::Writer::EndWriting()
+{
+    if (m_pPage == nullptr)
+    {
+        UNEXPECTED("Attempting to end writing with an invalid writer.");
+        return WritingStatus::NotSealed;
+    }
+
+    WritingStatus Status = m_pPage->EndWriting();
+    m_pPage              = nullptr;
+    return Status;
+}
+
+GPUUploadManagerImpl::Page::Writer::~Writer()
+{
+    if (m_pPage != nullptr)
+    {
+        UNEXPECTED("Writer was not explicitly ended. Ending writing in destructor.");
+        EndWriting();
+    }
+}
+
 GPUUploadManagerImpl::Page::Page(Uint32 Size) noexcept :
     m_Size{Size}
 {}
@@ -60,7 +114,7 @@ GPUUploadManagerImpl::Page::Page(IRenderDevice*  pDevice,
     VERIFY_EXPR(m_pData != nullptr);
 }
 
-bool GPUUploadManagerImpl::Page::TryBeginWriting()
+GPUUploadManagerImpl::Page::Writer GPUUploadManagerImpl::Page::TryBeginWriting()
 {
     Uint32 State = m_State.load(std::memory_order_acquire);
     for (;;)
@@ -68,21 +122,21 @@ bool GPUUploadManagerImpl::Page::TryBeginWriting()
         if (State & SEALED_BIT)
         {
             // The page is sealed for new writes.
-            return false;
+            return Writer{nullptr};
         }
 
         if ((State & WRITER_MASK) == WRITER_MASK)
         {
             // Too many writers.
             // This should never happen in practice, but we handle this case for robustness.
-            return false;
+            return Writer{nullptr};
         }
 
         if (m_State.compare_exchange_weak(
                 State, // On failure, updated state is written back to State variable.
                 State + 1,
                 std::memory_order_acq_rel))
-            return true;
+            return Writer{this};
     }
 }
 

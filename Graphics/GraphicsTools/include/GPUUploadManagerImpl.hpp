@@ -69,17 +69,49 @@ public:
              IDeviceContext* pContext,
              Uint32          Size);
 
-        // Tries to begin writing to the page. Returns false if the page is sealed for new writes.
-        // Otherswise, increments the number of active writers and returns true.
-        bool TryBeginWriting();
-
         enum class WritingStatus
         {
             NotSealed,
             NotLastWriter,
             LastWriterSealed
         };
-        WritingStatus EndWriting();
+
+        class Writer
+        {
+        public:
+            operator bool() const { return m_pPage != nullptr; }
+
+            // clang-format off
+            Writer           (const Writer&) = delete;
+            Writer& operator=(const Writer&) = delete;
+            Writer           (Writer&& Other) noexcept;
+            Writer& operator=(Writer&& Other) noexcept;
+            // clang-format on
+
+            bool ScheduleBufferUpdate(IBuffer*                      pDstBuffer,
+                                      Uint32                        DstOffset,
+                                      Uint32                        NumBytes,
+                                      const void*                   pSrcData,
+                                      GPUUploadExecutedCallbackType Callback,
+                                      void*                         pCallbackData);
+
+            WritingStatus EndWriting();
+
+            ~Writer();
+
+        private:
+            friend Page;
+            explicit Writer(Page* pPage) noexcept :
+                m_pPage{pPage}
+            {}
+
+        private:
+            Page* m_pPage = nullptr;
+        };
+
+        // Tries to begin writing to the page. Returns a valid Writer object if the
+        // page is not sealed for new writes, and an empty Writer otherwise.
+        Writer TryBeginWriting();
 
         enum class SealStatus
         {
@@ -97,15 +129,6 @@ public:
 
         // Seals the page for new writes and returns the sealing status.
         SealStatus TrySeal();
-
-        // Schedules a buffer update operation on the page.
-        // Returns true if the operation was successfully scheduled, and false otherwise.
-        bool ScheduleBufferUpdate(IBuffer*                      pDstBuffer,
-                                  Uint32                        DstOffset,
-                                  Uint32                        NumBytes,
-                                  const void*                   pSrcData,
-                                  GPUUploadExecutedCallbackType Callback,
-                                  void*                         pCallbackData);
 
         void ExecutePendingOps(IDeviceContext* pContext, Uint64 FenceValue);
         void Reset(IDeviceContext* pContext);
@@ -125,6 +148,18 @@ public:
 
         // Returns true if the page is sealed for new writes. This is used for testing and debugging purposes.
         bool IsSealed() const { return (m_State.load(std::memory_order_acquire) & SEALED_BIT) != 0; }
+
+    private:
+        // Schedules a buffer update operation on the page.
+        // Returns true if the operation was successfully scheduled, and false otherwise.
+        bool ScheduleBufferUpdate(IBuffer*                      pDstBuffer,
+                                  Uint32                        DstOffset,
+                                  Uint32                        NumBytes,
+                                  const void*                   pSrcData,
+                                  GPUUploadExecutedCallbackType Callback,
+                                  void*                         pCallbackData);
+
+        WritingStatus EndWriting();
 
     private:
         const Uint32 m_Size = 0;
