@@ -1480,12 +1480,15 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const void* RGB
 void DeviceContextVkImpl::FinishFrame()
 {
 #ifdef DILIGENT_DEBUG
-    for (const auto& MappedBuffIt : m_DbgMappedBuffers)
+    for (auto& MappedBuffIt : m_DbgMappedBuffers)
     {
-        const BufferDesc& BuffDesc = MappedBuffIt.first->GetDesc();
-        if (BuffDesc.Usage == USAGE_DYNAMIC)
+        if (MappedBuffIt.second.Usage == USAGE_DYNAMIC)
         {
-            LOG_WARNING_MESSAGE("Dynamic buffer '", BuffDesc.Name, "' is still mapped when finishing the frame. The contents of the buffer and mapped address will become invalid");
+            if (RefCntAutoPtr<IBuffer> pBuffer = MappedBuffIt.second.pBuffer.Lock())
+            {
+                const BufferDesc& BuffDesc = pBuffer->GetDesc();
+                LOG_WARNING_MESSAGE("Dynamic buffer '", BuffDesc.Name, "' is still mapped when finishing the frame. The contents of the buffer and mapped address will become invalid");
+            }
         }
     }
 #endif

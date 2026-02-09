@@ -716,6 +716,9 @@ protected:
     struct DbgMappedBufferInfo
     {
         MAP_TYPE MapType;
+        USAGE    Usage;
+
+        RefCntWeakPtr<IBuffer> pBuffer;
     };
     std::unordered_map<IBuffer*, DbgMappedBufferInfo> m_DbgMappedBuffers;
 #endif
@@ -1799,7 +1802,7 @@ inline void DeviceContextBase<ImplementationTraits>::MapBuffer(
 #ifdef DILIGENT_DEBUG
     {
         VERIFY(m_DbgMappedBuffers.find(pBuffer) == m_DbgMappedBuffers.end(), "Buffer '", BuffDesc.Name, "' has already been mapped");
-        m_DbgMappedBuffers[pBuffer] = DbgMappedBufferInfo{MapType};
+        m_DbgMappedBuffers[pBuffer] = DbgMappedBufferInfo{MapType, BuffDesc.Usage, RefCntWeakPtr<IBuffer>{pBuffer}};
     }
 #endif
 
@@ -1852,9 +1855,16 @@ inline void DeviceContextBase<ImplementationTraits>::UnmapBuffer(IBuffer* pBuffe
 #ifdef DILIGENT_DEBUG
     {
         auto MappedBufferIt = m_DbgMappedBuffers.find(pBuffer);
-        VERIFY(MappedBufferIt != m_DbgMappedBuffers.end(), "Buffer '", pBuffer->GetDesc().Name, "' has not been mapped.");
-        VERIFY(MappedBufferIt->second.MapType == MapType, "MapType (", MapType, ") does not match the map type that was used to map the buffer ", MappedBufferIt->second.MapType);
-        m_DbgMappedBuffers.erase(MappedBufferIt);
+        if (MappedBufferIt != m_DbgMappedBuffers.end())
+        {
+            VERIFY(MappedBufferIt->second.MapType == MapType, "MapType (", MapType,
+                   ") does not match the map type that was used to map the buffer ", MappedBufferIt->second.MapType);
+            m_DbgMappedBuffers.erase(MappedBufferIt);
+        }
+        else
+        {
+            UNEXPECTED("Buffer '", pBuffer->GetDesc().Name, "' has not been mapped.");
+        }
     }
 #endif
 }
