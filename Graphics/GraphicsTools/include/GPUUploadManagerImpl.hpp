@@ -63,7 +63,7 @@ public:
     class Page
     {
     public:
-        explicit Page(Uint32 Size) noexcept;
+        explicit Page(Uint32 Size, bool PersistentMapped = false) noexcept;
 
         Page(IRenderDevice*  pDevice,
              IDeviceContext* pContext,
@@ -149,6 +149,8 @@ public:
         // Returns true if the page is sealed for new writes. This is used for testing and debugging purposes.
         bool DbgIsSealed() const { return (m_State.load(std::memory_order_relaxed) & SEALED_BIT) != 0; }
 
+        void ReleaseStagingBuffer(IDeviceContext* pContext);
+
     private:
         // Schedules a buffer update operation on the page.
         // Returns true if the operation was successfully scheduled, and false otherwise.
@@ -162,7 +164,8 @@ public:
         WritingStatus EndWriting();
 
     private:
-        const Uint32 m_Size = 0;
+        const Uint32 m_Size             = 0;
+        const bool   m_PersistentMapped = false;
 
         RefCntAutoPtr<IBuffer> m_pStagingBuffer;
 
@@ -202,19 +205,20 @@ private:
 private:
     const Uint32 m_PageSize;
 
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
+    RefCntAutoPtr<IRenderDevice>  m_pDevice;
+    RefCntAutoPtr<IDeviceContext> m_pContext;
 
     // Pages that are pending for execution.
     MPSCQueue<Page*> m_PendingPages;
 
     // Pages that are ready to be used for writing. They are already mapped.
-    std::mutex         m_FreePagesMtx;
-    std::vector<Page*> m_FreePages;
-    std::vector<Page*> m_NewFreePages;
+    //std::mutex         m_FreePagesMtx;
+    //std::vector<Page*> m_FreePages;
+    //std::vector<Page*> m_NewFreePages;
 
     // Pages that have been submitted for execution and are being processed by the GPU.
-    std::vector<Page*> m_InFlightPages;
-    std::vector<Page*> m_TmpInFlightPages;
+    //std::vector<Page*> m_InFlightPages;
+    //std::vector<Page*> m_TmpInFlightPages;
 
     RefCntAutoPtr<IFence> m_pFence;
     Uint64                m_NextFenceValue = 1;

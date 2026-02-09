@@ -80,14 +80,24 @@ GPUUploadManagerImpl::Page::Writer::~Writer()
     }
 }
 
-GPUUploadManagerImpl::Page::Page(Uint32 Size) noexcept :
-    m_Size{Size}
+GPUUploadManagerImpl::Page::Page(Uint32 Size, bool PersistentMapped) noexcept :
+    m_Size{Size},
+    m_PersistentMapped{PersistentMapped}
 {}
+
+inline bool PersistentMapSupported(IRenderDevice* pDevice)
+{
+    RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
+    return DeviceType == RENDER_DEVICE_TYPE_D3D12 || DeviceType == RENDER_DEVICE_TYPE_VULKAN;
+}
 
 GPUUploadManagerImpl::Page::Page(IRenderDevice*  pDevice,
                                  IDeviceContext* pContext,
                                  Uint32          Size) :
-    Page{Size}
+    Page{
+        Size,
+        PersistentMapSupported(pDevice),
+    }
 {
     static std::atomic<int> PageCounter{0};
     const std::string       Name = "GPUUploadManagerImpl page " + std::to_string(PageCounter.fetch_add(1));
@@ -221,7 +231,7 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
     VERIFY(DbgIsSealed(), "Page must be sealed before executing pending operations");
     VERIFY(DbgGetWriterCount() == 0, "All writers must finish before executing pending operations");
 
-    if (m_pData != nullptr)
+    if (m_pData != nullptr && !m_PersistentMapped)
     {
         VERIFY_EXPR(pContext != nullptr);
         pContext->UnmapBuffer(m_pStagingBuffer, MAP_WRITE);
@@ -258,7 +268,10 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
 
     if (pContext != nullptr)
     {
-        pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_NONE, m_pData);
+        if (!m_PersistentMapped)
+        {
+            pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_NONE, m_pData);
+        }
         VERIFY_EXPR(m_pData != nullptr);
     }
 }
@@ -272,11 +285,23 @@ bool GPUUploadManagerImpl::Page::TryEnqueue()
     return m_Enqueued.compare_exchange_strong(Expected, true, std::memory_order_acq_rel);
 }
 
+void GPUUploadManagerImpl::Page::ReleaseStagingBuffer(IDeviceContext* pContext)
+{
+    if (m_pData != nullptr)
+    {
+        VERIFY_EXPR(pContext != nullptr);
+        pContext->UnmapBuffer(m_pStagingBuffer, MAP_WRITE);
+        m_pData = nullptr;
+    }
+    m_pStagingBuffer.Release();
+}
+
 
 GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, const GPUUploadManagerCreateInfo& CI) :
     TBase{pRefCounters},
     m_PageSize{AlignUpToPowerOfTwo(CI.PageSize)},
-    m_pDevice{CI.pDevice}
+    m_pDevice{CI.pDevice},
+    m_pContext{CI.pContext}
 {
     FenceDesc Desc;
     Desc.Name = "GPU upload manager fence";
@@ -289,10 +314,15 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
 
 GPUUploadManagerImpl::~GPUUploadManagerImpl()
 {
+    for (std::unique_ptr<Page>& P : m_Pages)
+    {
+        P->ReleaseStagingBuffer(m_pContext);
+    }
 }
 
 void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
 {
+    DEV_CHECK_ERR(pContext == m_pContext, "The context passed to RenderThreadUpdate must be the same as the one used to create the GPUUploadManagerImpl");
     (void)m_NextFenceValue;
 }
 
