@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2022 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <algorithm>
+#include <cstring>
 
 #include "DefaultRawMemoryAllocator.hpp"
 #include "RefCntAutoPtr.hpp"
@@ -902,6 +903,64 @@ TEST(Common_RefCntAutoPtr, Threading)
     RefCntAutoPtrThreadingTest ThreadingTest;
     ThreadingTest.StartConcurrencyTest();
     ThreadingTest.RunConcurrencyTest();
+}
+
+
+TEST(Common_RefCntAutoPtr, OveralignedObject)
+{
+    struct OveralignedObject : public Object
+    {
+        OveralignedObject(IReferenceCounters* pRefCounters, bool ThrowException = false) :
+            Object{pRefCounters}
+        {
+            if (ThrowException)
+                throw std::runtime_error("Test exception");
+        }
+
+#ifdef _MSC_VER
+#    pragma warning(push)
+#    pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
+        alignas(64) char Buffer[128]{};
+
+#ifdef _MSC_VER
+#    pragma warning(pop)
+#endif
+    };
+
+    {
+        RefCntAutoPtr<OveralignedObject> Ptr{MakeNewObj<OveralignedObject>()};
+        EXPECT_TRUE(reinterpret_cast<std::uintptr_t>(Ptr.RawPtr()) % alignof(OveralignedObject) == 0);
+        std::memset(Ptr->Buffer, 0xAB, sizeof(Ptr->Buffer));
+    }
+
+    {
+        RefCntAutoPtr<OveralignedObject> Ptr{NEW_RC_OBJ(DefaultRawMemoryAllocator::GetAllocator(), "Test overaligned object", OveralignedObject)()};
+        EXPECT_TRUE(reinterpret_cast<std::uintptr_t>(Ptr.RawPtr()) % alignof(OveralignedObject) == 0);
+        std::memset(Ptr->Buffer, 0xAB, sizeof(Ptr->Buffer));
+    }
+
+    bool ExceptionThrown = false;
+    try
+    {
+        RefCntAutoPtr<OveralignedObject> Ptr{MakeNewRCObj<OveralignedObject>{}(true)};
+    }
+    catch (const std::runtime_error&)
+    {
+        ExceptionThrown = true;
+    }
+    EXPECT_TRUE(ExceptionThrown);
+
+    ExceptionThrown = false;
+    try
+    {
+        RefCntAutoPtr<OveralignedObject> Ptr{NEW_RC_OBJ(DefaultRawMemoryAllocator::GetAllocator(), "Test overaligned object", OveralignedObject)(true)};
+    }
+    catch (const std::runtime_error&)
+    {
+        ExceptionThrown = true;
+    }
+    EXPECT_TRUE(ExceptionThrown);
 }
 
 } // namespace
