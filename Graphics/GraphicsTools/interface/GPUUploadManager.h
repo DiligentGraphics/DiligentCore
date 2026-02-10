@@ -68,6 +68,8 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
 
     /// Schedules an asynchronous buffer update operation.
     ///
+    /// \param [in] pContext      - If calling the method from the render thread, a pointer to the device context.
+    ///                             If calling the method from a worker thread, this parameter must be null.
     /// \param [in] pDstBuffer    - Pointer to the destination buffer.
     /// \param [in] DstOffset     - Offset in the destination buffer.
     /// \param [in] NumBytes      - Number of bytes to copy.
@@ -75,6 +77,7 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// \param [in] Callback      - Optional callback to be called when the GPU copy operation is scheduled for execution.
     /// \param [in] pCallbackData - Optional pointer to user data that will be passed to the callback.
     VIRTUAL void METHOD(ScheduleBufferUpdate)(THIS_
+                                              IDeviceContext*               pContext,
                                               IBuffer*                      pDstBuffer,
                                               Uint32                        DstOffset,
                                               Uint32                        NumBytes,

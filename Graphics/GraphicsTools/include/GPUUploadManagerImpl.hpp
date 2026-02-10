@@ -53,7 +53,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE RenderThreadUpdate(IDeviceContext* pContext) override final;
 
-    virtual void DILIGENT_CALL_TYPE ScheduleBufferUpdate(IBuffer*                      pDstBuffer,
+    virtual void DILIGENT_CALL_TYPE ScheduleBufferUpdate(IDeviceContext*               pContext,
+                                                         IBuffer*                      pDstBuffer,
                                                          Uint32                        DstOffset,
                                                          Uint32                        NumBytes,
                                                          const void*                   pSrcData,
@@ -140,14 +141,16 @@ public:
         Uint64 GetFenceValue() const { return m_FenceValue; }
         Uint32 GetSize() const { return m_Size; }
 
-        // Returns the number of pending operations. This is used for testing and debugging purposes.
-        size_t DbgGetNumPendingOps() const { return m_NumPendingOps.load(std::memory_order_relaxed); }
+        // Returns the number of pending operations.
+        size_t GetNumPendingOps() const { return m_NumPendingOps.load(std::memory_order_acquire); }
 
+#ifdef DILIGENT_DEBUG
         // Returns the number of active writers. This is used for testing and debugging purposes.
-        Uint32 DbgGetWriterCount() const { return m_State.load(std::memory_order_relaxed) & WRITER_MASK; }
+        Uint32 DbgGetWriterCount() const { return m_State.load(std::memory_order_acquire) & WRITER_MASK; }
 
         // Returns true if the page is sealed for new writes. This is used for testing and debugging purposes.
-        bool DbgIsSealed() const { return (m_State.load(std::memory_order_relaxed) & SEALED_BIT) != 0; }
+        bool DbgIsSealed() const { return (m_State.load(std::memory_order_acquire) & SEALED_BIT) != 0; }
+#endif
 
         void ReleaseStagingBuffer(IDeviceContext* pContext);
 
@@ -202,6 +205,9 @@ public:
 private:
     void  ReclaimCompletedPages(IDeviceContext* pContext);
     bool  SealAndSwapCurrentPage(IDeviceContext* pContext);
+    void  UpdateFreePages(IDeviceContext* pContext);
+    void  ProcessPendingPages(IDeviceContext* pContext);
+    bool  TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent);
     bool  TryEnqueuePage(Page* P);
     Page* AcquireFreePage(IDeviceContext* pContext);
     Page* CreatePage(IDeviceContext* pContext, Uint32 MinSize = 0);
@@ -216,8 +222,21 @@ private:
     MPSCQueue<Page*> m_PendingPages;
 
     // Pages that are ready to be used for writing. They are already mapped.
-    std::mutex         m_FreePagesMtx;
-    std::vector<Page*> m_FreePages;
+    class FreePages
+    {
+    public:
+        void   Push(Page** ppPages, size_t NumPages);
+        void   Push(Page* pPage) { Push(&pPage, 1); }
+        Page*  Pop(Uint32 MinSize = 0);
+        size_t Size() const { return m_Size.load(std::memory_order_relaxed); }
+
+    private:
+        std::mutex          m_PagesMtx;
+        std::vector<Page*>  m_Pages;
+        std::atomic<size_t> m_Size{0};
+    };
+    FreePages m_FreePages;
+
     std::vector<Page*> m_NewFreePages;
 
     // Pages that have been submitted for execution and are being processed by the GPU.

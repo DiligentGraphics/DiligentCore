@@ -110,7 +110,7 @@ GPUUploadManagerImpl::Page::Page(IRenderDevice*  pDevice,
     pDevice->CreateBuffer(Desc, nullptr, &m_pStagingBuffer);
     VERIFY_EXPR(m_pStagingBuffer != nullptr);
 
-    pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_NONE, m_pData);
+    pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_DO_NOT_WAIT, m_pData);
     VERIFY_EXPR(m_pData != nullptr);
 }
 
@@ -270,7 +270,7 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
     {
         if (!m_PersistentMapped)
         {
-            pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_NONE, m_pData);
+            pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_DO_NOT_WAIT, m_pData);
         }
         VERIFY_EXPR(m_pData != nullptr);
     }
@@ -296,6 +296,34 @@ void GPUUploadManagerImpl::Page::ReleaseStagingBuffer(IDeviceContext* pContext)
     m_pStagingBuffer.Release();
 }
 
+void GPUUploadManagerImpl::FreePages::Push(Page** ppPages, size_t NumPages)
+{
+    if (NumPages == 0)
+        return;
+
+    std::lock_guard<std::mutex> Guard{m_PagesMtx};
+    m_Pages.insert(m_Pages.end(), ppPages, ppPages + NumPages);
+    m_Size.store(m_Pages.size(), std::memory_order_relaxed);
+}
+
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 MinSize)
+{
+    Page* P = nullptr;
+    {
+        std::lock_guard<std::mutex> Guard{m_PagesMtx};
+        for (auto it = m_Pages.begin(); it != m_Pages.end(); ++it)
+        {
+            if ((*it)->GetSize() >= MinSize)
+            {
+                P = *it;
+                m_Pages.erase(it);
+                m_Size.store(m_Pages.size(), std::memory_order_relaxed);
+                break;
+            }
+        }
+    }
+    return P;
+}
 
 GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, const GPUUploadManagerCreateInfo& CI) :
     TBase{pRefCounters},
@@ -325,19 +353,66 @@ void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
     DEV_CHECK_ERR(pContext == m_pContext, "The context passed to RenderThreadUpdate must be the same as the one used to create the GPUUploadManagerImpl");
 
     SealAndSwapCurrentPage(pContext);
-
     ReclaimCompletedPages(pContext);
+    UpdateFreePages(pContext);
+    ProcessPendingPages(pContext);
 
-    m_pFence->Signal(m_NextFenceValue++);
+    pContext->EnqueueSignal(m_pFence, m_NextFenceValue++);
 }
 
-void GPUUploadManagerImpl::ScheduleBufferUpdate(IBuffer*                      pDstBuffer,
+void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pContext,
+                                                IBuffer*                      pDstBuffer,
                                                 Uint32                        DstOffset,
                                                 Uint32                        NumBytes,
                                                 const void*                   pSrcData,
                                                 GPUUploadEnqueuedCallbackType Callback,
                                                 void*                         pCallbackData)
+
 {
+    bool IsFirstAttempt = true;
+
+    auto UpdatePendingSizeAndTryRotate = [&](Page* P) {
+        if (IsFirstAttempt)
+        {
+            // Atomically update the max pending update size to ensure the next page is large enough
+            AtomicMax(m_MaxPendingUpdateSize, NumBytes, std::memory_order_relaxed);
+            m_TotalPendingUpdateSize.fetch_add(NumBytes, std::memory_order_relaxed);
+            IsFirstAttempt = false;
+        }
+        if (!TryRotatePage(pContext, P))
+        {
+            std::this_thread::yield();
+        }
+    };
+
+    while (true)
+    {
+        Page*        P      = m_pCurrentPage.load(std::memory_order_acquire);
+        Page::Writer Writer = P->TryBeginWriting();
+        if (!Writer)
+        {
+            UpdatePendingSizeAndTryRotate(P);
+            continue;
+        }
+
+        const bool UpdateScheduled = Writer.ScheduleBufferUpdate(pDstBuffer, DstOffset, NumBytes, pSrcData, Callback, pCallbackData);
+        if (Writer.EndWriting() == Page::WritingStatus::LastWriterSealed)
+        {
+            // We were the last writer
+            TryEnqueuePage(P);
+        }
+
+        if (UpdateScheduled)
+        {
+            if (!IsFirstAttempt)
+                m_TotalPendingUpdateSize.fetch_sub(NumBytes, std::memory_order_relaxed);
+            break;
+        }
+        else
+        {
+            UpdatePendingSizeAndTryRotate(P);
+        }
+    }
 }
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pContext, Uint32 MinSize)
@@ -374,11 +449,42 @@ bool GPUUploadManagerImpl::SealAndSwapCurrentPage(IDeviceContext* pContext)
     return true;
 }
 
+bool GPUUploadManagerImpl::TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent)
+{
+    // Grab a free page (workers can't create, so pContext=null)
+    Page* Fresh = AcquireFreePage(pContext);
+    if (!Fresh)
+        return false;
+
+    Page* Cur = ExpectedCurrent;
+    if (!m_pCurrentPage.compare_exchange_strong(Cur, Fresh, std::memory_order_acq_rel))
+    {
+        // Lost the race: put Fresh back
+        m_FreePages.Push(Fresh);
+        return true; // Rotation happened by someone else
+    }
+
+    // We won: seal and enqueue if no writers
+    if (ExpectedCurrent && ExpectedCurrent->TrySeal() == Page::SealStatus::Ready)
+        TryEnqueuePage(ExpectedCurrent);
+
+    return true;
+}
+
 bool GPUUploadManagerImpl::TryEnqueuePage(Page* P)
 {
+    VERIFY_EXPR(P->DbgIsSealed());
     if (P->TryEnqueue())
     {
-        m_PendingPages.Enqueue(P);
+        if (P->GetNumPendingOps() > 0)
+        {
+            m_PendingPages.Enqueue(P);
+        }
+        else
+        {
+            P->Reset(nullptr);
+            m_FreePages.Push(P);
+        }
         return true;
     }
     return false;
@@ -407,31 +513,49 @@ void GPUUploadManagerImpl::ReclaimCompletedPages(IDeviceContext* pContext)
     m_InFlightPages.swap(m_TmpInFlightPages);
     m_TmpInFlightPages.clear();
 
-    {
-        std::lock_guard<std::mutex> Guard{m_FreePagesMtx};
-        m_FreePages.insert(m_FreePages.end(), m_NewFreePages.begin(), m_NewFreePages.end());
-    }
+    m_FreePages.Push(m_NewFreePages.data(), m_NewFreePages.size());
     m_NewFreePages.clear();
+}
+
+void GPUUploadManagerImpl::UpdateFreePages(IDeviceContext* pContext)
+{
+    VERIFY_EXPR(pContext != nullptr);
+
+    const Uint32 TotalPendingSize = m_TotalPendingUpdateSize.exchange(0, std::memory_order_relaxed);
+    const Uint32 MinimalPageCount = std::max((TotalPendingSize + m_PageSize - 1) / m_PageSize, 1u);
+
+    const Uint32 NumFreePages     = static_cast<Uint32>(m_FreePages.Size());
+    const Uint32 NumPagesToCreate = MinimalPageCount > NumFreePages ? MinimalPageCount - NumFreePages : 0;
+
+    if (NumPagesToCreate > 0)
+    {
+        m_NewFreePages.clear();
+        for (Uint32 i = 0; i < NumPagesToCreate; ++i)
+        {
+            m_NewFreePages.push_back(CreatePage(pContext));
+        }
+        m_FreePages.Push(m_NewFreePages.data(), m_NewFreePages.size());
+        m_NewFreePages.clear();
+    }
+}
+
+void GPUUploadManagerImpl::ProcessPendingPages(IDeviceContext* pContext)
+{
+    VERIFY_EXPR(pContext != nullptr);
+
+    Page* ReadyPage = nullptr;
+    while (m_PendingPages.Dequeue(ReadyPage))
+    {
+        ReadyPage->ExecutePendingOps(pContext, m_NextFenceValue);
+        m_InFlightPages.push_back(ReadyPage);
+    }
 }
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext* pContext)
 {
     Uint32 MaxPendingUpdateSize = m_MaxPendingUpdateSize.load(std::memory_order_relaxed);
 
-    Page* P = nullptr;
-    {
-        std::lock_guard<std::mutex> Guard{m_FreePagesMtx};
-        for (auto it = m_FreePages.begin(); it != m_FreePages.end(); ++it)
-        {
-            if ((*it)->GetSize() >= MaxPendingUpdateSize)
-            {
-                P = *it;
-                m_FreePages.erase(it);
-                break;
-            }
-        }
-    }
-
+    Page* P = m_FreePages.Pop(MaxPendingUpdateSize);
     if (P == nullptr && pContext != nullptr)
     {
         P = CreatePage(pContext, MaxPendingUpdateSize);
