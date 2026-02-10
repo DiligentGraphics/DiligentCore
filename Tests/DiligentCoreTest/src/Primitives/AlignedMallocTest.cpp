@@ -1,6 +1,5 @@
 /*
- *  Copyright 2019-2026 Diligent Graphics LLC
- *  Copyright 2015-2019 Egor Yusov
+ *  Copyright 2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,59 +24,48 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
-#include "DefaultRawMemoryAllocator.hpp"
-#include "Align.hpp"
-
-#include <stdlib.h>
-
 #if defined(_DEBUG) && defined(_MSC_VER)
 #    define USE_CRT_MALLOC_DBG 1
 #endif
 #include "AlignedMalloc.h"
 
-namespace Diligent
+#include "gtest/gtest.h"
+
+#include <cstring>
+
+using namespace Diligent;
+
+namespace
 {
 
-DefaultRawMemoryAllocator::DefaultRawMemoryAllocator()
+TEST(Primitives_AlignedMalloc, AllocDealloc)
 {
+    for (size_t alignment = 8; alignment <= 4096; alignment *= 2)
+    {
+        for (size_t size = alignment; size <= 4096; size *= 2)
+        {
+            void* ptr = ALIGNED_MALLOC(size, alignment, __FILE__, __LINE__);
+            EXPECT_NE(ptr, nullptr);
+            EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) % alignment, 0U);
+            std::memset(ptr, 0xCD, size);
+            ALIGNED_FREE(ptr);
+        }
+    }
 }
 
-void* DefaultRawMemoryAllocator::Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
+TEST(Primitives_AlignedMalloc, AllocateAlignedFallback)
 {
-    VERIFY_EXPR(Size > 0);
-#ifdef USE_CRT_MALLOC_DBG
-    return _malloc_dbg(Size, _NORMAL_BLOCK, dbgFileName, dbgLineNumber);
-#else
-    return malloc(Size);
-#endif
+    for (size_t alignment = 8; alignment <= 4096; alignment *= 2)
+    {
+        for (size_t size = 1; size <= 4096; size *= 2)
+        {
+            void* ptr = AllocateAlignedFallback(size, alignment);
+            EXPECT_NE(ptr, nullptr);
+            EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) % alignment, 0U);
+            std::memset(ptr, 0xCD, size);
+            FreeAlignedFallback(ptr);
+        }
+    }
 }
 
-void DefaultRawMemoryAllocator::Free(void* Ptr)
-{
-    free(Ptr);
-}
-
-void* DefaultRawMemoryAllocator::AllocateAligned(size_t Size, size_t Alignment, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
-{
-    VERIFY_EXPR(Size > 0 && Alignment > 0);
-    // Alignment must be a power of two and a multiple of sizeof(void*))
-    Alignment = std::max(Alignment, sizeof(void*));
-    // Size must be an integral multiple of alignment,
-    // or aligned_alloc will return null
-    Size = AlignUp(Size, Alignment);
-    return ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber);
-}
-
-void DefaultRawMemoryAllocator::FreeAligned(void* Ptr)
-{
-    ALIGNED_FREE(Ptr);
-}
-
-DefaultRawMemoryAllocator& DefaultRawMemoryAllocator::GetAllocator()
-{
-    static DefaultRawMemoryAllocator Allocator;
-    return Allocator;
-}
-
-} // namespace Diligent
+} // namespace

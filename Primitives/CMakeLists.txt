@@ -4,10 +4,12 @@ project(Diligent-Primitives CXX)
 
 set(SOURCE
     src/DebugOutput.cpp
+    src/AlignedMalloc.cpp
     src/test.cpp
 )
 
 set(INTERFACE
+    interface/AlignedMalloc.h
     interface/BasicTypes.h
     interface/CheckBaseStructAlignment.hpp
     interface/CommonDefinitions.h
