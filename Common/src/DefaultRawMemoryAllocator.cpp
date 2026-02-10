@@ -66,12 +66,12 @@ void* DefaultRawMemoryAllocator::AllocateAligned(size_t Size, size_t Alignment, 
     // Size must be an integral multiple of alignment,
     // or aligned_alloc will return null
     Size = AlignUp(Size, Alignment);
-    return ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber);
+    return DILIGENT_ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber);
 }
 
 void DefaultRawMemoryAllocator::FreeAligned(void* Ptr)
 {
-    ALIGNED_FREE(Ptr);
+    DILIGENT_ALIGNED_FREE(Ptr);
 }
 
 DefaultRawMemoryAllocator& DefaultRawMemoryAllocator::GetAllocator()

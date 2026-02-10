@@ -44,11 +44,11 @@ TEST(Primitives_AlignedMalloc, AllocDealloc)
     {
         for (size_t size = alignment; size <= 4096; size *= 2)
         {
-            void* ptr = ALIGNED_MALLOC(size, alignment, __FILE__, __LINE__);
+            void* ptr = DILIGENT_ALIGNED_MALLOC(size, alignment, __FILE__, __LINE__);
             EXPECT_NE(ptr, nullptr);
             EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) % alignment, 0U);
             std::memset(ptr, 0xCD, size);
-            ALIGNED_FREE(ptr);
+            DILIGENT_ALIGNED_FREE(ptr);
         }
     }
 }

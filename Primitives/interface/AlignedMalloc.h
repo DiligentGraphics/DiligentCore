@@ -36,25 +36,25 @@
 #    define USE_ALIGNED_MALLOC_FALLBACK 1
 #endif
 
-#ifdef ALIGNED_MALLOC
-#    undef ALIGNED_MALLOC
+#ifdef DILIGENT_ALIGNED_MALLOC
+#    undef DILIGENT_ALIGNED_MALLOC
 #endif
 #ifdef ALIGNED_FREE
 #    undef ALIGNED_FREE
 #endif
 
 #if defined(_MSC_VER) && defined(USE_CRT_MALLOC_DBG)
-#    define ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) _aligned_malloc_dbg(Size, Alignment, dbgFileName, dbgLineNumber)
-#    define ALIGNED_FREE(Ptr)                                           _aligned_free(Ptr)
+#    define DILIGENT_ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) _aligned_malloc_dbg(Size, Alignment, dbgFileName, dbgLineNumber)
+#    define DILIGENT_ALIGNED_FREE(Ptr)                                           _aligned_free(Ptr)
 #elif defined(_MSC_VER) || defined(__MINGW64__) || defined(__MINGW32__)
-#    define ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) _aligned_malloc(Size, Alignment)
-#    define ALIGNED_FREE(Ptr)                                           _aligned_free(Ptr)
+#    define DILIGENT_ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) _aligned_malloc(Size, Alignment)
+#    define DILIGENT_ALIGNED_FREE(Ptr)                                           _aligned_free(Ptr)
 #elif defined(USE_ALIGNED_MALLOC_FALLBACK)
-#    define ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) AllocateAlignedFallback(Size, Alignment)
-#    define ALIGNED_FREE(Ptr)                                           FreeAlignedFallback(Ptr)
+#    define DILIGENT_ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) AllocateAlignedFallback(Size, Alignment)
+#    define DILIGENT_ALIGNED_FREE(Ptr)                                           FreeAlignedFallback(Ptr)
 #else
-#    define ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) aligned_alloc(Alignment, ((Size) + (Alignment)-1) & ~((Alignment)-1))
-#    define ALIGNED_FREE(Ptr)                                           free(Ptr)
+#    define DILIGENT_ALIGNED_MALLOC(Size, Alignment, dbgFileName, dbgLineNumber) aligned_alloc(Alignment, ((Size) + (Alignment)-1) & ~((Alignment)-1))
+#    define DILIGENT_ALIGNED_FREE(Ptr)                                           free(Ptr)
 #endif
 
 namespace Diligent
