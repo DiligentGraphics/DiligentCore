@@ -48,6 +48,8 @@ TEST(GPUUploadManagerTest, Creation)
     IRenderDevice*         pDevice  = pEnv->GetDevice();
     IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
     GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext};
     CreateGPUUploadManager(CreateInfo, &pUploadManager);
@@ -59,6 +61,8 @@ void VerifyBufferContents(IBuffer* pBuffer, const std::vector<Uint8>& ExpectedDa
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
     IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
 
     BufferDesc Desc     = pBuffer->GetDesc();
     Desc.Name           = "GPUUploadManagerTest readback buffer";
@@ -77,6 +81,7 @@ void VerifyBufferContents(IBuffer* pBuffer, const std::vector<Uint8>& ExpectedDa
     void* pBufferData = nullptr;
     pContext->MapBuffer(pReadbackBuffer, MAP_READ, MAP_FLAG_DO_NOT_WAIT, pBufferData);
     ASSERT_NE(pBufferData, nullptr);
+    pContext->UnmapBuffer(pReadbackBuffer, MAP_READ);
 
     EXPECT_TRUE(std::memcmp(pBufferData, ExpectedData.data(), ExpectedData.size()) == 0) << "Buffer contents do not match expected data";
 }
@@ -86,6 +91,8 @@ TEST(GPUUploadManagerTest, ScheduleUpdates)
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
     IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
     GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 1024};
@@ -114,6 +121,98 @@ TEST(GPUUploadManagerTest, ScheduleUpdates)
     pUploadManager->ScheduleBufferUpdate(pContext, pBuffer, 1536, 512, &BufferData[1536]);
     pUploadManager->ScheduleBufferUpdate(pContext, pBuffer, 2048, 2048, &BufferData[2048]);
     pUploadManager->RenderThreadUpdate(pContext);
+
+    VerifyBufferContents(pBuffer, BufferData);
+}
+
+TEST(GPUUploadManagerTest, ParallelUpdates)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 16384};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_TRUE(pUploadManager != nullptr);
+
+    std::vector<Uint8> BufferData(4 << 20);
+    for (size_t i = 0; i < BufferData.size(); ++i)
+    {
+        BufferData[i] = static_cast<Uint8>(i % 256);
+    }
+
+    BufferDesc Desc;
+    Desc.Name      = "GPUUploadManagerTest buffer";
+    Desc.Size      = BufferData.size();
+    Desc.Usage     = USAGE_DEFAULT;
+    Desc.BindFlags = BIND_VERTEX_BUFFER;
+
+    RefCntAutoPtr<IBuffer> pBuffer;
+    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    ASSERT_TRUE(pBuffer);
+
+    const size_t kNumThreads = std::max(2u, std::thread::hardware_concurrency() - 1);
+    LOG_INFO_MESSAGE("Number of threads: ", kNumThreads);
+
+    std::atomic<Uint32> CurrOffset{0};
+    std::atomic<Uint32> NumUpdatesScheduled{0};
+    std::atomic<Uint32> NumThreadsCompleted{0};
+
+    std::vector<std::thread> Threads;
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        Threads.emplace_back(
+            [&]() {
+                while (true)
+                {
+                    const Uint32 UpdateSize = 64;
+
+                    Uint32 Offset = CurrOffset.fetch_add(UpdateSize);
+                    if (Offset >= BufferData.size())
+                        break;
+                    pUploadManager->ScheduleBufferUpdate(nullptr, pBuffer, Offset, UpdateSize, &BufferData[Offset]);
+                    NumUpdatesScheduled.fetch_add(1);
+                }
+                NumThreadsCompleted.fetch_add(1);
+            });
+    }
+
+    const Uint32 NumUpdatesToRenderThreadUpdate = 256;
+
+    Uint32 LastNumUpdatesScheduled    = 0;
+    Uint32 NumIterationsWithoutUpdate = 0;
+    Uint32 NumRenderThreadUpdates     = 0;
+    while (NumThreadsCompleted.load() < kNumThreads)
+    {
+        if (LastNumUpdatesScheduled == NumUpdatesScheduled.load())
+        {
+            ++NumIterationsWithoutUpdate;
+        }
+        else
+        {
+            LastNumUpdatesScheduled    = NumUpdatesScheduled.load();
+            NumIterationsWithoutUpdate = 0;
+        }
+
+        if (NumUpdatesScheduled.load() >= NumUpdatesToRenderThreadUpdate || NumIterationsWithoutUpdate >= 100)
+        {
+            pUploadManager->RenderThreadUpdate(pContext);
+            NumUpdatesScheduled.fetch_sub(NumUpdatesToRenderThreadUpdate);
+            pContext->Flush();
+            pContext->FinishFrame();
+            ++NumRenderThreadUpdates;
+        }
+    }
+
+    LOG_INFO_MESSAGE("Total render thread updates: ", NumRenderThreadUpdates);
+
+    pUploadManager->RenderThreadUpdate(pContext);
+
+    for (std::thread& thread : Threads)
+    {
+        thread.join();
+    }
 
     VerifyBufferContents(pBuffer, BufferData);
 }

@@ -391,6 +391,7 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
         Page::Writer Writer = P->TryBeginWriting();
         if (!Writer)
         {
+            // The page is sealed, so we need to rotate to a new page and try again
             UpdatePendingSizeAndTryRotate(P);
             continue;
         }
@@ -398,14 +399,19 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
         const bool UpdateScheduled = Writer.ScheduleBufferUpdate(pDstBuffer, DstOffset, NumBytes, pSrcData, Callback, pCallbackData);
         if (Writer.EndWriting() == Page::WritingStatus::LastWriterSealed)
         {
-            // We were the last writer
+            // We were the last writer - enqueue the page whether the update was successfully scheduled or not,
+            // because the page is sealed and can't be written to anymore.
             TryEnqueuePage(P);
         }
 
         if (UpdateScheduled)
         {
             if (!IsFirstAttempt)
+            {
+                // If we had to rotate the page at least once, we need to subtract the update size from the total pending update size
+                // as the update was successfully scheduled on the page.
                 m_TotalPendingUpdateSize.fetch_sub(NumBytes, std::memory_order_relaxed);
+            }
             break;
         }
         else
