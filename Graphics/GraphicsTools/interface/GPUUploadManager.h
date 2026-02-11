@@ -42,6 +42,10 @@ struct GPUUploadManagerCreateInfo
 
     /// Size of the staging buffer page.
     Uint32 PageSize DEFAULT_INITIALIZER(4 * 1024 * 1024);
+
+    /// Initial number of upload pages. If the manager runs out of pages to write to,
+    /// it will create new ones as needed. This parameter controls how many pages are created at startup.
+    Uint32 InitialPageCount DEFAULT_INITIALIZER(1);
 };
 typedef struct GPUUploadManagerCreateInfo GPUUploadManagerCreateInfo;
 

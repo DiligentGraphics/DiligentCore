@@ -337,7 +337,14 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     m_pDevice->CreateFence(Desc, &m_pFence);
     VERIFY_EXPR(m_pFence != nullptr);
 
+    // Create at least one page.
     m_pCurrentPage.store(CreatePage(CI.pContext), std::memory_order_release);
+
+    // Create additional pages if requested.
+    while (m_Pages.size() < CI.InitialPageCount)
+    {
+        CreatePage(CI.pContext);
+    }
 }
 
 GPUUploadManagerImpl::~GPUUploadManagerImpl()
