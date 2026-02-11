@@ -216,6 +216,7 @@ private:
 
 private:
     const Uint32 m_PageSize;
+    const Uint32 m_MaxPageCount;
 
     RefCntAutoPtr<IRenderDevice>  m_pDevice;
     RefCntAutoPtr<IDeviceContext> m_pContext;

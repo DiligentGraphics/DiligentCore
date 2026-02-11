@@ -328,6 +328,7 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 MinSize)
 GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, const GPUUploadManagerCreateInfo& CI) :
     TBase{pRefCounters},
     m_PageSize{AlignUpToPowerOfTwo(CI.PageSize)},
+    m_MaxPageCount{CI.MaxPageCount},
     m_pDevice{CI.pDevice},
     m_pContext{CI.pContext}
 {
@@ -535,8 +536,13 @@ void GPUUploadManagerImpl::UpdateFreePages(IDeviceContext* pContext)
 
     m_PeakTotalPendingUpdateSize = std::max(m_PeakTotalPendingUpdateSize, TotalPendingSize);
 
-    const Uint32 NumFreePages     = static_cast<Uint32>(m_FreePages.Size());
-    const Uint32 NumPagesToCreate = MinimalPageCount > NumFreePages ? MinimalPageCount - NumFreePages : 0;
+    const Uint32 NumFreePages = static_cast<Uint32>(m_FreePages.Size());
+
+    Uint32 NumPagesToCreate = MinimalPageCount > NumFreePages ? MinimalPageCount - NumFreePages : 0;
+    if (m_MaxPageCount != 0 && m_Pages.size() + NumPagesToCreate > m_MaxPageCount)
+    {
+        NumPagesToCreate = m_MaxPageCount > m_Pages.size() ? m_MaxPageCount - static_cast<Uint32>(m_Pages.size()) : 0;
+    }
 
     if (NumPagesToCreate > 0)
     {
