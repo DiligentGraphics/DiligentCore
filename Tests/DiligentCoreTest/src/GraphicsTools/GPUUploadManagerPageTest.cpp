@@ -240,9 +240,13 @@ TEST(GPUUploadManagerPageTest, ScheduleBufferUpdateParallel)
     static constexpr size_t kNumIterations = kNumUpdates;
 
     Uint32 NumUpdatesScheduled = 0;
-    auto   Callback            = MakeCallback([&NumUpdatesScheduled] {
-        NumUpdatesScheduled++;
-    });
+    auto   Callback =
+        MakeCallback(
+            [&NumUpdatesScheduled](IBuffer* pDstBuffer,
+                                   Uint32   DstOffset,
+                                   Uint32   NumBytes) {
+                NumUpdatesScheduled++;
+            });
 
     std::atomic<size_t> UpdatesScheduled{0};
     for (size_t t = 0; t < kNumThreads; ++t)

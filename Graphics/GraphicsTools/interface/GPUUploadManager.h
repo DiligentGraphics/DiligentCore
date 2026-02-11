@@ -48,7 +48,10 @@ typedef struct GPUUploadManagerCreateInfo GPUUploadManagerCreateInfo;
 /// Callback function type for GPU upload enqueued callback.
 /// This callback is called when the GPU copy operation is scheduled for execution
 /// in the render thread.
-typedef void (*GPUUploadEnqueuedCallbackType)(void*);
+typedef void (*GPUUploadEnqueuedCallbackType)(IBuffer* pDstBuffer,
+                                              Uint32   DstOffset,
+                                              Uint32   NumBytes,
+                                              void*    pUserData);
 
 // clang-format off
 

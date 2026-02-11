@@ -248,7 +248,7 @@ void GPUUploadManagerImpl::Page::ExecutePendingOps(IDeviceContext* pContext, Uin
 
         if (Op.Callback != nullptr)
         {
-            Op.Callback(Op.pCallbackData);
+            Op.Callback(Op.pDstBuffer, Op.DstOffset, Op.NumBytes, Op.pCallbackData);
         }
     }
     m_NumPendingOps.store(0);
