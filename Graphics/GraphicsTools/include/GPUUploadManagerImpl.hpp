@@ -61,6 +61,8 @@ public:
                                                          GPUUploadEnqueuedCallbackType Callback,
                                                          void*                         pCallbackData) override final;
 
+    virtual void DILIGENT_CALL_TYPE GetStats(GPUUploadManagerStats& Stats) const override final;
+
     class Page
     {
     public:
@@ -252,6 +254,9 @@ private:
 
     std::atomic<Uint32> m_MaxPendingUpdateSize{0};
     std::atomic<Uint32> m_TotalPendingUpdateSize{0};
+
+    std::atomic<Uint32> m_PeakUpdateSize{0};
+    Uint32              m_PeakTotalPendingUpdateSize = 0;
 };
 
 } // namespace Diligent

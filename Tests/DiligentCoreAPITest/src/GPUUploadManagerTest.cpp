@@ -214,6 +214,16 @@ TEST(GPUUploadManagerTest, ParallelUpdates)
         thread.join();
     }
 
+    GPUUploadManagerStats Stats;
+    pUploadManager->GetStats(Stats);
+    LOG_INFO_MESSAGE("GPU Upload Manager Stats:"
+                     "\n    NumPages                   ",
+                     Stats.NumPages,
+                     "\n    NumFreePages               ", Stats.NumFreePages,
+                     "\n    NumInFlightPages           ", Stats.NumInFlightPages,
+                     "\n    PeakTotalPendingUpdateSize ", Stats.PeakTotalPendingUpdateSize,
+                     "\n    PeakUpdateSize             ", Stats.PeakUpdateSize);
+
     VerifyBufferContents(pBuffer, BufferData);
 }
 

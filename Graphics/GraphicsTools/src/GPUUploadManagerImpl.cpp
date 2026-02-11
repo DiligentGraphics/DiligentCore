@@ -413,12 +413,6 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
 
         if (UpdateScheduled)
         {
-            if (!IsFirstAttempt)
-            {
-                // If we had to rotate the page at least once, we need to subtract the update size from the total pending update size
-                // as the update was successfully scheduled on the page.
-                m_TotalPendingUpdateSize.fetch_sub(NumBytes, std::memory_order_relaxed);
-            }
             break;
         }
         else
@@ -426,6 +420,8 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
             UpdatePendingSizeAndTryRotate(P);
         }
     }
+
+    AtomicMax(m_PeakUpdateSize, NumBytes, std::memory_order_relaxed);
 }
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pContext, Uint32 MinSize)
@@ -537,6 +533,8 @@ void GPUUploadManagerImpl::UpdateFreePages(IDeviceContext* pContext)
     const Uint32 TotalPendingSize = m_TotalPendingUpdateSize.exchange(0, std::memory_order_relaxed);
     const Uint32 MinimalPageCount = std::max((TotalPendingSize + m_PageSize - 1) / m_PageSize, 1u);
 
+    m_PeakTotalPendingUpdateSize = std::max(m_PeakTotalPendingUpdateSize, TotalPendingSize);
+
     const Uint32 NumFreePages     = static_cast<Uint32>(m_FreePages.Size());
     const Uint32 NumPagesToCreate = MinimalPageCount > NumFreePages ? MinimalPageCount - NumFreePages : 0;
 
@@ -581,6 +579,16 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext
     }
 
     return P;
+}
+
+void GPUUploadManagerImpl::GetStats(GPUUploadManagerStats& Stats) const
+{
+    Stats.NumPages         = static_cast<Uint32>(m_Pages.size());
+    Stats.NumFreePages     = static_cast<Uint32>(m_FreePages.Size());
+    Stats.NumInFlightPages = static_cast<Uint32>(m_InFlightPages.size());
+
+    Stats.PeakTotalPendingUpdateSize = m_PeakTotalPendingUpdateSize;
+    Stats.PeakUpdateSize             = m_PeakUpdateSize.load(std::memory_order_relaxed);
 }
 
 void CreateGPUUploadManager(const GPUUploadManagerCreateInfo& CreateInfo,

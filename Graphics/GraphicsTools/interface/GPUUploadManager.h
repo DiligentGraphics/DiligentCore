@@ -57,6 +57,29 @@ typedef void (*GPUUploadEnqueuedCallbackType)(IBuffer* pDstBuffer,
                                               Uint32   NumBytes,
                                               void*    pUserData);
 
+
+/// GPU upload manager statistics.
+struct GPUUploadManagerStats
+{
+    /// The number of pages in the manager.
+    Uint32 NumPages DEFAULT_INITIALIZER(0);
+
+    /// The number of free pages that are ready to be written to.
+    Uint32 NumFreePages DEFAULT_INITIALIZER(0);
+
+    /// The number of pages that are currently being used by the GPU for copy operations.
+    Uint32 NumInFlightPages DEFAULT_INITIALIZER(0);
+
+    /// The peak pending update size in bytes. This is the maximum total size of all pending buffer updates
+    /// that could not be enqueued immediately due to lack of free pages.
+    Uint32 PeakTotalPendingUpdateSize DEFAULT_INITIALIZER(0);
+
+    /// Peak size of a single update in bytes.
+    Uint32 PeakUpdateSize DEFAULT_INITIALIZER(0);
+};
+typedef struct GPUUploadManagerStats GPUUploadManagerStats;
+
+
 // clang-format off
 
 #define DILIGENT_INTERFACE_NAME IGPUUploadManager
@@ -91,6 +114,10 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
                                               const void*                   pSrcData,
                                               GPUUploadEnqueuedCallbackType Callback      DEFAULT_VALUE(nullptr),
                                               void*                         pCallbackData DEFAULT_VALUE(nullptr)) PURE;
+
+    /// Retrieves GPU upload manager statistics.
+    VIRTUAL void METHOD(GetStats)(THIS_
+                                  GPUUploadManagerStats REF Stats) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -102,6 +129,7 @@ DILIGENT_END_INTERFACE
 
 #    define IGPUUploadManager_RenderThreadUpdate(This, ...)   CALL_IFACE_METHOD(GPUUploadManager, RenderThreadUpdate, This, __VA_ARGS__)
 #    define IGPUUploadManager_ScheduleBufferUpdate(This, ...) CALL_IFACE_METHOD(GPUUploadManager, ScheduleBufferUpdate, This, __VA_ARGS__)
+#    define IGPUUploadManager_GetStats(This, ...)             CALL_IFACE_METHOD(GPUUploadManager, GetStats, This, __VA_ARGS__)
 
 // clang-format on
 
