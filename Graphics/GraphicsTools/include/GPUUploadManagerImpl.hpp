@@ -39,6 +39,7 @@
 #include <memory>
 #include <vector>
 #include <mutex>
+#include <map>
 
 namespace Diligent
 {
@@ -236,9 +237,9 @@ private:
         size_t Size() const { return m_Size.load(std::memory_order_acquire); }
 
     private:
-        std::mutex          m_PagesMtx;
-        std::vector<Page*>  m_Pages;
-        std::atomic<size_t> m_Size{0};
+        std::mutex                           m_PagesMtx;
+        std::map<Uint32, std::vector<Page*>> m_PagesBySize;
+        std::atomic<size_t>                  m_Size{0};
     };
     FreePages m_FreePages;
 

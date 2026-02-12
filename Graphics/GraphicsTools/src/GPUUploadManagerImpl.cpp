@@ -312,8 +312,22 @@ void GPUUploadManagerImpl::FreePages::Push(Page** ppPages, size_t NumPages)
         return;
 
     std::lock_guard<std::mutex> Guard{m_PagesMtx};
-    m_Pages.insert(m_Pages.end(), ppPages, ppPages + NumPages);
-    m_Size.store(m_Pages.size(), std::memory_order_release);
+
+    size_t TotalAddedPages = 0;
+    for (size_t i = 0; i < NumPages; ++i)
+    {
+        if (Page* pPage = ppPages[i])
+        {
+            const Uint32 PageSize = pPage->GetSize();
+            m_PagesBySize[PageSize].emplace_back(pPage);
+            ++TotalAddedPages;
+        }
+        else
+        {
+            UNEXPECTED("Null page pointer");
+        }
+    }
+    m_Size.fetch_add(TotalAddedPages, std::memory_order_release);
 }
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 RequiredSize)
@@ -321,14 +335,27 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 Required
     Page* P = nullptr;
     {
         std::lock_guard<std::mutex> Guard{m_PagesMtx};
-        for (auto it = m_Pages.begin(); it != m_Pages.end(); ++it)
+        // Find the first page that is large enough to accommodate the required size
+        auto it = m_PagesBySize.lower_bound(RequiredSize);
+        if (it != m_PagesBySize.end())
         {
-            if ((*it)->GetSize() >= RequiredSize)
+            std::vector<Page*>& Pages = it->second;
+            if (!Pages.empty())
             {
-                P = *it;
-                m_Pages.erase(it);
-                m_Size.store(m_Pages.size(), std::memory_order_release);
-                break;
+                P = Pages.back();
+                Pages.pop_back();
+                m_Size.fetch_sub(1, std::memory_order_release);
+                if (Pages.empty())
+                {
+                    // Remove the entry from the map if there are no more pages of this size,
+                    // so that lower_bound in future calls won't return this empty entry.
+                    m_PagesBySize.erase(it);
+                }
+            }
+            else
+            {
+                UNEXPECTED("Page size entry exists in the map, but there are no pages in the vector");
+                m_PagesBySize.erase(it);
             }
         }
     }
