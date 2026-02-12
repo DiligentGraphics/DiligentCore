@@ -256,6 +256,11 @@ private:
 
     std::vector<std::unique_ptr<Page>> m_Pages;
 
+    // The number of running ScheduleBufferUpdate operations.
+    std::atomic<Uint32> m_NumRunningUpdates{0};
+    std::atomic<bool>   m_Stopping{false};
+    Threading::Signal   m_LastRunningThreadFinishedSignal;
+
     std::atomic<Uint32> m_MaxPendingUpdateSize{0};
     std::atomic<Uint32> m_TotalPendingUpdateSize{0};
 

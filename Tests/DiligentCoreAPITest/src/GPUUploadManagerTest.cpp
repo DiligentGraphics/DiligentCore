@@ -35,9 +35,12 @@
 #include <thread>
 #include <array>
 #include <cstring>
+#include <chrono>
 
 using namespace Diligent;
 using namespace Diligent::Testing;
+
+using namespace std::chrono_literals;
 
 namespace
 {
@@ -233,6 +236,52 @@ TEST(GPUUploadManagerTest, ParallelUpdates)
                      "\n    PeakUpdateSize             ", Stats.PeakUpdateSize);
 
     VerifyBufferContents(pBuffer, BufferData);
+}
+
+
+TEST(GPUUploadManagerTest, DestroyWhileUpdatesAreRunning)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 1024};
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_TRUE(pUploadManager != nullptr);
+
+    const size_t             kNumThreads = 4;
+    std::vector<std::thread> Threads;
+    std::atomic<Uint32>      NumUpdatesRunning{0};
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        Threads.emplace_back(
+            [&]() {
+                NumUpdatesRunning.fetch_add(1);
+                pUploadManager->ScheduleBufferUpdate(nullptr, nullptr, 0, 2048, nullptr);
+                NumUpdatesRunning.fetch_sub(1);
+            });
+    }
+
+    // Wait until all threads are running updates
+    while (NumUpdatesRunning.load() < kNumThreads)
+    {
+        std::this_thread::yield();
+    }
+
+    std::this_thread::sleep_for(10ms);
+    EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
+
+    pUploadManager.Release();
+
+    EXPECT_EQ(NumUpdatesRunning.load(), 0u);
+
+    for (std::thread& thread : Threads)
+    {
+        thread.join();
+    }
 }
 
 } // namespace

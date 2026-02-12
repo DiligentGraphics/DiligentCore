@@ -359,6 +359,14 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
 
 GPUUploadManagerImpl::~GPUUploadManagerImpl()
 {
+    m_Stopping.store(true, std::memory_order_release);
+    m_PageRotatedSignal.RequestStop();
+    // Wait for any running updates to finish.
+    if (m_NumRunningUpdates.load(std::memory_order_acquire) > 0)
+    {
+        m_LastRunningThreadFinishedSignal.Wait();
+    }
+
     for (std::unique_ptr<Page>& P : m_Pages)
     {
         P->ReleaseStagingBuffer(m_pContext);
@@ -390,7 +398,32 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
     DEV_CHECK_ERR(pContext == nullptr || pContext == m_pContext,
                   "If a context is provided to ScheduleBufferUpdate, it must be the same as the one used to create the GPUUploadManagerImpl");
 
+    class RunningUpdatesGuard
+    {
+    public:
+        explicit RunningUpdatesGuard(GPUUploadManagerImpl& Mgr) noexcept :
+            m_Mgr{Mgr}
+        {
+            m_Mgr.m_NumRunningUpdates.fetch_add(1, std::memory_order_acq_rel);
+        }
+
+        ~RunningUpdatesGuard()
+        {
+            Uint32 NumRunningUpdates = m_Mgr.m_NumRunningUpdates.fetch_sub(1, std::memory_order_acq_rel);
+            if (m_Mgr.m_Stopping.load(std::memory_order_acquire) && NumRunningUpdates == 1)
+            {
+                m_Mgr.m_LastRunningThreadFinishedSignal.Trigger();
+            }
+        }
+
+    private:
+        GPUUploadManagerImpl& m_Mgr;
+    };
+    RunningUpdatesGuard Guard{*this};
+
+
     bool IsFirstAttempt = true;
+    bool AbortUpdate    = false;
 
     auto UpdatePendingSizeAndTryRotate = [&](Page* P) {
         if (IsFirstAttempt)
@@ -403,11 +436,11 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
         Uint64 PageEpoch = m_PageRotatedSignal.CurrentEpoch();
         if (!TryRotatePage(pContext, P, NumBytes))
         {
-            m_PageRotatedSignal.WaitNext(PageEpoch);
+            AbortUpdate = m_PageRotatedSignal.WaitNext(PageEpoch) == 0;
         }
     };
 
-    while (true)
+    while (!AbortUpdate && !m_Stopping.load(std::memory_order_acquire))
     {
         Page*        P      = m_pCurrentPage.load(std::memory_order_acquire);
         Page::Writer Writer = P->TryBeginWriting();
