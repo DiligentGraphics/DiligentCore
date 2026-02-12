@@ -198,26 +198,28 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(IBuffer*                  
     // but we can still schedule the update since we have an active writer
     // that prevents the page from being submitted for execution.
 
-    constexpr Uint32 Alignment   = 16;
-    const Uint32     AlignedSize = AlignUp(NumBytes, Alignment);
-
-    Uint32 Offset = m_Offset.load(std::memory_order_acquire);
-    for (;;)
+    Uint32 Offset = 0;
+    if (NumBytes > 0)
     {
-        VERIFY_EXPR((Offset % Alignment) == 0);
-        if (Offset + AlignedSize > m_Size)
-            return false; // Fail without incrementing offset
+        constexpr Uint32 Alignment   = 16;
+        const Uint32     AlignedSize = AlignUp(NumBytes, Alignment);
 
-        if (m_Offset.compare_exchange_weak(Offset, Offset + AlignedSize, std::memory_order_acq_rel))
-            break; // Success
-    }
+        Offset = m_Offset.load(std::memory_order_acquire);
+        for (;;)
+        {
+            VERIFY_EXPR((Offset % Alignment) == 0);
+            if (Offset + AlignedSize > m_Size)
+                return false; // Fail without incrementing offset
 
-    m_NumPendingOps.fetch_add(1, std::memory_order_relaxed);
+            if (m_Offset.compare_exchange_weak(Offset, Offset + AlignedSize, std::memory_order_acq_rel))
+                break; // Success
+        }
 
-    if (m_pData != nullptr && NumBytes > 0)
-    {
-        VERIFY_EXPR(pSrcData != nullptr);
-        std::memcpy(static_cast<Uint8*>(m_pData) + Offset, pSrcData, NumBytes);
+        if (m_pData != nullptr)
+        {
+            VERIFY_EXPR(pSrcData != nullptr);
+            std::memcpy(static_cast<Uint8*>(m_pData) + Offset, pSrcData, NumBytes);
+        }
     }
 
     PendingOp Op;
@@ -228,6 +230,7 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(IBuffer*                  
     Op.DstOffset     = DstOffset;
     Op.NumBytes      = NumBytes;
     m_PendingOps.Enqueue(std::move(Op));
+    m_NumPendingOps.fetch_add(1, std::memory_order_relaxed);
 
     return true;
 }
@@ -384,6 +387,9 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
                                                 void*                         pCallbackData)
 
 {
+    DEV_CHECK_ERR(pContext == nullptr || pContext == m_pContext,
+                  "If a context is provided to ScheduleBufferUpdate, it must be the same as the one used to create the GPUUploadManagerImpl");
+
     bool IsFirstAttempt = true;
 
     auto UpdatePendingSizeAndTryRotate = [&](Page* P) {
