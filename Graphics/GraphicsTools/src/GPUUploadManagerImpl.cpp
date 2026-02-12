@@ -230,7 +230,7 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(IBuffer*                  
     Op.DstOffset     = DstOffset;
     Op.NumBytes      = NumBytes;
     m_PendingOps.Enqueue(std::move(Op));
-    m_NumPendingOps.fetch_add(1, std::memory_order_relaxed);
+    m_NumPendingOps.fetch_add(1, std::memory_order_acq_rel);
 
     return true;
 }
@@ -312,7 +312,7 @@ void GPUUploadManagerImpl::FreePages::Push(Page** ppPages, size_t NumPages)
 
     std::lock_guard<std::mutex> Guard{m_PagesMtx};
     m_Pages.insert(m_Pages.end(), ppPages, ppPages + NumPages);
-    m_Size.store(m_Pages.size(), std::memory_order_relaxed);
+    m_Size.store(m_Pages.size(), std::memory_order_release);
 }
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 RequiredSize)
@@ -326,7 +326,7 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 Required
             {
                 P = *it;
                 m_Pages.erase(it);
-                m_Size.store(m_Pages.size(), std::memory_order_relaxed);
+                m_Size.store(m_Pages.size(), std::memory_order_release);
                 break;
             }
         }
@@ -426,16 +426,16 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
     bool AbortUpdate    = false;
 
     auto UpdatePendingSizeAndTryRotate = [&](Page* P) {
-        if (IsFirstAttempt)
-        {
-            // Atomically update the max pending update size to ensure the next page is large enough
-            AtomicMax(m_MaxPendingUpdateSize, NumBytes, std::memory_order_relaxed);
-            m_TotalPendingUpdateSize.fetch_add(NumBytes, std::memory_order_relaxed);
-            IsFirstAttempt = false;
-        }
         Uint64 PageEpoch = m_PageRotatedSignal.CurrentEpoch();
         if (!TryRotatePage(pContext, P, NumBytes))
         {
+            // Atomically update the max pending update size to ensure the next page is large enough
+            AtomicMax(m_MaxPendingUpdateSize, NumBytes, std::memory_order_acq_rel);
+            if (IsFirstAttempt)
+            {
+                m_TotalPendingUpdateSize.fetch_add(NumBytes, std::memory_order_acq_rel);
+                IsFirstAttempt = false;
+            }
             AbortUpdate = m_PageRotatedSignal.WaitNext(PageEpoch) == 0;
         }
     };
@@ -598,7 +598,7 @@ void GPUUploadManagerImpl::UpdateFreePages(IDeviceContext* pContext)
 {
     VERIFY_EXPR(pContext != nullptr);
 
-    const Uint32 TotalPendingSize = m_TotalPendingUpdateSize.exchange(0, std::memory_order_relaxed);
+    const Uint32 TotalPendingSize = m_TotalPendingUpdateSize.exchange(0, std::memory_order_acq_rel);
     const Uint32 MinimalPageCount = std::max((TotalPendingSize + m_PageSize - 1) / m_PageSize, 1u);
 
     m_PeakTotalPendingUpdateSize = std::max(m_PeakTotalPendingUpdateSize, TotalPendingSize);
@@ -637,7 +637,7 @@ void GPUUploadManagerImpl::ProcessPendingPages(IDeviceContext* pContext)
 
 GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize)
 {
-    Uint32 MaxPendingUpdateSize = std::max(m_MaxPendingUpdateSize.load(std::memory_order_relaxed), RequiredSize);
+    Uint32 MaxPendingUpdateSize = std::max(m_MaxPendingUpdateSize.load(std::memory_order_acquire), RequiredSize);
 
     Page* P = m_FreePages.Pop(MaxPendingUpdateSize);
     if (P == nullptr && pContext != nullptr)
@@ -653,7 +653,7 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext
         {
             if (PageSize < MaxPendingUpdateSize)
                 break;
-            if (m_MaxPendingUpdateSize.compare_exchange_weak(MaxPendingUpdateSize, 0, std::memory_order_relaxed))
+            if (m_MaxPendingUpdateSize.compare_exchange_weak(MaxPendingUpdateSize, 0, std::memory_order_acq_rel))
                 break;
         }
     }

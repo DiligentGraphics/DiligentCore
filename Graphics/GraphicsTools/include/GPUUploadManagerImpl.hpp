@@ -233,7 +233,7 @@ private:
         void   Push(Page** ppPages, size_t NumPages);
         void   Push(Page* pPage) { Push(&pPage, 1); }
         Page*  Pop(Uint32 MinSize = 0);
-        size_t Size() const { return m_Size.load(std::memory_order_relaxed); }
+        size_t Size() const { return m_Size.load(std::memory_order_acquire); }
 
     private:
         std::mutex          m_PagesMtx;
