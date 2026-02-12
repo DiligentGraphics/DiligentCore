@@ -132,4 +132,74 @@ private:
     std::atomic_int         m_NumThreadsAwaken{0};
 };
 
+
+class TickSignal
+{
+public:
+    TickSignal() = default;
+
+    // clang-format off
+    TickSignal           (const TickSignal&) = delete;
+    TickSignal& operator=(const TickSignal&) = delete;
+    TickSignal           (TickSignal&&)      = delete;
+    TickSignal& operator=(TickSignal&&)      = delete;
+    // clang-format on
+
+    // Wake everybody (broadcast). Optionally carry an int payload.
+    void Tick(int Value = 1)
+    {
+        VERIFY(Value != 0, "Tick value must not be zero");
+        {
+            std::lock_guard<std::mutex> Lock{m_Mutex};
+            ++m_Epoch;
+            m_Value = Value;
+        }
+        m_CV.notify_all();
+    }
+
+    // Get current epoch so a worker can "arm" itself to wait for the next tick.
+    uint64_t CurrentEpoch() const
+    {
+        std::lock_guard<std::mutex> Lock{m_Mutex};
+        return m_Epoch;
+    }
+
+    // Wait until the epoch changes (i.e., a new tick happens), then consume it.
+    // Returns the last tick value.
+    int WaitNext(uint64_t& seenEpoch)
+    {
+        std::unique_lock<std::mutex> lock{m_Mutex};
+        m_CV.wait(lock, [&] { return m_Stop || m_Epoch != seenEpoch; });
+
+        if (m_Stop)
+            return 0; // or throw / special code
+
+        seenEpoch = m_Epoch;
+        return m_Value;
+    }
+
+    void RequestStop()
+    {
+        {
+            std::lock_guard<std::mutex> lock{m_Mutex};
+            m_Stop = true;
+        }
+        m_CV.notify_all();
+    }
+
+    bool StopRequested() const
+    {
+        std::lock_guard<std::mutex> lock{m_Mutex};
+        return m_Stop;
+    }
+
+private:
+    mutable std::mutex      m_Mutex;
+    std::condition_variable m_CV;
+
+    uint64_t m_Epoch = 0; // protected by m_Mutex
+    int      m_Value = 0; // protected by m_Mutex
+    bool     m_Stop  = false;
+};
+
 } // namespace Threading
