@@ -312,14 +312,14 @@ void GPUUploadManagerImpl::FreePages::Push(Page** ppPages, size_t NumPages)
     m_Size.store(m_Pages.size(), std::memory_order_relaxed);
 }
 
-GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 MinSize)
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::FreePages::Pop(Uint32 RequiredSize)
 {
     Page* P = nullptr;
     {
         std::lock_guard<std::mutex> Guard{m_PagesMtx};
         for (auto it = m_Pages.begin(); it != m_Pages.end(); ++it)
         {
-            if ((*it)->GetSize() >= MinSize)
+            if ((*it)->GetSize() >= RequiredSize)
             {
                 P = *it;
                 m_Pages.erase(it);
@@ -395,7 +395,7 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
             IsFirstAttempt = false;
         }
         Uint64 PageEpoch = m_PageRotatedSignal.CurrentEpoch();
-        if (!TryRotatePage(pContext, P))
+        if (!TryRotatePage(pContext, P, NumBytes))
         {
             m_PageRotatedSignal.WaitNext(PageEpoch);
         }
@@ -452,10 +452,10 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
     AtomicMax(m_PeakUpdateSize, NumBytes, std::memory_order_relaxed);
 }
 
-GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pContext, Uint32 MinSize)
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pContext, Uint32 RequiredSize)
 {
     Uint32 PageSize = m_PageSize;
-    while (PageSize < MinSize)
+    while (PageSize < RequiredSize)
         PageSize *= 2;
 
     std::unique_ptr<Page> NewPage = std::make_unique<Page>(m_pDevice, pContext, PageSize);
@@ -486,10 +486,10 @@ bool GPUUploadManagerImpl::SealAndSwapCurrentPage(IDeviceContext* pContext)
     return true;
 }
 
-bool GPUUploadManagerImpl::TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent)
+bool GPUUploadManagerImpl::TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent, Uint32 RequiredSize)
 {
     // Grab a free page (workers can't create, so pContext=null)
-    Page* Fresh = AcquireFreePage(pContext);
+    Page* Fresh = AcquireFreePage(pContext, RequiredSize);
     if (!Fresh)
         return false;
 
@@ -596,9 +596,9 @@ void GPUUploadManagerImpl::ProcessPendingPages(IDeviceContext* pContext)
     }
 }
 
-GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext* pContext)
+GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize)
 {
-    Uint32 MaxPendingUpdateSize = m_MaxPendingUpdateSize.load(std::memory_order_relaxed);
+    Uint32 MaxPendingUpdateSize = std::max(m_MaxPendingUpdateSize.load(std::memory_order_relaxed), RequiredSize);
 
     Page* P = m_FreePages.Pop(MaxPendingUpdateSize);
     if (P == nullptr && pContext != nullptr)

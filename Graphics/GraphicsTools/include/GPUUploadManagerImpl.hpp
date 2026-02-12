@@ -211,10 +211,10 @@ private:
     bool  SealAndSwapCurrentPage(IDeviceContext* pContext);
     void  UpdateFreePages(IDeviceContext* pContext);
     void  ProcessPendingPages(IDeviceContext* pContext);
-    bool  TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent);
+    bool  TryRotatePage(IDeviceContext* pContext, Page* ExpectedCurrent, Uint32 RequiredSize);
     bool  TryEnqueuePage(Page* P);
-    Page* AcquireFreePage(IDeviceContext* pContext);
-    Page* CreatePage(IDeviceContext* pContext, Uint32 MinSize = 0);
+    Page* AcquireFreePage(IDeviceContext* pContext, Uint32 RequiredSize = 0);
+    Page* CreatePage(IDeviceContext* pContext, Uint32 RequiredSize = 0);
 
 private:
     const Uint32 m_PageSize;
