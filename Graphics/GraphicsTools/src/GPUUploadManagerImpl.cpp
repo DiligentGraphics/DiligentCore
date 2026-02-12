@@ -32,6 +32,7 @@
 #include <vector>
 #include <cstring>
 #include <thread>
+#include <algorithm>
 
 namespace Diligent
 {
@@ -351,7 +352,10 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     m_pCurrentPage.store(CreatePage(CI.pContext), std::memory_order_release);
 
     // Create additional pages if requested.
-    while (m_Pages.size() < CI.InitialPageCount)
+    const Uint32 InitialPageCount = CI.MaxPageCount > 0 ?
+        std::min(CI.InitialPageCount, CI.MaxPageCount) :
+        CI.InitialPageCount;
+    while (m_Pages.size() < InitialPageCount)
     {
         m_FreePages.Push(CreatePage(CI.pContext));
     }
