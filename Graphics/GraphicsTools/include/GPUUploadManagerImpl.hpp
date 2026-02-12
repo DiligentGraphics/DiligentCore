@@ -34,6 +34,7 @@
 #include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "MPSCQueue.hpp"
+#include "ThreadSignal.hpp"
 
 #include <memory>
 #include <vector>
@@ -250,7 +251,8 @@ private:
     RefCntAutoPtr<IFence> m_pFence;
     Uint64                m_NextFenceValue = 1;
 
-    std::atomic<Page*> m_pCurrentPage{nullptr};
+    std::atomic<Page*>    m_pCurrentPage{nullptr};
+    Threading::TickSignal m_PageRotatedSignal;
 
     std::vector<std::unique_ptr<Page>> m_Pages;
 

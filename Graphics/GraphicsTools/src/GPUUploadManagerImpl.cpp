@@ -372,6 +372,7 @@ void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
     ProcessPendingPages(pContext);
 
     pContext->EnqueueSignal(m_pFence, m_NextFenceValue++);
+    m_PageRotatedSignal.Tick();
 }
 
 void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pContext,
@@ -393,9 +394,10 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
             m_TotalPendingUpdateSize.fetch_add(NumBytes, std::memory_order_relaxed);
             IsFirstAttempt = false;
         }
+        Uint64 PageEpoch = m_PageRotatedSignal.CurrentEpoch();
         if (!TryRotatePage(pContext, P))
         {
-            std::this_thread::yield();
+            m_PageRotatedSignal.WaitNext(PageEpoch);
         }
     };
 
@@ -484,6 +486,7 @@ bool GPUUploadManagerImpl::TryRotatePage(IDeviceContext* pContext, Page* Expecte
     if (ExpectedCurrent && ExpectedCurrent->TrySeal() == Page::SealStatus::Ready)
         TryEnqueuePage(ExpectedCurrent);
 
+    m_PageRotatedSignal.Tick();
     return true;
 }
 
