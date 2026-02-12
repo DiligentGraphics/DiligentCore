@@ -62,8 +62,6 @@ void VerifyBufferContents(IBuffer* pBuffer, const std::vector<Uint8>& ExpectedDa
     IRenderDevice*         pDevice  = pEnv->GetDevice();
     IDeviceContext*        pContext = pEnv->GetDeviceContext();
 
-    GPUTestingEnvironment::ScopedReset AutoReset;
-
     BufferDesc Desc     = pBuffer->GetDesc();
     Desc.Name           = "GPUUploadManagerTest readback buffer";
     Desc.Usage          = USAGE_STAGING;
@@ -72,18 +70,24 @@ void VerifyBufferContents(IBuffer* pBuffer, const std::vector<Uint8>& ExpectedDa
 
     RefCntAutoPtr<IBuffer> pReadbackBuffer;
     pDevice->CreateBuffer(Desc, nullptr, &pReadbackBuffer);
-    ASSERT_TRUE(pBuffer != nullptr);
+    ASSERT_TRUE(pReadbackBuffer);
 
     pContext->CopyBuffer(pBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
                          pReadbackBuffer, 0, ExpectedData.size(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     pContext->WaitForIdle();
 
     void* pBufferData = nullptr;
-    pContext->MapBuffer(pReadbackBuffer, MAP_READ, MAP_FLAG_DO_NOT_WAIT, pBufferData);
-    ASSERT_NE(pBufferData, nullptr);
-    pContext->UnmapBuffer(pReadbackBuffer, MAP_READ);
 
+    RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
+
+    MAP_FLAGS MapFlags = (DeviceType == RENDER_DEVICE_TYPE_D3D12 || DeviceType == RENDER_DEVICE_TYPE_VULKAN) ?
+        MAP_FLAG_DO_NOT_WAIT :
+        MAP_FLAG_NONE;
+
+    pContext->MapBuffer(pReadbackBuffer, MAP_READ, MapFlags, pBufferData);
+    ASSERT_NE(pBufferData, nullptr);
     EXPECT_TRUE(std::memcmp(pBufferData, ExpectedData.data(), ExpectedData.size()) == 0) << "Buffer contents do not match expected data";
+    pContext->UnmapBuffer(pReadbackBuffer, MAP_READ);
 }
 
 TEST(GPUUploadManagerTest, ScheduleUpdates)
@@ -115,11 +119,13 @@ TEST(GPUUploadManagerTest, ScheduleUpdates)
     pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
     ASSERT_TRUE(pBuffer);
 
+    pUploadManager->ScheduleBufferUpdate(pContext, pBuffer, 0, 0, nullptr);
     pUploadManager->ScheduleBufferUpdate(pContext, pBuffer, 0, 256, &BufferData[0]);
     pUploadManager->ScheduleBufferUpdate(pContext, pBuffer, 256, 256, &BufferData[256]);
     pUploadManager->ScheduleBufferUpdate(pContext, pBuffer, 512, 1024, &BufferData[512]);
     pUploadManager->ScheduleBufferUpdate(pContext, pBuffer, 1536, 512, &BufferData[1536]);
     pUploadManager->ScheduleBufferUpdate(pContext, pBuffer, 2048, 2048, &BufferData[2048]);
+    pUploadManager->RenderThreadUpdate(pContext);
     pUploadManager->RenderThreadUpdate(pContext);
 
     VerifyBufferContents(pBuffer, BufferData);
@@ -130,6 +136,8 @@ TEST(GPUUploadManagerTest, ParallelUpdates)
     GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
     IRenderDevice*         pDevice  = pEnv->GetDevice();
     IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
 
     RefCntAutoPtr<IGPUUploadManager> pUploadManager;
     GPUUploadManagerCreateInfo       CreateInfo{pDevice, pContext, 16384};
@@ -198,7 +206,7 @@ TEST(GPUUploadManagerTest, ParallelUpdates)
         if (NumUpdatesScheduled.load() >= NumUpdatesToRenderThreadUpdate || NumIterationsWithoutUpdate >= 100)
         {
             pUploadManager->RenderThreadUpdate(pContext);
-            NumUpdatesScheduled.fetch_sub(NumUpdatesToRenderThreadUpdate);
+            NumUpdatesScheduled.store(0);
             pContext->Flush();
             pContext->FinishFrame();
             ++NumRenderThreadUpdates;

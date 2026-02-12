@@ -112,8 +112,9 @@ public:
             Page* m_pPage = nullptr;
         };
 
-        // Tries to begin writing to the page. Returns a valid Writer object if the
-        // page is not sealed for new writes, and an empty Writer otherwise.
+        // Tries to atomically begin writing to the page:
+        // - If the page is not sealed for new writes, increments the writer count and returns a valid Writer object.
+        // - If the page is sealed for new writes, returns an empty Writer object.
         Writer TryBeginWriting();
 
         enum class SealStatus

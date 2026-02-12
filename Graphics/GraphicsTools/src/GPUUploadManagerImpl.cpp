@@ -110,7 +110,12 @@ GPUUploadManagerImpl::Page::Page(IRenderDevice*  pDevice,
     pDevice->CreateBuffer(Desc, nullptr, &m_pStagingBuffer);
     VERIFY_EXPR(m_pStagingBuffer != nullptr);
 
-    pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_DO_NOT_WAIT, m_pData);
+    RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
+
+    MAP_FLAGS MapFlags = (DeviceType == RENDER_DEVICE_TYPE_D3D12 || DeviceType == RENDER_DEVICE_TYPE_VULKAN) ?
+        MAP_FLAG_DO_NOT_WAIT :
+        MAP_FLAG_NONE;
+    pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MapFlags, m_pData);
     VERIFY_EXPR(m_pData != nullptr);
 }
 
@@ -196,19 +201,20 @@ bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(IBuffer*                  
     constexpr Uint32 Alignment   = 16;
     const Uint32     AlignedSize = AlignUp(NumBytes, Alignment);
 
-    Uint32 Offset = m_Offset.load(std::memory_order_relaxed);
+    Uint32 Offset = m_Offset.load(std::memory_order_acquire);
     for (;;)
     {
+        VERIFY_EXPR((Offset % Alignment) == 0);
         if (Offset + AlignedSize > m_Size)
             return false; // Fail without incrementing offset
 
-        if (m_Offset.compare_exchange_weak(Offset, Offset + AlignedSize, std::memory_order_relaxed))
+        if (m_Offset.compare_exchange_weak(Offset, Offset + AlignedSize, std::memory_order_acq_rel))
             break; // Success
     }
 
     m_NumPendingOps.fetch_add(1, std::memory_order_relaxed);
 
-    if (m_pData != nullptr)
+    if (m_pData != nullptr && NumBytes > 0)
     {
         VERIFY_EXPR(pSrcData != nullptr);
         std::memcpy(static_cast<Uint8*>(m_pData) + Offset, pSrcData, NumBytes);
@@ -270,7 +276,7 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
     {
         if (!m_PersistentMapped)
         {
-            pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_DO_NOT_WAIT, m_pData);
+            pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_NONE, m_pData);
         }
         VERIFY_EXPR(m_pData != nullptr);
     }
@@ -344,7 +350,7 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     // Create additional pages if requested.
     while (m_Pages.size() < CI.InitialPageCount)
     {
-        CreatePage(CI.pContext);
+        m_FreePages.Push(CreatePage(CI.pContext));
     }
 }
 
@@ -580,8 +586,15 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext
 
     if (P != nullptr)
     {
-        // Clear only if no one increased it since we read it
-        m_MaxPendingUpdateSize.compare_exchange_strong(MaxPendingUpdateSize, 0u, std::memory_order_relaxed);
+        const Uint32 PageSize = P->GetSize();
+        // Clear if the page is larger than the max pending update
+        for (;;)
+        {
+            if (PageSize < MaxPendingUpdateSize)
+                break;
+            if (m_MaxPendingUpdateSize.compare_exchange_weak(MaxPendingUpdateSize, 0, std::memory_order_relaxed))
+                break;
+        }
     }
 
     return P;

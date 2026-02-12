@@ -96,7 +96,12 @@ typedef struct GPUUploadManagerStats GPUUploadManagerStats;
 /// Asynchronous GPU upload manager
 DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
 {
-    /// Executes pending render-thread operations
+    /// Executes pending render-thread operations.
+    ///
+    /// The method can be called in parallel with ScheduleBufferUpdate() from worker threads, but only
+    /// one thread is allowed to call RenderThreadUpdate() at a time. The method must be called periodically
+    /// to process pending buffer updates. If the method is not called, ScheduleBufferUpdate() may block indefinitely
+    /// when there are no free pages available for new updates.
     VIRTUAL void METHOD(RenderThreadUpdate)(THIS_
                                             IDeviceContext* pContext) PURE;
 
@@ -110,6 +115,16 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
     /// \param [in] pSrcData      - Pointer to the source data.
     /// \param [in] Callback      - Optional callback to be called when the GPU copy operation is scheduled for execution.
     /// \param [in] pCallbackData - Optional pointer to user data that will be passed to the callback.
+    ///
+    /// The method is thread-safe and can be called from multiple threads simultaneously with other calls to ScheduleBufferUpdate()
+    /// and RenderThreadUpdate().
+    /// 
+    /// If the method is called from a worker thread, the pContext parameter must be null, and the render thread must periodically
+    /// call RenderThreadUpdate() to process pending buffer updates. If RenderThreadUpdate() is not called, the method may block indefinitely
+    /// when there are no free pages available for new updates.
+    /// 
+    /// If the method is called from the render thread, the pContext parameter must be a pointer to the device context used to create the
+    /// GPU upload manager. If the method is called from the render thread with null pContext, it may never return.
     VIRTUAL void METHOD(ScheduleBufferUpdate)(THIS_
                                               IDeviceContext*               pContext,
                                               IBuffer*                      pDstBuffer,
