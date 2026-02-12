@@ -166,7 +166,7 @@ TEST(GPUUploadManagerPageTest, ParallelTryBeginWriting)
     LOG_INFO_MESSAGE("Total writes: ", TotalWrites.load(), " out of ", kNumThreads * kNumIterations);
 
     EXPECT_EQ(NumPagesAlreadySealed.load(), kNumThreads - 1) << "Only one thread should be able to seal the page";
-    EXPECT_EQ(NumLastWriters.load(), 1) << "Only one thread should be the last writer";
+    EXPECT_EQ(NumLastWriters.load(), 1u) << "Only one thread should be the last writer";
 }
 
 

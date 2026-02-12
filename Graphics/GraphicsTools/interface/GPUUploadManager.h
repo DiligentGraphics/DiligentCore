@@ -135,6 +135,8 @@ DILIGENT_BEGIN_INTERFACE(IGPUUploadManager, IObject)
                                               void*                         pCallbackData DEFAULT_VALUE(nullptr)) PURE;
 
     /// Retrieves GPU upload manager statistics.
+    ///
+    /// The method must not be called concurrently with RenderThreadUpdate().
     VIRTUAL void METHOD(GetStats)(THIS_
                                   GPUUploadManagerStats REF Stats) CONST PURE;
 };

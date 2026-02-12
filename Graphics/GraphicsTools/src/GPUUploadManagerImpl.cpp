@@ -412,13 +412,32 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
             continue;
         }
 
-        const bool UpdateScheduled = Writer.ScheduleBufferUpdate(pDstBuffer, DstOffset, NumBytes, pSrcData, Callback, pCallbackData);
-        if (Writer.EndWriting() == Page::WritingStatus::LastWriterSealed)
+        auto EndWriting = [&]() {
+            if (Writer.EndWriting() == Page::WritingStatus::LastWriterSealed)
+            {
+                // We were the last writer - enqueue the page whether the update was successfully
+                // scheduled or not, because the page is sealed and can't be written to anymore.
+                TryEnqueuePage(P);
+            }
+        };
+
+        // Prevent ABA-style bug when pages are reset and reused
+        // * Thread T1 loads P0 as current, then gets descheduled before TryBeginWriting().
+        // * Render thread swaps current to P1, seals P0, sees it has 0 ops, calls Reset(nullptr)
+        //   which clears SEALED_BIT, and pushes P0 to FreePages
+        // * T1 resumes and calls P0->TryBeginWriting() and succeeds (because SEALED_BIT is now cleared).
+        // * T1 schedules an update into a page that is not current and is simultaneously sitting in the free list,
+        //   potentially being popped/installed elsewhere.
+        // Validate that the page is still current to avoid this scenario.
+        if (P != m_pCurrentPage.load(std::memory_order_acquire))
         {
-            // We were the last writer - enqueue the page whether the update was successfully scheduled or not,
-            // because the page is sealed and can't be written to anymore.
-            TryEnqueuePage(P);
+            EndWriting();
+            // Reload current and retry
+            continue;
         }
+
+        const bool UpdateScheduled = Writer.ScheduleBufferUpdate(pDstBuffer, DstOffset, NumBytes, pSrcData, Callback, pCallbackData);
+        EndWriting();
 
         if (UpdateScheduled)
         {
