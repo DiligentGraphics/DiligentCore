@@ -83,7 +83,7 @@ void VerifyBufferContents(IBuffer* pBuffer, const std::vector<Uint8>& ExpectedDa
 
     RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
 
-    MAP_FLAGS MapFlags = (DeviceType == RENDER_DEVICE_TYPE_D3D12 || DeviceType == RENDER_DEVICE_TYPE_VULKAN) ?
+    MAP_FLAGS MapFlags = (DeviceType == RENDER_DEVICE_TYPE_D3D12 || DeviceType == RENDER_DEVICE_TYPE_VULKAN || DeviceType == RENDER_DEVICE_TYPE_WEBGPU) ?
         MAP_FLAG_DO_NOT_WAIT :
         MAP_FLAG_NONE;
 
