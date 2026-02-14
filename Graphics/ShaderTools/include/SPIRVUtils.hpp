@@ -35,13 +35,45 @@
 namespace Diligent
 {
 
+/// Defines image access modes in HLSL.
+enum IMAGE_ACCESS_MODE
+{
+    IMAGE_ACCESS_MODE_UNKNOWN,
+    IMAGE_ACCESS_MODE_READ,
+    IMAGE_ACCESS_MODE_WRITE,
+    IMAGE_ACCESS_MODE_READ_WRITE
+};
+
+/// Stores the image format and access mode for an RWTexture declared in HLSL.
+struct ImageFormatAndAccess
+{
+    TEXTURE_FORMAT    Format     = TEX_FORMAT_UNKNOWN;
+    IMAGE_ACCESS_MODE AccessMode = IMAGE_ACCESS_MODE_UNKNOWN;
+
+    ImageFormatAndAccess() noexcept = default;
+
+    constexpr ImageFormatAndAccess(TEXTURE_FORMAT    _Format,
+                                   IMAGE_ACCESS_MODE _AccessMode = IMAGE_ACCESS_MODE_UNKNOWN) noexcept :
+        Format{_Format}, AccessMode{_AccessMode} {}
+
+    bool operator==(const ImageFormatAndAccess& rhs) const
+    {
+        return Format == rhs.Format && AccessMode == rhs.AccessMode;
+    }
+
+    bool operator!=(const ImageFormatAndAccess& rhs) const
+    {
+        return !(*this == rhs);
+    }
+};
+
 /// Patches image format declarations in the SPIRV code using the provided mapping.
 ///
 /// \param [in] SPIRV        - SPIRV code.
 /// \param [in] ImageFormats - Mapping from image format names to texture formats.
 ///
 /// \return Patched SPIRV code.
-std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&                                SPIRV,
-                                        const std::unordered_map<HashMapStringKey, TEXTURE_FORMAT>& ImageFormats);
+std::vector<uint32_t> PatchImageFormatsAndAccessModes(const std::vector<uint32_t>&                                      SPIRV,
+                                                      const std::unordered_map<HashMapStringKey, ImageFormatAndAccess>& ImageInfos);
 
 } // namespace Diligent

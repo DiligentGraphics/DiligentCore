@@ -236,6 +236,18 @@ TEXTURE_FORMAT ParseGLSLImageFormat(const std::string& Format)
         return TEX_FORMAT_UNKNOWN;
 }
 
+IMAGE_ACCESS_MODE ParseGLSLImageAccessMode(const std::string& AccessMode)
+{
+    if (AccessMode == "read")
+        return IMAGE_ACCESS_MODE_READ;
+    else if (AccessMode == "write")
+        return IMAGE_ACCESS_MODE_WRITE;
+    else if (AccessMode == "read_write")
+        return IMAGE_ACCESS_MODE_READ_WRITE;
+    else
+        return IMAGE_ACCESS_MODE_UNKNOWN;
+}
+
 } // namespace Parsing
 
 } // namespace Diligent

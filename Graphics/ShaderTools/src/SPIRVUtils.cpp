@@ -26,6 +26,7 @@
 
 #include "SPIRVUtils.hpp"
 #include "SPIRVShaderResources.hpp" // required for diligent_spirv_cross
+#include "HLSLParsingTools.hpp"
 
 #include "spirv_cross.hpp"
 
@@ -95,61 +96,136 @@ static spv::ImageFormat TextureFormatToSpvImageFormat(TEXTURE_FORMAT Format)
     }
 }
 
-std::vector<uint32_t> PatchImageFormats(const std::vector<uint32_t>&                                SPIRV,
-                                        const std::unordered_map<HashMapStringKey, TEXTURE_FORMAT>& ImageFormats)
-{
-    diligent_spirv_cross::Compiler Compiler{SPIRV};
 
+std::vector<uint32_t> PatchImageFormatsAndAccessModes(const std::vector<uint32_t>& SPIRV, const std::unordered_map<HashMapStringKey, ImageFormatAndAccess>& ImageInfos)
+{
+    diligent_spirv_cross::Compiler        Compiler{SPIRV};
     diligent_spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
 
     std::unordered_map<uint32_t, uint32_t> ImageTypeIdToFormat;
-    for (uint32_t i = 0; i < SPIRV.size(); ++i)
+    ImageTypeIdToFormat.reserve(resources.storage_images.size());
+
+    uint32_t FirstFunctionWordIndex = 0;
+    uint32_t LastDecorateEnd        = 0;
+
+    constexpr size_t SpirvHeaderSize    = 5;
+    uint32_t         InstructionPointer = static_cast<uint32_t>(SpirvHeaderSize);
+    while (InstructionPointer < SPIRV.size())
     {
         // OpTypeImage
         //      0          1          2          3      4        5      6       7           8               9
         // |  OpCode  | Result | Sampled Type | Dim | Depth | Arrayed | MS | Sampled | Image Format | Access Qualifier
         constexpr uint32_t ImageFormatOffset = 8;
 
-        uint32_t OpCode = SPIRV[i] & 0xFFFF;
-        if (OpCode == spv::OpTypeImage && i + ImageFormatOffset < SPIRV.size())
+        const uint32_t Instruction = SPIRV[InstructionPointer];
+        const uint16_t WordCount   = static_cast<uint16_t>(Instruction >> 16);
+        const uint16_t OpCode      = static_cast<uint16_t>(Instruction & 0xFFFFu);
+
+        if (WordCount == 0 || InstructionPointer + WordCount > SPIRV.size())
+            break;
+
+        if (OpCode == spv::OpTypeImage)
         {
-            const uint32_t ImageTypeId       = SPIRV[i + 1];
-            ImageTypeIdToFormat[ImageTypeId] = i + ImageFormatOffset;
+            const uint32_t ImageTypeId = SPIRV[InstructionPointer + 1];
+            if (WordCount > ImageFormatOffset)
+                ImageTypeIdToFormat[ImageTypeId] = InstructionPointer + ImageFormatOffset;
         }
+        else if (OpCode == spv::OpFunction && FirstFunctionWordIndex == 0)
+        {
+            FirstFunctionWordIndex = InstructionPointer;
+        }
+        else if (OpCode == spv::OpDecorate)
+        {
+            LastDecorateEnd = InstructionPointer + WordCount;
+        }
+
+        InstructionPointer += WordCount;
     }
 
     std::vector<uint32_t> PatchedSPIRV = SPIRV;
+
+    std::vector<uint32_t> NewDecorations;
+    NewDecorations.reserve(resources.storage_images.size() * 3);
+
     for (const diligent_spirv_cross::Resource& Img : resources.storage_images)
     {
-        const diligent_spirv_cross::SPIRType& type = Compiler.get_type(Img.type_id);
-        if (type.image.dim == spv::Dim1D ||
-            type.image.dim == spv::Dim2D ||
-            type.image.dim == spv::Dim3D)
+        const diligent_spirv_cross::SPIRType& SpvType = Compiler.get_type(Img.type_id);
+        if (SpvType.image.dim == spv::Dim1D ||
+            SpvType.image.dim == spv::Dim2D ||
+            SpvType.image.dim == spv::Dim3D)
         {
-            auto FormatIt = ImageFormats.find(HashMapStringKey{Img.name.c_str()});
-            if (FormatIt != ImageFormats.end())
+            auto InfoIt = ImageInfos.find(HashMapStringKey{Img.name.c_str()});
+            if (InfoIt == ImageInfos.end())
+                continue;
+
+            const spv::ImageFormat SpvFormat = TextureFormatToSpvImageFormat(InfoIt->second.Format);
+            if (SpvFormat != spv::ImageFormatUnknown)
             {
-                spv::ImageFormat spvFormat = TextureFormatToSpvImageFormat(FormatIt->second);
-                if (spvFormat != spv::ImageFormatUnknown)
+                auto FormatOffsetIt = ImageTypeIdToFormat.find(Img.base_type_id);
+                if (FormatOffsetIt != ImageTypeIdToFormat.end() &&
+                    FormatOffsetIt->second < PatchedSPIRV.size())
                 {
-                    auto FormatOffsetIt = ImageTypeIdToFormat.find(Img.base_type_id);
-                    if (FormatOffsetIt != ImageTypeIdToFormat.end())
+                    const uint32_t ImageFormatOffset = FormatOffsetIt->second;
+                    uint32_t&      FormatWord        = PatchedSPIRV[ImageFormatOffset];
+                    if (FormatWord != static_cast<uint32_t>(SpvType.image.format) &&
+                        FormatWord != static_cast<uint32_t>(SpvFormat))
                     {
-                        const uint32_t ImageFormatOffset = FormatOffsetIt->second;
-                        uint32_t&      FormatWord        = PatchedSPIRV[ImageFormatOffset];
-                        if (FormatWord != static_cast<uint32_t>(type.image.format) &&
-                            FormatWord != static_cast<uint32_t>(spvFormat))
-                        {
-                            LOG_ERROR_MESSAGE("Inconsistent formats encountered while patching format for image '", Img.name,
-                                              "'.\nThis likely is the result of the same-format textures using inconsistent format specifiers in HLSL, for example:"
-                                              "\n  RWTexture2D<float4/*format=rgba32f>  g_RWTex1;"
-                                              "\n  RWTexture2D<float4/*format=rgba32ui> g_RWTex2;");
-                        }
-                        FormatWord = spvFormat;
+                        LOG_ERROR_MESSAGE("Inconsistent formats encountered while patching format for image '", Img.name,
+                                          "'.\nThis likely is the result of the same-format textures using inconsistent format specifiers in HLSL, for example:"
+                                          "\n  RWTexture2D<float4/*format=rgba32f>  g_RWTex1;"
+                                          "\n  RWTexture2D<float4/*format=rgba32ui> g_RWTex2;");
                     }
+                    FormatWord = static_cast<uint32_t>(SpvFormat);
                 }
             }
+
+            switch (InfoIt->second.AccessMode)
+            {
+                case IMAGE_ACCESS_MODE_READ:
+                {
+                    constexpr uint32_t WordCount = 3;
+                    constexpr uint32_t OpCode    = static_cast<uint32_t>(spv::OpDecorate);
+
+                    NewDecorations.push_back((WordCount << 16) | OpCode);
+                    NewDecorations.push_back(Img.id);
+                    NewDecorations.push_back(static_cast<uint32_t>(spv::DecorationNonWritable));
+                    break;
+                }
+
+                case IMAGE_ACCESS_MODE_WRITE:
+                {
+                    constexpr uint32_t WordCount = 3;
+                    constexpr uint32_t OpCode    = static_cast<uint32_t>(spv::OpDecorate);
+
+                    NewDecorations.push_back((WordCount << 16) | OpCode);
+                    NewDecorations.push_back(Img.id);
+                    NewDecorations.push_back(static_cast<uint32_t>(spv::DecorationNonReadable));
+                    break;
+                }
+
+                case IMAGE_ACCESS_MODE_READ_WRITE:
+                case IMAGE_ACCESS_MODE_UNKNOWN:
+                default:
+                    break;
+            }
         }
+    }
+
+    if (!NewDecorations.empty())
+    {
+        size_t InsertPos = PatchedSPIRV.size();
+
+        if (LastDecorateEnd != 0 && LastDecorateEnd <= PatchedSPIRV.size())
+        {
+            InsertPos = static_cast<size_t>(LastDecorateEnd);
+        }
+        else if (FirstFunctionWordIndex != 0 && FirstFunctionWordIndex < PatchedSPIRV.size())
+        {
+            InsertPos = static_cast<size_t>(FirstFunctionWordIndex);
+        }
+
+        PatchedSPIRV.insert(PatchedSPIRV.begin() + InsertPos,
+                            NewDecorations.begin(), NewDecorations.end());
     }
 
     return PatchedSPIRV;

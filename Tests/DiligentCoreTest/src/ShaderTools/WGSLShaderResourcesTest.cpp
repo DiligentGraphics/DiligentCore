@@ -30,6 +30,8 @@
 #include "DefaultShaderSourceStreamFactory.h"
 #include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"
+#include "HLSLParsingTools.hpp"
+#include "ShaderToolsCommon.hpp"
 
 #include <unordered_map>
 
@@ -59,6 +61,14 @@ std::string HLSLtoWGLS(const char* FilePath)
 
     GLSLangUtils::InitializeGlslang();
     auto SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, GLSLangUtils::SpirvVersion::Vk100, nullptr, nullptr);
+    StripGoogleHlslFunctionality(SPIRV);
+
+    const ShaderSourceFileData SourceData = ReadShaderSourceFile(ShaderCI);
+
+    const auto ImageFormats = Parsing::ExtractGLSLImageFormatsAndAccessModeFromHLSL(std::string(SourceData.Source, SourceData.SourceLength));
+    if (!ImageFormats.empty())
+        SPIRV = PatchImageFormatsAndAccessModes(SPIRV, ImageFormats);
+
     GLSLangUtils::FinalizeGlslang();
 
     if (SPIRV.empty())
@@ -150,10 +160,10 @@ TEST(WGSLShaderResources, RWTextures)
                           {"g_WOTex2DArr", WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_RGBA32_UINT, WGSLSampleType::UInt},
                           {"g_WOTex3D",    WGSLResourceType::WOStorageTexture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_RGBA32_FLOAT,      WGSLSampleType::Float},
 
-                          {"g_ROTex1D",    WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_1D, TEX_FORMAT_UNKNOWN,       WGSLSampleType::SInt},
-                          {"g_ROTex2D",    WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_UNKNOWN,       WGSLSampleType::Float},
-                          {"g_ROTex2DArr", WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_UNKNOWN, WGSLSampleType::UInt},
-                          {"g_ROTex3D",    WGSLResourceType::Texture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_UNKNOWN,       WGSLSampleType::Float},
+                          {"g_ROTex1D",    WGSLResourceType::ROStorageTexture, 1, RESOURCE_DIM_TEX_1D, TEX_FORMAT_RG32_SINT,       WGSLSampleType::SInt},
+                          {"g_ROTex2D",    WGSLResourceType::ROStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_RG32_FLOAT,       WGSLSampleType::Float},
+                          {"g_ROTex2DArr", WGSLResourceType::ROStorageTexture, 1, RESOURCE_DIM_TEX_2D_ARRAY, TEX_FORMAT_RG32_UINT, WGSLSampleType::UInt},
+                          {"g_ROTex3D",    WGSLResourceType::ROStorageTexture, 1, RESOURCE_DIM_TEX_3D, TEX_FORMAT_RG32_FLOAT,       WGSLSampleType::Float},
 
                           {"g_RWTex1D",    WGSLResourceType::RWStorageTexture, 1, RESOURCE_DIM_TEX_1D, TEX_FORMAT_R32_SINT,       WGSLSampleType::SInt},
                           {"g_RWTex2D",    WGSLResourceType::RWStorageTexture, 1, RESOURCE_DIM_TEX_2D, TEX_FORMAT_R32_FLOAT,      WGSLSampleType::Float},

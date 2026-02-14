@@ -125,7 +125,7 @@ cbuffer Constants
 	float4 g_Color;
 };
 
-VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV : register(u0);
+VK_IMAGE_FORMAT("rgba8") RWTexture2D</*format=rgba8*/ /*access=write*/ float4> g_tex2DUAV : register(u0);
 
 void main(in VSOutput VSOut)
 {
