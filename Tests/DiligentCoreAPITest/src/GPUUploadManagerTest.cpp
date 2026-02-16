@@ -255,33 +255,125 @@ TEST(GPUUploadManagerTest, DestroyWhileUpdatesAreRunning)
     const size_t             kNumThreads = 4;
     std::vector<std::thread> Threads;
     std::atomic<Uint32>      NumUpdatesRunning{0};
+    Threading::Signal        AllThreadsRunningSignal;
     for (size_t t = 0; t < kNumThreads; ++t)
     {
         Threads.emplace_back(
             [&]() {
-                NumUpdatesRunning.fetch_add(1);
+                if (NumUpdatesRunning.fetch_add(1) == kNumThreads - 1)
+                {
+                    AllThreadsRunningSignal.Trigger();
+                }
                 pUploadManager->ScheduleBufferUpdate(nullptr, nullptr, 0, 2048, nullptr);
                 NumUpdatesRunning.fetch_sub(1);
             });
     }
 
-    // Wait until all threads are running updates
-    while (NumUpdatesRunning.load() < kNumThreads)
-    {
-        std::this_thread::yield();
-    }
+    AllThreadsRunningSignal.Wait();
 
     std::this_thread::sleep_for(10ms);
     EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
 
     pUploadManager.Release();
 
+    for (std::thread& thread : Threads)
+    {
+        thread.join();
+    }
     EXPECT_EQ(NumUpdatesRunning.load(), 0u);
+}
+
+
+TEST(GPUUploadManagerTest, CreateWithNullContext)
+{
+    GPUTestingEnvironment* pEnv     = GPUTestingEnvironment::GetInstance();
+    IRenderDevice*         pDevice  = pEnv->GetDevice();
+    IDeviceContext*        pContext = pEnv->GetDeviceContext();
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IGPUUploadManager> pUploadManager;
+    GPUUploadManagerCreateInfo       CreateInfo{pDevice};
+    CreateInfo.PageSize         = 1024;
+    CreateInfo.InitialPageCount = 8;
+    CreateGPUUploadManager(CreateInfo, &pUploadManager);
+    ASSERT_TRUE(pUploadManager != nullptr);
+
+    const size_t kNumThreads = std::max(2u, std::thread::hardware_concurrency() - 1);
+    LOG_INFO_MESSAGE("Number of threads: ", kNumThreads);
+
+    constexpr size_t kNumUpdatesPerThread = 16;
+    constexpr size_t kUpdateSize          = 2048;
+
+    std::vector<Uint8> BufferData(kNumUpdatesPerThread * kUpdateSize * kNumThreads);
+    for (size_t i = 0; i < BufferData.size(); ++i)
+    {
+        BufferData[i] = static_cast<Uint8>(i % 256);
+    }
+
+    BufferDesc Desc;
+    Desc.Name      = "GPUUploadManagerTest buffer";
+    Desc.Size      = BufferData.size();
+    Desc.Usage     = USAGE_DEFAULT;
+    Desc.BindFlags = BIND_VERTEX_BUFFER;
+
+    RefCntAutoPtr<IBuffer> pBuffer;
+    pDevice->CreateBuffer(Desc, nullptr, &pBuffer);
+    ASSERT_TRUE(pBuffer);
+
+    std::vector<std::thread> Threads;
+    std::atomic<Uint32>      NumUpdatesRunning{0};
+    Threading::Signal        AllThreadsRunningSignal;
+
+    std::atomic<Uint32> CurrOffset{0};
+    for (size_t t = 0; t < kNumThreads; ++t)
+    {
+        Threads.emplace_back(
+            [&]() {
+                if (NumUpdatesRunning.fetch_add(1) == kNumThreads - 1)
+                {
+                    AllThreadsRunningSignal.Trigger();
+                }
+                for (size_t i = 0; i < kNumUpdatesPerThread; ++i)
+                {
+                    Uint32 Offset = CurrOffset.fetch_add(kUpdateSize);
+                    pUploadManager->ScheduleBufferUpdate(nullptr, pBuffer, Offset, kUpdateSize, &BufferData[Offset]);
+                }
+                NumUpdatesRunning.fetch_sub(1);
+            });
+    }
+
+    AllThreadsRunningSignal.Wait();
+
+    std::this_thread::sleep_for(10ms);
+    EXPECT_EQ(NumUpdatesRunning.load(), kNumThreads) << "All threads should be running updates because RenderThreadUpdate() was not called";
+
+    while (NumUpdatesRunning.load() > 0)
+    {
+        pUploadManager->RenderThreadUpdate(pContext);
+        pContext->Flush();
+        pContext->FinishFrame();
+        std::this_thread::sleep_for(10ms);
+    }
+
+    pUploadManager->RenderThreadUpdate(pContext);
 
     for (std::thread& thread : Threads)
     {
         thread.join();
     }
+
+    VerifyBufferContents(pBuffer, BufferData);
+
+    GPUUploadManagerStats Stats;
+    pUploadManager->GetStats(Stats);
+    LOG_INFO_MESSAGE("GPU Upload Manager Stats:"
+                     "\n    NumPages                   ",
+                     Stats.NumPages,
+                     "\n    NumFreePages               ", Stats.NumFreePages,
+                     "\n    NumInFlightPages           ", Stats.NumInFlightPages,
+                     "\n    PeakTotalPendingUpdateSize ", Stats.PeakTotalPendingUpdateSize,
+                     "\n    PeakUpdateSize             ", Stats.PeakUpdateSize);
 }
 
 } // namespace

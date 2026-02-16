@@ -110,14 +110,6 @@ GPUUploadManagerImpl::Page::Page(IRenderDevice*  pDevice,
     Desc.CPUAccessFlags = CPU_ACCESS_WRITE;
     pDevice->CreateBuffer(Desc, nullptr, &m_pStagingBuffer);
     VERIFY_EXPR(m_pStagingBuffer != nullptr);
-
-    RENDER_DEVICE_TYPE DeviceType = pDevice->GetDeviceInfo().Type;
-
-    MAP_FLAGS MapFlags = (DeviceType == RENDER_DEVICE_TYPE_D3D12 || DeviceType == RENDER_DEVICE_TYPE_VULKAN) ?
-        MAP_FLAG_DO_NOT_WAIT :
-        MAP_FLAG_NONE;
-    pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MapFlags, m_pData);
-    VERIFY_EXPR(m_pData != nullptr);
 }
 
 GPUUploadManagerImpl::Page::Writer GPUUploadManagerImpl::Page::TryBeginWriting()
@@ -276,12 +268,12 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
     m_Enqueued.store(false);
     m_FenceValue = 0;
 
-    if (pContext != nullptr)
+    if (pContext != nullptr && m_pData == nullptr)
     {
-        if (!m_PersistentMapped)
-        {
-            pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MAP_FLAG_NONE, m_pData);
-        }
+        const MAP_FLAGS MapFlags = m_PersistentMapped ?
+            MAP_FLAG_DO_NOT_WAIT :
+            MAP_FLAG_NONE;
+        pContext->MapBuffer(m_pStagingBuffer, MAP_WRITE, MapFlags, m_pData);
         VERIFY_EXPR(m_pData != nullptr);
     }
 }
@@ -375,8 +367,11 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
     m_pDevice->CreateFence(Desc, &m_pFence);
     VERIFY_EXPR(m_pFence != nullptr);
 
-    // Create at least one page.
-    m_pCurrentPage.store(CreatePage(CI.pContext), std::memory_order_release);
+    if (CI.pContext != nullptr)
+    {
+        // Create at least one page.
+        m_pCurrentPage.store(CreatePage(CI.pContext), std::memory_order_release);
+    }
 
     // Create additional pages if requested.
     const Uint32 InitialPageCount = CI.MaxPageCount > 0 ?
@@ -384,7 +379,19 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
         CI.InitialPageCount;
     while (m_Pages.size() < InitialPageCount)
     {
-        m_FreePages.Push(CreatePage(CI.pContext));
+        Page* pPage = CreatePage(CI.pContext);
+        if (CI.pContext != nullptr)
+        {
+            // If a context is provided, we can immediately map the staging buffer and
+            // prepare the page for use, so we push it to the free list.
+            m_FreePages.Push(pPage);
+        }
+        else
+        {
+            // If no context is provided, the page needs to be mapped in Reset(),
+            // so we add it to the list of in-flight pages.
+            m_InFlightPages.emplace_back(pPage);
+        }
     }
 }
 
@@ -406,7 +413,15 @@ GPUUploadManagerImpl::~GPUUploadManagerImpl()
 
 void GPUUploadManagerImpl::RenderThreadUpdate(IDeviceContext* pContext)
 {
-    DEV_CHECK_ERR(pContext == m_pContext, "The context passed to RenderThreadUpdate must be the same as the one used to create the GPUUploadManagerImpl");
+    if (!m_pContext)
+    {
+        // If no context was provided at creation, we can accept any context in RenderThreadUpdate, but it must be the same across calls.
+        m_pContext = pContext;
+    }
+    else
+    {
+        DEV_CHECK_ERR(pContext == m_pContext, "The context provided to RenderThreadUpdate must be the same as the one used to create the GPUUploadManagerImpl");
+    }
 
     SealAndSwapCurrentPage(pContext);
     ReclaimCompletedPages(pContext);
@@ -473,7 +488,14 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(IDeviceContext*               pC
 
     while (!AbortUpdate && !m_Stopping.load(std::memory_order_acquire))
     {
-        Page*        P      = m_pCurrentPage.load(std::memory_order_acquire);
+        Page* P = m_pCurrentPage.load(std::memory_order_acquire);
+        if (P == nullptr)
+        {
+            // No current page, wait for a page to become available
+            UpdatePendingSizeAndTryRotate(P);
+            continue;
+        }
+
         Page::Writer Writer = P->TryBeginWriting();
         if (!Writer)
         {
@@ -531,6 +553,10 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::CreatePage(IDeviceContext* pCo
     std::unique_ptr<Page> NewPage = std::make_unique<Page>(m_pDevice, pContext, PageSize);
 
     Page* P = NewPage.get();
+    if (pContext != nullptr)
+    {
+        P->Reset(pContext);
+    }
     m_Pages.emplace_back(std::move(NewPage));
 
     return P;
@@ -548,7 +574,7 @@ bool GPUUploadManagerImpl::SealAndSwapCurrentPage(IDeviceContext* pContext)
     Page* pOld = m_pCurrentPage.exchange(pFreshPage, std::memory_order_acq_rel);
 
     // Seal old page and enqueue if no writers; otherwise last writer will enqueue it
-    if (pOld->TrySeal() == Page::SealStatus::Ready)
+    if (pOld != nullptr && pOld->TrySeal() == Page::SealStatus::Ready)
     {
         TryEnqueuePage(pOld);
     }
@@ -572,7 +598,7 @@ bool GPUUploadManagerImpl::TryRotatePage(IDeviceContext* pContext, Page* Expecte
     }
 
     // We won: seal and enqueue if no writers
-    if (ExpectedCurrent && ExpectedCurrent->TrySeal() == Page::SealStatus::Ready)
+    if (ExpectedCurrent != nullptr && ExpectedCurrent->TrySeal() == Page::SealStatus::Ready)
         TryEnqueuePage(ExpectedCurrent);
 
     m_PageRotatedSignal.Tick();
