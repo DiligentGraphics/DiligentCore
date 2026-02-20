@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -458,6 +458,7 @@ public:
             if (m_DynamicTexArray->GetDesc().ArraySize != ArraySize)
             {
                 m_DynamicTexArray->Resize(pDevice, pContext, ArraySize);
+                m_TexArraySize.store(m_DynamicTexArray->GetDesc().ArraySize);
             }
 
             return m_DynamicTexArray->Update(pDevice, pContext);
