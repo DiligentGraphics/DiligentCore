@@ -1176,7 +1176,8 @@ struct HashCombiner<HasherType, PipelineStateCreateInfo> : HashCombinerBase<Hash
         this->m_Hasher(
             CI.PSODesc,
             CI.Flags,
-            CI.ResourceSignaturesCount);
+            CI.ResourceSignaturesCount,
+            CI.NumSpecializationConstants);
         if (CI.ppResourceSignatures != nullptr)
         {
             for (size_t i = 0; i < CI.ResourceSignaturesCount; ++i)
@@ -1190,6 +1191,17 @@ struct HashCombiner<HasherType, PipelineStateCreateInfo> : HashCombinerBase<Hash
         else
         {
             VERIFY_EXPR(CI.ResourceSignaturesCount == 0);
+        }
+
+        if (CI.pSpecializationConstants != nullptr)
+        {
+            for (Uint32 i = 0; i < CI.NumSpecializationConstants; ++i)
+            {
+                const SpecializationConstant& SC = CI.pSpecializationConstants[i];
+                this->m_Hasher(SC.Name, SC.ShaderStages, SC.Size);
+                if (SC.pData != nullptr && SC.Size > 0)
+                    this->m_Hasher.UpdateRaw(SC.pData, SC.Size);
+            }
         }
     }
 };
