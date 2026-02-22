@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -135,8 +135,24 @@ bool PSOSerializer<Mode>::SerializeCreateInfo(
             return false;
     }
 
+    // Serialize specialization constants
+    if (!Ser.SerializeArray(Allocator, CreateInfo.pSpecializationConstants, CreateInfo.NumSpecializationConstants,
+                            [](Serializer<Mode>&                  Ser,
+                               ConstQual<SpecializationConstant>& SpecConst) //
+                            {
+                                if (!Ser(SpecConst.Name,
+                                         SpecConst.ShaderStages,
+                                         SpecConst.Size))
+                                    return false;
+
+                                size_t DataSize = SpecConst.Size;
+                                return Ser.SerializeBytes(SpecConst.pData, DataSize);
+                            }))
+        return false;
+
     ASSERT_SIZEOF64(ShaderResourceVariableDesc, 16, "Did you add a new member to ShaderResourceVariableDesc? Please add serialization here.");
-    ASSERT_SIZEOF64(PipelineStateCreateInfo, 96, "Did you add a new member to PipelineStateCreateInfo? Please add serialization here.");
+    ASSERT_SIZEOF64(SpecializationConstant, 24, "Did you add a new member to SpecializationConstant? Please add serialization here.");
+    ASSERT_SIZEOF64(PipelineStateCreateInfo, 112, "Did you add a new member to PipelineStateCreateInfo? Please add serialization here.");
 
     return true;
 }
@@ -193,7 +209,7 @@ bool PSOSerializer<Mode>::SerializeCreateInfo(
 
     // Skip NodeMask
 
-    ASSERT_SIZEOF64(GraphicsPipelineStateCreateInfo, 344, "Did you add a new member to GraphicsPipelineStateCreateInfo? Please add serialization here.");
+    ASSERT_SIZEOF64(GraphicsPipelineStateCreateInfo, 360, "Did you add a new member to GraphicsPipelineStateCreateInfo? Please add serialization here.");
     ASSERT_SIZEOF64(LayoutElement, 40, "Did you add a new member to LayoutElement? Please add serialization here.");
 }
 
@@ -206,7 +222,7 @@ bool PSOSerializer<Mode>::SerializeCreateInfo(
 {
     return SerializeCreateInfo(Ser, static_cast<ConstQual<PipelineStateCreateInfo>&>(CreateInfo), PRSNames, Allocator);
 
-    ASSERT_SIZEOF64(ComputePipelineStateCreateInfo, 104, "Did you add a new member to ComputePipelineStateCreateInfo? Please add serialization here.");
+    ASSERT_SIZEOF64(ComputePipelineStateCreateInfo, 120, "Did you add a new member to ComputePipelineStateCreateInfo? Please add serialization here.");
 }
 
 template <SerializerMode Mode>
@@ -224,7 +240,7 @@ bool PSOSerializer<Mode>::SerializeCreateInfo(
                CreateInfo.TilePipeline.SampleCount,
                CreateInfo.TilePipeline.RTVFormats);
 
-    ASSERT_SIZEOF64(TilePipelineStateCreateInfo, 128, "Did you add a new member to TilePipelineStateCreateInfo? Please add serialization here.");
+    ASSERT_SIZEOF64(TilePipelineStateCreateInfo, 144, "Did you add a new member to TilePipelineStateCreateInfo? Please add serialization here.");
 }
 
 template <SerializerMode Mode>
@@ -336,7 +352,7 @@ bool PSOSerializer<Mode>::SerializeCreateInfo(
                            });
     return res;
 
-    ASSERT_SIZEOF64(RayTracingPipelineStateCreateInfo, 168, "Did you add a new member to RayTracingPipelineStateCreateInfo? Please add serialization here.");
+    ASSERT_SIZEOF64(RayTracingPipelineStateCreateInfo, 184, "Did you add a new member to RayTracingPipelineStateCreateInfo? Please add serialization here.");
     ASSERT_SIZEOF64(RayTracingGeneralShaderGroup, 16, "Did you add a new member to RayTracingGeneralShaderGroup? Please add serialization here.");
     ASSERT_SIZEOF64(RayTracingTriangleHitShaderGroup, 24, "Did you add a new member to RayTracingTriangleHitShaderGroup? Please add serialization here.");
     ASSERT_SIZEOF64(RayTracingProceduralHitShaderGroup, 32, "Did you add a new member to RayTracingProceduralHitShaderGroup? Please add serialization here.");
