@@ -1138,6 +1138,163 @@ TEST(GraphicsTypesXTest, ComputePipelineStateCreateInfoX)
 }
 
 
+TEST(GraphicsTypesXTest, SpecializationConstants)
+{
+    const float  SpecConst1Value = 3.14f;
+    const Uint32 SpecConst2Value = 42;
+    const Int32  SpecConst3Value = -7;
+
+    const SpecializationConstant SpecConsts[] = {
+        {"SC_Float", SHADER_TYPE_VERTEX, sizeof(SpecConst1Value), &SpecConst1Value},
+        {"SC_Uint", SHADER_TYPE_PIXEL, sizeof(SpecConst2Value), &SpecConst2Value},
+        {"SC_Int", SHADER_TYPE_COMPUTE, sizeof(SpecConst3Value), &SpecConst3Value},
+    };
+
+    // Test copy construction, move construction, and assignment from plain struct with spec constants
+    {
+        ComputePipelineStateCreateInfo Ref;
+        Ref.NumSpecializationConstants = _countof(SpecConsts);
+        Ref.pSpecializationConstants   = SpecConsts;
+        TestCtorsAndAssignments<ComputePipelineStateCreateInfoX>(Ref);
+    }
+
+    // Test AddSpecializationConstant with StringPool (verifies deep copy of names and data)
+    {
+        StringPool                      Pool;
+        ComputePipelineStateCreateInfoX DescX;
+        DescX
+            .AddSpecializationConstant({Pool("SC_Float"), SHADER_TYPE_VERTEX, sizeof(SpecConst1Value), &SpecConst1Value})
+            .AddSpecializationConstant({Pool("SC_Uint"), SHADER_TYPE_PIXEL, sizeof(SpecConst2Value), &SpecConst2Value})
+            .AddSpecializationConstant({Pool("SC_Int"), SHADER_TYPE_COMPUTE, sizeof(SpecConst3Value), &SpecConst3Value});
+        Pool.Clear();
+
+        ComputePipelineStateCreateInfo Ref;
+        Ref.NumSpecializationConstants = _countof(SpecConsts);
+        Ref.pSpecializationConstants   = SpecConsts;
+        EXPECT_EQ(DescX, Ref);
+    }
+
+    // Test AddSpecializationConstant deep-copies raw bytes.
+    {
+        Uint8       MutableData[] = {10, 20, 30, 40, 50};
+        const Uint8 RefData[]     = {10, 20, 30, 40, 50};
+
+        ComputePipelineStateCreateInfoX DescX;
+        DescX.AddSpecializationConstant({"SC_Bytes", SHADER_TYPE_PIXEL, static_cast<Uint32>(_countof(MutableData)), MutableData});
+
+        for (Uint8& Byte : MutableData)
+            Byte = 0;
+
+        ASSERT_EQ(DescX.NumSpecializationConstants, 1u);
+        const SpecializationConstant& SpecConst = DescX.pSpecializationConstants[0];
+        ASSERT_NE(SpecConst.pData, nullptr);
+        EXPECT_EQ(SpecConst.Size, static_cast<Uint32>(_countof(RefData)));
+
+        const Uint8* pData = static_cast<const Uint8*>(SpecConst.pData);
+        for (size_t i = 0; i < _countof(RefData); ++i)
+            EXPECT_EQ(pData[i], RefData[i]);
+    }
+
+    // Test create-info wrapper constructor deep-copies raw bytes.
+    {
+        const Uint8                     RefData[] = {1, 2, 3, 4};
+        ComputePipelineStateCreateInfoX DescX;
+        {
+            Uint8                        MutableData[] = {1, 2, 3, 4};
+            const SpecializationConstant SpecConst{
+                "SC_CtorBytes",
+                SHADER_TYPE_COMPUTE,
+                static_cast<Uint32>(_countof(MutableData)),
+                MutableData};
+
+            ComputePipelineStateCreateInfo SrcCI;
+            SrcCI.NumSpecializationConstants = 1;
+            SrcCI.pSpecializationConstants   = &SpecConst;
+            DescX                            = ComputePipelineStateCreateInfoX{SrcCI};
+
+            for (Uint8& Byte : MutableData)
+                Byte = 0;
+        }
+
+        ASSERT_EQ(DescX.NumSpecializationConstants, 1u);
+        const SpecializationConstant& SpecConst = DescX.pSpecializationConstants[0];
+        ASSERT_NE(SpecConst.pData, nullptr);
+        EXPECT_EQ(SpecConst.Size, static_cast<Uint32>(_countof(RefData)));
+
+        const Uint8* pData = static_cast<const Uint8*>(SpecConst.pData);
+        for (size_t i = 0; i < _countof(RefData); ++i)
+            EXPECT_EQ(pData[i], RefData[i]);
+    }
+
+    // Test ClearSpecializationConstants
+    {
+        ComputePipelineStateCreateInfoX DescX;
+        DescX
+            .AddSpecializationConstant(SpecConsts[0])
+            .AddSpecializationConstant(SpecConsts[1])
+            .AddSpecializationConstant(SpecConsts[2]);
+        EXPECT_EQ(DescX.NumSpecializationConstants, 3u);
+
+        DescX.ClearSpecializationConstants();
+        EXPECT_EQ(DescX.NumSpecializationConstants, 0u);
+        EXPECT_EQ(DescX.pSpecializationConstants, nullptr);
+        EXPECT_EQ(DescX, ComputePipelineStateCreateInfo{});
+    }
+
+    // Test copy and move survive source destruction
+    {
+        ComputePipelineStateCreateInfoX DescCopy;
+        ComputePipelineStateCreateInfoX DescMove;
+        ComputePipelineStateCreateInfo  Ref;
+        Ref.NumSpecializationConstants = _countof(SpecConsts);
+        Ref.pSpecializationConstants   = SpecConsts;
+
+        {
+            StringPool                      Pool;
+            ComputePipelineStateCreateInfoX DescX;
+            DescX
+                .AddSpecializationConstant({Pool("SC_Float"), SHADER_TYPE_VERTEX, sizeof(SpecConst1Value), &SpecConst1Value})
+                .AddSpecializationConstant({Pool("SC_Uint"), SHADER_TYPE_PIXEL, sizeof(SpecConst2Value), &SpecConst2Value})
+                .AddSpecializationConstant({Pool("SC_Int"), SHADER_TYPE_COMPUTE, sizeof(SpecConst3Value), &SpecConst3Value});
+            Pool.Clear();
+            EXPECT_EQ(DescX, Ref);
+
+            DescCopy       = DescX;
+            auto DescCopy2 = DescCopy;
+            DescMove       = std::move(DescCopy2);
+        }
+
+        EXPECT_EQ(DescCopy, Ref);
+        EXPECT_EQ(DescMove, Ref);
+
+        ComputePipelineStateCreateInfoX DescCopy2{DescCopy};
+        ComputePipelineStateCreateInfoX DescMove2{std::move(DescMove)};
+        EXPECT_EQ(DescCopy2, Ref);
+        EXPECT_EQ(DescMove2, Ref);
+        EXPECT_EQ(DescCopy2, DescMove2);
+    }
+
+    // Test AddSpecializationConstant + ClearSpecializationConstants + re-add
+    {
+        ComputePipelineStateCreateInfoX DescX;
+        DescX.AddSpecializationConstant(SpecConsts[0]);
+        EXPECT_EQ(DescX.NumSpecializationConstants, 1u);
+
+        DescX.ClearSpecializationConstants();
+        EXPECT_EQ(DescX.NumSpecializationConstants, 0u);
+
+        DescX
+            .AddSpecializationConstant(SpecConsts[1])
+            .AddSpecializationConstant(SpecConsts[2]);
+
+        ComputePipelineStateCreateInfo Ref;
+        const SpecializationConstant   RefConsts[] = {SpecConsts[1], SpecConsts[2]};
+        Ref.NumSpecializationConstants             = _countof(RefConsts);
+        Ref.pSpecializationConstants               = RefConsts;
+        EXPECT_EQ(DescX, Ref);
+    }
+}
+
 TEST(GraphicsTypesXTest, TilePipelineStateCreateInfoX)
 {
     {
