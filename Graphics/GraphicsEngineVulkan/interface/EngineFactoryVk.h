@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -111,7 +111,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryVk, IEngineFactory)
     /// Returns the supported Vulkan version. If Vulkan is not supported, returns 0.
 
     /// This function can be used to check whether Vulkan is supported on the platform.
-    VIRTUAL Version METHOD(GetVulkanVersion)(THIS) CONST PURE;
+    VIRTUAL const Version REF METHOD(GetVulkanVersion)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 

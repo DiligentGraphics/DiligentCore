@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,10 +116,14 @@ public:
         m_EnableDeviceSimulation = true;
     }
 
-    virtual Version DILIGENT_CALL_TYPE GetVulkanVersion() const override final
+    virtual const Version& DILIGENT_CALL_TYPE GetVulkanVersion() override final
     {
-        uint32_t ApiVersion = VulkanUtilities::Instance::GetApiVersion();
-        return {VK_VERSION_MAJOR(ApiVersion), VK_VERSION_MINOR(ApiVersion)};
+        if (m_VulkanVersion == Version{})
+        {
+            uint32_t ApiVersion = VulkanUtilities::Instance::GetApiVersion();
+            m_VulkanVersion     = {VK_VERSION_MAJOR(ApiVersion), VK_VERSION_MINOR(ApiVersion)};
+        }
+        return m_VulkanVersion;
     }
 
     virtual void DILIGENT_CALL_TYPE CreateDearchiver(const DearchiverCreateInfo& CreateInfo,
@@ -140,7 +144,8 @@ private:
     // To track that there is only one render device
     RefCntWeakPtr<IRenderDevice> m_wpDevice;
 
-    bool m_EnableDeviceSimulation = false;
+    bool    m_EnableDeviceSimulation = false;
+    Version m_VulkanVersion          = {};
 };
 
 

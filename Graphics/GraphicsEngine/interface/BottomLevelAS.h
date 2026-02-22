@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -321,7 +321,7 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     /// Returns the scratch buffer info for the current acceleration structure.
 
     /// \return ScratchBufferSizes object, see Diligent::ScratchBufferSizes.
-    VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
+    VIRTUAL const ScratchBufferSizes REF METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
 
 
     /// Returns the native acceleration structure handle specific to the underlying graphics API

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -266,7 +266,7 @@ public:
     }
 
     /// Implementation of ITopLevelAS::GetBuildInfo().
-    virtual TLASBuildInfo DILIGENT_CALL_TYPE GetBuildInfo() const override final
+    virtual const TLASBuildInfo& DILIGENT_CALL_TYPE GetBuildInfo() const override final
     {
         return m_BuildInfo;
     }
@@ -286,7 +286,7 @@ public:
     }
 
     /// Implementation of ITopLevelAS::GetScratchBufferSizes().
-    virtual ScratchBufferSizes DILIGENT_CALL_TYPE GetScratchBufferSizes() const override final
+    virtual const ScratchBufferSizes& DILIGENT_CALL_TYPE GetScratchBufferSizes() const override final
     {
         return this->m_ScratchSize;
     }
