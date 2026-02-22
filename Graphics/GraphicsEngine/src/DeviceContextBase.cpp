@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -853,8 +853,9 @@ bool VerifyBuildTLASAttribs(const BuildTLASAttribs& Attribs, const RayTracingPro
 
         if (Attribs.Update)
         {
-            const TLASInstanceDesc IDesc = Attribs.pTLAS->GetInstanceDesc(Inst.InstanceName);
-            CHECK_BUILD_TLAS_ATTRIBS(IDesc.InstanceIndex != INVALID_INDEX, "Update is true, but pInstances[", i, "].InstanceName does not exists.");
+            TLASInstanceDesc Desc;
+            Attribs.pTLAS->GetInstanceDesc(Inst.InstanceName, Desc);
+            CHECK_BUILD_TLAS_ATTRIBS(Desc.InstanceIndex != INVALID_INDEX, "Update is true, but pInstances[", i, "].InstanceName does not exists.");
         }
 
         if (Inst.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)

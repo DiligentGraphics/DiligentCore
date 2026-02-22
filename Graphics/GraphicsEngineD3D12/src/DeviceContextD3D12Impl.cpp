@@ -2961,12 +2961,17 @@ void DeviceContextD3D12Impl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
         {
-            const TLASBuildInstanceData& Inst     = Attribs.pInstances[i];
-            const TLASInstanceDesc       InstDesc = pTLASD3D12->GetInstanceDesc(Inst.InstanceName);
+            const TLASBuildInstanceData& Inst = Attribs.pInstances[i];
 
+            TLASInstanceDesc InstDesc;
+            if (!pTLASD3D12->GetInstanceDesc(Inst.InstanceName, InstDesc))
+            {
+                UNEXPECTED("Failed to find instance '", Inst.InstanceName, '\'');
+                continue;
+            }
             if (InstDesc.InstanceIndex >= Attribs.InstanceCount)
             {
-                UNEXPECTED("Failed to find instance by name");
+                UNEXPECTED("Failed to find instance '", Inst.InstanceName, '\'');
                 return;
             }
 

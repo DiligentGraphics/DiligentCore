@@ -3839,12 +3839,17 @@ void DeviceContextVkImpl::BuildTLAS(const BuildTLASAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
         {
-            const TLASBuildInstanceData& Inst     = Attribs.pInstances[i];
-            const TLASInstanceDesc       InstDesc = pTLASVk->GetInstanceDesc(Inst.InstanceName);
+            const TLASBuildInstanceData& Inst = Attribs.pInstances[i];
 
+            TLASInstanceDesc InstDesc;
+            if (!pTLASVk->GetInstanceDesc(Inst.InstanceName, InstDesc))
+            {
+                UNEXPECTED("Failed to find instance '", Inst.InstanceName, '\'');
+                continue;
+            }
             if (InstDesc.InstanceIndex >= Attribs.InstanceCount)
             {
-                UNEXPECTED("Failed to find instance by name");
+                UNEXPECTED("Failed to find instance '", Inst.InstanceName, '\'');
                 return;
             }
 

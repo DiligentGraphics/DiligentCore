@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -206,8 +206,10 @@ public:
         VERIFY_EXPR(pTLAS != nullptr);
 
         TopLevelASImplType* const pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
-        const TLASBuildInfo       Info      = pTLASImpl->GetBuildInfo();
-        const TLASInstanceDesc    Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
+        const TLASBuildInfo&      Info      = pTLASImpl->GetBuildInfo();
+
+        TLASInstanceDesc Desc;
+        pTLASImpl->GetInstanceDesc(pInstanceName, Desc);
 
         VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < Info.HitGroupStride);
@@ -248,8 +250,10 @@ public:
         VERIFY_EXPR(pTLAS != nullptr);
 
         TopLevelASImplType* const pTLASImpl = ClassPtrCast<TopLevelASImplType>(pTLAS);
-        const TLASBuildInfo       Info      = pTLASImpl->GetBuildInfo();
-        const TLASInstanceDesc    Desc      = pTLASImpl->GetInstanceDesc(pInstanceName);
+        const TLASBuildInfo&      Info      = pTLASImpl->GetBuildInfo();
+
+        TLASInstanceDesc Desc;
+        pTLASImpl->GetInstanceDesc(pInstanceName, Desc);
 
         VERIFY_EXPR(Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_GEOMETRY ||
                     Info.BindingMode == HIT_GROUP_BINDING_MODE_PER_INSTANCE);

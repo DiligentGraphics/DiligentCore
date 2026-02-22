@@ -165,14 +165,17 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
 
     /// Returns instance description that can be used in shader binding table.
 
-    /// \param [in] Name - Instance name that is specified in TLASBuildInstanceData::InstanceName.
-    /// \return TLASInstanceDesc object, see Diligent::TLASInstanceDesc.
-    ///         If instance does not exist then TLASInstanceDesc::ContributionToHitGroupIndex
-    ///         and TLASInstanceDesc::InstanceIndex are set to INVALID_INDEX.
+    /// \param [in]  Name - Instance name that is specified in TLASBuildInstanceData::InstanceName.
+    /// \param [out] Desc - Instance description that will be filled with the information about the
+    ///                     instance, see Diligent::TLASInstanceDesc.
+    ///                     If instance does not exist, then TLASInstanceDesc::ContributionToHitGroupIndex
+    ///                     and TLASInstanceDesc::InstanceIndex are set to INVALID_INDEX.
+    /// \return  True if instance with the specified name was found and Desc is successfully filled, false otherwise.
     ///
     /// \note Access to the TLAS must be externally synchronized.
-    VIRTUAL TLASInstanceDesc METHOD(GetInstanceDesc)(THIS_
-                                                     const Char* Name) CONST PURE;
+    VIRTUAL Bool METHOD(GetInstanceDesc)(THIS_
+                                         const Char*          Name,
+                                         TLASInstanceDesc REF Desc) CONST PURE;
 
 
     /// Returns TLAS state after the last build or update operation.

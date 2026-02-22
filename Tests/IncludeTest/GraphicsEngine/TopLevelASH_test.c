@@ -32,7 +32,8 @@ void TestTopLevelAS_CInterface(ITopLevelAS* pTLAS)
     const TopLevelASDesc* pDesc = ITopLevelAS_GetDesc(pTLAS);
     (void)pDesc;
 
-    TLASInstanceDesc InstDesc = ITopLevelAS_GetInstanceDesc(pTLAS, "Name");
+    TLASInstanceDesc InstDesc;
+    ITopLevelAS_GetInstanceDesc(pTLAS, "Name", &InstDesc);
     (void)InstDesc;
 
     const TLASBuildInfo* BuildInfo = ITopLevelAS_GetBuildInfo(pTLAS);
