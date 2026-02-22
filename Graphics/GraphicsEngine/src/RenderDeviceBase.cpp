@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -120,9 +120,10 @@ DeviceFeatures EnableDeviceFeatures(const DeviceFeatures& SupportedFeatures,
     ENABLE_FEATURE(NativeMultiDraw,                   "Native multi-draw commands are");
     ENABLE_FEATURE(AsyncShaderCompilation,            "Async shader compilation is");
     ENABLE_FEATURE(FormattedBuffers,                  "Formatted buffers are");
+    ENABLE_FEATURE(SpecializationConstants,           "Specialization constants are");
     // clang-format on
 
-    ASSERT_SIZEOF(DeviceFeatures, 47, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
+    ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here (if necessary).");
 
     return EnabledFeatures;
 }

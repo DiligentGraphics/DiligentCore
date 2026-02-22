@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1856,6 +1856,17 @@ struct DeviceFeatures
     /// Indicates if device supports formatted buffers.
     DEVICE_FEATURE_STATE FormattedBuffers       DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports pipeline specialization constants.
+
+    /// When this feature is enabled, applications can provide specialization
+    /// constants when creating a pipeline state to set constant values at
+    /// pipeline creation time. The driver may use these values to optimize
+    /// the compiled shader code.
+    ///
+	/// Supported by Vulkan and WebGPU backends.
+	/// Not supported by D3D11, D3D12, OpenGL, or Metal backends.
+    DEVICE_FEATURE_STATE SpecializationConstants DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
 
@@ -1906,11 +1917,12 @@ struct DeviceFeatures
 	Handler(TextureSubresourceViews)		   \
 	Handler(NativeMultiDraw)                   \
     Handler(AsyncShaderCompilation)			   \
-	Handler(FormattedBuffers)
+	Handler(FormattedBuffers)                  \
+    Handler(SpecializationConstants)
 
     explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept
     {
-        static_assert(sizeof(*this) == 47, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
+        static_assert(sizeof(*this) == 48, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
     #define INIT_FEATURE(Feature) Feature = State;
         ENUMERATE_DEVICE_FEATURES(INIT_FEATURE)
     #undef INIT_FEATURE
