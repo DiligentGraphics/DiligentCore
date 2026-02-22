@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -653,12 +653,14 @@ void RenderDeviceGLImpl::CreateDeferredContext(IDeviceContext** ppContext)
     *ppContext = nullptr;
 }
 
-SparseTextureFormatInfo RenderDeviceGLImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                                       RESOURCE_DIMENSION Dimension,
-                                                                       Uint32             SampleCount) const
+Bool RenderDeviceGLImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                                    RESOURCE_DIMENSION       Dimension,
+                                                    Uint32                   SampleCount,
+                                                    SparseTextureFormatInfo& FormatInfo) const
 {
     UNSUPPORTED("GetSparseTextureFormatInfo is not supported in OpenGL");
-    return {};
+    FormatInfo = {};
+    return false;
 }
 
 bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString) const

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -388,10 +388,11 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 
 
     /// Returns the sparse texture format info for the given texture format, resource dimension and sample count.
-    VIRTUAL SparseTextureFormatInfo METHOD(GetSparseTextureFormatInfo)(THIS_
-                                                                       TEXTURE_FORMAT     TexFormat,
-                                                                       RESOURCE_DIMENSION Dimension,
-                                                                       Uint32             SampleCount) CONST PURE;
+    VIRTUAL Bool METHOD(GetSparseTextureFormatInfo)(THIS_
+                                                    TEXTURE_FORMAT              TexFormat,
+                                                    RESOURCE_DIMENSION          Dimension,
+                                                    Uint32                      SampleCount,
+                                                    SparseTextureFormatInfo REF FormatInfo) CONST PURE;
 
     /// Purges device release queues and releases all stale resources.
     /// This method is automatically called by ISwapChain::Present() of the primary swap chain.

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -150,9 +150,10 @@ public:
     void DILIGENT_CALL_TYPE IdleGPU() override final;
 
     /// Implementation of IRenderDevice::GetSparseTextureFormatInfo() in WebGPU backend.
-    SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                                          RESOURCE_DIMENSION Dimension,
-                                                                          Uint32             SampleCount) const override final;
+    Bool DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                                       RESOURCE_DIMENSION       Dimension,
+                                                       Uint32                   SampleCount,
+                                                       SparseTextureFormatInfo& FormatInfo) const override final;
 
     /// Implementation of IRenderDeviceWebGPU::GetWebGPUInstance() in WebGPU backend.
     WGPUInstance DILIGENT_CALL_TYPE GetWebGPUInstance() const override final;

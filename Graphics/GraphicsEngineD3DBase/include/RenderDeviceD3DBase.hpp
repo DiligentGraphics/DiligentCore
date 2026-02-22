@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -184,13 +184,16 @@ public:
     }
 
 protected:
-    virtual SparseTextureFormatInfo DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                                                  RESOURCE_DIMENSION Dimension,
-                                                                                  Uint32             SampleCount) const override
+    virtual Bool DILIGENT_CALL_TYPE GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                                               RESOURCE_DIMENSION       Dimension,
+                                                               Uint32                   SampleCount,
+                                                               SparseTextureFormatInfo& Info) const override
     {
+        Info = {};
+
         const COMPONENT_TYPE ComponentType = CheckSparseTextureFormatSupport(TexFormat, Dimension, SampleCount, this->m_AdapterInfo.SparseResources);
         if (ComponentType == COMPONENT_TYPE_UNDEFINED)
-            return {};
+            return false;
 
         TextureDesc TexDesc;
         TexDesc.Type        = Dimension;
@@ -200,7 +203,6 @@ protected:
 
         const SparseTextureProperties SparseProps = GetStandardSparseTextureProperties(TexDesc);
 
-        SparseTextureFormatInfo Info;
         Info.BindFlags   = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
         Info.TileSize[0] = SparseProps.TileSize[0];
         Info.TileSize[1] = SparseProps.TileSize[1];
@@ -212,7 +214,7 @@ protected:
         else if (ComponentType != COMPONENT_TYPE_COMPRESSED)
             Info.BindFlags |= BIND_RENDER_TARGET | BIND_INPUT_ATTACHMENT;
 
-        return Info;
+        return true;
     }
 
 protected:

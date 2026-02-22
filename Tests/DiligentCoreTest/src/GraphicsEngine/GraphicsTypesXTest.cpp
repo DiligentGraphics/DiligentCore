@@ -1276,8 +1276,9 @@ TEST(GraphicsTypesXTest, RenderDeviceX)
             (void)TexFmtInfoEx;
         }
         {
-            auto SparseInfo = Device.GetSparseTextureFormatInfo(TEX_FORMAT_UNKNOWN, RESOURCE_DIM_BUFFER, 0);
-            (void)SparseInfo;
+            SparseTextureFormatInfo SparseInfo;
+            auto                    FmtSupported = Device.GetSparseTextureFormatInfo(TEX_FORMAT_UNKNOWN, RESOURCE_DIM_BUFFER, 0, SparseInfo);
+            (void)FmtSupported;
         }
         Device.ReleaseStaleResources();
         Device.IdleGPU();

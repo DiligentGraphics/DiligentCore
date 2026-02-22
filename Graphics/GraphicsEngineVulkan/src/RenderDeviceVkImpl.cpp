@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -780,13 +780,16 @@ HardwareQueueIndex RenderDeviceVkImpl::GetQueueFamilyIndex(SoftwareQueueIndex Cm
     return HardwareQueueIndex{CmdQueue.GetQueueFamilyIndex()};
 }
 
-SparseTextureFormatInfo RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                                       RESOURCE_DIMENSION Dimension,
-                                                                       Uint32             SampleCount) const
+Bool RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                                    RESOURCE_DIMENSION       Dimension,
+                                                    Uint32                   SampleCount,
+                                                    SparseTextureFormatInfo& Info) const
 {
+    Info = {};
+
     const COMPONENT_TYPE ComponentType = CheckSparseTextureFormatSupport(TexFormat, Dimension, SampleCount, m_AdapterInfo.SparseResources);
     if (ComponentType == COMPONENT_TYPE_UNDEFINED)
-        return {};
+        return false;
 
     const VkPhysicalDevice      vkDevice       = m_PhysicalDevice->GetVkDeviceHandle();
     const VkImageType           vkType         = Dimension == RESOURCE_DIM_TEX_3D ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D;
@@ -800,11 +803,10 @@ SparseTextureFormatInfo RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_F
 
     vkGetPhysicalDeviceSparseImageFormatProperties(vkDevice, vkFormat, vkType, vkSampleCount, vkDefaultUsage, VK_IMAGE_TILING_OPTIMAL, &FmtPropsCount, nullptr);
     if (FmtPropsCount != 1)
-        return {}; // Only single block per region is supported
+        return false; // Only single block per region is supported
 
     vkGetPhysicalDeviceSparseImageFormatProperties(vkDevice, vkFormat, vkType, vkSampleCount, vkDefaultUsage, VK_IMAGE_TILING_OPTIMAL, &FmtPropsCount, FmtProps);
 
-    SparseTextureFormatInfo Info;
     Info.BindFlags   = BIND_NONE;
     Info.TileSize[0] = FmtProps[0].imageGranularity.width;
     Info.TileSize[1] = FmtProps[0].imageGranularity.height;
@@ -829,7 +831,7 @@ SparseTextureFormatInfo RenderDeviceVkImpl::GetSparseTextureFormatInfo(TEXTURE_F
     if (CheckUsage(VK_IMAGE_USAGE_STORAGE_BIT))
         Info.BindFlags |= BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
-    return Info;
+    return true;
 }
 
 void RenderDeviceVkImpl::GetDeviceFeaturesVk(DeviceFeaturesVk& FeaturesVk) const

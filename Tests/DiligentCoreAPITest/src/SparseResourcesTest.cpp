@@ -1890,7 +1890,13 @@ TEST_F(SparseResourceTest, SparseTexture3D)
     {
         GTEST_SKIP() << "Sparse texture 3D is not supported by this device";
     }
-    if ((pDevice->GetSparseTextureFormatInfo(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_3D, 1).BindFlags & BIND_UNORDERED_ACCESS) == 0)
+
+    SparseTextureFormatInfo SparseInfo;
+    if (!pDevice->GetSparseTextureFormatInfo(TEX_FORMAT_RGBA8_UNORM, RESOURCE_DIM_TEX_3D, 1, SparseInfo))
+    {
+        GTEST_SKIP() << "Sparse texture format is not supported by this device";
+    }
+    if ((SparseInfo.BindFlags & BIND_UNORDERED_ACCESS) == 0)
     {
         GTEST_SKIP() << "Sparse texture UAV is not supported by this device";
     }
@@ -2198,7 +2204,9 @@ TEST_F(SparseResourceTest, GetSparseTextureFormatInfo)
 
     const auto CheckInfo = [&](TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension, Uint32 SampleCount, const char* FmtName, BIND_FLAGS PossibleBindFlags) //
     {
-        SparseTextureFormatInfo Info = pDevice->GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount);
+        SparseTextureFormatInfo Info;
+        if (!pDevice->GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount, Info))
+            return;
 
         if (Info.BindFlags == BIND_NONE)
             return; // not supported

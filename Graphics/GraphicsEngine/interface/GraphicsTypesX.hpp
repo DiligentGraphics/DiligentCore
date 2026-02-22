@@ -2248,11 +2248,12 @@ public:
         return m_pDevice->GetTextureFormatInfoExt(TexFormat);
     }
 
-    SparseTextureFormatInfo GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                       RESOURCE_DIMENSION Dimension,
-                                                       Uint32             SampleCount) const noexcept
+    Bool GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                    RESOURCE_DIMENSION       Dimension,
+                                    Uint32                   SampleCount,
+                                    SparseTextureFormatInfo& FormatInfo) const noexcept
     {
-        return m_pDevice->GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount);
+        return m_pDevice->GetSparseTextureFormatInfo(TexFormat, Dimension, SampleCount, FormatInfo);
     }
 
     void ReleaseStaleResources(bool ForceRelease = false) const noexcept

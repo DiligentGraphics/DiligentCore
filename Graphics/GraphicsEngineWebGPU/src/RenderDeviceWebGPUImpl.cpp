@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -276,12 +276,14 @@ void RenderDeviceWebGPUImpl::CreateDeferredContext(IDeviceContext** ppContext)
     *ppContext = nullptr;
 }
 
-SparseTextureFormatInfo RenderDeviceWebGPUImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT     TexFormat,
-                                                                           RESOURCE_DIMENSION Dimension,
-                                                                           Uint32             SampleCount) const
+Bool RenderDeviceWebGPUImpl::GetSparseTextureFormatInfo(TEXTURE_FORMAT           TexFormat,
+                                                        RESOURCE_DIMENSION       Dimension,
+                                                        Uint32                   SampleCount,
+                                                        SparseTextureFormatInfo& FormatInfo) const
 {
     UNSUPPORTED("GetSparseTextureFormatInfo is not supported in WebGPU");
-    return {};
+    FormatInfo = {};
+    return false;
 }
 
 WGPUInstance RenderDeviceWebGPUImpl::GetWebGPUInstance() const

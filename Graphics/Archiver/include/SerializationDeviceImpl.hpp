@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
                                                      IRenderPass**         ppRenderPass) override final;
 
-    UNSUPPORTED_CONST_METHOD(SparseTextureFormatInfo, GetSparseTextureFormatInfo, TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension, Uint32 SampleCount)
+    UNSUPPORTED_CONST_METHOD(Bool, GetSparseTextureFormatInfo, TEXTURE_FORMAT TexFormat, RESOURCE_DIMENSION Dimension, Uint32 SampleCount, SparseTextureFormatInfo& FormatInfo)
 
     /// Implementation of ISerializationDevice::CreateShader().
     virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo&  ShaderCI,
