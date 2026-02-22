@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023-2025 Diligent Graphics LLC
+ *  Copyright 2023-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -168,12 +168,6 @@ BufferWebGPUImpl::BufferWebGPUImpl(IReferenceCounters*        pRefCounters,
 Uint64 BufferWebGPUImpl::GetNativeHandle()
 {
     return BitCast<Uint64>(GetWebGPUBuffer());
-}
-
-SparseBufferProperties BufferWebGPUImpl::GetSparseProperties() const
-{
-    DEV_ERROR("IBuffer::GetSparseProperties() is not supported in WebGPU");
-    return {};
 }
 
 WGPUBuffer BufferWebGPUImpl::GetWebGPUBuffer() const

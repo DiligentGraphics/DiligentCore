@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -351,7 +351,7 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
                                                Uint64 Size) PURE;
 
     /// Returns the sparse buffer memory properties
-    VIRTUAL SparseBufferProperties METHOD(GetSparseProperties)(THIS) CONST PURE;
+    VIRTUAL const SparseBufferProperties REF METHOD(GetSparseProperties)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -247,6 +247,9 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     }
 
     m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 static BufferDesc BufferDescFromD3D12Resource(BufferDesc BuffDesc, ID3D12Resource* pd3d12Buffer)
@@ -316,6 +319,9 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     }
 
     m_MemoryProperties = MEMORY_PROPERTY_HOST_COHERENT;
+
+    if (m_Desc.Usage == USAGE_SPARSE)
+        InitSparseProperties();
 }
 
 BufferD3D12Impl::~BufferD3D12Impl()
@@ -431,11 +437,9 @@ D3D12_RESOURCE_STATES BufferD3D12Impl::GetD3D12ResourceState() const
     return ResourceStateFlagsToD3D12ResourceStates(GetState());
 }
 
-SparseBufferProperties BufferD3D12Impl::GetSparseProperties() const
+void BufferD3D12Impl::InitSparseProperties()
 {
-    DEV_CHECK_ERR(m_Desc.Usage == USAGE_SPARSE,
-                  "IBuffer::GetSparseProperties() must only be used for sparse buffer");
-
+    VERIFY_EXPR(m_Desc.Usage == USAGE_SPARSE);
     ID3D12Device* pd3d12Device = m_pDevice->GetD3D12Device();
 
     UINT             NumTilesForEntireResource = 0;
@@ -451,10 +455,8 @@ SparseBufferProperties BufferD3D12Impl::GetSparseProperties() const
     VERIFY(StandardTileShapeForNonPackedMips.WidthInTexels == D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES,
            "Expected to be a standard block size");
 
-    SparseBufferProperties Props;
-    Props.AddressSpaceSize = Uint64{NumTilesForEntireResource} * StandardTileShapeForNonPackedMips.WidthInTexels;
-    Props.BlockSize        = StandardTileShapeForNonPackedMips.WidthInTexels;
-    return Props;
+    m_SparseProps.AddressSpaceSize = Uint64{NumTilesForEntireResource} * StandardTileShapeForNonPackedMips.WidthInTexels;
+    m_SparseProps.BlockSize        = StandardTileShapeForNonPackedMips.WidthInTexels;
 }
 
 } // namespace Diligent

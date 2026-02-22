@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -84,9 +84,6 @@ public:
     /// Implementation of IBufferD3D12::GetD3D12ResourceState().
     virtual D3D12_RESOURCE_STATES DILIGENT_CALL_TYPE GetD3D12ResourceState() const override final;
 
-    /// Implementation of IBuffer::GetSparseProperties().
-    virtual SparseBufferProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
-
     __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress()
     {
         VERIFY_EXPR(m_Desc.Usage != USAGE_DYNAMIC);
@@ -103,6 +100,9 @@ private:
     void CreateUAV(struct BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor) const;
     void CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor) const;
 
+    void InitSparseProperties();
+
+private:
     DescriptorHeapAllocation m_CBVDescriptorAllocation;
 };
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -335,9 +335,10 @@ public:
     virtual const SparseTextureProperties& DILIGENT_CALL_TYPE GetSparseProperties() const override final
     {
         DEV_CHECK_ERR(this->m_Desc.Usage == USAGE_SPARSE,
-                      "ITexture::GetSparseProperties() must be used for sparse texture");
+                      "ITexture::GetSparseProperties() must be used for sparse textures only");
         VERIFY_EXPR(m_pSparseProps != nullptr);
-        return *m_pSparseProps;
+        static constexpr SparseTextureProperties kDefaultSparseProps{};
+        return m_pSparseProps ? *m_pSparseProps : kDefaultSparseProps;
     }
 
 protected:

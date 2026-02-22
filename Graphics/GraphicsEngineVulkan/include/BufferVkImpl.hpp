@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -87,9 +87,6 @@ public:
     virtual void DILIGENT_CALL_TYPE InvalidateMappedRange(Uint64 StartOffset,
                                                           Uint64 Size) override final;
 
-    /// Implementation of IBuffer::GetSparseProperties().
-    virtual SparseBufferProperties DILIGENT_CALL_TYPE GetSparseProperties() const override final;
-
     bool CheckAccessFlags(VkAccessFlags AccessFlags) const
     {
         return (GetAccessFlags() & AccessFlags) == AccessFlags;
@@ -106,6 +103,9 @@ private:
 
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;
 
+    void InitSparseProperties();
+
+private:
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc& ViewDesc);
 
     Uint32       m_DynamicOffsetAlignment    = 0;
