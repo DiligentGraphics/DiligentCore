@@ -58,7 +58,7 @@ TEST(Common_WeakValueHashMap, GetOrInsert)
         auto Handle1 = Map.GetOrInsert(1, "Value");
 
         // Release map while the handle is still alive
-        Map = {};
+        Map = WeakValueHashMap<int, std::string>{};
 
         EXPECT_TRUE(Handle1);
         EXPECT_STREQ(Handle1->c_str(), "Value");
@@ -71,7 +71,7 @@ TEST(Common_WeakValueHashMap, GetOrInsert)
         auto Handle1 = Map.GetOrInsert(1, "Value");
 
         // Release map while the handle is still alive
-        Map = {};
+        Map = WeakValueHashMap<int, std::string>{};
 
         WeakValueHashMap<int, std::string>::ValueHandle Handle2{std::move(Handle1)};
         EXPECT_FALSE(Handle1);
@@ -86,7 +86,7 @@ TEST(Common_WeakValueHashMap, GetOrInsert)
         auto Handle1 = Map.GetOrInsert(1, "Value");
 
         // Release map while the handle is still alive
-        Map = {};
+        Map = WeakValueHashMap<int, std::string>{};
 
         WeakValueHashMap<int, std::string>::ValueHandle Handle2;
         Handle2 = std::move(Handle1);
@@ -207,72 +207,78 @@ static constexpr int kNumParallelKeys = 16384;
 // Test that multiple threads can concurrently get or insert values into the map
 TEST(Common_WeakValueHashMap, ParallelGetOrInsert1)
 {
-    std::vector<std::thread> Threads(kNumThreads);
-
-    Threading::Signal StartSignal;
-
-    WeakValueHashMap<int, std::string> Map;
-    for (size_t t = 0; t < kNumThreads; ++t)
+    for (size_t NumShards : {1, 2, 4})
     {
-        Threads[t] = std::thread{
-            [&Map, &StartSignal]() //
-            {
-                StartSignal.Wait(true, kNumThreads);
+        std::vector<std::thread> Threads(kNumThreads);
 
-                for (int k = 0; k < kNumParallelKeys; ++k)
+        Threading::Signal StartSignal;
+
+        WeakValueHashMap<int, std::string> Map{NumShards};
+        for (size_t t = 0; t < kNumThreads; ++t)
+        {
+            Threads[t] = std::thread{
+                [&Map, &StartSignal]() //
                 {
-                    std::string Value = "Value" + std::to_string(k);
+                    StartSignal.Wait(true, kNumThreads);
 
-                    auto Handle = Map.GetOrInsert(k, Value);
-                    EXPECT_TRUE(Handle);
-                    EXPECT_EQ(*Handle, Value);
-                }
-            }};
-    }
+                    for (int k = 0; k < kNumParallelKeys; ++k)
+                    {
+                        std::string Value = "Value" + std::to_string(k);
 
-    StartSignal.Trigger(true);
-    for (auto& Thread : Threads)
-    {
-        Thread.join();
+                        auto Handle = Map.GetOrInsert(k, Value);
+                        EXPECT_TRUE(Handle);
+                        EXPECT_EQ(*Handle, Value);
+                    }
+                }};
+        }
+
+        StartSignal.Trigger(true);
+        for (auto& Thread : Threads)
+        {
+            Thread.join();
+        }
     }
 }
 
 // Similar to the previous test, but all values are kept alive
 TEST(Common_WeakValueHashMap, ParallelGetOrInsert2)
 {
-    std::vector<std::thread> Threads(kNumThreads);
-
-    Threading::Signal StartSignal;
-
-    std::vector<WeakValueHashMap<int, std::string>::ValueHandle> Handles(kNumThreads * kNumParallelKeys);
-
-    WeakValueHashMap<int, std::string> Map;
-    for (size_t t = 0; t < kNumThreads; ++t)
+    for (size_t NumShards : {1, 2, 4})
     {
-        Threads[t] = std::thread{
-            [&Map, &StartSignal, &Handles](size_t ThreadId) //
-            {
-                StartSignal.Wait(true, kNumThreads);
+        std::vector<std::thread> Threads(kNumThreads);
 
-                for (int k = 0; k < kNumParallelKeys; ++k)
+        Threading::Signal StartSignal;
+
+        std::vector<WeakValueHashMap<int, std::string>::ValueHandle> Handles(kNumThreads * kNumParallelKeys);
+
+        WeakValueHashMap<int, std::string> Map{NumShards};
+        for (size_t t = 0; t < kNumThreads; ++t)
+        {
+            Threads[t] = std::thread{
+                [&Map, &StartSignal, &Handles](size_t ThreadId) //
                 {
-                    std::string Value = "Value" + std::to_string(k);
+                    StartSignal.Wait(true, kNumThreads);
 
-                    auto Handle = Map.GetOrInsert(k, Value);
-                    EXPECT_TRUE(Handle);
-                    EXPECT_EQ(*Handle, Value);
+                    for (int k = 0; k < kNumParallelKeys; ++k)
+                    {
+                        std::string Value = "Value" + std::to_string(k);
 
-                    Handles[ThreadId * kNumParallelKeys + k] = std::move(Handle);
-                }
-            },
-            t,
-        };
-    }
+                        auto Handle = Map.GetOrInsert(k, Value);
+                        EXPECT_TRUE(Handle);
+                        EXPECT_EQ(*Handle, Value);
 
-    StartSignal.Trigger(true);
-    for (auto& Thread : Threads)
-    {
-        Thread.join();
+                        Handles[ThreadId * kNumParallelKeys + k] = std::move(Handle);
+                    }
+                },
+                t,
+            };
+        }
+
+        StartSignal.Trigger(true);
+        for (auto& Thread : Threads)
+        {
+            Thread.join();
+        }
     }
 }
 

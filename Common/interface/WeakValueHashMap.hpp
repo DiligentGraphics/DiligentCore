@@ -32,6 +32,7 @@
 #include <unordered_map>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
@@ -70,7 +71,14 @@ private:
     class Impl;
 
 public:
-    WeakValueHashMap() = default;
+    explicit WeakValueHashMap(size_t NumShards = 1) :
+        m_pImpl(NumShards != 0 ? NumShards : 1)
+    {
+        for (std::shared_ptr<Impl>& pImpl : m_pImpl)
+        {
+            pImpl = std::make_shared<Impl>();
+        }
+    }
 
     // clang-format off
     WeakValueHashMap           (const WeakValueHashMap&) = delete;
@@ -136,16 +144,23 @@ public:
 
     ValueHandle Get(const KeyType& Key) const
     {
-        return m_pImpl->Get(Key);
+        const size_t ShardIdx = GetShardIndex(Key);
+        return m_pImpl[ShardIdx]->Get(Key);
     }
 
     template <typename... ArgsType>
     ValueHandle GetOrInsert(const KeyType& Key, ArgsType&&... Args) const
     {
-        return m_pImpl->GetOrInsert(Key, std::forward<ArgsType>(Args)...);
+        const size_t ShardIdx = GetShardIndex(Key);
+        return m_pImpl[ShardIdx]->GetOrInsert(Key, std::forward<ArgsType>(Args)...);
     }
 
 private:
+    size_t GetShardIndex(const KeyType& Key) const
+    {
+        return m_pImpl.size() > 1 ? m_Hasher(Key) % m_pImpl.size() : 0;
+    }
+
     class Impl : public std::enable_shared_from_this<Impl>
     {
     public:
@@ -184,7 +199,8 @@ private:
             // Create shared_ptr with deleter that erases the Key from the map when
             // the last reference to the value is destroyed
             std::shared_ptr<ValueType> pNewValue{
-                new ValueType{std::forward<ArgsType>(Args)...},
+                // Use parentheses to avoid initializer_list surprises.
+                new ValueType(std::forward<ArgsType>(Args)...),
                 [WeakSelf = std::move(WeakSelf), Key](ValueType* pValue) {
                     // Get a pointer before deleting the value as the value keeps the map alive.
                     std::shared_ptr<Impl> Self = WeakSelf.lock();
@@ -249,7 +265,8 @@ private:
         std::mutex                                                           m_Mtx;
         std::unordered_map<KeyType, std::weak_ptr<ValueType>, Hasher, Keyeq> m_Map;
     };
-    std::shared_ptr<Impl> m_pImpl = std::make_shared<Impl>();
+    std::vector<std::shared_ptr<Impl>> m_pImpl;
+    Hasher                             m_Hasher;
 };
 
 } // namespace Diligent
