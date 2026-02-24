@@ -798,6 +798,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         Features.TileShaders                 = DEVICE_FEATURE_STATE_DISABLED;
         Features.SubpassFramebufferFetch     = DEVICE_FEATURE_STATE_DISABLED;
         Features.TextureComponentSwizzle     = DEVICE_FEATURE_STATE_DISABLED;
+        Features.SpecializationConstants     = DEVICE_FEATURE_STATE_DISABLED;
 
         {
             bool WireframeFillSupported = (glPolygonMode != nullptr);
