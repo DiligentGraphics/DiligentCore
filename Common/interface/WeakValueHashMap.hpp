@@ -1,5 +1,5 @@
 /*
- *  Copyright 2025 Diligent Graphics LLC
+ *  Copyright 2025-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -70,44 +70,40 @@ private:
     class Impl;
 
 public:
+    WeakValueHashMap() = default;
+
+    // clang-format off
+    WeakValueHashMap           (const WeakValueHashMap&) = delete;
+    WeakValueHashMap& operator=(const WeakValueHashMap&) = delete;
+    WeakValueHashMap           (WeakValueHashMap&&) noexcept = default;
+    WeakValueHashMap& operator=(WeakValueHashMap&&) noexcept = default;
+    // clang-format on
+
     /// ValueHandle is a handle to a value in the WeakValueHashMap.
 
-    /// It holds a strong pointer to the value and removes the entry from the map when it is destroyed.
+    /// It holds a strong pointer to the value (and keeps the map implementation alive while the handle exists).
+    /// The map entry is removed by the value's custom deleter when the last strong reference to the value is destroyed.
     class ValueHandle
     {
     public:
         ValueHandle() = default;
 
-        ~ValueHandle()
-        {
-            Release();
-        }
-
         // Disable copy semantics
         ValueHandle(const ValueHandle&) = delete;
         ValueHandle& operator=(const ValueHandle&) = delete;
 
-        ValueHandle(ValueHandle&& rhs) noexcept :
-            m_pMap{std::move(rhs.m_pMap)},
-            m_pValue{std::move(rhs.m_pValue)},
-            m_Key{std::move(rhs.m_Key)}
-        {
-            rhs.m_pMap.reset();
-            rhs.m_pValue.reset();
-        }
+        ValueHandle(ValueHandle&& rhs) noexcept = default;
 
         ValueHandle& operator=(ValueHandle&& rhs) noexcept
         {
             if (this != &rhs)
             {
-                Release();
+                // It is important to reset the value first to ensure that the map is alive if m_pValue keeps the last reference.
+                m_pValue.reset();
+                m_pMap.reset();
 
                 m_pMap   = std::move(rhs.m_pMap);
                 m_pValue = std::move(rhs.m_pValue);
-                m_Key    = std::move(rhs.m_Key);
-
-                rhs.m_pMap.reset();
-                rhs.m_pValue.reset();
             }
             return *this;
         }
@@ -125,31 +121,17 @@ public:
     private:
         friend class WeakValueHashMap<KeyType, ValueType, Hasher, Keyeq>;
 
-        void Release()
-        {
-            if (m_pMap)
-            {
-                // Release the shared pointer first so that Remove() can check if
-                // any other shared pointers exist
-                m_pValue.reset();
-
-                m_pMap->Remove(m_Key);
-                m_pMap.reset();
-            }
-        }
-
         ValueHandle(Impl&                      Map,
-                    std::shared_ptr<ValueType> pValue,
-                    KeyType                    Key) :
+                    std::shared_ptr<ValueType> pValue) :
             m_pMap{Map.shared_from_this()},
-            m_pValue{std::move(pValue)},
-            m_Key{std::move(Key)}
+            m_pValue{std::move(pValue)}
         {}
 
     private:
+        // Declaration order matters for destruction:
+        // m_pValue is destroyed first, then m_pMap.
         std::shared_ptr<Impl>      m_pMap;
         std::shared_ptr<ValueType> m_pValue;
-        KeyType                    m_Key;
     };
 
     ValueHandle Get(const KeyType& Key) const
@@ -176,12 +158,10 @@ private:
             {
                 if (auto pValue = it->second.lock())
                 {
-                    return ValueHandle{*this, std::move(pValue), Key};
+                    return ValueHandle{*this, std::move(pValue)};
                 }
                 else
                 {
-                    // Since ValueHandle::Release() resets the shared_ptr before calling Remove(),
-                    // we may find expired weak pointers in the map. Remove them.
                     m_Map.erase(it);
                 }
             }
@@ -198,7 +178,22 @@ private:
             }
 
             // Create the new value outside of the lock
-            auto pNewValue = std::make_shared<ValueType>(std::forward<ArgsType>(Args)...);
+
+            std::weak_ptr<Impl> WeakSelf{this->shared_from_this()};
+
+            // Create shared_ptr with deleter that erases the Key from the map when
+            // the last reference to the value is destroyed
+            std::shared_ptr<ValueType> pNewValue{
+                new ValueType{std::forward<ArgsType>(Args)...},
+                [WeakSelf = std::move(WeakSelf), Key](ValueType* pValue) {
+                    // Get a pointer before deleting the value as the value keeps the map alive.
+                    std::shared_ptr<Impl> Self = WeakSelf.lock();
+                    delete pValue;
+                    if (Self)
+                    {
+                        Self->Remove(Key);
+                    }
+                }};
 
             std::lock_guard<std::mutex> Lock{m_Mtx};
 
@@ -209,20 +204,20 @@ private:
                 if (auto pValue = it->second.lock())
                 {
                     // Discard the newly created value and use the one created by the other thread
-                    return ValueHandle{*this, std::move(pValue), Key};
+                    return ValueHandle{*this, std::move(pValue)};
                 }
                 else
                 {
                     // Replace the expired weak pointer with the newly created value
                     it->second = pNewValue;
-                    return ValueHandle{*this, std::move(pNewValue), Key};
+                    return ValueHandle{*this, std::move(pNewValue)};
                 }
             }
 
             // Insert the new value
             bool Inserted = m_Map.emplace(Key, pNewValue).second;
             VERIFY(Inserted, "Failed to insert new value into the map. This should never happen as we have already checked that the key does not exist.");
-            return ValueHandle{*this, std::move(pNewValue), Key};
+            return ValueHandle{*this, std::move(pNewValue)};
         }
 
         void Remove(const KeyType& Key)
@@ -232,13 +227,11 @@ private:
             auto Iter = m_Map.find(Key);
             if (Iter == m_Map.end())
             {
-                // If two ValueHandles are destroyed simultaneously from different threads,
-                // both may try to remove the same entry. In this case, just return.
                 return;
             }
 
-            // If the weak pointer is not expired, it means that another ValueHandle instance exists,
-            // which will remove the entry when it is destroyed.
+            // Only erase if the weak entry refers to no live value anymore.
+            // (If the key was reused for a newer value, its weak_ptr won't be expired.)
             if (Iter->second.expired())
             {
                 m_Map.erase(Iter);
@@ -248,7 +241,7 @@ private:
         ~Impl()
         {
             VERIFY(m_Map.empty(), "Map is not empty upon destruction. This should never happen because all entries should have been "
-                                  "removed by destructors of ValueHandle objects, and the map can't be destroyed while any ValueHandle "
+                                  "removed by custom deleters, and the map can't be destroyed while any ValueHandle "
                                   "instances are alive.");
         }
 
