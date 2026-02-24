@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1611,5 +1611,152 @@ TEST_F(PSOCreationFailureTest, MissingCombinedImageSampler)
     TestCreatePSOFailure(PsoCI, "contains combined image sampler 'g_Texture', while the same resource is defined by the pipeline "
                                 "resource signature 'PSO Create Failure - Missing Combined Image Sampler' as separate image");
 }
+
+
+TEST_F(PSOCreationFailureTest, SpecConst_NullPointerWithNonZeroCount)
+{
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst NullPointerWithNonZeroCount")};
+    PsoCI.NumSpecializationConstants = 1;
+    PsoCI.pSpecializationConstants   = nullptr;
+    TestCreatePSOFailure(PsoCI, "pSpecializationConstants is null");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_FeatureDisabled)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants == DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_VERTEX, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst FeatureDisabled")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "SpecializationConstants device feature is not enabled");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_NullName)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {nullptr, SHADER_TYPE_VERTEX, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst NullName")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "Name must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_EmptyName)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {"", SHADER_TYPE_VERTEX, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst EmptyName")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "Name must not be empty");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_UnknownShaderStages)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_UNKNOWN, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst UnknownShaderStages")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "ShaderStages must not be SHADER_TYPE_UNKNOWN");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_ZeroSize)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_VERTEX, 0, &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst ZeroSize")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "Size must not be zero");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_NullData)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_VERTEX, sizeof(float), nullptr},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst NullData")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "pData must not be null");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_DuplicateNameOverlappingStages)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, sizeof(Data), &Data},
+        {"Constant0", SHADER_TYPE_VERTEX | SHADER_TYPE_GEOMETRY, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst DuplicateNameOverlappingStages")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "is defined in overlapping shader stages");
+}
+
+TEST_F(PSOCreationFailureTest, SpecConst_ErrorAtSecondElement)
+{
+    if (GPUTestingEnvironment::GetInstance()->GetDevice()->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+
+    const float Data = 1.0f;
+
+    // First element is valid, second has null name
+    SpecializationConstant SpecConsts[] = {
+        {"Constant0", SHADER_TYPE_VERTEX, sizeof(Data), &Data},
+        {nullptr, SHADER_TYPE_PIXEL, sizeof(Data), &Data},
+    };
+
+    auto PsoCI{GetGraphicsPSOCreateInfo("PSO Create Failure - SpecConst ErrorAtSecondElement")};
+    PsoCI.NumSpecializationConstants = _countof(SpecConsts);
+    PsoCI.pSpecializationConstants   = SpecConsts;
+    TestCreatePSOFailure(PsoCI, "pSpecializationConstants[1].Name must not be null");
+}
+
 
 } // namespace
