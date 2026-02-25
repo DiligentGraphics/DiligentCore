@@ -1,0 +1,19 @@
+// Test shader for specialization constants reflection
+[[vk::constant_id(0)]] const bool   g_EnableFeature = true;
+[[vk::constant_id(1)]] const int    g_IntParam      = 42;
+[[vk::constant_id(2)]] const uint   g_UintParam     = 7;
+[[vk::constant_id(3)]] const float  g_FloatParam    = 1.0f;
+
+float4 main() : SV_Target
+{
+    float4 result = float4(0, 0, 0, 1);
+
+    if (g_EnableFeature)
+    {
+        result.x = float(g_IntParam);
+        result.y = float(g_UintParam);
+        result.z = g_FloatParam;
+    }
+
+    return result;
+}

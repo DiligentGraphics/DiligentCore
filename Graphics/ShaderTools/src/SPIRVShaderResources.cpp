@@ -613,9 +613,57 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     ResCounters.NumPushConstants = static_cast<Uint32>(resources.push_constant_buffers.size());
     static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 13, "Please set the new resource type counter here");
 
+    // Specialization constants reflection
+    struct SpecConstInfo
+    {
+        std::string            Name;
+        uint32_t               SpecId    = 0;
+        uint32_t               Size      = 0;
+        SHADER_CODE_BASIC_TYPE BasicType = SHADER_CODE_BASIC_TYPE_UNKNOWN;
+    };
+    std::vector<SpecConstInfo> SpecConstants;
+    Uint32                     NumSpecConstants = 0;
+
+    {
+        diligent_spirv_cross::SmallVector<diligent_spirv_cross::SpecializationConstant> spec_consts =
+            Compiler.get_specialization_constants();
+        for (const diligent_spirv_cross::SpecializationConstant& sc : spec_consts)
+        {
+            const diligent_spirv_cross::SPIRConstant& Constant = Compiler.get_constant(sc.id);
+            const diligent_spirv_cross::SPIRType&     Type     = Compiler.get_type(Constant.constant_type);
+
+            // Only support scalar specialization constants
+            if (Type.vecsize != 1 || Type.columns != 1)
+            {
+                LOG_WARNING_MESSAGE("Specialization constant '", Compiler.get_name(sc.id),
+                                    "' (SpecId=", sc.constant_id, ") in shader '", CI.Name,
+                                    "' is not a scalar type and will be skipped.");
+                continue;
+            }
+
+            SpecConstInfo Info;
+            Info.Name   = Compiler.get_name(sc.id);
+            Info.SpecId = sc.constant_id;
+            // OpTypeBool has width==1 in SPIRV-Cross; use 4 bytes (VkBool32) for bool specialization constants
+            Info.Size      = Type.basetype == diligent_spirv_cross::SPIRType::Boolean ? 4 : Type.width / 8;
+            Info.BasicType = SpirvBaseTypeToShaderCodeBasicType(Type.basetype);
+
+            if (Info.Name.empty())
+            {
+                LOG_WARNING_MESSAGE("Specialization constant with SpecId=", sc.constant_id,
+                                    " in shader '", CI.Name, "' has no name (OpName) and will be skipped.");
+                continue;
+            }
+
+            ResourceNamesPoolSize += Info.Name.length() + 1;
+            SpecConstants.emplace_back(std::move(Info));
+        }
+        NumSpecConstants = static_cast<Uint32>(SpecConstants.size());
+    }
+
     // Resource names pool is only needed to facilitate string allocation.
     StringPool ResourceNamesPool;
-    Initialize(Allocator, ResCounters, NumShaderStageInputs, ResourceNamesPoolSize, ResourceNamesPool);
+    Initialize(Allocator, ResCounters, NumShaderStageInputs, NumSpecConstants, ResourceNamesPoolSize, ResourceNamesPool);
 
     // Uniform buffer reflections
     std::vector<ShaderCodeBufferDescX> UBReflections;
@@ -842,6 +890,22 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         VERIFY_EXPR(CurrStageInput == GetNumShaderStageInputs());
     }
 
+    if (!SpecConstants.empty())
+    {
+        Uint32 CurrSpecConst = 0;
+        for (const SpecConstInfo& SC : SpecConstants)
+        {
+            new (&GetSpecConstant(CurrSpecConst++)) SPIRVSpecializationConstantAttribs //
+                {
+                    ResourceNamesPool.CopyString(SC.Name),
+                    SC.SpecId,
+                    SC.Size,
+                    SC.BasicType //
+                };
+        }
+        VERIFY_EXPR(CurrSpecConst == GetNumSpecConstants());
+    }
+
     VERIFY(ResourceNamesPool.GetRemainingSize() == 0, "Names pool must be empty");
 
     if (m_ShaderType == SHADER_TYPE_COMPUTE)
@@ -862,6 +926,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
 void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
                                       const ResourceCounters& Counters,
                                       Uint32                  NumShaderStageInputs,
+                                      Uint32                  NumSpecConstants,
                                       size_t                  ResourceNamesPoolSize,
                                       StringPool&             ResourceNamesPool)
 {
@@ -890,12 +955,16 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     VERIFY(NumShaderStageInputs <= MaxOffset, "Max offset exceeded");
     m_NumShaderStageInputs = static_cast<OffsetType>(NumShaderStageInputs);
 
+    VERIFY(NumSpecConstants <= MaxOffset, "Max offset exceeded");
+    m_NumSpecConstants = static_cast<OffsetType>(NumSpecConstants);
+
     size_t AlignedResourceNamesPoolSize = AlignUp(ResourceNamesPoolSize, sizeof(void*));
 
     static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)");
     // clang-format off
     size_t MemorySize = GetTotalResources()           * sizeof(SPIRVShaderResourceAttribs) +
                         m_NumShaderStageInputs        * sizeof(SPIRVShaderStageInputAttribs) +
+                        m_NumSpecConstants            * sizeof(SPIRVSpecializationConstantAttribs) +
                         AlignedResourceNamesPoolSize  * sizeof(char);
 
     VERIFY_EXPR(GetNumUBs()           == Counters.NumUBs);
@@ -917,7 +986,8 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
         m_MemoryBuffer  = std::unique_ptr<void, STDDeleterRawMem<void>>(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(m_MemoryBuffer.get()) +
             GetTotalResources() * sizeof(SPIRVShaderResourceAttribs) +
-            m_NumShaderStageInputs * sizeof(SPIRVShaderStageInputAttribs);
+            m_NumShaderStageInputs * sizeof(SPIRVShaderStageInputAttribs) +
+            m_NumSpecConstants * sizeof(SPIRVSpecializationConstantAttribs);
         ResourceNamesPool.AssignMemory(NamesPool, ResourceNamesPoolSize);
     }
 }
@@ -950,6 +1020,9 @@ SPIRVShaderResources::~SPIRVShaderResources()
 
     for (Uint32 n = 0; n < GetNumShaderStageInputs(); ++n)
         GetShaderStageInputAttribs(n).~SPIRVShaderStageInputAttribs();
+
+    for (Uint32 n = 0; n < GetNumSpecConstants(); ++n)
+        GetSpecConstant(n).~SPIRVSpecializationConstantAttribs();
 
     for (Uint32 n = 0; n < GetNumAccelStructs(); ++n)
         GetAccelStruct(n).~SPIRVShaderResourceAttribs();
@@ -1190,6 +1263,18 @@ std::string SPIRVShaderResources::DumpResources() const
         } //
     );
     VERIFY_EXPR(ResNum == GetTotalResources());
+
+    if (GetNumSpecConstants() > 0)
+    {
+        ss << std::endl
+           << "Specialization constants (" << GetNumSpecConstants() << "):";
+        for (Uint32 n = 0; n < GetNumSpecConstants(); ++n)
+        {
+            const auto& SC = GetSpecConstant(n);
+            ss << std::endl
+               << "  '" << SC.Name << "' SpecId=" << SC.SpecId << " Size=" << SC.Size;
+        }
+    }
 
     return ss.str();
 }
