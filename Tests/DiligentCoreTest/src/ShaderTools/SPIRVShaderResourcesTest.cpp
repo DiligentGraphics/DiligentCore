@@ -589,15 +589,6 @@ TEST_F(SPIRVShaderResourcesTest, MixedResources_DXC)
     TestMixedResources(SHADER_COMPILER_DXC);
 }
 
-
-struct SPIRVSpecConstRefAttribs
-{
-    const char* const            Name;
-    const uint32_t               SpecId;
-    const uint32_t               Size;
-    const SHADER_CODE_BASIC_TYPE BasicType;
-};
-
 void TestSpecializationConstants(SHADER_COMPILER Compiler)
 {
     std::vector<unsigned int> SPIRV;
@@ -617,7 +608,7 @@ void TestSpecializationConstants(SHADER_COMPILER Compiler)
 
     LOG_INFO_MESSAGE("SPIRV Resources:\n", Resources.DumpResources());
 
-    const std::vector<SPIRVSpecConstRefAttribs> RefSpecConstants = {
+    const std::vector<SPIRVSpecializationConstantAttribs> RefSpecConstants = {
         {"g_EnableFeature", 0, 4, SHADER_CODE_BASIC_TYPE_BOOL},
         {"g_IntParam", 1, 4, SHADER_CODE_BASIC_TYPE_INT},
         {"g_UintParam", 2, 4, SHADER_CODE_BASIC_TYPE_UINT},
@@ -628,8 +619,8 @@ void TestSpecializationConstants(SHADER_COMPILER Compiler)
     EXPECT_EQ(ConstResources.GetNumSpecConstants(), static_cast<Uint32>(RefSpecConstants.size()));
 
     // Build a map from name to reference for order-independent matching
-    std::unordered_map<std::string, const SPIRVSpecConstRefAttribs*> RefMap;
-    for (const SPIRVSpecConstRefAttribs& Ref : RefSpecConstants)
+    std::unordered_map<std::string, const SPIRVSpecializationConstantAttribs*> RefMap;
+    for (const SPIRVSpecializationConstantAttribs& Ref : RefSpecConstants)
         RefMap[Ref.Name] = &Ref;
 
     for (Uint32 i = 0; i < ConstResources.GetNumSpecConstants(); ++i)
@@ -638,7 +629,7 @@ void TestSpecializationConstants(SHADER_COMPILER Compiler)
         const auto                                it = RefMap.find(SC.Name);
         ASSERT_NE(it, RefMap.end()) << "Specialization constant '" << SC.Name << "' is not found in the reference list";
 
-        const auto* pRef = it->second;
+        const SPIRVSpecializationConstantAttribs* pRef = it->second;
         EXPECT_EQ(SC.SpecId, pRef->SpecId) << SC.Name;
         EXPECT_EQ(SC.Size, pRef->Size) << SC.Name;
         EXPECT_EQ(SC.BasicType, pRef->BasicType) << SC.Name;

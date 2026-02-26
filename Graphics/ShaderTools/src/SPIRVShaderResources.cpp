@@ -614,19 +614,12 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     static_assert(Uint32{SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes} == 13, "Please set the new resource type counter here");
 
     // Specialization constants reflection
-    struct SpecConstInfo
-    {
-        std::string            Name;
-        uint32_t               SpecId    = 0;
-        uint32_t               Size      = 0;
-        SHADER_CODE_BASIC_TYPE BasicType = SHADER_CODE_BASIC_TYPE_UNKNOWN;
-    };
-    std::vector<SpecConstInfo> SpecConstants;
-    Uint32                     NumSpecConstants = 0;
-
+    diligent_spirv_cross::SmallVector<SPIRVSpecializationConstantAttribs> SpecConstants;
+    Uint32                                                                NumSpecConstants = 0;
     {
         diligent_spirv_cross::SmallVector<diligent_spirv_cross::SpecializationConstant> spec_consts =
             Compiler.get_specialization_constants();
+        SpecConstants.reserve(spec_consts.size());
         for (const diligent_spirv_cross::SpecializationConstant& sc : spec_consts)
         {
             const diligent_spirv_cross::SPIRConstant& Constant = Compiler.get_constant(sc.id);
@@ -641,22 +634,23 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
                 continue;
             }
 
-            SpecConstInfo Info;
-            Info.Name   = Compiler.get_name(sc.id);
-            Info.SpecId = sc.constant_id;
-            // OpTypeBool has width==1 in SPIRV-Cross; use 4 bytes (VkBool32) for bool specialization constants
-            Info.Size      = Type.basetype == diligent_spirv_cross::SPIRType::Boolean ? 4 : Type.width / 8;
-            Info.BasicType = SpirvBaseTypeToShaderCodeBasicType(Type.basetype);
-
-            if (Info.Name.empty())
+            const std::string& Name = Compiler.get_name(sc.id);
+            if (Name.empty())
             {
                 LOG_WARNING_MESSAGE("Specialization constant with SpecId=", sc.constant_id,
                                     " in shader '", CI.Name, "' has no name (OpName) and will be skipped.");
                 continue;
             }
+            ResourceNamesPoolSize += Name.length() + 1;
 
-            ResourceNamesPoolSize += Info.Name.length() + 1;
-            SpecConstants.emplace_back(std::move(Info));
+            SPIRVSpecializationConstantAttribs Info{
+                Name.c_str(),
+                sc.constant_id,
+                // OpTypeBool has width==1 in SPIRV-Cross; use 4 bytes (VkBool32) for bool specialization constants
+                Type.basetype == diligent_spirv_cross::SPIRType::Boolean ? 4 : Type.width / 8,
+                SpirvBaseTypeToShaderCodeBasicType(Type.basetype),
+            };
+            SpecConstants.push_back(Info);
         }
         NumSpecConstants = static_cast<Uint32>(SpecConstants.size());
     }
@@ -893,7 +887,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     if (!SpecConstants.empty())
     {
         Uint32 CurrSpecConst = 0;
-        for (const SpecConstInfo& SC : SpecConstants)
+        for (const SPIRVSpecializationConstantAttribs& SC : SpecConstants)
         {
             new (&GetSpecConstant(CurrSpecConst++)) SPIRVSpecializationConstantAttribs //
                 {
@@ -961,6 +955,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     size_t AlignedResourceNamesPoolSize = AlignUp(ResourceNamesPoolSize, sizeof(void*));
 
     static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)");
+    static_assert(sizeof(SPIRVSpecializationConstantAttribs) % sizeof(void*) == 0, "Size of SPIRVSpecializationConstantAttribs struct must be multiple of sizeof(void*)");
     // clang-format off
     size_t MemorySize = GetTotalResources()           * sizeof(SPIRVShaderResourceAttribs) +
                         m_NumShaderStageInputs        * sizeof(SPIRVShaderStageInputAttribs) +
@@ -1270,7 +1265,7 @@ std::string SPIRVShaderResources::DumpResources() const
            << "Specialization constants (" << GetNumSpecConstants() << "):";
         for (Uint32 n = 0; n < GetNumSpecConstants(); ++n)
         {
-            const auto& SC = GetSpecConstant(n);
+            const SPIRVSpecializationConstantAttribs& SC = GetSpecConstant(n);
             ss << std::endl
                << "  '" << SC.Name << "' SpecId=" << SC.SpecId << " Size=" << SC.Size;
         }
