@@ -1968,7 +1968,7 @@ DeviceFeatures VkFeaturesToDeviceFeatures(uint32_t                              
     Features.TextureSubresourceViews       = DEVICE_FEATURE_STATE_ENABLED;
     Features.AsyncShaderCompilation        = DEVICE_FEATURE_STATE_ENABLED;
     Features.FormattedBuffers              = DEVICE_FEATURE_STATE_ENABLED;
-    Features.SpecializationConstants       = DEVICE_FEATURE_STATE_DISABLED;
+    Features.SpecializationConstants       = DEVICE_FEATURE_STATE_ENABLED;
 
     // Timestamps are not a feature and can't be disabled. They are either supported by the device, or not.
     Features.TimestampQueries = vkDeviceProps.limits.timestampComputeAndGraphics ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
