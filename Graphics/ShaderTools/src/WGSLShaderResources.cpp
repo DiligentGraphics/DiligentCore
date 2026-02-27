@@ -321,6 +321,24 @@ WEB_GPU_BINDING_TYPE GetWebGPUTextureBindingType(WGSLShaderResourceAttribs::Text
     }
 }
 
+SHADER_CODE_BASIC_TYPE TintOverrideTypeToShaderCodeBasicType(tint::inspector::Override::Type OverrideType)
+{
+    using TintOverrideType = tint::inspector::Override::Type;
+    switch (OverrideType)
+    {
+            // clang-format off
+        case TintOverrideType::kBool:    return SHADER_CODE_BASIC_TYPE_BOOL;
+        case TintOverrideType::kFloat32: return SHADER_CODE_BASIC_TYPE_FLOAT;
+        case TintOverrideType::kUint32:  return SHADER_CODE_BASIC_TYPE_UINT;
+        case TintOverrideType::kInt32:   return SHADER_CODE_BASIC_TYPE_INT;
+        case TintOverrideType::kFloat16: return SHADER_CODE_BASIC_TYPE_FLOAT16;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected override type");
+            return SHADER_CODE_BASIC_TYPE_UNKNOWN;
+    }
+}
+
 } // namespace
 
 WGSLShaderResourceAttribs::WGSLShaderResourceAttribs(const char*                             _Name,
@@ -904,7 +922,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     // Count override constants (specialization constants)
     const auto& Overrides        = EntryPoints[EntryPointIdx].overrides;
     Uint32      NumSpecConstants = static_cast<Uint32>(Overrides.size());
-    for (const auto& Override : Overrides)
+    for (const tint::inspector::Override& Override : Overrides)
     {
         ResourceNamesPoolSize += Override.name.length() + 1;
     }
@@ -989,24 +1007,11 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
 
     // Construct specialization constant attribs
     {
-        using TintOverrideType = tint::inspector::Override::Type;
-        Uint32 SpecConstIdx    = 0;
-        for (const auto& Override : Overrides)
+        Uint32 SpecConstIdx = 0;
+        for (const tint::inspector::Override& Override : Overrides)
         {
             const char*            SCName = ResourceNamesPool.CopyString(Override.name);
-            SHADER_CODE_BASIC_TYPE SCType = SHADER_CODE_BASIC_TYPE_UNKNOWN;
-            switch (Override.type)
-            {
-                // clang-format off
-                case TintOverrideType::kBool:    SCType = SHADER_CODE_BASIC_TYPE_BOOL;    break;
-                case TintOverrideType::kFloat32:  SCType = SHADER_CODE_BASIC_TYPE_FLOAT;   break;
-                case TintOverrideType::kUint32:   SCType = SHADER_CODE_BASIC_TYPE_UINT;    break;
-                case TintOverrideType::kInt32:    SCType = SHADER_CODE_BASIC_TYPE_INT;     break;
-                case TintOverrideType::kFloat16:  SCType = SHADER_CODE_BASIC_TYPE_FLOAT16; break;
-                // clang-format on
-                default:
-                    UNEXPECTED("Unexpected override type");
-            }
+            SHADER_CODE_BASIC_TYPE SCType = TintOverrideTypeToShaderCodeBasicType(Override.type);
             new (&GetSpecConstant(SpecConstIdx++)) WGSLSpecializationConstantAttribs{SCName, Override.id.value, SCType};
         }
         VERIFY_EXPR(SpecConstIdx == GetNumSpecConstants());
@@ -1066,7 +1071,7 @@ void WGSLShaderResources::Initialize(IMemoryAllocator&       Allocator,
     static_assert(sizeof(WGSLSpecializationConstantAttribs) % sizeof(void*) == 0, "Size of WGSLSpecializationConstantAttribs struct must be a multiple of sizeof(void*)");
     // clang-format off
     size_t MemorySize = m_TotalResources             * sizeof(WGSLShaderResourceAttribs) +
-                        m_NumSpecConstants            * sizeof(WGSLSpecializationConstantAttribs) +
+                        m_NumSpecConstants           * sizeof(WGSLSpecializationConstantAttribs) +
                         AlignedResourceNamesPoolSize * sizeof(char);
 
     VERIFY_EXPR(GetNumUBs()         == Counters.NumUBs);
