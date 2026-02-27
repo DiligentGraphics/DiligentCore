@@ -901,9 +901,17 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     ResourceNamesPoolSize += strlen(ShaderName) + 1;
     ResourceNamesPoolSize += strlen(EntryPoint) + 1;
 
+    // Count override constants (specialization constants)
+    const auto& Overrides        = EntryPoints[EntryPointIdx].overrides;
+    Uint32      NumSpecConstants = static_cast<Uint32>(Overrides.size());
+    for (const auto& Override : Overrides)
+    {
+        ResourceNamesPoolSize += Override.name.length() + 1;
+    }
+
     // Resource names pool is only needed to facilitate string allocation.
     StringPool ResourceNamesPool;
-    Initialize(Allocator, ResCounters, ResourceNamesPoolSize, ResourceNamesPool);
+    Initialize(Allocator, ResCounters, NumSpecConstants, ResourceNamesPoolSize, ResourceNamesPool);
 
     // Uniform buffer reflections
     std::vector<ShaderCodeBufferDescX> UBReflections;
@@ -979,6 +987,31 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
     VERIFY_EXPR(CurrRes.NumSamplers == GetNumSamplers());
     VERIFY_EXPR(CurrRes.NumExtTextures == GetNumExtTextures());
 
+    // Construct specialization constant attribs
+    {
+        using TintOverrideType = tint::inspector::Override::Type;
+        Uint32 SpecConstIdx    = 0;
+        for (const auto& Override : Overrides)
+        {
+            const char*            SCName = ResourceNamesPool.CopyString(Override.name);
+            SHADER_CODE_BASIC_TYPE SCType = SHADER_CODE_BASIC_TYPE_UNKNOWN;
+            switch (Override.type)
+            {
+                // clang-format off
+                case TintOverrideType::kBool:    SCType = SHADER_CODE_BASIC_TYPE_BOOL;    break;
+                case TintOverrideType::kFloat32:  SCType = SHADER_CODE_BASIC_TYPE_FLOAT;   break;
+                case TintOverrideType::kUint32:   SCType = SHADER_CODE_BASIC_TYPE_UINT;    break;
+                case TintOverrideType::kInt32:    SCType = SHADER_CODE_BASIC_TYPE_INT;     break;
+                case TintOverrideType::kFloat16:  SCType = SHADER_CODE_BASIC_TYPE_FLOAT16; break;
+                // clang-format on
+                default:
+                    UNEXPECTED("Unexpected override type");
+            }
+            new (&GetSpecConstant(SpecConstIdx++)) WGSLSpecializationConstantAttribs{SCName, Override.id.value, SCType};
+        }
+        VERIFY_EXPR(SpecConstIdx == GetNumSpecConstants());
+    }
+
     if (CombinedSamplerSuffix != nullptr)
     {
         m_CombinedSamplerSuffix = ResourceNamesPool.CopyString(CombinedSamplerSuffix);
@@ -1002,6 +1035,7 @@ WGSLShaderResources::WGSLShaderResources(IMemoryAllocator&      Allocator,
 
 void WGSLShaderResources::Initialize(IMemoryAllocator&       Allocator,
                                      const ResourceCounters& Counters,
+                                     Uint32                  NumSpecConstants,
                                      size_t                  ResourceNamesPoolSize,
                                      StringPool&             ResourceNamesPool)
 {
@@ -1023,13 +1057,16 @@ void WGSLShaderResources::Initialize(IMemoryAllocator&       Allocator,
     m_SamplerOffset         = AdvanceOffset(Counters.NumSamplers);
     m_ExternalTextureOffset = AdvanceOffset(Counters.NumExtTextures);
     m_TotalResources        = AdvanceOffset(0);
+    m_NumSpecConstants      = static_cast<OffsetType>(NumSpecConstants);
     static_assert(Uint32{WGSLShaderResourceAttribs::ResourceType::NumResourceTypes} == 13, "Please update the new resource type offset");
 
     size_t AlignedResourceNamesPoolSize = AlignUp(ResourceNamesPoolSize, sizeof(void*));
 
     static_assert(sizeof(WGSLShaderResourceAttribs) % sizeof(void*) == 0, "Size of WGSLShaderResourceAttribs struct must be a multiple of sizeof(void*)");
+    static_assert(sizeof(WGSLSpecializationConstantAttribs) % sizeof(void*) == 0, "Size of WGSLSpecializationConstantAttribs struct must be a multiple of sizeof(void*)");
     // clang-format off
     size_t MemorySize = m_TotalResources             * sizeof(WGSLShaderResourceAttribs) +
+                        m_NumSpecConstants            * sizeof(WGSLSpecializationConstantAttribs) +
                         AlignedResourceNamesPoolSize * sizeof(char);
 
     VERIFY_EXPR(GetNumUBs()         == Counters.NumUBs);
@@ -1046,7 +1083,8 @@ void WGSLShaderResources::Initialize(IMemoryAllocator&       Allocator,
         void* pRawMem   = Allocator.Allocate(MemorySize, "Memory for shader resources", __FILE__, __LINE__);
         m_MemoryBuffer  = std::unique_ptr<void, STDDeleterRawMem<void>>(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(m_MemoryBuffer.get()) +
-            m_TotalResources * sizeof(WGSLShaderResourceAttribs);
+            m_TotalResources * sizeof(WGSLShaderResourceAttribs) +
+            m_NumSpecConstants * sizeof(WGSLSpecializationConstantAttribs);
         ResourceNamesPool.AssignMemory(NamesPool, ResourceNamesPoolSize);
     }
 }
@@ -1055,6 +1093,21 @@ WGSLShaderResources::~WGSLShaderResources()
 {
     for (Uint32 n = 0; n < GetTotalResources(); ++n)
         GetResource(n).~WGSLShaderResourceAttribs();
+
+    for (Uint32 n = 0; n < GetNumSpecConstants(); ++n)
+        GetSpecConstant(n).~WGSLSpecializationConstantAttribs();
+}
+
+const WGSLSpecializationConstantAttribs& WGSLShaderResources::GetSpecConstant(Uint32 n) const noexcept
+{
+    VERIFY(n < m_NumSpecConstants, "Specialization constant index (", n, ") is out of range. Total spec constant count: ", m_NumSpecConstants);
+    const WGSLShaderResourceAttribs* ResourceMemoryEnd = reinterpret_cast<const WGSLShaderResourceAttribs*>(m_MemoryBuffer.get()) + GetTotalResources();
+    return reinterpret_cast<const WGSLSpecializationConstantAttribs*>(ResourceMemoryEnd)[n];
+}
+
+WGSLSpecializationConstantAttribs& WGSLShaderResources::GetSpecConstant(Uint32 n) noexcept
+{
+    return const_cast<WGSLSpecializationConstantAttribs&>(const_cast<const WGSLShaderResources*>(this)->GetSpecConstant(n));
 }
 
 std::string WGSLShaderResources::DumpResources()
@@ -1172,6 +1225,20 @@ std::string WGSLShaderResources::DumpResources()
         } //
     );
     VERIFY_EXPR(ResNum == GetTotalResources());
+
+    if (GetNumSpecConstants() > 0)
+    {
+        ss << std::endl
+           << "Spec Constants (" << GetNumSpecConstants() << "):";
+        for (Uint32 n = 0; n < GetNumSpecConstants(); ++n)
+        {
+            const auto& SC = GetSpecConstant(n);
+            ss << std::endl
+               << std::setw(3) << n << " Spec Constant     "
+               << std::setw(32) << ('\'' + std::string{SC.Name} + '\'')
+               << " id=" << SC.OverrideId;
+        }
+    }
 
     return ss.str();
 }
