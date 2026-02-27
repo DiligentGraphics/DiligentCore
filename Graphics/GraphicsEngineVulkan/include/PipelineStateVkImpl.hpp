@@ -49,6 +49,11 @@ namespace Diligent
 
 class DeviceContextVkImpl;
 
+namespace
+{
+struct ShaderStageSpecializationData;
+}
+
 /// Pipeline state object implementation in Vulkan backend.
 class PipelineStateVkImpl final : public PipelineStateBase<EngineVkImplTraits>
 {
@@ -131,7 +136,8 @@ private:
     template <typename PSOCreateInfoType>
     TShaderStages InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
                                       std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
-                                      std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules) noexcept(false);
+                                      std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
+                                      std::vector<ShaderStageSpecializationData>&        SpecDataPerStage) noexcept(false);
 
     void InitPipelineLayout(const PipelineStateCreateInfo& CreateInfo,
                             TShaderStages&                 ShaderStages) noexcept(false);
