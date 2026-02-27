@@ -166,8 +166,7 @@ struct WGSLSpecializationConstantAttribs
 /*  0  */const char* const Name;
 /*  8  */const Uint16      OverrideId;
 /* 10  */const Uint8       Type; // SHADER_CODE_BASIC_TYPE
-/* 11  */const Uint8       Padding;
-/* 12  */const Uint32      Reserved;
+/* 11  */
 /* 16 */ // End of structure
 
     // clang-format on
@@ -177,9 +176,7 @@ struct WGSLSpecializationConstantAttribs
                                       SHADER_CODE_BASIC_TYPE _Type) noexcept :
         Name{_Name},
         OverrideId{_OverrideId},
-        Type{static_cast<Uint8>(_Type)},
-        Padding{0},
-        Reserved{0}
+        Type{static_cast<Uint8>(_Type)}
     {}
 
     SHADER_CODE_BASIC_TYPE GetType() const { return static_cast<SHADER_CODE_BASIC_TYPE>(Type); }
