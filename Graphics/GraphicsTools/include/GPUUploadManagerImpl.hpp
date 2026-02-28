@@ -124,6 +124,8 @@ public:
 
         // Seals the page for new writes and returns the sealing status.
         SealStatus TrySeal();
+        void       Unseal();
+        void       Seal();
 
         void ExecutePendingOps(IDeviceContext* pContext, Uint64 FenceValue);
         void Reset(IDeviceContext* pContext);

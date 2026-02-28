@@ -187,6 +187,18 @@ GPUUploadManagerImpl::Page::SealStatus GPUUploadManagerImpl::Page::TrySeal()
     }
 }
 
+void GPUUploadManagerImpl::Page::Unseal()
+{
+    VERIFY_EXPR(DbgGetWriterCount() == 0);
+    m_State.fetch_and(WRITER_MASK, std::memory_order_release);
+}
+
+void GPUUploadManagerImpl::Page::Seal()
+{
+    VERIFY_EXPR(DbgGetWriterCount() == 0);
+    m_State.fetch_or(SEALED_BIT, std::memory_order_release);
+}
+
 bool GPUUploadManagerImpl::Page::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& UpdateInfo)
 {
     VERIFY_EXPR(DbgGetWriterCount() > 0);
@@ -286,7 +298,8 @@ void GPUUploadManagerImpl::Page::Reset(IDeviceContext* pContext)
     VERIFY(m_PendingOps.IsEmpty(), "All pending operations must be executed before resetting the page");
 
     m_Offset.store(0);
-    m_State.store(0);
+    // Keep the page sealed until we make it current to prevent any accidental writes.
+    m_State.store(SEALED_BIT);
     m_NumPendingOps.store(0);
     m_Enqueued.store(false);
     m_FenceValue = 0;
@@ -396,6 +409,7 @@ GPUUploadManagerImpl::GPUUploadManagerImpl(IReferenceCounters* pRefCounters, con
         // Create at least one page.
         if (Page* pPage = CreatePage(CI.pContext))
         {
+            pPage->Unseal();
             m_pCurrentPage.store(pPage, std::memory_order_release);
         }
         else
@@ -558,14 +572,7 @@ void GPUUploadManagerImpl::ScheduleBufferUpdate(const ScheduleBufferUpdateInfo& 
             }
         };
 
-        // Prevent ABA-style bug when pages are reset and reused
-        // * Thread T1 loads P0 as current, then gets descheduled before TryBeginWriting().
-        // * Render thread swaps current to P1, seals P0, sees it has 0 ops, calls Reset(nullptr)
-        //   which clears SEALED_BIT, and pushes P0 to FreePages
-        // * T1 resumes and calls P0->TryBeginWriting() and succeeds (because SEALED_BIT is now cleared).
-        // * T1 schedules an update into a page that is not current and is simultaneously sitting in the free list,
-        //   potentially being popped/installed elsewhere.
-        // Validate that the page is still current to avoid this scenario.
+        // Prevent ABA-style bug when pages are reset and reused by validating that the page is still current.
         if (P != m_pCurrentPage.load(std::memory_order_acquire))
         {
             EndWriting();
@@ -646,6 +653,7 @@ bool GPUUploadManagerImpl::TryRotatePage(IDeviceContext* pContext, Page* Expecte
     if (!m_pCurrentPage.compare_exchange_strong(Cur, Fresh, std::memory_order_acq_rel))
     {
         // Lost the race: put Fresh back
+        Fresh->Seal();
         m_FreePages.Push(Fresh);
         return true; // Rotation happened by someone else
     }
@@ -813,6 +821,19 @@ GPUUploadManagerImpl::Page* GPUUploadManagerImpl::AcquireFreePage(IDeviceContext
 
     if (P != nullptr)
     {
+        // Unseal the page only when we make it current to prevent any accidental writes in scenario like this:
+        // * Thread T1 runs GPUUploadManagerImpl::ScheduleBufferUpdate:
+        //   * loads P0 as current, then gets descheduled before TryBeginWriting().
+        // * Render thread swaps current to P1, seals P0, sees it has 0 ops, calls Reset(nullptr), and pushes P0 to FreePages
+        // * T1 resumes and calls P0->TryBeginWriting() and succeeds (if SEALED_BIT is cleared).
+        // * T1 schedules an update into a page that is not current and is simultaneously sitting in the free list,
+        //   potentially being popped/installed elsewhere.
+        P->Unseal();
+
+        // Note that we MUST unseal the page BEFORE we make it current because otherwise
+        // GPUUploadManagerImpl::ScheduleBufferUpdate may find a sealed page and try to
+        // rotate it.
+
         const Uint32 PageSize = P->GetSize();
         // Clear if the page is larger than the max pending update
         for (;;)

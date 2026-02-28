@@ -58,6 +58,7 @@ TEST(GPUUploadManagerPageTest, States)
         EXPECT_FALSE(Page.TryBeginWriting()) << "Should not be able to begin writing to a sealed page";
 
         Page.Reset(nullptr);
+        Page.Unseal();
         GPUUploadManagerImpl::Page::Writer Writer = Page.TryBeginWriting();
         EXPECT_TRUE(Writer) << "Should be able to begin writing after resetting the page";
         EXPECT_EQ(Writer.EndWriting(), GPUUploadManagerImpl::Page::WritingStatus::NotSealed) << "Page should not be sealed after the first writer finishes";
