@@ -1760,9 +1760,9 @@ TEST_F(PSOCreationFailureTest, SpecConst_ErrorAtSecondElement)
 
 
 // ---------------------------------------------------------------------------
-// Vulkan-specific tests for BuildSpecializationData (Name->SpecId matching).
-// These require GLSL shaders with layout(constant_id) declarations so that
-// the reflected specialization constants are available for matching.
+// Backend-specific tests for specialization constant matching (name-based).
+// These require backend-specific shaders with specialization constant
+// declarations so that reflected constants are available for matching.
 // ---------------------------------------------------------------------------
 
 // Providing a user constant whose name does not match any reflected constant
@@ -1773,8 +1773,8 @@ TEST_F(PSOCreationFailureTest, SpecConst_UnmatchedNameIsSkipped)
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (!DeviceInfo.IsVulkanDevice())
-        GTEST_SKIP() << "Name->SpecId matching is currently Vulkan-only";
+    if (!DeviceInfo.IsVulkanDevice() && !DeviceInfo.IsWebGPUDevice())
+        GTEST_SKIP() << "Name-based spec constant matching requires Vulkan or WebGPU";
     if (DeviceInfo.Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
         GTEST_SKIP() << "Specialization constants are not supported by this device";
 
@@ -1800,21 +1800,56 @@ TEST_F(PSOCreationFailureTest, SpecConst_UnmatchedNameIsSkipped)
         }
     )";
 
+    static constexpr char VSSource_WGSL[] = R"(
+        override sc_Scale: f32 = 1.0;
+
+        @vertex
+        fn main() -> @builtin(position) vec4<f32> {
+            return vec4<f32>(0.0, 0.0, 0.0, sc_Scale);
+        }
+    )";
+
+    static constexpr char PSSource_WGSL[] = R"(
+        @fragment
+        fn main() -> @location(0) vec4<f32> {
+            return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+        }
+    )";
+
     ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
 
     RefCntAutoPtr<IShader> pVS;
     {
-        ShaderCI.Desc   = {"SpecConst UnmatchedName VS", SHADER_TYPE_VERTEX, true};
-        ShaderCI.Source = VSSource_GLSL;
+        ShaderCI.Desc       = {"SpecConst UnmatchedName VS", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        if (DeviceInfo.IsWebGPUDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+            ShaderCI.Source         = VSSource_WGSL;
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+            ShaderCI.Source         = VSSource_GLSL;
+        }
         pDevice->CreateShader(ShaderCI, &pVS);
         ASSERT_TRUE(pVS);
     }
 
     RefCntAutoPtr<IShader> pPS;
     {
-        ShaderCI.Desc   = {"SpecConst UnmatchedName PS", SHADER_TYPE_PIXEL, true};
-        ShaderCI.Source = PSSource_GLSL;
+        ShaderCI.Desc       = {"SpecConst UnmatchedName PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        if (DeviceInfo.IsWebGPUDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+            ShaderCI.Source         = PSSource_WGSL;
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+            ShaderCI.Source         = PSSource_GLSL;
+        }
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_TRUE(pPS);
     }
@@ -1842,8 +1877,8 @@ TEST_F(PSOCreationFailureTest, SpecConst_InsufficientData)
     auto* const pDevice    = pEnv->GetDevice();
     const auto& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (!DeviceInfo.IsVulkanDevice())
-        GTEST_SKIP() << "Name->SpecId matching is currently Vulkan-only";
+    if (!DeviceInfo.IsVulkanDevice() && !DeviceInfo.IsWebGPUDevice())
+        GTEST_SKIP() << "Name-based spec constant matching requires Vulkan or WebGPU";
     if (DeviceInfo.Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
         GTEST_SKIP() << "Specialization constants are not supported by this device";
 
@@ -1860,10 +1895,30 @@ TEST_F(PSOCreationFailureTest, SpecConst_InsufficientData)
         }
     )";
 
+    static constexpr char CSSource_WGSL[] = R"(
+        override sc_Value: f32 = 1.0;
+
+        @group(0) @binding(0) var g_DummyUAV: texture_storage_2d<rgba8unorm, write>;
+
+        @compute @workgroup_size(1, 1, 1)
+        fn main() {
+            textureStore(g_DummyUAV, vec2<i32>(0), vec4<f32>(sc_Value));
+        }
+    )";
+
     ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
-    ShaderCI.Desc           = {"SpecConst InsufficientData CS", SHADER_TYPE_COMPUTE, true};
-    ShaderCI.Source         = CSSource_GLSL;
+    ShaderCI.Desc       = {"SpecConst InsufficientData CS", SHADER_TYPE_COMPUTE, true};
+    ShaderCI.EntryPoint = "main";
+    if (DeviceInfo.IsWebGPUDevice())
+    {
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+        ShaderCI.Source         = CSSource_WGSL;
+    }
+    else
+    {
+        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+        ShaderCI.Source         = CSSource_GLSL;
+    }
 
     RefCntAutoPtr<IShader> pCS;
     pDevice->CreateShader(ShaderCI, &pCS);

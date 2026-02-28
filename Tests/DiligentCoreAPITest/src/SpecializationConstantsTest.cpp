@@ -83,6 +83,29 @@ static constexpr char g_SpecConstComputeCS_GLSL[] = R"(
     }
 )";
 
+static constexpr char g_SpecConstComputeCS_WGSL[] = R"(
+    override sc_MulR: f32 = -1.0;
+    override sc_MulG: f32 = -1.0;
+    override sc_MulB: f32 = -1.0;
+
+    @group(0) @binding(0) var g_tex2DUAV: texture_storage_2d<rgba8unorm, write>;
+
+    @compute @workgroup_size(16, 16, 1)
+    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+        let dim = textureDimensions(g_tex2DUAV);
+        let coord = vec2<i32>(gid.xy);
+        if (coord.x >= i32(dim.x) || coord.y >= i32(dim.y)) {
+            return;
+        }
+        let uv = vec2<f32>(gid.xy % 256u) / 256.0;
+        let Color = vec4<f32>(uv.x * sc_MulR,
+                              uv.y * sc_MulG,
+                              uv.x * sc_MulB,
+                              1.0);
+        textureStore(g_tex2DUAV, coord, Color);
+    }
+)";
+
 // Vertex shader: hardcoded positions (same as DrawTest_ProceduralTriangleVS),
 // per-vertex colors supplied via specialization constants (9 floats).
 static constexpr char g_SpecConstGraphicsVS_GLSL[] = R"(
@@ -128,6 +151,47 @@ static constexpr char g_SpecConstGraphicsVS_GLSL[] = R"(
     }
 )";
 
+static constexpr char g_SpecConstGraphicsVS_WGSL[] = R"(
+    override sc_Col0_R: f32 = 0.0;
+    override sc_Col0_G: f32 = 0.0;
+    override sc_Col0_B: f32 = 0.0;
+
+    override sc_Col1_R: f32 = 0.0;
+    override sc_Col1_G: f32 = 0.0;
+    override sc_Col1_B: f32 = 0.0;
+
+    override sc_Col2_R: f32 = 0.0;
+    override sc_Col2_G: f32 = 0.0;
+    override sc_Col2_B: f32 = 0.0;
+
+    struct VSOutput {
+        @builtin(position) Position: vec4<f32>,
+        @location(0) Color: vec3<f32>,
+    };
+
+    @vertex
+    fn main(@builtin(vertex_index) VertexIndex: u32) -> VSOutput {
+        var Pos: array<vec4<f32>, 6>;
+        Pos[0] = vec4<f32>(-1.0, -0.5, 0.0, 1.0);
+        Pos[1] = vec4<f32>(-0.5,  0.5, 0.0, 1.0);
+        Pos[2] = vec4<f32>( 0.0, -0.5, 0.0, 1.0);
+
+        Pos[3] = vec4<f32>( 0.0, -0.5, 0.0, 1.0);
+        Pos[4] = vec4<f32>( 0.5,  0.5, 0.0, 1.0);
+        Pos[5] = vec4<f32>( 1.0, -0.5, 0.0, 1.0);
+
+        var Col: array<vec3<f32>, 3>;
+        Col[0] = vec3<f32>(sc_Col0_R, sc_Col0_G, sc_Col0_B);
+        Col[1] = vec3<f32>(sc_Col1_R, sc_Col1_G, sc_Col1_B);
+        Col[2] = vec3<f32>(sc_Col2_R, sc_Col2_G, sc_Col2_B);
+
+        var output: VSOutput;
+        output.Position = Pos[VertexIndex];
+        output.Color = Col[VertexIndex % 3];
+        return output;
+    }
+)";
+
 // Fragment shader: interpolated color modulated by specialization constants.
 // sc_Col0_R is shared with the vertex shader (tests cross-stage matching).
 // sc_Brightness and sc_AlphaScale are PS-only.
@@ -147,6 +211,18 @@ static constexpr char g_SpecConstGraphicsPS_GLSL[] = R"(
     void main()
     {
         out_Color = vec4(vec3(in_Color.r * sc_Col0_R, in_Color.gb) * sc_Brightness,
+                         sc_AlphaScale);
+    }
+)";
+
+static constexpr char g_SpecConstGraphicsPS_WGSL[] = R"(
+    override sc_Col0_R: f32 = -1.0;
+    override sc_Brightness: f32 = -1.0;
+    override sc_AlphaScale: f32 = -1.0;
+
+    @fragment
+    fn main(@location(0) in_Color: vec3<f32>) -> @location(0) vec4<f32> {
+        return vec4<f32>(vec3<f32>(in_Color.r * sc_Col0_R, in_Color.g, in_Color.b) * sc_Brightness,
                          sc_AlphaScale);
     }
 )";
@@ -189,8 +265,6 @@ TEST_F(SpecializationConstants, ComputePath)
     ISwapChain*             pSwapChain = pEnv->GetSwapChain();
     const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (!DeviceInfo.IsVulkanDevice())
-        GTEST_SKIP() << "Specialization constants are currently Vulkan-only";
     if (DeviceInfo.Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
         GTEST_SKIP() << "Specialization constants are not supported by this device";
     if (!DeviceInfo.Features.ComputeShaders)
@@ -212,10 +286,19 @@ TEST_F(SpecializationConstants, ComputePath)
     // --- Spec-const pass: same gradient, channel multipliers via specialization constants ---
     {
         ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
-        ShaderCI.Desc           = {"SpecConst Compute CS", SHADER_TYPE_COMPUTE, true};
-        ShaderCI.EntryPoint     = "main";
-        ShaderCI.Source         = g_SpecConstComputeCS_GLSL;
+        ShaderCI.Desc       = {"SpecConst Compute CS", SHADER_TYPE_COMPUTE, true};
+        ShaderCI.EntryPoint = "main";
+
+        if (DeviceInfo.IsWebGPUDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+            ShaderCI.Source         = g_SpecConstComputeCS_WGSL;
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+            ShaderCI.Source         = g_SpecConstComputeCS_GLSL;
+        }
 
         RefCntAutoPtr<IShader> pCS;
         pDevice->CreateShader(ShaderCI, &pCS);
@@ -278,8 +361,6 @@ TEST_F(SpecializationConstants, GraphicsPath)
     ISwapChain*             pSwapChain = pEnv->GetSwapChain();
     const RenderDeviceInfo& DeviceInfo = pDevice->GetDeviceInfo();
 
-    if (!DeviceInfo.IsVulkanDevice())
-        GTEST_SKIP() << "Specialization constants are currently Vulkan-only";
     if (DeviceInfo.Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
         GTEST_SKIP() << "Specialization constants are not supported by this device";
 
@@ -304,20 +385,39 @@ TEST_F(SpecializationConstants, GraphicsPath)
         pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
 
         RefCntAutoPtr<IShader> pVS;
         {
-            ShaderCI.Desc   = {"SpecConst Graphics VS", SHADER_TYPE_VERTEX, true};
-            ShaderCI.Source = g_SpecConstGraphicsVS_GLSL;
+            ShaderCI.Desc       = {"SpecConst Graphics VS", SHADER_TYPE_VERTEX, true};
+            ShaderCI.EntryPoint = "main";
+            if (DeviceInfo.IsWebGPUDevice())
+            {
+                ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+                ShaderCI.Source         = g_SpecConstGraphicsVS_WGSL;
+            }
+            else
+            {
+                ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+                ShaderCI.Source         = g_SpecConstGraphicsVS_GLSL;
+            }
             pDevice->CreateShader(ShaderCI, &pVS);
             ASSERT_NE(pVS, nullptr);
         }
 
         RefCntAutoPtr<IShader> pPS;
         {
-            ShaderCI.Desc   = {"SpecConst Graphics PS", SHADER_TYPE_PIXEL, true};
-            ShaderCI.Source = g_SpecConstGraphicsPS_GLSL;
+            ShaderCI.Desc       = {"SpecConst Graphics PS", SHADER_TYPE_PIXEL, true};
+            ShaderCI.EntryPoint = "main";
+            if (DeviceInfo.IsWebGPUDevice())
+            {
+                ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+                ShaderCI.Source         = g_SpecConstGraphicsPS_WGSL;
+            }
+            else
+            {
+                ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+                ShaderCI.Source         = g_SpecConstGraphicsPS_GLSL;
+            }
             pDevice->CreateShader(ShaderCI, &pPS);
             ASSERT_NE(pPS, nullptr);
         }
