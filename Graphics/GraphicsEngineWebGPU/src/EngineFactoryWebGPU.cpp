@@ -403,7 +403,7 @@ DeviceFeatures GetSupportedFeatures(WGPUAdapter wgpuAdapter, WGPUDevice wgpuDevi
     Features.NativeMultiDraw                   = DEVICE_FEATURE_STATE_DISABLED;
     Features.AsyncShaderCompilation            = DEVICE_FEATURE_STATE_ENABLED;
     Features.FormattedBuffers                  = DEVICE_FEATURE_STATE_DISABLED;
-    Features.SpecializationConstants           = DEVICE_FEATURE_STATE_DISABLED;
+    Features.SpecializationConstants           = DEVICE_FEATURE_STATE_ENABLED;
 
     Features.TimestampQueries = CheckFeature(WGPUFeatureName_TimestampQuery);
     Features.DurationQueries  = Features.TimestampQueries ?
