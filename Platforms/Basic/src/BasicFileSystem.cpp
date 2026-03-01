@@ -395,6 +395,57 @@ std::string BasicFileSystem::GetRelativePath(const Char* PathFrom,
     return RelPath;
 }
 
+void BasicFileSystem::GetCommonPathPrefix(const char* Path1,
+                                          const char* Path2,
+                                          size_t&     Prefix1Len,
+                                          size_t&     Prefix2Len)
+{
+    Prefix1Len = 0;
+    Prefix2Len = 0;
+
+    if (Path1 == nullptr || Path2 == nullptr)
+    {
+        DEV_ERROR("Paths must not be null");
+        return;
+    }
+
+    if (Path1[0] == '\0' || Path2[0] == '\0')
+        return;
+
+    if (IsSlash(Path1[0]) != IsSlash(Path2[0]))
+        return;
+
+    while (Path1[Prefix1Len] != '\0' && Path2[Prefix2Len] != '\0')
+    {
+        // Skip leading slashes
+        while (IsSlash(Path1[Prefix1Len]))
+            ++Prefix1Len;
+        while (IsSlash(Path2[Prefix2Len]))
+            ++Prefix2Len;
+
+        if (Path1[Prefix1Len] == '\0' || Path2[Prefix2Len] == '\0')
+            break;
+
+        size_t i = Prefix1Len;
+        size_t j = Prefix2Len;
+        while (Path1[i] != '\0' && !IsSlash(Path1[i]) &&
+               Path2[j] != '\0' && !IsSlash(Path2[j]) &&
+               Path1[i] == Path2[j])
+        {
+            ++i;
+            ++j;
+        }
+
+        if ((Path1[i] != '\0' && !IsSlash(Path1[i])) ||
+            (Path2[j] != '\0' && !IsSlash(Path2[j])))
+        {
+            break;
+        }
+
+        Prefix1Len = i;
+        Prefix2Len = j;
+    }
+}
 
 std::string BasicFileSystem::FileDialog(const FileDialogAttribs& DialogAttribs)
 {

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -739,6 +739,62 @@ TEST(Platforms_FileSystem, GetLocalAppDataDirectory)
 TEST(Platforms_FileSystem, GetLocalAppDataDirectory_NullAppName)
 {
     TestGetLocalAppDataDirectory(nullptr);
+}
+
+
+TEST(Platforms_FileSystem, GetCommonPathPrefix)
+{
+    auto TestPrefix = [](const char* Path1, const char* Path2, size_t ExpectedPrefix1Len, size_t ExpectedPrefix2Len) {
+        size_t Prefix1Len = 123;
+        size_t Prefix2Len = 456;
+        FileSystem::GetCommonPathPrefix(Path1, Path2, Prefix1Len, Prefix2Len);
+        EXPECT_EQ(Prefix1Len, ExpectedPrefix1Len);
+        EXPECT_EQ(Prefix2Len, ExpectedPrefix2Len);
+    };
+
+    TestPrefix("", "", 0, 0);
+    TestPrefix("/", "", 0, 0);
+    TestPrefix("\\", "", 0, 0);
+    TestPrefix("", "/", 0, 0);
+    TestPrefix("", "\\", 0, 0);
+
+    TestPrefix("/", "/", 1, 1);
+    TestPrefix("//", "/", 2, 1);
+    TestPrefix("/", "//", 1, 2);
+    TestPrefix("//", "//", 2, 2);
+
+    TestPrefix("", "a", 0, 0);
+    TestPrefix("a", "", 0, 0);
+    TestPrefix("a/b/c", "a/b/c", 5, 5);
+    TestPrefix("a/b/c/", "a/b/c/", 6, 6);
+    TestPrefix("a/b/c/", "a/b/", 4, 4);
+    TestPrefix("a/b/", "a/b/c/", 4, 4);
+    TestPrefix("a/b/c", "a/b/d", 4, 4);
+    TestPrefix("a/b", "a/b/c", 3, 3);
+
+    TestPrefix("a//b/c", "a/b/c", 6, 5);
+    TestPrefix("a/b/c", "a//b/c", 5, 6);
+    TestPrefix("/a/b", "/a/c", 3, 3);
+
+    TestPrefix("a/b", "a/b/", 3, 3);
+    TestPrefix("a/", "a////b", 2, 5);
+    TestPrefix("a\\b\\c", "a/b/c", 5, 5);
+    TestPrefix("/a", "//a", 2, 3);
+
+    TestPrefix("path", "path", 4, 4);
+    TestPrefix("path1", "path", 0, 0);
+    TestPrefix("path", "path1", 0, 0);
+    TestPrefix("path/", "path1", 0, 0);
+    TestPrefix("path1", "path/", 0, 0);
+
+    TestPrefix("common/path1", "common/path", 7, 7);
+    TestPrefix("common/path", "common/path1", 7, 7);
+    TestPrefix("common/path1", "common/path/", 7, 7);
+    TestPrefix("common/path/", "common/path1", 7, 7);
+    TestPrefix("common//path", "common/path1", 8, 7);
+    TestPrefix("common/path", "common//path1", 7, 8);
+    TestPrefix("common/path/", "common/path", 11, 11);
+    TestPrefix("common/path", "common/path/", 11, 11);
 }
 
 } // namespace
