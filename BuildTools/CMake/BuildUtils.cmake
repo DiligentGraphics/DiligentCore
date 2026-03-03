@@ -486,6 +486,7 @@ function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
     if (NOT ("${DILIGENT_CORE_SOURCE_DIR}" STREQUAL "${MODULE_ROOT_PATH}"))
         # Start by copying .clang-format file to the module's root folder
         add_custom_command(TARGET ${MODULE_NAME}-ValidateFormatting
+            PRE_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DILIGENT_CORE_SOURCE_DIR}/.clang-format" "${MODULE_ROOT_PATH}/.clang-format"
         )
     endif()
@@ -501,6 +502,7 @@ function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
     if (RUN_VALIDATION_SCRIPT)
         # Run the format validation script
         add_custom_command(TARGET ${MODULE_NAME}-ValidateFormatting
+            PRE_BUILD
             COMMAND ${RUN_VALIDATION_SCRIPT}
             WORKING_DIRECTORY "${MODULE_ROOT_PATH}/BuildTools/FormatValidation"
             COMMENT "Validating ${MODULE_NAME} module's source code formatting..."

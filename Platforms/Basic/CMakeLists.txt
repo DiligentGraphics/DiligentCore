@@ -51,8 +51,10 @@ set_target_properties(Diligent-BasicPlatform PROPERTIES
 
 if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-BasicPlatform)
-    get_target_relative_dir(Diligent-BasicPlatform BASIC_PLATFORM_DIR)
-    install(DIRECTORY    "../interface"
-            DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/${BASIC_PLATFORM_DIR}/../"
+    get_target_relative_dir(Diligent-BasicPlatform BASIC_PLATFORM_DIR) # DiligentCore/Platforms/BasicPlatform
+    cmake_path(GET BASIC_PLATFORM_DIR PARENT_PATH PLATFORMS_DIR)       # DiligentCore/Platforms
+    install(
+        DIRECTORY   "../interface"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${PLATFORMS_DIR}"
     )
 endif()
