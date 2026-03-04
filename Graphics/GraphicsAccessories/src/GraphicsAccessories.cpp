@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *  Copyright 2015-2019 Egor Yusov
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -1717,6 +1717,40 @@ const char* GetShaderCodeBasicTypeString(SHADER_CODE_BASIC_TYPE Type)
         case SHADER_CODE_BASIC_TYPE_STRING:     return "string";
         // clang-format on
         default: UNEXPECTED("Unknown/unsupported variable class"); return "UNKNOWN";
+    }
+}
+
+Uint32 GetShaderCodeBasicTypeBitSize(SHADER_CODE_BASIC_TYPE Type)
+{
+    static_assert(SHADER_CODE_BASIC_TYPE_COUNT == 21, "Did you add a new type? Please update the switch below.");
+    switch (Type)
+    {
+        // clang-format off
+        case SHADER_CODE_BASIC_TYPE_UNKNOWN:    return 0;
+        case SHADER_CODE_BASIC_TYPE_VOID:       return 0;
+        case SHADER_CODE_BASIC_TYPE_BOOL:       return 8;
+        case SHADER_CODE_BASIC_TYPE_INT:        return 32;
+        case SHADER_CODE_BASIC_TYPE_INT8:       return 8;
+        case SHADER_CODE_BASIC_TYPE_INT16:      return 16;
+        case SHADER_CODE_BASIC_TYPE_INT64:      return 64;
+        case SHADER_CODE_BASIC_TYPE_UINT:       return 32;
+        case SHADER_CODE_BASIC_TYPE_UINT8:      return 8;
+        case SHADER_CODE_BASIC_TYPE_UINT16:     return 16;
+        case SHADER_CODE_BASIC_TYPE_UINT64:     return 64;
+        case SHADER_CODE_BASIC_TYPE_FLOAT:      return 32;
+        case SHADER_CODE_BASIC_TYPE_FLOAT16:    return 16;
+        case SHADER_CODE_BASIC_TYPE_DOUBLE:     return 64;
+        case SHADER_CODE_BASIC_TYPE_MIN8FLOAT:  return 8;
+        case SHADER_CODE_BASIC_TYPE_MIN10FLOAT: return 10;
+        case SHADER_CODE_BASIC_TYPE_MIN16FLOAT: return 16;
+        case SHADER_CODE_BASIC_TYPE_MIN12INT:   return 12;
+        case SHADER_CODE_BASIC_TYPE_MIN16INT:   return 16;
+        case SHADER_CODE_BASIC_TYPE_MIN16UINT:  return 16;
+        case SHADER_CODE_BASIC_TYPE_STRING:     return 0;
+        // clang-format on
+        default:
+            UNEXPECTED("Unknown/unsupported variable class");
+            return 0;
     }
 }
 
