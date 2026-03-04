@@ -58,6 +58,7 @@
 #include "ShaderBindingTable.h"
 #include "DeviceMemory.h"
 #include "CommandQueue.h"
+#include "SuperResolution.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -3750,6 +3751,21 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// Returns the device context statistics, see Diligent::DeviceContextStats.
     VIRTUAL const DeviceContextStats REF METHOD(GetStats)(THIS) CONST PURE;
+
+
+    /// Executes the hardware super resolution upscaler.
+
+    /// \param [in] Attribs             - Upscale operation attributes, see Diligent::ExecuteSuperResolutionAttribs.
+    /// \param [in] pUpscaler           - Super resolution upscaler object to execute.
+    ///
+    /// \remarks The command must be called outside of a render pass.
+    ///          All input textures must be in the appropriate states or
+    ///          TransitionMode should be set to RESOURCE_STATE_TRANSITION_MODE_TRANSITION.
+    ///
+    /// \remarks Supported contexts: graphics.
+    VIRTUAL void METHOD(ExecuteSuperResolution)(THIS_
+                                                const ExecuteSuperResolutionAttribs REF Attribs,
+                                                ISuperResolution*                       pUpscaler) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -3829,6 +3845,7 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_BindSparseResourceMemory(This, ...)      CALL_IFACE_METHOD(DeviceContext, BindSparseResourceMemory,  This, __VA_ARGS__)
 #    define IDeviceContext_ClearStats(This)                         CALL_IFACE_METHOD(DeviceContext, ClearStats,                This)
 #    define IDeviceContext_GetStats(This)                           CALL_IFACE_METHOD(DeviceContext, GetStats,                  This)
+#    define IDeviceContext_ExecuteSuperResolution(This, ...)        CALL_IFACE_METHOD(DeviceContext, ExecuteSuperResolution,    This, __VA_ARGS__)
 
 // clang-format on
 

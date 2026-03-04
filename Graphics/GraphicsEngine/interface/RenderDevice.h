@@ -343,6 +343,21 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                                   IPipelineStateCache**                  ppPSOCache) PURE;
 
 
+    /// Creates a new super resolution upscaler object.
+
+    /// \param [in]  Desc       - Super resolution upscaler description, see Diligent::SuperResolutionDesc for details.
+    /// \param [out] ppUpscaler - Address of the memory location where a pointer to the
+    ///                           super resolution upscaler interface will be written.
+    ///                           The function calls AddRef(), so that the new object will have
+    ///                           one reference.
+    ///
+    /// \remarks    On backends that don't support hardware upscaling, the method will
+    ///             return nullptr.
+    VIRTUAL void METHOD(CreateSuperResolution)(THIS_
+                                               const SuperResolutionDesc REF Desc,
+                                               ISuperResolution**            ppUpscaler) PURE;
+
+
     /// Creates a deferred context.
 
     /// \param [out] ppContext - Address of the memory location where a pointer to the
@@ -393,6 +408,21 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                                     RESOURCE_DIMENSION          Dimension,
                                                     Uint32                      SampleCount,
                                                     SparseTextureFormatInfo REF FormatInfo) CONST PURE;
+
+
+    /// Returns the optimal source (input) settings for super resolution upscaling.
+
+    /// \param [in]  Attribs  - Attributes, see Diligent::SuperResolutionSourceSettingsAttribs for details.
+    /// \param [out] Settings - On success, receives the optimal source settings, 
+    ///                         see Diligent::SuperResolutionSourceSettings for details.
+    ///
+    /// \remarks    On backends that don't support hardware upscaling, Settings will be zero-initialized.
+    ///             Use this method to determine the optimal render resolution before creating
+    ///             the upscaler object.
+    VIRTUAL void METHOD(GetSuperResolutionSourceSettings)(THIS_
+                                                          const SuperResolutionSourceSettingsAttribs REF Attribs,
+                                                          SuperResolutionSourceSettings              REF Settings) CONST PURE;
+ 
 
     /// Purges device release queues and releases all stale resources.
     /// This method is automatically called by ISwapChain::Present() of the primary swap chain.
@@ -457,34 +487,36 @@ DILIGENT_END_INTERFACE
 #if DILIGENT_C_INTERFACE
 
 // clang-format off
-#    define IRenderDevice_CreateBuffer(This, ...)                    CALL_IFACE_METHOD(RenderDevice, CreateBuffer,                    This, __VA_ARGS__)
-#    define IRenderDevice_CreateShader(This, ...)                    CALL_IFACE_METHOD(RenderDevice, CreateShader,                    This, __VA_ARGS__)
-#    define IRenderDevice_CreateTexture(This, ...)                   CALL_IFACE_METHOD(RenderDevice, CreateTexture,                   This, __VA_ARGS__)
-#    define IRenderDevice_CreateSampler(This, ...)                   CALL_IFACE_METHOD(RenderDevice, CreateSampler,                   This, __VA_ARGS__)
-#    define IRenderDevice_CreateResourceMapping(This, ...)           CALL_IFACE_METHOD(RenderDevice, CreateResourceMapping,           This, __VA_ARGS__)
-#    define IRenderDevice_CreateGraphicsPipelineState(This, ...)     CALL_IFACE_METHOD(RenderDevice, CreateGraphicsPipelineState,     This, __VA_ARGS__)
-#    define IRenderDevice_CreateComputePipelineState(This, ...)      CALL_IFACE_METHOD(RenderDevice, CreateComputePipelineState,      This, __VA_ARGS__)
-#    define IRenderDevice_CreateRayTracingPipelineState(This, ...)   CALL_IFACE_METHOD(RenderDevice, CreateRayTracingPipelineState,   This, __VA_ARGS__)
-#    define IRenderDevice_CreateFence(This, ...)                     CALL_IFACE_METHOD(RenderDevice, CreateFence,                     This, __VA_ARGS__)
-#    define IRenderDevice_CreateQuery(This, ...)                     CALL_IFACE_METHOD(RenderDevice, CreateQuery,                     This, __VA_ARGS__)
-#    define IRenderDevice_CreateRenderPass(This, ...)                CALL_IFACE_METHOD(RenderDevice, CreateRenderPass,                This, __VA_ARGS__)
-#    define IRenderDevice_CreateFramebuffer(This, ...)               CALL_IFACE_METHOD(RenderDevice, CreateFramebuffer,               This, __VA_ARGS__)
-#    define IRenderDevice_CreateBLAS(This, ...)                      CALL_IFACE_METHOD(RenderDevice, CreateBLAS,                      This, __VA_ARGS__)
-#    define IRenderDevice_CreateTLAS(This, ...)                      CALL_IFACE_METHOD(RenderDevice, CreateTLAS,                      This, __VA_ARGS__)
-#    define IRenderDevice_CreateSBT(This, ...)                       CALL_IFACE_METHOD(RenderDevice, CreateSBT,                       This, __VA_ARGS__)
-#    define IRenderDevice_CreatePipelineResourceSignature(This, ...) CALL_IFACE_METHOD(RenderDevice, CreatePipelineResourceSignature, This, __VA_ARGS__)
-#    define IRenderDevice_CreateDeviceMemory(This, ...)              CALL_IFACE_METHOD(RenderDevice, CreateDeviceMemory,              This, __VA_ARGS__)
-#    define IRenderDevice_CreatePipelineStateCache(This, ...)        CALL_IFACE_METHOD(RenderDevice, CreatePipelineStateCache,        This, __VA_ARGS__)
-#    define IRenderDevice_CreateDeferredContext(This, ...)           CALL_IFACE_METHOD(RenderDevice, CreateDeferredContext,           This, __VA_ARGS__)
-#    define IRenderDevice_GetAdapterInfo(This)                       CALL_IFACE_METHOD(RenderDevice, GetAdapterInfo,                  This)
-#    define IRenderDevice_GetDeviceInfo(This)                        CALL_IFACE_METHOD(RenderDevice, GetDeviceInfo,                   This)
-#    define IRenderDevice_GetTextureFormatInfo(This, ...)            CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,            This, __VA_ARGS__)
-#    define IRenderDevice_GetTextureFormatInfoExt(This, ...)         CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,         This, __VA_ARGS__)
-#    define IRenderDevice_GetSparseTextureFormatInfo(This, ...)      CALL_IFACE_METHOD(RenderDevice, GetSparseTextureFormatInfo,      This, __VA_ARGS__)
-#    define IRenderDevice_ReleaseStaleResources(This, ...)           CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,           This, __VA_ARGS__)
-#    define IRenderDevice_IdleGPU(This)                              CALL_IFACE_METHOD(RenderDevice, IdleGPU,                         This)
-#    define IRenderDevice_GetEngineFactory(This)                     CALL_IFACE_METHOD(RenderDevice, GetEngineFactory,                This)
-#    define IRenderDevice_GetShaderCompilationThreadPool(This)       CALL_IFACE_METHOD(RenderDevice, GetShaderCompilationThreadPool,  This)
+#    define IRenderDevice_CreateBuffer(This, ...)                     CALL_IFACE_METHOD(RenderDevice, CreateBuffer,                     This, __VA_ARGS__)
+#    define IRenderDevice_CreateShader(This, ...)                     CALL_IFACE_METHOD(RenderDevice, CreateShader,                     This, __VA_ARGS__)
+#    define IRenderDevice_CreateTexture(This, ...)                    CALL_IFACE_METHOD(RenderDevice, CreateTexture,                    This, __VA_ARGS__)
+#    define IRenderDevice_CreateSampler(This, ...)                    CALL_IFACE_METHOD(RenderDevice, CreateSampler,                    This, __VA_ARGS__)
+#    define IRenderDevice_CreateResourceMapping(This, ...)            CALL_IFACE_METHOD(RenderDevice, CreateResourceMapping,            This, __VA_ARGS__)
+#    define IRenderDevice_CreateGraphicsPipelineState(This, ...)      CALL_IFACE_METHOD(RenderDevice, CreateGraphicsPipelineState,      This, __VA_ARGS__)
+#    define IRenderDevice_CreateComputePipelineState(This, ...)       CALL_IFACE_METHOD(RenderDevice, CreateComputePipelineState,       This, __VA_ARGS__)
+#    define IRenderDevice_CreateRayTracingPipelineState(This, ...)    CALL_IFACE_METHOD(RenderDevice, CreateRayTracingPipelineState,    This, __VA_ARGS__)
+#    define IRenderDevice_CreateFence(This, ...)                      CALL_IFACE_METHOD(RenderDevice, CreateFence,                      This, __VA_ARGS__)
+#    define IRenderDevice_CreateQuery(This, ...)                      CALL_IFACE_METHOD(RenderDevice, CreateQuery,                      This, __VA_ARGS__)
+#    define IRenderDevice_CreateRenderPass(This, ...)                 CALL_IFACE_METHOD(RenderDevice, CreateRenderPass,                 This, __VA_ARGS__)
+#    define IRenderDevice_CreateFramebuffer(This, ...)                CALL_IFACE_METHOD(RenderDevice, CreateFramebuffer,                This, __VA_ARGS__)
+#    define IRenderDevice_CreateBLAS(This, ...)                       CALL_IFACE_METHOD(RenderDevice, CreateBLAS,                       This, __VA_ARGS__)
+#    define IRenderDevice_CreateTLAS(This, ...)                       CALL_IFACE_METHOD(RenderDevice, CreateTLAS,                       This, __VA_ARGS__)
+#    define IRenderDevice_CreateSBT(This, ...)                        CALL_IFACE_METHOD(RenderDevice, CreateSBT,                        This, __VA_ARGS__)
+#    define IRenderDevice_CreatePipelineResourceSignature(This, ...)  CALL_IFACE_METHOD(RenderDevice, CreatePipelineResourceSignature,  This, __VA_ARGS__)
+#    define IRenderDevice_CreateDeviceMemory(This, ...)               CALL_IFACE_METHOD(RenderDevice, CreateDeviceMemory,               This, __VA_ARGS__)
+#    define IRenderDevice_CreatePipelineStateCache(This, ...)         CALL_IFACE_METHOD(RenderDevice, CreatePipelineStateCache,         This, __VA_ARGS__)
+#    define IRenderDevice_CreateSuperResolution(This, ...)            CALL_IFACE_METHOD(RenderDevice, CreateSuperResolution,            This, __VA_ARGS__)
+#    define IRenderDevice_CreateDeferredContext(This, ...)            CALL_IFACE_METHOD(RenderDevice, CreateDeferredContext,            This, __VA_ARGS__)
+#    define IRenderDevice_GetAdapterInfo(This)                        CALL_IFACE_METHOD(RenderDevice, GetAdapterInfo,                   This)
+#    define IRenderDevice_GetDeviceInfo(This)                         CALL_IFACE_METHOD(RenderDevice, GetDeviceInfo,                    This)
+#    define IRenderDevice_GetTextureFormatInfo(This, ...)             CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,             This, __VA_ARGS__)
+#    define IRenderDevice_GetTextureFormatInfoExt(This, ...)          CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,          This, __VA_ARGS__)
+#    define IRenderDevice_GetSparseTextureFormatInfo(This, ...)       CALL_IFACE_METHOD(RenderDevice, GetSparseTextureFormatInfo,       This, __VA_ARGS__)
+#    define IRenderDevice_ReleaseStaleResources(This, ...)            CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,            This, __VA_ARGS__)
+#    define IRenderDevice_IdleGPU(This)                               CALL_IFACE_METHOD(RenderDevice, IdleGPU,                          This)
+#    define IRenderDevice_GetEngineFactory(This)                      CALL_IFACE_METHOD(RenderDevice, GetEngineFactory,                 This)
+#    define IRenderDevice_GetShaderCompilationThreadPool(This)        CALL_IFACE_METHOD(RenderDevice, GetShaderCompilationThreadPool,   This)
+#    define IRenderDevice_GetSuperResolutionSourceSettings(This, ...) CALL_IFACE_METHOD(RenderDevice, GetSuperResolutionSourceSettings, This, __VA_ARGS__)
 // clang-format on
 
 #endif

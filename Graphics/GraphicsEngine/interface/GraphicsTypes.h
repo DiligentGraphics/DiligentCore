@@ -1867,6 +1867,10 @@ struct DeviceFeatures
 	/// Not supported by D3D11, D3D12, OpenGL, or Metal backends.
     DEVICE_FEATURE_STATE SpecializationConstants DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if the device supports hardware super resolution (upscaling).
+    /// MetalFX on Metal, DirectSR on D3D12.
+    DEVICE_FEATURE_STATE SuperResolution        DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 #if DILIGENT_CPP_INTERFACE
     constexpr DeviceFeatures() noexcept {}
 
@@ -1918,11 +1922,12 @@ struct DeviceFeatures
 	Handler(NativeMultiDraw)                   \
     Handler(AsyncShaderCompilation)			   \
 	Handler(FormattedBuffers)                  \
-    Handler(SpecializationConstants)
+    Handler(SpecializationConstants)           \
+    Handler(SuperResolution)
 
     explicit constexpr DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept
     {
-        static_assert(sizeof(*this) == 48, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
+        static_assert(sizeof(*this) == 49, "Did you add a new feature to DeviceFeatures? Please add it to ENUMERATE_DEVICE_FEATURES.");
     #define INIT_FEATURE(Feature) Feature = State;
         ENUMERATE_DEVICE_FEATURES(INIT_FEATURE)
     #undef INIT_FEATURE
@@ -3263,6 +3268,165 @@ struct SparseResourceProperties
 typedef struct SparseResourceProperties SparseResourceProperties;
 
 
+/// Super resolution upscaler type.
+DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_UPSCALER_TYPE, Uint8)
+{
+    /// Spatial upscaling only (single frame, no motion vectors required).
+    SUPER_RESOLUTION_UPSCALER_TYPE_SPATIAL = 0u,
+
+    /// Temporal upscaling (uses motion vectors and history accumulation).
+    SUPER_RESOLUTION_UPSCALER_TYPE_TEMPORAL
+};
+
+
+/// Super resolution optimization type.
+/// Defines the quality/performance trade-off for super resolution upscaling.
+DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_OPTIMIZATION_TYPE, Uint8)
+{
+    /// Maximum quality, lowest performance.
+    SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_QUALITY = 0u,
+
+    /// Favor quality over performance.
+    SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_QUALITY,
+
+    /// Balanced quality/performance trade-off.
+    SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED,
+
+    /// Favor performance over quality.
+    SUPER_RESOLUTION_OPTIMIZATION_TYPE_HIGH_PERFORMANCE,
+
+    /// Maximum performance, lowest quality.
+    SUPER_RESOLUTION_OPTIMIZATION_TYPE_MAX_PERFORMANCE,
+
+    SUPER_RESOLUTION_OPTIMIZATION_TYPE_COUNT
+};
+
+
+/// Capability flags for spatial super resolution upscaling.
+DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_SPATIAL_CAP_FLAGS, Uint32)
+{
+    SUPER_RESOLUTION_SPATIAL_CAP_FLAG_NONE   = 0u,
+
+    /// The upscaler is a native hardware-accelerated implementation (e.g. MetalFX, DirectSR)
+    /// as opposed to a custom software fallback.
+    SUPER_RESOLUTION_SPATIAL_CAP_FLAG_NATIVE = 1u << 0,
+
+    SUPER_RESOLUTION_SPATIAL_CAP_FLAG_LAST   = SUPER_RESOLUTION_SPATIAL_CAP_FLAG_NATIVE
+};
+DEFINE_FLAG_ENUM_OPERATORS(SUPER_RESOLUTION_SPATIAL_CAP_FLAGS)
+
+
+/// Capability flags for temporal super resolution upscaling.
+DILIGENT_TYPED_ENUM(SUPER_RESOLUTION_TEMPORAL_CAP_FLAGS, Uint32)
+{
+    SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_NONE                    = 0u,
+
+    /// The upscaler is a native hardware-accelerated implementation (e.g. MetalFX, DirectSR)
+    /// as opposed to a custom software fallback.
+    SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_NATIVE                  = 1u << 0,
+
+    /// The upscaler supports exposure scale texture input.
+    SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_EXPOSURE_SCALE_TEXTURE  = 1u << 1,
+
+    /// The upscaler supports ignore history mask texture input.
+    /// When set, the backend processes the pIgnoreHistoryMaskTextureSRV field
+    /// in ExecuteSuperResolutionAttribs.
+    SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_IGNORE_HISTORY_MASK     = 1u << 2,
+
+    /// The upscaler supports reactive mask texture input.
+    /// When set, the backend processes the pReactiveMaskTextureSRV field
+    /// in ExecuteSuperResolutionAttribs.
+    SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_REACTIVE_MASK           = 1u << 3,
+
+    /// The upscaler supports the sharpness control parameter.
+    /// When set, the Sharpness field in ExecuteSuperResolutionAttribs is used.
+    SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_SHARPNESS               = 1u << 4,
+
+    SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_LAST                    = SUPER_RESOLUTION_TEMPORAL_CAP_FLAG_SHARPNESS
+};
+DEFINE_FLAG_ENUM_OPERATORS(SUPER_RESOLUTION_TEMPORAL_CAP_FLAGS)
+
+
+/// Information about a supported super resolution upscaler variant
+struct SuperResolutionInfo
+{
+    /// Human-readable name of the upscaler variant (e.g. "MetalFX Spatial", "MetalFX Temporal").
+    Char Name[128] DEFAULT_INITIALIZER({});
+
+    /// Unique identifier for this upscaler variant.
+    /// Pass this VariantId to SuperResolutionDesc when creating an upscaler.
+    INTERFACE_ID VariantId DEFAULT_INITIALIZER({});
+
+    /// Upscaler type. Determines which input textures and parameters are required.
+    SUPER_RESOLUTION_UPSCALER_TYPE Type DEFAULT_INITIALIZER(SUPER_RESOLUTION_UPSCALER_TYPE_SPATIAL);
+
+#if defined(DILIGENT_SHARP_GEN)
+    Uint32  CapFlags  DEFAULT_INITIALIZER(0);
+#else
+    union
+    {
+        /// Capability flags for SUPER_RESOLUTION_UPSCALER_TYPE_SPATIAL.
+        SUPER_RESOLUTION_SPATIAL_CAP_FLAGS  SpatialCapFlags DEFAULT_INITIALIZER(SUPER_RESOLUTION_SPATIAL_CAP_FLAG_NONE);
+
+        /// Capability flags for SUPER_RESOLUTION_UPSCALER_TYPE_TEMPORAL.
+        SUPER_RESOLUTION_TEMPORAL_CAP_FLAGS TemporalCapFlags;
+    };
+#endif
+
+#if DILIGENT_CPP_INTERFACE
+    constexpr Uint32 SpatialOrTemporalCapFlags() const
+    {
+        #if defined(DILIGENT_SHARP_GEN)
+            return CapFlags;
+        #else
+            return SpatialCapFlags;
+        #endif
+    }
+
+    /// Comparison operator tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise.
+    bool operator==(const SuperResolutionInfo& RHS) const noexcept
+    {
+        return VariantId                   == RHS.VariantId                   &&
+               Type                        == RHS.Type                        &&
+               SpatialOrTemporalCapFlags() == RHS.SpatialOrTemporalCapFlags() &&
+               memcmp(Name, RHS.Name, sizeof(Name)) == 0;
+    }
+#endif
+};
+typedef struct SuperResolutionInfo SuperResolutionInfo;
+
+
+/// Super resolution properties, reported via GraphicsAdapterInfo
+struct SuperResolutionProperties
+{
+    /// Array of supported upscaler variants and their capabilities.
+    SuperResolutionInfo Upscalers[DILIGENT_MAX_SUPER_RESOLUTION_UPSCALERS] DEFAULT_INITIALIZER({});
+
+    /// The number of valid elements in the Upscalers array.
+    Uint8 NumUpscalers DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    bool operator==(const SuperResolutionProperties& RHS) const
+    {
+        if (NumUpscalers != RHS.NumUpscalers)
+            return false;
+
+        for (Uint8 i = 0; i < NumUpscalers; ++i)
+            if (!(Upscalers[i] == RHS.Upscalers[i]))
+                return false;
+
+        return true;
+    }
+#endif
+};
+typedef struct SuperResolutionProperties SuperResolutionProperties;
+
+
 /// Command queue properties
 struct CommandQueueInfo
 {
@@ -3354,6 +3518,9 @@ struct GraphicsAdapterInfo
     /// Sparse resource properties, see Diligent::SparseResourceProperties.
     SparseResourceProperties SparseResources;
 
+    /// Super resolution upscaler properties, see Diligent::SuperResolutionProperties.
+    SuperResolutionProperties SuperResolution;
+
     /// Supported device features, see Diligent::DeviceFeatures.
 
     /// The feature state indicates:
@@ -3400,6 +3567,7 @@ struct GraphicsAdapterInfo
                ComputeShader   == RHS.ComputeShader   &&
                DrawCommand     == RHS.DrawCommand     &&
                SparseResources == RHS.SparseResources &&
+               SuperResolution == RHS.SuperResolution &&
                Features        == RHS.Features        &&
                memcmp(Description, RHS.Description, sizeof(Description)) == 0;
     }
