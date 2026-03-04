@@ -2190,7 +2190,7 @@ void TestRenderStateCaches(bool CompileAsync)
 
     SpecializationConstant SpecConsts[SpecConstRefDescCount];
 
-    for (size_t i = 0; i < SpecConstRefDescCount; ++i)
+    for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
     {
         SpecConsts[i].Name         = SpecConstRefDescs[i].Name;
         SpecConsts[i].ShaderStages = SpecConstRefDescs[i].Stage;
@@ -2243,7 +2243,7 @@ void TestRenderStateCaches(bool CompileAsync)
             CreateGraphicsPSO(pCache, false, CompileAsync, "SpecConsts Cache Mutable Test", pVS, pPS, MutableSpecConsts, _countof(MutableSpecConsts), pMutablePSO);
             ASSERT_NE(pMutablePSO, nullptr);
 
-            //Make sure the strings and data are properly copied in CreateGraphicsPSO.
+            // Make sure the strings and data are properly copied in CreateGraphicsPSO.
             for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
             {
                 MutableNames[i]  = SpecConstRefDescs[(i + 1) % SpecConstRefDescCount].Name;
@@ -2369,7 +2369,9 @@ void TestDistinctEntries(bool CompileAsync)
         ASSERT_NE(pPSO_A2, nullptr);
         ASSERT_EQ(pPSO_A2->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
         if (!CompileAsync)
+        {
             EXPECT_EQ(pPSO_A, pPSO_A2);
+        }
         else
         {
             RefCntAutoPtr<IPipelineState> pPSO_A3;
@@ -2390,7 +2392,9 @@ void TestDistinctEntries(bool CompileAsync)
         ASSERT_NE(pPSO_B2, nullptr);
         ASSERT_EQ(pPSO_B2->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
         if (!CompileAsync)
+        {
             EXPECT_EQ(pPSO_B, pPSO_B2);
+        }
         else
         {
             RefCntAutoPtr<IPipelineState> pPSO_B3;
