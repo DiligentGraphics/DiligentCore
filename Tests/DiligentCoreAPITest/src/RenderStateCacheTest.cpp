@@ -2303,36 +2303,36 @@ void TestDistinctEntries(bool CompileAsync)
 
         float RefValuesB[SpecConstRefDescCount];
         for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
+        {
             RefValuesB[i] = SpecConstRefDescs[i].RefValue;
-        RefValuesB[9] = 2.0f; // sc_Brightness
-
-        // clang-format off
+            if (!strcmp(SpecConstRefDescs[i].Name, "sc_Brightness"))
+                RefValuesB[i] = 2.0f;
+        }
 
         SpecializationConstant SpecConstsA[SpecConstRefDescCount];
-
-        for(size_t i = 0; i < SpecConstRefDescCount; ++i){
-            SpecConstsA[i].Name = SpecConstRefDescs[i].Name;
+        for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
+        {
+            SpecConstsA[i].Name         = SpecConstRefDescs[i].Name;
             SpecConstsA[i].ShaderStages = SpecConstRefDescs[i].Stage;
-            SpecConstsA[i].pData = &SpecConstRefDescs[i].RefValue;
-            SpecConstsA[i].Size = sizeof(SpecConstRefDescs[i].RefValue);
+            SpecConstsA[i].pData        = &SpecConstRefDescs[i].RefValue;
+            SpecConstsA[i].Size         = sizeof(SpecConstRefDescs[i].RefValue);
         }
 
         SpecializationConstant SpecConstsB[SpecConstRefDescCount];
-
-        for(size_t i = 0; i < SpecConstRefDescCount; ++i){
-            SpecConstsB[i].Name = SpecConstRefDescs[i].Name;
+        for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
+        {
+            SpecConstsB[i].Name         = SpecConstRefDescs[i].Name;
             SpecConstsB[i].ShaderStages = SpecConstRefDescs[i].Stage;
-            SpecConstsB[i].pData = &RefValuesB[i];
-            SpecConstsB[i].Size = sizeof(RefValuesB[i]);
+            SpecConstsB[i].pData        = &RefValuesB[i];
+            SpecConstsB[i].Size         = sizeof(RefValuesB[i]);
         }
-
-        // clang-format on
 
         RefCntAutoPtr<IPipelineState> pPSO_A;
         CreateGraphicsPSO(pCache, pData != nullptr, CompileAsync, "SpecConsts Distinct Test",
                           pVS, pPS, SpecConstsA, _countof(SpecConstsA), pPSO_A);
         ASSERT_NE(pPSO_A, nullptr);
         ASSERT_EQ(pPSO_A->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+        VerifyPSO(pPSO_A);
 
         RefCntAutoPtr<IPipelineState> pPSO_B;
         CreateGraphicsPSO(pCache, pData != nullptr, CompileAsync, "SpecConsts Distinct Test",
