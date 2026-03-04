@@ -26,8 +26,10 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "RenderDevice.h"
+#include "SuperResolution.h"
 
 int TestObjectCInterface(struct IObject* pObject);
 
@@ -250,7 +252,6 @@ int TestRenderDeviceCInterface_CreateGraphicsPipelineState(struct IRenderDevice*
     return num_errors;
 }
 
-
 int TestRenderDeviceCInterface_CreateFence(struct IRenderDevice* pRenderDevice)
 {
     struct FenceDesc fenceDesc;
@@ -289,6 +290,57 @@ int TestRenderDeviceCInterface_CreateQuery(struct IRenderDevice* pRenderDevice)
         IRenderDevice_CreateQuery(pRenderDevice, &queryDesc, &pQuery);
         if (pQuery != NULL)
             IObject_Release(pQuery);
+        else
+            ++num_errors;
+    }
+
+    return num_errors;
+}
+
+int TestRenderDeviceCInterface_CreateSuperResolution(struct IRenderDevice* pRenderDevice)
+{
+    SuperResolutionDesc        Desc;
+    struct ISuperResolution*   pUpscaler = NULL;
+    struct RenderDeviceInfo    DeviceInfo;
+    struct GraphicsAdapterInfo AdapterInfo;
+
+    int num_errors = 0;
+
+    DeviceInfo  = *IRenderDevice_GetDeviceInfo(pRenderDevice);
+    AdapterInfo = *IRenderDevice_GetAdapterInfo(pRenderDevice);
+    if (DeviceInfo.Features.SuperResolution)
+    {
+        // Test GetSuperResolutionSourceSettings
+        SuperResolutionSourceSettingsAttribs QueryAttribs;
+        SuperResolutionSourceSettings        SourceSettings;
+
+        memset(&QueryAttribs, 0, sizeof(QueryAttribs));
+        QueryAttribs.VariantId        = AdapterInfo.SuperResolution.Upscalers[0].VariantId;
+        QueryAttribs.OutputWidth      = 1920;
+        QueryAttribs.OutputHeight     = 1080;
+        QueryAttribs.OptimizationType = SUPER_RESOLUTION_OPTIMIZATION_TYPE_BALANCED;
+
+        memset(&SourceSettings, 0, sizeof(SourceSettings));
+        IRenderDevice_GetSuperResolutionSourceSettings(pRenderDevice, &QueryAttribs, &SourceSettings);
+        if (SourceSettings.OptimalInputWidth == 0)
+            ++num_errors;
+        if (SourceSettings.OptimalInputHeight == 0)
+            ++num_errors;
+
+        // Test CreateSuperResolution
+        memset(&Desc, 0, sizeof(Desc));
+        Desc._DeviceObjectAttribs.Name = "Test SuperResolution Upscaler";
+        Desc.VariantId                 = AdapterInfo.SuperResolution.Upscalers[0].VariantId;
+        Desc.OutputWidth               = 1920;
+        Desc.OutputHeight              = 1080;
+        Desc.OutputFormat              = TEX_FORMAT_RGBA16_FLOAT;
+        Desc.ColorFormat               = TEX_FORMAT_RGBA16_FLOAT;
+        Desc.InputWidth                = SourceSettings.OptimalInputWidth;
+        Desc.InputHeight               = SourceSettings.OptimalInputHeight;
+
+        IRenderDevice_CreateSuperResolution(pRenderDevice, &Desc, &pUpscaler);
+        if (pUpscaler != NULL)
+            IObject_Release(pUpscaler);
         else
             ++num_errors;
     }
