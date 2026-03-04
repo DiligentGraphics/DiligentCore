@@ -4164,6 +4164,12 @@ void DeviceContextVkImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COM
         UNEXPECTED("VariableRateShading device feature is not enabled");
 }
 
+void DeviceContextVkImpl::ExecuteSuperResolution(const ExecuteSuperResolutionAttribs& Attribs,
+                                                 ISuperResolution*                    pUpscaler)
+{
+    UNSUPPORTED("ExecuteSuperResolution is not supported in Vulkan");
+}
+
 void DeviceContextVkImpl::BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs)
 {
     TDeviceContextBase::BindSparseResourceMemory(Attribs, 0);

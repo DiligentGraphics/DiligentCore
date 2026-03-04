@@ -3348,4 +3348,10 @@ void DeviceContextD3D12Impl::BindSparseResourceMemory(const BindSparseResourceMe
     UnlockCommandQueue();
 }
 
+void DeviceContextD3D12Impl::ExecuteSuperResolution(const ExecuteSuperResolutionAttribs& Attribs,
+                                                    ISuperResolution*                    pUpscaler)
+{
+    UNSUPPORTED("ExecuteSuperResolution is not supported in DirectX 12");
+}
+
 } // namespace Diligent

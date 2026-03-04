@@ -62,6 +62,9 @@
 namespace Diligent
 {
 
+class SuperResolutionD3D12Impl
+{};
+
 namespace
 {
 
@@ -674,6 +677,20 @@ void RenderDeviceD3D12Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
                                       IShaderBindingTable**         ppSBT)
 {
     CreateSBTImpl(ppSBT, Desc);
+}
+
+void RenderDeviceD3D12Impl::CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                                  ISuperResolution**         ppUpscaler)
+{
+    UNSUPPORTED("CreateSuperResolution is not supported in DirectX 12");
+    *ppUpscaler = nullptr;
+}
+
+void RenderDeviceD3D12Impl::GetSuperResolutionSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                                             SuperResolutionSourceSettings&              Settings) const
+{
+    UNSUPPORTED("GetSuperResolutionSourceSettings is not supported in DirectX 12");
+    Settings = {};
 }
 
 void RenderDeviceD3D12Impl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,

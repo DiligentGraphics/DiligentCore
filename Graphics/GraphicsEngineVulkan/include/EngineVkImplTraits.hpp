@@ -77,6 +77,7 @@ class ShaderBindingTableVkImpl;
 class PipelineResourceSignatureVkImpl;
 class DeviceMemoryVkImpl;
 class PipelineStateCacheVkImpl;
+class SuperResolutionVkImpl;
 
 class FixedBlockMemoryAllocator;
 
@@ -136,6 +137,7 @@ struct EngineVkImplTraits
     using PipelineResourceSignatureImplType = PipelineResourceSignatureVkImpl;
     using DeviceMemoryImplType              = DeviceMemoryVkImpl;
     using PipelineStateCacheImplType        = PipelineStateCacheVkImpl;
+    using SuperResolutionImplType           = SuperResolutionVkImpl;
 
     using BuffViewObjAllocatorType = FixedBlockMemoryAllocator;
     using TexViewObjAllocatorType  = FixedBlockMemoryAllocator;

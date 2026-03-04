@@ -410,7 +410,7 @@ DeviceFeatures GetSupportedFeatures(WGPUAdapter wgpuAdapter, WGPUDevice wgpuDevi
         CheckFeature(WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses) :
         DEVICE_FEATURE_STATE_DISABLED;
 
-    ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 
     return Features;
 }

@@ -67,6 +67,12 @@ class ShaderBindingTableWebGPUImpl
 class DeviceMemoryWebGPUImpl
 {};
 
+class PipelineStateCacheWebGPUImpl
+{};
+
+class SuperResolutionWebGPUImpl
+{};
+
 #if PLATFORM_WEB
 static void DebugMessengerCallback(WGPUErrorType MessageType, const char* Message, void* pUserData)
 {
@@ -255,6 +261,20 @@ void RenderDeviceWebGPUImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
 {
     UNSUPPORTED("CreateSBT is not supported in WebGPU");
     *ppSBT = nullptr;
+}
+
+void RenderDeviceWebGPUImpl::CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                                   ISuperResolution**         ppUpscaler)
+{
+    UNSUPPORTED("CreateSuperResolution is not supported in WebGPU");
+    *ppUpscaler = nullptr;
+}
+
+void RenderDeviceWebGPUImpl::GetSuperResolutionSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                                              SuperResolutionSourceSettings&              Settings) const
+{
+    UNSUPPORTED("GetSuperResolutionSourceSettings is not supported in WebGPU");
+    Settings = {};
 }
 
 void RenderDeviceWebGPUImpl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo,

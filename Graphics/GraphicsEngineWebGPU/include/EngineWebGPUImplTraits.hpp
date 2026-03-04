@@ -70,8 +70,8 @@ class TopLevelASWebGPUImpl;
 class ShaderBindingTableWebGPUImpl;
 class PipelineResourceSignatureWebGPUImpl;
 class DeviceMemoryWebGPUImpl;
-class PipelineStateCacheWebGPUImpl
-{};
+class PipelineStateCacheWebGPUImpl;
+class SuperResolutionWebGPUImpl;
 
 class FixedBlockMemoryAllocator;
 
@@ -127,6 +127,7 @@ struct EngineWebGPUImplTraits
     using PipelineResourceSignatureImplType = PipelineResourceSignatureWebGPUImpl;
     using DeviceMemoryImplType              = DeviceMemoryWebGPUImpl;
     using PipelineStateCacheImplType        = PipelineStateCacheWebGPUImpl;
+    using SuperResolutionImplType           = SuperResolutionWebGPUImpl;
 
     using BuffViewObjAllocatorType = FixedBlockMemoryAllocator;
     using TexViewObjAllocatorType  = FixedBlockMemoryAllocator;

@@ -2121,6 +2121,12 @@ void DeviceContextGLImpl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_COM
     UNSUPPORTED("SetShadingRate is not supported in OpenGL");
 }
 
+void DeviceContextGLImpl::ExecuteSuperResolution(const ExecuteSuperResolutionAttribs& Attribs,
+                                                 ISuperResolution*                    pUpscaler)
+{
+    UNSUPPORTED("ExecuteSuperResolution is not supported in OpenGL");
+}
+
 void DeviceContextGLImpl::BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs)
 {
     UNSUPPORTED("BindSparseResourceMemory is not supported in OpenGL");

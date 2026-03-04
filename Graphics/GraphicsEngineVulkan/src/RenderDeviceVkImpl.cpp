@@ -56,6 +56,9 @@
 namespace Diligent
 {
 
+class SuperResolutionVkImpl
+{};
+
 RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                              pRefCounters,
                                        IMemoryAllocator&                                RawMemAllocator,
                                        IEngineFactory*                                  pEngineFactory,
@@ -715,6 +718,20 @@ void RenderDeviceVkImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
                                    IShaderBindingTable**         ppSBT)
 {
     CreateSBTImpl(ppSBT, Desc);
+}
+
+void RenderDeviceVkImpl::CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                               ISuperResolution**         ppUpscaler)
+{
+    UNSUPPORTED("CreateSuperResolution is not supported in Vulkan");
+    *ppUpscaler = nullptr;
+}
+
+void RenderDeviceVkImpl::GetSuperResolutionSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                                          SuperResolutionSourceSettings&              Settings) const
+{
+    UNSUPPORTED("GetSuperResolutionSourceSettings is not supported in Vulkan");
+    Settings = {};
 }
 
 void RenderDeviceVkImpl::CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,

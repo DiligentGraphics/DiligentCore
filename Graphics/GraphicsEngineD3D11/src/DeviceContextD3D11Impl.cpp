@@ -2466,6 +2466,12 @@ void DeviceContextD3D11Impl::SetShadingRate(SHADING_RATE BaseRate, SHADING_RATE_
     UNSUPPORTED("SetShadingRate is not supported in DirectX 11");
 }
 
+void DeviceContextD3D11Impl::ExecuteSuperResolution(const ExecuteSuperResolutionAttribs& Attribs,
+                                                    ISuperResolution*                    pUpscaler)
+{
+    UNSUPPORTED("ExecuteSuperResolution is not supported in DirectX 11");
+}
+
 void DeviceContextD3D11Impl::BindSparseResourceMemory(const BindSparseResourceMemoryAttribs& Attribs)
 {
     TDeviceContextBase::BindSparseResourceMemory(Attribs, 0);

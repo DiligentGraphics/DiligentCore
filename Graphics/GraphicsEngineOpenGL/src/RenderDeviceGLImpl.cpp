@@ -134,6 +134,10 @@ class ShaderBindingTableGLImpl
 {};
 class DeviceMemoryGLImpl
 {};
+class PipelineStateCacheGlImpl
+{};
+class SuperResolutionGLImpl
+{};
 
 static void VerifyEngineGLCreateInfo(const EngineGLCreateInfo& EngineCI) noexcept(false)
 {
@@ -635,6 +639,20 @@ void RenderDeviceGLImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
     *ppSBT = nullptr;
 }
 
+void RenderDeviceGLImpl::CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                               ISuperResolution**         ppUpscaler)
+{
+    UNSUPPORTED("CreateSuperResolution is not supported in OpenGL");
+    *ppUpscaler = nullptr;
+}
+
+void RenderDeviceGLImpl::GetSuperResolutionSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                                          SuperResolutionSourceSettings&              Settings) const
+{
+    UNSUPPORTED("GetSuperResolutionSourceSettings is not supported in OpenGL");
+    Settings = {};
+}
+
 void RenderDeviceGLImpl::CreateDeviceMemory(const DeviceMemoryCreateInfo& CreateInfo, IDeviceMemory** ppMemory)
 {
     UNSUPPORTED("CreateDeviceMemory is not supported in OpenGL");
@@ -1132,7 +1150,7 @@ void RenderDeviceGLImpl::InitAdapterInfo()
         m_AdapterInfo.Queues[0].TextureCopyGranularity[2] = 1;
     }
 
-    ASSERT_SIZEOF(DeviceFeatures, 48, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
+    ASSERT_SIZEOF(DeviceFeatures, 49, "Did you add a new feature to DeviceFeatures? Please handle its status here.");
 }
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()

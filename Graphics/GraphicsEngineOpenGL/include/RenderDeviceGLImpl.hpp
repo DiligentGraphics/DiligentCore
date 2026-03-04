@@ -140,6 +140,14 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
                                               IShaderBindingTable**         ppSBT) override final;
 
+    /// Implementation of IRenderDevice::CreateSuperResolution() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CreateSuperResolution(const SuperResolutionDesc& Desc,
+                                                          ISuperResolution**         ppUpscaler) override final;
+
+    /// Implementation of IRenderDevice::GetSuperResolutionSourceSettings() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE GetSuperResolutionSourceSettings(const SuperResolutionSourceSettingsAttribs& Attribs,
+                                                                     SuperResolutionSourceSettings&              Settings) const override final;
+
     /// Implementation of IRenderDevice::CreatePipelineResourceSignature() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE CreatePipelineResourceSignature(const PipelineResourceSignatureDesc& Desc,
                                                                     IPipelineResourceSignature**         ppSignature) override final;
