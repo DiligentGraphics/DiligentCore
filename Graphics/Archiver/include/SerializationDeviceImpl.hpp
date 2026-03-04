@@ -70,11 +70,14 @@ public:
     UNSUPPORTED_METHOD(void, CreateTLAS,        const TopLevelASDesc&         Desc, ITopLevelAS**         ppTLAS)
     UNSUPPORTED_METHOD(void, CreateSBT,         const ShaderBindingTableDesc& Desc, IShaderBindingTable** ppSBT)
     UNSUPPORTED_METHOD(void, CreatePipelineResourceSignature, const PipelineResourceSignatureDesc& Desc, IPipelineResourceSignature** ppSignature)
+    UNSUPPORTED_METHOD(void, CreateSuperResolution,           const SuperResolutionDesc&           Desc, ISuperResolution**           ppUpscaler)
     UNSUPPORTED_METHOD(void, CreateDeviceMemory,       const DeviceMemoryCreateInfo&       CreateInfo, IDeviceMemory**       ppMemory)
     UNSUPPORTED_METHOD(void, CreatePipelineStateCache, const PipelineStateCacheCreateInfo& CreateInfo, IPipelineStateCache** ppPSOCache)
     UNSUPPORTED_METHOD(void, CreateDeferredContext, IDeviceContext** ppContext)
     UNSUPPORTED_METHOD(void, IdleGPU)
     UNSUPPORTED_METHOD(void, ReleaseStaleResources, bool ForceRelease)
+
+    UNSUPPORTED_CONST_METHOD(void, GetSuperResolutionSourceSettings, const SuperResolutionSourceSettingsAttribs& Attribs, SuperResolutionSourceSettings& Settings)
     // clang-format on
 
     /// Implementation of IRenderDevice::CreateRenderPass().
