@@ -2118,7 +2118,8 @@ void CreateGraphicsPSO(IRenderStateCache*             pCache,
                        IShader*                       pPS,
                        const SpecializationConstant*  pSpecConsts,
                        Uint32                         NumSpecConsts,
-                       RefCntAutoPtr<IPipelineState>& pPSO)
+                       RefCntAutoPtr<IPipelineState>& pPSO,
+                       bool*                          pFoundInCache = nullptr)
 {
     auto* pEnv       = GPUTestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
@@ -2144,6 +2145,8 @@ void CreateGraphicsPSO(IRenderStateCache*             pCache,
         bool PSOFound = pCache->CreateGraphicsPipelineState(PsoCI, &pPSO);
         if (!CompileAsync)
             EXPECT_EQ(PSOFound, PresentInCache);
+        if (pFoundInCache != nullptr)
+            *pFoundInCache = PSOFound;
     }
     else
     {
@@ -2262,11 +2265,27 @@ void TestRenderStateCaches(bool CompileAsync)
 
         {
             RefCntAutoPtr<IPipelineState> pPSO2;
-            CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Cache Test", pVS, pPS, SpecConsts, _countof(SpecConsts), pPSO2);
+            bool                          PSOFound2 = false;
+            CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Cache Test", pVS, pPS, SpecConsts, _countof(SpecConsts), pPSO2, &PSOFound2);
+            EXPECT_TRUE(PSOFound2);
             ASSERT_NE(pPSO2, nullptr);
             ASSERT_EQ(pPSO2->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+
+            RefCntAutoPtr<IPipelineState> pPSO3;
+            bool                          PSOFound3 = false;
+            CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Cache Test", pVS, pPS, SpecConsts, _countof(SpecConsts), pPSO3, &PSOFound3);
+            EXPECT_TRUE(PSOFound3);
+            ASSERT_NE(pPSO3, nullptr);
+            ASSERT_EQ(pPSO3->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+
             if (!CompileAsync)
+            {
                 EXPECT_EQ(pPSO, pPSO2);
+            }
+            else
+            {
+                EXPECT_EQ(pPSO2, pPSO3);
+            }
         }
 
         pData.Release();
@@ -2343,20 +2362,46 @@ void TestDistinctEntries(bool CompileAsync)
         EXPECT_NE(pPSO_A, pPSO_B);
 
         RefCntAutoPtr<IPipelineState> pPSO_A2;
+        bool                          PSOFoundA2 = false;
         CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Distinct Test",
-                          pVS, pPS, SpecConstsA, _countof(SpecConstsA), pPSO_A2);
+                          pVS, pPS, SpecConstsA, _countof(SpecConstsA), pPSO_A2, &PSOFoundA2);
+        EXPECT_TRUE(PSOFoundA2);
         ASSERT_NE(pPSO_A2, nullptr);
         ASSERT_EQ(pPSO_A2->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
         if (!CompileAsync)
             EXPECT_EQ(pPSO_A, pPSO_A2);
+        else
+        {
+            RefCntAutoPtr<IPipelineState> pPSO_A3;
+            bool                          PSOFoundA3 = false;
+            CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Distinct Test",
+                              pVS, pPS, SpecConstsA, _countof(SpecConstsA), pPSO_A3, &PSOFoundA3);
+            EXPECT_TRUE(PSOFoundA3);
+            ASSERT_NE(pPSO_A3, nullptr);
+            ASSERT_EQ(pPSO_A3->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+            EXPECT_EQ(pPSO_A2, pPSO_A3);
+        }
 
         RefCntAutoPtr<IPipelineState> pPSO_B2;
+        bool                          PSOFoundB2 = false;
         CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Distinct Test",
-                          pVS, pPS, SpecConstsB, _countof(SpecConstsB), pPSO_B2);
+                          pVS, pPS, SpecConstsB, _countof(SpecConstsB), pPSO_B2, &PSOFoundB2);
+        EXPECT_TRUE(PSOFoundB2);
         ASSERT_NE(pPSO_B2, nullptr);
         ASSERT_EQ(pPSO_B2->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
         if (!CompileAsync)
             EXPECT_EQ(pPSO_B, pPSO_B2);
+        else
+        {
+            RefCntAutoPtr<IPipelineState> pPSO_B3;
+            bool                          PSOFoundB3 = false;
+            CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Distinct Test",
+                              pVS, pPS, SpecConstsB, _countof(SpecConstsB), pPSO_B3, &PSOFoundB3);
+            EXPECT_TRUE(PSOFoundB3);
+            ASSERT_NE(pPSO_B3, nullptr);
+            ASSERT_EQ(pPSO_B3->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+            EXPECT_EQ(pPSO_B2, pPSO_B3);
+        }
 
         RefCntAutoPtr<IPipelineState> pPSO_None;
         CreateGraphicsPSO(pCache, pData != nullptr, CompileAsync, "SpecConsts Distinct Test",
