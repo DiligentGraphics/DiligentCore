@@ -1205,17 +1205,33 @@ void TestPipelineStateCIHasher()
     Helper.Get().ppResourceSignatures = ppSignatures.data();
     TEST_RANGE(ResourceSignaturesCount, 1u, MAX_RESOURCE_SIGNATURES);
 
+    // Keep specialization constant storage alive for the entire helper lifetime.
+    // StdHasherTestHelper stores shallow copies of create-info in m_Descs.
+    const Uint32                 Data1[] = {1, 2, 3};
+    const Uint32                 Data2[] = {4, 5, 6};
+    const Uint32                 Data3[] = {7, 8, 9};
+    const SpecializationConstant SpecConsts[] =
+        {
+            {"Const1", SHADER_TYPE_VERTEX, sizeof(Uint32), &Data1[0]},
+            {"Const2", SHADER_TYPE_PIXEL, sizeof(Uint32), &Data2[0]},
+            {"Const3", SHADER_TYPE_GEOMETRY, sizeof(Uint32), &Data3[0]},
+        };
+
+    const Uint32                 DataA = 100;
+    const Uint32                 DataB = 200;
+    const SpecializationConstant SC_A{"Const", SHADER_TYPE_VERTEX, sizeof(Uint32), &DataA};
+    const SpecializationConstant SC_B{"Const", SHADER_TYPE_VERTEX, sizeof(Uint32), &DataB};
+
+    const Uint32                 DataName = 42;
+    const SpecializationConstant SC_Name1{"Alpha", SHADER_TYPE_VERTEX, sizeof(Uint32), &DataName};
+    const SpecializationConstant SC_Name2{"Beta", SHADER_TYPE_VERTEX, sizeof(Uint32), &DataName};
+
+    const Uint32                 DataStage = 42;
+    const SpecializationConstant SC_VS{"Const", SHADER_TYPE_VERTEX, sizeof(Uint32), &DataStage};
+    const SpecializationConstant SC_PS{"Const", SHADER_TYPE_PIXEL, sizeof(Uint32), &DataStage};
+
     // Test specialization constants hashing
     {
-        const Uint32                 Data1[] = {1, 2, 3};
-        const Uint32                 Data2[] = {4, 5, 6};
-        const Uint32                 Data3[] = {7, 8, 9};
-        const SpecializationConstant SpecConsts[] =
-            {
-                {"Const1", SHADER_TYPE_VERTEX, sizeof(Uint32), &Data1[0]},
-                {"Const2", SHADER_TYPE_PIXEL, sizeof(Uint32), &Data2[0]},
-                {"Const3", SHADER_TYPE_GEOMETRY, sizeof(Uint32), &Data3[0]},
-            };
         Helper.Get().ppResourceSignatures     = nullptr;
         Helper.Get().ResourceSignaturesCount  = 0;
         Helper.Get().pSpecializationConstants = SpecConsts;
@@ -1226,11 +1242,6 @@ void TestPipelineStateCIHasher()
 
     // Test that different specialization constant data produces different hashes
     {
-        const Uint32                 DataA = 100;
-        const Uint32                 DataB = 200;
-        const SpecializationConstant SC_A{"Const", SHADER_TYPE_VERTEX, sizeof(Uint32), &DataA};
-        const SpecializationConstant SC_B{"Const", SHADER_TYPE_VERTEX, sizeof(Uint32), &DataB};
-
         Helper.Get().NumSpecializationConstants = 1;
         Helper.Get().pSpecializationConstants   = &SC_A;
         Helper.Add("SpecConst data A");
@@ -1241,10 +1252,6 @@ void TestPipelineStateCIHasher()
 
     // Test that different specialization constant names produce different hashes
     {
-        const Uint32                 Data = 42;
-        const SpecializationConstant SC_Name1{"Alpha", SHADER_TYPE_VERTEX, sizeof(Uint32), &Data};
-        const SpecializationConstant SC_Name2{"Beta", SHADER_TYPE_VERTEX, sizeof(Uint32), &Data};
-
         Helper.Get().NumSpecializationConstants = 1;
         Helper.Get().pSpecializationConstants   = &SC_Name1;
         Helper.Add("SpecConst name Alpha");
@@ -1255,10 +1262,6 @@ void TestPipelineStateCIHasher()
 
     // Test that different specialization constant ShaderStages produce different hashes
     {
-        const Uint32                 Data = 42;
-        const SpecializationConstant SC_VS{"Const", SHADER_TYPE_VERTEX, sizeof(Uint32), &Data};
-        const SpecializationConstant SC_PS{"Const", SHADER_TYPE_PIXEL, sizeof(Uint32), &Data};
-
         Helper.Get().NumSpecializationConstants = 1;
         Helper.Get().pSpecializationConstants   = &SC_VS;
         Helper.Add("SpecConst stage VS");
