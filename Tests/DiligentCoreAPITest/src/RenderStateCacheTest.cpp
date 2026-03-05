@@ -1,5 +1,5 @@
 /*
- *  Copyright 2019-2025 Diligent Graphics LLC
+ *  Copyright 2019-2026 Diligent Graphics LLC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1916,6 +1916,530 @@ TEST(RenderStateCacheTest, NonSeparableProgramBindingConflict)
     pCache->CreateGraphicsPipelineState(PsoCI, &pPSO);
     ASSERT_NE(pPSO, nullptr) << "PSO creation failed - likely due to binding conflict in non-separable program";
     ASSERT_EQ(pPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+}
+
+namespace SpecConstsTests
+{
+
+const std::string GraphicsVS_GLSL{
+    R"(
+#version 450
+
+#ifndef GL_ES
+out gl_PerVertex { vec4 gl_Position; };
+#endif
+
+layout(constant_id = 0) const float sc_Col0_R = -1.0;
+layout(constant_id = 1) const float sc_Col0_G = -1.0;
+layout(constant_id = 2) const float sc_Col0_B = -1.0;
+
+layout(constant_id = 3) const float sc_Col1_R = -1.0;
+layout(constant_id = 4) const float sc_Col1_G = -1.0;
+layout(constant_id = 5) const float sc_Col1_B = -1.0;
+
+layout(constant_id = 6) const float sc_Col2_R = -1.0;
+layout(constant_id = 7) const float sc_Col2_G = -1.0;
+layout(constant_id = 8) const float sc_Col2_B = -1.0;
+
+layout(location = 0) out vec3 out_Color;
+
+void main()
+{
+    vec4 Pos[6];
+    Pos[0] = vec4(-1.0, -0.5, 0.0, 1.0);
+    Pos[1] = vec4(-0.5, +0.5, 0.0, 1.0);
+    Pos[2] = vec4( 0.0, -0.5, 0.0, 1.0);
+
+    Pos[3] = vec4(+0.0, -0.5, 0.0, 1.0);
+    Pos[4] = vec4(+0.5, +0.5, 0.0, 1.0);
+    Pos[5] = vec4(+1.0, -0.5, 0.0, 1.0);
+
+    vec3 Col[3];
+    Col[0] = vec3(sc_Col0_R, sc_Col0_G, sc_Col0_B);
+    Col[1] = vec3(sc_Col1_R, sc_Col1_G, sc_Col1_B);
+    Col[2] = vec3(sc_Col2_R, sc_Col2_G, sc_Col2_B);
+
+    gl_Position = Pos[gl_VertexIndex];
+    out_Color   = Col[gl_VertexIndex % 3];
+}
+)"};
+
+const std::string GraphicsPS_GLSL{
+    R"(
+#version 450
+
+layout(constant_id = 0) const float sc_Col0_R     = -1.0;
+layout(constant_id = 1) const float sc_Brightness = -1.0;
+layout(constant_id = 2) const float sc_AlphaScale = -1.0;
+
+layout(location = 0) in  vec3 in_Color;
+layout(location = 0) out vec4 out_Color;
+
+void main()
+{
+    out_Color = vec4(vec3(in_Color.r * sc_Col0_R, in_Color.g, in_Color.b) * sc_Brightness,
+                     sc_AlphaScale);
+}
+)"};
+
+const std::string GraphicsVS_WGSL{
+    R"(
+override sc_Col0_R: f32 = -1.0;
+override sc_Col0_G: f32 = -1.0;
+override sc_Col0_B: f32 = -1.0;
+
+override sc_Col1_R: f32 = -1.0;
+override sc_Col1_G: f32 = -1.0;
+override sc_Col1_B: f32 = -1.0;
+
+override sc_Col2_R: f32 = -1.0;
+override sc_Col2_G: f32 = -1.0;
+override sc_Col2_B: f32 = -1.0;
+
+struct VSOutput {
+    @builtin(position) Position: vec4<f32>,
+    @location(0) Color: vec3<f32>,
+};
+
+@vertex
+fn main(@builtin(vertex_index) VertexIndex: u32) -> VSOutput {
+    var Pos: array<vec4<f32>, 6>;
+    Pos[0] = vec4<f32>(-1.0, -0.5, 0.0, 1.0);
+    Pos[1] = vec4<f32>(-0.5,  0.5, 0.0, 1.0);
+    Pos[2] = vec4<f32>( 0.0, -0.5, 0.0, 1.0);
+
+    Pos[3] = vec4<f32>( 0.0, -0.5, 0.0, 1.0);
+    Pos[4] = vec4<f32>( 0.5,  0.5, 0.0, 1.0);
+    Pos[5] = vec4<f32>( 1.0, -0.5, 0.0, 1.0);
+
+    var Col: array<vec3<f32>, 3>;
+    Col[0] = vec3<f32>(sc_Col0_R, sc_Col0_G, sc_Col0_B);
+    Col[1] = vec3<f32>(sc_Col1_R, sc_Col1_G, sc_Col1_B);
+    Col[2] = vec3<f32>(sc_Col2_R, sc_Col2_G, sc_Col2_B);
+
+    var output: VSOutput;
+    output.Position = Pos[VertexIndex];
+    output.Color = Col[VertexIndex % 3];
+    return output;
+}
+)"};
+
+const std::string GraphicsPS_WGSL{
+    R"(
+override sc_Col0_R: f32 = -1.0;
+override sc_Brightness: f32 = -1.0;
+override sc_AlphaScale: f32 = -1.0;
+
+@fragment
+fn main(@location(0) in_Color: vec3<f32>) -> @location(0) vec4<f32> {
+    return vec4<f32>(vec3<f32>(in_Color.r * sc_Col0_R, in_Color.g, in_Color.b) * sc_Brightness,
+                     sc_AlphaScale);
+}
+)"};
+
+struct SpecConstRefAttribs
+{
+    const Char* Name;
+    SHADER_TYPE Stage;
+    float       RefValue;
+};
+
+// clang-format off
+static constexpr SpecConstRefAttribs SpecConstRefDescs[] = {
+    {"sc_Col0_R",     SHADER_TYPE_VS_PS,   1.0f},
+    {"sc_Col0_G",     SHADER_TYPE_VERTEX,  0.0f},
+    {"sc_Col0_B",     SHADER_TYPE_VERTEX,  0.0f},
+    {"sc_Col1_R",     SHADER_TYPE_VERTEX,  0.0f},
+    {"sc_Col1_G",     SHADER_TYPE_VERTEX,  1.0f},
+    {"sc_Col1_B",     SHADER_TYPE_VERTEX,  0.0f},
+    {"sc_Col2_R",     SHADER_TYPE_VERTEX,  0.0f},
+    {"sc_Col2_G",     SHADER_TYPE_VERTEX,  0.0f},
+    {"sc_Col2_B",     SHADER_TYPE_VERTEX,  1.0f},
+    {"sc_Brightness", SHADER_TYPE_PIXEL,   1.0f},
+    {"sc_AlphaScale", SHADER_TYPE_PIXEL,   1.0f},
+};
+// clang-format on
+
+static constexpr Uint32 SpecConstRefDescCount = _countof(SpecConstRefDescs);
+
+void CreateShaders(IRenderStateCache*      pCache,
+                   bool                    PresentInCache,
+                   bool                    CompileAsync,
+                   RefCntAutoPtr<IShader>& pVS,
+                   RefCntAutoPtr<IShader>& pPS)
+{
+    auto* const pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& DeviceInfo = pDevice->GetDeviceInfo();
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.CompileFlags = CompileAsync ? SHADER_COMPILE_FLAG_ASYNCHRONOUS : SHADER_COMPILE_FLAG_NONE;
+
+    {
+        ShaderCI.Desc       = {"SpecConsts Cache VS", SHADER_TYPE_VERTEX, true};
+        ShaderCI.EntryPoint = "main";
+        if (DeviceInfo.IsWebGPUDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+            ShaderCI.Source         = GraphicsVS_WGSL.c_str();
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+            ShaderCI.Source         = GraphicsVS_GLSL.c_str();
+        }
+        CreateShader(pCache, ShaderCI, PresentInCache, pVS);
+        ASSERT_TRUE(pVS);
+    }
+
+    {
+        ShaderCI.Desc       = {"SpecConsts Cache PS", SHADER_TYPE_PIXEL, true};
+        ShaderCI.EntryPoint = "main";
+        if (DeviceInfo.IsWebGPUDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_WGSL;
+            ShaderCI.Source         = GraphicsPS_WGSL.c_str();
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+            ShaderCI.Source         = GraphicsPS_GLSL.c_str();
+        }
+        CreateShader(pCache, ShaderCI, PresentInCache, pPS);
+        ASSERT_TRUE(pPS);
+    }
+}
+
+void CreateGraphicsPSO(IRenderStateCache*             pCache,
+                       bool                           PresentInCache,
+                       bool                           CompileAsync,
+                       const Char*                    Name,
+                       IShader*                       pVS,
+                       IShader*                       pPS,
+                       const SpecializationConstant*  pSpecConsts,
+                       Uint32                         NumSpecConsts,
+                       RefCntAutoPtr<IPipelineState>& pPSO,
+                       bool*                          pFoundInCache = nullptr)
+{
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    GraphicsPipelineStateCreateInfo PsoCI;
+    PsoCI.PSODesc.Name = Name;
+    PsoCI.Flags        = CompileAsync ? PSO_CREATE_FLAG_ASYNCHRONOUS : PSO_CREATE_FLAG_NONE;
+
+    PsoCI.pVS = pVS;
+    PsoCI.pPS = pPS;
+
+    PsoCI.GraphicsPipeline.NumRenderTargets             = 1;
+    PsoCI.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
+    PsoCI.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    PsoCI.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    PsoCI.pSpecializationConstants   = pSpecConsts;
+    PsoCI.NumSpecializationConstants = NumSpecConsts;
+
+    if (pCache != nullptr)
+    {
+        bool PSOFound = pCache->CreateGraphicsPipelineState(PsoCI, &pPSO);
+        if (!CompileAsync)
+            EXPECT_EQ(PSOFound, PresentInCache);
+        if (pFoundInCache != nullptr)
+            *pFoundInCache = PSOFound;
+    }
+    else
+    {
+        EXPECT_FALSE(PresentInCache);
+        pDevice->CreateGraphicsPipelineState(PsoCI, &pPSO);
+    }
+    ASSERT_NE(pPSO, nullptr);
+}
+
+void VerifyPSO(IPipelineState* pPSO)
+{
+    auto* pEnv       = GPUTestingEnvironment::GetInstance();
+    auto* pCtx       = pEnv->GetDeviceContext();
+    auto* pSwapChain = pEnv->GetSwapChain();
+
+    static FastRandFloat rnd{2, 0, 1};
+    const float          ClearColor[] = {rnd(), rnd(), rnd(), rnd()};
+    RenderDrawCommandReference(pSwapChain, ClearColor);
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pCtx->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    pCtx->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pCtx->SetPipelineState(pPSO);
+    pCtx->Draw({6, DRAW_FLAG_VERIFY_ALL});
+
+    pSwapChain->Present();
+}
+
+void TestRenderStateCaches(bool CompileAsync)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    if (pDevice->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+    }
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    SpecializationConstant SpecConsts[SpecConstRefDescCount];
+
+    for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
+    {
+        SpecConsts[i].Name         = SpecConstRefDescs[i].Name;
+        SpecConsts[i].ShaderStages = SpecConstRefDescs[i].Stage;
+        SpecConsts[i].pData        = &SpecConstRefDescs[i].RefValue;
+        SpecConsts[i].Size         = sizeof(SpecConstRefDescs[i].RefValue);
+    }
+
+    RefCntAutoPtr<IShader> pUncachedVS, pUncachedPS;
+    CreateShaders(nullptr, false, false, pUncachedVS, pUncachedPS);
+    ASSERT_NE(pUncachedVS, nullptr);
+    ASSERT_NE(pUncachedPS, nullptr);
+
+    RefCntAutoPtr<IPipelineState> pRefPSO;
+    CreateGraphicsPSO(nullptr, false, false, "SpecConsts Cache Test", pUncachedVS, pUncachedPS, SpecConsts, _countof(SpecConsts), pRefPSO);
+    ASSERT_NE(pRefPSO, nullptr);
+    ASSERT_EQ(pRefPSO->GetStatus(), PIPELINE_STATE_STATUS_READY);
+
+    RefCntAutoPtr<IDataBlob> pData;
+    for (Uint32 pass = 0; pass < 3; ++pass)
+    {
+        // 0: empty cache
+        // 1: loaded cache
+        // 2: reloaded cache (loaded -> stored -> loaded)
+
+        auto pCache = CreateCache(pDevice, /*HotReload=*/false, pData);
+        ASSERT_TRUE(pCache);
+
+        RefCntAutoPtr<IShader> pVS, pPS;
+        CreateShaders(pCache, pData != nullptr, CompileAsync, pVS, pPS);
+        ASSERT_NE(pVS, nullptr);
+        ASSERT_NE(pPS, nullptr);
+
+        if (CompileAsync && pass == 0)
+        {
+            std::string            MutableNames[SpecConstRefDescCount];
+            float                  MutableValues[SpecConstRefDescCount];
+            SpecializationConstant MutableSpecConsts[SpecConstRefDescCount];
+
+            for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
+            {
+                MutableNames[i]                   = SpecConstRefDescs[i].Name;
+                MutableValues[i]                  = SpecConstRefDescs[i].RefValue;
+                MutableSpecConsts[i].Name         = MutableNames[i].c_str();
+                MutableSpecConsts[i].ShaderStages = SpecConstRefDescs[i].Stage;
+                MutableSpecConsts[i].pData        = &MutableValues[i];
+                MutableSpecConsts[i].Size         = sizeof(MutableValues[i]);
+            }
+
+            RefCntAutoPtr<IPipelineState> pMutablePSO;
+            CreateGraphicsPSO(pCache, false, CompileAsync, "SpecConsts Cache Mutable Test", pVS, pPS, MutableSpecConsts, _countof(MutableSpecConsts), pMutablePSO);
+            ASSERT_NE(pMutablePSO, nullptr);
+
+            // Make sure the strings and data are properly copied in CreateGraphicsPSO.
+            for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
+            {
+                MutableNames[i]  = SpecConstRefDescs[(i + 1) % SpecConstRefDescCount].Name;
+                MutableValues[i] = SpecConstRefDescs[(i + 1) % SpecConstRefDescCount].RefValue;
+            }
+
+            ASSERT_EQ(pMutablePSO->GetStatus(true), PIPELINE_STATE_STATUS_READY);
+            VerifyPSO(pMutablePSO);
+        }
+
+        RefCntAutoPtr<IPipelineState> pPSO;
+        CreateGraphicsPSO(pCache, pData != nullptr, CompileAsync, "SpecConsts Cache Test", pVS, pPS, SpecConsts, _countof(SpecConsts), pPSO);
+        ASSERT_NE(pPSO, nullptr);
+        ASSERT_EQ(pPSO->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+        EXPECT_TRUE(pRefPSO->IsCompatibleWith(pPSO));
+        EXPECT_TRUE(pPSO->IsCompatibleWith(pRefPSO));
+
+        VerifyPSO(pPSO);
+
+        {
+            RefCntAutoPtr<IPipelineState> pPSO2;
+            bool                          PSOFound2 = false;
+            CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Cache Test", pVS, pPS, SpecConsts, _countof(SpecConsts), pPSO2, &PSOFound2);
+            EXPECT_TRUE(PSOFound2);
+            ASSERT_NE(pPSO2, nullptr);
+            ASSERT_EQ(pPSO2->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+
+            RefCntAutoPtr<IPipelineState> pPSO3;
+            bool                          PSOFound3 = false;
+            CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Cache Test", pVS, pPS, SpecConsts, _countof(SpecConsts), pPSO3, &PSOFound3);
+            EXPECT_TRUE(PSOFound3);
+            ASSERT_NE(pPSO3, nullptr);
+            ASSERT_EQ(pPSO3->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+
+            if (!CompileAsync)
+            {
+                EXPECT_EQ(pPSO, pPSO2);
+            }
+            else
+            {
+                EXPECT_EQ(pPSO2, pPSO3);
+            }
+        }
+
+        pData.Release();
+        pCache->WriteToBlob(pass == 0 ? ContentVersion : ~0u, &pData);
+    }
+}
+
+void TestDistinctEntries(bool CompileAsync)
+{
+    auto* pEnv    = GPUTestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    if (pDevice->GetDeviceInfo().Features.SpecializationConstants != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        GTEST_SKIP() << "Specialization constants are not supported by this device";
+    }
+
+    GPUTestingEnvironment::ScopedReset AutoReset;
+
+    RefCntAutoPtr<IDataBlob> pData;
+    for (Uint32 pass = 0; pass < 3; ++pass)
+    {
+        // 0: empty cache
+        // 1: loaded cache
+        // 2: reloaded cache (loaded -> stored -> loaded)
+
+        auto pCache = CreateCache(pDevice, /*HotReload=*/false, pData);
+        ASSERT_TRUE(pCache);
+
+        RefCntAutoPtr<IShader> pVS, pPS;
+        CreateShaders(pCache, pData != nullptr, CompileAsync, pVS, pPS);
+        ASSERT_NE(pVS, nullptr);
+        ASSERT_NE(pPS, nullptr);
+
+        float RefValuesB[SpecConstRefDescCount];
+        for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
+        {
+            RefValuesB[i] = SpecConstRefDescs[i].RefValue;
+            if (!strcmp(SpecConstRefDescs[i].Name, "sc_Brightness"))
+                RefValuesB[i] = 2.0f;
+        }
+
+        SpecializationConstant SpecConstsA[SpecConstRefDescCount];
+        for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
+        {
+            SpecConstsA[i].Name         = SpecConstRefDescs[i].Name;
+            SpecConstsA[i].ShaderStages = SpecConstRefDescs[i].Stage;
+            SpecConstsA[i].pData        = &SpecConstRefDescs[i].RefValue;
+            SpecConstsA[i].Size         = sizeof(SpecConstRefDescs[i].RefValue);
+        }
+
+        SpecializationConstant SpecConstsB[SpecConstRefDescCount];
+        for (Uint32 i = 0; i < SpecConstRefDescCount; ++i)
+        {
+            SpecConstsB[i].Name         = SpecConstRefDescs[i].Name;
+            SpecConstsB[i].ShaderStages = SpecConstRefDescs[i].Stage;
+            SpecConstsB[i].pData        = &RefValuesB[i];
+            SpecConstsB[i].Size         = sizeof(RefValuesB[i]);
+        }
+
+        RefCntAutoPtr<IPipelineState> pPSO_A;
+        CreateGraphicsPSO(pCache, pData != nullptr, CompileAsync, "SpecConsts Distinct Test",
+                          pVS, pPS, SpecConstsA, _countof(SpecConstsA), pPSO_A);
+        ASSERT_NE(pPSO_A, nullptr);
+        ASSERT_EQ(pPSO_A->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+        VerifyPSO(pPSO_A);
+
+        RefCntAutoPtr<IPipelineState> pPSO_B;
+        CreateGraphicsPSO(pCache, pData != nullptr, CompileAsync, "SpecConsts Distinct Test",
+                          pVS, pPS, SpecConstsB, _countof(SpecConstsB), pPSO_B);
+        ASSERT_NE(pPSO_B, nullptr);
+        ASSERT_EQ(pPSO_B->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+
+        EXPECT_NE(pPSO_A, pPSO_B);
+
+        RefCntAutoPtr<IPipelineState> pPSO_A2;
+        bool                          PSOFoundA2 = false;
+        CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Distinct Test",
+                          pVS, pPS, SpecConstsA, _countof(SpecConstsA), pPSO_A2, &PSOFoundA2);
+        EXPECT_TRUE(PSOFoundA2);
+        ASSERT_NE(pPSO_A2, nullptr);
+        ASSERT_EQ(pPSO_A2->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+        if (!CompileAsync)
+        {
+            EXPECT_EQ(pPSO_A, pPSO_A2);
+        }
+        else
+        {
+            RefCntAutoPtr<IPipelineState> pPSO_A3;
+            bool                          PSOFoundA3 = false;
+            CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Distinct Test",
+                              pVS, pPS, SpecConstsA, _countof(SpecConstsA), pPSO_A3, &PSOFoundA3);
+            EXPECT_TRUE(PSOFoundA3);
+            ASSERT_NE(pPSO_A3, nullptr);
+            ASSERT_EQ(pPSO_A3->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+            EXPECT_EQ(pPSO_A2, pPSO_A3);
+        }
+
+        RefCntAutoPtr<IPipelineState> pPSO_B2;
+        bool                          PSOFoundB2 = false;
+        CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Distinct Test",
+                          pVS, pPS, SpecConstsB, _countof(SpecConstsB), pPSO_B2, &PSOFoundB2);
+        EXPECT_TRUE(PSOFoundB2);
+        ASSERT_NE(pPSO_B2, nullptr);
+        ASSERT_EQ(pPSO_B2->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+        if (!CompileAsync)
+        {
+            EXPECT_EQ(pPSO_B, pPSO_B2);
+        }
+        else
+        {
+            RefCntAutoPtr<IPipelineState> pPSO_B3;
+            bool                          PSOFoundB3 = false;
+            CreateGraphicsPSO(pCache, true, CompileAsync, "SpecConsts Distinct Test",
+                              pVS, pPS, SpecConstsB, _countof(SpecConstsB), pPSO_B3, &PSOFoundB3);
+            EXPECT_TRUE(PSOFoundB3);
+            ASSERT_NE(pPSO_B3, nullptr);
+            ASSERT_EQ(pPSO_B3->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+            EXPECT_EQ(pPSO_B2, pPSO_B3);
+        }
+
+        RefCntAutoPtr<IPipelineState> pPSO_None;
+        CreateGraphicsPSO(pCache, pData != nullptr, CompileAsync, "SpecConsts Distinct Test",
+                          pVS, pPS, nullptr, 0, pPSO_None);
+        ASSERT_NE(pPSO_None, nullptr);
+        ASSERT_EQ(pPSO_None->GetStatus(CompileAsync), PIPELINE_STATE_STATUS_READY);
+        EXPECT_NE(pPSO_None, pPSO_A);
+        EXPECT_NE(pPSO_None, pPSO_B);
+
+        pData.Release();
+        pCache->WriteToBlob(pass == 0 ? ContentVersion : ~0u, &pData);
+    }
+}
+
+} // namespace SpecConstsTests
+
+TEST(RenderStateCacheTest, SpecializationConstants)
+{
+    SpecConstsTests::TestRenderStateCaches(/*CompileAsync = */ false);
+}
+
+TEST(RenderStateCacheTest, SpecializationConstants_Async)
+{
+    SpecConstsTests::TestRenderStateCaches(/*CompileAsync = */ true);
+}
+
+TEST(RenderStateCacheTest, SpecializationConstants_DistinctEntries)
+{
+    SpecConstsTests::TestDistinctEntries(/*CompileAsync = */ false);
+}
+
+TEST(RenderStateCacheTest, SpecializationConstants_DistinctEntries_Async)
+{
+    SpecConstsTests::TestDistinctEntries(/*CompileAsync = */ true);
 }
 
 } // namespace
