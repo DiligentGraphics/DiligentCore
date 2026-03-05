@@ -694,9 +694,9 @@ void TestCaches(bool CompileAsync)
 
         if (CompileAsync && pass == 0)
         {
-            std::string            MutableNames[g_SpecConstRefDescCount];
-            float                  MutableValues[g_SpecConstRefDescCount];
-            SpecializationConstant MutableSpecConsts[g_SpecConstRefDescCount];
+            std::vector<std::string>            MutableNames(g_SpecConstRefDescCount);
+            std::vector<float>                  MutableValues(g_SpecConstRefDescCount);
+            std::vector<SpecializationConstant> MutableSpecConsts(g_SpecConstRefDescCount);
 
             for (Uint32 i = 0; i < g_SpecConstRefDescCount; ++i)
             {
@@ -709,15 +709,13 @@ void TestCaches(bool CompileAsync)
             }
 
             RefCntAutoPtr<IPipelineState> pMutablePSO;
-            CreateGraphicsPSO(pCache, false, CompileAsync, "SpecConsts Cache Mutable Test", pVS, pPS, MutableSpecConsts, _countof(MutableSpecConsts), pMutablePSO);
+            CreateGraphicsPSO(pCache, false, CompileAsync, "SpecConsts Cache Mutable Test", pVS, pPS, MutableSpecConsts.data(), g_SpecConstRefDescCount, pMutablePSO);
             ASSERT_NE(pMutablePSO, nullptr);
 
             // Make sure the strings and data are properly copied in CreateGraphicsPSO.
-            for (Uint32 i = 0; i < g_SpecConstRefDescCount; ++i)
-            {
-                MutableNames[i]  = g_SpecConstRefDescs[(i + 1) % g_SpecConstRefDescCount].Name;
-                MutableValues[i] = g_SpecConstRefDescs[(i + 1) % g_SpecConstRefDescCount].RefValue;
-            }
+            MutableNames.clear();
+            MutableValues.clear();
+            MutableSpecConsts.clear();
 
             ASSERT_EQ(pMutablePSO->GetStatus(true), PIPELINE_STATE_STATUS_READY);
             VerifyPSO(pMutablePSO);
