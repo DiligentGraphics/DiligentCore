@@ -2,7 +2,35 @@ cmake_minimum_required (VERSION 3.10)
 
 project(Diligent-GraphicsEngineD3DBase CXX)
 
-set(DILIGENT_NVAPI_PATH "" CACHE PATH "Path to NVAPI to enable D3D11/D3D12 extensions")
+if (PLATFORM_WIN32)
+    if (DILIGENT_NVAPI_PATH)
+        if (NOT EXISTS "${DILIGENT_NVAPI_PATH}/nvapi.h")
+            message(WARNING
+                "DILIGENT_NVAPI_PATH does not look like NVAPI (missing nvapi.h): ${DILIGENT_NVAPI_PATH}\n"
+                "Will ignore it and download NVAPI instead."
+            )
+            unset(DILIGENT_NVAPI_PATH CACHE)
+        endif()
+    endif()
+
+    if (NOT DILIGENT_NVAPI_PATH AND (TARGET_CPU STREQUAL "x86_64" OR TARGET_CPU STREQUAL "x86"))
+        message(STATUS "Downloading NVAPI repository...")
+
+        include(FetchContent)
+        FetchContent_Declare(
+            nvapi
+            GIT_REPOSITORY https://github.com/NVIDIA/nvapi
+            GIT_TAG        9296d67 # R590
+        )
+        FetchContent_MakeAvailable(nvapi)
+
+        set(DILIGENT_NVAPI_PATH
+            "${nvapi_SOURCE_DIR}"
+            CACHE PATH "Path to NVAPI to enable D3D11/D3D12 extensions"
+            FORCE
+        )
+    endif()
+endif()
 
 set(INCLUDE
     include/D3DCommonTypeConversions.hpp
