@@ -37,6 +37,8 @@
 
 namespace Diligent
 {
+struct RenderDeviceVkImpl;
+VkImageCreateInfo TextureDescToVkImageCreateInfo(const TextureDesc& Desc, const RenderDeviceVkImpl* pRenderDeviceVk) noexcept;
 
 VkFormat       TexFormatToVkFormat(TEXTURE_FORMAT TexFmt);
 TEXTURE_FORMAT VkFormatToTexFormat(VkFormat VkFmt);
