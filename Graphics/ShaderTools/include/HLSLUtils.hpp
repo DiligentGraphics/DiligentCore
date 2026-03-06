@@ -41,7 +41,7 @@ namespace Diligent
 
 String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI) noexcept(false);
 
-String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel, const char* ShaderProfileArguments);
+String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel);
 
 template <typename BlobType>
 void HandleHLSLCompilerResult(bool               CompilationSucceeded,
